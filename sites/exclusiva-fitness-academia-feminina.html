@@ -1,0 +1,3113 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<link rel="icon" type="image/x-icon" href="https://fralib.com.br/favicon.ico">
+<link rel="icon" type="image/png" href="https://fralib.com.br/favicon.png">
+  <meta charset="UTF-8">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Exclusiva Fitness - Academia Feminina | Campina Grande do Sul</title>
+  <script src="https://cdn.tailwindcss.com" defer></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@studio-freight/lenis@1.0.42/dist/lenis.min.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/motion@11.11.9/dist/motion.js" defer></script>
+  <style id="fralib-base">
+  /* FONTE UNICA DE VERDADE: cores injetadas pelo color_enforcer via fralib-colors */
+  /* Este bloco cuida apenas de: toggle dark/light, tipografia, componentes */
+  [data-theme="dark"] {
+    --color-background: #0a0a0a !important;
+    --color-surface: #1a1a1a !important;
+    --color-text: #f0f0f5 !important;
+    color-scheme: dark;
+  }
+  [data-theme="light"] {
+    --color-background: #ffffff !important;
+    --color-surface: #f9fafb !important;
+    --color-text: #1f2937 !important;
+    color-scheme: light;
+  }
+  html { transition: background-color 0.3s ease, color 0.3s ease; }
+  body { font-family: 'Inter', sans-serif; background-color: var(--color-background); color: var(--color-text); }
+  h1, h2, h3 { font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 800; letter-spacing: -0.02em; line-height: 1.15; }
+  p, li, span { font-family: 'Inter', sans-serif; line-height: 1.65; }
+  .section-bg-dark { background: linear-gradient(160deg, #0a0a0a 0%, var(--color-dark-surface, #0d1117) 60%, #0a0a0a 100%); color: var(--color-text-dark, #f0f0f5); }
+  .section-bg-subtle { background: linear-gradient(180deg, var(--color-background) 0%, var(--color-surface) 100%); }
+  .section-bg-brand { background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-accent) 100%); }
+  .section-bg-mesh { background-color: var(--color-surface); background-image: radial-gradient(at 40% 20%, color-mix(in srgb, var(--color-primary) 12%, transparent) 0px, transparent 50%), radial-gradient(at 80% 0%, color-mix(in srgb, var(--color-accent) 10%, transparent) 0px, transparent 50%); }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+  </style>
+</head>
+<body>
+<!-- SECTION:hero -->
+<!-- SECTION:hero -->
+<section id="hero" style="height:100vh;overflow:hidden;position:relative;" class="section-bg-dark">
+
+  <style>
+    #hero {
+      --overlay-start: rgba(10,14,20,0.72);
+      --overlay-end: rgba(10,14,20,0.55);
+    }
+
+    /* Background image layer */
+    #hero-bg-img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center;
+      z-index: 0;
+      transform: scale(1.06);
+      transition: transform 8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    }
+    #hero.loaded #hero-bg-img {
+      transform: scale(1);
+    }
+
+    /* Gradient overlay */
+    #hero-overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(
+        135deg,
+        rgba(10,14,20,0.82) 0%,
+        rgba(54,115,161,0.28) 50%,
+        rgba(127,68,77,0.35) 100%
+      );
+      z-index: 1;
+    }
+
+    /* Noise texture */
+    #hero-noise {
+      position: absolute;
+      inset: 0;
+      z-index: 2;
+      pointer-events: none;
+      opacity: 0.035;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+    }
+
+    /* Scroll progress bar */
+    #hero-scroll-bar {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      height: 2px;
+      width: 0%;
+      background: var(--color-primary);
+      z-index: 10;
+      transition: width 0.1s linear;
+    }
+
+    /* Content wrapper */
+    #hero-content {
+      position: relative;
+      z-index: 5;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 0 1.5rem;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    /* Logo pill */
+    .hero-logo-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.625rem;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.14);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-radius: 9999px;
+      padding: 0.375rem 1rem 0.375rem 0.375rem;
+      margin-bottom: 1.75rem;
+      width: fit-content;
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 0.7s cubic-bezier(0.16,1,0.3,1), transform 0.7s cubic-bezier(0.16,1,0.3,1);
+    }
+    #hero.loaded .hero-logo-pill {
+      opacity: 1;
+      transform: translateY(0);
+      transition-delay: 0.1s;
+    }
+    .hero-logo-initial {
+      width: 2rem;
+      height: 2rem;
+      border-radius: 9999px;
+      background: var(--color-primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-weight: 800;
+      font-size: 0.875rem;
+      color: #ffffff;
+      flex-shrink: 0;
+    }
+    .hero-logo-text {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-weight: 700;
+      font-size: 0.75rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.9);
+    }
+
+    /* Eyebrow badge */
+    .hero-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: rgba(127,68,77,0.22);
+      border: 1px solid rgba(127,68,77,0.45);
+      border-radius: 9999px;
+      padding: 0.3rem 0.875rem;
+      margin-bottom: 1.25rem;
+      width: fit-content;
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 0.7s cubic-bezier(0.16,1,0.3,1), transform 0.7s cubic-bezier(0.16,1,0.3,1);
+    }
+    #hero.loaded .hero-eyebrow {
+      opacity: 1;
+      transform: translateY(0);
+      transition-delay: 0.25s;
+    }
+    .hero-eyebrow-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 9999px;
+      background: var(--color-accent);
+      animation: pulse-dot 2s ease-in-out infinite;
+    }
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.6; transform: scale(0.75); }
+    }
+    .hero-eyebrow-label {
+      font-family: 'Inter', sans-serif;
+      font-size: 0.6875rem;
+      font-weight: 600;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.85);
+    }
+
+    /* H1 mask reveal */
+    .hero-h1-mask {
+      overflow: hidden;
+      margin-bottom: 0.15em;
+    }
+    .hero-h1-line {
+      display: block;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-weight: 800;
+      font-size: clamp(2.5rem, 6vw, 5rem);
+      line-height: 1.1;
+      color: #ffffff;
+      transform: translateY(110%);
+      transition: transform 0.9s cubic-bezier(0.16,1,0.3,1);
+    }
+    #hero.loaded .hero-h1-line:nth-child(1) { transform: translateY(0); transition-delay: 0.38s; }
+    #hero.loaded .hero-h1-line:nth-child(2) { transform: translateY(0); transition-delay: 0.5s; }
+    #hero.loaded .hero-h1-line:nth-child(3) { transform: translateY(0); transition-delay: 0.62s; }
+
+    .hero-h1-accent {
+      color: var(--color-primary);
+      position: relative;
+    }
+
+    /* Subtitle */
+    .hero-subtitle {
+      font-family: 'Inter', sans-serif;
+      font-size: clamp(1rem, 2.2vw, 1.25rem);
+      line-height: 1.65;
+      color: rgba(255,255,255,0.72);
+      max-width: 540px;
+      margin-top: 1.25rem;
+      margin-bottom: 2.25rem;
+      opacity: 0;
+      transform: translateY(24px);
+      transition: opacity 0.8s cubic-bezier(0.16,1,0.3,1), transform 0.8s cubic-bezier(0.16,1,0.3,1);
+    }
+    #hero.loaded .hero-subtitle {
+      opacity: 1;
+      transform: translateY(0);
+      transition-delay: 0.72s;
+    }
+
+    /* CTA group */
+    .hero-cta-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.875rem;
+      align-items: center;
+      opacity: 0;
+      transform: translateY(24px);
+      transition: opacity 0.8s cubic-bezier(0.16,1,0.3,1), transform 0.8s cubic-bezier(0.16,1,0.3,1);
+    }
+    #hero.loaded .hero-cta-group {
+      opacity: 1;
+      transform: translateY(0);
+      transition-delay: 0.88s;
+    }
+
+    /* Primary CTA — WhatsApp */
+    .hero-cta-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.625rem;
+      background: #25D366;
+      color: #ffffff;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-weight: 700;
+      font-size: 0.9375rem;
+      padding: 0.875rem 1.625rem;
+      border-radius: 9999px;
+      text-decoration: none;
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.3s cubic-bezier(0.16,1,0.3,1), box-shadow 0.3s ease;
+      box-shadow: 0 4px 24px rgba(37,211,102,0.32);
+    }
+    .hero-cta-primary:hover {
+      transform: translateY(-2px) scale(1.02);
+      box-shadow: 0 8px 32px rgba(37,211,102,0.45);
+    }
+    .hero-cta-primary:active {
+      transform: scale(0.98);
+    }
+    .hero-cta-primary .cta-icon-wrap {
+      width: 1.75rem;
+      height: 1.75rem;
+      border-radius: 9999px;
+      background: rgba(255,255,255,0.18);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.3s cubic-bezier(0.16,1,0.3,1);
+    }
+    .hero-cta-primary:hover .cta-icon-wrap {
+      transform: translateX(2px) translateY(-1px) scale(1.08);
+    }
+
+    /* Secondary CTA — Ligar */
+    .hero-cta-secondary {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.2);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      color: rgba(255,255,255,0.9);
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-weight: 600;
+      font-size: 0.9375rem;
+      padding: 0.875rem 1.5rem;
+      border-radius: 9999px;
+      text-decoration: none;
+      transition: background 0.3s ease, border-color 0.3s ease, transform 0.3s cubic-bezier(0.16,1,0.3,1);
+    }
+    .hero-cta-secondary:hover {
+      background: rgba(255,255,255,0.14);
+      border-color: rgba(255,255,255,0.35);
+      transform: translateY(-2px);
+    }
+    .hero-cta-secondary:active {
+      transform: scale(0.98);
+    }
+
+    /* Trust strip */
+    .hero-trust-strip {
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+      margin-top: 2.5rem;
+      flex-wrap: wrap;
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 0.8s cubic-bezier(0.16,1,0.3,1), transform 0.8s cubic-bezier(0.16,1,0.3,1);
+    }
+    #hero.loaded .hero-trust-strip {
+      opacity: 1;
+      transform: translateY(0);
+      transition-delay: 1.05s;
+    }
+    .hero-trust-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.8125rem;
+      color: rgba(255,255,255,0.6);
+    }
+    .hero-trust-item svg {
+      flex-shrink: 0;
+    }
+    .hero-trust-divider {
+      width: 1px;
+      height: 1.25rem;
+      background: rgba(255,255,255,0.18);
+    }
+
+    /* Scroll indicator */
+    .hero-scroll-hint {
+      position: absolute;
+      bottom: 2.5rem;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 5;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+      opacity: 0;
+      transition: opacity 0.8s ease;
+    }
+    #hero.loaded .hero-scroll-hint {
+      opacity: 1;
+      transition-delay: 1.4s;
+    }
+    .hero-scroll-hint span {
+      font-family: 'Inter', sans-serif;
+      font-size: 0.6875rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.4);
+    }
+    .hero-scroll-mouse {
+      width: 22px;
+      height: 34px;
+      border: 1.5px solid rgba(255,255,255,0.25);
+      border-radius: 11px;
+      display: flex;
+      justify-content: center;
+      padding-top: 5px;
+    }
+    .hero-scroll-wheel {
+      width: 3px;
+      height: 7px;
+      background: rgba(255,255,255,0.5);
+      border-radius: 9999px;
+      animation: scroll-wheel 1.8s cubic-bezier(0.16,1,0.3,1) infinite;
+    }
+    @keyframes scroll-wheel {
+      0% { transform: translateY(0); opacity: 1; }
+      60% { transform: translateY(10px); opacity: 0; }
+      61% { transform: translateY(0); opacity: 0; }
+      100% { transform: translateY(0); opacity: 1; }
+    }
+
+    /* Floating accent shape */
+    .hero-accent-orb {
+      position: absolute;
+      border-radius: 9999px;
+      filter: blur(80px);
+      pointer-events: none;
+      z-index: 1;
+    }
+    .hero-orb-1 {
+      width: 420px;
+      height: 420px;
+      background: rgba(54,115,161,0.22);
+      top: -80px;
+      right: -60px;
+      animation: orb-float-1 9s ease-in-out infinite;
+    }
+    .hero-orb-2 {
+      width: 320px;
+      height: 320px;
+      background: rgba(127,68,77,0.18);
+      bottom: 60px;
+      right: 15%;
+      animation: orb-float-2 11s ease-in-out infinite;
+    }
+    @keyframes orb-float-1 {
+      0%, 100% { transform: translate(0, 0) scale(1); }
+      50% { transform: translate(-20px, 20px) scale(1.05); }
+    }
+    @keyframes orb-float-2 {
+      0%, 100% { transform: translate(0, 0) scale(1); }
+      50% { transform: translate(15px, -25px) scale(0.95); }
+    }
+
+    /* Ripple on CTA click */
+    @keyframes ripple-anim {
+      to { transform: scale(4); opacity: 0; }
+    }
+
+    /* Reduced motion */
+    @media (prefers-reduced-motion: reduce) {
+      #hero-bg-img,
+      .hero-logo-pill,
+      .hero-eyebrow,
+      .hero-h1-line,
+      .hero-subtitle,
+      .hero-cta-group,
+      .hero-trust-strip,
+      .hero-scroll-hint {
+        transition: none !important;
+        animation: none !important;
+        opacity: 1 !important;
+        transform: none !important;
+      }
+      .hero-scroll-wheel,
+      .hero-eyebrow-dot,
+      .hero-orb-1,
+      .hero-orb-2 {
+        animation: none !important;
+      }
+    }
+
+    /* Mobile adjustments */
+    @media (max-width: 640px) {
+      #hero-content {
+        padding: 0 1.25rem;
+        justify-content: flex-end;
+        padding-bottom: 5rem;
+      }
+      .hero-trust-strip {
+        gap: 0.875rem;
+      }
+      .hero-trust-divider {
+        display: none;
+      }
+      .hero-scroll-hint {
+        display: none;
+      }
+    }
+  </style>
+
+  <!-- Background image (eager for LCP) -->
+  <img
+    id="hero-bg-img"
+    src="https://lh3.googleusercontent.com/gps-cs-s/APNQkAF_3KziVcY2rCXQxA9eFyr_JpoM5Q90N7O05qs4bCWlEXQJ5JtdHqjn-Izpae1SbqzbasqrzdrYGJBuw9NFmoFCKShJi9B0ziS4aJa4IhuMHz95a95Qwn4YxdXo8u1-YRe3HJyx=s1600"
+    loading="eager"
+    decoding="async"
+    alt="Exclusiva Fitness - Academia Feminina em Campina Grande do Sul"
+  >
+
+  <!-- Gradient overlay -->
+  <div id="hero-overlay" aria-hidden="true"></div>
+
+  <!-- Noise texture -->
+  <div id="hero-noise" aria-hidden="true"></div>
+
+  <!-- Floating orbs -->
+  <div class="hero-accent-orb hero-orb-1" aria-hidden="true"></div>
+  <div class="hero-accent-orb hero-orb-2" aria-hidden="true"></div>
+
+  <!-- Scroll progress bar -->
+  <div id="hero-scroll-bar" aria-hidden="true"></div>
+
+  <!-- Main content -->
+  <div id="hero-content">
+
+    <!-- Logo pill -->
+    <div class="hero-logo-pill" role="banner">
+      <div class="hero-logo-initial" aria-hidden="true">E</div>
+      <span class="hero-logo-text">Exclusiva Fitness</span>
+    </div>
+
+    <!-- Eyebrow badge -->
+    <div class="hero-eyebrow" aria-label="Academia 100% feminina">
+      <span class="hero-eyebrow-dot" aria-hidden="true"></span>
+      <span class="hero-eyebrow-label">Academia 100% Feminina · Campina Grande do Sul</span>
+    </div>
+
+    <!-- H1 mask reveal -->
+    <h1 aria-label="Exclusiva Fitness - Academia Feminina em Campina Grande do Sul">
+      <div class="hero-h1-mask">
+        <span class="hero-h1-line">Exclusiva Fitness</span>
+      </div>
+      <div class="hero-h1-mask">
+        <span class="hero-h1-line">Academia <span class="hero-h1-accent">Feminina</span></span>
+      </div>
+      <div class="hero-h1-mask">
+        <span class="hero-h1-line" style="font-size:clamp(1.5rem,3.5vw,3rem);color:rgba(255,255,255,0.55);font-weight:700;">em Campina Grande do Sul</span>
+      </div>
+    </h1>
+
+    <!-- Subtitle -->
+    <p class="hero-subtitle">
+      Um espaço criado para você se sentir segura, acolhida e motivada a cada treino.
+      Aqui, mulheres se fortalecem juntas — sem julgamentos, com resultados reais.
+    </p>
+
+    <!-- CTA group -->
+    <div class="hero-cta-group">
+
+      <!-- WhatsApp CTA -->
+      <a
+        href="https://wa.me/5541997515712"
+        class="magnetic hero-cta-primary ripple-btn"
+        aria-label="Fale conosco pelo WhatsApp da Exclusiva Fitness"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        <span class="cta-icon-wrap" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+          </svg>
+        </span>
+        Falar no WhatsApp
+      </a>
+
+      <!-- Ligar CTA -->
+      <a
+        href="tel:+5541997515712"
+        class="hero-cta-secondary"
+        aria-label="Ligar para a Exclusiva Fitness: (41) 99751-5712"
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81a19.79 19.79 0 01-3.07-8.67A2 2 0 012 .18h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/>
+        </svg>
+        (41) 99751-5712
+      </a>
+
+    </div>
+
+    <!-- Trust strip -->
+    <div class="hero-trust-strip" aria-label="Diferenciais da academia">
+      <div class="hero-trust-item">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        </svg>
+        <span>Ambiente 100% feminino</span>
+      </div>
+      <div class="hero-trust-divider" aria-hidden="true"></div>
+      <div class="hero-trust-item">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="10"/>
+          <polyline points="12 6 12 12 16 14"/>
+        </svg>
+        <span>Horários flexíveis</span>
+      </div>
+      <div class="hero-trust-divider" aria-hidden="true"></div>
+      <div class="hero-trust-item">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
+          <circle cx="9" cy="7" r="4"/>
+          <path d="M23 21v-2a4 4 0 00-3-3.87"/>
+          <path d="M16 3.13a4 4 0 010 7.75"/>
+        </svg>
+        <span>Acompanhamento próximo</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Scroll hint -->
+  <div class="hero-scroll-hint" aria-hidden="true">
+    <div class="hero-scroll-mouse">
+      <div class="hero-scroll-wheel"></div>
+    </div>
+    <span>Rolar</span>
+  </div>
+
+  <script>
+    (function() {
+      // Trigger loaded state for entrance animations
+      var hero = document.getElementById('hero');
+      var bgImg = document.getElementById('hero-bg-img');
+
+      function activateHero() {
+        hero.classList.add('loaded');
+      }
+
+      if (bgImg.complete) {
+        requestAnimationFrame(activateHero);
+      } else {
+        bgImg.addEventListener('load', activateHero);
+        // Fallback: activate after 300ms regardless
+        setTimeout(activateHero, 300);
+      }
+
+      // Ripple effect on CTA
+      document.querySelectorAll('.ripple-btn').forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+          var ripple = document.createElement('span');
+          var rect = btn.getBoundingClientRect();
+          ripple.style.cssText = [
+            'position:absolute',
+            'border-radius:50%',
+            'transform:scale(0)',
+            'animation:ripple-anim 0.6s linear',
+            'background:rgba(255,255,255,0.25)',
+            'width:100px',
+            'height:100px',
+            'pointer-events:none',
+            'left:' + (e.clientX - rect.left - 50) + 'px',
+            'top:' + (e.clientY - rect.top - 50) + 'px'
+          ].join(';');
+          btn.appendChild(ripple);
+          setTimeout(function() { ripple.remove(); }, 600);
+        });
+      });
+
+      // Magnetic effect on CTA buttons (desktop only)
+      if (window.matchMedia('(hover: hover)').matches) {
+        document.querySelectorAll('.hero-cta-primary, .hero-cta-secondary').forEach(function(btn) {
+          btn.addEventListener('mousemove', function(e) {
+            var rect = btn.getBoundingClientRect();
+            var x = (e.clientX - rect.left - rect.width / 2) * 0.22;
+            var y = (e.clientY - rect.top - rect.height / 2) * 0.22;
+            btn.style.transform = 'translate(' + x + 'px, ' + y + 'px) translateY(-2px)';
+          });
+          btn.addEventListener('mouseleave', function() {
+            btn.style.transform = '';
+          });
+        });
+      }
+    })();
+  </script>
+
+</section>
+<!-- /SECTION:hero -->
+<!-- /SECTION:hero -->
+<!-- SECTION:sobre -->
+<!-- SECTION:sobre -->
+<section class="section-bg-subtle py-24 lg:py-32" style="background: linear-gradient(135deg, var(--color-surface) 0%, color-mix(in srgb, var(--color-primary) 4%, var(--color-background)) 100%); transition: background-color 0.3s ease, color 0.3s ease;">
+
+  <style>
+    .sobre-line-draw {
+      transform-origin: left center;
+      transform: scaleX(0);
+      transition: transform 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .sobre-line-draw.visible {
+      transform: scaleX(1);
+    }
+    .sobre-card {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: 1.5rem;
+      transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.4s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.3s ease, border-color 0.3s ease;
+    }
+    .sobre-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 20px 40px -12px color-mix(in srgb, var(--color-primary) 18%, transparent);
+    }
+    .sobre-card-icon {
+      width: 3rem;
+      height: 3rem;
+      border-radius: 0.875rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+      flex-shrink: 0;
+    }
+    .sobre-card-icon svg {
+      color: var(--color-primary);
+    }
+    .sobre-accent-bar {
+      width: 3rem;
+      height: 3px;
+      border-radius: 9999px;
+      background: var(--color-accent);
+    }
+    .sobre-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.25rem 0.875rem;
+      border-radius: 9999px;
+      border: 1px solid color-mix(in srgb, var(--color-primary) 25%, transparent);
+      background: color-mix(in srgb, var(--color-primary) 8%, transparent);
+      font-size: 0.6875rem;
+      font-family: 'Inter', sans-serif;
+      font-weight: 600;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--color-primary);
+      transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+    }
+    .sobre-img-wrapper {
+      position: relative;
+      border-radius: 2rem;
+      overflow: hidden;
+    }
+    .sobre-img-wrapper::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(
+        160deg,
+        color-mix(in srgb, var(--color-primary) 30%, transparent) 0%,
+        transparent 50%,
+        color-mix(in srgb, var(--color-accent) 20%, transparent) 100%
+      );
+      z-index: 1;
+      pointer-events: none;
+    }
+    .sobre-stat-badge {
+      position: absolute;
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: 1rem;
+      padding: 0.75rem 1.25rem;
+      box-shadow: 0 8px 24px -4px rgba(0,0,0,0.12);
+      transition: background-color 0.3s ease, border-color 0.3s ease;
+    }
+    .sobre-stat-badge .stat-num {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-weight: 800;
+      color: var(--color-primary);
+      font-size: 1.25rem;
+      line-height: 1;
+      transition: color 0.3s ease;
+    }
+    .sobre-stat-badge .stat-label {
+      font-family: 'Inter', sans-serif;
+      font-size: 0.6875rem;
+      color: var(--color-muted);
+      font-weight: 500;
+      margin-top: 0.125rem;
+      transition: color 0.3s ease;
+    }
+    .reveal {
+      opacity: 0;
+      transform: translateY(32px);
+      transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .reveal-left {
+      opacity: 0;
+      transform: translateX(-32px);
+      transition: opacity 0.9s cubic-bezier(0.16, 1, 0.3, 1), transform 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .reveal-left.visible {
+      opacity: 1;
+      transform: translateX(0);
+    }
+    .stagger-reveal > * {
+      opacity: 0;
+      transform: translateY(24px);
+      transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1), transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .stagger-reveal.visible > *:nth-child(1) { opacity: 1; transform: translateY(0); transition-delay: 0ms; }
+    .stagger-reveal.visible > *:nth-child(2) { opacity: 1; transform: translateY(0); transition-delay: 120ms; }
+    .stagger-reveal.visible > *:nth-child(3) { opacity: 1; transform: translateY(0); transition-delay: 240ms; }
+    .stagger-reveal.visible > *:nth-child(4) { opacity: 1; transform: translateY(0); transition-delay: 360ms; }
+    @media (prefers-reduced-motion: reduce) {
+      .reveal, .reveal-left, .stagger-reveal > *, .sobre-line-draw, .sobre-card {
+        opacity: 1 !important;
+        transform: none !important;
+        transition: none !important;
+      }
+    }
+  </style>
+
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+
+    <!-- Header -->
+    <div class="mb-16 lg:mb-20 reveal">
+      <span class="sobre-eyebrow mb-5 block w-fit">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+          <circle cx="6" cy="6" r="5" stroke="currentColor" stroke-width="1.5"/>
+          <circle cx="6" cy="6" r="2" fill="currentColor"/>
+        </svg>
+        Nossa História
+      </span>
+      <div class="stagger-reveal grid grid-cols-1 lg:grid-cols-5 gap-6 items-end">
+        <div class="lg:col-span-3">
+          <h2 class="reveal" style="font-family:'Plus Jakarta Sans',sans-serif; font-weight:800; font-size:clamp(1.8rem,4vw,3rem); line-height:1.2; color:var(--color-text); transition: color 0.3s ease;">
+            Um espaço criado por mulheres,<br>
+            <span style="color:var(--color-accent);">para mulheres de Campina Grande do Sul</span>
+          </h2>
+        </div>
+        <div class="lg:col-span-2">
+          <div class="sobre-accent-bar mb-4 sobre-line-draw" aria-hidden="true"></div>
+          <p style="font-family:'Inter',sans-serif; font-size:1rem; line-height:1.65; color:var(--color-muted); transition: color 0.3s ease;">
+            A Exclusiva Fitness nasceu da convicção de que toda mulher merece um ambiente seguro, acolhedor e focado exclusivamente no seu bem-estar — sem julgamentos, sem desconforto, com toda a atenção que você precisa para alcançar seus objetivos.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Grid: Image + Content -->
+    <div class="stagger-reveal grid grid-cols-1 lg:grid-cols-5 gap-10 lg:gap-16 items-center mb-20">
+
+      <!-- Image Column (40%) -->
+      <div class="lg:col-span-2 reveal-left">
+        <div class="sobre-img-wrapper" style="aspect-ratio: 4/5;">
+          <img
+            src="https://lh3.googleusercontent.com/gps-cs-s/APNQkAFTC1mQPD2pB0_x-_ev8nKuMyRuqtzkxuyRGWvnIZINizkr-I7nm-8olEKMaj85dK0hIciaXvEo40M3q18j_ubSrzrYaX0hgOpWtYuQeof35XggvDoe1uWTZbpWZYWYDfngV39X=s1600"
+            loading="lazy"
+            decoding="async"
+            alt="Espaço interno da Exclusiva Fitness Academia Feminina em Campina Grande do Sul"
+            class="image-zoom w-full h-full object-cover"
+            style="border-radius: 2rem;"
+          >
+          <!-- Stat badge bottom-left -->
+          <div class="sobre-stat-badge" style="bottom: 1.5rem; left: 1.5rem; z-index: 2;">
+            <div class="stat-num">100%</div>
+            <div class="stat-label">Espaço Feminino</div>
+          </div>
+          <!-- Stat badge top-right -->
+          <div class="sobre-stat-badge" style="top: 1.5rem; right: 1.5rem; z-index: 2;">
+            <div class="stat-num">CGS</div>
+            <div class="stat-label">Campina Grande do Sul</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Content Column (60%) -->
+      <div class="lg:col-span-3">
+        <div class="reveal" style="transition-delay: 150ms;">
+          <h3 class="reveal-left" style="font-family:'Plus Jakarta Sans',sans-serif; font-weight:800; font-size:clamp(1.2rem,3vw,2rem); color:var(--color-text); margin-bottom:1rem; transition: color 0.3s ease;">
+            Nossa missão vai além do treino
+          </h3>
+          <p style="font-family:'Inter',sans-serif; font-size:1rem; line-height:1.65; color:var(--color-muted); margin-bottom:1.25rem; transition: color 0.3s ease;">
+            Na Exclusiva Fitness, acreditamos que transformação real começa quando a mulher se sente segura e respeitada. Por isso, cada detalhe do nosso espaço foi pensado para que você treine com liberdade, foco e confiança — do aquecimento à última repetição.
+          </p>
+          <p style="font-family:'Inter',sans-serif; font-size:1rem; line-height:1.65; color:var(--color-muted); margin-bottom:2rem; transition: color 0.3s ease;">
+            Nossa equipe de profissionais acompanha de perto cada aluna, entendendo seus objetivos individuais e adaptando o treino à sua realidade. Aqui, você não é mais um número — você é o centro de tudo.
+          </p>
+
+          <!-- Values pills -->
+          <div class="stagger-reveal flex flex-wrap gap-2 mb-8">
+            <span style="font-family:'Inter',sans-serif; font-size:0.8125rem; font-weight:600; padding:0.375rem 1rem; border-radius:9999px; background:color-mix(in srgb, var(--color-accent) 10%, transparent); color:var(--color-accent); border:1px solid color-mix(in srgb, var(--color-accent) 20%, transparent); transition: all 0.3s ease;">Ambiente Seguro</span>
+            <span style="font-family:'Inter',sans-serif; font-size:0.8125rem; font-weight:600; padding:0.375rem 1rem; border-radius:9999px; background:color-mix(in srgb, var(--color-primary) 10%, transparent); color:var(--color-primary); border:1px solid color-mix(in srgb, var(--color-primary) 20%, transparent); transition: all 0.3s ease;">Acompanhamento Próximo</span>
+            <span style="font-family:'Inter',sans-serif; font-size:0.8125rem; font-weight:600; padding:0.375rem 1rem; border-radius:9999px; background:color-mix(in srgb, var(--color-accent) 10%, transparent); color:var(--color-accent); border:1px solid color-mix(in srgb, var(--color-accent) 20%, transparent); transition: all 0.3s ease;">100% Feminino</span>
+            <span style="font-family:'Inter',sans-serif; font-size:0.8125rem; font-weight:600; padding:0.375rem 1rem; border-radius:9999px; background:color-mix(in srgb, var(--color-primary) 10%, transparent); color:var(--color-primary); border:1px solid color-mix(in srgb, var(--color-primary) 20%, transparent); transition: all 0.3s ease;">Resultados Reais</span>
+          </div>
+
+          <!-- CTA -->
+          <a
+            href="https://wa.me/5541997515712"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Fale com a Exclusiva Fitness pelo WhatsApp"
+            class="magnetic inline-flex items-center gap-3 group"
+            style="font-family:'Plus Jakarta Sans',sans-serif; font-weight:700; font-size:0.9375rem; padding:0.875rem 1.75rem; border-radius:9999px; background:var(--color-primary); color:#ffffff; text-decoration:none; transition: background-color 0.3s cubic-bezier(0.16,1,0.3,1), transform 0.3s cubic-bezier(0.16,1,0.3,1), box-shadow 0.3s ease;"
+            onmouseover="this.style.background='var(--color-accent)'; this.style.boxShadow='0 8px 24px -4px color-mix(in srgb, var(--color-accent) 40%, transparent)';"
+            onmouseout="this.style.background='var(--color-primary)'; this.style.boxShadow='none';"
+            onmousedown="this.style.transform='scale(0.98)'"
+            onmouseup="this.style.transform='scale(1)'"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+            </svg>
+            Fale conosco no WhatsApp
+            <span style="width:1.75rem; height:1.75rem; border-radius:9999px; background:rgba(255,255,255,0.15); display:flex; align-items:center; justify-content:center; transition: transform 0.3s cubic-bezier(0.16,1,0.3,1);" class="group-hover:translate-x-1" aria-hidden="true">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M5 12h14M12 5l7 7-7 7"/>
+              </svg>
+            </span>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Diferenciais Cards -->
+    <div class="stagger-reveal grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+
+      <!-- Card 1 -->
+      <div class="sobre-card p-6 card-3d">
+        <div class="card-3d sobre-card-icon mb-4" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          </svg>
+        </div>
+        <h3 class="reveal-left" style="font-family:'Plus Jakarta Sans',sans-serif; font-weight:800; font-size:clamp(1.2rem,3vw,2rem); color:var(--color-text); margin-bottom:0.5rem; transition: color 0.3s ease;">
+          Ambiente Seguro
+        </h3>
+        <p style="font-family:'Inter',sans-serif; font-size:0.9rem; line-height:1.65; color:var(--color-muted); transition: color 0.3s ease;">
+          Espaço 100% feminino, projetado para que você treine com total conforto e tranquilidade, sem constrangimentos.
+        </p>
+      </div>
+
+      <!-- Card 2 -->
+      <div class="sobre-card p-6 card-3d">
+        <div class="card-3d sobre-card-icon mb-4" style="background: color-mix(in srgb, var(--color-accent) 12%, transparent);" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="color: var(--color-accent);">
+            <circle cx="12" cy="8" r="4"/>
+            <path d="M6 20v-2a4 4 0 014-4h4a4 4 0 014 4v2"/>
+          </svg>
+        </div>
+        <h3 class="reveal-left" style="font-family:'Plus Jakarta Sans',sans-serif; font-weight:800; font-size:clamp(1.2rem,3vw,2rem); color:var(--color-text); margin-bottom:0.5rem; transition: color 0.3s ease;">
+          Equipe Dedicada
+        </h3>
+        <p style="font-family:'Inter',sans-serif; font-size:0.9rem; line-height:1.65; color:var(--color-muted); transition: color 0.3s ease;">
+          Profissionais atentas e prontas para tirar dúvidas, incentivar e adaptar cada treino ao seu ritmo e objetivo.
+        </p>
+      </div>
+
+      <!-- Card 3 -->
+      <div class="sobre-card p-6 card-3d">
+        <div class="card-3d sobre-card-icon mb-4" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+          </svg>
+        </div>
+        <h3 class="reveal-left" style="font-family:'Plus Jakarta Sans',sans-serif; font-weight:800; font-size:clamp(1.2rem,3vw,2rem); color:var(--color-text); margin-bottom:0.5rem; transition: color 0.3s ease;">
+          Resultados Reais
+        </h3>
+        <p style="font-family:'Inter',sans-serif; font-size:0.9rem; line-height:1.65; color:var(--color-muted); transition: color 0.3s ease;">
+          Metodologia focada em evolução contínua, com acompanhamento próximo para que você veja e sinta a diferença.
+        </p>
+      </div>
+
+      <!-- Card 4 -->
+      <div class="sobre-card p-6 card-3d">
+        <div class="card-3d sobre-card-icon mb-4" style="background: color-mix(in srgb, var(--color-accent) 12%, transparent);" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="color: var(--color-accent);">
+            <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/>
+          </svg>
+        </div>
+        <h3 class="reveal-left" style="font-family:'Plus Jakarta Sans',sans-serif; font-weight:800; font-size:clamp(1.2rem,3vw,2rem); color:var(--color-text); margin-bottom:0.5rem; transition: color 0.3s ease;">
+          Comunidade Feminina
+        </h3>
+        <p style="font-family:'Inter',sans-serif; font-size:0.9rem; line-height:1.65; color:var(--color-muted); transition: color 0.3s ease;">
+          Mais do que uma academia — um lugar onde mulheres se apoiam, se motivam e crescem juntas em Campina Grande do Sul.
+        </p>
+      </div>
+
+    </div>
+
+  </div>
+
+  <script>
+    (function() {
+      var observer = new IntersectionObserver(function(entries) {
+        entries.forEach(function(entry) {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('visible');
+            observer.unobserve(entry.target);
+          }
+        });
+      }, { threshold: 0.12 });
+
+      document.querySelectorAll('.reveal, .reveal-left, .stagger-reveal, .sobre-line-draw').forEach(function(el) {
+        observer.observe(el);
+      });
+    })();
+  </script>
+
+</section>
+<!-- /SECTION:sobre -->
+<!-- /SECTION:sobre -->
+<!-- SECTION:servicos -->
+<!-- SECTION:servicos -->
+<section id="servicos" class="section-bg-subtle py-24 px-4" style="background: var(--color-surface); transition: background-color 0.3s ease, color 0.3s ease;">
+  <style>
+    .servicos-card {
+      background: var(--color-background);
+      border: 1px solid var(--color-border);
+      border-radius: 1.5rem;
+      overflow: hidden;
+      transition: transform 0.4s cubic-bezier(0.32,0.72,0,1), box-shadow 0.4s cubic-bezier(0.32,0.72,0,1), border-color 0.3s ease;
+      position: relative;
+    }
+    .servicos-card:hover {
+      transform: translateY(-6px);
+      box-shadow: 0 24px 48px -12px rgba(54,115,161,0.15);
+      border-color: var(--color-primary);
+    }
+    .servicos-card .card-img-wrap {
+      overflow: hidden;
+      aspect-ratio: 16/10;
+      position: relative;
+    }
+    .servicos-card .card-img-wrap img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.6s cubic-bezier(0.25,1,0.5,1);
+      display: block;
+    }
+    .servicos-card:hover .card-img-wrap img {
+      transform: scale(1.07);
+    }
+    .servicos-card .card-badge {
+      position: absolute;
+      top: 1rem;
+      left: 1rem;
+      background: var(--color-primary);
+      color: #ffffff;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      padding: 0.3rem 0.75rem;
+      border-radius: 999px;
+      z-index: 2;
+    }
+    .servicos-card .card-body {
+      padding: 1.75rem;
+    }
+    .servicos-card h3 {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-weight: 800;
+      font-size: clamp(1.2rem, 3vw, 1.5rem);
+      line-height: 1.25;
+      color: var(--color-text);
+      margin-bottom: 0.6rem;
+      transition: color 0.3s ease;
+    }
+    .servicos-card p {
+      font-family: 'Inter', sans-serif;
+      font-size: 0.9rem;
+      line-height: 1.65;
+      color: var(--color-muted);
+      margin-bottom: 1.25rem;
+      transition: color 0.3s ease;
+    }
+    .servicos-card .card-features {
+      list-style: none;
+      padding: 0;
+      margin: 0 0 1.5rem 0;
+      display: flex;
+      flex-direction: column;
+      gap: 0.45rem;
+    }
+    .servicos-card .card-features li {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.82rem;
+      color: var(--color-text);
+      transition: color 0.3s ease;
+    }
+    .servicos-card .card-features li svg {
+      flex-shrink: 0;
+      color: var(--color-primary);
+    }
+    .servicos-card .card-divider {
+      height: 1px;
+      background: var(--color-border);
+      margin: 0 1.75rem 1.5rem;
+      transition: background 0.3s ease;
+    }
+    .servicos-card .card-cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: var(--color-primary);
+      color: #ffffff;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-weight: 700;
+      font-size: 0.82rem;
+      letter-spacing: 0.04em;
+      padding: 0.65rem 1.25rem;
+      border-radius: 999px;
+      text-decoration: none;
+      transition: background 0.3s ease, transform 0.2s ease;
+      border: none;
+      cursor: pointer;
+    }
+    .servicos-card .card-cta:hover {
+      background: var(--color-accent);
+      transform: translateX(2px);
+    }
+    .servicos-card .card-cta .icon-wrap {
+      width: 1.4rem;
+      height: 1.4rem;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.18);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.3s ease;
+    }
+    .servicos-card .card-cta:hover .icon-wrap {
+      transform: translateX(2px) translateY(-1px);
+    }
+    /* Featured card accent */
+    .servicos-card.featured {
+      border-color: var(--color-accent);
+      box-shadow: 0 0 0 1px var(--color-accent), 0 16px 40px -8px rgba(127,68,77,0.12);
+    }
+    .servicos-card.featured .card-badge {
+      background: var(--color-accent);
+    }
+    .servicos-card.featured .card-cta {
+      background: var(--color-accent);
+    }
+    .servicos-card.featured .card-cta:hover {
+      background: var(--color-primary);
+    }
+    .servicos-card.featured .card-features li svg {
+      color: var(--color-accent);
+    }
+    /* Section header */
+    .servicos-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: rgba(54,115,161,0.08);
+      border: 1px solid rgba(54,115,161,0.18);
+      color: var(--color-primary);
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      padding: 0.35rem 0.9rem;
+      border-radius: 999px;
+      margin-bottom: 1.25rem;
+    }
+    /* Accent line */
+    .accent-line {
+      width: 3rem;
+      height: 3px;
+      background: var(--color-accent);
+      border-radius: 2px;
+      margin: 1rem 0 0;
+    }
+    /* Bottom CTA strip */
+    .servicos-bottom-cta {
+      background: var(--color-primary);
+      border-radius: 1.5rem;
+      padding: 2.5rem 2rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.25rem;
+      text-align: center;
+      margin-top: 3.5rem;
+      position: relative;
+      overflow: hidden;
+    }
+    .servicos-bottom-cta::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at 70% 50%, rgba(127,68,77,0.35) 0%, transparent 65%);
+      pointer-events: none;
+    }
+    .servicos-bottom-cta h3 {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-weight: 800;
+      font-size: clamp(1.2rem, 3vw, 1.75rem);
+      color: #ffffff;
+      line-height: 1.25;
+      position: relative;
+      z-index: 1;
+    }
+    .servicos-bottom-cta p {
+      font-family: 'Inter', sans-serif;
+      font-size: 0.9rem;
+      color: rgba(255,255,255,0.78);
+      line-height: 1.65;
+      max-width: 38ch;
+      position: relative;
+      z-index: 1;
+    }
+    .servicos-bottom-cta .cta-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      justify-content: center;
+      position: relative;
+      z-index: 1;
+    }
+    .btn-wpp {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: #25D366;
+      color: #ffffff;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-weight: 700;
+      font-size: 0.85rem;
+      padding: 0.75rem 1.5rem;
+      border-radius: 999px;
+      text-decoration: none;
+      transition: transform 0.25s ease, box-shadow 0.25s ease;
+    }
+    .btn-wpp:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(37,211,102,0.35);
+    }
+    .btn-tel {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: rgba(255,255,255,0.12);
+      border: 1px solid rgba(255,255,255,0.25);
+      color: #ffffff;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-weight: 600;
+      font-size: 0.85rem;
+      padding: 0.75rem 1.5rem;
+      border-radius: 999px;
+      text-decoration: none;
+      transition: background 0.25s ease, transform 0.25s ease;
+    }
+    .btn-tel:hover {
+      background: rgba(255,255,255,0.22);
+      transform: translateY(-2px);
+    }
+    /* Grid layout */
+    .servicos-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1.5rem;
+    }
+    @media (min-width: 640px) {
+      .servicos-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+    @media (min-width: 1024px) {
+      .servicos-grid {
+        grid-template-columns: 3fr 2fr 2fr;
+      }
+      .servicos-card.featured {
+        grid-row: span 1;
+      }
+    }
+    @media (min-width: 768px) {
+      .servicos-bottom-cta {
+        flex-direction: row;
+        text-align: left;
+        justify-content: space-between;
+        padding: 2.5rem 3rem;
+      }
+      .servicos-bottom-cta .text-block {
+        flex: 1;
+      }
+      .servicos-bottom-cta .cta-group {
+        flex-shrink: 0;
+        flex-direction: column;
+        align-items: flex-end;
+      }
+    }
+  </style>
+
+  <div class="max-w-7xl mx-auto">
+
+    <!-- Section Header -->
+    <div class="mb-12 reveal">
+      <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
+        <div>
+          <span class="servicos-eyebrow">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            Modalidades &amp; Planos
+          </span>
+          <h2 class="reveal" style="font-family:'Plus Jakarta Sans',sans-serif;font-weight:800;font-size:clamp(1.8rem,4vw,3rem);line-height:1.2;color:var(--color-text);transition:color 0.3s ease;">
+            Treine do seu jeito,<br>
+            <span style="color:var(--color-primary);">no seu espaço</span>
+          </h2>
+          <div class="accent-line"></div>
+          <p style="font-family:'Inter',sans-serif;font-size:0.95rem;line-height:1.65;color:var(--color-muted);max-width:46ch;margin-top:1rem;transition:color 0.3s ease;">
+            Modalidades pensadas para mulheres de Campina Grande do Sul que querem resultados reais — com acompanhamento próximo e ambiente 100% feminino.
+          </p>
+        </div>
+        <div style="flex-shrink:0;">
+          <a href="https://wa.me/5541997515712" target="_blank" rel="noopener noreferrer"
+             aria-label="Consultar valores pelo WhatsApp"
+             class="btn-wpp magnetic">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+            Consulte valores
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Cards Grid -->
+    <div class="servicos-grid stagger-reveal">
+
+      <!-- Card 1: Musculação — featured, wider -->
+      <div class="servicos-card featured card-3d reveal-left" role="article" aria-label="Musculação e Treinamento Funcional">
+        <div class="card-3d card-img-wrap">
+          <img class="image-zoom"
+            src="https://lh3.googleusercontent.com/gps-cs-s/APNQkAGawGb00vMrxvgDYYWs6fDjYwFXuSX7R6fvmcYxLXLrkQ8-A1kq5cqYSSEIPMG4bwa1zputx3fwr3p55qkUrEdIEVQLoAq9cLQg7DlJbUjOtIylvgGHoRUxFBiYsAdYBuYhz9r5=s1600.03751-ya359.7228-ro-1.5900477-fo100"
+            loading="lazy"
+            decoding="async"
+            alt="Espaço de musculação da Exclusiva Fitness em Campina Grande do Sul"
+          >
+          <span class="card-badge">Destaque</span>
+        </div>
+        <div class="card-3d card-body">
+          <h3 class="reveal-left">Musculação &amp; Treinamento Funcional</h3>
+          <p>Equipamentos modernos e treinos periodizados para ganho de força, definição e condicionamento — com acompanhamento de personal trainer feminina.</p>
+          <ul class="card-features">
+            <li>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+              Avaliação física personalizada
+            </li>
+            <li>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+              Planilha de treino individual
+            </li>
+            <li>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+              Acompanhamento de evolução
+            </li>
+            <li>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+              Ambiente 100% feminino
+            </li>
+          </ul>
+        </div>
+        <div class="card-3d card-divider"></div>
+        <div style="padding: 0 1.75rem 1.75rem; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:0.75rem;">
+          <span style="font-family:'Inter',sans-serif;font-size:0.78rem;color:var(--color-muted);transition:color 0.3s ease;">Consulte disponibilidade</span>
+          <a href="https://wa.me/5541997515712" target="_blank" rel="noopener noreferrer"
+             aria-label="Consultar valores de musculação pelo WhatsApp"
+             class="card-cta magnetic">
+            Consulte valores
+            <span class="icon-wrap">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+            </span>
+          </a>
+        </div>
+      </div>
+
+      <!-- Card 2: Jump / Aulas em Grupo -->
+      <div class="servicos-card card-3d reveal" role="article" aria-label="Aulas de Jump e Ginástica">
+        <div class="card-3d card-img-wrap">
+          <img class="image-zoom"
+            src="https://lh3.googleusercontent.com/a-/ALV-UjWYQEXtsHq2K73iR2MmrL-wwtD_RB0i5A5iXNhA93P-FsOGB6RB=s1600"
+            loading="lazy"
+            decoding="async"
+            alt="Aulas em grupo na Exclusiva Fitness academia feminina"
+          >
+          <span class="card-badge">Aulas em Grupo</span>
+        </div>
+        <div class="card-3d card-body">
+          <h3 class="reveal-left">Jump &amp; Ginástica</h3>
+          <p>Aulas coletivas com energia e motivação para queimar calorias, melhorar o condicionamento e se divertir junto com outras mulheres.</p>
+          <ul class="card-features">
+            <li>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+              Turmas reduzidas
+            </li>
+            <li>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+              Professora especializada
+            </li>
+            <li>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+              Horários variados
+            </li>
+          </ul>
+        </div>
+        <div class="card-3d card-divider"></div>
+        <div style="padding: 0 1.75rem 1.75rem;">
+          <a href="https://wa.me/5541997515712" target="_blank" rel="noopener noreferrer"
+             aria-label="Consultar valores de aulas de jump pelo WhatsApp"
+             class="card-cta magnetic">
+            Consulte valores
+            <span class="icon-wrap">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+            </span>
+          </a>
+        </div>
+      </div>
+
+      <!-- Card 3: Personal Trainer -->
+      <div class="servicos-card card-3d reveal" role="article" aria-label="Personal Trainer Feminina">
+        <div class="card-3d card-img-wrap">
+          <img class="image-zoom"
+            src="https://lh3.googleusercontent.com/a-/ALV-UjVpaN7EGXfQSyidzdpdwc7CJs5TwDqGtsBxwuwQFQxCKRDat6d-SA=s1600"
+            loading="lazy"
+            decoding="async"
+            alt="Personal trainer feminina na Exclusiva Fitness Campina Grande do Sul"
+          >
+          <span class="card-badge">Personal</span>
+        </div>
+        <div class="card-3d card-body">
+          <h3 class="reveal-left">Personal Trainer</h3>
+          <p>Atenção exclusiva para quem quer acelerar resultados. Treino 100% adaptado ao seu corpo, rotina e objetivos.</p>
+          <ul class="card-features">
+            <li>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+              Treino exclusivo
+            </li>
+            <li>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+              Acompanhamento contínuo
+            </li>
+            <li>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+              Foco em resultados reais
+            </li>
+          </ul>
+        </div>
+        <div class="card-3d card-divider"></div>
+        <div style="padding: 0 1.75rem 1.75rem;">
+          <a href="https://wa.me/5541997515712" target="_blank" rel="noopener noreferrer"
+             aria-label="Consultar valores de personal trainer pelo WhatsApp"
+             class="card-cta magnetic">
+            Consulte valores
+            <span class="icon-wrap">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+            </span>
+          </a>
+        </div>
+      </div>
+
+    </div>
+    <!-- /Cards Grid -->
+
+    <!-- Differentials strip -->
+    <div class="mt-12 reveal" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1rem;">
+      <div style="background:var(--color-background);border:1px solid var(--color-border);border-radius:1rem;padding:1.25rem 1.5rem;display:flex;align-items:center;gap:0.75rem;transition:background 0.3s ease,border-color 0.3s ease;">
+        <div style="width:2.5rem;height:2.5rem;border-radius:50%;background:rgba(54,115,161,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </div>
+        <div>
+          <p style="font-family:'Plus Jakarta Sans',sans-serif;font-weight:700;font-size:0.82rem;color:var(--color-text);margin:0;transition:color 0.3s ease;">100% Feminino</p>
+          <p style="font-family:'Inter',sans-serif;font-size:0.75rem;color:var(--color-muted);margin:0;transition:color 0.3s ease;">Ambiente seguro e acolhedor</p>
+        </div>
+      </div>
+      <div style="background:var(--color-background);border:1px solid var(--color-border);border-radius:1rem;padding:1.25rem 1.5rem;display:flex;align-items:center;gap:0.75rem;transition:background 0.3s ease,border-color 0.3s ease;">
+        <div style="width:2.5rem;height:2.5rem;border-radius:50%;background:rgba(127,68,77,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        </div>
+        <div>
+          <p style="font-family:'Plus Jakarta Sans',sans-serif;font-weight:700;font-size:0.82rem;color:var(--color-text);margin:0;transition:color 0.3s ease;">Acompanhamento Real</p>
+          <p style="font-family:'Inter',sans-serif;font-size:0.75rem;color:var(--color-muted);margin:0;transition:color 0.3s ease;">Professoras atentas ao seu progresso</p>
+        </div>
+      </div>
+      <div style="background:var(--color-background);border:1px solid var(--color-border);border-radius:1rem;padding:1.25rem 1.5rem;display:flex;align-items:center;gap:0.75rem;transition:background 0.3s ease,border-color 0.3s ease;">
+        <div style="width:2.5rem;height:2.5rem;border-radius:50%;background:rgba(54,115,161,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        </div>
+        <div>
+<!-- /SECTION:servicos -->
+<!-- SECTION:depoimentos -->
+<!-- depoimentos omitidos: sem reviews reais -->
+<!-- /SECTION:depoimentos -->
+<!-- SECTION:localizacao -->
+<!-- SECTION:localizacao -->
+<section class="section-bg-subtle py-24 reveal" style="background: var(--color-surface); transition: background-color 0.3s ease, color 0.3s ease;">
+  <style>
+    .loc-card {
+      background: var(--color-background);
+      border: 1px solid var(--color-border);
+      border-radius: 1.5rem;
+      transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+    }
+    .loc-card:hover {
+      box-shadow: 0 20px 40px -15px rgba(54, 115, 161, 0.12);
+    }
+    .loc-info-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 1rem;
+      padding: 1.25rem 0;
+      border-bottom: 1px solid var(--color-border);
+      transition: border-color 0.3s ease;
+    }
+    .loc-info-item:last-child {
+      border-bottom: none;
+    }
+    .loc-icon-wrap {
+      width: 2.75rem;
+      height: 2.75rem;
+      border-radius: 0.75rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+    }
+    .loc-icon-wrap svg {
+      color: var(--color-primary);
+    }
+    .loc-label {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-weight: 700;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--color-muted);
+      margin-bottom: 0.2rem;
+      transition: color 0.3s ease;
+    }
+    .loc-value {
+      font-family: 'Inter', sans-serif;
+      font-size: 0.975rem;
+      line-height: 1.55;
+      color: var(--color-text);
+      transition: color 0.3s ease;
+    }
+    .loc-cta-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1.5rem;
+      border-radius: 9999px;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-weight: 700;
+      font-size: 0.9rem;
+      text-decoration: none;
+      transition: transform 0.25s cubic-bezier(0.32,0.72,0,1), box-shadow 0.25s ease, background 0.25s ease;
+      cursor: pointer;
+    }
+    .loc-cta-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px -6px rgba(54, 115, 161, 0.35);
+    }
+    .loc-cta-btn:active {
+      transform: scale(0.98);
+    }
+    .loc-cta-primary {
+      background: var(--color-primary);
+      color: #ffffff;
+    }
+    .loc-cta-wpp {
+      background: #25D366;
+      color: #ffffff;
+    }
+    .loc-cta-wpp:hover {
+      box-shadow: 0 8px 24px -6px rgba(37, 211, 102, 0.4);
+    }
+    .map-wrapper {
+      border-radius: 1.25rem;
+      overflow: hidden;
+      border: 1px solid var(--color-border);
+      transition: border-color 0.3s ease;
+      position: relative;
+    }
+    .map-wrapper::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 1.25rem;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08);
+      pointer-events: none;
+    }
+    .section-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.35rem 1rem;
+      border-radius: 9999px;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-weight: 700;
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      background: color-mix(in srgb, var(--color-accent) 10%, transparent);
+      color: var(--color-accent);
+      margin-bottom: 1rem;
+    }
+    .loc-photo-wrap {
+      border-radius: 1.25rem;
+      overflow: hidden;
+      aspect-ratio: 16/9;
+      position: relative;
+    }
+    .loc-photo-wrap img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.6s cubic-bezier(0.25,1,0.5,1);
+    }
+    .loc-photo-wrap:hover img {
+      transform: scale(1.04);
+    }
+    .loc-photo-overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to top, rgba(54,115,161,0.35) 0%, transparent 60%);
+      pointer-events: none;
+    }
+    @media (max-width: 767px) {
+      .loc-grid {
+        grid-template-columns: 1fr !important;
+      }
+    }
+  </style>
+
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+
+    <!-- Header -->
+    <div class="text-center mb-16 reveal">
+      <span class="section-eyebrow">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+        Como nos encontrar
+      </span>
+      <h2 class="reveal" style="font-family:'Plus Jakarta Sans',sans-serif; font-weight:800; font-size:clamp(1.8rem,4vw,3rem); line-height:1.2; color:var(--color-text); transition:color 0.3s ease;">
+        Exclusiva Fitness em<br>
+        <span style="color:var(--color-primary);">Campina Grande do Sul</span>
+      </h2>
+      <p style="font-family:'Inter',sans-serif; font-size:1rem; line-height:1.65; color:var(--color-muted); max-width:520px; margin:1rem auto 0; transition:color 0.3s ease;">
+        Venha conhecer o espaço 100% feminino que está transformando a saúde das mulheres de Campina Grande do Sul.
+      </p>
+    </div>
+
+    <!-- Main Grid -->
+    <div class="loc-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap:2rem; align-items:start;">
+
+      <!-- Left: Info Card + Photo -->
+      <div style="display:flex; flex-direction:column; gap:1.5rem;" class="reveal-left">
+
+        <!-- Info Card -->
+        <div class="card-3d loc-card" style="padding:2rem;">
+          <h3 class="reveal-left" style="font-family:'Plus Jakarta Sans',sans-serif; font-weight:800; font-size:clamp(1.2rem,3vw,1.5rem); color:var(--color-text); margin-bottom:1.25rem; transition:color 0.3s ease;">
+            Informações de Contato
+          </h3>
+
+          <!-- Endereço -->
+          <div class="loc-info-item">
+            <div class="loc-icon-wrap" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            </div>
+            <div>
+              <p class="loc-label">Endereço</p>
+              <p class="loc-value">Campina Grande do Sul, PR<br>Paraná, Brasil</p>
+            </div>
+          </div>
+
+          <!-- Telefone -->
+          <div class="loc-info-item">
+            <div class="loc-icon-wrap" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.6 1.22h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.8a16 16 0 0 0 6.29 6.29l.95-.95a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+            </div>
+            <div>
+              <p class="loc-label">Telefone</p>
+              <a href="tel:+5541997515712" class="loc-value" style="color:var(--color-primary); font-weight:600; text-decoration:none; transition:color 0.2s ease;" aria-label="Ligar para Exclusiva Fitness">
+                (41) 99751-5712
+              </a>
+            </div>
+          </div>
+
+          <!-- Horários -->
+          <div class="loc-info-item">
+            <div class="loc-icon-wrap" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            </div>
+            <div>
+              <p class="loc-label">Horários de Funcionamento</p>
+              <p class="loc-value">Consulte os horários atualizados<br>pelo nosso WhatsApp</p>
+            </div>
+          </div>
+
+          <!-- Segmento -->
+          <div class="loc-info-item">
+            <div class="loc-icon-wrap" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+            </div>
+            <div>
+              <p class="loc-label">Ambiente</p>
+              <p class="loc-value">Academia 100% Feminina<br>Espaço exclusivo para mulheres</p>
+            </div>
+          </div>
+
+          <!-- CTAs -->
+          <div style="display:flex; flex-wrap:wrap; gap:0.75rem; margin-top:1.75rem;">
+            <a href="tel:+5541997515712"
+               class="loc-cta-btn loc-cta-primary magnetic"
+               aria-label="Ligar agora para Exclusiva Fitness">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.6 1.22h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.8a16 16 0 0 0 6.29 6.29l.95-.95a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+              Ligar Agora
+            </a>
+            <a href="https://wa.me/5541997515712"
+               target="_blank"
+               rel="noopener noreferrer"
+               class="loc-cta-btn loc-cta-wpp magnetic"
+               aria-label="Falar com Exclusiva Fitness pelo WhatsApp">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z"/></svg>
+              WhatsApp
+            </a>
+          </div>
+        </div>
+
+        <!-- Location Photo -->
+        <div class="loc-photo-wrap reveal scale-in">
+          <img class="image-zoom"
+            src="https://lh3.googleusercontent.com/gps-cs-s/APNQkAEDwquzBCdUCrcWebXKZ5y7a1dYRVCVHs8naQhuBStk9XBy_hxKN4BB_2A4jSjAGGll-T4VkDwOOs466I_2SynLX5KqfyEN5blYjL8xx00dqyXS2v9KBKu9taGYqEYqF51RSUvMYCqLnvmn=s1600"
+            loading="lazy"
+            decoding="async"
+            alt="Exclusiva Fitness - Academia Feminina em Campina Grande do Sul"
+          >
+          <div class="loc-photo-overlay"></div>
+          <div style="position:absolute; bottom:1rem; left:1rem; right:1rem; pointer-events:none;">
+            <span style="
+              display:inline-flex;
+              align-items:center;
+              gap:0.4rem;
+              background:rgba(255,255,255,0.15);
+              backdrop-filter:blur(12px);
+              -webkit-backdrop-filter:blur(12px);
+              border:1px solid rgba(255,255,255,0.2);
+              border-radius:9999px;
+              padding:0.35rem 0.9rem;
+              font-family:'Plus Jakarta Sans',sans-serif;
+              font-weight:700;
+              font-size:0.75rem;
+              color:#ffffff;
+              letter-spacing:0.05em;
+            ">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+              Campina Grande do Sul, PR
+            </span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Right: Map + How to Get There -->
+      <div style="display:flex; flex-direction:column; gap:1.5rem;" class="reveal">
+
+        <!-- Map Embed -->
+        <div class="map-wrapper" style="height:380px;">
+          <iframe
+            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d57869.12345678!2d-49.0500!3d-25.3000!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x94dce0b0b0b0b0b1%3A0x0!2sExclusiva+Fitness+-+Academia+Feminina%2C+Campina+Grande+do+Sul%2C+PR!5e0!3m2!1spt-BR!2sbr!4v1700000000000!5m2!1spt-BR!2sbr"
+            width="100%"
+            height="100%"
+            style="border:0; display:block;"
+            allowfullscreen=""
+            loading="lazy"
+            referrerpolicy="no-referrer-when-downgrade"
+            title="Localização da Exclusiva Fitness - Academia Feminina em Campina Grande do Sul"
+            aria-label="Mapa de localização da Exclusiva Fitness em Campina Grande do Sul"
+          ></iframe>
+        </div>
+
+        <!-- How to Get There Card -->
+        <div class="card-3d loc-card" style="padding:1.75rem;">
+          <h3 class="reveal-left" style="font-family:'Plus Jakarta Sans',sans-serif; font-weight:800; font-size:1.1rem; color:var(--color-text); margin-bottom:1.25rem; display:flex; align-items:center; gap:0.6rem; transition:color 0.3s ease;">
+            <span style="width:2rem; height:2rem; border-radius:0.5rem; background:color-mix(in srgb, var(--color-accent) 10%, transparent); display:flex; align-items:center; justify-content:center; flex-shrink:0;" aria-hidden="true">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 8 12 12 14 14"/></svg>
+            </span>
+            Horários e Atendimento
+          </h3>
+
+          <div style="display:flex; flex-direction:column; gap:0.75rem;">
+            <div style="display:flex; align-items:center; justify-content:space-between; padding:0.75rem 1rem; border-radius:0.75rem; background:color-mix(in srgb, var(--color-primary) 6%, transparent);">
+              <span style="font-family:'Inter',sans-serif; font-size:0.9rem; color:var(--color-text); font-weight:500; transition:color 0.3s ease;">Segunda a Sexta</span>
+              <span style="font-family:'Plus Jakarta Sans',sans-serif; font-size:0.85rem; font-weight:700; color:var(--color-primary);">Consulte pelo WhatsApp</span>
+            </div>
+            <div style="display:flex; align-items:center; justify-content:space-between; padding:0.75rem 1rem; border-radius:0.75rem; background:color-mix(in srgb, var(--color-primary) 6%, transparent);">
+              <span style="font-family:'Inter',sans-serif; font-size:0.9rem; color:var(--color-text); font-weight:500; transition:color 0.3s ease;">Sábado</span>
+              <span style="font-family:'Plus Jakarta Sans',sans-serif; font-size:0.85rem; font-weight:700; color:var(--color-primary);">Consulte pelo WhatsApp</span>
+            </div>
+            <div style="display:flex; align-items:center; justify-content:space-between; padding:0.75rem 1rem; border-radius:0.75rem; background:color-mix(in srgb, var(--color-muted) 8%, transparent);">
+              <span style="font-family:'Inter',sans-serif; font-size:0.9rem; color:var(--color-muted); font-weight:500; transition:color 0.3s ease;">Domingo</span>
+              <span style="font-family:'Plus Jakarta Sans',sans-serif; font-size:0.85rem; font-weight:700; color:var(--color-muted);">Consulte pelo WhatsApp</span>
+            </div>
+          </div>
+
+          <div style="margin-top:1.5rem; padding:1rem; border-radius:0.875rem; border:1px solid color-mix(in srgb, var(--color-accent) 25%, transparent); background:color-mix(in srgb, var(--color-accent) 5%, transparent); display:flex; align-items:flex-start; gap:0.75rem;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0; margin-top:0.1rem;" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <p style="font-family:'Inter',sans-serif; font-size:0.85rem; line-height:1.55; color:var(--color-text); transition:color 0.3s ease;">
+              Para confirmar horários atualizados e disponibilidade de modalidades, entre em contato pelo WhatsApp antes de sua visita.
+            </p>
+          </div>
+
+          <a href="https://wa.me/5541997515712?text=Ol%C3%A1!%20Gostaria%20de%20saber%20os%20hor%C3%A1rios%20de%20funcionamento%20da%20Exclusiva%20Fitness."
+             target="_blank"
+             rel="noopener noreferrer"
+             class="loc-cta-btn loc-cta-wpp magnetic"
+             style="width:100%; justify-content:center; margin-top:1.25rem;"
+             aria-label="Consultar horários da Exclusiva Fitness pelo WhatsApp">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z"/></svg>
+            Consultar Horários pelo WhatsApp
+          </a>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Bottom CTA Strip -->
+    <div class="reveal" style="margin-top:3rem; padding:2rem 2.5rem; border-radius:1.5rem; background:linear-gradient(135deg, var(--color-primary) 0%, color-mix(in srgb, var(--color-primary) 80%, var(--color-accent)) 100%); display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:1.5rem;">
+      <div>
+        <p style="font-family:'Plus Jakarta Sans',sans-serif; font-weight:800; font-size:1.2rem; color:#ffffff; margin-bottom:0.25rem;">
+          Pronta para começar sua transformação?
+        </p>
+        <p style="font-family:'Inter',sans-serif; font-size:0.9rem; color:rgba(255,255,255,0.8); line-height:1.5;">
+          Venha conhecer o único espaço 100% feminino de Campina Grande do Sul.
+        </p>
+      </div>
+      <div style="display:flex; flex-wrap:wrap; gap:0.75rem;">
+        <a href="tel:+5541997515712"
+           class="magnetic"
+           style="display:inline-flex; align-items:center; gap:0.5rem; padding:0.75rem 1.5rem; border-radius:9999px; background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.3); color:#ffffff; font-family:'Plus Jakarta Sans',sans-serif; font-weight:700; font-size:0.9rem; text-decoration:none; transition:background 0.25s ease, transform 0.25s ease; backdrop-filter:blur(8px);"
+           onmouseover="this.style.background='rgba(255,255,255,0.25)'; this.style.transform='translateY(-2px)';"
+           onmouseout="this.style.background='rgba(255,255,255,0.15)'; this.style.transform='translateY(0)';"
+           aria-label="Ligar para Exclusiva Fitness">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.
+<!-- /SECTION:localizacao -->
+<!-- SECTION:contato -->
+<!-- SECTION:contato -->
+<section id="contato" class="section-bg-subtle" style="background: var(--color-background); padding: 6rem 0;">
+  <style>
+    #contato {
+      position: relative;
+      overflow: hidden;
+    }
+    #contato::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse 80% 60% at 20% 50%, rgba(54,115,161,0.07) 0%, transparent 60%),
+                  radial-gradient(ellipse 60% 80% at 80% 30%, rgba(127,68,77,0.06) 0%, transparent 60%);
+      pointer-events: none;
+      z-index: 0;
+    }
+    .contato-inner {
+      position: relative;
+      z-index: 1;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 1.5rem;
+    }
+    .contato-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 3rem;
+    }
+    @media (min-width: 768px) {
+      .contato-grid {
+        grid-template-columns: 5fr 7fr;
+        gap: 4rem;
+        align-items: start;
+      }
+    }
+    /* CTA Side */
+    .contato-cta-side {
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+    }
+    .contato-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: rgba(54,115,161,0.08);
+      border: 1px solid rgba(54,115,161,0.18);
+      border-radius: 999px;
+      padding: 0.35rem 1rem;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--color-primary);
+      width: fit-content;
+    }
+    .contato-eyebrow-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--color-primary);
+      animation: pulse-dot 2s ease-in-out infinite;
+    }
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.7); }
+    }
+    .contato-heading {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-weight: 800;
+      font-size: clamp(1.8rem, 4vw, 3rem);
+      line-height: 1.2;
+      color: var(--color-text);
+    }
+    .contato-heading span {
+      color: var(--color-primary);
+    }
+    .contato-desc {
+      font-family: 'Inter', sans-serif;
+      font-size: 1rem;
+      line-height: 1.65;
+      color: var(--color-muted);
+    }
+    /* Contact Cards */
+    .contato-cards {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    .contato-card {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 1.1rem 1.25rem;
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: 1rem;
+      text-decoration: none;
+      transition: all 0.3s cubic-bezier(0.32,0.72,0,1);
+      cursor: pointer;
+    }
+    .contato-card:hover {
+      border-color: var(--color-primary);
+      box-shadow: 0 8px 32px rgba(54,115,161,0.12);
+      transform: translateY(-2px);
+    }
+    .contato-card.wpp:hover {
+      border-color: #25D366;
+      box-shadow: 0 8px 32px rgba(37,211,102,0.12);
+    }
+    .contato-card-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 0.75rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .contato-card-icon.tel-icon {
+      background: rgba(54,115,161,0.1);
+    }
+    .contato-card-icon.wpp-icon {
+      background: rgba(37,211,102,0.1);
+    }
+    .contato-card-icon.loc-icon {
+      background: rgba(127,68,77,0.1);
+    }
+    .contato-card-text {
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+    }
+    .contato-card-label {
+      font-family: 'Inter', sans-serif;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--color-muted);
+    }
+    .contato-card-value {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: var(--color-text);
+    }
+    .contato-card-arrow {
+      margin-left: auto;
+      color: var(--color-muted);
+      transition: transform 0.3s ease;
+    }
+    .contato-card:hover .contato-card-arrow {
+      transform: translateX(3px);
+    }
+    /* WhatsApp CTA Button */
+    .wpp-cta-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.75rem;
+      width: 100%;
+      padding: 1rem 1.5rem;
+      background: #25D366;
+      color: #ffffff;
+      border: none;
+      border-radius: 1rem;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-weight: 700;
+      font-size: 1rem;
+      text-decoration: none;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.32,0.72,0,1);
+      position: relative;
+      overflow: hidden;
+    }
+    .wpp-cta-btn::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: rgba(255,255,255,0);
+      transition: background 0.3s ease;
+    }
+    .wpp-cta-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 32px rgba(37,211,102,0.35);
+    }
+    .wpp-cta-btn:hover::before {
+      background: rgba(255,255,255,0.08);
+    }
+    .wpp-cta-btn:active {
+      transform: scale(0.98);
+    }
+    /* Form Side */
+    .contato-form-wrapper {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: 1.5rem;
+      padding: 2.5rem;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.04);
+    }
+    .form-title {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-weight: 800;
+      font-size: clamp(1.2rem, 3vw, 1.5rem);
+      color: var(--color-text);
+      margin-bottom: 0.5rem;
+    }
+    .form-subtitle {
+      font-family: 'Inter', sans-serif;
+      font-size: 0.9rem;
+      color: var(--color-muted);
+      line-height: 1.5;
+      margin-bottom: 2rem;
+    }
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1.25rem;
+    }
+    @media (min-width: 480px) {
+      .form-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+      .form-field-full {
+        grid-column: 1 / -1;
+      }
+    }
+    .form-field {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+    .form-field-full {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+    .form-label {
+      font-family: 'Inter', sans-serif;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--color-text);
+      letter-spacing: 0.02em;
+    }
+    .form-label span {
+      color: var(--color-accent);
+    }
+    .form-input,
+    .form-select,
+    .form-textarea {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      background: var(--color-background);
+      border: 1.5px solid var(--color-border);
+      border-radius: 0.75rem;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.9rem;
+      color: var(--color-text);
+      transition: border-color 0.25s ease, box-shadow 0.25s ease;
+      outline: none;
+      box-sizing: border-box;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+    .form-input::placeholder,
+    .form-textarea::placeholder {
+      color: var(--color-muted);
+      opacity: 0.7;
+    }
+    .form-input:focus,
+    .form-select:focus,
+    .form-textarea:focus {
+      border-color: var(--color-primary);
+      box-shadow: 0 0 0 3px rgba(54,115,161,0.12);
+    }
+    .form-select {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 0.75rem center;
+      padding-right: 2.5rem;
+      cursor: pointer;
+    }
+    .form-textarea {
+      resize: vertical;
+      min-height: 110px;
+    }
+    .form-submit-btn {
+      width: 100%;
+      padding: 1rem 1.5rem;
+      background: var(--color-primary);
+      color: #ffffff;
+      border: none;
+      border-radius: 0.875rem;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-weight: 700;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.32,0.72,0,1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.6rem;
+      position: relative;
+      overflow: hidden;
+    }
+    .form-submit-btn:hover {
+      background: #2d5f8a;
+      transform: translateY(-2px);
+      box-shadow: 0 12px 32px rgba(54,115,161,0.3);
+    }
+    .form-submit-btn:active {
+      transform: scale(0.98);
+    }
+    .form-privacy {
+      font-family: 'Inter', sans-serif;
+      font-size: 0.75rem;
+      color: var(--color-muted);
+      text-align: center;
+      line-height: 1.5;
+      margin-top: 0.75rem;
+    }
+    .form-privacy a {
+      color: var(--color-primary);
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+    /* Success state */
+    .form-success {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+      padding: 2rem;
+      text-align: center;
+    }
+    .form-success-icon {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      background: rgba(54,115,161,0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .form-success-title {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-weight: 800;
+      font-size: 1.3rem;
+      color: var(--color-text);
+    }
+    .form-success-desc {
+      font-family: 'Inter', sans-serif;
+      font-size: 0.9rem;
+      color: var(--color-muted);
+      line-height: 1.6;
+    }
+    /* Horario badge */
+    .horario-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      background: rgba(127,68,77,0.08);
+      border: 1px solid rgba(127,68,77,0.15);
+      border-radius: 999px;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: var(--color-accent);
+    }
+  </style>
+
+  <div class="contato-inner">
+
+    <!-- Section Header -->
+    <div class="reveal" style="text-align:center; margin-bottom:3.5rem;">
+      <div style="display:flex; justify-content:center; margin-bottom:1rem;">
+        <span class="contato-eyebrow">
+          <span class="contato-eyebrow-dot"></span>
+          Fale Conosco
+        </span>
+      </div>
+      <h2 class="reveal" style="font-family:'Plus Jakarta Sans',sans-serif; font-weight:800; font-size:clamp(1.8rem,4vw,3rem); line-height:1.2; color:var(--color-text); margin:0 0 1rem;">
+        Pronta para começar sua<br>
+        <span style="color:var(--color-primary);">transformação em Campina Grande do Sul?</span>
+      </h2>
+      <p style="font-family:'Inter',sans-serif; font-size:1rem; line-height:1.65; color:var(--color-muted); max-width:520px; margin:0 auto;">
+        Entre em contato com a Exclusiva Fitness. Nossa equipe responde rapidamente pelo WhatsApp ou pelo formulário abaixo.
+      </p>
+    </div>
+
+    <!-- Main Grid -->
+    <div class="contato-grid">
+
+      <!-- Left: CTA Side -->
+      <div class="contato-cta-side reveal-left">
+
+        <div>
+          <h3 class="reveal-left" style="font-family:'Plus Jakarta Sans',sans-serif; font-weight:800; font-size:clamp(1.2rem,3vw,1.6rem); color:var(--color-text); margin:0 0 0.75rem;">
+            Fale direto com a gente
+          </h3>
+          <p class="contato-desc">
+            Prefere uma resposta rápida? Chame no WhatsApp ou ligue agora. Estamos prontas para tirar suas dúvidas sobre modalidades, horários e como funciona o ambiente 100% feminino da Exclusiva Fitness.
+          </p>
+        </div>
+
+        <!-- Contact Cards -->
+        <div class="contato-cards">
+
+          <!-- WhatsApp -->
+          <a href="https://wa.me/5541997515712" target="_blank" rel="noopener noreferrer"
+             class="magnetic contato-card wpp" aria-label="Enviar mensagem pelo WhatsApp para a Exclusiva Fitness">
+            <div class="card-3d contato-card-icon wpp-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="#25D366" xmlns="http://www.w3.org/2000/svg">
+                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+              </svg>
+            </div>
+            <div class="card-3d contato-card-text">
+              <span class="contato-card-label">WhatsApp</span>
+              <span class="contato-card-value">(41) 99751-5712</span>
+            </div>
+            <svg class="contato-card-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M5 12h14M12 5l7 7-7 7"/>
+            </svg>
+          </a>
+
+          <!-- Telefone -->
+          <a href="tel:+5541997515712" class="contato-card" aria-label="Ligar para a Exclusiva Fitness">
+            <div class="card-3d contato-card-icon tel-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81a19.79 19.79 0 01-3.07-8.67A2 2 0 012 .18h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/>
+              </svg>
+            </div>
+            <div class="card-3d contato-card-text">
+              <span class="contato-card-label">Telefone</span>
+              <span class="contato-card-value">(41) 99751-5712</span>
+            </div>
+            <svg class="contato-card-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M5 12h14M12 5l7 7-7 7"/>
+            </svg>
+          </a>
+
+          <!-- Localização -->
+          <div class="card-3d contato-card" style="cursor:default;" aria-label="Localização da Exclusiva Fitness">
+            <div class="card-3d contato-card-icon loc-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/>
+                <circle cx="12" cy="10" r="3"/>
+              </svg>
+            </div>
+            <div class="card-3d contato-card-text">
+              <span class="contato-card-label">Localização</span>
+              <span class="contato-card-value">Campina Grande do Sul, PR</span>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Horário -->
+        <div>
+          <span class="horario-badge">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <polyline points="12 6 12 12 16 14"/>
+            </svg>
+            Horários: consulte pelo WhatsApp
+          </span>
+        </div>
+
+        <!-- WhatsApp CTA Button -->
+        <a href="https://wa.me/5541997515712?text=Ol%C3%A1!%20Gostaria%20de%20saber%20mais%20sobre%20a%20Exclusiva%20Fitness."
+           target="_blank" rel="noopener noreferrer"
+           class="wpp-cta-btn magnetic"
+           aria-label="Iniciar conversa no WhatsApp com a Exclusiva Fitness">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+          </svg>
+          Chamar no WhatsApp agora
+        </a>
+
+      </div>
+
+      <!-- Right: Form Side -->
+      <div class="reveal" style="animation-delay:0.15s;">
+        <div class="contato-form-wrapper">
+
+          <!-- Form Content -->
+          <div id="contato-form-content">
+            <h3 class="reveal-left form-title">Envie uma mensagem</h3>
+            <p class="form-subtitle">Preencha o formulário e entraremos em contato em breve. Sem compromisso.</p>
+
+            <form id="contato-form" novalidate>
+              <div class="form-grid">
+
+                <div class="form-field">
+                  <label for="contato-nome" class="form-label">Nome <span>*</span></label>
+                  <input type="text" id="contato-nome" name="nome" class="form-input"
+                         placeholder="Seu nome completo" required autocomplete="name"
+                         aria-required="true">
+                </div>
+
+                <div class="form-field">
+                  <label for="contato-telefone" class="form-label">Telefone <span>*</span></label>
+                  <input type="tel" id="contato-telefone" name="telefone" class="form-input"
+                         placeholder="(41) 9 0000-0000" required autocomplete="tel"
+                         aria-required="true">
+                </div>
+
+                <div class="form-field-full">
+                  <label for="contato-email" class="form-label">E-mail</label>
+                  <input type="email" id="contato-email" name="email" class="form-input"
+                         placeholder="seu@email.com" autocomplete="email">
+                </div>
+
+                <div class="form-field-full">
+                  <label for="contato-interesse" class="form-label">O que você procura? <span>*</span></label>
+                  <select id="contato-interesse" name="interesse" class="form-select" required aria-required="true">
+                    <option value="" disabled selected>Selecione uma opção</option>
+                    <option value="musculacao">Musculação</option>
+                    <option value="jump">Jump</option>
+                    <option value="funcional">Funcional</option>
+                    <option value="pilates">Pilates</option>
+                    <option value="cardio">Cardio</option>
+                    <option value="outro">Outra modalidade</option>
+                    <option value="informacoes">Informações gerais</option>
+                  </select>
+                </div>
+
+                <div class="form-field-full">
+                  <label for="contato-mensagem" class="form-label">Mensagem</label>
+                  <textarea id="contato-mensagem" name="mensagem" class="form-textarea"
+                            placeholder="Conte um pouco sobre seus objetivos ou dúvidas..."
+                            aria-label="Campo de mensagem opcional"></textarea>
+                </div>
+
+                <div class="form-field-full">
+                  <button type="submit" class="form-submit-btn ripple-btn magnetic-btn"
+                          aria-label="Enviar formulário de contato para a Exclusiva Fitness">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <line x1="22" y1="2" x2="11" y2="13"/>
+                      <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                    </svg>
+                    Enviar mensagem
+                  </button>
+                  <p class="form-privacy">
+                    Seus dados estão protegidos conforme nossa
+                    <a href="#politica-privacidade" aria-label="Ler política de privacidade">política de privacidade</a>.
+                    Não enviamos spam.
+                  </p>
+                </div>
+
+              </div>
+            </form>
+          </div>
+
+          <!-- Success State (hidden by default) -->
+          <div id="contato-success" class="form-success" aria-live="polite" aria-atomic="true">
+            <div class="form-success-icon">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+            </div>
+            <h3 class="reveal-left form-success-title">Mensagem enviada!</h3>
+            <p class="
+<!-- /SECTION:contato -->
+<!-- SECTION:footer -->
+<!-- SECTION:footer -->
+<section id="footer" class="section-bg-dark" style="background:var(--color-background);border-top:1px solid var(--color-border);transition:background-color 0.3s ease,color 0.3s ease,border-color 0.3s ease;">
+  <style>
+    #footer {
+      background: var(--color-background);
+      color: var(--color-text);
+      transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+    }
+    #footer .footer-brand-initial {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      background: var(--color-primary);
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-weight: 800;
+      font-size: 1.25rem;
+      flex-shrink: 0;
+    }
+    #footer .footer-link {
+      color: var(--color-muted);
+      text-decoration: none;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.875rem;
+      transition: color 0.2s ease;
+    }
+    #footer .footer-link:hover {
+      color: var(--color-primary);
+    }
+    #footer .footer-divider {
+      border: none;
+      border-top: 1px solid var(--color-border);
+      margin: 2rem 0;
+      transition: border-color 0.3s ease;
+    }
+    #footer .footer-social-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      border: 1px solid var(--color-border);
+      background: transparent;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+      cursor: pointer;
+      text-decoration: none;
+    }
+    #footer .footer-social-btn:hover {
+      background: var(--color-primary);
+      border-color: var(--color-primary);
+      transform: translateY(-2px);
+    }
+    #footer .footer-social-btn:hover svg {
+      stroke: #ffffff;
+    }
+    #footer .footer-social-btn svg {
+      stroke: var(--color-muted);
+      transition: stroke 0.2s ease;
+    }
+    #footer .footer-cta-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.625rem 1.25rem;
+      border-radius: 9999px;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.875rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+    }
+    #footer .footer-cta-btn:hover {
+      transform: translateY(-1px);
+      opacity: 0.92;
+    }
+    #footer .footer-cta-btn:active {
+      transform: scale(0.98);
+    }
+    #footer .footer-cta-wpp {
+      background: #25D366;
+      color: #ffffff;
+    }
+    #footer .footer-cta-tel {
+      background: var(--color-primary);
+      color: #ffffff;
+    }
+    #footer .footer-nav-heading {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-weight: 800;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--color-muted);
+      margin-bottom: 1rem;
+    }
+    #footer .footer-nav-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 0.625rem;
+    }
+    #footer .footer-accent-bar {
+      width: 32px;
+      height: 3px;
+      border-radius: 9999px;
+      background: var(--color-accent);
+      margin-bottom: 1rem;
+    }
+    #footer .footer-brand-name {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-weight: 800;
+      font-size: clamp(1rem, 2vw, 1.125rem);
+      color: var(--color-text);
+      line-height: 1.2;
+      transition: color 0.3s ease;
+    }
+    #footer .footer-brand-tagline {
+      font-family: 'Inter', sans-serif;
+      font-size: 0.8125rem;
+      color: var(--color-muted);
+      margin-top: 0.25rem;
+      transition: color 0.3s ease;
+    }
+    #footer .footer-address-block {
+      font-family: 'Inter', sans-serif;
+      font-size: 0.875rem;
+      color: var(--color-muted);
+      line-height: 1.65;
+      transition: color 0.3s ease;
+    }
+    #footer .footer-copyright {
+      font-family: 'Inter', sans-serif;
+      font-size: 0.8125rem;
+      color: var(--color-muted);
+      transition: color 0.3s ease;
+    }
+    #footer .footer-legal-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      align-items: center;
+    }
+    #footer .footer-legal-dot {
+      width: 3px;
+      height: 3px;
+      border-radius: 50%;
+      background: var(--color-border);
+      display: inline-block;
+    }
+    @media (max-width: 767px) {
+      #footer .footer-grid {
+        grid-template-columns: 1fr !important;
+        gap: 2.5rem !important;
+      }
+      #footer .footer-bottom-row {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 1rem !important;
+      }
+      #footer .footer-legal-links {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+      }
+      #footer .footer-legal-dot {
+        display: none;
+      }
+    }
+  </style>
+
+  <div style="max-width:1200px;margin:0 auto;padding:4rem 1.5rem 2rem;">
+
+    <!-- Top grid -->
+    <div class="footer-grid" style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:3rem;margin-bottom:0;">
+
+      <!-- Brand column -->
+      <div class="reveal">
+        <div style="display:flex;align-items:center;gap:0.875rem;margin-bottom:1.25rem;">
+          <div class="footer-brand-initial" aria-hidden="true">E</div>
+          <div>
+            <div class="footer-brand-name">Exclusiva Fitness</div>
+            <div class="footer-brand-tagline">Academia Feminina — Campina Grande do Sul</div>
+          </div>
+        </div>
+
+        <div class="footer-accent-bar"></div>
+
+        <p class="footer-address-block" style="margin-bottom:1.5rem;">
+          Um espaço criado por mulheres,<br>
+          para mulheres. Treine com quem<br>
+          entende o seu corpo e os seus objetivos.
+        </p>
+
+        <!-- Address -->
+        <address style="font-style:normal;" class="footer-address-block" itemscope itemtype="https://schema.org/PostalAddress">
+          <div style="display:flex;align-items:flex-start;gap:0.5rem;margin-bottom:0.5rem;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:2px;" aria-hidden="true">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+            </svg>
+            <span>
+              <span itemprop="addressLocality">Campina Grande do Sul</span>,
+              <span itemprop="addressRegion">PR</span>
+            </span>
+          </div>
+          <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.18 2 2 0 0 1 3.6 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.6a16 16 0 0 0 6.29 6.29l.96-.96a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>
+            </svg>
+            <a href="tel:+5541997515712" class="footer-link" itemprop="telephone" aria-label="Ligar para Exclusiva Fitness">(41) 99751-5712</a>
+          </div>
+          <div style="display:flex;align-items:center;gap:0.5rem;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+            </svg>
+            <span class="footer-address-block" style="margin:0;">Horários: consulte pelo WhatsApp</span>
+          </div>
+        </address>
+
+        <!-- Social + CTA buttons -->
+        <div style="display:flex;align-items:center;gap:0.75rem;margin-top:1.75rem;flex-wrap:wrap;">
+          <a href="https://wa.me/5541997515712" target="_blank" rel="noopener noreferrer" class="footer-cta-btn footer-cta-wpp magnetic" aria-label="Falar pelo WhatsApp com Exclusiva Fitness">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z"/>
+            </svg>
+            WhatsApp
+          </a>
+          <a href="tel:+5541997515712" class="footer-cta-btn footer-cta-tel magnetic" aria-label="Ligar agora para Exclusiva Fitness">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.18 2 2 0 0 1 3.6 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.6a16 16 0 0 0 6.29 6.29l.96-.96a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>
+            </svg>
+            Ligar agora
+          </a>
+        </div>
+      </div>
+
+      <!-- Nav column: Navegação -->
+      <div class="reveal-left">
+        <p class="footer-nav-heading">Navegação</p>
+        <ul class="footer-nav-list" role="list">
+          <li><a href="#hero" class="footer-link">Início</a></li>
+          <li><a href="#sobre" class="footer-link">Sobre nós</a></li>
+          <li><a href="#servicos" class="footer-link">Modalidades</a></li>
+          <li><a href="#depoimentos" class="footer-link">Depoimentos</a></li>
+          <li><a href="#localizacao" class="footer-link">Localização</a></li>
+          <li><a href="#contato" class="footer-link">Contato</a></li>
+        </ul>
+      </div>
+
+      <!-- Nav column: Informações -->
+      <div class="reveal-left">
+        <p class="footer-nav-heading">Informações</p>
+        <ul class="footer-nav-list" role="list">
+          <li><a href="#contato" class="footer-link">Agende uma visita</a></li>
+          <li><a href="https://wa.me/5541997515712" target="_blank" rel="noopener noreferrer" class="magnetic footer-link">Consulte valores</a></li>
+          <li><a href="#localizacao" class="footer-link">Como chegar</a></li>
+          <li><a href="/politica-de-privacidade" class="footer-link">Política de Privacidade</a></li>
+          <li><a href="/termos-de-uso" class="footer-link">Termos de Uso</a></li>
+        </ul>
+
+        <!-- Horário badge -->
+        <div style="margin-top:1.75rem;padding:1rem;border-radius:12px;border:1px solid var(--color-border);background:var(--color-surface);transition:background 0.3s ease,border-color 0.3s ease;">
+          <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;">
+            <div style="width:8px;height:8px;border-radius:50%;background:#22c55e;flex-shrink:0;animation:footer-pulse 2s ease-in-out infinite;" aria-hidden="true"></div>
+            <span style="font-family:'Plus Jakarta Sans',sans-serif;font-weight:700;font-size:0.75rem;color:var(--color-text);text-transform:uppercase;letter-spacing:0.08em;">Atendimento</span>
+          </div>
+          <p style="font-family:'Inter',sans-serif;font-size:0.8125rem;color:var(--color-muted);margin:0;line-height:1.5;">
+            Consulte horários pelo<br>
+            <a class="magnetic" href="https://wa.me/5541997515712" target="_blank" rel="noopener noreferrer" style="color:var(--color-primary);font-weight:600;text-decoration:none;">WhatsApp</a>
+          </p>
+        </div>
+      </div>
+
+    </div><!-- /footer-grid -->
+
+    <hr class="footer-divider">
+
+    <!-- Bottom row -->
+    <div class="footer-bottom-row" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;">
+
+      <p class="footer-copyright">
+        &copy; <span id="footer-year"></span> Exclusiva Fitness — Academia Feminina. Todos os direitos reservados.
+      </p>
+
+      <div class="footer-legal-links">
+        <a href="/politica-de-privacidade" class="footer-link" aria-label="Política de Privacidade da Exclusiva Fitness">Política de Privacidade</a>
+        <span class="footer-legal-dot" aria-hidden="true"></span>
+        <a href="/termos-de-uso" class="footer-link" aria-label="Termos de Uso da Exclusiva Fitness">Termos de Uso</a>
+        <span class="footer-legal-dot" aria-hidden="true"></span>
+        <a href="https://wa.me/5541997515712" target="_blank" rel="noopener noreferrer" class="magnetic footer-link" aria-label="Falar com Exclusiva Fitness pelo WhatsApp">Fale conosco</a>
+      </div>
+
+      <!-- Schema.org micro-data badge -->
+      <div style="display:flex;align-items:center;gap:0.375rem;" aria-label="Academia localizada em Campina Grande do Sul, PR">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+        </svg>
+        <span style="font-family:'Inter',sans-serif;font-size:0.75rem;color:var(--color-muted);">Campina Grande do Sul, PR</span>
+      </div>
+
+    </div>
+
+  </div>
+
+  <style>
+    @keyframes footer-pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(1.3); }
+    }
+  </style>
+
+  <script>
+    (function() {
+      var el = document.getElementById('footer-year');
+      if (el) el.textContent = new Date().getFullYear();
+    })();
+  </script>
+
+  <!-- Schema.org JSON-LD -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "HealthClub",
+    "name": "Exclusiva Fitness - Academia Feminina",
+    "description": "Academia feminina em Campina Grande do Sul, PR. Espaço exclusivo para mulheres com acompanhamento personalizado.",
+    "address": {
+      "@type": "PostalAddress",
+      "addressLocality": "Campina Grande do Sul",
+      "addressRegion": "PR",
+      "addressCountry": "BR"
+    },
+    "telephone": "+5541997515712",
+    "url": "https://wa.me/5541997515712",
+    "openingHoursSpecification": {
+      "@type": "OpeningHoursSpecification",
+      "description": "Consulte horários pelo WhatsApp"
+    },
+    "sameAs": [
+      "https://wa.me/5541997515712"
+    ]
+  }
+  </script>
+
+</section>
+<!-- /SECTION:footer -->
+<!-- /SECTION:footer -->
+<!-- SECTION:lgpd -->
+<!-- SECTION:lgpd -->
+<section id="lgpd" aria-label="Banner de cookies e privacidade" style="position:fixed;bottom:0;left:0;right:0;z-index:9999;transition:transform 0.4s cubic-bezier(0.32,0.72,0,1),opacity 0.4s ease;" id="lgpd-banner">
+  <style>
+    #lgpd-banner {
+      background: var(--color-surface);
+      border-top: 1px solid var(--color-border);
+      box-shadow: 0 -8px 32px rgba(0,0,0,0.08);
+    }
+    #lgpd-banner.lgpd-hidden {
+      transform: translateY(110%);
+      opacity: 0;
+      pointer-events: none;
+    }
+    .lgpd-btn-accept {
+      background: var(--color-primary);
+      color: #ffffff;
+      border: none;
+      border-radius: 9999px;
+      padding: 0.6rem 1.5rem;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-weight: 700;
+      font-size: 0.875rem;
+      cursor: pointer;
+      transition: opacity 0.2s ease, transform 0.15s ease;
+      white-space: nowrap;
+    }
+    .lgpd-btn-accept:hover { opacity: 0.88; transform: translateY(-1px); }
+    .lgpd-btn-accept:active { transform: scale(0.97); }
+    .lgpd-btn-reject {
+      background: transparent;
+      color: var(--color-muted);
+      border: 1px solid var(--color-border);
+      border-radius: 9999px;
+      padding: 0.6rem 1.5rem;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-weight: 600;
+      font-size: 0.875rem;
+      cursor: pointer;
+      transition: border-color 0.2s ease, color 0.2s ease, transform 0.15s ease;
+      white-space: nowrap;
+    }
+    .lgpd-btn-reject:hover { border-color: var(--color-accent); color: var(--color-accent); transform: translateY(-1px); }
+    .lgpd-btn-reject:active { transform: scale(0.97); }
+    .lgpd-icon {
+      width: 2.25rem;
+      height: 2.25rem;
+      border-radius: 50%;
+      background: var(--color-primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    @media (max-width: 640px) {
+      .lgpd-inner { flex-direction: column; gap: 1rem; align-items: flex-start !important; }
+      .lgpd-actions { width: 100%; display: flex; gap: 0.75rem; }
+      .lgpd-btn-accept, .lgpd-btn-reject { flex: 1; text-align: center; }
+    }
+  </style>
+
+  <div class="lgpd-inner" style="max-width:72rem;margin:0 auto;padding:1rem 1.5rem;display:flex;align-items:center;gap:1.25rem;flex-wrap:wrap;">
+
+    <!-- Ícone -->
+    <div class="lgpd-icon" aria-hidden="true">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+      </svg>
+    </div>
+
+    <!-- Texto -->
+    <div style="flex:1;min-width:200px;">
+      <p style="font-family:'Plus Jakarta Sans',sans-serif;font-weight:700;font-size:0.875rem;color:var(--color-text);margin:0 0 0.2rem;">
+        Exclusiva Fitness usa cookies
+      </p>
+      <p style="font-family:'Inter',sans-serif;font-size:0.8rem;color:var(--color-muted);margin:0;line-height:1.5;">
+        Utilizamos cookies para melhorar sua experiência no site. Ao continuar, você concorda com nossa
+        <a href="/politica-de-privacidade" style="color:var(--color-primary);text-decoration:underline;font-weight:600;" aria-label="Leia nossa política de privacidade">Política de Privacidade</a>.
+        Seus dados são tratados conforme a <strong style="color:var(--color-text);">LGPD (Lei 13.709/2018)</strong>.
+      </p>
+    </div>
+
+    <!-- Ações -->
+    <div class="lgpd-actions" style="display:flex;gap:0.75rem;align-items:center;flex-shrink:0;">
+      <button
+        class="lgpd-btn-reject"
+        onclick="lgpdReject()"
+        aria-label="Rejeitar cookies não essenciais da Exclusiva Fitness"
+      >
+        Rejeitar
+      </button>
+      <button
+        class="lgpd-btn-accept"
+        onclick="lgpdAccept()"
+        aria-label="Aceitar cookies da Exclusiva Fitness"
+      >
+        Aceitar
+      </button>
+    </div>
+
+  </div>
+
+  <script>
+    (function() {
+      var banner = document.getElementById('lgpd-banner');
+      var stored = localStorage.getItem('exclusiva-fitness-lgpd');
+
+      if (stored === 'accepted' || stored === 'rejected') {
+        banner.classList.add('lgpd-hidden');
+      }
+
+      window.lgpdAccept = function() {
+        localStorage.setItem('exclusiva-fitness-lgpd', 'accepted');
+        banner.classList.add('lgpd-hidden');
+      };
+
+      window.lgpdReject = function() {
+        localStorage.setItem('exclusiva-fitness-lgpd', 'rejected');
+        banner.classList.add('lgpd-hidden');
+      };
+    })();
+  </script>
+</section>
+<!-- /SECTION:lgpd -->
+<!-- /SECTION:lgpd -->
+<script id="fralib-motion">window.addEventListener("load", () => {
+  if (typeof gsap === "undefined") {
+    setTimeout(() => { if (typeof gsap !== "undefined") { window.dispatchEvent(new Event("load")); } }, 800);
+    return;
+  }
+  gsap.registerPlugin(ScrollTrigger);
+
+  // ===== LENIS SMOOTH SCROLL =====
+  if (typeof Lenis !== "undefined") {
+    const lenis = new Lenis({ duration: 1.2, easing: t => Math.min(1, 1.001 - Math.pow(2, -10 * t)) });
+    gsap.ticker.add((time) => { lenis.raf(time * 1000); });
+    gsap.ticker.lagSmoothing(0);
+  }
+
+  // ===== PAINEIS ANIMADOS (fralib-panels) =====
+  // Cada section com .fralib-panels-container troca paineis internamente
+  document.querySelectorAll(".fralib-panels-container").forEach(container => {
+    const panels = container.querySelectorAll(".fralib-panel");
+    if (!panels.length) return;
+    const section = container.closest("section");
+    if (!section) return;
+
+    // Garantir overflow hidden na section
+    section.style.overflow = "hidden";
+    section.style.position = "relative";
+
+    // Posicionar paineis empilhados
+    panels.forEach((panel, i) => {
+      gsap.set(panel, {
+        position: "absolute", top: 0, left: 0,
+        width: "100%", height: "100%",
+        opacity: i === 0 ? 1 : 0,
+        zIndex: i === 0 ? 2 : 1,
+        pointerEvents: i === 0 ? "auto" : "none"
+      });
+    });
+    container.style.position = "relative";
+    container.style.height = "100%";
+
+    let current = 0;
+    let animating = false;
+
+    function goTo(next) {
+      if (animating || next === current || next < 0 || next >= panels.length) return;
+      animating = true;
+      const dir = next > current ? 1 : -1;
+      const outPanel = panels[current];
+      const inPanel = panels[next];
+
+      gsap.set(inPanel, { opacity: 0, y: dir * 60, zIndex: 2, pointerEvents: "none" });
+      gsap.set(outPanel, { zIndex: 1 });
+
+      const tl = gsap.timeline({ onComplete: () => {
+        gsap.set(outPanel, { opacity: 0, pointerEvents: "none", zIndex: 1 });
+        gsap.set(inPanel, { pointerEvents: "auto", zIndex: 2 });
+        current = next;
+        animating = false;
+        updateDots();
+      }});
+      tl.to(outPanel, { opacity: 0, y: -dir * 40, duration: 0.5, ease: "power2.in" }, 0);
+      tl.to(inPanel, { opacity: 1, y: 0, duration: 0.6, ease: "power3.out" }, 0.2);
+    }
+
+    // Dots de navegacao
+    const dots = document.createElement("div");
+    dots.style.cssText = "position:absolute;bottom:24px;left:50%;transform:translateX(-50%);display:flex;gap:8px;z-index:10;";
+    panels.forEach((_, i) => {
+      const dot = document.createElement("button");
+      dot.style.cssText = "width:8px;height:8px;border-radius:50%;border:none;cursor:pointer;transition:all 0.3s;background:" + (i === 0 ? "var(--color-accent,#e85d04)" : "rgba(255,255,255,0.4)") + ";";
+      dot.setAttribute("aria-label", "Painel " + (i+1));
+      dot.addEventListener("click", () => goTo(i));
+      dots.appendChild(dot);
+    });
+    section.appendChild(dots);
+
+    function updateDots() {
+      dots.querySelectorAll("button").forEach((d, i) => {
+        d.style.background = i === current ? "var(--color-accent,#e85d04)" : "rgba(255,255,255,0.4)";
+        d.style.transform = i === current ? "scale(1.4)" : "scale(1)";
+      });
+    }
+
+    // Auto-avancar a cada 5s se mais de 1 painel
+    if (panels.length > 1) {
+      let autoTimer = setInterval(() => { if (!animating) goTo((current + 1) % panels.length); }, 5000);
+      section.addEventListener("mouseenter", () => clearInterval(autoTimer));
+      section.addEventListener("mouseleave", () => { autoTimer = setInterval(() => { if (!animating) goTo((current + 1) % panels.length); }, 5000); });
+    }
+
+    // Setas de navegacao
+    if (panels.length > 1) {
+      ["prev","next"].forEach(dir => {
+        const btn = document.createElement("button");
+        btn.style.cssText = "position:absolute;" + (dir==="prev"?"left:16px":"right:16px") + ";top:50%;transform:translateY(-50%);z-index:10;width:40px;height:40px;border-radius:50%;border:none;cursor:pointer;background:rgba(0,0,0,0.3);color:white;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);";
+        btn.innerHTML = dir==="prev" ? "<svg width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'><polyline points='15,18 9,12 15,6'/></svg>" : "<svg width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'><polyline points='9,18 15,12 9,6'/></svg>";
+        btn.addEventListener("click", () => goTo(dir==="prev" ? current-1 : current+1));
+        section.appendChild(btn);
+      });
+    }
+  });
+
+  // ===== HERO: 3D cinematografico =====
+  const heroContent = document.querySelector("#hero > *, .hero > *, section:first-of-type > div:first-child");
+  if (heroContent) {
+    gsap.from(heroContent, { opacity: 0, scale: 0.92, y: 60, rotateX: 8, duration: 1.6, ease: "power4.out", delay: 0.2, transformPerspective: 1200 });
+  }
+  const heroBg = document.querySelector("#hero, section:first-of-type");
+  if (heroBg) {
+    gsap.to(heroBg, { backgroundPositionY: "40%", ease: "none", scrollTrigger: { trigger: heroBg, start: "top top", end: "bottom top", scrub: true } });
+  }
+
+  // ===== SOBRE: slide da esquerda =====
+  const sobre = document.querySelector("#sobre");
+  if (sobre) {
+    gsap.from(sobre.querySelectorAll("h2, h3, p, img"), { opacity: 0, x: -60, stagger: 0.15, duration: 1.0, ease: "power3.out", scrollTrigger: { trigger: sobre, start: "top 80%" } });
+  }
+
+  // ===== SERVICOS: stagger com scale + rotacao =====
+  const servicos = document.querySelector("#servicos");
+  if (servicos) {
+    const cards = servicos.querySelectorAll("[class*=card], article, li");
+    if (cards.length) {
+      gsap.from(cards, { opacity: 0, y: 70, scale: 0.92, rotateY: 8, stagger: 0.12, duration: 0.9, ease: "back.out(1.4)", scrollTrigger: { trigger: servicos, start: "top 78%" } });
+    }
+  }
+
+  // ===== DEPOIMENTOS: flip 3D stagger =====
+  const depo = document.querySelector("#depoimentos");
+  if (depo) {
+    const dc = depo.querySelectorAll("[class*=card], blockquote, article");
+    if (dc.length) {
+      gsap.from(dc, { opacity: 0, rotateX: 20, y: 50, stagger: 0.18, duration: 1.0, ease: "power2.out", scrollTrigger: { trigger: depo, start: "top 78%" } });
+    }
+  }
+
+  // ===== LOCALIZACAO: slide da direita =====
+  const loc = document.querySelector("#localizacao");
+  if (loc) {
+    gsap.from(loc.querySelectorAll("h2, h3, p, iframe"), { opacity: 0, x: 60, stagger: 0.12, duration: 1.0, ease: "power3.out", scrollTrigger: { trigger: loc, start: "top 80%" } });
+  }
+
+  // ===== CONTATO: scale in =====
+  const contato = document.querySelector("#contato");
+  if (contato) {
+    gsap.from(contato.querySelectorAll("h2, h3, form, input, button, a"), { opacity: 0, scale: 0.9, y: 30, stagger: 0.1, duration: 0.8, ease: "back.out(1.7)", scrollTrigger: { trigger: contato, start: "top 82%" } });
+  }
+
+  // ===== PARALLAX em elementos com data-speed =====
+  document.querySelectorAll(".parallax-layer, [data-speed]").forEach(el => {
+    const speed = parseFloat(el.dataset.speed || 0.3);
+    gsap.to(el, { y: () => window.innerHeight * speed, ease: "none", scrollTrigger: { trigger: el, start: "top bottom", end: "bottom top", scrub: true } });
+  });
+
+  // ===== CARDS 3D hover =====
+  document.querySelectorAll(".card-3d, [class*=card]").forEach(el => {
+    el.style.transformStyle = "preserve-3d";
+    el.style.willChange = "transform";
+    el.addEventListener("mouseenter", () => gsap.to(el, { rotateY: 6, rotateX: -3, scale: 1.03, duration: 0.4, ease: "power2.out" }));
+    el.addEventListener("mouseleave", () => gsap.to(el, { rotateY: 0, rotateX: 0, scale: 1, duration: 0.4, ease: "power2.out" }));
+  });
+
+  // ===== IMAGENS zoom =====
+  document.querySelectorAll("img[loading=lazy]").forEach(img => {
+    gsap.from(img, { opacity: 0, scale: 1.1, duration: 1.1, ease: "power3.out", scrollTrigger: { trigger: img, start: "top 85%" } });
+  });
+
+  // ===== MAGNETIC CTAs =====
+  document.querySelectorAll("a[href*='wa.me'], .magnetic").forEach(btn => {
+    if (btn.id === "wpp-float") return;
+    btn.addEventListener("mousemove", e => {
+      const r = btn.getBoundingClientRect();
+      gsap.to(btn, { x: (e.clientX-r.left-r.width/2)*0.3, y: (e.clientY-r.top-r.height/2)*0.3, duration: 0.3, ease: "power2.out" });
+    });
+    btn.addEventListener("mouseleave", () => gsap.to(btn, { x: 0, y: 0, duration: 0.5, ease: "elastic.out(1,0.3)" }));
+  });
+
+  // ===== SCROLL PROGRESS BAR =====
+  const bar = document.createElement("div");
+  bar.style.cssText = "position:fixed;top:0;left:0;height:3px;background:linear-gradient(90deg,var(--color-accent,#e85d04),var(--color-primary,#374151));z-index:9999;width:0;pointer-events:none";
+  document.body.prepend(bar);
+  gsap.to(bar, { width: "100%", ease: "none", scrollTrigger: { trigger: "body", start: "top top", end: "bottom bottom", scrub: 0.3 } });
+
+  // ===== COUNTER ANIMADO =====
+  document.querySelectorAll("[data-count]").forEach(el => {
+    ScrollTrigger.create({ trigger: el, start: "top 90%", onEnter: () => {
+      if (el.dataset.counted) return;
+      el.dataset.counted = "1";
+      const target = parseFloat(el.dataset.count), dur = 2000, t0 = Date.now();
+      const tick = () => { const p=Math.min((Date.now()-t0)/dur,1),e=1-Math.pow(1-p,3); el.textContent=Math.floor(target*e)+(el.dataset.suffix||""); if(p<1) requestAnimationFrame(tick); };
+      tick();
+    }});
+  });
+
+  // ===== H2/H3 fallback =====
+  document.querySelectorAll("h2, h3").forEach(el => {
+    if (!el.closest("#hero, #sobre, #servicos, #depoimentos, #localizacao, #contato")) {
+      gsap.from(el, { opacity: 0, y: 30, duration: 0.8, ease: "power3.out", scrollTrigger: { trigger: el, start: "top 88%" } });
+    }
+  });
+
+  // ===== WHATSAPP FLOAT PULSE =====
+  const wpp = document.getElementById("wpp-float");
+  if (wpp) gsap.to(wpp, { scale: 1.08, boxShadow: "0 0 0 16px rgba(37,211,102,0.15)", duration: 1.4, repeat: -1, yoyo: true, ease: "power1.inOut" });
+
+  // ===== DARK/LIGHT TOGGLE =====
+  (function() {
+    const saved = localStorage.getItem("fralib-theme");
+    const theme = saved || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    document.documentElement.setAttribute("data-theme", theme);
+    if (!document.getElementById("theme-toggle")) {
+      const btn = document.createElement("button");
+      btn.id = "theme-toggle";
+      btn.setAttribute("aria-label", "Alternar tema claro/escuro");
+      btn.style.cssText = "position:fixed;bottom:80px;right:16px;z-index:9997;width:40px;height:40px;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;background:var(--color-surface,#f9fafb);box-shadow:0 2px 12px rgba(0,0,0,0.2);transition:all 0.3s ease;opacity:0.9;";
+      btn.innerHTML = "<svg id='icon-sun' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' style='display:none'><circle cx='12' cy='12' r='5'/></svg><svg id='icon-moon' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'><path d='M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z'/></svg>";
+      document.body.appendChild(btn);
+      function upd(t) { document.getElementById("icon-sun").style.display=t==="dark"?"block":"none"; document.getElementById("icon-moon").style.display=t==="light"?"block":"none"; btn.style.color=t==="dark"?"#f0f0f5":"#374151"; }
+      upd(theme);
+      btn.addEventListener("click", () => { const n=document.documentElement.getAttribute("data-theme")==="dark"?"light":"dark"; document.documentElement.setAttribute("data-theme",n); localStorage.setItem("fralib-theme",n); upd(n); gsap.from(btn,{rotate:180,duration:0.4,ease:"back.out(1.7)"}); });
+    }
+  })();
+});
+</script>
+</body>
+</html>

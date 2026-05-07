@@ -1,0 +1,92 @@
+Traceback (most recent call last):
+  File "/root/fralib/backend/orquestrador_inteligente.py", line 66, in processar_lead_inteiro
+    existente = lead_db.buscar_por_id(lead_id)
+  File "/root/fralib/backend/core/database.py", line 156, in buscar_por_id
+    return dict(result) if result else None
+           ~~~~^^^^^^^^
+ValueError: dictionary update sequence element #0 has length 32; 2 is required
+[Validation] ✅ agent_rag disponível
+[Validation] ✅ skill_loader disponível
+[Validation] ✅ design_guidelines disponível
+[Validation] 🎯 Sistema de Validação Obrigatória carregado
+
+============================================================
+FRALIB ORQUESTRADOR - BUSCA REAL
+Nicho: academia | Cidade: Campina Grande Do Sul | Limite: 1
+============================================================
+
+[ORQUESTRADOR] 🕵️ Ativando Agente Hunter...
+[Hunter V2] Buscando 1 leads para academia em Campina Grande Do Sul
+[Hunter] Iniciando busca: academia em Campina Grande Do Sul
+[Hunter] Acessando: https://www.google.com/maps/search/academia+em+Campina+Grande+Do+Sul
+[Hunter] 6 resultados encontrados
+[Hunter] ✅ Nova Imperio Gym (Rating: 0.0)
+
+[ORQUESTRADOR] 🤖 Processando: Nova Imperio Gym
+[ORQUESTRADOR] ❌ Erro ao processar lead Nova Imperio Gym: dictionary update sequence element #0 has length 32; 2 is required
+
+============================================================
+PIPELINE FINALIZADA COM SUCESSO
+============================================================
+Traceback (most recent call last):
+  File "/root/fralib/backend/orquestrador_inteligente.py", line 66, in processar_lead_inteiro
+    existente = lead_db.buscar_por_id(lead_id)
+  File "/root/fralib/backend/core/database.py", line 156, in buscar_por_id
+    return dict(result) if result else None
+           ~~~~^^^^^^^^
+ValueError: dictionary update sequence element #0 has length 32; 2 is required
+[Validation] ✅ agent_rag disponível
+[Validation] ✅ skill_loader disponível
+[Validation] ✅ design_guidelines disponível
+[Validation] 🎯 Sistema de Validação Obrigatória carregado
+
+============================================================
+FRALIB ORQUESTRADOR - BUSCA REAL
+Nicho: academia | Cidade: Campina Grande Do Sul | Limite: 1
+============================================================
+
+[ORQUESTRADOR] 🕵️ Ativando Agente Hunter...
+[Hunter V2] Buscando 1 leads para academia em Campina Grande Do Sul
+[Hunter] Iniciando busca: academia em Campina Grande Do Sul
+[Hunter] Acessando: https://www.google.com/maps/search/academia+em+Campina+Grande+Do+Sul
+[Hunter] 6 resultados encontrados
+[Hunter] ✅ Nova Imperio Gym (Rating: 0.0)
+
+[ORQUESTRADOR] 🤖 Processando: Nova Imperio Gym
+[ORQUESTRADOR] ❌ Erro ao processar lead Nova Imperio Gym: dictionary update sequence element #0 has length 32; 2 is required
+
+============================================================
+PIPELINE FINALIZADA COM SUCESSO
+============================================================
+[Validation] ✅ agent_rag disponível
+[Validation] ✅ skill_loader disponível
+[Validation] ✅ design_guidelines disponível
+[Validation] 🎯 Sistema de Validação Obrigatória carregado
+
+============================================================
+FRALIB ORQUESTRADOR - BUSCA REAL
+Nicho: academia | Cidade: Campina Grande Do Sul | Limite: 1
+============================================================
+
+[ORQUESTRADOR] 🕵️ Ativando Agente Hunter...
+[Hunter V2] Buscando 1 leads para academia em Campina Grande Do Sul
+[Hunter] Iniciando busca: academia em Campina Grande Do Sul
+[Hunter] Acessando: https://www.google.com/maps/search/academia+em+Campina+Grande+Do+Sul
+[Hunter] 6 resultados encontrados
+[Hunter] ✅ Nova Imperio Gym (Rating: 0.0)
+
+[ORQUESTRADOR] 🤖 Processando: Nova Imperio Gym
+[ORQUESTRADOR] ℹ️ Lead ja existe, atualizando status
+[Caio] Qualificando lead: Nova Imperio Gym
+[Caio] Usando temperature=0.3 (consistente/objetivo)
+[Caio] Extraindo cores...
+
+[Color Extractor] Extraindo cores...
+[Color Extractor] Nenhuma cor extraida, usando fallback
+[Caio] ✅ Qualificado: QUENTE (score=75, tier=STANDARD)
+[Validation] WARNING Caio: RAG NAO foi usado
+[ORQUESTRADOR] ✅ Qualificacao concluida: 75 pts
+
+============================================================
+PIPELINE FINALIZADA COM SUCESSO
+============================================================

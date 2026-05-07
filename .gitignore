@@ -1,0 +1,1 @@
+*.pyc\n__pycache__/\n*.backup*\n.env\nfralib.db\ncheckpoints/

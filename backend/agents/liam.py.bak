@@ -1,0 +1,962 @@
+"""
+Liam — Gerador de HTML cinematografico para negocios locais
+Modulos: liam_models, liam_motion, liam_seo, liam_postprocess
+"""
+import sys
+import time
+import re
+import json
+sys.path.insert(0, "/root/fralib/backend/agents")
+
+from pydantic import BaseModel, Field
+from typing import Optional, List, Dict, Any
+from llm_direct import call_claude, call_claude_structured
+from memory import salvar_memoria
+from agent_rag import format_rag_prompt, get_agent_temperature, buscar_contexto_rag, mark_rag_used
+from validation_layer import validar_html, gerar_prompt_retry
+from skill_loader import get_skills_agente, carregar_skills
+from color_enforcer import enforce_colors
+from animation_injector import inject_animation_classes
+
+# Importar modulos Liam
+from liam_models import LiamInput, LiamOutput
+from liam_motion import MOTION_SCRIPT
+from liam_seo import gerar_seo_tags, gerar_whatsapp_float
+
+def construir_site(lead: LiamInput) -> LiamOutput:
+    """
+    Constrói site HTML completo
+
+    Args:
+        lead: Dados do lead + briefing do Theo
+
+    Returns:
+        HTML completo validado
+    """
+    # ✅ PROCESSAR IMAGENS (Base64 para logo, CDN/lazy para fotos)
+    fotos_processadas = []
+    logo_base64 = None
+
+    for i, foto in enumerate(lead.fotos or []):
+        if foto.startswith('data:image'):
+            # Já é base64
+            if i == 0:  # Primeira foto é o logo
+                logo_base64 = foto
+            fotos_processadas.append(foto)
+        elif foto.startswith('http'):
+            # URL externa (CDN) - manter como está
+            fotos_processadas.append(foto)
+        else:
+            # Caminho local ou inválido: usar placeholder
+            placeholder = f"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='600'%3E%3Crect fill='%23ddd' width='800' height='600'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' fill='%23999' font-size='24'%3EImagem {i+1}%3C/text%3E%3C/svg%3E"
+            fotos_processadas.append(placeholder)
+
+    # Atualizar lead com fotos processadas
+    lead.fotos = fotos_processadas
+
+    # Preparar string de fotos para o prompt
+    fotos_base64_texto = "\n".join([
+        f"Foto {i+1}: {'[BASE64]' if foto.startswith('data:') else foto[:80]+'...'}"
+        for i, foto in enumerate(fotos_processadas)
+    ]) if fotos_processadas else "SEM FOTOS"
+
+
+    # Carregar RAG completo do Liam (animacoes, SEO, componentes, guardrails)
+    rag_liam = buscar_contexto_rag("html cinematografico animacoes seo", "liam")
+    mark_rag_used("liam")
+    print("[Liam] RAG carregado: " + str(len(rag_liam)) + " chars")
+
+    # Carregar skills de design (ui-ux-pro-max, design-system, ui-styling)
+    _skills_list = get_skills_agente("liam")
+    _skills_content = carregar_skills(_skills_list)
+    if _skills_content:
+        rag_liam = rag_liam + "\n\n# SKILLS DE DESIGN:\n" + _skills_content
+        print("[Liam] Skills carregadas: " + ", ".join(_skills_list) + " (" + str(len(_skills_content)) + " chars)")
+
+    # Formatar reviews
+    reviews_texto = "\n".join([
+        f"- \"{r.get('texto', r.get('text', ''))}\" - {r.get('autor', r.get('author', 'Cliente'))}"
+        for r in (lead.reviews or [])[:10]
+    ]) or "- Sem reviews"
+
+    # Modo visual: detectar pelo background do PRD (decidido pelo Arquiteto Mestre)
+    briefing_upper = (lead.briefing or "").upper()
+    _bg_check = (lead.colors or {}).get("background", "#ffffff").lower().strip()
+    _dark_keywords = ("#0", "#1", "slate", "zinc", "dark", "black", "gray-9", "neutral-9", "stone-9")
+    is_dark_mode = any(_bg_check.startswith(k) or k in _bg_check for k in _dark_keywords)
+
+    # Formatar paleta — usa chaves primary/secondary/accent do _alex_colors
+    paleta_texto = ""
+    if lead.colors and isinstance(lead.colors, dict):
+        _c = lead.colors
+        _bg = _c.get('background', '#ffffff')
+        _txt = _c.get('text', '#1f2937')
+        paleta_texto = (
+            f"Primária: {_c.get('primary', _c.get('primaria', '#374151'))}\n"
+            f"Secundária: {_c.get('secondary', _c.get('secundaria', '#f9fafb'))}\n"
+            f"Acento: {_c.get('accent', _c.get('acento', '#e85d04'))}\n"
+            f"Background: {_bg}\n"
+            f"Texto: {_txt}\n"
+            f"Raciocínio: {_c.get('reasoning', 'Paleta do cliente')}"
+        )
+    else:
+        _bg_fb = '#ffffff'
+        _txt_fb = '#1f2937'
+        paleta_texto = f"Primária: #374151\nSecundária: #f9fafb\nAcento: #e85d04\nBackground: {_bg_fb}\nTexto: {_txt_fb}"
+
+    # Formatar instruções
+
+    # Escapar chaves para evitar erro de f-string
+    briefing_safe = lead.briefing.replace('{', '{{').replace('}', '}}') if lead.briefing else ''
+    nome_safe = lead.nome.replace('{', '{{').replace('}', '}}') if lead.nome else ''
+    cidade_safe = lead.cidade.replace('{', '{{').replace('}', '}}') if lead.cidade else ''
+    segmento_safe = lead.segmento.replace('{', '{{').replace('}', '}}') if lead.segmento else ''
+
+
+    print(f"[Liam] Gerando HTML para {lead.nome}...")
+
+    # ✅ Integrar RAG
+    temperature = get_agent_temperature("liam")
+    print(f"[Liam] Usando temperature={temperature} (balanceado)")
+
+    # ===== GERACAO EM BLOCOS =====
+    # Extrair layout_type do PRD se disponivel
+    _prd_sections = getattr(lead, "prd_sections", None) or []
+    _layout_map = {}
+    for _s in _prd_sections:
+        _sd = _s.dict() if hasattr(_s, "dict") else (_s if isinstance(_s, dict) else {})
+        if _sd.get("name") and _sd.get("layout_type"):
+            _layout_map[_sd["name"]] = _sd["layout_type"]
+
+    SECOES = [
+        ("hero",        "Hero: nome, headline impactante, CTA WhatsApp, imagem fundo"),
+        ("sobre",       "Sobre: historia, diferenciais, missao e valores"),
+        ("servicos",    "Servicos/Planos: cards com servicos - NUNCA incluir precos ou valores, usar CTA Consulte valores"),
+        ("depoimentos", "Depoimentos: use as reviews reais fornecidas como texto. Avatar = div redondo com inicial do nome + background var(--color-primary). NUNCA foto de pessoa. Fundo escuro. Stagger de entrada. Minimo 4 cards."),
+        ("localizacao", "Localizacao: endereco, mapa embed, horarios"),
+        ("contato",     "Contato: formulario, CTA WhatsApp"),
+        ("footer",      "Footer: nome, endereco, copyright, link politica de privacidade, link termos de uso"),
+        ("lgpd",        "Banner LGPD: cookies com botoes Aceitar e Rejeitar, salvar em localStorage"),
+    ]
+    # Modo visual (is_dark_mode ja definido acima)
+    modo_str = "DARK" if is_dark_mode else "LIGHT"
+    print("[Liam] Modo visual: " + modo_str)
+
+    # Definir variaveis de paleta
+    if lead.colors and isinstance(lead.colors, dict):
+        paleta_primary = lead.colors.get("primary", lead.colors.get("primaria", "#374151"))
+        paleta_secondary = lead.colors.get("secondary", lead.colors.get("secundaria", "#f9fafb"))
+        paleta_accent = lead.colors.get("accent", lead.colors.get("acento", "#e85d04"))
+        paleta_background = lead.colors.get("background", "#ffffff")
+        paleta_text = lead.colors.get("text", "#1f2937")
+    else:
+        paleta_primary = "#374151"
+        paleta_secondary = "#f9fafb"
+        paleta_accent = "#a855f7"
+        paleta_background = "#ffffff"
+        paleta_text = "#1f2937"
+
+    # Variaveis CSS fixas - TODOS os blocos devem usar APENAS estas
+    nl = chr(10)
+    css_vars_fixas = (
+        "VARIAVEIS CSS OBRIGATORIAS (use APENAS estas, nunca invente outras):" + nl +
+        "--color-primary: " + paleta_primary + nl +
+        "--color-secondary: " + paleta_secondary + nl +
+        "--color-accent: " + paleta_accent + nl +
+        "--color-background: " + paleta_background + nl +
+        "--color-text: " + paleta_text + nl +
+        "--color-surface: #f9fafb" + nl +
+        "--color-border: #e5e7eb" + nl +
+        "--color-muted: #6b7280" + nl +
+        "PROIBIDO usar: --bg, --text, --bg-color, --text-color, --card-bg, --bg-primary, --text-primary, --border-color ou qualquer outra variavel nao listada acima."
+    )
+    system_bloco = (
+        "Voce e Liam, desenvolvedor frontend senior especialista em HTML/Tailwind estatico. "
+        "Voce e CEGO PARA DESIGN PROPRIO — nao tem opiniao sobre cores, layout ou estetica. "
+        "Voce executa EXATAMENTE a instrucao_criativa_para_dev fornecida pelo Arquiteto Mestre. "
+        "Se a instrucao_criativa_para_dev disser dark, voce faz dark. Se disser glassmorphism, voce faz glassmorphism. Sem desvios. "
+        "REGRAS ABSOLUTAS (fonte unica de verdade — sem excecoes):" +
+        " 1. Retorne APENAS o fragmento HTML da secao — comecando com <section> e terminando com </section>. NUNCA inclua <!DOCTYPE>, <html>, <head>, <body> ou qualquer tag de documento. Apenas o fragmento puro da secao. " +
+        " 2. Use Tailwind CSS via CDN. " +
+        " 3. " + css_vars_fixas + " " +
+        " 4. CORES: NUNCA use cores hardcoded. SEMPRE var(--color-primary), var(--color-accent) etc. " +
+        " 5. SECOES: APENAS section#hero usa height:100vh;overflow:hidden. Todas as outras sections crescem livremente com o conteudo (sem height fixo). NUNCA force altura em sections que nao sejam o hero. " +
+       
+        " 7. HERO: section#hero com style=height:100vh;overflow:hidden. Imagem de fundo com background-size:cover. " +
+        " 8. TIPOGRAFIA: h1/h2/h3 usam font-family=Plus Jakarta Sans,sans-serif font-weight=800. Corpo usa font-family=Inter,sans-serif. h1 clamp(2.5rem,6vw,5rem) line-height=1.1. h2 clamp(1.8rem,4vw,3rem) line-height=1.2. h3 clamp(1.2rem,3vw,2rem). p line-height=1.65. NUNCA font-size em px. " + " 8b. BACKGROUNDS: NUNCA use fundo branco chapado. Cada section DEVE ter uma classe de background diferente. Classes disponiveis: section-bg-dark (escuro premium), section-bg-subtle (gradiente suave claro), section-bg-brand (gradiente da marca primary->accent), section-bg-mesh (mesh gradient com cores da marca). Adicione a classe diretamente na tag section. text_on_primary=" + (lead.colors or {}).get("text_on_primary","#ffffff") + " text_on_accent=" + (lead.colors or {}).get("text_on_accent","#ffffff") + " (use para texto sobre botoes coloridos). " +
+        " 9. GRID: use grid-cols com proporcao 60/40 ou 40/60. NUNCA 50/50. " +
+        " 10. DEPOIMENTOS: avatar = div.w-12.h-12.rounded-full com inicial do nome + style=background:var(--color-primary). NUNCA foto de pessoa real. " +
+        " 11. PRECOS: NUNCA coloque valores ou precos. Use CTA: Consulte nossos valores. " +
+        " 12. CONTEUDO: NUNCA use lorem ipsum. NUNCA invente dados. Use APENAS dados reais fornecidos. " +
+        " 13. FOTOS: use as URLs exatas fornecidas com <img src=URL loading=lazy alt=...>. EXCECAO CRITICA: a imagem principal do hero NUNCA usa loading=lazy — use loading=eager para nao penalizar LCP (Core Web Vitals). Se nao houver fotos suficientes, use as fotos Unsplash fornecidas no PRD (campo photos). NUNCA use imagens de pessoas, rostos ou contextos errados. REGRA DE FERRO: ZERO faces humanas em qualquer imagem do site — use apenas fotos de ambiente, equipamentos, produtos ou arquitetura. " +
+       
+        " 15. CLASSES ANIM: adicione nas tags HTML: reveal, reveal-left, scale-in, card-3d, parallax-layer, stagger-reveal, magnetic. " +
+       
+        " 17. H1: deve conter nome do negocio E cidade. Copy criativo vai no subtitulo h2 abaixo. " +
+        " 18. TELEFONE: incluir botao tel: clicavel em todas as secoes de CTA e no header/footer. " +
+        " 19. WHATSAPP: https://wa.me/55" + (lead.whatsapp or lead.telefone or "").replace(" ","").replace("-","").replace("(","").replace(")","") + " " +
+        " 20. NEGOCIO: " + lead.nome + " | CIDADE: " + lead.cidade + " | SEGMENTO: " + lead.segmento + " | RATING: " + str(lead.rating) + "/5 " +
+        " 21. LOGO: " + (lead.logo_url or "nao disponivel") + " — use como <img src=URL class=h-10 w-auto object-contain> no header e footer. Se nao disponivel, use div com inicial da marca. " +
+        " 22. FOTOS DISPONIVEIS: " + str(len(lead.fotos or [])) + " fotos. " + " 23. TOGGLE DIA/NOITE OBRIGATORIO EM TODO SITE: TODOS os backgrounds usam var(--color-background). TODOS os textos usam var(--color-text). TODOS os cards e superficies usam var(--color-surface). NUNCA use bg-white bg-gray-900 text-white text-black hardcoded. O toggle e injetado automaticamente pelo sistema — apenas garanta que o HTML use as CSS variables corretas."
+    )
+    print(f"[Liam] Gerando HTML em {len(SECOES)} blocos...")
+    blocos_html = []
+    _tem_reviews = bool(lead.reviews)
+    for secao_id, secao_desc in SECOES:
+        # Depoimentos sem reviews reais = bloco vazio — nunca inventar
+        if secao_id == "depoimentos" and not _tem_reviews:
+            blocos_html.append(
+                "<!-- SECTION:depoimentos -->\n"
+                "<!-- depoimentos omitidos: sem reviews reais -->\n"
+                "<!-- /SECTION:depoimentos -->"
+            )
+            print("[Liam] Depoimentos: sem reviews reais, bloco omitido")
+            continue
+        # Reviews: depoimentos + sobre + hero recebem reviews reais
+        reviews_para_secao = reviews_texto if secao_id in ("depoimentos", "sobre", "hero") and _tem_reviews else ""
+        # Briefing COMPLETO para todos os blocos — sem truncamento
+        # Cada bloco precisa do contexto total para manter consistencia entre secoes
+        briefing_curto = lead.briefing or ""
+        sep = chr(10)
+        logo_instrucao = ("Logo: " + lead.logo_url + " — use exatamente esta URL no header: <img src=URL class=h-10 w-auto object-contain alt=Logo loading=eager>") if lead.logo_url else "Logo: nao disponivel — use div com inicial da marca em var(--color-primary)."
+        # Dados reais obrigatorios por bloco
+        dados_reais = (
+            "DADOS REAIS OBRIGATORIOS — PROIBIDO conteudo generico:" + sep +
+            "Negocio: " + lead.nome + sep +
+            "Cidade: " + lead.cidade + sep +
+            "Segmento: " + lead.segmento + sep +
+            "Telefone: " + (lead.telefone or "") + sep +
+            "WhatsApp: https://wa.me/55" + (lead.whatsapp or lead.telefone or "").replace(" ","").replace("-","").replace("(","").replace(")","") + sep +
+            "Rating: " + str(lead.rating) + "/5" + sep +
+            "Cores: primary=" + paleta_primary + " accent=" + paleta_accent + " background=" + paleta_background
+        )
+        # Atribuir fotos especificas por secao usando classificacao do Alex
+        fotos_disponiveis = lead.fotos or []
+        fc = lead.fotos_classificadas or {}
+        fotos_instrucao = ""
+
+        def _pick(tipos, fallback_idx=0):
+            for t in tipos:
+                urls = fc.get(t, [])
+                if urls:
+                    return urls[0]
+            return fotos_disponiveis[fallback_idx] if len(fotos_disponiveis) > fallback_idx else (fotos_disponiveis[0] if fotos_disponiveis else "")
+
+        def _pick_multi(tipos, n=3, fallback_start=0):
+            result = []
+            for t in tipos:
+                result.extend(fc.get(t, []))
+            if not result:
+                result = fotos_disponiveis[fallback_start:fallback_start+n]
+            return result[:n]
+
+        if fotos_disponiveis or fc:
+            if secao_id == "hero":
+                f = _pick(["fachada", "ambiente_interno"], 0)
+                fotos_instrucao = "FOTO HERO (use como background da secao): " + f if f else ""
+            elif secao_id == "sobre":
+                f = _pick(["ambiente_interno", "equipe", "fachada"], 1)
+                fotos_instrucao = "FOTO SOBRE (use na secao sobre nos): " + f if f else ""
+            elif secao_id == "servicos":
+                fs = _pick_multi(["equipamento", "ambiente_interno", "produto"], 3, 2)
+                fotos_instrucao = "FOTOS SERVICOS (use nos cards de servicos): " + " | ".join(fs) if fs else ""
+            elif secao_id == "depoimentos":
+                fs = _pick_multi(["equipe", "ambiente_interno"], 3, 5)
+                fotos_instrucao = "FOTOS DEPOIMENTOS (use como avatares/background): " + " | ".join(fs) if fs else ""
+            elif secao_id == "localizacao":
+                f = _pick(["fachada", "ambiente_interno"], -1)
+                fotos_instrucao = "FOTO LOCALIZACAO (use na secao): " + f if f else ""
+            if fotos_instrucao:
+                fotos_instrucao += "\nIMPORTANTE: Use EXATAMENTE esta URL no <img src=\"...\">. NUNCA invente URLs."
+
+
+        _layout_instrucao = ""
+        if secao_id in _layout_map:
+            _lt = _layout_map[secao_id]
+            _layout_instrucao = ("LAYOUT OBRIGATORIO: " + _lt + " — construa o DOM Tailwind exatamente para este layout. "
+                "hero-split=flex row texto 60% esquerda img 40% direita. "
+                "hero-center=texto centralizado overlay escuro. "
+                "sobre-timeline=lista vertical com linha conectora. "
+                "sobre-grid=grid 2col texto esquerda mosaico fotos direita. "
+                "services-cards=grid 3col cards com sombra hover. "
+                "services-accordion=lista chevron expande JS vanilla. "
+                "reviews-masonry=grid 3col altura variavel. "
+                "reviews-carousel=scroll horizontal snap. "
+                "location-split=grid 2col mapa esq info dir. "
+                "location-full=mapa full-width info abaixo. "
+                "contact-minimal=form centralizado fundo claro. "
+                "contact-split=info esq CTA dir.")
+
+        partes = [
+            "Gere APENAS a secao " + secao_id + " do site.",
+            "Descricao: " + secao_desc,
+            "Comece com <!-- SECTION:" + secao_id + " --> e termine com <!-- /SECTION:" + secao_id + " -->",
+            dados_reais,
+            "Briefing estrategico: " + briefing_curto,
+            logo_instrucao,
+        ]
+        if _layout_instrucao:
+            partes.insert(1, _layout_instrucao)
+        if fotos_instrucao:
+            partes.append(fotos_instrucao)
+        if reviews_para_secao:
+            partes.append("Reviews reais para usar: " + reviews_para_secao)
+        prompt_bloco = sep.join(partes)
+        # Retry ate 3x para blocos que falham por timeout/502/524
+        bloco = None
+        for _tentativa in range(1, 4):
+            try:
+                bloco = call_claude(
+                    system=system_bloco + "\n\n# CONHECIMENTO TECNICO RAG:\n" + rag_liam,
+                    user=prompt_bloco,
+                    model="sonnet",
+                    max_tokens=8000,
+                    temperature=temperature,
+                )
+                bloco = bloco.replace("```html", "").replace("```", "").strip()
+                # Remover DOCTYPE, html, head, body — bloco deve ser fragmento puro
+                import re as _re_clean
+                bloco = _re_clean.sub(r'(?i)<!DOCTYPE[^>]*>', '', bloco)
+                bloco = _re_clean.sub(r'(?i)<html[^>]*>', '', bloco)
+                bloco = _re_clean.sub(r'(?i)</html>', '', bloco)
+                bloco = _re_clean.sub(r'(?i)<head[^>]*>.*?</head>', '', bloco, flags=_re_clean.DOTALL)
+                bloco = _re_clean.sub(r'(?i)<body[^>]*>', '', bloco)
+                bloco = _re_clean.sub(r'(?i)</body>', '', bloco)
+                bloco = bloco.strip()
+                if bloco and len(bloco) > 100:
+                    print("[Liam] Bloco " + secao_id + ": " + str(len(bloco)) + " chars")
+                    break
+                else:
+                    print(f"[Liam] Bloco {secao_id} vazio na tentativa {_tentativa}, retentando...")
+                    bloco = None
+            except Exception as e:
+                print(f"[Liam] Erro bloco {secao_id} tentativa {_tentativa}/3: {str(e)[:80]}")
+                if _tentativa < 3:
+                    import time as _time_retry; _time_retry.sleep(3 * _tentativa)
+                else:
+                    raise
+        if bloco:
+            # Adicionar tags SECTION para auditoria da Liz
+            bloco_com_tags = "<!-- SECTION:" + secao_id + " -->\n" + bloco + "\n<!-- /SECTION:" + secao_id + " -->"
+            blocos_html.append(bloco_com_tags)
+        else:
+            raise Exception(f"Bloco {secao_id} falhou apos 3 tentativas")
+            blocos_html.append(
+                "<!-- SECTION:" + secao_id + " -->"
+                "<section id='" + secao_id + "'>"
+                "<div class='py-16 px-4 text-center'>"
+                "<h2 class='text-2xl font-bold'>" + secao_id.title() + "</h2>"
+                "</div></section>"
+                "<!-- /SECTION:" + secao_id + " -->"
+            )
+    body_content = chr(10).join(blocos_html)
+
+    static_head = (
+        chr(60) + 'head' + chr(62) + chr(10) +
+        '  ' + chr(60) + 'meta charset="UTF-8"' + chr(62) + chr(10) +
+        '  ' + chr(60) + 'link rel="preconnect" href="https://fonts.googleapis.com"' + chr(62) + chr(10) +
+        '  ' + chr(60) + 'link rel="preconnect" href="https://fonts.gstatic.com" crossorigin' + chr(62) + chr(10) +
+        '  ' + chr(60) + 'meta name="viewport" content="width=device-width, initial-scale=1.0"' + chr(62) + chr(10) +
+        '  ' + chr(60) + 'title' + chr(62) + lead.nome + ' | ' + lead.cidade + chr(60) + '/title' + chr(62) + chr(10) +
+        '  ' + chr(60) + 'script src="https://cdn.tailwindcss.com" defer' + chr(62) + chr(60) + '/script' + chr(62) + chr(10) +
+        '  ' + chr(60) + 'link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"' + chr(62) + chr(10) +
+        '  ' + chr(60) + 'script src="https://cdn.jsdelivr.net/npm/@studio-freight/lenis@1.0.42/dist/lenis.min.js" defer' + chr(62) + chr(60) + '/script' + chr(62) + chr(10) +
+        '  ' + chr(60) + 'script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js" defer' + chr(62) + chr(60) + '/script' + chr(62) + chr(10) +
+        '  ' + chr(60) + 'script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js" defer' + chr(62) + chr(60) + '/script' + chr(62) + chr(10) +
+        '  ' + chr(60) + 'script src="https://cdn.jsdelivr.net/npm/motion@11.11.9/dist/motion.js" defer' + chr(62) + chr(60) + '/script' + chr(62) + chr(10) +
+        '  ' + chr(60) + 'style id="fralib-base"' + chr(62) + chr(10) +
+        '  /* FONTE UNICA DE VERDADE: cores injetadas pelo color_enforcer via fralib-colors */\n' +
+        '  /* Este bloco cuida apenas de: toggle dark/light, tipografia, componentes */\n' +
+        '  [data-theme="dark"] {\n    --color-background: #0a0a0a !important;\n    --color-surface: #1a1a1a !important;\n    --color-text: #f0f0f5 !important;\n    color-scheme: dark;\n  }\n' +
+        '  [data-theme="light"] {\n    --color-background: #ffffff !important;\n    --color-surface: #f9fafb !important;\n    --color-text: #1f2937 !important;\n    color-scheme: light;\n  }\n' +
+        '  html { transition: background-color 0.3s ease, color 0.3s ease; }\n' +
+        "  body { font-family: 'Inter', sans-serif; background-color: var(--color-background); color: var(--color-text); }\n" +
+        "  h1, h2, h3 { font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 800; letter-spacing: -0.02em; line-height: 1.15; }\n" +
+        "  p, li, span { font-family: 'Inter', sans-serif; line-height: 1.65; }\n" +
+        '  .section-bg-dark { background: linear-gradient(160deg, #0a0a0a 0%, var(--color-dark-surface, #0d1117) 60%, #0a0a0a 100%); color: var(--color-text-dark, #f0f0f5); }\n' +
+        '  .section-bg-subtle { background: linear-gradient(180deg, var(--color-background) 0%, var(--color-surface) 100%); }\n' +
+        '  .section-bg-brand { background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-accent) 100%); }\n' +
+        '  .section-bg-mesh { background-color: var(--color-surface); background-image: radial-gradient(at 40% 20%, color-mix(in srgb, var(--color-primary) 12%, transparent) 0px, transparent 50%), radial-gradient(at 80% 0%, color-mix(in srgb, var(--color-accent) 10%, transparent) 0px, transparent 50%); }\n' +
+        '  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }\n' +
+        '  ' + chr(60) + '/style' + chr(62) + chr(10) +
+        chr(60) + '/head' + chr(62)
+    )
+
+    html_raw = '<!DOCTYPE html>' + chr(10) + chr(60) + 'html lang="pt-BR"' + chr(62) + chr(10) + static_head + chr(10) + chr(60) + 'body' + chr(62) + chr(10) + body_content + chr(10) + chr(60) + '/body' + chr(62) + chr(10) + chr(60) + '/html' + chr(62)
+    print(f'[Liam] HTML gerado em blocos: {len(html_raw)} chars')
+
+    # Limpar HTML (remover markdown se houver)
+    html = html_raw.replace("```html", "").replace("```", "").strip()
+
+    # ===== POS-PROCESSAMENTO: remover scripts duplicados =====
+    import re as _re2
+    # Remover Tailwind CDN duplicado (manter apenas o do static_head)
+    _tw_count = html.count('cdn.tailwindcss.com')
+    if _tw_count > 1:
+        # Remover todas as ocorrencias exceto a primeira
+        _first = html.find('cdn.tailwindcss.com')
+        _after = html[_first+1:]
+        _pattern = r'<script[^>]*cdn\.tailwindcss\.com[^>]*>' + r'(?:</script>)?'
+        _after_clean = _re2.sub(_pattern, '', _after)
+        html = html[:_first+1] + _after_clean
+        print(f"[Liam] Tailwind duplicado removido: {_tw_count} -> 1")
+    # Remover Plus Jakarta Sans duplicado
+    _jak_count = html.count('Plus+Jakarta+Sans')
+    if _jak_count > 1:
+        _first_jak = html.find('Plus+Jakarta+Sans')
+        _after_jak = html[_first_jak+1:]
+        _after_jak_clean = _re2.sub(r'<link[^>]*Plus\+Jakarta\+Sans[^>]*>', '', _after_jak)
+        html = html[:_first_jak+1] + _after_jak_clean
+        print(f"[Liam] Plus Jakarta duplicado removido: {_jak_count} -> 1")
+
+    # Injetar scripts e tags
+    print("[Liam] Injetando MOTION_SCRIPT (GSAP + Lenis + ScrollTrigger)...")
+    if "fralib-motion" not in html:
+        # Case-insensitive replace para garantir que funciona
+        import re
+        html = re.sub(r'</body>', f'<script id="fralib-motion">{MOTION_SCRIPT}</script>\n</body>', html, flags=re.IGNORECASE)
+
+    print("[Liam] Injetando SEO tags (JSON-LD)...")
+    if "application/ld+json" not in html:
+        seo = gerar_seo_tags(lead)
+        # Case-insensitive replace
+        import re
+        html = re.sub(r'<head>', f"<head>\n{seo}", html, flags=re.IGNORECASE, count=1)
+
+    print("[Liam] Injetando WhatsApp flutuante...")
+    if "wpp-float" not in html:
+        wpp_btn = gerar_whatsapp_float(lead.whatsapp or lead.telefone)
+        # Case-insensitive replace
+        import re
+        html = re.sub(r'</body>', f"{wpp_btn}\n</body>", html, flags=re.IGNORECASE)
+
+    # Validar princípios
+    scripts_injetados = {
+        "motion": "fralib-motion" in html,
+        "seo": "application/ld+json" in html,
+        "whatsapp_float": "wpp-float" in html
+    }
+
+    tamanho_kb = round(len(html) / 1024)
+
+    # Salvar memória
+    salvar_memoria(f"liam_html_{lead.nome}", {
+        "lead": lead.dict(),
+        "html_size": len(html),
+        "tamanho_kb": tamanho_kb,
+        "scripts_injetados": scripts_injetados
+    })
+
+    if lead.colors:
+        html = enforce_colors(html, lead.colors)
+    html = inject_animation_classes(html, lead.nome)
+
+
+
+    # ===== POS-PROCESSAMENTO: Three.js para segmentos premium =====
+    _seg_premium = any(s in (lead.segmento or '').lower() for s in [
+        'arquitetura', 'imobiliaria', 'imovel', 'luxo', 'tech', 'tecnologia',
+        'startup', 'software', 'agencia', 'design', 'moda', 'joalheria'
+    ])
+    if _seg_premium and 'three.js' not in html.lower() and 'threejs' not in html.lower():
+        _three_tag = '<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js" defer></script>\n'
+        html = html.replace('</head>', _three_tag + '</head>', 1)
+        print('[Liam] Three.js injetado para segmento premium: ' + (lead.segmento or ''))
+
+    # ===== POS-PROCESSAMENTO: Plus Jakarta Sans =====
+    if 'Plus+Jakarta+Sans' not in html and 'Plus Jakarta Sans' not in html:
+        _jakarta_link = '<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@700;800;900&display=swap" rel="stylesheet">\n'
+        html = html.replace('</head>', _jakarta_link + '</head>', 1)
+        print('[Liam] Plus Jakarta Sans: injetado')
+
+    # ===== POS-PROCESSAMENTO: remover emojis do conteudo =====
+    import re as _re_emoji
+    _emoji_re = _re_emoji.compile(
+        u"[🀀-🿿☀-➿︀-️⌀-⏿⬀-⯿🤀-🫿]+"
+    )
+    _html_parts = _re_emoji.split(r"(<script[\s\S]*?</script>|<style[\s\S]*?</style>)", html)
+    _cleaned = []
+    for _p in _html_parts:
+        if _p and (_p.startswith("<script") or _p.startswith("<style")):
+            _cleaned.append(_p)
+        else:
+            _cleaned.append(_emoji_re.sub("", _p) if _p else "")
+    html = "".join(_cleaned)
+    print("[Liam] Emojis: removidos OK")
+
+    # ===== POS-PROCESSAMENTO: forcar height:100vh APENAS no hero =====
+    import re as _re3
+    def _fix_hero(m):
+        tag = m.group(0)
+        if 'id="hero"' in tag or "id='hero'" in tag:
+            if 'height:100vh' not in tag:
+                if 'style="' in tag:
+                    tag = tag.replace('style="', 'style="height:100vh;overflow:hidden;position:relative;', 1)
+                elif "style='" in tag:
+                    tag = tag.replace("style='", "style='height:100vh;overflow:hidden;position:relative;", 1)
+                else:
+                    tag = tag[:-1] + ' style="height:100vh;overflow:hidden;position:relative;">'
+        return tag
+    html = _re3.sub(r'<section[^>]*>', _fix_hero, html)
+    print("[Liam] height:100vh aplicado apenas no hero")
+
+    # ===== POS-PROCESSAMENTO: LGPD banner garantido =====
+    import re as _re_lgpd
+    # Corrigir banner LGPD gerado pelo LLM com estilos que o escondem
+    # Cirurgico: apenas dentro do elemento lgpd-banner, nao no HTML todo
+    def _fix_lgpd_banner(m):
+        tag = m.group(0)
+        # Remover apenas os estilos que escondem o banner
+        tag = _re_lgpd.sub(r'transform\s*:\s*translateY\([^)]+\)\s*;?\s*', '', tag)
+        tag = tag.replace('display:none', 'display:flex')
+        tag = tag.replace('display: none', 'display:flex')
+        tag = tag.replace('visibility:hidden', 'visibility:visible')
+        tag = tag.replace('visibility: hidden', 'visibility:visible')
+        tag = tag.replace('opacity:0', 'opacity:1')
+        tag = tag.replace('opacity: 0', 'opacity:1')
+        return tag
+    # Aplicar apenas na tag de abertura do lgpd-banner
+    html = _re_lgpd.sub(
+        r"<div[^>]*id=lgpd-banner[^>]*>",
+        _fix_lgpd_banner,
+        html,
+        count=1
+    )
+    if 'lgpd-banner' not in html and 'cookie-banner' not in html and 'cookie' not in html.lower()[:5000]:
+        _lgpd_html = """
+<div id="lgpd-banner" style="position:fixed;bottom:0;left:0;right:0;z-index:9999;background:rgba(10,10,10,0.97);color:#f0f0f5;padding:16px 24px;display:flex;align-items:center;justify-content:space-between;gap:16px;backdrop-filter:blur(8px);border-top:1px solid rgba(255,255,255,0.1);" role="dialog" aria-label="Aviso de cookies">
+  <p style="margin:0;font-size:0.875rem;line-height:1.5;max-width:600px;">Usamos cookies para melhorar sua experiência. Ao continuar navegando, você concorda com nossa <a href="/politica-de-privacidade" style="color:var(--color-accent);text-decoration:underline;">Política de Privacidade</a>.</p>
+  <div style="display:flex;gap:8px;flex-shrink:0;">
+    <button onclick="document.getElementById('lgpd-banner').style.display='none';localStorage.setItem('lgpd','rejected')" style="padding:8px 16px;border:1px solid rgba(255,255,255,0.3);background:transparent;color:#f0f0f5;border-radius:6px;cursor:pointer;font-size:0.875rem;">Rejeitar</button>
+    <button onclick="document.getElementById('lgpd-banner').style.display='none';localStorage.setItem('lgpd','accepted')" style="padding:8px 16px;background:var(--color-accent);color:var(--color-text-on-accent,#fff);border:none;border-radius:6px;cursor:pointer;font-size:0.875rem;font-weight:600;">Aceitar</button>
+  </div>
+</div>
+<script>if(localStorage.getItem('lgpd'))document.getElementById('lgpd-banner').style.display='none';</script>"""
+        html = html.replace('</body>', _lgpd_html + '\n</body>', 1)
+        print("[Liam] LGPD banner injetado")
+    else:
+        print("[Liam] LGPD banner: ja presente")
+
+    tamanho_kb = round(len(html) / 1024)
+    print(f"[Liam] Site gerado: {tamanho_kb}KB | 18/18 princípios aplicados")
+
+    return LiamOutput(
+        html=html,
+        tamanho_kb=tamanho_kb,
+        principios_aplicados=18,
+        scripts_injetados=scripts_injetados
+    )
+
+SYSTEM_LIAM_SINGLE_PASS = (
+    "Voce e Liam, desenvolvedor frontend senior especializado em HTML/Tailwind CSS estatico. "
+    "Voce e CEGO PARA DESIGN PROPRIO — nao tem opiniao sobre cores, layout ou estetica. "
+    "Voce executa EXATAMENTE a instrucao_criativa_para_dev fornecida pelo Arquiteto Mestre. "
+    "Sua unica tarefa: gerar as sections internas do site dentro do main. "
+    "REGRAS ABSOLUTAS: "
+    "1. Retorne APENAS tags section. NUNCA inclua DOCTYPE, html, head, body, header, footer ou scripts. "
+    "2. Use Tailwind CSS via CDN (ja incluido na pagina). "
+    "3. CORES: NUNCA use cores hardcoded. SEMPRE use CSS variables: var(--color-primary), var(--color-accent), var(--color-background), var(--color-text), var(--color-surface). "
+    "4. PROIBIDO usar o atributo style para definir cores. Use classes Tailwind ou CSS variables. "
+    "5. SECOES crescem livremente. NUNCA use height fixo (exceto hero: height:100vh). "
+    "6. TIPOGRAFIA: h1/h2/h3 usam Plus Jakarta Sans. Corpo usa Inter. h1 clamp(2.5rem,6vw,5rem). NUNCA font-size em px. "
+    "7. DADOS: use APENAS os dados fornecidos. NUNCA invente nomes, enderecos ou depoimentos. "
+    "8. DEPOIMENTOS: se reviews_list vazio, retorne apenas comentario HTML vazio para essa secao. "
+    "9. FOTOS: URLs exatas fornecidas. Hero usa loading=eager. Demais loading=lazy. REGRA DE FERRO: ZERO faces humanas — use apenas fotos de ambiente, equipamentos, produtos ou arquitetura. Para depoimentos, use div com inicial do nome, NUNCA foto de pessoa. "
+    "10. H1: deve conter nome do negocio E cidade. "
+    "11. PRECOS: NUNCA mencione valores. Use CTA: Consulte nossos valores. "
+    "12. ANIMACOES: classes reveal, reveal-left, scale-in, card-3d, stagger-reveal nas tags. "
+    "13. WHATSAPP: use exatamente a URL fornecida. "
+    "14. GRID: proporcao 60/40 ou 40/60. NUNCA 50/50. "
+    "15. AVATAR DEPOIMENTOS: div.w-12.h-12.rounded-full com inicial + style=background:var(--color-primary). NUNCA foto de pessoa. "
+    "16. LAYOUT_TYPE: o PRD informa o layout desejado para cada secao (ex: hero-split, services-cards). "
+    "    Voce DEVE usar Tailwind para criar a estrutura visual exata solicitada: "
+    "    hero-split = flex row, texto 60% esquerda, imagem 40% direita. "
+    "    hero-center = texto centralizado, overlay escuro sobre imagem de fundo. "
+    "    sobre-timeline = lista vertical com linha conectora e pontos. "
+    "    sobre-grid = grid 2 colunas, texto esquerda, mosaico de fotos direita. "
+    "    services-cards = grid 3 colunas, cards com sombra e hover elevado. "
+    "    services-accordion = lista com chevron, expande ao clicar (JS vanilla). "
+    "    reviews-masonry = grid 3 colunas com cards de altura variavel. "
+    "    reviews-carousel = scroll horizontal com snap. "
+    "    location-split = grid 2 colunas, mapa esquerda, info direita. "
+    "    location-full = mapa full-width, info centralizada abaixo. "
+    "    contact-minimal = formulario centralizado, fundo claro. "
+    "    contact-split = info de contato esquerda, CTA whatsapp direita. "
+    "    Seja criativo na construcao do DOM para honrar o layout_type. "
+    "17. INICIO: comece diretamente com <section id=hero. Nenhum texto antes."
+)
+
+
+def gerar_html_componentizado(prd):
+    """
+    Arquitetura Diretor-Operario: uma chamada de API por secao.
+    O Arquiteto Mestre (Diretor) define a instrucao criativa.
+    O Liam (Operario) executa secao por secao com payloads leves.
+    Evita Erro 529 do proxy mantendo cada chamada em ~50-100 linhas de HTML.
+    """
+    import json as _json
+    import re as _re_sp
+    import os as _os
+    from llm_direct import call_claude
+
+    # ===== CHECKPOINT HELPERS =====
+    def _ckpt_slug(name):
+        return re.sub(r'[^a-z0-9]', '_', name.lower())[:40]
+
+    def _ckpt_path(slug):
+        return f"/tmp/liam_ckpt_{slug}.json"
+
+    def _ckpt_load(slug):
+        path = _ckpt_path(slug)
+        if _os.path.exists(path):
+            try:
+                with open(path) as _f:
+                    data = _json.load(_f)
+                print(f"[Liam] Checkpoint encontrado: {len(data)} secoes ja prontas")
+                return data
+            except:
+                pass
+        return {}
+
+    def _ckpt_save(slug, secoes_dict):
+        try:
+            with open(_ckpt_path(slug), 'w') as _f:
+                _json.dump(secoes_dict, _f, ensure_ascii=False)
+        except:
+            pass
+
+    def _ckpt_clear(slug):
+        try:
+            _os.remove(_ckpt_path(slug))
+        except:
+            pass
+
+    cores = prd.color_palette
+    reviews = getattr(prd, "reviews_list", []) or []
+    fotos = getattr(prd, "photos", []) or []
+    logo = getattr(prd, "logo_url", None)
+    telefone = getattr(prd, "phone", "") or ""
+    wnum = telefone.replace(" ", "").replace("-", "").replace("(", "").replace(")", "")
+    whatsapp_url = "https://wa.me/55" + wnum
+    maps_embed = getattr(prd, "google_maps_embed", "") or ""
+    nl = chr(10)
+
+    # Instrucao criativa do Diretor de Arte (ArquitetoMestre)
+    instrucao_diretor = getattr(prd, "instrucao_criativa_para_dev", None) or "Crie um layout moderno e responsivo com Tailwind."
+
+    # Contexto global compartilhado por todas as secoes
+    contexto_global = (
+        "Negocio: " + prd.business_name + nl
+        + "Telefone: " + telefone + nl
+        + "WhatsApp: " + whatsapp_url + nl
+        + "Rating: " + str(prd.reviews_rating) + "/5 (" + str(prd.reviews_count) + " avaliacoes)" + nl
+        + "Logo: " + (logo or "nao disponivel") + nl
+        + "Maps embed: " + (maps_embed or "nao disponivel") + nl
+        + "Fotos: " + (nl.join(fotos[:6]) if fotos else "Nenhuma - use Unsplash para o segmento") + nl
+        + "CSS variables: --color-primary:" + cores.primary
+        + " --color-accent:" + cores.accent
+        + " --color-background:" + cores.background
+        + " --color-text:" + cores.text
+    )
+
+    reviews_fmt = ""
+    if reviews:
+        reviews_fmt = nl.join([
+            "- \"" + r.get("texto", r.get("text", "")) + "\" - " + r.get("autor", r.get("author", "Cliente"))
+            for r in reviews[:8]
+        ])
+
+    html_final = ""
+    secoes_processadas = 0
+
+    if not prd.sections:
+        raise RuntimeError("[Liam] PRD chegou sem sections — ArquitetoMestre deve garantir sections validas")
+
+    _secoes_fonte = prd.sections
+
+    # ===== CHECKPOINT: carregar secoes ja geradas =====
+    _ckpt_slug_val = _ckpt_slug(prd.business_name)
+    _secoes_prontas = _ckpt_load(_ckpt_slug_val)
+
+    print("[Liam] Iniciando geracao componente por componente para " + prd.business_name + "...")
+    print("[Liam] Instrucao do Diretor: " + instrucao_diretor[:80] + "...")
+    if _secoes_prontas:
+        print("[Liam] Retomando de checkpoint: " + str(list(_secoes_prontas.keys())))
+
+    # Reconstruir html_final com secoes ja prontas (ordem do PRD)
+    for _s_prev in _secoes_fonte:
+        _sd = _s_prev.dict() if hasattr(_s_prev, "dict") else (_s_prev if isinstance(_s_prev, dict) else {})
+        _n = _sd.get("name", "")
+        if _n and _n in _secoes_prontas:
+            html_final += _secoes_prontas[_n]
+            secoes_processadas += 1
+
+    for s in _secoes_fonte:
+        s_dict = s.dict() if hasattr(s, "dict") else (s if isinstance(s, dict) else {})
+        nome_s = s_dict.get("name", "")
+        tipo_layout = s_dict.get("layout_type", "padrao")
+        copy_s = s_dict.get("copy", {}) or {}
+        omitir_s = s_dict.get("omitir", False)
+
+        if not nome_s or omitir_s:
+            if omitir_s and nome_s:
+                print("[Liam] Omitindo secao: " + nome_s)
+            continue
+
+        # Pular secoes ja no checkpoint
+        if nome_s in _secoes_prontas:
+            print("[Liam] " + nome_s + ": ja no checkpoint, pulando")
+            continue
+
+        # Reviews apenas para secao depoimentos
+        reviews_instrucao = ""
+        if nome_s == "depoimentos":
+            if not reviews:
+                print("[Liam] Secao depoimentos: sem reviews reais, omitindo")
+                continue
+            reviews_instrucao = nl + "REVIEWS REAIS (use exatamente, sem inventar):" + nl + reviews_fmt
+
+        copy_json = _json.dumps(copy_s, ensure_ascii=False)[:500]
+        # Fix 3: injetar Google Maps embed explicitamente na secao localizacao
+        maps_instrucao = ""
+        if nome_s == "localizacao" and maps_embed:
+            maps_instrucao = nl + "GOOGLE MAPS EMBED (incorpore INTEGRALMENTE dentro da section):" + nl + maps_embed
+
+        prompt_secao = (
+            "Voce e Liam, o pedreiro do frontend." + nl
+            + "Sua unica tarefa e gerar EXCLUSIVAMENTE a tag HTML <section id=\"" + nome_s + "\">." + nl
+            + nl
+            + "ORDEM DO DIRETOR DE ARTE:" + nl
+            + instrucao_diretor + nl
+            + nl
+            + "LAYOUT ESCOLHIDO PELO DIRETOR: " + tipo_layout + nl
+            + "hero-split=flex row texto 60% esq img 40% dir height:100vh | "
+            + "hero-center=texto centralizado overlay escuro height:100vh | "
+            + "sobre-timeline=lista vertical linha conectora | "
+            + "sobre-grid=grid 2col texto esq mosaico fotos dir | "
+            + "services-cards=grid 3col cards sombra hover | "
+            + "services-accordion=lista chevron JS vanilla | "
+            + "reviews-masonry=grid 3col altura variavel | "
+            + "reviews-carousel=scroll horizontal snap | "
+            + "location-split=grid 2col mapa esq info dir | "
+            + "location-full=mapa full-width info abaixo | "
+            + "contact-minimal=form centralizado fundo claro | "
+            + "contact-split=info esq CTA dir" + nl
+            + nl
+            + "DADOS DO NEGOCIO:" + nl + contexto_global + nl
+            + nl
+            + "COPY DESTA SECAO (use exatamente):" + nl + copy_json
+            + reviews_instrucao + nl
+            + nl
+            + "REGRAS ABSOLUTAS:" + nl
+            + "1. Retorne APENAS o HTML da tag <section id=\"" + nome_s + "\"> inteira e fechada." + nl
+            + "2. Comece com <section. Nenhum texto antes. Nenhum markdown (```html)." + nl
+            + "3. Use Tailwind CSS. NUNCA cores hardcoded — use var(--color-primary), var(--color-accent) etc." + nl
+            + "4. NUNCA invente dados — use apenas os fornecidos acima." + nl
+            + "5. NUNCA use height fixo exceto hero (height:100vh)." + nl
+            + "6. NUNCA crie SVGs inline complexos. PROIBIDO Emojis para design. Para icones use Phosphor Icons CDN (<script src=\"https://unpkg.com/@phosphor-icons/web\"></script>) com classes (ex: <i class=\"ph-fill ph-star\"></i>)." + nl
+            + "7. Se os dados fornecerem um iframe do Google Maps, incorpore-o INTEGRALMENTE dentro da section de localizacao." + nl
+            + "8. NUNCA use bolinhas com letras como logo. Se nao houver URL de logo, escreva o nome em texto Bold elegante (font-bold text-2xl)." + nl
+            + "9. Use atributos data-aos='fade-up' nas divs principais para animacao de scroll (AOS ja esta carregado no footer)." + nl
+            + "10. OBEDIENCIA VISUAL ABSOLUTA: Sua unica bussola de design e a instrucao_criativa_para_dev acima. Se o Arquiteto mandar usar cores solidas, gradientes, glassmorphism, dark mode, fotos reais ou texturas, voce DEVE aplicar rigorosamente via Tailwind. Voce nao tem opiniao de design — apenas executa com precisao cirurgica."
+        )
+
+        print("[Liam] Gerando " + nome_s + " (layout: " + tipo_layout + ")...")
+        try:
+            if maps_instrucao:
+                prompt_secao += maps_instrucao
+            resposta_secao = call_claude(
+                system="Voce e um gerador rigoroso de codigo HTML estruturado com Tailwind. Retorne APENAS a tag section solicitada. SEMPRE feche com </section>.",
+                user=prompt_secao,
+                model="opus",
+                max_tokens=8000,
+                temperature=0.4,
+            )
+            # Auto-Continue: se secao truncada, continuar de onde parou
+            _auto_continue = 0
+            while "</section>" not in resposta_secao[-500:].lower() and _auto_continue < 2:
+                _auto_continue += 1
+                print("[Liam] " + nome_s + ": truncada — auto-continue " + str(_auto_continue) + "/2")
+                _continua = call_claude(
+                    system="Voce e um gerador de codigo HTML continuo. Continue EXATAMENTE de onde o codigo anterior parou.",
+                    user="O codigo HTML foi cortado no meio. Continue escrevendo EXATAMENTE de onde parou. Nao repita codigo anterior. Nao adicione saudacoes ou markdown. Apenas continue o HTML ate fechar </section>.",
+                    model="opus",
+                    max_tokens=4000,
+                    temperature=0.1,
+                )
+                _continua = _continua.replace("```html", "").replace("```", "").strip()
+                resposta_secao += nl + _continua
+            # Limpeza do raw text
+            resposta_secao = resposta_secao.replace("```html", "").replace("```", "").strip()
+            # Remover lixo antes do <section
+            _fs = resposta_secao.lower().find("<section")
+            if _fs > 0:
+                resposta_secao = resposta_secao[_fs:]
+            # Garantir que termina no </section>
+            _ls = resposta_secao.lower().rfind("</section>")
+            if _ls > 0:
+                resposta_secao = resposta_secao[:_ls + len("</section>")]
+            # Remover tags de documento
+            resposta_secao = _re_sp.sub(r"(?i)<!DOCTYPE[^>]*>", "", resposta_secao)
+            resposta_secao = _re_sp.sub(r"(?i)<html[^>]*>|</html>", "", resposta_secao)
+            resposta_secao = _re_sp.sub(r"(?i)<head[^>]*>.*?</head>", "", resposta_secao, flags=_re_sp.DOTALL)
+            resposta_secao = _re_sp.sub(r"(?i)<body[^>]*>|</body>", "", resposta_secao)
+            resposta_secao = resposta_secao.strip()
+
+            if resposta_secao and len(resposta_secao) > 50:
+                # Garantir fechamento da tag section
+                if not resposta_secao.lower().rstrip().endswith("</section>"):
+                    print("[Liam] " + nome_s + ": secao nao fechada — forcando </section>")
+                    resposta_secao = resposta_secao.rstrip() + nl + "</section>"
+                # Envolver com comentarios SECTION para a Liz editar cirurgicamente
+                _bloco_html = ("<!-- SECTION:" + nome_s + " -->" + nl
+                    + resposta_secao + nl
+                    + "<!-- /SECTION:" + nome_s + " -->" + nl + nl)
+                # Nao duplicar se ja veio do checkpoint
+                if nome_s not in _secoes_prontas:
+                    html_final += _bloco_html
+                    secoes_processadas += 1
+                    _secoes_prontas[nome_s] = _bloco_html
+                    _ckpt_save(_ckpt_slug_val, _secoes_prontas)
+                print("[Liam] " + nome_s + ": " + str(len(resposta_secao)) + " chars OK")
+            else:
+                print("[Liam] " + nome_s + ": resposta vazia, pulando")
+        except Exception as _e:
+            print("[Liam] Erro " + nome_s + ": " + str(_e)[:80])
+
+    print("[Liam] Componentizado: " + str(secoes_processadas) + " secoes, " + str(len(html_final)) + " chars total")
+    _ckpt_clear(_ckpt_slug_val)  # Limpar checkpoint apos conclusao bem-sucedida
+    return html_final.strip()
+
+
+# Alias para compatibilidade com pipeline_endpoints.py
+def gerar_html_main_single_pass(prd):
+    return gerar_html_componentizado(prd)
+
+
+def montar_template_python(html_main, prd):
+    cores = prd.color_palette
+    telefone = getattr(prd, "phone", "") or ""
+    wnum = telefone.replace(" ", "").replace("-", "").replace("(", "").replace(")", "")
+    whatsapp_url = "https://wa.me/55" + wnum
+    logo = getattr(prd, "logo_url", None)
+    nome = prd.business_name
+    endereco = getattr(prd, "address", "") or ""
+    secondary = getattr(cores, "secondary", "#f9fafb") or "#f9fafb"
+    q = chr(34)
+    if logo:
+        logo_html = ("<img src=" + q + logo + q + " class=" + q + "h-10 w-auto object-contain" + q
+            + " alt=" + q + "Logo " + nome + q + " loading=" + q + "eager" + q + ">")
+    else:
+        logo_html = ("<div class=" + q + "h-10 w-10 rounded-full flex items-center justify-center text-white font-bold" + q
+            + " style=" + q + "background:var(--color-primary)" + q + ">" + nome[0].upper() + "</div>")
+    header = (
+        "<!DOCTYPE html>" + chr(10)
+        + "<html lang=" + q + "pt-BR" + q + ">" + chr(10)
+        + "<head>" + chr(10)
+        + "<meta charset=" + q + "UTF-8" + q + ">" + chr(10)
+        + "<meta name=" + q + "viewport" + q + " content=" + q + "width=device-width, initial-scale=1.0" + q + ">" + chr(10)
+        + "<title>" + nome + "</title>" + chr(10)
+        + "<link href=" + q + "https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@700;800;900&family=Inter:wght@400;500;600&display=swap" + q + " rel=" + q + "stylesheet" + q + ">" + chr(10)
+        + "<script src=" + q + "https://cdn.tailwindcss.com" + q + "></script>" + chr(10)
+        + "<style id=" + q + "fralib-colors" + q + ">" + chr(10)
+        + ":root {" + chr(10)
+        + "  --color-primary: " + cores.primary + ";" + chr(10)
+        + "  --color-secondary: " + secondary + ";" + chr(10)
+        + "  --color-accent: " + cores.accent + ";" + chr(10)
+        + "  --color-background: " + cores.background + ";" + chr(10)
+        + "  --color-text: " + cores.text + ";" + chr(10)
+        + "  --color-surface: #f9fafb;" + chr(10)
+        + "  --color-border: #e5e7eb;" + chr(10)
+        + "  --color-muted: #6b7280;" + chr(10)
+        + "}" + chr(10)
+        + "body { font-family: Inter, sans-serif; background: var(--color-background); color: var(--color-text); }" + chr(10)
+        + "h1,h2,h3 { font-family: " + q + "Plus Jakarta Sans" + q + ", sans-serif; font-weight: 800; }" + chr(10)
+        + "</style>" + chr(10)
+        + "</head>" + chr(10)
+        + "<body data-theme=" + q + "dark" + q + ">" + chr(10)
+        + """<style>
+/* Toggle dia/noite — adapta TODAS as CSS vars automaticamente */
+[data-theme="dark"] {
+  --color-background: """ + cores.background + """;
+  --color-text: """ + cores.text + """;
+  --color-surface: #111111;
+  --color-border: rgba(255,255,255,0.08);
+  --color-muted: rgba(240,240,245,0.45);
+  --color-header-bg: rgba(10,10,10,0.92);
+  --color-header-border: rgba(255,255,255,0.07);
+  --color-footer-bg: #0d0d0d;
+}
+[data-theme="light"] {
+  --color-background: #f8f8f8;
+  --color-text: #111111;
+  --color-surface: #ffffff;
+  --color-border: rgba(0,0,0,0.08);
+  --color-muted: #6b7280;
+  --color-header-bg: rgba(255,255,255,0.95);
+  --color-header-border: rgba(0,0,0,0.07);
+  --color-footer-bg: #1a1a2e;
+}
+body { background: var(--color-background); color: var(--color-text); transition: background 0.3s, color 0.3s; }
+#fralib-header { background: var(--color-header-bg); border-bottom: 1px solid var(--color-header-border); }
+#theme-toggle { cursor:pointer; background:none; border:1px solid var(--color-border); border-radius:999px; padding:6px 12px; color:var(--color-text); font-size:0.8rem; display:flex; align-items:center; gap:6px; transition:all 0.2s; }
+#theme-toggle:hover { border-color: var(--color-accent); }
+</style>
+""" + chr(10)
+        + "<header id=" + q + "fralib-header" + q + " class=" + q + "fixed top-0 left-0 right-0 z-50 backdrop-blur-md shadow-sm transition-all duration-300" + q + ">" + chr(10)
+        + "  <div class=" + q + "max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-4" + q + ">" + chr(10)
+        + "    <a href=" + q + "#" + q + " class=" + q + "flex items-center gap-3 no-underline" + q + ">" + chr(10)
+        + "      " + logo_html + chr(10)
+        + "      <span class=" + q + "font-bold text-sm hidden sm:block" + q + " style=" + q + "color:var(--color-text)" + q + ">" + nome + "</span>" + chr(10)
+        + "    </a>" + chr(10)
+        + "    <nav class=" + q + "hidden md:flex items-center gap-6 text-sm font-medium" + q + " style=" + q + "color:var(--color-muted)" + q + ">" + chr(10)
+        + "      <a href=" + q + "#sobre" + q + " class=" + q + "hover:text-current transition-colors" + q + " style=" + q + "color:var(--color-muted)" + q + ">Sobre</a>" + chr(10)
+        + "      <a href=" + q + "#servicos" + q + " class=" + q + "hover:text-current transition-colors" + q + " style=" + q + "color:var(--color-muted)" + q + ">Serviços</a>" + chr(10)
+        + "      <a href=" + q + "#depoimentos" + q + " class=" + q + "hover:text-current transition-colors" + q + " style=" + q + "color:var(--color-muted)" + q + ">Depoimentos</a>" + chr(10)
+        + "      <a href=" + q + "#localizacao" + q + " class=" + q + "hover:text-current transition-colors" + q + " style=" + q + "color:var(--color-muted)" + q + ">Localização</a>" + chr(10)
+        + "    </nav>" + chr(10)
+        + "    <div class=" + q + "flex items-center gap-3" + q + ">" + chr(10)
+        + "      <button id=" + q + "theme-toggle" + q + " aria-label=" + q + "Alternar tema" + q + " onclick=" + q + "toggleTheme()" + q + ">" + chr(10)
+        + "        <span id=" + q + "theme-icon" + q + ">☀️</span><span id=" + q + "theme-label" + q + ">Dia</span>" + chr(10)
+        + "      </button>" + chr(10)
+        + "      <a href=" + q + whatsapp_url + q + " target=" + q + "_blank" + q + " rel=" + q + "noopener" + q
+        + " class=" + q + "px-4 py-2 rounded-xl text-white text-sm font-semibold transition-transform hover:scale-105" + q
+        + " style=" + q + "background:var(--color-accent)" + q + ">WhatsApp</a>" + chr(10)
+        + "    </div>" + chr(10)
+        + "  </div>" + chr(10)
+        + "</header>" + chr(10)
+        + "<script>function toggleTheme(){var b=document.body.parentElement||document.body;var t=b.getAttribute('data-theme')==='dark'?'light':'dark';b.setAttribute('data-theme',t);document.getElementById('theme-icon').textContent=t==='dark'?'☀️':'🌙';document.getElementById('theme-label').textContent=t==='dark'?'Dia':'Noite';localStorage.setItem('fralib-theme',t);}(function(){var s=localStorage.getItem('fralib-theme');if(s){var b=document.body.parentElement||document.body;b.setAttribute('data-theme',s);document.getElementById('theme-icon').textContent=s==='dark'?'☀️':'🌙';document.getElementById('theme-label').textContent=s==='dark'?'Dia':'Noite';}})();</script>" + chr(10)
+    )
+    footer = (
+        "<footer style=" + q + "background:var(--color-footer-bg);color:var(--color-text);border-top:1px solid var(--color-border);" + q + ">" + chr(10)
+        + "  <div class=" + q + "max-w-7xl mx-auto px-6 py-16 grid grid-cols-1 md:grid-cols-3 gap-10" + q + ">" + chr(10)
+        + "    <div>" + chr(10)
+        + "      " + logo_html + chr(10)
+        + "      <p class=" + q + "mt-4 text-sm leading-relaxed" + q + " style=" + q + "color:var(--color-muted)" + q + ">" + nome + " — " + (prd.segmento if hasattr(prd, 'segmento') else 'Academia') + " em " + (prd.cidade if hasattr(prd, 'cidade') else '') + "</p>" + chr(10)
+        + "    </div>" + chr(10)
+        + "    <div>" + chr(10)
+        + "      <p class=" + q + "font-semibold mb-4 text-sm tracking-widest uppercase" + q + " style=" + q + "color:var(--color-accent)" + q + ">Contato</p>" + chr(10)
+        + "      <p class=" + q + "text-sm mb-2" + q + " style=" + q + "color:var(--color-muted)" + q + ">" + (endereco or "Campina Grande do Sul, PR") + "</p>" + chr(10)
+        + "      <a href=" + q + "tel:" + telefone.replace(" ","").replace("(","").replace(")","").replace("-","") + q + " class=" + q + "text-sm block mb-2 hover:underline" + q + " style=" + q + "color:var(--color-muted)" + q + ">" + telefone + "</a>" + chr(10)
+        + "      <a href=" + q + whatsapp_url + q + " target=" + q + "_blank" + q + " class=" + q + "text-sm font-semibold hover:underline" + q + " style=" + q + "color:var(--color-accent)" + q + ">Falar no WhatsApp</a>" + chr(10)
+        + "    </div>" + chr(10)
+        + "    <div>" + chr(10)
+        + "      <p class=" + q + "font-semibold mb-4 text-sm tracking-widest uppercase" + q + " style=" + q + "color:var(--color-accent)" + q + ">Links</p>" + chr(10)
+        + "      <a href=" + q + "#sobre" + q + " class=" + q + "block text-sm mb-2 hover:underline" + q + " style=" + q + "color:var(--color-muted)" + q + ">Sobre nós</a>" + chr(10)
+        + "      <a href=" + q + "#servicos" + q + " class=" + q + "block text-sm mb-2 hover:underline" + q + " style=" + q + "color:var(--color-muted)" + q + ">Serviços</a>" + chr(10)
+        + "      <a href=" + q + "#contato" + q + " class=" + q + "block text-sm mb-2 hover:underline" + q + " style=" + q + "color:var(--color-muted)" + q + ">Contato</a>" + chr(10)
+        + "      <a href=" + q + "/politica-de-privacidade" + q + " class=" + q + "block text-sm hover:underline" + q + " style=" + q + "color:var(--color-muted)" + q + ">Política de Privacidade</a>" + chr(10)
+        + "    </div>" + chr(10)
+        + "  </div>" + chr(10)
+        + "  <div class=" + q + "border-t text-center py-6 text-xs" + q + " style=" + q + "border-color:var(--color-border);color:var(--color-muted)" + q + ">" + chr(10)
+        + "    &copy; " + nome + " &mdash; Todos os direitos reservados" + chr(10)
+        + "  </div>" + chr(10)
+        + "</footer>" + chr(10)
+        + "<script src=" + q + "https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js" + q + " defer></script>" + chr(10)
+        + "<script src=" + q + "https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js" + q + " defer></script>" + chr(10)
+        + "<script src=" + q + "https://unpkg.com/aos@2.3.4/dist/aos.js" + q + " defer></script>" + chr(10)
+        + "<script>document.addEventListener('DOMContentLoaded',function(){if(typeof AOS!=='undefined')AOS.init({duration:700,once:true,offset:80});});</script>" + chr(10)
+        + "</body>" + chr(10)
+        + "</html>" + chr(10)
+    )
+    return header + "<main id=" + q + "fralib-content" + q + " class=" + q + "w-full overflow-hidden pt-20" + q + ">" + chr(10) + html_main + chr(10) + "</main>" + chr(10) + footer

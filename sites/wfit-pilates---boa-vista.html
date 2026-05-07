@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<link rel="icon" type="image/x-icon" href="https://fralib.com.br/favicon.ico">
+<link rel="icon" type="image/png" href="https://fralib.com.br/favicon.png">
+
+
+<meta name="description" content="academia em Curitiba">
+<meta name="robots" content="index, follow">
+<meta property="og:title" content="Wfit Pilates - Boa Vista">
+<meta property="og:description" content="academia em Curitiba">
+<meta property="og:image" content="">
+<meta property="og:url" content="https://fralib.com.br">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="pt_BR">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="canonical" href="https://fralib.com.br">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"LocalBusiness","name":"Wfit Pilates - Boa Vista","description":"academia em Curitiba","address":{"@type":"PostalAddress","addressLocality":"Curitiba"},"telephone":"041984850845","aggregateRating":{"@type":"AggregateRating","ratingValue":"0","reviewCount":"0"}}
+</script>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wfit Pilates - Estúdio de Pilates em Curitiba | Boa Vista</title>
+    
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="Wfit Pilates em Boa Vista, Curitiba. Estúdio completo de Pilates com instrutores certificados, equipamentos modernos e aulas personalizadas. Agende sua aula experimental gratuita!">
+    <meta name="keywords" content="pilates curitiba, pilates boa vista, studio pilates, aulas de pilates, pilates solo, pilates aparelhos, fisioterapia pilates, reabilitação curitiba">
+    <meta name="author" content="Wfit Pilates">
+    <meta name="robots" content="index, follow">
+    
+    <!-- Open Graph Meta Tags -->
+    <meta property="og:title" content="Wfit Pilates - Estúdio de Pilates em Curitiba">
+    <meta property="og:description" content="Transforme seu corpo e mente com Pilates. Estúdio completo em Boa Vista, Curitiba. Agende sua aula experimental!">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://wfitpilates.com.br">
+    <meta property="og:image" content="https://wfitpilates.com.br/og-image.jpg">
+    <meta property="og:locale" content="pt_BR">
+    
+    <!-- Twitter Card Meta Tags -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Wfit Pilates - Estúdio de Pilates em Curitiba">
+    <meta name="twitter:description" content="Transforme seu corpo e mente com Pilates. Estúdio completo em Boa Vista, Curitiba.">
+    <meta name="twitter:image" content="https://wfitpilates.com.br/twitter-image.jpg">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="/favicon.png">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Tailwind Config -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#374151',
+                        secondary: '#f9fafb',
+                        accent: '#6366f1',
+                        dark: '#1f2937'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Custom CSS Variables and Styles -->
+    <style>
+        :root {
+            --color-primary: #374151;
+            --color-secondary: #f9fafb;
+            --color-accent: #6366f1;
+            --color-background: #ffffff;
+            --color-text: #1f2937;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        html {
+            scroll-behavior: smooth;
+        }
+        
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            color: var(--color-text);
+            background-color: var(--color-background);
+            overflow-x: hidden;
+        }
+        
+        /* Animated Background */
+        .animated-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: -1;
+            background: linear-gradient(135deg, var(--color-secondary) 0%, #e0e7ff 50%, var(--color-secondary) 100%);
+            background-size: 400% 400%;
+            animation: gradientShift 15s ease infinite;
+        }
+        
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        
+        /* Typography Responsive */
+        .hero-title {
+            font-size: clamp(2.5rem, 8vw, 5rem);
+            line-height: 1.1;
+            font-weight: 800;
+        }
+        
+        .section-title {
+            font-size: clamp(2rem, 5vw, 3.5rem);
+            line-height: 1.2;
+            font-weight: 700;
+        }
+        
+        .subtitle {
+            font-size: clamp(1.125rem, 2.5vw, 1.5rem);
+            line-height: 1.6;
+        }
+        
+        /* Glassmorphism */
+        .glass {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        /* Card 3D Effect */
+        .card-3d {
+            transform-style: preserve-3d;
+            transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+        
+        .card-3d:hover {
+            transform: translateY(-12px) rotateX(5deg) rotateY(5deg);
+        }
+        
+        /* Button Styles */
+        .btn-primary {
+            background: linear-gradient(135deg, var(--color-accent) 0%, #4f46e5 100%);
+            color: white;
+            padding: 1rem 2.5rem;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 1.125rem;
+            transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+            display: inline-block;
+            text-decoration: none;
+            transform: translateZ(0);
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-3px) scale(1.05);
+            box-shadow: 0 8px 25px rgba(99, 102, 241, 0.4);
+        }
+        
+        .btn-secondary {
+            background: white;
+            color: var(--color-accent);
+            padding: 1rem 2.5rem;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 1.125rem;
+            transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            display: inline-block;
+            text-decoration: none;
+            border: 2px solid var(--color-accent);
+        }
+        
+        .btn-secondary:hover {
+            background: var(--color-accent);
+            color: white;
+            transform: translateY(-3px) scale(1.05);
+        }
+        
+        /* Scroll Progress Bar */
+        .scroll-progress {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 0%;
+            height: 4px;
+            background: linear-gradient(90deg, var(--color-accent), #4f46e5);
+            z-index: 9999;
+            transition: width 0.1s ease-out;
+        }
+        
+        /* Reveal Animations */
+        .reveal {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        .reveal-left {
+            opacity: 1;
+            transform: translateX(0);
+        }
+        
+        .scale-in {
+            opacity: 1;
+            transform: scale(1);
+        }
+        
+        /* Navbar Styles */
+        .navbar {
+            transition: all 0.3s ease;
+        }
+        
+        .navbar.scrolled {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(12px);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        }
+        
+        /* Hero Section */
+        .hero-gradient {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(249, 250, 251, 0.95) 100%);
+        }
+        
+        /* Service Card Hover */
+        .service-card {
+            transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+            border: 2px solid transparent;
+        }
+        
+        .service-card:hover {
+            border-color: var(--color-accent);
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px rgba(99, 102, 241, 0.15);
+        }
+        
+        /* Testimonial Card */
+        .testimonial-card {
+            background: white;
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+            transition: all 0.3s ease;
+        }
+        
+        .testimonial-card:hover {
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
+            transform: translateY(-5px);
+        }
+        
+        /* Stats Counter */
+        .stat-number {
+            font-size: clamp(2.5rem, 6vw, 4rem);
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--color-accent), #4f46e5);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        /* Image Hover Zoom */
+        .img-zoom {
+            overflow: hidden;
+            border-radius: 12px;
+        }
+        
+        .img-zoom img {
+            transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+        
+        .img-zoom:hover img {
+            transform: scale(1.1);
+        }
+        
+        /* WhatsApp Float Button */
+        #wpp-float {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            width: 64px;
+            height: 64px;
+            background: #25D366;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 8px 25px rgba(37, 211, 102, 0.4);
+            z-index: 9998;
+            transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+            animation: pulse 2s infinite;
+        }
+        
+        #wpp-float:hover {
+            transform: scale(1.15);
+            box-shadow: 0 12px 35px rgba(37, 211, 102, 0.5);
+        }
+        
+        @keyframes pulse {
+            0%, 100% {
+                box-shadow: 0 8px 25px rgba(37, 211, 102, 0.4);
+            }
+            50% {
+                box-shadow: 0 8px 35px rgba(37, 211, 102, 0.6);
+            }
+        }
+        
+        /* Benefits Grid */
+        .benefit-icon {
+            width: 64px;
+            height: 64px;
+            background: linear-gradient(135deg, var(--color-accent), #4f46e5);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 1.5rem;
+            transition: all 0.3s ease;
+        }
+        
+        .benefit-card:hover .benefit-icon {
+            transform: rotateY(360deg);
+        }
+        
+        /* FAQ Accordion */
+        .faq-item {
+            border-bottom: 1px solid #e5e7eb;
+            padding: 1.5rem 0;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .faq-item:hover {
+            background: rgba(99, 102, 241, 0.02);
+        }
+        
+        .faq-answer {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s ease;
+        }
+        
+        .faq-item.active .faq-answer {
+            max-height: 500px;
+            margin-top: 1rem;
+        }
+        
+        /* Mobile Menu */
+        .mobile-menu {
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+        }
+        
+        .mobile-menu.active {
+            transform: translateX(0);
+        }
+        
+        /* Responsive Utilities */
+        @media (max-width: 768px) {
+            .hero-title {
+                font-size: 2.5rem;
+            }
+            
+            #wpp-float {
+                width: 56px;
+                height: 56px;
+                bottom: 1.5rem;
+                right: 1.5rem;
+            }
+        }
+        
+        /* Loading Animation */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .fade-in-up {
+            animation: fadeInUp 0.8s ease-out forwards;
+        }
+    </style>
+</head>
+<body>
+    <!-- Scroll Progress Bar -->
+    <div class="scroll-progress" id="scrollProgress"></div>
+    
+    <!-- Animated Background -->
+    <div class="animated-bg"></div>
+    
+    <!-- Navigation -->
+    <nav class="navbar fixed top-0 left-0 w-full z-50 py-4 transition-all duration-300">
+        <div class="container mx-auto px-4 lg:px-8">
+            <div class="flex items-center justify-between">
+                <!-- Logo -->
+                <a href="#hero" class="text-2xl lg:text-3xl font-bold text-primary flex items-center space-x-2">
+                    <svg class="w-8 h-8 lg:w-10 lg:h-10 text-accent" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/>
+                    </svg>
+                    <span>Wfit Pilates</span>
+                </a>
+                
+                <!-- Desktop Menu -->
+                <ul class="hidden md:flex items-center space-x-8 text-base font-medium">
+                    <li><a href="#sobre" class="text-primary hover:text-accent transition-colors duration-300">Sobre</a></li>
+                    <li><a href="#servicos" class="text-primary hover:text-accent transition-colors duration-300">Serviços</a></li>
+                    <li><a href="#beneficios" class="text-primary hover:text-accent transition-colors duration-300">Benefícios</a></li>
+                    <li><a href="#depoimentos" class="text-primary hover:text-accent transition-colors duration-300">Depoimentos</a></li>
+                    <li><a href="#faq" class="text-primary hover:text-accent transition-colors duration-300">FAQ</a></li>
+                    <li><a href="#contato" class="text-primary hover:text-accent transition-colors duration-300">Contato</a></li>
+                </ul>
+                
+                <!-- CTA Button Desktop -->
+                <a href="https://wa.me/5541984850845?text=Olá!%20Gostaria%20de%20agendar%20uma%20aula%20experimental%20de%20Pilates" class="hidden md:inline-block btn-primary" aria-label="Agendar aula experimental via WhatsApp">
+                    Aula Grátis
+                </a>
+                
+                <!-- Mobile Menu Button -->
+                <button id="mobileMenuBtn" class="md:hidden text-primary focus:outline-none" aria-label="Abrir menu mobile">
+                    <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </nav>
+    
+    <!-- Mobile Menu -->
+    <div id="mobileMenu" class="mobile-menu fixed top-0 right-0 w-full h-full bg-white z-40 md:hidden shadow-2xl">
+        <div class="flex flex-col h-full">
+            <div class="flex items-center justify-between p-6 border-b">
+                <span class="text-2xl font-bold text-primary">Menu</span>
+                <button id="closeMobileMenu" class="text-primary focus:outline-none" aria-label="Fechar menu mobile">
+                    <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+            <ul class="flex flex-col space-y-6 p-8 text-lg font-medium">
+                <li><a href="#sobre" class="text-primary hover:text-accent transition-colors mobile-link">Sobre</a></li>
+                <li><a href="#servicos" class="text-primary hover:text-accent transition-colors mobile-link">Serviços</a></li>
+                <li><a href="#beneficios" class="text-primary hover:text-accent transition-colors mobile-link">Benefícios</a></li>
+                <li><a href="#depoimentos" class="text-primary hover:text-accent transition-colors mobile-link">Depoimentos</a></li>
+                <li><a href="#faq" class="text-primary hover:text-accent transition-colors mobile-link">FAQ</a></li>
+                <li><a href="#contato" class="text-primary hover:text-accent transition-colors mobile-link">Contato</a></li>
+            </ul>
+            <div class="p-8 mt-auto">
+                <a href="https://wa.me/5541984850845?text=Olá!%20Gostaria%20de%20agendar%20uma%20aula%20experimental%20de%20Pilates" class="btn-primary w-full text-center block" aria-label="Agendar aula experimental via WhatsApp">
+                    Agendar Aula Grátis
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Hero Section -->
+    <section id="hero" class="relative min-h-screen flex items-center justify-center pt-20 pb-16 px-4 hero-gradient overflow-hidden">
+        <div class="container mx-auto">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+                <!-- Hero Content -->
+                <div class="text-center lg:text-left space-y-8 reveal">
+                    <div class="inline-block px-4 py-2 bg-accent/10 rounded-full text-accent font-semibold text-sm mb-4">
+                        Estúdio de Pilates em Boa Vista, Curitiba
+                    </div>
+                    
+                    <h1 class="hero-title text-primary leading-tight">
+                        Fortaleça Seu Corpo, Liberte Sua Mente
+                    </h1>
+                    
+                    <p class="subtitle text-gray-600 max-w-2xl mx-auto lg:mx-0">
+                        Descubra o poder transformador do Pilates no Wfit Pilates. Aulas personalizadas com instrutores certificados, equipamentos de última geração e ambiente acolhedor no coração de Boa Vista, Curitiba. Sua primeira aula é por nossa conta!
+                    </p>
+                    
+                    <div class="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start items-center">
+                        <a href="https://wa.me/5541984850845?text=Olá!%20Quero%20agendar%20minha%20aula%20experimental%20gratuita%20no%20Wfit%20Pilates" class="btn-primary w-full sm:w-auto text-center" aria-label="Agendar aula experimental gratuita">
+                            Agendar Aula Experimental Grátis
+                        </a>
+                        <a href="#servicos" class="btn-secondary w-full sm:w-auto text-center" aria-label="Conhecer nossos serviços">
+                            Conhecer Serviços
+                        </a>
+                    </div>
+                    
+                    <!-- Trust Indicators -->
+                    <div class="flex flex-wrap gap-8 justify-center lg:justify-start pt-8">
+                        <div class="text-center lg:text-left">
+                            <div class="stat-number">500+</div>
+                            <p class="text-gray-600 font-medium">Alunos Ativos</p>
+                        </div>
+                        <div class="text-center lg:text-left">
+                            <div class="stat-number">8+</div>
+                            <p class="text-gray-600 font-medium">Anos de Experiência</p>
+                        </div>
+                        <div class="text-center lg:text-left">
+                            <div class="stat-number">15+</div>
+                            <p class="text-gray-600 font-medium">Instrutores Certificados</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Hero Image -->
+                <div class="relative reveal-left">
+                    <div class="relative z-10 rounded-2xl overflow-hidden shadow-2xl">
+                        <div class="aspect-[4/5] bg-gradient-to-br from-accent/20 to-primary/20 flex items-center justify-center">
+                            <svg class="w-32 h-32 text-accent/30" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/>
+                            </svg>
+                        </div>
+                    </div>
+                    
+                    <!-- Floating Card -->
+                    <div class="absolute -bottom-6 -left-6 bg-white rounded-xl shadow-xl p-6 glass max-w-xs hidden lg:block">
+                        <div class="flex items-center space-x-4">
+                            <div class="w-12 h-12 bg-accent rounded-full flex items-center justify-center">
+                                <svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <p class="font-bold text-primary">Aula Experimental</p>
+                                <p class="text-sm text-gray-600">100% Gratuita</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Decorative Elements -->
+        <div class="absolute top-20 right-10 w-72 h-72 bg-accent/5 rounded-full blur-3xl"></div>
+        <div class="absolute bottom-20 left-10 w-96 h-96 bg-primary/5 rounded-full blur-3xl"></div>
+    </section>
+    
+    <!-- About Section -->
+    <section id="sobre" class="py-20 lg:py-32 px-4 bg-white relative overflow-hidden">
+        <div class="container mx-auto">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+                <!-- About Image -->
+                <div class="relative reveal-left order-2 lg:order-1">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="img-zoom">
+                            <div class="aspect-square bg-gradient-to-br from-accent/20 to-primary/20 rounded-2xl flex items-center justify-center">
+                                <svg class="w-16 h-16 text-accent/40" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/>
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="img-zoom mt-8">
+                            <div class="aspect-square bg-gradient-to-br from-primary/20 to-accent/20 rounded-2xl flex items-center justify-center">
+                                <svg class="w-16 h-16 text-primary/40" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Experience Badge -->
+                    <div class="absolute -bottom-8 -right-8 bg-accent text-white rounded-2xl p-8 shadow-2xl hidden lg:block">
+                        <div class="text-center">
+                            <div class="text-5xl font-bold mb-2">8+</div>
+                            <p class="text-sm font-medium">Anos de<br>Excelência</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- About Content -->
+                <div class="space-y-6 reveal order-1 lg:order-2">
+                    <div class="inline-block px-4 py-2 bg-accent/10 rounded-full text-accent font-semibold text-sm">
+                        Sobre o Wfit Pilates
+                    </div>
+                    
+                    <h2 class="section-title text-primary">
+                        Seu Estúdio de Pilates de Referência em Curitiba
+                    </h2>
+                    
+                    <p class="text-lg text-gray-600 leading-relaxed">
+                        O Wfit Pilates nasceu da paixão por transformar vidas através do movimento consciente. Localizado estrategicamente em Boa Vista, Curitiba, nosso estúdio é um refúgio onde corpo e mente se conectam em perfeita harmonia.
+                    </p>
+                    
+                    <p class="text-lg text-gray-600 leading-relaxed">
+                        Com mais de 8 anos de experiência, construímos uma comunidade de mais de 500 alunos que confiam em nossa metodologia personalizada. Cada aula é cuidadosamente planejada por instrutores certificados pela Pilates Method Alliance, garantindo segurança, eficácia e resultados reais.
+                    </p>
+                    
+                    <p class="text-lg text-gray-600 leading-relaxed">
+                        Nosso estúdio conta com equipamentos importados de última geração, incluindo Reformers, Cadillac, Chair e Barrel, além de um espaço amplo e climatizado que proporciona o ambiente perfeito para sua prática. Seja você iniciante ou praticante avançado, temos o programa ideal para suas necessidades.
+                    </p>
+                    
+                    <!-- Features List -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-6">
+                        <div class="flex items-start space-x-3">
+                            <svg class="w-6 h-6 text-accent flex-shrink-0 mt-1" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                            </svg>
+                            <div>
+                                <p class="font-semibold text-primary">Instrutores Certificados</p>
+                                <p class="text-sm text-gray-600">Formação internacional reconhecida</p>
+                            </div>
+                        </div

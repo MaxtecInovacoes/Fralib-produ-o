@@ -1,0 +1,3345 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<script>window.checkTwoFactorStatus = async function() { return true; };</script>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="connect-src 'self' wss://fralib.com.br wss://fralib.com.br:3000 https://cdn.jsdelivr.net https://fralib.com.br">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FraLib OS — Central de Comando</title>
+<!-- v2.0.0 - 20260428211345 -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/toast.css">
+<script src="/static/js/chart.min.js?v=20260429"></script>
+<script src="/static/js/socket.io.min.js?v=20260429"></script>
+<script src="/js/toast.js?v=20260429"></script>
+<script src="/js/socket-client.js?v=20260429"></script>
+<script src="/js/csrf-helper.js?v=20260429"></script>
+<script src="/js/auth-helper.js?v=20260429"></script>
+<script src="/js/twofa-setup.js?v=20260429"></script>
+<style>
+:root{
+  --fl-bg:#0a0714;--fl-bg-surface:#0d0d12;--fl-bg-card:#12121a;
+  --fl-bg-hover:#1c1c28;--fl-bg-overlay:rgba(6,6,8,0.92);
+  --fl-purple:#9333ea;--fl-purple-300:#c084fc;--fl-purple-400:#a855f7;
+  --fl-purple-800:#2d1060;--fl-purple-900:#1a0a30;--fl-purple-950:#0e0718;
+  --fl-border:rgba(147,51,234,0.12);--fl-border-md:rgba(147,51,234,0.25);--fl-border-hi:rgba(147,51,234,0.50);
+  --fl-text:#f0f0f5;--fl-text-muted:#8888a0;--fl-text-dim:#5a5a70;
+  --fl-font-brand:'Press Start 2P',monospace;--fl-font-ui:'DM Sans',system-ui,sans-serif;--fl-font-mono:'JetBrains Mono',monospace;
+  --fl-ease:cubic-bezier(0.22,1,0.36,1);
+  --cyan:#00FFB3;--cyan-glow:rgba(0,255,179,0.4);--cyan-dim:rgba(0,255,179,0.12);
+  --gold:#FFB800;--gold-glow:rgba(255,184,0,0.35);--gold-dim:rgba(255,184,0,0.15);
+  --success:#22c55e;--warning:#f59e0b;--danger:#ef4444;--info:#38bdf8;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  font-family:var(--fl-font-ui);background:var(--fl-bg);color:var(--fl-text);
+  display:flex;overflow:hidden;-webkit-font-smoothing:antialiased;
+}
+
+/* ============================================================
+   SIDEBAR
+   ============================================================ */
+.sidebar{
+  width:240px;min-height:100vh;
+  background:var(--fl-bg-surface);
+  border-right:2px solid var(--fl-border);
+  display:flex;flex-direction:column;
+  padding:20px 0;flex-shrink:0;
+  box-shadow:4px 0 0 rgba(0,0,0,0.3);
+  z-index:100;
+}
+.sidebar-logo{
+  display:flex;align-items:center;gap:10px;
+  padding:0 20px 24px;border-bottom:1px solid var(--fl-border);
+  margin-bottom:16px;
+}
+.sidebar-logo img{height:32px;filter:drop-shadow(0 0 8px rgba(147,51,234,0.4))}
+.sidebar-logo span{font-family:var(--fl-font-brand);font-size:8px;color:var(--fl-purple-300);letter-spacing:1px}
+
+.sidebar-nav{flex:1;display:flex;flex-direction:column;gap:2px;padding:0 10px}
+.sidebar-link{
+  display:flex;align-items:center;gap:12px;
+  padding:12px 14px;
+  font-size:13px;font-weight:500;color:var(--fl-text-muted);
+  text-decoration:none;transition:all .2s var(--fl-ease);
+  border:2px solid transparent;
+}
+.sidebar-link:hover{color:var(--fl-text);background:var(--fl-bg-hover);border-color:var(--fl-border)}
+.sidebar-link.active{
+  color:var(--fl-purple-300);background:var(--fl-purple-900);
+  border-color:var(--fl-purple);
+  box-shadow:3px 3px 0 var(--fl-purple-950);
+}
+.sidebar-link .icon{width:20px;height:20px;flex-shrink:0}
+.sidebar-link .badge-count{
+  margin-left:auto;
+  font-family:var(--fl-font-brand);font-size:7px;
+  padding:3px 8px;background:var(--danger);color:#fff;
+}
+
+.sidebar-footer{
+  padding:16px 20px;border-top:1px solid var(--fl-border);
+  font-size:11px;color:var(--fl-text-dim);
+}
+
+/* ============================================================
+   MAIN AREA
+   ============================================================ */
+.main{flex:1;overflow-y:auto;overflow-x:hidden;padding:28px 32px}
+
+/* Header */
+.main-header{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:28px;gap:16px;flex-wrap:wrap;
+}
+.main-header h1{
+  font-family:var(--fl-font-brand);font-size:clamp(10px,1.5vw,14px);
+  background:linear-gradient(135deg,var(--fl-purple-300),var(--cyan));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+.header-right{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.header-user{
+  display:flex;align-items:center;gap:10px;
+  font-size:12px;color:var(--fl-text-muted);
+}
+.header-avatar{
+  width:32px;height:32px;
+  background:var(--fl-purple-900);border:2px solid var(--fl-purple);
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--fl-font-brand);font-size:10px;color:var(--fl-purple-300);
+  box-shadow:2px 2px 0 var(--fl-purple-950);
+}
+
+/* Pipeline Controls */
+.pipeline-controls{display:flex;gap:8px;align-items:center}
+.btn-pipeline{
+  padding:8px 14px;font-family:var(--fl-font-brand);font-size:7px;
+  cursor:pointer;border:2px solid;letter-spacing:1px;
+  transition:all .15s;white-space:nowrap;
+}
+.btn-pipeline-start{
+  background:var(--success);color:#000;border-color:#16803C;
+  box-shadow:3px 3px 0 #0D5A28;
+}
+.btn-pipeline-start:hover{box-shadow:3px 3px 0 #0D5A28,0 0 15px rgba(34,197,94,0.3)}
+.btn-pipeline-start:active{transform:translateY(2px);box-shadow:1px 1px 0 #0D5A28}
+.btn-pipeline-pause{
+  background:var(--warning);color:#000;border-color:#B45309;
+  box-shadow:3px 3px 0 #7C2D12;
+}
+.btn-pipeline-pause:hover{box-shadow:3px 3px 0 #7C2D12,0 0 15px rgba(245,158,11,0.3)}
+.btn-pipeline-pause:active{transform:translateY(2px);box-shadow:1px 1px 0 #7C2D12}
+.pipeline-status{
+  font-family:var(--fl-font-mono);font-size:10px;
+  padding:4px 10px;border:1px solid var(--fl-border);
+  background:var(--fl-bg-card);
+}
+.pipeline-status.running{border-color:var(--success);color:var(--success)}
+.pipeline-status.paused{border-color:var(--warning);color:var(--warning)}
+.pipeline-status.idle{border-color:var(--fl-text-dim);color:var(--fl-text-dim)}
+
+/* ============================================================
+   KPI CARDS — 6 cards em 2 linhas de 3
+   ============================================================ */
+.kpi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:32px}
+.kpi-card{
+  background:var(--fl-bg-card);border:2px solid var(--fl-border);
+  padding:20px;position:relative;overflow:hidden;
+  box-shadow:4px 4px 0 rgba(0,0,0,0.3);
+  transition:all .3s var(--fl-ease);
+}
+.kpi-card:hover{transform:translateY(-2px);box-shadow:6px 6px 0 rgba(0,0,0,0.4)}
+.kpi-card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:2px;
+}
+.kpi-card:nth-child(1)::before{background:var(--fl-purple)}
+.kpi-card:nth-child(2)::before{background:var(--cyan)}
+.kpi-card:nth-child(3)::before{background:var(--gold)}
+.kpi-card:nth-child(4)::before{background:var(--info)}
+.kpi-card:nth-child(5)::before{background:var(--success)}
+.kpi-card:nth-child(6)::before{background:var(--warning)}
+
+.kpi-label{font-size:11px;color:var(--fl-text-dim);margin-bottom:8px;font-weight:500;text-transform:uppercase;letter-spacing:1px}
+.kpi-value{font-family:var(--fl-font-brand);font-size:clamp(13px,1.6vw,22px);margin-bottom:4px}
+.kpi-card:nth-child(1) .kpi-value{color:var(--fl-purple-300)}
+.kpi-card:nth-child(2) .kpi-value{color:var(--cyan)}
+.kpi-card:nth-child(3) .kpi-value{color:var(--gold)}
+.kpi-card:nth-child(4) .kpi-value{color:var(--info)}
+.kpi-card:nth-child(5) .kpi-value{color:var(--success)}
+.kpi-card:nth-child(6) .kpi-value{color:var(--warning)}
+.kpi-sub{font-size:11px;color:var(--fl-text-dim)}
+.kpi-glow{
+  position:absolute;top:50%;right:-20px;
+  width:100px;height:100px;border-radius:50%;filter:blur(40px);opacity:.3;
+}
+.kpi-card:nth-child(1) .kpi-glow{background:var(--fl-purple)}
+.kpi-card:nth-child(2) .kpi-glow{background:var(--cyan)}
+.kpi-card:nth-child(3) .kpi-glow{background:var(--gold)}
+.kpi-card:nth-child(4) .kpi-glow{background:var(--info)}
+.kpi-card:nth-child(5) .kpi-glow{background:var(--success)}
+.kpi-card:nth-child(6) .kpi-glow{background:var(--warning)}
+
+/* ============================================================
+   VIEW SECTIONS — alternância de conteúdo
+   ============================================================ */
+.view-section{display:none}
+.view-section.active{display:block}
+
+/* ============================================================
+   KANBAN SECTION
+   ============================================================ */
+.kanban-header{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:16px;
+}
+.kanban-header h2{
+  font-family:var(--fl-font-brand);font-size:10px;
+  color:var(--fl-text-muted);letter-spacing:1px;
+}
+.kanban-scroll{
+  overflow-x:auto;padding-bottom:16px;
+  scrollbar-width:thin;scrollbar-color:var(--fl-purple-900) transparent;
+}
+.kanban-scroll::-webkit-scrollbar{height:6px}
+.kanban-scroll::-webkit-scrollbar-track{background:transparent}
+.kanban-scroll::-webkit-scrollbar-thumb{background:var(--fl-purple-900);border-radius:3px}
+
+.kanban-board{
+  display:grid;
+  grid-template-columns:repeat(6,260px);
+  gap:12px;
+  min-width:max-content;
+}
+.kanban-col{
+  background:var(--fl-bg-surface);
+  border:2px solid var(--fl-border);
+  min-height:400px;
+  display:flex;flex-direction:column;
+  box-shadow:4px 4px 0 rgba(0,0,0,0.2);
+}
+.kanban-col-header{
+  padding:12px 14px;
+  border-bottom:2px solid var(--fl-border);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.kanban-col-title{
+  font-family:var(--fl-font-brand);font-size:7px;
+  letter-spacing:1px;
+}
+.kanban-col-count{
+  font-family:var(--fl-font-mono);font-size:11px;
+  padding:2px 8px;background:rgba(255,255,255,0.05);
+}
+
+/* Column color coding */
+.col-fila .kanban-col-header{border-bottom-color:#60a5fa}
+.col-fila .kanban-col-title{color:#60a5fa}
+.col-intro .kanban-col-header{border-bottom-color:var(--cyan)}
+.col-intro .kanban-col-title{color:var(--cyan)}
+.col-followup1 .kanban-col-header{border-bottom-color:var(--fl-text-dim)}
+.col-followup1 .kanban-col-title{color:var(--fl-text-dim)}
+.col-followup2 .kanban-col-header{border-bottom-color:var(--warning)}
+.col-followup2 .kanban-col-title{color:var(--warning)}
+.col-qualificados .kanban-col-header{border-bottom-color:var(--info)}
+.col-qualificados .kanban-col-title{color:var(--info)}
+.col-negociacao .kanban-col-header{border-bottom-color:var(--fl-purple)}
+.col-negociacao .kanban-col-title{color:var(--fl-purple-300)}
+.col-perdidos .kanban-col-header{border-bottom-color:var(--danger)}
+.col-perdidos .kanban-col-title{color:var(--danger)}
+.col-ganhos .kanban-col-header{border-bottom-color:var(--success)}
+.col-ganhos .kanban-col-title{color:var(--success)}
+
+.kanban-col-body{
+  flex:1;padding:10px;display:flex;flex-direction:column;gap:10px;
+  min-height:100px;
+}
+.kanban-col-body.drag-over{background:rgba(147,51,234,0.06);border:2px dashed var(--fl-purple-400)}
+
+/* Lead Card */
+.lead-card{
+  background:var(--fl-bg-card);border:2px solid var(--fl-border);
+  padding:14px;cursor:pointer;
+  box-shadow:3px 3px 0 rgba(0,0,0,0.3);
+  transition:all .2s var(--fl-ease);
+  role:button;
+  tabindex:0;
+}
+.lead-card:hover{
+  border-color:var(--fl-purple);
+  box-shadow:4px 4px 0 rgba(0,0,0,0.4),0 0 15px rgba(147,51,234,0.1);
+  cursor:pointer;
+}
+.lead-card:active{cursor:grabbing}
+.lead-card.dragging{opacity:.5;transform:rotate(2deg);cursor:grabbing}
+
+/* ============================================================
+   MODAL DO LEAD
+   ============================================================ */
+.modal-overlay{
+  position:fixed;inset:0;z-index:9999;
+  background:rgba(6,6,8,0.85);backdrop-filter:blur(8px);
+  display:none;align-items:center;justify-content:center;
+  padding:20px;
+}
+.modal-overlay.open{display:flex}
+
+.modal{
+  background:var(--fl-bg-surface);border:2px solid var(--fl-purple);
+  width:100%;max-width:720px;max-height:90vh;overflow-y:auto;
+  box-shadow:8px 8px 0 rgba(0,0,0,0.5),0 0 80px rgba(147,51,234,0.15);
+  animation:modalIn .3s var(--fl-ease);
+}
+@keyframes modalIn{from{opacity:0;transform:translateY(20px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+
+.modal-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:18px 24px;border-bottom:2px solid var(--fl-border);
+}
+.modal-header h3{font-family:var(--fl-font-brand);font-size:10px;color:var(--fl-purple-300);letter-spacing:1px}
+.modal-close{
+  background:none;border:2px solid var(--fl-border);
+  color:var(--fl-text-dim);font-size:16px;
+  width:32px;height:32px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:all .2s;
+  box-shadow:2px 2px 0 rgba(0,0,0,0.2);
+}
+.modal-close:hover{border-color:var(--danger);color:var(--danger)}
+
+/* Tabs */
+.modal-tabs{display:flex;border-bottom:2px solid var(--fl-border)}
+.modal-tab{
+  flex:1;padding:12px;text-align:center;
+  font-family:var(--fl-font-brand);font-size:8px;
+  color:var(--fl-text-dim);cursor:pointer;
+  border-bottom:3px solid transparent;
+  transition:all .2s;letter-spacing:1px;
+}
+.modal-tab:hover{color:var(--fl-text-muted)}
+.modal-tab.active{color:var(--fl-purple-300);border-bottom-color:var(--fl-purple);background:rgba(147,51,234,0.05)}
+
+.modal-body{padding:24px}
+.tab-content{display:none}
+.tab-content.active{display:block}
+
+/* Chat SDR */
+.chat-area{
+  background:var(--fl-bg-card);border:2px solid var(--fl-border);
+  height:280px;overflow-y:auto;padding:16px;
+  display:flex;flex-direction:column;gap:10px;
+  margin-bottom:16px;
+}
+.chat-msg{
+  max-width:75%;padding:10px 14px;font-size:13px;line-height:1.5;
+  box-shadow:2px 2px 0 rgba(0,0,0,0.2);
+}
+.chat-msg.sent{
+  align-self:flex-end;
+  background:var(--fl-purple-900);border:1px solid var(--fl-purple-800);
+  color:var(--fl-purple-300);
+}
+.chat-msg.received{
+  align-self:flex-start;
+  background:var(--fl-bg-hover);border:1px solid var(--fl-border);
+  color:var(--fl-text-muted);
+}
+.chat-msg .time{font-size:9px;color:var(--fl-text-dim);margin-top:4px;text-align:right}
+.chat-input-row{display:flex;gap:8px}
+.chat-input-row input{
+  flex:1;padding:12px;background:var(--fl-bg-card);border:2px solid var(--fl-border);
+  color:var(--fl-text);font-family:var(--fl-font-ui);font-size:13px;outline:none;
+}
+.chat-input-row input:focus{border-color:var(--cyan)}
+.chat-send-btn{
+  padding:12px 18px;background:var(--success);color:#000;border:none;cursor:pointer;
+  font-family:var(--fl-font-brand);font-size:10px;font-weight:700;
+  box-shadow:inset -3px -3px 0 #16803C,inset 3px 3px 0 #4ADE80,0 4px 0 #0D5A28;
+  transition:transform 60ms;
+}
+.chat-send-btn:active{transform:translateY(4px);box-shadow:inset -3px -3px 0 #16803C,inset 3px 3px 0 #4ADE80}
+
+/* Site & Briefing */
+.briefing-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
+.briefing-item{
+  background:var(--fl-bg-card);border:2px solid var(--fl-border);
+  padding:14px;box-shadow:3px 3px 0 rgba(0,0,0,0.2);
+}
+.briefing-label{font-size:10px;color:var(--fl-text-dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px}
+.briefing-value{font-size:14px;font-weight:600;color:var(--fl-text)}
+
+.action-buttons{display:flex;gap:10px;flex-wrap:wrap}
+.btn-action{
+  flex:1;min-width:140px;padding:14px;text-align:center;
+  font-family:var(--fl-font-brand);font-size:8px;
+  text-decoration:none;cursor:pointer;border:none;
+  letter-spacing:1px;transition:transform 60ms,box-shadow 60ms;
+}
+.btn-action-gold{
+  background:var(--gold);color:#000;font-weight:700;
+  box-shadow:inset -3px -3px 0 #B88600,inset 3px 3px 0 #FFD54F,0 4px 0 #7A5900;
+}
+.btn-action-gold:hover{box-shadow:inset -3px -3px 0 #B88600,inset 3px 3px 0 #FFE082,0 4px 0 #7A5900,0 0 20px var(--gold-glow)}
+.btn-action-gold:active{transform:translateY(4px);box-shadow:inset -3px -3px 0 #B88600,inset 3px 3px 0 #FFD54F}
+.btn-action-cyan{
+  background:var(--cyan);color:#000;font-weight:700;
+  box-shadow:inset -3px -3px 0 #00A876,inset 3px 3px 0 #66FFD1,0 4px 0 #007A55;
+}
+.btn-action-cyan:hover{box-shadow:inset -3px -3px 0 #00A876,inset 3px 3px 0 #99FFE0,0 4px 0 #007A55,0 0 20px var(--cyan-glow)}
+.btn-action-cyan:active{transform:translateY(4px);box-shadow:inset -3px -3px 0 #00A876,inset 3px 3px 0 #66FFD1}
+.btn-action-purple{
+  background:var(--fl-purple);color:#fff;font-weight:700;
+  box-shadow:inset -3px -3px 0 var(--fl-purple-800),inset 3px 3px 0 var(--fl-purple-300),0 4px 0 var(--fl-purple-950);
+}
+.btn-action-purple:hover{box-shadow:inset -3px -3px 0 var(--fl-purple-800),inset 3px 3px 0 var(--fl-purple-300),0 4px 0 var(--fl-purple-950),0 0 20px rgba(147,51,234,0.3)}
+.btn-action-purple:active{transform:translateY(4px);box-shadow:inset -3px -3px 0 var(--fl-purple-800),inset 3px 3px 0 var(--fl-purple-300)}
+
+/* ============================================================
+   EMPTY STATE
+   ============================================================ */
+.empty-state{
+  display:none;text-align:center;padding:60px 20px;
+}
+.empty-state.show{display:block}
+.empty-mascot{height:120px;margin-bottom:20px;filter:drop-shadow(0 0 20px rgba(147,51,234,0.4));animation:mago-breath 4s ease-in-out infinite}
+@keyframes mago-breath{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-10px) scale(1.04)}}
+.empty-text{font-family:var(--fl-font-brand);font-size:9px;color:var(--fl-text-dim);line-height:2.2}
+
+/* ============================================================
+   OVERVIEW — Gráficos e Funil
+   ============================================================ */
+.section-title{
+  font-family:var(--fl-font-brand);font-size:10px;color:var(--fl-text-muted);
+  letter-spacing:1px;margin-bottom:16px;
+}
+.period-filters{display:flex;gap:8px;margin-bottom:24px;flex-wrap:wrap;align-items:center}
+.period-label{font-size:11px;color:var(--fl-text-dim);text-transform:uppercase;letter-spacing:1px;margin-right:4px}
+.btn-period{
+  padding:8px 16px;font-family:var(--fl-font-brand);font-size:7px;
+  background:var(--fl-bg-card);border:2px solid var(--fl-border);
+  color:var(--fl-text-dim);cursor:pointer;letter-spacing:1px;
+  transition:all .15s;
+}
+.btn-period:hover{border-color:var(--fl-purple);color:var(--fl-purple-300)}
+.btn-period.active{
+  background:var(--fl-purple-900);border-color:var(--fl-purple);
+  color:var(--fl-purple-300);
+  box-shadow:2px 2px 0 var(--fl-purple-950);
+}
+
+.charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:28px}
+.chart-card{
+  background:var(--fl-bg-card);border:2px solid var(--fl-border);
+  padding:20px;
+  box-shadow:4px 4px 0 rgba(0,0,0,0.2);
+}
+.chart-card.full-width{grid-column:1/-1}
+.chart-title{
+  font-family:var(--fl-font-brand);font-size:8px;color:var(--fl-text-muted);
+  letter-spacing:1px;margin-bottom:16px;
+}
+.chart-container{position:relative;height:200px}
+
+/* Funil */
+.funnel-wrap{display:flex;flex-direction:column;gap:8px;max-width:700px}
+.funnel-step{
+  display:flex;align-items:center;gap:14px;
+  padding:14px 18px;border:2px solid var(--fl-border);
+  background:var(--fl-bg-card);
+  transition:border-color .2s;
+}
+.funnel-step:hover{border-color:var(--fl-border-md)}
+.funnel-label{font-family:var(--fl-font-brand);font-size:7px;color:var(--fl-text-muted);letter-spacing:1px;flex:1;min-width:140px}
+.funnel-bar-wrap{flex:2;height:14px;background:rgba(255,255,255,0.04);overflow:hidden;border:1px solid var(--fl-border)}
+.funnel-bar{height:100%;transition:width .8s var(--fl-ease)}
+.funnel-count{font-family:var(--fl-font-mono);font-size:14px;font-weight:600;min-width:50px;text-align:right}
+
+/* ============================================================
+   UTI DE LEADS
+   ============================================================ */
+.uti-header{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:12px;flex-wrap:wrap;gap:8px;
+}
+.uti-desc{font-size:12px;color:var(--fl-text-dim);margin-bottom:18px;line-height:1.6}
+.uti-tab{
+  background:transparent;border:none;border-bottom:2px solid transparent;
+  color:var(--fl-text-dim);font-family:var(--fl-font-brand);font-size:7px;
+  letter-spacing:1px;padding:8px 14px 10px;cursor:pointer;transition:all .2s;
+}
+.uti-tab:hover{color:var(--fl-text)}
+.uti-tab.active{color:var(--fl-purple-300);border-bottom-color:var(--fl-purple)}
+.uti-enrich-form{
+  background:var(--fl-bg-surface);border:1px solid var(--fl-border);
+  padding:14px;margin-top:6px;display:grid;
+  grid-template-columns:1fr 1fr;gap:8px;
+}
+.uti-enrich-form input{
+  background:var(--fl-bg);border:1px solid var(--fl-border-md);color:var(--fl-text);
+  padding:6px 10px;font-size:12px;font-family:var(--fl-font-mono);width:100%;
+}
+.uti-enrich-form input:focus{outline:none;border-color:var(--fl-purple)}
+.uti-count-badge{
+  font-family:var(--fl-font-mono);font-size:11px;
+  padding:4px 12px;background:rgba(239,68,68,0.12);
+  border:1px solid var(--danger);color:var(--danger);
+}
+.uti-table-wrap{overflow-x:auto}
+.uti-table{
+  width:100%;border-collapse:collapse;
+  font-size:13px;
+}
+.uti-table th{
+  padding:10px 14px;text-align:left;
+  font-family:var(--fl-font-brand);font-size:7px;letter-spacing:1px;
+  color:var(--fl-text-dim);border-bottom:2px solid var(--fl-border);
+  background:var(--fl-bg-surface);white-space:nowrap;
+}
+.uti-table td{
+  padding:12px 14px;border-bottom:1px solid var(--fl-border);
+  color:var(--fl-text-muted);vertical-align:middle;
+}
+.uti-table tr:hover td{background:var(--fl-bg-hover)}
+.uti-status-badge{
+  font-family:var(--fl-font-mono);font-size:10px;
+  padding:2px 8px;background:rgba(239,68,68,0.10);
+  border:1px solid rgba(239,68,68,0.3);color:var(--danger);
+  white-space:nowrap;
+}
+.btn-requalificar{
+  padding:7px 14px;font-family:var(--fl-font-brand);font-size:7px;
+  background:var(--gold);color:#000;border:none;cursor:pointer;
+  box-shadow:2px 2px 0 #7A5900;letter-spacing:1px;
+  transition:all .15s;white-space:nowrap;
+}
+.btn-requalificar:hover{box-shadow:2px 2px 0 #7A5900,0 0 10px var(--gold-glow)}
+.btn-requalificar:active{transform:translateY(2px);box-shadow:none}
+.uti-empty{
+  text-align:center;padding:48px 20px;
+  font-family:var(--fl-font-brand);font-size:9px;color:var(--success);line-height:2.4;
+}
+
+/* ============================================================
+   CONFIGURAÇÕES
+   ============================================================ */
+.config-section{max-width:640px}
+.config-group{
+  background:var(--fl-bg-card);border:2px solid var(--fl-border);
+  padding:24px;margin-bottom:20px;
+  box-shadow:4px 4px 0 rgba(0,0,0,0.2);
+}
+.config-group-title{
+  font-family:var(--fl-font-brand);font-size:9px;color:var(--fl-purple-300);
+  letter-spacing:1px;margin-bottom:18px;padding-bottom:12px;
+  border-bottom:1px solid var(--fl-border);
+}
+.config-field{margin-bottom:16px}
+.config-label{
+  display:block;font-size:11px;color:var(--fl-text-dim);
+  text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;
+}
+.config-input,.config-select{
+  width:100%;padding:12px;
+  background:var(--fl-bg-surface);border:2px solid var(--fl-border);
+  color:var(--fl-text);font-family:var(--fl-font-mono);font-size:13px;outline:none;
+}
+.config-input:focus,.config-select:focus{border-color:var(--fl-purple)}
+.config-select option{background:var(--fl-bg-surface)}
+.config-row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.btn-config-save{
+  padding:14px 28px;font-family:var(--fl-font-brand);font-size:9px;
+  background:var(--fl-purple);color:#fff;border:none;cursor:pointer;
+  box-shadow:4px 4px 0 var(--fl-purple-950);letter-spacing:1px;
+  transition:all .15s;
+}
+.btn-config-save:hover{box-shadow:4px 4px 0 var(--fl-purple-950),0 0 20px rgba(147,51,234,0.3)}
+.btn-config-save:active{transform:translateY(2px);box-shadow:2px 2px 0 var(--fl-purple-950)}
+.btn-config-cyan{background:var(--cyan);color:#000;box-shadow:4px 4px 0 #007A55}
+.btn-config-cyan:hover{box-shadow:4px 4px 0 #007A55,0 0 20px var(--cyan-glow)}
+.config-notice{
+  font-size:12px;color:var(--fl-text-dim);margin-top:12px;
+  padding:10px 14px;border:1px solid var(--fl-border);background:rgba(255,255,255,0.02);line-height:1.6;
+}
+
+/* ============================================================
+   MOBILE SIDEBAR TOGGLE
+   ============================================================ */
+.sidebar-toggle{
+  display:none;position:fixed;top:14px;left:14px;z-index:200;
+  background:var(--fl-bg-card);border:2px solid var(--fl-purple);
+  color:var(--fl-purple-300);font-size:18px;
+  width:36px;height:36px;cursor:pointer;
+  box-shadow:3px 3px 0 var(--fl-purple-950);
+  align-items:center;justify-content:center;
+}
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media(max-width:1200px){
+  .kpi-grid{grid-template-columns:repeat(3,1fr)}
+}
+@media(max-width:1024px){
+  .charts-grid{grid-template-columns:1fr}
+  .chart-card.full-width{grid-column:auto}
+}
+@media(max-width:768px){
+  .sidebar{
+    position:fixed;left:-250px;top:0;bottom:0;z-index:150;
+    transition:left .3s var(--fl-ease);
+  }
+  .sidebar.open{left:0}
+  .sidebar-toggle{display:flex}
+  .main{padding:20px 16px;padding-top:60px}
+  .kpi-grid{grid-template-columns:1fr 1fr}
+  .briefing-grid{grid-template-columns:1fr}
+  .modal{max-width:95vw}
+  .config-row{grid-template-columns:1fr}
+  .pipeline-controls{flex-wrap:wrap}
+}
+@media(max-width:480px){
+  .kpi-grid{grid-template-columns:1fr}
+}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+</style>
+</head>
+<body>
+
+<!-- Mobile sidebar toggle -->
+<button class="sidebar-toggle" id="sidebarToggle" aria-label="Menu">&#9776;</button>
+
+
+<!-- ===== SIDEBAR ===== -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-logo">
+    <div style="font-weight:700;font-size:18px;color:var(--fl-purple)">FraLib OS</div>
+    <span>CENTRAL</span>
+  </div>
+  <nav class="sidebar-nav">
+    <a href="#" class="sidebar-link" data-view="overview">
+      <svg class="icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="3" y="3" width="7" height="7"></rect>
+        <rect x="14" y="3" width="7" height="7"></rect>
+        <rect x="14" y="14" width="7" height="7"></rect>
+        <rect x="3" y="14" width="7" height="7"></rect>
+      </svg>
+      Visão Geral
+    </a>
+    <a href="#" class="sidebar-link active" data-view="crm">
+      <svg class="icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+        <circle cx="9" cy="7" r="4"></circle>
+        <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
+        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+      </svg>
+      CRM / Leads
+    </a>
+    <a href="#" class="sidebar-link" data-view="uti">
+      <svg class="icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+        <line x1="12" y1="9" x2="12" y2="13"></line>
+        <line x1="12" y1="17" x2="12.01" y2="17"></line>
+      </svg>
+      Leads Incompletos
+      <span class="badge-count" id="utiBadge">!</span>
+    </a>
+    <a href="#" class="sidebar-link" data-view="config">
+      <svg class="icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+      </svg>
+      </svg>
+      Configurações
+    </a>
+  </nav>
+    <a href="#" class="sidebar-link" data-view="perfil">
+      <svg class="icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+        <circle cx="12" cy="7" r="4"></circle>
+      </svg>
+      Meu Perfil
+    </a>
+  <div class="sidebar-footer">
+    <button onclick="AuthHelper.logout()" style="width:100%;padding:12px;background:var(--fl-red,#dc2626);color:white;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
+      <svg style="width:16px;height:16px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+        <polyline points="16 17 21 12 16 7"></polyline>
+        <line x1="21" y1="12" x2="9" y2="12"></line>
+      </svg>
+      Sair
+    </button>
+</aside>
+
+
+<!-- ===== MAIN ===== -->
+<main class="main">
+
+  <!-- Header -->
+  <div class="main-header">
+    <h1>CENTRAL DE COMANDO</h1>
+    <div class="header-right">
+      <!-- Controles do Pipeline -->
+      <div class="pipeline-controls">
+        <span class="pipeline-status idle" id="pipelineStatus">&#9679; IDLE</span>
+        <button class="btn-pipeline btn-pipeline-start" id="btnIniciar" id="btnIniciar">&#9654; INICIAR</button>
+        <button class="btn-pipeline btn-pipeline-pause" id="btnPausar" onclick="pausarPipeline()" style="display:none">&#9646;&#9646; PAUSAR</button>
+        <button class="btn-pipeline btn-pipeline-start" id="btnRetomar" onclick="retomarPipeline()" style="display:none">&#9654; RETOMAR</button>
+      </div>
+      <!-- Usuário -->
+      <div class="header-user">
+        <span>Agente Bryan</span>
+        <div class="header-avatar">B</div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- KPI Cards — 6 métricas -->
+  <div class="kpi-grid" id="kpi-section" style="display: none;">
+    <div class="kpi-card">
+      <div class="kpi-glow"></div>
+      <div class="kpi-label">Total de Leads</div>
+      <div class="kpi-value" id="kpi-leads">—</div>
+      <div class="kpi-sub" id="kpi-leads-sub">carregando...</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-glow"></div>
+      <div class="kpi-label">Sites Gerados</div>
+      <div class="kpi-value" id="kpi-sites">—</div>
+      <div class="kpi-sub" id="kpi-sites-sub">na Vercel</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-glow"></div>
+      <div class="kpi-label">Receita Gerada</div>
+      <div class="kpi-value" id="kpi-receita">—</div>
+      <div class="kpi-sub" id="kpi-receita-sub">no período</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-glow"></div>
+      <div class="kpi-label">Contatos Enviados</div>
+      <div class="kpi-value" id="kpi-contatos">—</div>
+      <div class="kpi-sub" id="kpi-contatos-sub">via WhatsApp</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-glow"></div>
+      <div class="kpi-label">Ciclo Atual</div>
+      <div class="kpi-value" id="kpi-ciclo">—</div>
+      <div class="kpi-sub" id="kpi-ciclo-sub">carregando...</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-glow"></div>
+      <div class="kpi-label">Taxa de Conversão</div>
+      <div class="kpi-value" id="kpi-conversao">—</div>
+      <div class="kpi-sub" id="kpi-conversao-sub">leads com site</div>
+    </div>
+  </div>
+
+  <!-- Empty State (oculto por padrão) -->
+  <div class="empty-state" id="emptyState">
+    <p class="empty-text">AGUARDANDO SDR BRYAN<br>CAPTAR OS PRIMEIROS LEADS...</p>
+  </div>
+
+  <!-- ========== VIEW: VISÃO GERAL ========== -->
+
+  <section class="view-section" id="view-overview">
+
+    <h2 class="section-title">&#9632; ANALYTICS &amp; VISÃO GERAL</h2>
+
+    <!-- Filtros de período -->
+    <div class="period-filters">
+      <span class="period-label">PERÍODO:</span>
+      <button class="btn-period" data-periodo="hoje" onclick="trocarPeriodo('hoje',this)">HOJE</button>
+      <button class="btn-period" data-periodo="semana" onclick="trocarPeriodo('semana',this)">7 DIAS</button>
+      <button class="btn-period active" data-periodo="mes" onclick="trocarPeriodo('mes',this)">MÊS</button>
+      <button class="btn-period" data-periodo="tudo" onclick="trocarPeriodo('tudo',this)">TUDO</button>
+    </div>
+
+    <!-- Gráficos -->
+    <div class="charts-grid">
+      <div class="chart-card full-width">
+        <div class="chart-title">&#9650; LEADS CAPTADOS POR DIA</div>
+        <div class="chart-container"><canvas id="chartLinha"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">&#9632; PERFORMANCE POR CIDADE (TOP 8)</div>
+        <div class="chart-container"><canvas id="chartCidade"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">&#9679; DISTRIBUIÇÃO POR NICHO</div>
+        <div class="chart-container"><canvas id="chartNicho"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Funil de conversão -->
+    <h2 class="section-title">&#9660; FUNIL DE CONVERSÃO</h2>
+    <div class="funnel-wrap" id="funnelWrap">
+      <div style="font-size:12px;color:var(--fl-text-dim);padding:16px">Carregando funil...</div>
+    </div>
+
+  </section>
+
+  <!-- ========== VIEW: CRM / KANBAN ========== -->
+
+  <section class="view-section active" id="view-crm">
+
+    <div class="kanban-header">
+      <h2>&#9783; CRM KANBAN</h2>
+    </div>
+
+    <div class="kanban-scroll">
+      <div class="kanban-board" id="kanbanBoard">
+
+        <!-- Fila de Atendimento -->
+        <div class="kanban-col col-fila">
+          <div class="kanban-col-header">
+            <span class="kanban-col-title">FILA DE ATENDIMENTO</span>
+            <span class="kanban-col-count" id="count-fila">0</span>
+          </div>
+          <div class="kanban-col-body" data-col="fila"></div>
+        </div>
+
+        <!-- Atendimento Iniciado -->
+        <div class="kanban-col col-intro">
+          <div class="kanban-col-header">
+            <span class="kanban-col-title">ATENDIMENTO INICIADO</span>
+            <span class="kanban-col-count" id="count-intro">0</span>
+          </div>
+          <div class="kanban-col-body" data-col="intro"></div>
+        </div>
+
+        <!-- Follow Up 1 -->
+        <div class="kanban-col col-followup1">
+          <div class="kanban-col-header">
+            <span class="kanban-col-title">FOLLOW UP 1</span>
+            <span class="kanban-col-count" id="count-followup1">0</span>
+          </div>
+          <div class="kanban-col-body" data-col="followup1"></div>
+        </div>
+
+        <!-- Follow Up 2 -->
+        <div class="kanban-col col-followup2">
+          <div class="kanban-col-header">
+            <span class="kanban-col-title">FOLLOW UP 2</span>
+            <span class="kanban-col-count" id="count-followup2">0</span>
+          </div>
+          <div class="kanban-col-body" data-col="followup2"></div>
+        </div>
+
+        <!-- Qualificados -->
+        <div class="kanban-col col-qualificados">
+          <div class="kanban-col-header">
+            <span class="kanban-col-title">QUALIFICADOS</span>
+            <span class="kanban-col-count" id="count-qualificados">0</span>
+          </div>
+          <div class="kanban-col-body" data-col="qualificados"></div>
+        </div>
+
+        <!-- Negociação -->
+        <div class="kanban-col col-negociacao">
+          <div class="kanban-col-header">
+            <span class="kanban-col-title">NEGOCIAÇÃO</span>
+            <span class="kanban-col-count" id="count-negociacao">0</span>
+          </div>
+          <div class="kanban-col-body" data-col="negociacao"></div>
+        </div>
+
+        <!-- Perdidos -->
+        <div class="kanban-col col-perdidos">
+          <div class="kanban-col-header">
+            <span class="kanban-col-title">PERDIDOS</span>
+            <span class="kanban-col-count" id="count-perdidos">0</span>
+          </div>
+          <div class="kanban-col-body" data-col="perdidos"></div>
+        </div>
+
+        <!-- Ganhos -->
+        <div class="kanban-col col-ganhos">
+          <div class="kanban-col-header">
+            <span class="kanban-col-title">GANHOS / VENDIDOS</span>
+            <span class="kanban-col-count" id="count-ganhos">0</span>
+          </div>
+          <div class="kanban-col-body" data-col="ganhos"></div>
+        </div>
+
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ========== VIEW: UTI DE LEADS ========== -->
+
+  <section class="view-section" id="view-uti">
+
+    <div class="uti-header">
+      <h2 class="section-title" style="margin:0">&#9888; LEADS — UTI</h2>
+      <span class="uti-count-badge" id="utiCount">0 leads</span>
+    </div>
+
+    <!-- Abas UTI -->
+    <div style="display:flex;gap:4px;margin-bottom:16px;border-bottom:1px solid var(--fl-border);padding-bottom:0">
+      <button class="uti-tab active" id="uti-tab-falhas" onclick="trocarAbaUTI('falhas')">
+        ⚠️ FALHAS DE PIPELINE <span id="badge-falhas" style="background:var(--danger);color:#fff;border-radius:99px;padding:1px 7px;font-size:10px;margin-left:6px">0</span>
+      </button>
+      <button class="uti-tab" id="uti-tab-descartados" onclick="trocarAbaUTI('descartados')">
+        ✋ DESCARTADOS PELO CAIO <span id="badge-descartados" style="background:var(--fl-text-dim);color:#fff;border-radius:99px;padding:1px 7px;font-size:10px;margin-left:6px">0</span>
+      </button>
+    </div>
+
+    <!-- Tab: Falhas de Pipeline -->
+    <div id="uti-painel-falhas">
+      <p class="uti-desc">Leads que entraram no builder mas o site não foi gerado (erro técnico ou score insuficiente). Clique em <strong>▶ REPROCESSAR</strong> para tentar novamente.</p>
+      <div class="uti-table-wrap">
+        <table class="uti-table">
+          <thead><tr><th>NOME</th><th>NICHO</th><th>CIDADE</th><th>MOTIVO</th><th>SITE</th><th>AÇÃO</th></tr></thead>
+          <tbody id="utiTableBody"><tr><td colspan="6"><div class="uti-empty">CARREGANDO...</div></td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Tab: Descartados pelo Caio -->
+    <div id="uti-painel-descartados" style="display:none">
+      <p class="uti-desc">Leads rejeitados pelo Caio na entrada — dados insuficientes ou fora do perfil. Enriqueça os dados manualmente e clique em <strong>✋ QUALIFICAR</strong> para forçar pelo pipeline.</p>
+      <div class="uti-table-wrap">
+        <table class="uti-table">
+          <thead><tr><th>NOME</th><th>NICHO</th><th>CIDADE</th><th>TELEFONE</th><th>AÇÃO</th></tr></thead>
+          <tbody id="utiDescartadosBody"><tr><td colspan="5"><div class="uti-empty">CARREGANDO...</div></td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ========== VIEW: CONFIGURAÇÕES ========== -->
+
+  <section class="view-section" id="view-config">
+
+    <h2 class="section-title">⚡ MOTOR FRALIB</h2>
+
+    <!-- Layout em Grid 2 Colunas -->
+    <div style="display:grid;grid-template-columns:1fr;gap:24px;width:100%;max-width:100%">
+      <div style="display:grid;grid-template-columns:1fr;gap:24px;width:100%" class="lg:grid-cols-2">
+
+        <!-- Coluna Esquerda: Formulário -->
+        <div class="config-section">
+          <div class="config-group">
+            <div class="config-group-title">▶ INICIAR NOVO CICLO DE PROSPECÇÃO</div>
+            <div class="config-field">
+              <label class="config-label" for="configNicho">Nicho / Segmento</label>
+              <input class="config-input" id="configNicho" type="text" placeholder="ex: restaurantes, dentistas...">
+            </div>
+            <div class="config-field">
+              <label class="config-label" for="configCidade">Cidade Alvo</label>
+              <input class="config-input" id="configCidade" type="text" placeholder="ex: Curitiba, PR">
+            </div>
+            <div class="config-field">
+              <label class="config-label" for="configQtd">Leads por Ciclo</label>
+              <input class="config-input" id="configQtd" type="number" min="1" max="500" value="50" placeholder="Quantidade desejada">
+            </div>
+            <div class="config-field">
+              <label class="config-label" for="configScoreMin">Score Mínimo de Qualificação (1-100)</label>
+              <input class="config-input" id="configScoreMin" type="number" min="1" max="100" value="70" placeholder="ex: 70">
+            </div>
+            <button class="btn-config-save" onclick="salvarConfigPipeline()">▶ INICIAR PIPELINE</button>
+        </div>
+
+        <!-- Coluna Direita: Terminal Mágico -->
+        <div class="config-section" style="background:var(--fl-bg-card);border:2px solid var(--fl-border-md);border-radius:12px;padding:16px;height:100%;min-height:400px;overflow-y:auto;font-family:monospace;font-size:13px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--fl-border)">
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="font-size:16px">🔮</span>
+              <span style="font-weight:600;color:var(--fl-purple)">TERMINAL MÁGICO</span>
+            </div>
+            <button onclick="limparTerminal()" style="background:transparent;border:1px solid var(--fl-border);color:var(--fl-text-muted);padding:4px 12px;border-radius:6px;font-size:11px;cursor:pointer">LIMPAR</button>
+          </div>
+          <div id="magic-logs-content" style="display:flex;flex-direction:column;gap:6px"></div>
+        </div>
+
+      </div>
+
+      <!-- Estatísticas de Conversão do Motor -->
+      <div class="config-section">
+        <div class="config-group">
+          <div class="config-group-title">📊 ESTATÍSTICAS DE CONVERSÃO DO MOTOR</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px">
+
+            <!-- Card: Nichos com Maior Conversão -->
+            <div style="background:var(--fl-bg-card);border:1px solid var(--fl-border);border-radius:8px;padding:16px">
+              <div style="font-weight:600;margin-bottom:12px;color:var(--fl-text)">🎯 Nichos com Maior Conversão</div>
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <div style="display:flex;justify-content:space-between;align-items:center">
+                  <span style="color:var(--fl-text-muted);font-size:13px">Restaurantes</span>
+                  <span style="color:#10b981;font-weight:600">45%</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center">
+                  <span style="color:var(--fl-text-muted);font-size:13px">Clínicas</span>
+                  <span style="color:#10b981;font-weight:600">32%</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center">
+                  <span style="color:var(--fl-text-muted);font-size:13px">Academias</span>
+                  <span style="color:#fbbf24;font-weight:600">28%</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center">
+                  <span style="color:var(--fl-text-muted);font-size:13px">Salões</span>
+                  <span style="color:#fbbf24;font-weight:600">24%</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Card: Taxa de Resposta Média -->
+            <div style="background:var(--fl-bg-card);border:1px solid var(--fl-border);border-radius:8px;padding:16px">
+              <div style="font-weight:600;margin-bottom:12px;color:var(--fl-text)">📈 Taxa de Resposta Média</div>
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <div style="display:flex;justify-content:space-between;align-items:center">
+                  <span style="color:var(--fl-text-muted);font-size:13px">WhatsApp</span>
+                  <span style="color:#10b981;font-weight:600">68%</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center">
+                  <span style="color:var(--fl-text-muted);font-size:13px">Email</span>
+                  <span style="color:#fbbf24;font-weight:600">42%</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center">
+                  <span style="color:var(--fl-text-muted);font-size:13px">Telefone</span>
+                  <span style="color:#fbbf24;font-weight:600">35%</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center">
+                  <span style="color:var(--fl-text-muted);font-size:13px">Média Geral</span>
+                  <span style="color:#10b981;font-weight:700;font-size:16px">48%</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </section>
+
+  <!-- ===== VIEW: MEU PERFIL ===== -->
+
+  <section class="view-section" id="view-perfil">
+    <h2 class="section-title">👤 MEU PERFIL</h2>
+
+    <!-- Formulário de Dados -->
+    <div class="config-section">
+      <div class="config-group">
+        <div class="config-group-title">📋 INFORMAÇÕES PESSOAIS</div>
+        <div class="config-row">
+          <div class="config-field">
+            <label class="config-label" for="perfilNome">Nome Completo</label>
+            <input class="config-input" id="perfilNome" type="text" placeholder="Seu nome">
+          </div>
+          <div class="config-field">
+            <label class="config-label" for="perfilTelefone">Telefone</label>
+            <input class="config-input" id="perfilTelefone" type="tel" placeholder="00 00000-0000">
+          </div>
+        </div>
+        <div class="config-row">
+          <div class="config-field">
+            <label class="config-label" for="perfilCEP">CEP</label>
+            <input class="config-input" id="perfilCEP" type="text" placeholder="00000-000" maxlength="9">
+          </div>
+          <div class="config-field">
+            <label class="config-label" for="perfilRua">Rua</label>
+            <input class="config-input" id="perfilRua" type="text" placeholder="Rua" readonly>
+          </div>
+        </div>
+        <div class="config-row">
+          <div class="config-field">
+            <label class="config-label" for="perfilBairro">Bairro</label>
+            <input class="config-input" id="perfilBairro" type="text" placeholder="Bairro" readonly>
+          </div>
+          <div class="config-field">
+            <label class="config-label" for="perfilCidade">Cidade</label>
+            <input class="config-input" id="perfilCidade" type="text" placeholder="Cidade" readonly>
+          </div>
+        </div>
+        <div class="config-row">
+          <div class="config-field">
+            <label class="config-label" for="perfilEstado">Estado</label>
+            <input class="config-input" id="perfilEstado" type="text" placeholder="UF" readonly>
+          </div>
+          <div class="config-field">
+            <label class="config-label" for="perfilNicho">Profissão / Nicho</label>
+            <input class="config-input" id="perfilNicho" type="text" placeholder="Ex: Desenvolvedor, Agência">
+          </div>
+        </div>
+        <div class="config-field">
+          <label class="config-label" for="perfilOrigem">Como conheceu a FraLib?</label>
+          <select class="config-select" id="perfilOrigem">
+            <option value="">Selecione...</option>
+            <option value="google">Google / Busca</option>
+            <option value="indicacao">Indicação</option>
+            <option value="redes">Redes Sociais</option>
+            <option value="youtube">YouTube</option>
+            <option value="outro">Outro</option>
+          </select>
+        </div>
+        <button class="btn-config-save" onclick="salvarPerfil()">💾 SALVAR INFORMAÇÕES</button>
+      </div>
+    </div>
+
+    <!-- Área de Upsell -->
+    <div class="config-section" id="upsell-section">
+      <div class="config-group">
+        <div class="config-group-title">✨ ELEVE SUA MAGIA</div>
+        <p style="color:var(--fl-text-muted);margin-bottom:16px;font-size:14px">
+          Desbloqueie todo o potencial do FraLib OS com recursos premium
+        </p>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px">
+          <button id="btn-upgrade-pro" class="btn-config-save" style="background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#000;font-weight:700" onclick="mostrarToast('🚀 Em breve: Upgrade para PRO!')">
+            ⭐ UPGRADE PARA PRO
+          </button>
+          <button class="btn-config-save" style="background:var(--fl-purple);color:white" onclick="abrirModalCreditos()">
+            🪙 COMPRAR CRÉDITOS
+          </button>
+          <button class="btn-config-save" style="background:#0891b2;color:white;font-weight:700" class="hover:bg-cyan-500" onclick="mostrarToast('🌐 Em breve: Sites extras!')">
+            🌐 ADICIONAR SITE EXTRA
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Status WhatsApp -->
+    <div class="config-section">
+      <div class="config-group">
+        <div class="config-group-title">📱 STATUS WHATSAPP - MOTOR WHATSMEOW</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:16px;background:var(--fl-bg-card);border-radius:8px;border:1px solid var(--fl-border)">
+          <div>
+            <div style="font-weight:600;margin-bottom:4px">Instância: FraLib MeoWhats</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn-config-save" id="btn-whats-status" style="padding:8px 16px">VERIFICAR STATUS</button>
+          <button class="btn-config-save" id="btn-whats-connect" style="padding:8px 16px;background:#10b981;color:white">CONECTAR / QR CODE</button>
+          <button class="btn-config-save" id="btn-whats-disconnect" style="padding:8px 16px;background:#dc2626;color:white">DESCONECTAR</button>
+        </div>
+    </div>
+
+    <!-- Segurança: 2FA -->
+    <div class="config-section">
+      <div class="config-group">
+        <div class="config-group-title">🔐 SEGURANÇA DA CONTA</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:16px;background:var(--fl-bg-card);border-radius:8px;border:1px solid var(--fl-border)">
+          <div>
+            <div style="font-weight:600;margin-bottom:4px">Autenticação de Dois Fatores (2FA)</div>
+            <div style="font-size:13px;color:var(--fl-text-muted)" id="status2FA">Status: Carregando...</div>
+          </div>
+          <button class="btn-config-save" style="padding:8px 16px" id="btn-config-2fa">CONFIGURAR</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Zona de Perigo -->
+    <div class="config-section" style="background:rgba(239,68,68,0.05);border:2px solid rgba(239,68,68,0.3)">
+      <div class="config-group">
+        <div class="config-group-title" style="color:#ef4444">⚠️ ZONA DE PERIGO</div>
+        <p style="color:var(--fl-text-muted);margin-bottom:16px;font-size:14px">
+          Esta ação é irreversível. Todos os leads serão arquivados e o Kanban será limpo.
+        </p>
+        <button class="btn-config-save" style="background:#dc2626;color:white;font-weight:700" onclick="confirmarResetBoard()">
+          🗑️ ARQUIVAR TUDO E COMEÇAR DO ZERO
+        </button>
+      </div>
+    </div>
+
+  </section>
+
+</main>
+
+
+<!-- ===== MODAL DO LEAD ===== -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modalLeadName">LEAD</h3>
+      <button class="modal-close" onclick="closeModal()" aria-label="Fechar modal">&times;</button>
+    </div>
+    <div class="modal-tabs">
+      <div class="modal-tab active" data-tab="chat" onclick="switchTab('chat')">CHAT SDR</div>
+      <div class="modal-tab" data-tab="site" onclick="switchTab('site')">DADOS E SITE</div>
+    </div>
+    <div class="modal-body">
+
+      <!-- Tab: Chat SDR -->
+      <div class="tab-content active" id="tab-chat">
+        <div class="chat-area" id="chatArea">
+          <div class="chat-msg sent">
+            Olá! Sou o Bryan, assistente digital da FraLib. Vi que você tem um negócio na região. Posso criar um site profissional grátis para você avaliar?
+            <div class="time">--:--</div>
+          </div>
+        </div>
+        <div class="chat-input-row">
+          <input type="text" placeholder="Digite uma mensagem..." id="chatInput">
+          <button class="chat-send-btn" onclick="sendMsg()">&#9654;</button>
+        </div>
+      </div>
+
+      <!-- Tab: Dados e Site -->
+      <div class="tab-content" id="tab-site">
+        <div class="briefing-grid">
+          <div class="briefing-item">
+            <div class="briefing-label">Nicho</div>
+            <div class="briefing-value" id="modalNicho">—</div>
+          </div>
+          <div class="briefing-item">
+            <div class="briefing-label">Cidade</div>
+            <div class="briefing-value" id="modalCidade">—</div>
+          </div>
+          <div class="briefing-item">
+            <div class="briefing-label">Telefone WhatsApp</div>
+            <div class="briefing-value" id="modalTelefone" style="font-family:var(--fl-font-mono);font-size:13px">—</div>
+          </div>
+          <div class="briefing-item">
+            <div class="briefing-label">Score de Qualificação</div>
+            <div class="briefing-value" id="modalScore">—</div>
+          </div>
+          <div class="briefing-item" style="grid-column:1/-1">
+            <div class="briefing-label">URL do Site</div>
+            <div class="briefing-value" id="modalUrl" style="font-size:12px;word-break:break-all;font-family:var(--fl-font-mono)">—</div>
+          </div>
+        </div>
+        <div class="action-buttons">
+          <button class="btn-action btn-action-gold" onclick="abrirSiteModal()">&#127760; ABRIR SITE</button>
+          <button class="btn-action btn-action-purple" onclick="abrirWhatsApp()">&#128241; WHATSAPP</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     SCRIPTS
+     ============================================================ -->
+
+<script>
+/* ══ ESTADO GLOBAL ════════════════════════════════════════════════ */
+var periodoAtual = 'mes';
+var chartsInstances = {};
+var leadAtualModal = null;
+var lastStatus = {};
+
+/* ══ AUTH GUARD ═══════════════════════════════════════════════════ */
+(function(){
+  var token = localStorage.getItem('fralib_token');
+  if (!token) { window.location.href = '/login.html'; return; }
+  
+  // Usar URL absoluta para garantir HTTPS via proxy
+  var apiUrl = window.location.protocol + '//' + window.location.host + '/api/auth/me';
+  
+  fetch(apiUrl, { 
+    headers: { 'Authorization': 'Bearer ' + token },
+    credentials: 'same-origin'
+  })
+    .then(function(r){
+      if (!r.ok) {
+        console.error('[Auth] Status:', r.status, r.statusText);
+      }
+      if (r.status === 401) { 
+        console.warn('[Auth] Token inválido, redirecionando para login');
+        localStorage.removeItem('fralib_token'); 
+        window.location.href = '/login.html'; 
+      }
+      if (r.status === 403) { 
+        alert('Seu plano venceu. Renove para continuar.'); 
+        window.location.href = '/planos.html'; 
+      }
+      return r.json();
+    })
+    .then(function(data){
+      if (data && data.email) {
+        console.log('[Auth] Usuário autenticado:', data.email);
+      }
+    })
+    .catch(function(err){
+      console.error('[Auth] Erro ao validar token:', err);
+      // Não deslogar em caso de erro de rede temporário
+      // Apenas logar o erro para debug
+    });
+})();
+
+/* ══ HELPER FETCH AUTENTICADO ═════════════════════════════════════ */
+function authFetch(url, opts) {
+  var options = opts || {};
+  options.headers = options.headers || {};
+  options.headers['Authorization'] = 'Bearer ' + localStorage.getItem('fralib_token');
+  options.credentials = 'same-origin';
+  
+  // Garantir URL absoluta
+  var fullUrl = url;
+  if (url.startsWith('/')) {
+    fullUrl = window.location.protocol + '//' + window.location.host + url;
+  }
+  
+  return fetch(fullUrl, options).catch(function(err){
+    console.error('[authFetch] Erro na requisição:', url, err);
+    throw err;
+  });
+}
+
+
+/* ══ SANITIZAÇÃO XSS ═══════════════════════════════════════════════ */
+function escapeHtml(str) {
+  if (!str) return '';
+  var div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+function sanitizeUrl(url) {
+  if (!url) return '';
+  var trimmed = (url || '').trim();
+  if (trimmed.toLowerCase().startsWith('javascript:') ||
+      trimmed.toLowerCase().startsWith('data:') ||
+      trimmed.toLowerCase().startsWith('vbscript:')) {
+    return '#';
+  }
+  return trimmed;
+}
+
+/* ══ KPIs — 6 cards ═══════════════════════════════════════════════ */
+async function carregarKPIs() {
+  try {
+    var resStatus = authFetch('/api/pipeline/status').then(function(r){ return r.json(); });
+    var resAnalytics = authFetch('/api/pipeline/analytics/overview?periodo=mes').then(function(r){ return r.json(); });
+    var status = await resStatus;
+    var analytics = await resAnalytics;
+    lastStatus = status;
+
+    var set = function(id, val){ var el = document.getElementById(id); if(el) el.textContent = val; };
+
+    // KPI 1 — Total de Leads
+    set('kpi-leads', (analytics.total_leads != null ? analytics.total_leads : (status.totalLeads || 0)).toLocaleString('pt-BR'));
+    set('kpi-leads-sub', status.rodando ? '🟢 pipeline ativo' : '⚪ pipeline ocioso');
+
+    // KPI 2 — Sites Gerados
+    set('kpi-sites', (status.totalSites || 0).toLocaleString('pt-BR'));
+    set('kpi-sites-sub', 'deployados na Vercel');
+
+    // KPI 3 — Receita
+    set('kpi-receita', 'R$ ' + (analytics.receita || 0).toLocaleString('pt-BR', { minimumFractionDigits: 0 }));
+    set('kpi-receita-sub', (analytics.conversao || 0) + '% de conversão');
+
+    // KPI 4 — Contatos Enviados
+    set('kpi-contatos', (status.totalEnviados || 0).toLocaleString('pt-BR'));
+    set('kpi-contatos-sub', 'mensagens disparadas');
+
+    // KPI 5 — Ciclo Atual
+    set('kpi-ciclo', '#' + (status.cicloAtual || 0));
+    set('kpi-ciclo-sub', status.rodando ? 'em execução agora' : (status.cicloAtual > 0 ? 'último ciclo' : 'nenhum ciclo ainda'));
+
+    // KPI 6 — Taxa de Conversão
+    set('kpi-conversao', (analytics.conversao || 0) + '%');
+    set('kpi-conversao-sub', 'leads com site gerado');
+
+    // Atualizar status do pipeline nos botões
+    atualizarStatusPipeline(status.rodando, status.pausado);
+
+    // Atualizar badge UTI
+    atualizarUtiBadge();
+
+  } catch(e){ console.warn('KPIs:', e.message); }
+}
+
+/* ══ STATUS DO PIPELINE (botões header) ════════════════════════════ */
+function atualizarStatusPipeline(rodando, pausado) {
+  var statusEl = document.getElementById('pipelineStatus');
+  var btnIniciar = document.getElementById('btnIniciar');
+  var btnPausar = document.getElementById('btnPausar');
+  var btnRetomar = document.getElementById('btnRetomar');
+
+  if (rodando && !pausado) {
+    if (statusEl) { statusEl.textContent = '⬤ RODANDO'; statusEl.className = 'pipeline-status running'; }
+    if (btnIniciar) btnIniciar.style.display = 'none';
+    if (btnPausar) btnPausar.style.display = '';
+    if (btnRetomar) btnRetomar.style.display = 'none';
+  } else if (pausado) {
+    if (statusEl) { statusEl.textContent = '⏸ PAUSADO'; statusEl.className = 'pipeline-status paused'; }
+    if (btnIniciar) btnIniciar.style.display = 'none';
+    if (btnPausar) btnPausar.style.display = 'none';
+    if (btnRetomar) btnRetomar.style.display = '';
+  } else {
+    if (statusEl) { statusEl.textContent = '○ IDLE'; statusEl.className = 'pipeline-status idle'; }
+    if (btnIniciar) btnIniciar.style.display = '';
+    if (btnPausar) btnPausar.style.display = 'none';
+    if (btnRetomar) btnRetomar.style.display = 'none';
+  }
+}
+
+/* ═ Botão INICIAR no header — exige config primeiro ═══════════════ */
+function iniciarPipelineHeader() {
+  var nicho = (document.getElementById('configNicho') || {}).value || '';
+  var cidade = (document.getElementById('configCidade') || {}).value || '';
+  nicho = nicho.trim(); cidade = cidade.trim();
+
+  if (!nicho || !cidade) {
+    // Redireciona para a aba config
+    mostrarView('config');
+    document.querySelectorAll('.sidebar-link').forEach(function(l){ l.classList.remove('active'); });
+    var configLink = document.querySelector('[data-view="config"]');
+    if (configLink) configLink.classList.add('active');
+    // Destaca os campos
+    setTimeout(function(){
+      var el = document.getElementById('configNicho');
+      if (el) { el.focus(); el.style.borderColor = 'var(--gold)'; setTimeout(function(){ el.style.borderColor = ''; }, 2000); }
+    }, 100);
+    return;
+  }
+  _executarIniciar(nicho, cidade, parseInt((document.getElementById('configQtd') || {}).value || '50'));
+}
+
+async function _executarIniciar(nicho, cidade, qtd) {
+  try {
+    await authFetch('/api/pipeline/iniciar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ segmento: nicho, cidade: cidade, quantidade: qtd || 50 })
+    });
+    setTimeout(carregarKPIs, 800);
+  } catch(e) { alert('Erro ao iniciar pipeline: ' + e.message); }
+}
+
+async function pausarPipeline() {
+  try {
+    await authFetch('/api/pipeline/pausar', { method: 'POST' });
+    setTimeout(carregarKPIs, 500);
+  } catch(e) { console.warn('Pausar:', e.message); }
+}
+
+async function retomarPipeline() {
+  try {
+    await authFetch('/api/pipeline/retomar', { method: 'POST' });
+    setTimeout(carregarKPIs, 500);
+
+/* ══ TOAST NOTIFICATIONS ════════════════════════════════════════ */
+function mostrarToast(mensagem, duracao) {
+  duracao = duracao || 3000;
+  
+  // Criar elemento de toast
+  var toast = document.createElement('div');
+  toast.style.cssText = 'position:fixed;bottom:24px;right:24px;background:#1f2937;color:white;padding:16px 24px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.3);z-index:10000;font-size:14px;max-width:400px;animation:slideIn 0.3s ease';
+  toast.textContent = mensagem;
+  
+  document.body.appendChild(toast);
+  
+  // Remover após duração
+  setTimeout(function() {
+    toast.style.animation = 'slideOut 0.3s ease';
+    setTimeout(function() {
+      document.body.removeChild(toast);
+    }, 300);
+  }, duracao);
+}
+  } catch(e) { console.warn('Retomar:', e.message); }
+}
+
+/* ══ VIEWS — alternância de conteúdo ═══════════════════════════════ */
+function mostrarView(view) {
+  document.querySelectorAll('.view-section').forEach(function(s){ s.classList.remove('active'); });
+  console.log("[DEBUG] mostrarView chamada com view:", view);
+  var target = document.getElementById('view-' + view);
+  if (target) target.classList.add('active');
+  console.log("[DEBUG] Target encontrado:", target);
+
+  // Mostrar KPIs apenas na Visão Geral
+  var kpiSection = document.getElementById("kpi-section");
+  if (kpiSection) {
+    kpiSection.style.display = (view === "overview") ? "grid" : "none";
+  }
+  if (view === 'overview') {
+    setTimeout(function(){ carregarCharts(periodoAtual); }, 80);
+  }
+  if (view === 'uti') {
+    carregarUTI();
+  }
+  if (view === 'config') {
+  }
+}
+
+/* ══ FILTROS DE PERÍODO ════════════════════════════════════════════ */
+function trocarPeriodo(periodo, btn) {
+  periodoAtual = periodo;
+  document.querySelectorAll('.btn-period').forEach(function(b){ b.classList.remove('active'); });
+  if (btn) btn.classList.add('active');
+  carregarCharts(periodo);
+}
+
+/* ══ CHARTS — Chart.js ═════════════════════════════════════════════ */
+async function carregarCharts(periodo) {
+  if (typeof Chart === 'undefined') {
+    console.warn('Chart.js não carregado');
+    return;
+  }
+  try {
+    var data = await authFetch('/api/pipeline/analytics/overview?periodo=' + (periodo || 'mes')).then(function(r){ return r.json(); });
+    renderLinhaChart(data.por_dia || []);
+    renderCidadeChart(data.por_cidade || []);
+    renderNichoChart(data.por_nicho || []);
+    renderFunil(data);
+  } catch(e) { console.warn('Charts:', e.message); }
+}
+
+function destroyChart(id) {
+  if (chartsInstances[id]) {
+    chartsInstances[id].destroy();
+    delete chartsInstances[id];
+  }
+}
+
+var CHART_COLORS = [
+  'rgba(147,51,234,0.85)',
+  'rgba(0,255,179,0.85)',
+  'rgba(255,184,0,0.85)',
+  'rgba(56,189,248,0.85)',
+  'rgba(239,68,68,0.85)',
+  'rgba(34,197,94,0.85)',
+  'rgba(245,158,11,0.85)',
+  'rgba(192,132,252,0.85)'
+];
+
+var CHART_SCALES = {
+  x: {
+    grid: { color: 'rgba(255,255,255,0.05)' },
+    ticks: { color: '#8888a0', font: { family: "'JetBrains Mono', monospace", size: 10 } }
+  },
+  y: {
+    grid: { color: 'rgba(255,255,255,0.05)' },
+    ticks: { color: '#8888a0', font: { family: "'JetBrains Mono', monospace", size: 10 } },
+    beginAtZero: true
+  }
+};
+
+function renderLinhaChart(porDia) {
+  destroyChart('linha');
+  var canvas = document.getElementById('chartLinha');
+  if (!canvas) return;
+  chartsInstances['linha'] = new Chart(canvas, {
+    type: 'line',
+    data: {
+      labels: porDia.map(function(x){ return x.dia ? x.dia.slice(5) : ''; }),
+      datasets: [{
+        label: 'Leads',
+        data: porDia.map(function(x){ return x.total; }),
+        borderColor: 'rgba(147,51,234,0.9)',
+        backgroundColor: 'rgba(147,51,234,0.08)',
+        fill: true,
+        tension: 0.4,
+        pointBackgroundColor: '#c084fc',
+        pointRadius: 4,
+        borderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: CHART_SCALES
+    }
+  });
+}
+
+function renderCidadeChart(porCidade) {
+  destroyChart('cidade');
+  var canvas = document.getElementById('chartCidade');
+  if (!canvas) return;
+  chartsInstances['cidade'] = new Chart(canvas, {
+    type: 'bar',
+    data: {
+      labels: porCidade.map(function(x){ return x.nome || '—'; }),
+      datasets: [{
+        label: 'Leads',
+        data: porCidade.map(function(x){ return x.total; }),
+        backgroundColor: porCidade.map(function(_, i){ return CHART_COLORS[i % CHART_COLORS.length]; }),
+        borderWidth: 0,
+        borderRadius: 0
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: CHART_SCALES
+    }
+  });
+}
+
+function renderNichoChart(porNicho) {
+  destroyChart('nicho');
+  var canvas = document.getElementById('chartNicho');
+  if (!canvas) return;
+  chartsInstances['nicho'] = new Chart(canvas, {
+    type: 'doughnut',
+    data: {
+      labels: porNicho.map(function(x){ return x.nome || '—'; }),
+      datasets: [{
+        data: porNicho.map(function(x){ return x.total; }),
+        backgroundColor: CHART_COLORS.slice(0, porNicho.length),
+        borderColor: '#0a0714',
+        borderWidth: 3
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: {
+            color: '#8888a0',
+            font: { size: 10, family: "'JetBrains Mono', monospace" },
+            padding: 12,
+            boxWidth: 12
+          }
+        }
+      },
+      cutout: '60%'
+    }
+  });
+}
+
+function renderFunil(analytics) {
+  var wrap = document.getElementById('funnelWrap');
+  if (!wrap) return;
+
+  var totalLeads = analytics.total_leads || 0;
+  var totalSites = lastStatus.totalSites || Math.round(totalLeads * (analytics.conversao || 0) / 100);
+  var totalEnviados = lastStatus.totalEnviados || 0;
+
+  var steps = [
+    { label: 'LEADS PROSPECTADOS', count: totalLeads, color: 'var(--fl-purple)' },
+    { label: 'SITES GERADOS', count: totalSites, color: 'var(--cyan)' },
+    { label: 'WHATSAPP ENVIADOS', count: totalEnviados, color: 'var(--info)' }
+  ];
+
+  var maxCount = steps[0].count || 1;
+
+  wrap.innerHTML = steps.map(function(s) {
+    var pct = maxCount > 0 ? Math.min(100, Math.round((s.count / maxCount) * 100)) : 0;
+    return '<div class="funnel-step">' +
+      '<span class="funnel-label">' + escapeHtml(s.label) + '</span>' +
+      '<div class="funnel-bar-wrap">' +
+        '<div class="funnel-bar" style="width:' + pct + '%;background:' + s.color + '"></div>' +
+      '</div>' +
+      '<span class="funnel-count" style="color:' + s.color + '">' + s.count.toLocaleString('pt-BR') + '</span>' +
+    '</div>';
+  }).join('');
+}
+
+/* ══ KANBAN COM LEADS REAIS ════════════════════════════════════════ */
+function getColuna(lead) {
+  var s = (lead.status || '').toLowerCase();
+  var stage = (lead.sdr_stage || '').toLowerCase();
+  if (s === 'won' || s === 'convertido') return 'ganhos';
+  if (s === 'descartado' || s === 'rejeitado' || s === 'erro') return 'perdidos';
+  if (s === 'negociando' || stage === 'negotiation') return 'negociacao';
+  if ((lead.score || 0) >= 80 && (s === 'contatado' || s === 'enviado')) return 'qualificados';
+  if (stage === 'rapport' || stage === 'education') return 'followup2';
+  return 'followup1';
+}
+
+function criarCard(lead) {
+  if (!lead || !lead.id) return null;
+  var d = document.createElement('div');
+  d.className = 'lead-card';
+  d.draggable = true;
+  d.dataset.lead = lead.id;
+  d.setAttribute('role', 'button');
+  d.setAttribute('tabindex', '0');
+  d.setAttribute('aria-label', 'Lead: ' + (lead.nome || 'Sem nome'));
+  d.onclick = function(){ if (!draggedCard) openModalReal(lead); };
+  d.onkeydown = function(e){ if (e.key === 'Enter' && !draggedCard) openModalReal(lead); };
+
+  var safeUrl = sanitizeUrl(lead.url_site);
+  d.innerHTML =
+    '<div style="font-weight:700;font-size:13px;margin-bottom:4px;color:var(--fl-text)">' + escapeHtml(lead.nome || 'Lead') + '</div>' +
+    '<div style="font-size:11px;color:var(--fl-text-dim)">' + escapeHtml(lead.segmento || '') + (lead.cidade ? ' · ' + escapeHtml(lead.cidade) : '') + '</div>' +
+    (lead.score ? '<div style="font-size:11px;margin-top:6px;color:var(--gold)">⭐ ' + escapeHtml(String(lead.score)) + ' pts</div>' : '') +
+    (safeUrl && safeUrl !== '#'
+      ? '<div style="font-size:11px;margin-top:6px"><a href="' + safeUrl + '" target="_blank" rel="noopener noreferrer" style="color:var(--fl-purple-300)" onclick="event.stopPropagation()">🌐 Ver site</a></div>'
+      : '<div style="font-size:10px;margin-top:6px;color:var(--fl-text-dim)">sem site</div>'
+    );
+  initDrag(d);
+  return d;
+}
+
+async function carregarKanban() {
+  try {
+    var data = await authFetch('/api/dashboard/crm').then(function(r){ return r.json(); });
+    var emptyEl = document.getElementById('emptyState');
+
+    // data = { fila:[], intro:[], f1:[], f2:[], negotiation:[], qualificado:[], lost:[], won:[] }
+    var mapeamento = {
+      fila:        data.fila        || [],
+      intro:       data.intro       || [],
+      followup1:   data.f1          || [],
+      followup2:   data.f2          || [],
+      negociacao:  data.negotiation || [],
+      qualificados:data.qualificado || [],
+      perdidos:    data.lost        || [],
+      ganhos:      data.won         || []
+    };
+
+    var totalLeads = Object.values(mapeamento).reduce(function(acc, arr){ return acc + arr.length; }, 0);
+    if (totalLeads === 0) {
+      if (emptyEl) emptyEl.classList.add('show');
+      return;
+    }
+    if (emptyEl) emptyEl.classList.remove('show');
+
+    var cols = {};
+    document.querySelectorAll('.kanban-col-body').forEach(function(c){ cols[c.dataset.col] = c; });
+    Object.values(cols).forEach(function(c){ c.innerHTML = ''; });
+
+    Object.keys(mapeamento).forEach(function(colKey){
+      var col = cols[colKey];
+      if (!col) return;
+      mapeamento[colKey].forEach(function(lead){
+        // normaliza campo nicho→segmento para criarCard funcionar
+        if (!lead.segmento && lead.nicho) lead.segmento = lead.nicho;
+        col.appendChild(criarCard(lead));
+      });
+    });
+
+    updateCounts();
+  } catch(e){ console.warn('Kanban:', e.message); }
+}
+
+/* ══ MODAL COM DADOS REAIS ═════════════════════════════════════════ */
+function openModalReal(lead) {
+  leadAtualModal = lead;
+  var set = function(id, val){ var el = document.getElementById(id); if(el) el.textContent = val; };
+
+  set('modalLeadName', escapeHtml(lead.nome || 'Lead'));
+  set('modalNicho', escapeHtml(lead.segmento || '—'));
+  set('modalCidade', escapeHtml(lead.cidade || '—'));
+  set('modalTelefone', escapeHtml(lead.telefone_whatsapp || lead.telefoneWhatsapp || lead.telefone || '—'));
+  set('modalScore', lead.score ? escapeHtml(String(lead.score)) + ' pts' : '—');
+
+  var urlEl = document.getElementById('modalUrl');
+  if (urlEl) {
+    var safeUrl = sanitizeUrl(lead.url_site);
+    if (safeUrl && safeUrl !== '#') {
+      urlEl.innerHTML = '<a href="' + safeUrl + '" target="_blank" rel="noopener noreferrer" style="color:var(--cyan)">' + escapeHtml(safeUrl) + '</a>';
+    } else {
+      urlEl.textContent = 'Site ainda não gerado';
+    }
+  }
+
+  // Reset chat
+  var chatArea = document.getElementById('chatArea');
+  if (chatArea) {
+    chatArea.innerHTML = '<div class="chat-msg sent">Olá! Sou o Bryan, assistente digital da FraLib. Vi que você tem um negócio na região. Posso criar um site profissional grátis para você avaliar?<div class="time">--:--</div></div>';
+  }
+
+  document.getElementById('modalOverlay').classList.add('open');
+  switchTab('chat');
+}
+
+function abrirSiteModal() {
+  if (leadAtualModal && leadAtualModal.url_site) {
+    var safeUrl = sanitizeUrl(leadAtualModal.url_site);
+    if (safeUrl && safeUrl !== '#') {
+      window.open(safeUrl, '_blank', 'noopener,noreferrer');
+    } else {
+      alert('URL do site inválida.');
+    }
+  } else {
+    alert('Este lead ainda não tem um site gerado.');
+  }
+}
+
+function abrirWhatsApp() {
+  if (!leadAtualModal) return;
+  var tel = (leadAtualModal.telefone_whatsapp || leadAtualModal.telefoneWhatsapp || leadAtualModal.telefone || '').replace(/\D/g, '');
+  if (tel) {
+    window.open('https://wa.me/' + tel, '_blank');
+  } else {
+    alert('Telefone não disponível para este lead.');
+  }
+}
+
+/* ══ UTI DE LEADS ══════════════════════════════════════════════════ */
+var STATUS_LABEL = {
+  erro:             '⚠️ Erro no pipeline',
+  revisao_manual:   '📉 Score insuficiente',
+  processando:      '🔄 Travado',
+  pendente_manual:  '✋ Qualificação manual',
+};
+
+function trocarAbaUTI(aba) {
+  document.getElementById('uti-painel-falhas').style.display      = aba === 'falhas'      ? '' : 'none';
+  document.getElementById('uti-painel-descartados').style.display = aba === 'descartados' ? '' : 'none';
+  document.querySelectorAll('.uti-tab').forEach(function(t){ t.classList.remove('active'); });
+  var tab = document.getElementById('uti-tab-' + aba);
+  if (tab) tab.classList.add('active');
+}
+
+async function carregarUTI() {
+  var tbody      = document.getElementById('utiTableBody');
+  var tbodyDesc  = document.getElementById('utiDescartadosBody');
+  var countEl    = document.getElementById('utiCount');
+  if (!tbody) return;
+
+  tbody.innerHTML     = '<tr><td colspan="6"><div class="uti-empty">CARREGANDO...</div></td></tr>';
+  tbodyDesc.innerHTML = '<tr><td colspan="5"><div class="uti-empty">CARREGANDO...</div></td></tr>';
+
+  try {
+    var res = await authFetch('/api/dashboard/incomplete').then(function(r){ return r.json(); });
+    var falhas      = res.falhas      || [];
+    var descartados = res.descartados || [];
+    var total = falhas.length + descartados.length;
+
+    if (countEl) countEl.textContent = total + ' leads';
+    var bF = document.getElementById('badge-falhas');
+    var bD = document.getElementById('badge-descartados');
+    if (bF) bF.textContent = falhas.length;
+    if (bD) bD.textContent = descartados.length;
+
+    // ── Tabela Falhas ──
+    if (falhas.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6"><div class="uti-empty">&#9989; Nenhuma falha de pipeline!</div></td></tr>';
+    } else {
+      tbody.innerHTML = falhas.map(function(l){
+        var safeId = String(l.id || '').replace(/['"]/g, '');
+        var motivoLabel = escapeHtml(STATUS_LABEL[l.status] || l.status || 'erro');
+        var safeUrl = sanitizeUrl(l.url_site);
+        var siteLink = (safeUrl && safeUrl !== '#')
+          ? '<a href="' + safeUrl + '" target="_blank" rel="noopener noreferrer" style="color:var(--fl-purple-300);font-size:10px">ver site</a>'
+          : '<span style="color:var(--fl-text-dim);font-size:10px">—</span>';
+        return '<tr id="uti-row-' + safeId + '">' +
+          '<td style="font-weight:600;color:var(--fl-text);max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + escapeHtml(l.nome || '—') + '</td>' +
+          '<td style="font-size:11px">' + escapeHtml(l.nicho || '—') + '</td>' +
+          '<td style="font-size:11px;color:var(--fl-text-dim)">' + escapeHtml(l.cidade || '—') + '</td>' +
+          '<td style="font-size:11px">' + motivoLabel + '</td>' +
+          '<td>' + siteLink + '</td>' +
+          '<td><button class="btn-requalificar" id="btn-reprocessar-' + safeId + '" onclick="requalificarLead(\'' + safeId + '\', this)">▶ REPROCESSAR</button></td>' +
+        '</tr>';
+      }).join('');
+    }
+
+    // ── Tabela Descartados ──
+    if (descartados.length === 0) {
+      tbodyDesc.innerHTML = '<tr><td colspan="5"><div class="uti-empty">&#9989; Nenhum lead descartado!</div></td></tr>';
+    } else {
+      tbodyDesc.innerHTML = descartados.map(function(l){
+        var safeId = String(l.id || '').replace(/['"]/g, '');
+        var safeNome = escapeHtml(l.nome || '');
+        var safeNicho = escapeHtml(l.nicho || '');
+        var safeCidade = escapeHtml(l.cidade || '');
+        var safeTelefone = escapeHtml(l.telefone || '');
+        return '<tr id="desc-row-' + safeId + '">' +
+          '<td style="font-weight:600;color:var(--fl-text);max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (safeNome || '—') + '</td>' +
+          '<td style="font-size:11px">' + (safeNicho || '—') + '</td>' +
+          '<td style="font-size:11px;color:var(--fl-text-dim)">' + (safeCidade || '—') + '</td>' +
+          '<td style="font-size:11px;color:var(--fl-text-dim)">' + (safeTelefone || '—') + '</td>' +
+          '<td>' +
+            '<button class="btn-requalificar" onclick="expandirEnriquecimento(\'' + safeId + '\')">&#9998; ENRIQUECER</button>' +
+          '</td>' +
+        '</tr>' +
+        '<tr id="desc-form-' + safeId + '" style="display:none">' +
+          '<td colspan="5" style="padding:0">' +
+            '<div class="uti-enrich-form" id="form-' + safeId + '">' +
+              '<input placeholder="Nome do negócio" id="enrich-nome-' + safeId + '" value="' + safeNome + '">' +
+              '<input placeholder="Nicho / Segmento" id="enrich-nicho-' + safeId + '" value="' + safeNicho + '">' +
+              '<input placeholder="Cidade, Estado" id="enrich-cidade-' + safeId + '" value="' + safeCidade + '">' +
+              '<input placeholder="Telefone / WhatsApp" id="enrich-telefone-' + safeId + '" value="' + safeTelefone + '">' +
+            '</div>' +
+          '</td>' +
+        '</tr>';
+      }).join('');
+    }
+
+  } catch(e) {
+    tbody.innerHTML = '<tr><td colspan="6"><div class="uti-empty" style="color:var(--danger)">ERRO AO CARREGAR: ' + escapeHtml(e.message) + '</div></td></tr>';
+    console.warn('UTI:', e.message);
+  }
+}
+
+async function atualizarUtiBadge() {
+  try {
+    var res = await authFetch('/api/dashboard/incomplete').then(function(r){ return r.json(); });
+    var badge = document.getElementById('utiBadge');
+    if (!badge) return;
+    var count = res.total || 0;
+    badge.textContent = count > 0 ? count : '✓';
+    badge.style.background = count > 0 ? 'var(--danger)' : 'var(--success)';
+  } catch(e) {}
+}
+
+function expandirEnriquecimento(id) {
+  var formRow = document.getElementById('desc-form-' + id);
+  if (!formRow) return;
+  formRow.style.display = formRow.style.display === 'none' ? '' : 'none';
+}
+
+async function requalificarLead(id, btn) {
+  if (!id) return;
+  var row = document.getElementById('uti-row-' + id);
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ NA FILA...'; btn.style.opacity = '0.6'; }
+
+  try {
+    var res = await authFetch('/api/pipeline/reprocessar/' + id, { method: 'POST' }).then(function(r){ return r.json(); });
+    if (res.ok) {
+      if (btn) { btn.textContent = '🔄 PROCESSANDO...'; btn.style.color = 'var(--cyan)'; }
+      if (row) row.style.opacity = '0.5';
+      // Verifica status a cada 10s por até 10min
+      var tentativas = 0;
+      var check = setInterval(async function(){
+        tentativas++;
+        if (tentativas > 60) { clearInterval(check); return; }
+        try {
+          var fila = await authFetch('/api/pipeline/fila-reprocessamento').then(function(r){ return r.json(); });
+          var aindaNaFila = (fila.fila || []).some(function(i){ return String(i.id) === String(id); });
+          if (!aindaNaFila && !fila.rodando) {
+            clearInterval(check);
+            if (btn) { btn.textContent = '✓ CONCLUÍDO'; btn.style.color = 'var(--success)'; }
+            setTimeout(carregarUTI, 2000);
+            setTimeout(carregarKanban, 3000);
+          }
+        } catch(_) {}
+      }, 10000);
+    } else {
+      if (btn) { btn.disabled = false; btn.textContent = '▶ REPROCESSAR'; btn.style.opacity = '1'; }
+      alert(res.erro || 'Erro ao adicionar à fila.');
+    }
+  } catch(e) {
+    if (btn) { btn.disabled = false; btn.textContent = '▶ REPROCESSAR'; btn.style.opacity = '1'; }
+    alert('Erro: ' + e.message);
+  }
+}
+
+/* ══ CONFIG — iniciar pipeline ═════════════════════════════════════ */
+async function salvarConfigPipeline() {
+  var nicho = (document.getElementById('configNicho') || {}).value || '';
+  var cidade = (document.getElementById('configCidade') || {}).value || '';
+  var qtd = parseInt((document.getElementById('configQtd') || {}).value || '50');
+  nicho = nicho.trim(); cidade = cidade.trim();
+  var scoreMin = parseInt((document.getElementById("configScoreMin") || {}).value || "70");
+
+  if (!nicho || !cidade) {
+    alert('Preencha o Nicho e a Cidade antes de iniciar.');
+    return;
+  }
+
+  var btn = document.querySelector('.config-group .btn-config-save');
+  if (btn) { btn.textContent = '⏳ INICIANDO...'; btn.disabled = true; }
+
+  try {
+    await authFetch('/api/pipeline/iniciar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ segmento: nicho, cidade: cidade, quantidade: qtd, score_minimo: scoreMin })
+    });
+
+    if (btn) { btn.textContent = '✓ PIPELINE INICIADO!'; }
+    setTimeout(function(){
+      if (btn) { btn.textContent = '▶ INICIAR PIPELINE COM ESSAS CONFIGURAÇÕES'; btn.disabled = false; }
+    }, 3000);
+
+    // Mudar para CRM após 1.5s
+    setTimeout(function(){
+      mostrarView('crm');
+      document.querySelectorAll('.sidebar-link').forEach(function(l){ l.classList.remove('active'); });
+      var crmLink = document.querySelector('[data-view="crm"]');
+      if (crmLink) crmLink.classList.add('active');
+    }, 1500);
+
+    carregarKPIs();
+    setTimeout(carregarKanban, 4000);
+
+  } catch(e) {
+    if (btn) { btn.textContent = '✗ ERRO — TENTE NOVAMENTE'; btn.disabled = false; setTimeout(function(){ btn.textContent = '▶ INICIAR PIPELINE COM ESSAS CONFIGURAÇÕES'; }, 3000); }
+    alert('Erro ao iniciar pipeline: ' + e.message);
+  }
+}
+
+/* ══ WHATSAPP (MEOWHATS) STATUS ════════════════════════════════════ */
+async function confirmarReset() {
+  if (!confirm('⚠️ Arquivar TODOS os leads e limpar o Kanban?\n\nOs dados ficam salvos no banco — só o status muda para "arquivado".\n\nEssa ação não pode ser desfeita.')) return;
+  if (!confirm('Tem certeza? O board ficará vazio até o próximo ciclo de prospecção.')) return;
+  try {
+    var res = await authFetch('/api/pipeline/arquivar-tudo', { method: 'POST' }).then(function(r){ return r.json(); });
+    if (res.ok) {
+      alert('✅ ' + res.message);
+      setTimeout(function(){ carregarKPIs(); carregarKanban(); atualizarUtiBadge(); }, 500);
+    } else {
+      alert('Erro: ' + (res.erro || 'desconhecido'));
+    }
+  } catch(e) { alert('Erro: ' + e.message); }
+}
+/* ══ LOGOUT ════════════════════════════════════════════════════════ */
+function logout() {
+  ['fralib_token', 'fralib_user', 'fralib_onboarded'].forEach(function(k){ localStorage.removeItem(k); });
+  window.location.href = 'login.html';
+}
+
+/* ══ INICIALIZAR ══════════════════════════════════════════════════ */
+document.addEventListener('DOMContentLoaded', function(){
+  carregarKPIs();
+  carregarKanban();
+
+  // ─── WebSocket em Tempo Real (Elimina Polling) ───────────────────
+  SocketClient.init().then(() => {
+    console.log('[Dashboard] WebSocket conectado — polling eliminado');
+
+    // Listener: Novo lead criado
+    SocketClient.on('lead:created', (data) => {
+      console.log('[Dashboard] Novo lead recebido:', data.lead);
+      Toast.success(`Novo lead: ${data.lead.nome}`);
+      carregarKanban(); // Recarrega Kanban para exibir novo lead
+    });
+
+    // Listener: Lead atualizado
+    SocketClient.on('lead:updated', (data) => {
+      console.log('[Dashboard] Lead atualizado:', data);
+      carregarKanban(); // Recarrega Kanban para refletir mudança
+    });
+
+    // Listener: Pipeline iniciado
+    SocketClient.on('pipeline:started', (data) => {
+      console.log('[Dashboard] Pipeline iniciado:', data);
+      carregarKPIs(); // Atualiza KPIs
+    });
+
+    // Listener: Pipeline concluído
+    SocketClient.on('pipeline:completed', (data) => {
+      console.log('[Dashboard] Pipeline concluído:', data);
+      carregarKPIs(); // Atualiza KPIs
+      carregarKanban(); // Atualiza Kanban com novos leads
+    });
+  }).catch((err) => {
+    console.error('[Dashboard] Erro ao conectar WebSocket:', err);
+    Toast.warning('Modo offline — atualizações manuais');
+
+    // Fallback: Se WebSocket falhar, usa polling (1x por minuto)
+    setInterval(carregarKPIs, 60000);
+    setInterval(carregarKanban, 60000);
+  });
+});
+
+/* ── Sidebar toggle (mobile) ── */
+document.getElementById('sidebarToggle').addEventListener('click', function(){
+  document.getElementById('sidebar').classList.toggle('open');
+});
+
+/* ── Drag & Drop Kanban (Mouse + Touch) ── */
+var draggedCard = null;
+var touchStartX = 0;
+var touchStartY = 0;
+var touchCurrentX = 0;
+var touchCurrentY = 0;
+var isDragging = false;
+var ghostCard = null;
+
+function initDrag(card) {
+  // Mouse events (desktop)
+  card.addEventListener('dragstart', function(e){
+    draggedCard = card;
+    card.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', '');
+  });
+
+  card.addEventListener('dragend', function(){
+    card.classList.remove('dragging');
+    draggedCard = null;
+    document.querySelectorAll('.kanban-col-body').forEach(function(col){ col.classList.remove('drag-over'); });
+    updateCounts();
+  });
+
+  // Touch events (mobile)
+  card.addEventListener('touchstart', function(e){
+    if (e.target.closest('.lead-card-actions')) return; // Não arrastar se clicar em botões
+
+    isDragging = true;
+    draggedCard = card;
+
+    const touch = e.touches[0];
+    touchStartX = touch.clientX;
+    touchStartY = touch.clientY;
+
+    // Criar ghost card (clone visual)
+    ghostCard = card.cloneNode(true);
+    ghostCard.style.position = 'fixed';
+    ghostCard.style.zIndex = '10000';
+    ghostCard.style.opacity = '0.8';
+    ghostCard.style.pointerEvents = 'none';
+    ghostCard.style.width = card.offsetWidth + 'px';
+    ghostCard.style.transform = 'rotate(3deg) scale(1.05)';
+    ghostCard.style.transition = 'none';
+    document.body.appendChild(ghostCard);
+
+    // Ocultar card original
+    card.style.opacity = '0.3';
+
+    updateGhostPosition(touch.clientX, touch.clientY);
+
+    e.preventDefault();
+  }, { passive: false });
+
+  card.addEventListener('touchmove', function(e){
+    if (!isDragging) return;
+
+    const touch = e.touches[0];
+    touchCurrentX = touch.clientX;
+    touchCurrentY = touch.clientY;
+
+    updateGhostPosition(touchCurrentX, touchCurrentY);
+
+    // Detectar coluna sob o dedo
+    const elementBelow = document.elementFromPoint(touchCurrentX, touchCurrentY);
+    const colBelow = elementBelow?.closest('.kanban-col-body');
+
+    // Remover highlight de todas as colunas
+    document.querySelectorAll('.kanban-col-body').forEach(function(col){
+      col.classList.remove('drag-over');
+    });
+
+    // Adicionar highlight na coluna atual
+    if (colBelow) {
+      colBelow.classList.add('drag-over');
+    }
+
+    e.preventDefault();
+  }, { passive: false });
+
+  card.addEventListener('touchend', function(e){
+    if (!isDragging) return;
+
+    isDragging = false;
+
+    // Remover ghost card
+    if (ghostCard) {
+      ghostCard.remove();
+      ghostCard = null;
+    }
+
+    // Restaurar opacidade do card original
+    card.style.opacity = '1';
+
+    // Detectar coluna de destino
+    const elementBelow = document.elementFromPoint(touchCurrentX, touchCurrentY);
+    const colBelow = elementBelow?.closest('.kanban-col-body');
+
+    if (colBelow && draggedCard) {
+      // Mover card para nova coluna
+      colBelow.appendChild(draggedCard);
+
+      // Animação suave
+      draggedCard.style.animation = 'cardDrop 0.3s ease-out';
+      setTimeout(() => {
+        draggedCard.style.animation = '';
+      }, 300);
+    }
+
+    // Limpar estado
+    document.querySelectorAll('.kanban-col-body').forEach(function(col){
+      col.classList.remove('drag-over');
+    });
+    draggedCard = null;
+    updateCounts();
+
+    e.preventDefault();
+  }, { passive: false });
+}
+
+function updateGhostPosition(x, y) {
+  if (ghostCard) {
+    ghostCard.style.left = (x - ghostCard.offsetWidth / 2) + 'px';
+    ghostCard.style.top = (y - 60) + 'px';
+  }
+}
+
+// Adicionar CSS para animação de drop
+if (!document.getElementById('kanban-touch-styles')) {
+  const style = document.createElement('style');
+  style.id = 'kanban-touch-styles';
+  style.textContent = `
+    @keyframes cardDrop {
+      from {
+        transform: scale(1.1);
+        opacity: 0.8;
+      }
+      to {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+
+    .kanban-col-body.drag-over {
+      background: rgba(147,51,234,0.1);
+      border-color: rgba(147,51,234,0.5);
+    }
+
+    .lead-card.dragging {
+      opacity: 0.3;
+    }
+  `;
+  document.head.appendChild(style);
+}
+
+document.querySelectorAll('.kanban-col-body').forEach(function(col){
+  col.addEventListener('dragover', function(e){
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    col.classList.add('drag-over');
+  });
+  col.addEventListener('dragleave', function(){ col.classList.remove('drag-over'); });
+  col.addEventListener('drop', function(e){
+    e.preventDefault();
+    col.classList.remove('drag-over');
+    if (draggedCard) { col.appendChild(draggedCard); updateCounts(); }
+  });
+});
+
+function updateCounts() {
+  document.querySelectorAll('.kanban-col-body').forEach(function(col){
+    var name = col.dataset.col;
+    var count = col.querySelectorAll('.lead-card').length;
+    var el = document.getElementById('count-' + name);
+    if (el) el.textContent = count;
+  });
+}
+
+/* ── Modal ── */
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('open');
+  leadAtualModal = null;
+}
+
+document.getElementById('modalOverlay').addEventListener('click', function(e){
+  if (e.target === this) closeModal();
+});
+
+document.addEventListener('keydown', function(e){ if (e.key === 'Escape') closeModal(); });
+
+/* ── Tabs do modal ── */
+function switchTab(tab) {
+  document.querySelectorAll('.modal-tab').forEach(function(t){
+    t.classList.toggle('active', t.dataset.tab === tab);
+  });
+  document.querySelectorAll('.tab-content').forEach(function(t){ t.classList.remove('active'); });
+  var target = document.getElementById('tab-' + tab);
+  if (target) target.classList.add('active');
+}
+
+/* ── Chat send (intervenção manual) ── */
+function sendMsg() {
+  var input = document.getElementById('chatInput');
+  var text = (input.value || '').trim();
+  if (!text) return;
+  var area = document.getElementById('chatArea');
+  var msg = document.createElement('div');
+  msg.className = 'chat-msg sent';
+  var now = new Date();
+  msg.innerHTML = escapeHtml(text) + '<div class="time">' +
+    now.getHours().toString().padStart(2, '0') + ':' +
+    now.getMinutes().toString().padStart(2, '0') +
+  '</div>';
+  area.appendChild(msg);
+  area.scrollTop = area.scrollHeight;
+  input.value = '';
+}
+
+document.getElementById('chatInput').addEventListener('keydown', function(e){
+  if (e.key === 'Enter') sendMsg();
+});
+
+
+/* ══ VIACEP E ONBOARDING ════════════════════════════════════════ */
+// Listener para buscar CEP automaticamente
+document.addEventListener('DOMContentLoaded', function() {
+  var cepInput = document.getElementById('perfilCEP');
+  if (cepInput) {
+    cepInput.addEventListener('blur', buscarCEP);
+    cepInput.addEventListener('input', function(e) {
+      var valor = e.target.value.replace(/\D/g, '');
+      if (valor.length > 5) {
+        e.target.value = valor.substring(0, 5) + '-' + valor.substring(5, 8);
+      }
+    });
+
+/* ══ WHATSAPP CONTROLS ══════════════════════════════════════════ */
+async function conectarWhatsApp() {
+  try {
+    mostrarToast('🔄 Conectando WhatsApp...');
+
+    var response = await AuthHelper.authFetch('/api/whatsapp/connect', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    if (response.ok) {
+      var data = await response.json();
+
+      if (data.qrCode) {
+        // Mostrar QR Code em modal
+        mostrarQRCodeModal(data.qrCode);
+        mostrarToast('📱 Escaneie o QR Code com seu WhatsApp');
+      } else if (data.connected) {
+        mostrarToast('✅ WhatsApp já está conectado!');
+      }
+    } else {
+      var error = await response.json();
+      mostrarToast('❌ Erro: ' + (error.erro || 'Falha ao conectar'));
+    }
+  } catch (e) {
+    console.error('[WhatsApp] Erro ao conectar:', e);
+    mostrarToast('❌ Erro ao conectar WhatsApp');
+  }
+}
+
+async function desconectarWhatsApp() {
+  if (!confirm('⚠️ Deseja realmente desconectar o WhatsApp?\n\nVocê precisará escanear o QR Code novamente para reconectar.')) {
+    return;
+  }
+
+  try {
+    mostrarToast('🔄 Desconectando WhatsApp...');
+
+    var response = await AuthHelper.authFetch('/api/whatsapp/disconnect', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    if (response.ok) {
+      mostrarToast('✅ WhatsApp desconectado com sucesso');
+
+      // Atualizar status
+      var statusElem = document.getElementById('statusWhatsApp');
+      if (statusElem) {
+        statusElem.innerHTML = 'Status: <span style="color:#ef4444">DESCONECTADO</span>';
+      }
+    } else {
+      var error = await response.json();
+      mostrarToast('❌ Erro: ' + (error.erro || 'Falha ao desconectar'));
+    }
+  } catch (e) {
+    console.error('[WhatsApp] Erro ao desconectar:', e);
+    mostrarToast('❌ Erro ao desconectar WhatsApp');
+  }
+}
+
+function mostrarQRCodeModal(qrCodeBase64) {
+  // Criar modal para exibir QR Code
+  var modal = document.createElement('div');
+  modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);display:flex;align-items:center;justify-content:center;z-index:9999';
+
+  var content = document.createElement('div');
+  content.style.cssText = 'background:var(--fl-bg-card);padding:32px;border-radius:16px;text-align:center;max-width:400px';
+
+  content.innerHTML = '<h3 style="margin-bottom:16px;color:var(--fl-text)">📱 Escaneie o QR Code</h3>' +
+    '<p style="color:var(--fl-text-muted);margin-bottom:24px;font-size:14px">Abra o WhatsApp no seu celular e escaneie o código abaixo</p>' +
+    '<img src="data:image/png;base64,' + qrCodeBase64 + '" style="width:280px;height:280px;margin:0 auto 24px" />' +
+    '<button onclick="this.parentElement.parentElement.remove()" style="background:var(--fl-purple);color:white;padding:12px 24px;border:none;border-radius:8px;cursor:pointer;font-weight:600">FECHAR</button>';
+
+  modal.appendChild(content);
+  document.body.appendChild(modal);
+
+  // Fechar ao clicar fora
+  modal.addEventListener('click', function(e) {
+    if (e.target === modal) {
+      modal.remove();
+    }
+  });
+}
+  }
+
+  // Verificar onboarding ao carregar
+  verificarOnboarding();
+  verificarStatus2FA();
+});
+
+async function buscarCEP() {
+  var cep = document.getElementById('perfilCEP').value.replace(/\D/g, '');
+
+  if (cep.length !== 8) return;
+
+  try {
+    var response = await fetch('https://viacep.com.br/ws/' + cep + '/json/');
+    var data = await response.json();
+
+    if (data.erro) {
+      mostrarToast('❌ CEP não encontrado');
+      return;
+    }
+
+    document.getElementById('perfilRua').value = data.logradouro || '';
+    document.getElementById('perfilBairro').value = data.bairro || '';
+    document.getElementById('perfilCidade').value = data.localidade || '';
+    document.getElementById('perfilEstado').value = data.uf || '';
+
+    mostrarToast('✅ Endereço preenchido automaticamente');
+  } catch (e) {
+    console.error('[ViaCEP] Erro:', e);
+    mostrarToast('⚠️ Erro ao buscar CEP');
+  }
+}
+
+/* ══ EVENT LISTENERS - CORREÇÃO CSP ═════════════════════════════ */
+document.addEventListener('DOMContentLoaded', function() {
+
+  // Botão 2FA
+  var btn2FA = document.getElementById('btn-config-2fa');
+  if (btn2FA) {
+    btn2FA.addEventListener('click', function(e) {
+      e.preventDefault();
+      if (typeof TwoFactorAuth !== 'undefined' && TwoFactorAuth.showSetupModal) {
+        TwoFactorAuth.showSetupModal();
+      }
+    });
+  }
+
+  // Botões WhatsApp
+  var btnWhatsStatus = document.getElementById('btn-whats-status');
+  if (btnWhatsStatus) {
+    btnWhatsStatus.addEventListener('click', function(e) {
+      e.preventDefault();
+    });
+  }
+
+  var btnWhatsConnect = document.getElementById('btn-whats-connect');
+  if (btnWhatsConnect) {
+    btnWhatsConnect.addEventListener('click', function(e) {
+      e.preventDefault();
+      conectarWhatsApp();
+    });
+  }
+
+  var btnWhatsDisconnect = document.getElementById('btn-whats-disconnect');
+  if (btnWhatsDisconnect) {
+    btnWhatsDisconnect.addEventListener('click', function(e) {
+      e.preventDefault();
+      desconectarWhatsApp();
+    });
+  }
+});
+
+/* ══ BLOQUEIO ABSOLUTO DE ONBOARDING ════════════════════════════ */
+async function verificarOnboarding() {
+  try {
+    var r = await AuthHelper.authFetch('/api/users/onboarding-status');
+    if (!r.ok) return;
+    var status = await r.json();
+
+    if (!status.perfil_ok) {
+      var sidebar = document.getElementById('sidebar');
+      if (sidebar) sidebar.style.display = 'none';
+      mostrarView('perfil');
+      window.mostrarViewOriginal = window.mostrarView;
+      window.mostrarView = function(view) {
+        if (view !== 'perfil') return;
+        window.mostrarViewOriginal(view);
+      };
+      var aviso = document.getElementById('onboarding-aviso-perfil');
+      if (!aviso) {
+        aviso = document.createElement('div');
+        aviso.id = 'onboarding-aviso-perfil';
+        aviso.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#dc2626;color:#fff;text-align:center;padding:12px 16px;font-size:14px;font-weight:600;z-index:9999;';
+        aviso.innerHTML = '⚠️ Complete seu perfil (nome e segmento) para acessar o sistema';
+        document.body.prepend(aviso);
+      }
+      return;
+    }
+
+    var sidebar = document.getElementById('sidebar');
+    if (sidebar) sidebar.style.display = '';
+    var aviso = document.getElementById('onboarding-aviso-perfil');
+    if (aviso) aviso.remove();
+    if (window.mostrarViewOriginal) {
+      window.mostrarView = window.mostrarViewOriginal;
+      delete window.mostrarViewOriginal;
+    }
+
+    var rp = await AuthHelper.authFetch('/api/users/profile');
+    if (rp.ok) {
+      var perfil = await rp.json();
+      if (document.getElementById('perfilNome')) document.getElementById('perfilNome').value = perfil.nome || '';
+      if (document.getElementById('perfilTelefone')) document.getElementById('perfilTelefone').value = perfil.telefone || '';
+      if (document.getElementById('perfilNicho')) document.getElementById('perfilNicho').value = perfil.nicho || '';
+      if (document.getElementById('perfilOrigem')) document.getElementById('perfilOrigem').value = perfil.origem || '';
+      if (perfil.plano === 'PRO' || perfil.plano === 'pro' || perfil.role === 'superadmin') {
+        var btnUpgrade = document.getElementById('btn-upgrade-pro');
+        if (btnUpgrade) btnUpgrade.style.display = 'none';
+      }
+    }
+
+    var avisoWpp = document.getElementById('onboarding-aviso-wpp');
+    if (!status.wpp_ok) {
+      if (!avisoWpp) {
+        avisoWpp = document.createElement('div');
+        avisoWpp.id = 'onboarding-aviso-wpp';
+        avisoWpp.style.cssText = 'position:fixed;bottom:20px;right:20px;background:#1c1c2e;border:1px solid #f59e0b;color:#f59e0b;padding:14px 18px;border-radius:12px;font-size:13px;z-index:9998;max-width:320px;box-shadow:0 4px 20px rgba(0,0,0,.4);';
+        avisoWpp.innerHTML = '<strong>📱 WhatsApp não conectado</strong><br><span style="color:#ccc;font-size:12px">Conecte seu WhatsApp para ativar o SDR automático.</span><br><button onclick="mostrarView("perfil");document.getElementById("onboarding-aviso-wpp").remove()" style="margin-top:10px;background:#f59e0b;color:#000;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600">Conectar agora →</button><button onclick="this.parentElement.remove()" style="margin-top:10px;margin-left:8px;background:transparent;color:#888;border:none;cursor:pointer;font-size:12px">Depois</button>';
+        document.body.appendChild(avisoWpp);
+      }
+    } else {
+      if (avisoWpp) avisoWpp.remove();
+    }
+  } catch (e) {
+    console.error('[Onboarding] Erro:', e);
+  }
+}
+
+// Após salvar perfil, re-verificar onboarding
+var salvarPerfilOriginal = window.salvarPerfil;
+window.salvarPerfil = async function() {
+  if (salvarPerfilOriginal) await salvarPerfilOriginal();
+  await verificarOnboarding();
+};
+
+// Atualizar função salvarPerfil para desbloquear menus
+var salvarPerfilOriginal = salvarPerfil;
+salvarPerfil = async function() {
+  await salvarPerfilOriginal();
+
+  // Desbloquear menus após salvar
+  document.querySelectorAll('.sidebar-link').forEach(function(link) {
+    link.style.opacity = '1';
+    link.style.pointerEvents = 'auto';
+  });
+};
+
+/* ══ VERIFICAR STATUS 2FA ═══════════════════════════════════════ */
+async function verificarStatus2FA() {
+  try {
+    const status = await TwoFactorAuth.checkStatus();
+    const statusElem = document.getElementById('status2FA');
+    
+    if (statusElem) {
+      if (status.enabled) {
+        statusElem.innerHTML = 'Status: <span style="color:#10b981">✓ ATIVO</span>';
+      } else {
+        statusElem.innerHTML = 'Status: <span style="color:#ef4444">✗ DESATIVADO</span>';
+      }
+    }
+  } catch (e) {
+    console.error('[2FA] Erro ao verificar status:', e);
+  }
+}
+/* ── 2FA Functions ── */
+/* ══ CORREÇÕES 2FA - DEBUG CRÍTICO ══════════════════════════════ */
+
+// Função unificada para verificar status 2FA
+async function verificarStatus2FA() {
+  try {
+    const status = await TwoFactorAuth.checkStatus();
+    const statusElem = document.getElementById('status2FA');
+
+    if (statusElem) {
+      if (status.enabled) {
+        statusElem.innerHTML = 'Status: <span style="color:#10b981">✓ ATIVO</span>';
+      } else {
+        statusElem.innerHTML = 'Status: <span style="color:#ef4444">✗ DESATIVADO</span>';
+      }
+    }
+  } catch (e) {
+    console.error('[2FA] Erro ao verificar status:', e);
+    // Não mostrar erro ao usuário se 2FA não estiver configurado
+  }
+}
+
+// Event listener para botão 2FA (sem onclick inline - correção CSP)
+document.addEventListener('DOMContentLoaded', function() {
+  var btn2FA = document.getElementById('btn-config-2fa');
+  if (btn2FA) {
+    btn2FA.addEventListener('click', function(e) {
+      e.preventDefault();
+      TwoFactorAuth.showSetupModal();
+    });
+  }
+});
+async function setupTwoFactor() {
+  await TwoFactorAuth.showSetupModal();
+}
+
+async function disableTwoFactor() {
+  const password = prompt('Digite sua senha para desativar o 2FA:');
+  if (!password) return;
+
+  try {
+
+/* ══ TERMINAL MÁGICO ════════════════════════════════════════════ */
+var mensagensMisticas = [
+  '🔮 Aquecendo o caldeirão de leads...',
+  '✨ Buscando dinheiro na internet...',
+  '🎨 Fazendo a arte do site...',
+  '⚡ Oportunidade encontrada!',
+  '🌟 Invocando leads qualificados...',
+  '🪄 Tecendo a teia de prospecção...',
+  '💎 Garimpando ouro digital...',
+  '🎯 Mirando no alvo perfeito...',
+  '🚀 Lançando foguetes de vendas...',
+  '🔥 Acendendo a fogueira do sucesso...',
+  '💰 Contando moedas de ouro...',
+  '📞 Preparando o telefone mágico...',
+  '🎪 Montando o circo das vendas...',
+  '🏆 Conquistando territórios...',
+  '🌈 Seguindo o arco-íris do lucro...'
+];
+
+function adicionarLogMagico(mensagem) {
+  var container = document.getElementById('magic-logs-container');
+  var content = document.getElementById('magic-logs-content');
+
+  if (!container || !content) return;
+
+  // Mostrar terminal se estiver oculto
+  container.style.display = 'block';
+
+  // Escolher mensagem mística aleatória se não for fornecida
+  if (!mensagem) {
+    mensagem = mensagensMisticas[Math.floor(Math.random() * mensagensMisticas.length)];
+  }
+
+  // Criar linha de log
+  var logLine = document.createElement('div');
+  logLine.style.cssText = 'color:var(--fl-text-muted);padding:4px 8px;background:rgba(147,51,234,0.05);border-radius:4px;border-left:3px solid var(--fl-purple)';
+
+  var timestamp = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  logLine.innerHTML = '<span style="color:var(--fl-text-dim)">[' + timestamp + ']</span> ' + escapeHtml(mensagem);
+
+  // Adicionar ao topo
+  content.insertBefore(logLine, content.firstChild);
+
+  // Limitar a 20 logs
+  while (content.children.length > 20) {
+    content.removeChild(content.lastChild);
+  }
+}
+
+function limparTerminal() {
+  var content = document.getElementById('magic-logs-content');
+  if (content) content.innerHTML = '';
+}
+
+// Escutar eventos do Socket.io
+if (typeof socket !== 'undefined') {
+  socket.on('pipeline:start', function() {
+    adicionarLogMagico('🔮 Pipeline iniciado! Preparando a magia...');
+  });
+
+  socket.on('pipeline:lead', function(data) {
+    adicionarLogMagico();
+  });
+
+  socket.on('pipeline:site', function(data) {
+    adicionarLogMagico();
+  });
+
+  socket.on('pipeline:complete', function() {
+    adicionarLogMagico('✅ Ciclo completo! A magia aconteceu!');
+  });
+
+  socket.on('pipeline:error', function() {
+    adicionarLogMagico('⚠️ Ops! O feitiço falhou...');
+  });
+}
+    await TwoFactorAuth.disable(password);
+    alert('2FA desativado com sucesso!');
+async function checkTwoFactorStatus() {  try {    const res = await authFetch("/api/auth/2fa/status");    if (!res.ok) return;    const data = await res.json();    const badge = document.getElementById("2fa-status-badge");    if (badge) {      badge.textContent = data.enabled ? "Ativo" : "Inativo";      badge.className = data.enabled ? "badge badge-success" : "badge badge-secondary";    }  } catch (err) {    console.warn("[2FA] Erro ao verificar status:", err.message);  }}
+    await checkTwoFactorStatus();
+  } catch (err) {
+    alert('Erro ao desativar 2FA: ' + err.message);
+  }
+}
+
+// Verificar status do 2FA ao carregar a página
+document.addEventListener('DOMContentLoaded', function(){
+  checkTwoFactorStatus();
+});
+
+/* ══ MEU PERFIL ═════════════════════════════════════════════════ */
+async function salvarPerfil() {
+  var nome = document.getElementById('perfilNome').value;
+  var telefone = document.getElementById('perfilTelefone').value;
+  var endereco = document.getElementById('perfilEndereco').value;
+  var nicho = document.getElementById('perfilNicho').value;
+  var origem = document.getElementById('perfilOrigem').value;
+
+  if (!nome || !telefone) {
+    mostrarToast('⚠️ Preencha pelo menos Nome e Telefone');
+    return;
+  }
+
+  try {
+    var response = await AuthHelper.authFetch('/api/users/profile', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nome: nome, telefone: telefone, endereco: endereco, nicho: nicho, origem: origem })
+    });
+
+    if (response.ok) {
+      mostrarToast('✅ Perfil salvo com sucesso!');
+    } else {
+      mostrarToast('❌ Erro ao salvar perfil');
+    }
+  } catch (e) {
+    console.error('[Perfil] Erro:', e);
+    mostrarToast('❌ Erro ao salvar perfil');
+  }
+}
+
+function abrirConfig2FA() {
+  mostrarView('config');
+  setTimeout(function() {
+    var elem2FA = document.querySelector('[data-view="config"]');
+    if (elem2FA) elem2FA.scrollIntoView({ behavior: 'smooth' });
+  }, 100);
+}
+
+function confirmarResetBoard() {
+  if (!confirm('⚠️ ATENÇÃO: Esta ação irá ARQUIVAR todos os leads do Kanban.\n\nTodos os leads serão movidos para "arquivado" e o board será limpo.\n\nDeseja continuar?')) {
+    return;
+  }
+  
+  if (!confirm('🔴 ÚLTIMA CONFIRMAÇÃO\n\nTem certeza absoluta? Esta ação NÃO pode ser desfeita!')) {
+    return;
+  }
+
+  resetBoard();
+}
+
+async function resetBoard() {
+  try {
+    mostrarToast('🗑️ Arquivando todos os leads...');
+    
+    var response = await AuthHelper.authFetch('/api/leads/archive-all', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    if (response.ok) {
+      mostrarToast('✅ Board resetado com sucesso!');
+      
+      // Limpar Kanban no frontend
+      ['novo', 'contato', 'proposta', 'fechado'].forEach(function(col) {
+        var container = document.getElementById('col-' + col);
+        if (container) container.innerHTML = '';
+      });
+      
+      // Recarregar KPIs
+      carregarKPIs();
+    } else {
+      mostrarToast('❌ Erro ao resetar board');
+    }
+  } catch (e) {
+    console.error('[Reset] Erro:', e);
+    mostrarToast('❌ Erro ao resetar board');
+  }
+}
+
+
+/* ══ EVENT LISTENERS FINAIS - SEM CSP VIOLATIONS ════════════════ */
+document.addEventListener('DOMContentLoaded', function() {
+  
+  // Event listener para botão INICIAR do pipeline
+  var btnIniciarPipeline = document.getElementById("btnIniciar");
+  if (btnIniciarPipeline) {
+    btnIniciarPipeline.addEventListener("click", function(e) {
+      e.preventDefault();
+      iniciarPipelineHeader();
+    });
+  }
+  // Botão 2FA - Configurar
+  var btn2FA = document.getElementById('btn-config-2fa');
+  if (btn2FA) {
+    btn2FA.addEventListener('click', function(e) {
+      e.preventDefault();
+      if (window.TwoFactorAuth && window.TwoFactorAuth.showSetupModal) {
+        window.TwoFactorAuth.showSetupModal();
+      }
+    });
+  }
+
+console.log("[DEBUG] Registrando event listeners da sidebar...");
+  // Event listeners da sidebar
+  document.querySelectorAll('.sidebar-link').forEach(function(link){
+    link.addEventListener('click', function(e){
+console.log("[DEBUG] Click capturado! View:", link.dataset.view);
+      e.preventDefault();
+      document.querySelectorAll('.sidebar-link').forEach(function(l){ 
+        l.classList.remove('active'); 
+      });
+      link.classList.add('active');
+      var view = link.dataset.view;
+      if (view) mostrarView(view);
+      var sidebar = document.getElementById('sidebar');
+      if (sidebar) sidebar.classList.remove('open');
+    });
+console.log("[DEBUG] Event listeners registrados. Total:", document.querySelectorAll(".sidebar-link").length);
+  });
+
+  // Botões de Upsell
+  var btnUpgradePro = document.getElementById('btn-upgrade-pro');
+  if (btnUpgradePro) {
+    btnUpgradePro.addEventListener('click', function(e) {
+      e.preventDefault();
+      if (window.mostrarToast) {
+        window.mostrarToast('🚀 Em breve: Upgrade para PRO!');
+      }
+    });
+  }
+
+  // Botão Comprar Tokens
+  var btnTokens = document.querySelectorAll('.btn-config-save')[1];
+  if (btnTokens && btnTokens.textContent.includes('TOKENS')) {
+    btnTokens.addEventListener('click', function(e) {
+      e.preventDefault();
+      if (window.mostrarToast) {
+        window.mostrarToast('🎯 Em breve: Compra de tokens!');
+      }
+    });
+  }
+
+  // Botão Site Extra
+  var btnSiteExtra = document.querySelectorAll('.btn-config-save')[2];
+  if (btnSiteExtra && btnSiteExtra.textContent.includes('SITE EXTRA')) {
+    btnSiteExtra.addEventListener('click', function(e) {
+      e.preventDefault();
+      if (window.mostrarToast) {
+        window.mostrarToast('🌐 Em breve: Sites extras!');
+      }
+    });
+  }
+});
+</script>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════
+// LOGS EM TEMPO REAL VIA SSE (Server-Sent Events)
+// ═══════════════════════════════════════════════════════════════════
+(function() {
+  const logsContainer = document.getElementById('magic-logs-content');
+  if (!logsContainer) return;
+
+  let eventSource = null;
+  const maxLogs = 100;
+
+  function conectarSSE() {
+    if (eventSource) eventSource.close();
+
+    eventSource = new EventSource('/api/logs/stream');
+
+    eventSource.onmessage = function(event) {
+      try {
+        const data = JSON.parse(event.data);
+        adicionarLog(data);
+      } catch (e) {
+        console.error('[SSE] Erro ao parsear log:', e);
+      }
+    };
+
+    eventSource.onerror = function(err) {
+      console.error('[SSE] Erro na conexão:', err);
+      eventSource.close();
+      setTimeout(conectarSSE, 5000);
+    };
+  }
+
+  function adicionarLog(data) {
+    const logDiv = document.createElement('div');
+    logDiv.style.cssText = 'padding:8px 12px;border-radius:6px;font-size:13px;font-family:monospace;line-height:1.4;';
+
+    const cores = {
+      'ERROR': 'background:#fee;border-left:3px solid #f44',
+      'SUCCESS': 'background:#efe;border-left:3px solid #4f4',
+      'WARNING': 'background:#ffe;border-left:3px solid #fa4',
+      'INFO': 'background:#eef;border-left:3px solid #44f',
+      'LEADS': 'background:#f0f8ff;border-left:3px solid #4a9eff',
+      'CAIO': 'background:#fff0f5;border-left:3px solid #ff69b4',
+      'PIPELINE_STATUS': 'background:#f5f5f5;border-left:3px solid #888'
+    };
+
+    logDiv.style.cssText += cores[data.evento] || 'background:#f9f9f9;border-left:3px solid #ccc';
+
+    const ts = data.ts || new Date().toLocaleTimeString('pt-BR');
+
+    const icones = {
+      'ERROR': '❌',
+      'SUCCESS': '✅',
+      'WARNING': '⚠️',
+      'INFO': 'ℹ️',
+      'LEADS': '🔍',
+      'CAIO': '🤖',
+      'PIPELINE_STATUS': '⚙️'
+    };
+
+    const icone = icones[data.evento] || '📝';
+
+    logDiv.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:start;gap:12px;"><div style="flex:1;"><strong style="color:#333;">' + icone + ' ' + escapeHtml(data.evento) + '</strong><div style="color:#666;margin-top:4px;">' + escapeHtml(data.mensagem) + '</div></div><small style="color:#999;white-space:nowrap;">' + ts + '</small></div>';
+
+    logsContainer.insertBefore(logDiv, logsContainer.firstChild);
+
+    while (logsContainer.children.length > maxLogs) {
+      logsContainer.removeChild(logsContainer.lastChild);
+    }
+
+    if (logsContainer.scrollTop < 100) {
+      logsContainer.scrollTop = 0;
+    }
+  }
+
+  conectarSSE();
+
+  document.addEventListener('visibilitychange', function() {
+    if (!document.hidden && (!eventSource || eventSource.readyState === 2)) {
+      conectarSSE();
+    }
+  });
+})();
+// ===== SISTEMA DE CRÉDITOS =====
+
+// Variáveis globais
+let userCredits = 0;
+const PAYMENT_LINK = "https://buy.stripe.com/5kQ5kvbtIgltgBFb24eAg00";
+
+// Carregar saldo de créditos
+async function carregarCreditos() {
+  try {
+    const response = await authFetch('/api/credits/balance');
+    const data = await response.json();
+    userCredits = data.creditos_disponiveis;
+    
+    // Atualizar UI se existir elemento de saldo
+    const saldoEl = document.getElementById('saldo-creditos');
+    if (saldoEl) {
+      saldoEl.textContent = userCredits;
+    }
+    
+    return data;
+  } catch(e) {
+    console.error('Erro ao carregar créditos:', e);
+    return null;
+  }
+}
+
+// Abrir modal de compra de créditos
+function abrirModalCreditos() {
+  // Criar modal se não existir
+  let modal = document.getElementById('modal-creditos');
+  if (!modal) {
+    modal = criarModalCreditos();
+    document.body.appendChild(modal);
+  }
+  
+  // Carregar tabela de preços
+  carregarTabelaPrecos();
+  
+  // Mostrar modal
+  modal.style.display = 'flex';
+}
+
+// Criar modal de créditos
+function criarModalCreditos() {
+  const modal = document.createElement('div');
+  modal.id = 'modal-creditos';
+  modal.style.cssText = `
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.8);
+    z-index: 9999;
+    align-items: center;
+    justify-content: center;
+  `;
+  
+  modal.innerHTML = `
+    <div style="
+      background: var(--fl-bg-card);
+      border: 2px solid var(--fl-border);
+      border-radius: 16px;
+      padding: 32px;
+      max-width: 600px;
+      width: 90%;
+      max-height: 80vh;
+      overflow-y: auto;
+    ">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px">
+        <h2 style="font-family:var(--fl-font-brand);font-size:16px;color:var(--fl-purple-300)">
+          🪙 COMPRAR CRÉDITOS
+        </h2>
+        <button onclick="fecharModalCreditos()" style="
+          background:none;
+          border:none;
+          color:var(--fl-text-muted);
+          font-size:24px;
+          cursor:pointer;
+          padding:0;
+          width:32px;
+          height:32px;
+        ">×</button>
+      </div>
+      
+      <div style="margin-bottom:24px">
+        <div style="
+          background:var(--fl-purple-900);
+          border:2px solid var(--fl-purple);
+          border-radius:12px;
+          padding:20px;
+          text-align:center;
+        ">
+          <div style="font-size:14px;color:var(--fl-text-muted);margin-bottom:8px">
+            Seu saldo atual
+          </div>
+          <div style="font-family:var(--fl-font-brand);font-size:32px;color:var(--fl-purple-300)">
+            <span id="saldo-creditos-modal">0</span> créditos
+          </div>
+        </div>
+      </div>
+      
+      <div style="margin-bottom:24px">
+        <h3 style="font-size:14px;color:var(--fl-text);margin-bottom:16px;font-weight:600">
+          📊 Tabela de Preços (com bônus progressivo)
+        </h3>
+        <div id="tabela-precos" style="display:flex;flex-direction:column;gap:12px">
+          <div style="text-align:center;color:var(--fl-text-muted)">
+            Carregando...
+          </div>
+        </div>
+      </div>
+      
+      <div style="
+        background:var(--fl-bg-surface);
+        border:1px solid var(--fl-border);
+        border-radius:8px;
+        padding:16px;
+        margin-bottom:24px;
+      ">
+        <div style="font-size:12px;color:var(--fl-text-muted);line-height:1.6">
+          💡 <strong>Como funciona:</strong><br>
+          • Cada site gerado = 1 crédito<br>
+          • Compre quanto quiser (mínimo R$ 5)<br>
+          • Bônus progressivo: quanto mais comprar, mais créditos recebe!<br>
+          • Créditos nunca expiram
+        </div>
+      </div>
+      
+      <button onclick="window.open('${PAYMENT_LINK}', '_blank')" style="
+        width:100%;
+        padding:16px;
+        background:linear-gradient(135deg,var(--fl-purple),var(--fl-purple-400));
+        color:white;
+        border:none;
+        border-radius:8px;
+        font-size:16px;
+        font-weight:700;
+        cursor:pointer;
+        transition:transform 0.2s;
+      " onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+        💳 COMPRAR CRÉDITOS AGORA
+      </button>
+    </div>
+  `;
+  
+  return modal;
+}
+
+// Fechar modal
+function fecharModalCreditos() {
+  const modal = document.getElementById('modal-creditos');
+  if (modal) modal.style.display = 'none';
+}
+
+// Carregar tabela de preços
+async function carregarTabelaPrecos() {
+  try {
+    const response = await fetch('/api/credits/pricing');
+    const precos = await response.json();
+    
+    const container = document.getElementById('tabela-precos');
+    if (!container) return;
+    
+    container.innerHTML = precos.map(p => `
+      <div style="
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+        padding:16px;
+        background:var(--fl-bg-surface);
+        border:2px solid ${p.bonus_percentual > 0 ? 'var(--fl-purple)' : 'var(--fl-border)'};
+        border-radius:8px;
+        ${p.bonus_percentual > 0 ? 'box-shadow:0 0 20px rgba(147,51,234,0.3);' : ''}
+      ">
+        <div>
+          <div style="font-size:18px;font-weight:700;color:var(--fl-text)">
+            R$ ${p.valor.toFixed(2)}
+          </div>
+          <div style="font-size:12px;color:var(--fl-text-muted);margin-top:4px">
+            R$ ${p.custo_por_credito.toFixed(3)}/crédito
+          </div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-family:var(--fl-font-brand);font-size:20px;color:var(--fl-purple-300)">
+            ${p.creditos_totais} créditos
+          </div>
+          ${p.bonus_percentual > 0 ? `
+            <div style="
+              display:inline-block;
+              margin-top:4px;
+              padding:4px 8px;
+              background:var(--fl-purple);
+              color:white;
+              border-radius:4px;
+              font-size:10px;
+              font-weight:700;
+            ">
+              +${p.bonus_percentual}% BÔNUS
+            </div>
+          ` : ''}
+        </div>
+      </div>
+    `).join('');
+    
+    // Atualizar saldo no modal
+    const saldoModal = document.getElementById('saldo-creditos-modal');
+    if (saldoModal) {
+      const creditos = await carregarCreditos();
+      if (creditos) saldoModal.textContent = creditos.creditos_disponiveis;
+    }
+    
+  } catch(e) {
+    console.error('Erro ao carregar preços:', e);
+    const container = document.getElementById('tabela-precos');
+    if (container) {
+      container.innerHTML = '<div style="color:var(--danger)">Erro ao carregar preços</div>';
+    }
+  }
+}
+
+// Inicializar ao carregar página
+document.addEventListener('DOMContentLoaded', function() {
+  carregarCreditos();
+});
+// ===== INTEGRAÇÃO DE CRÉDITOS NO PIPELINE =====
+
+// Verificar créditos antes de iniciar pipeline
+async function verificarCreditosAntesPipeline() {
+  try {
+    const response = await authFetch('/api/credits/check');
+    const data = await response.json();
+    
+    if (!data.can_proceed) {
+      // SEM CRÉDITOS - Mostrar modal de compra
+      mostrarModalSemCreditos(data);
+      return false;
+    }
+    
+    // TEM CRÉDITOS - Verificar se tem alerta
+    if (data.alert) {
+      mostrarAlertaCreditos(data.alert);
+    }
+    
+    return true;
+  } catch(e) {
+    console.error('Erro ao verificar créditos:', e);
+    return true; // Permitir continuar em caso de erro
+  }
+}
+
+// Modal de créditos insuficientes
+function mostrarModalSemCreditos(data) {
+  const modal = document.createElement('div');
+  modal.id = 'modal-sem-creditos';
+  modal.style.cssText = `
+    display: flex;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.9);
+    z-index: 10000;
+    align-items: center;
+    justify-content: center;
+  `;
+  
+  modal.innerHTML = `
+    <div style="
+      background: var(--fl-bg-card);
+      border: 3px solid var(--danger);
+      border-radius: 16px;
+      padding: 40px;
+      max-width: 500px;
+      width: 90%;
+      text-align: center;
+      box-shadow: 0 0 40px rgba(239,68,68,0.5);
+    ">
+      <div style="font-size:64px;margin-bottom:20px">🚨</div>
+      <h2 style="
+        font-family:var(--fl-font-brand);
+        font-size:18px;
+        color:var(--danger);
+        margin-bottom:16px;
+      ">
+        CRÉDITOS INSUFICIENTES
+      </h2>
+      <p style="
+        font-size:16px;
+        color:var(--fl-text);
+        margin-bottom:24px;
+        line-height:1.6;
+      ">
+        Você não tem créditos para gerar sites.<br>
+        Recarregue sua conta para continuar usando o FraLib OS!
+      </p>
+      <div style="
+        background:var(--fl-bg-surface);
+        border:1px solid var(--fl-border);
+        border-radius:8px;
+        padding:16px;
+        margin-bottom:24px;
+      ">
+        <div style="font-size:12px;color:var(--fl-text-muted);margin-bottom:8px">
+          Seu saldo atual
+        </div>
+        <div style="
+          font-family:var(--fl-font-brand);
+          font-size:32px;
+          color:var(--danger);
+        ">
+          0 créditos
+        </div>
+      </div>
+      <button onclick="window.open('${data.payment_link}', '_blank'); document.getElementById('modal-sem-creditos').remove();" style="
+        width:100%;
+        padding:16px;
+        background:linear-gradient(135deg,var(--fl-purple),var(--fl-purple-400));
+        color:white;
+        border:none;
+        border-radius:8px;
+        font-size:16px;
+        font-weight:700;
+        cursor:pointer;
+        margin-bottom:12px;
+        transition:transform 0.2s;
+      " onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+        💳 COMPRAR CRÉDITOS AGORA
+      </button>
+      <button onclick="document.getElementById('modal-sem-creditos').remove()" style="
+        width:100%;
+        padding:12px;
+        background:none;
+        border:1px solid var(--fl-border);
+        border-radius:8px;
+        color:var(--fl-text-muted);
+        font-size:14px;
+        cursor:pointer;
+      ">
+        Cancelar
+      </button>
+    </div>
+  `;
+  
+  document.body.appendChild(modal);
+}
+
+// Alerta flutuante de créditos baixos
+function mostrarAlertaCreditos(alert) {
+  // Remover alerta anterior se existir
+  const alertaAnterior = document.getElementById('alerta-creditos-flutuante');
+  if (alertaAnterior) alertaAnterior.remove();
+  
+  const alerta = document.createElement('div');
+  alerta.id = 'alerta-creditos-flutuante';
+  alerta.style.cssText = `
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    max-width: 400px;
+    background: var(--fl-bg-card);
+    border: 2px solid ${alert.color};
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    z-index: 9998;
+    animation: slideIn 0.3s ease-out;
+  `;
+  
+  alerta.innerHTML = `
+    <div style="display:flex;align-items:start;gap:12px">
+      <div style="font-size:32px">${alert.icon}</div>
+      <div style="flex:1">
+        <div style="font-size:14px;color:var(--fl-text);margin-bottom:12px;line-height:1.5">
+          ${alert.message}
+        </div>
+        <button onclick="window.open('${alert.payment_link}', '_blank')" style="
+          width:100%;
+          padding:12px;
+          background:${alert.color};
+          color:white;
+          border:none;
+          border-radius:8px;
+          font-size:14px;
+          font-weight:700;
+          cursor:pointer;
+          transition:transform 0.2s;
+        " onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+          💳 COMPRAR CRÉDITOS
+        </button>
+      </div>
+      <button onclick="this.parentElement.parentElement.remove()" style="
+        background:none;
+        border:none;
+        color:var(--fl-text-muted);
+        font-size:20px;
+        cursor:pointer;
+        padding:0;
+        width:24px;
+        height:24px;
+      ">×</button>
+    </div>
+  `;
+  
+  document.body.appendChild(alerta);
+  
+  // Auto-remover após 10 segundos
+  setTimeout(() => {
+    if (alerta.parentElement) alerta.remove();
+  }, 10000);
+}
+
+// Verificar créditos ao carregar página
+document.addEventListener('DOMContentLoaded', async function() {
+  // Carregar saldo
+  await carregarCreditos();
+  
+  // Verificar se precisa mostrar alerta
+  try {
+    const response = await authFetch('/api/credits/check');
+    const data = await response.json();
+    
+    if (data.alert) {
+      // Esperar 2 segundos antes de mostrar alerta
+      setTimeout(() => {
+        mostrarAlertaCreditos(data.alert);
+      }, 2000);
+    }
+  } catch(e) {
+    console.error('Erro ao verificar alertas:', e);
+  }
+});
+
+// Adicionar animação CSS
+const style = document.createElement('style');
+style.textContent = `
+  @keyframes slideIn {
+    from {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+`;
+document.head.appendChild(style);
+</script>
+</body></html>

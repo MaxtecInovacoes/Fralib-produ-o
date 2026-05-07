@@ -1,0 +1,131 @@
+  <!-- ===== VIEW: MEU PERFIL ===== -->
+  <section class="view-section" id="view-perfil">
+    <h2 class="section-title">👤 MEU PERFIL</h2>
+
+    <!-- Formulário de Dados -->
+    <div class="config-section">
+      <div class="config-group">
+        <div class="config-group-title">📋 INFORMAÇÕES PESSOAIS</div>
+        <div class="config-row">
+          <div class="config-field">
+            <label class="config-label" for="perfilNome">Nome Completo</label>
+            <input class="config-input" id="perfilNome" type="text" placeholder="Seu nome">
+          </div>
+          <div class="config-field">
+            <label class="config-label" for="perfilTelefone">Telefone</label>
+            <input class="config-input" id="perfilTelefone" type="tel" placeholder="00 00000-0000">
+          </div>
+        </div>
+        <div class="config-row">
+          <div class="config-field">
+            <label class="config-label" for="perfilCEP">CEP</label>
+            <input class="config-input" id="perfilCEP" type="text" placeholder="00000-000" maxlength="9">
+          </div>
+          <div class="config-field">
+            <label class="config-label" for="perfilRua">Rua</label>
+            <input class="config-input" id="perfilRua" type="text" placeholder="Rua" readonly>
+          </div>
+        </div>
+        <div class="config-row">
+          <div class="config-field">
+            <label class="config-label" for="perfilBairro">Bairro</label>
+            <input class="config-input" id="perfilBairro" type="text" placeholder="Bairro" readonly>
+          </div>
+          <div class="config-field">
+            <label class="config-label" for="perfilCidade">Cidade</label>
+            <input class="config-input" id="perfilCidade" type="text" placeholder="Cidade" readonly>
+          </div>
+        </div>
+        <div class="config-row">
+          <div class="config-field">
+            <label class="config-label" for="perfilEstado">Estado</label>
+            <input class="config-input" id="perfilEstado" type="text" placeholder="UF" readonly>
+          </div>
+          <div class="config-field">
+            <label class="config-label" for="perfilNicho">Profissão / Nicho</label>
+            <input class="config-input" id="perfilNicho" type="text" placeholder="Ex: Desenvolvedor, Agência">
+          </div>
+        </div>
+        <div class="config-field">
+          <label class="config-label" for="perfilOrigem">Como conheceu a FraLib?</label>
+          <select class="config-select" id="perfilOrigem">
+            <option value="">Selecione...</option>
+            <option value="google">Google / Busca</option>
+            <option value="indicacao">Indicação</option>
+            <option value="redes">Redes Sociais</option>
+            <option value="youtube">YouTube</option>
+            <option value="outro">Outro</option>
+          </select>
+        </div>
+        <button class="btn-config-save" onclick="salvarPerfil()">💾 SALVAR INFORMAÇÕES</button>
+      </div>
+    </div>
+
+    <!-- Área de Upsell -->
+    <div class="config-section" id="upsell-section">
+      <div class="config-group">
+        <div class="config-group-title">✨ ELEVE SUA MAGIA</div>
+        <p style="color:var(--fl-text-muted);margin-bottom:16px;font-size:14px">
+          Desbloqueie todo o potencial do FraLib OS com recursos premium
+        </p>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px">
+          <button id="btn-upgrade-pro" class="btn-config-save" style="background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#000;font-weight:700" onclick="mostrarToast('🚀 Em breve: Upgrade para PRO!')">
+            ⭐ UPGRADE PARA PRO
+          </button>
+          <button class="btn-config-save" style="background:var(--fl-purple);color:white" onclick="abrirModalCreditos()">
+            🪙 COMPRAR CRÉDITOS
+          </button>
+          <button class="btn-config-save" style="background:#0891b2;color:white;font-weight:700" class="hover:bg-cyan-500" onclick="mostrarToast('🌐 Em breve: Sites extras!')">
+            🌐 ADICIONAR SITE EXTRA
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Status WhatsApp -->
+    <div class="config-section">
+      <div class="config-group">
+        <div class="config-group-title">📱 STATUS WHATSAPP - MOTOR WHATSMEOW</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:16px;background:var(--fl-bg-card);border-radius:8px;border:1px solid var(--fl-border)">
+          <div>
+            <div style="font-weight:600;margin-bottom:4px">Instância: FraLib MeoWhats</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn-config-save" id="btn-whats-status" style="padding:8px 16px">VERIFICAR STATUS</button>
+          <button class="btn-config-save" id="btn-whats-connect" style="padding:8px 16px;background:#10b981;color:white">CONECTAR / QR CODE</button>
+          <button class="btn-config-save" id="btn-whats-disconnect" style="padding:8px 16px;background:#dc2626;color:white">DESCONECTAR</button>
+        </div>
+    </div>
+
+    <!-- Segurança: 2FA -->
+    <div class="config-section">
+      <div class="config-group">
+        <div class="config-group-title">🔐 SEGURANÇA DA CONTA</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:16px;background:var(--fl-bg-card);border-radius:8px;border:1px solid var(--fl-border)">
+          <div>
+            <div style="font-weight:600;margin-bottom:4px">Autenticação de Dois Fatores (2FA)</div>
+            <div style="font-size:13px;color:var(--fl-text-muted)" id="status2FA">Status: Carregando...</div>
+          </div>
+          <button class="btn-config-save" style="padding:8px 16px" id="btn-config-2fa">CONFIGURAR</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Zona de Perigo -->
+    <div class="config-section" style="background:rgba(239,68,68,0.05);border:2px solid rgba(239,68,68,0.3)">
+      <div class="config-group">
+        <div class="config-group-title" style="color:#ef4444">⚠️ ZONA DE PERIGO</div>
+        <p style="color:var(--fl-text-muted);margin-bottom:16px;font-size:14px">
+          Esta ação é irreversível. Todos os leads serão arquivados e o Kanban será limpo.
+        </p>
+        <button class="btn-config-save" style="background:#dc2626;color:white;font-weight:700" onclick="confirmarResetBoard()">
+          🗑️ ARQUIVAR TUDO E COMEÇAR DO ZERO
+        </button>
+      </div>
+    </div>
+
+  </section>
+
+</main>
+

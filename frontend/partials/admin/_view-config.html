@@ -1,0 +1,106 @@
+  <section class="view-section" id="view-config">
+
+    <h2 class="section-title">⚡ MOTOR FRALIB</h2>
+
+    <!-- Layout em Grid 2 Colunas -->
+    <div style="display:grid;grid-template-columns:1fr;gap:24px;width:100%;max-width:100%">
+      <div style="display:grid;grid-template-columns:1fr;gap:24px;width:100%" class="lg:grid-cols-2">
+
+        <!-- Coluna Esquerda: Formulário -->
+        <div class="config-section">
+          <div class="config-group">
+            <div class="config-group-title">▶ INICIAR NOVO CICLO DE PROSPECÇÃO</div>
+            <div class="config-field">
+              <label class="config-label" for="configNicho">Nicho / Segmento</label>
+              <input class="config-input" id="configNicho" type="text" placeholder="ex: restaurantes, dentistas...">
+            </div>
+            <div class="config-field">
+              <label class="config-label" for="configCidade">Cidade Alvo</label>
+              <input class="config-input" id="configCidade" type="text" placeholder="ex: Curitiba, PR">
+            </div>
+            <div class="config-field">
+              <label class="config-label" for="configQtd">Leads por Ciclo</label>
+              <input class="config-input" id="configQtd" type="number" min="1" max="500" value="50" placeholder="Quantidade desejada">
+            </div>
+            <div class="config-field">
+              <label class="config-label" for="configScoreMin">Score Mínimo de Qualificação (1-100)</label>
+              <input class="config-input" id="configScoreMin" type="number" min="1" max="100" value="70" placeholder="ex: 70">
+            </div>
+            <button class="btn-config-save" onclick="salvarConfigPipeline()">▶ INICIAR PIPELINE</button>
+        </div>
+
+        <!-- Coluna Direita: Terminal Mágico -->
+        <div class="config-section" style="background:var(--fl-bg-card);border:2px solid var(--fl-border-md);border-radius:12px;padding:16px;height:100%;min-height:400px;overflow-y:auto;font-family:monospace;font-size:13px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--fl-border)">
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="font-size:16px">🔮</span>
+              <span style="font-weight:600;color:var(--fl-purple)">TERMINAL MÁGICO</span>
+            </div>
+            <button onclick="limparTerminal()" style="background:transparent;border:1px solid var(--fl-border);color:var(--fl-text-muted);padding:4px 12px;border-radius:6px;font-size:11px;cursor:pointer">LIMPAR</button>
+          </div>
+          <div id="magic-logs-content" style="display:flex;flex-direction:column;gap:6px"></div>
+        </div>
+
+      </div>
+
+      <!-- Estatísticas de Conversão do Motor -->
+      <div class="config-section">
+        <div class="config-group">
+          <div class="config-group-title">📊 ESTATÍSTICAS DE CONVERSÃO DO MOTOR</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px">
+
+            <!-- Card: Nichos com Maior Conversão -->
+            <div style="background:var(--fl-bg-card);border:1px solid var(--fl-border);border-radius:8px;padding:16px">
+              <div style="font-weight:600;margin-bottom:12px;color:var(--fl-text)">🎯 Nichos com Maior Conversão</div>
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <div style="display:flex;justify-content:space-between;align-items:center">
+                  <span style="color:var(--fl-text-muted);font-size:13px">Restaurantes</span>
+                  <span style="color:#10b981;font-weight:600">45%</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center">
+                  <span style="color:var(--fl-text-muted);font-size:13px">Clínicas</span>
+                  <span style="color:#10b981;font-weight:600">32%</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center">
+                  <span style="color:var(--fl-text-muted);font-size:13px">Academias</span>
+                  <span style="color:#fbbf24;font-weight:600">28%</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center">
+                  <span style="color:var(--fl-text-muted);font-size:13px">Salões</span>
+                  <span style="color:#fbbf24;font-weight:600">24%</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Card: Taxa de Resposta Média -->
+            <div style="background:var(--fl-bg-card);border:1px solid var(--fl-border);border-radius:8px;padding:16px">
+              <div style="font-weight:600;margin-bottom:12px;color:var(--fl-text)">📈 Taxa de Resposta Média</div>
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <div style="display:flex;justify-content:space-between;align-items:center">
+                  <span style="color:var(--fl-text-muted);font-size:13px">WhatsApp</span>
+                  <span style="color:#10b981;font-weight:600">68%</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center">
+                  <span style="color:var(--fl-text-muted);font-size:13px">Email</span>
+                  <span style="color:#fbbf24;font-weight:600">42%</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center">
+                  <span style="color:var(--fl-text-muted);font-size:13px">Telefone</span>
+                  <span style="color:#fbbf24;font-weight:600">35%</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center">
+                  <span style="color:var(--fl-text-muted);font-size:13px">Média Geral</span>
+                  <span style="color:#10b981;font-weight:700;font-size:16px">48%</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </section>
+
+  <!-- ===== VIEW: MEU PERFIL ===== -->

@@ -1,0 +1,369 @@
+"""
+Credits Endpoints - API REST para Sistema de Créditos
+"""
+from fastapi import APIRouter, Request, HTTPException, Depends, Request, Header
+from pydantic import BaseModel
+from typing import Optional, List, Dict, Any
+import os
+import stripe
+from datetime import datetime
+
+from credits_manager import (
+    get_user_credits,
+    add_credits,
+    use_credit,
+    refund_credit,
+    get_credit_history,
+    get_pricing_table,
+    PRECO_POR_CREDITO,
+    PEDIDO_MINIMO
+)
+
+# Configurar Stripe
+_stripe_key = os.getenv("STRIPE_SECRET_KEY")
+if not _stripe_key:
+    raise ValueError("STRIPE_SECRET_KEY nao configurado no .env")
+stripe.api_key = _stripe_key
+STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET")
+if not STRIPE_WEBHOOK_SECRET:
+    raise ValueError("STRIPE_WEBHOOK_SECRET nao configurado no .env")
+STRIPE_PAYMENT_LINK = os.getenv("STRIPE_PAYMENT_LINK", "")
+
+router = APIRouter(prefix="/api/credits", tags=["credits"])
+
+# ===== MODELOS =====
+
+class CreditBalance(BaseModel):
+    """Saldo de créditos do usuário"""
+    user_id: int
+    creditos_disponiveis: int
+    creditos_usados: int
+    creditos_totais_comprados: int
+    ultima_recarga: Optional[str]
+    valor_ultima_recarga: Optional[float]
+
+class CreditTransaction(BaseModel):
+    """Transação de crédito"""
+    id: int
+    tipo: str
+    quantidade: int
+    saldo_anterior: int
+    saldo_novo: int
+    valor_pago: Optional[float]
+    descricao: str
+    created_at: str
+
+class PricingOption(BaseModel):
+    """Opção de preço"""
+    valor: float
+    creditos_base: int
+    creditos_bonus: int
+    creditos_totais: int
+    bonus_percentual: int
+    custo_por_credito: float
+
+# ===== HELPER: GET CURRENT USER =====
+
+from auth import get_current_user
+
+
+# ===== ENDPOINTS =====
+
+@router.get("/balance", response_model=CreditBalance)
+async def get_balance(user: dict = Depends(get_current_user)):
+    """
+    Retorna saldo de créditos do usuário
+
+    **Exemplo:**
+    ```
+    GET /api/credits/balance
+    Headers: X-User-ID: 1
+    ```
+    """
+    credits = get_user_credits(user["id"])
+    return CreditBalance(**credits)
+
+@router.get("/history", response_model=List[CreditTransaction])
+async def get_history(
+    limit: int = 50,
+    user: dict = Depends(get_current_user)
+):
+    """
+    Retorna histórico de transações do usuário
+
+    **Exemplo:**
+    ```
+    GET /api/credits/history?limit=20
+    Headers: X-User-ID: 1
+    ```
+    """
+    history = get_credit_history(user["id"], limit)
+    return [CreditTransaction(**tx) for tx in history]
+
+@router.get("/pricing", response_model=List[PricingOption])
+async def get_pricing():
+    """
+    Retorna tabela de preços com bônus
+
+    **Exemplo:**
+    ```
+    GET /api/credits/pricing
+    ```
+
+    **Resposta:**
+    ```json
+    [
+      {
+        "valor": 5.0,
+        "creditos_base": 50,
+        "creditos_bonus": 0,
+        "creditos_totais": 50,
+        "bonus_percentual": 0,
+        "custo_por_credito": 0.1
+      },
+      {
+        "valor": 10.0,
+        "creditos_base": 100,
+        "creditos_bonus": 10,
+        "creditos_totais": 110,
+        "bonus_percentual": 10,
+        "custo_por_credito": 0.091
+      }
+    ]
+    ```
+    """
+    pricing = get_pricing_table()
+    return [PricingOption(**p) for p in pricing]
+
+@router.get("/payment-link")
+async def get_payment_link():
+    """
+    Retorna link de pagamento Stripe
+
+    **Exemplo:**
+    ```
+    GET /api/credits/payment-link
+    ```
+    """
+    return {
+        "payment_link": STRIPE_PAYMENT_LINK,
+        "pedido_minimo": PEDIDO_MINIMO,
+        "preco_por_credito": PRECO_POR_CREDITO
+    }
+
+@router.post("/use")
+async def use_credit_endpoint(
+    descricao: str = "Geração de site",
+    user: dict = Depends(get_current_user)
+):
+    """
+    Desconta 1 crédito do usuário
+
+    **Exemplo:**
+    ```
+    POST /api/credits/use
+    Headers: X-User-ID: 1
+    Body: {"descricao": "Geração de site para Academia XYZ"}
+    ```
+    """
+    success = use_credit(user["id"], descricao)
+
+    if not success:
+        raise HTTPException(
+            status_code=402,  # Payment Required
+            detail="Créditos insuficientes. Recarregue sua conta."
+        )
+
+    # Retornar novo saldo
+    credits = get_user_credits(user["id"])
+
+    return {
+        "success": True,
+        "creditos_restantes": credits["creditos_disponiveis"],
+        "mensagem": "1 crédito descontado com sucesso"
+    }
+
+@router.post("/refund")
+async def refund_credit_endpoint(
+    descricao: str = "Estorno por erro",
+    user: dict = Depends(get_current_user)
+):
+    """
+    Devolve 1 crédito ao usuário (rollback)
+
+    **Exemplo:**
+    ```
+    POST /api/credits/refund
+    Headers: X-User-ID: 1
+    Body: {"descricao": "Erro ao gerar site"}
+    ```
+    """
+    refund_credit(user["id"], descricao)
+
+    # Retornar novo saldo
+    credits = get_user_credits(user["id"])
+
+    return {
+        "success": True,
+        "creditos_restantes": credits["creditos_disponiveis"],
+        "mensagem": "1 crédito devolvido com sucesso"
+    }
+
+# ===== WEBHOOK STRIPE =====
+
+@router.post("/webhook/stripe")
+async def stripe_webhook(
+    request: Request,
+    stripe_signature: str = Header(None, alias="stripe-signature")
+):
+    """
+    Webhook do Stripe para processar pagamentos confirmados
+
+    **Configurar no Stripe Dashboard:**
+    1. Ir em Developers > Webhooks
+    2. Adicionar endpoint: https://seu-dominio.com/api/credits/webhook/stripe
+    3. Selecionar evento: checkout.session.completed
+    4. Copiar Signing Secret e adicionar no .env como STRIPE_WEBHOOK_SECRET
+    """
+    payload = await request.body()
+
+    try:
+        # Verificar assinatura do webhook
+        event = stripe.Webhook.construct_event(
+            payload, stripe_signature, STRIPE_WEBHOOK_SECRET
+        )
+    except ValueError as e:
+        # Payload inválido
+        raise HTTPException(status_code=400, detail="Payload inválido")
+    except stripe.error.SignatureVerificationError as e:
+        # Assinatura inválida
+        raise HTTPException(status_code=400, detail="Assinatura inválida")
+
+    # Processar evento
+    if event["type"] == "checkout.session.completed":
+        session = event["data"]["object"]
+
+        # Extrair dados do pagamento
+        customer_email = session.get("customer_email") or session.get("customer_details", {}).get("email")
+        amount_total = session.get("amount_total", 0) / 100  # centavos → reais
+        session_id = session.get("id")
+
+        # TODO: Buscar user_id pelo email
+        # Por enquanto, usar metadata se disponível
+        user_id = session.get("metadata", {}).get("user_id")
+
+        if not user_id:
+            print(f"⚠️ Webhook: user_id não encontrado para {customer_id}")
+            return {"status": "error", "message": "user_id não encontrado"}
+
+        user_id = int(user_id)
+
+        # Adicionar créditos
+        try:
+            resultado = add_credits(user_id, amount_total, session_id)
+
+            print(f"✅ Webhook: {resultado['creditos_totais']} créditos adicionados para user_id={user_id}")
+            print(f"   Valor: R$ {amount_total:.2f}")
+            print(f"   Base: {resultado['creditos_base']} + Bônus: {resultado['creditos_bonus']}")
+
+            # TODO: Enviar email de confirmação
+            # await send_email(
+            #     to=customer_email,
+            #     subject="✅ Créditos adicionados!",
+            #     body=f"Você recebeu {resultado['creditos_totais']} créditos!"
+            # )
+
+            return {
+                "status": "success",
+                "user_id": user_id,
+                "creditos_adicionados": resultado["creditos_totais"],
+                "saldo_novo": resultado["saldo_novo"]
+            }
+        except Exception as e:
+            print(f"❌ Erro ao adicionar créditos: {e}")
+            raise HTTPException(status_code=500, detail=str(e))
+
+    return {"status": "ok"}
+
+# ===== MIDDLEWARE PARA VERIFICAR CRÉDITOS =====
+
+async def check_credits_middleware(request: Request, call_next):
+    """
+    Middleware para verificar e descontar créditos antes de executar pipeline
+
+    **Uso:**
+    ```python
+    from credits_endpoints import check_credits_middleware
+
+    app.middleware("http")(check_credits_middleware)
+    ```
+    """
+    # Verificar se é rota que consome créditos
+    if request.url.path.startswith("/api/pipeline/") or request.url.path.startswith("/pipeline/"):
+        try:
+            user = await get_current_user(request)
+
+            # Verificar saldo
+            credits = get_user_credits(user["id"])
+
+            if credits["creditos_disponiveis"] < 1:
+                return HTTPException(
+                    status_code=402,
+                    detail={
+                        "error": "Créditos insuficientes",
+                        "creditos_disponiveis": 0,
+                        "payment_link": STRIPE_PAYMENT_LINK
+                    }
+                )
+
+            # Descontar crédito
+            use_credit(user["id"], f"Pipeline: {request.url.path}")
+
+            # Adicionar info ao request
+            request.state.credits_deducted = True
+            request.state.credits_remaining = credits["creditos_disponiveis"] - 1
+
+        except HTTPException:
+            raise
+        except Exception as e:
+            print(f"⚠️ Erro no middleware de créditos: {e}")
+
+    # Executar request
+    try:
+        response = await call_next(request)
+        return response
+    except Exception as e:
+        # Rollback: devolver crédito se request falhou
+        if hasattr(request.state, "credits_deducted") and request.state.credits_deducted:
+            try:
+                user = await get_current_user(request)
+                refund_credit(user["id"], f"Erro no pipeline: {str(e)[:100]}")
+                print(f"↩️ Crédito devolvido para user_id={user['id']} (erro no pipeline)")
+            except Exception as rollback_error:
+                print(f"❌ Erro ao devolver crédito: {rollback_error}")
+
+        raise
+
+
+@router.get("/check")
+async def check_credits_before_action(user: dict = Depends(get_current_user)):
+    """Verifica se usuário tem créditos antes de executar ação"""
+    from pipeline_credits_middleware import check_credits_before_pipeline
+    
+    check = await check_credits_before_pipeline(user["id"])
+    
+    if not check['has_credits']:
+        return {
+            'can_proceed': False,
+            'error': 'Créditos insuficientes',
+            'message': 'Você não tem créditos. Recarregue para continuar!',
+            'creditos_disponiveis': 0,
+            'payment_link': STRIPE_PAYMENT_LINK
+        }
+    
+    return {
+        'can_proceed': True,
+        'creditos_disponiveis': check['creditos_disponiveis'],
+        'alert': check['alert'],
+        'payment_link': STRIPE_PAYMENT_LINK
+    }
