@@ -952,14 +952,9 @@ async function salvarConfigPipeline() {
     setTimeout(function(){
       if (btn) { btn.textContent = '▶ INICIAR'; btn.disabled = false; }
     }, 3000);
-    setTimeout(function(){
-      mostrarView('crm');
-      document.querySelectorAll('.sidebar-link').forEach(function(l){ l.classList.remove('active'); });
-      var crmLink = document.querySelector('[data-view="crm"]');
-      if (crmLink) crmLink.classList.add('active');
-    }, 1500);
+    // Permanecer no Motor Fralib — não redirecionar para CRM
     carregarKPIs();
-    setTimeout(carregarKanban, 4000);
+    mostrarToast('▶ Pipeline iniciado! Acompanhe o progresso no terminal abaixo.');
 
   } catch(e) {
     if (btn) { btn.textContent = '✗ ERRO'; btn.disabled = false; setTimeout(function(){ btn.textContent = '▶ INICIAR'; }, 3000); }

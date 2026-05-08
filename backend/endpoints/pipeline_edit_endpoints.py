@@ -9,7 +9,7 @@ from sqlalchemy import text
 from pydantic import BaseModel as _BaseModel
 from database import get_db
 from auth import get_current_user
-from endpoints.sse_endpoints import adicionar_log
+from sse_endpoints import adicionar_log
 
 router = APIRouter(prefix="/api/pipeline", tags=["pipeline"])
 logger = logging.getLogger("uvicorn")

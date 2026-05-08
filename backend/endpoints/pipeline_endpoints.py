@@ -12,7 +12,7 @@ from sqlalchemy import text
 from database import get_db, get_pipeline_state, update_pipeline_state, engine
 from auth import get_current_user
 from utils.agente1_hunter_v2 import buscar_leads_google_maps
-from endpoints.sse_endpoints import adicionar_log
+from sse_endpoints import adicionar_log
 
 import logging as _logging
 
@@ -43,32 +43,7 @@ class _SSEHandler(_logging.Handler):
 _sse_handler = _SSEHandler()
 _sse_handler.setFormatter(_logging.Formatter("%(message)s"))
 
-import builtins as _builtins
-_print_original = _builtins.print
-
-def _print_sse(*args, **kwargs):
-    msg = " ".join(str(a) for a in args)
-    _print_original(*args, **kwargs)
-    nivel = "info"
-    ml = msg.lower()
-    if "erro" in ml or "error" in ml:
-        nivel = "error"
-    elif "ok" in ml or "concluido" in ml or "aprovado" in ml:
-        nivel = "success"
-    elif "warn" in ml or "aviso" in ml:
-        nivel = "warning"
-    elif "lead" in ml or "hunter" in ml or "scraper" in ml:
-        nivel = "leads"
-    elif "caio" in ml or "qualif" in ml:
-        nivel = "caio"
-    elif "pipeline" in ml or "fase" in ml or "liam" in ml or "liz" in ml or "bryan" in ml:
-        nivel = "pipeline"
-    try:
-        adicionar_log(msg, nivel)
-    except Exception:
-        pass
-
-_builtins.print = _print_sse
+# Logs do pipeline chegam ao terminal via adicionar_log() chamado explicitamente
 
 
 from agents.caio import qualificar_lead, LeadInput as CaioInput

@@ -3,11 +3,11 @@ from fastapi.responses import StreamingResponse
 import asyncio
 import json
 from datetime import datetime
+from collections import deque
 
 router = APIRouter(prefix="/api/logs", tags=["sse"])
 
-# Fila global de logs
-log_queue = []
+log_queue = deque(maxlen=500)
 
 @router.get("/stream")
 async def stream_logs():
@@ -15,12 +15,13 @@ async def stream_logs():
         try:
             while True:
                 if log_queue:
-                    log = log_queue.pop(0)
-                    yield f"data: {json.dumps(log, ensure_ascii=False)}\n\n"
+                    log = log_queue.popleft()
+                    payload = json.dumps(log, ensure_ascii=False)
+                    yield 'data: ' + payload + '\n\n'
                 else:
-                    yield ": heartbeat\n\n"
-                await asyncio.sleep(0.5)
-        except asyncio.CancelledError:
+                    yield ': heartbeat\n\n'
+                await asyncio.sleep(0.3)
+        except (asyncio.CancelledError, GeneratorExit):
             pass
 
     return StreamingResponse(
@@ -33,7 +34,6 @@ async def stream_logs():
         },
     )
 
-# Mapa tipo -> evento (formato que o frontend espera)
 _TIPO_EVENTO = {
     "info":     "INFO",
     "success":  "SUCCESS",
@@ -51,5 +51,19 @@ def adicionar_log(mensagem: str, tipo: str = "info"):
         "mensagem": mensagem,
         "ts":       datetime.now().strftime("%H:%M:%S"),
     })
-    if len(log_queue) > 200:
-        log_queue.pop(0)
+
+@router.post('/test')
+async def test_log(payload: dict):
+    adicionar_log(payload.get('mensagem', 'teste'), payload.get('tipo', 'info'))
+    return {'ok': True, 'queue_size': len(log_queue)}
+
+@router.get('/debug')
+async def debug_queue():
+    import sys
+    mods = {k: v.__file__ for k, v in sys.modules.items() if 'sse_endpoint' in k}
+    return {
+        'queue_id': id(log_queue),
+        'queue_size': len(log_queue),
+        'queue_contents': list(log_queue)[:5],
+        'modules': mods
+    }
