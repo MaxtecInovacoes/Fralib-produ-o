@@ -3,7 +3,7 @@ import os
 from typing import Optional
 
 RESEND_API_KEY = os.getenv("RESEND_API_KEY", "")
-FROM_EMAIL = os.getenv("FROM_EMAIL", "noreply@seunegociofralib.site")
+FROM_EMAIL = os.getenv("FROM_EMAIL", "onboarding@resend.dev")
 APP_URL = os.getenv("APP_URL", "https://seunegociofralib.site")
 
 async def enviar_email_confirmacao(email: str, nome: str, token: str) -> bool:

@@ -74,7 +74,8 @@ async def onboarding_status(db: Session = Depends(get_db), user: dict = Depends(
         meowhats_url = os.getenv("MEOWHATS_URL", "http://localhost:3001")
         meowhats_key = os.getenv("MEOWHATS_KEY", "1763kovQ@")
         async with httpx.AsyncClient(timeout=3) as c:
-            r = await c.get(f"{meowhats_url}/api/sessions/fralib/status", headers={"X-API-Key": meowhats_key})
+            tenant_id = f"fralib_user_{user_id}"
+            r = await c.get(f"{meowhats_url}/api/sessions/{tenant_id}/status", headers={"X-API-Key": meowhats_key})
             if r.status_code == 200:
                 data = r.json()
                 wpp_ok = data.get("status") in ("connected", "open", "authenticated")

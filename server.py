@@ -29,7 +29,7 @@ inicializar_database()
 limiter = Limiter(key_func=get_remote_address, default_limits=["100/minute"])
 
 # CSRF Secret Key
-CSRF_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "fralib-secret-key-2024")
+CSRF_SECRET_KEY = os.getenv("CSRF_SECRET_KEY")
 
 def generate_csrf_token():
     """Gera um token CSRF seguro"""
@@ -158,7 +158,7 @@ async def get_csrf_token():
         value=token,
         httponly=True,
         samesite="lax",
-        secure=False,  # True em producao com HTTPS
+        secure=True,
         max_age=3600  # 1 hora
     )
     return response
