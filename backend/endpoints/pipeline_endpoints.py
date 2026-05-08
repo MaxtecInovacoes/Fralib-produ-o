@@ -685,6 +685,55 @@ async def reset_pipeline(db: Session = Depends(get_db), usuario: dict = Depends(
     return {"status": "resetado", "mensagem": "Pipeline resetado com sucesso"}
 
 
+
+@router.post('/pausar')
+async def pausar_pipeline(db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
+    tenant_id = usuario.get("tenant_id", usuario["id"])
+    update_pipeline_state(db, tenant_id, pausado=True)
+    adicionar_log("Pipeline pausado pelo usuario", "warning")
+    return {"status": "pausado"}
+
+@router.post('/retomar')
+async def retomar_pipeline(db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
+    tenant_id = usuario.get("tenant_id", usuario["id"])
+    update_pipeline_state(db, tenant_id, pausado=False)
+    adicionar_log("Pipeline retomado pelo usuario", "info")
+    return {"status": "retomado"}
+
+@router.post('/arquivar-tudo')
+async def arquivar_tudo(db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
+    tenant_id = usuario.get("tenant_id", usuario["id"])
+    try:
+        result = db.execute(text(
+            "UPDATE leads SET status='arquivado', atualizado_em=:ts WHERE user_id=:uid AND status != 'arquivado'"
+        ), {"uid": tenant_id, "ts": datetime.now().isoformat()})
+        db.commit()
+        count = result.rowcount
+        adicionar_log(f"{count} leads arquivados", "info")
+        return {"ok": True, "message": f"{count} leads arquivados com sucesso"}
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+@router.post('/reprocessar/{lead_id}')
+async def reprocessar_lead(lead_id: str, background_tasks: BackgroundTasks, db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
+    tenant_id = usuario.get("tenant_id", usuario["id"])
+    lead = db.execute(text("SELECT * FROM leads WHERE id=:id AND user_id=:uid"), {"id": lead_id, "uid": tenant_id}).fetchone()
+    if not lead:
+        raise HTTPException(404, "Lead nao encontrado")
+    db.execute(text("UPDATE leads SET status='capturado', processado=false, atualizado_em=:ts WHERE id=:id"),
+               {"ts": datetime.now().isoformat(), "id": lead_id})
+    db.commit()
+    adicionar_log(f"Lead {lead.nome} marcado para reprocessamento", "info")
+    return {"ok": True, "mensagem": f"Lead {lead.nome} na fila para reprocessamento"}
+
+@router.get('/fila-reprocessamento')
+async def fila_reprocessamento(db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
+    tenant_id = usuario.get("tenant_id", usuario["id"])
+    leads = db.execute(text(
+        "SELECT id, nome, cidade, segmento, rating, score, tier FROM leads WHERE user_id=:uid AND status='capturado' ORDER BY criado_em DESC"
+    ), {"uid": tenant_id}).fetchall()
+    return {"leads": [dict(r._mapping) for r in leads], "total": len(leads)}
+
 @router.get('/analytics/overview')
 async def get_analytics(periodo: str = 'mes', db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
     from datetime import datetime, timedelta
