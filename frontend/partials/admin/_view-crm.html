@@ -1,13 +1,22 @@
-  <section class="view-section active" id="view-crm">
+  <!-- ========== VIEW: CRM / KANBAN ========== -->
+
+  <section class="view-section" id="view-crm">
 
     <div class="kanban-header">
       <h2>&#9783; CRM KANBAN</h2>
     </div>
 
+    <div class="period-filters" style="margin-bottom:16px;">
+      <button class="btn-period active" data-period="tudo" onclick="setCrmPeriod('tudo',this)">TUDO</button>
+      <button class="btn-period" data-period="hoje" onclick="setCrmPeriod('hoje',this)">HOJE</button>
+      <button class="btn-period" data-period="semana" onclick="setCrmPeriod('semana',this)">7 DIAS</button>
+      <button class="btn-period" data-period="mes" onclick="setCrmPeriod('mes',this)">MES</button>
+      <input type="text" id="crm-search" placeholder="Buscar empresa..." oninput="renderKanban(_crmDataCache)" style="background:var(--fl-bg-card);border:1px solid var(--fl-border);color:var(--fl-text);padding:6px 12px;border-radius:6px;font-size:13px;min-width:200px;margin-left:8px;">
+      <span id="crm-count" style="color:var(--fl-text-muted);font-size:12px;margin-left:auto;"></span>
+    </div>
+
     <div class="kanban-scroll">
       <div class="kanban-board" id="kanbanBoard">
-
-        <!-- Fila de Atendimento -->
         <div class="kanban-col col-fila">
           <div class="kanban-col-header">
             <span class="kanban-col-title">FILA DE ATENDIMENTO</span>
@@ -15,8 +24,6 @@
           </div>
           <div class="kanban-col-body" data-col="fila"></div>
         </div>
-
-        <!-- Atendimento Iniciado -->
         <div class="kanban-col col-intro">
           <div class="kanban-col-header">
             <span class="kanban-col-title">ATENDIMENTO INICIADO</span>
@@ -24,8 +31,6 @@
           </div>
           <div class="kanban-col-body" data-col="intro"></div>
         </div>
-
-        <!-- Follow Up 1 -->
         <div class="kanban-col col-followup1">
           <div class="kanban-col-header">
             <span class="kanban-col-title">FOLLOW UP 1</span>
@@ -33,8 +38,6 @@
           </div>
           <div class="kanban-col-body" data-col="followup1"></div>
         </div>
-
-        <!-- Follow Up 2 -->
         <div class="kanban-col col-followup2">
           <div class="kanban-col-header">
             <span class="kanban-col-title">FOLLOW UP 2</span>
@@ -42,8 +45,6 @@
           </div>
           <div class="kanban-col-body" data-col="followup2"></div>
         </div>
-
-        <!-- Qualificados -->
         <div class="kanban-col col-qualificados">
           <div class="kanban-col-header">
             <span class="kanban-col-title">QUALIFICADOS</span>
@@ -51,8 +52,6 @@
           </div>
           <div class="kanban-col-body" data-col="qualificados"></div>
         </div>
-
-        <!-- Negociação -->
         <div class="kanban-col col-negociacao">
           <div class="kanban-col-header">
             <span class="kanban-col-title">NEGOCIAÇÃO</span>
@@ -60,8 +59,6 @@
           </div>
           <div class="kanban-col-body" data-col="negociacao"></div>
         </div>
-
-        <!-- Perdidos -->
         <div class="kanban-col col-perdidos">
           <div class="kanban-col-header">
             <span class="kanban-col-title">PERDIDOS</span>
@@ -69,8 +66,6 @@
           </div>
           <div class="kanban-col-body" data-col="perdidos"></div>
         </div>
-
-        <!-- Ganhos -->
         <div class="kanban-col col-ganhos">
           <div class="kanban-col-header">
             <span class="kanban-col-title">GANHOS / VENDIDOS</span>
@@ -83,5 +78,3 @@
     </div>
 
   </section>
-
-  <!-- ========== VIEW: UTI DE LEADS ========== -->

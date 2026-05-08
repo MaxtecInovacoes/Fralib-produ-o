@@ -1,0 +1,37 @@
+  <!-- ========== VIEW: HISTÓRICO DE CICLOS ========== -->
+  <section class="view-section" id="view-ciclos">
+    <h2 class="section-title">⚙️ HISTÓRICO DE CICLOS</h2>
+
+        <div class="period-filters" style="margin-bottom:16px;">
+      <button class="btn-period active" data-period="tudo" onclick="setCiclosPeriod('tudo',this)">TUDO</button>
+      <button class="btn-period" data-period="hoje" onclick="setCiclosPeriod('hoje',this)">HOJE</button>
+      <button class="btn-period" data-period="semana" onclick="setCiclosPeriod('semana',this)">7 DIAS</button>
+      <button class="btn-period" data-period="mes" onclick="setCiclosPeriod('mes',this)">MES</button>
+      <input type="text" id="ciclos-search" placeholder="Buscar nicho ou cidade..." style="background:var(--fl-bg-card);border:1px solid var(--fl-border);color:var(--fl-text);padding:6px 12px;border-radius:6px;font-size:13px;min-width:220px;margin-left:8px;" oninput="filtrarCiclos(this.value)">
+      <span id="ciclos-count" style="font-size:12px;color:var(--fl-text-muted);margin-left:auto;"></span>
+    </div>
+
+    <div style="overflow-x:auto;">
+      <table style="width:100%;border-collapse:collapse;font-size:13px;" id="ciclosTable">
+        <thead>
+          <tr style="border-bottom:1px solid var(--fl-border);">
+            <th style="text-align:left;padding:10px 8px;color:var(--fl-text-muted);font-family:var(--fl-font-brand);font-size:11px;letter-spacing:1px;white-space:nowrap;">#</th>
+            <th style="text-align:left;padding:10px 8px;color:var(--fl-text-muted);font-family:var(--fl-font-brand);font-size:11px;letter-spacing:1px;white-space:nowrap;">NICHO</th>
+            <th style="text-align:left;padding:10px 8px;color:var(--fl-text-muted);font-family:var(--fl-font-brand);font-size:11px;letter-spacing:1px;white-space:nowrap;">CIDADE</th>
+            <th style="text-align:center;padding:10px 8px;color:var(--fl-text-muted);font-family:var(--fl-font-brand);font-size:11px;letter-spacing:1px;white-space:nowrap;">LEADS</th>
+            <th style="text-align:center;padding:10px 8px;color:var(--fl-text-muted);font-family:var(--fl-font-brand);font-size:11px;letter-spacing:1px;white-space:nowrap;">SITES</th>
+            <th style="text-align:center;padding:10px 8px;color:var(--fl-text-muted);font-family:var(--fl-font-brand);font-size:11px;letter-spacing:1px;white-space:nowrap;">ENVIADOS</th>
+            <th style="text-align:center;padding:10px 8px;color:var(--fl-text-muted);font-family:var(--fl-font-brand);font-size:11px;letter-spacing:1px;white-space:nowrap;">ERROS</th>
+            <th style="text-align:center;padding:10px 8px;color:var(--fl-text-muted);font-family:var(--fl-font-brand);font-size:11px;letter-spacing:1px;white-space:nowrap;">CONV.</th>
+            <th style="text-align:left;padding:10px 8px;color:var(--fl-text-muted);font-family:var(--fl-font-brand);font-size:11px;letter-spacing:1px;white-space:nowrap;">INICIADO</th>
+            <th style="text-align:left;padding:10px 8px;color:var(--fl-text-muted);font-family:var(--fl-font-brand);font-size:11px;letter-spacing:1px;white-space:nowrap;">CONCLUÍDO</th>
+          </tr>
+        </thead>
+        <tbody id="ciclosBody">
+          <tr><td colspan="10" style="text-align:center;padding:32px;color:var(--fl-text-muted)">Carregando...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ========== VIEW: SITES GERADOS ========== -->

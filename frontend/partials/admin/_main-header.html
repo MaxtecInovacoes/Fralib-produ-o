@@ -1,0 +1,70 @@
+
+
+<!-- ===== MAIN ===== -->
+<main class="main">
+
+  <!-- Header -->
+  <div class="main-header">
+    <h1>CENTRAL DE COMANDO</h1>
+    <div class="header-right">
+      <!-- Controles do Pipeline -->
+      <div class="pipeline-controls">
+        <span class="pipeline-status idle" id="pipelineStatus">&#9679; IDLE</span>
+        <button class="btn-pipeline btn-pipeline-start" id="btnIniciar" id="btnIniciar">&#9654; INICIAR</button>
+        <button class="btn-pipeline btn-pipeline-pause" id="btnPausar" onclick="pausarPipeline()" style="display:none">&#9646;&#9646; PAUSAR</button>
+        <button class="btn-pipeline btn-pipeline-start" id="btnRetomar" onclick="retomarPipeline()" style="display:none">&#9654; RETOMAR</button>
+      </div>
+      <!-- Usuário -->
+      <div class="header-user">
+        <span>Agente Bryan</span>
+        <div class="header-avatar">B</div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- KPI Cards — 6 métricas -->
+  <div class="kpi-grid" id="kpi-section" style="display: none;">
+    <div class="kpi-card">
+      <div class="kpi-glow"></div>
+      <div class="kpi-label">Total de Leads</div>
+      <div class="kpi-value" id="kpi-leads">—</div>
+      <div class="kpi-sub" id="kpi-leads-sub">carregando...</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-glow"></div>
+      <div class="kpi-label">Sites Gerados</div>
+      <div class="kpi-value" id="kpi-sites">—</div>
+      <div class="kpi-sub" id="kpi-sites-sub">na Vercel</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-glow"></div>
+      <div class="kpi-label">Receita Gerada</div>
+      <div class="kpi-value" id="kpi-receita">—</div>
+      <div class="kpi-sub" id="kpi-receita-sub">no período</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-glow"></div>
+      <div class="kpi-label">Contatos Enviados</div>
+      <div class="kpi-value" id="kpi-contatos">—</div>
+      <div class="kpi-sub" id="kpi-contatos-sub">via WhatsApp</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-glow"></div>
+      <div class="kpi-label">Ciclo Atual</div>
+      <div class="kpi-value" id="kpi-ciclo">—</div>
+      <div class="kpi-sub" id="kpi-ciclo-sub">carregando...</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-glow"></div>
+      <div class="kpi-label">Taxa de Conversão</div>
+      <div class="kpi-value" id="kpi-conversao">—</div>
+      <div class="kpi-sub" id="kpi-conversao-sub">leads com site</div>
+    </div>
+  </div>
+
+  <!-- Empty State (oculto por padrão) -->
+  <div class="empty-state" id="emptyState">
+    <p class="empty-text">AGUARDANDO SDR BRYAN<br>CAPTAR OS PRIMEIROS LEADS...</p>
+  </div>
+

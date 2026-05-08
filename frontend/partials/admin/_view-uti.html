@@ -1,42 +1,46 @@
   <section class="view-section" id="view-uti">
 
+    <div class="period-filters" style="margin-bottom:16px;">
+      <button class="btn-period active" data-period="tudo" onclick="setUtiPeriod('tudo',this)">TUDO</button>
+      <button class="btn-period" data-period="hoje" onclick="setUtiPeriod('hoje',this)">HOJE</button>
+      <button class="btn-period" data-period="semana" onclick="setUtiPeriod('semana',this)">7 DIAS</button>
+      <button class="btn-period" data-period="mes" onclick="setUtiPeriod('mes',this)">MES</button>
+      <input type="text" id="uti-search" placeholder="Buscar empresa..." oninput="renderUTI(_utiDataCache)" style="background:var(--fl-bg-card);border:1px solid var(--fl-border);color:var(--fl-text);padding:6px 12px;border-radius:6px;font-size:13px;min-width:200px;margin-left:8px;">
+      <span id="uti-filter-count" style="color:var(--fl-text-muted);font-size:12px;margin-left:auto;"></span>
+    </div>
+
     <div class="uti-header">
-      <h2 class="section-title" style="margin:0">&#9888; LEADS — UTI</h2>
+      <h2 class="section-title" style="margin:0">&#9888; LEADS &mdash; UTI</h2>
       <span class="uti-count-badge" id="utiCount">0 leads</span>
     </div>
 
-    <!-- Abas UTI -->
     <div style="display:flex;gap:4px;margin-bottom:16px;border-bottom:1px solid var(--fl-border);padding-bottom:0">
       <button class="uti-tab active" id="uti-tab-falhas" onclick="trocarAbaUTI('falhas')">
-        ⚠️ FALHAS DE PIPELINE <span id="badge-falhas" style="background:var(--danger);color:#fff;border-radius:99px;padding:1px 7px;font-size:10px;margin-left:6px">0</span>
+        &#9888; FALHAS DE PIPELINE <span id="badge-falhas" style="background:var(--danger);color:#fff;border-radius:99px;padding:1px 7px;font-size:10px;margin-left:6px">0</span>
       </button>
       <button class="uti-tab" id="uti-tab-descartados" onclick="trocarAbaUTI('descartados')">
-        ✋ DESCARTADOS PELO CAIO <span id="badge-descartados" style="background:var(--fl-text-dim);color:#fff;border-radius:99px;padding:1px 7px;font-size:10px;margin-left:6px">0</span>
+        &#9995; DESCARTADOS PELO CAIO <span id="badge-descartados" style="background:var(--fl-text-dim);color:#fff;border-radius:99px;padding:1px 7px;font-size:10px;margin-left:6px">0</span>
       </button>
     </div>
 
-    <!-- Tab: Falhas de Pipeline -->
     <div id="uti-painel-falhas">
-      <p class="uti-desc">Leads que entraram no builder mas o site não foi gerado (erro técnico ou score insuficiente). Clique em <strong>▶ REPROCESSAR</strong> para tentar novamente.</p>
+      <p class="uti-desc">Leads que entraram no pipeline mas travaram por erro t&eacute;cnico. Clique em <strong>&#9654; REPROCESSAR</strong> para tentar novamente.</p>
       <div class="uti-table-wrap">
         <table class="uti-table">
-          <thead><tr><th>NOME</th><th>NICHO</th><th>CIDADE</th><th>MOTIVO</th><th>SITE</th><th>AÇÃO</th></tr></thead>
+          <thead><tr><th>NOME</th><th>NICHO</th><th>CIDADE</th><th>MOTIVO</th><th>SITE</th><th>A&Ccedil;&Atilde;O</th></tr></thead>
           <tbody id="utiTableBody"><tr><td colspan="6"><div class="uti-empty">CARREGANDO...</div></td></tr></tbody>
         </table>
       </div>
     </div>
 
-    <!-- Tab: Descartados pelo Caio -->
     <div id="uti-painel-descartados" style="display:none">
-      <p class="uti-desc">Leads rejeitados pelo Caio na entrada — dados insuficientes ou fora do perfil. Enriqueça os dados manualmente e clique em <strong>✋ QUALIFICAR</strong> para forçar pelo pipeline.</p>
+      <p class="uti-desc">Leads rejeitados pelo Caio na entrada &mdash; dados insuficientes ou fora do perfil. Enrique&ccedil;a os dados manualmente e clique em <strong>&#9995; QUALIFICAR</strong> para for&ccedil;ar pelo pipeline.</p>
       <div class="uti-table-wrap">
         <table class="uti-table">
-          <thead><tr><th>NOME</th><th>NICHO</th><th>CIDADE</th><th>TELEFONE</th><th>AÇÃO</th></tr></thead>
+          <thead><tr><th>NOME</th><th>NICHO</th><th>CIDADE</th><th>TELEFONE</th><th>A&Ccedil;&Atilde;O</th></tr></thead>
           <tbody id="utiDescartadosBody"><tr><td colspan="5"><div class="uti-empty">CARREGANDO...</div></td></tr></tbody>
         </table>
       </div>
     </div>
 
   </section>
-
-  <!-- ========== VIEW: CONFIGURAÇÕES ========== -->

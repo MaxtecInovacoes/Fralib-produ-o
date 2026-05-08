@@ -534,6 +534,11 @@ async def executar_pipeline_completo(config: dict, tenant_id: int):
                     tel = '55' + tel
                 jid = f"{tel}@s.whatsapp.net"
                 texto = bryan_output.mensagem.texto
+                # TESTE: redirecionar para numero de teste se configurado
+                test_number = _os.getenv("BRYAN_TEST_NUMBER", "")
+                if test_number:
+                    jid = f"{test_number}@s.whatsapp.net"
+                    adicionar_log(f"  Bryan: MODO TESTE - redirecionando para {test_number}", "warning")
                 with httpx.Client(timeout=10) as c:
                     r = c.post(
                         f"{meowhats_url}/api/sessions/{tenant_id}/send",

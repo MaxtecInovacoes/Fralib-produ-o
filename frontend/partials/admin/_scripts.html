@@ -4,11 +4,17 @@ var periodoAtual = 'mes';
 var chartsInstances = {};
 var leadAtualModal = null;
 var lastStatus = {};
+var crmPeriodAtual = 'tudo';
+var crmSearchAtual = '';
+var utiPeriodAtual = 'tudo';
+var utiSearchAtual = '';
+var _crmDataCache = null;
+var _utiDataCache = null;
 
 /* ══ AUTH GUARD ═══════════════════════════════════════════════════ */
 (function(){
   var token = localStorage.getItem('fralib_token');
-  if (!token) { window.location.href = '/login.html'; return; }
+  if (!token) { window.location.href = '/login'; return; }
   
   // Usar URL absoluta para garantir HTTPS via proxy
   var apiUrl = window.location.protocol + '//' + window.location.host + '/api/auth/me';
@@ -24,11 +30,11 @@ var lastStatus = {};
       if (r.status === 401) { 
         console.warn('[Auth] Token inválido, redirecionando para login');
         localStorage.removeItem('fralib_token'); 
-        window.location.href = '/login.html'; 
+        window.location.href = '/login'; 
       }
       if (r.status === 403) { 
         alert('Seu plano venceu. Renove para continuar.'); 
-        window.location.href = '/planos.html'; 
+        window.location.href = '/planos'; 
       }
       return r.json();
     })
@@ -45,19 +51,41 @@ var lastStatus = {};
 })();
 
 /* ══ HELPER FETCH AUTENTICADO ═════════════════════════════════════ */
-function authFetch(url, opts) {
+var _csrfTokenCache = null;
+var _csrfTokenExpiry = 0;
+
+async function _getCsrfToken() {
+  if (_csrfTokenCache && Date.now() < _csrfTokenExpiry) return _csrfTokenCache;
+  try {
+    var r = await fetch('/api/csrf-token', { credentials: 'include' });
+    var d = await r.json();
+    _csrfTokenCache = d.csrf_token;
+    _csrfTokenExpiry = Date.now() + 55 * 60 * 1000;
+    return _csrfTokenCache;
+  } catch(e) {
+    console.error('[CSRF] Erro ao buscar token:', e);
+    return null;
+  }
+}
+
+async function authFetch(url, opts) {
   var options = opts || {};
   options.headers = options.headers || {};
   options.headers['Authorization'] = 'Bearer ' + localStorage.getItem('fralib_token');
-  options.credentials = 'same-origin';
-  
-  // Garantir URL absoluta
+  options.credentials = 'include';
+
+  var method = (options.method || 'GET').toUpperCase();
+  if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(method)) {
+    var csrf = await _getCsrfToken();
+    if (csrf) options.headers['X-CSRF-Token'] = csrf;
+  }
+
   var fullUrl = url;
   if (url.startsWith('/')) {
     fullUrl = window.location.protocol + '//' + window.location.host + url;
   }
-  
-  return fetch(fullUrl, options).catch(function(err){
+
+  return fetch(fullUrl, options).catch(function(err) {
     console.error('[authFetch] Erro na requisição:', url, err);
     throw err;
   });
@@ -86,10 +114,8 @@ function sanitizeUrl(url) {
 /* ══ KPIs — 6 cards ═══════════════════════════════════════════════ */
 async function carregarKPIs() {
   try {
-    var resStatus = authFetch('/api/pipeline/status').then(function(r){ return r.json(); });
-    var resAnalytics = authFetch('/api/pipeline/analytics/overview?periodo=mes').then(function(r){ return r.json(); });
-    var status = await resStatus;
-    var analytics = await resAnalytics;
+    var status = await (await authFetch('/api/pipeline/status')).json();
+    var analytics = await (await authFetch('/api/pipeline/analytics/overview?periodo=' + periodoAtual)).json();
     lastStatus = status;
 
     var set = function(id, val){ var el = document.getElementById(id); if(el) el.textContent = val; };
@@ -104,7 +130,11 @@ async function carregarKPIs() {
 
     // KPI 3 — Receita
     set('kpi-receita', 'R$ ' + (analytics.receita || 0).toLocaleString('pt-BR', { minimumFractionDigits: 0 }));
-    set('kpi-receita-sub', (analytics.conversao || 0) + '% de conversão');
+    set('kpi-receita-sub', (analytics.conversao_venda || 0) + '% conv. venda');
+
+    // KPI extra — Vendidos
+    set('kpi-vendidos', (analytics.total_vendidos || 0).toLocaleString('pt-BR'));
+    set('kpi-vendidos-sub', 'R$ ' + (analytics.receita || 0).toLocaleString('pt-BR', {minimumFractionDigits:0}) + ' faturado');
 
     // KPI 4 — Contatos Enviados
     set('kpi-contatos', (status.totalEnviados || 0).toLocaleString('pt-BR'));
@@ -176,13 +206,37 @@ function iniciarPipelineHeader() {
 
 async function _executarIniciar(nicho, cidade, qtd) {
   try {
-    await authFetch('/api/pipeline/iniciar', {
+    const resp = await authFetch('/api/pipeline/iniciar', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ segmento: nicho, cidade: cidade, quantidade: qtd || 50 })
     });
+    if (resp && resp.status === 402) {
+      const data = await resp.json().catch(() => ({}));
+      _mostrarPopupUpgrade(data.detail || {});
+      return;
+    }
     setTimeout(carregarKPIs, 800);
   } catch(e) { alert('Erro ao iniciar pipeline: ' + e.message); }
+}
+
+function _mostrarPopupUpgrade(det) {
+  const resetEm = det.reset_em || 'proxima segunda-feira';
+  const restantes = det.tokens_restantes !== undefined ? det.tokens_restantes : 0;
+  const motivo = det.erro || 'Limite de ciclos atingido';
+  const html = `<div id="upgradeOverlay" style="position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;display:flex;align-items:center;justify-content:center;">
+    <div style="background:#1a1a2e;border:1px solid #f5c518;border-radius:12px;padding:32px;max-width:420px;width:90%;text-align:center;">
+      <div style="font-size:2rem;margin-bottom:12px;">&#9889;</div>
+      <h2 style="color:#f5c518;margin-bottom:8px;">Limite atingido</h2>
+      <p style="color:#ccc;margin-bottom:8px;">${motivo}</p>
+      <p style="color:#888;font-size:.85rem;margin-bottom:24px;">Ciclos restantes: <b style="color:#f5c518">${restantes}</b> &nbsp;|&nbsp; Reinicia: <b style="color:#f5c518">${resetEm}</b></p>
+      <div style="display:flex;gap:12px;justify-content:center;">
+        <a href="/planos" style="background:#f5c518;color:#000;padding:10px 24px;border-radius:8px;font-weight:700;text-decoration:none;">FAZER UPGRADE</a>
+        <button onclick="document.getElementById('upgradeOverlay').remove()" style="background:transparent;border:1px solid #555;color:#ccc;padding:10px 24px;border-radius:8px;cursor:pointer;">AGUARDAR</button>
+      </div>
+    </div>
+  </div>`;
+  document.body.insertAdjacentHTML('beforeend', html);
 }
 
 async function pausarPipeline() {
@@ -222,7 +276,7 @@ function mostrarToast(mensagem, duracao) {
 /* ══ VIEWS — alternância de conteúdo ═══════════════════════════════ */
 function mostrarView(view) {
   document.querySelectorAll('.view-section').forEach(function(s){ s.classList.remove('active'); });
-  console.log("[DEBUG] mostrarView chamada com view:", view);
+  localStorage.setItem('fralib_view', view);
   var target = document.getElementById('view-' + view);
   if (target) target.classList.add('active');
   console.log("[DEBUG] Target encontrado:", target);
@@ -239,7 +293,20 @@ function mostrarView(view) {
     carregarUTI();
   }
   if (view === 'config') {
+    setTimeout(function(){
+      if (window.initPixelOffice) {
+        window._pixelOfficeStarted = false;
+        window.initPixelOffice();
+      }
+    }, 50);
   }
+  if (view === 'ciclos') {
+    carregarCiclos();
+  }
+  if (view === 'config') {
+    carregarStatsConfig();
+  }
+  if (view === 'sites') carregarSites();
 }
 
 /* ══ FILTROS DE PERÍODO ════════════════════════════════════════════ */
@@ -251,6 +318,21 @@ function trocarPeriodo(periodo, btn) {
 }
 
 /* ══ CHARTS — Chart.js ═════════════════════════════════════════════ */
+
+async function carregarStatsConfig() {
+  try {
+    var data = await authFetch('/api/pipeline/stats').then(function(r){ return r.json(); });
+    var set = function(id, val){ var el = document.getElementById(id); if(el) el.textContent = val; };
+    set('stat-taxa-resposta', (data.taxa_resposta || 0) + '%');
+    set('stat-nicho-top', data.nicho_top || '—');
+    set('stat-nicho-top-conv', (data.nicho_top_conv || 0) + '%');
+    set('stat-cidade-top', data.cidade_top || '—');
+    set('stat-cidade-top-total', data.cidade_top_total || 0);
+    set('stat-ticket-medio', 'R$ ' + (data.ticket_medio || 0).toLocaleString('pt-BR', {minimumFractionDigits:0}));
+    set('stat-msgs-bryan', (data.total_msgs_bryan || 0).toLocaleString('pt-BR'));
+  } catch(e) { console.warn('Stats:', e.message); }
+}
+
 async function carregarCharts(periodo) {
   if (typeof Chart === 'undefined') {
     console.warn('Chart.js não carregado');
@@ -420,6 +502,61 @@ function getColuna(lead) {
   return 'followup1';
 }
 
+
+/* == FILTROS CRM / UTI ================================================= */
+function setCrmPeriod(period, btn) {
+  crmPeriodAtual = period;
+  document.querySelectorAll('.btn-period[onclick*="setCrmPeriod"]').forEach(function(b){ b.classList.remove('active'); });
+  if (btn) btn.classList.add('active');
+  renderKanban(_crmDataCache);
+}
+function setUtiPeriod(period, btn) {
+  utiPeriodAtual = period;
+  document.querySelectorAll('.btn-period[onclick*="setUtiPeriod"]').forEach(function(b){ b.classList.remove('active'); });
+  if (btn) btn.classList.add('active');
+  renderUTI(_utiDataCache);
+}
+function setCiclosPeriod(period, btn) {
+  document.querySelectorAll('.btn-period[onclick*="setCiclosPeriod"]').forEach(function(b){ b.classList.remove('active'); });
+  if (btn) btn.classList.add('active');
+  var search = document.getElementById('ciclos-search');
+  var q = search ? search.value : '';
+  carregarCiclos(period, q);
+}
+function iniciarPipeline() {
+  if (!confirm('Iniciar novo ciclo do pipeline agora?')) return;
+  authFetch('/api/pipeline/iniciar', {method:'POST'})
+    .then(function(r){ return r.json(); })
+    .then(function(d){ Toast.success(d.mensagem || 'Pipeline iniciado!'); })
+    .catch(function(e){ Toast.error('Erro: ' + e.message); });
+}
+function filtrarPorPeriodo(leads, period) {
+  if (!period || period === 'tudo') return leads;
+  var agora = new Date();
+  var inicio;
+  if (period === 'hoje') {
+    inicio = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate());
+  } else if (period === 'semana') {
+    inicio = new Date(agora - 7 * 24 * 60 * 60 * 1000);
+  } else if (period === 'mes') {
+    inicio = new Date(agora.getFullYear(), agora.getMonth(), 1);
+  }
+  return leads.filter(function(l) {
+    if (!l.criado_em) return true;
+    var d = new Date(l.criado_em);
+    return d >= inicio;
+  });
+}
+function filtrarPorBusca(leads, search) {
+  if (!search) return leads;
+  var q = search.toLowerCase();
+  return leads.filter(function(l) {
+    return (l.nome || '').toLowerCase().indexOf(q) !== -1 ||
+           (l.cidade || '').toLowerCase().indexOf(q) !== -1 ||
+           (l.segmento || '').toLowerCase().indexOf(q) !== -1 ||
+           (l.nicho || '').toLowerCase().indexOf(q) !== -1;
+  });
+}
 function criarCard(lead) {
   if (!lead || !lead.id) return null;
   var d = document.createElement('div');
@@ -441,6 +578,14 @@ function criarCard(lead) {
       ? '<div style="font-size:11px;margin-top:6px"><a href="' + safeUrl + '" target="_blank" rel="noopener noreferrer" style="color:var(--fl-purple-300)" onclick="event.stopPropagation()">🌐 Ver site</a></div>'
       : '<div style="font-size:10px;margin-top:6px;color:var(--fl-text-dim)">sem site</div>'
     );
+  if (window._leadsComResposta && window._leadsComResposta.some(function(l){
+    return l.nome && lead.nome && l.nome.toLowerCase() === lead.nome.toLowerCase();
+  })) {
+    var badge = document.createElement("span");
+    badge.style.cssText = "background:#10b981;color:#fff;font-size:9px;padding:2px 6px;border-radius:10px;font-family:var(--fl-font-brand);letter-spacing:1px;margin-top:4px;display:inline-block;";
+    badge.textContent = "RESPONDEU";
+    d.appendChild(badge);
+  }
   initDrag(d);
   return d;
 }
@@ -448,43 +593,60 @@ function criarCard(lead) {
 async function carregarKanban() {
   try {
     var data = await authFetch('/api/dashboard/crm').then(function(r){ return r.json(); });
-    var emptyEl = document.getElementById('emptyState');
-
-    // data = { fila:[], intro:[], f1:[], f2:[], negotiation:[], qualificado:[], lost:[], won:[] }
-    var mapeamento = {
-      fila:        data.fila        || [],
-      intro:       data.intro       || [],
-      followup1:   data.f1          || [],
-      followup2:   data.f2          || [],
-      negociacao:  data.negotiation || [],
-      qualificados:data.qualificado || [],
-      perdidos:    data.lost        || [],
-      ganhos:      data.won         || []
-    };
-
-    var totalLeads = Object.values(mapeamento).reduce(function(acc, arr){ return acc + arr.length; }, 0);
-    if (totalLeads === 0) {
-      if (emptyEl) emptyEl.classList.add('show');
-      return;
-    }
-    if (emptyEl) emptyEl.classList.remove('show');
-
-    var cols = {};
-    document.querySelectorAll('.kanban-col-body').forEach(function(c){ cols[c.dataset.col] = c; });
-    Object.values(cols).forEach(function(c){ c.innerHTML = ''; });
-
-    Object.keys(mapeamento).forEach(function(colKey){
-      var col = cols[colKey];
-      if (!col) return;
-      mapeamento[colKey].forEach(function(lead){
-        // normaliza campo nicho→segmento para criarCard funcionar
-        if (!lead.segmento && lead.nicho) lead.segmento = lead.nicho;
-        col.appendChild(criarCard(lead));
-      });
-    });
-
-    updateCounts();
+    _crmDataCache = data;
+    renderKanban(data);
   } catch(e){ console.warn('Kanban:', e.message); }
+}
+
+function renderKanban(data) {
+  if (!data) return;
+  var emptyEl = document.getElementById('emptyState');
+  var searchEl = document.getElementById('crm-search');
+  crmSearchAtual = searchEl ? searchEl.value : '';
+  var todos = [];
+  ['fila','intro','f1','f2','negotiation','qualificado','lost','won'].forEach(function(k){ if (data[k]) todos = todos.concat(data[k]); });
+  todos = filtrarPorPeriodo(todos, crmPeriodAtual);
+  todos = filtrarPorBusca(todos, crmSearchAtual);
+  var countEl = document.getElementById('crm-count');
+  if (todos.length === 0) {
+    if (emptyEl) emptyEl.classList.add('show');
+    if (countEl) countEl.textContent = '0 leads';
+    return;
+  }
+  if (emptyEl) emptyEl.classList.remove('show');
+  var mapeamento = { fila:[], intro:[], followup1:[], followup2:[], negociacao:[], qualificados:[], perdidos:[], ganhos:[] };
+  todos.forEach(function(lead) {
+    if (!lead.segmento && lead.nicho) lead.segmento = lead.nicho;
+    var status = (lead.status || 'pendente').toLowerCase();
+    var sdr = (lead.sdr_stage || 'intro').toLowerCase();
+    if (status === 'pendente' || status === 'processando' || status === 'erro') {
+      mapeamento.fila.push(lead);
+    } else if (status === 'concluido') {
+      if (sdr === 'intro') mapeamento.intro.push(lead);
+      else if (sdr === 'f1' || sdr === 'followup1') mapeamento.followup1.push(lead);
+      else if (sdr === 'f2' || sdr === 'followup2') mapeamento.followup2.push(lead);
+      else if (sdr === 'negotiation') mapeamento.negociacao.push(lead);
+      else if (sdr === 'qualificado') mapeamento.qualificados.push(lead);
+      else if (sdr === 'won') mapeamento.ganhos.push(lead);
+      else mapeamento.intro.push(lead);
+    } else if (status === 'descartado' || status === 'lost') {
+      mapeamento.perdidos.push(lead);
+    } else if (status === 'convertido' || status === 'won') {
+      mapeamento.ganhos.push(lead);
+    } else {
+      mapeamento.fila.push(lead);
+    }
+  });
+  var cols = {};
+  document.querySelectorAll('.kanban-col-body').forEach(function(c){ cols[c.dataset.col] = c; });
+  Object.values(cols).forEach(function(c){ c.innerHTML = ''; });
+  Object.keys(mapeamento).forEach(function(colKey){
+    var col = cols[colKey];
+    if (!col) return;
+    mapeamento[colKey].forEach(function(lead){ col.appendChild(criarCard(lead)); });
+  });
+  updateCounts();
+  if (countEl) countEl.textContent = todos.length + ' leads';
 }
 
 /* ══ MODAL COM DADOS REAIS ═════════════════════════════════════════ */
@@ -508,14 +670,26 @@ function openModalReal(lead) {
     }
   }
 
-  // Reset chat
-  var chatArea = document.getElementById('chatArea');
-  if (chatArea) {
-    chatArea.innerHTML = '<div class="chat-msg sent">Olá! Sou o Bryan, assistente digital da FraLib. Vi que você tem um negócio na região. Posso criar um site profissional grátis para você avaliar?<div class="time">--:--</div></div>';
-  }
+  // Preencher campos editaveis
+  var editWa = document.getElementById('editWhatsapp');
+  if (editWa) editWa.value = lead.telefone_whatsapp || lead.whatsapp || lead.telefone || '';
+  var editObs = document.getElementById('editObservacoes');
+  if (editObs) editObs.value = lead.observacoes || '';
+  var editVal = document.getElementById('editValorVenda');
+  if (editVal) editVal.value = lead.valor_venda || '';
+
+  // Status badge
+  var statusBadge = document.getElementById('modalLeadStatus');
+  if (statusBadge) statusBadge.textContent = (lead.status || '').toUpperCase();
+
+  // Carregar fotos do site
+  carregarFotosSite(lead.id, lead.url_site);
 
   document.getElementById('modalOverlay').classList.add('open');
   switchTab('chat');
+
+  // Carregar conversa Bryan
+  carregarConversaBryan(lead.id);
 }
 
 function abrirSiteModal() {
@@ -557,84 +731,136 @@ function trocarAbaUTI(aba) {
   if (tab) tab.classList.add('active');
 }
 
+
+var _sitesCache = [];
+
+async function carregarSites() {
+  try {
+    var data = await authFetch('/api/leads/sites').then(function(r){ return r.json(); });
+    _sitesCache = data.sites || [];
+    renderSites(_sitesCache);
+  } catch(e) { console.warn('Sites:', e.message); }
+}
+
+function renderSites(sites) {
+  var grid = document.getElementById('sitesGrid');
+  var countEl = document.getElementById('sites-count');
+  if (!grid) return;
+
+  if (!sites || sites.length === 0) {
+    grid.innerHTML = '<div style="text-align:center;color:var(--fl-text-muted);padding:32px;grid-column:1/-1">Nenhum site gerado ainda.</div>';
+    if (countEl) countEl.textContent = '0 sites';
+    return;
+  }
+
+  if (countEl) countEl.textContent = sites.length + ' sites';
+
+  grid.innerHTML = sites.map(function(s) {
+    var vendido = s.valor_venda > 0;
+    var dataStr = s.criado_em ? new Date(s.criado_em).toLocaleDateString('pt-BR') : '—';
+    var safeUrl = sanitizeUrl(s.url_site);
+    var card = document.createElement('div');
+    card.style.cssText = 'background:var(--fl-bg-card);border:1px solid var(--fl-border);border-radius:8px;overflow:hidden;transition:border-color .2s;cursor:pointer;';
+    card.onmouseover = function(){ this.style.borderColor = 'var(--fl-purple)'; };
+    card.onmouseout = function(){ this.style.borderColor = 'var(--fl-border)'; };
+    var thumbHtml = s.thumb ? '<img src="' + escapeHtml(s.thumb) + '" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display=&quot;none&quot;">' : '';
+    var badge = vendido ? '<div style="position:absolute;top:8px;right:8px;background:#10b981;color:#fff;font-size:9px;padding:2px 6px;border-radius:10px;font-family:var(--fl-font-brand)">VENDIDO</div>' : '';
+    var valorHtml = vendido ? '<span style="font-size:11px;color:#10b981;font-family:var(--fl-font-mono)">R$ ' + s.valor_venda.toLocaleString('pt-BR', {minimumFractionDigits:0}) + '</span>' : '<span style="font-size:10px;color:var(--fl-text-muted)">Score: ' + s.score + '</span>';
+    card.innerHTML = '<div style="height:130px;background:var(--fl-bg);overflow:hidden;position:relative;">' + thumbHtml + '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.3);"><a href="' + safeUrl + '" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" style="background:var(--fl-purple);color:#fff;padding:6px 14px;border-radius:4px;font-size:11px;font-family:var(--fl-font-brand);letter-spacing:1px;text-decoration:none;">&#127760; ABRIR</a></div>' + badge + '</div><div style="padding:10px 12px;"><div style="font-size:13px;font-weight:600;color:var(--fl-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="' + escapeHtml(s.nome) + '">' + escapeHtml(s.nome) + '</div><div style="font-size:11px;color:var(--fl-text-muted);margin-top:2px;">' + escapeHtml(s.segmento) + ' · ' + escapeHtml(s.cidade) + '</div><div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;"><span style="font-size:10px;color:var(--fl-text-muted)">' + dataStr + '</span>' + valorHtml + '</div></div>';
+    return card.outerHTML;
+  }).join('');
+}
+
+function filtrarSites(search) {
+  if (!search) { renderSites(_sitesCache); return; }
+  var q = search.toLowerCase();
+  renderSites(_sitesCache.filter(function(s){
+    return (s.nome||'').toLowerCase().includes(q) ||
+           (s.cidade||'').toLowerCase().includes(q) ||
+           (s.segmento||'').toLowerCase().includes(q);
+  }));
+}
+
 async function carregarUTI() {
-  var tbody      = document.getElementById('utiTableBody');
-  var tbodyDesc  = document.getElementById('utiDescartadosBody');
-  var countEl    = document.getElementById('utiCount');
+  var tbody = document.getElementById('utiTableBody');
+  var tbodyDesc = document.getElementById('utiDescartadosBody');
   if (!tbody) return;
-
-  tbody.innerHTML     = '<tr><td colspan="6"><div class="uti-empty">CARREGANDO...</div></td></tr>';
-  tbodyDesc.innerHTML = '<tr><td colspan="5"><div class="uti-empty">CARREGANDO...</div></td></tr>';
-
+  tbody.innerHTML = '<tr><td colspan="6"><div class="uti-empty">CARREGANDO...</div></td></tr>';
+  if (tbodyDesc) tbodyDesc.innerHTML = '<tr><td colspan="5"><div class="uti-empty">CARREGANDO...</div></td></tr>';
   try {
     var res = await authFetch('/api/dashboard/incomplete').then(function(r){ return r.json(); });
-    var falhas      = res.falhas      || [];
-    var descartados = res.descartados || [];
-    var total = falhas.length + descartados.length;
-
-    if (countEl) countEl.textContent = total + ' leads';
-    var bF = document.getElementById('badge-falhas');
-    var bD = document.getElementById('badge-descartados');
-    if (bF) bF.textContent = falhas.length;
-    if (bD) bD.textContent = descartados.length;
-
-    // ── Tabela Falhas ──
-    if (falhas.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="6"><div class="uti-empty">&#9989; Nenhuma falha de pipeline!</div></td></tr>';
-    } else {
-      tbody.innerHTML = falhas.map(function(l){
-        var safeId = String(l.id || '').replace(/['"]/g, '');
-        var motivoLabel = escapeHtml(STATUS_LABEL[l.status] || l.status || 'erro');
-        var safeUrl = sanitizeUrl(l.url_site);
-        var siteLink = (safeUrl && safeUrl !== '#')
-          ? '<a href="' + safeUrl + '" target="_blank" rel="noopener noreferrer" style="color:var(--fl-purple-300);font-size:10px">ver site</a>'
-          : '<span style="color:var(--fl-text-dim);font-size:10px">—</span>';
-        return '<tr id="uti-row-' + safeId + '">' +
-          '<td style="font-weight:600;color:var(--fl-text);max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + escapeHtml(l.nome || '—') + '</td>' +
-          '<td style="font-size:11px">' + escapeHtml(l.nicho || '—') + '</td>' +
-          '<td style="font-size:11px;color:var(--fl-text-dim)">' + escapeHtml(l.cidade || '—') + '</td>' +
-          '<td style="font-size:11px">' + motivoLabel + '</td>' +
-          '<td>' + siteLink + '</td>' +
-          '<td><button class="btn-requalificar" id="btn-reprocessar-' + safeId + '" onclick="requalificarLead(\'' + safeId + '\', this)">▶ REPROCESSAR</button></td>' +
-        '</tr>';
-      }).join('');
-    }
-
-    // ── Tabela Descartados ──
-    if (descartados.length === 0) {
-      tbodyDesc.innerHTML = '<tr><td colspan="5"><div class="uti-empty">&#9989; Nenhum lead descartado!</div></td></tr>';
-    } else {
-      tbodyDesc.innerHTML = descartados.map(function(l){
-        var safeId = String(l.id || '').replace(/['"]/g, '');
-        var safeNome = escapeHtml(l.nome || '');
-        var safeNicho = escapeHtml(l.nicho || '');
-        var safeCidade = escapeHtml(l.cidade || '');
-        var safeTelefone = escapeHtml(l.telefone || '');
-        return '<tr id="desc-row-' + safeId + '">' +
-          '<td style="font-weight:600;color:var(--fl-text);max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (safeNome || '—') + '</td>' +
-          '<td style="font-size:11px">' + (safeNicho || '—') + '</td>' +
-          '<td style="font-size:11px;color:var(--fl-text-dim)">' + (safeCidade || '—') + '</td>' +
-          '<td style="font-size:11px;color:var(--fl-text-dim)">' + (safeTelefone || '—') + '</td>' +
-          '<td>' +
-            '<button class="btn-requalificar" onclick="expandirEnriquecimento(\'' + safeId + '\')">&#9998; ENRIQUECER</button>' +
-          '</td>' +
-        '</tr>' +
-        '<tr id="desc-form-' + safeId + '" style="display:none">' +
-          '<td colspan="5" style="padding:0">' +
-            '<div class="uti-enrich-form" id="form-' + safeId + '">' +
-              '<input placeholder="Nome do negócio" id="enrich-nome-' + safeId + '" value="' + safeNome + '">' +
-              '<input placeholder="Nicho / Segmento" id="enrich-nicho-' + safeId + '" value="' + safeNicho + '">' +
-              '<input placeholder="Cidade, Estado" id="enrich-cidade-' + safeId + '" value="' + safeCidade + '">' +
-              '<input placeholder="Telefone / WhatsApp" id="enrich-telefone-' + safeId + '" value="' + safeTelefone + '">' +
-            '</div>' +
-          '</td>' +
-        '</tr>';
-      }).join('');
-    }
-
+    _utiDataCache = res;
+    renderUTI(res);
   } catch(e) {
-    tbody.innerHTML = '<tr><td colspan="6"><div class="uti-empty" style="color:var(--danger)">ERRO AO CARREGAR: ' + escapeHtml(e.message) + '</div></td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6"><div class="uti-empty" style="color:var(--danger)">ERRO: ' + escapeHtml(e.message) + '</div></td></tr>';
     console.warn('UTI:', e.message);
+  }
+}
+
+function renderUTI(res) {
+  if (!res) return;
+  var tbody = document.getElementById('utiTableBody');
+  var tbodyDesc = document.getElementById('utiDescartadosBody');
+  var countEl = document.getElementById('utiCount');
+  var filterCountEl = document.getElementById('uti-filter-count');
+  var searchEl = document.getElementById('uti-search');
+  utiSearchAtual = searchEl ? searchEl.value : '';
+  var falhas = filtrarPorBusca(filtrarPorPeriodo((res.falhas || []).slice(), utiPeriodAtual), utiSearchAtual);
+  var descartados = filtrarPorBusca(filtrarPorPeriodo((res.descartados || []).slice(), utiPeriodAtual), utiSearchAtual);
+  var total = falhas.length + descartados.length;
+  if (countEl) countEl.textContent = total + ' leads';
+  if (filterCountEl) filterCountEl.textContent = total + ' leads';
+  var bF = document.getElementById('badge-falhas');
+  var bD = document.getElementById('badge-descartados');
+  if (bF) bF.textContent = falhas.length;
+  if (bD) bD.textContent = descartados.length;
+  if (!tbody) return;
+  if (falhas.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6"><div class="uti-empty">&#9989; Nenhuma falha de pipeline!</div></td></tr>';
+  } else {
+    tbody.innerHTML = falhas.map(function(l){
+      var safeId = String(l.id || '').replace(/['"]/g, '');
+      var motivoLabel = escapeHtml(STATUS_LABEL[l.status] || l.status || 'erro');
+      var safeUrl = sanitizeUrl(l.url_site);
+      var siteLink = (safeUrl && safeUrl !== '#')
+        ? '<a href="' + safeUrl + '" target="_blank" rel="noopener noreferrer" style="color:var(--fl-purple-300);font-size:10px">ver site</a>'
+        : '<span style="color:var(--fl-text-dim);font-size:10px">&#8212;</span>';
+      return '<tr id="uti-row-' + safeId + '">' +
+        '<td style="font-weight:600;color:var(--fl-text)">' + escapeHtml(l.nome || '&#8212;') + '</td>' +
+        '<td style="font-size:11px">' + escapeHtml(l.nicho || '&#8212;') + '</td>' +
+        '<td style="font-size:11px;color:var(--fl-text-dim)">' + escapeHtml(l.cidade || '&#8212;') + '</td>' +
+        '<td style="font-size:11px">' + motivoLabel + '</td>' +
+        '<td>' + siteLink + '</td>' +
+        '<td><button class="btn-requalificar" id="btn-reprocessar-' + safeId + '" onclick="requalificarLead(\x27' + safeId + '\x27, this)">&#9654; REPROCESSAR</button></td>' +
+      '</tr>';
+    }).join('');
+  }
+  if (!tbodyDesc) return;
+  if (descartados.length === 0) {
+    tbodyDesc.innerHTML = '<tr><td colspan="5"><div class="uti-empty">&#9989; Nenhum lead descartado!</div></td></tr>';
+  } else {
+    tbodyDesc.innerHTML = descartados.map(function(l){
+      var safeId = String(l.id || '').replace(/['"]/g, '');
+      var safeNome = escapeHtml(l.nome || '');
+      var safeNicho = escapeHtml(l.nicho || '');
+      var safeCidade = escapeHtml(l.cidade || '');
+      var safeTelefone = escapeHtml(l.telefone || '');
+      return '<tr id="desc-row-' + safeId + '">' +
+        '<td style="font-weight:600;color:var(--fl-text)">' + (safeNome || '&#8212;') + '</td>' +
+        '<td style="font-size:11px">' + (safeNicho || '&#8212;') + '</td>' +
+        '<td style="font-size:11px;color:var(--fl-text-dim)">' + (safeCidade || '&#8212;') + '</td>' +
+        '<td style="font-size:11px;color:var(--fl-text-dim)">' + (safeTelefone || '&#8212;') + '</td>' +
+        '<td><button class="btn-requalificar" onclick="expandirEnriquecimento(\x27' + safeId + '\x27)">&#9998; ENRIQUECER</button></td>' +
+      '</tr>' +
+      '<tr id="desc-form-' + safeId + '" style="display:none">' +
+        '<td colspan="5" style="padding:0"><div class="uti-enrich-form" id="form-' + safeId + '">' +
+          '<input placeholder="Nome do negocio" id="enrich-nome-' + safeId + '" value="' + safeNome + '">' +
+          '<input placeholder="Nicho / Segmento" id="enrich-nicho-' + safeId + '" value="' + safeNicho + '">' +
+          '<input placeholder="Cidade, Estado" id="enrich-cidade-' + safeId + '" value="' + safeCidade + '">' +
+          '<input placeholder="Telefone / WhatsApp" id="enrich-telefone-' + safeId + '" value="' + safeTelefone + '">' +
+        '</div></td>' +
+      '</tr>';
+    }).join('');
   }
 }
 
@@ -708,31 +934,99 @@ async function salvarConfigPipeline() {
   if (btn) { btn.textContent = '⏳ INICIANDO...'; btn.disabled = true; }
 
   try {
-    await authFetch('/api/pipeline/iniciar', {
+    var resp = await authFetch('/api/pipeline/iniciar', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ segmento: nicho, cidade: cidade, quantidade: qtd, score_minimo: scoreMin })
     });
+    var data = await resp.json();
 
-    if (btn) { btn.textContent = '✓ PIPELINE INICIADO!'; }
+    if (data.status === 'fila_pendente') {
+      if (btn) { btn.textContent = '▶ INICIAR'; btn.disabled = false; }
+      mostrarToast('⏳ Há ' + data.leads_na_fila + ' lead(s) na fila. Processe-os primeiro.');
+      await carregarFilaLeads();
+      return;
+    }
+
+    if (btn) { btn.textContent = '✓ INICIADO!'; }
     setTimeout(function(){
-      if (btn) { btn.textContent = '▶ INICIAR PIPELINE COM ESSAS CONFIGURAÇÕES'; btn.disabled = false; }
+      if (btn) { btn.textContent = '▶ INICIAR'; btn.disabled = false; }
     }, 3000);
-
-    // Mudar para CRM após 1.5s
     setTimeout(function(){
       mostrarView('crm');
       document.querySelectorAll('.sidebar-link').forEach(function(l){ l.classList.remove('active'); });
       var crmLink = document.querySelector('[data-view="crm"]');
       if (crmLink) crmLink.classList.add('active');
     }, 1500);
-
     carregarKPIs();
     setTimeout(carregarKanban, 4000);
 
   } catch(e) {
-    if (btn) { btn.textContent = '✗ ERRO — TENTE NOVAMENTE'; btn.disabled = false; setTimeout(function(){ btn.textContent = '▶ INICIAR PIPELINE COM ESSAS CONFIGURAÇÕES'; }, 3000); }
-    alert('Erro ao iniciar pipeline: ' + e.message);
+    if (btn) { btn.textContent = '✗ ERRO'; btn.disabled = false; setTimeout(function(){ btn.textContent = '▶ INICIAR'; }, 3000); }
+    mostrarToast('Erro ao iniciar pipeline: ' + e.message);
+  }
+}
+
+async function carregarFilaLeads() {
+  try {
+    var resp = await authFetch('/api/leads/capturados');
+    var data = await resp.json();
+    var leads = data.leads || [];
+    var painel = document.getElementById('painel-fila');
+    var lista = document.getElementById('fila-lista');
+    if (!painel || !lista) return;
+    if (leads.length === 0) { painel.style.display = 'none'; return; }
+    painel.style.display = 'block';
+    lista.innerHTML = leads.map(function(l) {
+      var score = l.score ? '<span style="background:#1e3a5f;color:#60a5fa;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;">Score ' + l.score + '</span>' : '';
+      var tier = l.tier ? '<span style="background:#1a3a2a;color:#10b981;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;">' + l.tier + '</span>' : '';
+      var rating = l.rating ? '⭐ ' + parseFloat(l.rating).toFixed(1) : '';
+      return '<div style="background:var(--fl-bg-card);border:1px solid var(--fl-border);border-left:3px solid #f59e0b;border-radius:8px;padding:12px 16px;display:flex;align-items:center;gap:12px;">' +
+        '<div style="flex:1;">' +
+          '<div style="font-weight:600;font-size:14px;color:var(--fl-text);">' + (l.nome || '—') + '</div>' +
+          '<div style="font-size:12px;color:var(--fl-text-muted);margin-top:2px;">' + (l.segmento || '') + ' · ' + (l.cidade || '') + (rating ? ' · ' + rating : '') + '</div>' +
+        '</div>' +
+        '<div style="display:flex;gap:6px;align-items:center;">' + score + tier + '</div>' +
+      '</div>';
+    }).join('');
+  } catch(e) {
+    console.error('[Fila] Erro:', e);
+  }
+}
+
+async function processarFila() {
+  var btn = document.querySelector('#painel-fila button');
+  if (btn) { btn.textContent = '⏳ Processando...'; btn.disabled = true; }
+  try {
+    var filaResp = await authFetch('/api/leads/capturados');
+    var filaData = await filaResp.json();
+    var primeiroLead = (filaData.leads || [])[0];
+    var nicho = (document.getElementById('configNicho') || {}).value || (primeiroLead ? primeiroLead.segmento : '') || '';
+    var cidade = (document.getElementById('configCidade') || {}).value || (primeiroLead ? primeiroLead.cidade : '') || '';
+    var scoreMin = parseInt((document.getElementById('configScoreMin') || {}).value || '70');
+    var qtd = parseInt((document.getElementById('configQtd') || {}).value || '10');
+    var resp = await authFetch('/api/pipeline/iniciar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ segmento: nicho, cidade: cidade, quantidade: qtd, score_minimo: scoreMin, processar_fila: true })
+    });
+    mostrarToast('▶ Pipeline iniciado para processar a fila!');
+    document.getElementById('painel-fila').style.display = 'none';
+    setTimeout(function(){ mostrarView('crm'); carregarKPIs(); carregarKanban(); }, 1500);
+  } catch(e) {
+    mostrarToast('Erro: ' + e.message);
+    if (btn) { btn.textContent = '▶ PROCESSAR FILA AGORA'; btn.disabled = false; }
+  }
+}
+
+async function limparFila() {
+  if (!confirm('Remover todos os leads da fila? Eles serão deletados permanentemente.')) return;
+  try {
+    await authFetch('/api/leads/fila', { method: 'DELETE' });
+    mostrarToast('🗑 Fila limpa com sucesso');
+    document.getElementById('painel-fila').style.display = 'none';
+  } catch(e) {
+    mostrarToast('Erro ao limpar fila: ' + e.message);
   }
 }
 
@@ -753,51 +1047,28 @@ async function confirmarReset() {
 /* ══ LOGOUT ════════════════════════════════════════════════════════ */
 function logout() {
   ['fralib_token', 'fralib_user', 'fralib_onboarded'].forEach(function(k){ localStorage.removeItem(k); });
-  window.location.href = 'login.html';
+  window.location.href = '/login';
 }
 
 /* ══ INICIALIZAR ══════════════════════════════════════════════════ */
-document.addEventListener('DOMContentLoaded', function(){
+document.addEventListener('DOMContentLoaded', function(){ verificarPrimeiroAcesso(); carregarFotoPerfil();
+  // Restaurar view salva
+  var savedView = localStorage.getItem('fralib_view') || 'overview';
+  mostrarView(savedView);
+  var savedLink = document.querySelector('[data-view="' + savedView + '"]');
+  if (savedLink) {
+    document.querySelectorAll('.sidebar-link').forEach(function(l){ l.classList.remove('active'); });
+    savedLink.classList.add('active');
+  }
+
   carregarKPIs();
   carregarKanban();
 
-  // ─── WebSocket em Tempo Real (Elimina Polling) ───────────────────
-  SocketClient.init().then(() => {
-    console.log('[Dashboard] WebSocket conectado — polling eliminado');
-
-    // Listener: Novo lead criado
-    SocketClient.on('lead:created', (data) => {
-      console.log('[Dashboard] Novo lead recebido:', data.lead);
-      Toast.success(`Novo lead: ${data.lead.nome}`);
-      carregarKanban(); // Recarrega Kanban para exibir novo lead
-    });
-
-    // Listener: Lead atualizado
-    SocketClient.on('lead:updated', (data) => {
-      console.log('[Dashboard] Lead atualizado:', data);
-      carregarKanban(); // Recarrega Kanban para refletir mudança
-    });
-
-    // Listener: Pipeline iniciado
-    SocketClient.on('pipeline:started', (data) => {
-      console.log('[Dashboard] Pipeline iniciado:', data);
-      carregarKPIs(); // Atualiza KPIs
-    });
-
-    // Listener: Pipeline concluído
-    SocketClient.on('pipeline:completed', (data) => {
-      console.log('[Dashboard] Pipeline concluído:', data);
-      carregarKPIs(); // Atualiza KPIs
-      carregarKanban(); // Atualiza Kanban com novos leads
-    });
-  }).catch((err) => {
-    console.error('[Dashboard] Erro ao conectar WebSocket:', err);
-    Toast.warning('Modo offline — atualizações manuais');
-
-    // Fallback: Se WebSocket falhar, usa polling (1x por minuto)
-    setInterval(carregarKPIs, 60000);
-    setInterval(carregarKanban, 60000);
-  });
+  // Polling a cada 60s
+  setInterval(carregarKPIs, 60000);
+  setInterval(carregarKanban, 60000);
+  carregarMensagensNovas();
+  setInterval(carregarMensagensNovas, 30000);
 });
 
 /* ── Sidebar toggle (mobile) ── */
@@ -985,6 +1256,295 @@ function updateCounts() {
 }
 
 /* ── Modal ── */
+
+// Carregar conversa Bryan
+async function carregarConversaBryan(leadId) {
+  var chatArea = document.getElementById('chatArea');
+  if (!chatArea) return;
+  chatArea.innerHTML = '<div style="text-align:center;color:var(--fl-text-muted);font-size:12px;padding:20px 0">Carregando...</div>';
+  try {
+    var data = await authFetch('/api/leads/' + leadId + '/conversa').then(function(r){ return r.json(); });
+    var msgs = data.mensagens || [];
+    if (msgs.length === 0) {
+      chatArea.innerHTML = '<div style="text-align:center;color:var(--fl-text-muted);font-size:12px;padding:20px 0">Nenhuma conversa ainda.</div>';
+      return;
+    }
+    chatArea.innerHTML = '';
+    msgs.forEach(function(m) {
+      var div = document.createElement('div');
+      var isSaida = m.direcao === 'saida';
+      div.className = 'chat-msg ' + (isSaida ? 'sent' : 'received');
+      var hora = m.criado_em ? new Date(m.criado_em).toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'}) : '--:--';
+      div.innerHTML = escapeHtml(m.mensagem) + '<div class="time">' + hora + '</div>';
+      chatArea.appendChild(div);
+    });
+    chatArea.scrollTop = chatArea.scrollHeight;
+  } catch(e) {
+    chatArea.innerHTML = '<div style="text-align:center;color:var(--fl-text-muted);font-size:12px;padding:20px 0">Erro ao carregar conversa.</div>';
+  }
+}
+
+// Salvar dados editaveis do lead
+async function salvarDadosLead() {
+  if (!leadAtualModal) return;
+  var payload = {
+    whatsapp: document.getElementById('editWhatsapp').value,
+    observacoes: document.getElementById('editObservacoes').value,
+    valor_venda: parseFloat(document.getElementById('editValorVenda').value) || null
+  };
+  try {
+    await authFetch('/api/leads/' + leadAtualModal.id, {
+      method: 'PATCH',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload)
+    });
+    Toast.success('Dados salvos!');
+    leadAtualModal.whatsapp = payload.whatsapp;
+    leadAtualModal.telefone_whatsapp = payload.whatsapp;
+  } catch(e) {
+    Toast.error('Erro ao salvar: ' + e.message);
+  }
+}
+
+// Reprocessar lead
+async function reprocessarLead() {
+  if (!leadAtualModal) return;
+  if (!confirm('Reprocessar "' + leadAtualModal.nome + '" pulando o Caio?')) return;
+  try {
+    var res = await authFetch('/api/leads/' + leadAtualModal.id + '/reprocessar', {method:'POST'}).then(function(r){ return r.json(); });
+    Toast.success(res.mensagem || 'Lead enviado para reprocessamento!');
+    closeModal();
+    setTimeout(carregarKanban, 1000);
+  } catch(e) {
+    Toast.error('Erro: ' + e.message);
+  }
+}
+
+// Baixar HTML do site
+async function baixarHtmlSite() {
+  if (!leadAtualModal || !leadAtualModal.url_site) {
+    Toast.warning('Este lead ainda nao tem site gerado.');
+    return;
+  }
+  try {
+    var url = leadAtualModal.url_site;
+    var slug = url.replace(/\/$/, '').split('/sites/')[1];
+    if (!slug) slug = url.replace(/\/$/, '').split('/').pop();
+    var htmlUrl = '/sites/' + slug + '/index.html';
+    var res = await fetch(htmlUrl);
+    if (!res.ok) throw new Error('Arquivo nao encontrado em ' + htmlUrl);
+    var html = await res.text();
+    var blob = new Blob([html], {type: 'text/html'});
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = slug + '.html';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(a.href);
+    Toast.success('Download iniciado!');
+  } catch(e) {
+    Toast.error('Erro ao baixar: ' + e.message);
+  }
+}
+
+// Editar site via prompt (Fase 4)
+// Histórico de edições por lead
+var _siteEditHistorico = {};
+
+function siteEditSugestao(texto) {
+  var el = document.getElementById('siteEditPrompt');
+  if (el) { el.value = texto + ' '; el.focus(); }
+}
+
+function _siteEditAdicionarHistorico(leadId, prompt, status, resumo) {
+  if (!_siteEditHistorico[leadId]) _siteEditHistorico[leadId] = [];
+  _siteEditHistorico[leadId].unshift({
+    prompt: prompt,
+    status: status,
+    resumo: resumo,
+    ts: new Date().toLocaleTimeString('pt-BR') + ' ' + new Date().toLocaleDateString('pt-BR')
+  });
+  _siteEditRenderHistorico(leadId);
+}
+
+function _siteEditRenderHistorico(leadId) {
+  var lista = document.getElementById('siteEditHistoricoLista');
+  var container = document.getElementById('siteEditHistorico');
+  if (!lista || !container) return;
+  var items = _siteEditHistorico[leadId] || [];
+  if (!items.length) { container.style.display = 'none'; return; }
+  container.style.display = 'block';
+  lista.innerHTML = '';
+  items.forEach(function(item, i) {
+    var div = document.createElement('div');
+    var isFirst = i === 0;
+    var corStatus = item.status === 'ok' ? '#10b981' : item.status === 'erro' ? '#ef4444' : '#f59e0b';
+    var icone = item.status === 'ok' ? '✓' : item.status === 'erro' ? '✗' : '⏳';
+    div.style.cssText = 'display:flex;gap:10px;align-items:flex-start;padding:8px 10px;border-radius:4px;background:' + (isFirst ? 'rgba(147,51,234,0.08)' : 'rgba(255,255,255,0.02)') + ';border-left:2px solid ' + corStatus + ';';
+    div.innerHTML =
+      '<span style="color:' + corStatus + ';font-weight:700;font-size:13px;flex-shrink:0;">' + icone + '</span>' +
+      '<div style="flex:1;min-width:0;">' +
+        '<div style="font-size:12px;color:var(--fl-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="' + escapeHtml(item.prompt) + '">' + escapeHtml(item.prompt) + '</div>' +
+        (item.resumo ? '<div style="font-size:11px;color:var(--fl-text-muted);margin-top:2px;">' + escapeHtml(item.resumo) + '</div>' : '') +
+        '<div style="font-size:10px;color:var(--fl-text-muted);margin-top:2px;">' + item.ts + '</div>' +
+      '</div>';
+    lista.appendChild(div);
+  });
+}
+
+async function editarSitePrompt() {
+  var promptEl = document.getElementById('siteEditPrompt');
+  var prompt = (promptEl || {}).value || '';
+  prompt = prompt.trim();
+  if (!prompt) { Toast.warning('Digite o que deseja alterar no site.'); return; }
+  if (!leadAtualModal || !leadAtualModal.url_site) { Toast.warning('Lead sem site gerado.'); return; }
+
+  var statusEl = document.getElementById('siteEditStatus');
+  var logsEl = document.getElementById('siteEditLogs');
+  var btnEl = document.getElementById('btnAplicarEdicao');
+  var leadId = leadAtualModal.id;
+
+  // Desabilitar botão
+  if (btnEl) { btnEl.disabled = true; btnEl.textContent = '⏳ PROCESSANDO...'; }
+
+  // Verificar pipeline
+  try {
+    var pStatus = await authFetch('/api/pipeline/status').then(function(r){ return r.json(); });
+    if (pStatus && pStatus.rodando) {
+      if (statusEl) { statusEl.style.display = 'block'; statusEl.style.borderLeftColor = '#f59e0b'; statusEl.innerHTML = '⚠️ Pipeline em execução — editando em paralelo...'; }
+    }
+  } catch(e) {}
+
+  if (statusEl) { statusEl.style.display = 'block'; statusEl.style.borderLeftColor = 'var(--fl-purple)'; statusEl.innerHTML = '⏳ Enviando para o Liam...'; }
+  if (logsEl) { logsEl.style.display = 'block'; logsEl.innerHTML = ''; }
+
+  // Interceptar logs SSE para mostrar no modal
+  var _origAdicionarLog = window._adicionarLogOriginal || null;
+  var logsCapturados = [];
+  window._siteEditCapturando = true;
+
+  // Adicionar item pendente no histórico
+  _siteEditAdicionarHistorico(leadId, prompt, 'pendente', 'Processando...');
+
+  var tsInicio = Date.now();
+
+  try {
+    var response = await authFetch('/api/leads/' + leadId + '/editar-site', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ prompt: prompt })
+    });
+
+    var res;
+    try { res = await response.json(); }
+    catch(e) { throw new Error('Resposta inválida do servidor'); }
+
+    var duracao = Math.round((Date.now() - tsInicio) / 1000);
+
+    if (res.ok) {
+      // Sucesso — mostrar resumo
+      var resumo = 'Concluído em ' + duracao + 's';
+      if (statusEl) {
+        statusEl.style.borderLeftColor = '#10b981';
+        statusEl.innerHTML =
+          '<div style="font-weight:600;color:#10b981;margin-bottom:6px;">✓ Site atualizado em ' + duracao + 's</div>' +
+          '<div style="color:var(--fl-text-muted);font-size:11px;margin-bottom:8px;">Alteração aplicada: <em>' + escapeHtml(prompt) + '</em></div>' +
+          '<button onclick="abrirSiteModal()" style="background:#10b981;color:#000;border:none;padding:6px 14px;border-radius:4px;font-size:11px;cursor:pointer;font-family:var(--fl-font-brand);letter-spacing:1px;">VER SITE ATUALIZADO</button>';
+      }
+      _siteEditHistorico[leadId] && (_siteEditHistorico[leadId][0].status = 'ok') && (_siteEditHistorico[leadId][0].resumo = resumo);
+      _siteEditRenderHistorico(leadId);
+      if (promptEl) promptEl.value = '';
+      Toast.success('Site atualizado em ' + duracao + 's!');
+    } else {
+      var errMsg = res.detail || 'Falha ao editar site';
+      if (statusEl) { statusEl.style.borderLeftColor = '#ef4444'; statusEl.innerHTML = '<span style="color:#ef4444;">✗ Erro: ' + escapeHtml(errMsg) + '</span>'; }
+      _siteEditHistorico[leadId] && (_siteEditHistorico[leadId][0].status = 'erro') && (_siteEditHistorico[leadId][0].resumo = errMsg);
+      _siteEditRenderHistorico(leadId);
+      Toast.error('Erro: ' + errMsg);
+    }
+  } catch(e) {
+    var errMsg2 = e.message || 'Erro desconhecido';
+    if (statusEl) { statusEl.style.borderLeftColor = '#ef4444'; statusEl.innerHTML = '<span style="color:#ef4444;">✗ ' + escapeHtml(errMsg2) + '</span>'; }
+    _siteEditHistorico[leadId] && (_siteEditHistorico[leadId][0].status = 'erro') && (_siteEditHistorico[leadId][0].resumo = errMsg2);
+    _siteEditRenderHistorico(leadId);
+    Toast.error('Erro: ' + errMsg2);
+  } finally {
+    window._siteEditCapturando = false;
+    if (btnEl) { btnEl.disabled = false; btnEl.textContent = '✦ APLICAR'; }
+  }
+}
+
+
+// Carregar fotos existentes do site
+async function carregarFotosSite(leadId, urlSite) {
+  var container = document.getElementById('fotosExistentes');
+  if (!container) return;
+  if (!urlSite) {
+    container.innerHTML = '<span style="font-size:11px;color:var(--fl-text-muted)">Site ainda não gerado.</span>';
+    return;
+  }
+  var slug = urlSite.replace(/\/$/, '').split('/sites/')[1] || urlSite.replace(/\/$/, '').split('/').pop();
+  var fotos = ['logo.webp', 'foto_1.webp', 'foto_2.webp', 'foto_3.webp', 'foto_4.webp'];
+  container.innerHTML = '';
+  for (var i = 0; i < fotos.length; i++) {
+    var url = '/sites/' + slug + '/assets/' + fotos[i];
+    (function(fotoUrl, nome) {
+      var img = document.createElement('img');
+      img.src = fotoUrl + '?t=' + Date.now();
+      img.title = nome;
+      img.style.cssText = 'width:60px;height:60px;object-fit:cover;border-radius:4px;border:1px solid var(--fl-border);cursor:pointer;';
+      img.onerror = function(){ if (this.parentNode) this.parentNode.removeChild(this); };
+      container.appendChild(img);
+    })(url, fotos[i]);
+  }
+  setTimeout(function(){
+    if (container.children.length === 0) {
+      container.innerHTML = '<span style="font-size:11px;color:var(--fl-text-muted)">Nenhuma foto encontrada.</span>';
+    }
+  }, 2000);
+}
+
+// Upload de foto para o site
+async function uploadFotoSite(input) {
+  if (!input.files || !input.files[0]) return;
+  if (!leadAtualModal) { Toast.warning('Nenhum lead selecionado.'); return; }
+
+  var statusEl = document.getElementById('uploadFotoStatus');
+  if (statusEl) { statusEl.style.display = 'block'; statusEl.textContent = '⏳ Enviando foto...'; }
+
+  var tipo = (document.getElementById('fotoTipo') || {}).value || 'foto';
+  var numero = (document.getElementById('fotoNumero') || {}).value || '1';
+
+  var formData = new FormData();
+  formData.append('foto', input.files[0]);
+  formData.append('tipo', tipo);
+  formData.append('numero', numero);
+
+  try {
+    var token = localStorage.getItem('fralib_token');
+    var res = await fetch('/api/leads/' + leadAtualModal.id + '/upload-foto', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token },
+      body: formData
+    });
+    var data = await res.json();
+
+    if (data.ok) {
+      Toast.success('Foto enviada: ' + data.filename);
+      if (statusEl) { statusEl.textContent = '✅ ' + data.mensagem; }
+      carregarFotosSite(leadAtualModal.id, leadAtualModal.url_site);
+      input.value = '';
+    } else {
+      Toast.error('Erro: ' + (data.detail || 'Falha no upload'));
+      if (statusEl) { statusEl.textContent = '❌ Erro: ' + (data.detail || 'Falha'); }
+    }
+  } catch(e) {
+    Toast.error('Erro no upload: ' + e.message);
+    if (statusEl) { statusEl.textContent = '❌ ' + e.message; }
+  }
+}
+
 function closeModal() {
   document.getElementById('modalOverlay').classList.remove('open');
   leadAtualModal = null;
@@ -1041,34 +1601,68 @@ document.addEventListener('DOMContentLoaded', function() {
         e.target.value = valor.substring(0, 5) + '-' + valor.substring(5, 8);
       }
     });
+  }
+  // Verificar onboarding ao carregar
+  verificarOnboarding();
+  verificarStatus2FA();
+});
 
 /* ══ WHATSAPP CONTROLS ══════════════════════════════════════════ */
+async function verificarStatusWhatsApp() {
+  try {
+    var response = await authFetch('/api/whatsapp/status');
+    var data = await response.json();
+    var status = data.status || 'disconnected';
+    var cores = { connected: '#10b981', qr: '#f59e0b', disconnected: '#ef4444', error: '#ef4444' };
+    var labels = { connected: 'CONECTADO', qr: 'AGUARDANDO QR', disconnected: 'DESCONECTADO', error: 'ERRO' };
+    var cor = cores[status] || '#6b7280';
+    var label = labels[status] || status.toUpperCase();
+    var el = document.getElementById('whats-status-text');
+    if (el) el.innerHTML = 'Status: <span style="color:' + cor + ';font-weight:700;">' + label + '</span>';
+    var dot = document.getElementById('whats-status-dot');
+    if (dot) dot.style.background = cor;
+  } catch(e) {
+    console.error('[WhatsApp] Status error:', e);
+  }
+}
 async function conectarWhatsApp() {
   try {
-    mostrarToast('🔄 Conectando WhatsApp...');
-
-    var response = await AuthHelper.authFetch('/api/whatsapp/connect', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' }
-    });
-
-    if (response.ok) {
-      var data = await response.json();
-
-      if (data.qrCode) {
-        // Mostrar QR Code em modal
-        mostrarQRCodeModal(data.qrCode);
-        mostrarToast('📱 Escaneie o QR Code com seu WhatsApp');
-      } else if (data.connected) {
-        mostrarToast('✅ WhatsApp já está conectado!');
-      }
+    Toast.info('Conectando WhatsApp... aguarde o QR Code');
+    var response = await authFetch('/api/whatsapp/connect', { method: 'POST' });
+    var data = await response.json();
+    if (data.qr) {
+      mostrarQRCodeModal(data.qr);
+    } else if (data.status === 'connected') {
+      Toast.success('WhatsApp ja esta conectado!');
+      verificarStatusWhatsApp();
+    } else if (data.status === 'connecting') {
+      // Polling ate QR aparecer
+      Toast.info('Aguardando QR Code...');
+      var tentativas = 0;
+      var poll = setInterval(async function() {
+        tentativas++;
+        try {
+          var r2 = await authFetch('/api/whatsapp/qr');
+          var d2 = await r2.json();
+          if (d2.qr) {
+            clearInterval(poll);
+            mostrarQRCodeModal(d2.qr);
+          } else if (d2.status === 'connected') {
+            clearInterval(poll);
+            Toast.success('WhatsApp conectado!');
+            verificarStatusWhatsApp();
+          } else if (tentativas >= 15) {
+            clearInterval(poll);
+            Toast.error('Timeout: QR nao gerado. Tente novamente.');
+          }
+        } catch(e) { clearInterval(poll); }
+      }, 2000);
     } else {
-      var error = await response.json();
-      mostrarToast('❌ Erro: ' + (error.erro || 'Falha ao conectar'));
+      Toast.error('Erro: ' + (data.detail || data.status || 'Falha ao conectar'));
     }
   } catch (e) {
     console.error('[WhatsApp] Erro ao conectar:', e);
-    mostrarToast('❌ Erro ao conectar WhatsApp');
+    Toast.error('Erro ao conectar WhatsApp');
   }
 }
 
@@ -1080,23 +1674,10 @@ async function desconectarWhatsApp() {
   try {
     mostrarToast('🔄 Desconectando WhatsApp...');
 
-    var response = await AuthHelper.authFetch('/api/whatsapp/disconnect', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' }
-    });
-
-    if (response.ok) {
-      mostrarToast('✅ WhatsApp desconectado com sucesso');
-
-      // Atualizar status
-      var statusElem = document.getElementById('statusWhatsApp');
-      if (statusElem) {
-        statusElem.innerHTML = 'Status: <span style="color:#ef4444">DESCONECTADO</span>';
-      }
-    } else {
-      var error = await response.json();
-      mostrarToast('❌ Erro: ' + (error.erro || 'Falha ao desconectar'));
-    }
+    var response = await authFetch('/api/whatsapp/disconnect', { method: 'POST' });
+    var data = await response.json();
+    Toast.success('WhatsApp desconectado');
+    verificarStatusWhatsApp();
   } catch (e) {
     console.error('[WhatsApp] Erro ao desconectar:', e);
     mostrarToast('❌ Erro ao desconectar WhatsApp');
@@ -1109,10 +1690,11 @@ function mostrarQRCodeModal(qrCodeBase64) {
   modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);display:flex;align-items:center;justify-content:center;z-index:9999';
   var content = document.createElement('div');
   content.style.cssText = 'background:var(--fl-bg-card);padding:32px;border-radius:16px;text-align:center;max-width:400px;width:90%';
+  var src = qrCodeBase64.startsWith('data:') ? qrCodeBase64 : 'data:image/png;base64,' + qrCodeBase64;
   content.innerHTML =
     '<h3 style="margin-bottom:8px;color:var(--fl-text)">📱 Escaneie o QR Code</h3>' +
-    '<p style="color:var(--fl-text-muted);margin-bottom:20px;font-size:13px">Abra o WhatsApp → Dispositivos conectados → Conectar dispositivo</p>' +
-    '<img id="qr-modal-img" src="data:image/png;base64,' + qrCodeBase64 + '" style="width:260px;height:260px;margin:0 auto 16px;display:block;border-radius:8px" />' +
+    '<p style="color:var(--fl-text-muted);margin-bottom:20px;font-size:13px">WhatsApp → Dispositivos conectados → Conectar dispositivo</p>' +
+    '<img id="qr-modal-img" src="' + src + '" style="width:260px;height:260px;margin:0 auto 16px;display:block;border-radius:8px" />' +
     '<p id="qr-modal-status" style="font-size:12px;color:var(--fl-text-muted);margin-bottom:16px">Aguardando leitura do QR Code...</p>' +
     '<button onclick="fecharQRModal()" style="background:var(--fl-purple);color:white;padding:10px 24px;border:none;border-radius:8px;cursor:pointer;font-weight:600;font-size:13px">FECHAR</button>';
   modal.appendChild(content);
@@ -1148,12 +1730,6 @@ function fecharQRModal() {
     modal.remove();
   }
 }
-  }
-
-  // Verificar onboarding ao carregar
-  verificarOnboarding();
-  verificarStatus2FA();
-});
 
 async function buscarCEP() {
   var cep = document.getElementById('perfilCEP').value.replace(/\D/g, '');
@@ -1200,8 +1776,10 @@ document.addEventListener('DOMContentLoaded', function() {
   if (btnWhatsStatus) {
     btnWhatsStatus.addEventListener('click', function(e) {
       e.preventDefault();
+      verificarStatusWhatsApp();
     });
   }
+  verificarStatusWhatsApp();
 
   var btnWhatsConnect = document.getElementById('btn-whats-connect');
   if (btnWhatsConnect) {
@@ -1259,10 +1837,26 @@ async function verificarOnboarding() {
     var rp = await AuthHelper.authFetch('/api/users/profile');
     if (rp.ok) {
       var perfil = await rp.json();
-      if (document.getElementById('perfilNome')) document.getElementById('perfilNome').value = perfil.nome || '';
-      if (document.getElementById('perfilTelefone')) document.getElementById('perfilTelefone').value = perfil.telefone || '';
-      if (document.getElementById('perfilNicho')) document.getElementById('perfilNicho').value = perfil.nicho || '';
-      if (document.getElementById('perfilOrigem')) document.getElementById('perfilOrigem').value = perfil.origem || '';
+      var campos = {
+        'perfilEmail': perfil.email || '',
+        'perfilNome': perfil.nome || '',
+        'perfilTelefone': perfil.telefone || '',
+        'perfilNicho': perfil.nicho || '',
+        'perfilOrigem': perfil.origem || '',
+        'perfilCEP': perfil.cep || '',
+        'perfilRua': perfil.rua || '',
+        'perfilBairro': perfil.bairro || '',
+        'perfilCidade': perfil.cidade || '',
+        'perfilEstado': perfil.estado || ''
+      };
+      Object.keys(campos).forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el && !el.value) el.value = campos[id];
+      });
+      if (perfil.foto_url) {
+        localStorage.setItem('perfil_foto', perfil.foto_url);
+        carregarFotoPerfil();
+      }
       if (perfil.plano === 'PRO' || perfil.plano === 'pro' || perfil.role === 'superadmin') {
         var btnUpgrade = document.getElementById('btn-upgrade-pro');
         if (btnUpgrade) btnUpgrade.style.display = 'none';
@@ -1275,7 +1869,7 @@ async function verificarOnboarding() {
         avisoWpp = document.createElement('div');
         avisoWpp.id = 'onboarding-aviso-wpp';
         avisoWpp.style.cssText = 'position:fixed;bottom:20px;right:20px;background:#1c1c2e;border:1px solid #f59e0b;color:#f59e0b;padding:14px 18px;border-radius:12px;font-size:13px;z-index:9998;max-width:320px;box-shadow:0 4px 20px rgba(0,0,0,.4);';
-        avisoWpp.innerHTML = '<strong>📱 WhatsApp não conectado</strong><br><span style="color:#ccc;font-size:12px">Conecte seu WhatsApp para ativar o SDR automático.</span><br><button onclick="mostrarView("perfil");document.getElementById("onboarding-aviso-wpp").remove()" style="margin-top:10px;background:#f59e0b;color:#000;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600">Conectar agora →</button><button onclick="this.parentElement.remove()" style="margin-top:10px;margin-left:8px;background:transparent;color:#888;border:none;cursor:pointer;font-size:12px">Depois</button>';
+        avisoWpp.innerHTML = '<strong>📱 WhatsApp não conectado</strong><br><span style="color:#ccc;font-size:12px">Conecte para ativar o SDR automático.</span><br><button onclick="mostrarView(&quot;perfil&quot;);document.getElementById(&quot;onboarding-aviso-wpp&quot;).remove()" style="margin-top:10px;background:#f59e0b;color:#000;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600">Conectar agora →</button><button onclick="this.parentElement.remove()" style="margin-top:10px;margin-left:8px;background:transparent;color:#888;border:none;cursor:pointer;font-size:12px">Depois</button>';
         document.body.appendChild(avisoWpp);
       }
     } else {
@@ -1286,24 +1880,7 @@ async function verificarOnboarding() {
   }
 }
 
-// Após salvar perfil, re-verificar onboarding
-var salvarPerfilOriginal = window.salvarPerfil;
-window.salvarPerfil = async function() {
-  if (salvarPerfilOriginal) await salvarPerfilOriginal();
-  await verificarOnboarding();
-};
 
-// Atualizar função salvarPerfil para desbloquear menus
-var salvarPerfilOriginal = salvarPerfil;
-salvarPerfil = async function() {
-  await salvarPerfilOriginal();
-
-  // Desbloquear menus após salvar
-  document.querySelectorAll('.sidebar-link').forEach(function(link) {
-    link.style.opacity = '1';
-    link.style.pointerEvents = 'auto';
-  });
-};
 
 /* ══ VERIFICAR STATUS 2FA ═══════════════════════════════════════ */
 async function verificarStatus2FA() {
@@ -1361,8 +1938,14 @@ async function setupTwoFactor() {
 async function disableTwoFactor() {
   const password = prompt('Digite sua senha para desativar o 2FA:');
   if (!password) return;
-
   try {
+    await TwoFactorAuth.disable(password);
+    alert('2FA desativado com sucesso!');
+    await checkTwoFactorStatus();
+  } catch (err) {
+    alert('Erro ao desativar 2FA: ' + err.message);
+  }
+}
 
 /* ══ TERMINAL MÁGICO ════════════════════════════════════════════ */
 var mensagensMisticas = [
@@ -1440,48 +2023,106 @@ if (typeof socket !== 'undefined') {
     adicionarLogMagico('⚠️ Ops! O feitiço falhou...');
   });
 }
-    await TwoFactorAuth.disable(password);
-    alert('2FA desativado com sucesso!');
-async function checkTwoFactorStatus() {  try {    const res = await authFetch("/api/auth/2fa/status");    if (!res.ok) return;    const data = await res.json();    const badge = document.getElementById("2fa-status-badge");    if (badge) {      badge.textContent = data.enabled ? "Ativo" : "Inativo";      badge.className = data.enabled ? "badge badge-success" : "badge badge-secondary";    }  } catch (err) {    console.warn("[2FA] Erro ao verificar status:", err.message);  }}
-    await checkTwoFactorStatus();
+
+
+async function checkTwoFactorStatus() {
+  try {
+    const res = await authFetch("/api/auth/2fa/status");
+    if (!res.ok) return;
+    const data = await res.json();
+    const badge = document.getElementById("2fa-status-badge");
+    if (badge) {
+      badge.textContent = data.enabled ? "Ativo" : "Inativo";
+      badge.className = data.enabled ? "badge badge-success" : "badge badge-secondary";
+    }
   } catch (err) {
-    alert('Erro ao desativar 2FA: ' + err.message);
+    console.warn("[2FA] Erro ao verificar status:", err.message);
   }
 }
 
-// Verificar status do 2FA ao carregar a página
-document.addEventListener('DOMContentLoaded', function(){
-  checkTwoFactorStatus();
-});
-
 /* ══ MEU PERFIL ═════════════════════════════════════════════════ */
+
+// Primeiro acesso: mostrar modal se perfil vazio
+function verificarPrimeiroAcesso() {
+  var nome = localStorage.getItem('perfil_nome') || '';
+  if (!nome) {
+    var m = document.getElementById('modal-primeiro-acesso');
+    if (m) { m.style.display = 'flex'; }
+  }
+}
+function fecharModalPrimeiroAcesso() {
+  var m = document.getElementById('modal-primeiro-acesso');
+  if (m) m.style.display = 'none';
+  document.querySelector('[data-view="perfil"]').click();
+}
+
+// Upload foto de perfil
+async function uploadFotoPerfil(input) {
+  if (!input.files || !input.files[0]) return;
+  var file = input.files[0];
+  if (file.size > 2 * 1024 * 1024) { Toast.error('Foto muito grande. Max 2MB.'); return; }
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var url = e.target.result;
+    var img = document.getElementById('perfil-foto-img');
+    var icon = document.getElementById('perfil-foto-icon');
+    if (img) { img.src = url; img.style.display = 'block'; }
+    if (icon) icon.style.display = 'none';
+    localStorage.setItem('perfil_foto', url);
+    Toast.success('Foto atualizada!');
+  };
+  reader.readAsDataURL(file);
+}
+
+// Carregar foto salva no perfil
+function carregarFotoPerfil() {
+  var url = localStorage.getItem('perfil_foto');
+  if (!url) return;
+  var img = document.getElementById('perfil-foto-img');
+  var icon = document.getElementById('perfil-foto-icon');
+  if (img) { img.src = url; img.style.display = 'block'; }
+  if (icon) icon.style.display = 'none';
+  var sImg = document.getElementById('sidebar-foto-img');
+  var sIcon = document.getElementById('sidebar-foto-icon');
+  if (sImg) { sImg.src = url; sImg.style.display = 'block'; }
+  if (sIcon) sIcon.style.display = 'none';
+}
 async function salvarPerfil() {
-  var nome = document.getElementById('perfilNome').value;
-  var telefone = document.getElementById('perfilTelefone').value;
-  var endereco = document.getElementById('perfilEndereco').value;
-  var nicho = document.getElementById('perfilNicho').value;
-  var origem = document.getElementById('perfilOrigem').value;
+  var nome = (document.getElementById('perfilNome') || {}).value || '';
+  var telefone = (document.getElementById('perfilTelefone') || {}).value || '';
+  var rua = (document.getElementById('perfilRua') || {}).value || '';
+  var bairro = (document.getElementById('perfilBairro') || {}).value || '';
+  var cidade = (document.getElementById('perfilCidade') || {}).value || '';
+  var estado = (document.getElementById('perfilEstado') || {}).value || '';
+  var cep = (document.getElementById('perfilCEP') || {}).value || '';
+  var nicho = (document.getElementById('perfilNicho') || {}).value || '';
+  var origem = (document.getElementById('perfilOrigem') || {}).value || '';
 
   if (!nome || !telefone) {
     mostrarToast('⚠️ Preencha pelo menos Nome e Telefone');
     return;
   }
 
+  var endereco = [rua, bairro, cidade, estado, cep].filter(Boolean).join(', ');
+
   try {
-    var response = await AuthHelper.authFetch('/api/users/profile', {
+    var response = await authFetch('/api/users/profile', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nome: nome, telefone: telefone, endereco: endereco, nicho: nicho, origem: origem })
+      body: JSON.stringify({ nome: nome, telefone: telefone, endereco: endereco, nicho: nicho, origem: origem, cep: cep, rua: rua, bairro: bairro, cidade: cidade, estado: estado })
     });
 
     if (response.ok) {
-      mostrarToast('✅ Perfil salvo com sucesso!');
+      localStorage.setItem('perfil_nome', nome);
+      Toast.success('Perfil salvo com sucesso!');
+      try { verificarOnboarding(); } catch(_) {}
     } else {
-      mostrarToast('❌ Erro ao salvar perfil');
+      var err = await response.json().catch(function(){ return {}; });
+      Toast.error(err.detail || 'Erro ao salvar perfil');
     }
   } catch (e) {
     console.error('[Perfil] Erro:', e);
-    mostrarToast('❌ Erro ao salvar perfil');
+    Toast.error('Erro ao salvar perfil: ' + e.message);
   }
 }
 
@@ -1608,18 +2249,78 @@ console.log("[DEBUG] Event listeners registrados. Total:", document.querySelecto
     });
   }
 });
-</script>
 
-<script>
+/* ══ CICLOS ════════════════════════════════════════════════════════ */
+var _ciclosCache = [];
+
+async function carregarCiclos(period, search) {
+  try {
+    var data = await authFetch('/api/pipeline/ciclos').then(function(r){ return r.json(); });
+    _ciclosCache = data.ciclos || [];
+    var filtered = _ciclosCache;
+    if (period && period !== 'tudo') {
+      var agora = new Date();
+      var inicio;
+      if (period === 'hoje') { inicio = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate()); }
+      else if (period === 'semana') { inicio = new Date(agora - 7*24*60*60*1000); }
+      else if (period === 'mes') { inicio = new Date(agora.getFullYear(), agora.getMonth(), 1); }
+      if (inicio) filtered = filtered.filter(function(c){ return c.iniciado_em && new Date(c.iniciado_em) >= inicio; });
+    }
+    if (search) {
+      var q = search.toLowerCase();
+      filtered = filtered.filter(function(c){ return (c.nicho||'').toLowerCase().includes(q) || (c.cidade||'').toLowerCase().includes(q); });
+    }
+    renderCiclos(filtered);
+  } catch(e) { console.warn('Ciclos:', e.message); }
+}
+
+function renderCiclos(ciclos) {
+  var tbody = document.getElementById('ciclosBody');
+  var countEl = document.getElementById('ciclos-count');
+  if (!tbody) return;
+  if (!ciclos || ciclos.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:32px;color:var(--fl-text-muted)">Nenhum ciclo encontrado.</td></tr>';
+    if (countEl) countEl.textContent = '0 ciclos';
+    return;
+  }
+  if (countEl) countEl.textContent = ciclos.length + ' ciclos';
+  tbody.innerHTML = ciclos.map(function(c) {
+    var dtInicio = c.iniciado_em ? new Date(c.iniciado_em).toLocaleDateString('pt-BR') : '—';
+    var dtFim = c.concluido_em ? new Date(c.concluido_em).toLocaleDateString('pt-BR') : '—';
+    var convColor = c.conversao >= 80 ? '#10b981' : c.conversao >= 50 ? '#f59e0b' : 'var(--fl-text-muted)';
+    var erroColor = c.erros > 0 ? '#ef4444' : 'var(--fl-text-muted)';
+    return '<tr style="border-bottom:1px solid rgba(255,255,255,0.05);transition:background .15s" onmouseover="this.style.background=&quot;rgba(147,51,234,0.05)&quot;" onmouseout="this.style.background=&quot;&quot;">'+
+      '<td style="padding:10px 8px;color:var(--fl-text-muted);font-family:var(--fl-font-mono);font-size:11px">#'+c.id+'</td>'+
+      '<td style="padding:10px 8px;color:var(--fl-text);font-weight:500">'+escapeHtml(c.nicho)+'</td>'+
+      '<td style="padding:10px 8px;color:var(--fl-text-muted)">'+escapeHtml(c.cidade)+'</td>'+
+      '<td style="padding:10px 8px;text-align:center;color:var(--fl-cyan);font-family:var(--fl-font-mono)">'+c.leads_buscados+'</td>'+
+      '<td style="padding:10px 8px;text-align:center;color:var(--fl-purple-300);font-family:var(--fl-font-mono)">'+c.sites_gerados+'</td>'+
+      '<td style="padding:10px 8px;text-align:center;color:#10b981;font-family:var(--fl-font-mono)">'+c.enviados+'</td>'+
+      '<td style="padding:10px 8px;text-align:center;color:'+erroColor+';font-family:var(--fl-font-mono)">'+c.erros+'</td>'+
+      '<td style="padding:10px 8px;text-align:center;color:'+convColor+';font-family:var(--fl-font-mono);font-weight:600">'+c.conversao+'%</td>'+
+      '<td style="padding:10px 8px;color:var(--fl-text-muted);font-size:11px">'+dtInicio+'</td>'+
+      '<td style="padding:10px 8px;color:var(--fl-text-muted);font-size:11px">'+dtFim+'</td>'+
+    '</tr>';
+  }).join('');
+}
+
+function filtrarCiclos(search) {
+  var btn = document.querySelector('.btn-period.active[onclick*="setCiclosPeriod"]');
+  var period = btn ? btn.getAttribute('data-period') : 'tudo';
+  carregarCiclos(period, search);
+}
+
+
 // ═══════════════════════════════════════════════════════════════════
 // LOGS EM TEMPO REAL VIA SSE (Server-Sent Events)
 // ═══════════════════════════════════════════════════════════════════
 (function() {
-  const logsContainer = document.getElementById('magic-logs-content');
-  if (!logsContainer) return;
-
   let eventSource = null;
   const maxLogs = 100;
+
+  function getContainer() {
+    return document.getElementById('magic-logs-content');
+  }
 
   function conectarSSE() {
     if (eventSource) eventSource.close();
@@ -1629,59 +2330,77 @@ console.log("[DEBUG] Event listeners registrados. Total:", document.querySelecto
     eventSource.onmessage = function(event) {
       try {
         const data = JSON.parse(event.data);
+        // normalizar: suporta tanto 'tipo' quanto 'evento'
+        if (!data.evento && data.tipo) data.evento = data.tipo.toUpperCase();
+        if (!data.evento) data.evento = 'INFO';
         adicionarLog(data);
+        if(window._pixelOfficeSSEHook) window._pixelOfficeSSEHook(data);
       } catch (e) {
         console.error('[SSE] Erro ao parsear log:', e);
       }
     };
 
+    eventSource.onopen = function() {
+      var dot = document.getElementById('sse-dot');
+      if (dot) dot.style.background = '#10b981';
+      adicionarLog({ evento: 'INFO', mensagem: 'Terminal conectado. Aguardando pipeline...', ts: new Date().toLocaleTimeString('pt-BR') });
+    };
+
     eventSource.onerror = function(err) {
       console.error('[SSE] Erro na conexão:', err);
+      var dot = document.getElementById('sse-dot');
+      if (dot) dot.style.background = '#ef4444';
       eventSource.close();
       setTimeout(conectarSSE, 5000);
     };
   }
 
   function adicionarLog(data) {
+    const logsContainer = getContainer();
+    if (!logsContainer) return;
+    var placeholder = logsContainer.querySelector('[data-placeholder]');
+    if (placeholder) placeholder.remove();
+
     const logDiv = document.createElement('div');
-    logDiv.style.cssText = 'padding:8px 12px;border-radius:6px;font-size:13px;font-family:monospace;line-height:1.4;';
-
-    const cores = {
-      'ERROR': 'background:#fee;border-left:3px solid #f44',
-      'SUCCESS': 'background:#efe;border-left:3px solid #4f4',
-      'WARNING': 'background:#ffe;border-left:3px solid #fa4',
-      'INFO': 'background:#eef;border-left:3px solid #44f',
-      'LEADS': 'background:#f0f8ff;border-left:3px solid #4a9eff',
-      'CAIO': 'background:#fff0f5;border-left:3px solid #ff69b4',
-      'PIPELINE_STATUS': 'background:#f5f5f5;border-left:3px solid #888'
-    };
-
-    logDiv.style.cssText += cores[data.evento] || 'background:#f9f9f9;border-left:3px solid #ccc';
-
     const ts = data.ts || new Date().toLocaleTimeString('pt-BR');
 
-    const icones = {
-      'ERROR': '❌',
-      'SUCCESS': '✅',
-      'WARNING': '⚠️',
-      'INFO': 'ℹ️',
-      'LEADS': '🔍',
-      'CAIO': '🤖',
-      'PIPELINE_STATUS': '⚙️'
+    const cores = {
+      'ERROR':           'border-left:3px solid #ef4444;background:rgba(239,68,68,0.08);',
+      'SUCCESS':         'border-left:3px solid #10b981;background:rgba(16,185,129,0.08);',
+      'WARNING':         'border-left:3px solid #f59e0b;background:rgba(245,158,11,0.08);',
+      'INFO':            'border-left:3px solid #9333ea;background:rgba(147,51,234,0.08);',
+      'LEADS':           'border-left:3px solid #06b6d4;background:rgba(6,182,212,0.08);',
+      'CAIO':            'border-left:3px solid #a855f7;background:rgba(168,85,247,0.08);',
+      'PIPELINE_STATUS': 'border-left:3px solid #374151;background:rgba(255,255,255,0.03);'
     };
 
-    const icone = icones[data.evento] || '📝';
+    const icones = {
+      'ERROR': '✗', 'SUCCESS': '✓', 'WARNING': '!',
+      'INFO': '·', 'LEADS': '◎', 'CAIO': '◈', 'PIPELINE_STATUS': '⚙'
+    };
 
-    logDiv.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:start;gap:12px;"><div style="flex:1;"><strong style="color:#333;">' + icone + ' ' + escapeHtml(data.evento) + '</strong><div style="color:#666;margin-top:4px;">' + escapeHtml(data.mensagem) + '</div></div><small style="color:#999;white-space:nowrap;">' + ts + '</small></div>';
+    const coresIcone = {
+      'ERROR': '#ef4444', 'SUCCESS': '#10b981', 'WARNING': '#f59e0b',
+      'INFO': '#c084fc', 'LEADS': '#06b6d4', 'CAIO': '#a855f7', 'PIPELINE_STATUS': '#6b7280'
+    };
 
-    logsContainer.insertBefore(logDiv, logsContainer.firstChild);
+    const cor = cores[data.evento] || 'border-left:3px solid #374151;background:rgba(255,255,255,0.02);';
+    const icone = icones[data.evento] || '·';
+    const corIcone = coresIcone[data.evento] || '#9ca3af';
+
+    logDiv.style.cssText = 'padding:6px 10px;border-radius:4px;line-height:1.5;margin-bottom:2px;' + cor;
+    logDiv.innerHTML =
+      '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;">' +
+        '<span style="color:' + corIcone + ';font-weight:700;flex-shrink:0;width:12px;">' + icone + '</span>' +
+        '<span style="flex:1;color:#e5e7eb;word-break:break-word;">' + escapeHtml(data.mensagem) + '</span>' +
+        '<span style="color:#6b7280;font-size:10px;white-space:nowrap;flex-shrink:0;">' + ts + '</span>' +
+      '</div>';
+
+    logsContainer.appendChild(logDiv);
+    logsContainer.scrollTop = logsContainer.scrollHeight;
 
     while (logsContainer.children.length > maxLogs) {
-      logsContainer.removeChild(logsContainer.lastChild);
-    }
-
-    if (logsContainer.scrollTop < 100) {
-      logsContainer.scrollTop = 0;
+      logsContainer.removeChild(logsContainer.firstChild);
     }
   }
 
@@ -2143,5 +2862,101 @@ style.textContent = `
   }
 `;
 document.head.appendChild(style);
+
+/* ══ LEAD MANUAL ══════════════════════════════════════════════════ */
+function abrirModalLeadManual() {
+  var m = document.getElementById('modalLeadManual');
+  if (m) { m.classList.add('open'); }
+}
+function fecharModalLeadManual() {
+  var m = document.getElementById('modalLeadManual');
+  if (m) { m.classList.remove('open'); }
+  ['lm-nome','lm-nicho','lm-cidade','lm-telefone','lm-whatsapp','lm-briefing'].forEach(function(id){
+    var el = document.getElementById(id); if (el) el.value = '';
+  });
+  var s = document.getElementById('lm-status'); if (s) s.style.display = 'none';
+}
+async function salvarLeadManual() {
+  var nome = (document.getElementById('lm-nome') || {}).value || '';
+  var nicho = (document.getElementById('lm-nicho') || {}).value || '';
+  var cidade = (document.getElementById('lm-cidade') || {}).value || '';
+  var telefone = (document.getElementById('lm-telefone') || {}).value || '';
+  if (!nome || !nicho || !cidade || !telefone) { Toast.warning('Preencha nome, nicho, cidade e telefone.'); return; }
+  var statusEl = document.getElementById('lm-status');
+  if (statusEl) { statusEl.style.display = 'block'; statusEl.textContent = 'Cadastrando lead...'; }
+  var briefing = (document.getElementById('lm-briefing') || {}).value || '';
+  try {
+    var res = await authFetch('/api/leads/manual', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        nome: nome, nicho: nicho, cidade: cidade,
+        telefone: telefone,
+        whatsapp: (document.getElementById('lm-whatsapp') || {}).value || telefone,
+        briefing: briefing, score: 80
+      })
+    }).then(function(r){ return r.json(); });
+    if (res.ok) {
+      if (statusEl) statusEl.textContent = 'OK: ' + res.mensagem;
+      Toast.success(res.mensagem);
+      setTimeout(function(){ fecharModalLeadManual(); carregarKanban(); }, 2000);
+    } else {
+      Toast.error('Erro: ' + (res.detail || 'Falha'));
+      if (statusEl) statusEl.textContent = 'Erro: ' + (res.detail || 'Falha');
+    }
+  } catch(e) {
+    Toast.error('Erro: ' + e.message);
+    if (statusEl) statusEl.textContent = 'Erro: ' + e.message;
+  }
+}
+
+/* ══ FECHAR VENDA ═════════════════════════════════════════════════ */
+function abrirFecharVenda() {
+  if (!leadAtualModal) return;
+  var m = document.getElementById('modalFecharVenda');
+  var nomeEl = document.getElementById('fv-lead-nome');
+  if (nomeEl) nomeEl.textContent = leadAtualModal.nome || 'Lead';
+  var valorEl = document.getElementById('fv-valor');
+  if (valorEl) valorEl.value = leadAtualModal.valor_venda || '';
+  if (m) m.style.display = 'flex';
+}
+function fecharModalVenda() {
+  var m = document.getElementById('modalFecharVenda');
+  if (m) m.classList.remove('open');
+}
+async function confirmarVenda() {
+  if (!leadAtualModal) return;
+  var valor = parseFloat((document.getElementById('fv-valor') || {}).value) || 0;
+  if (!valor || valor <= 0) { Toast.warning('Informe o valor da venda.'); return; }
+  var pagamento = (document.getElementById('fv-pagamento') || {}).value || 'pix';
+  var obs = (document.getElementById('fv-obs') || {}).value || '';
+  try {
+    await authFetch('/api/leads/' + leadAtualModal.id, {
+      method: 'PATCH',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        valor_venda: valor,
+        observacoes: obs + (obs ? ' | ' : '') + 'Pagamento: ' + pagamento,
+        status: 'won'
+      })
+    });
+    Toast.success('Venda fechada! R$ ' + valor.toLocaleString('pt-BR', {minimumFractionDigits:2}));
+    fecharModalVenda();
+    closeModal();
+    setTimeout(carregarKanban, 500);
+    setTimeout(carregarKPIs, 500);
+  } catch(e) {
+    Toast.error('Erro ao registrar venda: ' + e.message);
+  }
+}
+
+/* ══ BADGES MENSAGENS NOVAS ═══════════════════════════════════════ */
+async function carregarMensagensNovas() {
+  try {
+    var data = await authFetch('/api/leads/mensagens-novas').then(function(r){ return r.json(); });
+    window._leadsComResposta = data.leads_com_resposta || [];
+  } catch(e) {}
+}
+
 </script>
 </body></html>

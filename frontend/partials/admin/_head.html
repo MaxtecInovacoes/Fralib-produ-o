@@ -6,6 +6,10 @@
 <meta http-equiv="Expires" content="0">
 <script>window.checkTwoFactorStatus = async function() { return true; };</script>
 <meta charset="UTF-8">
+<link rel="icon" type="image/x-icon" href="/favicon.ico?v=">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png?v=">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png?v=">
+<link rel="apple-touch-icon" href="/favicon-32.png?v=1778153020">
 <meta http-equiv="Content-Security-Policy" content="connect-src 'self' wss://fralib.com.br wss://fralib.com.br:3000 https://cdn.jsdelivr.net https://fralib.com.br">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>FraLib OS — Central de Comando</title>
@@ -14,8 +18,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/css/toast.css">
-<script src="/static/js/chart.min.js?v=20260429"></script>
-<script src="/static/js/socket.io.min.js?v=20260429"></script>
+<script src="/js/chart.min.js?v=20260429"></script>
+<script src="/js/socket.io.min.js?v=20260429"></script>
 <script src="/js/toast.js?v=20260429"></script>
 <script src="/js/socket-client.js?v=20260429"></script>
 <script src="/js/csrf-helper.js?v=20260429"></script>
@@ -203,25 +207,38 @@ body{
   color:var(--fl-text-muted);letter-spacing:1px;
 }
 .kanban-scroll{
-  overflow-x:auto;padding-bottom:16px;
-  scrollbar-width:thin;scrollbar-color:var(--fl-purple-900) transparent;
+  overflow-x:auto;
+  overflow-y:hidden;
+  padding-bottom:8px;
+  scrollbar-width:thin;
+  scrollbar-color:var(--fl-purple-900) transparent;
+  height:calc(100vh - 200px);
+  display:flex;
+  flex-direction:row;
 }
 .kanban-scroll::-webkit-scrollbar{height:6px}
 .kanban-scroll::-webkit-scrollbar-track{background:transparent}
 .kanban-scroll::-webkit-scrollbar-thumb{background:var(--fl-purple-900);border-radius:3px}
 
 .kanban-board{
-  display:grid;
-  grid-template-columns:repeat(6,260px);
-  gap:12px;
+  display:flex;
+  flex-direction:row;
+  gap:10px;
   min-width:max-content;
+  height:100%;
+  overflow-y:hidden;
 }
 .kanban-col{
   background:var(--fl-bg-surface);
   border:2px solid var(--fl-border);
-  min-height:400px;
-  display:flex;flex-direction:column;
+  width:220px;
+  min-width:220px;
+  max-width:220px;
+  display:flex;
+  flex-direction:column;
   box-shadow:4px 4px 0 rgba(0,0,0,0.2);
+  height:100%;
+  overflow:hidden;
 }
 .kanban-col-header{
   padding:12px 14px;
@@ -229,8 +246,12 @@ body{
   display:flex;align-items:center;justify-content:space-between;
 }
 .kanban-col-title{
-  font-family:var(--fl-font-brand);font-size:7px;
+  font-family:var(--fl-font-brand);
+  font-size:9px;
   letter-spacing:1px;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
 }
 .kanban-col-count{
   font-family:var(--fl-font-mono);font-size:11px;
@@ -256,9 +277,18 @@ body{
 .col-ganhos .kanban-col-title{color:var(--success)}
 
 .kanban-col-body{
-  flex:1;padding:10px;display:flex;flex-direction:column;gap:10px;
-  min-height:100px;
+  flex:1;
+  padding:10px;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  overflow-y:auto;
+  overflow-x:hidden;
+  scrollbar-width:thin;
+  scrollbar-color:var(--fl-border) transparent;
 }
+.kanban-col-body::-webkit-scrollbar{width:3px}
+.kanban-col-body::-webkit-scrollbar-thumb{background:var(--fl-border);border-radius:3px}
 .kanban-col-body.drag-over{background:rgba(147,51,234,0.06);border:2px dashed var(--fl-purple-400)}
 
 /* Lead Card */
@@ -431,6 +461,27 @@ body{
   color:var(--fl-purple-300);
   box-shadow:2px 2px 0 var(--fl-purple-950);
 }
+.btn-filter-period{
+  background:var(--fl-bg-card);
+  border:1px solid var(--fl-border);
+  color:var(--fl-text-muted);
+  padding:6px 12px;
+  border-radius:6px;
+  font-size:11px;
+  cursor:pointer;
+  font-family:var(--fl-font-brand);
+  letter-spacing:1px;
+  transition:all .2s;
+}
+.btn-filter-period.active{
+  background:var(--fl-purple);
+  border-color:var(--fl-purple);
+  color:#fff;
+}
+.btn-filter-period:hover{
+  border-color:var(--fl-purple);
+  color:var(--fl-purple-300);
+}
 
 .charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:28px}
 .chart-card{
@@ -527,7 +578,7 @@ body{
 /* ============================================================
    CONFIGURAÇÕES
    ============================================================ */
-.config-section{max-width:640px}
+.config-section{max-width:100%}
 .config-group{
   background:var(--fl-bg-card);border:2px solid var(--fl-border);
   padding:24px;margin-bottom:20px;
@@ -606,10 +657,15 @@ body{
   .kpi-grid{grid-template-columns:1fr}
 }
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+
+.modal-input{width:100%;background:var(--fl-bg-card);border:1px solid var(--fl-border);color:var(--fl-text);padding:8px 12px;border-radius:6px;font-size:13px;box-sizing:border-box;font-family:inherit;}
+.modal-input:focus{outline:none;border-color:var(--fl-purple);}
 </style>
+
 </head>
 <body>
 
 <!-- Mobile sidebar toggle -->
 <button class="sidebar-toggle" id="sidebarToggle" aria-label="Menu">&#9776;</button>
+
 
