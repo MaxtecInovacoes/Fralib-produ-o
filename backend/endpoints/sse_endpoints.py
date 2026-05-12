@@ -132,10 +132,14 @@ def _validar_token_sse(token: str) -> dict:
 @router.get("/stream")
 async def stream_logs(token: str = Query(..., description="JWT token para autenticação")):
     jwt_payload = _validar_token_sse(token)
-    user_id = str(jwt_payload.get("sub", ""))
+    raw_sub = jwt_payload.get("sub", "")
+    try:
+        user_id = str(int(raw_sub)) if raw_sub != "" else ""
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=401, detail="Token inválido")
 
     async def event_generator():
-        # Canal privado do usuário
+        # Canal privado do usuário (user_id já validado como inteiro acima — seguro p/ LISTEN)
         canal = f"fralib_logs_{user_id}" if user_id else "fralib_logs"
 
         pg_conn = None

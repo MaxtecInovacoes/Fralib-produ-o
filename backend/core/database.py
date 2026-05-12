@@ -351,8 +351,98 @@ def inicializar_database():
             )
         """))
 
+        # ===== JOB QUEUE PERSISTENTE =====
+        # Tabela `jobs`: fila generica de tarefas em background com retry e crash recovery.
+        # status: pending | running | completed | failed_retriable | failed_permanent
+        # Worker daemon faz SELECT FOR UPDATE SKIP LOCKED em (status='pending' AND next_retry_at <= NOW())
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS jobs (
+                id SERIAL PRIMARY KEY,
+                tipo VARCHAR(80) NOT NULL,
+                payload JSONB NOT NULL DEFAULT '{}'::jsonb,
+                tenant_id INTEGER,
+                status VARCHAR(30) NOT NULL DEFAULT 'pending',
+                attempts INTEGER NOT NULL DEFAULT 0,
+                max_attempts INTEGER NOT NULL DEFAULT 3,
+                last_error TEXT,
+                last_phase VARCHAR(80),
+                idempotency_key VARCHAR(120) UNIQUE,
+                checkpoint_id VARCHAR(120),
+                worker_id VARCHAR(80),
+                worker_heartbeat TIMESTAMP,
+                next_retry_at TIMESTAMP DEFAULT NOW(),
+                criado_em TIMESTAMP DEFAULT NOW(),
+                iniciado_em TIMESTAMP,
+                concluido_em TIMESTAMP
+            )
+        """))
+        conn.execute(text("""
+            CREATE INDEX IF NOT EXISTS idx_jobs_claim
+            ON jobs (status, next_retry_at)
+            WHERE status = 'pending'
+        """))
+        conn.execute(text("""
+            CREATE INDEX IF NOT EXISTS idx_jobs_tenant
+            ON jobs (tenant_id, status)
+        """))
+
+        # Tabela `pipeline_failures`: jobs que esgotaram os retries automaticos.
+        # Aparece pro cliente no dashboard com botao "tentar de novo manualmente".
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS pipeline_failures (
+                id SERIAL PRIMARY KEY,
+                tenant_id INTEGER NOT NULL,
+                job_id INTEGER REFERENCES jobs(id) ON DELETE SET NULL,
+                lead_id TEXT,
+                lead_nome TEXT,
+                fase VARCHAR(80),
+                mensagem_amigavel TEXT,
+                erro_tecnico TEXT,
+                tentativas_automaticas INTEGER DEFAULT 0,
+                checkpoint_id VARCHAR(120),
+                payload JSONB,
+                criado_em TIMESTAMP DEFAULT NOW(),
+                visto_pelo_usuario BOOLEAN DEFAULT FALSE,
+                resolvido BOOLEAN DEFAULT FALSE,
+                resolvido_em TIMESTAMP
+            )
+        """))
+        conn.execute(text("""
+            CREATE INDEX IF NOT EXISTS idx_failures_tenant
+            ON pipeline_failures (tenant_id, resolvido, criado_em DESC)
+        """))
+
+        # PR8: BYOK Anthropic - cliente do plano Pro guarda a propria
+        # API key criptografada (Fernet). O pipeline le esta coluna
+        # quando _current_user_id e Pro, senao usa ANTHROPIC_API_KEY do .env.
+        conn.execute(text("""
+            ALTER TABLE users
+            ADD COLUMN IF NOT EXISTS anthropic_key_encrypted TEXT
+        """))
+
+        # PR7: idempotencia + auditoria dos webhooks da Stripe.
+        # Cada evento da Stripe traz um id unico ("evt_..."); guardar aqui
+        # evita reprocessamento se a Stripe reenviar (acontece em retries
+        # automaticos quando nosso 2xx demora demais ou cai).
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS stripe_events (
+                event_id VARCHAR(120) PRIMARY KEY,
+                tipo VARCHAR(120),
+                user_id INTEGER,
+                stripe_customer_id VARCHAR(120),
+                processado BOOLEAN DEFAULT FALSE,
+                erro TEXT,
+                criado_em TIMESTAMP DEFAULT NOW(),
+                processado_em TIMESTAMP
+            )
+        """))
+        conn.execute(text("""
+            CREATE INDEX IF NOT EXISTS idx_stripe_events_customer
+            ON stripe_events (stripe_customer_id, criado_em DESC)
+        """))
+
         conn.commit()
-    
+
     print("[Database] ✅ Banco inicializado")
 
 

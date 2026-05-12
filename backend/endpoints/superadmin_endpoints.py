@@ -272,64 +272,55 @@ async def impersonate(user_id: int, db: Session = Depends(get_db), user: dict = 
 async def get_usage(db: Session = Depends(get_db), user: dict = Depends(require_superadmin), periodo: str = "48h"):
     """Consumo de tokens por hora e por agente. Periodo: 24h, 48h, 7d, 30d"""
     try:
-        # Definir intervalo
-        intervals = {
-            "24h": "24 hours",
-            "48h": "48 hours",
-            "7d": "7 days",
-            "30d": "30 days"
+        # Whitelist estrita: periodo -> (hours_interval, granularidade)
+        # Hours como inteiro literal evita qualquer interpolacao de string vinda do usuario
+        PERIODO_CONFIG = {
+            "24h": (24, "hour"),
+            "48h": (48, "hour"),
+            "7d":  (24 * 7, "day"),
+            "30d": (24 * 30, "day"),
         }
-        interval = intervals.get(periodo, "48 hours")
-        
-        # Totais gerais (do periodo)
-        totals = db.execute(text(f"""
-            SELECT COUNT(*), COALESCE(SUM(input_tokens),0), COALESCE(SUM(output_tokens),0)
-            FROM llm_usage WHERE criado_em > NOW() - INTERVAL '{interval}'
-        """)).fetchone()
-        
+        if periodo not in PERIODO_CONFIG:
+            periodo = "48h"
+        hours, gran = PERIODO_CONFIG[periodo]
+        # gran vem da whitelist acima ("hour" ou "day"), seguro p/ interpolar
+        time_group = f"date_trunc('{gran}', criado_em)"
+
+        # Totais gerais (do periodo) — hours via bindparam
+        totals = db.execute(text(
+            "SELECT COUNT(*), COALESCE(SUM(input_tokens),0), COALESCE(SUM(output_tokens),0) "
+            "FROM llm_usage WHERE criado_em > NOW() - (:hours || ' hours')::interval"
+        ), {"hours": hours}).fetchone()
+
         # Totais all-time
         totals_all = db.execute(text(
             "SELECT COUNT(*), COALESCE(SUM(input_tokens),0), COALESCE(SUM(output_tokens),0) FROM llm_usage"
         )).fetchone()
-        
-        # Granularidade: hora pra 24h/48h, dia pra 7d/30d
-        if periodo in ("24h", "48h"):
-            time_group = "date_trunc('hour', criado_em)"
-        else:
-            time_group = "date_trunc('day', criado_em)"
-        
+
         # Timeline
-        timeline = db.execute(text(f"""
-            SELECT {time_group} as periodo,
-                   SUM(input_tokens) as input,
-                   SUM(output_tokens) as output,
-                   COUNT(*) as calls
-            FROM llm_usage
-            WHERE criado_em > NOW() - INTERVAL '{interval}'
-            GROUP BY periodo ORDER BY periodo
-        """)).fetchall()
-        
+        timeline = db.execute(text(
+            f"SELECT {time_group} as periodo, "
+            "SUM(input_tokens) as input, SUM(output_tokens) as output, COUNT(*) as calls "
+            "FROM llm_usage WHERE criado_em > NOW() - (:hours || ' hours')::interval "
+            "GROUP BY periodo ORDER BY periodo"
+        ), {"hours": hours}).fetchall()
+
         # Por agente (no periodo)
-        by_agent = db.execute(text(f"""
-            SELECT agente, COUNT(*) as calls,
-                   SUM(input_tokens) as input,
-                   SUM(output_tokens) as output
-            FROM llm_usage
-            WHERE criado_em > NOW() - INTERVAL '{interval}'
-            GROUP BY agente ORDER BY input DESC
-        """)).fetchall()
-        
+        by_agent = db.execute(text(
+            "SELECT agente, COUNT(*) as calls, "
+            "SUM(input_tokens) as input, SUM(output_tokens) as output "
+            "FROM llm_usage WHERE criado_em > NOW() - (:hours || ' hours')::interval "
+            "GROUP BY agente ORDER BY input DESC"
+        ), {"hours": hours}).fetchall()
+
         # Por usuario (no periodo)
-        by_user = db.execute(text(f"""
-            SELECT u.email, u.nome,
-                   COUNT(*) as calls,
-                   SUM(l.input_tokens) as input,
-                   SUM(l.output_tokens) as output
-            FROM llm_usage l
-            LEFT JOIN users u ON u.id = l.user_id
-            WHERE l.criado_em > NOW() - INTERVAL '{interval}'
-            GROUP BY u.email, u.nome ORDER BY input DESC
-        """)).fetchall()
+        by_user = db.execute(text(
+            "SELECT u.email, u.nome, COUNT(*) as calls, "
+            "SUM(l.input_tokens) as input, SUM(l.output_tokens) as output "
+            "FROM llm_usage l LEFT JOIN users u ON u.id = l.user_id "
+            "WHERE l.criado_em > NOW() - (:hours || ' hours')::interval "
+            "GROUP BY u.email, u.nome ORDER BY input DESC"
+        ), {"hours": hours}).fetchall()
         
         return {
             "ok": True,

@@ -38,6 +38,44 @@ def set_current_user_id(uid):
     global _current_user_id
     _current_user_id = uid
 
+
+# PR8: BYOK - cliente Pro usa a propria Anthropic key.
+# Cache em memoria por user_id pra evitar bater no banco a cada chamada LLM.
+_byok_cache = {}
+
+def _get_active_api_key():
+    """Retorna a Anthropic key do user ativo (BYOK Pro) ou o default do .env."""
+    uid = _current_user_id
+    if not uid:
+        return ANTHROPIC_API_KEY
+    if uid in _byok_cache:
+        return _byok_cache[uid] or ANTHROPIC_API_KEY
+    try:
+        import psycopg2
+        from utils.secrets_crypto import decriptar
+        conn = psycopg2.connect(os.getenv('DATABASE_URL', 'postgresql://postgres:fralib2024@localhost:5433/fralib_db'))
+        cur = conn.cursor()
+        cur.execute('SELECT plano, anthropic_key_encrypted FROM users WHERE id=%s', (uid,))
+        row = cur.fetchone()
+        cur.close()
+        conn.close()
+        if row and (row[0] or '').lower() == 'pro' and row[1]:
+            key = decriptar(row[1])
+            _byok_cache[uid] = key
+            return key or ANTHROPIC_API_KEY
+        _byok_cache[uid] = None  # cacheia "nao tem" pra evitar query repetida
+    except Exception as e:
+        print(f'[llm_direct] BYOK lookup falhou para user {uid}: {e}')
+    return ANTHROPIC_API_KEY
+
+def invalidar_byok_cache(uid=None):
+    """Chamar quando o cliente troca a key (ou cancela). uid=None limpa tudo."""
+    global _byok_cache
+    if uid is None:
+        _byok_cache = {}
+    else:
+        _byok_cache.pop(uid, None)
+
 def _salvar_uso_llm(modelo, input_tokens, output_tokens, agente=None):
     try:
         import psycopg2
@@ -70,18 +108,23 @@ def call_claude(system, user, model='opus', max_tokens=4000, temperature=0.7, ag
     """
     
     # ✅ AUTOMÁTICO: Se agent_name foi passado, ativar RAG + Skills
+    # PR12: capturar rag_context cru para cachear separadamente (em vez de
+    # fundir com user e perder a oportunidade de cache).
+    rag_block = ""
     if agent_name:
         try:
             # 1. Importar funções (lazy import para não quebrar se não existir)
             from agent_rag import buscar_contexto_rag, format_rag_prompt, mark_rag_used
             from skill_loader import get_skills_agente, carregar_skills
-            
+
             # 2. Buscar e injetar RAG
             rag_context = buscar_contexto_rag(user, agent_name.lower())
             if rag_context:
-                user = format_rag_prompt(user, rag_context)
+                # PR12: guarda o bloco RAG isolado para cachear; nao funde com user.
+                # Formato igual ao format_rag_prompt para manter compatibilidade semantica.
+                rag_block = f"CONTEXTO RAG (conhecimento da base):\n{rag_context}\n\n---\n\n"
                 mark_rag_used(agent_name)
-                print(f"[LLM Direct] ✅ RAG ativado para {agent_name}")
+                print(f"[LLM Direct] ✅ RAG ativado para {agent_name} ({len(rag_block)} chars)")
             
             # 3. Buscar e injetar Skills
             skills = get_skills_agente(agent_name.lower())
@@ -132,27 +175,46 @@ def call_claude(system, user, model='opus', max_tokens=4000, temperature=0.7, ag
     url = f'{_base}/v1/messages'
     
     headers = {
-        'x-api-key': ANTHROPIC_API_KEY,
+        'x-api-key': _get_active_api_key(),
         'anthropic-version': '2023-06-01',
         'Content-Type': 'application/json'
     }
     
-    # Prompt caching: se system prompt >= 1024 chars, cachear automaticamente
-    # Economiza 80-90% dos tokens de input em chamadas repetidas do mesmo agente
-    # Mínimo exigido pela Anthropic: 1024 tokens (~4096 chars para ser seguro, usamos 1024)
+    # Prompt caching: se system prompt >= 1024 chars, cachear automaticamente.
+    # Economiza 80-90% dos tokens de input em chamadas repetidas do mesmo agente.
+    # Minimo exigido pela Anthropic: 1024 tokens (~4096 chars para ser seguro, usamos 1024).
+    extra_headers = {}
+    cache_ativo = False
     if system and len(system) >= 1024:
         system_payload = [{"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}]
-        extra_headers = {"anthropic-beta": "prompt-caching-2024-07-31"}
+        cache_ativo = True
     else:
         system_payload = system
-        extra_headers = {}
+
+    # PR12: bloco RAG cacheado separadamente quando vale a pena (>= 1024 chars).
+    # Em chamadas repetidas do mesmo agente sobre leads diferentes, o RAG se
+    # repete - cachear economiza ate 90% dos tokens desse bloco.
+    if rag_block and len(rag_block) >= 1024:
+        messages_content = [
+            {"type": "text", "text": rag_block, "cache_control": {"type": "ephemeral"}},
+            {"type": "text", "text": user},
+        ]
+        cache_ativo = True
+    elif rag_block:
+        # RAG pequeno: junta no user message sem cache (caso raro)
+        messages_content = rag_block + user
+    else:
+        messages_content = user
+
+    if cache_ativo:
+        extra_headers = {"anthropic-beta": "prompt-caching-2024-07-31"}
 
     payload = {
         'model': model_id,
         'max_tokens': max_tokens,
         'temperature': temperature,
         'system': system_payload,
-        'messages': [{'role': 'user', 'content': user}]
+        'messages': [{'role': 'user', 'content': messages_content}]
     }
 
     # Mesclar headers extras (ex: prompt caching beta)
@@ -285,7 +347,7 @@ def call_claude_structured(system, user, tool_name, tool_description, input_sche
 
     url = f'{ANTHROPIC_BASE_URL}/v1/messages'
     headers = {
-        'x-api-key': ANTHROPIC_API_KEY,
+        'x-api-key': _get_active_api_key(),
         'anthropic-version': '2023-06-01',
         'Content-Type': 'application/json'
     }

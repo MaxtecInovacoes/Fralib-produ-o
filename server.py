@@ -22,8 +22,8 @@ sys.path.insert(0, '/root/fralib/backend/utils')
 from database import inicializar_database
 inicializar_database()
 
-# Rate Limiting
-limiter = Limiter(key_func=get_remote_address, default_limits=["100/minute"])
+# Rate Limiting (instancia compartilhada — definida em core/rate_limiter.py)
+from rate_limiter import limiter
 
 # Importar routers
 import auth_endpoints
@@ -39,6 +39,9 @@ import whatsapp_endpoints
 import llm_endpoints
 import api_usage_endpoints
 import superadmin_endpoints
+import falhas_endpoints
+import site_editor_endpoints
+import tracking_endpoints
 
 
 from contextlib import asynccontextmanager
@@ -77,6 +80,29 @@ async def lifespan(app):
     except Exception as e:
         print(f"[Server] Aviso: nao foi possivel verificar pipeline_queue: {e}")
 
+    # PR15: tracking de visitas + colunas ROI na tabela leads
+    try:
+        from sqlalchemy import text
+        from database import engine
+        with engine.connect() as conn:
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS site_visitas (
+                    id SERIAL PRIMARY KEY,
+                    lead_id VARCHAR(100) NOT NULL,
+                    evento VARCHAR(20) NOT NULL,
+                    ip_hash VARCHAR(32),
+                    ua_hash VARCHAR(32),
+                    criado_em TIMESTAMP DEFAULT NOW()
+                )
+            """))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS idx_site_visitas_lead ON site_visitas(lead_id, criado_em)"))
+            conn.execute(text("ALTER TABLE leads ADD COLUMN IF NOT EXISTS valor_venda NUMERIC(10,2)"))
+            conn.execute(text("ALTER TABLE leads ADD COLUMN IF NOT EXISTS data_conversao TIMESTAMP"))
+            conn.commit()
+        print("[Server] Migration PR15 OK (site_visitas + colunas ROI)")
+    except Exception as e:
+        print(f"[Server] Aviso: migration PR15 falhou: {e}")
+
     # Iniciar listener WhatsApp (recebe respostas dos leads e chama Bryan)
     try:
         import sys, os
@@ -105,7 +131,7 @@ app.mount("/static", StaticFiles(directory="/root/fralib/frontend/static"), name
 app.mount("/css", StaticFiles(directory="/root/fralib/frontend/css"), name="css")
 app.mount("/js", StaticFiles(directory="/root/fralib/frontend/js"), name="js")
 
-# CORS
+# CORS — metodos e headers explicitos em vez de wildcard
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -115,11 +141,38 @@ app.add_middleware(
         "https://www.seunegociofralib.site"
     ],
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "X-Requested-With", "Accept"],
 )
 
-# Endpoint CSRF stub — frontend chama mas sistema usa JWT; retorna token dummy para evitar 404
+# Security headers (CSP + clickjacking + MIME sniffing + referrer)
+# CSP permissivo o suficiente para o dashboard atual (Chart.js, socket.io, inline styles
+# gerados pelo Liam) mas bloqueia <script> injetado por XSS de campos do banco.
+@app.middleware("http")
+async def security_headers(request, call_next):
+    response = await call_next(request)
+    # Sites gerados pelo Liam ficam em /var/www/fralib/sites e sao servidos pelo nginx,
+    # nao por este app — CSP aqui nao os afeta.
+    response.headers.setdefault(
+        "Content-Security-Policy",
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; "
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+        "font-src 'self' https://fonts.gstatic.com data:; "
+        "img-src 'self' data: blob: https:; "
+        "connect-src 'self' https: wss: ws:; "
+        "frame-ancestors 'none'; "
+        "base-uri 'self'; "
+        "form-action 'self'"
+    )
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("X-Frame-Options", "DENY")
+    response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+    return response
+
+# CSRF stub — autenticacao real e via JWT no header Authorization.
+# Este endpoint existe so para o frontend (csrf-helper.js) nao receber 404.
+# TODO: remover quando o csrf-helper.js for desligado no frontend.
 @app.get("/api/csrf-token")
 async def csrf_token():
     import secrets
@@ -139,47 +192,15 @@ app.include_router(whatsapp_endpoints.router)
 app.include_router(llm_endpoints.router)
 app.include_router(api_usage_endpoints.router)
 app.include_router(superadmin_endpoints.router)
+app.include_router(falhas_endpoints.router)
+app.include_router(site_editor_endpoints.router)
+app.include_router(tracking_endpoints.router)
+import cron_endpoints
+app.include_router(cron_endpoints.router)
 
-# Rate limiting especifico para login (implementacao simples em memoria)
-import time as _time_srv
-from collections import defaultdict as _dd_srv
-_login_calls = _dd_srv(list)
+# Rate limit do login agora vem via @limiter.limit em auth_endpoints.py (slowapi).
+# CSP+security headers vem via security_headers middleware acima (linha ~125).
 
-@app.middleware("http")
-async def rate_limit_login(request: Request, call_next):
-    if request.url.path == "/api/auth/login" and request.method == "POST":
-        ip = request.client.host if request.client else "unknown"
-        now = _time_srv.time()
-        calls = [t for t in _login_calls[ip] if now - t < 60]
-        if len(calls) >= 5:
-            from fastapi.responses import JSONResponse
-            return JSONResponse(status_code=429, content={"detail": "Rate limit: maximo 5 tentativas de login por minuto"})
-        calls.append(now)
-        _login_calls[ip] = calls
-    response = await call_next(request)
-    return response
-
-@app.middleware("http")
-async def csp_middleware(request: Request, call_next):
-    response = await call_next(request)
-    
-    # Apenas adicionar CSP em respostas HTML
-    if "text/html" in response.headers.get("content-type", ""):
-        # CSP Policy - Permitir recursos do mesmo dominio + CDNs confiaveis
-        csp_policy = (
-            "default-src 'self'; "
-            "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com https://cdnjs.cloudflare.com; "
-            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; "
-            "font-src 'self' https://fonts.gstatic.com; "
-            "img-src 'self' data: https:; "
-            "connect-src 'self' https://api.stripe.com; "
-            "frame-ancestors 'self'; "
-            "base-uri 'self'; "
-            "form-action 'self';"
-        )
-        response.headers["Content-Security-Policy"] = csp_policy
-    
-    return response
 # Servir frontend
 
 @app.get("/health")

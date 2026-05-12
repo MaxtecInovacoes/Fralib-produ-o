@@ -47,8 +47,8 @@ async def whatsapp_connect(
     usuario: dict = Depends(get_current_user)
 ):
     plano = db.execute(text("SELECT plano FROM users WHERE id=:id"), {"id": usuario["id"]}).scalar()
-    if plano not in ("pro", "beta", "admin"):
-        raise HTTPException(403, "WhatsApp disponivel apenas no plano Pro.")
+    if (plano or "").lower() not in ("pro", "starter", "beta", "admin"):
+        raise HTTPException(403, "Conecte o WhatsApp apos assinar um plano (Starter ou Pro).")
     tenant_id = _tenant(usuario["id"])
     try:
         async with httpx.AsyncClient(timeout=10) as c:

@@ -58,6 +58,7 @@ from agents.bryan import iniciar_contato, BryanInput
 from agents.liam_models import LiamOutput
 from services.credits_manager import verificar_pode_executar, consume_tokens
 from pipeline_queue_manager import pipeline_queue
+from retry_helper import tentar
 
 from collections import defaultdict as _defaultdict
 _pipeline_calls = _defaultdict(list)
@@ -450,7 +451,11 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
                 whatsapp=state.lead_obj.lead.whatsapp or "",
                 rating=float(state.lead_obj.lead.rating or 0), jina_insights=state.jina_insights
             )
-            state.briefing_theo = gerar_briefing_estrategico(theo_input)
+            state.briefing_theo = tentar(
+                lambda: gerar_briefing_estrategico(theo_input),
+                fase="theo", max_attempts=3, base_delay=2.0,
+                log_fn=_log,
+            )
             _log(f"  Briefing: {len(state.briefing_theo)} chars", "success")
             logger.info("[Pipeline] Theo: OK")
         except Exception as e:
@@ -529,17 +534,20 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
         random.sample(_pool, 6)
         _seg = state.segmento or state.lead_obj.lead.segmento or "negocio local"
         _cid = state.lead_obj.lead.cidade or state.cidade or ""
-        state.prd_arquiteto = gerar_arquiteto_mestre_prd(
-            dados_hunter=state.lead_raw_data,
-            cidade=_cid,
-            segmento=_seg,
-            jina_insights=state.jina_insights,
-            briefing_theo=state.briefing_theo,
-            
-            caio_tier=state.qualificacao_caio.tier if state.qualificacao_caio else "STANDARD",
-            caio_score=state.qualificacao_caio.score if state.qualificacao_caio else 0,
-            caio_motivo=state.qualificacao_caio.motivo if state.qualificacao_caio else "",
-            dark_mode=False,
+        state.prd_arquiteto = tentar(
+            lambda: gerar_arquiteto_mestre_prd(
+                dados_hunter=state.lead_raw_data,
+                cidade=_cid,
+                segmento=_seg,
+                jina_insights=state.jina_insights,
+                briefing_theo=state.briefing_theo,
+                caio_tier=state.qualificacao_caio.tier if state.qualificacao_caio else "STANDARD",
+                caio_score=state.qualificacao_caio.score if state.qualificacao_caio else 0,
+                caio_motivo=state.qualificacao_caio.motivo if state.qualificacao_caio else "",
+                dark_mode=False,
+            ),
+            fase="arquiteto", max_attempts=3, base_delay=2.0,
+            log_fn=_log,
         )
         _log(f"  PRD: {len(state.prd_arquiteto.sections)} secoes", "success")
         # Forcar google_maps_embed com iframe OSM (o Arquiteto nao tem place_id)
@@ -557,7 +565,11 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
         _log("FASE 7: LIAM (Componentizado)", "info")
         if not state.prd_arquiteto:
             raise Exception("PRD nao disponivel para o Liam")
-        _html_main = gerar_html_componentizado(state.prd_arquiteto)
+        _html_main = tentar(
+            lambda: gerar_html_componentizado(state.prd_arquiteto),
+            fase="liam", max_attempts=3, base_delay=3.0,
+            log_fn=_log,
+        )
         if not _html_main or len(_html_main) < 500:
             raise Exception("Liam retornou HTML vazio")
         try: open("/root/fralib/logs/pipeline_trace/liam_sections.html","w").write(_html_main)
@@ -680,6 +692,9 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
         _log("FASE 9: DEPLOY", "info")
         web_dir = f"/var/www/fralib/sites/{tenant_id}/{state.lead_slug}"
         os.makedirs(web_dir, exist_ok=True)
+        # PR15: substituir placeholder do pixel de tracking pelo lead_id real
+        if hasattr(state, 'lead_id') and state.lead_id:
+            state.html_final = state.html_final.replace("__FRALIB_LEAD_ID__", str(state.lead_id))
         with open(f"{web_dir}/index.html", "w", encoding="utf-8") as _f:
             _f.write(state.html_final)
         if state.alex_result and state.alex_result.assets_dir:
@@ -696,11 +711,20 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
                 print(f"[Pipeline] Assets copiados: {assets_src} -> {assets_dst}")
             else:
                 print(f"[Pipeline] Assets src não encontrado: {assets_src}")
-        os.system(f"chown -R www-data:www-data {web_dir}")
-        os.system(f"chmod -R 755 {web_dir}")
+        import subprocess as _sp
+        _sp.run(["chown", "-R", "www-data:www-data", web_dir], check=False)
+        _sp.run(["chmod", "-R", "755", web_dir], check=False)
         state.site_url = f"https://seunegociofralib.site/sites/{tenant_id}/{state.lead_slug}/"
         _log(f"  Deploy: {state.site_url}", "success")
         logger.info(f"[Pipeline] Deploy: {state.site_url}")
+
+        # FASE 9.5: HEALTH CHECK (PR14) - bloqueia Bryan se site quebrado
+        _log("FASE 9.5: HEALTH CHECK", "info")
+        from services.site_health_check import validar_site
+        validar_site(state.site_url)
+        _log("  Health check: OK", "success")
+        logger.info(f"[Pipeline] HealthCheck OK: {state.site_url}")
+
         _log("FASE 10: BRYAN", "info")
         # Verificar WhatsApp conectado para o Bryan
         _wpp_conectado = False
@@ -758,8 +782,10 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
                         json={"jid": jid, "type": "text", "text": texto}
                     )
                     if r.status_code == 200:
-                        _log(f"  Bryan: mensagem ENVIADA para {tel}", "success")
-                        logger.info(f"[Pipeline] Bryan: mensagem enviada para {jid}")
+                        # Mascarar telefone nos logs (LGPD): mostra so os 4 ultimos digitos
+                        _tel_mask = ('*' * max(0, len(tel) - 4)) + tel[-4:] if tel else '****'
+                        _log(f"  Bryan: mensagem ENVIADA para {_tel_mask}", "success")
+                        logger.info(f"[Pipeline] Bryan: mensagem enviada para {_tel_mask}@s.whatsapp.net")
                     else:
                         _log(f"  Bryan: falha no envio ({r.text[:80]})", "warning")
                         logger.warning(f"[Pipeline] Bryan envio falhou: {r.text}")
@@ -795,10 +821,15 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
     except Exception as e:
         # Detectar rate limit e enviar mensagem amigável
         from llm_direct import RateLimitError
+        from services.site_health_check import HealthCheckError
+        _fase_erro = None
         if isinstance(e, RateLimitError):
             _reset_min = max(1, e.reset_seconds // 60)
             _log(f"⚠️ LIMITE DE USO ATINGIDO. Volte daqui {_reset_min} minuto(s).", "rate_limit")
             _log(f"O sistema está temporariamente indisponível. Seus leads estão salvos e serão processados quando o limite resetar.", "info")
+        elif isinstance(e, HealthCheckError):
+            _fase_erro = "healthcheck"
+            _log(f"❌ Site gerado quebrado: {e.motivo} ({e.detalhe})", "error")
         else:
             _log(f"ERRO: {str(e)}", "error")
         logger.error(f"[Pipeline] Erro: {e}")
@@ -826,7 +857,10 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
             except Exception:
                 pass
         # pipeline_queue.release gerenciado pelo executar_pipeline_multiplos
-        return {"sucesso": False, "erro": str(e)}
+        _ret = {"sucesso": False, "erro": str(e)}
+        if _fase_erro:
+            _ret["fase"] = _fase_erro
+        return _ret
 
 
 
@@ -1036,8 +1070,30 @@ async def iniciar_pipeline(
     except Exception as eq:
         print(f"[Pipeline] Aviso: nao foi possivel salvar na pipeline_queue: {eq}")
 
-    background_tasks.add_task(executar_pipeline_multiplos, config_limpo, tenant_id, queue_id)
-    return {"status": "iniciado", "mensagem": "Pipeline iniciado com 7 agentes", "config": config_limpo, "queue_id": queue_id}
+    # PR2: enfileira no job_queue (Postgres) em vez de BackgroundTasks.
+    # Se enqueue falhar (banco indisponivel etc), faz fallback pra BackgroundTasks
+    # pra nao quebrar o fluxo do cliente.
+    import job_queue as _jq
+    try:
+        idem = f"pipeline-{tenant_id}-{queue_id}" if queue_id else None
+        job_id = _jq.enqueue(
+            db,
+            tipo="pipeline_multiplos",
+            payload={**config_limpo, "queue_id": queue_id},
+            tenant_id=tenant_id,
+            max_attempts=3,
+            idempotency_key=idem,
+        )
+        if job_id is None:
+            # Idempotency colisao -> ja tem job equivalente rodando
+            adicionar_log(f"[Pipeline] Job ja enfileirado (idem={idem})", "info", user_id=tenant_id)
+            return {"status": "ja_enfileirado", "mensagem": "Pipeline ja esta na fila", "config": config_limpo, "queue_id": queue_id}
+        adicionar_log(f"[Pipeline] Job #{job_id} enfileirado (queue_id={queue_id})", "info", user_id=tenant_id)
+        return {"status": "iniciado", "mensagem": "Pipeline iniciado com 7 agentes", "config": config_limpo, "queue_id": queue_id, "job_id": job_id}
+    except Exception as e_enq:
+        logger.warning(f"[Pipeline] enqueue falhou, usando fallback BackgroundTasks: {e_enq}")
+        background_tasks.add_task(executar_pipeline_multiplos, config_limpo, tenant_id, queue_id)
+        return {"status": "iniciado", "mensagem": "Pipeline iniciado (modo legado)", "config": config_limpo, "queue_id": queue_id}
 
 
 @router.get('/fila')
@@ -1399,6 +1455,9 @@ async def _executar_pipeline_a_partir_fase2(state, tenant_id, config):
         _log("FASE 9: DEPLOY", "info")
         web_dir = f"/var/www/fralib/sites/{tenant_id}/{state.lead_slug}"
         os.makedirs(web_dir, exist_ok=True)
+        # PR15: substituir placeholder do pixel de tracking pelo lead_id real
+        if hasattr(state, 'lead_id') and state.lead_id:
+            state.html_final = state.html_final.replace("__FRALIB_LEAD_ID__", str(state.lead_id))
         with open(f"{web_dir}/index.html", "w", encoding="utf-8") as _f:
             _f.write(state.html_final)
         if state.alex_result and state.alex_result.assets_dir:
@@ -1411,8 +1470,9 @@ async def _executar_pipeline_a_partir_fase2(state, tenant_id, config):
                 if os.path.exists(assets_dst):
                     shutil.rmtree(assets_dst)
                 shutil.copytree(assets_src, assets_dst)
-        os.system(f"chown -R www-data:www-data {web_dir}")
-        os.system(f"chmod -R 755 {web_dir}")
+        import subprocess as _sp
+        _sp.run(["chown", "-R", "www-data:www-data", web_dir], check=False)
+        _sp.run(["chmod", "-R", "755", web_dir], check=False)
         state.site_url = f"https://seunegociofralib.site/sites/{tenant_id}/{state.lead_slug}/"
         _log(f"  Deploy: {state.site_url}", "success")
 

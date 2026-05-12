@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from pydantic import BaseModel
@@ -8,6 +8,7 @@ sys.path.append('/root/fralib/backend')
 sys.path.append('/root/fralib/backend/core')
 from database import get_db
 from auth import get_current_user
+from rate_limiter import limiter
 import uuid
 from datetime import datetime
 
@@ -32,19 +33,19 @@ class BetaLeadRequest(BaseModel):
     whatsapp: str
     origem: Optional[str] = 'landing'
 
+_tabela_inicializada = False
+
 @router.post('/lead')
-async def salvar_beta_lead(req: BetaLeadRequest, db: Session = Depends(get_db)):
+@limiter.limit("5/minute")
+async def salvar_beta_lead(request: Request, req: BetaLeadRequest, db: Session = Depends(get_db)):
     try:
-        criar_tabela_se_nao_existe(db)
+        global _tabela_inicializada
+        if not _tabela_inicializada:
+            criar_tabela_se_nao_existe(db)
+            _tabela_inicializada = True
 
-        existente = db.execute(
-            text('SELECT id FROM beta_leads WHERE email = :email'),
-            {'email': req.email}
-        ).fetchone()
-
-        if existente:
-            return {'ok': True, 'mensagem': 'Lead ja cadastrado', 'novo': False}
-
+        # INSERT direto com ON CONFLICT DO NOTHING — nao revela se email ja existe.
+        # Resposta sempre idempotente: status ok com mesma mensagem.
         lead_id = str(uuid.uuid4())
         agora = datetime.now().isoformat()
 
@@ -62,11 +63,11 @@ async def salvar_beta_lead(req: BetaLeadRequest, db: Session = Depends(get_db)):
         })
         db.commit()
 
-        return {'ok': True, 'mensagem': 'Lead salvo com sucesso', 'novo': True}
+        return {'ok': True, 'mensagem': 'Lead recebido'}
 
     except Exception as e:
         print(f'[BetaLead] Erro: {e}')
-        return {'ok': False, 'mensagem': 'Erro ao salvar lead'}
+        return {'ok': False, 'mensagem': 'Erro ao processar'}
 
 @router.get('/leads')
 async def listar_beta_leads(db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):

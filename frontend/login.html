@@ -200,8 +200,11 @@
       <div class="login-logo-sub">CENTRAL DE COMANDO</div>
     </div>
 
+    <div id="planoBanner" style="display:none;background:rgba(192,132,252,0.12);border:1px solid var(--fl-border-md);padding:10px 14px;margin-bottom:18px;font-size:12px;color:var(--fl-purple-300);text-align:center;letter-spacing:1px"></div>
+
     <div id="error" class="error-msg"></div>
 
+    <!-- Form de LOGIN (default) -->
     <form id="loginForm">
       <div class="form-group">
         <label for="email">Email</label>
@@ -214,21 +217,136 @@
       <button type="submit" class="btn-login" id="btnLogin">ENTRAR</button>
     </form>
 
+    <!-- Form de SIGNUP (mostrado quando ?signup=1) -->
+    <form id="signupForm" style="display:none">
+      <div class="form-group">
+        <label for="signupNome">Seu nome</label>
+        <input type="text" id="signupNome" name="nome" required autocomplete="name" placeholder="Como devemos te chamar" style="width:100%;padding:12px 14px;background:var(--fl-bg-surface);border:2px solid var(--fl-border);color:var(--fl-text);font-family:var(--fl-font-ui);font-size:15px;outline:none">
+      </div>
+      <div class="form-group">
+        <label for="signupEmail">Email</label>
+        <input type="email" id="signupEmail" name="email" required autocomplete="email" placeholder="seu@email.com">
+      </div>
+      <div class="form-group">
+        <label for="signupPassword">Senha (mínimo 12 caracteres)</label>
+        <input type="password" id="signupPassword" name="password" required autocomplete="new-password" minlength="12" placeholder="••••••••••••">
+      </div>
+      <button type="submit" class="btn-login" id="btnSignup">CRIAR CONTA</button>
+    </form>
+
     <div class="login-footer">
-      Não tem conta? <a href="/planos">Ver planos</a>
+      <span id="footerLogin">Não tem conta? <a href="#" id="toSignup">Criar conta</a></span>
+      <span id="footerSignup" style="display:none">Já tem conta? <a href="#" id="toLogin">Fazer login</a></span>
     </div>
   </div>
 
   <script>
-    var form = document.getElementById('loginForm');
-    var errorDiv = document.getElementById('error');
-    var btnLogin = document.getElementById('btnLogin');
+    var loginForm  = document.getElementById('loginForm');
+    var signupForm = document.getElementById('signupForm');
+    var errorDiv   = document.getElementById('error');
+    var btnLogin   = document.getElementById('btnLogin');
+    var btnSignup  = document.getElementById('btnSignup');
+    var planoBanner = document.getElementById('planoBanner');
+    var footerLogin  = document.getElementById('footerLogin');
+    var footerSignup = document.getElementById('footerSignup');
 
-    // Redirecionar se já logado
+    // ── PR5: detectar ?signup=1&plano=X vindo da landing ────────────
+    var params = new URLSearchParams(window.location.search);
+    var PLANOS_VALIDOS = { starter: 'STARTER (R$97/mes)', pro: 'PRO BYOK (R$297/mes)' };
+    var planoEscolhido = (params.get('plano') || '').toLowerCase();
+    if (planoEscolhido && PLANOS_VALIDOS[planoEscolhido]) {
+      localStorage.setItem('fralib_pending_plano', planoEscolhido);
+    }
+    var planoPendente = localStorage.getItem('fralib_pending_plano') || '';
+    if (planoPendente && PLANOS_VALIDOS[planoPendente]) {
+      planoBanner.textContent = 'PLANO ESCOLHIDO: ' + PLANOS_VALIDOS[planoPendente] + ' → conclua o cadastro para pagar';
+      planoBanner.style.display = 'block';
+    }
+
+    function setModo(modo) {
+      if (modo === 'signup') {
+        loginForm.style.display = 'none';
+        signupForm.style.display = 'block';
+        footerLogin.style.display = 'none';
+        footerSignup.style.display = 'inline';
+      } else {
+        loginForm.style.display = 'block';
+        signupForm.style.display = 'none';
+        footerLogin.style.display = 'inline';
+        footerSignup.style.display = 'none';
+      }
+      errorDiv.classList.remove('show');
+    }
+    if (params.get('signup') === '1') setModo('signup');
+    document.getElementById('toSignup').addEventListener('click', function(e){ e.preventDefault(); setModo('signup'); });
+    document.getElementById('toLogin').addEventListener('click',  function(e){ e.preventDefault(); setModo('login'); });
+
+    // Redirecionar se já logado (mas se houver plano pendente, vai pro checkout)
     var token = localStorage.getItem('fralib_token');
-    if (token) { window.location.href = '/dashboard'; }
+    if (token) {
+      if (planoPendente && PLANOS_VALIDOS[planoPendente]) {
+        iniciarCheckout(token, planoPendente);
+      } else {
+        window.location.href = '/dashboard';
+      }
+    }
 
-    form.addEventListener('submit', async function(e) {
+    async function iniciarCheckout(jwt, plano) {
+      try {
+        var r = await fetch('/api/credits/criar-checkout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + jwt },
+          body: JSON.stringify({ plano: plano })
+        });
+        var d = await r.json();
+        if (r.ok && d.checkout_url) {
+          localStorage.removeItem('fralib_pending_plano');
+          window.location.href = d.checkout_url;
+        } else {
+          errorDiv.textContent = 'Falha ao iniciar checkout: ' + (d.detail || 'tente novamente em /dashboard');
+          errorDiv.classList.add('show');
+          setTimeout(function(){ window.location.href = '/dashboard'; }, 3000);
+        }
+      } catch(e) {
+        window.location.href = '/dashboard';
+      }
+    }
+
+    // ── Signup ─────────────────────────────────────────────────────
+    signupForm.addEventListener('submit', async function(e) {
+      e.preventDefault();
+      errorDiv.classList.remove('show');
+      btnSignup.disabled = true;
+      btnSignup.textContent = 'CRIANDO...';
+      var nome  = document.getElementById('signupNome').value.trim();
+      var email = document.getElementById('signupEmail').value.trim();
+      var pwd   = document.getElementById('signupPassword').value;
+      try {
+        var r = await fetch('/api/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: email, password: pwd, nome: nome })
+        });
+        var d = await r.json();
+        if (r.ok) {
+          // Conta criada. O email de confirmacao foi enviado.
+          // O plano pendente segue no localStorage; sera consumido apos confirmar email + login.
+          signupForm.innerHTML = '<div style="text-align:center;padding:20px 0"><div style="font-size:48px;color:#22c55e;margin-bottom:12px">&#10004;</div><div style="font-size:14px;color:var(--fl-text);margin-bottom:8px">CONTA CRIADA!</div><div style="font-size:12px;color:var(--fl-text-muted);line-height:1.6">Enviamos um email de confirmacao para<br><strong>' + email.replace(/[<>"&]/g,'') + '</strong><br><br>Clique no link e depois faca login para concluir o pagamento do plano.</div></div>';
+        } else {
+          errorDiv.textContent = d.detail || 'Erro ao criar conta';
+          errorDiv.classList.add('show');
+          btnSignup.disabled = false;
+          btnSignup.textContent = 'CRIAR CONTA';
+        }
+      } catch(err) {
+        errorDiv.textContent = 'Erro de conexao. Tente novamente.';
+        errorDiv.classList.add('show');
+        btnSignup.disabled = false;
+        btnSignup.textContent = 'CRIAR CONTA';
+      }
+    });
+
+    loginForm.addEventListener('submit', async function(e) {
       e.preventDefault();
       errorDiv.classList.remove('show');
       btnLogin.disabled = true;
@@ -248,7 +366,43 @@
 
         if (response.ok) {
           localStorage.setItem('fralib_token', data.access_token);
-          window.location.href = '/dashboard';
+          var pp = localStorage.getItem('fralib_pending_plano') || '';
+          if (pp && PLANOS_VALIDOS[pp]) {
+            btnLogin.textContent = 'INDO PRO CHECKOUT...';
+            iniciarCheckout(data.access_token, pp);
+          } else {
+            window.location.href = '/dashboard';
+          }
+        } else if (response.status === 403 && response.headers.get('X-Require-Email-Confirmation') === '1') {
+          // Email nao confirmado: mostrar mensagem + botao de reenviar
+          errorDiv.innerHTML = '';
+          var msg = document.createElement('div');
+          msg.textContent = data.detail || 'Email nao confirmado.';
+          errorDiv.appendChild(msg);
+          var btnReenviar = document.createElement('button');
+          btnReenviar.type = 'button';
+          btnReenviar.textContent = 'REENVIAR EMAIL DE CONFIRMACAO';
+          btnReenviar.style.cssText = 'margin-top:12px;background:#7c3aed;color:#fff;border:0;padding:10px 18px;border-radius:6px;font-weight:700;cursor:pointer';
+          btnReenviar.onclick = async function() {
+            btnReenviar.disabled = true;
+            btnReenviar.textContent = 'ENVIANDO...';
+            try {
+              var r = await fetch('/api/auth/reenviar-confirmacao', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: email, password: password })
+              });
+              var d = await r.json();
+              btnReenviar.textContent = r.ok ? 'EMAIL ENVIADO! VERIFIQUE SUA CAIXA' : (d.detail || 'Erro ao reenviar');
+            } catch(_) {
+              btnReenviar.textContent = 'Erro de conexao';
+              btnReenviar.disabled = false;
+            }
+          };
+          errorDiv.appendChild(btnReenviar);
+          errorDiv.classList.add('show');
+          btnLogin.disabled = false;
+          btnLogin.textContent = 'ENTRAR';
         } else {
           errorDiv.textContent = data.detail || 'Email ou senha incorretos.';
           errorDiv.classList.add('show');

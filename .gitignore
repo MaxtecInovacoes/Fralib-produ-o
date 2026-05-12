@@ -1,1 +1,9 @@
-*.pyc\n__pycache__/\n*.backup*\n.env\nfralib.db\ncheckpoints/
+*.pyc
+__pycache__/
+*.backup*
+*.bak
+*.bak.*
+.env
+.env.*
+fralib.db
+checkpoints/

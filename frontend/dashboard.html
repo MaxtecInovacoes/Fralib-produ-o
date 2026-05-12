@@ -749,6 +749,43 @@ body{
 
     <h2 class="section-title">&#9632; ANALYTICS &amp; VISÃO GERAL</h2>
 
+    <!-- PR9: Onboarding inline (3 cards sumindo quando concluidos) -->
+    <div id="onboarding-cards" style="display:none;margin-bottom:24px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <div>
+          <div style="font-size:13px;font-weight:700;color:var(--fl-purple-300);letter-spacing:2px">&#128640; COMECE AQUI</div>
+          <div style="font-size:12px;color:var(--fl-text-muted);margin-top:4px">3 passos rapidos para o seu pipeline rodar sozinho</div>
+        </div>
+        <div id="onboarding-progress" style="font-family:var(--fl-font-mono);font-size:11px;color:var(--fl-text-dim)">0/3</div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px">
+        <div class="ob-card" id="ob-card-perfil" data-passo="1" data-done="0" style="background:var(--fl-bg-card);border:2px solid var(--fl-border-md);padding:18px 20px;border-radius:8px;cursor:pointer;transition:all .2s" onclick="mostrarView('perfil')">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+            <span class="ob-step" style="background:var(--fl-purple);color:#fff;width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;font-size:12px;font-weight:700;font-family:var(--fl-font-mono)">1</span>
+            <strong style="font-size:13px;letter-spacing:1px">PERFIL</strong>
+          </div>
+          <div style="font-size:12px;color:var(--fl-text-muted);line-height:1.5;margin-bottom:10px">Conte seu nome e nicho. O Theo usa isso para escrever sites mais alinhados.</div>
+          <div class="ob-status" style="font-size:11px;font-weight:700;color:var(--fl-purple-300)">&#9655; PREENCHER</div>
+        </div>
+        <div class="ob-card" id="ob-card-wpp" data-passo="2" data-done="0" style="background:var(--fl-bg-card);border:2px solid var(--fl-border-md);padding:18px 20px;border-radius:8px;cursor:pointer;transition:all .2s" onclick="mostrarView('whatsapp')">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+            <span class="ob-step" style="background:var(--fl-purple);color:#fff;width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;font-size:12px;font-weight:700;font-family:var(--fl-font-mono)">2</span>
+            <strong style="font-size:13px;letter-spacing:1px">WHATSAPP</strong>
+          </div>
+          <div style="font-size:12px;color:var(--fl-text-muted);line-height:1.5;margin-bottom:10px">Conecte para o Bryan SDR enviar as mensagens nos leads automaticamente.</div>
+          <div class="ob-status" style="font-size:11px;font-weight:700;color:var(--fl-purple-300)">&#9655; CONECTAR QR</div>
+        </div>
+        <div class="ob-card" id="ob-card-pipeline" data-passo="3" data-done="0" style="background:var(--fl-bg-card);border:2px solid var(--fl-border-md);padding:18px 20px;border-radius:8px;cursor:pointer;transition:all .2s" onclick="mostrarView('config')">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+            <span class="ob-step" style="background:var(--fl-purple);color:#fff;width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;font-size:12px;font-weight:700;font-family:var(--fl-font-mono)">3</span>
+            <strong style="font-size:13px;letter-spacing:1px">PRIMEIRO PIPELINE</strong>
+          </div>
+          <div style="font-size:12px;color:var(--fl-text-muted);line-height:1.5;margin-bottom:10px">Capture o seu primeiro lote de leads e veja o sistema rodar de ponta a ponta.</div>
+          <div class="ob-status" style="font-size:11px;font-weight:700;color:var(--fl-purple-300)">&#9655; INICIAR</div>
+        </div>
+      </div>
+    </div>
+
     <!-- Filtros de período -->
     <div class="period-filters">
       <span class="period-label">PERÍODO:</span>
@@ -1085,6 +1122,28 @@ body{
       </div>
     </div>
 
+    <!-- BYOK: chave Anthropic do plano Pro -->
+    <div class="config-section" id="byok-section" style="display:none">
+      <div class="config-group">
+        <div class="config-group-title">🔑 SUA CHAVE ANTHROPIC (BYOK)</div>
+        <p style="color:var(--fl-text-muted);margin-bottom:12px;font-size:13px;line-height:1.6">
+          No plano Pro, o pipeline usa <strong>sua própria API key da Anthropic</strong>. Você paga só pelo consumo real direto na Anthropic — sem limites artificiais de créditos.
+        </p>
+        <div id="byok-status" style="margin-bottom:14px;font-size:13px;color:var(--fl-text-muted)"></div>
+        <div class="config-input-group">
+          <label class="config-label" for="byokKey">Cole sua API key (começa com sk-ant-)</label>
+          <input class="config-input" id="byokKey" type="password" placeholder="sk-ant-..." autocomplete="off" spellcheck="false">
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px">
+          <button class="btn-config-save" style="background:var(--fl-purple);flex:1;min-width:180px" onclick="salvarByokKey(this)">💾 SALVAR CHAVE</button>
+          <button class="btn-config-save" style="background:#1e293b;color:#cbd5e1;border:1px solid #475569;flex:0 1 auto" onclick="removerByokKey(this)">REMOVER</button>
+        </div>
+        <p style="font-size:11px;color:var(--fl-text-dim);margin-top:10px;line-height:1.5">
+          Sua chave é guardada criptografada (Fernet). Nunca aparece nos logs nem em respostas da API.
+        </p>
+      </div>
+    </div>
+
     <!-- Área de Upsell -->
     <div class="config-section" id="upsell-section">
       <div class="config-group">
@@ -1093,14 +1152,17 @@ body{
           Desbloqueie todo o potencial do FraLib OS com recursos premium
         </p>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px">
-          <button id="btn-upgrade-pro" class="btn-config-save" style="background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#000;font-weight:700" onclick="mostrarToast('🚀 Em breve: Upgrade para PRO!')">
+          <button id="btn-upgrade-pro" class="btn-config-save" style="background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#000;font-weight:700" onclick="iniciarUpgrade('pro')">
             ⭐ UPGRADE PARA PRO
+          </button>
+          <button id="btn-upgrade-starter" class="btn-config-save" style="background:linear-gradient(135deg,#a855f7,#7c3aed);color:white;font-weight:700" onclick="iniciarUpgrade('starter')">
+            🚀 ASSINAR STARTER
           </button>
           <button class="btn-config-save" style="background:var(--fl-purple);color:white" onclick="abrirModalCreditos()">
             🪙 COMPRAR CRÉDITOS
           </button>
-          <button class="btn-config-save" style="background:#0891b2;color:white;font-weight:700" class="hover:bg-cyan-500" onclick="mostrarToast('🌐 Em breve: Sites extras!')">
-            🌐 ADICIONAR SITE EXTRA
+          <button id="btn-gerenciar-assinatura" class="btn-config-save" style="background:#1e293b;color:#cbd5e1;border:1px solid #475569;display:none" onclick="abrirPortalAssinatura(this)">
+            ⚙️ GERENCIAR ASSINATURA
           </button>
         </div>
       </div>
@@ -1149,6 +1211,42 @@ body{
       </div>
     </div>
 
+  </section>
+
+  <!-- ========== VIEW: WHATSAPP ========== -->
+  <section class="view-section" id="view-whatsapp">
+    <h2 class="section-title">&#128241; WHATSAPP</h2>
+    <div class="config-section" style="max-width:520px;margin:0 auto">
+      <div class="config-group">
+        <div class="config-group-title">CONEXAO DO BRYAN SDR</div>
+        <p style="color:var(--fl-text-muted);font-size:13px;line-height:1.6;margin-bottom:18px">
+          Conecte uma conta WhatsApp para que o Bryan envie mensagens automaticas nos leads qualificados. <strong>Use um numero dedicado</strong> &mdash; o WhatsApp pode banir contas que enviam muitas mensagens.
+        </p>
+
+        <div id="wpp-status-box" style="padding:14px 16px;background:var(--fl-bg-card);border:1px solid var(--fl-border);border-radius:8px;margin-bottom:18px;text-align:center;font-size:13px;color:var(--fl-text-muted)">
+          CARREGANDO STATUS...
+        </div>
+
+        <div id="wpp-qr-wrap" style="display:none;text-align:center;padding:20px;background:#fff;border-radius:12px;margin-bottom:18px">
+          <img id="wpp-qr-img" alt="QR Code" style="max-width:280px;width:100%;height:auto;display:block;margin:0 auto">
+          <div style="font-size:11px;color:#666;margin-top:12px;line-height:1.5">
+            Abra o WhatsApp no celular &rarr; <strong>Aparelhos conectados</strong> &rarr; <strong>Conectar um aparelho</strong> &rarr; escaneie o codigo.
+          </div>
+        </div>
+
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <button id="btn-wpp-connect" class="btn-config-save" style="background:#22c55e;color:#000;flex:1;min-width:180px" onclick="conectarWhatsApp(this)">
+            &#9655; GERAR QR / CONECTAR
+          </button>
+          <button id="btn-wpp-refresh" class="btn-config-save" style="background:var(--fl-purple);color:#fff" onclick="atualizarWhatsAppStatus()">
+            &#8635; ATUALIZAR
+          </button>
+          <button id="btn-wpp-disconnect" class="btn-config-save" style="background:#1e293b;color:#cbd5e1;border:1px solid #475569;display:none" onclick="desconectarWhatsApp(this)">
+            DESCONECTAR
+          </button>
+        </div>
+      </div>
+    </div>
   </section>
 
 </main>
@@ -1208,6 +1306,7 @@ body{
         <div class="action-buttons">
           <button class="btn-action btn-action-gold" onclick="abrirSiteModal()">&#127760; ABRIR SITE</button>
           <button class="btn-action btn-action-purple" onclick="abrirWhatsApp()">&#128241; WHATSAPP</button>
+          <button class="btn-action btn-action-cyan" onclick="abrirEditorWYSIWYG(leadAtualModal && leadAtualModal.id)">&#9999;&#65039; EDITAR SITE</button>
         </div>
       </div>
 
@@ -1462,6 +1561,11 @@ function mostrarView(view) {
   if (view === 'config') {
     carregarFilaCapturados();
   }
+  if (view === 'whatsapp') {
+    if (typeof atualizarWhatsAppStatus === 'function') atualizarWhatsAppStatus();
+  } else {
+    if (typeof _wppStopPoll === 'function') _wppStopPoll();
+  }
 }
 
 /* ══ FILTROS DE PERÍODO ════════════════════════════════════════════ */
@@ -1655,6 +1759,12 @@ function criarCard(lead) {
   d.onkeydown = function(e){ if (e.key === 'Enter' && !draggedCard) openModalReal(lead); };
 
   var safeUrl = sanitizeUrl(lead.url_site);
+  var views = parseInt(lead.views_count || 0, 10);
+  var clicks = parseInt(lead.clicks_count || 0, 10);
+  var statusLower = (lead.status || '').toLowerCase();
+  var jaConvertido = statusLower === 'convertido' || statusLower === 'won' || statusLower === 'ganho';
+  var valorVenda = parseFloat(lead.valor_venda || 0);
+
   d.innerHTML =
     '<div style="font-weight:700;font-size:13px;margin-bottom:4px;color:var(--fl-text)">' + escapeHtml(lead.nome || 'Lead') + '</div>' +
     '<div style="font-size:11px;color:var(--fl-text-dim)">' + escapeHtml(lead.segmento || '') + (lead.cidade ? ' · ' + escapeHtml(lead.cidade) : '') + '</div>' +
@@ -1663,12 +1773,51 @@ function criarCard(lead) {
       ? '<div style="font-size:11px;margin-top:6px"><a href="' + safeUrl + '" target="_blank" rel="noopener noreferrer" style="color:var(--fl-purple-300)" onclick="event.stopPropagation()">🌐 Ver site</a></div>'
       : '<div style="font-size:10px;margin-top:6px;color:var(--fl-text-dim)">sem site</div>'
     ) +
+    (views > 0 || clicks > 0
+      ? '<div style="font-size:11px;margin-top:6px;color:#0ea5e9">👁 ' + views + ' visita' + (views === 1 ? '' : 's') + (clicks > 0 ? ' · 📞 ' + clicks + ' clique' + (clicks === 1 ? '' : 's') : '') + '</div>'
+      : ''
+    ) +
+    (jaConvertido && valorVenda > 0
+      ? '<div style="margin-top:8px;background:#10b981;color:#fff;padding:6px;border-radius:6px;font-size:12px;font-weight:700;text-align:center">✅ VENDA R$ ' + valorVenda.toFixed(2).replace('.', ',') + '</div>'
+      : (safeUrl && safeUrl !== '#' && !jaConvertido
+        ? '<div style="margin-top:8px"><button onclick="event.stopPropagation();marcarVenda(\'' + lead.id + '\',this)" style="background:#10b981;color:#fff;border:none;padding:5px 10px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;width:100%">💰 GANHEI VENDA</button></div>'
+        : ''
+      )
+    ) +
     ((lead.sdr_stage || '').toLowerCase() === 'pendente_wpp'
-      ? '<div style="margin-top:8px"><button onclick="event.stopPropagation();enviarMensagemLead('' + lead.id + '',this)" style="background:#22c55e;color:#fff;border:none;padding:5px 10px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;width:100%">📱 Enviar Mensagem</button></div>'
+      ? '<div style="margin-top:8px"><button onclick="event.stopPropagation();enviarMensagemLead(\'' + lead.id + '\',this)" style="background:#22c55e;color:#fff;border:none;padding:5px 10px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;width:100%">📱 Enviar Mensagem</button></div>'
       : ''
     );
   initDrag(d);
   return d;
+}
+
+async function marcarVenda(leadId, btn) {
+  var raw = prompt('Qual foi o valor da venda? (apenas numeros, ex: 1500)');
+  if (raw === null) return;
+  var valor = parseFloat(String(raw).replace(',', '.').replace(/[^\d.]/g, ''));
+  if (!valor || valor <= 0) { alert('Valor invalido'); return; }
+  btn.disabled = true;
+  btn.textContent = 'Salvando...';
+  try {
+    var r1 = await authFetch('/api/leads/' + leadId, {
+      method: 'PATCH',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({valor_venda: valor})
+    });
+    if (!r1.ok) throw new Error('PATCH falhou');
+    var r2 = await authFetch('/api/leads/' + leadId + '/feedback', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({resultado: 'convertido', observacao: 'Venda registrada via card CRM'})
+    });
+    if (!r2.ok) throw new Error('Feedback falhou');
+    btn.textContent = '✅ Salvo!';
+    setTimeout(function(){ carregarKanban(); }, 800);
+  } catch(e) {
+    btn.textContent = '❌ Erro';
+    setTimeout(function(){ btn.textContent = '💰 GANHEI VENDA'; btn.disabled = false; }, 2500);
+  }
 }
 
 async function enviarMensagemLead(leadId, btn) {
@@ -2631,10 +2780,21 @@ async function verificarOnboarding() {
       if (document.getElementById('perfilTelefone')) document.getElementById('perfilTelefone').value = perfil.telefone || '';
       if (document.getElementById('perfilNicho')) document.getElementById('perfilNicho').value = perfil.nicho || '';
       if (document.getElementById('perfilOrigem')) document.getElementById('perfilOrigem').value = perfil.origem || '';
-      if (perfil.plano === 'PRO' || perfil.plano === 'pro' || perfil.role === 'superadmin') {
+      var planoAtual = (perfil.plano || '').toLowerCase();
+      var temPlanoAtivo = (planoAtual === 'pro' || planoAtual === 'starter');
+      if (planoAtual === 'pro' || perfil.role === 'superadmin') {
         var btnUpgrade = document.getElementById('btn-upgrade-pro');
         if (btnUpgrade) btnUpgrade.style.display = 'none';
       }
+      if (planoAtual === 'starter' || planoAtual === 'pro') {
+        var btnStarter = document.getElementById('btn-upgrade-starter');
+        if (btnStarter) btnStarter.style.display = 'none';
+      }
+      // Mostrar "Gerenciar assinatura" so para quem tem plano pago ativo
+      var btnPortal = document.getElementById('btn-gerenciar-assinatura');
+      if (btnPortal) btnPortal.style.display = temPlanoAtivo ? 'block' : 'none';
+      // PR8: carregar status da chave BYOK (se Pro, mostra a secao)
+      if (typeof carregarByokStatus === 'function') carregarByokStatus();
     }
 
     // --- BLOCO 2: WhatsApp não conectado (aviso, não bloqueia) ---
@@ -3096,6 +3256,240 @@ async function carregarCreditos() {
   }
 }
 
+// ── PR10: Tela QR WhatsApp ─────────────────────────────────────
+var _wppPollTimer = null;
+function _wppQrSrc(qr) {
+  if (!qr) return '';
+  if (qr.indexOf('data:image') === 0) return qr;
+  // Fallback: gerar QR via servico publico se vier so o texto
+  return 'https://api.qrserver.com/v1/create-qr-code/?size=280x280&data=' + encodeURIComponent(qr);
+}
+function _wppSetStatusBox(html, color) {
+  var box = document.getElementById('wpp-status-box');
+  if (!box) return;
+  box.innerHTML = html;
+  box.style.color = color || 'var(--fl-text-muted)';
+}
+async function atualizarWhatsAppStatus() {
+  var qrWrap = document.getElementById('wpp-qr-wrap');
+  var qrImg  = document.getElementById('wpp-qr-img');
+  var btnDc  = document.getElementById('btn-wpp-disconnect');
+  var btnCn  = document.getElementById('btn-wpp-connect');
+  try {
+    var r = await authFetch('/api/whatsapp/status');
+    var d = await r.json();
+    var st = (d.status || 'disconnected').toLowerCase();
+    if (st === 'connected' || st === 'open' || st === 'authenticated') {
+      _wppSetStatusBox('&#9989; <strong>CONECTADO</strong> &mdash; o Bryan ja pode enviar mensagens', '#22c55e');
+      if (qrWrap) qrWrap.style.display = 'none';
+      if (btnDc) btnDc.style.display = 'block';
+      if (btnCn) btnCn.textContent = '&#8635; RECONECTAR';
+      _wppStopPoll();
+    } else if (st === 'qr' && d.qr) {
+      _wppSetStatusBox('&#128221; Escaneie o QR abaixo no seu celular', '#f59e0b');
+      if (qrImg) qrImg.src = _wppQrSrc(d.qr);
+      if (qrWrap) qrWrap.style.display = 'block';
+      if (btnDc) btnDc.style.display = 'none';
+      _wppStartPoll();
+    } else if (st === 'connecting') {
+      _wppSetStatusBox('&#9203; Conectando... gerando QR code', '#f59e0b');
+      if (qrWrap) qrWrap.style.display = 'none';
+      _wppStartPoll();
+    } else {
+      _wppSetStatusBox('&#9888;&#65039; <strong>DESCONECTADO</strong> &mdash; clique em GERAR QR para iniciar', '#94a3b8');
+      if (qrWrap) qrWrap.style.display = 'none';
+      if (btnDc) btnDc.style.display = 'none';
+      _wppStopPoll();
+    }
+  } catch(e) {
+    _wppSetStatusBox('Erro: ' + (e.message || 'falha de conexao'), '#ef4444');
+  }
+}
+function _wppStartPoll() {
+  if (_wppPollTimer) return;
+  _wppPollTimer = setInterval(atualizarWhatsAppStatus, 4000);
+}
+function _wppStopPoll() {
+  if (_wppPollTimer) { clearInterval(_wppPollTimer); _wppPollTimer = null; }
+}
+async function conectarWhatsApp(btn) {
+  var orig = btn.textContent;
+  btn.disabled = true; btn.textContent = 'GERANDO...';
+  try {
+    var r = await authFetch('/api/whatsapp/connect', { method: 'POST' });
+    var d = await r.json();
+    if (!r.ok) {
+      mostrarToast('Erro: ' + (d.detail || 'tente novamente'));
+    } else {
+      _wppStartPoll();
+      setTimeout(atualizarWhatsAppStatus, 1500);
+    }
+  } catch(e) {
+    mostrarToast('Erro: ' + e.message);
+  }
+  btn.disabled = false; btn.textContent = orig;
+}
+async function desconectarWhatsApp(btn) {
+  if (!confirm('Desconectar o WhatsApp? O Bryan vai parar de enviar mensagens.')) return;
+  var orig = btn.textContent;
+  btn.disabled = true; btn.textContent = 'DESCONECTANDO...';
+  try {
+    await authFetch('/api/whatsapp/disconnect', { method: 'POST' });
+    setTimeout(atualizarWhatsAppStatus, 800);
+  } catch(e) {
+    mostrarToast('Erro: ' + e.message);
+  }
+  btn.disabled = false; btn.textContent = orig;
+}
+
+// ── PR9: Cards de onboarding sequenciais inline ────────────────
+async function atualizarOnboardingCards() {
+  var box = document.getElementById('onboarding-cards');
+  if (!box) return;
+  try {
+    var r = await AuthHelper.authFetch('/api/users/onboarding-status');
+    if (!r.ok) { box.style.display = 'none'; return; }
+    var d = await r.json();
+    var passos = [
+      { id: 'ob-card-perfil',   done: !!d.perfil_ok,   doneLabel: '\u2713 PERFIL OK' },
+      { id: 'ob-card-wpp',      done: !!d.wpp_ok,      doneLabel: '\u2713 WHATSAPP CONECTADO' },
+      { id: 'ob-card-pipeline', done: !!d.pipeline_ok, doneLabel: '\u2713 PRIMEIRO PIPELINE OK' }
+    ];
+    var concluidos = 0;
+    passos.forEach(function(p) {
+      var el = document.getElementById(p.id);
+      if (!el) return;
+      var status = el.querySelector('.ob-status');
+      var step   = el.querySelector('.ob-step');
+      if (p.done) {
+        concluidos++;
+        el.setAttribute('data-done', '1');
+        el.style.opacity = '0.55';
+        el.style.borderColor = '#22c55e';
+        if (status) { status.textContent = p.doneLabel; status.style.color = '#22c55e'; }
+        if (step)   { step.style.background = '#22c55e'; step.textContent = '\u2713'; }
+      } else {
+        el.setAttribute('data-done', '0');
+        el.style.opacity = '1';
+      }
+    });
+    var prog = document.getElementById('onboarding-progress');
+    if (prog) prog.textContent = concluidos + '/3';
+    // Sumir o bloco inteiro quando tudo OK
+    box.style.display = (concluidos >= 3) ? 'none' : 'block';
+  } catch(e) {
+    box.style.display = 'none';
+  }
+}
+// Atualizar ao carregar e ao trocar de view
+document.addEventListener('DOMContentLoaded', function(){
+  setTimeout(atualizarOnboardingCards, 1500);
+});
+// Atualizar a cada 60s (em background) sem martelar o backend
+setInterval(atualizarOnboardingCards, 60000);
+
+// ── PR8: BYOK Anthropic (plano Pro) ───────────────────────────────
+async function carregarByokStatus() {
+  var sec = document.getElementById('byok-section');
+  var st  = document.getElementById('byok-status');
+  if (!sec || !st) return;
+  try {
+    var r = await authFetch('/api/users/anthropic-key/status');
+    var d = await r.json();
+    var isPro = (d.plano || '').toLowerCase() === 'pro';
+    sec.style.display = isPro ? 'block' : 'none';
+    if (!isPro) return;
+    if (d.configurada) {
+      st.innerHTML = '✅ Chave configurada: <code style="background:var(--fl-bg-card);padding:2px 8px;border-radius:4px;color:#22c55e">' +
+        (d.hint || '****').replace(/[<>"&]/g,'') + '</code>';
+    } else {
+      st.innerHTML = '⚠️ Nenhuma chave configurada — o pipeline usa a chave compartilhada (sujeita a limites).';
+    }
+  } catch(e) {
+    sec.style.display = 'none';
+  }
+}
+
+async function salvarByokKey(btn) {
+  var input = document.getElementById('byokKey');
+  var key = (input.value || '').trim();
+  if (!key) { mostrarToast('Cole a chave antes de salvar'); return; }
+  var orig = btn.textContent;
+  btn.disabled = true; btn.textContent = 'SALVANDO...';
+  try {
+    var r = await authFetch('/api/users/anthropic-key', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ api_key: key })
+    });
+    var d = await r.json();
+    if (r.ok) {
+      input.value = '';
+      mostrarToast('Chave salva com sucesso');
+      carregarByokStatus();
+    } else {
+      mostrarToast('Erro: ' + (d.detail || 'tente novamente'));
+    }
+  } catch(e) {
+    mostrarToast('Erro: ' + e.message);
+  }
+  btn.disabled = false; btn.textContent = orig;
+}
+
+async function removerByokKey(btn) {
+  if (!confirm('Remover sua chave Anthropic? O pipeline voltara a usar a chave compartilhada.')) return;
+  var orig = btn.textContent;
+  btn.disabled = true; btn.textContent = 'REMOVENDO...';
+  try {
+    var r = await authFetch('/api/users/anthropic-key', { method: 'DELETE' });
+    if (r.ok) { mostrarToast('Chave removida'); carregarByokStatus(); }
+    else { var d = await r.json(); mostrarToast('Erro: ' + (d.detail || '')); }
+  } catch(e) { mostrarToast('Erro: ' + e.message); }
+  btn.disabled = false; btn.textContent = orig;
+}
+
+// ── PR6: Upgrade (cria Checkout Stripe) ───────────────────────────
+async function iniciarUpgrade(plano) {
+  var p = (plano || '').toLowerCase();
+  if (p !== 'starter' && p !== 'pro') {
+    mostrarToast('Plano invalido');
+    return;
+  }
+  try {
+    var r = await authFetch('/api/credits/criar-checkout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ plano: p })
+    });
+    var d = await r.json();
+    if (r.ok && d.checkout_url) {
+      window.location.href = d.checkout_url;
+    } else {
+      mostrarToast('Erro: ' + (d.detail || 'tente novamente'));
+    }
+  } catch(e) {
+    mostrarToast('Erro de conexao: ' + e.message);
+  }
+}
+
+// ── PR6: Customer Portal Stripe (gerenciar/cancelar/trocar cartao) ─
+async function abrirPortalAssinatura(btn) {
+  if (btn) { btn.disabled = true; var orig = btn.textContent; btn.textContent = 'ABRINDO...'; }
+  try {
+    var r = await authFetch('/api/credits/portal', { method: 'POST' });
+    var d = await r.json();
+    if (r.ok && d.portal_url) {
+      window.location.href = d.portal_url;
+    } else {
+      mostrarToast('Erro: ' + (d.detail || 'tente novamente'));
+      if (btn) { btn.disabled = false; btn.textContent = orig; }
+    }
+  } catch(e) {
+    mostrarToast('Erro: ' + e.message);
+    if (btn) { btn.disabled = false; btn.textContent = orig; }
+  }
+}
+
 // Abrir modal de compra de créditos
 function abrirModalCreditos() {
   // Criar modal se não existir
@@ -3535,4 +3929,64 @@ style.textContent = `
 `;
 document.head.appendChild(style);
 </script>
+
+<!-- ===== PR13: EDITOR WYSIWYG ===== -->
+<style>
+  #editorSiteModal{position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.85);display:none}
+  #editorSiteModal.open{display:flex;flex-direction:column}
+  #editorSiteHeader{height:56px;display:flex;align-items:center;gap:12px;padding:0 16px;background:#0f0f12;color:#fff;border-bottom:1px solid #222}
+  #editorSiteHeader .title{flex:1;font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #editorSiteHeader button{padding:8px 14px;border:0;border-radius:6px;font-weight:600;cursor:pointer;font-size:13px}
+  .btn-editor-save{background:#10b981;color:#fff}
+  .btn-editor-cancel{background:#374151;color:#fff}
+  .btn-editor-sync{background:#0ea5e9;color:#fff}
+  #editorSiteBody{flex:1;display:flex;overflow:hidden}
+  #editorSidePanel{width:300px;background:#111;color:#e5e7eb;padding:16px;overflow-y:auto;border-right:1px solid #222;font-size:13px}
+  #editorSidePanel h4{margin:0 0 6px;font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:#9ca3af}
+  #editorSidePanel label{display:block;margin:10px 0 4px;font-weight:600}
+  #editorSidePanel input,#editorSidePanel textarea{width:100%;background:#0a0a0c;border:1px solid #2a2a30;color:#fff;padding:8px;border-radius:4px;font-size:13px;font-family:inherit}
+  #editorSidePanel input:focus,#editorSidePanel textarea:focus{outline:none;border-color:#0ea5e9}
+  #editorIframeWrap{flex:1;background:#fff;position:relative}
+  #editorIframe{width:100%;height:100%;border:0;display:block}
+  #editorStatus{position:absolute;bottom:12px;right:12px;background:#10b981;color:#fff;padding:6px 12px;border-radius:4px;font-size:12px;opacity:0;transition:opacity .3s;pointer-events:none}
+  #editorStatus.show{opacity:1}
+  #editorStatus.err{background:#dc2626}
+  .editor-hint{font-size:11px;color:#6b7280;margin-top:4px;line-height:1.3}
+</style>
+<div id="editorSiteModal" role="dialog" aria-label="Editor de Site">
+  <div id="editorSiteHeader">
+    <div class="title" id="editorSiteTitle">Editor de Site</div>
+    <button class="btn-editor-sync" onclick="editorSincronizarCampos()" title="Aplica os campos do painel no site">&#128260; APLICAR CAMPOS</button>
+    <button class="btn-editor-save" onclick="editorSalvarSite()">&#128190; SALVAR</button>
+    <button class="btn-editor-cancel" onclick="editorFechar()">&#10006; FECHAR</button>
+  </div>
+  <div id="editorSiteBody">
+    <aside id="editorSidePanel">
+      <h4>Dados de Contato</h4>
+      <label>Telefone / WhatsApp</label>
+      <input type="text" id="edTelefone" placeholder="(11) 99999-9999" />
+      <div class="editor-hint">Atualiza links wa.me e tel:.</div>
+      <label>Nome do Negocio</label>
+      <input type="text" id="edNome" placeholder="Padaria do Joao" />
+      <label>Headline (H1)</label>
+      <textarea id="edHeadline" rows="2" placeholder="Texto principal do hero"></textarea>
+      <h4 style="margin-top:18px">Endereco</h4>
+      <label>Endereco completo</label>
+      <textarea id="edEndereco" rows="2" placeholder="Rua X, 123 - Bairro - Cidade/UF"></textarea>
+      <h4 style="margin-top:18px">Horarios</h4>
+      <label>Seg-Sex</label>
+      <input type="text" id="edHorSeg" placeholder="08:00 - 18:00" />
+      <label>Sabado</label>
+      <input type="text" id="edHorSab" placeholder="08:00 - 13:00" />
+      <div class="editor-hint" style="margin-top:18px;border-top:1px solid #222;padding-top:12px">
+        <strong>Dica:</strong> clique em qualquer texto do site (no centro) para editar diretamente. Use os campos acima para aplicar de uma vez.
+      </div>
+    </aside>
+    <div id="editorIframeWrap">
+      <iframe id="editorIframe" sandbox="allow-same-origin allow-scripts allow-forms"></iframe>
+      <div id="editorStatus"></div>
+    </div>
+  </div>
+</div>
+<script src="/js/site-editor.js?v=20260512"></script>
 </body></html>

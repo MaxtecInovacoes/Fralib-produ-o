@@ -1093,6 +1093,21 @@ def _clarear_cor(hex_color: str, mix: float = 0.12) -> str:
         return '#f0f4ff'
 
 
+def _gerar_pixel_tracking() -> str:
+    """PR15: pixel de tracking. __FRALIB_LEAD_ID__ e substituido no deploy."""
+    return (
+        '<script>'
+        '(function(){var L="__FRALIB_LEAD_ID__";if(!L||L.indexOf("FRALIB")>=0)return;'
+        'var O="https://seunegociofralib.site";'
+        'var p=function(u,b){try{fetch(O+u,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(b),keepalive:true});}catch(e){}};'
+        'window.addEventListener("load",function(){p("/api/track/view",{lead_id:L});});'
+        'document.addEventListener("click",function(e){var a=e.target.closest&&e.target.closest("a");if(!a)return;'
+        'var h=a.getAttribute("href")||"";if(/wa\\.me\\/|api\\.whatsapp\\.com/.test(h))p("/api/track/click",{lead_id:L,tipo:"wa"});'
+        'else if(/^tel:/i.test(h))p("/api/track/click",{lead_id:L,tipo:"tel"});},true);})();'
+        '</script>'
+    )
+
+
 def montar_template_python(html_main, prd):
     cores = prd.color_palette
     telefone = getattr(prd, "phone", "") or ""
@@ -1152,6 +1167,7 @@ def montar_template_python(html_main, prd):
         + "<meta name=" + q + "viewport" + q + " content=" + q + "width=device-width, initial-scale=1.0" + q + ">" + chr(10)
         + "<title>" + nome + "</title>" + chr(10)
         + _gerar_seo_inline(prd) + chr(10)
+        + _gerar_pixel_tracking() + chr(10)
         + "<link href=" + q + "https://fonts.googleapis.com/css2?family=" + _font_heading.replace(" ","+") + ":wght@400;600;700;800&family=" + _font_body.replace(" ","+") + ":wght@400;500;600&display=swap" + q + " rel=" + q + "stylesheet" + q + ">" + chr(10)
         + "<script src=" + q + "https://cdn.tailwindcss.com" + q + "></script>" + chr(10)
         + "<style id=" + q + "fralib-tokens" + q + ">" + chr(10)

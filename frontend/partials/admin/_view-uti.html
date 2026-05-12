@@ -27,6 +27,9 @@
       <button class="uti-tab" id="uti-tab-fila" onclick="trocarAbaUTI('fila')">
         &#9654; FILA DE PROCESSAMENTO <span id="badge-fila" style="background:#06b6d4;color:#fff;border-radius:99px;padding:1px 7px;font-size:10px;margin-left:6px">0</span>
       </button>
+      <button class="uti-tab" id="uti-tab-pipeline" onclick="trocarAbaUTI('pipeline')">
+        &#128680; PIPELINE TRAVADO <span id="badge-pipeline" style="background:#ef4444;color:#fff;border-radius:99px;padding:1px 7px;font-size:10px;margin-left:6px">0</span>
+      </button>
     </div>
 
     <!-- Painel: Falhas de Pipeline -->
@@ -64,6 +67,17 @@
           <tbody id="utiIncompletosBody">
             <tr><td colspan="7"><div class="uti-empty">CARREGANDO...</div></td></tr>
           </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Painel: Pipeline travado (falhas persistentes) -->
+    <div id="uti-painel-pipeline" style="display:none">
+      <p class="uti-desc">Jobs que falharam ap&oacute;s tentativas autom&aacute;ticas e precisam de reprocessamento manual. O sistema retoma do <strong>checkpoint</strong>, economizando tokens.</p>
+      <div class="uti-table-wrap">
+        <table class="uti-table">
+          <thead><tr><th>LEAD</th><th>FASE</th><th>MOTIVO</th><th>TENTATIVAS</th><th>QUANDO</th><th>A&Ccedil;&Atilde;O</th></tr></thead>
+          <tbody id="utiPipelineBody"><tr><td colspan="6"><div class="uti-empty">CARREGANDO...</div></td></tr></tbody>
         </table>
       </div>
     </div>

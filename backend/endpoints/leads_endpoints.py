@@ -136,6 +136,10 @@ async def editar_site(lead_id: str, req: EditarSiteRequest, db: Session = Depend
         raise HTTPException(status_code=400, detail='Lead nao tem site gerado')
 
     slug = url_site.rstrip('/').split('/')[-1]
+    # Defesa em profundidade: bloquear path traversal mesmo que url_site venha corrompido do banco
+    import re as _re_path
+    if not _re_path.match(r'^[a-z0-9][a-z0-9-]{0,80}$', slug):
+        raise HTTPException(status_code=400, detail='Slug do site invalido')
     html_path = '/var/www/fralib/sites/' + slug + '/index.html'
 
     if not os.path.exists(html_path):
@@ -364,7 +368,10 @@ async def _gerar_site_manual(lead_id: str, req: LeadManualRequest, user_id):
         html_main = gerar_html_componentizado(prd)
         html_final = montar_template_python(html_main, prd)
         if html_final:
-            slug = req.nome.lower().replace(' ', '-')[:40] + '-manual'
+            import re as _re_slug
+            # Sanitizar: so a-z, 0-9 e hifen. Evita command/path injection no web_dir.
+            _slug_raw = _re_slug.sub(r'[^a-z0-9]+', '-', (req.nome or '').lower()).strip('-')[:40]
+            slug = (_slug_raw or 'lead') + '-manual'
             web_dir = f'/var/www/fralib/sites/{slug}'
             _os.makedirs(web_dir, exist_ok=True)
             with open(f'{web_dir}/index.html', 'w', encoding='utf-8') as f:
@@ -375,8 +382,8 @@ async def _gerar_site_manual(lead_id: str, req: LeadManualRequest, user_id):
             import os as _os2
             _eng = _ce(_os2.environ.get('DATABASE_URL', ''), pool_pre_ping=True)
             with _eng.connect() as conn:
-                conn.execute(_text("UPDATE leads SET url_site=:url, site_url=:url, status='concluido', processado=true, atualizado_em=:ts WHERE id=:id"),
-                    {"url": site_url, "ts": _dt.now().isoformat(), "id": lead_id})
+                conn.execute(_text("UPDATE leads SET url_site=:url, site_url=:url, status='concluido', processado=true, atualizado_em=:ts WHERE id=:id AND user_id=:uid"),
+                    {"url": site_url, "ts": _dt.now().isoformat(), "id": lead_id, "uid": user_id})
                 conn.commit()
             print(f"[LeadManual] Site salvo: {site_url}")
     except Exception as e:
@@ -387,8 +394,8 @@ async def _gerar_site_manual(lead_id: str, req: LeadManualRequest, user_id):
         import os as _os2
         _eng = _ce(_os2.environ.get('DATABASE_URL', ''), pool_pre_ping=True)
         with _eng.connect() as conn:
-            conn.execute(_text("UPDATE leads SET status='erro', atualizado_em=:ts WHERE id=:id"),
-                {"ts": _dt.now().isoformat(), "id": lead_id})
+            conn.execute(_text("UPDATE leads SET status='erro', atualizado_em=:ts WHERE id=:id AND user_id=:uid"),
+                {"ts": _dt.now().isoformat(), "id": lead_id, "uid": user_id})
             conn.commit()
 
 @router.get('/mensagens-novas')
@@ -619,7 +626,7 @@ async def deletar_lead(lead_id: str, db: Session = Depends(get_db), usuario: dic
         if not lead:
             raise HTTPException(status_code=404, detail="Lead não encontrado")
         # Deletar interações relacionadas primeiro
-        db.execute(text("DELETE FROM interacoes WHERE lead_id=:id"), {"id": lead_id})
+        db.execute(text("DELETE FROM interacoes WHERE lead_id IN (SELECT id FROM leads WHERE id=:id AND user_id=:uid)"), {"id": lead_id, "uid": tenant_id})
         db.execute(text("DELETE FROM leads WHERE id=:id AND user_id=:uid"), {"id": lead_id, "uid": tenant_id})
         db.commit()
         return {"ok": True, "mensagem": "Lead deletado com sucesso"}

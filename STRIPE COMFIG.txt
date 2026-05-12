@@ -1,0 +1,6 @@
+  3 ações operacionais antes do deploy no VPS:
+
+  1. Adicionar ao .env em prod: FERNET_KEY=<gerar com python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"> e FRALIB_ENV=prod
+  2. Apontar o webhook na Stripe para https://seunegociofralib.site/api/credits/webhook/stripe e selecionar os eventos: checkout.session.completed, invoice.payment_succeeded,
+  invoice.payment_failed, customer.subscription.updated, customer.subscription.deleted
+  3. Restart PM2 (pm2 restart fralib && pm2 restart fralib-worker) para o database.py rodar os novos ALTER TABLE e CREATE TABLE

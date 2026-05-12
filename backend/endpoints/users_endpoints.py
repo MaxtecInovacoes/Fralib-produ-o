@@ -87,9 +87,17 @@ async def onboarding_status(db: Session = Depends(get_db), user: dict = Depends(
         "SELECT id FROM leads WHERE user_id=:uid AND status='demo' LIMIT 1"
     ), {"uid": user_id}).fetchone()
 
+    # PR9: ja rodou pelo menos um pipeline real (lead concluido nao-demo)?
+    pipeline_ok_row = db.execute(text(
+        "SELECT 1 FROM leads WHERE user_id=:uid AND status='concluido' "
+        "AND (status IS DISTINCT FROM 'demo') LIMIT 1"
+    ), {"uid": user_id}).fetchone()
+    pipeline_ok = bool(pipeline_ok_row)
+
     return {
         "perfil_ok": perfil_ok,
         "wpp_ok": wpp_ok,
+        "pipeline_ok": pipeline_ok,
         "plano": row[3],
         "creditos": row[4],
         "creditos_max": row[5],
@@ -131,3 +139,66 @@ async def criar_lead_demo(db: Session = Depends(get_db), user: dict = Depends(ge
     })
     db.commit()
     return {"status": "ok", "mensagem": "Lead demo criado", "lead_id": lead_id}
+
+
+# ─── PR8: BYOK Anthropic (plano Pro) ─────────────────────────────────
+class AnthropicKeyRequest(BaseModel):
+    api_key: str
+
+
+@router.get('/anthropic-key/status')
+async def status_anthropic_key(db: Session = Depends(get_db), user: dict = Depends(get_current_user)):
+    """Retorna se o usuario ja configurou a key e um hint (sem expor)."""
+    from utils.secrets_crypto import decriptar, mascarar_key
+    row = db.execute(text(
+        'SELECT plano, anthropic_key_encrypted FROM users WHERE id=:id'
+    ), {'id': user['id']}).fetchone()
+    if not row:
+        raise HTTPException(404, 'Usuario nao encontrado')
+    plano = (row[0] or '').lower()
+    enc = row[1] or ''
+    if not enc:
+        return {'configurada': False, 'hint': '', 'plano': plano}
+    plain = decriptar(enc)
+    return {'configurada': bool(plain), 'hint': mascarar_key(plain), 'plano': plano}
+
+
+@router.put('/anthropic-key')
+async def salvar_anthropic_key(
+    body: AnthropicKeyRequest,
+    db: Session = Depends(get_db),
+    user: dict = Depends(get_current_user)
+):
+    """Salva a Anthropic API key (criptografada). So plano=pro pode."""
+    from utils.secrets_crypto import encriptar
+    row = db.execute(text('SELECT plano FROM users WHERE id=:id'), {'id': user['id']}).fetchone()
+    if not row:
+        raise HTTPException(404, 'Usuario nao encontrado')
+    if (row[0] or '').lower() != 'pro':
+        raise HTTPException(403, 'BYOK disponivel apenas no plano Pro')
+    key = (body.api_key or '').strip()
+    if not key.startswith('sk-ant-') or len(key) < 30:
+        raise HTTPException(400, 'API key invalida. Deve comecar com sk-ant- e ter ao menos 30 chars.')
+    enc = encriptar(key)
+    db.execute(text('UPDATE users SET anthropic_key_encrypted=:k WHERE id=:id'),
+               {'k': enc, 'id': user['id']})
+    db.commit()
+    try:
+        from agents.llm_direct import invalidar_byok_cache
+        invalidar_byok_cache(user['id'])
+    except Exception:
+        pass
+    return {'status': 'ok'}
+
+
+@router.delete('/anthropic-key')
+async def remover_anthropic_key(db: Session = Depends(get_db), user: dict = Depends(get_current_user)):
+    db.execute(text('UPDATE users SET anthropic_key_encrypted=NULL WHERE id=:id'),
+               {'id': user['id']})
+    db.commit()
+    try:
+        from agents.llm_direct import invalidar_byok_cache
+        invalidar_byok_cache(user['id'])
+    except Exception:
+        pass
+    return {'status': 'ok'}

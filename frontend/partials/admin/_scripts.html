@@ -1029,13 +1029,14 @@ async function carregarFilaLeads() {
     if (leads.length === 0) { painel.style.display = 'none'; return; }
     painel.style.display = 'block';
     lista.innerHTML = leads.map(function(l) {
-      var score = l.score ? '<span style="background:#1e3a5f;color:#60a5fa;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;">Score ' + l.score + '</span>' : '';
-      var tier = l.tier ? '<span style="background:#1a3a2a;color:#10b981;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;">' + l.tier + '</span>' : '';
+      var safeScore = (l.score != null) ? parseInt(l.score) : NaN;
+      var score = !isNaN(safeScore) ? '<span style="background:#1e3a5f;color:#60a5fa;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;">Score ' + safeScore + '</span>' : '';
+      var tier = l.tier ? '<span style="background:#1a3a2a;color:#10b981;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;">' + escapeHtml(l.tier) + '</span>' : '';
       var rating = l.rating ? '⭐ ' + parseFloat(l.rating).toFixed(1) : '';
       return '<div style="background:var(--fl-bg-card);border:1px solid var(--fl-border);border-left:3px solid #f59e0b;border-radius:8px;padding:12px 16px;display:flex;align-items:center;gap:12px;">' +
         '<div style="flex:1;">' +
-          '<div style="font-weight:600;font-size:14px;color:var(--fl-text);">' + (l.nome || '—') + '</div>' +
-          '<div style="font-size:12px;color:var(--fl-text-muted);margin-top:2px;">' + (l.segmento || '') + ' · ' + (l.cidade || '') + (rating ? ' · ' + rating : '') + '</div>' +
+          '<div style="font-weight:600;font-size:14px;color:var(--fl-text);">' + escapeHtml(l.nome || '—') + '</div>' +
+          '<div style="font-size:12px;color:var(--fl-text-muted);margin-top:2px;">' + escapeHtml(l.segmento || '') + ' · ' + escapeHtml(l.cidade || '') + (rating ? ' · ' + rating : '') + '</div>' +
         '</div>' +
         '<div style="display:flex;gap:6px;align-items:center;">' + score + tier + '</div>' +
       '</div>';
@@ -3138,7 +3139,7 @@ async function carregarMensagensNovas() {
 /* ── 2.1 Trocar aba UTI (estende trocarAbaUTI existente) ─────────── */
 var _trocarAbaUTI_orig = typeof trocarAbaUTI === 'function' ? trocarAbaUTI : null;
 function trocarAbaUTI(aba) {
-  var paineis = ['falhas','descartados','incompletos','fila'];
+  var paineis = ['falhas','descartados','incompletos','fila','pipeline'];
   paineis.forEach(function(p){
     var el = document.getElementById('uti-painel-' + p);
     var tab = document.getElementById('uti-tab-' + p);
@@ -3147,7 +3148,95 @@ function trocarAbaUTI(aba) {
   });
   if (aba === 'incompletos') carregarLeadsIncompletos();
   if (aba === 'fila') carregarFilaQualificados();
+  if (aba === 'pipeline') carregarPipelineFalhas();
 }
+
+/* ── PR4: Pipeline falhas (job_queue → pipeline_failures) ──────── */
+function _formatarTempoRelativo(iso) {
+  if (!iso) return '—';
+  try {
+    var d = new Date(iso);
+    var diff = (Date.now() - d.getTime()) / 1000;
+    if (diff < 60) return 'agora';
+    if (diff < 3600) return Math.floor(diff/60) + 'min atras';
+    if (diff < 86400) return Math.floor(diff/3600) + 'h atras';
+    return Math.floor(diff/86400) + 'd atras';
+  } catch(e) { return '—'; }
+}
+
+async function carregarPipelineFalhas() {
+  var tbody = document.getElementById('utiPipelineBody');
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="6"><div class="uti-empty">CARREGANDO...</div></td></tr>';
+  try {
+    var data = await authFetch('/api/falhas?apenas_pendentes=true&limit=100').then(function(r){ return r.json(); });
+    var falhas = data.falhas || [];
+    var badge = document.getElementById('badge-pipeline');
+    if (badge) badge.textContent = falhas.length;
+    if (!falhas.length) {
+      tbody.innerHTML = '<tr><td colspan="6"><div class="uti-empty">&#9989; Nenhum pipeline travado!</div></td></tr>';
+      return;
+    }
+    tbody.innerHTML = falhas.map(function(f) {
+      var nome = escapeHtml(f.lead_nome || '—');
+      var fase = escapeHtml((f.fase || 'desconhecido').toUpperCase());
+      var msg  = escapeHtml(f.mensagem || 'Erro desconhecido');
+      var tent = parseInt(f.tentativas, 10) || 0;
+      var quando = _formatarTempoRelativo(f.criado_em);
+      var fid = parseInt(f.id, 10);
+      return '<tr id="falha-row-' + fid + '">' +
+        '<td style="font-weight:600;color:var(--fl-text)">' + nome + '</td>' +
+        '<td style="font-size:11px"><span style="background:var(--fl-bg-card);padding:2px 8px;border-radius:4px;font-family:var(--fl-font-mono);color:#ef4444">' + fase + '</span></td>' +
+        '<td style="font-size:11px;color:var(--fl-text-dim);max-width:280px">' + msg + '</td>' +
+        '<td style="font-size:11px;text-align:center">' + tent + '/3</td>' +
+        '<td style="font-size:11px;color:var(--fl-text-dim)">' + quando + '</td>' +
+        '<td><button class="btn-requalificar" id="btn-retry-' + fid + '" onclick="retryPipelineFalha(' + fid + ', this)">&#8635; TENTAR DE NOVO</button></td>' +
+      '</tr>';
+    }).join('');
+  } catch(e) {
+    tbody.innerHTML = '<tr><td colspan="6"><div class="uti-empty" style="color:var(--danger)">ERRO: ' + escapeHtml(e.message) + '</div></td></tr>';
+  }
+}
+
+async function retryPipelineFalha(falhaId, btn) {
+  var fid = parseInt(falhaId, 10);
+  if (!fid) return;
+  if (btn) { btn.disabled = true; btn.textContent = 'ENFILEIRANDO...'; btn.style.opacity = '0.6'; }
+  try {
+    var res = await authFetch('/api/falhas/' + fid + '/retry', { method: 'POST' }).then(function(r){ return r.json(); });
+    if (res && res.ok) {
+      var row = document.getElementById('falha-row-' + fid);
+      if (row) row.style.opacity = '0.4';
+      if (btn) { btn.textContent = res.ja_enfileirado ? 'JA NA FILA' : '✓ NA FILA'; }
+      setTimeout(carregarPipelineFalhas, 1500);
+    } else {
+      if (btn) { btn.disabled = false; btn.textContent = '⟳ TENTAR DE NOVO'; btn.style.opacity = '1'; }
+      alert('Erro: ' + (res && res.detail ? res.detail : 'tente novamente'));
+    }
+  } catch(e) {
+    if (btn) { btn.disabled = false; btn.textContent = '⟳ TENTAR DE NOVO'; btn.style.opacity = '1'; }
+    alert('Erro: ' + e.message);
+  }
+}
+
+/* Badge no sidebar: chama /api/falhas/contador */
+async function atualizarPipelineBadge() {
+  try {
+    var data = await authFetch('/api/falhas/contador').then(function(r){ return r.json(); });
+    var n = data.nao_vistas || 0;
+    var badge = document.getElementById('badge-pipeline');
+    if (badge && n > 0) badge.textContent = n;
+    // Tambem reforca o utiBadge se houver falha nao vista
+    var utiBadge = document.getElementById('utiBadge');
+    if (utiBadge && n > 0) {
+      utiBadge.textContent = n;
+      utiBadge.style.background = 'var(--danger)';
+    }
+  } catch(e) {}
+}
+/* Atualiza a cada 30s */
+setInterval(atualizarPipelineBadge, 30000);
+setTimeout(atualizarPipelineBadge, 2000);
 
 /* ── 2.1 Carregar leads incompletos/rejeitados ───────────────────── */
 async function carregarLeadsIncompletos() {

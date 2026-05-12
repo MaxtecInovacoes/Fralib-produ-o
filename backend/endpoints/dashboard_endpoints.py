@@ -41,11 +41,36 @@ async def get_incomplete(db: Session = Depends(get_db), usuario: dict = Depends(
 async def get_crm(db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
     try:
         tenant_id = usuario.get("tenant_id", usuario["id"])
-        result = db.execute(text(
-            "SELECT id, nome, cidade, segmento, telefone, COALESCE(NULLIF(telefone_whatsapp,''), whatsapp, telefone) as telefone_whatsapp, score, status, sdr_stage, url_site, criado_em FROM leads WHERE user_id = :uid ORDER BY score DESC"
-        ), {"uid": tenant_id}).fetchall()
+        result = db.execute(text("""
+            SELECT
+                l.id, l.nome, l.cidade, l.segmento, l.telefone,
+                COALESCE(NULLIF(l.telefone_whatsapp,''), l.whatsapp, l.telefone) as telefone_whatsapp,
+                l.score, l.status, l.sdr_stage, l.url_site, l.criado_em,
+                l.valor_venda,
+                COALESCE(v.views_count, 0) as views_count,
+                COALESCE(v.clicks_count, 0) as clicks_count
+            FROM leads l
+            LEFT JOIN (
+                SELECT lead_id,
+                       COUNT(*) FILTER (WHERE evento = 'view') as views_count,
+                       COUNT(*) FILTER (WHERE evento LIKE 'click_%') as clicks_count
+                FROM site_visitas
+                WHERE criado_em > NOW() - INTERVAL '30 days'
+                GROUP BY lead_id
+            ) v ON v.lead_id = l.id
+            WHERE l.user_id = :uid
+            ORDER BY l.score DESC
+        """), {"uid": tenant_id}).fetchall()
 
-        leads = [dict(r._mapping) for r in result]
+        leads = []
+        for r in result:
+            d = dict(r._mapping)
+            # PR15: serializar campos numericos/data pra JSON
+            if d.get('valor_venda') is not None:
+                d['valor_venda'] = float(d['valor_venda'])
+            if d.get('criado_em') is not None:
+                d['criado_em'] = str(d['criado_em'])
+            leads.append(d)
 
         # Mapear status/sdr_stage do banco para colunas do Kanban
         data = {"fila": [], "intro": [], "f1": [], "f2": [], "negotiation": [], "qualificado": [], "lost": [], "won": []}
