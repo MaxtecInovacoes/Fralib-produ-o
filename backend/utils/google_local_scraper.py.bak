@@ -1,0 +1,519 @@
+﻿"""
+Google Local Business Scraper - Parseia resultados do Google Search
+
+Interface compatível com agente1_hunter_v2.py:
+  - buscar(query, cidade, limite) -> List[Dict]
+  - buscar_negocio(nome, cidade)  -> Dict
+
+Campos: nome, categoria, telefone, rating, total_avaliacoes,
+  reviews, fotos, website, endereco, logo,
+  horarios, maps_url, atributos, servicos, faixa_preco
+"""
+from playwright.async_api import async_playwright
+import asyncio
+import re
+import random
+from typing import List, Dict, Optional
+
+class GoogleLocalScraper:
+    def __init__(self, headless: bool = True):
+        self.headless = headless
+
+    async def _human_delay(self, min_ms=800, max_ms=2500):
+        await asyncio.sleep(random.uniform(min_ms/1000, max_ms/1000))
+
+    async def buscar(self, query: str, cidade: str, limite: int = 10) -> List[Dict]:
+        async with async_playwright() as p:
+            browser = await p.chromium.launch(
+                headless=self.headless,
+                args=["--disable-blink-features=AutomationControlled", "--no-sandbox"]
+            )
+            context = await browser.new_context(
+                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+                viewport={"width": 1366, "height": 768},
+                locale="pt-BR",
+                timezone_id="America/Sao_Paulo",
+                extra_http_headers={"Accept-Language": "pt-BR,pt;q=0.9"}
+            )
+            await context.add_init_script(
+                "Object.defineProperty(navigator, 'webdriver', { get: () => undefined });"
+            )
+            page = await context.new_page()
+
+            try:
+                maps_query = f"{query} {cidade}"
+                maps_url = f"https://www.google.com/maps/search/{maps_query.replace(' ', '+')}?hl=pt-BR"
+                print(f"[Scraper] Abrindo Maps: {maps_query}")
+                await page.goto(maps_url, timeout=30000)
+                await self._human_delay(3000, 5000)
+
+                estabelecimentos_maps = await self._capturar_painel_maps(page, limite)
+
+                if estabelecimentos_maps:
+                    import asyncio as _asyncio
+                    _sem = _asyncio.Semaphore(4)  # max 4 tabs simultâneas
+
+                    async def _buscar_com_sem(est):
+                        async with _sem:
+                            try:
+                                detalhes = await self._buscar_detalhes(context, est["nome"], cidade)
+                                if detalhes:
+                                    est["logo"] = detalhes.get("logo", "")
+                                    est["fotos"] = detalhes.get("fotos", [])
+                                    est["depoimentos"] = detalhes.get("depoimentos", [])
+                                    est["horarios"] = detalhes.get("horarios", [])
+                                    est["maps_url"] = detalhes.get("maps_url", "")
+                                    est["atributos"] = detalhes.get("atributos", [])
+                                    est["servicos"] = detalhes.get("servicos", [])
+                                    est["faixa_preco"] = detalhes.get("faixa_preco", "")
+                                    if detalhes.get("website"):
+                                        est["website"] = detalhes["website"]
+                                    if detalhes.get("telefone"):
+                                        est["telefone"] = detalhes["telefone"]
+                            except Exception as e_det:
+                                print(f"[Scraper] detalhe {est['nome']}: {e_det}")
+
+                    await _asyncio.gather(*[_buscar_com_sem(est) for est in estabelecimentos_maps])
+                    print(f"\n[Scraper] Total: {len(estabelecimentos_maps)} estabelecimentos capturados")
+                    await browser.close()
+                    return estabelecimentos_maps
+
+                # Fallback: Google Search texto
+                await page.goto("https://www.google.com.br", timeout=30000)
+                await self._human_delay(1500, 3000)
+                try:
+                    btn = await page.query_selector("button[id='L2AGLb']")
+                    if btn:
+                        await btn.click()
+                        await self._human_delay(500, 1000)
+                except:
+                    pass
+
+                search_query = f"{query} {cidade}"
+                search_box = await page.query_selector("textarea[name='q'], input[name='q']")
+                if search_box:
+                    await search_box.click()
+                    await self._human_delay(300, 600)
+                    for char in search_query:
+                        await search_box.type(char, delay=random.randint(40, 120))
+                    await self._human_delay(400, 800)
+                    await page.keyboard.press("Enter")
+                else:
+                    url = f"https://www.google.com.br/search?q={search_query.replace(' ', '+')}&hl=pt-BR"
+                    await page.goto(url, timeout=30000)
+
+                await self._human_delay(3000, 5000)
+                texto = await page.inner_text("body")
+                estabelecimentos = self._parsear_resultados(texto, limite)
+
+                import asyncio as _asyncio2
+                _sem2 = _asyncio2.Semaphore(4)
+
+                async def _buscar_com_sem2(est):
+                    async with _sem2:
+                        try:
+                            detalhes = await self._buscar_detalhes(context, est["nome"], cidade)
+                            if detalhes:
+                                est["logo"] = detalhes.get("logo", "")
+                                est["fotos"] = detalhes.get("fotos", [])
+                                est["depoimentos"] = detalhes.get("depoimentos", [])
+                                est["horarios"] = detalhes.get("horarios", [])
+                                est["maps_url"] = detalhes.get("maps_url", "")
+                                est["atributos"] = detalhes.get("atributos", [])
+                                est["servicos"] = detalhes.get("servicos", [])
+                                est["faixa_preco"] = detalhes.get("faixa_preco", "")
+                        except:
+                            pass
+
+                await _asyncio2.gather(*[_buscar_com_sem2(est) for est in estabelecimentos])
+
+                print(f"\n[Scraper] Total: {len(estabelecimentos)} estabelecimentos capturados")
+                await browser.close()
+                return estabelecimentos
+
+            except Exception as e:
+                print(f"[Scraper] ERRO: {e}")
+                await browser.close()
+                return []
+
+    async def _capturar_painel_maps(self, page, limite: int) -> List[Dict]:
+        """Captura resultados do painel lateral do Google Maps com scroll."""
+        estabelecimentos = []
+        try:
+            await page.wait_for_selector(
+                "div[role='feed'], div.Nv2PK, a[href*='/maps/place/']",
+                timeout=10000
+            )
+            await self._human_delay(1000, 2000)
+
+            painel = await page.query_selector("div[role='feed']")
+            if painel:
+                rodadas = max(3, (limite // 5) + 2)
+                for _ in range(rodadas):
+                    await painel.evaluate("el => el.scrollTop += 1200")
+                    await self._human_delay(1200, 2000)
+                    fim = await page.query_selector("span.HlvSq")
+                    if fim:
+                        break
+
+            cards = await page.query_selector_all("div.Nv2PK")
+            print(f"[Scraper] Painel Maps: {len(cards)} cards encontrados")
+
+            for card in cards[:limite]:
+                try:
+                    nome_el = await card.query_selector("div.qBF1Pd, span.fontHeadlineSmall")
+                    nome = (await nome_el.inner_text()).strip() if nome_el else ""
+                    if not nome or len(nome) < 3:
+                        continue
+
+                    rating_el = await card.query_selector("span.MW4etd")
+                    rating_txt = (await rating_el.inner_text()).strip() if rating_el else "0"
+                    try:
+                        rating = float(rating_txt.replace(",", "."))
+                    except:
+                        rating = 0.0
+
+                    # Reviews: extrair do texto completo do card via regex (span.UY7F9 foi removido pelo Google)
+                    card_text = await card.inner_text()
+                    reviews_match = re.search(r"\(([\d\.]+)\)", card_text)
+                    reviews_num = int(re.sub(r"\D", "", reviews_match.group(1))) if reviews_match else 0
+
+                    # Tipo e endereço: extrair do texto do card
+                    linhas = [l.strip() for l in card_text.split("\n") if l.strip()]
+                    tipo = ""
+                    endereco = ""
+                    for linha in linhas:
+                        if linha in [nome, rating_txt]:
+                            continue
+                        if re.search(r"(Academia|Sala de fitness|Gym|Fitness|Pilates|Crossfit)", linha, re.I) and not tipo:
+                            tipo = linha.split("·")[0].strip()
+                        if re.search(r"(Rua|R\.|Av\.|Avenida|Rodovia|Al\.|Alameda)", linha) and not endereco:
+                            endereco = re.sub(r"^.*?·\s*", "", linha).strip()
+
+                    est = {
+                        "nome": nome, "tipo": tipo or "Academia", "endereco": endereco,
+                        "telefone": "", "rating": rating, "reviews": reviews_num,
+                        "website": "", "logo": "", "fotos": [], "depoimentos": [],
+                        "horarios": [], "maps_url": "", "atributos": [],
+                        "servicos": [], "faixa_preco": "",
+                    }
+                    estabelecimentos.append(est)
+                    print(f"[Scraper] Maps OK {nome} | {rating} ({reviews_num} reviews)")
+                except Exception as e_card:
+                    print(f"[Scraper] card erro: {e_card}")
+                    continue
+
+        except Exception as e:
+            print(f"[Scraper] Painel Maps erro (usando fallback): {e}")
+
+        return estabelecimentos
+
+    def _parsear_resultados(self, texto: str, limite: int) -> List[Dict]:
+        estabelecimentos = []
+        linhas = [l.strip() for l in texto.split("\n") if l.strip()]
+        i = 0
+        while i < len(linhas) and len(estabelecimentos) < limite:
+            linha = linhas[i]
+            match_rating_tipo = re.match(r"^([0-9],[0-9])\(([0-9]+)\)\s*[·•]\s*(.+)$", linha)
+            if match_rating_tipo:
+                nome = linhas[i-1] if i > 0 else "Sem nome"
+                if any(x in nome.lower() for x in ["resultados", "empresas", "mais empresas", "mapa", "abrir"]):
+                    i += 1
+                    continue
+                rating = float(match_rating_tipo.group(1).replace(",", "."))
+                reviews = int(match_rating_tipo.group(2))
+                tipo = match_rating_tipo.group(3).strip()
+                endereco = ""
+                telefone = ""
+                depoimento_rapido = ""
+                website = ""
+                for j in range(i+1, min(i+8, len(linhas))):
+                    prox = linhas[j]
+                    if any(x in prox for x in ["R. ", "Av. ", "Rua ", "Avenida ", "Rodovia ", "Al. "]):
+                        endereco = re.sub(r"^.*?[·•]\s*", "", prox).strip()
+                    elif re.search(r"\(\d{2}\)\s*\d{4,5}", prox):
+                        telefone = re.search(r"\(\d{2}\)\s*[\d\s-]+", prox).group(0).strip()
+                    elif prox.startswith('"') and prox.endswith('"') and len(prox) > 5:
+                        depoimento_rapido = prox.strip('"')
+                    elif prox.lower() in ["site", "website"]:
+                        website = "disponivel"
+                    elif re.match(r"^[0-9],[0-9]\([0-9]+\)", prox):
+                        break
+                est = {
+                    "nome": nome, "tipo": tipo, "endereco": endereco,
+                    "telefone": telefone, "rating": rating, "reviews": reviews,
+                    "website": website, "logo": "", "fotos": [], "depoimentos": [],
+                    "horarios": [], "maps_url": "", "atributos": [],
+                    "servicos": [], "faixa_preco": "",
+                }
+                if depoimento_rapido:
+                    est["depoimentos"] = [{"autor": "Cliente", "rating": 5, "texto": depoimento_rapido, "data": ""}]
+                estabelecimentos.append(est)
+                print(f"[Scraper] OK {nome} | {rating} ({reviews} reviews) | {telefone}")
+            i += 1
+        return estabelecimentos
+
+    async def _buscar_detalhes(self, context, nome: str, cidade: str) -> Optional[Dict]:
+        """Busca detalhes no Google Maps: fotos, reviews, horarios, atributos, servicos, website."""
+        detail_page = None
+        try:
+            detail_page = await context.new_page()
+            search = f"{nome} {cidade}"
+            url = f"https://www.google.com/maps/search/{search.replace(' ', '+')}?hl=pt-BR"
+            await detail_page.goto(url, timeout=20000)
+            await asyncio.sleep(3)
+
+            maps_url_final = detail_page.url
+
+            # Se Maps redirecionou direto para a página do negócio, já está no lugar certo
+            # Se ficou na lista de resultados, clicar no primeiro link
+            if "/maps/place/" not in detail_page.url:
+                primeiro = await detail_page.query_selector("a[href*='/maps/place/']")
+                if primeiro:
+                    href = await primeiro.get_attribute("href")
+                    await detail_page.goto(href, timeout=20000)
+                    await asyncio.sleep(3)
+                    maps_url_final = detail_page.url
+
+            page = detail_page
+
+            # Fotos
+            logo = ""
+            fotos = []
+            imgs = await page.query_selector_all("img[src*='googleusercontent']")
+            for img in imgs[:15]:
+                src = await img.get_attribute("src")
+                if src and "googleusercontent" in src:
+                    src_hd = re.sub(r"=w[0-9]+-h[0-9]+-[a-z0-9-]+", "=s1600", src)
+                    src_hd = re.sub(r"=w[0-9]+-h[0-9]+", "=s1600", src_hd)
+                    if not logo:
+                        logo = src_hd
+                    if src_hd not in fotos:
+                        fotos.append(src_hd)
+
+            # Website real
+            website_real = ""
+            try:
+                site_el = await page.query_selector("a[data-item-id='authority']")
+                if site_el:
+                    website_real = await site_el.get_attribute("href") or ""
+                    if website_real and "google.com" in website_real:
+                        website_real = ""
+            except:
+                pass
+
+            # Telefone real
+            telefone_real = ""
+            try:
+                tel_el = await page.query_selector("[data-item-id*='phone'], button[aria-label*='Ligar']")
+                if tel_el:
+                    lbl = await tel_el.get_attribute("aria-label") or await tel_el.inner_text() or ""
+                    m = re.search(r"[\(\d][\d\s\(\)\-]+", lbl)
+                    if m:
+                        telefone_real = m.group(0).strip()
+            except:
+                pass
+
+            # Horarios
+            horarios = []
+            try:
+                btn_horarios = await page.query_selector("div[aria-label*='horario'], button[aria-label*='horario']")
+                if btn_horarios:
+                    await btn_horarios.click()
+                    await asyncio.sleep(1)
+                horario_els = await page.query_selector_all("table.eK4R0e tr")
+                for el in horario_els[:14]:
+                    txt = (await el.inner_text()).strip()
+                    if txt and len(txt) > 3:
+                        horarios.append(txt)
+                if not horarios:
+                    horario_div = await page.query_selector("div[class*='t39EBf']")
+                    if horario_div:
+                        txt = (await horario_div.inner_text()).strip()
+                        horarios = [l.strip() for l in txt.split("\n") if l.strip()][:14]
+            except:
+                pass
+
+            # Atributos
+            atributos = []
+            try:
+                attr_els = await page.query_selector_all("div.RcCsl span, li[class*='hpLkke']")
+                for el in attr_els[:20]:
+                    txt = (await el.inner_text()).strip()
+                    if txt and 2 < len(txt) < 60:
+                        atributos.append(txt)
+                atributos = list(dict.fromkeys(atributos))[:15]
+            except:
+                pass
+
+            # Servicos
+            servicos = []
+            try:
+                serv_els = await page.query_selector_all("div.qty3Ue span")
+                for el in serv_els[:20]:
+                    txt = (await el.inner_text()).strip()
+                    if txt and 2 < len(txt) < 80:
+                        servicos.append(txt)
+                servicos = list(dict.fromkeys(servicos))[:15]
+            except:
+                pass
+
+
+            # Endereco completo
+            endereco_completo = ""
+            try:
+                addr_el = await page.query_selector("button[data-item-id='address'], [data-item-id='address']")
+                if addr_el:
+                    addr_label = await addr_el.get_attribute("aria-label") or ""
+                    if addr_label:
+                        # aria-label formato: "Endereco: Rua X, 123 - Bairro, Cidade - UF"
+                        endereco_completo = addr_label.replace("Endereço: ", "").replace("Endereco: ", "").strip()
+                    if not endereco_completo:
+                        endereco_completo = (await addr_el.inner_text()).strip()
+                if not endereco_completo:
+                    # Fallback: buscar no texto geral da pagina
+                    addr_divs = await page.query_selector_all("div[class*='Io6YTe'], div[class*='rogA2c']")
+                    for div in addr_divs[:5]:
+                        txt = (await div.inner_text()).strip()
+                        if re.search(r"(Rua|R\.|Av\.|Avenida|Rodovia|Al\.|Alameda|Estr\.|Estrada)", txt) and len(txt) > 10:
+                            endereco_completo = txt
+                            break
+            except:
+                pass
+
+            # Faixa de preco
+            faixa_preco = ""
+            try:
+                preco_el = await page.query_selector("span[aria-label*='Preco'], span.mgr77e")
+                if preco_el:
+                    faixa_preco = (await preco_el.get_attribute("aria-label") or await preco_el.inner_text() or "").strip()
+            except:
+                pass
+
+            # Reviews reais
+            depoimentos = []
+            try:
+                aba_reviews = None
+                for sel in [
+                    "button[aria-label*='valiac']",
+                    "button[aria-label*='eview']",
+                    "[data-tab-index='1']",
+                    "button[jsaction*='review']",
+                ]:
+                    aba_reviews = await page.query_selector(sel)
+                    if aba_reviews:
+                        break
+
+                if aba_reviews:
+                    await aba_reviews.click()
+                    await asyncio.sleep(2)
+                    painel = await page.query_selector("div[aria-label*='valiac'], div[role='main']")
+                    if painel:
+                        for _ in range(4):
+                            await painel.evaluate("el => el.scrollTop += 800")
+                            await asyncio.sleep(0.8)
+                    botoes_mais = await page.query_selector_all("button[aria-label*='mais'], button.w8nwRe")
+                    for btn in botoes_mais[:10]:
+                        try:
+                            await btn.click()
+                            await asyncio.sleep(0.3)
+                        except:
+                            pass
+                    review_blocks = await page.query_selector_all(
+                        "div[data-review-id], div.jftiEf"
+                    )
+                    for block in review_blocks[:10]:
+                        try:
+                            autor_el = await block.query_selector("div.d4r55, span.X43Kjb")
+                            autor = (await autor_el.inner_text()).strip() if autor_el else "Cliente"
+                            texto_el = await block.query_selector("span.wiI7pd, div.MyEned span")
+                            texto = (await texto_el.inner_text()).strip() if texto_el else ""
+                            estrelas = await block.query_selector_all("img[src*='star_active']")
+                            rating_val = len(estrelas) if estrelas else 5
+                            if not estrelas:
+                                rating_el = await block.query_selector("[aria-label*='estrela'], [aria-label*='star']")
+                                if rating_el:
+                                    lbl = await rating_el.get_attribute("aria-label") or ""
+                                    m = re.search(r"([0-9])", lbl)
+                                    if m:
+                                        rating_val = int(m.group(1))
+                            data_el = await block.query_selector("span.rsqaWe")
+                            data_str = (await data_el.inner_text()).strip() if data_el else ""
+                            if texto and len(texto) > 15 and autor != "Cliente":
+                                depoimentos.append({"autor": autor, "rating": rating_val, "texto": texto, "data": data_str})
+                        except:
+                            continue
+
+                if not depoimentos:
+                    html = await page.content()
+                    for pattern in [
+                        r'<span[^>]*class="[^"]*wiI7pd[^"]*"[^>]*>([^<]{20,500})</span>',
+                        r'<div[^>]*class="[^"]*MyEned[^"]*"[^>]*><span[^>]*>([^<]{20,500})</span>',
+                    ]:
+                        matches = re.findall(pattern, html)
+                        for texto in matches[:8]:
+                            if len(texto) > 20:
+                                depoimentos.append({"autor": "Cliente Google", "rating": 5, "texto": texto.strip(), "data": ""})
+                        if depoimentos:
+                            break
+            except Exception as e_rev:
+                print(f"[Scraper] reviews erro (nao critico): {e_rev}")
+
+            # Gerar embed Google Maps por coordenadas ou nome+cidade
+            google_maps_embed = ""
+            try:
+                import urllib.parse as _up
+                _q = _up.quote(f"{nome}, {cidade}")
+                coord_match = re.search(r'@(-?[0-9]+\.[0-9]+),(-?[0-9]+\.[0-9]+)', maps_url_final)
+                if coord_match:
+                    lat, lng = coord_match.group(1), coord_match.group(2)
+                    google_maps_embed = (f'<iframe width="100%" height="450" style="border:0;" '
+                        f'loading="lazy" allowfullscreen="" referrerpolicy="no-referrer-when-downgrade" '
+                        f'src="https://maps.google.com/maps?q={lat},{lng}&output=embed&z=16"></iframe>')
+                else:
+                    google_maps_embed = (f'<iframe width="100%" height="450" style="border:0;" '
+                        f'loading="lazy" allowfullscreen="" referrerpolicy="no-referrer-when-downgrade" '
+                        f'src="https://maps.google.com/maps?q={_q}&output=embed&z=16"></iframe>')
+                print(f"[Scraper] maps_embed gerado: {len(google_maps_embed)} chars")
+            except Exception as e_maps:
+                print(f"[Scraper] maps_embed erro: {e_maps}")
+
+            # Separar logo (primeira imagem) das fotos do estabelecimento
+            logo_url = fotos[0] if fotos else ""
+            fotos_sem_logo = fotos[1:] if len(fotos) > 1 else fotos
+
+            print(f"[Scraper] {nome}: {len(fotos)} fotos, {len(depoimentos)} reviews, {len(horarios)} horarios, {len(atributos)} atributos, endereco={endereco_completo[:50]}")
+            return {
+                "logo": logo_url, "fotos": fotos_sem_logo, "depoimentos": depoimentos,
+                "horarios": horarios, "maps_url": maps_url_final,
+                "website": website_real, "telefone": telefone_real,
+                "atributos": atributos, "servicos": servicos, "faixa_preco": faixa_preco,
+                "google_maps_embed": google_maps_embed,
+                "endereco_completo": endereco_completo,
+            }
+
+        except Exception as e:
+            print(f"[Scraper] detalhe erro: {e}")
+            return None
+        finally:
+            if detail_page:
+                try:
+                    await detail_page.close()
+                except:
+                    pass
+
+    async def buscar_negocio(self, nome: str, cidade: str) -> Optional[Dict]:
+        resultados = await self.buscar(nome, cidade, limite=1)
+        if resultados:
+            r = resultados[0]
+            return {
+                "nome": r.get("nome", nome), "categoria": r.get("tipo", ""),
+                "telefone": r.get("telefone", ""), "rating": r.get("rating", 0),
+                "total_avaliacoes": r.get("reviews", 0), "reviews": r.get("depoimentos", []),
+                "fotos": r.get("fotos", []), "logo": r.get("logo", ""),
+                "website": r.get("website", ""), "endereco": r.get("endereco_completo", "") or r.get("endereco", ""),
+                "horarios": r.get("horarios", []), "maps_url": r.get("maps_url", ""),
+                "atributos": r.get("atributos", []), "servicos": r.get("servicos", []),
+                "faixa_preco": r.get("faixa_preco", ""),
+            }
+        return None

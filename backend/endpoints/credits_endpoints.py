@@ -179,7 +179,8 @@ async def credits_check(db: Session = Depends(get_db), usuario: dict = Depends(g
     can_proceed = creditos > 0
     alert = None
     if creditos == 1:
-        alert = "Ultimo ciclo disponivel. Considere fazer upgrade."
+        stripe_link = os.getenv("STRIPE_PAYMENT_LINK", "#")
+        alert = {"message": "Ultimo ciclo disponivel. Considere fazer upgrade para continuar gerando sites.", "icon": "⚠️", "color": "#f59e0b", "payment_link": stripe_link}
     return {
         "can_proceed": can_proceed,
         "creditos": creditos,

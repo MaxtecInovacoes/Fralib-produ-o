@@ -5,12 +5,11 @@
     <span>Sistema Operacional</span>
   </div>
   <nav class="sidebar-nav">
-    <a href="#" class="sidebar-link" data-view="perfil" id="sidebar-perfil-link">
-      <span id="sidebar-foto-wrap" style="width:24px;height:24px;border-radius:50%;border:1.5px solid var(--fl-purple);overflow:hidden;background:var(--fl-bg-card);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-        <img id="sidebar-foto-img" src="" alt="" style="width:100%;height:100%;object-fit:cover;display:none;">
-        <svg id="sidebar-foto-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--fl-text-muted)" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-      </span>
-      Meu Perfil
+    <a href="#" class="sidebar-link active" data-view="config">
+      <svg class="icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+      </svg>
+      Motor FraLib
     </a>
     <a href="#" class="sidebar-link" data-view="overview">
       <svg class="icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -21,7 +20,7 @@
       </svg>
       Visão Geral
     </a>
-    <a href="#" class="sidebar-link active" data-view="crm">
+    <a href="#" class="sidebar-link" data-view="crm">
       <svg class="icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
         <circle cx="9" cy="7" r="4"></circle>
@@ -51,13 +50,6 @@
       </svg>
       Sites
     </a>
-    <a href="#" class="sidebar-link" data-view="config">
-      <svg class="icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
-      </svg>
-      </svg>
-      Motor FraLib
-    </a>
   </nav>
   <nav style="padding:0 10px 8px;">
     <button class="sidebar-link" style="width:100%;background:none;border:2px solid transparent;cursor:pointer;color:var(--fl-purple-300);" onclick="abrirModalLeadManual()">
@@ -65,9 +57,16 @@
       Lead Manual
     </button>
   </nav>
-  
+  <nav style="padding:0 10px 8px;">
+    <a href="#" class="sidebar-link" data-view="perfil" id="sidebar-perfil-link">
+      <span id="sidebar-foto-wrap" style="width:24px;height:24px;border-radius:50%;border:1.5px solid var(--fl-purple);overflow:hidden;background:var(--fl-bg-card);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <img id="sidebar-foto-img" src="" alt="" style="width:100%;height:100%;object-fit:cover;display:none;">
+        <svg id="sidebar-foto-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--fl-text-muted)" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+      </span>
+      Meu Perfil
+    </a>
+  </nav>
   <div class="sidebar-footer">
     <span onclick="AuthHelper.logout()" style="color:var(--fl-text-muted);font-size:11px;font-family:var(--fl-font-brand);letter-spacing:2px;cursor:pointer;padding:8px 4px;display:block;text-align:center;transition:color 0.2s;" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color=''">SAIR</span>
+  </div>
 </aside>
-
-

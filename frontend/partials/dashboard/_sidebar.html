@@ -5,6 +5,12 @@
     <span>CENTRAL</span>
   </div>
   <nav class="sidebar-nav">
+    <a href="#" class="sidebar-link active" data-view="config">
+      <svg class="icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+      </svg>
+      Motor FraLib
+    </a>
     <a href="#" class="sidebar-link" data-view="overview">
       <svg class="icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <rect x="3" y="3" width="7" height="7"></rect>
@@ -14,7 +20,7 @@
       </svg>
       Visão Geral
     </a>
-    <a href="#" class="sidebar-link active" data-view="crm">
+    <a href="#" class="sidebar-link" data-view="crm">
       <svg class="icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
         <circle cx="9" cy="7" r="4"></circle>
@@ -32,14 +38,6 @@
       Leads Incompletos
       <span class="badge-count" id="utiBadge">!</span>
     </a>
-    <a href="#" class="sidebar-link" data-view="config">
-      <svg class="icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
-      </svg>
-      </svg>
-      Configurações
-    </a>
-  </nav>
     <a href="#" class="sidebar-link" data-view="perfil">
       <svg class="icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
@@ -47,6 +45,7 @@
       </svg>
       Meu Perfil
     </a>
+  </nav>
   <div class="sidebar-footer">
     <button onclick="AuthHelper.logout()" style="width:100%;padding:12px;background:var(--fl-red,#dc2626);color:white;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
       <svg style="width:16px;height:16px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -56,5 +55,5 @@
       </svg>
       Sair
     </button>
+  </div>
 </aside>
-

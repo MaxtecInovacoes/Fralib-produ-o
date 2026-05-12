@@ -28,9 +28,10 @@ async def editar_secao_endpoint(
     usuario: dict = Depends(get_current_user)
 ):
     from agents.liz import editar_secao, listar_secoes
+    tenant_id = usuario.get("tenant_id", usuario["id"])
     result = db.execute(
-        text("SELECT site_url, nome FROM leads WHERE id = :lead_id"),
-        {"lead_id": req.lead_id}
+        text("SELECT site_url, nome FROM leads WHERE id = :lead_id AND user_id = :uid"),
+        {"lead_id": req.lead_id, "uid": tenant_id}
     ).fetchone()
     if not result:
         raise HTTPException(status_code=404, detail="Lead nao encontrado")
@@ -39,7 +40,10 @@ async def editar_secao_endpoint(
     if not site_url:
         raise HTTPException(status_code=404, detail="Site ainda nao foi gerado para este lead")
     slug = _re.sub(r"[^a-z0-9]+", "-", lead_nome.lower()).strip("-")[:50]
-    html_path = f"/var/www/fralib/sites/{slug}/index.html"
+    html_path = f"/var/www/fralib/sites/{tenant_id}/{slug}/index.html"
+    # fallback para path legado
+    if not os.path.exists(html_path):
+        html_path = f"/var/www/fralib/sites/{slug}/index.html"
     if not os.path.exists(html_path):
         raise HTTPException(status_code=404, detail=f"Arquivo HTML nao encontrado: {html_path}")
     with open(html_path, "r", encoding="utf-8") as f:
@@ -63,15 +67,18 @@ async def listar_secoes_endpoint(
     usuario: dict = Depends(get_current_user)
 ):
     from agents.liz import listar_secoes
+    tenant_id = usuario.get("tenant_id", usuario["id"])
     result = db.execute(
-        text("SELECT site_url, nome FROM leads WHERE id = :lead_id"),
-        {"lead_id": lead_id}
+        text("SELECT site_url, nome FROM leads WHERE id = :lead_id AND user_id = :uid"),
+        {"lead_id": lead_id, "uid": tenant_id}
     ).fetchone()
     if not result:
         raise HTTPException(status_code=404, detail="Lead nao encontrado")
     lead_nome = result[1]
     slug = _re.sub(r"[^a-z0-9]+", "-", lead_nome.lower()).strip("-")[:50]
-    html_path = f"/var/www/fralib/sites/{slug}/index.html"
+    html_path = f"/var/www/fralib/sites/{tenant_id}/{slug}/index.html"
+    if not os.path.exists(html_path):
+        html_path = f"/var/www/fralib/sites/{slug}/index.html"
     if not os.path.exists(html_path):
         return {"secoes": [], "mensagem": "Site ainda nao gerado"}
     with open(html_path, "r", encoding="utf-8") as f:

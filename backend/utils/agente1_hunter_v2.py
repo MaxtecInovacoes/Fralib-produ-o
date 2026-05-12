@@ -34,11 +34,12 @@ class LeadRaw(BaseModel):
     endereco: Optional[str] = None
     latitude: Optional[float] = None
     longitude: Optional[float] = None
-    horarios: Optional[List[str]] = []
     maps_url: Optional[str] = None
     atributos: Optional[List[str]] = []
     servicos: Optional[List[str]] = []
     faixa_preco: Optional[str] = None
+    logo_url: Optional[str] = None
+    google_maps_embed: Optional[str] = None
 
 class LeadQualificado(BaseModel):
     """Lead qualificado com score e tier"""
@@ -69,6 +70,29 @@ DDDS_PERMITIDOS = [
     '41', '42', '43', '44', '45', '46',  # PR
     '47', '48', '49',  # SC
     '51', '53', '54', '55',  # RS
+    # Nordeste
+    '71', '73', '74', '75', '77',  # BA
+    '85', '88',  # CE
+    '98', '99',  # MA
+    '83',  # PB
+    '81', '87',  # PE
+    '86', '89',  # PI
+    '84',  # RN
+    '79',  # SE
+    '82',  # AL
+    # Norte
+    '91', '93', '94',  # PA
+    '92', '97',  # AM
+    '69',  # RO
+    '68',  # AC
+    '95',  # RR
+    '96',  # AP
+    '63',  # TO
+    # Centro-Oeste
+    '61',  # DF
+    '62', '64',  # GO
+    '65', '66',  # MT
+    '67',  # MS
 ]
 
 # ===== VALIDAÇÕES =====
@@ -247,11 +271,12 @@ async def buscar_lead_google_maps(
         return None
 
     # Converter para LeadRaw
+    _segmento_raw = dados.get('categoria') or segmento or 'Negócio Local'
     lead = LeadRaw(
         nome=dados['nome'],
         cidade=cidade,
-        segmento=dados.get('categoria', 'Negócio Local'),
-        categoria=dados.get('categoria'),
+        segmento=_segmento_raw,
+        categoria=dados.get('categoria') or segmento,
         telefone=dados.get('telefone'),
         whatsapp=dados.get('telefone'),  # Assumir que telefone é WhatsApp
         rating=dados.get('rating', 0),
@@ -265,6 +290,8 @@ async def buscar_lead_google_maps(
         atributos=dados.get('atributos', []),
         servicos=dados.get('servicos', []),
         faixa_preco=dados.get('faixa_preco'),
+        logo_url=dados.get('logo', '') or '',
+        google_maps_embed=dados.get('google_maps_embed', '') or '',
     )
 
     # ✅ VALIDAR DADOS MÍNIMOS
@@ -324,43 +351,63 @@ async def buscar_leads_google_maps(
     leads_existentes: set = None,
 ) -> List[LeadQualificado]:
     """
-    Busca múltiplos leads no Google Search para um segmento/cidade.
-    Usada pelo pipeline_endpoints_hunter.py
-
-    Args:
-        cidade: Cidade alvo (ex: "Curitiba")
-        segmento: Nicho (ex: "academia", "barbearia")
-        limite: Quantidade máxima de leads
-        score_type: Tier mínimo aceito (PREMIUM, STANDARD, LOW)
-        leads_existentes: set de nomes normalizados já no banco (lower+strip) — pula duplicatas
-
-    Returns:
-        Lista de LeadQualificado
+    Busca leads no Google Maps com estrategia LAZY:
+    1. Captura cards basicos (leve)
+    2. Para cada card: busca detalhes -> qualifica -> aceita/rejeita
+    3. Para quando atingir limite de aprovados
     """
     _existentes = leads_existentes or set()
-    print(f"\n[Hunter V2] Buscando {limite} leads: {segmento} em {cidade} ({len(_existentes)} ja existentes no banco)...")
+    print(f"[Hunter V2] Buscando {limite} leads LAZY: {segmento} em {cidade} ({len(_existentes)} ja existentes)...")
+
+
 
     scraper = GoogleMapsScraper(headless=True)
-    # Busca o dobro para compensar os que já existem no banco
-    _buscar = max(limite * 2, limite + len(_existentes) + 5)
-    resultados_raw = await scraper.buscar(segmento, cidade, limite=_buscar)
 
-    leads_qualificados = []
-    tiers_aceitos = {'PREMIUM', 'STANDARD', 'LOW'}
-    if score_type == 'PREMIUM':
-        tiers_aceitos = {'PREMIUM'}
-    elif score_type == 'STANDARD':
-        tiers_aceitos = {'PREMIUM', 'STANDARD'}
+    # FASE 1: Buscar APENAS cards (sem detalhes) — rapido e leve
+    _buscar = min(limite + 3, max(limite * 2, limite + len(_existentes) + 2))
+    cards_raw = await scraper.buscar_somente_cards(segmento, cidade, limite=_buscar)
+    print(f"[Hunter V2] {len(cards_raw)} cards capturados (sem detalhes)")
 
-    for dados in resultados_raw:
-        if len(leads_qualificados) >= limite:
+    if not cards_raw:
+        print("[Hunter V2] Nenhum card encontrado, tentando busca completa...")
+        resultados_raw = await scraper.buscar(segmento, cidade, limite=_buscar)
+        cards_raw = resultados_raw
+
+    leads_encontrados = []
+
+    # FASE 2: Loop LAZY — detalhe de 1, qualifica, aceita/rejeita
+    for dados in cards_raw:
+        if len(leads_encontrados) >= limite:
             break
 
-        # Pular leads já existentes no banco
-        _nome_norm = dados.get('nome', '').lower().strip()
-        if _nome_norm and _nome_norm in _existentes:
-            print(f"[Hunter V2] SKIP duplicata: {dados.get('nome')}")
+        nome = dados.get('nome', '').strip()
+        if not nome or len(nome) < 3:
             continue
+
+        # Pular leads ja existentes no banco
+        _nome_norm = nome.lower().strip()
+        if _nome_norm and _nome_norm in _existentes:
+            print(f"[Hunter V2] SKIP duplicata: {nome}")
+            continue
+
+        # LAZY: buscar detalhes de APENAS este lead
+        try:
+            detalhes = await scraper.buscar_detalhe_unico(nome, cidade)
+            if detalhes:
+                dados["logo"] = detalhes.get("logo", "")
+                dados["fotos"] = detalhes.get("fotos", [])
+                dados["depoimentos"] = detalhes.get("depoimentos", [])
+                dados["horarios"] = detalhes.get("horarios", [])
+                dados["maps_url"] = detalhes.get("maps_url", "")
+                dados["atributos"] = detalhes.get("atributos", [])
+                dados["servicos"] = detalhes.get("servicos", [])
+                dados["faixa_preco"] = detalhes.get("faixa_preco", "")
+                if detalhes.get("website"):
+                    dados["website"] = detalhes["website"]
+                if detalhes.get("telefone"):
+                    dados["telefone"] = detalhes["telefone"]
+        except Exception as e_det:
+            print(f"[Hunter V2] Detalhe {nome}: {e_det}")
 
         try:
             lead = LeadRaw(
@@ -379,18 +426,18 @@ async def buscar_leads_google_maps(
                 fotos=dados.get('fotos', []),
                 website=dados.get('website', ''),
                 endereco=dados.get('endereco', ''),
+                latitude=dados.get('latitude') or dados.get('lat'),
+                longitude=dados.get('longitude') or dados.get('lng'),
+                horarios=dados.get('horarios') or dados.get('hours') or dados.get('opening_hours') or [],
+                logo_url=dados.get('logo_url') or dados.get('logo'),
                 maps_url=dados.get('maps_url'),
                 atributos=dados.get('atributos', []),
                 servicos=dados.get('servicos', []),
                 faixa_preco=dados.get('faixa_preco'),
             )
 
-            dados_suficientes, erros = validar_dados_minimos(lead)
             resultado = calcular_score(lead, cidade)
-
-            if resultado['tier'] not in tiers_aceitos:
-                print(f"[Hunter V2] SKIP {lead.nome} - tier {resultado['tier']} abaixo do mínimo")
-                continue
+            dados_suficientes, erros = validar_dados_minimos(lead)
 
             lead_qualificado = LeadQualificado(
                 lead=lead,
@@ -402,16 +449,15 @@ async def buscar_leads_google_maps(
                 dados_suficientes=dados_suficientes
             )
 
-            leads_qualificados.append(lead_qualificado)
-            print(f"[Hunter V2] OK {lead.nome} | Score: {resultado['score']} | Tier: {resultado['tier']}")
+            leads_encontrados.append(lead_qualificado)
+            print(f"[Hunter V2] APROVADO {lead.nome} | Score: {resultado['score']} | Tier: {resultado['tier']}")
 
         except Exception as e:
             print(f"[Hunter V2] ERRO ao processar {dados.get('nome', '?')}: {e}")
             continue
 
-    print(f"[Hunter V2] Total: {len(leads_qualificados)} leads qualificados")
-    return leads_qualificados
-
+    print(f"[Hunter V2] Total: {len(leads_encontrados)} leads coletados (lazy, {len(cards_raw)} cards avaliados)")
+    return leads_encontrados
 
 # ===== TESTE =====
 

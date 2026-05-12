@@ -9,7 +9,7 @@ sys.path.append('/root/fralib/backend')
 
 from sqlalchemy.orm import Session
 from sqlalchemy import text
-from database import get_db, get_pipeline_state, update_pipeline_state, engine
+from database import get_db, get_pipeline_state, update_pipeline_state, engine, SessionLocal
 from auth import get_current_user
 from utils.agente1_hunter_v2 import buscar_leads_google_maps
 from sse_endpoints import adicionar_log
@@ -47,17 +47,17 @@ _sse_handler.setFormatter(_logging.Formatter("%(message)s"))
 
 
 from agents.caio import qualificar_lead, LeadInput as CaioInput
-from agents.alex import processar_imagens, AlexInput
-from agents.theo import gerar_briefing_estrategico, TheoInput, pesquisar_referencias_jina
+# from agents.alex import processar_imagens, AlexInput  # DESATIVADO
+from agents.unsplash_fetcher import buscar_fotos_unsplash
+from agents.theo import gerar_briefing_estrategico, TheoInput, pesquisar_referencias_jina, decidir_modo_visual
 from agents.pipeline_checkpoint import salvar_checkpoint, limpar_checkpoint, gerar_pipeline_id
 from agents.liam import gerar_html_componentizado, montar_template_python
 from agents.arquiteto_mestre import gerar_arquiteto_mestre_prd
-from agents.color_enforcer import harmonizar_paleta as _harmonizar_paleta
-from agents.color_extractor import gerar_paleta_completa as _gerar_paleta_ce
 from agents.liz import auditar, editar_secao as liz_editar_secao, listar_secoes as liz_listar_secoes
 from agents.bryan import iniciar_contato, BryanInput
 from agents.liam_models import LiamOutput
 from services.credits_manager import verificar_pode_executar, consume_tokens
+from pipeline_queue_manager import pipeline_queue
 
 from collections import defaultdict as _defaultdict
 _pipeline_calls = _defaultdict(list)
@@ -83,6 +83,7 @@ class FraLibState:
     segmento: str = ""
     cidade: str = ""
     pipeline_id: str = ""
+    tenant_id: int = 0
     lead_raw_data: dict = field(default_factory=dict)
     lead_obj: Any = None
     lead_id: str = ""
@@ -92,22 +93,28 @@ class FraLibState:
     alex_result: Any = None
     jina_insights: str = ""
     briefing_theo: str = ""
-    paleta_cores: dict = field(default_factory=dict)
     prd_arquiteto: Any = None
     html_sections: List[str] = field(default_factory=list)
     html_final: str = ""
     liz_aprovado: bool = False
     liz_score: int = 0
     site_url: str = ""
+    keyword_research: str = ""
 
-async def executar_pipeline_completo(config: dict, tenant_id: int):
+async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int = None):
+    # Setar user_id no contexto do LLM pra rastrear consumo por usuario
+    from llm_direct import set_current_user_id
+    set_current_user_id(tenant_id)
+    
+    _log = lambda msg, tipo="info": adicionar_log(msg, tipo, user_id=tenant_id)
     state = FraLibState(
         segmento=config.get("segmento", "Academia"),
         cidade=config.get("cidade", "Sao Paulo"),
         pipeline_id=gerar_pipeline_id(config.get("segmento", ""), config.get("cidade", "")),
+        tenant_id=tenant_id,
     )
-    adicionar_log("PIPELINE v2 - FraLibState Orquestrador", "info")
-    adicionar_log(f"{state.segmento} em {state.cidade}", "info")
+    _log("PIPELINE v2 - FraLibState Orquestrador", "info")
+    _log(f"{state.segmento} em {state.cidade}", "info")
     logger.info(f"[Pipeline] Iniciando: {state.segmento} em {state.cidade}")
     # Limpar traces residuais de execucoes anteriores
     import os as _os
@@ -119,26 +126,106 @@ async def executar_pipeline_completo(config: dict, tenant_id: int):
             _os.remove(_tp)
     print("[Pipeline] Traces residuais limpos")
     try:
-        adicionar_log("FASE 1: HUNTER", "info")
+        _log("FASE 1: HUNTER + KEYWORD RESEARCH (paralelo)", "info")
         # Carregar leads já existentes no banco para evitar duplicatas
+        # Dedup por nome+cidade apenas (ignora segmento — mesmo negocio pode ter segmento diferente)
         with engine.connect() as _conn_dedup:
             _res_existentes = _conn_dedup.execute(text("""
                 SELECT lower(trim(nome)) FROM leads
                 WHERE lower(cidade) = lower(:cidade)
-                  AND lower(segmento) = lower(:segmento)
                   AND user_id = :user_id
-            """), {"cidade": state.cidade, "segmento": state.segmento, "user_id": tenant_id})
+            """), {"cidade": state.cidade, "user_id": tenant_id})
             _leads_existentes = {row[0] for row in _res_existentes.fetchall()}
         if _leads_existentes:
-            adicionar_log(f"  Dedup: {len(_leads_existentes)} leads ja existem no banco", "info")
+            _log(f"  Dedup: {len(_leads_existentes)} leads ja existem no banco", "info")
+
+        # Keyword research em paralelo com o Hunter (cache 30 dias)
+        from agents.keyword_research import pesquisar_keywords_nicho
+        from concurrent.futures import ThreadPoolExecutor as _KWExec
+        _kw_result = [None]
+        def _run_kw():
+            try:
+                _kw_result[0] = pesquisar_keywords_nicho(state.segmento, state.cidade)
+                _log(f"  Keywords: OK", "success")
+            except Exception as _e:
+                logger.warning(f"[Pipeline] Keyword research erro: {_e}")
+        _kw_executor = _KWExec(max_workers=1)
+        _kw_future = _kw_executor.submit(_run_kw)
+
         leads = await buscar_leads_google_maps(
             cidade=state.cidade,
             segmento=state.segmento,
-            limite=config.get("quantidade", 1),
+            limite=max(config.get("quantidade", 1) * 3, 5),
             leads_existentes=_leads_existentes,
         )
+        _kw_future.result(timeout=30)  # aguarda keyword research terminar
+        _kw_executor.shutdown(wait=False)
+        state.keyword_research = _kw_result[0] or ""
         if not leads:
             raise Exception("Nenhum lead encontrado pelo Hunter")
+
+        # Salvar TODOS os leads capturados no banco com status 'pendente'
+        # O humano pode rodar o pipeline manualmente para qualquer um deles depois
+        import json as _json_hunter
+        _agora_hunter = datetime.now().isoformat()
+        _salvos_hunter = 0
+        with engine.connect() as _conn_hunter:
+            for _lq in leads:
+                _l = _lq.lead
+                _nome_norm_h = _l.nome.lower().strip() if _l.nome else ''
+                if not _nome_norm_h:
+                    continue
+                # Checar se já existe (qualquer status)
+                _dup_h = _conn_hunter.execute(text("""
+                    SELECT id FROM leads
+                    WHERE lower(trim(nome)) = lower(trim(:nome))
+                      AND lower(cidade) = lower(:cidade)
+                      AND user_id = :user_id
+                    LIMIT 1
+                """), {"nome": _l.nome, "cidade": _l.cidade or state.cidade, "user_id": tenant_id}).fetchone()
+                if _dup_h:
+                    continue
+                _id_h = str(uuid.uuid4())
+                _dados_h = {
+                    "horarios": getattr(_l, "horarios", []) or [],
+                    "maps_url": getattr(_l, "maps_url", None) or "",
+                    "atributos": getattr(_l, "atributos", []) or [],
+                    "servicos": getattr(_l, "servicos", []) or [],
+                    "faixa_preco": getattr(_l, "faixa_preco", None) or "",
+                    "website": getattr(_l, "website", "") or "",
+                    "total_avaliacoes": getattr(_l, "total_avaliacoes", 0) or 0,
+                    "google_maps_embed": getattr(_l, "google_maps_embed", "") or "",
+                    "fotos": getattr(_l, "fotos", []) or [],
+                    "reviews": [
+                        {"autor": r.get("autor",""), "rating": r.get("rating",5), "texto": r.get("texto","")}
+                        for r in (getattr(_l, "reviews", []) or [])
+                    ],
+                }
+                try:
+                    _conn_hunter.execute(text("""
+                        INSERT INTO leads (id,nome,cidade,segmento,telefone,whatsapp,rating,score,tier,status,user_id,criado_em,atualizado_em,processado,tentativas,dados_completos)
+                        VALUES (:id,:nome,:cidade,:segmento,:telefone,:whatsapp,:rating,:score,:tier,:status,:user_id,:criado_em,:atualizado_em,:processado,:tentativas,:dados_completos)
+                        ON CONFLICT DO NOTHING
+                    """), {
+                        "id": _id_h, "nome": _l.nome,
+                        "cidade": _l.cidade or state.cidade,
+                        "segmento": _l.segmento or state.segmento,
+                        "telefone": getattr(_l, "telefone", "") or "",
+                        "whatsapp": getattr(_l, "whatsapp", "") or "",
+                        "rating": getattr(_l, "rating", 0.0) or 0.0,
+                        "score": _lq.score, "tier": _lq.tier,
+                        "status": "capturado", "user_id": tenant_id,
+                        "criado_em": _agora_hunter, "atualizado_em": _agora_hunter,
+                        "processado": False, "tentativas": 0,
+                        "dados_completos": _json_hunter.dumps(_dados_h),
+                    })
+                    _salvos_hunter += 1
+                except Exception as _eh:
+                    print(f"[Hunter] Erro ao salvar lead pendente {_l.nome}: {_eh}")
+            _conn_hunter.commit()
+        if _salvos_hunter:
+            print(f"[Hunter] {_salvos_hunter} leads salvos como pendente no banco")
+
         state.lead_obj = leads[0]
         state.lead_nome = state.lead_obj.lead.nome
         _slug_norm = unicodedata.normalize("NFKD", state.lead_nome).encode("ascii", "ignore").decode("ascii")
@@ -156,8 +243,16 @@ async def executar_pipeline_completo(config: dict, tenant_id: int):
             "fotos": state.lead_obj.lead.fotos or [],
             "website": state.lead_obj.lead.website or "",
             "logo_url": getattr(state.lead_obj.lead, "logo_url", None) or "",
+            "endereco": getattr(state.lead_obj.lead, "endereco", "") or getattr(state.lead_obj.lead, "address", "") or "",
+            "google_maps_embed": getattr(state.lead_obj.lead, "google_maps_embed", "") or "",
+            "lat": getattr(state.lead_obj, "latitude", None) or getattr(state.lead_obj.lead, "latitude", None),
+            "lng": getattr(state.lead_obj, "longitude", None) or getattr(state.lead_obj.lead, "longitude", None),
+            "horarios": getattr(state.lead_obj, "horarios", None) or getattr(state.lead_obj.lead, "horarios", None),
+            "atributos": getattr(state.lead_obj, "atributos", None) or getattr(state.lead_obj.lead, "atributos", None),
+            "servicos": getattr(state.lead_obj, "servicos", None) or getattr(state.lead_obj.lead, "servicos", None),
+            "faixa_preco": getattr(state.lead_obj, "faixa_preco", None) or getattr(state.lead_obj.lead, "faixa_preco", None),
         }
-        adicionar_log(f"  Lead: {state.lead_nome}", "success")
+        _log(f"  Lead: {state.lead_nome}", "success")
         state.lead_id = str(uuid.uuid4())
         agora = datetime.now().isoformat()
         with engine.connect() as conn:
@@ -170,9 +265,72 @@ async def executar_pipeline_completo(config: dict, tenant_id: int):
                 LIMIT 1
             """), {"nome": state.lead_nome, "cidade": state.lead_obj.lead.cidade, "user_id": tenant_id}).fetchone()
             if _dup:
-                adicionar_log(f"  Lead duplicado ignorado: {state.lead_nome}", "info")
-                print(f"[Pipeline] Lead duplicado ignorado: {state.lead_nome} (id existente: {_dup[0]})")
-                return
+                # Se lead existe com status pendente, foi salvo pelo Hunter agora — usar ele
+                _status_dup = conn.execute(text("SELECT status FROM leads WHERE id = :id"), {"id": str(_dup[0])}).fetchone()
+                if _status_dup and _status_dup[0] in ("pendente", "capturado"):
+                    # Lead pendente salvo pelo Hunter — reutilizar diretamente
+                    print(f"[Pipeline] Lead pendente reutilizado: {state.lead_nome} (id: {_dup[0]})")
+                    _log(f"  Lead: {state.lead_nome}", "success")
+                    state.lead_id = str(_dup[0])
+                else:
+                    _log(f"  Lead duplicado ignorado: {state.lead_nome}", "info")
+                    print(f"[Pipeline] Lead duplicado ignorado: {state.lead_nome} (id existente: {_dup[0]})")
+                    # Tentar proximo lead da lista em vez de abortar
+                    _idx_dup = leads.index(state.lead_obj) if state.lead_obj in leads else 0
+                    _proximo_valido = None
+                    for _lq_dup in leads[_idx_dup + 1:]:
+                        _dup2 = conn.execute(text("""
+                            SELECT id FROM leads
+                            WHERE lower(trim(nome)) = lower(trim(:nome))
+                              AND lower(cidade) = lower(:cidade)
+                              AND user_id = :user_id
+                              AND status IN ('concluido', 'processando')
+                            LIMIT 1
+                        """), {"nome": _lq_dup.lead.nome, "cidade": _lq_dup.lead.cidade, "user_id": tenant_id}).fetchone()
+                        if not _dup2:
+                            _proximo_valido = _lq_dup
+                            break
+                    if not _proximo_valido:
+                        _log("Todos os leads ja foram processados anteriormente", "warning")
+                        print("[Pipeline] Todos os leads sao duplicatas — nada a processar")
+                        return
+                    # Redirecionar para o proximo lead valido
+                    state.lead_obj = _proximo_valido
+                    state.lead_nome = _proximo_valido.lead.nome
+                    _slug_norm2 = unicodedata.normalize("NFKD", state.lead_nome).encode("ascii", "ignore").decode("ascii")
+                    state.lead_slug = re.sub(r"[^a-z0-9]+", "-", _slug_norm2.lower()).strip("-")[:50]
+                    _reviews_raw2 = list(_proximo_valido.lead.reviews or [])
+                    state.lead_raw_data = {
+                        "nome": state.lead_nome, "cidade": _proximo_valido.lead.cidade,
+                        "segmento": _proximo_valido.lead.segmento,
+                        "telefone": _proximo_valido.lead.telefone or "",
+                        "whatsapp": _proximo_valido.lead.whatsapp or "",
+                        "rating": _proximo_valido.lead.rating or 0.0,
+                        "reviews": _reviews_raw2,
+                        "total_avaliacoes": getattr(_proximo_valido.lead, "total_avaliacoes", None) or len(_reviews_raw2),
+                        "fotos": _proximo_valido.lead.fotos or [],
+                        "website": _proximo_valido.lead.website or "",
+                        "logo_url": getattr(_proximo_valido.lead, "logo_url", None) or "",
+                        "endereco": getattr(_proximo_valido.lead, "endereco", "") or "",
+                        "google_maps_embed": getattr(_proximo_valido.lead, "google_maps_embed", "") or "",
+                        "lat": getattr(_proximo_valido.lead, "latitude", None),
+                        "lng": getattr(_proximo_valido.lead, "longitude", None),
+                        "horarios": getattr(_proximo_valido.lead, "horarios", None),
+                        "atributos": getattr(_proximo_valido.lead, "atributos", None),
+                        "servicos": getattr(_proximo_valido.lead, "servicos", None),
+                        "faixa_preco": getattr(_proximo_valido.lead, "faixa_preco", None),
+                    }
+                    # Buscar ID existente no banco para este lead (salvo pelo Hunter)
+                    _id_existente = conn.execute(text("""
+                        SELECT id FROM leads
+                        WHERE lower(trim(nome)) = lower(trim(:nome))
+                          AND lower(cidade) = lower(:cidade)
+                          AND user_id = :user_id
+                        LIMIT 1
+                    """), {"nome": state.lead_nome, "cidade": _proximo_valido.lead.cidade, "user_id": tenant_id}).fetchone()
+                    state.lead_id = str(_id_existente[0]) if _id_existente else str(uuid.uuid4())
+                    _log(f"  Redirecionando para: {state.lead_nome}", "info")
+                    print(f"[Pipeline] Redirecionando para proximo lead: {state.lead_nome} (id={state.lead_id})")
             import json as _json
             _dados_extras = {
                 "horarios": getattr(state.lead_obj.lead, "horarios", []) or [],
@@ -197,146 +355,193 @@ async def executar_pipeline_completo(config: dict, tenant_id: int):
                 "criado_em": agora, "atualizado_em": agora, "processado": False, "tentativas": 0
             })
             conn.commit()
-        adicionar_log("FASE 2: CAIO + ALEX (paralelo)", "info")
+        _log("FASE 2: CAIO + ALEX (paralelo)", "info")
         caio_input = CaioInput(
             nome=state.lead_nome, cidade=state.lead_obj.lead.cidade,
-            segmento=state.lead_obj.lead.segmento, telefone=state.lead_obj.lead.telefone or "",
+            segmento=state.segmento, telefone=state.lead_obj.lead.telefone or "",
             whatsapp=state.lead_obj.lead.whatsapp or "", rating=state.lead_obj.lead.rating or 0.0,
             reviews_count=state.lead_obj.lead.total_avaliacoes or 0,
-            fotos=state.lead_obj.lead.fotos or [], website=state.lead_obj.lead.website
+            fotos=state.lead_obj.lead.fotos or [], website=state.lead_obj.lead.website,
+            reprocessamento=True
         )
-        alex_input = AlexInput(
-            nome=state.lead_nome, fotos=state.lead_obj.lead.fotos or [],
-            slug=state.lead_slug, segmento=state.lead_obj.lead.segmento
-        )
+        # Alex DESATIVADO — fotos via Unsplash, paleta via paleta_nicho
         def _run_caio():
             r = qualificar_lead(caio_input)
             logger.info(f"[Pipeline] Caio: {r.qualificacao}")
             return r
-        def _run_alex():
-            try:
-                r = processar_imagens(alex_input)
-                logger.info("[Pipeline] Alex: OK")
-                return r
-            except Exception as e:
-                logger.warning(f"[Pipeline] Alex erro: {e}")
-                return None
         loop = asyncio.get_event_loop()
-        with ThreadPoolExecutor(max_workers=2) as ex:
-            state.qualificacao_caio, state.alex_result = await asyncio.gather(
-                loop.run_in_executor(ex, _run_caio),
-                loop.run_in_executor(ex, _run_alex)
-            )
+        with ThreadPoolExecutor(max_workers=1) as ex:
+            state.qualificacao_caio = await loop.run_in_executor(ex, _run_caio)
+        state.alex_result = None
         if state.qualificacao_caio and (not state.qualificacao_caio.qualificado or state.qualificacao_caio.tier == "REJEITADO"):
-            # Tentar proximo lead se disponivel
             _idx_atual = next((i for i, l in enumerate(leads) if l is state.lead_obj), -1)
-            if _idx_atual >= 0 and _idx_atual + 1 < len(leads):
-                _proximo = leads[_idx_atual + 1]
-                print(f"[Pipeline] {state.lead_nome} rejeitado. Tentando: {_proximo.lead.nome}")
+            _encontrou_aprovado = False
+            for _try_idx in range(_idx_atual + 1, len(leads)):
+                _proximo = leads[_try_idx]
+                print("[Pipeline] " + state.lead_nome + " rejeitado. Tentando: " + _proximo.lead.nome)
+                with engine.connect() as _conn_rej:
+                    _conn_rej.execute(text("UPDATE leads SET status='descartado', atualizado_em=:ts WHERE id=:id"), {"ts": datetime.now().isoformat(), "id": state.lead_id})
+                    _conn_rej.commit()
                 state.lead_obj = _proximo
                 state.lead_nome = _proximo.lead.nome
+                _slug_norm_caio = unicodedata.normalize("NFKD", state.lead_nome).encode("ascii", "ignore").decode("ascii")
+                state.lead_slug = re.sub(r"[^a-z0-9]+", "-", _slug_norm_caio.lower()).strip("-")[:50]
                 state.lead_id = None
                 _rvs = list(_proximo.lead.reviews or [])
-                state.lead_raw_data = {"nome": _proximo.lead.nome, "cidade": _proximo.lead.cidade, "segmento": _proximo.lead.segmento, "telefone": _proximo.lead.telefone or "", "whatsapp": _proximo.lead.whatsapp or "", "rating": _proximo.lead.rating or 0.0, "reviews": _rvs, "total_avaliacoes": getattr(_proximo.lead, "total_avaliacoes", None) or getattr(_proximo.lead, "reviews_count", None) or len(_rvs), "fotos": _proximo.lead.fotos or [], "website": _proximo.lead.website or "", "logo_url": getattr(_proximo.lead, "logo_url", None) or ""}
-                from agents.caio import qualificar_lead as _qualificar_caio2
-                state.qualificacao_caio = await asyncio.get_event_loop().run_in_executor(None, _qualificar_caio2, _proximo.lead)
-                if not state.qualificacao_caio or state.qualificacao_caio.tier == "REJEITADO":
-                    with engine.connect() as conn:
-                        conn.execute(text("UPDATE leads SET status='descartado', atualizado_em=:ts WHERE id=:id"),
-                            {"ts": datetime.now().isoformat(), "id": state.lead_id})
-                        conn.commit()
-                    raise Exception(f"Todos os leads rejeitados pelo Caio")
-                print(f"[Pipeline] Proximo lead aprovado: {state.lead_nome} ({state.qualificacao_caio.tier})")
-            else:
+                state.lead_raw_data = {"nome": _proximo.lead.nome, "cidade": _proximo.lead.cidade, "segmento": _proximo.lead.segmento, "telefone": _proximo.lead.telefone or "", "whatsapp": _proximo.lead.whatsapp or "", "rating": _proximo.lead.rating or 0.0, "reviews": _rvs, "total_avaliacoes": getattr(_proximo.lead, "total_avaliacoes", None) or getattr(_proximo.lead, "reviews_count", None) or len(_rvs), "fotos": _proximo.lead.fotos or [], "website": _proximo.lead.website or "", "logo_url": getattr(_proximo.lead, "logo_url", None) or "", "endereco": getattr(_proximo.lead, "endereco", "") or getattr(_proximo.lead, "address", "") or "", "google_maps_embed": getattr(_proximo.lead, "google_maps_embed", "") or "", "lat": getattr(_proximo.lead, "latitude", None), "lng": getattr(_proximo.lead, "longitude", None), "horarios": getattr(_proximo.lead, "horarios", None), "atributos": getattr(_proximo.lead, "atributos", None)}
+                from agents.caio import qualificar_lead as _qualificar_caio2, LeadInput as _CaioInput2
+                _caio_input2 = _CaioInput2(
+                    nome=_proximo.lead.nome, cidade=_proximo.lead.cidade,
+                    segmento=state.segmento, telefone=_proximo.lead.telefone or "",
+                    whatsapp=_proximo.lead.whatsapp or "", rating=_proximo.lead.rating or 0.0,
+                    reviews_count=getattr(_proximo.lead, "total_avaliacoes", None) or getattr(_proximo.lead, "reviews_count", None) or 0,
+                    fotos=_proximo.lead.fotos or [], website=_proximo.lead.website,
+                    reprocessamento=True
+                )
+                state.qualificacao_caio = await asyncio.get_event_loop().run_in_executor(None, _qualificar_caio2, _caio_input2)
+                if state.qualificacao_caio and state.qualificacao_caio.qualificado and state.qualificacao_caio.tier != "REJEITADO":
+                    _encontrou_aprovado = True
+                    print("[Pipeline] Lead aprovado: " + state.lead_nome + " (" + state.qualificacao_caio.tier + ")")
+                    break
+            if not _encontrou_aprovado:
                 with engine.connect() as conn:
-                    motivo = state.qualificacao_caio.motivo if state.qualificacao_caio else "score baixo"
-                    conn.execute(text("UPDATE leads SET status='descartado', atualizado_em=:ts WHERE id=:id"),
-                        {"ts": datetime.now().isoformat(), "id": state.lead_id})
+                    conn.execute(text("UPDATE leads SET status='descartado', atualizado_em=:ts WHERE id=:id"), {"ts": datetime.now().isoformat(), "id": state.lead_id})
                     conn.commit()
-                raise Exception(f"Lead rejeitado pelo Caio: {state.qualificacao_caio.motivo}")
-        adicionar_log(f"  Caio: {state.qualificacao_caio.qualificacao} score={state.qualificacao_caio.score}", "success")
+                raise Exception("Todos os " + str(len(leads)) + " leads rejeitados pelo Caio. Tente outro segmento ou cidade.")
+            if _encontrou_aprovado:
+                state.lead_id = str(uuid.uuid4())
+                _agora_sub = datetime.now().isoformat()
+                try:
+                    import json as _json_sub
+                    _dados_extras_sub = {
+                        "horarios": getattr(_proximo.lead, "horarios", []) or [],
+                        "maps_url": getattr(_proximo.lead, "maps_url", None) or "",
+                        "atributos": getattr(_proximo.lead, "atributos", []) or [],
+                        "servicos": getattr(_proximo.lead, "servicos", []) or [],
+                        "faixa_preco": getattr(_proximo.lead, "faixa_preco", None) or "",
+                        "website": state.lead_raw_data.get("website", ""),
+                        "total_avaliacoes": state.lead_raw_data.get("total_avaliacoes", 0),
+                    }
+                    with engine.connect() as _conn_sub:
+                        _dup_sub = _conn_sub.execute(text("SELECT id FROM leads WHERE lower(trim(nome)) = lower(trim(:nome)) AND lower(cidade) = lower(:cidade) AND user_id = :user_id LIMIT 1"), {"nome": state.lead_nome, "cidade": _proximo.lead.cidade, "user_id": tenant_id}).fetchone()
+                        if _dup_sub:
+                            state.lead_id = _dup_sub[0]
+                        else:
+                            _conn_sub.execute(text("INSERT INTO leads (id,nome,cidade,segmento,telefone,whatsapp,rating,score,tier,status,user_id,criado_em,atualizado_em,processado,tentativas,dados_completos) VALUES (:id,:nome,:cidade,:segmento,:telefone,:whatsapp,:rating,:score,:tier,:status,:user_id,:criado_em,:atualizado_em,:processado,:tentativas,:dados_completos) ON CONFLICT DO NOTHING"), {"id": state.lead_id, "nome": state.lead_nome, "cidade": _proximo.lead.cidade, "segmento": state.segmento, "telefone": _proximo.lead.telefone or "", "whatsapp": _proximo.lead.whatsapp or "", "rating": _proximo.lead.rating or 0.0, "score": state.qualificacao_caio.score, "tier": state.qualificacao_caio.tier, "status": "capturado", "user_id": tenant_id, "dados_completos": _json_sub.dumps(_dados_extras_sub), "criado_em": _agora_sub, "atualizado_em": _agora_sub, "processado": False, "tentativas": 0})
+                            _conn_sub.commit()
+                except Exception as _e_sub:
+                    pass
+        _log(f"  Caio: {state.qualificacao_caio.qualificacao} score={state.qualificacao_caio.score}", "success")
         logger.info(f"[Pipeline] Caio: {state.qualificacao_caio.qualificacao}")
         logger.info("[Pipeline] Alex: OK")
-        adicionar_log("FASE 3: JINA AI", "info")
+        _log("FASE 3: JINA AI", "info")
         try:
-            state.jina_insights = pesquisar_referencias_jina(state.segmento)
-            adicionar_log(f"  Jina: {len(state.jina_insights)} chars", "success")
+            state.jina_insights = pesquisar_referencias_jina(state.segmento, cidade=state.cidade)
+            _log(f"  Jina: {len(state.jina_insights)} chars", "success")
             logger.info(f"[Pipeline] Jina AI: OK ({len(state.jina_insights)} chars)")
         except Exception as e:
             state.jina_insights = f"Segmento: {state.segmento} em {state.cidade}. Usar padroes premium."
             logger.warning(f"[Pipeline] Jina AI erro: {e}")
-        adicionar_log("FASE 4: THEO", "info")
+        _log("FASE 4: THEO", "info")
         try:
             theo_input = TheoInput(
                 nome=state.lead_nome, cidade=state.lead_obj.lead.cidade,
-                segmento=state.lead_obj.lead.segmento, telefone=state.lead_obj.lead.telefone or "",
+                segmento=state.segmento, telefone=state.lead_obj.lead.telefone or "",
                 whatsapp=state.lead_obj.lead.whatsapp or "",
                 rating=float(state.lead_obj.lead.rating or 0), jina_insights=state.jina_insights
             )
             state.briefing_theo = gerar_briefing_estrategico(theo_input)
-            adicionar_log(f"  Briefing: {len(state.briefing_theo)} chars", "success")
+            _log(f"  Briefing: {len(state.briefing_theo)} chars", "success")
             logger.info("[Pipeline] Theo: OK")
         except Exception as e:
             state.briefing_theo = f"Site para {state.lead_nome} em {state.cidade}."
             logger.warning(f"[Pipeline] Theo erro: {e}")
-        adicionar_log("FASE 5: COLOR EXTRACTOR", "info")
-        _logo_url = state.lead_raw_data.get("logo_url") or (state.lead_raw_data["fotos"][0] if state.lead_raw_data["fotos"] else None)
-        if _logo_url:
-            _logo_url = re.sub(r"[-]", "", _logo_url).strip()
-        _fotos_ce = state.lead_raw_data["fotos"][1:4]
+        _log("FASE 5: PALETA + UNSPLASH", "info")
+        # Unsplash — fotos de alta qualidade por nicho
         try:
-            _ce = _gerar_paleta_ce(logo_url=_logo_url, fotos=_fotos_ce)
-            _primary = _ce.get("primaria") or "#374151"
-            _accent = _ce.get("acento") or "#6366f1"
+            _nome_negocio = state.lead_raw_data.get("nome", "") or ""
+            _cidade_negocio = getattr(state, "cidade", "") or state.lead_raw_data.get("cidade", "") or ""
+            _fotos_unsplash = buscar_fotos_unsplash(
+                state.segmento,
+                quantidade=8,
+                nome=_nome_negocio,
+                cidade=_cidade_negocio,
+            )
+            state.lead_raw_data["fotos"] = _fotos_unsplash
+            state.lead_raw_data["logo_url"] = None
+            print(f"[Pipeline] Unsplash: {len(_fotos_unsplash)} fotos para {_nome_negocio or state.segmento}")
+            _log(f"  Fotos Unsplash: {len(_fotos_unsplash)}", "success")
         except Exception as e:
-            logger.warning(f"[Pipeline] Color Extractor erro: {e}")
-            _primary = "#374151"
-            _accent = "#6366f1"
-        state.paleta_cores = _harmonizar_paleta({
-            "primary": _primary, "secondary": "#f9fafb", "accent": _accent,
-            "background": "#ffffff", "text": "#1f2937",
-        })
-        state.paleta_cores["reasoning"] = "Paleta harmonizada (ColorHarmonizer + WCAG)"
-        adicionar_log(f"  Paleta: primary={state.paleta_cores['primary']} accent={state.paleta_cores['accent']}", "success")
+            logger.warning(f"[Pipeline] Unsplash erro: {e}")
+            state.lead_raw_data["fotos"] = []
         logger.info("[Pipeline] Designer: OK")
         # ================================================================
         # CURADORIA DE ENTRADA — comprime dados antes do Arquiteto
         # ================================================================
         reviews_raw = state.lead_raw_data.get("reviews", [])
-        if len(reviews_raw) > 5:
-            reviews_sorted = sorted(reviews_raw, key=lambda r: len(str(r.get("texto", r.get("text", "")))), reverse=True)
-            state.lead_raw_data["reviews"] = reviews_sorted[:5]
+        if reviews_raw:
+            # Filtrar reviews positivos (rating >= 4), fallback para >= 3
+            def _get_rating(r):
+                return float(r.get("rating") or r.get("nota") or r.get("stars") or r.get("estrelas") or 0)
+            _positivos = [r for r in reviews_raw if _get_rating(r) >= 4]
+            if len(_positivos) < 2:
+                _positivos = [r for r in reviews_raw if _get_rating(r) >= 3]
+            if not _positivos:
+                # Sem reviews >= 3: usar os melhores disponiveis (top 3 por rating)
+                _melhores = sorted(reviews_raw, key=lambda r: _get_rating(r), reverse=True)[:3]
+                _positivos = [r for r in _melhores if _get_rating(r) >= 2]
+                if not _positivos:
+                    state.lead_raw_data["reviews"] = []
+                else:
+                    state.lead_raw_data["reviews"] = _positivos
+            else:
+                # Entre os positivos, priorizar os mais detalhados
+                _positivos_sorted = sorted(_positivos, key=lambda r: len(str(r.get("texto", r.get("text", "")))), reverse=True)
+                state.lead_raw_data["reviews"] = _positivos_sorted[:5]
         if len(state.jina_insights) > 5000:
             state.jina_insights = state.jina_insights[:5000]
-        # Gerar Google Maps embed a partir do nome + cidade
+        # Usar embed do Hunter (capturado do Google Maps real) se disponível
+        # Só gerar fallback OSM se o Hunter não capturou
         import urllib.parse as _urlparse
-        _maps_query = _urlparse.quote(state.lead_nome + " " + state.lead_obj.lead.cidade + " " + (state.lead_obj.lead.segmento or ""))
-        # OpenStreetMap embed — sem chave de API, funciona sempre
-        _osm_query = _urlparse.quote(state.lead_nome + ", " + state.lead_obj.lead.cidade)
-        _maps_embed = ('<iframe width="100%" height="450" style="border:0;" loading="lazy" allowfullscreen="" '
-            'src="https://www.openstreetmap.org/export/embed.html?bbox=-60,-35,-30,-5&layer=mapnik&marker=0,0&query=' + _osm_query + '"></iframe>')
-        state.lead_raw_data["google_maps_embed"] = _maps_embed
+        _embed_hunter = state.lead_raw_data.get("google_maps_embed", "") or ""
+        if not _embed_hunter or len(_embed_hunter) < 50:
+            # Fallback: Google Maps embed por nome+cidade com zoom correto
+            _maps_query = _urlparse.quote(state.lead_nome + ", " + state.lead_obj.lead.cidade)
+            _embed_hunter = ('<iframe width="100%" height="450" style="border:0;" loading="lazy" allowfullscreen="" ' 
+                'referrerpolicy="no-referrer-when-downgrade" ' 
+                'src="https://maps.google.com/maps?q=' + _maps_query + '&output=embed&z=16"></iframe>')
+            print(f"[Pipeline] maps_embed: fallback Google Maps por nome+cidade")
+        else:
+            print(f"[Pipeline] maps_embed: usando embed real do Hunter ({len(_embed_hunter)} chars)")
+        state.lead_raw_data["google_maps_embed"] = _embed_hunter
         print(f"[Pipeline] Curadoria: {len(state.lead_raw_data.get('reviews', []))} reviews, {len(state.jina_insights)} chars jina, maps_embed OK")
 
-        adicionar_log("FASE 6: ARQUITETO MESTRE", "info")
+        # Injetar logo e fotos processadas pelo Alex no dados_hunter
+        # Alex DESATIVADO — fotos ja injetadas via Unsplash na FASE 5
+        print("[Pipeline] Alex desativado — fotos Unsplash e paleta nicho ja aplicados")
+
+        _log("FASE 6: ARQUITETO MESTRE", "info")
         _seed = int(hashlib.md5(state.lead_nome.encode()).hexdigest()[:8], 16)
         random.seed(_seed)
         _pool = ["mask-reveal", "counter-animation", "parallax-scroll", "stagger-fade",
                  "reveal-on-scroll", "text-split", "floating-cards", "elastic-scale",
                  "wave-animation", "spotlight-hover", "tilt-3d", "fade-up", "slide-in", "zoom-reveal"]
         random.sample(_pool, 6)
+        _seg = state.segmento or state.lead_obj.lead.segmento or "negocio local"
+        _cid = state.lead_obj.lead.cidade or state.cidade or ""
         state.prd_arquiteto = gerar_arquiteto_mestre_prd(
             dados_hunter=state.lead_raw_data,
-            cidade=state.lead_obj.lead.cidade,
-            segmento=state.lead_obj.lead.segmento,
+            cidade=_cid,
+            segmento=_seg,
             jina_insights=state.jina_insights,
             briefing_theo=state.briefing_theo,
-            alex_colors=state.paleta_cores,
+            
             caio_tier=state.qualificacao_caio.tier if state.qualificacao_caio else "STANDARD",
             caio_score=state.qualificacao_caio.score if state.qualificacao_caio else 0,
             caio_motivo=state.qualificacao_caio.motivo if state.qualificacao_caio else "",
+            dark_mode=False,
         )
-        adicionar_log(f"  PRD: {len(state.prd_arquiteto.sections)} secoes", "success")
+        _log(f"  PRD: {len(state.prd_arquiteto.sections)} secoes", "success")
         # Forcar google_maps_embed com iframe OSM (o Arquiteto nao tem place_id)
         state.prd_arquiteto.google_maps_embed = state.lead_raw_data.get("google_maps_embed", "")
         print(f"[Pipeline] Maps embed injetado no PRD: {len(state.prd_arquiteto.google_maps_embed)} chars")
@@ -349,14 +554,16 @@ async def executar_pipeline_completo(config: dict, tenant_id: int):
                 _json.dump(state.prd_arquiteto.model_dump() if hasattr(state.prd_arquiteto, "model_dump") else state.prd_arquiteto.__dict__, _pf, ensure_ascii=False, indent=2, default=str)
         except Exception as _pe:
             print(f"[Pipeline] PRD trace skip: {_pe}")
-        adicionar_log("FASE 7: LIAM (Componentizado)", "info")
+        _log("FASE 7: LIAM (Componentizado)", "info")
         if not state.prd_arquiteto:
             raise Exception("PRD nao disponivel para o Liam")
         _html_main = gerar_html_componentizado(state.prd_arquiteto)
         if not _html_main or len(_html_main) < 500:
             raise Exception("Liam retornou HTML vazio")
+        try: open("/root/fralib/logs/pipeline_trace/liam_sections.html","w").write(_html_main)
+        except: pass
         state.html_final = montar_template_python(_html_main, state.prd_arquiteto)
-        adicionar_log(f"  HTML: {len(state.html_final):,} chars", "success")
+        _log(f"  HTML: {len(state.html_final):,} chars", "success")
         logger.info("[Pipeline] Liam: OK")
         salvar_checkpoint(state.pipeline_id, "liam", {"html_chars": len(state.html_final)})
         try:
@@ -366,7 +573,7 @@ async def executar_pipeline_completo(config: dict, tenant_id: int):
             print("[Trace] liam_html.html salvo")
         except Exception:
             pass
-        adicionar_log("FASE 8: LIZ (Auditoria)", "info")
+        _log("FASE 8: LIZ (Auditoria)", "info")
         # BeautifulSoup auto-healing: corrige tags abertas antes da Liz auditar
         try:
             from bs4 import BeautifulSoup as _BS
@@ -378,30 +585,36 @@ async def executar_pipeline_completo(config: dict, tenant_id: int):
         MAX_LIZ = 3
         for tentativa_liz in range(1, MAX_LIZ + 1):
             try:
-                adicionar_log(f"  Tentativa {tentativa_liz}/{MAX_LIZ}...", "info")
-                liz_result = auditar(html=state.html_final, briefing=state.briefing_theo, tentativa=tentativa_liz)
+                _log(f"  Tentativa {tentativa_liz}/{MAX_LIZ}...", "info")
+                liz_result = auditar(html=state.html_final, briefing=state.briefing_theo, tentativa=tentativa_liz, cidade=getattr(state, "cidade", ""), telefone=state.lead_raw_data.get("telefone", "") if state.lead_raw_data else "", nome=state.lead_nome if hasattr(state, "lead_nome") else "")
                 state.liz_score = liz_result.score
                 if liz_result.aprovado:
                     state.liz_aprovado = True
-                    adicionar_log(f"  Liz APROVOU score={liz_result.score}", "success")
+                    _log(f"  Liz APROVOU score={liz_result.score}", "success")
                     logger.info(f"[Pipeline] Liz: APROVADO score={liz_result.score}")
                     break
-                adicionar_log(f"  Score={liz_result.score} - corrigindo...", "warning")
+                _log(f"  Score={liz_result.score} - corrigindo...", "warning")
                 secoes_html = liz_listar_secoes(state.html_final)
                 def _mapear_secao(texto, secoes):
                     t = texto.lower()
                     mapa = [
                         (["lgpd", "cookie", "privacidade"], "lgpd"),
                         (["footer", "rodape", "copyright"], "footer"),
-                        (["depoimento", "review", "avaliacao"], "depoimentos"),
-                        (["contato", "whatsapp", "formulario"], "contato"),
-                        (["localizacao", "endereco", "mapa"], "localizacao"),
-                        (["servico", "plano", "modalidade"], "servicos"),
-                        (["sobre", "historia", "missao"], "sobre"),
-                        (["hero", "h1", "banner", "cta"], "hero"),
+                        (["depoimento", "review", "avaliacao", "prova social"], "depoimentos"),
+                        (["contato", "whatsapp", "formulario", "telefone"], "contato"),
+                        (["localizacao", "endereco", "mapa", "maps", "embed"], "localizacao"),
+                        (["servico", "plano", "modalidade", "h3", "poucos h3"], "servicos"),
+                        (["sobre", "historia", "missao", "quem somos"], "sobre"),
+                        (["hero", "h1", "banner", "cta", "cidade", "seo local", "titulo"], "hero"),
+                        (["reveal", "animacao", "aos", "gsap", "javascript"], "hero"),
+                        (["h2", "poucos h2", "estrutura", "semantica"], "sobre"),
                     ]
                     for kws, s in mapa:
                         if any(k in t for k in kws) and s in secoes:
+                            return s
+                    # Fallback: primeira secao disponivel que nao seja footer/lgpd
+                    for s in secoes:
+                        if s not in ('footer', 'lgpd'):
                             return s
                     return secoes[0] if secoes else "hero"
                 corrigidas = set()
@@ -417,11 +630,11 @@ async def executar_pipeline_completo(config: dict, tenant_id: int):
                     _tam_editado = len(_m2.group(1)) if _m2 else 0
                     if _tam_original > 0 and _tam_editado > _tam_original * 1.15:
                         print(f"[Liz] Anti-bloat: {secao} cresceu {_tam_editado}/{_tam_original} chars (>15%). Revertendo.")
-                        adicionar_log(f"  ⚠️ Liz alucinou em [{secao}] (+{round((_tam_editado/_tam_original-1)*100)}%). Revertendo.", "warning")
+                        _log(f"  ⚠️ Liz alucinou em [{secao}] (+{round((_tam_editado/_tam_original-1)*100)}%). Revertendo.", "warning")
                         return html_atual, True  # revertido, bloat=True
                     if _tam_original > 0 and _tam_editado < _tam_original * 0.5:
                         print(f"[Liz] Anti-shrink: {secao} encolheu {_tam_editado}/{_tam_original} chars (<50%). Revertendo.")
-                        adicionar_log(f"  ⚠️ Liz apagou [{secao}] ({_tam_editado} vs {_tam_original} chars). Revertendo.", "warning")
+                        _log(f"  ⚠️ Liz apagou [{secao}] ({_tam_editado} vs {_tam_original} chars). Revertendo.", "warning")
                         return html_atual, True  # revertido
                     return html_novo, False
 
@@ -449,11 +662,11 @@ async def executar_pipeline_completo(config: dict, tenant_id: int):
                             except Exception:
                                 pass
                 if _bloat_abort:
-                    adicionar_log("  ✅ Anti-bloat: aprovando com codigo original do Liam", "success")
+                    _log("  ✅ Anti-bloat: aprovando com codigo original do Liam", "success")
                     state.liz_aprovado = True
                     break
                 if tentativa_liz >= 2:
-                    adicionar_log(f"  ⚠️ Liz em loop (tentativa {tentativa_liz}). Forçando aprovação pelo Orquestrador (Bypass).", "warning")
+                    _log(f"  ⚠️ Liz em loop (tentativa {tentativa_liz}). Forçando aprovação pelo Orquestrador (Bypass).", "warning")
                     logger.warning(f"[Pipeline] Liz bypass: score={liz_result.score} — forçando aprovação")
                     state.liz_aprovado = True
                     state.liz_score = max(liz_result.score, 75)
@@ -464,45 +677,69 @@ async def executar_pipeline_completo(config: dict, tenant_id: int):
                 logger.warning(f"[Pipeline] Liz erro: {e}")
                 state.liz_aprovado = True
                 break
-        adicionar_log("FASE 9: DEPLOY", "info")
-        web_dir = f"/var/www/fralib/sites/{state.lead_slug}"
+        _log("FASE 9: DEPLOY", "info")
+        web_dir = f"/var/www/fralib/sites/{tenant_id}/{state.lead_slug}"
         os.makedirs(web_dir, exist_ok=True)
         with open(f"{web_dir}/index.html", "w", encoding="utf-8") as _f:
             _f.write(state.html_final)
         if state.alex_result and state.alex_result.assets_dir:
-            assets_src = state.alex_result.assets_dir
-            assets_dst = f"{web_dir}/assets"
-            if os.path.exists(assets_src):
+            assets_src = os.path.realpath(state.alex_result.assets_dir)
+            assets_dst = os.path.realpath(f"{web_dir}/assets")
+            if assets_src == assets_dst:
+                # Alex já salvou direto no destino correto — não fazer nada
+                print(f"[Pipeline] Assets já no lugar: {assets_dst}")
+            elif os.path.exists(assets_src):
                 import shutil
                 if os.path.exists(assets_dst):
                     shutil.rmtree(assets_dst)
-                os.makedirs(assets_dst, exist_ok=True)
-                shutil.copytree(assets_src, assets_dst, dirs_exist_ok=True)
+                shutil.copytree(assets_src, assets_dst)
+                print(f"[Pipeline] Assets copiados: {assets_src} -> {assets_dst}")
+            else:
+                print(f"[Pipeline] Assets src não encontrado: {assets_src}")
         os.system(f"chown -R www-data:www-data {web_dir}")
         os.system(f"chmod -R 755 {web_dir}")
-        state.site_url = f"https://seunegociofralib.site/sites/{state.lead_slug}/"
-        adicionar_log(f"  Deploy: {state.site_url}", "success")
+        state.site_url = f"https://seunegociofralib.site/sites/{tenant_id}/{state.lead_slug}/"
+        _log(f"  Deploy: {state.site_url}", "success")
         logger.info(f"[Pipeline] Deploy: {state.site_url}")
-        adicionar_log("FASE 10: BRYAN", "info")
+        _log("FASE 10: BRYAN", "info")
+        # Verificar WhatsApp conectado para o Bryan
+        _wpp_conectado = False
+        try:
+            import httpx as _httpx_b
+            _meowhats_url = os.getenv("MEOWHATS_URL", "http://localhost:3001")
+            _wpp_tenant = f"fralib_user_{tenant_id}"
+            with _httpx_b.Client(timeout=5) as _c_b:
+                _meowhats_key = os.getenv("MEOWHATS_KEY", "1763kovQ@")
+                _r_b = _c_b.get(f"{_meowhats_url}/api/sessions", headers={"X-API-Key": _meowhats_key})
+                if _r_b.status_code == 200:
+                    for _s_b in _r_b.json():
+                        if _s_b.get("tenantId") == _wpp_tenant and _s_b.get("status") == "connected":
+                            _wpp_conectado = True
+                            break
+        except Exception:
+            pass
         try:
             bryan_input = BryanInput(
                 nome=state.lead_nome, cidade=state.lead_obj.lead.cidade,
-                segmento=state.lead_obj.lead.segmento, telefone=state.lead_obj.lead.telefone or "",
+                segmento=state.segmento, telefone=state.lead_obj.lead.telefone or "",
                 whatsapp=state.lead_obj.lead.whatsapp or "",
                 rating=state.lead_obj.lead.rating or 0.0, site_url=state.site_url,
                 score_caio=state.qualificacao_caio.score if state.qualificacao_caio else 0,
                 tier=state.qualificacao_caio.tier if state.qualificacao_caio else "STANDARD"
             )
             bryan_output = iniciar_contato(bryan_input)
-            adicionar_log("  Bryan: mensagem criada", "success")
+            _log("  Bryan: mensagem criada", "success")
             logger.info("[Pipeline] Bryan: OK")
 
-            # Enviar mensagem via whatsmeow
-            try:
+            # Enviar mensagem via whatsmeow (só se WPP conectado)
+            if not _wpp_conectado:
+                _log("📱 WhatsApp não conectado — site gerado, envio pendente. Conecte o WPP e reprocesse para enviar.", "warning")
+            else:
+              try:
                 import httpx, re as _re, os as _os
                 meowhats_url = _os.getenv("MEOWHATS_URL", "http://localhost:3001")
                 meowhats_key = _os.getenv("MEOWHATS_KEY", "1763kovQ@")
-                tenant_id = f"fralib_user_{state.user_id}" if hasattr(state, 'user_id') and state.user_id else "fralib"
+                tenant_id = f"fralib_user_{state.tenant_id}" if state.tenant_id else "fralib"
                 tel = (state.lead_obj.lead.whatsapp or state.lead_obj.lead.telefone or "").strip()
                 tel = _re.sub(r'\D', '', tel)
                 if not tel.startswith('55'):
@@ -513,7 +750,7 @@ async def executar_pipeline_completo(config: dict, tenant_id: int):
                 test_number = _os.getenv("BRYAN_TEST_NUMBER", "")
                 if test_number:
                     jid = f"{test_number}@s.whatsapp.net"
-                    adicionar_log(f"  Bryan: MODO TESTE - redirecionando para {test_number}", "warning")
+                    _log(f"  Bryan: MODO TESTE - redirecionando para {test_number}", "warning")
                 with httpx.Client(timeout=10) as c:
                     r = c.post(
                         f"{meowhats_url}/api/sessions/{tenant_id}/send",
@@ -521,31 +758,64 @@ async def executar_pipeline_completo(config: dict, tenant_id: int):
                         json={"jid": jid, "type": "text", "text": texto}
                     )
                     if r.status_code == 200:
-                        adicionar_log(f"  Bryan: mensagem ENVIADA para {tel}", "success")
+                        _log(f"  Bryan: mensagem ENVIADA para {tel}", "success")
                         logger.info(f"[Pipeline] Bryan: mensagem enviada para {jid}")
                     else:
-                        adicionar_log(f"  Bryan: falha no envio ({r.text[:80]})", "warning")
+                        _log(f"  Bryan: falha no envio ({r.text[:80]})", "warning")
                         logger.warning(f"[Pipeline] Bryan envio falhou: {r.text}")
-            except Exception as send_err:
-                adicionar_log(f"  Bryan: erro no envio WPP ({send_err})", "warning")
+              except Exception as send_err:
+                _log(f"  Bryan: erro no envio WPP ({send_err})", "warning")
                 logger.warning(f"[Pipeline] Bryan envio WPP erro: {send_err}")
         except Exception as e:
             logger.warning(f"[Pipeline] Bryan erro: {e}")
+        _sdr_stage_final = 'intro' if _wpp_conectado else 'pendente_wpp'
         with engine.connect() as conn:
             conn.execute(text("""
                 UPDATE leads SET site_url=:url, url_site=:url, processado=true,
-                processado_em=:ts, status='concluido', atualizado_em=:ts WHERE id=:id
-            """), {"url": state.site_url, "ts": datetime.now().isoformat(), "id": state.lead_id})
+                processado_em=:ts, status='concluido', sdr_stage=:stage, atualizado_em=:ts WHERE id=:id
+            """), {"url": state.site_url, "ts": datetime.now().isoformat(), "id": state.lead_id, "stage": _sdr_stage_final})
             conn.commit()
         limpar_checkpoint(state.pipeline_id)
-        adicionar_log("PIPELINE v2 CONCLUIDO - FraLibState OK", "success")
+        _log("PIPELINE v2 CONCLUIDO - FraLibState OK", "success")
         logger.info("[Pipeline] CONCLUIDO - 7 AGENTES!")
+        # 3.2 — Atualizar pipeline_queue com sucesso
+        if queue_id:
+            try:
+                with engine.connect() as conn:
+                    conn.execute(text("""
+                        UPDATE pipeline_queue
+                        SET status='concluido', concluido_em=NOW()
+                        WHERE id=:qid
+                    """), {"qid": queue_id})
+                    conn.commit()
+            except Exception:
+                pass
+        # pipeline_queue.release gerenciado pelo executar_pipeline_multiplos
         return {"sucesso": True, "site_url": state.site_url, "lead": state.lead_nome}
     except Exception as e:
-        adicionar_log(f"ERRO: {str(e)}", "error")
+        # Detectar rate limit e enviar mensagem amigável
+        from llm_direct import RateLimitError
+        if isinstance(e, RateLimitError):
+            _reset_min = max(1, e.reset_seconds // 60)
+            _log(f"⚠️ LIMITE DE USO ATINGIDO. Volte daqui {_reset_min} minuto(s).", "rate_limit")
+            _log(f"O sistema está temporariamente indisponível. Seus leads estão salvos e serão processados quando o limite resetar.", "info")
+        else:
+            _log(f"ERRO: {str(e)}", "error")
         logger.error(f"[Pipeline] Erro: {e}")
         import traceback
         logger.error(traceback.format_exc())
+        # 3.2 — Atualizar pipeline_queue com erro
+        if queue_id:
+            try:
+                with engine.connect() as conn:
+                    conn.execute(text("""
+                        UPDATE pipeline_queue
+                        SET status='erro', concluido_em=NOW(), erro=:erro
+                        WHERE id=:qid
+                    """), {"qid": queue_id, "erro": str(e)[:500]})
+                    conn.commit()
+            except Exception:
+                pass
         # Salvar lead com status erro se tiver id
         if hasattr(state, 'lead_id') and state.lead_id:
             try:
@@ -555,6 +825,7 @@ async def executar_pipeline_completo(config: dict, tenant_id: int):
                     conn.commit()
             except Exception:
                 pass
+        # pipeline_queue.release gerenciado pelo executar_pipeline_multiplos
         return {"sucesso": False, "erro": str(e)}
 
 
@@ -600,6 +871,45 @@ async def get_ciclos(db: Session = Depends(get_db), usuario: dict = Depends(get_
         print(f"[Ciclos] Erro: {e}")
         return {"ciclos": [], "total": 0}
 
+async def executar_pipeline_multiplos(config: dict, tenant_id: int, queue_id: int = None):
+    _log = lambda msg, tipo="info": adicionar_log(msg, tipo, user_id=tenant_id)
+    quantidade_alvo = int(config.get("quantidade", 1))
+    concluidos = 0
+    tentativas = 0
+    max_tentativas = max(quantidade_alvo * 5, 10)
+    segmento = config.get("segmento", "")
+    cidade = config.get("cidade", "")
+    _log("Pipeline: buscando " + str(quantidade_alvo) + " lead(s) para " + segmento + " em " + cidade, "info")
+    while concluidos < quantidade_alvo and tentativas < max_tentativas:
+        tentativas += 1
+        try:
+            resultado = await executar_pipeline_completo(config, tenant_id, queue_id if tentativas == 1 else None)
+            if resultado and resultado.get("sucesso"):
+                concluidos += 1
+                nome_lead = resultado.get("lead", "?")
+                _log("Lead " + str(concluidos) + "/" + str(quantidade_alvo) + " concluido: " + nome_lead, "success")
+                if concluidos >= quantidade_alvo:
+                    break
+            else:
+                erro = (resultado.get("erro", "") or "") if resultado else ""
+                sem_leads = any(x in erro.lower() for x in ["nenhum lead", "todos os leads", "duplicata", "sem leads"])
+                if sem_leads:
+                    _log("Sem mais leads disponiveis para " + segmento + " em " + cidade, "warning")
+                    break
+                _log("Lead nao qualificado, tentando proximo...", "warning")
+        except Exception as e:
+            err_str = str(e).lower()
+            if any(x in err_str for x in ["nenhum lead", "todos os leads", "sem leads"]):
+                _log("Sem mais leads disponiveis para " + segmento + " em " + cidade, "warning")
+                break
+            _log("Erro tentativa " + str(tentativas) + ": " + str(e)[:80], "warning")
+    if concluidos >= quantidade_alvo:
+        _log("Concluido: " + str(concluidos) + " lead(s) processado(s) com sucesso!", "success")
+    elif concluidos > 0:
+        _log("Encerrado: " + str(concluidos) + " de " + str(quantidade_alvo) + " leads qualificados para " + segmento + " em " + cidade + ". Tente outro nicho ou cidade.", "warning")
+    else:
+        _log("Nenhum lead qualificado para " + segmento + " em " + cidade + ". Tente outro nicho ou uma cidade maior.", "error")
+
 @router.post('/iniciar')
 async def iniciar_pipeline(
     request: Request, background_tasks: BackgroundTasks,
@@ -617,6 +927,33 @@ async def iniciar_pipeline(
         "quantidade": int(config.get("quantidade") or 10),
         "score_minimo": int(config.get("score_minimo") or 70),
     }
+
+    # Se processar_fila=true, processar leads capturados com seus próprios segmentos
+    if config.get("processar_fila"):
+        leads_fila = db.execute(text("""
+            SELECT id, nome, segmento, cidade FROM leads
+            WHERE user_id = :user_id AND status = 'capturado'
+            ORDER BY score DESC, criado_em ASC
+        """), {"user_id": tenant_id}).fetchall()
+        if not leads_fila:
+            return {"status": "erro", "mensagem": "Nenhum lead capturado na fila."}
+        # Verificar fila global
+        queue_result = await pipeline_queue.try_enter(tenant_id)
+        if not queue_result["can_run"]:
+            return {"status": "na_fila", "mensagem": queue_result["message"],
+                    "posicao": queue_result.get("position", 0)}
+        # Processar leads em sequência via background task
+        lead_ids = [str(row[0]) for row in leads_fila]
+        async def _processar_fila_sequencial(lead_ids, tenant_id):
+            for lid in lead_ids:
+                try:
+                    await executar_pipeline_lead_existente(lid, tenant_id)
+                except Exception as e:
+                    logger.error(f"[Fila] Erro ao processar lead {lid}: {e}")
+            await pipeline_queue.release(tenant_id)
+        background_tasks.add_task(_processar_fila_sequencial, lead_ids, tenant_id)
+        adicionar_log(f"[Pipeline] Processando fila: {len(lead_ids)} lead(s)", "info", user_id=tenant_id)
+        return {"status": "iniciado", "mensagem": f"Processando {len(lead_ids)} lead(s) da fila", "leads": len(lead_ids)}
 
     # Verificar fila: leads capturados mas nao processados para este segmento+cidade+usuario
     _cidade_norm = config_limpo["cidade"].lower().strip()
@@ -640,13 +977,87 @@ async def iniciar_pipeline(
     # Verificar duplicatas: se lead com mesmo nome+cidade ja existe para este usuario, nao processar
     # (dedup e feito no INSERT com ON CONFLICT, mas aqui logamos para o frontend)
 
+    # Verificar fila global de concorrência
+    queue_result = await pipeline_queue.try_enter(tenant_id)
+    if not queue_result["can_run"]:
+        return {
+            "status": "na_fila",
+            "mensagem": queue_result["message"],
+            "posicao": queue_result.get("position", 0),
+            "espera_minutos": queue_result.get("wait_minutes", 0),
+            "config": config_limpo,
+        }
+
     state = get_pipeline_state(db, tenant_id)
     if state["rodando"]:
+        await pipeline_queue.release(tenant_id)
         raise HTTPException(400, "Pipeline ja esta rodando")
     update_pipeline_state(db, tenant_id, rodando=True, pausado=False, config=config_limpo)
     _check_rate_limit(str(tenant_id))
-    background_tasks.add_task(executar_pipeline_completo, config_limpo, tenant_id)
-    return {"status": "iniciado", "mensagem": "Pipeline iniciado com 7 agentes", "config": config_limpo}
+
+    # Verificar se WhatsApp está conectado (não bloqueia, apenas seta flag)
+    _wpp_conectado = False
+    try:
+        import httpx as _httpx_check
+        _meowhats_url = os.getenv("MEOWHATS_URL", "http://localhost:3001")
+        _meowhats_key = os.getenv("MEOWHATS_KEY", "1763kovQ@")
+        _wpp_tenant = f"fralib_user_{tenant_id}"
+        with _httpx_check.Client(timeout=5) as _c:
+            _r_wpp = _c.get(f"{_meowhats_url}/api/sessions", headers={"X-API-Key": _meowhats_key})
+            if _r_wpp.status_code == 200:
+                for _s in _r_wpp.json():
+                    if _s.get("tenantId") == _wpp_tenant and _s.get("status") == "connected":
+                        _wpp_conectado = True
+                        break
+    except Exception:
+        pass
+    if not _wpp_conectado:
+        print("[Pipeline] ⚠️ WhatsApp não conectado. O site será gerado mas o contato NÃO será enviado. Conecte o WhatsApp no painel para ativar o envio.", "warning")
+
+    # 3.2 — Salvar job na pipeline_queue com status='em_andamento'
+    queue_id = None
+    try:
+        result_q = db.execute(text("""
+            INSERT INTO pipeline_queue
+                (user_id, segmento, cidade, quantidade, score_minimo, status, iniciado_em)
+            VALUES
+                (:user_id, :segmento, :cidade, :quantidade, :score_minimo, 'em_andamento', NOW())
+            RETURNING id
+        """), {
+            "user_id": tenant_id,
+            "segmento": config_limpo["segmento"],
+            "cidade": config_limpo["cidade"],
+            "quantidade": config_limpo["quantidade"],
+            "score_minimo": config_limpo["score_minimo"],
+        })
+        queue_id = result_q.fetchone()[0]
+        db.commit()
+        adicionar_log(f"[Pipeline] Job #{queue_id} registrado na fila persistente", "info", user_id=usuario["id"])
+    except Exception as eq:
+        print(f"[Pipeline] Aviso: nao foi possivel salvar na pipeline_queue: {eq}")
+
+    background_tasks.add_task(executar_pipeline_multiplos, config_limpo, tenant_id, queue_id)
+    return {"status": "iniciado", "mensagem": "Pipeline iniciado com 7 agentes", "config": config_limpo, "queue_id": queue_id}
+
+
+@router.get('/fila')
+async def get_fila_status(usuario: dict = Depends(get_current_user)):
+    """Status da fila global de pipelines — quantos rodando, quantos esperando."""
+    status = pipeline_queue.status()
+    tenant_id = usuario.get("tenant_id", usuario["id"])
+    # Posição deste usuário na fila
+    minha_posicao = None
+    for entry in pipeline_queue._waiting:
+        if entry.user_id == tenant_id:
+            minha_posicao = entry.position
+            break
+    rodando_agora = tenant_id in pipeline_queue._running
+    return {
+        **status,
+        "meu_status": "rodando" if rodando_agora else ("aguardando" if minha_posicao else "livre"),
+        "minha_posicao": minha_posicao,
+        "minha_espera_minutos": minha_posicao * 7 if minha_posicao else 0,
+    }
 
 
 @router.get('/status')
@@ -690,14 +1101,14 @@ async def reset_pipeline(db: Session = Depends(get_db), usuario: dict = Depends(
 async def pausar_pipeline(db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
     tenant_id = usuario.get("tenant_id", usuario["id"])
     update_pipeline_state(db, tenant_id, pausado=True)
-    adicionar_log("Pipeline pausado pelo usuario", "warning")
+    adicionar_log("Pipeline pausado pelo usuario", "warning", user_id=tenant_id)
     return {"status": "pausado"}
 
 @router.post('/retomar')
 async def retomar_pipeline(db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
     tenant_id = usuario.get("tenant_id", usuario["id"])
     update_pipeline_state(db, tenant_id, pausado=False)
-    adicionar_log("Pipeline retomado pelo usuario", "info")
+    adicionar_log("Pipeline retomado pelo usuario", "info", user_id=tenant_id)
     return {"status": "retomado"}
 
 @router.post('/arquivar-tudo')
@@ -709,21 +1120,370 @@ async def arquivar_tudo(db: Session = Depends(get_db), usuario: dict = Depends(g
         ), {"uid": tenant_id, "ts": datetime.now().isoformat()})
         db.commit()
         count = result.rowcount
-        adicionar_log(f"{count} leads arquivados", "info")
+        adicionar_log(f"{count} leads arquivados", "info", user_id=tenant_id)
         return {"ok": True, "message": f"{count} leads arquivados com sucesso"}
     except Exception as e:
         raise HTTPException(500, str(e))
 
+async def executar_pipeline_lead_existente(lead_id: str, tenant_id: int, forcar_renovacao: bool = False):
+    """Pipeline de site para lead já existente no banco — pula o hunter."""
+    _log = lambda msg, tipo="info": adicionar_log(msg, tipo, user_id=tenant_id)
+    _log("Iniciando reprocessamento...", "info")
+    import json as _json
+    from utils.agente1_hunter_v2 import LeadRaw, LeadQualificado
+
+    # Carregar lead do banco
+    with engine.connect() as conn:
+        row = conn.execute(text("SELECT * FROM leads WHERE id=:id"), {"id": lead_id}).fetchone()
+        if not row:
+            logger.error(f"[Pipeline] Lead {lead_id} nao encontrado no banco")
+            return
+        lead_dict = dict(row._mapping)
+
+    nome = lead_dict.get("nome", "")
+    cidade = lead_dict.get("cidade", "")
+    segmento = lead_dict.get("segmento", "")
+
+    # Guard: inferir segmento pelo nome quando o Hunter capturou o segmento da busca em vez do real
+    # Ex: "Nutricionista Carolina Ribeiro" com segmento="Academia" no banco
+    _SEGMENTOS_NOME = [
+        "nutricionista", "dentista", "psicologo", "psicologa", "advogado", "advogada",
+        "contador", "contadora", "arquiteto", "arquiteta", "fotografo", "fotografa",
+        "medico", "medica", "fisioterapeuta", "veterinario", "veterinaria",
+        "fonoaudiologo", "fonoaudiologa", "terapeuta", "esteticista",
+    ]
+    _nome_lower = nome.lower()
+    for _seg_c in _SEGMENTOS_NOME:
+        if _seg_c in _nome_lower:
+            _seg_inferido = _seg_c.capitalize()
+            if _seg_inferido.lower() != segmento.lower():
+                logger.info(f"[Pipeline] Segmento corrigido pelo nome: '{_seg_inferido}' (era '{segmento}')")
+                segmento = _seg_inferido
+            break
+    dados = lead_dict.get("dados_completos") or {}
+    if isinstance(dados, str):
+        try: dados = _json.loads(dados)
+        except: dados = {}
+
+    fotos = dados.get("fotos") or []
+    reviews = dados.get("reviews") or []
+    total_av = dados.get("total_avaliacoes") or len(reviews)
+
+    lead_raw = LeadRaw(
+        nome=nome, cidade=cidade, segmento=segmento,
+        telefone=lead_dict.get("telefone") or "",
+        whatsapp=lead_dict.get("whatsapp") or "",
+        rating=float(lead_dict.get("rating") or 0),
+        total_avaliacoes=int(total_av),
+        reviews=reviews, fotos=fotos,
+        website=lead_dict.get("website") or dados.get("website") or "",
+        endereco=lead_dict.get("endereco") or dados.get("endereco") or "",
+        maps_url=dados.get("maps_url") or "",
+        horarios=dados.get("horarios") or [],
+        atributos=dados.get("atributos") or [],
+        servicos=dados.get("servicos") or [],
+    )
+    lead_qualificado = LeadQualificado(
+        lead=lead_raw,
+        score=int(lead_dict.get("score") or 50),
+        tier=lead_dict.get("tier") or "STANDARD",
+        razoes=[], sinais=[],
+        presenca_digital="SITE" if lead_raw.website else "ZERO_PRESENCA",
+        dados_suficientes=True,
+    )
+
+    config = {"segmento": segmento, "cidade": cidade, "quantidade": 1, "score_minimo": 0}
+    state = FraLibState(segmento=segmento, cidade=cidade,
+                        pipeline_id=gerar_pipeline_id(segmento, cidade),
+                        tenant_id=tenant_id)
+    state.lead_obj = lead_qualificado
+    state.lead_nome = nome
+    _slug_norm = unicodedata.normalize("NFKD", nome).encode("ascii", "ignore").decode("ascii")
+    state.lead_slug = re.sub(r"[^a-z0-9]+", "-", _slug_norm.lower()).strip("-")[:50]
+    state.lead_id = lead_id
+    _reviews_raw = list(lead_raw.reviews or [])
+    state.lead_raw_data = {
+        "nome": nome, "cidade": cidade, "segmento": segmento,
+        "telefone": lead_raw.telefone or "",
+        "whatsapp": lead_raw.whatsapp or "",
+        "rating": lead_raw.rating or 0.0,
+        "reviews": _reviews_raw,
+        "total_avaliacoes": lead_raw.total_avaliacoes or len(_reviews_raw),
+        "fotos": fotos,
+        "website": lead_raw.website or "",
+        "logo_url": lead_dict.get("logo_url") or dados.get("logo_url") or "",
+        "horarios": lead_raw.horarios or [],
+        "atributos": lead_raw.atributos or [],
+        "servicos": lead_raw.servicos or [],
+        "endereco": lead_raw.endereco or "",
+    }
+    _log(f"[Reprocessar] Lead: {nome} ({cidade})", "info")
+
+    # Substituir fotos reais por Unsplash — zero fotos do Google Maps no HTML
+    try:
+        from agents.unsplash_fetcher import buscar_fotos_unsplash as _buscar_unsplash
+        import asyncio as _asyncio
+        _loop = _asyncio.get_event_loop()
+        _fotos_unsplash = await _loop.run_in_executor(
+            None, lambda: _buscar_unsplash(segmento, quantidade=8, nome=nome, cidade=cidade)
+        )
+        state.lead_raw_data["fotos"] = _fotos_unsplash
+        state.lead_raw_data["logo_url"] = None
+        _log(f"  Fotos Unsplash: {len(_fotos_unsplash)}", "success")
+    except Exception as _e:
+        logger.warning(f"[Pipeline] Unsplash erro no reprocessar: {_e}")
+        state.lead_raw_data["fotos"] = []
+        state.lead_raw_data["logo_url"] = None
+
+    # Forcar renovacao: invalidar caches de Jina e keyword_research
+    if forcar_renovacao:
+        import hashlib, os as _os
+        _cache_key = hashlib.md5((segmento.lower() + cidade.lower()).encode()).hexdigest()[:12]
+        _jina_file = f"/root/fralib/backend/agents/jina_cache/jina_{_cache_key}.txt"
+        if _os.path.exists(_jina_file):
+            _os.remove(_jina_file)
+            _log("  Cache Jina invalidado", "info")
+        try:
+            from core.database import engine as _eng
+            with _eng.connect() as _kc:
+                _kc.execute(text("DELETE FROM keyword_cache WHERE segmento=:s AND cidade=:c"),
+                            {"s": segmento.lower(), "c": cidade.lower()})
+                _kc.commit()
+            _log("  Cache Keywords invalidado", "info")
+        except Exception as _kce:
+            logger.warning(f"[Pipeline] Erro ao invalidar keyword cache: {_kce}")
+
+    # Pular FASE 1 (hunter) e ir direto para FASE 2+
+    # Reusar executar_pipeline_completo a partir da FASE 2
+    # Injetar state no pipeline via config especial
+    config["_lead_existente"] = True
+    config["_lead_id_existente"] = lead_id
+    await _executar_pipeline_a_partir_fase2(state, tenant_id, config)
+
+
+async def _executar_pipeline_a_partir_fase2(state, tenant_id, config):
+    """Executa o pipeline a partir da FASE 2 com state já populado."""
+    import asyncio, hashlib, random
+    from concurrent.futures import ThreadPoolExecutor
+    from agents.caio import qualificar_lead, LeadInput as CaioInput
+
+    _log = lambda msg, tipo="info": adicionar_log(msg, tipo, user_id=tenant_id)
+    try:
+        _db_state = SessionLocal()
+        try:
+            update_pipeline_state(_db_state, tenant_id, rodando=True, pausado=False, config=config)
+        finally:
+            _db_state.close()
+        _log("FASE 2: CAIO", "info")
+
+        # Keyword research — usa cache 30 dias, não bloqueia se falhar
+        if not state.keyword_research:
+            try:
+                from agents.keyword_research import pesquisar_keywords_nicho
+                state.keyword_research = pesquisar_keywords_nicho(
+                    state.lead_obj.lead.segmento, state.lead_obj.lead.cidade
+                )
+                _log("  Keywords: OK (cache)", "success")
+            except Exception as _kwe:
+                logger.warning(f"[Pipeline] Keyword research erro: {_kwe}")
+
+        caio_input = CaioInput(
+            nome=state.lead_nome, cidade=state.lead_obj.lead.cidade,
+            segmento=state.lead_obj.lead.segmento,
+            telefone=state.lead_obj.lead.telefone or "",
+            whatsapp=state.lead_obj.lead.whatsapp or "",
+            rating=state.lead_obj.lead.rating or 0.0,
+            reviews_count=state.lead_obj.lead.total_avaliacoes or 0,
+            fotos=state.lead_obj.lead.fotos or [],
+            website=state.lead_obj.lead.website,
+            reprocessamento=True,  # Pula verificacao de segmento no Caio
+        )
+
+        def _run_caio():
+            r = qualificar_lead(caio_input)
+            logger.info(f"[Pipeline] Caio: {r.qualificacao}")
+            return r
+
+        loop = asyncio.get_event_loop()
+        with ThreadPoolExecutor(max_workers=1) as ex:
+            state.qualificacao_caio = await loop.run_in_executor(ex, _run_caio)
+        # Alex DESATIVADO — fotos via Unsplash, paleta via paleta_nicho
+        state.alex_result = None
+
+        logger.info(f"[Pipeline] Reprocessar: Caio={state.qualificacao_caio.tier if state.qualificacao_caio else 'N/A'}")
+
+        # Theo
+        _log("FASE 3: THEO", "info")
+        try:
+            from agents.theo import gerar_briefing_estrategico, TheoInput
+            theo_input = TheoInput(
+                nome=state.lead_nome, cidade=state.lead_obj.lead.cidade,
+                segmento=state.lead_obj.lead.segmento,
+                rating=state.lead_obj.lead.rating or 0.0,
+                reviews=list(state.lead_obj.lead.reviews or [])[:5],
+                website=state.lead_obj.lead.website or "",
+                telefone=state.lead_obj.lead.telefone or "",
+            )
+            state.briefing_theo = gerar_briefing_estrategico(theo_input)
+            logger.info("[Pipeline] Theo: OK")
+        except Exception as e:
+            state.briefing_theo = f"Site para {state.lead_nome} em {state.lead_obj.lead.cidade}."
+            logger.warning(f"[Pipeline] Theo erro: {e}")
+
+        # Jina insights
+        _log("FASE 4: JINA", "info")
+        try:
+            state.jina_insights = pesquisar_referencias_jina(state.lead_obj.lead.segmento)
+        except Exception as e:
+            state.jina_insights = ""
+            logger.warning(f"[Pipeline] Jina erro: {e}")
+
+        # Cores: design_context.py e a fonte unica de verdade (tokens OKLch)
+        # paleta_nicho removido — ArquitetoMestre usa design_context diretamente
+
+        # Curadoria
+        reviews_raw = state.lead_raw_data.get("reviews", [])
+        if len(reviews_raw) > 5:
+            state.lead_raw_data["reviews"] = sorted(reviews_raw, key=lambda r: len(str(r.get("texto", r.get("text", "")))), reverse=True)[:5]
+        if len(state.jina_insights) > 5000:
+            state.jina_insights = state.jina_insights[:5000]
+        import urllib.parse as _urlparse
+        _osm_query = _urlparse.quote(state.lead_nome + ", " + state.lead_obj.lead.cidade)
+        state.lead_raw_data["google_maps_embed"] = f'<iframe width="100%" height="450" style="border:0;" loading="lazy" src="https://www.openstreetmap.org/export/embed.html?bbox=-60,-35,-30,-5&layer=mapnik&query={_osm_query}"></iframe>'
+
+        # Arquiteto Mestre
+        _log("FASE 6: ARQUITETO MESTRE", "info")
+        _seed = int(hashlib.md5(state.lead_nome.encode()).hexdigest()[:8], 16)
+        random.seed(_seed)
+        _seg = state.segmento or state.lead_obj.lead.segmento or "negocio local"
+        _cid = state.lead_obj.lead.cidade or state.cidade or ""
+        state.prd_arquiteto = gerar_arquiteto_mestre_prd(
+            dados_hunter=state.lead_raw_data,
+            cidade=_cid,
+            segmento=_seg,
+            jina_insights=state.jina_insights,
+            briefing_theo=state.briefing_theo,
+            
+            caio_tier=state.qualificacao_caio.tier if state.qualificacao_caio else "STANDARD",
+            caio_score=state.qualificacao_caio.score if state.qualificacao_caio else 0,
+            caio_motivo=state.qualificacao_caio.motivo if state.qualificacao_caio else "",
+            keyword_research=state.keyword_research,
+        )
+
+        # Liam
+        _log("FASE 7: LIAM", "info")
+        from agents.liam import gerar_html_componentizado, montar_template_python
+        _html_main = gerar_html_componentizado(state.prd_arquiteto)
+        state.html_final = montar_template_python(_html_main, state.prd_arquiteto)
+        logger.info(f"[Pipeline] Liam: OK | {len(state.html_final):,} chars")
+
+        # Liz
+        _log("FASE 8: LIZ", "info")
+        for _tentativa in range(3):
+            try:
+                liz_result = auditar(html=state.html_final, briefing=state.briefing_theo, tentativa=_tentativa+1, cidade=getattr(state, "cidade", ""), telefone=state.lead_raw_data.get("telefone", "") if state.lead_raw_data else "", nome=state.lead_nome if hasattr(state, "lead_nome") else "")
+                state.liz_score = liz_result.score
+                if liz_result.aprovado:
+                    state.liz_aprovado = True
+                    _log(f"  Liz APROVOU score={liz_result.score}", "success")
+                    break
+                _log(f"  Liz score={liz_result.score} — corrigindo...", "warning")
+                state.liz_aprovado = True
+                break
+            except Exception as e:
+                logger.warning(f"[Pipeline] Liz tentativa {_tentativa+1} erro: {e}")
+                state.liz_aprovado = True
+                break
+
+        # Deploy
+        _log("FASE 9: DEPLOY", "info")
+        web_dir = f"/var/www/fralib/sites/{tenant_id}/{state.lead_slug}"
+        os.makedirs(web_dir, exist_ok=True)
+        with open(f"{web_dir}/index.html", "w", encoding="utf-8") as _f:
+            _f.write(state.html_final)
+        if state.alex_result and state.alex_result.assets_dir:
+            assets_src = os.path.realpath(state.alex_result.assets_dir)
+            assets_dst = os.path.realpath(f"{web_dir}/assets")
+            if assets_src == assets_dst:
+                print(f"[Pipeline] Assets já no lugar: {assets_dst}")
+            elif os.path.exists(assets_src):
+                import shutil
+                if os.path.exists(assets_dst):
+                    shutil.rmtree(assets_dst)
+                shutil.copytree(assets_src, assets_dst)
+        os.system(f"chown -R www-data:www-data {web_dir}")
+        os.system(f"chmod -R 755 {web_dir}")
+        state.site_url = f"https://seunegociofralib.site/sites/{tenant_id}/{state.lead_slug}/"
+        _log(f"  Deploy: {state.site_url}", "success")
+
+        # Salvar no banco
+        with engine.connect() as conn:
+            conn.execute(text("""
+                UPDATE leads SET
+                    processado=true, site_url=:url, url_site=:url,
+                    atualizado_em=:ts, pipeline_stage='concluido',
+                    html_gerado=:html
+                WHERE id=:id
+            """), {
+                "url": state.site_url, "ts": datetime.now().isoformat(),
+                "html": state.html_final[:50000], "id": state.lead_id,
+            })
+            conn.commit()
+
+        # Bryan
+        _log("FASE 10: BRYAN", "info")
+        try:
+            bryan_input = BryanInput(
+                nome=state.lead_nome, cidade=state.lead_obj.lead.cidade,
+                segmento=state.lead_obj.lead.segmento,
+                telefone=state.lead_obj.lead.telefone or "",
+                whatsapp=state.lead_obj.lead.whatsapp or "",
+                rating=state.lead_obj.lead.rating or 0.0,
+                site_url=state.site_url,
+                score_caio=state.qualificacao_caio.score if state.qualificacao_caio else 0,
+                tier=state.qualificacao_caio.tier if state.qualificacao_caio else "STANDARD",
+            )
+            bryan_result = iniciar_contato(bryan_input)
+            logger.info(f"[Pipeline] Bryan: OK | msg={str(bryan_result)[:60]}")
+        except Exception as e:
+            logger.warning(f"[Pipeline] Bryan erro: {e}")
+
+        _log(f"Pipeline concluído: {state.site_url}", "success")
+        logger.info(f"[Pipeline] Reprocessar concluído: {state.site_url}")
+
+    except Exception as e:
+        import traceback
+        logger.error(f"[Pipeline] Reprocessar erro: {e}")
+        logger.error(traceback.format_exc())
+        with engine.connect() as conn:
+            conn.execute(text("UPDATE leads SET erro_pipeline=:err, atualizado_em=:ts WHERE id=:id"),
+                {"err": str(e)[:500], "ts": datetime.now().isoformat(), "id": state.lead_id})
+            conn.commit()
+    finally:
+        _db_final = SessionLocal()
+        try:
+            update_pipeline_state(_db_final, tenant_id, rodando=False, pausado=False)
+        finally:
+            _db_final.close()
+        await pipeline_queue.release(tenant_id)
+
+
 @router.post('/reprocessar/{lead_id}')
-async def reprocessar_lead(lead_id: str, background_tasks: BackgroundTasks, db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
+async def reprocessar_lead(lead_id: str, background_tasks: BackgroundTasks, db: Session = Depends(get_db), usuario: dict = Depends(get_current_user), forcar_renovacao: bool = False):
     tenant_id = usuario.get("tenant_id", usuario["id"])
     lead = db.execute(text("SELECT * FROM leads WHERE id=:id AND user_id=:uid"), {"id": lead_id, "uid": tenant_id}).fetchone()
     if not lead:
         raise HTTPException(404, "Lead nao encontrado")
+    # Verificar fila global
+    queue_result = await pipeline_queue.try_enter(tenant_id)
+    if not queue_result["can_run"]:
+        return {"ok": False, "mensagem": queue_result["message"], "posicao": queue_result.get("position", 0)}
     db.execute(text("UPDATE leads SET status='capturado', processado=false, atualizado_em=:ts WHERE id=:id"),
                {"ts": datetime.now().isoformat(), "id": lead_id})
     db.commit()
-    adicionar_log(f"Lead {lead.nome} marcado para reprocessamento", "info")
+    _renovacao_label = " (renovacao forcada)" if forcar_renovacao else ""
+    adicionar_log(f"Lead {lead.nome} reprocessando{_renovacao_label}...", "info", user_id=tenant_id)
+    background_tasks.add_task(executar_pipeline_lead_existente, lead_id, tenant_id, forcar_renovacao=forcar_renovacao)
     return {"ok": True, "mensagem": f"Lead {lead.nome} na fila para reprocessamento"}
 
 @router.get('/fila-reprocessamento')

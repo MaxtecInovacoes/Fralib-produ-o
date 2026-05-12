@@ -186,10 +186,15 @@ def auditoria_tecnica(html: str, briefing: str = "") -> AuditoriaTecnica:
         problemas.append(ProblemaAuditoria(gravidade="BAIXO", dimensao="SEO", problema="FAQ ausente - quando disponivel, aumenta visibilidade em buscas por IA"))
         # sem desconto de score — FAQ e opcional
 
-    # Google Maps embed
-    has_maps = "maps.google" in html or "google.com/maps" in html
+    # Google Maps / OpenStreetMap embed
+    has_maps = any(p in html for p in [
+        "maps.google", "google.com/maps",
+        "openstreetmap.org", "leafletjs.com",
+        "leaflet", "osm", "mapbox.com",
+        "maps.googleapis.com",
+    ])
     if not has_maps:
-        problemas.append(ProblemaAuditoria(gravidade="MEDIO", dimensao="SEO", problema="Falta embed Google Maps - sinal SEO local"))
+        problemas.append(ProblemaAuditoria(gravidade="MEDIO", dimensao="SEO", problema="Falta embed de mapa (Google Maps ou OpenStreetMap) - sinal SEO local"))
         score -= 5
 
     # Valores/precos proibidos
@@ -311,7 +316,7 @@ def clean_json_response(text: str) -> str:
 
     return text
 
-def auditoria_semantica(html: str, briefing: str, tentativa: int = 1) -> AuditoriaSemantica:
+def auditoria_semantica(html: str, briefing: str, tentativa: int = 1, cidade: str = "", telefone: str = "", nome: str = "") -> AuditoriaSemantica:
     """
     Auditoria semantica via regex/heuristicas Python puras. Zero LLM.
     Verifica fidelidade ao briefing por presenca de palavras-chave e estrutura HTML.
@@ -319,12 +324,16 @@ def auditoria_semantica(html: str, briefing: str, tentativa: int = 1) -> Auditor
     problemas = []
     score = 100
 
-    # Extrair nome do negocio do briefing
-    nome_match = re.search(r"(?:negocio|nome)[^:]*:\s*(\S[^\n]*)", briefing, re.IGNORECASE)
-    nome_negocio = nome_match.group(1).strip()[:40] if nome_match else ""
-
-    # Verificar nome do negocio no HTML
-    if nome_negocio and nome_negocio.lower() not in html.lower():
+    # Usar nome real do lead ou extrair do briefing como fallback
+    if nome:
+        nome_negocio = nome[:40]
+    else:
+        _nm = re.search(r"(?:negocio|nome)[^:]*:\s*(\S[^\n]*)", briefing, re.IGNORECASE)
+        nome_negocio = _nm.group(1).strip()[:40] if _nm else ""
+    # Checar partes do nome (nomes compostos)
+    _nome_partes = [p for p in nome_negocio.lower().split() if len(p) > 3]
+    _nome_no_html = any(p in html.lower() for p in _nome_partes) if _nome_partes else False
+    if nome_negocio and not _nome_no_html:
         problemas.append("Nome do negocio '{}' nao encontrado no HTML".format(nome_negocio))
         score -= 20
 
@@ -357,6 +366,56 @@ def auditoria_semantica(html: str, briefing: str, tentativa: int = 1) -> Auditor
         problemas.append("{} imagens sem lazy loading".format(len(imgs_sem_lazy)))
         score -= 5
 
+    # === 3 DIMENSOES OPEN DESIGN ===
+
+    # Dimensao 1 — Especificidade: o site parece feito para ESTE negocio?
+    _especifico = False
+    if nome_negocio and nome_negocio.lower() in html.lower():
+        _especifico = True
+    # Verificar se tem dados reais (telefone, endereco, reviews)
+    # Telefone: verificar se o telefone real do lead esta no HTML
+    _tem_tel = bool(telefone and telefone in html) or bool(re.search(r'\(\d{2}\)\s*[\d\s\-]{8,13}', html))
+    # Endereco: aceitar rua/av. OU a cidade real do lead (passada como parametro)
+    _tem_end_fixo = any(kw in html.lower() for kw in ["rua ", "av.", "avenida", "travessa", "alameda"])
+    _tem_end_cidade = bool(cidade and cidade.lower() in html.lower())
+    _tem_end = _tem_end_fixo or _tem_end_cidade
+    if not _especifico or (not _tem_tel and not _tem_end):
+        problemas.append("Site parece generico — faltam dados especificos do negocio (nome, telefone, endereco)")
+        score -= 15
+
+    # Dimensao 2 — Contencao: tem elementos desnecessarios?
+    _contadores_zerados = len(re.findall(r'\b0\s*(?:clientes|projetos|anos|avaliacoes|reviews)\b', html, re.IGNORECASE))
+    if _contadores_zerados > 0:
+        problemas.append(f"{_contadores_zerados} contador(es) zerado(s) encontrado(s) — remover ou usar dados reais")
+        score -= 10
+    _secoes_vazias = len(re.findall(r'<section[^>]*>\s*</section>', html, re.IGNORECASE))
+    if _secoes_vazias > 0:
+        problemas.append(f"{_secoes_vazias} secao(oes) vazia(s) encontrada(s)")
+        score -= 8
+    # Remover atributos placeholder de inputs antes de checar texto placeholder
+    _html_sem_inputs = re.sub(r'<(input|textarea)[^>]*>', '', html, flags=re.IGNORECASE)
+    _placeholder = len(re.findall(r'lorem ipsum|feature one|feature two|coming soon', _html_sem_inputs, re.IGNORECASE))
+    if _placeholder > 0:
+        problemas.append(f"Texto placeholder encontrado ({_placeholder} ocorrencias) — substituir por conteudo real")
+        score -= 20
+
+    # Dimensao 3 — Consistencia de nicho: tipografia e tom batem com o segmento?
+    _tem_whatsapp_cta = "wa.me" in html or "whatsapp" in html.lower()
+    _tem_schema = "application/ld+json" in html
+    # H1 pode ter tags filhas (br, span, strong) — extrair texto puro
+    _h1_matches = re.findall(r'<h1[^>]*>(.*?)</h1>', html, re.IGNORECASE | re.DOTALL)
+    _h1_text = re.sub(r'<[^>]+>', ' ', ' '.join(_h1_matches)).strip() if _h1_matches else ''
+    _tem_h1_cidade = len(_h1_text) >= 5
+    if not _tem_whatsapp_cta:
+        problemas.append("CTA WhatsApp ausente — obrigatorio em todas as secoes")
+        score -= 15
+    if not _tem_schema:
+        problemas.append("Schema.org JSON-LD ausente — obrigatorio para SEO local")
+        score -= 10
+    if not _tem_h1_cidade:
+        problemas.append("H1 nao contem cidade — obrigatorio para SEO local")
+        score -= 8
+
     score = max(0, score)
     aprovado = score >= 70
 
@@ -373,7 +432,10 @@ def auditar(
     html: str,
     briefing: str = "",
     tentativa: int = 1,
-    lead_id: Optional[int] = None
+    lead_id: Optional[int] = None,
+    cidade: str = "",
+    telefone: str = "",
+    nome: str = "",
 ) -> LizOutput:
     """
     Auditoria completa do HTML (técnica + semântica)
@@ -395,7 +457,7 @@ def auditar(
 
     # Auditoria semântica (assíncrona com LLM)
     import time; time.sleep(2)  # Evitar rate limit 429
-    semantica = auditoria_semantica(html, briefing, tentativa)
+    semantica = auditoria_semantica(html, briefing, tentativa, cidade=cidade, telefone=telefone, nome=nome)
     print(f"   Semântica: {semantica.score}/100 ({len(semantica.problemas)} problemas)")
 
     # Score final (60% técnica + 40% semântica)
@@ -417,11 +479,25 @@ def auditar(
             "problemas_semanticos": semantica.problemas
         })
 
+    # Poder de rejeicao: se tentativa < 2 e reprovado, sinalizar para regenerar
+    rejeitar = not aprovado and tentativa < 2
+    status = "aprovado" if aprovado else ("rejeitar_regenerar" if rejeitar else "revisao_manual")
+
+    if rejeitar:
+        problemas_criticos = [p for p in semantica.problemas if any(
+            kw in p.lower() for kw in ["placeholder", "generico", "schema", "whatsapp", "h1"]
+        )]
+        print(f"[Liz] REJEITANDO — tentativa {tentativa}/2 — {len(problemas_criticos)} problemas criticos")
+        print(f"[Liz] Instrucoes para regeneracao: {problemas_criticos[:3]}")
+    elif status == "revisao_manual":
+        print(f"[Liz] 2 tentativas esgotadas — publicando com status revisao_manual (score={score_final})")
+
     return LizOutput(
         aprovado=aprovado,
         score=score_final,
         tecnica=tecnica,
         semantica=semantica,
+        correcoes_cirurgicas=[{"instrucao": p} for p in semantica.problemas[:5]] if rejeitar else [],
         tentativa=tentativa
     )
 
@@ -458,9 +534,10 @@ def editar_secao(html: str, secao: str, instrucao: str) -> str:
     html_editado = call_claude(
         system="Voce e um compilador estrito de HTML. Corrija APENAS erros de sintaxe. NUNCA reescreva, expanda ou redesenhe. Retorne APENAS HTML.",
         user=prompt,
-        model="sonnet",
+        model="haiku",
         max_tokens=8000,
-        temperature=0.0
+        temperature=0.0,
+        agent_name="liz",
     )
     # Extração estrita: pegar apenas o HTML, ignorar justificativas em texto plano
     import re as _re_liz

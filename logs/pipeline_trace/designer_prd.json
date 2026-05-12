@@ -1,0 +1,138 @@
+{
+  "sections": [
+    {
+      "name": "hero",
+      "required": true,
+      "components": [],
+      "data_source": "Hunter V2",
+      "schema_org": null
+    },
+    {
+      "name": "sobre",
+      "required": true,
+      "components": [],
+      "data_source": "Hunter V2",
+      "schema_org": null
+    },
+    {
+      "name": "servicos",
+      "required": true,
+      "components": [],
+      "data_source": "Hunter V2",
+      "schema_org": null
+    },
+    {
+      "name": "depoimentos",
+      "required": true,
+      "components": [],
+      "data_source": "Hunter V2",
+      "schema_org": null
+    },
+    {
+      "name": "faq",
+      "required": true,
+      "components": [],
+      "data_source": "Hunter V2",
+      "schema_org": null
+    },
+    {
+      "name": "localizacao",
+      "required": true,
+      "components": [],
+      "data_source": "Hunter V2",
+      "schema_org": null
+    },
+    {
+      "name": "contato",
+      "required": true,
+      "components": [],
+      "data_source": "Hunter V2",
+      "schema_org": null
+    }
+  ],
+  "color_palette": {
+    "primary": "oklch(12% 0.01 0)",
+    "secondary": "oklch(96% 0.008 0)",
+    "accent": "oklch(55% 0.22 145)",
+    "background": "oklch(98% 0.005 0)",
+    "text": "oklch(12% 0.01 0)",
+    "surface": "oklch(96% 0.008 0)",
+    "muted": "oklch(45% 0.01 0)",
+    "border": "oklch(88% 0.01 0)",
+    "tokens_oklch": {
+      "--bg": "oklch(98% 0.005 0)",
+      "--surface": "oklch(96% 0.008 0)",
+      "--fg": "oklch(12% 0.01 0)",
+      "--muted": "oklch(45% 0.01 0)",
+      "--border": "oklch(88% 0.01 0)",
+      "--accent": "oklch(55% 0.22 145)"
+    },
+    "reasoning": "OKLch determinístico. Direção=Energetic Nicho=academia Tier=STANDARD."
+  },
+  "typography": {
+    "heading": "Oswald",
+    "body": "Inter",
+    "accent": "Inter"
+  },
+  "animations": [
+    {
+      "name": "fade-in",
+      "type": "fade-in",
+      "target": "section",
+      "trigger": "scroll",
+      "duration": "0.6s",
+      "easing": "ease-out"
+    }
+  ],
+  "business_name": "Legacy Centro de Treinamento",
+  "reviews_count": 0,
+  "reviews_rating": 4.9,
+  "reviews_list": [],
+  "address": " · Rua Lucídio Florêncio Ribeiro, 896",
+  "phone": "(41) 99923-2953",
+  "hours": {},
+  "photos": [
+    "https://images.unsplash.com/photo-1734189605012-f03d97a4d98f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w5MDEyMjl8MHwxfHNlYXJjaHwxfHxneW0lMjBmaXRuZXNzJTIwd29ya291dCUyMHRyYWluaW5nfGVufDF8MHx8fDE3Nzg0OTYzNTd8MA&ixlib=rb-4.1.0&q=80&w=1080",
+    "https://images.unsplash.com/photo-1573858129432-f3bef7802595?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w5MDEyMjl8MHwxfHNlYXJjaHw2fHxneW0lMjBmaXRuZXNzJTIwd29ya291dCUyMHRyYWluaW5nfGVufDF8MHx8fDE3Nzg0OTYzNTd8MA&ixlib=rb-4.1.0&q=80&w=1080",
+    "https://images.unsplash.com/photo-1573858129585-6ca05f716932?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w5MDEyMjl8MHwxfHNlYXJjaHwxMnx8Z3ltJTIwZml0bmVzcyUyMHdvcmtvdXQlMjB0cmFpbmluZ3xlbnwxfDB8fHwxNzc4NDk2MzU3fDA&ixlib=rb-4.1.0&q=80&w=1080",
+    "https://images.unsplash.com/photo-1687350119840-3e2cc5977e92?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w5MDEyMjl8MHwxfHNlYXJjaHw3fHxneW0lMjBmaXRuZXNzJTIwd29ya291dCUyMHRyYWluaW5nfGVufDF8MHx8fDE3Nzg0OTYzNTd8MA&ixlib=rb-4.1.0&q=80&w=1080",
+    "https://images.unsplash.com/photo-1758521959341-398692c140a7?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w5MDEyMjl8MHwxfHNlYXJjaHwxN3x8Z3ltJTIwZml0bmVzcyUyMHdvcmtvdXQlMjB0cmFpbmluZ3xlbnwxfDB8fHwxNzc4NDk2MzU3fDA&ixlib=rb-4.1.0&q=80&w=1080",
+    "https://images.unsplash.com/photo-1758875570185-eaed16371474?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w5MDEyMjl8MHwxfHNlYXJjaHw5fHxneW0lMjBmaXRuZXNzJTIwd29ya291dCUyMHRyYWluaW5nfGVufDF8MHx8fDE3Nzg0OTYzNTd8MA&ixlib=rb-4.1.0&q=80&w=1080",
+    "https://images.unsplash.com/photo-1758875570600-8daf8d2f05f3?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w5MDEyMjl8MHwxfHNlYXJjaHwxMXx8Z3ltJTIwZml0bmVzcyUyMHdvcmtvdXQlMjB0cmFpbmluZ3xlbnwxfDB8fHwxNzc4NDk2MzU3fDA&ixlib=rb-4.1.0&q=80&w=1080",
+    "https://images.unsplash.com/photo-1573858129038-6f98c3cb2ac7?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w5MDEyMjl8MHwxfHNlYXJjaHwzfHxneW0lMjBmaXRuZXNzJTIwd29ya291dCUyMHRyYWluaW5nfGVufDF8MHx8fDE3Nzg0OTYzNTd8MA&ixlib=rb-4.1.0&q=80&w=1080"
+  ],
+  "logo_url": null,
+  "google_maps_embed": "<iframe width=\"100%\" height=\"450\" style=\"border:0;\" loading=\"lazy\" allowfullscreen=\"\" referrerpolicy=\"no-referrer-when-downgrade\" src=\"https://maps.google.com/maps?q=Legacy%20Centro%20de%20Treinamento%2C%20Campina%20Grande%20Do%20Sul&output=embed&z=16\"></iframe>",
+  "components_21dev": [
+    "whatsapp-sticky-cta"
+  ],
+  "cidade": "Campina Grande Do Sul",
+  "segmento": "academia",
+  "instrucao_criativa_para_dev": "Este site é uma parede de concreto que vibra. A Legacy Centro de Treinamento em Campina Grande Do Sul precisa de uma presença digital que transmita força bruta e movimento constante. A vibe é industrial-atlética: bordas grossas (3px+), blocos de cor sólida sem gradientes decorativos, tipografia Oswald em peso 700-900 no H1 com tracking negativo agressivo (-0.03em), criando tensão visual como se as letras estivessem comprimidas sob carga. O background é claro (--bg) mas os blocos de conteúdo usam contraste duro entre --surface e --fg, sem transições suaves — cortes secos entre seções. O accent verde (oklch 55% 0.22 145) aparece APENAS no CTA principal e no botão WhatsApp flutuante — dois usos, máximo. Glow no CTA com box-shadow usando color-mix do accent a 40% de opacidade, pulsando a cada 2.5s. Espaçamento generoso entre seções (py-24 mínimo), mas dentro dos blocos o conteúdo é denso e compacto, como equipamentos numa sala de musculação. Cards de serviços com borda sólida 3px em --border, sem border-radius — cantos retos, brutalistas. Hover nos cards: translate -4px no Y com sombra dura (sem blur, offset sólido 4px 4px em --fg). A micro-interação memorável é o H1 do hero entrando com scale-in rápido (200ms) e um leve overshoot (cubic-bezier 0.34, 1.56, 0.64, 1), como um soco no ar. Stagger de 40ms entre elementos. Toda animação respeita prefers-reduced-motion com fallback para opacity. O tom é direto, motivador, sem firulas — cada pixel justifica sua existência.\n\nCSS VARS CONFIRMADAS: --color-primary:oklch(55% 0.22 145) --color-background:oklch(98% 0.005 0) --color-accent:oklch(55% 0.22 145) --color-text:oklch(12% 0.01 0)",
+  "jina_insights": "Jina AI: Sem referencias. Usar padroes premium do segmento academia.",
+  "competitor_analysis": "",
+  "anti_patterns": [
+    "precos visiveis"
+  ],
+  "schema_org_types": [
+    "LocalBusiness"
+  ],
+  "seo_keywords": [
+    "academia",
+    "academia Campina Grande Do Sul",
+    "melhor academia Campina Grande Do Sul",
+    "academia campina grande do sul",
+    "academia campina grande do sul pr",
+    "start academia campina grande do sul",
+    "academia iron campina grande do sul",
+    "academia high campina grande do sul"
+  ],
+  "faq_questions": [
+    "Qual a mensalidade?",
+    "Tem aula experimental?",
+    "Qual o horario?"
+  ],
+  "value_props": [],
+  "geo": null,
+  "dark_mode": false
+}

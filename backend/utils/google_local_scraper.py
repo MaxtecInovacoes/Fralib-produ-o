@@ -1,4 +1,4 @@
-﻿"""
+"""
 Google Local Business Scraper - Parseia resultados do Google Search
 
 Interface compatível com agente1_hunter_v2.py:
@@ -50,25 +50,30 @@ class GoogleLocalScraper:
                 estabelecimentos_maps = await self._capturar_painel_maps(page, limite)
 
                 if estabelecimentos_maps:
-                    for est in estabelecimentos_maps:
-                        try:
-                            detalhes = await self._buscar_detalhes(context, est["nome"], cidade)
-                            if detalhes:
-                                est["logo"] = detalhes.get("logo", "")
-                                est["fotos"] = detalhes.get("fotos", [])
-                                est["depoimentos"] = detalhes.get("depoimentos", [])
-                                est["horarios"] = detalhes.get("horarios", [])
-                                est["maps_url"] = detalhes.get("maps_url", "")
-                                est["atributos"] = detalhes.get("atributos", [])
-                                est["servicos"] = detalhes.get("servicos", [])
-                                est["faixa_preco"] = detalhes.get("faixa_preco", "")
-                                if detalhes.get("website"):
-                                    est["website"] = detalhes["website"]
-                                if detalhes.get("telefone"):
-                                    est["telefone"] = detalhes["telefone"]
-                        except Exception as e_det:
-                            print(f"[Scraper] detalhe {est['nome']}: {e_det}")
+                    import asyncio as _asyncio
+                    _sem = _asyncio.Semaphore(4)  # max 4 tabs simultâneas
 
+                    async def _buscar_com_sem(est):
+                        async with _sem:
+                            try:
+                                detalhes = await self._buscar_detalhes(context, est["nome"], cidade)
+                                if detalhes:
+                                    est["logo"] = detalhes.get("logo", "")
+                                    est["fotos"] = detalhes.get("fotos", [])
+                                    est["depoimentos"] = detalhes.get("depoimentos", [])
+                                    est["horarios"] = detalhes.get("horarios", [])
+                                    est["maps_url"] = detalhes.get("maps_url", "")
+                                    est["atributos"] = detalhes.get("atributos", [])
+                                    est["servicos"] = detalhes.get("servicos", [])
+                                    est["faixa_preco"] = detalhes.get("faixa_preco", "")
+                                    if detalhes.get("website"):
+                                        est["website"] = detalhes["website"]
+                                    if detalhes.get("telefone"):
+                                        est["telefone"] = detalhes["telefone"]
+                            except Exception as e_det:
+                                print(f"[Scraper] detalhe {est['nome']}: {e_det}")
+
+                    await _asyncio.gather(*[_buscar_com_sem(est) for est in estabelecimentos_maps])
                     print(f"\n[Scraper] Total: {len(estabelecimentos_maps)} estabelecimentos capturados")
                     await browser.close()
                     return estabelecimentos_maps
@@ -101,20 +106,26 @@ class GoogleLocalScraper:
                 texto = await page.inner_text("body")
                 estabelecimentos = self._parsear_resultados(texto, limite)
 
-                for est in estabelecimentos:
-                    try:
-                        detalhes = await self._buscar_detalhes(context, est["nome"], cidade)
-                        if detalhes:
-                            est["logo"] = detalhes.get("logo", "")
-                            est["fotos"] = detalhes.get("fotos", [])
-                            est["depoimentos"] = detalhes.get("depoimentos", [])
-                            est["horarios"] = detalhes.get("horarios", [])
-                            est["maps_url"] = detalhes.get("maps_url", "")
-                            est["atributos"] = detalhes.get("atributos", [])
-                            est["servicos"] = detalhes.get("servicos", [])
-                            est["faixa_preco"] = detalhes.get("faixa_preco", "")
-                    except:
-                        pass
+                import asyncio as _asyncio2
+                _sem2 = _asyncio2.Semaphore(4)
+
+                async def _buscar_com_sem2(est):
+                    async with _sem2:
+                        try:
+                            detalhes = await self._buscar_detalhes(context, est["nome"], cidade)
+                            if detalhes:
+                                est["logo"] = detalhes.get("logo", "")
+                                est["fotos"] = detalhes.get("fotos", [])
+                                est["depoimentos"] = detalhes.get("depoimentos", [])
+                                est["horarios"] = detalhes.get("horarios", [])
+                                est["maps_url"] = detalhes.get("maps_url", "")
+                                est["atributos"] = detalhes.get("atributos", [])
+                                est["servicos"] = detalhes.get("servicos", [])
+                                est["faixa_preco"] = detalhes.get("faixa_preco", "")
+                        except:
+                            pass
+
+                await _asyncio2.gather(*[_buscar_com_sem2(est) for est in estabelecimentos])
 
                 print(f"\n[Scraper] Total: {len(estabelecimentos)} estabelecimentos capturados")
                 await browser.close()
@@ -162,18 +173,25 @@ class GoogleLocalScraper:
                     except:
                         rating = 0.0
 
-                    reviews_el = await card.query_selector("span.UY7F9")
-                    reviews_txt = (await reviews_el.inner_text()).strip() if reviews_el else "0"
-                    reviews_num = int(re.sub(r"\D", "", reviews_txt) or "0")
+                    # Reviews: extrair do texto completo do card via regex (span.UY7F9 foi removido pelo Google)
+                    card_text = await card.inner_text()
+                    reviews_match = re.search(r"\(([\d\.]+)\)", card_text)
+                    reviews_num = int(re.sub(r"\D", "", reviews_match.group(1))) if reviews_match else 0
 
-                    tipo_el = await card.query_selector("div.W4Efsd span:first-child")
-                    tipo = (await tipo_el.inner_text()).strip() if tipo_el else ""
-
-                    endereco_el = await card.query_selector("div.W4Efsd:last-child span")
-                    endereco = (await endereco_el.inner_text()).strip() if endereco_el else ""
+                    # Tipo e endereço: extrair do texto do card
+                    linhas = [l.strip() for l in card_text.split("\n") if l.strip()]
+                    tipo = ""
+                    endereco = ""
+                    for linha in linhas:
+                        if linha in [nome, rating_txt]:
+                            continue
+                        if re.search(r"(Academia|Sala de fitness|Gym|Fitness|Pilates|Crossfit)", linha, re.I) and not tipo:
+                            tipo = linha.split("·")[0].strip()
+                        if re.search(r"(Rua|R\.|Av\.|Avenida|Rodovia|Al\.|Alameda)", linha) and not endereco:
+                            endereco = re.sub(r"^.*?·\s*", "", linha).strip()
 
                     est = {
-                        "nome": nome, "tipo": tipo, "endereco": endereco,
+                        "nome": nome, "tipo": tipo or "Academia", "endereco": endereco,
                         "telefone": "", "rating": rating, "reviews": reviews_num,
                         "website": "", "logo": "", "fotos": [], "depoimentos": [],
                         "horarios": [], "maps_url": "", "atributos": [],
@@ -182,6 +200,7 @@ class GoogleLocalScraper:
                     estabelecimentos.append(est)
                     print(f"[Scraper] Maps OK {nome} | {rating} ({reviews_num} reviews)")
                 except Exception as e_card:
+                    print(f"[Scraper] card erro: {e_card}")
                     continue
 
         except Exception as e:
@@ -240,19 +259,30 @@ class GoogleLocalScraper:
         try:
             detail_page = await context.new_page()
             search = f"{nome} {cidade}"
-            url = f"https://www.google.com/maps/search/{search.replace(' ', '+')}&&hl=pt-BR"
+            url = f"https://www.google.com/maps/search/{search.replace(' ', '+')}?hl=pt-BR"
             await detail_page.goto(url, timeout=20000)
             await asyncio.sleep(3)
 
             maps_url_final = detail_page.url
-            primeiro = await detail_page.query_selector("a[href*='/maps/place/']")
-            if primeiro:
-                href = await primeiro.get_attribute("href")
-                await detail_page.goto(href + "&hl=pt-BR", timeout=20000)
-                await asyncio.sleep(3)
-                maps_url_final = detail_page.url
+
+            # Se Maps redirecionou direto para a página do negócio, já está no lugar certo
+            # Se ficou na lista de resultados, clicar no primeiro link
+            if "/maps/place/" not in detail_page.url:
+                primeiro = await detail_page.query_selector("a[href*='/maps/place/']")
+                if primeiro:
+                    href = await primeiro.get_attribute("href")
+                    await detail_page.goto(href, timeout=20000)
+                    await asyncio.sleep(3)
+                    maps_url_final = detail_page.url
 
             page = detail_page
+
+            # Aguardar carregamento completo da pagina de detalhes
+            try:
+                await page.wait_for_selector("img[src*='googleusercontent']", timeout=8000)
+                await asyncio.sleep(1.5)
+            except:
+                await asyncio.sleep(2)
 
             # Fotos
             logo = ""
@@ -335,6 +365,29 @@ class GoogleLocalScraper:
             except:
                 pass
 
+
+            # Endereco completo
+            endereco_completo = ""
+            try:
+                addr_el = await page.query_selector("button[data-item-id='address'], [data-item-id='address']")
+                if addr_el:
+                    addr_label = await addr_el.get_attribute("aria-label") or ""
+                    if addr_label:
+                        # aria-label formato: "Endereco: Rua X, 123 - Bairro, Cidade - UF"
+                        endereco_completo = addr_label.replace("Endereço: ", "").replace("Endereco: ", "").strip()
+                    if not endereco_completo:
+                        endereco_completo = (await addr_el.inner_text()).strip()
+                if not endereco_completo:
+                    # Fallback: buscar no texto geral da pagina
+                    addr_divs = await page.query_selector_all("div[class*='Io6YTe'], div[class*='rogA2c']")
+                    for div in addr_divs[:5]:
+                        txt = (await div.inner_text()).strip()
+                        if re.search(r"(Rua|R\.|Av\.|Avenida|Rodovia|Al\.|Alameda|Estr\.|Estrada)", txt) and len(txt) > 10:
+                            endereco_completo = txt
+                            break
+            except:
+                pass
+
             # Faixa de preco
             faixa_preco = ""
             try:
@@ -360,10 +413,14 @@ class GoogleLocalScraper:
 
                 if aba_reviews:
                     await aba_reviews.click()
+                    try:
+                        await page.wait_for_selector("div[data-review-id], div.jftiEf", timeout=8000)
+                    except:
+                        pass
                     await asyncio.sleep(2)
                     painel = await page.query_selector("div[aria-label*='valiac'], div[role='main']")
                     if painel:
-                        for _ in range(4):
+                        for _ in range(6):
                             await painel.evaluate("el => el.scrollTop += 800")
                             await asyncio.sleep(0.8)
                     botoes_mais = await page.query_selector_all("button[aria-label*='mais'], button.w8nwRe")
@@ -376,7 +433,7 @@ class GoogleLocalScraper:
                     review_blocks = await page.query_selector_all(
                         "div[data-review-id], div.jftiEf"
                     )
-                    for block in review_blocks[:10]:
+                    for block in review_blocks[:25]:
                         try:
                             autor_el = await block.query_selector("div.d4r55, span.X43Kjb")
                             autor = (await autor_el.inner_text()).strip() if autor_el else "Cliente"
@@ -393,8 +450,10 @@ class GoogleLocalScraper:
                                         rating_val = int(m.group(1))
                             data_el = await block.query_selector("span.rsqaWe")
                             data_str = (await data_el.inner_text()).strip() if data_el else ""
-                            if texto and len(texto) > 15 and autor != "Cliente":
+                            if texto and len(texto) > 15 and autor != "Cliente" and rating_val >= 4:
                                 depoimentos.append({"autor": autor, "rating": rating_val, "texto": texto, "data": data_str})
+                                if len(depoimentos) >= 10:
+                                    break
                         except:
                             continue
 
@@ -413,12 +472,37 @@ class GoogleLocalScraper:
             except Exception as e_rev:
                 print(f"[Scraper] reviews erro (nao critico): {e_rev}")
 
-            print(f"[Scraper] {nome}: {len(fotos)} fotos, {len(depoimentos)} reviews, {len(horarios)} horarios, {len(atributos)} atributos")
+            # Gerar embed Google Maps por coordenadas ou nome+cidade
+            google_maps_embed = ""
+            try:
+                import urllib.parse as _up
+                _q = _up.quote(f"{nome}, {cidade}")
+                coord_match = re.search(r'@(-?[0-9]+\.[0-9]+),(-?[0-9]+\.[0-9]+)', maps_url_final)
+                if coord_match:
+                    lat, lng = coord_match.group(1), coord_match.group(2)
+                    google_maps_embed = (f'<iframe width="100%" height="450" style="border:0;" '
+                        f'loading="lazy" allowfullscreen="" referrerpolicy="no-referrer-when-downgrade" '
+                        f'src="https://maps.google.com/maps?q={lat},{lng}&output=embed&z=16"></iframe>')
+                else:
+                    google_maps_embed = (f'<iframe width="100%" height="450" style="border:0;" '
+                        f'loading="lazy" allowfullscreen="" referrerpolicy="no-referrer-when-downgrade" '
+                        f'src="https://maps.google.com/maps?q={_q}&output=embed&z=16"></iframe>')
+                print(f"[Scraper] maps_embed gerado: {len(google_maps_embed)} chars")
+            except Exception as e_maps:
+                print(f"[Scraper] maps_embed erro: {e_maps}")
+
+            # Separar logo (primeira imagem) das fotos do estabelecimento
+            logo_url = fotos[0] if fotos else ""
+            fotos_sem_logo = fotos[1:] if len(fotos) > 1 else fotos
+
+            print(f"[Scraper] {nome}: {len(fotos)} fotos, {len(depoimentos)} reviews, {len(horarios)} horarios, {len(atributos)} atributos, endereco={endereco_completo[:50]}")
             return {
-                "logo": logo, "fotos": fotos, "depoimentos": depoimentos,
+                "logo": logo_url, "fotos": fotos_sem_logo, "depoimentos": depoimentos,
                 "horarios": horarios, "maps_url": maps_url_final,
                 "website": website_real, "telefone": telefone_real,
                 "atributos": atributos, "servicos": servicos, "faixa_preco": faixa_preco,
+                "google_maps_embed": google_maps_embed,
+                "endereco_completo": endereco_completo,
             }
 
         except Exception as e:
@@ -440,9 +524,41 @@ class GoogleLocalScraper:
                 "telefone": r.get("telefone", ""), "rating": r.get("rating", 0),
                 "total_avaliacoes": r.get("reviews", 0), "reviews": r.get("depoimentos", []),
                 "fotos": r.get("fotos", []), "logo": r.get("logo", ""),
-                "website": r.get("website", ""), "endereco": r.get("endereco", ""),
+                "website": r.get("website", ""), "endereco": r.get("endereco_completo", "") or r.get("endereco", ""),
                 "horarios": r.get("horarios", []), "maps_url": r.get("maps_url", ""),
                 "atributos": r.get("atributos", []), "servicos": r.get("servicos", []),
                 "faixa_preco": r.get("faixa_preco", ""),
             }
         return None
+
+    async def buscar_detalhe_unico(self, nome: str, cidade: str):
+        from playwright.async_api import async_playwright
+        async with async_playwright() as p:
+            browser = await p.chromium.launch(headless=self.headless, args=["--no-sandbox"])
+            context = await browser.new_context(
+                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                viewport={"width": 1366, "height": 768}, locale="pt-BR", timezone_id="America/Sao_Paulo",
+            )
+            try:
+                return await self._buscar_detalhes(context, nome, cidade)
+            finally:
+                await browser.close()
+
+    async def buscar_somente_cards(self, query: str, cidade: str, limite: int = 10):
+        from playwright.async_api import async_playwright
+        async with async_playwright() as p:
+            browser = await p.chromium.launch(headless=self.headless, args=["--no-sandbox"])
+            context = await browser.new_context(
+                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                viewport={"width": 1366, "height": 768}, locale="pt-BR", timezone_id="America/Sao_Paulo",
+                extra_http_headers={"Accept-Language": "pt-BR,pt;q=0.9"},
+            )
+            page = await context.new_page()
+            try:
+                url = f"https://www.google.com/maps/search/{query.replace(chr(32), chr(43))}+{cidade.replace(chr(32), chr(43))}?hl=pt-BR"
+                await page.goto(url, timeout=30000)
+                await self._human_delay(3000, 5000)
+                return await self._capturar_painel_maps(page, limite)
+            finally:
+                await browser.close()
+

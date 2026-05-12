@@ -315,6 +315,42 @@ def inicializar_database():
             )
         """))
         
+        # Criar tabela pipeline_queue (fila persistente de jobs)
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS pipeline_queue (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER NOT NULL,
+                segmento VARCHAR(100),
+                cidade VARCHAR(100),
+                quantidade INTEGER DEFAULT 10,
+                score_minimo INTEGER DEFAULT 60,
+                status VARCHAR(20) DEFAULT 'pendente',
+                criado_em TIMESTAMP DEFAULT NOW(),
+                iniciado_em TIMESTAMP,
+                concluido_em TIMESTAMP,
+                erro TEXT
+            )
+        """))
+
+        # Criar tabela sdr_learning (aprendizado do Bryan SDR)
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS sdr_learning (
+                id SERIAL PRIMARY KEY,
+                lead_id TEXT,
+                user_id INTEGER,
+                segmento TEXT,
+                tier TEXT,
+                mensagem_usada TEXT,
+                resultado TEXT,
+                observacao TEXT,
+                nicho TEXT,
+                intent TEXT,
+                reply TEXT,
+                next_stage TEXT,
+                criado_em TEXT
+            )
+        """))
+
         conn.commit()
     
     print("[Database] ✅ Banco inicializado")

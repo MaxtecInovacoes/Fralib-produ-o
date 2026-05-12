@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FraLib OS — Arquitetura do Sistema</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:#0a0a0f; color:#e2e8f0; font-family:'Segoe UI',system-ui,sans-serif; min-height:100vh; padding:32px 16px; }
+h1 { text-align:center; font-size:1.8rem; font-weight:700; background:linear-gradient(135deg,#9333ea,#06b6d4); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; margin-bottom:6px; }
+.subtitle { text-align:center; color:#64748b; font-size:0.85rem; margin-bottom:28px; }
+.svg-container { width:100%; max-width:1400px; margin:0 auto; overflow-x:auto; }
+svg { display:block; margin:0 auto; width:100%; height:auto; }
+.legend { display:flex; flex-wrap:wrap; justify-content:center; gap:16px; margin:28px auto 0; max-width:900px; }
+.legend-item { display:flex; align-items:center; gap:8px; font-size:0.82rem; color:#94a3b8; }
+.legend-dot { width:14px; height:14px; border-radius:3px; flex-shrink:0; }
+.footer { text-align:center; margin-top:32px; color:#334155; font-size:0.75rem; }
+</style>
+</head>
+<body>
+<h1>FraLib OS — Arquitetura do Sistema</h1>
+<p class="subtitle">Diagrama completo de infraestrutura, agentes IA e integrações &nbsp;|&nbsp; 08/05/2026</p>
+<div class="svg-container">
+<svg viewBox="0 0 1300 980" xmlns="http://www.w3.org/2000/svg" font-family="'Segoe UI',system-ui,sans-serif">
+<defs>
+<linearGradient id="bgGrad" x1="0" y1="0" x2="0" y2="1">
+  <stop offset="0%" stop-color="#0f0f1a"/><stop offset="100%" stop-color="#0a0a0f"/>
+</linearGradient>
+<marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#475569"/></marker>
+<marker id="arr-p" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#9333ea"/></marker>
+<marker id="arr-c" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#06b6d4"/></marker>
+<marker id="arr-g" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#10b981"/></marker>
+<marker id="arr-gold" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#fbbf24"/></marker>
+<marker id="arr-r" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#ef4444"/></marker>
+<filter id="gp"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+</defs>
+<!-- BG -->
+<rect width="1300" height="980" fill="url(#bgGrad)" rx="12"/>
+
+<!-- ===== CAMADA 1: USUARIO ===== -->
+<rect x="570" y="20" width="160" height="52" rx="10" fill="#1e293b" stroke="#475569" stroke-width="1.5"/>
+<text x="650" y="42" text-anchor="middle" fill="#e2e8f0" font-size="13" font-weight="600">👤 Usuário</text>
+<text x="650" y="60" text-anchor="middle" fill="#64748b" font-size="10">Browser / HTTPS</text>
+
+<!-- seta usuario -> nginx -->
+<line x1="650" y1="72" x2="650" y2="108" stroke="#475569" stroke-width="1.5" marker-end="url(#arr)"/>
+
+<!-- ===== CAMADA 2: NGINX ===== -->
+<rect x="380" y="108" width="540" height="72" rx="10" fill="#1a0a0a" stroke="#ef4444" stroke-width="2"/>
+<text x="650" y="130" text-anchor="middle" fill="#ef4444" font-size="13" font-weight="700">⚙ Nginx — Reverse Proxy</text>
+<text x="490" y="150" text-anchor="middle" fill="#94a3b8" font-size="10">seunegociofralib.site</text>
+<text x="490" y="164" text-anchor="middle" fill="#64748b" font-size="9">:80 / :443 (SSL)</text>
+<text x="650" y="150" text-anchor="middle" fill="#94a3b8" font-size="10">187.77.37.72</text>
+<text x="650" y="164" text-anchor="middle" fill="#64748b" font-size="9">IP direto</text>
+<text x="810" y="150" text-anchor="middle" fill="#94a3b8" font-size="10">/api/ → :8000</text>
+<text x="810" y="164" text-anchor="middle" fill="#64748b" font-size="9">proxy_pass FastAPI</text>
+
+<!-- seta nginx -> fastapi -->
+<line x1="650" y1="180" x2="650" y2="216" stroke="#ef4444" stroke-width="1.5" marker-end="url(#arr-r)"/>
+
+<!-- ===== CAMADA 3: FASTAPI ===== -->
+<rect x="300" y="216" width="700" height="80" rx="10" fill="#0d1117" stroke="#ef4444" stroke-width="2"/>
+<text x="650" y="238" text-anchor="middle" fill="#ef4444" font-size="13" font-weight="700">🚀 FastAPI — server.py  (PM2: fralib | porta 8000)</text>
+<text x="390" y="258" text-anchor="middle" fill="#94a3b8" font-size="9">/api/auth</text>
+<text x="470" y="258" text-anchor="middle" fill="#94a3b8" font-size="9">/api/pipeline</text>
+<text x="555" y="258" text-anchor="middle" fill="#94a3b8" font-size="9">/api/dashboard</text>
+<text x="645" y="258" text-anchor="middle" fill="#94a3b8" font-size="9">/api/leads</text>
+<text x="725" y="258" text-anchor="middle" fill="#94a3b8" font-size="9">/api/whatsapp</text>
+<text x="810" y="258" text-anchor="middle" fill="#94a3b8" font-size="9">/api/credits</text>
+<text x="900" y="258" text-anchor="middle" fill="#94a3b8" font-size="9">/api/llm</text>
+<text x="650" y="278" text-anchor="middle" fill="#64748b" font-size="9">Rate Limit: 100/min global | 5 pipelines/min por usuário | SlowAPI</text>
+<text x="650" y="290" text-anchor="middle" fill="#64748b" font-size="9">SSE: /api/logs/stream — logs em tempo real</text>
+
+<!-- seta fastapi -> pipeline -->
+<line x1="650" y1="296" x2="650" y2="332" stroke="#ef4444" stroke-width="1.5" marker-end="url(#arr-r)"/>
+
+<!-- ===== CAMADA 4: PIPELINE ===== -->
+<rect x="200" y="332" width="900" height="56" rx="10" fill="#0d0d1f" stroke="#9333ea" stroke-width="2"/>
+<text x="650" y="354" text-anchor="middle" fill="#9333ea" font-size="13" font-weight="700">🔄 Pipeline Orquestrador — pipeline_endpoints.py</text>
+<text x="650" y="374" text-anchor="middle" fill="#64748b" font-size="9">FraLibState · pipeline_checkpoint · rate_limit · consume_tokens · SSE logs</text>
+
+<!-- seta pipeline -> agentes -->
+<line x1="650" y1="388" x2="650" y2="420" stroke="#9333ea" stroke-width="1.5" marker-end="url(#arr-p)"/>
+
+<!-- ===== CAMADA 5: AGENTES IA ===== -->
+<rect x="30" y="420" width="1240" height="220" rx="10" fill="#0a0014" stroke="#9333ea" stroke-width="1.5" stroke-dasharray="6,3"/>
+<text x="650" y="442" text-anchor="middle" fill="#9333ea" font-size="12" font-weight="700">🤖 Agentes IA — /backend/agents/</text>
+
+<!-- Hunter -->
+<rect x="50" y="452" width="130" height="72" rx="8" fill="#1a0a2e" stroke="#9333ea" stroke-width="1.5"/>
+<text x="115" y="470" text-anchor="middle" fill="#c084fc" font-size="11" font-weight="700">🔍 Hunter</text>
+<text x="115" y="484" text-anchor="middle" fill="#94a3b8" font-size="8">agente1_hunter_v2</text>
+<text x="115" y="496" text-anchor="middle" fill="#64748b" font-size="8">Google Maps</text>
+<text x="115" y="508" text-anchor="middle" fill="#64748b" font-size="8">Playwright scraping</text>
+<text x="115" y="520" text-anchor="middle" fill="#64748b" font-size="8">LeadRaw / score</text>
+
+<!-- Caio -->
+<rect x="195" y="452" width="130" height="72" rx="8" fill="#1a0a2e" stroke="#9333ea" stroke-width="1.5"/>
+<text x="260" y="470" text-anchor="middle" fill="#c084fc" font-size="11" font-weight="700">📊 Caio</text>
+<text x="260" y="484" text-anchor="middle" fill="#94a3b8" font-size="8">caio.py</text>
+<text x="260" y="496" text-anchor="middle" fill="#64748b" font-size="8">Qualificador de leads</text>
+<text x="260" y="508" text-anchor="middle" fill="#64748b" font-size="8">Score PREMIUM/STD</text>
+<text x="260" y="520" text-anchor="middle" fill="#64748b" font-size="8">RAG: 1.894 chars</text>
+
+<!-- Theo -->
+<rect x="340" y="452" width="130" height="72" rx="8" fill="#1a0a2e" stroke="#9333ea" stroke-width="1.5"/>
+<text x="405" y="470" text-anchor="middle" fill="#c084fc" font-size="11" font-weight="700">🧠 Theo</text>
+<text x="405" y="484" text-anchor="middle" fill="#94a3b8" font-size="8">theo.py (723 linhas)</text>
+<text x="405" y="496" text-anchor="middle" fill="#64748b" font-size="8">Estrategista / PRD</text>
+<text x="405" y="508" text-anchor="middle" fill="#64748b" font-size="8">Briefing + Jina refs</text>
+<text x="405" y="520" text-anchor="middle" fill="#64748b" font-size="8">RAG: 4.206 chars</text>
+
+<!-- Arquiteto -->
+<rect x="485" y="452" width="130" height="72" rx="8" fill="#1a0a2e" stroke="#9333ea" stroke-width="1.5"/>
+<text x="550" y="470" text-anchor="middle" fill="#c084fc" font-size="11" font-weight="700">🏗 Arquiteto</text>
+<text x="550" y="484" text-anchor="middle" fill="#94a3b8" font-size="8">arquiteto_mestre.py</text>
+<text x="550" y="496" text-anchor="middle" fill="#64748b" font-size="8">Designer PRD visual</text>
+<text x="550" y="508" text-anchor="middle" fill="#64748b" font-size="8">Paleta + layout</text>
+<text x="550" y="520" text-anchor="middle" fill="#64748b" font-size="8">max_tokens: 8000</text>
+
+<!-- Alex -->
+<rect x="630" y="452" width="130" height="72" rx="8" fill="#1a0a2e" stroke="#9333ea" stroke-width="1.5"/>
+<text x="695" y="470" text-anchor="middle" fill="#c084fc" font-size="11" font-weight="700">🖼 Alex</text>
+<text x="695" y="484" text-anchor="middle" fill="#94a3b8" font-size="8">alex.py (1028 linhas)</text>
+<text x="695" y="496" text-anchor="middle" fill="#64748b" font-size="8">Integrador imagens</text>
+<text x="695" y="508" text-anchor="middle" fill="#64748b" font-size="8">Fotos + logo + cores</text>
+<text x="695" y="520" text-anchor="middle" fill="#64748b" font-size="8">RAG: 2.222 chars</text>
+
+<!-- Liam -->
+<rect x="775" y="452" width="130" height="72" rx="8" fill="#1a0a2e" stroke="#9333ea" stroke-width="1.5"/>
+<text x="840" y="470" text-anchor="middle" fill="#c084fc" font-size="11" font-weight="700">⚡ Liam</text>
+<text x="840" y="484" text-anchor="middle" fill="#94a3b8" font-size="8">liam.py (519 linhas)</text>
+<text x="840" y="496" text-anchor="middle" fill="#64748b" font-size="8">Gerador HTML</text>
+<text x="840" y="508" text-anchor="middle" fill="#64748b" font-size="8">Componentizado</text>
+<text x="840" y="520" text-anchor="middle" fill="#64748b" font-size="8">RAG: 18.645 chars</text>
+
+<!-- Liz -->
+<rect x="920" y="452" width="130" height="72" rx="8" fill="#1a0a2e" stroke="#9333ea" stroke-width="1.5"/>
+<text x="985" y="470" text-anchor="middle" fill="#c084fc" font-size="11" font-weight="700">🔎 Liz</text>
+<text x="985" y="484" text-anchor="middle" fill="#94a3b8" font-size="8">liz.py (491 linhas)</text>
+<text x="985" y="496" text-anchor="middle" fill="#64748b" font-size="8">Revisora de código</text>
+<text x="985" y="508" text-anchor="middle" fill="#64748b" font-size="8">Auditoria HTML</text>
+<text x="985" y="520" text-anchor="middle" fill="#64748b" font-size="8">Design-system skill</text>
+
+<!-- Bryan -->
+<rect x="1065" y="452" width="130" height="72" rx="8" fill="#1a0a2e" stroke="#9333ea" stroke-width="1.5"/>
+<text x="1130" y="470" text-anchor="middle" fill="#c084fc" font-size="11" font-weight="700">📤 Bryan</text>
+<text x="1130" y="484" text-anchor="middle" fill="#94a3b8" font-size="8">bryan.py (424 linhas)</text>
+<text x="1130" y="496" text-anchor="middle" fill="#64748b" font-size="8">Finalizador / SDR</text>
+<text x="1130" y="508" text-anchor="middle" fill="#64748b" font-size="8">Contato inicial</text>
+<text x="1130" y="520" text-anchor="middle" fill="#64748b" font-size="8">RAG: 3.437 chars</text>
+
+<!-- Seta de fluxo entre agentes (linha horizontal) -->
+<line x1="180" y1="488" x2="195" y2="488" stroke="#9333ea" stroke-width="1" marker-end="url(#arr-p)"/>
+<line x1="325" y1="488" x2="340" y2="488" stroke="#9333ea" stroke-width="1" marker-end="url(#arr-p)"/>
+<line x1="470" y1="488" x2="485" y2="488" stroke="#9333ea" stroke-width="1" marker-end="url(#arr-p)"/>
+<line x1="615" y1="488" x2="630" y2="488" stroke="#9333ea" stroke-width="1" marker-end="url(#arr-p)"/>
+<line x1="760" y1="488" x2="775" y2="488" stroke="#9333ea" stroke-width="1" marker-end="url(#arr-p)"/>
+<line x1="905" y1="488" x2="920" y2="488" stroke="#9333ea" stroke-width="1" marker-end="url(#arr-p)"/>
+<line x1="1050" y1="488" x2="1065" y2="488" stroke="#9333ea" stroke-width="1" marker-end="url(#arr-p)"/>
+
+<!-- Label ordem -->
+<text x="650" y="545" text-anchor="middle" fill="#4c1d95" font-size="9">Ordem: Hunter → Caio → Theo → Arquiteto → Alex → Liam → Liz → Bryan</text>
+
+<!-- Linha de suporte: brain.py, color_enforcer, color_extractor, animation_injector -->
+<rect x="200" y="558" width="900" height="28" rx="6" fill="#0f0a1f" stroke="#7c3aed" stroke-width="1" stroke-dasharray="4,2"/>
+<text x="650" y="576" text-anchor="middle" fill="#7c3aed" font-size="9">Suporte: brain.py · color_enforcer.py · color_extractor.py · animation_injector.py · liam_seo.py · liam_motion.py · validation_layer.py · skill_loader.py · agent_rag.py</text>
+
+<!-- Seta agentes -> deploy -->
+<line x1="650" y1="590" x2="650" y2="626" stroke="#9333ea" stroke-width="1.5" marker-end="url(#arr-p)"/>
+
+<!-- ===== CAMADA 6: DEPLOY / OUTPUT ===== -->
+<rect x="300" y="626" width="700" height="52" rx="10" fill="#0a1a0a" stroke="#10b981" stroke-width="2"/>
+<text x="650" y="648" text-anchor="middle" fill="#10b981" font-size="13" font-weight="700">🌐 Deploy — Landing Page Gerada</text>
+<text x="650" y="664" text-anchor="middle" fill="#64748b" font-size="9">/var/www/fralib/{slug}/index.html · seunegociofralib.site/{slug} · Bryan envia link via WhatsApp</text>
+
+<!-- ===== CAMADA 7: FRONTEND ===== -->
+<rect x="30" y="626" width="240" height="52" rx="10" fill="#0a1a0a" stroke="#10b981" stroke-width="1.5"/>
+<text x="150" y="645" text-anchor="middle" fill="#10b981" font-size="11" font-weight="700">🖥 Frontend</text>
+<text x="150" y="659" text-anchor="middle" fill="#94a3b8" font-size="9">landing.html · login.html</text>
+<text x="150" y="671" text-anchor="middle" fill="#64748b" font-size="9">admin.html · /var/www/fralib/</text>
+
+<!-- seta nginx -> frontend -->
+<line x1="380" y1="144" x2="270" y2="144" stroke="#10b981" stroke-width="1" stroke-dasharray="4,2" marker-end="url(#arr-g)"/>
+<line x1="270" y1="144" x2="150" y2="626" stroke="#10b981" stroke-width="1" stroke-dasharray="4,2"/>
+
+<!-- ===== CAMADA 8: INTEGRAÇÕES EXTERNAS ===== -->
+<rect x="30" y="700" width="1240" height="130" rx="10" fill="#001a1a" stroke="#06b6d4" stroke-width="1.5" stroke-dasharray="6,3"/>
+<text x="650" y="722" text-anchor="middle" fill="#06b6d4" font-size="12" font-weight="700">🔌 Integrações Externas</text>
+
+<!-- Google Maps -->
+<rect x="50" y="732" width="180" height="72" rx="8" fill="#001f2e" stroke="#06b6d4" stroke-width="1.5"/>
+<text x="140" y="752" text-anchor="middle" fill="#22d3ee" font-size="11" font-weight="700">🗺 Google Maps API</text>
+<text x="140" y="766" text-anchor="middle" fill="#94a3b8" font-size="8">google_local_scraper</text>
+<text x="140" y="778" text-anchor="middle" fill="#64748b" font-size="8">Playwright scraping</text>
+<text x="140" y="790" text-anchor="middle" fill="#64748b" font-size="8">Leads reais: nome, tel,</text>
+<text x="140" y="800" text-anchor="middle" fill="#64748b" font-size="8">fotos, rating, endereço</text>
+
+<!-- Jina AI -->
+<rect x="250" y="732" width="180" height="72" rx="8" fill="#001f2e" stroke="#06b6d4" stroke-width="1.5"/>
+<text x="340" y="752" text-anchor="middle" fill="#22d3ee" font-size="11" font-weight="700">🔗 Jina AI</text>
+<text x="340" y="766" text-anchor="middle" fill="#94a3b8" font-size="8">pesquisar_referencias_jina</text>
+<text x="340" y="778" text-anchor="middle" fill="#64748b" font-size="8">Web scraping semântico</text>
+<text x="340" y="790" text-anchor="middle" fill="#64748b" font-size="8">Referências visuais</text>
+<text x="340" y="800" text-anchor="middle" fill="#64748b" font-size="8">para briefing do Theo</text>
+
+<!-- Anthropic Claude -->
+<rect x="450" y="732" width="200" height="72" rx="8" fill="#001f2e" stroke="#06b6d4" stroke-width="1.5"/>
+<text x="550" y="752" text-anchor="middle" fill="#22d3ee" font-size="11" font-weight="700">🤖 Anthropic Claude</text>
+<text x="550" y="766" text-anchor="middle" fill="#94a3b8" font-size="8">claude-opus / sonnet</text>
+<text x="550" y="778" text-anchor="middle" fill="#64748b" font-size="8">LLM principal de todos</text>
+<text x="550" y="790" text-anchor="middle" fill="#64748b" font-size="8">os agentes do pipeline</text>
+<text x="550" y="800" text-anchor="middle" fill="#64748b" font-size="8">PM2: claude-mem</text>
+
+<!-- WhatsApp / MeoWhats -->
+<rect x="670" y="732" width="200" height="72" rx="8" fill="#001f2e" stroke="#06b6d4" stroke-width="1.5"/>
+<text x="770" y="752" text-anchor="middle" fill="#22d3ee" font-size="11" font-weight="700">💬 WhatsApp / MeoWhats</text>
+<text x="770" y="766" text-anchor="middle" fill="#94a3b8" font-size="8">PM2: meowhats</text>
+<text x="770" y="778" text-anchor="middle" fill="#64748b" font-size="8">Bryan envia landing page</text>
+<text x="770" y="790" text-anchor="middle" fill="#64748b" font-size="8">/api/whatsapp endpoints</text>
+<text x="770" y="800" text-anchor="middle" fill="#64748b" font-size="8">Contato SDR automático</text>
+
+<!-- Credits Manager -->
+<rect x="890" y="732" width="180" height="72" rx="8" fill="#001f2e" stroke="#06b6d4" stroke-width="1.5"/>
+<text x="980" y="752" text-anchor="middle" fill="#22d3ee" font-size="11" font-weight="700">💳 Credits Manager</text>
+<text x="980" y="766" text-anchor="middle" fill="#94a3b8" font-size="8">credits_manager.py</text>
+<text x="980" y="778" text-anchor="middle" fill="#64748b" font-size="8">verificar_pode_executar</text>
+<text x="980" y="790" text-anchor="middle" fill="#64748b" font-size="8">consume_tokens</text>
+<text x="980" y="800" text-anchor="middle" fill="#64748b" font-size="8">/api/credits</text>
+
+<!-- LLM Direct -->
+<rect x="1090" y="732" width="160" height="72" rx="8" fill="#001f2e" stroke="#06b6d4" stroke-width="1.5"/>
+<text x="1170" y="752" text-anchor="middle" fill="#22d3ee" font-size="11" font-weight="700">⚡ LLM Direct</text>
+<text x="1170" y="766" text-anchor="middle" fill="#94a3b8" font-size="8">llm_direct.py</text>
+<text x="1170" y="778" text-anchor="middle" fill="#64748b" font-size="8">/api/llm endpoints</text>
+<text x="1170" y="790" text-anchor="middle" fill="#64748b" font-size="8">Chamadas diretas</text>
+<text x="1170" y="800" text-anchor="middle" fill="#64748b" font-size="8">ao modelo</text>
+
+<!-- Setas agentes -> integrações -->
+<line x1="115" y1="524" x2="115" y2="700" stroke="#06b6d4" stroke-width="1" stroke-dasharray="3,2" marker-end="url(#arr-c)"/>
+<line x1="405" y1="524" x2="340" y2="700" stroke="#06b6d4" stroke-width="1" stroke-dasharray="3,2" marker-end="url(#arr-c)"/>
+<line x1="650" y1="590" x2="550" y2="700" stroke="#06b6d4" stroke-width="1" stroke-dasharray="3,2" marker-end="url(#arr-c)"/>
+<line x1="1130" y1="524" x2="770" y2="700" stroke="#06b6d4" stroke-width="1" stroke-dasharray="3,2" marker-end="url(#arr-c)"/>
+
+<!-- ===== CAMADA 9: BANCO DE DADOS ===== -->
+<rect x="30" y="848" width="620" height="110" rx="10" fill="#1a1400" stroke="#fbbf24" stroke-width="1.5"/>
+<text x="340" y="868" text-anchor="middle" fill="#fbbf24" font-size="12" font-weight="700">🗄 PostgreSQL — Banco de Dados</text>
+<rect x="50" y="876" width="120" height="52" rx="6" fill="#0f0d00" stroke="#fbbf24" stroke-width="1"/>
+<text x="110" y="892" text-anchor="middle" fill="#fcd34d" font-size="9" font-weight="600">users</text>
+<text x="110" y="904" text-anchor="middle" fill="#64748b" font-size="8">id, email, senha</text>
+<text x="110" y="914" text-anchor="middle" fill="#64748b" font-size="8">credits, plano</text>
+<text x="110" y="924" text-anchor="middle" fill="#64748b" font-size="8">created_at</text>
+<rect x="185" y="876" width="120" height="52" rx="6" fill="#0f0d00" stroke="#fbbf24" stroke-width="1"/>
+<text x="245" y="892" text-anchor="middle" fill="#fcd34d" font-size="9" font-weight="600">pipeline_queue</text>
+<text x="245" y="904" text-anchor="middle" fill="#64748b" font-size="8">id, user_id, status</text>
+<text x="245" y="914" text-anchor="middle" fill="#64748b" font-size="8">em_andamento</text>
+<text x="245" y="924" text-anchor="middle" fill="#64748b" font-size="8">interrompido</text>
+<rect x="320" y="876" width="120" height="52" rx="6" fill="#0f0d00" stroke="#fbbf24" stroke-width="1"/>
+<text x="380" y="892" text-anchor="middle" fill="#fcd34d" font-size="9" font-weight="600">pipeline_state</text>
+<text x="380" y="904" text-anchor="middle" fill="#64748b" font-size="8">rodando, pausado</text>
+<text x="380" y="914" text-anchor="middle" fill="#64748b" font-size="8">reset no startup</text>
+<text x="380" y="924" text-anchor="middle" fill="#64748b" font-size="8">via PM2</text>
+<rect x="455" y="876" width="120" height="52" rx="6" fill="#0f0d00" stroke="#fbbf24" stroke-width="1"/>
+<text x="515" y="892" text-anchor="middle" fill="#fcd34d" font-size="9" font-weight="600">leads</text>
+<text x="515" y="904" text-anchor="middle" fill="#64748b" font-size="8">nome, cidade, seg.</text>
+<text x="515" y="914" text-anchor="middle" fill="#64748b" font-size="8">score, tier, slug</text>
+<text x="515" y="924" text-anchor="middle" fill="#64748b" font-size="8">html_final</text>
+
+<!-- seta fastapi -> db -->
+<line x1="400" y1="296" x2="340" y2="848" stroke="#fbbf24" stroke-width="1" stroke-dasharray="3,2" marker-end="url(#arr-gold)"/>
+
+<!-- ===== CAMADA 10: PM2 PROCESSOS ===== -->
+<rect x="680" y="848" width="590" height="110" rx="10" fill="#1a0000" stroke="#ef4444" stroke-width="1.5"/>
+<text x="975" y="868" text-anchor="middle" fill="#ef4444" font-size="12" font-weight="700">⚙ PM2 — Processos em Produção</text>
+<rect x="700" y="876" width="160" height="64" rx="6" fill="#0f0000" stroke="#ef4444" stroke-width="1"/>
+<text x="780" y="893" text-anchor="middle" fill="#f87171" font-size="10" font-weight="700">fralib (id:0)</text>
+<text x="780" y="906" text-anchor="middle" fill="#94a3b8" font-size="8">Python FastAPI</text>
+<text x="780" y="917" text-anchor="middle" fill="#64748b" font-size="8">porta 8000</text>
+<text x="780" y="928" text-anchor="middle" fill="#64748b" font-size="8">~106MB RAM</text>
+<text x="780" y="938" text-anchor="middle" fill="#64748b" font-size="8">server.py</text>
+<rect x="875" y="876" width="160" height="64" rx="6" fill="#0f0000" stroke="#ef4444" stroke-width="1"/>
+<text x="955" y="893" text-anchor="middle" fill="#f87171" font-size="10" font-weight="700">meowhats</text>
+<text x="955" y="906" text-anchor="middle" fill="#94a3b8" font-size="8">WhatsApp Bot</text>
+<text x="955" y="917" text-anchor="middle" fill="#64748b" font-size="8">Node.js / WA Web</text>
+<text x="955" y="928" text-anchor="middle" fill="#64748b" font-size="8">Envio automático</text>
+<text x="955" y="938" text-anchor="middle" fill="#64748b" font-size="8">SDR Bryan</text>
+<rect x="1050" y="876" width="200" height="64" rx="6" fill="#0f0000" stroke="#ef4444" stroke-width="1"/>
+<text x="1150" y="893" text-anchor="middle" fill="#f87171" font-size="10" font-weight="700">claude-mem</text>
+<text x="1150" y="906" text-anchor="middle" fill="#94a3b8" font-size="8">Memória persistente</text>
+<text x="1150" y="917" text-anchor="middle" fill="#64748b" font-size="8">Claude context manager</text>
+<text x="1150" y="928" text-anchor="middle" fill="#64748b" font-size="8">memory.py</text>
+<text x="1150" y="938" text-anchor="middle" fill="#64748b" font-size="8">brain.py</text>
+
+<!-- seta pm2 -> fastapi -->
+<line x1="780" y1="848" x2="700" y2="296" stroke="#ef4444" stroke-width="1" stroke-dasharray="3,2" marker-end="url(#arr-r)"/>
+
+<!-- ===== LABELS DE CAMADAS (lado esquerdo) ===== -->
+<text x="14" y="50" fill="#334155" font-size="9" transform="rotate(-90,14,50)">CLIENTE</text>
+<text x="14" y="160" fill="#334155" font-size="9" transform="rotate(-90,14,160)">PROXY</text>
+<text x="14" y="270" fill="#334155" font-size="9" transform="rotate(-90,14,270)">API</text>
+<text x="14" y="380" fill="#334155" font-size="9" transform="rotate(-90,14,380)">PIPELINE</text>
+<text x="14" y="530" fill="#334155" font-size="9" transform="rotate(-90,14,530)">AGENTES</text>
+<text x="14" y="680" fill="#334155" font-size="9" transform="rotate(-90,14,680)">EXTERNO</text>
+<text x="14" y="900" fill="#334155" font-size="9" transform="rotate(-90,14,900)">DADOS/INFRA</text>
+
+</svg>
+</div>
+
+<!-- LEGENDA -->
+<div class="legend">
+  <div class="legend-item"><div class="legend-dot" style="background:#9333ea"></div>Agentes IA</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#06b6d4"></div>Integrações Externas</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#fbbf24"></div>Banco de Dados (PostgreSQL)</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#10b981"></div>Frontend / Deploy</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#ef4444"></div>PM2 / Infraestrutura</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#475569"></div>Fluxo de dados</div>
+</div>
+
+<p class="footer">FraLib OS · VPS 187.77.37.72 · Python 3.13 + FastAPI · Gerado em 08/05/2026</p>
+</body>
+</html>

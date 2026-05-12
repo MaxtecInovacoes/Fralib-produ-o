@@ -5,6 +5,7 @@ Agente Bryan - SDR (Sales Development Representative)
 Migração para Pydantic AI
 """
 import json
+import os
 from skill_loader import carregar_skills, get_skills_agente
 from validation_enforcer import require_rag
 import re
@@ -142,6 +143,47 @@ Retorne JSON estruturado:
 - Crie curiosidade sem ser invasivo
 """
 
+# ===== HISTÓRICO DE INTERAÇÕES =====
+
+def _carregar_historico_interacoes(telefone: str, limite: int = 5) -> str:
+    """
+    Carrega as últimas N mensagens da tabela interacoes para o lead.
+    Retorna string formatada 'Bryan: msg\\nLead: resposta' ou '' se falhar.
+    """
+    try:
+        from sqlalchemy import create_engine, text as sa_text
+        db_url = os.getenv("DATABASE_URL", "")
+        if not db_url:
+            return ""
+        engine = create_engine(db_url)
+        with engine.connect() as conn:
+            rows = conn.execute(
+                sa_text(
+                    """
+                    SELECT i.mensagem, i.direcao
+                    FROM interacoes i
+                    JOIN leads l ON l.id = i.lead_id
+                    WHERE l.telefone = :tel
+                    ORDER BY i.id DESC
+                    LIMIT :lim
+                    """
+                ),
+                {"tel": telefone, "lim": limite}
+            ).fetchall()
+        if not rows:
+            return ""
+        # Inverte para ordem cronológica
+        rows = list(reversed(rows))
+        linhas = []
+        for row in rows:
+            autor = "Bryan" if row.direcao == "saida" else "Lead"
+            linhas.append(f"{autor}: {row.mensagem}")
+        return "\n".join(linhas)
+    except Exception as e:
+        print(f"[Bryan] Aviso: não foi possível carregar histórico: {e}")
+        return ""
+
+
 # Função criar_agente_bryan() removida - não é mais necessária com HTTP direto
 
 def clean_json_response(text: str) -> str:
@@ -191,7 +233,11 @@ def iniciar_contato(lead: BryanInput) -> BryanOutput:
     cidade_safe = sanitize_text(lead.cidade)
     segmento_safe = sanitize_text(lead.segmento)
     tier_safe = sanitize_text(lead.tier)
-    
+
+    # Carregar histórico de interações anteriores
+    historico = _carregar_historico_interacoes(lead.telefone)
+    historico_bloco = f"\n**HISTÓRICO DE MENSAGENS:**\n{historico}\n" if historico else ""
+
     # Montar prompt
     prompt = f"""Crie mensagem de WhatsApp para iniciar contato:
 
@@ -205,7 +251,7 @@ def iniciar_contato(lead: BryanInput) -> BryanOutput:
 **ESTRATÉGIA:** {estrategia}
 **ESTADO ATUAL:** {ultimo_estado}
 **TENTATIVAS:** {tentativas}
-
+{historico_bloco}
 {f"**SITE PRONTO:** {lead.site_url}" if lead.site_url else "**SITE:** Em preparação final"}
 
 Crie mensagem de primeiro contato seguindo a estratégia {estrategia}.
@@ -224,8 +270,8 @@ Retorne JSON com texto, tipo e emojis_count.
         response_text = call_claude(
             system=BRYAN_INSTRUCTIONS,
             user=full_prompt,
-            model="sonnet",
-            max_tokens=4000,
+            model="haiku",
+            max_tokens=600,
             temperature=temperature,
             agent_name="Bryan"
         )
@@ -246,12 +292,19 @@ Retorne JSON com texto, tipo e emojis_count.
         if tentativas >= 2:
             proximo_passo = "Lead frio - aguardar 72h antes de novo contato"
 
-        # Salvar memória
+        # Salvar memória com estado real retornado pelo LLM (campo 'proximo_estado') ou avançar na state machine
+        proximo_estado = response_json.get("proximo_estado", None)
+        if not proximo_estado or proximo_estado not in ESTADOS_SDR:
+            # Avança automaticamente na state machine
+            idx_atual = ESTADOS_SDR.index(ultimo_estado) if ultimo_estado in ESTADOS_SDR else 0
+            idx_prox = min(idx_atual + 1, len(ESTADOS_SDR) - 1)
+            proximo_estado = ESTADOS_SDR[idx_prox]
+
         salvar_memoria(f"bryan_lead_{lead.telefone}", {
             "lead": lead.model_dump(),
             "mensagem": mensagem.model_dump(),
             "estrategia": estrategia,
-            "estado": "intro",
+            "estado": proximo_estado,
             "tentativas": tentativas + 1,
             "proximo_passo": proximo_passo
         })
@@ -280,6 +333,67 @@ Retorne JSON com texto, tipo e emojis_count.
             enviado=False
         )
 
+def _consultar_aprendizado_segmento(segmento: str) -> str:
+    """
+    Consulta sdr_learning para o segmento e retorna contexto de aprendizado.
+    Busca 3 convertidos e 3 perdidos mais recentes.
+    """
+    if not segmento:
+        return ""
+    try:
+        from sqlalchemy import create_engine, text as sa_text
+        db_url = os.getenv("DATABASE_URL", "")
+        if not db_url:
+            return ""
+        engine = create_engine(db_url)
+        with engine.connect() as conn:
+            convertidos = conn.execute(sa_text("""
+                SELECT mensagem_usada, observacao
+                FROM sdr_learning
+                WHERE resultado = 'convertido'
+                  AND (segmento ILIKE :seg OR nicho ILIKE :seg)
+                ORDER BY id DESC
+                LIMIT 3
+            """), {"seg": f"%{segmento}%"}).fetchall()
+
+            perdidos = conn.execute(sa_text("""
+                SELECT mensagem_usada, observacao
+                FROM sdr_learning
+                WHERE resultado = 'perdido'
+                  AND (segmento ILIKE :seg OR nicho ILIKE :seg)
+                ORDER BY id DESC
+                LIMIT 3
+            """), {"seg": f"%{segmento}%"}).fetchall()
+
+        linhas = []
+        if convertidos:
+            linhas.append("Abordagens que funcionaram neste segmento:")
+            for r in convertidos:
+                msg = r[0] or ""
+                obs = r[1] or ""
+                trecho = (msg[:120] + "...") if len(msg) > 120 else msg
+                if obs:
+                    linhas.append(f"  - {trecho} [obs: {obs[:80]}]")
+                else:
+                    linhas.append(f"  - {trecho}")
+
+        if perdidos:
+            linhas.append("Abordagens que NAO funcionaram neste segmento:")
+            for r in perdidos:
+                msg = r[0] or ""
+                obs = r[1] or ""
+                trecho = (msg[:120] + "...") if len(msg) > 120 else msg
+                if obs:
+                    linhas.append(f"  - {trecho} [obs: {obs[:80]}]")
+                else:
+                    linhas.append(f"  - {trecho}")
+
+        return "\n".join(linhas) if linhas else ""
+    except Exception as e:
+        print(f"[Bryan] Aviso: não foi possível consultar sdr_learning: {e}")
+        return ""
+
+
 def responder_lead(
     telefone: str,
     mensagem_recebida: str,
@@ -301,8 +415,16 @@ def responder_lead(
     if not memoria:
         print(f"⚠️ [Bryan] Sem contexto para lead {telefone}")
         contexto_anterior = "Primeira interação"
+        segmento_lead = ""
     else:
         contexto_anterior = f"Estado: {memoria.get('estado', 'intro')}, Tentativas: {memoria.get('tentativas', 0)}"
+        segmento_lead = memoria.get("lead", {}).get("segmento", "")
+
+    # Consultar aprendizado do segmento no sdr_learning
+    aprendizado = _consultar_aprendizado_segmento(segmento_lead)
+    aprendizado_bloco = f"\n**APRENDIZADO DO SEGMENTO ({segmento_lead}):**\n{aprendizado}\n" if aprendizado else ""
+    if aprendizado:
+        print(f"[Bryan] Aprendizado carregado para segmento '{segmento_lead}': {len(aprendizado)} chars")
 
     # Montar prompt
     prompt = f"""Responda mensagem do lead no WhatsApp:
@@ -310,7 +432,7 @@ def responder_lead(
 **LEAD:** {nome_negocio or "Cliente"}
 **TELEFONE:** {telefone}
 **CONTEXTO ANTERIOR:** {contexto_anterior}
-
+{aprendizado_bloco}
 **MENSAGEM RECEBIDA:**
 "{mensagem_recebida}"
 
@@ -333,8 +455,8 @@ Retorne JSON com texto, tipo="resposta" e emojis_count.
         response_text = call_claude(
             system=BRYAN_INSTRUCTIONS,
             user=full_prompt,
-            model="sonnet",
-            max_tokens=4000,
+            model="haiku",
+            max_tokens=600,
             temperature=temperature,
             agent_name="Bryan"
         )

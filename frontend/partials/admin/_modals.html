@@ -6,11 +6,19 @@
         <h3 id="modalLeadName">LEAD</h3>
         <span id="modalLeadStatus" style="font-size:11px;font-family:var(--fl-font-brand);letter-spacing:1px;color:var(--fl-text-muted)"></span>
       </div>
-      <button class="modal-close" onclick="closeModal()" aria-label="Fechar modal">&times;</button>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <!-- 3.3 — Badge EXCLUSIVO -->
+        <span
+          title="Este lead está reservado para sua conta. Outros usuários não podem prospectar este negócio."
+          style="display:inline-flex;align-items:center;gap:5px;background:rgba(147,51,234,0.15);border:1px solid rgba(147,51,234,0.4);color:#c084fc;font-size:10px;font-family:var(--fl-font-brand);letter-spacing:1.5px;padding:3px 8px;border-radius:4px;cursor:help;"
+        >🔒 EXCLUSIVO</span>
+        <button class="modal-close" onclick="closeModal()" aria-label="Fechar modal">&times;</button>
+      </div>
     </div>
     <div class="modal-tabs">
       <div class="modal-tab active" data-tab="chat" onclick="switchTab('chat')">💬 CONVERSA</div>
       <div class="modal-tab" data-tab="dados" onclick="switchTab('dados')">📋 DADOS</div>
+      <div class="modal-tab" data-tab="editar" onclick="switchTab('editar')">✏️ EDITAR</div>
       <div class="modal-tab" data-tab="site" onclick="switchTab('site')">🌐 SITE</div>
     </div>
     <div class="modal-body" style="display:flex;flex-direction:column;gap:14px;">
@@ -71,6 +79,64 @@
           <button class="btn-action" onclick="reprocessarLead()" style="flex:1;background:rgba(16,185,129,0.15);border:1px solid #10b981;color:#10b981">⚡ REPROCESSAR</button>
           <button class="btn-action btn-action-gold" onclick="abrirWhatsApp()" style="flex:1">📱 WHATSAPP</button>
           <button class="btn-action" onclick="abrirFecharVenda()" style="flex:1;background:rgba(16,185,129,0.15);border:1px solid #10b981;color:#10b981">🏆 FECHAR VENDA</button>
+        </div>
+
+        <!-- 3.1 — Botões de Feedback (Convertido / Perdido) -->
+        <div style="margin-top:14px;border-top:1px solid var(--fl-border);padding-top:14px;">
+          <div style="font-size:10px;font-family:var(--fl-font-brand);letter-spacing:1px;color:var(--fl-text-muted);margin-bottom:8px;">RESULTADO DA PROSPECÇÃO</div>
+          <div style="display:flex;gap:8px;">
+            <button
+              onclick="registrarFeedbackLead('convertido')"
+              title="Marcar lead como convertido e registrar aprendizado para o Bryan"
+              style="flex:1;background:rgba(16,185,129,0.15);border:1px solid #10b981;color:#10b981;padding:9px 12px;border-radius:6px;cursor:pointer;font-family:var(--fl-font-brand);letter-spacing:1px;font-size:12px;"
+            >✅ CONVERTIDO</button>
+            <button
+              onclick="registrarFeedbackLead('perdido')"
+              title="Marcar lead como perdido e registrar aprendizado para o Bryan"
+              style="flex:1;background:rgba(239,68,68,0.12);border:1px solid #ef4444;color:#ef4444;padding:9px 12px;border-radius:6px;cursor:pointer;font-family:var(--fl-font-brand);letter-spacing:1px;font-size:12px;"
+            >❌ PERDIDO</button>
+          </div>
+          <div id="feedbackStatus" style="display:none;margin-top:8px;padding:8px 12px;border-radius:6px;font-size:12px;"></div>
+        </div>
+      </div>
+
+      <!-- Tab: Editar Dados (2.4) -->
+      <div class="tab-content" id="tab-editar">
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <div>
+            <label class="config-label">NOME DA EMPRESA</label>
+            <input type="text" id="editLeadNome"
+              style="width:100%;background:var(--fl-bg-card);border:1px solid var(--fl-border);color:var(--fl-text);padding:8px 12px;border-radius:6px;font-size:13px;box-sizing:border-box;">
+          </div>
+          <div>
+            <label class="config-label">TELEFONE</label>
+            <input type="text" id="editLeadTelefone"
+              style="width:100%;background:var(--fl-bg-card);border:1px solid var(--fl-border);color:var(--fl-text);padding:8px 12px;border-radius:6px;font-size:13px;font-family:var(--fl-font-mono);box-sizing:border-box;">
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <div>
+              <label class="config-label">SEGMENTO</label>
+              <input type="text" id="editLeadSegmento"
+                style="width:100%;background:var(--fl-bg-card);border:1px solid var(--fl-border);color:var(--fl-text);padding:8px 12px;border-radius:6px;font-size:13px;box-sizing:border-box;">
+            </div>
+            <div>
+              <label class="config-label">CIDADE</label>
+              <input type="text" id="editLeadCidade"
+                style="width:100%;background:var(--fl-bg-card);border:1px solid var(--fl-border);color:var(--fl-text);padding:8px 12px;border-radius:6px;font-size:13px;box-sizing:border-box;">
+            </div>
+          </div>
+          <div>
+            <label class="config-label">OBSERVA&Ccedil;&Atilde;O</label>
+            <textarea id="editLeadObs"
+              style="width:100%;background:var(--fl-bg-card);border:1px solid var(--fl-border);color:var(--fl-text);padding:8px 12px;border-radius:6px;font-size:13px;resize:vertical;min-height:70px;box-sizing:border-box;"></textarea>
+          </div>
+          <div id="editLeadStatus" style="display:none;padding:8px 12px;border-radius:6px;font-size:12px;border-left:3px solid #9333ea;background:rgba(147,51,234,0.08);"></div>
+          <div style="display:flex;gap:8px;margin-top:4px;flex-wrap:wrap;">
+            <button onclick="salvarCamposLeadModal()" style="flex:2;background:#9333ea;border:none;color:#fff;padding:10px;border-radius:6px;cursor:pointer;font-family:var(--fl-font-brand);letter-spacing:1px;">💾 SALVAR ALTERA&Ccedil;&Otilde;ES</button>
+          </div>
+          <div style="border-top:1px solid var(--fl-border);padding-top:16px;margin-top:4px;">
+            <button onclick="abrirConfirmDeleteModal()" style="width:100%;background:rgba(239,68,68,0.12);border:1px solid #ef4444;color:#ef4444;padding:10px;border-radius:6px;cursor:pointer;font-family:var(--fl-font-brand);letter-spacing:1px;font-size:13px;">&#128465; DELETAR LEAD</button>
+          </div>
         </div>
       </div>
 

@@ -22,7 +22,6 @@
 <script src="/js/socket.io.min.js?v=20260429"></script>
 <script src="/js/toast.js?v=20260429"></script>
 <script src="/js/socket-client.js?v=20260429"></script>
-<script src="/js/csrf-helper.js?v=20260429"></script>
 <script src="/js/auth-helper.js?v=20260429"></script>
 <script src="/js/twofa-setup.js?v=20260429"></script>
 <style>
@@ -676,12 +675,11 @@ body{
     <span>Sistema Operacional</span>
   </div>
   <nav class="sidebar-nav">
-    <a href="#" class="sidebar-link" data-view="perfil" id="sidebar-perfil-link">
-      <span id="sidebar-foto-wrap" style="width:24px;height:24px;border-radius:50%;border:1.5px solid var(--fl-purple);overflow:hidden;background:var(--fl-bg-card);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-        <img id="sidebar-foto-img" src="" alt="" style="width:100%;height:100%;object-fit:cover;display:none;">
-        <svg id="sidebar-foto-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--fl-text-muted)" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-      </span>
-      Meu Perfil
+    <a href="#" class="sidebar-link active" data-view="config">
+      <svg class="icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+      </svg>
+      Motor FraLib
     </a>
     <a href="#" class="sidebar-link" data-view="overview">
       <svg class="icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -692,7 +690,7 @@ body{
       </svg>
       Visão Geral
     </a>
-    <a href="#" class="sidebar-link active" data-view="crm">
+    <a href="#" class="sidebar-link" data-view="crm">
       <svg class="icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
         <circle cx="9" cy="7" r="4"></circle>
@@ -722,13 +720,6 @@ body{
       </svg>
       Sites
     </a>
-    <a href="#" class="sidebar-link" data-view="config">
-      <svg class="icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
-      </svg>
-      </svg>
-      Motor FraLib
-    </a>
   </nav>
   <nav style="padding:0 10px 8px;">
     <button class="sidebar-link" style="width:100%;background:none;border:2px solid transparent;cursor:pointer;color:var(--fl-purple-300);" onclick="abrirModalLeadManual()">
@@ -736,12 +727,19 @@ body{
       Lead Manual
     </button>
   </nav>
-  
+  <nav style="padding:0 10px 8px;">
+    <a href="#" class="sidebar-link" data-view="perfil" id="sidebar-perfil-link">
+      <span id="sidebar-foto-wrap" style="width:24px;height:24px;border-radius:50%;border:1.5px solid var(--fl-purple);overflow:hidden;background:var(--fl-bg-card);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <img id="sidebar-foto-img" src="" alt="" style="width:100%;height:100%;object-fit:cover;display:none;">
+        <svg id="sidebar-foto-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--fl-text-muted)" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+      </span>
+      Meu Perfil
+    </a>
+  </nav>
   <div class="sidebar-footer">
     <span onclick="AuthHelper.logout()" style="color:var(--fl-text-muted);font-size:11px;font-family:var(--fl-font-brand);letter-spacing:2px;cursor:pointer;padding:8px 4px;display:block;text-align:center;transition:color 0.2s;" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color=''">SAIR</span>
+  </div>
 </aside>
-
-
 
 
 <!-- ===== MAIN ===== -->
@@ -766,6 +764,14 @@ body{
     </div>
   </div>
 
+
+  <!-- Banner de pipeline rodando — visível em todas as views -->
+  <div id="pipeline-banner" style="display:none;background:linear-gradient(90deg,#0f172a,#1e293b);border:1px solid #0183ff;border-radius:8px;padding:10px 16px;margin-bottom:12px;display:none;align-items:center;gap:12px;">
+    <span style="width:8px;height:8px;border-radius:50%;background:#10b981;display:inline-block;animation:pulse 1s infinite;flex-shrink:0;"></span>
+    <span style="color:#10b981;font-family:var(--fl-font-brand);font-size:11px;letter-spacing:1px;flex-shrink:0;">PIPELINE RODANDO</span>
+    <span id="pipeline-banner-fase" style="color:#94a3b8;font-family:var(--fl-font-mono);font-size:11px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Aguardando...</span>
+    <button onclick="document.querySelector('[data-view=\'config\']').click()" style="background:transparent;border:1px solid #0183ff;color:#0183ff;padding:2px 10px;font-size:10px;cursor:pointer;font-family:var(--fl-font-brand);letter-spacing:1px;flex-shrink:0;">VER LOGS</button>
+  </div>
 
   <!-- KPI Cards — 6 métricas -->
   <div class="kpi-grid" id="kpi-section" style="display: none;">
@@ -814,7 +820,7 @@ body{
 
   <!-- ========== VIEW: VISÃO GERAL ========== -->
 
-  <section class="view-section active" id="view-overview">
+  <section class="view-section" id="view-overview">
 
     <h2 class="section-title">&#9632; ANALYTICS &amp; VISÃO GERAL</h2>
 
@@ -842,6 +848,8 @@ body{
         <div class="chart-container"><canvas id="chartNicho"></canvas></div>
       </div>
     </div>
+
+
 
     <!-- Funil de conversão -->
     <h2 class="section-title">&#9660; FUNIL DE CONVERSÃO</h2>
@@ -931,7 +939,7 @@ body{
     </div>
 
   </section>
-  <section class="view-section" id="view-uti">
+<section class="view-section" id="view-uti">
 
     <div class="period-filters" style="margin-bottom:16px;">
       <button class="btn-period active" data-period="tudo" onclick="setUtiPeriod('tudo',this)">TUDO</button>
@@ -954,8 +962,15 @@ body{
       <button class="uti-tab" id="uti-tab-descartados" onclick="trocarAbaUTI('descartados')">
         &#9995; DESCARTADOS PELO CAIO <span id="badge-descartados" style="background:var(--fl-text-dim);color:#fff;border-radius:99px;padding:1px 7px;font-size:10px;margin-left:6px">0</span>
       </button>
+      <button class="uti-tab" id="uti-tab-incompletos" onclick="trocarAbaUTI('incompletos')">
+        &#128269; REVISÃO MANUAL <span id="badge-incompletos" style="background:#9333ea;color:#fff;border-radius:99px;padding:1px 7px;font-size:10px;margin-left:6px">0</span>
+      </button>
+      <button class="uti-tab" id="uti-tab-fila" onclick="trocarAbaUTI('fila')">
+        &#9654; FILA DE PROCESSAMENTO <span id="badge-fila" style="background:#06b6d4;color:#fff;border-radius:99px;padding:1px 7px;font-size:10px;margin-left:6px">0</span>
+      </button>
     </div>
 
+    <!-- Painel: Falhas de Pipeline -->
     <div id="uti-painel-falhas">
       <p class="uti-desc">Leads que entraram no pipeline mas travaram por erro t&eacute;cnico. Clique em <strong>&#9654; REPROCESSAR</strong> para tentar novamente.</p>
       <div class="uti-table-wrap">
@@ -966,6 +981,7 @@ body{
       </div>
     </div>
 
+    <!-- Painel: Descartados pelo Caio -->
     <div id="uti-painel-descartados" style="display:none">
       <p class="uti-desc">Leads rejeitados pelo Caio na entrada &mdash; dados insuficientes ou fora do perfil. Enrique&ccedil;a os dados manualmente e clique em <strong>&#9995; QUALIFICAR</strong> para for&ccedil;ar pelo pipeline.</p>
       <div class="uti-table-wrap">
@@ -976,7 +992,95 @@ body{
       </div>
     </div>
 
+    <!-- Painel: Revisão Manual (2.1) -->
+    <div id="uti-painel-incompletos" style="display:none">
+      <p class="uti-desc">Leads rejeitados ou com dados incompletos (score &lt; 20, sem nome ou telefone). Corrija os dados e aprove manualmente para o pipeline.</p>
+      <div class="uti-table-wrap">
+        <table class="uti-table">
+          <thead>
+            <tr>
+              <th>NOME</th><th>NICHO</th><th>CIDADE</th><th>TELEFONE</th><th>SCORE</th><th>STATUS</th><th>A&Ccedil;&Atilde;O</th>
+            </tr>
+          </thead>
+          <tbody id="utiIncompletosBody">
+            <tr><td colspan="7"><div class="uti-empty">CARREGANDO...</div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Painel: Fila de Processamento (2.2) -->
+    <div id="uti-painel-fila" style="display:none">
+      <p class="uti-desc">Leads qualificados aguardando processamento pelo pipeline. A ordem &eacute; por data de captura (FIFO).</p>
+      <div class="uti-table-wrap">
+        <table class="uti-table">
+          <thead>
+            <tr>
+              <th>#</th><th>NOME</th><th>NICHO</th><th>CIDADE</th><th>SCORE</th><th>TIER</th><th>STATUS</th><th>CAPTURADO EM</th>
+            </tr>
+          </thead>
+          <tbody id="utiFilaBody">
+            <tr><td colspan="8"><div class="uti-empty">CARREGANDO...</div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
   </section>
+
+  <!-- Modal de confirmação de deleção (2.3) -->
+  <div id="modalConfirmDelete" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9999;align-items:center;justify-content:center;">
+    <div style="background:#0a0a0f;border:1px solid #ef4444;border-radius:12px;padding:32px;max-width:420px;width:90%;text-align:center;">
+      <div style="font-size:2rem;margin-bottom:12px;">&#9888;</div>
+      <h3 style="color:#ef4444;margin-bottom:8px;font-family:var(--fl-font-brand);letter-spacing:1px;">DELETAR LEAD</h3>
+      <p style="color:var(--fl-text-muted);margin-bottom:6px;" id="confirmDeleteNome"></p>
+      <p style="color:#ef4444;font-size:12px;margin-bottom:24px;">Esta a&ccedil;&atilde;o n&atilde;o pode ser desfeita.</p>
+      <div style="display:flex;gap:12px;justify-content:center;">
+        <button onclick="fecharConfirmDelete()" style="background:var(--fl-bg-card);border:1px solid var(--fl-border);color:var(--fl-text-muted);padding:10px 24px;border-radius:8px;cursor:pointer;font-family:var(--fl-font-brand);">CANCELAR</button>
+        <button onclick="confirmarDeletarLead()" style="background:#ef4444;border:none;color:#fff;padding:10px 24px;border-radius:8px;cursor:pointer;font-family:var(--fl-font-brand);letter-spacing:1px;">SIM, DELETAR</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de edição de campos do lead incompleto (2.1) -->
+  <div id="modalEditarCampos" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9998;align-items:center;justify-content:center;">
+    <div style="background:#0a0a0f;border:1px solid #9333ea;border-radius:12px;padding:28px;max-width:480px;width:90%;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+        <h3 style="color:var(--fl-text);font-family:var(--fl-font-brand);letter-spacing:1px;margin:0;">EDITAR CAMPOS DO LEAD</h3>
+        <button onclick="fecharModalEditarCampos()" style="background:none;border:none;color:var(--fl-text-muted);font-size:20px;cursor:pointer;">&times;</button>
+      </div>
+      <input type="hidden" id="editCamposLeadId">
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div>
+          <label style="font-size:11px;color:var(--fl-text-muted);font-family:var(--fl-font-brand);letter-spacing:1px;display:block;margin-bottom:4px;">NOME DA EMPRESA</label>
+          <input type="text" id="editCamposNome" style="width:100%;background:var(--fl-bg-card);border:1px solid var(--fl-border);color:var(--fl-text);padding:8px 12px;border-radius:6px;font-size:13px;box-sizing:border-box;">
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--fl-text-muted);font-family:var(--fl-font-brand);letter-spacing:1px;display:block;margin-bottom:4px;">TELEFONE</label>
+          <input type="text" id="editCamposTelefone" style="width:100%;background:var(--fl-bg-card);border:1px solid var(--fl-border);color:var(--fl-text);padding:8px 12px;border-radius:6px;font-size:13px;font-family:var(--fl-font-mono);box-sizing:border-box;">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div>
+            <label style="font-size:11px;color:var(--fl-text-muted);font-family:var(--fl-font-brand);letter-spacing:1px;display:block;margin-bottom:4px;">SEGMENTO</label>
+            <input type="text" id="editCamposSegmento" style="width:100%;background:var(--fl-bg-card);border:1px solid var(--fl-border);color:var(--fl-text);padding:8px 12px;border-radius:6px;font-size:13px;box-sizing:border-box;">
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--fl-text-muted);font-family:var(--fl-font-brand);letter-spacing:1px;display:block;margin-bottom:4px;">CIDADE</label>
+            <input type="text" id="editCamposCidade" style="width:100%;background:var(--fl-bg-card);border:1px solid var(--fl-border);color:var(--fl-text);padding:8px 12px;border-radius:6px;font-size:13px;box-sizing:border-box;">
+          </div>
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--fl-text-muted);font-family:var(--fl-font-brand);letter-spacing:1px;display:block;margin-bottom:4px;">OBSERVA&Ccedil;&Atilde;O</label>
+          <textarea id="editCamposObs" style="width:100%;background:var(--fl-bg-card);border:1px solid var(--fl-border);color:var(--fl-text);padding:8px 12px;border-radius:6px;font-size:13px;resize:vertical;min-height:60px;box-sizing:border-box;"></textarea>
+        </div>
+        <div id="editCamposStatus" style="display:none;padding:8px 12px;border-radius:6px;font-size:12px;"></div>
+        <div style="display:flex;gap:8px;margin-top:4px;">
+          <button onclick="fecharModalEditarCampos()" style="flex:1;background:var(--fl-bg-card);border:1px solid var(--fl-border);color:var(--fl-text-muted);padding:10px;border-radius:6px;cursor:pointer;font-family:var(--fl-font-brand);">CANCELAR</button>
+          <button onclick="salvarCamposLead()" style="flex:2;background:#9333ea;border:none;color:#fff;padding:10px;border-radius:6px;cursor:pointer;font-family:var(--fl-font-brand);letter-spacing:1px;">SALVAR ALTERA&Ccedil;&Otilde;ES</button>
+        </div>
+      </div>
+    </div>
+  </div>
   <!-- ========== VIEW: HISTÓRICO DE CICLOS ========== -->
   <section class="view-section" id="view-ciclos">
     <h2 class="section-title">⚙️ HISTÓRICO DE CICLOS</h2>
@@ -1029,7 +1133,7 @@ body{
     </div>
   </section>
 
-﻿  <section class="view-section" id="view-config">
+﻿  <section class="view-section active" id="view-config">
 
     <h2 class="section-title">&#9889; MOTOR FRALIB</h2>
 
@@ -1037,8 +1141,8 @@ body{
     <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:16px;margin-bottom:20px;align-items:stretch;">
 
       <!-- Pixel Office -->
-      <div id="pixelOfficeWrap" style="background:#1a1a2e;border-radius:12px;border:1.5px solid #0183ff;overflow:hidden;">
-        <div style="background:rgba(8,8,20,0.95);border-bottom:1.5px solid #0183ff;padding:4px 12px;display:flex;justify-content:space-between;align-items:center;font-family:'Courier New',monospace;font-size:10px;color:#a0a0c0">
+      <div id="pixelOfficeWrap" style="background:#1a1a2e;border-radius:12px;border:1px solid var(--fl-border);overflow:hidden;max-height:420px;">
+        <div style="background:rgba(8,8,20,0.95);border-bottom:1px solid var(--fl-border);padding:4px 12px;display:flex;justify-content:space-between;align-items:center;font-family:'Courier New',monospace;font-size:10px;color:#a0a0c0">
           <span style="font-weight:bold;color:#7dd3fc;letter-spacing:1px">&#128187; PIXEL OFFICE</span>
           <div style="display:flex;gap:12px">
             <span>AGT <strong id="po-sc" style="color:#0183ff">9</strong></span>
@@ -1052,8 +1156,8 @@ body{
       </div>
 
       <!-- Terminal Magico -->
-      <div class="config-section" style="display:flex;flex-direction:column;">
-        <div class="config-group" style="flex:1;display:flex;flex-direction:column;margin-bottom:0;">
+      <div class="config-section" style="display:flex;flex-direction:column;max-height:420px;overflow:hidden;">
+        <div class="config-group" style="display:flex;flex-direction:column;margin-bottom:0;overflow:hidden;">
           <div class="config-group-title" style="display:flex;align-items:center;justify-content:space-between;">
             <span style="display:flex;align-items:center;gap:8px;">
               <span style="width:7px;height:7px;border-radius:50%;background:#10b981;display:inline-block;" id="sse-dot"></span>
@@ -1061,7 +1165,7 @@ body{
             </span>
             <button onclick="limparTerminal()" style="background:transparent;border:1px solid var(--fl-border);color:var(--fl-text-muted);padding:2px 10px;font-size:10px;cursor:pointer;font-family:var(--fl-font-brand);letter-spacing:1px;">LIMPAR</button>
           </div>
-          <div id="magic-logs-content" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:3px;font-family:var(--fl-font-mono);font-size:12px;min-height:200px;">
+          <div id="magic-logs-content" style="overflow-y:auto;display:flex;flex-direction:column-reverse;gap:3px;font-family:var(--fl-font-mono);font-size:12px;height:340px;max-height:340px;">
             <div data-placeholder style="color:var(--fl-text-muted);text-align:center;padding:32px 0;font-size:12px;">Aguardando logs do pipeline...</div>
           </div>
         </div>
@@ -2319,11 +2423,19 @@ window.initPixelOffice = function(){
         <h3 id="modalLeadName">LEAD</h3>
         <span id="modalLeadStatus" style="font-size:11px;font-family:var(--fl-font-brand);letter-spacing:1px;color:var(--fl-text-muted)"></span>
       </div>
-      <button class="modal-close" onclick="closeModal()" aria-label="Fechar modal">&times;</button>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <!-- 3.3 — Badge EXCLUSIVO -->
+        <span
+          title="Este lead está reservado para sua conta. Outros usuários não podem prospectar este negócio."
+          style="display:inline-flex;align-items:center;gap:5px;background:rgba(147,51,234,0.15);border:1px solid rgba(147,51,234,0.4);color:#c084fc;font-size:10px;font-family:var(--fl-font-brand);letter-spacing:1.5px;padding:3px 8px;border-radius:4px;cursor:help;"
+        >🔒 EXCLUSIVO</span>
+        <button class="modal-close" onclick="closeModal()" aria-label="Fechar modal">&times;</button>
+      </div>
     </div>
     <div class="modal-tabs">
       <div class="modal-tab active" data-tab="chat" onclick="switchTab('chat')">💬 CONVERSA</div>
       <div class="modal-tab" data-tab="dados" onclick="switchTab('dados')">📋 DADOS</div>
+      <div class="modal-tab" data-tab="editar" onclick="switchTab('editar')">✏️ EDITAR</div>
       <div class="modal-tab" data-tab="site" onclick="switchTab('site')">🌐 SITE</div>
     </div>
     <div class="modal-body" style="display:flex;flex-direction:column;gap:14px;">
@@ -2384,6 +2496,64 @@ window.initPixelOffice = function(){
           <button class="btn-action" onclick="reprocessarLead()" style="flex:1;background:rgba(16,185,129,0.15);border:1px solid #10b981;color:#10b981">⚡ REPROCESSAR</button>
           <button class="btn-action btn-action-gold" onclick="abrirWhatsApp()" style="flex:1">📱 WHATSAPP</button>
           <button class="btn-action" onclick="abrirFecharVenda()" style="flex:1;background:rgba(16,185,129,0.15);border:1px solid #10b981;color:#10b981">🏆 FECHAR VENDA</button>
+        </div>
+
+        <!-- 3.1 — Botões de Feedback (Convertido / Perdido) -->
+        <div style="margin-top:14px;border-top:1px solid var(--fl-border);padding-top:14px;">
+          <div style="font-size:10px;font-family:var(--fl-font-brand);letter-spacing:1px;color:var(--fl-text-muted);margin-bottom:8px;">RESULTADO DA PROSPECÇÃO</div>
+          <div style="display:flex;gap:8px;">
+            <button
+              onclick="registrarFeedbackLead('convertido')"
+              title="Marcar lead como convertido e registrar aprendizado para o Bryan"
+              style="flex:1;background:rgba(16,185,129,0.15);border:1px solid #10b981;color:#10b981;padding:9px 12px;border-radius:6px;cursor:pointer;font-family:var(--fl-font-brand);letter-spacing:1px;font-size:12px;"
+            >✅ CONVERTIDO</button>
+            <button
+              onclick="registrarFeedbackLead('perdido')"
+              title="Marcar lead como perdido e registrar aprendizado para o Bryan"
+              style="flex:1;background:rgba(239,68,68,0.12);border:1px solid #ef4444;color:#ef4444;padding:9px 12px;border-radius:6px;cursor:pointer;font-family:var(--fl-font-brand);letter-spacing:1px;font-size:12px;"
+            >❌ PERDIDO</button>
+          </div>
+          <div id="feedbackStatus" style="display:none;margin-top:8px;padding:8px 12px;border-radius:6px;font-size:12px;"></div>
+        </div>
+      </div>
+
+      <!-- Tab: Editar Dados (2.4) -->
+      <div class="tab-content" id="tab-editar">
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <div>
+            <label class="config-label">NOME DA EMPRESA</label>
+            <input type="text" id="editLeadNome"
+              style="width:100%;background:var(--fl-bg-card);border:1px solid var(--fl-border);color:var(--fl-text);padding:8px 12px;border-radius:6px;font-size:13px;box-sizing:border-box;">
+          </div>
+          <div>
+            <label class="config-label">TELEFONE</label>
+            <input type="text" id="editLeadTelefone"
+              style="width:100%;background:var(--fl-bg-card);border:1px solid var(--fl-border);color:var(--fl-text);padding:8px 12px;border-radius:6px;font-size:13px;font-family:var(--fl-font-mono);box-sizing:border-box;">
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <div>
+              <label class="config-label">SEGMENTO</label>
+              <input type="text" id="editLeadSegmento"
+                style="width:100%;background:var(--fl-bg-card);border:1px solid var(--fl-border);color:var(--fl-text);padding:8px 12px;border-radius:6px;font-size:13px;box-sizing:border-box;">
+            </div>
+            <div>
+              <label class="config-label">CIDADE</label>
+              <input type="text" id="editLeadCidade"
+                style="width:100%;background:var(--fl-bg-card);border:1px solid var(--fl-border);color:var(--fl-text);padding:8px 12px;border-radius:6px;font-size:13px;box-sizing:border-box;">
+            </div>
+          </div>
+          <div>
+            <label class="config-label">OBSERVA&Ccedil;&Atilde;O</label>
+            <textarea id="editLeadObs"
+              style="width:100%;background:var(--fl-bg-card);border:1px solid var(--fl-border);color:var(--fl-text);padding:8px 12px;border-radius:6px;font-size:13px;resize:vertical;min-height:70px;box-sizing:border-box;"></textarea>
+          </div>
+          <div id="editLeadStatus" style="display:none;padding:8px 12px;border-radius:6px;font-size:12px;border-left:3px solid #9333ea;background:rgba(147,51,234,0.08);"></div>
+          <div style="display:flex;gap:8px;margin-top:4px;flex-wrap:wrap;">
+            <button onclick="salvarCamposLeadModal()" style="flex:2;background:#9333ea;border:none;color:#fff;padding:10px;border-radius:6px;cursor:pointer;font-family:var(--fl-font-brand);letter-spacing:1px;">💾 SALVAR ALTERA&Ccedil;&Otilde;ES</button>
+          </div>
+          <div style="border-top:1px solid var(--fl-border);padding-top:16px;margin-top:4px;">
+            <button onclick="abrirConfirmDeleteModal()" style="width:100%;background:rgba(239,68,68,0.12);border:1px solid #ef4444;color:#ef4444;padding:10px;border-radius:6px;cursor:pointer;font-family:var(--fl-font-brand);letter-spacing:1px;font-size:13px;">&#128465; DELETAR LEAD</button>
+          </div>
         </div>
       </div>
 
@@ -2597,34 +2767,12 @@ var _utiDataCache = null;
 })();
 
 /* ══ HELPER FETCH AUTENTICADO ═════════════════════════════════════ */
-var _csrfTokenCache = null;
-var _csrfTokenExpiry = 0;
-
-async function _getCsrfToken() {
-  if (_csrfTokenCache && Date.now() < _csrfTokenExpiry) return _csrfTokenCache;
-  try {
-    var r = await fetch('/api/csrf-token', { credentials: 'include' });
-    var d = await r.json();
-    _csrfTokenCache = d.csrf_token;
-    _csrfTokenExpiry = Date.now() + 55 * 60 * 1000;
-    return _csrfTokenCache;
-  } catch(e) {
-    console.error('[CSRF] Erro ao buscar token:', e);
-    return null;
-  }
-}
 
 async function authFetch(url, opts) {
   var options = opts || {};
   options.headers = options.headers || {};
   options.headers['Authorization'] = 'Bearer ' + localStorage.getItem('fralib_token');
   options.credentials = 'include';
-
-  var method = (options.method || 'GET').toUpperCase();
-  if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(method)) {
-    var csrf = await _getCsrfToken();
-    if (csrf) options.headers['X-CSRF-Token'] = csrf;
-  }
 
   var fullUrl = url;
   if (url.startsWith('/')) {
@@ -2668,7 +2816,7 @@ async function carregarKPIs() {
 
     // KPI 1 — Total de Leads
     set('kpi-leads', (analytics.total_leads != null ? analytics.total_leads : (status.totalLeads || 0)).toLocaleString('pt-BR'));
-    set('kpi-leads-sub', status.rodando ? '🟢 pipeline ativo' : '⚪ pipeline ocioso');
+    set('kpi-leads-sub', '🔒 Seus leads exclusivos');
 
     // KPI 2 — Sites Gerados
     set('kpi-sites', (status.totalSites || 0).toLocaleString('pt-BR'));
@@ -2796,6 +2944,8 @@ async function retomarPipeline() {
   try {
     await authFetch('/api/pipeline/retomar', { method: 'POST' });
     setTimeout(carregarKPIs, 500);
+  } catch(e) { console.warn('Retomar:', e.message); }
+}
 
 /* ══ TOAST NOTIFICATIONS ════════════════════════════════════════ */
 function mostrarToast(mensagem, duracao) {
@@ -2815,8 +2965,6 @@ function mostrarToast(mensagem, duracao) {
       document.body.removeChild(toast);
     }, 300);
   }, duracao);
-}
-  } catch(e) { console.warn('Retomar:', e.message); }
 }
 
 /* ══ VIEWS — alternância de conteúdo ═══════════════════════════════ */
@@ -3132,6 +3280,12 @@ function criarCard(lead) {
     badge.textContent = "RESPONDEU";
     d.appendChild(badge);
   }
+  // 3.3 — Badge EXCLUSIVO
+  var badgeExclusivo = document.createElement("span");
+  badgeExclusivo.title = "Este lead está reservado para sua conta";
+  badgeExclusivo.style.cssText = "font-size:9px;background:rgba(147,51,234,0.2);border:1px solid #9333ea;color:#9333ea;padding:2px 6px;border-radius:4px;margin-top:4px;display:inline-block;";
+  badgeExclusivo.textContent = "\uD83D\uDD12 EXCLUSIVO";
+  d.appendChild(badgeExclusivo);
   initDrag(d);
   return d;
 }
@@ -3223,6 +3377,9 @@ function openModalReal(lead) {
   if (editObs) editObs.value = lead.observacoes || '';
   var editVal = document.getElementById('editValorVenda');
   if (editVal) editVal.value = lead.valor_venda || '';
+
+  // Preencher aba EDITAR (Sprint 2.4)
+  _preencherAbaEditar(lead);
 
   // Status badge
   var statusBadge = document.getElementById('modalLeadStatus');
@@ -3468,8 +3625,8 @@ async function salvarConfigPipeline() {
   var nicho = (document.getElementById('configNicho') || {}).value || '';
   var cidade = (document.getElementById('configCidade') || {}).value || '';
   var qtd = parseInt((document.getElementById('configQtd') || {}).value || '50');
+  var scoreMin = parseInt((document.getElementById('configScoreMin') || {}).value || '70');
   nicho = nicho.trim(); cidade = cidade.trim();
-  var scoreMin = parseInt((document.getElementById("configScoreMin") || {}).value || "70");
 
   if (!nicho || !cidade) {
     alert('Preencha o Nicho e a Cidade antes de iniciar.');
@@ -3477,8 +3634,29 @@ async function salvarConfigPipeline() {
   }
 
   var btn = document.querySelector('.config-group .btn-config-save');
-  if (btn) { btn.textContent = '⏳ INICIANDO...'; btn.disabled = true; }
+  if (btn) { btn.textContent = '⏳ VERIFICANDO...'; btn.disabled = true; }
 
+  // Verificar fila antes de chamar o backend
+  try {
+    var filaResp = await authFetch('/api/leads/capturados').then(function(r){ return r.json(); });
+    var leadsNaFila = (filaResp.leads || []).filter(function(l){
+      return l.segmento && l.cidade &&
+        l.segmento.toLowerCase().trim() === nicho.toLowerCase().trim() &&
+        l.cidade.toLowerCase().trim() === cidade.toLowerCase().trim();
+    });
+
+    if (leadsNaFila.length > 0) {
+      if (btn) { btn.textContent = '▶ INICIAR'; btn.disabled = false; }
+      _mostrarModalFila(leadsNaFila, nicho, cidade, qtd, scoreMin, btn);
+      return;
+    }
+  } catch(_) {}
+
+  _executarIniciarAdmin(nicho, cidade, qtd, scoreMin, btn);
+}
+
+async function _executarIniciarAdmin(nicho, cidade, qtd, scoreMin, btn) {
+  if (btn) { btn.textContent = '⏳ INICIANDO...'; btn.disabled = true; }
   try {
     var resp = await authFetch('/api/pipeline/iniciar', {
       method: 'POST',
@@ -3486,26 +3664,74 @@ async function salvarConfigPipeline() {
       body: JSON.stringify({ segmento: nicho, cidade: cidade, quantidade: qtd, score_minimo: scoreMin })
     });
     var data = await resp.json();
-
-    if (data.status === 'fila_pendente') {
-      if (btn) { btn.textContent = '▶ INICIAR'; btn.disabled = false; }
-      mostrarToast('⏳ Há ' + data.leads_na_fila + ' lead(s) na fila. Processe-os primeiro.');
-      await carregarFilaLeads();
-      return;
-    }
-
     if (btn) { btn.textContent = '✓ INICIADO!'; }
-    setTimeout(function(){
-      if (btn) { btn.textContent = '▶ INICIAR'; btn.disabled = false; }
-    }, 3000);
-    // Permanecer no Motor Fralib — não redirecionar para CRM
+    setTimeout(function(){ if (btn) { btn.textContent = '▶ INICIAR'; btn.disabled = false; } }, 3000);
     carregarKPIs();
     mostrarToast('▶ Pipeline iniciado! Acompanhe o progresso no terminal abaixo.');
-
   } catch(e) {
     if (btn) { btn.textContent = '✗ ERRO'; btn.disabled = false; setTimeout(function(){ btn.textContent = '▶ INICIAR'; }, 3000); }
     mostrarToast('Erro ao iniciar pipeline: ' + e.message);
   }
+}
+
+function _mostrarModalFila(leads, nicho, cidade, qtd, scoreMin, btn) {
+  var existing = document.getElementById('modal-fila-admin');
+  if (existing) existing.remove();
+
+  var tierColor = { PREMIUM: '#10b981', STANDARD: '#3b82f6', LOW: '#f59e0b', REJEITAR: '#ef4444', DADOS_INSUFICIENTES: '#6b7280' };
+  var listaHtml = leads.map(function(l) {
+    var cor = tierColor[l.tier] || '#6b7280';
+    return '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--fl-bg);border:1px solid var(--fl-border);border-radius:8px;gap:10px">' +
+      '<div style="flex:1;min-width:0">' +
+        '<div style="font-weight:600;font-size:13px;color:var(--fl-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + escapeHtml(l.nome || '—') + '</div>' +
+        '<div style="font-size:11px;color:var(--fl-text-muted)">' + escapeHtml(l.cidade || '') + (l.segmento ? ' · ' + escapeHtml(l.segmento) : '') + '</div>' +
+      '</div>' +
+      '<span style="font-size:11px;font-weight:700;color:' + cor + ';border:1px solid ' + cor + ';padding:2px 8px;border-radius:12px;flex-shrink:0">' + escapeHtml(l.tier || '') + '</span>' +
+    '</div>';
+  }).join('');
+
+  var modal = document.createElement('div');
+  modal.id = 'modal-fila-admin';
+  modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:9999;padding:16px;box-sizing:border-box';
+  modal.innerHTML =
+    '<div style="background:var(--fl-bg-card);border:1px solid var(--fl-border-md);border-radius:16px;padding:28px;max-width:480px;width:100%;max-height:80vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.5)">' +
+      '<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">' +
+        '<span style="font-size:22px">📋</span>' +
+        '<h3 style="margin:0;font-size:16px;font-weight:700;color:var(--fl-text)">Leads na fila — ' + escapeHtml(nicho) + ' em ' + escapeHtml(cidade) + '</h3>' +
+      '</div>' +
+      '<p style="color:var(--fl-text-muted);font-size:13px;margin:0 0 16px">O Hunter já coletou <strong style="color:var(--fl-text)">' + leads.length + ' lead(s)</strong> neste segmento. O que deseja fazer?</p>' +
+      '<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:20px">' + listaHtml + '</div>' +
+      '<div style="display:flex;flex-direction:column;gap:10px">' +
+        '<button id="btn-modal-processar" style="background:var(--fl-purple,#7c3aed);color:#fff;border:none;padding:12px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;width:100%">▶ PROCESSAR ESTES LEADS</button>' +
+        '<button id="btn-modal-descartar" style="background:transparent;color:#ef4444;border:1px solid #ef4444;padding:10px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;width:100%">🗑 DESCARTAR E INICIAR NOVO CICLO</button>' +
+        '<button id="btn-modal-cancelar" style="background:transparent;color:var(--fl-text-muted);border:none;padding:8px;font-size:12px;cursor:pointer;width:100%">Cancelar</button>' +
+      '</div>' +
+    '</div>';
+
+  document.body.appendChild(modal);
+
+  document.getElementById('btn-modal-processar').onclick = async function() {
+    modal.remove();
+    mostrarToast('▶ Processando ' + leads.length + ' lead(s) da fila...');
+    for (var i = 0; i < leads.length; i++) {
+      try { await authFetch('/api/pipeline/reprocessar/' + leads[i].id, { method: 'POST' }); } catch(_) {}
+    }
+    setTimeout(function(){ carregarKPIs(); carregarFilaLeads(); }, 1500);
+  };
+
+  document.getElementById('btn-modal-descartar').onclick = async function() {
+    this.textContent = '⏳ Descartando...'; this.disabled = true;
+    try {
+      for (var i = 0; i < leads.length; i++) {
+        await authFetch('/api/leads/' + leads[i].id, { method: 'DELETE' });
+      }
+    } catch(_) {}
+    modal.remove();
+    _executarIniciarAdmin(nicho, cidade, qtd, scoreMin, btn);
+  };
+
+  document.getElementById('btn-modal-cancelar').onclick = function() { modal.remove(); };
+  modal.addEventListener('click', function(e) { if (e.target === modal) modal.remove(); });
 }
 
 async function carregarFilaLeads() {
@@ -3722,9 +3948,25 @@ function initDrag(card) {
 
       // Animação suave
       draggedCard.style.animation = 'cardDrop 0.3s ease-out';
-      setTimeout(() => {
-        draggedCard.style.animation = '';
-      }, 300);
+      setTimeout(() => { draggedCard.style.animation = ''; }, 300);
+
+      // Salvar nova posição no banco
+      var leadId = draggedCard.dataset.lead;
+      var novaCol = colBelow.dataset.col;
+      var colToStage = {
+        'fila': 'pendente', 'intro': 'intro', 'followup1': 'f1',
+        'followup2': 'f2', 'negociacao': 'negotiation',
+        'qualificados': 'qualificado', 'perdidos': 'lost', 'ganhos': 'won'
+      };
+      var novoStage = colToStage[novaCol] || novaCol;
+      var novoStatus = novaCol === 'perdidos' ? 'descartado' : novaCol === 'ganhos' ? 'convertido' : null;
+      var body = { sdr_stage: novoStage };
+      if (novoStatus) body.status = novoStatus;
+      authFetch('/api/leads/' + leadId + '/campos', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      }).catch(function(){ Toast.error('Erro ao salvar posição'); });
     }
 
     // Limpar estado
@@ -3783,7 +4025,29 @@ document.querySelectorAll('.kanban-col-body').forEach(function(col){
   col.addEventListener('drop', function(e){
     e.preventDefault();
     col.classList.remove('drag-over');
-    if (draggedCard) { col.appendChild(draggedCard); updateCounts(); }
+    if (draggedCard) {
+      col.appendChild(draggedCard);
+      updateCounts();
+      // Salvar nova posição no banco
+      var leadId = draggedCard.dataset.lead;
+      var novaCol = col.dataset.col;
+      var colToStage = {
+        'fila': 'pendente', 'intro': 'intro', 'followup1': 'f1',
+        'followup2': 'f2', 'negociacao': 'negotiation',
+        'qualificados': 'qualificado', 'perdidos': 'lost', 'ganhos': 'won'
+      };
+      var novoStage = colToStage[novaCol] || novaCol;
+      var novoStatus = novaCol === 'perdidos' ? 'descartado' : novaCol === 'ganhos' ? 'convertido' : null;
+      var body = { sdr_stage: novoStage };
+      if (novoStatus) body.status = novoStatus;
+      authFetch('/api/leads/' + leadId + '/campos', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      }).then(function(r){
+        if (!r.ok) Toast.error('Erro ao salvar posição do lead');
+      }).catch(function(){ Toast.error('Erro ao salvar posição do lead'); });
+    }
   });
 });
 
@@ -3856,6 +4120,40 @@ async function reprocessarLead() {
     Toast.success(res.mensagem || 'Lead enviado para reprocessamento!');
     closeModal();
     setTimeout(carregarKanban, 1000);
+  } catch(e) {
+    Toast.error('Erro: ' + e.message);
+  }
+}
+
+// 3.1 — Registrar feedback de conversão/perda para o Bryan aprender
+async function registrarFeedbackLead(resultado) {
+  if (!leadAtualModal) return;
+  var label = resultado === 'convertido' ? 'CONVERTIDO' : 'PERDIDO';
+  var obs = prompt('Observação sobre este lead (opcional):', '');
+  if (obs === null) return; // cancelou
+  var statusEl = document.getElementById('feedbackStatus');
+  try {
+    var res = await authFetch('/api/leads/' + leadAtualModal.id + '/feedback', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ resultado: resultado, observacao: obs || '' })
+    }).then(function(r){ return r.json(); });
+
+    if (res.ok) {
+      if (statusEl) {
+        statusEl.style.display = 'block';
+        statusEl.style.background = resultado === 'convertido' ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.10)';
+        statusEl.style.borderLeft = resultado === 'convertido' ? '3px solid #10b981' : '3px solid #ef4444';
+        statusEl.style.color = resultado === 'convertido' ? '#10b981' : '#ef4444';
+        statusEl.textContent = resultado === 'convertido'
+          ? '✅ Lead marcado como CONVERTIDO! Bryan vai aprender com esta abordagem.'
+          : '❌ Lead marcado como PERDIDO. Bryan vai evitar esta abordagem no segmento.';
+      }
+      Toast.success('Feedback "' + label + '" registrado com sucesso!');
+      setTimeout(function(){ carregarKanban(); carregarKPIs(); }, 800);
+    } else {
+      Toast.error(res.detail || 'Erro ao registrar feedback');
+    }
   } catch(e) {
     Toast.error('Erro: ' + e.message);
   }
@@ -4404,17 +4702,38 @@ async function verificarOnboarding() {
       }
     }
 
-    var avisoWpp = document.getElementById('onboarding-aviso-wpp');
-    if (!status.wpp_ok) {
-      if (!avisoWpp) {
-        avisoWpp = document.createElement('div');
-        avisoWpp.id = 'onboarding-aviso-wpp';
-        avisoWpp.style.cssText = 'position:fixed;bottom:20px;right:20px;background:#1c1c2e;border:1px solid #f59e0b;color:#f59e0b;padding:14px 18px;border-radius:12px;font-size:13px;z-index:9998;max-width:320px;box-shadow:0 4px 20px rgba(0,0,0,.4);';
-        avisoWpp.innerHTML = '<strong>📱 WhatsApp não conectado</strong><br><span style="color:#ccc;font-size:12px">Conecte para ativar o SDR automático.</span><br><button onclick="mostrarView(&quot;perfil&quot;);document.getElementById(&quot;onboarding-aviso-wpp&quot;).remove()" style="margin-top:10px;background:#f59e0b;color:#000;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600">Conectar agora →</button><button onclick="this.parentElement.remove()" style="margin-top:10px;margin-left:8px;background:transparent;color:#888;border:none;cursor:pointer;font-size:12px">Depois</button>';
-        document.body.appendChild(avisoWpp);
+    // Fix 2.6: confirmar status real do WhatsApp antes de exibir aviso
+    // Usar o endpoint dedicado /api/whatsapp/status para double-check
+    var _mostrarAvisoWpp = function(wppOk) {
+      var avisoWpp = document.getElementById('onboarding-aviso-wpp');
+      if (!wppOk) {
+        if (!avisoWpp) {
+          avisoWpp = document.createElement('div');
+          avisoWpp.id = 'onboarding-aviso-wpp';
+          avisoWpp.style.cssText = 'position:fixed;bottom:20px;right:20px;background:#1c1c2e;border:1px solid #f59e0b;color:#f59e0b;padding:14px 18px;border-radius:12px;font-size:13px;z-index:9998;max-width:320px;box-shadow:0 4px 20px rgba(0,0,0,.4);';
+          avisoWpp.innerHTML = '<strong>📱 WhatsApp não conectado</strong><br><span style="color:#ccc;font-size:12px">Conecte para ativar o SDR automático.</span><br><button onclick="mostrarView(&quot;perfil&quot;);document.getElementById(&quot;onboarding-aviso-wpp&quot;).remove()" style="margin-top:10px;background:#f59e0b;color:#000;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600">Conectar agora →</button><button onclick="this.parentElement.remove()" style="margin-top:10px;margin-left:8px;background:transparent;color:#888;border:none;cursor:pointer;font-size:12px">Depois</button>';
+          document.body.appendChild(avisoWpp);
+        }
+      } else {
+        if (avisoWpp) avisoWpp.remove();
       }
+    };
+    // Double-check: se onboarding diz desconectado, confirmar com endpoint dedicado
+    if (!status.wpp_ok) {
+      // Aguardar 3s e verificar novamente com endpoint dedicado antes de mostrar aviso
+      setTimeout(async function() {
+        try {
+          var r2 = await authFetch('/api/whatsapp/status');
+          var d2 = await r2.json();
+          var realmente_ok = d2.status === 'connected' || d2.status === 'open' || d2.status === 'authenticated';
+          _mostrarAvisoWpp(!realmente_ok);
+        } catch(e) {
+          // Se falhar a verificação, não mostrar aviso (evitar falso positivo)
+          console.warn('[WPP] Não foi possível verificar status:', e.message);
+        }
+      }, 3000);
     } else {
-      if (avisoWpp) avisoWpp.remove();
+      _mostrarAvisoWpp(false); // wpp_ok = true, remover aviso se existir
     }
   } catch (e) {
     console.error('[Onboarding] Erro:', e);
@@ -4828,17 +5147,23 @@ function renderCiclos(ciclos) {
   tbody.innerHTML = ciclos.map(function(c) {
     var dtInicio = c.iniciado_em ? new Date(c.iniciado_em).toLocaleDateString('pt-BR') : '—';
     var dtFim = c.concluido_em ? new Date(c.concluido_em).toLocaleDateString('pt-BR') : '—';
-    var convColor = c.conversao >= 80 ? '#10b981' : c.conversao >= 50 ? '#f59e0b' : 'var(--fl-text-muted)';
-    var erroColor = c.erros > 0 ? '#ef4444' : 'var(--fl-text-muted)';
+    // Garantir que campos numéricos nunca sejam undefined/null (fix msg 'unds...')
+    var leads = c.leads_buscados != null ? c.leads_buscados : 0;
+    var sites = c.sites_gerados != null ? c.sites_gerados : 0;
+    var enviados = c.enviados != null ? c.enviados : 0;
+    var erros = c.erros != null ? c.erros : 0;
+    var conversao = c.conversao != null ? c.conversao : 0;
+    var convColor = conversao >= 80 ? '#10b981' : conversao >= 50 ? '#f59e0b' : 'var(--fl-text-muted)';
+    var erroColor = erros > 0 ? '#ef4444' : 'var(--fl-text-muted)';
     return '<tr style="border-bottom:1px solid rgba(255,255,255,0.05);transition:background .15s" onmouseover="this.style.background=&quot;rgba(147,51,234,0.05)&quot;" onmouseout="this.style.background=&quot;&quot;">'+
-      '<td style="padding:10px 8px;color:var(--fl-text-muted);font-family:var(--fl-font-mono);font-size:11px">#'+c.id+'</td>'+
-      '<td style="padding:10px 8px;color:var(--fl-text);font-weight:500">'+escapeHtml(c.nicho)+'</td>'+
-      '<td style="padding:10px 8px;color:var(--fl-text-muted)">'+escapeHtml(c.cidade)+'</td>'+
-      '<td style="padding:10px 8px;text-align:center;color:var(--fl-cyan);font-family:var(--fl-font-mono)">'+c.leads_buscados+'</td>'+
-      '<td style="padding:10px 8px;text-align:center;color:var(--fl-purple-300);font-family:var(--fl-font-mono)">'+c.sites_gerados+'</td>'+
-      '<td style="padding:10px 8px;text-align:center;color:#10b981;font-family:var(--fl-font-mono)">'+c.enviados+'</td>'+
-      '<td style="padding:10px 8px;text-align:center;color:'+erroColor+';font-family:var(--fl-font-mono)">'+c.erros+'</td>'+
-      '<td style="padding:10px 8px;text-align:center;color:'+convColor+';font-family:var(--fl-font-mono);font-weight:600">'+c.conversao+'%</td>'+
+      '<td style="padding:10px 8px;color:var(--fl-text-muted);font-family:var(--fl-font-mono);font-size:11px">#'+(c.id || '—')+'</td>'+
+      '<td style="padding:10px 8px;color:var(--fl-text);font-weight:500">'+escapeHtml(c.nicho || '—')+'</td>'+
+      '<td style="padding:10px 8px;color:var(--fl-text-muted)">'+escapeHtml(c.cidade || '—')+'</td>'+
+      '<td style="padding:10px 8px;text-align:center;color:var(--fl-cyan);font-family:var(--fl-font-mono)">'+leads+'</td>'+
+      '<td style="padding:10px 8px;text-align:center;color:var(--fl-purple-300);font-family:var(--fl-font-mono)">'+sites+'</td>'+
+      '<td style="padding:10px 8px;text-align:center;color:#10b981;font-family:var(--fl-font-mono)">'+enviados+'</td>'+
+      '<td style="padding:10px 8px;text-align:center;color:'+erroColor+';font-family:var(--fl-font-mono)">'+erros+'</td>'+
+      '<td style="padding:10px 8px;text-align:center;color:'+convColor+';font-family:var(--fl-font-mono);font-weight:600">'+conversao+'%</td>'+
       '<td style="padding:10px 8px;color:var(--fl-text-muted);font-size:11px">'+dtInicio+'</td>'+
       '<td style="padding:10px 8px;color:var(--fl-text-muted);font-size:11px">'+dtFim+'</td>'+
     '</tr>';
@@ -4857,7 +5182,7 @@ function filtrarCiclos(search) {
 // ═══════════════════════════════════════════════════════════════════
 (function() {
   let eventSource = null;
-  const maxLogs = 100;
+  const maxLogs = 40;
 
   function getContainer() {
     return document.getElementById('magic-logs-content');
@@ -4866,7 +5191,8 @@ function filtrarCiclos(search) {
   function conectarSSE() {
     if (eventSource) eventSource.close();
 
-    eventSource = new EventSource('/api/logs/stream');
+    var _sseToken = localStorage.getItem('fralib_token') || '';
+    eventSource = new EventSource('/api/logs/stream?token=' + encodeURIComponent(_sseToken));
 
     eventSource.onmessage = function(event) {
       try {
@@ -4896,7 +5222,29 @@ function filtrarCiclos(search) {
     };
   }
 
-  function adicionarLog(data) {
+  function _mostrarModalRateLimit(msg) {
+  const old = document.getElementById('modal-rate-limit');
+  if (old) old.remove();
+  const modal = document.createElement('div');
+  modal.id = 'modal-rate-limit';
+  modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:99999;';
+  modal.innerHTML = `
+    <div style="background:#1a1a2e;border:1px solid #333;border-radius:16px;padding:32px;max-width:420px;width:90%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.5);">
+      <div style="font-size:48px;margin-bottom:16px;">⏳</div>
+      <h2 style="margin:0 0 12px;font-size:20px;color:#f0f0f5;">Limite de Uso Atingido</h2>
+      <p style="color:#9ca3af;font-size:15px;line-height:1.5;margin:0 0 20px;">${msg || 'O sistema esta temporariamente indisponivel. Seus leads estao salvos e serao processados automaticamente quando o limite resetar.'}</p>
+      <button onclick="document.getElementById('modal-rate-limit').remove()" style="background:#6366f1;color:#fff;border:none;padding:10px 24px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;">Entendi</button>
+    </div>
+  `;
+  document.body.appendChild(modal);
+}
+
+function adicionarLog(data) {
+    // Rate limit — mostrar modal proeminente
+    if (data.evento === 'RATE_LIMIT' || data.tipo === 'rate_limit') {
+      _mostrarModalRateLimit(data.mensagem);
+    }
+
     const logsContainer = getContainer();
     if (!logsContainer) return;
     var placeholder = logsContainer.querySelector('[data-placeholder]');
@@ -4937,11 +5285,11 @@ function filtrarCiclos(search) {
         '<span style="color:#6b7280;font-size:10px;white-space:nowrap;flex-shrink:0;">' + ts + '</span>' +
       '</div>';
 
-    logsContainer.appendChild(logDiv);
-    logsContainer.scrollTop = logsContainer.scrollHeight;
+    logsContainer.insertBefore(logDiv, logsContainer.firstChild);
+    logsContainer.scrollTop = 0;
 
     while (logsContainer.children.length > maxLogs) {
-      logsContainer.removeChild(logsContainer.firstChild);
+      logsContainer.removeChild(logsContainer.lastChild);
     }
   }
 
@@ -5498,6 +5846,558 @@ async function carregarMensagensNovas() {
     window._leadsComResposta = data.leads_com_resposta || [];
   } catch(e) {}
 }
+
+/* ══════════════════════════════════════════════════════════════════
+   SPRINT 2 — Funções novas
+   ══════════════════════════════════════════════════════════════════ */
+
+/* ── 2.1 Trocar aba UTI (estende trocarAbaUTI existente) ─────────── */
+var _trocarAbaUTI_orig = typeof trocarAbaUTI === 'function' ? trocarAbaUTI : null;
+function trocarAbaUTI(aba) {
+  var paineis = ['falhas','descartados','incompletos','fila'];
+  paineis.forEach(function(p){
+    var el = document.getElementById('uti-painel-' + p);
+    var tab = document.getElementById('uti-tab-' + p);
+    if (el) el.style.display = (p === aba) ? '' : 'none';
+    if (tab) tab.classList.toggle('active', p === aba);
+  });
+  if (aba === 'incompletos') carregarLeadsIncompletos();
+  if (aba === 'fila') carregarFilaQualificados();
+}
+
+/* ── 2.1 Carregar leads incompletos/rejeitados ───────────────────── */
+async function carregarLeadsIncompletos() {
+  var tbody = document.getElementById('utiIncompletosBody');
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="7"><div class="uti-empty">CARREGANDO...</div></td></tr>';
+  try {
+    var data = await authFetch('/api/leads/incompletos').then(function(r){ return r.json(); });
+    var leads = data.leads || [];
+    var badge = document.getElementById('badge-incompletos');
+    if (badge) badge.textContent = leads.length;
+    if (!leads.length) {
+      tbody.innerHTML = '<tr><td colspan="7"><div class="uti-empty">Nenhum lead para revisão</div></td></tr>';
+      return;
+    }
+    tbody.innerHTML = leads.map(function(l) {
+      var nome = escapeHtml(l.nome || '—');
+      var nicho = escapeHtml(l.segmento || '—');
+      var cidade = escapeHtml(l.cidade || '—');
+      var tel = escapeHtml(l.telefone || '—');
+      var score = l.score != null ? l.score : '—';
+      var status = escapeHtml(l.status || '—');
+      var scoreColor = (l.score < 20) ? '#ef4444' : '#f59e0b';
+      return '<tr>' +
+        '<td>' + nome + '</td>' +
+        '<td>' + nicho + '</td>' +
+        '<td>' + cidade + '</td>' +
+        '<td style="font-family:var(--fl-font-mono);font-size:12px">' + tel + '</td>' +
+        '<td><span style="color:' + scoreColor + ';font-weight:600">' + score + '</span></td>' +
+        '<td><span style="font-size:10px;padding:2px 6px;border-radius:4px;background:rgba(239,68,68,0.15);color:#ef4444">' + status + '</span></td>' +
+        '<td style="display:flex;gap:6px;flex-wrap:wrap">' +
+          '<button onclick="aprovarLeadPipeline(\'' + l.id + '\',this)" style="background:rgba(147,51,234,0.15);border:1px solid #9333ea;color:#c084fc;padding:4px 10px;border-radius:4px;font-size:11px;cursor:pointer;font-family:var(--fl-font-brand)">&#9654; APROVAR</button>' +
+          '<button onclick="abrirModalEditarCampos(\'' + l.id + '\',\'' + nome.replace(/'/g,"\\'") + '\',\'' + tel.replace(/'/g,"\\'") + '\',\'' + nicho.replace(/'/g,"\\'") + '\',\'' + cidade.replace(/'/g,"\\'") + '\')" style="background:rgba(6,182,212,0.12);border:1px solid #06b6d4;color:#06b6d4;padding:4px 10px;border-radius:4px;font-size:11px;cursor:pointer;font-family:var(--fl-font-brand)">&#9998; EDITAR</button>' +
+        '</td>' +
+      '</tr>';
+    }).join('');
+  } catch(e) {
+    tbody.innerHTML = '<tr><td colspan="7"><div class="uti-empty">Erro ao carregar</div></td></tr>';
+  }
+}
+
+/* ── 2.1 Aprovar lead manualmente ───────────────────────────────── */
+async function aprovarLeadPipeline(leadId, btn) {
+  if (btn) { btn.disabled = true; btn.textContent = '...'; }
+  try {
+    var resp = await authFetch('/api/leads/' + leadId + '/aprovar-pipeline', { method: 'PATCH' });
+    var data = await resp.json();
+    if (data.ok) {
+      if (typeof Toast !== 'undefined') Toast.success('Lead aprovado para o pipeline!');
+      else alert('Lead aprovado para o pipeline!');
+      carregarLeadsIncompletos();
+    } else {
+      if (typeof Toast !== 'undefined') Toast.error(data.detail || 'Erro ao aprovar');
+      if (btn) { btn.disabled = false; btn.textContent = '▶ APROVAR'; }
+    }
+  } catch(e) {
+    if (typeof Toast !== 'undefined') Toast.error('Erro: ' + e.message);
+    if (btn) { btn.disabled = false; btn.textContent = '▶ APROVAR'; }
+  }
+}
+
+/* ── 2.1 Modal editar campos (painel UTI) ───────────────────────── */
+function abrirModalEditarCampos(id, nome, tel, seg, cidade) {
+  document.getElementById('editCamposLeadId').value = id;
+  document.getElementById('editCamposNome').value = nome !== '—' ? nome : '';
+  document.getElementById('editCamposTelefone').value = tel !== '—' ? tel : '';
+  document.getElementById('editCamposSegmento').value = seg !== '—' ? seg : '';
+  document.getElementById('editCamposCidade').value = cidade !== '—' ? cidade : '';
+  document.getElementById('editCamposObs').value = '';
+  var st = document.getElementById('editCamposStatus');
+  if (st) { st.style.display = 'none'; st.textContent = ''; }
+  var modal = document.getElementById('modalEditarCampos');
+  if (modal) { modal.style.display = 'flex'; }
+}
+
+function fecharModalEditarCampos() {
+  var modal = document.getElementById('modalEditarCampos');
+  if (modal) modal.style.display = 'none';
+}
+
+async function salvarCamposLead() {
+  var id = document.getElementById('editCamposLeadId').value;
+  var st = document.getElementById('editCamposStatus');
+  var payload = {
+    nome: document.getElementById('editCamposNome').value.trim() || null,
+    telefone: document.getElementById('editCamposTelefone').value.trim() || null,
+    segmento: document.getElementById('editCamposSegmento').value.trim() || null,
+    cidade: document.getElementById('editCamposCidade').value.trim() || null,
+    observacao: document.getElementById('editCamposObs').value.trim() || null
+  };
+  // Remover nulos
+  Object.keys(payload).forEach(function(k){ if (!payload[k]) delete payload[k]; });
+  try {
+    var resp = await authFetch('/api/leads/' + id + '/campos', {
+      method: 'PATCH',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload)
+    });
+    var data = await resp.json();
+    if (data.ok) {
+      if (st) { st.style.display = 'block'; st.style.borderColor = '#10b981'; st.style.background = 'rgba(16,185,129,0.08)'; st.textContent = '✓ Campos salvos com sucesso!'; }
+      setTimeout(function(){ fecharModalEditarCampos(); carregarLeadsIncompletos(); }, 1200);
+    } else {
+      if (st) { st.style.display = 'block'; st.style.borderColor = '#ef4444'; st.style.background = 'rgba(239,68,68,0.08)'; st.textContent = 'Erro: ' + (data.detail || 'falha ao salvar'); }
+    }
+  } catch(e) {
+    if (st) { st.style.display = 'block'; st.style.borderColor = '#ef4444'; st.style.background = 'rgba(239,68,68,0.08)'; st.textContent = 'Erro: ' + e.message; }
+  }
+}
+
+/* ── 2.2 Carregar fila de qualificados ──────────────────────────── */
+async function carregarFilaQualificados() {
+  var tbody = document.getElementById('utiFilaBody');
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="8"><div class="uti-empty">CARREGANDO...</div></td></tr>';
+  try {
+    var data = await authFetch('/api/leads/fila-qualificados').then(function(r){ return r.json(); });
+    var leads = data.leads || [];
+    var badge = document.getElementById('badge-fila');
+    if (badge) badge.textContent = leads.length;
+    if (!leads.length) {
+      tbody.innerHTML = '<tr><td colspan="8"><div class="uti-empty">Fila vazia — nenhum lead aguardando</div></td></tr>';
+      return;
+    }
+    tbody.innerHTML = leads.map(function(l) {
+      var tierColor = {'PREMIUM':'#f59e0b','STANDARD':'#06b6d4','BASIC':'#8888a0'}[l.tier] || '#8888a0';
+      var statusColor = l.status === 'qualificado' ? '#10b981' : '#06b6d4';
+      var dt = l.criado_em ? l.criado_em.slice(0,16).replace('T',' ') : '—';
+      return '<tr>' +
+        '<td><span style="background:#9333ea;color:#fff;border-radius:99px;padding:2px 8px;font-size:11px;font-weight:700">#' + l.posicao + '</span></td>' +
+        '<td>' + escapeHtml(l.nome || '—') + '</td>' +
+        '<td>' + escapeHtml(l.segmento || '—') + '</td>' +
+        '<td>' + escapeHtml(l.cidade || '—') + '</td>' +
+        '<td style="color:#c084fc;font-weight:600">' + (l.score || 0) + '</td>' +
+        '<td><span style="color:' + tierColor + ';font-size:11px;font-weight:600">' + escapeHtml(l.tier || '—') + '</span></td>' +
+        '<td><span style="color:' + statusColor + ';font-size:11px">' + escapeHtml(l.status || '—') + '</span></td>' +
+        '<td style="font-family:var(--fl-font-mono);font-size:11px;color:var(--fl-text-muted)">' + dt + '</td>' +
+      '</tr>';
+    }).join('');
+  } catch(e) {
+    tbody.innerHTML = '<tr><td colspan="8"><div class="uti-empty">Erro ao carregar fila</div></td></tr>';
+  }
+}
+
+/* ── 2.3 Deletar lead — modal de confirmação ────────────────────── */
+var _leadParaDeletar = null;
+
+function abrirConfirmDeleteModal() {
+  if (!leadAtualModal) return;
+  _leadParaDeletar = leadAtualModal;
+  var nomeEl = document.getElementById('confirmDeleteNome');
+  if (nomeEl) nomeEl.textContent = 'Tem certeza que deseja deletar "' + (leadAtualModal.nome || leadAtualModal.id) + '"?';
+  var modal = document.getElementById('modalConfirmDelete');
+  if (modal) modal.style.display = 'flex';
+}
+
+function fecharConfirmDelete() {
+  var modal = document.getElementById('modalConfirmDelete');
+  if (modal) modal.style.display = 'none';
+  _leadParaDeletar = null;
+}
+
+async function confirmarDeletarLead() {
+  if (!_leadParaDeletar) return;
+  var id = _leadParaDeletar.id;
+  fecharConfirmDelete();
+  try {
+    var resp = await authFetch('/api/leads/' + id, { method: 'DELETE' });
+    var data = await resp.json();
+    if (data.ok) {
+      closeModal();
+      if (typeof Toast !== 'undefined') Toast.success('Lead deletado com sucesso.');
+      else alert('Lead deletado.');
+      setTimeout(function(){
+        if (typeof carregarKanban === 'function') carregarKanban();
+        if (typeof carregarKPIs === 'function') carregarKPIs();
+      }, 400);
+    } else {
+      if (typeof Toast !== 'undefined') Toast.error(data.detail || 'Erro ao deletar lead');
+    }
+  } catch(e) {
+    if (typeof Toast !== 'undefined') Toast.error('Erro: ' + e.message);
+  }
+}
+
+/* ── 2.4 Salvar campos do lead via modal principal ──────────────── */
+async function salvarCamposLeadModal() {
+  if (!leadAtualModal) return;
+  var id = leadAtualModal.id;
+  var st = document.getElementById('editLeadStatus');
+  var payload = {
+    nome: (document.getElementById('editLeadNome').value || '').trim() || null,
+    telefone: (document.getElementById('editLeadTelefone').value || '').trim() || null,
+    segmento: (document.getElementById('editLeadSegmento').value || '').trim() || null,
+    cidade: (document.getElementById('editLeadCidade').value || '').trim() || null,
+    observacao: (document.getElementById('editLeadObs').value || '').trim() || null
+  };
+  Object.keys(payload).forEach(function(k){ if (!payload[k]) delete payload[k]; });
+  if (!Object.keys(payload).length) {
+    if (st) { st.style.display = 'block'; st.textContent = 'Nenhum campo alterado.'; }
+    return;
+  }
+  try {
+    var resp = await authFetch('/api/leads/' + id + '/campos', {
+      method: 'PATCH',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload)
+    });
+    var data = await resp.json();
+    if (data.ok) {
+      if (st) {
+        st.style.display = 'block';
+        st.style.borderColor = '#10b981';
+        st.style.background = 'rgba(16,185,129,0.08)';
+        st.textContent = '✓ Alterações salvas com sucesso!';
+      }
+      // Atualizar nome no header do modal se mudou
+      if (payload.nome) {
+        var nameEl = document.getElementById('modalLeadName');
+        if (nameEl) nameEl.textContent = payload.nome;
+        leadAtualModal.nome = payload.nome;
+      }
+      setTimeout(function(){
+        if (typeof carregarKanban === 'function') carregarKanban();
+      }, 600);
+    } else {
+      if (st) {
+        st.style.display = 'block';
+        st.style.borderColor = '#ef4444';
+        st.style.background = 'rgba(239,68,68,0.08)';
+        st.textContent = 'Erro: ' + (data.detail || 'falha ao salvar');
+      }
+    }
+  } catch(e) {
+    if (st) {
+      st.style.display = 'block';
+      st.style.borderColor = '#ef4444';
+      st.style.background = 'rgba(239,68,68,0.08)';
+      st.textContent = 'Erro: ' + e.message;
+    }
+  }
+}
+
+/* ── 2.4 Preencher aba editar ao abrir modal ────────────────────── */
+var _openModal_orig = typeof openModal === 'function' ? openModal : null;
+function _preencherAbaEditar(lead) {
+  if (!lead) return;
+  var set = function(id, val){ var el = document.getElementById(id); if(el) el.value = val || ''; };
+  set('editLeadNome', lead.nome);
+  set('editLeadTelefone', lead.telefone || lead.whatsapp);
+  set('editLeadSegmento', lead.segmento || lead.nicho);
+  set('editLeadCidade', lead.cidade);
+  set('editLeadObs', lead.observacoes || lead.observacao || '');
+  var st = document.getElementById('editLeadStatus');
+  if (st) { st.style.display = 'none'; st.textContent = ''; }
+}
+
+/* ── Atualizar badge UTI com contagem de incompletos ────────────── */
+async function atualizarUtiBadge() {
+  try {
+    var data = await authFetch('/api/leads/incompletos').then(function(r){ return r.json(); });
+    var badge = document.getElementById('badge-incompletos');
+    if (badge) badge.textContent = (data.total || 0);
+    var dataFila = await authFetch('/api/leads/fila-qualificados').then(function(r){ return r.json(); });
+    var badgeFila = document.getElementById('badge-fila');
+    if (badgeFila) badgeFila.textContent = (dataFila.total || 0);
+  } catch(e) {}
+}
+
+/* ══ TOUR ONBOARDING — 5 passos (item 2.8) ══════════════════════ */
+(function() {
+  var TOUR_KEY = 'fralib_onboarding_done';
+
+  var PASSOS = [
+    {
+      titulo: 'Bem-vindo ao FraLib OS!',
+      texto: 'Aqui você prospecta clientes automaticamente com IA. Vamos fazer um tour rápido?',
+      alvo: null,
+      posicao: 'center'
+    },
+    {
+      titulo: 'Configure o Pipeline',
+      texto: 'Escolha o segmento de mercado e a cidade alvo. O FraLib vai buscar leads qualificados automaticamente.',
+      alvo: '[data-view="config"]',
+      posicao: 'right'
+    },
+    {
+      titulo: 'Inicie e Acompanhe',
+      texto: 'Clique em INICIAR para rodar o pipeline. Acompanhe os logs em tempo real na aba Motor FraLib.',
+      alvo: '#btnIniciar',
+      posicao: 'bottom'
+    },
+    {
+      titulo: 'Seus Leads no CRM',
+      texto: 'Leads qualificados aparecem aqui no CRM em formato Kanban. Acompanhe cada etapa da prospecção.',
+      alvo: '[data-view="crm"]',
+      posicao: 'right'
+    },
+    {
+      titulo: 'SDR Automático Bryan',
+      texto: 'O Bryan SDR entra em contato automaticamente pelo WhatsApp com cada lead qualificado. Configure na aba Perfil.',
+      alvo: '[data-view="perfil"]',
+      posicao: 'right'
+    }
+  ];
+
+  var passoAtual = 0;
+  var overlay, card, spotlightEl;
+
+  function criarTour() {
+    // Overlay escuro
+    overlay = document.createElement('div');
+    overlay.id = 'fl-tour-overlay';
+    overlay.style.cssText = [
+      'position:fixed;inset:0;z-index:99990;',
+      'background:rgba(6,6,8,0.82);',
+      'backdrop-filter:blur(2px);',
+      'transition:opacity 0.3s;'
+    ].join('');
+
+    // Spotlight (recorte no overlay)
+    spotlightEl = document.createElement('div');
+    spotlightEl.id = 'fl-tour-spotlight';
+    spotlightEl.style.cssText = [
+      'position:fixed;z-index:99991;',
+      'border:2px solid #9333ea;',
+      'box-shadow:0 0 0 9999px rgba(6,6,8,0.82),0 0 30px rgba(147,51,234,0.5);',
+      'border-radius:6px;',
+      'pointer-events:none;',
+      'transition:all 0.35s cubic-bezier(0.22,1,0.36,1);',
+      'display:none;'
+    ].join('');
+
+    // Card do tour
+    card = document.createElement('div');
+    card.id = 'fl-tour-card';
+    card.style.cssText = [
+      'position:fixed;z-index:99992;',
+      'background:#12121a;',
+      'border:2px solid #9333ea;',
+      'box-shadow:6px 6px 0 #0e0718,0 0 40px rgba(147,51,234,0.25);',
+      'padding:24px 28px;',
+      'max-width:340px;width:90%;',
+      'transition:all 0.35s cubic-bezier(0.22,1,0.36,1);'
+    ].join('');
+
+    document.body.appendChild(overlay);
+    document.body.appendChild(spotlightEl);
+    document.body.appendChild(card);
+  }
+
+  function posicionarCard(alvo, posicao) {
+    if (!alvo || posicao === 'center') {
+      // Centralizado
+      card.style.top = '50%';
+      card.style.left = '50%';
+      card.style.transform = 'translate(-50%,-50%)';
+      card.style.right = '';
+      card.style.bottom = '';
+      spotlightEl.style.display = 'none';
+      return;
+    }
+
+    var el = document.querySelector(alvo);
+    if (!el) {
+      card.style.top = '50%';
+      card.style.left = '50%';
+      card.style.transform = 'translate(-50%,-50%)';
+      spotlightEl.style.display = 'none';
+      return;
+    }
+
+    var rect = el.getBoundingClientRect();
+    var pad = 8;
+
+    // Spotlight
+    spotlightEl.style.display = 'block';
+    spotlightEl.style.top    = (rect.top - pad) + 'px';
+    spotlightEl.style.left   = (rect.left - pad) + 'px';
+    spotlightEl.style.width  = (rect.width + pad * 2) + 'px';
+    spotlightEl.style.height = (rect.height + pad * 2) + 'px';
+
+    // Posicionar card
+    card.style.transform = '';
+    var gap = 16;
+    if (posicao === 'right') {
+      card.style.top  = Math.max(16, rect.top) + 'px';
+      card.style.left = (rect.right + gap) + 'px';
+      card.style.right = '';
+      card.style.bottom = '';
+    } else if (posicao === 'bottom') {
+      card.style.top  = (rect.bottom + gap) + 'px';
+      card.style.left = Math.max(16, rect.left) + 'px';
+      card.style.right = '';
+      card.style.bottom = '';
+    } else if (posicao === 'left') {
+      card.style.top  = Math.max(16, rect.top) + 'px';
+      card.style.right = (window.innerWidth - rect.left + gap) + 'px';
+      card.style.left = '';
+      card.style.bottom = '';
+    }
+
+    // Garantir que o card não saia da tela
+    setTimeout(function() {
+      var cr = card.getBoundingClientRect();
+      if (cr.right > window.innerWidth - 16) {
+        card.style.left = '';
+        card.style.right = '16px';
+      }
+      if (cr.bottom > window.innerHeight - 16) {
+        card.style.top = '';
+        card.style.bottom = '16px';
+      }
+    }, 10);
+  }
+
+  function renderPasso(idx) {
+    var passo = PASSOS[idx];
+    var total = PASSOS.length;
+
+    // Dots de progresso
+    var dots = '';
+    for (var i = 0; i < total; i++) {
+      dots += '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;margin:0 3px;background:' +
+        (i === idx ? '#9333ea' : 'rgba(147,51,234,0.25)') + ';transition:background 0.2s;"></span>';
+    }
+
+    card.innerHTML =
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">' +
+        '<span style="font-family:&quot;Press Start 2P&quot;,monospace;font-size:7px;color:#c084fc;letter-spacing:1px;">TOUR ' + (idx+1) + '/' + total + '</span>' +
+        '<button id="fl-tour-skip" style="background:none;border:none;color:#5a5a70;font-size:11px;cursor:pointer;padding:2px 6px;font-family:&quot;DM Sans&quot;,sans-serif;">Pular tour</button>' +
+      '</div>' +
+      '<div style="font-size:14px;font-weight:600;color:#f0f0f5;margin-bottom:10px;">' + passo.titulo + '</div>' +
+      '<div style="font-size:13px;color:#8888a0;line-height:1.6;margin-bottom:20px;">' + passo.texto + '</div>' +
+      '<div style="display:flex;align-items:center;justify-content:space-between;">' +
+        '<div>' + dots + '</div>' +
+        '<div style="display:flex;gap:10px;">' +
+          (idx > 0 ? '<button id="fl-tour-prev" style="background:transparent;border:1px solid rgba(147,51,234,0.3);color:#8888a0;padding:8px 16px;cursor:pointer;font-size:12px;font-family:&quot;DM Sans&quot;,sans-serif;">← Anterior</button>' : '') +
+          '<button id="fl-tour-next" style="background:#9333ea;border:2px solid #7c22d4;color:#fff;padding:8px 20px;cursor:pointer;font-size:12px;font-family:&quot;Press Start 2P&quot;,monospace;font-size:8px;letter-spacing:1px;box-shadow:3px 3px 0 #0e0718;">' +
+            (idx === total - 1 ? 'CONCLUIR' : 'PRÓXIMO →') +
+          '</button>' +
+        '</div>' +
+      '</div>';
+
+    posicionarCard(passo.alvo, passo.posicao);
+
+    // Eventos
+    var btnNext = document.getElementById('fl-tour-next');
+    var btnPrev = document.getElementById('fl-tour-prev');
+    var btnSkip = document.getElementById('fl-tour-skip');
+
+    if (btnNext) btnNext.addEventListener('click', function() {
+      if (passoAtual === PASSOS.length - 1) {
+        encerrarTour();
+      } else {
+        passoAtual++;
+        renderPasso(passoAtual);
+      }
+    });
+
+    if (btnPrev) btnPrev.addEventListener('click', function() {
+      if (passoAtual > 0) {
+        passoAtual--;
+        renderPasso(passoAtual);
+      }
+    });
+
+    if (btnSkip) btnSkip.addEventListener('click', encerrarTour);
+  }
+
+  function encerrarTour() {
+    localStorage.setItem(TOUR_KEY, '1');
+    if (overlay && overlay.parentNode) overlay.parentNode.removeChild(overlay);
+    if (card && card.parentNode) card.parentNode.removeChild(card);
+    if (spotlightEl && spotlightEl.parentNode) spotlightEl.parentNode.removeChild(spotlightEl);
+  }
+
+  function iniciarTour() {
+    if (localStorage.getItem(TOUR_KEY)) return; // já fez o tour
+    passoAtual = 0;
+    criarTour();
+    renderPasso(0);
+  }
+
+  // ── BANNER DE PIPELINE RODANDO ─────────────────────────────────────
+  (function() {
+    var banner = document.getElementById('pipeline-banner');
+    var bannerFase = document.getElementById('pipeline-banner-fase');
+    if (!banner) return;
+
+    // Verificar status do pipeline a cada 5s
+    function checkPipelineStatus() {
+      authFetch('/api/pipeline/status').then(function(d) {
+        if (d && d.rodando) {
+          banner.style.display = 'flex';
+        } else {
+          banner.style.display = 'none';
+        }
+      }).catch(function(){});
+    }
+    checkPipelineStatus();
+    setInterval(checkPipelineStatus, 5000);
+
+    // Interceptar SSE para atualizar fase no banner
+    var _origHook = window._pixelOfficeSSEHook;
+    window._pixelOfficeSSEHook = function(data) {
+      if (_origHook) _origHook(data);
+      var msg = data.mensagem || '';
+      // Mostrar fases relevantes no banner
+      if (msg && (msg.includes('FASE') || msg.includes('Pipeline') || msg.includes('Lead:') || msg.includes('Deploy') || msg.includes('concluído'))) {
+        if (bannerFase) bannerFase.textContent = msg;
+        if (msg.includes('concluído') || msg.includes('concluido')) {
+          setTimeout(function(){ banner.style.display = 'none'; }, 3000);
+        }
+      }
+    };
+  })();
+
+  // Expor globalmente para poder chamar manualmente
+  window.iniciarTourFraLib = iniciarTour;
+  window.encerrarTourFraLib = encerrarTour;
+
+  // Iniciar após o DOM carregar e as views estarem prontas
+  document.addEventListener('DOMContentLoaded', function() {
+    // Aguardar 2s para não conflitar com verificarOnboarding
+    setTimeout(function() {
+      // Só mostrar se perfil já estiver ok (não bloquear onboarding de perfil)
+      if (!localStorage.getItem(TOUR_KEY)) {
+        iniciarTour();
+      }
+    }, 2000);
+  });
+})();
+
 
 </script>
 </body></html>

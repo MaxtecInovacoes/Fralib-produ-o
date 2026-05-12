@@ -239,6 +239,7 @@ function mostrarView(view) {
     carregarUTI();
   }
   if (view === 'config') {
+    carregarFilaCapturados();
   }
 }
 
@@ -440,9 +441,35 @@ function criarCard(lead) {
     (safeUrl && safeUrl !== '#'
       ? '<div style="font-size:11px;margin-top:6px"><a href="' + safeUrl + '" target="_blank" rel="noopener noreferrer" style="color:var(--fl-purple-300)" onclick="event.stopPropagation()">🌐 Ver site</a></div>'
       : '<div style="font-size:10px;margin-top:6px;color:var(--fl-text-dim)">sem site</div>'
+    ) +
+    ((lead.sdr_stage || '').toLowerCase() === 'pendente_wpp'
+      ? '<div style="margin-top:8px"><button onclick="event.stopPropagation();enviarMensagemLead('' + lead.id + '',this)" style="background:#22c55e;color:#fff;border:none;padding:5px 10px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;width:100%">📱 Enviar Mensagem</button></div>'
+      : ''
     );
   initDrag(d);
   return d;
+}
+
+async function enviarMensagemLead(leadId, btn) {
+  btn.disabled = true;
+  btn.textContent = 'Enviando...';
+  try {
+    var r = await authFetch('/api/leads/' + leadId + '/enviar-mensagem', {method:'POST'});
+    var data = await r.json();
+    if (r.ok && data.ok) {
+      btn.textContent = '✅ Enviado!';
+      btn.style.background = '#6b7280';
+      setTimeout(function(){ carregarKanban(); }, 2000);
+    } else {
+      btn.textContent = '❌ ' + (data.detail || 'Erro');
+      btn.style.background = '#ef4444';
+      setTimeout(function(){ btn.textContent = '📱 Enviar Mensagem'; btn.style.background = '#22c55e'; btn.disabled = false; }, 3000);
+    }
+  } catch(e) {
+    btn.textContent = '❌ Erro';
+    btn.style.background = '#ef4444';
+    setTimeout(function(){ btn.textContent = '📱 Enviar Mensagem'; btn.style.background = '#22c55e'; btn.disabled = false; }, 3000);
+  }
 }
 
 async function carregarKanban() {
@@ -694,13 +721,139 @@ async function requalificarLead(id, btn) {
   }
 }
 
+/* ══ FILA DE LEADS CAPTURADOS — modal ao iniciar ═══════════════════ */
+async function _verificarFilaEIniciar(nicho, cidade, qtd, scoreMin, btn) {
+  // Buscar leads capturados para este segmento+cidade
+  var leads = [];
+  try {
+    var res = await authFetch('/api/pipeline/fila-reprocessamento').then(function(r){ return r.json(); });
+    leads = (res.leads || []).filter(function(l){
+      return l.segmento && l.cidade &&
+        l.segmento.toLowerCase().trim() === nicho.toLowerCase().trim() &&
+        l.cidade.toLowerCase().trim() === cidade.toLowerCase().trim();
+    });
+  } catch(_) {}
+
+  if (leads.length === 0) {
+    // Sem fila — iniciar direto
+    _executarIniciarPipeline(nicho, cidade, qtd, scoreMin, btn);
+    return;
+  }
+
+  // Mostrar modal com os leads na fila
+  var existing = document.getElementById('modal-fila-capturados');
+  if (existing) existing.remove();
+
+  var tierColor = { PREMIUM: '#10b981', STANDARD: '#3b82f6', LOW: '#f59e0b', REJEITAR: '#ef4444', DADOS_INSUFICIENTES: '#6b7280' };
+
+  var listaHtml = leads.map(function(l) {
+    var cor = tierColor[l.tier] || '#6b7280';
+    return '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--fl-bg);border:1px solid var(--fl-border);border-radius:8px;gap:10px">' +
+      '<div style="flex:1;min-width:0">' +
+        '<div style="font-weight:600;font-size:13px;color:var(--fl-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + escapeHtml(l.nome || '—') + '</div>' +
+        '<div style="font-size:11px;color:var(--fl-text-muted)">' + escapeHtml(l.cidade || '') + (l.segmento ? ' · ' + escapeHtml(l.segmento) : '') + '</div>' +
+      '</div>' +
+      '<span style="font-size:11px;font-weight:700;color:' + cor + ';border:1px solid ' + cor + ';padding:2px 8px;border-radius:12px;flex-shrink:0">' + escapeHtml(l.tier || '') + '</span>' +
+    '</div>';
+  }).join('');
+
+  var modal = document.createElement('div');
+  modal.id = 'modal-fila-capturados';
+  modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:9999;padding:16px;box-sizing:border-box';
+  modal.innerHTML =
+    '<div style="background:var(--fl-bg-card);border:1px solid var(--fl-border-md);border-radius:16px;padding:28px;max-width:480px;width:100%;max-height:80vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.5)">' +
+      '<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">' +
+        '<span style="font-size:22px">📋</span>' +
+        '<h3 style="margin:0;font-size:16px;font-weight:700;color:var(--fl-text)">Leads na fila para ' + escapeHtml(nicho) + ' em ' + escapeHtml(cidade) + '</h3>' +
+      '</div>' +
+      '<p style="color:var(--fl-text-muted);font-size:13px;margin:0 0 16px">O Hunter já coletou <strong style="color:var(--fl-text)">' + leads.length + ' lead(s)</strong> neste segmento. O que deseja fazer?</p>' +
+      '<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:20px">' + listaHtml + '</div>' +
+      '<div style="display:flex;flex-direction:column;gap:10px">' +
+        '<button id="btn-fila-continuar" style="background:var(--fl-purple);color:#fff;border:none;padding:12px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;width:100%">▶ PROCESSAR ESTES LEADS</button>' +
+        '<button id="btn-fila-excluir" style="background:transparent;color:#ef4444;border:1px solid #ef4444;padding:10px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;width:100%">🗑 DESCARTAR E INICIAR NOVO CICLO</button>' +
+        '<button id="btn-fila-cancelar" style="background:transparent;color:var(--fl-text-muted);border:none;padding:8px;font-size:12px;cursor:pointer;width:100%">Cancelar</button>' +
+      '</div>' +
+    '</div>';
+
+  document.body.appendChild(modal);
+
+  // Botão: processar leads existentes
+  document.getElementById('btn-fila-continuar').onclick = async function() {
+    modal.remove();
+    if (btn) { btn.textContent = '⏳ PROCESSANDO FILA...'; btn.disabled = true; }
+    for (var i = 0; i < leads.length; i++) {
+      try {
+        await authFetch('/api/pipeline/reprocessar/' + leads[i].id, { method: 'POST' });
+      } catch(_) {}
+    }
+    if (btn) { btn.textContent = '✓ FILA INICIADA!'; }
+    setTimeout(function(){
+      if (btn) { btn.textContent = '▶ INICIAR PIPELINE'; btn.disabled = false; }
+      mostrarView('crm');
+      document.querySelectorAll('.sidebar-link').forEach(function(l){ l.classList.remove('active'); });
+      var crmLink = document.querySelector('[data-view="crm"]');
+      if (crmLink) crmLink.classList.add('active');
+      setTimeout(carregarKanban, 1000);
+    }, 2000);
+  };
+
+  // Botão: descartar fila e iniciar novo ciclo
+  document.getElementById('btn-fila-excluir').onclick = async function() {
+    this.textContent = '⏳ Descartando...';
+    this.disabled = true;
+    try {
+      for (var i = 0; i < leads.length; i++) {
+        await authFetch('/api/leads/' + leads[i].id, { method: 'DELETE' });
+      }
+    } catch(_) {}
+    modal.remove();
+    _executarIniciarPipeline(nicho, cidade, qtd, scoreMin, btn);
+  };
+
+  // Botão: cancelar
+  document.getElementById('btn-fila-cancelar').onclick = function() {
+    modal.remove();
+    if (btn) { btn.textContent = '▶ INICIAR PIPELINE'; btn.disabled = false; }
+  };
+
+  // Fechar clicando fora
+  modal.addEventListener('click', function(e) {
+    if (e.target === modal) {
+      modal.remove();
+      if (btn) { btn.textContent = '▶ INICIAR PIPELINE'; btn.disabled = false; }
+    }
+  });
+}
+
+async function _executarIniciarPipeline(nicho, cidade, qtd, scoreMin, btn) {
+  try {
+    await authFetch('/api/pipeline/iniciar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ segmento: nicho, cidade: cidade, quantidade: qtd, score_minimo: scoreMin })
+    });
+    if (btn) { btn.textContent = '✓ PIPELINE INICIADO!'; }
+    setTimeout(function(){
+      if (btn) { btn.textContent = '▶ INICIAR PIPELINE'; btn.disabled = false; }
+      mostrarView('crm');
+      document.querySelectorAll('.sidebar-link').forEach(function(l){ l.classList.remove('active'); });
+      var crmLink = document.querySelector('[data-view="crm"]');
+      if (crmLink) crmLink.classList.add('active');
+      setTimeout(carregarKanban, 1500);
+    }, 2000);
+  } catch(e) {
+    if (btn) { btn.textContent = '▶ INICIAR PIPELINE'; btn.disabled = false; }
+    alert('Erro ao iniciar pipeline: ' + e.message);
+  }
+}
+
 /* ══ CONFIG — iniciar pipeline ═════════════════════════════════════ */
 async function salvarConfigPipeline() {
   var nicho = (document.getElementById('configNicho') || {}).value || '';
   var cidade = (document.getElementById('configCidade') || {}).value || '';
   var qtd = parseInt((document.getElementById('configQtd') || {}).value || '50');
+  var scoreMin = parseInt((document.getElementById('configScoreMin') || {}).value || '70');
   nicho = nicho.trim(); cidade = cidade.trim();
-  var scoreMin = parseInt((document.getElementById("configScoreMin") || {}).value || "70");
 
   if (!nicho || !cidade) {
     alert('Preencha o Nicho e a Cidade antes de iniciar.');
@@ -708,35 +861,9 @@ async function salvarConfigPipeline() {
   }
 
   var btn = document.querySelector('.config-group .btn-config-save');
-  if (btn) { btn.textContent = '⏳ INICIANDO...'; btn.disabled = true; }
+  if (btn) { btn.textContent = '⏳ VERIFICANDO...'; btn.disabled = true; }
 
-  try {
-    await authFetch('/api/pipeline/iniciar', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ segmento: nicho, cidade: cidade, quantidade: qtd, score_minimo: scoreMin })
-    });
-
-    if (btn) { btn.textContent = '✓ PIPELINE INICIADO!'; }
-    setTimeout(function(){
-      if (btn) { btn.textContent = '▶ INICIAR PIPELINE COM ESSAS CONFIGURAÇÕES'; btn.disabled = false; }
-    }, 3000);
-
-    // Mudar para CRM após 1.5s
-    setTimeout(function(){
-      mostrarView('crm');
-      document.querySelectorAll('.sidebar-link').forEach(function(l){ l.classList.remove('active'); });
-      var crmLink = document.querySelector('[data-view="crm"]');
-      if (crmLink) crmLink.classList.add('active');
-    }, 1500);
-
-    carregarKPIs();
-    setTimeout(carregarKanban, 4000);
-
-  } catch(e) {
-    if (btn) { btn.textContent = '✗ ERRO — TENTE NOVAMENTE'; btn.disabled = false; setTimeout(function(){ btn.textContent = '▶ INICIAR PIPELINE COM ESSAS CONFIGURAÇÕES'; }, 3000); }
-    alert('Erro ao iniciar pipeline: ' + e.message);
-  }
+  await _verificarFilaEIniciar(nicho, cidade, qtd, scoreMin, btn);
 }
 
 /* ══ WHATSAPP (MEOWHATS) STATUS ════════════════════════════════════ */
@@ -1615,6 +1742,26 @@ document.addEventListener('DOMContentLoaded', function() {
 
 <script>
 // ═══════════════════════════════════════════════════════════════════
+// Modal de Rate Limit
+function _mostrarModalRateLimit(msg) {
+  // Remover modal anterior se existir
+  const old = document.getElementById('modal-rate-limit');
+  if (old) old.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'modal-rate-limit';
+  modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:99999;';
+  modal.innerHTML = `
+    <div style="background:#fff;border-radius:16px;padding:32px;max-width:420px;width:90%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+      <div style="font-size:48px;margin-bottom:16px;">⏳</div>
+      <h2 style="margin:0 0 12px;font-size:20px;color:#1f2937;">Limite de Uso Atingido</h2>
+      <p style="color:#6b7280;font-size:15px;line-height:1.5;margin:0 0 20px;">${msg || 'O sistema está temporariamente indisponível. Seus leads estão salvos e serão processados automaticamente quando o limite resetar.'}</p>
+      <button onclick="document.getElementById('modal-rate-limit').remove()" style="background:#3b82f6;color:#fff;border:none;padding:10px 24px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;">Entendi</button>
+    </div>
+  `;
+  document.body.appendChild(modal);
+}
+
 // LOGS EM TEMPO REAL VIA SSE (Server-Sent Events)
 // ═══════════════════════════════════════════════════════════════════
 (function() {
@@ -1646,6 +1793,12 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   function adicionarLog(data) {
+    // Rate limit — mostrar modal proeminente
+    if (data.evento === 'RATE_LIMIT' || data.tipo === 'rate_limit') {
+      _mostrarModalRateLimit(data.mensagem);
+      return;
+    }
+
     const logDiv = document.createElement('div');
     logDiv.style.cssText = 'padding:8px 12px;border-radius:6px;font-size:13px;font-family:monospace;line-height:1.4;';
 

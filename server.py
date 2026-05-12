@@ -9,9 +9,6 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 import sys
 import os
-import secrets
-import hmac
-import hashlib
 
 # Adicionar TODAS as pastas do backend ao path
 sys.path.insert(0, '/root/fralib/backend')
@@ -28,17 +25,6 @@ inicializar_database()
 # Rate Limiting
 limiter = Limiter(key_func=get_remote_address, default_limits=["100/minute"])
 
-# CSRF Secret Key
-CSRF_SECRET_KEY = os.getenv("CSRF_SECRET_KEY")
-
-def generate_csrf_token():
-    """Gera um token CSRF seguro"""
-    return secrets.token_urlsafe(32)
-
-def verify_csrf_token(token: str, expected_token: str) -> bool:
-    """Verifica se o token CSRF e valido"""
-    return hmac.compare_digest(token, expected_token)
-
 # Importar routers
 import auth_endpoints
 import dashboard_endpoints
@@ -50,6 +36,9 @@ import users_endpoints
 import leads_endpoints
 import beta_endpoints
 import whatsapp_endpoints
+import llm_endpoints
+import api_usage_endpoints
+import superadmin_endpoints
 
 
 from contextlib import asynccontextmanager
@@ -65,7 +54,48 @@ async def lifespan(app):
         print("[Server] Pipeline state resetado no startup")
     except Exception as e:
         print(f"[Server] Aviso: nao foi possivel resetar pipeline_state: {e}")
+
+    # 3.2 — Marcar jobs em_andamento como interrompido (PM2 reiniciou durante execucao)
+    try:
+        from sqlalchemy import text
+        from database import engine
+        with engine.connect() as conn:
+            result = conn.execute(text("""
+                UPDATE pipeline_queue
+                SET status='interrompido', concluido_em=NOW(),
+                    erro='Processo reiniciado (PM2/servidor) durante execucao'
+                WHERE status='em_andamento'
+                RETURNING id
+            """))
+            interrompidos = result.fetchall()
+            conn.commit()
+        if interrompidos:
+            ids = [str(r[0]) for r in interrompidos]
+            print(f"[Server] {len(ids)} job(s) marcados como interrompido: {', '.join(ids)}")
+        else:
+            print("[Server] Nenhum job interrompido encontrado")
+    except Exception as e:
+        print(f"[Server] Aviso: nao foi possivel verificar pipeline_queue: {e}")
+
+    # Iniciar listener WhatsApp (recebe respostas dos leads e chama Bryan)
+    try:
+        import sys, os
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'backend'))
+        from whatsapp_listener import start_background_listener
+        start_background_listener()
+        print("[Server] WhatsApp listener iniciado")
+    except Exception as e:
+        print(f"[Server] Aviso: WhatsApp listener nao iniciado: {e}")
+
     yield
+
+    # Shutdown: fechar conexões SSE e pg_notify
+    print("[Server] Shutdown: fechando conexões...")
+    try:
+        from sse_endpoints import _shutdown_sse
+        _shutdown_sse()
+    except Exception as e:
+        print(f"[Server] Aviso shutdown SSE: {e}")
 
 app = FastAPI(title="FraLib API", version="2.0.0", lifespan=lifespan)
 app.state.limiter = limiter
@@ -89,6 +119,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Endpoint CSRF stub — frontend chama mas sistema usa JWT; retorna token dummy para evitar 404
+@app.get("/api/csrf-token")
+async def csrf_token():
+    import secrets
+    return {"csrf_token": secrets.token_hex(32)}
+
 # Routers
 app.include_router(auth_endpoints.router)
 app.include_router(dashboard_endpoints.router)
@@ -100,6 +136,9 @@ app.include_router(users_endpoints.router)
 app.include_router(leads_endpoints.router)
 app.include_router(beta_endpoints.router)
 app.include_router(whatsapp_endpoints.router)
+app.include_router(llm_endpoints.router)
+app.include_router(api_usage_endpoints.router)
+app.include_router(superadmin_endpoints.router)
 
 # Rate limiting especifico para login (implementacao simples em memoria)
 import time as _time_srv
@@ -117,12 +156,6 @@ async def rate_limit_login(request: Request, call_next):
             return JSONResponse(status_code=429, content={"detail": "Rate limit: maximo 5 tentativas de login por minuto"})
         calls.append(now)
         _login_calls[ip] = calls
-    response = await call_next(request)
-    return response
-
-# CSRF Middleware - desabilitado (JWT ja protege todos os endpoints)
-@app.middleware("http")
-async def csrf_middleware(request: Request, call_next):
     response = await call_next(request)
     return response
 
@@ -147,28 +180,32 @@ async def csp_middleware(request: Request, call_next):
         response.headers["Content-Security-Policy"] = csp_policy
     
     return response
-# Endpoint para obter CSRF token
-@app.get("/api/csrf-token")
-async def get_csrf_token():
-    """Retorna um CSRF token para o cliente"""
-    token = generate_csrf_token()
-    response = JSONResponse(content={"csrf_token": token})
-    response.set_cookie(
-        key="csrf_token",
-        value=token,
-        httponly=True,
-        samesite="lax",
-        secure=True,
-        max_age=3600  # 1 hora
-    )
-    return response
-
 # Servir frontend
 
 @app.get("/health")
 @limiter.exempt
 async def health():
     return {"status": "ok", "version": "2.0.0"}
+
+# Filtro para mascarar JWT token nos logs de acesso do uvicorn
+import logging
+import re as _re_log
+
+class _TokenMaskFilter(logging.Filter):
+    _pat = _re_log.compile(r'(token=)[A-Za-z0-9\-_\.]+')
+    def filter(self, record):
+        if record.args:
+            try:
+                record.args = tuple(
+                    self._pat.sub(r'\1[REDACTED]', a) if isinstance(a, str) else a
+                    for a in record.args
+                )
+            except Exception:
+                pass
+        return True
+
+_uvicorn_access = logging.getLogger("uvicorn.access")
+_uvicorn_access.addFilter(_TokenMaskFilter())
 
 if __name__ == "__main__":
     import uvicorn

@@ -13,7 +13,7 @@
     </div>
   </section>
 
-﻿  <section class="view-section" id="view-config">
+﻿  <section class="view-section active" id="view-config">
 
     <h2 class="section-title">&#9889; MOTOR FRALIB</h2>
 
@@ -21,8 +21,8 @@
     <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:16px;margin-bottom:20px;align-items:stretch;">
 
       <!-- Pixel Office -->
-      <div id="pixelOfficeWrap" style="background:#1a1a2e;border-radius:12px;border:1.5px solid #0183ff;overflow:hidden;">
-        <div style="background:rgba(8,8,20,0.95);border-bottom:1.5px solid #0183ff;padding:4px 12px;display:flex;justify-content:space-between;align-items:center;font-family:'Courier New',monospace;font-size:10px;color:#a0a0c0">
+      <div id="pixelOfficeWrap" style="background:#1a1a2e;border-radius:12px;border:1px solid var(--fl-border);overflow:hidden;max-height:420px;">
+        <div style="background:rgba(8,8,20,0.95);border-bottom:1px solid var(--fl-border);padding:4px 12px;display:flex;justify-content:space-between;align-items:center;font-family:'Courier New',monospace;font-size:10px;color:#a0a0c0">
           <span style="font-weight:bold;color:#7dd3fc;letter-spacing:1px">&#128187; PIXEL OFFICE</span>
           <div style="display:flex;gap:12px">
             <span>AGT <strong id="po-sc" style="color:#0183ff">9</strong></span>
@@ -36,8 +36,8 @@
       </div>
 
       <!-- Terminal Magico -->
-      <div class="config-section" style="display:flex;flex-direction:column;">
-        <div class="config-group" style="flex:1;display:flex;flex-direction:column;margin-bottom:0;">
+      <div class="config-section" style="display:flex;flex-direction:column;max-height:420px;overflow:hidden;">
+        <div class="config-group" style="display:flex;flex-direction:column;margin-bottom:0;overflow:hidden;">
           <div class="config-group-title" style="display:flex;align-items:center;justify-content:space-between;">
             <span style="display:flex;align-items:center;gap:8px;">
               <span style="width:7px;height:7px;border-radius:50%;background:#10b981;display:inline-block;" id="sse-dot"></span>
@@ -45,7 +45,7 @@
             </span>
             <button onclick="limparTerminal()" style="background:transparent;border:1px solid var(--fl-border);color:var(--fl-text-muted);padding:2px 10px;font-size:10px;cursor:pointer;font-family:var(--fl-font-brand);letter-spacing:1px;">LIMPAR</button>
           </div>
-          <div id="magic-logs-content" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:3px;font-family:var(--fl-font-mono);font-size:12px;min-height:200px;">
+          <div id="magic-logs-content" style="overflow-y:auto;display:flex;flex-direction:column-reverse;gap:3px;font-family:var(--fl-font-mono);font-size:12px;height:340px;max-height:340px;">
             <div data-placeholder style="color:var(--fl-text-muted);text-align:center;padding:32px 0;font-size:12px;">Aguardando logs do pipeline...</div>
           </div>
         </div>

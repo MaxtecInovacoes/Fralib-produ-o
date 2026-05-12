@@ -3,6 +3,7 @@ sys.path.insert(0, "/root/fralib/backend/agents")
 """
 Designer PRD - Etapa 3: Com 4 Skills + Debate + Jina AI + Paleta Alex
 """
+import os
 import json
 import re
 import requests
@@ -71,16 +72,16 @@ def clean_json_response(text: str) -> str:
 # ===== MODELOS PYDANTIC (importados de designer_prd.py) =====
 # ===== JINA AI INTEGRATION =====
 
-def pesquisar_referencias_jina(segmento: str) -> str:
+def pesquisar_referencias_jina(segmento: str, cidade: str = '') -> str:
     """
     Espia de performance: analisa sites que estao retendo e convertendo
     no nicho. Extrai o que faz o usuario ficar e agir para modelar no site.
-    Cache de 48h por segmento para evitar rate limit 429.
+    Cache de 48h por segmento+cidade para evitar rate limit 429.
     """
     import os, time, hashlib
     _cache_dir = "/root/fralib/backend/agents/jina_cache"
     os.makedirs(_cache_dir, exist_ok=True)
-    _cache_key = hashlib.md5(segmento.lower().encode()).hexdigest()[:12]
+    _cache_key = hashlib.md5((segmento.lower() + cidade.lower()).encode()).hexdigest()[:12]
     _cache_file = os.path.join(_cache_dir, f"jina_{_cache_key}.txt")
     _TTL = 48 * 3600  # 48 horas
     if os.path.exists(_cache_file) and (time.time() - os.path.getmtime(_cache_file)) < _TTL:
@@ -128,6 +129,9 @@ def pesquisar_referencias_jina(segmento: str) -> str:
     if not query:
         query = segmento + " site design premium UI UX moderno brasil"
 
+    if cidade:
+        query = query + " " + cidade
+
     print("[Jina AI] Query de design: " + query)
 
     # Buscar via Google Search pelo Jina — sites reais do nicho, nao grandes redes
@@ -144,6 +148,8 @@ def pesquisar_referencias_jina(segmento: str) -> str:
     try:
         search_url = "https://r.jina.ai/https://www.google.com/search?q=" + requests.utils.quote(query)
         headers_search = {"X-Return-Format": "markdown", "X-Timeout": "15"}
+        if jina_key := os.getenv("JINA_API_KEY"):
+            headers_search["Authorization"] = f"Bearer {jina_key}"
         response = requests.get(search_url, headers=headers_search, timeout=20)
         if response.status_code == 200:
             for line in response.text.split(chr(10)):
@@ -167,13 +173,15 @@ def pesquisar_referencias_jina(segmento: str) -> str:
 
     insights = []
     headers_site = {"X-Return-Format": "markdown", "X-Timeout": "15"}
+    if jina_key := os.getenv("JINA_API_KEY"):
+        headers_site["Authorization"] = f"Bearer {jina_key}"
 
     for i, site_url in enumerate(sites_ref, 1):
         try:
             print("[Jina AI] Referencia " + str(i) + ": " + site_url)
             resp = requests.get("https://r.jina.ai/" + site_url, headers=headers_site, timeout=15)
             if resp.status_code == 200:
-                content = resp.text[:1500]
+                content = resp.text[:3000]
                 insights.append("**Referencia " + str(i) + " (" + site_url + "):**" + chr(10) + content + chr(10))
                 print("[Jina AI] OK: " + str(len(content)) + " chars")
         except Exception as e:
@@ -183,28 +191,60 @@ def pesquisar_referencias_jina(segmento: str) -> str:
         return "Jina AI: Referencias sem conteudo. Usar padroes premium do segmento."
 
     header = (
-        "INTELIGENCIA DE MERCADO - NICHO: " + segmento.upper() + chr(10) + chr(10) +
-        "ANALISE CADA SITE E EXTRAIA:" + chr(10) +
-        "--- COPY E CONVERSAO ---" + chr(10) +
-        "1. HOOK DO HERO: headline/subheadline que captura atencao nos primeiros 3s" + chr(10) +
-        "2. CTA PRINCIPAL: texto exato, posicao, cor, urgencia — o que converte" + chr(10) +
-        "3. ANCORAGEM DE VALOR: como mostram transformacao antes de qualquer preco" + chr(10) +
-        "4. PROVA SOCIAL: como exibem rating, depoimentos, numeros de clientes" + chr(10) +
-        "--- DESIGN E VIBE VISUAL ---" + chr(10) +
-        "5. PALETA DOMINANTE: cores de fundo, texto, botoes CTA — hex se visivel" + chr(10) +
+        "INTELIGENCIA DE MERCADO - NICHO: " + segmento.upper() + " | CIDADE: " + (cidade or "Brasil").upper() + chr(10) + chr(10) +
+        "Voce e um especialista em marketing digital e SEO. Analise os sites abaixo e responda OBRIGATORIAMENTE:" + chr(10) + chr(10) +
+        "## 1. CONCORRENTES PRINCIPAIS" + chr(10) +
+        "Quem sao os principais concorrentes do nicho " + segmento + " com presenca digital forte no Brasil?" + chr(10) +
+        "Para cada um: nome, URL, por que estao dominando, qual diferencial os destaca." + chr(10) + chr(10) +
+        "## 2. PALAVRAS-CHAVE QUE ESTAO GERANDO DINHEIRO AGORA" + chr(10) +
+        "Quais palavras-chave esses concorrentes estao ranqueando e que geram conversao real?" + chr(10) +
+        "Separe em 3 grupos:" + chr(10) +
+        "- ALTA INTENCAO DE COMPRA: termos que indicam cliente pronto para contratar (ex: 'nutricionista consulta online', 'nutricionista perto de mim')" + chr(10) +
+        "- INFORMACIONAL: termos de pesquisa educativa que atraem trafego (ex: 'como emagrecer com nutricionista')" + chr(10) +
+        "- LOCAL: termos com cidade/bairro (ex: 'nutricionista " + (cidade or "sua cidade") + "')" + chr(10) + chr(10) +
+        "## 3. VOLUME E TENDENCIA" + chr(10) +
+        "Quais desses termos tem maior volume de busca no Brasil agora?" + chr(10) +
+        "Ordene do maior para o menor volume estimado. Indique quais estao em alta." + chr(10) + chr(10) +
+        "## 4. COPY E CONVERSAO" + chr(10) +
+        "1. HOOK DO HERO: headline que para o scroll em 3 segundos para " + segmento + chr(10) +
+        "2. CTA PRINCIPAL: texto exato que converte neste nicho" + chr(10) +
+        "3. PROVA SOCIAL: como os lideres exibem rating e depoimentos" + chr(10) +
+        "4. DIFERENCIAIS QUE CONVERTEM: 3-5 frases de valor que geram cliques" + chr(10) + chr(10) +
+        "## 5. DESIGN E VIBE VISUAL" + chr(10) +
+        "5. PALETA DOMINANTE: cores de fundo, texto, botoes CTA dos lideres" + chr(10) +
         "6. TOM VISUAL: dark/light, minimalista/denso, energetico/elegante/clinico" + chr(10) +
-        "7. TIPOGRAFIA: estilo dos titulos (bold agressivo, fino elegante, clean)" + chr(10) +
-        "8. ANIMACOES E MICRO-INTERACOES: o que usam para reter o usuario" + chr(10) +
-        "9. LAYOUT HERO: split, centralizado, full-width, video background" + chr(10) +
-        "--- DIFERENCIAIS ---" + chr(10) +
-        "10. O QUE NENHUM SITE DO NICHO FAZ: oportunidade de diferenciacao" + chr(10) +
-        "11. PADROES A EVITAR: o que todos fazem e parece template generico" + chr(10) +
-        "12. MOBILE: como tratam o above-the-fold e o CTA no celular" + chr(10) + chr(10) +
-        "OBJETIVO FINAL: extrair a VIBE VISUAL unica do segmento e identificar " + chr(10) +
-        "o que diferencia um site premium de um template generico neste nicho." + chr(10) + chr(10)
+        "7. O QUE NENHUM SITE DO NICHO FAZ: oportunidade de diferenciacao" + chr(10) + chr(10)
     )
 
     result = header + chr(10).join(insights)
+    # Extrair FAQ e keywords estruturados via LLM
+    try:
+        from llm_direct import call_claude
+        _faq_prompt = (
+            "Analise o conteudo abaixo de sites do nicho '" + segmento + "' e extraia:\n"
+            "1. FAQ_QUESTIONS: lista de 6 perguntas frequentes reais que clientes fazem (formato JSON array de strings)\n"
+            "2. SEO_KEYWORDS: lista de 10 termos de busca reais do nicho (formato JSON array de strings)\n"
+            "3. VALUE_PROPS: lista de 4 diferenciais que convertem (formato JSON array de strings)\n"
+            "Retorne APENAS JSON valido: {\"faq_questions\": [...], \"seo_keywords\": [...], \"value_props\": [...]}\n\n"
+            + chr(10).join(insights)[:4000]
+        )
+        _faq_resp = call_claude(
+            system="Voce extrai dados estruturados de conteudo web. Retorne APENAS JSON valido sem markdown.",
+            user=_faq_prompt,
+            model="sonnet",
+            max_tokens=1000,
+            temperature=0.1,
+        )
+        import json as _json
+        _faq_data = _json.loads(_faq_resp.strip())
+        # Append structured data to result
+        result += chr(10) + chr(10) + "=== DADOS ESTRUTURADOS PARA SEO ===" + chr(10)
+        result += "FAQ_QUESTIONS: " + _json.dumps(_faq_data.get('faq_questions', []), ensure_ascii=False) + chr(10)
+        result += "SEO_KEYWORDS: " + _json.dumps(_faq_data.get('seo_keywords', []), ensure_ascii=False) + chr(10)
+        result += "VALUE_PROPS: " + _json.dumps(_faq_data.get('value_props', []), ensure_ascii=False) + chr(10)
+        print("[Jina AI] FAQ/keywords extraidos: " + str(len(_faq_data.get('faq_questions', []))) + " FAQs, " + str(len(_faq_data.get('seo_keywords', []))) + " keywords")
+    except Exception as _fe:
+        print("[Jina AI] Aviso: extracao FAQ falhou: " + str(_fe))
     print("[Jina AI] Analise concluida: " + str(len(result)) + " chars")
     try:
         with open(_cache_file, "w", encoding="utf-8") as _f:
@@ -216,7 +256,7 @@ def pesquisar_referencias_jina(segmento: str) -> str:
 
 
 def pesquisar_concorrentes_jina(segmento: str, cidade: str) -> str:
-    return pesquisar_referencias_jina(segmento)
+    return pesquisar_referencias_jina(segmento, cidade)
 
 # ===== FUNÇÃO PRINCIPAL =====
 
@@ -433,7 +473,7 @@ Gere um PRD estruturado para o site seguindo:
     response_json = {}
     for _prd_attempt in range(1, 4):
         try:
-            r = call_claude(system=system_prd, user=prompt_unico, model='sonnet', max_tokens=6000, temperature=temperature)
+            r = call_claude(system=system_prd, user=prompt_unico, model='sonnet', max_tokens=6000, temperature=temperature, agent_name='theo')
             r = r.replace('```json', '').replace('```', '').strip()
             if not r:
                 print(f'[Designer PRD v3] Resposta vazia (tentativa {_prd_attempt}/3), retentando...')
@@ -677,7 +717,7 @@ def gerar_briefing_estrategico(input_data) -> str:
         from agent_rag import format_rag_prompt, get_agent_temperature
         full_prompt = format_rag_prompt("theo", user)
         temperature = get_agent_temperature("theo")
-        briefing = call_claude(system=system, user=full_prompt, model="sonnet", max_tokens=4000, temperature=temperature)
+        briefing = call_claude(system=system, user=full_prompt, model="sonnet", max_tokens=4000, temperature=temperature, agent_name="theo")
         print("[Theo] Briefing gerado: " + str(len(briefing)) + " chars")
         return briefing
     except Exception as e:

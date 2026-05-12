@@ -3,129 +3,263 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Login - FraLib OS</title>
+  <title>Login — FraLib OS</title>
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 100vh;
+    :root {
+      --fl-bg:         #0a0714;
+      --fl-bg-surface: #0e0a1a;
+      --fl-bg-card:    #12121a;
+      --fl-purple:     #9333ea;
+      --fl-purple-300: #c084fc;
+      --fl-purple-400: #a855f7;
+      --fl-purple-800: #2d1060;
+      --fl-purple-900: #1a0a30;
+      --fl-purple-950: #0e0718;
+      --fl-border:     rgba(147,51,234,0.18);
+      --fl-border-md:  rgba(147,51,234,0.35);
+      --fl-text:       #f0f0f5;
+      --fl-text-muted: #8888a0;
+      --fl-text-dim:   #5a5a70;
+      --fl-font-brand: 'Press Start 2P', monospace;
+      --fl-font-ui:    'DM Sans', system-ui, sans-serif;
+      --fl-font-mono:  'JetBrains Mono', monospace;
+      --cyan:          #00FFB3;
+      --gold:          #FFB800;
+      --success:       #22c55e;
+      --danger:        #ef4444;
     }
-    .login-container {
-      background: white;
-      padding: 40px;
-      border-radius: 12px;
-      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      height: 100%;
+      font-family: var(--fl-font-ui);
+      background: var(--fl-bg);
+      color: var(--fl-text);
+      -webkit-font-smoothing: antialiased;
+    }
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Orbs de fundo */
+    .orb {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(80px);
+      pointer-events: none;
+      z-index: 0;
+    }
+    .orb-1 {
+      width: 400px; height: 400px;
+      background: radial-gradient(circle, rgba(147,51,234,0.20), transparent 70%);
+      top: -100px; left: -100px;
+    }
+    .orb-2 {
+      width: 300px; height: 300px;
+      background: radial-gradient(circle, rgba(0,255,179,0.10), transparent 70%);
+      bottom: -80px; right: -80px;
+    }
+
+    /* Card de login */
+    .login-card {
+      position: relative;
+      z-index: 1;
+      background: var(--fl-bg-card);
+      border: 2px solid var(--fl-border-md);
+      box-shadow: 8px 8px 0 rgba(0,0,0,0.5), 0 0 60px rgba(147,51,234,0.12);
+      padding: 40px 36px;
       width: 100%;
       max-width: 400px;
+      margin: 20px;
     }
-    h1 {
+
+    /* Logo / título */
+    .login-logo {
       text-align: center;
-      color: #333;
-      margin-bottom: 30px;
-      font-size: 28px;
+      margin-bottom: 32px;
     }
+    .login-logo-title {
+      font-family: var(--fl-font-brand);
+      font-size: 13px;
+      background: linear-gradient(135deg, var(--fl-purple-300), var(--cyan));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: 1px;
+      line-height: 1.8;
+    }
+    .login-logo-sub {
+      font-family: var(--fl-font-mono);
+      font-size: 10px;
+      color: var(--fl-text-dim);
+      margin-top: 6px;
+      letter-spacing: 2px;
+    }
+
+    /* Formulário */
     .form-group {
       margin-bottom: 20px;
     }
     label {
       display: block;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--fl-text-muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
       margin-bottom: 8px;
-      color: #555;
-      font-weight: 500;
     }
-    input {
+    input[type="email"],
+    input[type="password"] {
       width: 100%;
-      padding: 12px;
-      border: 2px solid #e0e0e0;
-      border-radius: 6px;
-      font-size: 16px;
-      transition: border-color 0.3s;
-    }
-    input:focus {
+      padding: 12px 14px;
+      background: var(--fl-bg-surface);
+      border: 2px solid var(--fl-border);
+      color: var(--fl-text);
+      font-family: var(--fl-font-ui);
+      font-size: 15px;
       outline: none;
-      border-color: #667eea;
+      transition: border-color 0.2s;
     }
-    button {
+    input[type="email"]:focus,
+    input[type="password"]:focus {
+      border-color: var(--fl-purple);
+      box-shadow: 0 0 0 3px rgba(147,51,234,0.12);
+    }
+    input::placeholder { color: var(--fl-text-dim); }
+
+    /* Botão */
+    .btn-login {
       width: 100%;
       padding: 14px;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
-      border: none;
-      border-radius: 6px;
-      font-size: 16px;
-      font-weight: 600;
+      background: var(--fl-purple);
+      color: #fff;
+      border: 2px solid #7c22d4;
+      font-family: var(--fl-font-brand);
+      font-size: 9px;
+      letter-spacing: 2px;
       cursor: pointer;
-      transition: transform 0.2s;
+      box-shadow: 4px 4px 0 var(--fl-purple-950);
+      transition: all 0.15s;
+      margin-top: 8px;
     }
-    button:hover {
-      transform: translateY(-2px);
+    .btn-login:hover {
+      background: var(--fl-purple-400);
+      box-shadow: 4px 4px 0 var(--fl-purple-950), 0 0 20px rgba(147,51,234,0.3);
     }
-    button:active {
-      transform: translateY(0);
+    .btn-login:active {
+      transform: translateY(2px);
+      box-shadow: 2px 2px 0 var(--fl-purple-950);
     }
-    .error {
-      background: #fee;
-      color: #c33;
-      padding: 12px;
-      border-radius: 6px;
+    .btn-login:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    /* Mensagem de erro */
+    .error-msg {
+      background: rgba(239,68,68,0.10);
+      border: 1px solid rgba(239,68,68,0.35);
+      color: #fca5a5;
+      padding: 10px 14px;
+      font-size: 13px;
       margin-bottom: 20px;
       display: none;
     }
-    .error.show {
-      display: block;
+    .error-msg.show { display: block; }
+
+    /* Link de cadastro */
+    .login-footer {
+      text-align: center;
+      margin-top: 24px;
+      font-size: 12px;
+      color: var(--fl-text-dim);
     }
+    .login-footer a {
+      color: var(--fl-purple-300);
+      text-decoration: none;
+    }
+    .login-footer a:hover { text-decoration: underline; }
   </style>
 </head>
 <body>
-  <div class="login-container">
-    <h1>🚀 FraLib OS</h1>
-    <div id="error" class="error"></div>
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="login-logo-title">FRALIB OS</div>
+      <div class="login-logo-sub">CENTRAL DE COMANDO</div>
+    </div>
+
+    <div id="error" class="error-msg"></div>
+
     <form id="loginForm">
       <div class="form-group">
         <label for="email">Email</label>
-        <input type="email" id="email" name="email" required autocomplete="email" value="dezigpi@gmail.com">
+        <input type="email" id="email" name="email" required autocomplete="email" placeholder="seu@email.com">
       </div>
       <div class="form-group">
         <label for="password">Senha</label>
-        <input type="password" id="password" name="password" required autocomplete="current-password">
+        <input type="password" id="password" name="password" required autocomplete="current-password" placeholder="••••••••">
       </div>
-      <button type="submit">Entrar</button>
+      <button type="submit" class="btn-login" id="btnLogin">ENTRAR</button>
     </form>
+
+    <div class="login-footer">
+      Não tem conta? <a href="/planos">Ver planos</a>
+    </div>
   </div>
 
   <script>
-    const form = document.getElementById('loginForm');
-    const errorDiv = document.getElementById('error');
+    var form = document.getElementById('loginForm');
+    var errorDiv = document.getElementById('error');
+    var btnLogin = document.getElementById('btnLogin');
 
-    form.addEventListener('submit', async (e) => {
+    // Redirecionar se já logado
+    var token = localStorage.getItem('fralib_token');
+    if (token) { window.location.href = '/dashboard'; }
+
+    form.addEventListener('submit', async function(e) {
       e.preventDefault();
-      
-      const email = document.getElementById('email').value;
-      const password = document.getElementById('password').value;
+      errorDiv.classList.remove('show');
+      btnLogin.disabled = true;
+      btnLogin.textContent = 'ENTRANDO...';
+
+      var email = document.getElementById('email').value.trim();
+      var password = document.getElementById('password').value;
 
       try {
-        const response = await fetch('/api/auth/login', {
+        var response = await fetch('/api/auth/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password })
+          body: JSON.stringify({ email: email, password: password })
         });
 
-        const data = await response.json();
+        var data = await response.json();
 
         if (response.ok) {
           localStorage.setItem('fralib_token', data.access_token);
           window.location.href = '/dashboard';
         } else {
-          errorDiv.textContent = data.detail || 'Erro ao fazer login';
+          errorDiv.textContent = data.detail || 'Email ou senha incorretos.';
           errorDiv.classList.add('show');
+          btnLogin.disabled = false;
+          btnLogin.textContent = 'ENTRAR';
         }
-      } catch (error) {
+      } catch (err) {
         errorDiv.textContent = 'Erro de conexão. Tente novamente.';
         errorDiv.classList.add('show');
+        btnLogin.disabled = false;
+        btnLogin.textContent = 'ENTRAR';
       }
     });
   </script>

@@ -7,7 +7,6 @@ Regras determinísticas de if/else.
 import requests
 from typing import Optional, List, Dict
 from pydantic import BaseModel, Field
-from color_extractor import gerar_paleta_completa
 
 
 class LeadInput(BaseModel):
@@ -22,6 +21,7 @@ class LeadInput(BaseModel):
     website: Optional[str] = None
     logo_url: Optional[str] = None
     social: Optional[str] = None
+    reprocessamento: bool = False  # Pula verificacao de segmento
 
 class CaioOutput(BaseModel):
     qualificacao: str = Field(description="QUENTE/MORNO/FRIO/REJEITADO")
@@ -69,6 +69,42 @@ SITE_BUILDERS = [
 ]
 
 
+# Mapa de palavras-chave por segmento para filtro de relevancia
+_SEGMENTO_KEYWORDS = {
+    "nutricionista": ["nutri", "nutricao", "nutricionist", "dieta", "alimenta", "emagre", "performance"],
+    "academia": ["academi", "gym", "fitness", "muscula", "treino", "crossfit", "pilates", "personal"],
+    "barbearia": ["barbe", "barber", "cabelo", "corte", "navalha"],
+    "salao": ["salao", "salon", "cabele", "beleza", "estetica", "unhas", "manicure"],
+    "clinica": ["clinic", "medic", "saude", "hospital", "consulto", "terapia", "fisio"],
+    "dentista": ["dent", "odonto", "sorriso", "ortodon", "implant"],
+    "restaurante": ["restaur", "comida", "culinaria", "gastrono", "bistr", "churrasco", "pizz"],
+    "lanchonete": ["lanch", "burger", "hamburguer", "sanduiche", "fast"],
+    "padaria": ["padaria", "padao", "paes", "confeit", "doce", "bolo"],
+    "estetica": ["estet", "beleza", "spa", "massagem", "depila", "skin", "facial"],
+    "advocacia": ["advog", "juridic", "direito", "law", "escritorio"],
+    "psicologia": ["psicol", "terapia", "mental", "emocional"],
+    "pet": ["pet", "animal", "veterin", "caes", "gatos", "dog", "cat"],
+    "imobiliaria": ["imobil", "imoveis", "corretor", "aluguel", "venda"],
+    "farmacia": ["farmac", "drogaria", "medicamento", "remedio"],
+    "auto": ["auto", "mecanica", "carro", "veiculo", "oficina", "funilaria"],
+}
+
+def _verificar_relevancia_segmento(nome, segmento_pedido):
+    seg = segmento_pedido.lower().strip()
+    nome_lower = nome.lower()
+    keywords = None
+    for key, kws in _SEGMENTO_KEYWORDS.items():
+        if key in seg:
+            keywords = kws
+            break
+    if not keywords:
+        return True
+    for kw in keywords:
+        if kw in nome_lower:
+            return True
+    return False
+
+
 def verificar_se_e_rede(nome: str, website: str = "") -> bool:
     nome_lower = nome.lower()
     website_lower = website.lower() if website else ""
@@ -90,7 +126,7 @@ def validar_site(website: str) -> tuple:
             return False, "Site em builder de baixa qualidade"
     try:
         url = website if website.startswith(("http://", "https://")) else "https://" + website
-        response = requests.head(url, timeout=10, allow_redirects=True)
+        response = requests.head(url, timeout=3, allow_redirects=True)
         if response.status_code >= 400:
             return False, "Site offline (HTTP {})".format(response.status_code)
         final_url = response.url.lower()
@@ -151,6 +187,19 @@ def _calcular_score(lead: LeadInput) -> tuple:
 def qualificar_lead(lead: LeadInput) -> CaioOutput:
     """Qualifica lead via regras Python puras. Zero LLM."""
 
+    if not lead.reprocessamento and not _verificar_relevancia_segmento(lead.nome, lead.segmento):
+        print("[Caio] REJEITADO: {} - nao relevante para segmento {}".format(lead.nome, lead.segmento))
+        return CaioOutput(
+            qualificacao="REJEITADO", score=0, tier="REJEITADO",
+            motivo="Lead nao relevante para o segmento pedido", qualificado=False,
+            nome=lead.nome, cidade=lead.cidade, segmento=lead.segmento,
+            telefone=lead.telefone, whatsapp=lead.whatsapp or "",
+            rating=lead.rating, reviews_count=lead.reviews_count,
+            fotos=lead.fotos or [], website=lead.website or "",
+            logo_url=lead.logo_url or "", concorrentes=[],
+            paleta_cores={"primaria": "#374151", "secundaria": "#f9fafb", "acento": "#6366f1"},
+        )
+
     if verificar_se_e_rede(lead.nome, lead.website or ""):
         print("[Caio] REJEITADO: {} - rede/franquia".format(lead.nome))
         return CaioOutput(
@@ -192,10 +241,7 @@ def qualificar_lead(lead: LeadInput) -> CaioOutput:
 
     motivo = " | ".join(motivos) if motivos else "Score calculado por regras"
 
-    print("[Caio] Extraindo cores para {}...".format(lead.nome))
-    logo_url = lead.logo_url or (lead.fotos[0] if lead.fotos else None)
-    fotos_local = lead.fotos[1:] if lead.fotos and len(lead.fotos) > 1 else []
-    paleta = gerar_paleta_completa(logo_url=logo_url, fotos=fotos_local)
+    paleta = {}
 
     print("[Caio] {} -> {} (score={}, tier={})".format(lead.nome, qualificacao, score, tier))
 

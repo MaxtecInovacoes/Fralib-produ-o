@@ -3,6 +3,17 @@ import requests
 import json
 from dotenv import load_dotenv
 
+
+class RateLimitError(Exception):
+    """Exceção quando API atinge rate limit após todas as tentativas."""
+    def __init__(self, reset_seconds: int = 0):
+        self.reset_seconds = reset_seconds
+        if reset_seconds > 60:
+            tempo = f"{reset_seconds // 60}min {reset_seconds % 60}s"
+        else:
+            tempo = f"{reset_seconds}s"
+        super().__init__(f"Limite de uso atingido. Sera resetado em: {tempo}")
+
 # Carregar .env — tenta multiplos caminhos para garantir que encontra
 import pathlib as _pathlib
 _env_paths = [
@@ -19,6 +30,28 @@ else:
 
 ANTHROPIC_API_KEY = os.getenv('ANTHROPIC_API_KEY')
 ANTHROPIC_BASE_URL = os.getenv('ANTHROPIC_BASE_URL', 'https://api.aibee.cloud')
+
+# Contexto de usuario ativo (setado pelo pipeline antes de rodar)
+_current_user_id = None
+
+def set_current_user_id(uid):
+    global _current_user_id
+    _current_user_id = uid
+
+def _salvar_uso_llm(modelo, input_tokens, output_tokens, agente=None):
+    try:
+        import psycopg2
+        conn = psycopg2.connect(os.getenv('DATABASE_URL', 'postgresql://postgres:fralib2024@localhost:5433/fralib_db'))
+        cur = conn.cursor()
+        cur.execute(
+            'INSERT INTO llm_usage (modelo, input_tokens, output_tokens, agente, user_id) VALUES (%s, %s, %s, %s, %s)',
+            (modelo, input_tokens, output_tokens, agente, _current_user_id)
+        )
+        conn.commit()
+        cur.close()
+        conn.close()
+    except Exception as e:
+        print(f'[LLM Usage] Erro ao salvar: {e}')
 
 def call_claude(system, user, model='opus', max_tokens=4000, temperature=0.7, agent_name=None, base_url=None):
     """
@@ -62,13 +95,36 @@ def call_claude(system, user, model='opus', max_tokens=4000, temperature=0.7, ag
             print(f"[LLM Direct] ⚠️ Erro ao ativar RAG/Skills para {agent_name}: {e}")
             # Continua sem RAG/Skills se der erro
     
-    # 4. Mapear modelo
+    # 4. Roteamento automático de modelo por agente
+    # Haiku: tarefas simples/rápidas (Bryan mensagens, validações, checks)
+    # Sonnet: tarefas médias (qualificação, briefing, SEO, follow-up)
+    # Opus: tarefas complexas (geração de site completo, PRD, design system)
+    _AGENT_MODEL_MAP = {
+        # Haiku — respostas rápidas, sem raciocínio profundo
+        'bryan':   'haiku',   # mensagens WhatsApp
+        'liz':     'haiku',   # edições pontuais de HTML
+        # Sonnet — qualificação e análise média
+        # caio: zero LLM — Python puro, não entra no mapa
+        'theo':    'sonnet',  # briefing e análise
+        'alex':    'sonnet',  # cores e logos
+        # Opus — geração criativa pesada
+        'liam':    'opus',  # geração completa de site
+        'arquiteto_mestre': 'sonnet',
+        'designer_prd':     'sonnet',
+    }
+    if agent_name and model == 'opus':
+        # Só faz override se o chamador não especificou modelo explicitamente
+        _auto = _AGENT_MODEL_MAP.get(agent_name.lower())
+        if _auto:
+            model = _auto
+            print(f"[LLM Router] {agent_name} -> {model}")
+
     model_map = {
         'opus': 'claude-opus-4-7',
         'sonnet': 'claude-sonnet-4-6',
         'haiku': 'claude-haiku-4-5'
     }
-    
+
     model_id = model_map.get(model, model_map['opus'])
     
     # 5. Chamar API Claude
@@ -81,18 +137,44 @@ def call_claude(system, user, model='opus', max_tokens=4000, temperature=0.7, ag
         'Content-Type': 'application/json'
     }
     
+    # Prompt caching: se system prompt >= 1024 chars, cachear automaticamente
+    # Economiza 80-90% dos tokens de input em chamadas repetidas do mesmo agente
+    # Mínimo exigido pela Anthropic: 1024 tokens (~4096 chars para ser seguro, usamos 1024)
+    if system and len(system) >= 1024:
+        system_payload = [{"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}]
+        extra_headers = {"anthropic-beta": "prompt-caching-2024-07-31"}
+    else:
+        system_payload = system
+        extra_headers = {}
+
     payload = {
         'model': model_id,
         'max_tokens': max_tokens,
         'temperature': temperature,
-        'system': system,
+        'system': system_payload,
         'messages': [{'role': 'user', 'content': user}]
     }
+
+    # Mesclar headers extras (ex: prompt caching beta)
+    if extra_headers:
+        headers = {**headers, **extra_headers}
 
     import time as _llm_time
     for _llm_attempt in range(1, 4):
         response = requests.post(url, headers=headers, json=payload, timeout=600)
         if response.status_code == 429:
+            if _llm_attempt >= 3:
+                # Extrair tempo de reset dos headers
+                _reset_hdr = response.headers.get('Anthropic-Ratelimit-Input-Tokens-Reset', '')
+                _reset_secs = 60
+                if _reset_hdr:
+                    try:
+                        from datetime import datetime, timezone
+                        _reset_dt = datetime.fromisoformat(_reset_hdr.replace('Z', '+00:00'))
+                        _reset_secs = max(0, int((_reset_dt - datetime.now(timezone.utc)).total_seconds()))
+                    except Exception:
+                        _reset_secs = 60
+                raise RateLimitError(reset_seconds=_reset_secs)
             wait = 15 * _llm_attempt
             print(f'[LLM] 429 Rate Limit - aguardando {wait}s (tentativa {_llm_attempt}/3)...')
             _llm_time.sleep(wait)
@@ -115,7 +197,13 @@ def call_claude(system, user, model='opus', max_tokens=4000, temperature=0.7, ag
     usage = data.get('usage', {})
     input_tokens = usage.get('input_tokens', 0)
     output_tokens = usage.get('output_tokens', 0)
-    print(f"[LLM] stop_reason={stop_reason} input={input_tokens} output={output_tokens}")
+    cache_read = usage.get('cache_read_input_tokens', 0)
+    cache_created = usage.get('cache_creation_input_tokens', 0)
+    if cache_read or cache_created:
+        print(f"[LLM] stop_reason={stop_reason} input={input_tokens} output={output_tokens} cache_read={cache_read} cache_created={cache_created}")
+    else:
+        print(f"[LLM] stop_reason={stop_reason} input={input_tokens} output={output_tokens}")
+    _salvar_uso_llm(model_id, input_tokens, output_tokens, agent_name)
 
     # O proxy aibee.cloud sempre adiciona bloco tool_use extra no final
     # Extrair texto IMEDIATAMENTE se houver bloco text (ignorar tool_use)
@@ -123,15 +211,21 @@ def call_claude(system, user, model='opus', max_tokens=4000, temperature=0.7, ag
         if block.get('type') == 'text':
             return block['text']
 
-    # Sem bloco text — retry apenas se nao ha texto algum
+    # Sem bloco text — retry sem cache e sem tools (proxy pode estar cacheando tool_use)
     max_retries = 3
     retry_count = 0
     while retry_count < max_retries:
         retry_count += 1
         import time; time.sleep(2 * retry_count)
         print('[LLM] Retry ' + str(retry_count) + '/3 - sem bloco text, retentando')
+        # Remover tools, tool_choice E cache_control para forcar nova geracao
         payload_retry = {k: v for k, v in payload.items() if k != 'tools' and k != 'tool_choice'}
-        response2 = requests.post(url, headers=headers, json=payload_retry, timeout=600)
+        # Remover cache_control do system prompt
+        if isinstance(payload_retry.get('system'), list):
+            payload_retry['system'] = payload_retry['system'][0]['text'] if payload_retry['system'] else ''
+        # Headers sem prompt-caching
+        headers_retry = {k: v for k, v in headers.items() if 'beta' not in k.lower()}
+        response2 = requests.post(url, headers=headers_retry, json=payload_retry, timeout=600)
         response2.raise_for_status()
         data = response2.json()
         stop_reason = data.get('stop_reason', '?')
@@ -196,11 +290,18 @@ def call_claude_structured(system, user, tool_name, tool_description, input_sche
         'Content-Type': 'application/json'
     }
 
+    # Prompt caching no system prompt (igual ao call_claude)
+    if system and len(system) >= 1024:
+        system_payload = [{"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}]
+        headers["anthropic-beta"] = "prompt-caching-2024-07-31"
+    else:
+        system_payload = system
+
     payload = {
         'model': model_id,
         'max_tokens': max_tokens,
         'temperature': temperature,
-        'system': system,
+        'system': system_payload,
         'tools': [{
             'name': tool_name,
             'description': tool_description,
@@ -214,6 +315,17 @@ def call_claude_structured(system, user, tool_name, tool_description, input_sche
     for _attempt in range(1, 4):
         response = requests.post(url, headers=headers, json=payload, timeout=600)
         if response.status_code == 429:
+            if _attempt >= 3:
+                _reset_hdr = response.headers.get('Anthropic-Ratelimit-Input-Tokens-Reset', '')
+                _reset_secs = 60
+                if _reset_hdr:
+                    try:
+                        from datetime import datetime, timezone
+                        _reset_dt = datetime.fromisoformat(_reset_hdr.replace('Z', '+00:00'))
+                        _reset_secs = max(0, int((_reset_dt - datetime.now(timezone.utc)).total_seconds()))
+                    except Exception:
+                        _reset_secs = 60
+                raise RateLimitError(reset_seconds=_reset_secs)
             wait = 15 * _attempt
             print(f'[LLM Structured] 429 Rate Limit - aguardando {wait}s (tentativa {_attempt}/3)...')
             _time_struct.sleep(wait)

@@ -22,12 +22,13 @@ class CRMData(BaseModel):
 @router.get('/incomplete')
 async def get_incomplete(db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
     try:
+        tenant_id = usuario.get("tenant_id", usuario["id"])
         falhas = db.execute(text(
-            "SELECT id, nome, cidade, segmento, score, status, tentativas FROM leads WHERE status = 'erro' ORDER BY criado_em DESC LIMIT 50"
-        )).fetchall()
+            "SELECT id, nome, cidade, segmento, score, status, tentativas FROM leads WHERE status = 'erro' AND user_id = :uid ORDER BY criado_em DESC LIMIT 50"
+        ), {"uid": tenant_id}).fetchall()
         descartados = db.execute(text(
-            "SELECT id, nome, cidade, segmento, score, status FROM leads WHERE status = 'descartado' ORDER BY criado_em DESC LIMIT 50"
-        )).fetchall()
+            "SELECT id, nome, cidade, segmento, score, status FROM leads WHERE status = 'descartado' AND user_id = :uid ORDER BY criado_em DESC LIMIT 50"
+        ), {"uid": tenant_id}).fetchall()
         return {
             "falhas": [dict(r._mapping) for r in falhas],
             "descartados": [dict(r._mapping) for r in descartados]
@@ -39,9 +40,10 @@ async def get_incomplete(db: Session = Depends(get_db), usuario: dict = Depends(
 @router.get('/crm')
 async def get_crm(db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
     try:
+        tenant_id = usuario.get("tenant_id", usuario["id"])
         result = db.execute(text(
-            "SELECT id, nome, cidade, segmento, telefone, COALESCE(NULLIF(telefone_whatsapp,''), whatsapp, telefone) as telefone_whatsapp, score, status, sdr_stage, url_site, criado_em FROM leads ORDER BY score DESC"
-        )).fetchall()
+            "SELECT id, nome, cidade, segmento, telefone, COALESCE(NULLIF(telefone_whatsapp,''), whatsapp, telefone) as telefone_whatsapp, score, status, sdr_stage, url_site, criado_em FROM leads WHERE user_id = :uid ORDER BY score DESC"
+        ), {"uid": tenant_id}).fetchall()
 
         leads = [dict(r._mapping) for r in result]
 

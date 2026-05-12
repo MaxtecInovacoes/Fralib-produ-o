@@ -12,6 +12,70 @@ from auth import get_current_user
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 security = HTTPBearer()
 
+
+def _inicializar_tenant(db: Session, user_id: int, nome: str, email: str, now: str, trial_expires: str):
+    """
+    Inicializa todos os recursos necessários para um novo tenant:
+    - Diretório de sites no disco
+    - Licença trial na tabela licencas
+    - Config pipeline padrão
+    """
+    import os, secrets
+
+    # 1. Criar diretório de sites do tenant
+    sites_dir = f"/var/www/fralib/sites/{user_id}"
+    try:
+        os.makedirs(sites_dir, exist_ok=True)
+        os.system(f"chown -R www-data:www-data {sites_dir}")
+        os.system(f"chmod -R 755 {sites_dir}")
+        print(f"[Tenant Init] Diretório criado: {sites_dir}")
+    except Exception as e:
+        print(f"[Tenant Init] Erro ao criar diretório: {e}")
+
+    # 2. Criar licença trial (se não existir)
+    try:
+        existing_lic = db.execute(
+            text("SELECT id FROM licencas WHERE email = :email"),
+            {"email": email}
+        ).fetchone()
+        if not existing_lic:
+            lic_id = secrets.token_hex(8)
+            lic_chave = secrets.token_urlsafe(16)
+            db.execute(text("""
+                INSERT INTO licencas (id, cliente, email, plano, valor, chave, status, data, expira)
+                VALUES (:id, :cliente, :email, :plano, :valor, :chave, :status, :data, :expira)
+            """), {
+                "id": lic_id,
+                "cliente": nome,
+                "email": email,
+                "plano": "trial",
+                "valor": 0,
+                "chave": lic_chave,
+                "status": "ativa",
+                "data": now,
+                "expira": trial_expires,
+            })
+            db.commit()
+            print(f"[Tenant Init] Licença trial criada para user_id={user_id}")
+    except Exception as e:
+        print(f"[Tenant Init] Erro ao criar licença: {e}")
+
+    # 3. Criar config_pipeline padrão (se não existir)
+    try:
+        existing_cfg = db.execute(
+            text("SELECT id FROM config_pipeline WHERE user_id = :uid"),
+            {"uid": user_id}
+        ).fetchone()
+        if not existing_cfg:
+            db.execute(text("""
+                INSERT INTO config_pipeline (user_id, nicho, cidade, pipeline_status, volume_leads_target)
+                VALUES (:uid, '', '', 'parado', 10)
+            """), {"uid": user_id})
+            db.commit()
+            print(f"[Tenant Init] Config pipeline criada para user_id={user_id}")
+    except Exception as e:
+        print(f"[Tenant Init] Erro ao criar config_pipeline: {e}")
+
 SECRET_KEY = os.getenv("JWT_SECRET_KEY")
 if not SECRET_KEY:
     raise ValueError("JWT_SECRET_KEY nao configurado")
@@ -68,6 +132,13 @@ async def register(data: RegisterRequest, db: Session = Depends(get_db)):
     db.execute(text(sql), {"email": data.email, "nome": nome, "hash": password_hash,
                "now": now, "trial_exp": trial_expires})
     db.commit()
+
+    # Inicializar tenant: buscar user_id recém criado
+    new_user = db.execute(text("SELECT id FROM users WHERE email = :email"), {"email": data.email}).fetchone()
+    if new_user:
+        user_id = new_user[0]
+        _inicializar_tenant(db, user_id, nome, data.email, now, trial_expires)
+
     return {"status": "ok", "mensagem": "Cadastro realizado! Ja pode fazer login."}
 
 @router.get("/confirmar-email")

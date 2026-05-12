@@ -51,9 +51,14 @@ async def get_sites(db: Session = Depends(get_db), usuario: dict = Depends(get_c
 @router.get('/{lead_id}/conversa')
 async def get_conversa(lead_id: str, db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
     try:
-        result = db.execute(text(
-            "SELECT id, mensagem, direcao, criado_em FROM interacoes WHERE lead_id = :lead_id ORDER BY id ASC"
-        ), {"lead_id": lead_id}).fetchall()
+        tenant_id = usuario.get("tenant_id", usuario["id"])
+        result = db.execute(text("""
+            SELECT i.id, i.mensagem, i.direcao, i.criado_em
+            FROM interacoes i
+            JOIN leads l ON l.id = i.lead_id
+            WHERE i.lead_id = :lead_id AND l.user_id = :uid
+            ORDER BY i.id ASC
+        """), {"lead_id": lead_id, "uid": tenant_id}).fetchall()
         return {"mensagens": [dict(r._mapping) for r in result]}
     except Exception as e:
         return {"mensagens": []}
@@ -75,9 +80,11 @@ async def atualizar_lead(lead_id: str, request_data: dict, db: Session = Depends
         if not campos:
             return {"ok": True}
 
+        tenant_id = usuario.get("tenant_id", usuario["id"])
         sets = ", ".join([f"{k}=:{k}" for k in campos.keys()])
         campos['lead_id'] = lead_id
-        db.execute(text(f"UPDATE leads SET {sets} WHERE id=:lead_id"), campos)
+        campos['uid'] = tenant_id
+        db.execute(text(f"UPDATE leads SET {sets} WHERE id=:lead_id AND user_id=:uid"), campos)
         db.commit()
         return {"ok": True}
     except Exception as e:
@@ -87,10 +94,11 @@ async def atualizar_lead(lead_id: str, request_data: dict, db: Session = Depends
 @router.post('/{lead_id}/reprocessar')
 async def reprocessar_lead(lead_id: str, db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
     try:
-        lead = db.execute(text("SELECT * FROM leads WHERE id=:id"), {"id": lead_id}).fetchone()
+        tenant_id = usuario.get("tenant_id", usuario["id"])
+        lead = db.execute(text("SELECT * FROM leads WHERE id=:id AND user_id=:uid"), {"id": lead_id, "uid": tenant_id}).fetchone()
         if not lead:
             raise HTTPException(status_code=404, detail="Lead nao encontrado")
-        db.execute(text("UPDATE leads SET status='pendente', atualizado_em=NOW()::text WHERE id=:id"), {"id": lead_id})
+        db.execute(text("UPDATE leads SET status='pendente', atualizado_em=NOW()::text WHERE id=:id AND user_id=:uid"), {"id": lead_id, "uid": tenant_id})
         db.commit()
         return {"ok": True, "mensagem": "Lead marcado para reprocessamento"}
     except HTTPException:
@@ -117,7 +125,8 @@ async def editar_site(lead_id: str, req: EditarSiteRequest, db: Session = Depend
     import re as _re2
 
     adicionar_log(f'[Edicao Site] Iniciando: {req.prompt[:60]}', 'info')
-    lead = db.execute(text('SELECT * FROM leads WHERE id=:id'), {'id': lead_id}).fetchone()
+    tenant_id = usuario.get('tenant_id', usuario['id'])
+    lead = db.execute(text('SELECT * FROM leads WHERE id=:id AND user_id=:uid'), {'id': lead_id, 'uid': tenant_id}).fetchone()
     if not lead:
         raise HTTPException(status_code=404, detail='Lead nao encontrado')
 
@@ -218,7 +227,8 @@ async def upload_foto(
     usuario: dict = Depends(get_current_user)
 ):
     import os
-    lead = db.execute(text("SELECT * FROM leads WHERE id=:id"), {"id": lead_id}).fetchone()
+    tenant_id = usuario.get("tenant_id", usuario["id"])
+    lead = db.execute(text("SELECT * FROM leads WHERE id=:id AND user_id=:uid"), {"id": lead_id, "uid": tenant_id}).fetchone()
     if not lead:
         raise HTTPException(status_code=404, detail="Lead nao encontrado")
 
@@ -384,13 +394,16 @@ async def _gerar_site_manual(lead_id: str, req: LeadManualRequest, user_id):
 @router.get('/mensagens-novas')
 async def get_mensagens_novas(db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
     try:
+        tenant_id = usuario.get("tenant_id", usuario["id"])
         result = db.execute(text("""
-            SELECT DISTINCT lead_nome, COUNT(*) as total
-            FROM interacoes
-            WHERE direcao = 'entrada'
-            AND criado_em > (NOW() - INTERVAL '24 hours')::text
-            GROUP BY lead_nome
-        """)).fetchall()
+            SELECT DISTINCT i.lead_nome, COUNT(*) as total
+            FROM interacoes i
+            JOIN leads l ON l.id = i.lead_id
+            WHERE i.direcao = 'entrada'
+            AND i.criado_em > (NOW() - INTERVAL '24 hours')::text
+            AND l.user_id = :uid
+            GROUP BY i.lead_nome
+        """), {"uid": tenant_id}).fetchall()
         return {"leads_com_resposta": [{"nome": r.lead_nome, "total": r.total} for r in result]}
     except Exception as e:
         return {"leads_com_resposta": []}
@@ -401,6 +414,7 @@ async def get_mensagens_novas(db: Session = Depends(get_db), usuario: dict = Dep
 async def get_leads_capturados(db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
     try:
         tenant_id = usuario.get('tenant_id', usuario['id'])
+        cap_sql = "SELECT id, nome, cidade, segmento, rating, score, tier, status FROM leads WHERE user_id=:user_id AND status=:st ORDER BY criado_em DESC"
         result = db.execute(text(cap_sql), {'user_id': tenant_id, 'st': 'capturado'}).fetchall()
         leads = []
         import json
@@ -467,3 +481,312 @@ async def get_leads_desqualificados(db: Session = Depends(get_db), usuario: dict
     except Exception as e:
         print(f'[Leads] Erro desqualificados: {e}')
         return {'leads': [], 'total': 0}
+
+
+# ═══════════════════════════════════════════════════════════════════
+# SPRINT 2 — Novos endpoints
+# ═══════════════════════════════════════════════════════════════════
+
+# 2.1 — Leads incompletos/rejeitados para revisão manual
+@router.get('/incompletos')
+async def get_leads_incompletos(db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
+    try:
+        tenant_id = usuario.get('tenant_id', usuario['id'])
+        result = db.execute(text("""
+            SELECT id, nome, cidade, segmento, telefone, whatsapp, score, status, criado_em, observacoes
+            FROM leads
+            WHERE user_id = :uid
+              AND (
+                score < 20
+                OR status = 'rejeitado'
+                OR (nome IS NULL OR nome = '')
+                OR (telefone IS NULL OR telefone = '')
+              )
+            ORDER BY criado_em DESC
+            LIMIT 200
+        """), {"uid": tenant_id}).fetchall()
+        leads = [dict(r._mapping) for r in result]
+        return {"leads": leads, "total": len(leads)}
+    except Exception as e:
+        print(f"[Leads] Erro incompletos: {e}")
+        return {"leads": [], "total": 0}
+
+
+# 2.1 — Aprovar lead manualmente para o pipeline
+@router.patch('/{lead_id}/aprovar-pipeline')
+async def aprovar_lead_pipeline(lead_id: str, db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
+    try:
+        tenant_id = usuario.get("tenant_id", usuario["id"])
+        lead = db.execute(text("SELECT id FROM leads WHERE id=:id AND user_id=:uid"), {"id": lead_id, "uid": tenant_id}).fetchone()
+        if not lead:
+            raise HTTPException(status_code=404, detail="Lead não encontrado")
+        db.execute(text("""
+            UPDATE leads SET status='qualificado', score=50
+            WHERE id=:id AND user_id=:uid
+        """), {"id": lead_id, "uid": tenant_id})
+        db.commit()
+        return {"ok": True, "mensagem": "Lead aprovado manualmente para o pipeline"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[Leads] Erro aprovar-pipeline: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# 2.1 / 2.4 — Atualizar campos individuais do lead
+from pydantic import BaseModel as _BM3
+from typing import Optional as _Opt3
+
+class CamposLeadRequest(_BM3):
+    nome: _Opt3[str] = None
+    telefone: _Opt3[str] = None
+    segmento: _Opt3[str] = None
+    cidade: _Opt3[str] = None
+    observacao: _Opt3[str] = None
+    sdr_stage: _Opt3[str] = None
+    status: _Opt3[str] = None
+
+@router.patch('/{lead_id}/campos')
+async def atualizar_campos_lead(lead_id: str, req: CamposLeadRequest, db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
+    try:
+        tenant_id = usuario.get("tenant_id", usuario["id"])
+        lead = db.execute(text("SELECT id FROM leads WHERE id=:id AND user_id=:uid"), {"id": lead_id, "uid": tenant_id}).fetchone()
+        if not lead:
+            raise HTTPException(status_code=404, detail="Lead não encontrado")
+        campos = {}
+        if req.nome is not None:
+            campos['nome'] = req.nome
+        if req.telefone is not None:
+            campos['telefone'] = req.telefone
+            campos['whatsapp'] = req.telefone
+            campos['telefone_whatsapp'] = req.telefone
+        if req.segmento is not None:
+            campos['segmento'] = req.segmento
+        if req.cidade is not None:
+            campos['cidade'] = req.cidade
+        if req.observacao is not None:
+            campos['observacoes'] = req.observacao
+        if req.sdr_stage is not None:
+            campos['sdr_stage'] = req.sdr_stage
+        if req.status is not None:
+            campos['status'] = req.status
+        if not campos:
+            return {"ok": True, "mensagem": "Nenhum campo para atualizar"}
+        tenant_id = usuario.get("tenant_id", usuario["id"])
+        sets = ", ".join([f"{k}=:{k}" for k in campos.keys()])
+        campos['lead_id'] = lead_id
+        campos['uid'] = tenant_id
+        db.execute(text(f"UPDATE leads SET {sets} WHERE id=:lead_id AND user_id=:uid"), campos)
+        db.commit()
+        return {"ok": True, "mensagem": "Campos atualizados com sucesso"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[Leads] Erro atualizar campos: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# 2.2 — Fila de leads qualificados aguardando pipeline
+@router.get('/fila-qualificados')
+async def get_fila_qualificados(db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
+    try:
+        tenant_id = usuario.get('tenant_id', usuario['id'])
+        result = db.execute(text("""
+            SELECT id, nome, cidade, segmento, score, tier, status, criado_em
+            FROM leads
+            WHERE user_id = :uid
+              AND status IN ('qualificado', 'capturado')
+            ORDER BY criado_em ASC
+            LIMIT 100
+        """), {"uid": tenant_id}).fetchall()
+        leads = []
+        for i, r in enumerate(result):
+            d = dict(r._mapping)
+            d['posicao'] = i + 1
+            leads.append(d)
+        return {"leads": leads, "total": len(leads)}
+    except Exception as e:
+        print(f"[Leads] Erro fila-qualificados: {e}")
+        return {"leads": [], "total": 0}
+
+
+# 2.3 — Deletar lead
+@router.delete('/{lead_id}')
+async def deletar_lead(lead_id: str, db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
+    try:
+        tenant_id = usuario.get('tenant_id', usuario['id'])
+        lead = db.execute(text("SELECT id FROM leads WHERE id=:id AND user_id=:uid"), {"id": lead_id, "uid": tenant_id}).fetchone()
+        if not lead:
+            raise HTTPException(status_code=404, detail="Lead não encontrado")
+        # Deletar interações relacionadas primeiro
+        db.execute(text("DELETE FROM interacoes WHERE lead_id=:id"), {"id": lead_id})
+        db.execute(text("DELETE FROM leads WHERE id=:id AND user_id=:uid"), {"id": lead_id, "uid": tenant_id})
+        db.commit()
+        return {"ok": True, "mensagem": "Lead deletado com sucesso"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[Leads] Erro deletar lead: {e}")
+
+
+# ===== 3.1 — Feedback loop / Brain =====
+
+class FeedbackRequest(BaseModel):
+    resultado: str  # 'convertido' ou 'perdido'
+    observacao: str = ""
+
+@router.post('/{lead_id}/feedback')
+async def registrar_feedback(
+    lead_id: str,
+    req: FeedbackRequest,
+    db: Session = Depends(get_db),
+    usuario: dict = Depends(get_current_user)
+):
+    """
+    Registra feedback de conversão/perda de um lead.
+    Salva na tabela sdr_learning para o Bryan aprender com o histórico.
+    Se resultado='convertido', atualiza lead.status='convertido'.
+    """
+    if req.resultado not in ('convertido', 'perdido'):
+        raise HTTPException(status_code=400, detail="resultado deve ser 'convertido' ou 'perdido'")
+
+    try:
+        tenant_id = usuario.get('tenant_id', usuario['id'])
+
+        # Buscar dados do lead
+        lead = db.execute(text(
+            "SELECT id, segmento, tier, telefone FROM leads WHERE id=:id AND user_id=:uid"
+        ), {"id": lead_id, "uid": tenant_id}).fetchone()
+        if not lead:
+            raise HTTPException(status_code=404, detail="Lead não encontrado")
+
+        lead_dict = dict(lead._mapping)
+        segmento = lead_dict.get('segmento') or ''
+        tier = lead_dict.get('tier') or 'STANDARD'
+        telefone = lead_dict.get('telefone') or ''
+
+        # Buscar última mensagem enviada pelo Bryan (direcao='saida')
+        ultima_msg = db.execute(text("""
+            SELECT mensagem FROM interacoes
+            WHERE lead_id = :lead_id AND direcao = 'saida'
+            ORDER BY id DESC
+            LIMIT 1
+        """), {"lead_id": lead_id}).fetchone()
+        mensagem_usada = ultima_msg[0] if ultima_msg else ""
+
+        # Salvar na sdr_learning
+        db.execute(text("""
+            INSERT INTO sdr_learning
+                (lead_id, nicho, segmento, tier, mensagem_usada, resultado, observacao, user_id, criado_em)
+            VALUES
+                (:lead_id, :nicho, :segmento, :tier, :mensagem_usada, :resultado, :observacao, :user_id, NOW()::text)
+        """), {
+            "lead_id": lead_id,
+            "nicho": segmento,
+            "segmento": segmento,
+            "tier": tier,
+            "mensagem_usada": mensagem_usada,
+            "resultado": req.resultado,
+            "observacao": req.observacao,
+            "user_id": tenant_id,
+        })
+
+        # Se convertido, atualizar status do lead
+        if req.resultado == 'convertido':
+            db.execute(text(
+                "UPDATE leads SET status='convertido', atualizado_em=NOW()::text WHERE id=:id"
+            ), {"id": lead_id})
+
+        db.commit()
+
+        adicionar_log(
+            f"[Feedback] Lead {lead_id} marcado como '{req.resultado}' no segmento '{segmento}'",
+            'success' if req.resultado == 'convertido' else 'info'
+        )
+
+        return {
+            "ok": True,
+            "mensagem": f"Feedback '{req.resultado}' registrado com sucesso",
+            "lead_id": lead_id,
+            "segmento": segmento,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[Leads] Erro ao registrar feedback: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post('/{lead_id}/enviar-mensagem')
+async def enviar_mensagem_lead(lead_id: str, db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
+    """Envia mensagem Bryan para lead com site pronto (sdr_stage=pendente_wpp)."""
+    import os, httpx, re as _re
+    tenant_id = usuario.get("user_id") or usuario.get("sub")
+
+    # Buscar lead
+    row = db.execute(text(
+        "SELECT nome, telefone, whatsapp, segmento, cidade, site_url, rating, sdr_stage FROM leads WHERE id=:id AND user_id=:uid"
+    ), {"id": lead_id, "uid": tenant_id}).fetchone()
+    if not row:
+        raise HTTPException(404, "Lead não encontrado")
+
+    nome, telefone, whatsapp, segmento, cidade, site_url, rating, sdr_stage = row
+
+    if not site_url:
+        raise HTTPException(400, "Lead não tem site gerado. Rode o pipeline primeiro.")
+
+    # Verificar WPP conectado
+    meowhats_url = os.getenv("MEOWHATS_URL", "http://localhost:3001")
+    meowhats_key = os.getenv("MEOWHATS_KEY", "")
+    wpp_tenant = f"fralib_user_{tenant_id}"
+    try:
+        async with httpx.AsyncClient(timeout=5) as c:
+            r_wpp = await c.get(f"{meowhats_url}/api/sessions", headers={"X-API-Key": meowhats_key})
+            wpp_ok = False
+            if r_wpp.status_code == 200:
+                for s in r_wpp.json():
+                    if s.get("id") == wpp_tenant and s.get("status") == "connected":
+                        wpp_ok = True
+                        break
+            if not wpp_ok:
+                raise HTTPException(400, "WhatsApp não está conectado. Conecte primeiro no painel.")
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(500, "Erro ao verificar status do WhatsApp")
+
+    # Gerar mensagem com Bryan
+    from agents.bryan import iniciar_contato, BryanInput
+    bryan_input = BryanInput(
+        nome=nome, cidade=cidade or "", segmento=segmento or "",
+        telefone=telefone or "", whatsapp=whatsapp or "",
+        rating=rating or 0.0, site_url=site_url,
+        score_caio=80, tier="STANDARD"
+    )
+    bryan_output = iniciar_contato(bryan_input)
+
+    # Enviar via meowhats
+    tel = (whatsapp or telefone or "").strip()
+    tel = _re.sub(r'\D', '', tel)
+    if not tel.startswith('55'):
+        tel = '55' + tel
+    jid = f"{tel}@s.whatsapp.net"
+
+    async with httpx.AsyncClient(timeout=10) as c:
+        r_send = await c.post(
+            f"{meowhats_url}/api/sessions/{wpp_tenant}/send",
+            headers={"X-API-Key": meowhats_key},
+            json={"jid": jid, "type": "text", "text": bryan_output.mensagem.texto}
+        )
+        if r_send.status_code != 200:
+            raise HTTPException(500, f"Falha no envio: {r_send.text[:100]}")
+
+    # Atualizar sdr_stage
+    db.execute(text(
+        "UPDATE leads SET sdr_stage='intro', atualizado_em=NOW()::text WHERE id=:id"
+    ), {"id": lead_id})
+    db.commit()
+
+    adicionar_log(f"📱 Mensagem enviada para {nome} ({tel})", "success", tenant_id)
+    return {"ok": True, "mensagem": f"Mensagem enviada para {nome}"}

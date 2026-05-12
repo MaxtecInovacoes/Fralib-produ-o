@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from pydantic import BaseModel
@@ -7,6 +7,7 @@ import sys
 sys.path.append('/root/fralib/backend')
 sys.path.append('/root/fralib/backend/core')
 from database import get_db
+from auth import get_current_user
 import uuid
 from datetime import datetime
 
@@ -68,7 +69,9 @@ async def salvar_beta_lead(req: BetaLeadRequest, db: Session = Depends(get_db)):
         return {'ok': False, 'mensagem': 'Erro ao salvar lead'}
 
 @router.get('/leads')
-async def listar_beta_leads(db: Session = Depends(get_db)):
+async def listar_beta_leads(db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
+    if usuario.get("plano") not in ("admin", "superadmin"):
+        raise HTTPException(status_code=403, detail="Acesso restrito a administradores")
     try:
         criar_tabela_se_nao_existe(db)
         result = db.execute(text('''

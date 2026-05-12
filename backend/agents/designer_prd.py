@@ -98,6 +98,10 @@ class ColorPalette(BaseModel):
     accent: str = "#e85d04"
     background: str = "#ffffff"
     text: str = "#1f2937"
+    surface: str = "#f9fafb"
+    muted: str = "#6b7280"
+    border: str = "#e5e7eb"
+    tokens_oklch: dict = {}
     reasoning: str = "Paleta padrao"
 
     @field_validator("primary", "secondary", "accent", "background", "text", mode="before")
@@ -176,7 +180,7 @@ class DesignerPRD(BaseModel):
                 normalized[key] = value
             else:
                 # Fallback
-                normalized[required_key] = 'Inter'
+                normalized[key] = 'Inter'
         
         # Garantir campos obrigatórios
         for required_key in ['heading', 'body', 'accent']:
@@ -288,6 +292,13 @@ class DesignerPRD(BaseModel):
             elif isinstance(item, dict): result.append(str(item.get("type", item.get("name", "LocalBusiness"))))
             else: result.append(str(item))
         return result if result else ["LocalBusiness"]
+
+    seo_keywords: Optional[List[str]] = Field(default_factory=list)
+    faq_questions: Optional[List[str]] = Field(default_factory=list)
+    value_props: Optional[List[str]] = Field(default_factory=list)
+    geo: Optional[Dict[str, float]] = None
+    dark_mode: bool = False
+
     @model_validator(mode='after')
     def fill_missing_fields(self) -> 'DesignerPRD':
         """Preenche campos obrigatórios faltantes com fallback"""
