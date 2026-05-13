@@ -77,25 +77,27 @@ async def get_crm(db: Session = Depends(get_db), usuario: dict = Depends(get_cur
 
         for lead in leads:
             status = (lead.get('status') or 'pendente').lower()
-            sdr_stage = (lead.get('sdr_stage') or 'intro').lower()
+            sdr_stage = (lead.get('sdr_stage') or 'hook').lower()
 
             if status == 'pendente':
                 data['fila'].append(lead)
             elif status == 'processando':
                 data['fila'].append(lead)
             elif status == 'concluido':
-                if sdr_stage == 'intro':
+                if sdr_stage in ('hook', 'qualify', 'intro'):
                     data['intro'].append(lead)
-                elif sdr_stage in ('followup1', 'f1', 'follow_up_1'):
+                elif sdr_stage in ('pain', 'amplify', 'followup1', 'f1', 'follow_up_1', 'followup_24h', 'scheduled'):
                     data['f1'].append(lead)
-                elif sdr_stage in ('followup2', 'f2', 'follow_up_2', 'rapport', 'education'):
+                elif sdr_stage in ('tease', 'proof', 'followup2', 'f2', 'follow_up_2', 'rapport', 'education', 'followup_72h'):
                     data['f2'].append(lead)
-                elif sdr_stage in ('negotiation', 'negociacao'):
+                elif sdr_stage in ('reveal', 'feedback', 'close', 'urgency', 'negotiation', 'negociacao'):
                     data['negotiation'].append(lead)
-                elif sdr_stage in ('qualificado', 'qualified'):
+                elif sdr_stage in ('handoff', 'qualificado', 'qualified'):
                     data['qualificado'].append(lead)
                 elif sdr_stage in ('won', 'ganho', 'convertido'):
                     data['won'].append(lead)
+                elif sdr_stage in ('lost',):
+                    data['lost'].append(lead)
                 else:
                     data['intro'].append(lead)
             elif status in ('descartado', 'lost', 'perdido'):

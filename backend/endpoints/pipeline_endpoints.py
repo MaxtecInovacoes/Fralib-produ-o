@@ -749,7 +749,9 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
                 whatsapp=state.lead_obj.lead.whatsapp or "",
                 rating=state.lead_obj.lead.rating or 0.0, site_url=state.site_url,
                 score_caio=state.qualificacao_caio.score if state.qualificacao_caio else 0,
-                tier=state.qualificacao_caio.tier if state.qualificacao_caio else "STANDARD"
+                tier=state.qualificacao_caio.tier if state.qualificacao_caio else "STANDARD",
+                proof=state.qualificacao_caio.razoes[0] if state.qualificacao_caio and getattr(state.qualificacao_caio, 'razoes', None) else None,
+                concorrentes=getattr(state, 'concorrentes', None)
             )
             bryan_output = iniciar_contato(bryan_input)
             _log("  Bryan: mensagem criada", "success")
@@ -769,32 +771,37 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
                 if not tel.startswith('55'):
                     tel = '55' + tel
                 jid = f"{tel}@s.whatsapp.net"
-                texto = bryan_output.mensagem.texto
-                # TESTE: redirecionar para numero de teste se configurado
-                test_number = _os.getenv("BRYAN_TEST_NUMBER", "")
-                if test_number:
-                    jid = f"{test_number}@s.whatsapp.net"
-                    _log(f"  Bryan: MODO TESTE - redirecionando para {test_number}", "warning")
-                with httpx.Client(timeout=10) as c:
-                    r = c.post(
-                        f"{meowhats_url}/api/sessions/{tenant_id}/send",
-                        headers={"X-API-Key": meowhats_key},
-                        json={"jid": jid, "type": "text", "text": texto}
-                    )
-                    if r.status_code == 200:
-                        # Mascarar telefone nos logs (LGPD): mostra so os 4 ultimos digitos
-                        _tel_mask = ('*' * max(0, len(tel) - 4)) + tel[-4:] if tel else '****'
-                        _log(f"  Bryan: mensagem ENVIADA para {_tel_mask}", "success")
-                        logger.info(f"[Pipeline] Bryan: mensagem enviada para {_tel_mask}@s.whatsapp.net")
-                    else:
-                        _log(f"  Bryan: falha no envio ({r.text[:80]})", "warning")
-                        logger.warning(f"[Pipeline] Bryan envio falhou: {r.text}")
+                texto = bryan_output.reply
+                # Se Bryan bloqueou (fora do horário), marcar como pendente
+                if not texto or not texto.strip():
+                    _log(f"  Bryan: fora do horário ou reply vazio (intent={bryan_output.intent}) — lead na fila", "warning")
+                    _sdr_stage_final = 'pendente_wpp'
+                else:
+                    # TESTE: redirecionar para numero de teste se configurado
+                    test_number = _os.getenv("BRYAN_TEST_NUMBER", "")
+                    if test_number:
+                        jid = f"{test_number}@s.whatsapp.net"
+                        _log(f"  Bryan: MODO TESTE - redirecionando para {test_number}", "warning")
+                    with httpx.Client(timeout=10) as c:
+                        r = c.post(
+                            f"{meowhats_url}/api/sessions/{tenant_id}/send",
+                            headers={"X-API-Key": meowhats_key},
+                            json={"jid": jid, "type": "text", "text": texto}
+                        )
+                        if r.status_code == 200:
+                            # Mascarar telefone nos logs (LGPD): mostra so os 4 ultimos digitos
+                            _tel_mask = ('*' * max(0, len(tel) - 4)) + tel[-4:] if tel else '****'
+                            _log(f"  Bryan: mensagem ENVIADA para {_tel_mask}", "success")
+                            logger.info(f"[Pipeline] Bryan: mensagem enviada para {_tel_mask}@s.whatsapp.net")
+                        else:
+                            _log(f"  Bryan: falha no envio ({r.text[:80]})", "warning")
+                            logger.warning(f"[Pipeline] Bryan envio falhou: {r.text}")
               except Exception as send_err:
                 _log(f"  Bryan: erro no envio WPP ({send_err})", "warning")
                 logger.warning(f"[Pipeline] Bryan envio WPP erro: {send_err}")
         except Exception as e:
             logger.warning(f"[Pipeline] Bryan erro: {e}")
-        _sdr_stage_final = 'intro' if _wpp_conectado else 'pendente_wpp'
+        _sdr_stage_final = 'hook' if _wpp_conectado else 'pendente_wpp'
         with engine.connect() as conn:
             conn.execute(text("""
                 UPDATE leads SET site_url=:url, url_site=:url, processado=true,
@@ -1502,6 +1509,8 @@ async def _executar_pipeline_a_partir_fase2(state, tenant_id, config):
                 site_url=state.site_url,
                 score_caio=state.qualificacao_caio.score if state.qualificacao_caio else 0,
                 tier=state.qualificacao_caio.tier if state.qualificacao_caio else "STANDARD",
+                proof=state.qualificacao_caio.razoes[0] if state.qualificacao_caio and getattr(state.qualificacao_caio, 'razoes', None) else None,
+                concorrentes=getattr(state, 'concorrentes', None),
             )
             bryan_result = iniciar_contato(bryan_input)
             logger.info(f"[Pipeline] Bryan: OK | msg={str(bryan_result)[:60]}")

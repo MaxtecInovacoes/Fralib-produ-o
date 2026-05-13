@@ -1,34 +1,16 @@
 {
   "permissions": {
     "allow": [
-      "Bash(python *)",
-      "Bash(ls ecosystem.config.*)",
-      "Bash(find . -maxdepth 2 -name \"ecosystem*\")",
-      "Bash(node -e \"require\\('./ecosystem.config.js'\\); console.log\\('OK ecosystem'\\)\")",
-      "Bash(node *)",
+      "Bash(ssh *)",
+      "Bash(command -v rsync)",
+      "Bash(rsync --version)",
+      "Bash(ssh root@187.77.37.72 \"cd /root && tar --exclude='fralib/venv' --exclude='fralib/__pycache__' --exclude='fralib/**/__pycache__' --exclude='fralib/logs' -czf - fralib\")",
+      "Read(//c/Users/higor/**)",
+      "Bash(tar -tzf fralib_remote.tar.gz)",
+      "Bash(tar -xzf fralib_remote.tar.gz)",
+      "Bash(git init *)",
       "Bash(git add *)",
-      "Bash(git commit -m ' *)",
-      "Bash(xargs grep *)",
-      "Bash(git commit *)",
-      "Bash(git stash *)",
-      "Bash(awk '/id=\"view-perfil\"/,/^  <\\\\/section>/' frontend/dashboard.html)",
-      "Bash(grep -E \"\\\\.py$\")",
-      "Bash(find /c/Users/higor/Desktop/fralib -name \"*.py\" -path \"*/backend/*\" -exec grep -l \"FastAPI\\\\|uvicorn\" {} \\\\;)",
-      "Bash(find *)",
-      "Bash(venv/Scripts/python *)",
-      "Bash(venv/bin/python -c ' *)",
-      "Bash(where python *)",
-      "Bash(py -c \"import sqlalchemy; print\\(sqlalchemy.__version__\\)\")",
-      "Bash(py -m py_compile backend/endpoints/site_editor_endpoints.py)",
-      "Bash(py -m py_compile server.py)",
-      "Bash(py -m py_compile backend/services/site_health_check.py)",
-      "Bash(py -m py_compile backend/endpoints/pipeline_endpoints.py)",
-      "Bash(py -m py_compile backend/core/job_queue.py)",
-      "Bash(xargs ls *)",
-      "Bash(py -m py_compile backend/endpoints/tracking_endpoints.py)",
-      "Bash(py -m py_compile backend/endpoints/dashboard_endpoints.py)",
-      "Bash(py -m py_compile backend/agents/liam.py)",
-      "Bash(grep -n \"wa\\\\\\\\\\\\\\\\.\" backend/agents/liam.py)"
+      "Bash(git commit *)"
     ]
   }
 }

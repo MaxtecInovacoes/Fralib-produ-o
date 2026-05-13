@@ -27,15 +27,26 @@ engine = create_engine(DATABASE_URL, pool_pre_ping=True)
 
 # Mapeamento estado Bryan -> sdr_stage kanban
 ESTADO_TO_STAGE = {
-    "intro":       "intro",
+    "hook":        "intro",
+    "qualify":     "intro",
+    "pain":        "f1",
+    "amplify":     "f1",
+    "tease":       "f2",
+    "proof":       "f2",
+    "reveal":      "negotiation",
+    "feedback":    "negotiation",
+    "close":       "negotiation",
+    "urgency":     "negotiation",
     "followup1":   "f1",
     "followup2":   "f2",
     "rapport":     "f2",
     "education":   "f2",
     "negotiation": "negotiation",
     "qualificado": "qualificado",
+    "handoff":     "qualificado",
     "won":         "won",
     "lost":        "lost",
+    "scheduled":   "f1",
 }
 
 def _normalizar_tel(jid: str) -> str:
@@ -43,15 +54,34 @@ def _normalizar_tel(jid: str) -> str:
     return re.sub(r'\D', '', jid.split('@')[0])
 
 def _buscar_lead_por_tel(telefone: str):
-    """Busca lead no banco pelo telefone."""
+    """Busca lead no banco pelo telefone ou JID.
+    Tenta com e sem código de país (55) para cobrir ambos formatos.
+    """
+    # Gera variantes: com 55 e sem 55
+    tel_com_55 = telefone if telefone.startswith('55') else '55' + telefone
+    tel_sem_55 = telefone[2:] if telefone.startswith('55') and len(telefone) > 11 else telefone
+
     with engine.connect() as conn:
+        # Busca por telefone normalizado (tenta ambas variantes)
         row = conn.execute(text("""
-            SELECT id, nome, segmento, cidade, sdr_stage, status
+            SELECT id, nome, segmento, cidade, sdr_stage, status,
+                   COALESCE(telefone_whatsapp, whatsapp, telefone, '') as tel_raw
             FROM leads
-            WHERE regexp_replace(COALESCE(telefone_whatsapp, whatsapp, telefone, ''), '\\D', '', 'g') = :tel
+            WHERE regexp_replace(COALESCE(telefone_whatsapp, whatsapp, telefone, ''), '\\D', '', 'g')
+                  IN (:tel1, :tel2)
             LIMIT 1
-        """), {"tel": telefone}).fetchone()
-    return row
+        """), {"tel1": tel_com_55, "tel2": tel_sem_55}).fetchone()
+        if row:
+            return row
+        # Fallback: buscar por wpp_jid (LID de conta business)
+        row = conn.execute(text("""
+            SELECT id, nome, segmento, cidade, sdr_stage, status,
+                   COALESCE(telefone_whatsapp, whatsapp, telefone, '') as tel_raw
+            FROM leads
+            WHERE wpp_jid = :jid
+            LIMIT 1
+        """), {"jid": telefone}).fetchone()
+        return row
 
 def _salvar_interacao(lead_id: str, mensagem: str, direcao: str):
     """Salva mensagem na tabela interacoes."""
@@ -77,6 +107,56 @@ def _atualizar_stage(lead_id: str, sdr_stage: str):
             "UPDATE leads SET sdr_stage=:stage, atualizado_em=:ts WHERE id=:id"
         ), {"stage": sdr_stage, "ts": datetime.now().isoformat(), "id": lead_id})
         conn.commit()
+
+
+# Número do closer humano (recebe handoff)
+CLOSER_HUMANO = os.getenv("CLOSER_NUMERO", "5541992049684")
+
+
+def _notificar_handoff_humano(http_client, tenant_id: str, lead_id: str, nome: str, telefone: str, jid: str, meowhats_http: str):
+    """
+    Notifica o closer humano que um lead está pronto pra fechar.
+    Envia resumo do lead + últimas mensagens pro número do closer.
+    Bryan para de responder (stage=handoff).
+    """
+    try:
+        # Buscar últimas interações
+        with engine.connect() as conn:
+            rows = conn.execute(text("""
+                SELECT mensagem, direcao FROM interacoes
+                WHERE lead_id = :lid
+                ORDER BY criado_em DESC LIMIT 6
+            """), {"lid": lead_id}).fetchall()
+
+        historico = "\n".join([
+            f"{'👤 Lead' if r[1] == 'entrada' else '🤖 Franz'}: {r[0][:80]}"
+            for r in reversed(rows)
+        ]) if rows else "(sem histórico)"
+
+        # Montar mensagem pro closer
+        tel_mask = telefone[-4:] if telefone else "????"
+        resumo = (
+            f"🔥 *LEAD QUENTE — Pronto pra fechar!*\n\n"
+            f"👤 *{nome}*\n"
+            f"📱 Número: {telefone}\n"
+            f"💬 Link direto: wa.me/{telefone}\n\n"
+            f"_Últimas mensagens:_\n{historico}\n\n"
+            f"⚡ Responda direto pro lead neste número.\n"
+            f"Bryan já parou de responder."
+        )
+
+        # Enviar pro closer humano
+        closer_jid = f"{CLOSER_HUMANO}@s.whatsapp.net"
+        meowhats_http_real = os.getenv("MEOWHATS_URL", "http://localhost:3001")
+        http_client.post(
+            f"{meowhats_http_real}/api/sessions/{tenant_id}/send",
+            headers={"X-API-Key": MEOWHATS_KEY},
+            json={"jid": closer_jid, "type": "text", "text": resumo}
+        )
+        logger.info(f"🔥 Handoff: lead {nome} ({tel_mask}) → closer humano {CLOSER_HUMANO}")
+
+    except Exception as e:
+        logger.error(f"Erro no handoff: {e}")
 
 def _processar_mensagem(tenant_id: str, msg_data: dict):
     """Processa mensagem recebida de um lead."""
@@ -111,7 +191,18 @@ def _processar_mensagem(tenant_id: str, msg_data: dict):
             logger.info(f"Lead não encontrado para {telefone} — ignorando")
             return
 
-        lead_id, nome, segmento, cidade, sdr_stage_atual, status = lead
+        lead_id, nome, segmento, cidade, sdr_stage_atual, status, tel_raw = lead
+
+        # Salvar wpp_jid se diferente do telefone (LID de conta business)
+        raw_jid = jid.split('@')[0]
+        if raw_jid != telefone and len(raw_jid) > 5:
+            try:
+                with engine.connect() as conn:
+                    conn.execute(text("UPDATE leads SET wpp_jid=:jid WHERE id=:id AND (wpp_jid IS NULL OR wpp_jid != :jid)"),
+                                 {"jid": raw_jid, "id": lead_id})
+                    conn.commit()
+            except Exception:
+                pass
 
         # Salvar mensagem recebida sempre (histórico)
         _salvar_interacao(lead_id, texto, "entrada")
@@ -124,6 +215,12 @@ def _processar_mensagem(tenant_id: str, msg_data: dict):
             logger.info(f"Lead {nome}: sdr_stage vazio — Bryan ainda não iniciou contato")
             return
 
+        # Se stage é handoff ou won → Bryan NÃO responde mais (humano assumiu)
+        if sdr_stage_atual in ('handoff', 'won'):
+            logger.info(f"Lead {nome}: stage={sdr_stage_atual} — humano assumiu, Bryan parado")
+            _salvar_interacao(lead_id, texto, "entrada")
+            return
+
         # Chamar Bryan para gerar resposta
         import sys
         sys.path.insert(0, os.path.dirname(__file__))
@@ -131,52 +228,91 @@ def _processar_mensagem(tenant_id: str, msg_data: dict):
         from agents.bryan import responder_lead
 
         bryan_output = responder_lead(
-            telefone=telefone,
+            telefone=tel_raw,
             mensagem_recebida=texto,
             nome_negocio=nome or push_name
         )
 
-        resposta = bryan_output.mensagem.texto
+        resposta = bryan_output.reply
         proximo_passo = bryan_output.proximo_passo or ""
+
+        # Se reply vazio (opt_out, fila, etc) — não enviar
+        if not resposta or not resposta.strip():
+            logger.info(f"Lead {nome}: Bryan retornou reply vazio (intent={bryan_output.intent}) — não envia")
+            if bryan_output.next_stage == "lost":
+                _atualizar_stage(lead_id, "lost")
+            return
 
         # Salvar resposta do Bryan
         _salvar_interacao(lead_id, resposta, "saida")
 
-        # Determinar novo stage baseado no proximo_passo
-        novo_stage = sdr_stage_atual or "intro"
-        pp = proximo_passo.lower()
-        if "negoci" in pp or "proposta" in pp:
-            novo_stage = "negotiation"
-        elif "qualific" in pp or "ganho" in pp or "fechou" in pp:
-            novo_stage = "qualificado"
-        elif "perdido" in pp or "desistiu" in pp or "não quer" in pp:
-            novo_stage = "lost"
-        elif "followup" in pp or "follow" in pp or "aguardar" in pp:
-            # Avançar followup
-            if sdr_stage_atual in ("intro", None, ""):
-                novo_stage = "f1"
-            elif sdr_stage_atual == "f1":
-                novo_stage = "f2"
-            else:
-                novo_stage = sdr_stage_atual
+        # Usar next_stage direto do Bryan (state machine real)
+        novo_stage = bryan_output.next_stage or sdr_stage_atual or "hook"
 
         _atualizar_stage(lead_id, novo_stage)
+
+        # Se Bryan agendou follow-up, salvar a data
+        if novo_stage == "scheduled":
+            facts = bryan_output.update_facts or {}
+            followup_date = facts.get("followup_date", "")
+            if followup_date:
+                # Fallback: se LLM retornou data no passado, corrigir para amanhã
+                from datetime import datetime as _dt, timedelta as _td
+                import pytz as _tz
+                try:
+                    _hoje = _dt.now(_tz.timezone("America/Sao_Paulo")).date()
+                    _data_parsed = _dt.strptime(followup_date, "%Y-%m-%d").date()
+                    if _data_parsed <= _hoje:
+                        followup_date = (_hoje + _td(days=1)).strftime("%Y-%m-%d")
+                        logger.warning(f"Lead {nome}: data no passado corrigida para {followup_date}")
+                except (ValueError, TypeError):
+                    # Formato inválido — default amanhã
+                    followup_date = (_dt.now(_tz.timezone("America/Sao_Paulo")).date() + _td(days=1)).strftime("%Y-%m-%d")
+                    logger.warning(f"Lead {nome}: followup_date inválido, usando amanhã {followup_date}")
+
+                with engine.connect() as conn:
+                    conn.execute(text(
+                        "UPDATE leads SET followup_date=:fd WHERE id=:id"
+                    ), {"fd": followup_date, "id": lead_id})
+                    conn.commit()
+                logger.info(f"Lead {nome}: agendado para {followup_date}")
+
         logger.info(f"Lead {nome}: stage {sdr_stage_atual} -> {novo_stage}")
 
-        # Enviar resposta via meowhats
-        import httpx
+        # Enviar resposta via meowhats COM delay humanizado (composing)
+        import httpx, time
         meowhats_http = os.getenv("MEOWHATS_URL", "http://localhost:3001")
         try:
-            with httpx.Client(timeout=10) as c:
+            with httpx.Client(timeout=15) as c:
+                # 1. Mostrar "digitando..." (composing)
+                try:
+                    c.post(
+                        f"{meowhats_http}/api/sessions/{tenant_id}/presence",
+                        headers={"X-API-Key": MEOWHATS_KEY},
+                        json={"jid": jid, "type": "composing"}
+                    )
+                except Exception:
+                    pass  # não crítico
+
+                # 2. Delay proporcional ao tamanho da msg (~40 chars/seg, min 2s, max 8s)
+                delay_secs = min(max(len(resposta) * 0.025, 2.0), 8.0)
+                time.sleep(delay_secs)
+
+                # 3. Enviar mensagem
                 r = c.post(
                     f"{meowhats_http}/api/sessions/{tenant_id}/send",
                     headers={"X-API-Key": MEOWHATS_KEY},
                     json={"jid": jid, "type": "text", "text": resposta}
                 )
                 if r.status_code == 200:
-                    logger.info(f"Resposta enviada para {telefone}")
+                    logger.info(f"Resposta enviada para {telefone} (delay={delay_secs:.1f}s)")
                 else:
                     logger.warning(f"Falha ao enviar resposta: {r.text[:80]}")
+
+                # 4. Se handoff → notificar humano e parar Bryan
+                if bryan_output.should_handoff or novo_stage == 'handoff':
+                    _notificar_handoff_humano(c, tenant_id, lead_id, nome, telefone, jid, meowhats_http)
+
         except Exception as e:
             logger.warning(f"Erro ao enviar resposta WPP: {e}")
 

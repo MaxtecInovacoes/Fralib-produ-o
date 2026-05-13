@@ -784,15 +784,19 @@ async def enviar_mensagem_lead(lead_id: str, db: Session = Depends(get_db), usua
         r_send = await c.post(
             f"{meowhats_url}/api/sessions/{wpp_tenant}/send",
             headers={"X-API-Key": meowhats_key},
-            json={"jid": jid, "type": "text", "text": bryan_output.mensagem.texto}
+            json={"jid": jid, "type": "text", "text": bryan_output.reply}
         )
         if r_send.status_code != 200:
             raise HTTPException(500, f"Falha no envio: {r_send.text[:100]}")
 
+    # Se Bryan bloqueou (fora do horário), não enviar
+    if not bryan_output.reply or not bryan_output.reply.strip():
+        return {"ok": False, "mensagem": f"Fora do horário de atendimento — lead permanece na fila"}
+
     # Atualizar sdr_stage
     db.execute(text(
-        "UPDATE leads SET sdr_stage='intro', atualizado_em=NOW()::text WHERE id=:id"
-    ), {"id": lead_id})
+        "UPDATE leads SET sdr_stage=:stage, atualizado_em=NOW()::text WHERE id=:id"
+    ), {"id": lead_id, "stage": bryan_output.next_stage or "hook"})
     db.commit()
 
     adicionar_log(f"📱 Mensagem enviada para {nome} ({tel})", "success", tenant_id)
