@@ -43,13 +43,13 @@ def set_current_user_id(uid):
 # Cache em memoria por user_id pra evitar bater no banco a cada chamada LLM.
 _byok_cache = {}
 
-def _get_active_api_key():
-    """Retorna a Anthropic key do user ativo (BYOK Pro) ou o default do .env."""
+def _get_byok_key():
+    """Retorna a key BYOK do user Pro atual, ou None se nao houver."""
     uid = _current_user_id
     if not uid:
-        return ANTHROPIC_API_KEY
+        return None
     if uid in _byok_cache:
-        return _byok_cache[uid] or ANTHROPIC_API_KEY
+        return _byok_cache[uid]
     try:
         import psycopg2
         from utils.secrets_crypto import decriptar
@@ -61,12 +61,38 @@ def _get_active_api_key():
         conn.close()
         if row and (row[0] or '').lower() == 'pro' and row[1]:
             key = decriptar(row[1])
-            _byok_cache[uid] = key
-            return key or ANTHROPIC_API_KEY
-        _byok_cache[uid] = None  # cacheia "nao tem" pra evitar query repetida
+            _byok_cache[uid] = key or None
+            return _byok_cache[uid]
+        _byok_cache[uid] = None
     except Exception as e:
         print(f'[llm_direct] BYOK lookup falhou para user {uid}: {e}')
-    return ANTHROPIC_API_KEY
+    return None
+
+
+def _resolve_anthropic():
+    """Retorna (api_key, base_url, key_id_or_None).
+
+    Prioridade:
+    1. BYOK do user Pro ativo (key dele propria, sem failover).
+    2. Round-robin via ia_manager entre keys cadastradas no superadmin.
+    3. Fallback pro .env (ANTHROPIC_API_KEY / ANTHROPIC_BASE_URL).
+    """
+    byok = _get_byok_key()
+    if byok:
+        return (byok, ANTHROPIC_BASE_URL, None)
+    try:
+        import ia_manager
+        picked = ia_manager.pick_key('anthropic')
+        if picked:
+            return picked  # (key, base_url, id) ja com fallback .env interno
+    except Exception as e:
+        print(f'[llm_direct] ia_manager falhou, usando .env: {e}')
+    return (ANTHROPIC_API_KEY, ANTHROPIC_BASE_URL, None)
+
+
+# Compat: codigo legado pode importar _get_active_api_key.
+def _get_active_api_key():
+    return _resolve_anthropic()[0]
 
 def invalidar_byok_cache(uid=None):
     """Chamar quando o cliente troca a key (ou cancela). uid=None limpa tudo."""
@@ -170,12 +196,18 @@ def call_claude(system, user, model='opus', max_tokens=4000, temperature=0.7, ag
 
     model_id = model_map.get(model, model_map['opus'])
     
-    # 5. Chamar API Claude
-    _base = base_url or ANTHROPIC_BASE_URL
+    # 5. Resolver key/base_url (BYOK > ia_manager > .env)
+    if base_url:
+        # Caller forcou base_url explicitamente — usa key default do .env / BYOK
+        _api_key = _get_byok_key() or ANTHROPIC_API_KEY
+        _key_id = None
+        _base = base_url
+    else:
+        _api_key, _base, _key_id = _resolve_anthropic()
     url = f'{_base}/v1/messages'
-    
+
     headers = {
-        'x-api-key': _get_active_api_key(),
+        'x-api-key': _api_key,
         'anthropic-version': '2023-06-01',
         'Content-Type': 'application/json'
     }
@@ -222,26 +254,43 @@ def call_claude(system, user, model='opus', max_tokens=4000, temperature=0.7, ag
         headers = {**headers, **extra_headers}
 
     import time as _llm_time
+    try:
+        import ia_manager as _ia
+    except Exception:
+        _ia = None
+
+    response = None
     for _llm_attempt in range(1, 4):
         response = requests.post(url, headers=headers, json=payload, timeout=600)
         if response.status_code == 429:
+            cd = _ia.parse_cooldown_from_response(429, dict(response.headers)) if _ia else 60
+            if _ia and _key_id:
+                _ia.mark_failure(_key_id, '429 rate limit', cd)
+                _ia.raise_alert('rate_limit', _key_id,
+                                f'429 em call_claude (cooldown {cd}s)',
+                                lead_id=None, user_id=_current_user_id)
             if _llm_attempt >= 3:
-                # Extrair tempo de reset dos headers
-                _reset_hdr = response.headers.get('Anthropic-Ratelimit-Input-Tokens-Reset', '')
-                _reset_secs = 60
-                if _reset_hdr:
-                    try:
-                        from datetime import datetime, timezone
-                        _reset_dt = datetime.fromisoformat(_reset_hdr.replace('Z', '+00:00'))
-                        _reset_secs = max(0, int((_reset_dt - datetime.now(timezone.utc)).total_seconds()))
-                    except Exception:
-                        _reset_secs = 60
-                raise RateLimitError(reset_seconds=_reset_secs)
-            wait = 15 * _llm_attempt
-            print(f'[LLM] 429 Rate Limit - aguardando {wait}s (tentativa {_llm_attempt}/3)...')
+                if _ia and _key_id is None:
+                    _ia.raise_alert('all_keys_failed', None,
+                                    'Todas as keys Anthropic estouraram 429 apos 3 tentativas',
+                                    lead_id=None, user_id=_current_user_id)
+                raise RateLimitError(reset_seconds=cd)
+            # Pega proxima key e tenta de novo
+            if base_url is None:
+                _api_key, _base, _key_id = _resolve_anthropic()
+                url = f'{_base}/v1/messages'
+                headers['x-api-key'] = _api_key
+            wait = min(15 * _llm_attempt, 30)
+            print(f'[LLM] 429 — trocando key e aguardando {wait}s (tentativa {_llm_attempt}/3)...')
             _llm_time.sleep(wait)
             continue
         if response.status_code in (529, 503, 502):
+            if _ia and _key_id:
+                _ia.mark_failure(_key_id, f'{response.status_code} overloaded', 30)
+            if base_url is None:
+                _api_key, _base, _key_id = _resolve_anthropic()
+                url = f'{_base}/v1/messages'
+                headers['x-api-key'] = _api_key
             wait = 20 * _llm_attempt
             print(f'[LLM] {response.status_code} Proxy Overloaded - aguardando {wait}s (tentativa {_llm_attempt}/3)...')
             _llm_time.sleep(wait)
@@ -251,8 +300,25 @@ def call_claude(system, user, model='opus', max_tokens=4000, temperature=0.7, ag
             if _llm_attempt < 3:
                 _llm_time.sleep(5 * _llm_attempt)
                 continue
+        if response.status_code >= 400:
+            # 4xx que nao seja 429 = problema da request, nao da key. Nao penaliza.
+            if _ia and _key_id and response.status_code in (401, 403):
+                _ia.mark_failure(_key_id, f'{response.status_code} auth', 600)
+                _ia.raise_alert('key_invalid', _key_id,
+                                f'{response.status_code} retornado — key pode estar invalida',
+                                lead_id=None, user_id=_current_user_id)
         response.raise_for_status()
+        if _ia and _key_id:
+            _ia.mark_success(_key_id)
         break
+    else:
+        # Esgotou as 3 tentativas sem break
+        if _ia:
+            _ia.raise_alert('all_keys_failed', _key_id,
+                            'Todas as tentativas de call_claude falharam',
+                            lead_id=None, user_id=_current_user_id)
+        if response is not None:
+            response.raise_for_status()
 
     data = response.json()
     stop_reason = data.get('stop_reason', '?')
@@ -345,9 +411,10 @@ def call_claude_structured(system, user, tool_name, tool_description, input_sche
     }
     model_id = model_map.get(model, model_map['opus'])
 
-    url = f'{ANTHROPIC_BASE_URL}/v1/messages'
+    _api_key, _base, _key_id = _resolve_anthropic()
+    url = f'{_base}/v1/messages'
     headers = {
-        'x-api-key': _get_active_api_key(),
+        'x-api-key': _api_key,
         'anthropic-version': '2023-06-01',
         'Content-Type': 'application/json'
     }
@@ -374,25 +441,38 @@ def call_claude_structured(system, user, tool_name, tool_description, input_sche
     }
 
     import time as _time_struct
+    try:
+        import ia_manager as _ia
+    except Exception:
+        _ia = None
+
     for _attempt in range(1, 4):
         response = requests.post(url, headers=headers, json=payload, timeout=600)
         if response.status_code == 429:
+            cd = _ia.parse_cooldown_from_response(429, dict(response.headers)) if _ia else 60
+            if _ia and _key_id:
+                _ia.mark_failure(_key_id, '429 rate limit', cd)
+                _ia.raise_alert('rate_limit', _key_id,
+                                f'429 em call_claude_structured (cooldown {cd}s)',
+                                lead_id=None, user_id=_current_user_id)
             if _attempt >= 3:
-                _reset_hdr = response.headers.get('Anthropic-Ratelimit-Input-Tokens-Reset', '')
-                _reset_secs = 60
-                if _reset_hdr:
-                    try:
-                        from datetime import datetime, timezone
-                        _reset_dt = datetime.fromisoformat(_reset_hdr.replace('Z', '+00:00'))
-                        _reset_secs = max(0, int((_reset_dt - datetime.now(timezone.utc)).total_seconds()))
-                    except Exception:
-                        _reset_secs = 60
-                raise RateLimitError(reset_seconds=_reset_secs)
-            wait = 15 * _attempt
-            print(f'[LLM Structured] 429 Rate Limit - aguardando {wait}s (tentativa {_attempt}/3)...')
+                raise RateLimitError(reset_seconds=cd)
+            _api_key, _base, _key_id = _resolve_anthropic()
+            url = f'{_base}/v1/messages'
+            headers['x-api-key'] = _api_key
+            wait = min(15 * _attempt, 30)
+            print(f'[LLM Structured] 429 — trocando key e aguardando {wait}s (tentativa {_attempt}/3)...')
             _time_struct.sleep(wait)
             continue
+        if response.status_code >= 400 and response.status_code in (401, 403):
+            if _ia and _key_id:
+                _ia.mark_failure(_key_id, f'{response.status_code} auth', 600)
+                _ia.raise_alert('key_invalid', _key_id,
+                                f'{response.status_code} em call_claude_structured',
+                                lead_id=None, user_id=_current_user_id)
         response.raise_for_status()
+        if _ia and _key_id:
+            _ia.mark_success(_key_id)
         data = response.json()
         # Verificar se proxy retornou no_tool_available (falso tool_use)
         content_blocks = data.get('content', [])

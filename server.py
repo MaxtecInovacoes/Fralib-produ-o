@@ -49,6 +49,8 @@ import whatsapp_endpoints
 import llm_endpoints
 import api_usage_endpoints
 import superadmin_endpoints
+import provider_keys_endpoints
+import provider_alerts_endpoints
 import falhas_endpoints
 import site_editor_endpoints
 import tracking_endpoints
@@ -228,6 +230,8 @@ app.include_router(whatsapp_endpoints.router)
 app.include_router(llm_endpoints.router)
 app.include_router(api_usage_endpoints.router)
 app.include_router(superadmin_endpoints.router)
+app.include_router(provider_keys_endpoints.router)
+app.include_router(provider_alerts_endpoints.router)
 app.include_router(falhas_endpoints.router)
 app.include_router(site_editor_endpoints.router)
 app.include_router(tracking_endpoints.router)
