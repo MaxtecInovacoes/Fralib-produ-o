@@ -436,6 +436,7 @@ def auditar(
     cidade: str = "",
     telefone: str = "",
     nome: str = "",
+    user_id: Optional[int] = None,
 ) -> LizOutput:
     """
     Auditoria completa do HTML (técnica + semântica)
@@ -467,8 +468,8 @@ def auditar(
 
     print(f"   Score Final: {score_final}/100 - {'APROVADO' if aprovado else 'REPROVADO'}")
 
-    # Salvar memória
-    if lead_id:
+    # Salvar memória (somente quando user_id presente — multi-tenant)
+    if lead_id and user_id:
         salvar_memoria(f"liz_auditoria_{lead_id}_t{tentativa}", {
             "tentativa": tentativa,
             "score_final": score_final,
@@ -477,7 +478,7 @@ def auditar(
             "aprovado": aprovado,
             "problemas_tecnicos": [p.dict() for p in tecnica.problemas],
             "problemas_semanticos": semantica.problemas
-        })
+        }, user_id=user_id)
 
     # Poder de rejeicao: se tentativa < 2 e reprovado, sinalizar para regenerar
     rejeitar = not aprovado and tentativa < 2

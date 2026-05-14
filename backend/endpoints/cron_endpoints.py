@@ -138,7 +138,10 @@ async def despachar_fila_bryan(x_cron_secret: str = Header(None, alias='X-Cron-S
                     rating=rating or 0.0, site_url=site_url or "",
                     score_caio=80, tier="STANDARD"
                 )
-                bryan_output = iniciar_contato(bryan_input)
+                if not user_id:
+                    print(f"[Cron Bryan] ⚠️ lead {lead_id} sem user_id — ignorado (multi-tenant)")
+                    continue
+                bryan_output = iniciar_contato(bryan_input, user_id=user_id)
 
                 if not bryan_output.reply or not bryan_output.reply.strip():
                     continue
@@ -149,7 +152,7 @@ async def despachar_fila_bryan(x_cron_secret: str = Header(None, alias='X-Cron-S
                 if not tel.startswith('55'):
                     tel = '55' + tel
                 jid = f"{tel}@s.whatsapp.net"
-                wpp_tenant = f"fralib_user_{user_id}" if user_id else "fralib"
+                wpp_tenant = f"fralib_user_{user_id}"
 
                 with httpx.Client(timeout=10) as c:
                     r = c.post(
@@ -159,8 +162,8 @@ async def despachar_fila_bryan(x_cron_secret: str = Header(None, alias='X-Cron-S
                     )
                     if r.status_code == 200:
                         conn.execute(text(
-                            "UPDATE leads SET sdr_stage='hook', ab_variant=:var, atualizado_em=NOW()::text WHERE id=:id"
-                        ), {"id": lead_id, "var": _escolher_variante(lead_id)})
+                            "UPDATE leads SET sdr_stage='hook', ab_variant=:var, atualizado_em=NOW()::text WHERE id=:id AND user_id=:uid"
+                        ), {"id": lead_id, "var": _escolher_variante(lead_id), "uid": user_id})
                         conn.commit()
                         enviados += 1
                         print(f"[Cron Bryan] ✅ Enviado para {nome} ({tel[-4:]})")
@@ -240,10 +243,13 @@ async def followup_bryan(x_cron_secret: str = Header(None, alias='X-Cron-Secret'
                     tipo = "72h"
                     novo_stage = "followup_72h"
                 elif sdr_stage == 'followup_72h':
-                    # Marcar como perdido
+                    # Marcar como perdido (escopo ao tenant)
+                    if not user_id:
+                        print(f"[Cron FU] ⚠️ lead {lead_id} sem user_id — pulando lost")
+                        continue
                     conn.execute(text(
-                        "UPDATE leads SET sdr_stage='lost', atualizado_em=NOW()::text WHERE id=:id"
-                    ), {"id": lead_id})
+                        "UPDATE leads SET sdr_stage='lost', atualizado_em=NOW()::text WHERE id=:id AND user_id=:uid"
+                    ), {"id": lead_id, "uid": user_id})
                     conn.commit()
                     perdidos += 1
                     print(f"[Cron FU] 💀 {nome} marcado como lost (sem resposta)")
@@ -251,7 +257,10 @@ async def followup_bryan(x_cron_secret: str = Header(None, alias='X-Cron-Secret'
                 else:
                     continue
 
-                fu_output = followup_automatico(telefone or whatsapp or "", tipo)
+                if not user_id:
+                    print(f"[Cron FU] ⚠️ lead {lead_id} sem user_id — pulando")
+                    continue
+                fu_output = followup_automatico(telefone or whatsapp or "", tipo, user_id=user_id)
 
                 if not fu_output.reply or not fu_output.reply.strip():
                     continue
@@ -262,7 +271,10 @@ async def followup_bryan(x_cron_secret: str = Header(None, alias='X-Cron-Secret'
                 if not tel.startswith('55'):
                     tel = '55' + tel
                 jid = f"{tel}@s.whatsapp.net"
-                wpp_tenant = f"fralib_user_{user_id}" if user_id else "fralib"
+                if not user_id:
+                    print(f"[Cron Bryan] ⚠️ lead {lead_id} sem user_id — ignorado (multi-tenant)")
+                    continue
+                wpp_tenant = f"fralib_user_{user_id}"
 
                 with httpx.Client(timeout=10) as c:
                     r = c.post(
@@ -272,8 +284,8 @@ async def followup_bryan(x_cron_secret: str = Header(None, alias='X-Cron-Secret'
                     )
                     if r.status_code == 200:
                         conn.execute(text(
-                            "UPDATE leads SET sdr_stage=:stage, atualizado_em=NOW()::text WHERE id=:id"
-                        ), {"id": lead_id, "stage": novo_stage})
+                            "UPDATE leads SET sdr_stage=:stage, atualizado_em=NOW()::text WHERE id=:id AND user_id=:uid"
+                        ), {"id": lead_id, "stage": novo_stage, "uid": user_id})
                         conn.commit()
                         enviados += 1
                         print(f"[Cron FU] ✅ Follow-up '{tipo}' para {nome}")
@@ -287,7 +299,10 @@ async def followup_bryan(x_cron_secret: str = Header(None, alias='X-Cron-Secret'
         for row in scheduled_rows:
             lead_id, nome, telefone, whatsapp, segmento, cidade, site_url, sdr_stage, user_id, atualizado_em = row
             try:
-                fu_output = followup_automatico(telefone or whatsapp or "", "scheduled")
+                if not user_id:
+                    print(f"[Cron FU] ⚠️ lead {lead_id} sem user_id — pulando scheduled")
+                    continue
+                fu_output = followup_automatico(telefone or whatsapp or "", "scheduled", user_id=user_id)
 
                 if not fu_output.reply or not fu_output.reply.strip():
                     continue
@@ -297,7 +312,10 @@ async def followup_bryan(x_cron_secret: str = Header(None, alias='X-Cron-Secret'
                 if not tel.startswith('55'):
                     tel = '55' + tel
                 jid = f"{tel}@s.whatsapp.net"
-                wpp_tenant = f"fralib_user_{user_id}" if user_id else "fralib"
+                if not user_id:
+                    print(f"[Cron Bryan] ⚠️ lead {lead_id} sem user_id — ignorado (multi-tenant)")
+                    continue
+                wpp_tenant = f"fralib_user_{user_id}"
 
                 with httpx.Client(timeout=10) as c:
                     r = c.post(
@@ -308,8 +326,8 @@ async def followup_bryan(x_cron_secret: str = Header(None, alias='X-Cron-Secret'
                     if r.status_code == 200:
                         # Volta pro stage anterior ao scheduled (discovery ou qualify)
                         conn.execute(text(
-                            "UPDATE leads SET sdr_stage='pain', followup_date=NULL, atualizado_em=NOW()::text WHERE id=:id"
-                        ), {"id": lead_id})
+                            "UPDATE leads SET sdr_stage='pain', followup_date=NULL, atualizado_em=NOW()::text WHERE id=:id AND user_id=:uid"
+                        ), {"id": lead_id, "uid": user_id})
                         conn.commit()
                         enviados += 1
                         print(f"[Cron FU] 📅 Agendado retomado: {nome}")

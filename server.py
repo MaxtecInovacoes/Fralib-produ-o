@@ -18,7 +18,17 @@ sys.path.insert(0, '/root/fralib/backend/services')
 sys.path.insert(0, '/root/fralib/backend/agents')
 sys.path.insert(0, '/root/fralib/backend/utils')
 
-# Inicializar database
+# Aplicar migrations Alembic — fonte de verdade do schema
+from alembic.config import Config as _AlembicConfig
+from alembic import command as _alembic_command
+_ALEMBIC_INI = os.path.join(os.path.dirname(os.path.abspath(__file__)), "alembic.ini")
+try:
+    _alembic_command.upgrade(_AlembicConfig(_ALEMBIC_INI), "head")
+    print("[Startup] Alembic migrations aplicadas")
+except Exception as _e:
+    print(f"[Startup] Alembic falhou ({_e}) — continuando com inicializar_database como fallback")
+
+# Safety net: cria qualquer tabela que ainda nao esteja na Alembic
 from database import inicializar_database
 inicializar_database()
 
@@ -126,6 +136,32 @@ async def lifespan(app):
 app = FastAPI(title="FraLib API", version="2.0.0", lifespan=lifespan)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+
+@app.middleware("http")
+async def _attach_user_id_for_rate_limit(request, call_next):
+    """Decodifica JWT do header Authorization (best-effort) e popula request.state.user_id.
+
+    Nao falha quando o token esta ausente ou invalido — apenas deixa user_id em None,
+    fazendo o rate limiter cair no fallback por IP. NAO substitui get_current_user.
+    """
+    request.state.user_id = None
+    try:
+        auth = request.headers.get("authorization") or request.headers.get("Authorization")
+        if auth and auth.lower().startswith("bearer "):
+            import jwt as _jwt
+            _secret = os.getenv("JWT_SECRET_KEY", "")
+            if _secret:
+                try:
+                    _payload = _jwt.decode(auth.split(" ", 1)[1], _secret, algorithms=["HS256"])
+                    _sub = _payload.get("sub")
+                    if _sub:
+                        request.state.user_id = int(_sub)
+                except Exception:
+                    pass
+    except Exception:
+        pass
+    return await call_next(request)
 
 app.mount("/static", StaticFiles(directory="/root/fralib/frontend/static"), name="static")
 app.mount("/css", StaticFiles(directory="/root/fralib/frontend/css"), name="css")

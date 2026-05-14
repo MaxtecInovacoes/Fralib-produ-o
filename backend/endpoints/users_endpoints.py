@@ -39,20 +39,27 @@ async def get_profile(db: Session = Depends(get_db), user: dict = Depends(get_cu
         
     return dict(result._mapping)
 
+_ALLOWED_PROFILE_FIELDS = {
+    "nome", "telefone", "endereco", "nicho", "origem",
+    "cep", "rua", "bairro", "cidade", "estado",
+}
+
 @router.put("/profile")
 async def update_profile(data: UserProfileUpdate, db: Session = Depends(get_db), user: dict = Depends(get_current_user)):
     user_id = user["id"]
     update_data = data.model_dump(exclude_unset=True)
-    
+
+    update_data = {k: v for k, v in update_data.items() if k in _ALLOWED_PROFILE_FIELDS}
+
     if not update_data:
         return {"status": "ok", "mensagem": "Nenhum dado para atualizar"}
-        
+
     set_clause = ", ".join([f"{k} = :{k}" for k in update_data.keys()])
     query = text(f"UPDATE users SET {set_clause} WHERE id = :user_id")
-    
+
     db.execute(query, {**update_data, "user_id": user_id})
     db.commit()
-    
+
     return {"status": "ok", "mensagem": "Perfil atualizado com sucesso"}
 
 

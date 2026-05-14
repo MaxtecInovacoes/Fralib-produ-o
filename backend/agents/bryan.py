@@ -726,12 +726,16 @@ def safe_json_loads(text: str) -> dict:
     return json.loads(text)
 
 @require_rag("Bryan")
-def iniciar_contato(lead: BryanInput) -> BryanOutput:
+def iniciar_contato(lead: BryanInput, user_id: int = None) -> BryanOutput:
     """
     Inicia contato com lead qualificado — gera mensagem de intro (lead FRIO).
     NÃO revela site na primeira msg. Se apresenta, explica como achou, pergunta pelo decisor.
     RESPEITA HORÁRIO: seg-sáb 8h-21h Brasília. Fora disso, retorna enviado=False com motivo.
+
+    Multi-tenant: user_id obrigatorio (escopo da memoria por tenant).
     """
+    if not user_id:
+        raise ValueError("user_id obrigatorio em iniciar_contato (multi-tenant)")
     # Verificar horário de atendimento — NÃO aborda fora do horário
     if not _dentro_do_horario():
         print(f"⏰ [Franz] Fora do horário — intro para {lead.nome} adiada (fila)")
@@ -745,7 +749,7 @@ def iniciar_contato(lead: BryanInput) -> BryanOutput:
         )
 
     # Verificar se já contatou antes
-    memoria = carregar_memoria(f"bryan_lead_{lead.telefone}")
+    memoria = carregar_memoria(f"bryan_lead_{lead.telefone}", user_id=user_id)
     if memoria:
         print(f"⚠️ [Franz] Lead {lead.nome} já foi contatado antes")
         stage = memoria.get("estado", "hook")
@@ -862,7 +866,7 @@ Responda SOMENTE JSON válido."""
             "variant": variant,
             "facts": decision.get("update_facts", {}),
             "tentativas": 1
-        })
+        }, user_id=user_id)
 
         print(f"✅ [Franz] Intro criada para {lead.nome} (variante {variant})")
         print(f"   Reply: {decision['reply'][:80]}...")
@@ -957,14 +961,19 @@ def _consultar_aprendizado_segmento(segmento: str) -> str:
 def responder_lead(
     telefone: str,
     mensagem_recebida: str,
-    nome_negocio: str = ""
+    nome_negocio: str = "",
+    user_id: int = None
 ) -> BryanOutput:
     """
     Responde mensagem do lead — state machine completa com guardrails.
     Detecta intent, decide estratégia, chama LLM, aplica guardrails.
+
+    Multi-tenant: user_id obrigatorio (escopo da memoria por tenant).
     """
+    if not user_id:
+        raise ValueError("user_id obrigatorio em responder_lead (multi-tenant)")
     # Carregar contexto da conversa
-    memoria = carregar_memoria(f"bryan_lead_{telefone}")
+    memoria = carregar_memoria(f"bryan_lead_{telefone}", user_id=user_id)
     if not memoria:
         print(f"⚠️ [Franz] Sem contexto para lead {telefone}")
         stage = "hook"
@@ -994,7 +1003,7 @@ def responder_lead(
             if memoria:
                 memoria["navegando_bot"] = True
                 memoria["bot_tentativas"] = memoria.get("bot_tentativas", 0) + 1
-                salvar_memoria(f"bryan_lead_{telefone}", memoria)
+                salvar_memoria(f"bryan_lead_{telefone}", memoria, user_id=user_id)
             return BryanOutput(
                 intent="other",
                 emotion="neutro",
@@ -1010,7 +1019,7 @@ def responder_lead(
             **(memoria or {}),
             "estado": "lost",
             "facts": {**(memoria or {}).get("facts", {}), "deal_status": "opt_out"}
-        })
+        }, user_id=user_id)
         return BryanOutput(
             reply="Entendido! Vou remover seu contato agora. Se mudar de ideia no futuro, pode chamar 👍",
             intent="opt_out",
@@ -1032,7 +1041,7 @@ def responder_lead(
             "estado": "lost",
             "rejection_count": new_rejection_count,
             "facts": {**(memoria or {}).get("facts", {}), "deal_status": "lost"}
-        })
+        }, user_id=user_id)
         return BryanOutput(
             reply=reply_final,
             intent="rejection",
@@ -1147,7 +1156,7 @@ Responda SOMENTE JSON válido."""
                 "order_bump_offered": order_bump_offered or (next_stage == "order_bump"),
             },
             "tentativas": (memoria or {}).get("tentativas", 0) + 1
-        })
+        }, user_id=user_id)
 
         print(f"✅ [Franz] Resposta para {telefone}: stage {stage}→{next_stage}")
 
@@ -1203,10 +1212,12 @@ def gerar_followup(lead_data: dict, tipo: str) -> str:
     return msgs.get(tipo, msgs["24h"])
 
 
-def followup_automatico(telefone: str, tipo: str = "24h") -> BryanOutput:
+def followup_automatico(telefone: str, tipo: str = "24h", user_id: int = None) -> BryanOutput:
     """
     Envia follow-up automático para lead sem resposta.
     Chamado pelo cron/worker. Respeita horário de atendimento.
+
+    Multi-tenant: user_id obrigatorio (escopo da memoria por tenant).
 
     Args:
         telefone: Telefone do lead
@@ -1215,6 +1226,8 @@ def followup_automatico(telefone: str, tipo: str = "24h") -> BryanOutput:
     Returns:
         BryanOutput com a mensagem de follow-up
     """
+    if not user_id:
+        raise ValueError("user_id obrigatorio em followup_automatico (multi-tenant)")
     # Respeitar horário — follow-up só dentro do horário
     if not _dentro_do_horario():
         print(f"⏰ [Franz] Follow-up fora do horário — adiado")
@@ -1228,7 +1241,7 @@ def followup_automatico(telefone: str, tipo: str = "24h") -> BryanOutput:
         )
 
     # Carregar contexto
-    memoria = carregar_memoria(f"bryan_lead_{telefone}")
+    memoria = carregar_memoria(f"bryan_lead_{telefone}", user_id=user_id)
     if not memoria:
         print(f"⚠️ [Franz] Sem contexto para follow-up de {telefone}")
         return BryanOutput(
@@ -1252,7 +1265,7 @@ def followup_automatico(telefone: str, tipo: str = "24h") -> BryanOutput:
         **memoria,
         "estado": new_stage,
         "tentativas": memoria.get("tentativas", 0) + 1
-    })
+    }, user_id=user_id)
 
     print(f"✅ [Franz] Follow-up '{tipo}' gerado para {lead_data.get('nome', telefone)}")
 

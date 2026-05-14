@@ -111,7 +111,7 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
     state = FraLibState(
         segmento=config.get("segmento", "Academia"),
         cidade=config.get("cidade", "Sao Paulo"),
-        pipeline_id=gerar_pipeline_id(config.get("segmento", ""), config.get("cidade", "")),
+        pipeline_id=gerar_pipeline_id(tenant_id, config.get("segmento", ""), config.get("cidade", "")),
         tenant_id=tenant_id,
     )
     _log("PIPELINE v2 - FraLibState Orquestrador", "info")
@@ -381,7 +381,7 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
                 _proximo = leads[_try_idx]
                 print("[Pipeline] " + state.lead_nome + " rejeitado. Tentando: " + _proximo.lead.nome)
                 with engine.connect() as _conn_rej:
-                    _conn_rej.execute(text("UPDATE leads SET status='descartado', atualizado_em=:ts WHERE id=:id"), {"ts": datetime.now().isoformat(), "id": state.lead_id})
+                    _conn_rej.execute(text("UPDATE leads SET status='descartado', atualizado_em=:ts WHERE id=:id AND user_id=:uid"), {"ts": datetime.now().isoformat(), "id": state.lead_id, "uid": state.tenant_id})
                     _conn_rej.commit()
                 state.lead_obj = _proximo
                 state.lead_nome = _proximo.lead.nome
@@ -406,7 +406,7 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
                     break
             if not _encontrou_aprovado:
                 with engine.connect() as conn:
-                    conn.execute(text("UPDATE leads SET status='descartado', atualizado_em=:ts WHERE id=:id"), {"ts": datetime.now().isoformat(), "id": state.lead_id})
+                    conn.execute(text("UPDATE leads SET status='descartado', atualizado_em=:ts WHERE id=:id AND user_id=:uid"), {"ts": datetime.now().isoformat(), "id": state.lead_id, "uid": state.tenant_id})
                     conn.commit()
                 raise Exception("Todos os " + str(len(leads)) + " leads rejeitados pelo Caio. Tente outro segmento ou cidade.")
             if _encontrou_aprovado:
@@ -598,7 +598,7 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
         for tentativa_liz in range(1, MAX_LIZ + 1):
             try:
                 _log(f"  Tentativa {tentativa_liz}/{MAX_LIZ}...", "info")
-                liz_result = auditar(html=state.html_final, briefing=state.briefing_theo, tentativa=tentativa_liz, cidade=getattr(state, "cidade", ""), telefone=state.lead_raw_data.get("telefone", "") if state.lead_raw_data else "", nome=state.lead_nome if hasattr(state, "lead_nome") else "")
+                liz_result = auditar(html=state.html_final, briefing=state.briefing_theo, tentativa=tentativa_liz, cidade=getattr(state, "cidade", ""), telefone=state.lead_raw_data.get("telefone", "") if state.lead_raw_data else "", nome=state.lead_nome if hasattr(state, "lead_nome") else "", user_id=state.tenant_id, lead_id=getattr(state, "lead_id", None))
                 state.liz_score = liz_result.score
                 if liz_result.aprovado:
                     state.liz_aprovado = True
@@ -753,7 +753,7 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
                 proof=state.qualificacao_caio.razoes[0] if state.qualificacao_caio and getattr(state.qualificacao_caio, 'razoes', None) else None,
                 concorrentes=getattr(state, 'concorrentes', None)
             )
-            bryan_output = iniciar_contato(bryan_input)
+            bryan_output = iniciar_contato(bryan_input, user_id=state.tenant_id)
             _log("  Bryan: mensagem criada", "success")
             logger.info("[Pipeline] Bryan: OK")
 
@@ -765,7 +765,9 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
                 import httpx, re as _re, os as _os
                 meowhats_url = _os.getenv("MEOWHATS_URL", "http://localhost:3001")
                 meowhats_key = _os.getenv("MEOWHATS_KEY", "1763kovQ@")
-                tenant_id = f"fralib_user_{state.tenant_id}" if state.tenant_id else "fralib"
+                if not state.tenant_id:
+                    raise RuntimeError("tenant_id ausente — envio WhatsApp abortado (multi-tenant)")
+                tenant_id = f"fralib_user_{state.tenant_id}"
                 tel = (state.lead_obj.lead.whatsapp or state.lead_obj.lead.telefone or "").strip()
                 tel = _re.sub(r'\D', '', tel)
                 if not tel.startswith('55'):
@@ -805,8 +807,9 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
         with engine.connect() as conn:
             conn.execute(text("""
                 UPDATE leads SET site_url=:url, url_site=:url, processado=true,
-                processado_em=:ts, status='concluido', sdr_stage=:stage, atualizado_em=:ts WHERE id=:id
-            """), {"url": state.site_url, "ts": datetime.now().isoformat(), "id": state.lead_id, "stage": _sdr_stage_final})
+                processado_em=:ts, status='concluido', sdr_stage=:stage, atualizado_em=:ts
+                WHERE id=:id AND user_id=:uid
+            """), {"url": state.site_url, "ts": datetime.now().isoformat(), "id": state.lead_id, "stage": _sdr_stage_final, "uid": state.tenant_id})
             conn.commit()
         limpar_checkpoint(state.pipeline_id)
         _log("PIPELINE v2 CONCLUIDO - FraLibState OK", "success")
@@ -1195,11 +1198,14 @@ async def executar_pipeline_lead_existente(lead_id: str, tenant_id: int, forcar_
     import json as _json
     from utils.agente1_hunter_v2 import LeadRaw, LeadQualificado
 
-    # Carregar lead do banco
+    # Carregar lead do banco — valida ownership pelo tenant_id
     with engine.connect() as conn:
-        row = conn.execute(text("SELECT * FROM leads WHERE id=:id"), {"id": lead_id}).fetchone()
+        row = conn.execute(
+            text("SELECT * FROM leads WHERE id=:id AND user_id=:uid"),
+            {"id": lead_id, "uid": tenant_id},
+        ).fetchone()
         if not row:
-            logger.error(f"[Pipeline] Lead {lead_id} nao encontrado no banco")
+            logger.error(f"[Pipeline] Lead {lead_id} nao encontrado ou nao pertence ao usuario {tenant_id}")
             return
         lead_dict = dict(row._mapping)
 
@@ -1257,7 +1263,7 @@ async def executar_pipeline_lead_existente(lead_id: str, tenant_id: int, forcar_
 
     config = {"segmento": segmento, "cidade": cidade, "quantidade": 1, "score_minimo": 0}
     state = FraLibState(segmento=segmento, cidade=cidade,
-                        pipeline_id=gerar_pipeline_id(segmento, cidade),
+                        pipeline_id=gerar_pipeline_id(tenant_id, segmento, cidade),
                         tenant_id=tenant_id)
     state.lead_obj = lead_qualificado
     state.lead_nome = nome
@@ -1444,7 +1450,7 @@ async def _executar_pipeline_a_partir_fase2(state, tenant_id, config):
         _log("FASE 8: LIZ", "info")
         for _tentativa in range(3):
             try:
-                liz_result = auditar(html=state.html_final, briefing=state.briefing_theo, tentativa=_tentativa+1, cidade=getattr(state, "cidade", ""), telefone=state.lead_raw_data.get("telefone", "") if state.lead_raw_data else "", nome=state.lead_nome if hasattr(state, "lead_nome") else "")
+                liz_result = auditar(html=state.html_final, briefing=state.briefing_theo, tentativa=_tentativa+1, cidade=getattr(state, "cidade", ""), telefone=state.lead_raw_data.get("telefone", "") if state.lead_raw_data else "", nome=state.lead_nome if hasattr(state, "lead_nome") else "", user_id=state.tenant_id, lead_id=getattr(state, "lead_id", None))
                 state.liz_score = liz_result.score
                 if liz_result.aprovado:
                     state.liz_aprovado = True
@@ -1512,7 +1518,7 @@ async def _executar_pipeline_a_partir_fase2(state, tenant_id, config):
                 proof=state.qualificacao_caio.razoes[0] if state.qualificacao_caio and getattr(state.qualificacao_caio, 'razoes', None) else None,
                 concorrentes=getattr(state, 'concorrentes', None),
             )
-            bryan_result = iniciar_contato(bryan_input)
+            bryan_result = iniciar_contato(bryan_input, user_id=state.tenant_id)
             logger.info(f"[Pipeline] Bryan: OK | msg={str(bryan_result)[:60]}")
         except Exception as e:
             logger.warning(f"[Pipeline] Bryan erro: {e}")

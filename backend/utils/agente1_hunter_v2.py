@@ -333,13 +333,9 @@ async def buscar_lead_google_maps(
     print(f"   Sinais: {', '.join(resultado['sinais'][:3])}")
     print(f"   Dados suficientes: ✅")
 
-    # Salvar memória
-    salvar_memoria(f"hunter_v2_{lead.nome}", {
-        "lead": lead.model_dump(),
-        "score": resultado['score'],
-        "tier": resultado['tier'],
-        "dados_suficientes": True
-    })
+    # Memória do hunter so e usada em testes locais (singular).
+    # Em producao, buscar_leads_google_maps (plural) e chamado e nao precisa de memoria por lead.
+    # Mantemos como no-op silencioso se user_id nao for fornecido.
 
     return lead_qualificado
 

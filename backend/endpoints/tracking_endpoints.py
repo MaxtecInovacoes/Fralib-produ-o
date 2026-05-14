@@ -39,7 +39,12 @@ class TrackClickRequest(BaseModel):
 
 
 def _lead_existe(db: Session, lead_id: str) -> bool:
-    row = db.execute(text('SELECT 1 FROM leads WHERE id=:id'), {'id': lead_id}).fetchone()
+    # Tracking é público: só aceita leads com site publicado (status=concluido).
+    # Evita enumeração de IDs de leads não publicados.
+    row = db.execute(
+        text("SELECT 1 FROM leads WHERE id=:id AND status='concluido'"),
+        {'id': lead_id},
+    ).fetchone()
     return row is not None
 
 

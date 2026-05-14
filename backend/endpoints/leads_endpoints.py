@@ -673,12 +673,14 @@ async def registrar_feedback(
         telefone = lead_dict.get('telefone') or ''
 
         # Buscar última mensagem enviada pelo Bryan (direcao='saida')
+        # Defesa em profundidade: JOIN com leads valida ownership por user_id
         ultima_msg = db.execute(text("""
-            SELECT mensagem FROM interacoes
-            WHERE lead_id = :lead_id AND direcao = 'saida'
-            ORDER BY id DESC
+            SELECT i.mensagem FROM interacoes i
+            JOIN leads l ON l.id = i.lead_id
+            WHERE i.lead_id = :lead_id AND i.direcao = 'saida' AND l.user_id = :uid
+            ORDER BY i.id DESC
             LIMIT 1
-        """), {"lead_id": lead_id}).fetchone()
+        """), {"lead_id": lead_id, "uid": tenant_id}).fetchone()
         mensagem_usada = ultima_msg[0] if ultima_msg else ""
 
         # Salvar na sdr_learning
@@ -771,7 +773,7 @@ async def enviar_mensagem_lead(lead_id: str, db: Session = Depends(get_db), usua
         rating=rating or 0.0, site_url=site_url,
         score_caio=80, tier="STANDARD"
     )
-    bryan_output = iniciar_contato(bryan_input)
+    bryan_output = iniciar_contato(bryan_input, user_id=tenant_id)
 
     # Enviar via meowhats
     tel = (whatsapp or telefone or "").strip()

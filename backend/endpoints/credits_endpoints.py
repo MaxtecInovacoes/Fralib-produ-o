@@ -98,17 +98,42 @@ async def get_status(
 
 
 def _resolver_user_id(conn, meta_user_id, customer_email, stripe_customer_id):
-    """Resolve user_id usando 3 fallbacks: metadata, email, stripe_customer_id."""
+    """Resolve user_id com validacao cruzada — impede forja de metadata.
+
+    Coleta candidatos das 3 fontes (metadata, email, stripe_customer_id) e:
+    - 0 candidatos: retorna None.
+    - 1 candidato: retorna direto.
+    - >1 candidatos: conflito — confia em stripe_customer_id > email; metadata sozinho NAO basta.
+    """
+    candidatos = set()
+    uid_via_cid = None
+    uid_via_email = None
     if meta_user_id:
-        return int(meta_user_id)
+        try:
+            candidatos.add(int(meta_user_id))
+        except (TypeError, ValueError):
+            pass
     if customer_email:
         row = conn.execute(text('SELECT id FROM users WHERE email=:e'), {'e': customer_email}).fetchone()
         if row:
-            return int(row[0])
+            uid_via_email = int(row[0])
+            candidatos.add(uid_via_email)
     if stripe_customer_id:
         row = conn.execute(text('SELECT id FROM users WHERE stripe_customer_id=:c'), {'c': stripe_customer_id}).fetchone()
         if row:
-            return int(row[0])
+            uid_via_cid = int(row[0])
+            candidatos.add(uid_via_cid)
+    if not candidatos:
+        return None
+    if len(candidatos) == 1:
+        return candidatos.pop()
+    # Conflito: priorizar stripe_customer_id > email; metadata sozinho NAO eh aceito.
+    print(f'[Stripe] CONFLITO _resolver_user_id: candidatos={candidatos} '
+          f'meta={meta_user_id} email={customer_email} cid={stripe_customer_id}')
+    if uid_via_cid is not None:
+        return uid_via_cid
+    if uid_via_email is not None:
+        return uid_via_email
     return None
 
 

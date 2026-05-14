@@ -16,7 +16,6 @@ import re
 from pydantic import BaseModel, Field
 from typing import Optional, List, Dict, Any
 from llm_direct import call_claude
-from memory import salvar_memoria
 from agent_rag import format_rag_prompt, get_agent_temperature
 # from prompt_templates import formatar_prompt_liam
 from validation_layer import validar_html, gerar_prompt_retry

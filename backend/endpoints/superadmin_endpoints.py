@@ -4,6 +4,7 @@ from auth import get_current_user
 from database import get_db
 from sqlalchemy.orm import Session
 import jwt
+import json
 import os
 
 router = APIRouter(prefix='/api/superadmin', tags=['superadmin'])
@@ -18,6 +19,30 @@ def require_superadmin(user: dict = Depends(get_current_user)):
     if user.get("email") != SUPERADMIN_EMAIL:
         raise HTTPException(status_code=403, detail="Acesso negado: Super Admin apenas")
     return user
+
+
+def _audit(db, actor, action, target_user_id, target_id=None, metadata=None, request=None):
+    """Registra acao sensivel em audit_log. Falha silenciosa para nao quebrar o endpoint."""
+    try:
+        db.execute(text("""
+            INSERT INTO audit_log (actor_id, target_user_id, action, target_type, target_id, metadata, ip, user_agent)
+            VALUES (:actor, :target_user, :action, 'user', :target_id, CAST(:meta AS JSONB), :ip, :ua)
+        """), {
+            "actor": actor.get("id"),
+            "target_user": target_user_id,
+            "action": action,
+            "target_id": str(target_id) if target_id is not None else None,
+            "meta": json.dumps(metadata or {}),
+            "ip": (request.client.host if request and request.client else None),
+            "ua": (request.headers.get("user-agent") if request else None),
+        })
+        db.commit()
+    except Exception as _e:
+        print(f"[audit_log] falha ao registrar acao {action}: {_e}")
+        try:
+            db.rollback()
+        except Exception:
+            pass
 
 
 @router.get("/metrics")
@@ -169,20 +194,23 @@ async def list_users(db: Session = Depends(get_db), user: dict = Depends(require
 
 
 @router.post("/users/{user_id}/toggle")
-async def toggle_user(user_id: int, db: Session = Depends(get_db), user: dict = Depends(require_superadmin)):
+async def toggle_user(user_id: int, request: Request, db: Session = Depends(get_db), user: dict = Depends(require_superadmin)):
     """Ativar/desativar usuario"""
     try:
         row = db.execute(text("SELECT status, email FROM users WHERE id = :id"), {"id": user_id}).fetchone()
         if not row:
             raise HTTPException(status_code=404, detail="Usuario nao encontrado")
-        
+
         if row[1] == SUPERADMIN_EMAIL:
             raise HTTPException(status_code=403, detail="Nao pode desativar o superadmin")
-        
+
         new_status = "bloqueado" if row[0] != "bloqueado" else "ativo"
         db.execute(text("UPDATE users SET status = :status WHERE id = :id"), {"status": new_status, "id": user_id})
         db.commit()
-        
+
+        _audit(db, user, "toggle_user", user_id, target_id=user_id,
+               metadata={"from": row[0], "to": new_status, "email": row[1]}, request=request)
+
         return {"ok": True, "new_status": new_status, "user_id": user_id}
     except HTTPException:
         raise
@@ -209,7 +237,10 @@ async def set_plan(user_id: int, request: Request, db: Session = Depends(get_db)
             "UPDATE users SET plano = :plano, plano_pago = :pago WHERE id = :id"
         ), {"plano": plano, "pago": plano_pago, "id": user_id})
         db.commit()
-        
+
+        _audit(db, user, "set_plan", user_id, target_id=user_id,
+               metadata={"plano": plano, "plano_pago": plano_pago}, request=request)
+
         return {"ok": True, "plano": plano, "user_id": user_id}
     except HTTPException:
         raise
@@ -233,7 +264,10 @@ async def set_creditos(user_id: int, request: Request, db: Session = Depends(get
             "UPDATE users SET creditos = :c, creditos_max = :c WHERE id = :id"
         ), {"c": creditos, "id": user_id})
         db.commit()
-        
+
+        _audit(db, user, "set_creditos", user_id, target_id=user_id,
+               metadata={"creditos": creditos}, request=request)
+
         return {"ok": True, "creditos": creditos, "user_id": user_id}
     except HTTPException:
         raise
@@ -243,20 +277,23 @@ async def set_creditos(user_id: int, request: Request, db: Session = Depends(get
 
 
 @router.post("/impersonate/{user_id}")
-async def impersonate(user_id: int, db: Session = Depends(get_db), user: dict = Depends(require_superadmin)):
+async def impersonate(user_id: int, request: Request, db: Session = Depends(get_db), user: dict = Depends(require_superadmin)):
     """Logar como outro usuario"""
     try:
         row = db.execute(text("SELECT id, email, role FROM users WHERE id = :id"), {"id": user_id}).fetchone()
         if not row:
             raise HTTPException(status_code=404, detail="Usuario nao encontrado")
-        
+
         # Gerar token JWT para o usuario alvo
         token = jwt.encode(
             {"sub": str(row[0]), "email": row[1], "role": row[2] or "user"},
             SECRET_KEY,
             algorithm=ALGORITHM
         )
-        
+
+        _audit(db, user, "impersonate", int(row[0]), target_id=int(row[0]),
+               metadata={"email": row[1], "role": row[2] or "user"}, request=request)
+
         return {
             "ok": True,
             "token": token,

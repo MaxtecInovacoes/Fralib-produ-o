@@ -11,7 +11,6 @@ sys.path.insert(0, "/root/fralib/backend/agents")
 from pydantic import BaseModel, Field
 from typing import Optional, List, Dict, Any
 from llm_direct import call_claude, call_claude_structured
-from memory import salvar_memoria
 from liam_seo import _get_schema_type  # gerar_seo_tags e gerar_whatsapp_float substituidos por funcoes inline
 from open_design_selector import get_open_design_for_liam
 

@@ -53,8 +53,17 @@ def _normalizar_tel(jid: str) -> str:
     """Extrai número limpo do JID: '5511999@s.whatsapp.net' -> '5511999'"""
     return re.sub(r'\D', '', jid.split('@')[0])
 
-def _buscar_lead_por_tel(telefone: str):
-    """Busca lead no banco pelo telefone ou JID.
+_TENANT_RE = re.compile(r'^fralib_user_(\d+)$')
+
+def _user_id_from_tenant(tenant_id: str):
+    """Converte tenant_id 'fralib_user_{N}' em int N, ou None se inválido."""
+    if not tenant_id:
+        return None
+    m = _TENANT_RE.match(tenant_id)
+    return int(m.group(1)) if m else None
+
+def _buscar_lead_por_tel(telefone: str, user_id: int):
+    """Busca lead no banco pelo telefone ou JID, restrito ao user_id (tenant).
     Tenta com e sem código de país (55) para cobrir ambos formatos.
     """
     # Gera variantes: com 55 e sem 55
@@ -62,15 +71,16 @@ def _buscar_lead_por_tel(telefone: str):
     tel_sem_55 = telefone[2:] if telefone.startswith('55') and len(telefone) > 11 else telefone
 
     with engine.connect() as conn:
-        # Busca por telefone normalizado (tenta ambas variantes)
+        # Busca por telefone normalizado (tenta ambas variantes), filtrando por user_id
         row = conn.execute(text("""
             SELECT id, nome, segmento, cidade, sdr_stage, status,
                    COALESCE(telefone_whatsapp, whatsapp, telefone, '') as tel_raw
             FROM leads
-            WHERE regexp_replace(COALESCE(telefone_whatsapp, whatsapp, telefone, ''), '\\D', '', 'g')
+            WHERE user_id = :uid
+              AND regexp_replace(COALESCE(telefone_whatsapp, whatsapp, telefone, ''), '\\D', '', 'g')
                   IN (:tel1, :tel2)
             LIMIT 1
-        """), {"tel1": tel_com_55, "tel2": tel_sem_55}).fetchone()
+        """), {"tel1": tel_com_55, "tel2": tel_sem_55, "uid": user_id}).fetchone()
         if row:
             return row
         # Fallback: buscar por wpp_jid (LID de conta business)
@@ -78,9 +88,9 @@ def _buscar_lead_por_tel(telefone: str):
             SELECT id, nome, segmento, cidade, sdr_stage, status,
                    COALESCE(telefone_whatsapp, whatsapp, telefone, '') as tel_raw
             FROM leads
-            WHERE wpp_jid = :jid
+            WHERE user_id = :uid AND wpp_jid = :jid
             LIMIT 1
-        """), {"jid": telefone}).fetchone()
+        """), {"jid": telefone, "uid": user_id}).fetchone()
         return row
 
 def _salvar_interacao(lead_id: str, mensagem: str, direcao: str):
@@ -100,12 +110,12 @@ def _salvar_interacao(lead_id: str, mensagem: str, direcao: str):
     except Exception as e:
         logger.warning(f"Erro ao salvar interacao: {e}")
 
-def _atualizar_stage(lead_id: str, sdr_stage: str):
-    """Atualiza sdr_stage do lead no banco."""
+def _atualizar_stage(lead_id: str, sdr_stage: str, user_id: int):
+    """Atualiza sdr_stage do lead no banco (escopo ao user_id)."""
     with engine.connect() as conn:
         conn.execute(text(
-            "UPDATE leads SET sdr_stage=:stage, atualizado_em=:ts WHERE id=:id"
-        ), {"stage": sdr_stage, "ts": datetime.now().isoformat(), "id": lead_id})
+            "UPDATE leads SET sdr_stage=:stage, atualizado_em=:ts WHERE id=:id AND user_id=:uid"
+        ), {"stage": sdr_stage, "ts": datetime.now().isoformat(), "id": lead_id, "uid": user_id})
         conn.commit()
 
 
@@ -113,20 +123,21 @@ def _atualizar_stage(lead_id: str, sdr_stage: str):
 CLOSER_HUMANO = os.getenv("CLOSER_NUMERO", "5541992049684")
 
 
-def _notificar_handoff_humano(http_client, tenant_id: str, lead_id: str, nome: str, telefone: str, jid: str, meowhats_http: str):
+def _notificar_handoff_humano(http_client, tenant_id: str, lead_id: str, nome: str, telefone: str, jid: str, meowhats_http: str, user_id: int):
     """
     Notifica o closer humano que um lead está pronto pra fechar.
     Envia resumo do lead + últimas mensagens pro número do closer.
     Bryan para de responder (stage=handoff).
     """
     try:
-        # Buscar últimas interações
+        # Buscar últimas interações (filtradas por ownership via JOIN com leads)
         with engine.connect() as conn:
             rows = conn.execute(text("""
-                SELECT mensagem, direcao FROM interacoes
-                WHERE lead_id = :lid
-                ORDER BY criado_em DESC LIMIT 6
-            """), {"lid": lead_id}).fetchall()
+                SELECT i.mensagem, i.direcao FROM interacoes i
+                JOIN leads l ON l.id = i.lead_id
+                WHERE i.lead_id = :lid AND l.user_id = :uid
+                ORDER BY i.criado_em DESC LIMIT 6
+            """), {"lid": lead_id, "uid": user_id}).fetchall()
 
         historico = "\n".join([
             f"{'👤 Lead' if r[1] == 'entrada' else '🤖 Franz'}: {r[0][:80]}"
@@ -161,6 +172,10 @@ def _notificar_handoff_humano(http_client, tenant_id: str, lead_id: str, nome: s
 def _processar_mensagem(tenant_id: str, msg_data: dict):
     """Processa mensagem recebida de um lead."""
     try:
+        user_id = _user_id_from_tenant(tenant_id)
+        if user_id is None:
+            logger.warning(f"tenant_id invalido '{tenant_id}' — mensagem descartada (multi-tenant)")
+            return
         key = msg_data.get("key", {})
         # Ignorar mensagens enviadas por nós
         if key.get("fromMe", False):
@@ -185,8 +200,8 @@ def _processar_mensagem(tenant_id: str, msg_data: dict):
 
         logger.info(f"Mensagem de {telefone} ({push_name}): {texto[:60]}")
 
-        # Buscar lead no banco
-        lead = _buscar_lead_por_tel(telefone)
+        # Buscar lead no banco (escopo ao user_id do tenant)
+        lead = _buscar_lead_por_tel(telefone, user_id)
         if not lead:
             logger.info(f"Lead não encontrado para {telefone} — ignorando")
             return
@@ -198,8 +213,8 @@ def _processar_mensagem(tenant_id: str, msg_data: dict):
         if raw_jid != telefone and len(raw_jid) > 5:
             try:
                 with engine.connect() as conn:
-                    conn.execute(text("UPDATE leads SET wpp_jid=:jid WHERE id=:id AND (wpp_jid IS NULL OR wpp_jid != :jid)"),
-                                 {"jid": raw_jid, "id": lead_id})
+                    conn.execute(text("UPDATE leads SET wpp_jid=:jid WHERE id=:id AND user_id=:uid AND (wpp_jid IS NULL OR wpp_jid != :jid)"),
+                                 {"jid": raw_jid, "id": lead_id, "uid": user_id})
                     conn.commit()
             except Exception:
                 pass
@@ -230,7 +245,8 @@ def _processar_mensagem(tenant_id: str, msg_data: dict):
         bryan_output = responder_lead(
             telefone=tel_raw,
             mensagem_recebida=texto,
-            nome_negocio=nome or push_name
+            nome_negocio=nome or push_name,
+            user_id=user_id,
         )
 
         resposta = bryan_output.reply
@@ -240,7 +256,7 @@ def _processar_mensagem(tenant_id: str, msg_data: dict):
         if not resposta or not resposta.strip():
             logger.info(f"Lead {nome}: Bryan retornou reply vazio (intent={bryan_output.intent}) — não envia")
             if bryan_output.next_stage == "lost":
-                _atualizar_stage(lead_id, "lost")
+                _atualizar_stage(lead_id, "lost", user_id)
             return
 
         # Salvar resposta do Bryan
@@ -249,7 +265,7 @@ def _processar_mensagem(tenant_id: str, msg_data: dict):
         # Usar next_stage direto do Bryan (state machine real)
         novo_stage = bryan_output.next_stage or sdr_stage_atual or "hook"
 
-        _atualizar_stage(lead_id, novo_stage)
+        _atualizar_stage(lead_id, novo_stage, user_id)
 
         # Se Bryan agendou follow-up, salvar a data
         if novo_stage == "scheduled":
@@ -272,8 +288,8 @@ def _processar_mensagem(tenant_id: str, msg_data: dict):
 
                 with engine.connect() as conn:
                     conn.execute(text(
-                        "UPDATE leads SET followup_date=:fd WHERE id=:id"
-                    ), {"fd": followup_date, "id": lead_id})
+                        "UPDATE leads SET followup_date=:fd WHERE id=:id AND user_id=:uid"
+                    ), {"fd": followup_date, "id": lead_id, "uid": user_id})
                     conn.commit()
                 logger.info(f"Lead {nome}: agendado para {followup_date}")
 
@@ -311,7 +327,7 @@ def _processar_mensagem(tenant_id: str, msg_data: dict):
 
                 # 4. Se handoff → notificar humano e parar Bryan
                 if bryan_output.should_handoff or novo_stage == 'handoff':
-                    _notificar_handoff_humano(c, tenant_id, lead_id, nome, telefone, jid, meowhats_http)
+                    _notificar_handoff_humano(c, tenant_id, lead_id, nome, telefone, jid, meowhats_http, user_id)
 
         except Exception as e:
             logger.warning(f"Erro ao enviar resposta WPP: {e}")
@@ -346,7 +362,10 @@ async def _conectar_e_ouvir():
                 
                 if event_type == "message":
                     data = event.get("data", {})
-                    tenant_id = data.get("tenantId", "fralib")
+                    tenant_id = data.get("tenantId")
+                    if not tenant_id:
+                        logger.warning("Mensagem recebida sem tenantId — descartada (multi-tenant)")
+                        continue
                     msg_data  = data.get("message", {})
                     # Processar em thread separada para não bloquear o WebSocket
                     loop.run_in_executor(_executor, _processar_mensagem, tenant_id, msg_data)
