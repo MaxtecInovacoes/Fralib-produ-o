@@ -21,7 +21,7 @@ def upgrade():
             tipo            VARCHAR(32) NOT NULL,
             key_id          INTEGER REFERENCES provider_keys(id) ON DELETE SET NULL,
             mensagem        TEXT NOT NULL,
-            lead_id         BIGINT REFERENCES leads(id) ON DELETE SET NULL,
+            lead_id         TEXT REFERENCES leads(id) ON DELETE SET NULL,
             user_id_afetado BIGINT REFERENCES users(id) ON DELETE SET NULL,
             lido            BOOLEAN NOT NULL DEFAULT FALSE,
             criado_em       TIMESTAMP NOT NULL DEFAULT NOW(),
