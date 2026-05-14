@@ -7,6 +7,7 @@ import asyncio
 import json
 import os
 import re
+import threading
 import logging
 from datetime import datetime
 
@@ -21,9 +22,62 @@ logging.basicConfig(level=logging.INFO, format="[WPP-Listener] %(message)s")
 
 MEOWHATS_URL  = os.getenv("MEOWHATS_URL", "http://localhost:3001").replace("http://", "ws://").replace("https://", "wss://")
 MEOWHATS_KEY  = os.getenv("MEOWHATS_KEY", "")
+MEOWHATS_HTTP = os.getenv("MEOWHATS_URL", "http://localhost:3001")
 DATABASE_URL  = os.getenv("DATABASE_URL", "")
 
 engine = create_engine(DATABASE_URL, pool_pre_ping=True)
+
+# Cache do status de conexao por tenant, alimentado por eventos connection.update
+# do meowhats. Multi-tenant pos-fix (2026-05-13): meowhats emite "connected",
+# "pairing", "rejected", "logged_out", "disconnected", "reconnecting", "qr",
+# "timeout". So "connected" significa que o device esta pareado e pronto para
+# enviar mensagens.
+_TENANT_STATUS: dict[str, str] = {}
+_TENANT_STATUS_LOCK = threading.Lock()
+_CONNECTED_STATUSES = frozenset({"connected", "open", "authenticated"})
+
+
+def _set_tenant_status(tenant_id: str, status: str) -> None:
+    if not tenant_id or not status:
+        return
+    with _TENANT_STATUS_LOCK:
+        _TENANT_STATUS[tenant_id] = status
+
+
+def _get_tenant_status(tenant_id: str) -> str:
+    if not tenant_id:
+        return ""
+    with _TENANT_STATUS_LOCK:
+        return _TENANT_STATUS.get(tenant_id, "")
+
+
+def is_tenant_connected(tenant_id: str, *, fallback_http: bool = True) -> bool:
+    """Retorna True se o tenant esta com WhatsApp pareado e pronto para envio.
+
+    Usa o cache local (alimentado pelo WebSocket). Se o cache esta vazio para
+    aquele tenant e fallback_http=True, consulta GET /api/sessions/{id}/status
+    e cacheia o resultado. Chame com fallback_http=False em hot paths onde
+    consultas HTTP sao caras.
+    """
+    cached = _get_tenant_status(tenant_id)
+    if cached:
+        return cached in _CONNECTED_STATUSES
+    if not fallback_http:
+        return False
+    try:
+        import httpx
+        with httpx.Client(timeout=3) as c:
+            r = c.get(
+                f"{MEOWHATS_HTTP}/api/sessions/{tenant_id}/status",
+                headers={"X-API-Key": MEOWHATS_KEY},
+            )
+            if r.status_code == 200:
+                status = (r.json() or {}).get("status", "")
+                _set_tenant_status(tenant_id, status)
+                return status in _CONNECTED_STATUSES
+    except Exception as e:
+        logger.debug(f"is_tenant_connected fallback HTTP falhou ({tenant_id}): {e}")
+    return False
 
 # Mapeamento estado Bryan -> sdr_stage kanban
 ESTADO_TO_STAGE = {
@@ -129,6 +183,12 @@ def _notificar_handoff_humano(http_client, tenant_id: str, lead_id: str, nome: s
     Envia resumo do lead + últimas mensagens pro número do closer.
     Bryan para de responder (stage=handoff).
     """
+    if not is_tenant_connected(tenant_id):
+        logger.warning(
+            f"Handoff de {nome} NAO notificado: tenant {tenant_id} desconectado "
+            f"(status '{_get_tenant_status(tenant_id) or 'unknown'}')."
+        )
+        return
     try:
         # Buscar últimas interações (filtradas por ownership via JOIN com leads)
         with engine.connect() as conn:
@@ -295,6 +355,17 @@ def _processar_mensagem(tenant_id: str, msg_data: dict):
 
         logger.info(f"Lead {nome}: stage {sdr_stage_atual} -> {novo_stage}")
 
+        # Gate multi-tenant: nao tente enviar se o device do tenant nao esta
+        # pareado/conectado. Evita erros silenciosos em "pairing", "rejected",
+        # "logged_out", "disconnected".
+        if not is_tenant_connected(tenant_id):
+            current = _get_tenant_status(tenant_id) or "unknown"
+            logger.warning(
+                f"Lead {nome}: envio BLOQUEADO — tenant {tenant_id} esta em status '{current}'. "
+                f"Resposta de Bryan ja salva no historico; sera reenviada quando reconectar."
+            )
+            return
+
         # Enviar resposta via meowhats COM delay humanizado (composing)
         import httpx, time
         meowhats_http = os.getenv("MEOWHATS_URL", "http://localhost:3001")
@@ -372,7 +443,15 @@ async def _conectar_e_ouvir():
                     
                 elif event_type == "connection.update":
                     data = event.get("data", {})
-                    logger.info(f"Conexão WPP: tenant={data.get('tenantId')} status={data.get('status')}")
+                    tenant_id = data.get("tenantId") or ""
+                    status = data.get("status") or ""
+                    if tenant_id:
+                        _set_tenant_status(tenant_id, status)
+                    # Avisar quando o pareamento e recusado por hijack tentativo
+                    if status == "rejected":
+                        logger.warning(f"Conexão WPP RECUSADA: tenant={tenant_id} — {data.get('error', '')}")
+                    else:
+                        logger.info(f"Conexão WPP: tenant={tenant_id} status={status}")
                     
             except json.JSONDecodeError:
                 pass

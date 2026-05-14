@@ -11,6 +11,7 @@ from sqlalchemy import text
 
 from database import engine
 from services.email_service import enviar_email_resumo_diario
+from whatsapp_listener import is_tenant_connected
 
 router = APIRouter(prefix='/api/cron', tags=['cron'])
 
@@ -154,6 +155,10 @@ async def despachar_fila_bryan(x_cron_secret: str = Header(None, alias='X-Cron-S
                 jid = f"{tel}@s.whatsapp.net"
                 wpp_tenant = f"fralib_user_{user_id}"
 
+                if not is_tenant_connected(wpp_tenant):
+                    print(f"[Cron Bryan] ⏸ Lead {nome}: tenant {wpp_tenant} sem WhatsApp conectado — pulando")
+                    continue
+
                 with httpx.Client(timeout=10) as c:
                     r = c.post(
                         f"{meowhats_url}/api/sessions/{wpp_tenant}/send",
@@ -276,6 +281,10 @@ async def followup_bryan(x_cron_secret: str = Header(None, alias='X-Cron-Secret'
                     continue
                 wpp_tenant = f"fralib_user_{user_id}"
 
+                if not is_tenant_connected(wpp_tenant):
+                    print(f"[Cron Bryan] ⏸ Follow-up lead {lead_id}: tenant {wpp_tenant} sem WhatsApp conectado — pulando")
+                    continue
+
                 with httpx.Client(timeout=10) as c:
                     r = c.post(
                         f"{meowhats_url}/api/sessions/{wpp_tenant}/send",
@@ -316,6 +325,10 @@ async def followup_bryan(x_cron_secret: str = Header(None, alias='X-Cron-Secret'
                     print(f"[Cron Bryan] ⚠️ lead {lead_id} sem user_id — ignorado (multi-tenant)")
                     continue
                 wpp_tenant = f"fralib_user_{user_id}"
+
+                if not is_tenant_connected(wpp_tenant):
+                    print(f"[Cron FU] ⏸ Agendado lead {lead_id}: tenant {wpp_tenant} sem WhatsApp conectado — pulando")
+                    continue
 
                 with httpx.Client(timeout=10) as c:
                     r = c.post(

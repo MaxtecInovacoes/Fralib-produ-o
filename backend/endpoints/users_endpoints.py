@@ -16,6 +16,66 @@ from core.auth import get_current_user
 
 router = APIRouter(prefix='/api/users', tags=['users'])
 
+_WPP_CONNECTED_STATES = ("connected", "open", "authenticated")
+
+
+async def _check_whatsapp_connected(user_id: int) -> bool:
+    """Checa se o WhatsApp do user esta conectado no meowhats.
+
+    Tem dois caminhos: rota direta /api/sessions/{tenant}/status e fallback
+    listando todas as sessoes. Timeout maior (8s) + 1 retry para evitar
+    falso 'desconectado' quando o meowhats demora a responder.
+    """
+    import httpx, asyncio, logging
+    _log = logging.getLogger(__name__)
+
+    meowhats_url = os.getenv("MEOWHATS_URL", "http://localhost:3001")
+    meowhats_key = os.getenv("MEOWHATS_KEY", "1763kovQ@")
+    tenant_id = f"fralib_user_{user_id}"
+    headers = {"X-API-Key": meowhats_key}
+
+    async def _try_direct():
+        async with httpx.AsyncClient(timeout=8) as c:
+            r = await c.get(f"{meowhats_url}/api/sessions/{tenant_id}/status", headers=headers)
+            if r.status_code == 200:
+                return r.json().get("status") in _WPP_CONNECTED_STATES
+            return None
+
+    async def _try_list():
+        async with httpx.AsyncClient(timeout=8) as c:
+            r = await c.get(f"{meowhats_url}/api/sessions", headers=headers)
+            if r.status_code == 200:
+                for s in r.json():
+                    if s.get("tenantId") == tenant_id or s.get("id") == tenant_id:
+                        return s.get("status") in _WPP_CONNECTED_STATES
+                return False
+            return None
+
+    for tentativa in (1, 2):
+        try:
+            v = await _try_direct()
+            if v is True:
+                return True
+            if v is False:
+                # rota direta confirmou desconectado — tenta listar antes de aceitar
+                v2 = await _try_list()
+                if v2 is True:
+                    return True
+                if v2 is False:
+                    return False
+                # listar nao respondeu — segue retry
+            # v is None (status != 200) — tenta listar
+            v2 = await _try_list()
+            if v2 is not None:
+                return bool(v2)
+        except Exception as e:
+            _log.warning(f"[wpp_check] user={user_id} tentativa={tentativa} erro={e}")
+            if tentativa == 1:
+                await asyncio.sleep(0.4)
+                continue
+
+    return False
+
 class UserProfileUpdate(BaseModel):
     nome: Optional[str] = None
     telefone: Optional[str] = None
@@ -75,19 +135,8 @@ async def onboarding_status(db: Session = Depends(get_db), user: dict = Depends(
 
     perfil_ok = bool(row[0] and row[2])  # nome + nicho preenchidos
 
-    # Verificar WhatsApp conectado
-    wpp_ok = False
-    try:
-        meowhats_url = os.getenv("MEOWHATS_URL", "http://localhost:3001")
-        meowhats_key = os.getenv("MEOWHATS_KEY", "1763kovQ@")
-        async with httpx.AsyncClient(timeout=3) as c:
-            tenant_id = f"fralib_user_{user_id}"
-            r = await c.get(f"{meowhats_url}/api/sessions/{tenant_id}/status", headers={"X-API-Key": meowhats_key})
-            if r.status_code == 200:
-                data = r.json()
-                wpp_ok = data.get("status") in ("connected", "open", "authenticated")
-    except Exception:
-        pass
+    # Verificar WhatsApp conectado — 2 caminhos com fallback + retry
+    wpp_ok = await _check_whatsapp_connected(user_id)
 
     # Verificar se tem lead demo
     lead_demo = db.execute(text(

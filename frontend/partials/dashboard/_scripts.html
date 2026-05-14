@@ -1422,15 +1422,62 @@ async function verificarOnboarding() {
       if (!avisoWpp) {
         avisoWpp = document.createElement('div');
         avisoWpp.id = 'onboarding-aviso-wpp';
-        avisoWpp.style.cssText = 'position:fixed;bottom:20px;right:20px;background:#1c1c2e;border:1px solid #f59e0b;color:#f59e0b;padding:14px 18px;border-radius:12px;font-size:13px;z-index:9998;max-width:320px;box-shadow:0 4px 20px rgba(0,0,0,.4);';
-        avisoWpp.innerHTML = '<strong>📱 WhatsApp não conectado</strong><br><span style="color:#ccc;font-size:12px">Conecte seu WhatsApp para ativar o SDR automático.</span><br><button onclick="mostrarView("perfil");document.getElementById("onboarding-aviso-wpp").remove()" style="margin-top:10px;background:#f59e0b;color:#000;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600">Conectar agora →</button><button onclick="this.parentElement.remove()" style="margin-top:10px;margin-left:8px;background:transparent;color:#888;border:none;cursor:pointer;font-size:12px">Depois</button>';
+        avisoWpp.style.cssText = 'position:fixed;bottom:20px;right:20px;background:#1c1c2e;border:1px solid #f59e0b;color:#f59e0b;padding:14px 18px;border-radius:12px;font-size:13px;z-index:9998;max-width:340px;box-shadow:0 4px 20px rgba(0,0,0,.4);';
+        avisoWpp.innerHTML = '<strong>📱 WhatsApp não conectado</strong><br><span style="color:#ccc;font-size:12px">Conecte seu WhatsApp para ativar o SDR automático.</span><br><div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap;align-items:center"><button onclick="mostrarView(&quot;perfil&quot;);document.getElementById(&quot;onboarding-aviso-wpp&quot;).remove();_wppAvisoStopPoll()" style="background:#f59e0b;color:#000;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600">Conectar agora →</button><button id="aviso-wpp-recheck" onclick="_wppAvisoRecheck(this)" style="background:transparent;color:#f59e0b;border:1px solid #f59e0b;padding:5px 12px;border-radius:6px;cursor:pointer;font-size:11px">Já conectei</button><button onclick="this.closest(&quot;#onboarding-aviso-wpp&quot;).remove();_wppAvisoStopPoll()" style="background:transparent;color:#888;border:none;cursor:pointer;font-size:12px">Depois</button></div><div id="aviso-wpp-feedback" style="margin-top:6px;font-size:11px;color:#94a3b8;min-height:14px"></div>';
         document.body.appendChild(avisoWpp);
+        _wppAvisoStartPoll();
       }
     } else {
       if (avisoWpp) avisoWpp.remove();
+      _wppAvisoStopPoll();
     }
   } catch (e) {
     console.error('[Onboarding] Erro:', e);
+  }
+}
+
+// ── Polling do aviso de WhatsApp: refaz onboarding-status enquanto popup
+//    estiver visível. Some sozinho quando o backend confirmar conectado.
+var _wppAvisoTimer = null;
+function _wppAvisoStopPoll() {
+  if (_wppAvisoTimer) { clearInterval(_wppAvisoTimer); _wppAvisoTimer = null; }
+}
+function _wppAvisoStartPoll() {
+  _wppAvisoStopPoll();
+  _wppAvisoTimer = setInterval(async function() {
+    var aviso = document.getElementById('onboarding-aviso-wpp');
+    if (!aviso) { _wppAvisoStopPoll(); return; }
+    try {
+      var r = await AuthHelper.authFetch('/api/users/onboarding-status?_=' + Date.now(), { cache: 'no-store' });
+      if (!r.ok) return;
+      var s = await r.json();
+      if (s.wpp_ok) {
+        aviso.remove();
+        _wppAvisoStopPoll();
+        if (typeof mostrarToast === 'function') mostrarToast('✅ WhatsApp conectado — SDR ativo');
+      }
+    } catch (e) { /* silencioso, tenta de novo no proximo tick */ }
+  }, 10000);
+}
+async function _wppAvisoRecheck(btn) {
+  var fb = document.getElementById('aviso-wpp-feedback');
+  if (btn) { btn.disabled = true; btn.textContent = 'Verificando...'; }
+  if (fb) fb.textContent = '';
+  try {
+    var r = await AuthHelper.authFetch('/api/users/onboarding-status?_=' + Date.now(), { cache: 'no-store' });
+    var s = r.ok ? await r.json() : { wpp_ok: false };
+    if (s.wpp_ok) {
+      var aviso = document.getElementById('onboarding-aviso-wpp');
+      if (aviso) aviso.remove();
+      _wppAvisoStopPoll();
+      if (typeof mostrarToast === 'function') mostrarToast('✅ WhatsApp conectado — SDR ativo');
+    } else {
+      if (fb) fb.textContent = 'Ainda desconectado. Verifique se o QR foi escaneado.';
+      if (btn) { btn.disabled = false; btn.textContent = 'Já conectei'; }
+    }
+  } catch (e) {
+    if (fb) fb.textContent = 'Erro ao verificar. Tente novamente.';
+    if (btn) { btn.disabled = false; btn.textContent = 'Já conectei'; }
   }
 }
 

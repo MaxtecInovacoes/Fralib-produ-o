@@ -13,6 +13,7 @@ from database import get_db, get_pipeline_state, update_pipeline_state, engine, 
 from auth import get_current_user
 from utils.agente1_hunter_v2 import buscar_leads_google_maps
 from sse_endpoints import adicionar_log
+from whatsapp_listener import is_tenant_connected
 
 import logging as _logging
 
@@ -726,22 +727,9 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
         logger.info(f"[Pipeline] HealthCheck OK: {state.site_url}")
 
         _log("FASE 10: BRYAN", "info")
-        # Verificar WhatsApp conectado para o Bryan
-        _wpp_conectado = False
-        try:
-            import httpx as _httpx_b
-            _meowhats_url = os.getenv("MEOWHATS_URL", "http://localhost:3001")
-            _wpp_tenant = f"fralib_user_{tenant_id}"
-            with _httpx_b.Client(timeout=5) as _c_b:
-                _meowhats_key = os.getenv("MEOWHATS_KEY", "1763kovQ@")
-                _r_b = _c_b.get(f"{_meowhats_url}/api/sessions", headers={"X-API-Key": _meowhats_key})
-                if _r_b.status_code == 200:
-                    for _s_b in _r_b.json():
-                        if _s_b.get("tenantId") == _wpp_tenant and _s_b.get("status") == "connected":
-                            _wpp_conectado = True
-                            break
-        except Exception:
-            pass
+        # Verificar WhatsApp conectado para o Bryan (cache local + fallback HTTP)
+        _wpp_tenant_check = f"fralib_user_{tenant_id}"
+        _wpp_conectado = is_tenant_connected(_wpp_tenant_check)
         try:
             bryan_input = BryanInput(
                 nome=state.lead_nome, cidade=state.lead_obj.lead.cidade,
@@ -784,6 +772,10 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
                     if test_number:
                         jid = f"{test_number}@s.whatsapp.net"
                         _log(f"  Bryan: MODO TESTE - redirecionando para {test_number}", "warning")
+                    # Re-check defensivo: tenant pode ter caido entre o check do _wpp_conectado e aqui
+                    if not is_tenant_connected(tenant_id, fallback_http=False):
+                        _log(f"  Bryan: envio cancelado — tenant {tenant_id} caiu antes do envio.", "warning")
+                        raise RuntimeError("tenant_disconnected_at_send")
                     with httpx.Client(timeout=10) as c:
                         r = c.post(
                             f"{meowhats_url}/api/sessions/{tenant_id}/send",
@@ -1040,21 +1032,7 @@ async def iniciar_pipeline(
     _check_rate_limit(str(tenant_id))
 
     # Verificar se WhatsApp está conectado (não bloqueia, apenas seta flag)
-    _wpp_conectado = False
-    try:
-        import httpx as _httpx_check
-        _meowhats_url = os.getenv("MEOWHATS_URL", "http://localhost:3001")
-        _meowhats_key = os.getenv("MEOWHATS_KEY", "1763kovQ@")
-        _wpp_tenant = f"fralib_user_{tenant_id}"
-        with _httpx_check.Client(timeout=5) as _c:
-            _r_wpp = _c.get(f"{_meowhats_url}/api/sessions", headers={"X-API-Key": _meowhats_key})
-            if _r_wpp.status_code == 200:
-                for _s in _r_wpp.json():
-                    if _s.get("tenantId") == _wpp_tenant and _s.get("status") == "connected":
-                        _wpp_conectado = True
-                        break
-    except Exception:
-        pass
+    _wpp_conectado = is_tenant_connected(f"fralib_user_{tenant_id}")
     if not _wpp_conectado:
         print("[Pipeline] ⚠️ WhatsApp não conectado. O site será gerado mas o contato NÃO será enviado. Conecte o WhatsApp no painel para ativar o envio.", "warning")
 

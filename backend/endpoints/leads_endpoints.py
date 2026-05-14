@@ -8,6 +8,7 @@ sys.path.append('/root/fralib/backend/core')
 from database import get_db
 from auth import get_current_user
 from sse_endpoints import adicionar_log
+from whatsapp_listener import is_tenant_connected
 
 router = APIRouter(prefix='/api/leads', tags=['leads'])
 
@@ -781,6 +782,9 @@ async def enviar_mensagem_lead(lead_id: str, db: Session = Depends(get_db), usua
     if not tel.startswith('55'):
         tel = '55' + tel
     jid = f"{tel}@s.whatsapp.net"
+
+    if not is_tenant_connected(wpp_tenant):
+        raise HTTPException(409, "WhatsApp do usuário não está conectado. Pareie o QR code antes de enviar mensagens.")
 
     async with httpx.AsyncClient(timeout=10) as c:
         r_send = await c.post(
