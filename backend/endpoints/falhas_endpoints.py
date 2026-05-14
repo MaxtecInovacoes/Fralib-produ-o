@@ -172,9 +172,9 @@ async def retry_falha(
         text("""
             UPDATE pipeline_failures
             SET resolvido = TRUE, resolvido_em = NOW()
-            WHERE id = :fid
+            WHERE id = :fid AND tenant_id = :tid
         """),
-        {"fid": int(falha_id)},
+        {"fid": int(falha_id), "tid": tenant_id},
     )
     db.commit()
 

@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FraLib — Super Admin</title>
+<link rel="icon" type="image/x-icon" href="/favicon.ico">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="/js/auth-helper.js"></script>
+<style>
+:root{
+  --bg:#0a0714;--surface:#0d0d12;--card:#12121a;--hover:#1c1c28;
+  --purple:#9333ea;--purple-300:#c084fc;--purple-900:#1a0a30;
+  --border:rgba(147,51,234,0.18);--border-hi:rgba(147,51,234,0.50);
+  --text:#f0f0f5;--muted:#8888a0;--dim:#5a5a70;
+  --cyan:#00FFB3;--gold:#FFB800;
+  --success:#22c55e;--warning:#f59e0b;--danger:#ef4444;--info:#38bdf8;
+  --brand:'Press Start 2P',monospace;--ui:'DM Sans',system-ui,sans-serif;--mono:'JetBrains Mono',monospace;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font-family:var(--ui);background:var(--bg);color:var(--text);display:flex;flex-direction:column;min-height:100vh;-webkit-font-smoothing:antialiased}
+a{color:var(--purple-300);text-decoration:none}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+input,select{font-family:inherit}
+
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 24px;background:var(--surface);border-bottom:2px solid var(--border);position:sticky;top:0;z-index:10}
+.topbar-left{display:flex;align-items:center;gap:18px}
+.brand{font-family:var(--brand);font-size:11px;color:var(--purple-300);letter-spacing:1px}
+.badge-super{font-family:var(--mono);font-size:10px;padding:4px 10px;background:var(--purple-900);border:1px solid var(--purple);color:var(--purple-300);border-radius:2px;letter-spacing:1px}
+.topbar-right{display:flex;align-items:center;gap:14px;font-size:13px;color:var(--muted)}
+.topbar-right b{color:var(--text);font-weight:500}
+.btn-logout{padding:6px 12px;border:1px solid var(--border-hi);font-size:12px;color:var(--purple-300);transition:.15s}
+.btn-logout:hover{background:var(--purple-900)}
+
+.tabs{display:flex;gap:0;background:var(--surface);border-bottom:1px solid var(--border);padding:0 24px}
+.tab{padding:14px 22px;font-size:13px;font-weight:500;color:var(--muted);border-bottom:2px solid transparent;transition:.15s;letter-spacing:.3px}
+.tab:hover{color:var(--text)}
+.tab.active{color:var(--purple-300);border-bottom-color:var(--purple)}
+
+.main{flex:1;padding:24px;max-width:1600px;margin:0 auto;width:100%}
+.panel{display:none}
+.panel.active{display:block}
+
+h2.section-title{font-family:var(--brand);font-size:12px;color:var(--purple-300);margin-bottom:18px;letter-spacing:1px}
+.muted{color:var(--muted);font-size:13px}
+
+/* metrics grid */
+.metrics-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;margin-bottom:24px}
+.metric-card{background:var(--card);border:1px solid var(--border);padding:18px 20px;transition:.15s}
+.metric-card:hover{border-color:var(--border-hi)}
+.metric-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px}
+.metric-value{font-family:var(--mono);font-size:24px;font-weight:600;color:var(--text)}
+.metric-value.cyan{color:var(--cyan)}
+.metric-value.gold{color:var(--gold)}
+.metric-sub{font-size:11px;color:var(--dim);margin-top:6px}
+
+/* table */
+.table-wrap{background:var(--card);border:1px solid var(--border);overflow:hidden}
+.table-toolbar{padding:14px 16px;display:flex;gap:10px;align-items:center;border-bottom:1px solid var(--border);flex-wrap:wrap}
+.input{padding:8px 12px;background:var(--bg);border:1px solid var(--border);color:var(--text);font-size:13px;min-width:200px}
+.input:focus{outline:none;border-color:var(--purple)}
+.select{padding:8px 10px;background:var(--bg);border:1px solid var(--border);color:var(--text);font-size:13px}
+.btn{padding:8px 14px;border:1px solid var(--border-hi);font-size:12px;color:var(--purple-300);transition:.15s;font-weight:500;letter-spacing:.3px}
+.btn:hover{background:var(--purple-900)}
+.btn-primary{background:var(--purple);color:#fff;border-color:var(--purple)}
+.btn-primary:hover{background:#a855f7}
+.btn-danger{color:#fca5a5;border-color:rgba(239,68,68,.35)}
+.btn-danger:hover{background:rgba(239,68,68,.12)}
+.btn-success{color:#86efac;border-color:rgba(34,197,94,.35)}
+.btn-success:hover{background:rgba(34,197,94,.12)}
+
+.table{width:100%;border-collapse:collapse;font-size:13px}
+.table thead th{text-align:left;padding:12px 14px;background:var(--surface);font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);font-weight:500;border-bottom:1px solid var(--border)}
+.table tbody td{padding:12px 14px;border-bottom:1px solid rgba(147,51,234,0.08)}
+.table tbody tr:hover{background:var(--hover)}
+.table tbody tr:last-child td{border-bottom:none}
+.pill{display:inline-block;padding:2px 8px;font-size:10px;font-family:var(--mono);border-radius:2px;letter-spacing:.5px}
+.pill-trial{background:rgba(56,189,248,.12);color:var(--info);border:1px solid rgba(56,189,248,.3)}
+.pill-pago{background:rgba(34,197,94,.12);color:var(--success);border:1px solid rgba(34,197,94,.3)}
+.pill-blocked{background:rgba(239,68,68,.12);color:var(--danger);border:1px solid rgba(239,68,68,.3)}
+.pill-admin{background:rgba(255,184,0,.12);color:var(--gold);border:1px solid rgba(255,184,0,.3)}
+.row-actions{display:flex;gap:6px;flex-wrap:wrap}
+.row-actions .btn{padding:5px 10px;font-size:11px}
+
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--purple);border-radius:50%;animation:spin .8s linear infinite;vertical-align:middle}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading{padding:40px;text-align:center;color:var(--muted)}
+.empty{padding:40px;text-align:center;color:var(--dim);font-size:13px}
+
+.toast{position:fixed;bottom:20px;right:20px;padding:12px 18px;background:var(--card);border:1px solid var(--border-hi);font-size:13px;z-index:1000;animation:slidein .2s}
+.toast.success{border-color:rgba(34,197,94,.5);color:#86efac}
+.toast.error{border-color:rgba(239,68,68,.5);color:#fca5a5}
+@keyframes slidein{from{transform:translateX(20px);opacity:0}to{transform:none;opacity:1}}
+
+/* modal */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;z-index:200}
+.modal-bg.open{display:flex}
+.modal{background:var(--card);border:1px solid var(--border-hi);max-width:460px;width:90%;padding:24px}
+.modal h3{font-family:var(--brand);font-size:11px;color:var(--purple-300);margin-bottom:16px}
+.modal-body{margin-bottom:18px;font-size:13px;color:var(--text)}
+.modal-body label{display:block;font-size:12px;color:var(--muted);margin:10px 0 6px;text-transform:uppercase;letter-spacing:1px}
+.modal-actions{display:flex;justify-content:flex-end;gap:10px}
+
+/* charts area */
+.chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px}
+@media (max-width:900px){.chart-grid{grid-template-columns:1fr}}
+.chart-card{background:var(--card);border:1px solid var(--border);padding:16px}
+.chart-card h4{font-size:12px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:12px;font-weight:500}
+canvas{max-width:100%}
+
+.access-denied{padding:80px 24px;text-align:center}
+.access-denied h1{font-family:var(--brand);font-size:14px;color:var(--danger);margin-bottom:12px}
+.access-denied p{color:var(--muted);font-size:14px}
+</style>
+</head>
+<body>
+
+<div id="gate" class="access-denied" style="display:none">
+  <h1>Acesso negado</h1>
+  <p id="gate-msg">Esta área é restrita ao Super Admin.</p>
+  <p style="margin-top:20px"><a href="/dashboard">Voltar para o dashboard</a></p>
+</div>
+
+<div id="app" style="display:none;flex:1;flex-direction:column">
+
+<div class="topbar">
+  <div class="topbar-left">
+    <span class="brand">FRALIB · SUPERADMIN</span>
+    <span class="badge-super">ROOT</span>
+  </div>
+  <div class="topbar-right">
+    <span>Logado como <b id="me-email">…</b></span>
+    <button class="btn-logout" onclick="logout()">Sair</button>
+  </div>
+</div>
+
+<div class="tabs">
+  <button class="tab active" data-tab="metricas" onclick="switchTab('metricas')">Métricas</button>
+  <button class="tab" data-tab="usuarios" onclick="switchTab('usuarios')">Usuários</button>
+  <button class="tab" data-tab="consumo" onclick="switchTab('consumo')">Consumo</button>
+</div>
+
+<div class="main">
+
+  <!-- ========== METRICAS ========== -->
+  <section class="panel active" id="panel-metricas">
+    <h2 class="section-title">VISÃO GERAL DO SISTEMA</h2>
+    <div id="metrics-area" class="loading"><span class="spinner"></span> carregando métricas…</div>
+  </section>
+
+  <!-- ========== USUARIOS ========== -->
+  <section class="panel" id="panel-usuarios">
+    <h2 class="section-title">USUÁRIOS DA PLATAFORMA</h2>
+    <div class="table-wrap">
+      <div class="table-toolbar">
+        <input type="text" id="search-users" class="input" placeholder="Buscar por email ou nome…" oninput="renderUsers()">
+        <select id="filter-plano" class="select" onchange="renderUsers()">
+          <option value="">Todos os planos</option>
+          <option value="trial">trial</option>
+          <option value="starter">starter</option>
+          <option value="pro">pro</option>
+          <option value="beta">beta</option>
+          <option value="admin">admin</option>
+        </select>
+        <select id="filter-status" class="select" onchange="renderUsers()">
+          <option value="">Todos os status</option>
+          <option value="ativo">ativo</option>
+          <option value="trial">trial</option>
+          <option value="bloqueado">bloqueado</option>
+        </select>
+        <button class="btn" onclick="loadUsers()">Atualizar</button>
+        <span class="muted" id="users-count" style="margin-left:auto"></span>
+      </div>
+      <div id="users-area">
+        <div class="loading"><span class="spinner"></span> carregando…</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== CONSUMO ========== -->
+  <section class="panel" id="panel-consumo">
+    <h2 class="section-title">CONSUMO DE TOKENS & CUSTO</h2>
+    <div class="table-toolbar" style="border:1px solid var(--border);background:var(--card);margin-bottom:14px">
+      <span class="muted">Período:</span>
+      <select id="periodo" class="select" onchange="loadUsage()">
+        <option value="24h">Últimas 24h</option>
+        <option value="48h" selected>Últimas 48h</option>
+        <option value="7d">Últimos 7 dias</option>
+        <option value="30d">Últimos 30 dias</option>
+      </select>
+      <button class="btn" onclick="loadUsage()">Atualizar</button>
+    </div>
+    <div id="usage-area" class="loading"><span class="spinner"></span> carregando…</div>
+  </section>
+
+</div>
+
+</div>
+
+<!-- modal genérico -->
+<div class="modal-bg" id="modal">
+  <div class="modal">
+    <h3 id="modal-title">…</h3>
+    <div class="modal-body" id="modal-body"></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" id="modal-ok" onclick="confirmModal()">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const SUPERADMIN_EMAIL = "dezigpi@gmail.com";
+let USERS = [];
+let CURRENT_USER = null;
+
+// ===== boot =====
+(async function boot(){
+  const token = localStorage.getItem('fralib_token');
+  if(!token){ window.location.href='/login'; return; }
+  try{
+    const r = await fetch('/api/auth/me',{headers:{Authorization:'Bearer '+token}});
+    if(!r.ok){ window.location.href='/login'; return; }
+    const me = await r.json();
+    CURRENT_USER = me.user || me;
+    const email = CURRENT_USER.email || '';
+    document.getElementById('me-email').textContent = email;
+    if(email !== SUPERADMIN_EMAIL){
+      document.getElementById('gate-msg').textContent = 'Logado como '+email+'. Apenas '+SUPERADMIN_EMAIL+' tem acesso.';
+      document.getElementById('gate').style.display='block';
+      return;
+    }
+    document.getElementById('app').style.display='flex';
+    loadMetrics();
+  }catch(e){
+    console.error(e);
+    window.location.href='/login';
+  }
+})();
+
+function logout(){
+  localStorage.removeItem('fralib_token');
+  window.location.href='/login';
+}
+
+// ===== tabs =====
+function switchTab(tab){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.tab===tab));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('active',p.id==='panel-'+tab));
+  if(tab==='usuarios' && USERS.length===0) loadUsers();
+  if(tab==='consumo' && !document.getElementById('usage-area').dataset.loaded) loadUsage();
+}
+
+// ===== toast =====
+function toast(msg, kind='success'){
+  const t = document.createElement('div');
+  t.className='toast '+kind;
+  t.textContent=msg;
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(), 3200);
+}
+
+// ===== modal =====
+let _modalCb = null;
+function openModal(title, bodyHtml, onOk){
+  document.getElementById('modal-title').textContent = title;
+  document.getElementById('modal-body').innerHTML = bodyHtml;
+  _modalCb = onOk;
+  document.getElementById('modal').classList.add('open');
+}
+function closeModal(){ document.getElementById('modal').classList.remove('open'); _modalCb=null; }
+function confirmModal(){ if(_modalCb) _modalCb(); }
+
+// ===== fmt =====
+const fmt = n => (n||0).toLocaleString('pt-BR');
+const usd = n => '$ '+(Number(n)||0).toFixed(2);
+const dt = s => { if(!s) return '—'; try{ return new Date(s).toLocaleString('pt-BR'); }catch(_){ return s; } };
+
+// ===== METRICAS =====
+async function loadMetrics(){
+  const area = document.getElementById('metrics-area');
+  area.innerHTML = '<div class="loading"><span class="spinner"></span> carregando métricas…</div>';
+  try{
+    const r = await authFetch('/api/superadmin/metrics');
+    const data = await r.json();
+    if(!data.ok) throw new Error(data.detail||'erro');
+    const m = data.metrics;
+    area.className='';
+    area.innerHTML = `
+      <div class="metrics-grid">
+        <div class="metric-card"><div class="metric-label">Usuários totais</div><div class="metric-value">${fmt(m.totalUsers)}</div><div class="metric-sub">${fmt(m.activeUsers)} ativos</div></div>
+        <div class="metric-card"><div class="metric-label">Pagantes</div><div class="metric-value cyan">${fmt(m.pagantes)}</div><div class="metric-sub">${m.totalUsers?((m.pagantes/m.totalUsers*100).toFixed(1)+'%'):'0%'} do total</div></div>
+        <div class="metric-card"><div class="metric-label">Leads capturados</div><div class="metric-value">${fmt(m.totalLeads)}</div><div class="metric-sub">${fmt(m.sitesGerados)} sites prontos</div></div>
+        <div class="metric-card"><div class="metric-label">Pipelines executados</div><div class="metric-value">${fmt(m.totalPipelines)}</div><div class="metric-sub">${usd(m.custoPorPipeline)} médio/pipeline</div></div>
+        <div class="metric-card"><div class="metric-label">Tokens input</div><div class="metric-value">${fmt(m.tokensInput)}</div></div>
+        <div class="metric-card"><div class="metric-label">Tokens output</div><div class="metric-value">${fmt(m.tokensOutput)}</div></div>
+        <div class="metric-card"><div class="metric-label">Tokens total</div><div class="metric-value">${fmt(m.tokensConsumed)}</div></div>
+        <div class="metric-card"><div class="metric-label">Custo acumulado</div><div class="metric-value gold">${usd(m.custoTotalUSD)}</div></div>
+      </div>
+    `;
+  }catch(e){
+    area.innerHTML = '<div class="empty">Falha ao carregar: '+(e.message||e)+'</div>';
+  }
+}
+
+// ===== USUARIOS =====
+async function loadUsers(){
+  const area = document.getElementById('users-area');
+  area.innerHTML = '<div class="loading"><span class="spinner"></span> carregando…</div>';
+  try{
+    const r = await authFetch('/api/superadmin/users');
+    const data = await r.json();
+    if(!data.ok) throw new Error(data.detail||'erro');
+    USERS = data.users || [];
+    renderUsers();
+  }catch(e){
+    area.innerHTML = '<div class="empty">Falha ao carregar: '+(e.message||e)+'</div>';
+  }
+}
+
+function renderUsers(){
+  const q = (document.getElementById('search-users').value||'').toLowerCase().trim();
+  const fp = document.getElementById('filter-plano').value;
+  const fs = document.getElementById('filter-status').value;
+  let rows = USERS.slice();
+  if(q) rows = rows.filter(u => (u.email||'').toLowerCase().includes(q) || (u.nome||'').toLowerCase().includes(q));
+  if(fp) rows = rows.filter(u => u.plano === fp);
+  if(fs) rows = rows.filter(u => u.status === fs);
+
+  document.getElementById('users-count').textContent = rows.length+' de '+USERS.length;
+
+  if(rows.length===0){
+    document.getElementById('users-area').innerHTML = '<div class="empty">Nenhum usuário encontrado.</div>';
+    return;
+  }
+
+  let html = `
+    <table class="table">
+      <thead><tr>
+        <th>ID</th><th>Email / Nome</th><th>Plano</th><th>Status</th>
+        <th>Créditos</th><th>Leads</th><th>Sites</th><th>Tokens (in/out)</th>
+        <th>Criado</th><th>Último acesso</th><th>Ações</th>
+      </tr></thead>
+      <tbody>
+  `;
+  for(const u of rows){
+    const planoPill = u.plano==='admin'?'pill-admin':(u.plano_pago?'pill-pago':'pill-trial');
+    const stPill = u.status==='bloqueado'?'pill-blocked':(u.plano_pago?'pill-pago':'pill-trial');
+    const isMe = u.email === SUPERADMIN_EMAIL;
+    html += `
+      <tr>
+        <td style="font-family:var(--mono);color:var(--muted)">#${u.id}</td>
+        <td>
+          <div style="font-weight:500">${escapeHtml(u.email)}</div>
+          <div style="font-size:11px;color:var(--muted)">${escapeHtml(u.nome||'—')}</div>
+        </td>
+        <td><span class="pill ${planoPill}">${u.plano||'—'}</span></td>
+        <td><span class="pill ${stPill}">${u.status||'—'}</span></td>
+        <td style="font-family:var(--mono)">${fmt(u.creditos)}/${fmt(u.creditos_max)}</td>
+        <td>${fmt(u.total_leads)}</td>
+        <td>${fmt(u.sites_prontos)}</td>
+        <td style="font-family:var(--mono);font-size:11px">${fmt(u.llm_input)}<br>${fmt(u.llm_output)}</td>
+        <td style="font-size:11px;color:var(--muted)">${dt(u.criado_em)}</td>
+        <td style="font-size:11px;color:var(--muted)">${dt(u.ultimo_acesso)}</td>
+        <td>
+          <div class="row-actions">
+            <button class="btn" onclick="editPlano(${u.id}, '${u.plano||'trial'}')">Plano</button>
+            <button class="btn" onclick="editCreditos(${u.id}, ${u.creditos||0})">Créditos</button>
+            ${isMe ? '' : `<button class="btn ${u.status==='bloqueado'?'btn-success':'btn-danger'}" onclick="toggleUser(${u.id}, '${escapeAttr(u.email)}', '${u.status||''}')">${u.status==='bloqueado'?'Ativar':'Bloquear'}</button>`}
+            ${isMe ? '' : `<button class="btn" onclick="impersonate(${u.id}, '${escapeAttr(u.email)}')">Logar como</button>`}
+          </div>
+        </td>
+      </tr>
+    `;
+  }
+  html += '</tbody></table>';
+  document.getElementById('users-area').innerHTML = html;
+}
+
+function escapeHtml(s){ return String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function escapeAttr(s){ return escapeHtml(s).replace(/`/g,'&#96;'); }
+
+function editPlano(id, current){
+  const opts = ['trial','starter','pro','beta','admin'].map(p=>`<option value="${p}" ${p===current?'selected':''}>${p}</option>`).join('');
+  openModal('Alterar plano', `<label>Novo plano</label><select id="m-plano" class="select" style="width:100%">${opts}</select>`, async ()=>{
+    const plano = document.getElementById('m-plano').value;
+    try{
+      const r = await authFetch('/api/superadmin/users/'+id+'/set-plan', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({plano})});
+      const d = await r.json();
+      if(!d.ok) throw new Error(d.detail||'erro');
+      toast('Plano atualizado para '+plano);
+      closeModal();
+      loadUsers();
+    }catch(e){ toast('Falha: '+(e.message||e),'error'); }
+  });
+}
+
+function editCreditos(id, current){
+  openModal('Definir créditos', `<label>Créditos (este valor vira tanto o atual quanto o máximo)</label><input id="m-creditos" type="number" min="0" class="input" style="width:100%" value="${current}">`, async ()=>{
+    const creditos = parseInt(document.getElementById('m-creditos').value||'0',10);
+    try{
+      const r = await authFetch('/api/superadmin/users/'+id+'/set-creditos', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({creditos})});
+      const d = await r.json();
+      if(!d.ok) throw new Error(d.detail||'erro');
+      toast('Créditos definidos: '+creditos);
+      closeModal();
+      loadUsers();
+    }catch(e){ toast('Falha: '+(e.message||e),'error'); }
+  });
+}
+
+function toggleUser(id, email, current){
+  const acao = current==='bloqueado' ? 'reativar' : 'bloquear';
+  openModal(acao.charAt(0).toUpperCase()+acao.slice(1)+' usuário', `Confirmar ${acao} de <b>${escapeHtml(email)}</b>?`, async ()=>{
+    try{
+      const r = await authFetch('/api/superadmin/users/'+id+'/toggle', {method:'POST'});
+      const d = await r.json();
+      if(!d.ok) throw new Error(d.detail||'erro');
+      toast('Status: '+d.new_status);
+      closeModal();
+      loadUsers();
+    }catch(e){ toast('Falha: '+(e.message||e),'error'); }
+  });
+}
+
+function impersonate(id, email){
+  openModal('Logar como usuário', `Você vai receber um token de sessão de <b>${escapeHtml(email)}</b> e será redirecionado para o dashboard dele. Seu token de superadmin será sobrescrito — faça logout depois e re-logue com sua conta. Continuar?`, async ()=>{
+    try{
+      const r = await authFetch('/api/superadmin/impersonate/'+id, {method:'POST'});
+      const d = await r.json();
+      if(!d.ok) throw new Error(d.detail||'erro');
+      localStorage.setItem('fralib_token', d.token);
+      toast('Logado como '+email);
+      setTimeout(()=>{ window.location.href='/dashboard'; }, 600);
+    }catch(e){ toast('Falha: '+(e.message||e),'error'); }
+  });
+}
+
+// ===== CONSUMO =====
+async function loadUsage(){
+  const periodo = document.getElementById('periodo').value || '48h';
+  const area = document.getElementById('usage-area');
+  area.className='loading';
+  area.innerHTML = '<span class="spinner"></span> carregando…';
+  try{
+    const r = await authFetch('/api/superadmin/usage?periodo='+encodeURIComponent(periodo));
+    const data = await r.json();
+    if(!data.ok) throw new Error(data.detail||'erro');
+    area.className='';
+    area.dataset.loaded='1';
+    renderUsage(data);
+  }catch(e){
+    area.innerHTML = '<div class="empty">Falha ao carregar: '+(e.message||e)+'</div>';
+  }
+}
+
+function renderUsage(d){
+  const t = d.totals, ta = d.totals_all;
+  let html = `
+    <div class="metrics-grid">
+      <div class="metric-card"><div class="metric-label">Chamadas (período)</div><div class="metric-value">${fmt(t.calls)}</div><div class="metric-sub">${fmt(ta.calls)} all-time</div></div>
+      <div class="metric-card"><div class="metric-label">Input tokens (período)</div><div class="metric-value">${fmt(t.input_tokens)}</div><div class="metric-sub">${fmt(ta.input_tokens)} all-time</div></div>
+      <div class="metric-card"><div class="metric-label">Output tokens (período)</div><div class="metric-value">${fmt(t.output_tokens)}</div><div class="metric-sub">${fmt(ta.output_tokens)} all-time</div></div>
+      <div class="metric-card"><div class="metric-label">Total (período)</div><div class="metric-value cyan">${fmt(t.input_tokens + t.output_tokens)}</div></div>
+    </div>
+
+    <div class="chart-grid">
+      <div class="chart-card">
+        <h4>Por agente (período ${d.periodo})</h4>
+        ${renderUsageTable(d.by_agent, ['agente','calls','input','output'], ['Agente','Calls','Input','Output'])}
+      </div>
+      <div class="chart-card">
+        <h4>Por usuário (período ${d.periodo})</h4>
+        ${renderUsageTable(d.by_user, ['email','calls','input','output'], ['Email','Calls','Input','Output'])}
+      </div>
+    </div>
+
+    <div class="chart-card">
+      <h4>Timeline</h4>
+      ${renderUsageTable(d.timeline, ['periodo','calls','input','output'], ['Período','Calls','Input','Output'])}
+    </div>
+  `;
+  document.getElementById('usage-area').innerHTML = html;
+}
+
+function renderUsageTable(rows, cols, headers){
+  if(!rows || rows.length===0) return '<div class="empty">Sem dados.</div>';
+  let h = '<table class="table"><thead><tr>'+headers.map(x=>`<th>${x}</th>`).join('')+'</tr></thead><tbody>';
+  for(const r of rows){
+    h += '<tr>'+cols.map(c=>{
+      const v = r[c];
+      if(typeof v === 'number') return `<td style="font-family:var(--mono)">${fmt(v)}</td>`;
+      return `<td>${escapeHtml(v||'')}</td>`;
+    }).join('')+'</tr>';
+  }
+  h += '</tbody></table>';
+  return h;
+}
+</script>
+
+</body>
+</html>

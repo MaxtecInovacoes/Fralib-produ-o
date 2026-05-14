@@ -703,8 +703,8 @@ async def registrar_feedback(
         # Se convertido, atualizar status do lead
         if req.resultado == 'convertido':
             db.execute(text(
-                "UPDATE leads SET status='convertido', atualizado_em=NOW()::text WHERE id=:id"
-            ), {"id": lead_id})
+                "UPDATE leads SET status='convertido', atualizado_em=NOW()::text WHERE id=:id AND user_id=:uid"
+            ), {"id": lead_id, "uid": tenant_id})
 
         db.commit()
 
@@ -797,8 +797,8 @@ async def enviar_mensagem_lead(lead_id: str, db: Session = Depends(get_db), usua
 
     # Atualizar sdr_stage
     db.execute(text(
-        "UPDATE leads SET sdr_stage=:stage, atualizado_em=NOW()::text WHERE id=:id"
-    ), {"id": lead_id, "stage": bryan_output.next_stage or "hook"})
+        "UPDATE leads SET sdr_stage=:stage, atualizado_em=NOW()::text WHERE id=:id AND user_id=:uid"
+    ), {"id": lead_id, "stage": bryan_output.next_stage or "hook", "uid": tenant_id})
     db.commit()
 
     adicionar_log(f"📱 Mensagem enviada para {nome} ({tel})", "success", tenant_id)

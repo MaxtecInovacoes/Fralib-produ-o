@@ -861,8 +861,8 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
         if hasattr(state, 'lead_id') and state.lead_id:
             try:
                 with engine.connect() as conn:
-                    conn.execute(text("UPDATE leads SET status='erro', atualizado_em=:ts WHERE id=:id AND status NOT IN ('concluido','descartado')"),
-                        {"ts": datetime.now().isoformat(), "id": state.lead_id})
+                    conn.execute(text("UPDATE leads SET status='erro', atualizado_em=:ts WHERE id=:id AND user_id=:uid AND status NOT IN ('concluido','descartado')"),
+                        {"ts": datetime.now().isoformat(), "id": state.lead_id, "uid": state.tenant_id})
                     conn.commit()
             except Exception:
                 pass
@@ -1496,10 +1496,11 @@ async def _executar_pipeline_a_partir_fase2(state, tenant_id, config):
                     processado=true, site_url=:url, url_site=:url,
                     atualizado_em=:ts, pipeline_stage='concluido',
                     html_gerado=:html
-                WHERE id=:id
+                WHERE id=:id AND user_id=:uid
             """), {
                 "url": state.site_url, "ts": datetime.now().isoformat(),
                 "html": state.html_final[:50000], "id": state.lead_id,
+                "uid": state.tenant_id,
             })
             conn.commit()
 
@@ -1531,8 +1532,8 @@ async def _executar_pipeline_a_partir_fase2(state, tenant_id, config):
         logger.error(f"[Pipeline] Reprocessar erro: {e}")
         logger.error(traceback.format_exc())
         with engine.connect() as conn:
-            conn.execute(text("UPDATE leads SET erro_pipeline=:err, atualizado_em=:ts WHERE id=:id"),
-                {"err": str(e)[:500], "ts": datetime.now().isoformat(), "id": state.lead_id})
+            conn.execute(text("UPDATE leads SET erro_pipeline=:err, atualizado_em=:ts WHERE id=:id AND user_id=:uid"),
+                {"err": str(e)[:500], "ts": datetime.now().isoformat(), "id": state.lead_id, "uid": state.tenant_id})
             conn.commit()
     finally:
         _db_final = SessionLocal()
@@ -1553,8 +1554,8 @@ async def reprocessar_lead(lead_id: str, background_tasks: BackgroundTasks, db: 
     queue_result = await pipeline_queue.try_enter(tenant_id)
     if not queue_result["can_run"]:
         return {"ok": False, "mensagem": queue_result["message"], "posicao": queue_result.get("position", 0)}
-    db.execute(text("UPDATE leads SET status='capturado', processado=false, atualizado_em=:ts WHERE id=:id"),
-               {"ts": datetime.now().isoformat(), "id": lead_id})
+    db.execute(text("UPDATE leads SET status='capturado', processado=false, atualizado_em=:ts WHERE id=:id AND user_id=:uid"),
+               {"ts": datetime.now().isoformat(), "id": lead_id, "uid": tenant_id})
     db.commit()
     _renovacao_label = " (renovacao forcada)" if forcar_renovacao else ""
     adicionar_log(f"Lead {lead.nome} reprocessando{_renovacao_label}...", "info", user_id=tenant_id)
