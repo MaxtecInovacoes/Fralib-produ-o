@@ -1420,6 +1420,89 @@ async function retomarPipeline() {
     setTimeout(carregarKPIs, 500);
 
 /* ══ TOAST NOTIFICATIONS ════════════════════════════════════════ */
+// ══ MODAL DE PLANOS + CHECKOUT STRIPE ════════════════════════════
+function mostrarModalPlanos() {
+  var existing = document.getElementById('modal-planos-overlay');
+  if (existing) existing.remove();
+
+  var overlay = document.createElement('div');
+  overlay.id = 'modal-planos-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
+  overlay.innerHTML = `
+    <div style="background:#1a1a2e;border:1px solid #2d2d44;border-radius:16px;padding:32px;max-width:700px;width:100%;max-height:90vh;overflow-y:auto;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;">
+        <h2 style="font-size:18px;color:#fff;margin:0;">Escolha seu plano</h2>
+        <button onclick="document.getElementById('modal-planos-overlay').remove()" style="background:none;border:none;color:#888;font-size:24px;cursor:pointer;">&times;</button>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+        <div style="background:#0f0f1a;border:1px solid #2d2d44;border-radius:12px;padding:24px;">
+          <div style="font-size:11px;color:#7c3aed;font-weight:700;letter-spacing:1px;margin-bottom:8px;">STARTER</div>
+          <div style="font-size:28px;font-weight:700;color:#fff;">R$97<span style="font-size:14px;color:#888;">/mês</span></div>
+          <p style="font-size:12px;color:#888;margin:12px 0;">7 dias grátis. Cancele quando quiser.</p>
+          <ul style="list-style:none;padding:0;margin:16px 0;font-size:13px;color:#ccc;">
+            <li style="margin-bottom:8px;">✓ 200 interações SDR/mês</li>
+            <li style="margin-bottom:8px;">✓ IA treinada em conversão</li>
+            <li style="margin-bottom:8px;">✓ Kanban CRM completo</li>
+            <li style="margin-bottom:8px;">✓ Deploy de sites</li>
+            <li style="margin-bottom:8px;">✓ Suporte por email</li>
+          </ul>
+          <button onclick="iniciarCheckout('starter')" style="width:100%;padding:12px;background:#7c3aed;color:#fff;border:none;border-radius:8px;font-weight:700;font-size:14px;cursor:pointer;">ASSINAR STARTER</button>
+        </div>
+        <div style="background:#0f0f1a;border:2px solid #fbbf24;border-radius:12px;padding:24px;position:relative;">
+          <div style="position:absolute;top:-10px;right:16px;background:#fbbf24;color:#000;font-size:9px;font-weight:700;padding:3px 8px;border-radius:4px;">POPULAR</div>
+          <div style="font-size:11px;color:#fbbf24;font-weight:700;letter-spacing:1px;margin-bottom:8px;">PRO (BYOK)</div>
+          <div style="font-size:28px;font-weight:700;color:#fff;">R$297<span style="font-size:14px;color:#888;">/mês</span></div>
+          <p style="font-size:12px;color:#888;margin:12px 0;">Uso ilimitado com sua própria API key.</p>
+          <ul style="list-style:none;padding:0;margin:16px 0;font-size:13px;color:#ccc;">
+            <li style="margin-bottom:8px;">✓ Tokens ilimitados (BYOK)</li>
+            <li style="margin-bottom:8px;">✓ Multicanal avançado</li>
+            <li style="margin-bottom:8px;">✓ SDR com retries automáticos</li>
+            <li style="margin-bottom:8px;">✓ Agente personalizado</li>
+            <li style="margin-bottom:8px;">✓ Publicação ilimitada</li>
+            <li style="margin-bottom:8px;">✓ Suporte VIP prioritário</li>
+          </ul>
+          <button onclick="iniciarCheckout('pro')" style="width:100%;padding:12px;background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#000;border:none;border-radius:8px;font-weight:700;font-size:14px;cursor:pointer;">ASSINAR PRO</button>
+        </div>
+      </div>
+      <p style="text-align:center;font-size:11px;color:#666;margin-top:16px;">Garantia de 7 dias. Cancele a qualquer momento pelo portal.</p>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
+}
+
+async function iniciarCheckout(plano) {
+  try {
+    var r = await AuthHelper.authFetch('/api/credits/criar-checkout', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({plano: plano})
+    });
+    var d = await r.json();
+    if (d.checkout_url) {
+      window.location.href = d.checkout_url;
+    } else {
+      mostrarToast(d.detail || 'Erro ao criar checkout', 4000);
+    }
+  } catch(e) {
+    mostrarToast('Erro: ' + (e.message||e), 4000);
+  }
+}
+
+// Interceptar 402 globalmente — mostrar modal de planos
+(function() {
+  var _origFetch = AuthHelper.authFetch;
+  AuthHelper.authFetch = async function() {
+    var resp = await _origFetch.apply(this, arguments);
+    if (resp.status === 402) {
+      var d = await resp.clone().json().catch(function(){return {};});
+      mostrarToast(d.detail || 'Seu plano expirou. Assine para continuar.', 5000);
+      setTimeout(mostrarModalPlanos, 500);
+    }
+    return resp;
+  };
+})();
+
 function mostrarToast(mensagem, duracao) {
   duracao = duracao || 3000;
   
@@ -2641,17 +2724,19 @@ async function verificarOnboarding() {
     // --- BLOCO 2: WhatsApp não conectado (aviso, não bloqueia) ---
     var avisoWpp = document.getElementById('onboarding-aviso-wpp');
     if (!status.wpp_ok) {
-      if (!avisoWpp) {
+      if (localStorage.getItem('fralib_dismiss_wpp_aviso')) { /* user dismissed */ }
+      else if (!avisoWpp) {
         avisoWpp = document.createElement('div');
         avisoWpp.id = 'onboarding-aviso-wpp';
         avisoWpp.style.cssText = 'position:fixed;bottom:20px;right:20px;background:#1c1c2e;border:1px solid #f59e0b;color:#f59e0b;padding:14px 18px;border-radius:12px;font-size:13px;z-index:9998;max-width:340px;box-shadow:0 4px 20px rgba(0,0,0,.4);';
-        avisoWpp.innerHTML = '<strong>📱 WhatsApp não conectado</strong><br><span style="color:#ccc;font-size:12px">Conecte seu WhatsApp para ativar o SDR automático.</span><br><div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap;align-items:center"><button onclick="mostrarView(&quot;perfil&quot;);document.getElementById(&quot;onboarding-aviso-wpp&quot;).remove();_wppAvisoStopPoll()" style="background:#f59e0b;color:#000;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600">Conectar agora →</button><button id="aviso-wpp-recheck" onclick="_wppAvisoRecheck(this)" style="background:transparent;color:#f59e0b;border:1px solid #f59e0b;padding:5px 12px;border-radius:6px;cursor:pointer;font-size:11px">Já conectei</button><button onclick="this.closest(&quot;#onboarding-aviso-wpp&quot;).remove();_wppAvisoStopPoll()" style="background:transparent;color:#888;border:none;cursor:pointer;font-size:12px">Depois</button></div><div id="aviso-wpp-feedback" style="margin-top:6px;font-size:11px;color:#94a3b8;min-height:14px"></div>';
+        avisoWpp.innerHTML = '<strong>📱 WhatsApp não conectado</strong><br><span style="color:#ccc;font-size:12px">Conecte seu WhatsApp para ativar o SDR automático.</span><br><div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap;align-items:center"><button onclick="mostrarView(&quot;perfil&quot;);document.getElementById(&quot;onboarding-aviso-wpp&quot;).remove();_wppAvisoStopPoll()" style="background:#f59e0b;color:#000;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600">Conectar agora →</button><button id="aviso-wpp-recheck" onclick="_wppAvisoRecheck(this)" style="background:transparent;color:#f59e0b;border:1px solid #f59e0b;padding:5px 12px;border-radius:6px;cursor:pointer;font-size:11px">Já conectei</button><button onclick="this.closest(&quot;#onboarding-aviso-wpp&quot;).remove();_wppAvisoStopPoll()" style="background:transparent;color:#888;border:none;cursor:pointer;font-size:12px">Depois</button></div><label style="display:flex;align-items:center;gap:6px;margin-top:10px;cursor:pointer;font-size:11px;color:#666"><input type="checkbox" onchange="if(this.checked)localStorage.setItem(&quot;fralib_dismiss_wpp_aviso&quot;,&quot;1&quot;)"> Não mostrar novamente</label><div id="aviso-wpp-feedback" style="margin-top:6px;font-size:11px;color:#94a3b8;min-height:14px"></div>';
         document.body.appendChild(avisoWpp);
         _wppAvisoStartPoll();
       }
     } else {
       if (avisoWpp) avisoWpp.remove();
       _wppAvisoStopPoll();
+      localStorage.removeItem('fralib_dismiss_wpp_aviso');
     }
   } catch (e) {
     console.error('[Onboarding] Erro:', e);
@@ -2977,10 +3062,23 @@ document.addEventListener('DOMContentLoaded', function() {
   // Botões de Upsell
   var btnUpgradePro = document.getElementById('btn-upgrade-pro');
   if (btnUpgradePro) {
-    btnUpgradePro.addEventListener('click', function(e) {
+    btnUpgradePro.addEventListener('click', async function(e) {
       e.preventDefault();
-      if (window.mostrarToast) {
-        window.mostrarToast('🚀 Em breve: Upgrade para PRO!');
+      try {
+        var r = await AuthHelper.authFetch('/api/credits/status');
+        var d = await r.json();
+        if (d.plano_pago) {
+          // Já pago → abrir portal Stripe pra gerenciar
+          var p = await AuthHelper.authFetch('/api/credits/portal', {method:'POST'});
+          var pd = await p.json();
+          if (pd.portal_url) window.location.href = pd.portal_url;
+          else mostrarToast('Erro ao abrir portal', 'error');
+        } else {
+          // Não pago → abrir modal de planos
+          mostrarModalPlanos();
+        }
+      } catch(err) {
+        mostrarToast('Erro: ' + (err.message||err), 'error');
       }
     });
   }

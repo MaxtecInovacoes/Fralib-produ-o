@@ -77,14 +77,14 @@ ADMIN_ORDER = [
 
 if __name__ == '__main__':
     build('dashboard', DASHBOARD_ORDER)
-    # build('landing', LANDING_ORDER)  # DESABILITADO — landing v2 gerenciada manualmente
+    build('landing', LANDING_ORDER)
     # admin.html editado diretamente — NAO rebuildar via partials
     # build('admin', ADMIN_ORDER)
     print('Build completo!')
 
     import shutil, os
     deploy_dir = '/var/www/fralib'
-    for fname in ['dashboard.html']:  # landing.html gerenciada manualmente
+    for fname in ['dashboard.html', 'landing.html']:
         src = os.path.join(os.path.dirname(os.path.abspath(__file__)), fname)
         if os.path.exists(src):
             shutil.copy2(src, os.path.join(deploy_dir, fname))

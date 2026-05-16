@@ -107,6 +107,11 @@ def detectar_intent(msg: str) -> str:
         return 'objection_price'
     if any(t in l for t in ['sem tempo', 'ocupado', 'depois', 'mais tarde', 'semana que vem']):
         return 'objection_time'
+    if any(t in l for t in ['sou o dono', 'sou o responsável', 'sou o responsavel', 'eu sou o dono',
+                             'sou eu mesmo', 'eu que cuido', 'sou proprietário', 'sou proprietario',
+                             'eu mesmo', 'sou eu', 'pode falar comigo', 'fala comigo',
+                             'eu que gerencio', 'sou o gerente', 'sou a dona', 'sou a responsável']):
+        return 'is_decisor'
     if any(t in l for t in ['sim', 'quero', 'pode', 'manda', 'bora', 'fechado', 'aceito']):
         return 'acceptance'
     if any(t in l for t in ['não', 'nao', 'sem interesse', 'não preciso', 'já tenho']):
@@ -260,11 +265,28 @@ def decidir_estrategia(intent: str, stage: str, rejection_count: int = 0) -> str
 
 # ===== GUARDRAILS =====
 
-def aplicar_guardrails(decision: dict, stage_atual: str, lead_nome: str, historico: list) -> tuple:
+def aplicar_guardrails(decision: dict, stage_atual: str, lead_nome: str, historico: list, is_decisor: bool = None) -> tuple:
     """Aplica guardrails de segurança na resposta do LLM"""
     guard = None
     reply = decision.get("reply", "")
     next_stage = decision.get("next_stage", "hook")
+
+    # G0: Anti-loop responsável — se lead já confirmou que é decisor, remover perguntas sobre responsável
+    if is_decisor == True:
+        responsavel_patterns = [
+            r'falo com o (responsável|responsavel|dono|proprietário|gerente)',
+            r'quem (é|e) o (responsável|responsavel|dono)',
+            r'(responsável|responsavel|dono|proprietário) (está|esta|tá|ta) (aí|ai|por perto)',
+            r'consegue (me passar|passar) (pro|para o) (responsável|responsavel|dono)',
+            r'tem como falar com',
+        ]
+        for pat in responsavel_patterns:
+            if re.search(pat, reply, re.IGNORECASE):
+                reply = re.sub(pat + r'[^.!?\n]*[.!?\n]?', '', reply, flags=re.IGNORECASE).strip()
+                guard = 'G0_decisor_confirmed_no_ask'
+        if not reply or len(reply) < 10:
+            reply = f"Beleza! Me conta — como vocês captam clientes novos hoje na {lead_nome}?"
+            guard = 'G0_decisor_fallback'
 
     # G1: Preço antes de value → remover menção de R$
     if stage_atual in ('intro', 'qualify', 'proof', 'link'):
@@ -340,14 +362,58 @@ def aplicar_guardrails(decision: dict, stage_atual: str, lead_nome: str, histori
 
 # ===== HORÁRIO DE ATENDIMENTO =====
 
-def _dentro_do_horario() -> bool:
-    """Verifica se está dentro do horário de atendimento (seg-sáb, 8h-21h Brasília)"""
+def _dentro_do_horario(user_id: int = None) -> bool:
+    """Verifica se está dentro do horário de atendimento.
+    Usa config do tenant se disponível, senão default: seg-sáb, 8h-21h Brasília.
+    Config 'livre' = 24/7 sem restrição.
+    """
     from datetime import datetime, timezone, timedelta
     agora = datetime.now(timezone(timedelta(hours=-3)))
-    # 0=segunda, 6=domingo
-    if agora.weekday() == 6:  # domingo
+
+    # Buscar config do tenant
+    config = _get_horario_config(user_id) if user_id else None
+
+    if config:
+        if config.get('modo') == 'livre':
+            return True
+        hora_inicio = config.get('hora_inicio', 8)
+        hora_fim = config.get('hora_fim', 21)
+        dias_bloqueados = config.get('dias_bloqueados', [6])  # default: domingo
+    else:
+        hora_inicio = 8
+        hora_fim = 21
+        dias_bloqueados = [6]
+
+    if agora.weekday() in dias_bloqueados:
         return False
-    return 8 <= agora.hour < 21
+    return hora_inicio <= agora.hour < hora_fim
+
+
+def _get_horario_config(user_id: int) -> dict:
+    """Busca config de horário do SDR do tenant. Cache em memória."""
+    import time
+    _cache_key = f"sdr_horario_{user_id}"
+    cached = _HORARIO_CACHE.get(_cache_key)
+    if cached and time.time() < cached[1]:
+        return cached[0]
+    try:
+        from database import engine
+        from sqlalchemy import text
+        with engine.connect() as conn:
+            row = conn.execute(text(
+                "SELECT sdr_horario_config FROM users WHERE id=:id"
+            ), {"id": user_id}).fetchone()
+            if row and row[0]:
+                import json
+                config = json.loads(row[0]) if isinstance(row[0], str) else row[0]
+            else:
+                config = None
+        _HORARIO_CACHE[_cache_key] = (config, time.time() + 300)  # 5min cache
+        return config
+    except Exception:
+        return None
+
+_HORARIO_CACHE = {}
 
 # ===== SAUDAÇÃO POR HORÁRIO =====
 
@@ -697,7 +763,12 @@ def _carregar_historico_interacoes(telefone: str, limite: int = 5) -> str:
         rows = list(reversed(rows))
         linhas = []
         for row in rows:
-            autor = "Bryan" if row.direcao == "saida" else "Lead"
+            if row.direcao == "saida":
+                autor = "Bryan"
+            elif row.direcao == "saida_humano":
+                autor = "Dono"
+            else:
+                autor = "Lead"
             linhas.append(f"{autor}: {row.mensagem}")
         return "\n".join(linhas)
     except Exception as e:
@@ -737,7 +808,7 @@ def iniciar_contato(lead: BryanInput, user_id: int = None) -> BryanOutput:
     if not user_id:
         raise ValueError("user_id obrigatorio em iniciar_contato (multi-tenant)")
     # Verificar horário de atendimento — NÃO aborda fora do horário
-    if not _dentro_do_horario():
+    if not _dentro_do_horario(user_id):
         print(f"⏰ [Franz] Fora do horário — intro para {lead.nome} adiada (fila)")
         return BryanOutput(
             reply="",
@@ -995,7 +1066,9 @@ def responder_lead(
 
     # Detectar se é bot/msg automática — responder direto sem LLM
     bot_check = detectar_bot(mensagem_recebida)
-    if bot_check["is_bot"]:
+    # Só tratar como bot se confiança alta E não temos confirmação de que é humano
+    is_confirmed_human = (memoria or {}).get("facts", {}).get("is_decisor") == True
+    if bot_check["is_bot"] and not is_confirmed_human and bot_check["confidence"] >= 0.6:
         resposta_bot = gerar_resposta_bot(bot_check, nome_negocio)
         if resposta_bot:
             print(f"🤖 [Franz] Bot detectado ({bot_check['tipo']}, conf={bot_check['confidence']:.1f}) → respondendo: {resposta_bot}")
@@ -1029,6 +1102,18 @@ def responder_lead(
             enviado=False
         )
 
+    # Se lead confirma que é decisor → salvar na memória e resetar gatekeeper
+    if intent == 'is_decisor':
+        if memoria:
+            facts = memoria.get("facts", {})
+            facts["is_decisor"] = True
+            facts["gatekeeper_level"] = 0
+            memoria["facts"] = facts
+            salvar_memoria(f"bryan_lead_{telefone}", memoria, user_id=user_id)
+        else:
+            memoria = {"facts": {"is_decisor": True, "gatekeeper_level": 0}, "estado": stage}
+            salvar_memoria(f"bryan_lead_{telefone}", memoria, user_id=user_id)
+
     # Incrementar rejeições
     new_rejection_count = rejection_count + 1 if intent == 'rejection' else rejection_count
 
@@ -1054,7 +1139,7 @@ def responder_lead(
     estrategia = decidir_estrategia(intent, stage, new_rejection_count)
 
     # Carregar histórico e aprendizado
-    historico_raw = _carregar_historico_interacoes(telefone, limite=8)
+    historico_raw = _carregar_historico_interacoes(telefone, limite=15)
     aprendizado = _consultar_aprendizado_segmento(segmento_lead)
 
     # Dados do lead
@@ -1065,6 +1150,8 @@ def responder_lead(
     rating = lead_data.get("rating", "")
     proof = lead_data.get("proof", "Sem presença digital profissional")
     contact_name = (memoria or {}).get("facts", {}).get("contact_name", "")
+    is_decisor = (memoria or {}).get("facts", {}).get("is_decisor", None)
+    gatekeeper_level = (memoria or {}).get("facts", {}).get("gatekeeper_level", 0)
 
     # Concorrentes
     conc_bloco = ""
@@ -1086,6 +1173,15 @@ def responder_lead(
     _dia_semana = ["segunda", "terça", "quarta", "quinta", "sexta", "sábado", "domingo"][_agora_br.weekday()]
     _amanha = (_agora_br + _td(days=1)).strftime("%Y-%m-%d")
 
+    # Bloco decisor — instrução clara pro LLM
+    decisor_bloco = ""
+    if is_decisor == True:
+        decisor_bloco = "⚠️ CONFIRMADO: esta pessoa É o decisor/dono. NUNCA pergunte por responsável. Trate como decisor direto. Prossiga com o funil normalmente."
+    elif is_decisor == False:
+        decisor_bloco = f"Esta pessoa NÃO é o decisor. Gatekeeper nível {gatekeeper_level}/5. Siga o fluxo gatekeeper."
+    else:
+        decisor_bloco = "Status decisor: desconhecido. Se a pessoa disser que é o dono/responsável, aceite e prossiga."
+
     prompt = f"""CONTEXTO DO LEAD:
 - DATA DE HOJE: {_data_hoje} ({_dia_semana}) — AMANHÃ: {_amanha}
 - Empresa: {nome} ({segmento}) — {cidade}
@@ -1093,10 +1189,11 @@ def responder_lead(
 - Problema identificado: {proof}
 - Avaliação Google: {rating or 'N/A'}⭐
 - Nome do contato: {contact_name or 'Não identificado'}
+- {decisor_bloco}
 - Stage atual: {stage}
 - Estratégia: {estrategia}
 - Tentativas de reversão: {new_rejection_count}/3
-- Nível gatekeeper: {(memoria or {}).get("facts", {}).get("gatekeeper_level", 0)}/5 (0=não ativado, 1-5=níveis de insistência)
+- Nível gatekeeper: {gatekeeper_level}/5 (0=não ativado, 1-5=níveis de insistência)
 - Degrau de preço atual: {price_tier} (0=não revelado, 1=R$1.499, 2=R$999, 3=R$549, 4=pix)
 - Order bump já ofertado: {order_bump_offered}
 {conc_bloco}
@@ -1108,6 +1205,8 @@ def responder_lead(
 === CLIENTE AGORA ===
 "{mensagem_recebida}"
 
+REGRA CRÍTICA: Se o lead já confirmou que é o responsável/dono, NUNCA mais pergunte "falo com o responsável?" ou variações. Prossiga direto com o funil de vendas.
+
 Responda SOMENTE JSON válido."""
 
     try:
@@ -1118,7 +1217,7 @@ Responda SOMENTE JSON válido."""
         response_text = call_claude(
             system=BRYAN_INSTRUCTIONS,
             user=full_prompt,
-            model="haiku",
+            model="sonnet",
             max_tokens=500,
             temperature=0.7,
             agent_name="Franz"
@@ -1135,7 +1234,7 @@ Responda SOMENTE JSON válido."""
                 if line.startswith("Bryan:"):
                     historico_list.append({"role": "assistant", "content": line.split(": ", 1)[1] if ": " in line else line})
 
-        decision, guard = aplicar_guardrails(decision, stage, nome, historico_list)
+        decision, guard = aplicar_guardrails(decision, stage, nome, historico_list, is_decisor=is_decisor)
 
         if guard:
             print(f"[Franz] Guardrail ativado: {guard}")
@@ -1229,7 +1328,7 @@ def followup_automatico(telefone: str, tipo: str = "24h", user_id: int = None) -
     if not user_id:
         raise ValueError("user_id obrigatorio em followup_automatico (multi-tenant)")
     # Respeitar horário — follow-up só dentro do horário
-    if not _dentro_do_horario():
+    if not _dentro_do_horario(user_id):
         print(f"⏰ [Franz] Follow-up fora do horário — adiado")
         return BryanOutput(
             reply="",
@@ -1279,18 +1378,19 @@ def followup_automatico(telefone: str, tipo: str = "24h", user_id: int = None) -
     )
 
 
-def despachar_fila_leads(leads: list) -> list:
+def despachar_fila_leads(leads: list, user_id: int = None) -> list:
     """
     Despacha leads que ficaram na fila (site pronto, fora do horário).
     Chamado pelo cron/worker quando entra no horário comercial.
 
     Args:
         leads: Lista de dicts com dados dos leads (nome, cidade, segmento, telefone, etc)
+        user_id: ID do tenant (para config de horário)
 
     Returns:
         Lista de BryanOutput para cada lead processado
     """
-    if not _dentro_do_horario():
+    if not _dentro_do_horario(user_id):
         print(f"⏰ [Franz] Fora do horário — fila não despachada")
         return []
 

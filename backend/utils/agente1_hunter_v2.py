@@ -5,7 +5,7 @@ Captura leads REAIS do Google Maps usando Playwright
 
 from pydantic import BaseModel, Field, validator
 from typing import Optional, List, Dict, Any
-from google_local_scraper import GoogleLocalScraper as GoogleMapsScraper
+from utils.google_local_scraper import GoogleLocalScraper as GoogleMapsScraper
 import asyncio
 import re
 
@@ -339,6 +339,113 @@ async def buscar_lead_google_maps(
 
     return lead_qualificado
 
+
+# ═══════════════════════════════════════════════════════════════
+# CACHE GLOBAL DE LEADS — evita Playwright se já buscou antes
+# ═══════════════════════════════════════════════════════════════
+
+def _buscar_cache_leads(segmento: str, cidade: str, existentes: set, limite: int) -> List['LeadQualificado']:
+    """Busca leads no cache global (tabela leads_cache). Retorna lista de LeadQualificado ou []."""
+    try:
+        from database import engine
+        from sqlalchemy import text as _text
+        with engine.connect() as conn:
+            rows = conn.execute(_text("""
+                SELECT nome, cidade, segmento, telefone, rating, total_avaliacoes,
+                       website, endereco, maps_url, fotos, servicos, horarios, logo_url,
+                       atributos, faixa_preco, reviews_json
+                FROM leads_cache
+                WHERE lower(segmento) = lower(:seg) AND lower(cidade) = lower(:cid)
+                  AND criado_em > NOW() - INTERVAL '7 days'
+                ORDER BY rating DESC NULLS LAST
+                LIMIT :lim
+            """), {"seg": segmento, "cid": cidade, "lim": limite + len(existentes) + 5}).fetchall()
+
+        if not rows:
+            return []
+
+        import json as _json_cache
+        leads = []
+        for r in rows:
+            nome = r[0] or ''
+            if nome.lower().strip() in existentes:
+                continue
+            if len(leads) >= limite:
+                break
+            # Pular leads sem reviews no cache (Caio vai rejeitar)
+            _cached_reviews = []
+            if r[15]:
+                try:
+                    _cached_reviews = _json_cache.loads(r[15])
+                except:
+                    _cached_reviews = []
+            if not _cached_reviews:
+                continue
+            try:
+                lead = LeadRaw(
+                    nome=nome, cidade=r[1] or cidade, segmento=r[2] or segmento,
+                    telefone=r[3], rating=r[4] or 0, total_avaliacoes=r[5] or 0,
+                    website=r[6], endereco=r[7], maps_url=r[8],
+                    fotos=_json_cache.loads(r[9]) if r[9] else [],
+                    servicos=_json_cache.loads(r[10]) if r[10] else [],
+                    horarios=_json_cache.loads(r[11]) if r[11] else [],
+                    logo_url=r[12],
+                    atributos=_json_cache.loads(r[13]) if r[13] else [],
+                    faixa_preco=r[14],
+                    reviews=_cached_reviews,
+                )
+                resultado = calcular_score(lead, cidade)
+                dados_suficientes, _ = validar_dados_minimos(lead)
+                leads.append(LeadQualificado(
+                    lead=lead, score=resultado['score'], tier=resultado['tier'],
+                    razoes=resultado['razoes'], sinais=resultado['sinais'],
+                    presenca_digital=resultado['presenca_digital'],
+                    dados_suficientes=dados_suficientes
+                ))
+            except Exception:
+                continue
+        return leads
+    except Exception as e:
+        print(f"[Hunter Cache] Erro ao buscar cache: {e}")
+        return []
+
+
+def _salvar_cache_leads(leads: List['LeadQualificado'], segmento: str, cidade: str):
+    """Salva leads no cache global pra reutilização entre tenants."""
+    try:
+        from database import engine
+        from sqlalchemy import text as _text
+        import json as _json_cache
+        with engine.connect() as conn:
+            for lq in leads:
+                l = lq.lead
+                conn.execute(_text("""
+                    INSERT INTO leads_cache (nome, cidade, segmento, telefone, rating, total_avaliacoes,
+                        website, endereco, maps_url, fotos, servicos, horarios, logo_url,
+                        atributos, faixa_preco, reviews_json, criado_em)
+                    VALUES (:nome, :cidade, :seg, :tel, :rating, :aval, :web, :end, :maps,
+                        :fotos, :servicos, :horarios, :logo, :atrib, :faixa, :reviews, NOW())
+                    ON CONFLICT (lower(nome), lower(cidade)) DO UPDATE SET
+                        rating = EXCLUDED.rating, telefone = COALESCE(EXCLUDED.telefone, leads_cache.telefone),
+                        atualizado_em = NOW()
+                """), {
+                    "nome": l.nome, "cidade": l.cidade, "seg": segmento,
+                    "tel": l.telefone, "rating": l.rating, "aval": l.total_avaliacoes,
+                    "web": l.website, "end": l.endereco, "maps": l.maps_url,
+                    "fotos": _json_cache.dumps(l.fotos or []),
+                    "servicos": _json_cache.dumps(l.servicos or []),
+                    "horarios": _json_cache.dumps(l.horarios or []),
+                    "logo": getattr(l, 'logo_url', None),
+                    "atrib": _json_cache.dumps(l.atributos or []),
+                    "faixa": l.faixa_preco,
+                    "reviews": _json_cache.dumps([{"autor": r.get("autor",""), "texto": r.get("texto",""), "rating": r.get("rating",5)} for r in (l.reviews or [])[:5]]),
+                })
+            conn.commit()
+        print(f"[Hunter Cache] Salvou {len(leads)} leads no cache ({segmento}/{cidade})")
+    except Exception as e:
+        print(f"[Hunter Cache] Erro ao salvar cache: {e}")
+
+
 async def buscar_leads_google_maps(
     cidade: str,
     segmento: str,
@@ -355,7 +462,11 @@ async def buscar_leads_google_maps(
     _existentes = leads_existentes or set()
     print(f"[Hunter V2] Buscando {limite} leads LAZY: {segmento} em {cidade} ({len(_existentes)} ja existentes)...")
 
-
+    # ── CACHE GLOBAL: verificar se já temos leads cacheados pra este segmento+cidade ──
+    cached_leads = _buscar_cache_leads(segmento, cidade, _existentes, limite)
+    if cached_leads and len(cached_leads) >= limite:
+        print(f"[Hunter V2] ✅ CACHE HIT: {len(cached_leads)} leads do cache (sem Playwright)")
+        return cached_leads[:limite]
 
     scraper = GoogleMapsScraper(headless=True)
 
@@ -379,6 +490,23 @@ async def buscar_leads_google_maps(
         nome = dados.get('nome', '').strip()
         if not nome or len(nome) < 3:
             continue
+
+        # Validar que o lead pertence ao segmento buscado
+        tipo_real = (dados.get('tipo') or '').strip()
+        if tipo_real:
+            # Se o tipo real do Google Maps não tem relação com o segmento buscado, pular
+            _seg_lower = segmento.lower()
+            _tipo_lower = tipo_real.lower()
+            # Verificar se há alguma relação semântica
+            _match = (
+                _seg_lower in _tipo_lower or
+                _tipo_lower in _seg_lower or
+                any(p in _tipo_lower for p in _seg_lower.split()) or
+                any(p in _seg_lower for p in _tipo_lower.split())
+            )
+            if not _match:
+                print(f"[Hunter V2] SKIP nicho errado: {nome} (tipo={tipo_real}, buscado={segmento})")
+                continue
 
         # Pular leads ja existentes no banco
         _nome_norm = nome.lower().strip()
@@ -409,12 +537,12 @@ async def buscar_leads_google_maps(
             lead = LeadRaw(
                 nome=dados['nome'],
                 cidade=cidade,
-                segmento=dados.get('tipo', segmento),
+                segmento=tipo_real if tipo_real else segmento,
                 categoria=dados.get('tipo'),
                 telefone=dados.get('telefone'),
                 whatsapp=dados.get('telefone'),
                 rating=dados.get('rating', 0),
-                total_avaliacoes=dados.get('reviews', 0),
+                total_avaliacoes=dados.get('reviews', 0) or len(dados.get('depoimentos', [])),
                 reviews=[
                     {'autor': d.get('autor', ''), 'rating': d.get('rating', 5), 'texto': d.get('texto', ''), 'data': d.get('data', '')}
                     for d in dados.get('depoimentos', [])
@@ -453,6 +581,11 @@ async def buscar_leads_google_maps(
             continue
 
     print(f"[Hunter V2] Total: {len(leads_encontrados)} leads coletados (lazy, {len(cards_raw)} cards avaliados)")
+
+    # Salvar no cache global pra próximos tenants
+    if leads_encontrados:
+        _salvar_cache_leads(leads_encontrados, segmento, cidade)
+
     return leads_encontrados
 
 # ===== TESTE =====

@@ -171,6 +171,8 @@ canvas{max-width:100%}
   <button class="tab" data-tab="usuarios" onclick="switchTab('usuarios')">Usuários</button>
   <button class="tab" data-tab="consumo" onclick="switchTab('consumo')">Consumo</button>
   <button class="tab" data-tab="apikeys" onclick="switchTab('apikeys')">API Keys</button>
+  <button class="tab" data-tab="agentes" onclick="switchTab('agentes')">Agentes</button>
+  <button class="tab" data-tab="playground" onclick="switchTab('playground')">Playground</button>
   <button class="tab" data-tab="alertas" onclick="switchTab('alertas')">Alertas</button>
 </div>
 
@@ -242,6 +244,173 @@ canvas{max-width:100%}
     </div>
   </section>
 
+  <!-- ========== AGENTES ========== -->
+  <section class="panel" id="panel-agentes">
+    <h2 class="section-title">CONFIGURAÇÃO DE AGENTES — MODELO POR AGENTE</h2>
+    <div class="table-wrap">
+      <div class="table-toolbar">
+        <button class="btn" onclick="loadAgentConfigs()">Atualizar</button>
+        <span class="muted" style="margin-left:auto">Defina qual modelo cada agente usa. Fallback hardcoded se DB vazio.</span>
+      </div>
+      <div id="agentes-area">
+        <div class="loading"><span class="spinner"></span> carregando…</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== PLAYGROUND ========== -->
+  <section class="panel" id="panel-playground">
+    <h2 class="section-title">PLAYGROUND — TESTE A/B DE MODELOS</h2>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+      <!-- Config -->
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:16px;">
+        <div style="display:flex;gap:12px;margin-bottom:12px;flex-wrap:wrap;">
+          <div style="flex:1;min-width:120px;">
+            <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px;">Agente</label>
+            <select id="pg-agent" style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:8px;border-radius:6px;font-size:13px;" onchange="pgAgentChanged()">
+              <option value="theo">Theo</option>
+              <option value="liam">Liam</option>
+              <option value="bryan">Bryan</option>
+              <option value="liz">Liz</option>
+              <option value="arquiteto_mestre">Arquiteto</option>
+              <option value="alex">Alex</option>
+            </select>
+          </div>
+        </div>
+        <div style="margin-bottom:12px;">
+          <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px;">Prompt (exemplo real do pipeline)</label>
+          <textarea id="pg-prompt" rows="5" style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:10px;border-radius:6px;font-size:12px;font-family:var(--mono);resize:vertical;" placeholder="Cole aqui um prompt real que o agente recebe..."></textarea>
+        </div>
+        <button class="btn btn-primary" onclick="runPlayground()" style="width:100%;padding:12px;font-size:14px;font-weight:600;">▶ EXECUTAR TESTE A/B</button>
+        <div style="margin-top:8px;display:flex;gap:8px;">
+          <button class="btn" onclick="runPipelineTest()" style="flex:1;padding:10px;font-size:12px;border:1px solid var(--purple);color:var(--purple-300);">🔗 TESTE PIPELINE (Theo→Arquiteto→Liam)</button>
+        </div>
+      </div>
+      <!-- Modelo A / B selectors -->
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:14px;">
+          <div style="font-size:11px;color:var(--cyan);font-weight:600;margin-bottom:8px;">MODELO A</div>
+          <div style="display:flex;gap:8px;">
+            <select id="pg-provider-a" style="flex:1;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:6px;border-radius:4px;font-size:12px;" onchange="pgProviderChanged('a')">
+              <option value="anthropic">Anthropic</option>
+              <option value="openai">OpenAI</option>
+              <option value="google">Google</option>
+              <option value="groq">Groq</option>
+            </select>
+            <select id="pg-model-a" style="flex:2;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:6px;border-radius:4px;font-size:12px;font-family:var(--mono);"></select>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:8px;">
+            <div style="flex:1;"><label style="font-size:10px;color:var(--dim);">T°</label><input id="pg-temp-a" type="number" step="0.1" min="0" max="2" value="0.7" style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:4px;border-radius:4px;font-size:12px;"></div>
+            <div style="flex:1;"><label style="font-size:10px;color:var(--dim);">Max tokens</label><input id="pg-max-a" type="number" step="500" min="500" max="16000" value="2000" style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:4px;border-radius:4px;font-size:12px;"></div>
+          </div>
+        </div>
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:14px;">
+          <div style="font-size:11px;color:var(--gold);font-weight:600;margin-bottom:8px;">MODELO B</div>
+          <div style="display:flex;gap:8px;">
+            <select id="pg-provider-b" style="flex:1;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:6px;border-radius:4px;font-size:12px;" onchange="pgProviderChanged('b')">
+              <option value="anthropic">Anthropic</option>
+              <option value="openai">OpenAI</option>
+              <option value="google">Google</option>
+              <option value="groq">Groq</option>
+            </select>
+            <select id="pg-model-b" style="flex:2;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:6px;border-radius:4px;font-size:12px;font-family:var(--mono);"></select>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:8px;">
+            <div style="flex:1;"><label style="font-size:10px;color:var(--dim);">T°</label><input id="pg-temp-b" type="number" step="0.1" min="0" max="2" value="0.7" style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:4px;border-radius:4px;font-size:12px;"></div>
+            <div style="flex:1;"><label style="font-size:10px;color:var(--dim);">Max tokens</label><input id="pg-max-b" type="number" step="500" min="500" max="16000" value="2000" style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:4px;border-radius:4px;font-size:12px;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Resultados A/B -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;" id="pg-results">
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:16px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+          <span style="font-size:11px;color:var(--cyan);font-weight:600;">RESULTADO A</span>
+          <div style="display:flex;gap:6px;align-items:center;">
+            <span id="pg-stats-a" style="font-size:11px;color:var(--muted);font-family:var(--mono);"></span>
+            <button class="btn" id="pg-preview-btn-a" style="display:none;font-size:10px;padding:3px 8px;" onclick="pgTogglePreview('a')">Preview</button>
+          </div>
+        </div>
+        <pre id="pg-response-a" style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:12px;font-size:12px;font-family:var(--mono);color:var(--text);white-space:pre-wrap;word-break:break-word;max-height:400px;overflow-y:auto;min-height:60px;">Aguardando teste...</pre>
+        <iframe id="pg-iframe-a" style="display:none;width:100%;height:400px;border:1px solid var(--border);border-radius:6px;background:#fff;margin-top:8px;" sandbox="allow-same-origin"></iframe>
+      </div>
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:16px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+          <span style="font-size:11px;color:var(--gold);font-weight:600;">RESULTADO B</span>
+          <div style="display:flex;gap:6px;align-items:center;">
+            <span id="pg-stats-b" style="font-size:11px;color:var(--muted);font-family:var(--mono);"></span>
+            <button class="btn" id="pg-preview-btn-b" style="display:none;font-size:10px;padding:3px 8px;" onclick="pgTogglePreview('b')">Preview</button>
+          </div>
+        </div>
+        <pre id="pg-response-b" style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:12px;font-size:12px;font-family:var(--mono);color:var(--text);white-space:pre-wrap;word-break:break-word;max-height:400px;overflow-y:auto;min-height:60px;">Aguardando teste...</pre>
+        <iframe id="pg-iframe-b" style="display:none;width:100%;height:400px;border:1px solid var(--border);border-radius:6px;background:#fff;margin-top:8px;" sandbox="allow-same-origin"></iframe>
+      </div>
+    </div>
+
+    <!-- PIPELINE SANDBOX -->
+    <div style="margin-top:24px;border-top:1px solid var(--border);padding-top:20px;">
+      <h3 style="font-family:var(--brand);font-size:11px;color:var(--gold);margin-bottom:14px;letter-spacing:1px;">🏗️ PIPELINE SANDBOX — TESTE COMPLETO</h3>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:14px;">Roda o pipeline real (Hunter → Caio → Theo → Arquiteto → Liam → Liz) com modelos customizáveis. Sem WhatsApp, sem deploy.</p>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:14px;">
+        <div>
+          <label style="font-size:10px;color:var(--dim);display:block;margin-bottom:4px;">Segmento</label>
+          <input id="sb-segmento" type="text" value="Academia" style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:8px;border-radius:6px;font-size:13px;">
+        </div>
+        <div>
+          <label style="font-size:10px;color:var(--dim);display:block;margin-bottom:4px;">Cidade</label>
+          <input id="sb-cidade" type="text" value="Sao Paulo" style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:8px;border-radius:6px;font-size:13px;">
+        </div>
+        <div style="display:flex;align-items:flex-end;">
+          <button class="btn btn-primary" onclick="runSandbox()" style="width:100%;padding:10px;font-size:13px;font-weight:600;">🚀 RODAR PIPELINE</button>
+        </div>
+      </div>
+
+      <!-- Modelo por agente -->
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px;">
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:6px;padding:10px;">
+          <div style="font-size:10px;color:var(--cyan);font-weight:600;margin-bottom:6px;">THEO</div>
+          <select id="sb-theo-provider" style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:4px;border-radius:4px;font-size:11px;margin-bottom:4px;" onchange="sbProviderChanged('theo')">
+            <option value="anthropic">Anthropic</option><option value="openai">OpenAI</option><option value="google">Google</option><option value="groq">Groq</option>
+          </select>
+          <select id="sb-theo-model" style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:4px;border-radius:4px;font-size:10px;font-family:var(--mono);"></select>
+        </div>
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:6px;padding:10px;">
+          <div style="font-size:10px;color:var(--cyan);font-weight:600;margin-bottom:6px;">ARQUITETO</div>
+          <select id="sb-arquiteto_mestre-provider" style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:4px;border-radius:4px;font-size:11px;margin-bottom:4px;" onchange="sbProviderChanged('arquiteto_mestre')">
+            <option value="anthropic">Anthropic</option><option value="openai">OpenAI</option><option value="google">Google</option><option value="groq">Groq</option>
+          </select>
+          <select id="sb-arquiteto_mestre-model" style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:4px;border-radius:4px;font-size:10px;font-family:var(--mono);"></select>
+        </div>
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:6px;padding:10px;">
+          <div style="font-size:10px;color:var(--gold);font-weight:600;margin-bottom:6px;">LIAM</div>
+          <select id="sb-liam-provider" style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:4px;border-radius:4px;font-size:11px;margin-bottom:4px;" onchange="sbProviderChanged('liam')">
+            <option value="anthropic">Anthropic</option><option value="openai">OpenAI</option><option value="google">Google</option><option value="groq">Groq</option>
+          </select>
+          <select id="sb-liam-model" style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:4px;border-radius:4px;font-size:10px;font-family:var(--mono);"></select>
+        </div>
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:6px;padding:10px;">
+          <div style="font-size:10px;color:var(--muted);font-weight:600;margin-bottom:6px;">LIZ</div>
+          <select id="sb-liz-provider" style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:4px;border-radius:4px;font-size:11px;margin-bottom:4px;" onchange="sbProviderChanged('liz')">
+            <option value="anthropic">Anthropic</option><option value="openai">OpenAI</option><option value="google">Google</option><option value="groq">Groq</option>
+          </select>
+          <select id="sb-liz-model" style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:4px;border-radius:4px;font-size:10px;font-family:var(--mono);"></select>
+        </div>
+      </div>
+
+      <!-- Resultado sandbox -->
+      <div id="sb-log" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px;font-family:var(--mono);font-size:12px;color:var(--text);min-height:60px;max-height:200px;overflow-y:auto;margin-bottom:12px;white-space:pre-wrap;">Aguardando execução...</div>
+      <div style="display:flex;gap:8px;margin-bottom:8px;">
+        <button class="btn" id="sb-preview-btn" style="display:none;" onclick="document.getElementById('sb-iframe').style.display=document.getElementById('sb-iframe').style.display==='none'?'block':'none'">👁️ Toggle Preview</button>
+        <button class="btn" id="sb-code-btn" style="display:none;" onclick="document.getElementById('sb-code').style.display=document.getElementById('sb-code').style.display==='none'?'block':'none'">📄 Toggle Código</button>
+        <span id="sb-summary" style="margin-left:auto;font-size:12px;color:var(--muted);font-family:var(--mono);"></span>
+      </div>
+      <iframe id="sb-iframe" style="display:none;width:100%;height:600px;border:2px solid var(--purple);border-radius:8px;background:#fff;" sandbox="allow-same-origin"></iframe>
+      <pre id="sb-code" style="display:none;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:14px;font-size:11px;font-family:var(--mono);color:var(--text);white-space:pre-wrap;word-break:break-word;max-height:400px;overflow-y:auto;"></pre>
+    </div>
+  </section>
+
   <!-- ========== ALERTAS ========== -->
   <section class="panel" id="panel-alertas">
     <h2 class="section-title">ALERTAS DE PROVEDORES DE IA</h2>
@@ -308,6 +477,15 @@ let CURRENT_USER = null;
   }
 })();
 
+async function authFetch(url, opts = {}) {
+  const token = localStorage.getItem('fralib_token');
+  if (!token) { window.location.href = '/login'; return; }
+  opts.headers = { ...opts.headers, Authorization: 'Bearer ' + token };
+  const r = await fetch(url, opts);
+  if (r.status === 401) { localStorage.removeItem('fralib_token'); window.location.href = '/login'; return; }
+  return r;
+}
+
 function logout(){
   localStorage.removeItem('fralib_token');
   window.location.href='/login';
@@ -321,6 +499,8 @@ function switchTab(tab){
   if(tab==='consumo' && !document.getElementById('usage-area').dataset.loaded) loadUsage();
   if(tab==='apikeys') loadApiKeys();
   if(tab==='alertas') loadAlerts();
+  if(tab==='agentes') loadAgentConfigs();
+  if(tab==='playground') initPlayground();
 }
 
 // ===== toast =====
@@ -657,10 +837,11 @@ function _keyFormHtml(k){
   return `
     <div class="field-row">
       <label>Provider</label>
-      <select id="f-provider" ${isEdit?'disabled':''}>
+      <select id="f-provider" ${isEdit?'disabled':''} onchange="updateBaseUrlHint()">
         <option value="anthropic" ${k&&k.provider==='anthropic'?'selected':''}>anthropic</option>
         <option value="openai" ${k&&k.provider==='openai'?'selected':''}>openai</option>
         <option value="google" ${k&&k.provider==='google'?'selected':''}>google</option>
+        <option value="groq" ${k&&k.provider==='groq'?'selected':''}>groq</option>
         <option value="custom" ${k&&k.provider==='custom'?'selected':''}>custom (OpenAI-compatible)</option>
       </select>
     </div>
@@ -673,7 +854,7 @@ function _keyFormHtml(k){
       <input id="f-apikey" type="password" placeholder="${isEdit?'•••• (não muda se vazio)':'cole a key aqui'}" autocomplete="new-password">
     </div>
     <div class="field-row">
-      <label>Base URL (opcional p/ anthropic/openai/google, obrigatório p/ custom)</label>
+      <label>Base URL <span id="f-baseurl-hint" style="color:var(--muted);font-size:11px;"></span></label>
       <input id="f-baseurl" type="text" placeholder="https://api.exemplo.com/v1" value="${k?escapeAttr(k.base_url||''):''}">
     </div>
     <div style="display:flex;gap:8px;margin-top:8px">
@@ -685,6 +866,30 @@ function _keyFormHtml(k){
 
 function openNewKeyModal(){
   openModal('Nova API Key', _keyFormHtml(null), saveNewKey);
+  setTimeout(updateBaseUrlHint, 50);
+}
+
+function updateBaseUrlHint(){
+  const provider = document.getElementById('f-provider');
+  const hint = document.getElementById('f-baseurl-hint');
+  const input = document.getElementById('f-baseurl');
+  if(!provider||!hint) return;
+  const hints = {
+    'anthropic': '(opcional — padrão: https://api.anthropic.com)',
+    'openai': '(opcional — padrão: https://api.openai.com/v1)',
+    'google': '(não precisa — usa URL do Gemini automaticamente)',
+    'groq': '(obrigatório: https://api.groq.com/openai/v1)',
+    'custom': '(obrigatório — endpoint OpenAI-compatible)',
+  };
+  const placeholders = {
+    'anthropic': 'https://api.anthropic.com (ou proxy)',
+    'openai': 'https://api.openai.com/v1',
+    'google': '(deixe vazio)',
+    'groq': 'https://api.groq.com/openai/v1',
+    'custom': 'https://seu-proxy.com/v1',
+  };
+  hint.textContent = hints[provider.value] || '';
+  if(input && !input.value) input.placeholder = placeholders[provider.value] || '';
 }
 
 function editKey(id){
@@ -931,6 +1136,362 @@ async function reprocessLead(leadId){
     }catch(e){ toast('Falha: '+(e.message||e),'error'); }
   });
 }
+
+// ============================================================
+// AGENTES — CRUD de configuração de modelos
+// ============================================================
+let AGENT_CONFIGS = [];
+let PG_MODELS = {};
+
+async function loadAgentConfigs(){
+  const area = document.getElementById('agentes-area');
+  area.innerHTML = '<div class="loading"><span class="spinner"></span> carregando…</div>';
+  try{
+    const r = await authFetch('/api/agent-configs');
+    const d = await r.json();
+    if(!d.ok) throw new Error(d.detail||'erro');
+    AGENT_CONFIGS = d.configs || [];
+    renderAgentConfigs();
+  }catch(e){
+    area.innerHTML = '<div class="empty">Falha: '+escapeHtml(e.message||String(e))+'</div>';
+  }
+}
+
+function renderAgentConfigs(){
+  const area = document.getElementById('agentes-area');
+  if(!AGENT_CONFIGS.length){
+    area.innerHTML = '<div class="empty">Nenhuma config. Usando mapeamento hardcoded.</div>';
+    return;
+  }
+  let h = '<table class="table"><thead><tr>'+
+    '<th>Agente</th><th>Provider</th><th>Modelo</th><th>Fallback</th><th>T°</th><th>Max Tokens</th><th>Status</th><th>Ações</th></tr></thead><tbody>';
+  for(const c of AGENT_CONFIGS){
+    const statusPill = c.enabled
+      ? '<span class="pill pill-active">ativo</span>'
+      : '<span class="pill pill-disabled">desativado</span>';
+    const fallback = c.fallback_model_id ? `${c.fallback_provider||''}/${c.fallback_model_id}` : '—';
+    h += `<tr>
+      <td><strong style="color:var(--purple-300)">${escapeHtml(c.agent_name)}</strong></td>
+      <td><span class="pill pill-admin">${escapeHtml(c.provider)}</span></td>
+      <td style="font-family:var(--mono);font-size:12px">${escapeHtml(c.model_id)}</td>
+      <td style="font-family:var(--mono);font-size:11px;color:var(--muted)">${escapeHtml(fallback)}</td>
+      <td style="font-family:var(--mono);font-size:12px">${c.temperature}</td>
+      <td style="font-family:var(--mono);font-size:12px">${c.max_tokens}</td>
+      <td>${statusPill}</td>
+      <td><button class="btn" onclick="editAgentConfig('${escapeAttr(c.agent_name)}')">Editar</button></td>
+    </tr>`;
+  }
+  h += '</tbody></table>';
+  area.innerHTML = h;
+}
+
+async function editAgentConfig(agentName){
+  // Carregar modelos disponíveis
+  if(!Object.keys(PG_MODELS).length){
+    try{
+      const r = await authFetch('/api/agent-configs/models');
+      const d = await r.json();
+      PG_MODELS = d.models || {};
+    }catch(e){}
+  }
+  const c = AGENT_CONFIGS.find(x=>x.agent_name===agentName) || {};
+  const providerOpts = ['anthropic','openai','google','groq'].map(p=>
+    `<option value="${p}" ${c.provider===p?'selected':''}>${p}</option>`
+  ).join('');
+
+  function modelOpts(provider, selected){
+    const models = PG_MODELS[provider] || [];
+    return models.map(m=>`<option value="${m.id}" ${m.id===selected?'selected':''}>${m.label} (${m.id})</option>`).join('');
+  }
+
+  const html = `
+    <div class="field-row"><label>Provider</label>
+      <select id="ac-provider" onchange="document.getElementById('ac-model').innerHTML=window._acModelOpts(this.value)">${providerOpts}</select>
+    </div>
+    <div class="field-row"><label>Modelo</label>
+      <select id="ac-model">${modelOpts(c.provider||'anthropic', c.model_id)}</select>
+    </div>
+    <div class="field-row"><label>Fallback Provider</label>
+      <select id="ac-fb-provider" onchange="document.getElementById('ac-fb-model').innerHTML=window._acModelOpts(this.value)"><option value="">Nenhum</option>${['anthropic','openai','google','groq'].map(p=>`<option value="${p}" ${c.fallback_provider===p?'selected':''}>${p}</option>`).join('')}</select>
+    </div>
+    <div class="field-row"><label>Fallback Modelo</label>
+      <select id="ac-fb-model"><option value="">Nenhum</option>${c.fallback_provider ? modelOpts(c.fallback_provider, c.fallback_model_id) : ''}</select>
+    </div>
+    <div style="display:flex;gap:12px;">
+      <div class="field-row" style="flex:1"><label>Temperature</label><input id="ac-temp" type="number" step="0.1" min="0" max="2" value="${c.temperature||0.7}"></div>
+      <div class="field-row" style="flex:1"><label>Max Tokens</label><input id="ac-max" type="number" step="500" min="500" max="16000" value="${c.max_tokens||4000}"></div>
+    </div>
+  `;
+  window._acModelOpts = function(prov){ return modelOpts(prov, ''); };
+  openModal('Editar Agente: '+agentName, html, async function(){
+    const body = {
+      provider: document.getElementById('ac-provider').value,
+      model_id: document.getElementById('ac-model').value,
+      fallback_provider: document.getElementById('ac-fb-provider').value || null,
+      fallback_model_id: document.getElementById('ac-fb-model').value || null,
+      temperature: parseFloat(document.getElementById('ac-temp').value),
+      max_tokens: parseInt(document.getElementById('ac-max').value),
+    };
+    try{
+      const r = await authFetch('/api/agent-configs/'+agentName, {
+        method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)
+      });
+      const d = await r.json();
+      if(!d.ok) throw new Error(d.detail||'erro');
+      closeModal();
+      toast('Config atualizada: '+agentName);
+      loadAgentConfigs();
+    }catch(e){ toast('Falha: '+(e.message||e),'error'); }
+  });
+}
+
+// ============================================================
+// PLAYGROUND — Teste A/B
+// ============================================================
+let _pgInited = false;
+
+async function initPlayground(){
+  if(_pgInited) return;
+  _pgInited = true;
+  try{
+    const r = await authFetch('/api/agent-configs/models');
+    const d = await r.json();
+    PG_MODELS = d.models || {};
+  }catch(e){}
+  pgProviderChanged('a');
+  pgProviderChanged('b');
+  // Default: modelo B = google gemini
+  document.getElementById('pg-provider-b').value = 'google';
+  pgProviderChanged('b');
+}
+
+function pgProviderChanged(side){
+  const provider = document.getElementById('pg-provider-'+side).value;
+  const sel = document.getElementById('pg-model-'+side);
+  const models = PG_MODELS[provider] || [];
+  sel.innerHTML = models.map(m=>`<option value="${m.id}">${m.label}</option>`).join('');
+}
+
+function pgAgentChanged(){
+  // Preencher prompt de exemplo baseado no agente
+  const agent = document.getElementById('pg-agent').value;
+  const examples = {
+    'theo': 'Gere um briefing estrategico para um site de uma academia em Sao Paulo. Nome: FitLife Academia. Rating: 4.8/5 (120 avaliacoes). Foco em musculacao e crossfit.',
+    'liam': 'Gere a section hero para: FitLife Academia, Sao Paulo. Layout: hero-split. Foto: https://images.unsplash.com/photo-1534438327276-14e5300c3a48. WhatsApp: 5511999999999.',
+    'bryan': 'Gere uma mensagem WhatsApp de primeiro contato para FitLife Academia. Oferta: site profissional gratuito. Tom: consultivo, sem pressao.',
+    'liz': 'Audite este HTML e liste problemas de acessibilidade, SEO e performance: <section id="hero"><h1>Bem vindo</h1><img src="foto.jpg"><a href="#">Saiba mais</a></section>',
+    'arquiteto_mestre': 'Crie um PRD para site de academia em SP. Nome: FitLife. Servicos: musculacao, crossfit, pilates. Rating 4.8. 120 avaliacoes.',
+    'alex': 'Defina paleta de cores e identidade visual para: FitLife Academia. Segmento: fitness/academia. Cidade: Sao Paulo. Tom: energetico e moderno.',
+  };
+  document.getElementById('pg-prompt').value = examples[agent] || '';
+}
+
+function pgTogglePreview(side){
+  const iframe = document.getElementById('pg-iframe-'+side);
+  const pre = document.getElementById('pg-response-'+side);
+  if(iframe.style.display === 'none'){
+    iframe.style.display = 'block';
+    pre.style.display = 'none';
+  } else {
+    iframe.style.display = 'none';
+    pre.style.display = 'block';
+  }
+}
+
+function pgRenderResult(side, data){
+  const resp = document.getElementById('pg-response-'+side);
+  const stats = document.getElementById('pg-stats-'+side);
+  const previewBtn = document.getElementById('pg-preview-btn-'+side);
+  const iframe = document.getElementById('pg-iframe-'+side);
+
+  if(data.ok){
+    resp.textContent = data.response || '(vazio)';
+    stats.textContent = `⏱ ${(data.latency_ms/1000).toFixed(1)}s | ${data.input_tokens+data.output_tokens} tok`;
+    // Detectar HTML na resposta — mostrar botão de preview
+    const isHtml = data.response && (data.response.includes('<section') || data.response.includes('<div') || data.response.includes('<html'));
+    if(isHtml){
+      previewBtn.style.display = 'inline-block';
+      // Renderizar no iframe
+      const htmlContent = data.response.includes('<html') ? data.response :
+        `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><script src="https://cdn.tailwindcss.com"><\/script><style>:root{--bg:#ffffff;--surface:#f8f9fa;--fg:#1a1a2e;--muted:#6b7280;--border:#e5e7eb;--accent:#9333ea;}body{font-family:system-ui,sans-serif;margin:0;padding:0;color:var(--fg);background:var(--bg);}</style></head><body>${data.response}</body></html>`;
+      iframe.srcdoc = htmlContent;
+    } else {
+      previewBtn.style.display = 'none';
+      iframe.style.display = 'none';
+    }
+  } else {
+    resp.textContent = '❌ ' + (data.error||'erro');
+    stats.textContent = data.latency_ms ? `⏱ ${(data.latency_ms/1000).toFixed(1)}s` : '';
+    previewBtn.style.display = 'none';
+    iframe.style.display = 'none';
+  }
+}
+
+async function runPlayground(){
+  const agent = document.getElementById('pg-agent').value;
+  const prompt = document.getElementById('pg-prompt').value.trim();
+  if(!prompt){ toast('Preencha o prompt','error'); return; }
+
+  const respA = document.getElementById('pg-response-a');
+  const respB = document.getElementById('pg-response-b');
+  const statsA = document.getElementById('pg-stats-a');
+  const statsB = document.getElementById('pg-stats-b');
+
+  respA.textContent = '⏳ Executando...';
+  respB.textContent = '⏳ Executando...';
+  statsA.textContent = '';
+  statsB.textContent = '';
+  document.getElementById('pg-preview-btn-a').style.display = 'none';
+  document.getElementById('pg-preview-btn-b').style.display = 'none';
+  document.getElementById('pg-iframe-a').style.display = 'none';
+  document.getElementById('pg-iframe-b').style.display = 'none';
+
+  const configA = {
+    agent_name: agent,
+    provider: document.getElementById('pg-provider-a').value,
+    model_id: document.getElementById('pg-model-a').value,
+    user: prompt,
+    temperature: parseFloat(document.getElementById('pg-temp-a').value),
+    max_tokens: parseInt(document.getElementById('pg-max-a').value),
+  };
+  const configB = {
+    agent_name: agent,
+    provider: document.getElementById('pg-provider-b').value,
+    model_id: document.getElementById('pg-model-b').value,
+    user: prompt,
+    temperature: parseFloat(document.getElementById('pg-temp-b').value),
+    max_tokens: parseInt(document.getElementById('pg-max-b').value),
+  };
+
+  // Executar em paralelo
+  const [rA, rB] = await Promise.allSettled([
+    authFetch('/api/agent-configs/playground', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(configA)}).then(r=>r.json()),
+    authFetch('/api/agent-configs/playground', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(configB)}).then(r=>r.json()),
+  ]);
+
+  // Resultado A
+  pgRenderResult('a', rA.status==='fulfilled' ? rA.value : {ok:false, error:String(rA.reason)});
+  // Resultado B
+  pgRenderResult('b', rB.status==='fulfilled' ? rB.value : {ok:false, error:String(rB.reason)});
+}
+
+async function runPipelineTest(){
+
+}
+
+// ============================================================
+// PIPELINE SANDBOX
+// ============================================================
+
+function sbProviderChanged(agent){
+  const provider = document.getElementById('sb-'+agent+'-provider').value;
+  const sel = document.getElementById('sb-'+agent+'-model');
+  const models = PG_MODELS[provider] || [];
+  sel.innerHTML = models.map(m=>`<option value="${m.id}">${m.label}</option>`).join('');
+}
+
+function initSandboxModels(){
+  ['theo','arquiteto_mestre','liam','liz'].forEach(a => sbProviderChanged(a));
+}
+
+async function runSandbox(){
+  const log = document.getElementById('sb-log');
+  const iframe = document.getElementById('sb-iframe');
+  const code = document.getElementById('sb-code');
+  const summary = document.getElementById('sb-summary');
+
+  log.textContent = '';
+  iframe.style.display = 'none';
+  code.style.display = 'none';
+  document.getElementById('sb-preview-btn').style.display = 'none';
+  document.getElementById('sb-code-btn').style.display = 'none';
+  summary.textContent = '';
+
+  const segmento = document.getElementById('sb-segmento').value.trim() || 'Academia';
+  const cidade = document.getElementById('sb-cidade').value.trim() || 'Sao Paulo';
+
+  const models = {};
+  ['theo','arquiteto_mestre','liam','liz'].forEach(agent => {
+    models[agent] = {
+      provider: document.getElementById('sb-'+agent+'-provider').value,
+      model_id: document.getElementById('sb-'+agent+'-model').value,
+    };
+  });
+
+  // Mostrar config
+  log.textContent += '🚀 Pipeline Sandbox iniciado\n';
+  log.textContent += `📍 ${segmento} em ${cidade}\n`;
+  log.textContent += `─────────────────────────────\n`;
+  log.textContent += `🤖 Theo: ${models.theo.provider}/${models.theo.model_id}\n`;
+  log.textContent += `🤖 Arquiteto: ${models.arquiteto_mestre.provider}/${models.arquiteto_mestre.model_id}\n`;
+  log.textContent += `🤖 Liam: ${models.liam.provider}/${models.liam.model_id}\n`;
+  log.textContent += `🤖 Liz: ${models.liz.provider}/${models.liz.model_id}\n`;
+  log.textContent += `─────────────────────────────\n`;
+
+  // Progress indicators
+  const fases = ['Hunter','Caio','Theo','Arquiteto','Liam','Liz'];
+  let faseAtual = 0;
+  const progressInterval = setInterval(()=>{
+    if(faseAtual < fases.length){
+      const dots = '.'.repeat((Date.now()/500|0)%4);
+      log.textContent = log.textContent.replace(/⏳ .*\n?$/, '');
+      log.textContent += `⏳ ${fases[faseAtual]} processando${dots}\n`;
+    }
+  }, 500);
+
+  try {
+    const r = await authFetch('/api/agent-configs/pipeline-sandbox', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({segmento, cidade, models}),
+    });
+    const d = await r.json();
+    clearInterval(progressInterval);
+
+    // Rebuild log com resultados reais
+    log.textContent = '';
+    if(d.results && d.results.lead){
+      log.textContent += `🏢 Lead: ${d.results.lead.nome} (${d.results.lead.cidade})\n`;
+      log.textContent += `⭐ Rating: ${d.results.lead.rating}/5 | Tel: ${d.results.lead.telefone||'N/A'}\n`;
+      log.textContent += `─────────────────────────────\n`;
+    }
+    if(d.results && d.results.fases){
+      d.results.fases.forEach((f,i) => {
+        faseAtual = i+1;
+        const icon = f.status === 'ok' ? '✅' : '❌';
+        const tok = f.tokens ? ` | ${f.tokens} tok` : '';
+        const model = f.model ? ` [${f.provider}/${f.model}]` : '';
+        log.textContent += `${icon} ${f.fase}: ${(f.latency_ms/1000).toFixed(1)}s${tok}${model}\n`;
+        if(f.detail && f.status === 'error') log.textContent += `   ⚠️ ${f.detail}\n`;
+      });
+      log.textContent += `─────────────────────────────\n`;
+      log.textContent += `⏱ Total: ${(d.results.total_latency_ms/1000).toFixed(1)}s | ${d.results.total_tokens} tokens\n`;
+      summary.textContent = `⏱ ${(d.results.total_latency_ms/1000).toFixed(1)}s | ${d.results.total_tokens} tok`;
+    }
+
+    if(d.ok && d.results.html_final){
+      iframe.srcdoc = d.results.html_final;
+      iframe.style.display = 'block';
+      code.textContent = d.results.html_final;
+      document.getElementById('sb-preview-btn').style.display = 'inline-block';
+      document.getElementById('sb-code-btn').style.display = 'inline-block';
+      log.textContent += `\n🎉 Site gerado com sucesso! Preview abaixo ↓\n`;
+    } else if(d.error){
+      log.textContent += `\n❌ ERRO: ${d.error}\n`;
+    }
+  } catch(e){
+    clearInterval(progressInterval);
+    log.textContent += `\n❌ Falha na requisição: ${e.message||e}\n`;
+  }
+}
+
+// Init sandbox models quando playground carrega
+var _origInitPG = initPlayground;
+initPlayground = async function(){
+  await _origInitPG();
+  initSandboxModels();
+};
+
 </script>
 
 </body>

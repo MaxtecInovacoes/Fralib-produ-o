@@ -21,8 +21,6 @@ O manager nao faz a request — quem chama tem essa logica. Isso mantem o
 acoplamento minimo com call_claude/call_openai/etc.
 """
 import os
-import threading
-from collections import defaultdict
 from typing import Optional
 
 import psycopg2
@@ -41,10 +39,6 @@ _ENV_FALLBACK = {
         os.getenv('ANTHROPIC_BASE_URL', 'https://api.aibee.cloud'),
     ),
 }
-
-# Counters de round-robin por provider, em memoria. Thread-safe.
-_rr_counters: dict[str, int] = defaultdict(int)
-_rr_lock = threading.Lock()
 
 
 def _connect():
@@ -76,31 +70,50 @@ def _list_healthy(provider: str):
 def pick_key(provider: str) -> Optional[tuple[str, str, Optional[int]]]:
     """Retorna (api_key_plaintext, base_url, key_id) ou None se nao houver opcao.
 
-    Round-robin sobre o snapshot atual de keys saudaveis. Se nao houver key
-    cadastrada, usa fallback do .env (so pra anthropic).
+    Atomic LRU via DB: SELECT ... ORDER BY last_used_at ASC ... FOR UPDATE SKIP LOCKED
+    garante que multiplos workers/processos nunca pegam a mesma key simultaneamente.
     """
-    rows = _list_healthy(provider)
-    if not rows:
+    try:
+        with _connect() as conn:
+            with conn.cursor() as cur:
+                # Atomic: pega a key menos usada recentemente, trava a row
+                cur.execute(
+                    """
+                    UPDATE provider_keys
+                    SET last_used_at = NOW()
+                    WHERE id = (
+                        SELECT id FROM provider_keys
+                        WHERE provider = %s
+                          AND enabled = TRUE
+                          AND (cooldown_until IS NULL OR cooldown_until < NOW())
+                        ORDER BY last_used_at ASC NULLS FIRST
+                        LIMIT 1
+                        FOR UPDATE SKIP LOCKED
+                    )
+                    RETURNING id, encrypted_key, base_url
+                    """,
+                    (provider,),
+                )
+                row = cur.fetchone()
+                conn.commit()
+    except Exception as e:
+        print(f'[ia_manager] erro pick_key atomic: {e}')
+        row = None
+
+    if not row:
+        # Nenhuma key saudavel — fallback .env
         env = _ENV_FALLBACK.get(provider)
         if env and env[0]:
             return (env[0], env[1], None)
         return None
 
-    with _rr_lock:
-        idx = _rr_counters[provider] % len(rows)
-        _rr_counters[provider] = idx + 1
-
-    key_id, enc, base_url = rows[idx]
+    key_id, enc, base_url = row
     plain = decriptar(enc)
     if not plain:
-        # Key corrompida (FERNET_KEY mudou). Marca falha e tenta proxima.
+        # Key corrompida — marca falha e tenta proxima
         mark_failure(key_id, 'fernet_decrypt_failed', cooldown_seconds=300)
-        # Tail-recurse pra pegar a proxima — limita por seguranca a len(rows).
-        # Simples: chama de novo; se ainda vier essa, vai cair em outra iteracao
-        # do round-robin. No pior caso, todas falham e retornamos None.
         return pick_key(provider)
 
-    # base_url null = default por provider.
     if not base_url:
         base_url = _default_base_url(provider)
     return (plain, base_url, int(key_id))

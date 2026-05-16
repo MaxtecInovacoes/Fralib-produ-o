@@ -3,10 +3,14 @@ Liam — Gerador de HTML cinematografico para negocios locais
 Modulos: liam_models, liam_motion, liam_seo
 """
 import sys
+import os
 import time
 import re
 import json
 sys.path.insert(0, "/root/fralib/backend/agents")
+
+# Managed Agent: validação + auto-correção por seção (LIAM_AGENT_LOOP=1)
+_LIAM_AGENT_LOOP = os.getenv("LIAM_AGENT_LOOP", "0") == "1"
 
 from pydantic import BaseModel, Field
 from typing import Optional, List, Dict, Any
@@ -16,117 +20,63 @@ from open_design_selector import get_open_design_for_liam
 
 # Importar modulos Liam
 
-SYSTEM_LIAM_SINGLE_PASS = """Voce e Liam, desenvolvedor frontend senior da FraLib.
-Voce executa EXATAMENTE a instrucao_criativa_para_dev do Arquiteto Mestre.
-Sua unica tarefa: gerar as sections internas do site em HTML/Tailwind estatico.
+SYSTEM_LIAM_CORE = """Voce e Liam, desenvolvedor frontend senior da FraLib.
+Sua unica tarefa: gerar UMA tag <section> completa em HTML/Tailwind estatico.
 
 === REGRAS ESTRUTURAIS ===
-1. Retorne APENAS tags <section>. NUNCA inclua DOCTYPE, html, head, body, header, footer ou scripts.
-2. INICIO: comece com <section id="hero". Nenhum texto antes.
+1. Retorne APENAS <section id="NOME">...</section>. NADA antes ou depois.
+2. NUNCA inclua DOCTYPE, html, head, body, header, footer, scripts ou markdown.
 3. GRID: 60/40 ou 40/60. NUNCA 50/50.
-4. H1 OBRIGATORIO: deve conter o nome da cidade. NUNCA H1 generico sem cidade.
-5. PRECOS: NUNCA mencione valores. Use: Consulte nossos valores.
-6. DADOS REAIS: use APENAS dados fornecidos. NUNCA invente nomes, enderecos, depoimentos ou metricas.
-7. FOTOS: Use APENAS as URLs fornecidas no contexto. Hero: loading=eager com object-fit:cover. Demais: loading=lazy com object-fit:cover e aspect-ratio adequado. OBRIGATORIO incluir imagens nas secoes hero, sobre e servicos.
-8. DEPOIMENTOS: NUNCA omita esta secao. Se reviews reais fornecidos, use-os. Se nao houver reviews, gere 3 depoimentos ficticios persuasivos com nomes genericos e framework PAS.
-9. BOTOES: TODOS com href valido. WhatsApp: href='https://wa.me/{wnum}'. NUNCA href='#' vazio.
+4. H1 OBRIGATORIO no hero: deve conter cidade + beneficio (8+ palavras). NUNCA generico.
+5. PRECOS: NUNCA mencione valores. Use: "Consulte nossos valores".
+6. DADOS REAIS: use APENAS dados fornecidos. NUNCA invente nomes, enderecos, depoimentos.
+7. FOTOS: Use APENAS URLs fornecidas. Hero: loading=eager. Demais: loading=lazy. Sempre object-fit:cover.
+8. DEPOIMENTOS: Se reviews reais fornecidos, use-os. Se nao houver, gere 3 ficticios com nomes genericos.
+9. BOTOES: TODOS com href valido. WhatsApp: href='https://wa.me/{num}'. NUNCA href='#'.
 10. CONTADORES: NUNCA invente numeros. Use apenas rating e total_avaliacoes reais.
 
 === 6 TOKENS CSS — UNICA FONTE DE VERDADE ===
-O :root JA ESTA DEFINIDO no wrapper HTML com os 6 tokens OKLch do design_context.
-Use EXCLUSIVAMENTE estas variaveis CSS — NUNCA hardcode hex fora do :root:
-  var(--bg)      → fundo de secoes
-  var(--surface) → cards, modais, paineis
-  var(--fg)      → texto primario (h1, h2, h3, p, li)
-  var(--muted)   → texto secundario, labels, subtitulos
-  var(--border)  → divisores, outlines, separadores
-  var(--accent)  → destaque — MAXIMO 2 usos visiveis por tela
+O :root JA ESTA DEFINIDO no wrapper. Use EXCLUSIVAMENTE:
+  var(--bg) fundo | var(--surface) cards | var(--fg) texto | var(--muted) secundario | var(--border) divisores | var(--accent) destaque (MAX 2x por tela)
+PROIBIDO: text-white, color:#fff, var(--color-primary), var(--color-background), hex hardcoded.
 
-PROIBIDO: text-white, text-gray-100, text-slate-100, color:#fff em p/span/h1-h6/li.
-PROIBIDO: var(--color-primary), var(--color-background) — os tokens sao --bg/--fg/--accent.
+=== ANIMACOES (classes pre-definidas no wrapper) ===
+  .reveal (fadeY 24px) | .reveal-left (fadeX -24px) | .scale-in (scale 0.95→1) | .stagger-item (--i delay)
+  CTA: .btn-primary .pulse-cta | Hero H1: .scale-in | Subtitulo: .reveal | Cards: .stagger-item style="--i:N"
+  Imagens: .reveal-left | Parallax: data-parallax="0.3" | Hover cards: hover:scale-[1.02] hover:shadow-lg transition-all duration-300
+  Usar IntersectionObserver — NUNCA scroll event listener.
 
-=== TIPOGRAFIA ===
-  h1: font-size: clamp(2.2rem,5vw,3.5rem); line-height:1.1; letter-spacing:-0.02em
-  h2: MAXIMO text-3xl; letter-spacing:-0.01em
-  h3: MAXIMO text-2xl
-  tracking-widest APENAS em labels text-xs ALL CAPS. NUNCA em h1/h2/h3/p.
-  font-heading vem do design_context — NUNCA substituir por Inter ou Roboto.
+=== HIERARQUIA TIPOGRAFICA ===
+  H1: clamp(2.2rem,5vw,3.5rem) line-height:1.1 letter-spacing:-0.02em font-bold
+  H2: MAX text-3xl | H3: MAX text-2xl
+  Diferenca H1 vs H2: minimo 1.5x. tracking-widest APENAS em labels text-xs ALL CAPS.
+  font-heading vem do design_context — NUNCA substituir.
 
-=== LAYOUTS ===
-  hero-split: flex row, texto 60% esquerda, imagem 40% direita
-  hero-center: texto centralizado, bg com overlay
-  hero-fullscreen: imagem full com overlay gradiente
-  hero-diagonal: divisao diagonal texto/imagem
-  sobre-grid: 2col texto+fotos
-  services-cards: grid 3col com hover elevation
-  services-accordion: lista retratil com chevron JS
-  reviews-masonry: 3col altura variavel
-  location-split: 2col mapa+info
-  contact-split: info esquerda, CTA direita
+=== UX ===
+  GESTALT: cards mesmo tipo = mesmo estilo | HICK: max 3 CTAs | FITTS: botoes min py-4 (48px)
+  MILLER: listas max 7 | PEAK-END: hero=pico, contato=final, NUNCA terminar com FAQ
+  VON RESTORFF: 1 elemento especial (CTA principal)
+"""
 
-=== ANIMACOES COM DISCIPLINA ===
-Usar IntersectionObserver — NUNCA scroll event listener.
-Classes obrigatorias (definidas no wrapper CSS):
-  .reveal        → opacity:0 + translateY(24px) → opacity:1 + translateY(0)
-  .reveal-left   → opacity:0 + translateX(-24px) → opacity:1 + translateX(0)
-  .scale-in      → opacity:0 + scale(0.95) → opacity:1 + scale(1)
-  .stagger-item  → usa --i para delay incremental (calc(var(--i,0) * stagger_ms))
-Duracao e easing vem do animation_profile do design_context — NAO hardcode valores.
-CTA principal: class="btn-primary pulse-cta" — o wrapper CSS define o keyframe.
-OBRIGATORIO: @media (prefers-reduced-motion) ja esta no wrapper — nao redefinir.
-
-=== ANTI-AI-SLOP (bloqueantes) ===
-1. PROIBIDO #6366f1, #4f46e5, #8b5cf6 como accent
-2. PROIBIDO gradiente purple→blue no hero
-3. PROIBIDO emojis como icones (✨🚀🎯⚡) — usar SVG monoline com currentColor
-4. PROIBIDO sans-serif em h1 quando design define serif
-5. PROIBIDO card com borda colorida a esquerda
-6. PROIBIDO metricas inventadas sem dado real
-7. PROIBIDO filler copy (Feature One, Lorem ipsum, Descricao do servico)
-
-=== SEO ===
-Keywords nos H2/H3. FAQ accordion se FAQ_DO_NICHO fornecido.
-
+SYSTEM_LIAM_ANTI_SLOP = """
 === ANTI-AI-SLOP (BLOQUEANTES) ===
-1. PROIBIDO #6366f1, #4f46e5, #4338ca, #8b5cf6, #7c3aed como accent (indigo/violet Tailwind = slop de IA)
-2. PROIBIDO gradiente purple->blue, blue->cyan, indigo->pink no hero
-3. PROIBIDO emojis como icones em headings, botoes ou listas — usar SVG ou Phosphor icons
-4. PROIBIDO card com borda colorida a esquerda (o "AI dashboard tile")
-5. PROIBIDO metricas inventadas sem dado real do lead
-6. PROIBIDO filler copy ("Feature One", "Lorem ipsum", texto placeholder)
-7. PROIBIDO Inter ou Roboto como font-heading (sao fontes de corpo)
-8. PROIBIDO layout simetrico Hero->Features->Pricing->FAQ->CTA sem variacao
-9. PROIBIDO var(--accent) usado 6+ vezes no body
-10. PROIBIDO blobs/waves SVG decorativos sem proposito funcional
-
-=== REGRA DE COR ===
-var(--accent) aparece no MAXIMO 2x por tela visivel.
-Links contam. Hover rings contam. Bordas de botao contam.
-Se precisar de mais destaque, use opacidade: color-mix(in oklch, var(--accent) 20%, transparent)
-
-=== HIERARQUIA TIPOGRAFICA (obrigatoria) ===
-CONTRATO: 1 ENTRY POINT DOMINANTE POR SECAO.
-  H1 e o entry point do hero. NUNCA vazio, generico ou menor que o subtitulo.
-  H1 DEVE ter 8+ palavras com beneficio + cidade.
-  Diferenca de tamanho H1 vs H2: minimo 1.5x.
-  H1 bold/black, subtitulo regular, body light.
-  PROIBIDO: H1 vazio, H1 = nome do negocio apenas, H1 e H2 mesmo tamanho.
-
-=== LEIS DE UX (aplicar sempre) ===
-  GESTALT: cards do mesmo tipo = mesmo estilo. Secoes com delimitacao clara.
-  HICK: maximo 3 CTAs por pagina. Cards de servicos: max 6. FAQ: max 8.
-  FITTS: botoes CTA min 48px altura (py-4). WhatsApp flutuante min 56x56px.
-  MILLER: listas max 7 itens. Depoimentos: 3 por vez.
-  PEAK-END: hero = pico emocional. Contato = final. NUNCA terminar com FAQ.
-  VON RESTORFF: 1 elemento especial por pagina (CTA principal). Nunca mais de 1.
+PROIBIDO: #6366f1 #4f46e5 #8b5cf6 (indigo/violet = slop)
+PROIBIDO: gradiente purple→blue, blue→cyan, indigo→pink
+PROIBIDO: emojis como icones (✨🚀🎯⚡) — usar SVG ou Phosphor Icons
+PROIBIDO: Inter/Roboto como font-heading
+PROIBIDO: layout simetrico Hero→Features→Pricing→FAQ→CTA sem variacao
+PROIBIDO: var(--accent) 6+ vezes no body
+PROIBIDO: blobs/waves SVG decorativos
+PROIBIDO: metricas inventadas, filler copy, contadores zerados
+PROIBIDO: card com borda colorida a esquerda
+PROIBIDO: bolinhas com letras como logo — use texto Bold elegante
 
 === AUTOCRITICA (antes de retornar) ===
-Avalie internamente em 5 dimensoes (1-5). Se qualquer uma < 3, corrija antes de retornar:
-1. PHILOSOPHY: tom visual bate com o nicho?
-2. HIERARCHY: H1 domina com 8+ palavras + cidade? Subtitulo menor? CTA claro?
-3. EXECUTION: sem cores hardcoded, sem tokens errados, botoes min 48px?
-4. SPECIFICITY: zero filler copy, todos os dados sao reais?
-5. RESTRAINT: --accent max 2x? Sem gradiente decorativo? Max 3 CTAs?
+1. PHILOSOPHY: tom visual bate com nicho?
+2. HIERARCHY: H1 domina? Subtitulo menor? CTA claro?
+3. EXECUTION: sem cores hardcoded? Botoes min 48px?
+4. SPECIFICITY: zero filler copy? Dados reais?
+5. RESTRAINT: --accent max 2x? Max 3 CTAs?
 """
 
 
@@ -461,15 +411,24 @@ def gerar_html_componentizado(prd):
         return re.sub(r'[^a-z0-9]', '_', name.lower())[:40]
 
     def _ckpt_path(slug):
-        return f"/tmp/liam_ckpt_{slug}.json"
+        _dir = "/root/fralib/checkpoints/liam"
+        os.makedirs(_dir, exist_ok=True)
+        return f"{_dir}/{slug}.json"
 
     def _ckpt_load(slug):
         path = _ckpt_path(slug)
         if _os.path.exists(path):
             try:
+                import time as _t
+                # TTL: 24h — checkpoint mais velho que isso é descartado
+                _age = _t.time() - _os.path.getmtime(path)
+                if _age > 86400:
+                    print(f"[Liam] Checkpoint expirado ({_age/3600:.1f}h) — descartando")
+                    _os.remove(path)
+                    return {}
                 with open(path) as _f:
                     data = _json.load(_f)
-                print(f"[Liam] Checkpoint encontrado: {len(data)} secoes ja prontas")
+                print(f"[Liam] ♻️ Checkpoint encontrado: {len(data)} secoes ja prontas (age={_age/60:.0f}min)")
                 return data
             except:
                 pass
@@ -477,7 +436,7 @@ def gerar_html_componentizado(prd):
 
     def _ckpt_save(slug, secoes_dict):
         try:
-            with open(_ckpt_path(slug), 'w') as _f:
+            with open(_ckpt_path(slug), 'w', encoding='utf-8') as _f:
                 _json.dump(secoes_dict, _f, ensure_ascii=False)
         except:
             pass
@@ -495,6 +454,7 @@ def gerar_html_componentizado(prd):
         _raw_reviews = getattr(prd, "_raw_reviews", []) or []
         if _raw_reviews:
             reviews = _raw_reviews
+    print("[Liam] Reviews disponiveis: " + str(len(reviews)))
     fotos = getattr(prd, "photos", []) or []
     logo = getattr(prd, "logo_url", None)
     telefone = getattr(prd, "phone", "") or ""
@@ -521,6 +481,8 @@ def gerar_html_componentizado(prd):
     _seo_keywords = getattr(prd, "seo_keywords", []) or []
     _atributos = getattr(prd, "atributos", []) or []
     _servicos = getattr(prd, "servicos", []) or []
+    _horarios = getattr(prd, "horarios", {}) or getattr(prd, "hours", {}) or {}
+    _faixa_preco = getattr(prd, "faixa_preco", "") or ""
     contexto_global = (
         "Negocio: " + prd.business_name + nl
         + "Telefone: " + telefone + nl
@@ -532,20 +494,25 @@ def gerar_html_componentizado(prd):
         + ("SEO Keywords: " + ", ".join(_seo_keywords[:10]) + nl if _seo_keywords else "")
         + ("Atributos: " + ", ".join(str(a) for a in _atributos[:10]) + nl if _atributos else "")
         + ("Servicos: " + ", ".join(str(s) for s in _servicos[:10]) + nl if _servicos else "")
-        + "CSS variables: --color-primary:" + cores.primary
-        + " --color-accent:" + cores.accent
-        + " --color-background:" + cores.background
-        + " --color-text:" + cores.text
+        + ("Horarios: " + str(_horarios) + nl if _horarios else "")
+        + ("Faixa de preco: " + _faixa_preco + nl if _faixa_preco else "")
+        + "CSS variables (use APENAS estas no HTML): --bg:" + cores.background
+        + " --fg:" + cores.text
+        + " --accent:" + cores.accent
+        + " --surface:" + getattr(cores, "surface", cores.background)
+        + " --muted:" + getattr(cores, "muted", "oklch(60% 0.01 0)")
+        + " --border:" + getattr(cores, "border", "oklch(25% 0.02 250)")
     )
 
-    # Open Design: instrucoes de componentes e layout para o Liam
+    # Open Design: instrucoes de componentes e layout — vai pro SYSTEM prompt (régua)
+    _od_system_block = ""
     try:
         _od_segmento = getattr(prd, "segmento", "") or getattr(prd, "nicho", "") or ""
         _od_nome = prd.business_name or ""
         _od_tier = getattr(prd, "tier", "STANDARD") or "STANDARD"
         _od_ref = get_open_design_for_liam(_od_segmento, _od_nome, _od_tier)
         if _od_ref:
-            contexto_global += "\n\n" + _od_ref
+            _od_system_block = _od_ref
     except Exception:
         pass
 
@@ -593,9 +560,10 @@ def gerar_html_componentizado(prd):
 
     # Hero layout — extraído do PRD para ficar disponível nas threads
     _dc_tokens = getattr(getattr(prd, "color_palette", None), "tokens_oklch", None) or {}
-    _hero_layout = (_dc_tokens.get("hero_style") or {}).get("layout", "hero-split")
-    _hero_overlay = (_dc_tokens.get("hero_style") or {}).get("overlay", "rgba(0,0,0,0.45)")
-    _hero_img_style = (_dc_tokens.get("hero_style") or {}).get("img_style", "object-fit:cover;")
+    _hero_style_prd = getattr(getattr(prd, "color_palette", None), "hero_style", None) or {}
+    _hero_layout = _hero_style_prd.get("layout") or (_dc_tokens.get("hero_style") or {}).get("layout", "hero-split")
+    _hero_overlay = _hero_style_prd.get("overlay") or (_dc_tokens.get("hero_style") or {}).get("overlay", "rgba(0,0,0,0.55)")
+    _hero_img_style = _hero_style_prd.get("img_style") or (_dc_tokens.get("hero_style") or {}).get("img_style", "object-fit:cover;")
 
     def _gerar_secao(s):
         """Gera uma secao individual."""
@@ -620,14 +588,15 @@ def gerar_html_componentizado(prd):
             print("[Liam] " + nome_s + ": ja no checkpoint, pulando")
             return nome_s, _secoes_prontas[nome_s]
 
-        # Reviews para secao depoimentos — NUNCA omitir
+        # Reviews para secao depoimentos — OBRIGATÓRIO ter reviews reais
         reviews_instrucao = ""
         if nome_s.lower() in ("depoimentos", "reviews", "testimonials", "avaliacoes"):
-            if reviews:
+            if reviews and reviews_fmt and len(reviews_fmt) > 20:
                 reviews_instrucao = nl + "REVIEWS REAIS (use exatamente, sem inventar):" + nl + reviews_fmt
             else:
-                print("[Liam] Secao depoimentos: sem reviews reais, gerando ficticios PAS")
-                reviews_instrucao = nl + "SEM REVIEWS REAIS. Gere EXATAMENTE 3 depoimentos ficticios persuasivos usando framework PAS (Problema-Agitacao-Solucao). Use nomes genericos brasileiros (ex: Maria S., Carlos R., Ana P.). Cada depoimento deve: 1) mencionar uma dor real do nicho, 2) descrever a frustracao antes, 3) elogiar a solucao encontrada neste negocio. Rating 5 estrelas. Maximo 2 frases cada."
+                # Sem reviews reais = pular seção (não fabricar)
+                print("[Liam] Secao depoimentos: sem reviews reais (reviews=" + str(len(reviews)) + ") — PULANDO secao")
+                return nome_s, None
 
         copy_json = _json.dumps(copy_s, ensure_ascii=False)[:500]
         maps_instrucao = ""
@@ -635,38 +604,7 @@ def gerar_html_componentizado(prd):
             maps_instrucao = nl + "GOOGLE MAPS EMBED (incorpore INTEGRALMENTE dentro da section):" + nl + maps_embed
 
         # System prompt fixo — cacheado pela Anthropic a partir da 2a chamada (mesmo texto em todas as secoes)
-        system_liam = (
-            "Voce e Liam, o pedreiro do frontend da FraLib." + nl
-            + "Sua unica tarefa e gerar EXCLUSIVAMENTE uma tag HTML <section> completa e fechada." + nl
-            + nl
-            + "LAYOUTS DISPONIVEIS:" + nl
-            + "hero-split=flex row texto 60% esq img 40% dir height:100vh | "
-            + "hero-center=texto centralizado overlay escuro height:100vh | "
-            + "sobre-timeline=lista vertical linha conectora | "
-            + "sobre-grid=grid 2col texto esq mosaico fotos dir | "
-            + "services-cards=grid 3col cards sombra hover | "
-            + "services-accordion=lista chevron JS vanilla | "
-            + "reviews-masonry=grid 3col altura variavel | "
-            + "reviews-carousel=scroll horizontal snap | "
-            + "location-split=grid 2col mapa esq info dir | "
-            + "location-full=mapa full-width info abaixo | "
-            + "contact-minimal=form centralizado fundo claro | "
-            + "contact-split=info esq CTA dir" + nl
-            + nl
-            + "REGRAS ABSOLUTAS:" + nl
-            + "1. Retorne APENAS o HTML da tag <section id=NOME> inteira e fechada." + nl
-            + "2. Comece com <section. Nenhum texto antes. Nenhum markdown (```html)." + nl
-            + "3. Use Tailwind CSS. NUNCA cores hardcoded — use var(--bg), var(--fg), var(--accent), var(--surface), var(--muted), var(--border)." + nl
-            + "4. NUNCA invente dados, historias ou textos sobre o negocio. Use APENAS informacoes fornecidas no user prompt. Se nao ha dados sobre a historia do negocio, use frases genericas curtas como 'Atendimento de qualidade em [cidade]' — NUNCA crie narrativas ficticias." + nl
-            + "5. NUNCA use height fixo exceto hero (height:100vh)." + nl
-            + "6. NUNCA crie SVGs inline complexos. PROIBIDO Emojis para design. Para icones use Phosphor Icons CDN (<script src=\"https://unpkg.com/@phosphor-icons/web\"></script>) com classes (ex: <i class=\"ph-fill ph-star\"></i>)." + nl
-            + "7. MAPA: Se os dados fornecerem um iframe do Google Maps valido (nao vazio), incorpore-o INTEGRALMENTE. Se nao houver iframe valido, exiba o endereco em texto com icone ph-fill ph-map-pin e um botao CTA linkando para o Google Maps — NUNCA exiba iframe vazio ou quebrado." + nl
-            + "8. NUNCA use bolinhas com letras como logo. Se nao houver URL de logo, escreva o nome em texto Bold elegante (font-bold text-2xl)." + nl
-            + "9. ANIMACOES OBRIGATORIAS: Hero: H1=.scale-in, subtitulo=.reveal, CTA=.pulse-cta. Sections: divs com .reveal. Cards: .stagger-item style=--i:N para entrada sequencial. Imagens: .reveal-left. Contadores: data-count=VALOR. Botoes: .btn-primary. PARALLAX: hero div background com data-parallax=0.3. MICRO-INTERACOES: Cards com hover:scale-[1.02] hover:shadow-lg transition-all duration-300." + nl
-            + "10. OBEDIENCIA VISUAL ABSOLUTA: Sua unica bussola de design e a instrucao_criativa_para_dev acima. Se o Arquiteto mandar usar cores solidas, gradientes, glassmorphism, fotos reais ou texturas, voce DEVE aplicar rigorosamente via Tailwind. Voce nao tem opiniao de design — apenas executa com precisao cirurgica." + nl
-            + "11. PRECOS PROIBIDOS: NUNCA mencione valores monetarios, precos, mensalidades ou planos com valores. Se a secao for de planos/precos, use apenas CTA: Consulte nossos valores ou Fale conosco para saber mais." + nl
-            + "12. CONTRASTE OBRIGATORIO: Se um elemento tiver background escuro (var(--color-primary), var(--color-accent), cores hex escuras), o texto DENTRO dele deve ser claro (var(--color-text) no dark ou #ffffff). Se o background for claro (var(--color-surface), var(--color-background) no light), o texto deve ser escuro. NUNCA use var(--color-text) dentro de cards com background var(--color-primary) — use color:#ffffff ou color:var(--color-accent) para garantir contraste."
-        )
+        system_liam = SYSTEM_LIAM_CORE + nl + _od_system_block + nl + SYSTEM_LIAM_ANTI_SLOP
 
         # User prompt variavel — muda por secao (dados do negocio + copy especifico)
         prompt_secao = (
@@ -718,6 +656,10 @@ def gerar_html_componentizado(prd):
                     temperature=0.1,
                 )
                 _continua = _continua.replace("```html", "").replace("```", "").strip()
+                if not _continua:
+                    print("[Liam] " + nome_s + ": auto-continue retornou vazio — forcando fechamento")
+                    resposta_secao += nl + "</section>"
+                    break
                 resposta_secao += nl + _continua
             # Limpeza do raw text
             resposta_secao = resposta_secao.replace("```html", "").replace("```", "").strip()
@@ -737,6 +679,18 @@ def gerar_html_componentizado(prd):
                 if not resposta_secao.lower().rstrip().endswith("</section>"):
                     print("[Liam] " + nome_s + ": secao nao fechada — forcando </section>")
                     resposta_secao = resposta_secao.rstrip() + nl + "</section>"
+                # Validar integridade: seção deve ter abertura E fechamento
+                _has_open = "<section" in resposta_secao.lower()
+                _has_close = "</section>" in resposta_secao.lower()
+                if not _has_open or not _has_close:
+                    print("[Liam] " + nome_s + ": HTML invalido (sem tags section) — descartando")
+                    return nome_s, None
+                # Managed Agent: validar e corrigir seção antes de aceitar
+                if _LIAM_AGENT_LOOP:
+                    from liam_agent_loop import validate_and_fix_section
+                    resposta_secao, _was_fixed, _val_result = validate_and_fix_section(
+                        resposta_secao, nome_s, _seo_keywords[:5]
+                    )
                 _bloco_html = ("<!-- SECTION:" + nome_s + " -->" + nl
                     + resposta_secao + nl
                     + "<!-- /SECTION:" + nome_s + " -->" + nl + nl)
@@ -754,16 +708,30 @@ def gerar_html_componentizado(prd):
 
     # Executar secoes SEQUENCIALMENTE — gc.collect() entre cada para liberar RAM
     import gc
+    import time as _time_liam
     print("[Liam] Iniciando geracao SEQUENCIAL de " + str(len(_secoes_fonte)) + " secoes...")
     for _s_seq in _secoes_fonte:
-        try:
-            _nome_resultado, _html_resultado = _gerar_secao(_s_seq)
-        except Exception as _fe:
-            print("[Liam] Erro na secao: " + str(_fe)[:80])
-        finally:
-            gc.collect()
+        _sd_seq = _s_seq.dict() if hasattr(_s_seq, "dict") else (_s_seq if isinstance(_s_seq, dict) else {})
+        _nome_seq = _sd_seq.get("name", "")
+        _max_retries_secao = 3
+        for _retry_secao in range(_max_retries_secao):
+            try:
+                _nome_resultado, _html_resultado = _gerar_secao(_s_seq)
+                if _html_resultado:
+                    break  # sucesso
+                if _retry_secao < _max_retries_secao - 1:
+                    print(f"[Liam] {_nome_seq}: retry {_retry_secao + 1}/{_max_retries_secao} (resposta vazia)")
+                    _time_liam.sleep(2)
+            except Exception as _fe:
+                print("[Liam] Erro na secao " + _nome_seq + ": " + str(_fe)[:80])
+                if _retry_secao < _max_retries_secao - 1:
+                    _time_liam.sleep(2)
+            finally:
+                gc.collect()
 
     # Montar html_final na ORDEM ORIGINAL do PRD
+    html_final = ""  # Reset — evitar duplicação com pre-populate do checkpoint
+    secoes_processadas = 0
     for _s_ord in _secoes_fonte:
         _sd = _s_ord.dict() if hasattr(_s_ord, "dict") else (_s_ord if isinstance(_s_ord, dict) else {})
         _n = _sd.get("name", "")
@@ -847,7 +815,7 @@ def _gerar_seo_inline(prd) -> str:
             if _city in _cidade_lower:
                 address_region = _state
                 break
-    reviews_count = getattr(prd, "reviews_count", 10) or 10
+    reviews_count = getattr(prd, "reviews_count", 0) or 0
     desc = f"{segmento.capitalize()} em {cidade} — {nome}. {keywords[1] if len(keywords)>1 else segmento+' de qualidade'}. Atendimento personalizado e resultados reais."
     slug = _re.sub(r"[^a-z0-9]+", "-", _ud.normalize("NFKD", nome.lower()).encode("ascii", "ignore").decode()).strip("-")[:50]
     canonical = f"https://seunegociofralib.site/sites/{slug}/"
@@ -884,14 +852,9 @@ def _gerar_seo_inline(prd) -> str:
                     "opens": _parse_time(_times[0]),
                     "closes": _parse_time(_times[1]),
                 })
-        opening_hours = _ohs if _ohs else [
-            {"@type": "OpeningHoursSpecification", "dayOfWeek": ["Monday","Tuesday","Wednesday","Thursday","Friday"], "opens": "08:00", "closes": "18:00"},
-        ]
+        opening_hours = _ohs if _ohs else []
     else:
-        opening_hours = [
-            {"@type": "OpeningHoursSpecification", "dayOfWeek": ["Monday","Tuesday","Wednesday","Thursday","Friday"], "opens": "08:00", "closes": "18:00"},
-            {"@type": "OpeningHoursSpecification", "dayOfWeek": ["Saturday"], "opens": "08:00", "closes": "13:00"},
-        ]
+        opening_hours = []
     # Build main schema object
     _schema_obj = {
         "@context": "https://schema.org",
@@ -902,10 +865,11 @@ def _gerar_seo_inline(prd) -> str:
         "telephone": telefone,
         "image": image_url,
         "address": _addr_obj,
-        "openingHoursSpecification": opening_hours,
-        "hasMap": f"https://www.google.com/maps/search/{_re.sub(r'[^a-z0-9]+', '+', nome.lower())}+{_re.sub(r'[^a-z0-9]+', '+', cidade.lower())}",
     }
-    if rating and float(rating) > 0:
+    if opening_hours:
+        _schema_obj["openingHoursSpecification"] = opening_hours
+    _schema_obj["hasMap"] = f"https://www.google.com/maps/search/{_re.sub(r'[^a-z0-9]+', '+', nome.lower())}+{_re.sub(r'[^a-z0-9]+', '+', cidade.lower())}"
+    if rating and float(rating) > 0 and reviews_count > 0:
         _schema_obj["aggregateRating"] = {
             "@type": "AggregateRating",
             "ratingValue": str(rating),
@@ -1221,11 +1185,6 @@ def montar_template_python(html_main, prd):
         + "<body>" + chr(10)
         + """<style>
 :root {
-  --bg:      """ + _bg + """;
-  --surface: """ + _surface + """;
-  --fg:      """ + _fg + """;
-  --muted:   """ + _muted + """;
-  --border:  """ + _border + """;
   /* compat aliases */
   --color-background: """ + _bg + """;
   --color-text: """ + _fg + """;
@@ -1298,7 +1257,7 @@ body { background:var(--bg); color:var(--fg); }
         + "</div>" + nl
         + "<div class=" + q + "border-t footer-divider pt-6 flex flex-col md:flex-row items-center justify-between gap-3" + q + ">"
         + "<p class=" + q + "text-xs" + q + ">&copy; " + str(_ano) + " " + nome + " &mdash; Todos os direitos reservados.</p>"
-        + "<p class=" + q + "text-xs" + q + ">Site criado por <a href=" + q + "https://fralib.com.br" + q + " target=" + q + "_blank" + q + " rel=" + q + "noopener" + q + ">FraLib</a></p></div>" + nl
+        + ("" if getattr(prd, "white_label", False) else "<p class=" + q + "text-xs" + q + ">Site criado por <a href=" + q + "https://fralib.com.br" + q + " target=" + q + "_blank" + q + " rel=" + q + "noopener" + q + ">FraLib</a></p>") + "</div>" + nl
         + "</div></footer>" + nl
         + """<script>
 (function(){
@@ -1370,4 +1329,4 @@ body { background:var(--bg); color:var(--fg); }
         + _gerar_lgpd_banner(prd) + nl
         + "</body></html>" + nl
     )
-    return header + "<main id=" + q + "fralib-content" + q + " class=" + q + "w-full overflow-hidden pt-20" + q + ">" + nl + html_main + nl + "</main>" + nl + footer
+    return header + "<main id=" + q + "fralib-content" + q + " class=" + q + "w-full overflow-x-hidden pt-20" + q + ">" + nl + html_main + nl + "</main>" + nl + footer

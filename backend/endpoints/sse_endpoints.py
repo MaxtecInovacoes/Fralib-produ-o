@@ -264,7 +264,7 @@ def adicionar_log(mensagem: str, tipo: str = "info", user_id=None):
 
 @router.post("/test")
 async def test_log(payload: dict, usuario: dict = Depends(get_current_user)):
-    if usuario.get("plano") not in ("admin", "superadmin"):
+    if usuario.get("role") not in ("admin", "superadmin"):
         raise HTTPException(status_code=403, detail="Acesso restrito")
     user_id = payload.get("user_id") or usuario["id"]
     adicionar_log(payload.get("mensagem", "teste"), payload.get("tipo", "info"), user_id)
@@ -273,7 +273,7 @@ async def test_log(payload: dict, usuario: dict = Depends(get_current_user)):
 
 @router.get("/debug")
 async def debug_queue(usuario: dict = Depends(get_current_user)):
-    if usuario.get("plano") not in ("admin", "superadmin"):
+    if usuario.get("role") not in ("admin", "superadmin"):
         raise HTTPException(status_code=403, detail="Acesso restrito")
     import sys
     mods = {k: v.__file__ for k, v in sys.modules.items() if "sse_endpoint" in k}

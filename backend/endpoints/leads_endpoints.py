@@ -68,15 +68,13 @@ async def get_conversa(lead_id: str, db: Session = Depends(get_db), usuario: dic
 async def atualizar_lead(lead_id: str, request_data: dict, db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
     try:
         campos = {}
+        campos_permitidos = ['whatsapp', 'telefone_whatsapp', 'telefone', 'nome', 'segmento', 'cidade', 'observacoes', 'valor_venda', 'status']
+        for k in campos_permitidos:
+            if k in request_data:
+                campos[k] = request_data[k]
+        # Alias: whatsapp → telefone_whatsapp
         if 'whatsapp' in request_data:
-            campos['whatsapp'] = request_data['whatsapp']
             campos['telefone_whatsapp'] = request_data['whatsapp']
-        if 'observacoes' in request_data:
-            campos['observacoes'] = request_data['observacoes']
-        if 'valor_venda' in request_data:
-            campos['valor_venda'] = request_data['valor_venda']
-        if 'status' in request_data:
-            campos['status'] = request_data['status']
 
         if not campos:
             return {"ok": True}
@@ -85,7 +83,7 @@ async def atualizar_lead(lead_id: str, request_data: dict, db: Session = Depends
         sets = ", ".join([f"{k}=:{k}" for k in campos.keys()])
         campos['lead_id'] = lead_id
         campos['uid'] = tenant_id
-        db.execute(text(f"UPDATE leads SET {sets} WHERE id=:lead_id AND user_id=:uid"), campos)
+        db.execute(text(f"UPDATE leads SET {sets}, atualizado_em=NOW()::text WHERE id=:lead_id AND user_id=:uid"), campos)
         db.commit()
         return {"ok": True}
     except Exception as e:
@@ -141,10 +139,15 @@ async def editar_site(lead_id: str, req: EditarSiteRequest, db: Session = Depend
     import re as _re_path
     if not _re_path.match(r'^[a-z0-9][a-z0-9-]{0,80}$', slug):
         raise HTTPException(status_code=400, detail='Slug do site invalido')
-    html_path = '/var/www/fralib/sites/' + slug + '/index.html'
+    html_path = f'/var/www/fralib/sites/{tenant_id}/{slug}/index.html'
 
     if not os.path.exists(html_path):
-        raise HTTPException(status_code=404, detail='Arquivo HTML nao encontrado: ' + html_path)
+        # Fallback: tentar path antigo (sites sem tenant_id)
+        html_path_legacy = '/var/www/fralib/sites/' + slug + '/index.html'
+        if os.path.exists(html_path_legacy):
+            html_path = html_path_legacy
+        else:
+            raise HTTPException(status_code=404, detail='Arquivo HTML nao encontrado')
 
     with open(html_path, 'r', encoding='utf-8') as f:
         html_atual = f.read()
@@ -246,7 +249,14 @@ async def upload_foto(
     if not slug or slug == url_site.rstrip('/'):
         slug = url_site.rstrip('/').split('/')[-1]
 
-    assets_dir = '/var/www/fralib/sites/' + slug + '/assets'
+    # Validação anti-traversal
+    import re as _re_upload
+    slug_parts = slug.split('/')
+    for part in slug_parts:
+        if not _re_upload.match(r'^[a-zA-Z0-9_\-]+$', part):
+            raise HTTPException(status_code=400, detail="Slug invalido")
+
+    assets_dir = f'/var/www/fralib/sites/{tenant_id}/{slug_parts[-1]}/assets'
     os.makedirs(assets_dir, exist_ok=True)
 
     if tipo == 'logo':
@@ -256,6 +266,10 @@ async def upload_foto(
 
     filepath = assets_dir + '/' + filename
     contents = await foto.read()
+
+    # Limite de 10MB por upload
+    if len(contents) > 10 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="Arquivo muito grande (max 10MB)")
 
     try:
         from PIL import Image
@@ -327,6 +341,9 @@ async def _gerar_site_manual(lead_id: str, req: LeadManualRequest, user_id):
     try:
         from agents.liam import gerar_html_componentizado, montar_template_python
         from agents.arquiteto_mestre import gerar_arquiteto_mestre_prd
+        _use_agent = os.getenv("ARQUITETO_AGENT_LOOP", "0") == "1"
+        if _use_agent:
+            from agents.arquiteto_agent_loop import gerar_arquiteto_mestre_prd_agent
         
         # Montar dados mínimos para o Arquiteto Mestre
         dados_hunter = {
@@ -355,12 +372,12 @@ async def _gerar_site_manual(lead_id: str, req: LeadManualRequest, user_id):
             {'primaria': '#111827', 'acento': '#6366f1'}
         )
         
-        prd = gerar_arquiteto_mestre_prd(
+        _prd_fn = gerar_arquiteto_mestre_prd_agent if _use_agent else gerar_arquiteto_mestre_prd
+        prd = _prd_fn(
             dados_hunter=dados_hunter,
             cidade=req.cidade,
             segmento=req.nicho,
             jina_insights=req.briefing or "Negócio local de qualidade",
-            alex_colors=alex_colors,
             caio_tier="STANDARD",
             caio_score=req.score or 80,
             caio_motivo="Lead manual",
@@ -373,11 +390,11 @@ async def _gerar_site_manual(lead_id: str, req: LeadManualRequest, user_id):
             # Sanitizar: so a-z, 0-9 e hifen. Evita command/path injection no web_dir.
             _slug_raw = _re_slug.sub(r'[^a-z0-9]+', '-', (req.nome or '').lower()).strip('-')[:40]
             slug = (_slug_raw or 'lead') + '-manual'
-            web_dir = f'/var/www/fralib/sites/{slug}'
+            web_dir = f'/var/www/fralib/sites/{user_id}/{slug}'
             _os.makedirs(web_dir, exist_ok=True)
             with open(f'{web_dir}/index.html', 'w', encoding='utf-8') as f:
                 f.write(html_final)
-            site_url = f'https://seunegociofralib.site/sites/{slug}/'
+            site_url = f'https://seunegociofralib.site/sites/{user_id}/{slug}/'
             from datetime import datetime as _dt
             from sqlalchemy import create_engine as _ce
             import os as _os2
@@ -416,6 +433,30 @@ async def get_mensagens_novas(db: Session = Depends(get_db), usuario: dict = Dep
     except Exception as e:
         return {"leads_com_resposta": []}
 
+
+@router.get('/{lead_id}/chat')
+async def get_lead_chat(lead_id: str, db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
+    """Retorna histórico de conversas de um lead (para modal de chat no CRM)."""
+    tenant_id = usuario.get("tenant_id", usuario["id"])
+    # Verificar que lead pertence ao tenant
+    lead = db.execute(text("SELECT id, nome, sdr_stage FROM leads WHERE id=:id AND user_id=:uid"), {"id": lead_id, "uid": tenant_id}).fetchone()
+    if not lead:
+        raise HTTPException(status_code=404, detail="Lead nao encontrado")
+    msgs = db.execute(text("""
+        SELECT mensagem, direcao, criado_em
+        FROM interacoes
+        WHERE lead_id = :lid
+        ORDER BY id ASC
+        LIMIT 100
+    """), {"lid": lead_id}).fetchall()
+    return {
+        "lead_nome": lead.nome,
+        "sdr_stage": lead.sdr_stage,
+        "mensagens": [
+            {"texto": m.mensagem, "direcao": m.direcao, "ts": m.criado_em}
+            for m in msgs
+        ]
+    }
 
 
 @router.get('/capturados')
@@ -541,6 +582,26 @@ async def aprovar_lead_pipeline(lead_id: str, db: Session = Depends(get_db), usu
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# 2.2 — Descartar lead manualmente
+@router.patch('/{lead_id}/descartar')
+async def descartar_lead(lead_id: str, db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
+    try:
+        tenant_id = usuario.get("tenant_id", usuario["id"])
+        lead = db.execute(text("SELECT id FROM leads WHERE id=:id AND user_id=:uid"), {"id": lead_id, "uid": tenant_id}).fetchone()
+        if not lead:
+            raise HTTPException(status_code=404, detail="Lead não encontrado")
+        db.execute(text("""
+            UPDATE leads SET status='descartado', atualizado_em=NOW()::text
+            WHERE id=:id AND user_id=:uid
+        """), {"id": lead_id, "uid": tenant_id})
+        db.commit()
+        return {"ok": True, "mensagem": "Lead descartado"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # 2.1 / 2.4 — Atualizar campos individuais do lead
 from pydantic import BaseModel as _BM3
 from typing import Optional as _Opt3
@@ -615,6 +676,24 @@ async def get_fila_qualificados(db: Session = Depends(get_db), usuario: dict = D
         return {"leads": leads, "total": len(leads)}
     except Exception as e:
         print(f"[Leads] Erro fila-qualificados: {e}")
+        return {"leads": [], "total": 0}
+
+
+@router.get('/descartados')
+async def get_descartados(db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
+    try:
+        tenant_id = usuario.get('tenant_id', usuario['id'])
+        result = db.execute(text("""
+            SELECT id, nome, cidade, segmento, telefone, telefone_whatsapp, score, status, criado_em, atualizado_em
+            FROM leads
+            WHERE user_id = :uid AND status = 'descartado'
+            ORDER BY atualizado_em DESC
+            LIMIT 100
+        """), {"uid": tenant_id}).fetchall()
+        leads = [dict(r._mapping) for r in result]
+        return {"leads": leads, "total": len(leads)}
+    except Exception as e:
+        print(f"[Leads] Erro descartados: {e}")
         return {"leads": [], "total": 0}
 
 

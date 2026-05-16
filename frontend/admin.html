@@ -325,6 +325,7 @@ body{
   animation:modalIn .3s var(--fl-ease);
 }
 @keyframes modalIn{from{opacity:0;transform:translateY(20px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes cardSlideIn{from{opacity:0;transform:translateX(-20px) scale(0.95)}to{opacity:1;transform:translateX(0) scale(1)}}
 
 .modal-header{
   display:flex;align-items:center;justify-content:space-between;
@@ -765,14 +766,6 @@ body{
   </div>
 
 
-  <!-- Banner de pipeline rodando — visível em todas as views -->
-  <div id="pipeline-banner" style="display:none;background:linear-gradient(90deg,#0f172a,#1e293b);border:1px solid #0183ff;border-radius:8px;padding:10px 16px;margin-bottom:12px;display:none;align-items:center;gap:12px;">
-    <span style="width:8px;height:8px;border-radius:50%;background:#10b981;display:inline-block;animation:pulse 1s infinite;flex-shrink:0;"></span>
-    <span style="color:#10b981;font-family:var(--fl-font-brand);font-size:11px;letter-spacing:1px;flex-shrink:0;">PIPELINE RODANDO</span>
-    <span id="pipeline-banner-fase" style="color:#94a3b8;font-family:var(--fl-font-mono);font-size:11px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Aguardando...</span>
-    <button onclick="document.querySelector('[data-view=\'config\']').click()" style="background:transparent;border:1px solid #0183ff;color:#0183ff;padding:2px 10px;font-size:10px;cursor:pointer;font-family:var(--fl-font-brand);letter-spacing:1px;flex-shrink:0;">VER LOGS</button>
-  </div>
-
   <!-- KPI Cards — 6 métricas -->
   <div class="kpi-grid" id="kpi-section" style="display: none;">
     <div class="kpi-card">
@@ -983,11 +976,11 @@ body{
 
     <!-- Painel: Descartados pelo Caio -->
     <div id="uti-painel-descartados" style="display:none">
-      <p class="uti-desc">Leads rejeitados pelo Caio na entrada &mdash; dados insuficientes ou fora do perfil. Enrique&ccedil;a os dados manualmente e clique em <strong>&#9995; QUALIFICAR</strong> para for&ccedil;ar pelo pipeline.</p>
+      <p class="uti-desc">Leads descartados (rejeitados pelo Caio ou manualmente). Edite dados e reprocesse se valer a pena.</p>
       <div class="uti-table-wrap">
         <table class="uti-table">
-          <thead><tr><th>NOME</th><th>NICHO</th><th>CIDADE</th><th>TELEFONE</th><th>A&Ccedil;&Atilde;O</th></tr></thead>
-          <tbody id="utiDescartadosBody"><tr><td colspan="5"><div class="uti-empty">CARREGANDO...</div></td></tr></tbody>
+          <thead><tr><th>NOME</th><th>SEGMENTO</th><th>CIDADE</th><th>TELEFONE</th><th>DESCARTADO EM</th><th>AÇÕES</th></tr></thead>
+          <tbody id="utiDescartadosBody"><tr><td colspan="6"><div class="uti-empty">CARREGANDO...</div></td></tr></tbody>
         </table>
       </div>
     </div>
@@ -1009,14 +1002,14 @@ body{
       </div>
     </div>
 
-    <!-- Painel: Fila de Processamento (2.2) -->
+    <!-- Painel: Leads Capturados (Fila de Processamento) -->
     <div id="uti-painel-fila" style="display:none">
-      <p class="uti-desc">Leads qualificados aguardando processamento pelo pipeline. A ordem &eacute; por data de captura (FIFO).</p>
+      <p class="uti-desc">Leads encontrados pelo Hunter aguardando aprovação. Edite dados, aprove para o pipeline ou descarte.</p>
       <div class="uti-table-wrap">
         <table class="uti-table">
           <thead>
             <tr>
-              <th>#</th><th>NOME</th><th>NICHO</th><th>CIDADE</th><th>SCORE</th><th>TIER</th><th>STATUS</th><th>CAPTURADO EM</th>
+              <th>#</th><th>NOME</th><th>SEGMENTO</th><th>CIDADE</th><th>TELEFONE</th><th>STATUS</th><th>CAPTURADO</th><th>AÇÕES</th>
             </tr>
           </thead>
           <tbody id="utiFilaBody">
@@ -1137,11 +1130,11 @@ body{
 
     <h2 class="section-title">&#9889; MOTOR FRALIB</h2>
 
-    <!-- LINHA 1: Pixel Office + Terminal lado a lado -->
-    <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:16px;margin-bottom:20px;align-items:stretch;">
+    <!-- LINHA 1: Pixel Office -->
+    <div style="margin-bottom:20px;">
 
       <!-- Pixel Office -->
-      <div id="pixelOfficeWrap" style="background:#1a1a2e;border-radius:12px;border:1px solid var(--fl-border);overflow:hidden;max-height:420px;">
+      <div id="pixelOfficeWrap" style="background:#1a1a2e;border-radius:12px;border:1px solid var(--fl-border);overflow:hidden;">
         <div style="background:rgba(8,8,20,0.95);border-bottom:1px solid var(--fl-border);padding:4px 12px;display:flex;justify-content:space-between;align-items:center;font-family:'Courier New',monospace;font-size:10px;color:#a0a0c0">
           <span style="font-weight:bold;color:#7dd3fc;letter-spacing:1px">&#128187; PIXEL OFFICE</span>
           <div style="display:flex;gap:12px">
@@ -1151,23 +1144,7 @@ body{
           </div>
         </div>
         <div style="background:#1a1a2e;padding:0;line-height:0;font-size:0">
-          <canvas id="pixelOfficeCanvas" style="display:block;image-rendering:pixelated;image-rendering:crisp-edges;width:100%;aspect-ratio:2/1"></canvas>
-        </div>
-      </div>
-
-      <!-- Terminal Magico -->
-      <div class="config-section" style="display:flex;flex-direction:column;max-height:420px;overflow:hidden;">
-        <div class="config-group" style="display:flex;flex-direction:column;margin-bottom:0;overflow:hidden;">
-          <div class="config-group-title" style="display:flex;align-items:center;justify-content:space-between;">
-            <span style="display:flex;align-items:center;gap:8px;">
-              <span style="width:7px;height:7px;border-radius:50%;background:#10b981;display:inline-block;" id="sse-dot"></span>
-              &#128302; TERMINAL MAGICO
-            </span>
-            <button onclick="limparTerminal()" style="background:transparent;border:1px solid var(--fl-border);color:var(--fl-text-muted);padding:2px 10px;font-size:10px;cursor:pointer;font-family:var(--fl-font-brand);letter-spacing:1px;">LIMPAR</button>
-          </div>
-          <div id="magic-logs-content" style="overflow-y:auto;display:flex;flex-direction:column-reverse;gap:3px;font-family:var(--fl-font-mono);font-size:12px;height:340px;max-height:340px;">
-            <div data-placeholder style="color:var(--fl-text-muted);text-align:center;padding:32px 0;font-size:12px;">Aguardando logs do pipeline...</div>
-          </div>
+          <canvas id="pixelOfficeCanvas" style="display:block;image-rendering:pixelated;image-rendering:crisp-edges;width:100%;height:auto;aspect-ratio:2/1"></canvas>
         </div>
       </div>
 
@@ -1212,6 +1189,137 @@ body{
       </div>
     </div>
 
+    <!-- Banner de pipeline — progress visual (dentro do Motor FraLib) -->
+    <div id="pipeline-banner" style="display:none;background:#0f0f14;border:1px solid #9333ea44;border-radius:12px;padding:16px 20px;margin-bottom:20px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span style="width:8px;height:8px;border-radius:50%;background:#10b981;display:inline-block;animation:pulse 1s infinite;"></span>
+          <span style="color:#10b981;font-family:var(--fl-font-brand);font-size:10px;letter-spacing:1px;">PIPELINE RODANDO</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;">
+          <span id="pipeline-banner-timer" style="color:#fbbf24;font-family:var(--fl-font-mono);font-size:11px;font-weight:600;">⏱ 0:00</span>
+          <span id="pipeline-banner-eta" style="color:#6b7280;font-family:var(--fl-font-mono);font-size:10px;">ETA: calculando...</span>
+          <span id="pipeline-banner-percent" style="color:#c084fc;font-family:var(--fl-font-mono);font-size:12px;font-weight:700;">0%</span>
+        </div>
+      </div>
+      <div style="background:#1a1a2e;border-radius:6px;height:8px;overflow:hidden;margin-bottom:12px;">
+        <div id="pipeline-banner-bar" style="height:100%;width:0%;background:linear-gradient(90deg,#9333ea,#7c3aed);border-radius:6px;transition:width 0.6s ease;box-shadow:0 0 12px rgba(147,51,234,0.4);"></div>
+      </div>
+      <div id="pipeline-banner-steps" style="display:flex;justify-content:space-between;margin-bottom:10px;"></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <span id="pipeline-banner-fase" style="color:#a1a1aa;font-size:12px;">Aguardando...</span>
+      </div>
+    </div>
+
+
+    <!-- CONFIG HORÁRIO SDR -->
+    <div class="config-section" style="margin-bottom:24px;">
+      <div class="config-group" style="margin-bottom:0;">
+        <div class="config-group-title">⏰ HORÁRIO DO SDR (BRYAN)</div>
+        <p style="font-size:12px;color:var(--fl-text-muted);margin:4px 0 16px;">Define quando o Bryan pode enviar mensagens para os leads.</p>
+        <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+            <input type="radio" name="sdr-modo" value="personalizado" id="sdr-modo-custom" style="accent-color:var(--fl-purple);">
+            <span style="font-size:13px;color:var(--fl-text);">Horário específico</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+            <input type="radio" name="sdr-modo" value="livre" id="sdr-modo-livre" style="accent-color:var(--fl-purple);">
+            <span style="font-size:13px;color:var(--fl-text);">24/7 (sem restrição)</span>
+          </label>
+        </div>
+        <div id="sdr-horario-custom" style="margin-top:12px;display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap;">
+          <div class="config-field" style="margin-bottom:0;">
+            <label class="config-label">Início</label>
+            <select id="sdr-hora-inicio" class="config-input" style="width:80px;"></select>
+          </div>
+          <div class="config-field" style="margin-bottom:0;">
+            <label class="config-label">Fim</label>
+            <select id="sdr-hora-fim" class="config-input" style="width:80px;"></select>
+          </div>
+          <div class="config-field" style="margin-bottom:0;">
+            <label class="config-label">Dias bloqueados</label>
+            <div style="display:flex;gap:4px;" id="sdr-dias-wrap">
+              <label style="font-size:11px;color:var(--fl-text-muted);display:flex;align-items:center;gap:2px;"><input type="checkbox" value="0" class="sdr-dia-chk" style="accent-color:var(--fl-purple);"> Seg</label>
+              <label style="font-size:11px;color:var(--fl-text-muted);display:flex;align-items:center;gap:2px;"><input type="checkbox" value="1" class="sdr-dia-chk" style="accent-color:var(--fl-purple);"> Ter</label>
+              <label style="font-size:11px;color:var(--fl-text-muted);display:flex;align-items:center;gap:2px;"><input type="checkbox" value="2" class="sdr-dia-chk" style="accent-color:var(--fl-purple);"> Qua</label>
+              <label style="font-size:11px;color:var(--fl-text-muted);display:flex;align-items:center;gap:2px;"><input type="checkbox" value="3" class="sdr-dia-chk" style="accent-color:var(--fl-purple);"> Qui</label>
+              <label style="font-size:11px;color:var(--fl-text-muted);display:flex;align-items:center;gap:2px;"><input type="checkbox" value="4" class="sdr-dia-chk" style="accent-color:var(--fl-purple);"> Sex</label>
+              <label style="font-size:11px;color:var(--fl-text-muted);display:flex;align-items:center;gap:2px;"><input type="checkbox" value="5" class="sdr-dia-chk" style="accent-color:var(--fl-purple);"> Sáb</label>
+              <label style="font-size:11px;color:var(--fl-text-muted);display:flex;align-items:center;gap:2px;"><input type="checkbox" value="6" class="sdr-dia-chk" checked style="accent-color:var(--fl-purple);"> Dom</label>
+            </div>
+          </div>
+        </div>
+        <div style="margin-top:12px;display:flex;align-items:center;gap:12px;">
+          <button class="btn-config-save" style="white-space:nowrap;padding:8px 16px;font-size:12px;" onclick="salvarHorarioSDR()">💾 SALVAR HORÁRIO</button>
+          <span id="sdr-horario-status" style="font-size:11px;color:var(--fl-text-dim);"></span>
+        </div>
+      </div>
+    </div>
+
+    <script>
+    // SDR Horário config
+    (function(){
+      var selInicio = document.getElementById('sdr-hora-inicio');
+      var selFim = document.getElementById('sdr-hora-fim');
+      for(var h=0;h<24;h++){
+        selInicio.innerHTML += '<option value="'+h+'"'+(h===8?' selected':'')+'>'+h+':00</option>';
+        selFim.innerHTML += '<option value="'+(h+1)+'"'+((h+1)===21?' selected':'')+'>'+((h+1)>23?'0:00':(h+1)+':00')+'</option>';
+      }
+      // Toggle custom/livre
+      document.querySelectorAll('input[name="sdr-modo"]').forEach(function(r){
+        r.addEventListener('change', function(){
+          document.getElementById('sdr-horario-custom').style.display = this.value === 'livre' ? 'none' : 'flex';
+        });
+      });
+      // Carregar config salva
+      authFetch('/api/users/sdr-horario').then(function(r){return r.json();}).then(function(d){
+        if(d.modo === 'livre'){
+          document.getElementById('sdr-modo-livre').checked = true;
+          document.getElementById('sdr-horario-custom').style.display = 'none';
+        } else {
+          document.getElementById('sdr-modo-custom').checked = true;
+          document.getElementById('sdr-horario-custom').style.display = 'flex';
+        }
+        if(d.hora_inicio != null) selInicio.value = d.hora_inicio;
+        if(d.hora_fim != null) selFim.value = d.hora_fim;
+        if(d.dias_bloqueados){
+          document.querySelectorAll('.sdr-dia-chk').forEach(function(c){ c.checked = false; });
+          d.dias_bloqueados.forEach(function(dia){
+            var chk = document.querySelector('.sdr-dia-chk[value="'+dia+'"]');
+            if(chk) chk.checked = true;
+          });
+        }
+        document.getElementById('sdr-horario-status').textContent = '✓ Config carregada';
+      }).catch(function(){
+        // Fallback: mostrar personalizado como default
+        document.getElementById('sdr-modo-custom').checked = true;
+        document.getElementById('sdr-horario-custom').style.display = 'flex';
+      });
+    })();
+
+    async function salvarHorarioSDR(){
+      var modo = document.querySelector('input[name="sdr-modo"]:checked').value;
+      var horaInicio = parseInt(document.getElementById('sdr-hora-inicio').value);
+      var horaFim = parseInt(document.getElementById('sdr-hora-fim').value);
+      var diasBloqueados = [];
+      document.querySelectorAll('.sdr-dia-chk:checked').forEach(function(c){ diasBloqueados.push(parseInt(c.value)); });
+      try {
+        var r = await authFetch('/api/users/sdr-horario', {
+          method: 'PUT',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({modo:modo, hora_inicio:horaInicio, hora_fim:horaFim, dias_bloqueados:diasBloqueados})
+        });
+        var d = await r.json();
+        if(d.status === 'ok'){
+          document.getElementById('sdr-horario-status').innerHTML = '<span style="color:#10b981;">✓ Salvo! Bryan vai respeitar este horário.</span>';
+        } else {
+          document.getElementById('sdr-horario-status').innerHTML = '<span style="color:#ef4444;">✗ '+(d.detail||'Erro')+'</span>';
+        }
+      } catch(e){
+        document.getElementById('sdr-horario-status').innerHTML = '<span style="color:#ef4444;">✗ Erro: '+e.message+'</span>';
+      }
+    }
+    </script>
 
     <script>
 // ============================================================
@@ -2240,8 +2348,9 @@ window.initPixelOffice = function(){
         const container = document.getElementById('pixelOfficeWrap');
         if(!container) return;
         const maxW = container.clientWidth || 800;
-        const s = Math.min(maxW/W, 1);
-        cv.style.width=W*s+'px'; cv.style.height=H*s+'px';
+        const s = maxW / W;
+        cv.style.width = Math.floor(W * s) + 'px';
+        cv.style.height = Math.floor(H * s) + 'px';
     }
     resize();
     window._pixelOfficeResizeHandler = resize;
@@ -2266,6 +2375,10 @@ window.initPixelOffice = function(){
         <div style="font-family:var(--fl-font-brand);font-size:18px;color:var(--fl-purple-300);margin-bottom:8px;">BEM-VINDO AO FRALIB OS</div>
         <p style="color:var(--fl-text-muted);font-size:13px;margin-bottom:24px;">Complete seu perfil para continuar. Leva menos de 1 minuto.</p>
         <button class="btn-config-save" style="width:100%;" onclick="fecharModalPrimeiroAcesso()">PREENCHER PERFIL AGORA</button>
+        <label style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:16px;cursor:pointer;font-size:11px;color:var(--fl-text-dim);">
+          <input type="checkbox" id="chk-nao-mostrar-perfil" style="width:14px;height:14px;accent-color:var(--fl-purple);">
+          Não mostrar novamente
+        </label>
       </div>
     </div>
 
@@ -2383,6 +2496,30 @@ window.initPixelOffice = function(){
               <button class="btn-config-save" id="btn-whats-status" style="padding:8px 12px;font-size:12px;">VERIFICAR</button>
               <button class="btn-config-save" id="btn-whats-connect" style="padding:8px 12px;font-size:12px;">CONECTAR / QR CODE</button>
               <button class="btn-config-save" id="btn-whats-disconnect" style="padding:8px 12px;font-size:12px;">DESCONECTAR</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="config-section" style="max-width:100%;">
+          <div class="config-group">
+            <div class="config-group-title">CONFIGURAÇÕES DO BOT</div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:12px;background:var(--fl-bg-card);border:1px solid var(--fl-border);margin-bottom:8px;">
+              <div>
+                <div style="font-size:13px;margin-bottom:4px;">Ignorar contatos salvos</div>
+                <div style="font-size:11px;color:var(--fl-text-muted);">Bot não responde quem está na sua agenda</div>
+              </div>
+              <label style="position:relative;display:inline-block;width:44px;height:24px;cursor:pointer;">
+                <input type="checkbox" id="toggle-ignore-contacts" style="opacity:0;width:0;height:0;" onchange="toggleBotConfig('bot_ignore_saved_contacts', this.checked)">
+                <span style="position:absolute;inset:0;background:var(--fl-bg-surface);border:2px solid var(--fl-border);border-radius:12px;transition:all .2s;"></span>
+                <span id="toggle-ignore-contacts-dot" style="position:absolute;top:4px;left:4px;width:16px;height:16px;background:var(--fl-text-dim);border-radius:50%;transition:all .2s;"></span>
+              </label>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:12px;background:var(--fl-bg-card);border:1px solid var(--fl-border);">
+              <div>
+                <div style="font-size:13px;margin-bottom:4px;">Pausa ao intervir</div>
+                <div style="font-size:11px;color:var(--fl-text-muted);">Bot pausa 5min quando você responde manualmente</div>
+              </div>
+              <span style="font-family:var(--fl-font-mono);font-size:11px;color:var(--fl-success);">ATIVO</span>
             </div>
           </div>
         </div>
@@ -2561,68 +2698,18 @@ window.initPixelOffice = function(){
       <div class="tab-content" id="tab-site">
         <div class="briefing-item" style="margin-bottom:16px">
           <div class="briefing-label">URL do Site</div>
-          <div class="briefing-value" id="modalUrl" style="font-size:12px;word-break:break-all;font-family:var(--fl-font-mono)">—</div>
+          <a id="modalUrl" href="#" target="_blank" style="font-size:12px;word-break:break-all;font-family:var(--fl-font-mono);color:var(--fl-purple-300);text-decoration:none;">—</a>
         </div>
 
-        <!-- Editor de prompt -->
-        <div style="margin-bottom:16px;">
-          <label class="config-label">EDITAR SITE VIA PROMPT</label>
-          <textarea id="siteEditPrompt" placeholder="Ex: Troca a cor do botão para verde, adiciona seção de depoimentos, muda o título para..."
-            style="width:100%;background:var(--fl-bg-card);border:1px solid var(--fl-border);color:var(--fl-text);padding:10px 12px;border-radius:4px;font-size:13px;resize:vertical;min-height:90px;box-sizing:border-box;font-family:inherit;"></textarea>
-          <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;">
-            <button onclick="siteEditSugestao('Troca a cor primária para')" style="background:rgba(147,51,234,0.1);border:1px solid rgba(147,51,234,0.3);color:var(--fl-purple-300);padding:3px 8px;border-radius:3px;font-size:10px;cursor:pointer;font-family:var(--fl-font-brand);">+ COR</button>
-            <button onclick="siteEditSugestao('Muda o título principal para')" style="background:rgba(147,51,234,0.1);border:1px solid rgba(147,51,234,0.3);color:var(--fl-purple-300);padding:3px 8px;border-radius:3px;font-size:10px;cursor:pointer;font-family:var(--fl-font-brand);">+ TÍTULO</button>
-            <button onclick="siteEditSugestao('Adiciona uma seção de depoimentos com 3 clientes fictícios')" style="background:rgba(147,51,234,0.1);border:1px solid rgba(147,51,234,0.3);color:var(--fl-purple-300);padding:3px 8px;border-radius:3px;font-size:10px;cursor:pointer;font-family:var(--fl-font-brand);">+ DEPOIMENTOS</button>
-            <button onclick="siteEditSugestao('Adiciona botão de WhatsApp com o número')" style="background:rgba(147,51,234,0.1);border:1px solid rgba(147,51,234,0.3);color:var(--fl-purple-300);padding:3px 8px;border-radius:3px;font-size:10px;cursor:pointer;font-family:var(--fl-font-brand);">+ WHATSAPP</button>
-          </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">
+          <button class="btn-action btn-action-purple" onclick="abrirSiteModal()" style="flex:1">🔗 ABRIR SITE</button>
+          <button class="btn-action" onclick="abrirStudio()" style="flex:1;background:rgba(16,185,129,0.15);border:1px solid #10b981;color:#10b981;font-weight:700">🎨 STUDIO</button>
+          <button class="btn-action" onclick="baixarHtmlSite()" style="flex:1;background:rgba(59,130,246,0.15);border:1px solid #3b82f6;color:#3b82f6">⬇ BAIXAR HTML</button>
         </div>
 
-        <!-- Upload de fotos -->
-        <div style="margin-bottom:16px;">
-          <label style="font-size:11px;color:var(--fl-text-muted);font-family:var(--fl-font-brand);letter-spacing:1px;display:block;margin-bottom:8px">📸 FOTOS DO SITE</label>
-          
-          <!-- Fotos existentes -->
-          <div id="fotosExistentes" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;min-height:40px;">
-            <span style="font-size:11px;color:var(--fl-text-muted)">Carregando fotos...</span>
-          </div>
-          
-          <!-- Upload -->
-          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-            <select id="fotoTipo" style="background:var(--fl-bg-card);border:1px solid var(--fl-border);color:var(--fl-text);padding:6px 10px;border-radius:6px;font-size:12px;">
-              <option value="foto">Foto do site</option>
-              <option value="logo">Logo</option>
-            </select>
-            <select id="fotoNumero" style="background:var(--fl-bg-card);border:1px solid var(--fl-border);color:var(--fl-text);padding:6px 10px;border-radius:6px;font-size:12px;">
-              <option value="1">Foto 1</option>
-              <option value="2">Foto 2</option>
-              <option value="3">Foto 3</option>
-              <option value="4">Foto 4</option>
-              <option value="5">Foto 5</option>
-            </select>
-            <label style="background:var(--fl-bg-card);border:1px solid var(--fl-border);color:var(--fl-text-muted);padding:6px 12px;border-radius:6px;font-size:12px;cursor:pointer;white-space:nowrap;">
-              📁 Escolher arquivo
-              <input type="file" id="fotoUploadInput" accept="image/*" style="display:none" onchange="uploadFotoSite(this)">
-            </label>
-          </div>
-          <div id="uploadFotoStatus" style="font-size:11px;color:var(--fl-text-muted);margin-top:6px;display:none"></div>
-        </div>
-
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
-          <button class="btn-action btn-action-purple" onclick="abrirSiteModal()" style="flex:1">ABRIR SITE</button>
-          <button class="btn-action" onclick="baixarHtmlSite()" style="flex:1;background:rgba(59,130,246,0.15);border:1px solid #3b82f6;color:#3b82f6">BAIXAR HTML</button>
-          <button class="btn-action" id="btnAplicarEdicao" onclick="editarSitePrompt()" style="flex:1;background:rgba(147,51,234,0.15);border:1px solid var(--fl-purple);color:var(--fl-purple-300)">✦ APLICAR</button>
-        </div>
-
-        <!-- Status da edição -->
-        <div id="siteEditStatus" style="display:none;padding:10px 12px;border-radius:4px;font-size:12px;margin-bottom:8px;border-left:3px solid var(--fl-purple);background:rgba(147,51,234,0.08);"></div>
-
-        <!-- Logs em tempo real -->
-        <div id="siteEditLogs" style="display:none;background:var(--fl-bg);border:1px solid var(--fl-border);padding:8px 10px;max-height:100px;overflow-y:auto;border-radius:4px;font-family:var(--fl-font-mono);font-size:11px;margin-bottom:12px;"></div>
-
-        <!-- Histórico de edições -->
-        <div id="siteEditHistorico" style="display:none;">
-          <div style="font-family:var(--fl-font-brand);font-size:9px;letter-spacing:1px;color:var(--fl-text-muted);margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--fl-border);">HISTÓRICO DE ALTERAÇÕES</div>
-          <div id="siteEditHistoricoLista" style="display:flex;flex-direction:column;gap:6px;max-height:180px;overflow-y:auto;"></div>
+        <!-- Preview do site -->
+        <div style="border:1px solid var(--fl-border);border-radius:8px;overflow:hidden;background:#fff;height:320px;">
+          <iframe id="sitePreviewFrame" style="width:100%;height:100%;border:none;pointer-events:none;" sandbox="allow-same-origin"></iframe>
         </div>
       </div>
 
@@ -2910,6 +2997,16 @@ async function _executarIniciar(nicho, cidade, qtd) {
       _mostrarPopupUpgrade(data.detail || {});
       return;
     }
+    if (resp && resp.status === 429) {
+      const data = await resp.json().catch(() => ({}));
+      const msg = data.detail || 'Pipeline travado. Tente novamente em alguns segundos.';
+      if (typeof showToast === 'function') {
+        showToast('⚠️ ' + msg + ' Se persistir, entre em contato com o suporte.', 'warning', 8000);
+      } else {
+        alert('⚠️ ' + msg + '\n\nSe o problema persistir, entre em contato com o suporte.');
+      }
+      return;
+    }
     setTimeout(carregarKPIs, 800);
   } catch(e) { alert('Erro ao iniciar pipeline: ' + e.message); }
 }
@@ -2966,6 +3063,14 @@ function mostrarToast(mensagem, duracao) {
     }, 300);
   }, duracao);
 }
+
+// Shim Toast pra compatibilidade
+var Toast = {
+  success: function(msg) { mostrarToast('✅ ' + msg); },
+  error: function(msg) { mostrarToast('❌ ' + msg); },
+  warning: function(msg) { mostrarToast('⚠️ ' + msg); },
+  info: function(msg) { mostrarToast('ℹ️ ' + msg); }
+};
 
 /* ══ VIEWS — alternância de conteúdo ═══════════════════════════════ */
 function mostrarView(view) {
@@ -3188,12 +3293,17 @@ function renderFunil(analytics) {
 function getColuna(lead) {
   var s = (lead.status || '').toLowerCase();
   var stage = (lead.sdr_stage || '').toLowerCase();
-  if (s === 'won' || s === 'convertido') return 'ganhos';
-  if (s === 'descartado' || s === 'rejeitado' || s === 'erro') return 'perdidos';
-  if (s === 'negociando' || stage === 'negotiation') return 'negociacao';
-  if ((lead.score || 0) >= 80 && (s === 'contatado' || s === 'enviado')) return 'qualificados';
-  if (stage === 'rapport' || stage === 'education') return 'followup2';
-  return 'followup1';
+  // Stages diretos do kanban
+  if (stage === 'ganhos' || s === 'won' || s === 'convertido') return 'ganhos';
+  if (stage === 'perdidos' || s === 'descartado' || s === 'rejeitado' || s === 'erro') return 'perdidos';
+  if (stage === 'negociacao' || s === 'negociando') return 'negociacao';
+  if (stage === 'qualificados') return 'qualificados';
+  if (stage === 'followup2') return 'followup2';
+  if (stage === 'followup1') return 'followup1';
+  if (stage === 'intro') return 'intro';
+  // Fallback: sem stage = fila
+  if (!stage || s === 'pendente' || s === 'processando') return 'fila';
+  return 'fila';
 }
 
 
@@ -3298,6 +3408,9 @@ async function carregarKanban() {
   } catch(e){ console.warn('Kanban:', e.message); }
 }
 
+// Track posição anterior dos leads pra detectar mudança de coluna
+var _leadColMap = {};
+
 function renderKanban(data) {
   if (!data) return;
   var emptyEl = document.getElementById('emptyState');
@@ -3307,6 +3420,8 @@ function renderKanban(data) {
   ['fila','intro','f1','f2','negotiation','qualificado','lost','won'].forEach(function(k){ if (data[k]) todos = todos.concat(data[k]); });
   todos = filtrarPorPeriodo(todos, crmPeriodAtual);
   todos = filtrarPorBusca(todos, crmSearchAtual);
+  // Filtrar leads que ainda não entraram no pipeline (capturado = só scrapeado)
+  todos = todos.filter(function(l) { return (l.status || '').toLowerCase() !== 'capturado'; });
   var countEl = document.getElementById('crm-count');
   if (todos.length === 0) {
     if (emptyEl) emptyEl.classList.add('show');
@@ -3318,17 +3433,19 @@ function renderKanban(data) {
   todos.forEach(function(lead) {
     if (!lead.segmento && lead.nicho) lead.segmento = lead.nicho;
     var status = (lead.status || 'pendente').toLowerCase();
-    var sdr = (lead.sdr_stage || 'intro').toLowerCase();
+    var sdr = (lead.sdr_stage || '').toLowerCase();
     if (status === 'pendente' || status === 'processando' || status === 'erro') {
       mapeamento.fila.push(lead);
     } else if (status === 'concluido') {
-      if (sdr === 'intro') mapeamento.intro.push(lead);
-      else if (sdr === 'f1' || sdr === 'followup1') mapeamento.followup1.push(lead);
-      else if (sdr === 'f2' || sdr === 'followup2') mapeamento.followup2.push(lead);
-      else if (sdr === 'negotiation') mapeamento.negociacao.push(lead);
-      else if (sdr === 'qualificado') mapeamento.qualificados.push(lead);
-      else if (sdr === 'won') mapeamento.ganhos.push(lead);
-      else mapeamento.intro.push(lead);
+      if (sdr === 'ganhos' || sdr === 'won') mapeamento.ganhos.push(lead);
+      else if (sdr === 'perdidos' || sdr === 'lost') mapeamento.perdidos.push(lead);
+      else if (sdr === 'negociacao' || sdr === 'negotiation') mapeamento.negociacao.push(lead);
+      else if (sdr === 'qualificados' || sdr === 'qualificado') mapeamento.qualificados.push(lead);
+      else if (sdr === 'followup2' || sdr === 'f2') mapeamento.followup2.push(lead);
+      else if (sdr === 'followup1' || sdr === 'f1') mapeamento.followup1.push(lead);
+      else if (sdr === 'pendente_wpp' || sdr === 'hook') mapeamento.fila.push(lead);
+      else if (sdr === 'intro') mapeamento.intro.push(lead);
+      else mapeamento.fila.push(lead);
     } else if (status === 'descartado' || status === 'lost') {
       mapeamento.perdidos.push(lead);
     } else if (status === 'convertido' || status === 'won') {
@@ -3343,10 +3460,49 @@ function renderKanban(data) {
   Object.keys(mapeamento).forEach(function(colKey){
     var col = cols[colKey];
     if (!col) return;
-    mapeamento[colKey].forEach(function(lead){ col.appendChild(criarCard(lead)); });
+    mapeamento[colKey].forEach(function(lead){
+      var card = criarCard(lead);
+      col.appendChild(card);
+      // Detectar se lead mudou de coluna → animar
+      var prevCol = _leadColMap[lead.id];
+      if (prevCol && prevCol !== colKey) {
+        animateCardMove(card, prevCol, colKey);
+      }
+      _leadColMap[lead.id] = colKey;
+    });
   });
   updateCounts();
   if (countEl) countEl.textContent = todos.length + ' leads';
+}
+
+function animateCardMove(card, fromCol, toCol) {
+  // Cursor fantasma + card glow animation
+  card.style.animation = 'cardSlideIn 0.6s ease-out';
+  card.style.boxShadow = '0 0 12px rgba(147,51,234,0.5)';
+  setTimeout(function() {
+    card.style.boxShadow = '';
+    card.style.animation = '';
+  }, 1200);
+
+  // Cursor fantasma animado
+  var cursor = document.createElement('div');
+  cursor.className = 'ghost-cursor';
+  var fromColEl = document.querySelector('[data-col="' + fromCol + '"]');
+  var toColEl = document.querySelector('[data-col="' + toCol + '"]');
+  if (!fromColEl || !toColEl) return;
+  var fromRect = fromColEl.getBoundingClientRect();
+  var toRect = card.getBoundingClientRect();
+  cursor.style.cssText = 'position:fixed;width:20px;height:20px;border-radius:50%;background:var(--fl-purple);opacity:0.8;z-index:9999;pointer-events:none;transition:all 0.5s cubic-bezier(0.4,0,0.2,1);box-shadow:0 0 8px rgba(147,51,234,0.6);';
+  cursor.style.left = fromRect.left + fromRect.width/2 + 'px';
+  cursor.style.top = fromRect.top + 40 + 'px';
+  document.body.appendChild(cursor);
+  requestAnimationFrame(function() {
+    cursor.style.left = toRect.left + toRect.width/2 + 'px';
+    cursor.style.top = toRect.top + toRect.height/2 + 'px';
+    cursor.style.opacity = '0';
+    cursor.style.transform = 'scale(0.3)';
+  });
+  setTimeout(function() { cursor.remove(); }, 700);
 }
 
 /* ══ MODAL COM DADOS REAIS ═════════════════════════════════════════ */
@@ -3361,12 +3517,20 @@ function openModalReal(lead) {
   set('modalScore', lead.score ? escapeHtml(String(lead.score)) + ' pts' : '—');
 
   var urlEl = document.getElementById('modalUrl');
+  var siteTab = document.querySelector('.modal-tab[data-tab="site"]');
   if (urlEl) {
     var safeUrl = sanitizeUrl(lead.url_site);
     if (safeUrl && safeUrl !== '#') {
-      urlEl.innerHTML = '<a href="' + safeUrl + '" target="_blank" rel="noopener noreferrer" style="color:var(--cyan)">' + escapeHtml(safeUrl) + '</a>';
+      urlEl.href = safeUrl;
+      urlEl.textContent = safeUrl;
+      if (siteTab) siteTab.style.display = '';
+      // Carregar preview no iframe
+      var previewFrame = document.getElementById('sitePreviewFrame');
+      if (previewFrame) previewFrame.src = safeUrl;
     } else {
+      urlEl.href = '#';
       urlEl.textContent = 'Site ainda não gerado';
+      if (siteTab) siteTab.style.display = 'none';
     }
   }
 
@@ -3385,14 +3549,19 @@ function openModalReal(lead) {
   var statusBadge = document.getElementById('modalLeadStatus');
   if (statusBadge) statusBadge.textContent = (lead.status || '').toUpperCase();
 
-  // Carregar fotos do site
-  carregarFotosSite(lead.id, lead.url_site);
-
   document.getElementById('modalOverlay').classList.add('open');
   switchTab('chat');
 
   // Carregar conversa Bryan
   carregarConversaBryan(lead.id);
+}
+
+function abrirStudio() {
+  if (leadAtualModal && leadAtualModal.id) {
+    window.open('/studio/' + leadAtualModal.id, '_blank');
+  } else {
+    mostrarToast('Selecione um lead com site gerado');
+  }
 }
 
 function abrirSiteModal() {
@@ -3663,6 +3832,19 @@ async function _executarIniciarAdmin(nicho, cidade, qtd, scoreMin, btn) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ segmento: nicho, cidade: cidade, quantidade: qtd, score_minimo: scoreMin })
     });
+    if (resp && resp.status === 429) {
+      var d429 = await resp.json().catch(function(){return {};});
+      var msg429 = d429.detail || 'Pipeline travado.';
+      if (btn) { btn.textContent = '▶ INICIAR'; btn.disabled = false; }
+      mostrarToast('⚠️ ' + msg429 + ' Se persistir, contate o suporte.', 'warning');
+      return;
+    }
+    if (resp && resp.status === 402) {
+      var d402 = await resp.json().catch(function(){return {};});
+      if (btn) { btn.textContent = '▶ INICIAR'; btn.disabled = false; }
+      _mostrarPopupUpgrade(d402.detail || {});
+      return;
+    }
     var data = await resp.json();
     if (btn) { btn.textContent = '✓ INICIADO!'; }
     setTimeout(function(){ if (btn) { btn.textContent = '▶ INICIAR'; btn.disabled = false; } }, 3000);
@@ -3777,6 +3959,12 @@ async function processarFila() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ segmento: nicho, cidade: cidade, quantidade: qtd, score_minimo: scoreMin, processar_fila: true })
     });
+    if (resp && resp.status === 429) {
+      var d429 = await resp.json().catch(function(){return {};});
+      mostrarToast('⚠️ ' + (d429.detail || 'Pipeline travado.') + ' Se persistir, contate o suporte.', 'warning');
+      if (btn) { btn.textContent = '▶ PROCESSAR FILA AGORA'; btn.disabled = false; }
+      return;
+    }
     mostrarToast('▶ Pipeline iniciado para processar a fila!');
     document.getElementById('painel-fila').style.display = 'none';
     setTimeout(function(){ mostrarView('crm'); carregarKPIs(); carregarKanban(); }, 1500);
@@ -3833,7 +4021,7 @@ document.addEventListener('DOMContentLoaded', function(){ verificarPrimeiroAcess
 
   // Polling a cada 60s
   setInterval(carregarKPIs, 60000);
-  setInterval(carregarKanban, 60000);
+  setInterval(carregarKanban, 30000);
   carregarMensagensNovas();
   setInterval(carregarMensagensNovas, 30000);
 });
@@ -4466,17 +4654,17 @@ async function verificarStatusWhatsApp() {
 }
 async function conectarWhatsApp() {
   try {
-    Toast.info('Conectando WhatsApp... aguarde o QR Code');
+    mostrarToast('🔄 Conectando WhatsApp... aguarde o QR Code');
     var response = await authFetch('/api/whatsapp/connect', { method: 'POST' });
     var data = await response.json();
     if (data.qr) {
       mostrarQRCodeModal(data.qr);
     } else if (data.status === 'connected') {
-      Toast.success('WhatsApp ja esta conectado!');
+      mostrarToast('✅ WhatsApp ja esta conectado!');
       verificarStatusWhatsApp();
     } else if (data.status === 'connecting') {
       // Polling ate QR aparecer
-      Toast.info('Aguardando QR Code...');
+      mostrarToast('⏳ Aguardando QR Code...');
       var tentativas = 0;
       var poll = setInterval(async function() {
         tentativas++;
@@ -4488,20 +4676,20 @@ async function conectarWhatsApp() {
             mostrarQRCodeModal(d2.qr);
           } else if (d2.status === 'connected') {
             clearInterval(poll);
-            Toast.success('WhatsApp conectado!');
+            mostrarToast('✅ WhatsApp conectado!');
             verificarStatusWhatsApp();
           } else if (tentativas >= 15) {
             clearInterval(poll);
-            Toast.error('Timeout: QR nao gerado. Tente novamente.');
+            mostrarToast('❌ Timeout: QR nao gerado. Tente novamente.');
           }
         } catch(e) { clearInterval(poll); }
       }, 2000);
     } else {
-      Toast.error('Erro: ' + (data.detail || data.status || 'Falha ao conectar'));
+      mostrarToast('❌ Erro: ' + (data.detail || data.status || 'Falha ao conectar'));
     }
   } catch (e) {
     console.error('[WhatsApp] Erro ao conectar:', e);
-    Toast.error('Erro ao conectar WhatsApp');
+    mostrarToast('❌ Erro ao conectar WhatsApp');
   }
 }
 
@@ -4512,10 +4700,9 @@ async function desconectarWhatsApp() {
 
   try {
     mostrarToast('🔄 Desconectando WhatsApp...');
-
     var response = await authFetch('/api/whatsapp/disconnect', { method: 'POST' });
     var data = await response.json();
-    Toast.success('WhatsApp desconectado');
+    mostrarToast('✅ WhatsApp desconectado');
     verificarStatusWhatsApp();
   } catch (e) {
     console.error('[WhatsApp] Erro ao desconectar:', e);
@@ -4635,7 +4822,57 @@ document.addEventListener('DOMContentLoaded', function() {
       desconectarWhatsApp();
     });
   }
+
+  // Carregar config do bot
+  carregarBotConfig();
 });
+
+// ══ BOT CONFIG ═══════════════════════════════════════════════════
+async function carregarBotConfig() {
+  try {
+    var r = await AuthHelper.authFetch('/api/whatsapp/bot-config');
+    if (r.ok) {
+      var data = await r.json();
+      var toggle = document.getElementById('toggle-ignore-contacts');
+      var dot = document.getElementById('toggle-ignore-contacts-dot');
+      if (toggle) {
+        toggle.checked = data.bot_ignore_saved_contacts;
+        atualizarToggleVisual(toggle.checked, dot);
+      }
+    }
+  } catch(e) {}
+}
+
+function atualizarToggleVisual(ativo, dot) {
+  if (!dot) dot = document.getElementById('toggle-ignore-contacts-dot');
+  var track = dot ? dot.previousElementSibling : null;
+  if (ativo) {
+    if (dot) { dot.style.left = '24px'; dot.style.background = 'var(--cyan)'; }
+    if (track) { track.style.background = 'rgba(0,255,179,0.15)'; track.style.borderColor = 'rgba(0,255,179,0.4)'; }
+  } else {
+    if (dot) { dot.style.left = '4px'; dot.style.background = 'var(--fl-text-dim)'; }
+    if (track) { track.style.background = 'var(--fl-bg-surface)'; track.style.borderColor = 'var(--fl-border)'; }
+  }
+}
+
+async function toggleBotConfig(key, value) {
+  var dot = document.getElementById('toggle-ignore-contacts-dot');
+  atualizarToggleVisual(value, dot);
+  try {
+    var body = {};
+    body[key] = value;
+    var r = await AuthHelper.authFetch('/api/whatsapp/bot-config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    if (r.ok) {
+      mostrarToast(value ? 'Contatos salvos serão ignorados' : 'Bot responde todos');
+    }
+  } catch(e) {
+    mostrarToast('Erro ao salvar config');
+  }
+}
 
 /* ══ BLOQUEIO ABSOLUTO DE ONBOARDING ════════════════════════════ */
 async function verificarOnboarding() {
@@ -4707,15 +4944,17 @@ async function verificarOnboarding() {
     var _mostrarAvisoWpp = function(wppOk) {
       var avisoWpp = document.getElementById('onboarding-aviso-wpp');
       if (!wppOk) {
+        if (localStorage.getItem('fralib_dismiss_wpp_aviso')) return;
         if (!avisoWpp) {
           avisoWpp = document.createElement('div');
           avisoWpp.id = 'onboarding-aviso-wpp';
           avisoWpp.style.cssText = 'position:fixed;bottom:20px;right:20px;background:#1c1c2e;border:1px solid #f59e0b;color:#f59e0b;padding:14px 18px;border-radius:12px;font-size:13px;z-index:9998;max-width:320px;box-shadow:0 4px 20px rgba(0,0,0,.4);';
-          avisoWpp.innerHTML = '<strong>📱 WhatsApp não conectado</strong><br><span style="color:#ccc;font-size:12px">Conecte para ativar o SDR automático.</span><br><button onclick="mostrarView(&quot;perfil&quot;);document.getElementById(&quot;onboarding-aviso-wpp&quot;).remove()" style="margin-top:10px;background:#f59e0b;color:#000;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600">Conectar agora →</button><button onclick="this.parentElement.remove()" style="margin-top:10px;margin-left:8px;background:transparent;color:#888;border:none;cursor:pointer;font-size:12px">Depois</button>';
+          avisoWpp.innerHTML = '<strong>📱 WhatsApp não conectado</strong><br><span style="color:#ccc;font-size:12px">Conecte para ativar o SDR automático.</span><br><button onclick="mostrarView(&quot;perfil&quot;);document.getElementById(&quot;onboarding-aviso-wpp&quot;).remove()" style="margin-top:10px;background:#f59e0b;color:#000;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600">Conectar agora →</button><button onclick="this.parentElement.remove()" style="margin-top:10px;margin-left:8px;background:transparent;color:#888;border:none;cursor:pointer;font-size:12px">Depois</button><br><label style="display:flex;align-items:center;gap:6px;margin-top:10px;cursor:pointer;font-size:11px;color:#666"><input type="checkbox" onchange="if(this.checked)localStorage.setItem(&quot;fralib_dismiss_wpp_aviso&quot;,&quot;1&quot;)"> Não mostrar novamente</label>';
           document.body.appendChild(avisoWpp);
         }
       } else {
         if (avisoWpp) avisoWpp.remove();
+        localStorage.removeItem('fralib_dismiss_wpp_aviso');
       }
     };
     // Double-check: se onboarding diz desconectado, confirmar com endpoint dedicado
@@ -4879,8 +5118,18 @@ if (typeof socket !== 'undefined') {
     adicionarLogMagico('✅ Ciclo completo! A magia aconteceu!');
   });
 
-  socket.on('pipeline:error', function() {
+  socket.on('pipeline:error', function(data) {
     adicionarLogMagico('⚠️ Ops! O feitiço falhou...');
+    // Buscar detalhes do erro e mostrar popup
+    authFetch('/api/pipeline/status').then(function(r){ return r.json(); }).then(function(d) {
+      if (d && d.ultimo_erro) {
+        _mostrarPopupErroPipeline(d.ultimo_erro);
+      } else {
+        _mostrarPopupErroPipeline({ mensagem: 'Erro desconhecido no pipeline', recomendacao: 'Atualize a página e tente novamente. Se persistir, entre em contato com o suporte.' });
+      }
+    }).catch(function() {
+      _mostrarPopupErroPipeline({ mensagem: 'Erro no pipeline', recomendacao: 'Atualize a página e tente novamente.' });
+    });
   });
 }
 
@@ -4904,6 +5153,7 @@ async function checkTwoFactorStatus() {
 
 // Primeiro acesso: mostrar modal se perfil vazio
 function verificarPrimeiroAcesso() {
+  if (localStorage.getItem('fralib_hide_perfil_modal') === '1') return;
   var nome = localStorage.getItem('perfil_nome') || '';
   if (!nome) {
     var m = document.getElementById('modal-primeiro-acesso');
@@ -4911,6 +5161,10 @@ function verificarPrimeiroAcesso() {
   }
 }
 function fecharModalPrimeiroAcesso() {
+  var chk = document.getElementById('chk-nao-mostrar-perfil');
+  if (chk && chk.checked) {
+    localStorage.setItem('fralib_hide_perfil_modal', '1');
+  }
   var m = document.getElementById('modal-primeiro-acesso');
   if (m) m.style.display = 'none';
   document.querySelector('[data-view="perfil"]').click();
@@ -5863,6 +6117,7 @@ function trocarAbaUTI(aba) {
   });
   if (aba === 'incompletos') carregarLeadsIncompletos();
   if (aba === 'fila') carregarFilaQualificados();
+  if (aba === 'descartados') carregarLeadsDescartados();
 }
 
 /* ── 2.1 Carregar leads incompletos/rejeitados ───────────────────── */
@@ -5989,22 +6244,87 @@ async function carregarFilaQualificados() {
       return;
     }
     tbody.innerHTML = leads.map(function(l) {
-      var tierColor = {'PREMIUM':'#f59e0b','STANDARD':'#06b6d4','BASIC':'#8888a0'}[l.tier] || '#8888a0';
+      var nome = escapeHtml(l.nome || '—');
+      var nicho = escapeHtml(l.segmento || '—');
+      var cidade = escapeHtml(l.cidade || '—');
+      var tel = escapeHtml(l.telefone || l.telefone_whatsapp || '—');
       var statusColor = l.status === 'qualificado' ? '#10b981' : '#06b6d4';
-      var dt = l.criado_em ? l.criado_em.slice(0,16).replace('T',' ') : '—';
+      var dt = l.criado_em ? l.criado_em.slice(0,10) : '—';
       return '<tr>' +
         '<td><span style="background:#9333ea;color:#fff;border-radius:99px;padding:2px 8px;font-size:11px;font-weight:700">#' + l.posicao + '</span></td>' +
-        '<td>' + escapeHtml(l.nome || '—') + '</td>' +
-        '<td>' + escapeHtml(l.segmento || '—') + '</td>' +
-        '<td>' + escapeHtml(l.cidade || '—') + '</td>' +
-        '<td style="color:#c084fc;font-weight:600">' + (l.score || 0) + '</td>' +
-        '<td><span style="color:' + tierColor + ';font-size:11px;font-weight:600">' + escapeHtml(l.tier || '—') + '</span></td>' +
+        '<td>' + nome + '</td>' +
+        '<td>' + nicho + '</td>' +
+        '<td>' + cidade + '</td>' +
+        '<td style="font-family:var(--fl-font-mono);font-size:12px">' + tel + '</td>' +
         '<td><span style="color:' + statusColor + ';font-size:11px">' + escapeHtml(l.status || '—') + '</span></td>' +
         '<td style="font-family:var(--fl-font-mono);font-size:11px;color:var(--fl-text-muted)">' + dt + '</td>' +
+        '<td style="display:flex;gap:4px;flex-wrap:wrap">' +
+          '<button onclick="aprovarLeadPipeline(\'' + l.id + '\',this)" style="background:rgba(16,185,129,0.15);border:1px solid #10b981;color:#10b981;padding:3px 8px;border-radius:4px;font-size:10px;cursor:pointer;font-family:var(--fl-font-brand)" title="Aprovar para pipeline">✅</button>' +
+          '<button onclick="abrirModalEditarCampos(\'' + l.id + '\',\'' + nome.replace(/'/g,"\\'") + '\',\'' + tel.replace(/'/g,"\\'") + '\',\'' + nicho.replace(/'/g,"\\'") + '\',\'' + cidade.replace(/'/g,"\\'") + '\')" style="background:rgba(6,182,212,0.12);border:1px solid #06b6d4;color:#06b6d4;padding:3px 8px;border-radius:4px;font-size:10px;cursor:pointer;font-family:var(--fl-font-brand)" title="Editar dados">✏️</button>' +
+          '<button onclick="descartarLead(\'' + l.id + '\',this)" style="background:rgba(245,158,11,0.12);border:1px solid #f59e0b;color:#f59e0b;padding:3px 8px;border-radius:4px;font-size:10px;cursor:pointer;font-family:var(--fl-font-brand)" title="Descartar">⛔</button>' +
+          '<button onclick="deletarLeadDireto(\'' + l.id + '\',\'' + nome.replace(/'/g,"\\'") + '\',this)" style="background:rgba(239,68,68,0.12);border:1px solid #ef4444;color:#ef4444;padding:3px 8px;border-radius:4px;font-size:10px;cursor:pointer;font-family:var(--fl-font-brand)" title="Deletar permanente">🗑️</button>' +
+        '</td>' +
       '</tr>';
     }).join('');
   } catch(e) {
     tbody.innerHTML = '<tr><td colspan="8"><div class="uti-empty">Erro ao carregar fila</div></td></tr>';
+  }
+}
+
+/* ── Carregar leads descartados ─────────────────────────────────── */
+async function carregarLeadsDescartados() {
+  var tbody = document.getElementById('utiDescartadosBody');
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="6"><div class="uti-empty">CARREGANDO...</div></td></tr>';
+  try {
+    var data = await authFetch('/api/leads/descartados').then(function(r){ return r.json(); });
+    var leads = data.leads || [];
+    var badge = document.getElementById('badge-descartados');
+    if (badge) badge.textContent = leads.length;
+    if (!leads.length) {
+      tbody.innerHTML = '<tr><td colspan="6"><div class="uti-empty">Nenhum lead descartado</div></td></tr>';
+      return;
+    }
+    tbody.innerHTML = leads.map(function(l) {
+      var nome = escapeHtml(l.nome || '—');
+      var nicho = escapeHtml(l.segmento || '—');
+      var cidade = escapeHtml(l.cidade || '—');
+      var tel = escapeHtml(l.telefone || l.telefone_whatsapp || '—');
+      var dt = l.atualizado_em ? l.atualizado_em.slice(0,10) : (l.criado_em ? l.criado_em.slice(0,10) : '—');
+      return '<tr>' +
+        '<td>' + nome + '</td>' +
+        '<td>' + nicho + '</td>' +
+        '<td>' + cidade + '</td>' +
+        '<td style="font-family:var(--fl-font-mono);font-size:12px">' + tel + '</td>' +
+        '<td style="font-family:var(--fl-font-mono);font-size:11px;color:var(--fl-text-muted)">' + dt + '</td>' +
+        '<td style="display:flex;gap:4px;flex-wrap:wrap">' +
+          '<button onclick="reprocessarLeadDescartado(\'' + l.id + '\',this)" style="background:rgba(16,185,129,0.15);border:1px solid #10b981;color:#10b981;padding:3px 8px;border-radius:4px;font-size:10px;cursor:pointer;font-family:var(--fl-font-brand)" title="Reprocessar">♻️ REPROCESSAR</button>' +
+          '<button onclick="abrirModalEditarCampos(\'' + l.id + '\',\'' + nome.replace(/'/g,"\\'") + '\',\'' + tel.replace(/'/g,"\\'") + '\',\'' + nicho.replace(/'/g,"\\'") + '\',\'' + cidade.replace(/'/g,"\\'") + '\')" style="background:rgba(6,182,212,0.12);border:1px solid #06b6d4;color:#06b6d4;padding:3px 8px;border-radius:4px;font-size:10px;cursor:pointer;font-family:var(--fl-font-brand)" title="Editar">✏️</button>' +
+          '<button onclick="deletarLeadDireto(\'' + l.id + '\',\'' + nome.replace(/'/g,"\\'") + '\',this)" style="background:rgba(239,68,68,0.12);border:1px solid #ef4444;color:#ef4444;padding:3px 8px;border-radius:4px;font-size:10px;cursor:pointer;font-family:var(--fl-font-brand)" title="Deletar">🗑️</button>' +
+        '</td>' +
+      '</tr>';
+    }).join('');
+  } catch(e) {
+    tbody.innerHTML = '<tr><td colspan="6"><div class="uti-empty">Erro ao carregar</div></td></tr>';
+  }
+}
+
+// Reprocessar lead descartado (volta pra fila capturados)
+async function reprocessarLeadDescartado(leadId, btn) {
+  if (btn) { btn.disabled = true; btn.textContent = '...'; }
+  try {
+    var resp = await authFetch('/api/leads/' + leadId, { method: 'PATCH', headers: {'Content-Type':'application/json'}, body: JSON.stringify({status: 'capturado'}) });
+    var data = await resp.json();
+    if (data.ok) {
+      Toast.success('Lead movido para fila de capturados');
+      carregarLeadsDescartados();
+    } else {
+      Toast.error(data.detail || 'Erro');
+      if (btn) { btn.disabled = false; btn.textContent = '♻️ REPROCESSAR'; }
+    }
+  } catch(e) {
+    Toast.error('Erro: ' + e.message);
+    if (btn) { btn.disabled = false; btn.textContent = '♻️ REPROCESSAR'; }
   }
 }
 
@@ -6024,6 +6344,47 @@ function fecharConfirmDelete() {
   var modal = document.getElementById('modalConfirmDelete');
   if (modal) modal.style.display = 'none';
   _leadParaDeletar = null;
+}
+
+// Descartar lead direto da fila
+async function descartarLead(leadId, btn) {
+  if (!confirm('Descartar este lead? Ele irá para a aba Descartados.')) return;
+  if (btn) { btn.disabled = true; btn.textContent = '...'; }
+  try {
+    var resp = await authFetch('/api/leads/' + leadId + '/descartar', { method: 'PATCH' });
+    var data = await resp.json();
+    if (data.ok) {
+      Toast.success('Lead descartado');
+      carregarFilaQualificados();
+    } else {
+      Toast.error(data.detail || 'Erro ao descartar');
+      if (btn) { btn.disabled = false; btn.textContent = '⛔'; }
+    }
+  } catch(e) {
+    Toast.error('Erro: ' + e.message);
+    if (btn) { btn.disabled = false; btn.textContent = '⛔'; }
+  }
+}
+
+// Deletar lead direto da fila (sem modal)
+async function deletarLeadDireto(leadId, nome, btn) {
+  if (!confirm('Deletar "' + nome + '" permanentemente? Esta ação não pode ser desfeita.')) return;
+  if (btn) { btn.disabled = true; btn.textContent = '...'; }
+  try {
+    var resp = await authFetch('/api/leads/' + leadId, { method: 'DELETE' });
+    var data = await resp.json();
+    if (data.ok) {
+      Toast.success('Lead deletado');
+      carregarFilaQualificados();
+      carregarLeadsIncompletos();
+    } else {
+      Toast.error(data.detail || 'Erro ao deletar');
+      if (btn) { btn.disabled = false; btn.textContent = '🗑️'; }
+    }
+  } catch(e) {
+    Toast.error('Erro: ' + e.message);
+    if (btn) { btn.disabled = false; btn.textContent = '🗑️'; }
+  }
 }
 
 async function confirmarDeletarLead() {
@@ -6352,32 +6713,260 @@ async function atualizarUtiBadge() {
   (function() {
     var banner = document.getElementById('pipeline-banner');
     var bannerFase = document.getElementById('pipeline-banner-fase');
+    var bannerBar = document.getElementById('pipeline-banner-bar');
+    var bannerPercent = document.getElementById('pipeline-banner-percent');
+    var bannerSteps = document.getElementById('pipeline-banner-steps');
     if (!banner) return;
 
-    // Verificar status do pipeline a cada 5s
-    function checkPipelineStatus() {
-      authFetch('/api/pipeline/status').then(function(d) {
-        if (d && d.rodando) {
-          banner.style.display = 'flex';
+    var FASES_LABELS = ['Leads','Qualif.','Mercado','Estratégia','Fotos','Arquit.','HTML','Auditoria','Deploy','Contato'];
+    var faseAtual = 0;
+
+    function renderSteps(fase) {
+      if (!bannerSteps) return;
+      bannerSteps.innerHTML = FASES_LABELS.map(function(label, i) {
+        var num = i + 1;
+        var cor = num < fase ? '#10b981' : num === fase ? '#9333ea' : '#2a2a3e';
+        var anim = num === fase ? 'animation:pulse 1s infinite;' : '';
+        return '<div style="display:flex;flex-direction:column;align-items:center;gap:3px;">' +
+          '<div style="width:10px;height:10px;border-radius:50%;background:' + cor + ';' + anim + 'transition:background 0.4s;"></div>' +
+          '<span style="font-size:8px;color:' + (num <= fase ? '#e5e7eb' : '#4a4a5a') + ';font-family:var(--fl-font-mono);">' + label + '</span>' +
+        '</div>';
+      }).join('');
+    }
+
+    function updateProgress(fase, percent, label) {
+      faseAtual = fase;
+      if (bannerBar) bannerBar.style.width = percent + '%';
+      if (bannerPercent) bannerPercent.textContent = percent + '%';
+      if (bannerFase) bannerFase.textContent = label;
+      renderSteps(fase);
+      banner.style.display = 'block';
+      // Atualizar ETA baseado no progresso
+      _updateETA(percent);
+    }
+
+    // ── TIMER + ETA ──────────────────────────────────────────────
+    var _pipelineStartTime = null;
+    var _timerInterval = null;
+    var _avgPipelineMs = parseInt(localStorage.getItem('fralib_avg_pipeline_ms') || '0');
+    var _DEFAULT_ETA_MS = 180000; // 3 min padrão quando sem histórico
+
+    function _startTimer(iniciadoEm) {
+      // Usar timestamp real do backend se disponível
+      if (iniciadoEm) {
+        _pipelineStartTime = new Date(iniciadoEm).getTime();
+      } else if (!_pipelineStartTime) {
+        _pipelineStartTime = Date.now();
+      }
+      if (_timerInterval) return;
+      var timerEl = document.getElementById('pipeline-banner-timer');
+      _timerInterval = setInterval(function() {
+        if (!timerEl) return;
+        var elapsed = Math.floor((Date.now() - _pipelineStartTime) / 1000);
+        var min = Math.floor(elapsed / 60);
+        var sec = elapsed % 60;
+        timerEl.textContent = '⏱ ' + min + ':' + (sec < 10 ? '0' : '') + sec;
+      }, 1000);
+      // Mostrar ETA imediato
+      _updateETA(0);
+    }
+
+    function _stopTimer() {
+      if (_timerInterval) {
+        clearInterval(_timerInterval);
+        _timerInterval = null;
+      }
+      // Salvar duração pra calcular média
+      if (_pipelineStartTime) {
+        var duration = Date.now() - _pipelineStartTime;
+        var prev = parseInt(localStorage.getItem('fralib_avg_pipeline_ms') || '0');
+        var count = parseInt(localStorage.getItem('fralib_pipeline_count') || '0');
+        var newAvg = prev ? Math.round((prev * count + duration) / (count + 1)) : duration;
+        localStorage.setItem('fralib_avg_pipeline_ms', String(newAvg));
+        localStorage.setItem('fralib_pipeline_count', String(count + 1));
+        _avgPipelineMs = newAvg;
+        _pipelineStartTime = null;
+      }
+    }
+
+    function _updateETA(percent) {
+      var etaEl = document.getElementById('pipeline-banner-eta');
+      if (!etaEl) return;
+      var baseMs = _avgPipelineMs > 0 ? _avgPipelineMs : _DEFAULT_ETA_MS;
+      if (percent <= 0) {
+        if (_pipelineStartTime) {
+          var elapsed = Date.now() - _pipelineStartTime;
+          var restante = Math.max(0, baseMs - elapsed);
+          var restMin = Math.floor(restante / 60000);
+          var restSec = Math.floor((restante % 60000) / 1000);
+          if (restMin > 0) {
+            etaEl.textContent = 'ETA: ~' + restMin + 'min ' + restSec + 's';
+          } else if (restSec > 0) {
+            etaEl.textContent = 'ETA: ~' + restSec + 's';
+          } else {
+            etaEl.textContent = 'ETA: finalizando...';
+          }
         } else {
-          banner.style.display = 'none';
+          var estMin = Math.ceil(baseMs / 60000);
+          etaEl.textContent = 'ETA: ~' + estMin + 'min';
+        }
+        return;
+      }
+      if (percent >= 100) {
+        etaEl.textContent = 'Concluído!';
+        return;
+      }
+      // Calcular ETA baseado no tempo decorrido + percentual
+      if (_pipelineStartTime) {
+        var elapsed = Date.now() - _pipelineStartTime;
+        var totalEstimado = elapsed / (percent / 100);
+        var restante = Math.max(0, totalEstimado - elapsed);
+        var restMin = Math.floor(restante / 60000);
+        var restSec = Math.floor((restante % 60000) / 1000);
+        if (restMin > 0) {
+          etaEl.textContent = 'ETA: ~' + restMin + 'min ' + restSec + 's';
+        } else {
+          etaEl.textContent = 'ETA: ~' + restSec + 's';
+        }
+      }
+    }
+
+    renderSteps(0);
+
+    // Popup de erro do pipeline
+    window._erroJaMostrado = null;
+    function _mostrarPopupErroPipeline(erro) {
+      // Remover popup anterior se existir
+      var old = document.getElementById('pipeline-erro-popup');
+      if (old) old.remove();
+      var popup = document.createElement('div');
+      popup.id = 'pipeline-erro-popup';
+      popup.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:99999;background:#1a1a2e;border:1px solid #ef4444;border-radius:16px;padding:32px;max-width:440px;width:90%;box-shadow:0 25px 50px rgba(0,0,0,0.5);animation:fadeIn 0.3s ease;';
+      popup.innerHTML = '<div style="text-align:center;margin-bottom:16px;"><span style="font-size:48px;">⚠️</span></div>' +
+        '<h3 style="color:#f87171;margin:0 0 12px;font-size:18px;text-align:center;">Pipeline encontrou um problema</h3>' +
+        '<p style="color:#d1d5db;font-size:14px;line-height:1.6;margin:0 0 12px;background:#0f0f1a;border-radius:8px;padding:12px;">' + (erro.mensagem || 'Erro desconhecido') + '</p>' +
+        '<p style="color:#a78bfa;font-size:13px;line-height:1.5;margin:0 0 20px;"><strong>Recomendação:</strong> ' + (erro.recomendacao || 'Tente novamente.') + '</p>' +
+        '<div style="display:flex;gap:10px;justify-content:center;">' +
+          '<button onclick="this.closest(\'#pipeline-erro-popup\').remove()" style="background:#374151;color:#fff;border:none;border-radius:8px;padding:10px 20px;cursor:pointer;font-size:13px;">Fechar</button>' +
+          '<button onclick="location.reload()" style="background:#7c3aed;color:#fff;border:none;border-radius:8px;padding:10px 20px;cursor:pointer;font-size:13px;">Atualizar página</button>' +
+          '<a href="https://wa.me/5541999999999?text=Erro%20no%20pipeline" target="_blank" style="background:#10b981;color:#fff;border:none;border-radius:8px;padding:10px 20px;cursor:pointer;font-size:13px;text-decoration:none;">Suporte</a>' +
+        '</div>';
+      // Overlay
+      var overlay = document.createElement('div');
+      overlay.id = 'pipeline-erro-overlay';
+      overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:99998;';
+      overlay.onclick = function() { popup.remove(); overlay.remove(); };
+      document.body.appendChild(overlay);
+      document.body.appendChild(popup);
+    }
+
+    // Verificar status do pipeline a cada 5s (para quando não rodando)
+    var _pipelineInterval = null;
+    function checkPipelineStatus() {
+      authFetch('/api/pipeline/status').then(function(r) { return r.json(); }).then(function(d) {
+        if (d && d.rodando) {
+          banner.style.display = 'block';
+          _startTimer(d.iniciado_em);
+        } else {
+          if (faseAtual === 0) {
+            banner.style.display = 'none';
+          }
+          _stopTimer();
+          // Parar polling quando pipeline não está rodando
+          if (_pipelineInterval) {
+            clearInterval(_pipelineInterval);
+            _pipelineInterval = null;
+          }
+          // Mostrar popup de erro se pipeline parou com erro
+          if (d && d.ultimo_erro && !window._erroJaMostrado) {
+            window._erroJaMostrado = d.ultimo_erro.quando;
+            _mostrarPopupErroPipeline(d.ultimo_erro);
+          }
+        }
+        // Mostrar info de checkpoint salvo (progresso preservado)
+        if (d && d.checkpoint && d.checkpoint.total_fases > 0 && !d.rodando) {
+          var ckptEl = document.getElementById('pipeline-checkpoint-info');
+          if (!ckptEl) {
+            ckptEl = document.createElement('div');
+            ckptEl.id = 'pipeline-checkpoint-info';
+            ckptEl.style.cssText = 'background:#0f2a1a;border:1px solid #10b98144;border-radius:8px;padding:10px 14px;margin-bottom:12px;display:flex;align-items:center;gap:10px;';
+            banner.parentNode.insertBefore(ckptEl, banner);
+          }
+          ckptEl.innerHTML = '<span style="font-size:16px;">💾</span><div><div style="font-size:12px;color:#10b981;font-weight:600;">Progresso salvo</div><div style="font-size:11px;color:#6ee7b7;">' + d.checkpoint.total_fases + ' fases concluídas (último: ' + (d.checkpoint.ultimo_agente || '?') + '). Ao reiniciar, retoma de onde parou sem gastar tokens.</div></div>';
+          ckptEl.style.display = 'flex';
+        } else {
+          var ckptEl = document.getElementById('pipeline-checkpoint-info');
+          if (ckptEl) ckptEl.style.display = 'none';
         }
       }).catch(function(){});
     }
     checkPipelineStatus();
-    setInterval(checkPipelineStatus, 5000);
+    _pipelineInterval = setInterval(checkPipelineStatus, 5000);
 
-    // Interceptar SSE para atualizar fase no banner
+    // Interceptar SSE para atualizar progresso
     var _origHook = window._pixelOfficeSSEHook;
     window._pixelOfficeSSEHook = function(data) {
       if (_origHook) _origHook(data);
       var msg = data.mensagem || '';
-      // Mostrar fases relevantes no banner
-      if (msg && (msg.includes('FASE') || msg.includes('Pipeline') || msg.includes('Lead:') || msg.includes('Deploy') || msg.includes('concluído'))) {
-        if (bannerFase) bannerFase.textContent = msg;
-        if (msg.includes('concluído') || msg.includes('concluido')) {
-          setTimeout(function(){ banner.style.display = 'none'; }, 3000);
+
+      // Tentar parsear evento de progresso estruturado
+      try {
+        var prog = JSON.parse(msg);
+        if (prog && prog.type === 'progress') {
+          updateProgress(prog.fase, prog.percent, prog.label);
+          return;
         }
+      } catch(e) {}
+
+      // ══ ESTADOS VISUAIS ESPECIAIS ══
+      // Retomada de checkpoint
+      if (msg.includes('♻️') || msg.includes('retomado do checkpoint') || msg.includes('Retomando pipeline')) {
+        if (bannerFase) {
+          bannerFase.innerHTML = '<span style="color:#10b981;">♻️ ' + msg.replace(/♻️/g,'').trim() + '</span>';
+        }
+        banner.style.display = 'block';
+        return;
+      }
+      // Rate limit / throttle
+      if (msg.includes('rate limit') || msg.includes('Rate limit') || msg.includes('throttled') || msg.includes('aguardando cooldown')) {
+        if (bannerFase) {
+          bannerFase.innerHTML = '<span style="color:#f59e0b;">⏳ Aguardando liberação da API... seu progresso está salvo</span>';
+        }
+        banner.style.display = 'block';
+        return;
+      }
+      // Na fila
+      if (msg.includes('na_fila') || msg.includes('posicao')) {
+        if (bannerFase) {
+          bannerFase.innerHTML = '<span style="color:#06b6d4;">🔄 Na fila de processamento — seu progresso anterior está preservado</span>';
+        }
+        banner.style.display = 'block';
+        return;
+      }
+      // Checkpoint salvo
+      if (msg.includes('Checkpoint') && msg.includes('Salvo')) {
+        if (bannerFase) {
+          bannerFase.innerHTML = '<span style="color:#10b981;">💾 Progresso salvo — seguro contra interrupções</span>';
+        }
+        return;
+      }
+      // Output truncado / retry
+      if (msg.includes('truncado') || msg.includes('retry em')) {
+        if (bannerFase) {
+          bannerFase.innerHTML = '<span style="color:#f59e0b;">🔄 Resposta incompleta — retentando automaticamente...</span>';
+        }
+        return;
+      }
+
+      // Fallback: detectar FASE no texto
+      if (msg.includes('FASE')) {
+        if (bannerFase) bannerFase.textContent = msg;
+        banner.style.display = 'block';
+      }
+      if (msg.includes('CONCLUIDO') || msg.includes('concluido') || msg.includes('concluído')) {
+        updateProgress(10, 100, '✅ Pipeline concluído!');
+        _stopTimer();
+        setTimeout(function(){ banner.style.display = 'none'; faseAtual = 0; renderSteps(0); }, 5000);
       }
     };
   })();

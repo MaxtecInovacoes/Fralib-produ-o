@@ -102,6 +102,7 @@ class ColorPalette(BaseModel):
     muted: str = "#6b7280"
     border: str = "#e5e7eb"
     tokens_oklch: dict = {}
+    hero_style: dict = {}
     reasoning: str = "Paleta padrao"
 
     @field_validator("primary", "secondary", "accent", "background", "text", mode="before")
@@ -250,6 +251,11 @@ class DesignerPRD(BaseModel):
     segmento: str = ""
     instrucao_criativa_para_dev: str = "Crie um layout moderno e responsivo com Tailwind."
     jina_insights: str = ""
+    # Dados reais do Hunter — passados intactos pro Liam
+    servicos: list = []
+    atributos: list = []
+    horarios: dict = {}
+    faixa_preco: str = ""
 
     @field_validator("jina_insights", mode="before")
     @classmethod

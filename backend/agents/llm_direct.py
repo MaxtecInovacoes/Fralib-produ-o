@@ -1,6 +1,9 @@
 import os
 import requests
 import json
+import time as _time
+import threading as _threading
+from collections import defaultdict as _defaultdict
 from dotenv import load_dotenv
 
 
@@ -13,6 +16,112 @@ class RateLimitError(Exception):
         else:
             tempo = f"{reset_seconds}s"
         super().__init__(f"Limite de uso atingido. Sera resetado em: {tempo}")
+
+
+# ══════════════════════════════════════════════════════════════════
+# AGENT CONFIG CACHE — lookup dinâmico do DB com fallback hardcoded
+# ══════════════════════════════════════════════════════════════════
+_AGENT_CONFIG_CACHE: dict = {}
+_AGENT_CONFIG_CACHE_TS: float = 0.0
+_AGENT_CONFIG_CACHE_TTL: float = 60.0  # 60s TTL
+
+
+def _invalidar_agent_config_cache():
+    """Chamado quando superadmin altera config de agente."""
+    global _AGENT_CONFIG_CACHE, _AGENT_CONFIG_CACHE_TS
+    _AGENT_CONFIG_CACHE = {}
+    _AGENT_CONFIG_CACHE_TS = 0.0
+    print("[LLM] Agent config cache invalidado")
+
+
+def _load_agent_configs():
+    """Carrega configs do DB. Retorna dict {agent_name: {provider, model_id, temperature, max_tokens, ...}}."""
+    global _AGENT_CONFIG_CACHE, _AGENT_CONFIG_CACHE_TS
+    now = _time.time()
+    if _AGENT_CONFIG_CACHE and (now - _AGENT_CONFIG_CACHE_TS) < _AGENT_CONFIG_CACHE_TTL:
+        return _AGENT_CONFIG_CACHE
+    try:
+        from core.database import engine
+        from sqlalchemy import text
+        with engine.connect() as conn:
+            rows = conn.execute(text("""
+                SELECT agent_name, provider, model_id, fallback_provider, fallback_model_id,
+                       temperature, top_p, max_tokens, enabled
+                FROM agent_model_configs WHERE enabled = TRUE
+            """)).fetchall()
+        configs = {}
+        for r in rows:
+            configs[r[0]] = {
+                'provider': r[1],
+                'model_id': r[2],
+                'fallback_provider': r[3],
+                'fallback_model_id': r[4],
+                'temperature': r[5],
+                'top_p': r[6],
+                'max_tokens': r[7],
+            }
+        _AGENT_CONFIG_CACHE = configs
+        _AGENT_CONFIG_CACHE_TS = now
+        return configs
+    except Exception as e:
+        print(f"[LLM] agent_model_configs load falhou (usando hardcoded): {e}")
+        return {}
+# Com 3 workers + 1 server, sem spacing todos batem na key ao mesmo tempo.
+# Mínimo 1.2s entre calls globais (por processo). Com 3 processos = ~2.5 req/s max.
+_LAST_CALL_TIME = 0.0
+_CALL_SPACING_LOCK = _threading.Lock()
+CALL_SPACING_SECONDS = float(os.environ.get("LLM_CALL_SPACING", "1.2"))
+
+
+def _enforce_call_spacing():
+    """Garante intervalo mínimo entre chamadas API no mesmo processo."""
+    global _LAST_CALL_TIME
+    with _CALL_SPACING_LOCK:
+        now = _time.time()
+        elapsed = now - _LAST_CALL_TIME
+        if elapsed < CALL_SPACING_SECONDS:
+            wait = CALL_SPACING_SECONDS - elapsed
+            _time.sleep(wait)
+        _LAST_CALL_TIME = _time.time()
+# Janela deslizante: max N calls por minuto por tenant no pool compartilhado.
+# BYOK users não são limitados (usam key própria).
+_TENANT_CALLS_LOCK = _threading.Lock()
+_TENANT_CALLS: dict = _defaultdict(list)  # user_id -> [timestamps]
+TENANT_MAX_CALLS_PER_MIN = int(os.environ.get("TENANT_MAX_CALLS_PER_MIN", "40"))
+TENANT_THROTTLE_WAIT = 10  # segundos de espera quando throttled
+
+
+def _tenant_rate_check(user_id) -> tuple:
+    """Retorna (allowed: bool, wait_seconds: int, calls_in_window: int)."""
+    if not user_id:
+        return (True, 0, 0)
+    now = _time.time()
+    window = 60.0
+    with _TENANT_CALLS_LOCK:
+        # Limpar timestamps fora da janela
+        _TENANT_CALLS[user_id] = [t for t in _TENANT_CALLS[user_id] if now - t < window]
+        count = len(_TENANT_CALLS[user_id])
+        if count >= TENANT_MAX_CALLS_PER_MIN:
+            # Calcular quanto falta pro mais antigo sair da janela
+            oldest = _TENANT_CALLS[user_id][0]
+            wait = int(window - (now - oldest)) + 1
+            return (False, wait, count)
+        _TENANT_CALLS[user_id].append(now)
+        return (True, 0, count + 1)
+
+
+def _tenant_rate_alert(user_id, wait_seconds, calls_count):
+    """Grava alerta visível pro user e loga."""
+    print(f"[RATE-LIMIT] ⚠️ Tenant {user_id} throttled: {calls_count} calls/min (max={TENANT_MAX_CALLS_PER_MIN}). Aguardando {wait_seconds}s")
+    try:
+        import ia_manager as _ia
+        _ia.raise_alert(
+            'rate_limit', None,
+            f'Tenant throttled: {calls_count} chamadas/min excede limite de {TENANT_MAX_CALLS_PER_MIN}. Pipeline aguardou {wait_seconds}s.',
+            lead_id=None, user_id=user_id
+        )
+    except Exception:
+        pass
 
 # Carregar .env — tenta multiplos caminhos para garantir que encontra
 import pathlib as _pathlib
@@ -51,14 +160,11 @@ def _get_byok_key():
     if uid in _byok_cache:
         return _byok_cache[uid]
     try:
-        import psycopg2
+        from core.database import engine
+        from sqlalchemy import text
         from utils.secrets_crypto import decriptar
-        conn = psycopg2.connect(os.getenv('DATABASE_URL', 'postgresql://postgres:fralib2024@localhost:5433/fralib_db'))
-        cur = conn.cursor()
-        cur.execute('SELECT plano, anthropic_key_encrypted FROM users WHERE id=%s', (uid,))
-        row = cur.fetchone()
-        cur.close()
-        conn.close()
+        with engine.connect() as conn:
+            row = conn.execute(text('SELECT plano, anthropic_key_encrypted FROM users WHERE id=:id'), {'id': uid}).fetchone()
         if row and (row[0] or '').lower() == 'pro' and row[1]:
             key = decriptar(row[1])
             _byok_cache[uid] = key or None
@@ -104,16 +210,14 @@ def invalidar_byok_cache(uid=None):
 
 def _salvar_uso_llm(modelo, input_tokens, output_tokens, agente=None):
     try:
-        import psycopg2
-        conn = psycopg2.connect(os.getenv('DATABASE_URL', 'postgresql://postgres:fralib2024@localhost:5433/fralib_db'))
-        cur = conn.cursor()
-        cur.execute(
-            'INSERT INTO llm_usage (modelo, input_tokens, output_tokens, agente, user_id) VALUES (%s, %s, %s, %s, %s)',
-            (modelo, input_tokens, output_tokens, agente, _current_user_id)
-        )
-        conn.commit()
-        cur.close()
-        conn.close()
+        from core.database import engine
+        from sqlalchemy import text
+        with engine.connect() as conn:
+            conn.execute(
+                text('INSERT INTO llm_usage (modelo, input_tokens, output_tokens, agente, user_id) VALUES (:m, :i, :o, :a, :u)'),
+                {'m': modelo, 'i': input_tokens, 'o': output_tokens, 'a': agente, 'u': _current_user_id}
+            )
+            conn.commit()
     except Exception as e:
         print(f'[LLM Usage] Erro ao salvar: {e}')
 
@@ -165,36 +269,46 @@ def call_claude(system, user, model='opus', max_tokens=4000, temperature=0.7, ag
             # Continua sem RAG/Skills se der erro
     
     # 4. Roteamento automático de modelo por agente
-    # Haiku: tarefas simples/rápidas (Bryan mensagens, validações, checks)
-    # Sonnet: tarefas médias (qualificação, briefing, SEO, follow-up)
-    # Opus: tarefas complexas (geração de site completo, PRD, design system)
+    # Prioridade: DB config > hardcoded map > parâmetro do caller
     _AGENT_MODEL_MAP = {
-        # Haiku — respostas rápidas, sem raciocínio profundo
-        'bryan':   'haiku',   # mensagens WhatsApp
-        'liz':     'haiku',   # edições pontuais de HTML
-        # Sonnet — qualificação e análise média
-        # caio: zero LLM — Python puro, não entra no mapa
-        'theo':    'sonnet',  # briefing e análise
-        'alex':    'sonnet',  # cores e logos
-        # Opus — geração criativa pesada
-        'liam':    'opus',  # geração completa de site
+        # Fallback hardcoded — usado se DB não tem config pro agente
+        'bryan':   'haiku',
+        'liz':     'haiku',
+        'theo':    'sonnet',
+        'alex':    'sonnet',
+        'liam':    'opus',
         'arquiteto_mestre': 'sonnet',
         'designer_prd':     'sonnet',
     }
-    if agent_name and model == 'opus':
-        # Só faz override se o chamador não especificou modelo explicitamente
-        _auto = _AGENT_MODEL_MAP.get(agent_name.lower())
-        if _auto:
-            model = _auto
-            print(f"[LLM Router] {agent_name} -> {model}")
 
-    model_map = {
-        'opus': 'claude-opus-4-7',
-        'sonnet': 'claude-sonnet-4-6',
-        'haiku': 'claude-haiku-4-5'
-    }
+    # Tentar config dinâmica do DB
+    _db_config = None
+    if agent_name:
+        _all_configs = _load_agent_configs()
+        _db_config = _all_configs.get(agent_name.lower())
 
-    model_id = model_map.get(model, model_map['opus'])
+    if _db_config:
+        # DB config encontrada — usar provider/model/params dela
+        model_id = _db_config['model_id']
+        if _db_config.get('temperature') is not None:
+            temperature = _db_config['temperature']
+        if _db_config.get('max_tokens') is not None:
+            max_tokens = _db_config['max_tokens']
+        print(f"[LLM Router] {agent_name} -> {_db_config['provider']}/{model_id} (DB config)")
+    else:
+        # Fallback: hardcoded map
+        if agent_name and model == 'opus':
+            _auto = _AGENT_MODEL_MAP.get(agent_name.lower())
+            if _auto:
+                model = _auto
+                print(f"[LLM Router] {agent_name} -> {model} (hardcoded fallback)")
+
+        model_map = {
+            'opus': 'claude-opus-4-7',
+            'sonnet': 'claude-sonnet-4-6',
+            'haiku': 'claude-haiku-4-5'
+        }
+        model_id = model_map.get(model, model_map['opus'])
     
     # 5. Resolver key/base_url (BYOK > ia_manager > .env)
     if base_url:
@@ -259,45 +373,72 @@ def call_claude(system, user, model='opus', max_tokens=4000, temperature=0.7, ag
     except Exception:
         _ia = None
 
+    # ══ TENANT RATE LIMIT — throttle antes de chamar API ══
+    # Só aplica se NÃO for BYOK (BYOK usa key própria, não afeta pool)
+    if _key_id is not None and _current_user_id:
+        allowed, wait, count = _tenant_rate_check(_current_user_id)
+        if not allowed:
+            _tenant_rate_alert(_current_user_id, wait, count)
+            _llm_time.sleep(min(wait, TENANT_THROTTLE_WAIT))
+            # Re-check após espera (pode liberar)
+            allowed2, wait2, _ = _tenant_rate_check(_current_user_id)
+            if not allowed2:
+                _llm_time.sleep(wait2)
+
     response = None
-    for _llm_attempt in range(1, 4):
+    MAX_ATTEMPTS = 5  # Com 1 key, precisa mais tentativas (espera cooldown)
+    for _llm_attempt in range(1, MAX_ATTEMPTS + 1):
+        _enforce_call_spacing()
         response = requests.post(url, headers=headers, json=payload, timeout=600)
         if response.status_code == 429:
             cd = _ia.parse_cooldown_from_response(429, dict(response.headers)) if _ia else 60
             if _ia and _key_id:
                 _ia.mark_failure(_key_id, '429 rate limit', cd)
-                _ia.raise_alert('rate_limit', _key_id,
-                                f'429 em call_claude (cooldown {cd}s)',
-                                lead_id=None, user_id=_current_user_id)
-            if _llm_attempt >= 3:
-                if _ia and _key_id is None:
-                    _ia.raise_alert('all_keys_failed', None,
-                                    'Todas as keys Anthropic estouraram 429 apos 3 tentativas',
+                if _llm_attempt == 1:
+                    _ia.raise_alert('rate_limit', _key_id,
+                                    f'429 em call_claude (cooldown {cd}s)',
+                                    lead_id=None, user_id=_current_user_id)
+            if _llm_attempt >= MAX_ATTEMPTS:
+                if _ia:
+                    _ia.raise_alert('all_keys_failed', _key_id,
+                                    f'Rate limit persistente apos {MAX_ATTEMPTS} tentativas (cooldown {cd}s)',
                                     lead_id=None, user_id=_current_user_id)
                 raise RateLimitError(reset_seconds=cd)
-            # Pega proxima key e tenta de novo
+            # Com 1 key: espera o cooldown real (não troca key, espera liberar)
+            # Com N keys: tenta pegar outra
             if base_url is None:
-                _api_key, _base, _key_id = _resolve_anthropic()
-                url = f'{_base}/v1/messages'
-                headers['x-api-key'] = _api_key
-            wait = min(15 * _llm_attempt, 30)
-            print(f'[LLM] 429 — trocando key e aguardando {wait}s (tentativa {_llm_attempt}/3)...')
+                new_key = _resolve_anthropic()
+                if new_key and new_key[2] != _key_id:
+                    _api_key, _base, _key_id = new_key
+                    url = f'{_base}/v1/messages'
+                    headers['x-api-key'] = _api_key
+                    wait = min(10 * _llm_attempt, 20)
+                    print(f'[LLM] 429 — trocou key, aguardando {wait}s (tentativa {_llm_attempt}/{MAX_ATTEMPTS})')
+                else:
+                    # Mesma key (pool de 1) — espera cooldown real
+                    wait = min(cd, 60)
+                    print(f'[LLM] 429 — 1 key no pool, aguardando cooldown {wait}s (tentativa {_llm_attempt}/{MAX_ATTEMPTS})')
+            else:
+                wait = min(cd, 60)
+                print(f'[LLM] 429 — aguardando {wait}s (tentativa {_llm_attempt}/{MAX_ATTEMPTS})')
             _llm_time.sleep(wait)
             continue
         if response.status_code in (529, 503, 502):
             if _ia and _key_id:
                 _ia.mark_failure(_key_id, f'{response.status_code} overloaded', 30)
             if base_url is None:
-                _api_key, _base, _key_id = _resolve_anthropic()
-                url = f'{_base}/v1/messages'
-                headers['x-api-key'] = _api_key
-            wait = 20 * _llm_attempt
-            print(f'[LLM] {response.status_code} Proxy Overloaded - aguardando {wait}s (tentativa {_llm_attempt}/3)...')
+                new_key = _resolve_anthropic()
+                if new_key and new_key[2] != _key_id:
+                    _api_key, _base, _key_id = new_key
+                    url = f'{_base}/v1/messages'
+                    headers['x-api-key'] = _api_key
+            wait = min(20 * _llm_attempt, 60)
+            print(f'[LLM] {response.status_code} Overloaded - aguardando {wait}s (tentativa {_llm_attempt}/{MAX_ATTEMPTS})')
             _llm_time.sleep(wait)
             continue
         if response.status_code == 400:
-            print(f'[LLM] 400 Bad Request - payload pode ser grande demais, tentativa {_llm_attempt}/3')
-            if _llm_attempt < 3:
+            print(f'[LLM] 400 Bad Request - payload pode ser grande demais, tentativa {_llm_attempt}/{MAX_ATTEMPTS}')
+            if _llm_attempt < MAX_ATTEMPTS:
                 _llm_time.sleep(5 * _llm_attempt)
                 continue
         if response.status_code >= 400:

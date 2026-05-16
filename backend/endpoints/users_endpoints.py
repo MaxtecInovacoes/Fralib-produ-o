@@ -258,3 +258,62 @@ async def remover_anthropic_key(db: Session = Depends(get_db), user: dict = Depe
     except Exception:
         pass
     return {'status': 'ok'}
+
+
+# ═══ CONFIG HORÁRIO SDR ═══════════════════════════════════════════
+
+class HorarioSDRRequest(BaseModel):
+    modo: str  # 'livre' ou 'personalizado'
+    hora_inicio: int = 8
+    hora_fim: int = 21
+    dias_bloqueados: list = [6]  # 0=seg, 6=dom
+
+
+@router.get('/sdr-horario')
+async def get_sdr_horario(db: Session = Depends(get_db), user: dict = Depends(get_current_user)):
+    """Retorna config de horário do SDR do tenant."""
+    row = db.execute(text(
+        "SELECT sdr_horario_config FROM users WHERE id=:id"
+    ), {"id": user["id"]}).fetchone()
+    if row and row[0]:
+        import json
+        config = json.loads(row[0]) if isinstance(row[0], str) else row[0]
+        return config
+    # Default
+    return {"modo": "personalizado", "hora_inicio": 8, "hora_fim": 21, "dias_bloqueados": [6]}
+
+
+@router.put('/sdr-horario')
+async def salvar_sdr_horario(
+    body: HorarioSDRRequest,
+    db: Session = Depends(get_db),
+    user: dict = Depends(get_current_user)
+):
+    """Salva config de horário do SDR."""
+    import json
+    # Validar
+    if body.modo not in ('livre', 'personalizado'):
+        raise HTTPException(400, "Modo deve ser 'livre' ou 'personalizado'")
+    if body.hora_inicio < 0 or body.hora_inicio > 23:
+        raise HTTPException(400, "hora_inicio deve ser 0-23")
+    if body.hora_fim < 1 or body.hora_fim > 24:
+        raise HTTPException(400, "hora_fim deve ser 1-24")
+    if body.hora_inicio >= body.hora_fim:
+        raise HTTPException(400, "hora_inicio deve ser menor que hora_fim")
+
+    config = {
+        "modo": body.modo,
+        "hora_inicio": body.hora_inicio,
+        "hora_fim": body.hora_fim,
+        "dias_bloqueados": body.dias_bloqueados,
+    }
+    db.execute(text(
+        "UPDATE users SET sdr_horario_config = :cfg WHERE id=:id"
+    ), {"cfg": json.dumps(config), "id": user["id"]})
+    db.commit()
+
+    # Invalidar cache do bryan
+    from agents.bryan import _HORARIO_CACHE
+    _HORARIO_CACHE.pop(f"sdr_horario_{user['id']}", None)
+
+    return {"status": "ok", "config": config}

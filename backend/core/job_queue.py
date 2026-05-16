@@ -40,18 +40,21 @@ def enqueue(
     idempotency_key: Optional[str] = None,
     checkpoint_id: Optional[str] = None,
     delay_seconds: int = 0,
+    priority: int = 2,
 ) -> Optional[int]:
     """
     Enfileira um job. Retorna o job_id, ou None se ja existia um com a mesma
     idempotency_key (caso comum: dois requests concorrentes pro mesmo lead).
+
+    Priority: 1=Pro (alta), 2=Starter (normal), 3=Trial (baixa).
     """
     next_retry_at = datetime.utcnow() + timedelta(seconds=delay_seconds)
     try:
         row = db.execute(text("""
             INSERT INTO jobs (tipo, payload, tenant_id, max_attempts,
-                              idempotency_key, checkpoint_id, next_retry_at)
+                              idempotency_key, checkpoint_id, next_retry_at, priority)
             VALUES (:tipo, CAST(:payload AS jsonb), :tenant_id, :max_attempts,
-                    :idem, :ckpt, :next_retry_at)
+                    :idem, :ckpt, :next_retry_at, :priority)
             ON CONFLICT (idempotency_key) DO NOTHING
             RETURNING id
         """), {
@@ -62,6 +65,7 @@ def enqueue(
             "idem": idempotency_key,
             "ckpt": checkpoint_id,
             "next_retry_at": next_retry_at,
+            "priority": priority,
         }).fetchone()
         db.commit()
         return row[0] if row else None
@@ -88,7 +92,7 @@ def claim_next(db: Session, worker_id: str, tipos: Optional[list] = None) -> Opt
         WITH claimed AS (
             SELECT id FROM jobs
             WHERE status = 'pending' AND next_retry_at <= NOW() {filtro_tipo}
-            ORDER BY next_retry_at ASC
+            ORDER BY priority ASC, next_retry_at ASC
             FOR UPDATE SKIP LOCKED
             LIMIT 1
         )
@@ -141,12 +145,14 @@ def mark_failure(
     retriable: bool = True,
     lead_id: Optional[str] = None,
     lead_nome: Optional[str] = None,
+    delay_seconds: Optional[int] = None,
 ) -> str:
     """
     Marca o job como falho.
 
     - Se retriable=True e ainda ha attempts disponiveis: agenda retry com backoff.
       Volta pra status='pending' apos next_retry_at.
+    - delay_seconds: override do backoff padrao (ex: rate limit com cooldown conhecido).
     - Caso contrario: marca como failed_permanent e move pra pipeline_failures
       pra o usuario ver no dashboard.
 
@@ -163,7 +169,7 @@ def mark_failure(
 
     pode_tentar_mais = retriable and attempts < max_attempts
     if pode_tentar_mais:
-        delay = _BACKOFF[min(attempts - 1, len(_BACKOFF) - 1)]
+        delay = delay_seconds if delay_seconds is not None else _BACKOFF[min(attempts - 1, len(_BACKOFF) - 1)]
         db.execute(text("""
             UPDATE jobs
             SET status = 'pending',

@@ -71,7 +71,7 @@ async def salvar_beta_lead(request: Request, req: BetaLeadRequest, db: Session =
 
 @router.get('/leads')
 async def listar_beta_leads(db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
-    if usuario.get("plano") not in ("admin", "superadmin"):
+    if usuario.get("role") not in ("admin", "superadmin"):
         raise HTTPException(status_code=403, detail="Acesso restrito a administradores")
     try:
         criar_tabela_se_nao_existe(db)

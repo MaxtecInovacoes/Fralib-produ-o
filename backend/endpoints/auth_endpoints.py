@@ -106,6 +106,7 @@ class RegisterRequest(BaseModel):
     password: str
     nome: str = ""
     name: str = ""
+    telefone: str = ""
 
 def create_access_token(data: dict):
     to_encode = data.copy()
@@ -143,6 +144,17 @@ async def register(request: Request, data: RegisterRequest, db: Session = Depend
     existing = db.execute(text("SELECT id FROM users WHERE email = :email"), {"email": data.email}).fetchone()
     if existing:
         raise HTTPException(status_code=400, detail="Email ja cadastrado")
+
+    # Anti-abuse: limitar trials por IP (max 2 contas trial por IP em 30 dias)
+    client_ip = request.headers.get("x-forwarded-for", "").split(",")[0].strip() or request.client.host
+    if client_ip and client_ip not in ("127.0.0.1", "::1"):
+        recent_from_ip = db.execute(text("""
+            SELECT COUNT(*) FROM users
+            WHERE registro_ip = :ip AND criado_em > NOW() - INTERVAL '30 days'
+        """), {"ip": client_ip}).fetchone()
+        if recent_from_ip and recent_from_ip[0] >= 3:
+            raise HTTPException(status_code=429, detail="Limite de cadastros atingido. Tente novamente mais tarde.")
+
     if len(data.password) < 12:
         raise HTTPException(status_code=400, detail="Senha deve ter pelo menos 12 caracteres")
     if not any(c.isalpha() for c in data.password) or not any(c.isdigit() for c in data.password):
@@ -154,13 +166,14 @@ async def register(request: Request, data: RegisterRequest, db: Session = Depend
     confirm_token = secrets.token_urlsafe(32)
     confirm_expires = (datetime.utcnow() + timedelta(hours=24)).isoformat()
     # email_confirmado=false ate o usuario clicar no link recebido por email
+    telefone = (data.telefone or "").strip()
     sql = """INSERT INTO users (email, nome, name, password_hash, senha_hash, plano, plan, role, status,
-              creditos, creditos_max, trial_expires_at, criado_em, email_confirmado, confirm_token, confirm_expires)
+              creditos, creditos_max, trial_expires_at, criado_em, email_confirmado, confirm_token, confirm_expires, registro_ip, telefone)
               VALUES (:email, :nome, :nome, :hash, :hash, 'trial', 'free', 'user', 'trial',
-              1, 1, :trial_exp, :now, false, :ctoken, :cexp)"""
+              1, 1, :trial_exp, :now, false, :ctoken, :cexp, :ip, :tel)"""
     db.execute(text(sql), {"email": data.email, "nome": nome, "hash": password_hash,
                "now": now, "trial_exp": trial_expires,
-               "ctoken": confirm_token, "cexp": confirm_expires})
+               "ctoken": confirm_token, "cexp": confirm_expires, "ip": client_ip, "tel": telefone})
     db.commit()
 
     # Inicializar tenant: buscar user_id recém criado
@@ -200,8 +213,12 @@ async def confirmar_email(token: str, db: Session = Depends(get_db)):
     user = db.execute(text("SELECT id, confirm_expires FROM users WHERE confirm_token = :token"), {"token": token}).fetchone()
     if not user:
         return _pagina_confirmacao("Link invalido", "Este link de confirmacao ja foi usado ou nao existe.", sucesso=False)
-    if user[1] and datetime.utcnow().isoformat() > user[1]:
-        return _pagina_confirmacao("Link expirado", "Este link expirou. Faca login para solicitar um novo email de confirmacao.", sucesso=False)
+    if user[1]:
+        expires = user[1] if isinstance(user[1], datetime) else datetime.fromisoformat(user[1])
+        now = datetime.utcnow()
+        if expires.tzinfo: expires = expires.replace(tzinfo=None)
+        if now > expires:
+            return _pagina_confirmacao("Link expirado", "Este link expirou. Faca login para solicitar um novo email de confirmacao.", sucesso=False)
     db.execute(text("UPDATE users SET email_confirmado=true, confirm_token=NULL, confirm_expires=NULL WHERE id=:id"), {"id": user[0]})
     db.commit()
     return _pagina_confirmacao("Email confirmado!", "Sua conta foi ativada. Agora voce pode fazer login.", sucesso=True)
@@ -235,7 +252,7 @@ class ResetarSenhaRequest(BaseModel):
 async def esqueci_senha(request: Request, data: EsqueciSenhaRequest, db: Session = Depends(get_db)):
     from services.email_service import enviar_email_recuperacao
     user = db.execute(text(
-        "SELECT id, nome FROM users WHERE email = :email AND status != 'desativado'"
+        "SELECT id, nome FROM users WHERE lower(email) = lower(:email) AND status != 'desativado'"
     ), {"email": data.email}).fetchone()
     # Sempre retorna sucesso para não vazar se o email existe
     if not user:
@@ -246,7 +263,11 @@ async def esqueci_senha(request: Request, data: EsqueciSenhaRequest, db: Session
         "UPDATE users SET reset_token=:token, reset_expires=:expires WHERE id=:id"
     ), {"token": reset_token, "expires": reset_expires, "id": user[0]})
     db.commit()
-    await enviar_email_recuperacao(data.email, user[1] or data.email, reset_token)
+    try:
+        result = await enviar_email_recuperacao(data.email, user[1] or data.email, reset_token)
+        print(f"[Auth] Email recuperacao para {data.email}: {'ENVIADO' if result else 'FALHOU'}")
+    except Exception as e:
+        print(f"[Auth] Erro ao enviar email recuperacao: {e}")
     return {"status": "ok", "mensagem": "Se o email estiver cadastrado, voce recebera um link de recuperacao."}
 
 @router.post("/resetar-senha")
@@ -257,8 +278,12 @@ async def resetar_senha(request: Request, data: ResetarSenhaRequest, db: Session
     ), {"token": data.token}).fetchone()
     if not user:
         raise HTTPException(status_code=400, detail="Link invalido ou ja utilizado.")
-    if user[1] and datetime.utcnow().isoformat() > user[1]:
-        raise HTTPException(status_code=400, detail="Link expirado. Solicite um novo.")
+    if user[1]:
+        expires = user[1] if isinstance(user[1], datetime) else datetime.fromisoformat(user[1])
+        now = datetime.utcnow()
+        if expires.tzinfo: expires = expires.replace(tzinfo=None)
+        if now > expires:
+            raise HTTPException(status_code=400, detail="Link expirado. Solicite um novo.")
     if len(data.password) < 12:
         raise HTTPException(status_code=400, detail="Senha deve ter pelo menos 12 caracteres")
     if not any(c.isalpha() for c in data.password) or not any(c.isdigit() for c in data.password):

@@ -1,0 +1,1096 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FraLib Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+:root {
+  --studio-bg: #08080c;
+  --studio-surface: #12121a;
+  --studio-border: #1e1e2e;
+  --studio-text: #e5e7eb;
+  --studio-muted: #71717a;
+  --studio-purple: #9333ea;
+  --studio-purple-dim: rgba(147,51,234,0.2);
+  --studio-success: #10b981;
+  --studio-danger: #ef4444;
+}
+body { background:var(--studio-bg); color:var(--studio-text); font-family:'DM Sans',sans-serif; height:100vh; overflow:hidden; display:flex; flex-direction:column; }
+.studio-header { display:flex; align-items:center; justify-content:space-between; padding:10px 16px; background:var(--studio-surface); border-bottom:1px solid var(--studio-border); height:50px; flex-shrink:0; }
+.studio-header h1 { font-family:'Press Start 2P',monospace; font-size:10px; color:var(--studio-purple); letter-spacing:1px; }
+.studio-header .lead-name { font-size:13px; color:var(--studio-muted); margin-left:16px; }
+.studio-actions { display:flex; gap:8px; align-items:center; }
+.btn-studio { padding:6px 14px; border:1px solid var(--studio-border); background:var(--studio-surface); color:var(--studio-text); font-size:12px; cursor:pointer; border-radius:6px; font-family:'DM Sans',sans-serif; transition:all 0.2s; }
+.btn-studio:hover { border-color:var(--studio-purple); color:#fff; }
+.btn-studio.primary { background:var(--studio-purple); border-color:var(--studio-purple); color:#fff; font-weight:600; }
+.btn-studio.primary:hover { background:#7c22d4; }
+.btn-studio.danger { border-color:var(--studio-danger); color:var(--studio-danger); }
+.btn-studio.success { border-color:var(--studio-success); color:var(--studio-success); }
+.studio-body { display:flex; flex:1; overflow:hidden; }
+.studio-sidebar { width:260px; background:var(--studio-surface); border-right:1px solid var(--studio-border); overflow-y:auto; flex-shrink:0; }
+.studio-sidebar::-webkit-scrollbar { width:4px; }
+.studio-sidebar::-webkit-scrollbar-thumb { background:var(--studio-border); border-radius:2px; }
+.sidebar-section { padding:14px 16px; border-bottom:1px solid var(--studio-border); }
+.sidebar-section h3 { font-size:10px; font-weight:700; color:var(--studio-muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:10px; }
+.color-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+.color-row label { font-size:12px; color:var(--studio-text); }
+.color-row input[type="color"] { width:32px; height:24px; border:1px solid var(--studio-border); border-radius:4px; cursor:pointer; background:transparent; }
+.font-select { width:100%; padding:6px 10px; background:var(--studio-bg); border:1px solid var(--studio-border); color:var(--studio-text); border-radius:6px; font-size:12px; margin-bottom:8px; }
+.section-item { display:flex; align-items:center; justify-content:space-between; padding:8px 10px; background:var(--studio-bg); border:1px solid var(--studio-border); border-radius:6px; margin-bottom:6px; cursor:grab; font-size:12px; }
+.section-item:hover { border-color:var(--studio-purple); }
+.section-item .name { flex:1; }
+.section-item .toggle { width:14px; height:14px; cursor:pointer; opacity:0.6; }
+.section-item .toggle:hover { opacity:1; }
+.studio-canvas { flex:1; position:relative; background:#1a1a2e; }
+.studio-canvas iframe { width:100%; height:100%; border:none; background:#fff; transition:width 0.3s, margin 0.3s; }
+.studio-canvas.mobile iframe { width:375px; margin:0 auto; display:block; border-left:2px solid var(--studio-border); border-right:2px solid var(--studio-border); }
+.studio-canvas.tablet iframe { width:768px; margin:0 auto; display:block; border-left:2px solid var(--studio-border); border-right:2px solid var(--studio-border); }
+.device-toggle { display:flex; gap:4px; background:var(--studio-bg); border-radius:6px; padding:3px; }
+.device-btn { padding:4px 10px; font-size:11px; border:none; background:transparent; color:var(--studio-muted); cursor:pointer; border-radius:4px; }
+.device-btn.active { background:var(--studio-purple-dim); color:var(--studio-purple); }
+.toast-studio { position:fixed; bottom:20px; right:20px; padding:10px 18px; background:var(--studio-success); color:#fff; border-radius:8px; font-size:13px; font-weight:600; z-index:9999; opacity:0; transform:translateY(10px); transition:all 0.3s; pointer-events:none; }
+.toast-studio.show { opacity:1; transform:translateY(0); }
+.toast-studio.error { background:var(--studio-danger); }
+.saving-indicator { position:fixed; top:55px; right:16px; font-size:11px; color:var(--studio-muted); display:none; }
+.saving-indicator.active { display:block; }
+#imageUploadInput { display:none; }
+</style>
+</head>
+<body>
+
+<div class="studio-header">
+  <div style="display:flex;align-items:center;">
+    <h1>STUDIO</h1>
+    <span class="lead-name" id="studioLeadName">Carregando...</span>
+  </div>
+  <div class="studio-actions">
+    <div class="device-toggle">
+      <button class="device-btn active" onclick="setDevice('desktop', this)">Desktop</button>
+      <button class="device-btn" onclick="setDevice('tablet', this)">Tablet</button>
+      <button class="device-btn" onclick="setDevice('mobile', this)">Mobile</button>
+    </div>
+    <button class="btn-studio" id="btnUndo" onclick="undo()">↩ Desfazer</button>
+    <button class="btn-studio" id="btnRedo" onclick="redo()">↪ Refazer</button>
+    <button class="btn-studio danger" onclick="restaurarOriginal()">🔄 Restaurar</button>
+    <button class="btn-studio" onclick="salvar()">💾 Salvar</button>
+    <button class="btn-studio primary" id="btnPublicar" onclick="publicar()">🚀 PUBLICAR</button>
+    <span id="publishBadge" style="font-size:10px;color:var(--studio-danger);display:none;">● Não publicado</span>
+    <button class="btn-studio" onclick="window.location.href='/admin'">← Voltar</button>
+  </div>
+</div>
+
+<div class="studio-body">
+  <div class="studio-sidebar">
+    <!-- Cores -->
+    <div class="sidebar-section">
+      <h3>Cores</h3>
+      <div class="color-row"><label>Destaque</label><input type="color" id="colorAccent" oninput="previewColor('--color-accent', this.value)" onchange="setColor('--color-accent', this.value)"></div>
+      <div class="color-row"><label>Fundo</label><input type="color" id="colorSurface" oninput="previewColor('--color-surface', this.value)" onchange="setColor('--color-surface', this.value)"></div>
+      <div class="color-row"><label>Texto</label><input type="color" id="colorText" oninput="previewColor('--color-text', this.value)" onchange="setColor('--color-text', this.value)"></div>
+      <div class="color-row"><label>Borda</label><input type="color" id="colorBorder" oninput="previewColor('--color-border', this.value)" onchange="setColor('--color-border', this.value)"></div>
+      <div class="color-row"><label>Header BG</label><input type="color" id="colorHeaderBg" oninput="previewColor('--color-header-bg', this.value)" onchange="setColor('--color-header-bg', this.value)"></div>
+      <div class="color-row"><label>Footer BG</label><input type="color" id="colorFooterBg" oninput="previewColor('--color-footer-bg', this.value)" onchange="setColor('--color-footer-bg', this.value)"></div>
+    </div>
+
+    <!-- Fontes -->
+    <div class="sidebar-section">
+      <h3>Fontes</h3>
+      <label style="font-size:11px;color:var(--studio-muted);margin-bottom:4px;display:block;">Títulos</label>
+      <select class="font-select" id="fontHeading" onchange="setFont('heading', this.value)">
+        <option value="Playfair Display">Playfair Display</option>
+        <option value="Montserrat">Montserrat</option>
+        <option value="Poppins">Poppins</option>
+        <option value="Inter">Inter</option>
+        <option value="Raleway">Raleway</option>
+        <option value="Oswald">Oswald</option>
+        <option value="Lora">Lora</option>
+        <option value="Roboto Slab">Roboto Slab</option>
+      </select>
+      <label style="font-size:11px;color:var(--studio-muted);margin-bottom:4px;display:block;">Corpo</label>
+      <select class="font-select" id="fontBody" onchange="setFont('body', this.value)">
+        <option value="Inter">Inter</option>
+        <option value="DM Sans">DM Sans</option>
+        <option value="Open Sans">Open Sans</option>
+        <option value="Lato">Lato</option>
+        <option value="Nunito">Nunito</option>
+        <option value="Roboto">Roboto</option>
+        <option value="Source Sans 3">Source Sans 3</option>
+      </select>
+    </div>
+
+    <!-- Logo -->
+    <div class="sidebar-section">
+      <h3>Logo & Header</h3>
+      <div style="margin-bottom:8px;">
+        <div id="currentLogo" style="width:100%;height:60px;background:var(--studio-bg);border:1px solid var(--studio-border);border-radius:6px;display:flex;align-items:center;justify-content:center;overflow:hidden;margin-bottom:6px;">
+          <span style="font-size:11px;color:var(--studio-muted);">Sem logo</span>
+        </div>
+        <button class="btn-studio" style="width:100%;font-size:11px;" onclick="document.getElementById('logoUploadInput').click()">📷 Trocar Logo</button>
+        <input type="file" id="logoUploadInput" accept="image/*" style="display:none">
+      </div>
+      <label style="font-size:11px;color:var(--studio-muted);margin-bottom:4px;display:block;">Altura (px)</label>
+      <input type="range" id="logoHeight" min="20" max="80" value="40" style="width:100%;margin-bottom:6px;" oninput="updateLogoSize()">
+      <label style="font-size:11px;color:var(--studio-muted);margin-bottom:4px;display:block;">Largura máx (px)</label>
+      <input type="range" id="logoWidth" min="40" max="200" value="120" style="width:100%;margin-bottom:6px;" oninput="updateLogoSize()">
+      <label style="font-size:11px;color:var(--studio-muted);margin-bottom:4px;display:block;">Título do Header</label>
+      <input type="text" id="headerTitle" class="font-select" placeholder="Nome da marca" onchange="setHeaderTitle(this.value)">
+    </div>
+
+    <!-- Seções -->
+    <div class="sidebar-section">
+      <h3>Seções</h3>
+      <div id="sectionsList"></div>
+      <button class="btn-studio" style="width:100%;margin-top:8px;font-size:11px;" onclick="addSection()">+ Nova Seção</button>
+    </div>
+
+    <!-- Páginas -->
+    <div class="sidebar-section">
+      <h3>Páginas</h3>
+      <div id="pagesList">
+        <div class="section-item" style="background:var(--studio-purple-dim);border-color:var(--studio-purple);">
+          <span class="name">Início (principal)</span>
+        </div>
+      </div>
+      <button class="btn-studio" style="width:100%;margin-top:8px;font-size:11px;" onclick="addPage()">+ Nova Página</button>
+    </div>
+
+    <!-- Imagens -->
+    <div class="sidebar-section">
+      <h3>Imagens</h3>
+      <div id="imagesList" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;"></div>
+    </div>
+
+    <!-- IA Editor -->
+    <div class="sidebar-section">
+      <h3>✦ Editar com IA</h3>
+      <textarea id="aiPrompt" class="font-select" style="height:80px;resize:vertical;font-size:12px;" placeholder="Ex: Mude a cor principal pra azul, adicione um banner de promoção, troque o texto do hero..."></textarea>
+      <button class="btn-studio primary" style="width:100%;margin-top:8px;font-size:12px;" onclick="editarComIA()">✦ APLICAR COM IA</button>
+      <div id="aiStatus" style="font-size:11px;color:var(--studio-muted);margin-top:6px;display:none;"></div>
+    </div>
+
+    <!-- Avançado -->
+    <div class="sidebar-section">
+      <h3>Avançado</h3>
+      <button class="btn-studio" style="width:100%;font-size:11px;margin-bottom:6px;" onclick="editCSS()">🎨 CSS Customizado</button>
+      <button class="btn-studio" style="width:100%;font-size:11px;margin-bottom:6px;" onclick="editSEO()">🔍 SEO & Meta Tags</button>
+      <button class="btn-studio" style="width:100%;font-size:11px;" onclick="duplicateSite()">📋 Duplicar Site</button>
+    </div>
+  </div>
+
+  <div class="studio-canvas" id="studioCanvas">
+    <iframe id="siteFrame" style="border:none;background:#fff;"></iframe>
+  </div>
+</div>
+
+<div class="toast-studio" id="studioToast"></div>
+<div class="saving-indicator" id="savingIndicator">Salvando...</div>
+<input type="file" id="imageUploadInput" accept="image/*">
+
+<script>
+// ══ AUTH ══════════════════════════════════════════════════════════
+var token = localStorage.getItem('fralib_token');
+if (!token) { window.location.href = '/login'; }
+function authHeaders() { return { 'Authorization': 'Bearer ' + token }; }
+
+// ══ STATE ═════════════════════════════════════════════════════════
+var leadId = window.location.pathname.split('/studio/')[1];
+var undoStack = [];
+var redoStack = [];
+var currentHtml = '';
+var hasChanges = false;
+var selectedImageEl = null;
+var autoSaveTimer = null;
+
+// ══ INIT ══════════════════════════════════════════════════════════
+async function init() {
+  if (!leadId) { showToast('Lead ID não encontrado', true); return; }
+
+  // Carregar HTML do site (produção)
+  var r = await fetch('/api/sites/' + leadId + '/html', { headers: authHeaders() });
+  if (!r.ok) { showToast('Erro ao carregar site', true); return; }
+  var data = await r.json();
+  currentHtml = data.html || '';
+  originalHtml = currentHtml;
+  publishedHtml = currentHtml;
+
+  // Verificar rascunho local
+  try {
+    var draft = localStorage.getItem('studio_draft_' + leadId);
+    if (draft && draft !== currentHtml) {
+      if (confirm('Existe um rascunho não publicado. Deseja restaurá-lo?')) {
+        currentHtml = draft;
+      } else {
+        localStorage.removeItem('studio_draft_' + leadId);
+      }
+    }
+  } catch(e) {}
+
+  // Nome do lead
+  var lr = await fetch('/api/leads/' + leadId + '/chat', { headers: authHeaders() });
+  if (lr.ok) {
+    var ld = await lr.json();
+    document.getElementById('studioLeadName').textContent = ld.lead_nome || 'Lead';
+  }
+
+  renderSite();
+  parseSections();
+  parseColors();
+  parseImages();
+  pushUndo();
+  updatePublishBadge();
+
+  // Autosave rascunho a cada 30s
+  autoSaveTimer = setInterval(function() {
+    if (hasChanges) salvar(true);
+  }, 30000);
+}
+
+// ══ RENDER SITE ═══════════════════════════════════════════════════
+function renderSite() {
+  var frame = document.getElementById('siteFrame');
+  var injectedScript = `<script data-studio-injected>
+document.addEventListener("click", function(e) {
+  e.preventDefault(); e.stopPropagation();
+  var el = e.target;
+  if (el.tagName === "IMG") {
+    window.parent.postMessage({type:"img-click", src:el.src, xpath:getXPath(el)}, "*");
+    return;
+  }
+  var textEls = ["H1","H2","H3","H4","H5","H6","P","SPAN","A","LI","BUTTON","LABEL","TD","TH"];
+  if (textEls.includes(el.tagName) || el.closest("[contenteditable]")) {
+    el.contentEditable = "true";
+    el.focus();
+    el.style.outline = "2px solid #9333ea";
+    el.addEventListener("blur", function() {
+      el.contentEditable = "false";
+      el.style.outline = "";
+      window.parent.postMessage({type:"text-edit", html:document.documentElement.outerHTML}, "*");
+    }, {once:true});
+  }
+}, true);
+document.addEventListener("mouseover", function(e) {
+  var section = e.target.closest("section");
+  if (section) section.style.outline = "1px dashed rgba(147,51,234,0.4)";
+}, true);
+document.addEventListener("mouseout", function(e) {
+  var section = e.target.closest("section");
+  if (section) section.style.outline = "";
+}, true);
+function getXPath(el) {
+  var parts = [];
+  while (el && el.nodeType === 1) {
+    var idx = 1;
+    var sib = el.previousElementSibling;
+    while (sib) { if (sib.tagName === el.tagName) idx++; sib = sib.previousElementSibling; }
+    parts.unshift(el.tagName.toLowerCase() + "[" + idx + "]");
+    el = el.parentElement;
+  }
+  return "/" + parts.join("/");
+}
+<\/script>`;
+
+  // Injetar script antes de </body>
+  var html = currentHtml.replace('</body>', injectedScript + '</body>');
+
+  // Converter URLs relativas /sites/ para absolutas (Blob URL não resolve paths relativos)
+  html = html.replace(/(src|href)=(["'])(\/sites\/)/g, '$1=$2https://seunegociofralib.site$3');
+
+  // Garantir que o body do site tem scroll (alguns templates usam overflow:hidden)
+  var scrollFix = '<style data-studio-fix>html,body{height:auto!important;overflow:visible!important;overflow-x:hidden!important;min-height:100%!important;}main{overflow:visible!important;}</style>';
+  html = html.replace('</head>', scrollFix + '</head>');
+
+  // Usar Blob URL em vez de srcdoc (evita truncamento com HTML grande)
+  var blob = new Blob([html], { type: 'text/html' });
+  var url = URL.createObjectURL(blob);
+  frame.onload = function() {
+    URL.revokeObjectURL(url);
+    parseColors();
+    parseImages();
+    parseHeaderInfo();
+    parseFonts();
+    parseSections();
+  };
+  frame.src = url;
+}
+
+// ══ MESSAGES FROM IFRAME ══════════════════════════════════════════
+window.addEventListener('message', function(e) {
+  if (!e.data || !e.data.type) return;
+
+  if (e.data.type === 'text-edit') {
+    pushUndo();
+    currentHtml = e.data.html;
+    hasChanges = true;
+    parseSections();
+  }
+
+  if (e.data.type === 'img-click') {
+    selectedImageEl = e.data.xpath;
+    document.getElementById('imageUploadInput').click();
+  }
+});
+
+// ══ IMAGE UPLOAD ══════════════════════════════════════════════════
+document.getElementById('imageUploadInput').addEventListener('change', async function(e) {
+  var file = e.target.files[0];
+  if (!file || !selectedImageEl) return;
+
+  var formData = new FormData();
+  formData.append('foto', file);
+  formData.append('tipo', 'foto');
+  formData.append('numero', Date.now());
+
+  showToast('Enviando imagem...');
+  var r = await fetch('/api/leads/' + leadId + '/upload-foto', {
+    method: 'POST',
+    headers: authHeaders(),
+    body: formData
+  });
+
+  if (r.ok) {
+    var data = await r.json();
+    var newUrl = data.url || data.path || '';
+    if (newUrl) {
+      pushUndo();
+      // Substituir src da imagem no HTML
+      var frame = document.getElementById('siteFrame');
+      var doc = frame.contentDocument;
+      var imgs = doc.querySelectorAll('img');
+      // Encontrar imagem pelo xpath ou src anterior
+      imgs.forEach(function(img) {
+        if (getXPathFromDoc(img, doc) === selectedImageEl) {
+          img.src = newUrl;
+        }
+      });
+      currentHtml = doc.documentElement.outerHTML;
+      hasChanges = true;
+      parseImages();
+      showToast('Imagem atualizada!');
+    }
+  } else {
+    showToast('Erro no upload', true);
+  }
+  e.target.value = '';
+});
+
+function getXPathFromDoc(el, doc) {
+  var parts = [];
+  while (el && el.nodeType === 1) {
+    var idx = 1;
+    var sib = el.previousElementSibling;
+    while (sib) { if (sib.tagName === el.tagName) idx++; sib = sib.previousElementSibling; }
+    parts.unshift(el.tagName.toLowerCase() + '[' + idx + ']');
+    el = el.parentElement;
+  }
+  return '/' + parts.join('/');
+}
+
+// ══ COLORS ════════════════════════════════════════════════════════
+function previewColor(varName, value) {
+  var frame = document.getElementById('siteFrame');
+  var doc = frame.contentDocument;
+  if (doc) doc.documentElement.style.setProperty(varName, value);
+}
+
+function setColor(varName, value) {
+  pushUndo();
+  var frame = document.getElementById('siteFrame');
+  var doc = frame.contentDocument;
+  doc.documentElement.style.setProperty(varName, value);
+  if (varName === '--color-accent') {
+    doc.documentElement.style.setProperty('--accent', value);
+  }
+  currentHtml = doc.documentElement.outerHTML;
+  hasChanges = true;
+  updatePublishBadge();
+}
+
+function parseColors() {
+  var frame = document.getElementById('siteFrame');
+  setTimeout(function() {
+    var doc = frame.contentDocument;
+    if (!doc) return;
+    var style = getComputedStyle(doc.documentElement);
+    var accent = style.getPropertyValue('--color-accent').trim() || style.getPropertyValue('--accent').trim() || '#6366f1';
+    var surface = style.getPropertyValue('--color-surface').trim() || '#ffffff';
+    var text = style.getPropertyValue('--color-text').trim() || '#111827';
+    var border = style.getPropertyValue('--color-border').trim() || '#e5e7eb';
+    var headerBg = style.getPropertyValue('--color-header-bg').trim() || '#ffffff';
+    var footerBg = style.getPropertyValue('--color-footer-bg').trim() || '#111111';
+    document.getElementById('colorAccent').value = toHex(accent);
+    document.getElementById('colorSurface').value = toHex(surface);
+    document.getElementById('colorText').value = toHex(text);
+    document.getElementById('colorBorder').value = toHex(border);
+    document.getElementById('colorHeaderBg').value = toHex(headerBg);
+    document.getElementById('colorFooterBg').value = toHex(footerBg);
+  }, 500);
+}
+
+function toHex(color) {
+  if (color.startsWith('#') && color.length >= 7) return color.substring(0, 7);
+  if (color.startsWith('rgb')) {
+    var m = color.match(/(\d+)/g);
+    if (m && m.length >= 3) return '#' + ((1<<24)+(+m[0]<<16)+(+m[1]<<8)+(+m[2])).toString(16).slice(1);
+  }
+  return '#6366f1';
+}
+
+// ══ FONTS ═════════════════════════════════════════════════════════
+function setFont(type, fontName) {
+  pushUndo();
+  var frame = document.getElementById('siteFrame');
+  var doc = frame.contentDocument;
+  // Injetar Google Font no iframe se não existir
+  var fontId = 'gfont-' + fontName.replace(/\s+/g, '-').toLowerCase();
+  if (!doc.getElementById(fontId)) {
+    var link = doc.createElement('link');
+    link.id = fontId;
+    link.rel = 'stylesheet';
+    link.href = 'https://fonts.googleapis.com/css2?family=' + encodeURIComponent(fontName) + ':wght@400;500;600;700&display=swap';
+    doc.head.appendChild(link);
+  }
+  if (type === 'heading') {
+    doc.querySelectorAll('h1,h2,h3,h4,h5,h6').forEach(function(el) {
+      el.style.fontFamily = "'" + fontName + "', serif";
+    });
+    doc.documentElement.style.setProperty('--font-heading', "'" + fontName + "', serif");
+  } else {
+    doc.body.style.fontFamily = "'" + fontName + "', sans-serif";
+    doc.documentElement.style.setProperty('--font-body', "'" + fontName + "', sans-serif");
+  }
+  currentHtml = doc.documentElement.outerHTML;
+  hasChanges = true;
+  updatePublishBadge();
+}
+
+function parseFonts() {
+  var frame = document.getElementById('siteFrame');
+  setTimeout(function() {
+    var doc = frame.contentDocument;
+    if (!doc) return;
+    var style = getComputedStyle(doc.documentElement);
+    var heading = style.getPropertyValue('--font-heading').trim().replace(/['"]/g, '').split(',')[0].trim();
+    var body = style.getPropertyValue('--font-body').trim().replace(/['"]/g, '').split(',')[0].trim();
+    if (heading) {
+      var hSel = document.getElementById('fontHeading');
+      for (var i = 0; i < hSel.options.length; i++) {
+        if (hSel.options[i].value === heading) { hSel.selectedIndex = i; break; }
+      }
+    }
+    if (body) {
+      var bSel = document.getElementById('fontBody');
+      for (var i = 0; i < bSel.options.length; i++) {
+        if (bSel.options[i].value === body) { bSel.selectedIndex = i; break; }
+      }
+    }
+  }, 600);
+}
+
+// ══ SECTIONS ══════════════════════════════════════════════════════
+var draggedSection = null;
+
+function parseSections() {
+  var container = document.getElementById('sectionsList');
+  var sections = [];
+
+  // Tentar markers <!-- SECTION:xxx -->
+  var regex = /<!-- SECTION:(\w+) -->/g;
+  var match;
+  while ((match = regex.exec(currentHtml)) !== null) {
+    sections.push({ name: match[1], type: 'marker' });
+  }
+
+  // Fallback: detectar <section id="xxx"> se não tem markers
+  if (sections.length === 0) {
+    var secRegex = /<section[^>]+id=["']([^"']+)["']/gi;
+    while ((match = secRegex.exec(currentHtml)) !== null) {
+      sections.push({ name: match[1], type: 'id' });
+    }
+  }
+
+  // Fallback 2: detectar seções pelo iframe DOM
+  if (sections.length === 0) {
+    var frame = document.getElementById('siteFrame');
+    var doc = frame.contentDocument;
+    if (doc) {
+      doc.querySelectorAll('section[id], [id^="hero"], [id^="sobre"], [id^="servico"], [id^="depoimento"], [id^="localizacao"], [id^="contato"], [id^="faq"], [id^="footer"]').forEach(function(el) {
+        sections.push({ name: el.id, type: 'dom' });
+      });
+    }
+  }
+
+  container.innerHTML = sections.map(function(s) {
+    return '<div class="section-item" draggable="true" data-section="' + s.name + '" data-type="' + s.type + '">' +
+      '<span class="name">' + s.name + '</span>' +
+      '<span class="toggle" title="Ocultar" onclick="event.stopPropagation();toggleSection(\'' + s.name + '\', \'' + s.type + '\')">👁</span>' +
+    '</div>';
+  }).join('');
+
+  // Drag & drop handlers
+  var items = container.querySelectorAll('.section-item');
+  items.forEach(function(item) {
+    item.addEventListener('dragstart', function(e) {
+      draggedSection = item.dataset.section;
+      item.style.opacity = '0.4';
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    item.addEventListener('dragend', function() {
+      item.style.opacity = '1';
+      draggedSection = null;
+      container.querySelectorAll('.section-item').forEach(function(el) {
+        el.style.borderTop = '';
+      });
+    });
+    item.addEventListener('dragover', function(e) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      container.querySelectorAll('.section-item').forEach(function(el) {
+        el.style.borderTop = '';
+      });
+      item.style.borderTop = '2px solid var(--studio-purple)';
+    });
+    item.addEventListener('drop', function(e) {
+      e.preventDefault();
+      item.style.borderTop = '';
+      var targetSection = item.dataset.section;
+      if (draggedSection && draggedSection !== targetSection) {
+        reorderSections(draggedSection, targetSection);
+      }
+    });
+  });
+}
+
+function reorderSections(fromName, beforeName) {
+  pushUndo();
+  // Extrair blocos entre <!-- SECTION:X --> markers
+  var sectionRegex = /<!-- SECTION:(\w+) -->/g;
+  var matches = [];
+  var m;
+  while ((m = sectionRegex.exec(currentHtml)) !== null) {
+    matches.push({ name: m[1], index: m.index });
+  }
+  if (matches.length < 2) return;
+
+  // Encontrar limites de cada seção
+  var blocks = {};
+  for (var i = 0; i < matches.length; i++) {
+    var start = matches[i].index;
+    var end = (i + 1 < matches.length) ? matches[i + 1].index : currentHtml.indexOf('</main>');
+    if (end === -1) end = currentHtml.length;
+    blocks[matches[i].name] = currentHtml.substring(start, end);
+  }
+
+  // Reordenar: mover fromName antes de beforeName
+  var order = matches.map(function(x) { return x.name; });
+  var fromIdx = order.indexOf(fromName);
+  if (fromIdx === -1) return;
+  order.splice(fromIdx, 1);
+  var toIdx = order.indexOf(beforeName);
+  if (toIdx === -1) toIdx = order.length;
+  order.splice(toIdx, 0, fromName);
+
+  // Reconstruir HTML
+  var beforeSections = currentHtml.substring(0, matches[0].index);
+  var afterEnd = (matches.length > 0) ? matches[matches.length - 1].index + blocks[matches[matches.length - 1].name].length : currentHtml.length;
+  var afterSections = currentHtml.substring(afterEnd);
+  var newMiddle = order.map(function(name) { return blocks[name]; }).join('');
+
+  currentHtml = beforeSections + newMiddle + afterSections;
+  hasChanges = true;
+  renderSite();
+  parseSections();
+  updatePublishBadge();
+}
+
+function toggleSection(name, type) {
+  pushUndo();
+  var frame = document.getElementById('siteFrame');
+  var doc = frame.contentDocument;
+  var section = doc.getElementById(name);
+  if (!section) {
+    // Tentar buscar por marker comment
+    var walker = doc.createTreeWalker(doc.body, NodeFilter.SHOW_COMMENT);
+    while (walker.nextNode()) {
+      if (walker.currentNode.textContent.trim() === 'SECTION:' + name) {
+        section = walker.currentNode.nextElementSibling;
+        break;
+      }
+    }
+  }
+  if (section) {
+    section.style.display = section.style.display === 'none' ? '' : 'none';
+    currentHtml = doc.documentElement.outerHTML;
+    hasChanges = true;
+    updatePublishBadge();
+  }
+}
+
+// ══ IMAGES ════════════════════════════════════════════════════════
+function parseImages() {
+  var container = document.getElementById('imagesList');
+  var frame = document.getElementById('siteFrame');
+  setTimeout(function() {
+    var doc = frame.contentDocument;
+    if (!doc) return;
+    var imgs = doc.querySelectorAll('img');
+    container.innerHTML = '';
+    imgs.forEach(function(img, i) {
+      if (i > 11) return; // max 12
+      var div = document.createElement('div');
+      div.style.cssText = 'border-radius:4px;overflow:hidden;border:1px solid var(--studio-border);cursor:pointer;aspect-ratio:1;';
+      div.innerHTML = '<img src="' + img.src + '" style="width:100%;height:100%;object-fit:cover;">';
+      div.onclick = function() {
+        selectedImageEl = getXPathFromDoc(img, doc);
+        document.getElementById('imageUploadInput').click();
+      };
+      container.appendChild(div);
+    });
+  }, 600);
+}
+
+// ══ UNDO/REDO ═════════════════════════════════════════════════════
+function pushUndo() {
+  undoStack.push(currentHtml);
+  if (undoStack.length > 20) undoStack.shift();
+  redoStack = [];
+  updateUndoButtons();
+}
+
+function undo() {
+  if (undoStack.length <= 1) return;
+  redoStack.push(currentHtml);
+  currentHtml = undoStack.pop();
+  renderSite();
+  hasChanges = true;
+  updatePublishBadge();
+  showToast('Desfeito');
+}
+
+function redo() {
+  if (redoStack.length === 0) return;
+  undoStack.push(currentHtml);
+  currentHtml = redoStack.pop();
+  renderSite();
+  hasChanges = true;
+  updatePublishBadge();
+  showToast('Refeito');
+}
+
+// ══ DEVICE TOGGLE ═════════════════════════════════════════════════
+function setDevice(mode, btn) {
+  var canvas = document.getElementById('studioCanvas');
+  canvas.className = 'studio-canvas' + (mode !== 'desktop' ? ' ' + mode : '');
+  document.querySelectorAll('.device-btn').forEach(function(b) { b.classList.remove('active'); });
+  if (btn) btn.classList.add('active');
+}
+
+// ══ SAVE (rascunho local) & PUBLISH (produção) ═══════════════════
+var originalHtml = ''; // backup da versão original (antes de qualquer edição)
+var publishedHtml = ''; // última versão publicada
+
+function salvar(silent) {
+  if (!hasChanges && !silent) { showToast('Nenhuma alteração'); return; }
+
+  // Pegar HTML atualizado do iframe
+  var frame = document.getElementById('siteFrame');
+  var doc = frame.contentDocument;
+  if (doc) {
+    var injected = doc.querySelectorAll('[data-studio-injected]');
+    injected.forEach(function(el) { el.remove(); });
+    doc.querySelectorAll('[style*="outline"]').forEach(function(el) { el.style.outline = ''; });
+    doc.querySelectorAll('[contenteditable]').forEach(function(el) { el.removeAttribute('contenteditable'); });
+    currentHtml = '<!DOCTYPE html>\n' + doc.documentElement.outerHTML;
+  }
+
+  // Salvar rascunho no localStorage
+  try {
+    localStorage.setItem('studio_draft_' + leadId, currentHtml);
+  } catch(e) {}
+
+  hasChanges = false;
+  updatePublishBadge();
+  if (!silent) showToast('💾 Rascunho salvo');
+}
+
+async function publicar() {
+  salvar(true);
+
+  document.getElementById('savingIndicator').classList.add('active');
+
+  var cleanHtml = currentHtml
+    .replace(/<script data-studio-injected>[\s\S]*?<\/script>/gi, '')
+    .replace(/<script>[\s\S]*?getXPath[\s\S]*?<\/script>/gi, '')
+    .replace(/<script>[\s\S]*?contentEditable[\s\S]*?<\/script>/gi, '')
+    .replace(/https:\/\/seunegociofralib\.site(\/sites\/)/g, '$1');
+
+  var r = await fetch('/api/sites/' + leadId + '/salvar-html', {
+    method: 'POST',
+    headers: Object.assign({'Content-Type': 'application/json'}, authHeaders()),
+    body: JSON.stringify({ html: cleanHtml })
+  });
+
+  document.getElementById('savingIndicator').classList.remove('active');
+
+  if (r.ok) {
+    publishedHtml = currentHtml;
+    try { localStorage.removeItem('studio_draft_' + leadId); } catch(e) {}
+    updatePublishBadge();
+    showToast('🚀 Site publicado!');
+  } else {
+    var err = await r.json().catch(function(){ return {}; });
+    showToast('Erro: ' + (err.detail || 'falha ao publicar'), true);
+  }
+}
+
+function updatePublishBadge() {
+  var badge = document.getElementById('publishBadge');
+  if (currentHtml !== publishedHtml) {
+    badge.style.display = 'inline';
+  } else {
+    badge.style.display = 'none';
+  }
+  updateUndoButtons();
+}
+
+function updateUndoButtons() {
+  document.getElementById('btnUndo').textContent = '↩ Desfazer' + (undoStack.length > 1 ? ' (' + (undoStack.length - 1) + ')' : '');
+  document.getElementById('btnRedo').textContent = '↪ Refazer' + (redoStack.length > 0 ? ' (' + redoStack.length + ')' : '');
+}
+
+async function restaurarOriginal() {
+  if (!originalHtml) { showToast('Backup não disponível', true); return; }
+  if (!confirm('Restaurar site para a versão original? Todas as edições serão perdidas.')) return;
+
+  pushUndo();
+  currentHtml = originalHtml;
+  try { localStorage.removeItem('studio_draft_' + leadId); } catch(e) {}
+  renderSite();
+  parseSections();
+  hasChanges = true;
+  updatePublishBadge();
+  showToast('Site restaurado! Clique Publicar para aplicar.');
+}
+
+// ══ TOAST ═════════════════════════════════════════════════════════
+function showToast(msg, isError) {
+  var t = document.getElementById('studioToast');
+  t.textContent = msg;
+  t.className = 'toast-studio show' + (isError ? ' error' : '');
+  setTimeout(function() { t.className = 'toast-studio'; }, 2500);
+}
+
+// ══ BEFORE UNLOAD ═════════════════════════════════════════════════
+window.addEventListener('beforeunload', function(e) {
+  if (currentHtml !== publishedHtml) { e.preventDefault(); e.returnValue = ''; }
+});
+
+// ══ IA EDITOR ═════════════════════════════════════════════════════
+async function editarComIA() {
+  var prompt = document.getElementById('aiPrompt').value.trim();
+  if (!prompt) { showToast('Digite uma instrução', true); return; }
+
+  var statusEl = document.getElementById('aiStatus');
+  statusEl.style.display = 'block';
+  statusEl.textContent = '⏳ Processando com IA...';
+  statusEl.style.color = 'var(--studio-purple)';
+
+  try {
+    var r = await fetch('/api/sites/' + leadId + '/editar-ia', {
+      method: 'POST',
+      headers: Object.assign({'Content-Type': 'application/json'}, authHeaders()),
+      body: JSON.stringify({ prompt: prompt })
+    });
+
+    if (r.ok) {
+      // Recarregar HTML atualizado do servidor
+      var htmlR = await fetch('/api/sites/' + leadId + '/html', { headers: authHeaders() });
+      if (htmlR.ok) {
+        var data = await htmlR.json();
+        pushUndo();
+        currentHtml = data.html || currentHtml;
+        publishedHtml = currentHtml;
+        renderSite();
+        parseSections();
+        hasChanges = false;
+        updatePublishBadge();
+        statusEl.textContent = '✅ Edição aplicada!';
+        statusEl.style.color = 'var(--studio-success)';
+        document.getElementById('aiPrompt').value = '';
+        showToast('IA aplicou a edição!');
+      }
+    } else {
+      var err = await r.json().catch(function(){ return {}; });
+      statusEl.textContent = '❌ ' + (err.detail || 'Erro na edição');
+      statusEl.style.color = 'var(--studio-danger)';
+      showToast('Erro: ' + (err.detail || 'falha'), true);
+    }
+  } catch(e) {
+    statusEl.textContent = '❌ Erro de conexão';
+    statusEl.style.color = 'var(--studio-danger)';
+  }
+
+  setTimeout(function() { statusEl.style.display = 'none'; }, 5000);
+}
+
+// ══ LOGO & HEADER ═════════════════════════════════════════════════
+document.getElementById('logoUploadInput').addEventListener('change', async function(e) {
+  var file = e.target.files[0];
+  if (!file) return;
+  var formData = new FormData();
+  formData.append('foto', file);
+  formData.append('tipo', 'logo');
+  formData.append('numero', 0);
+
+  showToast('Enviando logo...');
+  var r = await fetch('/api/leads/' + leadId + '/upload-foto', {
+    method: 'POST',
+    headers: authHeaders(),
+    body: formData
+  });
+  if (r.ok) {
+    var data = await r.json();
+    var newUrl = data.url || data.path || '';
+    if (newUrl) {
+      pushUndo();
+      var frame = document.getElementById('siteFrame');
+      var doc = frame.contentDocument;
+      // Resolver URL absoluta pra funcionar dentro do iframe (Blob URL)
+      var absUrl = newUrl.startsWith('/') ? 'https://seunegociofralib.site' + newUrl : newUrl;
+      // Trocar logo no header (busca img no header/nav ou com class logo)
+      var logoImg = doc.querySelector('header img, nav img, .logo img, img[alt*="logo" i], img[src*="logo"]');
+      if (logoImg) {
+        logoImg.src = absUrl;
+      } else {
+        // Inserir dentro do link flex do header (ao lado do nome)
+        var logoLink = doc.querySelector('header a[href="#hero"], header a.flex');
+        if (logoLink) {
+          var img = doc.createElement('img');
+          img.src = absUrl;
+          img.alt = 'Logo';
+          img.className = 'h-10 w-auto object-contain';
+          logoLink.insertBefore(img, logoLink.firstChild);
+        } else {
+          var header = doc.querySelector('header, nav');
+          if (header) {
+            var img = doc.createElement('img');
+            img.src = absUrl;
+            img.alt = 'Logo';
+            img.style.cssText = 'height:40px;width:auto;object-fit:contain;';
+            header.insertBefore(img, header.firstChild);
+          }
+        }
+      }
+      currentHtml = doc.documentElement.outerHTML;
+      hasChanges = true;
+      // Atualizar preview na sidebar
+      document.getElementById('currentLogo').innerHTML = '<img src="' + absUrl + '" style="max-height:100%;max-width:100%;object-fit:contain;">';
+      showToast('Logo atualizada!');
+    }
+  } else {
+    showToast('Erro no upload', true);
+  }
+  e.target.value = '';
+});
+
+function updateLogoSize() {
+  var h = document.getElementById('logoHeight').value;
+  var w = document.getElementById('logoWidth').value;
+  var frame = document.getElementById('siteFrame');
+  var doc = frame.contentDocument;
+  if (!doc) return;
+  var logoImg = doc.querySelector('header img, nav img, .logo img, img[alt*="logo" i], img[src*="logo"]');
+  if (logoImg) {
+    pushUndo();
+    logoImg.style.height = h + 'px';
+    logoImg.style.maxWidth = w + 'px';
+    logoImg.style.width = 'auto';
+    logoImg.style.objectFit = 'contain';
+    currentHtml = doc.documentElement.outerHTML;
+    hasChanges = true;
+  }
+}
+
+function setHeaderTitle(value) {
+  if (!value) return;
+  pushUndo();
+  var frame = document.getElementById('siteFrame');
+  var doc = frame.contentDocument;
+  // Buscar texto do header (h1 no nav, ou span/a com classe brand/logo)
+  var headerText = doc.querySelector('header a, nav a, .brand, .logo-text, header h1');
+  if (headerText) {
+    headerText.textContent = value;
+  }
+  currentHtml = doc.documentElement.outerHTML;
+  hasChanges = true;
+}
+
+function parseHeaderInfo() {
+  var frame = document.getElementById('siteFrame');
+  setTimeout(function() {
+    var doc = frame.contentDocument;
+    if (!doc) return;
+    // Logo
+    var logoImg = doc.querySelector('header img, nav img, .logo img, img[alt*="logo" i], img[src*="logo"]');
+    if (logoImg && logoImg.src) {
+      // Usar getAttribute pra pegar URL original (não resolvida pelo blob)
+      var logoSrc = logoImg.getAttribute('src') || logoImg.src;
+      if (logoSrc.startsWith('/')) logoSrc = 'https://seunegociofralib.site' + logoSrc;
+      document.getElementById('currentLogo').innerHTML = '<img src="' + logoSrc + '" style="max-height:100%;max-width:100%;object-fit:contain;">';
+      // Popular sliders com tamanho atual
+      var computedH = logoImg.offsetHeight || 40;
+      var computedW = logoImg.offsetWidth || 120;
+      document.getElementById('logoHeight').value = Math.min(80, Math.max(20, computedH));
+      document.getElementById('logoWidth').value = Math.min(200, Math.max(40, computedW));
+    }
+    // Header title
+    var headerText = doc.querySelector('header a, nav a, .brand, .logo-text, header h1');
+    if (headerText) {
+      document.getElementById('headerTitle').value = headerText.textContent.trim();
+    }
+  }, 600);
+}
+
+// ══ PAGES (SPA-style via JS) ══════════════════════════════════════
+var pages = [{ name: 'Início', active: true }];
+
+function addPage() {
+  var name = prompt('Nome da nova página:');
+  if (!name) return;
+  pushUndo();
+  pages.push({ name: name, active: false });
+  renderPages();
+
+  // Criar seção de página no HTML
+  var frame = document.getElementById('siteFrame');
+  var doc = frame.contentDocument;
+  var pageId = name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  var newSection = doc.createElement('section');
+  newSection.id = 'page-' + pageId;
+  newSection.style.cssText = 'display:none;min-height:80vh;padding:80px 20px;';
+  newSection.innerHTML = '<div class="max-w-4xl mx-auto"><h2 style="font-size:2rem;font-weight:700;margin-bottom:1rem;">' + name + '</h2><p style="color:#6b7280;">Conteúdo da página ' + name + '. Clique para editar.</p></div>';
+  // Inserir antes do footer
+  var footer = doc.querySelector('footer');
+  if (footer) {
+    footer.parentNode.insertBefore(newSection, footer);
+  } else {
+    doc.body.appendChild(newSection);
+  }
+
+  // Adicionar link na navegação
+  var nav = doc.querySelector('nav ul, header ul');
+  if (nav) {
+    var li = doc.createElement('li');
+    li.innerHTML = '<a href="#page-' + pageId + '" onclick="document.querySelectorAll(\'[id^=page-]\').forEach(s=>s.style.display=\'none\');document.getElementById(\'page-' + pageId + '\').style.display=\'block\';return false;" style="color:inherit;text-decoration:none;">' + name + '</a>';
+    nav.appendChild(li);
+  }
+
+  currentHtml = doc.documentElement.outerHTML;
+  hasChanges = true;
+  showToast('Página "' + name + '" criada!');
+}
+
+function renderPages() {
+  var container = document.getElementById('pagesList');
+  container.innerHTML = pages.map(function(p, i) {
+    var active = i === 0 ? 'background:var(--studio-purple-dim);border-color:var(--studio-purple);' : '';
+    return '<div class="section-item" style="' + active + '"><span class="name">' + p.name + '</span></div>';
+  }).join('');
+}
+
+// ══ ADD SECTION ═══════════════════════════════════════════════════
+function addSection() {
+  var templates = [
+    { name: 'Texto', html: '<section style="padding:60px 20px;"><div class="max-w-4xl mx-auto"><h2 style="font-size:1.8rem;font-weight:700;margin-bottom:1rem;">Nova Seção</h2><p style="color:#6b7280;line-height:1.7;">Clique aqui para editar o texto desta seção. Adicione informações relevantes sobre seu negócio.</p></div></section>' },
+    { name: 'CTA (Chamada)', html: '<section style="padding:60px 20px;background:var(--color-accent,#6366f1);text-align:center;"><div class="max-w-3xl mx-auto"><h2 style="font-size:2rem;font-weight:700;color:#fff;margin-bottom:1rem;">Pronto para começar?</h2><p style="color:rgba(255,255,255,0.8);margin-bottom:1.5rem;">Entre em contato agora mesmo.</p><a href="#contato" style="display:inline-block;padding:12px 32px;background:#fff;color:#111;border-radius:8px;font-weight:600;text-decoration:none;">Fale Conosco</a></div></section>' },
+    { name: 'Galeria', html: '<section style="padding:60px 20px;"><div class="max-w-6xl mx-auto"><h2 style="font-size:1.8rem;font-weight:700;margin-bottom:2rem;text-align:center;">Galeria</h2><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;"><img src="https://placehold.co/400x300/1a1a2e/9333ea?text=Foto+1" style="width:100%;border-radius:8px;"><img src="https://placehold.co/400x300/1a1a2e/9333ea?text=Foto+2" style="width:100%;border-radius:8px;"><img src="https://placehold.co/400x300/1a1a2e/9333ea?text=Foto+3" style="width:100%;border-radius:8px;"></div></div></section>' },
+    { name: 'Vídeo', html: '<section style="padding:60px 20px;text-align:center;"><div class="max-w-3xl mx-auto"><h2 style="font-size:1.8rem;font-weight:700;margin-bottom:1.5rem;">Assista</h2><div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;border-radius:12px;background:#000;"><p style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:#fff;">Cole o embed do YouTube aqui</p></div></div></section>' },
+  ];
+
+  var choice = prompt('Tipo de seção:\n1 - Texto\n2 - CTA (Chamada)\n3 - Galeria\n4 - Vídeo\n\nDigite o número:');
+  var idx = parseInt(choice) - 1;
+  if (isNaN(idx) || idx < 0 || idx >= templates.length) return;
+
+  pushUndo();
+  var frame = document.getElementById('siteFrame');
+  var doc = frame.contentDocument;
+  var temp = doc.createElement('div');
+  temp.innerHTML = templates[idx].html;
+  var newSection = temp.firstChild;
+
+  var footer = doc.querySelector('footer');
+  if (footer) {
+    footer.parentNode.insertBefore(newSection, footer);
+  } else {
+    doc.body.appendChild(newSection);
+  }
+
+  currentHtml = doc.documentElement.outerHTML;
+  hasChanges = true;
+  parseSections();
+  showToast('Seção "' + templates[idx].name + '" adicionada!');
+}
+
+// ══ CSS CUSTOMIZADO ═══════════════════════════════════════════════
+function editCSS() {
+  var frame = document.getElementById('siteFrame');
+  var doc = frame.contentDocument;
+  var existingStyle = doc.querySelector('style#custom-css');
+  var current = existingStyle ? existingStyle.textContent : '';
+
+  var css = prompt('CSS customizado (será adicionado ao site):', current);
+  if (css === null) return;
+
+  pushUndo();
+  if (existingStyle) {
+    existingStyle.textContent = css;
+  } else {
+    var style = doc.createElement('style');
+    style.id = 'custom-css';
+    style.textContent = css;
+    doc.head.appendChild(style);
+  }
+  currentHtml = doc.documentElement.outerHTML;
+  hasChanges = true;
+  showToast('CSS aplicado!');
+}
+
+// ══ SEO & META ════════════════════════════════════════════════════
+function editSEO() {
+  var frame = document.getElementById('siteFrame');
+  var doc = frame.contentDocument;
+  var title = doc.querySelector('title');
+  var desc = doc.querySelector('meta[name="description"]');
+
+  var newTitle = prompt('Título da página (SEO):', title ? title.textContent : '');
+  if (newTitle === null) return;
+  var newDesc = prompt('Descrição (meta description):', desc ? desc.getAttribute('content') : '');
+  if (newDesc === null) return;
+
+  pushUndo();
+  if (title) title.textContent = newTitle;
+  if (desc) desc.setAttribute('content', newDesc);
+  else {
+    var meta = doc.createElement('meta');
+    meta.name = 'description';
+    meta.content = newDesc;
+    doc.head.appendChild(meta);
+  }
+  currentHtml = doc.documentElement.outerHTML;
+  hasChanges = true;
+  showToast('SEO atualizado!');
+}
+
+// ══ DUPLICAR SITE ═════════════════════════════════════════════════
+function duplicateSite() {
+  showToast('Funcionalidade em breve!');
+}
+
+// ══ START ═════════════════════════════════════════════════════════
+init();
+</script>
+</body>
+</html>

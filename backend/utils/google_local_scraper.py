@@ -191,7 +191,7 @@ class GoogleLocalScraper:
                             endereco = re.sub(r"^.*?·\s*", "", linha).strip()
 
                     est = {
-                        "nome": nome, "tipo": tipo or "Academia", "endereco": endereco,
+                        "nome": nome, "tipo": tipo or "", "endereco": endereco,
                         "telefone": "", "rating": rating, "reviews": reviews_num,
                         "website": "", "logo": "", "fotos": [], "depoimentos": [],
                         "horarios": [], "maps_url": "", "atributos": [],
@@ -253,6 +253,88 @@ class GoogleLocalScraper:
             i += 1
         return estabelecimentos
 
+    async def _extrair_reviews_de_blocos(self, page) -> List[Dict]:
+        """Extrai reviews dos blocos na aba de reviews (camada 1)."""
+        depoimentos = []
+        review_blocks = await page.query_selector_all(
+            "div[data-review-id], div.jftiEf, div[class*='review'], div.GHT2ce"
+        )
+        for block in review_blocks[:25]:
+            try:
+                autor_el = await block.query_selector(
+                    "div.d4r55, span.X43Kjb, a[data-review-id] div, "
+                    "button[data-review-id] div, div.WNxzHc, span.SubCsc"
+                )
+                autor = (await autor_el.inner_text()).strip() if autor_el else "Cliente"
+                texto_el = await block.query_selector(
+                    "span.wiI7pd, div.MyEned span, span[data-expandable-section], "
+                    "div.Jtu6Td span, span.review-full-text, div[class*='bodyMedium'] span"
+                )
+                texto = (await texto_el.inner_text()).strip() if texto_el else ""
+                if not texto:
+                    all_spans = await block.query_selector_all("span")
+                    for sp in all_spans:
+                        t = (await sp.inner_text()).strip()
+                        if len(t) > 15 and not re.match(r"^[0-9,.\s]+$", t):
+                            texto = t
+                            break
+                rating_val = 5
+                rating_el = await block.query_selector("[aria-label*='estrela'], [aria-label*='star'], span[role='img']")
+                if rating_el:
+                    lbl = await rating_el.get_attribute("aria-label") or ""
+                    m = re.search(r"([0-9])", lbl)
+                    if m:
+                        rating_val = int(m.group(1))
+                data_el = await block.query_selector("span.rsqaWe, span[class*='dehysf']")
+                data_str = (await data_el.inner_text()).strip() if data_el else ""
+                if texto and len(texto) > 3 and rating_val >= 4:
+                    depoimentos.append({"autor": autor, "rating": rating_val, "texto": texto, "data": data_str})
+                    if len(depoimentos) >= 10:
+                        break
+            except:
+                continue
+        return depoimentos
+
+    async def _extrair_reviews_de_blocos_raw(self, review_blocks) -> List[Dict]:
+        """Extrai reviews de blocos já selecionados (camada 2 - destaque)."""
+        depoimentos = []
+        for block in review_blocks[:15]:
+            try:
+                autor_el = await block.query_selector(
+                    "div.d4r55, span.X43Kjb, div.WNxzHc, span.SubCsc, "
+                    "a[data-review-id] div, button div[class]"
+                )
+                autor = (await autor_el.inner_text()).strip() if autor_el else "Cliente"
+                texto_el = await block.query_selector(
+                    "span.wiI7pd, div.MyEned span, span[data-expandable-section], "
+                    "div.Jtu6Td span, span.review-full-text"
+                )
+                texto = ""
+                if texto_el:
+                    texto = (await texto_el.inner_text()).strip()
+                if not texto:
+                    all_spans = await block.query_selector_all("span")
+                    for sp in all_spans:
+                        t = (await sp.inner_text()).strip()
+                        if len(t) > 15 and not re.match(r"^[0-9,.\s]+$", t):
+                            texto = t
+                            break
+                rating_val = 5
+                rating_el = await block.query_selector("[aria-label*='estrela'], [aria-label*='star'], span[role='img']")
+                if rating_el:
+                    lbl = await rating_el.get_attribute("aria-label") or ""
+                    m = re.search(r"([0-9])", lbl)
+                    if m:
+                        rating_val = int(m.group(1))
+                if texto and len(texto) > 3 and rating_val >= 4:
+                    if not any(d["texto"] == texto for d in depoimentos):
+                        depoimentos.append({"autor": autor, "rating": rating_val, "texto": texto, "data": ""})
+                        if len(depoimentos) >= 10:
+                            break
+            except:
+                continue
+        return depoimentos
+
     async def _buscar_detalhes(self, context, nome: str, cidade: str) -> Optional[Dict]:
         """Busca detalhes no Google Maps: fotos, reviews, horarios, atributos, servicos, website."""
         detail_page = None
@@ -284,19 +366,9 @@ class GoogleLocalScraper:
             except:
                 await asyncio.sleep(2)
 
-            # Fotos
+            # Fotos — DESATIVADO: usamos Unsplash, não fotos do Google Maps
             logo = ""
             fotos = []
-            imgs = await page.query_selector_all("img[src*='googleusercontent']")
-            for img in imgs[:15]:
-                src = await img.get_attribute("src")
-                if src and "googleusercontent" in src:
-                    src_hd = re.sub(r"=w[0-9]+-h[0-9]+-[a-z0-9-]+", "=s1600", src)
-                    src_hd = re.sub(r"=w[0-9]+-h[0-9]+", "=s1600", src_hd)
-                    if not logo:
-                        logo = src_hd
-                    if src_hd not in fotos:
-                        fotos.append(src_hd)
 
             # Website real
             website_real = ""
@@ -324,20 +396,48 @@ class GoogleLocalScraper:
             # Horarios
             horarios = []
             try:
-                btn_horarios = await page.query_selector("div[aria-label*='horario'], button[aria-label*='horario']")
+                # Tentar clicar no botão de horários (vários seletores)
+                btn_horarios = None
+                for sel_h in [
+                    "div[aria-label*='orário']",
+                    "div[aria-label*='orario']",
+                    "button[aria-label*='orário']",
+                    "button[aria-label*='orario']",
+                    "div[aria-label*='ours']",
+                    "button[data-item-id='oh']",
+                    "[data-hide-tooltip-on-mouse-move] img[src*='schedule']",
+                    "div[class*='OqCZI'] span",
+                ]:
+                    btn_horarios = await page.query_selector(sel_h)
+                    if btn_horarios:
+                        break
                 if btn_horarios:
-                    await btn_horarios.click()
-                    await asyncio.sleep(1)
-                horario_els = await page.query_selector_all("table.eK4R0e tr")
+                    try:
+                        await btn_horarios.click(force=True, timeout=3000)
+                        await asyncio.sleep(1.5)
+                    except:
+                        pass
+                # Extrair tabela de horários
+                horario_els = await page.query_selector_all("table.eK4R0e tr, table.WgFkxc tr, table[class*='fontBody'] tr")
                 for el in horario_els[:14]:
                     txt = (await el.inner_text()).strip()
                     if txt and len(txt) > 3:
                         horarios.append(txt)
+                # Fallback: div com horários em texto
                 if not horarios:
-                    horario_div = await page.query_selector("div[class*='t39EBf']")
-                    if horario_div:
-                        txt = (await horario_div.inner_text()).strip()
-                        horarios = [l.strip() for l in txt.split("\n") if l.strip()][:14]
+                    for sel_div in ["div[class*='t39EBf']", "div[class*='OqCZI']", "div[aria-label*='orário']", "div[aria-label*='orario']"]:
+                        horario_div = await page.query_selector(sel_div)
+                        if horario_div:
+                            txt = (await horario_div.inner_text()).strip()
+                            lines = [l.strip() for l in txt.split("\n") if l.strip() and len(l.strip()) > 3]
+                            if lines:
+                                horarios = lines[:14]
+                                break
+                # Fallback 2: aria-label do botão contém horários resumidos
+                if not horarios and btn_horarios:
+                    lbl = await btn_horarios.get_attribute("aria-label") or ""
+                    if lbl and len(lbl) > 10:
+                        horarios = [l.strip() for l in lbl.replace(". ", "\n").split("\n") if l.strip() and len(l.strip()) > 3][:14]
             except:
                 pass
 
@@ -397,80 +497,153 @@ class GoogleLocalScraper:
             except:
                 pass
 
-            # Reviews reais
+            # Reviews reais — 3 camadas de fallback
             depoimentos = []
+
+            # Fechar modais/overlays que bloqueiam clicks (Google Maps review prompt)
+            try:
+                for modal_sel in [
+                    "div.goog-reviews-write-widget-modal-bg",
+                    "div[class*='modal-bg']",
+                    "button[aria-label='Fechar']",
+                    "button[aria-label='Close']",
+                    "div[class*='VIpgJd']",
+                ]:
+                    modals = await page.query_selector_all(modal_sel)
+                    for modal in modals:
+                        await modal.evaluate("el => el.remove()")
+                await asyncio.sleep(0.5)
+            except:
+                pass
+
+            # CAMADA 1: Clicar na aba de reviews e extrair
             try:
                 aba_reviews = None
                 for sel in [
                     "button[aria-label*='valiac']",
+                    "button[aria-label*='valia']",
                     "button[aria-label*='eview']",
+                    "button[aria-label*='Review']",
                     "[data-tab-index='1']",
                     "button[jsaction*='review']",
+                    "button[jsaction*='pane.rating']",
+                    "a[href*='reviews']",
                 ]:
                     aba_reviews = await page.query_selector(sel)
                     if aba_reviews:
                         break
 
                 if aba_reviews:
-                    await aba_reviews.click()
+                    # Remover modais novamente antes do click (podem reaparecer)
+                    await page.evaluate("document.querySelectorAll('.goog-reviews-write-widget-modal-bg, [class*=VIpgJd]').forEach(e => e.remove())")
+                    await aba_reviews.click(force=True, timeout=5000)
                     try:
-                        await page.wait_for_selector("div[data-review-id], div.jftiEf", timeout=8000)
+                        await page.wait_for_selector("div[data-review-id], div.jftiEf, div[jscontroller] span.wiI7pd", timeout=8000)
                     except:
                         pass
                     await asyncio.sleep(2)
-                    painel = await page.query_selector("div[aria-label*='valiac'], div[role='main']")
+                    painel = await page.query_selector("div[aria-label*='valiac'], div[aria-label*='valia'], div[role='main']")
                     if painel:
                         for _ in range(6):
                             await painel.evaluate("el => el.scrollTop += 800")
                             await asyncio.sleep(0.8)
-                    botoes_mais = await page.query_selector_all("button[aria-label*='mais'], button.w8nwRe")
+                    botoes_mais = await page.query_selector_all("button[aria-label*='mais'], button[aria-label*='Mais'], button.w8nwRe, button[aria-expanded='false']")
                     for btn in botoes_mais[:10]:
                         try:
                             await btn.click()
                             await asyncio.sleep(0.3)
                         except:
                             pass
-                    review_blocks = await page.query_selector_all(
-                        "div[data-review-id], div.jftiEf"
-                    )
-                    for block in review_blocks[:25]:
+                    depoimentos = await self._extrair_reviews_de_blocos(page)
+                    if depoimentos:
+                        print(f"[Scraper] {nome}: {len(depoimentos)} reviews (camada 1 - aba)")
+            except Exception as e_rev:
+                print(f"[Scraper] reviews camada 1 erro: {e_rev}")
+
+            # CAMADA 2: Reviews em destaque na visão geral (mesma página, sem clicar aba)
+            if not depoimentos:
+                try:
+                    # Fechar modais/overlays que possam bloquear clicks
+                    for modal_sel in [
+                        "div.goog-reviews-write-widget-modal-bg",
+                        "div[class*='modal-bg']",
+                        "button[aria-label='Fechar']",
+                        "button[aria-label='Close']",
+                    ]:
+                        modal = await page.query_selector(modal_sel)
+                        if modal:
+                            await modal.evaluate("el => el.remove()")
+                    await asyncio.sleep(0.5)
+
+                    # Voltar pra visão geral se estávamos na aba de reviews
+                    overview_btn = await page.query_selector("[data-tab-index='0'], button[aria-label*='Visão geral'], button[aria-label*='Geral']")
+                    if overview_btn:
                         try:
-                            autor_el = await block.query_selector("div.d4r55, span.X43Kjb")
-                            autor = (await autor_el.inner_text()).strip() if autor_el else "Cliente"
-                            texto_el = await block.query_selector("span.wiI7pd, div.MyEned span")
-                            texto = (await texto_el.inner_text()).strip() if texto_el else ""
-                            estrelas = await block.query_selector_all("img[src*='star_active']")
-                            rating_val = len(estrelas) if estrelas else 5
-                            if not estrelas:
-                                rating_el = await block.query_selector("[aria-label*='estrela'], [aria-label*='star']")
-                                if rating_el:
-                                    lbl = await rating_el.get_attribute("aria-label") or ""
-                                    m = re.search(r"([0-9])", lbl)
-                                    if m:
-                                        rating_val = int(m.group(1))
-                            data_el = await block.query_selector("span.rsqaWe")
-                            data_str = (await data_el.inner_text()).strip() if data_el else ""
-                            if texto and len(texto) > 15 and autor != "Cliente" and rating_val >= 4:
-                                depoimentos.append({"autor": autor, "rating": rating_val, "texto": texto, "data": data_str})
-                                if len(depoimentos) >= 10:
-                                    break
+                            await overview_btn.click(force=True, timeout=5000)
+                            await asyncio.sleep(1.5)
+                        except:
+                            pass
+                    destaque_sels = [
+                        "div.GHT2ce",
+                        "div[data-review-id]",
+                        "div.jftiEf",
+                        "div[jscontroller][class*='review']",
+                        "div.WMbnJf",
+                        "div[class*='fontBodyMedium'][data-review-id]",
+                    ]
+                    review_blocks = []
+                    for sel in destaque_sels:
+                        review_blocks = await page.query_selector_all(sel)
+                        if review_blocks:
+                            break
+                    if review_blocks:
+                        depoimentos = await self._extrair_reviews_de_blocos_raw(review_blocks)
+                        if depoimentos:
+                            print(f"[Scraper] {nome}: {len(depoimentos)} reviews (camada 2 - destaque)")
+                except Exception as e_rev2:
+                    print(f"[Scraper] reviews camada 2 erro: {e_rev2}")
+
+            # CAMADA 3: Heurística — qualquer bloco com estrelas + texto perto
+            if not depoimentos:
+                _lixo_patterns = re.compile(
+                    r"(^Aberto|^Fechado|^Fecha\b|^Abre\b|^horário|"
+                    r"^Sala de fitness$|^Academia$|^Gym$|^Centro de treinamento$|"
+                    r"^\d{1,2}:\d{2}|·|^Avalia|estrela|^Enviar|^Escrever|"
+                    r"^Rua |^R\. |^Av\.|^Rodovia|^Endere|"
+                    r"^Ligar$|^Rotas$|^Salvar$|^Compartilhar$|^Site$|"
+                    r"^Mais info|^Sugerir|^Editar|^Adicionar|"
+                    r"^\(\d+\)$|^[0-9,.\s]+$)", re.I
+                )
+                try:
+                    all_blocks = await page.query_selector_all("[aria-label*='estrela'], [aria-label*='star'], span[role='img'][aria-label]")
+                    for block in all_blocks[:20]:
+                        try:
+                            lbl = await block.get_attribute("aria-label") or ""
+                            m = re.search(r"([0-9])", lbl)
+                            rating_val = int(m.group(1)) if m else 5
+                            parent = await block.evaluate_handle("el => el.closest('div[class]') || el.parentElement?.parentElement")
+                            if not parent:
+                                continue
+                            parent_text = await parent.evaluate("el => el.innerText || ''")
+                            linhas = [l.strip() for l in parent_text.split("\n") if l.strip() and len(l.strip()) > 3]
+                            texto_candidatos = [l for l in linhas if len(l) > 15 and not _lixo_patterns.search(l)]
+                            if texto_candidatos:
+                                texto = texto_candidatos[0][:500]
+                                autor_candidatos = [l for l in linhas if 2 < len(l) < 40 and l != texto and not re.search(r"[0-9]{2}", l) and not _lixo_patterns.search(l)]
+                                autor = autor_candidatos[0] if autor_candidatos else "Cliente"
+                                if not any(d["texto"] == texto for d in depoimentos):
+                                    depoimentos.append({"autor": autor, "rating": rating_val, "texto": texto, "data": ""})
+                                    if len(depoimentos) >= 10:
+                                        break
                         except:
                             continue
+                    if depoimentos:
+                        print(f"[Scraper] {nome}: {len(depoimentos)} reviews (camada 3 - heuristica)")
+                except Exception as e_rev3:
+                    print(f"[Scraper] reviews camada 3 erro: {e_rev3}")
 
-                if not depoimentos:
-                    html = await page.content()
-                    for pattern in [
-                        r'<span[^>]*class="[^"]*wiI7pd[^"]*"[^>]*>([^<]{20,500})</span>',
-                        r'<div[^>]*class="[^"]*MyEned[^"]*"[^>]*><span[^>]*>([^<]{20,500})</span>',
-                    ]:
-                        matches = re.findall(pattern, html)
-                        for texto in matches[:8]:
-                            if len(texto) > 20:
-                                depoimentos.append({"autor": "Cliente Google", "rating": 5, "texto": texto.strip(), "data": ""})
-                        if depoimentos:
-                            break
-            except Exception as e_rev:
-                print(f"[Scraper] reviews erro (nao critico): {e_rev}")
+            if not depoimentos:
+                print(f"[Scraper] {nome}: 0 reviews em todas as 3 camadas")
 
             # Gerar embed Google Maps por coordenadas ou nome+cidade
             google_maps_embed = ""

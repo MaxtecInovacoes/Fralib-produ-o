@@ -318,6 +318,20 @@ async def _processar_evento_stripe(event, tipo, obj, stripe_customer_id):
         return None
 
 
+PACOTES_CREDITOS = [
+    {"valor": 5.00,  "creditos_base": 1,  "bonus_percentual": 0,  "creditos_totais": 1,  "custo_por_credito": 5.00},
+    {"valor": 20.00, "creditos_base": 5,  "bonus_percentual": 10, "creditos_totais": 5,  "custo_por_credito": 4.00},
+    {"valor": 50.00, "creditos_base": 15, "bonus_percentual": 20, "creditos_totais": 18, "custo_por_credito": 2.78},
+    {"valor": 100.00,"creditos_base": 30, "bonus_percentual": 35, "creditos_totais": 40, "custo_por_credito": 2.50},
+]
+
+
+@router.get('/pricing')
+async def get_pricing():
+    """Retorna tabela de pacotes de creditos com bonus progressivo."""
+    return PACOTES_CREDITOS
+
+
 @router.get('/balance')
 async def credits_balance(db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
     """Retorna saldo de creditos do usuario - compatibilidade admin.html"""

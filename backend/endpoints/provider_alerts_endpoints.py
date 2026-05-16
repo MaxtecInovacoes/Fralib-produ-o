@@ -55,7 +55,7 @@ async def list_alerts(only_unread: bool = False, limit: int = 100,
                a.lido, a.criado_em, a.lido_em,
                pk.label AS key_label, pk.provider AS key_provider,
                u.email AS user_email,
-               l.cliente_nome AS lead_nome
+               l.nome AS lead_nome
         FROM provider_alerts a
         LEFT JOIN provider_keys pk ON pk.id = a.key_id
         LEFT JOIN users u          ON u.id = a.user_id_afetado

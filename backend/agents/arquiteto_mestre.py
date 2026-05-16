@@ -562,7 +562,22 @@ REGRAS:
     dados["typography"] = {"heading": _design_dict["font_heading"], "body": _design_dict["font_body"]}
     dados.setdefault("animations", [])
     dados.setdefault("google_maps_embed", "")
-    dados.setdefault("hours", {})
+    # Dados reais do Hunter — passados intactos pro Liam
+    _horarios_raw = dados_hunter.get("horarios") or {}
+    if isinstance(_horarios_raw, list):
+        _horarios_dict = {}
+        for h in _horarios_raw:
+            if isinstance(h, str) and h.strip():
+                parts = h.split("\t") if "\t" in h else h.split("  ")
+                if len(parts) >= 2:
+                    _horarios_dict[parts[0].strip()] = parts[1].strip()
+                else:
+                    _horarios_dict[h.strip()] = ""
+        _horarios_raw = _horarios_dict
+    dados["hours"] = _horarios_raw
+    dados["servicos"] = dados_hunter.get("servicos") or []
+    dados["atributos"] = dados_hunter.get("atributos") or []
+    dados["faixa_preco"] = dados_hunter.get("faixa_preco") or ""
     dados.setdefault("photos", fotos)
     # Garantir reviews reais no PRD (fallback para o Liam)
     dados["_raw_reviews"] = reviews_reais

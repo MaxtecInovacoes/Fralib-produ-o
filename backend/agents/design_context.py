@@ -231,7 +231,8 @@ NICHOS: Dict[str, Dict] = {
     "barbearia":    {"dir": "luxury", "dir_variantes": ["editorial", "brutalism", "cal"],      "components": "galeria de cortes, lista de serviços, CTA agendamento WhatsApp, badge avaliação Google, horários", "tom": "direto, masculino, confiante — sem adjetivos vagos", "seo": "H1 com cidade, schema BarberShop, FAQ sobre cortes e preços", "anti": "pastéis, fontes cursivas, fotos de stock, contadores inventados"},
     "restaurante":  {"dir": "cafe", "dir_variantes": ["cafe", "starbucks", "warm_editorial"],      "components": "foto hero do prato principal, cardápio resumido, horários, localização embed, CTA reserva WhatsApp, avaliações reais", "tom": "apetitoso, acolhedor, local", "seo": "H1 com cidade e culinária, schema Restaurant + Menu, FAQ sobre reservas", "anti": "fotos de stock de comida, layout genérico de delivery"},
     "clinica":      {"dir": "clean", "dir_variantes": ["clean", "minimal", "friendly"], "components": "especialidades, equipe com CRM, CTA agendamento WhatsApp, convênios, localização", "tom": "profissional, empático, claro", "seo": "H1 com especialidade e cidade, schema MedicalBusiness, FAQ sobre consultas", "anti": "jargão médico, fotos de stock de médicos, promessas de cura"},
-    "academia":     {"dir": "energetic", "dir_variantes": ["energetic", "arc", "creative"],      "components": "modalidades, planos e preços, CTA matrícula WhatsApp, fotos do espaço real, horários de aulas", "tom": "energético, motivador, direto", "seo": "H1 com modalidade e cidade, schema SportsActivityLocation, FAQ sobre planos", "anti": "atletas de stock, promessas em X dias, layout corporativo"},
+    "nutricionista": {"dir": "friendly", "dir_variantes": ["friendly", "warm_editorial", "clean"], "components": "especialidades, CTA agendamento WhatsApp, depoimentos, FAQ sobre consultas, localização", "tom": "acolhedor, empático, motivador — fala de saúde sem ser clínico", "seo": "H1 com especialidade e cidade, schema MedicalBusiness, FAQ sobre nutrição", "anti": "jargão médico, fotos de stock, promessas de emagrecimento rápido"},
+    "academia":     {"dir": "bold", "dir_variantes": ["bold", "nike", "energetic"],      "components": "modalidades, planos e preços, CTA matrícula WhatsApp, fotos do espaço real, horários de aulas", "tom": "energético, motivador, direto", "seo": "H1 com modalidade e cidade, schema SportsActivityLocation, FAQ sobre planos", "anti": "atletas de stock, promessas em X dias, layout corporativo"},
     "pet_shop":     {"dir": "friendly", "dir_variantes": ["friendly", "duolingo", "lingo"],      "components": "serviços (banho, tosa, vet), galeria de pets, CTA WhatsApp, produtos, horários", "tom": "carinhoso, confiável — fala com o dono", "seo": "H1 com serviço e cidade, schema AnimalShelter, FAQ sobre serviços", "anti": "fotos de stock de animais, tom infantilizado"},
     "advocacia":    {"dir": "warm_editorial", "dir_variantes": ["warm_editorial", "editorial", "professional"],      "components": "áreas de atuação, perfil com OAB, CTA consulta WhatsApp, casos de sucesso, localização", "tom": "sério, competente, acessível — sem juridiquês", "seo": "H1 com área do direito e cidade, schema LegalService, FAQ sobre honorários", "anti": "promessas de ganhar causas, jargão no hero, stock de martelo"},
     "odontologia":  {"dir": "clean", "dir_variantes": ["clean", "minimal", "friendly"], "components": "tratamentos, antes/depois, CTA WhatsApp, convênios, equipe com CRO, localização", "tom": "profissional, acolhedor — reduz ansiedade", "seo": "H1 com tratamento e cidade, schema Dentist, FAQ sobre dor e procedimentos", "anti": "sorrisos perfeitos de stock, jargão técnico, promessas imediatas"},
@@ -256,7 +257,7 @@ ALIASES = {
     "imoveis": "imobiliaria", "contabil": "contabilidade",
     "escolas": "escola", "salao": "salao_beleza",
     "auto_peca": "auto_pecas", "mecanica": "auto_pecas",
-    "crossfit": "academia", "nutricionista": "clinica",
+    "crossfit": "academia",
     "psicologia": "clinica", "lanchonete": "restaurante",
     "padaria": "restaurante",
 }
@@ -402,6 +403,73 @@ HERO_STYLES = {
         "text_pos": "left",
         "img_style": "object-fit:cover;filter:grayscale(0.3) contrast(1.15);",
         "noise": True,  # adiciona camada de ruído CSS
+    },
+    "bold": {
+        "layout":   "hero-fullscreen",
+        "gradient": (
+            "background:linear-gradient(160deg,"
+            "oklch(5% 0.01 220) 0%,"
+            "oklch(12% 0.02 240) 50%,"
+            "oklch(8% 0.015 200) 100%);"
+            "background-size:200% 200%;"
+            "animation:hero-bold 8s ease-in-out infinite alternate;"
+        ),
+        "keyframes": (
+            "@keyframes hero-bold{"
+            "0%{background-position:0% 50%}"
+            "100%{background-position:100% 50%}"
+            "}"
+        ),
+        "overlay":  "rgba(0,0,0,0.50)",
+        "text_pos": "center",
+        "img_style": "object-fit:cover;filter:contrast(1.2) brightness(0.75) saturate(1.1);",
+    },
+    "nike": {
+        "layout":   "hero-fullscreen",
+        "gradient": (
+            "background:oklch(4% 0.0 0);"
+        ),
+        "keyframes": "",
+        "overlay":  "rgba(0,0,0,0.60)",
+        "text_pos": "center",
+        "img_style": "object-fit:cover;filter:contrast(1.3) brightness(0.7) saturate(0.9);",
+    },
+    "energetic": {
+        "layout":   "hero-fullscreen",
+        "gradient": (
+            "background:linear-gradient(135deg,"
+            "oklch(8% 0.02 250) 0%,"
+            "oklch(15% 0.04 200) 100%);"
+        ),
+        "keyframes": "",
+        "overlay":  "rgba(0,0,0,0.45)",
+        "text_pos": "center",
+        "img_style": "object-fit:cover;filter:contrast(1.15) brightness(0.8) saturate(1.2);",
+    },
+    "friendly": {
+        "layout":   "hero-center",
+        "gradient": (
+            "background:linear-gradient(160deg,"
+            "oklch(97% 0.01 350) 0%,"
+            "oklch(95% 0.015 340) 50%,"
+            "oklch(98% 0.005 0) 100%);"
+        ),
+        "keyframes": "",
+        "overlay":  "rgba(0,0,0,0.0)",
+        "text_pos": "center",
+        "img_style": "object-fit:cover;filter:saturate(0.9) brightness(1.0);border-radius:16px;",
+    },
+    "warm_editorial": {
+        "layout":   "hero-split",
+        "gradient": (
+            "background:linear-gradient(135deg,"
+            "oklch(25% 0.03 50) 0%,"
+            "oklch(18% 0.02 40) 100%);"
+        ),
+        "keyframes": "",
+        "overlay":  "rgba(20,10,5,0.45)",
+        "text_pos": "left",
+        "img_style": "object-fit:cover;filter:saturate(1.05) brightness(0.9);",
     },
 }
 

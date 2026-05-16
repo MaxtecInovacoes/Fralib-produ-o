@@ -20,7 +20,7 @@ router = APIRouter(prefix='/api/provider-keys', tags=['provider-keys'])
 
 SUPERADMIN_EMAIL = 'dezigpi@gmail.com'
 
-ALLOWED_PROVIDERS = {'anthropic', 'openai', 'google', 'custom'}
+ALLOWED_PROVIDERS = {'anthropic', 'openai', 'google', 'groq', 'custom'}
 
 
 def require_superadmin(user: dict = Depends(get_current_user)):
@@ -286,9 +286,18 @@ def _test_provider(provider: str, apikey: str, base_url: str | None) -> dict:
                 'Authorization': f'Bearer {apikey}',
                 'Content-Type': 'application/json',
             })
+        elif provider == 'groq':
+            url = (base_url or 'https://api.groq.com/openai/v1').rstrip('/') + '/chat/completions'
+            r = requests.post(url, timeout=10, json={
+                'model': 'llama-3.1-8b-instant',
+                'max_tokens': 1,
+                'messages': [{'role': 'user', 'content': 'hi'}],
+            }, headers={
+                'Authorization': f'Bearer {apikey}',
+                'Content-Type': 'application/json',
+            })
         else:
             return {'ok': False, 'error': 'provider invalido'}
-    except requests.Timeout:
         return {'ok': False, 'error': 'timeout (10s)'}
     except requests.ConnectionError:
         return {'ok': False, 'error': 'network (host inacessivel)'}

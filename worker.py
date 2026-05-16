@@ -143,11 +143,23 @@ async def _process_one(job: dict) -> None:
             job_queue.mark_success(db, job_id)
             log.info(f"job {job_id} concluido")
         else:
-            status = job_queue.mark_failure(
-                db, job_id, error=mensagem or "erro desconhecido", fase=fase,
-                retriable=True,
-                lead_nome=(job["payload"] or {}).get("nome"),
-            )
+            # Degradação graceful: se foi rate limit, re-enfileira com delay maior
+            is_rate_limit = mensagem and ("rate limit" in mensagem.lower() or "limite de uso" in mensagem.lower())
+            if is_rate_limit:
+                # Espera proporcional à tentativa: 60s, 120s, 180s...
+                delay = 60 * job["attempts"]
+                log.warning(f"job {job_id} rate-limited — re-enfileirando com delay {delay}s")
+                status = job_queue.mark_failure(
+                    db, job_id, error=f"Rate limit — retry em {delay}s", fase=fase,
+                    retriable=True, delay_seconds=delay,
+                    lead_nome=(job["payload"] or {}).get("nome"),
+                )
+            else:
+                status = job_queue.mark_failure(
+                    db, job_id, error=mensagem or "erro desconhecido", fase=fase,
+                    retriable=True,
+                    lead_nome=(job["payload"] or {}).get("nome"),
+                )
             log.warning(f"job {job_id} -> {status} (fase={fase}): {mensagem}")
     except Exception as e:
         log.error(f"erro ao marcar resultado do job {job_id}: {e}")
@@ -158,6 +170,7 @@ async def _process_one(job: dict) -> None:
 async def _main_loop():
     log.info(f"worker iniciado id={WORKER_ID} poll={POLL_SECONDS}s")
     last_reap = 0.0
+    last_ckpt_reap = 0.0
 
     while _running:
         # Reap periodico de workers mortos
@@ -174,6 +187,15 @@ async def _main_loop():
             except Exception as e:
                 log.warning(f"reaper falhou: {e}")
             last_reap = now
+
+        # Reap periodico de checkpoints expirados (a cada 1h)
+        if now - last_ckpt_reap >= 3600:
+            try:
+                from agents.pipeline_checkpoint import limpar_checkpoints_expirados
+                limpar_checkpoints_expirados(max_age_hours=24)
+            except Exception as e:
+                log.warning(f"checkpoint reaper falhou: {e}")
+            last_ckpt_reap = now
 
         # Tenta pegar proximo job
         try:

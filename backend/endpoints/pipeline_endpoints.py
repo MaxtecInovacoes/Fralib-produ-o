@@ -51,9 +51,17 @@ from agents.caio import qualificar_lead, LeadInput as CaioInput
 # from agents.alex import processar_imagens, AlexInput  # DESATIVADO
 from agents.unsplash_fetcher import buscar_fotos_unsplash
 from agents.theo import gerar_briefing_estrategico, TheoInput, pesquisar_referencias_jina, decidir_modo_visual
-from agents.pipeline_checkpoint import salvar_checkpoint, limpar_checkpoint, gerar_pipeline_id
+# Theo Managed Agent (feature flag: THEO_AGENT_LOOP=1)
+_THEO_AGENT = os.getenv("THEO_AGENT_LOOP", "0") == "1"
+if _THEO_AGENT:
+    from agents.theo_agent_loop import gerar_briefing_estrategico_agent as _gerar_briefing_agent
+from agents.pipeline_checkpoint import salvar_checkpoint, limpar_checkpoint, gerar_pipeline_id, agente_concluido, get_dados_agente, resumo_checkpoint
 from agents.liam import gerar_html_componentizado, montar_template_python
 from agents.arquiteto_mestre import gerar_arquiteto_mestre_prd
+# Managed Agent (feature flag: ARQUITETO_AGENT_LOOP=1)
+_ARQUITETO_AGENT = os.getenv("ARQUITETO_AGENT_LOOP", "0") == "1"
+if _ARQUITETO_AGENT:
+    from agents.arquiteto_agent_loop import gerar_arquiteto_mestre_prd_agent as _gerar_prd_agent
 from agents.liz import auditar, editar_secao as liz_editar_secao, listar_secoes as liz_listar_secoes
 from agents.bryan import iniciar_contato, BryanInput
 from agents.liam_models import LiamOutput
@@ -107,17 +115,44 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
     # Setar user_id no contexto do LLM pra rastrear consumo por usuario
     from llm_direct import set_current_user_id
     set_current_user_id(tenant_id)
-    
+
     _log = lambda msg, tipo="info": adicionar_log(msg, tipo, user_id=tenant_id)
+
+    def _progress(fase_num, label):
+        import json as _json_prog
+        adicionar_log(_json_prog.dumps({
+            "type": "progress", "fase": fase_num, "total": 10,
+            "label": label, "percent": round(fase_num / 10 * 100)
+        }), "pipeline", user_id=tenant_id)
+
+    def _validar_output(output, min_chars=50, must_contain=None):
+        """Valida que output não está truncado/quebrado antes de salvar checkpoint."""
+        if not output:
+            return False
+        text = output if isinstance(output, str) else str(output)
+        if len(text) < min_chars:
+            return False
+        # Detectar resposta truncada (termina no meio de frase sem pontuação final)
+        if must_contain:
+            for marker in must_contain:
+                if marker not in text:
+                    return False
+        return True
+
     state = FraLibState(
-        segmento=config.get("segmento", "Academia"),
-        cidade=config.get("cidade", "Sao Paulo"),
+        segmento=config.get("segmento", ""),
+        cidade=config.get("cidade", ""),
         pipeline_id=gerar_pipeline_id(tenant_id, config.get("segmento", ""), config.get("cidade", "")),
         tenant_id=tenant_id,
     )
     _log("PIPELINE v2 - FraLibState Orquestrador", "info")
     _log(f"{state.segmento} em {state.cidade}", "info")
     logger.info(f"[Pipeline] Iniciando: {state.segmento} em {state.cidade}")
+    # Checkpoint: verificar se existe progresso anterior
+    _ckpt_resumo = resumo_checkpoint(state.pipeline_id)
+    if "nenhum" not in _ckpt_resumo:
+        _log(f"♻️ Retomando pipeline: {_ckpt_resumo}", "info")
+        logger.info(f"[Pipeline] Retomando de checkpoint: {_ckpt_resumo}")
     # Limpar traces residuais de execucoes anteriores
     import os as _os
     _trace_dir = "/root/fralib/logs/pipeline_trace"
@@ -128,6 +163,7 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
             _os.remove(_tp)
     print("[Pipeline] Traces residuais limpos")
     try:
+        _progress(1, "Buscando leads...")
         _log("FASE 1: HUNTER + KEYWORD RESEARCH (paralelo)", "info")
         # Carregar leads já existentes no banco para evitar duplicatas
         # Dedup por nome+cidade apenas (ignora segmento — mesmo negocio pode ter segmento diferente)
@@ -157,14 +193,14 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
         leads = await buscar_leads_google_maps(
             cidade=state.cidade,
             segmento=state.segmento,
-            limite=max(config.get("quantidade", 1) * 3, 5),
+            limite=1,
             leads_existentes=_leads_existentes,
         )
         _kw_future.result(timeout=30)  # aguarda keyword research terminar
         _kw_executor.shutdown(wait=False)
         state.keyword_research = _kw_result[0] or ""
         if not leads:
-            raise Exception("Nenhum lead encontrado pelo Hunter")
+            raise Exception("Nenhum lead novo encontrado para '" + state.segmento + "' em '" + state.cidade + "'. Os leads dessa regiao ja estao sendo processados ou nao ha negocios com dados suficientes. Tente outro nicho ou cidade.")
 
         # Salvar TODOS os leads capturados no banco com status 'pendente'
         # O humano pode rodar o pipeline manualmente para qualquer um deles depois
@@ -230,6 +266,13 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
 
         state.lead_obj = leads[0]
         state.lead_nome = state.lead_obj.lead.nome
+        # GUARD: se checkpoint tem dados de outro lead, limpar pra evitar contaminação
+        _ckpt_lead_check = get_dados_agente(state.pipeline_id, "arquiteto")
+        if _ckpt_lead_check and _ckpt_lead_check.get("prd_json"):
+            _ckpt_bname = _ckpt_lead_check["prd_json"].get("business_name", "")
+            if _ckpt_bname and _ckpt_bname.lower().strip() != state.lead_nome.lower().strip():
+                print(f"[Pipeline] ⚠️ Checkpoint de outro lead ({_ckpt_bname}) — limpando pra {state.lead_nome}")
+                limpar_checkpoint(state.pipeline_id)
         _slug_norm = unicodedata.normalize("NFKD", state.lead_nome).encode("ascii", "ignore").decode("ascii")
         state.lead_slug = re.sub(r"[^a-z0-9]+", "-", _slug_norm.lower()).strip("-")[:50]
         _reviews_raw = list(state.lead_obj.lead.reviews or [])
@@ -357,12 +400,13 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
                 "criado_em": agora, "atualizado_em": agora, "processado": False, "tentativas": 0
             })
             conn.commit()
+        _progress(2, "Qualificando lead...")
         _log("FASE 2: CAIO + ALEX (paralelo)", "info")
         caio_input = CaioInput(
             nome=state.lead_nome, cidade=state.lead_obj.lead.cidade,
             segmento=state.segmento, telefone=state.lead_obj.lead.telefone or "",
             whatsapp=state.lead_obj.lead.whatsapp or "", rating=state.lead_obj.lead.rating or 0.0,
-            reviews_count=state.lead_obj.lead.total_avaliacoes or 0,
+            reviews_count=state.lead_obj.lead.total_avaliacoes or len(state.lead_obj.lead.reviews or []) or 0,
             fotos=state.lead_obj.lead.fotos or [], website=state.lead_obj.lead.website,
             reprocessamento=True
         )
@@ -390,13 +434,13 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
                 state.lead_slug = re.sub(r"[^a-z0-9]+", "-", _slug_norm_caio.lower()).strip("-")[:50]
                 state.lead_id = None
                 _rvs = list(_proximo.lead.reviews or [])
-                state.lead_raw_data = {"nome": _proximo.lead.nome, "cidade": _proximo.lead.cidade, "segmento": _proximo.lead.segmento, "telefone": _proximo.lead.telefone or "", "whatsapp": _proximo.lead.whatsapp or "", "rating": _proximo.lead.rating or 0.0, "reviews": _rvs, "total_avaliacoes": getattr(_proximo.lead, "total_avaliacoes", None) or getattr(_proximo.lead, "reviews_count", None) or len(_rvs), "fotos": _proximo.lead.fotos or [], "website": _proximo.lead.website or "", "logo_url": getattr(_proximo.lead, "logo_url", None) or "", "endereco": getattr(_proximo.lead, "endereco", "") or getattr(_proximo.lead, "address", "") or "", "google_maps_embed": getattr(_proximo.lead, "google_maps_embed", "") or "", "lat": getattr(_proximo.lead, "latitude", None), "lng": getattr(_proximo.lead, "longitude", None), "horarios": getattr(_proximo.lead, "horarios", None), "atributos": getattr(_proximo.lead, "atributos", None)}
+                state.lead_raw_data = {"nome": _proximo.lead.nome, "cidade": _proximo.lead.cidade, "segmento": _proximo.lead.segmento, "telefone": _proximo.lead.telefone or "", "whatsapp": _proximo.lead.whatsapp or "", "rating": _proximo.lead.rating or 0.0, "reviews": _rvs, "total_avaliacoes": getattr(_proximo.lead, "total_avaliacoes", None) or getattr(_proximo.lead, "reviews_count", None) or len(_rvs), "fotos": _proximo.lead.fotos or [], "website": _proximo.lead.website or "", "logo_url": getattr(_proximo.lead, "logo_url", None) or "", "endereco": getattr(_proximo.lead, "endereco", "") or getattr(_proximo.lead, "address", "") or "", "google_maps_embed": getattr(_proximo.lead, "google_maps_embed", "") or "", "lat": getattr(_proximo.lead, "latitude", None), "lng": getattr(_proximo.lead, "longitude", None), "horarios": getattr(_proximo.lead, "horarios", None), "atributos": getattr(_proximo.lead, "atributos", None), "servicos": getattr(_proximo.lead, "servicos", None), "faixa_preco": getattr(_proximo.lead, "faixa_preco", None)}
                 from agents.caio import qualificar_lead as _qualificar_caio2, LeadInput as _CaioInput2
                 _caio_input2 = _CaioInput2(
                     nome=_proximo.lead.nome, cidade=_proximo.lead.cidade,
                     segmento=state.segmento, telefone=_proximo.lead.telefone or "",
                     whatsapp=_proximo.lead.whatsapp or "", rating=_proximo.lead.rating or 0.0,
-                    reviews_count=getattr(_proximo.lead, "total_avaliacoes", None) or getattr(_proximo.lead, "reviews_count", None) or 0,
+                    reviews_count=getattr(_proximo.lead, "total_avaliacoes", None) or len(getattr(_proximo.lead, "reviews", None) or []) or 0,
                     fotos=_proximo.lead.fotos or [], website=_proximo.lead.website,
                     reprocessamento=True
                 )
@@ -406,10 +450,7 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
                     print("[Pipeline] Lead aprovado: " + state.lead_nome + " (" + state.qualificacao_caio.tier + ")")
                     break
             if not _encontrou_aprovado:
-                with engine.connect() as conn:
-                    conn.execute(text("UPDATE leads SET status='descartado', atualizado_em=:ts WHERE id=:id AND user_id=:uid"), {"ts": datetime.now().isoformat(), "id": state.lead_id, "uid": state.tenant_id})
-                    conn.commit()
-                raise Exception("Todos os " + str(len(leads)) + " leads rejeitados pelo Caio. Tente outro segmento ou cidade.")
+                raise Exception("Nenhum lead qualificado encontrado para '" + state.segmento + "' em '" + state.cidade + "'. Motivos possiveis: leads sem reviews/telefone ou nicho com poucos negocios. Tente outro segmento ou cidade maior.")
             if _encontrou_aprovado:
                 state.lead_id = str(uuid.uuid4())
                 _agora_sub = datetime.now().isoformat()
@@ -436,32 +477,52 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
         _log(f"  Caio: {state.qualificacao_caio.qualificacao} score={state.qualificacao_caio.score}", "success")
         logger.info(f"[Pipeline] Caio: {state.qualificacao_caio.qualificacao}")
         logger.info("[Pipeline] Alex: OK")
+        _progress(3, "Pesquisa de mercado...")
         _log("FASE 3: JINA AI", "info")
-        try:
-            state.jina_insights = pesquisar_referencias_jina(state.segmento, cidade=state.cidade)
-            _log(f"  Jina: {len(state.jina_insights)} chars", "success")
-            logger.info(f"[Pipeline] Jina AI: OK ({len(state.jina_insights)} chars)")
-        except Exception as e:
-            state.jina_insights = f"Segmento: {state.segmento} em {state.cidade}. Usar padroes premium."
-            logger.warning(f"[Pipeline] Jina AI erro: {e}")
+        _jina_cached = get_dados_agente(state.pipeline_id, "jina")
+        if _jina_cached and _jina_cached.get("insights"):
+            state.jina_insights = _jina_cached["insights"]
+            _log(f"  Jina: ♻️ retomado do checkpoint ({len(state.jina_insights)} chars)", "success")
+        else:
+            try:
+                state.jina_insights = pesquisar_referencias_jina(state.segmento, cidade=state.cidade)
+                _log(f"  Jina: {len(state.jina_insights)} chars", "success")
+                logger.info(f"[Pipeline] Jina AI: OK ({len(state.jina_insights)} chars)")
+                if _validar_output(state.jina_insights, min_chars=30):
+                    salvar_checkpoint(state.pipeline_id, "jina", {"insights": state.jina_insights})
+            except Exception as e:
+                state.jina_insights = ""
+                logger.warning(f"[Pipeline] Jina AI erro (sem fallback): {e}")
+        _progress(4, "Estratégia do site...")
         _log("FASE 4: THEO", "info")
-        try:
-            theo_input = TheoInput(
-                nome=state.lead_nome, cidade=state.lead_obj.lead.cidade,
-                segmento=state.segmento, telefone=state.lead_obj.lead.telefone or "",
-                whatsapp=state.lead_obj.lead.whatsapp or "",
-                rating=float(state.lead_obj.lead.rating or 0), jina_insights=state.jina_insights
-            )
-            state.briefing_theo = tentar(
-                lambda: gerar_briefing_estrategico(theo_input),
-                fase="theo", max_attempts=3, base_delay=2.0,
-                log_fn=_log,
-            )
-            _log(f"  Briefing: {len(state.briefing_theo)} chars", "success")
-            logger.info("[Pipeline] Theo: OK")
-        except Exception as e:
-            state.briefing_theo = f"Site para {state.lead_nome} em {state.cidade}."
-            logger.warning(f"[Pipeline] Theo erro: {e}")
+        _theo_cached = get_dados_agente(state.pipeline_id, "theo")
+        if _theo_cached and _theo_cached.get("briefing"):
+            state.briefing_theo = _theo_cached["briefing"]
+            _log(f"  Briefing: ♻️ retomado do checkpoint ({len(state.briefing_theo)} chars)", "success")
+        else:
+            try:
+                theo_input = TheoInput(
+                    nome=state.lead_nome, cidade=state.lead_obj.lead.cidade,
+                    segmento=state.segmento, telefone=state.lead_obj.lead.telefone or "",
+                    whatsapp=state.lead_obj.lead.whatsapp or "",
+                    rating=float(state.lead_obj.lead.rating or 0), jina_insights=state.jina_insights
+                )
+                _theo_fn = _gerar_briefing_agent if _THEO_AGENT else gerar_briefing_estrategico
+                state.briefing_theo = tentar(
+                    lambda: _theo_fn(theo_input),
+                    fase="theo", max_attempts=3, base_delay=2.0,
+                    log_fn=_log,
+                )
+                _log(f"  Briefing: {len(state.briefing_theo)} chars", "success")
+                logger.info("[Pipeline] Theo: OK")
+                if _validar_output(state.briefing_theo, min_chars=100):
+                    salvar_checkpoint(state.pipeline_id, "theo", {"briefing": state.briefing_theo})
+                else:
+                    _log("  ⚠️ Theo output truncado — não salvou checkpoint", "warning")
+            except Exception as e:
+                state.briefing_theo = ""
+                logger.warning(f"[Pipeline] Theo erro (sem fallback): {e}")
+        _progress(5, "Buscando fotos...")
         _log("FASE 5: PALETA + UNSPLASH", "info")
         # Unsplash — fotos de alta qualidade por nicho
         try:
@@ -473,8 +534,11 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
                 nome=_nome_negocio,
                 cidade=_cidade_negocio,
             )
+            # Usar APENAS Unsplash — fotos do Google Maps são de baixa qualidade
             state.lead_raw_data["fotos"] = _fotos_unsplash
-            state.lead_raw_data["logo_url"] = None
+            # Logo: manter texto (nome do negócio) — não usar logo do Google Maps
+            if not state.lead_raw_data.get("logo_url"):
+                state.lead_raw_data["logo_url"] = None
             print(f"[Pipeline] Unsplash: {len(_fotos_unsplash)} fotos para {_nome_negocio or state.segmento}")
             _log(f"  Fotos Unsplash: {len(_fotos_unsplash)}", "success")
         except Exception as e:
@@ -526,31 +590,62 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
         # Alex DESATIVADO — fotos ja injetadas via Unsplash na FASE 5
         print("[Pipeline] Alex desativado — fotos Unsplash e paleta nicho ja aplicados")
 
+        _progress(6, "Arquitetando site...")
         _log("FASE 6: ARQUITETO MESTRE", "info")
-        _seed = int(hashlib.md5(state.lead_nome.encode()).hexdigest()[:8], 16)
-        random.seed(_seed)
-        _pool = ["mask-reveal", "counter-animation", "parallax-scroll", "stagger-fade",
-                 "reveal-on-scroll", "text-split", "floating-cards", "elastic-scale",
-                 "wave-animation", "spotlight-hover", "tilt-3d", "fade-up", "slide-in", "zoom-reveal"]
-        random.sample(_pool, 6)
-        _seg = state.segmento or state.lead_obj.lead.segmento or "negocio local"
-        _cid = state.lead_obj.lead.cidade or state.cidade or ""
-        state.prd_arquiteto = tentar(
-            lambda: gerar_arquiteto_mestre_prd(
-                dados_hunter=state.lead_raw_data,
-                cidade=_cid,
-                segmento=_seg,
-                jina_insights=state.jina_insights,
-                briefing_theo=state.briefing_theo,
-                caio_tier=state.qualificacao_caio.tier if state.qualificacao_caio else "STANDARD",
-                caio_score=state.qualificacao_caio.score if state.qualificacao_caio else 0,
-                caio_motivo=state.qualificacao_caio.motivo if state.qualificacao_caio else "",
-                dark_mode=False,
-            ),
-            fase="arquiteto", max_attempts=3, base_delay=2.0,
-            log_fn=_log,
-        )
-        _log(f"  PRD: {len(state.prd_arquiteto.sections)} secoes", "success")
+        _arq_cached = get_dados_agente(state.pipeline_id, "arquiteto")
+        if _arq_cached and _arq_cached.get("prd_json"):
+            # Retomar PRD do checkpoint
+            from designer_prd import DesignerPRD as PRDOutput
+            try:
+                state.prd_arquiteto = PRDOutput(**_arq_cached["prd_json"])
+                _log(f"  PRD: ♻️ retomado do checkpoint ({len(state.prd_arquiteto.sections)} seções)", "success")
+            except Exception as _prd_err:
+                _log(f"  ⚠️ Checkpoint PRD inválido, regenerando: {_prd_err}", "warning")
+                _arq_cached = None
+        if not _arq_cached or not _arq_cached.get("prd_json"):
+            _seed = int(hashlib.md5(state.lead_nome.encode()).hexdigest()[:8], 16)
+            random.seed(_seed)
+            _pool = ["mask-reveal", "counter-animation", "parallax-scroll", "stagger-fade",
+                     "reveal-on-scroll", "text-split", "floating-cards", "elastic-scale",
+                     "wave-animation", "spotlight-hover", "tilt-3d", "fade-up", "slide-in", "zoom-reveal"]
+            random.sample(_pool, 6)
+            _seg = state.segmento or state.lead_obj.lead.segmento or "negocio local"
+            _cid = state.lead_obj.lead.cidade or state.cidade or ""
+            _prd_fn = _gerar_prd_agent if _ARQUITETO_AGENT else gerar_arquiteto_mestre_prd
+            state.prd_arquiteto = tentar(
+                lambda: _prd_fn(
+                    dados_hunter=state.lead_raw_data,
+                    cidade=_cid,
+                    segmento=_seg,
+                    jina_insights=state.jina_insights,
+                    briefing_theo=state.briefing_theo,
+                    caio_tier=state.qualificacao_caio.tier if state.qualificacao_caio else "STANDARD",
+                    caio_score=state.qualificacao_caio.score if state.qualificacao_caio else 0,
+                    caio_motivo=state.qualificacao_caio.motivo if state.qualificacao_caio else "",
+                    dark_mode=False,
+                    keyword_research=getattr(state, 'keyword_research', ''),
+                ),
+                fase="arquiteto", max_attempts=3, base_delay=2.0,
+                log_fn=_log,
+            )
+            _log(f"  PRD: {len(state.prd_arquiteto.sections)} secoes", "success")
+            # Salvar checkpoint do PRD (mais caro em tokens depois do Liam)
+            try:
+                _prd_dict = state.prd_arquiteto.model_dump() if hasattr(state.prd_arquiteto, "model_dump") else state.prd_arquiteto.__dict__
+                if _validar_output(str(_prd_dict), min_chars=200):
+                    salvar_checkpoint(state.pipeline_id, "arquiteto", {"prd_json": _prd_dict})
+                else:
+                    _log("  ⚠️ PRD output truncado — não salvou checkpoint", "warning")
+            except Exception as _ckpt_e:
+                print(f"[Checkpoint] PRD save skip: {_ckpt_e}")
+        # White-label: verificar se tenant tem plano PRO (remove branding FraLib do footer)
+        try:
+            with engine.connect() as _wl_conn:
+                _wl_row = _wl_conn.execute(text("SELECT plano FROM users WHERE id=:uid"), {"uid": tenant_id}).fetchone()
+                if _wl_row and _wl_row[0] in ('pro', 'enterprise'):
+                    state.prd_arquiteto.white_label = True
+        except Exception:
+            pass
         # Forcar google_maps_embed com iframe OSM (o Arquiteto nao tem place_id)
         state.prd_arquiteto.google_maps_embed = state.lead_raw_data.get("google_maps_embed", "")
         print(f"[Pipeline] Maps embed injetado no PRD: {len(state.prd_arquiteto.google_maps_embed)} chars")
@@ -563,22 +658,37 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
                 _json.dump(state.prd_arquiteto.model_dump() if hasattr(state.prd_arquiteto, "model_dump") else state.prd_arquiteto.__dict__, _pf, ensure_ascii=False, indent=2, default=str)
         except Exception as _pe:
             print(f"[Pipeline] PRD trace skip: {_pe}")
+        _progress(7, "Gerando HTML...")
         _log("FASE 7: LIAM (Componentizado)", "info")
         if not state.prd_arquiteto:
             raise Exception("PRD nao disponivel para o Liam")
-        _html_main = tentar(
-            lambda: gerar_html_componentizado(state.prd_arquiteto),
-            fase="liam", max_attempts=3, base_delay=3.0,
-            log_fn=_log,
-        )
-        if not _html_main or len(_html_main) < 500:
-            raise Exception("Liam retornou HTML vazio")
-        try: open("/root/fralib/logs/pipeline_trace/liam_sections.html","w").write(_html_main)
-        except: pass
-        state.html_final = montar_template_python(_html_main, state.prd_arquiteto)
-        _log(f"  HTML: {len(state.html_final):,} chars", "success")
-        logger.info("[Pipeline] Liam: OK")
-        salvar_checkpoint(state.pipeline_id, "liam", {"html_chars": len(state.html_final)})
+        _liam_cached = get_dados_agente(state.pipeline_id, "liam")
+        if _liam_cached and _liam_cached.get("html_final") and len(_liam_cached["html_final"]) >= 500:
+            state.html_final = _liam_cached["html_final"]
+            _log(f"  HTML: ♻️ retomado do checkpoint ({len(state.html_final):,} chars)", "success")
+        else:
+            _html_main = tentar(
+                lambda: gerar_html_componentizado(state.prd_arquiteto),
+                fase="liam", max_attempts=3, base_delay=3.0,
+                log_fn=_log,
+            )
+            if not _html_main or len(_html_main) < 500:
+                raise Exception("Liam retornou HTML vazio")
+            try: open("/root/fralib/logs/pipeline_trace/liam_sections.html","w").write(_html_main)
+            except: pass
+            state.html_final = montar_template_python(_html_main, state.prd_arquiteto)
+            _log(f"  HTML: {len(state.html_final):,} chars", "success")
+            logger.info("[Pipeline] Liam: OK")
+            # Validar HTML antes de salvar checkpoint (não salvar truncado)
+            _html_valid = (
+                len(state.html_final) >= 2000 and
+                "</html>" in state.html_final.lower()
+            )
+            if _html_valid:
+                salvar_checkpoint(state.pipeline_id, "liam", {"html_final": state.html_final})
+            else:
+                _log("  ⚠️ HTML incompleto (sem </html>) — não salvou checkpoint", "warning")
+                raise Exception(f"Liam gerou HTML truncado ({len(state.html_final)} chars, sem tag de fechamento)")
         try:
             os.makedirs("/root/fralib/logs/pipeline_trace", exist_ok=True)
             with open("/root/fralib/logs/pipeline_trace/liam_html.html", "w", encoding="utf-8") as _f:
@@ -586,6 +696,7 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
             print("[Trace] liam_html.html salvo")
         except Exception:
             pass
+        _progress(8, "Auditoria de qualidade...")
         _log("FASE 8: LIZ (Auditoria)", "info")
         # BeautifulSoup auto-healing: corrige tags abertas antes da Liz auditar
         try:
@@ -690,6 +801,7 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
                 logger.warning(f"[Pipeline] Liz erro: {e}")
                 state.liz_aprovado = True
                 break
+        _progress(9, "Publicando site...")
         _log("FASE 9: DEPLOY", "info")
         web_dir = f"/var/www/fralib/sites/{tenant_id}/{state.lead_slug}"
         os.makedirs(web_dir, exist_ok=True)
@@ -726,6 +838,7 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
         _log("  Health check: OK", "success")
         logger.info(f"[Pipeline] HealthCheck OK: {state.site_url}")
 
+        _progress(10, "Enviando contato...")
         _log("FASE 10: BRYAN", "info")
         # Verificar WhatsApp conectado para o Bryan (cache local + fallback HTTP)
         _wpp_tenant_check = f"fralib_user_{tenant_id}"
@@ -752,7 +865,10 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
               try:
                 import httpx, re as _re, os as _os
                 meowhats_url = _os.getenv("MEOWHATS_URL", "http://localhost:3001")
-                meowhats_key = _os.getenv("MEOWHATS_KEY", "1763kovQ@")
+                meowhats_key = _os.getenv("MEOWHATS_KEY", "")
+                if not meowhats_key:
+                    _log("⚠️ MEOWHATS_KEY não configurada no .env — envio WhatsApp abortado.", "warning")
+                    raise RuntimeError("MEOWHATS_KEY ausente")
                 if not state.tenant_id:
                     raise RuntimeError("tenant_id ausente — envio WhatsApp abortado (multi-tenant)")
                 tenant_id = f"fralib_user_{state.tenant_id}"
@@ -806,6 +922,36 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
         limpar_checkpoint(state.pipeline_id)
         _log("PIPELINE v2 CONCLUIDO - FraLibState OK", "success")
         logger.info("[Pipeline] CONCLUIDO - 7 AGENTES!")
+
+        # Buscar leads extras em background pra fila de processamento
+        _qtd_extra = config.get("quantidade", 1) - 1
+        if _qtd_extra > 0:
+            async def _buscar_extras():
+                try:
+                    _existentes_agora = set()
+                    with engine.connect() as _c:
+                        _r = _c.execute(text("SELECT lower(trim(nome)) FROM leads WHERE lower(cidade)=lower(:c) AND user_id=:u"), {"c": state.cidade, "u": tenant_id})
+                        _existentes_agora = {row[0] for row in _r.fetchall()}
+                    _extras = await buscar_leads_google_maps(
+                        cidade=state.cidade, segmento=state.segmento,
+                        limite=_qtd_extra, leads_existentes=_existentes_agora,
+                    )
+                    if _extras:
+                        import json as _jx
+                        _agora = datetime.now().isoformat()
+                        with engine.connect() as _cx:
+                            for _lq in _extras:
+                                _l = _lq.lead
+                                _id = str(uuid.uuid4())
+                                _dados = {"reviews": [{"autor": r.get("autor",""), "rating": r.get("rating",5), "texto": r.get("texto","")} for r in (_l.reviews or [])], "fotos": _l.fotos or [], "horarios": getattr(_l, "horarios", None), "servicos": getattr(_l, "servicos", None), "atributos": getattr(_l, "atributos", None)}
+                                _cx.execute(text("""INSERT INTO leads (id,nome,cidade,segmento,telefone,whatsapp,rating,score,tier,status,user_id,criado_em,atualizado_em,processado,tentativas,dados_completos) VALUES (:id,:nome,:cidade,:segmento,:telefone,:whatsapp,:rating,:score,:tier,'capturado',:user_id,:criado_em,:atualizado_em,false,0,:dados_completos) ON CONFLICT DO NOTHING"""),
+                                    {"id": _id, "nome": _l.nome, "cidade": _l.cidade, "segmento": _l.segmento, "telefone": _l.telefone or "", "whatsapp": _l.whatsapp or "", "rating": _l.rating or 0.0, "score": _lq.score, "tier": _lq.tier, "user_id": tenant_id, "criado_em": _agora, "atualizado_em": _agora, "dados_completos": _jx.dumps(_dados)})
+                            _cx.commit()
+                        print(f"[Pipeline] {len(_extras)} leads extras salvos na fila de processamento")
+                except Exception as _ex:
+                    logger.warning(f"[Pipeline] Busca extras erro: {_ex}")
+            asyncio.create_task(_buscar_extras())
+
         # 3.2 — Atualizar pipeline_queue com sucesso
         if queue_id:
             try:
@@ -957,12 +1103,56 @@ async def iniciar_pipeline(
     except Exception:
         config = {}
     tenant_id = usuario.get("tenant_id", usuario["id"])
+
+    # Limites de quantidade por plano (server-side, não confia no frontend)
+    _plano_row = db.execute(text("SELECT plano FROM users WHERE id=:id"), {"id": tenant_id}).fetchone()
+    _plano_user = (_plano_row[0] if _plano_row else 'trial').lower()
+    _MAX_QTD = {'trial': 1, 'starter': 10, 'pro': 50, 'beta': 50}
+    _max_qtd = _MAX_QTD.get(_plano_user, 1)
+
     config_limpo = {
-        "segmento": config.get("segmento") or "Academia",
-        "cidade": config.get("cidade") or "Sao Paulo",
-        "quantidade": int(config.get("quantidade") or 10),
+        "segmento": (config.get("segmento") or "").strip(),
+        "cidade": (config.get("cidade") or "").strip(),
+        "quantidade": min(int(config.get("quantidade") or 10), _max_qtd),
         "score_minimo": int(config.get("score_minimo") or 70),
     }
+
+    if not config_limpo["segmento"] or not config_limpo["cidade"]:
+        raise HTTPException(status_code=400, detail="Segmento e cidade são obrigatórios.")
+
+    # Gate: apenas 1 pipeline por vez por tenant (com auto-reset se travou)
+    _state = get_pipeline_state(db, tenant_id)
+    if _state.get("rodando"):
+        # Auto-reset se ficou preso por mais de 5 minutos
+        _inicio = _state.get("atualizado_em") or _state.get("iniciado_em")
+        _travou = False
+        if _inicio:
+            from datetime import datetime, timezone, timedelta
+            try:
+                if isinstance(_inicio, str):
+                    _inicio = datetime.fromisoformat(_inicio)
+                if _inicio.tzinfo is None:
+                    _inicio = _inicio.replace(tzinfo=timezone.utc)
+                _travou = datetime.now(timezone.utc) - _inicio > timedelta(minutes=5)
+            except:
+                _travou = True
+        else:
+            _travou = True
+
+        if _travou:
+            update_pipeline_state(db, tenant_id, rodando=False, pausado=False)
+            print(f"[Pipeline] ⚠️ Auto-reset: pipeline do tenant {tenant_id} estava travado há >5min")
+        else:
+            raise HTTPException(status_code=429, detail="Você já tem um pipeline rodando. Aguarde a conclusão.")
+
+    # Gate de créditos — verificar ANTES de entrar na fila
+    creditos_check = verificar_pode_executar(db, tenant_id)
+    if not creditos_check.get("pode"):
+        raise HTTPException(
+            status_code=402,
+            detail=creditos_check.get("motivo", "Sem créditos disponíveis."),
+            headers={"X-Upgrade-URL": creditos_check.get("upgrade_url", "/planos")}
+        )
 
     # Se processar_fila=true, processar leads capturados com seus próprios segmentos
     if config.get("processar_fila"):
@@ -1064,6 +1254,9 @@ async def iniciar_pipeline(
     import job_queue as _jq
     try:
         idem = f"pipeline-{tenant_id}-{queue_id}" if queue_id else None
+        # Priority baseada no plano: Pro=1, Starter=2, Trial/Free=3
+        _plano = (creditos_check.get("plano") or "").lower()
+        _priority = 1 if _plano == "pro" else (2 if _plano == "starter" else 3)
         job_id = _jq.enqueue(
             db,
             tipo="pipeline_multiplos",
@@ -1071,6 +1264,7 @@ async def iniciar_pipeline(
             tenant_id=tenant_id,
             max_attempts=3,
             idempotency_key=idem,
+            priority=_priority,
         )
         if job_id is None:
             # Idempotency colisao -> ja tem job equivalente rodando
@@ -1114,14 +1308,59 @@ async def get_status(db: Session = Depends(get_db), usuario: dict = Depends(get_
     total_enviados = db.execute(text("SELECT COUNT(*) FROM leads WHERE user_id=:uid AND status = 'contatado'"), {"uid": tenant_id}).scalar() or 0
     ciclo_atual = db.execute(text("SELECT COALESCE(MAX(ciclo), 0) FROM leads WHERE user_id=:uid"), {"uid": tenant_id}).scalar() or 0
 
+    # Checkpoint info: mostrar pro user se tem progresso salvo
+    _ckpt_info = None
+    try:
+        _cfg = state.get("config") or {}
+        _pid = gerar_pipeline_id(tenant_id, _cfg.get("segmento", ""), _cfg.get("cidade", ""))
+        from agents.pipeline_checkpoint import carregar_checkpoint as _load_ckpt
+        _ckpt = _load_ckpt(_pid)
+        if _ckpt and _ckpt.get("agentes"):
+            _ckpt_info = {
+                "fases_concluidas": list(_ckpt["agentes"].keys()),
+                "total_fases": len(_ckpt["agentes"]),
+                "ultimo_agente": _ckpt.get("ultimo_agente"),
+                "atualizado_em": _ckpt.get("atualizado_em"),
+            }
+    except Exception:
+        pass
+
+    # Verificar último erro do pipeline (job mais recente com falha)
+    _ultimo_erro = None
+    try:
+        _job_erro = db.execute(text("""
+            SELECT erro, tipo, atualizado_em FROM pipeline_queue
+            WHERE tenant_id = :uid AND status = 'erro'
+            ORDER BY concluido_em DESC LIMIT 1
+        """), {"uid": tenant_id}).fetchone()
+        if _job_erro and _job_erro[0]:
+            _erro_msg = str(_job_erro[0])[:200]
+            _recomendacao = "Tente novamente. Se persistir, entre em contato com o suporte."
+            if "Nenhum lead qualificado" in _erro_msg:
+                _recomendacao = "Tente outro segmento ou uma cidade maior com mais negócios."
+            elif "reviews" in _erro_msg.lower() or "depoimentos" in _erro_msg.lower():
+                _recomendacao = "Os negócios dessa região não têm avaliações suficientes. Tente outra cidade."
+            elif "timeout" in _erro_msg.lower() or "connection" in _erro_msg.lower():
+                _recomendacao = "Erro de conexão temporário. Atualize a página e tente novamente."
+            _ultimo_erro = {
+                "mensagem": _erro_msg,
+                "recomendacao": _recomendacao,
+                "quando": _job_erro[2].isoformat() if _job_erro[2] else None,
+            }
+    except Exception:
+        pass
+
     return {
         "rodando": state["rodando"],
         "pausado": state["pausado"],
         "config": state["config"],
+        "iniciado_em": state.get("updated_at").isoformat() if state.get("updated_at") else None,
         "totalLeads": total_leads,
         "totalSites": total_sites,
         "totalEnviados": total_enviados,
-        "cicloAtual": ciclo_atual
+        "cicloAtual": ciclo_atual,
+        "checkpoint": _ckpt_info,
+        "ultimo_erro": _ultimo_erro,
     }
 
 
@@ -1340,7 +1579,7 @@ async def _executar_pipeline_a_partir_fase2(state, tenant_id, config):
             telefone=state.lead_obj.lead.telefone or "",
             whatsapp=state.lead_obj.lead.whatsapp or "",
             rating=state.lead_obj.lead.rating or 0.0,
-            reviews_count=state.lead_obj.lead.total_avaliacoes or 0,
+            reviews_count=state.lead_obj.lead.total_avaliacoes or len(state.lead_obj.lead.reviews or []) or 0,
             fotos=state.lead_obj.lead.fotos or [],
             website=state.lead_obj.lead.website,
             reprocessamento=True,  # Pula verificacao de segmento no Caio
@@ -1371,7 +1610,8 @@ async def _executar_pipeline_a_partir_fase2(state, tenant_id, config):
                 website=state.lead_obj.lead.website or "",
                 telefone=state.lead_obj.lead.telefone or "",
             )
-            state.briefing_theo = gerar_briefing_estrategico(theo_input)
+            _theo_fn2 = _gerar_briefing_agent if _THEO_AGENT else gerar_briefing_estrategico
+            state.briefing_theo = _theo_fn2(theo_input)
             logger.info("[Pipeline] Theo: OK")
         except Exception as e:
             state.briefing_theo = f"Site para {state.lead_nome} em {state.lead_obj.lead.cidade}."
@@ -1404,13 +1644,14 @@ async def _executar_pipeline_a_partir_fase2(state, tenant_id, config):
         random.seed(_seed)
         _seg = state.segmento or state.lead_obj.lead.segmento or "negocio local"
         _cid = state.lead_obj.lead.cidade or state.cidade or ""
-        state.prd_arquiteto = gerar_arquiteto_mestre_prd(
+        _prd_fn2 = _gerar_prd_agent if _ARQUITETO_AGENT else gerar_arquiteto_mestre_prd
+        state.prd_arquiteto = _prd_fn2(
             dados_hunter=state.lead_raw_data,
             cidade=_cid,
             segmento=_seg,
             jina_insights=state.jina_insights,
             briefing_theo=state.briefing_theo,
-            
+
             caio_tier=state.qualificacao_caio.tier if state.qualificacao_caio else "STANDARD",
             caio_score=state.qualificacao_caio.score if state.qualificacao_caio else 0,
             caio_motivo=state.qualificacao_caio.motivo if state.qualificacao_caio else "",

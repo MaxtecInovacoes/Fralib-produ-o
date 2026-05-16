@@ -1,4 +1,4 @@
-﻿import sys
+import sys
 sys.path.insert(0, "/root/fralib/backend/agents")
 """
 Caio - Qualificador de Leads (Python puro, zero LLM)
@@ -227,6 +227,25 @@ def qualificar_lead(lead: LeadInput) -> CaioOutput:
                 logo_url=lead.logo_url or "", concorrentes=[],
                 paleta_cores={"primaria": "#374151", "secundaria": "#f9fafb", "acento": "#6366f1"},
             )
+
+    # GATE: dados mínimos obrigatórios — sem dados reais, não passa
+    _dados_faltando = []
+    if not lead.telefone and not lead.whatsapp:
+        _dados_faltando.append("telefone/whatsapp")
+    # Reviews não são bloqueantes — site pode ser gerado sem depoimentos
+    if _dados_faltando:
+        _motivo_dados = "Dados insuficientes: falta " + ", ".join(_dados_faltando)
+        print("[Caio] REJEITADO: {} - {}".format(lead.nome, _motivo_dados))
+        return CaioOutput(
+            qualificacao="REJEITADO", score=0, tier="REJEITADO",
+            motivo=_motivo_dados, qualificado=False,
+            nome=lead.nome, cidade=lead.cidade, segmento=lead.segmento,
+            telefone=lead.telefone, whatsapp=lead.whatsapp or "",
+            rating=lead.rating, reviews_count=lead.reviews_count,
+            fotos=lead.fotos or [], website=lead.website or "",
+            logo_url=lead.logo_url or "", concorrentes=[],
+            paleta_cores={"primaria": "#374151", "secundaria": "#f9fafb", "acento": "#6366f1"},
+        )
 
     score, motivos = _calcular_score(lead)
 

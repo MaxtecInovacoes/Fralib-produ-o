@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 import jwt
 import json
 import os
+from datetime import datetime, timedelta
 
 router = APIRouter(prefix='/api/superadmin', tags=['superadmin'])
 
@@ -286,7 +287,8 @@ async def impersonate(user_id: int, request: Request, db: Session = Depends(get_
 
         # Gerar token JWT para o usuario alvo
         token = jwt.encode(
-            {"sub": str(row[0]), "email": row[1], "role": row[2] or "user"},
+            {"sub": str(row[0]), "email": row[1], "role": row[2] or "user",
+             "exp": datetime.utcnow() + timedelta(hours=2)},
             SECRET_KEY,
             algorithm=ALGORITHM
         )

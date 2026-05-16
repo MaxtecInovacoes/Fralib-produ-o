@@ -51,6 +51,7 @@ import api_usage_endpoints
 import superadmin_endpoints
 import provider_keys_endpoints
 import provider_alerts_endpoints
+import agent_config_endpoints
 import falhas_endpoints
 import site_editor_endpoints
 import tracking_endpoints
@@ -114,6 +115,63 @@ async def lifespan(app):
         print("[Server] Migration PR15 OK (site_visitas + colunas ROI)")
     except Exception as e:
         print(f"[Server] Aviso: migration PR15 falhou: {e}")
+
+    # Migration: coluna registro_ip para anti-abuse de trials
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS registro_ip VARCHAR(45)"))
+            conn.commit()
+        print("[Server] Migration: registro_ip OK")
+    except Exception as e:
+        print(f"[Server] Aviso: migration registro_ip falhou: {e}")
+
+    # Migration: tabela leads_cache (cache global de leads entre tenants)
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS leads_cache (
+                    id SERIAL PRIMARY KEY,
+                    nome VARCHAR(255) NOT NULL,
+                    cidade VARCHAR(100) NOT NULL,
+                    segmento VARCHAR(100),
+                    telefone VARCHAR(30),
+                    rating NUMERIC(3,1),
+                    total_avaliacoes INTEGER DEFAULT 0,
+                    website VARCHAR(500),
+                    endereco VARCHAR(500),
+                    maps_url VARCHAR(500),
+                    fotos TEXT,
+                    servicos TEXT,
+                    horarios TEXT,
+                    logo_url VARCHAR(500),
+                    atributos TEXT,
+                    faixa_preco VARCHAR(50),
+                    reviews_json TEXT,
+                    criado_em TIMESTAMP DEFAULT NOW(),
+                    atualizado_em TIMESTAMP DEFAULT NOW()
+                )
+            """))
+            conn.execute(text("""
+                CREATE UNIQUE INDEX IF NOT EXISTS idx_leads_cache_nome_cidade
+                ON leads_cache (lower(nome), lower(cidade))
+            """))
+            conn.execute(text("""
+                CREATE INDEX IF NOT EXISTS idx_leads_cache_segmento_cidade
+                ON leads_cache (lower(segmento), lower(cidade))
+            """))
+            conn.commit()
+        print("[Server] Migration: leads_cache OK")
+    except Exception as e:
+        print(f"[Server] Aviso: migration leads_cache falhou: {e}")
+
+    # Migration: coluna sdr_horario_config para config de horário do SDR por tenant
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS sdr_horario_config TEXT"))
+            conn.commit()
+        print("[Server] Migration: sdr_horario_config OK")
+    except Exception as e:
+        print(f"[Server] Aviso: migration sdr_horario_config falhou: {e}")
 
     # Iniciar listener WhatsApp (recebe respostas dos leads e chama Bryan)
     try:
@@ -232,6 +290,7 @@ app.include_router(api_usage_endpoints.router)
 app.include_router(superadmin_endpoints.router)
 app.include_router(provider_keys_endpoints.router)
 app.include_router(provider_alerts_endpoints.router)
+app.include_router(agent_config_endpoints.router)
 app.include_router(falhas_endpoints.router)
 app.include_router(site_editor_endpoints.router)
 app.include_router(tracking_endpoints.router)

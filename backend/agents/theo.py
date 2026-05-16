@@ -1,7 +1,7 @@
 import sys
 sys.path.insert(0, "/root/fralib/backend/agents")
 """
-Designer PRD - Etapa 3: Com 4 Skills + Debate + Jina AI + Paleta Alex
+Theo - Estrategista / PRD + Jina AI Research
 """
 import os
 import json
@@ -631,9 +631,18 @@ Gere um PRD estruturado para o site seguindo:
 # ===== BRIEFING ESTRATEGICO =====
 
 def decidir_modo_visual(segmento: str) -> str:
-    """Modo visual: dark para nichos de impacto, light para nichos suaves."""
+    """Modo visual: dark para nichos de impacto/premium, light para nichos suaves/saúde."""
     _seg = segmento.lower().strip()
-    _dark_nichos = ["academia", "crossfit", "barbearia", "advocacia", "artes marciais", "musculacao", "box", "luta"]
+    _dark_nichos = [
+        "academia", "crossfit", "barbearia", "advocacia", "artes marciais",
+        "musculacao", "box", "luta", "tattoo", "tatuagem", "bar", "pub",
+        "cervejaria", "balada", "boate", "night", "rock", "metal",
+        "mecanica", "auto", "oficina", "moto", "burger", "hamburgueria",
+        "churrascaria", "steakhouse", "pizzaria", "gastronomia", "restaurante",
+        "tech", "tecnologia", "startup", "dev", "gaming", "esports",
+        "fotografia", "studio", "estudio", "musica", "audio", "podcast",
+        "arquitetura", "design", "agencia", "marketing", "consultoria",
+    ]
     if any(n in _seg for n in _dark_nichos):
         return "dark"
     return "light"
@@ -742,73 +751,3 @@ class TheoInput(BaseModel):
     instagram: Optional[str] = None
     site: Optional[str] = None
     jina_insights: Optional[str] = None
-
-
-def gerar_planta_baixa(input_data: TheoInput) -> DesignerPRD:
-    """Adapter function para compatibilidade com orquestrador"""
-    # Criar dados no formato esperado por gerar_prd_com_debate
-    dados_hunter = {
-        'nome': input_data.nome,
-        'cidade': input_data.cidade,
-        'segmento': input_data.segmento,
-        'telefone': input_data.telefone,
-        'whatsapp': input_data.whatsapp,
-        'instagram': input_data.instagram,
-        'site': input_data.site
-    }
-
-    # Briefing básico
-    briefing_theo = f"""Criar site para {input_data.nome}
-Segmento: {input_data.segmento}
-Cidade: {input_data.cidade}
-Rating: {input_data.rating}/100"""
-
-    # Debate result padrão
-    debate_result = {
-        'estilo_visual': 'moderno-minimalista',
-        'animacoes': ['fade-in', 'slide-up'],
-        'prioridades': ['conversao', 'seo-local']
-    }
-
-    # Cores por segmento (Alex sobrescreve com paleta real do logo)
-    modo_visual = decidir_modo_visual(input_data.segmento)
-    seg_lower = input_data.segmento.lower()
-    if any(s in seg_lower for s in ["academia", "crossfit", "gym", "fitness", "musculacao"]):
-        alex_colors = {"primary": "#1a1a2e", "secondary": "#16213e", "accent": "#e94560", "background": "#ffffff", "text": "#1f2937"}
-    elif any(s in seg_lower for s in ["barbearia", "barber"]):
-        alex_colors = {"primary": "#1a1a1a", "secondary": "#2d2d2d", "accent": "#c9a227", "background": "#ffffff", "text": "#1f2937"}
-    elif any(s in seg_lower for s in ["clinica", "medico", "odontologica", "dentista"]):
-        alex_colors = {"primary": "#0077b6", "secondary": "#f0f4f8", "accent": "#00b4d8", "background": "#ffffff", "text": "#1f2937"}
-    elif any(s in seg_lower for s in ["padaria", "confeitaria", "cafe"]):
-        alex_colors = {"primary": "#5c3d2e", "secondary": "#f5e6d3", "accent": "#e07b39", "background": "#ffffff", "text": "#1f2937"}
-    elif any(s in seg_lower for s in ["restaurante", "lanchonete"]):
-        alex_colors = {"primary": "#2d1b00", "secondary": "#f5e6d3", "accent": "#c9a227", "background": "#ffffff", "text": "#1f2937"}
-    else:
-        # Sem cores do Alex — gerar paleta baseada no segmento via harmonizador
-        from color_enforcer import harmonizar_paleta as _harm
-        _seg = (input_data.segmento or "").lower()
-        _seed_colors = {
-            "academia":    {"primary": "#1a3a2a", "accent": "#e85d04"},
-            "fitness":     {"primary": "#1a3a2a", "accent": "#e85d04"},
-            "crossfit":    {"primary": "#1a1a1a", "accent": "#f97316"},
-            "barbearia":   {"primary": "#1a1209", "accent": "#d4a017"},
-            "salao":       {"primary": "#2d1b2e", "accent": "#e879f9"},
-            "clinica":     {"primary": "#0c2340", "accent": "#0ea5e9"},
-            "estetica":    {"primary": "#2d1b2e", "accent": "#f472b6"},
-            "restaurante": {"primary": "#1a0a00", "accent": "#f59e0b"},
-            "padaria":     {"primary": "#2d1a00", "accent": "#f97316"},
-        }
-        _base = next((v for k, v in _seed_colors.items() if k in _seg), {"primary": "#1a2a3a", "accent": "#0ea5e9"})
-        alex_colors = _harm(_base)
-        alex_colors["secondary"] = "#f9fafb"
-        alex_colors["background"] = "#ffffff"
-        alex_colors["text"] = "#1f2937"
-
-    return gerar_prd_com_debate(
-        briefing_theo=briefing_theo,
-        dados_hunter=dados_hunter,
-        cidade=input_data.cidade,
-        segmento=input_data.segmento,
-        debate_result=debate_result,
-        alex_colors=alex_colors
-    )

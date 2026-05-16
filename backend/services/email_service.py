@@ -1,6 +1,10 @@
 import httpx
 import os
 from typing import Optional
+from dotenv import load_dotenv
+
+# Garantir que .env está carregado independente de quem importa
+load_dotenv(os.path.join(os.path.dirname(__file__), '..', '..', '.env'))
 
 RESEND_API_KEY = os.getenv("RESEND_API_KEY", "")
 FROM_EMAIL = os.getenv("FROM_EMAIL", "noreply@seunegociofralib.site")
