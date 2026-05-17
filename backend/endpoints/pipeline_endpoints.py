@@ -1556,52 +1556,26 @@ async def _executar_pipeline_a_partir_fase2(state, tenant_id, config):
             except Exception as _kwe:
                 logger.warning(f"[Pipeline] Keyword research erro: {_kwe}")
 
-        caio_input = CaioInput(
-            nome=state.lead_nome, cidade=state.lead_obj.lead.cidade,
-            segmento=state.lead_obj.lead.segmento,
-            telefone=state.lead_obj.lead.telefone or "",
-            whatsapp=state.lead_obj.lead.whatsapp or "",
-            rating=state.lead_obj.lead.rating or 0.0,
-            reviews_count=state.lead_obj.lead.total_avaliacoes or len(state.lead_obj.lead.reviews or []) or 0,
-            fotos=state.lead_obj.lead.fotos or [],
-            website=state.lead_obj.lead.website,
-            reprocessamento=True,  # Pula verificacao de segmento no Caio
+        # Reprocessamento: PULAR Caio — lead já foi qualificado antes
+        # Usar score/tier do banco (já qualificado anteriormente)
+        from agents.caio import CaioOutput
+        state.qualificacao_caio = CaioOutput(
+            qualificado=True,
+            qualificacao="QUENTE",
+            tier=state.lead_obj.tier or "STANDARD",
+            score=state.lead_obj.score or 50,
+            motivo="Reprocessamento — qualificação anterior mantida",
         )
-
-        def _run_caio():
-            r = qualificar_lead(caio_input)
-            logger.info(f"[Pipeline] Caio: {r.qualificacao}")
-            return r
-
-        loop = asyncio.get_event_loop()
-        with ThreadPoolExecutor(max_workers=1) as ex:
-            state.qualificacao_caio = await loop.run_in_executor(ex, _run_caio)
         # Alex DESATIVADO — fotos via Unsplash, paleta via paleta_nicho
         state.alex_result = None
-
-        logger.info(f"[Pipeline] Reprocessar: Caio={state.qualificacao_caio.tier if state.qualificacao_caio else 'N/A'}")
+        _log(f"  Caio: PULADO (reprocessamento) — tier={state.qualificacao_caio.tier}", "info")
 
         # Theo
-        _log("FASE 3: THEO", "info")
-        try:
-            from agents.theo import gerar_briefing_estrategico, TheoInput
-            theo_input = TheoInput(
-                nome=state.lead_nome, cidade=state.lead_obj.lead.cidade,
-                segmento=state.lead_obj.lead.segmento,
-                rating=state.lead_obj.lead.rating or 0.0,
-                reviews=list(state.lead_obj.lead.reviews or [])[:5],
-                website=state.lead_obj.lead.website or "",
-                telefone=state.lead_obj.lead.telefone or "",
-            )
-            _theo_fn2 = _gerar_briefing_agent if _THEO_AGENT else gerar_briefing_estrategico
-            state.briefing_theo = _theo_fn2(theo_input)
-            logger.info("[Pipeline] Theo: OK")
-        except Exception as e:
-            state.briefing_theo = f"Site para {state.lead_nome} em {state.lead_obj.lead.cidade}."
-            logger.warning(f"[Pipeline] Theo erro: {e}")
+        # Theo REMOVIDO — pipeline atual não usa mais
+        state.briefing_theo = f"Site para {state.lead_nome} em {state.lead_obj.lead.cidade}."
 
         # Jina insights
-        _log("FASE 4: JINA", "info")
+        _log("FASE 3: JINA", "info")
         try:
             state.jina_insights = pesquisar_referencias_jina(state.lead_obj.lead.segmento)
         except Exception as e:
@@ -1625,8 +1599,17 @@ async def _executar_pipeline_a_partir_fase2(state, tenant_id, config):
         _log("FASE 6: ARQUITETO MESTRE", "info")
         _seed = int(hashlib.md5(state.lead_nome.encode()).hexdigest()[:8], 16)
         random.seed(_seed)
+        # Refinar segmento pelo nome (ex: "churrascaria" no nome)
+        _nome_lower_r = state.lead_nome.lower()
+        _SUB_SEG_R = {"churrascaria": "churrascaria", "steakhouse": "churrascaria", "pizzaria": "pizzaria", "padaria": "padaria", "lanchonete": "lanchonete", "barbearia": "barbearia"}
+        for _kw_r, _seg_r in _SUB_SEG_R.items():
+            if _kw_r in _nome_lower_r and state.segmento != _seg_r:
+                _log(f"  Segmento refinado: {state.segmento} → {_seg_r}", "info")
+                state.segmento = _seg_r
+                break
         _seg = state.segmento or state.lead_obj.lead.segmento or "negocio local"
         _cid = state.lead_obj.lead.cidade or state.cidade or ""
+        _dark_mode = state.segmento in ("academia", "crossfit", "churrascaria", "barbearia")
         _prd_fn2 = _gerar_prd_agent if _ARQUITETO_AGENT else gerar_arquiteto_mestre_prd
         state.prd_arquiteto = _prd_fn2(
             dados_hunter=state.lead_raw_data,
@@ -1634,10 +1617,10 @@ async def _executar_pipeline_a_partir_fase2(state, tenant_id, config):
             segmento=_seg,
             jina_insights=state.jina_insights,
             briefing_theo=state.briefing_theo,
-
             caio_tier=state.qualificacao_caio.tier if state.qualificacao_caio else "STANDARD",
             caio_score=state.qualificacao_caio.score if state.qualificacao_caio else 0,
             caio_motivo=state.qualificacao_caio.motivo if state.qualificacao_caio else "",
+            dark_mode=_dark_mode,
             keyword_research=state.keyword_research,
         )
 
