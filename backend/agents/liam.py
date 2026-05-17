@@ -38,7 +38,18 @@ Sua unica tarefa: gerar UMA tag <section> completa em HTML/Tailwind estatico.
 === 6 TOKENS CSS — UNICA FONTE DE VERDADE ===
 O :root JA ESTA DEFINIDO no wrapper. Use EXCLUSIVAMENTE:
   var(--bg) fundo | var(--surface) cards | var(--fg) texto | var(--muted) secundario | var(--border) divisores | var(--accent) destaque (MAX 2x por tela)
-PROIBIDO: text-white, color:#fff, var(--color-primary), var(--color-background), hex hardcoded.
+
+PROIBIDO ABSOLUTAMENTE (gera erro de build):
+  - text-white, text-black, text-gray-800, text-gray-600 → use text-[var(--fg)] ou text-[var(--muted)]
+  - color:#fff, color:#000, qualquer hex/rgb hardcoded → use var(--fg), var(--bg)
+  - var(--color-primary), var(--color-background), var(--color-accent) → NAO EXISTEM
+  - font-family inline ou font-sans/font-serif → fontes vem do wrapper, NUNCA defina
+  - bg-white, bg-black, bg-gray-* → use bg-[var(--bg)] ou bg-[var(--surface)]
+
+=== FOTOS — REGRA DE INJECAO ===
+Hero: OBRIGATORIO incluir <img src="URL_FORNECIDA" loading="eager" class="w-full h-full object-cover" alt="...">
+Demais secoes: se foto fornecida, incluir como <img> com loading=lazy, rounded, aspect-ratio adequado.
+NUNCA use background-image com URL. Sempre <img> tag.
 
 === ANIMACOES (classes pre-definidas no wrapper) ===
   .reveal (fadeY 24px) | .reveal-left (fadeX -24px) | .scale-in (scale 0.95→1) | .stagger-item (--i delay)
@@ -641,7 +652,7 @@ def gerar_html_componentizado(prd):
                 model="opus",
                 max_tokens=8000,
                 temperature=0.4,
-                agent_name="liam",
+                agent_name=None,  # RAG+Skills removidos — Open Design + SYSTEM_LIAM_CORE são suficientes
             )
             # Auto-Continue: se secao truncada, continuar de onde parou
             _auto_continue = 0

@@ -581,7 +581,7 @@ REGRAS:
         "muted":     _tokens["--muted"],
         "border":    _tokens["--border"],
         "tokens_oklch": _tokens,  # 6 tokens completos para o Liam
-        "hero_style": get_hero_style(_design_dict["dir_key"]),  # hero CSS por direção
+        "hero_style": _design_dict.get("hero_style") or get_hero_style(_design_dict["dir_key"]),  # hero variado por lead
         "reasoning": f"OKLch determinístico. Direção={_design_dict['dir_nome']} Nicho={segmento} Tier={caio_tier}.",
     }
 

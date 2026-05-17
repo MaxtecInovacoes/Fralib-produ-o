@@ -298,7 +298,35 @@ def get_design_context(segmento: str, nome_negocio: str = "", tier: str = "STAND
     tokens = dict(d["tokens"])
     if dark_mode:
         tokens.update(DARK_OVERLAY)
-    anim = ANIMATION_PROFILES[d["animation"]]
+    anim = dict(ANIMATION_PROFILES[d["animation"]])  # copia pra não mutar original
+
+    # Variação de animação por lead — mesmo perfil base, tipos diferentes
+    _anim_hero_types = ["fade-up", "slide-up", "scale-in"]
+    _anim_card_types = ["fade-up", "slide-left", "scale-in", "fade-up"]
+    if nome_negocio:
+        _anim_seed = int(_hlib.md5(("anim_" + nome_negocio).encode()).hexdigest(), 16)
+        _anim_rng = _rnd.Random(_anim_seed)
+        anim["hero_type"] = _anim_rng.choice(_anim_hero_types)
+        anim["card_type"] = _anim_rng.choice(_anim_card_types)
+
+    # Variação de hero layout por lead — mesmo nicho, hero diferente
+    _hero_base = get_hero_style(dir_key)
+    _hero_layouts_pool = ["hero-split", "hero-center", "hero-fullscreen", "hero-diagonal"]
+    if nome_negocio:
+        _hero_seed = int(_hlib.md5(("hero_" + nome_negocio).encode()).hexdigest(), 16)
+        _hero_rng = _rnd.Random(_hero_seed)
+        # Manter layout compatível com a direção (dark = fullscreen/center, light = split/center/diagonal)
+        _bg_lightness = 100
+        import re as _re_lgt
+        _m_lgt = _re_lgt.search(r"oklch\((\d+)%", tokens.get("--bg", "oklch(100% 0.0 0)"))
+        if _m_lgt:
+            _bg_lightness = int(_m_lgt.group(1))
+        if _bg_lightness < 30:
+            _hero_pool = ["hero-fullscreen", "hero-center", "hero-diagonal"]
+        else:
+            _hero_pool = ["hero-split", "hero-center", "hero-diagonal", "hero-fullscreen"]
+        _hero_base["layout"] = _hero_rng.choice(_hero_pool)
+
     return {
         "dir_key":       dir_key,
         "dir_nome":      d["nome"],
@@ -308,6 +336,7 @@ def get_design_context(segmento: str, nome_negocio: str = "", tier: str = "STAND
         "vibe":          d["vibe"],
         "animation":     d["animation"],
         "animation_profile": anim,
+        "hero_style":    _hero_base,
         "components":    nicho["components"],
         "tom":           nicho["tom"],
         "seo":           nicho["seo"],

@@ -493,35 +493,10 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
             except Exception as e:
                 state.jina_insights = ""
                 logger.warning(f"[Pipeline] Jina AI erro (sem fallback): {e}")
-        _progress(4, "Estratégia do site...")
-        _log("FASE 4: THEO", "info")
-        _theo_cached = get_dados_agente(state.pipeline_id, "theo")
-        if _theo_cached and _theo_cached.get("briefing"):
-            state.briefing_theo = _theo_cached["briefing"]
-            _log(f"  Briefing: ♻️ retomado do checkpoint ({len(state.briefing_theo)} chars)", "success")
-        else:
-            try:
-                theo_input = TheoInput(
-                    nome=state.lead_nome, cidade=state.lead_obj.lead.cidade,
-                    segmento=state.segmento, telefone=state.lead_obj.lead.telefone or "",
-                    whatsapp=state.lead_obj.lead.whatsapp or "",
-                    rating=float(state.lead_obj.lead.rating or 0), jina_insights=state.jina_insights
-                )
-                _theo_fn = _gerar_briefing_agent if _THEO_AGENT else gerar_briefing_estrategico
-                state.briefing_theo = tentar(
-                    lambda: _theo_fn(theo_input),
-                    fase="theo", max_attempts=3, base_delay=2.0,
-                    log_fn=_log,
-                )
-                _log(f"  Briefing: {len(state.briefing_theo)} chars", "success")
-                logger.info("[Pipeline] Theo: OK")
-                if _validar_output(state.briefing_theo, min_chars=100):
-                    salvar_checkpoint(state.pipeline_id, "theo", {"briefing": state.briefing_theo})
-                else:
-                    _log("  ⚠️ Theo output truncado — não salvou checkpoint", "warning")
-            except Exception as e:
-                state.briefing_theo = ""
-                logger.warning(f"[Pipeline] Theo erro (sem fallback): {e}")
+        _progress(4, "Preparando design...")
+        _log("FASE 4: DESIGN (Theo aposentado — ArquitetoMestre faz tudo)", "info")
+        # Theo APOSENTADO — briefing gerado inline (ArquitetoMestre já monta brief próprio)
+        state.briefing_theo = f"Site premium para {state.lead_nome} ({state.segmento}) em {state.cidade}. Rating: {state.lead_obj.lead.rating or 0}/5."
         _progress(5, "Buscando fotos...")
         _log("FASE 5: PALETA + UNSPLASH", "info")
         # Unsplash — fotos de alta qualidade por nicho
