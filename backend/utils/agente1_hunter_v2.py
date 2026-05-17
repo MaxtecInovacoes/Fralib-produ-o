@@ -483,8 +483,11 @@ async def buscar_leads_google_maps(
     leads_encontrados = []
 
     # FASE 2: Loop LAZY — detalhe de 1, qualifica, aceita/rejeita
+    # Buscar mais leads que o limite pra poder ordenar por score depois
+    _max_avaliar = max(limite * 3, 5)  # avaliar pelo menos 5 pra ter opção
+    _avaliados = 0
     for dados in cards_raw:
-        if len(leads_encontrados) >= limite:
+        if _avaliados >= _max_avaliar:
             break
 
         nome = dados.get('nome', '').strip()
@@ -574,19 +577,24 @@ async def buscar_leads_google_maps(
             )
 
             leads_encontrados.append(lead_qualificado)
+            _avaliados += 1
             print(f"[Hunter V2] APROVADO {lead.nome} | Score: {resultado['score']} | Tier: {resultado['tier']}")
 
         except Exception as e:
             print(f"[Hunter V2] ERRO ao processar {dados.get('nome', '?')}: {e}")
+            _avaliados += 1
             continue
 
     print(f"[Hunter V2] Total: {len(leads_encontrados)} leads coletados (lazy, {len(cards_raw)} cards avaliados)")
+
+    # Ordenar por score (maior primeiro) — prioriza leads com reviews e dados completos
+    leads_encontrados.sort(key=lambda lq: lq.score, reverse=True)
 
     # Salvar no cache global pra próximos tenants
     if leads_encontrados:
         _salvar_cache_leads(leads_encontrados, segmento, cidade)
 
-    return leads_encontrados
+    return leads_encontrados[:limite]
 
 # ===== TESTE =====
 
