@@ -74,6 +74,16 @@ _pipeline_calls = _defaultdict(list)
 _PIPELINE_MAX_CALLS = 5
 _PIPELINE_WINDOW = 60
 
+# Cooldown por plano (segundos entre pipelines)
+_COOLDOWN_POR_PLANO = {
+    'trial': 0,       # trial: bloqueado por créditos (1 total), não precisa cooldown
+    'starter': 3600,  # 1 hora
+    'pro': 1800,      # 30 minutos
+    'beta': 1800,     # beta = pro
+    'free': 0,
+}
+_last_pipeline_finish = _defaultdict(float)  # tenant_id -> timestamp do último pipeline concluído
+
 def _check_rate_limit(user_id: str):
     now = time.time()
     calls = [t for t in _pipeline_calls[user_id] if now - t < _PIPELINE_WINDOW]
@@ -82,6 +92,25 @@ def _check_rate_limit(user_id: str):
         raise HTTPException(429, f"Rate limit: max {_PIPELINE_MAX_CALLS} pipelines/min.")
     calls.append(now)
     _pipeline_calls[user_id] = calls
+
+
+def _check_cooldown(db, tenant_id: int):
+    """Verifica cooldown entre pipelines baseado no plano do usuário."""
+    row = db.execute(text("SELECT plano FROM users WHERE id=:id"), {"id": tenant_id}).fetchone()
+    plano = (row[0] if row else "trial") or "trial"
+    cooldown_secs = _COOLDOWN_POR_PLANO.get(plano, 3600)
+    if cooldown_secs <= 0:
+        return
+    last_finish = _last_pipeline_finish.get(tenant_id, 0)
+    elapsed = time.time() - last_finish
+    if elapsed < cooldown_secs:
+        restante = int(cooldown_secs - elapsed)
+        minutos = restante // 60
+        segundos = restante % 60
+        raise HTTPException(
+            429,
+            f"Aguarde {minutos}min {segundos}s antes de rodar outro pipeline. Plano {plano}: intervalo de {cooldown_secs // 60} minutos entre execuções."
+        )
 
 router = APIRouter(prefix='/api/pipeline', tags=['pipeline'])
 logger = logging.getLogger('uvicorn')
@@ -997,6 +1026,13 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
         _log("PIPELINE v2 CONCLUIDO - FraLibState OK", "success")
         logger.info("[Pipeline] CONCLUIDO - 7 AGENTES!")
 
+        # Descontar 1 crédito do usuário
+        from database import SessionLocal
+        with SessionLocal() as _db_cred:
+            consume_tokens(_db_cred, tenant_id, 1, f"Pipeline concluido: {state.lead_nome}")
+        # Registrar timestamp pra cooldown
+        _last_pipeline_finish[tenant_id] = time.time()
+
         # Buscar leads extras em background pra fila de processamento
         _qtd_extra = config.get("quantidade", 1) - 1
         if _qtd_extra > 0:
@@ -1294,6 +1330,7 @@ async def iniciar_pipeline(
         raise HTTPException(400, "Pipeline ja esta rodando")
     update_pipeline_state(db, tenant_id, rodando=True, pausado=False, config=config_limpo)
     _check_rate_limit(str(tenant_id))
+    _check_cooldown(db, tenant_id)
 
     # Verificar se WhatsApp está conectado (não bloqueia, apenas seta flag)
     _wpp_conectado = is_tenant_connected(f"fralib_user_{tenant_id}")
