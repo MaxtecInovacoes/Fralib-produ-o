@@ -285,7 +285,7 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
         leads = await buscar_leads_google_maps(
             cidade=state.cidade,
             segmento=state.segmento,
-            limite=1,
+            limite=5,  # Buscar 5 pra ter margem se Caio rejeitar os primeiros
             leads_existentes=_leads_existentes,
         )
         _kw_future.result(timeout=30)  # aguarda keyword research terminar
