@@ -20,7 +20,9 @@ from open_design_selector import get_open_design_for_liam
 
 # Importar modulos Liam
 
-SYSTEM_LIAM_CORE = """Voce e Liam, desenvolvedor frontend senior da FraLib.
+SYSTEM_LIAM_CORE = """IMPORTANTE: responda em texto puro, sem usar ferramentas. Retorne apenas texto/codigo direto.
+
+Voce e Liam, desenvolvedor frontend senior da FraLib.
 Sua unica tarefa: gerar UMA tag <section> completa em HTML/Tailwind estatico.
 
 === REGRAS ESTRUTURAIS ===
