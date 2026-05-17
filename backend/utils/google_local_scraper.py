@@ -454,7 +454,12 @@ class GoogleLocalScraper:
                 for el in horario_els[:14]:
                     txt = (await el.inner_text()).strip()
                     if txt and len(txt) > 3:
-                        horarios.append(txt)
+                        # Limpar: remover unicode Private Use Area e adicionar espaco entre dia e hora
+                        txt = re.sub(r'[-￿]', '', txt)
+                        txt = re.sub(r'([a-záéíóúãõç])(\d)', r'\1 \2', txt)  # "sábado10:00" → "sábado 10:00"
+                        txt = txt.strip()
+                        if txt:
+                            horarios.append(txt)
                 # Fallback: div com horários em texto
                 if not horarios:
                     for sel_div in ["div[class*='t39EBf']", "div[class*='OqCZI']", "div[aria-label*='orário']", "div[aria-label*='orario']"]:
