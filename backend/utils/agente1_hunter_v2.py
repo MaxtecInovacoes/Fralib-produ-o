@@ -483,11 +483,9 @@ async def buscar_leads_google_maps(
     leads_encontrados = []
 
     # FASE 2: Loop LAZY — detalhe de 1, qualifica, aceita/rejeita
-    # Buscar mais leads que o limite pra poder ordenar por score depois
-    _max_avaliar = max(limite * 3, 5)  # avaliar pelo menos 5 pra ter opção
-    _avaliados = 0
+    # Para no primeiro lead com score suficiente E reviews reais
     for dados in cards_raw:
-        if _avaliados >= _max_avaliar:
+        if len(leads_encontrados) >= limite:
             break
 
         nome = dados.get('nome', '').strip()
@@ -566,6 +564,20 @@ async def buscar_leads_google_maps(
             resultado = calcular_score(lead, cidade)
             dados_suficientes, erros = validar_dados_minimos(lead)
 
+            # Preferir leads com reviews reais (mínimo 3 pra ter depoimentos no site)
+            _has_reviews = lead.reviews and len(lead.reviews) >= 3
+            if not _has_reviews and len(leads_encontrados) == 0:
+                # Guardar como fallback mas continuar buscando um com reviews
+                if not hasattr(buscar_leads_google_maps, '_fallback'):
+                    buscar_leads_google_maps._fallback = []
+                buscar_leads_google_maps._fallback.append(LeadQualificado(
+                    lead=lead, score=resultado['score'], tier=resultado['tier'],
+                    razoes=resultado['razoes'], sinais=resultado['sinais'],
+                    presenca_digital=resultado['presenca_digital'], dados_suficientes=dados_suficientes
+                ))
+                print(f"[Hunter V2] SKIP sem reviews: {lead.nome} ({len(lead.reviews or [])} reviews) — guardado como fallback")
+                continue
+
             lead_qualificado = LeadQualificado(
                 lead=lead,
                 score=resultado['score'],
@@ -577,15 +589,20 @@ async def buscar_leads_google_maps(
             )
 
             leads_encontrados.append(lead_qualificado)
-            _avaliados += 1
             print(f"[Hunter V2] APROVADO {lead.nome} | Score: {resultado['score']} | Tier: {resultado['tier']}")
 
         except Exception as e:
             print(f"[Hunter V2] ERRO ao processar {dados.get('nome', '?')}: {e}")
-            _avaliados += 1
             continue
 
     print(f"[Hunter V2] Total: {len(leads_encontrados)} leads coletados (lazy, {len(cards_raw)} cards avaliados)")
+
+    # Se nenhum lead com reviews foi encontrado, usar fallback
+    if not leads_encontrados and hasattr(buscar_leads_google_maps, '_fallback') and buscar_leads_google_maps._fallback:
+        leads_encontrados = buscar_leads_google_maps._fallback
+        print(f"[Hunter V2] Usando {len(leads_encontrados)} leads fallback (sem reviews)")
+    # Limpar fallback
+    buscar_leads_google_maps._fallback = []
 
     # Ordenar por score (maior primeiro) — prioriza leads com reviews e dados completos
     leads_encontrados.sort(key=lambda lq: lq.score, reverse=True)
