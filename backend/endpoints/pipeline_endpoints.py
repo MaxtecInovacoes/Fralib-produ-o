@@ -1329,7 +1329,7 @@ async def get_status(db: Session = Depends(get_db), usuario: dict = Depends(get_
         "rodando": state["rodando"],
         "pausado": state["pausado"],
         "config": state["config"],
-        "iniciado_em": state.get("updated_at").isoformat() if state.get("updated_at") else None,
+        "iniciado_em": state.get("iniciado_em").isoformat() if state.get("iniciado_em") else None,
         "totalLeads": total_leads,
         "totalSites": total_sites,
         "totalEnviados": total_enviados,

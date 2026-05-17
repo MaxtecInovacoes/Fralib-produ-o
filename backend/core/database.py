@@ -451,7 +451,7 @@ def inicializar_database():
 def get_pipeline_state(db: Session, tenant_id: int):
     """Retorna o estado do pipeline para um tenant especifico"""
     query = text("""
-        SELECT rodando, pausado, config, updated_at
+        SELECT rodando, pausado, config, updated_at, iniciado_em
         FROM public.pipeline_state
         WHERE tenant_id = :tenant_id
     """)
@@ -462,15 +462,16 @@ def get_pipeline_state(db: Session, tenant_id: int):
             "rodando": result[0],
             "pausado": result[1],
             "config": result[2] or {},
-            "updated_at": result[3]
+            "updated_at": result[3],
+            "iniciado_em": result[4]
         }
     else:
-        # Estado padrão se não existir
         return {
             "rodando": False,
             "pausado": False,
             "config": {},
-            "updated_at": None
+            "updated_at": None,
+            "iniciado_em": None
         }
 
 def update_pipeline_state(db: Session, tenant_id: int, rodando=None, pausado=None, config=None):
@@ -487,6 +488,10 @@ def update_pipeline_state(db: Session, tenant_id: int, rodando=None, pausado=Non
         if rodando is not None:
             updates.append("rodando = :rodando")
             params["rodando"] = rodando
+            if rodando:
+                updates.append("iniciado_em = NOW()")
+            else:
+                updates.append("iniciado_em = NULL")
 
         if pausado is not None:
             updates.append("pausado = :pausado")
@@ -504,8 +509,8 @@ def update_pipeline_state(db: Session, tenant_id: int, rodando=None, pausado=Non
     else:
         # INSERT
         query = text("""
-            INSERT INTO public.pipeline_state (tenant_id, rodando, pausado, config, updated_at)
-            VALUES (:tenant_id, :rodando, :pausado, :config, NOW())
+            INSERT INTO public.pipeline_state (tenant_id, rodando, pausado, config, updated_at, iniciado_em)
+            VALUES (:tenant_id, :rodando, :pausado, :config, NOW(), CASE WHEN :rodando THEN NOW() ELSE NULL END)
         """)
         db.execute(query, {
             "tenant_id": tenant_id,
