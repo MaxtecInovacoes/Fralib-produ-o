@@ -680,7 +680,10 @@ def gerar_html_componentizado(prd):
     _hero_overlay = _hero_style_prd.get("overlay") or (_dc_tokens.get("hero_style") or {}).get("overlay", "rgba(0,0,0,0.55)")
     _hero_img_style = _hero_style_prd.get("img_style") or (_dc_tokens.get("hero_style") or {}).get("img_style", "object-fit:cover;")
 
+    import threading
+
     _liam_model = "sonnet"
+    _thread_local = threading.local()
 
     def _gerar_secao(s):
         """Gera uma secao individual."""
@@ -755,7 +758,7 @@ def gerar_html_componentizado(prd):
             resposta_secao = call_claude(
                 system=system_liam,
                 user=prompt_secao,
-                model=_liam_model,
+                model=getattr(_thread_local, 'model', _liam_model),
                 max_tokens=8000,
                 temperature=0.4,
                 agent_name=None,
@@ -823,33 +826,52 @@ def gerar_html_componentizado(prd):
             print("[Liam] Erro " + nome_s + ": " + str(_e)[:80])
             return nome_s, None
 
-    # Executar secoes SEQUENCIALMENTE — gc.collect() entre cada para liberar RAM
+    # Executar secoes em PARALELO com rate limit (max 3 concurrent)
     import gc
     import time as _time_liam
-    print("[Liam] Iniciando geracao SEQUENCIAL de " + str(len(_secoes_fonte)) + " secoes...")
-    for _s_seq in _secoes_fonte:
-        _sd_seq = _s_seq.dict() if hasattr(_s_seq, "dict") else (_s_seq if isinstance(_s_seq, dict) else {})
-        _nome_seq = _sd_seq.get("name", "")
-        _max_retries_secao = 3
-        for _retry_secao in range(_max_retries_secao):
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+
+    _rate_semaphore = threading.Semaphore(3)
+    _rate_delay = 1.0  # segundos entre submits pra evitar 429
+
+    def _gerar_com_retry(s_item):
+        """Gera seção com retry e escalação pra Opus."""
+        _sd = s_item.dict() if hasattr(s_item, "dict") else (s_item if isinstance(s_item, dict) else {})
+        _nome = _sd.get("name", "")
+        _max_retries = 3
+        for _retry in range(_max_retries):
             try:
-                if _retry_secao >= 1:
-                    _liam_model = "opus"
-                    print(f"[Liam] {_nome_seq}: escalando para Opus (retry {_retry_secao})")
-                else:
-                    _liam_model = "sonnet"
-                _nome_resultado, _html_resultado = _gerar_secao(_s_seq)
-                if _html_resultado:
-                    break  # sucesso
-                if _retry_secao < _max_retries_secao - 1:
-                    print(f"[Liam] {_nome_seq}: retry {_retry_secao + 1}/{_max_retries_secao} (resposta vazia)")
+                with _rate_semaphore:
+                    if _retry >= 1:
+                        _thread_local.model = "opus"
+                        print(f"[Liam] {_nome}: escalando para Opus (retry {_retry})")
+                    else:
+                        _thread_local.model = "sonnet"
+                    _nome_r, _html_r = _gerar_secao(s_item)
+                if _html_r:
+                    return _nome_r, _html_r
+                if _retry < _max_retries - 1:
+                    print(f"[Liam] {_nome}: retry {_retry + 1}/{_max_retries} (resposta vazia)")
                     _time_liam.sleep(2)
             except Exception as _fe:
-                print("[Liam] Erro na secao " + _nome_seq + ": " + str(_fe)[:80])
-                if _retry_secao < _max_retries_secao - 1:
+                print("[Liam] Erro na secao " + _nome + ": " + str(_fe)[:80])
+                if _retry < _max_retries - 1:
                     _time_liam.sleep(2)
             finally:
                 gc.collect()
+        return _nome, None
+
+    print("[Liam] Iniciando geracao PARALELA de " + str(len(_secoes_fonte)) + " secoes (max 3 concurrent)...")
+    with ThreadPoolExecutor(max_workers=3) as _executor:
+        _futures = []
+        for _s_par in _secoes_fonte:
+            _futures.append(_executor.submit(_gerar_com_retry, _s_par))
+            _time_liam.sleep(_rate_delay)
+        for _fut in as_completed(_futures):
+            try:
+                _fut.result()
+            except Exception as _e:
+                print(f"[Liam] Thread erro: {str(_e)[:80]}")
 
     # Montar html_final na ORDEM ORIGINAL do PRD
     html_final = ""  # Reset — evitar duplicação com pre-populate do checkpoint
