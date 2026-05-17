@@ -112,7 +112,7 @@ HTML ORIGINAL:
         model="sonnet",
         max_tokens=8000,
         temperature=0.1,
-        agent_name="liam_fixer",
+        agent_name=None,  # Sem RAG/Skills — correção mecânica
     )
 
     # Limpar

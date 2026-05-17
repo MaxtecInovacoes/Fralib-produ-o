@@ -9,8 +9,8 @@ import re
 import json
 sys.path.insert(0, "/root/fralib/backend/agents")
 
-# Managed Agent: validação + auto-correção por seção (LIAM_AGENT_LOOP=1)
-_LIAM_AGENT_LOOP = os.getenv("LIAM_AGENT_LOOP", "0") == "1"
+# Managed Agent: validação + auto-correção por seção (sempre ativo)
+_LIAM_AGENT_LOOP = True
 
 from pydantic import BaseModel, Field
 from typing import Optional, List, Dict, Any
