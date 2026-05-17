@@ -1,10 +1,15 @@
 import os
+import sys
 import requests
 import json
 import time as _time
 import threading as _threading
 from collections import defaultdict as _defaultdict
 from dotenv import load_dotenv
+
+_services_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "services"))
+if _services_dir not in sys.path:
+    sys.path.insert(0, _services_dir)
 
 
 class RateLimitError(Exception):
@@ -139,6 +144,13 @@ else:
 
 ANTHROPIC_API_KEY = os.getenv('ANTHROPIC_API_KEY')
 ANTHROPIC_BASE_URL = os.getenv('ANTHROPIC_BASE_URL', 'https://api.aibee.cloud')
+
+
+def _llm_timeout():
+    """Timeout de rede configuravel para evitar bloqueio longo em shutdown."""
+    connect = float(os.environ.get("LLM_CONNECT_TIMEOUT", "10"))
+    read = float(os.environ.get("LLM_READ_TIMEOUT", "180"))
+    return (connect, read)
 
 # Contexto de usuario ativo (setado pelo pipeline antes de rodar)
 _current_user_id = None
@@ -389,7 +401,7 @@ def call_claude(system, user, model='opus', max_tokens=4000, temperature=0.7, ag
     MAX_ATTEMPTS = 5  # Com 1 key, precisa mais tentativas (espera cooldown)
     for _llm_attempt in range(1, MAX_ATTEMPTS + 1):
         _enforce_call_spacing()
-        response = requests.post(url, headers=headers, json=payload, timeout=600)
+        response = requests.post(url, headers=headers, json=payload, timeout=_llm_timeout())
         if response.status_code == 429:
             cd = _ia.parse_cooldown_from_response(429, dict(response.headers)) if _ia else 60
             if _ia and _key_id:
@@ -494,7 +506,7 @@ def call_claude(system, user, model='opus', max_tokens=4000, temperature=0.7, ag
             payload_retry['system'] = payload_retry['system'][0]['text'] if payload_retry['system'] else ''
         # Headers sem prompt-caching
         headers_retry = {k: v for k, v in headers.items() if 'beta' not in k.lower()}
-        response2 = requests.post(url, headers=headers_retry, json=payload_retry, timeout=600)
+        response2 = requests.post(url, headers=headers_retry, json=payload_retry, timeout=_llm_timeout())
         response2.raise_for_status()
         data = response2.json()
         stop_reason = data.get('stop_reason', '?')
@@ -588,7 +600,7 @@ def call_claude_structured(system, user, tool_name, tool_description, input_sche
         _ia = None
 
     for _attempt in range(1, 4):
-        response = requests.post(url, headers=headers, json=payload, timeout=600)
+        response = requests.post(url, headers=headers, json=payload, timeout=_llm_timeout())
         if response.status_code == 429:
             cd = _ia.parse_cooldown_from_response(429, dict(response.headers)) if _ia else 60
             if _ia and _key_id:

@@ -127,6 +127,26 @@ def clean_json(text: str) -> str:
     return max(candidates, key=len)
 
 
+def _validar_prd_minimo(prd: DesignerPRD) -> None:
+    """Falha cedo se o PRD vier sem contrato minimo para o Liam."""
+    if not prd.business_name:
+        raise ValueError("PRD invalido: business_name vazio")
+    if not prd.sections or len(prd.sections) < 4:
+        raise ValueError("PRD invalido: sections insuficientes")
+    nomes = {str(s.name).lower() for s in prd.sections}
+    obrigatorias = {"hero", "sobre", "servicos", "contato"}
+    faltando = sorted(obrigatorias - nomes)
+    if faltando:
+        raise ValueError("PRD invalido: secoes obrigatorias ausentes: " + ", ".join(faltando))
+    if not prd.typography:
+        raise ValueError("PRD invalido: typography vazio")
+    if not prd.color_palette:
+        raise ValueError("PRD invalido: color_palette vazio")
+    for campo in ("primary", "background", "text", "accent"):
+        if not getattr(prd.color_palette, campo, None):
+            raise ValueError(f"PRD invalido: color_palette.{campo} vazio")
+
+
 
 def _buscar_google_suggest(segmento: str, cidade: str) -> list:
     """Busca termos reais do Google Suggest para o nicho/cidade."""
@@ -229,6 +249,16 @@ Para cada secao (hero, sobre, servicos, depoimentos, localizacao, contato, foote
 Se reviews_list estiver vazio, a secao depoimentos deve ter "omitir": true no objeto da secao.
 
 RESTRICAO TECNICA ABSOLUTA: O destino final e HTML/Tailwind ESTATICO puro. E ESTRITAMENTE PROIBIDO solicitar React, Vue, JSX, componentes funcionais, hooks, useState, npm install ou qualquer biblioteca JS complexa. O Liam gera apenas HTML + Tailwind CDN + Vanilla JS."""
+
+SYSTEM_COPY_MARKDOWN = """Voce e o Copywriter Senior da FraLib. Sua unica funcao e escrever copy especifica para secoes de sites locais.
+
+REGRAS ABSOLUTAS:
+1. Retorne APENAS Markdown estruturado no formato pedido. Nenhum JSON.
+2. Nao use code blocks.
+3. Use APENAS dados reais fornecidos. NUNCA invente nomes, enderecos, telefones ou depoimentos.
+4. Copy de cada secao deve ser especifica para o negocio, sem frases genericas intercambiaveis.
+5. NUNCA mencione precos, valores ou mensalidades.
+6. O destino final e HTML/Tailwind ESTATICO puro. Nao solicite React, Vue, JSX, hooks, npm install ou biblioteca JS complexa."""
 
 
 import hashlib as _hashlib_am
@@ -455,23 +485,43 @@ REVIEWS REAIS:
 SECOES A GERAR: {", ".join(_secoes_nomes)}
 {"IMPORTANTE: secao depoimentos tem reviews reais — use-os." if _reviews_has else "IMPORTANTE: secao depoimentos — adicione omitir:true pois nao ha reviews."}
 
-Retorne JSON com EXATAMENTE esta estrutura:
-{{
-  "sections": [
-    {{
-      "name": "hero",
-      "layout_type": "{next((s.get('layout_type','hero-split') for s in _sections_estrutura if s.get('name')=='hero'), 'hero-split')}",
-      "required": true,
-      "copy": {{
-        "h1": "titulo principal com cidade",
-        "subtitulo": "subtitulo persuasivo",
-        "cta": "texto do botao CTA",
-        "eyebrow": "tag acima do h1"
-      }}
-    }},
-    ... (uma entrada por secao)
-  ]
-}}
+Retorne MARKDOWN ESTRUTURADO com EXATAMENTE este formato:
+
+## hero
+h1: titulo principal com cidade
+subtitulo: subtitulo persuasivo
+cta: texto do botao CTA
+eyebrow: tag acima do h1
+
+## sobre
+h2: titulo da secao
+body: texto curto e especifico
+cta: texto do botao CTA
+
+## servicos
+h2: titulo da secao
+body: texto curto e especifico
+items: lista curta dos servicos reais, separados por ponto e virgula
+cta: texto do botao CTA
+
+## depoimentos
+omitir: {"false" if _reviews_has else "true"}
+h2: titulo da secao
+body: texto curto, usando apenas reviews reais quando existirem
+
+## faq
+h2: titulo da secao
+body: perguntas e respostas curtas baseadas no contexto real
+
+## localizacao
+h2: titulo da secao
+body: texto com endereco real quando disponivel
+cta: texto do botao CTA
+
+## contato
+h2: titulo da secao
+body: texto com telefone real quando disponivel
+cta: texto do botao CTA
 REGRAS CRAFT (obrigatorias):
 {_craft_ctx}
 
@@ -481,10 +531,11 @@ REGRAS:
 - H1 OBRIGATORIO: deve ter 8+ palavras com beneficio + cidade. Exemplo: "Nutricao personalizada para sua saude em {cidade}". NUNCA apenas o nome do negocio.
 - Telefone real: {_tel}
 - Copy especifico para {_nome}, nunca generico
-- JSON APENAS. Sem markdown."""
+- No campo omitir, use exatamente true ou false.
+- MARKDOWN APENAS. Sem JSON. Sem code blocks."""
 
     print(f"[ArquitetoMestre] Bloco 2: copy para {len(_secoes_nomes)} secoes...")
-    _resp2 = call_claude(system=SYSTEM_ARQUITETO, user=prompt_bloco2, model="sonnet", max_tokens=6000, temperature=0.4, agent_name="arquiteto_mestre")
+    _resp2 = call_claude(system=SYSTEM_COPY_MARKDOWN, user=prompt_bloco2, model="sonnet", max_tokens=6000, temperature=0.4, agent_name="arquiteto_mestre")
     _resp2 = _re_ctrl.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f]', ' ', _resp2)
     _dados2 = parse_bloco2_with_fallback(_resp2)
     if _dados2 and _dados2.get("sections"):
@@ -594,20 +645,24 @@ REGRAS:
     dados.setdefault("schema_org_types", ["LocalBusiness"])
     dados["dark_mode"] = dark_mode
 
-    # Se dados nao tem sections (JSON truncado/mal formatado), fazer segunda chamada focada
+    # Se dados nao tem sections, fazer segunda chamada focada em Markdown estruturado
     if not dados.get('sections') or not isinstance(dados.get('sections'), list) or len(dados.get('sections', [])) == 0:
-        print(f"[ArquitetoMestre] JSON sem sections — segunda chamada focada")
+        print(f"[ArquitetoMestre] Markdown sem sections — segunda chamada focada")
         _prompt_retry = (
-            f"Gere APENAS o JSON do site para: {dados_hunter.get('nome', '')} em {cidade} ({segmento}).\n"
+            f"Gere APENAS MARKDOWN ESTRUTURADO para o site de: {dados_hunter.get('nome', '')} em {cidade} ({segmento}).\n"
             f"Telefone: {dados_hunter.get('telefone', '')} | Rating: {dados_hunter.get('rating', 0)}/5 | Tier: {caio_tier}\n"
-            f"Retorne JSON valido com estas chaves obrigatorias:\n"
-            f"business_name, segmento, sections (lista com hero/sobre/servicos/depoimentos/faq/localizacao/contato), "
-            f"color_palette, typography, tokens_oklch, layout_type, instrucao_criativa_para_dev\n"
-            f"Cada section: name, layout_type, copy (h1/h2/subtitulo/cta/body conforme o tipo).\n"
-            f"JSON APENAS, sem markdown, sem explicacao."
+            f"Retorne as secoes em markdown no formato:\n"
+            f"## hero\nh1: ...\nsubtitulo: ...\ncta: ...\neyebrow: ...\n\n"
+            f"## sobre\nh2: ...\nbody: ...\ncta: ...\n\n"
+            f"## servicos\nh2: ...\nbody: ...\nitems: ...\ncta: ...\n\n"
+            f"## depoimentos\nomitir: true|false\nh2: ...\nbody: ...\n\n"
+            f"## faq\nh2: ...\nbody: ...\n\n"
+            f"## localizacao\nh2: ...\nbody: ...\ncta: ...\n\n"
+            f"## contato\nh2: ...\nbody: ...\ncta: ...\n"
+            f"MARKDOWN APENAS, sem JSON, sem explicacao."
         )
         _resp2 = call_claude(
-            system=SYSTEM_ARQUITETO,
+            system=SYSTEM_COPY_MARKDOWN,
             user=_prompt_retry,
             model="sonnet",
             max_tokens=16000,
@@ -615,15 +670,27 @@ REGRAS:
         )
         import re as _re2
         _resp2 = _re2.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f]", " ", _resp2)
-        _json2 = clean_json(_resp2)
+        _dados_retry = parse_bloco2_with_fallback(_resp2)
         try:
-            dados = json.loads(_json2)
-            if "sections" in dados and isinstance(dados["sections"], list):
-                dados["sections"] = _garantir_layout_type(dados["sections"], dados.get("business_name", dados_hunter.get("nome", "")))
-            print(f"[ArquitetoMestre] Segunda chamada: {len(dados.get('sections', []))} secoes")
+            if _dados_retry and _dados_retry.get("sections"):
+                _copy_map2 = {s.get("name", ""): s.get("copy", {}) for s in _dados_retry.get("sections", [])}
+                _omitir_map2 = {s.get("name", ""): s.get("omitir", False) for s in _dados_retry.get("sections", [])}
+                _sections_retry = []
+                for s in _sections_estrutura:
+                    nome_s = s.get("name", "")
+                    sec = dict(s)
+                    sec["copy"] = _copy_map2.get(nome_s, sec.get("copy", {"h2": nome_s.capitalize(), "cta": "Fale Conosco"}))
+                    sec["omitir"] = _omitir_map2.get(nome_s, sec.get("omitir", False))
+                    _sections_retry.append(sec)
+                dados["sections"] = _garantir_layout_type(_sections_retry, dados.get("business_name", dados_hunter.get("nome", "")))
+                print(f"[ArquitetoMestre] Segunda chamada: {len(dados.get('sections', []))} secoes")
+            else:
+                print("[ArquitetoMestre] Segunda chamada falhou: markdown sem sections")
         except Exception as _e2:
             print(f"[ArquitetoMestre] Segunda chamada falhou: {_e2}")
 
     print(f"[ArquitetoMestre] PRD gerado: {len(dados.get('sections', []))} secoes, {len(dados.get('reviews_list', []))} reviews reais")
 
-    return DesignerPRD(**dados)
+    prd = DesignerPRD(**dados)
+    _validar_prd_minimo(prd)
+    return prd

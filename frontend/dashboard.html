@@ -1279,7 +1279,15 @@ function authFetch(url, opts) {
     fullUrl = window.location.protocol + '//' + window.location.host + url;
   }
   
-  return fetch(fullUrl, options).catch(function(err){
+  return fetch(fullUrl, options).then(function(r) {
+    if (r.status === 401) {
+      window.__fralibAuthExpired = true;
+      localStorage.removeItem('fralib_token');
+      window.location.href = '/login.html';
+      throw new Error('Unauthorized');
+    }
+    return r;
+  }).catch(function(err){
     console.error('[authFetch] Erro na requisição:', url, err);
     throw err;
   });
@@ -3141,7 +3149,9 @@ function _mostrarModalRateLimit(msg) {
   function conectarSSE() {
     if (eventSource) eventSource.close();
 
-    eventSource = new EventSource('/api/logs/stream');
+    var _sseToken = localStorage.getItem('fralib_token') || '';
+    if (!_sseToken || window.__fralibAuthExpired) return;
+    eventSource = new EventSource('/api/logs/stream?token=' + encodeURIComponent(_sseToken));
 
     eventSource.onmessage = function(event) {
       try {
@@ -3155,6 +3165,7 @@ function _mostrarModalRateLimit(msg) {
     eventSource.onerror = function(err) {
       console.error('[SSE] Erro na conexão:', err);
       eventSource.close();
+      if (window.__fralibAuthExpired || !localStorage.getItem('fralib_token')) return;
       setTimeout(conectarSSE, 5000);
     };
   }

@@ -125,8 +125,8 @@ def parse_bloco2_markdown(text: str) -> Dict[str, Any]:
                 omitir = val in ('true', 'sim', '1', 'yes')
                 continue
 
-            # Detectar chave: valor (chave so letras/underscore)
-            kv_match = re.match(r'^([a-z_]+)\s*:\s*(.*)$', stripped, re.IGNORECASE)
+            # Detectar chave: valor (ex: h1, h2, subtitulo, cta)
+            kv_match = re.match(r'^([a-z0-9_]+)\s*:\s*(.*)$', stripped, re.IGNORECASE)
             if kv_match and not stripped.startswith('-'):
                 if current_key:
                     copy[current_key] = '\n'.join(current_value).strip()

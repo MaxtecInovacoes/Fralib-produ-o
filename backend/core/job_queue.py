@@ -137,6 +137,21 @@ def mark_success(db: Session, job_id: int) -> None:
     db.commit()
 
 
+def mark_interrupted(db: Session, job_id: int, reason: str = "worker_shutdown") -> None:
+    """Devolve o job em execucao para pending sem consumir retry."""
+    db.execute(text("""
+        UPDATE jobs
+        SET status = 'pending',
+            last_error = COALESCE(last_error || ' | ', '') || :reason,
+            worker_id = NULL,
+            worker_heartbeat = NULL,
+            next_retry_at = NOW()
+        WHERE id = :id
+          AND status = 'running'
+    """), {"id": job_id, "reason": reason[:500]})
+    db.commit()
+
+
 def mark_failure(
     db: Session,
     job_id: int,

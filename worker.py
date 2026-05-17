@@ -29,6 +29,7 @@ sys.path.insert(0, '/root/fralib/backend')
 sys.path.insert(0, '/root/fralib/backend/core')
 sys.path.insert(0, '/root/fralib/backend/agents')
 sys.path.insert(0, '/root/fralib/backend/endpoints')
+sys.path.insert(0, '/root/fralib/backend/services')
 
 # Em Windows local, esses paths nao existem mas os imports funcionam pelos
 # sys.path do server.py. Em prod sempre /root/fralib.
@@ -36,6 +37,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'backend'))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'backend', 'core'))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'backend', 'agents'))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'backend', 'endpoints'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'backend', 'services'))
 
 from database import SessionLocal, inicializar_database
 import job_queue
@@ -52,11 +54,23 @@ REAP_SECS = int(os.environ.get("WORKER_REAP_SECS", "60"))
 
 WORKER_ID = job_queue.generate_worker_id()
 _running = True
+_current_job_id = None
 
 
 def _shutdown(signum, frame):
     global _running
-    log.info(f"sinal {signum} recebido, encerrando apos job atual")
+    if _current_job_id:
+        log.info(f"sinal {signum} recebido, encerrando apos job atual id={_current_job_id}")
+        try:
+            db = SessionLocal()
+            try:
+                job_queue.mark_interrupted(db, _current_job_id, "worker_shutdown")
+            finally:
+                db.close()
+        except Exception as e:
+            log.warning(f"nao foi possivel marcar job interrompido: {e}")
+    else:
+        log.info(f"sinal {signum} recebido, encerrando")
     _running = False
 
 
@@ -87,8 +101,9 @@ async def _executar_job(job: dict) -> tuple[bool, Optional[str], Optional[str]]:
     Fase_em_erro ajuda a montar mensagem amigavel.
     """
     tipo = job["tipo"]
-    payload = job["payload"] or {}
+    payload = dict(job["payload"] or {})
     tenant_id = job["tenant_id"]
+    payload.setdefault("trace_id", f"job-{job['id']}")
 
     if tipo == "pipeline_lead":
         # Import tardio: evita carregar todo o pipeline em workers idle.
@@ -122,8 +137,11 @@ async def _executar_job(job: dict) -> tuple[bool, Optional[str], Optional[str]]:
 
 
 async def _process_one(job: dict) -> None:
+    global _current_job_id
     job_id = job["id"]
-    log.info(f"job {job_id} ({job['tipo']}) tenant={job['tenant_id']} attempt={job['attempts']}/{job['max_attempts']}")
+    trace_id = (job.get("payload") or {}).get("trace_id") or f"job-{job_id}"
+    _current_job_id = job_id
+    log.info(f"[{trace_id}] job {job_id} ({job['tipo']}) tenant={job['tenant_id']} attempt={job['attempts']}/{job['max_attempts']}")
 
     stop_event = asyncio.Event()
     hb_task = asyncio.create_task(_heartbeat_loop(job_id, stop_event))
@@ -136,19 +154,20 @@ async def _process_one(job: dict) -> None:
             await asyncio.wait_for(hb_task, timeout=5)
         except (asyncio.TimeoutError, asyncio.CancelledError):
             pass
+        _current_job_id = None
 
     db = SessionLocal()
     try:
         if sucesso:
             job_queue.mark_success(db, job_id)
-            log.info(f"job {job_id} concluido")
+            log.info(f"[{trace_id}] job {job_id} concluido")
         else:
             # Degradação graceful: se foi rate limit, re-enfileira com delay maior
             is_rate_limit = mensagem and ("rate limit" in mensagem.lower() or "limite de uso" in mensagem.lower())
             if is_rate_limit:
                 # Espera proporcional à tentativa: 60s, 120s, 180s...
                 delay = 60 * job["attempts"]
-                log.warning(f"job {job_id} rate-limited — re-enfileirando com delay {delay}s")
+                log.warning(f"[{trace_id}] job {job_id} rate-limited — re-enfileirando com delay {delay}s")
                 status = job_queue.mark_failure(
                     db, job_id, error=f"Rate limit — retry em {delay}s", fase=fase,
                     retriable=True, delay_seconds=delay,
@@ -160,7 +179,7 @@ async def _process_one(job: dict) -> None:
                     retriable=True,
                     lead_nome=(job["payload"] or {}).get("nome"),
                 )
-            log.warning(f"job {job_id} -> {status} (fase={fase}): {mensagem}")
+            log.warning(f"[{trace_id}] job {job_id} -> {status} (fase={fase}): {mensagem}")
     except Exception as e:
         log.error(f"erro ao marcar resultado do job {job_id}: {e}")
     finally:
