@@ -76,10 +76,11 @@ _PIPELINE_WINDOW = 60
 
 # Cooldown por plano (segundos entre pipelines)
 _COOLDOWN_POR_PLANO = {
-    'trial': 0,       # trial: bloqueado por créditos (1 total), não precisa cooldown
-    'starter': 3600,  # 1 hora
-    'pro': 1800,      # 30 minutos
-    'beta': 1800,     # beta = pro
+    'trial': 0,        # trial: bloqueado por créditos (1 total), não precisa cooldown
+    'starter': 3600,   # 1 hora
+    'pro': 1800,       # 30 minutos
+    'ilimitado': 0,    # sem cooldown
+    'beta': 1800,      # beta = pro
     'free': 0,
 }
 
