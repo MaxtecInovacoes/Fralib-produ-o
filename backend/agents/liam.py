@@ -407,6 +407,9 @@ def _sanitizar_botoes_contraste(html):
         html
     )
     return html
+
+
+def _sanitizar_cores_hardcoded_texto(html):
     """Substitui cores de texto hardcoded claras (#f0f4ff, #f1f5f9, etc) por CSS vars."""
     import re as _re
     # Cores claras hardcoded que quebram o modo claro
