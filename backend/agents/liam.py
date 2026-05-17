@@ -80,6 +80,7 @@ NUNCA use background-image com URL. Sempre <img> tag.
   GESTALT: cards mesmo tipo = mesmo estilo | HICK: max 3 CTAs | FITTS: botoes min py-4 (48px)
   MILLER: listas max 7 | PEAK-END: hero=pico, contato=final, NUNCA terminar com FAQ
   VON RESTORFF: 1 elemento especial (CTA principal)
+  BOTOES: background var(--accent) → texto SEMPRE var(--bg). NUNCA var(--fg) em botao com accent.
 
 === LAYOUT & CONTRASTE (CRITICO) ===
   PADDING: toda secao py-16 md:py-24 px-4 md:px-8. NUNCA secao sem padding.
@@ -390,7 +391,22 @@ def _sanitizar_css_var_bug(html):
     return html
 
 
-def _sanitizar_cores_hardcoded_texto(html):
+def _sanitizar_botoes_contraste(html):
+    """Fix botões com accent bg + fg text (ilegível). Deve ser accent bg + bg text."""
+    import re as _re
+    # Padrão: background-color:var(--accent) ... color:var(--fg) em links/botões
+    html = _re.sub(
+        r'(background(?:-color)?\s*:\s*var\(--accent\)\s*;[^"]*?)color\s*:\s*var\(--fg\)',
+        r'\1color:var(--bg)',
+        html
+    )
+    # Inverso: color:var(--fg) ... background:var(--accent)
+    html = _re.sub(
+        r'(color\s*:\s*)var\(--fg\)(\s*;[^"]*?background(?:-color)?\s*:\s*var\(--accent\))',
+        r'\1var(--bg)\2',
+        html
+    )
+    return html
     """Substitui cores de texto hardcoded claras (#f0f4ff, #f1f5f9, etc) por CSS vars."""
     import re as _re
     # Cores claras hardcoded que quebram o modo claro
@@ -890,6 +906,8 @@ def gerar_html_componentizado(prd):
     print("[Liam] Fontes sanitizadas")
     html_final = _sanitizar_cores_light(html_final)
     print("[Liam] Cores light sanitizadas")
+    html_final = _sanitizar_botoes_contraste(html_final)
+    print("[Liam] Botoes contraste sanitizados")
     html_final = _sanitizar_css_var_bug(html_final)
     print("[Liam] CSS var bug sanitizado")
     html_final = _sanitizar_cores_hardcoded_texto(html_final)
