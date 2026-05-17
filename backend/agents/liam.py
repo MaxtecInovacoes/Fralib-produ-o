@@ -57,6 +57,17 @@ NUNCA use background-image com URL. Sempre <img> tag.
   Imagens: .reveal-left | Parallax: data-parallax="0.3" | Hover cards: hover:scale-[1.02] hover:shadow-lg transition-all duration-300
   Usar IntersectionObserver — NUNCA scroll event listener.
 
+=== ANIMACOES PREMIUM (diferencial R$200 → R$20K) ===
+  PARALLAX: imagens com data-parallax="0.15" (sutil) a "0.4" (dramatico). Hero SEMPRE tem parallax.
+  STAGGER WATERFALL: cards/listas NUNCA aparecem de uma vez. Usar style="--i:0" style="--i:1" style="--i:2" com .stagger-item.
+  SCROLL PROGRESS: barra de progresso no topo (position:fixed, scaleX via scroll%). Adicionar no hero.
+  HOVER PREMIUM: cards com transition-all duration-300 hover:translate-y-[-4px] hover:shadow-xl. Botoes com active:scale-[0.97].
+  COUNTER ANIMATE: numeros (rating, anos) com data-counter="4.7" — JS anima de 0 ao valor no scroll.
+  TEXT REVEAL: headlines com overflow:hidden + span.reveal-text (translateY 100% → 0 no scroll).
+  GRADIENT SHIFT: hero background com background-size:200% e animation sutil (10s alternate infinite).
+  PERFORMANCE: animar APENAS transform e opacity. NUNCA top/left/width/height. will-change:transform em elementos animados.
+  REDUCED MOTION: @media(prefers-reduced-motion:reduce) desativa animacoes — substituir por opacity simples.
+
 === HIERARQUIA TIPOGRAFICA ===
   H1: clamp(2.2rem,5vw,3.5rem) line-height:1.1 letter-spacing:-0.02em font-bold
   H2: MAX text-3xl | H3: MAX text-2xl
@@ -1198,10 +1209,19 @@ def montar_template_python(html_main, prd):
         + ".btn-primary,.btn-secondary { transition: transform var(--dur-feedback) var(--ease-std), box-shadow var(--dur-feedback) var(--ease-std); }" + chr(10)
         + ".btn-primary:hover,.btn-secondary:hover { transform: scale(1.03); box-shadow: 0 4px 20px color-mix(in oklch, var(--accent) 30%, transparent); }" + chr(10)
         + ".btn-primary:active,.btn-secondary:active { transform: scale(0.98); }" + chr(10)
+        + "/* Scroll progress bar */" + chr(10)
+        + "#scroll-progress{position:fixed;top:0;left:0;height:3px;background:var(--accent);z-index:9999;transform-origin:left;transform:scaleX(0);transition:none;}" + chr(10)
+        + "/* Text reveal animation */" + chr(10)
+        + ".text-reveal{overflow:hidden;display:inline-block;}" + chr(10)
+        + ".text-reveal span{display:inline-block;transform:translateY(100%);opacity:0;transition:transform 0.6s cubic-bezier(0.16,1,0.3,1),opacity 0.6s ease;}" + chr(10)
+        + ".text-reveal.visible span{transform:translateY(0);opacity:1;}" + chr(10)
+        + "/* Tilt 3D hover on cards */" + chr(10)
+        + "[data-tilt]{transition:transform 0.3s ease;transform-style:preserve-3d;}" + chr(10)
         + "</style>" + chr(10)
         + "<script src=" + q + "https://unpkg.com/@phosphor-icons/web@2.1.1" + q + "></script>" + chr(10)
         + "</head>" + chr(10)
         + "<body>" + chr(10)
+        + "<div id=\"scroll-progress\"></div>" + chr(10)
         + """<style>
 :root {
   /* compat aliases */
@@ -1280,6 +1300,9 @@ body { background:var(--bg); color:var(--fg); }
         + "</div></footer>" + nl
         + """<script>
 (function(){
+  // Scroll progress bar
+  var prog = document.getElementById('scroll-progress');
+  if(prog){window.addEventListener('scroll',function(){var h=document.documentElement.scrollHeight-window.innerHeight;prog.style.transform='scaleX('+(h>0?window.scrollY/h:0)+')';},{passive:true});}
   // IntersectionObserver — scroll reveal com tokens CSS
   // Parallax scroll
   window.addEventListener('scroll', function() {
@@ -1342,6 +1365,13 @@ body { background:var(--bg); color:var(--fg); }
     }
     setTimeout(tick, 80);
   })();
+  // 3D tilt on cards with data-tilt
+  document.querySelectorAll('[data-tilt]').forEach(function(card){
+    card.addEventListener('mousemove',function(e){var r=card.getBoundingClientRect();var x=(e.clientX-r.left)/r.width-0.5;var y=(e.clientY-r.top)/r.height-0.5;card.style.transform='perspective(600px) rotateY('+x*8+'deg) rotateX('+(-y*8)+'deg)';});
+    card.addEventListener('mouseleave',function(){card.style.transform='perspective(600px) rotateY(0) rotateX(0)';});
+  });
+  // Text reveal
+  document.querySelectorAll('.text-reveal').forEach(function(el){io.observe(el);});
   });
 })();
 </script>""" + nl
