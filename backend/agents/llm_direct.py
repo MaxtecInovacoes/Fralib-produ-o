@@ -404,6 +404,12 @@ def call_claude(system, user, model='opus', max_tokens=4000, temperature=0.7, ag
 
     response = None
     MAX_ATTEMPTS = 5  # Com 1 key, precisa mais tentativas (espera cooldown)
+    # Sanitização estrita ANTES do post: garantir que tools/tool_choice não vazam
+    if not payload.get('tools'):
+        payload.pop('tools', None)
+    payload.pop('tool_choice', None)
+    _payload_keys = [k for k in payload.keys() if k not in ('system', 'messages')]
+    print(f"[LLM] Payload keys (sanitizado): {_payload_keys} | model={payload.get('model')}")
     for _llm_attempt in range(1, MAX_ATTEMPTS + 1):
         _enforce_call_spacing()
         response = requests.post(url, headers=headers, json=payload, timeout=_llm_timeout())
