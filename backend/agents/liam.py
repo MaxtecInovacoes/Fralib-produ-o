@@ -670,10 +670,10 @@ def gerar_html_componentizado(prd):
             resposta_secao = call_claude(
                 system=system_liam,
                 user=prompt_secao,
-                model="opus",
+                model="sonnet",
                 max_tokens=8000,
                 temperature=0.4,
-                agent_name=None,  # RAG+Skills removidos — Open Design + SYSTEM_LIAM_CORE são suficientes
+                agent_name=None,
             )
             # Auto-Continue: se secao truncada, continuar de onde parou
             _auto_continue = 0
