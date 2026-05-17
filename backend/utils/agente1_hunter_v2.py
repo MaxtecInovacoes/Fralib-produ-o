@@ -471,8 +471,8 @@ async def buscar_leads_google_maps(
     scraper = GoogleMapsScraper(headless=True)
 
     # Buscar leads COM detalhes (reviews, horários, fotos) em 1 sessão de browser
-    # Mais eficiente que abrir browser separado pra cada lead
-    _buscar = min(limite + 5, max(limite * 3, limite + len(_existentes) + 3))
+    # Buscar poucos a mais que o limite pra ter opção se o primeiro não tiver reviews
+    _buscar = limite + 2
     cards_raw = await scraper.buscar(segmento, cidade, limite=_buscar)
     print(f"[Hunter V2] {len(cards_raw)} leads com detalhes capturados")
 
