@@ -6843,6 +6843,29 @@ async function atualizarUtiBadge() {
 
     renderSteps(0);
 
+    function _mostrarSucessoPipeline() {
+      var old = document.getElementById('pipeline-sucesso-popup');
+      if (old) old.remove();
+      var overlay = document.createElement('div');
+      overlay.id = 'pipeline-sucesso-overlay';
+      overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:99998;animation:fadeIn 0.3s ease;';
+      var popup = document.createElement('div');
+      popup.id = 'pipeline-sucesso-popup';
+      popup.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:99999;background:linear-gradient(135deg,#0f2a1a,#1a1a2e);border:1px solid #10b981;border-radius:16px;padding:36px;max-width:440px;width:90%;box-shadow:0 25px 50px rgba(16,185,129,0.15);animation:fadeIn 0.4s ease;text-align:center;';
+      var timerEl = document.getElementById('pipeline-banner-timer');
+      var tempoFinal = timerEl ? timerEl.textContent.replace('⏱ ','') : '';
+      popup.innerHTML = '<div style="font-size:56px;margin-bottom:12px;">🎉</div>' +
+        '<h3 style="color:#10b981;margin:0 0 10px;font-size:20px;">Pipeline Concluído!</h3>' +
+        '<p style="color:#d1d5db;font-size:15px;line-height:1.6;margin:0 0 8px;">Seu site foi gerado e o SDR já entrou em contato com seu cliente.</p>' +
+        (tempoFinal ? '<p style="color:#6ee7b7;font-size:13px;margin:0 0 16px;">Tempo total: ' + tempoFinal + '</p>' : '') +
+        '<p style="color:#a78bfa;font-size:14px;font-weight:600;margin:0 0 20px;">Boas vendas! 🚀</p>' +
+        '<button onclick="document.getElementById(\'pipeline-sucesso-popup\').remove();document.getElementById(\'pipeline-sucesso-overlay\').remove();" style="background:#10b981;color:#fff;border:none;border-radius:8px;padding:10px 24px;cursor:pointer;font-size:14px;font-weight:600;">Fechar</button>';
+      overlay.onclick = function() { popup.remove(); overlay.remove(); };
+      document.body.appendChild(overlay);
+      document.body.appendChild(popup);
+      setTimeout(function() { if (document.getElementById('pipeline-sucesso-popup')) { popup.remove(); overlay.remove(); } }, 10000);
+    }
+
     // Popup de erro do pipeline
     window._erroJaMostrado = null;
     function _mostrarPopupErroPipeline(erro) {
@@ -6976,7 +6999,8 @@ async function atualizarUtiBadge() {
       if (msg.includes('CONCLUIDO') || msg.includes('concluido') || msg.includes('concluído')) {
         updateProgress(10, 100, '✅ Pipeline concluído!');
         _stopTimer();
-        setTimeout(function(){ banner.style.display = 'none'; faseAtual = 0; renderSteps(0); }, 5000);
+        setTimeout(function(){ banner.style.display = 'none'; faseAtual = 0; renderSteps(0); }, 3000);
+        _mostrarSucessoPipeline();
       }
     };
   })();
