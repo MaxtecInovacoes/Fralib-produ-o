@@ -256,28 +256,53 @@ class GoogleLocalScraper:
     async def _extrair_reviews_de_blocos(self, page) -> List[Dict]:
         """Extrai reviews dos blocos na aba de reviews (camada 1)."""
         depoimentos = []
+        _textos_vistos = set()  # dedup por texto
         review_blocks = await page.query_selector_all(
-            "div[data-review-id], div.jftiEf, div[class*='review'], div.GHT2ce"
+            "div[data-review-id], div.jftiEf"
         )
+        if not review_blocks:
+            review_blocks = await page.query_selector_all("div.GHT2ce, div[class*='review']")
         for block in review_blocks[:25]:
             try:
+                # Autor: pegar apenas o nome, sem metadata
+                autor = "Cliente"
                 autor_el = await block.query_selector(
-                    "div.d4r55, span.X43Kjb, a[data-review-id] div, "
-                    "button[data-review-id] div, div.WNxzHc, span.SubCsc"
+                    "div.d4r55, span.X43Kjb, div.WNxzHc a, button.WEBjve div"
                 )
-                autor = (await autor_el.inner_text()).strip() if autor_el else "Cliente"
+                if autor_el:
+                    _autor_raw = (await autor_el.inner_text()).strip()
+                    # Limpar metadata do autor (ex: "Juliana Ferrari\n7 avaliações · 13 fotos")
+                    _autor_lines = _autor_raw.split("\n")
+                    autor = _autor_lines[0].strip()
+                    # Remover sufixos como "7 avaliações" ou "Local Guide"
+                    if "avalia" in autor.lower() or "foto" in autor.lower():
+                        autor = "Cliente"
+                    elif len(autor) > 40:
+                        autor = autor[:40]
+
+                # Texto do review
                 texto_el = await block.query_selector(
-                    "span.wiI7pd, div.MyEned span, span[data-expandable-section], "
-                    "div.Jtu6Td span, span.review-full-text, div[class*='bodyMedium'] span"
+                    "span.wiI7pd, div.MyEned span, span[data-expandable-section]"
                 )
                 texto = (await texto_el.inner_text()).strip() if texto_el else ""
                 if not texto:
+                    # Fallback: buscar span com texto longo
                     all_spans = await block.query_selector_all("span")
                     for sp in all_spans:
                         t = (await sp.inner_text()).strip()
-                        if len(t) > 15 and not re.match(r"^[0-9,.\s]+$", t):
+                        if len(t) > 20 and not re.match(r"^[0-9,.\s]+$", t) and "avalia" not in t.lower():
                             texto = t
                             break
+
+                # Limpar texto: remover metadata misturada
+                if texto:
+                    # Cortar em "Gostei", "Útil", "Compartilhar" que são botões
+                    for _corte in ["\nGostei", "\nÚtil", "\nCompartilhar", "\n(Traduzido"]:
+                        if _corte in texto:
+                            texto = texto[:texto.index(_corte)]
+                    texto = texto.strip()
+
+                # Rating
                 rating_val = 5
                 rating_el = await block.query_selector("[aria-label*='estrela'], [aria-label*='star'], span[role='img']")
                 if rating_el:
@@ -285,12 +310,19 @@ class GoogleLocalScraper:
                     m = re.search(r"([0-9])", lbl)
                     if m:
                         rating_val = int(m.group(1))
+
+                # Data
                 data_el = await block.query_selector("span.rsqaWe, span[class*='dehysf']")
                 data_str = (await data_el.inner_text()).strip() if data_el else ""
-                if texto and len(texto) > 3 and rating_val >= 4:
-                    depoimentos.append({"autor": autor, "rating": rating_val, "texto": texto, "data": data_str})
-                    if len(depoimentos) >= 10:
-                        break
+
+                # Validar e dedup
+                if texto and len(texto) > 10 and rating_val >= 4:
+                    _texto_key = texto[:50].lower()
+                    if _texto_key not in _textos_vistos:
+                        _textos_vistos.add(_texto_key)
+                        depoimentos.append({"autor": autor, "rating": rating_val, "texto": texto, "data": data_str})
+                        if len(depoimentos) >= 8:
+                            break
             except:
                 continue
         return depoimentos
