@@ -82,7 +82,6 @@ _COOLDOWN_POR_PLANO = {
     'beta': 1800,     # beta = pro
     'free': 0,
 }
-_last_pipeline_finish = _defaultdict(float)  # tenant_id -> timestamp do último pipeline concluído
 
 def _check_rate_limit(user_id: str):
     now = time.time()
@@ -95,14 +94,26 @@ def _check_rate_limit(user_id: str):
 
 
 def _check_cooldown(db, tenant_id: int):
-    """Verifica cooldown entre pipelines baseado no plano do usuário."""
+    """Verifica cooldown entre pipelines baseado no plano do usuário. Persiste via DB."""
     row = db.execute(text("SELECT plano FROM users WHERE id=:id"), {"id": tenant_id}).fetchone()
     plano = (row[0] if row else "trial") or "trial"
     cooldown_secs = _COOLDOWN_POR_PLANO.get(plano, 3600)
     if cooldown_secs <= 0:
         return
-    last_finish = _last_pipeline_finish.get(tenant_id, 0)
-    elapsed = time.time() - last_finish
+    # Buscar último pipeline concluído deste tenant
+    last_row = db.execute(text(
+        "SELECT processado_em FROM leads WHERE user_id=:uid AND status='concluido' ORDER BY processado_em DESC LIMIT 1"
+    ), {"uid": tenant_id}).fetchone()
+    if not last_row or not last_row[0]:
+        return
+    from datetime import datetime as _dt
+    try:
+        last_ts = last_row[0]
+        if isinstance(last_ts, str):
+            last_ts = _dt.fromisoformat(last_ts)
+        elapsed = (_dt.now() - last_ts).total_seconds()
+    except Exception:
+        return
     if elapsed < cooldown_secs:
         restante = int(cooldown_secs - elapsed)
         minutos = restante // 60
@@ -1030,8 +1041,6 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
         from database import SessionLocal
         with SessionLocal() as _db_cred:
             consume_tokens(_db_cred, tenant_id, 1, f"Pipeline concluido: {state.lead_nome}")
-        # Registrar timestamp pra cooldown
-        _last_pipeline_finish[tenant_id] = time.time()
 
         # Buscar leads extras em background pra fila de processamento
         _qtd_extra = config.get("quantidade", 1) - 1
