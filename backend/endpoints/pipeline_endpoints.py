@@ -1038,9 +1038,12 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
         logger.info("[Pipeline] CONCLUIDO - 7 AGENTES!")
 
         # Descontar 1 crédito do usuário
-        from database import SessionLocal
-        with SessionLocal() as _db_cred:
-            consume_tokens(_db_cred, tenant_id, 1, f"Pipeline concluido: {state.lead_nome}")
+        try:
+            with SessionLocal() as _db_cred:
+                _consumed = consume_tokens(_db_cred, tenant_id, 1, f"Pipeline concluido: {state.lead_nome}")
+                print(f"[Pipeline] Credito descontado: {_consumed} (tenant={tenant_id})")
+        except Exception as _cred_err:
+            print(f"[Pipeline] ERRO ao descontar credito: {_cred_err}")
 
         # Buscar leads extras em background pra fila de processamento
         _qtd_extra = config.get("quantidade", 1) - 1
