@@ -157,9 +157,9 @@ async def stripe_webhook(
     except (ValueError, stripe.error.SignatureVerificationError):
         raise HTTPException(400, 'Webhook invalido')
 
-    event_id = event.get('id', '')
-    tipo = event.get('type', '')
-    obj = event.get('data', {}).get('object', {}) or {}
+    event_id = event['id']
+    tipo = event['type']
+    obj = event['data']['object']
     stripe_customer_id = obj.get('customer', '') or ''
 
     from database import engine
