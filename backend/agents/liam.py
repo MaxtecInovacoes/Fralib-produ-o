@@ -67,6 +67,14 @@ NUNCA use background-image com URL. Sempre <img> tag.
   GESTALT: cards mesmo tipo = mesmo estilo | HICK: max 3 CTAs | FITTS: botoes min py-4 (48px)
   MILLER: listas max 7 | PEAK-END: hero=pico, contato=final, NUNCA terminar com FAQ
   VON RESTORFF: 1 elemento especial (CTA principal)
+
+=== LAYOUT & CONTRASTE (CRITICO) ===
+  PADDING: toda secao py-16 md:py-24 px-4 md:px-8. NUNCA secao sem padding.
+  Z-INDEX: texto SEMPRE acima de imagens. Se hero tem imagem de fundo: position:relative no container, img absolute inset-0 z-0, texto relative z-10.
+  OVERLAY: se imagem de fundo + texto por cima: OBRIGATORIO overlay escuro (bg-black/50 ou bg-gradient-to-t from-black/70) + texto branco (text-white permitido APENAS sobre overlay escuro).
+  CONTRASTE: texto NUNCA pode ter cor similar ao fundo. Se --bg e claro, --fg deve ser escuro. Se --bg e escuro, texto deve ser claro.
+  IMAGENS: NUNCA position:absolute sem container position:relative. NUNCA img cobrindo texto sem overlay.
+  RESPONSIVO: mobile-first. Hero: flex-col no mobile, md:flex-row no desktop. Imagens: w-full h-64 md:h-auto.
 """
 
 SYSTEM_LIAM_ANTI_SLOP = """

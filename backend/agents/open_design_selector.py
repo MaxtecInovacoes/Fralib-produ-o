@@ -20,10 +20,11 @@ SEGMENT_DESIGN_MAP = {
     # Masculino, edgy, confiante
     "barbearia": ["brutalism", "bold", "neobrutalism", "editorial", "warp", "mono"],
     # Acolhedor, apetitoso, local
-    "restaurante": ["cafe", "warm-editorial", "starbucks", "airbnb", "friendly", "storytelling"],
-    "pizzaria": ["cafe", "colorful", "friendly", "warm-editorial", "starbucks", "vibrant"],
+    "restaurante": ["cafe", "warm-editorial", "airbnb", "friendly", "storytelling"],
+    "churrascaria": ["bold", "brutalism", "cafe", "warm-editorial"],
+    "pizzaria": ["cafe", "colorful", "friendly", "warm-editorial", "vibrant"],
     "lanchonete": ["colorful", "friendly", "cafe", "duolingo", "vibrant", "bold"],
-    "padaria": ["cafe", "warm-editorial", "starbucks", "friendly", "vintage", "paper"],
+    "padaria": ["cafe", "warm-editorial", "friendly", "vintage", "paper"],
     # Clínico, confiável, moderno
     "clinica": ["clean", "minimal", "modern", "professional", "stripe", "linear-app"],
     "odontologia": ["clean", "modern", "minimal", "professional", "sleek", "refined"],

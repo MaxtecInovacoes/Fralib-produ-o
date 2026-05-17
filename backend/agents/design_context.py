@@ -1,7 +1,16 @@
 """design_context.py — Sistema de Design por Nicho (Open Design adaptado)
 6 tokens CSS universais em OKLch + direção visual + perfil de animação por nicho.
 """
+import os as _os
+import json as _json
 from typing import Dict
+
+# ─── OPEN DESIGN TOKENS (pré-computados do DESIGN.md) ─────────────────────────
+_OD_TOKENS_PATH = _os.path.join(_os.path.dirname(__file__), "open_design_tokens.json")
+_OD_TOKENS: Dict[str, dict] = {}
+if _os.path.exists(_OD_TOKENS_PATH):
+    with open(_OD_TOKENS_PATH, "r") as _f:
+        _OD_TOKENS = _json.load(_f)
 
 # ─── 5 DIREÇÕES VISUAIS ────────────────────────────────────────────────────────
 # Cada direção define os 6 tokens universais em OKLch + tipografia + animação
@@ -31,6 +40,7 @@ DIRECOES_VISUAIS = {
     "brutalism": {"nome": "Brutalism", "tokens": {"--bg": "oklch(100% 0.0 0)", "--surface": "oklch(100% 0.0 0)", "--fg": "oklch(9% 0.017 221)", "--muted": "oklch(60% 0.01 0)", "--border": "oklch(9% 0.017 221)", "--accent": "oklch(48% 0.114 9)"}, "font_heading": "Darker Grotesque", "font_body": "Darker Grotesque", "vibe": "anti-design cru, concreto, minimalismo funcional", "animation": "energetico"},
     "bugatti": {"nome": "Bugatti", "tokens": {"--bg": "oklch(0% 0.0 0)", "--surface": "oklch(0% 0.0 0)", "--fg": "oklch(100% 0.0 0)", "--muted": "oklch(60% 0.0 0)", "--border": "oklch(60% 0.0 0)", "--accent": "oklch(100% 0.0 0)"}, "font_heading": "Bugatti Display", "font_body": "Bugatti Text Regular", "vibe": "hypercar, cinema-black, monocromatico monumental", "animation": "elegante"},
     "cafe": {"nome": "Cafe", "tokens": {"--bg": "oklch(97% 0.003 30)", "--surface": "oklch(97% 0.003 30)", "--fg": "oklch(18% 0.025 24)", "--muted": "oklch(37% 0.02 26)", "--border": "oklch(89% 0.009 30)", "--accent": "oklch(28% 0.034 25)"}, "font_heading": "Poppins", "font_body": "Poppins", "vibe": "aconchegante, tons quentes cafe, tipografia suave", "animation": "elegante"},
+    "rustico": {"nome": "Rustico", "tokens": {"--bg": "oklch(22% 0.02 40)", "--surface": "oklch(28% 0.025 35)", "--fg": "oklch(93% 0.01 60)", "--muted": "oklch(60% 0.02 45)", "--border": "oklch(35% 0.03 30)", "--accent": "oklch(62% 0.16 38)"}, "font_heading": "Oswald", "font_body": "Inter", "vibe": "churrascaria, madeira escura, fogo, tons terrosos quentes, robusto", "animation": "energetico"},
     "cal": {"nome": "Cal", "tokens": {"--bg": "oklch(100% 0.0 0)", "--surface": "oklch(100% 0.0 0)", "--fg": "oklch(14% 0.0 0)", "--muted": "oklch(54% 0.0 0)", "--border": "oklch(25% 0.02 250)", "--accent": "oklch(14% 0.0 0)"}, "font_heading": "Cal Sans", "font_body": "Inter", "vibe": "agendamento open-source, monocromatico, developer", "animation": "elegante"},
     "canva": {"nome": "Canva", "tokens": {"--bg": "oklch(100% 0.0 0)", "--surface": "oklch(96% 0.002 220)", "--fg": "oklch(7% 0.008 210)", "--muted": "oklch(39% 0.007 213)", "--border": "oklch(25% 0.02 250)", "--accent": "oklch(29% 0.149 266)"}, "font_heading": "Canva Sans", "font_body": "Canva Sans", "vibe": "criacao visual, gradiente roxo-azul, geometria amigavel", "animation": "vibrante"},
     "cisco": {"nome": "Cisco", "tokens": {"--bg": "oklch(9% 0.013 212)", "--surface": "oklch(22% 0.002 240)", "--fg": "oklch(100% 0.0 0)", "--muted": "oklch(62% 0.003 240)", "--border": "oklch(35% 0.002 240)", "--accent": "oklch(51% 0.167 196)"}, "font_heading": "CiscoSansTT", "font_body": "CiscoSansTT", "vibe": "infra enterprise, dark confianca, Cisco Blue", "animation": "elegante"},
@@ -229,7 +239,8 @@ ANIMATION_PROFILES = {
 # ─── NICHOS ────────────────────────────────────────────────────────────────────
 NICHOS: Dict[str, Dict] = {
     "barbearia":    {"dir": "luxury", "dir_variantes": ["editorial", "brutalism", "cal"],      "components": "galeria de cortes, lista de serviços, CTA agendamento WhatsApp, badge avaliação Google, horários", "tom": "direto, masculino, confiante — sem adjetivos vagos", "seo": "H1 com cidade, schema BarberShop, FAQ sobre cortes e preços", "anti": "pastéis, fontes cursivas, fotos de stock, contadores inventados"},
-    "restaurante":  {"dir": "cafe", "dir_variantes": ["cafe", "starbucks", "warm_editorial"],      "components": "foto hero do prato principal, cardápio resumido, horários, localização embed, CTA reserva WhatsApp, avaliações reais", "tom": "apetitoso, acolhedor, local", "seo": "H1 com cidade e culinária, schema Restaurant + Menu, FAQ sobre reservas", "anti": "fotos de stock de comida, layout genérico de delivery"},
+    "restaurante":  {"dir": "cafe", "dir_variantes": ["cafe", "rustico", "warm_editorial"],      "components": "foto hero do prato principal, cardápio resumido, horários, localização embed, CTA reserva WhatsApp, avaliações reais", "tom": "apetitoso, acolhedor, local", "seo": "H1 com cidade e culinária, schema Restaurant + Menu, FAQ sobre reservas", "anti": "fotos de stock de comida, layout genérico de delivery"},
+    "churrascaria": {"dir": "rustico", "dir_variantes": ["rustico", "cafe"],      "components": "foto hero de carne/brasa, cardápio resumido, horários, localização embed, CTA reserva WhatsApp, avaliações reais", "tom": "robusto, acolhedor, gaúcho, sabor de brasa", "seo": "H1 com cidade e tipo de carne, schema Restaurant, FAQ sobre rodízio e reservas", "anti": "fotos de comida gourmet/fine dining, paleta fria, layout minimalista"},
     "clinica":      {"dir": "clean", "dir_variantes": ["clean", "minimal", "friendly"], "components": "especialidades, equipe com CRM, CTA agendamento WhatsApp, convênios, localização", "tom": "profissional, empático, claro", "seo": "H1 com especialidade e cidade, schema MedicalBusiness, FAQ sobre consultas", "anti": "jargão médico, fotos de stock de médicos, promessas de cura"},
     "nutricionista": {"dir": "friendly", "dir_variantes": ["friendly", "warm_editorial", "clean"], "components": "especialidades, CTA agendamento WhatsApp, depoimentos, FAQ sobre consultas, localização", "tom": "acolhedor, empático, motivador — fala de saúde sem ser clínico", "seo": "H1 com especialidade e cidade, schema MedicalBusiness, FAQ sobre nutrição", "anti": "jargão médico, fotos de stock, promessas de emagrecimento rápido"},
     "academia":     {"dir": "bold", "dir_variantes": ["bold", "nike", "energetic"],      "components": "modalidades, planos e preços, CTA matrícula WhatsApp, fotos do espaço real, horários de aulas", "tom": "energético, motivador, direto", "seo": "H1 com modalidade e cidade, schema SportsActivityLocation, FAQ sobre planos", "anti": "atletas de stock, promessas em X dias, layout corporativo"},
@@ -260,14 +271,16 @@ ALIASES = {
     "crossfit": "academia",
     "psicologia": "clinica", "lanchonete": "restaurante",
     "padaria": "restaurante",
+    "churrascaria": "churrascaria", "churrascarias": "churrascaria",
+    "steakhouse": "churrascaria",
 }
 
 
-def get_design_context(segmento: str, nome_negocio: str = "", tier: str = "STANDARD", dark_mode: bool = False) -> dict:
+def get_design_context(segmento: str, nome_negocio: str = "", tier: str = "STANDARD", dark_mode: bool = False, od_slug: str = "") -> dict:
     """Retorna dict com tokens, tipografia e perfil de animação para o nicho.
-    
-    Retorna dict (não string) para que o ArquitetoMestre possa usar os valores
-    diretamente sem parsing — e montar o :root CSS com precisão.
+
+    Se od_slug fornecido, usa tokens pré-computados do Open Design (DESIGN.md).
+    Fallback: DIRECOES_VISUAIS hardcoded.
     """
     seg = segmento.lower().replace(" ", "_").replace("-", "_")
     seg = ALIASES.get(seg, seg)
@@ -280,9 +293,6 @@ def get_design_context(segmento: str, nome_negocio: str = "", tier: str = "STAND
     })
     tier_upper = tier.upper()
     opcoes = TIER_DIRECAO.get(tier_upper, ["clean"])
-    # Direção do nicho tem prioridade absoluta — tier só influencia nichos sem direção definida
-    # (nichos com dir explícito sempre usam sua direção, independente do tier)
-    # Variantes por nicho: sorteia entre direcoes compativeis para cada lead ser visualmente unico
     import hashlib as _hlib
     _variantes = nicho.get("dir_variantes", [nicho["dir"]])
     import random as _rnd
@@ -295,7 +305,14 @@ def get_design_context(segmento: str, nome_negocio: str = "", tier: str = "STAND
     if dir_key not in DIRECOES_VISUAIS:
         dir_key = nicho["dir"]
     d = DIRECOES_VISUAIS[dir_key]
-    tokens = dict(d["tokens"])
+
+    # Tokens: prioridade Open Design (DESIGN.md real) > DIRECOES_VISUAIS hardcoded
+    _od_effective_slug = od_slug or dir_key
+    if _od_effective_slug in _OD_TOKENS:
+        tokens = dict(_OD_TOKENS[_od_effective_slug])
+    else:
+        tokens = dict(d["tokens"])
+
     if dark_mode:
         tokens.update(DARK_OVERLAY)
     anim = dict(ANIMATION_PROFILES[d["animation"]])  # copia pra não mutar original
@@ -552,9 +569,9 @@ def get_hero_css(dir_key: str) -> str:
     return css
 
 
-def get_design_context_prompt(segmento: str, nome_negocio: str = "", tier: str = "STANDARD", dark_mode: bool = False) -> str:
+def get_design_context_prompt(segmento: str, nome_negocio: str = "", tier: str = "STANDARD", dark_mode: bool = False, od_slug: str = "") -> str:
     """Versão string para injetar em prompts LLM."""
-    ctx = get_design_context(segmento, nome_negocio, tier, dark_mode)
+    ctx = get_design_context(segmento, nome_negocio, tier, dark_mode, od_slug=od_slug)
     tokens_str = "\n".join(f"  {k}: {v}" for k, v in ctx["tokens"].items())
     anim = ctx["animation_profile"]
     _posture = ctx.get("posture", [])

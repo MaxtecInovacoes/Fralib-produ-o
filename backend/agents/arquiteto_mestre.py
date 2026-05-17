@@ -16,7 +16,7 @@ from designer_prd import DesignerPRD, ColorPalette, AnimationSpec, SectionSpec
 from design_context import get_design_context, get_design_context_prompt, get_hero_style
 from craft_rules import get_craft_rules, get_autocritica
 from seo_context import get_seo_context
-from open_design_selector import get_open_design_prompt
+from open_design_selector import get_open_design_prompt, select_design_system
 from markdown_prd_parser import parse_bloco1_with_fallback, parse_bloco2_with_fallback
 
 
@@ -331,7 +331,10 @@ def gerar_arquiteto_mestre_prd(
         print("[ArquitetoMestre] Jina FAQ extraido:", len(_jina_faq), "perguntas")
 
     # Design context primeiro — define tokens OKLch e tipografia
-    _design_dict = get_design_context(segmento, dados_hunter.get("nome", ""), caio_tier, dark_mode)
+    # Selecionar slug do Open Design ANTES pra unificar cores + referência criativa
+    _od_result = select_design_system(segmento, dados_hunter.get("nome", ""), caio_tier)
+    _od_slug = _od_result.get("slug", "")
+    _design_dict = get_design_context(segmento, dados_hunter.get("nome", ""), caio_tier, dark_mode, od_slug=_od_slug)
 
     # Cores vem exclusivamente do design_context (tokens OKLch)
 
@@ -352,7 +355,7 @@ def gerar_arquiteto_mestre_prd(
 
     # Montar contextos Open Design
     _brief_estruturado = _montar_brief_estruturado(dados_hunter, cidade, segmento, caio_tier, caio_score)
-    _design_ctx = get_design_context_prompt(segmento, dados_hunter.get("nome", ""), caio_tier, dark_mode)  # string para prompt
+    _design_ctx = get_design_context_prompt(segmento, dados_hunter.get("nome", ""), caio_tier, dark_mode, od_slug=_od_slug)  # string para prompt
     _craft_ctx = get_craft_rules()
     _autocritica_ctx = get_autocritica()
     _seo_ctx = get_seo_context(segmento, cidade, dados_hunter.get("nome", ""))

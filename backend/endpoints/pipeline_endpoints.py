@@ -266,6 +266,14 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
 
         state.lead_obj = leads[0]
         state.lead_nome = state.lead_obj.lead.nome
+        # Refinar segmento pelo nome do lead (ex: "restaurante" → "churrascaria")
+        _nome_lower = state.lead_nome.lower()
+        _SUB_SEGMENTOS = {"churrascaria": "churrascaria", "steakhouse": "churrascaria", "pizzaria": "pizzaria", "padaria": "padaria", "lanchonete": "lanchonete", "barbearia": "barbearia", "salão": "salao_beleza", "salao": "salao_beleza", "pet": "pet_shop"}
+        for _kw, _seg_ref in _SUB_SEGMENTOS.items():
+            if _kw in _nome_lower and state.segmento != _seg_ref:
+                _log(f"  Segmento refinado: {state.segmento} → {_seg_ref} (detectado '{_kw}' no nome)", "info")
+                state.segmento = _seg_ref
+                break
         # GUARD: se checkpoint tem dados de outro lead, limpar pra evitar contaminação
         _ckpt_lead_check = get_dados_agente(state.pipeline_id, "arquiteto")
         if _ckpt_lead_check and _ckpt_lead_check.get("prd_json"):

@@ -28,6 +28,7 @@ QUERIES_NICHO = {
     "odontologia":    "dentist dental clinic smile",
     "estetica":       "beauty spa aesthetic treatment",
     "restaurante":    "restaurant food dining gourmet",
+    "churrascaria":   "steakhouse barbecue grilled meat fire",
     "lanchonete":     "burger sandwich food snack",
     "padaria":        "bakery bread pastry artisan",
     "confeitaria":    "cake pastry dessert sweet",
