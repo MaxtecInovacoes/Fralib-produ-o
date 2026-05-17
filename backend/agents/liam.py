@@ -109,6 +109,71 @@ PROIBIDO: bolinhas com letras como logo — use texto Bold elegante
 3. EXECUTION: sem cores hardcoded? Botoes min 48px?
 4. SPECIFICITY: zero filler copy? Dados reais?
 5. RESTRAINT: --accent max 2x? Max 3 CTAs?
+
+=== SKELETON OBRIGATORIO POR SECAO (Sonnet: SIGA EXATAMENTE) ===
+
+HERO (min 60 linhas):
+<section id="hero" class="relative w-full min-h-[100dvh] flex items-center overflow-hidden" style="background-color:var(--bg);">
+  <div class="relative z-10 w-full flex flex-col lg:flex-row items-center min-h-[100dvh]">
+    <div class="w-full lg:w-[60%] flex flex-col justify-center px-6 md:px-12 lg:px-20 py-20 lg:py-0">
+      <div class="max-w-2xl">
+        [eyebrow .reveal text-xs uppercase tracking-[0.25em] color:var(--accent)]
+        [h1 .scale-in font-bold clamp(2.8rem,6vw,4.5rem) color:var(--fg)]
+        [subtitle .reveal text-lg color:var(--muted) max-w-[52ch]]
+        [rating .reveal stars + data-counter]
+        [CTA .pulse-cta .btn-primary px-8 py-4 rounded-full bg-[var(--accent)] color:#fff]
+      </div>
+    </div>
+    <div class="w-full lg:w-[40%] h-[50vh] lg:h-full lg:min-h-[100dvh] relative overflow-hidden">
+      <img data-parallax="0.3" loading="eager" class="w-full h-full object-cover">
+      <div class="absolute inset-0 pointer-events-none hidden lg:block" style="background:linear-gradient(to right,var(--bg) 0%,transparent 15%)"></div>
+    </div>
+  </div>
+</section>
+
+SOBRE (min 40 linhas):
+<section id="sobre" class="relative py-24 md:py-40" style="background-color:var(--bg);">
+  <div class="max-w-6xl mx-auto px-4 md:px-8">
+    [separador .line-draw h-px bg-[var(--border)] mb-16]
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-20 items-center">
+      [col-img .reveal-left aspect-[3/4] rounded-2xl overflow-hidden img loading=lazy data-parallax="0.15"]
+      [col-texto .reveal span-label + h2 text-3xl + paragrafos + stats .stagger-item data-counter]
+    </div>
+  </div>
+</section>
+
+SERVICOS (min 50 linhas):
+<section id="servicos" class="py-24 md:py-32" style="background-color:var(--surface);">
+  <div class="max-w-6xl mx-auto px-4 md:px-8">
+    [h2 .reveal text-center]
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mt-16">
+      [cards .stagger-item style="--i:N" hover:translate-y-[-4px] hover:shadow-xl transition-all duration-300 rounded-2xl p-8 border border-[var(--border)]]
+    </div>
+  </div>
+</section>
+
+DEPOIMENTOS (min 30 linhas):
+<section id="depoimentos" class="py-24 md:py-32" style="background-color:var(--bg);">
+  [h2 .reveal + grid 1-3 cols cards com aspas, nome, rating stars]
+</section>
+
+LOCALIZACAO (min 20 linhas):
+<section id="localizacao" class="py-24 md:py-32" style="background-color:var(--surface);">
+  [h2 + grid: col-mapa(iframe google maps embed) + col-info(endereco, horario, telefone)]
+</section>
+
+CONTATO/CTA FINAL (min 20 linhas):
+<section id="contato" class="py-24 md:py-32" style="background-color:var(--bg);">
+  [h2 + texto persuasivo + CTA grande centralizado .pulse-cta]
+</section>
+
+REGRAS DO SKELETON:
+- CADA secao DEVE abrir com <section id="..." class="..."> e fechar com </section>
+- NUNCA gerar div solto sem section wrapper
+- Hero OBRIGATORIO: min-h-[100dvh], grid 60/40, img com data-parallax
+- TODAS secoes: py-24 md:py-32 minimo, max-w-6xl mx-auto
+- MINIMO 6 secoes por site (hero + sobre + servicos + depoimentos + localizacao + contato)
+- Se PRD pedir FAQ: inserir ANTES de contato (NUNCA como ultima secao)
 """
 
 
