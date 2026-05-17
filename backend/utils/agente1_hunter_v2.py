@@ -482,6 +482,9 @@ async def buscar_leads_google_maps(
 
     leads_encontrados = []
 
+    # Ordenar cards por reviews (mais reviews primeiro) — prioriza leads com depoimentos
+    cards_raw.sort(key=lambda c: c.get('reviews', 0) if isinstance(c.get('reviews', 0), int) else 0, reverse=True)
+
     # FASE 2: Loop LAZY — detalhe de 1, qualifica, aceita/rejeita
     # Para no primeiro lead com score suficiente E reviews reais
     for dados in cards_raw:
@@ -513,6 +516,12 @@ async def buscar_leads_google_maps(
         _nome_norm = nome.lower().strip()
         if _nome_norm and _nome_norm in _existentes:
             print(f"[Hunter V2] SKIP duplicata: {nome}")
+            continue
+
+        # Pular leads com 0 reviews no card (não vale abrir detalhes)
+        _card_reviews = dados.get('reviews', 0)
+        if isinstance(_card_reviews, int) and _card_reviews < 5:
+            print(f"[Hunter V2] SKIP poucas reviews no card: {nome} ({_card_reviews} reviews)")
             continue
 
         # LAZY: buscar detalhes de APENAS este lead
