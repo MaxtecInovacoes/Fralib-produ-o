@@ -470,15 +470,11 @@ async def buscar_leads_google_maps(
 
     scraper = GoogleMapsScraper(headless=True)
 
-    # FASE 1: Buscar APENAS cards (sem detalhes) — rapido e leve
-    _buscar = min(limite + 3, max(limite * 2, limite + len(_existentes) + 2))
-    cards_raw = await scraper.buscar_somente_cards(segmento, cidade, limite=_buscar)
-    print(f"[Hunter V2] {len(cards_raw)} cards capturados (sem detalhes)")
-
-    if not cards_raw:
-        print("[Hunter V2] Nenhum card encontrado, tentando busca completa...")
-        resultados_raw = await scraper.buscar(segmento, cidade, limite=_buscar)
-        cards_raw = resultados_raw
+    # Buscar leads COM detalhes (reviews, horários, fotos) em 1 sessão de browser
+    # Mais eficiente que abrir browser separado pra cada lead
+    _buscar = min(limite + 5, max(limite * 3, limite + len(_existentes) + 3))
+    cards_raw = await scraper.buscar(segmento, cidade, limite=_buscar)
+    print(f"[Hunter V2] {len(cards_raw)} leads com detalhes capturados")
 
     leads_encontrados = []
 
@@ -518,30 +514,7 @@ async def buscar_leads_google_maps(
             print(f"[Hunter V2] SKIP duplicata: {nome}")
             continue
 
-        # Pular leads com 0 reviews no card (não vale abrir detalhes)
-        _card_reviews = dados.get('reviews', 0)
-        if isinstance(_card_reviews, int) and _card_reviews < 5:
-            print(f"[Hunter V2] SKIP poucas reviews no card: {nome} ({_card_reviews} reviews)")
-            continue
-
-        # LAZY: buscar detalhes de APENAS este lead
-        try:
-            detalhes = await scraper.buscar_detalhe_unico(nome, cidade)
-            if detalhes:
-                dados["logo"] = detalhes.get("logo", "")
-                dados["fotos"] = detalhes.get("fotos", [])
-                dados["depoimentos"] = detalhes.get("depoimentos", [])
-                dados["horarios"] = detalhes.get("horarios", [])
-                dados["maps_url"] = detalhes.get("maps_url", "")
-                dados["atributos"] = detalhes.get("atributos", [])
-                dados["servicos"] = detalhes.get("servicos", [])
-                dados["faixa_preco"] = detalhes.get("faixa_preco", "")
-                if detalhes.get("website"):
-                    dados["website"] = detalhes["website"]
-                if detalhes.get("telefone"):
-                    dados["telefone"] = detalhes["telefone"]
-        except Exception as e_det:
-            print(f"[Hunter V2] Detalhe {nome}: {e_det}")
+        # Detalhes já vêm do scraper.buscar() — não precisa abrir browser separado
 
         try:
             lead = LeadRaw(
