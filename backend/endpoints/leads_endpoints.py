@@ -658,13 +658,15 @@ async def atualizar_campos_lead(lead_id: str, req: CamposLeadRequest, db: Sessio
 # 2.2 — Fila de leads qualificados aguardando pipeline
 @router.get('/fila-qualificados')
 async def get_fila_qualificados(db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
+    """Fila de atendimento: apenas leads que completaram pipeline (site pronto, aguardando SDR enviar msg)"""
     try:
         tenant_id = usuario.get('tenant_id', usuario['id'])
         result = db.execute(text("""
             SELECT id, nome, cidade, segmento, score, tier, status, criado_em
             FROM leads
             WHERE user_id = :uid
-              AND status IN ('qualificado', 'capturado')
+              AND status = 'concluido'
+              AND (sdr_stage IN ('hook', 'pendente_wpp') OR sdr_stage IS NULL)
             ORDER BY criado_em ASC
             LIMIT 100
         """), {"uid": tenant_id}).fetchall()
