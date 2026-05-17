@@ -597,6 +597,8 @@ def gerar_html_componentizado(prd):
     _hero_overlay = _hero_style_prd.get("overlay") or (_dc_tokens.get("hero_style") or {}).get("overlay", "rgba(0,0,0,0.55)")
     _hero_img_style = _hero_style_prd.get("img_style") or (_dc_tokens.get("hero_style") or {}).get("img_style", "object-fit:cover;")
 
+    _liam_model = "sonnet"
+
     def _gerar_secao(s):
         """Gera uma secao individual."""
         s_dict = s.dict() if hasattr(s, "dict") else (s if isinstance(s, dict) else {})
@@ -670,7 +672,7 @@ def gerar_html_componentizado(prd):
             resposta_secao = call_claude(
                 system=system_liam,
                 user=prompt_secao,
-                model="sonnet",
+                model=_liam_model,
                 max_tokens=8000,
                 temperature=0.4,
                 agent_name=None,
@@ -748,6 +750,11 @@ def gerar_html_componentizado(prd):
         _max_retries_secao = 3
         for _retry_secao in range(_max_retries_secao):
             try:
+                if _retry_secao >= 1:
+                    _liam_model = "opus"
+                    print(f"[Liam] {_nome_seq}: escalando para Opus (retry {_retry_secao})")
+                else:
+                    _liam_model = "sonnet"
                 _nome_resultado, _html_resultado = _gerar_secao(_s_seq)
                 if _html_resultado:
                     break  # sucesso
