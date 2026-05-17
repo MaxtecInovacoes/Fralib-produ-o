@@ -232,7 +232,6 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
             _log(f"  Lead: {state.lead_nome} | Caio: PULADO (tier={state.qualificacao_caio.tier})", "success")
             # Unsplash — renovar fotos
             try:
-                from agents.unsplash_fetcher import buscar_fotos_unsplash
                 _fotos_u = buscar_fotos_unsplash(state.segmento, quantidade=8, nome=state.lead_nome, cidade=_ld["cidade"])
                 state.lead_raw_data["fotos"] = _fotos_u
                 state.lead_raw_data["logo_url"] = None
