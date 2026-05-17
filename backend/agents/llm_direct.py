@@ -375,6 +375,11 @@ def call_claude(system, user, model='opus', max_tokens=4000, temperature=0.7, ag
         'messages': [{'role': 'user', 'content': messages_content}]
     }
 
+    # Blindagem 1: NUNCA enviar tools/tool_choice no call_claude (não-structured)
+    # O proxy aibee.cloud interpreta tools vazias e retorna tool_use fantasma
+    payload.pop('tools', None)
+    payload.pop('tool_choice', None)
+
     # Mesclar headers extras (ex: prompt caching beta)
     if extra_headers:
         headers = {**headers, **extra_headers}
@@ -500,10 +505,17 @@ def call_claude(system, user, model='opus', max_tokens=4000, temperature=0.7, ag
         import time; time.sleep(2 * retry_count)
         print('[LLM] Retry ' + str(retry_count) + '/3 - sem bloco text, retentando')
         # Remover tools, tool_choice E cache_control para forcar nova geracao
-        payload_retry = {k: v for k, v in payload.items() if k != 'tools' and k != 'tool_choice'}
+        payload_retry = {k: v for k, v in payload.items() if k not in ('tools', 'tool_choice')}
         # Remover cache_control do system prompt
         if isinstance(payload_retry.get('system'), list):
             payload_retry['system'] = payload_retry['system'][0]['text'] if payload_retry['system'] else ''
+        # Blindagem 2: Cache buster — string invisível no system pra forçar nova geração no proxy
+        import uuid as _uuid_retry
+        _cache_bust = f"\n\n[{_uuid_retry.uuid4().hex[:8]}]"
+        if isinstance(payload_retry.get('system'), str):
+            payload_retry['system'] = payload_retry['system'] + _cache_bust
+        elif isinstance(payload_retry.get('system'), list):
+            payload_retry['system'] = payload_retry['system'][0]['text'] + _cache_bust if payload_retry['system'] else _cache_bust
         # Headers sem prompt-caching
         headers_retry = {k: v for k, v in headers.items() if 'beta' not in k.lower()}
         response2 = requests.post(url, headers=headers_retry, json=payload_retry, timeout=_llm_timeout())
@@ -513,9 +525,22 @@ def call_claude(system, user, model='opus', max_tokens=4000, temperature=0.7, ag
         usage = data.get('usage', {})
         output_tokens = usage.get('output_tokens', 0)
         print('[LLM] Retry ' + str(retry_count) + ': stop=' + stop_reason + ' out=' + str(output_tokens))
+        # Blindagem 3: extrair texto mesmo se stop_reason=tool_use
         for block in data.get('content', []):
-            if block.get('type') == 'text':
+            if block.get('type') == 'text' and block.get('text', '').strip():
                 return block['text']
+        # Se tool_use com input contendo texto, extrair
+        for block in data.get('content', []):
+            if block.get('type') == 'tool_use':
+                inp = block.get('input', {})
+                if isinstance(inp, dict):
+                    for key in ['text', 'content', 'response', 'message', 'output', 'html', 'code']:
+                        if key in inp and isinstance(inp[key], str) and len(inp[key]) > 50:
+                            print(f"[LLM] Retry {retry_count}: recuperado de tool_use.input.{key}")
+                            return inp[key]
+                elif isinstance(inp, str) and len(inp) > 50:
+                    print(f"[LLM] Retry {retry_count}: recuperado de tool_use.input (string)")
+                    return inp
 
     # Ultimo fallback: procurar qualquer bloco com chave 'text'
     for block in data.get('content', []):
