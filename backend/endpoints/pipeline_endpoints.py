@@ -119,10 +119,21 @@ def _check_cooldown(db, tenant_id: int):
         restante = int(cooldown_secs - elapsed)
         minutos = restante // 60
         segundos = restante % 60
-        raise HTTPException(
-            429,
-            f"Aguarde {minutos}min {segundos}s antes de rodar outro pipeline. Plano {plano}: intervalo de {cooldown_secs // 60} minutos entre execuções."
-        )
+        # Verificar se tem leads na fila pra auto-run
+        fila_count = db.execute(text(
+            "SELECT COUNT(*) FROM leads WHERE user_id=:uid AND status='capturado'"
+        ), {"uid": tenant_id}).scalar() or 0
+        detail = {
+            "mensagem": f"Aguarde {minutos}min {segundos}s antes de rodar outro pipeline.",
+            "cooldown_restante_seg": restante,
+            "cooldown_total_seg": cooldown_secs,
+            "proximo_em": (_dt.now() + timedelta(seconds=restante)).isoformat(),
+            "plano": plano,
+            "leads_na_fila": fila_count,
+            "auto_run": fila_count > 0,
+            "upsell": f"Upgrade para {'Pro (30min)' if plano == 'starter' else 'Ilimitado (sem espera)'} para rodar mais rápido." if plano in ('starter', 'pro') else None,
+        }
+        raise HTTPException(status_code=429, detail=detail)
 
 router = APIRouter(prefix='/api/pipeline', tags=['pipeline'])
 logger = logging.getLogger('uvicorn')
@@ -1045,6 +1056,31 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
                 print(f"[Pipeline] Credito descontado: {_consumed} (tenant={tenant_id})")
         except Exception as _cred_err:
             print(f"[Pipeline] ERRO ao descontar credito: {_cred_err}")
+
+        # Auto-run: se tem leads na fila, agendar próximo após cooldown
+        try:
+            with SessionLocal() as _db_auto:
+                _plano_row = _db_auto.execute(text("SELECT plano, plano_pago FROM users WHERE id=:id"), {"id": tenant_id}).fetchone()
+                _plano_auto = (_plano_row[0] if _plano_row else "trial") or "trial"
+                _plano_pago_auto = _plano_row[1] if _plano_row else False
+                _fila_auto = _db_auto.execute(text(
+                    "SELECT id, segmento, cidade FROM leads WHERE user_id=:uid AND status='capturado' ORDER BY score DESC LIMIT 1"
+                ), {"uid": tenant_id}).fetchone()
+                if _fila_auto and _plano_pago_auto:
+                    _cooldown_auto = _COOLDOWN_POR_PLANO.get(_plano_auto, 3600)
+                    _lead_id_auto = str(_fila_auto[0])
+                    print(f"[Pipeline] Auto-run: lead {_lead_id_auto} na fila, agendando em {_cooldown_auto}s")
+                    _log(f"Proximo pipeline automatico em {_cooldown_auto // 60}min ({_fila_auto[1]} - {_fila_auto[2]})", "info")
+
+                    async def _auto_run_delayed():
+                        await asyncio.sleep(_cooldown_auto)
+                        try:
+                            await executar_pipeline_lead_existente(_lead_id_auto, tenant_id)
+                        except Exception as _ar_err:
+                            print(f"[Pipeline] Auto-run erro: {_ar_err}")
+                    asyncio.create_task(_auto_run_delayed())
+        except Exception as _auto_err:
+            print(f"[Pipeline] Auto-run check erro: {_auto_err}")
 
         # Buscar leads extras em background pra fila de processamento
         _qtd_extra = config.get("quantidade", 1) - 1
