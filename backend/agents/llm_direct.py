@@ -561,7 +561,7 @@ def call_claude(system, user, model='opus', max_tokens=4000, temperature=0.7, ag
                 print("[LLM] Recuperado de no_tool_available.input (string)")
                 return inp
     print(f"[LLM] ERRO: nenhum bloco text encontrado. content={data.get('content', [])}")
-    return ""  
+    raise RuntimeError("[LLM] Proxy retornou tool_use sem texto após 3 retries — resposta irrecuperável")
 
 
 def call_claude_structured(system, user, tool_name, tool_description, input_schema, model='opus', max_tokens=8000, temperature=0.7):
