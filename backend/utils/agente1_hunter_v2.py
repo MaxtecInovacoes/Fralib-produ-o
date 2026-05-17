@@ -470,10 +470,10 @@ async def buscar_leads_google_maps(
 
     scraper = GoogleMapsScraper(headless=True)
 
-    # Buscar MAIS cards do que o limite pedido pra ter margem de filtrar duplicatas
-    # Se pede 1, busca 20 (padrão Maps). Se pede 5, busca 20. Nunca menos que 20.
+    # Buscar cards do Maps — sempre 20+ pra ter margem de filtrar duplicatas
+    # Mas limitar detalhes (reviews, fotos) aos primeiros N não-duplicados
     _busca_limite = max(20, limite * 4)
-    cards_raw = await scraper.buscar(segmento, cidade, limite=_busca_limite)
+    cards_raw = await scraper.buscar(segmento, cidade, limite=_busca_limite, leads_existentes=_existentes)
     print(f"[Hunter V2] {len(cards_raw)} leads com detalhes capturados")
 
     leads_encontrados = []

@@ -22,7 +22,8 @@ class GoogleLocalScraper:
     async def _human_delay(self, min_ms=800, max_ms=2500):
         await asyncio.sleep(random.uniform(min_ms/1000, max_ms/1000))
 
-    async def buscar(self, query: str, cidade: str, limite: int = 10) -> List[Dict]:
+    async def buscar(self, query: str, cidade: str, limite: int = 10, leads_existentes: set = None) -> List[Dict]:
+        _existentes = leads_existentes or set()
         async with async_playwright() as p:
             browser = await p.chromium.launch(
                 headless=self.headless,
@@ -53,6 +54,14 @@ class GoogleLocalScraper:
                     import asyncio as _asyncio
                     _sem = _asyncio.Semaphore(4)  # max 4 tabs simultâneas
 
+                    # Filtrar duplicatas ANTES de buscar detalhes (economiza tempo)
+                    _novos = [e for e in estabelecimentos_maps if e.get("nome", "").lower().strip() not in _existentes]
+                    _dupes = len(estabelecimentos_maps) - len(_novos)
+                    if _dupes > 0:
+                        print(f"[Scraper] {_dupes} duplicatas filtradas antes de buscar detalhes")
+                    # Limitar detalhes a no máximo 5 (suficiente pra pipeline pegar 1-3 válidos)
+                    _para_detalhar = _novos[:min(5, max(limite, 5))]
+
                     async def _buscar_com_sem(est):
                         async with _sem:
                             try:
@@ -73,10 +82,10 @@ class GoogleLocalScraper:
                             except Exception as e_det:
                                 print(f"[Scraper] detalhe {est['nome']}: {e_det}")
 
-                    await _asyncio.gather(*[_buscar_com_sem(est) for est in estabelecimentos_maps])
-                    print(f"\n[Scraper] Total: {len(estabelecimentos_maps)} estabelecimentos capturados")
+                    await _asyncio.gather(*[_buscar_com_sem(est) for est in _para_detalhar])
+                    print(f"\n[Scraper] Total: {len(_para_detalhar)} estabelecimentos capturados")
                     await browser.close()
-                    return estabelecimentos_maps
+                    return _para_detalhar
 
                 # Fallback: Google Search texto
                 await page.goto("https://www.google.com.br", timeout=30000)
