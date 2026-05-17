@@ -605,7 +605,7 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
                     caio_tier=state.qualificacao_caio.tier if state.qualificacao_caio else "STANDARD",
                     caio_score=state.qualificacao_caio.score if state.qualificacao_caio else 0,
                     caio_motivo=state.qualificacao_caio.motivo if state.qualificacao_caio else "",
-                    dark_mode=False,
+                    dark_mode=state.segmento in ("academia", "crossfit", "churrascaria", "barbearia"),
                     keyword_research=getattr(state, 'keyword_research', ''),
                 ),
                 fase="arquiteto", max_attempts=3, base_delay=2.0,
