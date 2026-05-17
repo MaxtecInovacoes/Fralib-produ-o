@@ -503,9 +503,12 @@ def call_claude(system, user, model='opus', max_tokens=4000, temperature=0.7, ag
     while retry_count < max_retries:
         retry_count += 1
         import time; time.sleep(2 * retry_count)
-        print('[LLM] Retry ' + str(retry_count) + '/3 - sem bloco text, retentando')
+        # Fallback de modelo: Opus falhou → usar Sonnet nos retries
+        _fallback_model = 'claude-sonnet-4-6'
+        print(f'[LLM] Retry {retry_count}/3 - Fallback para Sonnet ativado devido a erro de tool_use')
         # Remover tools, tool_choice E cache_control para forcar nova geracao
         payload_retry = {k: v for k, v in payload.items() if k not in ('tools', 'tool_choice')}
+        payload_retry['model'] = _fallback_model
         # Remover cache_control do system prompt
         if isinstance(payload_retry.get('system'), list):
             payload_retry['system'] = payload_retry['system'][0]['text'] if payload_retry['system'] else ''
