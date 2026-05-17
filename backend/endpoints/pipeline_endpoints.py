@@ -163,6 +163,98 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
             _os.remove(_tp)
     print("[Pipeline] Traces residuais limpos")
     try:
+        # ─── REPROCESSAMENTO: pular Hunter + Caio se lead já existe ───
+        _lead_id_existente = config.get("_lead_id_existente")
+        if _lead_id_existente:
+            _log("REPROCESSAMENTO — pulando Hunter + Caio", "info")
+            from utils.agente1_hunter_v2 import LeadRaw, LeadQualificado
+            from agents.caio import CaioOutput
+            import json as _json_reproc
+            with engine.connect() as _conn_reproc:
+                _row_reproc = _conn_reproc.execute(
+                    text("SELECT * FROM leads WHERE id=:id AND user_id=:uid"),
+                    {"id": _lead_id_existente, "uid": tenant_id},
+                ).fetchone()
+            if not _row_reproc:
+                raise Exception(f"Lead {_lead_id_existente} nao encontrado")
+            _ld = dict(_row_reproc._mapping)
+            _dados_r = _ld.get("dados_completos") or {}
+            if isinstance(_dados_r, str):
+                try: _dados_r = _json_reproc.loads(_dados_r)
+                except: _dados_r = {}
+            _reviews_r = _dados_r.get("reviews") or []
+            _lead_raw_r = LeadRaw(
+                nome=_ld["nome"], cidade=_ld["cidade"], segmento=_ld.get("segmento") or state.segmento,
+                telefone=_ld.get("telefone") or "", whatsapp=_ld.get("whatsapp") or "",
+                rating=float(_ld.get("rating") or 0), total_avaliacoes=int(_ld.get("total_avaliacoes") or len(_reviews_r)),
+                reviews=_reviews_r, fotos=_dados_r.get("fotos") or [],
+                website=_ld.get("website") or _dados_r.get("website") or "",
+                endereco=_ld.get("endereco") or _dados_r.get("endereco") or "",
+                maps_url=_dados_r.get("maps_url") or "",
+                horarios=_dados_r.get("horarios") or [], atributos=_dados_r.get("atributos") or [],
+                servicos=_dados_r.get("servicos") or [],
+            )
+            state.lead_obj = LeadQualificado(
+                lead=_lead_raw_r, score=int(_ld.get("score") or 50),
+                tier=_ld.get("tier") or "STANDARD", razoes=[], sinais=[],
+                presenca_digital="SITE" if _lead_raw_r.website else "ZERO_PRESENCA",
+                dados_suficientes=True,
+            )
+            state.lead_nome = _ld["nome"]
+            _slug_norm = unicodedata.normalize("NFKD", state.lead_nome).encode("ascii", "ignore").decode("ascii")
+            state.lead_slug = re.sub(r"[^a-z0-9]+", "-", _slug_norm.lower()).strip("-")[:50]
+            state.lead_id = _lead_id_existente
+            # Refinar segmento pelo nome
+            _nome_lower = state.lead_nome.lower()
+            _SUB_SEGMENTOS = {"churrascaria": "churrascaria", "steakhouse": "churrascaria", "pizzaria": "pizzaria", "padaria": "padaria", "lanchonete": "lanchonete", "barbearia": "barbearia", "salão": "salao_beleza", "salao": "salao_beleza", "pet": "pet_shop"}
+            for _kw, _seg_ref in _SUB_SEGMENTOS.items():
+                if _kw in _nome_lower and state.segmento != _seg_ref:
+                    _log(f"  Segmento refinado: {state.segmento} → {_seg_ref}", "info")
+                    state.segmento = _seg_ref
+                    break
+            state.lead_raw_data = {
+                "nome": state.lead_nome, "cidade": _ld["cidade"], "segmento": state.segmento,
+                "telefone": _lead_raw_r.telefone, "whatsapp": _lead_raw_r.whatsapp,
+                "rating": _lead_raw_r.rating, "reviews": _reviews_r,
+                "total_avaliacoes": _lead_raw_r.total_avaliacoes, "fotos": _lead_raw_r.fotos,
+                "website": _lead_raw_r.website, "logo_url": _dados_r.get("logo_url"),
+                "horarios": _lead_raw_r.horarios, "atributos": _lead_raw_r.atributos,
+                "servicos": _lead_raw_r.servicos, "endereco": _lead_raw_r.endereco,
+            }
+            # Caio: pular — usar qualificação anterior
+            state.qualificacao_caio = CaioOutput(
+                qualificado=True, qualificacao="QUENTE",
+                tier=state.lead_obj.tier or "STANDARD",
+                score=state.lead_obj.score or 50,
+                motivo="Reprocessamento — qualificação anterior mantida",
+            )
+            state.alex_result = None
+            _log(f"  Lead: {state.lead_nome} | Caio: PULADO (tier={state.qualificacao_caio.tier})", "success")
+            # Unsplash — renovar fotos
+            try:
+                from agents.unsplash_fetcher import buscar_fotos_unsplash
+                _fotos_u = buscar_fotos_unsplash(state.segmento, quantidade=8, nome=state.lead_nome, cidade=_ld["cidade"])
+                state.lead_raw_data["fotos"] = _fotos_u
+                state.lead_raw_data["logo_url"] = None
+                _log(f"  Fotos Unsplash: {len(_fotos_u)}", "success")
+            except Exception as _eu:
+                logger.warning(f"[Pipeline] Unsplash erro: {_eu}")
+            # Forcar renovacao de caches se pedido
+            if config.get("_forcar_renovacao"):
+                import hashlib as _hl_r
+                _cache_key_r = _hl_r.md5((state.segmento.lower() + _ld["cidade"].lower()).encode()).hexdigest()[:12]
+                _jina_file_r = f"/root/fralib/backend/agents/jina_cache/jina_{_cache_key_r}.txt"
+                if _os.path.exists(_jina_file_r):
+                    _os.remove(_jina_file_r)
+                    _log("  Cache Jina invalidado", "info")
+            # Reprocessamento: usar _executar_pipeline_a_partir_fase2 (mesmos agentes)
+            if not getattr(state, 'keyword_research', ''):
+                try:
+                    from agents.keyword_research import pesquisar_keywords_nicho
+                    state.keyword_research = pesquisar_keywords_nicho(state.segmento, state.lead_obj.lead.cidade)
+                except: state.keyword_research = ""
+            await _executar_pipeline_a_partir_fase2(state, tenant_id, config)
+            return {"sucesso": True, "lead": state.lead_nome}
         _progress(1, "Buscando leads...")
         _log("FASE 1: HUNTER + KEYWORD RESEARCH (paralelo)", "info")
         # Carregar leads já existentes no banco para evitar duplicatas
@@ -1556,19 +1648,18 @@ async def _executar_pipeline_a_partir_fase2(state, tenant_id, config):
             except Exception as _kwe:
                 logger.warning(f"[Pipeline] Keyword research erro: {_kwe}")
 
-        # Reprocessamento: PULAR Caio — lead já foi qualificado antes
-        # Usar score/tier do banco (já qualificado anteriormente)
-        from agents.caio import CaioOutput
-        state.qualificacao_caio = CaioOutput(
-            qualificado=True,
-            qualificacao="QUENTE",
-            tier=state.lead_obj.tier or "STANDARD",
-            score=state.lead_obj.score or 50,
-            motivo="Reprocessamento — qualificação anterior mantida",
-        )
-        # Alex DESATIVADO — fotos via Unsplash, paleta via paleta_nicho
+        # Caio: pular se já qualificado (reprocessamento)
+        if not state.qualificacao_caio:
+            from agents.caio import CaioOutput
+            state.qualificacao_caio = CaioOutput(
+                qualificado=True,
+                qualificacao="QUENTE",
+                tier=state.lead_obj.tier or "STANDARD",
+                score=state.lead_obj.score or 50,
+                motivo="Reprocessamento — qualificação anterior mantida",
+            )
         state.alex_result = None
-        _log(f"  Caio: PULADO (reprocessamento) — tier={state.qualificacao_caio.tier}", "info")
+        _log(f"  Caio: {state.qualificacao_caio.qualificacao} (tier={state.qualificacao_caio.tier})", "info")
 
         # Theo
         # Theo REMOVIDO — pipeline atual não usa mais
@@ -1744,7 +1835,25 @@ async def reprocessar_lead(lead_id: str, background_tasks: BackgroundTasks, db: 
     db.commit()
     _renovacao_label = " (renovacao forcada)" if forcar_renovacao else ""
     adicionar_log(f"Lead {lead.nome} reprocessando{_renovacao_label}...", "info", user_id=tenant_id)
-    background_tasks.add_task(executar_pipeline_lead_existente, lead_id, tenant_id, forcar_renovacao=forcar_renovacao)
+    # Enfileirar como job normal no worker — usa pipeline principal com flag pra pular Hunter+Caio
+    import job_queue as _jq
+    config_reproc = {
+        "segmento": lead.segmento or "",
+        "cidade": lead.cidade or "",
+        "quantidade": 1,
+        "_lead_id_existente": lead_id,
+        "_forcar_renovacao": forcar_renovacao,
+    }
+    try:
+        job_id = _jq.enqueue(
+            db, tipo="pipeline_multiplos",
+            payload={**config_reproc, "queue_id": queue_result.get("queue_id")},
+            tenant_id=tenant_id, max_attempts=3, priority=1,
+        )
+        adicionar_log(f"[Pipeline] Reprocessamento enfileirado (job #{job_id})", "info", user_id=tenant_id)
+    except Exception as _e:
+        # Fallback: background task
+        background_tasks.add_task(executar_pipeline_lead_existente, lead_id, tenant_id, forcar_renovacao=forcar_renovacao)
     return {"ok": True, "mensagem": f"Lead {lead.nome} na fila para reprocessamento"}
 
 @router.get('/fila-reprocessamento')
