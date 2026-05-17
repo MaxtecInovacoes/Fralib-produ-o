@@ -174,6 +174,24 @@ REGRAS DO SKELETON:
 - TODAS secoes: py-24 md:py-32 minimo, max-w-6xl mx-auto
 - MINIMO 6 secoes por site (hero + sobre + servicos + depoimentos + localizacao + contato)
 - Se PRD pedir FAQ: inserir ANTES de contato (NUNCA como ultima secao)
+
+=== ALTERNANCIA DE FUNDO (RITMO VISUAL) ===
+Secoes NUNCA devem ter todas o mesmo fundo. Alternar entre:
+  - var(--bg) — fundo principal (off-white tintado)
+  - var(--surface) — branco puro (cards, destaque)
+  - color-mix(in oklch, var(--accent) 5%, var(--bg)) — fundo com toque sutil do accent
+  - var(--fg) com texto var(--bg) — secao dark invertida (MAX 1 por site, ideal pra CTA final ou depoimentos)
+
+Padrao recomendado:
+  hero: var(--bg)
+  sobre: var(--bg)
+  servicos: var(--surface) ← destaca cards
+  depoimentos: color-mix(in oklch, var(--accent) 8%, var(--bg)) ← fundo tintado sutil
+  localizacao: var(--bg)
+  contato: var(--fg) com texto var(--bg) ← secao dark, CTA final impactante
+
+REGRA: NUNCA 3 secoes seguidas com mesmo background. Minimo 2 fundos diferentes alternando.
+REGRA: Secao dark (fundo var(--fg)) = texto DEVE ser var(--bg). Botoes: bg-[var(--accent)] text-white.
 """
 
 
