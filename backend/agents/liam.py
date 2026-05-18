@@ -1567,6 +1567,78 @@ def _gerar_back_to_top() -> str:
     )
 
 
+def _gerar_stats_section(prd) -> str:
+    """Seção de números/stats — social proof quantitativo. Injetada se tem dados."""
+    _rating = getattr(prd, 'rating', 0) or getattr(prd, 'reviews_rating', 0) or 0
+    _reviews = getattr(prd, 'reviews_list', []) or []
+    _n_reviews = len(_reviews)
+    _anos = getattr(prd, 'years_in_business', 0) or 0
+    _fotos = getattr(prd, 'photos', []) or []
+
+    # Precisa de pelo menos 2 stats pra mostrar
+    stats = []
+    if _rating >= 4.0:
+        stats.append({"valor": str(_rating).replace('.', ','), "label": "Avalia&ccedil;&atilde;o Google", "suffix": "/5"})
+    if _n_reviews >= 5:
+        stats.append({"valor": str(_n_reviews), "label": "Avalia&ccedil;&otilde;es", "suffix": "+"})
+    if _anos >= 2:
+        stats.append({"valor": str(_anos), "label": "Anos de experi&ecirc;ncia", "suffix": ""})
+    elif _anos == 0 and _n_reviews > 20:
+        stats.append({"valor": str(_n_reviews * 8), "label": "Clientes atendidos", "suffix": "+"})
+
+    if len(stats) < 2:
+        return ""
+
+    nl = chr(10)
+    items = ""
+    for i, s in enumerate(stats[:4]):
+        items += (
+            '<div class="text-center stagger-item" style="--i:' + str(i) + '">' + nl
+            + '<p class="text-3xl md:text-5xl font-bold" style="color:var(--accent);" data-count="'
+            + s["valor"].replace(",", ".").replace("+", "") + '">' + s["valor"] + s["suffix"] + '</p>' + nl
+            + '<p class="text-sm mt-2" style="color:var(--muted);">' + s["label"] + '</p>' + nl
+            + '</div>' + nl
+        )
+    return (
+        '<section id="numeros" class="py-16 md:py-24" style="background-color:var(--bg);">' + nl
+        + '<div class="max-w-4xl mx-auto px-4 md:px-8">' + nl
+        + '<div class="grid grid-cols-2 md:grid-cols-' + str(min(len(stats), 4)) + ' gap-8 md:gap-12">' + nl
+        + items
+        + '</div></div></section>' + nl
+    )
+
+
+def _gerar_cta_final(prd, whatsapp_url: str) -> str:
+    """Seção CTA final — última chamada pra ação antes do footer."""
+    nome = getattr(prd, 'business_name', '') or ''
+    _sub = getattr(prd, 'sub_nicho', {}) or {}
+    _cta_text = "Fale conosco"
+    if isinstance(_sub, dict) and _sub.get("cta"):
+        _cta_text = _sub["cta"]
+    else:
+        _seg = (getattr(prd, "segmento", "") or "").lower()
+        _map = {"academia": "Comece hoje", "restaurante": "Faça sua reserva",
+                "clinica": "Agende sua consulta", "estetica": "Agende sua avaliação",
+                "advogado": "Consulta gratuita", "barbearia": "Agende seu horário",
+                "nutricionista": "Agende sua consulta", "pizzaria": "Peça agora"}
+        _cta_text = _map.get(_seg, "Fale conosco")
+
+    nl = chr(10)
+    return (
+        '<section id="cta-final" class="py-20 md:py-32 relative overflow-hidden" style="background-color:var(--accent);">' + nl
+        + '<div class="max-w-3xl mx-auto px-4 md:px-8 text-center relative z-10">' + nl
+        + '<h2 class="reveal text-2xl md:text-4xl font-bold text-white mb-4">Pronto para come&ccedil;ar?</h2>' + nl
+        + '<p class="reveal text-white/80 text-lg mb-8 max-w-xl mx-auto">Entre em contato e descubra como podemos ajudar voc&ecirc;.</p>' + nl
+        + '<a href="' + whatsapp_url + '" target="_blank" rel="noopener" '
+        + 'class="reveal inline-flex items-center gap-3 px-8 py-4 rounded-full text-lg font-bold transition-transform hover:scale-105" '
+        + 'style="background:white;color:var(--accent);">'
+        + '<i class="ph-fill ph-whatsapp-logo text-xl"></i>' + _cta_text + '</a>' + nl
+        + '</div>' + nl
+        + '<div class="absolute inset-0 opacity-10" style="background:radial-gradient(circle at 30% 50%,white 0%,transparent 60%);"></div>' + nl
+        + '</section>' + nl
+    )
+
+
 def _gerar_galeria_section(prd) -> str:
     """Seção galeria — grid de fotos do negócio. Injetada se tem 4+ fotos."""
     fotos = getattr(prd, 'photos', []) or []
@@ -2050,8 +2122,10 @@ body { background:var(--bg); color:var(--fg); }
     # Injetar FAQ accordion se PRD tem FAQ
     _faq_section = _gerar_faq_section(prd)
     _galeria_section = _gerar_galeria_section(prd)
+    _stats_section = _gerar_stats_section(prd)
+    _cta_final_section = _gerar_cta_final(prd, whatsapp_url)
 
-    return header + "<main id=" + q + "fralib-content" + q + " class=" + q + "w-full overflow-x-hidden pt-20" + q + ">" + nl + html_main + nl + _galeria_section + _faq_section + "</main>" + nl + footer
+    return header + "<main id=" + q + "fralib-content" + q + " class=" + q + "w-full overflow-x-hidden pt-20" + q + ">" + nl + html_main + nl + _stats_section + _galeria_section + _faq_section + _cta_final_section + "</main>" + nl + footer
 
 
 def critique_theater_pass(html):
