@@ -117,10 +117,36 @@ section{padding:100px 0;position:relative}
   font-family:var(--fl-font-brand);
   font-size:clamp(11px,2vw,18px);
   text-align:center;line-height:2;
-  margin-bottom:56px;
+  margin-bottom:16px;
   background:linear-gradient(135deg,var(--fl-purple-300),var(--cyan));
   -webkit-background-clip:text;-webkit-text-fill-color:transparent;
   background-clip:text;
+}
+.section-sub{
+  text-align:center;
+  color:var(--fl-text-muted);
+  font-size:clamp(14px,1.4vw,17px);
+  line-height:1.7;
+  max-width:600px;
+  margin:0 auto 48px;
+}
+.highlight-box{
+  background:var(--fl-bg-card);
+  border:1px solid var(--fl-border-md);
+  border-radius:var(--fl-r-lg);
+  padding:32px;
+  text-align:center;
+}
+.highlight-box h3{
+  font-family:var(--fl-font-brand);
+  font-size:clamp(10px,1.5vw,14px);
+  margin-bottom:16px;
+  color:var(--fl-text);
+}
+.highlight-box p{
+  color:var(--fl-text-muted);
+  font-size:14px;
+  line-height:1.7;
 }
 
 /* ============================================================
@@ -217,14 +243,6 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
   -webkit-mask-image:radial-gradient(ellipse at center,black 20%,transparent 70%);
   pointer-events:none;
 }
-/* Hero logo centered above badge */
-.hero-logo{
-  height:clamp(100px,16vw,156px);width:auto;
-  margin-bottom:16px;
-  position:relative;z-index:2;
-  filter:drop-shadow(0 0 20px rgba(147,51,234,0.4));
-  animation:fadeUp .5s var(--fl-ease) both;
-}
 
 .hero-badge{
   display:inline-flex;align-items:center;gap:10px;
@@ -252,22 +270,22 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
   100%{transform:scale(1.6);opacity:0}
 }
 
-.hero h1{
+.hero-title{
   font-family:var(--fl-font-brand);
   font-size:clamp(14px,3vw,28px);
   line-height:2;max-width:860px;
   margin-bottom:24px;position:relative;z-index:2;
   animation:fadeUp .8s var(--fl-ease) .1s both;
 }
-.hero h1 .grad{
+.hero-title .grad{
   background:linear-gradient(135deg,var(--fl-purple-300),var(--cyan));
   -webkit-background-clip:text;-webkit-text-fill-color:transparent;
   background-clip:text;
   filter:drop-shadow(0 0 20px rgba(147,51,234,0.4));
 }
 .hero-sub{
-  font-size:clamp(14px,1.6vw,17px);color:var(--fl-text-muted);
-  max-width:600px;line-height:1.8;margin-bottom:44px;
+  font-size:clamp(15px,1.6vw,18px);color:var(--fl-text-muted);
+  max-width:580px;line-height:1.7;margin-bottom:44px;
   position:relative;z-index:2;
   animation:fadeUp .8s var(--fl-ease) .2s both;
 }
@@ -277,36 +295,50 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
   animation:fadeUp .8s var(--fl-ease) .3s both;
 }
 
-/* MASCOT in hero */
-.hero-mascot{
-  position:absolute;bottom:60px;right:8%;z-index:2;
-  animation:mago-breath 4s ease-in-out infinite;
-  pointer-events:none;
+/* Floating 3D Cards */
+.hero-visual{
+  position:relative;width:100%;max-width:600px;height:200px;
+  margin-top:60px;z-index:2;
+  perspective:1000px;
+  animation:fadeUp 1s var(--fl-ease) .5s both;
 }
-.hero-mascot img{
-  height:clamp(120px,18vw,220px);width:auto;
-  filter:drop-shadow(0 0 30px rgba(147,51,234,0.5)) drop-shadow(0 0 60px rgba(147,51,234,0.2));
+.float-card{
+  position:absolute;
+  background:var(--fl-bg-card);
+  border:1px solid var(--fl-border-md);
+  border-radius:var(--fl-r-lg);
+  padding:16px 20px;
+  display:flex;align-items:center;gap:12px;
+  box-shadow:0 8px 32px rgba(0,0,0,0.4),0 0 20px rgba(147,51,234,0.08);
+  backdrop-filter:blur(8px);
+  transition:transform 0.3s ease,box-shadow 0.3s ease;
+  animation:float-card 6s ease-in-out infinite;
 }
-@keyframes mago-breath{
-  0%,100%{transform:translateY(0) scale(1);filter:brightness(1)}
-  50%{transform:translateY(-15px) scale(1.05);filter:brightness(1.2)}
+.float-card:hover{
+  transform:translateY(-4px) scale(1.03);
+  box-shadow:0 12px 40px rgba(0,0,0,0.5),0 0 30px rgba(147,51,234,0.15);
 }
-
-/* MAGIC SPARKLES near mascot */
-.sparkle{
-  position:absolute;width:4px;height:4px;border-radius:50%;
-  background:var(--gold);
-  box-shadow:0 0 6px var(--gold),0 0 12px var(--gold);
-  animation:sparkle-float 3s ease-in-out infinite;
-  pointer-events:none;
+.float-card-icon{font-size:1.5rem}
+.float-card-label{font-size:0.85rem;font-weight:600;color:var(--fl-text);white-space:nowrap}
+.float-card-1{top:0;left:5%;animation-delay:0s}
+.float-card-2{top:20px;right:8%;animation-delay:-1.5s}
+.float-card-3{bottom:20px;left:15%;animation-delay:-3s}
+.float-card-4{bottom:0;right:15%;animation-delay:-4.5s}
+@keyframes float-card{
+  0%,100%{transform:translateY(0) rotateX(0) rotateY(0)}
+  25%{transform:translateY(-8px) rotateX(2deg) rotateY(-1deg)}
+  50%{transform:translateY(-4px) rotateX(-1deg) rotateY(2deg)}
+  75%{transform:translateY(-10px) rotateX(1deg) rotateY(-2deg)}
 }
-.sparkle:nth-child(2){animation-delay:.5s;left:20px;top:-10px}
-.sparkle:nth-child(3){animation-delay:1s;left:-15px;top:5px}
-.sparkle:nth-child(4){animation-delay:1.5s;left:35px;top:-20px}
-.sparkle:nth-child(5){animation-delay:2s;left:-5px;top:-30px}
-@keyframes sparkle-float{
-  0%,100%{opacity:0;transform:translateY(0) scale(0)}
-  50%{opacity:1;transform:translateY(-20px) scale(1)}
+@media(max-width:768px){
+  .hero-visual{height:160px;margin-top:40px}
+  .float-card{padding:12px 14px}
+  .float-card-icon{font-size:1.2rem}
+  .float-card-label{font-size:0.75rem}
+  .float-card-1{left:2%}
+  .float-card-2{right:2%}
+  .float-card-3{left:5%}
+  .float-card-4{right:5%}
 }
 
 @keyframes fadeUp{
@@ -827,14 +859,8 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
   line-height:2;margin-bottom:36px;
   position:relative;z-index:1;
 }
-.cta-mascot{
-  margin-top:40px;
-  animation:mago-breath 4s ease-in-out infinite;
-}
-.cta-mascot img{
-  height:120px;width:auto;
-  filter:drop-shadow(0 0 30px rgba(147,51,234,0.5));
-}
+.cta-mascot{display:none}
+.cta-mascot img{display:none}
 
 /* ============================================================
    BETA FORM
@@ -1136,36 +1162,46 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
 <section class="hero" id="hero">
   <div class="hero-grid"></div>
 
-  <img src="/images/Logo FraLib.png" alt="FraLib OS" class="hero-logo">
-
   <div class="hero-badge">
     <span class="pulse-dot"></span>
-    AGORA COM IA AUTÔNOMA — VAGAS BETA ABERTAS
+    VAGAS BETA ABERTAS
   </div>
 
-  <h1>
-    SEU CLIENTE JÁ RECEBE O <span class="grad">SITE PRONTO NO WHATSAPP</span>. ELE SÓ PRECISA DIZER "QUERO".
+  <h1 class="hero-title">
+    Seu cliente recebe o <span class="grad">site pronto no WhatsApp</span>. Ele só precisa dizer "quero".
   </h1>
 
   <p class="hero-sub">
-    A IA encontra negócios sem site, cria um site profissional personalizado e envia pelo WhatsApp — tudo automático. Seu cliente não precisa esperar, não precisa pagar adiantado, não precisa confiar no escuro. O site já está lá. Pronto. Bonito. Funcionando.
+    A IA encontra negócios sem site, cria um site profissional personalizado e envia pelo WhatsApp — tudo automático. Sem espera, sem pagamento adiantado, sem confiança no escuro.
   </p>
 
   <div class="hero-buttons">
     <a href="/login?signup=1" class="btn btn-yellow btn-hero glow-pulse">
-      COMEÇAR GRÁTIS POR 7 DIAS →
+      COMEÇAR GRÁTIS →
     </a>
     <a href="#como-funciona" class="btn btn-outline">
-      ▶ Ver o sistema funcionando ao vivo
+      VER COMO FUNCIONA
     </a>
   </div>
 
-  <div class="hero-mascot float"><img src="/images/Mestre Fralib - Mago da IA.png" alt="Mestre FraLib - Mago da IA">
-    <span class="sparkle" style="top:-10px;left:10px"></span>
-    <span class="sparkle" style="top:5px;left:30px"></span>
-    <span class="sparkle" style="top:-20px;left:50px"></span>
-    <span class="sparkle" style="top:0;left:-5px"></span>
-    <span class="sparkle" style="top:-15px;left:65px"></span>
+  <!-- 3D Floating Cards Effect -->
+  <div class="hero-visual">
+    <div class="float-card float-card-1" data-parallax="0.15">
+      <div class="float-card-icon">🔍</div>
+      <div class="float-card-label">Prospecta</div>
+    </div>
+    <div class="float-card float-card-2" data-parallax="0.25">
+      <div class="float-card-icon">⚡</div>
+      <div class="float-card-label">Cria site</div>
+    </div>
+    <div class="float-card float-card-3" data-parallax="0.1">
+      <div class="float-card-icon">💬</div>
+      <div class="float-card-label">Envia no WhatsApp</div>
+    </div>
+    <div class="float-card float-card-4" data-parallax="0.2">
+      <div class="float-card-icon">💰</div>
+      <div class="float-card-label">Fecha venda</div>
+    </div>
   </div>
 </section>
 
@@ -1274,7 +1310,7 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
           <div class="step-desc">Mensagem personalizada, tom natural. Não é disparo em massa — é UMA mensagem, para UM lead qualificado, com o site DELE já pronto. O lead só precisa dizer "quero".</div>
         </div>
       </div>
-      <div class="steps-mascot"><img class="pixel-anim-idle" src="/images/Mestre Fralib estudando.png" alt="Mestre FraLib estudando"></div>
+      <div class="steps-mascot" style="display:none"></div>
     </div>
     <p class="section-sub reveal" style="margin-top:32px">Você só gasta tempo com quem JÁ demonstrou interesse. Sem prospecção manual. Sem tráfego pago. Sem cold call.</p>
   </div>
@@ -1730,7 +1766,6 @@ document.querySelectorAll('a[href^="#"]').forEach(a => {
 (function(){
   const parallaxEls = document.querySelectorAll('[data-parallax]');
   const orbs = document.querySelectorAll('.orb');
-  const mascots = document.querySelectorAll('.hero-mascot, .steps-mascot, .cta-mascot');
   let ticking = false;
 
   function updateParallax(){
@@ -1743,12 +1778,13 @@ document.querySelectorAll('a[href^="#"]').forEach(a => {
       orb.style.transform = 'translateY(' + (scrollY * speed) + 'px)';
     });
 
-    // Mascots parallax (medium)
-    mascots.forEach(m => {
-      const rect = m.getBoundingClientRect();
-      const center = rect.top + rect.height / 2;
-      const offset = (center - vh / 2) * 0.06;
-      m.style.transform = 'translateY(' + (-offset) + 'px)';
+    // Floating cards parallax
+    parallaxEls.forEach(el => {
+      const speed = parseFloat(el.dataset.parallax) || 0.1;
+      const rect = el.getBoundingClientRect();
+      if(rect.bottom > 0 && rect.top < vh){
+        el.style.transform = 'translateY(' + (scrollY * speed * -0.5) + 'px)';
+      }
     });
 
     // Grid parallax
