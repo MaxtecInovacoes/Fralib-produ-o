@@ -1642,6 +1642,17 @@ def montar_template_python(html_main, prd):
         + "/* Variable font optical sizing */" + chr(10)
         + "h1 { font-optical-sizing:auto; }" + chr(10)
         + "p { text-wrap:pretty; }" + chr(10)
+        + "/* Skeleton loading — hero shimmer */" + chr(10)
+        + "@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}" + chr(10)
+        + ".skeleton{background:linear-gradient(90deg,var(--surface) 25%,color-mix(in oklch,var(--surface) 80%,var(--fg)) 50%,var(--surface) 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:8px;}" + chr(10)
+        + "#hero .skeleton{position:absolute;inset:0;z-index:0;}" + chr(10)
+        + "#hero.loaded .skeleton{display:none;}" + chr(10)
+        + "/* Horizontal scroll cards mobile */" + chr(10)
+        + "@media(max-width:768px){.scroll-x-mobile{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;gap:1rem;padding-bottom:1rem;-webkit-overflow-scrolling:touch;scrollbar-width:none;}.scroll-x-mobile::-webkit-scrollbar{display:none;}.scroll-x-mobile>*{flex:0 0 85%;scroll-snap-align:start;max-width:85%;}}" + chr(10)
+        + "/* Swiper overrides */" + chr(10)
+        + ".swiper{width:100%;padding-bottom:2rem;}" + chr(10)
+        + ".swiper-pagination-bullet-active{background:var(--accent)!important;}" + chr(10)
+        + ".swiper-slide{height:auto;}" + chr(10)
         + ".hero-overlay { position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(0,0,0,0.5), rgba(0,0,0,0.7)); z-index: 1; }" + chr(10)
         + "/* Reveal animations */" + chr(10)
         + ".reveal,.reveal-left,.scale-in { opacity:0; }" + chr(10)
@@ -1674,6 +1685,9 @@ def montar_template_python(html_main, prd):
         + "[data-tilt]{transition:transform 0.3s ease;transform-style:preserve-3d;}" + chr(10)
         + "</style>" + chr(10)
         + "<script src=" + q + "https://unpkg.com/@phosphor-icons/web@2.1.1" + q + "></script>" + chr(10)
+        + "<!-- Swiper.js for mobile carousels -->" + chr(10)
+        + "<link rel=" + q + "stylesheet" + q + " href=" + q + "https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" + q + ">" + chr(10)
+        + "<script src=" + q + "https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js" + q + " defer></script>" + chr(10)
         + "</head>" + chr(10)
         + "<body>" + chr(10)
         + "<a href=" + q + "#fralib-content" + q + " class=" + q + "skip-link" + q + ">Pular para o conte&uacute;do</a>" + chr(10)
@@ -1835,6 +1849,29 @@ body { background:var(--bg); color:var(--fg); }
   });
   // Text reveal
   document.querySelectorAll('.text-reveal').forEach(function(el){io.observe(el);});
+  // Swiper init — mobile carousels for testimonials/services
+  (function(){
+    if(typeof Swiper==='undefined') return;
+    document.querySelectorAll('.swiper').forEach(function(el){
+      new Swiper(el,{slidesPerView:1.2,spaceBetween:16,grabCursor:true,pagination:{el:el.querySelector('.swiper-pagination'),clickable:true},breakpoints:{768:{slidesPerView:2.2,spaceBetween:24},1024:{slidesPerView:3,spaceBetween:32}}});
+    });
+  })();
+  // Hero skeleton — remove on load
+  (function(){
+    var hero=document.getElementById('hero');
+    if(hero){
+      var img=hero.querySelector('img');
+      if(img&&!img.complete){img.addEventListener('load',function(){hero.classList.add('loaded');});}
+      else{hero.classList.add('loaded');}
+    }
+  })();
+  // Horizontal scroll mobile — add class to card grids on mobile
+  (function(){
+    if(window.innerWidth>768) return;
+    document.querySelectorAll('#servicos .grid, #depoimentos .grid').forEach(function(g){
+      if(!g.classList.contains('swiper-wrapper')){g.classList.add('scroll-x-mobile');}
+    });
+  })();
   });
 })();
 </script>""" + nl
