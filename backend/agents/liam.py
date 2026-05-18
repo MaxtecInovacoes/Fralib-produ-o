@@ -1087,6 +1087,15 @@ def gerar_html_main_single_pass(prd):
     return gerar_html_componentizado(prd)
 
 
+def _extract_hue(oklch_value: str) -> str:
+    """Extrai o hue de um valor oklch (ex: 'oklch(55% 0.2 25)' → '25')."""
+    import re as _re_hue
+    m = _re_hue.search(r'oklch\([^)]*\s+([\d.]+)\s*\)', oklch_value)
+    if m:
+        return m.group(1)
+    return "240"  # fallback azul neutro
+
+
 def _gerar_seo_inline(prd) -> str:
     """Gera meta tags SEO determinísticas a partir do PRD."""
     import unicodedata as _ud, re as _re, json as _json
@@ -1628,6 +1637,7 @@ def montar_template_python(html_main, prd):
         + "  --muted:   " + _muted   + ";" + chr(10)
         + "  --border:  " + _border  + ";" + chr(10)
         + "  --accent:  " + _accent  + ";" + chr(10)
+        + "  --accent-hue: " + _extract_hue(_accent) + ";" + chr(10)
         + "  /* animação */" + chr(10)
         + "  --dur-enter:    " + _enter_dur  + ";" + chr(10)
         + "  --dur-feedback: " + _feedback   + ";" + chr(10)
@@ -1744,10 +1754,11 @@ def montar_template_python(html_main, prd):
 :root {
   --color-header-bg: color-mix(in oklch, var(--bg) 92%, transparent);
   --color-header-border: color-mix(in oklch, var(--border) 80%, transparent);
-  --color-footer-bg: color-mix(in oklch, var(--fg) 95%, var(--accent));
-  --color-footer-text: color-mix(in oklch, var(--bg) 90%, var(--muted));
-  --color-footer-muted: color-mix(in oklch, var(--bg) 60%, var(--muted));
-  --color-footer-border: color-mix(in oklch, var(--fg) 80%, var(--accent));
+  /* Footer: sempre escuro independente do tema */
+  --color-footer-bg: oklch(10% 0.01 var(--accent-hue, 240));
+  --color-footer-text: oklch(92% 0 0);
+  --color-footer-muted: oklch(60% 0 0);
+  --color-footer-border: oklch(20% 0.01 var(--accent-hue, 240));
 }
 body { background:var(--bg); color:var(--fg); }
 #fralib-header { background:var(--color-header-bg); border-bottom:1px solid var(--color-header-border); backdrop-filter:blur(12px); }
