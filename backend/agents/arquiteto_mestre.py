@@ -336,6 +336,12 @@ def gerar_arquiteto_mestre_prd(
     _od_slug = _od_result.get("slug", "")
     _design_dict = get_design_context(segmento, dados_hunter.get("nome", ""), caio_tier, dark_mode, od_slug=_od_slug)
 
+    # Sub-nicho: detectar a partir dos dados do Google
+    from design_context import detectar_sub_nicho
+    _sub_nicho = detectar_sub_nicho(segmento, dados_hunter)
+    if _sub_nicho.get("sub_nicho"):
+        print(f"[ArquitetoMestre] Sub-nicho detectado: {segmento}/{_sub_nicho['sub_nicho']} (tom: {_sub_nicho['tom'][:40]})")
+
     # Cores vem exclusivamente do design_context (tokens OKLch)
 
     # Formatar reviews reais
@@ -359,6 +365,20 @@ def gerar_arquiteto_mestre_prd(
     _craft_ctx = get_craft_rules()
     _autocritica_ctx = get_autocritica()
     _seo_ctx = get_seo_context(segmento, cidade, dados_hunter.get("nome", ""))
+
+    # Sub-nicho: injetar no prompt pra direcionar tom e copy
+    _sub_nicho_ctx = ""
+    if _sub_nicho.get("sub_nicho"):
+        _sub_nicho_ctx = (
+            f"\n=== SUB-NICHO DETECTADO (OBRIGATORIO seguir) ===\n"
+            f"Segmento: {segmento} | Sub-nicho: {_sub_nicho['sub_nicho']}\n"
+            f"Tom de comunicação: {_sub_nicho['tom']}\n"
+            f"Público-alvo: {_sub_nicho['publico']}\n"
+            f"CTA principal sugerido: {_sub_nicho['cta']}\n"
+            f"REGRA: Todo copy, H1, subtítulo e CTA DEVEM se comunicar com este público específico.\n"
+            f"NÃO use tom genérico. Fale diretamente com {_sub_nicho['publico']}.\n"
+            f"=== FIM SUB-NICHO ===\n"
+        )
 
     # Open Design: referência criativa de design system real por segmento
     _open_design_ref = get_open_design_prompt(segmento, dados_hunter.get("nome", ""), caio_tier)
@@ -399,7 +419,7 @@ CIDADE: {cidade}
 SEGMENTO: {segmento}
 TIER: {caio_tier} (score={caio_score})
 RATING: {_rating}/5 ({_total_av} avaliacoes)
-
+{_sub_nicho_ctx}
 {_design_ctx}
 
 {_craft_ctx}
@@ -574,6 +594,8 @@ REGRAS:
 
     # Paleta: tokens OKLch do design_context têm prioridade absoluta.
     _tokens = _design_dict["tokens"]
+    _tokens["_craft"] = _design_dict.get("craft", {})  # Craft profile (spacing/typography/rhythm)
+    _tokens["_animation_profile"] = _design_dict.get("animation_profile", {})
     dados["color_palette"] = {
         "primary":   _tokens["--fg"],
         "secondary": _tokens["--surface"],
@@ -583,7 +605,7 @@ REGRAS:
         "surface":   _tokens["--surface"],
         "muted":     _tokens["--muted"],
         "border":    _tokens["--border"],
-        "tokens_oklch": _tokens,  # 6 tokens completos para o Liam
+        "tokens_oklch": _tokens,  # 6 tokens + craft + animation para o Liam
         "hero_style": _design_dict.get("hero_style") or get_hero_style(_design_dict["dir_key"]),  # hero variado por lead
         "reasoning": f"OKLch determinístico. Direção={_design_dict['dir_nome']} Nicho={segmento} Tier={caio_tier}.",
     }
@@ -592,6 +614,7 @@ REGRAS:
     dados.setdefault("business_name", dados_hunter.get("nome", ""))
     dados["segmento"] = segmento or dados.get("segmento") or ""
     dados["cidade"] = cidade or dados.get("cidade") or ""
+    dados["sub_nicho"] = _sub_nicho  # Sub-nicho detectado (tom, publico, cta)
     dados.setdefault("address", dados_hunter.get("endereco", ""))
     dados.setdefault("phone", dados_hunter.get("telefone", ""))
     dados.setdefault("rating", float(dados_hunter.get("rating", 0)))

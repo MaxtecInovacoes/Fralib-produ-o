@@ -1299,7 +1299,17 @@ def gerar_followup(lead_data: dict, tipo: str) -> str:
     url = lead_data.get("site_url", "")
     cidade = lead_data.get("cidade", "")
     segmento = lead_data.get("segmento", "")
+    sdr_stage = lead_data.get("sdr_stage", "hook")
 
+    # Stages iniciais (lead nunca interagiu) — NÃO revelar site
+    if sdr_stage in ("hook", "qualify", "pain", "amplify"):
+        msgs_early = {
+            "24h": f"Oi! Tudo bem? Mandei uma msg ontem mas acho que passou batido 😅\n\nVocês são de {segmento} mesmo né? Queria tirar uma dúvida rápida!",
+            "72h": f"Última tentativa por aqui! Se não fizer sentido, sem problema 👋\n\nSó queria saber se vocês atendem pessoal novo ou é mais por indicação?",
+        }
+        return msgs_early.get(tipo, msgs_early["24h"])
+
+    # Stages avançados (lead já interagiu) — pode revelar site
     msgs = {
         "24h": f"Oi! Franz aqui de novo — ainda tenho o projeto da {nome} reservado aqui 😄\n\n{url}\n\nO que achou? Qualquer ajuste é só falar.",
         "72h": f"{nome}, última passagem por aqui da minha parte!\n\nO link ainda tá no ar por mais uns dias: {url}\n\nSe fizer sentido no futuro, pode me chamar quando quiser 👋",
@@ -1354,6 +1364,7 @@ def followup_automatico(telefone: str, tipo: str = "24h", user_id: int = None) -
 
     lead_data = memoria.get("lead", {})
     stage = memoria.get("estado", "hook")
+    lead_data["sdr_stage"] = stage  # Garantir que gerar_followup sabe o stage
 
     # Gerar mensagem
     reply = gerar_followup(lead_data, tipo)

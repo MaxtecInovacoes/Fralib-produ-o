@@ -20,10 +20,21 @@ from open_design_selector import get_open_design_for_liam
 
 # Importar modulos Liam
 
-SYSTEM_LIAM_CORE = """IMPORTANTE: responda em texto puro, sem usar ferramentas. Retorne apenas texto/codigo direto.
+SYSTEM_LIAM_CORE = """IMPORTANTE: responda APENAS em texto puro HTML. NUNCA use ferramentas/tools. NUNCA retorne JSON. Retorne APENAS codigo HTML direto, sem markdown, sem blocos de codigo.
 
 Voce e Liam, desenvolvedor frontend senior da FraLib.
 Sua unica tarefa: gerar UMA tag <section> completa em HTML/Tailwind estatico.
+
+=== DESIGN INTELLIGENCE (condensado de ui-ux-pro-max + design-system) ===
+CONTRAST: min 4.5:1 ratio texto/fundo. Light mode text: slate-900 (#0F172A). NUNCA slate-400 pra body.
+SPACING: 8px grid. Sections: py-16 md:py-24. Cards: p-6 md:p-8. Gap min: gap-4 (16px).
+TOUCH: botoes min 44x44px (py-3 px-6 minimo). cursor-pointer em tudo clicavel.
+HOVER: SEMPRE feedback visual. Cards: hover:translate-y-[-4px] hover:shadow-xl transition-all duration-300. Botoes: hover:opacity-90 active:scale-[0.97].
+ICONS: Phosphor Icons APENAS. NUNCA emojis como icones. NUNCA SVG inline longo.
+IMAGES: aspect-ratio definido. rounded-xl ou rounded-2xl. object-cover SEMPRE. Sombra sutil em fotos.
+CARDS: border sutil (1px border-[var(--border)]). Padding generoso. Hover state obrigatorio.
+VISUAL WEIGHT: hero = 60% visual. CTA = destaque maximo (accent + tamanho). Texto secundario = muted.
+COLOR TEMPERATURE: comida = quente (vermelho/laranja/amarelo). Saude = frio (azul/verde). Fitness = energetico (vermelho/laranja). Luxo = neutro (preto/dourado).
 
 === REGRAS ESTRUTURAIS ===
 1. Retorne APENAS <section id="NOME">...</section>. NADA antes ou depois.
@@ -84,11 +95,14 @@ NUNCA use background-image com URL. Sempre <img> tag.
 
 === LAYOUT & CONTRASTE (CRITICO) ===
   PADDING: toda secao py-16 md:py-24 px-4 md:px-8. NUNCA secao sem padding.
+  POSITION: NUNCA use position:absolute na tag <section> ou em containers diretos de secao. Absolute APENAS para overlays (img/div) DENTRO de um parent relative.
   Z-INDEX: texto SEMPRE acima de imagens. Se hero tem imagem de fundo: position:relative no container, img absolute inset-0 z-0, texto relative z-10.
   OVERLAY: se imagem de fundo + texto por cima: OBRIGATORIO overlay escuro (bg-black/50 ou bg-gradient-to-t from-black/70) + texto branco (text-white permitido APENAS sobre overlay escuro).
   CONTRASTE: texto NUNCA pode ter cor similar ao fundo. Se --bg e claro, --fg deve ser escuro. Se --bg e escuro, texto deve ser claro.
-  IMAGENS: NUNCA position:absolute sem container position:relative. NUNCA img cobrindo texto sem overlay.
+  IMAGENS: NUNCA position:absolute sem container position:relative. NUNCA img cobrindo texto sem overlay. NUNCA img sem max-width:100%.
   RESPONSIVO: mobile-first. Hero: flex-col no mobile, md:flex-row no desktop. Imagens: w-full h-64 md:h-auto.
+  GAP: todo flex/grid DEVE ter gap (min gap-4). NUNCA elementos colados sem espacamento.
+  OVERFLOW: NUNCA permitir texto cortado. Use overflow-wrap:break-word. Titulos com clamp() obrigatorio.
 """
 
 SYSTEM_LIAM_ANTI_SLOP = """
@@ -276,68 +290,97 @@ def _sanitizar_fontes(html):
 
 
 def _sanitizar_cores_light(html):
-    """Pos-processador: substitui cores de texto claras hardcoded por CSS vars para compatibilidade com light mode."""
+    """Pos-processador: detecta contraste ruim via OKLch lightness e corrige."""
     import re as _re
 
-    def fix_color_white_inline(m):
-        full = m.group(0)
-        if any(x in full for x in ['btn', 'button', 'badge', 'rounded-full', 'background']):
-            return full
-        return _re.sub(r'color\s*:\s*#(?:fff|ffffff)\b', 'color:var(--color-text)', full)
+    # Extrair lightness do --bg e --fg do :root
+    _bg_m = _re.search(r'--bg:\s*oklch\((\d+(?:\.\d+)?)%', html)
+    _fg_m = _re.search(r'--fg:\s*oklch\((\d+(?:\.\d+)?)%', html)
+    if not _bg_m:
+        return html
 
-    def fix_color_gray_inline(m):
-        full = m.group(0)
-        if any(x in full for x in ['btn', 'button', 'badge', 'rounded-full', 'background']):
-            return full
-        return _re.sub(
-            r'color\s*:\s*#(?:d1d5db|9ca3af|a0aec0|e2e8f0|cbd5e1|f3f4f6|e5e7eb)\b',
-            'color:var(--color-muted)', full
+    bg_lightness = float(_bg_m.group(1))
+    fg_lightness = float(_fg_m.group(1)) if _fg_m else (15 if bg_lightness > 60 else 92)
+    is_light_theme = bg_lightness > 60
+
+    # Em tema claro: text-white em seções sem fundo escuro = erro
+    if is_light_theme:
+        def fix_section_light(m):
+            section_tag = m.group(1)
+            section_body = m.group(2)
+
+            # Detectar se seção tem fundo escuro explícito
+            has_dark_bg = False
+            # Checar bg-[var(--fg)] ou bg-[var(--accent)] ou bg-black ou oklch com L < 40%
+            if any(x in section_tag for x in ['bg-[var(--fg)]', 'bg-black', 'bg-gray-900', 'bg-gray-800']):
+                has_dark_bg = True
+            oklch_in_tag = _re.search(r'oklch\((\d+(?:\.\d+)?)%', section_tag)
+            if oklch_in_tag and float(oklch_in_tag.group(1)) < 40:
+                has_dark_bg = True
+            if 'linear-gradient' in section_tag and ('black' in section_tag or 'rgba(0' in section_tag):
+                has_dark_bg = True
+
+            if has_dark_bg:
+                return m.group(0)  # Seção escura — text-white OK
+
+            # Remover text-white de tags de texto (não de botões)
+            def fix_text_white(tm):
+                tag = tm.group(0)
+                if any(x in tag for x in ['btn', 'button', 'rounded-full', 'px-6', 'px-8', 'py-3', 'py-4', 'cta']):
+                    return tag
+                return _re.sub(r'(?<!\w)text-white(?!\w)', 'text-[var(--fg)]', tag)
+
+            section_body = _re.sub(
+                r'<(?:h1|h2|h3|h4|p|span|li|td|th|label)[^>]*class="[^"]*text-white[^"]*"[^>]*>',
+                fix_text_white, section_body, flags=_re.IGNORECASE
+            )
+
+            # Corrigir color:#fff inline em texto
+            def fix_white_inline(im):
+                full = im.group(0)
+                if any(x in full for x in ['btn', 'button', 'badge', 'rounded-full', 'background']):
+                    return full
+                return _re.sub(r'color\s*:\s*#(?:fff|ffffff)\b', 'color:var(--fg)', full)
+
+            section_body = _re.sub(
+                r'<(?:p|span|li|td|th|label|small|em|strong|h[1-6])[^>]+style="[^"]*color\s*:\s*#(?:fff|ffffff)[^"]*"[^>]*>',
+                fix_white_inline, section_body, flags=_re.IGNORECASE
+            )
+
+            return '<section' + section_tag + '>' + section_body + '</section>'
+
+        html = _re.sub(
+            r'<section([^>]*)>(.*?)</section>',
+            fix_section_light, html, flags=_re.DOTALL
         )
 
-    # Corrigir color:#fff em tags de texto com style inline
-    html = _re.sub(
-        r'<(?:p|span|li|td|th|label|small|em|strong|h1|h2|h3|h4)[^>]+style="[^"]*color\s*:\s*#(?:fff|ffffff)[^"]*"[^>]*>',
-        fix_color_white_inline, html, flags=_re.IGNORECASE
-    )
-    # Corrigir cinzas claros em tags de texto com style inline
-    html = _re.sub(
-        r'<(?:p|span|li|td|th|label|small|em|strong|h1|h2|h3|h4)[^>]+style="[^"]*color\s*:\s*#(?:d1d5db|9ca3af|a0aec0|e2e8f0|cbd5e1|f3f4f6|e5e7eb)[^"]*"[^>]*>',
-        fix_color_gray_inline, html, flags=_re.IGNORECASE
-    )
+    else:
+        # Tema escuro: text-black ou color:#000 em texto = erro
+        def fix_section_dark(m):
+            section_tag = m.group(1)
+            section_body = m.group(2)
 
-    # Substituir class text-white em tags de texto dentro de sections com bg claro/neutro
-    def fix_section(m):
-        section_tag = m.group(1)
-        section_body = m.group(2)
+            # Detectar se seção tem fundo claro explícito
+            has_light_bg = False
+            if any(x in section_tag for x in ['bg-[var(--bg)]', 'bg-white']):
+                oklch_check = _re.search(r'oklch\((\d+(?:\.\d+)?)%', section_tag)
+                if oklch_check and float(oklch_check.group(1)) > 70:
+                    has_light_bg = True
 
-        has_dark_bg = any(x in section_tag for x in [
-            'var(--color-primary)', 'var(--color-accent)', 'var(--color-footer',
-            'linear-gradient', '#1a1a', '#0f0f', '#111', '#000', '#2d2d', '#1f1f', '#0d0d'
-        ])
-        has_light_bg = any(x in section_tag for x in [
-            'var(--color-background)', 'var(--color-surface)', '#f8f8', '#fff', '#faf', '#f0f'
-        ])
+            if has_light_bg:
+                return m.group(0)
 
-        if has_dark_bg and not has_light_bg:
-            return m.group(0)
+            # Remover text-black
+            section_body = _re.sub(r'(?<!\w)text-black(?!\w)', 'text-[var(--fg)]', section_body)
+            # Corrigir color:#000 inline
+            section_body = _re.sub(r'color\s*:\s*#(?:000|000000)\b', 'color:var(--fg)', section_body)
 
-        def fix_text_white_tag(tm):
-            tag = tm.group(0)
-            if any(x in tag for x in ['px-6', 'px-8', 'py-3', 'py-2', 'rounded-full', 'rounded-lg btn', 'cta']):
-                return tag
-            tag = _re.sub(r'(?<!\w)text-white(?!\w)', 'text-adaptive', tag)
-            return tag
+            return '<section' + section_tag + '>' + section_body + '</section>'
 
-        section_body = _re.sub(
-            r'<(?:h1|h2|h3|h4|p|span|li|td|th|label)[^>]*class="[^"]*text-white[^"]*"[^>]*>',
-            fix_text_white_tag, section_body, flags=_re.IGNORECASE
+        html = _re.sub(
+            r'<section([^>]*)>(.*?)</section>',
+            fix_section_dark, html, flags=_re.DOTALL
         )
-        return '<section' + section_tag + '>' + section_body + '</section>'
-
-    html = _re.sub(
-        r'<section([^>]*)>(.*?)</section>',
-        fix_section, html, flags=_re.DOTALL
-    )
 
     return html
 
@@ -597,6 +640,36 @@ def gerar_html_componentizado(prd):
     maps_embed = getattr(prd, "google_maps_embed", "") or ""
     nl = chr(10)
 
+    # ─── MICRO-DECISÃO: adaptar intensidade/layout ao conteúdo real ───────────
+    _rating = getattr(prd, "reviews_rating", 0) or getattr(prd, "rating", 0) or 0
+    _n_reviews = len(reviews)
+    _n_fotos = len(fotos)
+    _sections = getattr(prd, "sections", []) or []
+    _n_servicos = sum(1 for s in _sections if "servic" in (getattr(s, "name", "") or s.get("name", "") if isinstance(s, dict) else "").lower())
+
+    # Intensidade visual baseada nos dados reais (sem LLM, regras puras)
+    _intensity = "medium"  # default
+    if _rating >= 4.7 and _n_fotos >= 4:
+        _intensity = "high"  # negócio premium com fotos boas = site sofisticado
+    elif _rating < 4.0 or _n_fotos <= 1:
+        _intensity = "low"  # negócio simples = site clean, não compete com fotos ruins
+
+    # Layout density baseada na quantidade de conteúdo
+    _density = "medium"
+    _total_sections = len(_sections)
+    if _total_sections >= 7:
+        _density = "dense"
+    elif _total_sections <= 4:
+        _density = "sparse"
+
+    # Photo treatment
+    _photo_treatment = "standard"
+    if _n_fotos >= 5 and _rating >= 4.5:
+        _photo_treatment = "premium"  # parallax forte, clip-reveal, gallery
+    elif _n_fotos <= 2:
+        _photo_treatment = "minimal"  # sem parallax pesado, fotos pequenas
+
+    print(f"[Liam] Micro-decisão: intensity={_intensity} density={_density} photos={_photo_treatment} (rating={_rating} fotos={_n_fotos} sections={_total_sections})")
 
     instrucao_diretor = getattr(prd, "instrucao_criativa_para_dev", None) or "Crie um layout moderno e responsivo com Tailwind."
 
@@ -701,8 +774,19 @@ def gerar_html_componentizado(prd):
 
     import threading
 
-    _liam_model = "sonnet"
+    _liam_model = "opus"
     _thread_local = threading.local()
+
+    # Pré-calcular ritmo visual: alternar fundos para evitar seções adjacentes iguais
+    _section_names = [s.get("name", "") if isinstance(s, dict) else getattr(s, "name", "") for s in prd.sections]
+    _rhythm_map = {}
+    for _idx, _sn in enumerate(_section_names):
+        if _idx % 2 == 0:
+            _rhythm_map[_sn] = "FUNDO: var(--bg). Contraste com seção seguinte que usa var(--surface)."
+        else:
+            _rhythm_map[_sn] = "FUNDO: var(--surface). Contraste com seção anterior que usa var(--bg)."
+        if _sn.lower() == "hero":
+            _rhythm_map[_sn] = "FUNDO: imagem com overlay escuro. Texto BRANCO (text-white permitido). Próxima seção usa var(--bg)."
 
     def _gerar_secao(s):
         """Gera uma secao individual."""
@@ -746,8 +830,13 @@ def gerar_html_componentizado(prd):
         system_liam = SYSTEM_LIAM_CORE + nl + _od_system_block + nl + SYSTEM_LIAM_ANTI_SLOP
 
         # User prompt variavel — muda por secao (dados do negocio + copy especifico)
+        _rhythm_hint = _rhythm_map.get(nome_s, "")
+        _ctx_rhythm = ""
+        if _rhythm_hint:
+            _ctx_rhythm = "RITMO VISUAL (OBRIGATORIO seguir): " + _rhythm_hint + nl + nl
         prompt_secao = (
-            "ORDEM DO DIRETOR DE ARTE:" + nl
+            _ctx_rhythm
+            + "ORDEM DO DIRETOR DE ARTE:" + nl
             + instrucao_diretor + nl
             + nl
             + "SECAO A GERAR: <section id=\"" + nome_s + "\"> usando layout: " + tipo_layout + nl
@@ -793,6 +882,7 @@ def gerar_html_componentizado(prd):
                     model="sonnet",
                     max_tokens=4000,
                     temperature=0.1,
+                    agent_name=None,
                 )
                 _continua = _continua.replace("```html", "").replace("```", "").strip()
                 if not _continua:
@@ -1236,6 +1326,119 @@ def _gerar_pixel_tracking() -> str:
     )
 
 
+def _gerar_whatsapp_float(whatsapp_url: str) -> str:
+    """Botão WhatsApp flutuante — canto inferior direito, pulse animation."""
+    return (
+        '<a href="' + whatsapp_url + '" target="_blank" rel="noopener" '
+        'id="wpp-float" '
+        'style="position:fixed;bottom:24px;right:24px;z-index:900;width:56px;height:56px;'
+        'background:#25D366;border-radius:50%;display:flex;align-items:center;justify-content:center;'
+        'box-shadow:0 4px 12px rgba(37,211,102,0.4);transition:transform 0.2s,box-shadow 0.2s;'
+        'animation:wpp-pulse 2s infinite;" '
+        'aria-label="Falar no WhatsApp">'
+        '<svg width="28" height="28" viewBox="0 0 24 24" fill="white">'
+        '<path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>'
+        '<path d="M12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2 22l4.832-1.438A9.955 9.955 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2zm0 18a8 8 0 01-4.243-1.214l-.252-.149-2.868.852.852-2.868-.149-.252A8 8 0 1112 20z"/>'
+        '</svg></a>'
+        '<style>@keyframes wpp-pulse{0%,100%{box-shadow:0 4px 12px rgba(37,211,102,0.4)}50%{box-shadow:0 4px 24px rgba(37,211,102,0.7)}}'
+        '#wpp-float:hover{transform:scale(1.1);box-shadow:0 6px 20px rgba(37,211,102,0.6)}</style>'
+    )
+
+
+def _gerar_cta_mobile(whatsapp_url: str, nome: str) -> str:
+    """Barra CTA fixa no mobile — aparece ao scrollar, some no topo."""
+    return (
+        '<div id="cta-mobile" style="position:fixed;bottom:0;left:0;right:0;z-index:800;'
+        'background:var(--color-footer-bg,#111);padding:12px 16px;display:none;'
+        'align-items:center;justify-content:space-between;gap:12px;'
+        'border-top:1px solid var(--border,rgba(255,255,255,0.1));backdrop-filter:blur(8px);">'
+        '<span style="color:var(--color-footer-text,#eee);font-size:0.8rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + nome + '</span>'
+        '<a href="' + whatsapp_url + '" target="_blank" rel="noopener" '
+        'style="background:#25D366;color:#fff;padding:10px 18px;border-radius:8px;font-size:0.8rem;'
+        'font-weight:700;text-decoration:none;white-space:nowrap;display:flex;align-items:center;gap:6px;">'
+        '<i class="ph-fill ph-whatsapp-logo"></i>Chamar</a></div>'
+        '<script>(function(){'
+        'var cta=document.getElementById("cta-mobile");'
+        'if(!cta||window.innerWidth>768)return;'
+        'var wf=document.getElementById("wpp-float");'
+        'window.addEventListener("scroll",function(){'
+        'if(window.scrollY>400){cta.style.display="flex";if(wf)wf.style.display="none";}'
+        'else{cta.style.display="none";if(wf)wf.style.display="flex";}'
+        '},{passive:true});'
+        '})();</script>'
+    )
+
+
+def _gerar_back_to_top() -> str:
+    """Botão back-to-top — aparece após scroll, smooth scroll up."""
+    return (
+        '<button id="btt" aria-label="Voltar ao topo" '
+        'style="position:fixed;bottom:90px;right:24px;z-index:850;width:40px;height:40px;'
+        'border-radius:50%;background:var(--surface,#222);border:1px solid var(--border,#333);'
+        'color:var(--fg,#fff);display:none;align-items:center;justify-content:center;'
+        'cursor:pointer;transition:opacity 0.3s,transform 0.2s;opacity:0.7;font-size:1.1rem;" '
+        'onclick="window.scrollTo({top:0,behavior:\'smooth\'})">'
+        '<i class="ph ph-caret-up"></i></button>'
+        '<script>(function(){'
+        'var b=document.getElementById("btt");if(!b)return;'
+        'window.addEventListener("scroll",function(){'
+        'if(window.scrollY>600){b.style.display="flex";}else{b.style.display="none";}'
+        '},{passive:true});'
+        'b.addEventListener("mouseenter",function(){b.style.opacity="1";b.style.transform="translateY(-2px)";});'
+        'b.addEventListener("mouseleave",function(){b.style.opacity="0.7";b.style.transform="translateY(0)";});'
+        '})();</script>'
+    )
+
+
+def _gerar_faq_section(prd) -> str:
+    """Seção FAQ accordion — injetada automaticamente se PRD tem FAQ."""
+    faq = getattr(prd, 'faq_questions', []) or []
+    if not faq or len(faq) < 2:
+        return ""
+    q = '"'
+    nl = chr(10)
+    items = ""
+    for i, item in enumerate(faq[:8]):
+        if isinstance(item, dict):
+            pergunta = item.get("pergunta", item.get("question", ""))
+            resposta = item.get("resposta", item.get("answer", ""))
+        elif isinstance(item, str):
+            pergunta = item
+            resposta = ""
+        else:
+            continue
+        if not pergunta:
+            continue
+        items += (
+            '<div class="faq-item stagger-item" style="--i:' + str(i) + ';border-bottom:1px solid var(--border);padding:16px 0;">'
+            '<button class="faq-toggle" style="width:100%;display:flex;align-items:center;justify-content:space-between;'
+            'background:none;border:none;cursor:pointer;padding:8px 0;text-align:left;color:var(--fg);font-size:1rem;font-weight:600;" '
+            'aria-expanded="false" onclick="this.parentElement.classList.toggle(\'open\');this.setAttribute(\'aria-expanded\',this.parentElement.classList.contains(\'open\'))">'
+            '<span>' + pergunta + '</span>'
+            '<i class="ph ph-caret-down" style="transition:transform 0.3s;flex-shrink:0;margin-left:12px;"></i>'
+            '</button>'
+            + ('<div class="faq-answer" style="max-height:0;overflow:hidden;transition:max-height 0.3s ease,padding 0.3s;'
+               'color:var(--muted);font-size:0.9rem;line-height:1.6;">'
+               '<p style="padding:8px 0 16px;">' + resposta + '</p></div>' if resposta else
+               '<div class="faq-answer" style="max-height:0;overflow:hidden;transition:max-height 0.3s ease;"></div>')
+            + '</div>' + nl
+        )
+    if not items:
+        return ""
+    return (
+        '<section id="faq" class="py-16 md:py-24" style="background-color:var(--surface);">' + nl
+        + '<div class="max-w-3xl mx-auto px-4 md:px-8">' + nl
+        + '<h2 class="reveal text-2xl md:text-3xl font-bold text-center mb-12" style="color:var(--fg);">Perguntas Frequentes</h2>' + nl
+        + '<div class="space-y-0">' + nl
+        + items
+        + '</div></div></section>' + nl
+        + '<style>'
+        + '.faq-item.open .faq-answer{max-height:200px;padding:4px 0;}'
+        + '.faq-item.open .ph-caret-down{transform:rotate(180deg);}'
+        + '</style>' + nl
+    )
+
+
 def montar_template_python(html_main, prd):
     cores = prd.color_palette
     telefone = getattr(prd, "phone", "") or ""
@@ -1275,6 +1478,21 @@ def montar_template_python(html_main, prd):
     _anim_profile = _tokens.get("_animation_profile", {})
     _enter_dur  = _anim_profile.get("enter",      "300ms")
     _feedback   = _anim_profile.get("feedback",   "150ms")
+
+    # Craft profile — spacing, typography, rhythm (forçado via CSS)
+    _craft = getattr(cores, "craft", None) or _tokens.get("_craft", {}) or {}
+    _h1_size     = _craft.get("h1_size",     "clamp(2.2rem, 5vw, 3.5rem)")
+    _h1_weight   = _craft.get("h1_weight",   "700")
+    _h1_tracking = _craft.get("h1_tracking", "-0.02em")
+    _h2_size     = _craft.get("h2_size",     "clamp(1.4rem, 3vw, 2rem)")
+    _h2_weight   = _craft.get("h2_weight",   "600")
+    _h2_tracking = _craft.get("h2_tracking", "-0.01em")
+    _body_size   = _craft.get("body_size",   "1rem")
+    _body_lh     = _craft.get("body_lh",     "1.65")
+    _label_track = _craft.get("label_tracking", "0.06em")
+    _section_py  = _craft.get("section_py",  "clamp(4rem, 8vw, 6rem)")
+    _card_pad    = _craft.get("card_padding","1.5rem")
+    _elem_gap    = _craft.get("element_gap", "1.25rem")
     _easing_std = _anim_profile.get("easing_std", "cubic-bezier(0.4,0.0,0.2,1)")
     _easing_ent = _anim_profile.get("easing_enter","cubic-bezier(0.0,0.0,0.2,1)")
     _stagger    = _anim_profile.get("stagger",    "60ms")
@@ -1306,23 +1524,54 @@ def montar_template_python(html_main, prd):
         + "  --muted:   " + _muted   + ";" + chr(10)
         + "  --border:  " + _border  + ";" + chr(10)
         + "  --accent:  " + _accent  + ";" + chr(10)
-        + "  /* compat aliases — remover após migração completa */" + chr(10)
-        + "  --color-primary:    " + _fg     + ";" + chr(10)
-        + "  --color-accent:     " + _accent + ";" + chr(10)
-        + "  --color-background: " + _bg     + ";" + chr(10)
-        + "  --color-text:       " + _fg     + ";" + chr(10)
-        + "  --color-surface:    " + _surface+ ";" + chr(10)
-        + "  --color-border:     " + _border + ";" + chr(10)
-        + "  --color-muted:      " + _muted  + ";" + chr(10)
         + "  /* animação */" + chr(10)
         + "  --dur-enter:    " + _enter_dur  + ";" + chr(10)
         + "  --dur-feedback: " + _feedback   + ";" + chr(10)
         + "  --ease-std:     " + _easing_std + ";" + chr(10)
         + "  --ease-enter:   " + _easing_ent + ";" + chr(10)
         + "  --stagger:      " + _stagger    + ";" + chr(10)
+        + "  /* craft — typography */" + chr(10)
+        + "  --h1-size:      " + _h1_size    + ";" + chr(10)
+        + "  --h1-weight:    " + _h1_weight  + ";" + chr(10)
+        + "  --h1-tracking:  " + _h1_tracking+ ";" + chr(10)
+        + "  --h2-size:      " + _h2_size    + ";" + chr(10)
+        + "  --h2-weight:    " + _h2_weight  + ";" + chr(10)
+        + "  --h2-tracking:  " + _h2_tracking+ ";" + chr(10)
+        + "  --body-size:    " + _body_size  + ";" + chr(10)
+        + "  --body-lh:      " + _body_lh    + ";" + chr(10)
+        + "  --label-tracking:" + _label_track+ ";" + chr(10)
+        + "  /* craft — spacing */" + chr(10)
+        + "  --section-py:   " + _section_py + ";" + chr(10)
+        + "  --card-padding: " + _card_pad   + ";" + chr(10)
+        + "  --element-gap:  " + _elem_gap   + ";" + chr(10)
         + "}" + chr(10)
-        + "body { font-family: '" + _font_body + "', sans-serif; background: var(--bg); color: var(--fg); }" + chr(10)
-        + "h1,h2,h3,h4 { font-family: '" + _font_heading + "', serif; font-weight: 700; }" + chr(10)
+        + "body { font-family: '" + _font_body + "', sans-serif; background: var(--bg); color: var(--fg); overflow-wrap: break-word; word-break: break-word; font-size: var(--body-size); line-height: var(--body-lh); }" + chr(10)
+        + "h1,h2,h3,h4 { font-family: '" + _font_heading + "', serif; overflow-wrap: break-word; text-wrap: balance; }" + chr(10)
+        + "h1 { font-size: var(--h1-size); font-weight: var(--h1-weight); letter-spacing: var(--h1-tracking); line-height: 1.1; }" + chr(10)
+        + "h2 { font-size: var(--h2-size); font-weight: var(--h2-weight); letter-spacing: var(--h2-tracking); }" + chr(10)
+        + ".eyebrow, .section-label, [class*='uppercase'] { letter-spacing: var(--label-tracking); }" + chr(10)
+        + "img { max-width: 100%; height: auto; decoding: async; }" + chr(10)
+        + "section { padding: var(--section-py) 1rem; content-visibility: auto; contain-intrinsic-size: auto 500px; }" + chr(10)
+        + "#hero { content-visibility: visible; }" + chr(10)
+        + "@media(min-width:768px) { section { padding: var(--section-py) 2rem; } }" + chr(10)
+        + ".flex, [class*='flex'] { gap: var(--element-gap); }" + chr(10)
+        + ".grid, [class*='grid'] { gap: var(--element-gap); }" + chr(10)
+        + ".card,[class*='card'] { padding: var(--card-padding); }" + chr(10)
+        + "a:empty::after, button:empty::after { content: 'Saiba mais'; }" + chr(10)
+        + "/* Skip to content — accessibility */" + chr(10)
+        + ".skip-link { position:absolute;top:-40px;left:0;background:var(--accent);color:var(--bg);padding:8px 16px;z-index:10000;font-size:0.875rem;transition:top 0.2s; }" + chr(10)
+        + ".skip-link:focus { top:0; }" + chr(10)
+        + "/* Focus visible — accessibility */" + chr(10)
+        + ":focus-visible { outline:2px solid var(--accent);outline-offset:2px;border-radius:4px; }" + chr(10)
+        + "/* Header scroll state */" + chr(10)
+        + "#fralib-header.scrolled { padding-top:0.5rem;padding-bottom:0.5rem;box-shadow:0 2px 12px rgba(0,0,0,0.15); }" + chr(10)
+        + "/* Image craft — grayscale hover on gallery */" + chr(10)
+        + ".img-craft { transition:filter 0.4s ease,transform 0.4s ease; }" + chr(10)
+        + ".img-craft:hover { filter:grayscale(0) brightness(1.05);transform:scale(1.02); }" + chr(10)
+        + "/* Clip-path reveal on scroll */" + chr(10)
+        + ".clip-reveal { clip-path:inset(8% 8% 8% 8%);transition:clip-path 0.8s cubic-bezier(0.16,1,0.3,1); }" + chr(10)
+        + ".clip-reveal.visible { clip-path:inset(0 0 0 0); }" + chr(10)
+        + ".hero-overlay { position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(0,0,0,0.5), rgba(0,0,0,0.7)); z-index: 1; }" + chr(10)
         + "/* Reveal animations */" + chr(10)
         + ".reveal,.reveal-left,.scale-in { opacity:0; }" + chr(10)
         + ".reveal.visible { opacity:1; transform:translateY(0) !important; transition: opacity var(--dur-enter) var(--ease-enter), transform var(--dur-enter) var(--ease-enter); }" + chr(10)
@@ -1356,21 +1605,16 @@ def montar_template_python(html_main, prd):
         + "<script src=" + q + "https://unpkg.com/@phosphor-icons/web@2.1.1" + q + "></script>" + chr(10)
         + "</head>" + chr(10)
         + "<body>" + chr(10)
-        + "<div id=\"scroll-progress\"></div>" + chr(10)
+        + "<a href=" + q + "#fralib-content" + q + " class=" + q + "skip-link" + q + ">Pular para o conte&uacute;do</a>" + chr(10)
+        + "<div id=" + q + "scroll-progress" + q + "></div>" + chr(10)
         + """<style>
 :root {
-  /* compat aliases */
-  --color-background: """ + _bg + """;
-  --color-text: """ + _fg + """;
-  --color-surface: """ + _surface + """;
-  --color-border: """ + _border + """;
-  --color-muted: """ + _muted + """;
   --color-header-bg: color-mix(in oklch, var(--bg) 92%, transparent);
   --color-header-border: color-mix(in oklch, var(--border) 80%, transparent);
-  --color-footer-bg: oklch(13% 0.01 0);
-  --color-footer-text: oklch(95% 0.005 0);
-  --color-footer-muted: oklch(70% 0.005 0);
-  --color-footer-border: oklch(25% 0.01 0);
+  --color-footer-bg: color-mix(in oklch, var(--fg) 95%, var(--accent));
+  --color-footer-text: color-mix(in oklch, var(--bg) 90%, var(--muted));
+  --color-footer-muted: color-mix(in oklch, var(--bg) 60%, var(--muted));
+  --color-footer-border: color-mix(in oklch, var(--fg) 80%, var(--accent));
 }
 body { background:var(--bg); color:var(--fg); }
 #fralib-header { background:var(--color-header-bg); border-bottom:1px solid var(--color-header-border); backdrop-filter:blur(12px); }
@@ -1435,9 +1679,14 @@ body { background:var(--bg); color:var(--fg); }
         + "</div></footer>" + nl
         + """<script>
 (function(){
-  // Scroll progress bar
+  // Scroll progress bar + header scroll state
   var prog = document.getElementById('scroll-progress');
-  if(prog){window.addEventListener('scroll',function(){var h=document.documentElement.scrollHeight-window.innerHeight;prog.style.transform='scaleX('+(h>0?window.scrollY/h:0)+')';},{passive:true});}
+  var hdr = document.getElementById('fralib-header');
+  window.addEventListener('scroll',function(){
+    var h=document.documentElement.scrollHeight-window.innerHeight;
+    if(prog){prog.style.transform='scaleX('+(h>0?window.scrollY/h:0)+')';}
+    if(hdr){if(window.scrollY>60){hdr.classList.add('scrolled');}else{hdr.classList.remove('scrolled');}}
+  },{passive:true});
   // IntersectionObserver — scroll reveal com tokens CSS
   // Parallax scroll
   window.addEventListener('scroll', function() {
@@ -1473,7 +1722,7 @@ body { background:var(--bg); color:var(--fg); }
     });
   },{threshold:0.15,rootMargin:'0px 0px -50px 0px'});
   document.addEventListener('DOMContentLoaded',function(){
-    document.querySelectorAll('.reveal,.reveal-left,.scale-in').forEach(function(el,i){
+    document.querySelectorAll('.reveal,.reveal-left,.scale-in,.clip-reveal').forEach(function(el,i){
       el.style.setProperty('--i',i%6);
       io.observe(el);
     });
@@ -1511,6 +1760,244 @@ body { background:var(--bg); color:var(--fg); }
 })();
 </script>""" + nl
         + _gerar_lgpd_banner(prd) + nl
+        + _gerar_whatsapp_float(whatsapp_url) + nl
+        + _gerar_cta_mobile(whatsapp_url, nome) + nl
+        + _gerar_back_to_top() + nl
         + "</body></html>" + nl
     )
-    return header + "<main id=" + q + "fralib-content" + q + " class=" + q + "w-full overflow-x-hidden pt-20" + q + ">" + nl + html_main + nl + "</main>" + nl + footer
+    # Injetar FAQ accordion se PRD tem FAQ
+    _faq_section = _gerar_faq_section(prd)
+
+    return header + "<main id=" + q + "fralib-content" + q + " class=" + q + "w-full overflow-x-hidden pt-20" + q + ">" + nl + html_main + nl + _faq_section + "</main>" + nl + footer
+
+
+def critique_theater_pass(html):
+    """
+    Critique Theater — QA pass pós-montagem.
+    Detecta e corrige problemas visuais sem depender do LLM.
+    Regras matemáticas puras: contraste, botões vazios, overlays, gaps.
+    """
+    import re as _re
+    fixes_applied = []
+
+    # 1. Botões/links vazios — injetar texto fallback
+    def _fix_empty_buttons(m):
+        tag = m.group(0)
+        # Verificar se tem conteúdo entre > e </a> ou </button>
+        inner = _re.search(r'>([^<]*)</', tag)
+        if inner and inner.group(1).strip() == '':
+            fixes_applied.append('empty_button')
+            # Determinar texto baseado no href
+            if 'wa.me' in tag or 'whatsapp' in tag.lower():
+                return tag.replace('></', '>Fale conosco</')
+            elif '#contato' in tag:
+                return tag.replace('></', '>Entre em contato</')
+            else:
+                return tag.replace('></', '>Saiba mais</')
+        return tag
+
+    html = _re.sub(r'<a[^>]*>[\s]*</a>', lambda m: m.group(0).replace('></a>', '>Saiba mais</a>'), html)
+    html = _re.sub(r'<button[^>]*>[\s]*</button>', lambda m: m.group(0).replace('></button>', '>Saiba mais</button>'), html)
+
+    # 2. Hero sem overlay — se tem background-image + texto, forçar overlay
+    def _fix_hero_overlay(m):
+        section = m.group(0)
+        # Se já tem overlay class, pular
+        if 'hero-overlay' in section or 'bg-black/' in section or 'from-black' in section:
+            return section
+        # Se tem background-image e texto direto (h1/h2/p)
+        if 'background-image' in section and ('<h1' in section or '<h2' in section):
+            fixes_applied.append('hero_overlay')
+            # Injetar overlay div após abertura da section
+            section = _re.sub(
+                r'(<section[^>]*id="hero"[^>]*>)',
+                r'\1<div class="hero-overlay"></div>',
+                section
+            )
+            # Forçar texto relativo z-10
+            section = section.replace('class="', 'class="relative z-10 ', 1)
+        return section
+
+    html = _re.sub(r'<section[^>]*id="hero"[^>]*>.*?</section>', _fix_hero_overlay, html, flags=_re.DOTALL)
+
+    # 3. Texto preto sobre fundo escuro — detectar via OKLch lightness
+    # Se --bg tem lightness < 40%, qualquer color:#000 ou text-black é erro
+    _bg_match = _re.search(r'--bg:\s*oklch\((\d+(?:\.\d+)?)%', html)
+    _accent_match = _re.search(r'--accent:\s*oklch\((\d+(?:\.\d+)?)%', html)
+    _muted_match = _re.search(r'--muted:\s*oklch\((\d+(?:\.\d+)?)%', html)
+
+    if _bg_match:
+        _bg_lightness = float(_bg_match.group(1))
+        is_light = _bg_lightness > 60
+
+        if is_light and _bg_lightness < 40:
+            pass  # dark theme handled below
+        elif _bg_lightness < 40:
+            # Fundo escuro — remover text-black, color:#000, color:black
+            html = _re.sub(r'(?<!\w)text-black(?!\w)', 'text-[var(--fg)]', html)
+            html = _re.sub(r'color\s*:\s*#(?:000|000000)\b', 'color:var(--fg)', html)
+            html = _re.sub(r'color\s*:\s*black\b', 'color:var(--fg)', html)
+            fixes_applied.append('dark_bg_text_fix')
+
+    # 3b. Validar accent não é invisível
+    if _accent_match and _bg_match:
+        _accent_l = float(_accent_match.group(1))
+        _bg_l = float(_bg_match.group(1))
+        # Accent quase igual ao bg = invisível
+        if abs(_accent_l - _bg_l) < 15:
+            fixes_applied.append('accent_contrast_fix')
+            html = _re.sub(
+                r'(--accent:\s*)oklch\([^)]+\)',
+                r'\1oklch(55% 0.2 270)',
+                html
+            )
+
+    # 3c. Validar muted não é invisível
+    if _muted_match and _bg_match:
+        _muted_l = float(_muted_match.group(1))
+        _bg_l2 = float(_bg_match.group(1))
+        if abs(_muted_l - _bg_l2) < 15:
+            fixes_applied.append('muted_contrast_fix')
+            html = _re.sub(
+                r'(--muted:\s*)oklch\([^)]+\)',
+                r'\1oklch(55% 0.01 0)',
+                html
+            )
+
+    # 4. Imagens sem contenção — position:absolute sem relative parent
+    # Detectar img com absolute que não está dentro de relative container
+    def _fix_absolute_img(m):
+        container = m.group(0)
+        if 'position:absolute' in container or 'absolute' in container:
+            if 'relative' not in container:
+                fixes_applied.append('img_absolute_fix')
+                return container.replace('class="', 'class="relative ', 1)
+        return container
+
+    # 5. Seções sem padding — forçar padding mínimo
+    def _fix_section_padding(m):
+        tag = m.group(0)
+        if 'py-' not in tag and 'padding' not in tag:
+            fixes_applied.append('section_padding')
+            return tag.rstrip('>') + ' style="padding:4rem 1rem;">'
+        return tag
+
+    html = _re.sub(r'<section[^>]*>', _fix_section_padding, html)
+
+    # 6. Font-size excessivo sem clamp — detectar font-size > 4rem inline
+    def _fix_large_font(m):
+        val = m.group(1)
+        try:
+            num = float(val)
+            if num > 4:
+                fixes_applied.append('font_size_clamp')
+                return 'font-size:clamp(2rem,5vw,' + val + 'rem)'
+        except ValueError:
+            pass
+        return m.group(0)
+
+    html = _re.sub(r'font-size:\s*(\d+(?:\.\d+)?)rem', _fix_large_font, html)
+
+    # 7. Legacy var references que escaparam — substituir por tokens canônicos
+    html = html.replace('var(--color-primary)', 'var(--fg)')
+    html = html.replace('var(--color-accent)', 'var(--accent)')
+    html = html.replace('var(--color-background)', 'var(--bg)')
+    html = html.replace('var(--color-text)', 'var(--fg)')
+    html = html.replace('var(--color-surface)', 'var(--surface)')
+    html = html.replace('var(--color-border)', 'var(--border)')
+    html = html.replace('var(--color-muted)', 'var(--muted)')
+
+    # 8. MOTION INJECTION — forçar parallax e animações em imagens
+    # Intensidade varia por _micro_decision (passado via data-attr no html ou inferido)
+    # Detectar intensidade do site pelo craft rhythm
+    _site_intensity = "medium"
+    if 'very-spacious' in html or 'luxury' in html.lower():
+        _site_intensity = "high"
+    elif 'compressed' in html:
+        _site_intensity = "low"
+
+    _img_counter = [0]  # mutable counter pra variar animações
+    def _inject_img_motion(m):
+        tag = m.group(0)
+        mods = []
+        _img_counter[0] += 1
+        _idx = _img_counter[0]
+        # Parallax: intensidade varia
+        if 'data-parallax' not in tag:
+            if 'loading="eager"' in tag or 'loading=eager' in tag:
+                _pval = {"high": "0.35", "medium": "0.25", "low": "0.12"}[_site_intensity]
+                tag = tag.replace('<img ', '<img data-parallax="' + _pval + '" fetchpriority="high" ')
+            else:
+                _pval = {"high": "0.2", "medium": "0.15", "low": "0.08"}[_site_intensity]
+                tag = tag.replace('<img ', '<img data-parallax="' + _pval + '" ')
+            mods.append('parallax')
+        # Reveal: variar entre reveal-left, clip-reveal, scale-in (não sempre igual)
+        if 'reveal' not in tag and 'scale-in' not in tag and 'clip-reveal' not in tag:
+            if _site_intensity == "high":
+                _anim_options = ['clip-reveal', 'reveal-left', 'scale-in', 'clip-reveal']
+            elif _site_intensity == "low":
+                _anim_options = ['reveal', 'reveal', 'scale-in']
+            else:
+                _anim_options = ['reveal-left', 'clip-reveal', 'scale-in']
+            _anim_class = _anim_options[_idx % len(_anim_options)]
+            if 'class="' in tag:
+                tag = tag.replace('class="', 'class="' + _anim_class + ' ')
+            elif "class='" in tag:
+                tag = tag.replace("class='", "class='" + _anim_class + " ")
+            else:
+                tag = tag.replace('<img ', '<img class="' + _anim_class + '" ')
+            mods.append(_anim_class)
+        # Rounded + shadow: intensidade varia
+        if 'rounded' not in tag:
+            _round_class = {"high": "rounded-2xl shadow-xl", "medium": "rounded-xl shadow-lg", "low": "rounded-lg shadow-md"}[_site_intensity]
+            if 'class="' in tag:
+                tag = tag.replace('class="', 'class="' + _round_class + ' ')
+            mods.append('rounded+shadow')
+        # Object-fit: garantir
+        if 'object-cover' not in tag and 'object-fit' not in tag:
+            if 'class="' in tag:
+                tag = tag.replace('class="', 'class="object-cover ')
+            mods.append('object-cover')
+        # img-craft hover — só em intensity high/medium e não hero
+        if 'img-craft' not in tag and 'hero' not in tag.lower() and _idx > 1 and _site_intensity != "low":
+            if 'class="' in tag:
+                tag = tag.replace('class="', 'class="img-craft ')
+            mods.append('img-craft')
+        if mods:
+            fixes_applied.append('img_motion:' + '+'.join(mods))
+        return tag
+
+    html = _re.sub(r'<img\s[^>]+>', _inject_img_motion, html)
+
+    # 9. Cards sem hover/tilt — adicionar data-tilt em cards
+    def _inject_card_motion(m):
+        tag = m.group(0)
+        if 'data-tilt' not in tag and 'hover:' not in tag:
+            # Adicionar hover translate + shadow
+            if 'class="' in tag:
+                tag = tag.replace('class="', 'class="hover:translate-y-[-4px] hover:shadow-xl transition-all duration-300 ')
+                fixes_applied.append('card_hover')
+        return tag
+
+    # Cards: divs com border + rounded (padrão de card)
+    html = _re.sub(r'<div[^>]*class="[^"]*(?:border|card)[^"]*rounded[^"]*"[^>]*>', _inject_card_motion, html)
+
+    # 10. Seções sem reveal — h2 sem animação
+    def _inject_h2_reveal(m):
+        tag = m.group(0)
+        if 'reveal' not in tag and 'scale-in' not in tag:
+            if 'class="' in tag:
+                tag = tag.replace('class="', 'class="reveal ')
+            else:
+                tag = tag.replace('<h2', '<h2 class="reveal"')
+            fixes_applied.append('h2_reveal')
+        return tag
+
+    html = _re.sub(r'<h2[^>]*>', _inject_h2_reveal, html)
+
+    if fixes_applied:
+        print(f"[CritiqueTheater] {len(fixes_applied)} fixes: {', '.join(set(fixes_applied))}")
+    else:
+        print("[CritiqueTheater] Nenhum problema detectado — site aprovado")
+
+    return html

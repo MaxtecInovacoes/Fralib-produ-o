@@ -236,6 +236,195 @@ ANIMATION_PROFILES = {
     },
 }
 
+# ─── CRAFT PROFILES — Spacing, Typography, Rhythm por direção visual ──────────
+# Injetados como CSS vars obrigatórias no :root — LLM não decide, CSS força.
+CRAFT_PROFILES = {
+    "editorial": {
+        # Typography
+        "h1_size": "clamp(3rem, 7vw, 5rem)",
+        "h1_weight": "700",
+        "h1_tracking": "-0.025em",
+        "h2_size": "clamp(1.3rem, 2.5vw, 1.75rem)",
+        "h2_weight": "600",
+        "h2_tracking": "-0.01em",
+        "body_size": "1.0625rem",
+        "body_lh": "1.7",
+        "label_tracking": "0.08em",
+        # Spacing (generoso — editorial respira)
+        "section_py": "clamp(5rem, 10vw, 8rem)",
+        "section_gap": "3rem",
+        "card_padding": "2rem",
+        "element_gap": "1.5rem",
+        # Rhythm
+        "rhythm": "spacious",
+    },
+    "brutalism": {
+        "h1_size": "clamp(2.5rem, 8vw, 6rem)",
+        "h1_weight": "900",
+        "h1_tracking": "-0.03em",
+        "h2_size": "clamp(1.5rem, 3vw, 2.2rem)",
+        "h2_weight": "800",
+        "h2_tracking": "-0.02em",
+        "body_size": "1rem",
+        "body_lh": "1.5",
+        "label_tracking": "0.12em",
+        # Spacing (compacto — brutalism é denso)
+        "section_py": "clamp(3rem, 6vw, 5rem)",
+        "section_gap": "2rem",
+        "card_padding": "1.5rem",
+        "element_gap": "1rem",
+        "rhythm": "compressed",
+    },
+    "minimal": {
+        "h1_size": "clamp(2.2rem, 5vw, 3.5rem)",
+        "h1_weight": "600",
+        "h1_tracking": "-0.015em",
+        "h2_size": "clamp(1.2rem, 2.5vw, 1.6rem)",
+        "h2_weight": "500",
+        "h2_tracking": "-0.005em",
+        "body_size": "1rem",
+        "body_lh": "1.65",
+        "label_tracking": "0.06em",
+        "section_py": "clamp(4rem, 8vw, 7rem)",
+        "section_gap": "2.5rem",
+        "card_padding": "1.75rem",
+        "element_gap": "1.25rem",
+        "rhythm": "spacious",
+    },
+    "energetic": {
+        "h1_size": "clamp(2.5rem, 6vw, 4.5rem)",
+        "h1_weight": "800",
+        "h1_tracking": "-0.02em",
+        "h2_size": "clamp(1.4rem, 3vw, 2rem)",
+        "h2_weight": "700",
+        "h2_tracking": "-0.01em",
+        "body_size": "1rem",
+        "body_lh": "1.55",
+        "label_tracking": "0.1em",
+        "section_py": "clamp(3.5rem, 7vw, 5.5rem)",
+        "section_gap": "2rem",
+        "card_padding": "1.5rem",
+        "element_gap": "1rem",
+        "rhythm": "compressed",
+    },
+    "warm": {
+        "h1_size": "clamp(2.2rem, 5vw, 3.8rem)",
+        "h1_weight": "700",
+        "h1_tracking": "-0.015em",
+        "h2_size": "clamp(1.3rem, 2.5vw, 1.8rem)",
+        "h2_weight": "600",
+        "h2_tracking": "-0.008em",
+        "body_size": "1.0625rem",
+        "body_lh": "1.7",
+        "label_tracking": "0.06em",
+        "section_py": "clamp(4rem, 8vw, 6.5rem)",
+        "section_gap": "2.5rem",
+        "card_padding": "1.75rem",
+        "element_gap": "1.25rem",
+        "rhythm": "medium",
+    },
+    "luxury": {
+        "h1_size": "clamp(2.8rem, 6vw, 4.5rem)",
+        "h1_weight": "300",
+        "h1_tracking": "0.02em",
+        "h2_size": "clamp(1.2rem, 2vw, 1.5rem)",
+        "h2_weight": "400",
+        "h2_tracking": "0.01em",
+        "body_size": "0.9375rem",
+        "body_lh": "1.8",
+        "label_tracking": "0.15em",
+        "section_py": "clamp(6rem, 12vw, 10rem)",
+        "section_gap": "4rem",
+        "card_padding": "2.5rem",
+        "element_gap": "2rem",
+        "rhythm": "very-spacious",
+    },
+    "friendly": {
+        "h1_size": "clamp(2rem, 5vw, 3.2rem)",
+        "h1_weight": "700",
+        "h1_tracking": "-0.01em",
+        "h2_size": "clamp(1.3rem, 2.5vw, 1.75rem)",
+        "h2_weight": "600",
+        "h2_tracking": "0em",
+        "body_size": "1.0625rem",
+        "body_lh": "1.65",
+        "label_tracking": "0.04em",
+        "section_py": "clamp(3.5rem, 7vw, 5.5rem)",
+        "section_gap": "2rem",
+        "card_padding": "1.5rem",
+        "element_gap": "1.25rem",
+        "rhythm": "medium",
+    },
+}
+
+# Mapeamento direção visual → craft profile
+_DIR_TO_CRAFT = {
+    # Editorial / Spacious
+    "editorial": "editorial", "paper": "editorial", "storytelling": "editorial",
+    "publication": "editorial", "artistic": "editorial", "creative": "editorial",
+    "theverge": "editorial", "wired": "editorial", "spacious": "editorial",
+    # Minimal / Clean
+    "ant": "minimal", "application": "minimal", "cal": "minimal", "clean": "minimal",
+    "corporate": "minimal", "dashboard": "minimal", "enterprise": "minimal",
+    "material": "minimal", "modern": "minimal", "professional": "minimal",
+    "sleek": "minimal", "stripe": "minimal", "notion": "minimal", "linear": "minimal",
+    "vercel": "minimal", "supabase": "minimal", "shadcn": "minimal", "simple": "minimal",
+    "github": "minimal", "airtable": "minimal", "figma": "minimal", "raycast": "minimal",
+    "resend": "minimal", "mintlify": "minimal", "sanity": "minimal", "posthog": "minimal",
+    "hashicorp": "minimal", "clickhouse": "minimal", "sentry": "minimal",
+    "superhuman": "minimal", "default": "minimal", "flat": "minimal",
+    # Energetic / Bold
+    "bold": "energetic", "energetic": "energetic", "nike": "energetic",
+    "vibrant": "energetic", "dramatic": "energetic", "spacex": "energetic",
+    "warp": "energetic", "neobrutalism": "energetic", "colorful": "energetic",
+    "neon": "energetic", "cosmic": "energetic", "futuristic": "energetic",
+    "hud": "energetic", "tesla": "energetic", "playstation": "energetic",
+    "discord": "energetic", "spotify": "energetic", "nvidia": "energetic",
+    "bmw_m": "energetic", "ferrari": "energetic", "lamborghini": "energetic",
+    "bugatti": "energetic", "totality_festival": "energetic", "pacman": "energetic",
+    "tetris": "energetic", "trading_terminal": "energetic",
+    # Brutalism
+    "brutalism": "brutalism", "mono": "brutalism", "dithered": "brutalism",
+    "cursor": "brutalism",
+    # Warm / Acolhedor
+    "cafe": "warm", "warm_editorial": "warm", "starbucks": "warm",
+    "vintage": "warm", "retro": "warm", "rustico": "warm", "airbnb": "warm",
+    "shopify": "warm", "pinterest": "warm", "canva": "warm", "loom": "warm",
+    "intercom": "warm", "miro": "warm",
+    # Luxury / Premium
+    "elegant": "luxury", "luxury": "luxury", "premium": "luxury",
+    "refined": "luxury", "glassmorphism": "luxury", "bmw": "luxury",
+    "apple": "luxury", "mastercard": "luxury", "revolut": "luxury",
+    "wise": "luxury", "coinbase": "luxury",
+    # Friendly / Approachable
+    "friendly": "friendly", "duolingo": "friendly", "doodle": "friendly",
+    "lingo": "friendly", "lovable": "friendly", "expo": "friendly",
+    "slack": "friendly", "huggingface": "friendly", "ollama": "friendly",
+    "wechat": "friendly", "xiaohongshu": "friendly",
+    # AI / Tech (minimal with slight energy)
+    "agentic": "minimal", "claude": "minimal", "openai": "minimal",
+    "cohere": "minimal", "mistral_ai": "minimal", "together_ai": "minimal",
+    "replicate": "minimal", "runwayml": "minimal", "elevenlabs": "minimal",
+    "minimax": "minimal", "x_ai": "minimal", "opencode_ai": "minimal",
+    "voltagent": "minimal", "composio": "minimal",
+    # Special
+    "neumorphism": "minimal", "skeumorphism": "warm", "claymorphism": "friendly",
+    "gradient": "energetic", "bento": "minimal", "perspective": "editorial",
+    "expressive": "editorial", "fantasy": "energetic", "contemporary": "minimal",
+    "clay": "friendly", "framer": "minimal", "webflow": "minimal",
+    "uber": "minimal", "meta": "minimal", "ibm": "minimal", "cisco": "minimal",
+    "mongodb": "minimal", "zapier": "minimal", "binance": "energetic",
+    "kraken": "energetic", "renault": "minimal", "vodafone": "minimal",
+    "webex": "minimal", "mission_control": "energetic", "kami": "luxury",
+    "levels": "minimal", "atelier_zero": "luxury", "arc": "minimal",
+    "urdu": "editorial",
+}
+
+def get_craft_profile(dir_key: str) -> dict:
+    """Retorna craft profile (spacing/typography/rhythm) pra uma direção visual."""
+    craft_key = _DIR_TO_CRAFT.get(dir_key, "warm")
+    return dict(CRAFT_PROFILES[craft_key])
+
 # ─── NICHOS ────────────────────────────────────────────────────────────────────
 NICHOS: Dict[str, Dict] = {
     "barbearia":    {"dir": "luxury", "dir_variantes": ["editorial", "brutalism", "cal"],      "components": "galeria de cortes, lista de serviços, CTA agendamento WhatsApp, badge avaliação Google, horários", "tom": "direto, masculino, confiante — sem adjetivos vagos", "seo": "H1 com cidade, schema BarberShop, FAQ sobre cortes e preços", "anti": "pastéis, fontes cursivas, fotos de stock, contadores inventados"},
@@ -248,7 +437,7 @@ NICHOS: Dict[str, Dict] = {
     "advocacia":    {"dir": "warm_editorial", "dir_variantes": ["warm_editorial", "editorial", "professional"],      "components": "áreas de atuação, perfil com OAB, CTA consulta WhatsApp, casos de sucesso, localização", "tom": "sério, competente, acessível — sem juridiquês", "seo": "H1 com área do direito e cidade, schema LegalService, FAQ sobre honorários", "anti": "promessas de ganhar causas, jargão no hero, stock de martelo"},
     "odontologia":  {"dir": "clean", "dir_variantes": ["clean", "minimal", "friendly"], "components": "tratamentos, antes/depois, CTA WhatsApp, convênios, equipe com CRO, localização", "tom": "profissional, acolhedor — reduz ansiedade", "seo": "H1 com tratamento e cidade, schema Dentist, FAQ sobre dor e procedimentos", "anti": "sorrisos perfeitos de stock, jargão técnico, promessas imediatas"},
     "estetica":     {"dir": "elegant", "dir_variantes": ["elegant", "refined", "warm_editorial"],      "components": "tratamentos, galeria de resultados reais, CTA WhatsApp, certificações, faixa de preço", "tom": "elegante, confiante — foco em autoestima", "seo": "H1 com tratamento e cidade, schema BeautySalon, FAQ sobre recuperação", "anti": "modelos perfeitas de stock, promessas milagrosas"},
-    "pizzaria":     {"dir": "cafe", "dir_variantes": ["cafe", "vibrant", "starbucks"],      "components": "cardápio com fotos reais, sabores em destaque, CTA pedido WhatsApp, horários, área de entrega", "tom": "apetitoso, descontraído, local", "seo": "H1 com cidade e tipo, schema FoodEstablishment, FAQ sobre entrega", "anti": "fotos de stock de pizza, layout de app de delivery"},
+    "pizzaria":     {"dir": "vibrant", "dir_variantes": ["vibrant", "cafe", "starbucks"],      "components": "cardápio com fotos reais, sabores em destaque, CTA pedido WhatsApp, horários, área de entrega", "tom": "apetitoso, descontraído, local", "seo": "H1 com cidade e tipo, schema FoodEstablishment, FAQ sobre entrega", "anti": "fotos de stock de pizza, layout de app de delivery"},
     "farmacia":     {"dir": "clean", "dir_variantes": ["clean", "minimal", "simple"],   "components": "serviços (manipulação, delivery, plantão), produtos em destaque, CTA WhatsApp, horários, localização", "tom": "confiável, claro — saúde sem alarmismo", "seo": "H1 com cidade e diferencial, schema Pharmacy, FAQ sobre manipulação", "anti": "jargão farmacêutico, e-commerce genérico"},
     "imobiliaria":  {"dir": "airbnb", "dir_variantes": ["airbnb", "minimal", "warm_editorial"], "components": "tipos de imóveis, lançamentos, CTA WhatsApp com corretor, avaliações, área de atuação", "tom": "profissional, local — conhece o bairro", "seo": "H1 com cidade e tipo, schema RealEstateAgent, FAQ sobre financiamento", "anti": "casas perfeitas de stock, promessas de valorização"},
     "contabilidade":{"dir": "professional", "dir_variantes": ["professional", "clean", "corporate"],   "components": "serviços (MEI, PJ, IR), diferenciais, CTA WhatsApp, equipe com CRC, cases", "tom": "técnico mas acessível, parceiro", "seo": "H1 com serviço e cidade, schema AccountingService, FAQ sobre abertura de empresa", "anti": "jargão contábil no hero, calculadora de stock"},
@@ -344,6 +533,116 @@ def get_design_context(segmento: str, nome_negocio: str = "", tier: str = "STAND
             _hero_pool = ["hero-split", "hero-center", "hero-diagonal", "hero-fullscreen"]
         _hero_base["layout"] = _hero_rng.choice(_hero_pool)
 
+    # ═══ VALIDAÇÃO DE SANIDADE DOS TOKENS ═══
+    # Garantir que tokens OKLch fazem sentido visual
+    import re as _re_val
+    def _get_lightness(val):
+        m = _re_val.search(r"oklch\((\d+(?:\.\d+)?)%", val)
+        return float(m.group(1)) if m else None
+
+    def _get_chroma(val):
+        m = _re_val.search(r"oklch\(\d+(?:\.\d+)?%\s+([\d.]+)", val)
+        return float(m.group(1)) if m else None
+
+    def _get_hue(val):
+        m = _re_val.search(r"oklch\(\d+(?:\.\d+)?%\s+[\d.]+\s+([\d.]+)", val)
+        return float(m.group(1)) if m else None
+
+    # Hue contextual por segmento — fallback vibrante quando accent é fraco
+    _SEGMENT_HUE = {
+        # Comida/bebida → vermelho/laranja/amarelo quente
+        "pizzaria": 25, "pizza": 25, "restaurante": 30, "hamburgueria": 25,
+        "lanchonete": 35, "padaria": 50, "cafe": 55, "bar": 20,
+        "churrascaria": 20, "sorveteria": 340, "doceria": 350, "confeitaria": 350,
+        "acai": 320, "sushi": 15, "pastelaria": 40, "food_truck": 30,
+        # Saúde → verde/azul
+        "nutricionista": 270, "dentista": 210, "psicologo": 280, "psicologa": 280,
+        "medico": 210, "medica": 210, "fisioterapeuta": 180, "veterinario": 150,
+        "farmacia": 160, "clinica": 200, "hospital": 210, "esteticista": 330,
+        # Fitness → laranja/vermelho energético
+        "academia": 25, "personal": 20, "crossfit": 15, "pilates": 300,
+        # Jurídico/financeiro → azul/dourado
+        "advogado": 240, "advogada": 240, "contador": 230, "contadora": 230,
+        "escritorio": 240, "consultoria": 250,
+        # Tech/criativo → roxo/azul
+        "agencia": 270, "marketing": 280, "design": 290, "fotografo": 300,
+        "fotografa": 300, "arquiteto": 260, "arquiteta": 260,
+        # Educação → azul/verde
+        "escola": 220, "curso": 230, "professor": 220, "professora": 220,
+        # Beleza → rosa/roxo
+        "salao": 330, "barbearia": 30, "manicure": 340, "maquiadora": 350,
+        # Automotivo → azul/cinza
+        "mecanica": 220, "oficina": 220, "lava_jato": 210, "auto_eletrica": 230,
+        # Imóveis → azul/verde
+        "imobiliaria": 200, "corretor": 200, "corretora": 200,
+        # Pet → verde/laranja
+        "pet_shop": 150, "petshop": 150, "dog_walker": 140,
+    }
+    _fallback_hue = _SEGMENT_HUE.get(seg, 270)
+
+    _bg_l = _get_lightness(tokens.get("--bg", ""))
+    _fg_l = _get_lightness(tokens.get("--fg", ""))
+    _muted_l = _get_lightness(tokens.get("--muted", ""))
+    _accent_l = _get_lightness(tokens.get("--accent", ""))
+    _accent_c = _get_chroma(tokens.get("--accent", ""))
+
+    if _bg_l is not None:
+        is_light_theme = _bg_l > 60
+
+        # Muted: deve ser intermediário (40-70% em tema claro, 50-80% em tema escuro)
+        if _muted_l is not None:
+            if is_light_theme and (_muted_l > 80 or _muted_l < 30):
+                tokens["--muted"] = f"oklch(55% 0.015 {_fallback_hue})"
+            elif not is_light_theme and (_muted_l < 40 or _muted_l > 90):
+                tokens["--muted"] = f"oklch(65% 0.015 {_fallback_hue})"
+
+        # Accent: deve ser vibrante (30-70% lightness E chroma >= 0.1)
+        _accent_needs_fix = False
+        if _accent_l is not None:
+            if _accent_l > 85 or _accent_l < 20:
+                _accent_needs_fix = True
+            elif _accent_c is not None and _accent_c < 0.1:
+                _accent_needs_fix = True  # Chroma muito baixo = sem cor visível
+
+        if _accent_needs_fix:
+            tokens["--accent"] = f"oklch(55% 0.2 {_fallback_hue})"
+
+        # Hue override: se segmento tem preferência forte de cor e accent hue está longe
+        # (ex: pizzaria deve ser vermelho/laranja, não roxo/azul)
+        _SEGMENT_HUE_STRICT = {
+            "pizzaria", "pizza", "restaurante", "hamburgueria", "lanchonete",
+            "churrascaria", "padaria", "sorveteria", "doceria", "confeitaria",
+            "acai", "sushi", "pastelaria", "food_truck", "bar", "cafe",
+            "academia", "personal", "crossfit",
+        }
+        if seg in _SEGMENT_HUE_STRICT and not _accent_needs_fix:
+            _current_hue = _get_hue(tokens.get("--accent", ""))
+            if _current_hue is not None:
+                # Verificar se hue atual está longe do ideal (> 90° de diferença)
+                _hue_diff = abs(_current_hue - _fallback_hue)
+                if _hue_diff > 180:
+                    _hue_diff = 360 - _hue_diff
+                if _hue_diff > 90:
+                    # Manter lightness e chroma, trocar hue
+                    _keep_l = _accent_l if _accent_l else 55
+                    _keep_c = _accent_c if _accent_c and _accent_c >= 0.1 else 0.18
+                    tokens["--accent"] = f"oklch({_keep_l}% {_keep_c} {_fallback_hue})"
+
+        # FG: deve contrastar com BG (diferença mínima 50%)
+        if _fg_l is not None:
+            if is_light_theme and _fg_l > 50:
+                tokens["--fg"] = f"oklch(15% 0.02 {_fallback_hue})"
+            elif not is_light_theme and _fg_l < 50:
+                tokens["--fg"] = "oklch(92% 0.01 0)"
+
+        # Border: não pode ser invisível
+        _border_l = _get_lightness(tokens.get("--border", ""))
+        if _border_l is not None:
+            if is_light_theme and _border_l < 40:
+                tokens["--border"] = "oklch(85% 0.005 0)"
+            elif not is_light_theme and _border_l > 80:
+                tokens["--border"] = "oklch(25% 0.005 0)"
+
     return {
         "dir_key":       dir_key,
         "dir_nome":      d["nome"],
@@ -360,7 +659,204 @@ def get_design_context(segmento: str, nome_negocio: str = "", tier: str = "STAND
         "anti":          nicho["anti"] + " | " + d.get("anti", ""),
         "segmento":      seg,
         "tier":          tier_upper,
+        "craft":         get_craft_profile(dir_key),
     }
+
+
+# ─── SUB-NICHOS — Detecção automática a partir dos dados do Google ────────────
+# Cada segmento tem sub-nichos com tom de comunicação, CTA e público diferentes.
+# Detectado via keywords no nome, serviços, atributos e reviews do lead.
+
+SUB_NICHOS = {
+    "nutricionista": {
+        "esportivo": {
+            "keywords": ["esportiv", "performance", "hipertrofia", "atleta", "suplementa", "treino", "muscula", "bodybuilding", "crossfit", "funcional"],
+            "tom": "motivacional, direto, resultados mensuráveis",
+            "publico": "atletas e praticantes de atividade física intensa",
+            "cta": "Montar meu plano de performance",
+            "vibe_override": "energetic",
+        },
+        "emagrecimento": {
+            "keywords": ["emagrecimento", "emagrecer", "peso", "dieta", "detox", "metabol", "gordura", "slim", "fit"],
+            "tom": "acolhedor, transformação pessoal, sem julgamento",
+            "publico": "pessoas buscando perda de peso saudável",
+            "cta": "Começar minha transformação",
+            "vibe_override": None,
+        },
+        "clinico": {
+            "keywords": ["clinic", "patolog", "diabetes", "hipertens", "renal", "oncolog", "hospital", "intolerancia", "alergia", "celiac"],
+            "tom": "profissional, científico, confiável",
+            "publico": "pacientes com condições de saúde específicas",
+            "cta": "Agendar avaliação nutricional",
+            "vibe_override": "minimal",
+        },
+        "materno": {
+            "keywords": ["gestante", "matern", "gravid", "amament", "bebe", "infantil", "pediatr"],
+            "tom": "carinhoso, seguro, cuidado",
+            "publico": "gestantes e mães",
+            "cta": "Cuidar da minha nutrição",
+            "vibe_override": "friendly",
+        },
+    },
+    "academia": {
+        "musculacao": {
+            "keywords": ["muscula", "bodybuilding", "hipertrofia", "peso", "halter", "anilha"],
+            "tom": "intenso, disciplina, resultados",
+            "publico": "praticantes de musculação focados em ganho de massa",
+            "cta": "Começar meu treino",
+            "vibe_override": "energetic",
+        },
+        "funcional": {
+            "keywords": ["funcional", "crossfit", "hiit", "circuit", "bootcamp", "outdoor"],
+            "tom": "comunidade, superação, energia",
+            "publico": "pessoas que buscam condicionamento geral",
+            "cta": "Agendar aula experimental",
+            "vibe_override": "energetic",
+        },
+        "pilates_yoga": {
+            "keywords": ["pilates", "yoga", "alongamento", "flexibilidade", "meditacao", "mindful", "bem-estar"],
+            "tom": "calmo, equilíbrio, consciência corporal",
+            "publico": "pessoas buscando bem-estar e flexibilidade",
+            "cta": "Agendar minha primeira aula",
+            "vibe_override": "warm",
+        },
+        "luta": {
+            "keywords": ["luta", "boxe", "muay thai", "jiu", "mma", "karate", "judo", "taekwondo", "kickbox"],
+            "tom": "guerreiro, disciplina, respeito",
+            "publico": "praticantes de artes marciais",
+            "cta": "Agendar aula experimental",
+            "vibe_override": "brutalism",
+        },
+    },
+    "restaurante": {
+        "fino": {
+            "keywords": ["gourmet", "fine dining", "chef", "degusta", "harmoniza", "wine", "vinho", "premium", "autoral"],
+            "tom": "sofisticado, experiência gastronômica, exclusivo",
+            "publico": "público exigente que valoriza experiência",
+            "cta": "Reservar mesa",
+            "vibe_override": "luxury",
+        },
+        "casual": {
+            "keywords": ["casual", "familia", "almoco", "prato feito", "buffet", "self-service", "kg", "executivo"],
+            "tom": "acolhedor, familiar, bom custo-benefício",
+            "publico": "famílias e trabalhadores da região",
+            "cta": "Ver cardápio",
+            "vibe_override": "warm",
+        },
+        "delivery": {
+            "keywords": ["delivery", "entrega", "ifood", "rappi", "pedido", "online", "app"],
+            "tom": "rápido, prático, conveniente",
+            "publico": "pessoas que pedem comida em casa",
+            "cta": "Pedir agora",
+            "vibe_override": "energetic",
+        },
+    },
+    "clinica": {
+        "estetica": {
+            "keywords": ["estetic", "botox", "preenchimento", "harmoniza", "facial", "laser", "peeling", "rejuvenesc"],
+            "tom": "sofisticado, resultado natural, autoestima",
+            "publico": "pessoas buscando procedimentos estéticos",
+            "cta": "Agendar avaliação",
+            "vibe_override": "luxury",
+        },
+        "odonto": {
+            "keywords": ["dent", "odonto", "ortodont", "implante", "clareamento", "sorriso", "oral"],
+            "tom": "confiável, tecnologia, sorriso",
+            "publico": "pacientes odontológicos",
+            "cta": "Agendar avaliação",
+            "vibe_override": "minimal",
+        },
+        "medica": {
+            "keywords": ["medic", "consult", "exame", "diagnos", "tratamento", "saude", "prevenc"],
+            "tom": "profissional, cuidado, confiança",
+            "publico": "pacientes buscando atendimento médico",
+            "cta": "Agendar consulta",
+            "vibe_override": "minimal",
+        },
+    },
+    "advogado": {
+        "trabalhista": {
+            "keywords": ["trabalh", "CLT", "rescis", "demiss", "FGTS", "hora extra", "acidente trabalho"],
+            "tom": "combativo, defesa dos direitos, justiça",
+            "publico": "trabalhadores com direitos violados",
+            "cta": "Consulta gratuita",
+            "vibe_override": None,
+        },
+        "empresarial": {
+            "keywords": ["empresar", "societar", "contrato", "compliance", "tributar", "fiscal", "holding"],
+            "tom": "estratégico, parceiro de negócios, expertise",
+            "publico": "empresários e gestores",
+            "cta": "Agendar reunião",
+            "vibe_override": "minimal",
+        },
+        "familia": {
+            "keywords": ["famil", "divorc", "pensao", "guarda", "inventar", "heranca", "casamento"],
+            "tom": "empático, discreto, acolhedor",
+            "publico": "pessoas em situações familiares delicadas",
+            "cta": "Conversar com advogado",
+            "vibe_override": "warm",
+        },
+    },
+    "barbearia": {
+        "premium": {
+            "keywords": ["premium", "vip", "lounge", "whisky", "cerveja", "experiencia", "exclusiv"],
+            "tom": "masculino premium, experiência, clube",
+            "publico": "homens que valorizam experiência premium",
+            "cta": "Agendar horário",
+            "vibe_override": "luxury",
+        },
+        "tradicional": {
+            "keywords": ["tradicional", "classico", "navalha", "barba", "bigode", "vintage"],
+            "tom": "tradição, ofício, autenticidade",
+            "publico": "homens que valorizam o corte clássico",
+            "cta": "Agendar corte",
+            "vibe_override": None,
+        },
+    },
+}
+
+
+def detectar_sub_nicho(segmento: str, dados_lead: dict) -> dict:
+    """
+    Detecta sub-nicho a partir dos dados do Google (nome, serviços, atributos, reviews).
+    Retorna dict com: sub_nicho, tom, publico, cta, vibe_override (ou None se genérico).
+    """
+    sub_nichos = SUB_NICHOS.get(segmento, {})
+    if not sub_nichos:
+        return {"sub_nicho": None, "tom": "", "publico": "", "cta": "", "vibe_override": None}
+
+    # Montar texto pra buscar keywords
+    nome = (dados_lead.get("nome", "") or "").lower()
+    servicos = " ".join(dados_lead.get("servicos", []) or []).lower() if isinstance(dados_lead.get("servicos"), list) else str(dados_lead.get("servicos", "")).lower()
+    atributos = " ".join(dados_lead.get("atributos", []) or []).lower() if isinstance(dados_lead.get("atributos"), list) else str(dados_lead.get("atributos", "")).lower()
+    reviews_text = " ".join([
+        str(r.get("texto", r.get("text", "")))
+        for r in (dados_lead.get("reviews", []) or [])[:10]
+    ]).lower()
+    categorias = " ".join(dados_lead.get("categorias", []) or []).lower() if isinstance(dados_lead.get("categorias"), list) else str(dados_lead.get("categorias", "")).lower()
+
+    corpus = f"{nome} {servicos} {atributos} {reviews_text} {categorias}"
+
+    # Pontuar cada sub-nicho
+    best_score = 0
+    best_sub = None
+    for sub_key, sub_data in sub_nichos.items():
+        score = sum(1 for kw in sub_data["keywords"] if kw in corpus)
+        if score > best_score:
+            best_score = score
+            best_sub = sub_key
+
+    if best_sub and best_score >= 2:  # Mínimo 2 keywords pra confirmar
+        sub = sub_nichos[best_sub]
+        return {
+            "sub_nicho": best_sub,
+            "tom": sub["tom"],
+            "publico": sub["publico"],
+            "cta": sub["cta"],
+            "vibe_override": sub.get("vibe_override"),
+        }
+
+    return {"sub_nicho": None, "tom": "", "publico": "", "cta": "", "vibe_override": None}
 
 
 

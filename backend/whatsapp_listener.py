@@ -75,8 +75,8 @@ def _user_can_use_bot(user_id: int) -> bool:
             ), {"id": user_id}).fetchone()
             if row:
                 plano, plano_pago, trial_exp, creditos, status = row
-                # Plano pago ativo com créditos → OK
-                if plano_pago and creditos and creditos > 0:
+                # Plano pago ativo → bot sempre liberado (créditos controlam pipeline, não bot)
+                if plano_pago:
                     can_use = True
                 # Trial ainda válido com créditos → OK
                 elif plano == 'trial' and trial_exp:
@@ -460,10 +460,10 @@ def _buscar_lead_por_tel(telefone: str, user_id: int):
         # Usar ANY com array pra suportar N variantes
         row = conn.execute(text("""
             SELECT id, nome, segmento, cidade, sdr_stage, status,
-                   COALESCE(telefone_whatsapp, whatsapp, telefone, '') as tel_raw
+                   COALESCE(NULLIF(telefone_whatsapp,''), NULLIF(whatsapp,''), telefone, '') as tel_raw
             FROM leads
             WHERE user_id = :uid
-              AND regexp_replace(COALESCE(telefone_whatsapp, whatsapp, telefone, ''), '\\D', '', 'g')
+              AND regexp_replace(COALESCE(NULLIF(telefone_whatsapp,''), NULLIF(whatsapp,''), telefone, ''), '\\D', '', 'g')
                   = ANY(:variantes)
             LIMIT 1
         """), {"variantes": variantes_list, "uid": user_id}).fetchone()
@@ -472,7 +472,7 @@ def _buscar_lead_por_tel(telefone: str, user_id: int):
         # Fallback: buscar por wpp_jid (LID de conta business)
         row = conn.execute(text("""
             SELECT id, nome, segmento, cidade, sdr_stage, status,
-                   COALESCE(telefone_whatsapp, whatsapp, telefone, '') as tel_raw
+                   COALESCE(NULLIF(telefone_whatsapp,''), NULLIF(whatsapp,''), telefone, '') as tel_raw
             FROM leads
             WHERE user_id = :uid AND wpp_jid = :jid
             LIMIT 1

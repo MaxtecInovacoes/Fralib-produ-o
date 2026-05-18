@@ -4,7 +4,7 @@ def get_essential_skills(agente: str) -> list[str]:
     essential = {
         'caio': [],  # Caio não precisa de skills
         'theo': ['design-system'],  # Apenas design system
-        'liam': ['ui-ux-pro-max', 'design-system'],  # Apenas 2 principais
+        'liam': [],  # Liam usa regras condensadas no SYSTEM prompt (não carregar skills pesadas)
         'liz': []  # Liz não precisa de skills
     }
     return essential.get(agente, [])
