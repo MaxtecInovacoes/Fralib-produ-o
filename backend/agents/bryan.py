@@ -906,7 +906,7 @@ Responda SOMENTE JSON válido."""
         response_text = call_claude(
             system=BRYAN_INSTRUCTIONS,
             user=full_prompt,
-            model="haiku",
+            model="sonnet",
             max_tokens=500,
             temperature=0.7,
             agent_name="Franz"

@@ -1989,7 +1989,7 @@ body { background:var(--bg); color:var(--fg); }
         + "<div class=" + q + "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10 mb-12" + q + ">" + nl
         + "<div>" + logo_html + "<p class=" + q + "mt-4 text-sm leading-relaxed" + q + ">" + nome + " &mdash; " + _segmento_footer + " em " + _cidade_footer + "</p><p class=" + q + "text-xs mt-2" + q + ">Atendimento especializado com qualidade e compromisso.</p></div>" + nl
         + "<div><h3>Navega&ccedil;&atilde;o</h3><ul class=" + q + "space-y-2" + q + "><li><a href=" + q + "#hero" + q + ">In&iacute;cio</a></li><li><a href=" + q + "#sobre" + q + ">Sobre n&oacute;s</a></li><li><a href=" + q + "#servicos" + q + ">Servi&ccedil;os</a></li><li><a href=" + q + "#depoimentos" + q + ">Depoimentos</a></li><li><a href=" + q + "#localizacao" + q + ">Localiza&ccedil;&atilde;o</a></li><li><a href=" + q + "#contato" + q + ">Contato</a></li></ul></div>" + nl
-        + "<div><h3>Hor&aacute;rios</h3><ul>" + _horas_html + "</ul></div>" + nl
+        + "<div><h3>Hor&aacute;rios</h3><span id=" + q + "fralib-open-badge" + q + " style=" + q + "display:none;font-size:0.7rem;padding:2px 8px;border-radius:9999px;font-weight:600;margin-bottom:0.5rem;display:inline-block" + q + "></span><ul>" + _horas_html + "</ul></div>" + nl
         + "<div><h3>Contato</h3>"
         + ("<p class=" + q + "text-sm mb-2" + q + ">" + endereco + "</p>" if endereco else "")
         + "<a href=" + q + "tel:" + telefone.replace(" ","").replace("(","").replace(")","").replace("-","") + q + " class=" + q + "block text-sm mb-3" + q + ">" + telefone + "</a>"
@@ -2000,6 +2000,7 @@ body { background:var(--bg); color:var(--fg); }
         + "<p class=" + q + "text-xs" + q + ">&copy; " + str(_ano) + " " + nome + " &mdash; Todos os direitos reservados.</p>"
         + ("" if getattr(prd, "white_label", False) else "<p class=" + q + "text-xs" + q + ">Site criado por <a href=" + q + "https://fralib.com.br" + q + " target=" + q + "_blank" + q + " rel=" + q + "noopener" + q + ">FraLib</a></p>") + "</div>" + nl
         + "</div></footer>" + nl
+        + "<script>window.__fralibHours=" + __import__("json").dumps(_horas, ensure_ascii=False) + ";</script>" + nl
         + """<script>
 (function(){
   // Scroll progress bar + header scroll state
@@ -2109,6 +2110,32 @@ body { background:var(--bg); color:var(--fg); }
     document.querySelectorAll('#servicos .grid, #depoimentos .grid').forEach(function(g){
       if(!g.classList.contains('swiper-wrapper')){g.classList.add('scroll-x-mobile');}
     });
+  })();
+  // Horário dinâmico — badge "Aberto agora" / "Fechado"
+  (function(){
+    var badge=document.getElementById('fralib-open-badge');
+    if(!badge) return;
+    var hoursData=window.__fralibHours||{};
+    if(!Object.keys(hoursData).length){badge.style.display='none';return;}
+    var dias=['domingo','segunda','terca','quarta','quinta','sexta','sabado'];
+    var aliases={'segunda-feira':'segunda','terça-feira':'terca','terca-feira':'terca','quarta-feira':'quarta','quinta-feira':'quinta','sexta-feira':'sexta','sábado':'sabado','sabado':'sabado','domingo':'domingo','seg':'segunda','ter':'terca','qua':'quarta','qui':'quinta','sex':'sexta','sab':'sabado','dom':'domingo','mon':'segunda','tue':'terca','wed':'quarta','thu':'quinta','fri':'sexta','sat':'sabado','sun':'domingo'};
+    var now=new Date();
+    var diaIdx=now.getDay();
+    var diaKey=dias[diaIdx];
+    var found=null;
+    Object.keys(hoursData).forEach(function(k){
+      var kn=k.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/-feira/g,'').trim();
+      if(kn===diaKey||(aliases[kn]&&aliases[kn]===diaKey)||kn.indexOf(diaKey)===0) found=hoursData[k];
+    });
+    if(!found){badge.textContent='Fechado hoje';badge.style.background='#dc2626';badge.style.color='#fff';badge.style.display='inline-block';return;}
+    var match=String(found).match(/(\\d{1,2})[h:]?(\\d{0,2})\\s*[-–aà]\\s*(\\d{1,2})[h:]?(\\d{0,2})/);
+    if(!match){badge.style.display='none';return;}
+    var open=parseInt(match[1])*60+parseInt(match[2]||'0');
+    var close=parseInt(match[3])*60+parseInt(match[4]||'0');
+    var nowMin=now.getHours()*60+now.getMinutes();
+    if(nowMin>=open&&nowMin<close){badge.textContent='Aberto agora';badge.style.background='#16a34a';badge.style.color='#fff';}
+    else{badge.textContent='Fechado';badge.style.background='#dc2626';badge.style.color='#fff';}
+    badge.style.display='inline-block';
   })();
   });
 })();
