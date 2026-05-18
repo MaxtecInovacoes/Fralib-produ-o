@@ -144,6 +144,32 @@ body{
 .pipeline-status.paused{border-color:var(--warning);color:var(--warning)}
 .pipeline-status.idle{border-color:var(--fl-text-dim);color:var(--fl-text-dim)}
 
+/* Cooldown Timer */
+.cooldown-timer{display:none;align-items:center;gap:8px;padding:8px 14px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.3);border-radius:8px;font-family:var(--fl-font-mono);font-size:12px;color:var(--warning)}
+.cooldown-timer.active{display:flex}
+.cooldown-timer .timer-value{font-weight:700;font-size:14px;min-width:50px}
+.cooldown-timer .timer-label{color:var(--fl-text-muted);font-size:11px}
+
+/* Pipeline Progress Bar */
+.pipeline-progress{display:none;padding:12px 16px;background:var(--fl-bg-card);border:1px solid var(--fl-border);border-radius:8px;margin-bottom:16px}
+.pipeline-progress.active{display:block}
+.pipeline-progress .progress-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.pipeline-progress .progress-title{font-size:12px;font-weight:600;color:var(--fl-text)}
+.pipeline-progress .progress-time{font-size:11px;color:var(--fl-text-muted);font-family:var(--fl-font-mono)}
+.pipeline-progress .progress-bar{height:6px;background:var(--fl-bg-hover);border-radius:3px;overflow:hidden}
+.pipeline-progress .progress-fill{height:100%;background:linear-gradient(90deg,var(--fl-purple),var(--cyan));border-radius:3px;transition:width 0.5s var(--fl-ease)}
+.pipeline-progress .progress-steps{display:flex;justify-content:space-between;margin-top:8px}
+.pipeline-progress .step{font-size:9px;color:var(--fl-text-dim);font-family:var(--fl-font-mono);transition:color 0.3s}
+.pipeline-progress .step.done{color:var(--success)}
+.pipeline-progress .step.current{color:var(--cyan);font-weight:700}
+
+/* Upsell Card */
+.upsell-card{display:none;padding:12px 16px;background:rgba(147,51,234,0.06);border:1px solid rgba(147,51,234,0.2);border-radius:8px;margin-bottom:16px;text-align:center}
+.upsell-card.active{display:block}
+.upsell-card p{font-size:12px;color:var(--fl-text-muted);margin-bottom:8px}
+.upsell-card a{font-size:11px;color:var(--fl-purple-300);text-decoration:none;font-weight:600;font-family:var(--fl-font-mono)}
+.upsell-card a:hover{color:var(--fl-purple-400);text-decoration:underline}
+
 /* ============================================================
    KPI CARDS — 6 cards em 2 linhas de 3
    ============================================================ */
@@ -684,6 +710,11 @@ body{
       <!-- Controles do Pipeline -->
       <div class="pipeline-controls">
         <span class="pipeline-status idle" id="pipelineStatus">&#9679; IDLE</span>
+        <div class="cooldown-timer" id="cooldownTimer">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          <span class="timer-value" id="cooldownValue">00:00</span>
+          <span class="timer-label" id="cooldownLabel">para próximo</span>
+        </div>
         <button class="btn-pipeline btn-pipeline-start" id="btnIniciar" id="btnIniciar">&#9654; INICIAR</button>
         <button class="btn-pipeline btn-pipeline-pause" id="btnPausar" onclick="pausarPipeline()" style="display:none">&#9646;&#9646; PAUSAR</button>
         <button class="btn-pipeline btn-pipeline-start" id="btnRetomar" onclick="retomarPipeline()" style="display:none">&#9654; RETOMAR</button>
@@ -696,6 +727,30 @@ body{
     </div>
   </div>
 
+
+  <!-- Pipeline Progress Bar -->
+  <div class="pipeline-progress" id="pipelineProgress">
+    <div class="progress-header">
+      <span class="progress-title" id="progressTitle">Pipeline rodando...</span>
+      <span class="progress-time" id="progressTime">0:00</span>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+    <div class="progress-steps">
+      <span class="step" data-step="hunter">Hunter</span>
+      <span class="step" data-step="caio">Caio</span>
+      <span class="step" data-step="theo">Theo</span>
+      <span class="step" data-step="arquiteto">Arquiteto</span>
+      <span class="step" data-step="liam">Liam</span>
+      <span class="step" data-step="liz">Liz</span>
+      <span class="step" data-step="deploy">Deploy</span>
+    </div>
+  </div>
+
+  <!-- Upsell Card (cooldown) -->
+  <div class="upsell-card" id="upsellCard">
+    <p id="upsellText">Esperando cooldown? Upgrade para rodar mais rápido.</p>
+    <a href="/planos.html">VER PLANOS &rarr;</a>
+  </div>
 
   <!-- KPI Cards — 6 métricas -->
   <div class="kpi-grid" id="kpi-section" style="display: none;">
@@ -1406,11 +1461,69 @@ function iniciarPipelineHeader() {
 
 async function _executarIniciar(nicho, cidade, qtd) {
   try {
-    await authFetch('/api/pipeline/iniciar', {
+    var resp = await authFetch('/api/pipeline/iniciar', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ segmento: nicho, cidade: cidade, quantidade: qtd || 50 })
     });
+    if (resp && resp.status === 429) {
+      var d429 = await resp.json().catch(function(){return {};});
+      var det = d429.detail || {};
+      if (det.cooldown_restante_seg) {
+        var restante = det.cooldown_restante_seg;
+        var plano = det.plano || 'starter';
+        var filaCount = det.leads_na_fila || 0;
+        var upsell = det.upsell || '';
+        var html = '<div id="cooldownOverlay" style="position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);">'
+          + '<div style="background:rgba(10,7,20,0.95);border:1px solid rgba(147,51,234,0.3);border-radius:16px;padding:36px;max-width:400px;width:90%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.5),inset 0 1px 0 rgba(255,255,255,0.04);">'
+          + '<div style="width:56px;height:56px;margin:0 auto 16px;background:rgba(147,51,234,0.1);border-radius:50%;display:flex;align-items:center;justify-content:center;border:1px solid rgba(147,51,234,0.2);"><span style="font-size:1.5rem;">⏱️</span></div>'
+          + '<h2 style="font-family:\'Press Start 2P\',monospace;font-size:11px;color:#f5c518;margin-bottom:12px;letter-spacing:1px;">COOLDOWN ATIVO</h2>'
+          + '<p style="color:#a0a0b8;font-size:0.9rem;margin-bottom:4px;">Plano <b style="color:#c084fc;">' + plano + '</b></p>'
+          + '<p style="color:#6b6b80;font-size:0.8rem;margin-bottom:16px;">Aguarde entre pipelines</p>'
+          + '<div id="cooldownTimer" style="font-family:\'JetBrains Mono\',monospace;font-size:2.2rem;font-weight:700;color:#f5c518;margin:20px 0;text-shadow:0 0 12px rgba(245,197,24,0.3);"></div>'
+          + (filaCount > 0 ? '<p style="color:#8888a0;font-size:0.8rem;margin-bottom:8px;font-family:\'JetBrains Mono\',monospace;">' + filaCount + ' lead(s) na fila — auto-processamento</p>' : '')
+          + (upsell ? '<p style="color:#a855f7;font-size:0.8rem;margin-top:12px;padding:8px 12px;background:rgba(147,51,234,0.08);border-radius:8px;border:1px solid rgba(147,51,234,0.15);">' + upsell + '</p>' : '')
+          + '<div style="display:flex;gap:12px;justify-content:center;margin-top:24px;">'
+          + (upsell ? '<a href="/planos" style="font-family:\'Press Start 2P\',monospace;font-size:9px;background:#FACC15;color:#000;padding:12px 20px;text-decoration:none;box-shadow:inset -3px -3px 0 #A16207,inset 3px 3px 0 #FDE68A,0 4px 0 #713F12;letter-spacing:1px;">UPGRADE</a>' : '')
+          + '<button onclick="document.getElementById(\'cooldownOverlay\').remove()" style="font-family:\'Press Start 2P\',monospace;font-size:9px;background:transparent;border:1px solid rgba(147,51,234,0.3);color:#a0a0b8;padding:12px 20px;cursor:pointer;letter-spacing:1px;">FECHAR</button>'
+          + '</div></div></div>';
+        document.body.insertAdjacentHTML('beforeend', html);
+        var segsRestantes = restante;
+        function atualizarTimer() {
+          var m = Math.floor(segsRestantes / 60);
+          var s = segsRestantes % 60;
+          var el = document.getElementById('cooldownTimer');
+          if (el) el.textContent = m + ':' + (s < 10 ? '0' : '') + s;
+          if (segsRestantes <= 0) {
+            var ov = document.getElementById('cooldownOverlay');
+            if (ov) ov.remove();
+            if (typeof showToast === 'function') showToast('✅ Cooldown encerrado! Pode rodar o pipeline.', 'success', 5000);
+            return;
+          }
+          segsRestantes--;
+          setTimeout(atualizarTimer, 1000);
+        }
+        atualizarTimer();
+      } else {
+        var msg429 = typeof det === 'string' ? det : (det.mensagem || 'Aguarde antes de rodar outro pipeline.');
+        if (typeof showToast === 'function') showToast('⏱️ ' + msg429, 'warning', 8000);
+        else alert('⏱️ ' + msg429);
+      }
+      return;
+    }
+    if (resp && resp.status === 402) {
+      var d402 = await resp.json().catch(function(){return {};});
+      var motivo = (d402.detail && d402.detail.motivo) || d402.detail || 'Sem créditos disponíveis.';
+      alert('⚡ ' + motivo + '\n\nFaça upgrade em /planos');
+      return;
+    }
+    if (resp && !resp.ok) {
+      var errData = await resp.json().catch(function(){return {};});
+      var errMsg = errData.detail || 'Erro ao iniciar pipeline.';
+      if (typeof errMsg === 'object') errMsg = errMsg.mensagem || JSON.stringify(errMsg);
+      alert('❌ ' + errMsg);
+      return;
+    }
     setTimeout(carregarKPIs, 800);
   } catch(e) { alert('Erro ao iniciar pipeline: ' + e.message); }
 }
@@ -2932,6 +3045,7 @@ function limparTerminal() {
 if (typeof socket !== 'undefined') {
   socket.on('pipeline:start', function() {
     adicionarLogMagico('🔮 Pipeline iniciado! Preparando a magia...');
+    iniciarProgressBar();
   });
 
   socket.on('pipeline:lead', function(data) {
@@ -2944,12 +3058,144 @@ if (typeof socket !== 'undefined') {
 
   socket.on('pipeline:complete', function() {
     adicionarLogMagico('✅ Ciclo completo! A magia aconteceu!');
+    pararProgressBar();
+    mostrarToastConclusao();
+    iniciarCooldownTimer();
   });
 
   socket.on('pipeline:error', function() {
     adicionarLogMagico('⚠️ Ops! O feitiço falhou...');
+    pararProgressBar();
   });
 }
+
+/* ══ COOLDOWN TIMER ═══════════════════════════════════════════════ */
+var _cooldownInterval = null;
+var _cooldownRestante = 0;
+
+function iniciarCooldownTimer(segs) {
+  if (!segs) {
+    authFetch('/api/pipeline/status').then(function(r){return r.json()}).then(function(s){
+      if (s.cooldown && s.cooldown.cooldown_restante > 0) {
+        _startCooldown(s.cooldown.cooldown_restante, s.cooldown.plano, s.cooldown.leads_na_fila);
+      }
+    });
+    return;
+  }
+  _startCooldown(segs);
+}
+
+function _startCooldown(segs, plano, filaCount) {
+  _cooldownRestante = segs;
+  var timerEl = document.getElementById('cooldownTimer');
+  var valueEl = document.getElementById('cooldownValue');
+  var labelEl = document.getElementById('cooldownLabel');
+  var upsellEl = document.getElementById('upsellCard');
+  var upsellText = document.getElementById('upsellText');
+
+  if (timerEl) timerEl.classList.add('active');
+  if (upsellEl && plano && (plano === 'starter' || plano === 'pro')) {
+    upsellEl.classList.add('active');
+    var upgrade = plano === 'starter' ? 'Pro (30min)' : 'Ilimitado (sem espera)';
+    if (upsellText) upsellText.textContent = 'Esperando ' + Math.ceil(segs/60) + 'min? Upgrade para ' + upgrade + ' e rode mais rapido.';
+  }
+  if (filaCount > 0 && labelEl) {
+    labelEl.textContent = filaCount + ' lead(s) na fila - auto-run';
+  }
+
+  if (_cooldownInterval) clearInterval(_cooldownInterval);
+  _cooldownInterval = setInterval(function(){
+    _cooldownRestante--;
+    if (_cooldownRestante <= 0) {
+      clearInterval(_cooldownInterval);
+      _cooldownInterval = null;
+      if (timerEl) timerEl.classList.remove('active');
+      if (upsellEl) upsellEl.classList.remove('active');
+      if (typeof showToast === 'function') showToast('Cooldown liberado! Pronto para rodar.', 'success');
+      return;
+    }
+    var m = Math.floor(_cooldownRestante / 60);
+    var s = _cooldownRestante % 60;
+    if (valueEl) valueEl.textContent = (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
+  }, 1000);
+
+  var m = Math.floor(_cooldownRestante / 60);
+  var s = _cooldownRestante % 60;
+  if (valueEl) valueEl.textContent = (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
+}
+
+/* ══ PIPELINE PROGRESS BAR ════════════════════════════════════════ */
+var _progressInterval = null;
+var _progressStart = null;
+var _PIPELINE_STEPS = ['hunter','caio','theo','arquiteto','liam','liz','deploy'];
+
+function iniciarProgressBar() {
+  var el = document.getElementById('pipelineProgress');
+  if (el) el.classList.add('active');
+  _progressStart = Date.now();
+  var fill = document.getElementById('progressFill');
+  if (fill) fill.style.width = '5%';
+  _marcarStep(0);
+
+  if (_progressInterval) clearInterval(_progressInterval);
+  _progressInterval = setInterval(function(){
+    var elapsed = Math.floor((Date.now() - _progressStart) / 1000);
+    var m = Math.floor(elapsed / 60);
+    var s = elapsed % 60;
+    var timeEl = document.getElementById('progressTime');
+    if (timeEl) timeEl.textContent = m + ':' + (s < 10 ? '0' : '') + s;
+    var pct = Math.min(95, 5 + (elapsed / 240) * 90);
+    if (fill) fill.style.width = pct + '%';
+    var stepIdx = Math.min(6, Math.floor(elapsed / 35));
+    _marcarStep(stepIdx);
+  }, 1000);
+}
+
+function pararProgressBar() {
+  var el = document.getElementById('pipelineProgress');
+  var fill = document.getElementById('progressFill');
+  if (fill) fill.style.width = '100%';
+  _marcarStep(7);
+  if (_progressInterval) clearInterval(_progressInterval);
+  _progressInterval = null;
+  setTimeout(function(){ if (el) el.classList.remove('active'); }, 3000);
+}
+
+function _marcarStep(idx) {
+  var steps = document.querySelectorAll('.pipeline-progress .step');
+  steps.forEach(function(s, i){
+    s.classList.remove('done','current');
+    if (i < idx) s.classList.add('done');
+    else if (i === idx) s.classList.add('current');
+  });
+}
+
+/* ══ TOAST CONCLUSÃO ══════════════════════════════════════════════ */
+function mostrarToastConclusao() {
+  if (typeof showToast === 'function') {
+    showToast('Pipeline concluido! Site gerado com sucesso.', 'success');
+  }
+  if ('Notification' in window && Notification.permission === 'granted') {
+    new Notification('FraLib OS', { body: 'Pipeline concluido! Site pronto.', icon: '/images/Logo FraLib.png' });
+  }
+}
+
+/* ══ CARREGAR COOLDOWN NO INIT ════════════════════════════════════ */
+(function(){
+  setTimeout(function(){
+    authFetch('/api/pipeline/status').then(function(r){return r.json()}).then(function(s){
+      if (s.cooldown && s.cooldown.bloqueado && s.cooldown.cooldown_restante > 0) {
+        _startCooldown(s.cooldown.cooldown_restante, s.cooldown.plano, s.cooldown.leads_na_fila);
+      }
+      if (s.rodando && !s.pausado) {
+        iniciarProgressBar();
+      }
+    }).catch(function(){});
+  }, 1500);
+  if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission();
+  }
+})();
     await TwoFactorAuth.disable(password);
     alert('2FA desativado com sucesso!');
 async function checkTwoFactorStatus() {  try {    const res = await authFetch("/api/auth/2fa/status");    if (!res.ok) return;    const data = await res.json();    const badge = document.getElementById("2fa-status-badge");    if (badge) {      badge.textContent = data.enabled ? "Ativo" : "Inativo";      badge.className = data.enabled ? "badge badge-success" : "badge badge-secondary";    }  } catch (err) {    console.warn("[2FA] Erro ao verificar status:", err.message);  }}

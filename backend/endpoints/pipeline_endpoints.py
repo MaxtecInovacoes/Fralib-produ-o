@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Request
 from typing import Optional, Dict, Any, List
 from dataclasses import dataclass, field
 import logging, sys, os, uuid, re, time, asyncio, hashlib, random, unicodedata
-from datetime import datetime
+from datetime import datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor
 
 sys.path.append('/root/fralib/backend')
@@ -56,7 +56,7 @@ _THEO_AGENT = os.getenv("THEO_AGENT_LOOP", "0") == "1"
 if _THEO_AGENT:
     from agents.theo_agent_loop import gerar_briefing_estrategico_agent as _gerar_briefing_agent
 from agents.pipeline_checkpoint import salvar_checkpoint, limpar_checkpoint, gerar_pipeline_id, agente_concluido, get_dados_agente, resumo_checkpoint
-from agents.liam import gerar_html_componentizado, montar_template_python
+from agents.liam import gerar_html_componentizado, montar_template_python, critique_theater_pass
 from agents.arquiteto_mestre import gerar_arquiteto_mestre_prd
 # Managed Agent (feature flag: ARQUITETO_AGENT_LOOP=1)
 _ARQUITETO_AGENT = os.getenv("ARQUITETO_AGENT_LOOP", "0") == "1"
@@ -107,7 +107,7 @@ def _check_cooldown(db, tenant_id: int):
     ), {"uid": tenant_id}).fetchone()
     if not last_row or not last_row[0]:
         return
-    from datetime import datetime as _dt
+    from datetime import datetime as _dt, timedelta as _td
     try:
         last_ts = last_row[0]
         if isinstance(last_ts, str):
@@ -127,7 +127,7 @@ def _check_cooldown(db, tenant_id: int):
             "mensagem": f"Aguarde {minutos}min {segundos}s antes de rodar outro pipeline.",
             "cooldown_restante_seg": restante,
             "cooldown_total_seg": cooldown_secs,
-            "proximo_em": (_dt.now() + timedelta(seconds=restante)).isoformat(),
+            "proximo_em": (_dt.now() + _td(seconds=restante)).isoformat(),
             "plano": plano,
             "leads_na_fila": fila_count,
             "auto_run": fila_count > 0,
@@ -336,7 +336,7 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
         leads = await buscar_leads_google_maps(
             cidade=state.cidade,
             segmento=state.segmento,
-            limite=5,  # Buscar 5 pra ter margem se Caio rejeitar os primeiros
+            limite=config_limpo["quantidade"],
             leads_existentes=_leads_existentes,
         )
         _kw_future.result(timeout=30)  # aguarda keyword research terminar
@@ -345,13 +345,16 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
         if not leads:
             raise Exception("Nenhum lead novo encontrado para '" + state.segmento + "' em '" + state.cidade + "'. Os leads dessa regiao ja estao sendo processados ou nao ha negocios com dados suficientes. Tente outro nicho ou cidade.")
 
-        # Salvar TODOS os leads capturados no banco com status 'pendente'
-        # O humano pode rodar o pipeline manualmente para qualquer um deles depois
+        # Salvar leads capturados no banco com status 'capturado'
+        # Limitar salvamento pela quantidade solicitada (trial=1, starter=10, etc)
         import json as _json_hunter
         _agora_hunter = datetime.now().isoformat()
         _salvos_hunter = 0
+        _max_salvar = config_limpo["quantidade"]
         with engine.connect() as _conn_hunter:
             for _lq in leads:
+                if _salvos_hunter >= _max_salvar:
+                    break
                 _l = _lq.lead
                 _nome_norm_h = _l.nome.lower().strip() if _l.nome else ''
                 if not _nome_norm_h:
@@ -803,6 +806,7 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
             try: open("/root/fralib/logs/pipeline_trace/liam_sections.html","w").write(_html_main)
             except: pass
             state.html_final = montar_template_python(_html_main, state.prd_arquiteto)
+            state.html_final = critique_theater_pass(state.html_final)
             _log(f"  HTML: {len(state.html_final):,} chars", "success")
             logger.info("[Pipeline] Liam: OK")
             # Validar HTML antes de salvar checkpoint (não salvar truncado)
@@ -1315,6 +1319,14 @@ async def iniciar_pipeline(
 
     # Se processar_fila=true, processar leads capturados com seus próprios segmentos
     if config.get("processar_fila"):
+        # Verificar créditos antes de processar fila
+        creditos_check = verificar_pode_executar(db, tenant_id)
+        if not creditos_check.get("pode"):
+            raise HTTPException(
+                status_code=402,
+                detail=creditos_check.get("motivo", "Sem créditos disponíveis."),
+                headers={"X-Upgrade-URL": creditos_check.get("upgrade_url", "/planos")}
+            )
         leads_fila = db.execute(text("""
             SELECT id, nome, segmento, cidade FROM leads
             WHERE user_id = :user_id AND status = 'capturado'
@@ -1377,9 +1389,9 @@ async def iniciar_pipeline(
     if state["rodando"]:
         await pipeline_queue.release(tenant_id)
         raise HTTPException(400, "Pipeline ja esta rodando")
-    update_pipeline_state(db, tenant_id, rodando=True, pausado=False, config=config_limpo)
     _check_rate_limit(str(tenant_id))
     _check_cooldown(db, tenant_id)
+    update_pipeline_state(db, tenant_id, rodando=True, pausado=False, config=config_limpo)
 
     # Verificar se WhatsApp está conectado (não bloqueia, apenas seta flag)
     _wpp_conectado = is_tenant_connected(f"fralib_user_{tenant_id}")
@@ -1510,6 +1522,39 @@ async def get_status(db: Session = Depends(get_db), usuario: dict = Depends(get_
     except Exception:
         pass
 
+    # Cooldown info para o frontend
+    _cooldown_info = None
+    try:
+        _user_row = db.execute(text("SELECT plano FROM users WHERE id=:id"), {"id": tenant_id}).fetchone()
+        _plano = (_user_row[0] if _user_row else "trial") or "trial"
+        _cd_secs = _COOLDOWN_POR_PLANO.get(_plano, 3600)
+        _fila_count = db.execute(text("SELECT COUNT(*) FROM leads WHERE user_id=:uid AND status='capturado'"), {"uid": tenant_id}).scalar() or 0
+        if _cd_secs > 0:
+            _last = db.execute(text(
+                "SELECT processado_em FROM leads WHERE user_id=:uid AND status='concluido' ORDER BY processado_em DESC LIMIT 1"
+            ), {"uid": tenant_id}).fetchone()
+            if _last and _last[0]:
+                from datetime import datetime as _dtx
+                _last_ts = _last[0]
+                if isinstance(_last_ts, str):
+                    _last_ts = _dtx.fromisoformat(_last_ts)
+                _elapsed = (_dtx.now() - _last_ts).total_seconds()
+                _restante = max(0, int(_cd_secs - _elapsed))
+                _cooldown_info = {
+                    "plano": _plano,
+                    "cooldown_total": _cd_secs,
+                    "cooldown_restante": _restante,
+                    "bloqueado": _restante > 0,
+                    "leads_na_fila": _fila_count,
+                    "auto_run": _fila_count > 0 and _restante > 0,
+                }
+            else:
+                _cooldown_info = {"plano": _plano, "cooldown_total": _cd_secs, "cooldown_restante": 0, "bloqueado": False, "leads_na_fila": _fila_count, "auto_run": False}
+        else:
+            _cooldown_info = {"plano": _plano, "cooldown_total": 0, "cooldown_restante": 0, "bloqueado": False, "leads_na_fila": _fila_count, "auto_run": False}
+    except Exception:
+        pass
+
     return {
         "rodando": state["rodando"],
         "pausado": state["pausado"],
@@ -1521,6 +1566,7 @@ async def get_status(db: Session = Depends(get_db), usuario: dict = Depends(get_
         "cicloAtual": ciclo_atual,
         "checkpoint": _ckpt_info,
         "ultimo_erro": _ultimo_erro,
+        "cooldown": _cooldown_info,
     }
 
 
@@ -1571,6 +1617,24 @@ async def arquivar_tudo(db: Session = Depends(get_db), usuario: dict = Depends(g
 async def executar_pipeline_lead_existente(lead_id: str, tenant_id: int, forcar_renovacao: bool = False):
     """Pipeline de site para lead já existente no banco — pula o hunter."""
     _log = lambda msg, tipo="info": adicionar_log(msg, tipo, user_id=tenant_id)
+
+    # Verificar créditos antes de executar
+    with SessionLocal() as _db_check:
+        _cred_check = verificar_pode_executar(_db_check, tenant_id)
+        if not _cred_check.get("pode"):
+            _log(f"Pipeline bloqueado: {_cred_check.get('motivo', 'Sem créditos')}", "warning")
+            logger.info(f"[Pipeline] Lead {lead_id} bloqueado — sem créditos (tenant={tenant_id})")
+            return
+
+        # Verificar cooldown (starter/pro)
+        try:
+            _check_cooldown(_db_check, tenant_id)
+        except HTTPException as _cd_err:
+            _detail = _cd_err.detail if isinstance(_cd_err.detail, str) else _cd_err.detail.get("mensagem", "Cooldown ativo")
+            _log(f"Pipeline bloqueado: {_detail}", "warning")
+            logger.info(f"[Pipeline] Lead {lead_id} bloqueado — cooldown (tenant={tenant_id})")
+            return
+
     _log("Iniciando reprocessamento...", "info")
     import json as _json
     from utils.agente1_hunter_v2 import LeadRaw, LeadQualificado
@@ -1802,9 +1866,10 @@ async def _executar_pipeline_a_partir_fase2(state, tenant_id, config):
 
         # Liam
         _log("FASE 7: LIAM", "info")
-        from agents.liam import gerar_html_componentizado, montar_template_python
+        from agents.liam import gerar_html_componentizado, montar_template_python, critique_theater_pass
         _html_main = gerar_html_componentizado(state.prd_arquiteto)
         state.html_final = montar_template_python(_html_main, state.prd_arquiteto)
+        state.html_final = critique_theater_pass(state.html_final)
         logger.info(f"[Pipeline] Liam: OK | {len(state.html_final):,} chars")
 
         # Liz
@@ -1908,6 +1973,16 @@ async def _executar_pipeline_a_partir_fase2(state, tenant_id, config):
 @router.post('/reprocessar/{lead_id}')
 async def reprocessar_lead(lead_id: str, background_tasks: BackgroundTasks, db: Session = Depends(get_db), usuario: dict = Depends(get_current_user), forcar_renovacao: bool = False):
     tenant_id = usuario.get("tenant_id", usuario["id"])
+    # Verificar créditos
+    creditos_check = verificar_pode_executar(db, tenant_id)
+    if not creditos_check.get("pode"):
+        raise HTTPException(
+            status_code=402,
+            detail=creditos_check.get("motivo", "Sem créditos disponíveis."),
+            headers={"X-Upgrade-URL": creditos_check.get("upgrade_url", "/planos")}
+        )
+    # Verificar cooldown
+    _check_cooldown(db, tenant_id)
     lead = db.execute(text("SELECT * FROM leads WHERE id=:id AND user_id=:uid"), {"id": lead_id, "uid": tenant_id}).fetchone()
     if not lead:
         raise HTTPException(404, "Lead nao encontrado")

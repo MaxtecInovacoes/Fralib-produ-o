@@ -79,12 +79,14 @@ async def get_crm(db: Session = Depends(get_db), usuario: dict = Depends(get_cur
             status = (lead.get('status') or 'pendente').lower()
             sdr_stage = (lead.get('sdr_stage') or 'hook').lower()
 
-            if status == 'pendente':
-                data['fila'].append(lead)
-            elif status == 'processando':
-                data['fila'].append(lead)
+            # Leads sem site pronto NÃO aparecem no kanban
+            if status in ('pendente', 'processando', 'capturado', 'erro'):
+                continue
             elif status == 'concluido':
-                if sdr_stage in ('hook', 'qualify', 'intro'):
+                if sdr_stage in ('hook', 'pendente_wpp'):
+                    # Site pronto, aguardando SDR enviar primeira msg
+                    data['fila'].append(lead)
+                elif sdr_stage in ('qualify', 'intro'):
                     data['intro'].append(lead)
                 elif sdr_stage in ('pain', 'amplify', 'followup1', 'f1', 'follow_up_1', 'followup_24h', 'scheduled'):
                     data['f1'].append(lead)
@@ -104,8 +106,7 @@ async def get_crm(db: Session = Depends(get_db), usuario: dict = Depends(get_cur
                 data['lost'].append(lead)
             elif status in ('convertido', 'won', 'ganho'):
                 data['won'].append(lead)
-            else:
-                data['fila'].append(lead)
+            # Qualquer outro status: não aparece no kanban
 
         return data
     except Exception as e:

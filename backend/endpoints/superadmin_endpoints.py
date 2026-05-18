@@ -226,17 +226,18 @@ async def set_plan(user_id: int, request: Request, db: Session = Depends(get_db)
     try:
         body = await request.json()
         plano = body.get("plano", "trial")
-        if plano not in ("trial", "starter", "pro", "beta", "admin"):
+        if plano not in ("trial", "starter", "pro", "ilimitado", "beta", "admin"):
             raise HTTPException(status_code=400, detail="Plano invalido")
         
         row = db.execute(text("SELECT id FROM users WHERE id = :id"), {"id": user_id}).fetchone()
         if not row:
             raise HTTPException(status_code=404, detail="Usuario nao encontrado")
         
-        plano_pago = plano in ("starter", "pro", "beta")
+        plano_pago = plano in ("starter", "pro", "beta", "ilimitado")
+        status_novo = "ativo" if plano_pago else plano
         db.execute(text(
-            "UPDATE users SET plano = :plano, plano_pago = :pago WHERE id = :id"
-        ), {"plano": plano, "pago": plano_pago, "id": user_id})
+            "UPDATE users SET plano = :plano, plano_pago = :pago, status = :status WHERE id = :id"
+        ), {"plano": plano, "pago": plano_pago, "status": status_novo, "id": user_id})
         db.commit()
 
         _audit(db, user, "set_plan", user_id, target_id=user_id,

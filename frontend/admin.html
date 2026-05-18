@@ -3007,11 +3007,13 @@ async function _executarIniciar(nicho, cidade, qtd) {
     }
     if (resp && resp.status === 429) {
       const data = await resp.json().catch(() => ({}));
-      const msg = data.detail || 'Pipeline travado. Tente novamente em alguns segundos.';
-      if (typeof showToast === 'function') {
-        showToast('⚠️ ' + msg + ' Se persistir, entre em contato com o suporte.', 'warning', 8000);
+      const det = data.detail || {};
+      if (det.cooldown_restante_seg) {
+        _mostrarCooldownPopup(det);
       } else {
-        alert('⚠️ ' + msg + '\n\nSe o problema persistir, entre em contato com o suporte.');
+        const msg = typeof det === 'string' ? det : (det.mensagem || 'Pipeline travado. Tente novamente em alguns segundos.');
+        if (typeof showToast === 'function') showToast('⚠️ ' + msg, 'warning', 8000);
+        else alert('⚠️ ' + msg);
       }
       return;
     }
@@ -3020,24 +3022,65 @@ async function _executarIniciar(nicho, cidade, qtd) {
 }
 
 function _mostrarPopupUpgrade(det) {
-  const resetEm = det.reset_em || 'proxima segunda-feira';
+  const resetEm = det.reset_em;
   const restantes = det.tokens_restantes !== undefined ? det.tokens_restantes : 0;
   const motivo = det.erro || 'Limite de ciclos atingido';
+  const resetInfo = resetEm ? ` &nbsp;|&nbsp; Reinicia: <b style="color:#f5c518">${resetEm}</b>` : '';
   const html = `<div id="upgradeOverlay" style="position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;display:flex;align-items:center;justify-content:center;">
     <div style="background:#1a1a2e;border:1px solid #f5c518;border-radius:12px;padding:32px;max-width:420px;width:90%;text-align:center;">
       <div style="font-size:2rem;margin-bottom:12px;">&#9889;</div>
       <h2 style="color:#f5c518;margin-bottom:8px;">Limite atingido</h2>
       <p style="color:#ccc;margin-bottom:8px;">${motivo}</p>
-      <p style="color:#888;font-size:.85rem;margin-bottom:24px;">Ciclos restantes: <b style="color:#f5c518">${restantes}</b> &nbsp;|&nbsp; Reinicia: <b style="color:#f5c518">${resetEm}</b></p>
+      <p style="color:#888;font-size:.85rem;margin-bottom:24px;">Ciclos restantes: <b style="color:#f5c518">${restantes}</b>${resetInfo}</p>
       <div style="display:flex;gap:12px;justify-content:center;">
         <a href="/planos" style="background:#f5c518;color:#000;padding:10px 24px;border-radius:8px;font-weight:700;text-decoration:none;">FAZER UPGRADE</a>
-        <button onclick="document.getElementById('upgradeOverlay').remove()" style="background:transparent;border:1px solid #555;color:#ccc;padding:10px 24px;border-radius:8px;cursor:pointer;">AGUARDAR</button>
+        <button onclick="document.getElementById('upgradeOverlay').remove()" style="background:transparent;border:1px solid #555;color:#ccc;padding:10px 24px;border-radius:8px;cursor:pointer;">FECHAR</button>
       </div>
     </div>
   </div>`;
   document.body.insertAdjacentHTML('beforeend', html);
 }
 
+function _mostrarCooldownPopup(det) {
+  // Remover popup anterior se existir
+  var old = document.getElementById('cooldownOverlay');
+  if (old) old.remove();
+  var restante = det.cooldown_restante_seg || 60;
+  var plano = det.plano || 'starter';
+  var filaCount = det.leads_na_fila || 0;
+  var upsell = det.upsell || '';
+  var html = '<div id="cooldownOverlay" style="position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);">'
+    + '<div style="background:rgba(10,7,20,0.95);border:1px solid rgba(147,51,234,0.3);border-radius:16px;padding:36px;max-width:400px;width:90%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.5),inset 0 1px 0 rgba(255,255,255,0.04);">'
+    + '<div style="width:56px;height:56px;margin:0 auto 16px;background:rgba(147,51,234,0.1);border-radius:50%;display:flex;align-items:center;justify-content:center;border:1px solid rgba(147,51,234,0.2);"><span style="font-size:1.5rem;">⏱️</span></div>'
+    + '<h2 style="font-family:\'Press Start 2P\',monospace;font-size:11px;color:#f5c518;margin-bottom:12px;letter-spacing:1px;">COOLDOWN ATIVO</h2>'
+    + '<p style="color:#a0a0b8;font-size:0.9rem;margin-bottom:4px;">Plano <b style="color:#c084fc;">' + plano + '</b></p>'
+    + '<p style="color:#6b6b80;font-size:0.8rem;margin-bottom:16px;">Aguarde entre pipelines</p>'
+    + '<div id="cooldownTimer" style="font-family:\'JetBrains Mono\',monospace;font-size:2.2rem;font-weight:700;color:#f5c518;margin:20px 0;text-shadow:0 0 12px rgba(245,197,24,0.3);"></div>'
+    + (filaCount > 0 ? '<p style="color:#8888a0;font-size:0.8rem;margin-bottom:8px;font-family:\'JetBrains Mono\',monospace;">' + filaCount + ' lead(s) na fila — auto-processamento</p>' : '')
+    + (upsell ? '<p style="color:#a855f7;font-size:0.8rem;margin-top:12px;padding:8px 12px;background:rgba(147,51,234,0.08);border-radius:8px;border:1px solid rgba(147,51,234,0.15);">' + upsell + '</p>' : '')
+    + '<div style="display:flex;gap:12px;justify-content:center;margin-top:24px;">'
+    + (upsell ? '<a href="/planos" style="font-family:\'Press Start 2P\',monospace;font-size:9px;background:#FACC15;color:#000;padding:12px 20px;text-decoration:none;box-shadow:inset -3px -3px 0 #A16207,inset 3px 3px 0 #FDE68A,0 4px 0 #713F12;letter-spacing:1px;">UPGRADE</a>' : '')
+    + '<button onclick="document.getElementById(\'cooldownOverlay\').remove()" style="font-family:\'Press Start 2P\',monospace;font-size:9px;background:transparent;border:1px solid rgba(147,51,234,0.3);color:#a0a0b8;padding:12px 20px;cursor:pointer;letter-spacing:1px;">FECHAR</button>'
+    + '</div></div></div>';
+  document.body.insertAdjacentHTML('beforeend', html);
+  var segsRestantes = restante;
+  function _tickCooldown() {
+    var m = Math.floor(segsRestantes / 60);
+    var s = segsRestantes % 60;
+    var el = document.getElementById('cooldownTimer');
+    if (el) el.textContent = m + ':' + (s < 10 ? '0' : '') + s;
+    if (segsRestantes <= 0) {
+      var ov = document.getElementById('cooldownOverlay');
+      if (ov) ov.remove();
+      if (typeof mostrarToast === 'function') mostrarToast('✅ Cooldown encerrado! Pode rodar o pipeline.', 'success');
+      else if (typeof Toast !== 'undefined') Toast.success('✅ Cooldown encerrado!');
+      return;
+    }
+    segsRestantes--;
+    setTimeout(_tickCooldown, 1000);
+  }
+  _tickCooldown();
+}
 async function pausarPipeline() {
   try {
     await authFetch('/api/pipeline/pausar', { method: 'POST' });
@@ -3338,8 +3381,22 @@ function setCiclosPeriod(period, btn) {
 function iniciarPipeline() {
   if (!confirm('Iniciar novo ciclo do pipeline agora?')) return;
   authFetch('/api/pipeline/iniciar', {method:'POST'})
-    .then(function(r){ return r.json(); })
-    .then(function(d){ Toast.success(d.mensagem || 'Pipeline iniciado!'); })
+    .then(function(r){
+      if (r.status === 429) {
+        return r.json().then(function(d){
+          var det = d.detail || {};
+          if (det.cooldown_restante_seg) {
+            _mostrarCooldownPopup(det);
+          } else {
+            Toast.warning('⏱️ ' + (det.mensagem || 'Aguarde antes de rodar outro pipeline.'));
+          }
+        });
+      }
+      if (r.status === 402) {
+        return r.json().then(function(d){ _mostrarPopupUpgrade(d.detail || {}); });
+      }
+      return r.json().then(function(d){ Toast.success(d.mensagem || 'Pipeline iniciado!'); });
+    })
     .catch(function(e){ Toast.error('Erro: ' + e.message); });
 }
 function filtrarPorPeriodo(leads, period) {
@@ -3842,9 +3899,14 @@ async function _executarIniciarAdmin(nicho, cidade, qtd, scoreMin, btn) {
     });
     if (resp && resp.status === 429) {
       var d429 = await resp.json().catch(function(){return {};});
-      var msg429 = d429.detail || 'Pipeline travado.';
+      var det = d429.detail || {};
       if (btn) { btn.textContent = '▶ INICIAR'; btn.disabled = false; }
-      mostrarToast('⚠️ ' + msg429 + ' Se persistir, contate o suporte.', 'warning');
+      if (det.cooldown_restante_seg) {
+        _mostrarCooldownPopup(det);
+      } else {
+        var msg429 = typeof det === 'string' ? det : (det.mensagem || 'Pipeline travado.');
+        mostrarToast('⚠️ ' + msg429, 'warning');
+      }
       return;
     }
     if (resp && resp.status === 402) {
@@ -3969,7 +4031,12 @@ async function processarFila() {
     });
     if (resp && resp.status === 429) {
       var d429 = await resp.json().catch(function(){return {};});
-      mostrarToast('⚠️ ' + (d429.detail || 'Pipeline travado.') + ' Se persistir, contate o suporte.', 'warning');
+      var det = d429.detail || {};
+      if (det.cooldown_restante_seg) {
+        _mostrarCooldownPopup(det);
+      } else {
+        mostrarToast('⏱️ ' + (det.mensagem || 'Aguarde antes de rodar outro pipeline.'), 'warning');
+      }
       if (btn) { btn.textContent = '▶ PROCESSAR FILA AGORA'; btn.disabled = false; }
       return;
     }

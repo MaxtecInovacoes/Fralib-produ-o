@@ -371,6 +371,6 @@ async def credits_check(db: Session = Depends(get_db), usuario: dict = Depends(g
         "plano": plano,
         "alert": alert,
         "tokens_restantes": creditos,
-        "reset_em": "proxima segunda-feira",
-        "erro": "Sem ciclos disponiveis. Faca upgrade para continuar." if not can_proceed else None,
+        "reset_em": None if plano == "trial" else "proxima segunda-feira",
+        "erro": "Voce usou seu site gratuito. Assine um plano para continuar gerando sites." if (not can_proceed and plano == "trial") else ("Sem ciclos disponiveis. Faca upgrade para continuar." if not can_proceed else None),
     }

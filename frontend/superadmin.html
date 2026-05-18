@@ -633,7 +633,7 @@ function escapeHtml(s){ return String(s==null?'':s).replace(/[&<>"']/g, c => ({'
 function escapeAttr(s){ return escapeHtml(s).replace(/`/g,'&#96;'); }
 
 function editPlano(id, current){
-  const opts = ['trial','starter','pro','beta','admin'].map(p=>`<option value="${p}" ${p===current?'selected':''}>${p}</option>`).join('');
+  const opts = ['trial','starter','pro','ilimitado','beta','admin'].map(p=>`<option value="${p}" ${p===current?'selected':''}>${p}</option>`).join('');
   openModal('Alterar plano', `<label>Novo plano</label><select id="m-plano" class="select" style="width:100%">${opts}</select>`, async ()=>{
     const plano = document.getElementById('m-plano').value;
     try{

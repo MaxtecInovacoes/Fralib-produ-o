@@ -207,18 +207,19 @@ async function _executarIniciar(nicho, cidade, qtd) {
 }
 
 function _mostrarPopupUpgrade(det) {
-  const resetEm = det.reset_em || 'proxima segunda-feira';
+  const resetEm = det.reset_em;
   const restantes = det.tokens_restantes !== undefined ? det.tokens_restantes : 0;
   const motivo = det.erro || 'Limite de ciclos atingido';
+  const resetInfo = resetEm ? ` &nbsp;|&nbsp; Reinicia: <b style="color:#f5c518">${resetEm}</b>` : '';
   const html = `<div id="upgradeOverlay" style="position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;display:flex;align-items:center;justify-content:center;">
     <div style="background:#1a1a2e;border:1px solid #f5c518;border-radius:12px;padding:32px;max-width:420px;width:90%;text-align:center;">
       <div style="font-size:2rem;margin-bottom:12px;">&#9889;</div>
       <h2 style="color:#f5c518;margin-bottom:8px;">Limite atingido</h2>
       <p style="color:#ccc;margin-bottom:8px;">${motivo}</p>
-      <p style="color:#888;font-size:.85rem;margin-bottom:24px;">Ciclos restantes: <b style="color:#f5c518">${restantes}</b> &nbsp;|&nbsp; Reinicia: <b style="color:#f5c518">${resetEm}</b></p>
+      <p style="color:#888;font-size:.85rem;margin-bottom:24px;">Ciclos restantes: <b style="color:#f5c518">${restantes}</b>${resetInfo}</p>
       <div style="display:flex;gap:12px;justify-content:center;">
         <a href="/planos" style="background:#f5c518;color:#000;padding:10px 24px;border-radius:8px;font-weight:700;text-decoration:none;">FAZER UPGRADE</a>
-        <button onclick="document.getElementById('upgradeOverlay').remove()" style="background:transparent;border:1px solid #555;color:#ccc;padding:10px 24px;border-radius:8px;cursor:pointer;">AGUARDAR</button>
+        <button onclick="document.getElementById('upgradeOverlay').remove()" style="background:transparent;border:1px solid #555;color:#ccc;padding:10px 24px;border-radius:8px;cursor:pointer;">FECHAR</button>
       </div>
     </div>
   </div>`;

@@ -296,6 +296,8 @@ app.include_router(site_editor_endpoints.router)
 app.include_router(tracking_endpoints.router)
 import cron_endpoints
 app.include_router(cron_endpoints.router)
+import blog_endpoints
+app.include_router(blog_endpoints.router)
 
 # Rate limit do login agora vem via @limiter.limit em auth_endpoints.py (slowapi).
 # CSP+security headers vem via security_headers middleware acima (linha ~125).
