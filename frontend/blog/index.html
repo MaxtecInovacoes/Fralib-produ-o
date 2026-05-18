@@ -38,25 +38,58 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
 .nav-cta:hover{background:#FDE047;box-shadow:inset -3px -3px 0 #A16207,inset 3px 3px 0 #FEF9C3,0 4px 0 #713F12,0 0 20px rgba(250,204,21,0.4)}
 .mobile-toggle{display:none;background:none;border:none;color:var(--fl-text);font-size:24px;cursor:pointer}
 
-.blog-container{max-width:820px;margin:0 auto;padding:2.5rem 1.5rem;padding-top:100px;position:relative;z-index:1}
-.blog-header{text-align:center;padding:2rem 0 2.5rem;border-bottom:1px solid var(--fl-border);margin-bottom:2.5rem}
-.blog-header h1{font-family:var(--fl-font-brand);font-size:clamp(11px,2vw,16px);line-height:2;color:var(--fl-text)}
-.blog-header p{color:var(--fl-text-muted);font-size:1rem;margin-top:0.5rem}
-.article-list{display:flex;flex-direction:column;gap:1.2rem}
-.article-card{background:var(--fl-bg-card);border:1px solid var(--fl-border);border-radius:14px;padding:1.5rem 2rem;transition:all 220ms ease}
-.article-card:hover{border-color:rgba(147,51,234,0.5);box-shadow:0 0 16px rgba(147,51,234,0.25);transform:translateY(-2px)}
-.article-card h2{font-size:1.2rem;font-weight:600;margin-bottom:0.4rem}
-.article-card h2 a{color:var(--fl-text);text-decoration:none;transition:color 120ms ease}
-.article-card h2 a:hover{color:var(--fl-purple-400)}
-.article-card .excerpt{color:var(--fl-text-muted);font-size:0.9rem;line-height:1.6;margin-bottom:0.5rem}
-.article-card .meta{font-size:0.75rem;color:var(--fl-text-dim);font-family:var(--fl-font-mono)}
-.blog-cta{background:rgba(18,18,26,0.6);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(147,51,234,0.3);border-radius:14px;padding:2.5rem;margin:2.5rem 0;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,0.3),inset 0 1px 0 rgba(255,255,255,0.05)}
-.blog-cta h3{color:var(--fl-purple-400);font-size:1.1rem;margin-bottom:0.5rem}
-.blog-cta p{color:var(--fl-text-muted);font-size:0.9rem;margin-bottom:1rem}
+/* Blog Layout — inspired by open-design.ai */
+.blog-wrapper{max-width:1200px;margin:0 auto;padding:120px 2rem 4rem}
+.blog-hero{text-align:center;margin-bottom:3rem}
+.blog-hero h1{font-family:var(--fl-font-brand);font-size:clamp(12px,2.5vw,18px);line-height:2;color:var(--fl-text);margin-bottom:0.5rem}
+.blog-hero p{color:var(--fl-text-muted);font-size:1.05rem;max-width:600px;margin:0 auto}
+
+/* Category filters */
+.blog-filters{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:2.5rem}
+.filter-btn{padding:8px 18px;border-radius:100px;border:1px solid var(--fl-border);background:transparent;color:var(--fl-text-muted);font-size:0.8rem;font-weight:500;cursor:pointer;transition:all .2s}
+.filter-btn:hover{border-color:var(--fl-purple-400);color:var(--fl-text)}
+.filter-btn.active{background:var(--fl-purple);border-color:var(--fl-purple);color:#fff}
+
+/* Featured post */
+.featured-post{display:grid;grid-template-columns:1.2fr 1fr;gap:2rem;margin-bottom:3rem;background:var(--fl-bg-card);border:1px solid var(--fl-border);border-radius:var(--fl-r-lg);overflow:hidden;transition:all .3s var(--fl-ease)}
+.featured-post:hover{border-color:var(--fl-border-md);box-shadow:0 8px 40px rgba(147,51,234,0.1);transform:translateY(-2px)}
+.featured-thumb{aspect-ratio:16/10;background:linear-gradient(135deg,var(--fl-bg-surface),var(--fl-purple-600));display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative}
+.featured-thumb img{width:100%;height:100%;object-fit:cover}
+.featured-thumb .thumb-placeholder{font-size:3rem;opacity:0.3}
+.featured-content{padding:2rem;display:flex;flex-direction:column;justify-content:center}
+.featured-badge{display:inline-flex;align-items:center;gap:6px;font-size:0.7rem;font-weight:700;color:var(--cyan);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.75rem}
+.featured-badge::before{content:'';width:8px;height:8px;border-radius:50%;background:var(--cyan);animation:pulse-dot 2s infinite}
+@keyframes pulse-dot{0%,100%{opacity:1}50%{opacity:0.4}}
+.featured-content h2{font-size:1.5rem;font-weight:700;line-height:1.3;margin-bottom:0.75rem}
+.featured-content h2 a{color:var(--fl-text);text-decoration:none;transition:color .2s}
+.featured-content h2 a:hover{color:var(--fl-purple-400)}
+.featured-content .excerpt{color:var(--fl-text-muted);font-size:0.9rem;line-height:1.6;margin-bottom:1rem}
+.featured-content .meta{font-size:0.75rem;color:var(--fl-text-dim);font-family:var(--fl-font-mono);display:flex;gap:12px;align-items:center}
+
+/* Post grid */
+.posts-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.5rem;margin-bottom:3rem}
+.post-card{background:var(--fl-bg-card);border:1px solid var(--fl-border);border-radius:var(--fl-r-lg);overflow:hidden;transition:all .25s var(--fl-ease);display:flex;flex-direction:column}
+.post-card:hover{border-color:var(--fl-border-md);box-shadow:0 8px 32px rgba(147,51,234,0.12);transform:translateY(-3px)}
+.post-thumb{aspect-ratio:16/9;background:linear-gradient(135deg,var(--fl-bg-surface),rgba(147,51,234,0.15));display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative}
+.post-thumb img{width:100%;height:100%;object-fit:cover}
+.post-thumb .thumb-icon{font-size:2rem;opacity:0.25}
+.post-card-body{padding:1.25rem 1.5rem;display:flex;flex-direction:column;flex:1}
+.post-category{font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--fl-purple-400);margin-bottom:0.5rem}
+.post-card-body h3{font-size:1rem;font-weight:600;line-height:1.4;margin-bottom:0.5rem}
+.post-card-body h3 a{color:var(--fl-text);text-decoration:none;transition:color .15s}
+.post-card-body h3 a:hover{color:var(--fl-purple-400)}
+.post-card-body .excerpt{color:var(--fl-text-muted);font-size:0.82rem;line-height:1.5;margin-bottom:auto;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.post-card-body .meta{font-size:0.7rem;color:var(--fl-text-dim);font-family:var(--fl-font-mono);margin-top:1rem;display:flex;gap:10px;align-items:center}
+
+/* CTA section */
+.blog-cta{background:rgba(18,18,26,0.6);backdrop-filter:blur(16px);border:1px solid rgba(147,51,234,0.3);border-radius:var(--fl-r-lg);padding:3rem;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,0.3),inset 0 1px 0 rgba(255,255,255,0.05);margin-bottom:3rem}
+.blog-cta h3{color:var(--fl-purple-400);font-size:1.2rem;margin-bottom:0.5rem}
+.blog-cta p{color:var(--fl-text-muted);font-size:0.95rem;margin-bottom:1.25rem}
 .blog-cta .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:16px 32px;font-family:var(--fl-font-brand);font-size:11px;text-decoration:none;cursor:pointer;border:none;color:#000;letter-spacing:1px;background:#FACC15;box-shadow:inset -4px -4px 0 #A16207,inset 4px 4px 0 #FDE68A,0 6px 0 #713F12;border-radius:0;transition:transform 60ms,box-shadow 60ms}
 .blog-cta .btn:hover{background:#FDE047;box-shadow:inset -4px -4px 0 #A16207,inset 4px 4px 0 #FEF9C3,0 6px 0 #713F12,0 0 30px rgba(250,204,21,0.4)}
 
-.footer{padding:2rem 0;text-align:center;border-top:1px solid var(--fl-border);margin-top:3rem;position:relative;z-index:1}
+/* Footer */
+.footer{padding:2rem 0;text-align:center;border-top:1px solid var(--fl-border);position:relative;z-index:1}
 .footer-grid{max-width:1000px;margin:0 auto;display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr;gap:2rem;text-align:left;padding:0 1.5rem}
 .footer-brand img{height:28px;margin-bottom:0.5rem}
 .footer-brand p{color:var(--fl-text-muted);font-size:0.8rem;line-height:1.5}
@@ -66,10 +99,17 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
 
 #particles-canvas{position:fixed;inset:0;z-index:0;pointer-events:none}
 
+@media(max-width:1024px){
+  .posts-grid{grid-template-columns:repeat(2,1fr)}
+  .featured-post{grid-template-columns:1fr}
+}
 @media(max-width:768px){
-  .blog-container{padding:1.5rem 1rem;padding-top:80px}
+  .blog-wrapper{padding:90px 1rem 3rem}
   .nav-links{display:none}
   .mobile-toggle{display:block}
+  .posts-grid{grid-template-columns:1fr}
+  .featured-post{grid-template-columns:1fr}
+  .featured-content{padding:1.5rem}
   .footer-grid{grid-template-columns:1fr 1fr;gap:1.5rem}
 }
 </style>
@@ -96,65 +136,122 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
   </div>
 </nav>
 
-<div class="blog-container">
-  <header class="blog-header">
+<div class="blog-wrapper">
+  <header class="blog-hero">
     <h1>Blog FraLib OS</h1>
-    <p>Estrategias para vender sites com IA para negocios locais</p>
+    <p>Estrategias, tutoriais e insights para vender sites com IA para negocios locais</p>
   </header>
 
-  <div class="article-list">
-    <article class="article-card">
-      <h2><a href="/blog/como-vender-sites-para-negocios-locais.html">Como Vender Sites Para Negocios Locais Sem Saber Programar</a></h2>
-      <p class="excerpt">Descubra como freelancers estao faturando R$5.000 a R$15.000/mes vendendo sites para restaurantes, saloes e clinicas — sem escrever uma linha de codigo.</p>
-      <span class="meta">16 Mai 2026 · 6 min de leitura</span>
-    </article>
-
-    <article class="article-card">
-      <h2><a href="/blog/quanto-cobrar-por-site-de-restaurante.html">Quanto Cobrar Por Um Site de Restaurante, Salao ou Clinica</a></h2>
-      <p class="excerpt">Tabela de precos realista com exemplos de quanto freelancers cobram por sites de negocios locais em 2026. De R$500 a R$1.500/mes.</p>
-      <span class="meta">16 Mai 2026 · 5 min de leitura</span>
-    </article>
-
-    <article class="article-card">
-      <h2><a href="/blog/sdr-automatico-whatsapp-ia.html">SDR Automatico: Como Prospectar Clientes Pelo WhatsApp Com IA</a></h2>
-      <p class="excerpt">Como um agente de IA pode encontrar negocios sem site, criar uma proposta visual e enviar pelo WhatsApp — tudo no automatico.</p>
-      <span class="meta">16 Mai 2026 · 7 min de leitura</span>
-    </article>
-
-    <article class="article-card">
-      <h2><a href="/blog/encontrar-negocios-sem-site-google-maps.html">Como Encontrar Negocios Sem Site no Google Maps</a></h2>
-      <p class="excerpt">Passo a passo para identificar negocios locais que nao tem presenca online e transforma-los em clientes pagantes.</p>
-      <span class="meta">16 Mai 2026 · 4 min de leitura</span>
-    </article>
-
-    <article class="article-card">
-      <h2><a href="/blog/criar-site-com-inteligencia-artificial.html">Criar Site Com Inteligencia Artificial: Guia Completo 2026</a></h2>
-      <p class="excerpt">Comparativo das melhores ferramentas de IA para criar sites profissionais em minutos. Qual vale a pena para revenda?</p>
-      <span class="meta">16 Mai 2026 · 8 min de leitura</span>
-    </article>
-
-    <article class="article-card">
-      <h2><a href="/blog/freelancer-sites-como-ganhar-5000-por-mes.html">Freelancer de Sites: Como Ganhar R$5.000/Mes Vendendo Sites</a></h2>
-      <p class="excerpt">Plano de acao completo para sair do zero e faturar R$5.000/mes vendendo sites para negocios locais como freelancer.</p>
-      <span class="meta">16 Mai 2026 · 6 min de leitura</span>
-    </article>
-
-    <article class="article-card">
-      <h2><a href="/blog/whatsapp-vendas-automatizar-sem-banir.html">WhatsApp Para Vendas: Como Automatizar Sem Ser Banido</a></h2>
-      <p class="excerpt">Boas praticas para usar WhatsApp como canal de vendas com automacao inteligente sem correr risco de banimento.</p>
-      <span class="meta">16 Mai 2026 · 5 min de leitura</span>
-    </article>
-
-    <article class="article-card">
-      <h2><a href="/blog/nicho-sites-negocios-locais-2026.html">Nicho de Sites Para Negocios Locais: Por Que e o Melhor em 2026</a></h2>
-      <p class="excerpt">Dados de mercado que mostram por que vender sites para negocios locais e a oportunidade mais lucrativa e menos competitiva de 2026.</p>
-      <span class="meta">16 Mai 2026 · 5 min de leitura</span>
-    </article>
+  <!-- Category Filters -->
+  <div class="blog-filters">
+    <button class="filter-btn active" data-filter="all">Todos</button>
+    <button class="filter-btn" data-filter="vendas">Vendas</button>
+    <button class="filter-btn" data-filter="ia">Inteligencia Artificial</button>
+    <button class="filter-btn" data-filter="whatsapp">WhatsApp</button>
+    <button class="filter-btn" data-filter="estrategia">Estrategia</button>
+    <button class="filter-btn" data-filter="tutorial">Tutorial</button>
   </div>
 
+  <!-- Featured Post -->
+  <a href="/blog/como-vender-sites-para-negocios-locais.html" style="text-decoration:none;color:inherit">
+  <article class="featured-post" data-category="vendas">
+    <div class="featured-thumb">
+      <span class="thumb-placeholder">&#x1F4BB;</span>
+    </div>
+    <div class="featured-content">
+      <span class="featured-badge">Destaque</span>
+      <h2><span>Como Vender Sites Para Negocios Locais Sem Saber Programar</span></h2>
+      <p class="excerpt">Descubra como freelancers estao faturando R$5.000 a R$15.000/mes vendendo sites para restaurantes, saloes e clinicas — sem escrever uma linha de codigo. Guia completo com passo a passo.</p>
+      <div class="meta">
+        <span>16 Mai 2026</span>
+        <span>·</span>
+        <span>6 min de leitura</span>
+        <span>·</span>
+        <span>Vendas</span>
+      </div>
+    </div>
+  </article>
+  </a>
+
+  <!-- Posts Grid -->
+  <div class="posts-grid">
+
+    <article class="post-card" data-category="vendas">
+      <div class="post-thumb"><span class="thumb-icon">&#x1F4B0;</span></div>
+      <div class="post-card-body">
+        <span class="post-category">Vendas</span>
+        <h3><a href="/blog/quanto-cobrar-por-site-de-restaurante.html">Quanto Cobrar Por Um Site de Restaurante, Salao ou Clinica</a></h3>
+        <p class="excerpt">Tabela de precos realista com exemplos de quanto freelancers cobram por sites de negocios locais em 2026. De R$500 a R$1.500/mes.</p>
+        <div class="meta"><span>16 Mai 2026</span><span>·</span><span>5 min</span></div>
+      </div>
+    </article>
+
+    <article class="post-card" data-category="whatsapp">
+      <div class="post-thumb"><span class="thumb-icon">&#x1F4F1;</span></div>
+      <div class="post-card-body">
+        <span class="post-category">WhatsApp</span>
+        <h3><a href="/blog/sdr-automatico-whatsapp-ia.html">SDR Automatico: Como Prospectar Clientes Pelo WhatsApp Com IA</a></h3>
+        <p class="excerpt">Como um agente de IA pode encontrar negocios sem site, criar uma proposta visual e enviar pelo WhatsApp — tudo no automatico.</p>
+        <div class="meta"><span>16 Mai 2026</span><span>·</span><span>7 min</span></div>
+      </div>
+    </article>
+
+    <article class="post-card" data-category="tutorial">
+      <div class="post-thumb"><span class="thumb-icon">&#x1F5FA;</span></div>
+      <div class="post-card-body">
+        <span class="post-category">Tutorial</span>
+        <h3><a href="/blog/encontrar-negocios-sem-site-google-maps.html">Como Encontrar Negocios Sem Site no Google Maps</a></h3>
+        <p class="excerpt">Passo a passo para identificar negocios locais que nao tem presenca online e transforma-los em clientes pagantes.</p>
+        <div class="meta"><span>16 Mai 2026</span><span>·</span><span>4 min</span></div>
+      </div>
+    </article>
+
+    <article class="post-card" data-category="ia">
+      <div class="post-thumb"><span class="thumb-icon">&#x1F916;</span></div>
+      <div class="post-card-body">
+        <span class="post-category">Inteligencia Artificial</span>
+        <h3><a href="/blog/criar-site-com-inteligencia-artificial.html">Criar Site Com Inteligencia Artificial: Guia Completo 2026</a></h3>
+        <p class="excerpt">Comparativo das melhores ferramentas de IA para criar sites profissionais em minutos. Qual vale a pena para revenda?</p>
+        <div class="meta"><span>16 Mai 2026</span><span>·</span><span>8 min</span></div>
+      </div>
+    </article>
+
+    <article class="post-card" data-category="estrategia">
+      <div class="post-thumb"><span class="thumb-icon">&#x1F4C8;</span></div>
+      <div class="post-card-body">
+        <span class="post-category">Estrategia</span>
+        <h3><a href="/blog/freelancer-sites-como-ganhar-5000-por-mes.html">Freelancer de Sites: Como Ganhar R$5.000/Mes Vendendo Sites</a></h3>
+        <p class="excerpt">Plano de acao completo para sair do zero e faturar R$5.000/mes vendendo sites para negocios locais como freelancer.</p>
+        <div class="meta"><span>16 Mai 2026</span><span>·</span><span>6 min</span></div>
+      </div>
+    </article>
+
+    <article class="post-card" data-category="whatsapp">
+      <div class="post-thumb"><span class="thumb-icon">&#x1F6E1;</span></div>
+      <div class="post-card-body">
+        <span class="post-category">WhatsApp</span>
+        <h3><a href="/blog/whatsapp-vendas-automatizar-sem-banir.html">WhatsApp Para Vendas: Como Automatizar Sem Ser Banido</a></h3>
+        <p class="excerpt">Boas praticas para usar WhatsApp como canal de vendas com automacao inteligente sem correr risco de banimento.</p>
+        <div class="meta"><span>16 Mai 2026</span><span>·</span><span>5 min</span></div>
+      </div>
+    </article>
+
+    <article class="post-card" data-category="estrategia">
+      <div class="post-thumb"><span class="thumb-icon">&#x1F3AF;</span></div>
+      <div class="post-card-body">
+        <span class="post-category">Estrategia</span>
+        <h3><a href="/blog/nicho-sites-negocios-locais-2026.html">Nicho de Sites Para Negocios Locais: Por Que e o Melhor em 2026</a></h3>
+        <p class="excerpt">Dados de mercado que mostram por que vender sites para negocios locais e a oportunidade mais lucrativa e menos competitiva de 2026.</p>
+        <div class="meta"><span>16 Mai 2026</span><span>·</span><span>5 min</span></div>
+      </div>
+    </article>
+
+  </div>
+
+  <!-- CTA -->
   <div class="blog-cta">
     <h3>Pronto para comecar?</h3>
-    <p>Teste o FraLib OS gratis por 7 dias. Sem cartao, sem compromisso.</p>
+    <p>Teste o FraLib OS gratis. Gere seu primeiro site em 3 minutos.</p>
     <a href="/login?signup=1" class="btn">TESTAR GRATIS</a>
   </div>
 </div>
@@ -170,7 +267,6 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
       <a href="/docs/como-funciona.html">Como Funciona</a>
       <a href="/docs/pipeline.html">Pipeline de IA</a>
       <a href="/docs/sdr-bryan.html">SDR Bryan</a>
-      <a href="/docs/sites-gerados.html">Sites Gerados</a>
       <a href="/planos.html">Planos</a>
     </div>
     <div class="footer-col">
@@ -178,7 +274,6 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
       <a href="/blog/">Blog</a>
       <a href="/docs/">Documentacao</a>
       <a href="/docs/faq.html">FAQ</a>
-      <a href="/docs/roi.html">Calculadora ROI</a>
     </div>
     <div class="footer-col">
       <h4>Empresa</h4>
@@ -189,8 +284,52 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
 </footer>
 
 <script>
-(function(){const c=document.getElementById('particles-canvas');if(!c)return;const x=c.getContext('2d');let W,H,p=[];function r(){W=c.width=innerWidth;H=c.height=innerHeight}function rn(a,b){return Math.random()*(b-a)+a}function i(){p=[];const n=Math.min(Math.floor((W*H)/14000),60);for(let j=0;j<n;j++)p.push({x:rn(0,W),y:rn(0,H),vx:rn(-.12,.12),vy:rn(-.12,.12),s:rn(.6,1.4),a:rn(.15,.5)})}function d(){x.clearRect(0,0,W,H);p.forEach(pt=>{pt.x+=pt.vx;pt.y+=pt.vy;if(pt.x<0)pt.x=W;if(pt.x>W)pt.x=0;if(pt.y<0)pt.y=H;if(pt.y>H)pt.y=0;x.beginPath();x.arc(pt.x,pt.y,pt.s,0,Math.PI*2);x.fillStyle=`rgba(192,132,252,${pt.a})`;x.fill()});requestAnimationFrame(d)}addEventListener('resize',()=>{r();i()});r();i();d()})();
-const nav=document.getElementById('navbar');addEventListener('scroll',()=>{nav.classList.toggle('scrolled',scrollY>20)});
+(function(){
+  // Particles
+  const c=document.getElementById('particles-canvas');if(!c)return;const x=c.getContext('2d');let W,H,p=[];
+  function r(){W=c.width=innerWidth;H=c.height=innerHeight}
+  function rn(a,b){return Math.random()*(b-a)+a}
+  function i(){p=[];const n=Math.min(Math.floor((W*H)/14000),60);for(let j=0;j<n;j++)p.push({x:rn(0,W),y:rn(0,H),vx:rn(-.12,.12),vy:rn(-.12,.12),s:rn(.6,1.4),a:rn(.15,.5)})}
+  function d(){x.clearRect(0,0,W,H);p.forEach(pt=>{pt.x+=pt.vx;pt.y+=pt.vy;if(pt.x<0)pt.x=W;if(pt.x>W)pt.x=0;if(pt.y<0)pt.y=H;if(pt.y>H)pt.y=0;x.beginPath();x.arc(pt.x,pt.y,pt.s,0,Math.PI*2);x.fillStyle=`rgba(192,132,252,${pt.a})`;x.fill()});requestAnimationFrame(d)}
+  addEventListener('resize',()=>{r();i()});r();i();d();
+
+  // Nav scroll
+  const nav=document.getElementById('navbar');
+  addEventListener('scroll',()=>{nav.classList.toggle('scrolled',scrollY>20)});
+
+  // Category filter
+  const btns=document.querySelectorAll('.filter-btn');
+  const cards=document.querySelectorAll('.post-card');
+  const featured=document.querySelector('.featured-post');
+  btns.forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      btns.forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      const f=btn.dataset.filter;
+      cards.forEach(card=>{
+        if(f==='all'||card.dataset.category===f){card.style.display='';}
+        else{card.style.display='none';}
+      });
+      if(featured){
+        if(f==='all'||featured.dataset.category===f){featured.style.display='';}
+        else{featured.style.display='none';}
+      }
+    });
+  });
+
+  // Mobile menu
+  const toggle=document.getElementById('mobileToggle');
+  const links=document.querySelector('.nav-links');
+  if(toggle&&links){
+    toggle.addEventListener('click',()=>{
+      links.style.display=links.style.display==='flex'?'none':'flex';
+      links.style.position='fixed';links.style.top='60px';links.style.left='0';links.style.right='0';
+      links.style.background='rgba(6,6,8,0.98)';links.style.padding='1.5rem';
+      links.style.flexDirection='column';links.style.alignItems='center';links.style.gap='1.5rem';
+      links.style.borderBottom='1px solid var(--fl-border)';links.style.zIndex='999';
+    });
+  }
+})();
 </script>
 </body>
 </html>
