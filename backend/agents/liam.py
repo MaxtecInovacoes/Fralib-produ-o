@@ -1136,6 +1136,32 @@ def _extract_hue(oklch_value: str) -> str:
     return "240"  # fallback azul neutro
 
 
+def _nav_cta_text(prd) -> str:
+    """Retorna texto do CTA do nav baseado no sub-nicho ou segmento."""
+    _sub = getattr(prd, "sub_nicho", {}) or {}
+    if isinstance(_sub, dict) and _sub.get("cta"):
+        # Encurtar pra caber no nav (max 15 chars)
+        cta = _sub["cta"]
+        if len(cta) > 18:
+            cta = cta.split()[0] + " " + cta.split()[-1] if len(cta.split()) > 2 else cta[:15]
+        return cta
+    _seg = (getattr(prd, "segmento", "") or "").lower()
+    _cta_map = {
+        "academia": "Agendar aula",
+        "restaurante": "Reservar",
+        "clinica": "Agendar",
+        "estetica": "Agendar",
+        "advogado": "Consulta",
+        "barbearia": "Agendar",
+        "nutricionista": "Agendar",
+        "dentista": "Agendar",
+        "psicologo": "Agendar",
+        "pizzaria": "Pedir agora",
+        "delivery": "Pedir agora",
+    }
+    return _cta_map.get(_seg, "Fale conosco")
+
+
 def _gerar_seo_inline(prd) -> str:
     """Gera meta tags SEO determinísticas a partir do PRD."""
     import unicodedata as _ud, re as _re, json as _json
@@ -1541,6 +1567,47 @@ def _gerar_back_to_top() -> str:
     )
 
 
+def _gerar_galeria_section(prd) -> str:
+    """Seção galeria — grid de fotos do negócio. Injetada se tem 4+ fotos."""
+    fotos = getattr(prd, 'photos', []) or []
+    if len(fotos) < 4:
+        return ""
+    q = '"'
+    nl = chr(10)
+    # Usar até 8 fotos
+    _fotos_use = fotos[:8]
+    _n = len(_fotos_use)
+
+    # Grid layout varia: masonry-like com spans diferentes
+    items = ""
+    for i, foto in enumerate(_fotos_use):
+        url = foto if isinstance(foto, str) else foto.get("url", foto.get("src", ""))
+        if not url:
+            continue
+        # Variar aspect ratio pra não ficar grid uniforme
+        _aspects = ["aspect-square", "aspect-[4/3]", "aspect-[3/4]", "aspect-square"]
+        _aspect = _aspects[i % len(_aspects)]
+        # Primeira e quinta foto são maiores (span 2 cols em desktop)
+        _span = " md:col-span-2 md:row-span-2" if i in (0, 4) else ""
+        items += (
+            '<div class="overflow-hidden rounded-xl' + _span + ' reveal">' + nl
+            + '<img src="' + url + '" alt="' + getattr(prd, 'business_name', '') + '" '
+            + 'class="w-full h-full object-cover ' + _aspect + ' img-craft hover:scale-105 transition-transform duration-500" '
+            + 'loading="lazy">' + nl
+            + '</div>' + nl
+        )
+    if not items:
+        return ""
+    return (
+        '<section id="galeria" class="py-16 md:py-24" style="background-color:var(--surface);">' + nl
+        + '<div class="max-w-6xl mx-auto px-4 md:px-8">' + nl
+        + '<h2 class="reveal text-2xl md:text-3xl font-bold text-center mb-12" style="color:var(--fg);">Nosso Espa&ccedil;o</h2>' + nl
+        + '<div class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">' + nl
+        + items
+        + '</div></div></section>' + nl
+    )
+
+
 def _gerar_faq_section(prd) -> str:
     """Seção FAQ accordion — injetada automaticamente se PRD tem FAQ."""
     faq = getattr(prd, 'faq_questions', []) or []
@@ -1809,9 +1876,9 @@ body { background:var(--bg); color:var(--fg); }
         + "  <div class=" + q + "max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-4" + q + ">" + chr(10)
         + "    <a href=" + q + "#hero" + q + " class=" + q + "flex items-center gap-3 no-underline" + q + ">" + chr(10)
         + "      " + logo_html + chr(10)
-        + "      <span class=" + q + "font-bold text-sm hidden sm:block" + q + " style=" + q + "color:var(--color-text)" + q + ">" + nome + "</span>" + chr(10)
+        + "      <span class=" + q + "font-bold text-sm hidden sm:block" + q + " style=" + q + "color:var(--fg)" + q + ">" + nome + "</span>" + chr(10)
         + "    </a>" + chr(10)
-        + "    <nav class=" + q + "hidden md:flex items-center gap-6 text-sm font-medium" + q + " style=" + q + "color:var(--color-muted)" + q + ">" + chr(10)
+        + "    <nav class=" + q + "hidden md:flex items-center gap-6 text-sm font-medium" + q + " style=" + q + "color:var(--muted)" + q + ">" + chr(10)
         + _gerar_nav_links(prd, q)
         + "    </nav>" + chr(10)
         + "    <div class=" + q + "flex items-center gap-3" + q + ">" + chr(10)
@@ -1819,7 +1886,7 @@ body { background:var(--bg); color:var(--fg); }
 
         + "      <a href=" + q + whatsapp_url + q + " target=" + q + "_blank" + q + " rel=" + q + "noopener" + q
         + " class=" + q + "px-4 py-2 rounded-xl text-white text-sm font-semibold transition-transform hover:scale-105" + q
-        + " style=" + q + "background:var(--color-accent)" + q + ">WhatsApp</a>" + chr(10)
+        + " style=" + q + "background:var(--accent)" + q + ">" + _nav_cta_text(prd) + "</a>" + chr(10)
         + "    </div>" + chr(10)
         + "  </div>" + chr(10)
         + "</header>" + chr(10)
@@ -1982,8 +2049,9 @@ body { background:var(--bg); color:var(--fg); }
     )
     # Injetar FAQ accordion se PRD tem FAQ
     _faq_section = _gerar_faq_section(prd)
+    _galeria_section = _gerar_galeria_section(prd)
 
-    return header + "<main id=" + q + "fralib-content" + q + " class=" + q + "w-full overflow-x-hidden pt-20" + q + ">" + nl + html_main + nl + _faq_section + "</main>" + nl + footer
+    return header + "<main id=" + q + "fralib-content" + q + " class=" + q + "w-full overflow-x-hidden pt-20" + q + ">" + nl + html_main + nl + _galeria_section + _faq_section + "</main>" + nl + footer
 
 
 def critique_theater_pass(html):
