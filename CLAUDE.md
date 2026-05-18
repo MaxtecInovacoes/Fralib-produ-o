@@ -1,5 +1,12 @@
 # FraLib — CLAUDE.md
 
+## REGRAS ABSOLUTAS DE DEPLOY
+
+1. NUNCA usar SCP, rsync ou editar arquivos direto na VPS
+2. SEMPRE: editar local → git add → git commit → git push (deploy automatico)
+3. NUNCA deployar codigo nao commitado
+4. Se fez alteracao, DEVE commitar antes de encerrar sessao
+
 ## Visao Geral do Projeto
 
 FraLib e um SaaS de geracao de landing pages via pipeline de agentes IA.
@@ -82,3 +89,48 @@ Correcoes recentes:
 - websocket.go:166 (meowhats): filtro tenantId no WS vem da query string
   sem autorizacao. Aceitavel hoje porque API key e backend-only, mas
   registrar como divida.
+
+## WhatsApp LID Protocol (whatsmeow)
+
+O WhatsApp Web/whatsmeow usa o protocolo **LID** (Linked ID) internamente para multi-device. Mensagens chegam com JIDs no formato `234754607685703@lid` ao invés do antigo `telefone@s.whatsapp.net`.
+
+**Como funciona:**
+- Cada número tem um LID único atribuído pelo WhatsApp (multi-device)
+- A tabela `whatsmeow_lid_map` (DB whatsmeow, porta 5433) mapeia: `lid` → `pn` (phone number)
+- Exemplo: LID `234754607685703` → PN `554185134105`
+
+**Padrão no código:**
+- Sempre verificar se JID contém `@lid` antes de processar
+- Se `@lid`: resolver via `_resolver_lid()` que consulta `whatsmeow_lid_map`
+- Se `@s.whatsapp.net`: extrair número direto (formato antigo, ainda funciona pra envio)
+- Para ENVIAR mensagens: pode usar tanto o LID (`234754607685703@lid`) quanto o telefone (`5541985134105@s.whatsapp.net`) — o meowhats resolve via `IsOnWhatsApp()`
+
+**DB whatsmeow:**
+- Host: localhost:5433
+- DB: whatsmeow
+- User: postgres / fralib2024
+- Tabela `whatsmeow_lid_map`: lid (PK) | pn (unique)
+- Tabela `tenant_device`: tenant_id | jid
+
+**API meowhats (porta 3001):**
+- Auth: Header `X-API-Key: 1763kovQ@`
+- Enviar msg: `POST /api/sessions/{tenantId}/send` — body: `{jid, type, text}`
+- Typing: `POST /api/sessions/{tenantId}/presence` — body: `{jid, type: "composing"}`
+- Status: `GET /api/sessions/{tenantId}/status`
+- Conectar: `POST /api/sessions/{tenantId}/connect`
+- Desconectar: `POST /api/sessions/{tenantId}/disconnect`
+- Logout (apaga creds): `POST /api/sessions/{tenantId}/logout`
+- WebSocket: `ws://localhost:3001/ws` (header X-API-Key, query ?tenantId= opcional)
+
+**WebSocket events:**
+- `message` — msg recebida (Baileys format): data.message.key.remoteJid, data.message.message.conversation
+- `connection.update` — status: connected, qr, disconnected, reconnecting, timeout
+- Server pinga a cada 30s, ReadDeadline 90s — client DEVE responder pong ou enviar frames
+
+**Importante:**
+- O LID NÃO é o telefone — não tentar buscar lead por LID direto
+- Sempre resolver LID → telefone antes de buscar no banco de leads
+- O campo `wpp_jid` nos leads guarda o LID pra fallback de busca
+- JID formato: `{DDI}{DDD}{numero}@s.whatsapp.net` (sem +, sem espaços)
+- Sessões persistem no PostgreSQL — restart não perde login
+- Celular NÃO precisa ficar ligado (multi-device protocol)
