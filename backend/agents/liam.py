@@ -1392,6 +1392,42 @@ def _gerar_pixel_tracking() -> str:
     )
 
 
+def _gerar_logo_svg(nome: str, segmento: str) -> str:
+    """Gera logo SVG via haiku — ícone minimalista baseado no negócio."""
+    try:
+        from llm_direct import call_claude
+        _prompt = (
+            f"Gere um SVG inline minimalista para logo de: {nome} (segmento: {segmento}).\n\n"
+            f"REGRAS ABSOLUTAS:\n"
+            f"- Retorne APENAS o <svg>...</svg>, nada mais\n"
+            f"- viewBox='0 0 40 40', width=40 height=40\n"
+            f"- Use APENAS fill='currentColor' ou stroke='currentColor' (herda cor do site)\n"
+            f"- Máximo 3 elementos (path/circle/rect)\n"
+            f"- Estilo: geométrico, clean, profissional\n"
+            f"- Sem texto dentro do SVG\n"
+            f"- Represente visualmente o segmento/negócio de forma abstrata"
+        )
+        _svg = call_claude(
+            system="Você é um designer de ícones SVG minimalistas. Retorne APENAS código SVG, sem explicação.",
+            user=_prompt,
+            model="haiku",
+            max_tokens=200,
+            temperature=0.3,
+        )
+        _svg = _svg.strip()
+        if _svg.startswith("<svg") and _svg.endswith("</svg>"):
+            return '<div class="h-10 w-10 flex items-center justify-center" style="color:var(--accent)">' + _svg + '</div>'
+    except Exception as _e:
+        print(f"[Liam] Logo SVG fallback: {_e}")
+
+    # Fallback: texto bold estilizado (não bolinha)
+    _initials = "".join([w[0].upper() for w in nome.split()[:2]])
+    return (
+        '<span style="font-family:var(--font-heading,inherit);font-weight:700;font-size:1.25rem;'
+        'letter-spacing:-0.02em;color:var(--fg);">' + _initials + '</span>'
+    )
+
+
 def _gerar_whatsapp_float(whatsapp_url: str) -> str:
     """Botão WhatsApp flutuante — canto inferior direito, pulse animation."""
     return (
@@ -1566,8 +1602,8 @@ def montar_template_python(html_main, prd):
         logo_html = ("<img src=" + q + logo + q + " class=" + q + "h-10 w-auto object-contain" + q
             + " alt=" + q + "Logo " + nome + q + " loading=" + q + "eager" + q + ">")
     else:
-        logo_html = ("<div class=" + q + "h-10 w-10 rounded-full flex items-center justify-center font-bold" + q
-            + " style=" + q + "background:var(--accent);color:var(--bg)" + q + ">" + nome[0].upper() + "</div>")
+        # Gerar logo SVG via haiku baseado no nome + segmento
+        logo_html = _gerar_logo_svg(nome, getattr(prd, "segmento", "") or getattr(prd, "segment", "") or "")
     _dark_mode_prd = getattr(prd, "dark_mode", None)
     if _dark_mode_prd is None:
         _dark_mode_prd = getattr(prd.color_palette, "dark_mode", False) if hasattr(prd, "color_palette") else False
