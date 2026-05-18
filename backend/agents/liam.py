@@ -705,6 +705,25 @@ def gerar_html_componentizado(prd):
 
     instrucao_diretor = getattr(prd, "instrucao_criativa_para_dev", None) or "Crie um layout moderno e responsivo com Tailwind."
 
+    # Injetar micro-decisão como contexto obrigatório pro Liam
+    _density_rules = {
+        "dense": "LAYOUT DENSO: muitos serviços/conteúdo. Use grid 3-4 colunas, cards compactos, bento grid. Não desperdice espaço vertical.",
+        "sparse": "LAYOUT ESPAÇOSO: poucos serviços. Use layout generoso, 1-2 colunas, muito whitespace. Cada elemento respira.",
+        "medium": "LAYOUT EQUILIBRADO: mix de densidade. Use grid 2-3 colunas, espaçamento confortável.",
+    }
+    _motion_rules = {
+        "cinematic": "MOTION CINEMATICO: use transições dramáticas, parallax forte, clip-path reveals. Site sofisticado.",
+        "subtle": "MOTION SUTIL: animações discretas, fade simples, sem parallax pesado. Site sério e profissional.",
+        "balanced": "MOTION EQUILIBRADO: mix de reveals e fades. Parallax moderado.",
+    }
+    _micro_context = (
+        f"\n=== DECISÃO DE DESIGN (OBRIGATÓRIO) ===\n"
+        f"Intensidade: {_intensity} | {_density_rules.get(_density, '')}\n"
+        f"{_motion_rules.get(_micro_decision.get('motion_style', 'balanced'), '')}\n"
+        f"=== FIM DECISÃO ===\n"
+    )
+    instrucao_diretor = _micro_context + instrucao_diretor
+
     # Injetar animation_profile por nicho no contexto
     try:
         from animation_profile import format_animation_context
