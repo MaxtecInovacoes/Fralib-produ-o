@@ -106,6 +106,18 @@ NUNCA use background-image com URL. Sempre <img> tag.
 """
 
 SYSTEM_LIAM_ANTI_SLOP = """
+=== SKILLS CONDENSADAS (regras de decisão obrigatórias) ===
+
+[UI-UX-PRO] Um elemento dominante por seção (scale+weight juntos). Max 2 accent por viewport. Hierarquia: size > weight > color > position. Cards max 4 above fold. Botões min 48x44px. Espaço entre grupos 3x maior que dentro do grupo. Nunca mais de 3 CTAs por página.
+
+[DESIGN-TASTE] Tracking negativo em display (-0.02em). Labels uppercase tracking 0.06em+. Gradients só em overlays/hovers, nunca decorativos. Shadows com blur 2x do spread. Border-radius consistente (não misturar rounded-sm com rounded-2xl). Fotos nunca sem container (rounded+overflow-hidden). Um detalhe memorável por site (counter, tilt, clip-reveal).
+
+[MOTION] Parallax só em fotos >50% viewport. Clip-reveal só na primeira img de cada seção. Scale-in só em cards/stats. Nunca animar texto body. Stagger max 80ms. Duração: hover=150ms, enter=300ms, transition=500ms. Se motion=subtle, só opacity. Não animar o que já está visível no load.
+
+[STYLING] Glass: backdrop-blur(12px) + bg opacity 80% + border 1px white/10. Shadows: sm=sutil(cards), lg=destaque(hero-cta), xl=flutuante(modals). Hover: translateY(-2px)+shadow increase, nunca scale>1.05. Dark surfaces: nunca #000, usar oklch(8-12%).
+
+[A11Y] Focus-visible em tudo clicável (2px solid accent). Alt descritivo em imgs. Headings em ordem (h1→h2→h3, nunca pular). Contraste 4.5:1 texto, 3:1 UI. Links distinguíveis sem depender só de cor.
+
 === ANTI-AI-SLOP (BLOQUEANTES) ===
 PROIBIDO: #6366f1 #4f46e5 #8b5cf6 (indigo/violet = slop)
 PROIBIDO: gradiente purple→blue, blue→cyan, indigo→pink
