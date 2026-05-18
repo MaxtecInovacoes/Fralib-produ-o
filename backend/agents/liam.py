@@ -646,30 +646,62 @@ def gerar_html_componentizado(prd):
     _n_fotos = len(fotos)
     _sections = getattr(prd, "sections", []) or []
     _n_servicos = sum(1 for s in _sections if "servic" in (getattr(s, "name", "") or s.get("name", "") if isinstance(s, dict) else "").lower())
+    _segmento_micro = getattr(prd, "segmento", "") or getattr(prd, "segment", "") or ""
+    _sub_nicho_prd = getattr(prd, "sub_nicho", {}) or {}
+    _sub_nicho_nome = _sub_nicho_prd.get("sub_nicho", "") if isinstance(_sub_nicho_prd, dict) else ""
 
-    # Intensidade visual baseada nos dados reais (sem LLM, regras puras)
-    _intensity = "medium"  # default
-    if _rating >= 4.7 and _n_fotos >= 4:
-        _intensity = "high"  # negócio premium com fotos boas = site sofisticado
-    elif _rating < 4.0 or _n_fotos <= 1:
-        _intensity = "low"  # negócio simples = site clean, não compete com fotos ruins
+    # Micro-decisão via Haiku (~300 tokens) — decisões contextuais que regras fixas não conseguem
+    _micro_decision = {"intensity": "medium", "density": "medium", "photo_treatment": "standard", "motion_style": "balanced", "cta_style": "standard"}
+    try:
+        from llm_direct import call_claude
+        import json as _mj
+        _micro_prompt = (
+            f"Negócio: {prd.business_name} | Segmento: {_segmento_micro} | Sub-nicho: {_sub_nicho_nome}\n"
+            f"Rating: {_rating}/5 | Reviews: {_n_reviews} | Fotos: {_n_fotos} | Seções: {len(_sections)}\n\n"
+            f"Retorne APENAS JSON (sem explicação):\n"
+            f'{{"intensity":"high|medium|low","density":"dense|medium|sparse","photo_treatment":"premium|standard|minimal","motion_style":"cinematic|balanced|subtle","cta_style":"bold|standard|soft"}}\n\n'
+            f"Regras:\n"
+            f"- intensity high: rating>=4.7 + fotos boas + negócio premium\n"
+            f"- intensity low: rating<4.0 ou sem fotos\n"
+            f"- density dense: muitas seções/serviços\n"
+            f"- photo_treatment premium: muitas fotos + rating alto\n"
+            f"- motion_style cinematic: negócio sofisticado (estética, luxo, gastronomia fina)\n"
+            f"- motion_style subtle: negócio sério (advogado, clínica médica)\n"
+            f"- cta_style bold: negócio energético (academia, delivery)\n"
+            f"- cta_style soft: negócio acolhedor (psicólogo, yoga, nutricionista clínico)"
+        )
+        _micro_resp = call_claude(
+            system="Você é um diretor de arte. Analise os dados e retorne APENAS o JSON pedido. Nada mais.",
+            user=_micro_prompt,
+            model="haiku",
+            max_tokens=150,
+            temperature=0.1,
+        )
+        _micro_resp = _micro_resp.strip()
+        if _micro_resp.startswith("{"):
+            _micro_decision.update(_mj.loads(_micro_resp))
+        print(f"[Liam] Micro-decisão (haiku): {_micro_decision}")
+    except Exception as _me:
+        print(f"[Liam] Micro-decisão fallback (regras): {_me}")
+        # Fallback: regras puras
+        if _rating >= 4.7 and _n_fotos >= 4:
+            _micro_decision["intensity"] = "high"
+        elif _rating < 4.0 or _n_fotos <= 1:
+            _micro_decision["intensity"] = "low"
+        if len(_sections) >= 7:
+            _micro_decision["density"] = "dense"
+        elif len(_sections) <= 4:
+            _micro_decision["density"] = "sparse"
+        if _n_fotos >= 5 and _rating >= 4.5:
+            _micro_decision["photo_treatment"] = "premium"
+        elif _n_fotos <= 2:
+            _micro_decision["photo_treatment"] = "minimal"
 
-    # Layout density baseada na quantidade de conteúdo
-    _density = "medium"
-    _total_sections = len(_sections)
-    if _total_sections >= 7:
-        _density = "dense"
-    elif _total_sections <= 4:
-        _density = "sparse"
+    _intensity = _micro_decision["intensity"]
+    _density = _micro_decision["density"]
+    _photo_treatment = _micro_decision["photo_treatment"]
 
-    # Photo treatment
-    _photo_treatment = "standard"
-    if _n_fotos >= 5 and _rating >= 4.5:
-        _photo_treatment = "premium"  # parallax forte, clip-reveal, gallery
-    elif _n_fotos <= 2:
-        _photo_treatment = "minimal"  # sem parallax pesado, fotos pequenas
-
-    print(f"[Liam] Micro-decisão: intensity={_intensity} density={_density} photos={_photo_treatment} (rating={_rating} fotos={_n_fotos} sections={_total_sections})")
+    print(f"[Liam] Micro-decisão final: intensity={_intensity} density={_density} photos={_photo_treatment} motion={_micro_decision.get('motion_style','balanced')} cta={_micro_decision.get('cta_style','standard')}")
 
     instrucao_diretor = getattr(prd, "instrucao_criativa_para_dev", None) or "Crie um layout moderno e responsivo com Tailwind."
 
@@ -1013,7 +1045,10 @@ def gerar_html_componentizado(prd):
     html_final = _sanitizar_wpp_duplicado(html_final)
     print("[Liam] WPP duplicado sanitizado")
     _ckpt_clear(_ckpt_slug_val)  # Limpar checkpoint apos conclusao bem-sucedida
-    return html_final.strip()
+    # Injetar micro-decisão como comentário HTML pra critique_theater_pass ler
+    _micro_tag = f'<!-- fralib-micro intensity="{_intensity}" density="{_density}" photo="{_photo_treatment}" motion="{_micro_decision.get("motion_style","balanced")}" -->'
+    html_final = _micro_tag + "\n" + html_final.strip()
+    return html_final
 
 
 # Alias para compatibilidade com pipeline_endpoints.py
@@ -1908,13 +1943,18 @@ def critique_theater_pass(html):
     html = html.replace('var(--color-muted)', 'var(--muted)')
 
     # 8. MOTION INJECTION — forçar parallax e animações em imagens
-    # Intensidade varia por _micro_decision (passado via data-attr no html ou inferido)
-    # Detectar intensidade do site pelo craft rhythm
-    _site_intensity = "medium"
-    if 'very-spacious' in html or 'luxury' in html.lower():
-        _site_intensity = "high"
-    elif 'compressed' in html:
-        _site_intensity = "low"
+    # Ler micro-decisão do comentário HTML (injetado pelo gerar_html_componentizado)
+    _micro_match = _re.search(r'<!-- fralib-micro intensity="(\w+)" density="(\w+)" photo="(\w+)" motion="(\w+)" -->', html)
+    if _micro_match:
+        _site_intensity = _micro_match.group(1)
+        _site_motion = _micro_match.group(4)
+    else:
+        _site_intensity = "medium"
+        _site_motion = "balanced"
+        if 'very-spacious' in html or 'luxury' in html.lower():
+            _site_intensity = "high"
+        elif 'compressed' in html:
+            _site_intensity = "low"
 
     _img_counter = [0]  # mutable counter pra variar animações
     def _inject_img_motion(m):
@@ -1933,7 +1973,11 @@ def critique_theater_pass(html):
             mods.append('parallax')
         # Reveal: variar entre reveal-left, clip-reveal, scale-in (não sempre igual)
         if 'reveal' not in tag and 'scale-in' not in tag and 'clip-reveal' not in tag:
-            if _site_intensity == "high":
+            if _site_motion == "cinematic":
+                _anim_options = ['clip-reveal', 'clip-reveal', 'scale-in', 'reveal-left']
+            elif _site_motion == "subtle":
+                _anim_options = ['reveal', 'reveal', 'reveal']
+            elif _site_intensity == "high":
                 _anim_options = ['clip-reveal', 'reveal-left', 'scale-in', 'clip-reveal']
             elif _site_intensity == "low":
                 _anim_options = ['reveal', 'reveal', 'scale-in']
