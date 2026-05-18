@@ -897,8 +897,48 @@ def gerar_html_componentizado(prd):
         _ctx_rhythm = ""
         if _rhythm_hint:
             _ctx_rhythm = "RITMO VISUAL (OBRIGATORIO seguir): " + _rhythm_hint + nl + nl
+
+        # VARIANTE DE LAYOUT — hash do nome seleciona variante diferente por seção
+        # Garante que 3 leads do mesmo nicho/cidade NÃO saem iguais
+        import hashlib as _hl
+        _hash_val = int(_hl.md5((prd.business_name + "|" + nome_s + "|fralib").encode()).hexdigest()[:8], 16)
+        _layout_variants = {
+            "hero": [
+                "LAYOUT HERO: Split 60/40 (texto esquerda, foto direita). Foto com gradient fade lateral.",
+                "LAYOUT HERO: Fullscreen foto com overlay escuro. Texto centralizado sobre a imagem. CTA grande.",
+                "LAYOUT HERO: Texto centralizado sem foto. Background com mesh-glow sutil. Tipografia dominante.",
+                "LAYOUT HERO: Assimétrico — texto 70% esquerda com foto pequena flutuante no canto. Muito whitespace.",
+            ],
+            "sobre": [
+                "LAYOUT SOBRE: Grid 2 colunas — foto esquerda (aspect 3/4), texto direita com stats.",
+                "LAYOUT SOBRE: Foto full-width no topo (aspect 16/9), texto abaixo em 2 colunas.",
+                "LAYOUT SOBRE: Timeline vertical com marcos do negócio. Sem foto grande.",
+                "LAYOUT SOBRE: Texto grande centralizado (editorial). Foto pequena circular ao lado do nome.",
+            ],
+            "servicos": [
+                "LAYOUT SERVICOS: Grid 3 colunas com cards. Ícone + título + descrição.",
+                "LAYOUT SERVICOS: Bento grid assimétrico (1 card grande + 2 pequenos). Hover com lift.",
+                "LAYOUT SERVICOS: Lista vertical com ícone à esquerda e descrição à direita. Separadores sutis.",
+                "LAYOUT SERVICOS: Grid 2 colunas com foto em cada card. Cards com gradient-border.",
+            ],
+            "depoimentos": [
+                "LAYOUT DEPOIMENTOS: Cards em grid 3 colunas. Aspas grandes. Nome + estrelas.",
+                "LAYOUT DEPOIMENTOS: Um depoimento destaque grande (full-width quote) + 2 menores abaixo em grid.",
+                "LAYOUT DEPOIMENTOS: Carousel/slider horizontal (use classe swiper). Um depoimento por vez com foto.",
+                "LAYOUT DEPOIMENTOS: Quote wall — todos os depoimentos em masonry grid com tamanhos variados.",
+                "LAYOUT DEPOIMENTOS: Lista vertical simples. Cada review com borda-left accent. Minimalista.",
+                "LAYOUT DEPOIMENTOS: Cards horizontais (foto + texto lado a lado). 2 por linha.",
+            ],
+        }
+        _section_key = nome_s.lower()
+        _variant_hint = ""
+        if _section_key in _layout_variants:
+            _variants = _layout_variants[_section_key]
+            _variant_hint = _variants[_hash_val % len(_variants)] + nl + nl
+
         prompt_secao = (
             _ctx_rhythm
+            + _variant_hint
             + "ORDEM DO DIRETOR DE ARTE:" + nl
             + instrucao_diretor + nl
             + nl
