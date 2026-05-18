@@ -1568,8 +1568,10 @@ def montar_template_python(html_main, prd):
         + "<title>" + nome + "</title>" + chr(10)
         + _gerar_seo_inline(prd) + chr(10)
         + _gerar_pixel_tracking() + chr(10)
-        + "<link href=" + q + "https://fonts.googleapis.com/css2?family=" + _font_heading.replace(" ","+") + ":wght@400;600;700;800&family=" + _font_body.replace(" ","+") + ":wght@400;500;600&display=swap" + q + " rel=" + q + "stylesheet" + q + ">" + chr(10)
+        + "<link href=" + q + "https://fonts.googleapis.com/css2?family=" + _font_heading.replace(" ","+") + ":wght@300..900&family=" + _font_body.replace(" ","+") + ":wght@300..700&display=swap" + q + " rel=" + q + "stylesheet" + q + ">" + chr(10)
         + "<script src=" + q + "https://cdn.tailwindcss.com" + q + "></script>" + chr(10)
+        + "<!-- Lenis smooth scroll -->" + chr(10)
+        + "<script src=" + q + "https://cdn.jsdelivr.net/npm/lenis@1.1.18/dist/lenis.min.js" + q + "></script>" + chr(10)
         + "<style id=" + q + "fralib-tokens" + q + ">" + chr(10)
         + ":root {" + chr(10)
         + "  --bg:      " + _bg      + ";" + chr(10)
@@ -1625,6 +1627,21 @@ def montar_template_python(html_main, prd):
         + "/* Clip-path reveal on scroll */" + chr(10)
         + ".clip-reveal { clip-path:inset(8% 8% 8% 8%);transition:clip-path 0.8s cubic-bezier(0.16,1,0.3,1); }" + chr(10)
         + ".clip-reveal.visible { clip-path:inset(0 0 0 0); }" + chr(10)
+        + "/* Texture & depth */" + chr(10)
+        + ".grain::after { content:'';position:absolute;inset:0;pointer-events:none;opacity:0.04;background-image:url(\"data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\"); }" + chr(10)
+        + ".mesh-glow { position:relative; }" + chr(10)
+        + ".mesh-glow::before { content:'';position:absolute;top:20%;left:50%;width:60%;height:60%;transform:translateX(-50%);background:radial-gradient(ellipse,color-mix(in oklch,var(--accent) 15%,transparent) 0%,transparent 70%);pointer-events:none;filter:blur(60px);z-index:0; }" + chr(10)
+        + "/* Section dividers */" + chr(10)
+        + ".divider-wave { position:relative; }" + chr(10)
+        + ".divider-wave::after { content:'';position:absolute;bottom:-1px;left:0;right:0;height:48px;background:var(--bg);clip-path:ellipse(55% 100% at 50% 100%); }" + chr(10)
+        + ".divider-angle { position:relative; }" + chr(10)
+        + ".divider-angle::after { content:'';position:absolute;bottom:-1px;left:0;right:0;height:48px;background:var(--bg);clip-path:polygon(0 100%,100% 60%,100% 100%); }" + chr(10)
+        + "/* Gradient border on cards */" + chr(10)
+        + ".gradient-border { border:1px solid transparent;background-clip:padding-box;position:relative; }" + chr(10)
+        + ".gradient-border::before { content:'';position:absolute;inset:-1px;border-radius:inherit;padding:1px;background:linear-gradient(135deg,var(--accent),var(--muted));-webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none; }" + chr(10)
+        + "/* Variable font optical sizing */" + chr(10)
+        + "h1 { font-optical-sizing:auto; }" + chr(10)
+        + "p { text-wrap:pretty; }" + chr(10)
         + ".hero-overlay { position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(0,0,0,0.5), rgba(0,0,0,0.7)); z-index: 1; }" + chr(10)
         + "/* Reveal animations */" + chr(10)
         + ".reveal,.reveal-left,.scale-in { opacity:0; }" + chr(10)
@@ -1784,24 +1801,32 @@ body { background:var(--bg); color:var(--fg); }
     document.querySelectorAll('.stagger-item').forEach(function(el,i){
       el.style.setProperty('--i',i);
     });
-  // Typewriter effect on hero H1 — reveal char by char on page load
+  // Typewriter → Word Split Reveal (premium text animation)
   (function(){
     var mq = window.matchMedia('(prefers-reduced-motion: reduce)');
     if(mq.matches) return;
     var h1 = document.querySelector('#hero h1');
     if(!h1) return;
-    var text = h1.textContent;
-    var dur = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--dur-enter')) || 0.6;
-    var delay = dur * 1000;
-    h1.textContent = '';
+    var text = h1.textContent.trim();
+    var words = text.split(/\s+/);
+    h1.innerHTML = words.map(function(w,i){
+      return '<span class="word-reveal" style="display:inline-block;opacity:0;transform:translateY(20px) rotateX(-10deg);transition:opacity 0.5s cubic-bezier(0.16,1,0.3,1),transform 0.5s cubic-bezier(0.16,1,0.3,1);transition-delay:'+((i*0.08)+0.2)+'s">'+w+'</span>';
+    }).join(' ');
     h1.style.visibility = 'visible';
-    var i = 0;
-    var interval = delay / Math.max(text.length, 1);
-    interval = Math.min(Math.max(interval, 20), 60);
-    function tick(){
-      if(i < text.length){ h1.textContent += text[i++]; setTimeout(tick, interval); }
-    }
-    setTimeout(tick, 80);
+    requestAnimationFrame(function(){
+      setTimeout(function(){
+        h1.querySelectorAll('.word-reveal').forEach(function(w){
+          w.style.opacity='1';w.style.transform='translateY(0) rotateX(0)';
+        });
+      }, 100);
+    });
+  })();
+  // Lenis smooth scroll init
+  (function(){
+    if(typeof Lenis==='undefined') return;
+    var lenis = new Lenis({duration:1.2,easing:function(t){return Math.min(1,1.001-Math.pow(2,-10*t));},orientation:'vertical',smoothWheel:true});
+    function raf(time){lenis.raf(time);requestAnimationFrame(raf);}
+    requestAnimationFrame(raf);
   })();
   // 3D tilt on cards with data-tilt
   document.querySelectorAll('[data-tilt]').forEach(function(card){
@@ -2057,6 +2082,66 @@ def critique_theater_pass(html):
         return tag
 
     html = _re.sub(r'<h2[^>]*>', _inject_h2_reveal, html)
+
+    # 11. Texture & depth injection — grain + mesh-glow baseado na intensidade
+    if _site_intensity in ("high", "medium"):
+        # Adicionar grain no hero
+        html = _re.sub(
+            r'(<section[^>]*id="hero"[^>]*)',
+            lambda m: m.group(0) if 'grain' in m.group(0) else m.group(0).replace('class="', 'class="grain ') if 'class="' in m.group(0) else m.group(0),
+            html
+        )
+        fixes_applied.append('grain_hero')
+
+    if _site_intensity == "high" and _site_motion == "cinematic":
+        # Adicionar mesh-glow na seção de serviços ou sobre
+        html = _re.sub(
+            r'(<section[^>]*id="(?:servicos|sobre)"[^>]*)',
+            lambda m: m.group(0) if 'mesh-glow' in m.group(0) else m.group(0).replace('class="', 'class="mesh-glow ') if 'class="' in m.group(0) else m.group(0),
+            html, count=1
+        )
+        fixes_applied.append('mesh_glow')
+
+    # 12. Section dividers — variar entre wave e angle (não em todos, só entre seções contrastantes)
+    _section_tags = list(_re.finditer(r'</section>\s*<section', html))
+    if _section_tags and _site_intensity != "low":
+        # Adicionar divider na primeira transição de seção (após hero)
+        _first_break = _section_tags[0]
+        _divider_class = "divider-wave" if _site_motion != "cinematic" else "divider-angle"
+        # Injetar no section anterior ao break
+        _pos = _first_break.start()
+        _before = html[:_pos]
+        _last_section = _before.rfind('<section')
+        if _last_section > 0:
+            _section_tag = html[_last_section:_pos]
+            if _divider_class not in _section_tag:
+                if 'class="' in html[_last_section:_last_section+200]:
+                    html = html[:_last_section] + html[_last_section:].replace('class="', 'class="' + _divider_class + ' ', 1)
+                    fixes_applied.append('section_divider')
+
+    # 13. Responsive images — otimizar Unsplash URLs com srcset
+    def _inject_srcset(m):
+        tag = m.group(0)
+        src_match = _re.search(r'src="(https://images\.unsplash\.com/[^"]+)"', tag)
+        if not src_match:
+            return tag
+        base_url = src_match.group(1)
+        # Limpar params existentes e adicionar srcset
+        clean_url = _re.sub(r'[&?]w=\d+', '', base_url)
+        clean_url = _re.sub(r'[&?]q=\d+', '', clean_url)
+        sep = '&' if '?' in clean_url else '?'
+        srcset = (
+            clean_url + sep + 'w=400&q=75&fm=webp 400w, '
+            + clean_url + sep + 'w=800&q=80&fm=webp 800w, '
+            + clean_url + sep + 'w=1200&q=80&fm=webp 1200w'
+        )
+        sizes = '(max-width:640px) 100vw, (max-width:1024px) 50vw, 33vw'
+        if 'srcset' not in tag:
+            tag = tag.replace(src_match.group(0), src_match.group(0) + ' srcset="' + srcset + '" sizes="' + sizes + '"')
+            fixes_applied.append('srcset')
+        return tag
+
+    html = _re.sub(r'<img\s[^>]*src="https://images\.unsplash\.com/[^>]+>', _inject_srcset, html)
 
     if fixes_applied:
         print(f"[CritiqueTheater] {len(fixes_applied)} fixes: {', '.join(set(fixes_applied))}")
