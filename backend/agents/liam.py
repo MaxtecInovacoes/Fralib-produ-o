@@ -315,6 +315,41 @@ def _sanitizar_cores_light(html):
     fg_lightness = float(_fg_m.group(1)) if _fg_m else (15 if bg_lightness > 60 else 92)
     is_light_theme = bg_lightness > 60
 
+    # === TEMA ESCURO: substituir fundos claros Tailwind por CSS vars ===
+    if not is_light_theme:
+        # bg-white, bg-gray-50/100/200 = fundo claro em tema escuro = quebra
+        _bg_light_classes = [
+            'bg-white', 'bg-gray-50', 'bg-gray-100', 'bg-gray-200',
+            'bg-slate-50', 'bg-slate-100', 'bg-slate-200',
+            'bg-zinc-50', 'bg-zinc-100', 'bg-zinc-200',
+            'bg-neutral-50', 'bg-neutral-100', 'bg-neutral-200',
+            'bg-stone-50', 'bg-stone-100', 'bg-stone-200',
+        ]
+        for cls in _bg_light_classes:
+            html = _re.sub(r'(?<!\w)' + _re.escape(cls) + r'(?!\w)', 'bg-[var(--surface)]', html)
+
+        # text-gray-800/900, text-black, text-slate-800/900 = texto escuro em tema escuro
+        _text_dark_classes = [
+            ('text-gray-900', 'text-[var(--fg)]'),
+            ('text-gray-800', 'text-[var(--fg)]'),
+            ('text-gray-700', 'text-[var(--muted)]'),
+            ('text-slate-900', 'text-[var(--fg)]'),
+            ('text-slate-800', 'text-[var(--fg)]'),
+            ('text-slate-700', 'text-[var(--muted)]'),
+            ('text-zinc-900', 'text-[var(--fg)]'),
+            ('text-zinc-800', 'text-[var(--fg)]'),
+            ('text-neutral-900', 'text-[var(--fg)]'),
+            ('text-neutral-800', 'text-[var(--fg)]'),
+        ]
+        for old_cls, new_cls in _text_dark_classes:
+            html = _re.sub(r'(?<!\w)' + _re.escape(old_cls) + r'(?!\w)', new_cls, html)
+
+        # border-gray-100/200/300 = borda clara invisível em tema escuro
+        _border_light = ['border-gray-100', 'border-gray-200', 'border-gray-300',
+                         'border-slate-100', 'border-slate-200', 'border-slate-300']
+        for cls in _border_light:
+            html = _re.sub(r'(?<!\w)' + _re.escape(cls) + r'(?!\w)', 'border-[var(--border)]', html)
+
     # Em tema claro: text-white em seções sem fundo escuro = erro
     if is_light_theme:
         def fix_section_light(m):
@@ -2161,7 +2196,7 @@ body { background:var(--bg); color:var(--fg); }
     if(!Object.keys(hoursData).length){badge.style.display='none';return;}
     var dias=['domingo','segunda','terca','quarta','quinta','sexta','sabado'];
     var aliases={'segunda-feira':'segunda','terça-feira':'terca','terca-feira':'terca','quarta-feira':'quarta','quinta-feira':'quinta','sexta-feira':'sexta','sábado':'sabado','sabado':'sabado','domingo':'domingo','seg':'segunda','ter':'terca','qua':'quarta','qui':'quinta','sex':'sexta','sab':'sabado','dom':'domingo','mon':'segunda','tue':'terca','wed':'quarta','thu':'quinta','fri':'sexta','sat':'sabado','sun':'domingo'};
-    var now=new Date();
+    var now=new Date(new Date().toLocaleString('en-US',{timeZone:'America/Sao_Paulo'}));
     var diaIdx=now.getDay();
     var diaKey=dias[diaIdx];
     var found=null;
@@ -2170,12 +2205,11 @@ body { background:var(--bg); color:var(--fg); }
       if(kn===diaKey||(aliases[kn]&&aliases[kn]===diaKey)||kn.indexOf(diaKey)===0) found=hoursData[k];
     });
     if(!found){badge.textContent='Fechado hoje';badge.style.background='#dc2626';badge.style.color='#fff';badge.style.display='inline-block';return;}
-    var match=String(found).match(/(\\d{1,2})[h:]?(\\d{0,2})\\s*[-–aà]\\s*(\\d{1,2})[h:]?(\\d{0,2})/);
-    if(!match){badge.style.display='none';return;}
-    var open=parseInt(match[1])*60+parseInt(match[2]||'0');
-    var close=parseInt(match[3])*60+parseInt(match[4]||'0');
+    var ranges=String(found).match(/(\d{1,2})[h:]?(\d{0,2})\s*[-–aà]\s*(\d{1,2})[h:]?(\d{0,2})/g)||[];
     var nowMin=now.getHours()*60+now.getMinutes();
-    if(nowMin>=open&&nowMin<close){badge.textContent='Aberto agora';badge.style.background='#16a34a';badge.style.color='#fff';}
+    var aberto=false;
+    ranges.forEach(function(r){var m=r.match(/(\d{1,2})[h:]?(\d{0,2})\s*[-–aà]\s*(\d{1,2})[h:]?(\d{0,2})/);if(m){var o=parseInt(m[1])*60+parseInt(m[2]||'0');var c=parseInt(m[3])*60+parseInt(m[4]||'0');if(nowMin>=o&&nowMin<c)aberto=true;}});
+    if(aberto){badge.textContent='Aberto agora';badge.style.background='#16a34a';badge.style.color='#fff';}
     else{badge.textContent='Fechado';badge.style.background='#dc2626';badge.style.color='#fff';}
     badge.style.display='inline-block';
   })();
