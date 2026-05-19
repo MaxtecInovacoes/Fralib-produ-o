@@ -295,50 +295,41 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
   animation:fadeUp .8s var(--fl-ease) .3s both;
 }
 
-/* Floating 3D Cards */
-.hero-visual{
-  position:relative;width:100%;max-width:600px;height:200px;
-  margin-top:60px;z-index:2;
-  perspective:1000px;
+/* Pipeline Steps in Hero */
+.hero-pipeline{
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  margin-top:56px;position:relative;z-index:2;
   animation:fadeUp 1s var(--fl-ease) .5s both;
+  flex-wrap:wrap;
 }
-.float-card{
-  position:absolute;
+.pipeline-step{
   background:var(--fl-bg-card);
   border:1px solid var(--fl-border-md);
   border-radius:var(--fl-r-lg);
-  padding:16px 20px;
-  display:flex;align-items:center;gap:12px;
-  box-shadow:0 8px 32px rgba(0,0,0,0.4),0 0 20px rgba(147,51,234,0.08);
-  backdrop-filter:blur(8px);
+  padding:14px 20px;
+  display:flex;align-items:center;gap:10px;
   transition:transform 0.3s ease,box-shadow 0.3s ease;
-  animation:float-card 6s ease-in-out infinite;
 }
-.float-card:hover{
-  transform:translateY(-4px) scale(1.03);
-  box-shadow:0 12px 40px rgba(0,0,0,0.5),0 0 30px rgba(147,51,234,0.15);
+.pipeline-step:hover{
+  transform:translateY(-3px);
+  box-shadow:0 8px 24px rgba(147,51,234,0.15);
+  border-color:var(--fl-purple-400);
 }
-.float-card-icon{font-size:1.5rem}
-.float-card-label{font-size:0.85rem;font-weight:600;color:var(--fl-text);white-space:nowrap}
-.float-card-1{top:0;left:5%;animation-delay:0s}
-.float-card-2{top:20px;right:8%;animation-delay:-1.5s}
-.float-card-3{bottom:20px;left:15%;animation-delay:-3s}
-.float-card-4{bottom:0;right:15%;animation-delay:-4.5s}
-@keyframes float-card{
-  0%,100%{transform:translateY(0) rotateX(0) rotateY(0)}
-  25%{transform:translateY(-8px) rotateX(2deg) rotateY(-1deg)}
-  50%{transform:translateY(-4px) rotateX(-1deg) rotateY(2deg)}
-  75%{transform:translateY(-10px) rotateX(1deg) rotateY(-2deg)}
+.pipeline-num{
+  width:28px;height:28px;border-radius:50%;
+  background:var(--fl-purple);color:#fff;
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--fl-font-brand);font-size:10px;font-weight:700;
+  flex-shrink:0;
 }
+.pipeline-label{font-size:0.82rem;font-weight:500;color:var(--fl-text);white-space:nowrap}
+.pipeline-arrow{opacity:0.5;flex-shrink:0}
 @media(max-width:768px){
-  .hero-visual{height:160px;margin-top:40px}
-  .float-card{padding:12px 14px}
-  .float-card-icon{font-size:1.2rem}
-  .float-card-label{font-size:0.75rem}
-  .float-card-1{left:2%}
-  .float-card-2{right:2%}
-  .float-card-3{left:5%}
-  .float-card-4{right:5%}
+  .hero-pipeline{gap:6px}
+  .pipeline-step{padding:10px 14px}
+  .pipeline-label{font-size:0.72rem}
+  .pipeline-arrow{display:none}
+  .hero-pipeline{flex-direction:column;gap:10px}
 }
 
 @keyframes fadeUp{
@@ -1162,6 +1153,8 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
 <section class="hero" id="hero">
   <div class="hero-grid"></div>
 
+  <img src="/images/Logo FraLib.png" alt="FraLib OS" class="hero-logo" style="height:clamp(60px,10vw,90px);margin-bottom:20px;position:relative;z-index:2;filter:drop-shadow(0 0 16px rgba(147,51,234,0.4));animation:fadeUp .4s var(--fl-ease) both;">
+
   <div class="hero-badge">
     <span class="pulse-dot"></span>
     VAGAS BETA ABERTAS
@@ -1184,23 +1177,26 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
     </a>
   </div>
 
-  <!-- 3D Floating Cards Effect -->
-  <div class="hero-visual">
-    <div class="float-card float-card-1" data-parallax="0.15">
-      <div class="float-card-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>
-      <div class="float-card-label">Prospecta</div>
+  <!-- Pipeline Steps Visual -->
+  <div class="hero-pipeline">
+    <div class="pipeline-step" data-parallax="0.12">
+      <div class="pipeline-num">1</div>
+      <div class="pipeline-label">Encontra leads no Google Maps</div>
     </div>
-    <div class="float-card float-card-2" data-parallax="0.25">
-      <div class="float-card-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div>
-      <div class="float-card-label">Cria site</div>
+    <div class="pipeline-arrow"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--fl-purple-400)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>
+    <div class="pipeline-step" data-parallax="0.18">
+      <div class="pipeline-num">2</div>
+      <div class="pipeline-label">Cria site personalizado</div>
     </div>
-    <div class="float-card float-card-3" data-parallax="0.1">
-      <div class="float-card-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
-      <div class="float-card-label">Envia no WhatsApp</div>
+    <div class="pipeline-arrow"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--fl-purple-400)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>
+    <div class="pipeline-step" data-parallax="0.22">
+      <div class="pipeline-num">3</div>
+      <div class="pipeline-label">Envia pelo WhatsApp</div>
     </div>
-    <div class="float-card float-card-4" data-parallax="0.2">
-      <div class="float-card-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
-      <div class="float-card-label">Fecha venda</div>
+    <div class="pipeline-arrow"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--fl-purple-400)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>
+    <div class="pipeline-step" data-parallax="0.15">
+      <div class="pipeline-num">4</div>
+      <div class="pipeline-label">Fecha a venda</div>
     </div>
   </div>
 </section>
