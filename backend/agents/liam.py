@@ -1034,6 +1034,12 @@ def gerar_html_componentizado(prd):
                 if not _has_open or not _has_close:
                     print("[Liam] " + nome_s + ": HTML invalido (sem tags section) — descartando")
                     return nome_s, None
+                # Constitutional AI: auto-crítica + auto-revisão (PRD #5)
+                try:
+                    from liam_constitutional import constitutional_pass
+                    resposta_secao = constitutional_pass(resposta_secao, nome_s, str(cores)[:500] if cores else "")
+                except Exception as _const_err:
+                    print(f"[CONSTITUTIONAL] Erro (não bloqueante): {_const_err}")
                 # Managed Agent: validar e corrigir seção antes de aceitar
                 if _LIAM_AGENT_LOOP:
                     from liam_agent_loop import validate_and_fix_section
