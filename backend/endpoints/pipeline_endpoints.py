@@ -95,31 +95,38 @@ def _check_rate_limit(user_id: str):
 
 
 def _check_cooldown(db, tenant_id: int):
-    """Verifica cooldown entre pipelines baseado no plano do usuário. Persiste via DB."""
+    """Verifica cooldown entre pipelines baseado no plano do usuário. Usa pipeline_executions (com fallback)."""
     row = db.execute(text("SELECT plano FROM users WHERE id=:id"), {"id": tenant_id}).fetchone()
     plano = (row[0] if row else "trial") or "trial"
     cooldown_secs = _COOLDOWN_POR_PLANO.get(plano, 3600)
     if cooldown_secs <= 0:
         return
-    # Buscar último pipeline concluído deste tenant
+    # Buscar último pipeline concluído — pipeline_executions (robusto) com fallback pra leads
     last_row = db.execute(text(
-        "SELECT processado_em FROM leads WHERE user_id=:uid AND status='concluido' ORDER BY processado_em DESC LIMIT 1"
+        "SELECT finished_at FROM pipeline_executions WHERE user_id=:uid AND status='completed' ORDER BY finished_at DESC LIMIT 1"
     ), {"uid": tenant_id}).fetchone()
     if not last_row or not last_row[0]:
+        # Fallback: leads.processado_em (transição)
+        last_row = db.execute(text(
+            "SELECT processado_em FROM leads WHERE user_id=:uid AND status='concluido' ORDER BY processado_em DESC LIMIT 1"
+        ), {"uid": tenant_id}).fetchone()
+    if not last_row or not last_row[0]:
         return
-    from datetime import datetime as _dt, timedelta as _td
+    from datetime import datetime as _dt, timedelta as _td, timezone as _tz
     try:
         last_ts = last_row[0]
         if isinstance(last_ts, str):
             last_ts = _dt.fromisoformat(last_ts)
-        elapsed = (_dt.now() - last_ts).total_seconds()
+        if last_ts.tzinfo:
+            elapsed = (_dt.now(_tz.utc) - last_ts).total_seconds()
+        else:
+            elapsed = (_dt.now() - last_ts).total_seconds()
     except Exception:
         return
     if elapsed < cooldown_secs:
         restante = int(cooldown_secs - elapsed)
         minutos = restante // 60
         segundos = restante % 60
-        # Verificar se tem leads na fila pra auto-run
         fila_count = db.execute(text(
             "SELECT COUNT(*) FROM leads WHERE user_id=:uid AND status='capturado'"
         ), {"uid": tenant_id}).scalar() or 0
@@ -1311,6 +1318,18 @@ IMPORTANTE: Corrija EXATAMENTE os problemas acima. Não altere o que já estava 
                     conn.commit()
             except Exception:
                 pass
+        # Registrar execução concluída
+        try:
+            with engine.connect() as _conn_exec:
+                _conn_exec.execute(text("""
+                    UPDATE pipeline_executions SET finished_at=NOW(), status='completed',
+                           lead_id=:lid, lead_nome=:lnome
+                    WHERE user_id=:uid AND status='running'
+                    AND id = (SELECT id FROM pipeline_executions WHERE user_id=:uid AND status='running' ORDER BY started_at DESC LIMIT 1)
+                """), {"uid": tenant_id, "lid": state.lead_id, "lnome": state.lead_nome})
+                _conn_exec.commit()
+        except Exception:
+            pass
         return {"sucesso": True, "site_url": state.site_url, "lead": state.lead_nome}
     except Exception as e:
         # Detectar rate limit e enviar mensagem amigável
@@ -1365,6 +1384,17 @@ IMPORTANTE: Corrija EXATAMENTE os problemas acima. Não altere o que já estava 
             _trace.lead_nome = getattr(state, 'lead_nome', '') or ''
             _trace.finalizar("failed")
             salvar_trace(_trace)
+        # Registrar execução falhada
+        try:
+            with engine.connect() as _conn_exec:
+                _conn_exec.execute(text("""
+                    UPDATE pipeline_executions SET finished_at=NOW(), status='failed'
+                    WHERE user_id=:uid AND status='running'
+                    AND id = (SELECT id FROM pipeline_executions WHERE user_id=:uid AND status='running' ORDER BY started_at DESC LIMIT 1)
+                """), {"uid": tenant_id})
+                _conn_exec.commit()
+        except Exception:
+            pass
         _ret = {"sucesso": False, "erro": str(e)}
         if _fase_erro:
             _ret["fase"] = _fase_erro
@@ -1571,6 +1601,17 @@ async def iniciar_pipeline(
     _check_rate_limit(str(tenant_id))
     _check_cooldown(db, tenant_id)
     update_pipeline_state(db, tenant_id, rodando=True, pausado=False, config=config_limpo)
+
+    # Registrar execução na pipeline_executions
+    try:
+        _plano_exec = _plano_user
+        db.execute(text("""
+            INSERT INTO pipeline_executions (user_id, status, plano_no_momento)
+            VALUES (:uid, 'running', :plano)
+        """), {"uid": tenant_id, "plano": _plano_exec})
+        db.commit()
+    except Exception:
+        pass
 
     # Verificar se WhatsApp está conectado (não bloqueia, apenas seta flag)
     _wpp_conectado = is_tenant_connected(f"fralib_user_{tenant_id}")
