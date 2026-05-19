@@ -3124,6 +3124,89 @@ function _startCooldown(segs, plano, filaCount) {
   if (valueEl) valueEl.textContent = (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
 }
 
+/* ══ COOLDOWN STATUS POLLING (usa novo endpoint) ═════════════════ */
+var _cooldownPollInterval = null;
+
+function iniciarCooldownPolling() {
+  _pollCooldownStatus();
+  if (_cooldownPollInterval) clearInterval(_cooldownPollInterval);
+  _cooldownPollInterval = setInterval(_pollCooldownStatus, 10000);
+}
+
+function _pollCooldownStatus() {
+  authFetch('/api/pipeline/cooldown-status').then(function(r){return r.json()}).then(function(data){
+    var timerEl = document.getElementById('cooldownTimer');
+    var valueEl = document.getElementById('cooldownValue');
+    var labelEl = document.getElementById('cooldownLabel');
+    var upsellEl = document.getElementById('upsellCard');
+    var upsellText = document.getElementById('upsellText');
+    var statusEl = document.getElementById('pipelineStatus');
+
+    // Cooldown ativo
+    if (data.cooldown && data.cooldown.ativo) {
+      _cooldownRestante = data.cooldown.restante_seg;
+      if (timerEl) timerEl.classList.add('active');
+      if (statusEl) { statusEl.className = 'pipeline-status paused'; statusEl.innerHTML = '&#9679; COOLDOWN'; }
+
+      // Restart local countdown
+      if (!_cooldownInterval) {
+        _cooldownInterval = setInterval(function(){
+          _cooldownRestante--;
+          if (_cooldownRestante <= 0) {
+            clearInterval(_cooldownInterval); _cooldownInterval = null;
+            if (timerEl) timerEl.classList.remove('active');
+            if (upsellEl) upsellEl.classList.remove('active');
+            if (statusEl) { statusEl.className = 'pipeline-status idle'; statusEl.innerHTML = '&#9679; PRONTO'; }
+            if (typeof showToast === 'function') showToast('Cooldown liberado!', 'success');
+            return;
+          }
+          var m = Math.floor(_cooldownRestante / 60), s = _cooldownRestante % 60;
+          if (valueEl) valueEl.textContent = (m<10?'0':'') + m + ':' + (s<10?'0':'') + s;
+        }, 1000);
+      }
+
+      // Upsell
+      if (data.upsell && data.upsell.mostrar && upsellEl) {
+        upsellEl.classList.add('active');
+        if (upsellText) upsellText.textContent = data.upsell.mensagem_curta;
+        var upsellLink = upsellEl.querySelector('a');
+        if (upsellLink) upsellLink.href = data.upsell.url;
+      }
+
+      // Fila info
+      if (data.fila && data.fila.leads_aguardando > 0 && labelEl) {
+        labelEl.textContent = data.fila.leads_aguardando + ' lead(s) na fila - auto-run';
+      }
+    } else {
+      // Sem cooldown
+      if (timerEl) timerEl.classList.remove('active');
+      if (upsellEl) upsellEl.classList.remove('active');
+      if (_cooldownInterval) { clearInterval(_cooldownInterval); _cooldownInterval = null; }
+      if (statusEl && !statusEl.classList.contains('running')) {
+        statusEl.className = 'pipeline-status idle'; statusEl.innerHTML = '&#9679; PRONTO';
+      }
+    }
+
+    // Bloqueio (trial esgotado)
+    if (data.bloqueio) {
+      if (statusEl) { statusEl.className = 'pipeline-status paused'; statusEl.innerHTML = '&#9679; BLOQUEADO'; }
+      if (upsellEl) { upsellEl.classList.add('active'); }
+      if (upsellText) upsellText.textContent = data.bloqueio.mensagem;
+    }
+
+    // Atualizar KPIs de uso se existirem
+    var kpiHoje = document.getElementById('kpiSitesHoje');
+    var kpiSemana = document.getElementById('kpiSitesSemana');
+    var kpiTotal = document.getElementById('kpiSitesTotal');
+    if (kpiHoje && data.uso) kpiHoje.textContent = data.uso.sites_hoje || 0;
+    if (kpiSemana && data.uso) kpiSemana.textContent = data.uso.sites_semana || 0;
+    if (kpiTotal && data.uso) kpiTotal.textContent = data.uso.sites_total || 0;
+  }).catch(function(){});
+}
+
+// Iniciar polling ao carregar
+document.addEventListener('DOMContentLoaded', function(){ setTimeout(iniciarCooldownPolling, 2000); });
+
 /* ══ PIPELINE PROGRESS BAR ════════════════════════════════════════ */
 var _progressInterval = null;
 var _progressStart = null;
