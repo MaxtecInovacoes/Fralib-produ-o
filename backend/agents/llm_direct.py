@@ -497,6 +497,19 @@ def call_claude(system, user, model='opus', max_tokens=4000, temperature=0.7, ag
         print(f"[LLM] stop_reason={stop_reason} input={input_tokens} output={output_tokens}")
     _salvar_uso_llm(model_id, input_tokens, output_tokens, agent_name)
 
+    # Token Tracker: registrar automaticamente no tracker ativo (PRD #4)
+    try:
+        from token_tracker import get_tracker
+        _tracker = get_tracker()
+        if _tracker:
+            _tracker.registrar(
+                agente=agent_name or "unknown",
+                model=model_id,
+                usage=usage,
+            )
+    except Exception:
+        pass
+
     # O proxy aibee.cloud sempre adiciona bloco tool_use extra no final
     # Extrair texto IMEDIATAMENTE se houver bloco text (ignorar tool_use)
     for block in data.get('content', []):

@@ -197,6 +197,18 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
         pipeline_id=gerar_pipeline_id(tenant_id, config.get("segmento", ""), config.get("cidade", "")),
         tenant_id=tenant_id,
     )
+    # PRD #4: Token Tracker — rastreia custo LLM por run
+    try:
+        from agents.token_tracker import TokenTracker, set_tracker
+        _token_tracker = TokenTracker(
+            run_id=state.pipeline_id[:8],
+            lead_nome="",  # preenchido após hunter
+            nicho=state.segmento,
+        )
+        set_tracker(_token_tracker)
+    except Exception:
+        _token_tracker = None
+
     _log("PIPELINE v2 - FraLibState Orquestrador", "info")
     _log(f"{state.segmento} em {state.cidade}", "info")
     logger.info(f"[Pipeline] Iniciando: {state.segmento} em {state.cidade}")
@@ -1045,6 +1057,18 @@ IMPORTANTE: Corrija EXATAMENTE os problemas acima. Não altere o que já estava 
         limpar_checkpoint(state.pipeline_id)
         _log("PIPELINE v2 CONCLUIDO - FraLibState OK", "success")
         logger.info("[Pipeline] CONCLUIDO - 7 AGENTES!")
+
+        # PRD #4: Token Tracking — log + salvar no DB
+        try:
+            if _token_tracker:
+                _token_tracker.lead_nome = state.lead_nome or ""
+                from agents.token_tracker import log_tracking, salvar_tracking, set_tracker
+                _resumo = _token_tracker.resumo()
+                log_tracking(_resumo)
+                salvar_tracking(_resumo)
+                set_tracker(None)  # limpar tracker do thread
+        except Exception as _track_err:
+            print(f"[TRACKING] Erro: {_track_err}")
 
         # Descontar 1 crédito do usuário
         try:
