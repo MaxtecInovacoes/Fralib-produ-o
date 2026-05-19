@@ -167,7 +167,8 @@ canvas{max-width:100%}
 </div>
 
 <div class="tabs">
-  <button class="tab active" data-tab="metricas" onclick="switchTab('metricas')">Métricas</button>
+  <button class="tab active" data-tab="dashboard" onclick="switchTab('dashboard')">Dashboard</button>
+  <button class="tab" data-tab="metricas" onclick="switchTab('metricas')">Métricas</button>
   <button class="tab" data-tab="usuarios" onclick="switchTab('usuarios')">Usuários</button>
   <button class="tab" data-tab="consumo" onclick="switchTab('consumo')">Consumo</button>
   <button class="tab" data-tab="apikeys" onclick="switchTab('apikeys')">API Keys</button>
@@ -178,8 +179,46 @@ canvas{max-width:100%}
 
 <div class="main">
 
+  <!-- ========== DASHBOARD ========== -->
+  <section class="panel active" id="panel-dashboard">
+    <h2 class="section-title">DASHBOARD OPERACIONAL</h2>
+
+    <!-- Health Status -->
+    <div id="dash-health" class="metrics-grid" style="margin-bottom:20px"></div>
+
+    <!-- KPIs -->
+    <div id="dash-kpis" class="metrics-grid"></div>
+
+    <!-- Alerts -->
+    <div id="dash-alerts" style="margin:20px 0"></div>
+
+    <!-- Charts -->
+    <div class="chart-grid">
+      <div class="chart-card">
+        <h4>Custo por Dia (7d)</h4>
+        <canvas id="chart-costs" height="200"></canvas>
+      </div>
+      <div class="chart-card">
+        <h4>Pipeline — Falhas por Fase</h4>
+        <canvas id="chart-falhas" height="200"></canvas>
+      </div>
+    </div>
+
+    <!-- Pipeline Stats -->
+    <div id="dash-pipeline" style="margin:16px 0"></div>
+
+    <!-- Failed Jobs + Queue Controls -->
+    <div style="display:flex;gap:14px;align-items:center;margin:16px 0">
+      <h4 style="font-size:12px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin:0">Jobs Falhados</h4>
+      <button class="btn btn-danger" onclick="pauseQueue()">Pausar Fila</button>
+      <button class="btn btn-success" onclick="resumeQueue()">Retomar Fila</button>
+      <button class="btn" onclick="loadDashboard()">Atualizar</button>
+    </div>
+    <div id="dash-jobs" class="table-wrap"></div>
+  </section>
+
   <!-- ========== METRICAS ========== -->
-  <section class="panel active" id="panel-metricas">
+  <section class="panel" id="panel-metricas">
     <h2 class="section-title">VISÃO GERAL DO SISTEMA</h2>
     <div id="metrics-area" class="loading"><span class="spinner"></span> carregando métricas…</div>
   </section>
@@ -446,6 +485,7 @@ canvas{max-width:100%}
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
 const SUPERADMIN_EMAIL = "dezigpi@gmail.com";
 let USERS = [];
@@ -468,7 +508,7 @@ let CURRENT_USER = null;
       return;
     }
     document.getElementById('app').style.display='flex';
-    loadMetrics();
+    loadDashboard();
     refreshBell();
     setInterval(refreshBell, 30000);
   }catch(e){
@@ -495,6 +535,8 @@ function logout(){
 function switchTab(tab){
   document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.tab===tab));
   document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('active',p.id==='panel-'+tab));
+  if(tab==='dashboard' && !document.getElementById('dash-kpis').dataset.loaded) loadDashboard();
+  if(tab==='metricas' && !document.getElementById('metrics-area').dataset.loaded) loadMetrics();
   if(tab==='usuarios' && USERS.length===0) loadUsers();
   if(tab==='consumo' && !document.getElementById('usage-area').dataset.loaded) loadUsage();
   if(tab==='apikeys') loadApiKeys();
@@ -1491,6 +1533,176 @@ initPlayground = async function(){
   await _origInitPG();
   initSandboxModels();
 };
+
+// ===== DASHBOARD OPERACIONAL =====
+let _chartCosts = null;
+let _chartFalhas = null;
+
+async function loadDashboard(){
+  document.getElementById('dash-kpis').dataset.loaded = '1';
+  await Promise.all([loadDashHealth(), loadDashOverview(), loadDashAlerts(), loadDashCosts(), loadDashPipeline(), loadDashJobs()]);
+}
+
+async function loadDashHealth(){
+  try{
+    const r = await authFetch('/api/superadmin/dashboard/health');
+    const d = await r.json();
+    const el = document.getElementById('dash-health');
+    const statusPill = (s) => s==='up' ? '<span class="pill pill-active">UP</span>' : s==='degraded' ? '<span class="pill pill-cooldown">DEGRADED</span>' : '<span class="pill pill-disabled">DOWN</span>';
+    el.innerHTML = `
+      <div class="metric-card"><div class="metric-label">PostgreSQL</div><div class="metric-value" style="font-size:16px">${statusPill(d.postgres?.status)}</div><div class="metric-sub">${d.postgres?.connections_active||0} conexões ativas</div></div>
+      <div class="metric-card"><div class="metric-label">Workers</div><div class="metric-value" style="font-size:16px">${statusPill(d.workers?.status)}</div><div class="metric-sub">${d.workers?.active||0} ativos</div></div>
+      <div class="metric-card"><div class="metric-label">CPU</div><div class="metric-value">${d.system?.cpu_percent!=null ? d.system.cpu_percent+'%' : '—'}</div></div>
+      <div class="metric-card"><div class="metric-label">RAM</div><div class="metric-value">${d.system?.ram_percent!=null ? d.system.ram_percent+'%' : '—'}</div></div>
+      <div class="metric-card"><div class="metric-label">Disco</div><div class="metric-value">${d.system?.disk_percent!=null ? d.system.disk_percent+'%' : '—'}</div></div>
+      <div class="metric-card"><div class="metric-label">Fila</div><div class="metric-value">${d.queue?.pending||0}</div><div class="metric-sub">${d.queue?.running||0} rodando · ${d.queue?.failed_24h||0} falhas 24h</div></div>
+    `;
+  }catch(e){ document.getElementById('dash-health').innerHTML = '<div class="empty">Erro: '+e.message+'</div>'; }
+}
+
+async function loadDashOverview(){
+  try{
+    const r = await authFetch('/api/superadmin/dashboard/overview');
+    const d = await r.json();
+    const el = document.getElementById('dash-kpis');
+    el.innerHTML = `
+      <div class="metric-card"><div class="metric-label">Sites 24h</div><div class="metric-value cyan">${d.sites?.['24h']||0}</div></div>
+      <div class="metric-card"><div class="metric-label">Sites 7d</div><div class="metric-value">${d.sites?.['7d']||0}</div></div>
+      <div class="metric-card"><div class="metric-label">Sites 30d</div><div class="metric-value">${d.sites?.['30d']||0}</div></div>
+      <div class="metric-card"><div class="metric-label">Taxa Sucesso 24h</div><div class="metric-value ${d.taxa_sucesso_24h>=80?'cyan':'gold'}">${d.taxa_sucesso_24h||0}%</div></div>
+      <div class="metric-card"><div class="metric-label">Custo 24h</div><div class="metric-value gold">${usd(d.custo?.['24h'])}</div></div>
+      <div class="metric-card"><div class="metric-label">Custo 7d</div><div class="metric-value">${usd(d.custo?.['7d'])}</div></div>
+      <div class="metric-card"><div class="metric-label">Custo médio/site</div><div class="metric-value">${usd(d.custo?.medio_por_site)}</div></div>
+      <div class="metric-card"><div class="metric-label">Duração média</div><div class="metric-value">${d.duracao_media_s||0}s</div></div>
+    `;
+  }catch(e){ document.getElementById('dash-kpis').innerHTML = '<div class="empty">Erro: '+e.message+'</div>'; }
+}
+
+async function loadDashAlerts(){
+  try{
+    const r = await authFetch('/api/superadmin/dashboard/alerts');
+    const d = await r.json();
+    const el = document.getElementById('dash-alerts');
+    if(!d.alerts || d.alerts.length === 0){
+      el.innerHTML = '<div style="padding:10px;color:var(--success);font-size:13px">✓ Nenhum alerta ativo</div>';
+      return;
+    }
+    el.innerHTML = d.alerts.map(a => `
+      <div style="padding:10px 14px;margin-bottom:6px;border:1px solid ${a.severity==='critical'?'rgba(239,68,68,.5)':'rgba(245,158,11,.5)'};background:${a.severity==='critical'?'rgba(239,68,68,.08)':'rgba(245,158,11,.08)'};font-size:13px">
+        <strong style="color:${a.severity==='critical'?'var(--danger)':'var(--warning)'}">${a.severity.toUpperCase()}</strong> — ${a.message}
+      </div>
+    `).join('');
+  }catch(e){ document.getElementById('dash-alerts').innerHTML = ''; }
+}
+
+async function loadDashCosts(){
+  try{
+    const r = await authFetch('/api/superadmin/dashboard/costs?period=7d&group_by=day');
+    const d = await r.json();
+    if(!d.data || d.data.length === 0) return;
+    const ctx = document.getElementById('chart-costs').getContext('2d');
+    if(_chartCosts) _chartCosts.destroy();
+    _chartCosts = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: d.data.map(r => r.dia?.slice(5)||''),
+        datasets: [{
+          label: 'Custo USD',
+          data: d.data.map(r => r.custo),
+          backgroundColor: 'rgba(147,51,234,0.6)',
+          borderColor: 'rgba(147,51,234,1)',
+          borderWidth: 1
+        }]
+      },
+      options: { responsive:true, plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true}} }
+    });
+  }catch(e){ console.error('chart costs:', e); }
+}
+
+async function loadDashPipeline(){
+  try{
+    const r = await authFetch('/api/superadmin/dashboard/pipeline?period=7d');
+    const d = await r.json();
+    const el = document.getElementById('dash-pipeline');
+    el.innerHTML = `
+      <div class="metrics-grid">
+        <div class="metric-card"><div class="metric-label">Runs 7d</div><div class="metric-value">${d.total_runs||0}</div></div>
+        <div class="metric-card"><div class="metric-label">Sucesso</div><div class="metric-value cyan">${d.sucesso||0}</div></div>
+        <div class="metric-card"><div class="metric-label">Falhas</div><div class="metric-value" style="color:var(--danger)">${d.falhas||0}</div></div>
+        <div class="metric-card"><div class="metric-label">Taxa Sucesso</div><div class="metric-value ${d.taxa_sucesso>=80?'cyan':'gold'}">${d.taxa_sucesso||0}%</div></div>
+      </div>
+    `;
+    // Chart falhas por fase
+    if(d.falhas_por_fase && d.falhas_por_fase.length > 0){
+      const ctx = document.getElementById('chart-falhas').getContext('2d');
+      if(_chartFalhas) _chartFalhas.destroy();
+      _chartFalhas = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: d.falhas_por_fase.map(f => f.fase),
+          datasets: [{
+            label: 'Falhas',
+            data: d.falhas_por_fase.map(f => f.total),
+            backgroundColor: 'rgba(239,68,68,0.6)',
+            borderColor: 'rgba(239,68,68,1)',
+            borderWidth: 1
+          }]
+        },
+        options: { indexAxis:'y', responsive:true, plugins:{legend:{display:false}}, scales:{x:{beginAtZero:true}} }
+      });
+    }
+  }catch(e){ document.getElementById('dash-pipeline').innerHTML = '<div class="empty">Erro pipeline: '+e.message+'</div>'; }
+}
+
+async function loadDashJobs(){
+  try{
+    const r = await authFetch('/api/superadmin/dashboard/jobs/failed?limit=10');
+    const d = await r.json();
+    const el = document.getElementById('dash-jobs');
+    if(!d.jobs || d.jobs.length === 0){
+      el.innerHTML = '<div class="empty">Nenhum job falhado</div>';
+      return;
+    }
+    el.innerHTML = `<table class="table"><thead><tr><th>ID</th><th>Lead</th><th>Fase</th><th>Erro</th><th>Tentativas</th><th>Data</th><th>Ação</th></tr></thead><tbody>
+      ${d.jobs.map(j => `<tr>
+        <td style="font-family:var(--mono);font-size:11px">${j.id}</td>
+        <td>${j.lead_nome||'—'}</td>
+        <td><span class="pill pill-cooldown">${j.fase||'—'}</span></td>
+        <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${(j.erro||'').replace(/"/g,'&quot;')}">${j.mensagem||j.erro||'—'}</td>
+        <td>${j.tentativas||0}</td>
+        <td style="font-size:11px">${dt(j.created_at)}</td>
+        <td>${j.job_id ? `<button class="btn btn-success" style="padding:4px 8px;font-size:10px" onclick="replayJob(${j.job_id})">Replay</button>` : '—'}</td>
+      </tr>`).join('')}
+    </tbody></table>`;
+  }catch(e){ document.getElementById('dash-jobs').innerHTML = '<div class="empty">Erro: '+e.message+'</div>'; }
+}
+
+async function replayJob(jobId){
+  if(!confirm('Re-enfileirar job #'+jobId+'?')) return;
+  try{
+    const r = await authFetch('/api/superadmin/dashboard/jobs/'+jobId+'/replay', {method:'POST'});
+    const d = await r.json();
+    toast(d.message||'Job re-enfileirado', 'success');
+    loadDashJobs();
+  }catch(e){ toast('Erro: '+e.message, 'error'); }
+}
+
+async function pauseQueue(){
+  if(!confirm('Pausar toda a fila por 24h?')) return;
+  try{
+    const r = await authFetch('/api/superadmin/dashboard/queue/pause', {method:'POST'});
+    const d = await r.json();
+    toast(d.message||'Fila pausada', 'success');
+  }catch(e){ toast('Erro: '+e.message, 'error'); }
+}
+
+async function resumeQueue(){
+  try{
+    const r = await authFetch('/api/superadmin/dashboard/queue/resume', {method:'POST'});
+    const d = await r.json();
+    toast(d.message||'Fila retomada', 'success');
+  }catch(e){ toast('Erro: '+e.message, 'error'); }
+}
 
 </script>
 
