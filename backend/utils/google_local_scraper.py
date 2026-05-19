@@ -184,8 +184,15 @@ class GoogleLocalScraper:
 
                     # Reviews: extrair do texto completo do card via regex (span.UY7F9 foi removido pelo Google)
                     card_text = await card.inner_text()
-                    reviews_match = re.search(r"\((\d{1,6})\)", card_text)
+                    # Padrão Google Maps: "4,7(123)" ou "4.7 (123)" — rating seguido de (count)
+                    reviews_match = re.search(r"[0-9][,\.][0-9]\s*\((\d{1,6})\)", card_text)
+                    if not reviews_match:
+                        # Fallback: qualquer (número) isolado que não seja o rating
+                        reviews_match = re.search(r"\((\d{2,6})\)", card_text)
                     reviews_num = int(reviews_match.group(1)) if reviews_match else 0
+                    # Sanity: se reviews_num == rating sem pontuação (ex: 4.1 -> 41), zerar
+                    if reviews_num > 0 and str(reviews_num) == rating_txt.replace(",","").replace(".",""):
+                        reviews_num = 0
 
                     # Tipo e endereço: extrair do texto do card
                     linhas = [l.strip() for l in card_text.split("\n") if l.strip()]
