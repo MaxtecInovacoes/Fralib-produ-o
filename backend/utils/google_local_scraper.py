@@ -184,8 +184,8 @@ class GoogleLocalScraper:
 
                     # Reviews: extrair do texto completo do card via regex (span.UY7F9 foi removido pelo Google)
                     card_text = await card.inner_text()
-                    reviews_match = re.search(r"\(([\d\.]+)\)", card_text)
-                    reviews_num = int(re.sub(r"\D", "", reviews_match.group(1))) if reviews_match else 0
+                    reviews_match = re.search(r"\((\d{1,6})\)", card_text)
+                    reviews_num = int(reviews_match.group(1)) if reviews_match else 0
 
                     # Tipo e endereço: extrair do texto do card
                     linhas = [l.strip() for l in card_text.split("\n") if l.strip()]
