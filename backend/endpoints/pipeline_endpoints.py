@@ -2333,9 +2333,7 @@ async def reprocessar_lead(lead_id: str, background_tasks: BackgroundTasks, db: 
     _renovacao_label = " (renovacao forcada)" if forcar_renovacao else ""
     adicionar_log(f"Lead {lead.nome} reprocessando{_renovacao_label}...", "info", user_id=tenant_id)
     # Enfileirar como job normal no worker — usa pipeline principal com flag pra pular Hunter+Caio
-    print(f"[Reprocessar] ANTES do import job_queue")
     import job_queue as _jq
-    print(f"[Reprocessar] DEPOIS do import job_queue")
     config_reproc = {
         "segmento": lead.segmento or "",
         "cidade": lead.cidade or "",
@@ -2349,14 +2347,12 @@ async def reprocessar_lead(lead_id: str, background_tasks: BackgroundTasks, db: 
             payload={**config_reproc},
             tenant_id=tenant_id, max_attempts=3, priority=1,
         )
-        print(f"[Reprocessar] enqueue retornou job_id={job_id}")
         if job_id:
             adicionar_log(f"[Pipeline] Reprocessamento enfileirado (job #{job_id})", "info", user_id=tenant_id)
         else:
-            print(f"[Reprocessar] enqueue retornou None — usando BackgroundTask")
             background_tasks.add_task(executar_pipeline_lead_existente, lead_id, tenant_id, forcar_renovacao=forcar_renovacao)
     except Exception as _e:
-        print(f"[Reprocessar] Enqueue falhou: {_e}, usando BackgroundTask")
+        print(f"[Reprocessar] Enqueue falhou: {_e}")
         background_tasks.add_task(executar_pipeline_lead_existente, lead_id, tenant_id, forcar_renovacao=forcar_renovacao)
     return {"ok": True, "mensagem": "Lead marcado para reprocessamento"}
 
