@@ -1,11 +1,12 @@
 import os
 import sys
-import requests
 import json
 import time as _time
 import threading as _threading
 from collections import defaultdict as _defaultdict
 from dotenv import load_dotenv
+import anthropic
+import httpx
 
 _services_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "services"))
 if _services_dir not in sys.path:
@@ -28,7 +29,7 @@ class RateLimitError(Exception):
 # ══════════════════════════════════════════════════════════════════
 _AGENT_CONFIG_CACHE: dict = {}
 _AGENT_CONFIG_CACHE_TS: float = 0.0
-_AGENT_CONFIG_CACHE_TTL: float = 60.0  # 60s TTL
+_AGENT_CONFIG_CACHE_TTL: float = 60.0
 
 
 def _invalidar_agent_config_cache():
@@ -71,43 +72,44 @@ def _load_agent_configs():
     except Exception as e:
         print(f"[LLM] agent_model_configs load falhou (usando hardcoded): {e}")
         return {}
-# Com 3 workers + 1 server, sem spacing todos batem na key ao mesmo tempo.
-# Mínimo 1.2s entre calls globais (por processo). Com 3 processos = ~2.5 req/s max.
+
+
+# ══════════════════════════════════════════════════════════════════
+# CALL SPACING — mínimo 1.2s entre calls por processo
+# ══════════════════════════════════════════════════════════════════
 _LAST_CALL_TIME = 0.0
 _CALL_SPACING_LOCK = _threading.Lock()
 CALL_SPACING_SECONDS = float(os.environ.get("LLM_CALL_SPACING", "1.2"))
 
 
 def _enforce_call_spacing():
-    """Garante intervalo mínimo entre chamadas API no mesmo processo."""
     global _LAST_CALL_TIME
     with _CALL_SPACING_LOCK:
         now = _time.time()
         elapsed = now - _LAST_CALL_TIME
         if elapsed < CALL_SPACING_SECONDS:
-            wait = CALL_SPACING_SECONDS - elapsed
-            _time.sleep(wait)
+            _time.sleep(CALL_SPACING_SECONDS - elapsed)
         _LAST_CALL_TIME = _time.time()
-# Janela deslizante: max N calls por minuto por tenant no pool compartilhado.
-# BYOK users não são limitados (usam key própria).
+
+
+# ══════════════════════════════════════════════════════════════════
+# TENANT RATE LIMIT — sliding window per tenant
+# ══════════════════════════════════════════════════════════════════
 _TENANT_CALLS_LOCK = _threading.Lock()
-_TENANT_CALLS: dict = _defaultdict(list)  # user_id -> [timestamps]
+_TENANT_CALLS: dict = _defaultdict(list)
 TENANT_MAX_CALLS_PER_MIN = int(os.environ.get("TENANT_MAX_CALLS_PER_MIN", "40"))
-TENANT_THROTTLE_WAIT = 10  # segundos de espera quando throttled
+TENANT_THROTTLE_WAIT = 10
 
 
 def _tenant_rate_check(user_id) -> tuple:
-    """Retorna (allowed: bool, wait_seconds: int, calls_in_window: int)."""
     if not user_id:
         return (True, 0, 0)
     now = _time.time()
     window = 60.0
     with _TENANT_CALLS_LOCK:
-        # Limpar timestamps fora da janela
         _TENANT_CALLS[user_id] = [t for t in _TENANT_CALLS[user_id] if now - t < window]
         count = len(_TENANT_CALLS[user_id])
         if count >= TENANT_MAX_CALLS_PER_MIN:
-            # Calcular quanto falta pro mais antigo sair da janela
             oldest = _TENANT_CALLS[user_id][0]
             wait = int(window - (now - oldest)) + 1
             return (False, wait, count)
@@ -116,8 +118,7 @@ def _tenant_rate_check(user_id) -> tuple:
 
 
 def _tenant_rate_alert(user_id, wait_seconds, calls_count):
-    """Grava alerta visível pro user e loga."""
-    print(f"[RATE-LIMIT] ⚠️ Tenant {user_id} throttled: {calls_count} calls/min (max={TENANT_MAX_CALLS_PER_MIN}). Aguardando {wait_seconds}s")
+    print(f"[RATE-LIMIT] Tenant {user_id} throttled: {calls_count} calls/min (max={TENANT_MAX_CALLS_PER_MIN}). Aguardando {wait_seconds}s")
     try:
         import ia_manager as _ia
         _ia.raise_alert(
@@ -128,7 +129,10 @@ def _tenant_rate_alert(user_id, wait_seconds, calls_count):
     except Exception:
         pass
 
-# Carregar .env — tenta multiplos caminhos para garantir que encontra
+
+# ══════════════════════════════════════════════════════════════════
+# ENV LOADING
+# ══════════════════════════════════════════════════════════════════
 import pathlib as _pathlib
 _env_paths = [
     '/root/fralib/.env',
@@ -140,32 +144,27 @@ for _env_path in _env_paths:
         load_dotenv(_env_path, override=True)
         break
 else:
-    load_dotenv()  # fallback
+    load_dotenv()
 
 ANTHROPIC_API_KEY = os.getenv('ANTHROPIC_API_KEY')
 ANTHROPIC_BASE_URL = os.getenv('ANTHROPIC_BASE_URL', 'https://api.aibee.cloud')
 
 
-def _llm_timeout():
-    """Timeout de rede configuravel para evitar bloqueio longo em shutdown."""
-    connect = float(os.environ.get("LLM_CONNECT_TIMEOUT", "10"))
-    read = float(os.environ.get("LLM_READ_TIMEOUT", "180"))
-    return (connect, read)
-
-# Contexto de usuario ativo (setado pelo pipeline antes de rodar)
+# ══════════════════════════════════════════════════════════════════
+# USER CONTEXT + BYOK
+# ══════════════════════════════════════════════════════════════════
 _current_user_id = None
+
 
 def set_current_user_id(uid):
     global _current_user_id
     _current_user_id = uid
 
 
-# PR8: BYOK - cliente Pro usa a propria Anthropic key.
-# Cache em memoria por user_id pra evitar bater no banco a cada chamada LLM.
 _byok_cache = {}
 
+
 def _get_byok_key():
-    """Retorna a key BYOK do user Pro atual, ou None se nao houver."""
     uid = _current_user_id
     if not uid:
         return None
@@ -188,13 +187,7 @@ def _get_byok_key():
 
 
 def _resolve_anthropic():
-    """Retorna (api_key, base_url, key_id_or_None).
-
-    Prioridade:
-    1. BYOK do user Pro ativo (key dele propria, sem failover).
-    2. Round-robin via ia_manager entre keys cadastradas no superadmin.
-    3. Fallback pro .env (ANTHROPIC_API_KEY / ANTHROPIC_BASE_URL).
-    """
+    """Retorna (api_key, base_url, key_id_or_None)."""
     byok = _get_byok_key()
     if byok:
         return (byok, ANTHROPIC_BASE_URL, None)
@@ -202,24 +195,27 @@ def _resolve_anthropic():
         import ia_manager
         picked = ia_manager.pick_key('anthropic')
         if picked:
-            return picked  # (key, base_url, id) ja com fallback .env interno
+            return picked
     except Exception as e:
         print(f'[llm_direct] ia_manager falhou, usando .env: {e}')
     return (ANTHROPIC_API_KEY, ANTHROPIC_BASE_URL, None)
 
 
-# Compat: codigo legado pode importar _get_active_api_key.
 def _get_active_api_key():
     return _resolve_anthropic()[0]
 
+
 def invalidar_byok_cache(uid=None):
-    """Chamar quando o cliente troca a key (ou cancela). uid=None limpa tudo."""
     global _byok_cache
     if uid is None:
         _byok_cache = {}
     else:
         _byok_cache.pop(uid, None)
 
+
+# ══════════════════════════════════════════════════════════════════
+# USAGE TRACKING
+# ══════════════════════════════════════════════════════════════════
 def _salvar_uso_llm(modelo, input_tokens, output_tokens, agente=None):
     try:
         from core.database import engine
@@ -233,54 +229,65 @@ def _salvar_uso_llm(modelo, input_tokens, output_tokens, agente=None):
     except Exception as e:
         print(f'[LLM Usage] Erro ao salvar: {e}')
 
+
+# ══════════════════════════════════════════════════════════════════
+# SDK CLIENT FACTORY
+# ══════════════════════════════════════════════════════════════════
+def _create_client(api_key: str, base_url: str) -> anthropic.Anthropic:
+    return anthropic.Anthropic(
+        api_key=api_key,
+        base_url=base_url,
+        max_retries=0,
+        timeout=httpx.Timeout(connect=10.0, read=180.0, write=30.0, pool=10.0),
+    )
+
+
+# ══════════════════════════════════════════════════════════════════
+# CALL CLAUDE — SDK-based with manual retry for key rotation
+# ══════════════════════════════════════════════════════════════════
+_AGENT_MODEL_MAP = {
+    'bryan': 'haiku',
+    'liz': 'haiku',
+    'theo': 'sonnet',
+    'alex': 'sonnet',
+    'liam': 'opus',
+    'arquiteto_mestre': 'sonnet',
+    'designer_prd': 'sonnet',
+}
+
+MODEL_MAP = {
+    'opus': 'claude-opus-4-7',
+    'sonnet': 'claude-sonnet-4-6',
+    'haiku': 'claude-haiku-4-5',
+}
+
+
 def call_claude(system, user, model='opus', max_tokens=4000, temperature=0.7, agent_name=None, base_url=None):
-    """
-    Chama Claude API com suporte automático a RAG e Skills
-    
-    Args:
-        system: System prompt
-        user: User prompt
-        model: 'opus', 'sonnet' ou 'haiku'
-        max_tokens: Limite de tokens
-        temperature: Temperatura (0.0-1.0)
-        agent_name: Nome do agente (ex: 'Caio', 'Liam') - ativa RAG + Skills automaticamente
-    
-    Returns:
-        Resposta do Claude
-    """
-    
-    # ✅ AUTOMÁTICO: Se agent_name foi passado, ativar RAG + Skills
-    # PR12: capturar rag_context cru para cachear separadamente (em vez de
-    # fundir com user e perder a oportunidade de cache).
+    """Chama Claude API via SDK com RAG, Skills, Memory, Agent Router, BYOK, e key rotation."""
+
+    # ── RAG + Skills injection ──
     rag_block = ""
     if agent_name:
         try:
-            # 1. Importar funções (lazy import para não quebrar se não existir)
             from agent_rag import buscar_contexto_rag, format_rag_prompt, mark_rag_used
             from skill_loader import get_skills_agente, carregar_skills
 
-            # 2. Buscar e injetar RAG
             rag_context = buscar_contexto_rag(user, agent_name.lower())
             if rag_context:
-                # PR12: guarda o bloco RAG isolado para cachear; nao funde com user.
-                # Formato igual ao format_rag_prompt para manter compatibilidade semantica.
                 rag_block = f"CONTEXTO RAG (conhecimento da base):\n{rag_context}\n\n---\n\n"
                 mark_rag_used(agent_name)
-                print(f"[LLM Direct] ✅ RAG ativado para {agent_name} ({len(rag_block)} chars)")
-            
-            # 3. Buscar e injetar Skills
+                print(f"[LLM Direct] RAG ativado para {agent_name} ({len(rag_block)} chars)")
+
             skills = get_skills_agente(agent_name.lower())
             if skills:
                 guidelines = carregar_skills(skills)
                 if guidelines:
                     system = f"{system}\n\n{'='*60}\n# SKILLS ATIVADAS\n{'='*60}\n{guidelines}"
-                    print(f"[LLM Direct] ✅ Skills ativadas para {agent_name}: {', '.join(skills)}")
-        
+                    print(f"[LLM Direct] Skills ativadas para {agent_name}: {', '.join(skills)}")
         except Exception as e:
-            print(f"[LLM Direct] ⚠️ Erro ao ativar RAG/Skills para {agent_name}: {e}")
-            # Continua sem RAG/Skills se der erro
+            print(f"[LLM Direct] Erro RAG/Skills para {agent_name}: {e}")
 
-    # PRD #11: Memory Tiered — injetar memória no system prompt
+    # ── Memory injection (PRD #11) ──
     if agent_name:
         try:
             from agent_memory import get_memory, gerar_prompt_com_memoria
@@ -290,27 +297,13 @@ def call_claude(system, user, model='opus', max_tokens=4000, temperature=0.7, ag
         except Exception:
             pass
 
-    # 4. Roteamento automático de modelo por agente
-    # Prioridade: DB config > hardcoded map > parâmetro do caller
-    _AGENT_MODEL_MAP = {
-        # Fallback hardcoded — usado se DB não tem config pro agente
-        'bryan':   'haiku',
-        'liz':     'haiku',
-        'theo':    'sonnet',
-        'alex':    'sonnet',
-        'liam':    'opus',
-        'arquiteto_mestre': 'sonnet',
-        'designer_prd':     'sonnet',
-    }
-
-    # Tentar config dinâmica do DB
+    # ── Model routing ──
     _db_config = None
     if agent_name:
         _all_configs = _load_agent_configs()
         _db_config = _all_configs.get(agent_name.lower())
 
     if _db_config:
-        # DB config encontrada — usar provider/model/params dela
         model_id = _db_config['model_id']
         if _db_config.get('temperature') is not None:
             temperature = _db_config['temperature']
@@ -318,7 +311,6 @@ def call_claude(system, user, model='opus', max_tokens=4000, temperature=0.7, ag
             max_tokens = _db_config['max_tokens']
         print(f"[LLM Router] {agent_name} -> {_db_config['provider']}/{model_id} (DB config)")
     else:
-        # PRD #7: Agent Router dinâmico (thread-local, por complexidade do lead)
         _routed = False
         if agent_name:
             try:
@@ -332,50 +324,32 @@ def call_claude(system, user, model='opus', max_tokens=4000, temperature=0.7, ag
             except Exception:
                 pass
 
-        # Fallback: hardcoded map (só se router não roteou)
         if not _routed and agent_name and model == 'opus':
             _auto = _AGENT_MODEL_MAP.get(agent_name.lower())
             if _auto:
                 model = _auto
                 print(f"[LLM Router] {agent_name} -> {model} (hardcoded fallback)")
 
-        model_map = {
-            'opus': 'claude-opus-4-7',
-            'sonnet': 'claude-sonnet-4-6',
-            'haiku': 'claude-haiku-4-5'
-        }
-        model_id = model_map.get(model, model_map['opus'])
-    
-    # 5. Resolver key/base_url (BYOK > ia_manager > .env)
+        model_id = MODEL_MAP.get(model, MODEL_MAP['opus'])
+
+    # ── Resolve key/base_url ──
     if base_url:
-        # Caller forcou base_url explicitamente — usa key default do .env / BYOK
         _api_key = _get_byok_key() or ANTHROPIC_API_KEY
         _key_id = None
         _base = base_url
     else:
         _api_key, _base, _key_id = _resolve_anthropic()
-    url = f'{_base}/v1/messages'
 
-    headers = {
-        'x-api-key': _api_key,
-        'anthropic-version': '2023-06-01',
-        'Content-Type': 'application/json'
-    }
-    
-    # Prompt caching: se system prompt >= 1024 chars, cachear automaticamente.
-    # Economiza 80-90% dos tokens de input em chamadas repetidas do mesmo agente.
-    # Minimo exigido pela Anthropic: 1024 tokens (~4096 chars para ser seguro, usamos 1024).
+    # ── Prompt caching: system payload ──
     extra_headers = {}
     cache_ativo = False
     if system and len(system) >= 1024:
         system_payload = [{"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}]
         cache_ativo = True
     else:
-        system_payload = system
+        system_payload = [{"type": "text", "text": system}] if system else []
 
-    # PR12: bloco RAG cacheado separadamente quando vale a pena (>= 1024 chars).
-    # Em chamadas repetidas do mesmo agente sobre leads diferentes, o RAG se
-    # repete - cachear economiza ate 90% dos tokens desse bloco.
+    # ── Messages: RAG block cacheado separadamente ──
     if rag_block and len(rag_block) >= 1024:
         messages_content = [
             {"type": "text", "text": rag_block, "cache_control": {"type": "ephemeral"}},
@@ -383,330 +357,288 @@ def call_claude(system, user, model='opus', max_tokens=4000, temperature=0.7, ag
         ]
         cache_ativo = True
     elif rag_block:
-        # RAG pequeno: junta no user message sem cache (caso raro)
         messages_content = rag_block + user
     else:
         messages_content = user
 
     if cache_ativo:
-        extra_headers = {"anthropic-beta": "prompt-caching-2024-07-31"}
+        extra_headers["anthropic-beta"] = "prompt-caching-2024-07-31"
 
-    payload = {
-        'model': model_id,
-        'max_tokens': max_tokens,
-        'temperature': temperature,
-        'system': system_payload,
-        'messages': [{'role': 'user', 'content': messages_content}]
-    }
+    # ── Tenant rate limit ──
+    if _key_id is not None and _current_user_id:
+        allowed, wait, count = _tenant_rate_check(_current_user_id)
+        if not allowed:
+            _tenant_rate_alert(_current_user_id, wait, count)
+            _time.sleep(min(wait, TENANT_THROTTLE_WAIT))
+            allowed2, wait2, _ = _tenant_rate_check(_current_user_id)
+            if not allowed2:
+                _time.sleep(wait2)
 
-    # Blindagem 1: NUNCA enviar tools/tool_choice no call_claude (não-structured)
-    # O proxy aibee.cloud interpreta tools vazias e retorna tool_use fantasma
-    payload.pop('tools', None)
-    payload.pop('tool_choice', None)
-
-    # Mesclar headers extras (ex: prompt caching beta)
-    if extra_headers:
-        headers = {**headers, **extra_headers}
-
-    import time as _llm_time
+    # ── ia_manager ref ──
     try:
         import ia_manager as _ia
     except Exception:
         _ia = None
 
-    # ══ TENANT RATE LIMIT — throttle antes de chamar API ══
-    # Só aplica se NÃO for BYOK (BYOK usa key própria, não afeta pool)
-    if _key_id is not None and _current_user_id:
-        allowed, wait, count = _tenant_rate_check(_current_user_id)
-        if not allowed:
-            _tenant_rate_alert(_current_user_id, wait, count)
-            _llm_time.sleep(min(wait, TENANT_THROTTLE_WAIT))
-            # Re-check após espera (pode liberar)
-            allowed2, wait2, _ = _tenant_rate_check(_current_user_id)
-            if not allowed2:
-                _llm_time.sleep(wait2)
-
+    # ── SDK retry loop ──
+    MAX_ATTEMPTS = 5
     response = None
-    MAX_ATTEMPTS = 5  # Com 1 key, precisa mais tentativas (espera cooldown)
-    # Sanitização estrita ANTES do post: garantir que tools/tool_choice não vazam
-    if not payload.get('tools'):
-        payload.pop('tools', None)
-    payload.pop('tool_choice', None)
-    _payload_keys = [k for k in payload.keys() if k not in ('system', 'messages')]
-    print(f"[LLM] Payload keys (sanitizado): {_payload_keys} | model={payload.get('model')}")
-    for _llm_attempt in range(1, MAX_ATTEMPTS + 1):
+    print(f"[LLM] model={model_id} cache={'on' if cache_ativo else 'off'} agent={agent_name or '-'}")
+
+    for _attempt in range(1, MAX_ATTEMPTS + 1):
         _enforce_call_spacing()
-        response = requests.post(url, headers=headers, json=payload, timeout=_llm_timeout())
-        if response.status_code == 429:
-            cd = _ia.parse_cooldown_from_response(429, dict(response.headers)) if _ia else 60
+        client = _create_client(_api_key, _base)
+        try:
+            response = client.messages.create(
+                model=model_id,
+                max_tokens=max_tokens,
+                temperature=temperature,
+                system=system_payload,
+                messages=[{"role": "user", "content": messages_content}],
+                extra_headers=extra_headers if extra_headers else None,
+            )
+
+            # ── Success: log usage ──
+            usage = response.usage
+            input_tokens = usage.input_tokens
+            output_tokens = usage.output_tokens
+            cache_read = getattr(usage, 'cache_read_input_tokens', 0) or 0
+            cache_created = getattr(usage, 'cache_creation_input_tokens', 0) or 0
+            if cache_read or cache_created:
+                print(f"[LLM] stop={response.stop_reason} in={input_tokens} out={output_tokens} cache_read={cache_read} cache_created={cache_created}")
+            else:
+                print(f"[LLM] stop={response.stop_reason} in={input_tokens} out={output_tokens}")
+
+            _salvar_uso_llm(model_id, input_tokens, output_tokens, agent_name)
+
+            try:
+                from token_tracker import get_tracker
+                _tracker = get_tracker()
+                if _tracker:
+                    _tracker.registrar(agente=agent_name or "unknown", model=model_id, usage={
+                        'input_tokens': input_tokens, 'output_tokens': output_tokens,
+                        'cache_read_input_tokens': cache_read, 'cache_creation_input_tokens': cache_created,
+                    })
+            except Exception:
+                pass
+
+            if _ia and _key_id:
+                _ia.mark_success(_key_id)
+
+            # ── Extract text from response ──
+            for block in response.content:
+                if block.type == "text":
+                    return block.text
+
+            # ── Proxy workaround: tool_use text extraction ──
+            return _extract_text_from_tool_use(response, client, model_id, max_tokens, temperature, system, user, extra_headers)
+
+        except anthropic.RateLimitError as e:
+            cd = 60
+            if _ia:
+                try:
+                    cd = _ia.parse_cooldown_from_response(429, dict(e.response.headers) if e.response else {})
+                except Exception:
+                    pass
             if _ia and _key_id:
                 _ia.mark_failure(_key_id, '429 rate limit', cd)
-                if _llm_attempt == 1:
-                    _ia.raise_alert('rate_limit', _key_id,
-                                    f'429 em call_claude (cooldown {cd}s)',
-                                    lead_id=None, user_id=_current_user_id)
-            if _llm_attempt >= MAX_ATTEMPTS:
+                if _attempt == 1:
+                    _ia.raise_alert('rate_limit', _key_id, f'429 em call_claude (cooldown {cd}s)', lead_id=None, user_id=_current_user_id)
+            if _attempt >= MAX_ATTEMPTS:
                 if _ia:
-                    _ia.raise_alert('all_keys_failed', _key_id,
-                                    f'Rate limit persistente apos {MAX_ATTEMPTS} tentativas (cooldown {cd}s)',
-                                    lead_id=None, user_id=_current_user_id)
+                    _ia.raise_alert('all_keys_failed', _key_id, f'Rate limit persistente apos {MAX_ATTEMPTS} tentativas', lead_id=None, user_id=_current_user_id)
                 raise RateLimitError(reset_seconds=cd)
-            # Com 1 key: espera o cooldown real (não troca key, espera liberar)
-            # Com N keys: tenta pegar outra
             if base_url is None:
                 new_key = _resolve_anthropic()
                 if new_key and new_key[2] != _key_id:
                     _api_key, _base, _key_id = new_key
-                    url = f'{_base}/v1/messages'
-                    headers['x-api-key'] = _api_key
-                    wait = min(10 * _llm_attempt, 20)
-                    print(f'[LLM] 429 — trocou key, aguardando {wait}s (tentativa {_llm_attempt}/{MAX_ATTEMPTS})')
+                    wait = min(10 * _attempt, 20)
+                    print(f'[LLM] 429 — trocou key, aguardando {wait}s (tentativa {_attempt}/{MAX_ATTEMPTS})')
                 else:
-                    # Mesma key (pool de 1) — espera cooldown real
                     wait = min(cd, 60)
-                    print(f'[LLM] 429 — 1 key no pool, aguardando cooldown {wait}s (tentativa {_llm_attempt}/{MAX_ATTEMPTS})')
+                    print(f'[LLM] 429 — 1 key no pool, aguardando cooldown {wait}s (tentativa {_attempt}/{MAX_ATTEMPTS})')
             else:
                 wait = min(cd, 60)
-                print(f'[LLM] 429 — aguardando {wait}s (tentativa {_llm_attempt}/{MAX_ATTEMPTS})')
-            _llm_time.sleep(wait)
-            continue
-        if response.status_code in (529, 503, 502):
-            if _ia and _key_id:
-                _ia.mark_failure(_key_id, f'{response.status_code} overloaded', 30)
-            if base_url is None:
-                new_key = _resolve_anthropic()
-                if new_key and new_key[2] != _key_id:
-                    _api_key, _base, _key_id = new_key
-                    url = f'{_base}/v1/messages'
-                    headers['x-api-key'] = _api_key
-            wait = min(20 * _llm_attempt, 60)
-            print(f'[LLM] {response.status_code} Overloaded - aguardando {wait}s (tentativa {_llm_attempt}/{MAX_ATTEMPTS})')
-            _llm_time.sleep(wait)
-            continue
-        if response.status_code == 400:
-            print(f'[LLM] 400 Bad Request - payload pode ser grande demais, tentativa {_llm_attempt}/{MAX_ATTEMPTS}')
-            if _llm_attempt < MAX_ATTEMPTS:
-                _llm_time.sleep(5 * _llm_attempt)
-                continue
-        if response.status_code >= 400:
-            # 4xx que nao seja 429 = problema da request, nao da key. Nao penaliza.
-            if _ia and _key_id and response.status_code in (401, 403):
-                _ia.mark_failure(_key_id, f'{response.status_code} auth', 600)
-                _ia.raise_alert('key_invalid', _key_id,
-                                f'{response.status_code} retornado — key pode estar invalida',
-                                lead_id=None, user_id=_current_user_id)
-        response.raise_for_status()
-        if _ia and _key_id:
-            _ia.mark_success(_key_id)
-        break
-    else:
-        # Esgotou as 3 tentativas sem break
-        if _ia:
-            _ia.raise_alert('all_keys_failed', _key_id,
-                            'Todas as tentativas de call_claude falharam',
-                            lead_id=None, user_id=_current_user_id)
-        if response is not None:
-            response.raise_for_status()
+                print(f'[LLM] 429 — aguardando {wait}s (tentativa {_attempt}/{MAX_ATTEMPTS})')
+            _time.sleep(wait)
 
-    data = response.json()
-    stop_reason = data.get('stop_reason', '?')
-    usage = data.get('usage', {})
-    input_tokens = usage.get('input_tokens', 0)
-    output_tokens = usage.get('output_tokens', 0)
-    cache_read = usage.get('cache_read_input_tokens', 0)
-    cache_created = usage.get('cache_creation_input_tokens', 0)
-    if cache_read or cache_created:
-        print(f"[LLM] stop_reason={stop_reason} input={input_tokens} output={output_tokens} cache_read={cache_read} cache_created={cache_created}")
-    else:
-        print(f"[LLM] stop_reason={stop_reason} input={input_tokens} output={output_tokens}")
-    _salvar_uso_llm(model_id, input_tokens, output_tokens, agent_name)
+        except anthropic.APIStatusError as e:
+            if e.status_code in (529, 503, 502):
+                if _ia and _key_id:
+                    _ia.mark_failure(_key_id, f'{e.status_code} overloaded', 30)
+                if base_url is None:
+                    new_key = _resolve_anthropic()
+                    if new_key and new_key[2] != _key_id:
+                        _api_key, _base, _key_id = new_key
+                wait = min(20 * _attempt, 60)
+                print(f'[LLM] {e.status_code} Overloaded - aguardando {wait}s (tentativa {_attempt}/{MAX_ATTEMPTS})')
+                _time.sleep(wait)
+            elif e.status_code == 400:
+                print(f'[LLM] 400 Bad Request (tentativa {_attempt}/{MAX_ATTEMPTS})')
+                if _attempt < MAX_ATTEMPTS:
+                    _time.sleep(5 * _attempt)
+                else:
+                    raise
+            elif e.status_code in (401, 403):
+                if _ia and _key_id:
+                    _ia.mark_failure(_key_id, f'{e.status_code} auth', 600)
+                    _ia.raise_alert('key_invalid', _key_id, f'{e.status_code} — key pode estar invalida', lead_id=None, user_id=_current_user_id)
+                raise
+            else:
+                raise
 
-    # Token Tracker: registrar automaticamente no tracker ativo (PRD #4)
-    try:
-        from token_tracker import get_tracker
-        _tracker = get_tracker()
-        if _tracker:
-            _tracker.registrar(
-                agente=agent_name or "unknown",
-                model=model_id,
-                usage=usage,
-            )
-    except Exception:
-        pass
+    # Esgotou tentativas
+    if _ia:
+        _ia.raise_alert('all_keys_failed', _key_id, 'Todas as tentativas de call_claude falharam', lead_id=None, user_id=_current_user_id)
+    raise RuntimeError(f"[LLM] Falhou apos {MAX_ATTEMPTS} tentativas")
 
-    # O proxy aibee.cloud sempre adiciona bloco tool_use extra no final
-    # Extrair texto IMEDIATAMENTE se houver bloco text (ignorar tool_use)
-    for block in data.get('content', []):
-        if block.get('type') == 'text':
-            return block['text']
 
-    # Sem bloco text — retry sem cache e sem tools (proxy pode estar cacheando tool_use)
-    max_retries = 3
-    retry_count = 0
-    while retry_count < max_retries:
-        retry_count += 1
-        import time; time.sleep(2 * retry_count)
-        # Fallback de modelo: Opus falhou → usar Sonnet nos retries
-        _fallback_model = 'claude-sonnet-4-6'
-        print(f'[LLM] Retry {retry_count}/3 - Fallback para Sonnet ativado devido a erro de tool_use')
-        # Remover tools, tool_choice E cache_control para forcar nova geracao
-        payload_retry = {k: v for k, v in payload.items() if k not in ('tools', 'tool_choice')}
-        payload_retry['model'] = _fallback_model
-        # Remover cache_control do system prompt
-        if isinstance(payload_retry.get('system'), list):
-            payload_retry['system'] = payload_retry['system'][0]['text'] if payload_retry['system'] else ''
-        # Blindagem 2: Cache buster — string invisível no system pra forçar nova geração no proxy
-        import uuid as _uuid_retry
-        _cache_bust = f"\n\n[{_uuid_retry.uuid4().hex[:8]}]"
-        if isinstance(payload_retry.get('system'), str):
-            payload_retry['system'] = payload_retry['system'] + _cache_bust
-        elif isinstance(payload_retry.get('system'), list):
-            payload_retry['system'] = payload_retry['system'][0]['text'] + _cache_bust if payload_retry['system'] else _cache_bust
-        # Headers sem prompt-caching
-        headers_retry = {k: v for k, v in headers.items() if 'beta' not in k.lower()}
-        response2 = requests.post(url, headers=headers_retry, json=payload_retry, timeout=_llm_timeout())
-        response2.raise_for_status()
-        data = response2.json()
-        stop_reason = data.get('stop_reason', '?')
-        usage = data.get('usage', {})
-        output_tokens = usage.get('output_tokens', 0)
-        print('[LLM] Retry ' + str(retry_count) + ': stop=' + stop_reason + ' out=' + str(output_tokens))
-        # Blindagem 3: extrair texto mesmo se stop_reason=tool_use
-        for block in data.get('content', []):
-            if block.get('type') == 'text' and block.get('text', '').strip():
-                return block['text']
-        # Se tool_use com input contendo texto, extrair
-        for block in data.get('content', []):
-            if block.get('type') == 'tool_use':
-                inp = block.get('input', {})
-                if isinstance(inp, dict):
-                    for key in ['text', 'content', 'response', 'message', 'output', 'html', 'code']:
-                        if key in inp and isinstance(inp[key], str) and len(inp[key]) > 50:
-                            print(f"[LLM] Retry {retry_count}: recuperado de tool_use.input.{key}")
-                            return inp[key]
-                elif isinstance(inp, str) and len(inp) > 50:
-                    print(f"[LLM] Retry {retry_count}: recuperado de tool_use.input (string)")
-                    return inp
-
-    # Ultimo fallback: procurar qualquer bloco com chave 'text'
-    for block in data.get('content', []):
-        if 'text' in block:
-            return block['text']
-
-    # Ultimo fallback: tentar extrair texto do input do no_tool_available
-    for block in data.get('content', []):
-        if block.get('name') == 'no_tool_available':
-            inp = block.get('input', {})
+def _extract_text_from_tool_use(response, client, model_id, max_tokens, temperature, system, user, extra_headers):
+    """Proxy aibee.cloud workaround: extrai texto de tool_use blocks fantasma."""
+    for block in response.content:
+        if block.type == "tool_use":
+            inp = block.input
             if isinstance(inp, dict):
-                # Tentar campos comuns onde o proxy pode ter colocado o texto
-                for key in ['text', 'content', 'response', 'message', 'output']:
-                    if key in inp and inp[key]:
-                        print(f"[LLM] Recuperado de no_tool_available.input.{key}")
-                        return str(inp[key])
-            elif isinstance(inp, str) and inp:
-                print("[LLM] Recuperado de no_tool_available.input (string)")
+                for key in ['text', 'content', 'response', 'message', 'output', 'html', 'code']:
+                    if key in inp and isinstance(inp[key], str) and len(inp[key]) > 50:
+                        print(f"[LLM] Recuperado de tool_use.input.{key}")
+                        return inp[key]
+            elif isinstance(inp, str) and len(inp) > 50:
                 return inp
-    print(f"[LLM] ERRO: nenhum bloco text encontrado. content={data.get('content', [])}")
-    raise RuntimeError("[LLM] Proxy retornou tool_use sem texto após 3 retries — resposta irrecuperável")
+
+    # Retry sem cache — forçar nova geração
+    import uuid as _uuid
+    for retry in range(1, 4):
+        _time.sleep(2 * retry)
+        _fallback_model = 'claude-sonnet-4-6'
+        print(f'[LLM] Retry {retry}/3 - Fallback Sonnet (tool_use workaround)')
+        _cache_bust = f"\n\n[{_uuid.uuid4().hex[:8]}]"
+        system_clean = system + _cache_bust if isinstance(system, str) else system
+
+        try:
+            resp2 = client.messages.create(
+                model=_fallback_model,
+                max_tokens=max_tokens,
+                temperature=temperature,
+                system=[{"type": "text", "text": system_clean}] if isinstance(system_clean, str) else system_clean,
+                messages=[{"role": "user", "content": user}],
+            )
+            for block in resp2.content:
+                if block.type == "text" and block.text.strip():
+                    return block.text
+            for block in resp2.content:
+                if block.type == "tool_use":
+                    inp = block.input
+                    if isinstance(inp, dict):
+                        for key in ['text', 'content', 'response', 'message', 'output', 'html', 'code']:
+                            if key in inp and isinstance(inp[key], str) and len(inp[key]) > 50:
+                                print(f"[LLM] Retry {retry}: recuperado de tool_use.input.{key}")
+                                return inp[key]
+                    elif isinstance(inp, str) and len(inp) > 50:
+                        return inp
+        except Exception as e:
+            print(f"[LLM] Retry {retry} falhou: {e}")
+
+    print(f"[LLM] ERRO: nenhum bloco text encontrado apos 3 retries")
+    raise RuntimeError("[LLM] Proxy retornou tool_use sem texto apos 3 retries")
 
 
+# ══════════════════════════════════════════════════════════════════
+# CALL CLAUDE STRUCTURED — tool_use forçado para JSON
+# ══════════════════════════════════════════════════════════════════
 def call_claude_structured(system, user, tool_name, tool_description, input_schema, model='opus', max_tokens=8000, temperature=0.7):
-    """
-    Chama Claude com tool_use para forcar retorno de JSON estruturado exato.
-    O Claude e obrigado a preencher o schema definido - sem texto livre.
-
-    Args:
-        system: System prompt
-        user: User prompt
-        tool_name: Nome da tool (ex: 'gerar_prd')
-        tool_description: Descricao da tool
-        input_schema: JSON Schema dict com os campos obrigatorios
-        model: 'opus', 'sonnet' ou 'haiku'
-        max_tokens: Limite de tokens
-        temperature: Temperatura
-
-    Returns:
-        Dict com os campos retornados pelo Claude
-    """
+    """Chama Claude com tool_use para forcar retorno de JSON estruturado."""
     model_map = {
         'opus': 'claude-opus-4-7',
         'sonnet': 'claude-sonnet-4-6',
-        'haiku': 'claude-haiku-4-5'
+        'haiku': 'claude-haiku-4-5',
     }
     model_id = model_map.get(model, model_map['opus'])
 
     _api_key, _base, _key_id = _resolve_anthropic()
-    url = f'{_base}/v1/messages'
-    headers = {
-        'x-api-key': _api_key,
-        'anthropic-version': '2023-06-01',
-        'Content-Type': 'application/json'
-    }
 
-    # Prompt caching no system prompt (igual ao call_claude)
+    # Prompt caching no system
+    extra_headers = {}
     if system and len(system) >= 1024:
         system_payload = [{"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}]
-        headers["anthropic-beta"] = "prompt-caching-2024-07-31"
+        extra_headers["anthropic-beta"] = "prompt-caching-2024-07-31"
     else:
-        system_payload = system
+        system_payload = [{"type": "text", "text": system}] if system else []
 
-    payload = {
-        'model': model_id,
-        'max_tokens': max_tokens,
-        'temperature': temperature,
-        'system': system_payload,
-        'tools': [{
-            'name': tool_name,
-            'description': tool_description,
-            'input_schema': input_schema
-        }],
-        'tool_choice': {'type': 'tool', 'name': tool_name},
-        'messages': [{'role': 'user', 'content': user}]
-    }
-
-    import time as _time_struct
     try:
         import ia_manager as _ia
     except Exception:
         _ia = None
 
     for _attempt in range(1, 4):
-        response = requests.post(url, headers=headers, json=payload, timeout=_llm_timeout())
-        if response.status_code == 429:
-            cd = _ia.parse_cooldown_from_response(429, dict(response.headers)) if _ia else 60
+        _enforce_call_spacing()
+        client = _create_client(_api_key, _base)
+        try:
+            response = client.messages.create(
+                model=model_id,
+                max_tokens=max_tokens,
+                temperature=temperature,
+                system=system_payload,
+                messages=[{"role": "user", "content": user}],
+                tools=[{
+                    "name": tool_name,
+                    "description": tool_description,
+                    "input_schema": input_schema,
+                }],
+                tool_choice={"type": "tool", "name": tool_name},
+                extra_headers=extra_headers if extra_headers else None,
+            )
+
+            # Log usage
+            usage = response.usage
+            input_tokens = usage.input_tokens
+            output_tokens = usage.output_tokens
+            cache_read = getattr(usage, 'cache_read_input_tokens', 0) or 0
+            cache_created = getattr(usage, 'cache_creation_input_tokens', 0) or 0
+            if cache_read or cache_created:
+                print(f"[LLM Structured] stop={response.stop_reason} in={input_tokens} out={output_tokens} cache_read={cache_read} cache_created={cache_created}")
+            else:
+                print(f"[LLM Structured] stop={response.stop_reason} in={input_tokens} out={output_tokens}")
+
+            _salvar_uso_llm(model_id, input_tokens, output_tokens, f"structured_{tool_name}")
+
+            if _ia and _key_id:
+                _ia.mark_success(_key_id)
+
+            # Extract tool_use input
+            for block in response.content:
+                if block.type == "tool_use" and block.name == tool_name:
+                    return block.input
+
+            # Fallback: any tool_use block
+            for block in response.content:
+                if block.type == "tool_use":
+                    return block.input
+
+            raise RuntimeError(f"[LLM Structured] Nenhum tool_use block na resposta (stop={response.stop_reason})")
+
+        except anthropic.RateLimitError as e:
+            cd = 60
+            if _ia:
+                try:
+                    cd = _ia.parse_cooldown_from_response(429, dict(e.response.headers) if e.response else {})
+                except Exception:
+                    pass
             if _ia and _key_id:
                 _ia.mark_failure(_key_id, '429 rate limit', cd)
-                _ia.raise_alert('rate_limit', _key_id,
-                                f'429 em call_claude_structured (cooldown {cd}s)',
-                                lead_id=None, user_id=_current_user_id)
+                _ia.raise_alert('rate_limit', _key_id, f'429 em call_claude_structured (cooldown {cd}s)', lead_id=None, user_id=_current_user_id)
             if _attempt >= 3:
                 raise RateLimitError(reset_seconds=cd)
             _api_key, _base, _key_id = _resolve_anthropic()
-            url = f'{_base}/v1/messages'
-            headers['x-api-key'] = _api_key
             wait = min(15 * _attempt, 30)
-            print(f'[LLM Structured] 429 — trocando key e aguardando {wait}s (tentativa {_attempt}/3)...')
-            _time_struct.sleep(wait)
-            continue
-        if response.status_code >= 400 and response.status_code in (401, 403):
-            if _ia and _key_id:
-                _ia.mark_failure(_key_id, f'{response.status_code} auth', 600)
-                _ia.raise_alert('key_invalid', _key_id,
-                                f'{response.status_code} em call_claude_structured',
-                                lead_id=None, user_id=_current_user_id)
-        response.raise_for_status()
-        if _ia and _key_id:
-            _ia.mark_success(_key_id)
-        data = response.json()
-        # Verificar se proxy retornou no_tool_available (falso tool_use)
-        content_blocks = data.get('content', [])
-        has_fake = any(b.get('name') == 'no_tool_available' for b in content_blocks)
-        for block in content_blocks:
-            if block.get('type') == 'tool_use' and block.get('name') == tool_name:
-                return block['input']
-        if has_fake and _attempt < 3:
-            print(f'[LLM Structured] Proxy retornou no_tool_available, tentativa {_attempt}/3...')
-            _time_struct.sleep(3 * _attempt)
-            continue
-        break
-    raise ValueError(f'Claude nao retornou tool_use para {tool_name} apos 3 tentativas')
+            print(f'[LLM Structured] 429 — trocando key, aguardando {wait}s (tentativa {_attempt}/3)')
+            _time.sleep(wait)
+
+        except anthropic.APIStatusError as e:
+            if e.status_code in (401, 403) and _ia and _key_id:
+                _ia.mark_failure(_key_id, f'{e.status_code} auth', 600)
+                _ia.raise_alert('key_invalid', _key_id, f'{e.status_code} em call_claude_structured', lead_id=None, user_id=_current_user_id)
+            raise
+
+    raise RuntimeError("[LLM Structured] Falhou apos 3 tentativas")
+
