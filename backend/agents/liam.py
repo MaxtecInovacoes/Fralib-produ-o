@@ -1975,11 +1975,11 @@ def montar_template_python(html_main, prd):
 :root {
   --color-header-bg: color-mix(in oklch, var(--bg) 92%, transparent);
   --color-header-border: color-mix(in oklch, var(--border) 80%, transparent);
-  /* Footer: sempre escuro independente do tema */
-  --color-footer-bg: oklch(10% 0.01 var(--accent-hue, 240));
+  /* Footer: sempre escuro, hue do accent */
+  --color-footer-bg: oklch(10% 0.01 """ + _extract_hue(_accent) + """);
   --color-footer-text: oklch(92% 0 0);
   --color-footer-muted: oklch(60% 0 0);
-  --color-footer-border: oklch(20% 0.01 var(--accent-hue, 240));
+  --color-footer-border: oklch(20% 0.01 """ + _extract_hue(_accent) + """);
 }
 body { background:var(--bg); color:var(--fg); }
 #fralib-header { background:var(--color-header-bg); border-bottom:1px solid var(--color-header-border); backdrop-filter:blur(12px); }
