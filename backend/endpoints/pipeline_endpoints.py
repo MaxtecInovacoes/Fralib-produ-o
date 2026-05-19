@@ -2343,8 +2343,8 @@ async def reprocessar_lead(lead_id: str, background_tasks: BackgroundTasks, db: 
     }
     try:
         job_id = _jq.enqueue(
-            db, tipo="pipeline_multiplos",
-            payload={**config_reproc, "queue_id": queue_result.get("queue_id")},
+            db, tipo="pipeline_lead",
+            payload={**config_reproc},
             tenant_id=tenant_id, max_attempts=3, priority=1,
         )
         adicionar_log(f"[Pipeline] Reprocessamento enfileirado (job #{job_id})", "info", user_id=tenant_id)
