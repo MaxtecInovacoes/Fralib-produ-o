@@ -315,6 +315,22 @@ def gerar_arquiteto_mestre_prd(
     Returns:
         DesignerPRD validado com dados reais
     """
+    # PRD #8: Semantic Cache — reutilizar PRD se nicho+tier+direction já existe
+    try:
+        from prd_cache import buscar_prd_cache, adaptar_prd_template
+        from design_context import get_design_context
+        _dc = get_design_context(segmento, dados_hunter.get("nome", ""))
+        _direction = _dc.get("direction", "default") if _dc else "default"
+        _cache_entry = buscar_prd_cache(segmento, caio_tier, _direction)
+        if _cache_entry:
+            _prd_adaptado = adaptar_prd_template(_cache_entry, dados_hunter, briefing_theo)
+            if _prd_adaptado and isinstance(_prd_adaptado, dict):
+                _prd_adaptado["_cache_hit"] = True
+                _prd_adaptado["_cache_key"] = _cache_entry.get("key")
+                return DesignerPRD(**_prd_adaptado) if not isinstance(_prd_adaptado, DesignerPRD) else _prd_adaptado
+    except Exception as _cache_err:
+        print(f"[CACHE] Erro no lookup (gerando normal): {_cache_err}")
+
     # Google Suggest: termos reais do nicho para enriquecer copy e SEO
     google_suggest_terms = _buscar_google_suggest(segmento, cidade)
     suggest_fmt = ", ".join(google_suggest_terms) if google_suggest_terms else "nao disponivel"

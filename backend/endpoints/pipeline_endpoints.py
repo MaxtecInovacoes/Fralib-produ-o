@@ -667,6 +667,27 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
             _ledger.registrar_fim_fase(2, FaseStatus.CONCLUIDA, resultado=f"score={state.qualificacao_caio.score} tier={state.qualificacao_caio.tier}")
             _ledger.atualizar_fact("score_qualificacao", state.qualificacao_caio.score)
             _ledger.atualizar_fact("tier", state.qualificacao_caio.tier)
+        # PRD #7: Agent Router — modelo dinâmico por complexidade
+        try:
+            from agent_router import AgentRouter, calcular_complexidade_lead, set_router
+            _router_facts = {
+                "qtd_reviews": state.lead_raw_data.get("total_avaliacoes", 0),
+                "nicho": state.segmento,
+                "tier": state.qualificacao_caio.tier if state.qualificacao_caio else "STANDARD",
+                "tem_site": bool(state.lead_raw_data.get("website")),
+                "servicos": state.lead_raw_data.get("servicos") or [],
+            }
+            _complexidade = calcular_complexidade_lead(_router_facts)
+            _router = AgentRouter(_complexidade)
+            set_router(_router)
+            print(_router.resumo())
+            if _ledger:
+                _ledger.atualizar_fact("complexidade", _complexidade)
+                _ledger.registrar_decisao(2, f"routing_{_complexidade}", f"Modelos ajustados por complexidade")
+        except Exception as _router_err:
+            print(f"[ROUTER] Erro (fallback medio): {_router_err}")
+            _router = None
+            _complexidade = "medio"
         _progress(3, "Pesquisa de mercado...")
         _log("FASE 3: JINA AI", "info")
         if _ledger: _ledger.registrar_inicio_fase(3, "jina")
@@ -984,6 +1005,18 @@ IMPORTANTE: Corrija EXATAMENTE os problemas acima. Não altere o que já estava 
         if _ledger:
             _ledger.registrar_fim_fase(8, FaseStatus.CONCLUIDA, resultado=f"liz_aprovado={state.liz_aprovado}")
             _ledger.registrar_inicio_fase(9, "deploy")
+        # PRD #8: Salvar PRD no cache semântico (só se Liz aprovou e não veio do cache)
+        if state.liz_aprovado and state.prd_arquiteto and not getattr(state.prd_arquiteto, '_cache_hit', False):
+            try:
+                from prd_cache import salvar_prd_cache, atualizar_quality_score
+                from design_context import get_design_context
+                _dc_cache = get_design_context(state.segmento, state.lead_nome)
+                _dir_cache = _dc_cache.get("direction", "default") if _dc_cache else "default"
+                _tier_cache = state.qualificacao_caio.tier if state.qualificacao_caio else "STANDARD"
+                _prd_dict = state.prd_arquiteto.model_dump() if hasattr(state.prd_arquiteto, "model_dump") else state.prd_arquiteto.__dict__
+                salvar_prd_cache(state.segmento, _tier_cache, _dir_cache, _prd_dict, state.lead_raw_data)
+            except Exception as _cache_save_err:
+                print(f"[CACHE] Erro ao salvar PRD: {_cache_save_err}")
         web_dir = f"/var/www/fralib/sites/{tenant_id}/{state.lead_slug}"
         os.makedirs(web_dir, exist_ok=True)
         # PR15: substituir placeholder do pixel de tracking pelo lead_id real
@@ -1124,6 +1157,13 @@ IMPORTANTE: Corrija EXATAMENTE os problemas acima. Não altere o que já estava 
                 set_tracker(None)  # limpar tracker do thread
         except Exception as _track_err:
             print(f"[TRACKING] Erro: {_track_err}")
+
+        # PRD #7: Limpar router do thread
+        try:
+            from agent_router import set_router
+            set_router(None)
+        except Exception:
+            pass
 
         # Descontar 1 crédito do usuário
         try:

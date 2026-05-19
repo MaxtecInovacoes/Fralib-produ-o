@@ -308,8 +308,22 @@ def call_claude(system, user, model='opus', max_tokens=4000, temperature=0.7, ag
             max_tokens = _db_config['max_tokens']
         print(f"[LLM Router] {agent_name} -> {_db_config['provider']}/{model_id} (DB config)")
     else:
-        # Fallback: hardcoded map
-        if agent_name and model == 'opus':
+        # PRD #7: Agent Router dinâmico (thread-local, por complexidade do lead)
+        _routed = False
+        if agent_name:
+            try:
+                from agent_router import get_router
+                _active_router = get_router()
+                if _active_router:
+                    _routed_model = _active_router.get_model(agent_name.lower())
+                    if _routed_model:
+                        model = _routed_model
+                        _routed = True
+            except Exception:
+                pass
+
+        # Fallback: hardcoded map (só se router não roteou)
+        if not _routed and agent_name and model == 'opus':
             _auto = _AGENT_MODEL_MAP.get(agent_name.lower())
             if _auto:
                 model = _auto
