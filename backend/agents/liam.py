@@ -811,7 +811,17 @@ def gerar_html_componentizado(prd):
     _secoes_fonte = prd.sections
 
     _ckpt_slug_val = _ckpt_slug(prd.business_name)
-    _secoes_prontas = _ckpt_load(_ckpt_slug_val)
+
+    # Se tem reflection_context, limpar checkpoint (forçar regeneração completa)
+    _has_reflection = getattr(prd, "reflection_context", None)
+    if not _has_reflection and isinstance(prd, dict):
+        _has_reflection = prd.get("reflection_context")
+    if _has_reflection:
+        _ckpt_clear(_ckpt_slug_val)
+        _secoes_prontas = {}
+        print("[Liam] REFLECTION MODE — checkpoint limpo, regenerando todas as seções")
+    else:
+        _secoes_prontas = _ckpt_load(_ckpt_slug_val)
 
     print("[Liam] Iniciando geracao componente por componente para " + prd.business_name + "...")
     print("[Liam] Instrucao do Diretor: " + instrucao_diretor[:80] + "...")
@@ -963,6 +973,13 @@ def gerar_html_componentizado(prd):
 
         if maps_instrucao:
             prompt_secao += maps_instrucao
+
+        # ── REFLECTION: injetar feedback da Liz se disponível ──
+        _reflection = getattr(prd, "reflection_context", None)
+        if not _reflection and isinstance(prd, dict):
+            _reflection = prd.get("reflection_context")
+        if _reflection:
+            prompt_secao += nl + nl + _reflection
 
         print("[Liam] Gerando " + nome_s + " (layout: " + tipo_layout + ")...")
         try:

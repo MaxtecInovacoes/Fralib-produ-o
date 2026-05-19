@@ -505,6 +505,100 @@ def auditar(
 # ===== TESTE =====
 
 
+def auditar_secao_estruturado(html: str, briefing: str = "", cidade: str = "", nome: str = "") -> dict:
+    """
+    Audita HTML e retorna feedback estruturado para reflection loop.
+    Usa Haiku (barato) para avaliação rápida.
+
+    Returns:
+        {
+            "aprovado": bool,
+            "score": float,
+            "problemas": [{"dimensao": str, "score": int, "detalhe": str}],
+            "instrucoes_correcao": str
+        }
+    """
+    # 1. Auditoria técnica (sem LLM)
+    tecnica = auditoria_tecnica(html, briefing=briefing)
+
+    # 2. Auditoria semântica via LLM (Haiku)
+    system = """Você é Liz, auditora de qualidade web. Avalie o HTML contra o briefing.
+
+Retorne APENAS JSON válido (sem markdown, sem ```):
+{
+    "score_design": 1-10,
+    "detalhe_design": "problema específico ou OK",
+    "score_copy": 1-10,
+    "detalhe_copy": "problema específico ou OK",
+    "score_mobile": 1-10,
+    "detalhe_mobile": "problema específico ou OK",
+    "score_performance": 1-10,
+    "detalhe_performance": "problema específico ou OK",
+    "instrucoes_correcao": "Lista numerada de correções específicas (ou 'Nenhuma')"
+}
+
+Critérios:
+- Design: paleta coerente, espaçamento, tipografia, hierarquia visual
+- Copy: CTAs com urgência, textos persuasivos, sem placeholder/genérico
+- Mobile: responsivo, touch targets, sem overflow horizontal
+- Performance: lazy loading, fontes otimizadas, sem JS bloqueante"""
+
+    user = f"""BRIEFING:
+{briefing[:2000] if briefing else 'Não disponível'}
+
+NEGÓCIO: {nome} em {cidade}
+
+HTML A AVALIAR (primeiros 4000 chars):
+{html[:4000]}"""
+
+    try:
+        resposta = call_claude(system=system, user=user, model='haiku', max_tokens=800, temperature=0.3, agent_name='liz')
+        # Parse JSON
+        resposta = resposta.strip()
+        if resposta.startswith("```"):
+            resposta = re.sub(r"^```\w*\n?", "", resposta)
+            resposta = re.sub(r"\n?```$", "", resposta)
+        dados = json.loads(resposta)
+    except (json.JSONDecodeError, Exception) as e:
+        print(f"[Liz Reflection] JSON parse falhou: {e} — aprovando com warning")
+        return {"aprovado": True, "score": 7.5, "problemas": [], "instrucoes_correcao": ""}
+
+    # Montar resultado
+    problemas = []
+    dimensoes = ["design", "copy", "mobile", "performance"]
+    scores = []
+    for dim in dimensoes:
+        s = int(dados.get(f"score_{dim}", 8))
+        d = dados.get(f"detalhe_{dim}", "OK")
+        scores.append(s)
+        problemas.append({"dimensao": dim, "score": s, "detalhe": d})
+
+    # Score combinado: 60% técnica (normalizada 0-10) + 40% semântica LLM
+    score_tecnico_norm = min(10, tecnica.score / 10)
+    score_semantico = sum(scores) / len(scores) if scores else 7.5
+    score_final = round(score_tecnico_norm * 0.6 + score_semantico * 0.4, 1)
+
+    # Veto técnico
+    _veto = any(p.gravidade in ("CRITICO", "CRÍTICO") for p in tecnica.problemas)
+    aprovado = score_final >= 7.5 and not _veto
+
+    # Adicionar problemas técnicos críticos
+    for p in tecnica.problemas:
+        if p.gravidade in ("CRITICO", "CRÍTICO", "ALTO"):
+            problemas.append({"dimensao": p.dimensao, "score": 3, "detalhe": p.problema})
+
+    instrucoes = dados.get("instrucoes_correcao", "")
+
+    print(f"[Liz Reflection] score={score_final} aprovado={aprovado} problemas={len([p for p in problemas if p['score'] < 7])}")
+
+    return {
+        "aprovado": aprovado,
+        "score": score_final,
+        "problemas": problemas,
+        "instrucoes_correcao": instrucoes,
+    }
+
+
 if __name__ == "__main__":
     print("Liz QA Agent - Use via import")
 

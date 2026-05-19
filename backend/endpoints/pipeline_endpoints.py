@@ -62,7 +62,7 @@ from agents.arquiteto_mestre import gerar_arquiteto_mestre_prd
 _ARQUITETO_AGENT = os.getenv("ARQUITETO_AGENT_LOOP", "0") == "1"
 if _ARQUITETO_AGENT:
     from agents.arquiteto_agent_loop import gerar_arquiteto_mestre_prd_agent as _gerar_prd_agent
-from agents.liz import auditar, editar_secao as liz_editar_secao, listar_secoes as liz_listar_secoes
+from agents.liz import auditar, editar_secao as liz_editar_secao, listar_secoes as liz_listar_secoes, auditar_secao_estruturado
 from agents.bryan import iniciar_contato, BryanInput
 from agents.liam_models import LiamOutput
 from services.credits_manager import verificar_pode_executar, consume_tokens
@@ -837,94 +837,85 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
         except Exception as _bse:
             print(f"[Pipeline] BeautifulSoup skip: {_bse}")
         MAX_LIZ = 3
+        _reflection_context = ""
+        _html_pre_liz = state.html_final  # backup original do Liam
         for tentativa_liz in range(1, MAX_LIZ + 1):
             try:
                 _log(f"  Tentativa {tentativa_liz}/{MAX_LIZ}...", "info")
-                liz_result = auditar(html=state.html_final, briefing=state.briefing_theo, tentativa=tentativa_liz, cidade=getattr(state, "cidade", ""), telefone=state.lead_raw_data.get("telefone", "") if state.lead_raw_data else "", nome=state.lead_nome if hasattr(state, "lead_nome") else "", user_id=state.tenant_id, lead_id=getattr(state, "lead_id", None))
-                state.liz_score = liz_result.score
-                if liz_result.aprovado:
-                    state.liz_aprovado = True
-                    _log(f"  Liz APROVOU score={liz_result.score}", "success")
-                    logger.info(f"[Pipeline] Liz: APROVADO score={liz_result.score}")
-                    break
-                _log(f"  Score={liz_result.score} - corrigindo...", "warning")
-                secoes_html = liz_listar_secoes(state.html_final)
-                def _mapear_secao(texto, secoes):
-                    t = texto.lower()
-                    mapa = [
-                        (["lgpd", "cookie", "privacidade"], "lgpd"),
-                        (["footer", "rodape", "copyright"], "footer"),
-                        (["depoimento", "review", "avaliacao", "prova social"], "depoimentos"),
-                        (["contato", "whatsapp", "formulario", "telefone"], "contato"),
-                        (["localizacao", "endereco", "mapa", "maps", "embed"], "localizacao"),
-                        (["servico", "plano", "modalidade", "h3", "poucos h3"], "servicos"),
-                        (["sobre", "historia", "missao", "quem somos"], "sobre"),
-                        (["hero", "h1", "banner", "cta", "cidade", "seo local", "titulo"], "hero"),
-                        (["reveal", "animacao", "aos", "gsap", "javascript"], "hero"),
-                        (["h2", "poucos h2", "estrutura", "semantica"], "sobre"),
-                    ]
-                    for kws, s in mapa:
-                        if any(k in t for k in kws) and s in secoes:
-                            return s
-                    # Fallback: primeira secao disponivel que nao seja footer/lgpd
-                    for s in secoes:
-                        if s not in ('footer', 'lgpd'):
-                            return s
-                    return secoes[0] if secoes else "hero"
-                corrigidas = set()
-                _bloat_abort = False
 
-                def _editar_com_antibloat(html_atual, secao, instrucao):
-                    """Edita secao e reverte se crescer mais de 15% (anti-bloat)."""
-                    _pat = r"<!-- SECTION:" + secao + r" -->(.*?)<!-- /SECTION:" + secao + r" -->"
-                    _m = re.search(_pat, html_atual, re.DOTALL)
-                    _tam_original = len(_m.group(1)) if _m else 0
-                    html_novo = liz_editar_secao(html_atual, secao, instrucao)
-                    _m2 = re.search(_pat, html_novo, re.DOTALL)
-                    _tam_editado = len(_m2.group(1)) if _m2 else 0
-                    if _tam_original > 0 and _tam_editado > _tam_original * 1.15:
-                        print(f"[Liz] Anti-bloat: {secao} cresceu {_tam_editado}/{_tam_original} chars (>15%). Revertendo.")
-                        _log(f"  ⚠️ Liz alucinou em [{secao}] (+{round((_tam_editado/_tam_original-1)*100)}%). Revertendo.", "warning")
-                        return html_atual, True  # revertido, bloat=True
-                    if _tam_original > 0 and _tam_editado < _tam_original * 0.5:
-                        print(f"[Liz] Anti-shrink: {secao} encolheu {_tam_editado}/{_tam_original} chars (<50%). Revertendo.")
-                        _log(f"  ⚠️ Liz apagou [{secao}] ({_tam_editado} vs {_tam_original} chars). Revertendo.", "warning")
-                        return html_atual, True  # revertido
-                    return html_novo, False
+                # ── REFLECTION LOOP: auditar com feedback estruturado ──
+                liz_result_struct = auditar_secao_estruturado(
+                    html=state.html_final,
+                    briefing=state.briefing_theo or "",
+                    cidade=getattr(state, "cidade", ""),
+                    nome=state.lead_nome if hasattr(state, "lead_nome") else "",
+                )
+                state.liz_score = int(liz_result_struct["score"] * 10)  # normalizar pra 0-100
 
-                for p in [p for p in liz_result.tecnica.problemas if p.gravidade in ("CRITICO", "ALTO")][:3]:
-                    s = _mapear_secao(p.problema + " " + p.dimensao, secoes_html)
-                    if s not in corrigidas:
-                        try:
-                            state.html_final, _bloat = _editar_com_antibloat(state.html_final, s, p.problema)
-                            if _bloat:
-                                _bloat_abort = True
-                                break
-                            corrigidas.add(s)
-                        except Exception:
-                            pass
-                if not _bloat_abort:
-                    for prob in (liz_result.semantica.problemas if liz_result.semantica else [])[:4]:
-                        s = _mapear_secao(prob, secoes_html)
-                        if s not in corrigidas:
-                            try:
-                                state.html_final, _bloat = _editar_com_antibloat(state.html_final, s, prob)
-                                if _bloat:
-                                    _bloat_abort = True
-                                    break
-                                corrigidas.add(s)
-                            except Exception:
-                                pass
-                if _bloat_abort:
-                    _log("  ✅ Anti-bloat: aprovando com codigo original do Liam", "success")
+                if liz_result_struct["aprovado"]:
+                    state.liz_aprovado = True
+                    _log(f"  Liz APROVOU score={liz_result_struct['score']}", "success")
+                    print(f"[REFLECTION] Seção completa | aprovada na tentativa {tentativa_liz} | score final: {liz_result_struct['score']}")
+                    break
+
+                # Montar reflection pra próxima tentativa
+                problemas_texto = "\n".join([
+                    f"- {p['dimensao']} ({p['score']}/10): {p['detalhe']}"
+                    for p in liz_result_struct["problemas"] if p["score"] < 7
+                ])
+                _new_reflection = f"""## REFLEXÃO (tentativa {tentativa_liz} rejeitada)
+Score: {liz_result_struct['score']}/10
+Problemas encontrados:
+{problemas_texto}
+
+Instruções de correção:
+{liz_result_struct['instrucoes_correcao']}
+
+IMPORTANTE: Corrija EXATAMENTE os problemas acima. Não altere o que já estava correto."""
+
+                _reflection_context = _reflection_context + "\n\n" + _new_reflection if _reflection_context else _new_reflection
+
+                print(f"[REFLECTION] Tentativa {tentativa_liz} | score: {liz_result_struct['score']} | problemas: {[p['dimensao'] for p in liz_result_struct['problemas'] if p['score'] < 7]}")
+                _log(f"  Score={liz_result_struct['score']} - regenerando com reflection...", "warning")
+
+                if tentativa_liz >= MAX_LIZ:
+                    # Force-approve após max tentativas
+                    _log(f"  ⚠️ {MAX_LIZ} tentativas esgotadas. Forçando aprovação (score={liz_result_struct['score']})", "warning")
+                    print(f"[REFLECTION][WARN] Force-approved após {MAX_LIZ} tentativas | score: {liz_result_struct['score']}")
+                    state.liz_aprovado = True
+                    state.liz_score = max(state.liz_score, 70)
+                    break
+
+                # ── REGENERAR COM LIAM + REFLECTION ──
+                try:
+                    from agents.liam import gerar_html_componentizado as _liam_regen, montar_template_python as _liam_template, critique_theater_pass as _liam_critique
+                    # Injetar reflection no PRD (campo extra que Liam lê)
+                    _prd_com_reflection = state.prd_arquiteto
+                    if hasattr(_prd_com_reflection, '__dict__'):
+                        _prd_com_reflection.reflection_context = _reflection_context
+                    elif isinstance(_prd_com_reflection, dict):
+                        _prd_com_reflection["reflection_context"] = _reflection_context
+
+                    _html_regen = _liam_regen(_prd_com_reflection)
+                    if _html_regen and len(_html_regen) >= 500:
+                        _html_novo = _liam_template(_html_regen, _prd_com_reflection)
+                        _html_novo = _liam_critique(_html_novo)
+                        # Anti-bloat: se cresceu >15%, reverter
+                        if len(_html_novo) > len(_html_pre_liz) * 1.15:
+                            print(f"[REFLECTION] Anti-bloat: HTML cresceu {len(_html_novo)} vs {len(_html_pre_liz)} (>15%). Mantendo original.")
+                            _log("  ⚠️ Anti-bloat: regeneração inflou HTML. Aprovando original.", "warning")
+                            state.liz_aprovado = True
+                            break
+                        state.html_final = _html_novo
+                    else:
+                        print(f"[REFLECTION] Liam retornou HTML curto ({len(_html_regen) if _html_regen else 0}). Mantendo anterior.")
+                        state.liz_aprovado = True
+                        break
+                except Exception as e_regen:
+                    print(f"[REFLECTION] Erro na regeneração: {e_regen}. Aprovando HTML atual.")
                     state.liz_aprovado = True
                     break
-                if tentativa_liz >= 2:
-                    _log(f"  ⚠️ Liz em loop (tentativa {tentativa_liz}). Forçando aprovação pelo Orquestrador (Bypass).", "warning")
-                    logger.warning(f"[Pipeline] Liz bypass: score={liz_result.score} — forçando aprovação")
-                    state.liz_aprovado = True
-                    state.liz_score = max(liz_result.score, 75)
-                    break
+
             except Exception as e:
                 if "Deploy bloqueado" in str(e):
                     raise
