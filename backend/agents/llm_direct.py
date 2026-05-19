@@ -279,7 +279,17 @@ def call_claude(system, user, model='opus', max_tokens=4000, temperature=0.7, ag
         except Exception as e:
             print(f"[LLM Direct] ⚠️ Erro ao ativar RAG/Skills para {agent_name}: {e}")
             # Continua sem RAG/Skills se der erro
-    
+
+    # PRD #11: Memory Tiered — injetar memória no system prompt
+    if agent_name:
+        try:
+            from agent_memory import get_memory, gerar_prompt_com_memoria
+            _mem_core, _mem_warm, _mem_nicho = get_memory()
+            if _mem_core and _mem_warm and _mem_nicho:
+                system = gerar_prompt_com_memoria(system, agent_name.lower(), _mem_nicho, _mem_core, _mem_warm)
+        except Exception:
+            pass
+
     # 4. Roteamento automático de modelo por agente
     # Prioridade: DB config > hardcoded map > parâmetro do caller
     _AGENT_MODEL_MAP = {

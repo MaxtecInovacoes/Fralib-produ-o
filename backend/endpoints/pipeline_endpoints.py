@@ -226,6 +226,17 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
     except Exception:
         _trace = None
 
+    # PRD #11: Memory Tiered — agentes aprendem entre gerações
+    try:
+        from agent_memory import CoreMemory, WarmMemory, ColdMemory
+        _memory_core = CoreMemory()
+        _memory_warm = WarmMemory()
+        _memory_cold = ColdMemory()
+    except Exception:
+        _memory_core = None
+        _memory_warm = None
+        _memory_cold = None
+
     _log("PIPELINE v2 - FraLibState Orquestrador", "info")
     _log(f"{state.segmento} em {state.cidade}", "info")
     logger.info(f"[Pipeline] Iniciando: {state.segmento} em {state.cidade}")
@@ -701,6 +712,13 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
             print(f"[ROUTER] Erro (fallback medio): {_router_err}")
             _router = None
             _complexidade = "medio"
+        # PRD #11: Ativar memória no thread pra call_claude injetar automaticamente
+        if _memory_core and _memory_warm:
+            try:
+                from agent_memory import set_memory
+                set_memory(_memory_core, _memory_warm, state.segmento)
+            except Exception:
+                pass
         _progress(3, "Pesquisa de mercado...")
         _log("FASE 3: JINA AI", "info")
         if _ledger: _ledger.registrar_inicio_fase(3, "jina")
@@ -1182,6 +1200,24 @@ IMPORTANTE: Corrija EXATAMENTE os problemas acima. Não altere o que já estava 
             print(formatar_trace_log(_trace))
             salvar_trace(_trace)
 
+        # PRD #11: Memory — salvar cold + promoção periódica
+        if _memory_cold:
+            try:
+                _memory_cold.salvar_run(state.pipeline_id[:8], {
+                    "nicho": state.segmento,
+                    "lead": state.lead_nome,
+                    "tier": state.qualificacao_caio.tier if state.qualificacao_caio else "",
+                    "liz_aprovado": state.liz_aprovado,
+                    "site_url": state.site_url,
+                })
+            except Exception:
+                pass
+        if _memory_warm and _memory_core:
+            try:
+                _memory_warm.promover_para_core(_memory_core)
+            except Exception:
+                pass
+
         # PRD #4: Token Tracking — log + salvar no DB
         try:
             if _token_tracker:
@@ -1198,6 +1234,12 @@ IMPORTANTE: Corrija EXATAMENTE os problemas acima. Não altere o que já estava 
         try:
             from agent_router import set_router
             set_router(None)
+        except Exception:
+            pass
+        # PRD #11: Limpar memória do thread
+        try:
+            from agent_memory import clear_memory
+            clear_memory()
         except Exception:
             pass
 
