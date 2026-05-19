@@ -147,6 +147,129 @@ logger = logging.getLogger('uvicorn')
 logger.addHandler(_sse_handler)
 
 
+@router.get('/cooldown-status')
+async def cooldown_status(db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
+    """Status completo de cooldown, fila e uso para dashboard."""
+    tenant_id = usuario.get("tenant_id", usuario["id"])
+
+    # Plano
+    row = db.execute(text("SELECT plano FROM users WHERE id=:id"), {"id": tenant_id}).fetchone()
+    plano = (row[0] if row else "trial") or "trial"
+    cooldown_secs = _COOLDOWN_POR_PLANO.get(plano, 3600)
+
+    # Último pipeline concluído
+    from datetime import datetime as _dt, timedelta as _td, timezone as _tz
+    last_row = db.execute(text(
+        "SELECT finished_at FROM pipeline_executions WHERE user_id=:uid AND status='completed' ORDER BY finished_at DESC LIMIT 1"
+    ), {"uid": tenant_id}).fetchone()
+    if not last_row or not last_row[0]:
+        last_row = db.execute(text(
+            "SELECT processado_em FROM leads WHERE user_id=:uid AND status='concluido' ORDER BY processado_em DESC LIMIT 1"
+        ), {"uid": tenant_id}).fetchone()
+
+    # Calcular cooldown
+    pode_rodar = True
+    cooldown_info = {"ativo": False, "total_seg": cooldown_secs, "restante_seg": 0, "elapsed_seg": 0, "proximo_em": None, "percentual_completo": 100}
+    if last_row and last_row[0] and cooldown_secs > 0:
+        last_ts = last_row[0]
+        if isinstance(last_ts, str):
+            last_ts = _dt.fromisoformat(last_ts)
+        if last_ts.tzinfo:
+            elapsed = (_dt.now(_tz.utc) - last_ts).total_seconds()
+        else:
+            elapsed = (_dt.now() - last_ts).total_seconds()
+        if elapsed < cooldown_secs:
+            pode_rodar = False
+            restante = int(cooldown_secs - elapsed)
+            cooldown_info = {
+                "ativo": True,
+                "total_seg": cooldown_secs,
+                "restante_seg": restante,
+                "elapsed_seg": int(elapsed),
+                "proximo_em": (_dt.now() + _td(seconds=restante)).isoformat(),
+                "percentual_completo": round(elapsed / cooldown_secs * 100, 1),
+            }
+        else:
+            cooldown_info["elapsed_seg"] = int(elapsed)
+
+    # Fila de leads
+    fila_row = db.execute(text("""
+        SELECT COUNT(*) as total,
+               (SELECT nome FROM leads WHERE user_id=:uid AND status='capturado' ORDER BY score DESC LIMIT 1),
+               (SELECT cidade FROM leads WHERE user_id=:uid AND status='capturado' ORDER BY score DESC LIMIT 1)
+        FROM leads WHERE user_id=:uid AND status='capturado'
+    """), {"uid": tenant_id}).fetchone()
+    fila = {
+        "leads_aguardando": fila_row[0] if fila_row else 0,
+        "proximo_lead_nome": fila_row[1] if fila_row else None,
+        "proximo_lead_cidade": fila_row[2] if fila_row else None,
+        "auto_run_ativo": (fila_row[0] or 0) > 0,
+    }
+
+    # Uso
+    uso_row = db.execute(text("""
+        SELECT
+            COUNT(*) FILTER (WHERE finished_at >= CURRENT_DATE) as hoje,
+            COUNT(*) FILTER (WHERE finished_at >= CURRENT_DATE - INTERVAL '7 days') as semana,
+            COUNT(*) FILTER (WHERE finished_at >= DATE_TRUNC('month', CURRENT_DATE)) as mes,
+            COUNT(*) as total,
+            MAX(finished_at) as ultimo_em
+        FROM pipeline_executions
+        WHERE user_id=:uid AND status='completed'
+    """), {"uid": tenant_id}).fetchone()
+    ultimo_nome_row = db.execute(text(
+        "SELECT lead_nome FROM pipeline_executions WHERE user_id=:uid AND status='completed' ORDER BY finished_at DESC LIMIT 1"
+    ), {"uid": tenant_id}).fetchone()
+    uso = {
+        "sites_hoje": uso_row[0] if uso_row else 0,
+        "sites_semana": uso_row[1] if uso_row else 0,
+        "sites_mes": uso_row[2] if uso_row else 0,
+        "sites_total": uso_row[3] if uso_row else 0,
+        "ultimo_site_em": str(uso_row[4]) if uso_row and uso_row[4] else None,
+        "ultimo_site_nome": ultimo_nome_row[0] if ultimo_nome_row else None,
+    }
+
+    # Upsell
+    _UPSELL_MSGS = {
+        "trial": {"plano_sugerido": "starter", "mensagem_curta": "Starter: R$97/mês — sites ilimitados", "mensagem_longa": "Com o Starter você gera sites ilimitados no automático. Cooldown de 1h entre gerações."},
+        "starter": {"plano_sugerido": "pro", "mensagem_curta": "Pro: cooldown de 30min (metade da espera)", "mensagem_longa": "No Pro o cooldown cai pra 30 minutos. Gere o dobro de sites por dia."},
+        "pro": {"plano_sugerido": "ilimitado", "mensagem_curta": "Ilimitado: zero espera, slot dedicado", "mensagem_longa": "No Ilimitado não tem cooldown. Gere quantos sites quiser, quando quiser."},
+    }
+    mostrar_upsell = cooldown_info["ativo"] or (plano == "trial" and (uso.get("sites_total", 0) >= 1))
+    upsell_data = _UPSELL_MSGS.get(plano)
+    upsell = None
+    if mostrar_upsell and upsell_data:
+        upsell = {
+            "mostrar": True,
+            "plano_atual": plano,
+            **upsell_data,
+            "url": f"/planos?from=cooldown&current={plano}",
+        }
+
+    # Bloqueio (trial esgotado)
+    bloqueio = None
+    if plano == "trial":
+        from services.credits_manager import verificar_pode_executar
+        cred = verificar_pode_executar(db, tenant_id)
+        if not cred.get("pode"):
+            pode_rodar = False
+            bloqueio = {
+                "motivo": "trial_esgotado",
+                "mensagem": cred.get("motivo", "Créditos esgotados"),
+                "creditos_restantes": 0,
+            }
+
+    return {
+        "pode_rodar": pode_rodar,
+        "plano": plano,
+        "cooldown": cooldown_info,
+        "fila": fila,
+        "uso": uso,
+        "upsell": upsell,
+        "bloqueio": bloqueio,
+    }
+
+
 @dataclass
 class FraLibState:
     segmento: str = ""
