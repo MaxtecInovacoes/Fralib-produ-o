@@ -642,3 +642,208 @@ def call_claude_structured(system, user, tool_name, tool_description, input_sche
 
     raise RuntimeError("[LLM Structured] Falhou apos 3 tentativas")
 
+
+# ══════════════════════════════════════════════════════════════════
+# CALL CLAUDE JSON — structured output com parsing robusto
+# ══════════════════════════════════════════════════════════════════
+import re as _re
+
+
+def _strip_markdown_fences(text: str) -> str:
+    """Remove ```json ... ``` fences."""
+    text = text.strip()
+    if text.startswith("```"):
+        text = _re.sub(r"^```\w*\n?", "", text)
+        text = _re.sub(r"\n?```$", "", text)
+    return text.strip()
+
+
+def call_claude_json(
+    system: str,
+    user: str,
+    model: str = "sonnet",
+    max_tokens: int = 4096,
+    temperature: float = 0.5,
+    agent_name: str = None,
+    output_model=None,
+    retries: int = 2,
+) -> dict:
+    """Chama Claude e retorna JSON parseado. Retry automático em parse failure.
+
+    Args:
+        output_model: Pydantic BaseModel class (opcional). Se passado, valida e retorna instância.
+        retries: Tentativas extras em caso de JSON inválido.
+
+    Returns:
+        dict (ou instância Pydantic se output_model passado)
+    """
+    json_instruction = "\n\nResponda EXCLUSIVAMENTE com JSON válido. Sem markdown, sem texto antes ou depois."
+    full_system = system + json_instruction
+
+    last_error = None
+    for attempt in range(1, retries + 2):
+        try:
+            raw = call_claude(
+                system=full_system,
+                user=user,
+                model=model,
+                max_tokens=max_tokens,
+                temperature=temperature,
+                agent_name=agent_name,
+            )
+            clean = _strip_markdown_fences(raw)
+            parsed = json.loads(clean)
+
+            if output_model:
+                return output_model.model_validate(parsed)
+            return parsed
+
+        except (json.JSONDecodeError, Exception) as e:
+            last_error = e
+            if attempt <= retries:
+                print(f"[LLM JSON] Parse falhou (tentativa {attempt}/{retries+1}): {e}")
+                _time.sleep(2 * attempt)
+            else:
+                break
+
+    raise RuntimeError(f"[LLM JSON] JSON parse falhou apos {retries+1} tentativas: {last_error}")
+
+
+# ══════════════════════════════════════════════════════════════════
+# CALL CLAUDE STREAM — streaming com callback (Fase 4)
+# ══════════════════════════════════════════════════════════════════
+def call_claude_stream(
+    system: str,
+    user: str,
+    model: str = "opus",
+    max_tokens: int = 16384,
+    temperature: float = 0.7,
+    agent_name: str = None,
+    on_chunk: callable = None,
+) -> str:
+    """Streaming com callback por chunk. Retorna texto completo ao final."""
+
+    # ── Model routing (simplificado — sem RAG/Skills para streaming) ──
+    _db_config = None
+    if agent_name:
+        _all_configs = _load_agent_configs()
+        _db_config = _all_configs.get(agent_name.lower())
+
+    if _db_config:
+        model_id = _db_config['model_id']
+        if _db_config.get('temperature') is not None:
+            temperature = _db_config['temperature']
+        if _db_config.get('max_tokens') is not None:
+            max_tokens = _db_config['max_tokens']
+    else:
+        model_id = MODEL_MAP.get(model, MODEL_MAP['opus'])
+
+    _api_key, _base, _key_id = _resolve_anthropic()
+
+    # Prompt caching
+    extra_headers = {}
+    if system and len(system) >= 1024:
+        system_payload = [{"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}]
+        extra_headers["anthropic-beta"] = "prompt-caching-2024-07-31"
+    else:
+        system_payload = [{"type": "text", "text": system}] if system else []
+
+    _enforce_call_spacing()
+    client = _create_client(_api_key, _base)
+
+    full_text = ""
+    with client.messages.stream(
+        model=model_id,
+        max_tokens=max_tokens,
+        temperature=temperature,
+        system=system_payload,
+        messages=[{"role": "user", "content": user}],
+        extra_headers=extra_headers if extra_headers else None,
+    ) as stream:
+        for text in stream.text_stream:
+            full_text += text
+            if on_chunk:
+                on_chunk(text)
+
+    # Log usage do stream
+    response = stream.get_final_message()
+    usage = response.usage
+    input_tokens = usage.input_tokens
+    output_tokens = usage.output_tokens
+    cache_read = getattr(usage, 'cache_read_input_tokens', 0) or 0
+    cache_created = getattr(usage, 'cache_creation_input_tokens', 0) or 0
+    if cache_read or cache_created:
+        print(f"[LLM Stream] stop={response.stop_reason} in={input_tokens} out={output_tokens} cache_read={cache_read}")
+    else:
+        print(f"[LLM Stream] stop={response.stop_reason} in={input_tokens} out={output_tokens}")
+    _salvar_uso_llm(model_id, input_tokens, output_tokens, agent_name)
+
+    if _key_id:
+        try:
+            import ia_manager as _ia
+            _ia.mark_success(_key_id)
+        except Exception:
+            pass
+
+    return full_text
+
+
+# ══════════════════════════════════════════════════════════════════
+# CALL CLAUDE CACHED — explicit prompt caching (Fase 5)
+# ══════════════════════════════════════════════════════════════════
+def call_claude_cached(
+    system: str,
+    user: str,
+    model: str = "sonnet",
+    max_tokens: int = 4096,
+    temperature: float = 0.7,
+    agent_name: str = None,
+    cache_user_prefix: str = None,
+) -> str:
+    """Chamada com prompt caching explícito. Cacheia system + opcionalmente prefixo do user.
+
+    Args:
+        cache_user_prefix: Se passado, este texto é cacheado como primeiro bloco do user message.
+    """
+    _api_key, _base, _key_id = _resolve_anthropic()
+
+    model_id = MODEL_MAP.get(model, MODEL_MAP['opus'])
+
+    system_payload = [{"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}]
+
+    if cache_user_prefix:
+        messages_content = [
+            {"type": "text", "text": cache_user_prefix, "cache_control": {"type": "ephemeral"}},
+            {"type": "text", "text": user},
+        ]
+    else:
+        messages_content = user
+
+    extra_headers = {"anthropic-beta": "prompt-caching-2024-07-31"}
+
+    _enforce_call_spacing()
+    client = _create_client(_api_key, _base)
+
+    response = client.messages.create(
+        model=model_id,
+        max_tokens=max_tokens,
+        temperature=temperature,
+        system=system_payload,
+        messages=[{"role": "user", "content": messages_content}],
+        extra_headers=extra_headers,
+    )
+
+    usage = response.usage
+    input_tokens = usage.input_tokens
+    output_tokens = usage.output_tokens
+    cache_read = getattr(usage, 'cache_read_input_tokens', 0) or 0
+    cache_created = getattr(usage, 'cache_creation_input_tokens', 0) or 0
+    print(f"[LLM Cached] in={input_tokens} out={output_tokens} cache_read={cache_read} cache_created={cache_created}")
+    _salvar_uso_llm(model_id, input_tokens, output_tokens, agent_name)
+
+    for block in response.content:
+        if block.type == "text":
+            return block.text
+
+    raise RuntimeError("[LLM Cached] Nenhum bloco text na resposta")
+
