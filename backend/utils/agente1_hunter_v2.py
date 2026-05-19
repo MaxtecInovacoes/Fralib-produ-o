@@ -1,11 +1,14 @@
 """
 Agente 1 - Lead Hunter V2 (COM SCRAPING REAL)
-Captura leads REAIS do Google Maps usando Playwright
+Captura leads REAIS do Google Maps.
+Primary: gosom/google-maps-scraper (REST API, open-source)
+Fallback: Playwright (google_local_scraper.py)
 """
 
 from pydantic import BaseModel, Field, validator
 from typing import Optional, List, Dict, Any
 from utils.google_local_scraper import GoogleLocalScraper as GoogleMapsScraper
+from utils.google_maps_gosom import buscar_gosom, buscar_negocio_gosom
 import asyncio
 import re
 
@@ -262,12 +265,17 @@ async def buscar_lead_google_maps(
     """
     print(f"\n[Hunter V2] Buscando: {nome} em {cidade}...")
 
-    # Scraping do Google Maps
-    async with GoogleMapsScraper(headless=True) as scraper:
-        dados = await scraper.buscar_negocio(nome, cidade)
+    # PRIMARY: gosom REST API
+    dados = await buscar_negocio_gosom(nome, cidade)
+
+    # FALLBACK: Playwright
+    if not dados:
+        print(f"[Hunter V2] Gosom falhou — tentando Playwright...")
+        async with GoogleMapsScraper(headless=True) as scraper:
+            dados = await scraper.buscar_negocio(nome, cidade)
 
     if not dados:
-        print(f"[Hunter V2] ❌ Negócio não encontrado no Google Maps")
+        print(f"[Hunter V2] Negócio não encontrado no Google Maps")
         return None
 
     # Converter para LeadRaw
@@ -465,15 +473,23 @@ async def buscar_leads_google_maps(
     # ── CACHE GLOBAL: verificar se já temos leads cacheados pra este segmento+cidade ──
     cached_leads = _buscar_cache_leads(segmento, cidade, _existentes, limite)
     if cached_leads and len(cached_leads) >= limite:
-        print(f"[Hunter V2] ✅ CACHE HIT: {len(cached_leads)} leads do cache (sem Playwright)")
+        print(f"[Hunter V2] ✅ CACHE HIT: {len(cached_leads)} leads do cache (sem scraping)")
         return cached_leads[:limite]
 
-    scraper = GoogleMapsScraper(headless=True)
-
-    # Buscar cards do Maps — sempre 20+ pra ter margem de filtrar duplicatas
-    # Mas limitar detalhes (reviews, fotos) aos primeiros N não-duplicados
+    # ── PRIMARY: gosom/google-maps-scraper (REST API, open-source) ──
+    cards_raw = None
     _busca_limite = max(20, limite * 4)
-    cards_raw = await scraper.buscar(segmento, cidade, limite=_busca_limite, leads_existentes=_existentes)
+
+    gosom_results = await buscar_gosom(segmento, cidade, limite=_busca_limite)
+    if gosom_results and len(gosom_results) > 0:
+        cards_raw = gosom_results
+        print(f"[Hunter V2] ✅ GOSOM: {len(cards_raw)} leads capturados")
+    else:
+        # ── FALLBACK: Playwright (google_local_scraper.py) ──
+        print(f"[Hunter V2] Gosom indisponível — usando Playwright...")
+        scraper = GoogleMapsScraper(headless=True)
+        cards_raw = await scraper.buscar(segmento, cidade, limite=_busca_limite, leads_existentes=_existentes)
+
     print(f"[Hunter V2] {len(cards_raw)} leads com detalhes capturados")
 
     leads_encontrados = []
