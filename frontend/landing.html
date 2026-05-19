@@ -1165,7 +1165,7 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
   </h1>
 
   <p class="hero-sub">
-    A IA encontra negócios sem site, cria um site profissional personalizado e envia pelo WhatsApp — tudo automático. Sem espera, sem pagamento adiantado, sem confiança no escuro.
+    A IA prospecta, cria o site e envia pelo WhatsApp — tudo automático, sem você mover um dedo.
   </p>
 
   <div class="hero-buttons">
@@ -1268,7 +1268,15 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
         <div class="problema-text">O cliente diz "vou pensar" e nunca mais responde</div>
       </div>
     </div>
-    <p class="section-sub reveal" style="margin-top:32px"><strong style="color:var(--fl-danger)">Resultado: 3h30 jogadas fora. Zero reais no bolso.</strong><br><br>O problema nunca foi o produto. Foi o <span style="color:var(--fl-text)">PROCESSO</span>.</p>
+    <div class="reveal" style="margin-top:40px;text-align:center;padding:32px;background:var(--fl-bg-card);border:1px solid var(--fl-border);border-radius:var(--fl-r-lg);max-width:600px;margin-left:auto;margin-right:auto">
+      <p style="color:var(--fl-text-dim);font-size:12px;font-family:var(--fl-font-mono);margin-bottom:8px">ENQUANTO VOCÊ LIA ISSO:</p>
+      <div style="display:flex;align-items:center;justify-content:center;gap:8px">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--cyan)" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        <span id="pipeline-timer" style="font-family:var(--fl-font-mono);font-size:28px;font-weight:700;color:var(--cyan)">00:00</span>
+      </div>
+      <p style="color:var(--fl-text-muted);font-size:13px;margin-top:8px">um site foi criado e entregue a um lead em potencial</p>
+      <p style="color:var(--fl-text);font-size:15px;font-weight:600;margin-top:16px">O problema nunca foi o produto. Foi o <span style="color:var(--fl-purple-400)">PROCESSO</span>.</p>
+    </div>
   </div>
 </section>
 
@@ -1713,6 +1721,27 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
      ============================================================ -->
 
 <script>
+// === PIPELINE TIMER (simula tempo de geração) ===
+(function(){
+  var el=document.getElementById('pipeline-timer');
+  if(!el)return;
+  var start=Date.now();
+  var target=180;// 3 min simulated
+  function tick(){
+    var elapsed=Math.floor((Date.now()-start)/1000);
+    var sim=Math.min(elapsed*12,target);// accelerated
+    var m=Math.floor(sim/60);
+    var s=sim%60;
+    el.textContent=(m<10?'0'+m:m)+':'+(s<10?'0'+s:s);
+    if(sim<target)requestAnimationFrame(tick);
+    else el.textContent='03:00';
+  }
+  var io=new IntersectionObserver(function(entries){
+    if(entries[0].isIntersecting){start=Date.now();tick();io.disconnect();}
+  },{threshold:0.5});
+  io.observe(el.parentElement.parentElement);
+})();
+
 // === NAV SCROLL ===
 const nav = document.getElementById('navbar');
 window.addEventListener('scroll', () => {
