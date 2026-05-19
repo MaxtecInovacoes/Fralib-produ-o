@@ -2349,9 +2349,9 @@ async def reprocessar_lead(lead_id: str, background_tasks: BackgroundTasks, db: 
         )
         adicionar_log(f"[Pipeline] Reprocessamento enfileirado (job #{job_id})", "info", user_id=tenant_id)
     except Exception as _e:
-        # Fallback: background task
+        print(f"[Reprocessar] Enqueue falhou: {_e}, usando BackgroundTask")
         background_tasks.add_task(executar_pipeline_lead_existente, lead_id, tenant_id, forcar_renovacao=forcar_renovacao)
-    return {"ok": True, "mensagem": f"Lead {lead.nome} na fila para reprocessamento"}
+    return {"ok": True, "mensagem": "Lead marcado para reprocessamento"}
 
 @router.get('/fila-reprocessamento')
 async def fila_reprocessamento(db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
