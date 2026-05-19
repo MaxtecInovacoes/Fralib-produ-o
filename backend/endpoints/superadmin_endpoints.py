@@ -381,3 +381,394 @@ async def get_usage(db: Session = Depends(get_db), user: dict = Depends(require_
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ══════════════════════════════════════════════════════════════════════
+# DASHBOARD CRÍTICO — Métricas de operação, custos, saúde, alertas
+# ══════════════════════════════════════════════════════════════════════
+
+# Preços por 1M tokens (USD)
+_PRECOS = {
+    "opus": {"input": 15.0, "output": 75.0},
+    "claude-opus-4-0-20250514": {"input": 15.0, "output": 75.0},
+    "sonnet": {"input": 3.0, "output": 15.0},
+    "claude-sonnet-4-6-20250514": {"input": 3.0, "output": 15.0},
+    "haiku": {"input": 0.25, "output": 1.25},
+    "claude-haiku-4-5-20251001": {"input": 0.25, "output": 1.25},
+}
+
+def _calcular_custo(modelo: str, input_tokens: int, output_tokens: int) -> float:
+    modelo_lower = (modelo or "").lower()
+    precos = None
+    for key, val in _PRECOS.items():
+        if key in modelo_lower:
+            precos = val
+            break
+    if not precos:
+        precos = _PRECOS["sonnet"]
+    return (input_tokens * precos["input"] + output_tokens * precos["output"]) / 1_000_000
+
+
+@router.get("/dashboard/overview")
+async def dashboard_overview(db: Session = Depends(get_db), user: dict = Depends(require_superadmin)):
+    """KPIs principais: 24h, 7d, 30d"""
+    try:
+        exec_row = db.execute(text("""
+            SELECT
+                COUNT(*) FILTER (WHERE finished_at >= NOW() - INTERVAL '24 hours' AND status='completed') as sites_24h,
+                COUNT(*) FILTER (WHERE finished_at >= NOW() - INTERVAL '7 days' AND status='completed') as sites_7d,
+                COUNT(*) FILTER (WHERE finished_at >= NOW() - INTERVAL '30 days' AND status='completed') as sites_30d,
+                COUNT(*) FILTER (WHERE finished_at >= NOW() - INTERVAL '24 hours') as total_24h,
+                COUNT(*) FILTER (WHERE finished_at >= NOW() - INTERVAL '24 hours' AND status='failed') as falhas_24h
+            FROM pipeline_executions
+        """)).fetchone()
+
+        custo_row = db.execute(text("""
+            SELECT
+                COALESCE(SUM(custo_total_usd) FILTER (WHERE created_at >= NOW() - INTERVAL '24 hours'), 0) as custo_24h,
+                COALESCE(SUM(custo_total_usd) FILTER (WHERE created_at >= NOW() - INTERVAL '7 days'), 0) as custo_7d,
+                COALESCE(SUM(custo_total_usd) FILTER (WHERE created_at >= NOW() - INTERVAL '30 days'), 0) as custo_30d,
+                COALESCE(AVG(custo_total_usd) FILTER (WHERE created_at >= NOW() - INTERVAL '7 days'), 0) as custo_medio_site,
+                COALESCE(AVG(duracao_s) FILTER (WHERE created_at >= NOW() - INTERVAL '7 days'), 0) as duracao_media_s
+            FROM pipeline_token_usage
+        """)).fetchone()
+
+        fila_row = db.execute(text("""
+            SELECT
+                COUNT(*) FILTER (WHERE status = 'pending') as pendentes,
+                COUNT(*) FILTER (WHERE status = 'running') as rodando,
+                COUNT(*) FILTER (WHERE status = 'failed_permanent') as dead_letter
+            FROM jobs WHERE created_at > NOW() - INTERVAL '7 days'
+        """)).fetchone()
+
+        total_24h = exec_row[3] or 1
+        taxa_sucesso = round((exec_row[0] or 0) / total_24h * 100, 1) if total_24h > 0 else 0
+
+        return {
+            "sites": {"24h": exec_row[0] or 0, "7d": exec_row[1] or 0, "30d": exec_row[2] or 0},
+            "taxa_sucesso_24h": taxa_sucesso,
+            "falhas_24h": exec_row[4] or 0,
+            "custo": {
+                "24h": round(custo_row[0] or 0, 2),
+                "7d": round(custo_row[1] or 0, 2),
+                "30d": round(custo_row[2] or 0, 2),
+                "medio_por_site": round(custo_row[3] or 0, 3),
+            },
+            "duracao_media_s": round(custo_row[4] or 0, 1),
+            "fila": {
+                "pendentes": fila_row[0] or 0,
+                "rodando": fila_row[1] or 0,
+                "dead_letter": fila_row[2] or 0,
+            },
+        }
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+
+@router.get("/dashboard/costs")
+async def dashboard_costs(db: Session = Depends(get_db), user: dict = Depends(require_superadmin),
+                          period: str = "7d", group_by: str = "day"):
+    """Breakdown de custos. group_by: day, agent, model, segmento"""
+    PERIODS = {"24h": 24, "7d": 168, "30d": 720}
+    hours = PERIODS.get(period, 168)
+
+    try:
+        if group_by == "day":
+            rows = db.execute(text("""
+                SELECT DATE(created_at) as dia, COUNT(*) as runs,
+                       ROUND(SUM(custo_total_usd)::numeric, 3) as custo,
+                       ROUND(AVG(custo_total_usd)::numeric, 3) as custo_medio
+                FROM pipeline_token_usage
+                WHERE created_at > NOW() - (:hours || ' hours')::interval
+                GROUP BY dia ORDER BY dia
+            """), {"hours": hours}).fetchall()
+            return {"group_by": "day", "data": [
+                {"dia": str(r[0]), "runs": r[1], "custo": float(r[2] or 0), "custo_medio": float(r[3] or 0)} for r in rows
+            ]}
+
+        if group_by == "agent":
+            rows = db.execute(text("""
+                SELECT key as agente,
+                       COUNT(*) as runs,
+                       ROUND(SUM((value->>'custo_usd')::float)::numeric, 4) as custo,
+                       ROUND(SUM((value->>'input_tokens')::int)::numeric, 0) as input_tokens,
+                       ROUND(SUM((value->>'output_tokens')::int)::numeric, 0) as output_tokens
+                FROM pipeline_token_usage, jsonb_each(por_agente)
+                WHERE created_at > NOW() - (:hours || ' hours')::interval
+                GROUP BY key ORDER BY custo DESC
+            """), {"hours": hours}).fetchall()
+            return {"group_by": "agent", "data": [
+                {"agente": r[0], "runs": r[1], "custo": float(r[2] or 0),
+                 "input_tokens": int(r[3] or 0), "output_tokens": int(r[4] or 0)} for r in rows
+            ]}
+
+        if group_by == "model":
+            rows = db.execute(text("""
+                SELECT modelo, COUNT(*) as calls,
+                       SUM(input_tokens) as input_t, SUM(output_tokens) as output_t
+                FROM llm_usage
+                WHERE criado_em > NOW() - (:hours || ' hours')::interval
+                GROUP BY modelo ORDER BY input_t DESC
+            """), {"hours": hours}).fetchall()
+            data = []
+            for r in rows:
+                custo = _calcular_custo(r[0], r[2] or 0, r[3] or 0)
+                data.append({"modelo": r[0], "calls": r[1], "input_tokens": r[2] or 0,
+                             "output_tokens": r[3] or 0, "custo_usd": round(custo, 3)})
+            return {"group_by": "model", "data": data}
+
+        if group_by == "segmento":
+            rows = db.execute(text("""
+                SELECT nicho, COUNT(*) as runs,
+                       ROUND(SUM(custo_total_usd)::numeric, 3) as custo,
+                       ROUND(AVG(custo_total_usd)::numeric, 3) as custo_medio
+                FROM pipeline_token_usage
+                WHERE created_at > NOW() - (:hours || ' hours')::interval AND nicho IS NOT NULL
+                GROUP BY nicho ORDER BY custo DESC
+            """), {"hours": hours}).fetchall()
+            return {"group_by": "segmento", "data": [
+                {"segmento": r[0], "runs": r[1], "custo": float(r[2] or 0), "custo_medio": float(r[3] or 0)} for r in rows
+            ]}
+
+        return {"error": "group_by invalido. Use: day, agent, model, segmento"}
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+
+@router.get("/dashboard/costs/projection")
+async def costs_projection(db: Session = Depends(get_db), user: dict = Depends(require_superadmin)):
+    """Projeção de custo mensal baseado nos últimos 7 dias."""
+    try:
+        row = db.execute(text("""
+            SELECT COALESCE(SUM(custo_total_usd), 0) as custo_7d, COUNT(*) as runs_7d
+            FROM pipeline_token_usage WHERE created_at > NOW() - INTERVAL '7 days'
+        """)).fetchone()
+        custo_7d = float(row[0] or 0)
+        runs_7d = row[1] or 0
+        custo_diario = custo_7d / 7
+        return {
+            "custo_7d": round(custo_7d, 2),
+            "custo_diario_medio": round(custo_diario, 2),
+            "projecao_mensal": round(custo_diario * 30, 2),
+            "runs_diario_medio": round(runs_7d / 7, 1),
+            "projecao_runs_mensal": round(runs_7d / 7 * 30, 0),
+        }
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+
+@router.get("/dashboard/pipeline")
+async def dashboard_pipeline(db: Session = Depends(get_db), user: dict = Depends(require_superadmin),
+                             period: str = "7d"):
+    """Performance do pipeline: taxa sucesso, falhas por fase, tempo por fase."""
+    PERIODS = {"24h": 24, "7d": 168, "30d": 720}
+    hours = PERIODS.get(period, 168)
+
+    try:
+        status_row = db.execute(text("""
+            SELECT COUNT(*) as total,
+                   COUNT(*) FILTER (WHERE status='completed') as sucesso,
+                   COUNT(*) FILTER (WHERE status='failed') as falhas
+            FROM pipeline_executions
+            WHERE started_at > NOW() - (:hours || ' hours')::interval
+        """), {"hours": hours}).fetchone()
+
+        falhas_fase = db.execute(text("""
+            SELECT fase, COUNT(*) as total
+            FROM pipeline_failures
+            WHERE created_at > NOW() - (:hours || ' hours')::interval
+            GROUP BY fase ORDER BY total DESC
+        """), {"hours": hours}).fetchall()
+
+        tempo_fase = db.execute(text("""
+            SELECT s.value->>'agente' as agente,
+                   ROUND(AVG((s.value->>'duracao_ms')::float / 1000)::numeric, 1) as media_s,
+                   COUNT(*) as chamadas
+            FROM pipeline_traces, jsonb_array_elements(spans_json) as s
+            WHERE created_at > NOW() - (:hours || ' hours')::interval
+              AND s.value->>'duracao_ms' IS NOT NULL
+            GROUP BY agente ORDER BY media_s DESC
+        """), {"hours": hours}).fetchall()
+
+        total = status_row[0] or 1
+        return {
+            "total_runs": status_row[0] or 0,
+            "sucesso": status_row[1] or 0,
+            "falhas": status_row[2] or 0,
+            "taxa_sucesso": round((status_row[1] or 0) / total * 100, 1),
+            "falhas_por_fase": [{"fase": r[0] or "unknown", "total": r[1]} for r in falhas_fase],
+            "tempo_por_fase": [{"agente": r[0] or "unknown", "media_s": float(r[1] or 0), "chamadas": r[2]} for r in tempo_fase],
+        }
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+
+@router.get("/dashboard/health")
+async def dashboard_health(db: Session = Depends(get_db), user: dict = Depends(require_superadmin)):
+    """Status de saúde de todos os serviços."""
+    health = {}
+
+    try:
+        pg_conns = db.execute(text("SELECT COUNT(*) FROM pg_stat_activity WHERE state='active'")).scalar()
+        health["postgres"] = {"status": "up", "connections_active": pg_conns}
+    except Exception:
+        health["postgres"] = {"status": "down"}
+
+    try:
+        workers_row = db.execute(text("""
+            SELECT COUNT(DISTINCT worker_id) FROM jobs
+            WHERE status='running' AND worker_heartbeat > NOW() - INTERVAL '2 minutes'
+        """)).scalar()
+        health["workers"] = {"status": "up" if workers_row > 0 else "degraded", "active": workers_row or 0}
+    except Exception:
+        health["workers"] = {"status": "unknown"}
+
+    try:
+        fila = db.execute(text("""
+            SELECT COUNT(*) FILTER (WHERE status='pending') as pending,
+                   COUNT(*) FILTER (WHERE status='running') as running,
+                   COUNT(*) FILTER (WHERE status='failed_permanent' AND created_at > NOW() - INTERVAL '24 hours') as failed_24h
+            FROM jobs
+        """)).fetchone()
+        health["queue"] = {"pending": fila[0] or 0, "running": fila[1] or 0, "failed_24h": fila[2] or 0}
+    except Exception:
+        health["queue"] = {"status": "unknown"}
+
+    try:
+        import psutil
+        health["system"] = {
+            "cpu_percent": psutil.cpu_percent(interval=0.5),
+            "ram_percent": psutil.virtual_memory().percent,
+            "disk_percent": psutil.disk_usage('/').percent,
+        }
+    except Exception:
+        health["system"] = {"cpu_percent": None, "ram_percent": None, "disk_percent": None}
+
+    return health
+
+
+@router.get("/dashboard/alerts")
+async def dashboard_alerts(db: Session = Depends(get_db), user: dict = Depends(require_superadmin)):
+    """Alertas ativos baseados em regras."""
+    alerts = []
+
+    try:
+        custo_hoje = db.execute(text(
+            "SELECT COALESCE(SUM(custo_total_usd), 0) FROM pipeline_token_usage WHERE created_at >= CURRENT_DATE"
+        )).scalar() or 0
+        if custo_hoje > 20:
+            alerts.append({"severity": "warning", "rule": "custo_diario_alto",
+                           "message": f"Custo hoje: ${custo_hoje:.2f} (limite: $20)", "value": round(custo_hoje, 2)})
+
+        falhas_recentes = db.execute(text("""
+            SELECT fase, COUNT(*) as total FROM pipeline_failures
+            WHERE created_at > NOW() - INTERVAL '1 hour'
+            GROUP BY fase HAVING COUNT(*) >= 3
+        """)).fetchall()
+        for r in falhas_recentes:
+            alerts.append({"severity": "critical", "rule": "falhas_consecutivas",
+                           "message": f"3+ falhas na fase '{r[0]}' na ultima hora", "fase": r[0], "total": r[1]})
+
+        taxa_row = db.execute(text("""
+            SELECT COUNT(*) as total, COUNT(*) FILTER (WHERE status='completed') as ok
+            FROM pipeline_executions WHERE started_at > NOW() - INTERVAL '1 hour'
+        """)).fetchone()
+        if taxa_row and taxa_row[0] >= 3:
+            taxa = (taxa_row[1] or 0) / taxa_row[0] * 100
+            if taxa < 70:
+                alerts.append({"severity": "warning", "rule": "taxa_sucesso_baixa",
+                               "message": f"Taxa sucesso ultima hora: {taxa:.0f}%", "value": round(taxa, 1)})
+
+        workers_alive = db.execute(text("""
+            SELECT COUNT(DISTINCT worker_id) FROM jobs
+            WHERE status='running' AND worker_heartbeat > NOW() - INTERVAL '2 minutes'
+        """)).scalar() or 0
+        if workers_alive == 0:
+            pending = db.execute(text("SELECT COUNT(*) FROM jobs WHERE status='pending'")).scalar() or 0
+            if pending > 0:
+                alerts.append({"severity": "critical", "rule": "workers_down",
+                               "message": f"Nenhum worker ativo com {pending} jobs pendentes"})
+
+        try:
+            import psutil
+            disk = psutil.disk_usage('/').percent
+            if disk > 90:
+                alerts.append({"severity": "warning", "rule": "disk_alto",
+                               "message": f"Disco em {disk:.0f}%", "value": disk})
+        except Exception:
+            pass
+
+    except Exception as e:
+        alerts.append({"severity": "error", "rule": "alert_engine_error", "message": str(e)})
+
+    return {"alerts": alerts, "total": len(alerts), "critical": sum(1 for a in alerts if a["severity"] == "critical")}
+
+
+@router.get("/dashboard/jobs/failed")
+async def dashboard_jobs_failed(db: Session = Depends(get_db), user: dict = Depends(require_superadmin),
+                                limit: int = 20):
+    """Jobs falhados com detalhes para replay."""
+    try:
+        rows = db.execute(text("""
+            SELECT pf.id, pf.job_id, pf.lead_nome, pf.fase, pf.mensagem_amigavel,
+                   pf.erro_tecnico, pf.tentativas_automaticas, pf.created_at, pf.tenant_id, u.email
+            FROM pipeline_failures pf LEFT JOIN users u ON u.id = pf.tenant_id
+            ORDER BY pf.created_at DESC LIMIT :limit
+        """), {"limit": limit}).fetchall()
+        return {"jobs": [
+            {"id": r[0], "job_id": r[1], "lead_nome": r[2], "fase": r[3],
+             "mensagem": r[4], "erro": (r[5] or "")[:200], "tentativas": r[6],
+             "created_at": str(r[7]), "tenant_id": r[8], "email": r[9]}
+            for r in rows
+        ]}
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+
+@router.post("/dashboard/jobs/{job_id}/replay")
+async def replay_job(job_id: int, db: Session = Depends(get_db), user: dict = Depends(require_superadmin),
+                     request: Request = None):
+    """Reprocessar job falhado — volta pra fila como pending."""
+    try:
+        job = db.execute(text("SELECT id, tipo, payload, tenant_id FROM jobs WHERE id = :id"), {"id": job_id}).fetchone()
+        if not job:
+            raise HTTPException(404, "Job nao encontrado")
+        db.execute(text("""
+            UPDATE jobs SET status='pending', attempts=0, last_error=NULL,
+                           next_retry_at=NOW(), worker_id=NULL, worker_heartbeat=NULL
+            WHERE id = :id
+        """), {"id": job_id})
+        db.commit()
+        _audit(db, user, "replay_job", job[3], target_id=job_id, request=request)
+        return {"ok": True, "message": f"Job #{job_id} re-enfileirado"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+
+@router.post("/dashboard/queue/pause")
+async def pause_queue(db: Session = Depends(get_db), user: dict = Depends(require_superadmin), request: Request = None):
+    """Pausa fila — adia todos pending em 24h."""
+    try:
+        db.execute(text("""
+            UPDATE jobs SET next_retry_at = NOW() + INTERVAL '24 hours'
+            WHERE status='pending' AND next_retry_at <= NOW()
+        """))
+        db.commit()
+        _audit(db, user, "pause_queue", None, request=request)
+        return {"ok": True, "message": "Fila pausada (jobs adiados 24h)"}
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+
+@router.post("/dashboard/queue/resume")
+async def resume_queue(db: Session = Depends(get_db), user: dict = Depends(require_superadmin), request: Request = None):
+    """Retoma fila — libera jobs adiados."""
+    try:
+        db.execute(text("UPDATE jobs SET next_retry_at = NOW() WHERE status='pending' AND next_retry_at > NOW()"))
+        db.commit()
+        _audit(db, user, "resume_queue", None, request=request)
+        return {"ok": True, "message": "Fila retomada"}
+    except Exception as e:
+        raise HTTPException(500, str(e))
