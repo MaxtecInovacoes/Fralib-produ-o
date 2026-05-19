@@ -983,14 +983,33 @@ def gerar_html_componentizado(prd):
 
         print("[Liam] Gerando " + nome_s + " (layout: " + tipo_layout + ")...")
         try:
-            resposta_secao = call_claude(
-                system=system_liam,
-                user=prompt_secao,
-                model=getattr(_thread_local, 'model', _liam_model),
-                max_tokens=8000,
-                temperature=0.4,
-                agent_name=None,
-            )
+            # PRD #12: MoA — Mixture of Agents pra hero (leads médios/complexos)
+            _moa_result = None
+            if nome_s.lower() == "hero":
+                try:
+                    from agent_router import get_router
+                    _r = get_router()
+                    _compl = _r.complexidade if _r else "simples"
+                    if _compl in ("medio", "complexo"):
+                        from liam_moa import gerar_hero_moa
+                        _prd_hero = s_dict if isinstance(s_dict, dict) else {}
+                        _fotos_moa = fotos if fotos else []
+                        _tokens_str = str(cores)[:500] if cores else ""
+                        _moa_result = gerar_hero_moa(_prd_hero, _tokens_str, _fotos_moa, _compl)
+                except Exception as _moa_err:
+                    print(f"[MOA] Erro (fallback normal): {_moa_err}")
+
+            if _moa_result and len(_moa_result) > 200:
+                resposta_secao = _moa_result
+            else:
+                resposta_secao = call_claude(
+                    system=system_liam,
+                    user=prompt_secao,
+                    model=getattr(_thread_local, 'model', _liam_model),
+                    max_tokens=8000,
+                    temperature=0.4,
+                    agent_name=None,
+                )
             # Auto-Continue: se secao truncada, continuar de onde parou
             _auto_continue = 0
             while "</section>" not in resposta_secao[-500:].lower() and _auto_continue < 2:
