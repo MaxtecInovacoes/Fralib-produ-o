@@ -637,7 +637,7 @@ async def dashboard_health(db: Session = Depends(get_db), user: dict = Depends(r
     try:
         import psutil
         health["system"] = {
-            "cpu_percent": psutil.cpu_percent(interval=0.5),
+            "cpu_percent": psutil.cpu_percent(interval=None),
             "ram_percent": psutil.virtual_memory().percent,
             "disk_percent": psutil.disk_usage('/').percent,
         }
