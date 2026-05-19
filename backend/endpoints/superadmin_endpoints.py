@@ -438,7 +438,7 @@ async def dashboard_overview(db: Session = Depends(get_db), user: dict = Depends
                 COUNT(*) FILTER (WHERE status = 'pending') as pendentes,
                 COUNT(*) FILTER (WHERE status = 'running') as rodando,
                 COUNT(*) FILTER (WHERE status = 'failed_permanent') as dead_letter
-            FROM jobs WHERE created_at > NOW() - INTERVAL '7 days'
+            FROM jobs WHERE criado_em > NOW() - INTERVAL '7 days'
         """)).fetchone()
 
         total_24h = exec_row[3] or 1
@@ -576,7 +576,7 @@ async def dashboard_pipeline(db: Session = Depends(get_db), user: dict = Depends
         falhas_fase = db.execute(text("""
             SELECT fase, COUNT(*) as total
             FROM pipeline_failures
-            WHERE created_at > NOW() - (:hours || ' hours')::interval
+            WHERE criado_em > NOW() - (:hours || ' hours')::interval
             GROUP BY fase ORDER BY total DESC
         """), {"hours": hours}).fetchall()
 
@@ -627,7 +627,7 @@ async def dashboard_health(db: Session = Depends(get_db), user: dict = Depends(r
         fila = db.execute(text("""
             SELECT COUNT(*) FILTER (WHERE status='pending') as pending,
                    COUNT(*) FILTER (WHERE status='running') as running,
-                   COUNT(*) FILTER (WHERE status='failed_permanent' AND created_at > NOW() - INTERVAL '24 hours') as failed_24h
+                   COUNT(*) FILTER (WHERE status='failed_permanent' AND criado_em > NOW() - INTERVAL '24 hours') as failed_24h
             FROM jobs
         """)).fetchone()
         health["queue"] = {"pending": fila[0] or 0, "running": fila[1] or 0, "failed_24h": fila[2] or 0}
@@ -662,7 +662,7 @@ async def dashboard_alerts(db: Session = Depends(get_db), user: dict = Depends(r
 
         falhas_recentes = db.execute(text("""
             SELECT fase, COUNT(*) as total FROM pipeline_failures
-            WHERE created_at > NOW() - INTERVAL '1 hour'
+            WHERE criado_em > NOW() - INTERVAL '1 hour'
             GROUP BY fase HAVING COUNT(*) >= 3
         """)).fetchall()
         for r in falhas_recentes:
@@ -711,9 +711,9 @@ async def dashboard_jobs_failed(db: Session = Depends(get_db), user: dict = Depe
     try:
         rows = db.execute(text("""
             SELECT pf.id, pf.job_id, pf.lead_nome, pf.fase, pf.mensagem_amigavel,
-                   pf.erro_tecnico, pf.tentativas_automaticas, pf.created_at, pf.tenant_id, u.email
+                   pf.erro_tecnico, pf.tentativas_automaticas, pf.criado_em, pf.tenant_id, u.email
             FROM pipeline_failures pf LEFT JOIN users u ON u.id = pf.tenant_id
-            ORDER BY pf.created_at DESC LIMIT :limit
+            ORDER BY pf.criado_em DESC LIMIT :limit
         """), {"limit": limit}).fetchall()
         return {"jobs": [
             {"id": r[0], "job_id": r[1], "lead_nome": r[2], "fase": r[3],
