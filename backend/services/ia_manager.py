@@ -152,6 +152,8 @@ def mark_success(key_id: Optional[int]) -> None:
 
 def mark_failure(key_id: Optional[int], error: str, cooldown_seconds: int = 15) -> None:
     if not key_id:
+        # Fallback .env — gravar cooldown global
+        set_global_cooldown(cooldown_seconds)
         return
     error_short = (error or '')[:500]
     try:
@@ -171,6 +173,46 @@ def mark_failure(key_id: Optional[int], error: str, cooldown_seconds: int = 15) 
             conn.commit()
     except Exception as e:
         print(f'[ia_manager] mark_failure falhou key_id={key_id}: {e}')
+
+
+def set_global_cooldown(seconds: int) -> None:
+    """Grava cooldown global para quando usa key do .env (sem key_id)."""
+    if seconds < 15:
+        return
+    try:
+        with _connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    INSERT INTO app_settings (key, value)
+                    VALUES ('global_cooldown_until', (NOW() + (%s || ' seconds')::interval)::text)
+                    ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value
+                """, (str(int(seconds)),))
+            conn.commit()
+        print(f'[ia_manager] Global cooldown setado: {seconds}s')
+    except Exception as e:
+        # Tabela pode não existir — criar
+        if 'app_settings' in str(e) or 'relation' in str(e):
+            try:
+                with _connect() as conn:
+                    with conn.cursor() as cur:
+                        cur.execute("""
+                            CREATE TABLE IF NOT EXISTS app_settings (
+                                key VARCHAR(100) PRIMARY KEY,
+                                value TEXT NOT NULL,
+                                updated_at TIMESTAMP DEFAULT NOW()
+                            )
+                        """)
+                        cur.execute("""
+                            INSERT INTO app_settings (key, value)
+                            VALUES ('global_cooldown_until', (NOW() + (%s || ' seconds')::interval)::text)
+                            ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value
+                        """, (str(int(seconds)),))
+                    conn.commit()
+                print(f'[ia_manager] Global cooldown setado (tabela criada): {seconds}s')
+            except Exception as e2:
+                print(f'[ia_manager] set_global_cooldown falhou: {e2}')
+        else:
+            print(f'[ia_manager] set_global_cooldown falhou: {e}')
 
 
 def raise_alert(tipo: str, key_id: Optional[int], mensagem: str,
@@ -249,33 +291,54 @@ TENANT_DAILY_LIMITS = {
 def is_globally_cooled_down() -> tuple:
     """Retorna (em_cooldown: bool, segundos_restantes: int).
     Checa se TODAS as keys estão em cooldown (circuit breaker global).
+    Funciona tanto com keys na tabela quanto com fallback .env.
     """
     try:
         with _connect() as conn:
             with conn.cursor() as cur:
+                # Primeiro: checar tabela provider_keys
                 cur.execute("""
-                    SELECT EXTRACT(EPOCH FROM (cooldown_until - NOW()))::int as remaining
-                    FROM provider_keys
+                    SELECT COUNT(*) FROM provider_keys
                     WHERE provider = 'anthropic' AND enabled = TRUE
-                      AND cooldown_until > NOW()
-                    ORDER BY cooldown_until DESC LIMIT 1
                 """)
-                row = cur.fetchone()
-                if row and row[0] and row[0] > 0:
-                    # Verificar se existe alguma key SAUDAVEL (sem cooldown)
+                total_keys = cur.fetchone()[0] or 0
+
+                if total_keys > 0:
+                    # Tem keys na tabela — checar se alguma está saudável
                     cur.execute("""
                         SELECT COUNT(*) FROM provider_keys
                         WHERE provider = 'anthropic' AND enabled = TRUE
                           AND (cooldown_until IS NULL OR cooldown_until < NOW())
                     """)
-                    healthy = cur.fetchone()
-                    if healthy and healthy[0] > 0:
-                        return (False, 0)  # Tem key saudável disponível
-                    return (True, row[0])
-        return (False, 0)
+                    healthy = cur.fetchone()[0] or 0
+                    if healthy > 0:
+                        return (False, 0)
+                    # Todas em cooldown — pegar o maior cooldown
+                    cur.execute("""
+                        SELECT EXTRACT(EPOCH FROM (cooldown_until - NOW()))::int
+                        FROM provider_keys
+                        WHERE provider = 'anthropic' AND enabled = TRUE
+                        ORDER BY cooldown_until DESC LIMIT 1
+                    """)
+                    row = cur.fetchone()
+                    return (True, row[0]) if row and row[0] and row[0] > 0 else (False, 0)
+                else:
+                    # Sem keys na tabela — checar cooldown global via tabela auxiliar
+                    cur.execute("""
+                        SELECT EXTRACT(EPOCH FROM (value::timestamp - NOW()))::int
+                        FROM app_settings
+                        WHERE key = 'global_cooldown_until' AND value::timestamp > NOW()
+                    """)
+                    row = cur.fetchone()
+                    if row and row[0] and row[0] > 0:
+                        return (True, row[0])
+                    return (False, 0)
     except Exception as e:
+        # Tabela app_settings pode não existir — ignorar
+        if 'app_settings' in str(e):
+            return (False, 0)
         print(f'[ia_manager] is_globally_cooled_down erro: {e}')
-        return (False, 0)  # Na dúvida, não bloqueia
+        return (False, 0)
 
 
 def check_daily_budget() -> tuple:
