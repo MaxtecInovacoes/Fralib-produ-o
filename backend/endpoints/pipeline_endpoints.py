@@ -2347,7 +2347,12 @@ async def reprocessar_lead(lead_id: str, background_tasks: BackgroundTasks, db: 
             payload={**config_reproc},
             tenant_id=tenant_id, max_attempts=3, priority=1,
         )
-        adicionar_log(f"[Pipeline] Reprocessamento enfileirado (job #{job_id})", "info", user_id=tenant_id)
+        print(f"[Reprocessar] enqueue retornou job_id={job_id}")
+        if job_id:
+            adicionar_log(f"[Pipeline] Reprocessamento enfileirado (job #{job_id})", "info", user_id=tenant_id)
+        else:
+            print(f"[Reprocessar] enqueue retornou None — usando BackgroundTask")
+            background_tasks.add_task(executar_pipeline_lead_existente, lead_id, tenant_id, forcar_renovacao=forcar_renovacao)
     except Exception as _e:
         print(f"[Reprocessar] Enqueue falhou: {_e}, usando BackgroundTask")
         background_tasks.add_task(executar_pipeline_lead_existente, lead_id, tenant_id, forcar_renovacao=forcar_renovacao)
