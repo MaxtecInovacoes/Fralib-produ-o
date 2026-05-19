@@ -233,14 +233,34 @@ async def _process_one(job: dict) -> None:
             job_queue.mark_success(db, job_id)
             log.info(f"[{trace_id}] job {job_id} concluido")
         else:
-            # Degradação graceful: se foi rate limit, re-enfileira com delay maior
-            is_rate_limit = mensagem and ("rate limit" in mensagem.lower() or "limite de uso" in mensagem.lower())
+            # Degradação graceful: se foi rate limit ou budget, re-enfileira com delay inteligente
+            _msg_lower = (mensagem or "").lower()
+            is_rate_limit = "rate limit" in _msg_lower or "limite de uso" in _msg_lower or "429" in _msg_lower
+            is_budget = "budget" in _msg_lower or "limite diário" in _msg_lower or "tokens esgotado" in _msg_lower
+
             if is_rate_limit:
-                # Espera proporcional à tentativa: 60s, 120s, 180s...
-                delay = 60 * job["attempts"]
+                # Extrair cooldown real do erro (ex: "cooldown 60s" ou "resetado em: 35min")
+                import re as _re_worker
+                _cd_match = _re_worker.search(r'(\d+)\s*(?:min|m)', mensagem or '')
+                _cd_sec_match = _re_worker.search(r'(\d+)\s*s', mensagem or '')
+                if _cd_match:
+                    delay = int(_cd_match.group(1)) * 60 + 60  # minutos + margem
+                elif _cd_sec_match and int(_cd_sec_match.group(1)) > 30:
+                    delay = int(_cd_sec_match.group(1)) + 30
+                else:
+                    delay = min(120 * job["attempts"], 600)  # max 10min
                 log.warning(f"[{trace_id}] job {job_id} rate-limited — re-enfileirando com delay {delay}s")
                 status = job_queue.mark_failure(
                     db, job_id, error=f"Rate limit — retry em {delay}s", fase=fase,
+                    retriable=True, delay_seconds=delay,
+                    lead_nome=(job["payload"] or {}).get("nome"),
+                )
+            elif is_budget:
+                # Budget esgotado — delay longo (1h), não ficar tentando
+                delay = 3600
+                log.warning(f"[{trace_id}] job {job_id} budget esgotado — retry em {delay}s")
+                status = job_queue.mark_failure(
+                    db, job_id, error=f"Budget esgotado — retry em 1h", fase=fase,
                     retriable=True, delay_seconds=delay,
                     lead_nome=(job["payload"] or {}).get("nome"),
                 )

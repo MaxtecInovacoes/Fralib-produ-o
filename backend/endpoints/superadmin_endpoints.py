@@ -704,6 +704,16 @@ async def dashboard_alerts(db: Session = Depends(get_db), user: dict = Depends(r
     return {"alerts": alerts, "total": len(alerts), "critical": sum(1 for a in alerts if a["severity"] == "critical")}
 
 
+@router.get("/dashboard/rate-limits")
+async def dashboard_rate_limits(user: dict = Depends(require_superadmin)):
+    """Status completo do rate limiting: budget, keys, calls/min, top tenants."""
+    try:
+        import ia_manager
+        return ia_manager.get_rate_limit_status()
+    except Exception as e:
+        raise HTTPException(500, detail=f"Erro ao consultar rate limits: {e}")
+
+
 @router.get("/dashboard/jobs/failed")
 async def dashboard_jobs_failed(db: Session = Depends(get_db), user: dict = Depends(require_superadmin),
                                 limit: int = 20):

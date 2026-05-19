@@ -230,3 +230,177 @@ def parse_cooldown_from_response(status_code: int, headers: dict) -> int:
     if status_code >= 500:
         return 15
     return 15
+
+
+# ─── Rate Limit Protection System ───────────────────────────────────────────
+
+DAILY_TOKEN_BUDGET = int(os.getenv("DAILY_TOKEN_BUDGET", "2000000"))  # 2M tokens/dia default
+GLOBAL_MAX_CALLS_PER_MIN = int(os.getenv("GLOBAL_MAX_CALLS_PER_MIN", "30"))
+
+TENANT_DAILY_LIMITS = {
+    'trial': 100_000,
+    'starter': 300_000,
+    'pro': 800_000,
+    'beta': 800_000,
+    'ilimitado': 999_999_999,
+}
+
+
+def is_globally_cooled_down() -> tuple:
+    """Retorna (em_cooldown: bool, segundos_restantes: int).
+    Checa se TODAS as keys estão em cooldown (circuit breaker global).
+    """
+    try:
+        with _connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    SELECT EXTRACT(EPOCH FROM (cooldown_until - NOW()))::int as remaining
+                    FROM provider_keys
+                    WHERE provider = 'anthropic' AND enabled = TRUE
+                      AND cooldown_until > NOW()
+                    ORDER BY cooldown_until DESC LIMIT 1
+                """)
+                row = cur.fetchone()
+                if row and row[0] and row[0] > 0:
+                    # Verificar se existe alguma key SAUDAVEL (sem cooldown)
+                    cur.execute("""
+                        SELECT COUNT(*) FROM provider_keys
+                        WHERE provider = 'anthropic' AND enabled = TRUE
+                          AND (cooldown_until IS NULL OR cooldown_until < NOW())
+                    """)
+                    healthy = cur.fetchone()
+                    if healthy and healthy[0] > 0:
+                        return (False, 0)  # Tem key saudável disponível
+                    return (True, row[0])
+        return (False, 0)
+    except Exception as e:
+        print(f'[ia_manager] is_globally_cooled_down erro: {e}')
+        return (False, 0)  # Na dúvida, não bloqueia
+
+
+def check_daily_budget() -> tuple:
+    """Retorna (dentro_budget: bool, tokens_restantes: int)."""
+    try:
+        with _connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    SELECT COALESCE(SUM(input_tokens + output_tokens), 0)::bigint as total
+                    FROM llm_usage
+                    WHERE criado_em > NOW() - INTERVAL '24 hours'
+                """)
+                row = cur.fetchone()
+                used = row[0] if row else 0
+                remaining = DAILY_TOKEN_BUDGET - used
+                return (remaining > 0, max(0, remaining))
+    except Exception as e:
+        print(f'[ia_manager] check_daily_budget erro: {e}')
+        return (True, DAILY_TOKEN_BUDGET)  # Na dúvida, permite
+
+
+def check_tenant_budget(tenant_id: int, plano: str = 'starter') -> tuple:
+    """Retorna (dentro_budget: bool, tokens_restantes: int)."""
+    limit = TENANT_DAILY_LIMITS.get(plano.lower(), 300_000)
+    if limit >= 999_999_999:
+        return (True, limit)
+    try:
+        with _connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    SELECT COALESCE(SUM(input_tokens + output_tokens), 0)::bigint
+                    FROM llm_usage
+                    WHERE user_id = %s AND criado_em > NOW() - INTERVAL '24 hours'
+                """, (tenant_id,))
+                row = cur.fetchone()
+                used = row[0] if row else 0
+                remaining = limit - used
+                return (used < limit, max(0, remaining))
+    except Exception as e:
+        print(f'[ia_manager] check_tenant_budget erro: {e}')
+        return (True, limit)
+
+
+def check_global_call_rate() -> tuple:
+    """Retorna (dentro_limite: bool, calls_no_ultimo_minuto: int).
+    Coordenação cross-process via DB.
+    """
+    try:
+        with _connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    SELECT COUNT(*)::int FROM llm_usage
+                    WHERE criado_em > NOW() - INTERVAL '1 minute'
+                """)
+                row = cur.fetchone()
+                count = row[0] if row else 0
+                return (count < GLOBAL_MAX_CALLS_PER_MIN, count)
+    except Exception as e:
+        print(f'[ia_manager] check_global_call_rate erro: {e}')
+        return (True, 0)
+
+
+def get_rate_limit_status() -> dict:
+    """Retorna status completo para dashboard de monitoramento."""
+    try:
+        with _connect() as conn:
+            with conn.cursor() as cur:
+                # Budget diário
+                cur.execute("""
+                    SELECT COALESCE(SUM(input_tokens + output_tokens), 0)::bigint
+                    FROM llm_usage WHERE criado_em > NOW() - INTERVAL '24 hours'
+                """)
+                daily_used = cur.fetchone()[0] or 0
+
+                # Calls último minuto
+                cur.execute("""
+                    SELECT COUNT(*)::int FROM llm_usage
+                    WHERE criado_em > NOW() - INTERVAL '1 minute'
+                """)
+                calls_last_min = cur.fetchone()[0] or 0
+
+                # Status das keys
+                cur.execute("""
+                    SELECT id, enabled,
+                           CASE WHEN cooldown_until > NOW() THEN 'cooldown'
+                                WHEN enabled = FALSE THEN 'disabled'
+                                ELSE 'healthy' END as status,
+                           cooldown_until,
+                           success_count, failure_count, last_error
+                    FROM provider_keys WHERE provider = 'anthropic'
+                """)
+                keys = []
+                for row in cur.fetchall():
+                    success = row[4] or 0
+                    failure = row[5] or 0
+                    total = success + failure
+                    keys.append({
+                        "id": row[0],
+                        "status": row[2],
+                        "cooldown_until": row[3].isoformat() if row[3] else None,
+                        "success_rate": round(success / total * 100, 1) if total > 0 else 100.0,
+                        "last_error": row[6],
+                    })
+
+                # Top tenants
+                cur.execute("""
+                    SELECT user_id, SUM(input_tokens + output_tokens)::bigint as total
+                    FROM llm_usage
+                    WHERE criado_em > NOW() - INTERVAL '24 hours' AND user_id IS NOT NULL
+                    GROUP BY user_id ORDER BY total DESC LIMIT 10
+                """)
+                top_tenants = [{"id": r[0], "tokens": r[1]} for r in cur.fetchall()]
+
+                return {
+                    "daily_budget": {
+                        "limit": DAILY_TOKEN_BUDGET,
+                        "used": daily_used,
+                        "remaining": max(0, DAILY_TOKEN_BUDGET - daily_used),
+                        "percent": round(daily_used / DAILY_TOKEN_BUDGET * 100, 1) if DAILY_TOKEN_BUDGET > 0 else 0,
+                    },
+                    "keys": keys,
+                    "calls_last_minute": calls_last_min,
+                    "max_calls_per_minute": GLOBAL_MAX_CALLS_PER_MIN,
+                    "top_tenants_today": top_tenants,
+                }
+    except Exception as e:
+        print(f'[ia_manager] get_rate_limit_status erro: {e}')
+        return {"error": str(e)}

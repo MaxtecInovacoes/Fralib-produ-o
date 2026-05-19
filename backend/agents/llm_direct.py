@@ -380,6 +380,50 @@ def call_claude(system, user, model='opus', max_tokens=4000, temperature=0.7, ag
     except Exception:
         _ia = None
 
+    # ── Pre-flight: Circuit Breaker + Budget checks ──
+    if _ia and not base_url:  # Skip checks for BYOK users
+        try:
+            # Fase 1: Circuit breaker global — se todas as keys em cooldown, não tentar
+            _cooled, _cd_remaining = _ia.is_globally_cooled_down()
+            if _cooled and _cd_remaining > 60:
+                print(f"[LLM] Circuit breaker OPEN — cooldown {_cd_remaining}s restantes")
+                raise RateLimitError(_cd_remaining)
+
+            # Fase 2: Budget diário global
+            _budget_ok, _budget_remaining = _ia.check_daily_budget()
+            if not _budget_ok:
+                print(f"[LLM] Budget diário ESGOTADO — 0 tokens restantes")
+                raise Exception("Budget diário de tokens esgotado. Aguarde reset (24h rolling window).")
+
+            # Fase 3: Budget por tenant
+            if _current_user_id:
+                _plano = 'starter'  # default
+                try:
+                    from core.database import engine as _budget_engine
+                    from sqlalchemy import text as _budget_text
+                    with _budget_engine.connect() as _bconn:
+                        _prow = _bconn.execute(_budget_text("SELECT plano FROM users WHERE id = :uid"), {"uid": _current_user_id}).fetchone()
+                        if _prow:
+                            _plano = (_prow[0] or 'starter').lower()
+                except Exception:
+                    pass
+                _tenant_ok, _tenant_remaining = _ia.check_tenant_budget(_current_user_id, _plano)
+                if not _tenant_ok:
+                    print(f"[LLM] Tenant {_current_user_id} budget ESGOTADO (plano={_plano})")
+                    raise Exception(f"Limite diário de tokens atingido para seu plano ({_plano}). Upgrade para mais capacidade.")
+
+            # Fase 5: Coordenação cross-process — backpressure suave
+            _rate_ok, _rate_count = _ia.check_global_call_rate()
+            if not _rate_ok:
+                import time as _time_bp
+                _time_bp.sleep(2)  # Backpressure: espera 2s se acima do limite global
+        except RateLimitError:
+            raise  # Re-raise para o worker tratar
+        except Exception as _preflight_err:
+            if "Budget" in str(_preflight_err) or "Limite" in str(_preflight_err):
+                raise  # Budget errors devem propagar
+            print(f"[LLM] Pre-flight check erro (ignorando): {_preflight_err}")
+
     # ── SDK retry loop ──
     MAX_ATTEMPTS = 5
     response = None
