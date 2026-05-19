@@ -209,6 +209,16 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
     except Exception:
         _token_tracker = None
 
+    # PRD #6: Ledger Pattern — documento vivo do pipeline
+    try:
+        from pipeline_ledger import Ledger, FaseStatus, salvar_ledger
+        _ledger = Ledger(run_id=state.pipeline_id[:8])
+        _ledger.atualizar_fact("segmento", state.segmento)
+        _ledger.atualizar_fact("cidade", state.cidade)
+        _ledger.atualizar_fact("nicho", state.segmento)
+    except Exception:
+        _ledger = None
+
     _log("PIPELINE v2 - FraLibState Orquestrador", "info")
     _log(f"{state.segmento} em {state.cidade}", "info")
     logger.info(f"[Pipeline] Iniciando: {state.segmento} em {state.cidade}")
@@ -320,6 +330,7 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
             return {"sucesso": True, "lead": state.lead_nome}
         _progress(1, "Buscando leads...")
         _log("FASE 1: HUNTER + KEYWORD RESEARCH (paralelo)", "info")
+        if _ledger: _ledger.registrar_inicio_fase(1, "hunter_kw")
         # Carregar leads já existentes no banco para evitar duplicatas
         # Dedup por nome+cidade apenas (ignora segmento — mesmo negocio pode ter segmento diferente)
         with engine.connect() as _conn_dedup:
@@ -568,6 +579,15 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
             conn.commit()
         _progress(2, "Qualificando lead...")
         _log("FASE 2: CAIO + ALEX (paralelo)", "info")
+        if _ledger:
+            _ledger.registrar_fim_fase(1, FaseStatus.CONCLUIDA, resultado=f"lead={state.lead_nome}")
+            _ledger.atualizar_fact("lead_nome", state.lead_nome)
+            _ledger.atualizar_fact("lead_telefone", state.lead_obj.lead.telefone or "")
+            _ledger.atualizar_fact("lead_endereco", getattr(state.lead_obj.lead, "endereco", ""))
+            _ledger.atualizar_fact("tem_reviews", bool(state.lead_obj.lead.reviews))
+            _ledger.atualizar_fact("qtd_reviews", state.lead_obj.lead.total_avaliacoes or 0)
+            _ledger.atualizar_fact("tem_site", bool(state.lead_obj.lead.website))
+            _ledger.registrar_inicio_fase(2, "caio")
         caio_input = CaioInput(
             nome=state.lead_nome, cidade=state.lead_obj.lead.cidade,
             segmento=state.segmento, telefone=state.lead_obj.lead.telefone or "",
@@ -643,8 +663,13 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
         _log(f"  Caio: {state.qualificacao_caio.qualificacao} score={state.qualificacao_caio.score}", "success")
         logger.info(f"[Pipeline] Caio: {state.qualificacao_caio.qualificacao}")
         logger.info("[Pipeline] Alex: OK")
+        if _ledger:
+            _ledger.registrar_fim_fase(2, FaseStatus.CONCLUIDA, resultado=f"score={state.qualificacao_caio.score} tier={state.qualificacao_caio.tier}")
+            _ledger.atualizar_fact("score_qualificacao", state.qualificacao_caio.score)
+            _ledger.atualizar_fact("tier", state.qualificacao_caio.tier)
         _progress(3, "Pesquisa de mercado...")
         _log("FASE 3: JINA AI", "info")
+        if _ledger: _ledger.registrar_inicio_fase(3, "jina")
         _jina_cached = get_dados_agente(state.pipeline_id, "jina")
         if _jina_cached and _jina_cached.get("insights"):
             state.jina_insights = _jina_cached["insights"]
@@ -659,12 +684,19 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
             except Exception as e:
                 state.jina_insights = ""
                 logger.warning(f"[Pipeline] Jina AI erro (sem fallback): {e}")
+        if _ledger:
+            if state.jina_insights:
+                _ledger.registrar_fim_fase(3, FaseStatus.CONCLUIDA, resultado=f"{len(state.jina_insights)} chars")
+            else:
+                _ledger.registrar_fim_fase(3, FaseStatus.PULADA, erro="sem resultado")
+                _ledger.registrar_decisao(3, "pular_jina", "Fase não obrigatória")
         _progress(4, "Preparando design...")
         _log("FASE 4: DESIGN (Theo aposentado — ArquitetoMestre faz tudo)", "info")
         # Theo APOSENTADO — briefing gerado inline (ArquitetoMestre já monta brief próprio)
         state.briefing_theo = f"Site premium para {state.lead_nome} ({state.segmento}) em {state.cidade}. Rating: {state.lead_obj.lead.rating or 0}/5."
         _progress(5, "Buscando fotos...")
         _log("FASE 5: PALETA + UNSPLASH", "info")
+        if _ledger: _ledger.registrar_inicio_fase(5, "unsplash")
         # Unsplash — fotos de alta qualidade por nicho
         try:
             _nome_negocio = state.lead_raw_data.get("nome", "") or ""
@@ -733,6 +765,11 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
 
         _progress(6, "Arquitetando site...")
         _log("FASE 6: ARQUITETO MESTRE", "info")
+        if _ledger:
+            _n_fotos = len(state.lead_raw_data.get("fotos", []))
+            _ledger.registrar_fim_fase(5, FaseStatus.CONCLUIDA, resultado=f"{_n_fotos} fotos")
+            _ledger.atualizar_fact("fotos_disponiveis", _n_fotos)
+            _ledger.registrar_inicio_fase(6, "arquiteto", modelo="sonnet")
         _arq_cached = get_dados_agente(state.pipeline_id, "arquiteto")
         if _arq_cached and _arq_cached.get("prd_json"):
             # Retomar PRD do checkpoint
@@ -801,6 +838,9 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
             print(f"[Pipeline] PRD trace skip: {_pe}")
         _progress(7, "Gerando HTML...")
         _log("FASE 7: LIAM (Componentizado)", "info")
+        if _ledger:
+            _ledger.registrar_fim_fase(6, FaseStatus.CONCLUIDA, resultado="PRD gerado")
+            _ledger.registrar_inicio_fase(7, "liam", modelo="opus")
         if not state.prd_arquiteto:
             raise Exception("PRD nao disponivel para o Liam")
         _liam_cached = get_dados_agente(state.pipeline_id, "liam")
@@ -840,6 +880,9 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
             pass
         _progress(8, "Auditoria de qualidade...")
         _log("FASE 8: LIZ (Auditoria)", "info")
+        if _ledger:
+            _ledger.registrar_fim_fase(7, FaseStatus.CONCLUIDA, resultado=f"{len(state.html_final)} chars HTML")
+            _ledger.registrar_inicio_fase(8, "liz", modelo="haiku")
         # BeautifulSoup auto-healing: corrige tags abertas antes da Liz auditar
         try:
             from bs4 import BeautifulSoup as _BS
@@ -938,6 +981,9 @@ IMPORTANTE: Corrija EXATAMENTE os problemas acima. Não altere o que já estava 
                 break
         _progress(9, "Publicando site...")
         _log("FASE 9: DEPLOY", "info")
+        if _ledger:
+            _ledger.registrar_fim_fase(8, FaseStatus.CONCLUIDA, resultado=f"liz_aprovado={state.liz_aprovado}")
+            _ledger.registrar_inicio_fase(9, "deploy")
         web_dir = f"/var/www/fralib/sites/{tenant_id}/{state.lead_slug}"
         os.makedirs(web_dir, exist_ok=True)
         # PR15: substituir placeholder do pixel de tracking pelo lead_id real
@@ -975,6 +1021,9 @@ IMPORTANTE: Corrija EXATAMENTE os problemas acima. Não altere o que já estava 
 
         _progress(10, "Enviando contato...")
         _log("FASE 10: BRYAN", "info")
+        if _ledger:
+            _ledger.registrar_fim_fase(9, FaseStatus.CONCLUIDA, resultado=state.site_url)
+            _ledger.registrar_inicio_fase(10, "bryan", modelo="haiku")
         # Verificar WhatsApp conectado para o Bryan (cache local + fallback HTTP)
         _wpp_tenant_check = f"fralib_user_{tenant_id}"
         _wpp_conectado = is_tenant_connected(_wpp_tenant_check)
@@ -1057,6 +1106,12 @@ IMPORTANTE: Corrija EXATAMENTE os problemas acima. Não altere o que já estava 
         limpar_checkpoint(state.pipeline_id)
         _log("PIPELINE v2 CONCLUIDO - FraLibState OK", "success")
         logger.info("[Pipeline] CONCLUIDO - 7 AGENTES!")
+
+        # PRD #6: Ledger — finalizar e salvar
+        if _ledger:
+            _ledger.registrar_fim_fase(10, FaseStatus.CONCLUIDA, resultado="pipeline_completo")
+            print(_ledger.snapshot())
+            salvar_ledger(_ledger)
 
         # PRD #4: Token Tracking — log + salvar no DB
         try:
@@ -1184,6 +1239,14 @@ IMPORTANTE: Corrija EXATAMENTE os problemas acima. Não altere o que já estava 
                     conn.commit()
             except Exception:
                 pass
+        # PRD #6: Ledger — salvar com erro
+        if _ledger:
+            _fase_atual = _ledger.assignments.get("fase_atual", 0)
+            if _fase_atual:
+                _ledger.registrar_fim_fase(_fase_atual, FaseStatus.FALHOU, erro=str(e)[:200])
+                _ledger.registrar_decisao(_fase_atual, "abortar_pipeline", f"Erro fatal: {str(e)[:100]}")
+            print(_ledger.snapshot())
+            salvar_ledger(_ledger)
         # pipeline_queue.release gerenciado pelo executar_pipeline_multiplos
         _ret = {"sucesso": False, "erro": str(e)}
         if _fase_erro:
