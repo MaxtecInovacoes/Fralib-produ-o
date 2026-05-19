@@ -643,6 +643,20 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
                     print(f"[Pipeline] Lead pendente reutilizado: {state.lead_nome} (id: {_dup[0]})")
                     _log(f"  Lead: {state.lead_nome}", "success")
                     state.lead_id = str(_dup[0])
+                    # Atualizar reviews/dados se o lead antigo não tinha
+                    _fresh_reviews = [
+                        {"autor": r.get("autor",""), "rating": r.get("rating",5), "texto": r.get("texto","")}
+                        for r in (getattr(state.lead_obj.lead, "reviews", []) or [])
+                    ]
+                    if _fresh_reviews:
+                        import json as _json_reutil
+                        conn.execute(text("""
+                            UPDATE leads SET dados_completos = jsonb_set(
+                                COALESCE(dados_completos::jsonb, '{}'::jsonb),
+                                '{reviews}', :reviews::jsonb
+                            ) WHERE id = :id AND (dados_completos::jsonb->'reviews' = '[]'::jsonb OR dados_completos::jsonb->'reviews' IS NULL)
+                        """), {"id": state.lead_id, "reviews": _json_reutil.dumps(_fresh_reviews)})
+                        conn.commit()
                 else:
                     _log(f"  Lead duplicado ignorado: {state.lead_nome}", "info")
                     print(f"[Pipeline] Lead duplicado ignorado: {state.lead_nome} (id existente: {_dup[0]})")
