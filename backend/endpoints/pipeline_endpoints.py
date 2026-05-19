@@ -997,9 +997,38 @@ IMPORTANTE: Corrija EXATAMENTE os problemas acima. Não altere o que já estava 
                 _log(f"  Score={liz_result_struct['score']} - regenerando com reflection...", "warning")
 
                 if tentativa_liz >= MAX_LIZ:
-                    # Force-approve após max tentativas
-                    _log(f"  ⚠️ {MAX_LIZ} tentativas esgotadas. Forçando aprovação (score={liz_result_struct['score']})", "warning")
-                    print(f"[REFLECTION][WARN] Force-approved após {MAX_LIZ} tentativas | score: {liz_result_struct['score']}")
+                    # PRD #13: LATS — tree search antes de force-approve
+                    try:
+                        from agents.liam_lats import lats_retry
+                        _lats_falhas = [{"html": state.html_final, "score": liz_result_struct.get('score', 0), "problemas": str([p['dimensao'] for p in liz_result_struct.get('problemas', []) if p.get('score', 10) < 7])}]
+                        _lats_nicho = getattr(state, "segmento", "") or ""
+                        _lats_tier = getattr(state.lead_obj, "tier", "STANDARD") if hasattr(state, "lead_obj") and state.lead_obj else "STANDARD"
+                        _lats_fotos = state.lead_raw_data.get("fotos", []) if hasattr(state, "lead_raw_data") else []
+                        _lats_tokens = str(getattr(state.prd_arquiteto, "design_tokens", ""))[:500]
+                        _lats_prd = state.prd_arquiteto.__dict__ if hasattr(state.prd_arquiteto, "__dict__") else {}
+                        _lats_result = lats_retry(
+                            nome_secao="full_page",
+                            prd_secao=_lats_prd,
+                            design_tokens_str=_lats_tokens,
+                            fotos=_lats_fotos,
+                            historico_falhas=_lats_falhas,
+                            nicho=_lats_nicho,
+                            tier=_lats_tier,
+                        )
+                        if _lats_result.get("aprovado") and _lats_result.get("html") and len(_lats_result["html"]) >= 500:
+                            from agents.liam import montar_template_python as _liam_tpl_lats
+                            state.html_final = _liam_tpl_lats(_lats_result["html"], state.prd_arquiteto)
+                            state.liz_aprovado = True
+                            state.liz_score = int(_lats_result["score"] * 10)
+                            _log(f"  LATS resolveu! strategy={_lats_result['strategy']} score={_lats_result['score']:.1f}", "success")
+                            if _ledger: _ledger.registrar_decisao(8, "lats_sucesso", f"LATS resolveu via {_lats_result['strategy']}")
+                            break
+                    except Exception as _lats_err:
+                        print(f"[LATS] Erro (force-approve): {_lats_err}")
+
+                    # Force-approve após max tentativas (LATS não resolveu)
+                    _log(f"  ⚠️ {MAX_LIZ} tentativas + LATS esgotados. Forçando aprovação (score={liz_result_struct['score']})", "warning")
+                    print(f"[REFLECTION][WARN] Force-approved após {MAX_LIZ} tentativas + LATS | score: {liz_result_struct['score']}")
                     state.liz_aprovado = True
                     state.liz_score = max(state.liz_score, 70)
                     break
