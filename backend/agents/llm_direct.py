@@ -424,6 +424,16 @@ def call_claude(system, user, model='opus', max_tokens=4000, temperature=0.7, ag
                 raise  # Budget errors devem propagar
             print(f"[LLM] Pre-flight check erro (ignorando): {_preflight_err}")
 
+    # ── Token Bucket: throttle preventivo ──
+    if not base_url:  # Skip para BYOK
+        try:
+            from services.token_bucket import throttle as _tb_throttle
+            _input_est = (len(system or '') + len(user or '')) // 4
+            _total_est = _input_est + max_tokens
+            _tb_throttle(_total_est)
+        except Exception:
+            pass  # Não bloquear se bucket falhar
+
     # ── SDK retry loop ──
     MAX_ATTEMPTS = 5
     response = None

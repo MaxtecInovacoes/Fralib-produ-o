@@ -1121,7 +1121,7 @@ def gerar_html_componentizado(prd):
     from concurrent.futures import ThreadPoolExecutor, as_completed
 
     _rate_semaphore = threading.Semaphore(3)
-    _rate_delay = 1.0  # segundos entre submits pra evitar 429
+    _rate_delay = float(os.getenv("LIAM_THREAD_DELAY", "2.0"))  # segundos entre submits pra evitar 429
 
     def _gerar_com_retry(s_item):
         """Gera seção com retry e escalação pra Opus."""
@@ -1151,7 +1151,7 @@ def gerar_html_componentizado(prd):
         return _nome, None
 
     print("[Liam] Iniciando geracao PARALELA de " + str(len(_secoes_fonte)) + " secoes (max 3 concurrent)...")
-    with ThreadPoolExecutor(max_workers=3) as _executor:
+    with ThreadPoolExecutor(max_workers=2) as _executor:
         _futures = []
         for _s_par in _secoes_fonte:
             _futures.append(_executor.submit(_gerar_com_retry, _s_par))
