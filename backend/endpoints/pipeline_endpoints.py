@@ -66,7 +66,7 @@ from agents.liz import auditar, editar_secao as liz_editar_secao, listar_secoes 
 from agents.bryan import iniciar_contato, BryanInput
 from agents.liam_models import LiamOutput
 from services.credits_manager import verificar_pode_executar, consume_tokens
-from pipeline_queue_manager import pipeline_queue
+from pipeline_queue_manager import pipeline_queue  # DEPRECATED: mantido apenas para /fila endpoint
 from retry_helper import tentar
 
 from collections import defaultdict as _defaultdict
@@ -163,7 +163,7 @@ class FraLibState:
     site_url: str = ""
     keyword_research: str = ""
 
-async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int = None):
+async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int = None, resume_from_phase: int = 0):
     # Setar user_id no contexto do LLM pra rastrear consumo por usuario
     from llm_direct import set_current_user_id
     set_current_user_id(tenant_id)
@@ -1130,78 +1130,43 @@ IMPORTANTE: Corrija EXATAMENTE os problemas acima. Não altere o que já estava 
             _ledger.registrar_inicio_fase(10, "bryan", modelo="haiku")
         if _span: _span.finalizar("success")
         _span = _trace.iniciar_span("bryan", agente="bryan", modelo="haiku") if _trace else None
-        # Verificar WhatsApp conectado para o Bryan (cache local + fallback HTTP)
-        _wpp_tenant_check = f"fralib_user_{tenant_id}"
-        _wpp_conectado = is_tenant_connected(_wpp_tenant_check)
+        # Bryan como job separado — não bloqueia pipeline principal
+        _sdr_stage_final = 'pendente_wpp'
         try:
-            bryan_input = BryanInput(
-                nome=state.lead_nome, cidade=state.lead_obj.lead.cidade,
-                segmento=state.segmento, telefone=state.lead_obj.lead.telefone or "",
-                whatsapp=state.lead_obj.lead.whatsapp or "",
-                rating=state.lead_obj.lead.rating or 0.0, site_url=state.site_url,
-                score_caio=state.qualificacao_caio.score if state.qualificacao_caio else 0,
-                tier=state.qualificacao_caio.tier if state.qualificacao_caio else "STANDARD",
-                proof=state.qualificacao_caio.razoes[0] if state.qualificacao_caio and getattr(state.qualificacao_caio, 'razoes', None) else None,
-                concorrentes=getattr(state, 'concorrentes', None)
-            )
-            bryan_output = iniciar_contato(bryan_input, user_id=state.tenant_id)
-            _log("  Bryan: mensagem criada", "success")
-            logger.info("[Pipeline] Bryan: OK")
-
-            # Enviar mensagem via whatsmeow (só se WPP conectado)
-            if not _wpp_conectado:
-                _log("📱 WhatsApp não conectado — site gerado, envio pendente. Conecte o WPP e reprocesse para enviar.", "warning")
-            else:
-              try:
-                import httpx, re as _re, os as _os
-                meowhats_url = _os.getenv("MEOWHATS_URL", "http://localhost:3001")
-                meowhats_key = _os.getenv("MEOWHATS_KEY", "")
-                if not meowhats_key:
-                    _log("⚠️ MEOWHATS_KEY não configurada no .env — envio WhatsApp abortado.", "warning")
-                    raise RuntimeError("MEOWHATS_KEY ausente")
-                if not state.tenant_id:
-                    raise RuntimeError("tenant_id ausente — envio WhatsApp abortado (multi-tenant)")
-                tenant_id = f"fralib_user_{state.tenant_id}"
-                tel = (state.lead_obj.lead.whatsapp or state.lead_obj.lead.telefone or "").strip()
-                tel = _re.sub(r'\D', '', tel)
-                if not tel.startswith('55'):
-                    tel = '55' + tel
-                jid = f"{tel}@s.whatsapp.net"
-                texto = bryan_output.reply
-                # Se Bryan bloqueou (fora do horário), marcar como pendente
-                if not texto or not texto.strip():
-                    _log(f"  Bryan: fora do horário ou reply vazio (intent={bryan_output.intent}) — lead na fila", "warning")
-                    _sdr_stage_final = 'pendente_wpp'
-                else:
-                    # TESTE: redirecionar para numero de teste se configurado
-                    test_number = _os.getenv("BRYAN_TEST_NUMBER", "")
-                    if test_number:
-                        jid = f"{test_number}@s.whatsapp.net"
-                        _log(f"  Bryan: MODO TESTE - redirecionando para {test_number}", "warning")
-                    # Re-check defensivo: tenant pode ter caido entre o check do _wpp_conectado e aqui
-                    if not is_tenant_connected(tenant_id, fallback_http=False):
-                        _log(f"  Bryan: envio cancelado — tenant {tenant_id} caiu antes do envio.", "warning")
-                        raise RuntimeError("tenant_disconnected_at_send")
-                    with httpx.Client(timeout=10) as c:
-                        r = c.post(
-                            f"{meowhats_url}/api/sessions/{tenant_id}/send",
-                            headers={"X-API-Key": meowhats_key},
-                            json={"jid": jid, "type": "text", "text": texto}
-                        )
-                        if r.status_code == 200:
-                            # Mascarar telefone nos logs (LGPD): mostra so os 4 ultimos digitos
-                            _tel_mask = ('*' * max(0, len(tel) - 4)) + tel[-4:] if tel else '****'
-                            _log(f"  Bryan: mensagem ENVIADA para {_tel_mask}", "success")
-                            logger.info(f"[Pipeline] Bryan: mensagem enviada para {_tel_mask}@s.whatsapp.net")
-                        else:
-                            _log(f"  Bryan: falha no envio ({r.text[:80]})", "warning")
-                            logger.warning(f"[Pipeline] Bryan envio falhou: {r.text}")
-              except Exception as send_err:
-                _log(f"  Bryan: erro no envio WPP ({send_err})", "warning")
-                logger.warning(f"[Pipeline] Bryan envio WPP erro: {send_err}")
+            _bryan_payload = {
+                "nome": state.lead_nome,
+                "cidade": state.lead_obj.lead.cidade,
+                "segmento": state.segmento,
+                "telefone": state.lead_obj.lead.telefone or "",
+                "whatsapp": state.lead_obj.lead.whatsapp or "",
+                "rating": state.lead_obj.lead.rating or 0.0,
+                "site_url": state.site_url,
+                "score_caio": state.qualificacao_caio.score if state.qualificacao_caio else 0,
+                "tier": state.qualificacao_caio.tier if state.qualificacao_caio else "STANDARD",
+                "proof": state.qualificacao_caio.razoes[0] if state.qualificacao_caio and getattr(state.qualificacao_caio, 'razoes', None) else None,
+                "lead_id": state.lead_id,
+                "tenant_id": state.tenant_id,
+            }
+            import job_queue as _jq_bryan
+            _db_bryan = SessionLocal()
+            try:
+                _jq_bryan.enqueue(
+                    _db_bryan,
+                    tipo="bryan_outreach",
+                    payload=_bryan_payload,
+                    tenant_id=state.tenant_id,
+                    max_attempts=5,
+                    idempotency_key=f"bryan-{state.lead_id}",
+                )
+                _db_bryan.close()
+                _log("  Bryan: enfileirado como job separado", "info")
+                _sdr_stage_final = 'hook'
+            except Exception:
+                _db_bryan.close()
+                raise
         except Exception as e:
-            logger.warning(f"[Pipeline] Bryan erro: {e}")
-        _sdr_stage_final = 'hook' if _wpp_conectado else 'pendente_wpp'
+            logger.warning(f"[Pipeline] Bryan enqueue erro (não bloqueia): {e}")
+            _log(f"  Bryan: falha ao enfileirar ({e}). Site gerado OK.", "warning")
         with engine.connect() as conn:
             conn.execute(text("""
                 UPDATE leads SET site_url=:url, url_site=:url, processado=true,
@@ -1346,7 +1311,6 @@ IMPORTANTE: Corrija EXATAMENTE os problemas acima. Não altere o que já estava 
                     conn.commit()
             except Exception:
                 pass
-        # pipeline_queue.release gerenciado pelo executar_pipeline_multiplos
         return {"sucesso": True, "site_url": state.site_url, "lead": state.lead_nome}
     except Exception as e:
         # Detectar rate limit e enviar mensagem amigável
@@ -1401,7 +1365,6 @@ IMPORTANTE: Corrija EXATAMENTE os problemas acima. Não altere o que já estava 
             _trace.lead_nome = getattr(state, 'lead_nome', '') or ''
             _trace.finalizar("failed")
             salvar_trace(_trace)
-        # pipeline_queue.release gerenciado pelo executar_pipeline_multiplos
         _ret = {"sucesso": False, "erro": str(e)}
         if _fase_erro:
             _ret["fase"] = _fase_erro
@@ -1491,7 +1454,7 @@ async def executar_pipeline_multiplos(config: dict, tenant_id: int, queue_id: in
 
 @router.post('/iniciar')
 async def iniciar_pipeline(
-    request: Request, background_tasks: BackgroundTasks,
+    request: Request,
     db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)
 ):
     try:
@@ -1568,11 +1531,6 @@ async def iniciar_pipeline(
         """), {"user_id": tenant_id}).fetchall()
         if not leads_fila:
             return {"status": "erro", "mensagem": "Nenhum lead capturado na fila."}
-        # Verificar fila global
-        queue_result = await pipeline_queue.try_enter(tenant_id)
-        if not queue_result["can_run"]:
-            return {"status": "na_fila", "mensagem": queue_result["message"],
-                    "posicao": queue_result.get("position", 0)}
         # Processar leads em sequência via background task
         lead_ids = [str(row[0]) for row in leads_fila]
         async def _processar_fila_sequencial(lead_ids, tenant_id):
@@ -1581,7 +1539,6 @@ async def iniciar_pipeline(
                     await executar_pipeline_lead_existente(lid, tenant_id)
                 except Exception as e:
                     logger.error(f"[Fila] Erro ao processar lead {lid}: {e}")
-            await pipeline_queue.release(tenant_id)
         background_tasks.add_task(_processar_fila_sequencial, lead_ids, tenant_id)
         adicionar_log(f"[Pipeline] Processando fila: {len(lead_ids)} lead(s)", "info", user_id=tenant_id)
         return {"status": "iniciado", "mensagem": f"Processando {len(lead_ids)} lead(s) da fila", "leads": len(lead_ids)}
@@ -1608,20 +1565,8 @@ async def iniciar_pipeline(
     # Verificar duplicatas: se lead com mesmo nome+cidade ja existe para este usuario, nao processar
     # (dedup e feito no INSERT com ON CONFLICT, mas aqui logamos para o frontend)
 
-    # Verificar fila global de concorrência
-    queue_result = await pipeline_queue.try_enter(tenant_id)
-    if not queue_result["can_run"]:
-        return {
-            "status": "na_fila",
-            "mensagem": queue_result["message"],
-            "posicao": queue_result.get("position", 0),
-            "espera_minutos": queue_result.get("wait_minutes", 0),
-            "config": config_limpo,
-        }
-
     state = get_pipeline_state(db, tenant_id)
     if state["rodando"]:
-        await pipeline_queue.release(tenant_id)
         raise HTTPException(400, "Pipeline ja esta rodando")
     _check_rate_limit(str(tenant_id))
     _check_cooldown(db, tenant_id)
@@ -1679,9 +1624,8 @@ async def iniciar_pipeline(
         adicionar_log(f"[Pipeline] Job #{job_id} enfileirado (queue_id={queue_id})", "info", user_id=tenant_id)
         return {"status": "iniciado", "mensagem": "Pipeline iniciado com 7 agentes", "config": config_limpo, "queue_id": queue_id, "job_id": job_id}
     except Exception as e_enq:
-        logger.warning(f"[Pipeline] enqueue falhou, usando fallback BackgroundTasks: {e_enq}")
-        background_tasks.add_task(executar_pipeline_multiplos, config_limpo, tenant_id, queue_id)
-        return {"status": "iniciado", "mensagem": "Pipeline iniciado (modo legado)", "config": config_limpo, "queue_id": queue_id}
+        logger.error(f"[Pipeline] enqueue falhou: {e_enq}")
+        raise HTTPException(status_code=503, detail="Sistema de filas temporariamente indisponível. Tente novamente em alguns segundos.")
 
 
 @router.get('/fila')
@@ -2201,7 +2145,6 @@ async def _executar_pipeline_a_partir_fase2(state, tenant_id, config):
             update_pipeline_state(_db_final, tenant_id, rodando=False, pausado=False)
         finally:
             _db_final.close()
-        await pipeline_queue.release(tenant_id)
 
 
 @router.post('/reprocessar/{lead_id}')
@@ -2220,10 +2163,6 @@ async def reprocessar_lead(lead_id: str, background_tasks: BackgroundTasks, db: 
     lead = db.execute(text("SELECT * FROM leads WHERE id=:id AND user_id=:uid"), {"id": lead_id, "uid": tenant_id}).fetchone()
     if not lead:
         raise HTTPException(404, "Lead nao encontrado")
-    # Verificar fila global
-    queue_result = await pipeline_queue.try_enter(tenant_id)
-    if not queue_result["can_run"]:
-        return {"ok": False, "mensagem": queue_result["message"], "posicao": queue_result.get("position", 0)}
     db.execute(text("UPDATE leads SET status='capturado', processado=false, atualizado_em=:ts WHERE id=:id AND user_id=:uid"),
                {"ts": datetime.now().isoformat(), "id": lead_id, "uid": tenant_id})
     db.commit()

@@ -29,6 +29,8 @@ from sqlalchemy.orm import Session
 
 # Backoff exponencial em segundos: tentativa 1 -> 30s, 2 -> 2min, 3 -> 8min
 _BACKOFF = [30, 120, 480]
+# Bryan: mais tentativas com backoff mais longo (WhatsApp instável)
+_BACKOFF_BRYAN = [60, 120, 240, 480, 960]
 
 
 def enqueue(
@@ -181,10 +183,25 @@ def mark_failure(
         return "missing"
 
     attempts, max_attempts, tenant_id, checkpoint_id, payload = job
+    # Determinar backoff baseado no tipo do job
+    _tipo_job = None
+    if isinstance(payload, dict):
+        _tipo_job = payload.get("_job_tipo")
+    elif isinstance(payload, str):
+        import json as _j
+        try:
+            _tipo_job = _j.loads(payload).get("_job_tipo")
+        except Exception:
+            pass
+    # Buscar tipo do job direto da tabela se não veio no payload
+    if not _tipo_job:
+        _tipo_row = db.execute(text("SELECT tipo FROM jobs WHERE id = :id"), {"id": job_id}).fetchone()
+        _tipo_job = _tipo_row[0] if _tipo_row else None
+    _backoff_table = _BACKOFF_BRYAN if _tipo_job == "bryan_outreach" else _BACKOFF
 
     pode_tentar_mais = retriable and attempts < max_attempts
     if pode_tentar_mais:
-        delay = delay_seconds if delay_seconds is not None else _BACKOFF[min(attempts - 1, len(_BACKOFF) - 1)]
+        delay = delay_seconds if delay_seconds is not None else _backoff_table[min(attempts - 1, len(_backoff_table) - 1)]
         db.execute(text("""
             UPDATE jobs
             SET status = 'pending',

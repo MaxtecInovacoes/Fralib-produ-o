@@ -112,6 +112,7 @@ async def _executar_job(job: dict) -> tuple[bool, Optional[str], Optional[str]]:
         try:
             resultado = await executar_pipeline_completo(
                 payload, tenant_id, queue_id=payload.get("queue_id"),
+                resume_from_phase=job.get("last_phase") or 0,
             )
             if resultado and resultado.get("sucesso"):
                 return True, None, None
@@ -132,6 +133,76 @@ async def _executar_job(job: dict) -> tuple[bool, Optional[str], Optional[str]]:
             return True, None, None
         except Exception as e:
             return False, "pipeline", str(e)
+
+    if tipo == "bryan_outreach":
+        # Job separado: gera mensagem + envia WhatsApp
+        try:
+            from bryan import iniciar_contato, BryanInput
+            from whatsapp_listener import is_tenant_connected
+            import httpx, re as _re, os as _os
+
+            bryan_input = BryanInput(
+                nome=payload.get("nome", ""),
+                cidade=payload.get("cidade", ""),
+                segmento=payload.get("segmento", ""),
+                telefone=payload.get("telefone", ""),
+                whatsapp=payload.get("whatsapp", ""),
+                rating=payload.get("rating", 0.0),
+                site_url=payload.get("site_url", ""),
+                score_caio=payload.get("score_caio", 0),
+                tier=payload.get("tier", "STANDARD"),
+                proof=payload.get("proof"),
+                concorrentes=payload.get("concorrentes"),
+            )
+            bryan_output = iniciar_contato(bryan_input, user_id=tenant_id)
+
+            if not bryan_output or not bryan_output.reply or not bryan_output.reply.strip():
+                log.info(f"Bryan: reply vazio (fora do horário?) — lead {payload.get('nome')}")
+                return True, None, None  # Não é erro, só fora do horário
+
+            # Enviar via WhatsApp
+            _tenant_key = f"fralib_user_{tenant_id}"
+            if not is_tenant_connected(_tenant_key):
+                log.warning(f"Bryan: WPP não conectado para tenant {tenant_id}")
+                return False, "bryan", "WhatsApp não conectado"
+
+            meowhats_url = _os.getenv("MEOWHATS_URL", "http://localhost:3001")
+            meowhats_key = _os.getenv("MEOWHATS_KEY", "")
+            if not meowhats_key:
+                return False, "bryan", "MEOWHATS_KEY ausente"
+
+            tel = (payload.get("whatsapp") or payload.get("telefone") or "").strip()
+            tel = _re.sub(r'\D', '', tel)
+            if not tel.startswith('55'):
+                tel = '55' + tel
+            jid = f"{tel}@s.whatsapp.net"
+
+            test_number = _os.getenv("BRYAN_TEST_NUMBER", "")
+            if test_number:
+                jid = f"{test_number}@s.whatsapp.net"
+
+            with httpx.Client(timeout=10) as c:
+                r = c.post(
+                    f"{meowhats_url}/api/sessions/{_tenant_key}/send",
+                    headers={"X-API-Key": meowhats_key},
+                    json={"jid": jid, "type": "text", "text": bryan_output.reply}
+                )
+                if r.status_code == 200:
+                    # Atualizar lead como contatado
+                    _db_b = SessionLocal()
+                    try:
+                        from sqlalchemy import text as _txt
+                        _db_b.execute(_txt("UPDATE leads SET sdr_stage='hook' WHERE id=:id AND user_id=:uid"),
+                                      {"id": payload.get("lead_id"), "uid": tenant_id})
+                        _db_b.commit()
+                    finally:
+                        _db_b.close()
+                    log.info(f"Bryan: mensagem enviada para {tel[-4:]}*** | lead={payload.get('nome')}")
+                    return True, None, None
+                else:
+                    return False, "bryan", f"Envio falhou: {r.text[:200]}"
+        except Exception as e:
+            return False, "bryan", str(e)
 
     return False, "desconhecido", f"tipo de job nao reconhecido: {tipo}"
 
@@ -220,7 +291,7 @@ async def _main_loop():
         try:
             db = SessionLocal()
             try:
-                job = job_queue.claim_next(db, WORKER_ID, tipos=["pipeline_lead", "pipeline_multiplos"])
+                job = job_queue.claim_next(db, WORKER_ID, tipos=["pipeline_lead", "pipeline_multiplos", "bryan_outreach"])
             finally:
                 db.close()
         except Exception as e:

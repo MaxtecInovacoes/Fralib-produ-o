@@ -300,6 +300,8 @@ import blog_endpoints
 app.include_router(blog_endpoints.router)
 import obs_endpoints
 app.include_router(obs_endpoints.router)
+import queue_endpoints
+app.include_router(queue_endpoints.router)
 
 # Rate limit do login agora vem via @limiter.limit em auth_endpoints.py (slowapi).
 # CSP+security headers vem via security_headers middleware acima (linha ~125).
