@@ -849,6 +849,8 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
                     briefing=state.briefing_theo or "",
                     cidade=getattr(state, "cidade", ""),
                     nome=state.lead_nome if hasattr(state, "lead_nome") else "",
+                    nicho=getattr(state, "segmento", "") or "",
+                    tier=getattr(state.lead_obj, "tier", "STANDARD") if hasattr(state, "lead_obj") and state.lead_obj else "STANDARD",
                 )
                 state.liz_score = int(liz_result_struct["score"] * 10)  # normalizar pra 0-100
 

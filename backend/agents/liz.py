@@ -505,97 +505,141 @@ def auditar(
 # ===== TESTE =====
 
 
-def auditar_secao_estruturado(html: str, briefing: str = "", cidade: str = "", nome: str = "") -> dict:
+def auditar_secao_estruturado(html: str, briefing: str = "", cidade: str = "", nome: str = "", nicho: str = "", tier: str = "STANDARD") -> dict:
     """
-    Audita HTML e retorna feedback estruturado para reflection loop.
+    Audita HTML com rubrica multi-dimensional e pesos por nicho.
     Usa Haiku (barato) para avaliação rápida.
 
     Returns:
         {
             "aprovado": bool,
             "score": float,
+            "score_ponderado": float,
+            "scores": dict,
             "problemas": [{"dimensao": str, "score": int, "detalhe": str}],
-            "instrucoes_correcao": str
+            "instrucoes_correcao": str,
+            "dimensoes_criticas": list
         }
     """
+    from liz_rubricas import DIMENSOES, THRESHOLDS, calcular_score_ponderado, detectar_nicho
+
+    # Detectar nicho se não passado
+    if not nicho:
+        nicho = detectar_nicho(briefing or nome or "")
+
     # 1. Auditoria técnica (sem LLM)
     tecnica = auditoria_tecnica(html, briefing=briefing)
 
-    # 2. Auditoria semântica via LLM (Haiku)
-    system = """Você é Liz, auditora de qualidade web. Avalie o HTML contra o briefing.
+    # 2. Auditoria semântica via LLM (Haiku) com rubrica
+    system = """Você é Liz, auditora de qualidade web especializada.
+
+Avalie o HTML contra o briefing usando EXATAMENTE estas 8 dimensões:
+
+1. design_visual (1-10): Cores seguem paleta? Tipografia correta? Espaçamento? Hierarquia?
+2. copy_qualidade (1-10): Texto persuasivo? Sem frases genéricas? CTAs com verbo+benefício? Sem ficção?
+3. mobile_responsivo (1-10): Funciona em 375px? Touch targets 44px+? Sem overflow?
+4. performance (1-10): Lazy loading? CSS inline mínimo? Sem JS bloqueante?
+5. imagens (1-10): Foto real por seção? Relevante? Alta qualidade? Não genérica?
+6. acessibilidade (1-10): Contraste AA? Alt text? Semântica HTML5? Landmarks?
+7. seo_basico (1-10): Headings hierárquicos? Texto crawlável?
+8. coerencia_prd (1-10): HTML segue estrutura e conteúdo do briefing?
+
+REGRAS:
+- Score 1-4: problema grave, precisa refazer
+- Score 5-6: abaixo do aceitável, precisa corrigir
+- Score 7-8: bom, aceitável
+- Score 9-10: excelente
 
 Retorne APENAS JSON válido (sem markdown, sem ```):
 {
-    "score_design": 1-10,
-    "detalhe_design": "problema específico ou OK",
-    "score_copy": 1-10,
-    "detalhe_copy": "problema específico ou OK",
-    "score_mobile": 1-10,
-    "detalhe_mobile": "problema específico ou OK",
-    "score_performance": 1-10,
-    "detalhe_performance": "problema específico ou OK",
-    "instrucoes_correcao": "Lista numerada de correções específicas (ou 'Nenhuma')"
-}
-
-Critérios:
-- Design: paleta coerente, espaçamento, tipografia, hierarquia visual
-- Copy: CTAs com urgência, textos persuasivos, sem placeholder/genérico
-- Mobile: responsivo, touch targets, sem overflow horizontal
-- Performance: lazy loading, fontes otimizadas, sem JS bloqueante"""
+    "scores": {
+        "design_visual": N,
+        "copy_qualidade": N,
+        "mobile_responsivo": N,
+        "performance": N,
+        "imagens": N,
+        "acessibilidade": N,
+        "seo_basico": N,
+        "coerencia_prd": N
+    },
+    "problemas": [
+        {"dimensao": "nome_dimensao", "detalhe": "problema específico encontrado"}
+    ],
+    "instrucoes_correcao": "Lista numerada de correções"
+}"""
 
     user = f"""BRIEFING:
 {briefing[:2000] if briefing else 'Não disponível'}
 
-NEGÓCIO: {nome} em {cidade}
+NEGÓCIO: {nome} em {cidade} | Nicho: {nicho}
 
-HTML A AVALIAR (primeiros 4000 chars):
-{html[:4000]}"""
+HTML A AVALIAR (primeiros 5000 chars):
+{html[:5000]}"""
 
     try:
-        resposta = call_claude(system=system, user=user, model='haiku', max_tokens=800, temperature=0.3, agent_name='liz')
-        # Parse JSON
+        resposta = call_claude(system=system, user=user, model='haiku', max_tokens=1200, temperature=0.3, agent_name='liz')
         resposta = resposta.strip()
         if resposta.startswith("```"):
             resposta = re.sub(r"^```\w*\n?", "", resposta)
             resposta = re.sub(r"\n?```$", "", resposta)
         dados = json.loads(resposta)
     except (json.JSONDecodeError, Exception) as e:
-        print(f"[Liz Reflection] JSON parse falhou: {e} — aprovando com warning")
-        return {"aprovado": True, "score": 7.5, "problemas": [], "instrucoes_correcao": ""}
+        print(f"[Liz Rubrica] JSON parse falhou: {e} — aprovando com warning")
+        return {"aprovado": True, "score": 7.5, "score_ponderado": 7.5, "scores": {}, "problemas": [], "instrucoes_correcao": "", "dimensoes_criticas": []}
 
-    # Montar resultado
-    problemas = []
-    dimensoes = ["design", "copy", "mobile", "performance"]
-    scores = []
-    for dim in dimensoes:
-        s = int(dados.get(f"score_{dim}", 8))
-        d = dados.get(f"detalhe_{dim}", "OK")
-        scores.append(s)
-        problemas.append({"dimensao": dim, "score": s, "detalhe": d})
+    scores = dados.get("scores", {})
 
-    # Score combinado: 60% técnica (normalizada 0-10) + 40% semântica LLM
-    score_tecnico_norm = min(10, tecnica.score / 10)
-    score_semantico = sum(scores) / len(scores) if scores else 7.5
-    score_final = round(score_tecnico_norm * 0.6 + score_semantico * 0.4, 1)
-
-    # Veto técnico
+    # Penalizar scores baseado em problemas técnicos
     _veto = any(p.gravidade in ("CRITICO", "CRÍTICO") for p in tecnica.problemas)
-    aprovado = score_final >= 7.5 and not _veto
+    if _veto:
+        # Reduzir scores relevantes
+        for p in tecnica.problemas:
+            if p.gravidade in ("CRITICO", "CRÍTICO"):
+                if "html" in p.dimensao.lower() or "doctype" in p.problema.lower():
+                    scores["coerencia_prd"] = min(scores.get("coerencia_prd", 7), 4)
+                if "whatsapp" in p.problema.lower() or "conversao" in p.dimensao.lower():
+                    scores["copy_qualidade"] = min(scores.get("copy_qualidade", 7), 4)
+                if "seo" in p.dimensao.lower():
+                    scores["seo_basico"] = min(scores.get("seo_basico", 7), 4)
 
-    # Adicionar problemas técnicos críticos
-    for p in tecnica.problemas:
-        if p.gravidade in ("CRITICO", "CRÍTICO", "ALTO"):
-            problemas.append({"dimensao": p.dimensao, "score": 3, "detalhe": p.problema})
+    # Calcular score ponderado
+    score_ponderado = calcular_score_ponderado(scores, nicho)
+
+    # Verificar dimensões críticas
+    dimensoes_criticas = [dim for dim, score in scores.items() if score < THRESHOLDS["dimensao_critica_minima"]]
+
+    # Determinar threshold
+    threshold = THRESHOLDS["aprovacao_premium"] if tier == "PREMIUM" else THRESHOLDS["aprovacao_minima"]
+    aprovado = score_ponderado >= threshold and len(dimensoes_criticas) == 0
+
+    # Montar problemas no formato do reflection loop
+    problemas = []
+    for p in dados.get("problemas", []):
+        dim = p.get("dimensao", "")
+        score_dim = scores.get(dim, 7)
+        problemas.append({"dimensao": dim, "score": score_dim, "detalhe": p.get("detalhe", "")})
+
+    # Adicionar dimensões críticas como problemas
+    for dim in dimensoes_criticas:
+        if not any(p["dimensao"] == dim for p in problemas):
+            problemas.append({"dimensao": dim, "score": scores.get(dim, 0), "detalhe": f"{dim} abaixo do mínimo ({scores.get(dim, 0)}/10)"})
 
     instrucoes = dados.get("instrucoes_correcao", "")
 
-    print(f"[Liz Reflection] score={score_final} aprovado={aprovado} problemas={len([p for p in problemas if p['score'] < 7])}")
+    # Log estruturado
+    scores_str = " ".join([f"{k[:4]}:{v}" for k, v in scores.items()])
+    status = "APROVADO" if aprovado else f"REPROVADO ({', '.join(dimensoes_criticas)})" if dimensoes_criticas else "REPROVADO"
+    print(f"[LIZ] nicho:{nicho} | score:{score_ponderado} | {scores_str} | {status}")
 
     return {
         "aprovado": aprovado,
-        "score": score_final,
+        "score": score_ponderado,
+        "score_ponderado": score_ponderado,
+        "scores": scores,
         "problemas": problemas,
         "instrucoes_correcao": instrucoes,
+        "dimensoes_criticas": dimensoes_criticas,
+        "threshold_usado": threshold,
     }
 
 
