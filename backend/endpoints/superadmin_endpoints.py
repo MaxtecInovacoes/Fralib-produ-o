@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 import jwt
 import json
 import os
+import psutil
 from datetime import datetime, timedelta
 
 router = APIRouter(prefix='/api/superadmin', tags=['superadmin'])
@@ -635,14 +636,13 @@ async def dashboard_health(db: Session = Depends(get_db), user: dict = Depends(r
         health["queue"] = {"status": "unknown"}
 
     try:
-        import psutil
         health["system"] = {
             "cpu_percent": psutil.cpu_percent(interval=None),
             "ram_percent": psutil.virtual_memory().percent,
             "disk_percent": psutil.disk_usage('/').percent,
         }
-    except Exception:
-        health["system"] = {"cpu_percent": None, "ram_percent": None, "disk_percent": None}
+    except Exception as e:
+        health["system"] = {"cpu_percent": None, "ram_percent": None, "disk_percent": None, "error": str(e)}
 
     return health
 
