@@ -161,19 +161,8 @@ def _normalizar_row(row: Dict) -> Optional[Dict]:
     except (json.JSONDecodeError, TypeError):
         pass
 
-    # Fotos
+    # Fotos: não usar do Google Maps (pipeline usa Unsplash)
     fotos = []
-    try:
-        images_raw = json.loads(row.get("images") or "[]")
-        for img in images_raw:
-            if isinstance(img, str):
-                fotos.append(img)
-            elif isinstance(img, dict):
-                url = img.get("image") or img.get("url") or ""
-                if url:
-                    fotos.append(url)
-    except (json.JSONDecodeError, TypeError):
-        pass
 
     # Horários
     horarios = []
