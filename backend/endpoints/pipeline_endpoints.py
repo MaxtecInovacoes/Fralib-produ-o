@@ -219,6 +219,13 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
     except Exception:
         _ledger = None
 
+    # PRD #10: Observability — trace completo do pipeline
+    try:
+        from observability import Trace, salvar_trace, formatar_trace_log
+        _trace = Trace(run_id=state.pipeline_id[:8], nicho=state.segmento)
+    except Exception:
+        _trace = None
+
     _log("PIPELINE v2 - FraLibState Orquestrador", "info")
     _log(f"{state.segmento} em {state.cidade}", "info")
     logger.info(f"[Pipeline] Iniciando: {state.segmento} em {state.cidade}")
@@ -331,6 +338,7 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
         _progress(1, "Buscando leads...")
         _log("FASE 1: HUNTER + KEYWORD RESEARCH (paralelo)", "info")
         if _ledger: _ledger.registrar_inicio_fase(1, "hunter_kw")
+        _span = _trace.iniciar_span("hunter_kw", agente="hunter") if _trace else None
         # Carregar leads já existentes no banco para evitar duplicatas
         # Dedup por nome+cidade apenas (ignora segmento — mesmo negocio pode ter segmento diferente)
         with engine.connect() as _conn_dedup:
@@ -588,6 +596,10 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
             _ledger.atualizar_fact("qtd_reviews", state.lead_obj.lead.total_avaliacoes or 0)
             _ledger.atualizar_fact("tem_site", bool(state.lead_obj.lead.website))
             _ledger.registrar_inicio_fase(2, "caio")
+        if _span: _span.finalizar("success")
+        if _trace:
+            _trace.lead_nome = state.lead_nome
+            _span = _trace.iniciar_span("caio", agente="caio", modelo="haiku")
         caio_input = CaioInput(
             nome=state.lead_nome, cidade=state.lead_obj.lead.cidade,
             segmento=state.segmento, telefone=state.lead_obj.lead.telefone or "",
@@ -667,6 +679,7 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
             _ledger.registrar_fim_fase(2, FaseStatus.CONCLUIDA, resultado=f"score={state.qualificacao_caio.score} tier={state.qualificacao_caio.tier}")
             _ledger.atualizar_fact("score_qualificacao", state.qualificacao_caio.score)
             _ledger.atualizar_fact("tier", state.qualificacao_caio.tier)
+        if _span: _span.finalizar("success")
         # PRD #7: Agent Router — modelo dinâmico por complexidade
         try:
             from agent_router import AgentRouter, calcular_complexidade_lead, set_router
@@ -691,6 +704,7 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
         _progress(3, "Pesquisa de mercado...")
         _log("FASE 3: JINA AI", "info")
         if _ledger: _ledger.registrar_inicio_fase(3, "jina")
+        _span = _trace.iniciar_span("jina", agente="jina") if _trace else None
         _jina_cached = get_dados_agente(state.pipeline_id, "jina")
         if _jina_cached and _jina_cached.get("insights"):
             state.jina_insights = _jina_cached["insights"]
@@ -711,6 +725,7 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
             else:
                 _ledger.registrar_fim_fase(3, FaseStatus.PULADA, erro="sem resultado")
                 _ledger.registrar_decisao(3, "pular_jina", "Fase não obrigatória")
+        if _span: _span.finalizar("success" if state.jina_insights else "skipped")
         _progress(4, "Preparando design...")
         _log("FASE 4: DESIGN (Theo aposentado — ArquitetoMestre faz tudo)", "info")
         # Theo APOSENTADO — briefing gerado inline (ArquitetoMestre já monta brief próprio)
@@ -718,6 +733,7 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
         _progress(5, "Buscando fotos...")
         _log("FASE 5: PALETA + UNSPLASH", "info")
         if _ledger: _ledger.registrar_inicio_fase(5, "unsplash")
+        _span = _trace.iniciar_span("unsplash", agente="unsplash") if _trace else None
         # Unsplash — fotos de alta qualidade por nicho
         try:
             _nome_negocio = state.lead_raw_data.get("nome", "") or ""
@@ -791,6 +807,8 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
             _ledger.registrar_fim_fase(5, FaseStatus.CONCLUIDA, resultado=f"{_n_fotos} fotos")
             _ledger.atualizar_fact("fotos_disponiveis", _n_fotos)
             _ledger.registrar_inicio_fase(6, "arquiteto", modelo="sonnet")
+        if _span: _span.finalizar("success")
+        _span = _trace.iniciar_span("arquiteto", agente="arquiteto", modelo="sonnet") if _trace else None
         _arq_cached = get_dados_agente(state.pipeline_id, "arquiteto")
         if _arq_cached and _arq_cached.get("prd_json"):
             # Retomar PRD do checkpoint
@@ -862,6 +880,8 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
         if _ledger:
             _ledger.registrar_fim_fase(6, FaseStatus.CONCLUIDA, resultado="PRD gerado")
             _ledger.registrar_inicio_fase(7, "liam", modelo="opus")
+        if _span: _span.finalizar("success")
+        _span = _trace.iniciar_span("liam", agente="liam", modelo="opus") if _trace else None
         if not state.prd_arquiteto:
             raise Exception("PRD nao disponivel para o Liam")
         _liam_cached = get_dados_agente(state.pipeline_id, "liam")
@@ -904,6 +924,8 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
         if _ledger:
             _ledger.registrar_fim_fase(7, FaseStatus.CONCLUIDA, resultado=f"{len(state.html_final)} chars HTML")
             _ledger.registrar_inicio_fase(8, "liz", modelo="haiku")
+        if _span: _span.finalizar("success")
+        _span = _trace.iniciar_span("liz", agente="liz", modelo="haiku") if _trace else None
         # BeautifulSoup auto-healing: corrige tags abertas antes da Liz auditar
         try:
             from bs4 import BeautifulSoup as _BS
@@ -1005,6 +1027,8 @@ IMPORTANTE: Corrija EXATAMENTE os problemas acima. Não altere o que já estava 
         if _ledger:
             _ledger.registrar_fim_fase(8, FaseStatus.CONCLUIDA, resultado=f"liz_aprovado={state.liz_aprovado}")
             _ledger.registrar_inicio_fase(9, "deploy")
+        if _span: _span.finalizar("success")
+        _span = _trace.iniciar_span("deploy", agente="deploy") if _trace else None
         # PRD #8: Salvar PRD no cache semântico (só se Liz aprovou e não veio do cache)
         if state.liz_aprovado and state.prd_arquiteto and not getattr(state.prd_arquiteto, '_cache_hit', False):
             try:
@@ -1057,6 +1081,8 @@ IMPORTANTE: Corrija EXATAMENTE os problemas acima. Não altere o que já estava 
         if _ledger:
             _ledger.registrar_fim_fase(9, FaseStatus.CONCLUIDA, resultado=state.site_url)
             _ledger.registrar_inicio_fase(10, "bryan", modelo="haiku")
+        if _span: _span.finalizar("success")
+        _span = _trace.iniciar_span("bryan", agente="bryan", modelo="haiku") if _trace else None
         # Verificar WhatsApp conectado para o Bryan (cache local + fallback HTTP)
         _wpp_tenant_check = f"fralib_user_{tenant_id}"
         _wpp_conectado = is_tenant_connected(_wpp_tenant_check)
@@ -1145,6 +1171,16 @@ IMPORTANTE: Corrija EXATAMENTE os problemas acima. Não altere o que já estava 
             _ledger.registrar_fim_fase(10, FaseStatus.CONCLUIDA, resultado="pipeline_completo")
             print(_ledger.snapshot())
             salvar_ledger(_ledger)
+
+        # PRD #10: Trace — finalizar e salvar
+        if _span: _span.finalizar("success")
+        if _trace:
+            _trace.lead_nome = state.lead_nome
+            _trace.tier = state.qualificacao_caio.tier if state.qualificacao_caio else ""
+            _trace.complexidade = _complexidade if '_complexidade' in dir() else ""
+            _trace.finalizar("success")
+            print(formatar_trace_log(_trace))
+            salvar_trace(_trace)
 
         # PRD #4: Token Tracking — log + salvar no DB
         try:
@@ -1287,6 +1323,13 @@ IMPORTANTE: Corrija EXATAMENTE os problemas acima. Não altere o que já estava 
                 _ledger.registrar_decisao(_fase_atual, "abortar_pipeline", f"Erro fatal: {str(e)[:100]}")
             print(_ledger.snapshot())
             salvar_ledger(_ledger)
+        # PRD #10: Trace — salvar com erro
+        if _trace:
+            _cur_span = _trace.span_atual()
+            if _cur_span: _cur_span.finalizar("error", erro=str(e)[:200])
+            _trace.lead_nome = getattr(state, 'lead_nome', '') or ''
+            _trace.finalizar("failed")
+            salvar_trace(_trace)
         # pipeline_queue.release gerenciado pelo executar_pipeline_multiplos
         _ret = {"sucesso": False, "erro": str(e)}
         if _fase_erro:
