@@ -508,7 +508,7 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
         leads = await buscar_leads_google_maps(
             cidade=state.cidade,
             segmento=state.segmento,
-            limite=config_limpo["quantidade"],
+            limite=config.get("quantidade", 10),
             leads_existentes=_leads_existentes,
         )
         _kw_future.result(timeout=30)  # aguarda keyword research terminar
@@ -522,7 +522,7 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
         import json as _json_hunter
         _agora_hunter = datetime.now().isoformat()
         _salvos_hunter = 0
-        _max_salvar = config_limpo["quantidade"]
+        _max_salvar = config.get("quantidade", 10)
         with engine.connect() as _conn_hunter:
             for _lq in leads:
                 if _salvos_hunter >= _max_salvar:
