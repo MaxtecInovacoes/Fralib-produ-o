@@ -2333,7 +2333,9 @@ async def reprocessar_lead(lead_id: str, background_tasks: BackgroundTasks, db: 
     _renovacao_label = " (renovacao forcada)" if forcar_renovacao else ""
     adicionar_log(f"Lead {lead.nome} reprocessando{_renovacao_label}...", "info", user_id=tenant_id)
     # Enfileirar como job normal no worker — usa pipeline principal com flag pra pular Hunter+Caio
+    print(f"[Reprocessar] ANTES do import job_queue")
     import job_queue as _jq
+    print(f"[Reprocessar] DEPOIS do import job_queue")
     config_reproc = {
         "segmento": lead.segmento or "",
         "cidade": lead.cidade or "",
