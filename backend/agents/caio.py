@@ -232,6 +232,21 @@ def qualificar_lead(lead: LeadInput) -> CaioOutput:
     _dados_faltando = []
     if not lead.telefone and not lead.whatsapp:
         _dados_faltando.append("telefone/whatsapp")
+    else:
+        # Verificar se telefone é celular (WhatsApp) — fixo não serve pra venda
+        _tel_check = (lead.whatsapp or lead.telefone or "").replace(" ", "").replace("-", "").replace("(", "").replace(")", "").replace("+55", "")
+        # Celular BR: DDD(2) + 9 + 8 dígitos = 11 dígitos, começa com 9 após DDD
+        _digits_only = ''.join(c for c in _tel_check if c.isdigit())
+        _is_celular = False
+        if len(_digits_only) >= 10:
+            # Com DDD: posição 2 deve ser 9 (ex: 41999990000)
+            if len(_digits_only) >= 11 and _digits_only[2] == '9':
+                _is_celular = True
+            # Sem DDD: começa com 9 (ex: 999990000)
+            elif len(_digits_only) == 9 and _digits_only[0] == '9':
+                _is_celular = True
+        if not _is_celular:
+            _dados_faltando.append("celular/whatsapp (telefone fixo nao serve)")
     # Reviews não são bloqueantes — site pode ser gerado sem depoimentos
     if _dados_faltando:
         _motivo_dados = "Dados insuficientes: falta " + ", ".join(_dados_faltando)

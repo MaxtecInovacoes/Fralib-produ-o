@@ -150,7 +150,7 @@ async def register(request: Request, data: RegisterRequest, db: Session = Depend
     if client_ip and client_ip not in ("127.0.0.1", "::1"):
         recent_from_ip = db.execute(text("""
             SELECT COUNT(*) FROM users
-            WHERE registro_ip = :ip AND criado_em > NOW() - INTERVAL '30 days'
+            WHERE registro_ip = :ip AND criado_em::timestamp > NOW() - INTERVAL '30 days'
         """), {"ip": client_ip}).fetchone()
         if recent_from_ip and recent_from_ip[0] >= 3:
             raise HTTPException(status_code=429, detail="Limite de cadastros atingido. Tente novamente mais tarde.")
