@@ -784,7 +784,7 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
         if state.qualificacao_caio and (not state.qualificacao_caio.qualificado or state.qualificacao_caio.tier == "REJEITADO"):
             _idx_atual = next((i for i, l in enumerate(leads) if l is state.lead_obj), -1)
             _encontrou_aprovado = False
-            _motivos_rejeicao = [{"nome": state.lead_nome, "motivo": (state.qualificacao_caio.razoes[0] if state.qualificacao_caio.razoes else "Rejeitado pelo Caio")}]
+            _motivos_rejeicao = [{"nome": state.lead_nome, "motivo": getattr(state.qualificacao_caio, "motivo", None) or "Rejeitado pelo Caio"}]
             for _try_idx in range(_idx_atual + 1, min(_idx_atual + 16, len(leads))):
                 _proximo = leads[_try_idx]
                 _log(f"  {state.lead_nome} rejeitado. Tentando: {_proximo.lead.nome}", "info")
@@ -813,7 +813,7 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
                     _log(f"  Lead aprovado: {state.lead_nome} ({state.qualificacao_caio.tier})", "success")
                     break
                 else:
-                    _motivo = (state.qualificacao_caio.razoes[0] if state.qualificacao_caio and state.qualificacao_caio.razoes else "Rejeitado")
+                    _motivo = (getattr(state.qualificacao_caio, "motivo", None) if state.qualificacao_caio else "Rejeitado")
                     _motivos_rejeicao.append({"nome": _proximo.lead.nome, "motivo": _motivo})
             if not _encontrou_aprovado:
                 _detalhes = [f"{m['nome']} — {m['motivo']}" for m in _motivos_rejeicao[:8]]
@@ -1400,7 +1400,7 @@ IMPORTANTE: Corrija EXATAMENTE os problemas acima. Não altere o que já estava 
                 "site_url": state.site_url,
                 "score_caio": state.qualificacao_caio.score if state.qualificacao_caio else 0,
                 "tier": state.qualificacao_caio.tier if state.qualificacao_caio else "STANDARD",
-                "proof": state.qualificacao_caio.razoes[0] if state.qualificacao_caio and getattr(state.qualificacao_caio, 'razoes', None) else None,
+                "proof": getattr(state.qualificacao_caio, 'motivo', None) if state.qualificacao_caio else None,
                 "lead_id": state.lead_id,
                 "tenant_id": state.tenant_id,
             }
@@ -2456,7 +2456,7 @@ async def _executar_pipeline_a_partir_fase2(state, tenant_id, config):
                 site_url=state.site_url,
                 score_caio=state.qualificacao_caio.score if state.qualificacao_caio else 0,
                 tier=state.qualificacao_caio.tier if state.qualificacao_caio else "STANDARD",
-                proof=state.qualificacao_caio.razoes[0] if state.qualificacao_caio and getattr(state.qualificacao_caio, 'razoes', None) else None,
+                proof=getattr(state.qualificacao_caio, 'motivo', None) if state.qualificacao_caio else None,
                 concorrentes=getattr(state, 'concorrentes', None),
             )
             bryan_result = iniciar_contato(bryan_input, user_id=state.tenant_id)
