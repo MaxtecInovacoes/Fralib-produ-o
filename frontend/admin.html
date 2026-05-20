@@ -3067,8 +3067,15 @@ async function _executarIniciar(nicho, cidade, qtd) {
       }
       return;
     }
+    if (!resp.ok) {
+      var errData = await resp.json().catch(function(){ return {}; });
+      var msg = errData.detail || errData.message || 'Erro ao iniciar pipeline';
+      if (typeof msg === 'object') msg = msg.message || msg.erro || JSON.stringify(msg);
+      erroProgressOverlay(msg);
+      return;
+    }
     setTimeout(carregarKPIs, 800);
-    mostrarProgressOverlay();
+    mostrarToast('▶ Pipeline iniciado! Acompanhe na aba Motor.');
   } catch(e) { alert('Erro ao iniciar pipeline: ' + e.message); }
 }
 
@@ -4017,15 +4024,22 @@ async function _executarIniciarAdmin(nicho, cidade, qtd, scoreMin, btn) {
       }
       return;
     }
+    if (!resp.ok) {
+      var errGen = await resp.json().catch(function(){ return {}; });
+      var msgGen = errGen.detail || errGen.message || 'Erro ao iniciar pipeline';
+      if (typeof msgGen === 'object') msgGen = msgGen.message || msgGen.erro || JSON.stringify(msgGen);
+      if (btn) { btn.textContent = '▶ INICIAR'; btn.disabled = false; }
+      erroProgressOverlay(msgGen);
+      return;
+    }
     var data = await resp.json();
     if (btn) { btn.textContent = '✓ INICIADO!'; }
     setTimeout(function(){ if (btn) { btn.textContent = '▶ INICIAR'; btn.disabled = false; } }, 3000);
     carregarKPIs();
-    mostrarProgressOverlay();
-    mostrarToast('▶ Pipeline iniciado! Acompanhe o progresso no terminal abaixo.');
+    mostrarToast('▶ Pipeline iniciado! Acompanhe na aba Motor.');
   } catch(e) {
-    if (btn) { btn.textContent = '✗ ERRO'; btn.disabled = false; setTimeout(function(){ btn.textContent = '▶ INICIAR'; }, 3000); }
-    mostrarToast('Erro ao iniciar pipeline: ' + e.message);
+    if (btn) { btn.textContent = '▶ INICIAR'; btn.disabled = false; }
+    erroProgressOverlay('Erro de conexão: ' + e.message);
   }
 }
 
@@ -7370,25 +7384,11 @@ function _retryPipelineFromError() {
   };
 
   window.finalizarProgressOverlay = function(url, nome) {
-    var ov = _getOverlay();
-    if (!ov) return;
-    if (_ppTimer) { clearInterval(_ppTimer); _ppTimer = null; }
-    ov.querySelector('.pp-running').style.display = 'none';
-    ov.querySelector('.pp-error').style.display = 'none';
-    var done = ov.querySelector('.pp-done');
-    done.style.display = 'flex';
-    var elapsed = _ppStart ? Math.floor((Date.now() - _ppStart) / 1000) : 0;
-    var min = Math.floor(elapsed / 60);
-    var sec = elapsed % 60;
-    done.querySelector('.pp-done-time').textContent = 'Concluido em ' + min + ':' + sec.toString().padStart(2, '0');
-    if (nome) done.querySelector('.pp-done-nome').textContent = nome;
-    var btnVer = done.querySelector('.pp-btn-ver-site');
-    if (url && btnVer) {
-      btnVer.style.display = 'inline-block';
-      btnVer.onclick = function() { window.open(url, '_blank'); };
-    } else if (btnVer) {
-      btnVer.style.display = 'none';
-    }
+    fecharProgressOverlay();
+    var msg = '✅ Site pronto' + (nome ? ': ' + nome : '') + '!';
+    mostrarToast(msg, 8000);
+    if (url) window.open(url, '_blank');
+    setTimeout(carregarKanban, 1000);
   };
 
   window.erroProgressOverlay = function(msg) {
@@ -7399,7 +7399,17 @@ function _retryPipelineFromError() {
     ov.querySelector('.pp-done').style.display = 'none';
     var err = ov.querySelector('.pp-error');
     err.style.display = 'flex';
-    err.querySelector('.pp-error-msg').textContent = msg || 'Erro no pipeline';
+    var msgFinal = msg || 'Erro no pipeline';
+    var acao = 'Recarregue a página e tente novamente. Se persistir, contate o suporte.';
+    if (msg && msg.toLowerCase().indexOf('nenhum lead') !== -1) {
+      acao = 'Tente outro nicho ou uma cidade maior.';
+    } else if (msg && msg.toLowerCase().indexOf('whatsapp') !== -1) {
+      acao = 'Conecte seu WhatsApp em Configurações e tente novamente.';
+    } else if (msg && msg.toLowerCase().indexOf('crédito') !== -1) {
+      acao = 'Aguarde o reset dos créditos ou faça upgrade do plano.';
+    }
+    err.querySelector('.pp-error-msg').textContent = msgFinal + ' — ' + acao;
+    ov.classList.add('open');
   };
 
   window.fecharProgressOverlay = function() {
@@ -7421,6 +7431,18 @@ function _retryPipelineFromError() {
   }
 })();
 
+async function cancelarPipelineReal() {
+  if (!confirm('Cancelar o pipeline em andamento?')) return;
+  try {
+    await authFetch('/api/pipeline/cancelar', { method: 'POST' });
+    fecharProgressOverlay();
+    mostrarToast('⏹ Pipeline cancelado.');
+    setTimeout(carregarKPIs, 500);
+  } catch(e) {
+    fecharProgressOverlay();
+  }
+}
+
 </script>
 <!-- Pipeline Progress Overlay HTML -->
 <div id="pipeline-progress-overlay">
@@ -7433,7 +7455,7 @@ function _retryPipelineFromError() {
       <div class="pp-bar"><div class="pp-bar-fill"></div></div>
       <div class="pp-timer">0:00 — media ~4min</div>
       <div class="pp-actions">
-        <button class="pp-btn pp-btn-danger" onclick="if(confirm('Cancelar pipeline?'))fecharProgressOverlay()">CANCELAR</button>
+        <button class="pp-btn pp-btn-danger" onclick="cancelarPipelineReal()">CANCELAR</button>
       </div>
     </div>
     <div class="pp-done">
