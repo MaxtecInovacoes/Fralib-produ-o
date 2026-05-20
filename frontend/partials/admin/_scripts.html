@@ -948,6 +948,26 @@ async function salvarConfigPipeline() {
   _executarIniciarAdmin(nicho, cidade, qtd, scoreMin, btn);
 }
 
+function mostrarErrosPipelineAdmin(titulo, mensagem, acao) {
+  var old = document.getElementById('modal-erro-pipeline-admin');
+  if (old) old.remove();
+  var modal = document.createElement('div');
+  modal.id = 'modal-erro-pipeline-admin';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:99999;display:flex;align-items:center;justify-content:center;';
+  modal.innerHTML = ''
+    + '<div style="background:#1a1a2e;border:1px solid #ef4444;border-radius:12px;padding:32px;max-width:420px;width:90%;text-align:center;">'
+    + '  <div style="font-size:48px;margin-bottom:16px;">⚠️</div>'
+    + '  <h3 style="color:#ef4444;margin:0 0 12px;font-size:18px;">' + titulo + '</h3>'
+    + '  <p style="color:#ccc;margin:0 0 20px;font-size:14px;line-height:1.5;">' + mensagem + '</p>'
+    + '  <p style="color:#888;margin:0 0 20px;font-size:12px;">' + (acao || 'Se o problema persistir, entre em contato com o suporte.') + '</p>'
+    + '  <button onclick="document.getElementById(\'modal-erro-pipeline-admin\').remove()" '
+    + '    style="background:#ef4444;color:white;border:none;padding:12px 32px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;">'
+    + '    Entendi'
+    + '  </button>'
+    + '</div>';
+  document.body.appendChild(modal);
+}
+
 async function _executarIniciarAdmin(nicho, cidade, qtd, scoreMin, btn) {
   if (btn) { btn.textContent = '⏳ INICIANDO...'; btn.disabled = true; }
   try {
@@ -956,11 +976,21 @@ async function _executarIniciarAdmin(nicho, cidade, qtd, scoreMin, btn) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ segmento: nicho, cidade: cidade, quantidade: qtd, score_minimo: scoreMin })
     });
-    if (resp.status === 428) {
-      var errData = await resp.json();
-      var msg = (errData.detail && errData.detail.message) || 'Conecte seu WhatsApp antes de rodar o pipeline.';
+    if (!resp.ok) {
+      var errData = {};
+      try { errData = await resp.json(); } catch(_){}
       if (btn) { btn.textContent = '▶ INICIAR'; btn.disabled = false; }
-      mostrarToast('⚠️ ' + msg, 'warning');
+      if (resp.status === 428) {
+        mostrarErrosPipelineAdmin('WhatsApp não conectado', (errData.detail && errData.detail.message) || 'Conecte seu WhatsApp antes de rodar o pipeline.', 'Após conectar, tente novamente.');
+      } else if (resp.status === 402) {
+        mostrarErrosPipelineAdmin('Limite atingido', (errData.detail && errData.detail.erro) || 'Créditos esgotados.', 'Aguarde o reset ou faça upgrade.');
+      } else if (resp.status === 503) {
+        mostrarErrosPipelineAdmin('Pipeline ocupado', 'Já existe um pipeline em execução.', 'Aguarde finalizar ou cancele o atual.');
+      } else if (resp.status === 429) {
+        mostrarErrosPipelineAdmin('Muitas requisições', 'Aguarde antes de tentar novamente.', 'Tente novamente em alguns minutos.');
+      } else {
+        mostrarErrosPipelineAdmin('Erro', errData.detail || 'Pipeline não iniciou.', 'Recarregue e tente novamente.');
+      }
       return;
     }
     var data = await resp.json();
@@ -969,8 +999,8 @@ async function _executarIniciarAdmin(nicho, cidade, qtd, scoreMin, btn) {
     carregarKPIs();
     mostrarToast('▶ Pipeline iniciado! Acompanhe o progresso no terminal abaixo.');
   } catch(e) {
-    if (btn) { btn.textContent = '✗ ERRO'; btn.disabled = false; setTimeout(function(){ btn.textContent = '▶ INICIAR'; }, 3000); }
-    mostrarToast('Erro ao iniciar pipeline: ' + e.message);
+    if (btn) { btn.textContent = '▶ INICIAR'; btn.disabled = false; }
+    mostrarErrosPipelineAdmin('Erro de conexão', 'Não foi possível conectar ao servidor.', 'Verifique sua internet e recarregue.');
   }
 }
 

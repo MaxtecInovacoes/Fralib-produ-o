@@ -2094,6 +2094,20 @@ async def reset_pipeline(db: Session = Depends(get_db), usuario: dict = Depends(
 
 
 
+@router.post('/cancelar')
+async def cancelar_pipeline(db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
+    tenant_id = usuario.get("tenant_id", usuario["id"])
+    result = db.execute(text("""
+        UPDATE jobs SET status = 'failed_permanent', updated_at = NOW()
+        WHERE tenant_id = :tid AND status IN ('pending', 'running')
+    """), {"tid": tenant_id})
+    db.commit()
+    cancelled = result.rowcount
+    update_pipeline_state(db, tenant_id, rodando=False, pausado=False)
+    adicionar_log(f"Pipeline cancelado ({cancelled} jobs)", "warning", user_id=tenant_id)
+    return {"status": "cancelado", "jobs_cancelados": cancelled}
+
+
 @router.post('/pausar')
 async def pausar_pipeline(db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
     tenant_id = usuario.get("tenant_id", usuario["id"])
