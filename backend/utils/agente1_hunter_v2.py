@@ -18,6 +18,44 @@ try:
 except ImportError:
     def salvar_memoria(key, data): pass
 
+# ===== MAPA DE SINÔNIMOS POR NICHO =====
+# Termos que o Google Maps usa vs o que o usuário busca
+SINONIMOS_NICHO = {
+    "dentistas": ["odontológica", "odontologica", "odonto", "dentista", "dentário", "dentario", "oral", "ortodontia", "implantes", "endodontia", "periodontia"],
+    "dentista": ["odontológica", "odontologica", "odonto", "dentista", "dentário", "dentario", "oral", "ortodontia", "implantes"],
+    "nutricionistas": ["nutricionista", "nutrição", "nutricao", "nutri", "dietista", "alimentação"],
+    "nutricionista": ["nutricionista", "nutrição", "nutricao", "nutri", "dietista", "alimentação"],
+    "academias": ["academia", "fitness", "musculação", "musculacao", "crossfit", "gym", "ginástica", "ginastica"],
+    "academia": ["academia", "fitness", "musculação", "musculacao", "crossfit", "gym", "ginástica", "ginastica"],
+    "psicólogos": ["psicólogo", "psicologo", "psicologia", "psicoterapia", "terapeuta", "terapia"],
+    "psicologo": ["psicólogo", "psicologo", "psicologia", "psicoterapia", "terapeuta", "terapia"],
+    "advogados": ["advogado", "advocacia", "jurídico", "juridico", "escritório de advocacia", "direito"],
+    "advogado": ["advogado", "advocacia", "jurídico", "juridico", "escritório de advocacia", "direito"],
+    "salão de beleza": ["salão", "salao", "beleza", "cabeleireiro", "cabeleireira", "hair", "barbearia", "estética", "estetica"],
+    "barbearia": ["barbearia", "barbeiro", "barber", "salão masculino", "salao masculino"],
+    "restaurantes": ["restaurante", "hamburgueria", "pizzaria", "churrascaria", "lanchonete", "bistrô", "bistro", "gastro", "culinária"],
+    "hamburgueria": ["hamburgueria", "hambúrguer", "hamburguer", "burger", "lanchonete", "fast food"],
+    "pizzaria": ["pizzaria", "pizza", "pizzas"],
+    "pet shop": ["pet shop", "pet", "veterinário", "veterinaria", "banho e tosa", "animal", "clínica veterinária"],
+    "veterinário": ["veterinário", "veterinaria", "vet", "animal", "pet", "clínica veterinária"],
+    "fisioterapia": ["fisioterapia", "fisioterapeuta", "fisio", "reabilitação", "reabilitacao", "pilates", "rpg"],
+    "personal trainer": ["personal", "trainer", "treinador", "preparador físico", "preparador fisico", "fitness"],
+    "encanador": ["encanador", "hidráulica", "hidraulica", "encanamento", "bombeiro hidráulico"],
+    "eletricista": ["eletricista", "elétrica", "eletrica", "instalação elétrica", "instalacao eletrica"],
+    "contabilidade": ["contabilidade", "contador", "contábil", "contabil", "escritório contábil"],
+    "imobiliária": ["imobiliária", "imobiliaria", "imóveis", "imoveis", "corretor", "corretora"],
+    "clínica médica": ["clínica", "clinica", "médica", "medica", "consultório", "consultorio", "saúde", "saude"],
+    "dermatologista": ["dermatologista", "dermatologia", "derma", "pele", "estética", "estetica"],
+    "oftalmologista": ["oftalmologista", "oftalmologia", "olhos", "óptica", "optica", "ótica", "otica"],
+    "mecânica": ["mecânica", "mecanica", "mecânico", "mecanico", "oficina", "auto center", "autocenter", "funilaria"],
+    "autoescola": ["autoescola", "auto escola", "cfc", "habilitação", "habilitacao", "carteira de motorista"],
+    "escola": ["escola", "colégio", "colegio", "ensino", "educação", "educacao", "curso"],
+    "farmácia": ["farmácia", "farmacia", "drogaria", "medicamento"],
+    "padaria": ["padaria", "panificadora", "confeitaria", "pão", "pao", "bakery"],
+    "floricultura": ["floricultura", "flores", "florista", "arranjos"],
+    "lavanderia": ["lavanderia", "lavagem", "lava", "tinturaria", "passadoria"],
+}
+
 # ===== MODELOS PYDANTIC =====
 
 class LeadRaw(BaseModel):
@@ -513,15 +551,31 @@ async def buscar_leads_google_maps(
         tipo_real = (dados.get('tipo') or '').strip()
         if tipo_real:
             # Se o tipo real do Google Maps não tem relação com o segmento buscado, pular
-            _seg_lower = segmento.lower()
-            _tipo_lower = tipo_real.lower()
-            # Verificar se há alguma relação semântica
+            _seg_lower = segmento.lower().strip()
+            _tipo_lower = tipo_real.lower().strip()
+
+            # 1. Match direto
             _match = (
                 _seg_lower in _tipo_lower or
                 _tipo_lower in _seg_lower or
-                any(p in _tipo_lower for p in _seg_lower.split()) or
-                any(p in _seg_lower for p in _tipo_lower.split())
+                any(p in _tipo_lower for p in _seg_lower.split() if len(p) > 3) or
+                any(p in _seg_lower for p in _tipo_lower.split() if len(p) > 3)
             )
+
+            # 2. Match por sinônimos
+            if not _match:
+                _sinonimos = SINONIMOS_NICHO.get(_seg_lower, [])
+                if _sinonimos:
+                    _match = any(sin in _tipo_lower for sin in _sinonimos)
+
+                # Fallback: buscar em todas as chaves que contenham o segmento
+                if not _match:
+                    for _chave, _sins in SINONIMOS_NICHO.items():
+                        if _seg_lower in _chave or _chave in _seg_lower:
+                            if any(sin in _tipo_lower for sin in _sins):
+                                _match = True
+                                break
+
             if not _match:
                 print(f"[Hunter V2] SKIP nicho errado: {nome} (tipo={tipo_real}, buscado={segmento})")
                 continue

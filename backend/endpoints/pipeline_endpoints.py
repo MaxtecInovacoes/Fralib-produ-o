@@ -1798,6 +1798,21 @@ async def iniciar_pipeline(
     if not config_limpo["segmento"] or not config_limpo["cidade"]:
         raise HTTPException(status_code=400, detail="Segmento e cidade são obrigatórios.")
 
+    # Gate: WhatsApp deve estar conectado pra pipeline funcionar
+    try:
+        from whatsapp_listener import is_tenant_connected
+        _tenant_wpp = f"fralib_user_{tenant_id}"
+        if not is_tenant_connected(_tenant_wpp):
+            raise HTTPException(
+                status_code=428,
+                detail={
+                    "error": "whatsapp_not_connected",
+                    "message": "Conecte seu WhatsApp antes de rodar o pipeline. Vá em Configurações > WhatsApp."
+                }
+            )
+    except ImportError:
+        pass  # Se módulo não disponível, não bloquear
+
     # Gate: apenas 1 pipeline por vez por tenant (com auto-reset se travou)
     _state = get_pipeline_state(db, tenant_id)
     if _state.get("rodando"):

@@ -326,6 +326,26 @@ _TENANT_STATUS: dict[str, str] = {}
 _TENANT_STATUS_LOCK = threading.Lock()
 _CONNECTED_STATUSES = frozenset({"connected", "open", "authenticated"})
 
+# Contador de QR timeouts por tenant (anti-loop zumbi)
+_QR_TIMEOUT_COUNT: dict[str, int] = {}
+_QR_MAX_RETRIES = 3
+
+
+def _on_qr_timeout(tenant_id: str) -> bool:
+    """Chamado quando QR code expira sem ser escaneado. Retorna False se deve parar."""
+    _QR_TIMEOUT_COUNT[tenant_id] = _QR_TIMEOUT_COUNT.get(tenant_id, 0) + 1
+    count = _QR_TIMEOUT_COUNT[tenant_id]
+    if count >= _QR_MAX_RETRIES:
+        print(f"[WPP] {tenant_id}: QR timeout {count}x — parando tentativas. Reconectar manualmente.")
+        return False
+    print(f"[WPP] {tenant_id}: QR timeout ({count}/{_QR_MAX_RETRIES})")
+    return True
+
+
+def _on_qr_success(tenant_id: str):
+    """Chamado quando QR é escaneado com sucesso."""
+    _QR_TIMEOUT_COUNT.pop(tenant_id, None)
+
 
 def _set_tenant_status(tenant_id: str, status: str) -> None:
     if not tenant_id or not status:
@@ -881,6 +901,15 @@ async def _conectar_e_ouvir():
                     if tenant_id:
                         _old_status = _get_tenant_status(tenant_id)
                         _set_tenant_status(tenant_id, status)
+
+                        # QR timeout tracking (anti-loop zumbi)
+                        if status == "qr" and _old_status == "qr":
+                            if not _on_qr_timeout(tenant_id):
+                                # Max retries atingido — não processar mais
+                                continue
+                        elif status in _CONNECTED_STATUSES:
+                            _on_qr_success(tenant_id)
+
                         # Alertar usuário quando WPP desconecta
                         if status in ("qr", "disconnected", "logged_out") and _old_status in _CONNECTED_STATUSES:
                             try:

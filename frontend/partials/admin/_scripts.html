@@ -956,6 +956,13 @@ async function _executarIniciarAdmin(nicho, cidade, qtd, scoreMin, btn) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ segmento: nicho, cidade: cidade, quantidade: qtd, score_minimo: scoreMin })
     });
+    if (resp.status === 428) {
+      var errData = await resp.json();
+      var msg = (errData.detail && errData.detail.message) || 'Conecte seu WhatsApp antes de rodar o pipeline.';
+      if (btn) { btn.textContent = '▶ INICIAR'; btn.disabled = false; }
+      mostrarToast('⚠️ ' + msg, 'warning');
+      return;
+    }
     var data = await resp.json();
     if (btn) { btn.textContent = '✓ INICIADO!'; }
     setTimeout(function(){ if (btn) { btn.textContent = '▶ INICIAR'; btn.disabled = false; } }, 3000);
@@ -1129,7 +1136,7 @@ document.addEventListener('DOMContentLoaded', function(){ verificarPrimeiroAcess
   setInterval(carregarKPIs, 60000);
   setInterval(carregarKanban, 60000);
   carregarMensagensNovas();
-  setInterval(carregarMensagensNovas, 30000);
+  setInterval(carregarMensagensNovas, 60000);
 });
 
 /* ── Sidebar toggle (mobile) ── */
@@ -3245,8 +3252,8 @@ async function atualizarPipelineBadge() {
     }
   } catch(e) {}
 }
-/* Atualiza a cada 30s */
-setInterval(atualizarPipelineBadge, 30000);
+/* Atualiza a cada 60s */
+setInterval(atualizarPipelineBadge, 60000);
 setTimeout(atualizarPipelineBadge, 2000);
 
 /* ── 2.1 Carregar leads incompletos/rejeitados ───────────────────── */
@@ -3749,7 +3756,7 @@ async function atualizarUtiBadge() {
       }).catch(function(){});
     }
     checkPipelineStatus();
-    setInterval(checkPipelineStatus, 5000);
+    setInterval(checkPipelineStatus, 30000);
 
     // Interceptar SSE para atualizar fase no banner
     var _origHook = window._pixelOfficeSSEHook;
