@@ -1939,7 +1939,7 @@ async def iniciar_pipeline(
     try:
         idem = f"pipeline-{tenant_id}-{queue_id}" if queue_id else None
         # Priority baseada no plano: Pro=1, Starter=2, Trial/Free=3
-        _plano = (creditos_check.get("plano") or "").lower()
+        _plano = _plano_user
         _priority = 1 if _plano == "pro" else (2 if _plano == "starter" else 3)
         job_id = _jq.enqueue(
             db,
