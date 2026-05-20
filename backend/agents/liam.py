@@ -44,7 +44,7 @@ COLOR TEMPERATURE: comida = quente (vermelho/laranja/amarelo). Saude = frio (azu
 5. PRECOS: NUNCA mencione valores. Use: "Consulte nossos valores".
 6. DADOS REAIS: use APENAS dados fornecidos. NUNCA invente nomes, enderecos, depoimentos.
 7. FOTOS: Use APENAS URLs fornecidas. Hero: loading=eager. Demais: loading=lazy. Sempre object-fit:cover.
-8. DEPOIMENTOS: Se reviews reais fornecidos, use-os. Se nao houver, gere 3 ficticios com nomes genericos.
+8. DEPOIMENTOS: Se reviews reais fornecidos, use EXATAMENTE os 3 fornecidos (sem inventar mais). Se nao houver reviews, OMITA a secao inteira. NUNCA gere depoimentos ficticios.
 9. BOTOES: TODOS com href valido. WhatsApp: href='https://wa.me/{num}'. NUNCA href='#'.
 10. CONTADORES: NUNCA invente numeros. Use apenas rating e total_avaliacoes reais.
 
@@ -859,7 +859,7 @@ def gerar_html_componentizado(prd):
     if reviews:
         reviews_fmt = nl.join([
             "- \"" + r.get("texto", r.get("text", "")) + "\" - " + r.get("autor", r.get("author", "Cliente"))
-            for r in reviews[:8]
+            for r in reviews[:3]
         ])
 
     html_final = ""
@@ -1145,7 +1145,7 @@ def gerar_html_componentizado(prd):
     import time as _time_liam
     from concurrent.futures import ThreadPoolExecutor, as_completed
 
-    _rate_semaphore = threading.Semaphore(3)
+    _rate_semaphore = threading.Semaphore(1)
     _rate_delay = float(os.getenv("LIAM_THREAD_DELAY", "2.0"))  # segundos entre submits pra evitar 429
 
     def _gerar_com_retry(s_item):
@@ -1176,7 +1176,7 @@ def gerar_html_componentizado(prd):
         return _nome, None
 
     print("[Liam] Iniciando geracao PARALELA de " + str(len(_secoes_fonte)) + " secoes (max 3 concurrent)...")
-    with ThreadPoolExecutor(max_workers=2) as _executor:
+    with ThreadPoolExecutor(max_workers=1) as _executor:
         _futures = []
         for _s_par in _secoes_fonte:
             _futures.append(_executor.submit(_gerar_com_retry, _s_par))

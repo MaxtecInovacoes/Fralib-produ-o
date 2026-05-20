@@ -19,7 +19,7 @@ module.exports = {
       script: 'worker.py',
       interpreter: '/root/fralib/venv/bin/python3',
       cwd: '/root/fralib',
-      instances: 3,
+      instances: 1,
       exec_mode: 'fork',
       autorestart: true,
       kill_timeout: 8000,

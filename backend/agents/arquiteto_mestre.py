@@ -17,6 +17,49 @@ from design_context import get_design_context, get_design_context_prompt, get_he
 from craft_rules import get_craft_rules, get_autocritica
 from seo_context import get_seo_context
 from open_design_selector import get_open_design_prompt, select_design_system
+
+
+def selecionar_top_reviews(reviews: list, max_site: int = 3) -> dict:
+    """
+    Separa reviews em:
+    - top_3: os melhores pro site (nota alta + texto longo)
+    - insights: inteligência extraída de TODOS pra alimentar copy
+    """
+    if not reviews:
+        return {"top_3": [], "insights": {"total_reviews": 0, "nota_media": 0, "elogios_resumo": [], "reclamacoes_resumo": [], "palavras_frequentes": [], "diferencial_detectado": ""}}
+
+    scored = []
+    for r in reviews:
+        texto = r.get("texto", r.get("text", ""))
+        nota = float(r.get("nota", r.get("rating", r.get("stars", 5))))
+        score = nota * 10 + min(len(texto), 200)
+        scored.append({"review": r, "score": score, "texto": texto, "nota": nota})
+
+    scored.sort(key=lambda x: x["score"], reverse=True)
+
+    top_3 = [s["review"] for s in scored[:max_site]]
+
+    elogios = [s["texto"][:150] for s in scored if s["nota"] >= 4][:5]
+    reclamacoes = [s["texto"][:150] for s in scored if s["nota"] <= 2][:3]
+
+    palavras = {}
+    _stop = {"para", "como", "mais", "muito", "esse", "essa", "este", "esta", "aqui", "onde", "quando", "lugar", "super", "legal"}
+    for s in scored:
+        for p in s["texto"].lower().split():
+            if len(p) > 4 and p not in _stop:
+                palavras[p] = palavras.get(p, 0) + 1
+    top_palavras = sorted(palavras.items(), key=lambda x: x[1], reverse=True)[:10]
+
+    insights = {
+        "total_reviews": len(reviews),
+        "nota_media": round(sum(s["nota"] for s in scored) / len(scored), 1),
+        "elogios_resumo": elogios,
+        "reclamacoes_resumo": reclamacoes,
+        "palavras_frequentes": [p[0] for p in top_palavras],
+        "diferencial_detectado": elogios[0][:100] if elogios else ""
+    }
+
+    return {"top_3": top_3, "insights": insights}
 from markdown_prd_parser import parse_bloco1_with_fallback, parse_bloco2_with_fallback
 
 
@@ -362,15 +405,33 @@ def gerar_arquiteto_mestre_prd(
     # Cores vem exclusivamente do design_context (tokens OKLch)
 
     # Formatar reviews reais
+    # Separar reviews: top 3 pro site + insights pra inteligência
     reviews_reais = dados_hunter.get("reviews") or []
+    _reviews_separados = selecionar_top_reviews(reviews_reais)
+    _top_3 = _reviews_separados["top_3"]
+    _reviews_insights_arq = _reviews_separados["insights"]
+
     reviews_fmt = ""
-    if reviews_reais:
+    if _top_3:
         reviews_fmt = "\n".join([
             f'- "{r.get("texto", r.get("text", ""))}" — {r.get("autor", r.get("author", "Cliente"))}'
-            for r in reviews_reais[:8]
+            for r in _top_3
         ])
     else:
         reviews_fmt = "NENHUM REVIEW DISPONIVEL — campo reviews_list deve ser []"
+
+    # Contexto de inteligência dos reviews (pra melhorar copy de TODAS as seções)
+    _reviews_intel_ctx = ""
+    if _reviews_insights_arq["total_reviews"] > 0:
+        _reviews_intel_ctx = (
+            f"\n=== INTELIGÊNCIA DOS REVIEWS ({_reviews_insights_arq['total_reviews']} avaliações, nota {_reviews_insights_arq['nota_media']}/5) ===\n"
+            f"O que clientes ELOGIAM: {', '.join(_reviews_insights_arq['elogios_resumo'][:3])}\n"
+            f"O que clientes RECLAMAM: {', '.join(_reviews_insights_arq['reclamacoes_resumo'][:2]) if _reviews_insights_arq['reclamacoes_resumo'] else 'nada relevante'}\n"
+            f"Palavras mais citadas: {', '.join(_reviews_insights_arq['palavras_frequentes'][:8])}\n"
+            f"Diferencial detectado: {_reviews_insights_arq['diferencial_detectado']}\n"
+            f"REGRA: Use esses insights pra enriquecer copy do hero, sobre e serviços. Mencione elogios reais. Evite mencionar reclamações.\n"
+            f"=== FIM INTELIGÊNCIA REVIEWS ===\n"
+        )
 
     # Fotos disponiveis
     fotos = dados_hunter.get("fotos") or []
@@ -561,6 +622,7 @@ MODO VISUAL: {"DARK" if dark_mode else "LIGHT"}
 
 DIRECAO CRIATIVA: {_instrucao[:500]}
 {_intel_ctx}
+{_reviews_intel_ctx}
 REGRAS DE COPY:
 - NUNCA usar: "atendimento personalizado", "qualidade e compromisso", "resultados reais", "pronto para comecar", "os melhores profissionais"
 - CTAs: variar entre secoes (NUNCA repetir mesmo texto 2x). Hero=urgencia, Servicos=curiosidade, Depoimentos=desejo, Contato=escassez
