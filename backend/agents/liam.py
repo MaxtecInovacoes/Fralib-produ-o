@@ -948,7 +948,7 @@ def gerar_html_componentizado(prd):
         reviews_instrucao = ""
         if nome_s.lower() in ("depoimentos", "reviews", "testimonials", "avaliacoes"):
             if reviews and reviews_fmt and len(reviews_fmt) > 20:
-                reviews_instrucao = nl + "REVIEWS REAIS (use exatamente, sem inventar):" + nl + reviews_fmt
+                reviews_instrucao = nl + "REVIEWS REAIS (use APENAS estes, COPIE o texto literal, NÃO invente nenhum depoimento extra — gere exatamente " + str(min(len(reviews), 3)) + " cards):" + nl + reviews_fmt
             else:
                 # Sem reviews reais = pular seção (não fabricar)
                 print("[Liam] Secao depoimentos: sem reviews reais (reviews=" + str(len(reviews)) + ") — PULANDO secao")

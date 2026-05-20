@@ -11,12 +11,6 @@ import re
 
 CONSTITUICAO_LIAM = [
     {
-        "id": "C1_FOTOS_REAIS",
-        "regra": "Seções visuais (hero, sobre, servicos, galeria) DEVEM ter pelo menos 1 tag <img> com src real. Seções de texto (depoimentos, faq, contato, localizacao) NÃO precisam de imagem obrigatória.",
-        "severidade": "critica",
-        "fix_hint": "Adicionar <img> com foto relevante (apenas em seções visuais: hero, sobre, servicos, galeria)"
-    },
-    {
         "id": "C2_SEM_FICCAO",
         "regra": "PROIBIDO inventar depoimentos, nomes de clientes, estatísticas ou histórias. Se não veio no PRD, não existe.",
         "severidade": "critica",
@@ -94,12 +88,7 @@ def auto_critica_constitucional(html_secao: str, nome_secao: str, design_tokens_
     """
     from llm_direct import call_claude
 
-    # Seções de texto não precisam de foto obrigatória
-    _secoes_texto = ("depoimentos", "faq", "contato", "localizacao", "reviews", "testimonials")
-    if nome_secao.lower() in _secoes_texto:
-        constituicao_filtrada = [c for c in CONSTITUICAO_LIAM if c["id"] != "C1_FOTOS_REAIS"]
-    else:
-        constituicao_filtrada = CONSTITUICAO_LIAM
+    constituicao_filtrada = CONSTITUICAO_LIAM
 
     constituicao_texto = "\n".join([
         f"- [{c['id']}] ({c['severidade']}): {c['regra']}"
@@ -120,7 +109,7 @@ REGRAS DO CRÍTICO:
 Retorne APENAS JSON válido (sem markdown, sem ```):
 {{
     "violacoes": [
-        {{"id": "C1_FOTOS_REAIS", "trecho": "trecho problemático curto", "fix": "como corrigir"}}
+        {{"id": "C2_SEM_FICCAO", "trecho": "trecho problemático curto", "fix": "como corrigir"}}
     ]
 }}"""
 
