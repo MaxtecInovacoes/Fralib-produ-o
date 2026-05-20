@@ -500,6 +500,7 @@ async def buscar_leads_google_maps(
     limite: int = 5,
     score_type: str = 'STANDARD',
     leads_existentes: set = None,
+    force_fresh: bool = False,
 ) -> List[LeadQualificado]:
     """
     Busca leads no Google Maps com estrategia LAZY:
@@ -511,7 +512,11 @@ async def buscar_leads_google_maps(
     print(f"[Hunter V2] Buscando {limite} leads LAZY: {segmento} em {cidade} ({len(_existentes)} ja existentes)...")
 
     # ── CACHE GLOBAL: verificar se já temos leads cacheados pra este segmento+cidade ──
-    cached_leads = _buscar_cache_leads(segmento, cidade, _existentes, limite)
+    if force_fresh:
+        print(f"[Hunter V2] FORCE FRESH: ignorando cache, buscando direto no Maps")
+        cached_leads = []
+    else:
+        cached_leads = _buscar_cache_leads(segmento, cidade, _existentes, limite)
     if cached_leads and len(cached_leads) >= limite:
         print(f"[Hunter V2] ✅ CACHE HIT: {len(cached_leads)} leads do cache (sem scraping)")
         return cached_leads[:limite]

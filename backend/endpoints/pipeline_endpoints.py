@@ -495,6 +495,7 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
             segmento=state.segmento,
             limite=config.get("quantidade", 10),
             leads_existentes=_leads_existentes,
+            force_fresh=config.get("force_fresh", False),
         )
         _kw_future.result(timeout=30)  # aguarda keyword research terminar
         _kw_executor.shutdown(wait=False)
@@ -1754,13 +1755,23 @@ async def executar_pipeline_multiplos(config: dict, tenant_id: int, queue_id: in
                 erro = (resultado.get("erro", "") or "") if resultado else ""
                 sem_leads = any(x in erro.lower() for x in ["nenhum lead", "todos os leads", "duplicata", "sem leads"])
                 if sem_leads:
-                    _log("Sem mais leads disponiveis para " + segmento + " em " + cidade, "warning")
+                    if not config.get("_cache_invalidado"):
+                        _log("Cache esgotado. Buscando leads novos no Google Maps...", "info")
+                        config["_cache_invalidado"] = True
+                        config["force_fresh"] = True
+                        continue
+                    _log("Sem mais leads disponiveis para " + segmento + " em " + cidade + ". Tente outro nicho ou uma cidade maior.", "warning")
                     break
                 _log("Lead nao qualificado, tentando proximo...", "warning")
         except Exception as e:
             err_str = str(e).lower()
             if any(x in err_str for x in ["nenhum lead", "todos os leads", "sem leads"]):
-                _log("Sem mais leads disponiveis para " + segmento + " em " + cidade, "warning")
+                if not config.get("_cache_invalidado"):
+                    _log("Cache esgotado. Buscando leads novos no Google Maps...", "info")
+                    config["_cache_invalidado"] = True
+                    config["force_fresh"] = True
+                    continue
+                _log("Sem mais leads disponiveis para " + segmento + " em " + cidade + ". Tente outro nicho ou uma cidade maior.", "warning")
                 break
             _log("Erro tentativa " + str(tentativas) + ": " + str(e)[:80], "warning")
     if concluidos >= quantidade_alvo:
