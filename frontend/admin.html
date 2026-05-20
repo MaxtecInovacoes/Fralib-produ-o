@@ -7360,27 +7360,14 @@ function _retryPipelineFromError() {
   }
 
   window.mostrarProgressOverlay = function() {
-    var ov = _getOverlay();
-    if (!ov) return;
-    ov.querySelector('.pp-running').style.display = 'flex';
-    ov.querySelector('.pp-done').style.display = 'none';
-    ov.querySelector('.pp-error').style.display = 'none';
-    ov.querySelector('.pp-bar-fill').style.width = '0%';
-    ov.querySelector('.pp-label').textContent = 'Preparando pipeline...';
-    ov.querySelector('.pp-fase').textContent = 'Iniciando';
-    ov.classList.add('open');
-    _ppStart = Date.now();
-    if (_ppTimer) clearInterval(_ppTimer);
-    _ppTimer = setInterval(_atualizarTimer, 1000);
+    // Overlay desativado no fluxo normal — progresso via toast + aba Motor
   };
 
   window.atualizarProgressOverlay = function(fase, total, label, percent) {
-    var ov = _getOverlay();
-    if (!ov) return;
-    if (!ov.classList.contains('open')) window.mostrarProgressOverlay();
-    ov.querySelector('.pp-bar-fill').style.width = percent + '%';
-    ov.querySelector('.pp-label').textContent = label;
-    ov.querySelector('.pp-fase').textContent = 'Etapa ' + fase + ' de ' + total;
+    // Progresso via toast, não overlay bloqueante
+    if (label && typeof mostrarToast === 'function') {
+      mostrarToast('⚙️ ' + label + ' (' + percent + '%)', 3000);
+    }
   };
 
   window.finalizarProgressOverlay = function(url, nome) {
