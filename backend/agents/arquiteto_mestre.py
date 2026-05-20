@@ -299,6 +299,7 @@ def gerar_arquiteto_mestre_prd(
     briefing_theo: str = "",
     dark_mode: bool = False,
     keyword_research: str = "",
+    inteligencia: dict = None,
 ) -> DesignerPRD:
     """
     Gera PRD completo fundindo estrategia + design em um unico passe.
@@ -428,6 +429,43 @@ def gerar_arquiteto_mestre_prd(
     _rating = dados_hunter.get("rating", 0)
     _total_av = dados_hunter.get("total_avaliacoes", 0)
 
+    # Injetar inteligência de mercado no prompt (se disponível)
+    _intel_ctx = ""
+    if inteligencia:
+        _conc = inteligencia.get("concorrencia", {})
+        _rev_ins = inteligencia.get("reviews_insights", {})
+        _seo = inteligencia.get("seo", {})
+        _servicos_r = inteligencia.get("servicos_reais", [])
+
+        if _conc.get("padroes_mercado"):
+            _pm = _conc["padroes_mercado"]
+            _intel_ctx += f"\n=== INTELIGENCIA DE MERCADO ===\n"
+            _intel_ctx += f"Tema dominante concorrentes: {_pm.get('tema_dominante', 'N/A')}\n"
+            _intel_ctx += f"Fonte H1 dominante: {_pm.get('fonte_h1_dominante', 'N/A')}\n"
+            _intel_ctx += f"CTAs encontrados: {', '.join(_pm.get('ctas_encontrados', [])[:3])}\n"
+            # Headlines dos concorrentes
+            _h1s = [c.get("h1_text", "") for c in _conc.get("concorrentes", []) if c.get("h1_text")]
+            if _h1s:
+                _intel_ctx += f"Headlines concorrentes: {' | '.join(_h1s[:3])}\n"
+
+        if _rev_ins.get("palavras_frequentes"):
+            _intel_ctx += f"Palavras mais citadas em reviews: {', '.join(_rev_ins['palavras_frequentes'][:8])}\n"
+        if _rev_ins.get("diferencial_detectado"):
+            _intel_ctx += f"Diferencial detectado nos reviews: {_rev_ins['diferencial_detectado']}\n"
+        if _rev_ins.get("elogios"):
+            _intel_ctx += f"Elogios reais: {_rev_ins['elogios'][0][:100]}\n"
+
+        if _servicos_r:
+            _intel_ctx += f"Servicos CONFIRMADOS no Maps: {', '.join(s['titulo'] for s in _servicos_r[:6])}\n"
+            _intel_ctx += "REGRA: Use APENAS estes servicos. NAO invente servicos que nao estao listados.\n"
+
+        if _seo.get("h1_sugerido"):
+            _intel_ctx += f"H1 sugerido (SEO): {_seo['h1_sugerido']}\n"
+        if _seo.get("people_also_ask"):
+            _intel_ctx += f"People Also Ask (usar no FAQ): {' | '.join(_seo['people_also_ask'][:4])}\n"
+
+        _intel_ctx += "=== FIM INTELIGENCIA ===\n"
+
     prompt_bloco1 = f"""Voce e o Diretor de Arte. Defina a estrutura e direcao criativa do site.
 
 NEGOCIO: {_nome}
@@ -435,6 +473,7 @@ CIDADE: {cidade}
 SEGMENTO: {segmento}
 TIER: {caio_tier} (score={caio_score})
 RATING: {_rating}/5 ({_total_av} avaliacoes)
+{_intel_ctx}
 {_sub_nicho_ctx}
 {_design_ctx}
 
@@ -468,6 +507,14 @@ layout_type: (um de: brutalist/editorial/organic/corporate/minimal)
 - faq | services-accordion
 - localizacao | (location-split ou location-full ou location-card)
 - contato | (contact-minimal ou contact-split ou contact-card)
+- footer | (footer-3col ou footer-2col ou footer-centered ou footer-darkbar)
+
+REGRAS DE VARIACAO POR NICHO:
+- Restaurante/Bar: hero-fullscreen + foto comida, depoimentos ANTES de servicos se rating > 4.5
+- Profissional saude: hero-split + foto profissional, sobre LOGO apos hero
+- Academia/Fitness: hero-fullscreen dark + tipografia bold gigante
+- Salao/Estetica: hero-diagonal editorial + galeria antes/depois
+- Servico urgente (encanador, eletricista): contato ANTES de servicos
 
 MARKDOWN APENAS. Sem JSON. Sem code blocks."""
 
@@ -513,6 +560,14 @@ TIER: {caio_tier}
 MODO VISUAL: {"DARK" if dark_mode else "LIGHT"}
 
 DIRECAO CRIATIVA: {_instrucao[:500]}
+{_intel_ctx}
+REGRAS DE COPY:
+- NUNCA usar: "atendimento personalizado", "qualidade e compromisso", "resultados reais", "pronto para comecar", "os melhores profissionais"
+- CTAs: variar entre secoes (NUNCA repetir mesmo texto 2x). Hero=urgencia, Servicos=curiosidade, Depoimentos=desejo, Contato=escassez
+- Copy geo-especifica: mencionar bairro/rua/pontos de referencia (minimo 3 mencoes geograficas)
+- Secao SOBRE: usar elogios reais dos reviews + diferencial detectado. Contar historia REAL.
+- Secao SERVICOS: usar APENAS servicos confirmados no Maps (listados acima). NAO inventar.
+- Secao FAQ: usar People Also Ask como perguntas (se disponivel). Respostas com nome do negocio + localidade.
 
 REVIEWS REAIS:
 {reviews_fmt}
@@ -651,6 +706,10 @@ REGRAS:
             dados["geo"] = {"lat": float(_lat), "lng": float(_lng)}
         except (TypeError, ValueError):
             pass
+    # Place ID do Google Maps (pra embed e link correto)
+    _place_id = dados_hunter.get("place_id") or ""
+    if _place_id:
+        dados["place_id"] = _place_id
     # Tipografia do design_context — nunca fallback genérico
     dados["typography"] = {"heading": _design_dict["font_heading"], "body": _design_dict["font_body"]}
     dados.setdefault("animations", [])

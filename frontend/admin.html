@@ -660,6 +660,51 @@ body{
 
 .modal-input{width:100%;background:var(--fl-bg-card);border:1px solid var(--fl-border);color:var(--fl-text);padding:8px 12px;border-radius:6px;font-size:13px;box-sizing:border-box;font-family:inherit;}
 .modal-input:focus{outline:none;border-color:var(--fl-purple);}
+
+/* Pipeline Progress Overlay */
+#pipeline-progress-overlay{
+  position:fixed;inset:0;z-index:99999;
+  background:rgba(6,6,8,0.94);backdrop-filter:blur(8px);
+  display:none;align-items:center;justify-content:center;
+  opacity:0;transition:opacity .3s var(--fl-ease);
+}
+#pipeline-progress-overlay.open{display:flex;opacity:1}
+.pp-card{
+  background:var(--fl-bg-card);border:2px solid var(--fl-border-md);
+  padding:40px 36px;max-width:440px;width:90%;text-align:center;
+  box-shadow:0 0 60px rgba(147,51,234,0.15),8px 8px 0 var(--fl-purple-950);
+}
+.pp-icon{font-size:48px;margin-bottom:16px;animation:pp-spin 2s linear infinite}
+@keyframes pp-spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+.pp-icon-done{animation:none;font-size:56px}
+.pp-title{font-family:var(--fl-font-brand);font-size:11px;color:var(--fl-purple-300);margin-bottom:8px;letter-spacing:1px}
+.pp-label{color:var(--fl-text);font-size:15px;margin-bottom:4px}
+.pp-fase{color:var(--fl-text-muted);font-size:12px;margin-bottom:20px}
+.pp-bar{
+  width:100%;height:8px;background:var(--fl-bg-hover);border-radius:4px;
+  overflow:hidden;margin-bottom:12px;border:1px solid var(--fl-border);
+}
+.pp-bar-fill{
+  height:100%;width:0%;border-radius:4px;
+  background:linear-gradient(90deg,var(--fl-purple),var(--cyan));
+  transition:width .6s var(--fl-ease);
+}
+.pp-timer{color:var(--fl-text-dim);font-size:12px;font-family:var(--fl-font-mono);margin-bottom:24px}
+.pp-btn{
+  padding:12px 24px;font-family:var(--fl-font-brand);font-size:9px;
+  border:none;cursor:pointer;letter-spacing:1px;transition:all .15s;
+  box-shadow:4px 4px 0 rgba(0,0,0,0.3);
+}
+.pp-btn:active{transform:translateY(2px);box-shadow:2px 2px 0 rgba(0,0,0,0.3)}
+.pp-btn-primary{background:var(--fl-purple);color:#fff}
+.pp-btn-primary:hover{box-shadow:4px 4px 0 rgba(0,0,0,0.3),0 0 20px rgba(147,51,234,0.3)}
+.pp-btn-success{background:var(--cyan);color:#000}
+.pp-btn-success:hover{box-shadow:4px 4px 0 rgba(0,0,0,0.3),0 0 20px var(--cyan-glow)}
+.pp-btn-danger{background:transparent;color:var(--fl-text-dim);border:1px solid var(--fl-border);box-shadow:none;font-size:8px;margin-top:12px}
+.pp-btn-danger:hover{color:var(--danger);border-color:var(--danger)}
+.pp-actions{display:flex;flex-direction:column;align-items:center;gap:8px}
+.pp-running,.pp-done,.pp-error{display:flex;flex-direction:column;align-items:center}
+.pp-done,.pp-error{display:none}
 </style>
 
 </head>
@@ -3002,13 +3047,18 @@ async function _executarIniciar(nicho, cidade, qtd) {
     });
     if (resp && resp.status === 402) {
       const data = await resp.json().catch(() => ({}));
-      _mostrarPopupUpgrade(data.detail || {});
+      const det = data.detail || {};
+      if (det.reason === 'creditos_esgotados') {
+        _mostrarPopupCreditosEsgotados(det);
+      } else {
+        _mostrarPopupUpgrade(det);
+      }
       return;
     }
     if (resp && resp.status === 429) {
       const data = await resp.json().catch(() => ({}));
       const det = data.detail || {};
-      if (det.cooldown_restante_seg) {
+      if (det.cooldown_restante_seg || det.reason === 'cooldown') {
         _mostrarCooldownPopup(det);
       } else {
         const msg = typeof det === 'string' ? det : (det.mensagem || 'Pipeline travado. Tente novamente em alguns segundos.');
@@ -3018,6 +3068,7 @@ async function _executarIniciar(nicho, cidade, qtd) {
       return;
     }
     setTimeout(carregarKPIs, 800);
+    mostrarProgressOverlay();
   } catch(e) { alert('Erro ao iniciar pipeline: ' + e.message); }
 }
 
@@ -3081,6 +3132,52 @@ function _mostrarCooldownPopup(det) {
   }
   _tickCooldown();
 }
+
+function _mostrarPopupCreditosEsgotados(det) {
+  var old = document.getElementById('creditosOverlay');
+  if (old) old.remove();
+  var limite = det.limite_diario || 6;
+  var plano = det.plano || 'starter';
+  var upsell = det.upsell || '';
+  var resetAt = det.reset_at || '';
+  var agora = new Date();
+  var resetDate = resetAt ? new Date(resetAt) : null;
+  var segsAteReset = resetDate ? Math.max(0, Math.floor((resetDate - agora) / 1000)) : 0;
+
+  var html = '<div id="creditosOverlay" style="position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);">'
+    + '<div style="background:rgba(10,7,20,0.95);border:1px solid rgba(147,51,234,0.3);border-radius:16px;padding:36px;max-width:400px;width:90%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.5),inset 0 1px 0 rgba(255,255,255,0.04);">'
+    + '<div style="width:56px;height:56px;margin:0 auto 16px;background:rgba(239,68,68,0.1);border-radius:50%;display:flex;align-items:center;justify-content:center;border:1px solid rgba(239,68,68,0.2);"><span style="font-size:1.5rem;">📊</span></div>'
+    + '<h2 style="font-family:\'Press Start 2P\',monospace;font-size:11px;color:#ef4444;margin-bottom:12px;letter-spacing:1px;">CRÉDITOS ESGOTADOS</h2>'
+    + '<p style="color:#e5e7eb;font-size:0.95rem;margin-bottom:4px;">Você usou <b>' + limite + '/' + limite + '</b> sites hoje.</p>'
+    + '<p style="color:#6b6b80;font-size:0.8rem;margin-bottom:16px;">Plano <b style="color:#c084fc;">' + plano + '</b></p>'
+    + '<div id="creditosTimer" style="font-family:\'JetBrains Mono\',monospace;font-size:1.8rem;font-weight:700;color:#10b981;margin:16px 0;text-shadow:0 0 12px rgba(16,185,129,0.3);"></div>'
+    + '<p style="color:#8888a0;font-size:0.8rem;margin-bottom:16px;">Novos créditos em 00:00 (Brasília)</p>'
+    + (upsell ? '<p style="color:#a855f7;font-size:0.8rem;margin-top:8px;padding:8px 12px;background:rgba(147,51,234,0.08);border-radius:8px;border:1px solid rgba(147,51,234,0.15);">' + escapeHtml(upsell) + '</p>' : '')
+    + '<div style="display:flex;gap:12px;justify-content:center;margin-top:24px;">'
+    + (upsell ? '<a href="/planos" style="font-family:\'Press Start 2P\',monospace;font-size:9px;background:#a855f7;color:#fff;padding:12px 20px;text-decoration:none;box-shadow:4px 4px 0 rgba(0,0,0,0.3);letter-spacing:1px;">UPGRADE</a>' : '')
+    + '<button onclick="document.getElementById(\'creditosOverlay\').remove()" style="font-family:\'Press Start 2P\',monospace;font-size:9px;background:transparent;border:1px solid rgba(147,51,234,0.3);color:#a0a0b8;padding:12px 20px;cursor:pointer;letter-spacing:1px;">ENTENDI</button>'
+    + '</div></div></div>';
+  document.body.insertAdjacentHTML('beforeend', html);
+
+  var segsRest = segsAteReset;
+  function _tickCreditos() {
+    var h = Math.floor(segsRest / 3600);
+    var m = Math.floor((segsRest % 3600) / 60);
+    var s = segsRest % 60;
+    var el = document.getElementById('creditosTimer');
+    if (el) el.textContent = h + ':' + (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
+    if (segsRest <= 0) {
+      var ov = document.getElementById('creditosOverlay');
+      if (ov) ov.remove();
+      mostrarToast('✅ Créditos renovados! Pode rodar o pipeline.', 'success');
+      return;
+    }
+    segsRest--;
+    setTimeout(_tickCreditos, 1000);
+  }
+  _tickCreditos();
+}
+
 async function pausarPipeline() {
   try {
     await authFetch('/api/pipeline/pausar', { method: 'POST' });
@@ -3901,24 +3998,30 @@ async function _executarIniciarAdmin(nicho, cidade, qtd, scoreMin, btn) {
       var d429 = await resp.json().catch(function(){return {};});
       var det = d429.detail || {};
       if (btn) { btn.textContent = '▶ INICIAR'; btn.disabled = false; }
-      if (det.cooldown_restante_seg) {
+      if (det.cooldown_restante_seg || det.reason === 'cooldown') {
         _mostrarCooldownPopup(det);
       } else {
-        var msg429 = typeof det === 'string' ? det : (det.mensagem || 'Pipeline travado.');
+        var msg429 = typeof det === 'string' ? det : (det.mensagem || det.message || 'Pipeline travado.');
         mostrarToast('⚠️ ' + msg429, 'warning');
       }
       return;
     }
     if (resp && resp.status === 402) {
       var d402 = await resp.json().catch(function(){return {};});
+      var det402 = d402.detail || {};
       if (btn) { btn.textContent = '▶ INICIAR'; btn.disabled = false; }
-      _mostrarPopupUpgrade(d402.detail || {});
+      if (det402.reason === 'creditos_esgotados') {
+        _mostrarPopupCreditosEsgotados(det402);
+      } else {
+        _mostrarPopupUpgrade(det402);
+      }
       return;
     }
     var data = await resp.json();
     if (btn) { btn.textContent = '✓ INICIADO!'; }
     setTimeout(function(){ if (btn) { btn.textContent = '▶ INICIAR'; btn.disabled = false; } }, 3000);
     carregarKPIs();
+    mostrarProgressOverlay();
     mostrarToast('▶ Pipeline iniciado! Acompanhe o progresso no terminal abaixo.');
   } catch(e) {
     if (btn) { btn.textContent = '✗ ERRO'; btn.disabled = false; setTimeout(function(){ btn.textContent = '▶ INICIAR'; }, 3000); }
@@ -4094,11 +4197,24 @@ document.addEventListener('DOMContentLoaded', function(){ verificarPrimeiroAcess
   carregarKPIs();
   carregarKanban();
 
-  // Polling a cada 60s
-  setInterval(carregarKPIs, 60000);
-  setInterval(carregarKanban, 30000);
+  // Polling como fallback — desativado quando SSE conecta
+  var _kpiInterval = setInterval(carregarKPIs, 120000);
+  var _kanbanInterval = setInterval(carregarKanban, 120000);
   carregarMensagensNovas();
-  setInterval(carregarMensagensNovas, 30000);
+  var _msgInterval = setInterval(carregarMensagensNovas, 60000);
+
+  // Expor pra SSE controlar
+  window._pollingIntervals = { kpi: _kpiInterval, kanban: _kanbanInterval, msg: _msgInterval };
+  window._pausarPolling = function() {
+    if (window._pollingIntervals.kpi) { clearInterval(window._pollingIntervals.kpi); window._pollingIntervals.kpi = null; }
+    if (window._pollingIntervals.kanban) { clearInterval(window._pollingIntervals.kanban); window._pollingIntervals.kanban = null; }
+    if (window._pollingIntervals.msg) { clearInterval(window._pollingIntervals.msg); window._pollingIntervals.msg = null; }
+  };
+  window._retomarPolling = function() {
+    if (!window._pollingIntervals.kpi) window._pollingIntervals.kpi = setInterval(carregarKPIs, 120000);
+    if (!window._pollingIntervals.kanban) window._pollingIntervals.kanban = setInterval(carregarKanban, 120000);
+    if (!window._pollingIntervals.msg) window._pollingIntervals.msg = setInterval(carregarMensagensNovas, 60000);
+  };
 });
 
 /* ── Sidebar toggle (mobile) ── */
@@ -5541,6 +5657,8 @@ function filtrarCiclos(search) {
       var dot = document.getElementById('sse-dot');
       if (dot) dot.style.background = '#10b981';
       adicionarLog({ evento: 'INFO', mensagem: 'Terminal conectado. Aguardando pipeline...', ts: new Date().toLocaleTimeString('pt-BR') });
+      // SSE ativo — pausar polling HTTP (reduz carga no banco)
+      if (window._pausarPolling) window._pausarPolling();
     };
 
     eventSource.onerror = function(err) {
@@ -5548,6 +5666,8 @@ function filtrarCiclos(search) {
       var dot = document.getElementById('sse-dot');
       if (dot) dot.style.background = '#ef4444';
       eventSource.close();
+      // SSE caiu — reativar polling como fallback
+      if (window._retomarPolling) window._retomarPolling();
       if (window.__fralibAuthExpired || !localStorage.getItem('fralib_token')) return;
       setTimeout(conectarSSE, 5000);
     };
@@ -5574,6 +5694,33 @@ function adicionarLog(data) {
     // Rate limit — mostrar modal proeminente
     if (data.evento === 'RATE_LIMIT' || data.tipo === 'rate_limit') {
       _mostrarModalRateLimit(data.mensagem);
+    }
+
+    // Pipeline progress — rotear pro overlay visual
+    if (data.evento === 'PIPELINE_STATUS') {
+      try {
+        var prog = JSON.parse(data.mensagem);
+        if (prog.type === 'progress') {
+          atualizarProgressOverlay(prog.fase, prog.total, prog.label, prog.percent);
+          return;
+        }
+        if (prog.type === 'complete') {
+          finalizarProgressOverlay(prog.url || null, prog.lead_nome || null);
+          return;
+        }
+        if (prog.type === 'pipeline_error') {
+          _tratarErroPipeline(prog);
+          return;
+        }
+      } catch(e) {}
+    }
+    if (data.evento === 'SUCCESS' && data.mensagem && data.mensagem.indexOf('publicado') !== -1) {
+      finalizarProgressOverlay(null, null);
+    }
+    if (data.evento === 'ERROR' && document.getElementById('pipeline-progress-overlay') &&
+        document.getElementById('pipeline-progress-overlay').classList.contains('open')) {
+      erroProgressOverlay(data.mensagem);
+      return;
     }
 
     const logsContainer = getContainer();
@@ -7001,7 +7148,7 @@ async function atualizarUtiBadge() {
       }).catch(function(){});
     }
     checkPipelineStatus();
-    _pipelineInterval = setInterval(checkPipelineStatus, 5000);
+    _pipelineInterval = setInterval(checkPipelineStatus, 15000);
 
     // Interceptar SSE para atualizar progresso
     var _origHook = window._pixelOfficeSSEHook;
@@ -7089,5 +7236,224 @@ async function atualizarUtiBadge() {
 })();
 
 
+/* ══════════════════════════════════════════════════════════════════════
+   PIPELINE ERROR HANDLER (erros tipados via SSE)
+   ══════════════════════════════════════════════════════════════════════ */
+function _tratarErroPipeline(err) {
+  // Fechar progress overlay se aberto
+  fecharProgressOverlay();
+
+  if (err.severity === 'wait') {
+    // Overlay de espera: blur + mensagem + spinner
+    _mostrarOverlayEspera(err);
+  } else if (err.severity === 'warning') {
+    // Toast/banner leve
+    mostrarToast('⚠️ ' + (err.title || err.message), 'warning');
+  } else {
+    // Popup de erro grave
+    _mostrarPopupErroPipeline(err);
+  }
+}
+
+function _mostrarOverlayEspera(err) {
+  var old = document.getElementById('pipeline-wait-overlay');
+  if (old) old.remove();
+  var eta = err.eta_seconds ? Math.ceil(err.eta_seconds / 60) : 5;
+  var html = '<div id="pipeline-wait-overlay" style="position:fixed;inset:0;z-index:99998;background:rgba(6,6,8,0.85);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;">'
+    + '<div style="text-align:center;max-width:380px;padding:32px;">'
+    + '<div style="width:48px;height:48px;margin:0 auto 20px;border:3px solid var(--fl-purple-800);border-top-color:var(--fl-purple);border-radius:50%;animation:pp-spin 1s linear infinite;"></div>'
+    + '<h3 style="font-family:var(--fl-font-brand);font-size:10px;color:var(--fl-purple-300);margin-bottom:12px;letter-spacing:1px;">' + escapeHtml(err.title || 'AGUARDANDO') + '</h3>'
+    + '<p style="color:var(--fl-text);font-size:14px;margin-bottom:8px;">' + escapeHtml(err.message || '') + '</p>'
+    + (err.detalhes && err.detalhes[0] ? '<p style="color:var(--fl-text-muted);font-size:12px;margin-bottom:16px;">' + escapeHtml(err.detalhes[0]) + '</p>' : '')
+    + '<p style="color:var(--fl-text-dim);font-size:11px;font-family:var(--fl-font-mono);">Estimativa: ~' + eta + 'min</p>'
+    + '<p style="color:var(--success);font-size:11px;margin-top:12px;">Crédito NÃO consumido</p>'
+    + '<button onclick="document.getElementById(\'pipeline-wait-overlay\').remove()" style="margin-top:20px;font-family:var(--fl-font-brand);font-size:8px;background:transparent;border:1px solid var(--fl-border);color:var(--fl-text-dim);padding:10px 16px;cursor:pointer;letter-spacing:1px;">FECHAR</button>'
+    + '</div></div>';
+  document.body.insertAdjacentHTML('beforeend', html);
+
+  // Auto-dismiss após ETA
+  if (err.auto_retry && err.eta_seconds) {
+    setTimeout(function() {
+      var ov = document.getElementById('pipeline-wait-overlay');
+      if (ov) ov.remove();
+    }, (err.eta_seconds + 30) * 1000);
+  }
+}
+
+function _mostrarPopupErroPipeline(err) {
+  var old = document.getElementById('pipeline-error-popup');
+  if (old) old.remove();
+  var detalhesHtml = '';
+  if (err.detalhes && err.detalhes.length > 0) {
+    detalhesHtml = '<div style="text-align:left;margin:12px 0;padding:10px 14px;background:rgba(239,68,68,0.06);border:1px solid rgba(239,68,68,0.15);border-radius:8px;">';
+    for (var i = 0; i < err.detalhes.length && i < 5; i++) {
+      detalhesHtml += '<p style="color:var(--fl-text-muted);font-size:12px;margin:4px 0;">• ' + escapeHtml(err.detalhes[i]) + '</p>';
+    }
+    detalhesHtml += '</div>';
+  }
+  var creditoMsg = err.credito_consumido
+    ? '<p style="color:var(--warning);font-size:11px;margin-top:12px;">⚠️ Crédito consumido (site foi gerado)</p>'
+    : '<p style="color:var(--success);font-size:11px;margin-top:12px;">✅ Crédito NÃO consumido</p>';
+
+  var actionsHtml = '<div style="display:flex;gap:10px;justify-content:center;margin-top:20px;">';
+  // Botão retry se não for NO_LEADS
+  if (err.error_code !== 'NO_LEADS') {
+    actionsHtml += '<button onclick="_retryPipelineFromError()" style="font-family:var(--fl-font-brand);font-size:9px;background:var(--fl-purple);color:#fff;border:none;padding:12px 20px;cursor:pointer;letter-spacing:1px;box-shadow:4px 4px 0 rgba(0,0,0,0.3);">TENTAR NOVAMENTE</button>';
+  }
+  actionsHtml += '<button onclick="document.getElementById(\'pipeline-error-popup\').remove()" style="font-family:var(--fl-font-brand);font-size:9px;background:transparent;border:1px solid var(--fl-border);color:var(--fl-text-dim);padding:12px 20px;cursor:pointer;letter-spacing:1px;">FECHAR</button>';
+  actionsHtml += '</div>';
+
+  var html = '<div id="pipeline-error-popup" style="position:fixed;inset:0;z-index:99998;background:rgba(6,6,8,0.88);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;">'
+    + '<div style="background:var(--fl-bg-card);border:2px solid rgba(239,68,68,0.3);padding:32px;max-width:420px;width:90%;text-align:center;box-shadow:0 0 40px rgba(239,68,68,0.1),8px 8px 0 var(--fl-purple-950);">'
+    + '<div style="font-size:40px;margin-bottom:12px;">❌</div>'
+    + '<h3 style="font-family:var(--fl-font-brand);font-size:10px;color:#ef4444;margin-bottom:12px;letter-spacing:1px;">' + escapeHtml(err.title || 'ERRO') + '</h3>'
+    + '<p style="color:var(--fl-text);font-size:14px;margin-bottom:8px;">' + escapeHtml(err.message || 'Erro no pipeline') + '</p>'
+    + detalhesHtml
+    + creditoMsg
+    + actionsHtml
+    + '</div></div>';
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+
+function _retryPipelineFromError() {
+  document.getElementById('pipeline-error-popup').remove();
+  // Re-iniciar com mesma config
+  var nicho = (document.getElementById('configNicho') || {}).value || '';
+  var cidade = (document.getElementById('configCidade') || {}).value || '';
+  if (nicho && cidade) {
+    _executarIniciarAdmin(nicho, cidade,
+      parseInt((document.getElementById('configQtd') || {}).value || '50'),
+      parseInt((document.getElementById('configScoreMin') || {}).value || '70'),
+      document.querySelector('.config-group .btn-config-save'));
+  } else {
+    mostrarToast('Configure nicho e cidade antes de tentar novamente.', 'warning');
+  }
+}
+
+
+/* ══════════════════════════════════════════════════════════════════════
+   PIPELINE PROGRESS OVERLAY
+   ══════════════════════════════════════════════════════════════════════ */
+(function(){
+  var _ppTimer = null;
+  var _ppStart = null;
+  var _ppOverlay = null;
+
+  function _getOverlay() {
+    if (_ppOverlay) return _ppOverlay;
+    _ppOverlay = document.getElementById('pipeline-progress-overlay');
+    return _ppOverlay;
+  }
+
+  window.mostrarProgressOverlay = function() {
+    var ov = _getOverlay();
+    if (!ov) return;
+    ov.querySelector('.pp-running').style.display = 'flex';
+    ov.querySelector('.pp-done').style.display = 'none';
+    ov.querySelector('.pp-error').style.display = 'none';
+    ov.querySelector('.pp-bar-fill').style.width = '0%';
+    ov.querySelector('.pp-label').textContent = 'Preparando pipeline...';
+    ov.querySelector('.pp-fase').textContent = 'Iniciando';
+    ov.classList.add('open');
+    _ppStart = Date.now();
+    if (_ppTimer) clearInterval(_ppTimer);
+    _ppTimer = setInterval(_atualizarTimer, 1000);
+  };
+
+  window.atualizarProgressOverlay = function(fase, total, label, percent) {
+    var ov = _getOverlay();
+    if (!ov) return;
+    if (!ov.classList.contains('open')) window.mostrarProgressOverlay();
+    ov.querySelector('.pp-bar-fill').style.width = percent + '%';
+    ov.querySelector('.pp-label').textContent = label;
+    ov.querySelector('.pp-fase').textContent = 'Etapa ' + fase + ' de ' + total;
+  };
+
+  window.finalizarProgressOverlay = function(url, nome) {
+    var ov = _getOverlay();
+    if (!ov) return;
+    if (_ppTimer) { clearInterval(_ppTimer); _ppTimer = null; }
+    ov.querySelector('.pp-running').style.display = 'none';
+    ov.querySelector('.pp-error').style.display = 'none';
+    var done = ov.querySelector('.pp-done');
+    done.style.display = 'flex';
+    var elapsed = _ppStart ? Math.floor((Date.now() - _ppStart) / 1000) : 0;
+    var min = Math.floor(elapsed / 60);
+    var sec = elapsed % 60;
+    done.querySelector('.pp-done-time').textContent = 'Concluido em ' + min + ':' + sec.toString().padStart(2, '0');
+    if (nome) done.querySelector('.pp-done-nome').textContent = nome;
+    var btnVer = done.querySelector('.pp-btn-ver-site');
+    if (url && btnVer) {
+      btnVer.style.display = 'inline-block';
+      btnVer.onclick = function() { window.open(url, '_blank'); };
+    } else if (btnVer) {
+      btnVer.style.display = 'none';
+    }
+  };
+
+  window.erroProgressOverlay = function(msg) {
+    var ov = _getOverlay();
+    if (!ov) return;
+    if (_ppTimer) { clearInterval(_ppTimer); _ppTimer = null; }
+    ov.querySelector('.pp-running').style.display = 'none';
+    ov.querySelector('.pp-done').style.display = 'none';
+    var err = ov.querySelector('.pp-error');
+    err.style.display = 'flex';
+    err.querySelector('.pp-error-msg').textContent = msg || 'Erro no pipeline';
+  };
+
+  window.fecharProgressOverlay = function() {
+    var ov = _getOverlay();
+    if (!ov) return;
+    ov.classList.remove('open');
+    if (_ppTimer) { clearInterval(_ppTimer); _ppTimer = null; }
+  };
+
+  function _atualizarTimer() {
+    if (!_ppStart) return;
+    var ov = _getOverlay();
+    if (!ov) return;
+    var elapsed = Math.floor((Date.now() - _ppStart) / 1000);
+    var min = Math.floor(elapsed / 60);
+    var sec = elapsed % 60;
+    var timerEl = ov.querySelector('.pp-timer');
+    if (timerEl) timerEl.textContent = min + ':' + sec.toString().padStart(2, '0') + ' — media ~4min';
+  }
+})();
+
 </script>
+<!-- Pipeline Progress Overlay HTML -->
+<div id="pipeline-progress-overlay">
+  <div class="pp-card">
+    <div class="pp-running">
+      <div class="pp-icon">&#9881;</div>
+      <div class="pp-title">PIPELINE ATIVO</div>
+      <div class="pp-label">Preparando pipeline...</div>
+      <div class="pp-fase">Iniciando</div>
+      <div class="pp-bar"><div class="pp-bar-fill"></div></div>
+      <div class="pp-timer">0:00 — media ~4min</div>
+      <div class="pp-actions">
+        <button class="pp-btn pp-btn-danger" onclick="if(confirm('Cancelar pipeline?'))fecharProgressOverlay()">CANCELAR</button>
+      </div>
+    </div>
+    <div class="pp-done">
+      <div class="pp-icon-done" style="color:var(--cyan)">&#10003;</div>
+      <div class="pp-title" style="color:var(--cyan)">SITE PRONTO!</div>
+      <div class="pp-done-nome" style="color:var(--fl-text);font-size:14px;margin-bottom:4px"></div>
+      <div class="pp-done-time" style="color:var(--fl-text-dim);font-size:12px;margin-bottom:20px"></div>
+      <div class="pp-actions">
+        <button class="pp-btn pp-btn-success pp-btn-ver-site">VER SITE &#8594;</button>
+        <button class="pp-btn pp-btn-primary" onclick="fecharProgressOverlay();carregarKanban()">CONTINUAR</button>
+      </div>
+    </div>
+    <div class="pp-error">
+      <div class="pp-icon-done" style="color:var(--danger)">&#10007;</div>
+      <div class="pp-title" style="color:var(--danger)">ERRO NO PIPELINE</div>
+      <div class="pp-error-msg" style="color:var(--fl-text-muted);font-size:13px;margin-bottom:20px"></div>
+      <div class="pp-actions">
+        <button class="pp-btn pp-btn-primary" onclick="fecharProgressOverlay()">FECHAR</button>
+      </div>
+    </div>
+  </div>
+</div>
 </body></html>

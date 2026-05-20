@@ -65,7 +65,7 @@ if _ARQUITETO_AGENT:
 from agents.liz import auditar, editar_secao as liz_editar_secao, listar_secoes as liz_listar_secoes, auditar_secao_estruturado
 from agents.bryan import iniciar_contato, BryanInput
 from agents.liam_models import LiamOutput
-from services.credits_manager import verificar_pode_executar, consume_tokens
+from services.credits_manager import verificar_pode_executar, consume_tokens, validar_permissao_pipeline, consumir_credito_diario
 from pipeline_queue_manager import pipeline_queue  # DEPRECATED: mantido apenas para /fila endpoint
 from retry_helper import tentar
 
@@ -147,50 +147,67 @@ logger = logging.getLogger('uvicorn')
 logger.addHandler(_sse_handler)
 
 
+def emitir_erro_pipeline(tenant_id, error_code, message="", detalhes=None, **kwargs):
+    """Emite erro tipado via SSE pro frontend renderizar popup/overlay."""
+    import json as _json_err
+    _TEMPLATES = {
+        "RATE_LIMIT": {"severity": "wait", "title": "Servidor de IA ocupado"},
+        "NO_LEADS": {"severity": "error", "title": "Nenhum lead qualificado"},
+        "LLM_FAIL": {"severity": "error", "title": "Erro na geração do site"},
+        "DEPLOY_FAIL": {"severity": "error", "title": "Erro ao publicar o site"},
+        "SCRAPER_FAIL": {"severity": "error", "title": "Erro ao buscar negócios"},
+        "TIMEOUT": {"severity": "wait", "title": "Geração demorou mais que o esperado"},
+        "BRYAN_FAIL": {"severity": "warning", "title": "Site publicado, envio falhou"},
+        "HEALTH_FAIL": {"severity": "error", "title": "Site gerado com problemas"},
+    }
+    tpl = _TEMPLATES.get(error_code, {"severity": "error", "title": "Erro no pipeline"})
+    payload = {
+        "type": "pipeline_error",
+        "error_code": error_code,
+        "severity": tpl["severity"],
+        "title": tpl["title"],
+        "message": message,
+        "detalhes": detalhes or [],
+        "credito_consumido": kwargs.get("credito_consumido", False),
+        **{k: v for k, v in kwargs.items() if k != "credito_consumido"}
+    }
+    adicionar_log(_json_err.dumps(payload), "PIPELINE_STATUS", user_id=tenant_id)
+
 @router.get('/cooldown-status')
 async def cooldown_status(db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
-    """Status completo de cooldown, fila e uso para dashboard."""
+    """Status completo de cooldown, créditos e fila para dashboard."""
     tenant_id = usuario.get("tenant_id", usuario["id"])
+    from services.credits_manager import validar_permissao_pipeline, get_user_tokens, LIMITES_DIARIOS, COOLDOWNS
 
-    # Plano
-    row = db.execute(text("SELECT plano FROM users WHERE id=:id"), {"id": tenant_id}).fetchone()
-    plano = (row[0] if row else "trial") or "trial"
-    cooldown_secs = _COOLDOWN_POR_PLANO.get(plano, 3600)
+    perm = validar_permissao_pipeline(db, tenant_id)
+    info = get_user_tokens(db, tenant_id)
+    plano = info.get("plano", "trial")
+    cooldown_secs = COOLDOWNS.get(plano, 3600)
+    limite = LIMITES_DIARIOS.get(plano, 1)
 
-    # Último pipeline concluído
-    from datetime import datetime as _dt, timedelta as _td, timezone as _tz
-    last_row = db.execute(text(
-        "SELECT finished_at FROM pipeline_executions WHERE user_id=:uid AND status='completed' ORDER BY finished_at DESC LIMIT 1"
-    ), {"uid": tenant_id}).fetchone()
-    if not last_row or not last_row[0]:
-        last_row = db.execute(text(
-            "SELECT processado_em FROM leads WHERE user_id=:uid AND status='concluido' ORDER BY processado_em DESC LIMIT 1"
-        ), {"uid": tenant_id}).fetchone()
+    pode_rodar = perm["allowed"]
 
-    # Calcular cooldown
-    pode_rodar = True
-    cooldown_info = {"ativo": False, "total_seg": cooldown_secs, "restante_seg": 0, "elapsed_seg": 0, "proximo_em": None, "percentual_completo": 100}
-    if last_row and last_row[0] and cooldown_secs > 0:
-        last_ts = last_row[0]
-        if isinstance(last_ts, str):
-            last_ts = _dt.fromisoformat(last_ts)
-        if last_ts.tzinfo:
-            elapsed = (_dt.now(_tz.utc) - last_ts).total_seconds()
-        else:
-            elapsed = (_dt.now() - last_ts).total_seconds()
-        if elapsed < cooldown_secs:
-            pode_rodar = False
-            restante = int(cooldown_secs - elapsed)
-            cooldown_info = {
-                "ativo": True,
-                "total_seg": cooldown_secs,
-                "restante_seg": restante,
-                "elapsed_seg": int(elapsed),
-                "proximo_em": (_dt.now() + _td(seconds=restante)).isoformat(),
-                "percentual_completo": round(elapsed / cooldown_secs * 100, 1),
-            }
-        else:
-            cooldown_info["elapsed_seg"] = int(elapsed)
+    # Cooldown info
+    cooldown_info = {"ativo": False, "total_seg": cooldown_secs, "restante_seg": 0, "percentual_completo": 100}
+    if not pode_rodar and perm.get("reason") == "cooldown":
+        cooldown_info = {
+            "ativo": True,
+            "total_seg": cooldown_secs,
+            "restante_seg": perm.get("cooldown_restante_seg", 0),
+            "proximo_em": perm.get("proximo_em"),
+            "percentual_completo": round((1 - perm.get("cooldown_restante_seg", 0) / max(cooldown_secs, 1)) * 100, 1),
+        }
+
+    # Créditos info
+    creditos_info = {
+        "limite_diario": limite,
+        "usados_hoje": info.get("sites_hoje", 0),
+        "restantes_hoje": info.get("creditos_restantes_hoje", limite),
+        "reset_at": None,
+    }
+    if not pode_rodar and perm.get("reason") == "creditos_esgotados":
+        from services.credits_manager import _proximo_reset_iso
+        creditos_info["reset_at"] = _proximo_reset_iso()
 
     # Fila de leads
     fila_row = db.execute(text("""
@@ -207,62 +224,30 @@ async def cooldown_status(db: Session = Depends(get_db), usuario: dict = Depends
     }
 
     # Uso
-    uso_row = db.execute(text("""
-        SELECT
-            COUNT(*) FILTER (WHERE finished_at >= CURRENT_DATE) as hoje,
-            COUNT(*) FILTER (WHERE finished_at >= CURRENT_DATE - INTERVAL '7 days') as semana,
-            COUNT(*) FILTER (WHERE finished_at >= DATE_TRUNC('month', CURRENT_DATE)) as mes,
-            COUNT(*) as total,
-            MAX(finished_at) as ultimo_em
-        FROM pipeline_executions
-        WHERE user_id=:uid AND status='completed'
-    """), {"uid": tenant_id}).fetchone()
-    ultimo_nome_row = db.execute(text(
-        "SELECT lead_nome FROM pipeline_executions WHERE user_id=:uid AND status='completed' ORDER BY finished_at DESC LIMIT 1"
-    ), {"uid": tenant_id}).fetchone()
-    uso = {
-        "sites_hoje": uso_row[0] if uso_row else 0,
-        "sites_semana": uso_row[1] if uso_row else 0,
-        "sites_mes": uso_row[2] if uso_row else 0,
-        "sites_total": uso_row[3] if uso_row else 0,
-        "ultimo_site_em": str(uso_row[4]) if uso_row and uso_row[4] else None,
-        "ultimo_site_nome": ultimo_nome_row[0] if ultimo_nome_row else None,
-    }
+    uso = {"sites_hoje": info.get("sites_hoje", 0), "sites_total": info.get("sites_used", 0)}
 
     # Upsell
     _UPSELL_MSGS = {
-        "trial": {"plano_sugerido": "starter", "mensagem_curta": "Starter: R$97/mês — sites ilimitados", "mensagem_longa": "Com o Starter você gera sites ilimitados no automático. Cooldown de 1h entre gerações."},
-        "starter": {"plano_sugerido": "pro", "mensagem_curta": "Pro: cooldown de 30min (metade da espera)", "mensagem_longa": "No Pro o cooldown cai pra 30 minutos. Gere o dobro de sites por dia."},
-        "pro": {"plano_sugerido": "ilimitado", "mensagem_curta": "Ilimitado: zero espera, slot dedicado", "mensagem_longa": "No Ilimitado não tem cooldown. Gere quantos sites quiser, quando quiser."},
+        "trial": {"plano_sugerido": "starter", "mensagem_curta": "Starter: 6 sites/dia", "mensagem_longa": "Com o Starter você gera 6 sites por dia com cooldown de 1h."},
+        "starter": {"plano_sugerido": "pro", "mensagem_curta": "Pro: 16 sites/dia + cooldown 30min", "mensagem_longa": "No Pro são 16 sites/dia e cooldown de 30 minutos."},
+        "pro": {"plano_sugerido": "ilimitado", "mensagem_curta": "Ilimitado: sem limite + sem espera", "mensagem_longa": "No Ilimitado não tem cooldown nem limite diário."},
     }
-    mostrar_upsell = cooldown_info["ativo"] or (plano == "trial" and (uso.get("sites_total", 0) >= 1))
+    mostrar_upsell = not pode_rodar
     upsell_data = _UPSELL_MSGS.get(plano)
     upsell = None
     if mostrar_upsell and upsell_data:
-        upsell = {
-            "mostrar": True,
-            "plano_atual": plano,
-            **upsell_data,
-            "url": f"/planos?from=cooldown&current={plano}",
-        }
+        upsell = {"mostrar": True, "plano_atual": plano, **upsell_data, "url": f"/planos?from=cooldown&current={plano}"}
 
-    # Bloqueio (trial esgotado)
+    # Bloqueio
     bloqueio = None
-    if plano == "trial":
-        from services.credits_manager import verificar_pode_executar
-        cred = verificar_pode_executar(db, tenant_id)
-        if not cred.get("pode"):
-            pode_rodar = False
-            bloqueio = {
-                "motivo": "trial_esgotado",
-                "mensagem": cred.get("motivo", "Créditos esgotados"),
-                "creditos_restantes": 0,
-            }
+    if not pode_rodar:
+        bloqueio = {"motivo": perm.get("reason", "unknown"), "mensagem": perm.get("message", "Bloqueado")}
 
     return {
         "pode_rodar": pode_rodar,
         "plano": plano,
         "cooldown": cooldown_info,
+        "creditos": creditos_info,
         "fila": fila,
         "uso": uso,
         "upsell": upsell,
@@ -622,6 +607,7 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
             "atributos": getattr(state.lead_obj, "atributos", None) or getattr(state.lead_obj.lead, "atributos", None),
             "servicos": getattr(state.lead_obj, "servicos", None) or getattr(state.lead_obj.lead, "servicos", None),
             "faixa_preco": getattr(state.lead_obj, "faixa_preco", None) or getattr(state.lead_obj.lead, "faixa_preco", None),
+            "place_id": getattr(state.lead_obj.lead, "place_id", "") or "",
         }
         _log(f"  Lead: {state.lead_nome}", "success")
         state.lead_id = str(uuid.uuid4())
@@ -652,9 +638,9 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
                         import json as _json_reutil
                         conn.execute(text("""
                             UPDATE leads SET dados_completos = jsonb_set(
-                                COALESCE(dados_completos::jsonb, '{}'::jsonb),
-                                '{reviews}', :reviews::jsonb
-                            ) WHERE id = :id AND (dados_completos::jsonb->'reviews' = '[]'::jsonb OR dados_completos::jsonb->'reviews' IS NULL)
+                                COALESCE(CAST(dados_completos AS jsonb), CAST('{}' AS jsonb)),
+                                '{reviews}', CAST(:reviews AS jsonb)
+                            ) WHERE id = :id AND (CAST(dados_completos AS jsonb)->'reviews' = CAST('[]' AS jsonb) OR CAST(dados_completos AS jsonb)->'reviews' IS NULL)
                         """), {"id": state.lead_id, "reviews": _json_reutil.dumps(_fresh_reviews)})
                         conn.commit()
                 else:
@@ -755,29 +741,53 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
         if _trace:
             _trace.lead_nome = state.lead_nome
             _span = _trace.iniciar_span("caio", agente="caio", modelo="haiku")
-        caio_input = CaioInput(
-            nome=state.lead_nome, cidade=state.lead_obj.lead.cidade,
-            segmento=state.segmento, telefone=state.lead_obj.lead.telefone or "",
-            whatsapp=state.lead_obj.lead.whatsapp or "", rating=state.lead_obj.lead.rating or 0.0,
-            reviews_count=state.lead_obj.lead.total_avaliacoes or len(state.lead_obj.lead.reviews or []) or 0,
-            fotos=state.lead_obj.lead.fotos or [], website=state.lead_obj.lead.website,
-            reprocessamento=True
-        )
-        # Alex DESATIVADO — fotos via Unsplash, paleta via paleta_nicho
-        def _run_caio():
-            r = qualificar_lead(caio_input)
-            logger.info(f"[Pipeline] Caio: {r.qualificacao}")
-            return r
-        loop = asyncio.get_event_loop()
-        with ThreadPoolExecutor(max_workers=1) as ex:
-            state.qualificacao_caio = await loop.run_in_executor(ex, _run_caio)
-        state.alex_result = None
+
+        # Check rápido: lead já contatado? (evita gastar tokens gerando site pra lead repetido)
+        try:
+            with engine.connect() as _conn_dup:
+                _ja_contatado = _conn_dup.execute(text(
+                    "SELECT id FROM leads WHERE lower(trim(nome))=lower(trim(:nome)) AND user_id=:uid AND status IN ('contatado','concluido')"
+                ), {"nome": state.lead_nome, "uid": tenant_id}).fetchone()
+            if _ja_contatado:
+                _log(f"  {state.lead_nome} já contatado anteriormente — pulando", "warning")
+                # Simular rejeição do Caio pra entrar no loop de fallback
+                from agents.caio import CaioOutput as _CaioOut
+                state.qualificacao_caio = _CaioOut(qualificado=False, tier="REJEITADO", score=0, razoes=["Lead já contatado anteriormente"])
+                # Pular direto pro bloco de fallback (não chamar Caio)
+                if _span: _span.finalizar("skipped")
+                # Jump handled below by the rejection fallback block
+            else:
+                raise StopIteration  # flag: não é duplicado, continuar normalmente
+        except StopIteration:
+            pass
+        except Exception as _dup_err:
+            print(f"[Pipeline] Check duplicado falhou (ignorando): {_dup_err}")
+
+        if not (state.qualificacao_caio and state.qualificacao_caio.tier == "REJEITADO"):
+            caio_input = CaioInput(
+                nome=state.lead_nome, cidade=state.lead_obj.lead.cidade,
+                segmento=state.segmento, telefone=state.lead_obj.lead.telefone or "",
+                whatsapp=state.lead_obj.lead.whatsapp or "", rating=state.lead_obj.lead.rating or 0.0,
+                reviews_count=state.lead_obj.lead.total_avaliacoes or len(state.lead_obj.lead.reviews or []) or 0,
+                fotos=state.lead_obj.lead.fotos or [], website=state.lead_obj.lead.website,
+                reprocessamento=True
+            )
+            # Alex DESATIVADO — fotos via Unsplash, paleta via paleta_nicho
+            def _run_caio():
+                r = qualificar_lead(caio_input)
+                logger.info(f"[Pipeline] Caio: {r.qualificacao}")
+                return r
+            loop = asyncio.get_event_loop()
+            with ThreadPoolExecutor(max_workers=1) as ex:
+                state.qualificacao_caio = await loop.run_in_executor(ex, _run_caio)
+            state.alex_result = None
         if state.qualificacao_caio and (not state.qualificacao_caio.qualificado or state.qualificacao_caio.tier == "REJEITADO"):
             _idx_atual = next((i for i, l in enumerate(leads) if l is state.lead_obj), -1)
             _encontrou_aprovado = False
-            for _try_idx in range(_idx_atual + 1, len(leads)):
+            _motivos_rejeicao = [{"nome": state.lead_nome, "motivo": (state.qualificacao_caio.razoes[0] if state.qualificacao_caio.razoes else "Rejeitado pelo Caio")}]
+            for _try_idx in range(_idx_atual + 1, min(_idx_atual + 16, len(leads))):
                 _proximo = leads[_try_idx]
-                print("[Pipeline] " + state.lead_nome + " rejeitado. Tentando: " + _proximo.lead.nome)
+                _log(f"  {state.lead_nome} rejeitado. Tentando: {_proximo.lead.nome}", "info")
                 with engine.connect() as _conn_rej:
                     _conn_rej.execute(text("UPDATE leads SET status='descartado', atualizado_em=:ts WHERE id=:id AND user_id=:uid"), {"ts": datetime.now().isoformat(), "id": state.lead_id, "uid": state.tenant_id})
                     _conn_rej.commit()
@@ -800,10 +810,17 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
                 state.qualificacao_caio = await asyncio.get_event_loop().run_in_executor(None, _qualificar_caio2, _caio_input2)
                 if state.qualificacao_caio and state.qualificacao_caio.qualificado and state.qualificacao_caio.tier != "REJEITADO":
                     _encontrou_aprovado = True
-                    print("[Pipeline] Lead aprovado: " + state.lead_nome + " (" + state.qualificacao_caio.tier + ")")
+                    _log(f"  Lead aprovado: {state.lead_nome} ({state.qualificacao_caio.tier})", "success")
                     break
+                else:
+                    _motivo = (state.qualificacao_caio.razoes[0] if state.qualificacao_caio and state.qualificacao_caio.razoes else "Rejeitado")
+                    _motivos_rejeicao.append({"nome": _proximo.lead.nome, "motivo": _motivo})
             if not _encontrou_aprovado:
-                raise Exception("Nenhum lead qualificado encontrado para '" + state.segmento + "' em '" + state.cidade + "'. Motivos possiveis: leads sem reviews/telefone ou nicho com poucos negocios. Tente outro segmento ou cidade maior.")
+                _detalhes = [f"{m['nome']} — {m['motivo']}" for m in _motivos_rejeicao[:8]]
+                emitir_erro_pipeline(tenant_id, "NO_LEADS",
+                    message=f"Todos os negócios encontrados para {state.segmento} em {state.cidade} foram descartados.",
+                    detalhes=_detalhes)
+                raise Exception("Nenhum lead qualificado encontrado para '" + state.segmento + "' em '" + state.cidade + "'. " + str(len(_motivos_rejeicao)) + " leads avaliados e rejeitados.")
             if _encontrou_aprovado:
                 state.lead_id = str(uuid.uuid4())
                 _agora_sub = datetime.now().isoformat()
@@ -888,8 +905,68 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
                 _ledger.registrar_fim_fase(3, FaseStatus.PULADA, erro="sem resultado")
                 _ledger.registrar_decisao(3, "pular_jina", "Fase não obrigatória")
         if _span: _span.finalizar("success" if state.jina_insights else "skipped")
-        _progress(4, "Preparando design...")
-        _log("FASE 4: DESIGN (Theo aposentado — ArquitetoMestre faz tudo)", "info")
+
+        # ═══ MÓDULO DE INTELIGÊNCIA (paralelo) ═══
+        _progress(4, "Analisando concorrência...")
+        _log("FASE 4: INTELIGÊNCIA DE MERCADO", "info")
+        state.inteligencia = {}
+        try:
+            from utils.espionar_concorrencia import espionar_concorrencia, extrair_insights_reviews, mapear_atributos_para_servicos, gerar_seo_context
+
+            # Rodar espionagem + insights de reviews em paralelo
+            async def _run_inteligencia():
+                _tasks = []
+                _tasks.append(espionar_concorrencia(state.segmento, state.cidade, max_concorrentes=3))
+                return await asyncio.gather(*_tasks, return_exceptions=True)
+
+            _intel_results = await _run_inteligencia()
+            _concorrencia = _intel_results[0] if not isinstance(_intel_results[0], Exception) else {}
+
+            # Insights de reviews (local, sem async)
+            _reviews_raw = state.lead_raw_data.get("reviews", [])
+            _reviews_insights = extrair_insights_reviews(_reviews_raw)
+
+            # Serviços reais do Maps
+            _atributos = state.lead_raw_data.get("atributos") or []
+            _servicos_reais = mapear_atributos_para_servicos(_atributos, state.segmento)
+
+            # SEO context
+            _paa = _concorrencia.get("people_also_ask", []) if isinstance(_concorrencia, dict) else []
+            _seo = gerar_seo_context(
+                state.segmento, state.cidade, state.lead_nome,
+                paa=_paa,
+                rating=state.lead_raw_data.get("rating", 0),
+                total_reviews=state.lead_raw_data.get("total_avaliacoes", 0)
+            )
+
+            state.inteligencia = {
+                "concorrencia": _concorrencia if isinstance(_concorrencia, dict) else {},
+                "reviews_insights": _reviews_insights,
+                "servicos_reais": _servicos_reais,
+                "seo": _seo,
+            }
+            _n_conc = len(state.inteligencia.get("concorrencia", {}).get("concorrentes", []))
+            _log(f"  Inteligência: {_n_conc} concorrentes, {len(_servicos_reais)} serviços, {len(_paa)} PAA", "success")
+        except Exception as _intel_err:
+            print(f"[Pipeline] Módulo inteligência erro (não-fatal): {_intel_err}")
+            state.inteligencia = {}
+
+        # Enriquecer jina_insights com dados de concorrência (se disponível)
+        if state.inteligencia.get("concorrencia", {}).get("concorrentes"):
+            _conc_data = state.inteligencia["concorrencia"]
+            _enrich = "\n\n=== CONCORRENTES REAIS (via Playwright) ===\n"
+            for _c in _conc_data.get("concorrentes", [])[:3]:
+                _enrich += f"- {_c.get('nome', '?')}: tema={_c.get('tema','?')}, CTA='{_c.get('cta_principal','')}', H1='{_c.get('h1_text','')[:60]}'\n"
+            _pm = _conc_data.get("padroes_mercado", {})
+            if _pm:
+                _enrich += f"Padrão: {_pm.get('tema_dominante','?')}, fonte={_pm.get('fonte_h1_dominante','?')}\n"
+            _paa_list = state.inteligencia.get("concorrencia", {}).get("people_also_ask", [])
+            if _paa_list:
+                _enrich += f"People Also Ask: {' | '.join(_paa_list[:4])}\n"
+            state.jina_insights = (state.jina_insights or "") + _enrich
+
+        _progress(5, "Preparando design...")
+        _log("FASE 5: DESIGN (ArquitetoMestre)", "info")
         # Theo APOSENTADO — briefing gerado inline (ArquitetoMestre já monta brief próprio)
         state.briefing_theo = f"Site premium para {state.lead_nome} ({state.segmento}) em {state.cidade}. Rating: {state.lead_obj.lead.rating or 0}/5."
         _progress(5, "Buscando fotos...")
@@ -1003,6 +1080,7 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
                     caio_motivo=state.qualificacao_caio.motivo if state.qualificacao_caio else "",
                     dark_mode=state.segmento in ("academia", "crossfit", "churrascaria", "barbearia"),
                     keyword_research=getattr(state, 'keyword_research', ''),
+                    inteligencia=getattr(state, 'inteligencia', {}),
                 ),
                 fase="arquiteto", max_attempts=3, base_delay=2.0,
                 log_fn=_log,
@@ -1062,6 +1140,27 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
             except: pass
             state.html_final = montar_template_python(_html_main, state.prd_arquiteto)
             state.html_final = critique_theater_pass(state.html_final)
+
+            # Sanitizador: substituir source.unsplash.com (deprecated) por URLs reais
+            if "source.unsplash.com" in state.html_final:
+                import re as _re_unsplash
+                _fotos_disponiveis = getattr(state, '_fotos_unsplash', []) or state.lead_raw_data.get("fotos", [])
+                _fallback_foto = _fotos_disponiveis[0] if _fotos_disponiveis else "https://images.unsplash.com/photo-1497366216548-37526070297c?w=800&q=80"
+                _count_replaced = 0
+                def _replace_source_unsplash(match):
+                    nonlocal _count_replaced
+                    idx = _count_replaced % len(_fotos_disponiveis) if _fotos_disponiveis else 0
+                    replacement = _fotos_disponiveis[idx] if _fotos_disponiveis else _fallback_foto
+                    _count_replaced += 1
+                    return replacement
+                state.html_final = _re_unsplash.sub(
+                    r'https?://source\.unsplash\.com/[^\s"\'<>]+',
+                    _replace_source_unsplash,
+                    state.html_final
+                )
+                if _count_replaced:
+                    print(f"[Sanitizer] {_count_replaced}x source.unsplash.com substituído por URLs permanentes")
+
             _log(f"  HTML: {len(state.html_final):,} chars", "success")
             logger.info("[Pipeline] Liam: OK")
             # Validar HTML antes de salvar checkpoint (não salvar truncado)
@@ -1094,6 +1193,15 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
             _soup = _BS(state.html_final, "html.parser")
             state.html_final = str(_soup)
             print("[Pipeline] BeautifulSoup auto-healing: OK")
+        except ImportError:
+            # Fallback robusto: fechar tags comuns não fechadas
+            import re as _re_bs
+            for _tag in ['div', 'section', 'span', 'p', 'a', 'ul', 'li', 'header', 'footer', 'nav', 'main']:
+                _opens = len(_re_bs.findall(f'<{_tag}[\\s>]', state.html_final))
+                _closes = state.html_final.count(f'</{_tag}>')
+                if _opens > _closes:
+                    state.html_final += f'</{_tag}>' * (_opens - _closes)
+            print("[Pipeline] BeautifulSoup fallback (regex tag-close): OK")
         except Exception as _bse:
             print(f"[Pipeline] BeautifulSoup skip: {_bse}")
         MAX_LIZ = 3
@@ -1257,6 +1365,11 @@ IMPORTANTE: Corrija EXATAMENTE os problemas acima. Não altere o que já estava 
         _sp.run(["chown", "-R", "www-data:www-data", web_dir], check=False)
         _sp.run(["chmod", "-R", "755", web_dir], check=False)
         state.site_url = f"https://seunegociofralib.site/sites/{tenant_id}/{state.lead_slug}/"
+        # Fix canonical + og:url pra bater com URL real do deploy
+        _canonical_errada = f"https://seunegociofralib.site/sites/{state.lead_slug}/"
+        if _canonical_errada in state.html_final:
+            state.html_final = state.html_final.replace(_canonical_errada, state.site_url)
+            print(f"[Pipeline] Canonical corrigida: {state.site_url}")
         _log(f"  Deploy: {state.site_url}", "success")
         logger.info(f"[Pipeline] Deploy: {state.site_url}")
 
@@ -1320,6 +1433,12 @@ IMPORTANTE: Corrija EXATAMENTE os problemas acima. Não altere o que já estava 
             conn.commit()
         limpar_checkpoint(state.pipeline_id)
         _log("PIPELINE v2 CONCLUIDO - FraLibState OK", "success")
+        import json as _json_complete
+        adicionar_log(_json_complete.dumps({
+            "type": "complete",
+            "url": state.site_url,
+            "lead_nome": state.lead_nome
+        }), "PIPELINE_STATUS", user_id=tenant_id)
         logger.info("[Pipeline] CONCLUIDO - 7 AGENTES!")
 
         # PRD #6: Ledger — finalizar e salvar
@@ -1381,13 +1500,20 @@ IMPORTANTE: Corrija EXATAMENTE os problemas acima. Não altere o que já estava 
         except Exception:
             pass
 
-        # Descontar 1 crédito do usuário
+        # Descontar 1 crédito diário + marcar ultimo_deploy_at
         try:
             with SessionLocal() as _db_cred:
-                _consumed = consume_tokens(_db_cred, tenant_id, 1, f"Pipeline concluido: {state.lead_nome}")
-                print(f"[Pipeline] Credito descontado: {_consumed} (tenant={tenant_id})")
+                consumir_credito_diario(_db_cred, tenant_id, state.lead_nome)
+                print(f"[Pipeline] Credito diario consumido (tenant={tenant_id})")
         except Exception as _cred_err:
             print(f"[Pipeline] ERRO ao descontar credito: {_cred_err}")
+
+        # Limpar checkpoints expirados (>24h)
+        try:
+            from agents.pipeline_checkpoint import limpar_checkpoints_expirados
+            limpar_checkpoints_expirados(max_age_hours=24)
+        except Exception:
+            pass
 
         # Auto-run: se tem leads na fila, agendar próximo após cooldown
         try:
@@ -1469,18 +1595,43 @@ IMPORTANTE: Corrija EXATAMENTE os problemas acima. Não altere o que já estava 
             pass
         return {"sucesso": True, "site_url": state.site_url, "lead": state.lead_nome}
     except Exception as e:
-        # Detectar rate limit e enviar mensagem amigável
+        # Detectar tipo de erro e emitir SSE tipado
         from llm_direct import RateLimitError
         from services.site_health_check import HealthCheckError
         _fase_erro = None
         if isinstance(e, RateLimitError):
             _reset_min = max(1, e.reset_seconds // 60)
+            emitir_erro_pipeline(tenant_id, "RATE_LIMIT",
+                message=f"Servidor de IA ocupado. Retomando em ~{_reset_min}min.",
+                detalhes=["O sistema retoma automaticamente quando liberar."],
+                eta_seconds=e.reset_seconds, auto_retry=True)
             _log(f"⚠️ LIMITE DE USO ATINGIDO. Volte daqui {_reset_min} minuto(s).", "rate_limit")
-            _log(f"O sistema está temporariamente indisponível. Seus leads estão salvos e serão processados quando o limite resetar.", "info")
         elif isinstance(e, HealthCheckError):
             _fase_erro = "healthcheck"
+            emitir_erro_pipeline(tenant_id, "HEALTH_FAIL",
+                message=f"Site gerado mas com problemas: {e.motivo}",
+                detalhes=[e.detalhe] if hasattr(e, 'detalhe') else [])
             _log(f"❌ Site gerado quebrado: {e.motivo} ({e.detalhe})", "error")
+        elif "NenhumLead" in type(e).__name__ or "no leads" in str(e).lower() or "nenhum lead" in str(e).lower():
+            emitir_erro_pipeline(tenant_id, "NO_LEADS",
+                message=str(e),
+                detalhes=getattr(e, 'motivos', []) if hasattr(e, 'motivos') else [str(e)])
+            _log(f"⚠️ {str(e)}", "warning")
+        elif "deploy" in str(e).lower() or "nginx" in str(e).lower() or "filesystem" in str(e).lower():
+            _fase_erro = "deploy"
+            emitir_erro_pipeline(tenant_id, "DEPLOY_FAIL",
+                message="Site gerado mas erro ao publicar no servidor.",
+                detalhes=[str(e)[:200]])
+            _log(f"❌ Deploy falhou: {str(e)}", "error")
+        elif "scraper" in str(e).lower() or "playwright" in str(e).lower() or "google maps" in str(e).lower():
+            emitir_erro_pipeline(tenant_id, "SCRAPER_FAIL",
+                message="Não conseguimos buscar negócios no Google Maps.",
+                detalhes=[str(e)[:200]])
+            _log(f"❌ Scraper falhou: {str(e)}", "error")
         else:
+            emitir_erro_pipeline(tenant_id, "LLM_FAIL",
+                message="Erro na geração do site.",
+                detalhes=[str(e)[:200]])
             _log(f"ERRO: {str(e)}", "error")
         logger.error(f"[Pipeline] Erro: {e}")
         import traceback
@@ -1672,25 +1823,15 @@ async def iniciar_pipeline(
         else:
             raise HTTPException(status_code=429, detail="Você já tem um pipeline rodando. Aguarde a conclusão.")
 
-    # Gate de créditos — verificar ANTES de entrar na fila
-    creditos_check = verificar_pode_executar(db, tenant_id)
-    if not creditos_check.get("pode"):
-        raise HTTPException(
-            status_code=402,
-            detail=creditos_check.get("motivo", "Sem créditos disponíveis."),
-            headers={"X-Upgrade-URL": creditos_check.get("upgrade_url", "/planos")}
-        )
+    # Gate duplo: créditos diários + cooldown
+    perm = validar_permissao_pipeline(db, tenant_id)
+    if not perm["allowed"]:
+        _status = 429 if perm.get("reason") == "cooldown" else 402
+        raise HTTPException(status_code=_status, detail=perm)
 
     # Se processar_fila=true, processar leads capturados com seus próprios segmentos
     if config.get("processar_fila"):
-        # Verificar créditos antes de processar fila
-        creditos_check = verificar_pode_executar(db, tenant_id)
-        if not creditos_check.get("pode"):
-            raise HTTPException(
-                status_code=402,
-                detail=creditos_check.get("motivo", "Sem créditos disponíveis."),
-                headers={"X-Upgrade-URL": creditos_check.get("upgrade_url", "/planos")}
-            )
+        # Gate duplo já verificado acima (validar_permissao_pipeline)
         leads_fila = db.execute(text("""
             SELECT id, nome, segmento, cidade FROM leads
             WHERE user_id = :user_id AND status = 'capturado'
@@ -1736,7 +1877,6 @@ async def iniciar_pipeline(
     if state["rodando"]:
         raise HTTPException(400, "Pipeline ja esta rodando")
     _check_rate_limit(str(tenant_id))
-    _check_cooldown(db, tenant_id)
     update_pipeline_state(db, tenant_id, rodando=True, pausado=False, config=config_limpo)
 
     # Registrar execução na pipeline_executions
@@ -1878,34 +2018,31 @@ async def get_status(db: Session = Depends(get_db), usuario: dict = Depends(get_
     except Exception:
         pass
 
-    # Cooldown info para o frontend
+    # Cooldown info para o frontend (usa ultimo_deploy_at)
     _cooldown_info = None
     try:
-        _user_row = db.execute(text("SELECT plano FROM users WHERE id=:id"), {"id": tenant_id}).fetchone()
+        _user_row = db.execute(text("SELECT plano, ultimo_deploy_at FROM users WHERE id=:id"), {"id": tenant_id}).fetchone()
         _plano = (_user_row[0] if _user_row else "trial") or "trial"
         _cd_secs = _COOLDOWN_POR_PLANO.get(_plano, 3600)
         _fila_count = db.execute(text("SELECT COUNT(*) FROM leads WHERE user_id=:uid AND status='capturado'"), {"uid": tenant_id}).scalar() or 0
-        if _cd_secs > 0:
-            _last = db.execute(text(
-                "SELECT processado_em FROM leads WHERE user_id=:uid AND status='concluido' ORDER BY processado_em DESC LIMIT 1"
-            ), {"uid": tenant_id}).fetchone()
-            if _last and _last[0]:
-                from datetime import datetime as _dtx
-                _last_ts = _last[0]
-                if isinstance(_last_ts, str):
-                    _last_ts = _dtx.fromisoformat(_last_ts)
-                _elapsed = (_dtx.now() - _last_ts).total_seconds()
-                _restante = max(0, int(_cd_secs - _elapsed))
-                _cooldown_info = {
-                    "plano": _plano,
-                    "cooldown_total": _cd_secs,
-                    "cooldown_restante": _restante,
-                    "bloqueado": _restante > 0,
-                    "leads_na_fila": _fila_count,
-                    "auto_run": _fila_count > 0 and _restante > 0,
-                }
-            else:
-                _cooldown_info = {"plano": _plano, "cooldown_total": _cd_secs, "cooldown_restante": 0, "bloqueado": False, "leads_na_fila": _fila_count, "auto_run": False}
+        if _cd_secs > 0 and _user_row and _user_row[1]:
+            from datetime import datetime as _dtx, timezone as _tzx, timedelta as _tdx
+            _BRT = _tzx(_tdx(hours=-3))
+            _last_ts = _user_row[1]
+            if _last_ts.tzinfo is None:
+                _last_ts = _last_ts.replace(tzinfo=_tzx.utc)
+            _elapsed = (_dtx.now(_BRT) - _last_ts.astimezone(_BRT)).total_seconds()
+            _restante = max(0, int(_cd_secs - _elapsed))
+            _cooldown_info = {
+                "plano": _plano,
+                "cooldown_total": _cd_secs,
+                "cooldown_restante": _restante,
+                "bloqueado": _restante > 0,
+                "leads_na_fila": _fila_count,
+                "auto_run": _fila_count > 0 and _restante > 0,
+            }
+        elif _cd_secs > 0:
+            _cooldown_info = {"plano": _plano, "cooldown_total": _cd_secs, "cooldown_restante": 0, "bloqueado": False, "leads_na_fila": _fila_count, "auto_run": False}
         else:
             _cooldown_info = {"plano": _plano, "cooldown_total": 0, "cooldown_restante": 0, "bloqueado": False, "leads_na_fila": _fila_count, "auto_run": False}
     except Exception:
@@ -1974,21 +2111,13 @@ async def executar_pipeline_lead_existente(lead_id: str, tenant_id: int, forcar_
     """Pipeline de site para lead já existente no banco — pula o hunter."""
     _log = lambda msg, tipo="info": adicionar_log(msg, tipo, user_id=tenant_id)
 
-    # Verificar créditos antes de executar
+    # Verificar permissão (créditos + cooldown) antes de executar
     with SessionLocal() as _db_check:
-        _cred_check = verificar_pode_executar(_db_check, tenant_id)
-        if not _cred_check.get("pode"):
-            _log(f"Pipeline bloqueado: {_cred_check.get('motivo', 'Sem créditos')}", "warning")
-            logger.info(f"[Pipeline] Lead {lead_id} bloqueado — sem créditos (tenant={tenant_id})")
-            return
-
-        # Verificar cooldown (starter/pro)
-        try:
-            _check_cooldown(_db_check, tenant_id)
-        except HTTPException as _cd_err:
-            _detail = _cd_err.detail if isinstance(_cd_err.detail, str) else _cd_err.detail.get("mensagem", "Cooldown ativo")
-            _log(f"Pipeline bloqueado: {_detail}", "warning")
-            logger.info(f"[Pipeline] Lead {lead_id} bloqueado — cooldown (tenant={tenant_id})")
+        _perm = validar_permissao_pipeline(_db_check, tenant_id)
+        if not _perm["allowed"]:
+            _msg = _perm.get("message", "Bloqueado")
+            _log(f"Pipeline bloqueado: {_msg}", "warning")
+            logger.info(f"[Pipeline] Lead {lead_id} bloqueado — {_perm.get('reason', '?')} (tenant={tenant_id})")
             return
 
     _log("Iniciando reprocessamento...", "info")
@@ -2328,16 +2457,11 @@ async def _executar_pipeline_a_partir_fase2(state, tenant_id, config):
 @router.post('/reprocessar/{lead_id}')
 async def reprocessar_lead(lead_id: str, background_tasks: BackgroundTasks, db: Session = Depends(get_db), usuario: dict = Depends(get_current_user), forcar_renovacao: bool = False):
     tenant_id = usuario.get("tenant_id", usuario["id"])
-    # Verificar créditos
-    creditos_check = verificar_pode_executar(db, tenant_id)
-    if not creditos_check.get("pode"):
-        raise HTTPException(
-            status_code=402,
-            detail=creditos_check.get("motivo", "Sem créditos disponíveis."),
-            headers={"X-Upgrade-URL": creditos_check.get("upgrade_url", "/planos")}
-        )
-    # Verificar cooldown
-    _check_cooldown(db, tenant_id)
+    # Gate duplo: créditos + cooldown
+    _perm = validar_permissao_pipeline(db, tenant_id)
+    if not _perm["allowed"]:
+        _status = 429 if _perm.get("reason") == "cooldown" else 402
+        raise HTTPException(status_code=_status, detail=_perm)
     lead = db.execute(text("SELECT * FROM leads WHERE id=:id AND user_id=:uid"), {"id": lead_id, "uid": tenant_id}).fetchone()
     if not lead:
         raise HTTPException(404, "Lead nao encontrado")

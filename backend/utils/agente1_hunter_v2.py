@@ -43,6 +43,7 @@ class LeadRaw(BaseModel):
     faixa_preco: Optional[str] = None
     logo_url: Optional[str] = None
     google_maps_embed: Optional[str] = None
+    place_id: Optional[str] = None
 
 class LeadQualificado(BaseModel):
     """Lead qualificado com score e tier"""
@@ -300,6 +301,7 @@ async def buscar_lead_google_maps(
         faixa_preco=dados.get('faixa_preco'),
         logo_url=dados.get('logo', '') or '',
         google_maps_embed=dados.get('google_maps_embed', '') or '',
+        place_id=dados.get('place_id', '') or '',
     )
 
     # ✅ VALIDAR DADOS MÍNIMOS
@@ -557,6 +559,8 @@ async def buscar_leads_google_maps(
                 atributos=dados.get('atributos', []),
                 servicos=dados.get('servicos', []),
                 faixa_preco=dados.get('faixa_preco'),
+                google_maps_embed=dados.get('google_maps_embed', '') or '',
+                place_id=dados.get('place_id', '') or '',
             )
 
             resultado = calcular_score(lead, cidade)

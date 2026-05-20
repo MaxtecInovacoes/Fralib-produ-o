@@ -879,7 +879,24 @@ async def _conectar_e_ouvir():
                     tenant_id = data.get("tenantId") or ""
                     status = data.get("status") or ""
                     if tenant_id:
+                        _old_status = _get_tenant_status(tenant_id)
                         _set_tenant_status(tenant_id, status)
+                        # Alertar usuário quando WPP desconecta
+                        if status in ("qr", "disconnected", "logged_out") and _old_status in _CONNECTED_STATUSES:
+                            try:
+                                import json as _json_wpp
+                                _uid_num = int(tenant_id.replace("fralib_user_", "")) if "fralib_user_" in tenant_id else None
+                                if _uid_num:
+                                    from endpoints.sse_endpoints import adicionar_log
+                                    adicionar_log(_json_wpp.dumps({
+                                        "type": "pipeline_warning",
+                                        "error_code": "WPP_DISCONNECTED",
+                                        "severity": "warning",
+                                        "title": "WhatsApp desconectou",
+                                        "message": "Sua sessão WhatsApp caiu. Reconecte no painel para continuar enviando mensagens.",
+                                    }), "PIPELINE_STATUS", user_id=_uid_num)
+                            except Exception as _wpp_alert_err:
+                                logger.debug(f"WPP alert SSE falhou: {_wpp_alert_err}")
                     # Avisar quando o pareamento e recusado por hijack tentativo
                     if status == "rejected":
                         logger.warning(f"Conexão WPP RECUSADA: tenant={tenant_id} — {data.get('error', '')}")

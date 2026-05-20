@@ -125,6 +125,25 @@ async def lifespan(app):
     except Exception as e:
         print(f"[Server] Aviso: migration registro_ip falhou: {e}")
 
+    # Migration: créditos diários (duplo cadeado)
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS sites_hoje INTEGER DEFAULT 0"))
+            conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS sites_hoje_date DATE"))
+            conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS ultimo_deploy_at TIMESTAMP WITH TIME ZONE"))
+            conn.commit()
+        print("[Server] Migration: creditos diarios OK")
+    except Exception as e:
+        print(f"[Server] Aviso: migration creditos diarios falhou: {e}")
+
+    # Limpar checkpoints expirados (>24h) no startup
+    try:
+        from agents.pipeline_checkpoint import limpar_checkpoints_expirados
+        limpar_checkpoints_expirados(max_age_hours=24)
+        print("[Server] Checkpoints expirados limpos")
+    except Exception as e:
+        print(f"[Server] Aviso: limpeza checkpoints falhou: {e}")
+
     # Migration: tabela leads_cache (cache global de leads entre tenants)
     try:
         with engine.connect() as conn:

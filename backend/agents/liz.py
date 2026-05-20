@@ -46,7 +46,10 @@ class LizOutput(BaseModel):
 
 # ===== CONSTANTES =====
 
-SCORE_MINIMO = 70
+SCORE_MINIMO = 75
+
+# URLs que NUNCA devem aparecer no HTML final (auto-reprovação)
+_VETOS_URL = ["source.unsplash.com", "placeholder.com", "via.placeholder", "placehold.co", "picsum.photos"]
 
 # ===== AUDITORIA TÉCNICA =====
 
@@ -242,6 +245,56 @@ def auditoria_tecnica(html: str, briefing: str = "") -> AuditoriaTecnica:
     if html.count(":root") > 2:
         problemas.append(ProblemaAuditoria(gravidade="ALTO", dimensao="CSS", problema="Multiplos blocos :root (" + str(html.count(":root")) + ") — conflito de CSS vars"))
         score -= 15
+
+    # ═══ CHECKS NOVOS (Módulo Qualidade) ═══
+    import re as _re_liz
+
+    # CRÍTICO: H2 duplicados (-10 cada)
+    _h2s = _re_liz.findall(r'<h2[^>]*>(.*?)</h2>', html, _re_liz.IGNORECASE | _re_liz.DOTALL)
+    _h2_textos = [_re_liz.sub(r'<[^>]+>', '', h).strip().lower() for h in _h2s]
+    _h2_dupes = set(t for t in _h2_textos if _h2_textos.count(t) > 1 and t)
+    for _dup in _h2_dupes:
+        problemas.append(ProblemaAuditoria(gravidade="CRITICO", dimensao="SEO", problema=f"H2 duplicado: '{_dup[:50]}'"))
+        score -= 10
+
+    # CRÍTICO: Frases genéricas de template (-10 cada)
+    _FRASES_PROIBIDAS = [
+        "atendimento personalizado", "qualidade e compromisso", "resultados reais",
+        "pronto para começar", "os melhores profissionais", "excelência em",
+        "comprometidos com a qualidade", "venha nos conhecer",
+    ]
+    _html_lower = html.lower()
+    for _frase in _FRASES_PROIBIDAS:
+        if _frase in _html_lower:
+            problemas.append(ProblemaAuditoria(gravidade="CRITICO", dimensao="Conversão", problema=f"Frase genérica de template: '{_frase}'"))
+            score -= 10
+            break  # Só penaliza 1x (evitar -80 se tiver várias)
+
+    # GRAVE: Imagens sem loading=lazy (-5 cada, exceto hero)
+    _imgs = _re_liz.findall(r'<img[^>]+>', html, _re_liz.IGNORECASE)
+    _imgs_sem_lazy = 0
+    for _img in _imgs:
+        if 'loading="eager"' in _img or 'loading=eager' in _img:
+            continue  # hero OK
+        if 'loading="lazy"' not in _img and 'loading=lazy' not in _img:
+            _imgs_sem_lazy += 1
+    if _imgs_sem_lazy > 0:
+        problemas.append(ProblemaAuditoria(gravidade="ALTO", dimensao="HTML", problema=f"{_imgs_sem_lazy} imagens sem loading=lazy"))
+        score -= min(5 * _imgs_sem_lazy, 15)
+
+    # GRAVE: Imagens sem alt text (-5)
+    _imgs_sem_alt = sum(1 for _img in _imgs if 'alt=' not in _img.lower())
+    if _imgs_sem_alt > 0:
+        problemas.append(ProblemaAuditoria(gravidade="ALTO", dimensao="SEO", problema=f"{_imgs_sem_alt} imagens sem alt text"))
+        score -= min(5 * _imgs_sem_alt, 15)
+
+    # GRAVE: Mesmo CTA repetido 2+ vezes (-5)
+    _ctas = _re_liz.findall(r'<(?:a|button)[^>]*>(.*?)</(?:a|button)>', html, _re_liz.IGNORECASE | _re_liz.DOTALL)
+    _cta_textos = [_re_liz.sub(r'<[^>]+>', '', c).strip() for c in _ctas if len(_re_liz.sub(r'<[^>]+>', '', c).strip()) > 3]
+    _cta_dupes = set(t for t in _cta_textos if _cta_textos.count(t) > 2 and t)
+    for _cdup in list(_cta_dupes)[:2]:
+        problemas.append(ProblemaAuditoria(gravidade="ALTO", dimensao="Conversão", problema=f"CTA repetido {_cta_textos.count(_cdup)}x: '{_cdup[:40]}'"))
+        score -= 5
 
     score = max(0, score)
     _tem_critico = any(p.gravidade in ("CRITICO", "CRÍTICO") for p in problemas)
@@ -451,6 +504,16 @@ def auditar(
         Resultado da auditoria completa
     """
     print(f"[Liz] Auditando HTML (tentativa {tentativa})...")
+
+    # Veto automático: URLs deprecated/placeholder que NUNCA devem estar no site final
+    for _veto_url in _VETOS_URL:
+        if _veto_url in html:
+            print(f"   [Liz] VETO: URL proibida detectada: {_veto_url}")
+            _veto_problema = ProblemaAuditoria(gravidade="CRITICO", dimensao="HTML", problema=f"URL deprecated/placeholder detectada: {_veto_url}")
+            _veto_tecnica = AuditoriaTecnica(score=0, aprovado=False, problemas=[_veto_problema])
+            _veto_semantica = AuditoriaSemantica(score=0, aprovado=False, problemas=[f"Remover {_veto_url} e usar URLs reais"])
+            return LizOutput(aprovado=False, score=0, tecnica=_veto_tecnica, semantica=_veto_semantica, tentativa=tentativa,
+                correcoes_cirurgicas=[{"secao": "global", "instrucao": f"Substituir todas as URLs {_veto_url} por fotos reais do Unsplash API"}])
 
     # Auditoria técnica (síncrona)
     tecnica = auditoria_tecnica(html, briefing=briefing)

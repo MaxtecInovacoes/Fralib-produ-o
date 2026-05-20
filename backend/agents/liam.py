@@ -59,10 +59,23 @@ PROIBIDO ABSOLUTAMENTE (gera erro de build):
   - font-family inline ou font-sans/font-serif → fontes vem do wrapper, NUNCA defina
   - bg-white, bg-black, bg-gray-* → use bg-[var(--bg)] ou bg-[var(--surface)]
 
-=== FOTOS — REGRA DE INJECAO ===
+=== FOTOS — REGRA ABSOLUTA ===
+NUNCA gerar URLs com source.unsplash.com (API deprecated, imagens quebram).
+Usar EXCLUSIVAMENTE as URLs do array fotos_unsplash fornecido no contexto.
+Formato UNICO aceito: https://images.unsplash.com/photo-XXXXX?w=800&q=80
+Se precisar de mais fotos do que as fornecidas, reutilize as existentes com tamanhos diferentes (?w=400, ?w=1200).
 Hero: OBRIGATORIO incluir <img src="URL_FORNECIDA" loading="eager" class="w-full h-full object-cover" alt="...">
 Demais secoes: se foto fornecida, incluir como <img> com loading=lazy, rounded, aspect-ratio adequado.
 NUNCA use background-image com URL. Sempre <img> tag.
+Alt text: incluir keyword + localidade (ex: "hamburgueria gramado ambiente rooftop").
+Srcset: incluir 3 tamanhos quando possivel (400w, 800w, 1200w).
+
+=== FOOTER — GERAR COMO SECAO NORMAL ===
+Footer NAO e injetado separado. Voce gera como ultima <section id="footer">.
+Usar MESMAS CSS variables do site (--bg, --surface, --fg, --accent, --border).
+Footer DEVE conter: nome do negocio, endereco completo, telefone, horarios AGRUPADOS, nav interno, link WhatsApp, link Google Maps.
+Horarios: agrupar dias com mesmo horario ("Seg a Sex: 11h-23h"). NUNCA listar cada dia separado se horario e igual.
+NUNCA usar cores hardcoded no footer. NUNCA cor diferente do resto do site.
 
 === ANIMACOES (classes pre-definidas no wrapper) ===
   .reveal (fadeY 24px) | .reveal-left (fadeX -24px) | .scale-in (scale 0.95→1) | .stagger-item (--i delay)
@@ -103,6 +116,18 @@ NUNCA use background-image com URL. Sempre <img> tag.
   RESPONSIVO: mobile-first. Hero: flex-col no mobile, md:flex-row no desktop. Imagens: w-full h-64 md:h-auto.
   GAP: todo flex/grid DEVE ter gap (min gap-4). NUNCA elementos colados sem espacamento.
   OVERFLOW: NUNCA permitir texto cortado. Use overflow-wrap:break-word. Titulos com clamp() obrigatorio.
+
+=== REGRAS ANTI-CRITIQUE (evitar retrabalho pos-geracao) ===
+1. Todo <a> e <button> DEVE ter texto visivel. NUNCA gere <a></a> ou <button></button> vazios. Minimo: "Fale conosco".
+2. Hero com background-image DEVE ter overlay escuro (div absolute inset-0 bg-black/50 z-0) + texto z-10.
+3. font-size > 4rem: OBRIGATORIO usar clamp(). Ex: clamp(2.5rem, 5vw, 4rem).
+4. Secoes alternadas: variar fundo. Impares: bg-[var(--bg)]. Pares: bg-[var(--surface)].
+5. Imagens: SEMPRE object-cover + rounded-xl + loading=lazy (exceto hero=eager).
+6. Containers com img absolute: OBRIGATORIO position:relative no parent.
+7. NUNCA usar --color-primary, --color-background, --primary. Usar APENAS os 6 tokens: --bg, --surface, --fg, --muted, --border, --accent.
+8. Secoes sem padding: PROIBIDO. Minimo py-16 px-4.
+9. Texto sobre fundo escuro: NUNCA text-black ou text-gray-800. Usar text-[var(--fg)] ou text-white (se overlay).
+10. Accent vs background: contraste minimo 30% lightness. Se accent e claro e bg e claro, usar accent como border, nao como bg.
 """
 
 SYSTEM_LIAM_ANTI_SLOP = """
@@ -1341,7 +1366,7 @@ def _gerar_seo_inline(prd) -> str:
     }
     if opening_hours:
         _schema_obj["openingHoursSpecification"] = opening_hours
-    _schema_obj["hasMap"] = f"https://www.google.com/maps/search/{_re.sub(r'[^a-z0-9]+', '+', nome.lower())}+{_re.sub(r'[^a-z0-9]+', '+', cidade.lower())}"
+    _schema_obj["hasMap"] = f"https://www.google.com/maps/place/?q=place_id:{getattr(prd, 'place_id', '')}" if getattr(prd, 'place_id', '') else f"https://www.google.com/maps/search/{_re.sub(r'[^a-z0-9]+', '+', nome.lower())}+{_re.sub(r'[^a-z0-9]+', '+', cidade.lower())}"
     if rating and float(rating) > 0 and reviews_count > 0:
         _schema_obj["aggregateRating"] = {
             "@type": "AggregateRating",
@@ -2043,6 +2068,12 @@ body { background:var(--bg); color:var(--fg); }
     _segmento_footer = getattr(prd, "segmento", "") or ""
     _cidade_footer = getattr(prd, "cidade", "") or ""
     _ano = __import__("datetime").datetime.now().year
+    _place_id_footer = getattr(prd, "place_id", "") or ""
+    if _place_id_footer:
+        _maps_link_footer = f"https://www.google.com/maps/place/?q=place_id:{_place_id_footer}"
+    else:
+        import urllib.parse as _urlp_f
+        _maps_link_footer = f"https://www.google.com/maps/search/{_urlp_f.quote_plus(nome + ' ' + _cidade_footer)}"
     _horas = getattr(prd, "hours", {}) or {}
     _horas_html = ""
     if _horas:
@@ -2064,14 +2095,15 @@ body { background:var(--bg); color:var(--fg); }
         + "<footer>" + nl
         + "<div class=" + q + "max-w-7xl mx-auto px-6 pt-16 pb-10" + q + ">" + nl
         + "<div class=" + q + "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10 mb-12" + q + ">" + nl
-        + "<div>" + logo_html + "<p class=" + q + "mt-4 text-sm leading-relaxed" + q + ">" + nome + " &mdash; " + _segmento_footer + " em " + _cidade_footer + "</p><p class=" + q + "text-xs mt-2" + q + ">Atendimento especializado com qualidade e compromisso.</p></div>" + nl
+        + "<div>" + logo_html + "<p class=" + q + "mt-4 text-sm leading-relaxed" + q + ">" + nome + " &mdash; " + _segmento_footer + " em " + _cidade_footer + "</p></div>" + nl
         + "<div><h3>Navega&ccedil;&atilde;o</h3><ul class=" + q + "space-y-2" + q + "><li><a href=" + q + "#hero" + q + ">In&iacute;cio</a></li><li><a href=" + q + "#sobre" + q + ">Sobre n&oacute;s</a></li><li><a href=" + q + "#servicos" + q + ">Servi&ccedil;os</a></li><li><a href=" + q + "#depoimentos" + q + ">Depoimentos</a></li><li><a href=" + q + "#localizacao" + q + ">Localiza&ccedil;&atilde;o</a></li><li><a href=" + q + "#contato" + q + ">Contato</a></li></ul></div>" + nl
         + "<div><h3>Hor&aacute;rios</h3><span id=" + q + "fralib-open-badge" + q + " style=" + q + "display:none;font-size:0.7rem;padding:2px 8px;border-radius:9999px;font-weight:600;margin-bottom:0.5rem;display:inline-block" + q + "></span><ul>" + _horas_html + "</ul></div>" + nl
         + "<div><h3>Contato</h3>"
         + ("<p class=" + q + "text-sm mb-2" + q + ">" + endereco + "</p>" if endereco else "")
         + "<a href=" + q + "tel:" + telefone.replace(" ","").replace("(","").replace(")","").replace("-","") + q + " class=" + q + "block text-sm mb-3" + q + ">" + telefone + "</a>"
         + "<a href=" + q + whatsapp_url + q + " target=" + q + "_blank" + q + " rel=" + q + "noopener" + q + " class=" + q + "footer-cta" + q + "><i class=" + q + "ph-fill ph-whatsapp-logo" + q + "></i> Falar no WhatsApp</a>"
-        + "<a href=" + q + "/politica-de-privacidade" + q + " class=" + q + "block text-xs mt-4" + q + ">Pol&iacute;tica de Privacidade</a></div>" + nl
+        + "<a href=" + q + (_maps_link_footer) + q + " target=" + q + "_blank" + q + " rel=" + q + "noopener" + q + " class=" + q + "block text-xs mt-3" + q + "><i class=" + q + "ph ph-map-pin" + q + "></i> Ver no Google Maps</a>"
+        + "<a href=" + q + "/politica-de-privacidade" + q + " class=" + q + "block text-xs mt-2" + q + ">Pol&iacute;tica de Privacidade</a></div>" + nl
         + "</div>" + nl
         + "<div class=" + q + "border-t footer-divider pt-6 flex flex-col md:flex-row items-center justify-between gap-3" + q + ">"
         + "<p class=" + q + "text-xs" + q + ">&copy; " + str(_ano) + " " + nome + " &mdash; Todos os direitos reservados.</p>"

@@ -205,6 +205,22 @@ def _normalizar_row(row: Dict) -> Optional[Dict]:
     review_count = int(row.get("review_count") or 0)
     rating = float(row.get("review_rating") or 0)
 
+    # Gerar embed Google Maps por coordenadas ou nome+cidade
+    google_maps_embed = ""
+    lat = row.get("latitude")
+    lng = row.get("longitude")
+    try:
+        if lat and lng:
+            google_maps_embed = (f'<iframe width="100%" height="450" style="border:0;" loading="lazy" '
+                f'src="https://maps.google.com/maps?q={lat},{lng}&output=embed&z=16"></iframe>')
+        elif nome:
+            import urllib.parse as _urlp
+            _q = _urlp.quote_plus(f"{nome} {row.get('address', '')}")
+            google_maps_embed = (f'<iframe width="100%" height="450" style="border:0;" loading="lazy" '
+                f'src="https://maps.google.com/maps?q={_q}&output=embed&z=16"></iframe>')
+    except Exception:
+        pass
+
     return {
         "nome": nome,
         "tipo": row.get("category") or "",
@@ -225,6 +241,7 @@ def _normalizar_row(row: Dict) -> Optional[Dict]:
         "place_id": row.get("place_id") or "",
         "latitude": row.get("latitude"),
         "longitude": row.get("longitude"),
+        "google_maps_embed": google_maps_embed,
     }
 
 
