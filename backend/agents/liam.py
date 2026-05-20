@@ -1168,7 +1168,10 @@ def gerar_html_componentizado(prd):
                     print(f"[Liam] {_nome}: retry {_retry + 1}/{_max_retries} (resposta vazia)")
                     _time_liam.sleep(2)
             except Exception as _fe:
-                print("[Liam] Erro na secao " + _nome + ": " + str(_fe)[:80])
+                _err_str = str(_fe)
+                if "budget" in _err_str.lower() or "limite diário" in _err_str.lower() or "ESGOTADO" in _err_str:
+                    raise RuntimeError(f"[Liam] Budget diário esgotado. Pipeline abortada. Erro: {_fe}")
+                print("[Liam] Erro na secao " + _nome + ": " + _err_str[:80])
                 if _retry < _max_retries - 1:
                     _time_liam.sleep(2)
             finally:

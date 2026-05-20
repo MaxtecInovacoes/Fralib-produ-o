@@ -2109,7 +2109,7 @@ async def reset_pipeline(db: Session = Depends(get_db), usuario: dict = Depends(
 async def cancelar_pipeline(db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
     tenant_id = usuario.get("tenant_id", usuario["id"])
     result = db.execute(text("""
-        UPDATE jobs SET status = 'failed_permanent', updated_at = NOW()
+        UPDATE jobs SET status = 'failed_permanent'
         WHERE tenant_id = :tid AND status IN ('pending', 'running')
     """), {"tid": tenant_id})
     db.commit()
