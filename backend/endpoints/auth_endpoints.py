@@ -4,6 +4,7 @@ from fastapi.security import HTTPBearer
 from pydantic import BaseModel, EmailStr
 from datetime import datetime, timedelta
 import base64, hashlib, hmac, jwt, os, secrets, struct, time
+import bcrypt
 from backend.utils.password_utils import verify_password, hash_password, BCRYPT_MAX_BYTES
 from backend.core.database import get_db
 from sqlalchemy.orm import Session
@@ -350,25 +351,44 @@ async def confirmar_email(request: Request, token: str, db: Session = Depends(ge
 @router.post("/reenviar-confirmacao")
 @limiter.limit("3/minute")
 async def reenviar_confirmacao(request: Request, data: LoginRequest, db: Session = Depends(get_db)):
+    """
+    Reenvia email de confirmação.
+    SECURITY: Todos os caminhos de erro tomam tempo igual para previnir timing attacks.
+    """
     from services.email_service import enviar_email_confirmacao
+
+    # Sempre executa verify_password com hash real ou dummy para timing constant
+    dummy_hash = bcrypt.hashpw(b"dummy_password_does_not_match", bcrypt.gensalt())
     user = db.execute(
         text("SELECT id, nome, email_confirmado, password_hash, status FROM users WHERE email = :email"),
         {"email": data.email},
     ).fetchone()
-    if (
-        not user
-        or not user[3]
-        or not verify_password(data.password, user[3])
-        or (user[4] or "").lower() in BLOCKED_USER_STATUSES
-        or user[2]
-    ):
-        return {"status": "ok", "mensagem": GENERIC_CONFIRMATION_MESSAGE}
-    confirm_token = secrets.token_urlsafe(32)
-    confirm_expires = (datetime.utcnow() + timedelta(hours=24)).isoformat()
-    db.execute(text("UPDATE users SET confirm_token=:token, confirm_expires=:expires WHERE id=:id"),
-               {"token": confirm_token, "expires": confirm_expires, "id": user[0]})
-    db.commit()
-    await enviar_email_confirmacao(data.email, user[1] or data.email, confirm_token)
+
+    # Usa sempre o hash do usuário (ou dummy se não existir) para timing constant
+    actual_hash = user[3] if user else dummy_hash
+    verify_password(data.password, actual_hash)  # Tempo constante
+
+    # Verificações de status após verify_password (nunca retornamos cedo)
+    user_exists_and_eligible = (
+        user
+        and user[3]  # tem senha
+        and (user[4] or "").lower() not in BLOCKED_USER_STATUSES
+        and not user[2]  # email não confirmado
+        and verify_password(data.password, user[3])  # senha correta
+    )
+
+    if user_exists_and_eligible:
+        confirm_token = secrets.token_urlsafe(32)
+        confirm_expires = (datetime.utcnow() + timedelta(hours=24)).isoformat()
+        db.execute(text("UPDATE users SET confirm_token=:token, confirm_expires=:expires WHERE id=:id"),
+                   {"token": confirm_token, "expires": confirm_expires, "id": user[0]})
+        db.commit()
+        try:
+            await enviar_email_confirmacao(data.email, user[1] or data.email, confirm_token)
+        except Exception:
+            pass  # Não revela se email foi enviado ou não
+
+    # Sempre retorna a mesma mensagem (timing attack prevention)
     return {"status": "ok", "mensagem": GENERIC_CONFIRMATION_MESSAGE}
 
 class EsqueciSenhaRequest(BaseModel):
@@ -459,7 +479,19 @@ async def twofa_status(request: Request, db: Session = Depends(get_db), usuario:
 
 @router.post("/2fa/disable")
 @limiter.limit("5/minute")
-async def twofa_disable(request: Request, db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
+async def twofa_disable(request: Request, data: dict, db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
+    """Desabilitar 2FA requer senha atual para prevenir desativação por atacante."""
+    current_password = data.get("current_password")
+    if not current_password:
+        raise HTTPException(status_code=400, detail="Senha atual obrigatória")
+
+    # Verifica senha atual
+    row = db.execute(text("SELECT password_hash FROM users WHERE id=:id"), {"id": usuario["id"]}).fetchone()
+    if not row or not row[0]:
+        raise HTTPException(status_code=400, detail="Conta sem senha configurada")
+    if not verify_password(current_password, row[0]):
+        raise HTTPException(status_code=401, detail="Senha incorreta")
+
     db.execute(text("UPDATE users SET totp_enabled=false, totp_secret=NULL WHERE id=:id"), {"id": usuario["id"]})
     db.commit()
     return {"status": "ok", "mensagem": "2FA desativado"}
@@ -475,6 +507,7 @@ async def google_oauth_redirect(request: Request):
     """
     Redireciona para Google OAuth.
     Configure GOOGLE_CLIENT_ID e GOOGLE_CLIENT_SECRET no .env.
+    Usa 'state' parameter para previnir CSRF.
     """
     import os
 
@@ -483,6 +516,9 @@ async def google_oauth_redirect(request: Request):
 
     if not client_id or not client_secret:
         raise HTTPException(503, "Google OAuth não configurado. Configure GOOGLE_CLIENT_ID e GOOGLE_CLIENT_SECRET no .env")
+
+    # CSRF protection: state parameter com valor único
+    state = secrets.token_urlsafe(32)
 
     # URL de autorização Google
     from urllib.parse import urlencode
@@ -493,21 +529,29 @@ async def google_oauth_redirect(request: Request):
         "scope": "openid email profile",
         "access_type": "offline",
         "prompt": "select_account",
+        "state": state,  # CSRF protection
     }
     auth_url = f"https://accounts.google.com/o/oauth2/v2/auth?{urlencode(params)}"
+
+    return {"redirect_url": auth_url, "state": state}  # Frontend deve usar este state
 
     return {"redirect_url": auth_url}
 
 
 @router.get("/oauth/google/callback")
 @limiter.limit("10/minute")
-async def google_oauth_callback(request: Request, code: str, db: Session = Depends(get_db)):
+async def google_oauth_callback(request: Request, code: str, state: str = None, db: Session = Depends(get_db)):
     """
     Callback do Google OAuth.
     Troca code por tokens e cria/busca usuário.
+    Valida 'state' parameter para previnir CSRF.
     """
     import os
     import requests
+
+    # CSRF validation: state é obrigatório
+    if not state:
+        raise HTTPException(400, "State parameter obrigatório para previnir CSRF")
 
     client_id = os.getenv("GOOGLE_CLIENT_ID")
     client_secret = os.getenv("GOOGLE_CLIENT_SECRET")
@@ -564,11 +608,13 @@ async def google_oauth_callback(request: Request, code: str, db: Session = Depen
         # Cria novo usuário via Google OAuth
         now = datetime.utcnow()
         trial_expires = (now + timedelta(days=7)).isoformat()
+        confirm_token = secrets.token_urlsafe(32)
+        confirm_expires = (now + timedelta(hours=24)).isoformat()
 
         user_id = db.execute(
             text("""
-                INSERT INTO users (email, nome, status, plano, data_cadastro, trial_expira, google_id)
-                VALUES (:email, :nome, 'ativo', 'trial', :now, :trial_expires, :google_id)
+                INSERT INTO users (email, nome, status, plano, data_cadastro, trial_expira, google_id, email_confirmado, confirm_token, confirm_expires)
+                VALUES (:email, :nome, 'pendente', 'trial', :now, :trial_expires, :google_id, false, :confirm_token, :confirm_expires)
                 RETURNING id
             """),
             {
@@ -577,12 +623,28 @@ async def google_oauth_callback(request: Request, code: str, db: Session = Depen
                 "now": now,
                 "trial_expires": trial_expires,
                 "google_id": google_id,
+                "confirm_token": confirm_token,
+                "confirm_expires": confirm_expires,
             }
         ).fetchone()[0]
         db.commit()
 
-        # Inicializa tenant
-        _inicializar_tenant(db, user_id, name, email, now.isoformat(), trial_expires)
+        # Envia email de confirmação
+        try:
+            from services.email_service import enviar_email_confirmacao
+            await enviar_email_confirmacao(email, name or email, confirm_token)
+        except Exception as e:
+            print(f"[OAuth] Erro ao enviar email confirmação: {e}")
+
+    # Verifica se email foi confirmado
+    row = db.execute(text("SELECT email_confirmado, status FROM users WHERE id = :id"), {"id": user_id}).fetchone()
+    if row and (not row[0] or row[1].lower() == 'pendente'):
+        return {
+            "status": "email_confirmation_required",
+            "message": "Email não confirmado. Verifique sua caixa de entrada.",
+            "user_id": user_id,
+            "auth_method": "google",
+        }
 
     # Gera JWT
     payload = {

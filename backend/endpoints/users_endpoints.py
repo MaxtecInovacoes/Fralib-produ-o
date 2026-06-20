@@ -479,14 +479,28 @@ async def exportar_dados_usuario(
     user_id = user["id"]
     tenant_id = user.get("tenant_id", user_id)
 
+    # SECURITY: Todos os dados devem pertencer ao tenant do usuário autenticado
+    # Verifica que tenant_id está correto para evitar IDOR
+    if not tenant_id or tenant_id <= 0:
+        raise HTTPException(status_code=403, detail="Tenant inválido")
+
     try:
-        # Dados do usuário
+        # Dados do usuário - usa user_id próprio
         user_data = db.execute(
             text("SELECT id, email, name, nome, plano, plan, created_at FROM users WHERE id = :id"),
             {"id": user_id}
         ).fetchone()
 
-        # Leads do usuário
+        # Verifica que o usuário pertence ao tenant
+        if user_data:
+            db_tenant = db.execute(
+                text("SELECT tenant_id FROM users WHERE id = :id"),
+                {"id": user_id}
+            ).fetchone()
+            if not db_tenant or db_tenant[0] != tenant_id:
+                raise HTTPException(status_code=403, detail="Acesso negado")
+
+        # Leads do usuário - usa tenant_id
         leads = db.execute(
             text("""
                 SELECT id, nome, email, telefone, whatsapp, cidade, segmento,

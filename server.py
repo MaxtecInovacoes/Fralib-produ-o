@@ -426,17 +426,33 @@ async def politica_privacidade():
         raise HTTPException(status_code=404, detail="privacidade.html not found")
     return FileResponse(path, media_type="text/html; charset=utf-8")
 
-# Filtro para mascarar JWT token nos logs de acesso do uvicorn
+# Filtro para mascarar tokens sensíveis nos logs de acesso do uvicorn
 import logging
 import re as _re_log
 
 class _TokenMaskFilter(logging.Filter):
-    _pat = _re_log.compile(r'(token=)[A-Za-z0-9\-_\.]+')
+    # Máscara: token=valor, Bearer token, access_token=, jwt=, session=, code=
+    _patterns = [
+        _re_log.compile(r'(token=)[A-Za-z0-9\-_\.+=/]+'),
+        _re_log.compile(r'(Bearer\s+)[A-Za-z0-9\-_\.+=/]+'),
+        _re_log.compile(r'(access_token=)[A-Za-z0-9\-_\.+=/]+'),
+        _re_log.compile(r'(jwt=)[A-Za-z0-9\-_\.+=/]+'),
+        _re_log.compile(r'(session=)[A-Za-z0-9\-_\.+=/]+'),
+        _re_log.compile(r'(code=)[A-Za-z0-9\-_\.+=/]+'),
+        _re_log.compile(r'(refresh_token=)[A-Za-z0-9\-_\.+=/]+'),
+        # JWT tokens completos (eyJ...格式)
+        _re_log.compile(r'(eyJ[A-Za-z0-9\-_\.+=/]{10,})'),
+    ]
+
     def filter(self, record):
         if record.args:
             try:
+                def mask(s):
+                    for pat in self._patterns:
+                        s = pat.sub(r'\1[REDACTED]', s)
+                    return s
                 record.args = tuple(
-                    self._pat.sub(r'\1[REDACTED]', a) if isinstance(a, str) else a
+                    mask(a) if isinstance(a, str) else a
                     for a in record.args
                 )
             except Exception:
