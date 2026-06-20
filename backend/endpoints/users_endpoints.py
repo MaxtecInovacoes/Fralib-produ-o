@@ -500,34 +500,34 @@ async def exportar_dados_usuario(
             if not db_tenant or db_tenant[0] != tenant_id:
                 raise HTTPException(status_code=403, detail="Acesso negado")
 
-        # Leads do usuário - usa tenant_id
+        # Leads do usuário - USA user_id CORRETAMENTE
         leads = db.execute(
             text("""
                 SELECT id, nome, email, telefone, whatsapp, cidade, segmento,
                        url_site, site_url, tier, status, created_at, atualizado_em
                 FROM leads WHERE user_id = :uid
             """),
-            {"uid": tenant_id}
+            {"uid": user_id}  # FIX: usar user_id, não tenant_id
         ).fetchall()
 
-        # Interações
+        # Interações - USA user_id CORRETAMENTE
         interacoes = db.execute(
             text("""
                 SELECT id, lead_id, tipo, mensagem, direction, created_at
                 FROM interacoes WHERE user_id = :uid
                 LIMIT 1000
             """),
-            {"uid": tenant_id}
+            {"uid": user_id}  # FIX: usar user_id, não tenant_id
         ).fetchall()
 
-        # Pipeline runs (resumo)
+        # Pipeline runs (resumo) - USA user_id CORRETAMENTE
         pipelines = db.execute(
             text("""
                 SELECT id, lead_id, fase_atual, status, started_at, finished_at
                 FROM pipeline_runs WHERE user_id = :uid
                 LIMIT 500
             """),
-            {"uid": tenant_id}
+            {"uid": user_id}  # FIX: usar user_id, não tenant_id
         ).fetchall()
 
         # Credits (resumo)
@@ -586,25 +586,25 @@ async def deletar_conta_usuario(
     tenant_id = user.get("tenant_id", user_id)
 
     try:
-        # 1. Deletar interações
-        db.execute(text("DELETE FROM interacoes WHERE user_id = :uid"), {"uid": tenant_id})
+        # 1. Deletar interações - USA user_id CORRETAMENTE
+        db.execute(text("DELETE FROM interacoes WHERE user_id = :uid"), {"uid": user_id})
 
-        # 2. Deletar pipeline runs
-        db.execute(text("DELETE FROM pipeline_runs WHERE user_id = :uid"), {"uid": tenant_id})
+        # 2. Deletar pipeline runs - USA user_id CORRETAMENTE
+        db.execute(text("DELETE FROM pipeline_runs WHERE user_id = :uid"), {"uid": user_id})
 
-        # 3. Deletar pipeline failures
-        db.execute(text("DELETE FROM pipeline_failures WHERE tenant_id = :tid"), {"tid": tenant_id})
+        # 3. Deletar pipeline failures - USA user_id CORRETAMENTE
+        db.execute(text("DELETE FROM pipeline_failures WHERE user_id = :uid"), {"uid": user_id})
 
-        # 4. Deletar leads
-        db.execute(text("DELETE FROM leads WHERE user_id = :uid"), {"uid": tenant_id})
+        # 4. Deletar leads - USA user_id CORRETAMENTE
+        db.execute(text("DELETE FROM leads WHERE user_id = :uid"), {"uid": user_id})
 
-        # 5. Deletar user_configs
+        # 5. Deletar user_configs - USA user_id
         db.execute(text("DELETE FROM user_configs WHERE user_id = :uid"), {"uid": user_id})
 
-        # 6. Deletar licença
+        # 6. Deletar licença - USA user_id
         db.execute(text("DELETE FROM licencas WHERE user_id = :uid"), {"uid": user_id})
 
-        # 7. Deletar user (por último)
+        # 7. Deletar user (por último) - USA user_id
         db.execute(text("DELETE FROM users WHERE id = :id"), {"id": user_id})
 
         db.commit()

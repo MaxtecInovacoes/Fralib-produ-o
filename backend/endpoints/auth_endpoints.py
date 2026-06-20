@@ -463,12 +463,20 @@ async def get_me(usuario: dict = Depends(get_current_user), db: Session = Depend
 async def logout(request: Request, response: Response, usuario: dict = Depends(get_current_user)):
     # Extrair token para revogar
     token = request.cookies.get("fralib_session") or ""
+    logout_ok = True
     if token:
-        revoke_token(token)
+        result = revoke_token(token)
+        if result is False:
+            # Redis indisponível - token não pode ser revogado
+            logout_ok = False
+            logger.warning("[Auth] Logout: Redis indisponível, token permanece válido até expirar")
     secure = _cookie_secure(request)
     for cookie_name in ("fralib_session", "fralib_csrf"):
         response.delete_cookie(cookie_name, path="/", secure=secure, samesite="lax")
-    return {"status": "ok"}
+    return {
+        "status": "ok" if logout_ok else "partial",
+        "warning": "Token não pode ser revogado (Redis indisponível)" if not logout_ok else None
+    }
 
 @router.get("/2fa/status")
 @limiter.limit("30/minute")
@@ -507,7 +515,7 @@ async def google_oauth_redirect(request: Request):
     """
     Redireciona para Google OAuth.
     Configure GOOGLE_CLIENT_ID e GOOGLE_CLIENT_SECRET no .env.
-    Usa 'state' parameter para previnir CSRF.
+    Usa cookie httponly para state CSRF (mais seguro que JSON).
     """
     import os
 
@@ -517,8 +525,18 @@ async def google_oauth_redirect(request: Request):
     if not client_id or not client_secret:
         raise HTTPException(503, "Google OAuth não configurado. Configure GOOGLE_CLIENT_ID e GOOGLE_CLIENT_SECRET no .env")
 
-    # CSRF protection: state parameter com valor único
+    # CSRF protection: state parameter com valor único em cookie httponly
     state = secrets.token_urlsafe(32)
+
+    # Assinar o state com HMAC para evitar tampering
+    import hmac
+    import hashlib
+    secret_key = os.getenv("JWT_SECRET_KEY", "default-secret-change-me").encode()
+    state_signature = hmac.new(secret_key, state.encode(), hashlib.sha256).hexdigest()
+    signed_state = f"{state}.{state_signature}"
+
+    # Armazenar state assinado em cookie httponly (não acessível via JavaScript)
+    response = Response(content='{"redirect_url": "https://accounts.google.com/o/oauth2/v2/auth?"}', media_type="application/json")
 
     # URL de autorização Google
     from urllib.parse import urlencode
@@ -529,14 +547,21 @@ async def google_oauth_redirect(request: Request):
         "scope": "openid email profile",
         "access_type": "offline",
         "prompt": "select_account",
-        "state": state,  # CSRF protection
+        "state": state,  # CSRF protection - Google recebe state limpo
     }
     auth_url = f"https://accounts.google.com/o/oauth2/v2/auth?{urlencode(params)}"
 
-    return {"redirect_url": auth_url, "state": state}  # Frontend deve usar este state
+    # Cookie httponly com state assinado (não legível por JavaScript/XSS)
+    response.set_cookie(
+        key="oauth_state",
+        value=signed_state,
+        httponly=True,
+        secure=True,  # HTTPS only
+        samesite="lax",
+        max_age=600,  # 10 minutos
+    )
 
     return {"redirect_url": auth_url}
-
 
 @router.get("/oauth/google/callback")
 @limiter.limit("10/minute")
@@ -544,14 +569,43 @@ async def google_oauth_callback(request: Request, code: str, state: str = None, 
     """
     Callback do Google OAuth.
     Troca code por tokens e cria/busca usuário.
-    Valida 'state' parameter para previnir CSRF.
+    Valida state do cookie httponly (CSRF protection).
     """
     import os
     import requests
+    import hmac
+    import hashlib
 
-    # CSRF validation: state é obrigatório
-    if not state:
-        raise HTTPException(400, "State parameter obrigatório para previnir CSRF")
+    client_id = os.getenv("GOOGLE_CLIENT_ID")
+    client_secret = os.getenv("GOOGLE_CLIENT_SECRET")
+    public_url = os.getenv("FRALIB_PUBLIC_URL", "https://seunegociofralib.site")
+
+    if not client_id or not client_secret:
+        raise HTTPException(503, "Google OAuth não configurado")
+
+    # CSRF validation: state do cookie httponly (não do parâmetro GET)
+    oauth_state_cookie = request.cookies.get("oauth_state")
+    if not oauth_state_cookie:
+        raise HTTPException(400, "Cookie OAuth state ausente - possível CSRF")
+
+    # Validar assinatura do state
+    try:
+        state_parts = oauth_state_cookie.split(".")
+        if len(state_parts) != 2:
+            raise HTTPException(400, "State OAuth inválido")
+        state_from_cookie, received_signature = state_parts
+        secret_key = os.getenv("JWT_SECRET_KEY", "default-secret-change-me").encode()
+        expected_signature = hmac.new(secret_key, state_from_cookie.encode(), hashlib.sha256).hexdigest()
+        if not hmac.compare_digest(received_signature, expected_signature):
+            raise HTTPException(400, "State OAuth violado - CSRF detectado")
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(400, "State OAuth inválido")
+
+    # Validar que state do GET corresponde ao state do cookie
+    if state and state != state_from_cookie:
+        raise HTTPException(400, "State CSRF mismatch")
 
     client_id = os.getenv("GOOGLE_CLIENT_ID")
     client_secret = os.getenv("GOOGLE_CLIENT_SECRET")

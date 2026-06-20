@@ -38,10 +38,23 @@ def _is_token_revoked(token: str) -> bool:
 
 
 def revoke_token(token: str) -> None:
-    """Adiciona token à blacklist até expiração."""
+    """Adiciona token à blacklist até expiração.
+    ATENÇÃO: Se Redis estiver indisponível, token NÃO é revogado.
+    Em produção crítica, considere falhar de forma segura (raise exception).
+    """
     redis = _get_redis()
     if not redis:
-        return
+        # FIX: Falhar de forma SEGURA em vez de falhar silenciosamente
+        # Em produção: log erro crítico e considera logout como "pendente"
+        import logging
+        logging.getLogger("uvicorn").critical(
+            "[AUTH] CRÍTICO: Redis indisponível - token NÃO pode ser revogado! "
+            f"Token hash: {hashlib.sha256(token.encode()).hexdigest()[:16]}..."
+        )
+        # Opção 1: Raise exception (mais seguro, mas quebra UX)
+        # raise RuntimeError("Redis indisponível - token não pode ser revogado")
+        # Opção 2: Retornar false para caller decidir (menos agressivo)
+        return False
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM], options={"verify_exp": False})
         exp = payload.get("exp", 0)
@@ -50,6 +63,7 @@ def revoke_token(token: str) -> None:
     ttl = max(1, exp - int(time.time()))
     token_hash = hashlib.sha256(token.encode()).hexdigest()
     redis.setex(f"revoked_token:{token_hash}", ttl, "1")
+    return True
 
 security = HTTPBearer(auto_error=False)
 BLOCKED_USER_STATUSES = {"bloqueado", "suspenso", "cancelado", "inadimplente", "desativado"}

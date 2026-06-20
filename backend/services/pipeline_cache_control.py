@@ -14,9 +14,11 @@ logger = logging.getLogger("uvicorn")
 
 
 def invalidar_caches_cold_run(
-    segmento: str, cidade: str, nome: str, pipeline_id: str, log_fn=None
+    segmento: str, cidade: str, nome: str, pipeline_id: str, log_fn=None, user_id: int = None
 ):
-    """Remove caches que podem mascarar um reprocessamento criativo controlado."""
+    """Remove caches que podem mascarar um reprocessamento criativo controlado.
+    user_id: se fornecido, invalida apenas cache do tenant específico.
+    """
     _log_local = log_fn or (lambda *_args, **_kwargs: None)
     _segmento = (segmento or "").strip()
     _cidade = (cidade or "").strip()
@@ -54,10 +56,17 @@ def invalidar_caches_cold_run(
                 {"s": _segmento, "c": _cidade},
             )
             try:
-                _conn.execute(
-                    text("DELETE FROM leads_cache WHERE lower(segmento)=lower(:s) AND lower(cidade)=lower(:c)"),
-                    {"s": _segmento, "c": _cidade},
-                )
+                # FIX: invalidar cache isolado por user_id se fornecido
+                if user_id is not None:
+                    _conn.execute(
+                        text("DELETE FROM leads_cache WHERE user_id = :uid AND lower(segmento)=lower(:s) AND lower(cidade)=lower(:c)"),
+                        {"s": _segmento, "c": _cidade, "uid": user_id},
+                    )
+                else:
+                    _conn.execute(
+                        text("DELETE FROM leads_cache WHERE lower(segmento)=lower(:s) AND lower(cidade)=lower(:c)"),
+                        {"s": _segmento, "c": _cidade},
+                    )
             except Exception:
                 pass
             _conn.commit()

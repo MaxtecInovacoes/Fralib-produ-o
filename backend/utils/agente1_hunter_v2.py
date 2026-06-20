@@ -330,8 +330,8 @@ async def buscar_lead_google_maps(
 # CACHE GLOBAL DE LEADS — evita Playwright se já buscou antes
 # ═══════════════════════════════════════════════════════════════
 
-def _buscar_cache_leads(segmento: str, cidade: str, existentes: set, limite: int) -> List['LeadQualificado']:
-    """Busca leads no cache global (tabela leads_cache). Retorna lista de LeadQualificado ou []."""
+def _buscar_cache_leads(segmento: str, cidade: str, existentes: set, limite: int, user_id: int = 0) -> List['LeadQualificado']:
+    """Busca leads no cache ISOLADO POR USER_ID. Retorna lista de LeadQualificado ou []."""
     try:
         from database import engine
         from sqlalchemy import text as _text
@@ -341,11 +341,12 @@ def _buscar_cache_leads(segmento: str, cidade: str, existentes: set, limite: int
                        website, endereco, maps_url, fotos, servicos, horarios, logo_url,
                        atributos, faixa_preco, reviews_json
                 FROM leads_cache
-                WHERE lower(segmento) = lower(:seg) AND lower(cidade) = lower(:cid)
+                WHERE user_id = :uid
+                  AND lower(segmento) = lower(:seg) AND lower(cidade) = lower(:cid)
                   AND criado_em > NOW() - INTERVAL '7 days'
                 ORDER BY rating DESC NULLS LAST
                 LIMIT :lim
-            """), {"seg": segmento, "cid": cidade, "lim": limite + len(existentes) + 5}).fetchall()
+            """), {"seg": segmento, "cid": cidade, "lim": limite + len(existentes) + 5, "uid": user_id}).fetchall()
 
         if not rows:
             return []
@@ -523,8 +524,8 @@ def _prioridade_captura(item: 'LeadQualificado') -> tuple:
     )
 
 
-def _salvar_cache_leads(leads: List['LeadQualificado'], segmento: str, cidade: str):
-    """Salva leads no cache global pra reutilização entre tenants."""
+def _salvar_cache_leads(leads: List['LeadQualificado'], segmento: str, cidade: str, user_id: int = 0):
+    """Salva leads no cache ISOLADO POR USER_ID para evitar envenenamento entre tenants."""
     try:
         from database import engine
         from sqlalchemy import text as _text
@@ -533,15 +534,16 @@ def _salvar_cache_leads(leads: List['LeadQualificado'], segmento: str, cidade: s
             for lq in leads:
                 l = lq.lead
                 conn.execute(_text("""
-                    INSERT INTO leads_cache (nome, cidade, segmento, telefone, rating, total_avaliacoes,
+                    INSERT INTO leads_cache (user_id, nome, cidade, segmento, telefone, rating, total_avaliacoes,
                         website, endereco, maps_url, fotos, servicos, horarios, logo_url,
                         atributos, faixa_preco, reviews_json, criado_em)
-                    VALUES (:nome, :cidade, :seg, :tel, :rating, :aval, :web, :end, :maps,
+                    VALUES (:uid, :nome, :cidade, :seg, :tel, :rating, :aval, :web, :end, :maps,
                         :fotos, :servicos, :horarios, :logo, :atrib, :faixa, :reviews, NOW())
-                    ON CONFLICT (lower(nome), lower(cidade)) DO UPDATE SET
+                    ON CONFLICT (user_id, lower(nome), lower(cidade)) DO UPDATE SET
                         rating = EXCLUDED.rating, telefone = COALESCE(EXCLUDED.telefone, leads_cache.telefone),
                         atualizado_em = NOW()
                 """), {
+                    "uid": user_id,
                     "nome": l.nome, "cidade": l.cidade, "seg": segmento,
                     "tel": l.telefone, "rating": l.rating, "aval": l.total_avaliacoes,
                     "web": l.website, "end": l.endereco, "maps": l.maps_url,
@@ -686,12 +688,12 @@ async def buscar_leads_google_maps(
     if leads_prontos:
         print(f"[Hunter V2] Pool pronto: {len(leads_prontos)} lead(s) capturados/pendentes")
 
-    # ── CACHE GLOBAL: verificar se já temos leads cacheados pra este segmento+cidade ──
+    # ── CACHE ISOLADO POR USER_ID: verificar leads cacheados deste tenant ──
     if force_fresh:
         print("[Hunter V2] FORCE FRESH: ignorando cache, buscando direto no Maps")
         cached_leads = []
     else:
-        cached_leads = _buscar_cache_leads(segmento, cidade, _existentes, _candidate_limit)
+        cached_leads = _buscar_cache_leads(segmento, cidade, _existentes, _candidate_limit, user_id)
     pool_inicial = _merge_leads(leads_prontos, cached_leads, limite=_candidate_limit)
     if pool_inicial and len(pool_inicial) >= _min_buffer:
         print(
@@ -868,7 +870,7 @@ async def buscar_leads_google_maps(
         aprovados_necessarios,
     )
     if aprovados:
-        _salvar_cache_leads(aprovados, segmento, cidade)
+        _salvar_cache_leads(aprovados, segmento, cidade, user_id)
     return aprovados
 
 # ===== TESTE =====

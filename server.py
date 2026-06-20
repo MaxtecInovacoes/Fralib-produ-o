@@ -177,12 +177,13 @@ async def lifespan(app):
     except Exception as e:
         print(f"[Server] Aviso: limpeza checkpoints falhou: {e}")
 
-    # Migration: tabela leads_cache (cache global de leads entre tenants)
+    # Migration: tabela leads_cache (ISOLADO POR USER_ID para evitar envenenamento entre tenants)
     try:
         with engine.connect() as conn:
             conn.execute(text("""
                 CREATE TABLE IF NOT EXISTS leads_cache (
                     id SERIAL PRIMARY KEY,
+                    user_id INTEGER NOT NULL,  -- FIX: isola cache por tenant
                     nome VARCHAR(255) NOT NULL,
                     cidade VARCHAR(100) NOT NULL,
                     segmento VARCHAR(100),
@@ -203,16 +204,21 @@ async def lifespan(app):
                     atualizado_em TIMESTAMP DEFAULT NOW()
                 )
             """))
+            # Adicionar user_id se não existir (para migração de dados existentes)
+            try:
+                conn.execute(text("ALTER TABLE leads_cache ADD COLUMN IF NOT EXISTS user_id INTEGER NOT NULL DEFAULT 0"))
+            except:
+                pass  # Coluna já existe
             conn.execute(text("""
-                CREATE UNIQUE INDEX IF NOT EXISTS idx_leads_cache_nome_cidade
-                ON leads_cache (lower(nome), lower(cidade))
+                CREATE UNIQUE INDEX IF NOT EXISTS idx_leads_cache_user_nome_cidade
+                ON leads_cache (user_id, lower(nome), lower(cidade))
             """))
             conn.execute(text("""
-                CREATE INDEX IF NOT EXISTS idx_leads_cache_segmento_cidade
-                ON leads_cache (lower(segmento), lower(cidade))
+                CREATE INDEX IF NOT EXISTS idx_leads_cache_user_segmento_cidade
+                ON leads_cache (user_id, lower(segmento), lower(cidade))
             """))
             conn.commit()
-        print("[Server] Migration: leads_cache OK")
+        print("[Server] Migration: leads_cache OK (com user_id)")
     except Exception as e:
         print(f"[Server] Aviso: migration leads_cache falhou: {e}")
 
@@ -279,13 +285,11 @@ app.mount("/static", StaticFiles(directory=os.path.join(BASE_DIR, "frontend", "s
 app.mount("/css", StaticFiles(directory=os.path.join(BASE_DIR, "frontend", "css")), name="css")
 app.mount("/js", StaticFiles(directory=os.path.join(BASE_DIR, "frontend", "js")), name="js")
 
-# CORS — metodos e headers explicitos em vez de wildcard
+# CORS — origins configurados via env var (IP da VPS não deve estar no código)
+_cors_origins = os.getenv("FRALIB_CORS_ORIGINS", "http://localhost:8000").split(",")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://187.77.37.72:8000",
-        "http://localhost:8000"
-    ],
+    allow_origins=[origin.strip() for origin in _cors_origins],
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type", "X-Requested-With", "Accept", "X-CSRF-Token", "X-XSRF-Token"],

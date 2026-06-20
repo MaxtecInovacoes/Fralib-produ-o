@@ -11,6 +11,7 @@ from sqlalchemy import text
 from pydantic import BaseModel as _BaseModel
 from backend.core.database import get_db
 from backend.core.auth import get_current_user
+from backend.core.config import SITES_DIR  # FIX: usar config em vez de path hardcoded
 from backend.endpoints.sse_endpoints import adicionar_log
 
 router = APIRouter(prefix="/api/pipeline", tags=["pipeline"])
@@ -58,7 +59,8 @@ async def editar_secao_endpoint(
             status_code=404, detail="Site ainda nao foi gerado para este lead"
         )
     slug = _site_slug_from_url_or_name(site_url, lead_nome)
-    html_path = f"/var/www/fralib/sites/{tenant_id}/{slug}/index.html"
+    # FIX: usar SITES_DIR do config, não path hardcoded
+    html_path = os.path.join(SITES_DIR, str(tenant_id), slug, "index.html")
     if not os.path.exists(html_path):
         raise HTTPException(
             status_code=404, detail=f"Arquivo HTML nao encontrado: {html_path}"
@@ -105,7 +107,8 @@ async def listar_secoes_endpoint(
     site_url = result[0]
     lead_nome = result[1]
     slug = _site_slug_from_url_or_name(site_url, lead_nome)
-    html_path = f"/var/www/fralib/sites/{tenant_id}/{slug}/index.html"
+    # FIX: usar SITES_DIR do config, não path hardcoded
+    html_path = os.path.join(SITES_DIR, str(tenant_id), slug, "index.html")
     if not os.path.exists(html_path):
         return {"secoes": [], "mensagem": "Site ainda nao gerado"}
     with open(html_path, "r", encoding="utf-8") as f:
