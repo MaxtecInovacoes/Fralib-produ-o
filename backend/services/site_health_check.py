@@ -25,7 +25,7 @@ class HealthCheckError(Exception):
         super().__init__(f"{motivo}: {detalhe}" if detalhe else motivo)
 
 
-def _validar_conteudo(html: str) -> None:
+def _validar_conteudo(html: str, cidade: str | None = None) -> None:
     """Levanta HealthCheckError na primeira validacao que falhar."""
     if not html or len(html.encode("utf-8")) < TAMANHO_MINIMO_BYTES:
         raise HealthCheckError(
@@ -37,8 +37,23 @@ def _validar_conteudo(html: str) -> None:
     if "</body>" not in html_lower or "</html>" not in html_lower:
         raise HealthCheckError("HTML truncado", "faltam tags de fechamento </body> ou </html>")
 
-    if not re.search(r"<h1\b[^>]*>.*?</h1>", html, re.IGNORECASE | re.DOTALL):
+    h1_match = re.search(r"<h1\b[^>]*>(.*?)</h1>", html, re.IGNORECASE | re.DOTALL)
+    if not h1_match:
         raise HealthCheckError("Sem titulo H1", "site nao tem <h1> visivel")
+
+    h1_text = h1_match.group(1)
+    if cidade and not re.search(cidade, h1_text, re.IGNORECASE):
+        raise HealthCheckError("Cidade ausente no H1", f"H1 nao menciona '{cidade}'")
+
+    h2_count = len(re.findall(r"<h2\b", html, re.IGNORECASE))
+    if h2_count < 4:
+        raise HealthCheckError("H2 insuficiente", f"encontrados {h2_count} < 4 tags <h2>")
+
+    if not re.search(r"<title\b[^>]*>.*?</title>", html, re.IGNORECASE | re.DOTALL):
+        raise HealthCheckError("Sem title", "tag <title> ausente")
+
+    if not re.search(r'<meta[^>]+name\s*=\s*["\']description["\']', html, re.IGNORECASE):
+        raise HealthCheckError("Sem meta description", 'tag <meta name="description"> ausente')
 
     tem_tel = bool(re.search(r'href\s*=\s*["\']tel:', html, re.IGNORECASE))
     tem_wpp = bool(re.search(r'href\s*=\s*["\'][^"\']*wa\.me/', html, re.IGNORECASE)) or bool(
@@ -60,7 +75,9 @@ def _validar_conteudo(html: str) -> None:
         raise HealthCheckError("Schema.org invalido", f"JSON-LD nao parseia: {e}")
 
 
-def validar_site(url: str, timeout: float = 10.0, tentativas: int = 3, delay: float = 2.0) -> dict:
+def validar_site(
+    url: str, timeout: float = 10.0, tentativas: int = 3, delay: float = 2.0, cidade: str | None = None
+) -> dict:
     """
     Verifica que `url` responde 200 com HTML valido + campos minimos.
 
@@ -99,6 +116,6 @@ def validar_site(url: str, timeout: float = 10.0, tentativas: int = 3, delay: fl
         raise HealthCheckError("Content-Type errado", f"esperado text/html, veio {content_type!r}")
 
     html = response.text
-    _validar_conteudo(html)
+    _validar_conteudo(html, cidade=cidade)
     log.info(f"[HealthCheck] OK {url} ({len(html)} chars)")
     return {"ok": True, "tamanho": len(html), "status": response.status_code}

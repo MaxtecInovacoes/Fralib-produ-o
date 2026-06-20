@@ -21,6 +21,7 @@ from backend.domain.phase6_contract import (
     phase6_video_asset as _shared_phase6_video_asset,
     sanitize_keyword_term as _shared_sanitize_keyword_term,
 )
+from backend.utils.schema_builder import gerar_faq_schema as _gerar_faq_schema
 
 
 # ─── Phase 6 Wrappers ────────────────────────────────────────────────────────
@@ -84,6 +85,10 @@ def repair_phase6_publication_contract(html: str, prd=None) -> str:
             head_additions.append('<meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">')
         if "breadcrumblist" not in cleaned.lower():
             head_additions.append('<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Inicio","item":"#"}]}</script>')
+        if "faqpage" not in cleaned.lower():
+            faq_tag = _gerar_faq_schema_from_prd(prd)
+            if faq_tag:
+                head_additions.append(faq_tag)
         if phase6_should_use_video_hero(prd) and "https://videos.pexels.com" not in cleaned.lower():
             head_additions.append('<link rel="preconnect" href="https://videos.pexels.com">')
         if "cdn.jsdelivr.net/npm/gsap" not in cleaned.lower():
@@ -104,8 +109,9 @@ def repair_phase6_publication_contract(html: str, prd=None) -> str:
                 '@keyframes fralib-letter-reveal{from{opacity:.01;transform:translateY(.28em)}to{opacity:1;transform:translateY(0)}}'
                 '</style>'
             )
+        # FIX: prefers-reduced-motion verificado ANTES de iniciar GSAP
         if "fralibsmoothscroll" not in cleaned.lower() or "gsap.registerplugin" not in cleaned.lower():
-            head_additions.append('<script id="fralib-phase6-runtime">window.fralibSmoothScroll=window.fralibSmoothScroll||{};if(window.gsap&&window.ScrollTrigger){gsap.registerPlugin(ScrollTrigger)}</script>')
+            head_additions.append('<script id="fralib-phase6-runtime">window.fralibSmoothScroll=window.fralibSmoothScroll||{};(function(){const r=window.matchMedia&&window.matchMedia("(prefers-reduced-motion:reduce)").matches;if(r){document.documentElement.style.setProperty("--fralib-reduced-motion","1");}else if(window.gsap&&window.ScrollTrigger){gsap.registerPlugin(ScrollTrigger);}})();</script>')
         if head_additions:
             cleaned = re.sub(r"(?is)</head\s*>", "\n".join(head_additions) + "\n</head>", cleaned, count=1)
     return repair_phase6_body_contract(cleaned, prd)
@@ -369,3 +375,46 @@ def _publication_business_from_prd(prd) -> dict[str, str]:
         "phone": str(business.get("phone") or business.get("telefone") or business.get("whatsapp") or _get(prd, "phone", "telefone", "whatsapp", default="")).strip(),
         "site_url": str(business.get("site_url") or business.get("url_site") or _get(prd, "site_url", "url_site", default="")).strip(),
     }
+
+
+def _gerar_faq_schema_from_prd(prd) -> str:
+    """Extrai FAQ do PRD e gera tag JSON-LD FAQPage."""
+    if not prd:
+        return ""
+
+    perguntas_respostas = []
+
+    # Extrair de faqs direto no PRD
+    faqs = _get(prd, "faqs", "faq", "perguntas_respostas", default=[])
+    if isinstance(faqs, list):
+        perguntas_respostas.extend(faqs)
+
+    # Extrair de sections que contem faqs
+    sections = _get(prd, "sections", default=[])
+    if isinstance(sections, list):
+        for section in sections:
+            if isinstance(section, dict):
+                section_faqs = section.get("faqs") or section.get("faq") or []
+                if isinstance(section_faqs, list):
+                    perguntas_respostas.extend(section_faqs)
+                section_qa = section.get("perguntas_respostas") or []
+                if isinstance(section_qa, list):
+                    perguntas_respostas.extend(section_qa)
+
+    # Extrair de content
+    content = _get(prd, "content", default={})
+    if isinstance(content, dict):
+        content_faqs = content.get("faqs") or content.get("faq") or []
+        if isinstance(content_faqs, list):
+            perguntas_respostas.extend(content_faqs)
+
+    if not perguntas_respostas:
+        return ""
+
+    deploy_url = publication_canonical_from_prd(prd) or ""
+    return _gerar_faq_schema(perguntas_respostas, deploy_url)
+
+
+def gerar_faq_schema_from_prd(prd) -> str:
+    """Public export of _gerar_faq_schema_from_prd for external modules."""
+    return _gerar_faq_schema_from_prd(prd)

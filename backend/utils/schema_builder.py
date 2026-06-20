@@ -166,6 +166,61 @@ def agrupar_horarios(horarios):
     return grupos
 
 
+def gerar_faq_schema(perguntas_respostas: list[dict], deploy_url: str) -> str:
+    """Gera tag script JSON-LD com @type FAQPage conforme schema.org.
+
+    Args:
+        perguntas_respostas: Lista de dicts com keys 'pergunta'/'question' e 'resposta'/'answer'.
+        deploy_url: URL do site publicado.
+
+    Returns:
+        Tag script JSON-LD com FAQPage schema.
+    """
+    if not perguntas_respostas:
+        return ""
+
+    main_entity = []
+    for item in perguntas_respostas:
+        pergunta = (
+            item.get("pergunta")
+            or item.get("question")
+            or item.get("perg")
+            or item.get("q")
+            or ""
+        )
+        resposta = (
+            item.get("resposta")
+            or item.get("answer")
+            or item.get("resp")
+            or item.get("a")
+            or ""
+        )
+        if pergunta and resposta:
+            main_entity.append({
+                "@type": "Question",
+                "name": str(pergunta).strip(),
+                "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": str(resposta).strip(),
+                },
+            })
+
+    if not main_entity:
+        return ""
+
+    schema = {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": main_entity,
+    }
+
+    return (
+        '<script type="application/ld+json">\n'
+        + json.dumps(schema, ensure_ascii=False, indent=2)
+        + '\n</script>'
+    )
+
+
 def injetar_schema_no_html(html, lead_data, deploy_url, site_dir):
     """Injeta schema no HTML e cria sitemap+robots. Retorna HTML modificado."""
     schema_tag = gerar_schema(lead_data, deploy_url)
