@@ -11,6 +11,7 @@ sys.path.insert(0, _BASE)
 sys.path.insert(0, os.path.join(_BASE, "core"))
 from backend.core.database import get_db
 from backend.core.auth import get_current_user
+from backend.core.config import SITES_DIR
 from backend.endpoints.sse_endpoints import adicionar_log
 
 from pydantic import BaseModel
@@ -228,7 +229,7 @@ async def editar_site(
 
     if not _re_path.match(r"^[a-z0-9][a-z0-9-]{0,80}$", slug):
         raise HTTPException(status_code=400, detail="Slug do site invalido")
-    html_path = f"/var/www/fralib/sites/{tenant_id}/{slug}/index.html"
+    html_path = f"{SITES_DIR}/{tenant_id}/{slug}/index.html"
 
     if not os.path.exists(html_path):
         raise HTTPException(status_code=404, detail="Arquivo HTML nao encontrado")
@@ -366,7 +367,7 @@ async def upload_foto(
         if not _re_upload.match(r"^[a-zA-Z0-9_\-]+$", part):
             raise HTTPException(status_code=400, detail="Slug invalido")
 
-    assets_dir = f"/var/www/fralib/sites/{tenant_id}/{slug_parts[-1]}/assets"
+    assets_dir = f"{SITES_DIR}/{tenant_id}/{slug_parts[-1]}/assets"
     os.makedirs(assets_dir, exist_ok=True)
 
     if tipo == "logo":
