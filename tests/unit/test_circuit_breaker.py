@@ -41,16 +41,18 @@ class TestCircuitBreakerOpen:
 
     def test_opens_on_exception(self):
         """GREEN: Abre quando exceção esperada ocorre"""
-        from backend.services.circuit_breaker import CircuitBreaker, CircuitState, CircuitOpenError
+        from backend.services.circuit_breaker import CircuitBreaker, CircuitState
 
         cb = CircuitBreaker(name="test", failure_threshold=1)
 
         def failing_func():
             raise ValueError("Test error")
 
-        with pytest.raises(CircuitOpenError):
+        # A exceção é propagada E o circuit abre
+        with pytest.raises(ValueError):
             cb.call(failing_func)
 
+        # Verificar que abriu após a falha
         assert cb.state == CircuitState.OPEN
 
 
