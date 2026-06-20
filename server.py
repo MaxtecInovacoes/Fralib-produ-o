@@ -384,6 +384,12 @@ app.include_router(health_endpoints.router)
 app.include_router(tenant_api_keys.router)
 app.include_router(metrics_endpoints.router)
 app.include_router(hermes_endpoints.router)
+try:
+    import admin_services_endpoints
+    app.include_router(admin_services_endpoints.router)
+    print("[Server] admin_services_endpoints registrado")
+except ImportError as e:
+    print(f"[Server] admin_services_endpoints nao disponivel: {e}")
 
 # Rate limit do login agora vem via @limiter.limit em auth_endpoints.py (slowapi).
 # CSP+security headers vem via security_headers middleware acima (linha ~125).
