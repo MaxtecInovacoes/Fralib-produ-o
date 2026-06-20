@@ -151,7 +151,7 @@ async def list_users(db: Session = Depends(get_db), user: dict = Depends(require
     """Lista todos os usuarios com dados de consumo"""
     try:
         rows = db.execute(text("""
-            SELECT 
+            SELECT
                 u.id, u.email, u.nome, u.role, u.plano, u.status,
                 u.creditos, u.creditos_max,
                 u.sites_created_month, u.tokens_used_month,
@@ -159,12 +159,28 @@ async def list_users(db: Session = Depends(get_db), user: dict = Depends(require
                 u.plano_pago, u.email_confirmado,
                 COALESCE(u.telefone, '') as telefone,
                 COALESCE(u.nicho, '') as nicho,
-                (SELECT COUNT(*) FROM leads WHERE user_id = u.id) as total_leads,
-                (SELECT COUNT(*) FROM leads WHERE user_id = u.id AND processado = true) as sites_prontos,
-                (SELECT COALESCE(SUM(tokens_consumidos), 0) FROM token_transactions WHERE user_id = u.id) as tokens_total,
-                (SELECT COALESCE(SUM(input_tokens), 0) FROM llm_usage WHERE user_id = u.id) as llm_input,
-                (SELECT COALESCE(SUM(output_tokens), 0) FROM llm_usage WHERE user_id = u.id) as llm_output
+                COALESCE(ls.total_leads, 0) as total_leads,
+                COALESCE(ls.sites_prontos, 0) as sites_prontos,
+                COALESCE(tt.tokens_total, 0) as tokens_total,
+                COALESCE(lu.llm_input, 0) as llm_input,
+                COALESCE(lu.llm_output, 0) as llm_output
             FROM users u
+            LEFT JOIN (
+                SELECT user_id,
+                    COUNT(*) as total_leads,
+                    COUNT(*) FILTER (WHERE processado = true) as sites_prontos
+                FROM leads GROUP BY user_id
+            ) ls ON u.id = ls.user_id
+            LEFT JOIN (
+                SELECT user_id, SUM(tokens_consumidos) as tokens_total
+                FROM token_transactions GROUP BY user_id
+            ) tt ON u.id = tt.user_id
+            LEFT JOIN (
+                SELECT user_id,
+                    SUM(input_tokens) as llm_input,
+                    SUM(output_tokens) as llm_output
+                FROM llm_usage GROUP BY user_id
+            ) lu ON u.id = lu.user_id
             ORDER BY u.id DESC
         """)).fetchall()
         

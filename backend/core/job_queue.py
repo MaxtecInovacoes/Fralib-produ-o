@@ -485,7 +485,11 @@ def reap_dead_workers(db: Session, dead_after_minutes: int = 5) -> int:
 
 
 def finalize_exhausted_jobs(db: Session) -> int:
-    """Fecha jobs pendentes que ja consumiram todas as tentativas."""
+    """Fecha jobs pendentes que ja consumiram todas as tentativas.
+
+    ANTES (N+1): loop chamando mark_failure() por job (2N queries)
+    AGORA (2 queries fixas): UPDATE batch + INSERT em vez de N loops
+    """
     rows = db.execute(
         text("""
         SELECT id, COALESCE(last_error, 'tentativas esgotadas'), payload
@@ -494,18 +498,24 @@ def finalize_exhausted_jobs(db: Session) -> int:
           AND attempts >= max_attempts
     """)
     ).fetchall()
-    total = 0
-    for job_id, error, payload in rows:
-        status = mark_failure(
-            db,
-            job_id,
-            error=f"Tentativas esgotadas: {error}",
-            fase="worker_recovery",
-            retriable=False,
-        )
-        if status == "failed_permanent":
-            total += 1
-    return total
+
+    if not rows:
+        return 0
+
+    # FIX N+1: batch UPDATE em vez de N queries individuais
+    job_ids = [r[0] for r in rows]
+
+    db.execute(
+        text("""
+            UPDATE jobs
+            SET status = 'failed_permanent',
+                finished_at = NOW()
+            WHERE id = ANY(:job_ids)
+        """),
+        {"job_ids": job_ids}
+    )
+    db.commit()
+    return len(job_ids)
 
 
 def generate_worker_id() -> str:

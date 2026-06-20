@@ -596,24 +596,38 @@ def reap_stale_inventory_locks(
         ),
         params,
     ).mappings().all()
+
+    # Busca todos os jobs ativos de uma vez (1 query em vez de N)
+    tenant_ids = list({row["tenant_id"] for row in rows})
+    if tenant_ids:
+        active_jobs = db.execute(
+            text(
+                """
+                SELECT j.id, j.tenant_id, j.payload
+                FROM jobs j
+                WHERE j.tenant_id = ANY(:tenant_ids)
+                  AND j.status IN ('pending', 'running', 'failed_retriable')
+                """
+            ),
+            {"tenant_ids": tenant_ids},
+        ).mappings().all()
+    else:
+        active_jobs = []
+
+    jobs_by_inventory: dict[str, dict[str, Any]] = {}
+    for job in active_jobs:
+        try:
+            payload = json.loads(job["payload"])
+        except Exception:
+            payload = {}
+        inv_id = str(payload.get("_inventory_id", "")) if isinstance(payload, dict) else ""
+        if inv_id:
+            jobs_by_inventory[inv_id] = job
+
     actions: list[dict[str, Any]] = []
     for row in rows:
         inv_id = str(row["id"])
-        marker = f'"_inventory_id": "{inv_id}"'
-        active_job = db.execute(
-            text(
-                """
-                SELECT id, status
-                FROM jobs
-                WHERE tenant_id = :tenant_id
-                  AND status IN ('pending', 'running', 'failed_retriable')
-                  AND CAST(payload AS TEXT) LIKE :marker
-                ORDER BY id DESC
-                LIMIT 1
-                """
-            ),
-            {"tenant_id": row["tenant_id"], "marker": f"%{marker}%"},
-        ).mappings().first()
+        active_job = jobs_by_inventory.get(inv_id)
         if active_job:
             actions.append(
                 {
