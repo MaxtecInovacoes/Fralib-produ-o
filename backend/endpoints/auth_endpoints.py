@@ -8,7 +8,7 @@ from backend.utils.password_utils import verify_password, hash_password, BCRYPT_
 from backend.core.database import get_db
 from sqlalchemy.orm import Session
 from sqlalchemy import text
-from backend.core.auth import get_current_user
+from backend.core.auth import get_current_user, revoke_token
 from rate_limiter import limiter
 from backend.core.jwt_config import get_jwt_secret, ALGORITHM
 from backend.core.config import SUPERADMIN_EMAILS, is_superadmin
@@ -440,7 +440,11 @@ async def get_me(usuario: dict = Depends(get_current_user), db: Session = Depend
 
 
 @router.post("/logout")
-async def logout(request: Request, response: Response):
+async def logout(request: Request, response: Response, usuario: dict = Depends(get_current_user)):
+    # Extrair token para revogar
+    token = request.cookies.get("fralib_session") or ""
+    if token:
+        revoke_token(token)
     secure = _cookie_secure(request)
     for cookie_name in ("fralib_session", "fralib_csrf"):
         response.delete_cookie(cookie_name, path="/", secure=secure, samesite="lax")

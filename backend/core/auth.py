@@ -1,7 +1,9 @@
 from fastapi import Depends, HTTPException, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+import hashlib
 import jwt
 import os
+import time
 from enum import Enum
 from typing import Optional
 from sqlalchemy import text as sa_text
@@ -12,6 +14,42 @@ try:
 except Exception:
     def is_superadmin(_email: str) -> bool:
         return False
+
+
+def _get_redis():
+    """Retorna cliente Redis para blacklist de tokens."""
+    try:
+        import redis
+        redis_url = os.getenv("REDIS_URL", "").strip()
+        if not redis_url:
+            return None
+        return redis.from_url(redis_url, decode_responses=True)
+    except Exception:
+        return None
+
+
+def _is_token_revoked(token: str) -> bool:
+    """Verifica se token está na blacklist."""
+    redis = _get_redis()
+    if not redis:
+        return False
+    token_hash = hashlib.sha256(token.encode()).hexdigest()
+    return redis.exists(f"revoked_token:{token_hash}")
+
+
+def revoke_token(token: str) -> None:
+    """Adiciona token à blacklist até expiração."""
+    redis = _get_redis()
+    if not redis:
+        return
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM], options={"verify_exp": False})
+        exp = payload.get("exp", 0)
+    except Exception:
+        exp = int(time.time()) + 86400  # Default 24h
+    ttl = max(1, exp - int(time.time()))
+    token_hash = hashlib.sha256(token.encode()).hexdigest()
+    redis.setex(f"revoked_token:{token_hash}", ttl, "1")
 
 security = HTTPBearer(auto_error=False)
 BLOCKED_USER_STATUSES = {"bloqueado", "suspenso", "cancelado", "inadimplente", "desativado"}
@@ -65,6 +103,11 @@ async def get_current_user(
     try:
         token, used_cookie = _token_from_request(credentials, request)
         _verify_cookie_csrf(request, used_cookie)
+
+        # Verificar blacklist de tokens
+        if _is_token_revoked(token):
+            raise HTTPException(status_code=401, detail="Token revogado")
+
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         user_id = payload.get("sub")
         email = payload.get("email")
