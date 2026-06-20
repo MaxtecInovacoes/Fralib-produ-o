@@ -538,6 +538,8 @@ async def mercadopago_webhook(
             """), {"e": event_id, "u": resolved_user_id})
             conn.commit()
         return {"status": "ok", "tipo": tipo or "payment", "user_id": resolved_user_id}
+    except HTTPException:
+        raise  # Re-raise HTTPException para resposta correta ao MercadoPago
     except Exception as exc:
         err_msg = f"{type(exc).__name__}: {str(exc)[:500]}"
         print(f"[MercadoPago webhook] FALHA em {tipo} ({event_id}): {err_msg}")
@@ -547,7 +549,7 @@ async def mercadopago_webhook(
                 {"e": event_id, "err": err_msg},
             )
             conn.commit()
-        return {"status": "erro_logado", "tipo": tipo or "payment", "erro": err_msg}
+        raise HTTPException(500, f"Falha no processamento: {err_msg}")
 
 
 def _is_preapproval_event(tipo: str) -> bool:
