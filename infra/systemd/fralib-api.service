@@ -3,6 +3,8 @@ Description=FraLib API (FastAPI + uvicorn)
 Documentation=https://github.com/...
 After=network-online.target
 Wants=network-online.target
+StartLimitIntervalSec=60s
+StartLimitBurst=10
 
 [Service]
 Type=simple
@@ -25,8 +27,6 @@ LimitNOFILE=65535
 # Restart policy
 Restart=on-failure
 RestartSec=5s
-StartLimitIntervalSec=60s
-StartLimitBurst=10
 
 # Segurança
 NoNewPrivileges=yes

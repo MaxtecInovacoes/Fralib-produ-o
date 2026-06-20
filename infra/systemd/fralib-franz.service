@@ -3,6 +3,8 @@ Description=FraLib Franz Worker (SDR)
 Documentation=https://github.com/...
 After=network-online.target
 Wants=network-online.target
+StartLimitIntervalSec=120s
+StartLimitBurst=5
 
 [Service]
 Type=simple
@@ -23,8 +25,6 @@ LimitNOFILE=65535
 # Restart policy
 Restart=on-failure
 RestartSec=15s
-StartLimitIntervalSec=120s
-StartLimitBurst=5
 
 # Segurança
 NoNewPrivileges=yes

@@ -3,6 +3,8 @@ Description=FraLib Hermes Watchdog
 Documentation=https://github.com/...
 After=network-online.target fralib-api.service fralib-worker.service fralib-wpp-listener.service fralib-franz.service
 Wants=network-online.target
+StartLimitIntervalSec=300s
+StartLimitBurst=3
 
 [Service]
 Type=simple
@@ -23,8 +25,6 @@ LimitNOFILE=4096
 # Restart policy
 Restart=always
 RestartSec=30s
-StartLimitIntervalSec=300s
-StartLimitBurst=3
 
 # Segurança
 NoNewPrivileges=yes
