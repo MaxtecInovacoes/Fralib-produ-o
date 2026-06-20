@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Smoke Test VPS</title>
+<style>
+body{font-family:-apple-system,system-ui,sans-serif;background:#0f172a;color:#e2e8f0;margin:0;padding:32px}
+.container{max-width:900px;margin:0 auto}
+h1{color:#fff;margin:0 0 8px}
+.subtitle{color:#94a3b8;margin:0 0 32px}
+.summary{background:#10b981;color:#fff;padding:24px;border-radius:12px;margin-bottom:32px;font-size:24px;font-weight:600;text-align:center}
+.check{background:#1e293b;border-radius:8px;padding:16px 20px;margin-bottom:12px;border-left:4px solid #10b981}
+.check.fail{border-left-color:#ef4444}
+.check h3{margin:0 0 8px;color:#fff;display:flex;align-items:center;gap:8px}
+.badge{background:#10b981;color:#fff;font-size:12px;padding:2px 8px;border-radius:4px}
+.badge.fail{background:#ef4444}
+.evidence{background:#0f172a;padding:12px;border-radius:6px;font-family:monospace;font-size:12px;color:#94a3b8;margin-top:8px;word-break:break-all;max-height:120px;overflow:auto}
+.footer{margin-top:32px;text-align:center;color:#64748b;font-size:13px}
+</style></head><body>
+<div class="container">
+<h1>Smoke Test E2E - VPS Producao</h1>
+<p class="subtitle">FraLib PM2 -> systemd migration - 2026-06-20 20:14:38</p>
+<div class="summary">12/12 checks passaram</div>
+<div class="check"><h3>OK 5 servicos systemd ACTIVE <span class="badge">PASS</span></h3><div class="evidence">6 servicos fralib-* rodando</div></div><div class="check"><h3>OK API /health responde <span class="badge">PASS</span></h3><div class="evidence">{"status":"unhealthy","version":"2.0.0","commit":"452f70c","branch":"master","db":{"status":"ok","message":"Conectado"},"worker_queue":{"status":"ok","pending":0,"running":3,"stale_running":0,"failed_</div></div><div class="check"><h3>OK WhatsApp /health responde <span class="badge">PASS</span></h3><div class="evidence">{"sessions":18,"status":"ok","uptime":"1h46m31.944203071s","version":"1.1.0"}</div></div><div class="check"><h3>OK /api/admin/services retorna systemd <span class="badge">PASS</span></h3><div class="evidence">primary_runtime = system</div></div><div class="check"><h3>OK Detalhe de servico retorna status active <span class="badge">PASS</span></h3><div class="evidence">{"name":"fralib-api","runtime":"systemd","status":"active","pid":1840458,"memory_mb":122.2890625,"cpu_percent":null,"uptime_seconds":null,"restarts":0,"last_error":null,"raw_keys":["MainPID","NRestart</div></div><div class="check"><h3>OK journalctl retorna logs da API <span class="badge">PASS</span></h3><div class="evidence">Jun 20 23:14:42 srv1360826 fralib-api[1840458]: INFO:     127.0.0.1:58084 - "GET /api/admin/services HTTP/1.1" 200 OK | Jun 20 23:14:42 srv1360826 fralib-api[1840458]: INFO:     127.0.0.1:58090 - "GET /health HTTP/1.1" 200 OK | Jun 20 23:14:42 srv1360826 fralib-api[1840458]: INFO:     127.0.0.1:58106 - </div></div><div class="check"><h3>OK MemoryMax aplicado em fralib-api (>= 1G) <span class="badge">PASS</span></h3><div class="evidence">MemoryMax = 1073741824 bytes (1.00 GB)</div></div><div class="check"><h3>OK CPUQuota aplicado em fralib-api (>0%) <span class="badge">PASS</span></h3><div class="evidence">CPUQuota=vazio | CPUQuotaPerSecUSec=1.500000s</div></div><div class="check"><h3>OK Restart policy configurada <span class="badge">PASS</span></h3><div class="evidence">Restart = on-failure</div></div><div class="check"><h3>OK Todos os 5 PIDs estao rodando <span class="badge">PASS</span></h3><div class="evidence">9 PIDs ativos (sem zero)</div></div><div class="check"><h3>OK EnvironmentFile carregado (fralib.env) <span class="badge">PASS</span></h3><div class="evidence">/etc/fralib/fralib.env (ignore_errors=no)</div></div><div class="check"><h3>OK Hermes executando scans periodicas <span class="badge">PASS</span></h3><div class="evidence">3 scans/canary recentes no journal</div></div>
+<div class="footer">ECC Loop - Playwright Evidence - 2026-06-20 20:14:38</div>
+</div></body></html>
