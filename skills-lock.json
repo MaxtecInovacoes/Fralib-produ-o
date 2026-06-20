@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "skills": {
+    "design-with-taste": {
+      "source": "cristicretu/family-taste-skill",
+      "sourceType": "github",
+      "skillPath": "skills/design-with-taste/SKILL.md",
+      "computedHash": "b595748f7247b247fd3342383aab4b7f9372dfab2114fcb8ca1d95bc6cc3de7f"
+    },
+    "emil-design-eng": {
+      "source": "emilkowalski/skill",
+      "sourceType": "github",
+      "skillPath": "skills/emil-design-eng/SKILL.md",
+      "computedHash": "ac3fc5b4e206488ffc408a2806f829bb2e5eaf518fded09be34790685c2b3a0d"
+    },
+    "impeccable": {
+      "source": "pbakaus/impeccable",
+      "sourceType": "github",
+      "skillPath": ".agents/skills/impeccable/SKILL.md",
+      "computedHash": "d7a07155448a6ac09ec3078b0de05f093e0e7e0b7fa92d451f3883d233386050"
+    }
+  }
+}

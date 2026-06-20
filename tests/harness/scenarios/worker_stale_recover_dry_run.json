@@ -1,0 +1,16 @@
+{
+  "name": "worker_stale_recover_dry_run",
+  "description": "Worker stale recovery checks the allowed recover-runtime playbook without touching PM2.",
+  "mode": "dry-run",
+  "fixtures": ["tenant_pro.json"],
+  "expected_phases": ["worker_recover_dry_run"],
+  "mocked_systems": ["pipeline_queue", "worker_heartbeat", "pm2"],
+  "allowed_capabilities": [],
+  "forbidden_capabilities": ["live_llm", "live_hunter", "live_whatsapp", "live_deploy", "live_mercadopago", "paid_scraper", "external_http"],
+  "safe_commands": [["python", "pipeline.py", "recover-runtime"]],
+  "pass_criteria": [
+    "The scenario documents the recover-runtime playbook.",
+    "The harness does not restart PM2.",
+    "A live restart remains a Hermes Guard decision, not a harness action."
+  ]
+}

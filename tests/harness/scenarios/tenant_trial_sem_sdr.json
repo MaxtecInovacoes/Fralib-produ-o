@@ -1,0 +1,16 @@
+{
+  "name": "tenant_trial_sem_sdr",
+  "description": "Trial tenant consumes one approved fake lead and skips SDR send.",
+  "mode": "dry-run",
+  "fixtures": ["tenant_trial.json", "lead_pizzaria_curitiba.json"],
+  "expected_phases": ["lead_supply", "caio", "market_intel", "site_prompt_agent", "builder_renderer", "deploy_dry_run"],
+  "mocked_systems": ["lead_inventory", "jina_market_intel", "builder_runtime", "deploy_hook"],
+  "allowed_capabilities": [],
+  "forbidden_capabilities": ["live_llm", "live_hunter", "live_whatsapp", "live_deploy", "live_mercadopago", "paid_scraper", "external_http"],
+  "safe_commands": [["python", "pipeline.py", "smoke", "--dry-run"]],
+  "pass_criteria": [
+    "Only dry-run phases are declared.",
+    "No Franz/SDR live send is allowed for the trial scenario.",
+    "The Builder phase is represented by the Vite/React builder_renderer contract."
+  ]
+}

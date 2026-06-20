@@ -1,0 +1,49 @@
+A verdade funcional que eu isolei agora é:
+VPS: /root/fralib
+Local limpo/deploy: C:\fralib-sdr-fix
+Local principal agora alinhado: C:\fralib
+Commit único da verdade: 6fe1076f1694f0bd81230f68822b67631fd8ee40
+Site validado: Academia LC Fitness
+Também alinhei C:\fralib para esse mesmo commit. O que estava diferente/local sujo não foi apagado: ficou isolado em branch codex/isolated-pre-truth-20260616, em stash, e também em patch dentro do backup.
+Backup validado salvo em:
+C:\tmp\fralib-pipeline-backups\pipeline-truth-20260616-225108
+Documento principal do backup:
+C:\tmp\fralib-pipeline-backups\pipeline-truth-20260616-225108\MANIFESTO_PIPELINE_VERDADE.md
+O que foi validado:
+C:\fralib, C:\fralib-sdr-fix e VPS estão no mesmo commit 6fe1076.
+Site público respondeu 200.
+HTML contém Academia LC Fitness, data-lgpd-banner, og:image e canonical.
+py_compile passou local e na VPS para arquivos principais da pipeline.
+Smoke local dry-run rodou, 30 testes passaram; só falhou banco local porque Postgres localhost:5433 está desligado.
+Produção tem DB, fila e Meowhats ok, mas /health está unhealthy por litellm HTTP 404.
+Ponto importante: o site publicado tem LGPD no HTML, mas a última tentativa de reprocessar/job 1100 falhou porque o componente LGPD usava localStorage, e a pipeline bloqueia storage. Então a base funcional está salva, mas a próxima correção deve ser feita em branch a partir desse commit, removendo localStorage do LGPD antes de testar nova geração.
+
+Sim, avançou bem. A pipeline já está no ponto de beta controlado, não ainda venda ampla sem supervisão.
+Estado final validado:
+Produção/VPS está no commit c816fd6.
+C:\fralib, C:\fralib-sdr-fix e VPS estão alinhados nesse commit.
+Teste real tenant 2 rodou e concluiu:job 1103
+status completed
+attempts: 1
+site publicado: Academia LC Fitness
+
+HTML final validado:data-lgpd-banner=True
+data-lgpd-accept=True
+localStorage=False
+sessionStorage=False
+document.cookie=False
+og:image=True
+og:url=True
+canonical=True
+
+Backup novo da verdade funcional validada:
+C:\tmp\fralib-pipeline-backups\pipeline-truth-20260616-232742
+Manifesto:
+C:\tmp\fralib-pipeline-backups\pipeline-truth-20260616-232742\MANIFESTO_PIPELINE_VERDADE.md
+O que ainda falta para liberar venda beta com menos risco:
+Corrigir o /health, que ainda aparece unhealthy por litellm HTTP 404, embora DB, fila e site estejam funcionando.
+Testar o fluxo pelo admin.html: captar lead novo, enfileirar, gerar site e conferir painel.
+Rodar mais 1 ou 2 leads reais de nichos diferentes para garantir que não ficou específico demais em academia.
+Minha leitura objetiva: pode liberar beta assistido/controlado. Para venda mais aberta, eu corrigiria primeiro o health do LiteLLM e validaria o botão/fluxo do admin.
+
+23:29 	

@@ -1,0 +1,16 @@
+{
+  "name": "pizzaria_builder_vite_react",
+  "description": "Builder contract scenario for a pizzaria site using the active Vite/React renderer path.",
+  "mode": "dry-run",
+  "fixtures": ["tenant_pro.json", "lead_pizzaria_curitiba.json"],
+  "expected_phases": ["site_prompt_agent", "builder_renderer", "deploy_dry_run"],
+  "mocked_systems": ["litellm_builder_alias", "vite_react_renderer", "deploy_hook"],
+  "allowed_capabilities": [],
+  "forbidden_capabilities": ["live_llm", "live_hunter", "live_whatsapp", "live_deploy", "live_mercadopago", "paid_scraper", "external_http"],
+  "safe_commands": [],
+  "pass_criteria": [
+    "Builder remains a dry-run contract and does not call LiteLLM.",
+    "The expected artifact is dist/index.html, not legacy HTML overlay output.",
+    "The scenario rejects fetch/env/cookies/storage/eval by policy."
+  ]
+}

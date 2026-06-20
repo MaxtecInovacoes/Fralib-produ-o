@@ -1,0 +1,8 @@
+{
+  "tenant_id": 9002,
+  "user_id": 9002,
+  "plan": "pro",
+  "credits": 3,
+  "sdr_enabled": true,
+  "cooldown_minutes": 30
+}

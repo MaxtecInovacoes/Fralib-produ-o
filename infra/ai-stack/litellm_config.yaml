@@ -1,0 +1,221 @@
+# FraLib LiteLLM VPS - free-first multi-provider pool.
+# Secrets live only in /opt/ai-stack/.env. Never commit real keys.
+#
+# Internal model groups used by FraLib:
+# - fralib-builder-strong: Builder/site generation and coding-heavy output.
+# - fralib-agent-balanced: SDR/orchestrator agents that need context quality.
+# - fralib-fast-cheap: lightweight classification, short copy and status tasks.
+# - fralib-json-repair: strict JSON repair/validation.
+# - fralib-research: research/synthesis tasks.
+#
+# OPTIMIZADO: Groq first (rapido, 4 keys), GitHub apenas para builder (DeepSeek).
+
+litellm_settings:
+  # Retry automatico em caso de rate limit
+  request_timeout: 300
+  num_retries: 5                    # 5 tentativas (era 3)
+  retry_after_header: true          # Usa header do provider
+  max_retry_delay: 120             # Max 120s entre retries
+  timeout: 300
+  drop_params: true
+  set_verbose: true
+
+model_list:
+  # Builder / coding-heavy pool - use Sonnet first; Haiku is too small for full Vite projects.
+  - model_name: fralib-builder-strong
+    litellm_params:
+      model: openai/claude-sonnet-4-6
+      api_base: https://ia.namehost.com.br/v1
+      api_key: os.environ/NAMEHOST_API_KEY
+      rpm: 60
+      timeout: 240
+  - model_name: fralib-builder-strong
+    litellm_params:
+      model: openai/deepseek/deepseek-v3-0324
+      api_base: https://models.github.ai/inference
+      api_key: os.environ/GITHUB_MODELS_API_KEY_1
+      rpm: 4
+      timeout: 240
+  - model_name: fralib-builder-strong
+    litellm_params:
+      model: openai/gpt-4o-mini
+      api_base: https://models.github.ai/inference
+      api_key: os.environ/GITHUB_MODELS_API_KEY_1
+      rpm: 4
+      timeout: 180
+
+  # Balanced agent pool - Namehost first, then Groq/Gemini fallback.
+  - model_name: fralib-agent-balanced
+    litellm_params:
+      model: openai/claude-haiku-4-5
+      api_base: https://ia.namehost.com.br/v1
+      api_key: os.environ/NAMEHOST_API_KEY
+      rpm: 60
+      timeout: 120
+  - model_name: fralib-agent-balanced
+    litellm_params:
+      model: openai/claude-sonnet-4-6
+      api_base: https://ia.namehost.com.br/v1
+      api_key: os.environ/NAMEHOST_API_KEY
+      rpm: 60
+      timeout: 180
+  - model_name: fralib-agent-balanced
+    litellm_params:
+      model: groq/llama-3.3-70b-versatile
+      api_key: os.environ/GROQ_API_KEY_1
+      rpm: 30
+      timeout: 120
+  - model_name: fralib-agent-balanced
+    litellm_params:
+      model: groq/llama-3.3-70b-versatile
+      api_key: os.environ/GROQ_API_KEY_2
+      rpm: 30
+      timeout: 120
+  - model_name: fralib-agent-balanced
+    litellm_params:
+      model: groq/llama-3.1-8b-instant
+      api_key: os.environ/GROQ_API_KEY_3
+      rpm: 30
+      timeout: 90
+  - model_name: fralib-agent-balanced
+    litellm_params:
+      model: groq/llama-3.1-8b-instant
+      api_key: os.environ/GROQ_API_KEY_4
+      rpm: 30
+      timeout: 90
+  - model_name: fralib-agent-balanced
+    litellm_params:
+      model: gemini/gemini-3.1-flash-lite
+      api_key: os.environ/GEMINI_API_KEY_1
+      rpm: 15
+      timeout: 180
+  - model_name: fralib-agent-balanced
+    litellm_params:
+      model: gemini/gemini-3.1-flash-lite
+      api_key: os.environ/GEMINI_API_KEY_2
+      rpm: 15
+      timeout: 180
+
+  # Light pool - Namehost first, then Groq/Gemini fallback.
+  - model_name: fralib-fast-cheap
+    litellm_params:
+      model: openai/claude-haiku-4-5
+      api_base: https://ia.namehost.com.br/v1
+      api_key: os.environ/NAMEHOST_API_KEY
+      rpm: 60
+      timeout: 90
+  - model_name: fralib-fast-cheap
+    litellm_params:
+      model: groq/llama-3.1-8b-instant
+      api_key: os.environ/GROQ_API_KEY_1
+      rpm: 30
+      timeout: 90
+  - model_name: fralib-fast-cheap
+    litellm_params:
+      model: groq/llama-3.1-8b-instant
+      api_key: os.environ/GROQ_API_KEY_2
+      rpm: 30
+      timeout: 90
+  - model_name: fralib-fast-cheap
+    litellm_params:
+      model: groq/llama-3.1-8b-instant
+      api_key: os.environ/GROQ_API_KEY_3
+      rpm: 30
+      timeout: 90
+  - model_name: fralib-fast-cheap
+    litellm_params:
+      model: groq/llama-3.1-8b-instant
+      api_key: os.environ/GROQ_API_KEY_4
+      rpm: 30
+      timeout: 90
+  - model_name: fralib-fast-cheap
+    litellm_params:
+      model: groq/openai/gpt-oss-20b
+      api_key: os.environ/GROQ_API_KEY_1
+      rpm: 30
+      timeout: 90
+  - model_name: fralib-fast-cheap
+    litellm_params:
+      model: gemini/gemini-3.1-flash-lite
+      api_key: os.environ/GEMINI_API_KEY_3
+      rpm: 15
+      timeout: 120
+
+  # Strict JSON repair/validation pool - USA GROQ (4 keys)
+  - model_name: fralib-json-repair
+    litellm_params:
+      model: groq/openai/gpt-oss-20b
+      api_key: os.environ/GROQ_API_KEY_1
+      rpm: 30
+      timeout: 120
+  - model_name: fralib-json-repair
+    litellm_params:
+      model: groq/openai/gpt-oss-20b
+      api_key: os.environ/GROQ_API_KEY_2
+      rpm: 30
+      timeout: 120
+  - model_name: fralib-json-repair
+    litellm_params:
+      model: groq/llama-3.1-8b-instant
+      api_key: os.environ/GROQ_API_KEY_3
+      rpm: 30
+      timeout: 90
+  - model_name: fralib-json-repair
+    litellm_params:
+      model: groq/llama-3.1-8b-instant
+      api_key: os.environ/GROQ_API_KEY_4
+      rpm: 30
+      timeout: 90
+
+  # Research/synthesis pool - USA GEMINI (3 keys)
+  - model_name: fralib-research
+    litellm_params:
+      model: gemini/gemini-3.1-flash-lite
+      api_key: os.environ/GEMINI_API_KEY_1
+      rpm: 15
+      timeout: 180
+  - model_name: fralib-research
+    litellm_params:
+      model: gemini/gemini-3.1-flash-lite
+      api_key: os.environ/GEMINI_API_KEY_2
+      rpm: 15
+      timeout: 180
+  - model_name: fralib-research
+    litellm_params:
+      model: gemini/gemini-3.1-flash-lite
+      api_key: os.environ/GEMINI_API_KEY_3
+      rpm: 15
+      timeout: 180
+  - model_name: fralib-research
+    litellm_params:
+      model: openrouter/nex-agi/nex-n2-pro:free
+      api_key: os.environ/OPENROUTER_API_KEY_1
+      rpm: 5
+      timeout: 180
+
+  # Legacy compatibility shims.
+  - model_name: gemini-3.5-flash
+    litellm_params:
+      model: gemini/gemini-3.5-flash
+      api_key: os.environ/GEMINI_API_KEY_1
+      rpm: 15
+      timeout: 180
+  - model_name: gemini-3.1-flash-lite
+    litellm_params:
+      model: gemini/gemini-3.1-flash-lite
+      api_key: os.environ/GEMINI_API_KEY_1
+      rpm: 15
+      timeout: 180
+  - model_name: groq-llama
+    litellm_params:
+      model: groq/llama-3.3-70b-versatile
+      api_key: os.environ/GROQ_API_KEY_1
+      rpm: 30
+      timeout: 120
+  - model_name: groq-llama-fast
+    litellm_params:
+      model: groq/llama-3.1-8b-instant
+      api_key: os.environ/GROQ_API_KEY_1
+      rpm: 30
+      timeout: 90
+

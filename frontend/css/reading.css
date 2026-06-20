@@ -1,0 +1,298 @@
+/* reading.css — Legibilidade premium para blog e docs */
+
+/* Glass container para conteúdo */
+.article-content,
+.docs-content {
+  background: rgba(12, 12, 18, 0.65);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(147, 51, 234, 0.08);
+  border-radius: 16px;
+  padding: 3rem 2.5rem;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+/* Tipografia melhorada */
+.article-content,
+.docs-content {
+  font-size: 1.05rem;
+  line-height: 1.9;
+  color: #e8e8f0;
+  letter-spacing: 0.01em;
+}
+
+.article-content p,
+.docs-content p {
+  margin-bottom: 1.4rem;
+  font-size: 1.05rem;
+  line-height: 1.9;
+  color: #e0e0ea;
+}
+
+.article-content h1,
+.docs-content h1 {
+  font-family: var(--fl-font-brand);
+  font-size: clamp(11px, 1.8vw, 15px);
+  line-height: 2.2;
+  color: #f5f5ff;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.5rem;
+}
+
+.article-content h2,
+.docs-content h2 {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #a855f7;
+  margin-top: 3rem;
+  margin-bottom: 1.2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid rgba(147, 51, 234, 0.1);
+}
+
+.article-content h2:first-of-type,
+.docs-content h2:first-of-type {
+  border-top: none;
+  padding-top: 0;
+}
+
+.article-content h3,
+.docs-content h3 {
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: #c084fc;
+  margin-top: 2rem;
+  margin-bottom: 0.75rem;
+}
+
+/* Listas com espaçamento */
+.article-content ul,
+.article-content ol,
+.docs-content ul,
+.docs-content ol {
+  margin-bottom: 1.5rem;
+  padding-left: 1.8rem;
+  line-height: 1.9;
+}
+
+.article-content li,
+.docs-content li {
+  margin-bottom: 0.6rem;
+  color: #d8d8e5;
+}
+
+.article-content li::marker,
+.docs-content li::marker {
+  color: #a855f7;
+}
+
+/* Strong/bold */
+.article-content strong,
+.docs-content strong {
+  color: #c084fc;
+  font-weight: 600;
+}
+
+/* Links */
+.article-content a,
+.docs-content a {
+  color: #a855f7;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: rgba(168, 85, 247, 0.3);
+  transition: all 150ms ease;
+}
+
+.article-content a:hover,
+.docs-content a:hover {
+  color: #c084fc;
+  text-decoration-color: rgba(192, 132, 252, 0.6);
+}
+
+/* Blockquotes — glass */
+.article-content blockquote,
+.docs-content blockquote {
+  background: rgba(147, 51, 234, 0.06);
+  backdrop-filter: blur(8px);
+  border-left: 3px solid #7c3aed;
+  padding: 1.2rem 1.5rem;
+  margin: 1.8rem 0;
+  border-radius: 0 12px 12px 0;
+  font-style: italic;
+  color: #c8c8d8;
+}
+
+/* Code inline */
+.article-content code,
+.docs-content code {
+  background: rgba(147, 51, 234, 0.1);
+  border: 1px solid rgba(147, 51, 234, 0.15);
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.88em;
+  color: #c084fc;
+  font-family: var(--fl-font-mono);
+}
+
+/* Tabelas — glass com espaçamento */
+.article-content table,
+.docs-content table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin: 1.8rem 0;
+  background: rgba(18, 18, 26, 0.5);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(147, 51, 234, 0.15);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.article-content th,
+.docs-content th {
+  background: rgba(147, 51, 234, 0.12);
+  padding: 1rem 1.2rem;
+  text-align: left;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #c084fc;
+  font-family: var(--fl-font-mono);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  border-bottom: 1px solid rgba(147, 51, 234, 0.2);
+}
+
+.article-content td,
+.docs-content td {
+  padding: 0.9rem 1.2rem;
+  font-size: 0.95rem;
+  color: #d8d8e5;
+  border-bottom: 1px solid rgba(147, 51, 234, 0.06);
+}
+
+.article-content tr:last-child td,
+.docs-content tr:last-child td {
+  border-bottom: none;
+}
+
+.article-content tr:hover td,
+.docs-content tr:hover td {
+  background: rgba(147, 51, 234, 0.04);
+}
+
+/* Info boxes / callouts */
+.docs-info {
+  background: rgba(147, 51, 234, 0.06);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(147, 51, 234, 0.2);
+  border-radius: 12px;
+  padding: 1.2rem 1.5rem;
+  margin: 1.8rem 0;
+  box-shadow: 0 4px 16px rgba(147, 51, 234, 0.08);
+}
+
+.docs-info .info-title {
+  font-weight: 600;
+  color: #a855f7;
+  margin-bottom: 0.4rem;
+  font-size: 0.85rem;
+  font-family: var(--fl-font-mono);
+}
+
+.docs-info p {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #c8c8d8;
+}
+
+/* Cards grid */
+.docs-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1.2rem;
+  margin: 2rem 0;
+}
+
+.docs-card {
+  background: rgba(18, 18, 26, 0.6);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(147, 51, 234, 0.12);
+  border-radius: 14px;
+  padding: 1.4rem;
+  text-decoration: none;
+  transition: all 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.docs-card:hover {
+  border-color: rgba(147, 51, 234, 0.4);
+  box-shadow: 0 8px 24px rgba(147, 51, 234, 0.15);
+  transform: translateY(-3px);
+}
+
+/* CTA box — glass */
+.cta-box,
+.article-content .cta-box {
+  background: rgba(18, 18, 26, 0.6);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(147, 51, 234, 0.25);
+  border-radius: 14px;
+  padding: 2.5rem;
+  margin: 3rem 0;
+  text-align: center;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+/* Article meta */
+.article-content .article-meta {
+  color: #6b6b80;
+  font-size: 0.85rem;
+  font-family: var(--fl-font-mono);
+  margin-bottom: 2.5rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid rgba(147, 51, 234, 0.1);
+}
+
+/* Steps */
+.docs-step {
+  padding-left: 3rem;
+  padding-bottom: 2rem;
+  border-left: 2px solid rgba(147, 51, 234, 0.15);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .article-content,
+  .docs-content {
+    padding: 2rem 1.2rem;
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+  }
+
+  .docs-sidebar {
+    display: none;
+  }
+
+  .docs-content {
+    margin-left: 0;
+  }
+
+  .article-content h2,
+  .docs-content h2 {
+    font-size: 1.2rem;
+    margin-top: 2.5rem;
+  }
+
+  .article-content table,
+  .docs-content table {
+    font-size: 0.85rem;
+  }
+
+  .article-content th,
+  .docs-content th,
+  .article-content td,
+  .docs-content td {
+    padding: 0.7rem 0.8rem;
+  }
+}

@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Privacidade e LGPD - FraLib</title>
+<link rel="icon" href="/images/Mestre Fralib - Mago da IA.png">
+<style>
+:root{color-scheme:dark;--bg:#0a0714;--card:#12121a;--text:#f0f0f5;--muted:#a1a1aa;--line:rgba(147,51,234,.25);--brand:#c084fc;--warn:#facc15}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.65}
+main{max-width:980px;margin:0 auto;padding:48px 22px 80px}nav{display:flex;justify-content:space-between;gap:16px;align-items:center;margin-bottom:34px}
+a{color:var(--brand)}.brand{font-weight:800;text-decoration:none;color:var(--text)}.pill{border:1px solid var(--line);padding:8px 12px;text-decoration:none}
+h1{font-size:clamp(32px,7vw,58px);line-height:1.02;margin:0 0 12px}h2{margin-top:34px;font-size:22px}p,li{color:var(--muted)}ul{padding-left:22px}.notice{border:1px solid rgba(250,204,21,.35);background:rgba(250,204,21,.08);padding:16px;margin:24px 0;color:#fde68a}
+.doc{background:var(--card);border:1px solid var(--line);padding:28px}code{color:#fde68a}
+</style>
+</head>
+<body>
+<main>
+  <nav><a class="brand" href="/">FraLib</a><a class="pill" href="/docs/termos.html">Termos de Uso</a></nav>
+  <section class="doc">
+    <h1>Politica de Privacidade e LGPD FraLib</h1>
+    <p><strong>Versao:</strong> <code>fralib-privacidade-v1-2026-06-08</code></p>
+    <div class="notice">Esta politica cobre conta, leads, sites gerados, chaves de IA, pagamentos, logs, SDR/WhatsApp e seguranca operacional. Ela nao substitui revisao juridica especializada.</div>
+    <h2>Papeis LGPD</h2>
+    <p>A FraLib normalmente atua como controladora dos dados de conta, seguranca, pagamento, suporte, logs e prevencao a abuso. Para dados de leads e clientes finais processados dentro do tenant, a FraLib pode atuar como operadora, e o usuario pode ser controlador.</p>
+    <h2>Dados tratados</h2>
+    <ul>
+      <li>Conta: nome, email, telefone, senha com hash, status, plano, creditos, role e tenant.</li>
+      <li>Aceite legal: versao, data e IP dos Termos e Politica aceitos.</li>
+      <li>Operacao: nicho, cidade, leads, score, status, site, telefone/WhatsApp, observacoes e historico comercial.</li>
+      <li>Builder: HTML publicado, manifests, contratos visuais, imagens, SEO e logs.</li>
+      <li>SDR/WhatsApp: configuracoes, mensagens, opt-out, estagios e memoria operacional quando habilitado.</li>
+      <li>Integracoes: chaves criptografadas, provider alerts, identificadores de pagamento e eventos de webhook.</li>
+    </ul>
+    <h2>Finalidades</h2>
+    <p>Tratamos dados para criar e proteger contas, entregar Lead Supply, Caio, pesquisa, Builder, editor, publicacao, SDR, limites de plano, suporte, auditoria, prevencao a fraude, pagamento, seguranca, melhoria do produto e cumprimento legal.</p>
+    <h2>Bases legais</h2>
+    <p>Podemos usar execucao de contrato, obrigacao legal, legitimo interesse, exercicio regular de direitos e consentimento quando exigido. Para leads e clientes finais, o usuario deve ter sua propria base legal.</p>
+    <h2>Compartilhamento</h2>
+    <p>Compartilhamos apenas o necessario com provedores de infraestrutura, banco, email, IA, imagens, mapas, WhatsApp, pagamento via Mercado Pago, seguranca, suporte e autoridades quando exigido ou necessario para conter abuso.</p>
+    <h2>Retencao e direitos</h2>
+    <p>Dados ficam pelo tempo necessario para operar o servico, cumprir obrigacoes, auditar seguranca, resolver disputa e prevenir fraude. Titulares podem solicitar acesso, correcao, exclusao, bloqueio, informacoes de compartilhamento, portabilidade e revisao quando aplicavel.</p>
+    <h2>Seguranca</h2>
+    <p>A FraLib usa senha com hash, JWT com segredo forte, cookie HttpOnly, CSRF, criptografia Fernet para chaves, RBAC/superadmin, mascaramento de secrets, tenant scope, rate limit, gates de codigo gerado e auditorias. A seguranca maxima tambem exige HTTPS, Redis, <code>FRALIB_ENV=prod</code>, 2FA obrigatorio e rotacao de chaves.</p>
+    <h2>Responsabilidade do usuario</h2>
+    <p>O usuario deve ter base legal para leads, respeitar opt-out, revisar sites e mensagens, proteger acessos/chaves, configurar WhatsApp e tracking corretamente, e responder titulares quando for controlador.</p>
+  </section>
+</main>
+</body>
+</html>

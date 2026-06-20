@@ -1,0 +1,34 @@
+{
+  "academia": {
+    "best_hook": "Mencionei o site que fizemos + pergunta sobre modalidades",
+    "avg_stages_to_close": 7,
+    "common_objections": ["já tenho site", "não preciso"],
+    "best_time": "9h-11h (antes das aulas)",
+    "pain_triggers": ["falta de alunos", "concorrência", "sazonalidade"],
+    "notes": "Donos de academia respondem bem a dados (ex: 'X% dos alunos buscam no Google')"
+  },
+  "restaurante": {
+    "best_hook": "Site com cardápio online + delivery",
+    "avg_stages_to_close": 5,
+    "common_objections": ["já uso iFood", "não preciso de site"],
+    "best_time": "14h-16h (entre almoço e jantar)",
+    "pain_triggers": ["taxa do iFood", "falta de presença própria", "depender de marketplace"],
+    "notes": "Restaurantes convertem mais rápido que academias. Foco em independência do iFood."
+  },
+  "comercio": {
+    "best_hook": "Vitrine online 24h + Google Meu Negócio",
+    "avg_stages_to_close": 6,
+    "common_objections": ["só vendo na loja", "não entendo de internet"],
+    "best_time": "10h-12h",
+    "pain_triggers": ["movimento caindo", "concorrência online", "clientes não acham no Google"],
+    "notes": "Comércio local precisa de educação sobre presença digital. Ir devagar."
+  },
+  "servicos": {
+    "best_hook": "Portfolio online + captação de leads pelo site",
+    "avg_stages_to_close": 5,
+    "common_objections": ["trabalho por indicação", "não preciso"],
+    "best_time": "8h-10h",
+    "pain_triggers": ["depender de indicação", "sazonalidade", "não ter presença profissional"],
+    "notes": "Prestadores de serviço valorizam credibilidade. Site = cartão de visitas profissional."
+  }
+}

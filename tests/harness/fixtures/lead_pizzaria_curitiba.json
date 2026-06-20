@@ -1,0 +1,12 @@
+{
+  "lead_id": "fixture-lead-pizzaria-curitiba",
+  "business_name": "Forno Alto Pizzaria",
+  "niche": "pizzaria",
+  "subniche": "pizzaria artesanal",
+  "city": "Curitiba",
+  "state": "PR",
+  "rating": 4.7,
+  "reviews": 186,
+  "has_site": false,
+  "phone": "+5500000000000"
+}

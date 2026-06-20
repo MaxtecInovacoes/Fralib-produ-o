@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Login — FraLib OS</title>
+<link rel="icon" href="/images/Mestre Fralib - Mago da IA.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --fl-bg:         #0a0714;
+  --fl-bg-surface: #0e0a1a;
+  --fl-bg-card:    #12121a;
+  --fl-bg-card-2:  #18182280;
+  --fl-purple-950: #0e0718;
+  --fl-purple-900: #1a0a30;
+  --fl-purple-800: #2d1060;
+  --fl-purple-700: #4c1d9e;
+  --fl-purple-600: #7c3aed;
+  --fl-purple:     #9333ea;
+  --fl-purple-400: #a855f7;
+  --fl-purple-300: #c084fc;
+  --fl-purple-200: #d8b4fe;
+  --fl-glow-sm:  0 0 16px rgba(147,51,234,0.28);
+  --fl-glow-md:  0 0 32px rgba(147,51,234,0.35);
+  --fl-glow-lg:  0 0 60px rgba(147,51,234,0.45);
+  --fl-border:     rgba(147,51,234,0.12);
+  --fl-border-md:  rgba(147,51,234,0.25);
+  --fl-border-hi:  rgba(147,51,234,0.50);
+  --fl-text:       #f0f0f5;
+  --fl-text-muted: #8888a0;
+  --fl-text-dim:   #44445a;
+  --fl-text-brand: #c084fc;
+  --fl-success:  #22c55e;
+  --fl-danger:   #ef4444;
+  --fl-font-brand: 'Press Start 2P', monospace;
+  --fl-font-ui:    'DM Sans', system-ui, sans-serif;
+  --fl-font-mono:  'JetBrains Mono', monospace;
+  --fl-ease: cubic-bezier(0.22,1,0.36,1);
+  --cyan:      #00FFB3;
+  --cyan-dim:  rgba(0,255,179,0.12);
+  --cyan-glow: rgba(0,255,179,0.4);
+  --gold:      #FFB800;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{height:100%;scroll-behavior:smooth}
+body{
+  font-family:var(--fl-font-ui);
+  background:var(--fl-bg);
+  color:var(--fl-text);
+  -webkit-font-smoothing:antialiased;
+  min-height:100vh;
+  display:flex;align-items:center;justify-content:center;
+  position:relative;overflow-x:hidden;
+}
+
+/* ═══ BACKGROUND — identical to landing ═══ */
+#particles-canvas{position:fixed;inset:0;z-index:0;pointer-events:none}
+.bg-grid{
+  position:fixed;inset:0;z-index:0;
+  background-image:
+    linear-gradient(rgba(147,51,234,0.05) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(147,51,234,0.05) 1px,transparent 1px);
+  background-size:60px 60px;
+  mask-image:radial-gradient(ellipse at center,black 30%,transparent 75%);
+  -webkit-mask-image:radial-gradient(ellipse at center,black 30%,transparent 75%);
+  pointer-events:none;
+}
+.orb{
+  position:fixed;border-radius:50%;
+  filter:blur(80px);pointer-events:none;z-index:0;
+  animation:float-orb 12s ease-in-out infinite;
+}
+.orb-purple{
+  width:500px;height:500px;
+  background:radial-gradient(circle,rgba(147,51,234,0.25),transparent 70%);
+  top:-150px;left:-100px;
+}
+.orb-cyan{
+  width:400px;height:400px;
+  background:radial-gradient(circle,rgba(0,255,179,0.12),transparent 70%);
+  bottom:-100px;right:-100px;
+  animation-delay:-4s;
+}
+.orb-gold{
+  width:250px;height:250px;
+  background:radial-gradient(circle,rgba(255,184,0,0.10),transparent 70%);
+  top:40%;right:10%;
+  animation-delay:-8s;
+}
+@keyframes float-orb{
+  0%,100%{transform:translate(0,0) scale(1)}
+  33%{transform:translate(30px,-25px) scale(1.1)}
+  66%{transform:translate(-20px,15px) scale(0.95)}
+}
+
+/* ═══ NAV — same as landing ═══ */
+.nav{
+  position:fixed;top:0;left:0;right:0;z-index:100;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 32px;
+  background:rgba(6,6,8,0.75);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--fl-border);
+}
+.nav-brand{display:flex;align-items:center;gap:12px;text-decoration:none}
+.nav-brand img{height:36px;width:auto;filter:drop-shadow(0 0 8px rgba(147,51,234,0.4))}
+.nav-back{
+  font-family:var(--fl-font-brand);font-size:8px;
+  color:var(--fl-text-muted);text-decoration:none;
+  letter-spacing:1px;transition:color .2s;
+}
+.nav-back:hover{color:var(--cyan)}
+
+/* ═══ AUTH CARD ═══ */
+.auth-wrapper{
+  position:relative;z-index:10;
+  width:100%;max-width:420px;
+  margin:80px 20px 20px;
+  animation:fadeUp .6s var(--fl-ease) both;
+}
+.auth-card{
+  background:var(--fl-bg-card);
+  border:2px solid var(--fl-border-md);
+  padding:40px 36px;
+  box-shadow:8px 8px 0 rgba(0,0,0,0.5),0 0 80px rgba(147,51,234,0.10);
+}
+
+/* Logo */
+.auth-logo{text-align:center;margin-bottom:28px}
+.auth-logo img{
+  height:clamp(60px,10vw,80px);width:auto;margin-bottom:10px;
+  filter:drop-shadow(0 0 16px rgba(147,51,234,0.5));
+  animation:fadeUp .5s var(--fl-ease) both;
+}
+.auth-logo-sub{
+  font-family:var(--fl-font-mono);font-size:9px;
+  color:var(--fl-text-dim);letter-spacing:3px;
+  text-transform:uppercase;
+}
+
+/* Tabs — pixel style */
+.auth-tabs{
+  display:flex;gap:0;margin-bottom:24px;
+  border:2px solid var(--fl-border-md);
+}
+.auth-tab{
+  flex:1;padding:12px;text-align:center;
+  font-family:var(--fl-font-brand);font-size:8px;letter-spacing:1px;
+  cursor:pointer;background:transparent;border:none;
+  color:var(--fl-text-dim);transition:all .15s;
+}
+.auth-tab.active{
+  background:var(--fl-purple-900);
+  color:var(--fl-purple-300);
+  box-shadow:inset 0 -2px 0 var(--fl-purple);
+}
+.auth-tab:hover:not(.active){color:var(--fl-text-muted)}
+
+/* Form */
+.form-group{margin-bottom:18px}
+.form-group label{
+  display:block;font-family:var(--fl-font-mono);
+  font-size:10px;font-weight:500;
+  color:var(--fl-text-muted);text-transform:uppercase;
+  letter-spacing:1.5px;margin-bottom:8px;
+}
+.form-group input{
+  width:100%;padding:13px 14px;
+  background:var(--fl-bg-surface);
+  border:2px solid var(--fl-border);
+  color:var(--fl-text);font-family:var(--fl-font-ui);font-size:15px;
+  outline:none;transition:all .2s;
+}
+.form-group input:focus{
+  border-color:var(--fl-purple);
+  box-shadow:0 0 0 3px rgba(147,51,234,0.15),var(--fl-glow-sm);
+}
+.form-group input::placeholder{color:var(--fl-text-dim)}
+.toggle-pwd{position:absolute;right:10px;top:32px;background:none;border:none;color:var(--fl-text-muted);cursor:pointer;padding:4px;display:flex;align-items:center;}
+.toggle-pwd:hover{color:var(--fl-purple-300);}
+
+/* ═══ BUTTON — Yellow pixel-art (same as landing) ═══ */
+.btn-auth{
+  width:100%;padding:16px;margin-top:10px;
+  border:none;cursor:pointer;
+  font-family:var(--fl-font-brand);font-size:10px;letter-spacing:1.5px;
+  color:#000;font-weight:700;
+  background:#FACC15;
+  box-shadow:
+    inset -4px -4px 0 #A16207,
+    inset 4px 4px 0 #FDE68A,
+    0 6px 0 #713F12;
+  transition:all 60ms;
+  image-rendering:pixelated;
+}
+.btn-auth:hover{
+  background:#FDE047;
+  box-shadow:
+    inset -4px -4px 0 #A16207,
+    inset 4px 4px 0 #FEF9C3,
+    0 6px 0 #713F12,
+    0 0 30px rgba(250,204,21,0.4);
+}
+.btn-auth:active{
+  transform:translateY(6px);
+  box-shadow:inset -4px -4px 0 #A16207,inset 4px 4px 0 #FDE68A,0 0 0 #713F12;
+}
+.btn-auth:disabled{opacity:0.5;cursor:not-allowed;transform:none}
+
+/* Error */
+.error-msg{
+  background:rgba(239,68,68,0.08);
+  border:2px solid rgba(239,68,68,0.25);
+  color:#fca5a5;padding:10px 14px;font-size:13px;
+  margin-bottom:18px;display:none;
+}
+.error-msg.show{display:block}
+
+/* Plano banner */
+.plano-banner{
+  display:none;
+  background:rgba(0,255,179,0.06);
+  border:2px solid rgba(0,255,179,0.2);
+  padding:10px 14px;margin-bottom:18px;
+  font-family:var(--fl-font-mono);font-size:10px;
+  color:var(--cyan);text-align:center;letter-spacing:0.5px;
+}
+.plano-banner.show{display:block}
+
+/* Footer */
+.auth-footer{
+  text-align:center;margin-top:20px;
+  font-size:12px;color:var(--fl-text-dim);
+}
+.auth-footer a{color:var(--fl-purple-300);text-decoration:none}
+.auth-footer a:hover{color:var(--cyan)}
+.legal-consent{
+  display:flex;gap:10px;align-items:flex-start;
+  padding:12px;margin:2px 0 12px;
+  background:rgba(147,51,234,0.06);
+  border:1px solid var(--fl-border-md);
+  font-size:12px;line-height:1.5;color:var(--fl-text-muted);
+}
+.legal-consent input{width:16px;height:16px;min-width:16px;margin-top:2px;accent-color:var(--fl-purple)}
+.legal-consent a{color:var(--fl-purple-300);text-decoration:none}
+.legal-consent a:hover{color:var(--cyan)}
+
+/* Mascot */
+.auth-mascot{
+  position:fixed;bottom:30px;right:4%;z-index:5;
+  pointer-events:none;
+  animation:mago-breath 4s ease-in-out infinite;
+}
+.auth-mascot img{
+  height:clamp(100px,14vw,180px);width:auto;
+  filter:drop-shadow(0 0 30px rgba(147,51,234,0.5)) drop-shadow(0 0 60px rgba(147,51,234,0.2));
+}
+@keyframes mago-breath{
+  0%,100%{transform:translateY(0) scale(1);filter:brightness(1)}
+  50%{transform:translateY(-12px) scale(1.04);filter:brightness(1.15)}
+}
+
+/* Sparkles */
+.sparkle{
+  position:absolute;width:4px;height:4px;border-radius:50%;
+  background:var(--gold);
+  box-shadow:0 0 6px var(--gold),0 0 12px var(--gold);
+  animation:sparkle-float 3s ease-in-out infinite;
+}
+.sparkle:nth-child(2){animation-delay:-1s;left:20px;top:-10px}
+.sparkle:nth-child(3){animation-delay:-2s;left:-15px;top:20px}
+@keyframes sparkle-float{
+  0%,100%{opacity:0;transform:translateY(0) scale(0.5)}
+  50%{opacity:1;transform:translateY(-20px) scale(1)}
+}
+
+@keyframes fadeUp{
+  from{opacity:0;transform:translateY(24px)}
+  to{opacity:1;transform:translateY(0)}
+}
+
+/* Mobile */
+@media(max-width:520px){
+  .auth-card{padding:32px 24px}
+  .auth-mascot{display:none}
+  .nav{padding:12px 16px}
+  .auth-wrapper{margin-top:70px}
+}
+</style>
+</head>
+<body>
+  <div class="bg-grid"></div>
+  <div class="orb orb-purple"></div>
+  <div class="orb orb-cyan"></div>
+  <div class="orb orb-gold"></div>
+  <canvas id="particles-canvas"></canvas>
+
+  <nav class="nav">
+    <a href="/" class="nav-brand">
+      <img src="/images/Logo FraLib.png" alt="FraLib">
+    </a>
+    <a href="/" class="nav-back">← VOLTAR</a>
+  </nav>
+
+  <div class="auth-wrapper">
+    <div class="auth-card">
+      <div class="auth-logo">
+        <img src="/images/Logo FraLib.png" alt="FraLib OS">
+        <div class="auth-logo-sub">Central de Comando</div>
+      </div>
+
+      <div class="auth-tabs">
+        <button class="auth-tab active" id="tabLogin" type="button">LOGIN</button>
+        <button class="auth-tab" id="tabSignup" type="button">CRIAR CONTA</button>
+      </div>
+
+      <div id="planoBanner" class="plano-banner"></div>
+      <div id="error" class="error-msg"></div>
+
+      <!-- LOGIN -->
+      <form id="loginForm">
+        <div class="form-group">
+          <label for="email">Email</label>
+          <input type="email" id="email" name="email" required autocomplete="email" placeholder="seu@email.com">
+        </div>
+        <div class="form-group" style="position:relative;">
+          <label for="password">Senha</label>
+          <input type="password" id="password" name="password" required autocomplete="current-password" placeholder="••••••••">
+          <button type="button" class="toggle-pwd" onclick="togglePwd('password',this)" aria-label="Mostrar senha">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
+        <button type="submit" class="btn-auth" id="btnLogin">ENTRAR</button>
+        <a href="#" id="linkEsqueciSenha" style="display:block;text-align:center;margin-top:12px;font-size:12px;color:var(--fl-purple-300);text-decoration:none;">Esqueci minha senha</a>
+      </form>
+
+      <!-- ESQUECI SENHA -->
+      <form id="esqueciForm" style="display:none">
+        <p style="font-size:13px;color:var(--fl-text-muted);margin-bottom:16px;">Digite seu email e enviaremos um link para redefinir sua senha.</p>
+        <div class="form-group">
+          <label for="esqueciEmail">Email</label>
+          <input type="email" id="esqueciEmail" name="email" required autocomplete="email" placeholder="seu@email.com">
+        </div>
+        <button type="submit" class="btn-auth" id="btnEsqueci">ENVIAR LINK</button>
+        <a href="#" id="linkVoltarLogin" style="display:block;text-align:center;margin-top:12px;font-size:12px;color:var(--fl-text-muted);text-decoration:none;">← Voltar ao login</a>
+      </form>
+
+      <!-- SIGNUP -->
+      <form id="signupForm" style="display:none">
+        <div class="form-group">
+          <label for="signupNome">Seu nome</label>
+          <input type="text" id="signupNome" name="nome" required autocomplete="name" placeholder="Como devemos te chamar">
+        </div>
+        <div class="form-group">
+          <label for="signupTelefone">Telefone (WhatsApp)</label>
+          <input type="tel" id="signupTelefone" name="telefone" autocomplete="tel" placeholder="(41) 99999-9999">
+        </div>
+        <div class="form-group">
+          <label for="signupEmail">Email</label>
+          <input type="email" id="signupEmail" name="email" required autocomplete="email" placeholder="seu@email.com">
+        </div>
+        <div class="form-group" style="position:relative;">
+          <label for="signupPassword">Senha (min 12 chars)</label>
+          <input type="password" id="signupPassword" name="password" required autocomplete="new-password" minlength="12" placeholder="••••••••••••">
+          <button type="button" class="toggle-pwd" onclick="togglePwd('signupPassword',this)" aria-label="Mostrar senha">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
+        <div class="form-group" style="position:relative;">
+          <label for="signupPasswordConfirm">Confirmar senha</label>
+          <input type="password" id="signupPasswordConfirm" name="password_confirm" required autocomplete="new-password" minlength="12" placeholder="••••••••••••">
+          <button type="button" class="toggle-pwd" onclick="togglePwd('signupPasswordConfirm',this)" aria-label="Mostrar senha">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
+        <label class="legal-consent" for="acceptLegal">
+          <input type="checkbox" id="acceptLegal" name="accept_legal" required>
+          <span>Li e aceito os <a href="/docs/termos.html" target="_blank" rel="noopener">Termos de Uso</a> e a <a href="/docs/privacidade.html" target="_blank" rel="noopener">Política de Privacidade/LGPD</a> da FraLib, incluindo regras contra abuso, spam e uso indevido de dados.</span>
+        </label>
+        <button type="submit" class="btn-auth" id="btnSignup">CRIAR CONTA</button>
+      </form>
+
+      <div class="auth-footer" id="authFooter"></div>
+    </div>
+  </div>
+
+  <div class="auth-mascot">
+    <img src="/images/Mestre Fralib - Mago da IA.png" alt="Mestre FraLib">
+    <div class="sparkle"></div>
+    <div class="sparkle"></div>
+    <div class="sparkle"></div>
+  </div>
+
+  <script>
+  </script>
+  <script src="/js/csrf-helper.js"></script>
+  <script>
+// ── Particles (same as landing) ────────────────────────────────
+(function(){
+  var c=document.getElementById('particles-canvas'),ctx=c.getContext('2d');
+  function resize(){c.width=window.innerWidth;c.height=window.innerHeight}
+  resize();window.addEventListener('resize',resize);
+  var dots=[];for(var i=0;i<50;i++)dots.push({x:Math.random()*c.width,y:Math.random()*c.height,r:Math.random()*1.8+0.5,dx:(Math.random()-0.5)*0.4,dy:(Math.random()-0.5)*0.4,a:Math.random()*0.3+0.1});
+  function draw(){
+    ctx.clearRect(0,0,c.width,c.height);
+    dots.forEach(function(d){
+      d.x+=d.dx;d.y+=d.dy;
+      if(d.x<0||d.x>c.width)d.dx*=-1;
+      if(d.y<0||d.y>c.height)d.dy*=-1;
+      ctx.beginPath();ctx.arc(d.x,d.y,d.r,0,Math.PI*2);
+      ctx.fillStyle='rgba(147,51,234,'+d.a+')';ctx.fill();
+    });
+    // Connect nearby dots
+    for(var i=0;i<dots.length;i++){
+      for(var j=i+1;j<dots.length;j++){
+        var dx=dots[i].x-dots[j].x,dy=dots[i].y-dots[j].y;
+        var dist=Math.sqrt(dx*dx+dy*dy);
+        if(dist<120){
+          ctx.beginPath();ctx.moveTo(dots[i].x,dots[i].y);ctx.lineTo(dots[j].x,dots[j].y);
+          ctx.strokeStyle='rgba(147,51,234,'+(0.08*(1-dist/120))+')';ctx.stroke();
+        }
+      }
+    }
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// ── Toggle Password Visibility ────────────────────────────────
+function togglePwd(inputId, btn) {
+  var inp = document.getElementById(inputId);
+  if (!inp) return;
+  var isHidden = inp.type === 'password';
+  inp.type = isHidden ? 'text' : 'password';
+  btn.innerHTML = isHidden
+    ? '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>'
+    : '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+}
+
+// ── DOM ────────────────────────────────────────────────────────
+var loginForm=document.getElementById('loginForm');
+var signupForm=document.getElementById('signupForm');
+var esqueciForm=document.getElementById('esqueciForm');
+var errorDiv=document.getElementById('error');
+var btnLogin=document.getElementById('btnLogin');
+var btnSignup=document.getElementById('btnSignup');
+var planoBanner=document.getElementById('planoBanner');
+var tabLogin=document.getElementById('tabLogin');
+var tabSignup=document.getElementById('tabSignup');
+
+// ── Esqueci Senha ─────────────────────────────────────────────
+var linkEsqueci=document.getElementById('linkEsqueciSenha');
+var linkVoltar=document.getElementById('linkVoltarLogin');
+linkEsqueci.addEventListener('click', function(e) {
+  e.preventDefault();
+  loginForm.style.display = 'none';
+  signupForm.style.display = 'none';
+  esqueciForm.style.display = 'block';
+  errorDiv.classList.remove('show');
+});
+linkVoltar.addEventListener('click', function(e) {
+  e.preventDefault();
+  esqueciForm.style.display = 'none';
+  loginForm.style.display = 'block';
+  errorDiv.classList.remove('show');
+});
+esqueciForm.addEventListener('submit', async function(e) {
+  e.preventDefault();
+  var btn = document.getElementById('btnEsqueci');
+  btn.disabled = true; btn.textContent = 'ENVIANDO...';
+  var email = document.getElementById('esqueciEmail').value.trim();
+  try {
+    var r = await fetch('/api/auth/esqueci-senha', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({email:email})});
+    var d = await r.json();
+    esqueciForm.innerHTML = '<div style="text-align:center;padding:24px 0"><div style="font-size:32px;color:var(--fl-success);margin-bottom:12px">✓</div><div style="font-size:13px;color:var(--fl-text-muted);line-height:1.7">Se o email estiver cadastrado, você receberá um link de recuperação.<br><br><a href="#" onclick="location.reload()" style="color:var(--fl-purple-300)">Voltar ao login</a></div></div>';
+  } catch(err) {
+    btn.disabled = false; btn.textContent = 'ENVIAR LINK';
+    errorDiv.textContent = 'Erro de conexão.'; errorDiv.classList.add('show');
+  }
+});
+
+// ── Plano pendente ─────────────────────────────────────────────
+var params=new URLSearchParams(window.location.search);
+var PLANOS_VALIDOS={starter:'STARTER (R$97/mes)',pro:'PRO (R$197/mes)',agency:'AGENCY (R$497/mes)'};
+var planoEscolhido=(params.get('plano')||'').toLowerCase();
+if(planoEscolhido&&PLANOS_VALIDOS[planoEscolhido])localStorage.setItem('fralib_pending_plano',planoEscolhido);
+var planoPendente=localStorage.getItem('fralib_pending_plano')||'';
+if(planoPendente&&PLANOS_VALIDOS[planoPendente]){
+  planoBanner.textContent='PLANO: '+PLANOS_VALIDOS[planoPendente];
+  planoBanner.classList.add('show');
+}
+
+// ── Tabs ───────────────────────────────────────────────────────
+function setModo(modo){
+  if(modo==='signup'){
+    loginForm.style.display='none';signupForm.style.display='block';
+    tabLogin.classList.remove('active');tabSignup.classList.add('active');
+  }else{
+    loginForm.style.display='block';signupForm.style.display='none';
+    tabLogin.classList.add('active');tabSignup.classList.remove('active');
+  }
+  errorDiv.classList.remove('show');
+}
+if(params.get('signup')==='1'||window.location.hash==='#signup')setModo('signup');
+tabLogin.addEventListener('click',function(){setModo('login')});
+tabSignup.addEventListener('click',function(){setModo('signup')});
+
+// ── Auto-redirect ──────────────────────────────────────────────
+var token=localStorage.getItem('fralib_token');
+if(token){
+  if(planoPendente&&PLANOS_VALIDOS[planoPendente])iniciarCheckout(planoPendente);
+  else window.location.href='/dashboard';
+}
+
+async function iniciarCheckout(plano){
+  try{
+    var headers={'Content-Type':'application/json'};
+    if(window.CSRFHelper) headers=await window.CSRFHelper.addToHeaders(headers);
+    var legacyToken=localStorage.getItem('fralib_token');
+    if(legacyToken) headers.Authorization='Bearer '+legacyToken;
+    var r=await fetch('/api/credits/criar-checkout',{method:'POST',headers:headers,credentials:'include',body:JSON.stringify({plano:plano})});
+    var d=await r.json();
+    if(r.ok&&d.checkout_url){localStorage.removeItem('fralib_pending_plano');window.location.href=d.checkout_url}
+    else{errorDiv.textContent='Falha checkout: '+(d.detail||'tente em /dashboard');errorDiv.classList.add('show');setTimeout(function(){window.location.href='/dashboard'},3000)}
+  }catch(e){window.location.href='/dashboard'}
+}
+
+function finalizarLogin(d){
+  localStorage.removeItem('fralib_token');
+  var pp=localStorage.getItem('fralib_pending_plano')||'';
+  if(pp&&PLANOS_VALIDOS[pp]){btnLogin.textContent='CHECKOUT...';iniciarCheckout(pp)}
+  else window.location.href='/dashboard';
+}
+
+// ── Signup ─────────────────────────────────────────────────────
+signupForm.addEventListener('submit',async function(e){
+  e.preventDefault();errorDiv.classList.remove('show');
+  var nome=document.getElementById('signupNome').value.trim();
+  var telefone=document.getElementById('signupTelefone').value.trim();
+  var email=document.getElementById('signupEmail').value.trim();
+  var pwd=document.getElementById('signupPassword').value;
+  var pwdConfirm=document.getElementById('signupPasswordConfirm').value;
+  var acceptLegal=document.getElementById('acceptLegal').checked;
+  if(pwd!==pwdConfirm){
+    errorDiv.textContent='As senhas não coincidem.';errorDiv.classList.add('show');return;
+  }
+  if(pwd.length<12){
+    errorDiv.textContent='Senha deve ter no mínimo 12 caracteres.';errorDiv.classList.add('show');return;
+  }
+  if(!acceptLegal){
+    errorDiv.textContent='Você precisa aceitar os Termos de Uso e a Política de Privacidade/LGPD.';errorDiv.classList.add('show');return;
+  }
+  btnSignup.disabled=true;btnSignup.textContent='CRIANDO...';
+  try{
+    var r=await fetch('/api/auth/register',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({email:email,password:pwd,nome:nome,telefone:telefone,accept_terms:true,accept_privacy:true})});
+    var d=await r.json();
+    if(r.ok){
+      signupForm.innerHTML='<div style="text-align:center;padding:24px 0"><div style="font-family:var(--fl-font-brand);font-size:32px;color:var(--fl-success);margin-bottom:12px">✓</div><div style="font-family:var(--fl-font-brand);font-size:9px;color:var(--fl-text);margin-bottom:10px;letter-spacing:1px">CONTA CRIADA!</div><div style="font-size:13px;color:var(--fl-text-muted);line-height:1.7">Email de confirmação enviado para<br><strong style="color:var(--fl-purple-300)">'+email.replace(/[<>"&]/g,'')+'</strong><br><br>Confirme e faça login.</div></div>';
+    }else{
+      errorDiv.textContent=d.detail||'Erro ao criar conta';errorDiv.classList.add('show');
+      btnSignup.disabled=false;btnSignup.textContent='CRIAR CONTA';
+    }
+  }catch(err){
+    errorDiv.textContent='Erro de conexão.';errorDiv.classList.add('show');
+    btnSignup.disabled=false;btnSignup.textContent='CRIAR CONTA';
+  }
+});
+
+// ── Login ──────────────────────────────────────────────────────
+loginForm.addEventListener('submit',async function(e){
+  e.preventDefault();errorDiv.classList.remove('show');
+  btnLogin.disabled=true;btnLogin.textContent='ENTRANDO...';
+  var email=document.getElementById('email').value.trim();
+  var password=document.getElementById('password').value;
+  try{
+    var r=await fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({email:email,password:password})});
+    var d=await r.json();
+    if(r.ok){
+      finalizarLogin(d);
+    }else if(r.status===401&&r.headers.get('X-Require-2FA')==='1'){
+      var code=window.prompt('Digite o código 2FA do seu aplicativo autenticador');
+      if(!code){errorDiv.textContent='Código 2FA obrigatório.';errorDiv.classList.add('show');btnLogin.disabled=false;btnLogin.textContent='ENTRAR';return}
+      var rr=await fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({email:email,password:password,totp_code:code})});
+      var dd=await rr.json();
+      if(rr.ok){finalizarLogin(dd)}
+      else{errorDiv.textContent=dd.detail||'Código 2FA inválido';errorDiv.classList.add('show');btnLogin.disabled=false;btnLogin.textContent='ENTRAR'}
+    }else if(r.status===403&&r.headers.get('X-Require-Email-Confirmation')==='1'){
+      errorDiv.innerHTML='<div>'+(d.detail||'Email não confirmado.')+'</div><button type="button" id="btnReenviar" style="margin-top:10px;background:#FACC15;color:#000;border:0;padding:10px 18px;font-family:var(--fl-font-brand);font-size:8px;letter-spacing:1px;cursor:pointer;box-shadow:inset -3px -3px 0 #A16207,inset 3px 3px 0 #FDE68A,0 4px 0 #713F12">REENVIAR EMAIL</button>';
+      errorDiv.classList.add('show');
+      document.getElementById('btnReenviar').onclick=async function(){
+        this.disabled=true;this.textContent='ENVIANDO...';
+        try{var rr=await fetch('/api/auth/reenviar-confirmacao',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:email,password:password})});if(rr.ok)this.textContent='ENVIADO ✓';else this.textContent='ERRO'}catch(e){this.textContent='ERRO'}
+      };
+      btnLogin.disabled=false;btnLogin.textContent='ENTRAR';
+    }else{
+      errorDiv.textContent=d.detail||'Credenciais inválidas';errorDiv.classList.add('show');
+      btnLogin.disabled=false;btnLogin.textContent='ENTRAR';
+    }
+  }catch(err){
+    errorDiv.textContent='Erro de conexão.';errorDiv.classList.add('show');
+    btnLogin.disabled=false;btnLogin.textContent='ENTRAR';
+  }
+});
+  </script>
+</body>
+</html>

@@ -1,0 +1,8 @@
+{
+  "payment_id": "pay_fixture_approved_0001",
+  "status": "approved",
+  "external_reference": "fralib:9002:pro:harness",
+  "amount": 360,
+  "currency": "BRL",
+  "mode": "dry-run"
+}

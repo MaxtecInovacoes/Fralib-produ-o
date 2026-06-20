@@ -1,0 +1,34 @@
+"""Leads CRUD models and helpers."""
+
+from typing import Optional
+
+from pydantic import BaseModel
+
+
+class EditarSiteRequest(BaseModel):
+    prompt: str
+
+
+class LeadManualRequest(BaseModel):
+    nome: str
+    telefone: str
+    whatsapp: Optional[str] = None
+    nicho: str
+    cidade: str
+    briefing: Optional[str] = None
+    score: Optional[int] = 80
+
+
+class CamposLeadRequest(BaseModel):
+    nome: Optional[str] = None
+    telefone: Optional[str] = None
+    segmento: Optional[str] = None
+    cidade: Optional[str] = None
+    observacao: Optional[str] = None
+    sdr_stage: Optional[str] = None
+    status: Optional[str] = None
+
+
+class FeedbackRequest(BaseModel):
+    resultado: str  # 'convertido' ou 'perdido'
+    observacao: str = ""

@@ -1,0 +1,300 @@
+<!-- ===== MODAL DO LEAD ===== -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <h3 id="modalLeadName">LEAD</h3>
+        <span id="modalLeadStatus" style="font-size:11px;font-family:var(--fl-font-brand);letter-spacing:1px;color:var(--fl-text-muted)"></span>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <!-- 3.3 — Badge EXCLUSIVO -->
+        <span
+          title="Este lead está reservado para sua conta. Outros usuários não podem prospectar este negócio."
+          style="display:inline-flex;align-items:center;gap:5px;background:rgba(147,51,234,0.15);border:1px solid rgba(147,51,234,0.4);color:#c084fc;font-size:10px;font-family:var(--fl-font-brand);letter-spacing:1.5px;padding:3px 8px;border-radius:4px;cursor:help;"
+        >🔒 EXCLUSIVO</span>
+        <button class="modal-close" onclick="closeModal()" aria-label="Fechar modal">&times;</button>
+      </div>
+    </div>
+    <div class="modal-tabs">
+      <div class="modal-tab active" data-tab="chat" onclick="switchTab('chat')">💬 CONVERSA</div>
+      <div class="modal-tab" data-tab="dados" onclick="switchTab('dados')">📋 DADOS</div>
+      <div class="modal-tab" data-tab="editar" onclick="switchTab('editar')">✏️ EDITAR</div>
+      <div class="modal-tab" data-tab="site" onclick="switchTab('site')">🌐 SITE</div>
+    </div>
+    <div class="modal-body" style="display:flex;flex-direction:column;gap:14px;">
+
+      <!-- Tab: Conversa Franz -->
+      <div class="tab-content active" id="tab-chat">
+        <div class="chat-area" id="chatArea" style="min-height:280px;max-height:340px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding:12px;">
+          <div style="text-align:center;color:var(--fl-text-muted);font-size:12px;padding:20px 0">Carregando conversa...</div>
+        </div>
+        <div class="chat-input-row">
+          <input type="text" placeholder="Digite uma mensagem manual..." id="chatInput">
+          <button class="chat-send-btn" onclick="sendMsg()">&#9654;</button>
+        </div>
+      </div>
+
+      <!-- Tab: Dados do Lead -->
+      <div class="tab-content" id="tab-dados">
+        <div class="briefing-grid">
+          <div class="briefing-item">
+            <div class="briefing-label">Nicho</div>
+            <div class="briefing-value" id="modalNicho">—</div>
+          </div>
+          <div class="briefing-item">
+            <div class="briefing-label">Cidade</div>
+            <div class="briefing-value" id="modalCidade">—</div>
+          </div>
+          <div class="briefing-item">
+            <div class="briefing-label">Telefone</div>
+            <div class="briefing-value" id="modalTelefone" style="font-family:var(--fl-font-mono);font-size:13px">—</div>
+          </div>
+          <div class="briefing-item">
+            <div class="briefing-label">Score</div>
+            <div class="briefing-value" id="modalScore">—</div>
+          </div>
+        </div>
+
+        <!-- Campos editáveis -->
+        <div style="display:flex;flex-direction:column;gap:10px;margin-top:16px;">
+          <div>
+            <label class="config-label">WHATSAPP</label>
+            <input type="text" id="editWhatsapp" placeholder="5541999999999"
+              style="width:100%;background:var(--fl-bg-card);border:1px solid var(--fl-border);color:var(--fl-text);padding:8px 12px;border-radius:6px;font-size:13px;font-family:var(--fl-font-mono);box-sizing:border-box;">
+          </div>
+          <div>
+            <label class="config-label">OBSERVAÇÕES</label>
+            <textarea id="editObservacoes" placeholder="Anotações sobre o lead..."
+              style="width:100%;background:var(--fl-bg-card);border:1px solid var(--fl-border);color:var(--fl-text);padding:8px 12px;border-radius:6px;font-size:13px;resize:vertical;min-height:70px;box-sizing:border-box;"></textarea>
+          </div>
+          <div>
+            <label class="config-label">VALOR DE VENDA (R$)</label>
+            <input type="number" id="editValorVenda" placeholder="0.00"
+              style="width:100%;background:var(--fl-bg-card);border:1px solid var(--fl-border);color:var(--fl-text);padding:8px 12px;border-radius:6px;font-size:13px;font-family:var(--fl-font-mono);box-sizing:border-box;">
+          </div>
+        </div>
+
+        <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap;">
+          <button class="btn-action btn-action-purple" onclick="salvarDadosLead()" style="flex:1">💾 SALVAR</button>
+          <button class="btn-action" onclick="reprocessarLead()" style="flex:1;background:rgba(16,185,129,0.15);border:1px solid #10b981;color:#10b981">⚡ REPROCESSAR</button>
+          <button class="btn-action btn-action-gold" onclick="abrirWhatsApp()" style="flex:1">📱 WHATSAPP</button>
+          <button class="btn-action" onclick="abrirFecharVenda()" style="flex:1;background:rgba(16,185,129,0.15);border:1px solid #10b981;color:#10b981">🏆 FECHAR VENDA</button>
+        </div>
+
+        <!-- 3.1 — Botões de Feedback (Convertido / Perdido) -->
+        <div style="margin-top:14px;border-top:1px solid var(--fl-border);padding-top:14px;">
+          <div style="font-size:10px;font-family:var(--fl-font-brand);letter-spacing:1px;color:var(--fl-text-muted);margin-bottom:8px;">RESULTADO DA PROSPECÇÃO</div>
+          <div style="display:flex;gap:8px;">
+            <button
+              onclick="registrarFeedbackLead('convertido')"
+              title="Marcar lead como convertido e registrar aprendizado para o Franz"
+              style="flex:1;background:rgba(16,185,129,0.15);border:1px solid #10b981;color:#10b981;padding:9px 12px;border-radius:6px;cursor:pointer;font-family:var(--fl-font-brand);letter-spacing:1px;font-size:12px;"
+            >✅ CONVERTIDO</button>
+            <button
+              onclick="registrarFeedbackLead('perdido')"
+              title="Marcar lead como perdido e registrar aprendizado para o Franz"
+              style="flex:1;background:rgba(239,68,68,0.12);border:1px solid #ef4444;color:#ef4444;padding:9px 12px;border-radius:6px;cursor:pointer;font-family:var(--fl-font-brand);letter-spacing:1px;font-size:12px;"
+            >❌ PERDIDO</button>
+          </div>
+          <div id="feedbackStatus" style="display:none;margin-top:8px;padding:8px 12px;border-radius:6px;font-size:12px;"></div>
+        </div>
+      </div>
+
+      <!-- Tab: Editar Dados (2.4) -->
+      <div class="tab-content" id="tab-editar">
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <div>
+            <label class="config-label">NOME DA EMPRESA</label>
+            <input type="text" id="editLeadNome"
+              style="width:100%;background:var(--fl-bg-card);border:1px solid var(--fl-border);color:var(--fl-text);padding:8px 12px;border-radius:6px;font-size:13px;box-sizing:border-box;">
+          </div>
+          <div>
+            <label class="config-label">TELEFONE</label>
+            <input type="text" id="editLeadTelefone"
+              style="width:100%;background:var(--fl-bg-card);border:1px solid var(--fl-border);color:var(--fl-text);padding:8px 12px;border-radius:6px;font-size:13px;font-family:var(--fl-font-mono);box-sizing:border-box;">
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <div>
+              <label class="config-label">SEGMENTO</label>
+              <input type="text" id="editLeadSegmento"
+                style="width:100%;background:var(--fl-bg-card);border:1px solid var(--fl-border);color:var(--fl-text);padding:8px 12px;border-radius:6px;font-size:13px;box-sizing:border-box;">
+            </div>
+            <div>
+              <label class="config-label">CIDADE</label>
+              <input type="text" id="editLeadCidade"
+                style="width:100%;background:var(--fl-bg-card);border:1px solid var(--fl-border);color:var(--fl-text);padding:8px 12px;border-radius:6px;font-size:13px;box-sizing:border-box;">
+            </div>
+          </div>
+          <div>
+            <label class="config-label">OBSERVA&Ccedil;&Atilde;O</label>
+            <textarea id="editLeadObs"
+              style="width:100%;background:var(--fl-bg-card);border:1px solid var(--fl-border);color:var(--fl-text);padding:8px 12px;border-radius:6px;font-size:13px;resize:vertical;min-height:70px;box-sizing:border-box;"></textarea>
+          </div>
+          <div id="editLeadStatus" style="display:none;padding:8px 12px;border-radius:6px;font-size:12px;border-left:3px solid #9333ea;background:rgba(147,51,234,0.08);"></div>
+          <div style="display:flex;gap:8px;margin-top:4px;flex-wrap:wrap;">
+            <button onclick="salvarCamposLeadModal()" style="flex:2;background:#9333ea;border:none;color:#fff;padding:10px;border-radius:6px;cursor:pointer;font-family:var(--fl-font-brand);letter-spacing:1px;">💾 SALVAR ALTERA&Ccedil;&Otilde;ES</button>
+          </div>
+          <div style="border-top:1px solid var(--fl-border);padding-top:16px;margin-top:4px;">
+            <button onclick="abrirConfirmDeleteModal()" style="width:100%;background:rgba(239,68,68,0.12);border:1px solid #ef4444;color:#ef4444;padding:10px;border-radius:6px;cursor:pointer;font-family:var(--fl-font-brand);letter-spacing:1px;font-size:13px;">&#128465; DELETAR LEAD</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab: Site -->
+      <div class="tab-content" id="tab-site">
+        <div style="font-family:var(--fl-font-brand);font-size:9px;letter-spacing:1px;color:var(--fl-purple-300);margin-bottom:14px;">STUDIO DO SITE</div>
+        <div class="briefing-item" style="margin-bottom:16px">
+          <div class="briefing-label">URL do Site</div>
+          <div class="briefing-value" id="modalUrl" style="font-size:12px;word-break:break-all;font-family:var(--fl-font-mono)">—</div>
+        </div>
+
+        <!-- Editor de prompt -->
+        <div style="margin-bottom:16px;">
+          <label class="config-label">EDITAR SITE VIA PROMPT</label>
+          <textarea id="siteEditPrompt" placeholder="Ex: Troca a cor do botão para verde, adiciona seção de depoimentos, muda o título para..."
+            style="width:100%;background:var(--fl-bg-card);border:1px solid var(--fl-border);color:var(--fl-text);padding:10px 12px;border-radius:4px;font-size:13px;resize:vertical;min-height:90px;box-sizing:border-box;font-family:inherit;"></textarea>
+          <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;">
+            <button onclick="siteEditSugestao('Troca a cor primária para')" style="background:rgba(147,51,234,0.1);border:1px solid rgba(147,51,234,0.3);color:var(--fl-purple-300);padding:3px 8px;border-radius:3px;font-size:10px;cursor:pointer;font-family:var(--fl-font-brand);">+ COR</button>
+            <button onclick="siteEditSugestao('Muda o título principal para')" style="background:rgba(147,51,234,0.1);border:1px solid rgba(147,51,234,0.3);color:var(--fl-purple-300);padding:3px 8px;border-radius:3px;font-size:10px;cursor:pointer;font-family:var(--fl-font-brand);">+ TÍTULO</button>
+            <button onclick="siteEditSugestao('Adiciona uma seção de depoimentos com 3 clientes fictícios')" style="background:rgba(147,51,234,0.1);border:1px solid rgba(147,51,234,0.3);color:var(--fl-purple-300);padding:3px 8px;border-radius:3px;font-size:10px;cursor:pointer;font-family:var(--fl-font-brand);">+ DEPOIMENTOS</button>
+            <button onclick="siteEditSugestao('Adiciona botão de WhatsApp com o número')" style="background:rgba(147,51,234,0.1);border:1px solid rgba(147,51,234,0.3);color:var(--fl-purple-300);padding:3px 8px;border-radius:3px;font-size:10px;cursor:pointer;font-family:var(--fl-font-brand);">+ WHATSAPP</button>
+          </div>
+        </div>
+
+        <!-- Upload de fotos -->
+        <div style="margin-bottom:16px;">
+          <label style="font-size:11px;color:var(--fl-text-muted);font-family:var(--fl-font-brand);letter-spacing:1px;display:block;margin-bottom:8px">📸 FOTOS DO SITE</label>
+
+          <!-- Fotos existentes -->
+          <div id="fotosExistentes" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;min-height:40px;">
+            <span style="font-size:11px;color:var(--fl-text-muted)">Carregando fotos...</span>
+          </div>
+
+          <!-- Upload -->
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <select id="fotoTipo" style="background:var(--fl-bg-card);border:1px solid var(--fl-border);color:var(--fl-text);padding:6px 10px;border-radius:6px;font-size:12px;">
+              <option value="foto">Foto do site</option>
+              <option value="logo">Logo</option>
+            </select>
+            <select id="fotoNumero" style="background:var(--fl-bg-card);border:1px solid var(--fl-border);color:var(--fl-text);padding:6px 10px;border-radius:6px;font-size:12px;">
+              <option value="1">Foto 1</option>
+              <option value="2">Foto 2</option>
+              <option value="3">Foto 3</option>
+              <option value="4">Foto 4</option>
+              <option value="5">Foto 5</option>
+            </select>
+            <label style="background:var(--fl-bg-card);border:1px solid var(--fl-border);color:var(--fl-text-muted);padding:6px 12px;border-radius:6px;font-size:12px;cursor:pointer;white-space:nowrap;">
+              📁 Escolher arquivo
+              <input type="file" id="fotoUploadInput" accept="image/*" style="display:none" onchange="uploadFotoSite(this)">
+            </label>
+          </div>
+          <div id="uploadFotoStatus" style="font-size:11px;color:var(--fl-text-muted);margin-top:6px;display:none"></div>
+        </div>
+
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+          <button class="btn-action btn-action-purple" onclick="abrirSiteModal()" style="flex:1">ABRIR SITE</button>
+          <button class="btn-action" onclick="abrirEditorWYSIWYG(leadAtualModal && leadAtualModal.id)" style="flex:1;background:rgba(6,182,212,0.15);border:1px solid #06b6d4;color:#06b6d4">EDIÇÃO DIRETA</button>
+          <button class="btn-action" onclick="baixarHtmlSite()" style="flex:1;background:rgba(59,130,246,0.15);border:1px solid #3b82f6;color:#3b82f6">BAIXAR HTML</button>
+          <button class="btn-action" id="btnAplicarEdicao" onclick="editarSitePrompt()" style="flex:1;background:rgba(147,51,234,0.15);border:1px solid var(--fl-purple);color:var(--fl-purple-300)">✦ APLICAR</button>
+        </div>
+
+        <!-- Status da edição -->
+        <div id="siteEditStatus" style="display:none;padding:10px 12px;border-radius:4px;font-size:12px;margin-bottom:8px;border-left:3px solid var(--fl-purple);background:rgba(147,51,234,0.08);"></div>
+
+        <!-- Logs em tempo real -->
+        <div id="siteEditLogs" style="display:none;background:var(--fl-bg);border:1px solid var(--fl-border);padding:8px 10px;max-height:100px;overflow-y:auto;border-radius:4px;font-family:var(--fl-font-mono);font-size:11px;margin-bottom:12px;"></div>
+
+        <!-- Histórico de edições -->
+        <div id="siteEditHistorico" style="display:none;">
+          <div style="font-family:var(--fl-font-brand);font-size:9px;letter-spacing:1px;color:var(--fl-text-muted);margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--fl-border);">HISTÓRICO DE ALTERAÇÕES</div>
+          <div id="siteEditHistoricoLista" style="display:flex;flex-direction:column;gap:6px;max-height:180px;overflow-y:auto;"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL LEAD MANUAL ===== -->
+<div class="modal-overlay" id="modalLeadManual">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>CADASTRAR LEAD MANUAL</h3>
+      <button class="modal-close" onclick="fecharModalLeadManual()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="config-field">
+        <label class="config-label">NOME DA EMPRESA *</label>
+        <input class="config-input" type="text" id="lm-nome" placeholder="Ex: Academia FitLife">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div class="config-field">
+          <label class="config-label">NICHO *</label>
+          <input class="config-input" type="text" id="lm-nicho" placeholder="Ex: Academia">
+        </div>
+        <div class="config-field">
+          <label class="config-label">CIDADE *</label>
+          <input class="config-input" type="text" id="lm-cidade" placeholder="Ex: Curitiba">
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div class="config-field">
+          <label class="config-label">TELEFONE *</label>
+          <input class="config-input" type="text" id="lm-telefone" placeholder="41999999999" style="font-family:var(--fl-font-mono);">
+        </div>
+        <div class="config-field">
+          <label class="config-label">WHATSAPP</label>
+          <input class="config-input" type="text" id="lm-whatsapp" placeholder="41999999999" style="font-family:var(--fl-font-mono);">
+        </div>
+      </div>
+      <div class="config-field">
+        <label class="config-label">BRIEFING DO SITE <span style="color:var(--fl-purple-300)">(opcional - gera o site automaticamente)</span></label>
+        <textarea class="config-input" id="lm-briefing" placeholder="Ex: Site moderno para academia feminina, foco em agendamento de aulas, cores roxo e branco..." style="resize:vertical;min-height:90px;"></textarea>
+      </div>
+      <div id="lm-status" style="font-size:12px;color:var(--fl-text-muted);display:none;padding:8px;background:rgba(147,51,234,0.1);border-radius:6px;border:1px solid var(--fl-purple)"></div>
+      <div style="display:flex;gap:10px;padding-top:4px;">
+        <button onclick="fecharModalLeadManual()" style="flex:1;background:var(--fl-bg-card);border:2px solid var(--fl-border);color:var(--fl-text-muted);padding:11px;border-radius:6px;cursor:pointer;font-size:13px;font-family:var(--fl-font-brand);letter-spacing:1px;">CANCELAR</button>
+        <button onclick="salvarLeadManual()" class="btn-config-save" style="flex:2;">CADASTRAR LEAD</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL FECHAR VENDA ===== -->
+<div class="modal-overlay" id="modalFecharVenda">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>FECHAR VENDA</h3>
+      <button class="modal-close" onclick="fecharModalVenda()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div id="fv-lead-nome" style="font-size:14px;color:var(--fl-text);font-weight:600;padding:8px;background:rgba(16,185,129,0.1);border-radius:6px;border:1px solid #10b981;text-align:center;"></div>
+      <div>
+        <label class="config-label">VALOR DA VENDA (R$) *</label>
+        <input type="number" id="fv-valor" placeholder="0.00" style="width:100%;background:var(--fl-bg-card);border:1px solid #10b981;color:var(--fl-text);padding:8px 12px;border-radius:6px;font-size:16px;font-family:var(--fl-font-mono);box-sizing:border-box;">
+      </div>
+      <div>
+        <label class="config-label">FORMA DE PAGAMENTO</label>
+        <select id="fv-pagamento" style="width:100%;background:var(--fl-bg-card);border:1px solid var(--fl-border);color:var(--fl-text);padding:8px 12px;border-radius:6px;font-size:13px;box-sizing:border-box;">
+          <option value="pix">PIX</option>
+          <option value="cartao">Cartao</option>
+          <option value="boleto">Boleto</option>
+          <option value="dinheiro">Dinheiro</option>
+          <option value="outro">Outro</option>
+        </select>
+      </div>
+      <div>
+        <label class="config-label">OBSERVACAO</label>
+        <input type="text" id="fv-obs" placeholder="Ex: Pagamento confirmado via PIX" style="width:100%;background:var(--fl-bg-card);border:1px solid var(--fl-border);color:var(--fl-text);padding:8px 12px;border-radius:6px;font-size:13px;box-sizing:border-box;">
+      </div>
+      <div style="display:flex;gap:8px;margin-top:4px;">
+        <button onclick="fecharModalVenda()" style="flex:1;background:var(--fl-bg-card);border:1px solid var(--fl-border);color:var(--fl-text-muted);padding:10px;border-radius:6px;cursor:pointer;">CANCELAR</button>
+        <button onclick="confirmarVenda()" style="flex:2;background:#10b981;border:none;color:#fff;padding:10px;border-radius:6px;cursor:pointer;font-size:13px;font-family:var(--fl-font-brand);letter-spacing:1px;">CONFIRMAR VENDA</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     SCRIPTS
+     ============================================================ -->

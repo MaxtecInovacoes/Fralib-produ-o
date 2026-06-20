@@ -1,0 +1,259 @@
+<!-- ============================================================
+     MODAL EDITOR VISUAL (PR13) — workspace estilo site builder
+     ============================================================ -->
+<style>
+  #editorSiteModal{position:fixed;inset:0;z-index:2147483000;background:#07070b;color:#eef2ff;display:none;font-family:var(--fl-font-ui,system-ui,sans-serif)}
+  #editorSiteModal.open{display:flex;flex-direction:column}
+  #editorSiteHeader{height:58px;display:flex;align-items:center;gap:12px;padding:0 14px;background:#0d0d12;border-bottom:1px solid #242433;box-shadow:0 10px 28px rgba(0,0,0,.35);position:relative;z-index:2}
+  #editorSiteHeader .title{min-width:0;flex:1}
+  .editor-title-main{display:block;font-size:13px;font-weight:800;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .editor-title-sub{display:block;font-size:11px;color:#8b8ba3;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .editor-top-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+  .editor-btn{min-height:34px;padding:0 11px;border-radius:6px;border:1px solid #2b2b3d;background:#151520;color:#e5e7eb;font-size:12px;font-weight:700;cursor:pointer;transition:background .16s ease,color .16s ease,border-color .16s ease,transform .12s ease}
+  .editor-btn:hover{background:#20202d;border-color:#4b4b65}
+  .editor-btn:active{transform:translateY(1px)}
+  .editor-btn[disabled]{opacity:.45;cursor:not-allowed;transform:none}
+  .editor-btn.primary{background:#10b981;color:#06130d;border-color:#10b981}
+  .editor-btn.info{background:#0ea5e9;color:#06101a;border-color:#0ea5e9}
+  .editor-btn.danger{color:#fecaca;border-color:#7f1d1d;background:#2a0e12}
+  .editor-device-group{display:flex;border:1px solid #2b2b3d;border-radius:7px;overflow:hidden;background:#111119}
+  .editor-device-group .editor-btn{border:0;border-radius:0;min-width:42px;background:transparent}
+  .editor-device-group .editor-btn.active{background:#2b1a4a;color:#d8b4fe}
+  #editorSiteBody{flex:1;min-height:0;display:grid;grid-template-columns:292px minmax(0,1fr) 330px;background:#090910}
+  #editorLeftPanel,#editorInspector{min-height:0;overflow:auto;background:#101018;border-color:#252538;color:#e5e7eb}
+  #editorLeftPanel{border-right:1px solid #252538}
+  #editorInspector{border-left:1px solid #252538}
+  .editor-panel-head{padding:14px;border-bottom:1px solid #252538}
+  .editor-panel-title{font-size:12px;font-weight:800;color:#fff;margin:0 0 5px}
+  .editor-panel-note{font-size:11px;line-height:1.45;color:#8b8ba3}
+  .editor-tabs{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;padding:10px;border-bottom:1px solid #252538;position:sticky;top:0;background:#101018;z-index:1}
+  .editor-tab{height:34px;border:1px solid transparent;background:#151520;color:#a1a1b8;border-radius:6px;font-size:11px;font-weight:800;cursor:pointer}
+  .editor-tab.active{background:#2b1a4a;border-color:#7c3aed;color:#e9d5ff}
+  .editor-tab-panel{display:none;padding:12px 14px 18px}
+  .editor-tab-panel.active{display:block}
+  .editor-field{margin-bottom:12px}
+  .editor-field label{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:11px;font-weight:800;color:#a1a1b8;margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em}
+  .editor-field input,.editor-field textarea,.editor-field select{width:100%;background:#090910;border:1px solid #303045;color:#fff;border-radius:6px;padding:9px 10px;font:13px/1.35 var(--fl-font-ui,system-ui,sans-serif);outline:none}
+  .editor-field textarea{min-height:74px;resize:vertical}
+  .editor-field input[type="file"]{padding:8px;background:#111119;color:#cbd5e1}
+  .editor-field input:focus,.editor-field textarea:focus,.editor-field select:focus{border-color:#0ea5e9;box-shadow:0 0 0 3px rgba(14,165,233,.16)}
+  .editor-field input[type="color"]{height:38px;padding:3px}
+  .editor-hint{font-size:11px;color:#787891;line-height:1.45;margin-top:5px}
+  .editor-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .editor-pill-row{display:flex;flex-wrap:wrap;gap:7px}
+  .editor-pill{border:1px solid #303045;background:#151520;color:#e5e7eb;border-radius:999px;padding:7px 10px;font-size:11px;font-weight:700;cursor:pointer}
+  .editor-pill:hover{border-color:#0ea5e9;color:#7dd3fc}
+  .editor-swatch{width:28px;height:28px;border-radius:999px;border:2px solid rgba(255,255,255,.24);box-shadow:0 0 0 1px rgba(0,0,0,.35);cursor:pointer}
+  .editor-list{display:flex;flex-direction:column;gap:7px}
+  .editor-row{border:1px solid #28283a;background:#14141f;border-radius:8px;padding:9px 10px;color:#d6d6e5;display:flex;gap:9px;align-items:center;justify-content:space-between}
+  .editor-row-main{min-width:0;flex:1}
+  .editor-row-title{display:block;font-size:12px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .editor-row-sub{display:block;font-size:11px;color:#818198;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .editor-row button{border:1px solid #343449;background:#191927;color:#d6d6e5;border-radius:5px;min-height:28px;padding:0 8px;font-size:11px;font-weight:800;cursor:pointer;flex:0 0 auto}
+  .editor-thumb{width:44px;height:34px;object-fit:cover;border-radius:5px;background:#222;border:1px solid #303045;flex:0 0 auto}
+  #editorCanvasPanel{min-width:0;min-height:0;display:flex;flex-direction:column;background:radial-gradient(circle at top,#171727 0,#090910 45%,#060607 100%)}
+  #editorCanvasBar{height:44px;display:flex;align-items:center;gap:10px;padding:0 12px;border-bottom:1px solid #252538;color:#a1a1b8;font-size:12px}
+  #editorSelectedPath{min-width:0;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#e5e7eb}
+  #editorIframeWrap{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding:18px;overflow:auto;position:relative}
+  #editorIframe{width:100%;height:100%;border:0;background:#fff;border-radius:10px;box-shadow:0 24px 80px rgba(0,0,0,.45);transition:width .22s cubic-bezier(.16,1,.3,1),height .22s cubic-bezier(.16,1,.3,1)}
+  #editorSiteModal.device-desktop #editorIframe{width:100%;height:100%}
+  #editorSiteModal.device-tablet #editorIframe{width:min(820px,100%);height:min(1180px,100%)}
+  #editorSiteModal.device-mobile #editorIframe{width:min(390px,100%);height:min(820px,100%)}
+  #editorStatus{position:absolute;bottom:18px;right:18px;max-width:360px;background:#10b981;color:#06130d;padding:9px 12px;border-radius:7px;font-size:12px;font-weight:800;opacity:0;transform:translateY(8px);transition:opacity .22s ease,transform .22s ease;pointer-events:none;box-shadow:0 12px 28px rgba(0,0,0,.25)}
+  #editorStatus.show{opacity:1;transform:translateY(0)}
+  #editorStatus.err{background:#ef4444;color:#fff}
+  .editor-empty{padding:18px;border:1px dashed #343449;border-radius:8px;color:#8b8ba3;font-size:12px;line-height:1.5;background:#111119}
+  @media (max-width:1100px){
+    #editorSiteBody{grid-template-columns:260px minmax(0,1fr)}
+    #editorInspector{display:none}
+  }
+  @media (max-width:760px){
+    #editorSiteHeader{height:auto;min-height:58px;align-items:flex-start;padding:10px;flex-wrap:wrap}
+    #editorSiteBody{grid-template-columns:1fr}
+    #editorLeftPanel{display:none}
+    #editorIframeWrap{padding:10px}
+  }
+</style>
+
+<div id="editorSiteModal" class="device-desktop" role="dialog" aria-label="Editor visual de site">
+  <div id="editorSiteHeader">
+    <div class="title">
+      <span class="editor-title-main" id="editorSiteTitle">Editor visual</span>
+      <span class="editor-title-sub" id="editorSiteSubtitle">Selecione um elemento no site para editar texto, estilo, imagem ou seção.</span>
+    </div>
+    <div class="editor-top-actions">
+      <div class="editor-device-group" aria-label="Preview responsivo">
+        <button class="editor-btn active" id="editorDeviceDesktop" onclick="editorSetDevice('desktop')" title="Desktop">Desk</button>
+        <button class="editor-btn" id="editorDeviceTablet" onclick="editorSetDevice('tablet')" title="Tablet">Tab</button>
+        <button class="editor-btn" id="editorDeviceMobile" onclick="editorSetDevice('mobile')" title="Mobile">Mob</button>
+      </div>
+      <button class="editor-btn" id="editorUndoBtn" onclick="editorUndo()" title="Desfazer">Undo</button>
+      <button class="editor-btn" id="editorRedoBtn" onclick="editorRedo()" title="Refazer">Redo</button>
+      <button class="editor-btn info" onclick="editorSincronizarCampos()" title="Aplica os campos do painel no site">Aplicar dados</button>
+      <button class="editor-btn primary" onclick="editorSalvarSite()">Salvar site</button>
+      <button class="editor-btn danger" onclick="editorFechar()">Fechar</button>
+    </div>
+  </div>
+  <div id="editorSiteBody">
+    <aside id="editorLeftPanel">
+      <div class="editor-panel-head">
+        <div class="editor-panel-title">Construtor</div>
+        <div class="editor-panel-note">Clique no canvas, ajuste no inspector e salve. As mudanças ficam no HTML publicado do lead.</div>
+      </div>
+      <div class="editor-tabs">
+        <button class="editor-tab active" id="editorTabContentBtn" onclick="editorSetTab('content')">Dados</button>
+        <button class="editor-tab" id="editorTabStyleBtn" onclick="editorSetTab('style')">Cores</button>
+        <button class="editor-tab" id="editorTabMediaBtn" onclick="editorSetTab('media')">Mídia</button>
+        <button class="editor-tab" id="editorTabSectionsBtn" onclick="editorSetTab('sections')">Seções</button>
+        <button class="editor-tab" id="editorTabAiBtn" onclick="editorSetTab('ai')">IA</button>
+      </div>
+
+      <section class="editor-tab-panel active" id="editorTabContent">
+        <div class="editor-field">
+          <label for="edNome">Nome do negócio</label>
+          <input type="text" id="edNome" placeholder="Padaria do Joao" />
+        </div>
+        <div class="editor-field">
+          <label for="edHeadline">Headline principal</label>
+          <textarea id="edHeadline" rows="2" placeholder="Texto principal do hero"></textarea>
+        </div>
+        <div class="editor-field">
+          <label for="edTelefone">Telefone / WhatsApp</label>
+          <input type="text" id="edTelefone" placeholder="(11) 99999-9999" />
+          <div class="editor-hint">Atualiza links wa.me, tel: e JSON-LD quando existir.</div>
+        </div>
+        <div class="editor-field">
+          <label for="edEndereco">Endereço completo</label>
+          <textarea id="edEndereco" rows="2" placeholder="Rua X, 123 - Bairro - Cidade/UF"></textarea>
+        </div>
+        <div class="editor-grid-2">
+          <div class="editor-field">
+            <label for="edHorSeg">Seg-Sex</label>
+            <input type="text" id="edHorSeg" placeholder="08:00 - 18:00" />
+          </div>
+          <div class="editor-field">
+            <label for="edHorSab">Sábado</label>
+            <input type="text" id="edHorSab" placeholder="08:00 - 13:00" />
+          </div>
+        </div>
+      </section>
+
+      <section class="editor-tab-panel" id="editorTabStyle">
+        <div class="editor-field">
+          <label>Paleta rápida</label>
+          <div class="editor-pill-row">
+            <button class="editor-swatch" style="background:#ef4444" onclick="editorApplyPalette('#ef4444')" title="Vermelho"></button>
+            <button class="editor-swatch" style="background:#10b981" onclick="editorApplyPalette('#10b981')" title="Verde"></button>
+            <button class="editor-swatch" style="background:#0ea5e9" onclick="editorApplyPalette('#0ea5e9')" title="Azul"></button>
+            <button class="editor-swatch" style="background:#f59e0b" onclick="editorApplyPalette('#f59e0b')" title="Dourado"></button>
+            <button class="editor-swatch" style="background:#7c3aed" onclick="editorApplyPalette('#7c3aed')" title="Roxo"></button>
+            <button class="editor-swatch" style="background:#111827" onclick="editorApplyPalette('#111827')" title="Escuro"></button>
+          </div>
+          <div class="editor-hint">Seleciona um elemento e aplica cor ao texto, fundo ou botão conforme o tipo.</div>
+        </div>
+        <div class="editor-field">
+          <label for="editorGlobalAccent">Acento global</label>
+          <input type="color" id="editorGlobalAccent" value="#10b981" onchange="editorApplyGlobalAccent(this.value)" />
+        </div>
+        <div class="editor-pill-row">
+          <button class="editor-pill" onclick="editorApplyQuickStyle('dark-section')">Seção escura</button>
+          <button class="editor-pill" onclick="editorApplyQuickStyle('light-section')">Seção clara</button>
+          <button class="editor-pill" onclick="editorApplyQuickStyle('button-primary')">Botão primário</button>
+          <button class="editor-pill" onclick="editorApplyQuickStyle('card-polish')">Card premium</button>
+        </div>
+      </section>
+
+      <section class="editor-tab-panel" id="editorTabMedia">
+        <div class="editor-field">
+          <label for="editorImageSrc">Imagem selecionada</label>
+          <input type="url" id="editorImageSrc" placeholder="https://..." onchange="editorUpdateSelectedImage()" />
+          <input type="file" id="editorImageFile" accept="image/png,image/jpeg,image/webp,image/gif" onchange="editorUploadSelectedImage(this.files && this.files[0])" style="margin-top:8px" />
+          <div class="editor-hint">Envia PNG, JPG, WebP ou GIF até 5MB para a pasta publicada do site.</div>
+        </div>
+        <div class="editor-field">
+          <label for="editorImageAlt">Alt text</label>
+          <input type="text" id="editorImageAlt" placeholder="Descrição da imagem" onchange="editorUpdateSelectedImage()" />
+        </div>
+        <div class="editor-field">
+          <label for="editorLogoUrl">Trocar logo</label>
+          <input type="url" id="editorLogoUrl" placeholder="https://.../logo.png" />
+          <input type="file" id="editorLogoFile" accept="image/png,image/jpeg,image/webp,image/gif" onchange="editorUploadLogo(this.files && this.files[0])" style="margin-top:8px" />
+          <button class="editor-btn info" style="margin-top:8px;width:100%" onclick="editorApplyLogo()">Aplicar logo</button>
+        </div>
+        <div class="editor-field">
+          <label>Imagens do site</label>
+          <div class="editor-list" id="editorImageList"></div>
+        </div>
+      </section>
+
+      <section class="editor-tab-panel" id="editorTabSections">
+        <div class="editor-field">
+          <label>Adicionar seção</label>
+          <div class="editor-list">
+            <button class="editor-row" onclick="editorAddSection('cta')"><span class="editor-row-main"><span class="editor-row-title">CTA de venda</span><span class="editor-row-sub">Oferta + botão WhatsApp</span></span></button>
+            <button class="editor-row" onclick="editorAddSection('testimonials')"><span class="editor-row-main"><span class="editor-row-title">Depoimentos</span><span class="editor-row-sub">3 provas sociais editáveis</span></span></button>
+            <button class="editor-row" onclick="editorAddSection('faq')"><span class="editor-row-main"><span class="editor-row-title">FAQ</span><span class="editor-row-sub">Perguntas e objeções</span></span></button>
+            <button class="editor-row" onclick="editorAddSection('gallery')"><span class="editor-row-main"><span class="editor-row-title">Galeria</span><span class="editor-row-sub">Grid de imagens</span></span></button>
+            <button class="editor-row" onclick="editorAddSection('services')"><span class="editor-row-main"><span class="editor-row-title">Serviços</span><span class="editor-row-sub">Blocos comerciais</span></span></button>
+            <button class="editor-row" onclick="editorAddSection('hero')"><span class="editor-row-main"><span class="editor-row-title">Hero completo</span><span class="editor-row-sub">Headline, prova e CTA</span></span></button>
+            <button class="editor-row" onclick="editorAddSection('offer')"><span class="editor-row-main"><span class="editor-row-title">Oferta</span><span class="editor-row-sub">Benefícios e chamada</span></span></button>
+            <button class="editor-row" onclick="editorAddSection('pricing')"><span class="editor-row-main"><span class="editor-row-title">Planos</span><span class="editor-row-sub">3 opções editáveis</span></span></button>
+            <button class="editor-row" onclick="editorAddSection('process')"><span class="editor-row-main"><span class="editor-row-title">Processo</span><span class="editor-row-sub">Passo a passo</span></span></button>
+            <button class="editor-row" onclick="editorAddSection('team')"><span class="editor-row-main"><span class="editor-row-title">Equipe</span><span class="editor-row-sub">Pessoas e autoridade</span></span></button>
+            <button class="editor-row" onclick="editorAddSection('contact')"><span class="editor-row-main"><span class="editor-row-title">Contato</span><span class="editor-row-sub">WhatsApp, endereço e horário</span></span></button>
+          </div>
+        </div>
+        <div class="editor-field">
+          <label>Estrutura atual</label>
+          <div class="editor-list" id="editorSectionList"></div>
+        </div>
+      </section>
+
+      <section class="editor-tab-panel" id="editorTabAi">
+        <div class="editor-field">
+          <label for="editorAiScope">Escopo</label>
+          <select id="editorAiScope">
+            <option value="site">Site inteiro</option>
+            <option value="selected">Elemento selecionado</option>
+          </select>
+        </div>
+        <div class="editor-field">
+          <label for="editorAiPrompt">Pedido para IA</label>
+          <textarea id="editorAiPrompt" rows="6" placeholder="Ex: deixe a primeira seção mais premium, troque a copy para academia feminina e destaque o WhatsApp."></textarea>
+          <div class="editor-hint">Consome 1 crédito e salva a alteração no HTML publicado. Depois o editor recarrega o site.</div>
+        </div>
+        <div class="editor-pill-row" style="margin-bottom:12px">
+          <button class="editor-pill" onclick="editorUseAiPreset('copy')">Melhorar copy</button>
+          <button class="editor-pill" onclick="editorUseAiPreset('visual')">Mais premium</button>
+          <button class="editor-pill" onclick="editorUseAiPreset('cta')">CTA forte</button>
+        </div>
+        <button class="editor-btn primary" id="editorAiRunBtn" style="width:100%" onclick="editorRunAiPrompt()">Aplicar pedido com IA</button>
+      </section>
+    </aside>
+
+    <main id="editorCanvasPanel">
+      <div id="editorCanvasBar">
+        <span id="editorSelectedPath">Nenhum elemento selecionado</span>
+        <button class="editor-btn" onclick="editorDuplicateSelected()">Duplicar</button>
+        <button class="editor-btn" onclick="editorMoveSelected('up')">Subir</button>
+        <button class="editor-btn" onclick="editorMoveSelected('down')">Descer</button>
+        <button class="editor-btn danger" onclick="editorDeleteSelected()">Excluir</button>
+      </div>
+      <div id="editorIframeWrap">
+        <iframe id="editorIframe" sandbox="allow-same-origin allow-scripts allow-forms"></iframe>
+        <div id="editorStatus"></div>
+      </div>
+    </main>
+
+    <aside id="editorInspector">
+      <div class="editor-panel-head">
+        <div class="editor-panel-title">Inspector</div>
+        <div class="editor-panel-note" id="editorInspectorHint">Selecione texto, imagem, botão ou seção no canvas.</div>
+      </div>
+      <div class="editor-tab-panel active" id="editorInspectorBody">
+        <div class="editor-empty">Nenhum elemento selecionado.</div>
+      </div>
+    </aside>
+  </div>
+</div>
+<script src="/js/site-editor.js"></script>

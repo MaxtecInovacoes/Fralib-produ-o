@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FraLib - Arquitetura Atual</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 40px; color: #111827; line-height: 1.5; }
+    h1, h2 { margin-bottom: 8px; }
+    code { background: #f3f4f6; padding: 2px 6px; border-radius: 4px; }
+    .flow { display: grid; gap: 10px; max-width: 900px; }
+    .box { border: 1px solid #d1d5db; border-radius: 8px; padding: 12px 14px; background: #fff; }
+    .warn { border-color: #f59e0b; background: #fffbeb; }
+  </style>
+</head>
+<body>
+  <h1>FraLib - Arquitetura Atual</h1>
+  <p>Documento consolidado em 2026-05-25. A fonte operacional curta e <code>AGENTS.md</code>.</p>
+
+  <h2>Pipeline Ativo</h2>
+  <div class="flow">
+    <div class="box">1. Hunter + Keyword Research</div>
+    <div class="box">2. Caio</div>
+    <div class="box">3. Jina + inteligencia de mercado</div>
+    <div class="box">4. Unsplash + Pexels</div>
+    <div class="box">5. Agente de Nicho</div>
+    <div class="box">6. Agente de Variacao</div>
+    <div class="box">7. Arquiteto Mestre</div>
+    <div class="box">8. Skill Renderer</div>
+    <div class="box">9. Quality Gate</div>
+    <div class="box">10. Deploy + health check</div>
+    <div class="box">11. Bryan SDR</div>
+  </div>
+
+  <h2>Servicos</h2>
+  <div class="flow">
+    <div class="box">FastAPI: <code>server.py</code> em <code>:8000</code></div>
+    <div class="box">HTML: Skill Renderer sem rota fallback</div>
+    <div class="box">WhatsApp: meowhats em <code>:3001</code></div>
+    <div class="box">PostgreSQL: <code>localhost:5433/fralib_db</code></div>
+    <div class="box">Worker: PM2 <code>fralib-worker</code></div>
+  </div>
+
+  <h2>Legado Removido</h2>
+  <div class="box warn">A lista acima e a unica fonte valida. Qualquer agente fora dela deve ser tratado como nomenclatura historica.</div>
+</body>
+</html>

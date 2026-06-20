@@ -1,0 +1,16 @@
+{
+  "name": "tenant_pro_com_sdr_simulado",
+  "description": "Pro tenant reaches simulated Franz/SDR after Builder dry-run.",
+  "mode": "dry-run",
+  "fixtures": ["tenant_pro.json", "lead_pizzaria_curitiba.json"],
+  "expected_phases": ["lead_supply", "caio", "market_intel", "site_prompt_agent", "builder_renderer", "deploy_dry_run", "franz_sdr_simulated"],
+  "mocked_systems": ["lead_inventory", "jina_market_intel", "builder_runtime", "deploy_hook", "whatsapp_gateway"],
+  "allowed_capabilities": [],
+  "forbidden_capabilities": ["live_llm", "live_hunter", "live_whatsapp", "live_deploy", "live_mercadopago", "paid_scraper", "external_http"],
+  "safe_commands": [["python", "pipeline.py", "smoke", "--dry-run"]],
+  "pass_criteria": [
+    "SDR is simulated and cannot send WhatsApp.",
+    "Tenant plan allows SDR behavior without bypassing cooldown.",
+    "No live provider key is required."
+  ]
+}

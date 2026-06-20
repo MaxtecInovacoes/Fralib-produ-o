@@ -1,0 +1,156 @@
+<section class="view-section" id="view-uti">
+
+    <div class="period-filters" style="margin-bottom:16px;">
+      <button class="btn-period active" data-period="tudo" onclick="setUtiPeriod('tudo',this)">TUDO</button>
+      <button class="btn-period" data-period="hoje" onclick="setUtiPeriod('hoje',this)">HOJE</button>
+      <button class="btn-period" data-period="semana" onclick="setUtiPeriod('semana',this)">7 DIAS</button>
+      <button class="btn-period" data-period="mes" onclick="setUtiPeriod('mes',this)">MES</button>
+      <input type="text" id="uti-search" placeholder="Buscar empresa..." oninput="renderUTI(_utiDataCache)" style="background:var(--fl-bg-card);border:1px solid var(--fl-border);color:var(--fl-text);padding:6px 12px;border-radius:6px;font-size:13px;min-width:200px;margin-left:8px;">
+      <span id="uti-filter-count" style="color:var(--fl-text-muted);font-size:12px;margin-left:auto;"></span>
+    </div>
+
+    <div class="uti-header">
+      <h2 class="section-title" style="margin:0">&#9888; LEADS &mdash; UTI</h2>
+      <span class="uti-count-badge" id="utiCount">0 leads</span>
+    </div>
+
+    <div style="display:flex;gap:4px;margin-bottom:16px;border-bottom:1px solid var(--fl-border);padding-bottom:0">
+      <button class="uti-tab active" id="uti-tab-falhas" onclick="trocarAbaUTI('falhas')">
+        &#9888; FALHAS DE PIPELINE <span id="badge-falhas" style="background:var(--danger);color:#fff;border-radius:99px;padding:1px 7px;font-size:10px;margin-left:6px">0</span>
+      </button>
+      <button class="uti-tab" id="uti-tab-descartados" onclick="trocarAbaUTI('descartados')">
+        &#9995; DESCARTADOS PELO CAIO <span id="badge-descartados" style="background:var(--fl-text-dim);color:#fff;border-radius:99px;padding:1px 7px;font-size:10px;margin-left:6px">0</span>
+      </button>
+      <button class="uti-tab" id="uti-tab-incompletos" onclick="trocarAbaUTI('incompletos')">
+        &#128269; REVISÃO MANUAL <span id="badge-incompletos" style="background:#9333ea;color:#fff;border-radius:99px;padding:1px 7px;font-size:10px;margin-left:6px">0</span>
+      </button>
+      <button class="uti-tab" id="uti-tab-fila" onclick="trocarAbaUTI('fila')">
+        &#9654; FILA DE PROCESSAMENTO <span id="badge-fila" style="background:#06b6d4;color:#fff;border-radius:99px;padding:1px 7px;font-size:10px;margin-left:6px">0</span>
+      </button>
+      <button class="uti-tab" id="uti-tab-pipeline" onclick="trocarAbaUTI('pipeline')">
+        &#128680; PIPELINE TRAVADO <span id="badge-pipeline" style="background:#ef4444;color:#fff;border-radius:99px;padding:1px 7px;font-size:10px;margin-left:6px">0</span>
+      </button>
+    </div>
+
+    <!-- Painel: Falhas de Pipeline -->
+    <div id="uti-painel-falhas">
+      <p class="uti-desc">Leads que entraram no pipeline mas travaram por erro t&eacute;cnico. Clique em <strong>&#9654; REPROCESSAR</strong> para tentar novamente.</p>
+      <div class="uti-table-wrap">
+        <table class="uti-table">
+          <thead><tr><th>NOME</th><th>NICHO</th><th>CIDADE</th><th>MOTIVO</th><th>SITE</th><th>A&Ccedil;&Atilde;O</th></tr></thead>
+          <tbody id="utiTableBody"><tr><td colspan="6"><div class="uti-empty">CARREGANDO...</div></td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Painel: Descartados pelo Caio -->
+    <div id="uti-painel-descartados" style="display:none">
+      <p class="uti-desc">Leads rejeitados pelo Caio na entrada &mdash; dados insuficientes ou fora do perfil. Enrique&ccedil;a os dados manualmente e clique em <strong>&#9995; QUALIFICAR</strong> para for&ccedil;ar pelo pipeline.</p>
+      <div class="uti-table-wrap">
+        <table class="uti-table">
+          <thead><tr><th>NOME</th><th>NICHO</th><th>CIDADE</th><th>TELEFONE</th><th>A&Ccedil;&Atilde;O</th></tr></thead>
+          <tbody id="utiDescartadosBody"><tr><td colspan="5"><div class="uti-empty">CARREGANDO...</div></td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Painel: Revisão Manual (2.1) -->
+    <div id="uti-painel-incompletos" style="display:none">
+      <p class="uti-desc">Leads rejeitados ou com dados incompletos (score &lt; 20, sem nome ou telefone). Corrija os dados e aprove manualmente para o pipeline.</p>
+      <div class="uti-table-wrap">
+        <table class="uti-table">
+          <thead>
+            <tr>
+              <th>NOME</th><th>NICHO</th><th>CIDADE</th><th>TELEFONE</th><th>SCORE</th><th>STATUS</th><th>A&Ccedil;&Atilde;O</th>
+            </tr>
+          </thead>
+          <tbody id="utiIncompletosBody">
+            <tr><td colspan="7"><div class="uti-empty">CARREGANDO...</div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Painel: Pipeline travado (falhas persistentes) -->
+    <div id="uti-painel-pipeline" style="display:none">
+      <p class="uti-desc">Jobs que falharam ap&oacute;s tentativas autom&aacute;ticas e precisam de reprocessamento manual. O sistema retoma do <strong>checkpoint</strong>, economizando tokens.</p>
+      <div class="uti-table-wrap">
+        <table class="uti-table">
+          <thead><tr><th>LEAD</th><th>FASE</th><th>MOTIVO</th><th>TENTATIVAS</th><th>QUANDO</th><th>A&Ccedil;&Atilde;O</th></tr></thead>
+          <tbody id="utiPipelineBody"><tr><td colspan="6"><div class="uti-empty">CARREGANDO...</div></td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Painel: Fila de Processamento (2.2) -->
+    <div id="uti-painel-fila" style="display:none">
+      <p class="uti-desc">Leads qualificados aguardando processamento pelo pipeline. A ordem &eacute; por data de captura (FIFO).</p>
+      <div class="uti-table-wrap">
+        <table class="uti-table">
+          <thead>
+            <tr>
+              <th>#</th><th>NOME</th><th>NICHO</th><th>CIDADE</th><th>SCORE</th><th>TIER</th><th>STATUS</th><th>CAPTURADO EM</th>
+            </tr>
+          </thead>
+          <tbody id="utiFilaBody">
+            <tr><td colspan="8"><div class="uti-empty">CARREGANDO...</div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- Modal de confirmação de deleção (2.3) -->
+  <div id="modalConfirmDelete" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9999;align-items:center;justify-content:center;">
+    <div style="background:#0a0a0f;border:1px solid #ef4444;border-radius:12px;padding:32px;max-width:420px;width:90%;text-align:center;">
+      <div style="font-size:2rem;margin-bottom:12px;">&#9888;</div>
+      <h3 style="color:#ef4444;margin-bottom:8px;font-family:var(--fl-font-brand);letter-spacing:1px;">DELETAR LEAD</h3>
+      <p style="color:var(--fl-text-muted);margin-bottom:6px;" id="confirmDeleteNome"></p>
+      <p style="color:#ef4444;font-size:12px;margin-bottom:24px;">Esta a&ccedil;&atilde;o n&atilde;o pode ser desfeita.</p>
+      <div style="display:flex;gap:12px;justify-content:center;">
+        <button onclick="fecharConfirmDelete()" style="background:var(--fl-bg-card);border:1px solid var(--fl-border);color:var(--fl-text-muted);padding:10px 24px;border-radius:8px;cursor:pointer;font-family:var(--fl-font-brand);">CANCELAR</button>
+        <button onclick="confirmarDeletarLead()" style="background:#ef4444;border:none;color:#fff;padding:10px 24px;border-radius:8px;cursor:pointer;font-family:var(--fl-font-brand);letter-spacing:1px;">SIM, DELETAR</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de edição de campos do lead incompleto (2.1) -->
+  <div id="modalEditarCampos" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9998;align-items:center;justify-content:center;">
+    <div style="background:#0a0a0f;border:1px solid #9333ea;border-radius:12px;padding:28px;max-width:480px;width:90%;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+        <h3 style="color:var(--fl-text);font-family:var(--fl-font-brand);letter-spacing:1px;margin:0;">EDITAR CAMPOS DO LEAD</h3>
+        <button onclick="fecharModalEditarCampos()" style="background:none;border:none;color:var(--fl-text-muted);font-size:20px;cursor:pointer;">&times;</button>
+      </div>
+      <input type="hidden" id="editCamposLeadId">
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div>
+          <label style="font-size:11px;color:var(--fl-text-muted);font-family:var(--fl-font-brand);letter-spacing:1px;display:block;margin-bottom:4px;">NOME DA EMPRESA</label>
+          <input type="text" id="editCamposNome" style="width:100%;background:var(--fl-bg-card);border:1px solid var(--fl-border);color:var(--fl-text);padding:8px 12px;border-radius:6px;font-size:13px;box-sizing:border-box;">
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--fl-text-muted);font-family:var(--fl-font-brand);letter-spacing:1px;display:block;margin-bottom:4px;">TELEFONE</label>
+          <input type="text" id="editCamposTelefone" style="width:100%;background:var(--fl-bg-card);border:1px solid var(--fl-border);color:var(--fl-text);padding:8px 12px;border-radius:6px;font-size:13px;font-family:var(--fl-font-mono);box-sizing:border-box;">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div>
+            <label style="font-size:11px;color:var(--fl-text-muted);font-family:var(--fl-font-brand);letter-spacing:1px;display:block;margin-bottom:4px;">SEGMENTO</label>
+            <input type="text" id="editCamposSegmento" style="width:100%;background:var(--fl-bg-card);border:1px solid var(--fl-border);color:var(--fl-text);padding:8px 12px;border-radius:6px;font-size:13px;box-sizing:border-box;">
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--fl-text-muted);font-family:var(--fl-font-brand);letter-spacing:1px;display:block;margin-bottom:4px;">CIDADE</label>
+            <input type="text" id="editCamposCidade" style="width:100%;background:var(--fl-bg-card);border:1px solid var(--fl-border);color:var(--fl-text);padding:8px 12px;border-radius:6px;font-size:13px;box-sizing:border-box;">
+          </div>
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--fl-text-muted);font-family:var(--fl-font-brand);letter-spacing:1px;display:block;margin-bottom:4px;">OBSERVA&Ccedil;&Atilde;O</label>
+          <textarea id="editCamposObs" style="width:100%;background:var(--fl-bg-card);border:1px solid var(--fl-border);color:var(--fl-text);padding:8px 12px;border-radius:6px;font-size:13px;resize:vertical;min-height:60px;box-sizing:border-box;"></textarea>
+        </div>
+        <div id="editCamposStatus" style="display:none;padding:8px 12px;border-radius:6px;font-size:12px;"></div>
+        <div style="display:flex;gap:8px;margin-top:4px;">
+          <button onclick="fecharModalEditarCampos()" style="flex:1;background:var(--fl-bg-card);border:1px solid var(--fl-border);color:var(--fl-text-muted);padding:10px;border-radius:6px;cursor:pointer;font-family:var(--fl-font-brand);">CANCELAR</button>
+          <button onclick="salvarCamposLead()" style="flex:2;background:#9333ea;border:none;color:#fff;padding:10px;border-radius:6px;cursor:pointer;font-family:var(--fl-font-brand);letter-spacing:1px;">SALVAR ALTERA&Ccedil;&Otilde;ES</button>
+        </div>
+      </div>
+    </div>
+  </div>

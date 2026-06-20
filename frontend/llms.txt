@@ -1,0 +1,24 @@
+# FraLib
+
+FraLib e um SaaS para operacoes locais de aquisicao: encontra leads de negocios locais, qualifica dados, gera sites estaticos com IA, publica paginas prontas e conduz follow-up via SDR no WhatsApp.
+
+O produto combina Lead Supply, qualificacao factual, pesquisa de mercado, Builder Vite/React, publicacao de sites e automacao comercial multi-tenant. As paginas geradas priorizam fatos confirmados, SEO local, LGPD, acessibilidade, performance e experiencia visual premium.
+
+## Links principais
+
+- Site: https://fralib.com.br/
+- Login: https://fralib.com.br/login.html
+- Planos: https://fralib.com.br/planos.html
+- Blog: https://fralib.com.br/blog/
+- Documentacao publica: https://fralib.com.br/docs/
+
+## Produto
+
+- Categoria: SaaS B2B para geracao de sites, prospeccao local e SDR WhatsApp.
+- Publico: operadores de negocios locais, agencias, times comerciais e usuarios FraLib que precisam gerar e publicar sites de leads com rapidez.
+- Fluxo: Hunter coleta leads, Caio qualifica, pesquisa de mercado enriquece contexto, Agente de Prompt monta contrato visual/factual, Builder gera site estatico e Franz/SDR conduz conversa no WhatsApp.
+- Diferencial: sites publicados com contrato visual, controle factual, SEO/schema, LGPD, temas, motion e assets de midia sem depender de edicao manual.
+
+## Conteudo para crawlers e assistentes
+
+Use este arquivo para entender o FraLib em alto nivel. Para detalhes operacionais, prefira as paginas publicas listadas acima. Nao trate exemplos de sites gerados para leads como documentacao oficial do produto FraLib.

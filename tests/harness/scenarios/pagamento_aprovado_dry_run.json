@@ -1,0 +1,16 @@
+{
+  "name": "pagamento_aprovado_dry_run",
+  "description": "Mercado Pago approved payment reconciliation is represented only by a dry-run fixture.",
+  "mode": "dry-run",
+  "fixtures": ["tenant_pro.json", "payment_approved_dry_run.json"],
+  "expected_phases": ["payment_dry_run"],
+  "mocked_systems": ["mercadopago_api", "credit_ledger"],
+  "allowed_capabilities": [],
+  "forbidden_capabilities": ["live_llm", "live_hunter", "live_whatsapp", "live_deploy", "live_mercadopago", "paid_scraper", "external_http"],
+  "safe_commands": [["python", "scripts/vps_reconcile_mercadopago_payments.py", "--hours", "24", "--dry-run", "--fixture-json", "tests/harness/fixtures/payment_approved_dry_run.json"]],
+  "pass_criteria": [
+    "Only approved fixture metadata is inspected.",
+    "No --apply reconciliation command is allowed.",
+    "No real Mercado Pago access token is required."
+  ]
+}
