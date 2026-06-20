@@ -661,6 +661,8 @@ function renderHermesSnapshot(d){
   const payments = (d.payments || {}).last_24h || {};
   const providers = (d.providers || {}).alerts_24h || {};
   const pm2 = d.pm2 || {};
+  const services = d.services || [];  // Novo: lista canonica (systemd OU pm2)
+  const primaryRuntime = d.primary_runtime || (pm2.status === 'ok' ? 'pm2' : 'systemd');
   const redis = d.redis || {};
   const api = d.api || {};
   const whatsapp = d.whatsapp || {};
@@ -670,7 +672,16 @@ function renderHermesSnapshot(d){
   const stale = (jobs.stale_running || []).filter(r => !r.error).length;
   const qRows = queue.by_status || [];
   const qActive = qRows.reduce((sum, r) => sum + Number(r.total || 0), 0);
-  const processes = (pm2.processes || []).filter(p => ['fralib','fralib-worker','meowhats','fralib-franz-worker'].includes(p.name));
+
+  // Aceita tanto formato novo (services[]) quanto legado (pm2.processes[])
+  const serviceItems = services.length > 0
+    ? services
+    : (pm2.processes || []).filter(p => ['fralib','fralib-worker','meowhats','fralib-franz-worker'].includes(p.name));
+
+  // Cor baseada no runtime primario
+  const runtimeLabel = primaryRuntime === 'systemd' ? 'systemd' : primaryRuntime === 'pm2' ? 'PM2' : 'offline';
+  const runtimeColor = primaryRuntime === 'systemd' ? '#10b981' : primaryRuntime === 'pm2' ? '#f59e0b' : '#ef4444';
+
   document.getElementById('hermes-summary').innerHTML = `
     <div class="metric-card"><div class="metric-label">API</div><div class="metric-value" style="font-size:16px">${hermesStatusPill(api.status)}</div><div class="metric-sub">${api.code||'sem codigo'} · ${api.latency_ms||0}ms</div></div>
     <div class="metric-card"><div class="metric-label">Redis</div><div class="metric-value" style="font-size:16px">${hermesStatusPill(redis.status)}</div><div class="metric-sub">${redis.latency_ms!=null ? redis.latency_ms+'ms' : escapeHtml(redis.message||'')}</div></div>
@@ -679,7 +690,7 @@ function renderHermesSnapshot(d){
     <div class="metric-card"><div class="metric-label">Fila visivel</div><div class="metric-value">${qActive}</div><div class="metric-sub">${escapeHtml((queue.oldest_active||{}).status||'sem ativo')}</div></div>
     <div class="metric-card"><div class="metric-label">Mercado Pago 24h</div><div class="metric-value">${payments.total||0}</div><div class="metric-sub">${payments.processed||0} OK · ${payments.errors||0} erros</div></div>
     <div class="metric-card"><div class="metric-label">Providers 24h</div><div class="metric-value">${providers.total||0}</div><div class="metric-sub">${providers.open||0} abertos</div></div>
-    <div class="metric-card"><div class="metric-label">PM2</div><div class="metric-value" style="font-size:16px">${hermesStatusPill(pm2.status)}</div><div class="metric-sub">${processes.map(p => escapeHtml(p.name)+': '+escapeHtml(p.status)).join(' · ') || escapeHtml(pm2.error||'')}</div></div>
+    <div class="metric-card"><div class="metric-label" style="display:flex;justify-content:space-between"><span>Servicos</span><span style="font-size:10px;background:${runtimeColor};color:#fff;padding:1px 6px;border-radius:4px">${runtimeLabel}</span></div><div class="metric-value" style="font-size:13px">${serviceItems.length} ativos</div><div class="metric-sub" style="font-size:11px;line-height:1.4">${serviceItems.slice(0,5).map(s => `<span title="${s.runtime||''}">${escapeHtml(s.name)}: <strong style="color:${s.status==='active'||s.status==='online'?'#10b981':s.status==='failed'?'#ef4444':'#f59e0b'}">${escapeHtml(s.status)}</strong></span>`).join(' &middot; ') || escapeHtml(pm2.error||'sem dados')}</div></div>
   `;
   const diagnostics = d.diagnostics || [];
   const diagEl = document.getElementById('hermes-diagnostics');

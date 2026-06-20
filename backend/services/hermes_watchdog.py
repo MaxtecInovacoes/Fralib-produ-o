@@ -32,6 +32,64 @@ SAFE_PM2_RESTARTS = {
     ("pm2", "restart", "meowhats"),
 }
 
+# Mapeamento PM2 legacy -> systemd canonical (auto-detect)
+PM2_TO_SYSTEMD = {
+    "fralib": "fralib-api",
+    "fralib-worker": "fralib-worker",
+    "fralib-franz-worker": "fralib-franz",
+    "fralib-wpp-listener": "fralib-wpp-listener",
+    "fralib-hermes-watchdog": "fralib-hermes",
+    "meowhats": "whatsmeow",  # whatsmeow fica como esta (ja em systemd)
+}
+
+
+def _detect_runtime() -> str:
+    """Detecta runtime primario: systemd, pm2 ou none."""
+    import shutil
+    if shutil.which("systemctl"):
+        try:
+            import subprocess
+            r = subprocess.run(
+                ["systemctl", "list-unit-files", "fralib-*.service", "--no-legend"],
+                capture_output=True, text=True, timeout=5
+            )
+            if r.stdout.strip():
+                return "systemd"
+        except Exception:
+            pass
+    if shutil.which("pm2"):
+        return "pm2"
+    return "none"
+
+
+def _build_restart_command(legacy_pm2_name: str) -> list[str]:
+    """Constroi comando de restart usando systemd OU pm2 (auto-detect).
+
+    Args:
+        legacy_pm2_name: nome antigo (PM2) - ex: 'fralib', 'fralib-worker'
+
+    Returns:
+        Lista com comando - ex: ['systemctl', 'restart', 'fralib-api']
+                              ou ['pm2', 'restart', 'fralib']
+    """
+    runtime = _detect_runtime()
+    if runtime == "systemd":
+        canonical = PM2_TO_SYSTEMD.get(legacy_pm2_name, legacy_pm2_name)
+        return ["systemctl", "restart", canonical]
+    else:
+        # Fallback PM2 (mantem comportamento legado)
+        return ["pm2", "restart", legacy_pm2_name]
+
+
+def _safe_restart_commands(legacy_pm2_names: list[str]) -> list[tuple]:
+    """Versao auto-detect do SAFE_PM2_RESTARTS (tuplas para guardrail)."""
+    runtime = _detect_runtime()
+    result = set()
+    for legacy_name in legacy_pm2_names:
+        cmd = tuple(_build_restart_command(legacy_name))
+        result.add(cmd)
+    return result
+
 DANGEROUS_PATTERNS = [
     r"\bscp\b",
     r"\brsync\b",
@@ -693,7 +751,7 @@ def auto_remediate_diagnostics(
             results.append(
                 execute_guarded_action(
                     db,
-                    command=["pm2", "restart", "fralib"],
+                    command=_build_restart_command("fralib"),
                     trigger=incident,
                     source=source,
                     actor_id=actor_id,
@@ -703,7 +761,7 @@ def auto_remediate_diagnostics(
             results.append(
                 execute_guarded_action(
                     db,
-                    command=["pm2", "restart", "meowhats"],
+                    command=_build_restart_command("meowhats"),
                     trigger=incident,
                     source=source,
                     actor_id=actor_id,
@@ -716,7 +774,7 @@ def auto_remediate_diagnostics(
                     results.append(
                         execute_guarded_action(
                             db,
-                            command=["pm2", "restart", name],
+                            command=_build_restart_command(name),
                             trigger=incident,
                             source=source,
                             actor_id=actor_id,
