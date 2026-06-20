@@ -6,17 +6,16 @@ Cobre as operações CRUD dos leads:
 - Listagem de leads
 - Deleção de lead
 """
-import pytest
 import os
 import sys
-from unittest.mock import MagicMock, patch, AsyncMock
-from datetime import datetime
+from unittest.mock import MagicMock, patch
+
+import pytest
+from sqlalchemy import text
 
 # Setup path
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, os.path.join(ROOT, 'backend'))
-
-from sqlalchemy import text
 
 
 class TestLeadManualCreation:
@@ -24,8 +23,8 @@ class TestLeadManualCreation:
 
     def test_criar_lead_manual_sem_briefing_retorna_lead_id(self, db_session, test_user):
         """Criação de lead sem briefing deve retornar lead_id sem job_id."""
-        from backend.endpoints.leads_endpoints import criar_lead_manual, LeadManualRequest
-        from unittest.mock import AsyncMock, MagicMock
+        from backend.endpoints.leads_crud import criar_lead_manual
+        from backend.endpoints.leads_crud_models import LeadManualRequest
 
         req = LeadManualRequest(
             nome="João Silva",
@@ -64,7 +63,8 @@ class TestLeadManualCreation:
 
     def test_criar_lead_manual_com_briefing_retorna_job_id(self, db_session, test_user):
         """Criação de lead com briefing deve retornar job_id para o pipeline."""
-        from backend.endpoints.leads_endpoints import criar_lead_manual, LeadManualRequest
+        from backend.endpoints.leads_crud import criar_lead_manual
+        from backend.endpoints.leads_crud_models import LeadManualRequest
 
         req = LeadManualRequest(
             nome="Maria Santos",
@@ -78,7 +78,7 @@ class TestLeadManualCreation:
         mock_bg = MagicMock()
 
         # Mock do job_queue para não falhar
-        with patch('backend.endpoints.leads_endpoints.job_queue') as mock_jq:
+        with patch('backend.endpoints.leads_crud.job_queue') as mock_jq:
             mock_jq.enqueue.return_value = "job-123-abc"
 
             result = criar_lead_manual(
@@ -95,7 +95,8 @@ class TestLeadManualCreation:
 
     def test_criar_lead_com_telefone_vazio_usa_telefone_como_whatsapp(self, db_session, test_user):
         """Quando whatsapp não é fornecido, deve usar o telefone como whatsapp."""
-        from backend.endpoints.leads_endpoints import criar_lead_manual, LeadManualRequest
+        from backend.endpoints.leads_crud import criar_lead_manual
+        from backend.endpoints.leads_crud_models import LeadManualRequest
 
         req = LeadManualRequest(
             nome="Pedro Costa",
@@ -130,7 +131,7 @@ class TestLeadDeletion:
 
     def test_deletar_lead_existente_retorna_sucesso(self, db_session, test_user):
         """Deleção de lead existente deve retornar sucesso."""
-        from backend.endpoints.leads_endpoints import deletar_lead
+        from backend.endpoints.leads_crud import deletar_lead
 
         # Criar lead primeiro
         lead_id = "lead-test-delete-123"
@@ -162,7 +163,8 @@ class TestLeadDeletion:
     def test_deletar_lead_inexistente_retorna_404(self, db_session, test_user):
         """Deleção de lead inexistente deve retornar 404."""
         from fastapi import HTTPException
-        from backend.endpoints.leads_endpoints import deletar_lead
+
+        from backend.endpoints.leads_crud import deletar_lead
 
         with pytest.raises(HTTPException) as exc_info:
             deletar_lead(
@@ -176,7 +178,7 @@ class TestLeadDeletion:
 
     def test_deletar_lead_remove_interacoes_relacionadas(self, db_session, test_user):
         """Deleção de lead deve remover interações associadas."""
-        from backend.endpoints.leads_endpoints import deletar_lead
+        from backend.endpoints.leads_crud import deletar_lead
 
         # Criar lead e interações
         lead_id = "lead-with-interacoes"
@@ -225,7 +227,7 @@ class TestLeadUpdate:
 
     def test_atualizar_lead_campos_permitidos(self, db_session, test_user):
         """Atualização deve aceitar apenas campos permitidos."""
-        from backend.endpoints.leads_endpoints import atualizar_lead
+        from backend.endpoints.leads_crud import atualizar_lead
 
         # Criar lead
         lead_id = "lead-para-atualizar"
@@ -257,7 +259,7 @@ class TestLeadUpdate:
 
     def test_atualizar_lead_sem_campos_retorna_ok(self, db_session, test_user):
         """Atualização sem campos deve retornar ok sem modificar nada."""
-        from backend.endpoints.leads_endpoints import atualizar_lead
+        from backend.endpoints.leads_crud import atualizar_lead
 
         lead_id = "lead-sem-campos"
         db_session.execute(
@@ -287,7 +289,7 @@ class TestLeadUpdate:
 
     def test_atualizar_lead_alias_whatsapp(self, db_session, test_user):
         """Campo 'whatsapp' deve ser mapeado para 'telefone_whatsapp'."""
-        from backend.endpoints.leads_endpoints import atualizar_lead
+        from backend.endpoints.leads_crud import atualizar_lead
 
         lead_id = "lead-whatsapp-alias"
         db_session.execute(
@@ -332,7 +334,7 @@ class TestLeadListing:
         )
         db_session.commit()
 
-        from backend.endpoints.leads_endpoints import get_leads_capturados
+        from backend.endpoints.leads_queries import get_leads_capturados
 
         result = get_leads_capturados(db=db_session, usuario=test_user)
 
@@ -355,7 +357,7 @@ class TestLeadListing:
         )
         db_session.commit()
 
-        from backend.endpoints.leads_endpoints import get_leads_incompletos
+        from backend.endpoints.leads_queries import get_leads_incompletos
 
         result = get_leads_incompletos(db=db_session, usuario=test_user)
 
@@ -370,7 +372,7 @@ class TestLeadStatusTransitions:
 
     def test_aprovar_lead_pipeline_muda_status_para_qualificado(self, db_session, test_user):
         """Aprovação manual deve mudar status para 'qualificado'."""
-        from backend.endpoints.leads_endpoints import aprovar_lead_pipeline
+        from backend.endpoints.leads_crud import aprobar_lead_pipeline
 
         lead_id = "lead-para-aprovar"
         db_session.execute(
@@ -400,7 +402,7 @@ class TestLeadStatusTransitions:
 
     def test_descartar_lead_muda_status_para_descartado(self, db_session, test_user):
         """Descartar lead deve mudar status para 'descartado'."""
-        from backend.endpoints.leads_endpoints import descartar_lead
+        from backend.endpoints.leads_queries import descartar_lead
 
         lead_id = "lead-para-descartar"
         db_session.execute(
@@ -433,7 +435,8 @@ class TestLeadFeedback:
 
     def test_registrar_feedback_convertido_atualiza_status(self, db_session, test_user):
         """Feedback 'convertido' deve atualizar status do lead."""
-        from backend.endpoints.leads_endpoints import registrar_feedback, FeedbackRequest
+        from backend.endpoints.leads_crud_models import FeedbackRequest
+        from backend.endpoints.leads_crud_sdr import registrar_feedback
 
         lead_id = "lead-para-feedback"
         db_session.execute(
@@ -466,7 +469,9 @@ class TestLeadFeedback:
     def test_registrar_feedback_resultado_invalido_retorna_erro(self, db_session, test_user):
         """Feedback com resultado inválido deve retornar erro 400."""
         from fastapi import HTTPException
-        from backend.endpoints.leads_endpoints import registrar_feedback, FeedbackRequest
+
+        from backend.endpoints.leads_crud_models import FeedbackRequest
+        from backend.endpoints.leads_crud_sdr import registrar_feedback
 
         lead_id = "lead-feedback-invalido"
         db_session.execute(
