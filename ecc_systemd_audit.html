@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>ECC systemd Audit</title>
+<style>
+body{font-family:-apple-system,system-ui,sans-serif;background:#0f172a;color:#e2e8f0;margin:0;padding:32px}
+.container{max-width:900px;margin:0 auto}
+h1{color:#fff;margin:0 0 8px}
+.subtitle{color:#94a3b8;margin:0 0 32px}
+.summary{background:#10b981;color:#fff;padding:24px;border-radius:12px;margin-bottom:32px;font-size:24px;font-weight:600;text-align:center}
+.check{background:#1e293b;border-radius:8px;padding:16px 20px;margin-bottom:12px;border-left:4px solid #10b981}
+.check.fail{border-left-color:#ef4444}
+.check h3{margin:0 0 8px;color:#fff;display:flex;align-items:center;gap:8px}
+.badge{background:#10b981;color:#fff;font-size:12px;padding:2px 8px;border-radius:4px}
+.badge.fail{background:#ef4444}
+.evidence{background:#0f172a;padding:12px;border-radius:6px;font-family:monospace;font-size:13px;color:#94a3b8;margin-top:8px;word-break:break-all}
+.footer{margin-top:32px;text-align:center;color:#64748b;font-size:13px}
+</style></head><body>
+<div class="container">
+<h1>ECC Loop - Auditoria systemd</h1>
+<p class="subtitle">FraLib PM2 -> systemd migration - 2026-06-20 19:56:06</p>
+<div class="summary">12/12 checks passaram</div>
+<div class="check"><h3>OK 5 service files instalados <span class="badge">PASS</span></h3><div class="evidence">6 arquivos em /etc/systemd/system/</div></div><div class="check"><h3>OK Sintaxe systemd valida <span class="badge">PASS</span></h3><div class="evidence">OK</div></div><div class="check"><h3>OK EnvironmentFile gerado <span class="badge">PASS</span></h3><div class="evidence">/etc/fralib/fralib.env: 33 linhas</div></div><div class="check"><h3>OK Permissions 600 (secrets) <span class="badge">PASS</span></h3><div class="evidence">chmod 600 em fralib.env</div></div><div class="check"><h3>OK Boot order configuravel <span class="badge">PASS</span></h3><div class="evidence">After= fralib-api, fralib-worker, etc</div></div><div class="check"><h3>OK Helper env-from-dotenv.py <span class="badge">PASS</span></h3><div class="evidence">/root/fralib/infra/systemd/env-from-dotenv.py</div></div><div class="check"><h3>OK systemd_install.sh executavel <span class="badge">PASS</span></h3><div class="evidence">/root/fralib/scripts/systemd_install.sh</div></div><div class="check"><h3>OK systemd_uninstall.sh executavel <span class="badge">PASS</span></h3><div class="evidence">/root/fralib/scripts/systemd_uninstall.sh</div></div><div class="check"><h3>OK migrate_pm2_to_systemd.sh executavel <span class="badge">PASS</span></h3><div class="evidence">/root/fralib/scripts/migrate_pm2_to_systemd.sh</div></div><div class="check"><h3>OK PM2 dump.pm2 preservado (rollback) <span class="badge">PASS</span></h3><div class="evidence">/root/.pm2/dump.pm2</div></div><div class="check"><h3>OK Helper Python valido <span class="badge">PASS</span></h3><div class="evidence">AST parse sem erros</div></div><div class="check"><h3>OK Spec formal criada <span class="badge">PASS</span></h3><div class="evidence">docs/specs/SPEC_systemd_migration.md</div></div>
+<div class="footer">ECC Loop - Playwright Evidence - 2026-06-20 19:56:06</div>
+</div></body></html>
