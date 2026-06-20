@@ -3134,6 +3134,7 @@ async def _executar_pipeline_a_partir_fase2(state, tenant_id, config):
             render_site_with_builder=render_site_with_builder,
             _persist_failed_renderer_html=_persist_failed_renderer_html,
             _skip_html_quality_gate=_skip_html_quality_gate,
+            _skip_deterministic_gate=_skip_deterministic_gate,
             _tenant_sdr_allowed=_tenant_sdr_allowed,
             trial_credit_waits_for_sdr_delivery=trial_credit_waits_for_sdr_delivery,
             consumir_credito_diario=consumir_credito_diario,
