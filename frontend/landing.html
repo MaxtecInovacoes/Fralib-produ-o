@@ -226,7 +226,7 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
    HERO
    ============================================================ */
 .hero{
-  min-height:100vh;
+  min-height:min(100vh,100dvh);
   display:flex;flex-direction:column;align-items:center;justify-content:center;
   text-align:center;padding:140px 24px 80px;
   position:relative;overflow:hidden;
@@ -1112,6 +1112,7 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
 
 </head>
 <body>
+<a class="skip-link" href="#main">Pular para o conteúdo</a>
 <div id="particles-js"></div>
 
 <!-- PARTICLES CANVAS -->
@@ -1681,46 +1682,51 @@ function toggleTheme() {
 if(localStorage.getItem('fralib_theme') === 'light') toggleTheme();
 tBtn.addEventListener('click', toggleTheme);
 
-// --- Particles JS Init ---
+// --- Particles JS Init (with reduced-motion check) ---
 const initLightColors = ["#4c1d9e", "#00cc8e", "#eab308"];
 const initDarkColors  = ["#ffffff", "#dcdcdc", "#a855f7"];
-particlesJS("particles-js", {
-  "particles": {
-    "number": { "value": 250, "density": { "enable": true, "value_area": 1000 } },
-    "color": { "value": document.body.classList.contains('light-mode') ? initLightColors : initDarkColors },
-    "shape": { "type": "circle" },
-    "opacity": {
-      "value": 0.4,
-      "random": true,
-      "anim": { "enable": true, "speed": 1, "opacity_min": 0.1, "sync": false }
+
+// Only initialize particles if user hasn't requested reduced motion
+const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+if (!prefersReducedMotion && typeof particlesJS !== 'undefined') {
+  particlesJS("particles-js", {
+    "particles": {
+      "number": { "value": 250, "density": { "enable": true, "value_area": 1000 } },
+      "color": { "value": document.body.classList.contains('light-mode') ? initLightColors : initDarkColors },
+      "shape": { "type": "circle" },
+      "opacity": {
+        "value": 0.4,
+        "random": true,
+        "anim": { "enable": true, "speed": 1, "opacity_min": 0.1, "sync": false }
+      },
+      "size": {
+        "value": 2,
+        "random": true,
+         "anim": { "enable": true, "speed": 2, "size_min": 0.3, "sync": false }
+      },
+      "line_linked": {
+        "enable": false
+      },
+      "move": {
+        "enable": true,
+        "speed": 0.3,
+        "direction": "none",
+        "random": true,
+        "straight": false,
+        "out_mode": "out",
+        "bounce": false
+      }
     },
-    "size": {
-      "value": 2,
-      "random": true,
-       "anim": { "enable": true, "speed": 2, "size_min": 0.3, "sync": false }
+    "interactivity": {
+      "detect_on": "window",
+      "events": {
+        "onhover": { "enable": false },
+        "onclick": { "enable": false }
+      }
     },
-    "line_linked": {
-      "enable": false
-    },
-    "move": {
-      "enable": true,
-      "speed": 0.3,
-      "direction": "none",
-      "random": true,
-      "straight": false,
-      "out_mode": "out",
-      "bounce": false
-    }
-  },
-  "interactivity": {
-    "detect_on": "window",
-    "events": {
-      "onhover": { "enable": false },
-      "onclick": { "enable": false }
-    }
-  },
-  "retina_detect": true
-});
+    "retina_detect": true
+  });
+}
   </script>
 <script src="/js/fralib-tracker.js" defer></script>
 </body>

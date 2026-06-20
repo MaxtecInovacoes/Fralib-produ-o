@@ -66,7 +66,7 @@ src="https://www.facebook.com/tr?id=1022692323751129&ev=PageView&noscript=1"
 
   --fl-text:       #f0f0f5;
   --fl-text-muted: #8888a0;
-  --fl-text-dim:   #44445a;
+  --fl-text-dim:   #5a5a70;
   --fl-text-brand: #c084fc;
 
   --fl-success:  #22c55e;
@@ -95,6 +95,12 @@ src="https://www.facebook.com/tr?id=1022692323751129&ev=PageView&noscript=1"
   --gold-dim:  rgba(255,184,0,0.15);
   --gold-glow: rgba(255,184,0,0.35);
 }
+:focus-visible{outline:2px solid #9333ea;outline-offset:2px}
+
+/* ============================================================
+   SKIP LINK (WCAG 2.4.1)
+   ============================================================ */
+.skip-link{position:absolute;top:-40px;left:0;background:#9333ea;color:#fff;padding:8px 16px;z-index:9999;transition:top .2s}.skip-link:focus{top:0}
 
 /* ============================================================
    RESET
