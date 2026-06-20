@@ -4,6 +4,8 @@ Padrão: Agent Routing / Model Gateway
 Classifica lead → decide modelo/tokens/temperature por agente.
 """
 
+from contextvars import ContextVar
+from typing import Optional
 
 NICHOS_PREMIUM = [
     "restaurante", "hotel", "clinica_estetica", "arquitetura",
@@ -106,15 +108,15 @@ class AgentRouter:
 
 
 # ══════════════════════════════════════════════════════════════
-# THREAD-LOCAL ROUTER — call_claude consulta automaticamente
+# CONTEXT-VAR ROUTER — call_claude consulta automaticamente
+# Suporta async/await corretamente (threading.local não funciona com asyncio)
 # ══════════════════════════════════════════════════════════════
-import threading
-_thread_local = threading.local()
+_router_ctx: ContextVar[Optional["AgentRouter"]] = ContextVar("router", default=None)
 
 
-def set_router(router):
-    _thread_local.router = router
+def set_router(router: "AgentRouter") -> None:
+    _router_ctx.set(router)
 
 
-def get_router():
-    return getattr(_thread_local, 'router', None)
+def get_router() -> Optional["AgentRouter"]:
+    return _router_ctx.get()
