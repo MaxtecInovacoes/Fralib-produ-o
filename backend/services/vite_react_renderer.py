@@ -180,36 +180,58 @@ except ImportError:
     )
 
 try:
-    from backend.services.vite_build_executor import (
-        write_vite_project,
-        build_vite_project,
-        rewrite_vite_dist_asset_paths,
-        _node_bin,
-        _npm_bin,
-        _default_index_html,
-        _default_vite_config,
-        _default_tsconfig,
-        _default_main_tsx,
-        _default_app_tsx,
-        _default_types_ts,
-        _default_index_css,
-        _run,
+    from backend.services.vite_templates import (
+        vite_template_index_html,
+        vite_template_vite_config,
+        vite_template_tsconfig,
+        vite_template_main_tsx,
+        vite_template_main_tsx_with_factual_contract,
+        vite_template_app_tsx,
+        vite_template_types_ts,
+        vite_template_index_css,
+        vite_template_card_ui,
+        vite_template_lgpd_banner,
+        vite_template_navbar,
+        vite_template_hero_section,
+        vite_template_about_section,
+        vite_template_gallery_section,
+        vite_template_services_section,
+        vite_template_lifestyle_section,
+        vite_template_reviews_section,
+        vite_template_location_section,
+        vite_template_contact_cta,
+        vite_template_footer,
+        vite_template_booking_modal,
+        vite_template_factual_motion_contract,
+        _visual_business_payload,
+        _visual_media_urls,
     )
 except ImportError:
-    from services.vite_build_executor import (  # type: ignore
-        write_vite_project,
-        build_vite_project,
-        rewrite_vite_dist_asset_paths,
-        _node_bin,
-        _npm_bin,
-        _default_index_html,
-        _default_vite_config,
-        _default_tsconfig,
-        _default_main_tsx,
-        _default_app_tsx,
-        _default_types_ts,
-        _default_index_css,
-        _run,
+    from services.vite_templates import (  # type: ignore
+        vite_template_index_html,
+        vite_template_vite_config,
+        vite_template_tsconfig,
+        vite_template_main_tsx,
+        vite_template_main_tsx_with_factual_contract,
+        vite_template_app_tsx,
+        vite_template_types_ts,
+        vite_template_index_css,
+        vite_template_card_ui,
+        vite_template_lgpd_banner,
+        vite_template_navbar,
+        vite_template_hero_section,
+        vite_template_about_section,
+        vite_template_gallery_section,
+        vite_template_services_section,
+        vite_template_lifestyle_section,
+        vite_template_reviews_section,
+        vite_template_location_section,
+        vite_template_contact_cta,
+        vite_template_footer,
+        vite_template_booking_modal,
+        vite_template_factual_motion_contract,
+        _visual_business_payload,
+        _visual_media_urls,
     )
 
 try:
@@ -1399,15 +1421,15 @@ def prepare_vite_project_files(files: dict[str, str], *, facts: dict[str, Any]) 
     """Normalize generated files and inject deterministic Vite scaffolding."""
     prepared = {_safe_project_path(path): content for path, content in files.items()}
     prepared["package.json"] = json.dumps(FIXED_PACKAGE_JSON, ensure_ascii=False, indent=2)
-    prepared["vite.config.ts"] = _default_vite_config()
-    prepared["tsconfig.json"] = _default_tsconfig()
-    prepared["index.html"] = _default_index_html(facts)
-    prepared.setdefault("src/main.tsx", _default_main_tsx())
-    prepared.setdefault("src/App.tsx", _default_app_tsx())
-    prepared.setdefault("src/types.ts", _default_types_ts())
-    prepared.setdefault("src/fralib-jsx.d.ts", _default_jsx_fallback_types())
+    prepared["vite.config.ts"] = vite_template_vite_config()
+    prepared["tsconfig.json"] = vite_template_tsconfig()
+    prepared["index.html"] = vite_template_index_html(facts)
+    prepared.setdefault("src/main.tsx", vite_template_main_tsx())
+    prepared.setdefault("src/App.tsx", vite_template_app_tsx())
+    prepared.setdefault("src/types.ts", vite_template_types_ts())
+    prepared.setdefault("src/fralib-jsx.d.ts", vite_template_jsx_fallback_types())
     prepared["src/index.css"] = _ensure_index_css_contract(
-        prepared.get("src/index.css", _default_index_css())
+        prepared.get("src/index.css", vite_template_index_css())
     )
     _normalize_generated_imports_and_hooks(prepared)
     _stabilize_app_contract(prepared)
