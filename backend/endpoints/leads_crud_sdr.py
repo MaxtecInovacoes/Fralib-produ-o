@@ -44,34 +44,36 @@ async def registrar_feedback(
     try:
         tenant_id = usuario.get("tenant_id", usuario["id"])
 
-        # Buscar dados do lead
-        lead = db.execute(
-            text(
-                "SELECT id, segmento, tier, telefone FROM leads WHERE id=:id AND user_id=:uid"
-            ),
-            {"id": lead_id, "uid": tenant_id},
-        ).fetchone()
-        if not lead:
-            raise HTTPException(status_code=404, detail="Lead nao encontrado")
-
-        lead_dict = dict(lead._mapping)
-        segmento = lead_dict.get("segmento") or ""
-        tier = lead_dict.get("tier") or "STANDARD"
-        telefone = lead_dict.get("telefone") or ""
-
-        # Buscar ultima mensagem enviada pelo Franz (direcao='saida')
-        # Defesa em profundidade: JOIN com leads valida ownership por user_id
-        ultima_msg = db.execute(
+        # PERF: Unica query com LEFT JOIN para buscar lead E ultima mensagem
+        # Antes: 2 queries separadas; Depois: 1 query com JOIN
+        dados = db.execute(
             text("""
-            SELECT i.mensagem FROM interacoes i
-            JOIN leads l ON l.id = i.lead_id
-            WHERE i.lead_id = :lead_id AND i.direcao = 'saida' AND l.user_id = :uid
-            ORDER BY i.id DESC
-            LIMIT 1
-        """),
+            SELECT
+                l.id,
+                l.segmento,
+                l.tier,
+                l.telefone,
+                sub.mensagem_usada
+            FROM leads l
+            LEFT JOIN (
+                SELECT lead_id, mensagem AS mensagem_usada
+                FROM interacoes
+                WHERE lead_id = :lead_id AND direcao = 'saida'
+                ORDER BY id DESC
+                LIMIT 1
+            ) sub ON sub.lead_id = l.id
+            WHERE l.id = :lead_id AND l.user_id = :uid
+            """),
             {"lead_id": lead_id, "uid": tenant_id},
         ).fetchone()
-        mensagem_usada = ultima_msg[0] if ultima_msg else ""
+
+        if not dados:
+            raise HTTPException(status_code=404, detail="Lead nao encontrado")
+
+        segmento = dados.segmento or ""
+        tier = dados.tier or "STANDARD"
+        telefone = dados.telefone or ""
+        mensagem_usada = dados.mensagem_usada or ""
 
         variant = ""
         stage = ""

@@ -495,22 +495,24 @@ async def deletar_lead(
 ):
     try:
         tenant_id = usuario.get("tenant_id", usuario["id"])
-        lead = db.execute(
-            text("SELECT id FROM leads WHERE id=:id AND user_id=:uid"),
-            {"id": lead_id, "uid": tenant_id},
+
+        # PERF: DELETE com RETURNING elimina SELECT previo (3 queries -> 2)
+        deleted = db.execute(
+            text("""
+                DELETE FROM leads
+                WHERE id = :lead_id AND user_id = :uid
+                RETURNING id
+            """),
+            {"lead_id": lead_id, "uid": tenant_id},
         ).fetchone()
-        if not lead:
+
+        if not deleted:
             raise HTTPException(status_code=404, detail="Lead não encontrado")
-        # Deletar interações relacionadas primeiro
+
+        # Deletar interações - ja sabemos que o lead existe
         db.execute(
-            text(
-                "DELETE FROM interacoes WHERE lead_id IN (SELECT id FROM leads WHERE id=:id AND user_id=:uid)"
-            ),
-            {"id": lead_id, "uid": tenant_id},
-        )
-        db.execute(
-            text("DELETE FROM leads WHERE id=:id AND user_id=:uid"),
-            {"id": lead_id, "uid": tenant_id},
+            text("DELETE FROM interacoes WHERE lead_id = :lead_id"),
+            {"lead_id": lead_id},
         )
         db.commit()
         return {"ok": True, "mensagem": "Lead deletado com sucesso"}
