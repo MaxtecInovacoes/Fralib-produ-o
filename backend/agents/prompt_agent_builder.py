@@ -10,9 +10,6 @@ from backend.agents.prompt_agent_context import (
     _content_context,
     _design_context,
     _fmt_visual_direction,
-    _ideal_customer_context,
-    _infer_prompt_archetype,
-    _market_intelligence_context,
     _media_context,
     _normalize_target,
     _premium_delivery_contract,
@@ -26,7 +23,6 @@ from backend.agents.prompt_agent_context import (
 from backend.agents.prompt_agent_helpers import (
     _allowed_numeric_claims,
     _as_dict,
-    _compact,
     _dict,
     _fmt_contract_facts,
     _fmt_list,

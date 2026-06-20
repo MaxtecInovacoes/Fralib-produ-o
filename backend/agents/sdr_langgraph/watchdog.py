@@ -15,9 +15,7 @@ O NOVO FRANZ:
 """
 
 from __future__ import annotations
-import os
 from datetime import datetime, timezone, timedelta
-from typing import Optional
 from sqlalchemy import text
 
 

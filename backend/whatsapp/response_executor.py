@@ -1,7 +1,6 @@
 """Response execution: guard → send → persist → advance stage."""
 
 import logging
-import os
 import time as _time
 
 from sqlalchemy import text

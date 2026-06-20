@@ -4,7 +4,7 @@ Baseado em Vercel v0 + Lovable.dev
 """
 
 import re
-from typing import Dict, List, Tuple
+from typing import List, Tuple
 
 # Cores genericas proibidas
 CORES_PROIBIDAS = [

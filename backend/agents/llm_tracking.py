@@ -5,7 +5,6 @@ Handles token counting, cost calculation, and budget ledger recording.
 """
 from __future__ import annotations
 
-import time as _time
 
 
 # ─────────────────────────────────────────────────────────────────

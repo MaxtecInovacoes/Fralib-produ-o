@@ -368,7 +368,7 @@ def executar_bloco_copy(
         print(f"[BlocoCopy] OK: {len(sections)} secoes com copy")
         return {"sections": sections}
 
-    print(f"[BlocoCopy] Parse falhou — tentando retry com prompt simplificado")
+    print("[BlocoCopy] Parse falhou — tentando retry com prompt simplificado")
     # Retry: prompt mais simples ainda
     prompt_retry = (
         f"Gere MARKDOWN ESTRUTURADO para o site de: {nome} em {cidade} ({segmento}).\n"
@@ -424,7 +424,7 @@ def executar_bloco_copy(
         print(f"[BlocoCopy] Retry OK: {len(dados2['sections'])} secoes")
         return dados2
 
-    print(f"[BlocoCopy] Retry tambem falhou — fallback deterministico")
+    print("[BlocoCopy] Retry tambem falhou — fallback deterministico")
     return _copy_deterministica_fallback(
         nome=nome,
         cidade=cidade,

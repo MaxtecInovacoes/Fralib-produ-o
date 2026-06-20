@@ -18,15 +18,6 @@ import html as _html
 import re
 import unicodedata
 
-from backend.domain.phase6_contract import (
-    phase6_business_segment as _shared_phase6_business_segment,
-    phase6_business_subniche as _shared_phase6_business_subniche,
-    phase6_design_archetype as _shared_phase6_design_archetype,
-    phase6_image_asset as _shared_phase6_image_asset,
-    phase6_should_use_video_hero as _shared_phase6_should_use_video_hero,
-    phase6_video_asset as _shared_phase6_video_asset,
-    sanitize_keyword_term as _shared_sanitize_keyword_term,
-)
 
 # Import validators from dedicated modules
 from backend.agents.html_contract_validator import (
@@ -52,16 +43,10 @@ from backend.agents.html_media_validator import (
     media_urls_from_html as _media_urls_from_html,
     minimum_required_media as _minimum_required_media,
     photo_urls as _photo_urls,
-    safe_photo_url as _safe_photo_url,
-    image_fallback_for_segment as _image_fallback_for_segment,
 )
 
 # Import repair modules
 from backend.agents.html_phase6_repair import (
-    phase6_business_segment as _phase6_business_segment,
-    phase6_design_archetype as _phase6_design_archetype,
-    phase6_should_use_video_hero as _phase6_should_use_video_hero,
-    repair_phase6_body_contract as _repair_phase6_body_contract,
     repair_phase6_publication_contract as _repair_phase6_publication_contract,
 )
 from backend.agents.html_builder_repair import (

@@ -6,11 +6,9 @@ Suporta LiteLLM, OpenRouter, e outros provedores com API OpenAI-compatible.
 """
 
 import os
-import json
 import time as _time
 import httpx
 
-from backend.config import FRALIB_ROOT as _CFG_ROOT
 
 # LiteLLM configuration
 LITELLM_API_KEY = os.getenv('LITELLM_API_KEY')

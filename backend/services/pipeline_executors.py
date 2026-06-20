@@ -5,10 +5,8 @@ Executores de fase e lógica de retry do pipeline FraLib.
 import os
 import asyncio
 import hashlib
-import random
 import logging
-import time
-from typing import Any, Callable, Optional
+from typing import Any, Callable
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 

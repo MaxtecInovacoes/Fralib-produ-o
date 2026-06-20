@@ -6,26 +6,22 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 DesignerPRD - modelo/gerador legado de PRD.
 O pipeline ativo usa Arquiteto Mestre + Skill Renderer.
 """
-import json
 import re
 from pydantic import BaseModel, ConfigDict, Field, model_validator, field_validator
 from typing import List, Dict, Any, Optional
-from llm_direct import call_claude, call_claude_structured
+from llm_direct import call_claude_structured
 from agent_rag import format_rag_prompt, get_agent_temperature
-from skill_loader import carregar_skills, get_skills_agente
 from validation_enforcer import (
     require_rag,
     require_guidelines,
 )  # ✅ Validação obrigatória
 
 # # from prompt_templates import formatar_prompt_designer
-from validation_layer import validar_prd, gerar_prompt_retry
 from design_guidelines import ANIMATION_PRINCIPLES, ANIMATION_CSS
 
 
 def clean_json_response(text: str) -> str:
     """Remove markdown code blocks e extrai JSON válido (versão blindada)"""
-    import re
 
     text = re.sub(r"```json\s*", "", text)
     text = re.sub(r"```\s*$", "", text)
@@ -688,7 +684,7 @@ Retorne PRD estruturado em JSON.
 """
 
     # Log de confirmacao
-    print(f"[Designer PRD] Design Guidelines injetadas:")
+    print("[Designer PRD] Design Guidelines injetadas:")
     print(f"  - ANIMATION_PRINCIPLES: {len(ANIMATION_PRINCIPLES)} chars")
     print(f"  - ANIMATION_CSS: {len(ANIMATION_CSS)} chars")
 

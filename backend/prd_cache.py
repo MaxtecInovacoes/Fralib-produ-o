@@ -6,7 +6,6 @@ Cacheia apos validacao final/quality gate.
 
 import json
 import hashlib
-import os
 import logging
 from pathlib import Path
 from datetime import datetime

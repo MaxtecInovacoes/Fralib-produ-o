@@ -4,7 +4,7 @@ Cada chamada de grafo recebe um state, modifica, e retorna.
 """
 
 from __future__ import annotations
-from typing import TypedDict, List, Dict, Optional, Literal, Any
+from typing import TypedDict, List, Dict, Optional, Any
 from enum import Enum
 from pydantic import BaseModel, Field
 

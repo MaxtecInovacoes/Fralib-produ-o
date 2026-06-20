@@ -100,5 +100,5 @@ async def listar_beta_leads(
         ).fetchall()
         leads = [dict(r._mapping) for r in result]
         return {"ok": True, "total": len(leads), "leads": leads}
-    except Exception as e:
+    except Exception:
         return {"ok": False, "leads": [], "total": 0}

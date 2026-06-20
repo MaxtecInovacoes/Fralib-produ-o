@@ -3,7 +3,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import text
-from typing import Optional
 import os, sys, re as _re
 
 _BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -16,9 +15,6 @@ from backend.whatsapp_listener import is_tenant_connected, _salvar_interacao
 from backend.services.credits_manager import plano_tem_sdr
 from backend.services.sdr_gateway import SdrMessageContext, evaluate_sdr_output, has_prior_outbound
 
-from pydantic import BaseModel
-from typing import Optional as _OptStr
-from fastapi import BackgroundTasks
 
 
 # Import models from leads_crud_models
@@ -154,7 +150,7 @@ async def enviar_mensagem_lead(
     usuario: dict = Depends(get_current_user),
 ):
     """Envia mensagem Franz para lead com site pronto (sdr_stage=pendente_wpp)."""
-    import os, httpx, re as _re
+    import os, httpx
 
     tenant_id = int(usuario.get("tenant_id", usuario.get("id")))
     plano_row = db.execute(

@@ -36,30 +36,20 @@ from backend.agents.llm_config import (
     AGENT_MODEL_MAP,
     AIBEE_MODEL_MAP,
     LITELLM_MODEL_MAP,
-    MODEL_MAP,
     BUILDER_RENDERER_AGENT,
-    PROXY_BUILDER_MODEL,
     PROXY_PROVIDER,
     LITELLM_API_KEY,
-    LITELLM_BASE_URL,
     ANTHROPIC_API_KEY,
-    ANTHROPIC_BASE_URL,
     RateLimitError,
-    invalidate_agent_config_cache,
     fallbacks_disabled,
     _load_agent_configs,
 )
 
 from backend.agents.llm_context import (
-    set_current_user_id,
-    set_llm_context,
-    clear_llm_context,
-    _llm_context_value,
     _enforce_call_spacing,
     _tenant_rate_check,
     _tenant_rate_alert,
     get_current_user_id,
-    invalidar_byok_cache,
     _get_byok_key,
     _resolve_anthropic,
 )
@@ -67,11 +57,7 @@ from backend.agents.llm_context import (
 from backend.agents.llm_client import (
     _create_client,
     _is_litellm_openai_chat_base,
-    _litellm_chat_url,
     _call_litellm_openai_chat,
-    _llm_error_status,
-    _llm_error_text,
-    _llm_alert_type,
     _alert_llm_provider_failure,
     _extract_text_from_tool_use,
 )
@@ -111,7 +97,6 @@ def call_claude(
                 if _has_rag:
                     from agent_rag import (
                         buscar_contexto_rag,
-                        format_rag_prompt,
                         mark_rag_used,
                     )
 
@@ -320,7 +305,7 @@ def call_claude(
             # Fase 2: Budget diario global
             _budget_ok, _budget_remaining = _ia.check_daily_budget()
             if not _budget_ok:
-                print(f"[LLM] Budget diario ESGOTADO — 0 tokens restantes")
+                print("[LLM] Budget diario ESGOTADO — 0 tokens restantes")
                 raise Exception(
                     "Budget diario de tokens esgotado. Aguarde reset (24h rolling window)."
                 )

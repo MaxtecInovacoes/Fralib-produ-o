@@ -17,9 +17,6 @@ import re
 import unicodedata
 from urllib.parse import quote_plus
 
-from backend.agents.html_content_validator import (
-    strip_emoji_symbols,
-)
 from backend.agents.html_media_validator import (
     image_fallback_for_segment,
     media_urls_from_html,

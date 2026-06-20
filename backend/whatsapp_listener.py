@@ -12,11 +12,9 @@ import asyncio
 import json
 import os
 import re
-import random
 import threading
 import logging
 import time as _time
-from datetime import datetime
 from typing import Dict, List
 
 import websockets
@@ -30,11 +28,6 @@ from backend.services.sdr_settings import (
     is_within_outbound_schedule,
     reply_cooldown_seconds,
 )
-from backend.services.sdr_gateway import (
-    SdrMessageContext,
-    evaluate_sdr_output,
-    has_prior_outbound,
-)
 from whatsapp.lead_identity import (
     find_lead_by_phone_or_jid,
     normalize_jid_number,
@@ -47,13 +40,10 @@ from whatsapp.sdr_reply_service import (
     get_outgoing_formatter,
     is_duplicate_reply,
     map_next_stage,
-    normalize_followup_date,
     sanitize_reply,
 )
 from whatsapp.sender import (
     send_handoff_notification,
-    send_presence_composing,
-    send_text_parts,
 )
 from whatsapp.response_executor import (
     ExecutionContext,
@@ -86,7 +76,6 @@ from whatsapp.rate_limiter import (
     DEFAULT_COOLDOWN_SECONDS,
     DEFAULT_DAILY_LIMIT,
     DEFAULT_FLOOD_SILENCE,
-    DEFAULT_FLOOD_THRESHOLD,
     DEFAULT_FLOOD_WINDOW,
     DEFAULT_HUMAN_PAUSE_SECONDS,
 )

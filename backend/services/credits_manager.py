@@ -19,7 +19,6 @@ from typing import Optional
 
 from backend.domain.plans import (
     COOLDOWNS,
-    LIMITES_DIARIOS,
     PLAN_CREDITOS_PADRAO,
     PLAN_LIMITS,
     PLANOS_COM_SDR,

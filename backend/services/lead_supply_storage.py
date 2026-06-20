@@ -3,23 +3,13 @@
 from __future__ import annotations
 
 import json
-import uuid
-from datetime import datetime
 from typing import Any
 
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from backend.core import job_queue
 
-from backend.services.lead_supply_providers import (
-    PLAN_DAILY_CAPS,
-    PIPELINE_TYPES,
-    PRODUCTION_TICK_JOB,
-    SUPPLY_CAIO_JOB,
-    SUPPLY_HUNTER_JOB,
-)
-from backend.services.lead_supply_filters import _slug, dedupe_key, default_targets, normalize_list
+from backend.services.lead_supply_filters import default_targets, normalize_list
 
 
 def ensure_schema(db: Session) -> None:

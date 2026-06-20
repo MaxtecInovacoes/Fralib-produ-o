@@ -22,7 +22,7 @@ Uso:
 import os
 import time as _time
 import threading as _threading
-from typing import Optional, Literal
+from typing import Literal
 
 # ══════════════════════════════════════════════════════════════════
 # RATE LIMITING - Global sliding window
@@ -309,7 +309,7 @@ class LLMRouter:
 
                 # Trata rate limit
                 if "429" in error_msg or "rate limit" in error_msg.lower():
-                    print(f"[Router] Rate limit detectado, tentando próximo provider")
+                    print("[Router] Rate limit detectado, tentando próximo provider")
                     _time.sleep(5)
                 continue
 

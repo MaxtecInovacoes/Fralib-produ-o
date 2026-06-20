@@ -312,7 +312,7 @@ def buscar_fotos_unsplash(
     # Sem chave — fallback curado com URLs diretas e estáveis do Unsplash.
     if not UNSPLASH_ACCESS_KEY:
         print(
-            f"[Unsplash] AVISO: UNSPLASH_ACCESS_KEY nao configurada. Usando fallback."
+            "[Unsplash] AVISO: UNSPLASH_ACCESS_KEY nao configurada. Usando fallback."
         )
         urls = _fallback_urls(query, quantidade, nome, segmento)
         try:

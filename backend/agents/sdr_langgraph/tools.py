@@ -5,10 +5,7 @@ RAG, memória, validação, envio.
 
 from __future__ import annotations
 import os
-import re
-import json
-from typing import Optional, List, Dict, Any
-from datetime import datetime
+from typing import Optional, List
 
 import sys
 
@@ -18,8 +15,6 @@ BACKEND_DIR = os.path.dirname(AGENTS_DIR)
 sys.path.insert(0, BACKEND_DIR)
 sys.path.insert(0, AGENTS_DIR)
 
-from .state import LeadMemory
-from .prompts import build_stage_prompt, build_user_prompt
 
 
 # ════════════════════════════════════════════════════════════════════

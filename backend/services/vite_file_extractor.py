@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import re
-from typing import Any
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -165,8 +164,6 @@ def _normalize_component_export_contract(files: dict[str, str]) -> None:
         if path.endswith(".tsx") or path.endswith(".ts"):
             # Check for export
             if "export" not in content:
-                # Add default export if missing
-                name = path.split("/")[-1].replace(".tsx", "").replace(".ts", "")
                 # Try to find the component name
                 match = re.search(r"(?:function|const)\s+(\w+)", content)
                 if match:

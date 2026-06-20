@@ -11,7 +11,6 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from pydantic import BaseModel
-from typing import Optional
 
 from backend.core.database import get_db
 from backend.core.auth import get_current_user
@@ -138,7 +137,6 @@ def _get_pipeline_stats() -> dict:
 
 def _get_system_info() -> dict:
     """Informações do sistema."""
-    import os
     import psutil
 
     try:

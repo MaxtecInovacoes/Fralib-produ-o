@@ -6,7 +6,7 @@ Pode ser chamado via cron ou endpoint.
 """
 import os
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Optional
 from sqlalchemy import text
 

@@ -15,9 +15,6 @@ import httpx
 
 from backend.agents import llm_config
 from backend.agents.llm_context import (
-    _llm_context_value,
-    _get_byok_key,
-    _resolve_anthropic,
     get_current_user_id,
 )
 
@@ -358,5 +355,5 @@ def _extract_text_from_tool_use(
         except Exception as e:
             print(f"[LLM] Retry {retry} falhou: {e}")
 
-    print(f"[LLM] ERRO: nenhum bloco text encontrado apos 3 retries")
+    print("[LLM] ERRO: nenhum bloco text encontrado apos 3 retries")
     raise RuntimeError("[LLM] Proxy retornou tool_use sem texto apos 3 retries")

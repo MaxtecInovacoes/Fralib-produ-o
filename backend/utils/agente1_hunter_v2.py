@@ -4,7 +4,7 @@ Captura leads REAIS do Google Maps.
 Ordem: leads prontos/cache -> GoSom best-effort -> Playwright.
 """
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field
 from typing import Optional, List, Dict, Any
 from backend.utils.google_local_scraper import GoogleLocalScraper as GoogleMapsScraper
 from backend.utils.google_maps_gosom import buscar_gosom, buscar_negocio_gosom
@@ -247,12 +247,12 @@ async def buscar_lead_google_maps(
 
     # FALLBACK: Playwright
     if not dados:
-        print(f"[Hunter V2] Gosom falhou — tentando Playwright...")
+        print("[Hunter V2] Gosom falhou — tentando Playwright...")
         async with GoogleMapsScraper(headless=True) as scraper:
             dados = await scraper.buscar_negocio(nome, cidade)
 
     if not dados:
-        print(f"[Hunter V2] Negócio não encontrado no Google Maps")
+        print("[Hunter V2] Negócio não encontrado no Google Maps")
         return None
 
     # Converter para LeadRaw
@@ -284,7 +284,7 @@ async def buscar_lead_google_maps(
     dados_suficientes, erros = validar_dados_minimos(lead)
 
     if not dados_suficientes:
-        print(f"[Hunter V2] ⚠️ DADOS INSUFICIENTES:")
+        print("[Hunter V2] ⚠️ DADOS INSUFICIENTES:")
         for erro in erros:
             print(f"   - {erro}")
 
@@ -317,7 +317,7 @@ async def buscar_lead_google_maps(
     print(f"   Score: {resultado['score']}/100")
     print(f"   Tier: {resultado['tier']}")
     print(f"   Sinais: {', '.join(resultado['sinais'][:3])}")
-    print(f"   Dados suficientes: ✅")
+    print("   Dados suficientes: ✅")
 
     # Memória do hunter so e usada em testes locais (singular).
     # Em producao, buscar_leads_google_maps (plural) e chamado e nao precisa de memoria por lead.
@@ -688,7 +688,7 @@ async def buscar_leads_google_maps(
 
     # ── CACHE GLOBAL: verificar se já temos leads cacheados pra este segmento+cidade ──
     if force_fresh:
-        print(f"[Hunter V2] FORCE FRESH: ignorando cache, buscando direto no Maps")
+        print("[Hunter V2] FORCE FRESH: ignorando cache, buscando direto no Maps")
         cached_leads = []
     else:
         cached_leads = _buscar_cache_leads(segmento, cidade, _existentes, _candidate_limit)
@@ -732,7 +732,7 @@ async def buscar_leads_google_maps(
             return _filtrar_aprovados_caio(
                 pool_inicial, segmento, score_minimo, aprovados_necessarios
             )
-        print(f"[Hunter V2] Gosom indisponível — usando Playwright...")
+        print("[Hunter V2] Gosom indisponível — usando Playwright...")
         scraper = GoogleMapsScraper(headless=True)
         cards_raw = await scraper.buscar(
             segmento,
@@ -879,7 +879,7 @@ if __name__ == "__main__":
         lead = await buscar_lead_google_maps("Barbearia Seu Zé", "Curitiba")
 
         if lead:
-            print(f"\n[Teste] ✅ Lead capturado!")
+            print("\n[Teste] ✅ Lead capturado!")
             print(f"   Nome: {lead.lead.nome}")
             print(f"   Score: {lead.score}/100")
             print(f"   Tier: {lead.tier}")

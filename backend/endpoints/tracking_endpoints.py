@@ -11,7 +11,7 @@ import hashlib
 import os
 import sys
 import logging
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, Request
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from typing import Optional

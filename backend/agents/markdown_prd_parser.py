@@ -4,7 +4,7 @@ Substitui JSON como formato de output - mais robusto com LLMs.
 """
 import re
 import json
-from typing import Dict, List, Any, Optional
+from typing import Dict, Any, Optional
 
 
 VALID_SECTIONS = ('hero', 'sobre', 'servicos', 'depoimentos', 'faq', 'localizacao', 'contato', 'footer')

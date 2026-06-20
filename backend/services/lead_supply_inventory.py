@@ -20,12 +20,8 @@ from backend.services.lead_supply_providers import (
 from backend.services.lead_supply_filters import dedupe_key
 from backend.services.lead_supply_storage import (
     _event,
-    _row_to_config,
     ensure_schema,
     get_or_create_config,
-    get_user_plan,
-    default_targets,
-    normalize_list,
 )
 
 

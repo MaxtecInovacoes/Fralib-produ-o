@@ -6,7 +6,7 @@ Objetivo: descobrir o que as pessoas estão buscando que CONVERTE DINHEIRO
 no nicho — não design, não UI, mas intenção de compra real.
 """
 
-import os, time, hashlib, re, requests
+import os, re, requests
 from datetime import datetime, timedelta
 from urllib.parse import urlparse
 

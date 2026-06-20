@@ -12,7 +12,6 @@ from llm_direct import call_claude
 from markdown_prd_parser import parse_bloco1_with_fallback
 from prompts_arquiteto import (
     SYSTEM_DESIGN_DIRECTOR,
-    LAYOUT_OPTIONS,
     _buscar_google_suggest,
     _garantir_secoes_obrigatorias,
 )
@@ -245,7 +244,7 @@ def executar_bloco_estrutura(
             "sections": sections,
         }
 
-    print(f"[BlocoEstrutura] Parse falhou — usando estrutura padrao")
+    print("[BlocoEstrutura] Parse falhou — usando estrutura padrao")
     return {
         "layout_type": "editorial",
         "instrucao_criativa_para_dev": _fallback_instrucao_criativa(nome, cidade, segmento, design_dict),

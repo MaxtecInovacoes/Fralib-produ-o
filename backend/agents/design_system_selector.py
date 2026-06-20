@@ -8,7 +8,6 @@ import os
 import re
 import hashlib
 import json
-from typing import Optional
 from backend.config import DS_DIR as _CFG_DS_DIR
 
 DS_DIR = _CFG_DS_DIR
@@ -396,9 +395,6 @@ def _prioritize_curated_slugs(slugs: list[str]) -> list[str]:
 
 def _fallback_slugs_for_segment(seg: str) -> list:
     """Para segmentos não mapeados, infere slugs por afinidade de categoria."""
-    # Tentar encontrar o segmento em alguma categoria
-    index = _load_index()
-
     # Heurísticas por palavras-chave no nome do segmento
     keywords_map = {
         "bold": ["academia", "crossfit", "barbearia", "esporte", "fight", "mma", "box"],

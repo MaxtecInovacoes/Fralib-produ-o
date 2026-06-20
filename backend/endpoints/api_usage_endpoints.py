@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from backend.core.auth import get_current_user
 import os, requests
-from datetime import datetime, timezone
+from datetime import datetime
 from backend.core.database import engine
 from sqlalchemy import text
 

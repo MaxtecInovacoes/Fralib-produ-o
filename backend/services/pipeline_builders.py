@@ -412,12 +412,6 @@ def ensure_prd_design_reference(prd: Any, state: Any) -> str:
     Returns:
         The design reference pack ID string.
     """
-    from backend.services.pipeline_validators import (
-        derive_subniche,
-        extract_neighborhood,
-        build_local_keyword_terms,
-    )
-    from backend.services.pipeline_media import deterministic_media_bundle
 
     if not prd:
         return ""

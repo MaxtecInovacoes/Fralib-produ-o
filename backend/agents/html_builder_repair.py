@@ -16,14 +16,11 @@ import html as _html
 import json
 import re
 import unicodedata
-from urllib.parse import quote_plus
 
 from backend.agents.html_media_validator import (
-    image_fallback_for_segment,
     media_urls_from_html,
     minimum_required_media,
     photo_urls,
-    safe_photo_url,
 )
 
 
@@ -193,7 +190,6 @@ def _ensure_builder_seo_schema_contract(html: str, prd) -> str:
     if "<head" not in cleaned.lower():
         return cleaned
     from backend.agents.html_phase6_repair import (
-        phase6_business_segment as _phase6_business_segment,
         publication_keyword_meta,
         publication_page_description,
         publication_page_title,

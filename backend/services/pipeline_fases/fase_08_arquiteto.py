@@ -16,7 +16,6 @@ from backend.services.pipeline_prd_builder import (
     build_skill_fast_prd as _build_skill_fast_prd,
     ensure_prd_contracts as _ensure_prd_contracts,
     ensure_prd_design_reference as _ensure_prd_design_reference,
-    ensure_prd_publication_identity as _ensure_prd_publication_identity,
 )
 from backend.services.pipeline_cache_control import temporary_prd_cache_disabled
 from backend.agents.arquiteto_mestre import gerar_arquiteto_mestre_prd

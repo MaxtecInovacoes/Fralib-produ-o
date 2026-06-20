@@ -3,7 +3,6 @@ Validadores de estado, entrada e sanidade do pipeline FraLib.
 Inclui também funções puras de validação/sanitização extraídas de pipeline_prd_builder.
 """
 
-import os
 import re
 from typing import Any, Optional, List, Tuple
 from sqlalchemy import text

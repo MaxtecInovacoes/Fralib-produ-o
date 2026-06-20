@@ -14,7 +14,6 @@ async def run_hunter_job(db: Session, payload: dict[str, Any], tenant_id: int) -
     from backend.services.lead_supply_inventory import (
         _enqueue_caio,
         _existing_names,
-        _store_candidate,
         status,
     )
     from backend.services.lead_supply_events import _event

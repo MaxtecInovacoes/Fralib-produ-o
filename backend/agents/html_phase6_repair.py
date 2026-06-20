@@ -9,9 +9,7 @@ Handles deterministic repairs to ensure Phase 6 contract compliance:
 from __future__ import annotations
 
 import html as _html
-import json
 import re
-from urllib.parse import quote_plus
 
 from backend.domain.phase6_contract import (
     phase6_business_segment as _shared_phase6_business_segment,

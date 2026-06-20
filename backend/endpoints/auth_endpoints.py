@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.responses import HTMLResponse, JSONResponse
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.security import HTTPBearer
 from pydantic import BaseModel, EmailStr
 from datetime import datetime, timedelta
 import base64, hashlib, hmac, jwt, os, secrets, struct, time
@@ -43,7 +43,7 @@ def _inicializar_tenant(db: Session, user_id: int, nome: str, email: str, now: s
     - Licença trial na tabela licencas
     - Config pipeline padrão
     """
-    import os, secrets, shutil, pwd, stat
+    import os, secrets, pwd
 
     # 1. Criar diretório de sites do tenant (user_id forcado a int para evitar path injection)
     safe_uid = int(user_id)
@@ -534,7 +534,6 @@ async def google_oauth_callback(request: Request, code: str, db: Session = Depen
         raise HTTPException(400, f"Erro ao trocar código: {e}")
 
     access_token = tokens.get("access_token")
-    id_token = tokens.get("id_token")
 
     # Busca informações do usuário
     userinfo_url = "https://www.googleapis.com/oauth2/v2/userinfo"

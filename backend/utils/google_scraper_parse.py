@@ -5,9 +5,9 @@ Funções de parsing e extração de dados do Google Maps.
 import asyncio
 import random
 import re
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional
 
-from backend.utils.google_scraper_helpers import _env_int, _close_quietly
+from backend.utils.google_scraper_helpers import _env_int
 
 
 async def _capturar_painel_maps(page, limite: int) -> List[Dict]:

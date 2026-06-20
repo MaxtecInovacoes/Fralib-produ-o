@@ -1,7 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from sqlalchemy import text
-import asyncio
 import logging
 import uuid
 
@@ -11,7 +10,6 @@ from backend.core.database import (
     update_pipeline_state,
 )
 from backend.core.auth import get_current_user
-from backend.endpoints.sse_endpoints import adicionar_log
 from backend.whatsapp_listener import is_tenant_connected
 from backend.services.credits_manager import validar_permissao_pipeline, plano_tem_sdr
 from pipeline_runtime_utils import check_rate_limit as _check_rate_limit

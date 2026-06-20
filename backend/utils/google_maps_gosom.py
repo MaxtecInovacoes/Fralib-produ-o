@@ -157,10 +157,10 @@ async def buscar_gosom(
                     data = r.json()
                     status = data.get("Status", "")
                     if status == "ok":
-                        print(f"[Gosom] Job concluído!")
+                        print("[Gosom] Job concluído!")
                         break
                     elif status in ("failed", "error"):
-                        print(f"[Gosom] Job falhou")
+                        print("[Gosom] Job falhou")
                         _abrir_circuito("job falhou")
                         return None
                 except Exception:

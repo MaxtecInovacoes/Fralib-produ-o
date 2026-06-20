@@ -69,7 +69,6 @@ def buscar_inteligencia_jina(
     Retorna dict estruturado. Síncrono (compatível com pipeline atual).
     Cache de 48h por nicho+cidade.
     """
-    import requests
 
     # Cache
     _cache_dir = os.path.join(
@@ -114,7 +113,7 @@ def buscar_inteligencia_jina(
     try:
         with open(_cache_file, "w", encoding="utf-8") as f:
             json.dump(resultado, f, ensure_ascii=False)
-    except (OSError, IOError) as e:
+    except (OSError, IOError):
         pass
 
     total = len(json.dumps(resultado, ensure_ascii=False))
@@ -736,7 +735,7 @@ def formatar_inteligencia_para_arquiteto(intel: dict) -> str:
         "",
         f"TOM DE VOZ DO MERCADO: {intel.get('tom_de_voz', '')}",
         "",
-        f"LINGUAGEM COMERCIAL OBSERVADA:",
+        "LINGUAGEM COMERCIAL OBSERVADA:",
         f"  {', '.join(intel.get('palavras_poder', []))}",
         "",
     ]

@@ -4,13 +4,12 @@ Google Local Scraper - Core
 import asyncio
 import os
 import random
-import re
 from typing import Any, Callable, List, Dict, Optional
 
 from playwright.async_api import async_playwright
 
 from backend.utils.google_scraper_helpers import _env_int, _close_quietly, _playwright_launch_args
-from backend.utils.google_scraper_parse import _capturar_painel_maps, _parsear_resultados, _extrair_reviews_de_blocos, _extrair_reviews_de_blocos_raw, _buscar_detalhes
+from backend.utils.google_scraper_parse import _capturar_painel_maps, _parsear_resultados, _buscar_detalhes
 
 
 class GoogleLocalScraper:

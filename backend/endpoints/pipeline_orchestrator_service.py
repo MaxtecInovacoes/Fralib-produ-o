@@ -1107,7 +1107,7 @@ async def executar_pipeline_completo(
         elif _jina_result.get("error"):
             state.jina_insights = ""
             state.jina_intel_dict = {}
-            _log(f"  Jina: erro - continuando sem insights", "warning")
+            _log("  Jina: erro - continuando sem insights", "warning")
         else:
             state.jina_insights = _jina_result["insights"]
             state.jina_intel_dict = _jina_result.get("intel") or {}
@@ -2831,7 +2831,8 @@ async def executar_pipeline_lead_existente(
         atributos=dados.get("atributos") or [],
         servicos=dados.get("servicos") or [],
     )
-    lead_qualificado = LeadQualificado(
+    # LeadQualificado criado para validação - usado via state.lead
+    _lead_qualificado = LeadQualificado(
         lead=lead_raw,
         score=int(lead_dict.get("score") or 50),
         tier=lead_dict.get("tier") or "STANDARD",

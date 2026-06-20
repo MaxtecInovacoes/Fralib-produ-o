@@ -4,13 +4,6 @@ from sqlalchemy import text
 
 from backend.core.auth import get_current_user
 from backend.core.database import get_db
-from pipeline_orchestrator_service import (
-    FraLibState,
-    executar_pipeline_completo,
-    executar_pipeline_multiplos,
-    executar_pipeline_lead_existente,
-    _executar_pipeline_a_partir_fase2,
-)
 
 router = APIRouter(prefix="/api/pipeline", tags=["pipeline"])
 

@@ -24,7 +24,6 @@ import os
 from typing import Optional
 
 import psycopg2
-from psycopg2.extras import DictCursor
 
 from backend.utils.secrets_crypto import decriptar
 from backend.core.config import is_allowed_llm_url

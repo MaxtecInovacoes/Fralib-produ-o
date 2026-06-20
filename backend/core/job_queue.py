@@ -80,7 +80,7 @@ def enqueue(
         ).fetchone()
         db.commit()
         return row[0] if row else None
-    except Exception as e:
+    except Exception:
         db.rollback()
         raise
 

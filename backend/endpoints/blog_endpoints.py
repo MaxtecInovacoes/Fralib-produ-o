@@ -11,10 +11,9 @@ Endpoints:
 import os
 import re
 import json
-import time
 from datetime import datetime
 from pathlib import Path
-from fastapi import APIRouter, Header, HTTPException, Depends
+from fastapi import APIRouter, Header, HTTPException
 from sqlalchemy import text
 
 from backend.core.database import engine
@@ -286,13 +285,13 @@ Retorne APENAS o JSON no formato especificado."""
         # Parse JSON da resposta
         json_match = re.search(r'\{[\s\S]*\}', resposta)
         if not json_match:
-            print(f"[Blog] Erro: resposta sem JSON valido")
+            print("[Blog] Erro: resposta sem JSON valido")
             return None
 
         data = json.loads(json_match.group())
 
         if not all(k in data for k in ('titulo', 'meta_description', 'slug', 'conteudo_html')):
-            print(f"[Blog] Erro: JSON incompleto")
+            print("[Blog] Erro: JSON incompleto")
             return None
 
         # Sanitizar slug

@@ -275,7 +275,7 @@ def _default_index_html(facts: dict[str, Any]) -> str:
         html += f"""
     <meta property="og:image" content="{og_image}">"""
 
-    html += f"""
+    html += """
     <link rel="icon" type="image/svg+xml" href="/vite.svg">
 </head>
 <body>

@@ -161,7 +161,7 @@ def dashboard(data):
     print(f"  {data['req_remaining']:,} restando de {data['req_limit']:,}/min")
     print()
     print(f"  PIPELINES POSSIVEIS AGORA: ~{pipelines_ok} simultaneos")
-    print(f"  (estimativa: 15k input + 5k output por pipeline)")
+    print("  (estimativa: 15k input + 5k output por pipeline)")
     print()
 
     if inp_used > 80 or out_used > 80:

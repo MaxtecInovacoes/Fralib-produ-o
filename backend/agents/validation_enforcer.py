@@ -6,7 +6,7 @@ Data: 2026-04-27
 """
 import functools
 import inspect
-from typing import Callable, Any
+from typing import Callable
 
 class ResourceNotUsedError(Exception):
     """Erro quando recurso obrigatório não é usado"""
@@ -92,10 +92,10 @@ def validate_imports():
     Valida que módulos críticos estão disponíveis
     """
     try:
-        from agent_rag import format_rag_prompt, get_agent_temperature
+        import agent_rag  # noqa: F401
         print("[Validation] OK agent_rag disponivel")
-    except ImportError as e:
-        print(f"[Validation] WARN agent_rag nao encontrado: {e}")
+    except ImportError as exc:
+        print(f"[Validation] WARN agent_rag nao encontrado: {exc}")
 
     try:
         from skill_loader import carregar_skills, get_skills_agente

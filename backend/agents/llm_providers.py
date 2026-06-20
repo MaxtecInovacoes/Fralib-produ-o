@@ -30,7 +30,7 @@ import os
 import json
 import time as _time
 import re as _re
-from typing import Optional, Callable, Any
+from typing import Callable
 
 # Configurações de ambiente
 LITELLM_API_KEY = os.getenv('LITELLM_API_KEY')
@@ -56,7 +56,6 @@ from backend.agents.llm_google import (
     get_google_provider,
 )
 from backend.agents.llm_router import (
-    LLMRouter,
     LLMRouterError,
     AllProvidersFailedError,
     get_router,
@@ -199,9 +198,6 @@ def _call_anthropic(
     """Chamada Anthropic via SDK com retry e key rotation."""
     from llm_direct import (
         _resolve_anthropic,
-        _current_user_id,
-        _salvar_uso_llm,
-        _registrar_llm_budget,
     )
 
     api_key, base_url, key_id = _resolve_anthropic(agent_name)

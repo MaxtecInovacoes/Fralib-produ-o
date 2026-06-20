@@ -3,7 +3,6 @@ Agent RAG - Sistema de Recuperação de Contexto
 Versão 3.0 - Todos os chunks carregados, blocos por agente
 """
 
-import os
 from pathlib import Path
 from typing import Dict, List, Optional
 

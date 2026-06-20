@@ -14,7 +14,7 @@ from sqlalchemy import text
 from backend.core.database import get_db
 from backend.utils.secrets_crypto import encriptar, decriptar, mascarar_key
 from backend.core.access_control import require_superadmin
-from backend.core.config import IS_PRODUCTION, is_allowed_llm_url
+from backend.core.config import is_allowed_llm_url
 from backend.core.proxy_models import PROXY_LIGHT_MODEL
 
 

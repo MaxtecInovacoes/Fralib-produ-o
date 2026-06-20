@@ -15,7 +15,6 @@ sys.path.insert(0, BACKEND_DIR)
 sys.path.insert(0, AGENTS_DIR)
 
 from .agent import get_sdr_graph
-from .state import LeadMemory
 
 
 # ════════════════════════════════════════════════════════════════════
@@ -487,7 +486,6 @@ def _get_horario_config(user_id: int) -> dict:
     if cached and time.time() < cached[1]:
         return cached[0]
     try:
-        from agents.memory import get_memory_session
         from . import _get_sdr_settings_for_user as _local_settings
         from services.sdr_settings import outbound_schedule_from_settings
 

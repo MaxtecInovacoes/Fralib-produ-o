@@ -6,7 +6,6 @@ import json
 from typing import Any
 
 from backend.agents.prompt_agent_helpers import (
-    _as_dict,
     _as_list,
     _clean_dict,
     _compact,
@@ -14,14 +13,12 @@ from backend.agents.prompt_agent_helpers import (
     _dump_compact,
     _extract_keyword_candidates,
     _first,
-    _fmt_value,
     _ideal_customer_context,
     _infer_prompt_archetype,
     _infer_subniche,
     _market_intelligence_context,
     _media_urls,
     _normalize,
-    _normalize_target,
     _sanitize_primary_term,
     _section_name,
 )
@@ -207,9 +204,7 @@ def _section_request(lead: dict[str, Any], facts: dict[str, Any]) -> list[dict[s
 def _premium_delivery_contract(context: dict[str, Any]) -> str:
     from backend.agents.prompt_agent_helpers import (
         _as_list,
-        _section_name,
         _section_sequence_for_niche,
-        _infer_prompt_archetype,
     )
 
     business = context.get("business") or {}
@@ -303,7 +298,6 @@ def _premium_delivery_contract(context: dict[str, Any]) -> str:
 
 
 def _section_sequence_for_niche(segment: str, archetype: str, *, has_services: bool) -> list[str]:
-    from backend.agents.prompt_agent_helpers import _normalize
 
     normalized = _normalize(segment)
     if any(token in normalized for token in ("nutric", "saude", "alimentacao", "bem estar", "bem-estar")):
@@ -360,7 +354,7 @@ def _section_sequence_for_niche(segment: str, archetype: str, *, has_services: b
 
 def _visual_direction_contract(context: dict[str, Any]) -> dict[str, Any]:
     """Create the concrete art-direction contract the Builder must compose from."""
-    from backend.agents.prompt_agent_helpers import _as_list, _infer_prompt_archetype
+    from backend.agents.prompt_agent_helpers import _as_list
 
     business = context.get("business") or {}
     media = context.get("media") or {}
@@ -450,7 +444,7 @@ def _visual_direction_contract(context: dict[str, Any]) -> dict[str, Any]:
 def _visual_section_order(
     build_plan: dict[str, Any], *, has_address: bool
 ) -> list[dict[str, str]]:
-    from backend.agents.prompt_agent_helpers import _as_list, _section_name
+    from backend.agents.prompt_agent_helpers import _as_list
 
     raw = (
         (build_plan.get("information_architecture") or {}).get("section_order")
@@ -497,7 +491,6 @@ def _direction_for_archetype(
     has_reviews: bool,
     has_address: bool,
 ) -> tuple[str, str, dict[str, Any], list[str]]:
-    from backend.agents.prompt_agent_helpers import _normalize
 
     normalized = _normalize(segment)
     if archetype == "BOLD_ENERGY" or any(

@@ -4,7 +4,7 @@ Helpers de trace para o pipeline.
 Fornece funções para criar e finalizar spans de trace com persistência no DB.
 """
 from dataclasses import dataclass
-from typing import Optional, Any
+from typing import Any
 
 
 @dataclass

@@ -6,12 +6,10 @@ Suporta prompt caching, streaming, tools, e retry com key rotation.
 """
 
 import os
-import json
 import time as _time
 import httpx
 import anthropic
 
-from backend.config import FRALIB_ROOT as _CFG_ROOT
 
 # Configurações do ambiente
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
@@ -180,7 +178,7 @@ class AnthropicProvider:
         Returns:
             tuple: (texto_resposta, usage_dict)
         """
-        from llm_direct import _resolve_anthropic, _current_user_id
+        from llm_direct import _resolve_anthropic
 
         api_key = self.api_key
         base_url = self.base_url
@@ -251,7 +249,7 @@ class AnthropicProvider:
                 else:
                     raise
 
-            except (anthropic.APITimeoutError, anthropic.APIConnectionError) as e:
+            except (anthropic.APITimeoutError, anthropic.APIConnectionError):
                 if attempt >= max_attempts:
                     raise AnthropicTimeoutError(f"Timeout após {max_attempts} tentativas")
                 wait = min(15 * attempt, 60)

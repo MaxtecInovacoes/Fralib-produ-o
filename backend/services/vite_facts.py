@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import hashlib
 from typing import Any
 
 
@@ -99,7 +98,6 @@ def _facts_business(facts: dict[str, Any]) -> dict[str, Any]:
 
 def _facts_publication_url(facts: dict[str, Any]) -> str:
     """Build the publication URL from facts."""
-    business = facts.get("business", {})
     slug = facts.get("slug", "")
     domain = facts.get("publication_domain", "")
 

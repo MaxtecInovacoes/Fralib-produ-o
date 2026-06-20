@@ -2,17 +2,15 @@
 
 from __future__ import annotations
 
-import asyncio
 import json
 import uuid
-from datetime import datetime
 from typing import Any, TYPE_CHECKING
 
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 if TYPE_CHECKING:
-    from utils.agente1_hunter_v2 import LeadRaw
+    pass
 
 
 class HunterProvider:

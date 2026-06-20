@@ -1,7 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import text
-from typing import Optional
 import os, sys
 
 _BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -63,7 +62,7 @@ async def get_conversa(
             {"lead_id": lead_id, "uid": tenant_id},
         ).fetchall()
         return {"mensagens": [dict(r._mapping) for r in result]}
-    except Exception as e:
+    except Exception:
         return {"mensagens": []}
 
 
@@ -90,7 +89,7 @@ async def get_mensagens_novas(
                 {"nome": r.lead_nome, "total": r.total} for r in result
             ]
         }
-    except Exception as e:
+    except Exception:
         return {"leads_com_resposta": []}
 
 
@@ -184,7 +183,6 @@ async def limpar_fila_capturados(
 async def processar_proximo_fila(
     db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)
 ):
-    from fastapi import BackgroundTasks
 
     try:
         tenant_id = usuario.get("tenant_id", usuario["id"])

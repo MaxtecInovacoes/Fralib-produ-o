@@ -5,7 +5,6 @@ Chamadas para API Google Gemini via SDK google-generativeai.
 """
 
 import os
-from typing import Optional
 
 # Configurações do ambiente
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")

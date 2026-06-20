@@ -5,8 +5,6 @@ A FERNET_KEY é OBRIGATÓRIA em produção. Nunca use fallback derivado do JWT_S
 em produção - isso compromete a segurança de todas as chaves criptografadas.
 """
 import os
-import base64
-import hashlib
 from cryptography.fernet import Fernet, InvalidToken
 
 

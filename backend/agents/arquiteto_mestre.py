@@ -218,7 +218,7 @@ def gerar_arquiteto_mestre_prd(
     ]
     _tel = dados_hunter.get("telefone", "")
     _end = dados_hunter.get("endereco", "")
-    _faq_seo = f"FAQ para AI Search:\n" + "\n".join(f"  Q: {q}" for q in _faq_combinado)
+    _faq_seo = "FAQ para AI Search:\n" + "\n".join(f"  Q: {q}" for q in _faq_combinado)
     _faq_seo += "\nREGRA: Usar schema.org FAQPage (JSON-LD)."
 
     _intel_ctx = ""

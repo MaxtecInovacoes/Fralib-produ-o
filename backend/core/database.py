@@ -2,11 +2,8 @@
 
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker, Session
-from typing import Optional, List, Dict, Any
-from datetime import datetime
 import json
 import os
-import json
 
 try:
     from .proxy_models import (

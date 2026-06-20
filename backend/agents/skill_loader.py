@@ -20,7 +20,7 @@ Data: 2026-04-27
 """
 import os
 from pathlib import Path
-from typing import List, Dict, Optional
+from typing import List
 
 
 def _skill_roots() -> list[Path]:
@@ -131,7 +131,7 @@ def carregar_skills(skills: List[str]) -> str:
     if skills_carregadas:
         print(f"[Skills] {len(skills_carregadas)} skills ativadas: {', '.join(skills_carregadas)}")
     else:
-        print(f"[Skills] WARN Nenhuma skill carregada")
+        print("[Skills] WARN Nenhuma skill carregada")
 
     return guidelines_completo
 

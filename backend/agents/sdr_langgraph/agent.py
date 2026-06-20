@@ -8,8 +8,6 @@ import os
 import sys
 import json
 import re
-import time
-from typing import Literal
 
 from langgraph.graph import StateGraph, END
 
@@ -19,26 +17,22 @@ BACKEND_DIR = os.path.dirname(AGENTS_DIR)
 sys.path.insert(0, BACKEND_DIR)
 sys.path.insert(0, AGENTS_DIR)
 
-from .state import SDRState, LeadMemory, StageEnum
+from .state import SDRState, LeadMemory
 from .tools import (
     load_rag,
     detect_intent_with_llm,
-    detect_intent_regex,
     check_segment_contamination,
     is_valid_length,
     has_one_question,
     is_within_schedule,
     get_greeting,
-    get_agent_name,
     choose_variant,
 )
 from .prompts import (
     build_stage_prompt,
     build_user_prompt,
     should_use_lobo,
-    get_prompt_for_persona,
     get_persona_text,
-    PERSONAS,
 )
 from .multi_agent import (
     agent_system_overlay,
@@ -403,7 +397,6 @@ def node_hook(state: SDRState) -> dict:
     if not memory:
         return {"outgoing_message": "", "should_send": False}
 
-    agent_name = get_agent_name(memory.user_id)
     greeting = get_greeting()
     variant = state.get("variant", "A")
 

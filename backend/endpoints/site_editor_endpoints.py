@@ -381,15 +381,6 @@ async def editar_com_ia(
     )
     from llm_direct import call_claude
 
-    system_prompt = (
-        "Voce e um editor de sites HTML profissional. "
-        "Recebera o conteudo do BODY de um site e uma instrucao de edicao. "
-        "Retorne SOMENTE o HTML do body modificado. "
-        "NAO inclua DOCTYPE, html, head, body tags. NAO use markdown ou ```."
-        "NAO inclua style ou script tags. "
-        "Aplique APENAS a modificacao pedida. Preserve TODAS as classes, IDs, estrutura e atributos existentes. "
-        "Se a instrucao pedir algo impossivel, faca o mais proximo possivel."
-    )
     user_prompt = f"INSTRUCAO: {req.prompt}\n\nBODY HTML ATUAL:\n{body_limpo}"
 
     try:

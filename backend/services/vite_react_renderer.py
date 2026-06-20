@@ -22,7 +22,6 @@ import shutil
 import subprocess
 import time
 import unicodedata
-import textwrap
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from typing import Any
@@ -91,7 +90,6 @@ try:
 except ImportError:
     from services.vite_prompts import (  # type: ignore
         VITE_REACT_SYSTEM_PROMPT,
-        VITE_REACT_BATCH_SYSTEM_PROMPT,
         _compose_vite_user_prompt,
         _compose_vite_file_batch_prompt,
         _summarize_builder_facts,
@@ -221,12 +219,10 @@ except Exception:
 
 try:
     from backend.services.vite_renderer_models import (
-        MODEL_MAX_COMPLETION_TOKENS,
         cap_max_tokens_for_model,
     )
 except Exception:
     from backend.services.vite_renderer_models import (  # type: ignore
-        MODEL_MAX_COMPLETION_TOKENS,
         cap_max_tokens_for_model,
     )
 

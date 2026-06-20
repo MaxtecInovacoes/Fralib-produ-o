@@ -3,7 +3,6 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from sqlalchemy.orm import Session
 from sqlalchemy import text
-from typing import Optional
 import os, sys, re as _re2
 
 _BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -14,8 +13,6 @@ from backend.core.auth import get_current_user
 from backend.core.config import SITES_DIR
 from backend.endpoints.sse_endpoints import adicionar_log
 
-from pydantic import BaseModel
-from typing import Optional as _OptStr
 from fastapi import BackgroundTasks
 
 # Import models from leads_crud_models
@@ -399,7 +396,7 @@ async def upload_foto(
     except ImportError:
         with open(filepath, "wb") as f:
             f.write(contents)
-    except Exception as e:
+    except Exception:
         ext = foto.filename.split(".")[-1].lower() if foto.filename else "jpg"
         filepath = filepath.replace(".webp", "." + ext)
         filename = filename.replace(".webp", "." + ext)

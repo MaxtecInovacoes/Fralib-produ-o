@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import os
 import uuid
-from datetime import datetime
 from typing import Any
 
 from sqlalchemy import text
@@ -15,7 +14,6 @@ from backend.core import job_queue
 
 def run_production_tick(db: Session, payload: dict[str, Any], tenant_id: int) -> dict[str, Any]:
     """Run the production tick to process approved leads."""
-    from backend.services.lead_supply_providers import PRODUCTION_TICK_JOB
     from backend.services.lead_supply_storage import (
         _event,
         get_or_create_config,

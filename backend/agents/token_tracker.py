@@ -4,10 +4,9 @@ PRD #4: Visibilidade de custo por site gerado
 """
 
 import time
-import json
 from typing import Optional
 
-from backend.domain.llm_pricing import PRECOS_POR_MILHAO, estimate_llm_cost_usd
+from backend.domain.llm_pricing import estimate_llm_cost_usd
 
 
 def _calcular_custo(model: str, usage: dict) -> float:

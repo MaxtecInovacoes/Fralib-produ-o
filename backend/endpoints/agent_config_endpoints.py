@@ -4,8 +4,6 @@ Restrito a superadmin.
 """
 import time
 import json
-import requests
-import traceback
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import text
