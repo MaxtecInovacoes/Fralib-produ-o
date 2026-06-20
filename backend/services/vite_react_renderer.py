@@ -701,8 +701,8 @@ def _single_model_mode_enabled() -> bool:
 
 
 def _preview_fast_enabled() -> bool:
-    env = os.getenv("FRALIB_VITE_PREVIEW_FAST", "").strip().lower()
-    return env in {"1", "true", "yes", "on"}
+    env = os.getenv("FRALIB_VITE_PREVIEW_FAST", "1").strip().lower()
+    return env not in {"0", "false", "no", "off"}
 
 
 def _batch_first_project_attempts() -> int:
@@ -1535,23 +1535,23 @@ def _normalize_generated_imports_and_hooks(files: dict[str, str]) -> None:
                 )
         files[path] = updated
     if card_stub_needed and "src/components/ui/card.tsx" not in files:
-        files["src/components/ui/card.tsx"] = _default_card_ui_tsx()
+        files["src/components/ui/card.tsx"] = vite_template_card_ui()
 
 
 def _stabilize_app_contract(files: dict[str, str]) -> None:
     path = "src/App.tsx"
     content = str(files.get(path) or "")
     if not content:
-        files[path] = _default_app_tsx()
+        files[path] = vite_template_app_tsx()
         return
     updated = re.sub(r"\s+scrolled=\{[^}]+\}", "", content)
     files[path] = updated
 
 
 def _ensure_lgpd_banner_contract(files: dict[str, str]) -> None:
-    files["src/components/LgpdBanner.tsx"] = _default_lgpd_banner_tsx()
+    files["src/components/LgpdBanner.tsx"] = vite_template_lgpd_banner(facts)
     path = "src/App.tsx"
-    content = str(files.get(path) or _default_app_tsx())
+    content = str(files.get(path) or vite_template_app_tsx())
     if "LgpdBanner" in content:
         files[path] = content
         return
@@ -1577,7 +1577,7 @@ def _stabilize_navbar_contract(files: dict[str, str], facts: dict[str, Any]) -> 
     navbar_path = "src/components/Navbar.tsx"
     content = str(files.get(navbar_path) or "")
     if not content:
-        files[navbar_path] = _default_navbar_tsx(facts)
+        files[navbar_path] = vite_template_navbar(facts)
         return
     nav = content.lower()
     has_mobile_cta = "<button" in nav and any(
@@ -1588,7 +1588,7 @@ def _stabilize_navbar_contract(files: dict[str, str], facts: dict[str, Any]) -> 
     )
     has_shrink_brand = any(token in nav for token in ("min-w-0", "truncate", "shrink", "text-sm", "max-sm:"))
     if has_mobile_cta and not (has_responsive_cta or has_shrink_brand):
-        files[navbar_path] = _default_navbar_tsx(facts)
+        files[navbar_path] = vite_template_navbar(facts)
 
 
 def _rewrite_editorial_images(files: dict[str, str], facts: dict[str, Any]) -> None:
@@ -1630,25 +1630,7 @@ def _ensure_required_studio_components(files: dict[str, str], facts: dict[str, A
     phone_js = json.dumps(phone, ensure_ascii=False)
     city_js = json.dumps(city, ensure_ascii=False)
     if "src/components/BookingModal.tsx" not in files:
-        files["src/components/BookingModal.tsx"] = f"""import {{ motion }} from 'motion/react';
-
-const business = {{ name: {name_js}, phone: {phone_js}, city: {city_js} }};
-
-export function BookingModal({{ open, onClose }}: {{ open: boolean; onClose: () => void }}) {{
-  if (!open) return null;
-  return (
-    <motion.div className="fixed inset-0 z-50 grid place-items-center bg-zinc-950/75 p-5 backdrop-blur" role="dialog" aria-modal="true" aria-label="Contato pelo WhatsApp">
-      <div className="w-full max-w-lg border border-white/15 bg-zinc-950 p-6 text-white shadow-2xl">
-        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-300">Contato confirmado</p>
-        <h2 className="mt-3 text-3xl font-bold">{{business.name}}</h2>
-        <p className="mt-3 text-zinc-300">Fale com a equipe em {{business.city || 'sua cidade'}} pelo WhatsApp confirmado.</p>
-        <a className="mt-5 inline-flex rounded-full bg-emerald-300 px-5 py-3 font-semibold text-zinc-950" href={{`https://wa.me/${{business.phone.replace(/\\D/g, '')}}`}} rel="noopener noreferrer">Abrir WhatsApp</a>
-        <button className="ml-3 mt-5 inline-flex rounded-full border border-white/20 px-5 py-3" type="button" onClick={{onClose}}>Fechar modal</button>
-      </div>
-    </motion.div>
-  );
-}}
-"""
+        files["src/components/BookingModal.tsx"] = vite_template_booking_modal(facts)
     if "src/components/Footer.tsx" not in files:
         files["src/components/Footer.tsx"] = f"""const business = {{ name: {name_js}, phone: {phone_js}, city: {city_js} }};
 
@@ -1671,7 +1653,7 @@ export function Footer() {{
 
 
 def _ensure_factual_motion_contract(files: dict[str, str], facts: dict[str, Any]) -> None:
-    business = facts.get("business") if isinstance(facts.get("business"), dict) else {}
+    business = _facts_business(facts)
     name = str(business.get("name") or "").strip()
     if not name:
         return
@@ -1679,15 +1661,15 @@ def _ensure_factual_motion_contract(files: dict[str, str], facts: dict[str, Any]
     rating = str(business.get("rating") or "").strip().replace(",", ".")
     city = str(business.get("city") or facts.get("cidade") or "").strip()
     segment = str(business.get("segment") or business.get("segmento") or facts.get("segmento") or "").strip()
-    files["src/components/FactualMotionContract.tsx"] = _factual_motion_contract_tsx(
+    files["src/components/FactualMotionContract.tsx"] = vite_template_factual_motion_contract(
         name=name,
         phone=phone,
         rating=rating,
         city=city,
         segment=segment,
     )
-    files["src/main.tsx"] = _main_tsx_with_factual_contract(
-        files.get("src/main.tsx", _default_main_tsx())
+    files["src/main.tsx"] = vite_template_main_tsx_with_factual_contract(
+        files.get("src/main.tsx", vite_template_main_tsx())
     )
 
 
@@ -1743,29 +1725,29 @@ createRoot(document.getElementById('root') as HTMLElement).render(
 def _stabilize_reviews_contract(files: dict[str, str], facts: dict[str, Any]) -> None:
     path = "src/components/ReviewsSection.tsx"
     content = str(files.get(path) or "")
-    business = facts.get("business") if isinstance(facts.get("business"), dict) else {}
+    business = _facts_business(facts)
     has_real_reviews = isinstance(business.get("reviews"), list) and any(
         isinstance(item, dict) and str(item.get("texto") or item.get("text") or "").strip()
         for item in business.get("reviews") or []
     )
     if not content:
-        files[path] = _default_reviews_section_tsx(facts)
+        files[path] = vite_template_reviews_section(facts)
         return
     if not has_real_reviews:
-        files[path] = _default_reviews_section_tsx(facts)
+        files[path] = vite_template_reviews_section(facts)
         return
     lowered = content.lower()
     has_motion = any(token in lowered for token in ("motion.", "animate=", "repeat: infinity", "translatex", "x: ["))
     has_reviews = any(token in lowered for token in ("avalia", "depo", "review", "testimonial"))
     if not (has_motion and has_reviews):
-        files[path] = _default_reviews_section_tsx(facts)
+        files[path] = vite_template_reviews_section(facts)
 
 
 def _stabilize_location_contract(files: dict[str, str], facts: dict[str, Any]) -> None:
     path = "src/components/LocationSection.tsx"
     content = str(files.get(path) or "")
     if not content:
-        files[path] = _default_location_section_tsx(facts)
+        files[path] = vite_template_location_section(facts)
         return
     checks = [
         (r"<section\b", r"</section>"),
@@ -1775,10 +1757,10 @@ def _stabilize_location_contract(files: dict[str, str], facts: dict[str, Any]) -
         opens = len(re.findall(open_pat, content))
         closes = len(re.findall(close_pat, content))
         if closes < opens:
-            files[path] = _default_location_section_tsx(facts)
+            files[path] = vite_template_location_section(facts)
             return
     if "export function LocationSection" not in content and "const LocationSection" not in content:
-        files[path] = _default_location_section_tsx(facts)
+        files[path] = vite_template_location_section(facts)
 
 
 def _stabilize_contact_closure_contract(files: dict[str, str], facts: dict[str, Any]) -> None:
@@ -1788,23 +1770,23 @@ def _stabilize_contact_closure_contract(files: dict[str, str], facts: dict[str, 
     footer = str(files.get(footer_path) or "")
 
     if not contact or _needs_contact_closure_reset(contact):
-        files[contact_path] = _default_contact_cta_tsx(facts)
+        files[contact_path] = vite_template_contact_cta(facts)
     if not footer or _needs_footer_closure_reset(footer):
-        files[footer_path] = _default_footer_tsx(facts)
+        files[footer_path] = vite_template_footer(facts)
 
 
 def _stabilize_full_visual_shell_contract(files: dict[str, str], facts: dict[str, Any]) -> None:
     """Keep production tests visually stable when a lead already had bad retries."""
-    files["src/components/HeroSection.tsx"] = _default_hero_section_tsx(facts)
-    files["src/components/AboutSection.tsx"] = _default_about_section_tsx(facts)
-    files["src/components/GallerySection.tsx"] = _default_gallery_section_tsx(facts)
-    files["src/components/ServicesSection.tsx"] = _default_services_section_tsx(facts)
-    files["src/components/LifestyleSection.tsx"] = _default_lifestyle_section_tsx(facts)
-    files["src/components/ReviewsSection.tsx"] = _default_reviews_section_tsx(facts)
-    files["src/components/LocationSection.tsx"] = _default_location_section_tsx(facts)
-    files["src/components/ContactCTA.tsx"] = _default_contact_cta_tsx(facts)
-    files["src/components/Footer.tsx"] = _default_footer_tsx(facts)
-    files["src/components/LgpdBanner.tsx"] = _default_lgpd_banner_tsx()
+    files["src/components/HeroSection.tsx"] = vite_template_hero_section(facts)
+    files["src/components/AboutSection.tsx"] = vite_template_about_section(facts)
+    files["src/components/GallerySection.tsx"] = vite_template_gallery_section(facts)
+    files["src/components/ServicesSection.tsx"] = vite_template_services_section(facts)
+    files["src/components/LifestyleSection.tsx"] = vite_template_lifestyle_section(facts)
+    files["src/components/ReviewsSection.tsx"] = vite_template_reviews_section(facts)
+    files["src/components/LocationSection.tsx"] = vite_template_location_section(facts)
+    files["src/components/ContactCTA.tsx"] = vite_template_contact_cta(facts)
+    files["src/components/Footer.tsx"] = vite_template_footer(facts)
+    files["src/components/LgpdBanner.tsx"] = vite_template_lgpd_banner(facts)
 
 
 def _needs_contact_closure_reset(content: str) -> bool:
@@ -2113,13 +2095,8 @@ def _env_int(name: str, default: int) -> int:
 def write_vite_project(workspace: Path, files: dict[str, str]) -> None:
     """Write normalized files under the workspace and remove stale generated output."""
     workspace.mkdir(parents=True, exist_ok=True)
-    preserve_node_modules = os.getenv("FRALIB_VITE_PREVIEW_FAST", "").strip().lower() in {
-        "1",
-        "true",
-        "yes",
-        "on",
-    }
-    stale_targets = ("dist", "src") if preserve_node_modules else ("dist", "src", "node_modules")
+    preview_fast = _preview_fast_enabled()
+    stale_targets = ("dist", "src") if preview_fast else ("dist", "src", "node_modules")
     for stale in stale_targets:
         target = workspace / stale
         if target.exists():
@@ -2140,12 +2117,7 @@ def build_vite_project(workspace: Path) -> None:
     npm_cmd = _npm_bin()
     node_cmd = _node_bin()
     timeout = int(os.getenv("FRALIB_VITE_BUILD_TIMEOUT", "420"))
-    preview_fast = os.getenv("FRALIB_VITE_PREVIEW_FAST", "").strip().lower() in {
-        "1",
-        "true",
-        "yes",
-        "on",
-    }
+    preview_fast = _preview_fast_enabled()
     node_modules = workspace / "node_modules"
     should_install = True
     if preview_fast and node_modules.exists() and (node_modules / "vite").exists():
@@ -2279,12 +2251,87 @@ def _compose_vite_user_prompt(
     facts: dict[str, Any] | None = None,
     repair_context: dict[str, Any] | None = None,
 ) -> str:
-    facts_summary = _summarize_builder_facts(facts or {})
-    contamination_guard = _segment_contamination_guard(facts or {})
+    facts = facts or {}
+    facts_summary = _summarize_builder_facts(facts)
+    contamination_guard = _segment_contamination_guard(facts)
+
+    # Injetar design system por segmento para garantir diferenciação visual
+    design_system_ref = ""
+    design_reference_ref = ""
+    try:
+        from backend.agents.design_system_selector import select_design_system
+        from backend.core.design_reference_packs import format_design_reference_pack_prompt
+        segmento = facts.get("segment", "") or ""
+        nome_negocio = (facts.get("business") or {}).get("name", "") or ""
+        tier = facts.get("tier", facts.get("caio_tier", "STANDARD")) or "STANDARD"
+        ds_result = select_design_system(segmento, nome_negocio, tier)
+        if ds_result and ds_result.get("content"):
+            ds_content = ds_result["content"]
+            ds_slug = ds_result.get("slug", "unknown")
+            design_system_ref = f"""
+=== DESIGN SYSTEM: {ds_slug.upper()} ===
+CATEGORY: {ds_result.get('category', 'General')}
+{ds_content}
+=== END DESIGN SYSTEM ===
+
+IMPORTANT: Apply this design system's color palette, typography, and visual
+principles. The chosen design system MUST affect the visible output.
+"""
+        # Injetar Design Reference Pack completo (OpenDesign systems)
+        ref_pack = facts.get("design_reference_pack") or {}
+        if ref_pack and isinstance(ref_pack, dict):
+            ref_prompt = format_design_reference_pack_prompt(ref_pack)
+            if ref_prompt:
+                design_reference_ref = f"""
+=== BRAND REFERENCE PACK ===
+{ref_prompt}
+=== END BRAND REFERENCE ===
+
+Apply this brand's visual DNA: typography, colors, motion, spacing.
+"""
+    except Exception as e:
+        # Se falhar, continua sem design system (não quebra o pipeline)
+        design_system_ref = ""
+        design_reference_ref = ""
+
+    # Injetar site_skill_pack (regras Awwwards-grade) - UK post-commit 83fc6c1
+    skill_pack_ref = ""
+    try:
+        from backend.agents.site_skill_pack import SITE_SKILL_PACK
+        if SITE_SKILL_PACK:
+            skill_pack_ref = f"""
+=== AWWWRADS-GRADE CRAFT RULES ===
+{SITE_SKILL_PACK[:8000]}
+=== END CRAFT RULES ===
+
+CRITICAL: Follow these craft rules for every generated site.
+"""
+    except Exception:
+        skill_pack_ref = ""
+
+    # Injetar variação estrutural do Agente Variação
+    variacao_ref = ""
+    variacao = facts.get("variacao") or facts.get("variacao_estrutural") or {}
+    if variacao:
+        template_hero = variacao.get("template_hero", "") or ""
+        template_estrutura = variacao.get("template_estrutura", "") or ""
+        ordem_secoes = variacao.get("ordem_das_secoes", []) or []
+        if template_hero or template_estrutura:
+            variacao_ref = f"""
+=== STRUCTURAL VARIATION ===
+Hero Type: {template_hero or 'renderer-decides'}
+Structure: {template_estrutura or 'default'}
+Section Order: {', '.join(ordem_secoes) if ordem_secoes else 'default'}
+=== END VARIATION ===
+
+IMPORTANT: Use the specified hero type and section order. If 'renderer-decides',
+choose the best hero type for this business type.
+"""
+
     prompt = f"""Use this FraLib Prompt Agent request as the complete business brief.
 
 Return one JSON object with a `files` mapping for a complete Vite React
-TypeScript project. The compiled artifact must be `dist/index.html`.
+TypeScript project. The compiled artifact must be `dist/index.html`.{skill_pack_ref}{design_reference_ref}{design_system_ref}{variacao_ref}
 
 Studio-grade visual contract:
 - Use Tailwind v4 through `@tailwindcss/vite`, `@import "tailwindcss";`,

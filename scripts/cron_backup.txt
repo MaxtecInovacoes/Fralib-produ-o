@@ -1,0 +1,7 @@
+# =========================================================================
+# Cron do FraLib - Backup automático do PostgreSQL
+# =========================================================================
+# Linha única (sem header de crontab):
+# 0 2 * * * /root/fralib/scripts/backup_postgres.sh
+# 0 3 * * 0 /root/fralib/scripts/backup_postgres.sh  # semanal (domingo)
+# =========================================================================

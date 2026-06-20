@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>ECC Backup Audit</title>
+<style>
+body{font-family:-apple-system,system-ui,sans-serif;background:#0f172a;color:#e2e8f0;margin:0;padding:32px}
+.container{max-width:900px;margin:0 auto}
+h1{color:#fff;margin:0 0 8px 0}
+.subtitle{color:#94a3b8;margin:0 0 32px 0}
+.summary{background:#10b981;color:#fff;padding:24px;border-radius:12px;margin-bottom:32px;font-size:24px;font-weight:600;text-align:center}
+.check{background:#1e293b;border-radius:8px;padding:16px 20px;margin-bottom:12px;border-left:4px solid #10b981}
+.check.fail{border-left-color:#ef4444}
+.check h3{margin:0 0 8px 0;color:#fff;display:flex;align-items:center;gap:8px}
+.badge{background:#10b981;color:#fff;font-size:12px;padding:2px 8px;border-radius:4px}
+.badge.fail{background:#ef4444}
+.evidence{background:#0f172a;padding:12px;border-radius:6px;font-family:monospace;font-size:13px;color:#94a3b8;margin-top:8px;word-break:break-all}
+.footer{margin-top:32px;text-align:center;color:#64748b;font-size:13px}
+</style></head><body>
+<div class="container">
+<h1>🐕 ECC Loop - Auditoria de Backup</h1>
+<p class="subtitle">FraLib PostgreSQL - 2026-06-20 19:28:37</p>
+<div class="summary">✅ 8/8 checks passaram</div>
+<div class="check"><h3>✅ Script existe e executável <span class="badge">PASS</span></h3><div class="evidence">/root/fralib/scripts/backup_postgres.sh</div></div><div class="check"><h3>✅ Diretório de backup existe <span class="badge">PASS</span></h3><div class="evidence">1 arquivo(s) em /var/backups/fralib/postgres/daily/</div></div><div class="check"><h3>✅ Backup íntegro (pg_restore -l) <span class="badge">PASS</span></h3><div class="evidence">162 tabelas no backup</div></div><div class="check"><h3>✅ Restore de teste funcionou <span class="badge">PASS</span></h3><div class="evidence">count 
+-------
+    31
+(1 row)</div></div><div class="check"><h3>✅ Log estruturado gravado <span class="badge">PASS</span></h3><div class="evidence">/var/log/fralib/backup.log: 7 linhas</div></div><div class="check"><h3>✅ Cron agendado (02:00 UTC diário) <span class="badge">PASS</span></h3><div class="evidence">0 2 * * * /root/fralib/scripts/backup_postgres.sh >> /var/log/fralib/backup.log 2>&1</div></div><div class="check"><h3>✅ Retenção automática configurada <span class="badge">PASS</span></h3><div class="evidence">1 backups, mantém últimos 7 dias</div></div><div class="check"><h3>✅ Tamanho do backup razoável <span class="badge">PASS</span></h3><div class="evidence">6.1M (comprimido com -Z 9)</div></div>
+<div class="footer">ECC Loop • Playwright Evidence • 2026-06-20 19:28:37</div>
+</div></body></html>

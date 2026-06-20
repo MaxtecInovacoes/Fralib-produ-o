@@ -1970,12 +1970,14 @@ async def executar_pipeline_completo(
                     HtmlQualityGateError,
                     sanitize_builder_html_for_publication,
                     validate_generated_html,
+                    normalize_generated_html_for_publication,
                 )
             except Exception:
                 from html_quality_gate import (
                     HtmlQualityGateError,
                     sanitize_builder_html_for_publication,
                     validate_generated_html,
+                    normalize_generated_html_for_publication,
                 )
 
             _max_repair_attempts = 3
@@ -1990,14 +1992,36 @@ async def executar_pipeline_completo(
                     _persist_failed_renderer_html(state, exc, _renderer_agent)
                     if _repair_attempt >= _max_repair_attempts:
                         raise
+
+                    # PATCH-FIRST: tentar resolver problemas com patches diretos antes de rebuild
                     _log(
-                        f"  {_renderer_label}: quality gate falhou; solicitando reparo",
+                        f"  {_renderer_label}: quality gate falhou; tentando patch primeiro",
                         "warning",
                     )
-                    state.html_final = _gerar_html_renderer(
-                        _validation_errors=str(exc),
-                        _previous_html=state.html_final,
-                    )
+                    _original_html = state.html_final
+
+                    # Aplicar normalização adicional + sanitização novamente
+                    try:
+                        state.html_final = normalize_generated_html_for_publication(
+                            state.html_final, state.prd_arquiteto
+                        )
+                        state.html_final = sanitize_builder_html_for_publication(
+                            state.html_final, state.prd_arquiteto
+                        )
+                        validate_generated_html(state.html_final, state.prd_arquiteto)
+                        _log(f"  {_renderer_label}: patch resolveu problemas!", "success")
+                        break
+                    except HtmlQualityGateError:
+                        # Patch não funcionou, mas não perdemos o HTML original
+                        # Agora sim faz rebuild, mas passa o HTML original como referência
+                        _log(
+                            f"  {_renderer_label}: patch insuficiente; rebuild com referência",
+                            "warning",
+                        )
+                        state.html_final = _gerar_html_renderer(
+                            _validation_errors=str(exc),
+                            _previous_html=_original_html,  # Passa o original, não o html já modificado
+                        )
             state.html_final = sanitize_builder_html_for_publication(
                 state.html_final, state.prd_arquiteto
             )
