@@ -2,10 +2,17 @@
 (function(global){
   'use strict';
 
-  var state = window._ed.state;
-  var $ = window._ed.$;
-  var escapeText = window._ed.escapeText;
-  var getIframeDoc = window._ed.getIframeDoc;
+  var state = global.state;
+  var $ = global.$;
+  var escapeText = global.escapeText;
+  var status = global.status;
+  var setDirty = global.setDirty;
+
+  function getIframeDoc(){
+    var ifr = $('editorIframe');
+    try{ return ifr.contentDocument || ifr.contentWindow.document; }
+    catch(e){ return null; }
+  }
 
   function fileToBase64(file){
     return new Promise(function(resolve, reject){
@@ -26,7 +33,7 @@
     if(file.type && allowed.indexOf(file.type) === -1){
       return Promise.reject(new Error('Use PNG, JPG, WebP ou GIF'));
     }
-    window._ed.status('Enviando imagem...', false);
+    status('Enviando imagem...', false);
     return fileToBase64(file).then(function(dataBase64){
       return window.authFetch('/api/sites/' + encodeURIComponent(state.leadId) + '/upload-asset', {
         method: 'POST',
@@ -51,20 +58,20 @@
   function editorUploadSelectedImage(file){
     var el = global.getSelected();
     if(!el || (el.tagName || '').toLowerCase() !== 'img'){
-      window._ed.status('Selecione uma imagem no canvas antes do upload.', true);
+      status('Selecione uma imagem no canvas antes do upload.', true);
       return;
     }
     uploadAsset(file)
       .then(function(asset){
         el.setAttribute('src', asset.url);
         if($('editorImageSrc')) $('editorImageSrc').value = asset.url;
-        window._ed.setDirty(true);
+        setDirty(true);
         global.pushHistory();
         global.renderInspector(el);
         global.renderImages();
-        window._ed.status('Imagem enviada e aplicada.', false);
+        status('Imagem enviada e aplicada.', false);
       })
-      .catch(function(err){ window._ed.status('Upload falhou: ' + (err.message || err), true); });
+      .catch(function(err){ status('Upload falhou: ' + (err.message || err), true); });
   }
 
   function editorUploadLogo(file){
@@ -72,9 +79,9 @@
       .then(function(asset){
         if($('editorLogoUrl')) $('editorLogoUrl').value = asset.url;
         global.editorApplyLogo();
-        window._ed.status('Logo enviado e aplicado.', false);
+        status('Logo enviado e aplicado.', false);
       })
-      .catch(function(err){ window._ed.status('Upload falhou: ' + (err.message || err), true); });
+      .catch(function(err){ status('Upload falhou: ' + (err.message || err), true); });
   }
 
   function renderImages(){
@@ -129,13 +136,13 @@
 
   function editorDuplicateSelected(){
     var el = global.getSelected();
-    if(!el){ window._ed.status('Selecione um elemento primeiro.', true); return; }
+    if(!el){ status('Selecione um elemento primeiro.', true); return; }
     var clone = el.cloneNode(true);
     global.scrubEditorAttrs(clone);
     el.parentNode.insertBefore(clone, el.nextSibling);
     global.assignEditorIds(getIframeDoc());
     global.selecionarElemento(clone);
-    window._ed.setDirty(true);
+    setDirty(true);
     global.pushHistory();
     global.renderSections();
     global.renderImages();
@@ -143,30 +150,30 @@
 
   function editorMoveSelected(direction){
     var el = global.getSelected();
-    if(!el || !el.parentNode){ window._ed.status('Selecione um elemento primeiro.', true); return; }
+    if(!el || !el.parentNode){ status('Selecione um elemento primeiro.', true); return; }
     if(direction === 'up' && el.previousElementSibling){
       el.parentNode.insertBefore(el, el.previousElementSibling);
     } else if(direction === 'down' && el.nextElementSibling){
       el.parentNode.insertBefore(el.nextElementSibling, el);
     } else {
-      window._ed.status('Não há para onde mover.', true);
+      status('Não há para onde mover.', true);
       return;
     }
-    window._ed.setDirty(true);
+    setDirty(true);
     global.pushHistory();
     global.renderSections();
   }
 
   function editorDeleteSelected(){
     var el = global.getSelected();
-    if(!el){ window._ed.status('Selecione um elemento primeiro.', true); return; }
+    if(!el){ status('Selecione um elemento primeiro.', true); return; }
     if(!confirm('Excluir este elemento do site?')) return;
     var parent = el.parentNode;
     el.remove();
     state.selectedId = null;
     global.renderInspector(null);
     global.renderSelectedPath(null);
-    window._ed.setDirty(true);
+    setDirty(true);
     global.pushHistory();
     if(parent && parent.dataset && parent.dataset.fralibEditorId) global.selecionarElemento(parent);
     global.renderSections();
@@ -190,10 +197,10 @@
     global.assignEditorIds(doc);
     global.bindEditableText(doc);
     global.selecionarElemento(section);
-    window._ed.setDirty(true);
+    setDirty(true);
     global.pushHistory();
     global.renderSections();
-    window._ed.status('Seção adicionada.', false);
+    status('Seção adicionada.', false);
   }
 
   function sectionTemplate(type){

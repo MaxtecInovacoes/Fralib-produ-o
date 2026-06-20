@@ -32,6 +32,17 @@ def skip_html_quality_gate(config: dict | None = None) -> bool:
     )
 
 
+def skip_deterministic_gate(config: dict | None = None) -> bool:
+    """Gate determinístico NUNCA pode ser pulado por FRALIB_SKIP_HTML_QUALITY_GATE.
+
+    O skip flag só se aplica ao validador LLM opcional (validador.py), não às
+    validações determinísticas em html_quality_gate.py (audit_generated_html,
+    validate_generated_html, sanitize_builder_html_for_publication).
+    """
+    # Sempre retorna False - gate determinístico é mandatório
+    return False
+
+
 def is_builder_fast_path(config: dict | None = None) -> bool:
     config = config or {}
     if config.get("_disable_builder_fast_path"):

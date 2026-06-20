@@ -42,6 +42,7 @@ def test_pipeline_flow_flags_keep_existing_defaults(monkeypatch):
         is_builder_fast_path,
         is_prompt_agent_flow,
         skip_html_quality_gate,
+        skip_deterministic_gate,
     )
 
     monkeypatch.delenv("FRALIB_PROMPT_AGENT_FLOW", raising=False)
@@ -50,6 +51,13 @@ def test_pipeline_flow_flags_keep_existing_defaults(monkeypatch):
     assert is_prompt_agent_flow({}) is True
     assert is_builder_fast_path({}) is True
     assert skip_html_quality_gate({}) is False
+    # skip_deterministic_gate SEMPRE retorna False - gate determinístico não pode ser pulado
+    assert skip_deterministic_gate({}) is False
+    assert skip_deterministic_gate({"_skip_html_quality_gate": True}) is False
+    monkeypatch.setenv("FRALIB_SKIP_HTML_QUALITY_GATE", "1")
+    assert skip_html_quality_gate({}) is True
+    # Gate determinístico ainda NÃO pode ser pulado mesmo com FRALIB_SKIP_HTML_QUALITY_GATE=1
+    assert skip_deterministic_gate({}) is False
     assert is_prompt_agent_flow({"_disable_prompt_agent_flow": True}) is False
     assert is_builder_fast_path({"_disable_builder_fast_path": True}) is False
 

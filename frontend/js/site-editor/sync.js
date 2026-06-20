@@ -2,9 +2,16 @@
 (function(global){
   'use strict';
 
-  var state = window._ed.state;
-  var $ = window._ed.$;
-  var getIframeDoc = window._ed.getIframeDoc;
+  var state = global.state;
+  var $ = global.$;
+  var status = global.status;
+  var setDirty = global.setDirty;
+
+  function getIframeDoc(){
+    var ifr = $('editorIframe');
+    try{ return ifr.contentDocument || ifr.contentWindow.document; }
+    catch(e){ return null; }
+  }
 
   function preencherCamposPorInspecao(){
     setTimeout(function(){
@@ -34,7 +41,7 @@
 
   function sincronizarCampos(){
     var doc = getIframeDoc();
-    if(!doc){ window._ed.status('Site nao carregado', true); return; }
+    if(!doc){ status('Site nao carregado', true); return; }
     var tel = ($('edTelefone') && $('edTelefone').value || '').trim();
     var nome = ($('edNome') && $('edNome').value || '').trim();
     var headline = ($('edHeadline') && $('edHeadline').value || '').trim();
@@ -82,11 +89,11 @@
         return obj;
       });
     }
-    window._ed.setDirty(true);
+    setDirty(true);
     global.pushHistory();
     global.renderSections();
     global.renderImages();
-    window._ed.status('Dados aplicados. Clique em Salvar site para persistir.', false);
+    status('Dados aplicados. Clique em Salvar site para persistir.', false);
   }
 
   function atualizarSchema(doc, mutator){

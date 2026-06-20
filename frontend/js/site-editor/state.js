@@ -2,13 +2,70 @@
 (function(global){
   'use strict';
 
-  var state = window._ed.state;
-  var $ = window._ed.$;
-  var escapeText = window._ed.escapeText;
-  var status = window._ed.status;
-  var setDirty = window._ed.setDirty;
+  /* ── Base helpers shared via global ── */
+  var SELECTABLE = [
+    'section','header','footer','nav','main','article','aside',
+    'h1','h2','h3','h4','h5','p','li','a','button','blockquote',
+    'img','picture','figure','form','input','textarea','select',
+    '.card','[class*="card"]','[class*="hero"]','[class*="cta"]'
+  ].join(',');
 
-  /* ── State already initialised by this module (shared via window._ed) ── */
+  var TEXT_SELECTOR = 'h1,h2,h3,h4,h5,p,li,a,button,span,strong,em,small,blockquote,figcaption,label,td,th';
+
+  function $(id){ return document.getElementById(id); }
+
+  function escapeText(value){
+    return String(value == null ? '' : value)
+      .replace(/&/g,'&amp;')
+      .replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;')
+      .replace(/'/g,'&#039;');
+  }
+
+  var state = {
+    leadId: null,
+    slug: null,
+    htmlOriginal: '',
+    dirty: false,
+    selectedId: null,
+    selectedKind: null,
+    nextId: 1,
+    history: [],
+    historyIndex: -1,
+    snapshotTimer: null,
+    device: 'desktop',
+    restoring: false,
+  };
+
+  function status(msg, isErr){
+    var el = $('editorStatus');
+    if(!el) return;
+    el.textContent = msg;
+    el.classList.toggle('err', !!isErr);
+    el.classList.add('show');
+    clearTimeout(el._t);
+    el._t = setTimeout(function(){ el.classList.remove('show'); }, 2800);
+  }
+
+  function setDirty(value){
+    state.dirty = value !== false;
+    var sub = $('editorSiteSubtitle');
+    if(sub){
+      sub.textContent = state.dirty
+        ? 'Alteracoes locais ainda nao salvas.'
+        : 'Selecione um elemento no site para editar texto, estilo, imagem ou secao.';
+    }
+  }
+
+  /* ── Exports: base helpers first (needed by other modules) ── */
+  global.$ = $;
+  global.escapeText = escapeText;
+  global.status = status;
+  global.setDirty = setDirty;
+  global.SELECTABLE = SELECTABLE;
+  global.TEXT_SELECTOR = TEXT_SELECTOR;
+  global.state = state;
 
   /* ── Public API: open / close ── */
 
@@ -100,7 +157,7 @@
   }
 
   function assignEditorIds(doc){
-    var nodes = doc.querySelectorAll(window._ed.SELECTABLE);
+    var nodes = doc.querySelectorAll(SELECTABLE);
     nodes.forEach(function(el){
       if(el.closest('script,style,noscript,template')) return;
       if(!el.dataset.fralibEditorId){

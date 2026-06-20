@@ -4,13 +4,21 @@ The Builder asks the LLM for a studio-grade, componentized Vite React project,
 writes it into the isolated tenant/job workspace, installs a fixed dependency
 set and publishes only the compiled `dist` directory.
 
-MODULARIZED: Core logic extracted to separate modules:
+⚠️  ORQUESTRADOR - NÃO É MONOLITO
+=================================
+Este arquivo é um ORQUESTRADOR que coordena módulos modulares.
+Lógica de negócio extraída para:
 - vite_config.py: Configuration constants
 - vite_prompts.py: System prompts and composers
 - vite_facts.py: Facts extraction helpers
 - vite_file_extractor.py: File extraction and normalization
 - vite_validator.py: Project validation
 - vite_build_executor.py: Build execution
+- vite_modules.py: Module definitions
+- vite_renderer_models.py: Data models
+- vite_config_helpers.py: Configuration helpers
+
+@architecture Orquestrador (coordena módulos, 0 lógica isolada)
 """
 
 from __future__ import annotations

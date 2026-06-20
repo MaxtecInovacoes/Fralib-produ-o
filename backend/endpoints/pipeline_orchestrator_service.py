@@ -1,3 +1,26 @@
+"""Pipeline Orchestrator Service.
+
+⚠️  ORQUESTRADOR - NÃO É MONOLITO
+=================================
+Este arquivo é um ORQUESTRADOR que coordena ~20 módulos de helpers.
+Lógica de negócio extraída para:
+- pipeline_execution_core.py: Execução de pipeline
+- pipeline_phase_helpers.py: Helpers de fase
+- pipeline_lead_flow_helpers.py: Fluxo de leads
+- pipeline_lead_persistence.py: Persistência
+- pipeline_status_endpoints.py: Status endpoints
+- pipeline_trace_helpers.py: Tracing
+- pipeline_heartbeat.py: Heartbeat
+- pipeline_start_endpoints.py: Start endpoints
+- pipeline_run_helpers.py: Run helpers
+- pipeline_sse_handler.py: SSE handler
+- pipeline_reprocess_endpoints.py: Reprocess endpoints
+- pipeline_control_endpoints.py: Control endpoints
+- E mais ~12 arquivos de helpers
+
+@architecture Orquestrador (coordena módulos, ~2,500 linhas de orquestração)
+"""
+
 import asyncio
 import hashlib
 import logging
@@ -107,6 +130,7 @@ from backend.services.pipeline_flow_config import (
 )
 from backend.services.pipeline_flow_config import (
     skip_html_quality_gate as _skip_html_quality_gate,
+    skip_deterministic_gate as _skip_deterministic_gate,
 )
 from backend.services.pipeline_phase_tracking import (
     pipeline_phase_key as _pipeline_phase_key_impl,
@@ -1932,53 +1956,63 @@ async def executar_pipeline_completo(
                 # (permissao, disco cheio, diretorio invalido)
                 # Apenas logamos - nao queremos quebrar o pipeline por isso
                 logger.warning(f"[Pipeline] Falha ao salvar debug HTML: {e}")
-            if _skip_html_quality_gate(config):
-                _log(
-                    f"  {_renderer_label}: quality gate/repair ignorado (experimento nativo)",
-                    "warning",
-                )
-            else:
-                try:
-                    from agents.html_quality_gate import (
-                        HtmlQualityGateError,
-                        sanitize_builder_html_for_publication,
-                        validate_generated_html,
-                    )
-                except Exception:
-                    from html_quality_gate import (
-                        HtmlQualityGateError,
-                        sanitize_builder_html_for_publication,
-                        validate_generated_html,
-                    )
 
-                _max_repair_attempts = 3
-                for _repair_attempt in range(1, _max_repair_attempts + 1):
-                    try:
-                        state.html_final = sanitize_builder_html_for_publication(
-                            state.html_final, state.prd_arquiteto
-                        )
-                        validate_generated_html(state.html_final, state.prd_arquiteto)
-                        break
-                    except HtmlQualityGateError as exc:
-                        _persist_failed_renderer_html(state, exc, _renderer_agent)
-                        if _repair_attempt >= _max_repair_attempts:
-                            raise
-                        _log(
-                            f"  {_renderer_label}: quality gate falhou; solicitando reparo",
-                            "warning",
-                        )
-                        state.html_final = _gerar_html_renderer(
-                            _validation_errors=str(exc),
-                            _previous_html=state.html_final,
-                        )
-                state.html_final = sanitize_builder_html_for_publication(
-                    state.html_final, state.prd_arquiteto
+            # ── Gate determinístico: SEMPRE executa, não pode ser pulado ──
+            # FRALIB_SKIP_HTML_QUALITY_GATE só pula validador LLM opcional,
+            # nunca o gate determinístico (html_quality_gate.py)
+            if _skip_deterministic_gate(config):
+                _log(
+                    f"  {_renderer_label}: gate determinístico DESATIVADO (NUNCA deveria acontecer)",
+                    "error",
                 )
+            try:
+                from agents.html_quality_gate import (
+                    HtmlQualityGateError,
+                    sanitize_builder_html_for_publication,
+                    validate_generated_html,
+                )
+            except Exception:
+                from html_quality_gate import (
+                    HtmlQualityGateError,
+                    sanitize_builder_html_for_publication,
+                    validate_generated_html,
+                )
+
+            _max_repair_attempts = 3
+            for _repair_attempt in range(1, _max_repair_attempts + 1):
                 try:
+                    state.html_final = sanitize_builder_html_for_publication(
+                        state.html_final, state.prd_arquiteto
+                    )
                     validate_generated_html(state.html_final, state.prd_arquiteto)
+                    break
                 except HtmlQualityGateError as exc:
                     _persist_failed_renderer_html(state, exc, _renderer_agent)
-                    raise
+                    if _repair_attempt >= _max_repair_attempts:
+                        raise
+                    _log(
+                        f"  {_renderer_label}: quality gate falhou; solicitando reparo",
+                        "warning",
+                    )
+                    state.html_final = _gerar_html_renderer(
+                        _validation_errors=str(exc),
+                        _previous_html=state.html_final,
+                    )
+            state.html_final = sanitize_builder_html_for_publication(
+                state.html_final, state.prd_arquiteto
+            )
+            try:
+                validate_generated_html(state.html_final, state.prd_arquiteto)
+            except HtmlQualityGateError as exc:
+                _persist_failed_renderer_html(state, exc, _renderer_agent)
+                raise
+
+            # ── Validador LLM opcional: pode ser pulado com FRALIB_SKIP_HTML_QUALITY_GATE ──
+            if _skip_html_quality_gate(config):
+                _log(
+                    f"  {_renderer_label}: validador LLM ignorado (experimento nativo)",
+                    "warning",
+                )
             _log(f"  HTML: {len(state.html_final):,} chars", "success")
             logger.info(f"[Pipeline] {_renderer_label}: OK")
             # Validar HTML antes de salvar checkpoint (não salvar truncado)

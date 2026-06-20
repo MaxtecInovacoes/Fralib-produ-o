@@ -1,6 +1,21 @@
 """
 SDR Graph - Define o grafo de estados do agente.
 Cada node é um estágio ou ação. Edges definem as transições.
+
+⚠️  ORQUESTRADOR - NÃO É MONOLITO
+=================================
+Este arquivo é um ORQUESTRADOR que define o grafo LangGraph.
+Lógica extraída para:
+- state.py: Definições de estado
+- nodes/__init__.py: Nodes do grafo
+- tools.py: Ferramentas do agente
+- prompts.py: Prompts do sistema
+- learning.py: Aprendizado e ajuste
+- multi_agent.py: Multi-agente
+- watchdog.py: Watchdog/timeout
+- compat.py: Compatibilidade
+
+@architecture Orquestrador (define grafo, coordena nodes)
 """
 
 from __future__ import annotations

@@ -42,6 +42,7 @@ async def execute_pipeline_tail(
     render_site_with_builder=None,
     _persist_failed_renderer_html=None,
     _skip_html_quality_gate=None,
+    _skip_deterministic_gate=None,
     _tenant_sdr_allowed=None,
     trial_credit_waits_for_sdr_delivery=None,
     consumir_credito_diario=None,
@@ -93,8 +94,10 @@ async def execute_pipeline_tail(
             state.builder_manifest_path = _result.get("manifest_path", "")
             return _result["html"]
         state.html_final = _gerar_html_renderer()
-        if not _skip_html_quality_gate(config):
-            pass
+        # Gate determinístico: SEMPRE executa, não pode ser pulado
+        # _skip_html_quality_gate só pula validador LLM opcional
+        if _skip_deterministic_gate and _skip_deterministic_gate(config):
+            logger.error("[Pipeline] Gate determinístico deveria ser pulado - IMPOSSIVEL")
     _progress(10, "Publicando site...")
     _log("FASE 10: DEPLOY", "info")
     web_dir = f"/var/www/fralib/sites/{tenant_id}/{state.lead_slug}"

@@ -8,7 +8,7 @@ import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "backend"))
 
-from utils.schema_builder import gerar_schema, injetar_schema_no_html, normalizar_horarios
+from utils.schema_builder import gerar_schema, injetar_schema_no_html, normalizar_horarios, gerar_faq_schema
 
 
 def _schema_from_html(html):
@@ -70,3 +70,40 @@ def test_injetar_schema_falls_back_when_head_is_missing(tmp_path):
     assert "application/ld+json" in result
     assert (tmp_path / "sitemap.xml").exists()
     assert (tmp_path / "robots.txt").exists()
+
+
+@pytest.mark.unit
+def test_gerar_faq_schema_retorna_faqpage_valido():
+    perguntas_respostas = [
+        {"pergunta": "Qual o horario de funcionamento?", "resposta": "Seg a Sex das 8h as 18h."},
+        {"question": "Aceita cartao?", "answer": "Sim, aceitamos todos os cartoes."},
+        {"q": "Tem estacionamento?", "a": "Sim, gratuito para clientes."},
+    ]
+
+    faq_tag = gerar_faq_schema(perguntas_respostas, "https://exemplo.com")
+
+    assert '<script type="application/ld+json">' in faq_tag
+    assert "FAQPage" in faq_tag
+    assert "Qual o horario de funcionamento" in faq_tag
+    assert "Seg a Sex das 8h as 18h" in faq_tag
+
+
+@pytest.mark.unit
+def test_gerar_faq_schema_lista_vazia_retorna_string_vazia():
+    assert gerar_faq_schema([], "https://exemplo.com") == ""
+    assert gerar_faq_schema(None, "https://exemplo.com") == ""
+
+
+@pytest.mark.unit
+def test_gerar_faq_schema_ignora_itens_sem_pergunta_ou_resposta():
+    perguntas_respostas = [
+        {"pergunta": "Valido?", "resposta": "Sim."},
+        {"pergunta": "", "resposta": "Sem pergunta."},
+        {"pergunta": "Sem resposta", "resposta": ""},
+    ]
+
+    faq_tag = gerar_faq_schema(perguntas_respostas, "https://exemplo.com")
+
+    assert "Valido" in faq_tag
+    assert '"name":""' not in faq_tag
+    assert '"text":""' not in faq_tag

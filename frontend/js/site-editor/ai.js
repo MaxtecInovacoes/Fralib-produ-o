@@ -2,9 +2,16 @@
 (function(global){
   'use strict';
 
-  var state = window._ed.state;
-  var $ = window._ed.$;
-  var getIframeDoc = window._ed.getIframeDoc;
+  var state = global.state;
+  var $ = global.$;
+  var status = global.status;
+  var setDirty = global.setDirty;
+
+  function getIframeDoc(){
+    var ifr = $('editorIframe');
+    try{ return ifr.contentDocument || ifr.contentWindow.document; }
+    catch(e){ return null; }
+  }
 
   function serializeSelectedForPrompt(el){
     if(!el) return '';
@@ -42,10 +49,10 @@
         state.history = [];
         state.historyIndex = -1;
         $('editorIframe').srcdoc = state.htmlOriginal;
-        window._ed.setDirty(false);
+        setDirty(false);
         global.renderInspector(null);
         global.renderSelectedPath(null);
-        setTimeout(function(){ window._ed.status(message || 'Site recarregado.', false); }, 350);
+        setTimeout(function(){ status(message || 'Site recarregado.', false); }, 350);
       });
   }
 
@@ -55,9 +62,9 @@
     var scope = $('editorAiScope') ? $('editorAiScope').value : 'selected';
     var btn = $('editorAiRunBtn');
     var selected = global.getSelected();
-    if(!prompt){ window._ed.status('Escreva o pedido para a IA.', true); return; }
+    if(!prompt){ status('Escreva o pedido para a IA.', true); return; }
     if(scope === 'selected' && !selected){
-      window._ed.status('Selecione um elemento ou mude o escopo para site inteiro.', true);
+      status('Selecione um elemento ou mude o escopo para site inteiro.', true);
       return;
     }
     if(scope === 'selected'){
@@ -71,8 +78,8 @@
       ].join('\n');
     }
     if(btn) btn.disabled = true;
-    window._ed.status(window._ed.state.dirty ? 'Salvando antes de aplicar IA...' : 'Aplicando IA...', false);
-    var beforeAi = window._ed.state.dirty ? global.salvar({throwOnError: true}) : Promise.resolve();
+    status(state.dirty ? 'Salvando antes de aplicar IA...' : 'Aplicando IA...', false);
+    var beforeAi = state.dirty ? global.salvar({throwOnError: true}) : Promise.resolve();
     return beforeAi.then(function(){
       return window.authFetch('/api/sites/' + encodeURIComponent(state.leadId) + '/editar-ia', {
         method: 'POST',
@@ -88,7 +95,7 @@
       }
       return reloadSiteFromServer('Alteração por IA aplicada.');
     }).catch(function(err){
-      window._ed.status('IA falhou: ' + (err.message || err), true);
+      status('IA falhou: ' + (err.message || err), true);
     }).finally(function(){
       if(btn) btn.disabled = false;
     });

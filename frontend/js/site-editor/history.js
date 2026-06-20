@@ -2,9 +2,15 @@
 (function(global){
   'use strict';
 
-  var state = window._ed.state;
-  var $ = window._ed.$;
-  var getIframeDoc = window._ed.getIframeDoc;
+  var state = global.state;
+  var $ = global.$;
+  var setDirty = global.setDirty;
+
+  function getIframeDoc(){
+    var ifr = $('editorIframe');
+    try{ return ifr.contentDocument || ifr.contentWindow.document; }
+    catch(e){ return null; }
+  }
 
   function serializeForSave(){
     var doc = getIframeDoc();
@@ -54,7 +60,7 @@
     state.selectedId = null;
     state.restoring = true;
     $('editorIframe').srcdoc = state.history[index];
-    window._ed.setDirty(true);
+    setDirty(true);
     global.updateHistoryButtons();
   }
 

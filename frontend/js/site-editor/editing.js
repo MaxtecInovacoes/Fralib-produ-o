@@ -2,10 +2,17 @@
 (function(global){
   'use strict';
 
-  var state = window._ed.state;
-  var $ = window._ed.$;
-  var escapeText = window._ed.escapeText;
-  var getIframeDoc = window._ed.getIframeDoc;
+  var state = global.state;
+  var $ = global.$;
+  var escapeText = global.escapeText;
+  var status = global.status;
+  var setDirty = global.setDirty;
+
+  function getIframeDoc(){
+    var ifr = $('editorIframe');
+    try{ return ifr.contentDocument || ifr.contentWindow.document; }
+    catch(e){ return null; }
+  }
 
   function isTextOnly(el){
     return Array.prototype.every.call(el.childNodes, function(n){
@@ -14,14 +21,14 @@
   }
 
   function bindEditableText(doc){
-    doc.querySelectorAll(window._ed.TEXT_SELECTOR).forEach(function(el){
+    doc.querySelectorAll(global.TEXT_SELECTOR).forEach(function(el){
       if(el.closest('script,style,noscript,template')) return;
       if(!isTextOnly(el)) return;
       el.contentEditable = 'true';
       el.setAttribute('spellcheck','false');
       el.addEventListener('focus', function(){ global.selecionarElemento(el); });
       el.addEventListener('input', function(){
-        window._ed.setDirty(true);
+        setDirty(true);
         global.syncInspectorFromSelected();
         global.scheduleSnapshot();
       });
@@ -173,7 +180,7 @@
     if(!el) return;
     if(state.selectedKind !== 'text' && state.selectedKind !== 'button') return;
     el.textContent = value;
-    window._ed.setDirty(true);
+    setDirty(true);
     global.renderSelectedPath(el);
     global.scheduleSnapshot();
   }
@@ -183,7 +190,7 @@
     if(!el) return;
     if(value) el.setAttribute(attr, value);
     else el.removeAttribute(attr);
-    window._ed.setDirty(true);
+    setDirty(true);
     global.renderSelectedPath(el);
     global.scheduleSnapshot();
     global.renderImages();
@@ -193,14 +200,14 @@
     var el = getSelected();
     if(!el || !prop) return;
     el.style[prop] = value;
-    window._ed.setDirty(true);
+    setDirty(true);
     global.scheduleSnapshot();
     global.renderInspector(el);
   }
 
   function editorApplyPalette(color){
     var el = getSelected();
-    if(!el){ window._ed.status('Selecione um elemento primeiro.', true); return; }
+    if(!el){ status('Selecione um elemento primeiro.', true); return; }
     var tag = (el.tagName || '').toLowerCase();
     if(tag === 'a' || tag === 'button'){
       el.style.backgroundColor = color;
@@ -212,7 +219,7 @@
     } else {
       el.style.color = color;
     }
-    window._ed.setDirty(true);
+    setDirty(true);
     global.scheduleSnapshot();
     global.renderInspector(el);
   }
@@ -232,14 +239,14 @@
     ['--accent','--primary','--brand','--fl-accent'].forEach(function(name){
       root.style.setProperty(name, color);
     });
-    window._ed.setDirty(true);
+    setDirty(true);
     global.scheduleSnapshot();
-    window._ed.status('Acento global aplicado.', false);
+    status('Acento global aplicado.', false);
   }
 
   function editorApplyQuickStyle(kind){
     var el = getSelected();
-    if(!el){ window._ed.status('Selecione um elemento primeiro.', true); return; }
+    if(!el){ status('Selecione um elemento primeiro.', true); return; }
     if(kind === 'dark-section'){
       el.style.background = 'linear-gradient(135deg,#09090b,#18181b)';
       el.style.color = '#f8fafc';
@@ -263,7 +270,7 @@
       el.style.padding = '24px';
       el.style.boxShadow = '0 8px 24px rgba(0,0,0,.10)';
     }
-    window._ed.setDirty(true);
+    setDirty(true);
     global.scheduleSnapshot();
     global.renderInspector(el);
   }
@@ -279,7 +286,7 @@
     var alt = $('editorImageAlt') ? $('editorImageAlt').value.trim() : '';
     if(src) el.setAttribute('src', src);
     el.setAttribute('alt', alt);
-    window._ed.setDirty(true);
+    setDirty(true);
     global.scheduleSnapshot();
     global.renderImages();
   }
@@ -287,19 +294,19 @@
   function editorApplyLogo(){
     var doc = getIframeDoc();
     var url = $('editorLogoUrl') ? $('editorLogoUrl').value.trim() : '';
-    if(!doc || !url){ window._ed.status('Informe a URL do logo.', true); return; }
+    if(!doc || !url){ status('Informe a URL do logo.', true); return; }
     var logo = doc.querySelector('img[alt*="logo" i], header img, nav img');
     if(!logo){
-      window._ed.status('Nenhuma imagem de logo encontrada. Selecione uma imagem e troque manualmente.', true);
+      status('Nenhuma imagem de logo encontrada. Selecione uma imagem e troque manualmente.', true);
       return;
     }
     logo.setAttribute('src', url);
     logo.setAttribute('alt', 'Logo');
     global.selecionarElemento(logo);
-    window._ed.setDirty(true);
+    setDirty(true);
     global.scheduleSnapshot();
     global.renderImages();
-    window._ed.status('Logo atualizado no preview.', false);
+    status('Logo atualizado no preview.', false);
   }
 
   function syncInspectorFromSelected(){

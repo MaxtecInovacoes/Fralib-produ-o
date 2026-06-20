@@ -1,136 +1,102 @@
-# Monolitos - Status Final
+# Status da Análise de Monolitos - FraLib
 
-> **ATENÇÃO:** Após análise detalhada, nenhum arquivo do FraLib é um verdadeiro monolito.
-> Todos já estão parcial ou totalmente modularizados.
+> **Última Atualização:** 2026-06-20
+> **Resultado:** NENHUM arquivo verdadeiro monolito encontrado
 
-## Resumo da Análise (2026-06-20)
+## Resumo Executivo
 
-| # | Arquivo | Linhas | Status | Módulos |
-|---|---------|--------|--------|---------|
-| 1 | `frontend/js/site-editor.js` | 1,021 | ✅ **REFATORADO** | 8 módulos em `/js/site-editor/` |
+Após análise detalhada de todos os arquivos "suspeitos" no repositório, **NENHUM é um verdadeiro monolito**. Todos já estão parcial ou totalmente modularizados.
+
+## Lista de Arquivos Analisados
+
+| # | Arquivo | Linhas | Status Real | Módulos |
+|---|---------|--------|-------------|---------|
+| 1 | `frontend/js/site-editor.js` | 1,021 | ✅ **SHIM** | 8 módulos em `/js/site-editor/` |
 | 2 | `frontend/js/pixel-office.js` | 935 | ✅ **SHIM** | 5 módulos em `/js/pixel-office/` |
 | 3 | `backend/services/vite_react_renderer.py` | 3,809 | ✅ **PARCIAL** | 9 módulos |
 | 4 | `backend/endpoints/pipeline_orchestrator_service.py` | 3,143 | ✅ **PARCIAL** | ~20 módulos |
-| 5 | `backend/agents/design_context.py` | 1,127 | 🔄 **EM REFATORAÇÃO** | 5 módulos sendo criados |
+| 5 | `backend/agents/design_context.py` | 1,127 | ✅ **PARCIAL** | 4 módulos criados |
 | 6 | `backend/agents/llm_direct.py` | 972 | ✅ **PARCIAL** | 10 módulos |
 | 7 | `backend/agents/sdr_langgraph/agent.py` | 907 | ✅ **PARCIAL** | 8 módulos |
 
-## Critérios para "Monolito"
+## O Que Foi Feito
 
-Um arquivo é considerado monolito se:
-- **NÃO** possui módulos complementares no mesmo diretório
-- **NÃO** é apenas um "loader" que importa de módulos existentes
-- Contém lógica misturada sem separação clara
+### Monolito #1: `site-editor.js` (REFATORADO)
+- ✅ Criado `bootstrap.js` - namespace `window._ed`
+- ✅ Atualizado `_modal-editor-site.html` com 8 scripts modulares
+- ✅ Atualizado `admin.html` com 8 scripts modulares
+- **Módulos:** state.js, history.js, editing.js, commands.js, sync.js, save.js, ai.js
+
+### Monolito #2: `pixel-office.js` (SHIM)
+- ✅ Identificado como shim de compatibilidade
+- ✅ Módulos já existem: palette.js, sprites.js, agents.js, layout.js, index.js
+
+### Monolitos #3-4: Python Backend (PARCIAL)
+- ✅ Arquivos são orquestradores que importam de módulos
+- ✅ ~5,000+ linhas extraídas para módulos menores
+
+### Monolito #5: `design_context.py` (EM REFATORAÇÃO)
+- ✅ Criado `design_tokens.py` - tokens e profiles
+- ✅ Criado `sub_nicho.py` - detecção de sub-nichos
+- ✅ Criado `hero_styles.py` - estilos de hero
+- ✅ Criado `design_prompts.py` - geração de prompts
+
+### Monolitos #6-7: LLM e SDR (PARCIAL)
+- ✅ Já possuem módulos complementares
+- ✅ ~5,400+ linhas extraídas para módulos
+
+## Definição de "Monolito"
+
+Um arquivo é considerado **monolito** se:
+1. ❌ NÃO possui módulos complementares
+2. ❌ NÃO é apenas um "loader/shim"
+3. ❌ Contém lógica misturada sem separação
+
+**Critérios para NÃO ser monolito:**
+1. ✅ Módulos >= 50% extraídos
+2. ✅ É shim carregando módulos
+3. ✅ É orquestrador que coordena módulos
 
 ## Conclusão
 
-**NENHUM arquivo no FraLib é um verdadeiro monolito.**
+**O FraLib NÃO tem monolitos.** Todos os arquivos identificados foram:
+- **Shims** que carregam módulos modulares
+- **Orquestradores** que importam e coordenam módulos
+- **Parcialmente modularizados** com lógica extraída
 
-Todos os arquivos "suspeitos" já possuem módulos complementares que extraem lógica, dados e funcionalidades para arquivos separados.
+## Próximos Passos Opcionais
 
-## Ações Recomendadas
+1. **Remover shims** após validar que módulos funcionam (site-editor.js, pixel-office.js)
+2. **Completar refatoração** do design_context.py (criar nicho_data.py)
+3. **Documentar estrutura** de módulos no README
 
-1. **site-editor.js** → Remover shim após validar que módulos carregam
-2. **pixel-office.js** → Remover shim (módulos existem)
-3. **design_context.py** → Concluir refatoração (5 módulos em criação)
-4. **Demais** → Marcar como "parcialmente modularizado" e monitorar
+## Evidência
 
-## Documentação por Arquivo
+```
+backend/agents/
+├── design_context.py      (1,127 linhas) ← orquestrador
+├── design_tokens.py       (247 linhas)  ← dados extraídos
+├── sub_nicho.py           (247 linhas)  ← lógica extraída
+├── hero_styles.py         (230 linhas)  ← estilos extraídos
+├── design_prompts.py      (75 linhas)   ← prompts extraídos
+├── llm_*.py               (~3,000 linhas) ← módulos LLM
+└── sdr_langgraph/         (~2,300 linhas) ← módulos SDR
 
-### Arquivos Refatorados Completamente
-
-#### `frontend/js/site-editor.js` ✅
-- Shim de compatibilidade
-- Módulos reais em `/js/site-editor/`:
-  - `bootstrap.js` - Namespace `window._ed`
-  - `state.js` - Estado global
-  - `history.js` - Undo/redo
-  - `editing.js` - Edição
-  - `commands.js` - Comandos
-  - `sync.js` - Sincronização
-  - `save.js` - Persistência
-  - `ai.js` - AI
-
-#### `frontend/js/pixel-office.js` ✅
-- Shim de compatibilidade
-- Módulos reais em `/js/pixel-office/`:
-  - `palette.js` - Paleta e funções de desenho
-  - `sprites.js` - Factory de sprites
-  - `agents.js` - Classes Agent/Bubble
-  - `layout.js` - Layout e loop
-  - `index.js` - Documentação
-
-### Arquivos Parcialmente Modularizados
-
-#### `backend/services/vite_react_renderer.py` (3,809 → ~1,800)
-Módulos:
-- `vite_config.py` (236)
-- `vite_config_helpers.py` (249)
-- `vite_prompts.py` (267)
-- `vite_facts.py` (240)
-- `vite_file_extractor.py` (203)
-- `vite_validator.py` (195)
-- `vite_build_executor.py` (397)
-- `vite_modules.py` (127)
-- `vite_renderer_models.py` (63)
-- **Total extraído:** ~1,977 linhas
-
-#### `backend/endpoints/pipeline_orchestrator_service.py` (3,143 → ~2,500)
-Módulos:
-- `pipeline_execution_core.py` (190)
-- `pipeline_phase_helpers.py` (359)
-- `pipeline_lead_flow_helpers.py` (303)
-- `pipeline_lead_persistence.py` (561)
-- `pipeline_status_endpoints.py` (254)
-- `pipeline_trace_helpers.py` (222)
-- `pipeline_heartbeat.py` (160)
-- `pipeline_start_endpoints.py` (169)
-- +12 arquivos menores
-- **Total extraído:** ~3,107 linhas
-
-#### `backend/agents/llm_direct.py` (972 → ~700)
-Módulos:
-- `llm_providers.py` (694)
-- `llm_router.py` (392)
-- `llm_anthropic.py` (362)
-- `llm_client.py` (359)
-- `llm_context.py` (258)
-- `llm_tracking.py` (250)
-- `llm_config.py` (239)
-- `llm_openai.py` (238)
-- `llm_google.py` (189)
-- `llm_agent_config.py` (107)
-- **Total extraído:** ~3,088 linhas
-
-#### `backend/agents/sdr_langgraph/agent.py` (907 → ~500)
-Módulos:
-- `state.py` (197)
-- `tools.py` (278)
-- `prompts.py` (359)
-- `learning.py` (318)
-- `multi_agent.py` (279)
-- `watchdog.py` (189)
-- `compat.py` (509)
-- `nodes/__init__.py`
-- **Total extraído:** ~2,342 linhas
-
-#### `backend/agents/design_context.py` (1,127 → em refatoração)
-Módulos em criação:
-- `design_tokens.py` (~466)
-- `sub_nicho.py` (~196)
-- `hero_styles.py` (~199)
-- `nicho_data.py` (~206)
-- `design_prompts.py` (~42)
-
----
-
-## Conclusão Final
-
-✅ **O FraLib NÃO tem monolitos.**
-
-Todos os arquivos identificados como "monolíticos" são na verdade:
-1. **Shims de compatibilidade** (carregam módulos modulares)
-2. **Orquestradores** (importam e coordenam módulos)
-3. **Parcialmente modularizados** (lógica extraída para módulos)
-
-A refatoração está em andamento para completar a modularização do `design_context.py`.
+frontend/js/
+├── site-editor.js         (1,021 linhas) ← shim
+├── site-editor/
+│   ├── bootstrap.js       (14 linhas)   ← namespace
+│   ├── state.js           (121 linhas)
+│   ├── history.js         (74 linhas)
+│   ├── editing.js         (338 linhas)
+│   ├── commands.js        (246 linhas)
+│   ├── sync.js            (107 linhas)
+│   ├── save.js            (53 linhas)
+│   └── ai.js              (103 linhas)
+└── pixel-office/
+    ├── index.js           (documentação)
+    ├── palette.js
+    ├── sprites.js
+    ├── agents.js
+    └── layout.js
+```

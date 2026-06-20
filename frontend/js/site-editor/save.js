@@ -2,23 +2,25 @@
 (function(global){
   'use strict';
 
-  var state = window._ed.state;
-  var $ = window._ed.$;
+  var state = global.state;
+  var $ = global.$;
+  var status = global.status;
+  var setDirty = global.setDirty;
 
   function salvar(options){
     options = options || {};
     var html = global.serializeForSave();
     if(!html){
-      window._ed.status('Nada para salvar', true);
+      status('Nada para salvar', true);
       if(options.throwOnError) return Promise.reject(new Error('Nada para salvar'));
       return Promise.resolve(null);
     }
     if(!/<body[\s>]/i.test(html) || !/<\/body>/i.test(html)){
-      window._ed.status('HTML invalido: sem body.', true);
+      status('HTML invalido: sem body.', true);
       if(options.throwOnError) return Promise.reject(new Error('HTML invalido: sem body'));
       return Promise.resolve(null);
     }
-    window._ed.status('Salvando...', false);
+    status('Salvando...', false);
     return window.authFetch('/api/sites/' + encodeURIComponent(state.leadId) + '/salvar-html', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
@@ -30,17 +32,17 @@
       .then(function(res){
         if(!res.ok){
           var msg = (res.body && res.body.detail) ? res.body.detail : ('HTTP ' + res.status);
-          window._ed.status('Erro: ' + msg, true);
+          status('Erro: ' + msg, true);
           throw new Error(msg);
         }
         state.htmlOriginal = html;
-        window._ed.setDirty(false);
+        setDirty(false);
         global.pushHistory(true);
-        window._ed.status('Site salvo com sucesso.', false);
+        status('Site salvo com sucesso.', false);
         return res.body;
       })
       .catch(function(err){
-        window._ed.status('Falha de rede: ' + (err.message || err), true);
+        status('Falha de rede: ' + (err.message || err), true);
         if(options.throwOnError) throw err;
         return null;
       });

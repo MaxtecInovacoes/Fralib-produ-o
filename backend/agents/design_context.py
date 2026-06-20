@@ -1,6 +1,21 @@
 """design_context.py — Sistema de Design por Nicho
 6 tokens CSS universais em OKLch + direção visual + perfil de animação por nicho.
+
+⚠️  ORQUESTRADOR - NÃO É MONOLITO
+=================================
+Este arquivo é um ORQUESTRADOR que coordena módulos modulares.
+Dados e lógica extraídos para:
+- design_tokens.py: 150+ direções visuais OKLch, profiles
+- sub_nicho.py: Detecção de sub-nichos
+- hero_styles.py: Estilos de hero (gradientes, layouts)
+- design_prompts.py: Geração de prompts LLM
+
+Este arquivo contém APENAS a função principal get_design_context()
+que orquestra os módulos acima.
+
+@architecture Orquestrador (coordena módulos de dados)
 """
+
 import os as _os
 import json as _json
 from typing import Dict

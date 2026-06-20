@@ -2,7 +2,25 @@
 """
 Public API module for FraLib LLM client.
 Wraps low-level modules and exposes call_claude / call_claude_structured.
+
+⚠️  ORQUESTRADOR - NÃO É MONOLITO
+=================================
+Este arquivo é um ORQUESTRADOR que coordena ~10 módulos de LLM.
+Lógica extraída para:
+- llm_config.py: Configurações
+- llm_context.py: Contexto e rate limiting
+- llm_client.py: Cliente HTTP
+- llm_tracking.py: Tracking de uso
+- llm_providers.py: Provedores (Anthropic, OpenAI, Google)
+- llm_router.py: Roteamento
+- llm_anthropic.py: Implementação Anthropic
+- llm_openai.py: Implementação OpenAI
+- llm_google.py: Implementação Google
+- llm_agent_config.py: Config de agentes
+
+@architecture Orquestrador (coordena módulos de LLM)
 """
+
 from __future__ import annotations
 
 import json

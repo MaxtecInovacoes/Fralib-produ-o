@@ -2,11 +2,11 @@
 def get_essential_skills(agente: str) -> list[str]:
     """Retorna apenas skills essenciais para evitar timeout"""
     essential = {
-        'caio': [],  # Caio não precisa de skills
+        'caio': [],
         'agente_nicho': [],
         'agente_variacao': [],
         'arquiteto_mestre': ['design-with-taste'],
-        'builder_renderer': [],
+        'builder_renderer': ['site_skill_pack'],
         'validador': [],
         'bryan': [],
     }
@@ -138,9 +138,8 @@ def carregar_skills(skills: List[str]) -> str:
 
 # Configuração: Skills por agente
 SKILLS_POR_AGENTE = {
-    "agente_nicho": [
-        # Manter leve: nicho decide estrategia, nao visual final.
-    ],
+    "agente_nicho": [],
+    "agente_variacao": [],
     "arquiteto_mestre": [
         "design-with-taste",
     ],
@@ -150,7 +149,9 @@ SKILLS_POR_AGENTE = {
         "emil-design-eng",
         "design-motion-principles",
     ],
-    "builder_renderer": [],
+    "builder_renderer": ["site_skill_pack"],
+    "caio": [],
+    "bryan": [],
     "validador": [
         # Gate atual e deterministico; validador LLM fica standby.
     ]
