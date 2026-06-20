@@ -52,14 +52,16 @@ try:
 except Exception as _e:
     print(f"[Startup] Alembic falhou ({_e}) — continuando com inicializar_database como fallback")
 
-# Safety net: cria qualquer tabela que ainda nao esteja na Alembic
-from database import inicializar_database
-try:
-    _db_ready = inicializar_database()
-    if _db_ready is False:
-        print("[Startup] inicializar_database skipped/timeout — seguindo sem bloquear")
-except Exception as _e:
-    print(f"[Startup] inicializar_database falhou ({_e}) — seguindo sem bloquear")
+# Safety net DESABILITADO temporariamente: loop infinito em lock contention
+# (coluna valor_venda ja existe no banco como real, mas codigo tenta NUMERIC(10,2))
+# from database import inicializar_database
+# try:
+#     _db_ready = inicializar_database()
+#     if _db_ready is False:
+#         print("[Startup] inicializar_database skipped/timeout — seguindo sem bloquear")
+# except Exception as _e:
+#     print(f"[Startup] inicializar_database falhou ({_e}) — seguindo sem bloquear")
+print("[Startup] inicializar_database DESABILITADO — schema ja existe, alembic eh fonte de verdade")
 
 # Rate Limiting (instancia compartilhada — definida em core/rate_limiter.py)
 from rate_limiter import limiter
