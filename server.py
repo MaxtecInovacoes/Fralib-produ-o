@@ -102,9 +102,9 @@ from contextlib import asynccontextmanager
 
 @asynccontextmanager
 async def lifespan(app):
-    from sqlalchemy import text
-    from database import engine
-    print("[Server] Startup: jobs e pipeline_failures sao a fonte canonica de execucao")
+    """Lifespan desabilitado temporariamente - causa lock no valor_venda.
+    Para reabilitar, remover o ALTER TABLE que trava."""
+    yield
 
     # PR15: tracking de visitas + colunas ROI na tabela leads
     try:
