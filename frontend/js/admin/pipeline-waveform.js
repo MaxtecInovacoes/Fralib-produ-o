@@ -423,7 +423,9 @@
   }
 
   function ensureContainer() {
-    var host = document.getElementById('pipelineWaveformHost');
+    // Host preferencial: #pipelineWaveformGlobal (topo de TODAS as views, fora das view-sections)
+    var host = document.getElementById('pipelineWaveformGlobal')
+            || document.getElementById('pipelineWaveformHost');
     if (!host) {
       // Fallback: ancora no escritorio se admin.html antigo
       var anchor = document.getElementById('pixelOfficeWrap')
