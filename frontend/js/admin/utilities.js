@@ -316,9 +316,9 @@ function mostrarView(view) {
   }
   if (view === 'config') {
     setTimeout(function(){
-      if (window.initPixelOffice) {
-        window._pixelOfficeStarted = false;
-        window.initPixelOffice();
+      // Escritorio isometrico 3D novo (substitui o legado)
+      if (window.initPixelOfficeIso) {
+        window.initPixelOfficeIso();
       }
     }, 50);
     carregarStatsConfig();

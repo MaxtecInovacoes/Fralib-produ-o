@@ -1857,32 +1857,14 @@ window._pixelOfficeSSEHook = function(data) {
 };
 
 window.initPixelOffice = function(){
-    cv=document.getElementById('pixelOfficeCanvas');
-    if(!cv){ console.warn('[PixelOffice] canvas nao encontrado'); return; }
-    if(window._pixelOfficeRAF){ cancelAnimationFrame(window._pixelOfficeRAF); }
-    window._pixelOfficeStarted = true;
-    cx=cv.getContext('2d');
-    console.log('[PixelOffice] iniciando animacao');
-    cv.width=W; cv.height=H;
-    function resize(){
-        const container = document.getElementById('pixelOfficeWrap');
-        if(!container) return;
-        const maxW = container.clientWidth || 800;
-        const maxH = 292;
-        const s = Math.min(maxW/W, maxH/H);
-        cv.style.width=W*s+'px'; cv.style.height=H*s+'px';
-    }
-    resize();
-    window._pixelOfficeResizeHandler = resize;
-    window.addEventListener('resize', window._pixelOfficeResizeHandler);
-    initObstacles();
-    initWaypoints();
-    agents=AGENT_DEFS.map((d,i)=>{const a=new Agent(d);a.st=i*1.8;return a;});
-    loop();
+    // DESABILITADO: o escritorio isometrico 3D novo (pixel-office-iso.js)
+    // substitui este legado. Ver _scripts.html que zera este init antes
+    // de chamar o iso.
+    return;
 };
 
 
-    setTimeout(function(){ if(window.initPixelOffice){ window._pixelOfficeStarted=false; window.initPixelOffice(); } }, 100);
+    setTimeout(function(){ if(window.initPixelOfficeIso){ window.initPixelOfficeIso(); } }, 100);
     </script>
 </section>
 
@@ -4121,9 +4103,9 @@ function mostrarView(view) {
   }
   if (view === 'config') {
     setTimeout(function(){
-      if (window.initPixelOffice) {
-        window._pixelOfficeStarted = false;
-        window.initPixelOffice();
+      // Escritorio isometrico 3D novo (substitui o legado)
+      if (window.initPixelOfficeIso) {
+        window.initPixelOfficeIso();
       }
     }, 50);
   }
