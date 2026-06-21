@@ -299,6 +299,15 @@ export default defineConfig({
   build: {
     target: 'es2020',
     sourcemap: false,
+    chunkSizeWarningLimit: 250,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          motion: ['motion/react', 'gsap', 'gsap/ScrollTrigger', 'lenis'],
+          icons: ['lucide-react'],
+        },
+      },
+    },
   },
 });
 """

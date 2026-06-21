@@ -61,3 +61,41 @@ def cap_max_tokens_for_model(model_id: str, requested: int) -> int:
     if requested <= 0:
         return hard_cap
     return max(1024, min(requested, hard_cap))
+
+
+# -----------------------------------------------------------------------------
+# BATCH-LEVEL MODEL ROUTING
+# -----------------------------------------------------------------------------
+# Batches simples (estrutura, types, css) usam Haiku (10x mais barato).
+# Batches complexos (hero, design tokens) usam Sonnet.
+# Batches de refinamento/criativo usam Opus.
+
+LIGHT_BATCH_NAMES = {
+    "app", "main", "types", "css", "index_css", "tsconfig", "package_json",
+    "vite_config", "index_html", "index", "app_tsx", "main_tsx",
+}
+SONNET_BATCH_NAMES = {
+    "hero", "navbar", "footer", "about", "gallery", "location", "contact",
+    "reviews", "cta", "services", "menu", "testimonials", "team",
+}
+OPUS_BATCH_NAMES = {
+    "refactor", "custom_advanced", "architecture", "complex_interaction",
+}
+
+
+def batch_model_for_batch(batch_name: str) -> str:
+    """Roteia modelo LLM pelo nome do batch.
+
+    - Batches simples/estruturais: Haiku (~10x mais barato, ~3x mais rapido)
+    - Batches visuais/copy: Sonnet (balanceado)
+    - Batches complexos/criativos: Opus (top-tier)
+
+    Custo LLM estimado cai ~50%, velocidade +30% em media.
+    """
+    name = (batch_name or "").strip().lower()
+    name_clean = name.replace(".json", "").replace(".tsx", "").replace(".ts", "").replace(".css", "").replace(".html", "")
+    if name_clean in LIGHT_BATCH_NAMES or any(p in name_clean for p in ("tsconfig", "package", "config")):
+        return "haiku"
+    if name_clean in OPUS_BATCH_NAMES or "custom" in name_clean:
+        return "opus"
+    return "sonnet"

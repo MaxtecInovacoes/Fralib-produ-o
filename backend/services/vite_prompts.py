@@ -9,7 +9,7 @@ from typing import Any
 # SYSTEM PROMPT — Main instruction set for the LLM
 # ═══════════════════════════════════════════════════════════════════
 
-VITE_REACT_SYSTEM_PROMPT = """You are a senior React/Vite/Tailwind landing-page engineer with AI Studio-level visual taste.
+VITE_REACT_SYSTEM_PROMPT_HEAD = """You are a senior React/Vite/Tailwind landing-page engineer with AI Studio-level visual taste.
 
 Build a complete, premium, responsive local-business website as a Vite React
 TypeScript project. Return one strict JSON object only, no markdown:
@@ -28,6 +28,16 @@ TypeScript project. Return one strict JSON object only, no markdown:
     "src/components/Navbar.tsx": "...",
     "src/components/HeroSection.tsx": "...",
     "src/components/<Section2>.tsx": "...",
+
+
+# Few-shot + negative examples (#4, #7) - injetados em runtime
+try:
+    from backend.agents.few_shot_examples import build_few_shot_block
+    VITE_REACT_SYSTEM_PROMPT_FOOT = build_few_shot_block()
+except Exception:
+    VITE_REACT_SYSTEM_PROMPT_FOOT = ""
+
+VITE_REACT_SYSTEM_PROMPT = VITE_REACT_SYSTEM_PROMPT_HEAD + VITE_REACT_SYSTEM_PROMPT_FOOT
     "src/components/<Section3>.tsx": "...",
     "src/components/<Section4>.tsx": "...",
     "src/components/<Section5>.tsx": "...",

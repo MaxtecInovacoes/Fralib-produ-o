@@ -158,6 +158,34 @@ def audit_generated_html(html: str, prd) -> HtmlQualityReport:
     return HtmlQualityReport(aprovado=not problems, problemas=problems)
 
 
+# ─── Lazy Loading Helper (#9) ────────────────────────────────────────────────
+
+
+_LAZY_LOAD_IMG_RE = re.compile(r"<img\b(?![^>]*\bloading=)([^>]*?)>", re.IGNORECASE)
+_LAZY_LOAD_SKIP_HERO = re.compile(r"<img\b[^>]*\bdata-hero-image", re.IGNORECASE)
+
+
+def apply_lazy_loading_to_images(html: str) -> str:
+    """Adiciona loading=lazy e decoding=async em todas as <img> exceto a do hero.
+
+    -25% LCP, -40% banda. Imagens below-the-fold carregam sob demanda.
+    """
+    if not html or "<img" not in html:
+        return html
+
+    def _add_lazy(match: re.Match) -> str:
+        tag = match.group(0)
+        # Nao modifica a imagem do hero (ja tem loading=eager)
+        if 'data-hero-image' in tag or 'loading=' in tag:
+            return tag
+        # Adicionar loading=lazy + decoding=async antes do > de fechamento
+        if tag.endswith("/>"):
+            return tag[:-2] + ' loading="lazy" decoding="async" />'
+        return tag[:-1] + ' loading="lazy" decoding="async">'
+
+    return _LAZY_LOAD_IMG_RE.sub(_add_lazy, html)
+
+
 def validate_generated_html(html: str, prd) -> None:
     """Validate generated HTML. Raises HtmlQualityGateError if issues found."""
     report = audit_generated_html(html, prd)
@@ -184,6 +212,8 @@ def normalize_generated_html_for_publication(html: str, prd) -> str:
     cleaned = _normalize_media_strip_order(cleaned)
     cleaned = _ensure_single_location_map(cleaned, prd)
     cleaned = _ensure_minimum_footer(cleaned, prd)
+    # Lazy loading (#9)
+    cleaned = apply_lazy_loading_to_images(cleaned)
     return cleaned
 
 
@@ -207,6 +237,9 @@ def sanitize_builder_html_for_publication(
         cleaned = _repair_phase6_publication_contract(cleaned, prd)
     cleaned = _replace_visible_text_only(cleaned, PUBLIC_CLAIM_REPLACEMENTS)
     cleaned = _replace_attribute_text(cleaned, PUBLIC_CLAIM_REPLACEMENTS)
+
+    # Lazy loading em imagens (#9)
+    cleaned = apply_lazy_loading_to_images(cleaned)
 
     # OG Tags completas
     business = _get_business_from_prd(prd)

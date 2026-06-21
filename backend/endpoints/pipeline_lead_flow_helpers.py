@@ -285,15 +285,8 @@ async def prepare_lead_intelligence_assets(
 
 def build_reprocess_seed_state(state, lead_dict, dados, lead_raw, segmento, cidade, nome):
     """Recreate the normalized state used by reprocess and keep the orchestrator thin."""
-    state.lead_obj = LeadQualificado(
-        lead=lead_raw,
-        score=int(lead_dict.get("score") or 50),
-        tier=lead_dict.get("tier") or "STANDARD",
-        razoes=[],
-        sinais=[],
-        presenca_digital="SITE" if lead_raw.website else "ZERO_PRESENCA",
-        dados_suficientes=True,
-    )
+    from backend.utils.safe_lead_qualificado import safe_qualificar
+    state.lead_obj = safe_qualificar(lead_raw, lead_dict)
     state.lead_nome = nome
     state.lead_slug = _slugify_name(nome)
     state.lead_id = lead_dict.get("id") or lead_dict.get("lead_id") or ""

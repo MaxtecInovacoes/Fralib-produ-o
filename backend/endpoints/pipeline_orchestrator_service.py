@@ -2883,16 +2883,8 @@ from utils.safe_lead_qualificado import safe_qualificar
         atributos=dados.get("atributos") or [],
         servicos=dados.get("servicos") or [],
     )
-    # LeadQualificado criado para validação - usado via state.lead
-    _lead_qualificado = LeadQualificado(
-        lead=lead_raw,
-        score=int(lead_dict.get("score") or 50),
-        tier=lead_dict.get("tier") or "STANDARD",
-        razoes=[],
-        sinais=[],
-        presenca_digital="SITE" if lead_raw.website else "ZERO_PRESENCA",
-        dados_suficientes=True,
-    )
+    # LeadQualificado criado de forma defensiva (safe_qualificar lida com lead=None/str)
+    _lead_qualificado = safe_qualificar(lead_raw, lead_dict, log_fn=_log)
     state = FraLibState(
         segmento=segmento,
         cidade=cidade,
