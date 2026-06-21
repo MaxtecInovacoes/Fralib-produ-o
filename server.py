@@ -387,6 +387,9 @@ app.include_router(obs_endpoints.router)
 import queue_endpoints
 app.include_router(queue_endpoints.router)
 app.include_router(health_endpoints.router)
+# Plano Mestre SDR (b8214fe)
+import closer_endpoints
+app.include_router(closer_endpoints.router)
 app.include_router(tenant_api_keys.router)
 app.include_router(metrics_endpoints.router)
 app.include_router(hermes_endpoints.router)
