@@ -248,13 +248,30 @@ class Agent{
     }
 
     draw(ctx){
-        ctx.drawImage(this.frames[this.fr],this.x-16,this.y-32);
-        ctx.font='bold 9px Arial,sans-serif'; ctx.textAlign='center';
-        const tw=ctx.measureText(this.name).width;
-        ctx.fillStyle='rgba(0,0,20,0.85)'; ctx.fillRect(this.x-tw/2-5,this.y-46,tw+10,14);
-        ctx.strokeStyle='#0183ff'; ctx.lineWidth=1; ctx.strokeRect(this.x-tw/2-5,this.y-46,tw+10,14);
-        ctx.fillStyle='#7dd3fc'; ctx.fillText(this.name,this.x,this.y-35);
-        ctx.textAlign='left';
-        if(this.bubble) this.bubble.draw(ctx);
+        // Aura pulsante quando o agente esta "working" (estado padrao)
+        const working = (this.state === 'working' || this.state === 'idle');
+        if (working) {
+            const aura = (Math.sin(performance.now() * 0.004 + this.homeX) + 1) / 2; // 0..1
+            const radius = 18 + aura * 4;
+            const grad = ctx.createRadialGradient(this.x, this.y - 16, 4, this.x, this.y - 16, radius);
+            grad.addColorStop(0, 'rgba(125,211,252,' + (0.25 + aura * 0.2).toFixed(2) + ')');
+            grad.addColorStop(1, 'rgba(125,211,252,0)');
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.arc(this.x, this.y - 16, radius, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Pequeno shake vertical quando o agente esta trabalhando (respirando)
+        const shake = working ? Math.sin(performance.now() * 0.006 + this.homeX) * 0.8 : 0;
+
+        ctx.drawImage(this.frames[this.fr], this.x - 16, this.y - 32 + shake);
+        ctx.font = 'bold 9px Arial,sans-serif'; ctx.textAlign = 'center';
+        const tw = ctx.measureText(this.name).width;
+        ctx.fillStyle = 'rgba(0,0,20,0.85)'; ctx.fillRect(this.x - tw / 2 - 5, this.y - 46, tw + 10, 14);
+        ctx.strokeStyle = '#0183ff'; ctx.lineWidth = 1; ctx.strokeRect(this.x - tw / 2 - 5, this.y - 46, tw + 10, 14);
+        ctx.fillStyle = '#7dd3fc'; ctx.fillText(this.name, this.x, this.y - 35);
+        ctx.textAlign = 'left';
+        if (this.bubble) this.bubble.draw(ctx);
     }
 }

@@ -853,6 +853,59 @@ function drawFurniture(){
 
 let agents=[], evTimers={}, lastT=performance.now(), fc=0, ft=0;
 
+// Particulas ambientes (poeira/dots flutuando) — adiciona vida visual
+const particles=[];
+for(let i=0;i<35;i++){
+    particles.push({
+        x:Math.random()*800, y:Math.random()*400,
+        vx:(Math.random()-.5)*8, vy:(Math.random()-.5)*4,
+        r:0.6+Math.random()*1.4,
+        a:0.10+Math.random()*0.20,
+        c:['#7dd3fc','#a78bfa','#fbbf24','#34d399','#f472b6'][i%5]
+    });
+}
+function drawParticles(dt){
+    particles.forEach(p=>{
+        p.x+=p.vx*dt; p.y+=p.vy*dt;
+        if(p.x<0)p.x=800; if(p.x>800)p.x=0;
+        if(p.y<0)p.y=400; if(p.y>400)p.y=0;
+        cx.fillStyle=p.c;
+        cx.globalAlpha=p.a;
+        cx.beginPath(); cx.arc(p.x,p.y,p.r,0,Math.PI*2); cx.fill();
+    });
+    cx.globalAlpha=1;
+}
+
+// Sparkles nas mesas (efeito "produzindo") — pulsa com phase real
+let sparkleT=0;
+function drawSparkles(){
+    sparkleT+=0.05;
+    const positions=[
+        {x:80,y:135,s:1.4},{x:160,y:135,s:1.0},{x:240,y:135,s:1.2},
+        {x:380,y:140,s:1.3},{x:500,y:140,s:1.0},
+        {x:650,y:140,s:1.4},
+        {x:80,y:240,s:1.0},{x:160,y:240,s:1.2},{x:500,y:240,s:1.3},
+    ];
+    positions.forEach((p,i)=>{
+        const t=Math.sin(sparkleT+i*0.6)*0.5+0.5;
+        if(t<0.4) return;
+        cx.save();
+        cx.globalAlpha=t*0.85;
+        cx.fillStyle='#fef3c7';
+        cx.beginPath();
+        cx.arc(p.x,p.y,p.s*1.2,0,Math.PI*2);
+        cx.fill();
+        // cross
+        cx.strokeStyle='#fef3c7';
+        cx.lineWidth=0.6;
+        cx.beginPath();
+        cx.moveTo(p.x-3,p.y); cx.lineTo(p.x+3,p.y);
+        cx.moveTo(p.x,p.y-3); cx.lineTo(p.x,p.y+3);
+        cx.stroke();
+        cx.restore();
+    });
+}
+
 function triggerEv(ev){
     const avail=agents.filter(a=>!a.ge);
     if(avail.length<ev.min) return;
@@ -880,6 +933,8 @@ function loop(){
     if(ft>=1){document.getElementById('po-sf').textContent=fc;fc=0;ft=0;}
     cx.clearRect(0,0,W,H);
     drawBG();
+    drawParticles(dt);
+    drawSparkles();
     drawFurniture();
     updateEvTimers(dt);
     agents.forEach(a=>a.update(dt));
