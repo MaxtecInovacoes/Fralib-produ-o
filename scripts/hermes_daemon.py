@@ -63,8 +63,10 @@ def _run_scan() -> int:
 
     # ── Key healthcheck: detecta chave morta e auto-limpa / reprocessa ──
     try:
+        # Adiciona /root/fralib ao path para encontrar pacote backend
+        if str(ROOT) not in sys.path:
+            sys.path.insert(0, str(ROOT))
         from backend.services.key_healthcheck import run_healthcheck_cycle
-        sys.path.insert(0, str(ROOT / "backend"))
         cycle = run_healthcheck_cycle()
         _log(
             "key_healthcheck "
