@@ -25,7 +25,7 @@
   'use strict';
 
   // ── Setup basico ─────────────────────────────────────────────────
-  var cv, cx, W = 1200, H = 675; // 16:9
+  var cv, cx, W = 1600, H = 720; // 20:9 (mais panoramico, cabe cidade dos dois lados)
   var lastT = performance.now();
   var raf = null;
 
@@ -108,7 +108,7 @@
   var TILE_W = 40;  // largura de um tile (no eixo horizontal)
   var TILE_H = 20;  // altura (metade, para perspectiva 2:1)
   var ORIGIN_X = W * 0.5;  // centro horizontal
-  var ORIGIN_Y = 200;     // topo do chao
+  var ORIGIN_Y = 220;     // topo do chao
 
   function iso(tx, ty) {
     return {
@@ -216,35 +216,400 @@
     cx.fill();
   }
 
-  function drawSkyline() {
-    // silhueta de predios ao fundo (parallax 1)
-    var offset = (parallax.t * 4) % 200;
-    cx.fillStyle = P.building;
-    for (var x = -200; x < W + 200; x += 80) {
-      var real = (x + offset) % (W + 400);
-      var h = 40 + ((real * 13) % 80);
-      cx.fillRect(real - 100, H * 0.6 - h, 60, h);
-    }
-    // janelas acesas
-    cx.fillStyle = P.window;
-    for (var x2 = -200; x2 < W + 200; x2 += 80) {
-      var real2 = (x2 + offset) % (W + 400);
-      var h2 = 40 + ((real2 * 13) % 80);
-      for (var wy = 0; wy < h2 - 10; wy += 12) {
-        for (var wx = 0; wx < 50; wx += 15) {
-          if ((wx + wy + real2) % 30 < 12) {
-            cx.fillRect(real2 - 95 + wx, H * 0.6 - h2 + 6 + wy, 4, 6);
+  // ── Predios isométricos 3D (cidade em volta) ─────────────────────
+  // Constroi-se com `drawIsoBox` ja existente. Posicionamos em
+  // coordenadas isométricas para que a perspectiva bata com o escritorio.
+  function drawBuilding(tx, ty, w, h, height, baseColor, windowColor) {
+    // sombra no chao
+    var p = iso(tx, ty);
+    var p2 = iso(tx + w, ty + h);
+    cx.fillStyle = 'rgba(0,0,0,0.25)';
+    cx.beginPath();
+    cx.moveTo(p.sx - 6, p.sy + h * TILE_H * 2 + 4);
+    cx.lineTo(p2.sx + 6, p.sy + h * TILE_H * 2 + 4);
+    cx.lineTo(p2.sx + 6 + 8, p.sy + h * TILE_H * 2);
+    cx.lineTo(p.sx - 6 + 8, p.sy + h * TILE_H * 2);
+    cx.closePath();
+    cx.fill();
+    // caixas de janelas acesas (pre-computadas para performance)
+    var litWindows = [];
+    var winSeed = (tx * 31 + ty * 17) % 100;
+    var nFloors = Math.max(1, Math.floor(height / 14));
+    for (var f = 0; f < nFloors; f++) {
+      var winSeedF = (winSeed + f * 7) % 100;
+      for (var cxw = 0; cxw < w; cxw++) {
+        for (var cyw = 0; cyw < h; cyw++) {
+          if ((winSeedF + cxw * 3 + cyw * 5 + f) % 5 < 2) {
+            litWindows.push({ f: f, cx: cxw, cy: cyw });
           }
         }
       }
     }
-    // silhueta mais proxima (parallax 2)
-    cx.fillStyle = P.buildingLight;
-    for (var xx = -200; xx < W + 200; xx += 100) {
-      var real3 = (xx + parallax.t * 8) % (W + 400);
-      var h3 = 30 + ((real3 * 7) % 50);
-      cx.fillRect(real3 - 100, H * 0.6 - h3 + 10, 80, h3);
+    // corpo
+    drawIsoBox(tx, ty, w, h, height, baseColor, baseColor, baseColor);
+    // janelas: vamos redesenhar no front e side
+    var t4 = iso(tx, ty + h);
+    var t3 = iso(tx + w, ty + h);
+    var t1 = iso(tx, ty);
+    // front (sul) — entre t4 e t3
+    for (var i = 0; i < litWindows.length; i++) {
+      var ww = litWindows[i];
+      // distribui janelas por floor no front (lado sul) e side (oeste)
+      var isFront = (ww.cx + ww.cy < w);
+      var wx, wy;
+      if (isFront) {
+        // posicao interpolada entre t4 e t3
+        var alpha = (ww.cx + 0.5) / w;
+        wx = t4.sx + (t3.sx - t4.sx) * alpha;
+        wy = t4.sy + (t3.sy - t4.sy) * alpha;
+      } else {
+        // side (oeste) — entre t1 e t4
+        var alpha2 = (ww.cy + 0.5) / h;
+        wx = t1.sx + (t4.sx - t1.sx) * alpha2;
+        wy = t1.sy + (t4.sy - t1.sy) * alpha2;
+      }
+      // altura
+      var yOff = -height + 4 + ww.f * 14;
+      // tamanho da janela
+      cx.fillStyle = windowColor;
+      cx.fillRect(wx - 2.5, wy + yOff, 5, 7);
+      // brilho
+      cx.fillStyle = 'rgba(255,255,255,0.4)';
+      cx.fillRect(wx - 2.5, wy + yOff, 5, 2);
     }
+  }
+
+  function drawCity() {
+    // Predios da RUA NORTE (acima do escritorio, y=-7 ate y=-2)
+    // Cada um: posicao (tx, ty), tamanho, altura
+    drawBuilding(-13, -7, 2, 2, 70, '#1e1b3a', '#fef3c7');
+    drawBuilding(-10, -7, 2, 2, 95, '#2a1a4a', '#fbbf24');
+    drawBuilding(-7, -7, 2, 2, 55, '#1a1530', '#7dd3fc');
+    drawBuilding(15, -7, 2, 2, 85, '#1e1b3a', '#f472b6');
+    drawBuilding(18, -7, 2, 2, 60, '#2a1a4a', '#a7f3d0');
+    drawBuilding(21, -7, 2, 3, 100, '#1a1530', '#fef3c7');
+    drawBuilding(25, -7, 2, 2, 75, '#1e1b3a', '#fbbf24');
+
+    // Predios da RUA SUL (abaixo do escritorio, y=15 ate y=18)
+    drawBuilding(-13, 16, 2, 2, 90, '#1a1530', '#7dd3fc');
+    drawBuilding(-10, 16, 2, 2, 60, '#2a1a4a', '#fef3c7');
+    drawBuilding(-7, 16, 2, 2, 110, '#1e1b3a', '#a78bfa');
+    drawBuilding(15, 16, 3, 2, 80, '#1a1530', '#fbbf24');
+    drawBuilding(19, 16, 2, 2, 65, '#2a1a4a', '#34d399');
+    drawBuilding(22, 16, 2, 2, 95, '#1a1530', '#f472b6');
+    drawBuilding(25, 16, 2, 2, 70, '#1e1b3a', '#fef3c7');
+
+    // Predios do LADO OESTE (esquerda, tx=-13 ate -8)
+    drawBuilding(-13, -2, 2, 3, 85, '#1a1530', '#7dd3fc');
+    drawBuilding(-13, 2, 2, 3, 65, '#1e1b3a', '#a7f3d0');
+    drawBuilding(-13, 7, 2, 3, 100, '#2a1a4a', '#fbbf24');
+    drawBuilding(-13, 12, 2, 3, 75, '#1a1530', '#f472b6');
+
+    // Predios do LADO LESTE (direita, tx=15 ate 26)
+    drawBuilding(24, -2, 2, 3, 90, '#2a1a4a', '#fef3c7');
+    drawBuilding(24, 2, 2, 3, 60, '#1a1530', '#34d399');
+    drawBuilding(24, 7, 2, 3, 105, '#1e1b3a', '#7dd3fc');
+    drawBuilding(24, 12, 2, 3, 70, '#1a1530', '#fbbf24');
+  }
+
+  // ── Ruas (com carros em movimento) ───────────────────────────────
+  // 4 faixas de rua que envolvem o escritorio (Norte, Sul, Leste, Oeste)
+  var cars = [];
+  function initCars() {
+    cars = [];
+    var colors = ['#ef4444', '#3b82f6', '#10b981', '#fbbf24', '#a78bfa', '#f472b6', '#fef3c7', '#06b6d4', '#84cc16'];
+    // rua NORTE: carros andam da esquerda pra direita
+    for (var i = 0; i < 6; i++) {
+      cars.push({
+        lane: 'N', dir: 1, // 1 = esquerda->direita
+        x: -100 + i * 280,
+        y: 0, speed: 60 + Math.random() * 30,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        type: Math.random() < 0.3 ? 'truck' : 'car'
+      });
+    }
+    // rua SUL: carros andam da direita pra esquerda
+    for (var j = 0; j < 6; j++) {
+      cars.push({
+        lane: 'S', dir: -1,
+        x: W + 100 - j * 280,
+        y: 0, speed: 55 + Math.random() * 35,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        type: Math.random() < 0.3 ? 'truck' : 'car'
+      });
+    }
+    // rua OESTE: carros andam de cima pra baixo
+    for (var k = 0; k < 4; k++) {
+      cars.push({
+        lane: 'W', dir: 1, // ty cresce
+        x: 0, y: -50 + k * 200,
+        speed: 40 + Math.random() * 25,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        type: Math.random() < 0.3 ? 'truck' : 'car'
+      });
+    }
+    // rua LESTE: carros andam de baixo pra cima
+    for (var l = 0; l < 4; l++) {
+      cars.push({
+        lane: 'E', dir: -1,
+        x: 0, y: H + 50 - l * 200,
+        speed: 45 + Math.random() * 25,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        type: Math.random() < 0.3 ? 'truck' : 'car'
+      });
+    }
+  }
+
+  function drawStreets() {
+    // rua horizontal NORTE (acima do escritorio) - linha y = H*0.45
+    var roadN_Y = H * 0.42;
+    var roadW = 38;
+    // asfalto norte
+    cx.fillStyle = '#1a1a2a';
+    cx.fillRect(0, roadN_Y, W, roadW);
+    // faixa central pontilhada amarela
+    cx.fillStyle = '#fbbf24';
+    for (var x = 0; x < W; x += 40) {
+      cx.fillRect(x + 8, roadN_Y + roadW / 2 - 1, 22, 2);
+    }
+    // meio-fio de cima
+    cx.fillStyle = '#0d0a1f';
+    cx.fillRect(0, roadN_Y - 2, W, 2);
+    // meio-fio de baixo
+    cx.fillRect(0, roadN_Y + roadW, W, 2);
+
+    // rua horizontal SUL
+    var roadS_Y = H - 95;
+    cx.fillStyle = '#1a1a2a';
+    cx.fillRect(0, roadS_Y, W, roadW);
+    cx.fillStyle = '#fbbf24';
+    for (var x2 = 0; x2 < W; x2 += 40) {
+      cx.fillRect(x2 + 8, roadS_Y + roadW / 2 - 1, 22, 2);
+    }
+    cx.fillStyle = '#0d0a1f';
+    cx.fillRect(0, roadS_Y - 2, W, 2);
+    cx.fillRect(0, roadS_Y + roadW, W, 2);
+
+    // calcadas (entre rua e predios) - cor de concreto
+    cx.fillStyle = '#3a3548';
+    // calcada norte (entre ruaN e predios ao norte)
+    cx.fillRect(0, H * 0.30, W, 8);
+    // calcada sul
+    cx.fillRect(0, H - 130, W, 8);
+  }
+
+  // Carro isometrico simples
+  function drawCarIso(x, y, color, dir, type) {
+    cx.save();
+    cx.translate(x, y);
+    if (dir === -1) cx.scale(1, 1); else cx.scale(-1, 1);
+    var w = type === 'truck' ? 38 : 26;
+    var h = 14;
+    // sombra
+    cx.fillStyle = 'rgba(0,0,0,0.3)';
+    cx.beginPath();
+    cx.ellipse(0, 3, w / 2, 3, 0, 0, Math.PI * 2);
+    cx.fill();
+    // corpo
+    cx.fillStyle = color;
+    cx.fillRect(-w / 2, -h, w, h);
+    // capô
+    cx.fillStyle = darken(color, 0.2);
+    cx.fillRect(w / 2 - 8, -h - 3, 8, 3);
+    // janelas
+    cx.fillStyle = '#7dd3fc';
+    cx.globalAlpha = 0.7;
+    cx.fillRect(-w / 2 + 3, -h + 2, w - 10, 4);
+    cx.globalAlpha = 1;
+    // farois
+    cx.fillStyle = '#fef3c7';
+    cx.beginPath();
+    cx.arc(w / 2, -h / 2, 1.5, 0, Math.PI * 2);
+    cx.fill();
+    // roda
+    cx.fillStyle = '#1a1a2e';
+    cx.fillRect(-w / 2 + 3, -1, 4, 3);
+    cx.fillRect(w / 2 - 7, -1, 4, 3);
+    cx.restore();
+  }
+
+  // Carro "de cima" (para ruas horizontais, anda no eixo X)
+  function drawCarTop(x, y, color, dir, type) {
+    cx.save();
+    cx.translate(x, y);
+    if (dir === -1) cx.scale(-1, 1);
+    var w = type === 'truck' ? 32 : 22;
+    var h = 12;
+    // sombra
+    cx.fillStyle = 'rgba(0,0,0,0.25)';
+    cx.fillRect(-w / 2 + 1, 1, w, 4);
+    // corpo
+    cx.fillStyle = color;
+    cx.fillRect(-w / 2, -h, w, h);
+    // capô (frente)
+    cx.fillStyle = darken(color, 0.2);
+    cx.fillRect(w / 2 - 5, -h - 2, 5, 2);
+    // parabrisa
+    cx.fillStyle = '#7dd3fc';
+    cx.fillRect(w / 2 - 9, -h + 2, 4, 4);
+    // janela lateral
+    cx.globalAlpha = 0.7;
+    cx.fillRect(-w / 2 + 2, -h + 2, w - 13, 4);
+    cx.globalAlpha = 1;
+    // farois
+    cx.fillStyle = '#fef3c7';
+    cx.beginPath();
+    cx.arc(w / 2, -h / 2, 1.2, 0, Math.PI * 2);
+    cx.fill();
+    // lanternas traseiras
+    cx.fillStyle = '#ef4444';
+    cx.fillRect(-w / 2, -h + 1, 1.5, 3);
+    // rodas
+    cx.fillStyle = '#1a1a2e';
+    cx.fillRect(-w / 2 + 2, 0, 3, 3);
+    cx.fillRect(w / 2 - 5, 0, 3, 3);
+    cx.restore();
+  }
+
+  function updateCars(dt) {
+    cars.forEach(function (c) {
+      if (c.lane === 'N') {
+        c.x += c.speed * c.dir * dt;
+        if (c.dir > 0 && c.x > W + 100) c.x = -100;
+        if (c.dir < 0 && c.x < -100) c.x = W + 100;
+      } else if (c.lane === 'S') {
+        c.x += c.speed * c.dir * dt;
+        if (c.dir > 0 && c.x > W + 100) c.x = -100;
+        if (c.dir < 0 && c.x < -100) c.x = W + 100;
+      } else if (c.lane === 'W') {
+        c.y += c.speed * c.dir * dt;
+        if (c.dir > 0 && c.y > H + 100) c.y = -100;
+        if (c.dir < 0 && c.y < -100) c.y = H + 100;
+      } else if (c.lane === 'E') {
+        c.y += c.speed * c.dir * dt;
+        if (c.dir > 0 && c.y > H + 100) c.y = -100;
+        if (c.dir < 0 && c.y < -100) c.y = H + 100;
+      }
+    });
+  }
+
+  function drawCars() {
+    // rua NORTE (em cima, eixo X)
+    var roadN_Y = H * 0.42 + 38; // meio da rua
+    cars.forEach(function (c) {
+      if (c.lane === 'N') {
+        // duas lanes: par (y + 12) e impar (y + 26)
+        var off = (c.x % 60 < 30) ? 12 : 26;
+        drawCarTop(c.x, roadN_Y - 38 + off, c.color, c.dir, c.type);
+      } else if (c.lane === 'S') {
+        var roadS_Y = H - 95;
+        var off2 = (c.x % 60 < 30) ? 12 : 26;
+        drawCarTop(c.x, roadS_Y + off2, c.color, c.dir, c.type);
+      } else if (c.lane === 'W') {
+        // rua vertical do lado oeste (entre calcada e escritorio)
+        drawCarTop(c.x, c.y, c.color, c.dir, c.type);
+      } else if (c.lane === 'E') {
+        drawCarTop(c.x, c.y, c.color, c.dir, c.type);
+      }
+    });
+  }
+
+  // ── Pedestres andando nas calcadas ───────────────────────────────
+  var pedestrians = [];
+  function initPedestrians() {
+    pedestrians = [];
+    var skinTones = ['#fdbcb4', '#f0c27f', '#c89070', '#8b5a3c', '#f5d0a9'];
+    var shirtColors = ['#ef4444', '#3b82f6', '#10b981', '#a78bfa', '#fbbf24', '#ec4899', '#06b6d4', '#f472b6'];
+    for (var i = 0; i < 14; i++) {
+      var lane = ['N', 'S'][Math.floor(Math.random() * 2)];
+      pedestrians.push({
+        lane: lane,
+        x: Math.random() * W,
+        speed: 12 + Math.random() * 8,
+        dir: Math.random() < 0.5 ? 1 : -1,
+        skin: skinTones[Math.floor(Math.random() * skinTones.length)],
+        shirt: shirtColors[Math.floor(Math.random() * shirtColors.length)],
+        bobOffset: Math.random() * Math.PI * 2
+      });
+    }
+  }
+
+  function updatePedestrians(dt) {
+    pedestrians.forEach(function (p) {
+      p.x += p.speed * p.dir * dt;
+      if (p.dir > 0 && p.x > W + 20) p.x = -20;
+      if (p.dir < 0 && p.x < -20) p.x = W + 20;
+    });
+  }
+
+  function drawPedestrians() {
+    var sidewalkN = H * 0.30 + 4; // meio da calcada norte
+    var sidewalkS = H - 126;       // meio da calcada sul
+    pedestrians.forEach(function (p) {
+      var y = (p.lane === 'N') ? sidewalkN : sidewalkS;
+      // sombra
+      cx.fillStyle = 'rgba(0,0,0,0.3)';
+      cx.beginPath();
+      cx.ellipse(p.x, y + 6, 3, 1.2, 0, 0, Math.PI * 2);
+      cx.fill();
+      // pernas
+      var bob = Math.sin(performance.now() * 0.006 + p.bobOffset) * 0.6;
+      cx.fillStyle = '#1f2937';
+      cx.fillRect(p.x - 1.5, y + 2, 1.2, 4);
+      cx.fillRect(p.x + 0.3, y + 2, 1.2, 4);
+      // corpo
+      cx.fillStyle = p.shirt;
+      cx.fillRect(p.x - 2, y - 2 + bob, 4, 4);
+      // cabeca
+      cx.fillStyle = p.skin;
+      cx.fillRect(p.x - 1.2, y - 4.5 + bob, 2.4, 2.5);
+    });
+  }
+
+  // ── Postes de luz com halo ───────────────────────────────────────
+  function drawLightPosts() {
+    var postColor = '#3a3a4a';
+    var lampOn = '#fef3c7';
+    var positions = [
+      { x: 200, y: H * 0.42 + 38 },  // poste 1 na rua norte
+      { x: 600, y: H * 0.42 + 38 },
+      { x: 1000, y: H * 0.42 + 38 },
+      { x: 1400, y: H * 0.42 + 38 },
+      { x: 200, y: H - 95 + 19 },
+      { x: 600, y: H - 95 + 19 },
+      { x: 1000, y: H - 95 + 19 },
+      { x: 1400, y: H - 95 + 19 }
+    ];
+    positions.forEach(function (p) {
+      // poste
+      cx.fillStyle = postColor;
+      cx.fillRect(p.x - 1, p.y - 18, 2, 18);
+      // braco horizontal
+      cx.fillRect(p.x - 1, p.y - 18, 8, 1);
+      // lampada
+      cx.fillStyle = lampOn;
+      cx.beginPath();
+      cx.arc(p.x + 8, p.y - 18, 3, 0, Math.PI * 2);
+      cx.fill();
+      // halo
+      var grad = cx.createRadialGradient(p.x + 8, p.y - 18, 1, p.x + 8, p.y - 18, 30);
+      grad.addColorStop(0, 'rgba(254,243,199,0.6)');
+      grad.addColorStop(1, 'rgba(254,243,199,0)');
+      cx.fillStyle = grad;
+      cx.beginPath();
+      cx.arc(p.x + 8, p.y - 18, 30, 0, Math.PI * 2);
+      cx.fill();
+    });
+  }
+
+  // ── Util de cor ──────────────────────────────────────────────────
+  function darken(hex, amt) {
+    var h = hex.replace('#', '');
+    if (h.length === 3) h = h.split('').map(function (c) { return c + c; }).join('');
+    var r = Math.max(0, parseInt(h.substring(0, 2), 16) - Math.floor(255 * amt));
+    var g = Math.max(0, parseInt(h.substring(2, 4), 16) - Math.floor(255 * amt));
+    var b = Math.max(0, parseInt(h.substring(4, 6), 16) - Math.floor(255 * amt));
+    return 'rgb(' + r + ',' + g + ',' + b + ')';
   }
 
   // ── Chao (grid isometrico) ───────────────────────────────────────
@@ -793,8 +1158,17 @@
   function render() {
     // camadas back-to-front:
     drawSky();
-    drawSkyline();
+    // predios 3D da cidade em volta (camada distante)
+    drawCity();
+    // ruas + postes
+    drawStreets();
+    drawLightPosts();
+    // chao isometrico do escritorio
     drawGround();
+    // carros em movimento (atras dos postes, na frente das ruas)
+    drawCars();
+    // pedestres
+    drawPedestrians();
     // dutos primeiro (atras das salas)
     PIPES.forEach(drawPipe);
     // salas
@@ -812,6 +1186,8 @@
     lastT = now;
     cx.clearRect(0, 0, W, H);
     update(dt);
+    updateCars(dt);
+    updatePedestrians(dt);
     render();
     raf = requestAnimationFrame(loop);
   }
@@ -848,6 +1224,8 @@
     window.addEventListener('resize', resize);
 
     initCharacters();
+    initCars();
+    initPedestrians();
     if (raf) cancelAnimationFrame(raf);
     lastT = performance.now();
     raf = requestAnimationFrame(loop);
