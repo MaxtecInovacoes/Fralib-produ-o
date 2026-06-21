@@ -518,8 +518,19 @@ export function CardContent({ className = '', ...props }: DivProps) {
 """
 
 
-def vite_template_lgpd_banner() -> str:
-    """Template do componente LgpdBanner (banner de consentimento LGPD)."""
+def vite_template_lgpd_banner(facts: dict[str, Any] | None = None) -> str:
+    """Template do componente LgpdBanner (banner de consentimento LGPD).
+
+    Quando facts e fornecido, gera versao personalizada por negocio usando
+    backend.agents.lgpd_personalized.build_personalized_lgpd().
+    Caso contrario, usa o template generico.
+    """
+    if facts:
+        try:
+            from backend.agents.lgpd_personalized import build_personalized_lgpd
+            return build_personalized_lgpd(facts)
+        except Exception:
+            pass  # Fallback to generic template below
     return """import { useEffect, useState } from 'react';
 import { ShieldCheck, X } from 'lucide-react';
 import { motion } from 'motion/react';

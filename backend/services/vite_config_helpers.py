@@ -142,7 +142,11 @@ def _model_candidates(*values: str) -> list[str]:
 
 
 def _normalize_model_alias(model: str) -> str | None:
-    """Normalize model name aliases."""
+    """Normalize model name aliases.
+
+    Returns the canonical alias (haiku/sonnet/opus) for known models,
+    or None for unknown models so callers can fall back.
+    """
     model = (model or "").strip().lower()
     aliases = {
         "4": "opus",
@@ -156,11 +160,10 @@ def _normalize_model_alias(model: str) -> str | None:
         "claude-3-5": "sonnet",
         "claude-3-5-sonnet": "sonnet",
         "claude-3-5-haiku": "haiku",
-        "gpt-4": "sonnet",
         "gpt-4o": "sonnet",
         "gpt-4-mini": "haiku",
     }
-    return aliases.get(model, model if model else None)
+    return aliases.get(model)
 
 
 def _select_vite_react_models(primary_model: str, fallback_model: str) -> list[str]:

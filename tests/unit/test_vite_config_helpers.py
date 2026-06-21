@@ -126,12 +126,14 @@ class TestNormalizeModelAlias:
         assert _normalize_model_alias("4") == "opus"
 
     def test_unknown_model_unchanged(self):
-        """GREEN: Modelos desconhecidos retornam None"""
+        """GREEN: Modelos realmente desconhecidos retornam None.
+
+        gpt-4 esta mapeado para sonnet (alias legacy mantido),
+        entao usamos um modelo realmente fora do mapping.
+        """
         from backend.services.vite_config_helpers import _normalize_model_alias
 
-        # Modelos desconhecidos retornam None ou são normalizados
-        result = _normalize_model_alias("gpt-4")
-        # gpt-4 não está no mapping, pode retornar None ou string vazia
+        result = _normalize_model_alias("modelo-nao-existe-xyz")
         assert result is None or result == ""
 
 
