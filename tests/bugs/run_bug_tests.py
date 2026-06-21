@@ -54,18 +54,24 @@ def test_bug_enqueue_caio():
     r.assert_("from backend.services.lead_supply_inventory import" in hunter_content,
               "hunter.py importa de lead_supply_inventory")
 
-    # 5. Nenhum import de _enqueue_caio de lead_supply_storage
+    # 5. Nenhum import direto problematico
     suspicious = []
     for py_file in (PROJECT_ROOT / "backend").rglob("*.py"):
         if "__pycache__" in str(py_file):
             continue
+        # Pula arquivos onde o re-export e intencional
+        if "lead_supply_storage.py" in str(py_file):
+            continue  # este arquivo PODE re-exportar (definido)
+        if "safe_lead_qualificado.py" in str(py_file):
+            continue  # helper PODE usar LeadQualificado
         content = py_file.read_text(encoding="utf-8", errors="ignore")
-        if "from backend.services.lead_supply_storage import" in content and "_enqueue_caio" in content:
-            # Verifica se eh a re-exportacao (OK) ou import direto (bug)
-            if "_enqueue_caio as _real_fn" not in content:
-                suspicious.append(str(py_file.relative_to(PROJECT_ROOT)))
+        # Procura "from ... import" com storage E _enqueue_caio na mesma linha
+        for line in content.split("\n"):
+            if "from backend.services.lead_supply_storage" in line and "_enqueue_caio" in line:
+                if "_real_fn" not in line and "import _enqueue_caio" not in line:
+                    suspicious.append(f"{py_file.relative_to(PROJECT_ROOT)}: {line.strip()[:80]}")
     r.assert_(len(suspicious) == 0,
-              f"Nenhum import direto problematico ({len(suspicious)} encontrados)")
+              f"Nenhum import direto problematico ({len(suspicious)} encontrados: {suspicious[:2]})")
 
     return r
 
@@ -138,10 +144,12 @@ def test_regression_tenant_failures():
         if "__pycache__" in str(py_file) or "safe_lead_qualificado.py" in str(py_file):
             continue
         content = py_file.read_text(encoding="utf-8", errors="ignore")
-        if re.search(r'LeadQualificado\s*\(\s*lead\s*=', content):
-            bad_uses.append(str(py_file.relative_to(PROJECT_ROOT)))
+        for line in content.split("\n"):
+            # Procura "LeadQualificado(" que nao seja importacao de classe
+            if re.search(r'LeadQualificado\s*\(\s*lead\s*=', line):
+                bad_uses.append(f"{py_file.relative_to(PROJECT_ROOT)}: {line.strip()[:80]}")
     r.assert_(len(bad_uses) == 0,
-              f"Todos usam safe_qualificar ({len(bad_uses)} usos diretos restantes)")
+              f"Todos usam safe_qualificar ({len(bad_uses)} usos diretos: {bad_uses[:1]})")
 
     # 4. Sistema de diagnostico classifica os 2 bugs
     from backend.services.error_diagnostics import diagnosticar

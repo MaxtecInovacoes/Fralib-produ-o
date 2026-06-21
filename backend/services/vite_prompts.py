@@ -43,7 +43,7 @@ TypeScript project. Return one strict JSON object only, no markdown:
 
 # Few-shot + negative examples (#4, #7) - injetados em runtime
 def _build_few_shot_prompt() -> str:
-    """Lazy load few-shot examples. Falha silenciosa se modulo nao existir."""
+    # Lazy load few-shot examples. Falha silenciosa se modulo nao existir.
     try:
         from backend.agents.few_shot_examples import build_few_shot_block
         return build_few_shot_block()

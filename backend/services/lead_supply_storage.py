@@ -318,7 +318,13 @@ __all__ = [
 ]
 
 
-# Compat: re-exporta _enqueue_caio do modulo inventory
-# (algum codigo tenta importar daqui - nao quebrar)
-# Usa importlazy para garantir que a funcao ORIGINAL seja referenciada
-from backend.services.lead_supply_inventory import _enqueue_caio  # noqa: F401
+def __getattr__(name):
+    """Lazy import para evitar circular import com lead_supply_inventory.
+
+    Quando alguem faz `from backend.services.lead_supply_storage import _enqueue_caio`,
+    Python chama __getattr__ que importa o modulo inventory SOB DEMANDA.
+    """
+    if name == "_enqueue_caio":
+        from backend.services.lead_supply_inventory import _enqueue_caio
+        return _enqueue_caio
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
