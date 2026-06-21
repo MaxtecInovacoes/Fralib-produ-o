@@ -545,28 +545,26 @@
       </div>
     </div>
 
-    <!-- LINHA 1: Pixel Office + timeline lado a lado -->
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:16px;margin-bottom:20px;align-items:start;">
+    <!-- LINHA 1: Waveform full-width (timeline do pipeline) -->
+    <div id="pipelineWaveformHost" style="margin-bottom:16px;min-width:0;"></div>
 
-      <!-- Pixel Office -->
-      <div id="pixelOfficeWrap" style="background:#1a1a2e;border-radius:10px;border:0;box-shadow:inset 0 0 0 1px rgba(255,255,255,.04);overflow:hidden;max-height:330px;min-width:0;">
-        <div style="background:rgba(8,8,20,0.95);border-bottom:1px solid var(--fl-border);padding:4px 12px;display:flex;justify-content:space-between;align-items:center;font-family:'Courier New',monospace;font-size:10px;color:#a0a0c0">
-          <span style="font-weight:bold;color:#7dd3fc;letter-spacing:1px">&#128187; ESCRITORIO DO ROBO</span>
-          <div style="display:flex;gap:12px">
-            <span>AGT <strong id="po-sc" style="color:#0183ff">9</strong></span>
-            <span>PROD <strong id="po-sp" style="color:#0183ff">0%</strong></span>
-            <span>EVT <strong id="po-ev" style="color:#fbbf24">-</strong></span>
-          </div>
-        </div>
-        <div class="admin-simple-help" style="border-radius:0;border-left:0;border-right:0;">
-          Mapa visual do trabalho: os agentes se movem quando o sistema esta buscando, analisando ou produzindo.
-        </div>
-        <div style="background:#1a1a2e;padding:0;line-height:0;font-size:0">
-          <canvas id="pixelOfficeCanvas" style="display:block;image-rendering:pixelated;image-rendering:crisp-edges;width:100%;height:auto;max-height:292px;aspect-ratio:2/1;margin:0 auto;"></canvas>
+    <!-- LINHA 2: Escritorio do robo full-width, ocupa todo espaco -->
+    <div id="pixelOfficeWrap" style="background:#1a1a2e;border-radius:10px;border:0;box-shadow:inset 0 0 0 1px rgba(255,255,255,.04);overflow:hidden;min-height:380px;min-width:0;display:flex;flex-direction:column;">
+      <div style="background:rgba(8,8,20,0.95);border-bottom:1px solid var(--fl-border);padding:4px 12px;display:flex;justify-content:space-between;align-items:center;font-family:'Courier New',monospace;font-size:10px;color:#a0a0c0">
+        <span style="font-weight:bold;color:#7dd3fc;letter-spacing:1px">&#128187; ESCRITORIO DO ROBO</span>
+        <div style="display:flex;gap:12px">
+          <span>AGT <strong id="po-sc" style="color:#0183ff">9</strong></span>
+          <span>PROD <strong id="po-sp" style="color:#0183ff">0%</strong></span>
+          <span>EVT <strong id="po-ev" style="color:#fbbf24">-</strong></span>
         </div>
       </div>
-
+      <div class="admin-simple-help" style="border-radius:0;border-left:0;border-right:0;">
+        Mapa visual do trabalho: os agentes se movem quando o sistema esta buscando, analisando ou produzindo.
       </div>
+      <div style="background:#1a1a2e;padding:0;line-height:0;font-size:0;flex:1;display:flex;align-items:center;justify-content:center;">
+        <canvas id="pixelOfficeCanvas" style="display:block;image-rendering:pixelated;image-rendering:crisp-edges;width:100%;height:auto;max-height:480px;aspect-ratio:2/1;"></canvas>
+      </div>
+    </div>
 
     <!-- MOTOR DE ABASTECIMENTO: Hunter/Caio separado da pipeline -->
     <div class="config-section" id="leadSupplyPanel" style="margin-bottom:24px;">
@@ -8192,7 +8190,7 @@ async function atualizarUtiBadge() {
 </script>
 <!-- Modulos extraidos do admin monolitico. -->
 <script src="/js/admin/pipeline-timeline.js?v=1782014057"></script>
-<script src="/js/admin/pipeline-waveform.js?v=20260621-telemetry"></script>
+<script src="/js/admin/pipeline-waveform.js?v=20260621-layout"></script>
 <script src="/js/admin/audio-player/events.js?v=20260621"></script>
 <script src="/js/admin/audio-player/storage.js?v=20260621"></script>
 <script src="/js/admin/audio-player/player-core.js?v=20260621"></script>
