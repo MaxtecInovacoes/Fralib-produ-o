@@ -103,6 +103,9 @@ def test_pipeline_job_telemetry_aggregates_canonical_sources_with_tenant_scope()
     }
     assert all(params["tenant_id"] == 2 for _, params in db.calls)
     assert all("tenant_id = :tenant_id" in sql for sql, _ in db.calls)
+    assert all(params["created_at"] == job["criado_em"] for _, params in db.calls)
+    assert any("started_at >= CAST(:created_at AS timestamp)" in sql for sql, _ in db.calls)
+    assert any("created_at >= CAST(:created_at AS timestamp)" in sql for sql, _ in db.calls)
 
 
 def test_structured_sse_log_keeps_pipeline_fields_at_envelope_level():

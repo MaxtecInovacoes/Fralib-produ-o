@@ -182,6 +182,7 @@ def _pipeline_job_telemetry(db: Session, tenant_id: int, job: dict | None) -> di
 
     run_id = job.get("run_id")
     job_id = job.get("id")
+    created_at = job.get("criado_em")
     phases = []
     llm_by_phase = []
 
@@ -195,11 +196,16 @@ def _pipeline_job_telemetry(db: Session, tenant_id: int, job: dict | None) -> di
                            input_tokens, output_tokens, cache_read_tokens,
                            cache_created_tokens, custo_usd, erro
                     FROM pipeline_run_spans
-                    WHERE tenant_id = :tenant_id AND run_id = :run_id
+                    WHERE tenant_id = :tenant_id
+                      AND run_id = :run_id
+                      AND (
+                            :created_at IS NULL
+                         OR started_at >= CAST(:created_at AS timestamp)
+                      )
                     ORDER BY started_at ASC, fase_num ASC, id ASC
                     """
                 ),
-                {"tenant_id": tenant_id, "run_id": run_id},
+                {"tenant_id": tenant_id, "run_id": run_id, "created_at": created_at},
             ).mappings().all()
             for row in rows:
                 phase_num = row.get("fase_num")
@@ -254,13 +260,26 @@ def _pipeline_job_telemetry(db: Session, tenant_id: int, job: dict | None) -> di
                     WHERE tenant_id = :tenant_id
                       AND (
                             (:job_id IS NOT NULL AND job_id = :job_id)
-                         OR (job_id IS NULL AND :run_id IS NOT NULL AND run_id = :run_id)
+                         OR (
+                                job_id IS NULL
+                            AND :run_id IS NOT NULL
+                            AND run_id = :run_id
+                            AND (
+                                  :created_at IS NULL
+                               OR created_at >= CAST(:created_at AS timestamp)
+                            )
+                            )
                       )
                     GROUP BY phase, agent, provider, model
                     ORDER BY MIN(created_at) ASC
                     """
                 ),
-                {"tenant_id": tenant_id, "job_id": job_id, "run_id": run_id},
+                {
+                    "tenant_id": tenant_id,
+                    "job_id": job_id,
+                    "run_id": run_id,
+                    "created_at": created_at,
+                },
             ).mappings().all()
             llm_by_phase = [
                 {
