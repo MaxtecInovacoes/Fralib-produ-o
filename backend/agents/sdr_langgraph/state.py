@@ -107,6 +107,24 @@ class LeadMemory(BaseModel):
     top_concorrentes: List[str] = Field(default_factory=list)
     main_objection: str = ""
 
+    # BANT/MEDDIC estruturado (Fase 3)
+    bant_budget: str = ""        # "nao_quero_dizer", "menos_500", "500_1500", "1500_5000", "mais_5000"
+    bant_authority: str = ""     # "decisor", "influencia", "consulta", "nao_sei"
+    bant_need_score: int = 0     # 0-10
+    bant_timeline: str = ""      # "urgente", "30_dias", "90_dias", "sem_previsao"
+    meddic_metrics: str = ""     # O lead quer atingir qual métrica?
+    meddic_economic_buyer: str = ""  # Quem paga?
+    meddic_champion: str = ""    # Quem apoia internamente?
+    meddic_score: int = 0        # Score MEDDIC agregado 0-10
+
+    # Humanização (Fase 1)
+    humanization_profile: Dict[str, Any] = Field(default_factory=dict)
+    # ^ Ex: {"avg_response_time_min": 12, "msg_length_pref": "short", "emoji_tolerance": "low"}
+    lead_temperature: str = ""   # "frio", "morno", "quente" - inferido pelo bot
+    wall_street_close_used: bool = False
+    last_msg_sent_hash: str = ""  # Dedup anti-repetição
+    msgs_sent_count: int = 0
+
     def update_stage(self, new_stage: str) -> bool:
         """Atualiza stage se transição for válida. Retorna True se mudou."""
         if new_stage == self.stage:

@@ -810,6 +810,69 @@ def node_save_and_send(state: SDRState) -> dict:
     if not state.get("should_send", False):
         return {}
 
+    # ════════════════════════════════════════════════════════════════
+    # HUMANIZACAO (Fase 1 - SDD §1.4)
+    # - Calcula delay humano variavel
+    # - Detecta duplicatas (anti-repete-msgs)
+    # - Detecta msg parece-robo
+    # - Aplica Wall Street close se hesitou
+    # ════════════════════════════════════════════════════════════════
+    reply = state.get("proposed_reply", "") or state.get("draft", "")
+    if reply:
+        try:
+            from agents.sdr_langgraph.humanization import (
+                calc_humanize_delay,
+                detect_msg_duplicate,
+                is_robot_like,
+                msg_hash,
+                pick_wall_street_close,
+            )
+            from agents.sdr_langgraph.state import LeadMemory as _LM
+
+            # 1. Detecta msg parece-robo
+            if is_robot_like(reply):
+                print(f"[SDR-HUMANIZE] Mensagem parece-robo detectada: {reply[:80]}")
+                # Log pra revisar prompt depois
+
+            # 2. Detecta msg duplicada
+            previous_msgs = list(memory.agent_notes.get("last_msgs_sent", []))
+            if detect_msg_duplicate(reply, previous_msgs):
+                # Substitui por variacao
+                reply = reply + " Me conta, faz sentido?"
+                print(f"[SDR-HUMANIZE] Msg duplicada detectada, variacao adicionada")
+
+            # 3. Wall Street close automatico (se hesitou e ainda nao usou)
+            stage = memory.stage
+            has_hesitated = memory.rejection_count > 0 or "vou pensar" in reply.lower() or "agora nao" in reply.lower()
+            if has_hesitated and not memory.wall_street_close_used and stage in ("close", "feedback", "reveal"):
+                wall_street = pick_wall_street_close(memory.segmento)
+                reply = reply + "\n\n" + wall_street
+                memory.wall_street_close_used = True
+
+            # 4. Calcula delay humano
+            is_objetou = memory.rejection_count > 0 or memory.main_objection
+            is_first = memory.msgs_sent_count == 0
+            is_quente = memory.lead_temperature == "quente"
+            delay = calc_humanize_delay(
+                last_response_time_min=memory.humanization_profile.get("avg_response_time_min"),
+                is_objetou=is_objetou,
+                is_first_msg=is_first,
+                is_quente=is_quente,
+            )
+            print(f"[SDR-HUMANIZE] delay={delay.seconds:.1f}s reason={delay.reason}")
+
+            # 5. Atualiza contadores e dedup hash
+            memory.msgs_sent_count += 1
+            memory.last_msg_sent_hash = msg_hash(reply)
+            previous_msgs.append(reply)
+            memory.agent_notes["last_msgs_sent"] = previous_msgs[-5:]
+
+            # Re-inject no state pra envio
+            state["proposed_reply"] = reply
+            state["send_delay_seconds"] = delay.seconds
+        except Exception as e:
+            print(f"[SDR-HUMANIZE] Erro humanizacao (nao-fatal): {e}")
+
     # Salvar memória
     try:
         from agents.memory import salvar_memoria
