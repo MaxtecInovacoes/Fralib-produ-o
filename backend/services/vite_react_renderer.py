@@ -2108,6 +2108,14 @@ def validate_vite_project_files(
     requested_paths: set[str] | None = None,
     studio_mode: bool = True,
 ) -> None:
+    # Backfill: if the LLM failed to deliver a requested path, fall back to
+    # the deterministic studio template. This is friendlier than aborting
+    # the build over a missing optional file like src/pages/Index.tsx.
+    if requested_paths:
+        for path in list(requested_paths):
+            if path not in files or not files.get(path):
+                if path == "src/pages/Index.tsx":
+                    files[path] = _generate_studio_fallback_files(facts)["src/pages/Index.tsx"]
     missing = sorted(REQUIRED_PROJECT_FILES.difference(files))
     if missing:
         raise ViteReactRenderError("projeto Vite sem arquivos obrigatorios: " + ", ".join(missing))
@@ -4081,34 +4089,13 @@ def _ensure_index_css_contract(content: str) -> str:
     css = str(content or "").strip()
     css = re.sub(r"@import\s+[\"']tailwindcss/(?:base|components|utilities)[\"'];?\s*", "", css)
     css = re.sub(r"@tailwind\s+(?:base|components|utilities);?\s*", "", css)
-    # Strip backslash-newline escapes that the LLM sometimes emits as
-    # standalone "declarations" (e.g. trailing "\" on a line). Tailwind v4
-    # rejects these as "Invalid declaration: `\n`".
-    css = css.replace("\\\n", "\n").replace("\\n", "\n")
-    # Drop empty / whitespace-only / unparseable lines
-    cleaned_lines = []
-    for line in css.splitlines():
-        stripped = line.strip()
-        if not stripped:
-            cleaned_lines.append(line)
-            continue
-        # Keep @-rules, custom-properties, comments, selectors
-        if (
-            stripped.startswith("@")
-            or stripped.startswith("{")
-            or stripped.startswith("}")
-            or stripped.startswith("/*")
-            or stripped.startswith("*/")
-            or stripped.startswith("--")
-            or ":" in stripped
-            or stripped.startswith(".")
-            or stripped.startswith("#")
-            or stripped.startswith(":")
-            or stripped in {":root"}
-        ):
-            cleaned_lines.append(line)
-        # Otherwise drop — this is what causes "Invalid declaration: \n" in Tailwind v4
-    css = "\n".join(cleaned_lines)
+    # Tailwind v4 rejects two LLM artifacts:
+    #   1. "Invalid declaration: `\n`"  - when LLM emits stray "\\\n" tokens
+    #   2. "Missing opening {"          - when a rule body has been torn apart
+    # We sanitize without disturbing block structure.
+    css = css.replace("\\\n", "\n")  # collapse "\\\n" -> "\n"
+    css = re.sub(r"^\s*\\\s*$", "", css, flags=re.MULTILINE)  # drop lone backslash lines
+    css = re.sub(r"\\n\s*", "", css)  # drop orphan "\n" tokens
     if "@import \"tailwindcss\"" not in css and "@import 'tailwindcss'" not in css:
         css = '@import "tailwindcss";\n' + css
     if "prefers-reduced-motion" not in css:
