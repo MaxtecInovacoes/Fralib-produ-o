@@ -421,13 +421,14 @@
   function ensureContainer() {
     var host = document.getElementById('pipelineWaveformHost');
     if (!host) {
-      // Ancora na area do escritorio (que fica logo apos o header)
+      // Fallback: ancora no escritorio se admin.html antigo
       var anchor = document.getElementById('pixelOfficeWrap')
         || document.getElementById('pipeline-banner')
         || document.querySelector('.main');
       if (!anchor || !anchor.parentNode) return null;
       host = document.createElement('div');
       host.id = 'pipelineWaveformHost';
+      host.style.cssText = 'margin-bottom:16px;min-width:0;';
       // insere ANTES do escritorio (assim a timeline fica acima, escritorio embaixo)
       anchor.parentNode.insertBefore(host, anchor);
     }

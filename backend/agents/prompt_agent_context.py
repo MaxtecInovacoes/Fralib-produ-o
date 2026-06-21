@@ -19,6 +19,7 @@ from backend.agents.prompt_agent_helpers import (
     _market_intelligence_context,
     _media_urls,
     _normalize,
+    _normalize_target,
     _sanitize_primary_term,
     _section_name,
 )
