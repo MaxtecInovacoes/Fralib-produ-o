@@ -1351,7 +1351,11 @@ function mostrarView(view) {
   }
   if (view === 'config') {
     setTimeout(function(){
-      if (window.initPixelOffice) {
+      // Escritorio isometrico 3D novo (substitui o antigo)
+      if (window.initPixelOfficeIso) {
+        window.initPixelOfficeIso();
+      } else if (window.initPixelOffice) {
+        // fallback
         window._pixelOfficeStarted = false;
         window.initPixelOffice();
       }
