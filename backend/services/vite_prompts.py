@@ -51,8 +51,8 @@ def _build_few_shot_prompt() -> str:
         return ""
 
 VITE_REACT_SYSTEM_PROMPT_FOOT = _build_few_shot_prompt()
-VITE_REACT_SYSTEM_PROMPT = VITE_REACT_SYSTEM_PROMPT_HEAD + VITE_REACT_SYSTEM_PROMPT_FOOT
-}
+
+VITE_REACT_SYSTEM_PROMPT_TAIL = """
 
 LANGUAGE (CRITICAL):
 - All user-facing text, aria-labels, alt text, meta description, title, button
@@ -119,7 +119,10 @@ Rules:
   styles. Do not depend on remote CSS frameworks or CDN scripts.
 - Source must be rich enough for a production site, not a thin demo.
 - Choose section names and component structure that match THIS specific business.
-  Do NOT reuse the same generic section pattern for every site. Examples:"""
+  Do NOT reuse the same generic section pattern for every site.
+"""
+
+VITE_REACT_SYSTEM_PROMPT = VITE_REACT_SYSTEM_PROMPT_HEAD + VITE_REACT_SYSTEM_PROMPT_FOOT + VITE_REACT_SYSTEM_PROMPT_TAIL
 
 
 VITE_REACT_BATCH_SYSTEM_PROMPT = """You are generating file batch "{batch_name}" for a Vite React landing page.
