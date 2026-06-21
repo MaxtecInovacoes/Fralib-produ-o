@@ -1,20 +1,22 @@
 /**
  * pipeline-timeline.js
  * ====================
- * Render animado da esteira de agentes do FraLib com:
- *   - icone unico por agente
- *   - mensagens curtas que rotacionam a cada ~7s (com fade)
- *   - barra de progresso animada no agente ativo
- *   - pulse intenso no card ativo
+ * Render animado do agente ATIVO da esteira FraLib.
+ *
+ * UX: mostra APENAS o agente que esta trabalhando agora, com:
+ *   - icone grande + nome em destaque
+ *   - mensagem rotativa do que esta fazendo
+ *   - barra de progresso fake (0% -> 100%) que cicla automaticamente
+ *   - quando completa, mostra "site enviado para SDR!" e passa pro proximo
  *
  * Mantem a mesma assinatura renderPipelineTimeline(ativo, status) que o
  * codigo legado usava, para garantir compatibilidade com chamadas
- * pre-existentes em admin.html e partials/admin/_scripts.html.
+ * pre-existentes em admin.html.
  */
 (function () {
   'use strict';
 
-  // ── Personas dos agentes (icone + 4 mensagens cada) ─────────────
+  // ── Personas dos agentes (icone + label + 4 mensagens cada) ───
   var AGENT_PERSONAS = {
     hunter: {
       icon: '🔍',
@@ -120,16 +122,16 @@
 
   // Ordem canonica da esteira
   var PIPELINE_TIMELINE = [
-    { key: 'hunter',              fase: 1 },
-    { key: 'caio',                fase: 2 },
-    { key: 'jina',                fase: 3 },
-    { key: 'market_intelligence', fase: 4 },
-    { key: 'media',               fase: 5 },
-    { key: 'prompt_agent',        fase: 6 },
-    { key: 'designer',            fase: 8 },
-    { key: 'builder_renderer',    fase: 9 },
-    { key: 'deploy',              fase: 10 },
-    { key: 'franz',               fase: 11 }
+    'hunter',
+    'caio',
+    'jina',
+    'market_intelligence',
+    'media',
+    'prompt_agent',
+    'designer',
+    'builder_renderer',
+    'deploy',
+    'franz'
   ];
 
   // ── CSS injetado uma unica vez ─────────────────────────────────
@@ -139,129 +141,239 @@
     var s = document.createElement('style');
     s.id = STYLE_ID;
     s.textContent = [
-      '@keyframes timelinePulse {',
-      '  0%,100% { box-shadow: 0 0 0 4px rgba(168,85,247,.14), 0 0 18px rgba(168,85,247,.35); }',
-      '  50%    { box-shadow: 0 0 0 8px rgba(168,85,247,.08), 0 0 32px rgba(168,85,247,.55); }',
+      '@keyframes tlPulse {',
+      '  0%,100% { box-shadow: 0 0 0 4px rgba(168,85,247,.14), 0 0 24px rgba(168,85,247,.35); }',
+      '  50%    { box-shadow: 0 0 0 10px rgba(168,85,247,.06), 0 0 42px rgba(168,85,247,.6); }',
       '}',
-      '@keyframes timelineProgress {',
+      '@keyframes tlBarFill {',
       '  0%   { background-position: 0% 50%; }',
       '  100% { background-position: 200% 50%; }',
       '}',
-      '@keyframes timelineFade {',
-      '  from { opacity: 0; transform: translateY(-4px); }',
-      '  to   { opacity: 1; transform: translateY(0); }',
+      '@keyframes tlMsgFade {',
+      '  0%,100% { opacity: 0; transform: translateY(4px); }',
+      '  20%,80% { opacity: 1; transform: translateY(0); }',
       '}',
-      '.timeline-card { position:relative;display:grid;grid-template-columns:32px 1fr;gap:10px;align-items:center;border-radius:8px;padding:9px 10px;min-height:54px;transition:all .25s ease; }',
-      '.timeline-icon { width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-size:16px;line-height:1; }',
-      '.timeline-label { font-family:var(--fl-font-brand);font-size:9px;letter-spacing:1px; }',
-      '.timeline-msg { font-size:11px;color:var(--fl-text-muted);margin-top:5px;min-height:14px;transition:opacity .3s ease; }',
-      '.timeline-progress-bar { height:3px;background:linear-gradient(90deg,#a855f7,#ec4899,#a855f7);background-size:200% 100%;animation:timelineProgress 2s linear infinite;border-radius:2px;margin-top:5px;opacity:0; }',
-      '.timeline-card.is-active { animation: timelinePulse 1.6s ease-in-out infinite, timelineFade .4s ease; }',
-      '.timeline-card.is-active .timeline-progress-bar { opacity: 1; }',
-      '.timeline-card.is-done .timeline-icon { filter: saturate(.6); }',
+      '@keyframes tlDonePop {',
+      '  0%   { transform: scale(1); }',
+      '  50%  { transform: scale(1.08); }',
+      '  100% { transform: scale(1); }',
+      '}',
+      '.tl-card {',
+      '  position:relative;',
+      '  display:flex;',
+      '  flex-direction:column;',
+      '  align-items:center;',
+      '  justify-content:center;',
+      '  gap:12px;',
+      '  padding:24px 16px;',
+      '  border-radius:14px;',
+      '  border:1px solid rgba(168,85,247,.4);',
+      '  background:rgba(168,85,247,.08);',
+      '  text-align:center;',
+      '  min-height:170px;',
+      '  overflow:hidden;',
+      '}',
+      '.tl-card.is-active { animation: tlPulse 1.8s ease-in-out infinite; }',
+      '.tl-card.is-done {',
+      '  border-color: rgba(16,185,129,.5);',
+      '  background: rgba(16,185,129,.10);',
+      '  animation: tlDonePop .45s ease;',
+      '}',
+      '.tl-card.is-idle {',
+      '  border-color: rgba(148,163,184,.3);',
+      '  background: rgba(15,23,42,.55);',
+      '  color: var(--fl-text-muted);',
+      '}',
+      '.tl-icon {',
+      '  font-size:46px;',
+      '  line-height:1;',
+      '  filter: drop-shadow(0 0 12px rgba(168,85,247,.45));',
+      '}',
+      '.tl-card.is-done .tl-icon { filter: drop-shadow(0 0 12px rgba(16,185,129,.45)); }',
+      '.tl-label {',
+      '  font-family: var(--fl-font-brand);',
+      '  font-size: 13px;',
+      '  letter-spacing: 2px;',
+      '  color: #a855f7;',
+      '}',
+      '.tl-card.is-done .tl-label { color: #10b981; }',
+      '.tl-card.is-idle .tl-label { color: rgba(148,163,184,.7); }',
+      '.tl-msg {',
+      '  font-size: 13px;',
+      '  color: var(--fl-text);',
+      '  min-height: 18px;',
+      '  font-weight: 500;',
+      '  animation: tlMsgFade 6s ease-in-out infinite;',
+      '}',
+      '.tl-card.is-done .tl-msg { animation: none; color: #10b981; font-weight: 700; }',
+      '.tl-card.is-idle .tl-msg { color: var(--fl-text-muted); }',
+      '.tl-bar-track {',
+      '  width:100%;',
+      '  height: 8px;',
+      '  background: rgba(15,23,42,.6);',
+      '  border-radius: 99px;',
+      '  overflow: hidden;',
+      '  position:relative;',
+      '  margin-top: 4px;',
+      '}',
+      '.tl-bar-fill {',
+      '  height: 100%;',
+      '  width: 0%;',
+      '  background: linear-gradient(90deg, #a855f7, #ec4899, #06b6d4, #a855f7);',
+      '  background-size: 200% 100%;',
+      '  animation: tlBarFill 2s linear infinite;',
+      '  border-radius: 99px;',
+      '  transition: width .25s ease;',
+      '}',
+      '.tl-card.is-done .tl-bar-fill {',
+      '  background: linear-gradient(90deg, #10b981, #34d399, #10b981);',
+      '  width: 100% !important;',
+      '}',
+      '.tl-card.is-idle .tl-bar-fill { display:none; }',
+      '.tl-pct {',
+      '  font-family: var(--fl-font-mono);',
+      '  font-size: 11px;',
+      '  color: var(--fl-text-muted);',
+      '  margin-top: 2px;',
+      '}',
+      '.tl-card.is-done .tl-pct { color: #10b981; font-weight: 700; }',
       '@media (prefers-reduced-motion: reduce) {',
-      '  .timeline-card.is-active { animation: none; }',
-      '  .timeline-progress-bar { animation: none; }',
-      '  .timeline-msg { transition: none; }',
+      '  .tl-card, .tl-msg, .tl-bar-fill { animation: none !important; }',
       '}'
     ].join('\n');
     document.head.appendChild(s);
   }
 
+  // ── Estado da animacao ─────────────────────────────────────────
+  var state = {
+    currentIdx: 0,           // indice na PIPELINE_TIMELINE
+    progress: 0,             // 0..100
+    active: false,           // se ha pipeline rodando
+    cycleTimer: null,        // timer do progresso
+    msgIdx: 0,               // mensagem rotativa
+    msgTimer: null,          // timer de troca de mensagem
+    doneFlash: false         // flag para mostrar "site enviado"
+  };
+
   // ── Render principal ───────────────────────────────────────────
   function renderPipelineTimeline(ativo, status) {
     injectStyles();
-
     var el = document.getElementById('pipelineTimeline');
     if (!el) return;
 
-    // Status global (ex: "Pipeline em andamento")
-    var statusEl = document.getElementById('pipelineTimelineStatus');
-    if (statusEl) statusEl.textContent = status || (ativo ? 'em andamento' : 'aguardando');
-
-    var activeIndex = -1;
+    // Determinar se o pipeline esta rodando e qual agente
     if (ativo) {
-      activeIndex = -1;
-      for (var i = 0; i < PIPELINE_TIMELINE.length; i++) {
-        if (PIPELINE_TIMELINE[i].key === ativo) { activeIndex = i; break; }
+      var idx = PIPELINE_TIMELINE.indexOf(ativo);
+      if (idx >= 0) {
+        state.currentIdx = idx;
+        state.active = true;
+        state.progress = 0;
+        state.doneFlash = false;
       }
+    } else if (ativo === null) {
+      state.active = false;
     }
 
-    el.innerHTML = PIPELINE_TIMELINE.map(function (p, idx) {
-      var persona = AGENT_PERSONAS[p.key] || { icon: '•', label: p.key, msgs: ['processando...'] };
-      var done = activeIndex >= 0 && idx < activeIndex;
-      var active = activeIndex === idx;
+    // Status global
+    var statusEl = document.getElementById('pipelineTimelineStatus');
+    if (statusEl) statusEl.textContent = status || (state.active ? 'em andamento' : 'aguardando');
 
-      var border = active ? '#a855f7' : (done ? '#10b981' : 'rgba(148,163,184,.35)');
-      var bg     = active ? 'rgba(168,85,247,.18)' : (done ? 'rgba(16,185,129,.12)' : 'rgba(15,23,42,.55)');
-      var iconBg = active ? '#a855f7' : (done ? '#10b981' : 'rgba(148,163,184,.4)');
-      var iconColor = (done && !active) ? '#080814' : (active ? '#080814' : '#fff');
-      var labelColor = active ? '#a855f7' : (done ? '#10b981' : 'rgba(148,163,184,.85)');
-
-      // Mensagem inicial: pega um index estavel por agente + fase (evita piscar igual em todos)
-      var msgIdx = (idx + Math.floor(Date.now() / 7000)) % persona.msgs.length;
-      var msg = persona.msgs[msgIdx];
-
-      var cls = 'timeline-card';
-      if (active) cls += ' is-active';
-      if (done) cls += ' is-done';
-
-      return '<div class="' + cls + '" data-timeline-agent="' + p.key + '" data-msg-idx="' + msgIdx + '" '
-           + 'style="border:1px solid ' + border + ';background:' + bg + ';">'
-           + '<div class="timeline-icon" style="background:' + iconBg + ';color:' + iconColor + ';">'
-           +   persona.icon
-           + '</div>'
-           + '<div>'
-           +   '<div class="timeline-label" style="color:' + labelColor + ';">' + persona.label.toUpperCase() + '</div>'
-           +   '<div class="timeline-msg">' + msg + '</div>'
-           +   '<div class="timeline-progress-bar"></div>'
-           + '</div>'
-           + '</div>';
-    }).join('');
+    // Render do card
+    renderCard();
   }
 
-  // ── Rotacao automatica a cada 7s com fade ──────────────────────
-  var ROTATION_MS = 7000;
-  var _intervalId = null;
+  function renderCard() {
+    var el = document.getElementById('pipelineTimeline');
+    if (!el) return;
 
-  function startRotation() {
-    if (_intervalId) return;
-    _intervalId = setInterval(function () {
-      var cards = document.querySelectorAll('[data-timeline-agent]');
-      for (var i = 0; i < cards.length; i++) {
-        var card = cards[i];
-        var agent = card.getAttribute('data-timeline-agent');
-        var persona = AGENT_PERSONAS[agent];
-        if (!persona || !persona.msgs || !persona.msgs.length) continue;
+    var key = PIPELINE_TIMELINE[state.currentIdx];
+    var persona = AGENT_PERSONAS[key];
+    if (!persona) return;
 
-        var currentIdx = parseInt(card.getAttribute('data-msg-idx') || '0', 10);
-        var nextIdx = (currentIdx + 1) % persona.msgs.length;
+    var msg = persona.msgs[state.msgIdx % persona.msgs.length];
+    var pct = Math.min(100, Math.round(state.progress));
+    var cls = 'tl-card';
+    if (state.doneFlash) cls += ' is-done';
+    else if (state.active) cls += ' is-active';
+    else cls += ' is-idle';
 
-        var msgEl = card.querySelector('.timeline-msg');
-        if (!msgEl) continue;
+    var displayMsg = state.doneFlash
+      ? 'Site enviado para o SDR!'
+      : msg;
 
-        // fade out
-        msgEl.style.opacity = '0';
-        setTimeout(function (el, idx, txt) {
-          el.textContent = txt;
-          el.style.opacity = '1';
-          // Atualiza o atributo no card pai
-          var parent = el.closest('[data-timeline-agent]');
-          if (parent) parent.setAttribute('data-msg-idx', String(idx));
-        }, 300, msgEl, nextIdx, persona.msgs[nextIdx]);
-      }
-    }, ROTATION_MS);
+    el.innerHTML =
+      '<div class="' + cls + '">' +
+        '<div class="tl-icon">' + persona.icon + '</div>' +
+        '<div class="tl-label">' + persona.label.toUpperCase() + '</div>' +
+        '<div class="tl-msg" data-msg-idx="' + state.msgIdx + '">' + displayMsg + '</div>' +
+        '<div class="tl-bar-track"><div class="tl-bar-fill" id="tlBarFill" style="width:' + pct + '%"></div></div>' +
+        '<div class="tl-pct" id="tlPct">' + pct + '%</div>' +
+      '</div>';
+
+    // Atualizar o bar via DOM direto (mais leve que re-renderizar tudo)
+    var bar = document.getElementById('tlBarFill');
+    var pctEl = document.getElementById('tlPct');
+    if (bar) bar.style.width = pct + '%';
+    if (pctEl) pctEl.textContent = pct + '%';
   }
 
-  // Inicializa ao carregar a pagina
+  // ── Animacao do progresso (fake, sobe de 0 a 100%) ───────────
+  var PROGRESS_INTERVAL = 250;  // 4x por segundo
+  var PROGRESS_STEP = 3;        // +3% a cada tick (~75s para completar)
+  function tickProgress() {
+    if (!state.active || state.doneFlash) return;
+    state.progress += PROGRESS_STEP;
+    if (state.progress >= 100) {
+      state.progress = 100;
+      state.doneFlash = true;
+      // Ciclar para o proximo agente apos 1.8s
+      setTimeout(advanceAgent, 1800);
+    }
+    var bar = document.getElementById('tlBarFill');
+    var pctEl = document.getElementById('tlPct');
+    if (bar) bar.style.width = state.progress + '%';
+    if (pctEl) pctEl.textContent = Math.round(state.progress) + '%';
+  }
+
+  // ── Avancar para o proximo agente ──────────────────────────────
+  function advanceAgent() {
+    state.currentIdx = (state.currentIdx + 1) % PIPELINE_TIMELINE.length;
+    state.progress = 0;
+    state.doneFlash = false;
+    state.msgIdx = 0;
+    renderCard();
+  }
+
+  // ── Trocar mensagem a cada 6s ──────────────────────────────────
+  var MSG_INTERVAL = 6000;
+  function tickMessage() {
+    if (!state.active || state.doneFlash) return;
+    var key = PIPELINE_TIMELINE[state.currentIdx];
+    var persona = AGENT_PERSONAS[key];
+    if (!persona) return;
+    state.msgIdx = (state.msgIdx + 1) % persona.msgs.length;
+    var msgEl = document.querySelector('.tl-msg');
+    if (msgEl && !state.doneFlash) {
+      msgEl.textContent = persona.msgs[state.msgIdx];
+    }
+  }
+
+  // ── Inicializacao dos timers ───────────────────────────────────
+  function startLoops() {
+    if (state.cycleTimer) return;
+    state.cycleTimer = setInterval(tickProgress, PROGRESS_INTERVAL);
+    state.msgTimer = setInterval(tickMessage, MSG_INTERVAL);
+  }
+
+  // Auto-init
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', function () {
       renderPipelineTimeline(null);
-      startRotation();
+      startLoops();
     });
   } else {
     renderPipelineTimeline(null);
-    startRotation();
+    startLoops();
   }
 
   // ── API publica (substitui a funcao legada) ────────────────────
