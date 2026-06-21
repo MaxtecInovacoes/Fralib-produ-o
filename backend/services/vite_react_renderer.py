@@ -203,6 +203,7 @@ try:
         vite_template_footer,
         vite_template_booking_modal,
         vite_template_factual_motion_contract,
+        vite_template_jsx_fallback_types,
         _visual_business_payload,
         _visual_media_urls,
     )
@@ -230,6 +231,7 @@ except ImportError:
         vite_template_footer,
         vite_template_booking_modal,
         vite_template_factual_motion_contract,
+        vite_template_jsx_fallback_types,
         _visual_business_payload,
         _visual_media_urls,
     )
@@ -2859,6 +2861,8 @@ def _safe_project_path(path: str) -> str:
         "index.html",
         "vite.config.ts",
         "tsconfig.json",
+        "tsconfig.app.json",
+        "tsconfig.node.json",
         "metadata.json",
         "README.md",
         ".gitignore",
