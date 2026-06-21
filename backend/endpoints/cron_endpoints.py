@@ -5,6 +5,8 @@ Autenticacao por header X-Cron-Secret == CRON_SECRET do .env.
 Nunca expor sem secret - estes endpoints podem mandar emails em massa.
 """
 import os
+import random
+import time
 from datetime import datetime, timedelta
 from fastapi import APIRouter, Header, HTTPException
 from sqlalchemy import text
@@ -17,6 +19,17 @@ from backend.whatsapp_listener import is_tenant_connected, _salvar_interacao
 router = APIRouter(prefix='/api/cron', tags=['cron'])
 
 CRON_SECRET = os.getenv('CRON_SECRET', '')
+
+# Jitter humanizado entre envios do cron Franz (segundos).
+# Faixa [min, max) com distribuicao uniforme — gera cadencia irregular
+# (ex: 18s, 47s, 22s, 91s) em vez de rajada constante.
+FRANZ_CRON_JITTER_MIN_S = 18
+FRANZ_CRON_JITTER_MAX_S = 75
+
+# Teto de leads despachados por ciclo de cron. Reduzido de 10 para 5
+# para alinhar com a cadencia humanizada — 5 envios * ~46s medio =
+# ~4 min de processamento/ciclo, sobra do ciclo de 30 min.
+FRANZ_CRON_BATCH_LIMIT = 5
 
 
 def _autorizar(x_cron_secret: str):
@@ -130,8 +143,8 @@ async def despachar_fila_franz(x_cron_secret: str = Header(None, alias='X-Cron-S
               AND lower(COALESCE(u.plano, '')) IN ('trial','pro','beta','agency','ilimitado','admin')
               AND lower(COALESCE(u.status, '')) NOT IN ('bloqueado','suspenso','cancelado','inadimplente')
             ORDER BY l.processado_em ASC
-            LIMIT 10
-        """)).fetchall()
+            LIMIT :batch_limit
+        """), {"batch_limit": FRANZ_CRON_BATCH_LIMIT}).fetchall()
 
         if not rows:
             return {'status': 'ok', 'mensagem': 'Nenhum lead na fila', 'enviados': 0}
@@ -210,6 +223,12 @@ async def despachar_fila_franz(x_cron_secret: str = Header(None, alias='X-Cron-S
                         conn.commit()
                         enviados += 1
                         print(f"[Cron Franz] ✅ Enviado para {nome} ({tel[-4:]})")
+
+                        # Jitter humanizado entre envios (so apos sucesso, so se sobrou lead)
+                        if enviados < len(rows):
+                            delay = random.uniform(FRANZ_CRON_JITTER_MIN_S, FRANZ_CRON_JITTER_MAX_S)
+                            print(f"[Cron Franz] ⏳ aguardando {delay:.1f}s antes do proximo envio")
+                            time.sleep(delay)
                     else:
                         erros += 1
                         print(f"[Cron Franz] ❌ Falha envio {nome}: {r.text[:80]}")
