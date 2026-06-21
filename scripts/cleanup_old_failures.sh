@@ -22,30 +22,39 @@ log "=== Iniciando limpeza (retencao: ${RETENTION_DAYS}d) ==="
 
 # 1. Falhas resolvidas antigas
 RESOLVED=$(sudo -u postgres psql -p "$DB_PORT" -d "$DB_NAME" -t -c "
-DELETE FROM pipeline_failures
-WHERE resolvido = TRUE
-  AND resolvido_em < NOW() - INTERVAL '${RETENTION_DAYS} days';
-SELECT ROW_COUNT();
-" 2>&1 | tail -1)
+WITH deleted AS (
+  DELETE FROM pipeline_failures
+  WHERE resolvido = TRUE
+    AND resolvido_em < NOW() - INTERVAL '${RETENTION_DAYS} days'
+  RETURNING 1
+)
+SELECT COUNT(*) FROM deleted;
+" 2>&1 | tail -1 | tr -d ' ')
 log "Falhas resolvidas removidas: $RESOLVED"
 
 # 2. Falhas ABERTAS muito antigas (>30 dias, sem chance de retry)
 OPEN_OLD=$(sudo -u postgres psql -p "$DB_PORT" -d "$DB_NAME" -t -c "
-DELETE FROM pipeline_failures
-WHERE resolvido = FALSE
-  AND criado_em < NOW() - INTERVAL '30 days'
-  AND tentativas_automaticas >= 5;
-SELECT ROW_COUNT();
-" 2>&1 | tail -1)
+WITH deleted AS (
+  DELETE FROM pipeline_failures
+  WHERE resolvido = FALSE
+    AND criado_em < NOW() - INTERVAL '30 days'
+    AND tentativas_automaticas >= 5
+  RETURNING 1
+)
+SELECT COUNT(*) FROM deleted;
+" 2>&1 | tail -1 | tr -d ' ')
 log "Falhas abertas (>30d, >=5 tentativas) removidas: $OPEN_OLD"
 
 # 3. Jobs da fila concluidos/erro/interrompido antigos
 JOBS_DONE=$(sudo -u postgres psql -p "$DB_PORT" -d "$DB_NAME" -t -c "
-DELETE FROM pipeline_queue
-WHERE status IN ('concluido', 'erro', 'interrompido')
-  AND criado_em < NOW() - INTERVAL '${RETENTION_DAYS} days';
-SELECT ROW_COUNT();
-" 2>&1 | tail -1)
+WITH deleted AS (
+  DELETE FROM pipeline_queue
+  WHERE status IN ('concluido', 'erro', 'interrompido')
+    AND criado_em < NOW() - INTERVAL '${RETENTION_DAYS} days'
+  RETURNING 1
+)
+SELECT COUNT(*) FROM deleted;
+" 2>&1 | tail -1 | tr -d ' ')
 log "Jobs antigos removidos: $JOBS_DONE"
 
 # 4. Vacuum para recuperar espaco
