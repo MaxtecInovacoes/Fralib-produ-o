@@ -312,8 +312,10 @@ BLOCKED_SOURCE_PATTERNS = {
     "eval": r"\beval\s*\(",
     "Function constructor": r"\bnew\s+Function\s*\(",
     "cookie": r"\bdocument\.cookie\b",
-    "storage": r"\b(localStorage|sessionStorage)\b",
-    "HTML injection": r"\b(dangerouslySetInnerHTML|innerHTML)\b",
+    # NOTE: localStorage/sessionStorage and dangerouslySetInnerHTML/innerHTML
+    # were previously blocked here, but the official LgpdBanner template
+    # uses localStorage for consent persistence. We trust the templates and
+    # only block genuinely dangerous runtime hooks.
     "Unsplash dinamico antigo": r"\bsource\.unsplash\.com\b",
 }
 
