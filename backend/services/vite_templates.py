@@ -752,7 +752,7 @@ export function AboutSection() {{
   return (
     <section id="sobre" className="bg-[#f7f3ea] px-5 py-18 text-zinc-950 md:px-8 md:py-24">
       <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[1fr_0.85fr] lg:items-end">
-        <motion.div initial={{{{ opacity: 0, y: 18 }}}} whileInView={{{{ opacity: 1, y: 0 }}}} viewport={{{{ once: true, amount: 0.3 }}}>
+        <motion.div initial={{{{ opacity: 0, y: 18 }}}} whileInView={{{{ opacity: 1, y: 0 }}}} viewport={{{{ once: true, amount: 0.3 }}}}>
           <p className="text-xs font-semibold uppercase tracking-[0.22em] text-emerald-700">Sobre</p>
           <h2 className="mt-3 max-w-3xl text-3xl font-semibold tracking-tight md:text-5xl">
             {{business.segment}} com presença local em {{business.city}}.
