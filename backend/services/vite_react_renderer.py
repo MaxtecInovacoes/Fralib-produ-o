@@ -1645,7 +1645,7 @@ def prepare_vite_project_files(files: dict[str, str], *, facts: dict[str, Any]) 
     )
     _normalize_generated_imports_and_hooks(prepared)
     _stabilize_app_contract(prepared)
-    _ensure_lgpd_banner_contract(prepared)
+    _ensure_lgpd_banner_contract(prepared, facts)
     _stabilize_navbar_contract(prepared, facts)
     _rewrite_editorial_images(prepared, facts)
     _ensure_factual_motion_contract(prepared, facts)
@@ -1760,8 +1760,8 @@ def _stabilize_app_contract(files: dict[str, str]) -> None:
     files[path] = updated
 
 
-def _ensure_lgpd_banner_contract(files: dict[str, str]) -> None:
-    files["src/components/LgpdBanner.tsx"] = vite_template_lgpd_banner(facts)
+def _ensure_lgpd_banner_contract(files: dict[str, str], facts: dict[str, Any] | None = None) -> None:
+    files["src/components/LgpdBanner.tsx"] = vite_template_lgpd_banner(facts or {})
     path = "src/App.tsx"
     content = str(files.get(path) or vite_template_app_tsx())
     if "LgpdBanner" in content:
