@@ -41,15 +41,13 @@
     return null;
   }
 
-  // Mapeia fase_num (1..10) do backend em macro
-  // 1=hunter, 2=caio, 3=jina, 4=mercado, 5=midia, 6=prompt, 7=designer,
-  // 8=builder, 9=deploy, 10=franz
+  // Mapeia as 11 fases canonicas do backend em quatro macroetapas.
   function macroFromNum(n) {
     var i = parseInt(n, 10) - 1;
     if (i < 0) return 'buscar';
     if (i <= 0) return 'buscar';     // hunter
     if (i <= 4) return 'analisar';   // caio..midia
-    if (i <= 7) return 'produzir';   // prompt..builder
+    if (i <= 8) return 'produzir';   // prompt..builder
     return 'publicar';               // deploy..franz
   }
 
@@ -193,6 +191,29 @@
       '}',
       '.pw-node.is-done .pw-name { color: #10b981; }',
       '.pw-node.is-active .pw-name { color: var(--pw-tone, #a855f7); font-weight: 700; }',
+      '.pw-node-status {',
+      '  position: absolute;',
+      '  top: 64px;',
+      '  left: 50%;',
+      '  transform: translateX(-50%);',
+      '  white-space: nowrap;',
+      '  font-size: 9px;',
+      '  color: var(--pw-tone, #a855f7);',
+      '  background: rgba(15,23,42,.95);',
+      '  border: 1px solid var(--pw-tone, #a855f7);',
+      '  padding: 2px 8px;',
+      '  border-radius: 99px;',
+      '  max-width: 220px;',
+      '  overflow: hidden;',
+      '  text-overflow: ellipsis;',
+      '  opacity: 0;',
+      '  transition: opacity .25s ease;',
+      '  pointer-events: none;',
+      '  z-index: 4;',
+      '  box-shadow: 0 4px 14px rgba(0,0,0,.4);',
+      '  display: none;',
+      '}',
+      '.pw-node.is-active .pw-node-status { opacity: 1; display: block; }',
       '.pw-rail {',
       '  position: absolute;',
       '  left: 0; right: 0;',
@@ -251,12 +272,61 @@
       '.pw-eta { display: flex; align-items: center; gap: 6px; }',
       '.pw-eta strong { color: #f1f5f9; font-family: var(--fl-font-mono, monospace); }',
       '.pw-pct { font-size: 12px; color: #10b981; font-weight: 700; }',
+      '.pw-telemetry {',
+      '  display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px;',
+      '  margin-top: 10px; padding-top: 10px;',
+      '  border-top: 1px solid rgba(148,163,184,.14);',
+      '  color: #94a3b8; font-size: 9px;',
+      '}',
+      '.pw-telemetry strong { color: #f1f5f9; font-size: 11px; font-variant-numeric: tabular-nums; }',
+      '.pw-job { margin-left: auto; color: #67e8f9; }',
+      '.pw-log-toggle {',
+      '  display: inline-flex; min-height: 32px; align-items: center; gap: 8px;',
+      '  margin-top: 10px; padding: 7px 10px;',
+      '  border: 1px solid rgba(6,182,212,.42); border-radius: 6px;',
+      '  background: rgba(8,145,178,.08); color: #67e8f9; cursor: pointer;',
+      '  font: 700 9px var(--fl-font-mono, monospace); text-transform: uppercase;',
+      '  transition: background .15s, border-color .15s, transform .15s;',
+      '}',
+      '.pw-log-toggle:hover { border-color: #22d3ee; background: rgba(8,145,178,.16); }',
+      '.pw-log-toggle:active { transform: translateY(1px); }',
+      '.pw-log-toggle:focus-visible { outline: 2px solid #22d3ee; outline-offset: 2px; }',
+      '.pw-log-toggle span {',
+      '  display: inline-flex; min-width: 18px; height: 18px; align-items: center;',
+      '  justify-content: center; border-radius: 9px; background: #164e63;',
+      '}',
+      '.pw-live-panel {',
+      '  display: grid; grid-template-rows: 0fr; opacity: 0;',
+      '  transition: grid-template-rows .22s cubic-bezier(.16,1,.3,1), opacity .18s;',
+      '}',
+      '.pw-live-panel.is-open { grid-template-rows: 1fr; opacity: 1; }',
+      '.pw-call-list { min-height: 0; overflow: hidden; }',
+      '.pw-call-row {',
+      '  display: grid; grid-template-columns: minmax(80px,.8fr) minmax(100px,1fr) auto auto;',
+      '  gap: 10px; padding: 7px 2px; border-bottom: 1px solid rgba(148,163,184,.08);',
+      '  color: #b9c4d5; font-size: 9px;',
+      '}',
+      '.pw-call-row strong { color: #67e8f9; font-weight: 600; }',
+      '.pw-log-list { max-height: 220px; overflow: auto; border-top: 1px solid rgba(6,182,212,.2); }',
+      '.pw-log-row {',
+      '  display: grid; grid-template-columns: 52px 84px 1fr; gap: 8px;',
+      '  padding: 6px 2px; border-bottom: 1px solid rgba(148,163,184,.08);',
+      '  color: #b9c4d5; font-size: 9px; line-height: 1.45;',
+      '}',
+      '.pw-log-row time { color: #64748b; }',
+      '.pw-log-row strong { color: #67e8f9; font-size: 8px; text-transform: uppercase; }',
+      '.pw-empty { padding: 12px 2px; color: #75839a; font-size: 9px; }',
       '@media (prefers-reduced-motion: reduce) {',
-      '  .pw-bubble, .pw-bar, .pw-rail-fill, .pw-wrap::before { animation: none !important; }',
+      '  .pw-bubble, .pw-bar, .pw-rail-fill, .pw-wrap::before, .pw-live-panel { animation: none !important; transition: none !important; }',
       '}',
       '@media (max-width: 720px) {',
       '  .pw-name { font-size: 9px; }',
       '  .pw-stage { max-width: 50%; }',
+      '  .pw-job { width: 100%; margin-left: 0; }',
+      '  .pw-call-row { grid-template-columns: 1fr auto; }',
+      '  .pw-call-row span:nth-child(2) { display: none; }',
+      '  .pw-log-row { grid-template-columns: 46px 1fr; }',
+      '  .pw-log-row strong { display: none; }',
       '}'
     ].join('\n');
     document.head.appendChild(s);
@@ -264,24 +334,19 @@
 
   // ── Estado interno ────────────────────────────────────────────────
   var state = {
+    running: false,
+    status: 'idle',
     activeMacro: 'buscar',
-    progress: 0,        // 0..100 da fase ATUAL
     label: '',
-    fakeTimer: null
+    elapsed: 0,
+    jobId: null,
+    runId: null,
+    phases: [],
+    llm: { totals: {}, by_phase: [] },
+    logsOpen: false,
+    elapsedTimer: null,
+    syncTimer: null
   };
-
-  // ── Cronometro UNICO compartilhado ────────────────────────────────
-  // window.__pipelineSharedStart (timestamp ms) e definido por
-  // _scripts.html ao iniciar/parar o cronometro do banner. A waveform
-  // LE essa global — assim banner, "Trabalhando ha" e waveform mostram
-  // o MESMO segundo.
-  function sharedStart() {
-    var v = window.__pipelineSharedStart;
-    return (typeof v === 'number' && v > 0) ? v : 0;
-  }
-  function isSharedRunning() {
-    return sharedStart() > 0;
-  }
   function formatElapsed(sec) {
     sec = Math.max(0, Math.floor(sec));
     var m = Math.floor(sec / 60);
@@ -295,6 +360,7 @@
         '<div class="pw-node" data-idx="' + i + '" data-key="' + e.key + '" style="--pw-tone:' + e.tone + ';">' +
           '<div class="pw-bubble">' + e.icon + '</div>' +
           '<div class="pw-name">' + e.label + '</div>' +
+          '<div class="pw-node-status" data-status></div>' +
         '</div>';
     }).join('');
 
@@ -320,8 +386,19 @@
         '</div>' +
         '<div class="pw-wave" id="pwWave">' + bars.join('') + '</div>' +
         '<div class="pw-footer">' +
-          '<div class="pw-eta">⏱ <strong id="pwElapsed">00:00</strong> &nbsp;·&nbsp; <span id="pwEta">iniciar para ver previsao</span></div>' +
+          '<div class="pw-eta">⏱ <strong id="pwElapsed">00:00</strong> &nbsp;·&nbsp; <span id="pwEta">aguardando medicoes</span></div>' +
           '<div class="pw-pct" id="pwPct">0%</div>' +
+        '</div>' +
+        '<div class="pw-telemetry">' +
+          '<span>Tokens <strong id="pwTokens">0</strong></span>' +
+          '<span>Chamadas <strong id="pwCalls">0</strong></span>' +
+          '<span>Custo <strong id="pwCost">US$ 0,0000</strong></span>' +
+          '<span class="pw-job" id="pwJob">sem job ativo</span>' +
+        '</div>' +
+        '<button type="button" class="pw-log-toggle" id="pwLogToggle" aria-expanded="false" aria-controls="pwLivePanel">Acompanhar logs <span id="pwLogCount">0</span></button>' +
+        '<div class="pw-live-panel" id="pwLivePanel">' +
+          '<div class="pw-call-list" id="pwCallList"><div class="pw-empty">As chamadas LLM aparecerao aqui.</div></div>' +
+          '<div class="pw-log-list" id="pwLogList" aria-live="polite"><div class="pw-empty" id="pwLogEmpty">Os eventos desta execucao aparecerao aqui.</div></div>' +
         '</div>' +
       '</div>';
   }
@@ -348,6 +425,41 @@
     return 0;
   }
 
+  function compactNumber(value) {
+    var total = Number(value) || 0;
+    if (total >= 1000000) return (total / 1000000).toFixed(2) + 'M';
+    if (total >= 1000) return (total / 1000).toFixed(1) + 'k';
+    return String(total);
+  }
+
+  function macroDurations() {
+    var result = {};
+    (state.phases || []).forEach(function (phase) {
+      var macro = macroFromKey(phase.phase || phase.agent) || macroFromNum(phase.phase_num);
+      if (!macro) return;
+      result[macro] = (result[macro] || 0) + (Number(phase.duration_ms) || 0);
+    });
+    return result;
+  }
+
+  function renderCallDetails() {
+    var container = document.getElementById('pwCallList');
+    if (!container) return;
+    var calls = state.llm && Array.isArray(state.llm.by_phase) ? state.llm.by_phase : [];
+    if (!calls.length) {
+      container.innerHTML = '<div class="pw-empty">As chamadas LLM aparecerao aqui.</div>';
+      return;
+    }
+    container.innerHTML = calls.map(function (call) {
+      var tokens = (Number(call.input_tokens) || 0) + (Number(call.output_tokens) || 0) +
+        (Number(call.cache_read_tokens) || 0) + (Number(call.cache_created_tokens) || 0);
+      return '<div class="pw-call-row"><strong>' + escapeHtml(call.phase || call.agent || 'pipeline') + '</strong>' +
+        '<span>' + escapeHtml((call.provider || '') + ' · ' + (call.model || '')) + '</span>' +
+        '<span>' + escapeHtml(String(call.calls || 0)) + ' chamadas · ' + escapeHtml(compactNumber(tokens)) + ' tokens</span>' +
+        '<span>US$ ' + (Number(call.cost_usd) || 0).toFixed(4).replace('.', ',') + '</span></div>';
+    }).join('');
+  }
+
   // ── Render ────────────────────────────────────────────────────────
   function render() {
     var host = ensureContainer();
@@ -362,21 +474,30 @@
     var pctEl = document.getElementById('pwPct');
     if (!railFill || !stage) return;
 
-    // estado vem do cronometro compartilhado (fonte da verdade)
-    var running = isSharedRunning();
+    var running = state.running;
 
     var idx = findIdx(state.activeMacro);
     var totalNodes = ETAPAS.length;
+    var durations = macroDurations();
 
     nodes.forEach(function (n, i) {
       n.classList.remove('is-done', 'is-active', 'is-idle');
+      var statusEl = n.querySelector('[data-status]');
+      if (statusEl) statusEl.textContent = '';
       if (!running) {
-        n.classList.add('is-idle');
+        if (state.status === 'completed') n.classList.add('is-done');
+        else n.classList.add('is-idle');
         return;
       }
       if (i < idx) n.classList.add('is-done');
       else if (i === idx) n.classList.add('is-active');
       else n.classList.add('is-idle');
+      var macroKey = n.getAttribute('data-key');
+      if (durations[macroKey]) n.title = ETAPAS[i].label + ': ' + formatElapsed(durations[macroKey] / 1000);
+      // Mostra label do que esta rodando agora, embaixo do no ativo
+      if (i === idx && state.label && statusEl) {
+        statusEl.textContent = state.label;
+      }
     });
 
     // waveform: barras passadas verdes, atual pulsando cor da fase, futuras cinza
@@ -384,18 +505,15 @@
     var perNode = totalBars / totalNodes;
     var activeStart = Math.floor(idx * perNode);
     var activeEnd = Math.floor((idx + 1) * perNode);
-    var currentBar = Math.floor(activeStart + (state.progress / 100) * (activeEnd - activeStart));
     bars.forEach(function (b, i) {
       b.classList.remove('is-on', 'is-past');
       if (!running) return;
-      if (i < currentBar) b.classList.add('is-past');
+      if (i < activeStart) b.classList.add('is-past');
       else if (i < activeEnd) b.classList.add('is-on');
     });
 
-    // rail: preenche ate o no atual + progresso da fase
-    var railPct = running
-      ? ((idx + state.progress / 100) / (totalNodes - 1)) * 100
-      : 0;
+    // O preenchimento muda somente quando uma macroetapa real e persistida.
+    var railPct = state.status === 'completed' ? 100 : (running ? idx / (totalNodes - 1) * 100 : 0);
     railFill.style.width = Math.min(100, railPct).toFixed(1) + '%';
 
     if (dot) {
@@ -407,32 +525,31 @@
       stage.innerHTML = '<strong>' + ETAPAS[idx].label + '</strong> &middot; ' + escapeHtml(state.label);
     } else if (running) {
       stage.innerHTML = '<strong>' + ETAPAS[idx].label + '</strong>';
+    } else if (state.status === 'completed') {
+      stage.innerHTML = '<strong>concluido</strong> &middot; ultima execucao';
+    } else if (state.status && state.status.indexOf('failed') === 0) {
+      stage.innerHTML = '<strong>falhou</strong> &middot; consulte os logs';
     } else {
       stage.innerHTML = '<strong>aguardando</strong>';
     }
 
-    // elapsed vem do cronometro compartilhado
-    var elapsedSec = 0;
-    if (running) {
-      elapsedSec = Math.floor((Date.now() - sharedStart()) / 1000);
-    }
-    if (elapsedEl) elapsedEl.textContent = formatElapsed(elapsedSec);
+    if (elapsedEl) elapsedEl.textContent = formatElapsed(state.elapsed);
 
-    // eta
     if (etaEl) {
-      if (!running) {
-        etaEl.textContent = 'iniciar para ver previsao';
-      } else {
-        var remaining = Math.max(0, ((totalNodes - idx - 1) * 120) - (state.progress * 1.2));
-        etaEl.textContent = '~' + Math.round(remaining / 60) + ' min restantes';
-      }
+      if (running) etaEl.textContent = 'medindo em tempo real';
+      else if (state.status === 'completed') etaEl.textContent = 'ultima execucao concluida';
+      else etaEl.textContent = 'aguardando medicoes';
     }
     if (pctEl) {
-      var totalPct = running
-        ? Math.round(((idx + state.progress / 100) / totalNodes) * 100)
-        : 0;
+      var totalPct = state.status === 'completed' ? 100 : (running ? Math.round(idx / totalNodes * 100) : 0);
       pctEl.textContent = totalPct + '%';
     }
+    var totals = state.llm && state.llm.totals ? state.llm.totals : {};
+    if (document.getElementById('pwTokens')) document.getElementById('pwTokens').textContent = compactNumber(totals.total_tokens || 0);
+    if (document.getElementById('pwCalls')) document.getElementById('pwCalls').textContent = totals.calls || 0;
+    if (document.getElementById('pwCost')) document.getElementById('pwCost').textContent = 'US$ ' + (Number(totals.cost_usd) || 0).toFixed(4).replace('.', ',');
+    if (document.getElementById('pwJob')) document.getElementById('pwJob').textContent = state.jobId ? 'Job #' + state.jobId + (state.runId ? ' · run ' + state.runId : '') : 'sem job ativo';
+    renderCallDetails();
   }
 
   function escapeHtml(s) {
@@ -445,50 +562,124 @@
   function ativar(faseKey, label) {
     var macro = macroFromKey(faseKey);
     if (!macro) macro = 'buscar';
+    state.running = true;
+    state.status = 'running';
     state.activeMacro = macro;
     state.label = label || '';
     ensureContainer();
+    setLogsOpen(true);
     render();
-    startFakeTicker();
+    updateElapsedTimer();
   }
 
   function desativar() {
-    state.activeMacro = 'buscar';
-    state.progress = 0;
-    state.label = '';
-    stopFakeTicker();
+    state.running = false;
+    updateElapsedTimer();
     render();
   }
 
-  function setProgress(pct) {
-    state.progress = Math.max(0, Math.min(100, pct));
-    render();
+  function setProgress() {
+    // Compatibilidade: progresso agora vem apenas de fases persistidas.
   }
 
-  // Fallback: se nao vier progresso real, anda 1% a cada 1.5s na fase atual
-  function startFakeTicker() {
-    stopFakeTicker();
-    state.fakeTimer = setInterval(function () {
-      // so conta se cronometro compartilhado esta rodando
-      if (!isSharedRunning()) return;
-      state.progress = Math.min(100, state.progress + 0.6);
-      if (state.progress >= 100) {
-        // avanca para a proxima macro
-        var idx = findIdx(state.activeMacro);
-        if (idx < ETAPAS.length - 1) {
-          state.activeMacro = ETAPAS[idx + 1].key;
-          state.progress = 0;
-        }
-      }
-      render();
+  function updateElapsedTimer() {
+    if (state.elapsedTimer) clearInterval(state.elapsedTimer);
+    state.elapsedTimer = null;
+    if (!state.running) return;
+    state.elapsedTimer = setInterval(function () {
+      state.elapsed += 1;
+      var elapsed = document.getElementById('pwElapsed');
+      if (elapsed) elapsed.textContent = formatElapsed(state.elapsed);
     }, 1000);
   }
 
-  function stopFakeTicker() {
-    if (state.fakeTimer) {
-      clearInterval(state.fakeTimer);
-      state.fakeTimer = null;
+  function applyStatus(data) {
+    if (!data) return;
+    var telemetry = data.telemetry || {};
+    var job = data.current_job || data.latest_job || {};
+    state.running = Boolean(data.rodando);
+    state.status = telemetry.status || job.status || (state.running ? 'running' : 'idle');
+    state.jobId = telemetry.job_id || job.id || null;
+    state.runId = telemetry.run_id || job.run_id || null;
+    state.elapsed = Number(telemetry.elapsed_seconds) || 0;
+    state.phases = Array.isArray(telemetry.phases) ? telemetry.phases : [];
+    state.llm = telemetry.llm || { totals: {}, by_phase: [] };
+    var phaseKey = job.last_phase || data.fase_atual;
+    state.activeMacro = macroFromKey(phaseKey) || macroFromNum(job.phase_num || data.fase_num) || state.activeMacro;
+    state.label = data.fase_label || job.phase_label || job.last_phase || state.label;
+    if (state.running) setLogsOpen(true);
+    updateElapsedTimer();
+    render();
+  }
+
+  function setLogsOpen(open) {
+    state.logsOpen = Boolean(open);
+    var panel = document.getElementById('pwLivePanel');
+    var toggle = document.getElementById('pwLogToggle');
+    if (panel) panel.classList.toggle('is-open', state.logsOpen);
+    if (toggle) {
+      toggle.setAttribute('aria-expanded', state.logsOpen ? 'true' : 'false');
+      var count = document.getElementById('pwLogCount');
+      toggle.childNodes[0].nodeValue = state.logsOpen ? 'Ocultar logs ' : 'Acompanhar logs ';
+      if (count) toggle.appendChild(count);
     }
+  }
+
+  function isPipelineEvent(data) {
+    if (!data) return false;
+    if (data.event_kind === 'pipeline_phase' || data.evento === 'PIPELINE_STATUS') return true;
+    var message = String(data.mensagem || '');
+    return Boolean(macroFromKey(data.phase || message)) || /pipeline|fase|deploy|builder|lead:/i.test(message);
+  }
+
+  function appendLog(data) {
+    if (!isPipelineEvent(data)) return;
+    var list = document.getElementById('pwLogList');
+    if (!list) return;
+    var empty = document.getElementById('pwLogEmpty');
+    if (empty) empty.remove();
+    var row = document.createElement('div');
+    row.className = 'pw-log-row';
+    var phase = data.phase || macroFromKey(data.mensagem) || 'pipeline';
+    row.innerHTML = '<time>' + escapeHtml(data.ts || new Date().toLocaleTimeString('pt-BR')) + '</time>' +
+      '<strong>' + escapeHtml(String(phase).replace('_', ' ')) + '</strong>' +
+      '<span>' + escapeHtml(data.mensagem || data.label || 'Atualizacao da pipeline') + '</span>';
+    list.appendChild(row);
+    while (list.children.length > 80) list.removeChild(list.firstChild);
+    list.scrollTop = list.scrollHeight;
+    var count = document.getElementById('pwLogCount');
+    if (count) count.textContent = list.querySelectorAll('.pw-log-row').length;
+    if (state.running || data.event_kind === 'pipeline_phase') setLogsOpen(true);
+  }
+
+  function scheduleSync() {
+    if (state.syncTimer) clearTimeout(state.syncTimer);
+    state.syncTimer = setTimeout(_syncFromStatus, 250);
+  }
+
+  function handleSse(data) {
+    appendLog(data);
+    if (data && (data.type === 'progress' || data.event_kind === 'pipeline_phase')) {
+      state.running = true;
+      state.status = 'running';
+      state.activeMacro = macroFromKey(data.phase) || macroFromNum(data.fase) || state.activeMacro;
+      state.label = data.label || data.mensagem || state.label;
+      state.jobId = data.job_id || state.jobId;
+      state.runId = data.run_id || state.runId;
+      setLogsOpen(true);
+      render();
+      scheduleSync();
+    } else if (isPipelineEvent(data)) scheduleSync();
+  }
+
+  function hookSse() {
+    if (window._pixelOfficeSSEHook && window._pixelOfficeSSEHook.__pw_wrapped) return;
+    var original = window._pixelOfficeSSEHook;
+    window._pixelOfficeSSEHook = function (data) {
+      if (original) original(data);
+      handleSse(data);
+    };
+    window._pixelOfficeSSEHook.__pw_wrapped = true;
   }
 
   // ── Hook com o modulo legado (renderPipelineTimeline) ─────────────
@@ -509,29 +700,10 @@
 
   // Sincroniza com /api/pipeline/status a cada 5s
   function _syncFromStatus() {
-    if (typeof window.authFetch !== 'function') return;
-    window.authFetch('/api/pipeline/status')
+    if (typeof window.authFetch !== 'function') return Promise.resolve();
+    return window.authFetch('/api/pipeline/status')
       .then(function (r) { return r && r.json ? r.json() : null; })
-      .then(function (d) {
-        if (!d) return;
-        if (d.rodando) {
-          var key = null;
-          if (d.current_job) {
-            key = d.current_job.last_phase || d.current_job.phase;
-            if (key) key = String(key).toLowerCase();
-          }
-          if (key) {
-            var macro = macroFromKey(key);
-            if (macro) ativar(macro, d.fase_label || d.fase_atual || '');
-          } else if (d.fase_num) {
-            ativar(macroFromNum(d.fase_num), d.fase_label || '');
-          }
-        }
-        // se nao esta rodando e compartilhado tambem nao, desativa
-        if (!d.rodando && !isSharedRunning()) {
-          desativar();
-        }
-      })
+      .then(applyStatus)
       .catch(function () {});
   }
 
@@ -541,10 +713,11 @@
     ensureContainer();
     render();
     hookExisting();
-    // backstop poll 5s
+    hookSse();
+    var toggle = document.getElementById('pwLogToggle');
+    if (toggle) toggle.addEventListener('click', function () { setLogsOpen(!state.logsOpen); });
+    _syncFromStatus();
     setInterval(_syncFromStatus, 5000);
-    // re-render a cada 1s so pra atualizar o cronometro compartilhado
-    setInterval(render, 1000);
   }
 
   if (document.readyState === 'loading') {
@@ -558,6 +731,8 @@
     desativar: desativar,
     setProgress: setProgress,
     _syncFromStatus: _syncFromStatus,
+    applyStatus: applyStatus,
+    handleSse: handleSse,
     macroFromKey: macroFromKey,
     macroFromNum: macroFromNum,
     ETAPAS: ETAPAS

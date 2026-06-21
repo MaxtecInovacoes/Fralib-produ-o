@@ -10,7 +10,7 @@
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png?v=">
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png?v=">
 <link rel="apple-touch-icon" href="/favicon-32.png?v=1778153020">
-<meta http-equiv="Content-Security-Policy" content="connect-src 'self' wss://seunegociofralib.site wss://seunegociofralib.site:3000 https://cdn.jsdelivr.net https://seunegociofralib.site https://de1.api.radio-browser.info https://at1.api.radio-browser.info https://de2.api.radio-browser.info; media-src 'self' https: http:; img-src 'self' data: https: http:">
+<meta http-equiv="Content-Security-Policy" content="connect-src 'self' wss://fralib.com.br wss://fralib.com.br:3000 https://cdn.jsdelivr.net https://fralib.com.br">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>FraLib OS — Central de Comando</title>
 <!-- v2.0.0 - 20260428211345 -->
@@ -566,7 +566,7 @@
         </div>
       </div>
 
-      <!-- Linha do tempo (timeline legada escondida — a waveform nova ja mostra tudo) -->
+      <!-- Linha do tempo -->
       <div class="config-section" style="display:flex;flex-direction:column;max-height:330px;overflow:hidden;">
         <div class="config-group" style="display:flex;flex-direction:column;margin-bottom:0;overflow:hidden;">
           <div class="config-group-title" style="display:flex;align-items:center;justify-content:space-between;">
@@ -579,7 +579,7 @@
           <div class="admin-simple-help" style="border-radius:0;border-left:0;border-right:0;">
             Aqui aparece o passo atual do robo em ordem: buscar, qualificar, gerar site e registrar resultado.
           </div>
-          <div class="pipeline-time-strip" aria-label="Tempo de trabalho do robo" style="display:none;">
+          <div class="pipeline-time-strip" aria-label="Tempo de trabalho do robo">
             <div>
               <span>Trabalhando ha</span>
               <strong id="pipelineInlineTempo">00:00</strong>
@@ -593,7 +593,7 @@
               <strong id="pipelineInlineEta">aguardando</strong>
             </div>
           </div>
-          <div id="pipelineTimeline" style="display:none;"></div>
+          <div id="pipelineTimeline" style="display:flex;flex-direction:column;gap:7px;overflow:visible;min-height:0;padding-right:0;"></div>
         </div>
       </div>
 
@@ -844,17 +844,18 @@
             <select id="leadSupplyFilterSegmento" class="lead-supply-filter-select" onchange="setLeadSupplyFilter('segmento',this.value)" aria-label="Filtrar por nicho"><option value="">Todos nichos</option></select>
             <select id="leadSupplyFilterCidade" class="lead-supply-filter-select" onchange="setLeadSupplyFilter('cidade',this.value)" aria-label="Filtrar por cidade"><option value="">Todas cidades</option></select>
           </div>
-          <div class="lead-supply-table-wrap" style="overflow:visible;border:1px solid var(--fl-border);border-radius:8px;">
-            <table style="width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed;">
-              <thead style="background:var(--fl-bg-card);">
+          <div class="lead-supply-table-wrap" style="overflow:auto;border:1px solid var(--fl-border);border-radius:8px;max-height:320px;">
+            <table style="width:100%;border-collapse:collapse;font-size:12px;">
+              <thead style="position:sticky;top:0;background:var(--fl-bg-card);z-index:1;">
                 <tr>
-                  <th style="text-align:left;padding:8px;border-bottom:1px solid var(--fl-border);color:var(--fl-text-muted);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;width:45%;">Lead</th>
-                  <th style="text-align:left;padding:8px;border-bottom:1px solid var(--fl-border);color:var(--fl-text-muted);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;width:35%;">Nicho / Cidade</th>
-                  <th style="text-align:left;padding:8px;border-bottom:1px solid var(--fl-border);color:var(--fl-text-muted);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;width:20%;">Status</th>
+                  <th style="text-align:left;padding:10px;border-bottom:1px solid var(--fl-border);color:var(--fl-text-muted);font-weight:600;">Lead</th>
+                  <th style="text-align:left;padding:10px;border-bottom:1px solid var(--fl-border);color:var(--fl-text-muted);font-weight:600;">Nicho / Cidade</th>
+                  <th style="text-align:left;padding:10px;border-bottom:1px solid var(--fl-border);color:var(--fl-text-muted);font-weight:600;">Status</th>
+                  <th style="text-align:right;padding:10px;border-bottom:1px solid var(--fl-border);color:var(--fl-text-muted);font-weight:600;">Score</th>
                 </tr>
               </thead>
               <tbody id="leadSupplyRows">
-                <tr><td colspan="3" style="padding:18px;color:var(--fl-text-muted);text-align:center;">Carregando estoque...</td></tr>
+                <tr><td colspan="4" style="padding:18px;color:var(--fl-text-muted);text-align:center;">Carregando estoque...</td></tr>
               </tbody>
             </table>
           </div>
@@ -3645,21 +3646,19 @@ function renderLeadSupply(data) {
     _renderLeadSupplyFilters(leads);
     var filteredLeads = _leadSupplyApplyFilters(leads);
     if (!leads.length) {
-      rowsEl.innerHTML = '<tr><td colspan="3" style="padding:18px;color:var(--fl-text-muted);text-align:center;line-height:1.5;">Nenhum lead no estoque ainda. Buscar leads agora enfileira o Hunter; se ele nao achar lead novo, o registro mostra a tentativa e o contador continua zero.</td></tr>';
+      rowsEl.innerHTML = '<tr><td colspan="4" style="padding:18px;color:var(--fl-text-muted);text-align:center;line-height:1.5;">Nenhum lead no estoque ainda. Buscar leads agora enfileira o Hunter; se ele nao achar lead novo, o registro mostra a tentativa e o contador continua zero.</td></tr>';
     } else if (!filteredLeads.length) {
-      rowsEl.innerHTML = '<tr><td colspan="3" style="padding:18px;color:var(--fl-text-muted);text-align:center;line-height:1.5;">Nenhum lead combina com os filtros atuais.</td></tr>';
+      rowsEl.innerHTML = '<tr><td colspan="4" style="padding:18px;color:var(--fl-text-muted);text-align:center;line-height:1.5;">Nenhum lead combina com os filtros atuais.</td></tr>';
     } else {
-      // Limita visualizacao a 12 leads mais recentes (novos entram, ultimos somem)
-      var MAX_VISIBLE = 12;
-      var visibleLeads = filteredLeads.slice(0, MAX_VISIBLE);
-      rowsEl.innerHTML = visibleLeads.map(function(lead) {
+      rowsEl.innerHTML = filteredLeads.map(function(lead) {
         var color = _leadSupplyStatusColor(lead.status);
         var caioReason = lead.caio_motivo && ['discarded','qualifying','error_retry','failed'].indexOf(lead.status) >= 0
           ? '<div class="lead-supply-caio-reason">Caio: ' + escapeHtml(lead.caio_motivo) + '</div>' : '';
         return '<tr>'
-          + '<td style="padding:8px;border-bottom:1px solid var(--fl-border);color:var(--fl-text);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escapeHtml(lead.nome || '-') + '</td>'
-          + '<td style="padding:8px;border-bottom:1px solid var(--fl-border);color:var(--fl-text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escapeHtml((lead.segmento || '-') + ' / ' + (lead.cidade || '-')) + '</td>'
-          + '<td style="padding:8px;border-bottom:1px solid var(--fl-border);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><span style="display:inline-flex;align-items:center;gap:6px;color:' + color + ';"><span style="width:7px;height:7px;border-radius:50%;background:' + color + ';"></span>' + escapeHtml(_leadSupplyStatusLabel(lead.status)) + '</span>' + caioReason + '</td>'
+          + '<td style="padding:10px;border-bottom:1px solid var(--fl-border);color:var(--fl-text);font-weight:600;">' + escapeHtml(lead.nome || '-') + '</td>'
+          + '<td style="padding:10px;border-bottom:1px solid var(--fl-border);color:var(--fl-text-muted);">' + escapeHtml((lead.segmento || '-') + ' / ' + (lead.cidade || '-')) + '</td>'
+          + '<td style="padding:10px;border-bottom:1px solid var(--fl-border);"><span style="display:inline-flex;align-items:center;gap:6px;color:' + color + ';"><span style="width:7px;height:7px;border-radius:50%;background:' + color + ';"></span>' + escapeHtml(_leadSupplyStatusLabel(lead.status)) + '</span>' + caioReason + '</td>'
+          + '<td style="padding:10px;border-bottom:1px solid var(--fl-border);text-align:right;color:var(--fl-text);font-family:var(--fl-font-mono);">' + (lead.score_caio || 0) + '</td>'
           + '</tr>';
       }).join('');
     }
@@ -3957,6 +3956,8 @@ function atualizarCronometroPipelineAdmin() {
 }
 function iniciarCronometroPipelineAdmin() {
   if (!_pipelineInicioAdmin) _pipelineInicioAdmin = Date.now();
+  // EXPORTAR para a waveform consumir o MESMO cronometro (fonte da verdade)
+  window.__pipelineSharedStart = _pipelineInicioAdmin;
   atualizarCronometroPipelineAdmin();
   if (!_pipelineTimerAdmin) _pipelineTimerAdmin = setInterval(atualizarCronometroPipelineAdmin, 1000);
 }
@@ -3964,6 +3965,8 @@ function pararCronometroPipelineAdmin() {
   if (_pipelineTimerAdmin) clearInterval(_pipelineTimerAdmin);
   _pipelineTimerAdmin = null;
   _pipelineInicioAdmin = 0;
+  // zera global compartilhada tambem
+  window.__pipelineSharedStart = 0;
   var el = document.getElementById('pipeline-banner-tempo');
   if (el) el.textContent = '00:00';
   atualizarTempoInlinePipeline(0);
@@ -8091,40 +8094,46 @@ async function atualizarUtiBadge() {
   }
 
   // ── LINHA DO TEMPO DA PIPELINE ─────────────────────────────────────
-  // Implementacao em /js/admin/pipeline-timeline.js (icones + mensagens
-  // rotativas + barra de progresso animada). Mantemos apenas os helpers
-  // de mapeamento aqui para nao quebrar chamadas existentes.
-  var PIPELINE_TIMELINE_KEYS = {
-    hunter: 1, caio: 2, jina: 3, market_intelligence: 4, media: 5,
-    prompt_agent: 6, designer: 8, builder_renderer: 9, deploy: 10, franz: 11
-  };
+  var PIPELINE_TIMELINE = [
+    { key:'hunter', label:'Hunter', fase:1 },
+    { key:'caio', label:'Caio', fase:2 },
+    { key:'jina', label:'Jina', fase:3 },
+    { key:'market_intelligence', label:'Mercado', fase:4 },
+    { key:'media', label:'Midia', fase:5 },
+    { key:'prompt_agent', label:'Prompt', fase:6 },
+    { key:'designer', label:'Design', fase:8 },
+    { key:'builder_renderer', label:'Builder', fase:9 },
+    { key:'deploy', label:'Deploy', fase:10 },
+    { key:'franz', label:'Franz', fase:11 }
+  ];
   function etapaTimelinePorFase(fase) {
     var n = Number(fase || 0);
-    for (var k in PIPELINE_TIMELINE_KEYS) {
-      if (PIPELINE_TIMELINE_KEYS[k] === n) return k;
+    for (var i = 0; i < PIPELINE_TIMELINE.length; i++) {
+      if (PIPELINE_TIMELINE[i].fase === n) return PIPELINE_TIMELINE[i].key;
     }
     return null;
   }
   function normalizarEtapaTimeline(value) {
     var v = (value || '').toString().toLowerCase();
     if (!v) return null;
-    if (v.indexOf('builder') >= 0 || v.indexOf('renderer') >= 0) return 'builder_renderer';
-    if (v.indexOf('deploy') >= 0 || v.indexOf('public') >= 0) return 'deploy';
-    if (v.indexOf('franz') >= 0 || v.indexOf('bryan') >= 0 || v.indexOf('whatsapp') >= 0) return 'franz';
-    if (v.indexOf('arquiteto') >= 0 || v.indexOf('designer') >= 0 || v.indexOf('design') >= 0) return 'designer';
-    if (v.indexOf('prompt') >= 0 || v.indexOf('agente_nicho') >= 0 || v.indexOf('nicho') >= 0) return 'prompt_agent';
-    if (v.indexOf('unsplash') >= 0 || v.indexOf('foto') >= 0 || v.indexOf('midia') >= 0 || v.indexOf('mídia') >= 0) return 'media';
-    if (v.indexOf('mercado') >= 0 || v.indexOf('market') >= 0) return 'market_intelligence';
-    if (v.indexOf('jina') >= 0 || v.indexOf('keyword') >= 0) return 'jina';
-    if (v.indexOf('caio') >= 0 || v.indexOf('qualifica') >= 0) return 'caio';
-    if (v.indexOf('hunter') >= 0 || v.indexOf('lead:') >= 0 || v.indexOf('maps') >= 0) return 'hunter';
+    if (v.includes('builder') || v.includes('renderer')) return 'builder_renderer';
+    if (v.includes('deploy') || v.includes('public')) return 'deploy';
+    if (v.includes('franz') || v.includes('bryan') || v.includes('whatsapp')) return 'franz';
+    if (v.includes('arquiteto') || v.includes('designer') || v.includes('design')) return 'designer';
+    if (v.includes('prompt') || v.includes('agente_nicho') || v.includes('nicho')) return 'prompt_agent';
+    if (v.includes('unsplash') || v.includes('foto') || v.includes('midia') || v.includes('mídia')) return 'media';
+    if (v.includes('mercado') || v.includes('market')) return 'market_intelligence';
+    if (v.includes('jina') || v.includes('keyword')) return 'jina';
+    if (v.includes('caio') || v.includes('qualifica')) return 'caio';
+    if (v.includes('hunter') || v.includes('lead:') || v.includes('maps')) return 'hunter';
     return null;
   }
   function etapaTimelinePorMensagem(msg) {
     msg = (msg || '').toLowerCase();
     return normalizarEtapaTimeline(msg);
   }
-  // renderPipelineTimeline(ativo, status) vem do modulo carregado abaixo.
+  // renderPipelineTimeline(ativo, status) vem do modulo /js/admin/pipeline-timeline.js
+  // carregado no admin.html (com icones + mensagens rotativas + barra animada).
 
   function atualizarTimelineComStatus(d) {
     d = d || {};
@@ -8210,10 +8219,9 @@ async function atualizarUtiBadge() {
 
 
 </script>
-<!-- FraLib OS: Pipeline Timeline animada (icones + mensagens rotativas) -->
+<!-- Modulos extraidos do admin monolitico. -->
 <script src="/js/admin/pipeline-timeline.js?v=1782014057"></script>
-<script src="/js/admin/pipeline-waveform.js?v=20260621"></script>
-<!-- FraLib OS: Player de Música (Radio-Browser API, modulos) -->
+<script src="/js/admin/pipeline-waveform.js?v=20260621-telemetry"></script>
 <script src="/js/admin/audio-player/events.js?v=20260621"></script>
 <script src="/js/admin/audio-player/storage.js?v=20260621"></script>
 <script src="/js/admin/audio-player/player-core.js?v=20260621"></script>
