@@ -178,6 +178,66 @@ def test_regression_tenant_failures():
     return r
 
 
+def test_key_healthcheck():
+    r = TestRunner()
+    r.section("AUTO-FIX: key healthcheck + cleanup + reprocess")
+
+    # 1. Modulo existe e importa
+    from backend.services.key_healthcheck import (
+        check_key_health,
+        run_healthcheck_cycle,
+        auto_cleanup_auth_alerts,
+    )
+    r.assert_(callable(check_key_health), "check_key_health existe")
+    r.assert_(callable(run_healthcheck_cycle), "run_healthcheck_cycle existe")
+    r.assert_(callable(auto_cleanup_auth_alerts), "auto_cleanup_auth_alerts existe")
+
+    # 2. check_key_health retorna dict com campos esperados
+    health = check_key_health()
+    r.assert_(isinstance(health, dict), "check_key_health retorna dict")
+    r.assert_('ok' in health, "campo 'ok' presente")
+    r.assert_('status_code' in health, "campo 'status_code' presente")
+    r.assert_('error_type' in health, "campo 'error_type' presente")
+
+    # 3. Se chave atual esta OK, ok=True; se nao, ok=False com error_type
+    if health.get('ok'):
+        r.assert_(health['status_code'] == 200, "chave OK tem status 200")
+    else:
+        # Falhou - deve ter error_type util (permission_error, etc)
+        r.assert_(health.get('error_type') in ('permission_error', 'auth', 'exception', 'config_missing'),
+                  f"error_type util quando chave morta: {health.get('error_type')}")
+
+    # 4. run_healthcheck_cycle faz cleanup quando chave morta, ou reprocessa quando OK
+    cycle = run_healthcheck_cycle()
+    r.assert_('key_ok' in cycle, "cycle tem 'key_ok'")
+    r.assert_('alerts_cleaned' in cycle, "cycle tem 'alerts_cleaned'")
+    r.assert_('jobs_reopened' in cycle, "cycle tem 'jobs_reopened'")
+    r.assert_('action' in cycle, "cycle tem 'action'")
+
+    if cycle.get('key_ok'):
+        # Chave viva: deve ter tentado reprocessar jobs
+        r.assert_('jobs_reopened' in cycle, "chave viva -> jobs_reopened")
+        r.assert_(cycle['action'] == 'key_alive_reprocessed_jobs', "acao correta quando chave OK")
+    else:
+        # Chave morta: deve ter limpado alertas
+        r.assert_(cycle['action'] == 'key_dead_cleaned_alerts', "acao correta quando chave morta")
+
+    # 5. Tabela provider_alerts existe e pipeline_failures tambem
+    # (verifica nos arquivos que fazem query, nao no schema)
+    alerts_src = (PROJECT_ROOT / "backend" / "services" / "key_healthcheck.py").read_text(encoding="utf-8", errors="ignore")
+    r.assert_("provider_alerts" in alerts_src, "key_healthcheck usa provider_alerts")
+    r.assert_("pipeline_failures" in alerts_src, "key_healthcheck reabre pipeline_failures")
+    r.assert_("UPDATE provider_alerts" in alerts_src and "SET lido = TRUE" in alerts_src, "query de cleanup correta")
+    r.assert_("UPDATE pipeline_failures" in alerts_src and "SET resolvido = FALSE" in alerts_src, "query de reprocess correta")
+
+    # 6. Healthcheck plugado no Hermes daemon
+    hermes_src = (PROJECT_ROOT / "scripts" / "hermes_daemon.py").read_text(encoding="utf-8", errors="ignore")
+    r.assert_("key_healthcheck" in hermes_src, "hermes_daemon importa key_healthcheck")
+    r.assert_("run_healthcheck_cycle" in hermes_src, "hermes_daemon chama run_healthcheck_cycle")
+
+    return r
+
+
 def test_no_legacy_litellm_aliases():
     r = TestRunner()
     r.section("BUG #3: aliases fralib-* eliminados")
@@ -224,10 +284,11 @@ def main():
     r1 = test_bug_enqueue_caio()
     r2 = test_bug_lead_qualificado()
     r3 = test_regression_tenant_failures()
-    r4 = test_no_legacy_litellm_aliases()
+    r4 = test_key_healthcheck()
+    r5 = test_no_legacy_litellm_aliases()
 
-    total = r1.passed + r1.failed + r2.passed + r2.failed + r3.passed + r3.failed + r4.passed + r4.failed
-    passed = r1.passed + r2.passed + r3.passed + r4.passed
+    total = r1.passed + r1.failed + r2.passed + r2.failed + r3.passed + r3.failed + r4.passed + r4.failed + r5.passed + r5.failed
+    passed = r1.passed + r2.passed + r3.passed + r4.passed + r5.passed
     failed = total - passed
 
     print("\n" + "=" * 60)

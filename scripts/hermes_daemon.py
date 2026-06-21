@@ -57,9 +57,27 @@ def _run_scan() -> int:
             f"diagnostics={len(result.get('snapshot', {}).get('diagnostics', []))} "
             f"recorded={ids} remediation={remediation}"
         )
-        return len(ids)
+        scan_count = len(ids)
     finally:
         db.close()
+
+    # ── Key healthcheck: detecta chave morta e auto-limpa / reprocessa ──
+    try:
+        from backend.services.key_healthcheck import run_healthcheck_cycle
+        sys.path.insert(0, str(ROOT / "backend"))
+        cycle = run_healthcheck_cycle()
+        _log(
+            "key_healthcheck "
+            f"key_ok={cycle.get('key_ok')} "
+            f"status={cycle.get('status_code')} "
+            f"action={cycle.get('action')} "
+            f"alerts_cleaned={cycle.get('alerts_cleaned', 0)} "
+            f"jobs_reopened={cycle.get('jobs_reopened', 0)}"
+        )
+    except Exception as e:
+        _log(f"key_healthcheck erro (nao bloqueia scan): {e}")
+
+    return scan_count
 
 
 def _run_canary() -> None:
