@@ -415,18 +415,6 @@
           '<div class="pw-eta">⏱ <strong id="pwElapsed">00:00</strong> &nbsp;·&nbsp; <span id="pwEta">aguardando medicoes</span></div>' +
           '<div class="pw-pct" id="pwPct">0%</div>' +
         '</div>' +
-        '<div class="pw-telemetry">' +
-          '<span>Tokens <strong id="pwTokens">0</strong></span>' +
-          '<span>Chamadas <strong id="pwCalls">0</strong></span>' +
-          '<span>Custo <strong id="pwCost">US$ 0,0000</strong></span>' +
-          '<span>Média <strong id="pwAvg">00:00</strong></span>' +
-          '<span class="pw-job" id="pwJob">sem job ativo</span>' +
-        '</div>' +
-        '<button type="button" class="pw-log-toggle" id="pwLogToggle" aria-expanded="false" aria-controls="pwLivePanel">Acompanhar logs <span id="pwLogCount">0</span></button>' +
-        '<div class="pw-live-panel" id="pwLivePanel">' +
-          '<div class="pw-call-list" id="pwCallList"><div class="pw-empty">As chamadas LLM aparecerao aqui.</div></div>' +
-          '<div class="pw-log-list" id="pwLogList" aria-live="polite"><div class="pw-empty" id="pwLogEmpty">Os eventos desta execucao aparecerao aqui.</div></div>' +
-        '</div>' +
       '</div>';
   }
 
