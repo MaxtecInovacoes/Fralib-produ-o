@@ -207,21 +207,86 @@ def run_health_checks() -> list[Alert]:
 
 
 def send_alert(alert: Alert):
-    """
-    Envia alerta via canais configurados.
-    Por enquanto, apenas log. Pode expandir para Slack/Email/PagerDuty.
-    """
+    """Envia alerta via email (Resend) e log."""
     logger.warning(f"ALERT [{alert.level.upper()}]: {alert.title} - {alert.message}")
 
-    # TODO: Implementar envio para Slack/Email
-    # slack_webhook = os.getenv("SLACK_WEBHOOK_URL")
-    # if slack_webhook:
-    #     _send_slack_alert(slack_webhook, alert)
+    # Email via Resend
+    try:
+        import resend
+        resend.api_key = os.getenv("RESEND_API_KEY", "")
+        from_email = os.getenv("FROM_EMAIL", "noreply@seunegociofralib.site")
+        admin_email = os.getenv("SUPERADMIN_EMAIL", "")
 
-    # TODO: Email para superadmin
-    # admin_email = os.getenv("ALERT_EMAIL")
-    # if admin_email:
-    #     _send_email_alert(admin_email, alert)
+        if not resend.api_key:
+            logger.debug("RESEND_API_KEY not configured - email skipped")
+            return
+        if not admin_email:
+            logger.debug("SUPERADMIN_EMAIL not configured - email skipped")
+            return
+
+        import json as _json
+        subject = f"[FraLib {alert.level.upper()}] {alert.title}"
+        body_html = f"""
+        <h2>{alert.title}</h2>
+        <p><strong>Nivel:</strong> {alert.level}</p>
+        <p><strong>Mensagem:</strong> {alert.message}</p>
+        <p><strong>Timestamp:</strong> {alert.timestamp}</p>
+        <pre style="background:#f5f5f5;padding:12px;border-radius:6px;font-size:12px">{_json.dumps(alert.details, indent=2, default=str)[:1000]}</pre>
+        <p><em>Enviado automaticamente pelo watchdog do FraLib</em></p>
+        """
+        resend.Emails.send({
+            "from": from_email,
+            "to": [admin_email],
+            "subject": subject,
+            "html": body_html,
+        })
+        logger.info(f"Alert email sent: {subject}")
+    except ImportError:
+        logger.debug("resend not installed - pip install resend")
+    except Exception as e:
+        logger.warning(f"Failed to send alert email: {e}")
+
+
+def hook_pos_falha(erro_tecnico: str, fase: str | None = None, tenant_id: int = None) -> dict:
+    """Hook chamado apos cada falha registrada.
+
+    Args:
+        erro_tecnico: mensagem do erro
+        fase: fase do pipeline (opcional)
+        tenant_id: ID do tenant (opcional)
+
+    Returns:
+        dict com decisao de auto-fix + alerta (se aplicavel)
+    """
+    resultado = {"auto_fix": None, "alerta": None}
+
+    # 1. Tentar auto-fix
+    try:
+        from backend.services.auto_fix import tentar_auto_fix
+        fix = tentar_auto_fix(erro_tecnico, tentativas_anteriores=0, max_tentativas_total=3)
+        resultado["auto_fix"] = fix.to_dict()
+    except Exception as e:
+        logger.warning(f"erro no auto_fix: {e}")
+
+    # 2. Criar alerta se necessario
+    if not resultado["auto_fix"] or not resultado["auto_fix"].get("sucesso"):
+        try:
+            alerta = Alert(
+                level="warning",
+                title="Falha no pipeline",
+                message=f"Erro na fase '{fase or 'desconhecida'}'",
+                details={
+                    "erro": erro_tecnico[:200],
+                    "fase": fase,
+                    "tenant_id": tenant_id,
+                }
+            )
+            send_alert(alerta)
+            resultado["alerta"] = str(alerta)
+        except Exception as e:
+            logger.warning(f"erro ao criar alerta: {e}")
+
+    return resultado
 
 
 def check_and_alert():

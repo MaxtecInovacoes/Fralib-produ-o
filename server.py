@@ -391,6 +391,13 @@ try:
 except ImportError as e:
     print(f"[Server] admin_services_endpoints nao disponivel: {e}")
 
+try:
+    import diagnostico_endpoints
+    app.include_router(diagnostico_endpoints.router)
+    print("[Server] diagnostico_endpoints registrado")
+except ImportError as e:
+    print(f"[Server] diagnostico_endpoints nao disponivel: {e}")
+
 # Rate limit do login agora vem via @limiter.limit em auth_endpoints.py (slowapi).
 # CSP+security headers vem via security_headers middleware acima (linha ~125).
 
