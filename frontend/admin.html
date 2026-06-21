@@ -8090,65 +8090,40 @@ async function atualizarUtiBadge() {
   }
 
   // ── LINHA DO TEMPO DA PIPELINE ─────────────────────────────────────
-  var PIPELINE_TIMELINE = [
-    { key:'hunter', label:'Hunter', fase:1 },
-    { key:'caio', label:'Caio', fase:2 },
-    { key:'jina', label:'Jina', fase:3 },
-    { key:'market_intelligence', label:'Mercado', fase:4 },
-    { key:'media', label:'Midia', fase:5 },
-    { key:'prompt_agent', label:'Prompt', fase:6 },
-    { key:'designer', label:'Design', fase:8 },
-    { key:'builder_renderer', label:'Builder', fase:9 },
-    { key:'deploy', label:'Deploy', fase:10 },
-    { key:'franz', label:'Franz', fase:11 }
-  ];
+  // Implementacao em /js/admin/pipeline-timeline.js (icones + mensagens
+  // rotativas + barra de progresso animada). Mantemos apenas os helpers
+  // de mapeamento aqui para nao quebrar chamadas existentes.
+  var PIPELINE_TIMELINE_KEYS = {
+    hunter: 1, caio: 2, jina: 3, market_intelligence: 4, media: 5,
+    prompt_agent: 6, designer: 8, builder_renderer: 9, deploy: 10, franz: 11
+  };
   function etapaTimelinePorFase(fase) {
     var n = Number(fase || 0);
-    for (var i = 0; i < PIPELINE_TIMELINE.length; i++) {
-      if (PIPELINE_TIMELINE[i].fase === n) return PIPELINE_TIMELINE[i].key;
+    for (var k in PIPELINE_TIMELINE_KEYS) {
+      if (PIPELINE_TIMELINE_KEYS[k] === n) return k;
     }
     return null;
   }
   function normalizarEtapaTimeline(value) {
     var v = (value || '').toString().toLowerCase();
     if (!v) return null;
-    if (v.includes('builder') || v.includes('renderer')) return 'builder_renderer';
-    if (v.includes('deploy') || v.includes('public')) return 'deploy';
-    if (v.includes('franz') || v.includes('bryan') || v.includes('whatsapp')) return 'franz';
-    if (v.includes('arquiteto') || v.includes('designer') || v.includes('design')) return 'designer';
-    if (v.includes('prompt') || v.includes('agente_nicho') || v.includes('nicho')) return 'prompt_agent';
-    if (v.includes('unsplash') || v.includes('foto') || v.includes('midia') || v.includes('mídia')) return 'media';
-    if (v.includes('mercado') || v.includes('market')) return 'market_intelligence';
-    if (v.includes('jina') || v.includes('keyword')) return 'jina';
-    if (v.includes('caio') || v.includes('qualifica')) return 'caio';
-    if (v.includes('hunter') || v.includes('lead:') || v.includes('maps')) return 'hunter';
+    if (v.indexOf('builder') >= 0 || v.indexOf('renderer') >= 0) return 'builder_renderer';
+    if (v.indexOf('deploy') >= 0 || v.indexOf('public') >= 0) return 'deploy';
+    if (v.indexOf('franz') >= 0 || v.indexOf('bryan') >= 0 || v.indexOf('whatsapp') >= 0) return 'franz';
+    if (v.indexOf('arquiteto') >= 0 || v.indexOf('designer') >= 0 || v.indexOf('design') >= 0) return 'designer';
+    if (v.indexOf('prompt') >= 0 || v.indexOf('agente_nicho') >= 0 || v.indexOf('nicho') >= 0) return 'prompt_agent';
+    if (v.indexOf('unsplash') >= 0 || v.indexOf('foto') >= 0 || v.indexOf('midia') >= 0 || v.indexOf('mídia') >= 0) return 'media';
+    if (v.indexOf('mercado') >= 0 || v.indexOf('market') >= 0) return 'market_intelligence';
+    if (v.indexOf('jina') >= 0 || v.indexOf('keyword') >= 0) return 'jina';
+    if (v.indexOf('caio') >= 0 || v.indexOf('qualifica') >= 0) return 'caio';
+    if (v.indexOf('hunter') >= 0 || v.indexOf('lead:') >= 0 || v.indexOf('maps') >= 0) return 'hunter';
     return null;
   }
   function etapaTimelinePorMensagem(msg) {
     msg = (msg || '').toLowerCase();
     return normalizarEtapaTimeline(msg);
   }
-  function renderPipelineTimeline(ativo, status) {
-    var el = document.getElementById('pipelineTimeline');
-    if (!el) return;
-    var statusEl = document.getElementById('pipelineTimelineStatus');
-    if (statusEl) statusEl.textContent = status || (ativo ? 'em andamento' : 'aguardando');
-    var activeIndex = PIPELINE_TIMELINE.findIndex(function(p){ return p.key === ativo; });
-    el.innerHTML = PIPELINE_TIMELINE.map(function(p, idx) {
-      var done = activeIndex >= 0 && idx < activeIndex;
-      var active = activeIndex === idx;
-      var color = active ? '#a855f7' : (done ? '#10b981' : 'rgba(148,163,184,.35)');
-      var bg = active ? 'rgba(168,85,247,.18)' : (done ? 'rgba(16,185,129,.12)' : 'rgba(15,23,42,.55)');
-      var pulse = active ? 'box-shadow:0 0 0 4px rgba(168,85,247,.14),0 0 18px rgba(168,85,247,.35);transform:translateX(4px);' : '';
-      var detail = active ? (status || 'robo trabalhando nesta etapa') : (done ? 'concluido' : 'aguardando sua vez');
-      return '<div style="position:relative;display:grid;grid-template-columns:28px 1fr;gap:10px;align-items:center;border:1px solid ' + color + ';background:' + bg + ';border-radius:8px;padding:9px 10px;min-height:48px;transition:all .25s ease;' + pulse + '">'
-        + '<div style="width:24px;height:24px;border-radius:50%;display:grid;place-items:center;background:' + color + ';color:#080814;font-family:var(--fl-font-brand);font-size:8px;">' + (done ? '&#10003;' : (idx + 1)) + '</div>'
-        + '<div><div style="font-family:var(--fl-font-brand);font-size:9px;color:' + color + ';letter-spacing:1px;">' + p.label.toUpperCase() + '</div>'
-        + '<div style="font-size:11px;color:var(--fl-text-muted);margin-top:5px;">' + detail + '</div></div>'
-        + '</div>';
-    }).join('');
-  }
-  document.addEventListener('DOMContentLoaded', function(){ renderPipelineTimeline(null); });
+  // renderPipelineTimeline(ativo, status) vem do modulo carregado abaixo.
 
   function atualizarTimelineComStatus(d) {
     d = d || {};
@@ -8234,6 +8209,8 @@ async function atualizarUtiBadge() {
 
 
 </script>
+<!-- FraLib OS: Pipeline Timeline animada (icones + mensagens rotativas) -->
+<script src="/js/admin/pipeline-timeline.js?v=20260621"></script>
 <!-- FraLib OS: Player de Música (Radio-Browser API, modulos) -->
 <script src="/js/admin/audio-player/events.js?v=20260621"></script>
 <script src="/js/admin/audio-player/storage.js?v=20260621"></script>

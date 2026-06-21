@@ -5320,27 +5320,8 @@ async function atualizarUtiBadge() {
     msg = (msg || '').toLowerCase();
     return normalizarEtapaTimeline(msg);
   }
-  function renderPipelineTimeline(ativo, status) {
-    var el = document.getElementById('pipelineTimeline');
-    if (!el) return;
-    var statusEl = document.getElementById('pipelineTimelineStatus');
-    if (statusEl) statusEl.textContent = status || (ativo ? 'em andamento' : 'aguardando');
-    var activeIndex = PIPELINE_TIMELINE.findIndex(function(p){ return p.key === ativo; });
-    el.innerHTML = PIPELINE_TIMELINE.map(function(p, idx) {
-      var done = activeIndex >= 0 && idx < activeIndex;
-      var active = activeIndex === idx;
-      var color = active ? '#a855f7' : (done ? '#10b981' : 'rgba(148,163,184,.35)');
-      var bg = active ? 'rgba(168,85,247,.18)' : (done ? 'rgba(16,185,129,.12)' : 'rgba(15,23,42,.55)');
-      var pulse = active ? 'box-shadow:0 0 0 4px rgba(168,85,247,.14),0 0 18px rgba(168,85,247,.35);transform:translateX(4px);' : '';
-      var detail = active ? (status || 'robo trabalhando nesta etapa') : (done ? 'concluido' : 'aguardando sua vez');
-      return '<div style="position:relative;display:grid;grid-template-columns:28px 1fr;gap:10px;align-items:center;border:1px solid ' + color + ';background:' + bg + ';border-radius:8px;padding:9px 10px;min-height:48px;transition:all .25s ease;' + pulse + '">'
-        + '<div style="width:24px;height:24px;border-radius:50%;display:grid;place-items:center;background:' + color + ';color:#080814;font-family:var(--fl-font-brand);font-size:8px;">' + (done ? '&#10003;' : (idx + 1)) + '</div>'
-        + '<div><div style="font-family:var(--fl-font-brand);font-size:9px;color:' + color + ';letter-spacing:1px;">' + p.label.toUpperCase() + '</div>'
-        + '<div style="font-size:11px;color:var(--fl-text-muted);margin-top:5px;">' + detail + '</div></div>'
-        + '</div>';
-    }).join('');
-  }
-  document.addEventListener('DOMContentLoaded', function(){ renderPipelineTimeline(null); });
+  // renderPipelineTimeline(ativo, status) vem do modulo /js/admin/pipeline-timeline.js
+  // carregado no admin.html (com icones + mensagens rotativas + barra animada).
 
   function atualizarTimelineComStatus(d) {
     d = d || {};
