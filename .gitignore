@@ -37,3 +37,4 @@ qa-site-*.png
 .claude/worktrees/
 backup.zip
 *.zip
+.venv/

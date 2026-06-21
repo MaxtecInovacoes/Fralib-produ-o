@@ -283,7 +283,7 @@ async def _executar_job(job: dict) -> tuple[bool, Optional[str], Optional[str]]:
 
     if tipo == "pipeline_lead":
         # Import tardio: evita carregar todo o pipeline em workers idle.
-        from pipeline_endpoints import executar_pipeline_completo, executar_pipeline_lead_existente
+        from pipeline_orchestrator_service import executar_pipeline_completo, executar_pipeline_lead_existente
 
         try:
             if payload.get("_lead_id_existente"):
@@ -312,7 +312,7 @@ async def _executar_job(job: dict) -> tuple[bool, Optional[str], Optional[str]]:
 
     if tipo == "pipeline_multiplos":
         # Executa N tentativas ate atingir quantidade_alvo (compat com fluxo antigo).
-        from pipeline_endpoints import executar_pipeline_multiplos
+        from pipeline_orchestrator_service import executar_pipeline_multiplos
 
         try:
             resultado = await executar_pipeline_multiplos(

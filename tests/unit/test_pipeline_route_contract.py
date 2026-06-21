@@ -130,6 +130,9 @@ def test_worker_exceptions_are_marked_as_job_failures():
     assert "except Exception as exc:" in process_block
     assert 'sucesso, fase, mensagem = False, "worker_exception", str(exc)' in process_block
     assert "job_queue.mark_failure" in process_block
+    assert "from pipeline_endpoints import" not in worker
+    assert "from pipeline_orchestrator_service import executar_pipeline_completo" in worker
+    assert "from pipeline_orchestrator_service import executar_pipeline_multiplos" in worker
 
 
 def test_trial_credit_is_consumed_only_after_franz_send_success():
