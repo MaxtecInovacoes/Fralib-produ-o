@@ -253,7 +253,7 @@ async def lifespan(app):
     except Exception as e:
         print(f"[Server] Aviso shutdown SSE: {e}")
 
-app = FastAPI(title="FraLib API", version="2.0.0", lifespan=lifespan)
+app = FastAPI(title="FraLib API", version="2.0.0")  # lifespan=lifespan desabilitado temporariamente
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
