@@ -205,7 +205,12 @@ def _section_request(lead: dict[str, Any], facts: dict[str, Any]) -> list[dict[s
 def _premium_delivery_contract(context: dict[str, Any]) -> str:
     from backend.agents.prompt_agent_helpers import (
         _as_list,
-        _section_sequence_for_niche,
+    )
+
+    section_names = _section_sequence_for_niche(  # noqa: F821 — defined later in this module
+        _first(context.get("business") or {}, "segmento", "segment", default=""),
+        _first(context.get("design") or {}, "archetype", default=""),
+        has_services=bool(_as_list(_first(context.get("business") or {}, "servicos", "services", default=[]))),
     )
 
     business = context.get("business") or {}
