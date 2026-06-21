@@ -141,14 +141,7 @@
   </div>
 
 
-  <!-- Banner de pipeline rodando — visível em todas as views -->
-  <div id="pipeline-banner" style="display:none;background:linear-gradient(90deg,#0f172a,#1e293b);border:1px solid #0183ff;border-radius:8px;padding:10px 16px;margin-bottom:12px;display:none;align-items:center;gap:12px;">
-    <span style="width:8px;height:8px;border-radius:50%;background:#10b981;display:inline-block;animation:pulse 1s infinite;flex-shrink:0;"></span>
-    <span style="color:#10b981;font-family:var(--fl-font-brand);font-size:11px;letter-spacing:1px;flex-shrink:0;">PIPELINE RODANDO</span>
-    <span id="pipeline-banner-tempo" style="color:#e2e8f0;font-family:var(--fl-font-mono);font-size:11px;flex-shrink:0;">00:00</span>
-    <span id="pipeline-banner-fase" style="color:#94a3b8;font-family:var(--fl-font-mono);font-size:11px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Aguardando...</span>
-    <button onclick="document.querySelector('[data-view=\'config\']').click()" style="background:transparent;border:1px solid #0183ff;color:#0183ff;padding:2px 10px;font-size:10px;cursor:pointer;font-family:var(--fl-font-brand);letter-spacing:1px;flex-shrink:0;">VER LOGS</button>
-  </div>
+  <!-- Banner de pipeline: REMOVIDO — a waveform ja mostra tudo -->
 
   <!-- KPI Cards — 6 métricas -->
   <div class="kpi-grid" id="kpi-section" style="display: none;">
