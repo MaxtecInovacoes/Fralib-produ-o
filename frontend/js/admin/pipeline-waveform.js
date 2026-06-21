@@ -3,37 +3,55 @@
  * ===================
  * Linha do tempo visual estilo player de musica para o pipeline FraLib.
  *
- * Mostra TODAS as 10 etapas da esteira em uma trilha horizontal, com:
- *   - nos coloridos (idle / active pulsando / done com check)
- *   - barra de progresso avancando como em um player de musica
- *   - waveform fake embaixo (barras animadas estilo Spotify)
- *   - label da fase atual + tempo decorrido
+ * Mostra 4 etapas MACRO (sem expor nomes internos dos agentes):
+ *   1. Buscar    - Hunter vasculhando Google Maps
+ *   2. Analisar  - Caio, Jina, Mercado, Midia qualificando o lead
+ *   3. Produzir  - Prompt, Designer, Builder gerando o site
+ *   4. Publicar  - Deploy e contato SDR (Franz)
+ *
+ * Cronometro UNICO compartilhado com o banner "PIPELINE RODANDO" e o
+ * "Trabalhando ha" (vem de window.__pipelineSharedStart). Assim banner,
+ * waveform e inline mostram o MESMO segundo.
  *
  * API publica:
  *   - window.PipelineWaveform.ativar(faseKey, label)  - liga com fase
  *   - window.PipelineWaveform.desativar()             - desliga
  *   - window.PipelineWaveform.setProgress(pct)        - 0..100
- *   - window.PipelineWaveform.tickFake()              - avanca 1% (fallback)
- *
- * Sem dependencias externas. Auto-inicia ao carregar.
  */
 (function () {
   'use strict';
 
-  // ── Etapas canonicas da esteira FraLib ────────────────────────────
-  // Mantem alinhado com backend/agents/pipeline_phase_tracking.py
+  // ── 4 etapas MACRO (nao expoe estrutura interna) ───────────────────
   var ETAPAS = [
-    { key: 'hunter',              icon: '🔍', label: 'Hunter',     tone: '#a855f7' },
-    { key: 'caio',                icon: '🤖', label: 'Caio',       tone: '#a855f7' },
-    { key: 'jina',                icon: '🧠', label: 'Jina',       tone: '#a855f7' },
-    { key: 'market_intelligence', icon: '📊', label: 'Mercado',    tone: '#06b6d4' },
-    { key: 'media',               icon: '🎨', label: 'Midia',      tone: '#06b6d4' },
-    { key: 'prompt_agent',        icon: '✍️', label: 'Prompt',     tone: '#ec4899' },
-    { key: 'designer',            icon: '🎯', label: 'Designer',   tone: '#ec4899' },
-    { key: 'builder_renderer',    icon: '⚡', label: 'Builder',    tone: '#f59e0b' },
-    { key: 'deploy',              icon: '🚀', label: 'Deploy',     tone: '#10b981' },
-    { key: 'franz',               icon: '💬', label: 'Franz',      tone: '#10b981' }
+    { key: 'buscar',   icon: '🔎', label: 'Buscar',   tone: '#a855f7' },
+    { key: 'analisar', icon: '📊', label: 'Analisar', tone: '#06b6d4' },
+    { key: 'produzir', icon: '🎨', label: 'Produzir', tone: '#ec4899' },
+    { key: 'publicar', icon: '📤', label: 'Publicar', tone: '#10b981' }
   ];
+
+  // Mapeia qualquer chave vinda do backend para a macro correspondente
+  // (mantem compatibilidade com o modulo legado que passa 'hunter'/'caio'/etc)
+  function macroFromKey(k) {
+    if (!k) return null;
+    k = String(k).toLowerCase();
+    if (k.includes('deploy') || k.includes('public') || k.includes('franz') || k.includes('bryan') || k.includes('whatsapp')) return 'publicar';
+    if (k.includes('builder') || k.includes('renderer') || k.includes('designer') || k.includes('design') || k.includes('arquiteto') || k.includes('prompt') || k.includes('nicho') || k.includes('agente_nicho')) return 'produzir';
+    if (k.includes('caio') || k.includes('qualifica') || k.includes('jina') || k.includes('keyword') || k.includes('mercado') || k.includes('market') || k.includes('unsplash') || k.includes('midia') || k.includes('mídia') || k.includes('foto')) return 'analisar';
+    if (k.includes('hunter') || k.includes('lead:') || k.includes('maps')) return 'buscar';
+    return null;
+  }
+
+  // Mapeia fase_num (1..10) do backend em macro
+  // 1=hunter, 2=caio, 3=jina, 4=mercado, 5=midia, 6=prompt, 7=designer,
+  // 8=builder, 9=deploy, 10=franz
+  function macroFromNum(n) {
+    var i = parseInt(n, 10) - 1;
+    if (i < 0) return 'buscar';
+    if (i <= 0) return 'buscar';     // hunter
+    if (i <= 4) return 'analisar';   // caio..midia
+    if (i <= 7) return 'produzir';   // prompt..builder
+    return 'publicar';               // deploy..franz
+  }
 
   var STYLE_ID = 'pipeline-waveform-css';
 
@@ -127,10 +145,10 @@
       '  min-width: 0;',
       '}',
       '.pw-bubble {',
-      '  width: 34px; height: 34px;',
+      '  width: 36px; height: 36px;',
       '  border-radius: 50%;',
       '  display: flex; align-items: center; justify-content: center;',
-      '  font-size: 16px;',
+      '  font-size: 17px;',
       '  background: rgba(15,23,42,.9);',
       '  border: 2px solid rgba(148,163,184,.3);',
       '  color: #94a3b8;',
@@ -161,8 +179,8 @@
       '}',
       '.pw-name {',
       '  margin-top: 6px;',
-      '  font-size: 9px;',
-      '  letter-spacing: .8px;',
+      '  font-size: 10px;',
+      '  letter-spacing: 1px;',
       '  text-transform: uppercase;',
       '  color: #64748b;',
       '  text-align: center;',
@@ -170,13 +188,15 @@
       '  overflow: hidden;',
       '  text-overflow: ellipsis;',
       '  max-width: 100%;',
+      '  font-family: var(--fl-font-brand, "Inter", sans-serif);',
+      '  font-weight: 600;',
       '}',
       '.pw-node.is-done .pw-name { color: #10b981; }',
       '.pw-node.is-active .pw-name { color: var(--pw-tone, #a855f7); font-weight: 700; }',
       '.pw-rail {',
       '  position: absolute;',
       '  left: 0; right: 0;',
-      '  top: 22px;',
+      '  top: 24px;',
       '  height: 4px;',
       '  background: rgba(148,163,184,.18);',
       '  border-radius: 2px;',
@@ -188,7 +208,7 @@
       '  top: 0; bottom: 0;',
       '  left: 0;',
       '  width: 0%;',
-      '  background: linear-gradient(90deg, #a855f7, #ec4899, #06b6d4, #10b981, #10b981);',
+      '  background: linear-gradient(90deg, #a855f7, #06b6d4, #ec4899, #10b981, #10b981);',
       '  background-size: 200% 100%;',
       '  animation: pwFillMove 3s linear infinite;',
       '  border-radius: 2px;',
@@ -201,7 +221,7 @@
       '  justify-content: space-between;',
       '  gap: 2px;',
       '  height: 26px;',
-      '  margin-top: 10px;',
+      '  margin-top: 12px;',
       '  padding: 0 2px;',
       '}',
       '.pw-bar {',
@@ -235,7 +255,7 @@
       '  .pw-bubble, .pw-bar, .pw-rail-fill, .pw-wrap::before { animation: none !important; }',
       '}',
       '@media (max-width: 720px) {',
-      '  .pw-name { display: none; }',
+      '  .pw-name { font-size: 9px; }',
       '  .pw-stage { max-width: 50%; }',
       '}'
     ].join('\n');
@@ -244,16 +264,30 @@
 
   // ── Estado interno ────────────────────────────────────────────────
   var state = {
-    running: false,
-    activeKey: null,
-    activeIdx: 0,
+    activeMacro: 'buscar',
     progress: 0,        // 0..100 da fase ATUAL
     label: '',
-    elapsed: 0,         // segundos totais
-    fakeTimer: null,
-    pctTimer: null,
-    tickCount: 0
+    fakeTimer: null
   };
+
+  // ── Cronometro UNICO compartilhado ────────────────────────────────
+  // window.__pipelineSharedStart (timestamp ms) e definido por
+  // _scripts.html ao iniciar/parar o cronometro do banner. A waveform
+  // LE essa global — assim banner, "Trabalhando ha" e waveform mostram
+  // o MESMO segundo.
+  function sharedStart() {
+    var v = window.__pipelineSharedStart;
+    return (typeof v === 'number' && v > 0) ? v : 0;
+  }
+  function isSharedRunning() {
+    return sharedStart() > 0;
+  }
+  function formatElapsed(sec) {
+    sec = Math.max(0, Math.floor(sec));
+    var m = Math.floor(sec / 60);
+    var s = sec % 60;
+    return (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
+  }
 
   function buildHTML() {
     var nodes = ETAPAS.map(function (e, i) {
@@ -264,10 +298,9 @@
         '</div>';
     }).join('');
 
-    // 80 barras para o waveform (mais detalhe, mas flex:1 distribui igual)
+    // 60 barras para o waveform
     var bars = [];
-    for (var i = 0; i < 80; i++) {
-      // altura pseudo-aleatoria fixa (parece waveform estetica)
+    for (var i = 0; i < 60; i++) {
       var h = 8 + Math.abs(Math.sin(i * 0.42) * 14) + Math.abs(Math.cos(i * 0.27) * 8);
       bars.push('<div class="pw-bar" data-bar="' + i + '" style="height:' + h.toFixed(1) + 'px;"></div>');
     }
@@ -296,7 +329,6 @@
   function ensureContainer() {
     var host = document.getElementById('pipelineWaveformHost');
     if (!host) {
-      // injeta logo apos o banner do pipeline
       var anchor = document.getElementById('pipeline-banner');
       if (!anchor || !anchor.parentNode) return null;
       host = document.createElement('div');
@@ -307,6 +339,13 @@
       host.innerHTML = buildHTML();
     }
     return host;
+  }
+
+  function findIdx(key) {
+    for (var i = 0; i < ETAPAS.length; i++) {
+      if (ETAPAS[i].key === key) return i;
+    }
+    return 0;
   }
 
   // ── Render ────────────────────────────────────────────────────────
@@ -323,12 +362,15 @@
     var pctEl = document.getElementById('pwPct');
     if (!railFill || !stage) return;
 
-    var idx = state.activeIdx;
+    // estado vem do cronometro compartilhado (fonte da verdade)
+    var running = isSharedRunning();
+
+    var idx = findIdx(state.activeMacro);
     var totalNodes = ETAPAS.length;
 
     nodes.forEach(function (n, i) {
       n.classList.remove('is-done', 'is-active', 'is-idle');
-      if (!state.running) {
+      if (!running) {
         n.classList.add('is-idle');
         return;
       }
@@ -345,47 +387,48 @@
     var currentBar = Math.floor(activeStart + (state.progress / 100) * (activeEnd - activeStart));
     bars.forEach(function (b, i) {
       b.classList.remove('is-on', 'is-past');
-      if (!state.running) return;
+      if (!running) return;
       if (i < currentBar) b.classList.add('is-past');
       else if (i < activeEnd) b.classList.add('is-on');
     });
 
     // rail: preenche ate o no atual + progresso da fase
-    var railPct = state.running
+    var railPct = running
       ? ((idx + state.progress / 100) / (totalNodes - 1)) * 100
       : 0;
     railFill.style.width = Math.min(100, railPct).toFixed(1) + '%';
 
-    // dot
     if (dot) {
-      if (state.running) {
-        dot.classList.remove('idle');
-      } else {
-        dot.classList.add('idle');
-      }
+      if (running) dot.classList.remove('idle');
+      else dot.classList.add('idle');
     }
 
-    // header stage
-    if (state.running && state.label) {
-      stage.innerHTML = '<strong>' + escapeHtml(ETAPAS[idx].label) + '</strong> &middot; ' + escapeHtml(state.label);
-    } else if (state.running) {
-      stage.innerHTML = '<strong>' + escapeHtml(ETAPAS[idx].label) + '</strong>';
+    if (running && state.label) {
+      stage.innerHTML = '<strong>' + ETAPAS[idx].label + '</strong> &middot; ' + escapeHtml(state.label);
+    } else if (running) {
+      stage.innerHTML = '<strong>' + ETAPAS[idx].label + '</strong>';
     } else {
       stage.innerHTML = '<strong>aguardando</strong>';
     }
 
-    // elapsed / eta
-    if (elapsedEl) elapsedEl.textContent = formatTime(state.elapsed);
+    // elapsed vem do cronometro compartilhado
+    var elapsedSec = 0;
+    if (running) {
+      elapsedSec = Math.floor((Date.now() - sharedStart()) / 1000);
+    }
+    if (elapsedEl) elapsedEl.textContent = formatElapsed(elapsedSec);
+
+    // eta
     if (etaEl) {
-      if (!state.running) {
+      if (!running) {
         etaEl.textContent = 'iniciar para ver previsao';
       } else {
-        var remaining = Math.max(0, ((totalNodes - idx - 1) * 90) - (state.progress * 0.9));
+        var remaining = Math.max(0, ((totalNodes - idx - 1) * 120) - (state.progress * 1.2));
         etaEl.textContent = '~' + Math.round(remaining / 60) + ' min restantes';
       }
     }
     if (pctEl) {
-      var totalPct = state.running
+      var totalPct = running
         ? Math.round(((idx + state.progress / 100) / totalNodes) * 100)
         : 0;
       pctEl.textContent = totalPct + '%';
@@ -398,35 +441,21 @@
     });
   }
 
-  function formatTime(sec) {
-    var m = Math.floor(sec / 60);
-    var s = sec % 60;
-    return (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
-  }
-
   // ── API publica ───────────────────────────────────────────────────
   function ativar(faseKey, label) {
-    state.running = true;
+    var macro = macroFromKey(faseKey);
+    if (!macro) macro = 'buscar';
+    state.activeMacro = macro;
     state.label = label || '';
-    var idx = ETAPAS.findIndex(function (e) { return e.key === faseKey; });
-    if (idx < 0) idx = 0;
-    if (idx !== state.activeIdx) {
-      state.activeIdx = idx;
-      state.progress = 0;
-    }
-    state.activeKey = faseKey;
     ensureContainer();
     render();
     startFakeTicker();
   }
 
   function desativar() {
-    state.running = false;
-    state.activeKey = null;
-    state.activeIdx = 0;
+    state.activeMacro = 'buscar';
     state.progress = 0;
     state.label = '';
-    state.elapsed = 0;
     stopFakeTicker();
     render();
   }
@@ -440,13 +469,14 @@
   function startFakeTicker() {
     stopFakeTicker();
     state.fakeTimer = setInterval(function () {
-      if (!state.running) return;
-      state.elapsed += 1;
-      state.progress = Math.min(100, state.progress + 0.7);
+      // so conta se cronometro compartilhado esta rodando
+      if (!isSharedRunning()) return;
+      state.progress = Math.min(100, state.progress + 0.6);
       if (state.progress >= 100) {
-        // avanca para o proximo
-        if (state.activeIdx < ETAPAS.length - 1) {
-          state.activeIdx += 1;
+        // avanca para a proxima macro
+        var idx = findIdx(state.activeMacro);
+        if (idx < ETAPAS.length - 1) {
+          state.activeMacro = ETAPAS[idx + 1].key;
           state.progress = 0;
         }
       }
@@ -461,16 +491,15 @@
     }
   }
 
-  // ── Hook com o resto do admin (renderPipelineTimeline ja existente) ──
-  // Wrap para capturar as chamadas existentes sem modificar pipeline-timeline.js
+  // ── Hook com o modulo legado (renderPipelineTimeline) ─────────────
   function hookExisting() {
     var orig = window.renderPipelineTimeline;
     if (typeof orig !== 'function' || orig.__pw_wrapped) return;
     window.renderPipelineTimeline = function (ativo, status) {
-      orig.call(this, ativo, status);
+      try { orig.call(this, ativo, status); } catch (e) {}
       if (ativo === null || ativo === undefined) {
-        // nao desliga imediatamente: pode ser entre fases. So desliga se nao rodando.
-        window.PipelineWaveform._syncFromStatus();
+        // nao desliga: pode ser entre fases. _syncFromStatus confirma.
+        _syncFromStatus();
       } else {
         window.PipelineWaveform.ativar(ativo, status || '');
       }
@@ -478,7 +507,7 @@
     window.renderPipelineTimeline.__pw_wrapped = true;
   }
 
-  // Sincroniza com /api/pipeline/status a cada 5s (backstop caso SSE caia)
+  // Sincroniza com /api/pipeline/status a cada 5s
   function _syncFromStatus() {
     if (typeof window.authFetch !== 'function') return;
     window.authFetch('/api/pipeline/status')
@@ -489,56 +518,21 @@
           var key = null;
           if (d.current_job) {
             key = d.current_job.last_phase || d.current_job.phase;
-            if (key) key = normalizeKey(key);
+            if (key) key = String(key).toLowerCase();
           }
-          if (!key) key = mapFaseNum(d.fase_num);
-          window.PipelineWaveform.ativar(key, d.fase_label || d.fase_atual || '');
-        } else {
-          // se ja passamos do estado, desativa
-          if (state.running) {
-            // mantem por mais 4s caso proximo ciclo comece logo
-            setTimeout(function () {
-              window.PipelineWaveform._recheckIdle();
-            }, 4000);
+          if (key) {
+            var macro = macroFromKey(key);
+            if (macro) ativar(macro, d.fase_label || d.fase_atual || '');
+          } else if (d.fase_num) {
+            ativar(macroFromNum(d.fase_num), d.fase_label || '');
           }
+        }
+        // se nao esta rodando e compartilhado tambem nao, desativa
+        if (!d.rodando && !isSharedRunning()) {
+          desativar();
         }
       })
       .catch(function () {});
-  }
-
-  function _recheckIdle() {
-    if (typeof window.authFetch !== 'function') return;
-    window.authFetch('/api/pipeline/status')
-      .then(function (r) { return r && r.json ? r.json() : null; })
-      .then(function (d) {
-        if (d && !d.rodando) desativar();
-        else if (d && d.rodando) ativar(mapFaseNum(d.fase_num) || state.activeKey, d.fase_label || '');
-      })
-      .catch(function () {});
-  }
-
-  function normalizeKey(s) {
-    s = (s || '').toString().toLowerCase();
-    if (s.includes('builder') || s.includes('renderer')) return 'builder_renderer';
-    if (s.includes('deploy') || s.includes('public')) return 'deploy';
-    if (s.includes('franz') || s.includes('bryan') || s.includes('whatsapp')) return 'franz';
-    if (s.includes('designer') || s.includes('design') || s.includes('arquiteto')) return 'designer';
-    if (s.includes('prompt') || s.includes('nicho') || s.includes('agente_nicho')) return 'prompt_agent';
-    if (s.includes('unsplash') || s.includes('foto') || s.includes('midia') || s.includes('mídia')) return 'media';
-    if (s.includes('mercado') || s.includes('market')) return 'market_intelligence';
-    if (s.includes('jina') || s.includes('keyword')) return 'jina';
-    if (s.includes('caio') || s.includes('qualifica')) return 'caio';
-    if (s.includes('hunter') || s.includes('lead:') || s.includes('maps')) return 'hunter';
-    return null;
-  }
-
-  function mapFaseNum(n) {
-    if (!n && n !== 0) return null;
-    // mapear 1..10 para as chaves (ordem canonica)
-    var map = ['hunter', 'caio', 'jina', 'market_intelligence', 'media', 'prompt_agent', 'designer', 'builder_renderer', 'deploy', 'franz'];
-    var i = parseInt(n, 10) - 1;
-    if (i < 0 || i >= map.length) return null;
-    return map[i];
   }
 
   // ── Init ──────────────────────────────────────────────────────────
@@ -549,6 +543,8 @@
     hookExisting();
     // backstop poll 5s
     setInterval(_syncFromStatus, 5000);
+    // re-render a cada 1s so pra atualizar o cronometro compartilhado
+    setInterval(render, 1000);
   }
 
   if (document.readyState === 'loading') {
@@ -557,13 +553,13 @@
     init();
   }
 
-  // Expor
   window.PipelineWaveform = {
     ativar: ativar,
     desativar: desativar,
     setProgress: setProgress,
     _syncFromStatus: _syncFromStatus,
-    _recheckIdle: _recheckIdle,
+    macroFromKey: macroFromKey,
+    macroFromNum: macroFromNum,
     ETAPAS: ETAPAS
   };
 })();
