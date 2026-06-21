@@ -32,8 +32,17 @@ from backend.services.pipeline_media import (
 )
 
 # Re-export from builders module
+from backend.services.pipeline_builders import (
+    build_skill_fast_prd,
+    ensure_prd_design_reference,
+    ensure_prd_contracts,
+    ensure_prd_publication_identity,
+)
 
 # Re-export from prompt agent module
+from backend.services.pipeline_prompt_agent import (
+    build_prompt_agent_prd,
+)
 
 
 # ─── Legacy alias functions (for backward compatibility) ────────────────────────
