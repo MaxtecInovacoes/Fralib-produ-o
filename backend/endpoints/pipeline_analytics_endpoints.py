@@ -1,4 +1,11 @@
-from fastapi import APIRouter, Depends
+"""
+Pipeline Analytics Endpoints — métricas e médias históricas para a waveform do admin.
+
+Adicionado PRD #65: GET /api/pipeline/avg-by-macro retorna a média de duração por
+macro (buscar / analisar / produzir / publicar) para o tenant atual, agregando
+spans de `pipeline_run_spans` dos últimos N dias.
+"""
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 
@@ -6,6 +13,19 @@ from backend.core.database import get_db
 from backend.core.auth import get_current_user
 
 router = APIRouter(prefix="/api/pipeline", tags=["pipeline"])
+
+
+# Mapeia fase_nome (de pipeline_run_spans) para a macro correspondente
+# na waveform. Mantém paridade com macroFromKey/macroFromNum em
+# frontend/js/admin/pipeline-waveform.js.
+_MACRO_MAP = {
+    'hunter': 'buscar',
+    'caio': 'analisar', 'jina': 'analisar', 'mercado': 'analisar',
+    'midia': 'analisar', 'agente_nicho': 'analisar',
+    'prompt': 'produzir', 'designer': 'produzir', 'builder': 'produzir',
+    'arquiteto': 'produzir',
+    'deploy': 'publicar', 'franz': 'publicar', 'bryan': 'publicar',
+}
 
 
 @router.get("/analytics/overview")
@@ -67,3 +87,64 @@ async def get_analytics(
         "por_nicho": [{"nome": r.segmento or "-", "total": r.total} for r in top_nichos_rows],
     }
 
+
+@router.get("/avg-by-macro")
+async def pipeline_avg_by_macro(
+    dias: int = Query(default=30, ge=1, le=180),
+    min_samples: int = Query(default=3, ge=1, le=50),
+    db: Session = Depends(get_db),
+    usuario: dict = Depends(get_current_user),
+):
+    """Media de duracao por macro (4 etapas) para o tenant atual.
+
+    Cada macro agrega a media ponderada de duracao de todos os spans
+    (fase_nome) que pertencem a ela, calculado sobre os ultimos `dias`
+    runs com status='success'.
+
+    Retorna `total_avg_seconds` apenas se TODAS as 4 macros tem pelo
+    menos `min_samples` (default 3). Caso contrario retorna null e a UI
+    mostra 'calculando media'.
+    """
+    tenant_id = usuario.get("tenant_id", usuario["id"])
+    rows = db.execute(
+        text("""
+            SELECT fase_nome,
+                   COUNT(*) as samples,
+                   ROUND(AVG(duracao_ms) / 1000.0, 1) as avg_seconds
+            FROM pipeline_run_spans
+            WHERE tenant_id = :tenant_id
+              AND status = 'success'
+              AND started_at > NOW() - make_interval(days => :dias)
+            GROUP BY fase_nome
+        """),
+        {"tenant_id": tenant_id, "dias": dias},
+    ).fetchall()
+
+    macros = {
+        'buscar':   {'avg_seconds': 0.0, 'samples': 0},
+        'analisar': {'avg_seconds': 0.0, 'samples': 0},
+        'produzir': {'avg_seconds': 0.0, 'samples': 0},
+        'publicar': {'avg_seconds': 0.0, 'samples': 0},
+    }
+    for r in rows:
+        macro = _MACRO_MAP.get(r.fase_nome)
+        if macro and macro in macros:
+            m = macros[macro]
+            new_samples = m['samples'] + int(r.samples)
+            # media ponderada: soma das medias * samples, dividido pelo total de samples
+            if new_samples > 0:
+                m['avg_seconds'] = round(
+                    (m['avg_seconds'] * m['samples'] + float(r.avg_seconds) * int(r.samples)) / new_samples,
+                    1,
+                )
+            m['samples'] = new_samples
+
+    has_all = all(macros[m]['samples'] >= min_samples for m in macros)
+    total = round(sum(macros[m]['avg_seconds'] for m in macros), 1) if has_all else None
+
+    return {
+        "macros": macros,
+        "total_avg_seconds": total,
+        "window_days": dias,
+        "min_samples": min_samples,
+    }

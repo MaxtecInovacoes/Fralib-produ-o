@@ -272,6 +272,7 @@
       '.pw-eta { display: flex; align-items: center; gap: 6px; }',
       '.pw-eta strong { color: #f1f5f9; font-family: var(--fl-font-mono, monospace); }',
       '.pw-pct { font-size: 12px; color: #10b981; font-weight: 700; }',
+      '.pw-avg { color: #94a3b8; font-family: var(--fl-font-mono, monospace); font-size: 10px; letter-spacing: .3px; }',
       '.pw-telemetry {',
       '  display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px;',
       '  margin-top: 10px; padding-top: 10px;',
@@ -349,7 +350,10 @@
     summary: {},
     logsOpen: false,
     elapsedTimer: null,
-    syncTimer: null
+    syncTimer: null,
+    avgByMacro: null,    // { macros: {...}, total_avg_seconds, window_days, min_samples }
+    avgFetchedAt: 0,
+    avgTimer: null
   };
   function formatElapsed(sec) {
     sec = Math.max(0, Math.floor(sec));
@@ -412,7 +416,7 @@
         '</div>' +
         '<div class="pw-wave" id="pwWave">' + bars.join('') + '</div>' +
         '<div class="pw-footer">' +
-          '<div class="pw-eta">⏱ <strong id="pwElapsed">00:00</strong> &nbsp;·&nbsp; <span id="pwEta">aguardando medicoes</span></div>' +
+          '<div class="pw-eta">⏱ <strong id="pwElapsed">00:00</strong> &nbsp;·&nbsp; <span id="pwEta">aguardando medicoes</span> &nbsp;·&nbsp; <span id="pwAvg" class="pw-avg"></span></div>' +
           '<div class="pw-pct" id="pwPct">0%</div>' +
         '</div>' +
       '</div>';
@@ -478,6 +482,38 @@
         '<span>' + escapeHtml(String(call.calls || 0)) + ' chamadas · ' + escapeHtml(compactNumber(tokens)) + ' tokens</span>' +
         '<span>US$ ' + (Number(call.cost_usd) || 0).toFixed(4).replace('.', ',') + '</span></div>';
     }).join('');
+  }
+
+  // ── Media historica por tenant/fase (PRD #65) ────────────────────
+  function fetchAvgByMacro() {
+    var now = Date.now();
+    if (state.avgByMacro && now - state.avgFetchedAt < 60000) return Promise.resolve();
+    if (typeof window.authFetch !== 'function') return Promise.resolve();
+    return window.authFetch('/api/pipeline/avg-by-macro?dias=30&min_samples=3')
+      .then(function (r) { return r && r.json ? r.json() : null; })
+      .then(function (data) {
+        if (data) {
+          state.avgByMacro = data;
+          state.avgFetchedAt = now;
+          render();
+        }
+      })
+      .catch(function () { /* sem media, ok */ });
+  }
+
+  function renderAvg() {
+    var el = document.getElementById('pwAvg');
+    if (!el) return;
+    var avg = state.avgByMacro;
+    if (!avg) { el.textContent = ''; return; }
+    var total = avg.total_avg_seconds;
+    if (!total) {
+      el.textContent = 'média: calculando (' + avg.min_samples + '+ runs por macro)';
+      return;
+    }
+    var elapsed = measuredElapsedSeconds();
+    var remaining = Math.max(0, Math.floor(total - elapsed));
+    el.textContent = 'média ' + formatElapsed(total) + ' · resta ' + formatElapsed(remaining);
   }
 
   // ── Render ────────────────────────────────────────────────────────
@@ -555,6 +591,7 @@
     }
 
     refreshElapsedDisplay();
+    renderAvg();
 
     if (etaEl) {
       if (running && state.startedAt) etaEl.textContent = 'medindo pelo inicio registrado';
@@ -743,6 +780,8 @@
     if (toggle) toggle.addEventListener('click', function () { setLogsOpen(!state.logsOpen); });
     _syncFromStatus();
     setInterval(_syncFromStatus, 5000);
+    fetchAvgByMacro();
+    state.avgTimer = setInterval(fetchAvgByMacro, 5 * 60 * 1000);  // 5min
   }
 
   if (document.readyState === 'loading') {
