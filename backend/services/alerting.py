@@ -289,6 +289,48 @@ def hook_pos_falha(erro_tecnico: str, fase: str | None = None, tenant_id: int = 
     return resultado
 
 
+def hook_pos_falha(erro_tecnico: str, fase: str | None = None, tenant_id: int = None) -> dict:
+    """Hook chamado apos cada falha registrada - dispara alerta se necessario.
+
+    Args:
+        erro_tecnico: mensagem do erro
+        fase: fase do pipeline (opcional)
+        tenant_id: ID do tenant (opcional)
+
+    Returns:
+        dict com decisao de auto-fix + alerta (se aplicavel)
+    """
+    resultado = {"auto_fix": None, "alerta": None}
+
+    # 1. Tentar auto-fix
+    try:
+        from backend.services.auto_fix import tentar_auto_fix
+        fix = tentar_auto_fix(erro_tecnico, tentativas_anteriores=0, max_tentativas_total=3)
+        resultado["auto_fix"] = fix.to_dict()
+    except Exception as e:
+        logger.warning(f"erro no auto_fix: {e}")
+
+    # 2. Criar alerta se necessario
+    if not resultado["auto_fix"] or not resultado["auto_fix"].get("sucesso"):
+        try:
+            alerta = Alert(
+                level="warning",
+                title="Falha no pipeline",
+                message=f"Erro na fase '{fase or 'desconhecida'}'",
+                details={
+                    "erro": erro_tecnico[:200],
+                    "fase": fase,
+                    "tenant_id": tenant_id,
+                }
+            )
+            send_alert(alerta)
+            resultado["alerta"] = str(alerta)
+        except Exception as e:
+            logger.warning(f"erro ao criar alerta: {e}")
+
+    return resultado
+
+
 def check_and_alert():
     """Executa checks e envia alertas automaticamente."""
     alerts = run_health_checks()
