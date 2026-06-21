@@ -166,13 +166,33 @@ def call_llm(
         )
 
 
+def _join_url(base_url: str, suffix: str) -> str:
+    """Join a base URL and suffix, deduplicating the ``/v1`` segment.
+
+    Some providers (kpalabz, litellm proxies) already expose a ``/v1`` base
+    URL while the OpenAI/Anthropic SDKs (and our hand-rolled adapters) append
+    ``/v1/messages`` or ``/v1/chat/completions``. A naive ``f"{base}/{suffix}"``
+    produces ``https://api.kpalabz.com/v1/v1/messages`` (404) instead of
+    the correct ``https://api.kpalabz.com/v1/messages``.
+
+    This helper strips a trailing ``/v1`` from ``base_url`` when ``suffix``
+    begins with ``/v1``, then concatenates the two with a single ``/``.
+    """
+    base = (base_url or "").rstrip("/")
+    if suffix.startswith("/v1/") and base.endswith("/v1"):
+        base = base[: -len("/v1")]
+    if not suffix.startswith("/"):
+        suffix = "/" + suffix
+    return base + suffix
+
+
 def _call_anthropic(model_id, system, user, temperature, max_tokens):
     """Adaptador Anthropic (Messages API)."""
     api_key, base_url, key_id = _get_key_for_provider("anthropic")
     if not api_key:
         raise Exception("Nenhuma API key Anthropic disponível")
 
-    url = f"{base_url}/v1/messages"
+    url = _join_url(base_url, "/v1/messages")
     headers = {
         "x-api-key": api_key,
         "anthropic-version": "2023-06-01",
