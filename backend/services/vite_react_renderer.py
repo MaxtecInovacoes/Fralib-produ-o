@@ -1647,6 +1647,7 @@ def prepare_vite_project_files(files: dict[str, str], *, facts: dict[str, Any]) 
     )
     _normalize_generated_imports_and_hooks(prepared)
     _stabilize_app_contract(prepared)
+    _drop_malformed_data_url_in_jsx(prepared)
     _ensure_lgpd_banner_contract(prepared, facts)
     _stabilize_navbar_contract(prepared, facts)
     _rewrite_editorial_images(prepared, facts)
@@ -1752,10 +1753,49 @@ def _normalize_generated_imports_and_hooks(files: dict[str, str]) -> None:
         files["src/components/ui/card.tsx"] = vite_template_card_ui()
 
 
+def _drop_malformed_data_url_in_jsx(files: dict[str, str]) -> None:
+    """Sanitize stray `data:` URLs and unescaped backslash-n tokens that the
+    LLM sometimes emits in TSX/TS files. esbuild fails the build with
+    `Syntax error "n"` when an SVG ``data:image/svg+xml`` string is
+    closed with the wrong quote.
+    """
+    for path in list(files.keys()):
+        if not path.endswith((".tsx", ".ts", ".jsx", ".js")):
+            continue
+        content = files.get(path) or ""
+        original = content
+        # Strip "data:image/svg+xml,..." lines that bleed into JSX without
+        # proper escaping (terminate the broken string, replace with safe)
+        content = re.sub(
+            r"data:image/svg\+xml[^\n'\"]*",
+            "data:image/svg+xml;utf8,%3Csvg/%3E",
+            content,
+        )
+        # Drop bare "\\n" tokens that are leftover from a JSON escape leak
+        content = re.sub(r"\\n(?=[A-Za-z'\"])", " ", content)
+        # Sanity: if the file is shorter than 20 chars or has zero newlines,
+        # it is broken; fall back to template if it's a known TSX file
+        if len(content) < 20 and path == "src/App.tsx":
+            content = ""
+        if content != original:
+            files[path] = content
+
+
 def _stabilize_app_contract(files: dict[str, str]) -> None:
     path = "src/App.tsx"
     content = str(files.get(path) or "")
-    if not content:
+    # If the LLM returned a malformed App.tsx (e.g. starts with a `data:` URL
+    # or contains unescaped SVG inside a JSX/TS string that breaks esbuild),
+    # fall back to the deterministic template rather than fail the build.
+    stripped = content.lstrip()
+    looks_broken = (
+        not content
+        or not stripped.startswith(("import", "export", "//", "/*", "/*", '"', "'"))
+        or stripped.startswith("data:")
+        or "\"\n\"" in content
+        or re.search(r'\\"\s*\\n', content) is not None
+    )
+    if looks_broken:
         files[path] = vite_template_app_tsx()
         return
     updated = re.sub(r"\s+scrolled=\{[^}]+\}", "", content)
