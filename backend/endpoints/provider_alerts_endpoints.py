@@ -41,6 +41,17 @@ async def list_alerts(only_unread: bool = False, limit: int = 100,
                       db: Session = Depends(get_db),
                       user: dict = Depends(require_superadmin)):
     """Lista alertas, mais recentes primeiro. ?only_unread=true filtra so nao-lidos."""
+    # Auto-cleanup: marca como lido alertas stale (>7 dias) sem precisar de cron separado.
+    # Isso impede que erros ja resolvidos (ex: alias LiteLLM desativado) poluam o admin.
+    # Roda no GET em vez de cron pra eliminar dependencia operacional.
+    db.execute(text("""
+        UPDATE provider_alerts
+           SET lido = TRUE, lido_em = NOW()
+         WHERE NOT lido
+           AND criado_em < NOW() - INTERVAL '7 days'
+    """))
+    db.commit()
+
     where = 'WHERE NOT lido' if only_unread else ''
     rows = db.execute(text(f"""
         SELECT a.id, a.tipo, a.key_id, a.mensagem, a.lead_id, a.user_id_afetado,
