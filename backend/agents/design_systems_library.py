@@ -606,6 +606,9 @@ def resolve_nicho(segmento: str, subnicho: str = "") -> DesignSystem | None:
     syn_to_sub = {
         "pilates": "pilates",
         "hamburgueria": "hamburgueria",
+        "pet_shop": "pet_shop",
+        "pet shop": "pet_shop",
+        "petshop": "pet_shop",
         "pizzaria": "bistro",
         "cafe": "bistro",
         "bar": "bistro",

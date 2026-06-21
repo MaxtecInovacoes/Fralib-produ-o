@@ -6,7 +6,7 @@ from typing import Any
 
 
 # ═══════════════════════════════════════════════════════════════════
-# SYSTEM PROMPT — Main instruction set for the LLM
+# SYSTEM PROMPT - Main instruction set for the LLM
 # ═══════════════════════════════════════════════════════════════════
 
 VITE_REACT_SYSTEM_PROMPT_HEAD = """You are a senior React/Vite/Tailwind landing-page engineer with AI Studio-level visual taste.
@@ -39,6 +39,7 @@ TypeScript project. Return one strict JSON object only, no markdown:
     "src/components/Pricing.tsx": "...",
     "src/components/Faq.tsx": "..."
   }
+"""
 
 
 # Few-shot + negative examples (#4, #7) - injetados em runtime
@@ -61,7 +62,7 @@ LANGUAGE (CRITICAL):
 - Component names and props stay in English (React convention).
 
 ACCESSIBILITY (MANDATORY):
-- Use semantic HTML: <main>, <nav>, <section>, <article>, <header>, <footer>, <h1>–<h6>.
+- Use semantic HTML: <main>, <nav>, <section>, <article>, <header>, <footer>, <h1>-<h6>.
 - Every image MUST have descriptive alt attribute in pt-BR.
 - Icon-only buttons MUST have aria-label in pt-BR.
 - Form inputs MUST have associated <label> elements.
@@ -185,6 +186,13 @@ Requirements:
 - Include realistic content (no lorem ipsum)
 
 Generate complete TypeScript React components with proper types."""
+
+    # Injeta Design System Awwwards-grade (#25 Plano Mestre SDR)
+    try:
+        from backend.agents.design_system_injector import inject_design_system_into_prompt
+        prompt = inject_design_system_into_prompt(prompt, facts)
+    except Exception:
+        pass
 
     return prompt
 
