@@ -1390,6 +1390,141 @@ Previous response to repair:
         return ""
 
 
+def _extract_files_via_regex(text: str) -> dict[str, str]:
+    """Best-effort extract ``"path": "content"`` pairs from truncated JSON.
+
+    When the kpalabz proxy returns 50k+ chars of JSON cut off mid-string, the
+    standard ``json.loads`` fails with ``Unterminated string``. This walks
+    the text char-by-char, tracking quote/brace depth, and harvests every
+    well-formed top-level ``"path": "content"`` pair — even when the
+    surrounding ``{"files": {...}}`` wrapper is broken.
+
+    Returns a ``files`` dict, or empty ``{}`` if nothing salvageable.
+    """
+    out: dict[str, str] = {}
+
+    # Strategy A: walk the text and find "key": "value" pairs where value
+    # is a complete JSON string (i.e. starts and ends with unescaped ")
+    i = 0
+    n = len(text)
+    last_open = -1
+    while i < n:
+        # Find next unescaped quote
+        if text[i] != '"':
+            i += 1
+            continue
+        # Skip escaped quote
+        if i > 0 and text[i - 1] == "\\":
+            i += 1
+            continue
+        start = i
+        # Walk to find closing quote
+        j = i + 1
+        while j < n:
+            c = text[j]
+            if c == "\\":
+                j += 2  # skip escape
+                continue
+            if c == '"':
+                break
+            j += 1
+        if j >= n:
+            # Truncated before close - stop here
+            break
+        # We have a complete string [start, j]
+        key_candidate = text[start + 1 : j]
+        # Look ahead for ":"
+        k = j + 1
+        while k < n and text[k] in " \r\n\t":
+            k += 1
+        if k >= n or text[k] != ":":
+            i = j + 1
+            continue
+        # Look ahead for next string value
+        m = k + 1
+        while m < n and text[m] in " \r\n\t":
+            m += 1
+        if m >= n or text[m] != '"':
+            i = j + 1
+            continue
+        # Walk value string
+        vstart = m
+        p = m + 1
+        while p < n:
+            c = text[p]
+            if c == "\\":
+                p += 2
+                continue
+            if c == '"':
+                break
+            p += 1
+        if p >= n:
+            # value string truncated - skip
+            break
+        value = text[vstart + 1 : p]
+        # Heuristic: keys look like file paths (contain / or .) and
+        # values contain code (often >5 chars)
+        if ("/" in key_candidate or key_candidate.endswith(tuple(".tsx .ts .jsx .js .html .css .json .md .yaml .yml".split()))) and len(value) >= 1:
+            out.setdefault(key_candidate, value)
+        i = p + 1
+    return out
+
+
+def _tolerant_json_loads(text: str) -> dict:
+    """Parse JSON tolerating mid-string truncation.
+
+    The Vite React LLM frequently produces 50k+ char JSON outputs that the
+    kpalabz proxy cuts off mid-string, leaving Python's strict ``json.loads``
+    unable to parse them and crashing the whole build with
+    ``Unterminated string at line 1 column 52485``.
+
+    Strategy:
+    1. Try strict ``json.loads`` first (fast path).
+    2. On failure, use ``_extract_files_via_regex`` to harvest
+       ``"path": "content"`` pairs that are individually complete
+       (escape-aware quote walking), then wrap them in
+       ``{"files": {...}}``. This recovers the bulk of the build even
+       when the surrounding JSON is cut off mid-stream.
+    3. Fall back to the raw_decode / close-bracket heuristics.
+    """
+    if not text:
+        return {}
+    # Fast path
+    try:
+        obj = json.loads(text)
+        if isinstance(obj, dict):
+            return obj
+    except Exception:
+        pass
+
+    # Regex harvest — this is the workhorse for truncated output
+    files = _extract_files_via_regex(text)
+    if files:
+        return {"files": files}
+
+    # Last-resort: raw_decode + closing heuristics
+    decoder = json.JSONDecoder()
+    idx = 0
+    while idx < len(text):
+        try:
+            obj, end = decoder.raw_decode(text, idx)
+            if isinstance(obj, dict) and isinstance(obj.get("files"), dict):
+                return obj
+        except json.JSONDecodeError:
+            break
+        break
+    for trail in ('"', '"}', '"]', '"}]', '"\n}', '"\n]'):
+        try:
+            obj = json.loads(text + trail)
+            if isinstance(obj, dict):
+                return obj
+        except Exception:
+            continue
+    raise ViteReactRenderError(
+        f"JSON de arquivos irrecuperavel (len={len(text)})"
+    )
+
+
 def extract_vite_project_files(raw: str) -> dict[str, str]:
     """Extract a `files` mapping from tagged blocks or strict JSON output."""
     text = (raw or "").strip()
@@ -1406,10 +1541,9 @@ def extract_vite_project_files(raw: str) -> dict[str, str]:
         if not match:
             raise ViteReactRenderError("resposta nao contem JSON de arquivos")
         text = match.group(0)
-    try:
-        payload = json.loads(text)
-    except json.JSONDecodeError as exc:
-        raise ViteReactRenderError(f"JSON de arquivos invalido: {exc}") from exc
+    payload = _tolerant_json_loads(text)
+    if not isinstance(payload, dict):
+        raise ViteReactRenderError("payload extraido nao e dict")
     files = payload.get("files") if isinstance(payload, dict) else None
     if not files and isinstance(payload, dict):
         for wrapper_key in ("received", "project", "data", "result"):
