@@ -4081,6 +4081,34 @@ def _ensure_index_css_contract(content: str) -> str:
     css = str(content or "").strip()
     css = re.sub(r"@import\s+[\"']tailwindcss/(?:base|components|utilities)[\"'];?\s*", "", css)
     css = re.sub(r"@tailwind\s+(?:base|components|utilities);?\s*", "", css)
+    # Strip backslash-newline escapes that the LLM sometimes emits as
+    # standalone "declarations" (e.g. trailing "\" on a line). Tailwind v4
+    # rejects these as "Invalid declaration: `\n`".
+    css = css.replace("\\\n", "\n").replace("\\n", "\n")
+    # Drop empty / whitespace-only / unparseable lines
+    cleaned_lines = []
+    for line in css.splitlines():
+        stripped = line.strip()
+        if not stripped:
+            cleaned_lines.append(line)
+            continue
+        # Keep @-rules, custom-properties, comments, selectors
+        if (
+            stripped.startswith("@")
+            or stripped.startswith("{")
+            or stripped.startswith("}")
+            or stripped.startswith("/*")
+            or stripped.startswith("*/")
+            or stripped.startswith("--")
+            or ":" in stripped
+            or stripped.startswith(".")
+            or stripped.startswith("#")
+            or stripped.startswith(":")
+            or stripped in {":root"}
+        ):
+            cleaned_lines.append(line)
+        # Otherwise drop — this is what causes "Invalid declaration: \n" in Tailwind v4
+    css = "\n".join(cleaned_lines)
     if "@import \"tailwindcss\"" not in css and "@import 'tailwindcss'" not in css:
         css = '@import "tailwindcss";\n' + css
     if "prefers-reduced-motion" not in css:
