@@ -458,6 +458,7 @@ async def executar_pipeline_completo(
 
             from agents.caio import CaioOutput
             from utils.agente1_hunter_v2 import LeadQualificado, LeadRaw
+from utils.safe_lead_qualificado import safe_qualificar
 
             with engine.connect() as _conn_reproc:
                 _row_reproc = _conn_reproc.execute(
@@ -491,15 +492,7 @@ async def executar_pipeline_completo(
                 atributos=_dados_r.get("atributos") or [],
                 servicos=_dados_r.get("servicos") or [],
             )
-            state.lead_obj = LeadQualificado(
-                lead=_lead_raw_r,
-                score=int(_ld.get("score") or 50),
-                tier=_ld.get("tier") or "STANDARD",
-                razoes=[],
-                sinais=[],
-                presenca_digital="SITE" if _lead_raw_r.website else "ZERO_PRESENCA",
-                dados_suficientes=True,
-            )
+            state.lead_obj = safe_qualificar(_lead_raw_r, _ld, log_fn=_log)
             state.lead_nome = _ld["nome"]
             _slug_norm = (
                 unicodedata.normalize("NFKD", state.lead_nome)
@@ -2827,6 +2820,7 @@ async def executar_pipeline_lead_existente(
     import json as _json
 
     from utils.agente1_hunter_v2 import LeadQualificado, LeadRaw
+from utils.safe_lead_qualificado import safe_qualificar
 
     # Carregar lead do banco — valida ownership pelo tenant_id
     with engine.connect() as conn:
