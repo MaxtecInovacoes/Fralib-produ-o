@@ -1,7 +1,8 @@
 /**
  * FraLib Admin - Audio Panel UI
  * Player flutuante (canto inferior direito) que controla o audio-player.
- * Cada usuário cola sua URL do YouTube - preferência salva no localStorage.
+ * Cada usuario escolhe uma estacao de uma lista curada - preferencia
+ * salva no localStorage. Campo de URL manual fica como opcao avancada.
  */
 (function () {
   'use strict';
@@ -9,8 +10,30 @@
   var PANEL_ID = 'fralib-audio-panel';
   var COLLAPSE_KEY = 'fralib_audio_panel_collapsed';
 
+  /**
+   * Lista curada de estacoes/radios. Cada entrada: { id, nome, genero, youtubeId }
+   * Live streams 24/7 do YouTube (sem anuncios, sem login).
+   * Usuario escolhe da lista, sem precisar colar link.
+   */
+  var STATIONS = [
+    { id: 'lofi-girl',   nome: 'Lofi Girl',        genero: 'Lofi / Chill',         youtubeId: 'jfKfPfyJRdk' },
+    { id: 'lofi-sleep',  nome: 'Lofi para Dormir', genero: 'Sleep / Calm',         youtubeId: 'rUxyKA_-grg' },
+    { id: 'jazz-lofi',   nome: 'Jazz Lofi',        genero: 'Jazz / Smooth',        youtubeId: '7NOSDKb0HlU' },
+    { id: 'chillhop',    nome: 'Chillhop',         genero: 'Hip Hop / Chill',      youtubeId: '5yx6BWlEVcY' },
+    { id: 'coffee-shop', nome: 'Coffee Shop',      genero: 'Acustico / Jazz',      youtubeId: 'lTRiuFIWV54' },
+    { id: 'synthwave',   nome: 'Synthwave Radio',  genero: 'Retro / Eletronico',   youtubeId: '4xDzrJKXOOY' },
+    { id: 'classical',   nome: 'Classica Focus',   genero: 'Classica / Piano',     youtubeId: 'M4OLRR0AVQI' },
+    { id: 'rain-sounds', nome: 'Chuva e Trovao',   genero: 'Natureza / ASMR',      youtubeId: 'q76bMs-NwRk' }
+  ];
+
   /** Cria o HTML do painel */
   function buildPanelHTML() {
+    var stationOptions = STATIONS.map(function (s) {
+      return '<option value="' + s.id + '" data-youtube-id="' + s.youtubeId + '">' +
+             s.nome + ' - ' + s.genero +
+             '</option>';
+    }).join('');
+
     return '' +
       '<div id="' + PANEL_ID + '" class="fralib-audio-panel" data-collapsed="false">' +
         '<button class="fralib-audio-toggle" id="fralib-audio-toggle" aria-label="Minimizar player" title="Minimizar">' +
@@ -27,10 +50,20 @@
             '<input type="range" class="fralib-audio-volume" id="fralib-audio-volume" min="0" max="50" value="20" aria-label="Volume">' +
             '<span class="fralib-audio-volume-label" id="fralib-audio-volume-label">20%</span>' +
           '</div>' +
-          '<div class="fralib-audio-url-row">' +
-            '<input type="text" class="fralib-audio-url" id="fralib-audio-url" placeholder="Cole URL do YouTube aqui..." aria-label="URL do YouTube">' +
-            '<button class="fralib-audio-load" id="fralib-audio-load">Carregar</button>' +
+          '<div class="fralib-audio-station-row">' +
+            '<label class="fralib-audio-label" for="fralib-audio-station">Estacao:</label>' +
+            '<select class="fralib-audio-station" id="fralib-audio-station" aria-label="Escolher estacao">' +
+              '<option value="">- Selecione uma estacao -</option>' +
+              stationOptions +
+            '</select>' +
           '</div>' +
+          '<details class="fralib-audio-advanced">' +
+            '<summary class="fralib-audio-advanced-toggle">URL personalizada do YouTube</summary>' +
+            '<div class="fralib-audio-url-row">' +
+              '<input type="text" class="fralib-audio-url" id="fralib-audio-url" placeholder="Cole URL do YouTube aqui..." aria-label="URL do YouTube">' +
+              '<button class="fralib-audio-load" id="fralib-audio-load">Carregar</button>' +
+            '</div>' +
+          '</details>' +
           '<div class="fralib-audio-error" id="fralib-audio-error" role="alert"></div>' +
         '</div>' +
       '</div>';
@@ -88,6 +121,24 @@
         'border:none;box-shadow:0 0 0 3px rgba(59,130,246,0.2);' +
       '}' +
       '.fralib-audio-volume-label{font-size:11px;color:#94a3b8;min-width:32px;text-align:right;}' +
+      '.fralib-audio-station-row{display:flex;flex-direction:column;gap:4px;margin-bottom:10px;}' +
+      '.fralib-audio-label{font-size:11px;color:#94a3b8;font-weight:500;}' +
+      '.fralib-audio-station{' +
+        'padding:8px 10px;border:1px solid rgba(148,163,184,0.2);border-radius:6px;' +
+        'background:rgba(15,23,42,0.6);color:#f1f5f9;font-size:13px;outline:none;' +
+        'cursor:pointer;transition:border-color 0.15s;' +
+      '}' +
+      '.fralib-audio-station:focus{border-color:#3b82f6;}' +
+      '.fralib-audio-station option{background:#1e293b;color:#f1f5f9;}' +
+      '.fralib-audio-advanced{margin-top:6px;}' +
+      '.fralib-audio-advanced-toggle{' +
+        'font-size:11px;color:#94a3b8;cursor:pointer;padding:4px 0;' +
+        'list-style:none;user-select:none;' +
+      '}' +
+      '.fralib-audio-advanced-toggle::-webkit-details-marker{display:none;}' +
+      '.fralib-audio-advanced-toggle::before{content:"▶ ";font-size:9px;display:inline-block;transition:transform 0.15s;}' +
+      '.fralib-audio-advanced[open] .fralib-audio-advanced-toggle::before{transform:rotate(90deg);}' +
+      '.fralib-audio-advanced-toggle:hover{color:#cbd5e1;}' +
       '.fralib-audio-url-row{display:flex;gap:6px;}' +
       '.fralib-audio-url{' +
         'flex:1;padding:6px 10px;border:1px solid rgba(148,163,184,0.2);border-radius:6px;' +
@@ -168,7 +219,7 @@
           if (st.videoId) {
             window.fralibAudio.resume();
           } else {
-            showError('Cole uma URL do YouTube primeiro');
+            showError('Escolha uma estacao no dropdown acima');
           }
         }
       });
@@ -185,7 +236,24 @@
       });
     }
 
-    // Botão Carregar
+    // Dropdown de estacao
+    var stationSelect = $('#fralib-audio-station');
+    if (stationSelect && window.fralibAudio) {
+      stationSelect.addEventListener('change', function () {
+        var selectedId = stationSelect.value;
+        if (!selectedId) return;
+        var station = STATIONS.find(function (s) { return s.id === selectedId; });
+        if (!station) return;
+        if (window.fralibAudio.playVideoId(station.youtubeId, station.nome)) {
+          localStorage.setItem('fralib_audio_station', selectedId);
+          showError('');
+        } else {
+          showError('Player nao inicializado ainda');
+        }
+      });
+    }
+
+    // Botão Carregar (URL manual)
     var loadBtn = $('#fralib-audio-load');
     var urlInput = $('#fralib-audio-url');
     if (loadBtn && urlInput) {
@@ -270,9 +338,17 @@
     if (window.fralibAudio) {
       window.fralibAudio.init().then(function () {
         var st = window.fralibAudio.getState();
-        // Restaurar URL no input
+        // Restaurar URL custom no input (so se for URL real, nao marker de estacao)
         var urlInput = $('#fralib-audio-url');
-        if (urlInput && st.url) urlInput.value = st.url;
+        if (urlInput && st.url && st.url.indexOf('[station]') !== 0) {
+          urlInput.value = st.url;
+        }
+        // Restaurar estacao selecionada no dropdown
+        var stationSelect = $('#fralib-audio-station');
+        var savedStation = localStorage.getItem('fralib_audio_station');
+        if (stationSelect && savedStation) {
+          stationSelect.value = savedStation;
+        }
         // Restaurar volume
         var volSlider = $('#fralib-audio-volume');
         var volLabel = $('#fralib-audio-volume-label');

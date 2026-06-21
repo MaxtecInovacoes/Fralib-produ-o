@@ -214,6 +214,26 @@
   }
 
   /**
+   * Carrega e toca um videoId direto (sem precisar de URL completa).
+   * Usado pela lista curada de estacoes.
+   * @param {string} videoId ID do YouTube (11 chars)
+   * @param {string} [label] rotulo opcional (ex: "Lofi Girl")
+   * @returns {boolean} true se carregou
+   */
+  function playVideoId(videoId, label) {
+    if (!videoId || !/^[a-zA-Z0-9_-]{11}$/.test(videoId)) return false;
+    state.url = label ? ('[station] ' + label) : videoId;
+    state.currentVideoId = videoId;
+    if (player && player.loadVideoById) {
+      player.loadVideoById(videoId);
+      player.setVolume(state.volume);
+      saveState();
+      return true;
+    }
+    return false;
+  }
+
+  /**
    * Pausa a reprodução atual.
    */
   function pause() {
@@ -297,6 +317,7 @@
   window.fralibAudio = {
     init: init,
     play: play,
+    playVideoId: playVideoId,
     pause: pause,
     resume: resume,
     setVolume: setVolume,
