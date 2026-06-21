@@ -277,21 +277,20 @@ async def executar_pipeline_completo(
     _log = lambda msg, tipo="info", **kwargs: adicionar_log(msg, tipo, user_id=tenant_id)
 
     def _progress(fase_num, label):
-        import json as _json_prog
-
         _phase_key = _pipeline_phase_key(fase_num, label)
         _set_pipeline_job_phase(config, tenant_id, _phase_key, label)
         adicionar_log(
-            _json_prog.dumps(
-                {
-                    "type": "progress",
-                    "fase": fase_num,
-                    "phase": _phase_key,
-                    "total": 11,
-                    "label": label,
-                    "percent": round(min(fase_num, 11) / 11 * 100),
-                }
-            ),
+            {
+                "type": "progress",
+                "event_kind": "pipeline_phase",
+                "fase": fase_num,
+                "phase": _phase_key,
+                "total": 11,
+                "label": label,
+                "percent": round(min(fase_num, 11) / 11 * 100),
+                "job_id": config.get("_job_id"),
+                "run_id": _run_id_context,
+            },
             "pipeline",
             user_id=tenant_id,
         )
@@ -458,7 +457,7 @@ async def executar_pipeline_completo(
 
             from agents.caio import CaioOutput
             from utils.agente1_hunter_v2 import LeadQualificado, LeadRaw
-from utils.safe_lead_qualificado import safe_qualificar
+            from utils.safe_lead_qualificado import safe_qualificar
 
             with engine.connect() as _conn_reproc:
                 _row_reproc = _conn_reproc.execute(
@@ -2820,7 +2819,7 @@ async def executar_pipeline_lead_existente(
     import json as _json
 
     from utils.agente1_hunter_v2 import LeadQualificado, LeadRaw
-from utils.safe_lead_qualificado import safe_qualificar
+    from utils.safe_lead_qualificado import safe_qualificar
 
     # Carregar lead do banco — valida ownership pelo tenant_id
     with engine.connect() as conn:

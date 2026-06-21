@@ -389,6 +389,17 @@
           '<div class="pw-eta">⏱ <strong id="pwElapsed">00:00</strong> &nbsp;·&nbsp; <span id="pwEta">aguardando medicoes</span></div>' +
           '<div class="pw-pct" id="pwPct">0%</div>' +
         '</div>' +
+        '<div class="pw-telemetry">' +
+          '<span>Tokens <strong id="pwTokens">0</strong></span>' +
+          '<span>Chamadas <strong id="pwCalls">0</strong></span>' +
+          '<span>Custo <strong id="pwCost">US$ 0,0000</strong></span>' +
+          '<span class="pw-job" id="pwJob">sem job ativo</span>' +
+        '</div>' +
+        '<button type="button" class="pw-log-toggle" id="pwLogToggle" aria-expanded="false" aria-controls="pwLivePanel">Acompanhar logs <span id="pwLogCount">0</span></button>' +
+        '<div class="pw-live-panel" id="pwLivePanel">' +
+          '<div class="pw-call-list" id="pwCallList"><div class="pw-empty">As chamadas LLM aparecerao aqui.</div></div>' +
+          '<div class="pw-log-list" id="pwLogList" aria-live="polite"><div class="pw-empty" id="pwLogEmpty">Os eventos desta execucao aparecerao aqui.</div></div>' +
+        '</div>' +
       '</div>';
   }
 
@@ -518,6 +529,8 @@
       stage.innerHTML = '<strong>' + ETAPAS[idx].label + '</strong> &middot; ' + escapeHtml(state.label);
     } else if (running) {
       stage.innerHTML = '<strong>' + ETAPAS[idx].label + '</strong>';
+    } else if (state.status === 'pending') {
+      stage.innerHTML = '<strong>na fila</strong> &middot; aguardando worker';
     } else if (state.status === 'completed') {
       stage.innerHTML = '<strong>concluido</strong> &middot; ultima execucao';
     } else if (state.status && state.status.indexOf('failed') === 0) {
@@ -530,6 +543,7 @@
 
     if (etaEl) {
       if (running) etaEl.textContent = 'medindo em tempo real';
+      else if (state.status === 'pending') etaEl.textContent = 'na fila · aguardando worker';
       else if (state.status === 'completed') etaEl.textContent = 'ultima execucao concluida';
       else etaEl.textContent = 'aguardando medicoes';
     }
@@ -590,8 +604,8 @@
     if (!data) return;
     var telemetry = data.telemetry || {};
     var job = data.current_job || data.latest_job || {};
-    state.running = Boolean(data.rodando);
     state.status = telemetry.status || job.status || (state.running ? 'running' : 'idle');
+    state.running = state.status === 'running';
     state.jobId = telemetry.job_id || job.id || null;
     state.runId = telemetry.run_id || job.run_id || null;
     state.elapsed = Number(telemetry.elapsed_seconds) || 0;

@@ -6,12 +6,13 @@
 4. Se mudou codigo, config, pipeline ou docs, atualizar este arquivo.
 5. Este arquivo deve ficar com no maximo 80 linhas.
 
-## Estado Atual (2026-06-20)
+## Estado Atual (2026-06-21)
 - Branch: master
 - Runtime: **systemd** (5 servicos) - PM2 removido, fallback via ServiceManager
 - ServiceManager: backend/services/service_manager.py (auto-detect systemd/pm2)
 - Admin API: /api/admin/services, /logs, /restart, /runtime, /incidents
 - Frontend: card "Servicos" mostra runtime primario (systemd/pm2)
+- Esteira Fra: status agrega jobs/spans/ledger; logs de pipeline chegam via SSE por tenant
 - Monolitos quebrados: vite_react_renderer, pipeline_orchestrator_service, leads_crud
 - Modulos extraidos de vite: vite_config, vite_prompts, vite_facts, file_extractor, validator, build_executor
 - Performance: cache node_modules, Caio+Jina asyncio.gather, Design Director cache 24h

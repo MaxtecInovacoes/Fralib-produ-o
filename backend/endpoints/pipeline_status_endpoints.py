@@ -1,4 +1,6 @@
 from fastapi import APIRouter, Depends
+from datetime import datetime
+
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 
@@ -67,7 +69,7 @@ def _current_pipeline_job(db: Session, tenant_id: int) -> dict | None:
         text(
             """
             SELECT id, tipo, status, last_phase, last_error, run_id,
-                   worker_heartbeat, iniciado_em, criado_em
+                   worker_heartbeat, iniciado_em, criado_em, concluido_em
             FROM jobs
             WHERE tenant_id = :tenant_id
               AND tipo IN ('pipeline_lead', 'pipeline_multiplos', 'pipeline_main')
@@ -98,6 +100,220 @@ def _current_pipeline_job(db: Session, tenant_id: int) -> dict | None:
         else None,
         "iniciado_em": row["iniciado_em"].isoformat() if row["iniciado_em"] else None,
         "criado_em": row["criado_em"].isoformat() if row["criado_em"] else None,
+        "concluido_em": row["concluido_em"].isoformat()
+        if row["concluido_em"]
+        else None,
+    }
+
+
+def _latest_pipeline_job(db: Session, tenant_id: int) -> dict | None:
+    row = db.execute(
+        text(
+            """
+            SELECT id, tipo, status, last_phase, last_error, run_id,
+                   worker_heartbeat, iniciado_em, criado_em, concluido_em
+            FROM jobs
+            WHERE tenant_id = :tenant_id
+              AND tipo IN ('pipeline_lead', 'pipeline_multiplos', 'pipeline_main')
+            ORDER BY COALESCE(iniciado_em, criado_em) DESC, id DESC
+            LIMIT 1
+            """
+        ),
+        {"tenant_id": tenant_id},
+    ).mappings().first()
+    if not row:
+        return None
+    phase_num, phase_label = _phase_info(row.get("last_phase"))
+    return {
+        "id": row["id"],
+        "tipo": row["tipo"],
+        "status": row["status"],
+        "last_phase": row["last_phase"],
+        "phase_num": phase_num,
+        "phase_label": phase_label,
+        "last_error": (row["last_error"] or "")[:500]
+        if row["last_error"]
+        else None,
+        "run_id": row["run_id"],
+        "worker_heartbeat": row["worker_heartbeat"].isoformat()
+        if row["worker_heartbeat"]
+        else None,
+        "iniciado_em": row["iniciado_em"].isoformat()
+        if row["iniciado_em"]
+        else None,
+        "criado_em": row["criado_em"].isoformat() if row["criado_em"] else None,
+        "concluido_em": row["concluido_em"].isoformat()
+        if row["concluido_em"]
+        else None,
+    }
+
+
+def _elapsed_seconds(job: dict) -> int:
+    start_raw = job.get("iniciado_em")
+    if not start_raw:
+        return 0
+    try:
+        started = datetime.fromisoformat(str(start_raw))
+        finished_raw = job.get("concluido_em")
+        finished = datetime.fromisoformat(str(finished_raw)) if finished_raw else None
+        now = datetime.now(tz=started.tzinfo) if started.tzinfo else datetime.now()
+        return max(0, int(((finished or now) - started).total_seconds()))
+    except (TypeError, ValueError):
+        return 0
+
+
+def _queued_seconds(job: dict) -> int:
+    queued_raw = job.get("criado_em")
+    if not queued_raw:
+        return 0
+    try:
+        queued = datetime.fromisoformat(str(queued_raw))
+        started_raw = job.get("iniciado_em")
+        started = datetime.fromisoformat(str(started_raw)) if started_raw else None
+        now = datetime.now(tz=queued.tzinfo) if queued.tzinfo else datetime.now()
+        return max(0, int(((started or now) - queued).total_seconds()))
+    except (TypeError, ValueError):
+        return 0
+
+
+def _pipeline_job_telemetry(db: Session, tenant_id: int, job: dict | None) -> dict | None:
+    if not job:
+        return None
+
+    run_id = job.get("run_id")
+    job_id = job.get("id")
+    phases = []
+    llm_by_phase = []
+
+    if run_id:
+        try:
+            rows = db.execute(
+                text(
+                    """
+                    SELECT fase_num, fase_nome, agente, modelo, status,
+                           started_at, finished_at, duracao_ms,
+                           input_tokens, output_tokens, cache_read_tokens,
+                           cache_created_tokens, custo_usd, erro
+                    FROM pipeline_run_spans
+                    WHERE tenant_id = :tenant_id AND run_id = :run_id
+                    ORDER BY started_at ASC, fase_num ASC, id ASC
+                    """
+                ),
+                {"tenant_id": tenant_id, "run_id": run_id},
+            ).mappings().all()
+            for row in rows:
+                phase_num = row.get("fase_num")
+                if not phase_num:
+                    phase_num, _ = _phase_info(row.get("fase_nome"))
+                phases.append(
+                    {
+                        "phase_num": phase_num,
+                        "phase": str(row.get("fase_nome") or ""),
+                        "agent": str(row.get("agente") or ""),
+                        "model": str(row.get("modelo") or ""),
+                        "status": str(row.get("status") or "unknown"),
+                        "started_at": row["started_at"].isoformat()
+                        if row.get("started_at")
+                        else None,
+                        "finished_at": row["finished_at"].isoformat()
+                        if row.get("finished_at")
+                        else None,
+                        "duration_ms": int(row.get("duracao_ms") or 0),
+                        "input_tokens": int(row.get("input_tokens") or 0),
+                        "output_tokens": int(row.get("output_tokens") or 0),
+                        "cache_read_tokens": int(
+                            row.get("cache_read_tokens") or 0
+                        ),
+                        "cache_created_tokens": int(
+                            row.get("cache_created_tokens") or 0
+                        ),
+                        "cost_usd": float(row.get("custo_usd") or 0),
+                        "error": str(row.get("erro") or "")[:300] or None,
+                    }
+                )
+        except Exception:
+            db.rollback()
+
+    if job_id or run_id:
+        try:
+            rows = db.execute(
+                text(
+                    """
+                    SELECT COALESCE(NULLIF(phase, ''), 'unknown') AS phase,
+                           COALESCE(NULLIF(agent, ''), 'unknown') AS agent,
+                           COALESCE(NULLIF(provider, ''), 'unknown') AS provider,
+                           model,
+                           COUNT(*) AS calls,
+                           COALESCE(SUM(input_tokens), 0) AS input_tokens,
+                           COALESCE(SUM(output_tokens), 0) AS output_tokens,
+                           COALESCE(SUM(cache_read_tokens), 0) AS cache_read_tokens,
+                           COALESCE(SUM(cache_created_tokens), 0) AS cache_created_tokens,
+                           COALESCE(SUM(cost_usd), 0) AS cost_usd,
+                           COALESCE(SUM(latency_ms), 0) AS latency_ms
+                    FROM llm_budget_ledger
+                    WHERE tenant_id = :tenant_id
+                      AND (
+                            (:job_id IS NOT NULL AND job_id = :job_id)
+                         OR (job_id IS NULL AND :run_id IS NOT NULL AND run_id = :run_id)
+                      )
+                    GROUP BY phase, agent, provider, model
+                    ORDER BY MIN(created_at) ASC
+                    """
+                ),
+                {"tenant_id": tenant_id, "job_id": job_id, "run_id": run_id},
+            ).mappings().all()
+            llm_by_phase = [
+                {
+                    "phase": str(row.get("phase") or "unknown"),
+                    "agent": str(row.get("agent") or "unknown"),
+                    "provider": str(row.get("provider") or "unknown"),
+                    "model": str(row.get("model") or "unknown"),
+                    "calls": int(row.get("calls") or 0),
+                    "input_tokens": int(row.get("input_tokens") or 0),
+                    "output_tokens": int(row.get("output_tokens") or 0),
+                    "cache_read_tokens": int(row.get("cache_read_tokens") or 0),
+                    "cache_created_tokens": int(
+                        row.get("cache_created_tokens") or 0
+                    ),
+                    "cost_usd": float(row.get("cost_usd") or 0),
+                    "latency_ms": int(row.get("latency_ms") or 0),
+                }
+                for row in rows
+            ]
+        except Exception:
+            db.rollback()
+
+    totals = {
+        "calls": sum(item["calls"] for item in llm_by_phase),
+        "input_tokens": sum(item["input_tokens"] for item in llm_by_phase),
+        "output_tokens": sum(item["output_tokens"] for item in llm_by_phase),
+        "cache_read_tokens": sum(
+            item["cache_read_tokens"] for item in llm_by_phase
+        ),
+        "cache_created_tokens": sum(
+            item["cache_created_tokens"] for item in llm_by_phase
+        ),
+        "cost_usd": round(sum(item["cost_usd"] for item in llm_by_phase), 6),
+        "latency_ms": sum(item["latency_ms"] for item in llm_by_phase),
+    }
+    totals["total_tokens"] = (
+        totals["input_tokens"]
+        + totals["output_tokens"]
+        + totals["cache_read_tokens"]
+        + totals["cache_created_tokens"]
+    )
+
+    return {
+        "job_id": job_id,
+        "run_id": run_id,
+        "status": job.get("status"),
+        "started_at": job.get("iniciado_em") or job.get("criado_em"),
+        "finished_at": job.get("concluido_em"),
+        "elapsed_seconds": _elapsed_seconds(job),
+        "queued_seconds": _queued_seconds(job),
+        "phases": phases,
+        "llm": {"totals": totals, "by_phase": llm_by_phase},
+        "measured": bool(phases or llm_by_phase),
     }
 
 
@@ -210,6 +426,7 @@ async def get_status(db: Session = Depends(get_db), usuario: dict = Depends(get_
     tenant_id = usuario.get("tenant_id", usuario["id"])
     state = get_pipeline_state(db, tenant_id)
     current_job = _current_pipeline_job(db, tenant_id)
+    latest_job = current_job or _latest_pipeline_job(db, tenant_id)
     total_leads = db.execute(text("SELECT COUNT(*) FROM leads WHERE user_id=:uid"), {"uid": tenant_id}).scalar() or 0
     total_sites = db.execute(text("SELECT COUNT(*) FROM leads WHERE user_id=:uid AND (site_url IS NOT NULL AND site_url != '' OR url_site IS NOT NULL AND url_site != '')"), {"uid": tenant_id}).scalar() or 0
     total_enviados = db.execute(text("SELECT COUNT(*) FROM leads WHERE user_id=:uid AND status = 'contatado'"), {"uid": tenant_id}).scalar() or 0
@@ -235,7 +452,8 @@ async def get_status(db: Session = Depends(get_db), usuario: dict = Depends(get_
     except Exception:
         pass
     rodando = bool(current_job and current_job.get("status") in {"running", "pending", "failed_retriable"})
-    return {"rodando": rodando, "pausado": state["pausado"], "config": state["config"], "iniciado_em": state.get("iniciado_em").isoformat() if state.get("iniciado_em") else None, "totalLeads": total_leads, "totalSites": total_sites, "totalEnviados": total_enviados, "cicloAtual": ciclo_atual, "checkpoint": _ckpt_info, "ultimo_erro": _ultimo_erro, "cooldown": _cooldown_info, "pipeline_id": _pid, "current_job": current_job, "fase_atual": current_job.get("last_phase") if current_job else None, "fase_num": current_job.get("phase_num") if current_job else None, "fase_label": current_job.get("phase_label") if current_job else None}
+    telemetry = _pipeline_job_telemetry(db, tenant_id, latest_job)
+    return {"rodando": rodando, "pausado": state["pausado"], "config": state["config"], "iniciado_em": state.get("iniciado_em").isoformat() if state.get("iniciado_em") else None, "totalLeads": total_leads, "totalSites": total_sites, "totalEnviados": total_enviados, "cicloAtual": ciclo_atual, "checkpoint": _ckpt_info, "ultimo_erro": _ultimo_erro, "cooldown": _cooldown_info, "pipeline_id": _pid, "current_job": current_job, "latest_job": latest_job, "telemetry": telemetry, "fase_atual": current_job.get("last_phase") if current_job else None, "fase_num": current_job.get("phase_num") if current_job else None, "fase_label": current_job.get("phase_label") if current_job else None}
 
 
 @router.get("/stats")

@@ -99,7 +99,35 @@ def _get_notify_conn():
             return None
 
 
-def _pg_notify(mensagem: str, tipo: str, user_id=None) -> bool:
+def _build_log_entry(mensagem, tipo: str) -> dict:
+    evento = _TIPO_EVENTO.get(tipo.lower(), "INFO")
+    structured = mensagem if isinstance(mensagem, dict) else None
+    raw_message = mensagem if isinstance(mensagem, str) else ""
+    if structured is None and raw_message.lstrip().startswith("{"):
+        try:
+            parsed = json.loads(raw_message)
+            structured = parsed if isinstance(parsed, dict) else None
+        except (TypeError, ValueError, json.JSONDecodeError):
+            structured = None
+
+    log_entry = {
+        "evento": evento,
+        "mensagem": raw_message or str(mensagem),
+        "ts": datetime.now().strftime("%H:%M:%S"),
+    }
+    if structured:
+        for key, value in structured.items():
+            if key not in {"evento", "ts"}:
+                log_entry[key] = value
+        log_entry["mensagem"] = str(
+            structured.get("mensagem")
+            or structured.get("label")
+            or log_entry["mensagem"]
+        )
+    return log_entry
+
+
+def _pg_notify(mensagem, tipo: str, user_id=None) -> bool:
     """
     Publica log via pg_notify no canal do usuário.
     Usa conexão persistente para evitar overhead de connect/close a cada chamada.
@@ -112,12 +140,7 @@ def _pg_notify(mensagem: str, tipo: str, user_id=None) -> bool:
     if _notify_lock is None:
         _notify_lock = threading.Lock()
     try:
-        evento = _TIPO_EVENTO.get(tipo.lower(), "INFO")
-        log_entry = {
-            "evento": evento,
-            "mensagem": mensagem,
-            "ts": datetime.now().strftime("%H:%M:%S"),
-        }
+        log_entry = _build_log_entry(mensagem, tipo)
         payload = json.dumps(log_entry, ensure_ascii=False)
         payload_safe = payload.replace("'", "''")[:7900]
         canal = f"fralib_logs_{user_id}" if user_id else "fralib_logs"
@@ -305,7 +328,7 @@ _TIPO_EVENTO = {
 # ===== ADICIONAR LOG =====
 
 
-def adicionar_log(mensagem: str, tipo: str = "info", user_id=None):
+def adicionar_log(mensagem, tipo: str = "info", user_id=None):
     """
     Publica log via pg_notify no canal privado do usuário.
     user_id: int ou str do usuário dono do pipeline.
@@ -313,12 +336,7 @@ def adicionar_log(mensagem: str, tipo: str = "info", user_id=None):
     Fallback automático para deque em memória se PostgreSQL falhar.
     Assinatura compatível com versão anterior (user_id é opcional).
     """
-    evento = _TIPO_EVENTO.get(tipo.lower(), "INFO")
-    log_entry = {
-        "evento": evento,
-        "mensagem": mensagem,
-        "ts": datetime.now().strftime("%H:%M:%S"),
-    }
+    log_entry = _build_log_entry(mensagem, tipo)
 
     if not _pg_notify(mensagem, tipo, user_id):
         # Fallback: deque em memória por user_id
