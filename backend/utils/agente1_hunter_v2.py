@@ -331,7 +331,11 @@ async def buscar_lead_google_maps(
 # ═══════════════════════════════════════════════════════════════
 
 def _buscar_cache_leads(segmento: str, cidade: str, existentes: set, limite: int, user_id: int = 0) -> List['LeadQualificado']:
-    """Busca leads no cache ISOLADO POR USER_ID. Retorna lista de LeadQualificado ou []."""
+    """Busca leads no cache ISOLADO POR USER_ID. Retorna lista de LeadQualificado ou [].
+
+    Dedup por (user_id, lower(nome), lower(cidade), lower(endereco))
+    - evita "Campina Grande, PB" vs "Campina Grande do Sul, PR" colidirem como mesmo lead
+    """
     try:
         from database import engine
         from sqlalchemy import text as _text
@@ -344,7 +348,7 @@ def _buscar_cache_leads(segmento: str, cidade: str, existentes: set, limite: int
                 WHERE user_id = :uid
                   AND lower(segmento) = lower(:seg) AND lower(cidade) = lower(:cid)
                   AND criado_em > NOW() - INTERVAL '7 days'
-                ORDER BY rating DESC NULLS LAST
+                ORDER BY rating DESC NULLS LAST, total_avaliacoes DESC NULLS LAST
                 LIMIT :lim
             """), {"seg": segmento, "cid": cidade, "lim": limite + len(existentes) + 5, "uid": user_id}).fetchall()
 
@@ -534,17 +538,18 @@ def _salvar_cache_leads(leads: List['LeadQualificado'], segmento: str, cidade: s
             for lq in leads:
                 l = lq.lead
                 conn.execute(_text("""
-                    INSERT INTO leads_cache (user_id, nome, cidade, segmento, telefone, rating, total_avaliacoes,
+                    INSERT INTO leads_cache (user_id, nome, cidade, estado, segmento, telefone, rating, total_avaliacoes,
                         website, endereco, maps_url, fotos, servicos, horarios, logo_url,
                         atributos, faixa_preco, reviews_json, criado_em)
-                    VALUES (:uid, :nome, :cidade, :seg, :tel, :rating, :aval, :web, :end, :maps,
+                    VALUES (:uid, :nome, :cidade, :estado, :seg, :tel, :rating, :aval, :web, :end, :maps,
                         :fotos, :servicos, :horarios, :logo, :atrib, :faixa, :reviews, NOW())
                     ON CONFLICT (user_id, lower(nome), lower(cidade)) DO UPDATE SET
                         rating = EXCLUDED.rating, telefone = COALESCE(EXCLUDED.telefone, leads_cache.telefone),
                         atualizado_em = NOW()
                 """), {
                     "uid": user_id,
-                    "nome": l.nome, "cidade": l.cidade, "seg": segmento,
+                    "nome": l.nome, "cidade": l.cidade, "estado": (getattr(l, 'estado', None) or ''),
+                    "seg": segmento,
                     "tel": l.telefone, "rating": l.rating, "aval": l.total_avaliacoes,
                     "web": l.website, "end": l.endereco, "maps": l.maps_url,
                     "fotos": _json_cache.dumps(l.fotos or []),

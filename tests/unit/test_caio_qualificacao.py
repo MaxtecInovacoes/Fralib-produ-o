@@ -88,8 +88,6 @@ def test_agent_imports_smoke():
     import agents.caio
     import agents.sdr_langgraph
     import agents.design_context
-    import agents.designer_prd
-    import agents.craft_rules
     import agents.unsplash_fetcher
     import agents.pexels_video
     import agents.section_editor

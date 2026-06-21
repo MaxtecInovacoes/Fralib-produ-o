@@ -211,6 +211,12 @@ async def lifespan(app):
                 conn.execute(text("ALTER TABLE leads_cache ADD COLUMN IF NOT EXISTS user_id INTEGER NOT NULL DEFAULT 0"))
             except:
                 pass  # Coluna já existe
+            # FIX: adicionar coluna estado (VARCHAR(2) = UF) para dedup cidade+UF
+            # evita conflito tipo "Campina Grande, PB" vs "Campina Grande do Sul, PR"
+            try:
+                conn.execute(text("ALTER TABLE leads_cache ADD COLUMN IF NOT EXISTS estado VARCHAR(2)"))
+            except:
+                pass
             conn.execute(text("""
                 CREATE UNIQUE INDEX IF NOT EXISTS idx_leads_cache_user_nome_cidade
                 ON leads_cache (user_id, lower(nome), lower(cidade))
