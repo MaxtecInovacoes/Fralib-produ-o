@@ -24,7 +24,6 @@ FIXED_PACKAGE_JSON = {
         "@vitejs/plugin-react": "^4.3.3",
         "typescript": "^5.7.2",
         "vite": "^6.0.0",
-        "vite-plugin-prerender-spa": "^1.2.3",
     },
 }
 
