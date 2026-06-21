@@ -119,6 +119,19 @@ def test_sdr_paths_require_plan_gate():
     assert "lower(COALESCE(u.status, '')) NOT IN ('bloqueado','suspenso','cancelado','inadimplente')" in cron
 
 
+def test_worker_exceptions_are_marked_as_job_failures():
+    worker = _read("worker.py")
+    process_block = worker[
+        worker.index("async def _process_one") :
+        worker.index("async def _main_loop")
+    ]
+
+    assert "except asyncio.TimeoutError:" in process_block
+    assert "except Exception as exc:" in process_block
+    assert 'sucesso, fase, mensagem = False, "worker_exception", str(exc)' in process_block
+    assert "job_queue.mark_failure" in process_block
+
+
 def test_trial_credit_is_consumed_only_after_franz_send_success():
     credits = _read("backend/services/credits_manager.py")
     pipeline = _read("backend/endpoints/pipeline_orchestrator_service.py")

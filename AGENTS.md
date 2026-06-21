@@ -17,7 +17,7 @@
 - Modulos extraidos de vite: vite_config, vite_prompts, vite_facts, file_extractor, validator, build_executor
 - Performance: cache node_modules, Caio+Jina asyncio.gather, Design Director cache 24h
 - Backup: PostgreSQL diario 02:00 UTC (7d/4w retencao) - scripts/backup_postgres.sh
-- Bugs corrigidos: IDOR, OAuth CSRF, CORS, Leads Cache, Revoke Token fail-open, valor_venda lock
+- Bugs corrigidos: IDOR, OAuth CSRF, CORS, Leads Cache, Revoke Token fail-open, valor_venda, worker zumbi
 
 ## Decisoes Pausadas (NAO implementar ate gatilho)
 | Melhoria | Gatilho para reativar |

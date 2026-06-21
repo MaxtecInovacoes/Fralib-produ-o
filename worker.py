@@ -611,6 +611,8 @@ async def _process_one(job: dict) -> None:
             sucesso, fase, mensagem = await asyncio.wait_for(_executar_job(job), timeout=JOB_MAX_SECS)
         except asyncio.TimeoutError:
             sucesso, fase, mensagem = False, "worker_timeout", f"job excedeu timeout de {JOB_MAX_SECS}s"
+        except Exception as exc:
+            sucesso, fase, mensagem = False, "worker_exception", str(exc)
     finally:
         stop_event.set()
         hb_thread.join(timeout=5)
