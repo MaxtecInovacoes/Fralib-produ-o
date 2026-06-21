@@ -178,6 +178,44 @@ def test_regression_tenant_failures():
     return r
 
 
+def test_no_legacy_litellm_aliases():
+    r = TestRunner()
+    r.section("BUG #3: aliases fralib-* eliminados")
+
+    # 1. Whitelist canonica sem fralib-*
+    from backend.core.proxy_models import PROXY_MODEL_OPTIONS, ALLOWED_PROXY_MODELS
+    legacy = [m["id"] for m in PROXY_MODEL_OPTIONS if m["id"].startswith("fralib-")]
+    r.assert_(len(legacy) == 0, f"PROXY_MODEL_OPTIONS sem fralib-* (achou: {legacy})")
+
+    # 2. ALLOWED_PROXY_MODELS sem fralib-*
+    r.assert_(not any(m.startswith("fralib-") for m in ALLOWED_PROXY_MODELS),
+              "ALLOWED_PROXY_MODELS sem fralib-*")
+
+    # 3. llm_pricing limpo
+    from backend.domain.llm_pricing import MODEL_PRICES
+    legacy_prices = [k for k in MODEL_PRICES if k.startswith("fralib-")]
+    r.assert_(len(legacy_prices) == 0, f"MODEL_PRICES sem fralib-* (achou: {legacy_prices})")
+
+    # 4. set_agent_models_proxy_pool.py sem aliases de modelo fralib-*
+    pool_script = (PROJECT_ROOT / "scripts" / "set_agent_models_proxy_pool.py").read_text()
+    bad_aliases = re.findall(r'"fralib-(?:fast-cheap|json-repair|agent-balanced|research|builder-strong)"', pool_script)
+    r.assert_(len(bad_aliases) == 0,
+              f"set_agent_models_proxy_pool.py sem aliases de modelo fralib-* (achou: {bad_aliases})")
+
+    # 5. vps_apply_prod_runtime.py sem LOCAL_PROXY_* fralib-* (modelos de proxy)
+    vps_script = (PROJECT_ROOT / "scripts" / "vps_apply_prod_runtime.py").read_text()
+    bad_vps = re.findall(r'"fralib-(?:fast-cheap|json-repair|agent-balanced|research|builder-strong)"', vps_script)
+    r.assert_(len(bad_vps) == 0,
+              f"vps_apply_prod_runtime.py sem LOCAL_PROXY_* fralib-* (achou: {bad_vps})")
+
+    # 6. Migracao canonica contem clausula de limpeza (valida texto, sem importar)
+    db_src = (PROJECT_ROOT / "backend" / "core" / "database.py").read_text(encoding="utf-8", errors="ignore")
+    r.assert_("model_id LIKE 'fralib-%'" in db_src,
+              "database.py tem UPDATE WHERE model_id LIKE 'fralib-%'")
+
+    return r
+
+
 def main():
     print("=" * 60)
     print(" ECC LOOP - TESTES BUG FIXES (2 bugs corrigidos)")
@@ -186,9 +224,10 @@ def main():
     r1 = test_bug_enqueue_caio()
     r2 = test_bug_lead_qualificado()
     r3 = test_regression_tenant_failures()
+    r4 = test_no_legacy_litellm_aliases()
 
-    total = r1.passed + r1.failed + r2.passed + r2.failed + r3.passed + r3.failed
-    passed = r1.passed + r2.passed + r3.passed
+    total = r1.passed + r1.failed + r2.passed + r2.failed + r3.passed + r3.failed + r4.passed + r4.failed
+    passed = r1.passed + r2.passed + r3.passed + r4.passed
     failed = total - passed
 
     print("\n" + "=" * 60)

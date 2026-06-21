@@ -29,11 +29,6 @@ class ModelPrice:
 
 
 MODEL_PRICES: dict[str, ModelPrice] = {
-    "fralib-fast-cheap": ModelPrice(Decimal("0.0"), Decimal("0.0")),
-    "fralib-json-repair": ModelPrice(Decimal("0.0"), Decimal("0.0")),
-    "fralib-agent-balanced": ModelPrice(Decimal("0.0"), Decimal("0.0")),
-    "fralib-research": ModelPrice(Decimal("0.0"), Decimal("0.0")),
-    "fralib-builder-strong": ModelPrice(Decimal("0.0"), Decimal("0.0")),
     "claude-opus-4-8": ModelPrice(Decimal("5.0"), Decimal("25.0"), Decimal("6.25"), Decimal("0.50")),
     "claude-opus-4-20250514": ModelPrice(Decimal("5.0"), Decimal("25.0"), Decimal("6.25"), Decimal("0.50")),
     "claude-opus-4-7": ModelPrice(Decimal("15.0"), Decimal("75.0"), Decimal("18.75"), Decimal("1.50")),

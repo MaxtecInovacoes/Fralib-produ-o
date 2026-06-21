@@ -1,4 +1,8 @@
-"""Set FraLib agents to the canonical LiteLLM proxy pool aliases."""
+"""Set FraLib agents to the canonical proxy pool model IDs.
+
+NOTA: aliases `fralib-*` foram removidos em 2026-06-21 (fix do 401 jina_intel).
+Modelos canônicos agora apontam para IDs reais do pool.
+"""
 
 from __future__ import annotations
 
@@ -13,15 +17,15 @@ from sqlalchemy import create_engine, text
 ROOT = Path(__file__).resolve().parents[1]
 
 AGENT_CONFIGS: dict[str, tuple[str, float, int]] = {
-    "agente_nicho": ("fralib-fast-cheap", 0.30, 4000),
-    "agente_variacao": ("fralib-json-repair", 0.35, 1500),
-    "validador": ("fralib-json-repair", 0.20, 2000),
-    "arquiteto_mestre": ("fralib-agent-balanced", 0.35, 6000),
-    "designer_prd": ("fralib-agent-balanced", 0.35, 6000),
-    "curadoria": ("fralib-agent-balanced", 0.40, 3000),
-    "jina_intel": ("fralib-research", 0.30, 3500),
-    "franz": ("fralib-agent-balanced", 0.45, 1200),
-    "builder_renderer": ("fralib-builder-strong", 0.55, 36000),
+    "agente_nicho": ("claude-haiku-4-5", 0.30, 4000),
+    "agente_variacao": ("claude-haiku-4-5", 0.35, 1500),
+    "validador": ("claude-haiku-4-5", 0.20, 2000),
+    "arquiteto_mestre": ("claude-sonnet-4-6", 0.35, 6000),
+    "designer_prd": ("claude-sonnet-4-6", 0.35, 6000),
+    "curadoria": ("claude-sonnet-4-6", 0.40, 3000),
+    "jina_intel": ("claude-sonnet-4-6", 0.30, 3500),
+    "franz": ("claude-sonnet-4-6", 0.45, 1200),
+    "builder_renderer": ("claude-opus-4-8", 0.55, 36000),
 }
 
 
@@ -34,7 +38,7 @@ def _load_env() -> None:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Aplica aliases canonicos LiteLLM aos agentes")
+    parser = argparse.ArgumentParser(description="Aplica modelos canonicos do proxy pool aos agentes FraLib")
     parser.add_argument("--apply", action="store_true")
     args = parser.parse_args()
 

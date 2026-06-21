@@ -10,31 +10,6 @@ PROXY_BASE_URL_DEFAULT = "https://llm.seunegociofralib.site"
 
 PROXY_MODEL_OPTIONS = [
     {
-        "id": "fralib-fast-cheap",
-        "label": "FraLib fast/free pool via LiteLLM",
-        "tier": "light",
-    },
-    {
-        "id": "fralib-json-repair",
-        "label": "FraLib strict JSON repair pool via LiteLLM",
-        "tier": "light",
-    },
-    {
-        "id": "fralib-agent-balanced",
-        "label": "FraLib balanced agent pool via LiteLLM",
-        "tier": "medium",
-    },
-    {
-        "id": "fralib-research",
-        "label": "FraLib research pool via LiteLLM",
-        "tier": "medium",
-    },
-    {
-        "id": "fralib-builder-strong",
-        "label": "FraLib Builder/coding pool via LiteLLM",
-        "tier": "heavy",
-    },
-    {
         "id": "claude-haiku-4-5",
         "label": "Legacy light alias via llm.seunegociofralib.site",
         "tier": "light",

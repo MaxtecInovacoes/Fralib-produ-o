@@ -28,9 +28,9 @@ NAMEHOST_LIGHT_MODEL = "claude-sonnet-4-6"
 NAMEHOST_DEFAULT_MODEL = "claude-sonnet-4-6"
 NAMEHOST_BUILDER_MODEL = "claude-sonnet-4-6"
 LOCAL_PROXY_BASE_URL = "http://127.0.0.1:4000/v1"
-LOCAL_PROXY_LIGHT_MODEL = "fralib-fast-cheap"
-LOCAL_PROXY_DEFAULT_MODEL = "fralib-agent-balanced"
-LOCAL_PROXY_BUILDER_MODEL = "fralib-builder-strong"
+LOCAL_PROXY_LIGHT_MODEL = "claude-haiku-4-5"
+LOCAL_PROXY_DEFAULT_MODEL = "claude-sonnet-4-6"
+LOCAL_PROXY_BUILDER_MODEL = "claude-opus-4-8"
 
 
 def _fail(message: str, code: int = 1) -> None:

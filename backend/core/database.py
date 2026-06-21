@@ -544,6 +544,18 @@ def inicializar_database():
                 """,
                 {"provider": PROXY_PROVIDER, "builder_model": PROXY_BUILDER_MODEL},
             ),
+            (
+                """
+                UPDATE agent_model_configs
+                   SET provider = :provider,
+                       model_id = :default_model,
+                       fallback_provider = NULL,
+                       fallback_model_id = NULL,
+                       atualizado_em = NOW()
+                 WHERE model_id LIKE 'fralib-%'
+                """,
+                {"provider": PROXY_PROVIDER, "default_model": PROXY_DEFAULT_MODEL},
+            ),
         ):
             conn.execute(text(statement), params)
         conn.execute(text("DELETE FROM agent_model_configs WHERE agent_name = 'bryan'"))
@@ -778,11 +790,9 @@ def inicializar_database():
                 ('anthropic', 'claude-sonnet-4-20250514', 45, 40000, 1, 75.00, 60),
                 ('anthropic', 'claude-haiku-4-5', 90, 50000, 1, 35.00, 30),
                 ('anthropic', 'claude-haiku-4-20250514', 90, 50000, 1, 35.00, 30),
-                ('anthropic', 'fralib-fast-cheap', 60, 50000, 1, 0.00, 900),
-                ('anthropic', 'fralib-json-repair', 45, 50000, 1, 0.00, 900),
-                ('anthropic', 'fralib-agent-balanced', 30, 40000, 1, 0.00, 900),
-                ('anthropic', 'fralib-research', 20, 40000, 1, 0.00, 900),
-                ('anthropic', 'fralib-builder-strong', 10, 40000, 1, 0.00, 900),
+                ('anthropic', 'claude-haiku-4-5', 90, 50000, 1, 0.00, 30),
+                ('anthropic', 'claude-sonnet-4-6', 45, 40000, 1, 0.00, 60),
+                ('anthropic', 'claude-opus-4-8', 30, 30000, 1, 0.00, 90),
                 ('anthropic', 'fast', 90, 50000, 1, 35.00, 30),
                 ('anthropic', 'gpt-5.4-mini', 90, 50000, 1, 35.00, 30),
                 ('anthropic', 'deepseek-v4-flash', 45, 40000, 1, 75.00, 60),
