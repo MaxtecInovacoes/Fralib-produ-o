@@ -320,7 +320,5 @@ __all__ = [
 
 # Compat: re-exporta _enqueue_caio do modulo inventory
 # (algum codigo tenta importar daqui - nao quebrar)
-def _enqueue_caio(db: Session, tenant_id: int, inventory_id: str) -> None:
-    """Re-export de lead_supply_inventory._enqueue_caio (compat)."""
-    from backend.services.lead_supply_inventory import _enqueue_caio as _real_fn
-    return _real_fn(db, tenant_id, inventory_id)
+# Usa importlazy para garantir que a funcao ORIGINAL seja referenciada
+from backend.services.lead_supply_inventory import _enqueue_caio  # noqa: F401

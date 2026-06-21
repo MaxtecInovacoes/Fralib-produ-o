@@ -28,16 +28,6 @@ TypeScript project. Return one strict JSON object only, no markdown:
     "src/components/Navbar.tsx": "...",
     "src/components/HeroSection.tsx": "...",
     "src/components/<Section2>.tsx": "...",
-
-
-# Few-shot + negative examples (#4, #7) - injetados em runtime
-try:
-    from backend.agents.few_shot_examples import build_few_shot_block
-    VITE_REACT_SYSTEM_PROMPT_FOOT = build_few_shot_block()
-except Exception:
-    VITE_REACT_SYSTEM_PROMPT_FOOT = ""
-
-VITE_REACT_SYSTEM_PROMPT = VITE_REACT_SYSTEM_PROMPT_HEAD + VITE_REACT_SYSTEM_PROMPT_FOOT
     "src/components/<Section3>.tsx": "...",
     "src/components/<Section4>.tsx": "...",
     "src/components/<Section5>.tsx": "...",
@@ -49,6 +39,19 @@ VITE_REACT_SYSTEM_PROMPT = VITE_REACT_SYSTEM_PROMPT_HEAD + VITE_REACT_SYSTEM_PRO
     "src/components/Pricing.tsx": "...",
     "src/components/Faq.tsx": "..."
   }
+
+
+# Few-shot + negative examples (#4, #7) - injetados em runtime
+def _build_few_shot_prompt() -> str:
+    """Lazy load few-shot examples. Falha silenciosa se modulo nao existir."""
+    try:
+        from backend.agents.few_shot_examples import build_few_shot_block
+        return build_few_shot_block()
+    except Exception:
+        return ""
+
+VITE_REACT_SYSTEM_PROMPT_FOOT = _build_few_shot_prompt()
+VITE_REACT_SYSTEM_PROMPT = VITE_REACT_SYSTEM_PROMPT_HEAD + VITE_REACT_SYSTEM_PROMPT_FOOT
 }
 
 LANGUAGE (CRITICAL):

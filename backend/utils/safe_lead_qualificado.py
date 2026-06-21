@@ -45,9 +45,22 @@ def safe_qualificar(
     elif isinstance(lead_raw, str) or lead_raw is None:
         _log(f"[safe_qualificar] lead_raw={type(lead_raw).__name__}, usando lead_dict", "warning")
         if not lead_dict:
-            raise ValueError(
-                f"lead_raw={type(lead_raw).__name__} e lead_dict vazio - "
-                "nao foi possivel recuperar LeadQualificado"
+            # Em vez de raise, criar LeadQualificado minimo para nao quebrar pipeline
+            _log("[safe_qualificar] lead_dict vazio - criando LeadQualificado minimo", "warning")
+            lead_raw = LeadRaw(
+                nome="desconhecido",
+                cidade="",
+                segmento="",
+                telefone="",
+            )
+            return LeadQualificado(
+                lead=lead_raw,
+                score=0,
+                tier="UNKNOWN",
+                razoes=["dados_insuficientes"],
+                sinais=[],
+                presenca_digital="ZERO_PRESENCA",
+                dados_suficientes=False,
             )
         lead_raw = _dict_to_leadraw(lead_dict)
     else:
