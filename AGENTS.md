@@ -12,7 +12,7 @@
 - ServiceManager: backend/services/service_manager.py (auto-detect systemd/pm2)
 - Admin API: /api/admin/services, /logs, /restart, /runtime, /incidents
 - Frontend: card "Servicos" mostra runtime primario (systemd/pm2)
-- Esteira Fra: status agrega jobs/spans/ledger; logs de pipeline chegam via SSE por tenant
+- Esteira Fra: status agrega jobs/spans/ledger; tempo vem de iniciado/concluido + media historica
 - Monolitos quebrados: vite_react_renderer, pipeline_orchestrator_service, leads_crud
 - Modulos extraidos de vite: vite_config, vite_prompts, vite_facts, file_extractor, validator, build_executor
 - Performance: cache node_modules, Caio+Jina asyncio.gather, Design Director cache 24h

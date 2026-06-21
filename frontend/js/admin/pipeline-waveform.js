@@ -339,10 +339,14 @@
     activeMacro: 'buscar',
     label: '',
     elapsed: 0,
+    queuedAt: null,
+    startedAt: null,
+    finishedAt: null,
     jobId: null,
     runId: null,
     phases: [],
     llm: { totals: {}, by_phase: [] },
+    summary: {},
     logsOpen: false,
     elapsedTimer: null,
     syncTimer: null
@@ -352,6 +356,28 @@
     var m = Math.floor(sec / 60);
     var s = sec % 60;
     return (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
+  }
+
+  function parseTimeMs(value) {
+    if (!value) return null;
+    var ms = Date.parse(value);
+    return Number.isFinite(ms) ? ms : null;
+  }
+
+  function measuredElapsedSeconds() {
+    var started = parseTimeMs(state.startedAt);
+    var finished = parseTimeMs(state.finishedAt);
+    if (started) {
+      var end = finished || (state.running ? Date.now() : null);
+      if (end) return Math.max(0, Math.floor((end - started) / 1000));
+    }
+    return Math.max(0, Number(state.elapsed) || 0);
+  }
+
+  function refreshElapsedDisplay() {
+    state.elapsed = measuredElapsedSeconds();
+    var elapsed = document.getElementById('pwElapsed');
+    if (elapsed) elapsed.textContent = formatElapsed(state.elapsed);
   }
 
   function buildHTML() {
@@ -393,6 +419,7 @@
           '<span>Tokens <strong id="pwTokens">0</strong></span>' +
           '<span>Chamadas <strong id="pwCalls">0</strong></span>' +
           '<span>Custo <strong id="pwCost">US$ 0,0000</strong></span>' +
+          '<span>Média <strong id="pwAvg">00:00</strong></span>' +
           '<span class="pw-job" id="pwJob">sem job ativo</span>' +
         '</div>' +
         '<button type="button" class="pw-log-toggle" id="pwLogToggle" aria-expanded="false" aria-controls="pwLivePanel">Acompanhar logs <span id="pwLogCount">0</span></button>' +
@@ -473,7 +500,6 @@
     var railFill = document.getElementById('pwRailFill');
     var dot = document.getElementById('pwDot');
     var stage = document.getElementById('pwStage');
-    var elapsedEl = document.getElementById('pwElapsed');
     var etaEl = document.getElementById('pwEta');
     var pctEl = document.getElementById('pwPct');
     if (!railFill || !stage) return;
@@ -539,10 +565,11 @@
       stage.innerHTML = '<strong>aguardando</strong>';
     }
 
-    if (elapsedEl) elapsedEl.textContent = formatElapsed(state.elapsed);
+    refreshElapsedDisplay();
 
     if (etaEl) {
-      if (running) etaEl.textContent = 'medindo em tempo real';
+      if (running && state.startedAt) etaEl.textContent = 'medindo pelo inicio registrado';
+      else if (running) etaEl.textContent = 'aguardando inicio registrado';
       else if (state.status === 'pending') etaEl.textContent = 'na fila · aguardando worker';
       else if (state.status === 'completed') etaEl.textContent = 'ultima execucao concluida';
       else etaEl.textContent = 'aguardando medicoes';
@@ -555,6 +582,7 @@
     if (document.getElementById('pwTokens')) document.getElementById('pwTokens').textContent = compactNumber(totals.total_tokens || 0);
     if (document.getElementById('pwCalls')) document.getElementById('pwCalls').textContent = totals.calls || 0;
     if (document.getElementById('pwCost')) document.getElementById('pwCost').textContent = 'US$ ' + (Number(totals.cost_usd) || 0).toFixed(4).replace('.', ',');
+    if (document.getElementById('pwAvg')) document.getElementById('pwAvg').textContent = formatElapsed(state.summary.average_elapsed_seconds || 0);
     if (document.getElementById('pwJob')) document.getElementById('pwJob').textContent = state.jobId ? 'Job #' + state.jobId + (state.runId ? ' · run ' + state.runId : '') : 'sem job ativo';
     renderCallDetails();
   }
@@ -592,12 +620,9 @@
   function updateElapsedTimer() {
     if (state.elapsedTimer) clearInterval(state.elapsedTimer);
     state.elapsedTimer = null;
-    if (!state.running) return;
-    state.elapsedTimer = setInterval(function () {
-      state.elapsed += 1;
-      var elapsed = document.getElementById('pwElapsed');
-      if (elapsed) elapsed.textContent = formatElapsed(state.elapsed);
-    }, 1000);
+    refreshElapsedDisplay();
+    if (!state.running || !state.startedAt) return;
+    state.elapsedTimer = setInterval(refreshElapsedDisplay, 1000);
   }
 
   function applyStatus(data) {
@@ -608,9 +633,13 @@
     state.running = state.status === 'running';
     state.jobId = telemetry.job_id || job.id || null;
     state.runId = telemetry.run_id || job.run_id || null;
+    state.queuedAt = telemetry.queued_at || job.criado_em || null;
+    state.startedAt = telemetry.started_at || job.iniciado_em || null;
+    state.finishedAt = telemetry.finished_at || job.concluido_em || null;
     state.elapsed = Number(telemetry.elapsed_seconds) || 0;
     state.phases = Array.isArray(telemetry.phases) ? telemetry.phases : [];
     state.llm = telemetry.llm || { totals: {}, by_phase: [] };
+    state.summary = data.runtime_summary || telemetry.runtime_summary || {};
     var phaseKey = job.last_phase || data.fase_atual;
     state.activeMacro = macroFromKey(phaseKey) || macroFromNum(job.phase_num || data.fase_num) || state.activeMacro;
     state.label = data.fase_label || job.phase_label || job.last_phase || state.label;

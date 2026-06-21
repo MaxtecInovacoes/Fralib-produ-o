@@ -1,6 +1,9 @@
 from datetime import datetime, timedelta
 
-from backend.endpoints.pipeline_status_endpoints import _pipeline_job_telemetry
+from backend.endpoints.pipeline_status_endpoints import (
+    _pipeline_job_telemetry,
+    _pipeline_runtime_summary,
+)
 from backend.endpoints.sse_endpoints import _build_log_entry
 
 
@@ -13,6 +16,9 @@ class _MappingResult:
 
     def all(self):
         return self._rows
+
+    def first(self):
+        return self._rows[0] if self._rows else None
 
 
 class _TelemetrySession:
@@ -134,6 +140,50 @@ def test_pending_job_does_not_count_queue_wait_as_execution_time():
 
     assert telemetry["elapsed_seconds"] == 0
     assert telemetry["queued_seconds"] >= 299
+    assert telemetry["started_at"] is None
+    assert telemetry["queued_at"] == job["criado_em"]
+
+
+class _SummarySession:
+    def __init__(self):
+        self.calls = []
+        self.rolled_back = False
+
+    def execute(self, statement, params):
+        self.calls.append((str(statement), params))
+        return _MappingResult(
+            [
+                {
+                    "sample_size": 3,
+                    "average_elapsed_seconds": 612.7,
+                    "fastest_seconds": 420,
+                    "slowest_seconds": 980,
+                    "average_calls": 14.4,
+                    "average_tokens": 120345.9,
+                    "average_cost_usd": 1.234567,
+                }
+            ]
+        )
+
+    def rollback(self):
+        self.rolled_back = True
+
+
+def test_pipeline_runtime_summary_reports_recent_completed_average():
+    db = _SummarySession()
+
+    summary = _pipeline_runtime_summary(db, 2)
+
+    assert summary == {
+        "sample_size": 3,
+        "average_elapsed_seconds": 612,
+        "fastest_seconds": 420,
+        "slowest_seconds": 980,
+        "average_calls": 14,
+        "average_tokens": 120345,
+        "average_cost_usd": 1.234567,
+    }
+    assert db.calls[0][1]["tenant_id"] == 2
 
 
 def test_pipeline_waveform_uses_measured_telemetry_without_fake_eta():
@@ -142,8 +192,13 @@ def test_pipeline_waveform_uses_measured_telemetry_without_fake_eta():
     ).read()
 
     assert "telemetry.elapsed_seconds" in source
+    assert "telemetry.started_at" in source
+    assert "telemetry.queued_at" in source
+    assert "state.elapsed += 1" not in source
     assert "telemetry.phases" in source
     assert "totals.total_tokens" in source
+    assert "runtime_summary" in source
+    assert "pwAvg" in source
     assert "pwLogList" in source
     assert "startFakeTicker" not in source
     assert "min restantes" not in source

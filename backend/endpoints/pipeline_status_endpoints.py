@@ -307,13 +307,82 @@ def _pipeline_job_telemetry(db: Session, tenant_id: int, job: dict | None) -> di
         "job_id": job_id,
         "run_id": run_id,
         "status": job.get("status"),
-        "started_at": job.get("iniciado_em") or job.get("criado_em"),
+        "queued_at": job.get("criado_em"),
+        "started_at": job.get("iniciado_em"),
         "finished_at": job.get("concluido_em"),
         "elapsed_seconds": _elapsed_seconds(job),
         "queued_seconds": _queued_seconds(job),
         "phases": phases,
         "llm": {"totals": totals, "by_phase": llm_by_phase},
         "measured": bool(phases or llm_by_phase),
+    }
+
+
+def _pipeline_runtime_summary(db: Session, tenant_id: int) -> dict:
+    try:
+        row = db.execute(
+            text(
+                """
+                WITH recent AS (
+                    SELECT id,
+                           EXTRACT(EPOCH FROM (concluido_em - iniciado_em))::int AS elapsed_seconds
+                    FROM jobs
+                    WHERE tenant_id = :tenant_id
+                      AND tipo IN ('pipeline_lead', 'pipeline_multiplos', 'pipeline_main')
+                      AND status = 'completed'
+                      AND iniciado_em IS NOT NULL
+                      AND concluido_em IS NOT NULL
+                      AND concluido_em >= iniciado_em
+                    ORDER BY concluido_em DESC, id DESC
+                    LIMIT 20
+                ),
+                ledger AS (
+                    SELECT job_id,
+                           COUNT(*) AS calls,
+                           COALESCE(SUM(input_tokens), 0)
+                         + COALESCE(SUM(output_tokens), 0)
+                         + COALESCE(SUM(cache_read_tokens), 0)
+                         + COALESCE(SUM(cache_created_tokens), 0) AS total_tokens,
+                           COALESCE(SUM(cost_usd), 0) AS cost_usd
+                    FROM llm_budget_ledger
+                    WHERE tenant_id = :tenant_id
+                      AND job_id IN (SELECT id FROM recent)
+                    GROUP BY job_id
+                )
+                SELECT COUNT(recent.id) AS sample_size,
+                       COALESCE(AVG(recent.elapsed_seconds), 0) AS average_elapsed_seconds,
+                       COALESCE(MIN(recent.elapsed_seconds), 0) AS fastest_seconds,
+                       COALESCE(MAX(recent.elapsed_seconds), 0) AS slowest_seconds,
+                       COALESCE(AVG(ledger.calls), 0) AS average_calls,
+                       COALESCE(AVG(ledger.total_tokens), 0) AS average_tokens,
+                       COALESCE(AVG(ledger.cost_usd), 0) AS average_cost_usd
+                FROM recent
+                LEFT JOIN ledger ON ledger.job_id = recent.id
+                """
+            ),
+            {"tenant_id": tenant_id},
+        ).mappings().first()
+    except Exception:
+        db.rollback()
+        row = None
+    if not row:
+        return {
+            "sample_size": 0,
+            "average_elapsed_seconds": 0,
+            "fastest_seconds": 0,
+            "slowest_seconds": 0,
+            "average_calls": 0,
+            "average_tokens": 0,
+            "average_cost_usd": 0,
+        }
+    return {
+        "sample_size": int(row.get("sample_size") or 0),
+        "average_elapsed_seconds": int(float(row.get("average_elapsed_seconds") or 0)),
+        "fastest_seconds": int(row.get("fastest_seconds") or 0),
+        "slowest_seconds": int(row.get("slowest_seconds") or 0),
+        "average_calls": int(float(row.get("average_calls") or 0)),
+        "average_tokens": int(float(row.get("average_tokens") or 0)),
+        "average_cost_usd": round(float(row.get("average_cost_usd") or 0), 6),
     }
 
 
@@ -453,7 +522,8 @@ async def get_status(db: Session = Depends(get_db), usuario: dict = Depends(get_
         pass
     rodando = bool(current_job and current_job.get("status") in {"running", "pending", "failed_retriable"})
     telemetry = _pipeline_job_telemetry(db, tenant_id, latest_job)
-    return {"rodando": rodando, "pausado": state["pausado"], "config": state["config"], "iniciado_em": state.get("iniciado_em").isoformat() if state.get("iniciado_em") else None, "totalLeads": total_leads, "totalSites": total_sites, "totalEnviados": total_enviados, "cicloAtual": ciclo_atual, "checkpoint": _ckpt_info, "ultimo_erro": _ultimo_erro, "cooldown": _cooldown_info, "pipeline_id": _pid, "current_job": current_job, "latest_job": latest_job, "telemetry": telemetry, "fase_atual": current_job.get("last_phase") if current_job else None, "fase_num": current_job.get("phase_num") if current_job else None, "fase_label": current_job.get("phase_label") if current_job else None}
+    runtime_summary = _pipeline_runtime_summary(db, tenant_id)
+    return {"rodando": rodando, "pausado": state["pausado"], "config": state["config"], "iniciado_em": state.get("iniciado_em").isoformat() if state.get("iniciado_em") else None, "totalLeads": total_leads, "totalSites": total_sites, "totalEnviados": total_enviados, "cicloAtual": ciclo_atual, "checkpoint": _ckpt_info, "ultimo_erro": _ultimo_erro, "cooldown": _cooldown_info, "pipeline_id": _pid, "current_job": current_job, "latest_job": latest_job, "telemetry": telemetry, "runtime_summary": runtime_summary, "fase_atual": current_job.get("last_phase") if current_job else None, "fase_num": current_job.get("phase_num") if current_job else None, "fase_label": current_job.get("phase_label") if current_job else None}
 
 
 @router.get("/stats")

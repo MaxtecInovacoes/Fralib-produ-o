@@ -141,7 +141,14 @@
   </div>
 
 
-  <!-- Banner de pipeline: REMOVIDO — a waveform ja mostra tudo -->
+  <!-- Banner de pipeline rodando — visível em todas as views -->
+  <div id="pipeline-banner" style="display:none;background:linear-gradient(90deg,#0f172a,#1e293b);border:1px solid #0183ff;border-radius:8px;padding:10px 16px;margin-bottom:12px;display:none;align-items:center;gap:12px;">
+    <span style="width:8px;height:8px;border-radius:50%;background:#10b981;display:inline-block;animation:pulse 1s infinite;flex-shrink:0;"></span>
+    <span style="color:#10b981;font-family:var(--fl-font-brand);font-size:11px;letter-spacing:1px;flex-shrink:0;">PIPELINE RODANDO</span>
+    <span id="pipeline-banner-tempo" style="color:#e2e8f0;font-family:var(--fl-font-mono);font-size:11px;flex-shrink:0;">00:00</span>
+    <span id="pipeline-banner-fase" style="color:#94a3b8;font-family:var(--fl-font-mono);font-size:11px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Aguardando...</span>
+    <button onclick="document.querySelector('[data-view=\'config\']').click()" style="background:transparent;border:1px solid #0183ff;color:#0183ff;padding:2px 10px;font-size:10px;cursor:pointer;font-family:var(--fl-font-brand);letter-spacing:1px;flex-shrink:0;">VER LOGS</button>
+  </div>
 
   <!-- KPI Cards — 6 métricas -->
   <div class="kpi-grid" id="kpi-section" style="display: none;">
@@ -538,11 +545,11 @@
       </div>
     </div>
 
-    <!-- LINHA 1: Pixel Office ocupa 100% (timeline legada removida - waveform ja mostra tudo) -->
-    <div style="display:grid;grid-template-columns:1fr;gap:16px;margin-bottom:20px;align-items:start;">
+    <!-- LINHA 1: Pixel Office + timeline lado a lado -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:16px;margin-bottom:20px;align-items:start;">
 
       <!-- Pixel Office -->
-      <div id="pixelOfficeWrap" style="background:#1a1a2e;border-radius:10px;border:0;box-shadow:inset 0 0 0 1px rgba(255,255,255,.04);overflow:hidden;min-width:0;">
+      <div id="pixelOfficeWrap" style="background:#1a1a2e;border-radius:10px;border:0;box-shadow:inset 0 0 0 1px rgba(255,255,255,.04);overflow:hidden;max-height:330px;min-width:0;">
         <div style="background:rgba(8,8,20,0.95);border-bottom:1px solid var(--fl-border);padding:4px 12px;display:flex;justify-content:space-between;align-items:center;font-family:'Courier New',monospace;font-size:10px;color:#a0a0c0">
           <span style="font-weight:bold;color:#7dd3fc;letter-spacing:1px">&#128187; ESCRITORIO DO ROBO</span>
           <div style="display:flex;gap:12px">
@@ -555,7 +562,38 @@
           Mapa visual do trabalho: os agentes se movem quando o sistema esta buscando, analisando ou produzindo.
         </div>
         <div style="background:#1a1a2e;padding:0;line-height:0;font-size:0">
-          <canvas id="pixelOfficeCanvas" style="display:block;image-rendering:pixelated;image-rendering:crisp-edges;width:100%;height:auto;max-height:520px;aspect-ratio:2/1;margin:0 auto;"></canvas>
+          <canvas id="pixelOfficeCanvas" style="display:block;image-rendering:pixelated;image-rendering:crisp-edges;width:100%;height:auto;max-height:292px;aspect-ratio:2/1;margin:0 auto;"></canvas>
+        </div>
+      </div>
+
+      <!-- Linha do tempo -->
+      <div class="config-section" style="display:flex;flex-direction:column;max-height:330px;overflow:hidden;">
+        <div class="config-group" style="display:flex;flex-direction:column;margin-bottom:0;overflow:hidden;">
+          <div class="config-group-title" style="display:flex;align-items:center;justify-content:space-between;">
+            <span style="display:flex;align-items:center;gap:8px;">
+              <span style="width:7px;height:7px;border-radius:50%;background:#10b981;display:inline-block;" id="sse-dot"></span>
+              &#128337; O QUE ESTA ACONTECENDO AGORA
+            </span>
+            <span id="pipelineTimelineStatus" style="font-size:10px;color:var(--fl-text-muted);font-family:var(--fl-font-mono);">aguardando</span>
+          </div>
+          <div class="admin-simple-help" style="border-radius:0;border-left:0;border-right:0;">
+            Aqui aparece o passo atual do robo em ordem: buscar, qualificar, gerar site e registrar resultado.
+          </div>
+          <div class="pipeline-time-strip" aria-label="Tempo de trabalho do robo">
+            <div>
+              <span>Trabalhando ha</span>
+              <strong id="pipelineInlineTempo">00:00</strong>
+            </div>
+            <div>
+              <span>Media normal</span>
+              <strong id="pipelineInlineMedia">8 a 15 min</strong>
+            </div>
+            <div>
+              <span>Previsao</span>
+              <strong id="pipelineInlineEta">aguardando</strong>
+            </div>
+          </div>
+          <div id="pipelineTimeline" style="display:flex;flex-direction:column;gap:7px;overflow:visible;min-height:0;padding-right:0;"></div>
         </div>
       </div>
 
@@ -1857,14 +1895,32 @@ window._pixelOfficeSSEHook = function(data) {
 };
 
 window.initPixelOffice = function(){
-    // DESABILITADO: o escritorio isometrico 3D novo (pixel-office-iso.js)
-    // substitui este legado. Ver _scripts.html que zera este init antes
-    // de chamar o iso.
-    return;
+    cv=document.getElementById('pixelOfficeCanvas');
+    if(!cv){ console.warn('[PixelOffice] canvas nao encontrado'); return; }
+    if(window._pixelOfficeRAF){ cancelAnimationFrame(window._pixelOfficeRAF); }
+    window._pixelOfficeStarted = true;
+    cx=cv.getContext('2d');
+    console.log('[PixelOffice] iniciando animacao');
+    cv.width=W; cv.height=H;
+    function resize(){
+        const container = document.getElementById('pixelOfficeWrap');
+        if(!container) return;
+        const maxW = container.clientWidth || 800;
+        const maxH = 292;
+        const s = Math.min(maxW/W, maxH/H);
+        cv.style.width=W*s+'px'; cv.style.height=H*s+'px';
+    }
+    resize();
+    window._pixelOfficeResizeHandler = resize;
+    window.addEventListener('resize', window._pixelOfficeResizeHandler);
+    initObstacles();
+    initWaypoints();
+    agents=AGENT_DEFS.map((d,i)=>{const a=new Agent(d);a.st=i*1.8;return a;});
+    loop();
 };
 
 
-    setTimeout(function(){ if(window.initPixelOfficeIso){ window.initPixelOfficeIso(); } }, 100);
+    setTimeout(function(){ if(window.initPixelOffice){ window._pixelOfficeStarted=false; window.initPixelOffice(); } }, 100);
     </script>
 </section>
 
@@ -4103,7 +4159,9 @@ function mostrarView(view) {
   }
   if (view === 'config') {
     setTimeout(function(){
-      // Escritorio isometrico 3D novo (substitui o legado)
+      // Escritorio isometrico 3D novo (substitui o antigo)
+      // Desabilita o init legado para nao sobrescrever o canvas
+      window.initPixelOffice = function(){};
       if (window.initPixelOfficeIso) {
         window.initPixelOfficeIso();
       }
@@ -8175,5 +8233,4 @@ async function atualizarUtiBadge() {
 <script src="/js/admin/audio-panel/panel-dom.js?v=20260621"></script>
 <script src="/js/admin/audio-panel/panel-events.js?v=20260621"></script>
 <script src="/js/admin/audio-panel.js?v=20260621"></script>
-<script src="/js/pixel-office-iso.js?v=20260621"></script>
 </body></html>
