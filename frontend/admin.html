@@ -10,7 +10,7 @@
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png?v=">
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png?v=">
 <link rel="apple-touch-icon" href="/favicon-32.png?v=1778153020">
-<meta http-equiv="Content-Security-Policy" content="connect-src 'self' wss://seunegociofralib.site wss://seunegociofralib.site:3000 https://cdn.jsdelivr.net https://seunegociofralib.site https://www.youtube.com https://www.youtube-nocookie.com">
+<meta http-equiv="Content-Security-Policy" content="connect-src 'self' wss://seunegociofralib.site wss://seunegociofralib.site:3000 https://cdn.jsdelivr.net https://seunegociofralib.site https://de1.api.radio-browser.info https://at1.api.radio-browser.info https://de2.api.radio-browser.info; media-src 'self' https://*; img-src 'self' data: https:">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>FraLib OS — Central de Comando</title>
 <!-- v2.0.0 - 20260428211345 -->
@@ -8234,7 +8234,14 @@ async function atualizarUtiBadge() {
 
 
 </script>
-<!-- FraLib OS: Player de Música (YouTube Audio Only) -->
-<script src="/js/admin/audio-player.js?v=20260429"></script>
-<script src="/js/admin/audio-panel.js?v=20260429"></script>
+<!-- FraLib OS: Player de Música (Radio-Browser API, modulos) -->
+<script src="/js/admin/audio-player/events.js?v=20260621"></script>
+<script src="/js/admin/audio-player/storage.js?v=20260621"></script>
+<script src="/js/admin/audio-player/player-core.js?v=20260621"></script>
+<script src="/js/admin/audio-player/stations.js?v=20260621"></script>
+<script src="/js/admin/audio-player.js?v=20260621"></script>
+<script src="/js/admin/audio-panel/panel-styles.js?v=20260621"></script>
+<script src="/js/admin/audio-panel/panel-dom.js?v=20260621"></script>
+<script src="/js/admin/audio-panel/panel-events.js?v=20260621"></script>
+<script src="/js/admin/audio-panel.js?v=20260621"></script>
 </body></html>
