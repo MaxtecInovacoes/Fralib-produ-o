@@ -1352,12 +1352,10 @@ function mostrarView(view) {
   if (view === 'config') {
     setTimeout(function(){
       // Escritorio isometrico 3D novo (substitui o antigo)
+      // Desabilita o init legado para nao sobrescrever o canvas
+      window.initPixelOffice = function(){};
       if (window.initPixelOfficeIso) {
         window.initPixelOfficeIso();
-      } else if (window.initPixelOffice) {
-        // fallback
-        window._pixelOfficeStarted = false;
-        window.initPixelOffice();
       }
     }, 50);
   }
