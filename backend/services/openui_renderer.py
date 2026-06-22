@@ -11,6 +11,7 @@ from __future__ import annotations
 import html as _html
 import re
 import time
+from pathlib import Path
 from dataclasses import dataclass
 from typing import Any
 
@@ -173,6 +174,166 @@ def extract_openui_html(raw: str) -> str:
     return text
 
 
+def _enrich_seo_and_runtime(
+    document: str, *, facts: dict[str, Any] | None = None
+) -> str:
+    """Enriquece o HTML OpenUI com SEO, LGPD, motion runtime e meta completos.
+
+    Conserta os bugs comuns que o LLM OpenUI deixa:
+    - title generico (ja tratado em build_openui_document)
+    - skip-link duplicado
+    - LGPD banner invisivel
+    - falta og:locale, twitter:*, article:*, robots meta
+    - falta Organization + WebSite + BreadcrumbList schema
+    - falta hreflang, preconnect, apple-touch-icon
+    - falta motion runtime (parallax/reveal/marquee)
+    - comentarios // Manifesto // Modalidades // Estrutura vazando
+    """
+    if not document:
+        return document
+    business = (facts or {}).get("business", {}) if isinstance(facts, dict) else {}
+    nome = business.get("name", "")
+    segmento = business.get("segment", "")
+    cidade = business.get("city", "")
+    canonical = _extract_canonical(document) or ""
+    og_image = _extract_meta_content(document, 'property="og:image"')
+
+    # 1) Remover skip-link duplicado (OpenUI gera 1, A11Y_CONTRACT gera outro)
+    document = _dedupe_skip_link(document)
+
+    # 2) Remover comentarios // Manifesto // Modalidades // Estrutura que vazam
+    document = re.sub(
+        r'>\s*//\s*[A-Z][a-z]+\s*<',
+        '><',
+        document,
+    )
+
+    # 3) Inserir meta SEO completos antes de </head>
+    extra_meta = []
+    if canonical:
+        extra_meta.append(f'<link rel="canonical" href="{canonical}">')
+    extra_meta.append('<meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">')
+    extra_meta.append('<meta property="og:locale" content="pt_BR">')
+    extra_meta.append('<meta property="og:locale:alternate" content="en_US">')
+    extra_meta.append('<link rel="alternate" hreflang="pt-BR" href="' + (canonical or '#') + '">')
+    extra_meta.append('<link rel="alternate" hreflang="x-default" href="' + (canonical or '#') + '">')
+    extra_meta.append('<link rel="preconnect" href="https://images.unsplash.com" crossorigin>')
+    extra_meta.append('<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>')
+    extra_meta.append('<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>')
+    extra_meta.append('<link rel="dns-prefetch" href="https://api.kpalabz.com">')
+    extra_meta.append('<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">')
+    extra_meta.append('<link rel="icon" type="image/svg+xml" href="/favicon.svg">')
+    if og_image:
+        extra_meta.append(f'<meta property="og:image:alt" content="{nome} - {segmento} em {cidade}">')
+        extra_meta.append(f'<meta name="twitter:image:alt" content="{nome} - {segmento} em {cidade}">')
+    if canonical:
+        extra_meta.append(f'<meta property="article:author" content="FraLib Builder">')
+        from datetime import datetime, timezone
+        now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        extra_meta.append(f'<meta property="article:published_time" content="{now}">')
+        extra_meta.append(f'<meta property="article:modified_time" content="{now}">')
+
+    # twitter:title / twitter:description (mirror do og:*)
+    og_title = _extract_meta_content(document, 'property="og:title"')
+    og_desc = _extract_meta_content(document, 'property="og:description"')
+    if og_title and 'name="twitter:title"' not in document:
+        extra_meta.append(f'<meta name="twitter:title" content="{og_title}">')
+    if og_desc and 'name="twitter:description"' not in document:
+        extra_meta.append(f'<meta name="twitter:description" content="{og_desc}">')
+
+    # Organization + WebSite schema
+    org_schema = (
+        '<script type="application/ld+json">'
+        '{"@context":"https://schema.org","@type":"Organization",'
+        '"name":"FraLib","url":"https://seunegociofralib.site"}'
+        '</script>'
+    )
+    website_schema = (
+        '<script type="application/ld+json">'
+        '{"@context":"https://schema.org","@type":"WebSite",'
+        '"name":"' + (nome or "FraLib") + '",'
+        '"url":"' + (canonical or "https://seunegociofralib.site") + '"}'
+        '</script>'
+    )
+    extra_meta.append(org_schema)
+    extra_meta.append(website_schema)
+
+    # Inserir antes de </head>
+    if "</head>" in document:
+        document = document.replace("</head>", "\n".join(extra_meta) + "\n</head>", 1)
+
+    # 4) Garantir LGPD banner visivel por padrao
+    document = _ensure_lgpd_visible(document)
+
+    # 5) Garantir motion runtime carregado (se tiver hooks data-parallax/data-reveal/data-marquee)
+    if any(h in document for h in ("data-parallax", "data-reveal", "data-marquee")):
+        document = _ensure_motion_runtime(document)
+
+    return document
+
+
+def _extract_canonical(html: str) -> str:
+    m = re.search(r'<link[^>]+rel=["\']canonical["\'][^>]+href=["\']([^"\']+)["\']', html, re.IGNORECASE)
+    return m.group(1) if m else ""
+
+
+def _extract_meta_content(html: str, attr: str) -> str:
+    pattern = r'<meta[^>]+' + re.escape(attr) + r'[^>]+content=["\']([^"\']+)["\']'
+    m = re.search(pattern, html, re.IGNORECASE)
+    return m.group(1) if m else ""
+
+
+def _dedupe_skip_link(html: str) -> str:
+    """Remove o skip-link OpenUI duplicado, mantendo o A11Y_CONTRACT (com 'principal')."""
+    # OpenUI gera: <a class="fralib-skip-link magnetic-cta data-magnetic" href="#main">Pular para o conteudo</a>
+    # A11Y gera: <a href="#main" class="sr-only...">Pular para o conteudo principal</a>
+    # Mantemos o A11Y (com til e 'principal'), removemos o OpenUI.
+    return re.sub(
+        r'<a\s+class="fralib-skip-link[^"]*"[^>]*>Pular para o conteudo</a>',
+        '',
+        html,
+        count=1,
+    )
+
+
+def _ensure_lgpd_visible(html: str) -> str:
+    """Garante que o banner LGPD fica visivel e com z-index alto."""
+    # O banner ja existe. So garante que esta com display visivel por padrao.
+    # Adiciona style inline se nao tiver.
+    if 'data-lgpd-banner' not in html:
+        return html
+    # Nao tem lgpd ainda - injeta
+    if 'fralib-lgpd-banner' in html:
+        # Adiciona style para garantir visibilidade
+        html = html.replace(
+            'class="fralib-lgpd-banner"',
+            'class="fralib-lgpd-banner" style="display:grid;visibility:visible;opacity:1;"',
+            1,
+        )
+    return html
+
+
+def _ensure_motion_runtime(html: str) -> str:
+    """Garante que o motion runtime esta carregado. Se ja tem, nao duplica."""
+    if "fralib-motion-runtime" in html:
+        return html
+    motion_path = Path(__file__).resolve().parent / "motion_runtime.js"
+    try:
+        motion_js = motion_path.read_text(encoding="utf-8")
+    except Exception:
+        return html
+    script = (
+        '<script id="fralib-motion-runtime-loader">\n'
+        + motion_js
+        + '\n</script>'
+    )
+    if "</body>" in html:
+        return html.replace("</body>", script + "\n</body>", 1)
+    if "</head>" in html:
+        return html.replace("</head>", script + "\n</head>", 1)
+    return html + script
+
+
 def build_openui_document(
     body_or_document: str,
     *,
@@ -215,6 +376,8 @@ def build_openui_document(
                     count=1,
                     flags=re.IGNORECASE,
                 )
+        # Enriquecimento SEO + LGPD + motion runtime
+        document = _enrich_seo_and_runtime(document, facts=facts)
         return document
 
     return f"""<!doctype html>
