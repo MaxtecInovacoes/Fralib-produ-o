@@ -71,6 +71,38 @@ PREFER-REDUCED-MOTION:
 === FIM MOTION ===
 '''
 
+PERFORMANCE_CONTRACT = '''
+=== PERFORMANCE CONTRACT - SIGA OBRIGATORIAMENTE ===
+
+1. IMAGENS SEMPRE WebP/AVIF (NAO png/jpg)
+   - Use o parametro Unsplash: ?format=webp&quality=80&width=1080
+   - AVIF se suportado: ?format=avif&quality=75
+   - Isso reduz 30% do tamanho das imagens
+
+2. SRCSET em TODAS as imagens (responsive)
+   - Gere 3-4 tamanhos: 480w, 768w, 1080w, 1920w
+   - Use o parametro &w=480, &w=768, etc
+   - Adicione sizes apropriado: sizes="(max-width: 768px) 100vw, 50vw"
+
+3. LOADING LAZY em imagens abaixo do fold
+   - Primeira imagem (hero): loading="eager" fetchpriority="high"
+   - Demais imagens: loading="lazy"
+
+4. CSS MODERNO (sem JS extra):
+   - :has() para parent selector (cards com filhos)
+   - color-mix(in srgb, var(--primary) 80%, white) para variacoes de cor
+   - @container (container queries) para layout por componente
+   - @supports para feature detection graceful
+   - subgrid para alinhamento perfeito
+   - aspect-ratio: 16/9 para imagens (evita layout shift)
+
+5. PERFORMANCE:
+   - NUNCA imagens acima de 200kb
+   - NUNCA mais de 50 elementos com data-reveal (gera jank)
+   - SEMPRE inline critical CSS (Tailwind CDN ja faz)
+=== FIM PERFORMANCE ===
+'''
+
 A11Y_CONTRACT = """
 === A11Y CONTRACT - SIGA OBRIGATORIAMENTE ===
 - Primeiro elemento focavel do body: <a href="#main" class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:bg-white focus:text-black focus:px-4 focus:py-2 focus:z-50 focus:rounded">Pular para o conteudo principal</a>
@@ -224,6 +256,7 @@ def build_openui_context_block(facts: dict[str, Any] | None) -> str:
         _seo_block(facts),
         _design_block(facts),
         MOTION_CONTRACT,
+        PERFORMANCE_CONTRACT,
         A11Y_CONTRACT,
         FACTUAL_CONTRACT,
         _lgpd_block(facts),

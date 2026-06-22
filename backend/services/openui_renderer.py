@@ -269,7 +269,91 @@ def _enrich_seo_and_runtime(
     if any(h in document for h in ("data-parallax", "data-reveal", "data-marquee")):
         document = _ensure_motion_runtime(document)
 
+    # 6) Performance patches (srcset, lazy, fetchpriority, preload LCP)
+    document = _patch_performance(document)
+
     return document
+
+
+def _patch_performance(html: str) -> str:
+    """Aplica patches de performance em <img> no HTML OpenUI.
+
+    1. Adiciona srcset/sizes com 3 tamanhos (480w, 768w, 1080w) para Unsplash
+    2. Adiciona loading="lazy" em todas as <img> abaixo da primeira (hero)
+    3. Adiciona fetchpriority="high" na primeira <img> (hero = LCP)
+    4. Converte ?w=1080 para &w=480, &w=768, &w=1080 em srcset
+    5. Adiciona loading="lazy" decoding="async" em <img> sem loading
+    6. Adiciona <link rel=preload> para o LCP (primeira imagem)
+    """
+    if not html:
+        return html
+    # Coletar todas as tags <img>
+    img_pattern = re.compile(r'<img\s+([^>]*?)/?>', re.IGNORECASE | re.DOTALL)
+    imgs = list(img_pattern.finditer(html))
+    if not imgs:
+        return html
+
+    first_lcp_src = None
+    new_html_parts = []
+    last_end = 0
+
+    for idx, m in enumerate(imgs):
+        is_first = idx == 0
+        attrs_str = m.group(1)
+        new_html_parts.append(html[last_end:m.start()])
+
+        # Encontrar src
+        src_match = re.search(r'src=["\']([^"\']+)["\']', attrs_str, re.IGNORECASE)
+        if not src_match:
+            new_html_parts.append(m.group(0))
+            last_end = m.end()
+            continue
+        src = src_match.group(1)
+
+        # Se for Unsplash, gerar srcset
+        if 'unsplash.com' in src or 'images.unsplash.com' in src:
+            # Trocar ?w=XXX por &w=XXX para cada tamanho
+            sizes_srcset = []
+            for w in (480, 768, 1080, 1920):
+                if '?w=' in src:
+                    sized = src.replace('?w=', f'&w=').rsplit('&w=', 1)[0] + f'&w={w}'
+                else:
+                    sized = src + (('&' if '?' in src else '?') + f'w={w}')
+                sizes_srcset.append(f'{sized} {w}w')
+            srcset = ', '.join(sizes_srcset)
+            sizes_attr = '(max-width: 480px) 100vw, (max-width: 768px) 100vw, (max-width: 1080px) 50vw, 1080px'
+
+            # Adicionar srcset e sizes
+            if 'srcset=' not in attrs_str.lower():
+                attrs_str = attrs_str.rstrip() + f' srcset="{srcset}" sizes="{sizes_attr}"'
+
+        # Adicionar loading
+        if 'loading=' not in attrs_str.lower():
+            loading = 'eager' if is_first else 'lazy'
+            attrs_str = attrs_str.rstrip() + f' loading="{loading}"'
+
+        # Adicionar decoding
+        if 'decoding=' not in attrs_str.lower():
+            attrs_str = attrs_str.rstrip() + ' decoding="async"'
+
+        # Adicionar fetchpriority no hero
+        if is_first and 'fetchpriority=' not in attrs_str.lower():
+            attrs_str = attrs_str.rstrip() + ' fetchpriority="high"'
+            first_lcp_src = src
+
+        new_html_parts.append(f'<img {attrs_str}/>')
+        last_end = m.end()
+
+    new_html_parts.append(html[last_end:])
+    result = ''.join(new_html_parts)
+
+    # Adicionar <link rel=preload> para LCP
+    if first_lcp_src:
+        preload_tag = f'<link rel="preload" as="image" href="{first_lcp_src}" fetchpriority="high">'
+        if '<link rel="preload" as="image"' not in result and '</head>' in result:
+            result = result.replace('</head>', preload_tag + '\n</head>', 1)
+
+    return result
 
 
 def _extract_canonical(html: str) -> str:
