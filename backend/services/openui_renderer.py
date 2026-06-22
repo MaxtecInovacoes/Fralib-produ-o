@@ -115,7 +115,7 @@ def render_openui_site(
                 facts=facts,
             )
             body_html = extract_openui_html(raw)
-            document = build_openui_document(body_html)
+            document = build_openui_document(body_html, facts=facts)
             validate_openui_document(
                 document, body_html, facts, source_text=builder_prompt
             )
@@ -173,8 +173,17 @@ def extract_openui_html(raw: str) -> str:
     return text
 
 
-def build_openui_document(body_or_document: str) -> str:
-    """Wrap OpenUI body output in FraLib's publishable static document."""
+def build_openui_document(
+    body_or_document: str,
+    *,
+    facts: dict[str, Any] | None = None,
+) -> str:
+    """Wrap OpenUI body output in FraLib's publishable static document.
+
+    Se facts for passado, sobrescreve o <title> generico com o nome real
+    do negocio + segmento + cidade (corrige o bug do OpenUI que as vezes
+    retorna <title>FraLib Site</title>).
+    """
     content = (body_or_document or "").strip()
     if re.search(r"<!doctype|<html\b", content, re.IGNORECASE):
         document = content
@@ -186,6 +195,26 @@ def build_openui_document(body_or_document: str) -> str:
                 count=1,
                 flags=re.IGNORECASE,
             )
+        # Patch: substituir title generico "FraLib Site" pelo nome real
+        if facts:
+            business = (facts or {}).get("business", {}) if isinstance(facts, dict) else {}
+            nome = business.get("name") or ""
+            segmento = business.get("segment") or ""
+            cidade = business.get("city") or ""
+            if nome:
+                if segmento and cidade:
+                    real_title = f"{nome} | {segmento} em {cidade}"
+                elif segmento:
+                    real_title = f"{nome} | {segmento}"
+                else:
+                    real_title = nome
+                document = re.sub(
+                    r"<title>[^<]*</title>",
+                    f"<title>{real_title}</title>",
+                    document,
+                    count=1,
+                    flags=re.IGNORECASE,
+                )
         return document
 
     return f"""<!doctype html>
