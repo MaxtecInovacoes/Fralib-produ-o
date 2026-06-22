@@ -140,6 +140,16 @@ canvas{max-width:100%}
 .access-denied{padding:80px 24px;text-align:center}
 .access-denied h1{font-family:var(--brand);font-size:14px;color:var(--danger);margin-bottom:12px}
 .access-denied p{color:var(--muted);font-size:14px}
+
+/* SDR Studio */
+.sdr-layer-tab{padding:8px 16px;font-size:12px;font-weight:500;color:var(--muted);border-bottom:2px solid transparent;transition:.15s;letter-spacing:.3px;font-family:var(--ui)}
+.sdr-layer-tab:hover{color:var(--text)}
+.sdr-layer-tab.active{color:var(--purple-300);border-bottom-color:var(--purple)}
+.sdr-chat-msg{padding:8px 12px;margin-bottom:8px;border-radius:4px;max-width:90%;word-wrap:break-word;white-space:pre-wrap;line-height:1.45}
+.sdr-chat-msg.user{background:var(--purple-900);border:1px solid var(--border-hi);color:var(--text);margin-left:auto}
+.sdr-chat-msg.assistant{background:var(--surface);border:1px solid var(--border);color:var(--text)}
+.sdr-chat-msg.system{background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.3);color:var(--warning);font-size:12px;font-style:italic;margin:0 auto;text-align:center;max-width:100%}
+.sdr-chat-msg .sdr-msg-meta{font-size:10px;color:var(--dim);font-family:var(--mono);margin-top:4px;display:block}
 </style>
 </head>
 <body>
@@ -176,6 +186,7 @@ canvas{max-width:100%}
   <button class="tab" data-tab="apikeys" onclick="switchTab('apikeys')">API Keys</button>
   <button class="tab" data-tab="agentes" onclick="switchTab('agentes')">Agentes</button>
   <button class="tab" data-tab="playground" onclick="switchTab('playground')">Playground</button>
+  <button class="tab" data-tab="sdrstudio" onclick="switchTab('sdrstudio')">SDR Studio</button>
   <button class="tab" data-tab="alertas" onclick="switchTab('alertas')">Alertas</button>
 </div>
 
@@ -478,6 +489,81 @@ canvas{max-width:100%}
     </div>
   </section>
 
+  <!-- ========== SDR STUDIO ========== -->
+  <section class="panel" id="panel-sdrstudio">
+    <h2 class="section-title">SDR STUDIO — EDITOR DE PROMPTS DO FRANZ</h2>
+    <p class="muted" style="margin-bottom:14px">Edite as 3 camadas de prompt, converse com o Franz no chat à esquerda para validar, depois clique <b>Aplicar</b> para salvar ou <b>Publicar</b> para commitar.</p>
+
+    <div style="display:grid;grid-template-columns:minmax(380px,45%) 1fr;gap:16px;min-height:70vh">
+      <!-- COLUNA ESQUERDA: CHAT -->
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:6px;padding:14px;display:flex;flex-direction:column">
+        <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;align-items:center">
+          <div>
+            <label style="font-size:10px;color:var(--dim);display:block;margin-bottom:2px">Stage</label>
+            <select id="sdr-stage" style="background:var(--surface);border:1px solid var(--border);color:var(--text);padding:5px 8px;border-radius:4px;font-size:12px">
+              <option value="hook">hook</option>
+              <option value="qualify">qualify</option>
+              <option value="pain">pain</option>
+              <option value="amplify">amplify</option>
+              <option value="tease">tease</option>
+              <option value="proof">proof</option>
+              <option value="feedback">feedback</option>
+              <option value="close">close</option>
+              <option value="followup_24h">followup_24h</option>
+              <option value="followup_72h">followup_72h</option>
+            </select>
+          </div>
+          <div style="flex:1;min-width:100px">
+            <label style="font-size:10px;color:var(--dim);display:block;margin-bottom:2px">Segmento</label>
+            <input id="sdr-segmento" type="text" value="academia" style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:5px 8px;border-radius:4px;font-size:12px">
+          </div>
+          <div style="flex:1;min-width:100px">
+            <label style="font-size:10px;color:var(--dim);display:block;margin-bottom:2px">Cidade</label>
+            <input id="sdr-cidade" type="text" value="Sao Paulo" style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:5px 8px;border-radius:4px;font-size:12px">
+          </div>
+          <div>
+            <label style="font-size:10px;color:var(--dim);display:block;margin-bottom:2px">Modelo</label>
+            <select id="sdr-modelo" style="background:var(--surface);border:1px solid var(--border);color:var(--text);padding:5px 8px;border-radius:4px;font-size:12px;font-family:var(--mono)">
+              <option value="sonnet">sonnet</option>
+              <option value="opus">opus</option>
+              <option value="haiku">haiku</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="sdr-chat-log" style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:12px;overflow-y:auto;min-height:300px;max-height:60vh;font-size:13px"></div>
+
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <input id="sdr-input" type="text" placeholder='Ex: "Oi, vi vocês no Google"' style="flex:1;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:9px 12px;border-radius:4px;font-size:13px" onkeydown="if(event.key==='Enter')sendSdrMessage()">
+          <button class="btn btn-primary" onclick="sendSdrMessage()" style="padding:9px 18px">Enviar</button>
+          <button class="btn" onclick="clearSdrChat()" title="Limpar conversa">↺</button>
+        </div>
+      </div>
+
+      <!-- COLUNA DIREITA: EDITOR -->
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:6px;padding:14px;display:flex;flex-direction:column">
+        <div id="sdr-layer-tabs" style="display:flex;gap:0;margin-bottom:10px;border-bottom:1px solid var(--border)">
+          <button class="sdr-layer-tab active" data-layer="design_system" onclick="switchSdrLayer('design_system')">Design System</button>
+          <button class="sdr-layer-tab" data-layer="user_system" onclick="switchSdrLayer('user_system')">User System</button>
+          <button class="sdr-layer-tab" data-layer="rag" onclick="switchSdrLayer('rag')">RAG</button>
+          <span style="margin-left:auto;font-size:11px;color:var(--muted);align-self:center" id="sdr-layer-info">— carregando —</span>
+        </div>
+
+        <textarea id="sdr-editor" spellcheck="false" style="flex:1;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:14px;border-radius:4px;font-family:var(--mono);font-size:12px;line-height:1.5;resize:none;min-height:400px;max-height:65vh;white-space:pre;overflow:auto"></textarea>
+
+        <div style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap">
+          <span style="font-size:11px;color:var(--muted);font-family:var(--mono)" id="sdr-charcount">0 chars · 0 KB</span>
+          <span style="font-size:11px;color:var(--warning);font-family:var(--mono);display:none" id="sdr-dirty-badge">● não salvo</span>
+          <span style="flex:1"></span>
+          <button class="btn" onclick="loadSdrHistory()">📜 Histórico</button>
+          <button class="btn" onclick="reloadSdrLayer()">↻ Recarregar</button>
+          <button class="btn btn-primary" onclick="saveSdrLayer()">💾 Aplicar</button>
+          <button class="btn btn-success" onclick="publishSdrStudio()">✓ Publicar</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- ========== ALERTAS ========== -->
   <section class="panel" id="panel-alertas">
     <h2 class="section-title">ALERTAS DE PROVEDORES DE IA</h2>
@@ -575,6 +661,7 @@ function switchTab(tab){
   if(tab==='alertas') loadAlerts();
   if(tab==='agentes') loadAgentConfigs();
   if(tab==='playground') initPlayground();
+  if(tab==='sdrstudio' && !document.getElementById('panel-sdrstudio').dataset.loaded) loadSdrStudio();
 }
 
 // ===== toast =====
@@ -1881,6 +1968,256 @@ async function resumeQueue(){
     const d = await r.json();
     toast(d.message||'Fila retomada', 'success');
   }catch(e){ toast('Erro: '+e.message, 'error'); }
+}
+
+// ============================================================
+// SDR STUDIO — editor de prompts + chat de teste
+// ============================================================
+let SDR_LAYER = 'design_system';
+let SDR_LAYERS = { design_system: '', user_system: '', rag: '' };
+let SDR_DIRTY = { design_system: false, user_system: false, rag: false };
+let SDR_MESSAGES = []; // [{role, content}]
+
+async function loadSdrStudio(){
+  const panel = document.getElementById('panel-sdrstudio');
+  panel.dataset.loaded = '1';
+  setSdrEditorEnabled(false);
+  document.getElementById('sdr-layer-info').textContent = 'carregando…';
+  try{
+    const r = await authFetch('/api/superadmin/sdr-studio/files');
+    const d = await r.json();
+    if(!d.ok) throw new Error(d.detail||'erro');
+    SDR_LAYERS.design_system = d.design_system || '';
+    SDR_LAYERS.user_system = d.user_system || '';
+    SDR_LAYERS.rag = d.rag || '';
+    switchSdrLayer(SDR_LAYER, true);
+    toast('Arquivos carregados', 'success');
+  }catch(e){
+    document.getElementById('sdr-layer-info').textContent = 'erro: ' + (e.message||e);
+    toast('Falha: ' + (e.message||e), 'error');
+  }finally{
+    setSdrEditorEnabled(true);
+  }
+}
+
+function setSdrEditorEnabled(on){
+  const ed = document.getElementById('sdr-editor');
+  ed.disabled = !on;
+  ed.style.opacity = on ? '1' : '0.6';
+}
+
+function switchSdrLayer(layer, force){
+  if(!force && SDR_DIRTY[SDR_LAYER]){
+    if(!confirm('Você tem mudanças não salvas em ' + SDR_LAYER + '. Descartar e trocar?')) return;
+  }
+  SDR_LAYER = layer;
+  document.querySelectorAll('#sdr-layer-tabs .sdr-layer-tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.layer === layer);
+  });
+  const ed = document.getElementById('sdr-editor');
+  ed.value = SDR_LAYERS[layer] || '';
+  updateSdrCharCount();
+  document.getElementById('sdr-layer-info').textContent =
+    layer + ' · ' + (SDR_LAYERS[layer]||'').length.toLocaleString('pt-BR') + ' chars';
+  refreshDirtyBadge();
+}
+
+function updateSdrCharCount(){
+  const ed = document.getElementById('sdr-editor');
+  const txt = ed.value || '';
+  document.getElementById('sdr-charcount').textContent =
+    txt.length.toLocaleString('pt-BR') + ' chars · ' +
+    (txt.length/1024).toFixed(1) + ' KB';
+  SDR_DIRTY[SDR_LAYER] = (txt !== (SDR_LAYERS[SDR_LAYER] || ''));
+  refreshDirtyBadge();
+}
+
+function refreshDirtyBadge(){
+  const el = document.getElementById('sdr-dirty-badge');
+  el.style.display = SDR_DIRTY[SDR_LAYER] ? 'inline' : 'none';
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const ed = document.getElementById('sdr-editor');
+  if(ed) ed.addEventListener('input', updateSdrCharCount);
+});
+
+async function reloadSdrLayer(){
+  if(SDR_DIRTY[SDR_LAYER] && !confirm('Descartar mudanças locais e recarregar do disco?')) return;
+  document.getElementById('sdr-layer-info').textContent = 'recarregando…';
+  try{
+    const r = await authFetch('/api/superadmin/sdr-studio/files');
+    const d = await r.json();
+    if(!d.ok) throw new Error(d.detail||'erro');
+    SDR_LAYERS.design_system = d.design_system || '';
+    SDR_LAYERS.user_system = d.user_system || '';
+    SDR_LAYERS.rag = d.rag || '';
+    switchSdrLayer(SDR_LAYER, true);
+    toast('Recarregado do disco', 'success');
+  }catch(e){
+    toast('Falha: ' + (e.message||e), 'error');
+  }
+}
+
+async function saveSdrLayer(){
+  const content = document.getElementById('sdr-editor').value;
+  if(content.length > 100*1024){ toast('Máx 100KB por camada','error'); return; }
+  try{
+    const r = await authFetch('/api/superadmin/sdr-studio/files/' + SDR_LAYER, {
+      method:'PUT',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({content, note: 'save from panel'}),
+    });
+    const d = await r.json();
+    if(!d.ok) throw new Error(d.detail||'erro');
+    SDR_LAYERS[SDR_LAYER] = content;
+    SDR_DIRTY[SDR_LAYER] = false;
+    refreshDirtyBadge();
+    document.getElementById('sdr-layer-info').textContent =
+      SDR_LAYER + ' · salvo · ' + new Date().toLocaleTimeString('pt-BR');
+    toast('Aplicado: ' + SDR_LAYER, 'success');
+  }catch(e){
+    toast('Falha ao salvar: ' + (e.message||e), 'error');
+  }
+}
+
+async function publishSdrStudio(){
+  const hasDirty = SDR_DIRTY.design_system || SDR_DIRTY.user_system || SDR_DIRTY.rag;
+  if(!confirm(hasDirty
+    ? 'Há mudanças não salvas. Salvar todas antes de publicar?'
+    : 'Publicar — registrar como versão oficial e auditar?')) return;
+  for(const layer of ['design_system','user_system','rag']){
+    if(SDR_DIRTY[layer]){
+      if(layer === SDR_LAYER){
+        SDR_LAYERS[layer] = document.getElementById('sdr-editor').value;
+      }
+      try{
+        await authFetch('/api/superadmin/sdr-studio/files/' + layer, {
+          method:'PUT',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({content: SDR_LAYERS[layer], note: 'publish from panel'}),
+        });
+        SDR_DIRTY[layer] = false;
+      }catch(e){
+        toast('Falha ao publicar ' + layer + ': ' + (e.message||e), 'error');
+        return;
+      }
+    }
+  }
+  refreshDirtyBadge();
+  toast('Publicado — auditoria registrada', 'success');
+}
+
+function appendSdrChat(role, content, meta){
+  const log = document.getElementById('sdr-chat-log');
+  const div = document.createElement('div');
+  div.className = 'sdr-chat-msg ' + role;
+  div.textContent = content;
+  if(meta){
+    const m = document.createElement('span');
+    m.className = 'sdr-msg-meta';
+    m.textContent = meta;
+    div.appendChild(m);
+  }
+  log.appendChild(div);
+  log.scrollTop = log.scrollHeight;
+}
+
+async function sendSdrMessage(){
+  const input = document.getElementById('sdr-input');
+  const text = (input.value || '').trim();
+  if(!text) return;
+  if(SDR_DIRTY[SDR_LAYER]){
+    appendSdrChat('system',
+      '⚠ Você editou ' + SDR_LAYER + ' mas não clicou Aplicar. ' +
+      'O chat está usando a versão salva no disco.');
+  }
+  input.value = '';
+  appendSdrChat('user', text);
+  SDR_MESSAGES.push({role: 'user', content: text});
+  const btn = document.querySelector('#panel-sdrstudio .btn-primary');
+  const oldLabel = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = '…';
+  try{
+    const r = await authFetch('/api/superadmin/sdr-studio/chat', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        messages: SDR_MESSAGES,
+        stage: document.getElementById('sdr-stage').value,
+        segmento: document.getElementById('sdr-segmento').value,
+        cidade: document.getElementById('sdr-cidade').value,
+        modelo: document.getElementById('sdr-modelo').value,
+      }),
+    });
+    const d = await r.json();
+    if(!d.ok) throw new Error(d.detail||'erro');
+    appendSdrChat('assistant', d.reply || '(vazio)',
+      (d.model||'') + ' · ' + (d.latency_ms||0) + 'ms');
+    SDR_MESSAGES.push({role: 'assistant', content: d.reply || ''});
+  }catch(e){
+    appendSdrChat('system', '❌ ' + (e.message||e));
+  }finally{
+    btn.disabled = false;
+    btn.textContent = oldLabel;
+  }
+}
+
+function clearSdrChat(){
+  if(SDR_MESSAGES.length && !confirm('Limpar toda a conversa?')) return;
+  SDR_MESSAGES = [];
+  document.getElementById('sdr-chat-log').innerHTML = '';
+}
+
+async function loadSdrHistory(){
+  const layer = SDR_LAYER;
+  try{
+    const r = await authFetch('/api/superadmin/sdr-studio/versions?layer=' + encodeURIComponent(layer) + '&limit=20');
+    const d = await r.json();
+    if(!d.ok) throw new Error(d.detail||'erro');
+    const versions = d.versions || [];
+    if(!versions.length){
+      toast('Nenhuma versão salva para ' + layer, 'success');
+      return;
+    }
+    const body = `
+      <div style="font-size:12px;color:var(--muted);margin-bottom:8px">${versions.length} versão(ões) de <b>${escapeHtml(layer)}</b>:</div>
+      <div style="max-height:50vh;overflow-y:auto">
+        ${versions.map(v => `
+          <div style="display:flex;align-items:center;gap:8px;padding:8px;border:1px solid var(--border);margin-bottom:6px;background:var(--surface)">
+            <div style="flex:1;font-size:12px">
+              <div style="font-family:var(--mono);color:var(--purple-300)">v#${v.id}</div>
+              <div style="color:var(--muted);font-size:11px">${escapeHtml(v.created_by||'—')} · ${dt(v.created_at)}</div>
+              <div style="color:var(--dim);font-size:11px">${(v.bytes||0).toLocaleString('pt-BR')} bytes · ${escapeHtml((v.note||'').slice(0,60))}</div>
+            </div>
+            <button class="btn" onclick="restoreSdrVersion(${v.id})">Restaurar</button>
+          </div>
+        `).join('')}
+      </div>
+    `;
+    openModal('Histórico · ' + layer, body, null);
+    const okBtn = document.getElementById('modal-ok');
+    if(okBtn) okBtn.style.display = 'none';
+    const closeBtn = document.querySelector('#modal .modal-actions .btn:not(.btn-primary)');
+    if(closeBtn) closeBtn.textContent = 'Fechar';
+  }catch(e){
+    toast('Falha: ' + (e.message||e), 'error');
+  }
+}
+
+async function restoreSdrVersion(versionId){
+  if(!confirm('Restaurar versão #' + versionId + '? O estado atual será salvo como backup antes.')) return;
+  closeModal();
+  try{
+    const r = await authFetch('/api/superadmin/sdr-studio/versions/' + versionId + '/restore', {method:'POST'});
+    const d = await r.json();
+    if(!d.ok) throw new Error(d.detail||'erro');
+    toast('Versão #' + versionId + ' restaurada', 'success');
+    await loadSdrStudio();
+  }catch(e){
+    toast('Falha: ' + (e.message||e), 'error');
+  }
 }
 
 </script>
