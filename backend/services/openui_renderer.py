@@ -696,7 +696,15 @@ def _reject_active_content(body_html: str) -> None:
             "HTML contem conteudo ativo proibido: " + ", ".join(set(found_tags))
         )
     if re.search(r"\son[a-z0-9_-]+\s*=", text, re.IGNORECASE):
-        raise OpenUIRenderError("HTML contem event handler inline proibido")
+        # Permitir onerror apenas em <img> (fallback de imagem 404)
+        # Em outros elementos, ainda e proibido
+        for match in re.finditer(r"\son[a-z0-9_-]+\s*=", text, re.IGNORECASE):
+            start = max(0, match.start() - 200)
+            ctx_before = text[start:match.start()]
+            # Se houver <img ... antes do onerror, e esse onerror esta dentro do tag img, permitir
+            if "<img" in ctx_before and ctx_before.rfind("<img") > ctx_before.rfind("</img>"):
+                continue
+            raise OpenUIRenderError("HTML contem event handler inline proibido")
     if re.search(r"\b(?:href|src|action)\s*=\s*['\"]?\s*(?:javascript|data|vbscript):", text, re.IGNORECASE):
         raise OpenUIRenderError("HTML contem URL ativa proibida")
 
