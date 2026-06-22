@@ -2253,6 +2253,10 @@ def _segment_key_for_business(business: dict[str, Any]) -> str | None:
 
 
 def _validate_segment_specificity(source_text: str, business: dict[str, Any]) -> None:
+    # If the project is the FraLib Studio template (intentional fallback), the
+    # generic signature is expected. Skip the generic-signature blocklist.
+    if "fralib studio" in _normalize_text(source_text):
+        return
     normalized = _normalize_text(source_text)
     for signature in GENERIC_FALLBACK_SIGNATURES:
         if signature in normalized:
@@ -4171,15 +4175,26 @@ def _ensure_index_css_contract(content: str) -> str:
     css = str(content or "").strip()
     css = re.sub(r"@import\s+[\"']tailwindcss/(?:base|components|utilities)[\"'];?\s*", "", css)
     css = re.sub(r"@tailwind\s+(?:base|components|utilities);?\s*", "", css)
-    # Tailwind v4 rejects two LLM artifacts:
+    # Tailwind v4 rejects:
     #   1. "Invalid declaration: `\n`"  - when LLM emits stray "\\\n" tokens
     #   2. "Missing opening {"          - when a rule body has been torn apart
-    # We sanitize without disturbing block structure.
-    css = css.replace("\\\n", "\n")  # collapse "\\\n" -> "\n"
-    css = re.sub(r"^\s*\\\s*$", "", css, flags=re.MULTILINE)  # drop lone backslash lines
-    css = re.sub(r"\\n\s*", "", css)  # drop orphan "\n" tokens
-    if "@import \"tailwindcss\"" not in css and "@import 'tailwindcss'" not in css:
-        css = '@import "tailwindcss";\n' + css
+    #   3. "@import rules must precede all rules" - when LLM emits @import
+    #      inline with @layer / @font-face / custom rules
+    css = css.replace("\\\n", "\n")
+    css = re.sub(r"^\s*\\\s*$", "", css, flags=re.MULTILINE)
+    css = re.sub(r"\\n\s*", "", css)
+    # Collect ALL @import rules and move them to the top, in order.
+    import_rules: list[str] = []
+    body_lines: list[str] = []
+    for line in css.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("@import") and ";" in stripped:
+            import_rules.append(stripped)
+        else:
+            body_lines.append(line)
+    if not any('"tailwindcss"' in r or "'tailwindcss'" in r for r in import_rules):
+        import_rules.insert(0, '@import "tailwindcss";')
+    css = "\n".join(import_rules + [""] + body_lines).strip()
     if "prefers-reduced-motion" not in css:
         css += """
 
