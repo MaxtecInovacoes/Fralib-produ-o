@@ -80,6 +80,7 @@ def render_openui_site(
                 model=model,
                 max_tokens=max_tokens,
                 temperature=temperature if index == 1 else min(temperature, 0.25),
+                facts=facts,
             )
             body_html = extract_openui_html(raw)
             document = build_openui_document(body_html)
@@ -246,15 +247,34 @@ def validate_openui_document(
 
 
 def _call_openui_llm(
-    user_prompt: str, *, model: str, max_tokens: int, temperature: float
+    user_prompt: str,
+    *,
+    model: str,
+    max_tokens: int,
+    temperature: float,
+    facts: dict[str, Any] | None = None,
 ) -> str:
     try:
         from agents.llm_direct import call_claude
     except Exception:
         from llm_direct import call_claude
 
+    # Compila system prompt final = base + contratos FraLib (SEO, Design,
+    # Motion, A11y, Factual, LGPD, Deploy) com dados do lead.
+    final_system_prompt = OPENUI_SYSTEM_PROMPT
+    if facts:
+        try:
+            from services.openui_contracts import build_openui_context_block
+        except Exception:
+            try:
+                from backend.services.openui_contracts import build_openui_context_block
+            except Exception:
+                build_openui_context_block = None
+        if build_openui_context_block:
+            final_system_prompt = OPENUI_SYSTEM_PROMPT + "\n\n" + build_openui_context_block(facts)
+
     return call_claude(
-        OPENUI_SYSTEM_PROMPT,
+        final_system_prompt,
         user_prompt,
         model=model,
         max_tokens=max_tokens,

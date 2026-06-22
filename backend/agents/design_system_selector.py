@@ -321,7 +321,10 @@ def select_design_system(
         - alternatives: lista de slugs alternativos
         - category: categoria do design system
     """
-    from design_context import ALIASES
+    try:
+        from design_context import ALIASES
+    except Exception:
+        from agents.design_context import ALIASES
 
     seg = segmento.lower().replace(" ", "_").replace("-", "_")
     seg = ALIASES.get(seg, seg)
