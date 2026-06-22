@@ -248,6 +248,7 @@ def render_site_with_builder(
             temperature=float(os.getenv("FRALIB_OPENUI_TEMPERATURE", "0.35")),
         )
         index_target = output_dir / "index.html"
+        output_dir.mkdir(parents=True, exist_ok=True)
         index_target.write_text(render_result.html, encoding="utf-8")
         _write_builder_render_meta(
             output_dir,
