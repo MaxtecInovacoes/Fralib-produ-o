@@ -1,9 +1,9 @@
-/* FraLib Motion Runtime
-   Carregado via CDN no deploy do OpenUI.
-   Ativa parallax, scroll-reveal, smooth scroll (Lenis) e marquee infinito.
-   Respeita prefers-reduced-motion.
-   Idempotente: detecta <script id="fralib-motion-runtime"> e sai.
-   (function () {
+// FraLib Motion Runtime
+// Carregado via CDN no deploy do OpenUI.
+// Ativa parallax, scroll-reveal, smooth scroll (Lenis) e marquee infinito.
+// Respeita prefers-reduced-motion.
+// Idempotente: detecta <script id="fralib-motion-runtime"> e sai.
+(function () {
      if (document.getElementById('fralib-motion-runtime')) return;
      const s = document.createElement('script');
      s.id = 'fralib-motion-runtime';
