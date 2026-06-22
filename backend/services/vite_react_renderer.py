@@ -379,102 +379,82 @@ def render_vite_react_site(
     workspace = Path(workspace_dir).resolve()
 
     model_candidates = _select_vite_react_models_for_run(primary_model, fallback_model)
-    model = next((m for m in model_candidates if m), primary_model)
+    if not model_candidates:
+        model_candidates = [PROXY_BUILDER_MODEL]
 
-    # Step 1: LLM gera 1 vez
-    attempt_started = time.time()
-    raw = ""
-    try:
-        prompt = _compose_vite_user_prompt(
-            builder_prompt,
-            facts=facts,
-            repair_context=repair_context,
-        )
-        raw = _call_vite_react_llm(
-            prompt,
-            model=model,
-            max_tokens=max_tokens,
-            temperature=temperature,
-        )
-        files = prepare_vite_project_files(
-            extract_vite_project_files(raw),
-            facts=facts,
-        )
-        validate_vite_project_files(files, facts, requested_paths=requested_paths)
-        write_vite_project(workspace, files)
-        build_vite_project(workspace)
-        index_path = workspace / "dist" / "index.html"
-        html = index_path.read_text(encoding="utf-8")
-        validate_vite_dist(workspace / "dist")
-        attempts.append(
-            {
-                "model": model,
-                "status": "llm_success",
-                "elapsed_ms": int((time.time() - attempt_started) * 1000),
-                "source_files": len(files),
-                "html_chars": len(html),
-            }
-        )
-        return ViteReactRenderResult(
-            html=html,
-            source_files=files,
-            model=model,
-            attempts=attempts,
-            elapsed_ms=int((time.time() - started) * 1000),
-            dist_dir=str((workspace / "dist").resolve()),
-            index_path=str(index_path.resolve()),
-        )
-    except Exception as exc:
-        attempts.append(
-            {
-                "model": model,
-                "status": "llm_failed",
-                "elapsed_ms": int((time.time() - attempt_started) * 1000),
-                "error": str(exc)[:500],
-            }
-        )
+    # Cascata Haiku -> Sonnet -> Opus 4.8: tenta cada modelo em sequencia ate um dar 200.
+    # Sem Studio fallback. Se TODOS falharem, levanta ViteReactRenderError com diagnostico.
+    last_error: str | None = None
+    files: dict[str, str] = {}
+    html = ""
+    index_path = workspace / "dist" / "index.html"
 
-    # Step 2: LLM falhou -> FraLib Studio template deterministico, sem retry
-    attempt_started = time.time()
-    try:
-        fallback_files = _generate_studio_fallback_files(facts)
-        write_vite_project(workspace, fallback_files)
-        build_vite_project(workspace)
-        index_path = workspace / "dist" / "index.html"
-        html = index_path.read_text(encoding="utf-8")
-        validate_vite_dist(workspace / "dist")
-        attempts.append(
-            {
-                "model": "studio_template",
-                "status": "studio_success",
-                "elapsed_ms": int((time.time() - attempt_started) * 1000),
-                "source_files": len(fallback_files),
-                "html_chars": len(html),
-            }
-        )
-        return ViteReactRenderResult(
-            html=html,
-            source_files=fallback_files,
-            model="studio_template",
-            attempts=attempts,
-            elapsed_ms=int((time.time() - started) * 1000),
-            dist_dir=str((workspace / "dist").resolve()),
-            index_path=str(index_path.resolve()),
-        )
-    except Exception as exc:
-        attempts.append(
-            {
-                "model": "studio_template",
-                "status": "studio_failed",
-                "elapsed_ms": int((time.time() - attempt_started) * 1000),
-                "error": str(exc)[:500],
-            }
-        )
-        raise ViteReactRenderError(
-            "Vite React renderer falhou sem fallback: "
-            + json.dumps(attempts, ensure_ascii=False)
-        )
+    for model_idx, model in enumerate(model_candidates, start=1):
+        attempt_started = time.time()
+        try:
+            prompt = _compose_vite_user_prompt(
+                builder_prompt,
+                facts=facts,
+                repair_context=repair_context,
+            )
+            raw = _call_vite_react_llm(
+                prompt,
+                model=model,
+                max_tokens=max_tokens,
+                temperature=temperature,
+            )
+            files = prepare_vite_project_files(
+                extract_vite_project_files(raw),
+                facts=facts,
+            )
+            validate_vite_project_files(files, facts, requested_paths=requested_paths)
+            write_vite_project(workspace, files)
+            build_vite_project(workspace)
+            index_path = workspace / "dist" / "index.html"
+            html = index_path.read_text(encoding="utf-8")
+            validate_vite_dist(workspace / "dist")
+            attempts.append(
+                {
+                    "model": model,
+                    "model_index": model_idx,
+                    "status": "llm_success",
+                    "elapsed_ms": int((time.time() - attempt_started) * 1000),
+                    "source_files": len(files),
+                    "html_chars": len(html),
+                }
+            )
+            return ViteReactRenderResult(
+                html=html,
+                source_files=files,
+                model=model,
+                attempts=attempts,
+                elapsed_ms=int((time.time() - started) * 1000),
+                dist_dir=str((workspace / "dist").resolve()),
+                index_path=str(index_path.resolve()),
+            )
+        except Exception as exc:
+            last_error = str(exc)[:500]
+            attempts.append(
+                {
+                    "model": model,
+                    "model_index": model_idx,
+                    "status": "llm_failed",
+                    "elapsed_ms": int((time.time() - attempt_started) * 1000),
+                    "error": last_error,
+                }
+            )
+            # Erro permanente (403/401 plan vencido, auth invalida): nao tenta proximo
+            lowered = last_error.lower()
+            if any(marker in lowered for marker in ("401 unauthorized", "invalid api key", "permission_error")):
+                break
+            # Caso contrario, tenta proximo modelo da cascata
 
+    # Todos os modelos da cascata falharam. Sem Studio fallback - erro limpo.
+    raise ViteReactRenderError(
+        "Vite React renderer falhou em todos os modelos da cascata "
+        f"({len(model_candidates)} tentados: {', '.join(model_candidates)}). "
+        "Ultimo erro: " + (last_error or "(sem erro capturado)")
+    )
 
 def _select_vite_react_models(primary_model: str, fallback_model: str) -> list[str]:
     selected: list[str] = []
