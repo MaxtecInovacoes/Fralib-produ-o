@@ -1736,8 +1736,11 @@ def _normalize_page_export_contract(files: dict[str, str]) -> None:
         return
     has_named = bool(re.search(r"export\s+(?:function|const)\s+Index\b", content))
     has_default = bool(re.search(r"export\s+default\s+(?:function\s+Index\b|Index\b)", content))
+    # Count occurrences of `export { Index }` so we never double-append.
+    already_re_exported = bool(re.search(r"export\s*\{\s*Index\s*\}", content))
     if has_default and not has_named and re.search(r"default\s+function\s+Index\b", content):
-        files[path] = content.rstrip() + "\n\nexport { Index };\n"
+        if not already_re_exported:
+            files[path] = content.rstrip() + "\n\nexport { Index };\n"
     elif has_named and not has_default:
         files[path] = content.rstrip() + "\n\nexport default Index;\n"
 

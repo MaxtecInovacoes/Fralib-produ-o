@@ -17,6 +17,7 @@ FIXED_PACKAGE_JSON = {
         "@tailwindcss/vite": "^4.0.0",
         "tailwindcss": "^4.0.0",
         "motion": "^11.11.0",
+        "gsap": "^3.12.5",
     },
     "devDependencies": {
         "@types/react": "^18.3.12",

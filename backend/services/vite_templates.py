@@ -303,7 +303,7 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          motion: ['motion/react', 'gsap', 'gsap/ScrollTrigger', 'lenis'],
+          motion: ['motion/react', 'gsap', 'gsap/ScrollTrigger'],
           icons: ['lucide-react'],
         },
       },
