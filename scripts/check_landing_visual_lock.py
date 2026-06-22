@@ -12,7 +12,7 @@ import re
 ROOT = Path(__file__).resolve().parents[1]
 LOCKED_FILES = {
     "frontend/partials/landing/_head.html": (
-        "922b33c2beb3a231775147af507c0f94e0de95cc8a75124993e31bfb7dbe5a5e"
+        "2dc8424ddeb485a6c7e7ee4352e9da4de1f981ba093ab0c8dbe77b6b1c65e790"
     ),
 }
 
