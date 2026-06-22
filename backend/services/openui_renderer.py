@@ -476,7 +476,7 @@ def build_openui_document(
         document = _enrich_seo_and_runtime(document, facts=facts)
         return document
 
-    return f"""<!doctype html>
+    fallback_html = f"""<!doctype html>
 <html lang="pt-BR" data-renderer="builder" data-builder-engine="openui">
 <head>
   <meta charset="utf-8">
@@ -528,7 +528,7 @@ def build_openui_document(
 {content}
 </body>
 </html>"""
-    return _enrich_seo_and_runtime(result, facts=facts)
+    return _enrich_seo_and_runtime(fallback_html, facts=facts)
 
 
 def validate_openui_document(
