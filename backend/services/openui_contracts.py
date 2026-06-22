@@ -20,23 +20,56 @@ from typing import Any
 
 # --- Blocos estaticos (regras) ---
 
-MOTION_CONTRACT = """
-=== MOTION CONTRACT - SIGA OBRIGATORIAMENTE ===
-Adicione data-motion hooks no HTML para que o FraLib Motion Runtime (GSAP+ScrollTrigger+Lenis via CDN) ative:
-- data-parallax="0.3" em imagens/secoes de hero (movimento vertical ao scroll)
-- data-reveal em secoes internas (fade+slide ao entrar na viewport, stagger 0.05s)
-- data-marquee="left|right" data-marquee-speed="30" em trilhas de logos/icones (loop infinito)
-- data-parallax="0.1" em textos do hero (movimento sutil, mais devagar que o scroll)
-- data-parallax="0.5" em imagens de fundo (movimento mais rapido que o scroll)
-Use Tailwind animate-* classes (animate-fade-in, animate-slide-up) e
-  transition-* (transition-all duration-300 ease-out)
-- group hover effects em cards (group-hover:scale-105, group-hover:shadow-2xl)
-- Stagger animations em listas: animation-delay escalonado via inline style
-- Imagens: loading="lazy" e motion-safe:animate-fade-in
-- NUNCA use animation que bloqueia o usuario (auto-play video, scroll-jacking)
-- Use prefers-reduced-motion: prefers-reduced-motion:animate-none
+MOTION_CONTRACT = '''
+=== MOTION CONTRACT - SIGA OBRIGATORIAMENTE (12 SISTEMAS DISPONIVEIS) ===
+O FraLib Motion Runtime (GSAP+ScrollTrigger+Lenis via CDN) tem 12 sistemas de animacao que respondem a data-attributes no HTML.
+
+USE PELO MENOS 6 DESTES 12 EM CADA SITE (quanto mais, melhor - o LLM sera avaliado por isso):
+
+1. data-parallax="0.1..0.5" - movimento vertical ao scroll
+   - 0.1-0.2 em textos do hero (movimento sutil)
+   - 0.3 em imagens/secoes principais
+   - 0.5 em imagens de fundo (movimento mais rapido que o scroll)
+2. data-reveal="up|down|left|right|scale|fade" - fade+slide ao entrar viewport
+   - Use em secoes principais, cards, listas (com data-stagger no parent)
+3. data-marquee="left|right" data-marquee-speed="30..50" - trilhas infinitas
+   - OBRIGATORIO: use data-marquee pelo menos 1x para criar SCROLLER LATERAL de logos/servicos/depoimentos
+4. data-magnetic="0.2..0.5" - botoes que seguem o cursor
+   - OBRIGATORIO: use data-magnetic no CTA principal (Agendar/Falar WhatsApp)
+5. data-3d-tilt="10..20" - cards com efeito 3D ao mover mouse
+   - Use em cards premium (servicos, fotos, depoimentos)
+6. data-text-scramble - efeito de digitacao randomica
+   - Use no H1 ou titulos importantes
+7. data-horizontal-scroll data-horizontal-track - secao de scroll horizontal pinned
+   - Use para galeria de servicos ou portfolio
+8. data-counter="1234" - contador animado
+   - Use em numeros de impacto: "559 avaliacoes", "4.5/5 nota"
+9. data-stagger - parent que faz filhos entrarem em stagger
+   - Use em listas de servicos, beneficios, FAQ
+10. data-reveal="fade" com data-stagger no parent - listas suaves
+11. group hover effects: group-hover:scale-105, group-hover:shadow-2xl, group-hover:translate-y-1
+12. motion-safe:animate-* classes (animate-fade-in, animate-slide-up) para usuarios sem prefers-reduced-motion
+
+REGRAS DE USO:
+- NUNCA data-reveal em TODOS os elementos (gera ruido) - use nos 5-10 principais
+- data-marquee DEVE ser usado pelo menos 1x (scroller lateral e obrigatorio)
+- data-magnetic DEVE ser usado no CTA principal
+- data-parallax=0.3+ em hero image e secao de galeria
+- data-counter em numeros de impacto
+- data-3d-tilt em pelo menos 1 grupo de cards premium
+- data-text-scramble no H1 ou titulo principal
+
+ANIMACOES QUE NAO PODE USAR:
+- auto-play video (bloqueia usuario)
+- scroll-jacking (trava scroll)
+- animacoes de 10s+ sem motivo
+- mais de 3 niveis de stagger no mesmo viewport
+
+PREFER-REDUCED-MOTION:
+- Adicione motion-safe: nas classes Tailwind
+- O motion runtime ja desativa animacoes se prefers-reduced-motion: reduce
 === FIM MOTION ===
-"""
+'''
 
 A11Y_CONTRACT = """
 === A11Y CONTRACT - SIGA OBRIGATORIAMENTE ===
@@ -77,7 +110,8 @@ com <span> para cada campo confirmado. Crawlers usam isso para verificar fatos.
 """
 
 DEPLOY_RULES = """
-=== REGRAS DE DEPLOY - OPENUI HTML ESTATICO ===
+=== REGRAS DEPLOY OPENUI ===
+=== REGRAS DEPLOY OPENUI - HTML ESTATICO ===
 - Tailwind via CDN OK (https://cdn.tailwindcss.com) - deploy converte para build proprio
 - Google Fonts OK via <link rel="preconnect"> + <link href="https://fonts.googleapis.com">
 - Imagens: use URLs reais do brief (Hunter, Unsplash) ou CSS gradients - NUNCA
@@ -179,7 +213,7 @@ def build_openui_context_block(facts: dict[str, Any] | None) -> str:
     Combina (na ordem):
     1. SEO Framework (nichos: h1, keywords, FAQ, schema.org)
     2. Design System (paleta, tipografia, motion do nicho)
-    3. Motion Contract (parallax, reveal, GSAP rules)
+    3. Motion Contract (12 sistemas parallax/reveal/GSAP/3D/magnetic)
     4. A11y Contract (skip link, main, contraste)
     5. Factual Contract (JSON-LD + section sr-only)
     6. LGPD personalizado (segmento-aware)
