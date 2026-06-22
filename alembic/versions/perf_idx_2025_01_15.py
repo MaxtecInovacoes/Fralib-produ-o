@@ -16,7 +16,7 @@ import sqlalchemy as sa
 
 # revision identifiers
 revision = "perf_idx_2025_01_15"
-down_revision = "72bd68b42efe_sync_one_truth_mirrors"  # última migração
+down_revision = "72bd68b42efe"  # última migração
 branch_labels = None
 depends_on = None
 
