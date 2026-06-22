@@ -67,12 +67,17 @@ def render_openui_site(
     *,
     facts: dict[str, Any] | None = None,
     repair_context: dict[str, Any] | None = None,
-    primary_model: str = "sonnet",
-    fallback_model: str = "opus",
-    max_tokens: int = 8000,
+    primary_model: str = "haiku",
+    fallback_model: str = "sonnet",
+    max_tokens: int = 6000,
     temperature: float = 0.35,
 ) -> OpenUIRenderResult:
-    """Generate a publishable HTML document using the OpenUI contract."""
+    """Generate a publishable HTML document using the OpenUI contract.
+
+    Cascade rapido: haiku (5-10x mais rapido, ~10s) -> sonnet (fallback se
+    haiku falhar validacao). Opus fica disponivel via parametro explicito
+    para casos premium (segmentos high-ticket).
+    """
     started = time.time()
     facts = facts or {}
     attempts: list[dict[str, Any]] = []
