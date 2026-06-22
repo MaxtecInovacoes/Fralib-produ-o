@@ -46,6 +46,25 @@ Rules:
   overlap on mobile or desktop.
 - Prefer quiet premium composition, clear hierarchy, strong CTA, readable
   contrast and mobile-first sections.
+
+CRITICAL — do not invent creative metaphors or section labels:
+- The navigation menu and section headings must use the EXACT service names
+  from the brief, in the order they appear. Do NOT paraphrase them into
+  poetic labels (e.g., do NOT call "Integrativa / Funcional / Ortomolecular"
+  "Lente 01/02/03" or "Três lentes" — call them by their real names).
+- The hero H1 must use the business name (or its core service) as-is, not a
+  poetic restatement.
+- Use the brief's subniche/segment labels literally. If the brief has 3
+  sub-services, the section that lists them must show 3 cards with those
+  real names — not "Lente / Passo / Pilar" or other invented metaphors.
+- The CTA must reference the business type (e.g., "Agendar consulta" for
+  nutricionista, "Agendar treino" for academia). Never invent generic CTAs
+  like "Saiba mais" as the primary CTA.
+- Section order: hero, sobre (using brief description), serviços (using real
+  service names), processo/benefícios (3-5 cards using real differentiators
+  from brief), FAQ (using real perguntas from brief), contato com WhatsApp.
+- Address must be reproduced EXACTLY as in the brief — do not abbreviate,
+  do not paraphrase, do not "improve" logradouro names.
 """
 
 
