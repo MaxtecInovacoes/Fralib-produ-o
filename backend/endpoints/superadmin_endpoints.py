@@ -1,15 +1,21 @@
+from __future__ import annotations
+
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy import text
 from backend.core.database import get_db
 from sqlalchemy.orm import Session
 import jwt
 import json
+import logging
 import os
 from datetime import datetime, timedelta
+from pathlib import Path
 from backend.core.access_control import require_superadmin
 from backend.core.config import SUPERADMIN_EMAILS
 from backend.domain.llm_pricing import estimate_llm_cost_usd
 from backend.domain.plans import PLAN_SPECS, get_plan_spec, is_paid_plan
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix='/api/superadmin', tags=['superadmin'])
 
@@ -819,3 +825,372 @@ async def resume_queue(db: Session = Depends(get_db), user: dict = Depends(requi
         return {"ok": True, "message": "Fila retomada"}
     except Exception as e:
         raise HTTPException(500, str(e))
+
+
+# ══════════════════════════════════════════════════════════════════════
+# SDR STUDIO — Editor de prompts do Franz SDR
+# ══════════════════════════════════════════════════════════════════════
+
+# Limites de seguranca
+SDR_STUDIO_MAX_BYTES = 100 * 1024  # 100 KB por camada
+
+# Diretorio raiz dos arquivos editaveis
+_AGENTS_DIR = Path(__file__).resolve().parent.parent / "agents"
+
+# Mapeamento das 3 camadas editaveis (layer -> arquivo primario)
+_SDR_STUDIO_LAYERS: dict[str, dict[str, object]] = {
+    "design_system": {
+        "primary": _AGENTS_DIR / "DESIGN-SYSTEM.md",
+        "extras": [],
+    },
+    "user_system": {
+        "primary": _AGENTS_DIR / "caio_SKILL.md",
+        "extras": [],
+    },
+    "rag": {
+        "primary": _AGENTS_DIR / "rag_knowledge" / "franz.md",
+        "extras": [
+            _AGENTS_DIR / "rag_knowledge" / "caio.md",
+            _AGENTS_DIR / "rag_knowledge" / "agente_nicho.md",
+            _AGENTS_DIR / "rag_knowledge" / "designer.md",
+            _AGENTS_DIR / "rag_knowledge" / "builder_renderer.md",
+            _AGENTS_DIR / "rag_knowledge" / "curadoria.md",
+            _AGENTS_DIR / "rag_knowledge" / "seo_local.md",
+            _AGENTS_DIR / "rag_knowledge" / "validador.md",
+            _AGENTS_DIR / "bryan_knowledge" / "winning_patterns.md",
+            _AGENTS_DIR / "bryan_knowledge" / "objection_handling.md",
+            _AGENTS_DIR / "bryan_knowledge" / "segment_insights.json",
+            _AGENTS_DIR / "bryan_knowledge" / "ab_results.json",
+        ],
+    },
+}
+
+
+def _sdr_read_concatenated(layer: str) -> str:
+    """Le o conteudo da camada. Se houver extras, concatena com headers claros."""
+    cfg = _SDR_STUDIO_LAYERS.get(layer)
+    if not cfg:
+        raise HTTPException(status_code=400, detail=f"layer invalida: {layer}")
+    primary: Path = cfg["primary"]  # type: ignore[assignment]
+    extras: list[Path] = cfg["extras"]  # type: ignore[assignment]
+    if not primary.exists():
+        raise HTTPException(status_code=404, detail=f"Arquivo primario nao encontrado: {primary.name}")
+    parts: list[str] = []
+    if extras:
+        parts.append(f"# === {primary.name} ===\n")
+        parts.append(primary.read_text(encoding="utf-8"))
+        for extra in extras:
+            if extra.exists():
+                parts.append(f"\n\n# === {extra.name} ===\n")
+                parts.append(extra.read_text(encoding="utf-8"))
+        return "\n".join(parts)
+    return primary.read_text(encoding="utf-8")
+
+
+def _sdr_write_layer(layer: str, content: str) -> None:
+    """Escreve o conteudo no arquivo primario da camada."""
+    cfg = _SDR_STUDIO_LAYERS.get(layer)
+    if not cfg:
+        raise HTTPException(status_code=400, detail=f"layer invalida: {layer}")
+    primary: Path = cfg["primary"]  # type: ignore[assignment]
+    primary.parent.mkdir(parents=True, exist_ok=True)
+    primary.write_text(content, encoding="utf-8")
+
+
+@router.get("/sdr-studio/files")
+async def sdr_studio_get_files(user: dict = Depends(require_superadmin)):
+    """Retorna o conteudo atual das 3 camadas de prompt."""
+    try:
+        return {
+            "ok": True,
+            "design_system": _sdr_read_concatenated("design_system"),
+            "user_system": _sdr_read_concatenated("user_system"),
+            "rag": _sdr_read_concatenated("rag"),
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("[SDR Studio] get_files falhou")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.put("/sdr-studio/files/{layer}")
+async def sdr_studio_save_layer(
+    layer: str,
+    request: Request,
+    db: Session = Depends(get_db),
+    user: dict = Depends(require_superadmin),
+):
+    """Salva o conteudo de UMA camada. Registra versao no DB antes de escrever (rollback point)."""
+    if layer not in _SDR_STUDIO_LAYERS:
+        raise HTTPException(status_code=400, detail=f"layer invalida: {layer}")
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="JSON invalido")
+    content = body.get("content")
+    note = (body.get("note") or "")[:255]
+    if not isinstance(content, str):
+        raise HTTPException(status_code=400, detail="campo 'content' deve ser string")
+    if len(content.encode("utf-8")) > SDR_STUDIO_MAX_BYTES:
+        raise HTTPException(
+            status_code=413,
+            detail=f"Conteudo excede {SDR_STUDIO_MAX_BYTES // 1024}KB",
+        )
+
+    # 1) Backup do estado atual antes de sobrescrever
+    try:
+        current = _sdr_read_concatenated(layer)
+    except HTTPException:
+        current = ""
+    db.execute(
+        text("""
+            INSERT INTO sdr_studio_versions (layer, content, created_by, note)
+            VALUES (:layer, :content, :by, :note)
+        """),
+        {
+            "layer": layer,
+            "content": current,
+            "by": user.get("email", ""),
+            "note": note or "auto-backup antes de save",
+        },
+    )
+    db.commit()
+
+    # 2) Escrever novo conteudo
+    _sdr_write_layer(layer, content)
+
+    _audit(db, user, "sdr_studio_save", None, target_id=layer,
+           metadata={"layer": layer, "bytes": len(content.encode("utf-8"))},
+           request=request)
+
+    return {"ok": True, "layer": layer, "bytes": len(content.encode("utf-8"))}
+
+
+@router.get("/sdr-studio/versions")
+async def sdr_studio_list_versions(
+    layer: str = "",
+    limit: int = 20,
+    db: Session = Depends(get_db),
+    user: dict = Depends(require_superadmin),
+):
+    """Lista as ultimas N versoes salvas (append-only)."""
+    limit = max(1, min(int(limit or 20), 100))
+    if layer and layer not in _SDR_STUDIO_LAYERS:
+        raise HTTPException(status_code=400, detail=f"layer invalida: {layer}")
+    try:
+        if layer:
+            rows = db.execute(
+                text("""
+                    SELECT id, layer, created_by, created_at, note,
+                           LENGTH(content) AS bytes
+                    FROM sdr_studio_versions
+                    WHERE layer = :layer
+                    ORDER BY created_at DESC
+                    LIMIT :limit
+                """),
+                {"layer": layer, "limit": limit},
+            ).fetchall()
+        else:
+            rows = db.execute(
+                text("""
+                    SELECT id, layer, created_by, created_at, note,
+                           LENGTH(content) AS bytes
+                    FROM sdr_studio_versions
+                    ORDER BY created_at DESC
+                    LIMIT :limit
+                """),
+                {"limit": limit},
+            ).fetchall()
+        return {
+            "ok": True,
+            "versions": [
+                {
+                    "id": r[0],
+                    "layer": r[1],
+                    "created_by": r[2] or "",
+                    "created_at": r[3].isoformat() if r[3] else None,
+                    "note": r[4] or "",
+                    "bytes": r[5] or 0,
+                }
+                for r in rows
+            ],
+        }
+    except Exception as e:
+        logger.exception("[SDR Studio] list_versions falhou")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/sdr-studio/versions/{version_id}")
+async def sdr_studio_get_version(
+    version_id: int,
+    db: Session = Depends(get_db),
+    user: dict = Depends(require_superadmin),
+):
+    """Retorna o conteudo completo de uma versao especifica."""
+    row = db.execute(
+        text("SELECT id, layer, content, created_by, created_at, note FROM sdr_studio_versions WHERE id = :id"),
+        {"id": version_id},
+    ).fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="Versao nao encontrada")
+    return {
+        "ok": True,
+        "version": {
+            "id": row[0],
+            "layer": row[1],
+            "content": row[2] or "",
+            "created_by": row[3] or "",
+            "created_at": row[4].isoformat() if row[4] else None,
+            "note": row[5] or "",
+        },
+    }
+
+
+@router.post("/sdr-studio/versions/{version_id}/restore")
+async def sdr_studio_restore_version(
+    version_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+    user: dict = Depends(require_superadmin),
+):
+    """Restaura uma versao antiga: salva o estado atual como backup, depois escreve o conteudo antigo."""
+    row = db.execute(
+        text("SELECT layer, content FROM sdr_studio_versions WHERE id = :id"),
+        {"id": version_id},
+    ).fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="Versao nao encontrada")
+    layer, content = row[0], row[1] or ""
+    if layer not in _SDR_STUDIO_LAYERS:
+        raise HTTPException(status_code=500, detail=f"versao com layer invalida: {layer}")
+
+    # Backup do estado atual
+    try:
+        current = _sdr_read_concatenated(layer)
+    except HTTPException:
+        current = ""
+    db.execute(
+        text("""
+            INSERT INTO sdr_studio_versions (layer, content, created_by, note)
+            VALUES (:layer, :content, :by, :note)
+        """),
+        {
+            "layer": layer,
+            "content": current,
+            "by": user.get("email", ""),
+            "note": f"auto-backup antes de restore v{version_id}",
+        },
+    )
+    db.commit()
+
+    _sdr_write_layer(layer, content)
+
+    _audit(db, user, "sdr_studio_restore", None, target_id=version_id,
+           metadata={"layer": layer, "version_id": version_id}, request=request)
+
+    return {"ok": True, "layer": layer, "restored_from": version_id}
+
+
+@router.post("/sdr-studio/chat")
+async def sdr_studio_chat(
+    request: Request,
+    db: Session = Depends(get_db),
+    user: dict = Depends(require_superadmin),
+):
+    """Chat de teste com o Franz usando o system prompt atual (3 camadas concatenadas)."""
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="JSON invalido")
+    messages = body.get("messages") or []
+    stage = (body.get("stage") or "hook").strip()
+    segmento = (body.get("segmento") or "academia").strip()
+    cidade = (body.get("cidade") or "Sao Paulo").strip()
+    modelo = (body.get("modelo") or "sonnet").strip()
+    if not isinstance(messages, list) or not messages:
+        raise HTTPException(status_code=400, detail="'messages' deve ser lista nao vazia")
+    if len(messages) > 30:
+        raise HTTPException(status_code=400, detail="limite de 30 mensagens por chamada")
+
+    # 1) Montar system prompt a partir dos 3 arquivos editaveis
+    try:
+        ds = _sdr_read_concatenated("design_system")
+        us = _sdr_read_concatenated("user_system")
+        rag = _sdr_read_concatenated("rag")
+    except HTTPException:
+        raise
+
+    system_prompt = (
+        "Você é Franz, o SDR consultativo da FraLib em operação pelo WhatsApp.\n"
+        "Responda sempre em português brasileiro. Tom: consultor humano, sem pressão, "
+        "máximo 3 linhas curtas, no máximo 1 pergunta por mensagem.\n\n"
+        "═══════════════════════════════════\n"
+        "DESIGN SYSTEM (regras de comportamento / identidade):\n"
+        "═══════════════════════════════════\n"
+        f"{ds}\n\n"
+        "═══════════════════════════════════\n"
+        "USER SYSTEM (instrucoes do operador / playbook):\n"
+        "═══════════════════════════════════\n"
+        f"{us}\n\n"
+        "═══════════════════════════════════\n"
+        "RAG (base de conhecimento / objeções / padrões):\n"
+        "═══════════════════════════════════\n"
+        f"{rag}\n"
+    )
+
+    # 2) Construir o user prompt via build_user_prompt do sdr_langgraph (reutilizado de producao)
+    history = [{"role": m.get("role"), "content": m.get("content", "")}
+               for m in messages[:-1] if m.get("role") in ("user", "assistant")]
+    incoming = messages[-1].get("content", "")
+    try:
+        from agents.sdr_langgraph.prompts import build_user_prompt
+        user_prompt = build_user_prompt(
+            stage=stage,
+            incoming_message=incoming,
+            nome="(lead de teste do SDR Studio)",
+            cidade=cidade,
+            segmento=segmento,
+            rating=0.0,
+            history=history,
+            memory_facts=None,
+        )
+    except Exception as e:
+        logger.warning("[SDR Studio] build_user_prompt falhou, usando fallback: %s", e)
+        user_prompt = (
+            f"CONTEXTO: lead de teste, segmento={segmento}, cidade={cidade}, stage={stage}\n"
+            f"MENSAGEM: \"{incoming}\"\n"
+            "Responda em pt-BR, tom consultivo, max 3 linhas."
+        )
+
+    # 3) Chamar Claude via llm_direct
+    import time as _time
+    t0 = _time.time()
+    try:
+        from agents.llm_direct import call_claude
+        reply = call_claude(
+            system=system_prompt,
+            user=user_prompt,
+            model=modelo,
+            max_tokens=800,
+            temperature=0.7,
+            agent_name="sdr_studio",
+            respect_agent_config=False,
+            enable_context=False,
+        )
+    except Exception as e:
+        logger.exception("[SDR Studio] call_claude falhou")
+        raise HTTPException(status_code=502, detail=f"Falha ao chamar LLM: {e}")
+    latency_ms = int((_time.time() - t0) * 1000)
+
+    _audit(db, user, "sdr_studio_chat", None,
+           metadata={"stage": stage, "segmento": segmento, "model": modelo,
+                     "latency_ms": latency_ms, "msgs": len(messages)},
+           request=request)
+
+    return {
+        "ok": True,
+        "reply": reply or "",
+        "latency_ms": latency_ms,
+        "model": modelo,
+    }
