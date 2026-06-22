@@ -838,30 +838,20 @@ SDR_STUDIO_MAX_BYTES = 100 * 1024  # 100 KB por camada
 _AGENTS_DIR = Path(__file__).resolve().parent.parent / "agents"
 
 # Mapeamento das 3 camadas editaveis (layer -> arquivo primario)
+# Estas 3 camadas sao o ESPELHO do que o WhatsApp real injeta no system prompt do Franz.
+# Quando FRALIB_SDR_PROMPTS_FROM_MD=1, o WhatsApp real le os mesmos arquivos.
 _SDR_STUDIO_LAYERS: dict[str, dict[str, object]] = {
     "design_system": {
-        "primary": _AGENTS_DIR / "DESIGN-SYSTEM.md",
+        "primary": _AGENTS_DIR / "FRANZ_PERSONA.md",
         "extras": [],
     },
     "user_system": {
-        "primary": _AGENTS_DIR / "caio_SKILL.md",
+        "primary": _AGENTS_DIR / "FRANZ_PLAYBOOK.md",
         "extras": [],
     },
     "rag": {
-        "primary": _AGENTS_DIR / "rag_knowledge" / "franz.md",
-        "extras": [
-            _AGENTS_DIR / "rag_knowledge" / "caio.md",
-            _AGENTS_DIR / "rag_knowledge" / "agente_nicho.md",
-            _AGENTS_DIR / "rag_knowledge" / "designer.md",
-            _AGENTS_DIR / "rag_knowledge" / "builder_renderer.md",
-            _AGENTS_DIR / "rag_knowledge" / "curadoria.md",
-            _AGENTS_DIR / "rag_knowledge" / "seo_local.md",
-            _AGENTS_DIR / "rag_knowledge" / "validador.md",
-            _AGENTS_DIR / "bryan_knowledge" / "winning_patterns.md",
-            _AGENTS_DIR / "bryan_knowledge" / "objection_handling.md",
-            _AGENTS_DIR / "bryan_knowledge" / "segment_insights.json",
-            _AGENTS_DIR / "bryan_knowledge" / "ab_results.json",
-        ],
+        "primary": _AGENTS_DIR / "FRANZ_RAG.md",
+        "extras": [],
     },
 }
 
@@ -901,11 +891,14 @@ def _sdr_write_layer(layer: str, content: str) -> None:
 async def sdr_studio_get_files(user: dict = Depends(require_superadmin)):
     """Retorna o conteudo atual das 3 camadas de prompt."""
     try:
+        import os as _os
+        md_mode = _os.getenv("FRALIB_SDR_PROMPTS_FROM_MD", "0").strip().lower() in {"1", "true", "on", "sim"}
         return {
             "ok": True,
             "design_system": _sdr_read_concatenated("design_system"),
             "user_system": _sdr_read_concatenated("user_system"),
             "rag": _sdr_read_concatenated("rag"),
+            "whatsapp_mirror_enabled": md_mode,
         }
     except HTTPException:
         raise
@@ -1113,30 +1106,36 @@ async def sdr_studio_chat(
     if len(messages) > 30:
         raise HTTPException(status_code=400, detail="limite de 30 mensagens por chamada")
 
-    # 1) Montar system prompt a partir dos 3 arquivos editaveis
+    # 1) Montar system prompt a partir dos 3 arquivos editaveis.
+    #    Quando FRALIB_SDR_PROMPTS_FROM_MD=1, usa os mesmos helpers que o WhatsApp real
+    #    (get_franz_persona / get_franz_stage_prompt / get_franz_rag) -> espelho fiel.
+    import os as _os
+    md_mode = _os.getenv("FRALIB_SDR_PROMPTS_FROM_MD", "0").strip().lower() in {"1", "true", "on", "sim"}
     try:
         ds = _sdr_read_concatenated("design_system")
         us = _sdr_read_concatenated("user_system")
-        rag = _sdr_read_concatenated("rag")
+        rag_layer = _sdr_read_concatenated("rag")
     except HTTPException:
         raise
 
+    if md_mode:
+        try:
+            from agents.sdr_langgraph.prompts import (
+                get_franz_persona, get_franz_stage_prompt, get_franz_rag,
+            )
+            persona = get_franz_persona()
+            stage_prompt = get_franz_stage_prompt(stage) or us
+            rag_inject = get_franz_rag() or rag_layer
+        except Exception as e:
+            logger.warning("[SDR Studio] helpers .md indisponiveis, usando conteudo direto: %s", e)
+            persona, stage_prompt, rag_inject = ds, us, rag_layer
+    else:
+        persona, stage_prompt, rag_inject = ds, us, rag_layer
+
     system_prompt = (
-        "Você é Franz, o SDR consultativo da FraLib em operação pelo WhatsApp.\n"
-        "Responda sempre em português brasileiro. Tom: consultor humano, sem pressão, "
-        "máximo 3 linhas curtas, no máximo 1 pergunta por mensagem.\n\n"
-        "═══════════════════════════════════\n"
-        "DESIGN SYSTEM (regras de comportamento / identidade):\n"
-        "═══════════════════════════════════\n"
-        f"{ds}\n\n"
-        "═══════════════════════════════════\n"
-        "USER SYSTEM (instrucoes do operador / playbook):\n"
-        "═══════════════════════════════════\n"
-        f"{us}\n\n"
-        "═══════════════════════════════════\n"
-        "RAG (base de conhecimento / objeções / padrões):\n"
-        "═══════════════════════════════════\n"
-        f"{rag}\n"
+        f"{persona}\n\n"
+        f"{stage_prompt}\n\n"
+        f"CONTEXTO RAG (conhecimento da base):\n{rag_inject}\n"
     )
 
     # 2) Construir o user prompt via build_user_prompt do sdr_langgraph (reutilizado de producao)

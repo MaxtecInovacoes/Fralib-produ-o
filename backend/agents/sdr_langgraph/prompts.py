@@ -6,6 +6,72 @@ Customer-facing replies must always be written in Brazilian Portuguese.
 
 from __future__ import annotations
 
+import os
+from pathlib import Path
+
+
+# ─────────────────────────────────────────────────────────────────
+# SDR Studio integration — espelha o system prompt do WhatsApp
+# com os arquivos .md editados no SuperAdmin.
+#
+# Feature flag: FRALIB_SDR_PROMPTS_FROM_MD=1 → WhatsApp real le os .md
+# Default: 0 → comportamento atual (constantes deste arquivo).
+# ─────────────────────────────────────────────────────────────────
+
+_SDR_MD_DIR = Path(__file__).resolve().parent.parent
+_FALLBACK_PERSONA = None
+_FALLBACK_STAGES: dict[str, str] = {}
+
+
+def _sdr_prompts_from_md_enabled() -> bool:
+    return os.getenv("FRALIB_SDR_PROMPTS_FROM_MD", "0").strip().lower() in {"1", "true", "on", "sim"}
+
+
+def _read_layer(layer_file: str) -> str | None:
+    """Le uma camada do SDR Studio. Retorna None se arquivo nao existir."""
+    p = _SDR_MD_DIR / layer_file
+    if not p.exists():
+        return None
+    try:
+        return p.read_text(encoding="utf-8")
+    except Exception:
+        return None
+
+
+def _load_persona_from_md() -> str:
+    """Carrega FRANZ_PERSONA.md (Design System layer). Fallback: FRANZ_PERSONA constante."""
+    md = _read_layer("FRANZ_PERSONA.md")
+    return md if md else FRANZ_PERSONA
+
+
+def _load_stage_from_md(stage: str) -> str | None:
+    """Extrai o bloco '# === STAGE: <stage> ===' de FRANZ_PLAYBOOK.md.
+    Retorna None se feature flag off ou arquivo nao existir.
+    """
+    if not _sdr_prompts_from_md_enabled():
+        return None
+    md = _read_layer("FRANZ_PLAYBOOK.md")
+    if not md:
+        return None
+    marker = f"# === STAGE: {stage} ==="
+    idx = md.find(marker)
+    if idx < 0:
+        return None
+    # Acha o proximo "# === STAGE:" ou final do arquivo
+    rest = md[idx + len(marker):]
+    next_idx = rest.find("# === STAGE:")
+    if next_idx < 0:
+        return rest
+    return rest[:next_idx]
+
+
+def _load_rag_from_md() -> str:
+    """Carrega FRANZ_RAG.md. Retorna string vazia se feature flag off ou arquivo nao existir."""
+    if not _sdr_prompts_from_md_enabled():
+        return ""
+    md = _read_layer("FRANZ_RAG.md")
+    return md or ""
+
 
 OUTPUT_LANGUAGE_RULE = """
 OUTPUT LANGUAGE:
@@ -65,6 +131,24 @@ Never pressure, invent scarcity or promise guaranteed results.
 
 
 FRANZ_PERSONA = PERSONAS["consultivo"]["persona"]
+
+
+def get_franz_persona() -> str:
+    """Retorna a persona atual do Franz. Se feature flag ativa, le do .md; senao constante."""
+    return _load_persona_from_md()
+
+
+def get_franz_stage_prompt(stage: str) -> str:
+    """Retorna o prompt do stage. Se feature flag ativa, le do .md; senao constante."""
+    md = _load_stage_from_md(stage)
+    if md is not None:
+        return md
+    return STAGE_PROMPTS_CONSULTIVO.get(stage, STAGE_PROMPTS_CONSULTIVO["hook"])
+
+
+def get_franz_rag() -> str:
+    """Retorna o RAG do Franz (camada RAG do Studio). Vazio se feature flag off."""
+    return _load_rag_from_md()
 
 
 STAGE_PROMPTS_CONSULTIVO = {

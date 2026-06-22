@@ -530,6 +530,7 @@ canvas{max-width:100%}
             </select>
           </div>
         </div>
+        <div id="sdr-mirror-badge" style="font-size:10px;padding:5px 9px;border-radius:3px;margin-bottom:8px;display:none;font-family:var(--mono);letter-spacing:.3px"></div>
 
         <div id="sdr-chat-log" style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:12px;overflow-y:auto;min-height:300px;max-height:60vh;font-size:13px"></div>
 
@@ -1991,6 +1992,21 @@ async function loadSdrStudio(){
     SDR_LAYERS.user_system = d.user_system || '';
     SDR_LAYERS.rag = d.rag || '';
     switchSdrLayer(SDR_LAYER, true);
+    // Badge de espelhamento com WhatsApp real
+    const badge = document.getElementById('sdr-mirror-badge');
+    if(d.whatsapp_mirror_enabled){
+      badge.style.display = 'block';
+      badge.style.background = 'rgba(34,197,94,.1)';
+      badge.style.border = '1px solid rgba(34,197,94,.4)';
+      badge.style.color = 'var(--success, #22c55e)';
+      badge.textContent = '🟢 ESPELHO ATIVO — FRALIB_SDR_PROMPTS_FROM_MD=1. O WhatsApp real está lendo estes mesmos arquivos.';
+    }else{
+      badge.style.display = 'block';
+      badge.style.background = 'rgba(245,158,11,.08)';
+      badge.style.border = '1px solid rgba(245,158,11,.3)';
+      badge.style.color = 'var(--warning, #f59e0b)';
+      badge.textContent = '🟡 MODO RASCUNHO — alterações aqui NÃO afetam o WhatsApp real ainda. Para ativar: FRALIB_SDR_PROMPTS_FROM_MD=1 no .env + restart fralib-api/fralib-franz.';
+    }
     toast('Arquivos carregados', 'success');
   }catch(e){
     document.getElementById('sdr-layer-info').textContent = 'erro: ' + (e.message||e);
