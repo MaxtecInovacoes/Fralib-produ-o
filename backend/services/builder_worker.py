@@ -233,7 +233,39 @@ def render_site_with_builder(
     workspace_dir = Path(manifest["sandbox"]["workspace"]).resolve()
     output_dir = Path(manifest["sandbox"]["output_dir"]).resolve()
 
-    if engine == "vite_react":
+    if engine == "openui":
+        # OpenUI: HTML estatico, 1 chamada LLM, sem Vite/node_modules.
+        # Mais rapido, sem truncamento de output, gera landing page completa.
+        from services.openui_renderer import render_openui_site
+
+        render_result = render_openui_site(
+            manifest["prompt"],
+            facts=manifest.get("prompt_agent", {}).get("context", {}),
+            repair_context=repair_context,
+            primary_model=os.getenv("FRALIB_OPENUI_PRIMARY_MODEL", PROXY_BUILDER_MODEL),
+            fallback_model=os.getenv("FRALIB_OPENUI_FALLBACK_MODEL", PROXY_DEFAULT_MODEL),
+            max_tokens=int(os.getenv("FRALIB_OPENUI_MAX_TOKENS", "8000")),
+            temperature=float(os.getenv("FRALIB_OPENUI_TEMPERATURE", "0.35")),
+        )
+        index_target = output_dir / "index.html"
+        index_target.write_text(render_result.html, encoding="utf-8")
+        _write_builder_render_meta(
+            output_dir,
+            engine=engine,
+            model=render_result.model,
+            attempts=render_result.attempts,
+            elapsed_ms=render_result.elapsed_ms,
+            html_chars=len(render_result.html),
+            visual_direction=(
+                manifest.get("prompt_agent", {})
+                .get("context", {})
+                .get("visual_direction", {})
+            ),
+            source_files=[],
+        )
+        model = render_result.model
+        attempts = render_result.attempts
+    elif engine == "vite_react":
         fallback_model = _builder_proxy_fallback_model()
         render_result = render_vite_react_site(
             manifest["prompt"],

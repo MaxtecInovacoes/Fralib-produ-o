@@ -392,21 +392,36 @@ def render_vite_react_site(
     for model_idx, model in enumerate(model_candidates, start=1):
         attempt_started = time.time()
         try:
-            prompt = _compose_vite_user_prompt(
-                builder_prompt,
-                facts=facts,
-                repair_context=repair_context,
-            )
-            raw = _call_vite_react_llm(
-                prompt,
-                model=model,
-                max_tokens=max_tokens,
-                temperature=temperature,
-            )
-            files = prepare_vite_project_files(
-                extract_vite_project_files(raw),
-                facts=facts,
-            )
+            # Modo batch: divide em N chamadas (App, main, types, css, page, components)
+            # usando mix de modelos (Haiku pra simples, Opus pra hero/services/about).
+            # Mais barato, sem truncar output. Ativado por padrao quando FRALIB_VITE_BATCH
+            # nao for "0".
+            if _vite_react_batch_mode_enabled():
+                files = _generate_vite_project_files_in_batches(
+                    builder_prompt,
+                    facts=facts,
+                    model=model,
+                    max_tokens=max_tokens,
+                    temperature=temperature,
+                    repair_context=repair_context,
+                )
+            else:
+                # Modo single-shot: 1 chamada, max_tokens alta. Pode truncar.
+                prompt = _compose_vite_user_prompt(
+                    builder_prompt,
+                    facts=facts,
+                    repair_context=repair_context,
+                )
+                raw = _call_vite_react_llm(
+                    prompt,
+                    model=model,
+                    max_tokens=max_tokens,
+                    temperature=temperature,
+                )
+                files = prepare_vite_project_files(
+                    extract_vite_project_files(raw),
+                    facts=facts,
+                )
             validate_vite_project_files(files, facts, requested_paths=requested_paths)
             write_vite_project(workspace, files)
             build_vite_project(workspace)
@@ -517,6 +532,16 @@ def _single_model_mode_enabled() -> bool:
 
 def _preview_fast_enabled() -> bool:
     env = os.getenv("FRALIB_VITE_PREVIEW_FAST", "1").strip().lower()
+    return env not in {"0", "false", "no", "off"}
+
+
+def _vite_react_batch_mode_enabled() -> bool:
+    """When true, render_vite_react_site divides generation into per-component batches.
+
+    Saves tokens (~70%) by mixing Haiku (App/main/types/css) with Sonnet/Opus
+    (visual components). Default: ON.
+    """
+    env = os.getenv("FRALIB_VITE_BATCH", "1").strip().lower()
     return env not in {"0", "false", "no", "off"}
 
 

@@ -121,88 +121,86 @@ def main() -> int:
     print(f"design system: {facts.get('design_system')}")
     print(f"lead: {facts['business']['name']} ({facts['business']['city']})")
     print()
-    print("Etapa 1: chamar LLM direto (sem validador) para ver o que gera...")
-    from services.vite_react_renderer import (
-        _call_vite_react_llm,
-        _compose_vite_user_prompt,
-        extract_vite_project_files,
-        prepare_vite_project_files,
-        _select_vite_react_models_for_run,
-    )
-    from backend.core.proxy_models import PROXY_BUILDER_MODEL, PROXY_LIGHT_MODEL
+    print("Etapa 1: chamar render_vite_react_site (BATCH mode, mix de modelos)...")
+    from services.vite_react_renderer import render_vite_react_site
 
-    cascade = _select_vite_react_models_for_run(PROXY_BUILDER_MODEL, PROXY_LIGHT_MODEL)
-    print(f"cascade: {cascade}")
-    print()
+    started = time.time()
+    try:
+        result = render_vite_react_site(
+            builder_prompt,
+            workspace_dir=workspace,
+            facts=facts,
+        )
+        elapsed = time.time() - started
+        print()
+        print("=" * 60)
+        print(f"OK: {elapsed:.1f}s")
+        print("=" * 60)
+        print()
+        print(f"engine final: {result.model}")
+        print(f"index_path: {result.index_path}")
+        print(f"html_chars: {len(result.html)}")
+        print(f"source_files: {len(result.source_files)}")
+        print()
+        print("attempts (cascata):")
+        for a in result.attempts:
+            elapsed_ms = a.get("elapsed_ms", 0)
+            print(f"  - model={a.get('model')} status={a.get('status')} elapsed_ms={elapsed_ms}")
+            if a.get("error"):
+                print(f"    error: {a['error'][:200]}")
+        print()
+        print("source files (alphabetical):")
+        for path in sorted(result.source_files.keys()):
+            content = result.source_files[path]
+            print(f"  {path} ({len(content)} chars)")
 
-    raw = ""
-    used_model = ""
-    last_err = ""
-    for model in cascade:
-        try:
-            print(f"tentando {model}...")
-            started_m = time.time()
-            prompt = _compose_vite_user_prompt(builder_prompt, facts=facts)
-            raw = _call_vite_react_llm(prompt, model=model, max_tokens=16000, temperature=0.55)
-            used_model = model
-            print(f"  OK {model} em {time.time()-started_m:.1f}s ({len(raw)} chars)")
-            break
-        except Exception as e:
-            last_err = str(e)[:200]
-            print(f"  FAIL {model}: {last_err}")
+        expected = [
+            "src/components/Navbar.tsx",
+            "src/components/HeroSection.tsx",
+            "src/components/AboutSection.tsx",
+            "src/components/GallerySection.tsx",
+            "src/components/ServicesSection.tsx",
+            "src/components/LifestyleSection.tsx",
+            "src/components/ReviewsSection.tsx",
+            "src/components/LocationSection.tsx",
+            "src/components/ContactCTA.tsx",
+            "src/components/Footer.tsx",
+            "src/components/LgpdBanner.tsx",
+        ]
+        print()
+        print("completude dos 11 componentes:")
+        missing = []
+        for c in expected:
+            if c in result.source_files:
+                print(f"  OK   {c} ({len(result.source_files[c])} chars)")
+            else:
+                print(f"  MISS {c}")
+                missing.append(c)
+        if missing:
+            print(f"\n{len(missing)}/{len(expected)} componentes faltando!")
+        else:
+            print(f"\nTodos os {len(expected)} componentes presentes!")
 
-    if not raw:
-        print(f"FATAL: nenhum modelo retornou. Ultimo erro: {last_err}")
+        out = {
+            "elapsed_seconds": round(elapsed, 1),
+            "engine": result.model,
+            "html_chars": len(result.html),
+            "source_files_count": len(result.source_files),
+            "attempts": result.attempts,
+            "missing_components": missing,
+            "index_path": result.index_path,
+        }
+        report = workspace / "test-report.json"
+        report.write_text(json.dumps(out, ensure_ascii=False, indent=2), encoding="utf-8")
+        print(f"\nrelatorio salvo em {report}")
+        return 0 if not missing else 2
+    except Exception as exc:
+        elapsed = time.time() - started
+        print(f"\nFAIL: render crashou em {elapsed:.1f}s")
+        print(f"Erro: {exc}")
+        import traceback
+        traceback.print_exc()
         return 1
-
-    files = prepare_vite_project_files(extract_vite_project_files(raw), facts=facts)
-
-    print()
-    print("=" * 60)
-    print(f"LLM ({used_model}) gerou {len(files)} arquivos:")
-    print("=" * 60)
-    for path in sorted(files.keys()):
-        print(f"  {path} ({len(files[path])} chars)")
-
-    # Componentes esperados
-    expected = [
-        "src/components/Navbar.tsx",
-        "src/components/HeroSection.tsx",
-        "src/components/AboutSection.tsx",
-        "src/components/GallerySection.tsx",
-        "src/components/ServicesSection.tsx",
-        "src/components/LifestyleSection.tsx",
-        "src/components/ReviewsSection.tsx",
-        "src/components/LocationSection.tsx",
-        "src/components/ContactCTA.tsx",
-        "src/components/Footer.tsx",
-        "src/components/LgpdBanner.tsx",
-    ]
-    print()
-    print("completude:")
-    for c in expected:
-        marker = "OK  " if c in files else "MISS"
-        sz = len(files[c]) if c in files else 0
-        print(f"  {marker} {c} ({sz} chars)")
-
-    # Persiste o source cru para inspecao
-    raw_dump = workspace / "llm_raw_output.txt"
-    raw_dump.write_text(raw, encoding="utf-8")
-    print(f"\nLLM raw output: {raw_dump} ({len(raw)} chars)")
-
-    # Persiste report
-    report = {
-        "used_model": used_model,
-        "cascade": cascade,
-        "elapsed_seconds_total": round(time.time() - started, 1) if 'started' in dir() else 0,
-        "raw_chars": len(raw),
-        "files_count": len(files),
-        "missing_components": [c for c in expected if c not in files],
-    }
-    (workspace / "test-report.json").write_text(
-        json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8"
-    )
-    return 0
 
 
 if __name__ == "__main__":
