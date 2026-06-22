@@ -201,6 +201,27 @@ def _enrich_seo_and_runtime(
     # 1) Remover skip-link duplicado (OpenUI gera 1, A11Y_CONTRACT gera outro)
     document = _dedupe_skip_link(document)
 
+    # 1.5) Corrigir <title> generico "FraLib Site" pelo nome real do negocio
+    if facts:
+        business = (facts or {}).get("business", {}) if isinstance(facts, dict) else {}
+        nome = business.get("name") or ""
+        segmento = business.get("segment") or ""
+        cidade = business.get("city") or ""
+        if nome:
+            if segmento and cidade:
+                real_title = f"{nome} | {segmento} em {cidade}"
+            elif segmento:
+                real_title = f"{nome} | {segmento}"
+            else:
+                real_title = nome
+            document = re.sub(
+                r"<title>[^<]*</title>",
+                f"<title>{real_title}</title>",
+                document,
+                count=1,
+                flags=re.IGNORECASE,
+            )
+
     # 2) Remover comentarios // Manifesto // Modalidades // Estrutura que vazam
     document = re.sub(
         r'>\s*//\s*[A-Z][a-z]+\s*<',
@@ -381,11 +402,12 @@ def _extract_meta_content(html: str, attr: str) -> str:
 
 def _dedupe_skip_link(html: str) -> str:
     """Remove o skip-link OpenUI duplicado, mantendo o A11Y_CONTRACT (com 'principal')."""
-    # OpenUI gera: <a class="fralib-skip-link magnetic-cta data-magnetic" href="#main">Pular para o conteudo</a>
-    # A11Y gera: <a href="#main" class="sr-only...">Pular para o conteudo principal</a>
+    # OpenUI gera: <a class="fralib-skip-link..." ...>Pular para o conteudo</a> (sem "principal")
+    # A11Y gera: <a href="#main" class="sr-only...">Pular para o conteudo principal</a> (com "principal")
     # Mantemos o A11Y (com til e 'principal'), removemos o OpenUI.
+    # Regex flexivel: casa qualquer <a> com "Pular para o conteudo" (SEM "principal")
     return re.sub(
-        r'<a\s+class="fralib-skip-link[^"]*"[^>]*>Pular para o conteudo</a>',
+        r'<a\s[^>]*>\s*Pular para o conteudo\s*</a>',
         '',
         html,
         count=1,
