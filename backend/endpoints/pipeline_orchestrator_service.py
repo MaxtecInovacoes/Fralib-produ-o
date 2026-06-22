@@ -2834,6 +2834,40 @@ async def executar_pipeline_lead_existente(
             raise Exception(f"Lead {lead_id} nao encontrado")
         lead_dict = dict(row._mapping)
 
+    # ─── GUARD CROSS-TENANT: se o mesmo negócio (phone ou place_id) já tem
+    # lead ativo em OUTRO tenant, bloqueia para evitar site/WhatsApp duplicado.
+    # Cobre o caso de admins com múltiplas contas (dezigpi/maxtec) achando o
+    # mesmo negócio físico em tenants separados. ───
+    _phone_norm = re.sub(r"\D+", "", str(lead_dict.get("telefone") or ""))
+    if _phone_norm.startswith("55") and len(_phone_norm) > 11:
+        _phone_norm = _phone_norm[2:]
+    with engine.connect() as _guard_conn:
+        _dup = _guard_conn.execute(
+            text(
+                """
+                SELECT id, user_id, nome, status, url_site
+                FROM leads
+                WHERE id <> :id
+                  AND REPLACE(REPLACE(REPLACE(COALESCE(telefone,''),' ',''),'-',''),' ','') = :phone
+                  AND status IN ('processando','concluido','pronto')
+                LIMIT 5
+                """
+            ),
+            {"id": lead_id, "phone": _phone_norm},
+        ).fetchall()
+        if _dup:
+            _other = ", ".join(
+                f"user={r[1]} status={r[3]}" for r in _dup[:3]
+            )
+            _log(
+                f"BLOCKED: mesmo telefone ja tem lead ativo em outro tenant ({_other}). "
+                "Reutilize o existente.",
+                "warning",
+            )
+            raise Exception(
+                f"Lead {lead_id} bloqueado: telefone duplicado em outro tenant ({_other})"
+            )
+
     nome = lead_dict.get("nome", "")
     cidade = lead_dict.get("cidade", "")
     segmento = lead_dict.get("segmento", "")
