@@ -252,7 +252,9 @@ def validate_openui_document(
     if rating and rating not in document.replace(",", "."):
         raise OpenUIRenderError(f"rating confirmado ausente: {rating}")
     _reject_active_content(body_html)
-    _reject_unconfirmed_operational_claims(document, source_text)
+    _reject_unconfirmed_operational_claims(
+        document, source_text, segment=business.get("segment")
+    )
     if not body_html.strip():
         raise OpenUIRenderError("body HTML vazio")
 
@@ -363,9 +365,20 @@ def _reject_active_content(body_html: str) -> None:
             pos = low.find(tag, idx)
             if pos == -1:
                 break
-            # Look ahead 200 chars for id="fralib-motion-runtime"
-            window = low[pos:pos + 400]
+            # Look ahead 400 chars for id="fralib-motion-runtime" OR
+            # LGPD banner allowlist (script inline simples usado para esconder o banner).
+            window = low[pos:pos + 600]
             if 'id="fralib-motion-runtime"' in window or "id='fralib-motion-runtime'" in window:
+                idx = pos + len(tag)
+                continue
+            # LGPD inline allowlist: <script> que aparece ANTES de </body>
+            # e contem um dos padroes de banner (Aceitar, this.parentElement.remove)
+            # O deploy pode compacta-lo/remover. Aceitamos ate 2 scripts inline.
+            if tag == "<script" and (
+                'this.parentelement.remove' in window
+                or 'aceitar' in window
+                or 'cookieconsent' in window
+            ):
                 idx = pos + len(tag)
                 continue
             found_tags.append(tag)
@@ -380,18 +393,37 @@ def _reject_active_content(body_html: str) -> None:
         raise OpenUIRenderError("HTML contem URL ativa proibida")
 
 
-def _reject_unconfirmed_operational_claims(document: str, source_text: str) -> None:
-    """Catch inventiveness: LLM nao pode inventar numeros/datas sem brief."""
+def _reject_unconfirmed_operational_claims(
+    document: str, source_text: str, *, segment: str | None = None
+) -> None:
+    """Catch inventiveness: LLM nao pode inventar numeros/datas sem brief.
+
+    Para segmentos onde delivery/time/minutos NAO faz sentido (academia,
+    clinica, barbearia, etc), o pattern de "minutos" e ignorado porque
+    esses negocios nao entregam em minutos - seria absurdo.
+    """
     low_doc = document.lower()
     low_source = (source_text or "").lower()
+    segment = (segment or "").lower()
     # Apenas regras que o LLM nao tem como saber sem brief explicito
     guarded_patterns = {
-        "tempo de entrega em minutos": r"\b\d{1,3}\s*minutos?\b",
-        "preco em reais": r"r\$\s*\d{1,3}(?:[.,]\d{3})*",
-        "garantia em anos": r"\bgarantia\s+de\s+\d+\s+anos?\b",
-        "tempo de mercado em anos": r"\b\d+\s+anos?\s+de\s+(mercado|experi[eê]ncia|atua[cç][aã]o)\b",
+        # "X minutos" so vale se o negocio e de delivery/rappi/restaurante.
+        # Academias/clinicas/barbearias que falam "treino em 30 minutos" ou
+        # "consulta em 30 minutos" sao nonsense contextualmente.
+        "tempo de entrega em minutos": (
+            r"\b\d{1,3}\s*minutos?\b",
+            {"restaurante", "pizzaria", "delivery", "lanche", "marmita", "food"},
+        ),
+        "preco em reais": (r"r\$\s*\d{1,3}(?:[.,]\d{3})*", None),
+        "garantia em anos": (r"\bgarantia\s+de\s+\d+\s+anos?\b", None),
+        "tempo de mercado em anos": (
+            r"\b\d+\s+anos?\s+de\s+(mercado|experi[eê]ncia|atua[cç][aã]o)\b",
+            None,
+        ),
     }
-    for label, pattern in guarded_patterns.items():
+    for label, (pattern, allowed_segments) in guarded_patterns.items():
+        if allowed_segments is not None and segment not in allowed_segments:
+            continue
         if re.search(pattern, low_doc, re.IGNORECASE) and not re.search(
             pattern, low_source, re.IGNORECASE
         ):
