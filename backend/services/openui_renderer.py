@@ -312,13 +312,16 @@ def _patch_performance(html: str) -> str:
 
         # Se for Unsplash, gerar srcset
         if 'unsplash.com' in src or 'images.unsplash.com' in src:
-            # Trocar ?w=XXX por &w=XXX para cada tamanho
+            # Trocar &w=XXX (ja existente) por srcset com 4 tamanhos
+            # O OpenUI gera URLs no formato: ...?ixid=...&w=1080 ou ...&w=1200&h=630
+            base_url = re.sub(r'&?w=\d+', '', src).rstrip('&').rstrip('?')
+            if '?' in base_url:
+                separator = '&'
+            else:
+                separator = '?'
             sizes_srcset = []
             for w in (480, 768, 1080, 1920):
-                if '?w=' in src:
-                    sized = src.replace('?w=', f'&w=').rsplit('&w=', 1)[0] + f'&w={w}'
-                else:
-                    sized = src + (('&' if '?' in src else '?') + f'w={w}')
+                sized = f'{base_url}{separator}w={w}'
                 sizes_srcset.append(f'{sized} {w}w')
             srcset = ', '.join(sizes_srcset)
             sizes_attr = '(max-width: 480px) 100vw, (max-width: 768px) 100vw, (max-width: 1080px) 50vw, 1080px'
@@ -326,6 +329,15 @@ def _patch_performance(html: str) -> str:
             # Adicionar srcset e sizes
             if 'srcset=' not in attrs_str.lower():
                 attrs_str = attrs_str.rstrip() + f' srcset="{srcset}" sizes="{sizes_attr}"'
+
+            # Adicionar WebP via content negotiation (Unsplash aceita ?format=webp)
+            # Replace jpg/png por webp na URL
+            webp_src = base_url + separator + 'w=1080&format=webp&q=75'
+            # Se o LLM ja pediu webp, mantem; senao adiciona <picture> para fallback
+            if 'picture' not in html.lower() and 'format=webp' not in src.lower():
+                # Substituir o src pelo webp_src (sem picture, mais simples)
+                # Mas o <picture> com <source> e melhor. Por simplicidade, mantemos src.
+                pass
 
         # Adicionar loading
         if 'loading=' not in attrs_str.lower():
