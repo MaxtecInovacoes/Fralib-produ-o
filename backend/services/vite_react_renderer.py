@@ -189,21 +189,9 @@ try:
         vite_template_app_tsx,
         vite_template_types_ts,
         vite_template_index_css,
-        vite_template_card_ui,
-        vite_template_lgpd_banner,
-        vite_template_navbar,
-        vite_template_hero_section,
-        vite_template_about_section,
-        vite_template_gallery_section,
-        vite_template_services_section,
-        vite_template_lifestyle_section,
-        vite_template_reviews_section,
-        vite_template_location_section,
-        vite_template_contact_cta,
-        vite_template_footer,
-        vite_template_booking_modal,
-        vite_template_factual_motion_contract,
         vite_template_jsx_fallback_types,
+        vite_template_lgpd_banner,
+        vite_template_factual_motion_contract,
         _visual_business_payload,
         _visual_media_urls,
     )
@@ -217,21 +205,9 @@ except ImportError:
         vite_template_app_tsx,
         vite_template_types_ts,
         vite_template_index_css,
-        vite_template_card_ui,
-        vite_template_lgpd_banner,
-        vite_template_navbar,
-        vite_template_hero_section,
-        vite_template_about_section,
-        vite_template_gallery_section,
-        vite_template_services_section,
-        vite_template_lifestyle_section,
-        vite_template_reviews_section,
-        vite_template_location_section,
-        vite_template_contact_cta,
-        vite_template_footer,
-        vite_template_booking_modal,
-        vite_template_factual_motion_contract,
         vite_template_jsx_fallback_types,
+        vite_template_lgpd_banner,
+        vite_template_factual_motion_contract,
         _visual_business_payload,
         _visual_media_urls,
     )
@@ -326,13 +302,6 @@ STUDIO_COMPONENT_GROUPS = {
     "lifestyle": ("lifestyle", "editorial", "experience"),
     "services": ("service", "plan", "offer"),
     "modal": ("modal", "dialog", "booking"),
-}
-
-GENERIC_FALLBACK_SIGNATURES = {
-    "fralib studio",
-    "onde a obsessao pelo detalhe encontra a tradicao",
-    "um site com linguagem visual mais proxima de studio/editorial",
-    "essa dobra reforca o nicho com prova visual, contexto local e CTA direto",
 }
 
 SEGMENT_RULES = {
@@ -1510,14 +1479,8 @@ def prepare_vite_project_files(files: dict[str, str], *, facts: dict[str, Any]) 
     _stabilize_app_contract(prepared)
     _drop_malformed_data_url_in_jsx(prepared)
     _ensure_lgpd_banner_contract(prepared, facts)
-    _stabilize_navbar_contract(prepared, facts)
     _rewrite_editorial_images(prepared, facts)
     _ensure_factual_motion_contract(prepared, facts)
-    _ensure_required_studio_components(prepared, facts)
-    _stabilize_full_visual_shell_contract(prepared, facts)
-    _stabilize_reviews_contract(prepared, facts)
-    _stabilize_location_contract(prepared, facts)
-    _stabilize_contact_closure_contract(prepared, facts)
     _normalize_component_export_contract(prepared)
     _enforce_hero_visual_contract(prepared)
     return dict(sorted(prepared.items()))
@@ -1691,24 +1654,6 @@ def _ensure_lgpd_banner_contract(files: dict[str, str], facts: dict[str, Any] | 
     files[path] = updated
 
 
-def _stabilize_navbar_contract(files: dict[str, str], facts: dict[str, Any]) -> None:
-    navbar_path = "src/components/Navbar.tsx"
-    content = str(files.get(navbar_path) or "")
-    if not content:
-        files[navbar_path] = vite_template_navbar(facts)
-        return
-    nav = content.lower()
-    has_mobile_cta = "<button" in nav and any(
-        token in nav for token in ("matr", "começar", "comecar", "agendar")
-    )
-    has_responsive_cta = any(
-        token in nav for token in ("hidden sm:", "hidden md:", "max-sm:hidden", "sm:inline", "sm:flex")
-    )
-    has_shrink_brand = any(token in nav for token in ("min-w-0", "truncate", "shrink", "text-sm", "max-sm:"))
-    if has_mobile_cta and not (has_responsive_cta or has_shrink_brand):
-        files[navbar_path] = vite_template_navbar(facts)
-
-
 def _rewrite_editorial_images(files: dict[str, str], facts: dict[str, Any]) -> None:
     business = facts.get("business") if isinstance(facts.get("business"), dict) else {}
     media = facts.get("media") if isinstance(facts.get("media"), dict) else {}
@@ -1736,38 +1681,6 @@ def _rewrite_editorial_images(files: dict[str, str], facts: dict[str, Any]) -> N
             return replacement
 
         files[path] = pattern.sub(replace_url, text)
-
-
-def _ensure_required_studio_components(files: dict[str, str], facts: dict[str, Any]) -> None:
-    """Inject tiny factual components when an LLM batch omits hard studio contracts."""
-    business = facts.get("business") if isinstance(facts.get("business"), dict) else {}
-    name = str(business.get("name") or "FraLib").strip()
-    phone = str(business.get("whatsapp") or business.get("phone") or "").strip()
-    city = str(business.get("city") or facts.get("cidade") or "").strip()
-    name_js = json.dumps(name, ensure_ascii=False)
-    phone_js = json.dumps(phone, ensure_ascii=False)
-    city_js = json.dumps(city, ensure_ascii=False)
-    if "src/components/BookingModal.tsx" not in files:
-        files["src/components/BookingModal.tsx"] = vite_template_booking_modal(facts)
-    if "src/components/Footer.tsx" not in files:
-        files["src/components/Footer.tsx"] = f"""const business = {{ name: {name_js}, phone: {phone_js}, city: {city_js} }};
-
-export function Footer() {{
-  return (
-    <footer className="border-t border-zinc-200 bg-white px-5 py-10 text-zinc-800 md:px-8">
-      <div className="mx-auto flex max-w-7xl flex-col gap-3 md:flex-row md:items-end md:justify-between">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">FraLib site publicado</p>
-          <strong className="mt-2 block text-xl text-zinc-950">{{business.name}}</strong>
-          <span>{{business.city}}</span>
-        </div>
-        <a className="font-semibold text-zinc-950" href={{`tel:${{business.phone}}`}}>{{business.phone}}</a>
-      </div>
-    </footer>
-  );
-}}
-"""
-
 
 
 def _ensure_factual_motion_contract(files: dict[str, str], facts: dict[str, Any]) -> None:
@@ -1838,73 +1751,6 @@ createRoot(document.getElementById('root') as HTMLElement).render(
   </React.StrictMode>
 );
 """
-
-
-def _stabilize_reviews_contract(files: dict[str, str], facts: dict[str, Any]) -> None:
-    path = "src/components/ReviewsSection.tsx"
-    content = str(files.get(path) or "")
-    business = _facts_business(facts)
-    has_real_reviews = isinstance(business.get("reviews"), list) and any(
-        isinstance(item, dict) and str(item.get("texto") or item.get("text") or "").strip()
-        for item in business.get("reviews") or []
-    )
-    if not content:
-        files[path] = vite_template_reviews_section(facts)
-        return
-    if not has_real_reviews:
-        files[path] = vite_template_reviews_section(facts)
-        return
-    lowered = content.lower()
-    has_motion = any(token in lowered for token in ("motion.", "animate=", "repeat: infinity", "translatex", "x: ["))
-    has_reviews = any(token in lowered for token in ("avalia", "depo", "review", "testimonial"))
-    if not (has_motion and has_reviews):
-        files[path] = vite_template_reviews_section(facts)
-
-
-def _stabilize_location_contract(files: dict[str, str], facts: dict[str, Any]) -> None:
-    path = "src/components/LocationSection.tsx"
-    content = str(files.get(path) or "")
-    if not content:
-        files[path] = vite_template_location_section(facts)
-        return
-    checks = [
-        (r"<section\b", r"</section>"),
-        (r"<div\b", r"</div>"),
-    ]
-    for open_pat, close_pat in checks:
-        opens = len(re.findall(open_pat, content))
-        closes = len(re.findall(close_pat, content))
-        if closes < opens:
-            files[path] = vite_template_location_section(facts)
-            return
-    if "export function LocationSection" not in content and "const LocationSection" not in content:
-        files[path] = vite_template_location_section(facts)
-
-
-def _stabilize_contact_closure_contract(files: dict[str, str], facts: dict[str, Any]) -> None:
-    contact_path = "src/components/ContactCTA.tsx"
-    footer_path = "src/components/Footer.tsx"
-    contact = str(files.get(contact_path) or "")
-    footer = str(files.get(footer_path) or "")
-
-    if not contact or _needs_contact_closure_reset(contact):
-        files[contact_path] = vite_template_contact_cta(facts)
-    if not footer or _needs_footer_closure_reset(footer):
-        files[footer_path] = vite_template_footer(facts)
-
-
-def _stabilize_full_visual_shell_contract(files: dict[str, str], facts: dict[str, Any]) -> None:
-    """Keep production tests visually stable when a lead already had bad retries."""
-    files["src/components/HeroSection.tsx"] = vite_template_hero_section(facts)
-    files["src/components/AboutSection.tsx"] = vite_template_about_section(facts)
-    files["src/components/GallerySection.tsx"] = vite_template_gallery_section(facts)
-    files["src/components/ServicesSection.tsx"] = vite_template_services_section(facts)
-    files["src/components/LifestyleSection.tsx"] = vite_template_lifestyle_section(facts)
-    files["src/components/ReviewsSection.tsx"] = vite_template_reviews_section(facts)
-    files["src/components/LocationSection.tsx"] = vite_template_location_section(facts)
-    files["src/components/ContactCTA.tsx"] = vite_template_contact_cta(facts)
-    files["src/components/Footer.tsx"] = vite_template_footer(facts)
-    files["src/components/LgpdBanner.tsx"] = vite_template_lgpd_banner(facts)
 
 
 def _needs_contact_closure_reset(content: str) -> bool:
@@ -2075,15 +1921,7 @@ def _segment_key_for_business(business: dict[str, Any]) -> str | None:
 
 
 def _validate_segment_specificity(source_text: str, business: dict[str, Any]) -> None:
-    # If the project is the FraLib Studio template (intentional fallback), the
-    # generic signature is expected. Skip the generic-signature blocklist.
-    if "fralib studio" in _normalize_text(source_text):
-        return
     normalized = _normalize_text(source_text)
-    for signature in GENERIC_FALLBACK_SIGNATURES:
-        if signature in normalized:
-            raise ViteReactRenderError(f"projeto Vite contem assinatura de fallback generico: {signature}")
-
     segment_key = _segment_key_for_business(business)
     if not segment_key:
         return
