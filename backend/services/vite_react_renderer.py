@@ -640,10 +640,49 @@ def render_vite_react_site(
                 },
             )
 
-    raise ViteReactRenderError(
-        "Vite React renderer falhou sem fallback: "
-        + json.dumps(attempts, ensure_ascii=False)
-    )
+    # Last-resort fallback: build the deterministic FraLib Studio template.
+    # This guarantees a site on disk even when the LLM cannot produce a
+    # buildable project (esbuild errors, data: URL leaks, CSS malformed).
+    # Better to ship a clean FraLib site than 404 forever.
+    try:
+        fallback_files = _generate_studio_fallback_files(facts)
+        validate_vite_project_files(fallback_files, facts, requested_paths=requested_paths)
+        write_vite_project(workspace, fallback_files)
+        build_vite_project(workspace)
+        index_path = workspace / "dist" / "index.html"
+        html = index_path.read_text(encoding="utf-8")
+        validate_vite_dist(workspace / "dist")
+        attempts.append(
+            {
+                "model": "studio_fallback",
+                "status": "template_fallback_success",
+                "elapsed_ms": int((time.time() - started) * 1000),
+                "source_files": len(fallback_files),
+                "html_chars": len(html),
+            }
+        )
+        return ViteReactRenderResult(
+            html=html,
+            source_files=fallback_files,
+            model="studio_fallback",
+            attempts=attempts,
+            elapsed_ms=int((time.time() - started) * 1000),
+            dist_dir=str((workspace / "dist").resolve()),
+            index_path=str(index_path.resolve()),
+        )
+    except Exception as fallback_exc:
+        attempts.append(
+            {
+                "model": "studio_fallback",
+                "status": "template_fallback_failed",
+                "elapsed_ms": int((time.time() - started) * 1000),
+                "error": str(fallback_exc)[:500],
+            }
+        )
+        raise ViteReactRenderError(
+            "Vite React renderer falhou sem fallback: "
+            + json.dumps(attempts, ensure_ascii=False)
+        )
 
 
 def _select_vite_react_models(primary_model: str, fallback_model: str) -> list[str]:
