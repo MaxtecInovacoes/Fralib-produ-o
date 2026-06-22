@@ -31,7 +31,6 @@ def _is_litellm_openai_chat_base(base_url: str | None) -> bool:
             "127.0.0.1:4000",
             "localhost:4000",
             "llm.seunegociofralib.site",
-            "ia.namehost.com.br",
         )
     )
 

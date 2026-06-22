@@ -62,7 +62,6 @@ ALLOWED_LLM_BASE_URLS = {
     "api.anthropic.com",
     "api.claude.ai",
     "api.aibee.cloud",
-    "ia.namehost.com.br",
     "caludeilimi.up.railway.app",
     # OpenAI
     "api.openai.com",

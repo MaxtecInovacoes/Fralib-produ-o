@@ -470,10 +470,11 @@ def _select_vite_react_models(primary_model: str, fallback_model: str) -> list[s
 def _select_vite_react_models_for_run(primary_model: str, fallback_model: str) -> list[str]:
     if _single_model_mode_enabled():
         return _select_vite_react_models(primary_model or PROXY_BUILDER_MODEL, "")
+    # Cascade explicito via env (sempre que setado, sobrescreve primary/fallback)
+    explicit_cascade = os.getenv("FRALIB_VITE_NAMEHOST_MODELS", "").strip()
+    if explicit_cascade:
+        return _select_vite_react_models(explicit_cascade, "")
     if _namehost_batch_mode():
-        configured = os.getenv("FRALIB_VITE_NAMEHOST_MODELS", "").strip()
-        if configured:
-            return _select_vite_react_models(configured, "")
         preferred = (
             os.getenv("FRALIB_VITE_NAMEHOST_MODEL", "").strip()
             or os.getenv("FRALIB_PROXY_DEFAULT_MODEL", "").strip()
@@ -629,7 +630,7 @@ def _batch_first_enabled() -> bool:
 
 
 def _is_namehost_base() -> bool:
-    return "ia.namehost.com.br" in _proxy_base_url().lower()
+    return "proxy" in _proxy_base_url().lower()
 
 
 def _namehost_batch_mode() -> bool:

@@ -47,7 +47,7 @@ def _batch_first_enabled() -> bool:
 
 def _is_namehost_base() -> bool:
     base = _proxy_base_url()
-    return "namehost" in base.lower() or "proxy" in base.lower()
+    return "proxy" in base.lower()
 
 
 def _namehost_batch_mode() -> bool:

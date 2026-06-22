@@ -66,12 +66,12 @@ PROXY_MODEL_OPTIONS = [
     },
     {
         "id": "claude-opus-4-7",
-        "label": "Opus alias via ia.namehost.com.br",
+        "label": "Opus 4-7",
         "tier": "heavy",
     },
     {
         "id": "claude-opus-4-6",
-        "label": "Opus alias via ia.namehost.com.br",
+        "label": "Opus 4-6",
         "tier": "heavy",
     },
     {
