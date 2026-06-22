@@ -528,6 +528,7 @@ def build_openui_document(
 {content}
 </body>
 </html>"""
+    return _enrich_seo_and_runtime(result, facts=facts)
 
 
 def validate_openui_document(
