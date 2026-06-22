@@ -198,9 +198,26 @@ def main() -> int:
                 print(f"  OK   {name}")
             else:
                 print(f"  --   {name} (opcional)")
+
+    # 3) Aplica o motion_runtime (mesmo que builder_worker faz)
+    out_dir = ROOT / ".tmp" / "test-openui-real"
     print()
     print(f"Obrigatorios: {must_pass}/{must_have}")
     print(f"Opcionais:   {nice_pass}/{nice}")
+
+    # 3) Aplica o motion_runtime (mesmo que builder_worker faz)
+    from services.builder_worker import _inject_motion_runtime
+    html_with_motion = _inject_motion_runtime(result.html, facts)
+    motion_js_injected = "fralib-motion-runtime" in html_with_motion
+    print()
+    print("Motion runtime:")
+    print(f"  HTML original: {len(result.html)} chars")
+    print(f"  HTML + motion: {len(html_with_motion)} chars")
+    print(f"  motion.js injetado: {motion_js_injected}")
+    if motion_js_injected:
+        # Salva o HTML final (com motion.js)
+        (out_dir / "index_with_motion.html").write_text(html_with_motion, encoding="utf-8")
+        print(f"  Salvo em {out_dir / 'index_with_motion.html'}")
 
     # 4) Estima tokens
     print()
@@ -216,7 +233,6 @@ def main() -> int:
     print(f"  output (HTML):   {len(result.html):>7} chars ~ {output_tokens_est:>6} tokens")
 
     # 5) Salva artefatos
-    out_dir = ROOT / ".tmp" / "test-openui-real"
     out_dir.mkdir(parents=True, exist_ok=True)
     (out_dir / "index.html").write_text(result.html, encoding="utf-8")
     (out_dir / "system_prompt.txt").write_text(final_prompt, encoding="utf-8")

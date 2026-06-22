@@ -402,6 +402,9 @@ def _prepare_builder_html_for_publication(
     marked = _ensure_builder_publication_head(marked, facts or {})
     if engine == "vite_react":
         marked = _ensure_vite_mobile_publication_guard(marked)
+    # FraLib Motion Runtime: GSAP + ScrollTrigger + Lenis via CDN
+    # Ativa data-parallax, data-reveal, data-marquee, smooth scroll
+    marked = _inject_motion_runtime(marked, facts or {})
     try:
         from agents.html_quality_gate import sanitize_builder_html_for_publication
     except Exception:
@@ -414,6 +417,42 @@ def _prepare_builder_html_for_publication(
         facts or {},
         include_phase6=engine != "vite_react",
     )
+
+
+def _inject_motion_runtime(html: str, facts: dict[str, Any]) -> str:
+    """Injeta motion_runtime.js no HTML OpenUI para ativar parallax/scroll/marquee.
+
+    Carrega o JS inline (vindo de backend/services/motion_runtime.js).
+    Detecta data-parallax, data-reveal, data-marquee no HTML e so injeta
+    se houver pelo menos 1 hook. Idempotente: nao duplica se ja existe.
+    """
+    text = html or ""
+    if "fralib-motion-runtime" in text:
+        return text
+    has_motion_hook = any(
+        hook in text for hook in ("data-parallax", "data-reveal", "data-marquee")
+    )
+    if not has_motion_hook:
+        return text
+    # Carrega o motion_runtime.js do disco
+    motion_js_path = Path(__file__).resolve().parent / "motion_runtime.js"
+    try:
+        motion_js = motion_js_path.read_text(encoding="utf-8")
+    except Exception:
+        return text
+    # Inline o JS no HTML (sem request extra)
+    script = (
+        "<script id=\"fralib-motion-runtime-loader\">\n"
+        + motion_js
+        + "\n</script>"
+    )
+    # Injeta antes de </body>
+    if "</body>" in text:
+        return text.replace("</body>", script + "\n</body>", 1)
+    # Fallback: antes de </head>
+    if "</head>" in text:
+        return text.replace("</head>", script + "\n</head>", 1)
+    return text + script
 
 
 def _ensure_vite_mobile_publication_guard(html: str) -> str:

@@ -22,11 +22,15 @@ from typing import Any
 
 MOTION_CONTRACT = """
 === MOTION CONTRACT - SIGA OBRIGATORIAMENTE ===
-- Use Tailwind animate-* classes (animate-fade-in, animate-slide-up) e
+Adicione data-motion hooks no HTML para que o FraLib Motion Runtime (GSAP+ScrollTrigger+Lenis via CDN) ative:
+- data-parallax="0.3" em imagens/secoes de hero (movimento vertical ao scroll)
+- data-reveal em secoes internas (fade+slide ao entrar na viewport, stagger 0.05s)
+- data-marquee="left|right" data-marquee-speed="30" em trilhas de logos/icones (loop infinito)
+- data-parallax="0.1" em textos do hero (movimento sutil, mais devagar que o scroll)
+- data-parallax="0.5" em imagens de fundo (movimento mais rapido que o scroll)
+Use Tailwind animate-* classes (animate-fade-in, animate-slide-up) e
   transition-* (transition-all duration-300 ease-out)
-- Adicione data-parallax em secoes de hero/imagem (o deploy aplica
-  smooth scroll behavior via CSS)
-- Use group hover effects em cards (group-hover:scale-105, group-hover:shadow-2xl)
+- group hover effects em cards (group-hover:scale-105, group-hover:shadow-2xl)
 - Stagger animations em listas: animation-delay escalonado via inline style
 - Imagens: loading="lazy" e motion-safe:animate-fade-in
 - NUNCA use animation que bloqueia o usuario (auto-play video, scroll-jacking)
