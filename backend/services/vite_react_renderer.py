@@ -395,258 +395,80 @@ def render_vite_react_site(
     max_tokens: int = 16000,
     temperature: float = 0.55,
 ) -> ViteReactRenderResult:
-    """Generate, build and validate a Vite React project in one isolated workspace."""
+    """Generate, build and validate a Vite React project in one isolated workspace.
+
+    Single-pass pipeline: LLM gera 1x -> build direto. Sem repair_retry,
+    sem preview_fast, sem injecao de template sobre o output do LLM. Se o
+    LLM ou o build falhar, cai direto no FraLib Studio template
+    deterministico (que sempre compila). O site vai para QA com o output
+    do LLM ou com o Studio, sem retrabalho.
+    """
     started = time.time()
     facts = facts or {}
     attempts: list[dict[str, Any]] = []
-    prompt = _compose_vite_user_prompt(
-        builder_prompt,
-        facts=facts,
-        repair_context=repair_context,
-    )
     requested_paths = extract_requested_vite_project_paths(builder_prompt)
     workspace = Path(workspace_dir).resolve()
 
     model_candidates = _select_vite_react_models_for_run(primary_model, fallback_model)
-    for index, model in enumerate(model_candidates, start=1):
-        if not model:
-            continue
-        attempt_started = time.time()
-        raw = ""
-        try:
-            if _probe_enabled():
-                probe_ok, probe_raw = _probe_vite_react_model(model)
-            else:
-                probe_ok, probe_raw = True, "probe skipped for batch-first Namehost run"
-            attempts.append(
-                {
-                    "model": model,
-                    "status": "probe_skipped" if not _probe_enabled() else ("probe_ok" if probe_ok else "probe_failed"),
-                    "elapsed_ms": int((time.time() - attempt_started) * 1000),
-                    "probe_chars": len(probe_raw),
-                    "probe_preview": _safe_probe_preview(probe_raw),
-                }
-            )
-            if not probe_ok:
-                prompt = _compose_vite_user_prompt(
-                    builder_prompt,
-                    facts=facts,
-                    repair_context={
-                        "validation_errors": "probe falhou em JSON limpo",
-                        "previous_output": probe_raw[:2000],
-                    },
-                )
-                if _probe_failure_blocks_generation(probe_raw):
-                    continue
-            if _batch_first_enabled():
-                batch_repair_context = None if probe_ok else {
-                    "validation_errors": "probe falhou em JSON limpo",
-                    "previous_output": probe_raw[:2000],
-                }
-                for batch_attempt in range(1, _batch_first_project_attempts() + 1):
-                    try:
-                        files = prepare_vite_project_files(
-                            _generate_vite_project_files_in_batches(
-                                builder_prompt,
-                                facts=facts,
-                                model=model,
-                                max_tokens=max_tokens,
-                                temperature=min(temperature, 0.2),
-                                repair_context=batch_repair_context,
-                            ),
-                            facts=facts,
-                        )
-                        validate_vite_project_files(files, facts, requested_paths=requested_paths)
-                        write_vite_project(workspace, files)
-                        build_vite_project(workspace)
-                        index_path = workspace / "dist" / "index.html"
-                        html = index_path.read_text(encoding="utf-8")
-                        validate_vite_dist(workspace / "dist")
-                        attempts.append(
-                            {
-                                "model": model,
-                                "status": "batch_success",
-                                "batch_attempt": batch_attempt,
-                                "elapsed_ms": int((time.time() - attempt_started) * 1000),
-                                "source_files": len(files),
-                                "html_chars": len(html),
-                            }
-                        )
-                        return ViteReactRenderResult(
-                            html=html,
-                            source_files=files,
-                            model=model,
-                            attempts=attempts,
-                            elapsed_ms=int((time.time() - started) * 1000),
-                            dist_dir=str((workspace / "dist").resolve()),
-                            index_path=str(index_path.resolve()),
-                        )
-                    except Exception as batch_exc:
-                        status = (
-                            "batch_retry"
-                            if batch_attempt < _batch_first_project_attempts()
-                            and _batch_first_error_allows_repair(batch_exc)
-                            else "batch_failed"
-                        )
-                        attempts.append(
-                            {
-                                "model": model,
-                                "status": status,
-                                "batch_attempt": batch_attempt,
-                                "elapsed_ms": int((time.time() - attempt_started) * 1000),
-                                "error": str(batch_exc)[:500],
-                            }
-                        )
-                        if status != "batch_retry":
-                            break
-                        batch_repair_context = {
-                            "validation_errors": str(batch_exc),
-                            "previous_output": "",
-                        }
-                continue
-            last_exc: Exception | None = None
-            for repair_attempt in range(1, _model_repair_attempts() + 1):
-                raw = _call_vite_react_llm(
-                    prompt,
-                    model=model,
-                    max_tokens=max_tokens,
-                    temperature=temperature
-                    if index == 1 and repair_attempt == 1
-                    else min(temperature, 0.2),
-                )
-                try:
-                    files = prepare_vite_project_files(extract_vite_project_files(raw), facts=facts)
-                    validate_vite_project_files(files, facts, requested_paths=requested_paths)
-                    write_vite_project(workspace, files)
-                    build_vite_project(workspace)
-                    index_path = workspace / "dist" / "index.html"
-                    html = index_path.read_text(encoding="utf-8")
-                    validate_vite_dist(workspace / "dist")
-                    attempts.append(
-                        {
-                            "model": model,
-                            "status": "success",
-                            "repair_attempt": repair_attempt,
-                            "elapsed_ms": int((time.time() - attempt_started) * 1000),
-                            "source_files": len(files),
-                            "html_chars": len(html),
-                        }
-                    )
-                    return ViteReactRenderResult(
-                        html=html,
-                        source_files=files,
-                        model=model,
-                        attempts=attempts,
-                        elapsed_ms=int((time.time() - started) * 1000),
-                        dist_dir=str((workspace / "dist").resolve()),
-                        index_path=str(index_path.resolve()),
-                    )
-                except Exception as exc:
-                    last_exc = exc
-                    if repair_attempt >= _model_repair_attempts():
-                        raise
-                    attempts.append(
-                        {
-                            "model": model,
-                            "status": "repair_retry",
-                            "repair_attempt": repair_attempt,
-                            "elapsed_ms": int((time.time() - attempt_started) * 1000),
-                            "error": str(exc)[:500],
-                        }
-                    )
-                    prompt = _compose_vite_user_prompt(
-                        builder_prompt,
-                        facts=facts,
-                        repair_context={
-                            "validation_errors": str(exc),
-                            "previous_output": raw[:5000],
-                        },
-                    )
-            if last_exc:
-                raise last_exc
-        except Exception as exc:
-            if _preview_fast_enabled():
-                attempts.append(
-                    {
-                        "model": model,
-                        "status": "preview_fast_no_full_fallback",
-                        "elapsed_ms": int((time.time() - attempt_started) * 1000),
-                        "error": str(exc)[:500],
-                    }
-                )
-                continue
-            try:
-                files = prepare_vite_project_files(
-                    _generate_vite_project_files_in_batches(
-                        builder_prompt,
-                        facts=facts,
-                        model=model,
-                        max_tokens=max_tokens,
-                        temperature=min(temperature, 0.2),
-                        repair_context={
-                            "validation_errors": str(exc),
-                            "previous_output": raw[:5000],
-                        },
-                    ),
-                    facts=facts,
-                )
-                validate_vite_project_files(files, facts, requested_paths=requested_paths)
-                write_vite_project(workspace, files)
-                build_vite_project(workspace)
-                index_path = workspace / "dist" / "index.html"
-                html = index_path.read_text(encoding="utf-8")
-                validate_vite_dist(workspace / "dist")
-                attempts.append(
-                    {
-                        "model": model,
-                        "status": "batch_success",
-                        "elapsed_ms": int((time.time() - attempt_started) * 1000),
-                        "source_files": len(files),
-                        "html_chars": len(html),
-                    }
-                )
-                return ViteReactRenderResult(
-                    html=html,
-                    source_files=files,
-                    model=model,
-                    attempts=attempts,
-                    elapsed_ms=int((time.time() - started) * 1000),
-                    dist_dir=str((workspace / "dist").resolve()),
-                    index_path=str(index_path.resolve()),
-                )
-            except Exception as batch_exc:
-                attempts.append(
-                    {
-                        "model": model,
-                        "status": "batch_failed",
-                        "elapsed_ms": int((time.time() - attempt_started) * 1000),
-                        "error": str(batch_exc)[:500],
-                    }
-                )
-            attempts.append(
-                {
-                    "model": model,
-                    "status": "failed",
-                    "elapsed_ms": int((time.time() - attempt_started) * 1000),
-                    "error": str(exc)[:500],
-                }
-            )
-            prompt = _compose_vite_user_prompt(
-                builder_prompt,
-                facts=facts,
-                repair_context={
-                    "validation_errors": str(exc),
-                    "previous_output": raw[:5000],
-                },
-            )
+    model = next((m for m in model_candidates if m), primary_model)
 
-    # Last-resort fallback: build the deterministic FraLib Studio template.
-    # This guarantees a site on disk even when the LLM cannot produce a
-    # buildable project (esbuild errors, data: URL leaks, CSS malformed).
-    # Better to ship a clean FraLib site than 404 forever.
+    # Step 1: LLM gera 1 vez
+    attempt_started = time.time()
+    raw = ""
+    try:
+        prompt = _compose_vite_user_prompt(
+            builder_prompt,
+            facts=facts,
+            repair_context=repair_context,
+        )
+        raw = _call_vite_react_llm(
+            prompt,
+            model=model,
+            max_tokens=max_tokens,
+            temperature=temperature,
+        )
+        files = prepare_vite_project_files(
+            extract_vite_project_files(raw),
+            facts=facts,
+        )
+        validate_vite_project_files(files, facts, requested_paths=requested_paths)
+        write_vite_project(workspace, files)
+        build_vite_project(workspace)
+        index_path = workspace / "dist" / "index.html"
+        html = index_path.read_text(encoding="utf-8")
+        validate_vite_dist(workspace / "dist")
+        attempts.append(
+            {
+                "model": model,
+                "status": "llm_success",
+                "elapsed_ms": int((time.time() - attempt_started) * 1000),
+                "source_files": len(files),
+                "html_chars": len(html),
+            }
+        )
+        return ViteReactRenderResult(
+            html=html,
+            source_files=files,
+            model=model,
+            attempts=attempts,
+            elapsed_ms=int((time.time() - started) * 1000),
+            dist_dir=str((workspace / "dist").resolve()),
+            index_path=str(index_path.resolve()),
+        )
+    except Exception as exc:
+        attempts.append(
+            {
+                "model": model,
+                "status": "llm_failed",
+                "elapsed_ms": int((time.time() - attempt_started) * 1000),
+                "error": str(exc)[:500],
+            }
+        )
+
+    # Step 2: LLM falhou -> FraLib Studio template deterministico, sem retry
+    attempt_started = time.time()
     try:
         fallback_files = _generate_studio_fallback_files(facts)
-        validate_vite_project_files(fallback_files, facts, requested_paths=requested_paths)
         write_vite_project(workspace, fallback_files)
         build_vite_project(workspace)
         index_path = workspace / "dist" / "index.html"
@@ -654,9 +476,9 @@ def render_vite_react_site(
         validate_vite_dist(workspace / "dist")
         attempts.append(
             {
-                "model": "studio_fallback",
-                "status": "template_fallback_success",
-                "elapsed_ms": int((time.time() - started) * 1000),
+                "model": "studio_template",
+                "status": "studio_success",
+                "elapsed_ms": int((time.time() - attempt_started) * 1000),
                 "source_files": len(fallback_files),
                 "html_chars": len(html),
             }
@@ -664,19 +486,19 @@ def render_vite_react_site(
         return ViteReactRenderResult(
             html=html,
             source_files=fallback_files,
-            model="studio_fallback",
+            model="studio_template",
             attempts=attempts,
             elapsed_ms=int((time.time() - started) * 1000),
             dist_dir=str((workspace / "dist").resolve()),
             index_path=str(index_path.resolve()),
         )
-    except Exception as fallback_exc:
+    except Exception as exc:
         attempts.append(
             {
-                "model": "studio_fallback",
-                "status": "template_fallback_failed",
-                "elapsed_ms": int((time.time() - started) * 1000),
-                "error": str(fallback_exc)[:500],
+                "model": "studio_template",
+                "status": "studio_failed",
+                "elapsed_ms": int((time.time() - attempt_started) * 1000),
+                "error": str(exc)[:500],
             }
         )
         raise ViteReactRenderError(
