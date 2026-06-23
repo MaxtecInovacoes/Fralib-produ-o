@@ -1,11 +1,11 @@
-"""Test: garantir que nenhum codigo novo importa renderers legados.
+"""Test: garantir que engines legados nao voltem para a rota padrao.
 
-Renderers legados (NAO usar):
-- vite_react_renderer
+Renderers proibidos:
 - liam_renderer
 - skill_based_renderer
 
-So `openui_renderer` pode ser importado.
+`vite_react_renderer` existe como engine de compatibilidade explicita, acionada
+somente por FRALIB_BUILDER_ENGINE=vite_react.
 """
 
 import os
@@ -25,9 +25,9 @@ ALLOWED_FILES = {
 }
 
 
-def test_no_legacy_renderers_in_pipeline():
-    """Verifica que pipeline_orchestrator e builder_worker NAO importam legacy renderers."""
-    forbidden = ["vite_react_renderer", "liam_renderer", "skill_based_renderer"]
+def test_no_forbidden_renderers_in_pipeline():
+    """Verifica que pipeline_orchestrator e builder_worker NAO importam renderers proibidos."""
+    forbidden = ["liam_renderer", "skill_based_renderer"]
     critical_files = [
         "backend/services/builder_worker.py",
         "backend/endpoints/pipeline_orchestrator_service.py",
@@ -56,20 +56,17 @@ def test_no_legacy_renderers_in_pipeline():
                             assert False, f"{file} importa {forbidden_mod}: {line.strip()}"
 
 
-def test_openui_is_only_renderer_called():
-    """Verifica que builder_worker chama apenas render_openui_site."""
+def test_openui_is_default_and_vite_is_explicit_engine():
+    """OpenUI deve existir e Vite/React so pode ser acionado por engine explicita."""
     builder_worker = ROOT / "backend/services/builder_worker.py"
     if not builder_worker.exists():
         return
 
     content = builder_worker.read_text(encoding="utf-8")
-    # Deve ter render_openui_site
     assert "render_openui_site" in content, "builder_worker deve chamar render_openui_site"
-
-    # NAO deve ter render_vite_react_site (a menos que seja em comentario)
-    for line in content.split('\n'):
-        if "render_vite_react_site" in line and not line.strip().startswith('#'):
-            assert False, f"builder_worker chama render_vite_react_site (legado): {line.strip()}"
+    assert "FRALIB_BUILDER_ENGINE" in content, "engine precisa ser controlada por env explicita"
+    assert 'os.getenv("FRALIB_BUILDER_ENGINE", "openui")' in content, "OpenUI deve ser fallback padrao"
+    assert 'engine == "vite_react"' in content, "vite_react deve ser branch explicito, nao fallback implicito"
 
 
 def test_pipeline_phases_dont_call_legacy():
@@ -80,7 +77,7 @@ def test_pipeline_phases_dont_call_legacy():
 
     for f in phases_dir.glob("*.py"):
         content = f.read_text(encoding="utf-8")
-        for forbidden in ["vite_react_renderer", "liam_renderer", "skill_based_renderer"]:
+        for forbidden in ["liam_renderer", "skill_based_renderer"]:
             if forbidden in content and not all(
                 line.strip().startswith('#') for line in content.split('\n') if forbidden in line
             ):
@@ -90,8 +87,8 @@ def test_pipeline_phases_dont_call_legacy():
 if __name__ == "__main__":
     # Rodar testes sem pytest
     tests = [
-        test_no_legacy_renderers_in_pipeline,
-        test_openui_is_only_renderer_called,
+        test_no_forbidden_renderers_in_pipeline,
+        test_openui_is_default_and_vite_is_explicit_engine,
         test_pipeline_phases_dont_call_legacy,
     ]
 

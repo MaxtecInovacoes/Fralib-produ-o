@@ -14,17 +14,20 @@
 
 ## 1. Regra de Ouro (inviolável)
 
-**A Pipeline canônica é o ÚNICO caminho para gerar sites na FraLib.**
+**A Pipeline canônica é o caminho padrão para gerar sites na FraLib.**
 
 - Todo site gerado pela FraLib passa pelas **11 fases canônicas** (seção 4).
-- O gerador de site é **OpenUI** (seção 5). Não existe outro caminho.
+- O gerador padrão de site é **OpenUI** (seção 5).
+- `vite_react` existe apenas como engine de compatibilidade explícita
+  (`FRALIB_BUILDER_ENGINE=vite_react`) enquanto o builder React/Vite antigo é
+  recuperado e depois quebrado em módulos menores.
 - Sites publicados SEM passar pela pipeline são considerados **legado** e devem ser migrados.
 
 Qualquer pessoa (humana ou IA) que tentar:
 - Editar HTML direto
 - Chamar OpenUI fora do pipeline
-- Usar renderers legados (`vite_react_renderer`, `liam_renderer`, `skill_based_renderer`)
-- Adicionar novo "modo" de geração de site
+- Usar renderers proibidos (`liam_renderer`, `skill_based_renderer`)
+- Adicionar novo modo de geração fora do contrato `FRALIB_BUILDER_ENGINE`
 
 está **quebrando o sistema**. Faça pela pipeline.
 
@@ -59,10 +62,10 @@ está **quebrando o sistema**. Faça pela pipeline.
 | Backend HTTP | FastAPI + Uvicorn | `server.py` (porta 8000) | Endpoints REST que disparam jobs |
 | Orquestrador | FastAPI router + serviço | `backend/endpoints/pipeline_orchestrator_service.py` | Coordena as 11 fases |
 | Worker daemon | Python + asyncio | `worker.py` (raiz) | Processa jobs da fila |
-| **Gerador de site** | **OpenUI** (único) | `backend/services/openui_renderer.py` | **Fase 9 — renderiza HTML** |
+| **Gerador de site padrão** | **OpenUI** | `backend/services/openui_renderer.py` | **Fase 9 — renderiza HTML** |
 | Contratos OpenUI | 7 contratos injetados | `backend/services/openui_contracts.py` | SEO, design, motion, A11y, factual, LGPD, deploy |
 | Fila/Locks | PostgreSQL | `backend/core/job_queue.py` + tabela `public.jobs` | Tabela canônica de jobs |
-| Builder Worker | Python daemon | `backend/services/builder_worker.py` | **Dispara `render_openui_site`** |
+| Builder Worker | Python daemon | `backend/services/builder_worker.py` | **Dispara OpenUI padrão ou Vite/React compat explícito** |
 | Quality Gate | Determinístico (não pula) | `backend/agents/html_quality_gate.py` | **Fase 9b — valida HTML** |
 | LLM | Anthropic direto | `backend/agents/llm_direct.py` | Cascata Haiku→Sonnet |
 | WhatsApp | whatsmeow externo | `:3001` (systemd próprio) | Fase 11 (Franz) |
@@ -87,7 +90,7 @@ está **quebrando o sistema**. Faça pela pipeline.
 | 6 | Analisando nicho... | `agente_nicho` | Gerar briefing | Sonnet | `agents/agente_nicho.py` |
 | 7 | Definindo variação estrutural... | `agente_variacao` | Gerar variação | Haiku | `agents/agente_variacao.py` |
 | 8 | Arquitetando site... | `arquiteto_mestre` | Orquestra Arquiteto + Bloco Estrutura + Bloco Copy | Sonnet | `services/pipeline_fases/fase_08_arquiteto.py` |
-| **9** | **Gerando site no OpenUI...** | **`builder_renderer`** | **`render_openui_site` (ÚNICO)** | Haiku→Sonnet | **`services/openui_renderer.py`** |
+| **9** | **Gerando site...** | **`builder_renderer`** | **`render_openui_site` padrão / `render_vite_react_site` compat explícito** | Haiku→Sonnet | **`services/openui_renderer.py` / `services/vite_react_renderer.py`** |
 | **9b** | **Validando HTML...** | **`quality_gate`** | **`audit_generated_html` (loop ≤ 3 retries)** | N/A | **`agents/html_quality_gate.py`** |
 | 10 | Publicando site... | `deploy` | `publish_rendered_site` | N/A | `endpoints/pipeline_phase_helpers.py` |
 | 11 | Enviando contato... | `franz` | SDR LangGraph | Sonnet | `services/pipeline_executors.py` + `agents/sdr_langgraph/compat.py` |
@@ -97,19 +100,19 @@ está **quebrando o sistema**. Faça pela pipeline.
 
 ---
 
-## 6. OpenUI: O Único Gerador de Site
+## 6. OpenUI: Gerador Padrão de Site
 
 ### 6.1 Decisão arquitetural (a fonte da verdade)
 
-A FraLib usa **OpenUI como motor ÚNICO de geração de sites**. OpenUI é um contrato
+A FraLib usa **OpenUI como motor padrão de geração de sites**. OpenUI é um contrato
 de UI generation: um system prompt compacto pede ao LLM que retorne HTML Tailwind
 pronto para renderizar. A FraLib mantém isso in-process — não precisa de servidor
 externo, sessão de browser, build Node ou Sandbox.
 
-**Importante**: NÃO existe motor alternativo. Versões legadas como
-`vite_react_renderer.py`, `liam_renderer.py`, `skill_based_renderer.py` existem
-no código apenas por compatibilidade de imports, mas **NÃO devem ser usados**.
-Nenhum job da pipeline canônica deve chamá-los.
+**Importante**: `vite_react_renderer.py` voltou como motor de compatibilidade
+explícita para recuperar o builder React/Vite antigo. Ele só deve rodar quando
+`FRALIB_BUILDER_ENGINE=vite_react`. `liam_renderer.py` e
+`skill_based_renderer.py` continuam proibidos.
 
 ### 6.2 Como o OpenUI produz um site
 
@@ -129,7 +132,7 @@ Nenhum job da pipeline canônica deve chamá-los.
 7. **Quality Gate** valida em loop ≤ 3 retries.
 8. Deploy publica em `/var/www/fralib/sites/<tenant_id>/<lead_slug>/`.
 
-### 6.3 Por que OpenUI é o único caminho
+### 6.3 Por que OpenUI é o caminho padrão
 
 | Critério | OpenUI |
 |---|---|
@@ -346,18 +349,17 @@ em produção.
 
 | Tópico | Nomenclatura antiga (errada) | Nomenclatura canônica (correta) |
 |---|---|---|
-| Gerador de site | "Vite/React", "Skill Renderer" | **OpenUI** (único) |
+| Gerador de site padrão | "Skill Renderer" | **OpenUI** |
 | Orquestrador | `pipeline_endpoints.py` | `pipeline_orchestrator_service.py` |
 | Runtime | PM2 | **systemd** (5 serviços) + ServiceManager |
 | Fase 11 SDR | "Bryan" | **Franz** (sdr_langgraph) |
 | WhatsApp | "meowhats" | **whatsmeow** (externo, porta 3001) |
-| Renderer HTML | `skill_based_renderer.py`, `liam_renderer.py`, `vite_react_renderer.py` | `openui_renderer.py` (ÚNICO) |
+| Renderer padrão | `skill_based_renderer.py`, `liam_renderer.py` | `openui_renderer.py` |
 | LLM | "kpalabz direto" | Anthropic direto via `llm_direct.py` |
 
-**Atenção**: arquivos `vite_react_renderer.py`, `liam_renderer.py`,
-`skill_based_renderer.py` existem no código mas **não devem ser usados** por
-nenhum job da pipeline. Se encontrar imports desses arquivos em código novo,
-**rejeitar** o PR.
+**Atenção**: `liam_renderer.py` e `skill_based_renderer.py` não devem ser usados
+por nenhum job da pipeline. `vite_react_renderer.py` só pode ser usado pelo
+branch explícito `FRALIB_BUILDER_ENGINE=vite_react`.
 
 ---
 
@@ -385,25 +387,25 @@ nenhum job da pipeline. Se encontrar imports desses arquivos em código novo,
 
 ---
 
-## 18. Arquivos Legados Removidos (não reintroduzir)
+## 18. Arquivos Legados e Compatibilidade React/Vite
 
-Em 2026-06-23, fizemos auditoria completa e **removemos 15 arquivos órfãos** que
-referenciavam caminhos paralelos de renderização. **Não reintroduzir nenhum
-deles**:
+Em 2026-06-23, o builder React/Vite foi recuperado como compatibilidade
+explícita a pedido do usuário. Ele ainda contém monólito e deve ser quebrado
+depois. Não promover para padrão sem auditoria, testes e decisão explícita.
 
-| Arquivo removido | Motivo |
+| Arquivo | Estado |
 |---|---|
-| `backend/services/vite_react_renderer.py` | Renderer Vite/React paralelo (163KB) — não chamado por ninguém |
-| `backend/services/vite_renderer_models.py` | Models de token capping para Vite/React |
-| `backend/services/vite_build_executor.py` | Executor de build Vite/React |
-| `backend/services/vite_config.py` | Config Vite/React |
-| `backend/services/vite_config_helpers.py` | Helpers Vite/React |
-| `backend/services/vite_facts.py` | Facts do Vite/React |
-| `backend/services/vite_file_extractor.py` | File extractor Vite/React |
-| `backend/services/vite_modules.py` | Modules Vite/React |
-| `backend/services/vite_prompts.py` | Prompts Vite/React |
-| `backend/services/vite_templates.py` | Templates Vite/React |
-| `backend/services/vite_validator.py` | Validador Vite/React |
+| `backend/services/vite_react_renderer.py` | Renderer Vite/React recuperado como compat explícito; ainda monolítico e precisa ser quebrado |
+| `backend/services/vite_renderer_models.py` | Compat React/Vite |
+| `backend/services/vite_build_executor.py` | Compat React/Vite |
+| `backend/services/vite_config.py` | Compat React/Vite |
+| `backend/services/vite_config_helpers.py` | Compat React/Vite |
+| `backend/services/vite_facts.py` | Compat React/Vite |
+| `backend/services/vite_file_extractor.py` | Compat React/Vite |
+| `backend/services/vite_modules.py` | Compat React/Vite |
+| `backend/services/vite_prompts.py` | Compat React/Vite |
+| `backend/services/vite_templates.py` | Compat React/Vite |
+| `backend/services/vite_validator.py` | Compat React/Vite |
 | `scripts/test_build_only.py` | Teste órfão do Vite/React |
 | `scripts/test_builder_llm_only.py` | Teste órfão do Vite/React |
 | `tests/unit/test_vite_config.py` | Teste órfão |
@@ -413,7 +415,8 @@ deles**:
 | `tests/unit/test_vite_renderer_models.py` | Teste órfão |
 | `tests/unit/test_vite_validator.py` | Teste órfão |
 
-**Caminho único**: `backend/services/openui_renderer.py` (canônico, único).
+**Caminho padrão**: `backend/services/openui_renderer.py`.
+**Compat explícito**: `FRALIB_BUILDER_ENGINE=vite_react`.
 
 **Arquivos mantidos por compatibilidade** (não usados no caminho canônico, mas
 mantidos para evitar imports quebrados em outros módulos):

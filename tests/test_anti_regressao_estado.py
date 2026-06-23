@@ -77,11 +77,14 @@ class TestAntiRegressaoEstrutural:
 class TestAntiRegressaoConteudo:
     """Garante que decisoes de design NAO foram revertidas."""
 
-    def test_vite_react_renderer_nao_voltou(self):
-        """OpenUI e unico - vite_react NAO pode voltar."""
-        forbidden = BACKEND / "services" / "vite_react_renderer.py"
-        assert not forbidden.exists(), \
-            "vite_react_renderer.py voltou! Removido em 393f597 (Orfao)."
+    def test_vite_react_renderer_isolado_por_engine_explicita(self):
+        """Vite/React pode existir, mas nao pode virar rota implicita."""
+        from backend.services import builder_worker
+
+        assert (SERVICES_DIR / "vite_react_renderer.py").is_file(), \
+            "vite_react_renderer.py deve existir enquanto o modo compat estiver ativo."
+        assert builder_worker._builder_engine(None) == "openui"
+        assert builder_worker._builder_engine("vite_react") == "vite_react"
 
     def test_handler_generico_lgpd_nao_voltou(self):
         """O handler generico duplicado causa LGPD invisivel."""

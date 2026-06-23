@@ -26,8 +26,8 @@ except Exception:
         from core.proxy_models import PROXY_OPUS_FALLBACK_MODEL  # type: ignore
     except Exception:
         PROXY_OPUS_FALLBACK_MODEL = "claude-opus-4-7"  # safe fallback
-# NOTA: 'vite_react_renderer' foi removido. OpenUI e o UNICO gerador de sites.
-# from backend.services.vite_react_renderer import render_vite_react_site
+# Vite/React fica disponivel apenas quando FRALIB_BUILDER_ENGINE=vite_react.
+# O import e lazy para manter OpenUI leve como caminho padrao.
 
 
 _SAFE_SCOPE = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9._-]{0,95}$")
@@ -223,7 +223,7 @@ def render_site_with_builder(
         "FRALIB_BUILDER_MANIFEST_DIR",
         str((_ROOT / "logs" / "builder_manifests").resolve()),
     )
-    engine = _builder_engine(os.getenv("FRALIB_BUILDER_ENGINE", "vite_react"))
+    engine = _builder_engine(os.getenv("FRALIB_BUILDER_ENGINE", "openui"))
     manifest = build_builder_job_manifest(
         prd_or_facts,
         tenant_id=tenant_id,
@@ -274,9 +274,42 @@ def render_site_with_builder(
         )
         model = render_result.model
         attempts = render_result.attempts
-    # NOTA: engine 'vite_react' foi removido. OpenUI e o UNICO gerador de sites.
-    # O _builder_engine() sempre retorna 'openui' mesmo se o env tiver 'vite_react'
-    # (legacy), entao este codigo abaixo nunca e executado. Mantido como assert.
+    elif engine == "vite_react":
+        try:
+            from backend.services.vite_react_renderer import render_vite_react_site
+        except Exception:
+            from services.vite_react_renderer import render_vite_react_site  # type: ignore
+
+        fallback_model = _builder_proxy_fallback_model()
+        render_result = render_vite_react_site(
+            manifest["prompt"],
+            workspace_dir=workspace_dir,
+            facts=manifest.get("prompt_agent", {}).get("context", {}),
+            repair_context=repair_context,
+            primary_model=os.getenv("FRALIB_OPENUI_PRIMARY_MODEL", PROXY_BUILDER_MODEL),
+            fallback_model=fallback_model,
+            max_tokens=int(os.getenv("FRALIB_VITE_REACT_MAX_TOKENS", "64000")),
+            temperature=float(os.getenv("FRALIB_OPENUI_TEMPERATURE", "0.55")),
+        )
+        _write_builder_render_meta(
+            output_dir,
+            engine=engine,
+            model=render_result.model,
+            attempts=render_result.attempts,
+            elapsed_ms=render_result.elapsed_ms,
+            html_chars=len(render_result.html),
+            visual_direction=(
+                manifest.get("prompt_agent", {})
+                .get("context", {})
+                .get("visual_direction", {})
+            ),
+            source_files=sorted(render_result.source_files),
+        )
+        model = render_result.model
+        attempts = render_result.attempts
+    else:
+        raise RuntimeError(f"engine de Builder nao suportado: {engine!r}")
+
 
     index_path = _find_builder_index(output_dir)
     html = index_path.read_text(encoding="utf-8")
@@ -567,16 +600,14 @@ def _prompt_digest(tenant_scope: str, job_scope: str, prompt: str) -> str:
 
 
 def _builder_engine(value: str | None = None) -> str:
-    """Engine canonico de Builder: SEMPRE openui (unico gerador de sites da FraLib).
+    """Select the Builder engine.
 
-    O engine 'vite_react' foi removido - OpenUI e o unico caminho.
-    Mantido apenas para retrocompatibilidade: se vier 'vite_react' no env, ignora.
+    OpenUI remains the default. Vite/React is an explicit compatibility engine
+    for local/controlled runs while it is being split out of the old renderer.
     """
     engine = str(value or os.getenv("FRALIB_BUILDER_ENGINE", "openui")).strip().lower().replace("-", "_")
-    # Forca sempre openui, mesmo se o env ainda tem vite_react (legacy)
     if engine in {"vite", "react", "vite_react", "vite-react"}:
-        # Legacy engine removido - sempre usa openui
-        return "openui"
+        return "vite_react"
     if engine in {"openui", "html", "static_html"}:
         return "openui"
     raise ValueError(f"engine de Builder invalido: {value!r}")
