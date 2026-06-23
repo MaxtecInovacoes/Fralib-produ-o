@@ -12,6 +12,7 @@ class HandoffBase(BaseModel):
 class NichoBriefing(HandoffBase):
     nicho: str = ""
     subnichos: list[str] = Field(default_factory=list)
+    subnicho: str = ""  # canonico (ex: "nutricionista_esportiva") usado por agente_variacao
     cidade: str = ""
     publico_alvo: list[str] = Field(default_factory=list)
     usp: list[str] = Field(default_factory=list)
@@ -28,6 +29,8 @@ class NichoBriefing(HandoffBase):
 
     def to_markdown(self) -> str:
         lines = ["## Briefing de Nicho", f"**Nicho:** {self.nicho}"]
+        if self.subnicho:
+            lines.append(f"**Subnicho canonico:** {self.subnicho}")
         if self.subnichos:
             lines.append(f"**Subnichos:** {', '.join(self.subnichos)}")
         if self.cidade:
@@ -54,6 +57,7 @@ class NichoBriefing(HandoffBase):
 
 
 class VariacaoEstrutural(HandoffBase):
+    subnicho: str = ""
     template_estrutura: str = ""
     template_hero: str = ""
     template_prova_social: str = ""

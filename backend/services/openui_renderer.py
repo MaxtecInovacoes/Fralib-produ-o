@@ -24,12 +24,34 @@ try:
 except ImportError:
     from lgpd_injector import inject_lgpd_into_html
 
+try:
+    from backend.services.html_sanitizer import close_unclosed_block_tags
+except ImportError:
+    from html_sanitizer import close_unclosed_block_tags
+
 
 OPENUI_SYSTEM_PROMPT = """You are an OpenUI-style senior product interface designer.
 
 Transform the user's complete business brief into polished, responsive HTML
 using Tailwind CSS classes. Build a complete landing page, not a component
 demo. Return only BODY HTML, without doctype, html, head or body wrappers.
+
+=== MANDATORY STRUCTURE (NON-NEGOTIABLE) ===
+- MINIMUM 7 SECTIONS in this order (or follow the supplied ordem_das_secoes):
+  1. HERO with H1, subheadline, primary CTA button (WhatsApp link)
+  2. SOBRE (about) with real business description
+  3. SERVICOS with 3-5 cards using real service names from the brief
+  4. DEPOIMENTOS (social proof) with 2-4 reviews OR stats cards
+  5. FAQ with 3-5 real perguntas from the brief
+  6. CONTATO with WhatsApp CTA, address, hours, map link
+  7. FOOTER (always last, with: WhatsApp link, address, social links,
+     privacy policy link, copyright with current year)
+- FOOTER IS MANDATORY on every site. Never skip it.
+- TWO visible contact CTAs minimum: one in hero, one in footer.
+- If the brief supplies a ordem_das_secoes, USE THAT EXACT ORDER.
+- If the brief supplies subnicho-specific templates, follow them.
+
+=== DESIGN RULES ===
 
 Rules:
 - Preserve confirmed business facts exactly: name, phone, WhatsApp, address,
@@ -96,16 +118,18 @@ def render_openui_site(
     *,
     facts: dict[str, Any] | None = None,
     repair_context: dict[str, Any] | None = None,
-    primary_model: str = "haiku",
-    fallback_model: str = "sonnet",
+    primary_model: str = "sonnet",
+    fallback_model: str = "opus",
     max_tokens: int = 6000,
     temperature: float = 0.35,
 ) -> OpenUIRenderResult:
     """Generate a publishable HTML document using the OpenUI contract.
 
-    Cascade rapido: haiku (5-10x mais rapido, ~10s) -> sonnet (fallback se
-    haiku falhar validacao). Opus fica disponivel via parametro explicito
-    para casos premium (segmentos high-ticket).
+    Cascade qualidade: sonnet (primario, ~20s) -> opus (fallback se sonnet
+    falhar validacao). Haiku removido como primario em 2026-06-23 porque
+    gerava HTML mal-formado (tags abertas, blocos incompletos). Custo
+    ~5x maior mas qualidade compensa. Pode ser overridado por env var
+    FRALIB_OPENUI_PRIMARY_MODEL.
     """
     started = time.time()
     facts = facts or {}
@@ -206,6 +230,10 @@ def _enrich_seo_and_runtime(
     cidade = business.get("city", "")
     canonical = _extract_canonical(document) or ""
     og_image = _extract_meta_content(document, 'property="og:image"')
+
+    # 0) Fechar tags de bloco orfas (defesa contra bug "Im Tema": <h2> aberto
+    #    pelo LLM sem </h2> antes de <script> injetado pelo deploy)
+    document = close_unclosed_block_tags(document)
 
     # 1) Remover skip-link duplicado (OpenUI gera 1, A11Y_CONTRACT gera outro)
     document = _dedupe_skip_link(document)

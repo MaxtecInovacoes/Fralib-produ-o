@@ -153,6 +153,36 @@ class TestLGPDInjector:
             payload = build_lgpd_banner_html({"business": {"name": "X", "segment": segment}})
             assert payload["segment_key"] == segment, f"Segment key errado para {segment}"
 
+    def test_handler_generico_nao_eh_injetado_quando_runtime_existe(self):
+        """Defesa contra bug 'LGPD invisivel': se o banner ja vem com runtime
+        do openui_renderer, o handler generico do html_builder_repair NAO deve
+        ser injetado (causava display:none via localStorage)."""
+        from backend.agents.html_builder_repair import repair_builder_publication_contract
+
+        # HTML com banner LGPD + runtime ja injetados pelo openui_renderer
+        html_with_runtime = '''<html><head></head><body>
+<div id="fralib-lgpd-banner" data-lgpd-banner data-lgpd-accept>Banner</div>
+<script id="fralib-lgpd-runtime">var KEY = "fralib_lgpd_test_v2";</script>
+<button data-lgpd-accept>Aceitar</button>
+</body></html>'''
+
+        # Mock prd simples
+        class _MockPrd(dict):
+            def __getattr__(self, k): return self.get(k, "")
+        prd = _MockPrd(
+            name="Test", phone="11999887766", address="Rua X, 1", city="SP",
+            canonical_url="https://example.com", site_url="https://example.com",
+        )
+
+        result = repair_builder_publication_contract(html_with_runtime, prd)
+
+        # Handler generico NAO deve aparecer (causava bug)
+        assert "fralib-lgpd-click-handler" not in result, (
+            "Handler generico foi injetado mesmo com runtime presente — bug visual!"
+        )
+        # Runtime canonico do openui_renderer deve continuar presente
+        assert "fralib-lgpd-runtime" in result, "Runtime canonico foi removido!"
+
 
 if __name__ == "__main__":
     # Rodar sem pytest

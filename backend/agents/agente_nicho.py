@@ -8,6 +8,12 @@ sys.path.insert(0, os.path.dirname(__file__))
 from handoff_types import NichoBriefing
 from llm_direct import call_claude
 
+try:
+    from agente_variacao import detect_subniche
+except Exception:
+    def detect_subniche(segmento, servicos=None, atributos=None):  # type: ignore
+        return "default"
+
 SYSTEM_PROMPT = """You are the Local Niche Intelligence Agent.
 
 Your role is to analyze raw lead data and competitor data and return a structured briefing for the next agents.
@@ -169,6 +175,10 @@ Gere o briefing seguindo o formato obrigatório: MARKDOWN primeiro, depois JSON.
             if _nome_conc and len(_nome_conc) < 60:
                 _competidores.append(_nome_conc)
 
+    # Detectar subnicho canonico a partir de segmento + servicos + atributos.
+    # Usado pelo agente_variacao para escolher SUB_NICHO_TEMPLATES.
+    _subnicho = detect_subniche(segmento, _servicos, _atributos)
+
     return NichoBriefing(
         task_id=task_id,
         source_agent="agente_nicho",
@@ -177,6 +187,7 @@ Gere o briefing seguindo o formato obrigatório: MARKDOWN primeiro, depois JSON.
         task_summary=f"Briefing gerado para {_nome} ({segmento}) em {_elapsed:.1f}s",
         nicho=_dados.get("nicho", segmento),
         subnichos=_dados.get("subnichos", []),
+        subnicho=_subnicho,
         cidade=cidade,
         publico_alvo=_dados.get("publico_alvo", []),
         usp=_dados.get("usp", []),

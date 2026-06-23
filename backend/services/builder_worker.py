@@ -19,6 +19,13 @@ try:
     from backend.core.proxy_models import PROXY_DEFAULT_MODEL
 except Exception:
     from core.proxy_models import PROXY_DEFAULT_MODEL  # type: ignore
+try:
+    from backend.core.proxy_models import PROXY_OPUS_FALLBACK_MODEL
+except Exception:
+    try:
+        from core.proxy_models import PROXY_OPUS_FALLBACK_MODEL  # type: ignore
+    except Exception:
+        PROXY_OPUS_FALLBACK_MODEL = "claude-opus-4-7"  # safe fallback
 # NOTA: 'vite_react_renderer' foi removido. OpenUI e o UNICO gerador de sites.
 # from backend.services.vite_react_renderer import render_vite_react_site
 
@@ -244,7 +251,7 @@ def render_site_with_builder(
             facts=manifest.get("prompt_agent", {}).get("context", {}),
             repair_context=repair_context,
             primary_model=os.getenv("FRALIB_OPENUI_PRIMARY_MODEL", PROXY_BUILDER_MODEL),
-            fallback_model=os.getenv("FRALIB_OPENUI_FALLBACK_MODEL", PROXY_DEFAULT_MODEL),
+            fallback_model=os.getenv("FRALIB_OPENUI_FALLBACK_MODEL", PROXY_OPUS_FALLBACK_MODEL),
             max_tokens=int(os.getenv("FRALIB_OPENUI_MAX_TOKENS", "8000")),
             temperature=float(os.getenv("FRALIB_OPENUI_TEMPERATURE", "0.35")),
         )

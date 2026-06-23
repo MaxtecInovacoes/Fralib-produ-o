@@ -104,25 +104,12 @@ def repair_builder_publication_contract(html: str, prd) -> str:
             cleaned = re.sub(r"(?is)</body>", banner + "\n</body>", cleaned, count=1)
         else:
             cleaned += banner
-    if "data-lgpd-accept" in cleaned.lower() and "fralib-lgpd-click-handler" not in cleaned.lower():
-        handler = (
-            '<script id="fralib-lgpd-click-handler">'
-            "(function(){"
-            "var key='fralib_lgpd_consent_v1';"
-            "function hide(){var b=document.querySelector('[data-lgpd-banner]');if(b)b.style.display='none'}"
-            "try{if(localStorage.getItem(key)==='1')hide()}catch(_e){}"
-            "document.addEventListener('click',function(e){"
-            "if(e.target&&e.target.closest('[data-lgpd-accept]')){"
-            "try{localStorage.setItem(key,'1')}catch(_e){}"
-            "hide();"
-            "}});"
-            "})();"
-            "</script>"
-        )
-        if re.search(r"(?is)</body>", cleaned):
-            cleaned = re.sub(r"(?is)</body>", handler + "\n</body>", cleaned, count=1)
-        else:
-            cleaned += handler
+    # LGPD handler generico REMOVIDO em 2026-06-23:
+    # O handler antigo usava localStorage chave 'fralib_lgpd_consent_v1' que
+    # ESCONDIA o banner via display:none mesmo sem o usuario ter clicado
+    # (chave diferente da usada pelo banner injetado em openui_renderer.py
+    # via inject_lgpd_into_html: 'fralib_lgpd_<slug>_v2').
+    # O banner + runtime ja vem com chave UNICA por site pelo openui_renderer.
 
     cleaned = _ensure_builder_seo_schema_contract(cleaned, prd)
 

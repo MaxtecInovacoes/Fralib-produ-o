@@ -95,6 +95,9 @@ ALLOWED_PROXY_MODELS = frozenset(model["id"] for model in PROXY_MODEL_OPTIONS)
 PROXY_LIGHT_MODEL = os.getenv("FRALIB_PROXY_LIGHT_MODEL", "claude-sonnet-4-6")
 PROXY_DEFAULT_MODEL = os.getenv("FRALIB_PROXY_DEFAULT_MODEL", "claude-sonnet-4-6")
 PROXY_BUILDER_MODEL = os.getenv("FRALIB_PROXY_BUILDER_MODEL", "claude-sonnet-4-6")
+# Fallback do OpenUI renderer: se Sonnet falhar validacao, tenta Opus
+# (mais robusto contra HTML mal-formado). Overridable via env var.
+PROXY_OPUS_FALLBACK_MODEL = os.getenv("FRALIB_PROXY_OPUS_FALLBACK_MODEL", "claude-opus-4-7")
 
 
 def is_proxy_model(model_id: str | None) -> bool:
