@@ -700,8 +700,26 @@ def node_hook(state: SDRState) -> dict:
                     lead_id=memory.lead_id or "",
                 )
                 lead_text = format_lead_quality_for_prompt(lead_q)
+                # === Sprint 3C: Telemetria Variacao (opt-in via FRALIB_SDR_USE_TELEMETRIA=1) ===
+                # Injeta ranking de templates por taxa de conversao (real do nicho).
+                # Cold start: se < 3 conversas por template, retorna [] (sem ruido no prompt).
+                telemetria_text = ""
+                if os.getenv("FRALIB_SDR_USE_TELEMETRIA", "0") == "1":
+                    try:
+                        from .telemetria_variacao import (
+                            rank_variacoes_by_conversion,
+                            format_variacao_stats_for_prompt,
+                        )
+                        ranking = rank_variacoes_by_conversion(
+                            user_id=memory.user_id,
+                            nicho=memory.segmento or "default",
+                            min_amostra=3,
+                        )
+                        telemetria_text = format_variacao_stats_for_prompt(ranking)
+                    except Exception as _tel_err:
+                        print(f"[SDR] telemetria_variacao falhou (nao-bloqueante): {_tel_err}")
                 tools_extra = "\n\n".join(
-                    x for x in [playbook_text, similar_text, lead_text] if x
+                    x for x in [playbook_text, similar_text, lead_text, telemetria_text] if x
                 )
                 if tools_extra:
                     full_system = full_system + "\n\n" + tools_extra
@@ -794,6 +812,27 @@ def node_hook(state: SDRState) -> dict:
                         )
                     except Exception as _idx_err:
                         print(f"[SDR] index_conversation falhou (nao-bloqueante): {_idx_err}")
+                # === Sprint 3C: telemetria variacao (rastreia qual template converteu) ===
+                if os.getenv("FRALIB_SDR_USE_TELEMETRIA", "0") == "1" and memory.lead_id:
+                    try:
+                        from .telemetria_variacao import record_variacao_outcome
+                        # template_id derivado de persona + segmento (heuristica simples)
+                        template_id = f"v_{(memory.persona or 'consultivo').replace(' ', '_')}_{(memory.segmento or 'default').replace(' ', '_')}"
+                        record_variacao_outcome(
+                            user_id=memory.user_id,
+                            nicho=memory.segmento or "default",
+                            template_id=template_id,
+                            converteu=converteu,
+                            duracao_turnos=memory.turn_count or 0,
+                            lead_id=memory.lead_id,
+                            lead_score=0.0,  # TODO: cruzar com Caio quando disponivel
+                            variacao_meta={
+                                "intent_final": memory.last_intent or "",
+                                "tom": memory.persona or "consultivo",
+                            },
+                        )
+                    except Exception as _tel_err:
+                        print(f"[SDR] record_variacao_outcome falhou (nao-bloqueante): {_tel_err}")
         except Exception as _save_err:
             print(f"[SDR] save_sdr_lesson falhou (nao-bloqueante): {_save_err}")
 
