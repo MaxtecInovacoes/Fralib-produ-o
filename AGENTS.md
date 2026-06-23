@@ -339,7 +339,45 @@ nenhum job da pipeline. Se encontrar imports desses arquivos em código novo,
 
 ---
 
-## 18. Onboarding Rápido
+## 18. Arquivos Legados Removidos (não reintroduzir)
+
+Em 2026-06-23, fizemos auditoria completa e **removemos 15 arquivos órfãos** que
+referenciavam caminhos paralelos de renderização. **Não reintroduzir nenhum
+deles**:
+
+| Arquivo removido | Motivo |
+|---|---|
+| `backend/services/vite_react_renderer.py` | Renderer Vite/React paralelo (163KB) — não chamado por ninguém |
+| `backend/services/vite_renderer_models.py` | Models de token capping para Vite/React |
+| `backend/services/vite_build_executor.py` | Executor de build Vite/React |
+| `backend/services/vite_config.py` | Config Vite/React |
+| `backend/services/vite_config_helpers.py` | Helpers Vite/React |
+| `backend/services/vite_facts.py` | Facts do Vite/React |
+| `backend/services/vite_file_extractor.py` | File extractor Vite/React |
+| `backend/services/vite_modules.py` | Modules Vite/React |
+| `backend/services/vite_prompts.py` | Prompts Vite/React |
+| `backend/services/vite_templates.py` | Templates Vite/React |
+| `backend/services/vite_validator.py` | Validador Vite/React |
+| `scripts/test_build_only.py` | Teste órfão do Vite/React |
+| `scripts/test_builder_llm_only.py` | Teste órfão do Vite/React |
+| `tests/unit/test_vite_config.py` | Teste órfão |
+| `tests/unit/test_vite_config_helpers.py` | Teste órfão |
+| `tests/unit/test_vite_facts.py` | Teste órfão |
+| `tests/unit/test_vite_file_extractor.py` | Teste órfão |
+| `tests/unit/test_vite_renderer_models.py` | Teste órfão |
+| `tests/unit/test_vite_validator.py` | Teste órfão |
+
+**Caminho único**: `backend/services/openui_renderer.py` (canônico, único).
+
+**Arquivos mantidos por compatibilidade** (não usados no caminho canônico, mas
+mantidos para evitar imports quebrados em outros módulos):
+- `backend/services/pipeline_renderer_support.py` — nome herdado, mas o conteúdo
+  é apenas suporte de publicação (classificação de erros, persistência de HTML
+  que falhou, cálculo de job_id). **Não é renderização**.
+
+---
+
+## 19. Onboarding Rápido
 
 1. Ler este `AGENTS.md` inteiro.
 2. Rodar `python pipeline.py smoke --dry-run`.
