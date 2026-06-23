@@ -97,6 +97,24 @@ module.exports = {
         NODE_ENV: 'production',
         PYTHONUNBUFFERED: '1'
       }
+    },
+    {
+      name: 'fralib-dreamer',
+      script: 'scripts/dreamer_daemon.py',
+      interpreter: '/root/fralib/venv/bin/python3',
+      cwd: '/root/fralib',
+      instances: 1,
+      exec_mode: 'fork',
+      autorestart: true,
+      kill_timeout: 5000,
+      restart_delay: 5000,
+      max_restarts: 5,
+      cron_restart: '0 3 * * *',
+      env: {
+        NODE_ENV: 'production',
+        PYTHONUNBUFFERED: '1',
+        DREAMER_INTERVAL_SECONDS: '86400'
+      }
     }
   ]
 }

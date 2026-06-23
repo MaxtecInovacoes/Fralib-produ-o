@@ -7,6 +7,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 
 from handoff_types import NichoBriefing
 from llm_direct import call_claude
+from llm_config import AGENT_MODEL_MAP
 
 try:
     from agente_variacao import detect_subniche
@@ -129,7 +130,7 @@ Gere o briefing seguindo o formato obrigatório: MARKDOWN primeiro, depois JSON.
     resposta = call_claude(
         system=SYSTEM_PROMPT,
         user=user_prompt,
-        model="sonnet",
+        model=AGENT_MODEL_MAP["agente_nicho"],
         max_tokens=4000,
         temperature=0.3,
         agent_name="agente_nicho",

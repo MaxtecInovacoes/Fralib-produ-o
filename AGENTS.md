@@ -522,11 +522,20 @@ O Claude Agent SDK tem 4 features que a gente **NÃO tem** ainda:
 | Módulos "agentes" (cérebro) | **11** | Tabela 20.1 |
 | Agentes que chamam LLM | **6** (Jina, Nicho, Variação fallback, **Arquiteto orq. + bloco_estrutura + bloco_copy**, OpenUI, SDR) | grep `call_claude(` |
 | Agentes determinísticos (contratos) | **5** (Hunter, Caio, SitePrompt vazio, Quality, Repair) | Tabela 20.1 |
-| Packages com infra de learning | **1** (`sdr_langgraph/`) | `ls backend/agents/sdr_langgraph/` |
+| Packages com infra de learning | **2** (`sdr_langgraph/` + `memory_hook_site.py`) | v1.1-baseline-2026-06-23 |
 | Custo LLM dominado por 1 agente | **~70% OpenUI** (Arquiteto ~20% via bloco_*, Nicho/SDR/Jina ~10%) | Análise de chamadas |
 | Whitelist de learning agents | **5** nomes | `pipeline_learning.py:14` |
+| Agentes com memory_hook plugado | **5** (franz, nicho, arquiteto, builder, validador) | Sprint 0+1 (v1.1) |
 
 **Não diga "temos 74 agentes"**. Diga: **"temos 11 módulos-agente, dos quais 5 usam LLM, e o OpenUI domina 90% do custo de IA"**.
+
+**Mudanças v1.1-baseline-2026-06-23** (Sprint 0 + Sprint 1):
+- memory_hook plugado em **5 agentes whitelisted** (Nicho, Arquiteto, Builder, Validador, Franz)
+- Validador LLM reintroduzido no orchestrator com `score: float 0-10` em `ValidacaoResultado`
+- Race condition em `agent_memory._salvar()` mitigada com `threading.Lock` (intra) + `fcntl.flock` (inter)
+- Feedback loop Nicho↔Validador: briefing entra em Warm com score como multiplicador de confianca
+- Dreamer daemon agendado via PM2 (`fralib-dreamer`, cron 3h BRT)
+- `llm_config.AGENT_MODEL_MAP` sincronizado com overrides reais (Sonnet primário Nicho/Variação)
 
 ---
 

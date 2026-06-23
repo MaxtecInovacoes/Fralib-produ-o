@@ -2023,12 +2023,59 @@ async def executar_pipeline_completo(
                 _persist_failed_renderer_html(state, exc, _renderer_agent)
                 raise
 
-            # ── Validador LLM opcional: pode ser pulado com FRALIB_SKIP_HTML_QUALITY_GATE ──
-            if _skip_html_quality_gate(config):
-                _log(
-                    f"  {_renderer_label}: validador LLM ignorado (experimento nativo)",
-                    "warning",
-                )
+            # ── Validador LLM (Sonnet Haiku fallback) — score 0-10 + aprovado bool ──
+            # v1.1-baseline-2026-06-23: reintroduzido no orchestrator para fechar
+            # feedback loop Nicho↔Validador (Sprint 0).
+            _validador_result = None
+            if not _skip_html_quality_gate(config):
+                try:
+                    from agents.validador import validar
+                    _prd_text = (
+                        state.prd_arquiteto.model_dump_json()
+                        if hasattr(state.prd_arquiteto, "model_dump_json")
+                        else str(getattr(state.prd_arquiteto, "__dict__", {}))
+                    )
+                    _validador_result = validar(
+                        html=state.html_final,
+                        prd_text=_prd_text,
+                        segmento=state.segmento or "",
+                        task_id=str(state.pipeline_id),
+                    )
+                    _log(
+                        f"  Validador LLM: score={_validador_result.score:.1f}/10 "
+                        f"aprovado={_validador_result.aprovado}",
+                        "success" if _validador_result.aprovado else "warning",
+                    )
+                    state.validador_result = _validador_result
+                except Exception as _val_err:
+                    _log(f"  Validador LLM falhou (gate determinístico segue): {_val_err}", "warning")
+            else:
+                _log(f"  {_renderer_label}: validador LLM ignorado (FRALIB_SKIP_HTML_QUALITY_GATE=1)", "warning")
+
+            # v1.1-baseline-2026-06-23: feedback loop Nicho↔Validador (Sprint 1).
+            # Persiste lesson do briefing com score como multiplicador de confianca.
+            if _validador_result is not None and getattr(state, "nicho_briefing", None):
+                try:
+                    from agents.memory_hook_site import persist_lesson_with_score
+                    _briefing = state.nicho_briefing
+                    _subnicho = (
+                        getattr(_briefing, "subnicho", "")
+                        or getattr(_briefing, "subnichos", [""])[0]
+                        if getattr(_briefing, "subnichos", None)
+                        else ""
+                    )
+                    persist_lesson_with_score(
+                        agente="agente_nicho",
+                        nicho=state.segmento or "default",
+                        conteudo=(
+                            f"Briefing subnicho={_subnicho} "
+                            f"confianca_original={getattr(_briefing, 'confianca', 'media')} "
+                            f"score={_validador_result.score:.1f}"
+                        ),
+                        validador_score=_validador_result.score,
+                    )
+                except Exception as _persist_err:
+                    logger.warning(f"[Pipeline] persist_lesson_with_score falhou: {_persist_err}")
             _log(f"  HTML: {len(state.html_final):,} chars", "success")
             logger.info(f"[Pipeline] {_renderer_label}: OK")
             # Validar HTML antes de salvar checkpoint (não salvar truncado)

@@ -749,6 +749,28 @@ def _call_openui_llm(
         if build_openui_context_block:
             final_system_prompt = OPENUI_SYSTEM_PROMPT + "\n\n" + build_openui_context_block(facts)
 
+    # v1.1-baseline-2026-06-23: reidrata memory se thread-local vazio
+    # (worker process case — orchestrator seta memory em outra thread).
+    try:
+        from agent_memory import set_memory, get_memory, CoreMemory, WarmMemory
+        _mem_core, _mem_warm, _mem_nicho = get_memory()
+        if not (_mem_core and _mem_warm):
+            _nicho = (
+                (facts or {}).get("nicho")
+                or (facts or {}).get("segmento")
+                or ((facts or {}).get("business") or {}).get("segmento")
+                or "default"
+            )
+            try:
+                _core = CoreMemory()
+                _warm = WarmMemory()
+                set_memory(_core, _warm, _nicho)
+                logger.debug(f"[OpenUI] memory reidratada para nicho={_nicho}")
+            except Exception as _mem_err:
+                logger.warning(f"[OpenUI] memory rehydration falhou: {_mem_err}")
+    except ImportError:
+        pass  # Sem agent_memory instalado; prossegue sem memory
+
     return call_claude(
         final_system_prompt,
         user_prompt,
@@ -757,7 +779,7 @@ def _call_openui_llm(
         temperature=temperature,
         agent_name="builder_renderer",
         respect_agent_config=False,
-        enable_context=False,
+        enable_context=True,  # v1.1: builder_renderer agora consome memory
     )
 
 

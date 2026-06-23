@@ -226,20 +226,22 @@ São scrapers/scoring. Caio tem score determinístico (bom). Hunter é scraping 
 
 ## 3. Roadmap priorizado (alto ROI primeiro)
 
-| # | Ação | Esforço | ROI | Categoria |
-|---|---|---|---|---|
-| 1 | Adicionar `quality_judge` ao **OpenUI** | 1 sprint | **altíssimo** | Auto-melhorança |
-| 2 | Adicionar `memory_hook` ao **OpenUI** | 1 sprint | **altíssimo** | Auto-melhorança |
-| 3 | Adicionar `learning.py` ao **OpenUI** (top-10 patterns por subnicho) | 1 sprint | **altíssimo** | Auto-melhorança |
-| 4 | Adicionar `quality_judge` ao **Nicho** | 0.5 sprint | alto | Auto-melhorança |
-| 5 | Adicionar `memory_hook` ao **Nicho** | 0.5 sprint | alto | Auto-melhorança |
-| 6 | Métricas de conversão por **template da Variação** | 0.5 sprint | médio | Telemetria |
-| 7 | Tools dinâmicas no **SDR** (tools.py + multi_agent.py) | 2 sprints | alto | Agent SDK |
-| 8 | Loop autônomo no **SDR** (decide próximo estado) | 2 sprints | alto | Agent SDK |
-| 9 | RAG semântico em `agent_memory.py` (embeddings) | 2 sprints | alto | Memória |
-| 10 | Auto-fine-tuning (Lora/RLHF) | 6+ sprints | incerto | Última milha |
+| # | Ação | Esforço | ROI | Categoria | Status v1.1 |
+|---|---|---|---|---|---|
+| 1 | Adicionar `quality_judge` ao **OpenUI** | 1 sprint | **altíssimo** | Auto-melhorança | ✅ done (via validador.score reintroduzido) |
+| 2 | Adicionar `memory_hook` ao **OpenUI** | 1 sprint | **altíssimo** | Auto-melhorança | ✅ done (rehydration em `_call_openui_llm`) |
+| 3 | Adicionar `learning.py` ao **OpenUI** (top-10 patterns por subnicho) | 1 sprint | **altíssimo** | Auto-melhorança | ⏳ partial (record_pipeline_success já loga) |
+| 4 | Adicionar `quality_judge` ao **Nicho** | 0.5 sprint | alto | Auto-melhorança | ⏳ partial (briefing confianca agora logado) |
+| 5 | Adicionar `memory_hook` ao **Nicho** | 0.5 sprint | alto | Auto-melhorança | ✅ done (memory_hook_site.persist_lesson_with_score) |
+| 6 | Métricas de conversão por **template da Variação** | 0.5 sprint | médio | Telemetria | ⏳ deferred |
+| 7 | Tools dinâmicas no **SDR** (tools.py + multi_agent.py) | 2 sprints | alto | Agent SDK | ⏳ pending |
+| 8 | Loop autônomo no **SDR** (decide próximo estado) | 2 sprints | alto | Agent SDK | ⏳ pending |
+| 9 | RAG semântico em `agent_memory.py` (embeddings) | 2 sprints | alto | Memória | ⏳ pending |
+| 10 | Auto-fine-tuning (Lora/RLHF) | 6+ sprints | incerto | Última milha | ⏳ pending |
 
 **Top 3 (sprint 1)**: OpenUI com quality_judge + memory_hook + learning → todo site gerado fica melhor.
+
+**v1.1-baseline-2026-06-23 status**: 4/10 items ✅ done (1, 2, 5 + meta-judge correlacionado via validador_score). Sprint 0+1 completos. Restantes (3, 4, 6, 7, 8, 9, 10) → Sprint 2+.
 
 ---
 

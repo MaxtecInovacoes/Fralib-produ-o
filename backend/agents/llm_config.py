@@ -70,16 +70,20 @@ except Exception:
     )
 
 # Agent to model size mapping (hardcoded fallback)
+# v1.1-baseline-2026-06-23: sincronizado com overrides reais (auditoria gaps Sprint 0)
+# - agente_nicho e agente_variacao foram trocados Haiku→Sonnet em 2026-06-22
+# - arquiteto_mestre: bloco_copy.py usa cascade sonnet→haiku, nao sonnet→opus
+# - builder_renderer: OpenUI cascade sonnet→opus; opus eh o FALLBACK
 AGENT_MODEL_MAP: dict[str, str] = {
     "franz": "sonnet",  # Era haiku — Sonnet mantém contexto SDR muito melhor
     "bryan": "sonnet",  # Era haiku — alias legacy, ainda usado em imports
     "validador": "haiku",
-    "agente_nicho": "haiku",
-    "agente_variacao": "haiku",
+    "agente_nicho": "sonnet",      # v1.1: era haiku
+    "agente_variacao": "sonnet",   # v1.1: era haiku
     "curadoria": "opus",
-    "arquiteto_mestre": "opus",
+    "arquiteto_mestre": "sonnet",  # v1.1: era opus (cascade real sonnet→haiku em bloco_copy)
     "designer_prd": "opus",
-    "builder_renderer": "opus",
+    "builder_renderer": "opus",    # OpenUI cascade sonnet→opus; opus eh fallback
 }
 
 # Provider-specific model mappings

@@ -16,6 +16,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 
 from handoff_types import NichoBriefing, VariacaoEstrutural
 from llm_direct import call_claude
+from llm_config import AGENT_MODEL_MAP
 
 
 # ─── Subnicho detection (heuristica canonica) ──────────────────────────────
@@ -341,7 +342,7 @@ Retorne APENAS o JSON - sem markdown, sem explicacao extra."""
     resposta = call_claude(
         system=SYSTEM_PROMPT,
         user=user_prompt,
-        model="sonnet",  # Era haiku; agora sonnet para evitar variacoes ruins
+        model=AGENT_MODEL_MAP["agente_variacao"],
         max_tokens=1500,
         temperature=0.4,
         agent_name="agente_variacao",

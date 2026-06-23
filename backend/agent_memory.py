@@ -8,6 +8,7 @@ Cold: arquivo bruto de cada run (filesystem)
 
 import json
 import logging
+import threading
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -60,9 +61,15 @@ class MemoryEntry:
 
 
 class CoreMemory:
+    # Lock de classe para serializar read-modify-write entre processos via flock
+    # (POSIX) ou via _intra_process_lock (Windows fallback).
+    _intra_process_lock = threading.Lock()
+
     def __init__(self):
         MEMORY_DIR.mkdir(parents=True, exist_ok=True)
-        self.entries: list[MemoryEntry] = self._carregar()
+        # Lock de read-modify-write: protege _carregar + adicionar + _salvar
+        with CoreMemory._intra_process_lock:
+            self.entries: list[MemoryEntry] = self._carregar()
 
     def _carregar(self) -> list:
         if not CORE_FILE.exists():
@@ -82,35 +89,65 @@ class CoreMemory:
                 logger.error(f'[AgentMemory] Backup falhou: {backup_err}')
             return []  # Backup feito, inicia vazio
 
-    def _salvar(self):
-        # FIX CRÍTICO: escrita pode falhar silenciosamente
-        # (disco cheio, corrupcao, permissao) - memoria perdida sem saber
-        # Logamos para detectar problemas de infraestrutura
-        try:
-            with open(CORE_FILE, "w", encoding="utf-8") as f:
+    def _salvar(self) -> None:
+        """Salva core.json atomicamente com file lock (fcntl.flock).
+
+        v1.1-baseline-2026-06-23: protecao contra race condition em
+        pipeline_multiplos (2+ processos gravando simultaneamente).
+        Combina 2 camadas:
+        1. threading.Lock intra-processo (Windows + Linux)
+        2. fcntl.flock inter-processo (Linux only)
+
+        Windows: fallback sem flock (multi-process nao suportado em Win).
+        IMPORTANTE: Em Linux, __init__ ja adquire o lock intra-processo;
+        flock serializa entre processos diferentes.
+        """
+        with CoreMemory._intra_process_lock:
+            _f = None
+            try:
+                _f = open(CORE_FILE, "w", encoding="utf-8")
+            except (OSError, IOError) as e:
+                logger.error(f"[AgentMemory] Falha ao abrir core memory: {e}")
+                return
+            try:
+                try:
+                    import fcntl
+                    fcntl.flock(_f, fcntl.LOCK_EX)
+                except (ImportError, OSError):
+                    pass  # Windows ou sem suporte; prossegue sem lock
                 json.dump(
-                    [e.to_dict() for e in self.entries], f, ensure_ascii=False, indent=2
+                    [e.to_dict() for e in self.entries], _f, ensure_ascii=False, indent=2
                 )
-        except (OSError, IOError) as e:
-            logger.error(f"[AgentMemory] Falha ao salvar core memory: {e}")
+            except (OSError, IOError) as e:
+                logger.error(f"[AgentMemory] Falha ao salvar core memory: {e}")
+            finally:
+                try:
+                    import fcntl
+                    fcntl.flock(_f, fcntl.LOCK_UN)
+                except (ImportError, OSError, ValueError, AttributeError):
+                    pass
+                _f.close()
 
     def adicionar(self, entry: MemoryEntry):
-        existing = next((e for e in self.entries if e.conteudo == entry.conteudo), None)
-        if existing:
-            existing.confianca = max(existing.confianca, entry.confianca)
-            existing.atualizado_em = datetime.now(timezone.utc).isoformat()
-            self._salvar()
-            return
+        # Lock ja esta no escopo do caller (via __init__ quando necessario).
+        # Para chamadas diretas de adicionar() (fora de __init__), usamos o lock aqui.
+        with CoreMemory._intra_process_lock:
+            existing = next((e for e in self.entries if e.conteudo == entry.conteudo), None)
+            if existing:
+                existing.confianca = max(existing.confianca, entry.confianca)
+                existing.atualizado_em = datetime.now(timezone.utc).isoformat()
+                self._salvar()
+                return
 
-        if len(self.entries) >= 20:
-            self.entries.sort(key=lambda e: e.confianca)
-            removida = self.entries.pop(0)
-            print(
-                f"[MEMORY] Core cheio. Demovendo: '{removida.conteudo[:50]}' (conf={removida.confianca:.0%})"
-            )
-        self.entries.append(entry)
-        self._salvar()
-        print(f"[MEMORY] Core +1: '{entry.conteudo[:50]}' (conf={entry.confianca:.0%})")
+            if len(self.entries) >= 20:
+                self.entries.sort(key=lambda e: e.confianca)
+                removida = self.entries.pop(0)
+                print(
+                    f"[MEMORY] Core cheio. Demovendo: '{removida.conteudo[:50]}' (conf={removida.confianca:.0%})"
+                )
+            self.entries.append(entry)
+            self._salvar()
+            print(f"[MEMORY] Core +1: '{entry.conteudo[:50]}' (conf={entry.confianca:.0%})")
 
     def get_para_agente(self, agente: str, nicho: str) -> str:
         relevantes = [
@@ -198,15 +235,36 @@ class WarmMemory:
         except (json.JSONDecodeError, Exception):
             return []
 
-    def _salvar_nicho(self, nicho: str, entries: list):
-        # FIX CRÍTICO: mesma problema do _salvar() para warm memory
-        # Logamos para detectar problemas de escrita
+    def _salvar_nicho(self, nicho: str, entries: list) -> None:
+        """Salva warm/<nicho>.json atomicamente com file lock (fcntl.flock).
+
+        v1.1-baseline-2026-06-23: protecao contra race condition quando
+        2+ pipelines rodando em paralelo gravam no mesmo nicho.
+        Windows: fallback sem lock (multi-process nao suportado em Win).
+        """
         nicho_file = WARM_DIR / f"{nicho}.json"
+        _f = None
         try:
-            with open(nicho_file, "w", encoding="utf-8") as f:
-                json.dump(entries, f, ensure_ascii=False, indent=2)
+            _f = open(nicho_file, "w", encoding="utf-8")
+        except (OSError, IOError) as e:
+            logger.error(f"[AgentMemory] Falha ao abrir warm memory para nicho={nicho}: {e}")
+            return
+        try:
+            try:
+                import fcntl
+                fcntl.flock(_f, fcntl.LOCK_EX)
+            except (ImportError, OSError):
+                pass
+            json.dump(entries, _f, ensure_ascii=False, indent=2)
         except (OSError, IOError) as e:
             logger.error(f"[AgentMemory] Falha ao salvar warm memory para nicho={nicho}: {e}")
+        finally:
+            try:
+                import fcntl
+                fcntl.flock(_f, fcntl.LOCK_UN)
+            except (ImportError, OSError, ValueError, AttributeError):
+                pass
+            _f.close()
 
 
 class ColdMemory:

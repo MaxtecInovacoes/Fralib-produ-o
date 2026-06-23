@@ -134,6 +134,17 @@ Retorne APENAS o JSON — sem markdown, sem explicação extra."""
     )
     _aprovado = _dados.get("status") == "approved" or not _tem_problema_concreto
 
+    # v1.1-baseline-2026-06-23: calcula score 0-10 (LLM-as-judge)
+    _score = float(_dados.get("score", 7.0 if _aprovado else 3.0))
+    _score = max(0.0, min(10.0, _score))  # clamp [0, 10]
+    # Problemas criticos derrubam o score
+    if _problemas and any(
+        "crític" in str(p).lower() or "critic" in str(p).lower()
+        for p in _problemas
+    ):
+        _score = min(_score, 3.0)
+        _aprovado = False
+
     return ValidacaoResultado(
         task_id=task_id,
         source_agent="validador",
@@ -141,6 +152,7 @@ Retorne APENAS o JSON — sem markdown, sem explicação extra."""
         status="ok" if _aprovado else "changes_required",
         task_summary=f"Validação {'aprovada' if _aprovado else 'rejeitada'} em {_elapsed:.1f}s",
         aprovado=_aprovado,
+        score=_score,
         problemas=[] if _aprovado and not _tem_problema_concreto else _problemas,
         prioridade=_dados.get("prioridade", []),
         observacoes=_dados.get("observacoes", []),

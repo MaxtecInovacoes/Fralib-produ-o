@@ -71,6 +71,7 @@ class VariacaoEstrutural(HandoffBase):
 
 class ValidacaoResultado(HandoffBase):
     aprovado: bool = False
+    score: float = 0.0  # 0-10 LLM-as-judge (>=7 = aprovado)
     problemas: list[str] = Field(default_factory=list)
     prioridade: list[str] = Field(default_factory=list)
     observacoes: list[str] = Field(default_factory=list)
