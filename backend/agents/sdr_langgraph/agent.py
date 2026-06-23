@@ -181,6 +181,58 @@ def _next_stage(current: str, suggested: str, fallback: str) -> str:
     return STAGE_PROGRESSION[min(current_idx + 1, suggested_idx)]
 
 
+def _orchestrator_decide(
+    memory,
+    incoming_message: str,
+    llm_suggested_stage: str,
+) -> "OrchestratorDecision":
+    """Wrapper do Orchestrator. Substitui o _next_stage antigo na logica de decisao.
+
+    Mantem compatibilidade: retorna OrchestratorDecision com state + stage.
+    Na duvida, prioriza o Orchestrator (intent-based). Fallback: _next_stage legado.
+    """
+    try:
+        from .orchestrator import orchestrate, update_lead_memory_after_turn
+        decision = orchestrate(
+            incoming_message=incoming_message or "",
+            current_state_str=memory.conversation_state or "idle",
+            current_stage=memory.stage or "hook",
+            turn_count=memory.turn_count or 0,
+            suggested_stage=llm_suggested_stage,
+            enable_llm_fallback=False,  # nao chamar Haiku em runtime ainda; manter barato
+        )
+        update_lead_memory_after_turn(memory, decision)
+        return decision
+    except Exception as e:
+        print(f"[orchestrator] fallback to legacy _next_stage: {e}")
+        legacy_stage = _next_stage(memory.stage, llm_suggested_stage, "qualify")
+        memory.stage = legacy_stage
+        memory.conversation_state = memory.conversation_state or "waiting_response"
+        from .state_machine import ConversationState
+        return _build_legacy_decision(memory, legacy_stage, incoming_message, str(e))
+
+
+def _build_legacy_decision(memory, legacy_stage: str, incoming: str, err: str):
+    """Constroi OrchestratorDecision quando o orchestrator falha (fallback)."""
+    from .orchestrator import OrchestratorDecision
+    from .state_machine import ConversationState, Intent
+    from .intent_classifier import classify_intent
+    intent_result = classify_intent(incoming or "")
+    return OrchestratorDecision(
+        intent=intent_result.intent,
+        intent_confidence=intent_result.confidence,
+        intent_signals=intent_result.signals,
+        state_before=ConversationState.IDLE,
+        state_after=ConversationState.WAITING_RESPONSE,
+        stage_before=memory.stage,
+        stage_after=legacy_stage,
+        reasoning=f"legacy fallback: {err}",
+        should_advance=True,
+        in_loop=False,
+        force_break_loop=False,
+    )
+
+
 # ════════════════════════════════════════════════════════════════════
 # NODE 1: load_context (entrada - carrega tudo que precisa)
 # ════════════════════════════════════════════════════════════════════
@@ -491,8 +543,24 @@ def node_hook(state: SDRState) -> dict:
         else:
             reply = f"{greeting}! Falo com o responsável pela {memory.nome}?"
 
-    next_stage = _next_stage(memory.stage, next_stage, "qualify")
-    memory.update_stage(next_stage)
+    # === FSM + Intent orchestrator (substitui _next_stage legado) ===
+    # BUG FIX: stage-loop quando lead só cumprimenta. Orchestrator classifica intent +
+    # consulta FSM pra decidir proximo state/stage. Prioriza intent > stage.
+    orch = _orchestrator_decide(
+        memory=memory,
+        incoming_message=state.get("incoming_message", ""),
+        llm_suggested_stage=next_stage,
+    )
+    if orch.in_loop or orch.force_break_loop:
+        print(f"[SDR] hook: orchestrator loop-break detected; state={orch.state_before.value}->{orch.state_after.value}")
+    # Atualiza reply se orchestrator detectou loop mas reply é generico demais
+    if orch.force_break_loop and len(reply.strip()) < 30:
+        # resposta muito curta provavelmente repetindo hook; amplia com pergunta direta
+        if memory.segmento and "academia" in memory.segmento.lower():
+            reply = f"{greeting}! Olha, sem enrolação: você é o responsável pela academia ou tem alguém que decide junto?"
+        else:
+            reply = f"{greeting}! Sem enrolação: posso falar com quem decide sobre o site de vocês, ou é você mesmo?"
+
     memory.last_message_sent = reply
     if isinstance(update_facts, dict):
         save_agent_note(memory, state.get("selected_agent") or "abordagem", update_facts.get("agent_note"))
@@ -625,7 +693,18 @@ def make_stage_node(stage_name: str):
 
         # Avançar stage apenas quando o modelo sugerir transição válida.
         # Inbound deve responder ao que foi perguntado, sem empurrar script.
-        next_stage = _next_stage(memory.stage, next_stage, stage_name)
+        # === FSM + Intent orchestrator (substitui _next_stage legado) ===
+        orch = _orchestrator_decide(
+            memory=memory,
+            incoming_message=incoming,
+            llm_suggested_stage=next_stage,
+        )
+        if orch.state_after.value == "opt_out" and orch.intent.value == "opt_out":
+            next_stage = "lost"
+        elif orch.stage_after in STAGE_PROGRESSION:
+            next_stage = orch.stage_after
+        else:
+            next_stage = _next_stage(memory.stage, next_stage, stage_name)
         if next_stage in STAGE_PROGRESSION:
             memory.update_stage(next_stage)
         elif next_stage:
