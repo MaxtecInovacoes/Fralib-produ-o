@@ -251,11 +251,17 @@ def sanitize_builder_html_for_publication(
         og_title = _publication_page_title(prd, business)
         if og_title:
             cleaned = re.sub(r"(?is)</head>", f'<meta property="og:title" content="{_escape(og_title)}">\n</head>', cleaned, count=1)
+            # Adicionar twitter:title espelhado (cards precisam)
+            if 'name="twitter:title"' not in cleaned.lower():
+                cleaned = re.sub(r"(?is)</head>", f'<meta name="twitter:title" content="{_escape(og_title)}">\n</head>', cleaned, count=1)
     # og:description
     if 'property="og:description"' not in low:
         og_desc = _publication_page_description(prd, business)
         if og_desc:
             cleaned = re.sub(r"(?is)</head>", f'<meta property="og:description" content="{_escape(og_desc)}">\n</head>', cleaned, count=1)
+            # Adicionar twitter:description espelhado
+            if 'name="twitter:description"' not in cleaned.lower():
+                cleaned = re.sub(r"(?is)</head>", f'<meta name="twitter:description" content="{_escape(og_desc)}">\n</head>', cleaned, count=1)
     # og:image
     if 'property="og:image"' not in low or 'content=""' in low:
         og_image = _get_og_image_from_prd(prd) or "https://images.unsplash.com/photo-1497366216548-37526070297c?w=1200&h=630&fit=crop"
