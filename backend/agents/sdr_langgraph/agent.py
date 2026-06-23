@@ -652,12 +652,48 @@ def node_hook(state: SDRState) -> dict:
                     f"GATILHOS CONVERSAO: "
                     f"{', '.join(playbook.get('gatilhos_conversao', [])[:5])}"
                 )
-                similar_convs = retrieve_similar_conversations(
-                    memory.segmento or "default",
-                    user_id=memory.user_id,
-                    top_k=3,
-                )
-                similar_text = format_similar_conversations_for_prompt(similar_convs)
+                # === Sprint 3B: RAG semantico (opt-in via FRALIB_SDR_USE_RAG=1) ===
+                # Substitui retrieve_similar_conversations (keyword/tail) por
+                # search_similar_conversations (cosseno em embedding space).
+                # Fallback automatico se RAG off ou indice vazio.
+                if os.getenv("FRALIB_SDR_USE_RAG", "0") == "1":
+                    try:
+                        from .retrieval_semantico import (
+                            search_similar_conversations,
+                            format_search_results_for_prompt,
+                            current_backend,
+                        )
+                        rag_results = search_similar_conversations(
+                            user_id=memory.user_id,
+                            nicho=memory.segmento or "default",
+                            query=state.get("incoming_message", "")[:500],
+                            top_k=3,
+                            min_score=0.0,
+                        )
+                        similar_text = format_search_results_for_prompt(rag_results)
+                        # Se RAG nao retornou nada, cai no tail (Sprint 3A)
+                        if not similar_text:
+                            similar_convs = retrieve_similar_conversations(
+                                memory.segmento or "default",
+                                user_id=memory.user_id,
+                                top_k=3,
+                            )
+                            similar_text = format_similar_conversations_for_prompt(similar_convs)
+                    except Exception as _rag_err:
+                        print(f"[SDR] retrieval_semantico falhou, usando tail: {_rag_err}")
+                        similar_convs = retrieve_similar_conversations(
+                            memory.segmento or "default",
+                            user_id=memory.user_id,
+                            top_k=3,
+                        )
+                        similar_text = format_similar_conversations_for_prompt(similar_convs)
+                else:
+                    similar_convs = retrieve_similar_conversations(
+                        memory.segmento or "default",
+                        user_id=memory.user_id,
+                        top_k=3,
+                    )
+                    similar_text = format_similar_conversations_for_prompt(similar_convs)
                 lead_q = check_lead_quality(
                     user_id=memory.user_id,
                     telefone=memory.telefone or "",
@@ -735,6 +771,29 @@ def node_hook(state: SDRState) -> dict:
                     lead_id=memory.lead_id or "",
                     converteu=converteu,
                 )
+                # === Sprint 3B: indexa conversa no RAG (para futuras buscas) ===
+                # Constroi snippet a partir das ultimas mensagens do lead+bot.
+                if os.getenv("FRALIB_SDR_USE_RAG", "0") == "1" and memory.lead_id:
+                    try:
+                        from .retrieval_semantico import index_conversation
+                        snippet = (
+                            f"lead: {state.get('incoming_message', '')[:200]}\n"
+                            f"bot: {reply[:200]}"
+                        )
+                        index_conversation(
+                            user_id=memory.user_id,
+                            nicho=memory.segmento or "default",
+                            lead_id=memory.lead_id,
+                            text=snippet,
+                            metadata={
+                                "converteu": converteu,
+                                "intent_final": memory.last_intent or "",
+                                "stage": stage,
+                                "tom_usado": memory.persona or "consultivo",
+                            },
+                        )
+                    except Exception as _idx_err:
+                        print(f"[SDR] index_conversation falhou (nao-bloqueante): {_idx_err}")
         except Exception as _save_err:
             print(f"[SDR] save_sdr_lesson falhou (nao-bloqueante): {_save_err}")
 
