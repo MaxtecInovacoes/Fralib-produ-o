@@ -471,6 +471,15 @@ def _patch_performance(html: str) -> str:
         if '<link rel="preload" as="image"' not in result and '</head>' in result:
             result = result.replace('</head>', preload_tag + '\n</head>', 1)
 
+    # Substituir fm=jpg/png por fm=webp&q=75 (WebP/AVIF em URLs Unsplash)
+    # Performance: ~30% menor que JPEG, mesma qualidade visual
+    if 'unsplash.com' in result and 'fm=jpg' in result:
+        result = re.sub(r'fm=jpg(&?)q=\d+', r'fm=webp\1q=75', result)
+        result = re.sub(r'fm=jpg(&?)([^&])', r'fm=webp&q=75&\2', result)
+    if 'unsplash.com' in result and 'fm=png' in result:
+        result = re.sub(r'fm=png(&?)q=\d+', r'fm=webp\1q=75', result)
+        result = re.sub(r'fm=png(&?)([^&])', r'fm=webp&q=75&\2', result)
+
     return result
 
 

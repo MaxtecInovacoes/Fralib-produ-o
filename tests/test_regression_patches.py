@@ -150,6 +150,17 @@ class TestPatchPerformance:
         assert 'rel="preload" as="image"' in out.lower()
         assert 'hero.jpg' in out.lower()
 
+    def test_unsplash_fm_jpg_converted_to_webp(self):
+        html = '<html><head></head><body><img src="https://images.unsplash.com/photo-123?w=1080&fm=jpg&q=80" alt="Test"></body></html>'
+        out = _patch_performance(html)
+        assert 'fm=webp' in out.lower()
+        assert 'fm=jpg' not in out.lower() or 'fm=webp' in out.lower()  # WebP presente
+
+    def test_unsplash_fm_png_converted_to_webp(self):
+        html = '<html><head></head><body><img src="https://images.unsplash.com/photo-456?w=1080&fm=png&q=80" alt="Test"></body></html>'
+        out = _patch_performance(html)
+        assert 'fm=webp' in out.lower()
+
 
 class TestModernCSS:
     """Testes para _inject_modern_css_fallback"""
