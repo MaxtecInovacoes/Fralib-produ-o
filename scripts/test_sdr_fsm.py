@@ -573,6 +573,12 @@ class TestSimplifyLanguage(unittest.TestCase):
             self.assertIn(keyword, out.lower(), f"Faltando: {keyword}")
 
 
+    def test_contratacao_vira_fechar(self):
+        from agents.sdr_langgraph.agent import _simplify_language
+        out = _simplify_language("Vamos prosseguir com a contratacao?")
+        self.assertIn("fechar", out)
+        self.assertNotIn("contratac", out)
+
     def test_alavancar_vira_crescer(self):
         from agents.sdr_langgraph.agent import _simplify_language
         out = _simplify_language("Vamos alavancar seu negocio digital.")

@@ -295,6 +295,7 @@ def _simplify_language(reply: str) -> str:
         (r"\bsolicitar\b", "pedir"),
         (r"\bdespesa\b", "gasto"),
         (r"\bvalores\b", "preço"),
+        (r"\bcontratacao\b", "fechar"),
         (r"\bcontratar\b", "fechar"),
         (r"\badquirir\b", "comprar"),
         (r"\bsoluç(?:ões|oes|oes?)\s+personalizadas?\b", "coisa sob medida"),
