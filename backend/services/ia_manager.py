@@ -302,6 +302,14 @@ def parse_cooldown_from_response(status_code: int, headers: dict) -> int:
 DAILY_TOKEN_BUDGET = int(os.getenv("DAILY_TOKEN_BUDGET", "2000000"))  # 2M tokens/dia default
 GLOBAL_MAX_CALLS_PER_MIN = int(os.getenv("GLOBAL_MAX_CALLS_PER_MIN", "30"))
 
+# === Feature flag: bypass total do budget check ===
+# Quando FRALIB_SDR_BUDGET_DISABLED=1, check_daily_budget() e check_tenant_budget()
+# retornam sempre (True, ∞). Usado em situacoes de emergencia onde leads estao
+# sem responder (ex: budget diario esgotado em horario comercial).
+# ATENCAO: desabilitar o budget pode gerar custos acima do esperado.
+# DEFAULT: OFF (sempre protecao ativada).
+BUDGET_DISABLED = os.getenv("FRALIB_SDR_BUDGET_DISABLED", "0") == "1"
+
 TENANT_DAILY_LIMITS = {
     'trial': 100_000,
     'starter': 300_000,
@@ -366,6 +374,9 @@ def is_globally_cooled_down() -> tuple:
 
 def check_daily_budget() -> tuple:
     """Retorna (dentro_budget: bool, tokens_restantes: int)."""
+    # Bypass via feature flag (emergencia: leads sem responder)
+    if BUDGET_DISABLED:
+        return (True, 999_999_999)
     try:
         with _connect() as conn:
             with conn.cursor() as cur:
@@ -385,6 +396,9 @@ def check_daily_budget() -> tuple:
 
 def check_tenant_budget(tenant_id: int, plano: str = 'starter') -> tuple:
     """Retorna (dentro_budget: bool, tokens_restantes: int)."""
+    # Bypass via feature flag (emergencia: leads sem responder)
+    if BUDGET_DISABLED:
+        return (True, 999_999_999)
     limit = TENANT_DAILY_LIMITS.get(plano.lower(), 300_000)
     if limit >= 999_999_999:
         return (True, limit)
