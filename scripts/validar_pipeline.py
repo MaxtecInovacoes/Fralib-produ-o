@@ -210,6 +210,55 @@ def test_anti_regressao_estado():
         return True
 
 
+def test_anti_regressao_v11():
+    """Executa a suite tests/test_anti_regressao_v11.py.
+
+    v1.1-baseline-2026-06-23: protege Sprint 0+1 (memory_hook SDK).
+    Bloqueia reversao de: memory_hook_site.py, validador reintroduzido,
+    AGENT_MODEL_MAP, race condition, bridge Builder, PM2 dreamer, tag v1.1.
+    """
+    t0 = time.time()
+    test_path = os.path.join(
+        os.path.dirname(__file__), "..", "tests", "test_anti_regressao_v11.py"
+    )
+    if not os.path.exists(test_path):
+        log("AntiRegV11", "SKIP", f"Suite nao encontrada: {test_path}", time.time() - t0)
+        return True
+
+    try:
+        proc = subprocess.run(
+            [sys.executable, test_path],
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
+        out = (proc.stdout or "") + (proc.stderr or "")
+        m = re.search(r"(\d+)/(\d+)\s+passados", out)
+        if m:
+            passed, total = int(m.group(1)), int(m.group(2))
+        else:
+            passed, total = 0, 1
+        if proc.returncode == 0 and passed == total and total > 0:
+            log(
+                "AntiRegV11",
+                "PASS",
+                f"{passed}/{total} testes anti-regressao v1.1 verdes",
+                time.time() - t0,
+            )
+            return True
+        else:
+            log(
+                "AntiRegV11",
+                "FAIL",
+                f"{passed}/{total} — REGRESSAO v1.1 DETECTADA!\n{out[-800:]}",
+                time.time() - t0,
+            )
+            return False
+    except Exception as e:
+        log("AntiRegV11", "FAIL", f"Excecao: {e}", time.time() - t0)
+        return False
+
+
 def test_pipeline_imports():
     """Verificar que todos os imports do pipeline resolvem"""
     t0 = time.time()
@@ -308,7 +357,7 @@ def main():
     import argparse
 
     parser = argparse.ArgumentParser(description="Validador do Pipeline FraLib")
-    parser.add_argument("--etapa", type=int, help="Testar etapa especifica (1-6)")
+    parser.add_argument("--etapa", type=int, help="Testar etapa especifica (1-8)")
     parser.add_argument(
         "--e2e", action="store_true", help="Testar pipeline completo (requer VPS)"
     )
@@ -325,6 +374,7 @@ def main():
         print("  5 = Imports (todos os modulos)")
         print("  6 = Design Context")
         print("  7 = Anti-Regressao (estado consolidado v1.0)")
+        print("  8 = Anti-Regressao v1.1 (memory_hook SDK + race condition)")
         print("  --e2e = Pipeline completo")
         return
 
@@ -337,6 +387,7 @@ def main():
             5: ("Imports", test_pipeline_imports),
             6: ("DesignCtx", test_design_context),
             7: ("AntiReg", test_anti_regressao_estado),
+            8: ("AntiRegV11", test_anti_regressao_v11),
         }
         nome, fn = etapas.get(args.etapa, (None, None))
         if fn is None:
@@ -353,6 +404,7 @@ def main():
         test_pipeline_imports()
         test_design_context()
         test_anti_regressao_estado()
+        test_anti_regressao_v11()
     else:
         # Modo padrao: testar tudo
         print("\n=== Validacao Completa do Pipeline ===\n")
