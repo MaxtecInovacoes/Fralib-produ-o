@@ -238,6 +238,77 @@ def _build_legacy_decision(memory, legacy_stage: str, incoming: str, err: str):
 # NODE 1: load_context (entrada - carrega tudo que precisa)
 # ════════════════════════════════════════════════════════════════════
 
+def _simplify_language(reply: str) -> str:
+    """Reescreve a reply com tom didatico, como se fosse pra crianca de 10 anos.
+
+    Heuristicas simples (sem LLM call pra nao custar):
+    - Remove jargoes comuns
+    - Substitui palavras formais por coloquiais
+    - Corta redundancias
+    - Garante tom de WhatsApp
+
+    Aplica transformacoes leves. NAO muda o conteudo, so a forma.
+    """
+    if not reply or len(reply) < 20:
+        return reply
+
+    import re
+    result = reply
+
+    # Substituicoes: jargao -> linguagem simples
+    # Ordem importa: regras mais especificas ANTES das genericas.
+    # "captam" (3a pessoa) -> "atraem" (preserva conjugacao)
+    # "captar/captacao" -> "atrar/atrat" (infinitivo / substantivo)
+    replacements = [
+        (r"\bcaptam\b", "atraem"),
+        (r"\bcaptando\b", "atrando"),
+        (r"\bcaptar\b", "atrar"),
+        (r"\bcaptacao\b", "atrat"),
+        (r"\bcapt[aá]vamos\b", "atraiamos"),
+        (r"\botimizar?\b", "melhorar"),
+        (r"\bimplementa[rm]os?\b", "fazemos"),
+        (r"\bsoluç(?:ões|oes|oes?)\b", "coisas"),
+        (r"\bsolucoes\b", "coisas"),
+        (r"\bsolucao\b", "coisa"),
+        (r"\bconvers[aã]o\b", "cliente que vem"),
+        (r"\bconversoes\b", "clientes que vem"),
+        (r"\bvisualiza[çc]ao\b", "ver"),
+        (r"\bferramenta\b", "coisa"),
+        (r"\bplataforma\b", "coisa"),
+        (r"\bferramentas\b", "coisas"),
+        (r"\bdesenvolver\b", "fazer"),
+        (r"\bdesenvolvemos\b", "fazemos"),
+        (r"\bdigital\b", "online"),
+        (r"\bdigitalizar\b", "colocar online"),
+        (r"\bmaximiz[aá]r\b", "aumentar"),
+        (r"\bperformance\b", "resultado"),
+        (r"\bconversion\b", "cliente"),
+        (r"\bagendar uma (call|conversa|reuni[aã]o|reuniao)\b", "marcar um bate-papo"),
+        (r"\bcall\b", "conversa"),
+        (r"\bpoderia\b", "pode"),
+        # "gostaria de [verbo]" -> "quer [verbo]" (forma mais comum)
+        (r"\bgostaria de\b", "quer"),
+        # "gostaria" sozinho (sem "de") -> "queria" (soa mais natural em pt-BR)
+        (r"\bgostaria\b", "queria"),
+        # Colapsa "quer/queria [muito] de [verbo]" -> sem o "de" (glitch do gostaria de + outro verbo)
+        (r"\b(quer|queria)\s+(\w+\s+)?de\s+(\w+)\b", r"\1 \2\3"),
+        (r"\bsolicitar\b", "pedir"),
+        (r"\bdespesa\b", "gasto"),
+        (r"\bvalores\b", "preço"),
+        (r"\bcontratar\b", "fechar"),
+        (r"\badquirir\b", "comprar"),
+        (r"\bsoluç(?:ões|oes|oes?)\s+personalizadas?\b", "coisa sob medida"),
+        (r"\bsolucoes?\s+personalizadas?\b", "coisa sob medida"),
+        (r"\bROI\b", "retorno"),
+        (r"\boptimi[zs]e\b", "melhore"),
+        (r"\butilizar\b", "usar"),
+    ]
+    for pattern, replacement in replacements:
+        result = re.sub(pattern, replacement, result, flags=re.IGNORECASE)
+
+    return result
+
+
 def _reply_already_has_offer(reply: str) -> bool:
     """Heuristica: detecta se a reply ja tem uma oferta de site.
 
@@ -974,6 +1045,14 @@ def node_save_and_send(state: SDRState) -> dict:
                     state["site_offer_injected"] = True
         except Exception as _so_err:
             print(f"[SDR] site_offer falhou (nao-bloqueante): {_so_err}")
+
+    # === Simplificacao de linguagem (tom didatico) ===
+    # Reescreve jargoes com linguagem simples, como se fosse pra crianca de 10 anos.
+    if reply:
+        try:
+            reply = _simplify_language(reply)
+        except Exception as _sl_err:
+            print(f"[SDR] simplify_language falhou: {_sl_err}")
 
     # === LLM-as-judge quality gate (Feature 2 do roadmap 10/10) ===
     # Avalia a resposta antes de enviar. Bloqueia se score < 3.

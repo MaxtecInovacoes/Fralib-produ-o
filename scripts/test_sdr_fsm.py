@@ -499,5 +499,79 @@ class TestSiteScreenshot(unittest.TestCase):
         self.assertIsNone(result)
 
 
+class TestSimplifyLanguage(unittest.TestCase):
+    """Verifica que _simplify_language reescreve jargoes com tom simples."""
+
+    def test_optimizar_vira_melhorar(self):
+        from agents.sdr_langgraph.agent import _simplify_language
+        out = _simplify_language("Vamos otimizar sua presenca digital.")
+        self.assertIn("melhorar", out)
+        self.assertNotIn("otimizar", out)
+
+    def test_solucao_vira_coisa(self):
+        from agents.sdr_langgraph.agent import _simplify_language
+        out = _simplify_language("Temos a solucao perfeita para voce.")
+        self.assertIn("coisa", out)
+        self.assertNotIn("soluc", out)
+
+    def test_captacao_vira_atrair(self):
+        from agents.sdr_langgraph.agent import _simplify_language
+        out = _simplify_language("Como voces captam clientes hoje?")
+        self.assertIn("atraem", out.lower())
+
+    def test_call_vira_conversa(self):
+        from agents.sdr_langgraph.agent import _simplify_language
+        out = _simplify_language("Vamos agendar uma call amanha?")
+        # "agendar uma call" -> "marcar um bate-papo"
+        self.assertIn("bate-papo", out)
+        self.assertNotIn("call", out.lower())
+
+    def test_gostaria_vira_quer(self):
+        from agents.sdr_langgraph.agent import _simplify_language
+        out = _simplify_language("Voce gostaria de mais informacoes?")
+        # "gostaria de [verbo/info]" -> "quer"
+        self.assertIn("quer", out)
+        self.assertNotIn("gostaria", out)
+
+    def test_gostaria_sozinho_vira_queria(self):
+        from agents.sdr_langgraph.agent import _simplify_language
+        # sem "de" depois -> "queria" soa melhor em pt-BR
+        out = _simplify_language("Eu gostaria de saber o preco.")
+        # "gostaria de" -> "quer" (forma prioritaria)
+        self.assertNotIn("gostaria", out)
+
+    def test_quer_de_colapsa(self):
+        from agents.sdr_langgraph.agent import _simplify_language
+        # garante que o glitch "quer de marcar" nao acontece
+        out = _simplify_language("Voce gostaria de agendar uma call amanha?")
+        self.assertNotIn("quer de", out)
+        self.assertIn("bate-papo", out)
+
+    def test_digital_vira_online(self):
+        from agents.sdr_langgraph.agent import _simplify_language
+        out = _simplify_language("Sua presenca digital e importante.")
+        self.assertIn("online", out)
+        self.assertNotIn("digital", out)
+
+    def test_preserva_lead_e_link(self):
+        from agents.sdr_langgraph.agent import _simplify_language
+        out = _simplify_language("O lead pode ver o link do site.")
+        # "lead" e "link" sao termos do dominio, NAO trocar
+        self.assertIn("lead", out)
+        self.assertIn("link", out)
+
+    def test_resposta_curta_nao_alterada(self):
+        from agents.sdr_langgraph.agent import _simplify_language
+        out = _simplify_language("Oi!")
+        self.assertEqual(out, "Oi!")
+
+    def test_frase_complexa_completa(self):
+        from agents.sdr_langgraph.agent import _simplify_language
+        out = _simplify_language("Vamos otimizar sua captacao digital com solucoes personalizadas para maximizar conversoes.")
+        # deve ter: melhorar, atrat, online, coisa
+        for keyword in ["melhorar", "atra", "online", "coisa"]:
+            self.assertIn(keyword, out.lower(), f"Faltando: {keyword}")
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
