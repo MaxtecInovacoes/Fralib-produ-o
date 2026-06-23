@@ -139,12 +139,19 @@ Premium visual and publishing contract
 Mandatory visual direction contract
 {_fmt_visual_direction(context.get("visual_direction") or {})}
 
-Output runtime: deliver a Vite/React/TypeScript/Tailwind project
-componentized in Studio mode. Use `@tailwindcss/vite`, `motion/react`,
-`lucide-react`, `src/pages/Index.tsx`, `src/components/*.tsx`, `src/App.tsx`,
-`src/main.tsx`, `src/index.css`, `src/types.ts`, `index.html`,
-`package.json`, `tsconfig.json` and `vite.config.ts`. The FraLib wrapper runs
-the build and publishes only the `dist` folder.
+Output runtime: deliver a single self-contained HTML document
+that uses Tailwind utility classes inline. No build step, no
+package.json, no JavaScript frameworks. Use only static HTML + CSS +
+data-attributes for motion (data-reveal, data-parallax, data-marquee).
+FraLib Motion Runtime is injected by the deploy step and picks up
+those data-attributes automatically.
+
+FORBIDDEN — never generate:
+- @tailwindcss/vite, vite.config.ts, package.json, tsconfig.json
+- src/App.tsx, src/main.tsx, src/pages/Index.tsx, src/components/*.tsx
+- motion/react, lucide-react, useState, useEffect, useMemo, useRef
+- <script src="..."> imports of npm packages
+- import statements from JavaScript modules
 
 Immutable factual contract
 {_fmt_contract_facts(business)}

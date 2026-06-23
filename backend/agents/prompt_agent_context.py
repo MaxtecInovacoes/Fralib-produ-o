@@ -242,8 +242,8 @@ def _premium_delivery_contract(context: dict[str, Any]) -> str:
         + ".",
         "- O primeiro viewport precisa ter uma ideia visual forte: hero full-bleed ou composição com mídia dominante, H1 único, CTA principal, CTA secundário quando fizer sentido e prova/localidade visível.",
         "- O screenshot inicial precisa parecer campanha de agência em 2026: composição com profundidade, paleta comprometida, escala tipográfica própria, movimento planejado e assinatura visual impossível de confundir com template Tailwind de 2023.",
-        "- O Builder deve entregar qualidade de fonte comparável a AI Studio: Tailwind real, motion/react, estado React, useEffect, navbar, galeria premium, seção lifestyle/editorial, modal/lightbox local, imagens reais/editoriais e componentes com nomes limpos.",
-        "- A saída magra reprova: 20KB de fonte, zero motion, zero useState/useEffect, zero imagens, zero modal, hero+cards+footer ou CSS-only sem galeria não é entrega premium.",
+        "- O Builder deve entregar qualidade de fonte comparável a AI Studio: Tailwind real (utility classes inline no HTML), data-attributes para motion (data-reveal, data-parallax, data-marquee, data-mask-reveal, data-card-stagger), hero impactante, galeria CSS-only ou com imagens reais do briefing, modal/lightbox implementado com `<dialog>` nativo, imagens reais/editoriais e copy autoral por nicho.",
+        "- A saída magra reprova: 20KB de fonte, zero motion, zero imagens, hero+cards+footer sem narrativa ou CSS-only sem galeria não é entrega premium.",
         "- Antes de escolher cores/fonte/fundo, assuma uma decisão de direção de arte: cena física, estratégia de cor, par tipográfico, material de fundo, geometria dos cards e comportamento do menu. Essas decisões precisam aparecer no HTML/CSS.",
         "- Estruture a narrativa com AIDA ou PAS de forma orgânica: escolha AIDA quando a promessa precisa abrir desejo rápido e PAS quando a dor/objeção precisa conduzir a decisão; a escolha deve mudar a ordem, a densidade e o foco das seções, nunca ser um find/replace superficial.",
         "- A arquitetura deve variar por nicho e subnicho: não reutilize a mesma sequência de hero, prova, serviços, contato e footer entre academias, nutrição, barbearias ou clínicas.",
@@ -388,14 +388,14 @@ def _visual_direction_contract(context: dict[str, Any]) -> dict[str, Any]:
     return {
         "version": "fralib-visual-director-v2",
         "runtime_output": {
-            "engine": "Vite React TypeScript Tailwind motion",
-            "format": "componentized React source compiled by FraLib to static dist",
+            "engine": "OpenUI static HTML + Tailwind utility classes inline + data-attributes for motion",
+            "format": "single self-contained HTML document with inline Tailwind classes; deploy injects Motion Runtime JS for data-attributes",
             "studio_contract": [
-                "Tailwind v4 via @tailwindcss/vite",
-                "motion/react animations with reduced-motion fallback",
-                "React state and effects for navbar, modal and gallery",
-                "image-led hero plus gallery/lifestyle sections",
-                "dense source tree comparable to AI Studio output",
+                "Tailwind v4 utility classes inline (no build step)",
+                "data-attribute motion (data-reveal, data-parallax, data-marquee, data-mask-reveal, data-card-stagger) picked up by FraLib Motion Runtime",
+                "Hero image-led plus gallery/lifestyle sections",
+                "Modal/lightbox via native <dialog> element",
+                "dense semantic HTML comparable to AI Studio output",
             ],
             "creates": [
                 "package.json",

@@ -97,6 +97,27 @@ CRITICAL — do not invent creative metaphors or section labels:
   from brief), FAQ (using real perguntas from brief), contato com WhatsApp.
 - Address must be reproduced EXACTLY as in the brief — do not abbreviate,
   do not paraphrase, do not "improve" logradouro names.
+
+=== FORBIDDEN (escopo blindado estilo Lovable) ===
+You must NOT generate ANY of the following. They will fail the build.
+- JavaScript frameworks: React, Vue, Svelte, Angular, Next.js, Nuxt, Remix,
+  SvelteKit, Solid.js, Preact, jQuery. No JSX, TSX, .vue, .svelte files.
+- Build tools: Vite, Webpack, Parcel, esbuild, Bun, Rollup config files.
+  No package.json, tsconfig.json, vite.config.ts, next.config.js.
+- React/framework packages: motion/react, framer-motion, lucide-react,
+  @tanstack/react-query, swr, zustand, redux, react-router, styled-components,
+  @emotion/react, tailwindcss (as import).
+- React hooks in HTML attributes: className=, onClick=, useState, useEffect,
+  useMemo, useRef, dangerouslySetInnerHTML, key= (as React convention).
+- Import statements of any kind (import X from 'y' / require('y')).
+- <script src="..."> pointing to npm/unpkg/jsdelivr CDNs for JS packages.
+- Output format other than single self-contained HTML body fragment.
+- Components, props, JSX expressions, or TypeScript syntax in markup.
+
+ONLY ALLOWED: plain HTML5 + Tailwind utility classes (inline) + inline
+<style> blocks + data-attributes (data-reveal, data-parallax, data-marquee,
+data-mask-reveal, data-card-stagger) for motion. FraLib Motion Runtime
+is injected by deploy and picks up those data-attributes automatically.
 """
 
 
