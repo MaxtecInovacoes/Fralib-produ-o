@@ -244,9 +244,7 @@ def _enrich_seo_and_runtime(
     extra_meta.append('<link rel="dns-prefetch" href="https://api.kpalabz.com">')
     extra_meta.append('<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">')
     extra_meta.append('<link rel="icon" type="image/svg+xml" href="/favicon.svg">')
-    if og_image:
-        extra_meta.append(f'<meta property="og:image:alt" content="{nome} - {segmento} em {cidade}">')
-        extra_meta.append(f'<meta name="twitter:image:alt" content="{nome} - {segmento} em {cidade}">')
+    # og:image:alt e twitter:image:alt serao adicionados DEPOIS, no bloco twitter (junto com title/desc)
     if canonical:
         extra_meta.append(f'<meta property="article:author" content="FraLib Builder">')
         from datetime import datetime, timezone
@@ -254,13 +252,27 @@ def _enrich_seo_and_runtime(
         extra_meta.append(f'<meta property="article:published_time" content="{now}">')
         extra_meta.append(f'<meta property="article:modified_time" content="{now}">')
 
-    # twitter:title / twitter:description (mirror do og:*)
+    # twitter:title / twitter:description / twitter:image (mirror do og:*)
+    # Usar regex case-insensitive para detectar ja existencia (qualquer formato de aspas)
     og_title = _extract_meta_content(document, 'property="og:title"')
     og_desc = _extract_meta_content(document, 'property="og:description"')
-    if og_title and 'name="twitter:title"' not in document:
+    og_image_alt = _extract_meta_content(document, 'property="og:image:alt"') or (f"{nome} - {segmento} em {cidade}" if nome else "")
+    # Usar variaveis para deteccao (regex compila 1x)
+    has_tw_title = bool(re.search(r'name=["\']twitter:title["\']', document, re.I))
+    has_tw_desc = bool(re.search(r'name=["\']twitter:description["\']', document, re.I))
+    has_tw_image = bool(re.search(r'name=["\']twitter:image["\']', document, re.I))
+    has_tw_image_alt = bool(re.search(r'name=["\']twitter:image:alt["\']', document, re.I))
+    if og_title and not has_tw_title:
         extra_meta.append(f'<meta name="twitter:title" content="{og_title}">')
-    if og_desc and 'name="twitter:description"' not in document:
+    if og_desc and not has_tw_desc:
         extra_meta.append(f'<meta name="twitter:description" content="{og_desc}">')
+    if og_image and not has_tw_image:
+        extra_meta.append(f'<meta name="twitter:image" content="{og_image}">')
+    if og_image_alt and not has_tw_image_alt:
+        extra_meta.append(f'<meta name="twitter:image:alt" content="{og_image_alt}">')
+    # Twitter card (necessario para os meta acima funcionarem)
+    if not re.search(r'name=["\']twitter:card["\']', document, re.I):
+        extra_meta.append('<meta name="twitter:card" content="summary_large_image">')
 
     # Organization + WebSite schema
     org_schema = (
@@ -293,7 +305,54 @@ def _enrich_seo_and_runtime(
     # 6) Performance patches (srcset, lazy, fetchpriority, preload LCP)
     document = _patch_performance(document)
 
+    # 7) CSS modern fallback (se LLM nao gerou)
+    document = _inject_modern_css_fallback(document)
+
     return document
+
+
+def _inject_modern_css_fallback(html: str) -> str:
+    """Injeta CSS moderno se o LLM nao usou :has(), color-mix(), @container, subgrid.
+
+    Adiciona tambem prefers-reduced-motion, view-transitions, :focus-visible.
+    """
+    if not html or "</head>" not in html:
+        return html
+
+    needs = []
+    if ":has(" not in html:
+        needs.append("has")
+    if "color-mix(" not in html:
+        needs.append("color-mix")
+    if "@container" not in html:
+        needs.append("container")
+    if "subgrid" not in html:
+        needs.append("subgrid")
+    # Sempre adicionar prefers-reduced-motion + view-transitions (sempre util)
+    needs.append("a11y")
+
+    if not needs:
+        return html
+
+    snippets = []
+    if "has" in needs or "color-mix" in needs or "container" in needs or "subgrid" in needs:
+        snippets.append(
+            "/* FraLib modern CSS fallback */\n"
+            "section:has(> h2:first-child){scroll-margin-top:80px}\n"
+            "nav a:has(> .active){color:var(--primary)}\n"
+            "button{background-color:color-mix(in srgb,var(--primary) 90%,transparent)}\n"
+            "@container card (min-width: 400px){.card-grid{display:grid;grid-template-columns:1fr 1fr}}\n"
+            ".plan-grid>*{display:grid;grid-template-columns:subgrid;grid-column:span 2}\n"
+        )
+    if "a11y" in needs:
+        snippets.append(
+            "@media (prefers-reduced-motion: reduce){*{animation-duration:0.01ms!important;transition-duration:0.01ms!important;scroll-behavior:auto!important}}\n"
+            ":focus-visible{outline:2px solid var(--primary);outline-offset:2px}\n"
+            "@supports (view-transition-name: x){::view-transition-old(root),::view-transition-new(root){animation-duration:0.3s}}\n"
+        )
+
+    style_tag = "<style>\n" + "\n".join(snippets) + "</style>\n"
+    return html.replace("</head>", style_tag + "</head>", 1)
 
 
 def _patch_performance(html: str) -> str:
@@ -369,10 +428,11 @@ def _patch_performance(html: str) -> str:
         if 'decoding=' not in attrs_str.lower():
             attrs_str = attrs_str.rstrip() + ' decoding="async"'
 
-        # Adicionar fetchpriority no hero
-        if is_first and 'fetchpriority=' not in attrs_str.lower():
-            attrs_str = attrs_str.rstrip() + ' fetchpriority="high"'
+        # Adicionar fetchpriority no hero + SEMPRE capturar first_lcp_src
+        if is_first:
             first_lcp_src = src
+            if 'fetchpriority=' not in attrs_str.lower():
+                attrs_str = attrs_str.rstrip() + ' fetchpriority="high"'
 
         new_html_parts.append(f'<img {attrs_str}/>')
         last_end = m.end()
