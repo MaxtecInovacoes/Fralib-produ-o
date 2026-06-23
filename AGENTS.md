@@ -159,9 +159,55 @@ teste de regressão `tests/test_regression_patches.py` valida todos eles.
 | **Total** | **46 patches** | **100% verde no site academia-pipeline-teste** |
 
 **Garantia de não-regressão**:
-- Teste unitário: `tests/test_regression_patches.py` (27 testes).
+- Teste unitário: `tests/test_regression_patches.py` (29 testes).
 - Teste E2E: `scripts/test_regression.py` (roda pipeline + valida site).
 - CI: rodar `pytest tests/test_regression_patches.py` em todo PR.
+
+### 7.1 Variação por subnicho (8 nichos mapeados)
+
+Desde 2026-06-23, o `agente_variacao.py` tem o mapping `SUB_NICHO_TEMPLATES`
+que define estrutura canonica por subnicho (NAO chama LLM quando mapeado):
+
+| Subnicho | Template | Hero | Ordem das secoes |
+|---|---|---|---|
+| `nutricionista_esportiva` | organic | hero-fullscreen | hero, numeros, abordagem, galeria, depoimentos, faq, contato, footer |
+| `nutricionista_clinica` | editorial | hero-split | hero, sobre, servicos, processo, depoimentos, faq, contato, footer |
+| `clinica_estetica` | minimal | hero-center | hero, procedimentos, antes-depois, equipe, depoimentos, faq, contato, footer |
+| `barbearia_premium` | brutalist | hero-diagonal | hero, servicos, galeria, equipe, depoimentos, localizacao, contato, footer |
+| `academia_crossfit` | brutalist | hero-fullscreen | hero, numeros, modalidades, galeria, depoimentos, faq, contato, footer |
+| `restaurante_familiar` | organic | hero-split | hero, cardapio, sobre, galeria, depoimentos, localizacao, contato, footer |
+| `advocacia_trabalhista` | corporate | hero-split | hero, sobre, areas-atuacao, processo, depoimentos, faq, contato, footer |
+| `default` | corporate | hero-split | hero, sobre, servicos, depoimentos, faq, contato, footer |
+
+Adicionar novo subnicho = nova entrada em `SUB_NICHO_TEMPLATES` em
+`backend/agents/agente_variacao.py`. O `detect_subniche()` e heuristico
+(segmento + servicos + atributos).
+
+### 7.2 Modelos LLM (cascata)
+
+| Fase | Primary | Fallback |
+|---|---|---|
+| OpenUI renderer (fase 9) | **Sonnet 4-6** | Opus 4-7 |
+| Agente Variacao (fase 7) | **Sonnet 4-6** | (n/a) |
+| Agente Nicho (fase 6) | **Sonnet 4-6** | (n/a) |
+
+Haiku foi removido do caminho primario em 2026-06-23 porque gerava HTML
+mal-formado (tags abertas, blocos incompletos). Custo ~5x maior mas
+qualidade compensa. Override por env: `FRALIB_OPENUI_PRIMARY_MODEL`.
+
+### 7.3 HTML Sanitizer (defesa contra LLM mal-formado)
+
+`backend/services/html_sanitizer.py` fecha tags de bloco orfas ANTES de
+injetar scripts. Defende contra o bug "Im Tema" (h2 aberto pelo LLM
+sem `</h2>`, com motion_runtime_loader injetado dentro).
+
+Chamadas canonicas:
+- `close_unclosed_block_tags(html)` — fecha orfaos antes de `</body>`.
+- `close_unclosed_before_script_injection(html)` — fecha orfas antes de
+  `<script id="fralib-motion-runtime">` ou `<script id="fralib-lgpd-runtime">`.
+
+Plugado em `_enrich_seo_and_runtime` no `openui_renderer.py` ANTES de
+LGPD injector, motion runtime e performance patches.
 
 ---
 
