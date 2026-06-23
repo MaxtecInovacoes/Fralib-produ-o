@@ -423,6 +423,106 @@ mantidos para evitar imports quebrados em outros módulos):
 
 ---
 
+## 20. Inventário Definitivo de "Agentes" (e o que NÃO é agente)
+
+**Pergunta frequente**: "quantos agentes inteligentes a gente tem?". A resposta honesta é **5 usam LLM de verdade, 6 são contratos determinísticos**, distribuídos em **206 arquivos `.py` no backend** (74 só em `agents/`). Esta seção acaba com a confusão "74 agentes" vs "agentes de IA".
+
+### 20.1 Os 11 Módulos "Agentes" (1 por fase da pipeline)
+
+| # | Módulo | Fase | Função real | Usa LLM? | Auto-melhora? | Sinais |
+|---|---|---|---|---|---|---|
+| 1 | `utils/agente1_hunter_v2.py` | 1 | Scraper Google Maps | ❌ Não | ❌ | 0/8 |
+| 2 | `agents/caio.py` | 2 | Scorer determinístico de lead | ❌ Não | ❌ | 0/8 |
+| 3 | `utils/jina_intelligence.py` | utils | Análise Jina (web scraping + LLM) | ✅ Sim (chama `call_claude`) | ❌ | 0/8 |
+| 4 | `agents/agente_nicho.py` | 6 | Briefing do nicho + subnicho | ✅ Sim (1 call/lead) | ⚠️ Memória tier-1 | 1/8 |
+| 5 | `agents/agente_variacao.py` | 7 | Ordem de seções + templates | ⚠️ **Só fallback** (template canônico p/ 8 subnichos) | ⚠️ Memória tier-1 | 1/8 |
+| 6 | `agents/arquiteto_mestre.py` | 8 | PRD hardcoded | ❌ **Não chama LLM** (1 função, 505 linhas) | ❌ | 1/8 |
+| 7 | `agents/site_prompt_agent.py` | — | **VAZIO** (0 funções, 112 linhas) | ❌ | ❌ | 0/8 |
+| 8 | `agents/sdr_langgraph/agent.py` | 11 | FSM do Franz (WhatsApp) | ✅ Sim (2 calls/turno) | ✅ **Tem** feedback/learning | 2/8 |
+| 9 | `services/openui_renderer.py` | 9 | Gera HTML do site | ✅ Sim (1 call/site — **90% do custo LLM**) | ✅ Tracing | 1/8 |
+| 10 | `agents/html_quality_gate.py` | 9b | QA determinístico (regex+lxml) | ❌ | ❌ | 0/8 |
+| 11 | `agents/html_builder_repair.py` | 9b | Reparos de string surgery | ❌ | ⚠️ Tracing + prompt version | 2/8 |
+
+**"Sinais" = 8 sinais de inteligência**: cache, feedback loop, métricas, DB próprio, tracing, prompt versionado, auto-teste, memória persistente. SDR é o único com 2/8.
+
+### 20.2 Onde ESTÁ a inteligência hoje (infra de aprendizado já existe)
+
+Já existe a infraestrutura base de agentes auto-melhorantes — só falta plugar mais agentes:
+
+| Componente | O que faz | Localização |
+|---|---|---|
+| **agent_memory.py** | Sistema de memória 3-tier (Core/Warm/Cold estilo MemGPT/Letta) | `backend/agent_memory.py` (146 linhas) |
+| **pipeline_learning.py** | "Active learning" lessons injetados em prompts futuros | `backend/agents/pipeline_learning.py` |
+| **ACTIVE_LEARNING_AGENTS** | Whitelist: `agente_nicho`, `arquiteto_mestre`, `builder_renderer`, `validador`, `franz` | `pipeline_learning.py:14` |
+| **memory_hook.py** | Injeta top-10 Core + top-3 Warm no prompt do Franz | `backend/agents/sdr_langgraph/memory_hook.py` |
+| **learning.py** (SDR) | Avalia correções úteis e promove para lessons | `backend/agents/sdr_langgraph/learning.py` |
+| **quality_judge.py** | LLM-as-judge (Sonnet avalia saída do Franz) | `backend/agents/sdr_langgraph/quality_judge.py` |
+| **turn_tracing.py** | Tracing por turno de conversa | `backend/agents/sdr_langgraph/turn_tracing.py` |
+| **memory/cold/<uN>/** | Logs brutos de cada run (filesystem, por tenant) | `backend/memory/u1/franz_lead_*.json` |
+
+**Exemplo real de memória persistida** (`backend/memory/u1/franz_lead_5511999999999.json`):
+```json
+{
+  "nome": "Empresa Teste", "cidade": "Sao Paulo", "segmento": "tech",
+  "telefone": "5511999999999", "score_caio": 0, "tier": "STANDARD",
+  "_updated_at": "2026-06-21T15:57:00"
+}
+```
+
+### 20.3 Quais agentes PODEM virar auto-melhorantes (e como)
+
+A maioria dos 11 módulos **NÃO precisa** virar auto-melhorante — são determinísticos por design. Os **5 que usam LLM** são os candidatos. Mapa:
+
+| Agente | Vale auto-melhorar? | Por quê? | Como faria |
+|---|---|---|---|
+| **Jina** (utils) | ❌ Baixo | Jina é 1 call, e o output alimenta Nicho (que aprende) | Inherited via Nicho |
+| **Nicho** (fase 6) | ✅ **Alto** | Briefing define toda a estratégia de site | Adicionar feedback loop: lead→site gerado→aceite/recusa→Nicho aprende |
+| **Variação** (fase 7) | ✅ **Alto** | Escolhe template_estrutura e ordem_das_secoes | Coletar métricas "qual template converteu mais" |
+| **Arquiteto** (fase 8) | ⚠️ Primeiro vire LLM | É template estático, não agente | Trocar função hardcoded por call_claude + memory |
+| **SitePrompt** | 🗑️ Deletar | Arquivo vazio | Remover |
+| **SDR (Franz)** (fase 11) | ✅ **Já tem** | Infra de learning já existe | Expandir lessons: usar `quality_judge` p/ classificar respostas |
+| **OpenUI** (fase 9) | ✅ **Maior ROI** | 90% do custo LLM, gera o produto final | Memory tier-1 com 10 patterns de ouro (templates_html_que_funcionam) |
+| **Quality Gate** | ❌ Não | É guard-rail determinístico | — |
+| **Builder Repair** | ❌ Não | É patch fix | — |
+| **Caio, Hunter** | ❌ Não | São scraper/score | — |
+
+### 20.4 O que FALTA para serem "agentes de verdade" (estilo Claude Agent SDK)
+
+O Claude Agent SDK tem 4 features que a gente **NÃO tem** ainda:
+
+1. **Tools dinâmicas**: o agente decide em runtime quais tools chamar. A gente tem tools fixos por agente.
+2. **Loop autônomo**: o agente continua iterando até objetivo. A gente tem FSM finita.
+3. **Sub-agentes**: um agente delega para outro. A gente tem pipeline sequencial.
+4. **Memória semântica cross-session**: lessons injetados manualmente. A gente não tem retrieval automático.
+
+**O que é viável AGORA** (com 1 sprint):
+- Adicionar `learning.py` ao **OpenUI** (hoje só SDR tem)
+- Trocar `arquiteto_mestre.py` de template hardcoded → call_claude + memory
+- Adicionar `quality_judge.py` ao Nicho (Sonnet avalia briefing)
+- Deletar `site_prompt_agent.py` (vazio)
+
+**O que é roadmap (3-6 meses)**:
+- Agent SDK nativo: tools dinâmicas, sub-agentes
+- RAG semântico em `agent_memory.py` (embeddings + retrieval)
+- Auto-fine-tuning (Lora / RLHF) — caro, último passo
+
+### 20.5 Contagem CANÔNICA (referência pra acabar com divergência)
+
+| Métrica | Valor | Onde |
+|---|---|---|
+| Total de arquivos `.py` no backend | **206** | `find backend -name "*.py"` |
+| Arquivos em `backend/agents/` | **74** + 1 package (`sdr_langgraph/`) | `ls backend/agents/*.py` |
+| Módulos "agentes" (cérebro) | **11** | Tabela 20.1 |
+| Agentes que chamam LLM | **5** (Jina, Nicho, Variação, OpenUI, SDR) | grep `call_claude(` |
+| Agentes determinísticos (contratos) | **6** (Hunter, Caio, Arquiteto, SitePrompt vazio, Quality, Repair) | Tabela 20.1 |
+| Packages com infra de learning | **1** (`sdr_langgraph/`) | `ls backend/agents/sdr_langgraph/` |
+| Custo LLM dominado por 1 agente | **90% OpenUI** | Análise de chamadas |
+| Whitelist de learning agents | **5** nomes | `pipeline_learning.py:14` |
+
+**Não diga "temos 74 agentes"**. Diga: **"temos 11 módulos-agente, dos quais 5 usam LLM, e o OpenUI domina 90% do custo de IA"**.
+
+---
+
 ## 19. Onboarding Rápido
 
 1. Ler este `AGENTS.md` inteiro.
@@ -432,4 +532,4 @@ mantidos para evitar imports quebrados em outros módulos):
 
 ---
 
-**Conta de linhas**: este arquivo tem ~440 linhas (vs 524 anteriores) — consolidação removeu redundâncias.
+**Conta de linhas**: este arquivo tem ~570 linhas (vs 524 anteriores) — adição da seção 20 (Inventário Definitivo de Agentes).
