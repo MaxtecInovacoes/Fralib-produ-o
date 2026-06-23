@@ -391,5 +391,113 @@ class TestStreaming(unittest.TestCase):
         self.assertTrue(callable(stream_franz_reply))
 
 
+class TestSiteOffer(unittest.TestCase):
+    """Verifica que o helper de oferta de site gera texto correto."""
+
+    def test_proactive_with_site_url(self):
+        from agents.sdr_langgraph.state import LeadMemory
+        from agents.sdr_langgraph.site_offer import offer_proactive
+        memory = LeadMemory(lead_id="abc", user_id=2, telefone="5511999999999", site_url="https://demo.fralib.com.br/site/abc")
+        text = offer_proactive(memory, segmento="academia")
+        self.assertIsNotNone(text)
+        self.assertIn("demonstracao", text.lower())
+        self.assertIn("https://demo.fralib.com.br/site/abc", text)
+        # remover acentos antes de procurar
+        from unicodedata import normalize
+        text_normalized = normalize("NFKD", text.lower()).encode("ascii", "ignore").decode()
+        self.assertIn("copia", text_normalized)
+        self.assertIn("navegador", text_normalized)
+
+    def test_proactive_without_site_url(self):
+        from agents.sdr_langgraph.state import LeadMemory
+        from agents.sdr_langgraph.site_offer import offer_proactive
+        memory = LeadMemory(lead_id="abc", user_id=2, telefone="5511999999999")
+        text = offer_proactive(memory)
+        self.assertIsNone(text)
+
+    def test_in_objection_has_provider(self):
+        from agents.sdr_langgraph.state import LeadMemory
+        from agents.sdr_langgraph.site_offer import offer_in_objection
+        memory = LeadMemory(lead_id="abc", user_id=2, telefone="5511999999999", site_url="https://demo.x")
+        text = offer_in_objection(memory, objection_type="has_provider")
+        self.assertIn("demonstracao", text.lower())
+        self.assertIn("sem compromisso", text.lower())
+
+    def test_to_gatekeeper_offers_for_decisor(self):
+        from agents.sdr_langgraph.state import LeadMemory
+        from agents.sdr_langgraph.site_offer import offer_to_gatekeeper
+        memory = LeadMemory(lead_id="abc", user_id=2, telefone="5511999999999", site_url="https://demo.x")
+        text = offer_to_gatekeeper(memory, decisor_name_hint="dono")
+        self.assertIn("demonstracao", text.lower())
+        self.assertIn("dono", text.lower())
+        self.assertIn("2 min", text.lower())
+
+    def test_should_offer_proactive_when_lead_engaged(self):
+        from agents.sdr_langgraph.state import LeadMemory
+        from agents.sdr_langgraph.site_offer import should_offer_site, increment_offer_count
+        memory = LeadMemory(lead_id="abc", user_id=2, telefone="5511999999999", site_url="https://demo.x", conversation_state="engaged")
+        self.assertTrue(should_offer_site(memory, intent="engagement", turn_count=2))
+        increment_offer_count(memory)
+        self.assertEqual(memory.site_offer_count, 1)
+        increment_offer_count(memory)
+        self.assertEqual(memory.site_offer_count, 2)
+        self.assertFalse(should_offer_site(memory, intent="engagement", turn_count=3), "max 2 ofertas")
+
+    def test_should_not_offer_when_opt_out(self):
+        from agents.sdr_langgraph.state import LeadMemory
+        from agents.sdr_langgraph.site_offer import should_offer_site
+        memory = LeadMemory(lead_id="abc", user_id=2, telefone="5511999999999", site_url="https://demo.x", conversation_state="opt_out")
+        self.assertFalse(should_offer_site(memory, intent="engagement"))
+
+    def test_should_offer_at_hook_with_greeting_loop(self):
+        from agents.sdr_langgraph.state import LeadMemory
+        from agents.sdr_langgraph.site_offer import should_offer_site
+        memory = LeadMemory(lead_id="abc", user_id=2, telefone="5511999999999", site_url="https://demo.x", conversation_state="waiting_response")
+        # turno 1: nao oferece
+        self.assertFalse(should_offer_site(memory, intent="greeting", turn_count=1))
+        # turno 3 (loop): oferece proativamente
+        self.assertTrue(should_offer_site(memory, intent="greeting", turn_count=3))
+
+    def test_should_offer_for_objection(self):
+        from agents.sdr_langgraph.state import LeadMemory
+        from agents.sdr_langgraph.site_offer import should_offer_site
+        memory = LeadMemory(lead_id="abc", user_id=2, telefone="5511999999999", site_url="https://demo.x", conversation_state="engaged")
+        self.assertTrue(should_offer_site(memory, intent="objection", turn_count=3))
+
+    def test_should_offer_for_gatekeeper(self):
+        from agents.sdr_langgraph.state import LeadMemory
+        from agents.sdr_langgraph.site_offer import should_offer_site
+        memory = LeadMemory(lead_id="abc", user_id=2, telefone="5511999999999", site_url="https://demo.x", conversation_state="engaged")
+        self.assertTrue(should_offer_site(memory, intent="gatekeeper", turn_count=1))
+
+
+class TestSiteScreenshot(unittest.TestCase):
+    """Verifica o helper de screenshot."""
+
+    def test_build_site_url(self):
+        from agents.sdr_langgraph.site_screenshot import build_site_url
+        url = build_site_url(2, "academia-4fitness", "https://app.example.com")
+        self.assertEqual(url, "https://app.example.com/sites/2/academia-4fitness/")
+
+    def test_build_site_url_default_base(self):
+        from agents.sdr_langgraph.site_screenshot import build_site_url
+        url = build_site_url(2, "academia")
+        # deve usar env APP_URL ou fallback
+        self.assertIn("/sites/2/academia", url)
+
+    def test_get_site_url_from_memory_uses_site_url_field(self):
+        from agents.sdr_langgraph.state import LeadMemory
+        from agents.sdr_langgraph.site_screenshot import get_site_url_from_memory
+        memory = LeadMemory(lead_id="abc", user_id=2, telefone="x", site_url="https://direct.com")
+        self.assertEqual(get_site_url_from_memory(memory), "https://direct.com")
+
+    def test_capture_returns_none_on_bad_url(self):
+        from agents.sdr_langgraph.site_screenshot import capture_site_screenshot
+        result = capture_site_screenshot("", lead_id="x")
+        self.assertIsNone(result)
+        result = capture_site_screenshot("not-a-url", lead_id="x")
+        self.assertIsNone(result)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

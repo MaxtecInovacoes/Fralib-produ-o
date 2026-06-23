@@ -82,6 +82,7 @@ class LeadMemory(BaseModel):
     last_lead_response_at: Optional[str] = None  # timestamp ISO da ultima msg do lead
     last_intent: str = ""             # intent classificado da ultima msg
     last_intent_confidence: float = 0.0
+    site_offer_count: int = 0        # quantas vezes o Franz ofereceu o site (max 2)
 
     # Variante A/B
     variant: str = "A"  # A, B, C, D

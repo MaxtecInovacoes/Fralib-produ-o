@@ -238,6 +238,25 @@ def _build_legacy_decision(memory, legacy_stage: str, incoming: str, err: str):
 # NODE 1: load_context (entrada - carrega tudo que precisa)
 # ════════════════════════════════════════════════════════════════════
 
+def _reply_already_has_offer(reply: str) -> bool:
+    """Heuristica: detecta se a reply ja tem uma oferta de site.
+
+    Evita duplicar a oferta (ex: LLM ja mandou link + Studio prependeria de novo).
+    """
+    if not reply:
+        return False
+    reply_lower = reply.lower()
+    signals = [
+        "site_url" in reply_lower,
+        "demonstra" in reply_lower,
+        "fralib.com" in reply_lower or "seunegociofralib" in reply_lower,
+        "link" in reply_lower and ("site" in reply_lower or "prév" in reply_lower or "prévio" in reply_lower),
+        "leva 2 min" in reply_lower,
+        "sem custo" in reply_lower,
+    ]
+    return any(signals)
+
+
 @sdr_traced("node_load_context")
 def node_load_context(state: SDRState) -> dict:
     """Carrega memória do lead, RAG, contexto inicial"""
@@ -935,9 +954,29 @@ def node_save_and_send(state: SDRState) -> dict:
     if not state.get("should_send", False):
         return {}
 
+    # === Site Offer proativo (Feature: oferecer site pronto) ===
+    # Antes de qualquer envio, verifica se deve oferecer o site pronto.
+    # Adiciona a oferta ANTES da reply se ainda nao foi oferecida 2x.
+    reply = state.get("proposed_reply", "") or state.get("draft", "")
+    if reply:
+        try:
+            from .site_offer import should_offer_site, offer_proactive, increment_offer_count
+            incoming = state.get("incoming_message", "") or ""
+            detected_intent = state.get("detected_intent", "") or ""
+            turn_count = getattr(memory, "turn_count", 0) or 0
+            if should_offer_site(memory, intent=detected_intent, turn_count=turn_count):
+                # Detectar tipo de objecao (se for objection)
+                offer_text = offer_proactive(memory, segmento=memory.segmento or "")
+                if offer_text and not _reply_already_has_offer(reply):
+                    # Prepend a oferta (separada por quebra de linha)
+                    reply = f"{offer_text}\n\n---\n\n{reply}"
+                    increment_offer_count(memory)
+                    state["site_offer_injected"] = True
+        except Exception as _so_err:
+            print(f"[SDR] site_offer falhou (nao-bloqueante): {_so_err}")
+
     # === LLM-as-judge quality gate (Feature 2 do roadmap 10/10) ===
     # Avalia a resposta antes de enviar. Bloqueia se score < 3.
-    reply = state.get("proposed_reply", "") or state.get("draft", "")
     if reply:
         try:
             from .quality_judge import evaluate_reply
