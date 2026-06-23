@@ -437,7 +437,7 @@ mantidos para evitar imports quebrados em outros módulos):
 | 4 | `agents/agente_nicho.py` | 6 | Briefing do nicho + subnicho | ✅ Sim (1 call/lead) | ⚠️ Memória tier-1 | 1/8 |
 | 5 | `agents/agente_variacao.py` | 7 | Ordem de seções + templates | ⚠️ **Só fallback** (template canônico p/ 8 subnichos) | ⚠️ Memória tier-1 | 1/8 |
 | 6 | `agents/arquiteto_mestre.py` | 8 | Orquestrador: 1 call própria + delega p/ bloco_estrutura (2 calls) e bloco_copy (4 calls) = **~7 calls/lead** | ✅ Sim (orquestrador LLM, delega 2 helpers) | ⚠️ Tem cache | 1/8 |
-| 7 | `agents/site_prompt_agent.py` | — | **VAZIO** (0 funções, 112 linhas) | ❌ | ❌ | 0/8 |
+| 7 | `agents/site_prompt_agent.py` | 8b | **Re-exporter** de 3 helpers: `prompt_agent_builder` (210L), `prompt_agent_context` (582L), `prompt_agent_helpers` (369L) = 1161 linhas. **NÃO é vazio** — é o **ponto de entrada canônico** que monta o `builder_prompt` antes do OpenUI | ❌ Não chama LLM (monta string) | ❌ | 0/8 |
 | 8 | `agents/sdr_langgraph/agent.py` | 11 | FSM do Franz (WhatsApp) | ✅ Sim (2 calls/turno) | ✅ **Tem** feedback/learning | 2/8 |
 | 9 | `services/openui_renderer.py` | 9 | Gera HTML do site | ✅ Sim (1 call/site — **90% do custo LLM**) | ✅ Tracing | 1/8 |
 | 10 | `agents/html_quality_gate.py` | 9b | QA determinístico (regex+lxml) | ❌ | ❌ | 0/8 |
