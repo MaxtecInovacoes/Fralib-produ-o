@@ -21,6 +21,8 @@
 - `vite_react` existe apenas como engine de compatibilidade explícita
   (`FRALIB_BUILDER_ENGINE=vite_react`) enquanto o builder React/Vite antigo é
   recuperado e depois quebrado em módulos menores.
+- Quando `vite_react` falhar, o mesmo job deve cair para `openui_fallback` e
+  ainda publicar um HTML OpenUI auditável, sem perder o pipeline.
 - Sites publicados SEM passar pela pipeline são considerados **legado** e devem ser migrados.
 
 Qualquer pessoa (humana ou IA) que tentar:
@@ -117,7 +119,9 @@ explícita para recuperar o builder React/Vite antigo. Ele só deve rodar quando
 ### 6.2 Como o OpenUI produz um site
 
 1. `backend/services/builder_worker.py` recebe o brief do Arquiteto Mestre.
-2. **SEMPRE** chama `render_openui_site()` em `backend/services/openui_renderer.py:84`.
+2. Por padrão chama `render_openui_site()` em `backend/services/openui_renderer.py`.
+   Se `FRALIB_BUILDER_ENGINE=vite_react`, tenta `render_vite_react_site()`; se
+   Vite/React falhar, cai para `openui_fallback` no mesmo job.
 3. O renderer monta o system prompt injetando os **7 contratos**:
    1. **SEO Framework** por nicho
    2. **Design System** (cores, fontes, espaçamentos)
@@ -417,6 +421,9 @@ depois. Não promover para padrão sem auditoria, testes e decisão explícita.
 
 **Caminho padrão**: `backend/services/openui_renderer.py`.
 **Compat explícito**: `FRALIB_BUILDER_ENGINE=vite_react`.
+**Fallback de segurança**: se `vite_react` falhar, `backend/services/builder_worker.py`
+registra `engine=openui_fallback`, grava `builder-render.json` com
+`failed_openui_fallback` e publica HTML OpenUI.
 
 **Arquivos mantidos por compatibilidade** (não usados no caminho canônico, mas
 mantidos para evitar imports quebrados em outros módulos):

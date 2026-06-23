@@ -631,6 +631,47 @@ def node_hook(state: SDRState) -> dict:
             state.get("rag_context", "")
         )
 
+        # === Sprint 3A: Tools dinâmicas SDR (opt-in via FRALIB_SDR_USE_TOOLS=1) ===
+        # Pre-fetch das 3 read-only tools: playbook + similar conversations + lead quality.
+        # Resultado injetado no full_system como secao extra. Backward-compat 100% se flag off.
+        if os.getenv("FRALIB_SDR_USE_TOOLS", "0") == "1":
+            try:
+                from .tools_sdr import (
+                    get_nicho_playbook,
+                    retrieve_similar_conversations,
+                    check_lead_quality,
+                    format_similar_conversations_for_prompt,
+                    format_lead_quality_for_prompt,
+                )
+                playbook = get_nicho_playbook(memory.segmento or "default")
+                playbook_text = (
+                    f"NICHO: {memory.segmento or 'default'}\n"
+                    f"TOM: {playbook.get('tom_recomendado', 'consultivo')}\n"
+                    f"PERGUNTAS OBRIGATORIAS: "
+                    f"{', '.join(playbook.get('perguntas_obrigatorias', [])[:5])}\n"
+                    f"GATILHOS CONVERSAO: "
+                    f"{', '.join(playbook.get('gatilhos_conversao', [])[:5])}"
+                )
+                similar_convs = retrieve_similar_conversations(
+                    memory.segmento or "default",
+                    user_id=memory.user_id,
+                    top_k=3,
+                )
+                similar_text = format_similar_conversations_for_prompt(similar_convs)
+                lead_q = check_lead_quality(
+                    user_id=memory.user_id,
+                    telefone=memory.telefone or "",
+                    lead_id=memory.lead_id or "",
+                )
+                lead_text = format_lead_quality_for_prompt(lead_q)
+                tools_extra = "\n\n".join(
+                    x for x in [playbook_text, similar_text, lead_text] if x
+                )
+                if tools_extra:
+                    full_system = full_system + "\n\n" + tools_extra
+            except Exception as _tools_err:
+                print(f"[SDR] tools_sdr pre-fetch falhou (nao-bloqueante): {_tools_err}")
+
         # === Memory 3-tier (Feature #1 do roadmap 10/10) ===
         # Injeta top-10 core + top-3 warm via thread-local setada antes do LLM call.
         # O call_claude em llm_direct.py checa thread-local e injeta automaticamente
@@ -667,6 +708,35 @@ def node_hook(state: SDRState) -> dict:
         print(f"[SDR] hook LLM falhou: {e}")
         reply, next_stage = _fallback_reply("hook", memory, state.get("incoming_message", ""))
         update_facts = {}
+
+    # === Sprint 3A: save_sdr_lesson (se turno significativo) ===
+    # Persiste lesson quando: stage terminal (won/lost/opt_out) OU intent == objection_price
+    # Multiplicador aplicado: converteu=+1.5x, nao converteu=0.3x
+    if os.getenv("FRALIB_SDR_USE_TOOLS", "0") == "1":
+        try:
+            from .tools_sdr import save_sdr_lesson
+            stage = memory.stage
+            intent = (memory.last_intent or "").lower()
+            should_save = (
+                stage in ("won", "lost", "opt_out")
+                or intent == "objection_price"
+            )
+            if should_save:
+                converteu = stage == "won"
+                lesson_text = (
+                    f"lead {stage}: tom={memory.last_intent or 'n/a'}, "
+                    f"turnos={memory.turn_count}"
+                )
+                save_sdr_lesson(
+                    lesson=lesson_text,
+                    score=0.7,
+                    nicho=memory.segmento or "default",
+                    user_id=memory.user_id,
+                    lead_id=memory.lead_id or "",
+                    converteu=converteu,
+                )
+        except Exception as _save_err:
+            print(f"[SDR] save_sdr_lesson falhou (nao-bloqueante): {_save_err}")
 
     # Validar
     contaminado = check_segment_contamination(reply, memory.segmento)
