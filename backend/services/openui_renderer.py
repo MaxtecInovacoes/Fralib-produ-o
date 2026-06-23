@@ -10,10 +10,19 @@ from __future__ import annotations
 
 import html as _html
 import re
+import sys
 import time
 from pathlib import Path
 from dataclasses import dataclass
 from typing import Any
+
+# Adiciona o diretorio deste arquivo ao sys.path para que o import
+# do lgpd_injector funcione quando carregado em diferentes contextos
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+try:
+    from backend.services.lgpd_injector import inject_lgpd_into_html
+except ImportError:
+    from lgpd_injector import inject_lgpd_into_html
 
 
 OPENUI_SYSTEM_PROMPT = """You are an OpenUI-style senior product interface designer.
@@ -320,8 +329,10 @@ def _enrich_seo_and_runtime(
     if "</head>" in document:
         document = document.replace("</head>", "\n".join(extra_meta) + "\n</head>", 1)
 
-    # 4) Garantir LGPD banner visivel por padrao
-    document = _ensure_lgpd_visible(document)
+    # 4) LGPD banner personalizado (substitui qualquer banner generico existente)
+    #    Isso roda DEPOIS do site estar pronto, com copy personalizada por
+    #    segmento (academia, restaurante, clinica, etc) + cidade + WhatsApp.
+    document = inject_lgpd_into_html(document, facts=facts)
 
     # 5) Garantir motion runtime carregado (se tiver hooks data-parallax/data-reveal/data-marquee)
     if any(h in document for h in ("data-parallax", "data-reveal", "data-marquee")):
