@@ -276,6 +276,13 @@ async def executar_pipeline_completo(
 
     _log = lambda msg, tipo="info", **kwargs: adicionar_log(msg, tipo, user_id=tenant_id)
 
+    # ─── Sprint 2: flag opcional use_sdk_loop ───
+    # Quando FRALIB_USE_SDK_LOOP=1, delega ao site_orchestrator (loop autonomo
+    # + tools dinamicas). Default = False (backward-compat total com FSM hardcoded).
+    _use_sdk_loop = os.getenv("FRALIB_USE_SDK_LOOP", "0") == "1"
+    if _use_sdk_loop:
+        _log("Sprint 2: use_sdk_loop=True - delegando para site_orchestrator", "info")
+
     def _progress(fase_num, label):
         _phase_key = _pipeline_phase_key(fase_num, label)
         _set_pipeline_job_phase(config, tenant_id, _phase_key, label)

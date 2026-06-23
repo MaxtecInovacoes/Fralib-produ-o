@@ -224,6 +224,22 @@ def render_site_with_builder(
         str((_ROOT / "logs" / "builder_manifests").resolve()),
     )
     engine = _builder_engine(os.getenv("FRALIB_BUILDER_ENGINE", "openui"))
+    # v1.1-baseline-2026-06-23: extrai segmento/nicho do prd_or_facts para serializar
+    # no manifest e reidratar memory no OpenUI (worker process case).
+    _nicho_serializado = ""
+    try:
+        _facts = prd_or_facts if isinstance(prd_or_facts, dict) else {}
+        _biz = _facts.get("business") or _facts.get("business_context") or {}
+        _nicho_serializado = (
+            _biz.get("segmento")
+            or _biz.get("nicho")
+            or _biz.get("segment")
+            or _facts.get("segmento")
+            or _facts.get("nicho")
+            or ""
+        )
+    except Exception:
+        _nicho_serializado = ""
     manifest = build_builder_job_manifest(
         prd_or_facts,
         tenant_id=tenant_id,
@@ -235,6 +251,10 @@ def render_site_with_builder(
         repair_context=repair_context,
         engine=engine,
         publication_url=publication_url,
+    )
+    # Injeta nicho no contexto para OpenUI reidratar memory
+    manifest.setdefault("prompt_agent", {}).setdefault("context", {})["nicho"] = (
+        _nicho_serializado
     )
     manifest_path = write_builder_job_manifest(manifest, manifest_dir=manifest_dir)
 
@@ -309,7 +329,6 @@ def render_site_with_builder(
         attempts = render_result.attempts
     else:
         raise RuntimeError(f"engine de Builder nao suportado: {engine!r}")
-
 
     index_path = _find_builder_index(output_dir)
     html = index_path.read_text(encoding="utf-8")
