@@ -117,3 +117,73 @@ class SDRTurnTrace:
             )
         except Exception as e:
             logger.warning(f"[sdr_trace] persist falhou: {e}")
+
+
+# Cache de trace por lead (thread-local-ish via dict, OK pra worker single-threaded)
+_active_traces: dict[str, SDRTurnTrace] = {}
+
+
+def get_active_trace(lead_id: str) -> SDRTurnTrace | None:
+    return _active_traces.get(str(lead_id))
+
+
+def start_turn_trace(lead_id: str, lead_nome: str = "", nicho: str = "") -> SDRTurnTrace:
+    """Inicia 1 trace pro turno atual do lead. Persistido no fim."""
+    t = SDRTurnTrace(lead_id=lead_id, lead_nome=lead_nome, nicho=nicho)
+    _active_traces[str(lead_id)] = t
+    return t
+
+
+def end_turn_trace(lead_id: str) -> None:
+    """Persiste e remove o trace ativo do lead."""
+    t = _active_traces.pop(str(lead_id), None)
+    if t:
+        t.persist()
+
+
+def sdr_traced(node_name: str | None = None):
+    """Decorator que wrap uma funcao de node SDR com tracing automatico.
+
+    Usage:
+        @sdr_traced("node_hook")
+        def node_hook(state: SDRState) -> dict:
+            ...
+    """
+    def decorator(func):
+        nonlocal_node = node_name or func.__name__
+
+        def wrapper(state: SDRState) -> dict:
+            lead_id = str(state.get("lead_id") or state.get("telefone") or "unknown")
+            nicho = state.get("memory").segmento if state.get("memory") else "default"
+            nome = state.get("memory").nome if state.get("memory") else ""
+            trace = get_active_trace(lead_id)
+            if trace is None:
+                # sem trace ativo, criar um novo
+                trace = start_turn_trace(lead_id, lead_nome=nome, nicho=nicho)
+            span = trace.start_span(nonlocal_node, agente="franz", node=nonlocal_node)
+            try:
+                result = func(state)
+                trace.end_span(span, status="completed", result_keys=list(result.keys()) if isinstance(result, dict) else None)
+                return result
+            except Exception as e:
+                trace.end_span(span, status="failed", error=str(e)[:200])
+                raise
+        wrapper.__name__ = func.__name__
+        return wrapper
+    return decorator
+
+
+def trace_llm_call(lead_id: str, model: str, input_tokens: int, output_tokens: int, cost_usd: float, duration_ms: int):
+    """Helper pra registrar LLM call como span filho do trace ativo."""
+    trace = get_active_trace(lead_id)
+    if not trace:
+        return
+    span = trace.start_span("llm_call", modelo=model, input_tokens=input_tokens, output_tokens=output_tokens)
+    trace.end_span(
+        span,
+        status="completed",
+        input_tokens=input_tokens,
+        output_tokens=output_tokens,
+        cost_usd=cost_usd,
+        duration_ms=duration_ms,
+    )

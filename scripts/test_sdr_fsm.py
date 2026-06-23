@@ -325,6 +325,71 @@ class TestTurnTracing(unittest.TestCase):
         self.assertEqual(t.total_output_tokens, 20)
         self.assertAlmostEqual(t.custo_total_usd, 0.001)
 
+    def test_decorator_wraps_node(self):
+        from agents.sdr_langgraph.turn_tracing import sdr_traced, get_active_trace
+        from agents.sdr_langgraph.state import SDRState
+        @sdr_traced("test_node")
+        def fake_node(state):
+            return {"ok": True}
+        state = {"lead_id": "test_lead", "memory": None}
+        # cria trace
+        from agents.sdr_langgraph.turn_tracing import start_turn_trace
+        start_turn_trace("test_lead", "Lead X", "academia")
+        result = fake_node(state)
+        self.assertEqual(result.get("ok"), True)
+        trace = get_active_trace("test_lead")
+        self.assertIsNotNone(trace)
+        self.assertEqual(len(trace.spans), 1)
+        self.assertEqual(trace.spans[0]["nome"], "test_node")
+        from agents.sdr_langgraph.turn_tracing import end_turn_trace
+        end_turn_trace("test_lead")
+
+
+class TestQualityJudge(unittest.TestCase):
+    """Verifica que o LLM-as-judge classifica resposta corretamente."""
+
+    def test_heuristic_good_reply(self):
+        from agents.sdr_langgraph.quality_judge import _heuristic_evaluate
+        score = _heuristic_evaluate("oi", "Oi! Tudo bem? Voce e academia mesmo?", 3)
+        self.assertGreaterEqual(score.score, 3)
+        self.assertTrue(score.should_send)
+
+    def test_heuristic_bad_reply(self):
+        from agents.sdr_langgraph.quality_judge import _heuristic_evaluate
+        # Resposta com 3 perguntas e JSON cru (puxa 2 pontos)
+        reply = '{"reply": "Ola? Tudo bem? Como vai? Posso ajudar?"}'
+        score = _heuristic_evaluate("oi", reply, 3)
+        self.assertLess(score.score, 5)
+        self.assertIn("markdown_json_cru", score.issues)
+        self.assertIn("multiplas_perguntas", score.issues)
+
+    def test_evaluate_reply_uses_heuristic_when_disabled(self):
+        from agents.sdr_langgraph.quality_judge import evaluate_reply
+        q = evaluate_reply("oi", "Opa, tudo bem?", enable_llm=False)
+        self.assertIsNotNone(q)
+        self.assertGreaterEqual(q.score, 1)
+        self.assertLessEqual(q.score, 5)
+
+    def test_empty_reply_blocks(self):
+        from agents.sdr_langgraph.quality_judge import evaluate_reply
+        q = evaluate_reply("oi", "", enable_llm=False)
+        self.assertFalse(q.should_send)
+        self.assertEqual(q.score, 0)
+
+
+class TestStreaming(unittest.TestCase):
+    """Verifica que o modulo de streaming expoe API correta."""
+
+    def test_sse_format(self):
+        from agents.sdr_langgraph.streaming import sse_format
+        result = sse_format("hello world", event="message")
+        self.assertIn("event: message", result)
+        self.assertIn("data: hello world", result)
+
+    def test_stream_module_importable(self):
+        from agents.sdr_langgraph.streaming import stream_franz_reply
+        self.assertTrue(callable(stream_franz_reply))
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

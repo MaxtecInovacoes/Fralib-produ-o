@@ -537,6 +537,7 @@ canvas{max-width:100%}
         <div style="display:flex;gap:8px;margin-top:10px">
           <input id="sdr-input" type="text" placeholder='Ex: "Oi, vi vocês no Google"' style="flex:1;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:9px 12px;border-radius:4px;font-size:13px" onkeydown="if(event.key==='Enter')sendSdrMessage()">
           <button class="btn btn-primary" onclick="sendSdrMessage()" style="padding:9px 18px">Enviar</button>
+          <button class="btn" onclick="sendSdrMessageStream()" title="Stream SSE" style="padding:9px 14px">▶ Stream</button>
           <button class="btn" onclick="clearSdrChat()" title="Limpar conversa">↺</button>
         </div>
       </div>
@@ -2184,6 +2185,77 @@ function clearSdrChat(){
   if(SDR_MESSAGES.length && !confirm('Limpar toda a conversa?')) return;
   SDR_MESSAGES = [];
   document.getElementById('sdr-chat-log').innerHTML = '';
+}
+
+async function sendSdrMessageStream(){
+  const input = document.getElementById('sdr-input');
+  const text = (input.value || '').trim();
+  if(!text) return;
+  input.value = '';
+  appendSdrChat('user', text);
+  SDR_MESSAGES.push({role: 'user', content: text});
+  // Cria div "assistant" que vai crescendo
+  const log = document.getElementById('sdr-chat-log');
+  const div = document.createElement('div');
+  div.className = 'sdr-chat-msg assistant';
+  div.textContent = '▌';
+  const meta = document.createElement('span');
+  meta.className = 'sdr-msg-meta';
+  div.appendChild(meta);
+  log.appendChild(div);
+  log.scrollTop = log.scrollHeight;
+  const btn = document.querySelector('#panel-sdrstudio .btn-primary');
+  const oldLabel = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'streaming…';
+  let fullReply = '';
+  try{
+    const r = await fetch('/api/superadmin/sdr-studio/chat/stream', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':`Bearer ${AuthHelper.getToken?.() || localStorage.getItem('fralib_token')}`},
+      body: JSON.stringify({
+        messages: SDR_MESSAGES,
+        stage: document.getElementById('sdr-stage').value,
+        segmento: document.getElementById('sdr-segmento').value,
+        cidade: document.getElementById('sdr-cidade').value,
+        modelo: document.getElementById('sdr-modelo').value,
+      }),
+    });
+    if(!r.ok){ throw new Error('HTTP ' + r.status); }
+    const reader = r.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    const t0 = Date.now();
+    while(true){
+      const {done, value} = await reader.read();
+      if(done) break;
+      buffer += decoder.decode(value, {stream: true});
+      // SSE: separar por \n\n
+      const parts = buffer.split('\n\n');
+      buffer = parts.pop();
+      for(const part of parts){
+        if(!part.startsWith('data: ')) continue;
+        const data = part.slice(6);
+        if(data === '[DONE]') break;
+        if(data.startsWith('[ERROR]')){
+          div.textContent = fullReply + ' [erro]';
+          continue;
+        }
+        fullReply += data;
+        div.textContent = fullReply + ' ▌';
+        log.scrollTop = log.scrollHeight;
+      }
+    }
+    div.textContent = fullReply;
+    const duracao = ((Date.now() - t0) / 1000).toFixed(1);
+    meta.textContent = `stream · ${duracao}s`;
+    SDR_MESSAGES.push({role: 'assistant', content: fullReply});
+  }catch(e){
+    div.textContent = 'erro: ' + (e.message || e);
+  }finally{
+    btn.disabled = false;
+    btn.textContent = oldLabel;
+  }
 }
 
 async function loadSdrHistory(){

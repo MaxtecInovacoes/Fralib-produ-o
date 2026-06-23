@@ -43,6 +43,7 @@ from .tools import (
     get_greeting,
     choose_variant,
 )
+from .turn_tracing import sdr_traced, start_turn_trace, end_turn_trace, get_active_trace
 from .prompts import (
     build_stage_prompt,
     build_user_prompt,
@@ -237,6 +238,7 @@ def _build_legacy_decision(memory, legacy_stage: str, incoming: str, err: str):
 # NODE 1: load_context (entrada - carrega tudo que precisa)
 # ════════════════════════════════════════════════════════════════════
 
+@sdr_traced("node_load_context")
 def node_load_context(state: SDRState) -> dict:
     """Carrega memória do lead, RAG, contexto inicial"""
     print(f"[SDR] Loading context for {state.get('telefone', '?')}")
@@ -346,6 +348,7 @@ def node_load_context(state: SDRState) -> dict:
 # NODE 2: check_schedule (verifica horário)
 # ════════════════════════════════════════════════════════════════════
 
+@sdr_traced("node_check_schedule")
 def node_check_schedule(state: SDRState) -> dict:
     """Verifica se está no horário de atendimento"""
     if not is_within_schedule(state.get("user_id")):
@@ -398,6 +401,7 @@ def route_after_schedule(state: SDRState) -> str:
     return route_by_intent(state)
 
 
+@sdr_traced("node_greeting")
 def node_greeting(state: SDRState) -> dict:
     """Cumprimento inbound: retoma contexto e conduz com uma pergunta curta."""
     memory = state.get("memory")
@@ -472,6 +476,7 @@ def node_greeting(state: SDRState) -> dict:
 # NODE 4: node_hook (primeira abordagem)
 # ════════════════════════════════════════════════════════════════════
 
+@sdr_traced("node_hook")
 def node_hook(state: SDRState) -> dict:
     """Stage HOOK - primeira mensagem"""
     memory = state.get("memory")
@@ -787,6 +792,7 @@ def make_stage_node(stage_name: str):
 # NODES ESPECIAIS: opt_out, gatekeeper, schedule, is_decisor
 # ════════════════════════════════════════════════════════════════════
 
+@sdr_traced("node_opt_out")
 def node_opt_out(state: SDRState) -> dict:
     """Lead pediu pra parar - encerra"""
     memory = state.get("memory")
@@ -805,6 +811,7 @@ def node_opt_out(state: SDRState) -> dict:
     }
 
 
+@sdr_traced("node_is_decisor")
 def node_is_decisor(state: SDRState) -> dict:
     """Lead confirmou que é decisor - atualiza e segue funil"""
     memory = state.get("memory")
@@ -827,6 +834,7 @@ def node_is_decisor(state: SDRState) -> dict:
     }
 
 
+@sdr_traced("node_schedule")
 def node_schedule(state: SDRState) -> dict:
     """Lead quer agendar"""
     memory = state.get("memory")
@@ -873,6 +881,7 @@ def node_schedule(state: SDRState) -> dict:
 # NODES DE GATEKEEPER (5 níveis)
 # ════════════════════════════════════════════════════════════════════
 
+@sdr_traced("node_gatekeeper")
 def node_gatekeeper(state: SDRState) -> dict:
     """Navega gatekeeper com 5 níveis de insistência"""
     memory = state.get("memory")
@@ -916,6 +925,7 @@ def node_gatekeeper(state: SDRState) -> dict:
 # NODE FINAL: save_and_send
 # ════════════════════════════════════════════════════════════════════
 
+@sdr_traced("node_save_and_send")
 def node_save_and_send(state: SDRState) -> dict:
     """Salva memória e marca como pronto para enviar"""
     memory = state.get("memory")
@@ -924,6 +934,50 @@ def node_save_and_send(state: SDRState) -> dict:
 
     if not state.get("should_send", False):
         return {}
+
+    # === LLM-as-judge quality gate (Feature 2 do roadmap 10/10) ===
+    # Avalia a resposta antes de enviar. Bloqueia se score < 3.
+    reply = state.get("proposed_reply", "") or state.get("draft", "")
+    if reply:
+        try:
+            from .quality_judge import evaluate_reply
+            incoming = state.get("incoming_message", "")
+            stage = state.get("current_stage") or memory.stage or "hook"
+            segmento = memory.segmento or ""
+            quality = evaluate_reply(
+                incoming=incoming,
+                reply=reply,
+                stage=stage,
+                segmento=segmento,
+                min_score_to_send=3,
+                enable_llm=True,
+            )
+            # Persistir score na LeadMemory
+            if not hasattr(memory, "last_quality_score") or memory.last_quality_score is None:
+                memory.last_quality_score = 0
+            memory.last_quality_score = quality.score
+            memory.last_quality_issues = quality.issues
+            # Logar
+            from .turn_tracing import get_active_trace
+            trace = get_active_trace(str(state.get("lead_id") or memory.telefone or ""))
+            if trace:
+                span = trace.start_span("quality_judge", modelo="haiku", score=quality.score)
+                trace.end_span(span, status="completed", score=quality.score, should_send=quality.should_send)
+            # Bloquear envio se score < 3
+            if not quality.should_send:
+                print(f"[SDR] JUDGE BLOQUEOU ENVIO: score={quality.score}, issues={quality.issues}")
+                print(f"[SDR] Reply rejeitada: {reply[:100]}")
+                return {}  # nao envia
+        except Exception as _judge_err:
+            print(f"[SDR] quality_judge falhou (nao-bloqueante): {_judge_err}")
+
+    # Persiste o trace do turno SDR (todos os nodes ja instrumentaram spans)
+    try:
+        from .turn_tracing import end_turn_trace
+        lead_id = str(state.get("lead_id") or memory.telefone or "unknown")
+        end_turn_trace(lead_id)
+    except Exception as _trace_end_err:
+        print(f"[SDR] end_turn_trace falhou: {_trace_end_err}")
 
     # ════════════════════════════════════════════════════════════════
     # HUMANIZACAO (Fase 1 - SDD §1.4)

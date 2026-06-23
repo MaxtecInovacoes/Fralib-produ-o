@@ -1085,6 +1085,69 @@ async def sdr_studio_restore_version(
     return {"ok": True, "layer": layer, "restored_from": version_id}
 
 
+from fastapi.responses import StreamingResponse as _StreamingResponse
+
+
+@router.post("/sdr-studio/chat/stream")
+async def sdr_studio_chat_stream(
+    request: Request,
+    user: dict = Depends(require_superadmin),
+):
+    """Chat de teste com streaming SSE. Yield chunks incrementais."""
+    try:
+        body = await request.json()
+    except Exception:
+        return {"ok": False, "detail": "JSON invalido"}
+    messages = body.get("messages") or []
+    stage = (body.get("stage") or "hook").strip()
+    segmento = (body.get("segmento") or "academia").strip()
+    cidade = (body.get("cidade") or "Sao Paulo").strip()
+    modelo = (body.get("modelo") or "sonnet").strip()
+    if not isinstance(messages, list) or not messages:
+        return {"ok": False, "detail": "'messages' deve ser lista nao vazia"}
+
+    try:
+        ds = _sdr_read_concatenated("design_system")
+        us = _sdr_read_concatenated("user_system")
+        rag_layer = _sdr_read_concatenated("rag")
+    except Exception as e:
+        return {"ok": False, "detail": str(e)}
+
+    # System prompt com FSM stage prompt + persona
+    from backend.agents.sdr_langgraph.prompts import (
+        FRANZ_PERSONA, get_prompt_for_persona,
+    )
+    stage_prompt = get_prompt_for_persona("consultivo", stage)
+    system = f"{FRANZ_PERSONA}\n\n{stage_prompt}\n\nCONTEXTO RAG:\n{rag_layer}"
+    user_msg = messages[-1].get("content", "")
+    history = [{"role": m.get("role"), "content": m.get("content", "")}
+               for m in messages[:-1] if m.get("role") in ("user", "assistant")]
+    history_text = "\n".join(f"{m['role']}: {m['content']}" for m in history[-5:])
+    user_prompt = f"""LEAD: {user_msg}
+CONTEXTO: segmento={segmento}, cidade={cidade}, stage={stage}
+HISTORICO:
+{history_text or '(sem historico)'}
+Responda em pt-BR, tom consultivo, max 3 linhas."""
+
+    async def event_generator():
+        try:
+            from backend.agents.sdr_langgraph.streaming import stream_franz_reply
+            for chunk in stream_franz_reply(
+                system=system,
+                user=user_prompt,
+                model=modelo,
+                max_tokens=800,
+                temperature=0.7,
+            ):
+                # SSE: cada chunk eh data: <texto>\n\n
+                yield f"data: {chunk}\n\n"
+            yield "data: [DONE]\n\n"
+        except Exception as e:
+            yield f"data: [ERROR] {str(e)}\n\n"
+
+    return _StreamingResponse(event_generator(), media_type="text/event-stream")
+
+
 @router.post("/sdr-studio/chat")
 async def sdr_studio_chat(
     request: Request,
