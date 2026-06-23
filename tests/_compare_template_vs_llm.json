@@ -1,0 +1,69 @@
+{
+  "template": {
+    "chars": 70431,
+    "ms": 162.22830000333488,
+    "anim": {
+      "by_hint": {
+        "data-reveal": 3,
+        "data-parallax": 3,
+        "data-marquee": 3,
+        "fralib-motion-runtime": 5,
+        "@keyframes": 1,
+        "transition:": 11,
+        "animation:": 1,
+        "transform:": 15,
+        "transform ": 9,
+        "cubic-bezier": 4
+      },
+      "data_attrs_total": 21,
+      "h1_h2": 5,
+      "section_tags": 7,
+      "keyframes": 1,
+      "css_transitions": 11,
+      "css_animations": 1,
+      "css_transforms": 15,
+      "score": 93
+    },
+    "attempts": [
+      {
+        "model": "template+variation",
+        "status": "success",
+        "elapsed_ms": 11,
+        "html_chars": 70431,
+        "estetica": "EDITORIAL",
+        "theme": "zen-warm",
+        "motion": "medium",
+        "unresolved_placeholders": []
+      }
+    ]
+  },
+  "llm_stub": {
+    "chars": 29777,
+    "ms": 12.364599999273196,
+    "anim": {
+      "by_hint": {
+        "data-reveal": 43,
+        "data-parallax": 5,
+        "data-marquee": 5,
+        "data-card-stagger": 6,
+        "fralib-motion-runtime": 5,
+        "@keyframes": 1,
+        "transition:": 2,
+        "animation:": 1,
+        "transform:": 6,
+        "transform ": 6,
+        "hover:scale": 2,
+        "cubic-bezier": 2
+      },
+      "data_attrs_total": 53,
+      "h1_h2": 6,
+      "section_tags": 6,
+      "keyframes": 1,
+      "css_transitions": 2,
+      "css_animations": 1,
+      "css_transforms": 6,
+      "score": 152
+    }
+  },
+  "veredito": "LLM stub (mais elementos de animacao declarados)"
+}

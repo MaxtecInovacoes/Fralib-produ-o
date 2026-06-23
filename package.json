@@ -1,0 +1,29 @@
+{
+  "name": "fralib-motion-pack",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Awwwards 2026 animation pack for FraLib (GSAP + Lenis + Swup + AutoAnimate). Loaded by backend/services/motion_runtime.js via CDN; tracked here as a dependency manifest for tooling/build references.",
+  "scripts": {
+    "verify": "node -e \"const fs=require('fs');for(const f of ['backend/services/motion_runtime.js','backend/services/animations.css']){if(!fs.existsSync(f)){console.error('MISSING',f);process.exit(1)}}console.log('OK')\"",
+    "build": "echo \"Static site build is handled by Python (builder_worker.py + openui_renderer.py); no JS build step.\""
+  },
+  "dependencies": {
+    "gsap": "3.12.5",
+    "lenis": "1.3.23",
+    "swup": "4.9.2",
+    "@formkit/auto-animate": "0.9.0"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "fralib",
+    "motion",
+    "gsap",
+    "lenis",
+    "swup",
+    "auto-animate",
+    "awwwards"
+  ],
+  "license": "UNLICENSED"
+}

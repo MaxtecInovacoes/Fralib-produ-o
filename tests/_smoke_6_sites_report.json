@@ -1,0 +1,190 @@
+{
+  "total_ms": 101.93020000588149,
+  "chars_avg": 67682.83333333333,
+  "chars_min": 59249,
+  "chars_max": 80211,
+  "dominante_chars": "BOLD_ENERGY",
+  "results": [
+    {
+      "estetica": "BOLD_ENERGY",
+      "lead_id": 2000,
+      "theme": "brutalist-mono",
+      "typography": "Inter",
+      "layout": "bento",
+      "motion": "cinematic",
+      "chars": 80211,
+      "elapsed_ms": 25.0,
+      "ok": true,
+      "unresolved": [],
+      "errors": [],
+      "anim": {
+        "hints_matched": 55,
+        "data_anim_attrs": 0,
+        "css_transitions": 12,
+        "css_animations": 7,
+        "css_transforms": 19,
+        "css_keyframes": 4,
+        "by_hint": {
+          "data-motion=": 4,
+          "fralib-motion-runtime": 5,
+          "@keyframes": 4,
+          "transition:": 12,
+          "animation:": 7,
+          "transform: translate3d": 3,
+          "transform: rotate(": 2,
+          "parallax": 18
+        }
+      }
+    },
+    {
+      "estetica": "EDITORIAL",
+      "lead_id": 2001,
+      "theme": "trust-navy",
+      "typography": "Playfair Display",
+      "layout": "centered",
+      "motion": "medium",
+      "chars": 70444,
+      "elapsed_ms": 16.36,
+      "ok": true,
+      "unresolved": [],
+      "errors": [],
+      "anim": {
+        "hints_matched": 29,
+        "data_anim_attrs": 0,
+        "css_transitions": 11,
+        "css_animations": 1,
+        "css_transforms": 15,
+        "css_keyframes": 1,
+        "by_hint": {
+          "data-motion=": 1,
+          "fralib-motion-runtime": 5,
+          "@keyframes": 1,
+          "transition:": 11,
+          "animation:": 1,
+          "parallax": 10
+        }
+      }
+    },
+    {
+      "estetica": "MINIMAL",
+      "lead_id": 2002,
+      "theme": "zen-pure",
+      "typography": "Inter",
+      "layout": "bento",
+      "motion": "subtle",
+      "chars": 64869,
+      "elapsed_ms": 15.66,
+      "ok": true,
+      "unresolved": [],
+      "errors": [],
+      "anim": {
+        "hints_matched": 26,
+        "data_anim_attrs": 0,
+        "css_transitions": 7,
+        "css_animations": 1,
+        "css_transforms": 11,
+        "css_keyframes": 1,
+        "by_hint": {
+          "data-motion=": 1,
+          "fralib-motion-runtime": 5,
+          "@keyframes": 1,
+          "transition:": 7,
+          "animation:": 1,
+          "parallax": 11
+        }
+      }
+    },
+    {
+      "estetica": "KINETIC",
+      "lead_id": 2003,
+      "theme": "bold-dark",
+      "typography": "JetBrains Mono",
+      "layout": "bento",
+      "motion": "medium",
+      "chars": 68283,
+      "elapsed_ms": 16.81,
+      "ok": true,
+      "unresolved": [],
+      "errors": [],
+      "anim": {
+        "hints_matched": 35,
+        "data_anim_attrs": 0,
+        "css_transitions": 12,
+        "css_animations": 2,
+        "css_transforms": 18,
+        "css_keyframes": 1,
+        "by_hint": {
+          "data-motion=": 1,
+          "fralib-motion-runtime": 5,
+          "@keyframes": 1,
+          "transition:": 12,
+          "animation:": 2,
+          "transform: rotate(": 2,
+          "parallax": 12
+        }
+      }
+    },
+    {
+      "estetica": "SCROLL",
+      "lead_id": 2004,
+      "theme": "trust-navy",
+      "typography": "IBM Plex Sans",
+      "layout": "bento",
+      "motion": "medium",
+      "chars": 59249,
+      "elapsed_ms": 14.74,
+      "ok": true,
+      "unresolved": [],
+      "errors": [],
+      "anim": {
+        "hints_matched": 35,
+        "data_anim_attrs": 0,
+        "css_transitions": 8,
+        "css_animations": 2,
+        "css_transforms": 10,
+        "css_keyframes": 1,
+        "by_hint": {
+          "data-motion=": 5,
+          "fralib-motion-runtime": 5,
+          "@keyframes": 1,
+          "transition:": 8,
+          "animation:": 2,
+          "transform: rotate(": 1,
+          "parallax": 13
+        }
+      }
+    },
+    {
+      "estetica": "IMMERSIVE_3D",
+      "lead_id": 2005,
+      "theme": "trust-elite",
+      "typography": "Space Grotesk",
+      "layout": "magazine",
+      "motion": "cinematic",
+      "chars": 63041,
+      "elapsed_ms": 13.19,
+      "ok": true,
+      "unresolved": [],
+      "errors": [],
+      "anim": {
+        "hints_matched": 38,
+        "data_anim_attrs": 0,
+        "css_transitions": 6,
+        "css_animations": 3,
+        "css_transforms": 11,
+        "css_keyframes": 2,
+        "by_hint": {
+          "data-motion=": 1,
+          "fralib-motion-runtime": 5,
+          "@keyframes": 2,
+          "transition:": 6,
+          "animation:": 3,
+          "transform: scale(": 1,
+          "transform: rotate(": 1,
+          "parallax": 19
+        }
+      }
+    }
+  ],
+  "failed": []
+}
