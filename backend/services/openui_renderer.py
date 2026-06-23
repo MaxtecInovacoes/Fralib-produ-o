@@ -257,6 +257,27 @@ def _enrich_seo_and_runtime(
     og_title = _extract_meta_content(document, 'property="og:title"')
     og_desc = _extract_meta_content(document, 'property="og:description"')
     og_image_alt = _extract_meta_content(document, 'property="og:image:alt"') or (f"{nome} - {segmento} em {cidade}" if nome else "")
+
+    # Se og:title nao existir, gerar do <title>
+    if not og_title:
+        title_m = re.search(r'<title[^>]*>([^<]+)</title>', document, re.I)
+        if title_m:
+            og_title = title_m.group(1).strip()
+            extra_meta.append(f'<meta property="og:title" content="{og_title}">')
+
+    # Se og:description nao existir, gerar do <meta name="description">
+    if not og_desc:
+        og_desc = _extract_meta_content(document, 'name="description"')
+        if og_desc:
+            extra_meta.append(f'<meta property="og:description" content="{og_desc}">')
+
+    # Se og:image nao existir, pegar primeira img com src Unsplash
+    if not og_image:
+        img_m = re.search(r'<img[^>]+src=["\']([^"\']*unsplash[^"\']+)["\']', document, re.I)
+        if img_m:
+            og_image = img_m.group(1)
+            extra_meta.append(f'<meta property="og:image" content="{og_image}">')
+
     # Usar variaveis para deteccao (regex compila 1x)
     has_tw_title = bool(re.search(r'name=["\']twitter:title["\']', document, re.I))
     has_tw_desc = bool(re.search(r'name=["\']twitter:description["\']', document, re.I))
@@ -273,6 +294,10 @@ def _enrich_seo_and_runtime(
     # Twitter card (necessario para os meta acima funcionarem)
     if not re.search(r'name=["\']twitter:card["\']', document, re.I):
         extra_meta.append('<meta name="twitter:card" content="summary_large_image">')
+
+    # theme-color (caso LLM nao tenha gerado)
+    if not re.search(r'name=["\']theme-color["\']', document, re.I):
+        extra_meta.append('<meta name="theme-color" content="#ff6b1a">')
 
     # Organization + WebSite schema
     org_schema = (
