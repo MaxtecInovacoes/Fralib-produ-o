@@ -300,6 +300,8 @@ def _simplify_language(reply: str) -> str:
         (r"\bsoluç(?:ões|oes|oes?)\s+personalizadas?\b", "coisa sob medida"),
         (r"\bsolucoes?\s+personalizadas?\b", "coisa sob medida"),
         (r"\bROI\b", "retorno"),
+        (r"\balavanc[aá]r\b", "fazer crescer"),
+        (r"\balavancagem\b", "crescimento"),
         (r"\boptimi[zs]e\b", "melhore"),
         (r"\butilizar\b", "usar"),
     ]
