@@ -15,8 +15,10 @@ Uso:
 
 import sys
 import os
+import re
 import time
 import json
+import subprocess
 from datetime import datetime
 
 if hasattr(sys.stdout, "reconfigure"):
@@ -147,6 +149,58 @@ def test_arquivos_mortos():
         )
         return False
     else:
+        log("Cleanup", "OK", "0 arquivos orfaos reintroduzidos", time.time() - t0)
+        return True
+
+
+def test_anti_regressao_estado():
+    """Executa a suite tests/test_anti_regressao_estado.py.
+
+    Protege contra regressao silenciosa do estado consolidado em
+    v1.0-baseline-2026-06-23 (subnicho, Sonnet primario, LGPD,
+    HTML sanitizer, OpenUI unico, arquivos legados removidos).
+    """
+    t0 = time.time()
+    test_path = os.path.join(
+        os.path.dirname(__file__), "..", "tests", "test_anti_regressao_estado.py"
+    )
+    if not os.path.exists(test_path):
+        log("AntiReg", "SKIP", f"Suite nao encontrada: {test_path}", time.time() - t0)
+        return True  # Nao falhar se a suite for removida futuramente
+
+    try:
+        proc = subprocess.run(
+            [sys.executable, test_path],
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+        out = (proc.stdout or "") + (proc.stderr or "")
+        # Extrai N/M do rodape
+        m = re.search(r"(\d+)/(\d+)\s+passados", out)
+        if m:
+            passed, total = int(m.group(1)), int(m.group(2))
+        else:
+            passed, total = 0, 1
+        if proc.returncode == 0 and passed == total and total > 0:
+            log(
+                "AntiReg",
+                "PASS",
+                f"{passed}/{total} testes anti-regressao verdes",
+                time.time() - t0,
+            )
+            return True
+        else:
+            log(
+                "AntiReg",
+                "FAIL",
+                f"{passed}/{total} — REGRESSAO DETECTADA!\n{out[-800:]}",
+                time.time() - t0,
+            )
+            return False
+    except Exception as e:
+        log("AntiReg", "FAIL", f"Excecao: {e}", time.time() - t0)
+        return False
         log(
             "Cleanup",
             "PASS",
@@ -270,6 +324,7 @@ def main():
         print("  4 = HTML Sanitizer")
         print("  5 = Imports (todos os modulos)")
         print("  6 = Design Context")
+        print("  7 = Anti-Regressao (estado consolidado v1.0)")
         print("  --e2e = Pipeline completo")
         return
 
@@ -281,6 +336,7 @@ def main():
             4: ("Sanitizer", test_html_sanitizer),
             5: ("Imports", test_pipeline_imports),
             6: ("DesignCtx", test_design_context),
+            7: ("AntiReg", test_anti_regressao_estado),
         }
         nome, fn = etapas.get(args.etapa, (None, None))
         if fn is None:
@@ -296,6 +352,7 @@ def main():
         test_html_sanitizer()
         test_pipeline_imports()
         test_design_context()
+        test_anti_regressao_estado()
     else:
         # Modo padrao: testar tudo
         print("\n=== Validacao Completa do Pipeline ===\n")
@@ -305,6 +362,7 @@ def main():
         test_html_sanitizer()
         test_pipeline_imports()
         test_design_context()
+        test_anti_regressao_estado()
 
     print("\n" + "=" * 50)
     total = len(RESULTADOS)
