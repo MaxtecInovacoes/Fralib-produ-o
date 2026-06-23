@@ -436,7 +436,7 @@ mantidos para evitar imports quebrados em outros módulos):
 | 3 | `utils/jina_intelligence.py` | utils | Análise Jina (web scraping + LLM) | ✅ Sim (chama `call_claude`) | ❌ | 0/8 |
 | 4 | `agents/agente_nicho.py` | 6 | Briefing do nicho + subnicho | ✅ Sim (1 call/lead) | ⚠️ Memória tier-1 | 1/8 |
 | 5 | `agents/agente_variacao.py` | 7 | Ordem de seções + templates | ⚠️ **Só fallback** (template canônico p/ 8 subnichos) | ⚠️ Memória tier-1 | 1/8 |
-| 6 | `agents/arquiteto_mestre.py` | 8 | PRD hardcoded | ❌ **Não chama LLM** (1 função, 505 linhas) | ❌ | 1/8 |
+| 6 | `agents/arquiteto_mestre.py` | 8 | Orquestrador: 1 call própria + delega p/ bloco_estrutura (2 calls) e bloco_copy (4 calls) = **~7 calls/lead** | ✅ Sim (orquestrador LLM, delega 2 helpers) | ⚠️ Tem cache | 1/8 |
 | 7 | `agents/site_prompt_agent.py` | — | **VAZIO** (0 funções, 112 linhas) | ❌ | ❌ | 0/8 |
 | 8 | `agents/sdr_langgraph/agent.py` | 11 | FSM do Franz (WhatsApp) | ✅ Sim (2 calls/turno) | ✅ **Tem** feedback/learning | 2/8 |
 | 9 | `services/openui_renderer.py` | 9 | Gera HTML do site | ✅ Sim (1 call/site — **90% do custo LLM**) | ✅ Tracing | 1/8 |
@@ -501,6 +501,10 @@ O Claude Agent SDK tem 4 features que a gente **NÃO tem** ainda:
 - Adicionar `quality_judge.py` ao Nicho (Sonnet avalia briefing)
 - Deletar `site_prompt_agent.py` (vazio)
 
+**O que NÃO vale a pena mexer** (decisão deliberada):
+- **html_quality_gate.py** (38 funções determinísticas): validar `og:image existe?`, `data-lgpd-banner presente?`, `<video autoplay muted loop playsinline>?`. Substituir por LLM custaria $0.01-0.05/site, adicionaria 2-8s de latência, perderia determinismo/auditabilidade/idempotência. **Regras objetivas com LLM é regressão disfarçada de inteligência.**
+- **html_builder_repair.py** (13 funções de string surgery): consertar `<h2>Im Tema.` (sanitizer), LGPD handler genérico, CSS overflow. Mesma justificativa. LLM aqui seria "achismo" — `</body></html>` é `</body></html>`, não "parece fechamento".
+
 **O que é roadmap (3-6 meses)**:
 - Agent SDK nativo: tools dinâmicas, sub-agentes
 - RAG semântico em `agent_memory.py` (embeddings + retrieval)
@@ -513,10 +517,10 @@ O Claude Agent SDK tem 4 features que a gente **NÃO tem** ainda:
 | Total de arquivos `.py` no backend | **206** | `find backend -name "*.py"` |
 | Arquivos em `backend/agents/` | **74** + 1 package (`sdr_langgraph/`) | `ls backend/agents/*.py` |
 | Módulos "agentes" (cérebro) | **11** | Tabela 20.1 |
-| Agentes que chamam LLM | **5** (Jina, Nicho, Variação, OpenUI, SDR) | grep `call_claude(` |
-| Agentes determinísticos (contratos) | **6** (Hunter, Caio, Arquiteto, SitePrompt vazio, Quality, Repair) | Tabela 20.1 |
+| Agentes que chamam LLM | **6** (Jina, Nicho, Variação fallback, **Arquiteto orq. + bloco_estrutura + bloco_copy**, OpenUI, SDR) | grep `call_claude(` |
+| Agentes determinísticos (contratos) | **5** (Hunter, Caio, SitePrompt vazio, Quality, Repair) | Tabela 20.1 |
 | Packages com infra de learning | **1** (`sdr_langgraph/`) | `ls backend/agents/sdr_langgraph/` |
-| Custo LLM dominado por 1 agente | **90% OpenUI** | Análise de chamadas |
+| Custo LLM dominado por 1 agente | **~70% OpenUI** (Arquiteto ~20% via bloco_*, Nicho/SDR/Jina ~10%) | Análise de chamadas |
 | Whitelist de learning agents | **5** nomes | `pipeline_learning.py:14` |
 
 **Não diga "temos 74 agentes"**. Diga: **"temos 11 módulos-agente, dos quais 5 usam LLM, e o OpenUI domina 90% do custo de IA"**.
