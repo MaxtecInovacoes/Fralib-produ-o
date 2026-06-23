@@ -19,7 +19,8 @@ try:
     from backend.core.proxy_models import PROXY_DEFAULT_MODEL
 except Exception:
     from core.proxy_models import PROXY_DEFAULT_MODEL  # type: ignore
-from backend.services.vite_react_renderer import render_vite_react_site
+# NOTA: 'vite_react_renderer' foi removido. OpenUI e o UNICO gerador de sites.
+# from backend.services.vite_react_renderer import render_vite_react_site
 
 
 _SAFE_SCOPE = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9._-]{0,95}$")
@@ -266,64 +267,9 @@ def render_site_with_builder(
         )
         model = render_result.model
         attempts = render_result.attempts
-    elif engine == "vite_react":
-        fallback_model = _builder_proxy_fallback_model()
-        render_result = render_vite_react_site(
-            manifest["prompt"],
-            workspace_dir=workspace_dir,
-            facts=manifest.get("prompt_agent", {}).get("context", {}),
-            repair_context=repair_context,
-            primary_model=os.getenv("FRALIB_OPENUI_PRIMARY_MODEL", PROXY_BUILDER_MODEL),
-            fallback_model=fallback_model,
-            max_tokens=int(os.getenv("FRALIB_VITE_REACT_MAX_TOKENS", "64000")),
-            temperature=float(os.getenv("FRALIB_OPENUI_TEMPERATURE", "0.55")),
-        )
-        _write_builder_render_meta(
-            output_dir,
-            engine=engine,
-            model=render_result.model,
-            attempts=render_result.attempts,
-            elapsed_ms=render_result.elapsed_ms,
-            html_chars=len(render_result.html),
-            visual_direction=(
-                manifest.get("prompt_agent", {})
-                .get("context", {})
-                .get("visual_direction", {})
-            ),
-            source_files=sorted(render_result.source_files),
-        )
-        model = render_result.model
-        attempts = render_result.attempts
-    else:
-        # Fallback to vite_react if engine not recognized
-        engine = "vite_react"
-        fallback_model = _builder_proxy_fallback_model()
-        render_result = render_vite_react_site(
-            manifest["prompt"],
-            workspace_dir=workspace_dir,
-            facts=manifest.get("prompt_agent", {}).get("context", {}),
-            repair_context=repair_context,
-            primary_model=os.getenv("FRALIB_OPENUI_PRIMARY_MODEL", PROXY_BUILDER_MODEL),
-            fallback_model=fallback_model,
-            max_tokens=int(os.getenv("FRALIB_VITE_REACT_MAX_TOKENS", "64000")),
-            temperature=float(os.getenv("FRALIB_OPENUI_TEMPERATURE", "0.55")),
-        )
-        _write_builder_render_meta(
-            output_dir,
-            engine=engine,
-            model=render_result.model,
-            attempts=render_result.attempts,
-            elapsed_ms=render_result.elapsed_ms,
-            html_chars=len(render_result.html),
-            visual_direction=(
-                manifest.get("prompt_agent", {})
-                .get("context", {})
-                .get("visual_direction", {})
-            ),
-            source_files=sorted(render_result.source_files),
-        )
-        model = render_result.model
-        attempts = render_result.attempts
+    # NOTA: engine 'vite_react' foi removido. OpenUI e o UNICO gerador de sites.
+    # O _builder_engine() sempre retorna 'openui' mesmo se o env tiver 'vite_react'
+    # (legacy), entao este codigo abaixo nunca e executado. Mantido como assert.
 
     index_path = _find_builder_index(output_dir)
     html = index_path.read_text(encoding="utf-8")
@@ -614,9 +560,16 @@ def _prompt_digest(tenant_scope: str, job_scope: str, prompt: str) -> str:
 
 
 def _builder_engine(value: str | None = None) -> str:
-    engine = str(value or os.getenv("FRALIB_BUILDER_ENGINE", "vite_react")).strip().lower().replace("-", "_")
+    """Engine canonico de Builder: SEMPRE openui (unico gerador de sites da FraLib).
+
+    O engine 'vite_react' foi removido - OpenUI e o unico caminho.
+    Mantido apenas para retrocompatibilidade: se vier 'vite_react' no env, ignora.
+    """
+    engine = str(value or os.getenv("FRALIB_BUILDER_ENGINE", "openui")).strip().lower().replace("-", "_")
+    # Forca sempre openui, mesmo se o env ainda tem vite_react (legacy)
     if engine in {"vite", "react", "vite_react", "vite-react"}:
-        return "vite_react"
+        # Legacy engine removido - sempre usa openui
+        return "openui"
     if engine in {"openui", "html", "static_html"}:
         return "openui"
     raise ValueError(f"engine de Builder invalido: {value!r}")
