@@ -78,7 +78,7 @@ def evaluate_reply(
         raw = call_claude(
             system="Voce e um auditor. Responda SOMENTE em JSON valido, sem markdown.",
             user=prompt,
-            model="haiku",
+            model="sonnet",  # SONNET para avaliacao mais rigorosa
             max_tokens=200,
             temperature=0,
             agent_name="sdr_quality_judge",

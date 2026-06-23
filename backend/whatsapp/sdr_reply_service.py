@@ -88,7 +88,7 @@ def _summarize_history(messages: list[dict]) -> str:
                 "Maximo 250 caracteres."
             ),
             user=f"Conversa:\n{conversation}",
-            model="haiku",
+            model="sonnet",  # SONNET (consistente com resto do Franz)
             max_tokens=300,
             temperature=0.2,
             agent_name="sdr_history_summarizer",
