@@ -404,6 +404,20 @@ def node_greeting(state: SDRState) -> dict:
     if not memory:
         return {"outgoing_message": "", "should_send": False}
 
+    # === SDR Turn Tracing (Feature #4 do roadmap 10/10) ===
+    # Wrap todo o atendimento em 1 trace com 3 spans.
+    _turn_trace = None
+    try:
+        from .turn_tracing import SDRTurnTrace
+        _turn_trace = SDRTurnTrace(
+            lead_id=str(state.get("lead_id") or state.get("telefone") or "unknown"),
+            lead_nome=memory.nome or "",
+            nicho=memory.segmento or "default",
+        )
+        _span_intent = _turn_trace.start_span("intent_classifier", agente="franz")
+    except Exception as _trace_err:
+        print(f"[SDR] tracing init falhou (nao-bloqueante): {_trace_err}")
+
     greeting = get_greeting()
     history = state.get("history", []) or []
     prior_assistant = next(
@@ -473,6 +487,18 @@ def node_hook(state: SDRState) -> dict:
         memory.last_message_sent = reply
         save_agent_note(memory, state.get("selected_agent") or "abordagem", "Abordagem inicial enviada; proximo agente deve validar permissao/interesse antes de vender.")
         memory.attempts += 1
+        # === Memory extraction (Feature #1 do roadmap 10/10) ===
+        try:
+            from .memory_hook import extract_and_persist_learning
+            extract_and_persist_learning(
+                memory=memory,
+                incoming_message=state.get("incoming_message", ""),
+                intent_str=memory.last_intent or "",
+                reply=reply,
+                next_stage=memory.stage,
+            )
+        except Exception as _mem_err:
+            print(f"[SDR] memory hook extract falhou (nao-bloqueante): {_mem_err}")
         return {
             "outgoing_message": reply,
             "should_send": bool(reply and is_valid_length(reply) and has_one_question(reply)),
@@ -506,6 +532,16 @@ def node_hook(state: SDRState) -> dict:
             stage_prompt + "\n\n" +
             state.get("rag_context", "")
         )
+
+        # === Memory 3-tier (Feature #1 do roadmap 10/10) ===
+        # Injeta top-10 core + top-3 warm via thread-local setada antes do LLM call.
+        # O call_claude em llm_direct.py checa thread-local e injeta automaticamente
+        # atraves de gerar_prompt_com_memoria.
+        try:
+            from .memory_hook import inject_memory_for_franz
+            inject_memory_for_franz(memory, memory.segmento or "default")
+        except Exception as _mem_err:
+            print(f"[SDR] memory hook inject falhou (nao-bloqueante): {_mem_err}")
 
         response_text = call_claude(
             system=full_system,

@@ -250,5 +250,81 @@ class TestEndToEndScenarios(unittest.TestCase):
         self.assertEqual(d3.stage_after, "close")
 
 
+class TestSlidingWindow(unittest.TestCase):
+    """Verifica que build_history trunca em 30 msgs e gera summary."""
+
+    def test_small_history_no_truncation(self):
+        from whatsapp.sdr_reply_service import build_history
+        rows = [("msg 1", "saida"), ("resp 1", "entrada"), ("msg 2", "saida")]
+        h = build_history(rows, max_messages=30)
+        # sem summary porque < 30
+        self.assertEqual(len(h), 3)
+        # todas as mensagens devem ter role valido
+        for item in h:
+            self.assertIn(item["role"], ("user", "assistant"))
+
+    def test_large_history_truncated_with_summary(self):
+        from whatsapp.sdr_reply_service import build_history
+        # 50 mensagens -> deve truncar
+        rows = [(f"msg {i}", "saida" if i % 2 == 0 else "entrada") for i in range(50)]
+        h = build_history(rows, max_messages=30)
+        # max 30 raw + 1 system (summary) = 31
+        self.assertLessEqual(len(h), 31)
+        # primeira deve ser system se tem summary
+        if len(h) > 30:
+            self.assertEqual(h[0]["role"], "system")
+            self.assertIn("[Resumo", h[0]["content"])
+
+
+class TestMemoryHook(unittest.TestCase):
+    """Verifica que memory_hook carrega core/warm sem erros."""
+
+    def test_inject_memory_no_crash(self):
+        from agents.sdr_langgraph.memory_hook import inject_memory_for_franz
+        from agents.sdr_langgraph.state import LeadMemory
+        memory = LeadMemory(lead_id="test", user_id=2, telefone="5511999999999")
+        # nao deve crashar mesmo sem warm memory populado
+        try:
+            inject_memory_for_franz(memory, "academia")
+        except Exception as e:
+            self.fail(f"inject_memory_for_franz should not crash: {e}")
+
+    def test_extract_insight_objection(self):
+        from agents.sdr_langgraph.memory_hook import _build_insight
+        from agents.sdr_langgraph.state import LeadMemory
+        memory = LeadMemory(lead_id="test", user_id=2, telefone="5511999999999", segmento="academia")
+        insight = _build_insight(memory, "muito caro isso ai", "objection", "qualify")
+        self.assertIsNotNone(insight)
+        self.assertIn("academia", insight.lower())
+
+    def test_extract_insight_empty_input(self):
+        from agents.sdr_langgraph.memory_hook import _build_insight
+        from agents.sdr_langgraph.state import LeadMemory
+        memory = LeadMemory(lead_id="test", user_id=2, telefone="5511999999999")
+        self.assertIsNone(_build_insight(memory, "", "greeting", "hook"))
+
+
+class TestTurnTracing(unittest.TestCase):
+    """Verifica que SDRTurnTrace cria spans corretamente."""
+
+    def test_basic_trace(self):
+        from agents.sdr_langgraph.turn_tracing import SDRTurnTrace
+        t = SDRTurnTrace(lead_id="abc", lead_nome="Academia X", nicho="academia")
+        self.assertEqual(t.lead_id, "abc")
+        self.assertEqual(t.spans, [])
+        self.assertEqual(t.total_input_tokens, 0)
+
+    def test_span_lifecycle(self):
+        from agents.sdr_langgraph.turn_tracing import SDRTurnTrace
+        t = SDRTurnTrace(lead_id="abc", lead_nome="Academia X")
+        s = t.start_span("intent_classifier")
+        t.end_span(s, input_tokens=10, output_tokens=20, cost_usd=0.001)
+        self.assertEqual(len(t.spans), 1)
+        self.assertEqual(t.spans[0]["status"], "completed")
+        self.assertEqual(t.total_input_tokens, 10)
+        self.assertEqual(t.total_output_tokens, 20)
+        self.assertAlmostEqual(t.custo_total_usd, 0.001)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
