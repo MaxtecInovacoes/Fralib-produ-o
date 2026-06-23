@@ -1,0 +1,189 @@
+/* ============================================================================
+ * themes.css — 10 Temas Prontos (FraLib 4-Axis Variation System)
+ * ----------------------------------------------------------------------------
+ * Estilo DaisyUI: cada tema define um conjunto coerente de color vars
+ * aplicado a [data-theme="nome-do-tema"] ou via :root quando ativado
+ * pelo variation.py.
+ *
+ * 10 TEMAS (3 familias):
+ *
+ *   BOLD (3):
+ *     - bold-dark          preto + vermelho neon (BOLD_ENERGY default)
+ *     - bold-red           vermelho sangue + preto (agressivo)
+ *     - kinetic-acid       verde fluorescente + preto (cyberpunk)
+ *
+ *   TRUST / PREMIUM (2):
+ *     - trust-navy         azul-marinho + dourado (corporativo classico)
+ *     - trust-elite        preto + champagne (luxo discreto)
+ *
+ *   ZEN / MINIMAL (2):
+ *     - zen-pure           branco + preto + 1 cinza (minimalismo japones)
+ *     - zen-warm           off-white + terracota (calmo, organico)
+ *
+ *   EDITORIAL (1):
+ *     - editorial-cream    creme + serif classica (revista premium)
+ *
+ *   EXPERIMENTAL (2):
+ *     - glassmorphism      translucido + blur (moda, tech)
+ *     - brutalist-mono     preto + branco + mono (raw, sem decoracao)
+ *
+ * REGRA DE COERENCIA (variation.py aplica):
+ *   BOLD/IMMERSIVE -> bold-*, kinetic-acid
+ *   TRUST          -> trust-*
+ *   EDITORIAL      -> editorial-cream
+ *   MINIMAL        -> zen-*
+ *   KINETIC        -> bold-*, kinetic-acid, glassmorphism
+ *   SCROLL         -> editorial-cream, zen-warm, trust-*
+ * ========================================================================== */
+
+/* ============================================================================
+ * 1. BOLD-DARK — BOLD default
+ * ========================================================================== */
+:root,
+[data-theme="bold-dark"] {
+  --color-bg-light: #0a0a0a;
+  --color-bg-dark:  #050505;
+  --color-fg:       #fafafa;
+  --color-muted:    #a1a1aa;
+  --color-accent:   #ff2d2d;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --color-bg-light: #0a0a0a;
+    --color-fg:       #fafafa;
+    --color-accent:   #ff2d2d;
+  }
+}
+
+/* ============================================================================
+ * 2. BOLD-RED — vermelho sangue
+ * ========================================================================== */
+[data-theme="bold-red"] {
+  --color-bg-light: #110000;
+  --color-bg-dark:  #0a0000;
+  --color-fg:       #fff5f5;
+  --color-muted:    #d4a5a5;
+  --color-accent:   #dc143c;
+}
+
+/* ============================================================================
+ * 3. KINETIC-ACID — cyberpunk verde fluorescente
+ * ========================================================================== */
+[data-theme="kinetic-acid"] {
+  --color-bg-light: #000000;
+  --color-bg-dark:  #000000;
+  --color-fg:       #e5ffe5;
+  --color-muted:    #6b8a6b;
+  --color-accent:   #b6ff00;
+  --font-display:   "Space Grotesk", "Inter", sans-serif;
+  --font-body:      "JetBrains Mono", monospace;
+}
+
+/* ============================================================================
+ * 4. TRUST-NAVY — corporativo classico
+ * ========================================================================== */
+[data-theme="trust-navy"] {
+  --color-bg-light: #ffffff;
+  --color-bg-dark:  #0a1929;
+  --color-fg:       #0a1929;
+  --color-muted:    #5a6c7d;
+  --color-accent:   #c9a961;
+  --font-display:   "Playfair Display", Georgia, serif;
+  --font-body:      "IBM Plex Sans", "Inter", sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  [data-theme="trust-navy"] {
+    --color-bg-light: #0a1929;
+    --color-fg:       #f5f5f5;
+  }
+}
+
+/* ============================================================================
+ * 5. TRUST-ELITE — luxo discreto
+ * ========================================================================== */
+[data-theme="trust-elite"] {
+  --color-bg-light: #0c0c0d;
+  --color-bg-dark:  #000000;
+  --color-fg:       #f5f0e8;
+  --color-muted:    #8a8578;
+  --color-accent:   #d4af7a;
+  --font-display:   "Playfair Display", Georgia, serif;
+  --font-body:      "IBM Plex Sans", "Inter", sans-serif;
+}
+
+/* ============================================================================
+ * 6. ZEN-PURE — minimalismo japones
+ * ========================================================================== */
+[data-theme="zen-pure"] {
+  --color-bg-light: #ffffff;
+  --color-bg-dark:  #fafafa;
+  --color-fg:       #111111;
+  --color-muted:    #888888;
+  --color-accent:   #111111;
+  --font-display:   "Inter", system-ui, sans-serif;
+  --font-body:      "Inter", system-ui, sans-serif;
+}
+
+/* ============================================================================
+ * 7. ZEN-WARM — organico / calmo
+ * ========================================================================== */
+[data-theme="zen-warm"] {
+  --color-bg-light: #f7f1ea;
+  --color-bg-dark:  #efe5d8;
+  --color-fg:       #3a2e26;
+  --color-muted:    #8a7866;
+  --color-accent:   #c0654a;
+  --font-display:   "Playfair Display", Georgia, serif;
+  --font-body:      "IBM Plex Sans", "Inter", sans-serif;
+}
+
+/* ============================================================================
+ * 8. EDITORIAL-CREAM — revista premium
+ * ========================================================================== */
+[data-theme="editorial-cream"] {
+  --color-bg-light: #f4ede0;
+  --color-bg-dark:  #e8dfca;
+  --color-fg:       #1a1a1a;
+  --color-muted:    #6b5e4f;
+  --color-accent:   #8b0000;
+  --font-display:   "Playfair Display", Georgia, serif;
+  --font-body:      "IBM Plex Sans", "Inter", sans-serif;
+  --font-mono:      "JetBrains Mono", monospace;
+}
+
+/* ============================================================================
+ * 9. GLASSMORPHISM — translucido + blur
+ * ========================================================================== */
+[data-theme="glassmorphism"] {
+  --color-bg-light: rgba(20, 20, 40, 0.65);
+  --color-bg-dark:  rgba(10, 10, 20, 0.85);
+  --color-fg:       #ffffff;
+  --color-muted:    rgba(255, 255, 255, 0.7);
+  --color-accent:   #7dd3fc;
+  --font-display:   "Space Grotesk", "Inter", sans-serif;
+  --font-body:      "Inter", sans-serif;
+}
+
+/* ============================================================================
+ * 10. BRUTALIST-MONO — raw, sem decoracao
+ * ========================================================================== */
+[data-theme="brutalist-mono"] {
+  --color-bg-light: #ffffff;
+  --color-bg-dark:  #000000;
+  --color-fg:       #000000;
+  --color-muted:    #555555;
+  --color-accent:   #ff003c;
+  --font-display:   "JetBrains Mono", monospace;
+  --font-body:      "JetBrains Mono", monospace;
+  --font-mono:      "JetBrains Mono", monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  [data-theme="brutalist-mono"] {
+    --color-bg-light: #000000;
+    --color-fg:       #ffffff;
+    --color-muted:    #aaaaaa;
+  }
+}

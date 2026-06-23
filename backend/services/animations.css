@@ -1,0 +1,165 @@
+/* =====================================================================
+   FraLib Animations Pack — Awwwards 2026
+   @keyframes reutilizaveis para data-* attributes gerados pelos templates
+   (BOLD_ENERGY, KINETIC, IMMERSIVE_3D, EDITORIAL, MINIMAL, SCROLL).
+
+   Carregado inline pelo runtime quando data-animations="true" estiver
+   no <html> ou quando um [data-fralib-animations] ancestor existir.
+   Respeita prefers-reduced-motion (CSS puro via @media).
+   ===================================================================== */
+
+/* ─── Reveal variants (data-reveal="up|down|left|right|scale|fade") ─── */
+@keyframes fralib-reveal-up {
+  from { opacity: 0; transform: translate3d(0, 60px, 0); }
+  to   { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+@keyframes fralib-reveal-down {
+  from { opacity: 0; transform: translate3d(0, -60px, 0); }
+  to   { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+@keyframes fralib-reveal-left {
+  from { opacity: 0; transform: translate3d(60px, 0, 0); }
+  to   { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+@keyframes fralib-reveal-right {
+  from { opacity: 0; transform: translate3d(-60px, 0, 0); }
+  to   { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+@keyframes fralib-reveal-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes fralib-reveal-scale {
+  from { opacity: 0; transform: scale(0.85); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+/* ─── Mask reveal (clip-path progressive) — IMMERSIVE_3D ─────────────── */
+@keyframes fralib-mask-reveal {
+  0%   { clip-path: inset(0 100% 0 0); opacity: 0; }
+  60%  { opacity: 1; }
+  100% { clip-path: inset(0 0 0 0); opacity: 1; }
+}
+
+/* ─── Float / Pulse glow — BOLD_ENERGY ──────────────────────────────── */
+@keyframes fralib-float {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50%      { transform: translate3d(0, -8px, 0); }
+}
+@keyframes fralib-pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 0 0 var(--glow-color, rgba(255, 255, 255, 0.5));
+    filter: drop-shadow(0 0 0 var(--glow-color, rgba(255, 255, 255, 0)));
+  }
+  50% {
+    box-shadow: 0 0 24px 8px var(--glow-color, rgba(255, 255, 255, 0.5));
+    filter: drop-shadow(0 0 12px var(--glow-color, rgba(255, 255, 255, 0.5)));
+  }
+}
+
+/* ─── Text shimmer — KINETIC ─────────────────────────────────────────── */
+@keyframes fralib-text-shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* ─── Scroll indicator bounce ────────────────────────────────────────── */
+@keyframes fralib-scroll-indicator-bounce {
+  0%   { transform: translateY(0);   opacity: 0.4; }
+  50%  { transform: translateY(8px); opacity: 1; }
+  100% { transform: translateY(0);   opacity: 0.4; }
+}
+
+/* ─── Utility classes (apply via data attributes) ───────────────────── */
+[data-fralib-anim="float"] {
+  animation: fralib-float 3.4s ease-in-out infinite;
+}
+[data-fralib-anim="pulse-glow"] {
+  animation: fralib-pulse-glow 2.4s ease-in-out infinite;
+}
+[data-fralib-anim="shimmer"] {
+  background: linear-gradient(
+    90deg,
+    var(--shimmer-from, #ffffff) 0%,
+    var(--shimmer-mid,  #f0f0f0) 50%,
+    var(--shimmer-from, #ffffff) 100%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+          background-clip: text;
+  -webkit-text-fill-color: transparent;
+          text-fill-color: transparent;
+  animation: fralib-text-shimmer 2.8s linear infinite;
+}
+[data-fralib-anim="mask-reveal"] {
+  animation: fralib-mask-reveal 1.2s cubic-bezier(0.65, 0, 0.35, 1) both;
+}
+[data-fralib-anim="indicator-bounce"] {
+  animation: fralib-scroll-indicator-bounce 1.6s ease-in-out infinite;
+}
+
+/* ─── Reusable utility mixins via classes ───────────────────────────── */
+.fralib-mask-reveal {
+  animation: fralib-mask-reveal 1.2s cubic-bezier(0.65, 0, 0.35, 1) both;
+}
+.fralib-float {
+  animation: fralib-float 3.4s ease-in-out infinite;
+}
+.fralib-pulse-glow {
+  animation: fralib-pulse-glow 2.4s ease-in-out infinite;
+}
+.fralib-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--shimmer-from, #ffffff) 0%,
+    var(--shimmer-mid,  #f0f0f0) 50%,
+    var(--shimmer-from, #ffffff) 100%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+          background-clip: text;
+  -webkit-text-fill-color: transparent;
+          text-fill-color: transparent;
+  animation: fralib-text-shimmer 2.8s linear infinite;
+}
+.fralib-indicator {
+  display: inline-block;
+  animation: fralib-scroll-indicator-bounce 1.6s ease-in-out infinite;
+}
+
+/* ─── Hooks that complement GSAP data-reveal (CSS fallback) ─────────── */
+[data-reveal] {
+  opacity: 0;
+  will-change: opacity, transform;
+}
+[data-reveal][data-revealed="true"] {
+  opacity: 1;
+}
+[data-reveal="up"][data-revealed="true"]    { transform: translate3d(0, 0, 0); }
+[data-reveal="down"][data-revealed="true"]  { transform: translate3d(0, 0, 0); }
+[data-reveal="left"][data-revealed="true"]  { transform: translate3d(0, 0, 0); }
+[data-reveal="right"][data-revealed="true"] { transform: translate3d(0, 0, 0); }
+[data-reveal="scale"][data-revealed="true"] { transform: scale(1); }
+
+/* ─── prefers-reduced-motion: desliga TUDO ──────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  [data-fralib-anim],
+  .fralib-mask-reveal,
+  .fralib-float,
+  .fralib-pulse-glow,
+  .fralib-shimmer,
+  .fralib-indicator {
+    animation: none !important;
+  }
+  [data-reveal] {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  /* Marcador global lido pelo runtime JS tambem */
+  html.fralib-reduced-motion * {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

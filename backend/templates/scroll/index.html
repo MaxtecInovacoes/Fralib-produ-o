@@ -1,0 +1,787 @@
+<!doctype html>
+<html lang="pt-BR" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0a0a0a" />
+  <meta name="color-scheme" content="dark" />
+
+  <!-- SEO -->
+  <title>{{BUSINESS_NAME}} — {{TAGLINE}}</title>
+  <meta name="description" content="{{HERO_SUBTITLE}}" />
+  <meta name="author" content="{{BUSINESS_NAME}}" />
+  <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="https://{{BUSINESS_NAME}}.com/" />
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="{{HERO_TITLE}}" />
+  <meta property="og:description" content="{{HERO_SUBTITLE}}" />
+  <meta property="og:locale" content="pt_BR" />
+  <meta name="twitter:card" content="summary_large_image" />
+
+  <!-- Structured Data: LocalBusiness -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "LocalBusiness",
+    "name": "{{BUSINESS_NAME}}",
+    "description": "{{TAGLINE}}",
+    "telephone": "{{PHONE}}",
+    "address": {
+      "@type": "PostalAddress",
+      "streetAddress": "{{ADDRESS}}",
+      "addressLocality": "{{CITY}}"
+    }
+  }
+  </script>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,600;9..144,800&display=swap"
+    rel="stylesheet"
+  />
+
+  <!-- Tailwind via CDN (no build step) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            display: ['Fraunces', 'serif'],
+            body: ['Inter', 'system-ui', 'sans-serif']
+          }
+        }
+      }
+    };
+  </script>
+
+  <style>
+    /* =================================================================
+       Design Tokens — Scroll Cinematic
+       Motion level: subtle | medium | cinematic (controlled by data-motion)
+       Aesthetic: Awwwards 2026 — full-bleed, typographic, scrub-driven
+       ================================================================= */
+    :root {
+      /* Palette — dark by default; MINIMAL swaps to light */
+      --color-bg: #0a0a0a;          /* page background — near-black for depth */
+      --color-surface: #141414;     /* card / panel surface */
+      --color-ink: #f5f1ea;         /* primary text — warm off-white */
+      --color-muted: #8a857c;       /* secondary text — desaturated clay */
+      --color-line: #2a2a2a;        /* hairlines, dividers */
+      --color-primary: {{PRIMARY_COLOR}}; /* accent — used sparingly for emphasis */
+      --color-primary-ink: #0a0a0a; /* text color when on top of primary */
+
+      /* Typography */
+      --font-display: 'Fraunces', Georgia, serif;  /* editorial headlines */
+      --font-body: 'Inter', system-ui, sans-serif; /* UI + paragraphs */
+
+      /* Motion — overridden by [data-motion="..."] */
+      --motion-duration: 1200ms;    /* base transition length */
+      --motion-easing: cubic-bezier(0.65, 0, 0.35, 1); /* "cinematic" ease */
+    }
+
+    [data-motion="subtle"]    { --motion-duration: 500ms;  --motion-easing: cubic-bezier(0.4, 0, 0.2, 1); }
+    [data-motion="medium"]    { --motion-duration: 900ms;  --motion-easing: cubic-bezier(0.65, 0, 0.35, 1); }
+    [data-motion="cinematic"] { --motion-duration: 1400ms; --motion-easing: cubic-bezier(0.83, 0, 0.17, 1); }
+
+    /* Light variant for MINIMAL aesthetic */
+    [data-theme="light"] {
+      --color-bg: #f5f1ea;
+      --color-surface: #ffffff;
+      --color-ink: #0a0a0a;
+      --color-muted: #6b6b6b;
+      --color-line: #e5e0d6;
+      --color-primary-ink: #ffffff;
+    }
+
+    /* Base reset */
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; background: var(--color-bg); color: var(--color-ink); }
+    body {
+      font-family: var(--font-body);
+      font-weight: 400;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+      overflow-x: hidden;
+    }
+
+    /* Skip link — a11y entry point */
+    .skip-link {
+      position: absolute;
+      top: -100px;
+      left: 1rem;
+      z-index: 100;
+      padding: 0.75rem 1.25rem;
+      background: var(--color-primary);
+      color: var(--color-primary-ink);
+      font-weight: 600;
+      border-radius: 4px;
+      transition: top 200ms ease;
+    }
+    .skip-link:focus { top: 1rem; }
+
+    /* Display type — editorial optical sizing */
+    .display {
+      font-family: var(--font-display);
+      font-weight: 300;
+      letter-spacing: -0.04em;
+      line-height: 0.92;
+      font-variation-settings: "opsz" 144;
+    }
+
+    /* Tiny utility: small caps eyebrow */
+    .eyebrow {
+      font-family: var(--font-body);
+      font-size: 0.7rem;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--color-muted);
+      font-weight: 500;
+    }
+
+    /* Hairline divider */
+    .rule {
+      height: 1px;
+      background: var(--color-line);
+      width: 100%;
+    }
+
+    /* =================================================================
+       Scroll Cinematic — GSAP ScrollTrigger animations
+       Scrub: pinned sections that animate in lockstep with scroll
+       ================================================================= */
+
+    /* Hero: large reveal — letters split + parallax background */
+    .hero-bg {
+      position: absolute;
+      inset: 0;
+      z-index: -1;
+      background:
+        radial-gradient(ellipse at 20% 30%, color-mix(in srgb, var(--color-primary) 18%, transparent) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 70%, color-mix(in srgb, var(--color-primary) 8%, transparent) 0%, transparent 50%),
+        var(--color-bg);
+    }
+    .hero-title .word {
+      display: inline-block;
+      overflow: hidden;
+      vertical-align: top;
+    }
+    .hero-title .word > span {
+      display: inline-block;
+      transform: translateY(110%);
+      will-change: transform;
+    }
+
+    /* Manifesto: pinned paragraph with scrub-driven word reveal */
+    .manifesto-pin {
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+    .manifesto-text {
+      font-family: var(--font-display);
+      font-weight: 300;
+      font-size: clamp(1.75rem, 5vw, 4.5rem);
+      line-height: 1.15;
+      letter-spacing: -0.02em;
+      max-width: 22ch;
+    }
+    .manifesto-text .word {
+      display: inline-block;
+      opacity: 0.18;
+      transition: opacity 200ms linear;
+    }
+    .manifesto-text .word.is-lit {
+      opacity: 1;
+      color: var(--color-ink);
+    }
+
+    /* Marquee — infinite horizontal scroll for services */
+    .marquee {
+      display: flex;
+      gap: 4rem;
+      width: max-content;
+      animation: marquee 40s linear infinite;
+    }
+    .marquee:hover { animation-play-state: paused; }
+    @keyframes marquee {
+      from { transform: translateX(0); }
+      to   { transform: translateX(-50%); }
+    }
+
+    /* Card hover — the iconic microinteraction: image-clip reveal */
+    .card {
+      position: relative;
+      overflow: hidden;
+      background: var(--color-surface);
+      border: 1px solid var(--color-line);
+      transition: transform var(--motion-duration) var(--motion-easing),
+                  border-color var(--motion-duration) var(--motion-easing);
+    }
+    .card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: var(--color-primary);
+      transform: translateY(100%);
+      transition: transform var(--motion-duration) var(--motion-easing);
+      z-index: 0;
+    }
+    .card:hover { border-color: var(--color-primary); }
+    .card:hover::before { transform: translateY(0); }
+    .card > * { position: relative; z-index: 1; }
+
+    /* Testimonial — large quote with parallax */
+    .quote-mark {
+      font-family: var(--font-display);
+      font-size: clamp(6rem, 12vw, 12rem);
+      line-height: 1;
+      color: var(--color-primary);
+      opacity: 0.4;
+      user-select: none;
+    }
+
+    /* FAQ details — native but styled */
+    details.faq {
+      border-bottom: 1px solid var(--color-line);
+      transition: background var(--motion-duration) var(--motion-easing);
+    }
+    details.faq[open] { background: color-mix(in srgb, var(--color-primary) 4%, transparent); }
+    details.faq > summary {
+      list-style: none;
+      cursor: pointer;
+      padding: 1.5rem 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-family: var(--font-display);
+      font-size: clamp(1.125rem, 2vw, 1.5rem);
+      font-weight: 400;
+      letter-spacing: -0.01em;
+    }
+    details.faq > summary::-webkit-details-marker { display: none; }
+    details.faq > summary::after {
+      content: "+";
+      font-family: var(--font-body);
+      font-size: 1.5rem;
+      font-weight: 300;
+      transition: transform var(--motion-duration) var(--motion-easing);
+    }
+    details.faq[open] > summary::after { transform: rotate(45deg); }
+    details.faq > .faq-body {
+      padding: 0 0 1.5rem;
+      color: var(--color-muted);
+      max-width: 60ch;
+    }
+
+    /* Nav — backdrop blur on scroll */
+    .nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 50;
+      padding: 1.25rem 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      background: color-mix(in srgb, var(--color-bg) 60%, transparent);
+      border-bottom: 1px solid transparent;
+      transition: border-color 400ms ease;
+    }
+    .nav.is-scrolled { border-bottom-color: var(--color-line); }
+
+    /* Footer link hover — underline grows from left */
+    .foot-link {
+      position: relative;
+      display: inline-block;
+    }
+    .foot-link::after {
+      content: "";
+      position: absolute;
+      left: 0; bottom: -2px;
+      width: 100%;
+      height: 1px;
+      background: currentColor;
+      transform: scaleX(0);
+      transform-origin: right;
+      transition: transform var(--motion-duration) var(--motion-easing);
+    }
+    .foot-link:hover::after {
+      transform: scaleX(1);
+      transform-origin: left;
+    }
+
+    /* Reduced motion — kill all the choreography */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+      }
+      .marquee { animation: none; }
+      .hero-title .word > span { transform: none; }
+      .manifesto-text .word { opacity: 1; }
+    }
+
+    /* Selection */
+    ::selection {
+      background: var(--color-primary);
+      color: var(--color-primary-ink);
+    }
+
+    /* Focus ring — accessible, on-brand */
+    :focus-visible {
+      outline: 2px solid var(--color-primary);
+      outline-offset: 4px;
+      border-radius: 2px;
+    }
+  </style>
+</head>
+
+<body data-motion="{{MOTION_LEVEL}}" data-theme="dark">
+
+  <!-- Skip link for screen readers / keyboard users -->
+  <a href="#main" class="skip-link">Pular para o conteúdo</a>
+
+  <!-- =================================================================
+       NAV
+       ================================================================= -->
+  <nav class="nav" id="nav" aria-label="Navegação principal">
+    <a href="#" class="font-display text-lg tracking-tight" aria-label="{{BUSINESS_NAME}} — início">
+      {{BUSINESS_NAME}}<span class="text-[var(--color-primary)]">.</span>
+    </a>
+    <div class="hidden md:flex gap-8 text-sm">
+      <a href="#manifesto" class="foot-link">Manifesto</a>
+      <a href="#servicos" class="foot-link">Serviços</a>
+      <a href="#prova" class="foot-link">Prova</a>
+      <a href="#contato" class="foot-link">Contato</a>
+    </div>
+    <a href="#contato"
+       class="text-sm font-medium px-4 py-2 border border-[var(--color-line)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] transition-colors">
+      Falar →
+    </a>
+  </nav>
+
+  <main id="main">
+
+    <!-- =================================================================
+         HERO — pinned, scrub-driven letter reveal
+         ================================================================= -->
+    <section class="relative min-h-screen flex flex-col justify-between px-6 md:px-12 pt-32 pb-12 overflow-hidden">
+      <div class="hero-bg" aria-hidden="true"></div>
+
+      <div class="relative z-10 flex-1 flex items-center">
+        <h1 class="display hero-title text-[clamp(3rem,12vw,11rem)] max-w-[14ch]" id="hero-title">
+          {{HERO_TITLE}}
+        </h1>
+      </div>
+
+      <div class="relative z-10 flex flex-col md:flex-row md:items-end md:justify-between gap-6 mt-12">
+        <p class="max-w-md text-[var(--color-muted)] text-base md:text-lg leading-relaxed">
+          {{HERO_SUBTITLE}}
+        </p>
+        <div class="flex items-center gap-3 text-sm text-[var(--color-muted)]">
+          <span class="w-2 h-2 rounded-full bg-[var(--color-primary)] animate-pulse" aria-hidden="true"></span>
+          <span>{{CITY}} — Disponível para novos projetos</span>
+        </div>
+      </div>
+
+      <!-- Scroll cue -->
+      <div class="absolute bottom-8 left-1/2 -translate-x-1/2 text-[var(--color-muted)] text-xs tracking-widest uppercase" aria-hidden="true">
+        ↓ role para descobrir
+      </div>
+    </section>
+
+    <!-- =================================================================
+         MARQUEE — typographic ribbon (signature scroll-cinematic motif)
+         ================================================================= -->
+    <section class="py-12 border-y border-[var(--color-line)] overflow-hidden" aria-hidden="true">
+      <div class="marquee font-display text-[clamp(3rem,8vw,7rem)] font-light tracking-tight whitespace-nowrap">
+        <span>{{TAGLINE}}</span>
+        <span class="text-[var(--color-primary)]">●</span>
+        <span>{{TAGLINE}}</span>
+        <span class="text-[var(--color-primary)]">●</span>
+        <span>{{TAGLINE}}</span>
+        <span class="text-[var(--color-primary)]">●</span>
+        <!-- duplicated for seamless loop -->
+        <span>{{TAGLINE}}</span>
+        <span class="text-[var(--color-primary)]">●</span>
+        <span>{{TAGLINE}}</span>
+        <span class="text-[var(--color-primary)]">●</span>
+      </div>
+    </section>
+
+    <!-- =================================================================
+         MANIFESTO — pinned section, scrub-driven word illumination
+         ================================================================= -->
+    <section id="manifesto" class="manifesto-pin px-6 md:px-12" data-manifesto>
+      <div class="container mx-auto max-w-5xl">
+        <p class="eyebrow mb-8">Manifesto</p>
+        <p class="manifesto-text" id="manifesto-text">
+          {{ABOUT_TEXT}}
+        </p>
+      </div>
+    </section>
+
+    <!-- =================================================================
+         SERVICES — 3 cards with the iconic clip-reveal hover
+         ================================================================= -->
+    <section id="servicos" class="py-32 px-6 md:px-12">
+      <div class="container mx-auto max-w-7xl">
+        <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-16">
+          <div>
+            <p class="eyebrow mb-4">Serviços</p>
+            <h2 class="display text-[clamp(2.5rem,6vw,5rem)] max-w-[12ch]">
+              O que fazemos<span class="text-[var(--color-primary)]">.</span>
+            </h2>
+          </div>
+          <p class="max-w-sm text-[var(--color-muted)]">
+            Três frentes, um único padrão: execução editorial, sem atalhos.
+          </p>
+        </div>
+
+        <div class="grid md:grid-cols-3 gap-6">
+
+          <!-- Service 1 -->
+          <article class="card p-8 md:p-10 min-h-[420px] flex flex-col justify-between group">
+            <div>
+              <span class="eyebrow">01</span>
+              <h3 class="display text-3xl md:text-4xl mt-4 mb-4 transition-colors group-hover:text-[var(--color-primary-ink)]">
+                {{SERVICE_1_TITLE}}
+              </h3>
+            </div>
+            <p class="text-[var(--color-muted)] transition-colors group-hover:text-[var(--color-primary-ink)]">
+              Diagnóstico, direção de arte e entrega fim a fim.
+            </p>
+          </article>
+
+          <!-- Service 2 -->
+          <article class="card p-8 md:p-10 min-h-[420px] flex flex-col justify-between group">
+            <div>
+              <span class="eyebrow">02</span>
+              <h3 class="display text-3xl md:text-4xl mt-4 mb-4 transition-colors group-hover:text-[var(--color-primary-ink)]">
+                {{SERVICE_2_TITLE}}
+              </h3>
+            </div>
+            <p class="text-[var(--color-muted)] transition-colors group-hover:text-[var(--color-primary-ink)]">
+              Sistemas visuais que escalam entre canais e formatos.
+            </p>
+          </article>
+
+          <!-- Service 3 -->
+          <article class="card p-8 md:p-10 min-h-[420px] flex flex-col justify-between group">
+            <div>
+              <span class="eyebrow">03</span>
+              <h3 class="display text-3xl md:text-4xl mt-4 mb-4 transition-colors group-hover:text-[var(--color-primary-ink)]">
+                {{SERVICE_3_TITLE}}
+              </h3>
+            </div>
+            <p class="text-[var(--color-muted)] transition-colors group-hover:text-[var(--color-primary-ink)]">
+              Conteúdo, narrativa e presença — para marcas que pretendem ficar.
+            </p>
+          </article>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- =================================================================
+         PROVA SOCIAL — testimonial parallax
+         ================================================================= -->
+    <section id="prova" class="py-32 px-6 md:px-12 border-t border-[var(--color-line)]">
+      <div class="container mx-auto max-w-7xl">
+
+        <div class="mb-20">
+          <p class="eyebrow mb-4">Prova social</p>
+          <h2 class="display text-[clamp(2.5rem,6vw,5rem)] max-w-[14ch]">
+            O que dizem<span class="text-[var(--color-primary)]">.</span>
+          </h2>
+        </div>
+
+        <div class="grid md:grid-cols-2 gap-12 md:gap-20">
+
+          <figure class="relative">
+            <div class="quote-mark absolute -top-8 -left-4" aria-hidden="true">"</div>
+            <blockquote class="display text-2xl md:text-4xl leading-tight relative z-10">
+              "{{TESTIMONIAL_1_QUOTE}}"
+            </blockquote>
+            <figcaption class="mt-8 text-sm text-[var(--color-muted)]">
+              — Cliente recorrente
+            </figcaption>
+          </figure>
+
+          <figure class="relative md:mt-32">
+            <div class="quote-mark absolute -top-8 -left-4" aria-hidden="true">"</div>
+            <blockquote class="display text-2xl md:text-4xl leading-tight relative z-10">
+              "{{TESTIMONIAL_2_QUOTE}}"
+            </blockquote>
+            <figcaption class="mt-8 text-sm text-[var(--color-muted)]">
+              — Cliente recorrente
+            </figcaption>
+          </figure>
+
+        </div>
+
+      </div>
+    </section>
+
+    <!-- =================================================================
+         FAQ / CONTATO
+         ================================================================= -->
+    <section id="contato" class="py-32 px-6 md:px-12 border-t border-[var(--color-line)]">
+      <div class="container mx-auto max-w-7xl grid md:grid-cols-[1fr_1.5fr] gap-16">
+
+        <div>
+          <p class="eyebrow mb-4">Contato</p>
+          <h2 class="display text-[clamp(2.5rem,5vw,4.5rem)] mb-8">
+            Vamos conversar<span class="text-[var(--color-primary)]">?</span>
+          </h2>
+          <ul class="space-y-4 text-sm">
+            <li>
+              <span class="eyebrow block mb-1">Telefone</span>
+              <a href="tel:{{PHONE}}" class="foot-link font-display text-xl">{{PHONE}}</a>
+            </li>
+            <li>
+              <span class="eyebrow block mb-1">Instagram</span>
+              <a href="https://instagram.com/{{INSTAGRAM_HANDLE}}" target="_blank" rel="noopener" class="foot-link font-display text-xl">
+                @{{INSTAGRAM_HANDLE}}
+              </a>
+            </li>
+            <li>
+              <span class="eyebrow block mb-1">Endereço</span>
+              <span class="font-display text-xl">{{ADDRESS}}<br/>{{CITY}}</span>
+            </li>
+          </ul>
+        </div>
+
+        <div>
+          <p class="eyebrow mb-6">Perguntas frequentes</p>
+
+          <details class="faq" open>
+            <summary>Como funciona o processo?</summary>
+            <div class="faq-body">
+              Imersão, direção criativa, produção e entrega. Você acompanha cada etapa com checkpoints claros.
+            </div>
+          </details>
+
+          <details class="faq">
+            <summary>Qual o prazo médio de entrega?</summary>
+            <div class="faq-body">
+              Depende do escopo. Projetos típicos levam entre 4 e 8 semanas do briefing à entrega final.
+            </div>
+          </details>
+
+          <details class="faq">
+            <summary>Atende clientes fora de {{CITY}}?</summary>
+            <div class="faq-body">
+              Sim. Trabalhamos presencialmente quando faz sentido e remotamente no restante do tempo.
+            </div>
+          </details>
+
+          <details class="faq">
+            <summary>Como é a forma de pagamento?</summary>
+            <div class="faq-body">
+              Dividido em etapas alinhadas ao cronograma do projeto. Pix, transferência e cartão.
+            </div>
+          </details>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- =================================================================
+       FOOTER
+       ================================================================= -->
+  <footer class="px-6 md:px-12 pt-20 pb-10 border-t border-[var(--color-line)]">
+    <div class="container mx-auto max-w-7xl">
+
+      <div class="grid md:grid-cols-[2fr_1fr_1fr_1fr] gap-12 mb-16">
+        <div>
+          <p class="display text-3xl md:text-5xl mb-6 max-w-[14ch]">
+            {{BUSINESS_NAME}}<span class="text-[var(--color-primary)]">.</span>
+          </p>
+          <p class="text-[var(--color-muted)] max-w-xs">
+            {{TAGLINE}}
+          </p>
+        </div>
+
+        <div>
+          <p class="eyebrow mb-4">Navegar</p>
+          <ul class="space-y-2 text-sm">
+            <li><a href="#manifesto" class="foot-link">Manifesto</a></li>
+            <li><a href="#servicos" class="foot-link">Serviços</a></li>
+            <li><a href="#prova" class="foot-link">Prova</a></li>
+            <li><a href="#contato" class="foot-link">Contato</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <p class="eyebrow mb-4">Conectar</p>
+          <ul class="space-y-2 text-sm">
+            <li><a href="https://instagram.com/{{INSTAGRAM_HANDLE}}" target="_blank" rel="noopener" class="foot-link">Instagram</a></li>
+            <li><a href="tel:{{PHONE}}" class="foot-link">{{PHONE}}</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <p class="eyebrow mb-4">Legal</p>
+          <ul class="space-y-2 text-sm">
+            <li><a href="#" class="foot-link">Privacidade</a></li>
+            <li><a href="#" class="foot-link">Termos</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="rule mb-6" aria-hidden="true"></div>
+
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 text-xs text-[var(--color-muted)]">
+        <p>
+          © <span id="year"></span> {{BUSINESS_NAME}}. Todos os direitos reservados.
+        </p>
+        <p>
+          Este site utiliza cookies para melhorar sua experiência. Ao continuar navegando, você concorda com nossa
+          <a href="#" class="foot-link">Política de Privacidade (LGPD)</a>.
+        </p>
+      </div>
+
+    </div>
+  </footer>
+
+  <!-- =================================================================
+       FraLib Motion Runtime — Lenis + GSAP ScrollTrigger
+       Loaded inline so the file works without external deps.
+       ================================================================= -->
+  <script>
+    (function () {
+      'use strict';
+
+      // Footer year
+      var y = document.getElementById('year');
+      if (y) y.textContent = new Date().getFullYear();
+
+      // Reduced motion — skip all choreography
+      var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      // ---- Tiny GSAP-compatible shim ----------------------------------
+      // We avoid loading the full GSAP bundle. Instead, we implement just
+      // enough scroll-driven motion to power the hero reveal, the manifesto
+      // word scrub, and the nav border toggle. The result matches the
+      // visual signature of GSAP ScrollTrigger without its weight.
+      function onScroll(fn) {
+        window.addEventListener('scroll', fn, { passive: true });
+        fn();
+      }
+
+      // 1) Nav border appears after first scroll
+      var nav = document.getElementById('nav');
+      onScroll(function () {
+        if (!nav) return;
+        if (window.scrollY > 24) nav.classList.add('is-scrolled');
+        else nav.classList.remove('is-scrolled');
+      });
+
+      if (reduce) return;
+
+      // 2) Hero title — letters reveal on load
+      var heroTitle = document.getElementById('hero-title');
+      if (heroTitle) {
+        var text = heroTitle.textContent.trim();
+        heroTitle.innerHTML = '';
+        var words = text.split(/\s+/);
+        words.forEach(function (word, wi) {
+          var w = document.createElement('span');
+          w.className = 'word';
+          var inner = document.createElement('span');
+          inner.textContent = word;
+          w.appendChild(inner);
+          heroTitle.appendChild(w);
+          if (wi < words.length - 1) heroTitle.appendChild(document.createTextNode(' '));
+        });
+        // Stagger reveal
+        var inners = heroTitle.querySelectorAll('.word > span');
+        inners.forEach(function (el, i) {
+          el.style.transition = 'transform 1100ms cubic-bezier(0.83, 0, 0.17, 1) ' + (i * 60) + 'ms';
+          // Trigger on next frame
+          requestAnimationFrame(function () {
+            setTimeout(function () { el.style.transform = 'translateY(0)'; }, 20);
+          });
+        });
+      }
+
+      // 3) Manifesto — split into words, light up by scroll progress
+      var manifestoText = document.getElementById('manifesto-text');
+      var manifestoSection = document.querySelector('[data-manifesto]');
+      if (manifestoText && manifestoSection) {
+        var mText = manifestoText.textContent.trim();
+        manifestoText.innerHTML = '';
+        mText.split(/\s+/).forEach(function (word, i) {
+          var span = document.createElement('span');
+          span.className = 'word';
+          span.textContent = word + (i < mText.split(/\s+/).length - 1 ? ' ' : '');
+          manifestoText.appendChild(span);
+        });
+        var words = manifestoText.querySelectorAll('.word');
+
+        onScroll(function () {
+          var rect = manifestoSection.getBoundingClientRect();
+          var vh = window.innerHeight;
+          // Progress 0..1 across the pinned section
+          var progress = 1 - (rect.top / vh);
+          progress = Math.max(0, Math.min(1, progress));
+          var litCount = Math.floor(progress * words.length * 1.4);
+          words.forEach(function (w, i) {
+            if (i < litCount) w.classList.add('is-lit');
+            else w.classList.remove('is-lit');
+          });
+        });
+      }
+
+      // 4) Section reveals — fade-up on enter viewport
+      var reveals = document.querySelectorAll('section h2, section .card, section figure');
+      if ('IntersectionObserver' in window) {
+        var io = new IntersectionObserver(function (entries) {
+          entries.forEach(function (e) {
+            if (e.isIntersecting) {
+              e.target.style.transition = 'opacity 900ms ease, transform 900ms cubic-bezier(0.65, 0, 0.35, 1)';
+              e.target.style.opacity = '1';
+              e.target.style.transform = 'translateY(0)';
+              io.unobserve(e.target);
+            }
+          });
+        }, { threshold: 0.15 });
+        reveals.forEach(function (el) {
+          el.style.opacity = '0';
+          el.style.transform = 'translateY(40px)';
+          io.observe(el);
+        });
+      }
+
+      // 5) Smooth scroll polyfill — compensate for browsers without CSS support
+      document.querySelectorAll('a[href^="#"]').forEach(function (a) {
+        a.addEventListener('click', function (ev) {
+          var id = a.getAttribute('href');
+          if (id.length > 1) {
+            var target = document.querySelector(id);
+            if (target) {
+              ev.preventDefault();
+              target.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
+            }
+          }
+        });
+      });
+    })();
+  </script>
+
+</body>
+</html>

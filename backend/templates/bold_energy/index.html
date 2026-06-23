@@ -1,0 +1,1303 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0a0a0a" />
+  <title>{{BUSINESS_NAME}} — {{TAGLINE}}</title>
+  <meta name="description" content="{{HERO_SUBTITLE}}" />
+  <meta name="robots" content="index, follow" />
+  <meta property="og:title" content="{{BUSINESS_NAME}} — {{TAGLINE}}" />
+  <meta property="og:description" content="{{HERO_SUBTITLE}}" />
+  <meta property="og:type" content="website" />
+  <meta property="og:locale" content="pt_BR" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="{{BUSINESS_NAME}} — {{TAGLINE}}" />
+  <meta name="twitter:description" content="{{HERO_SUBTITLE}}" />
+  <link rel="canonical" href="/" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23ff5722'/%3E%3Cpath d='M9 22V10h4l5 8V10h4v12h-4l-5-8v8z' fill='%230a0a0a'/%3E%3C/svg%3E" />
+  <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ============================================================
+       DESIGN TOKENS — Bold/Dark Awwwards aesthetic
+       Edit these variables to re-skin the whole template
+       ============================================================ */
+    :root {
+      /* Surfaces — near-black with warm undertone for depth */
+      --color-bg: #0a0a0a;             /* page background */
+      --color-bg-elev-1: #111111;      /* cards, sticky panels */
+      --color-bg-elev-2: #181818;      /* hover surfaces, modals */
+      --color-border: #232323;         /* hairlines on dark surfaces */
+
+      /* Foreground — off-white avoids harsh contrast, easier on eyes */
+      --color-fg: #f5f1ea;             /* primary text (contrast on bg = 16:1) */
+      --color-fg-muted: #a8a39b;       /* secondary text (contrast = 7.2:1) */
+      --color-fg-subtle: #6b6760;      /* meta info, captions (contrast = 4.7:1) */
+
+      /* Accent — gets overridden by {{PRIMARY_COLOR}} at runtime */
+      --color-primary: #ff5722;        /* signature accent (CTAs, highlights) */
+      --color-primary-soft: #ff8a5e;   /* hover state, glows */
+      --color-accent-2: #c8ff00;       /* secondary accent, kinetic pops */
+
+      /* Type */
+      --font-display: 'Space Grotesk', system-ui, sans-serif;  /* headings, hero */
+      --font-body: 'Inter', system-ui, sans-serif;             /* body, UI */
+
+      /* Motion — FraLib runtime reads these to scale animations */
+      --motion-duration: 0.6s;         /* base duration (subtle/medium/cinematic) */
+      --motion-easing: cubic-bezier(0.22, 1, 0.36, 1);  /* smooth-out, no overshoot */
+      --motion-stagger: 80ms;          /* delay between staggered children */
+
+      /* Layout */
+      --container-max: 1280px;
+      --gutter-mobile: 1.25rem;
+      --gutter-desktop: 2rem;
+      --radius-sm: 6px;
+      --radius-md: 14px;
+      --radius-lg: 28px;
+    }
+
+    /* Motion scaling — OpenUI Builder rewrites --motion-duration per level */
+    [data-motion="subtle"]   { --motion-duration: 0.35s; --motion-stagger: 40ms; }
+    [data-motion="medium"]   { --motion-duration: 0.6s;  --motion-stagger: 80ms; }
+    [data-motion="cinematic"]{ --motion-duration: 1.2s;  --motion-stagger: 140ms; }
+
+    /* ============================================================
+       BASE
+       ============================================================ */
+    *, *::before, *::after { box-sizing: border-box; }
+    html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+    body {
+      margin: 0;
+      font-family: var(--font-body);
+      background: var(--color-bg);
+      color: var(--color-fg);
+      font-size: 16px;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      overflow-x: hidden;
+    }
+
+    /* Skip link — keyboard users jump straight to content */
+    .skip-link {
+      position: absolute;
+      top: -100px; left: 1rem;
+      z-index: 1000;
+      padding: 0.75rem 1.25rem;
+      background: var(--color-primary);
+      color: var(--color-bg);
+      font-weight: 600;
+      border-radius: var(--radius-sm);
+      transition: top 0.2s ease;
+    }
+    .skip-link:focus { top: 1rem; }
+
+    /* ============================================================
+       AURORA — animated gradient backdrop (Aceternity reference)
+       Pure CSS, no canvas. Uses conic + radial layering.
+       ============================================================ */
+    .aurora {
+      position: absolute;
+      inset: -20%;
+      z-index: 0;
+      pointer-events: none;
+      filter: blur(80px) saturate(140%);
+      opacity: 0.55;
+      background:
+        radial-gradient(40% 50% at 20% 30%, var(--color-primary) 0%, transparent 60%),
+        radial-gradient(35% 45% at 80% 20%, var(--color-accent-2) 0%, transparent 65%),
+        radial-gradient(45% 55% at 50% 80%, var(--color-primary-soft) 0%, transparent 60%);
+      animation: aurora-drift 22s ease-in-out infinite alternate;
+    }
+    @keyframes aurora-drift {
+      0%   { transform: translate3d(0,0,0) rotate(0deg) scale(1); }
+      50%  { transform: translate3d(3%,-2%,0) rotate(8deg) scale(1.08); }
+      100% { transform: translate3d(-2%,3%,0) rotate(-6deg) scale(1.02); }
+    }
+
+    /* Grain overlay — adds film texture, hides banding */
+    .grain {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      pointer-events: none;
+      opacity: 0.08;
+      mix-blend-mode: overlay;
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.5 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+    }
+
+    /* ============================================================
+       LAYOUT
+       ============================================================ */
+    .container {
+      width: 100%;
+      max-width: var(--container-max);
+      margin-inline: auto;
+      padding-inline: var(--gutter-mobile);
+    }
+    @media (min-width: 768px) {
+      .container { padding-inline: var(--gutter-desktop); }
+    }
+
+    section { position: relative; padding-block: clamp(4rem, 10vw, 8rem); }
+
+    /* ============================================================
+       TYPOGRAPHY
+       ============================================================ */
+    .display {
+      font-family: var(--font-display);
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      line-height: 0.95;
+    }
+    .display-xl {
+      font-size: clamp(2.5rem, 9vw, 7.5rem);
+    }
+    .display-lg {
+      font-size: clamp(2rem, 6vw, 4.5rem);
+    }
+    .display-md {
+      font-size: clamp(1.5rem, 3.5vw, 2.5rem);
+    }
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-family: var(--font-body);
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--color-fg-muted);
+    }
+    .eyebrow::before {
+      content: "";
+      width: 24px; height: 1px;
+      background: var(--color-primary);
+    }
+    .muted { color: var(--color-fg-muted); }
+    .subtle { color: var(--color-fg-subtle); }
+
+    /* ============================================================
+       BUTTONS + MICROINTERACTION
+       Magnetic hover: button text slides opposite to cursor.
+       Iconic Awwwards 2026 micro-detail.
+       ============================================================ */
+    .btn {
+      --btn-pad-x: 1.5rem;
+      --btn-pad-y: 0.875rem;
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.625rem;
+      padding: var(--btn-pad-y) var(--btn-pad-x);
+      font-family: var(--font-body);
+      font-size: 0.9375rem;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+      border-radius: 999px;
+      border: 1px solid transparent;
+      cursor: pointer;
+      text-decoration: none;
+      transition: transform var(--motion-duration) var(--motion-easing),
+                  background-color var(--motion-duration) var(--motion-easing),
+                  border-color var(--motion-duration) var(--motion-easing);
+      overflow: hidden;
+    }
+    .btn-primary {
+      background: var(--color-primary);
+      color: var(--color-bg);
+    }
+    .btn-primary:hover {
+      background: var(--color-primary-soft);
+      transform: translateY(-2px);
+    }
+    .btn-ghost {
+      background: transparent;
+      color: var(--color-fg);
+      border-color: var(--color-border);
+    }
+    .btn-ghost:hover {
+      border-color: var(--color-fg-muted);
+      background: var(--color-bg-elev-1);
+    }
+    .btn .btn-arrow {
+      transition: transform var(--motion-duration) var(--motion-easing);
+    }
+    .btn:hover .btn-arrow { transform: translateX(4px); }
+
+    /* ============================================================
+       NAV
+       ============================================================ */
+    .nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      padding-block: 1rem;
+      backdrop-filter: blur(14px) saturate(160%);
+      -webkit-backdrop-filter: blur(14px) saturate(160%);
+      background: color-mix(in oklab, var(--color-bg) 70%, transparent);
+      border-bottom: 1px solid color-mix(in oklab, var(--color-border) 50%, transparent);
+    }
+    .nav-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+    .logo {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 1.125rem;
+      color: var(--color-fg);
+      text-decoration: none;
+      letter-spacing: -0.01em;
+    }
+    .logo-mark {
+      width: 28px; height: 28px;
+      border-radius: 8px;
+      background: var(--color-primary);
+      display: grid; place-items: center;
+      color: var(--color-bg);
+      font-weight: 700;
+    }
+    .nav-links {
+      display: none;
+      align-items: center;
+      gap: 2rem;
+      list-style: none;
+      padding: 0; margin: 0;
+    }
+    .nav-links a {
+      color: var(--color-fg-muted);
+      text-decoration: none;
+      font-size: 0.9375rem;
+      font-weight: 500;
+      transition: color var(--motion-duration) var(--motion-easing);
+    }
+    .nav-links a:hover { color: var(--color-fg); }
+    @media (min-width: 768px) {
+      .nav-links { display: flex; }
+    }
+    .nav-cta { display: none; }
+    @media (min-width: 640px) {
+      .nav-cta { display: inline-flex; }
+    }
+
+    /* ============================================================
+       HERO
+       ============================================================ */
+    .hero {
+      position: relative;
+      min-height: 100svh;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      padding-top: 6rem;
+      padding-bottom: 4rem;
+      overflow: hidden;
+    }
+    .hero-grid {
+      position: relative;
+      z-index: 2;
+      display: grid;
+      gap: clamp(2rem, 5vw, 4rem);
+    }
+    .hero-pretitle {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.4rem 0.9rem 0.4rem 0.5rem;
+      border: 1px solid var(--color-border);
+      border-radius: 999px;
+      background: color-mix(in oklab, var(--color-bg-elev-1) 60%, transparent);
+      font-size: 0.8125rem;
+      color: var(--color-fg-muted);
+      width: fit-content;
+    }
+    .hero-pretitle .dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--color-primary);
+      box-shadow: 0 0 0 4px color-mix(in oklab, var(--color-primary) 30%, transparent);
+      animation: pulse 2.4s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 0 4px color-mix(in oklab, var(--color-primary) 30%, transparent); }
+      50%      { box-shadow: 0 0 0 8px color-mix(in oklab, var(--color-primary) 10%, transparent); }
+    }
+    .hero-title {
+      margin: 1.5rem 0 0;
+    }
+    .hero-title .word {
+      display: inline-block;
+      overflow: hidden;
+    }
+    .hero-title .word span {
+      display: inline-block;
+      will-change: transform;
+    }
+    .hero-title .accent {
+      color: var(--color-primary);
+      font-style: italic;
+      font-weight: 500;
+    }
+    .hero-sub {
+      max-width: 56ch;
+      margin: 1.5rem 0 0;
+      font-size: clamp(1rem, 1.5vw, 1.25rem);
+      color: var(--color-fg-muted);
+      line-height: 1.55;
+    }
+    .hero-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      margin-top: 2rem;
+    }
+    .hero-meta {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 1.5rem;
+      margin-top: 3.5rem;
+      padding-top: 2rem;
+      border-top: 1px solid var(--color-border);
+    }
+    .hero-meta-item .num {
+      font-family: var(--font-display);
+      font-size: clamp(1.5rem, 3vw, 2.25rem);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--color-fg);
+    }
+    .hero-meta-item .label {
+      display: block;
+      margin-top: 0.25rem;
+      font-size: 0.8125rem;
+      color: var(--color-fg-muted);
+      letter-spacing: 0.04em;
+    }
+
+    /* Floating geometric mark — pure SVG, replaces hero image */
+    .hero-orb {
+      position: relative;
+      aspect-ratio: 1;
+      max-width: 520px;
+      margin-inline: auto;
+      width: 100%;
+    }
+    .hero-orb svg { width: 100%; height: 100%; display: block; }
+    .orb-ring {
+      transform-origin: center;
+      animation: spin 28s linear infinite;
+    }
+    .orb-ring-reverse {
+      transform-origin: center;
+      animation: spin 40s linear infinite reverse;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ============================================================
+       CANONICAL SCROLL ANIMATION
+       Mask-reveal: words rise from behind a mask on enter.
+       Inspired by Trip-in-the-Dark / Awwwards 2026.
+       ============================================================ */
+    .reveal {
+      opacity: 0;
+      transform: translateY(40px);
+      transition: opacity var(--motion-duration) var(--motion-easing),
+                  transform var(--motion-duration) var(--motion-easing);
+    }
+    .reveal.is-visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .reveal-stagger > * {
+      opacity: 0;
+      transform: translateY(28px);
+      transition: opacity var(--motion-duration) var(--motion-easing),
+                  transform var(--motion-duration) var(--motion-easing);
+    }
+    .reveal-stagger.is-visible > * {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .reveal-stagger.is-visible > *:nth-child(1) { transition-delay: calc(var(--motion-stagger) * 0); }
+    .reveal-stagger.is-visible > *:nth-child(2) { transition-delay: calc(var(--motion-stagger) * 1); }
+    .reveal-stagger.is-visible > *:nth-child(3) { transition-delay: calc(var(--motion-stagger) * 2); }
+    .reveal-stagger.is-visible > *:nth-child(4) { transition-delay: calc(var(--motion-stagger) * 3); }
+    .reveal-stagger.is-visible > *:nth-child(5) { transition-delay: calc(var(--motion-stagger) * 4); }
+    .reveal-stagger.is-visible > *:nth-child(6) { transition-delay: calc(var(--motion-stagger) * 5); }
+
+    /* Parallax — slow-drift sections based on scroll position */
+    .parallax-slow { will-change: transform; }
+
+    /* ============================================================
+       MANIFESTO
+       ============================================================ */
+    .manifesto {
+      background: var(--color-bg);
+      border-top: 1px solid var(--color-border);
+      border-bottom: 1px solid var(--color-border);
+    }
+    .manifesto-body {
+      max-width: 28ch;
+      margin: 0;
+    }
+    .manifesto-body .accent-word {
+      color: var(--color-primary);
+      font-style: italic;
+      font-weight: 500;
+    }
+    .manifesto-side {
+      display: grid;
+      gap: 1.5rem;
+      align-content: end;
+    }
+    .manifesto-quote {
+      margin: 0;
+      padding-left: 1.25rem;
+      border-left: 2px solid var(--color-primary);
+      font-size: 0.9375rem;
+      color: var(--color-fg-muted);
+      line-height: 1.6;
+    }
+    .manifesto-quote strong { color: var(--color-fg); font-weight: 600; }
+
+    /* ============================================================
+       SERVICES
+       ============================================================ */
+    .service-card {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      padding: 2rem;
+      background: var(--color-bg-elev-1);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      transition: transform var(--motion-duration) var(--motion-easing),
+                  border-color var(--motion-duration) var(--motion-easing),
+                  background var(--motion-duration) var(--motion-easing);
+      overflow: hidden;
+    }
+    .service-card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(60% 80% at 50% 0%, color-mix(in oklab, var(--color-primary) 20%, transparent), transparent 60%);
+      opacity: 0;
+      transition: opacity var(--motion-duration) var(--motion-easing);
+      pointer-events: none;
+    }
+    .service-card:hover {
+      transform: translateY(-6px);
+      border-color: color-mix(in oklab, var(--color-primary) 50%, var(--color-border));
+      background: var(--color-bg-elev-2);
+    }
+    .service-card:hover::before { opacity: 1; }
+    .service-card > * { position: relative; }
+    .service-num {
+      font-family: var(--font-display);
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--color-primary);
+      letter-spacing: 0.05em;
+    }
+    .service-icon {
+      width: 56px; height: 56px;
+      border-radius: var(--radius-md);
+      background: color-mix(in oklab, var(--color-primary) 15%, var(--color-bg-elev-2));
+      border: 1px solid var(--color-border);
+      display: grid; place-items: center;
+      color: var(--color-primary);
+    }
+    .service-title {
+      margin: 0;
+      font-family: var(--font-display);
+      font-size: 1.5rem;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+    }
+    .service-desc {
+      margin: 0;
+      color: var(--color-fg-muted);
+      font-size: 0.9375rem;
+    }
+    .service-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-top: auto;
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--color-fg);
+      text-decoration: none;
+      letter-spacing: 0.02em;
+    }
+    .service-link .arrow {
+      transition: transform var(--motion-duration) var(--motion-easing);
+    }
+    .service-link:hover .arrow { transform: translateX(4px); }
+
+    /* ============================================================
+       PROOF — marquee + testimonial cards
+       ============================================================ */
+    .marquee {
+      position: relative;
+      overflow: hidden;
+      padding: 2rem 0;
+      border-block: 1px solid var(--color-border);
+      background: var(--color-bg-elev-1);
+      -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+              mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+    }
+    .marquee-track {
+      display: flex;
+      gap: 4rem;
+      width: max-content;
+      animation: marquee 40s linear infinite;
+    }
+    .marquee-item {
+      font-family: var(--font-display);
+      font-size: clamp(1.5rem, 3vw, 2.5rem);
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      color: var(--color-fg-muted);
+      white-space: nowrap;
+      display: inline-flex;
+      align-items: center;
+      gap: 1.5rem;
+    }
+    .marquee-item::after {
+      content: "✦";
+      color: var(--color-primary);
+      font-size: 0.6em;
+    }
+    @keyframes marquee {
+      from { transform: translateX(0); }
+      to   { transform: translateX(-50%); }
+    }
+
+    .testimonial {
+      padding: 2rem;
+      background: var(--color-bg-elev-1);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      position: relative;
+    }
+    .testimonial::before {
+      content: """;
+      position: absolute;
+      top: -0.5rem; left: 1.5rem;
+      font-family: var(--font-display);
+      font-size: 5rem;
+      line-height: 1;
+      color: var(--color-primary);
+      opacity: 0.4;
+    }
+    .testimonial-quote {
+      margin: 0 0 1.5rem;
+      font-family: var(--font-display);
+      font-size: clamp(1.125rem, 1.8vw, 1.375rem);
+      line-height: 1.4;
+      letter-spacing: -0.01em;
+      color: var(--color-fg);
+    }
+    .testimonial-meta {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--color-border);
+    }
+    .testimonial-avatar {
+      width: 44px; height: 44px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--color-primary), var(--color-accent-2));
+      display: grid; place-items: center;
+      color: var(--color-bg);
+      font-weight: 700;
+      font-family: var(--font-display);
+    }
+    .testimonial-name { font-weight: 600; font-size: 0.9375rem; }
+    .testimonial-role { font-size: 0.8125rem; color: var(--color-fg-muted); }
+
+    /* ============================================================
+       FAQ + CONTACT
+       ============================================================ */
+    .faq-item {
+      border-bottom: 1px solid var(--color-border);
+      padding: 1.5rem 0;
+    }
+    .faq-item:first-child { border-top: 1px solid var(--color-border); }
+    .faq-question {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      width: 100%;
+      padding: 0;
+      background: none;
+      border: 0;
+      color: var(--color-fg);
+      font-family: var(--font-display);
+      font-size: clamp(1rem, 1.6vw, 1.25rem);
+      font-weight: 600;
+      text-align: left;
+      cursor: pointer;
+      letter-spacing: -0.01em;
+    }
+    .faq-icon {
+      flex: none;
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      border: 1px solid var(--color-border);
+      display: grid; place-items: center;
+      transition: transform var(--motion-duration) var(--motion-easing),
+                  background var(--motion-duration) var(--motion-easing);
+    }
+    .faq-item[open] .faq-icon {
+      transform: rotate(45deg);
+      background: var(--color-primary);
+      border-color: var(--color-primary);
+      color: var(--color-bg);
+    }
+    .faq-answer {
+      padding-top: 1rem;
+      color: var(--color-fg-muted);
+      line-height: 1.6;
+      max-width: 60ch;
+    }
+
+    .contact-card {
+      padding: clamp(1.5rem, 4vw, 3rem);
+      background: var(--color-bg-elev-1);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+    }
+    .contact-row {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 1rem 0;
+      border-bottom: 1px solid var(--color-border);
+      text-decoration: none;
+      color: var(--color-fg);
+      transition: color var(--motion-duration) var(--motion-easing);
+    }
+    .contact-row:last-child { border-bottom: 0; }
+    .contact-row:hover { color: var(--color-primary); }
+    .contact-row .label { font-size: 0.75rem; color: var(--color-fg-subtle); text-transform: uppercase; letter-spacing: 0.1em; }
+    .contact-row .value { font-family: var(--font-display); font-weight: 500; font-size: 1rem; }
+
+    /* ============================================================
+       FOOTER
+       ============================================================ */
+    .footer {
+      padding-block: 4rem 2rem;
+      border-top: 1px solid var(--color-border);
+      background: var(--color-bg);
+    }
+    .footer-big {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: clamp(2.5rem, 10vw, 8rem);
+      line-height: 0.9;
+      letter-spacing: -0.04em;
+      background: linear-gradient(180deg, var(--color-fg) 0%, color-mix(in oklab, var(--color-fg) 30%, transparent) 100%);
+      -webkit-background-clip: text;
+              background-clip: text;
+      -webkit-text-fill-color: transparent;
+      word-break: break-word;
+    }
+    .footer-meta {
+      display: grid;
+      gap: 2rem;
+      grid-template-columns: 1fr;
+      margin-top: 3rem;
+      padding-top: 2rem;
+      border-top: 1px solid var(--color-border);
+      font-size: 0.8125rem;
+      color: var(--color-fg-subtle);
+    }
+    @media (min-width: 640px) {
+      .footer-meta { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (min-width: 1024px) {
+      .footer-meta { grid-template-columns: repeat(4, 1fr); }
+    }
+    .footer-meta h4 {
+      margin: 0 0 0.75rem;
+      font-size: 0.6875rem;
+      font-weight: 600;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--color-fg-muted);
+    }
+    .footer-meta a {
+      display: block;
+      padding: 0.25rem 0;
+      color: var(--color-fg-muted);
+      text-decoration: none;
+      transition: color var(--motion-duration) var(--motion-easing);
+    }
+    .footer-meta a:hover { color: var(--color-fg); }
+    .footer-bottom {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      margin-top: 2rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--color-border);
+      font-size: 0.75rem;
+      color: var(--color-fg-subtle);
+    }
+    @media (min-width: 640px) {
+      .footer-bottom { flex-direction: row; justify-content: space-between; align-items: center; }
+    }
+    .lgpd-notice {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 0.75rem;
+      border: 1px solid var(--color-border);
+      border-radius: 999px;
+      font-size: 0.75rem;
+    }
+
+    /* ============================================================
+       REDUCED MOTION — respect user preference
+       ============================================================ */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+      }
+      .reveal, .reveal-stagger > * { opacity: 1; transform: none; }
+      .aurora { animation: none; opacity: 0.3; }
+      .marquee-track { animation: none; }
+    }
+
+    /* ============================================================
+       UTILITY
+       ============================================================ */
+    .grid-services {
+      display: grid;
+      gap: 1.5rem;
+      grid-template-columns: 1fr;
+    }
+    @media (min-width: 768px) {
+      .grid-services { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (min-width: 1024px) {
+      .grid-services { grid-template-columns: repeat(3, 1fr); }
+    }
+    .grid-2 {
+      display: grid;
+      gap: 2rem;
+      grid-template-columns: 1fr;
+    }
+    @media (min-width: 1024px) {
+      .grid-2 { grid-template-columns: 1.2fr 1fr; gap: 5rem; }
+    }
+    .grid-testimonials {
+      display: grid;
+      gap: 1.5rem;
+      grid-template-columns: 1fr;
+    }
+    @media (min-width: 768px) {
+      .grid-testimonials { grid-template-columns: repeat(2, 1fr); }
+    }
+    .sr-only {
+      position: absolute;
+      width: 1px; height: 1px;
+      padding: 0; margin: -1px;
+      overflow: hidden; clip: rect(0,0,0,0);
+      white-space: nowrap; border: 0;
+    }
+  </style>
+</head>
+<body data-motion="medium">
+
+  <a href="#main" class="skip-link">Pular para o conteúdo</a>
+
+  <!-- ====== NAV ====== -->
+  <header class="nav" role="banner">
+    <div class="container nav-inner">
+      <a href="#" class="logo" aria-label="{{BUSINESS_NAME}} início">
+        <span class="logo-mark" aria-hidden="true">{{BUSINESS_NAME_INITIAL}}</span>
+        <span>{{BUSINESS_NAME}}</span>
+      </a>
+      <nav aria-label="Navegação principal">
+        <ul class="nav-links">
+          <li><a href="#manifesto">Manifesto</a></li>
+          <li><a href="#servicos">Serviços</a></li>
+          <li><a href="#provas">Provas</a></li>
+          <li><a href="#contato">Contato</a></li>
+        </ul>
+      </nav>
+      <a href="#contato" class="btn btn-primary nav-cta">
+        Falar conosco
+        <svg class="btn-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+      </a>
+    </div>
+  </header>
+
+  <main id="main">
+
+    <!-- ====== HERO ====== -->
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="aurora" aria-hidden="true"></div>
+      <div class="grain" aria-hidden="true"></div>
+
+      <div class="container">
+        <div class="hero-grid">
+          <div>
+            <span class="hero-pretitle reveal">
+              <span class="dot" aria-hidden="true"></span>
+              {{TAGLINE}}
+            </span>
+
+            <h1 id="hero-title" class="display display-xl hero-title">
+              <span class="word"><span>{{HERO_TITLE_LINE_1}}</span></span><br/>
+              <span class="word"><span class="accent">{{HERO_TITLE_LINE_2}}</span></span>
+            </h1>
+
+            <p class="hero-sub reveal">
+              {{HERO_SUBTITLE}}
+            </p>
+
+            <div class="hero-actions reveal">
+              <a href="#contato" class="btn btn-primary">
+                Começar agora
+                <svg class="btn-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+              </a>
+              <a href="#servicos" class="btn btn-ghost">
+                Ver serviços
+              </a>
+            </div>
+
+            <dl class="hero-meta reveal">
+              <div class="hero-meta-item">
+                <dt class="num">150+</dt>
+                <dd class="label">Projetos entregues</dd>
+              </div>
+              <div class="hero-meta-item">
+                <dt class="num">12</dt>
+                <dd class="label">Anos de estrada</dd>
+              </div>
+              <div class="hero-meta-item">
+                <dt class="num">98%</dt>
+                <dd class="label">Clientes que voltam</dd>
+              </div>
+            </dl>
+          </div>
+
+          <!-- Floating orb — pure SVG, replaces hero photo -->
+          <div class="hero-orb reveal" aria-hidden="true">
+            <svg viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <radialGradient id="orbGrad" cx="50%" cy="50%" r="50%">
+                  <stop offset="0%" stop-color="var(--color-primary)" stop-opacity="0.9"/>
+                  <stop offset="60%" stop-color="var(--color-primary)" stop-opacity="0.2"/>
+                  <stop offset="100%" stop-color="var(--color-primary)" stop-opacity="0"/>
+                </radialGradient>
+                <linearGradient id="strokeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="var(--color-primary)"/>
+                  <stop offset="100%" stop-color="var(--color-accent-2)"/>
+                </linearGradient>
+              </defs>
+              <circle cx="200" cy="200" r="100" fill="url(#orbGrad)"/>
+              <g class="orb-ring" fill="none" stroke="url(#strokeGrad)" stroke-width="1">
+                <circle cx="200" cy="200" r="140" stroke-dasharray="2 8"/>
+                <circle cx="200" cy="200" r="170" stroke-dasharray="1 14"/>
+              </g>
+              <g class="orb-ring-reverse" fill="none" stroke="var(--color-fg-muted)" stroke-opacity="0.4" stroke-width="0.5">
+                <path d="M 200 60 Q 280 120 280 200 Q 280 280 200 340 Q 120 280 120 200 Q 120 120 200 60"/>
+                <path d="M 200 80 Q 260 140 260 200 Q 260 260 200 320 Q 140 260 140 200 Q 140 140 200 80" stroke-dasharray="4 6"/>
+              </g>
+              <circle cx="200" cy="200" r="6" fill="var(--color-accent-2)"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====== MANIFESTO ====== -->
+    <section id="manifesto" class="manifesto" aria-labelledby="manifesto-title">
+      <div class="container">
+        <p class="eyebrow reveal">Manifesto</p>
+
+        <div class="grid-2" style="margin-top:2.5rem;">
+          <h2 id="manifesto-title" class="display display-lg manifesto-body reveal">
+            Construímos <span class="accent-word">experiências</span> que fazem marcas <span class="accent-word">vivas</span> serem lembradas.
+          </h2>
+
+          <div class="manifesto-side reveal">
+            <p class="muted" style="margin:0; max-width:52ch;">
+              {{ABOUT_TEXT}}
+            </p>
+            <blockquote class="manifesto-quote">
+              <strong>Não vendemos entregáveis.</strong> Vendemos a sensação de chegar primeiro, olhar mais alto, e ser impossível de ignorar.
+            </blockquote>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====== SERVIÇOS ====== -->
+    <section id="servicos" aria-labelledby="services-title">
+      <div class="container">
+        <header style="display:grid; gap:1rem; margin-bottom:3rem; max-width:60ch;">
+          <p class="eyebrow reveal">O que fazemos</p>
+          <h2 id="services-title" class="display display-lg reveal" style="margin:0;">
+            Três frentes, <span style="color:var(--color-primary); font-style:italic; font-weight:500;">uma obsessão:</span> resultado real.
+          </h2>
+        </header>
+
+        <div class="grid-services reveal-stagger">
+
+          <article class="service-card">
+            <div style="display:flex; align-items:center; justify-content:space-between;">
+              <span class="service-num">01 / 03</span>
+              <div class="service-icon" aria-hidden="true">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12l9-9 9 9"/><path d="M5 10v10h14V10"/></svg>
+              </div>
+            </div>
+            <h3 class="service-title">{{SERVICE_1_TITLE}}</h3>
+            <p class="service-desc">{{SERVICE_1_DESC}}</p>
+            <a href="#contato" class="service-link">
+              Saber mais
+              <svg class="arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+            </a>
+          </article>
+
+          <article class="service-card">
+            <div style="display:flex; align-items:center; justify-content:space-between;">
+              <span class="service-num">02 / 03</span>
+              <div class="service-icon" aria-hidden="true">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 10v6m11-11h-6M7 12H1m15.5-7.5l-4.2 4.2m-2.6 2.6l-4.2 4.2m0-11l4.2 4.2m2.6 2.6l4.2 4.2"/></svg>
+              </div>
+            </div>
+            <h3 class="service-title">{{SERVICE_2_TITLE}}</h3>
+            <p class="service-desc">{{SERVICE_2_DESC}}</p>
+            <a href="#contato" class="service-link">
+              Saber mais
+              <svg class="arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+            </a>
+          </article>
+
+          <article class="service-card">
+            <div style="display:flex; align-items:center; justify-content:space-between;">
+              <span class="service-num">03 / 03</span>
+              <div class="service-icon" aria-hidden="true">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+              </div>
+            </div>
+            <h3 class="service-title">{{SERVICE_3_TITLE}}</h3>
+            <p class="service-desc">{{SERVICE_3_DESC}}</p>
+            <a href="#contato" class="service-link">
+              Saber mais
+              <svg class="arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+            </a>
+          </article>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ====== PROVA SOCIAL ====== -->
+    <section id="provas" aria-labelledby="proof-title" style="padding-block:0;">
+      <div class="marquee" aria-hidden="true">
+        <div class="marquee-track">
+          <span class="marquee-item">Estratégia</span>
+          <span class="marquee-item">Branding</span>
+          <span class="marquee-item">Performance</span>
+          <span class="marquee-item">Conteúdo</span>
+          <span class="marquee-item">Design</span>
+          <span class="marquee-item">Tecnologia</span>
+          <span class="marquee-item">Estratégia</span>
+          <span class="marquee-item">Branding</span>
+          <span class="marquee-item">Performance</span>
+          <span class="marquee-item">Conteúdo</span>
+          <span class="marquee-item">Design</span>
+          <span class="marquee-item">Tecnologia</span>
+        </div>
+      </div>
+
+      <div class="container" style="padding-block: clamp(4rem, 10vw, 8rem);">
+        <header style="display:grid; gap:1rem; margin-bottom:3rem; max-width:60ch;">
+          <p class="eyebrow reveal">Prova social</p>
+          <h2 id="proof-title" class="display display-lg reveal" style="margin:0;">
+            Resultados que <span style="color:var(--color-primary); font-style:italic; font-weight:500;">falam mais alto</span> que promessas.
+          </h2>
+        </header>
+
+        <div class="grid-testimonials reveal-stagger">
+
+          <article class="testimonial">
+            <p class="testimonial-quote">{{TESTIMONIAL_1_QUOTE}}</p>
+            <div class="testimonial-meta">
+              <div class="testimonial-avatar" aria-hidden="true">{{TESTIMONIAL_1_INITIAL}}</div>
+              <div>
+                <div class="testimonial-name">{{TESTIMONIAL_1_NAME}}</div>
+                <div class="testimonial-role">{{TESTIMONIAL_1_ROLE}}</div>
+              </div>
+            </div>
+          </article>
+
+          <article class="testimonial">
+            <p class="testimonial-quote">{{TESTIMONIAL_2_QUOTE}}</p>
+            <div class="testimonial-meta">
+              <div class="testimonial-avatar" aria-hidden="true">{{TESTIMONIAL_2_INITIAL}}</div>
+              <div>
+                <div class="testimonial-name">{{TESTIMONIAL_2_NAME}}</div>
+                <div class="testimonial-role">{{TESTIMONIAL_2_ROLE}}</div>
+              </div>
+            </div>
+          </article>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ====== FAQ + CONTATO ====== -->
+    <section id="contato" aria-labelledby="contact-title" style="background:var(--color-bg-elev-1);">
+      <div class="container">
+        <div class="grid-2">
+
+          <div>
+            <p class="eyebrow reveal">Dúvidas frequentes</p>
+            <h2 id="contact-title" class="display display-lg reveal" style="margin:1.5rem 0 2.5rem;">
+              Antes de conversar, talvez a resposta esteja <span style="color:var(--color-primary); font-style:italic; font-weight:500;">aqui</span>.
+            </h2>
+
+            <div class="reveal-stagger">
+              <details class="faq-item">
+                <summary class="faq-question">
+                  Como funciona o processo?
+                  <span class="faq-icon" aria-hidden="true">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                  </span>
+                </summary>
+                <p class="faq-answer">{{FAQ_1_ANSWER}}</p>
+              </details>
+
+              <details class="faq-item">
+                <summary class="faq-question">
+                  Qual o investimento médio?
+                  <span class="faq-icon" aria-hidden="true">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                  </span>
+                </summary>
+                <p class="faq-answer">{{FAQ_2_ANSWER}}</p>
+              </details>
+
+              <details class="faq-item">
+                <summary class="faq-question">
+                  Vocês atendem fora de {{CITY}}?
+                  <span class="faq-icon" aria-hidden="true">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                  </span>
+                </summary>
+                <p class="faq-answer">{{FAQ_3_ANSWER}}</p>
+              </details>
+
+              <details class="faq-item">
+                <summary class="faq-question">
+                  Em quanto tempo vejo resultado?
+                  <span class="faq-icon" aria-hidden="true">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                  </span>
+                </summary>
+                <p class="faq-answer">{{FAQ_4_ANSWER}}</p>
+              </details>
+            </div>
+          </div>
+
+          <aside class="contact-card reveal" aria-label="Informações de contato">
+            <p class="eyebrow" style="margin-bottom:1.5rem;">Fale direto</p>
+            <h3 class="display display-md" style="margin:0 0 1.5rem;">
+              Vamos construir algo <span style="color:var(--color-primary); font-style:italic; font-weight:500;">ousado</span>?
+            </h3>
+
+            <a href="tel:{{PHONE}}" class="contact-row">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.37 1.9.7 2.8a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.9.33 1.84.57 2.8.7A2 2 0 0 1 22 16.92z"/></svg>
+              <div>
+                <div class="label">Telefone</div>
+                <div class="value">{{PHONE}}</div>
+              </div>
+            </a>
+
+            <a href="https://instagram.com/{{INSTAGRAM_HANDLE}}" target="_blank" rel="noopener noreferrer" class="contact-row">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+              <div>
+                <div class="label">Instagram</div>
+                <div class="value">@{{INSTAGRAM_HANDLE}}</div>
+              </div>
+            </a>
+
+            <div class="contact-row">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+              <div>
+                <div class="label">Endereço</div>
+                <div class="value">{{ADDRESS}}<br/><span style="color:var(--color-fg-muted); font-size:0.875rem;">{{CITY}}</span></div>
+              </div>
+            </div>
+
+            <a href="mailto:{{EMAIL}}" class="btn btn-primary" style="margin-top:2rem; width:100%; justify-content:center;">
+              Enviar mensagem
+              <svg class="btn-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+            </a>
+          </aside>
+
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ====== FOOTER ====== -->
+  <footer class="footer" role="contentinfo">
+    <div class="container">
+      <h2 class="footer-big reveal" aria-label="{{BUSINESS_NAME}}">{{BUSINESS_NAME}}</h2>
+
+      <div class="footer-meta">
+        <div>
+          <h4>Navegação</h4>
+          <a href="#manifesto">Manifesto</a>
+          <a href="#servicos">Serviços</a>
+          <a href="#provas">Provas</a>
+          <a href="#contato">Contato</a>
+        </div>
+        <div>
+          <h4>Contato</h4>
+          <a href="tel:{{PHONE}}">{{PHONE}}</a>
+          <a href="mailto:{{EMAIL}}">{{EMAIL}}</a>
+          <a href="https://instagram.com/{{INSTAGRAM_HANDLE}}" target="_blank" rel="noopener noreferrer">@{{INSTAGRAM_HANDLE}}</a>
+        </div>
+        <div>
+          <h4>Endereço</h4>
+          <a>{{ADDRESS}}</a>
+          <a>{{CITY}}</a>
+        </div>
+        <div>
+          <h4>Legal</h4>
+          <a href="#">Política de privacidade</a>
+          <a href="#">Termos de uso</a>
+          <a href="#">Cookies</a>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <span>© <span id="year">2026</span> {{BUSINESS_NAME}}. Todos os direitos reservados.</span>
+        <span class="lgpd-notice" title="Este site respeita a Lei Geral de Proteção de Dados (LGPD — Lei 13.709/2018). Coletamos apenas dados necessários para contato e analytics, nunca compartilhamos com terceiros sem consentimento.">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          Conforme LGPD
+        </span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ============================================================
+       FRALIB MOTION RUNTIME — inline, zero deps
+       Handles: scroll reveal, parallax, magnetic hover
+       ============================================================
+  -->
+  <script>
+  (function () {
+    'use strict';
+
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    // ---- 1) Scroll reveal (IntersectionObserver) ----------------
+    const revealEls = document.querySelectorAll('.reveal, .reveal-stagger');
+    if (revealEls.length && 'IntersectionObserver' in window && !prefersReducedMotion) {
+      const io = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('is-visible');
+            io.unobserve(entry.target);
+          }
+        });
+      }, { rootMargin: '0px 0px -10% 0px', threshold: 0.05 });
+      revealEls.forEach((el) => io.observe(el));
+    } else {
+      // Fallback / reduced motion: show everything immediately
+      revealEls.forEach((el) => el.classList.add('is-visible'));
+    }
+
+    // ---- 2) Parallax (scroll-driven transforms) -----------------
+    // Subtle 0.15 factor: hero-orb drifts slower than scroll
+    const parallaxEls = document.querySelectorAll('.parallax-slow');
+    if (parallaxEls.length && !prefersReducedMotion) {
+      let ticking = false;
+      const onScroll = () => {
+        if (ticking) return;
+        ticking = true;
+        requestAnimationFrame(() => {
+          const vh = window.innerHeight;
+          parallaxEls.forEach((el) => {
+            const rect = el.getBoundingClientRect();
+            const center = rect.top + rect.height / 2;
+            const offset = (center - vh / 2) * 0.08;
+            el.style.transform = `translate3d(0, ${offset.toFixed(2)}px, 0)`;
+          });
+          ticking = false;
+        });
+      };
+      window.addEventListener('scroll', onScroll, { passive: true });
+      onScroll();
+    }
+
+    // ---- 3) Magnetic hover (microinteração icônica) -------------
+    // Buttons subtly track the cursor up to 0.3em — feels alive, not gimmicky
+    const magneticEls = document.querySelectorAll('.btn-primary, .service-link');
+    if (magneticEls.length && !prefersReducedMotion) {
+      const STRENGTH = 0.3; // em units
+      magneticEls.forEach((el) => {
+        el.addEventListener('mousemove', (e) => {
+          const rect = el.getBoundingClientRect();
+          const x = (e.clientX - rect.left) / rect.width - 0.5;
+          const y = (e.clientY - rect.top) / rect.height - 0.5;
+          el.style.transform = `translate(${x * STRENGTH}em, ${y * STRENGTH}em)`;
+        });
+        el.addEventListener('mouseleave', () => {
+          el.style.transform = '';
+        });
+      });
+    }
+
+    // ---- 4) Smooth anchor scroll with offset for fixed nav ------
+    document.querySelectorAll('a[href^="#"]').forEach((link) => {
+      link.addEventListener('click', (e) => {
+        const id = link.getAttribute('href');
+        if (id.length < 2) return;
+        const target = document.querySelector(id);
+        if (!target) return;
+        e.preventDefault();
+        const navH = 64;
+        const top = target.getBoundingClientRect().top + window.scrollY - navH;
+        window.scrollTo({ top, behavior: prefersReducedMotion ? 'auto' : 'smooth' });
+      });
+    });
+
+    // ---- 5) Year stamp ------------------------------------------
+    const yearEl = document.getElementById('year');
+    if (yearEl) yearEl.textContent = new Date().getFullYear();
+  })();
+  </script>
+
+</body>
+</html>

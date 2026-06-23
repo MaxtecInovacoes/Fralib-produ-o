@@ -1,0 +1,835 @@
+<!doctype html>
+<html lang="pt-BR" data-theme="dark" data-motion="cinematic">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<meta name="theme-color" content="#07080c" />
+<meta name="color-scheme" content="dark light" />
+<title>{{BUSINESS_NAME}} — {{TAGLINE}}</title>
+<meta name="description" content="{{HERO_SUBTITLE}}" />
+<meta name="robots" content="index,follow" />
+<meta property="og:title" content="{{BUSINESS_NAME}} — {{TAGLINE}}" />
+<meta property="og:description" content="{{HERO_SUBTITLE}}" />
+<meta property="og:type" content="website" />
+<meta property="og:locale" content="pt_BR" />
+<meta name="twitter:card" content="summary_large_image" />
+<link rel="icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16' r='14' fill='%23{{PRIMARY_COLOR}}'/></svg>" />
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  // Tailwind theme bridge — pulls FraLib CSS vars into JS for arbitrary utilities
+  tailwind.config = {
+    darkMode: 'class',
+    theme: {
+      extend: {
+        colors: {
+          primary: 'rgb(var(--rgb-primary) / <alpha-value>)',
+          ink: 'rgb(var(--rgb-ink) / <alpha-value>)',
+          mute: 'rgb(var(--rgb-mute) / <alpha-value>)',
+          surface: 'rgb(var(--rgb-surface) / <alpha-value>)',
+        },
+        fontFamily: {
+          display: ['var(--font-display)', 'serif'],
+          body: ['var(--font-body)', 'system-ui', 'sans-serif'],
+        },
+      },
+    },
+  };
+</script>
+<style>
+  /* =========================================================
+     FraLib Immersive 3D — Design Tokens
+     ---------------------------------------------------------
+     --color-primary: cor de marca; alimenta CTAs, glow, links.
+     --color-bg:      tinta de fundo base (modo dark).
+     --font-display:  serifa geométrica para títulos 3D-ready.
+     --font-body:     sans neutra para corpo/UI.
+     --motion-duration: escala de tempo das animações
+                        (subtle=.25s / medium=.6s / cinematic=1.1s).
+     --motion-easing:    curva canônica de easing cinematográfico.
+     ========================================================= */
+  :root {
+    --color-primary: #ff4d2e;
+    --rgb-primary: 255 77 46;
+    --color-bg: #07080c;
+    --rgb-ink: 245 246 250;
+    --rgb-mute: 160 168 184;
+    --rgb-surface: 14 16 24;
+    --font-display: "Times New Roman", "Noto Serif", Georgia, serif;
+    --font-body: -apple-system, "Inter", "Segoe UI", system-ui, sans-serif;
+    --motion-duration: 1.1s;
+    --motion-easing: cubic-bezier(.22,.61,.36,1);
+    --grid-gutter: clamp(1rem, 4vw, 3rem);
+    --section-pad: clamp(4rem, 9vw, 8rem);
+    --max-w: 76rem;
+  }
+
+  /* Light theme fallback (acionado por [data-theme="light"]) */
+  :root[data-theme="light"] {
+    --color-bg: #f6f5f1;
+    --rgb-ink: 18 20 26;
+    --rgb-mute: 80 88 100;
+    --rgb-surface: 255 255 255;
+  }
+
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--color-bg);
+    color: rgb(var(--rgb-ink));
+    font-family: var(--font-body);
+    font-feature-settings: "ss01","cv11";
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  /* ---------- Focus ring WCAG-friendly ---------- */
+  :focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+
+  /* ---------- Skip link (a11y) ---------- */
+  .skip-link {
+    position: absolute; left: -9999px; top: 0;
+    background: var(--color-primary);
+    color: #fff; padding: .75rem 1rem;
+    font-weight: 600; z-index: 1000;
+  }
+  .skip-link:focus { left: 1rem; top: 1rem; }
+
+  /* =========================================================
+     HERO 3D — WebGL fragment shader inline
+     Constrói um campo de ruído pseudo-orgânico em câmera lenta.
+     Roda como background absoluto sem libs externas.
+     ========================================================= */
+  #hero-canvas {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    z-index: 0;
+    pointer-events: none;
+  }
+  .hero-grain {
+    position: absolute; inset: 0;
+    background-image: radial-gradient(rgba(255,255,255,.04) 1px, transparent 1px);
+    background-size: 3px 3px;
+    mix-blend-mode: overlay;
+    z-index: 1;
+    pointer-events: none;
+  }
+
+  /* =========================================================
+     Glassmorphism surface — cartões manifesto/serviços
+     ========================================================= */
+  .glass {
+    background: linear-gradient(180deg,
+      rgba(255,255,255,.04),
+      rgba(255,255,255,.01));
+    border: 1px solid rgba(255,255,255,.08);
+    backdrop-filter: blur(18px) saturate(140%);
+    -webkit-backdrop-filter: blur(18px) saturate(140%);
+    border-radius: 1.25rem;
+  }
+  :root[data-theme="light"] .glass {
+    background: linear-gradient(180deg,
+      rgba(255,255,255,.7),
+      rgba(255,255,255,.4));
+    border: 1px solid rgba(0,0,0,.06);
+  }
+
+  /* =========================================================
+     Display typography — escala fluida
+     ========================================================= */
+  .display-1 {
+    font-family: var(--font-display);
+    font-weight: 500;
+    font-size: clamp(2.5rem, 9vw, 8rem);
+    line-height: .95;
+    letter-spacing: -.03em;
+  }
+  .display-2 {
+    font-family: var(--font-display);
+    font-weight: 400;
+    font-size: clamp(2rem, 6vw, 4.5rem);
+    line-height: 1.02;
+    letter-spacing: -.02em;
+  }
+  .eyebrow {
+    font-size: .75rem;
+    letter-spacing: .25em;
+    text-transform: uppercase;
+    color: rgb(var(--rgb-mute));
+  }
+
+  /* =========================================================
+     CTA com microinteração icônica: glow + slide de seta
+     ========================================================= */
+  .btn {
+    --pad-y: .95rem;
+    --pad-x: 1.6rem;
+    display: inline-flex; align-items: center; gap: .75rem;
+    padding: var(--pad-y) var(--pad-x);
+    border-radius: 999px;
+    font-weight: 600;
+    font-size: .95rem;
+    letter-spacing: .01em;
+    background: var(--color-primary);
+    color: #fff;
+    position: relative;
+    overflow: hidden;
+    transition: transform var(--motion-duration) var(--motion-easing),
+                box-shadow var(--motion-duration) var(--motion-easing);
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-primary) 60%, transparent);
+  }
+  .btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 18px 60px -10px
+      color-mix(in srgb, var(--color-primary) 55%, transparent),
+      0 0 0 6px
+      color-mix(in srgb, var(--color-primary) 18%, transparent);
+  }
+  .btn .arrow {
+    display: inline-block;
+    transition: transform var(--motion-duration) var(--motion-easing);
+  }
+  .btn:hover .arrow { transform: translateX(6px); }
+  .btn-ghost {
+    background: transparent;
+    color: rgb(var(--rgb-ink));
+    border: 1px solid rgba(255,255,255,.18);
+  }
+  .btn-ghost:hover {
+    border-color: rgba(255,255,255,.45);
+    box-shadow: 0 0 0 6px rgba(255,255,255,.04);
+  }
+
+  /* =========================================================
+     Manifesto — tipografia monumental com kerning apertado
+     ========================================================= */
+  .marquee {
+    overflow: hidden;
+    mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+  }
+  .marquee-track {
+    display: flex; gap: 4rem;
+    width: max-content;
+    animation: scroll-x 38s linear infinite;
+    font-family: var(--font-display);
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    letter-spacing: -.02em;
+    color: rgb(var(--rgb-mute));
+    white-space: nowrap;
+  }
+  .marquee-track span { display: inline-block; }
+  .marquee-track .dot {
+    color: var(--color-primary);
+    font-size: .6em;
+    vertical-align: middle;
+  }
+  @keyframes scroll-x {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-50%); }
+  }
+
+  /* =========================================================
+     Scroll reveal — animação canônica da estética
+     Elementos com [data-reveal] sobem e opacificam ao entrar.
+     ========================================================= */
+  [data-reveal] {
+    opacity: 0;
+    transform: translateY(48px);
+    transition:
+      opacity var(--motion-duration) var(--motion-easing),
+      transform var(--motion-duration) var(--motion-easing);
+    will-change: opacity, transform;
+  }
+  [data-reveal].is-in {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  [data-reveal][data-reveal-delay="1"] { transition-delay: .12s; }
+  [data-reveal][data-reveal-delay="2"] { transition-delay: .24s; }
+  [data-reveal][data-reveal-delay="3"] { transition-delay: .36s; }
+
+  /* Parallax sutil em blobs do hero */
+  .blob {
+    position: absolute;
+    border-radius: 999px;
+    filter: blur(60px);
+    opacity: .55;
+    will-change: transform;
+  }
+  .blob-1 {
+    width: 38rem; height: 38rem;
+    background: color-mix(in srgb, var(--color-primary) 65%, transparent);
+    top: -8rem; left: -10rem;
+  }
+  .blob-2 {
+    width: 28rem; height: 28rem;
+    background: color-mix(in srgb, var(--color-primary) 35%, #5b6dff 65%);
+    bottom: -10rem; right: -6rem;
+  }
+
+  /* =========================================================
+     SERVICES grid
+     ========================================================= */
+  .service-card {
+    transition: transform var(--motion-duration) var(--motion-easing),
+                border-color var(--motion-duration) var(--motion-easing);
+  }
+  .service-card:hover {
+    transform: translateY(-6px) rotateX(2deg);
+    border-color: color-mix(in srgb, var(--color-primary) 60%, transparent);
+  }
+  .service-card .num {
+    font-family: var(--font-display);
+    font-size: 1.25rem;
+    color: var(--color-primary);
+  }
+
+  /* =========================================================
+     FAQ — details/summary estilizado
+     ========================================================= */
+  details.faq {
+    border-top: 1px solid rgba(255,255,255,.08);
+    padding: 1.5rem 0;
+    transition: padding var(--motion-duration) var(--motion-easing);
+  }
+  details.faq[open] { padding-bottom: 1rem; }
+  details.faq summary {
+    list-style: none;
+    cursor: pointer;
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 1.125rem;
+    font-weight: 500;
+  }
+  details.faq summary::-webkit-details-marker { display: none; }
+  details.faq summary::after {
+    content: "+";
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    color: var(--color-primary);
+    transition: transform var(--motion-duration) var(--motion-easing);
+  }
+  details.faq[open] summary::after { transform: rotate(45deg); }
+  details.faq p {
+    color: rgb(var(--rgb-mute));
+    max-width: 60ch;
+    margin-top: .75rem;
+  }
+
+  /* =========================================================
+     LGPD notice styling
+     ========================================================= */
+  .lgpd {
+    font-size: .8rem;
+    color: rgb(var(--rgb-mute));
+    line-height: 1.5;
+  }
+
+  /* =========================================================
+     Reduced motion — neutraliza parallax, marquee, reveals
+     ========================================================= */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: .001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: .001ms !important;
+      scroll-behavior: auto !important;
+    }
+    [data-reveal] { opacity: 1; transform: none; }
+    .marquee-track { animation: none; }
+    .blob { filter: blur(40px); }
+  }
+
+  /* =========================================================
+     Responsive guard rails
+     ========================================================= */
+  @media (max-width: 640px) {
+    .blob { opacity: .35; }
+    .marquee-track { gap: 2.5rem; }
+  }
+</style>
+</head>
+<body class="antialiased">
+
+<a class="skip-link" href="#main">Pular para conteúdo</a>
+
+<!-- =================== HEADER =================== -->
+<header class="fixed top-0 inset-x-0 z-40">
+  <div class="mx-auto max-w-[var(--max-w)] px-[var(--grid-gutter)] py-5 flex items-center justify-between">
+    <a href="#" class="flex items-center gap-2 font-display text-xl tracking-tight">
+      <span class="inline-block w-2.5 h-2.5 rounded-full" style="background:var(--color-primary)"></span>
+      <span>{{BUSINESS_NAME}}</span>
+    </a>
+    <nav class="hidden md:flex items-center gap-8 text-sm text-[rgb(var(--rgb-mute))]">
+      <a href="#manifesto" class="hover:text-white transition-colors">Manifesto</a>
+      <a href="#servicos" class="hover:text-white transition-colors">Serviços</a>
+      <a href="#provas" class="hover:text-white transition-colors">Provas</a>
+      <a href="#contato" class="hover:text-white transition-colors">Contato</a>
+    </nav>
+    <a href="#contato" class="btn text-sm" style="--pad-y:.55rem;--pad-x:1.1rem">
+      Falar agora <span class="arrow">→</span>
+    </a>
+  </div>
+</header>
+
+<main id="main">
+
+<!-- =================== HERO =================== -->
+<section class="relative min-h-[100svh] flex items-center overflow-hidden">
+  <!-- 3D WebGL scene inline -->
+  <canvas id="hero-canvas" aria-hidden="true"></canvas>
+  <!-- Blobs parallax -->
+  <div class="blob blob-1" data-parallax="0.15" aria-hidden="true"></div>
+  <div class="blob blob-2" data-parallax="0.25" aria-hidden="true"></div>
+  <div class="hero-grain" aria-hidden="true"></div>
+
+  <div class="relative z-10 mx-auto max-w-[var(--max-w)] px-[var(--grid-gutter)] pt-32 pb-24 w-full">
+    <p class="eyebrow mb-6" data-reveal>
+      <span class="inline-block w-8 h-px align-middle mr-3" style="background:var(--color-primary)"></span>
+      {{TAGLINE}}
+    </p>
+    <h1 class="display-1 max-w-[18ch]" data-reveal data-reveal-delay="1">
+      {{HERO_TITLE}}
+    </h1>
+    <p class="mt-8 max-w-[52ch] text-lg md:text-xl text-[rgb(var(--rgb-mute))]" data-reveal data-reveal-delay="2">
+      {{HERO_SUBTITLE}}
+    </p>
+    <div class="mt-10 flex flex-wrap items-center gap-4" data-reveal data-reveal-delay="3">
+      <a href="#servicos" class="btn">Ver serviços <span class="arrow">→</span></a>
+      <a href="#contato" class="btn btn-ghost">Agendar conversa</a>
+    </div>
+
+    <!-- Status pill -->
+    <div class="mt-14 inline-flex items-center gap-2 text-xs text-[rgb(var(--rgb-mute))]" data-reveal data-reveal-delay="3">
+      <span class="relative flex h-2 w-2">
+        <span class="absolute inline-flex h-full w-full rounded-full opacity-75"
+              style="background:var(--color-primary);animation:ping 2s infinite"></span>
+        <span class="relative inline-flex rounded-full h-2 w-2" style="background:var(--color-primary)"></span>
+      </span>
+      Aceitando projetos para Q1
+    </div>
+  </div>
+
+  <!-- Scroll cue -->
+  <div class="absolute bottom-6 left-1/2 -translate-x-1/2 z-10 text-[rgb(var(--rgb-mute))] text-xs flex flex-col items-center gap-2" aria-hidden="true">
+    <span>Role</span>
+    <span class="block w-px h-10 bg-gradient-to-b from-[rgb(var(--rgb-mute))] to-transparent"></span>
+  </div>
+</section>
+
+<!-- =================== MARQUEE =================== -->
+<section class="py-12 border-y border-white/5" aria-label="Diferenciais">
+  <div class="marquee">
+    <div class="marquee-track" aria-hidden="true">
+      <span>Estratégia</span><span class="dot">●</span>
+      <span>Design imersivo</span><span class="dot">●</span>
+      <span>Tecnologia</span><span class="dot">●</span>
+      <span>Performance</span><span class="dot">●</span>
+      <span>Movimento</span><span class="dot">●</span>
+      <!-- duplicate for seamless loop -->
+      <span>Estratégia</span><span class="dot">●</span>
+      <span>Design imersivo</span><span class="dot">●</span>
+      <span>Tecnologia</span><span class="dot">●</span>
+      <span>Performance</span><span class="dot">●</span>
+      <span>Movimento</span><span class="dot">●</span>
+    </div>
+  </div>
+</section>
+
+<!-- =================== MANIFESTO =================== -->
+<section id="manifesto" class="relative py-[var(--section-pad)]">
+  <div class="mx-auto max-w-[var(--max-w)] px-[var(--grid-gutter)] grid md:grid-cols-12 gap-10 md:gap-16">
+    <div class="md:col-span-4">
+      <p class="eyebrow mb-4" data-reveal>Manifesto</p>
+      <h2 class="display-2" data-reveal data-reveal-delay="1">
+        A web em<br/>três dimensões.
+      </h2>
+    </div>
+    <div class="md:col-span-7 md:col-start-6">
+      <p class="text-lg md:text-xl leading-relaxed text-[rgb(var(--rgb-ink))]" data-reveal data-reveal-delay="1">
+        {{ABOUT_TEXT}}
+      </p>
+      <div class="mt-10 grid grid-cols-2 gap-6" data-reveal data-reveal-delay="2">
+        <div class="glass p-6">
+          <div class="font-display text-4xl">120<span class="text-[rgb(var(--rgb-mute))] text-xl">+</span></div>
+          <p class="mt-2 text-sm text-[rgb(var(--rgb-mute))]">Projetos entregues</p>
+        </div>
+        <div class="glass p-6">
+          <div class="font-display text-4xl">38</div>
+          <p class="mt-2 text-sm text-[rgb(var(--rgb-mute))]">Prêmios de design</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =================== SERVIÇOS =================== -->
+<section id="servicos" class="relative py-[var(--section-pad)] bg-gradient-to-b from-transparent via-[rgb(var(--rgb-surface))] to-transparent">
+  <div class="mx-auto max-w-[var(--max-w)] px-[var(--grid-gutter)]">
+    <div class="flex items-end justify-between flex-wrap gap-6 mb-14">
+      <div>
+        <p class="eyebrow mb-4" data-reveal>Serviços</p>
+        <h2 class="display-2 max-w-[20ch]" data-reveal data-reveal-delay="1">
+          O que construímos para você.
+        </h2>
+      </div>
+      <p class="text-[rgb(var(--rgb-mute))] max-w-md" data-reveal data-reveal-delay="2">
+        Cada serviço é um sistema vivo — projetado para performar, escalar e emocionar.
+      </p>
+    </div>
+
+    <div class="grid md:grid-cols-3 gap-5">
+      <article class="service-card glass p-8" data-reveal>
+        <span class="num">01</span>
+        <h3 class="font-display text-2xl mt-4 mb-3">{{SERVICE_1_TITLE}}</h3>
+        <p class="text-[rgb(var(--rgb-mute))]">
+          Estratégia, design e implementação de marcas que precisam ocupar territórios digitais antes inexplorados.
+        </p>
+      </article>
+      <article class="service-card glass p-8" data-reveal data-reveal-delay="1">
+        <span class="num">02</span>
+        <h3 class="font-display text-2xl mt-4 mb-3">{{SERVICE_2_TITLE}}</h3>
+        <p class="text-[rgb(var(--rgb-mute))]">
+          Experiências 3D imersivas e motion design aplicado a produtos que precisam ser vividos, não apenas vistos.
+        </p>
+      </article>
+      <article class="service-card glass p-8" data-reveal data-reveal-delay="2">
+        <span class="num">03</span>
+        <h3 class="font-display text-2xl mt-4 mb-3">{{SERVICE_3_TITLE}}</h3>
+        <p class="text-[rgb(var(--rgb-mute))]">
+          Plataformas web de alta performance — engenharia de precisão para produtos que escalam sem perder identidade.
+        </p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- =================== PROVAS =================== -->
+<section id="provas" class="relative py-[var(--section-pad)]">
+  <div class="mx-auto max-w-[var(--max-w)] px-[var(--grid-gutter)]">
+    <p class="eyebrow mb-4" data-reveal>Prova social</p>
+    <h2 class="display-2 mb-14 max-w-[20ch]" data-reveal data-reveal-delay="1">
+      O que dizem quem viveu.
+    </h2>
+
+    <div class="grid md:grid-cols-2 gap-5">
+      <figure class="glass p-10" data-reveal>
+        <blockquote class="font-display text-2xl md:text-3xl leading-snug">
+          "{{TESTIMONIAL_1_QUOTE}}"
+        </blockquote>
+        <figcaption class="mt-8 flex items-center gap-4">
+          <span class="w-12 h-12 rounded-full inline-flex items-center justify-center font-display text-lg"
+                style="background:color-mix(in srgb,var(--color-primary) 30%,transparent);color:var(--color-primary)">A</span>
+          <div>
+            <p class="font-semibold">Ana Marques</p>
+            <p class="text-sm text-[rgb(var(--rgb-mute))]">CEO, Orbita Studio</p>
+          </div>
+        </figcaption>
+      </figure>
+
+      <figure class="glass p-10" data-reveal data-reveal-delay="1">
+        <blockquote class="font-display text-2xl md:text-3xl leading-snug">
+          "{{TESTIMONIAL_2_QUOTE}}"
+        </blockquote>
+        <figcaption class="mt-8 flex items-center gap-4">
+          <span class="w-12 h-12 rounded-full inline-flex items-center justify-center font-display text-lg"
+                style="background:color-mix(in srgb,var(--color-primary) 30%,transparent);color:var(--color-primary)">R</span>
+          <div>
+            <p class="font-semibold">Rafael Lemos</p>
+            <p class="text-sm text-[rgb(var(--rgb-mute))]">Head of Product, Vertex</p>
+          </div>
+        </figcaption>
+      </figure>
+    </div>
+
+    <!-- Logo strip -->
+    <div class="mt-16 flex flex-wrap items-center justify-center gap-x-12 gap-y-6 text-[rgb(var(--rgb-mute))]" data-reveal>
+      <span class="font-display text-lg tracking-widest opacity-70">ORBITA</span>
+      <span class="font-display text-lg tracking-widest opacity-70">VERTEX</span>
+      <span class="font-display text-lg tracking-widest opacity-70">NIMBUS</span>
+      <span class="font-display text-lg tracking-widest opacity-70">HELIX</span>
+      <span class="font-display text-lg tracking-widest opacity-70">PRISMA</span>
+    </div>
+  </div>
+</section>
+
+<!-- =================== FAQ + CONTATO =================== -->
+<section id="contato" class="relative py-[var(--section-pad)] bg-gradient-to-b from-transparent to-[rgb(var(--rgb-surface))]">
+  <div class="mx-auto max-w-[var(--max-w)] px-[var(--grid-gutter)] grid md:grid-cols-12 gap-12">
+    <div class="md:col-span-5">
+      <p class="eyebrow mb-4" data-reveal>Contato</p>
+      <h2 class="display-2 mb-8" data-reveal data-reveal-delay="1">Vamos construir algo que pulsa.</h2>
+      <div class="space-y-4 text-[rgb(var(--rgb-mute))]" data-reveal data-reveal-delay="2">
+        <p>
+          <span class="block text-xs uppercase tracking-widest text-white/60 mb-1">Telefone</span>
+          <a href="tel:{{PHONE}}" class="hover:text-white transition-colors">{{PHONE}}</a>
+        </p>
+        <p>
+          <span class="block text-xs uppercase tracking-widest text-white/60 mb-1">Endereço</span>
+          {{ADDRESS}} — {{CITY}}
+        </p>
+        <p>
+          <span class="block text-xs uppercase tracking-widest text-white/60 mb-1">Instagram</span>
+          <a href="https://instagram.com/{{INSTAGRAM_HANDLE}}" class="hover:text-white transition-colors" target="_blank" rel="noopener">@{{INSTAGRAM_HANDLE}}</a>
+        </p>
+      </div>
+      <a href="mailto:contato@{{BUSINESS_HANDLE}}.com" class="btn mt-10" data-reveal data-reveal-delay="3">
+        Iniciar projeto <span class="arrow">→</span>
+      </a>
+    </div>
+
+    <div class="md:col-span-6 md:col-start-7">
+      <p class="eyebrow mb-4" data-reveal>Perguntas frequentes</p>
+      <details class="faq" data-reveal>
+        <summary>Como funciona o processo de discovery?</summary>
+        <p>Começamos com uma imersão de 1–2 semanas no seu negócio: entrevistas, mapeamento de jornada e auditoria técnica. Entregamos um roadmap priorizado antes de qualquer linha de código.</p>
+      </details>
+      <details class="faq" data-reveal>
+        <summary>Quanto tempo leva um projeto típico?</summary>
+        <p>Entre 8 e 16 semanas para um site imersivo completo, dependendo da complexidade 3D e do número de integrações.</p>
+      </details>
+      <details class="faq" data-reveal>
+        <summary>Vocês atendem fora do Brasil?</summary>
+        <p>Sim. Trabalhamos com clientes em Portugal, EUA e LATAM. Reuniões remotas e contratos em múltiplas moedas.</p>
+      </details>
+      <details class="faq" data-reveal>
+        <summary>Oferecem manutenção pós-launch?</summary>
+        <p>Todos os planos incluem 90 dias de garantia. Pós isso, oferecemos contratos de evolução contínua ou treinamento do seu time interno.</p>
+      </details>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<!-- =================== FOOTER =================== -->
+<footer class="border-t border-white/5 py-14">
+  <div class="mx-auto max-w-[var(--max-w)] px-[var(--grid-gutter)] grid md:grid-cols-3 gap-10">
+    <div>
+      <a href="#" class="flex items-center gap-2 font-display text-xl">
+        <span class="inline-block w-2.5 h-2.5 rounded-full" style="background:var(--color-primary)"></span>
+        {{BUSINESS_NAME}}
+      </a>
+      <p class="mt-4 text-sm text-[rgb(var(--rgb-mute))] max-w-xs">{{TAGLINE}}</p>
+    </div>
+    <nav class="text-sm text-[rgb(var(--rgb-mute))] grid grid-cols-2 gap-3">
+      <a href="#manifesto" class="hover:text-white transition-colors">Manifesto</a>
+      <a href="#servicos" class="hover:text-white transition-colors">Serviços</a>
+      <a href="#provas" class="hover:text-white transition-colors">Provas</a>
+      <a href="#contato" class="hover:text-white transition-colors">Contato</a>
+    </nav>
+    <div>
+      <p class="lgpd">
+        Este site usa cookies analíticos para entender sua navegação. Ao continuar, você concorda com nossa
+        <a href="#" class="underline hover:text-white">Política de Privacidade</a> conforme a LGPD (Lei 13.709/2018).
+        Você pode revogar o consentimento a qualquer momento.
+      </p>
+      <p class="mt-4 text-xs text-[rgb(var(--rgb-mute))]">
+        © <span id="year"></span> {{BUSINESS_NAME}}. Todos os direitos reservados.
+      </p>
+    </div>
+  </div>
+</footer>
+
+<style>
+  /* ping keyframes for the status pill */
+  @keyframes ping {
+    75%, 100% { transform: scale(2); opacity: 0; }
+  }
+</style>
+
+<script>
+/* =====================================================================
+   FraLib Motion Runtime — mínimo, sem deps externas.
+   Responsabilidades:
+     1. Trocar variáveis CSS baseado em {{MOTION_LEVEL}} + {{PRIMARY_COLOR}}.
+     2. Aplicar a cena 3D WebGL no canvas do hero (fragment shader simples).
+     3. Disparar reveal on-scroll via IntersectionObserver.
+     4. Parallax sutil dos blobs do hero (scroll + mouse).
+     5. Respeitar prefers-reduced-motion.
+   ===================================================================== */
+(() => {
+  'use strict';
+
+  const root = document.documentElement;
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // ---- 1. Theme tokens ------------------------------------------------
+  // {{PRIMARY_COLOR}} chega como hex sem '#'; {{MOTION_LEVEL}} é uma string.
+  const applyTokens = () => {
+    try {
+      // Tag injects these via data-attrs set before script.
+      const primary = document.body.dataset.primary || '{{PRIMARY_COLOR}}';
+      const motion  = document.body.dataset.motion  || '{{MOTION_LEVEL}}';
+      if (primary && /^#?[0-9a-f]{3,8}$/i.test(primary)) {
+        const hex = primary.replace('#', '');
+        const rgb = hex.length === 3
+          ? hex.split('').map(c => parseInt(c+c, 16))
+          : [parseInt(hex.slice(0,2),16), parseInt(hex.slice(2,4),16), parseInt(hex.slice(4,6),16)];
+        if (rgb.every(v => !isNaN(v) && v >= 0 && v <= 255)) {
+          root.style.setProperty('--color-primary', '#' + hex);
+          root.style.setProperty('--rgb-primary', rgb.join(' '));
+        }
+      }
+      const map = { subtle: '.25s', medium: '.6s', cinematic: '1.1s' };
+      if (map[motion]) root.style.setProperty('--motion-duration', map[motion]);
+    } catch (e) { /* tokens keep defaults */ }
+  };
+  applyTokens();
+
+  // ---- 2. 3D hero scene (fragment shader) ----------------------------
+  // Shader gera um campo de ruído orgânico em câmera lenta.
+  // Conceito: substitui perfeitamente o "R3F/Drei" referenciado
+  // sem necessidade de bundler/WebGL libs externas.
+  const canvas = document.getElementById('hero-canvas');
+  if (canvas && !reduced) {
+    const gl = canvas.getContext('webgl', { antialias: false, alpha: true });
+    if (gl) {
+      const vsSrc = `
+        attribute vec2 p;
+        void main(){ gl_Position = vec4(p, 0.0, 1.0); }
+      `;
+      const fsSrc = `
+        precision mediump float;
+        uniform float u_time;
+        uniform vec2  u_res;
+        uniform vec3  u_primary;
+
+        // Hash + fbm
+        float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+        float noise(vec2 p){
+          vec2 i = floor(p); vec2 f = fract(p);
+          float a = hash(i), b = hash(i + vec2(1,0)),
+                c = hash(i + vec2(0,1)), d = hash(i + vec2(1,1));
+          vec2 u = f*f*(3.0-2.0*f);
+          return mix(mix(a,b,u.x), mix(c,d,u.x), u.y);
+        }
+        float fbm(vec2 p){
+          float v = 0.0; float a = 0.5;
+          for(int i=0;i<5;i++){ v += a*noise(p); p *= 2.0; a *= 0.5; }
+          return v;
+        }
+
+        void main(){
+          vec2 uv = gl_FragCoord.xy / u_res.xy;
+          vec2 p  = uv * 2.5;
+          float t = u_time * 0.08;
+          float n = fbm(p + vec2(t, -t*0.6));
+          n = fbm(p + n*1.4 + t*0.5);
+
+          // Vignette gradient
+          float d = distance(uv, vec2(0.5));
+          float v = smoothstep(1.05, 0.2, d);
+
+          vec3 col = mix(vec3(0.027,0.031,0.047), u_primary*0.18, n*v);
+          col += u_primary * 0.06 * pow(n, 3.0);
+
+          gl_FragColor = vec4(col, 1.0 - smoothstep(0.85, 1.4, d));
+        }
+      `;
+
+      const compile = (src, type) => {
+        const sh = gl.createShader(type);
+        gl.shaderSource(sh, src); gl.compileShader(sh);
+        if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) {
+          gl.deleteShader(sh); return null;
+        }
+        return sh;
+      };
+      const vs = compile(vsSrc, gl.VERTEX_SHADER);
+      const fs = compile(fsSrc, gl.FRAGMENT_SHADER);
+      const prog = gl.createProgram();
+      gl.attachShader(prog, vs); gl.attachShader(prog, fs);
+      gl.linkProgram(prog);
+      gl.useProgram(prog);
+
+      const buf = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+        -1,-1,  1,-1, -1, 1,
+        -1, 1,  1,-1,  1, 1,
+      ]), gl.STATIC_DRAW);
+      const aP = gl.getAttribLocation(prog, 'p');
+      gl.enableVertexAttribArray(aP);
+      gl.vertexAttribPointer(aP, 2, gl.FLOAT, false, 0, 0);
+
+      const uTime = gl.getUniformLocation(prog, 'u_time');
+      const uRes  = gl.getUniformLocation(prog, 'u_res');
+      const uPrim = gl.getUniformLocation(prog, 'u_primary');
+
+      const readPrimary = () => {
+        const s = getComputedStyle(root).getPropertyValue('--rgb-primary').trim();
+        const m = s.match(/(\d+)\s+(\d+)\s+(\d+)/);
+        return m ? [+m[1]/255, +m[2]/255, +m[3]/255] : [1, .3, .18];
+      };
+
+      const resize = () => {
+        const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+        const w = canvas.clientWidth, h = canvas.clientHeight;
+        canvas.width = Math.floor(w * dpr);
+        canvas.height = Math.floor(h * dpr);
+        gl.viewport(0, 0, canvas.width, canvas.height);
+        gl.uniform2f(uRes, canvas.width, canvas.height);
+      };
+      resize();
+      window.addEventListener('resize', resize);
+
+      const start = performance.now();
+      const render = () => {
+        gl.uniform1f(uTime, (performance.now() - start) / 1000);
+        const c = readPrimary();
+        gl.uniform3f(uPrim, c[0], c[1], c[2]);
+        gl.drawArrays(gl.TRIANGLES, 0, 6);
+        requestAnimationFrame(render);
+      };
+      render();
+    } else {
+      // Fallback: gradient estático (sem GPU)
+      canvas.style.background =
+        'radial-gradient(circle at 30% 20%, color-mix(in srgb,var(--color-primary) 35%,transparent), transparent 60%),' +
+        'radial-gradient(circle at 80% 70%, color-mix(in srgb,var(--color-primary) 20%,#5b6dff 80%), transparent 55%)';
+    }
+  }
+
+  // ---- 3. Reveal on scroll -------------------------------------------
+  if (!reduced && 'IntersectionObserver' in window) {
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          e.target.classList.add('is-in');
+          io.unobserve(e.target);
+        }
+      });
+    }, { rootMargin: '0px 0px -10% 0px', threshold: 0.05 });
+    document.querySelectorAll('[data-reveal]').forEach(el => io.observe(el));
+  } else {
+    document.querySelectorAll('[data-reveal]').forEach(el => el.classList.add('is-in'));
+  }
+
+  // ---- 4. Parallax (scroll + pointer) --------------------------------
+  if (!reduced) {
+    const blobs = document.querySelectorAll('[data-parallax]');
+    let mx = 0, my = 0, sy = 0;
+    const update = () => {
+      blobs.forEach(b => {
+        const k = parseFloat(b.dataset.parallax) || 0.2;
+        b.style.transform = `translate3d(${mx * k * 20}px, ${(sy + my) * k * 20}px, 0)`;
+      });
+    };
+    window.addEventListener('scroll', () => { sy = window.scrollY; update(); }, { passive: true });
+    window.addEventListener('pointermove', (e) => {
+      mx = (e.clientX / innerWidth)  - 0.5;
+      my = (e.clientY / innerHeight) - 0.5;
+      update();
+    }, { passive: true });
+  }
+
+  // ---- 5. Footer year -------------------------------------------------
+  const y = document.getElementById('year');
+  if (y) y.textContent = new Date().getFullYear();
+})();
+</script>
+
+</body>
+</html>

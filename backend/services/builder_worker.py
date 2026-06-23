@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import re
 import shutil
 import unicodedata
 from pathlib import Path, PurePosixPath
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 from backend.agents.site_prompt_agent import build_prompt_agent_payload
 try:
@@ -265,9 +268,47 @@ def render_site_with_builder(
     if engine == "openui":
         # OpenUI: HTML estatico, 1 chamada LLM, sem Vite/node_modules.
         # Mais rapido, sem truncamento de output, gera landing page completa.
-        from services.openui_renderer import render_openui_site
+        #
+        # FRALIB_USE_TEMPLATES=1: usa template estatico + variation 4-eixos
+        # (rota deterministica, SEM LLM). Fallback automatico para LLM se
+        # template_loader falhar (qualquer erro).
+        use_templates = (
+            os.getenv("FRALIB_USE_TEMPLATES", "0").strip().lower() in {"1", "true", "yes", "on"}
+        )
 
-        render_result = render_openui_site(
+        if use_templates:
+            try:
+                from services.openui_renderer import render_with_template
+
+                logger.info(
+                    "[builder_worker] FRALIB_USE_TEMPLATES=1 ativo - rota templates"
+                )
+                render_result = render_with_template(
+                    manifest["prompt"],
+                    facts=manifest.get("prompt_agent", {}).get("context", {}),
+                    repair_context=repair_context,
+                )
+            except Exception as template_exc:
+                # Fallback graceful: rota LLM (comportamento classico)
+                logger.warning(
+                    "[builder_worker] template route falhou, fallback LLM: %s",
+                    template_exc,
+                )
+                from services.openui_renderer import render_openui_site
+
+                render_result = render_openui_site(
+                    manifest["prompt"],
+                    facts=manifest.get("prompt_agent", {}).get("context", {}),
+                    repair_context=repair_context,
+                    primary_model=os.getenv("FRALIB_OPENUI_PRIMARY_MODEL", PROXY_BUILDER_MODEL),
+                    fallback_model=os.getenv("FRALIB_OPENUI_FALLBACK_MODEL", PROXY_OPUS_FALLBACK_MODEL),
+                    max_tokens=int(os.getenv("FRALIB_OPENUI_MAX_TOKENS", "8000")),
+                    temperature=float(os.getenv("FRALIB_OPENUI_TEMPERATURE", "0.35")),
+                )
+        else:
+            from services.openui_renderer import render_openui_site
+
+            render_result = render_openui_site(
             manifest["prompt"],
             facts=manifest.get("prompt_agent", {}).get("context", {}),
             repair_context=repair_context,

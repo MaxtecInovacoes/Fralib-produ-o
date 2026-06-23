@@ -1,0 +1,862 @@
+<!doctype html>
+<html lang="pt-BR" data-theme="kinetic" data-motion="medium">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0a0a0a" />
+  <title>{{BUSINESS_NAME}} — {{TAGLINE}}</title>
+  <meta name="description" content="{{HERO_SUBTITLE}}" />
+  <meta name="robots" content="index, follow" />
+  <meta name="author" content="{{BUSINESS_NAME}}" />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="{{BUSINESS_NAME}} — {{TAGLINE}}" />
+  <meta property="og:description" content="{{HERO_SUBTITLE}}" />
+  <meta property="og:locale" content="pt_BR" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="{{BUSINESS_NAME}} — {{TAGLINE}}" />
+  <meta name="twitter:description" content="{{HERO_SUBTITLE}}" />
+  <link rel="canonical" href="" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' font-family='monospace' font-weight='900' fill='%23ff4d2e'%3EK%3C/text%3E%3C/svg%3E" />
+
+  <!-- Tailwind via CDN (play CDN, no build) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    // Tailwind config bridge — exposes tokens used by the inline Motion runtime
+    tailwind.config = {
+      darkMode: ['class', '[data-theme="kinetic"]'],
+      theme: {
+        extend: {
+          fontFamily: {
+            display: ['var(--font-display)', 'ui-sans-serif', 'system-ui'],
+            body: ['var(--font-body)', 'ui-sans-serif', 'system-ui'],
+            mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace']
+          }
+        }
+      }
+    };
+  </script>
+
+  <style>
+    /* =========================================================
+       DESIGN TOKENS — editáveis por OpenUI Builder
+       --color-primary:  cor de marca (substituível por {{PRIMARY_COLOR}})
+       --color-bg:       cor de fundo (escuro por default)
+       --color-fg:       cor de texto principal
+       --color-muted:    cor de texto secundário
+       --font-display:   display variable (serifa ou sans grotesca)
+       --font-body:      body sans
+       --motion-duration: 240ms/480ms/720ms (subtle/medium/cinematic)
+       --motion-easing:   curva de easing padrão
+       --grid:           unidade de espaçamento
+       ========================================================= */
+    :root {
+      --color-primary: #ff4d2e;       /* CTA, links, marca tipográfica */
+      --color-bg:      #0a0a0a;       /* canvas principal */
+      --color-fg:      #f4f4f1;       /* texto principal (contraste 16.8:1) */
+      --color-muted:   #9a9a95;       /* texto secundário (contraste 5.4:1) */
+      --color-line:    #1f1f1f;       /* hairlines, divisores */
+      --color-card:    #111111;       /* cards/seções alternadas */
+
+      --font-display: 'Inter Tight', 'Helvetica Neue', system-ui, sans-serif;
+      --font-body:    'Inter', system-ui, -apple-system, sans-serif;
+
+      --motion-duration: 480ms;       /* medium é o default */
+      --motion-easing:   cubic-bezier(0.22, 1, 0.36, 1);
+      --motion-stagger: 60ms;
+
+      --grid: 8px;
+      --maxw: 1440px;
+    }
+
+    /* prefers-color-scheme: light fallback só se NÃO for kinetic */
+    [data-theme="minimal"] {
+      --color-bg:    #fafaf7;
+      --color-fg:    #0a0a0a;
+      --color-muted: #555;
+      --color-line:  #e5e5e0;
+      --color-card:  #f0efe9;
+    }
+
+    * { box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background: var(--color-bg);
+      color: var(--color-fg);
+      font-family: var(--font-body);
+      font-feature-settings: "ss01", "cv11";
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+      overflow-x: hidden;
+    }
+
+    /* Skip link para acessibilidade */
+    .skip-link {
+      position: absolute;
+      top: -100px;
+      left: 16px;
+      background: var(--color-primary);
+      color: #fff;
+      padding: 12px 16px;
+      font-weight: 700;
+      z-index: 1000;
+      border-radius: 4px;
+      transition: top 200ms var(--motion-easing);
+    }
+    .skip-link:focus { top: 16px; outline: 3px solid #fff; outline-offset: 2px; }
+
+    /* Foco visível consistente */
+    :focus-visible {
+      outline: 2px solid var(--color-primary);
+      outline-offset: 4px;
+      border-radius: 2px;
+    }
+
+    /* =========================================================
+       TIPOGRAFIA CINÉTICA
+       A peça central da estética: palavras que se desmontam,
+       mudam de peso, giram levemente e reagem ao scroll/cursor.
+       ========================================================= */
+    .kinetic-word {
+      display: inline-block;
+      will-change: transform, opacity, font-variation-settings;
+      transition:
+        font-variation-settings var(--motion-duration) var(--motion-easing),
+        transform        var(--motion-duration) var(--motion-easing),
+        letter-spacing   var(--motion-duration) var(--motion-easing),
+        color            var(--motion-duration) var(--motion-easing);
+    }
+
+    .kinetic-letter {
+      display: inline-block;
+      will-change: transform, opacity;
+      transition: transform var(--motion-duration) var(--motion-easing);
+    }
+
+    /* Hover icônico: split em camadas (estilo Crav) */
+    .hover-split {
+      position: relative;
+      display: inline-block;
+      line-height: 0.9;
+      cursor: pointer;
+    }
+    .hover-split__top,
+    .hover-split__bot {
+      display: block;
+      transition: transform var(--motion-duration) var(--motion-easing);
+    }
+    .hover-split__top { color: var(--color-fg); }
+    .hover-split__bot { color: var(--color-primary); }
+    .hover-split:hover .hover-split__top { transform: translateY(-30%); }
+    .hover-split:hover .hover-split__bot { transform: translateY(-70%); }
+
+    /* Headline massiva, quebra por linha, cada linha pode animar */
+    .display {
+      font-family: var(--font-display);
+      font-weight: 900;
+      font-stretch: 100%;
+      line-height: 0.86;
+      letter-spacing: -0.04em;
+      text-wrap: balance;
+    }
+    .display-xl { font-size: clamp(3.2rem, 14vw, 12rem); }
+    .display-lg { font-size: clamp(2.4rem, 8vw, 6rem); }
+    .display-md { font-size: clamp(1.8rem, 4.5vw, 3.5rem); }
+
+    .eyebrow {
+      font-family: var(--font-body);
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--color-muted);
+    }
+    .eyebrow::before {
+      content: "";
+      display: inline-block;
+      width: 24px;
+      height: 1px;
+      background: var(--color-primary);
+      vertical-align: middle;
+      margin-right: 12px;
+    }
+
+    /* Linhas divisoras finas (grid editorial) */
+    .hairline { border-top: 1px solid var(--color-line); }
+    .hairline-b { border-bottom: 1px solid var(--color-line); }
+
+    /* Cards com borda viva ao hover */
+    .card {
+      background: var(--color-card);
+      border: 1px solid var(--color-line);
+      padding: clamp(20px, 3vw, 32px);
+      position: relative;
+      overflow: hidden;
+      transition: border-color var(--motion-duration) var(--motion-easing);
+    }
+    .card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: var(--color-primary);
+      transform: translateY(100%);
+      transition: transform var(--motion-duration) var(--motion-easing);
+      z-index: 0;
+    }
+    .card:hover { border-color: var(--color-primary); }
+    .card:hover::before { transform: translateY(0); }
+    .card > * { position: relative; z-index: 1; }
+    .card:hover .card-num { color: #fff; }
+    .card:hover .card-title,
+    .card:hover .card-body { color: #fff; }
+    .card-num {
+      font-family: var(--font-mono, ui-monospace, monospace);
+      font-size: 12px;
+      color: var(--color-muted);
+      letter-spacing: 0.1em;
+      transition: color var(--motion-duration) var(--motion-easing);
+    }
+
+    /* Botões */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px 28px;
+      font-family: var(--font-body);
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      text-decoration: none;
+      border: 1px solid var(--color-fg);
+      color: var(--color-fg);
+      background: transparent;
+      cursor: pointer;
+      transition: all var(--motion-duration) var(--motion-easing);
+      position: relative;
+      overflow: hidden;
+    }
+    .btn::after {
+      content: "→";
+      transition: transform var(--motion-duration) var(--motion-easing);
+    }
+    .btn:hover {
+      background: var(--color-primary);
+      border-color: var(--color-primary);
+      color: #fff;
+    }
+    .btn:hover::after { transform: translateX(6px); }
+    .btn-primary {
+      background: var(--color-primary);
+      border-color: var(--color-primary);
+      color: #fff;
+    }
+    .btn-primary:hover {
+      background: var(--color-fg);
+      border-color: var(--color-fg);
+      color: var(--color-bg);
+    }
+
+    /* Marquee horizontal (estética kinetic) */
+    .marquee {
+      display: flex;
+      gap: 64px;
+      white-space: nowrap;
+      animation: marquee 40s linear infinite;
+      will-change: transform;
+    }
+    @keyframes marquee {
+      from { transform: translateX(0); }
+      to   { transform: translateX(-50%); }
+    }
+
+    /* SVG noise overlay sutil (textura de impressão) */
+    .noise::after {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      opacity: 0.04;
+      mix-blend-mode: overlay;
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence baseFrequency='0.9' /></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+      z-index: 100;
+    }
+
+    /* Reveal on scroll — Motion runtime injeta data-revealed="true" */
+    [data-reveal] {
+      opacity: 0;
+      transform: translateY(32px);
+      transition:
+        opacity var(--motion-duration) var(--motion-easing),
+        transform var(--motion-duration) var(--motion-easing);
+    }
+    [data-reveal][data-revealed="true"] {
+      opacity: 1;
+      transform: none;
+    }
+
+    /* Split text reveal (letra por letra) */
+    [data-split] .kinetic-letter {
+      opacity: 0;
+      transform: translateY(60%) rotate(8deg);
+    }
+    [data-split][data-revealed="true"] .kinetic-letter {
+      opacity: 1;
+      transform: none;
+      transition:
+        opacity var(--motion-duration) var(--motion-easing),
+        transform var(--motion-duration) var(--motion-easing);
+    }
+    [data-split][data-revealed="true"] .kinetic-letter:nth-child(1) { transition-delay: calc(var(--motion-stagger) * 0); }
+    [data-split][data-revealed="true"] .kinetic-letter:nth-child(2) { transition-delay: calc(var(--motion-stagger) * 1); }
+    [data-split][data-revealed="true"] .kinetic-letter:nth-child(3) { transition-delay: calc(var(--motion-stagger) * 2); }
+    [data-split][data-revealed="true"] .kinetic-letter:nth-child(4) { transition-delay: calc(var(--motion-stagger) * 3); }
+    [data-split][data-revealed="true"] .kinetic-letter:nth-child(5) { transition-delay: calc(var(--motion-stagger) * 4); }
+    [data-split][data-revealed="true"] .kinetic-letter:nth-child(6) { transition-delay: calc(var(--motion-stagger) * 5); }
+    [data-split][data-revealed="true"] .kinetic-letter:nth-child(7) { transition-delay: calc(var(--motion-stagger) * 6); }
+    [data-split][data-revealed="true"] .kinetic-letter:nth-child(8) { transition-delay: calc(var(--motion-stagger) * 7); }
+    [data-split][data-revealed="true"] .kinetic-letter:nth-child(9) { transition-delay: calc(var(--motion-stagger) * 8); }
+    [data-split][data-revealed="true"] .kinetic-letter:nth-child(10) { transition-delay: calc(var(--motion-stagger) * 9); }
+    [data-split][data-revealed="true"] .kinetic-letter:nth-child(n+11) { transition-delay: calc(var(--motion-stagger) * 10); }
+
+    /* Cursor follower sutil (desktop) */
+    .cursor-dot {
+      position: fixed;
+      top: 0; left: 0;
+      width: 12px; height: 12px;
+      border-radius: 50%;
+      background: var(--color-primary);
+      pointer-events: none;
+      mix-blend-mode: difference;
+      z-index: 200;
+      transform: translate(-50%, -50%);
+      transition: transform 80ms linear, width 200ms var(--motion-easing), height 200ms var(--motion-easing);
+      display: none;
+    }
+    @media (hover: hover) and (pointer: fine) {
+      .cursor-dot { display: block; }
+    }
+    .cursor-dot.is-hover {
+      width: 40px; height: 40px;
+    }
+
+    /* =========================================================
+       prefers-reduced-motion: desativa tudo que move
+       ========================================================= */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+      }
+      [data-reveal] { opacity: 1; transform: none; }
+      [data-split] .kinetic-letter { opacity: 1; transform: none; }
+      .marquee { animation: none; }
+    }
+
+    /* Utilitários */
+    .container-x { max-width: var(--maxw); margin-inline: auto; padding-inline: clamp(20px, 4vw, 64px); }
+    .clip-text {
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      background-image: linear-gradient(90deg, var(--color-fg) 0%, var(--color-primary) 100%);
+    }
+    .rot-slight { transform: rotate(-2deg); }
+    .rot-rev    { transform: rotate(2deg); }
+  </style>
+</head>
+<body class="noise">
+
+  <a href="#main" class="skip-link">Pular para o conteúdo</a>
+  <div class="cursor-dot" id="cursor" aria-hidden="true"></div>
+
+  <!-- ===================== HEADER ===================== -->
+  <header class="hairline-b sticky top-0 z-50" style="background: color-mix(in srgb, var(--color-bg) 92%, transparent); backdrop-filter: blur(12px);">
+    <div class="container-x flex items-center justify-between" style="height: 72px;">
+      <a href="#" class="flex items-center gap-3 font-display font-black tracking-tighter" style="font-size: 22px;" aria-label="{{BUSINESS_NAME}}">
+        <span class="kinetic-word" style="color: var(--color-primary);">[</span>
+        <span>{{BUSINESS_NAME}}</span>
+        <span class="kinetic-word" style="color: var(--color-primary);">]</span>
+      </a>
+      <nav aria-label="Navegação principal" class="hidden md:flex items-center gap-8">
+        <a href="#manifesto" class="kinetic-word text-sm font-semibold tracking-wide">Manifesto</a>
+        <a href="#servicos" class="kinetic-word text-sm font-semibold tracking-wide">Serviços</a>
+        <a href="#prova" class="kinetic-word text-sm font-semibold tracking-wide">Clientes</a>
+        <a href="#contato" class="kinetic-word text-sm font-semibold tracking-wide">Contato</a>
+      </nav>
+      <a href="#contato" class="btn btn-primary text-xs" style="padding: 10px 18px;">Vamos conversar</a>
+    </div>
+  </header>
+
+  <main id="main">
+
+    <!-- ===================== HERO ===================== -->
+    <section class="relative overflow-hidden" style="padding-block: clamp(60px, 10vw, 140px);">
+      <div class="container-x">
+
+        <div class="flex items-center justify-between mb-12">
+          <span class="eyebrow" data-reveal>(001) / Estúdio criativo</span>
+          <span class="hidden md:inline text-xs font-mono" style="color: var(--color-muted);" data-reveal>{{CITY}} · {{ADDRESS}}</span>
+        </div>
+
+        <h1 class="display display-xl" data-split>
+          <!-- Cada palavra/letra é animada independentemente pelo runtime -->
+          <span class="block">{{HERO_TITLE}}</span>
+        </h1>
+
+        <div class="mt-16 grid md:grid-cols-12 gap-8 items-end">
+          <p class="md:col-span-6 text-lg md:text-xl leading-relaxed" style="color: var(--color-muted);" data-reveal>
+            {{HERO_SUBTITLE}}
+          </p>
+          <div class="md:col-span-5 md:col-start-8 flex flex-wrap gap-4" data-reveal>
+            <a href="#servicos" class="btn btn-primary">Ver trabalhos</a>
+            <a href="#contato" class="btn">Iniciar projeto</a>
+          </div>
+        </div>
+
+        <!-- Marquee cinético inferior -->
+        <div class="mt-24 hairline pt-8 overflow-hidden">
+          <div class="marquee display" style="font-size: clamp(2rem, 5vw, 4rem); font-weight: 900;">
+            <span class="flex gap-16 items-center">
+              <span>Design que se move</span>
+              <span style="color: var(--color-primary);">✦</span>
+              <span>Tipo que respira</span>
+              <span style="color: var(--color-primary);">✦</span>
+              <span>Marca com pulso</span>
+              <span style="color: var(--color-primary);">✦</span>
+              <span>Design que se move</span>
+              <span style="color: var(--color-primary);">✦</span>
+              <span>Tipo que respira</span>
+              <span style="color: var(--color-primary);">✦</span>
+              <span>Marca com pulso</span>
+              <span style="color: var(--color-primary);">✦</span>
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- SVG decorativo (setas / número de edição) -->
+      <svg class="absolute top-8 right-8 hidden lg:block" width="120" height="120" viewBox="0 0 120 120" aria-hidden="true">
+        <circle cx="60" cy="60" r="58" fill="none" stroke="var(--color-line)" stroke-width="1" />
+        <text x="60" y="40" text-anchor="middle" font-family="ui-monospace" font-size="9" fill="var(--color-muted)" letter-spacing="2">SCROLL</text>
+        <text x="60" y="92" text-anchor="middle" font-family="ui-monospace" font-size="9" fill="var(--color-muted)" letter-spacing="2">DOWN</text>
+        <line x1="60" y1="48" x2="60" y2="80" stroke="var(--color-primary)" stroke-width="1" />
+        <polyline points="54,74 60,80 66,74" fill="none" stroke="var(--color-primary)" stroke-width="1" />
+      </svg>
+    </section>
+
+    <!-- ===================== MANIFESTO ===================== -->
+    <section id="manifesto" class="hairline-b" style="padding-block: clamp(60px, 10vw, 140px);">
+      <div class="container-x">
+        <div class="grid md:grid-cols-12 gap-12">
+          <div class="md:col-span-3">
+            <span class="eyebrow" data-reveal>(002) / Manifesto</span>
+          </div>
+          <div class="md:col-span-9">
+            <h2 class="display display-lg" data-split>
+              <span class="block">Acreditamos que</span>
+              <span class="block"><span class="clip-text">tipo é comportamento</span>,</span>
+              <span class="block">não estática.</span>
+            </h2>
+            <p class="mt-10 text-lg md:text-xl leading-relaxed max-w-3xl" style="color: var(--color-muted);" data-reveal>
+              {{ABOUT_TEXT}}
+            </p>
+
+            <!-- Princípios numerados -->
+            <ul class="mt-16 grid sm:grid-cols-2 gap-px" style="background: var(--color-line);">
+              <li class="card" data-reveal>
+                <div class="card-num">01 / Ritmo</div>
+                <h3 class="display display-md mt-6 card-title">Movimento com propósito</h3>
+                <p class="mt-4 card-body" style="color: var(--color-muted);">Cada animação carrega intenção. Nada é decorativo por acidente.</p>
+              </li>
+              <li class="card" data-reveal>
+                <div class="card-num">02 / Contraste</div>
+                <h3 class="display display-md mt-6 card-title">Peso & velocidade</h3>
+                <p class="mt-4 card-body" style="color: var(--color-muted);">Brutalismo tipográfico, sutileza técnica. O peso fala, o código sussurra.</p>
+              </li>
+              <li class="card" data-reveal>
+                <div class="card-num">03 / Sistema</div>
+                <h3 class="display display-md mt-6 card-title">Vivo, porém editável</h3>
+                <p class="mt-4 card-body" style="color: var(--color-muted);">Marcadores claros, tokens abertos, OpenUI Builder injeta conteúdo sem fricção.</p>
+              </li>
+              <li class="card" data-reveal>
+                <div class="card-num">04 / Acessibilidade</div>
+                <h3 class="display display-md mt-6 card-title">Bonito pra todos</h3>
+                <p class="mt-4 card-body" style="color: var(--color-muted);">Reduced motion, contraste AA, navegação por teclado. Sem concessões.</p>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== SERVIÇOS ===================== -->
+    <section id="servicos" class="hairline-b" style="padding-block: clamp(60px, 10vw, 140px);">
+      <div class="container-x">
+        <div class="flex items-end justify-between mb-16 flex-wrap gap-6">
+          <span class="eyebrow" data-reveal>(003) / Serviços</span>
+          <h2 class="display display-lg" data-split>
+            <span class="block">O que <span class="hover-split"><span class="hover-split__top">fazemos</span><span class="hover-split__bot">fazemos</span></span></span>
+          </h2>
+        </div>
+
+        <div class="grid md:grid-cols-3 gap-px" style="background: var(--color-line);">
+          <article class="card" data-reveal>
+            <div class="card-num">S/01</div>
+            <h3 class="display display-md mt-6 card-title">{{SERVICE_1_TITLE}}</h3>
+            <p class="mt-4 card-body" style="color: var(--color-muted);">Sistemas visuais que respondem ao scroll, ao cursor e ao contexto. Identidade cinética, literalmente.</p>
+            <ul class="mt-8 space-y-2 text-sm" style="color: var(--color-muted);">
+              <li>— Direção de arte</li>
+              <li>— Tipografia custom</li>
+              <li>— Brand book vivo</li>
+            </ul>
+          </article>
+          <article class="card" data-reveal>
+            <div class="card-num">S/02</div>
+            <h3 class="display display-md mt-6 card-title">{{SERVICE_2_TITLE}}</h3>
+            <p class="mt-4 card-body" style="color: var(--color-muted);">Sites que performam como portfólio, vendem como e-commerce e contam como filme.</p>
+            <ul class="mt-8 space-y-2 text-sm" style="color: var(--color-muted);">
+              <li>— Web design & dev</li>
+              <li>— Motion design</li>
+              <li>— Performance & SEO</li>
+            </ul>
+          </article>
+          <article class="card" data-reveal>
+            <div class="card-num">S/03</div>
+            <h3 class="display display-md mt-6 card-title">{{SERVICE_3_TITLE}}</h3>
+            <p class="mt-4 card-body" style="color: var(--color-muted);">Conteúdo que se move: títulos, legendas, vinhetas, tudo calibrado em pixels e em segundos.</p>
+            <ul class="mt-8 space-y-2 text-sm" style="color: var(--color-muted);">
+              <li>— Direção criativa</li>
+              <li>— Edição & cor</li>
+              <li>— Sound design</li>
+            </ul>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== PROVA SOCIAL ===================== -->
+    <section id="prova" class="hairline-b" style="padding-block: clamp(60px, 10vw, 140px);">
+      <div class="container-x">
+        <div class="flex items-end justify-between mb-16 flex-wrap gap-6">
+          <span class="eyebrow" data-reveal>(004) / Prova social</span>
+          <h2 class="display display-lg" data-split>
+            <span class="block">O que dizem</span>
+            <span class="block">de <span class="clip-text">nós</span>.</span>
+          </h2>
+        </div>
+
+        <div class="grid md:grid-cols-2 gap-px" style="background: var(--color-line);">
+          <figure class="card" data-reveal>
+            <blockquote class="display display-md card-title" style="line-height: 1.05;">
+              <span class="rot-slight inline-block">"</span>{{TESTIMONIAL_1_QUOTE}}<span class="rot-rev inline-block">"</span>
+            </blockquote>
+            <figcaption class="mt-10 flex items-center gap-4 card-body">
+              <span class="w-12 h-12 rounded-full inline-flex items-center justify-center font-black" style="background: var(--color-primary); color: #fff;">A</span>
+              <div>
+                <div class="font-bold">Ana Marques</div>
+                <div class="text-sm" style="color: var(--color-muted);">Diretora de Marca · Cliente A</div>
+              </div>
+            </figcaption>
+          </figure>
+          <figure class="card" data-reveal>
+            <blockquote class="display display-md card-title" style="line-height: 1.05;">
+              <span class="rot-slight inline-block">"</span>{{TESTIMONIAL_2_QUOTE}}<span class="rot-rev inline-block">"</span>
+            </blockquote>
+            <figcaption class="mt-10 flex items-center gap-4 card-body">
+              <span class="w-12 h-12 rounded-full inline-flex items-center justify-center font-black" style="background: var(--color-fg); color: var(--color-bg);">B</span>
+              <div>
+                <div class="font-bold">Bruno Sales</div>
+                <div class="text-sm" style="color: var(--color-muted);">CEO · Cliente B</div>
+              </div>
+            </figcaption>
+          </figure>
+        </div>
+
+        <!-- Faixa de logos em SVG puro -->
+        <div class="mt-24 hairline pt-10">
+          <p class="eyebrow mb-8" data-reveal>(005) / Quem confiou</p>
+          <div class="grid grid-cols-2 md:grid-cols-5 gap-8 items-center">
+            <div class="text-center font-black tracking-tighter kinetic-word" data-reveal style="font-size: 28px;">NOVA/</div>
+            <div class="text-center font-black tracking-tighter kinetic-word" data-reveal style="font-size: 28px;">crav°</div>
+            <div class="text-center font-black tracking-tighter kinetic-word" data-reveal style="font-size: 28px;">[RPA]</div>
+            <div class="text-center font-black tracking-tighter kinetic-word" data-reveal style="font-size: 28px;">SOMA&</div>
+            <div class="text-center font-black tracking-tighter kinetic-word" data-reveal style="font-size: 28px;">//BOLD</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== FAQ / CONTATO ===================== -->
+    <section id="contato" style="padding-block: clamp(60px, 10vw, 140px);">
+      <div class="container-x">
+        <div class="grid md:grid-cols-12 gap-12">
+          <div class="md:col-span-7">
+            <span class="eyebrow" data-reveal>(006) / Contato</span>
+            <h2 class="display display-lg mt-8" data-split>
+              <span class="block">Tem um projeto</span>
+              <span class="block">que precisa <span class="clip-text">mover</span>?</span>
+            </h2>
+            <p class="mt-8 text-lg max-w-xl" style="color: var(--color-muted);" data-reveal>
+              A gente responde em até 24h úteis. Manda o briefing, um link, ou só um oi.
+            </p>
+
+            <div class="mt-12 flex flex-wrap gap-4" data-reveal>
+              <a href="https://wa.me/{{PHONE}}" class="btn btn-primary">WhatsApp</a>
+              <a href="https://instagram.com/{{INSTAGRAM_HANDLE}}" class="btn" rel="noopener" target="_blank">Instagram</a>
+            </div>
+
+            <dl class="mt-16 grid sm:grid-cols-3 gap-px" style="background: var(--color-line);">
+              <div class="card" data-reveal>
+                <dt class="card-num">Telefone</dt>
+                <dd class="display mt-4 card-title" style="font-size: 24px;">{{PHONE}}</dd>
+              </div>
+              <div class="card" data-reveal>
+                <dt class="card-num">Endereço</dt>
+                <dd class="display mt-4 card-title" style="font-size: 24px;">{{ADDRESS}}</dd>
+              </div>
+              <div class="card" data-reveal>
+                <dt class="card-num">Cidade</dt>
+                <dd class="display mt-4 card-title" style="font-size: 24px;">{{CITY}}</dd>
+              </div>
+            </dl>
+          </div>
+
+          <!-- FAQ minimalista -->
+          <aside class="md:col-span-4 md:col-start-9">
+            <span class="eyebrow" data-reveal>FAQ</span>
+            <ul class="mt-8 space-y-6">
+              <li data-reveal>
+                <h3 class="font-bold text-lg">Prazo médio de entrega?</h3>
+                <p class="mt-2 text-sm" style="color: var(--color-muted);">4 a 8 semanas para landing pages, 8 a 12 para sites completos.</p>
+              </li>
+              <li data-reveal>
+                <h3 class="font-bold text-lg">Atende fora de {{CITY}}?</h3>
+                <p class="mt-2 text-sm" style="color: var(--color-muted);">Sim, 100% remoto e com clientes no Brasil e exterior.</p>
+              </li>
+              <li data-reveal>
+                <h3 class="font-bold text-lg">Como é o pagamento?</h3>
+                <p class="mt-2 text-sm" style="color: var(--color-muted);">50% entrada, 50% na entrega. Pix, boleto ou cartão.</p>
+              </li>
+              <li data-reveal>
+                <h3 class="font-bold text-lg">Cuida da parte técnica?</h3>
+                <p class="mt-2 text-sm" style="color: var(--color-muted);">Sim, design + dev + deploy em domínio próprio.</p>
+              </li>
+            </ul>
+          </aside>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ===================== FOOTER ===================== -->
+  <footer class="hairline" style="padding-block: 48px 24px;">
+    <div class="container-x">
+
+      <!-- Logo massiva cinética -->
+      <div class="overflow-hidden mb-12">
+        <div class="display font-black" style="font-size: clamp(4rem, 18vw, 16rem); line-height: 0.85; letter-spacing: -0.05em;" data-reveal>
+          {{BUSINESS_NAME}}<span style="color: var(--color-primary);">.</span>
+        </div>
+      </div>
+
+      <div class="grid md:grid-cols-4 gap-8 hairline-b pb-8" style="border-color: var(--color-line);">
+        <div>
+          <p class="eyebrow">Estúdio</p>
+          <p class="mt-4 text-sm" style="color: var(--color-muted);">{{ABOUT_TEXT}}</p>
+        </div>
+        <div>
+          <p class="eyebrow">Navegar</p>
+          <ul class="mt-4 space-y-2 text-sm">
+            <li><a href="#manifesto" class="kinetic-word">Manifesto</a></li>
+            <li><a href="#servicos" class="kinetic-word">Serviços</a></li>
+            <li><a href="#prova" class="kinetic-word">Clientes</a></li>
+            <li><a href="#contato" class="kinetic-word">Contato</a></li>
+          </ul>
+        </div>
+        <div>
+          <p class="eyebrow">Contato</p>
+          <ul class="mt-4 space-y-2 text-sm">
+            <li>{{PHONE}}</li>
+            <li>{{ADDRESS}}</li>
+            <li>{{CITY}}</li>
+            <li><a href="https://instagram.com/{{INSTAGRAM_HANDLE}}" rel="noopener" target="_blank">@{{INSTAGRAM_HANDLE}}</a></li>
+          </ul>
+        </div>
+        <div>
+          <p class="eyebrow">Newsletter</p>
+          <p class="mt-4 text-sm" style="color: var(--color-muted);">1 e-mail por mês, com estudos de caso e referências.</p>
+          <form class="mt-4 flex hairline" onsubmit="event.preventDefault(); this.querySelector('button').textContent='OK ✓';">
+            <label class="sr-only" for="email">E-mail</label>
+            <input id="email" type="email" required placeholder="seu@email.com"
+                   class="flex-1 bg-transparent py-3 text-sm outline-none" style="color: var(--color-fg);" />
+            <button type="submit" class="px-4 font-bold text-sm" style="color: var(--color-primary);">→</button>
+          </form>
+        </div>
+      </div>
+
+      <div class="mt-8 flex flex-wrap items-center justify-between gap-4 text-xs" style="color: var(--color-muted);">
+        <p>© <span id="year"></span> {{BUSINESS_NAME}}. Todos os direitos reservados.</p>
+        <p>
+          <a href="#" class="kinetic-word">Política de Privacidade</a> ·
+          <a href="#" class="kinetic-word">Termos</a> ·
+          <a href="#" class="kinetic-word">LGPD</a>
+        </p>
+        <p class="font-mono">Feito com kinetic type em {{CITY}}</p>
+      </div>
+
+      <!-- LGPD notice curto (obrigatório) -->
+      <p class="mt-6 text-[11px] leading-relaxed max-w-3xl" style="color: var(--color-muted);">
+        Aviso LGPD: este site coleta cookies analíticos e dados de formulário mediante consentimento. Os dados informados serão usados exclusivamente para responder seu contato e jamais compartilhados com terceiros. Você pode solicitar exclusão a qualquer momento pelo e-mail acima. <a href="#" class="underline">Saiba mais</a>.
+      </p>
+    </div>
+  </footer>
+
+  <!-- =========================================================
+       FRA.LIB MOTION RUNTIME — inline, ~80 linhas
+       - Split text em kinetic-letters
+       - IntersectionObserver para data-reveal
+       - Cursor follower
+       - Hover de peso (font-variation-settings) em .kinetic-word
+       - Motion level: subtle/medium/cinematic
+       ========================================================= -->
+  <script>
+    (function () {
+      'use strict';
+      var root = document.documentElement;
+      var prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      // ----- Motion level → duração -----
+      var motionLevel = (root.getAttribute('data-motion') || 'medium').toLowerCase();
+      var durationMap = { subtle: '240ms', medium: '480ms', cinematic: '720ms' };
+      if (durationMap[motionLevel]) {
+        root.style.setProperty('--motion-duration', durationMap[motionLevel]);
+      }
+
+      // ----- 1. Split text em <span class="kinetic-letter"> por caractere -----
+      // Aplica em qualquer [data-split] que ainda não foi processado.
+      function splitText(el) {
+        if (el.dataset.splitDone === '1') return;
+        // Captura blocos de texto (sem destruir elementos filhos intencionais)
+        var walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, null);
+        var nodes = [];
+        while (walker.nextNode()) nodes.push(walker.currentNode);
+        nodes.forEach(function (node) {
+          var txt = node.nodeValue;
+          if (!txt || !txt.trim()) return;
+          var frag = document.createDocumentFragment();
+          // Preserva espaços entre palavras com um span vazio
+          txt.split(/(\s+)/).forEach(function (chunk) {
+            if (chunk.match(/\s+/)) {
+              frag.appendChild(document.createTextNode(chunk));
+            } else {
+              chunk.split('').forEach(function (ch) {
+                var s = document.createElement('span');
+                s.className = 'kinetic-letter';
+                s.textContent = ch;
+                frag.appendChild(s);
+              });
+            }
+          });
+          node.parentNode.replaceChild(frag, node);
+        });
+        el.dataset.splitDone = '1';
+      }
+
+      // ----- 2. IntersectionObserver para revelar -----
+      var io;
+      function setupReveal() {
+        io = new IntersectionObserver(function (entries) {
+          entries.forEach(function (e) {
+            if (e.isIntersecting) {
+              e.target.setAttribute('data-revealed', 'true');
+              io.unobserve(e.target);
+            }
+          });
+        }, { rootMargin: '0px 0px -10% 0px', threshold: 0.05 });
+
+        document.querySelectorAll('[data-reveal], [data-split]').forEach(function (el) {
+          if (el.matches('[data-split]')) splitText(el);
+          io.observe(el);
+        });
+      }
+
+      // ----- 3. Hover de peso (kinetic-word): muda font-weight ao passar mouse -----
+      function setupKineticHover() {
+        if (prefersReduced) return;
+        document.querySelectorAll('.kinetic-word').forEach(function (w) {
+          w.addEventListener('mouseenter', function () {
+            w.style.fontVariationSettings = '"wght" 900, "wdth" 110';
+            w.style.letterSpacing = '0.02em';
+          });
+          w.addEventListener('mouseleave', function () {
+            w.style.fontVariationSettings = '';
+            w.style.letterSpacing = '';
+          });
+        });
+      }
+
+      // ----- 4. Cursor follower (desktop only) -----
+      function setupCursor() {
+        if (prefersReduced) return;
+        if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+        var dot = document.getElementById('cursor');
+        if (!dot) return;
+        var tx = 0, ty = 0, cx = 0, cy = 0;
+        document.addEventListener('mousemove', function (e) { tx = e.clientX; ty = e.clientY; });
+        function raf() {
+          cx += (tx - cx) * 0.25;
+          cy += (ty - cy) * 0.25;
+          dot.style.transform = 'translate(' + cx + 'px,' + cy + 'px) translate(-50%, -50%)';
+          requestAnimationFrame(raf);
+        }
+        raf();
+        // Cresce em elementos interativos
+        document.querySelectorAll('a, button, .card, .hover-split').forEach(function (el) {
+          el.addEventListener('mouseenter', function () { dot.classList.add('is-hover'); });
+          el.addEventListener('mouseleave', function () { dot.classList.remove('is-hover'); });
+        });
+      }
+
+      // ----- 5. Paralarax sutil no headline do hero (scroll) -----
+      function setupParallax() {
+        if (prefersReduced) return;
+        var h1 = document.querySelector('h1.display-xl');
+        if (!h1) return;
+        var ticking = false;
+        window.addEventListener('scroll', function () {
+          if (ticking) return;
+          ticking = true;
+          requestAnimationFrame(function () {
+            var y = Math.min(window.scrollY, 600);
+            h1.style.transform = 'translateY(' + (y * 0.18) + 'px)';
+            h1.style.opacity = String(1 - y / 800);
+            ticking = false;
+          });
+        }, { passive: true });
+      }
+
+      // ----- Boot -----
+      function boot() {
+        // Ano dinâmico
+        var y = document.getElementById('year');
+        if (y) y.textContent = new Date().getFullYear();
+
+        setupReveal();
+        setupKineticHover();
+        setupCursor();
+        setupParallax();
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', boot);
+      } else {
+        boot();
+      }
+    })();
+  </script>
+</body>
+</html>

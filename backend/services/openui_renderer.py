@@ -209,6 +209,146 @@ def render_openui_site(
     raise OpenUIRenderError(f"OpenUI renderer falhou: {attempts}")
 
 
+# ============================================================================
+# TEMPLATE-BASED RENDER (FraLib 4-Axis Variation + Templates estaticos)
+# ----------------------------------------------------------------------------
+# Esta rota NAO chama LLM. Combina:
+#   1) variation.generate_variation(lead_id, segmento)  -> {estetica, theme, ...}
+#   2) template_loader.load_template(estetica)          -> HTML canonico
+#   3) template_loader.render_with_variation(...)        -> HTML final
+#
+# Diferenca do render_openui_site:
+#   - DETERMINISTICO: mesmo (lead_id, segmento) -> mesmo HTML sempre
+#   - SEM LLM: zero custo de API, zero variabilidade entre runs
+#   - MESMO SHAPE DE SAIDA: retorna OpenUIRenderResult (compat com builder_worker)
+#
+# Backward-compat: render_openui_site() permanece INTACTO. Esta funcao e uma
+# rota paralela que o builder_worker escolhe via env var FRALIB_USE_TEMPLATES=1.
+# ============================================================================
+
+
+def render_with_template(
+    builder_prompt: str,
+    *,
+    facts: dict[str, Any] | None = None,
+    repair_context: dict[str, Any] | None = None,
+    primary_model: str = "sonnet",  # ignorado (nao chama LLM)
+    fallback_model: str = "opus",   # ignorado (nao chama LLM)
+    max_tokens: int = 6000,         # ignorado
+    temperature: float = 0.35,      # ignorado
+) -> OpenUIRenderResult:
+    """Render deterministico via template estatico + variation 4-eixos.
+
+    Args:
+        builder_prompt: prompt completo do Builder (nao usado para gerar HTML,
+                        apenas para manter assinatura compativel).
+        facts: contexto do lead ({"business": {...}, "lead_id": int, ...}).
+        repair_context: ignorado (rota deterministica nao repara).
+        *_model / max_tokens / temperature: ignorados. Mantidos na assinatura
+                para compatibilidade com render_openui_site.
+
+    Returns:
+        OpenUIRenderResult com mesmo shape de render_openui_site.
+
+    Raises:
+        OpenUIRenderError: se template_loader falhar.
+    """
+    started = time.time()
+    facts = facts or {}
+    attempts: list[dict[str, Any]] = []
+
+    try:
+        # Lazy import para evitar dependencia circular e manter backward-compat
+        try:
+            from backend.services.template_loader import (
+                load_template,
+                render_with_variation as tpl_render,
+                validate_template_output,
+            )
+        except Exception:
+            from services.template_loader import (  # type: ignore
+                load_template,
+                render_with_variation as tpl_render,
+                validate_template_output,
+            )
+
+        try:
+            from backend.templates._system.variation import generate_variation
+        except Exception:
+            from templates._system.variation import generate_variation  # type: ignore
+
+        # 1) Determinar lead_id + segmento (facts["lead_id"] OU facts["business"]["lead_id"])
+        lead_id_raw = (
+            facts.get("lead_id")
+            or (facts.get("business") or {}).get("lead_id")
+            or facts.get("job_id")
+            or 0
+        )
+        try:
+            lead_id = int(lead_id_raw)
+        except (TypeError, ValueError):
+            lead_id = abs(hash(str(lead_id_raw))) % (10 ** 8)
+
+        segmento = (
+            (facts.get("business") or {}).get("segmento")
+            or facts.get("segmento")
+            or (facts.get("business") or {}).get("segment")
+            or facts.get("segment")
+            or (facts.get("business") or {}).get("nicho")
+            or facts.get("nicho")
+            or "default"
+        )
+        segmento = str(segmento or "default").strip().lower()
+
+        # 2) Gerar variation (deterministico: mesmo lead_id+segmento -> mesma escolha)
+        variation = generate_variation(lead_id=lead_id, segmento=segmento)
+
+        attempt_started = time.time()
+        # 3) Carregar template canonico da estetica escolhida
+        template_html = load_template(variation["estetica"])
+
+        # 4) Render final (placeholders + CSS vars + motion runtime + tokens/themes)
+        final_html = tpl_render(template_html, facts, variation)
+
+        # 5) Validar output
+        report = validate_template_output(final_html)
+        if not report.get("ok"):
+            raise OpenUIRenderError(
+                f"template output invalido: {'; '.join(report.get('errors', []))[:500]}"
+            )
+
+        attempts.append(
+            {
+                "model": "template+variation",
+                "status": "success",
+                "elapsed_ms": int((time.time() - attempt_started) * 1000),
+                "html_chars": len(final_html),
+                "estetica": variation.get("estetica"),
+                "theme": variation.get("theme"),
+                "motion": variation.get("motion"),
+                "unresolved_placeholders": report.get("unresolved_placeholders", []),
+            }
+        )
+        return OpenUIRenderResult(
+            html=final_html,
+            body_html=final_html,
+            model="template+variation",
+            attempts=attempts,
+            elapsed_ms=int((time.time() - started) * 1000),
+        )
+
+    except Exception as exc:
+        attempts.append(
+            {
+                "model": "template+variation",
+                "status": "failed",
+                "elapsed_ms": int((time.time() - started) * 1000),
+                "error": str(exc)[:500],
+            }
+        )
+        raise OpenUIRenderError(f"render_with_template falhou: {exc}") from exc
+
+
 def extract_openui_html(raw: str) -> str:
     """Extract body HTML from common OpenUI/LLM response formats."""
     text = (raw or "").strip()

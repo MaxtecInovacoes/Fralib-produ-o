@@ -1,0 +1,118 @@
+/* ============================================================================
+ * tokens.css — Design Tokens Base (FraLib 4-Axis Variation System)
+ * ----------------------------------------------------------------------------
+ * Inspired by W3C Design Tokens Community Group spec (2025.10).
+ *
+ * Este arquivo define APENAS tokens semanticos neutros. Os temas (themes.css)
+ * sobrescrevem os valores de --color-*. Tipografia, motion e layout ficam
+ * neste arquivo porque sao ortogonais a cor.
+ *
+ * 4 EIXOS do sistema de variacao:
+ *   1. ESTETICA  (bold_energy, editorial, minimal, kinetic, scroll, immersive_3d)
+ *   2. TEMA      (10 temas em themes.css)
+ *   3. TIPOGRAFIA (5 familias abaixo)
+ *   4. LAYOUT    (centered, magazine, bento)
+ *   5. MOTION    (subtle, medium, cinematic)
+ *
+ * Cada template HTML consome estes tokens via var(--token-name).
+ * ========================================================================== */
+
+:root {
+  /* ------------------------------------------------------------------------
+   * EIXO COR (EIXO 2) — sobreescrito por themes.css
+   * ------------------------------------------------------------------------ */
+
+  /* Backgrounds */
+  --color-bg-light: #ffffff;            /* fundo padrao claro */
+  --color-bg-dark:  #0a0a0a;            /* fundo padrao escuro */
+
+  /* Foreground (texto) */
+  --color-fg:       #111111;            /* texto principal */
+  --color-muted:    #6b7280;            /* texto secundario / meta */
+
+  /* Accent (CTA, links, foco) */
+  --color-accent:   #ff5722;            /* cor de destaque */
+
+  /* ------------------------------------------------------------------------
+   * EIXO TIPOGRAFIA (EIXO 3) — 5 familias
+   * ------------------------------------------------------------------------
+   * - display:  headings / hero (com peso e impacto)
+   * - body:     texto corrido / paragrafos
+   * - mono:     codigo / numeros / counters
+   *
+   * Cada estetica declara uma composicao:
+   *   BOLD       -> display:Space Grotesk, body:Inter, mono:JetBrains Mono
+   *   EDITORIAL  -> display:Playfair Display, body:IBM Plex Sans, mono:JetBrains Mono
+   *   MINIMAL    -> display:Inter, body:Inter, mono:JetBrains Mono
+   *   KINETIC    -> display:Space Grotesk, body:Inter, mono:JetBrains Mono
+   *   SCROLL     -> display:Playfair Display, body:IBM Plex Sans, mono:JetBrains Mono
+   *   IMMERSIVE  -> display:Space Grotesk, body:Inter, mono:IBM Plex Sans
+   *
+   * Para temas serif-only (editorial-cream), display vira Playfair.
+   * ------------------------------------------------------------------------ */
+
+  /* Sans-serif neutra (default) */
+  --font-display: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-body:    "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono:    "JetBrains Mono", ui-monospace, "Cascadia Code", monospace;
+
+  /* Fallbacks alternativos (temas especificos sobrescrevem em themes.css):
+     --font-display-playfair:  "Playfair Display", Georgia, serif;
+     --font-display-grotesk:   "Space Grotesk", "Inter", sans-serif;
+     --font-body-plex:         "IBM Plex Sans", "Inter", sans-serif;
+  */
+
+  /* ------------------------------------------------------------------------
+   * EIXO MOTION (EIXO 5) — 3 levels
+   * ------------------------------------------------------------------------
+   * - subtle:    microinteracoes, hovers. NAO distrai.
+   * - medium:    transicoes de secao, fades, slides curtos. Equilibrado.
+   * - cinematic: hero, page transitions, parallax. Awwwards-tier.
+   *
+   * Regras de coerencia (variation.py):
+   *   BOLD/IMMERSIVE -> cinematic
+   *   EDITORIAL/KINETIC/SCROLL -> medium
+   *   MINIMAL -> subtle
+   * ------------------------------------------------------------------------ */
+
+  --motion-duration-subtle:    0.3s;
+  --motion-easing-subtle:      ease-out;
+
+  --motion-duration-medium:    0.6s;
+  --motion-easing-medium:      cubic-bezier(0.4, 0, 0.2, 1);
+
+  --motion-duration-cinematic: 1.2s;
+  --motion-easing-cinematic:   cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Defaults ativos (serem sobrescritos via inline style pelo variation.py) */
+  --motion-duration:           var(--motion-duration-medium);
+  --motion-easing:             var(--motion-easing-medium);
+
+  /* ------------------------------------------------------------------------
+   * EIXO LAYOUT (EIXO 4) — 3 tipos
+   * ------------------------------------------------------------------------
+   * - centered:  container fixo, conteudo centralizado, max-width classico.
+   *              Ideal para landing pages tradicionais.
+   * - magazine:  grid assimetrico, colunas desbalanceadas, hero bleed.
+   *              Ideal para editoriais e portfolios.
+   * - bento:     grid modular 2D com cards de tamanhos variaveis (estilo Apple).
+   *              Ideal para showcase de servicos / features.
+   *
+   * Variaveis operacionais (templates setam estas no <body>):
+   *   --layout-container-max: 1200px (centered) | 1440px (magazine) | 1320px (bento)
+   *   --layout-gutter:        24px (centered) | 32px (magazine) | 20px (bento)
+   * ------------------------------------------------------------------------ */
+
+  --layout-container-max: 1200px;
+  --layout-gutter:        24px;
+}
+
+/* ============================================================================
+ * prefers-color-scheme fallback (temas proveem versao dark separada)
+ * ========================================================================== */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg-light: var(--color-bg-dark);
+    --color-fg:       #f5f5f5;
+  }
+}
