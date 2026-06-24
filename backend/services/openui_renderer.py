@@ -144,6 +144,15 @@ def render_openui_site(
     max_tokens: int = 6000,
     temperature: float = 0.35,
 ) -> OpenUIRenderResult:
+    """Generate a publishable HTML document using the OpenUI contract.
+
+    Cascade qualidade: sonnet (primario, ~20s) -> opus (fallback se sonnet
+    falhar validacao). Haiku removido como primario em 2026-06-23 porque
+    gerava HTML mal-formado (tags abertas, blocos incompletos). Custo
+    medio: ~$0.025/site em sonnet, ~$0.06 em opus fallback. Sonnet hoje.
+
+    Tracing opt-in (Sprint 5 / v1.8) - controlado por FRALIB_TRACING env.
+    """
     # Sprint 5 (v1.8) - tracing opt-in (zero overhead se FRALIB_TRACING=0)
     try:
         from backend.services.tracing import trace_run, trace_llm_call

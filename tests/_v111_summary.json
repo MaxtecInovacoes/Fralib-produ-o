@@ -1,0 +1,96 @@
+{
+  "sprint": 8,
+  "version": "1.11",
+  "name": "Auto-melhoria (traces -> prompts)",
+  "status": "complete",
+  "date": "2026-06-24",
+  "files_created": [
+    {
+      "path": "backend/services/auto_improve.py",
+      "lines": 540,
+      "purpose": "Servico de auto-melhoria: le traces, sugere melhorias, evolui prompt v2, persiste, gate should_apply_v2"
+    },
+    {
+      "path": "backend/endpoints/admin_prompts_endpoints.py",
+      "lines": 234,
+      "purpose": "4 rotas admin: /versions, /analyze, /apply, /current para gerenciar prompt versions"
+    },
+    {
+      "path": "tests/test_anti_regressao_v111.py",
+      "lines": 300,
+      "purpose": "8 testes anti-regressao para auto_improve + endpoints + gate"
+    }
+  ],
+  "files_updated": [
+    {
+      "path": ".git/hooks/check_v11_protection.py",
+      "lines_added": 35,
+      "purpose": "Adiciona 4 checks para Sprint 8: auto_improve.py, admin_prompts_endpoints.py, gate should_apply_v2, _prompts_v2/"
+    }
+  ],
+  "main_functions": {
+    "auto_improve.py": [
+      "analyze_traces(days=7, min_samples=10) -> dict",
+      "suggest_prompt_improvements(agent) -> list[str]",
+      "evolve_prompt(agent, current, suggestions) -> str",
+      "persist_prompt_version(agent, version, prompt) -> None",
+      "get_best_prompt(agent) -> str",
+      "should_apply_v2(agent) -> bool (gate: min_samples=10 + delta>5%)"
+    ]
+  },
+  "endpoints": [
+    "GET /api/admin/prompts/versions?agent=nicho",
+    "POST /api/admin/prompts/analyze?days=7",
+    "POST /api/admin/prompts/apply?agent=nicho&version=v2",
+    "GET /api/admin/prompts/current?agent=nicho"
+  ],
+  "tests": {
+    "v111": {
+      "file": "tests/test_anti_regressao_v111.py",
+      "count": 8,
+      "all_passed": true,
+      "cases": [
+        "test_1_auto_improve_module_exists",
+        "test_2_analyze_traces_with_synthetic_data",
+        "test_3_suggest_prompt_improvements_for_low_success",
+        "test_4_evolve_prompt_returns_new_version",
+        "test_5_persist_and_get_best_prompt_roundtrip",
+        "test_6_should_apply_v2_gate_works",
+        "test_7_admin_prompts_endpoints_registered",
+        "test_8_pre_commit_hook_has_16_checks"
+      ]
+    },
+    "v18": {
+      "file": "tests/test_anti_regressao_v18.py",
+      "count": 8,
+      "all_passed": true
+    },
+    "estado": {
+      "file": "tests/test_anti_regressao_estado.py",
+      "count": 22,
+      "all_passed": true
+    }
+  },
+  "validation": {
+    "v111_passed": "8/8",
+    "v18_passed": "8/8",
+    "estado_passed": "22/22",
+    "total_passed": "38/38",
+    "pre_commit_hook_checks": 25,
+    "pre_commit_hook_min_required": 16
+  },
+  "design_decisions": {
+    "persist_directory": "backend/agents/_prompts_v2/",
+    "supported_agents": ["nicho", "arquiteto", "builder", "validador"],
+    "min_samples_threshold": 10,
+    "delta_threshold": 0.05,
+    "evolve_strategy": "APPEND-only (preserva v1, adiciona secao AUTO-IMPROVE)",
+    "tracing_overhead": "zero (usa trace_run no-op quando FRALIB_TRACING=0)"
+  },
+  "notes": [
+    "auto_improve.py reusa tracing.get_stats + tracing.TRACES_DIR + tracing.trace_run (Sprint 5)",
+    "Gates conservadores: min_samples=10 + delta>5% garantem que v2 so ativa com ganho real",
+    "apply endpoint nao ativa v2 se should_apply_v2 retorna False (rollback livre para v1)",
+    "ADMIN auth: padrao de admin_tracing (requer is_admin; production = 403 strict)"
+  ]
+}

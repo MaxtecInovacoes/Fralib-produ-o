@@ -1,0 +1,141 @@
+{
+  "version": "v1.12",
+  "date": "2026-06-24",
+  "sprint": "Sprint 9 - Edge Cases + Production Hardening",
+  "components": {
+    "edge_cases.py": {
+      "status": "created",
+      "functions": [
+        {
+          "name": "safe_normalize_text",
+          "description": "Normaliza texto de forma defensiva (None/vazio/whitespace/unicode safe)",
+          "lines": 28
+        },
+        {
+          "name": "safe_jsonl_iter",
+          "description": "Itera sobre arquivo JSONL pulando linhas malformadas (com warning)",
+          "lines": 46
+        },
+        {
+          "name": "db_retry",
+          "description": "Decorator para retentar operacoes de banco com backoff exponencial",
+          "lines": 32
+        },
+        {
+          "name": "assert_tenant_access",
+          "description": "Verifica acesso ao recurso no mesmo tenant (raise se mismatch)",
+          "lines": 18
+        },
+        {
+          "name": "safe_write_file",
+          "description": "Escreve arquivo tratando disk-full e erros de IO (retorna bool)",
+          "lines": 46
+        },
+        {
+          "name": "with_timeout",
+          "description": "Decorator que aborta funcao apos `seconds` (retorna fallback se exceder)",
+          "lines": 40
+        },
+        {
+          "name": "is_idempotent_action",
+          "description": "Helper de idempotencia basica (arquivo local, nao distribuido)",
+          "lines": 24
+        },
+        {
+          "name": "register_action",
+          "description": "Registra action_key como executada (com idempotency TTL)",
+          "lines": 16
+        },
+        {
+          "name": "TenantAccessError",
+          "description": "Excecao quando user tenta acessar recurso de outro tenant",
+          "lines": 7
+        }
+      ],
+      "total_lines": 257
+    },
+    "tracing.py": {
+      "status": "updated",
+      "changes": [
+        "get_stats agora usa safe_jsonl_iter da edge_cases",
+        "Melhora: tolera linhas malformadas nos trace files",
+        "+20 linhas de import/uso seguro"
+      ]
+    },
+    "test_anti_regressao_v112.py": {
+      "status": "created",
+      "tests": [
+        {
+          "name": "test_1_safe_normalize_handles_none_empty",
+          "description": "safe_normalize_text lida com None, vazio, whitespace"
+        },
+        {
+          "name": "test_2_safe_normalize_handles_unicode",
+          "description": "safe_normalize_text normaliza unicode (NFC)"
+        },
+        {
+          "name": "test_3_safe_jsonl_skips_malformed",
+          "description": "safe_jsonl_iter pula linhas malformadas (com warn)"
+        },
+        {
+          "name": "test_4_db_retry_succeeds",
+          "description": "db_retry succeed apos exceptions transientes"
+        },
+        {
+          "name": "test_5_assert_tenant_access_blocks_cross",
+          "description": "assert_tenant_access bloqueia acesso cross-tenant"
+        },
+        {
+          "name": "test_6_concurrent_jobs_idempotent",
+          "description": "is_idempotent_action + register_action simulam jobs concorrentes"
+        },
+        {
+          "name": "test_7_safe_write_file_handles_disk_full",
+          "description": "safe_write_file trata disk-full (mock)"
+        },
+        {
+          "name": "test_8_with_timeout_returns_fallback",
+          "description": "with_timeout retorna fallback se exceder"
+        },
+        {
+          "name": "test_9_tracing_get_stats_tolerates_malformed",
+          "description": "tracing.get_stats usa safe_jsonl_iter (tolera malformed)"
+        },
+        {
+          "name": "test_10_edge_cases_module_importable",
+          "description": "modulo edge_cases importavel sem side-effects"
+        }
+      ],
+      "total_tests": 10
+    }
+  },
+  "validation": {
+    "test_anti_regressao_v112.py": "10/10 passed",
+    "test_anti_regressao_v18.py": "8/8 passed",
+    "test_anti_regressao_estado.py": "22/22 passed",
+    "total": "40/40 passed - ALL GREEN"
+  },
+  "features": [
+    "Text normalization robusta (None/unicode/whitespace safe)",
+    "JSONL streaming tolerante a linhas quebradas",
+    "DB operations com retry automático (backoff exponencial)",
+    "Tenant access validation cedo (cross-tenant protection)",
+    "File write com tratamento de disk-full atomic",
+    "Timeout decorator com fallback para operações lentas",
+    "Idempotência básica para jobs concorrentes (arquivo local)",
+    "Melhoria: tracing agora tolera malformed JSON nos trace files"
+  ],
+  "production_hardening": [
+    "Stateless helpers (sem side-effects)",
+    "All functions have docstrings + examples",
+    "Graceful degradation (disk-full, timeout, malformed data)",
+    "Type hints on all function signatures",
+    "PEP 8 compliant code formatting"
+  ],
+  "next_steps": [
+    "Adicionar edge_cases.py ao pre-commit hook (proteger)",
+    "Atualizar docs com exemplos de uso em produção",
+    "Considerar helpers idempotencia distribuída (Redis)",
+    "Adicionar timeout ao pipeline orchestration"
+  ]
+}

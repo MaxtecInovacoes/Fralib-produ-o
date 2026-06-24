@@ -291,29 +291,22 @@ def get_stats(agent: str = None, days: int = 1) -> dict:
     stats = {"count": 0, "errors": 0, "total_latency_ms": 0, "total_cost_usd": 0.0,
              "total_input_tokens": 0, "total_output_tokens": 0}
     try:
+        # Import lazy para evitar circular import
+        from backend.services.edge_cases import safe_jsonl_iter
         for day_offset in range(days):
             day = time.strftime("%Y-%m-%d", time.localtime(time.time() - day_offset * 86400))
             path = TRACES_DIR / f"traces_{day}.jsonl"
-            if not path.is_file():
-                continue
-            with open(path, "r", encoding="utf-8") as f:
-                for line in f:
-                    line = line.strip()
-                    if not line:
-                        continue
-                    try:
-                        t = json.loads(line)
-                        if agent and t.get("agent") != agent:
-                            continue
-                        stats["count"] += 1
-                        if not t.get("success"):
-                            stats["errors"] += 1
-                        stats["total_latency_ms"] += t.get("latency_ms", 0)
-                        stats["total_cost_usd"] += t.get("cost_usd", 0.0)
-                        stats["total_input_tokens"] += t.get("input_tokens", 0)
-                        stats["total_output_tokens"] += t.get("output_tokens", 0)
-                    except json.JSONDecodeError:
-                        continue
+            # safe_jsonl_iter: pula linhas quebradas com warn, nao quebra stats
+            for t in safe_jsonl_iter(path):
+                if agent and t.get("agent") != agent:
+                    continue
+                stats["count"] += 1
+                if not t.get("success"):
+                    stats["errors"] += 1
+                stats["total_latency_ms"] += t.get("latency_ms", 0) or 0
+                stats["total_cost_usd"] += t.get("cost_usd", 0.0) or 0.0
+                stats["total_input_tokens"] += t.get("input_tokens", 0) or 0
+                stats["total_output_tokens"] += t.get("output_tokens", 0) or 0
     except Exception as e:
         logger.warning(f"[tracing] get_stats falhou: {e}")
     if stats["count"] > 0:
