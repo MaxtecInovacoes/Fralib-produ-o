@@ -516,7 +516,7 @@ async def get_status(db: Session = Depends(get_db), usuario: dict = Depends(get_
     current_job = _current_pipeline_job(db, tenant_id)
     latest_job = current_job or _latest_pipeline_job(db, tenant_id)
     total_leads = db.execute(text("SELECT COUNT(*) FROM leads WHERE user_id=:uid"), {"uid": tenant_id}).scalar() or 0
-    total_sites = db.execute(text("SELECT COUNT(*) FROM leads WHERE user_id=:uid AND (site_url IS NOT NULL AND site_url != '' OR url_site IS NOT NULL AND url_site != '')"), {"uid": tenant_id}).scalar() or 0
+    total_sites = db.execute(text("SELECT COUNT(*) FROM leads WHERE user_id=:uid AND ((site_url IS NOT NULL AND site_url != '') OR (url_site IS NOT NULL AND url_site != ''))"), {"uid": tenant_id}).scalar() or 0
     total_enviados = db.execute(text("SELECT COUNT(*) FROM leads WHERE user_id=:uid AND status = 'contatado'"), {"uid": tenant_id}).scalar() or 0
     ciclo_atual = db.execute(text("SELECT COALESCE(MAX(ciclo), 0) FROM leads WHERE user_id=:uid"), {"uid": tenant_id}).scalar() or 0
     _ckpt_info = None
@@ -549,10 +549,10 @@ async def get_status(db: Session = Depends(get_db), usuario: dict = Depends(get_
 async def get_stats(db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
     try:
         uid = usuario.get("tenant_id", usuario["id"])
-        total_com_site = db.execute(text("SELECT COUNT(*) FROM leads WHERE user_id=:uid AND (site_url IS NOT NULL AND site_url != '' OR url_site IS NOT NULL AND url_site != '')"), {"uid": uid}).scalar() or 0
+        total_com_site = db.execute(text("SELECT COUNT(*) FROM leads WHERE user_id=:uid AND ((site_url IS NOT NULL AND site_url != '') OR (url_site IS NOT NULL AND url_site != ''))"), {"uid": uid}).scalar() or 0
         total_respondeu = db.execute(text("SELECT COUNT(DISTINCT i.lead_nome) FROM interacoes i JOIN leads l ON l.nome=i.lead_nome WHERE l.user_id=:uid AND i.direcao='entrada'"), {"uid": uid}).scalar() or 0
         taxa_resposta = round(total_respondeu / total_com_site * 100, 1) if total_com_site > 0 else 0
-        nicho_top = db.execute(text("SELECT segmento, COUNT(CASE WHEN (site_url IS NOT NULL AND site_url != '' OR url_site IS NOT NULL AND url_site != '') THEN 1 END) * 100.0 / COUNT(*) as conv FROM leads WHERE user_id = :uid AND segmento IS NOT NULL AND segmento != '' GROUP BY segmento HAVING COUNT(*) >= 3 ORDER BY conv DESC LIMIT 1"), {"uid": uid}).fetchone()
+        nicho_top = db.execute(text("SELECT segmento, COUNT(CASE WHEN ((site_url IS NOT NULL AND site_url != '') OR (url_site IS NOT NULL AND url_site != '')) THEN 1 END) * 100.0 / COUNT(*) as conv FROM leads WHERE user_id = :uid AND segmento IS NOT NULL AND segmento != '' GROUP BY segmento HAVING COUNT(*) >= 3 ORDER BY conv DESC LIMIT 1"), {"uid": uid}).fetchone()
         cidade_top = db.execute(text("SELECT cidade, COUNT(*) as total FROM leads WHERE user_id = :uid AND cidade IS NOT NULL AND cidade != '' GROUP BY cidade ORDER BY total DESC LIMIT 1"), {"uid": uid}).fetchone()
         ticket_medio = db.execute(text("SELECT COALESCE(AVG(valor_venda), 0) FROM leads WHERE user_id=:uid AND valor_venda > 0"), {"uid": uid}).scalar() or 0
         total_msgs = db.execute(text("SELECT COUNT(*) FROM interacoes i JOIN leads l ON l.nome=i.lead_nome WHERE l.user_id=:uid AND i.direcao='saida'"), {"uid": uid}).scalar() or 0

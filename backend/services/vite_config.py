@@ -18,6 +18,16 @@ FIXED_PACKAGE_JSON = {
         "tailwindcss": "^4.0.0",
         "motion": "^11.11.0",
         "gsap": "^3.12.5",
+        # shadcn/ui dependencies
+        "@radix-ui/react-button": "^1.1.0",
+        "@radix-ui/react-card": "^1.1.0",
+        "@radix-ui/react-dialog": "^1.1.0",
+        "@radix-ui/react-dropdown-menu": "^2.1.0",
+        "@radix-ui/react-navigation-menu": "^1.2.0",
+        "@radix-ui/react-tabs": "^1.1.0",
+        "class-variance-authority": "^0.7.0",
+        "clsx": "^2.1.0",
+        "tailwind-merge": "^2.5.0",
     },
     "devDependencies": {
         "@types/react": "^18.3.12",

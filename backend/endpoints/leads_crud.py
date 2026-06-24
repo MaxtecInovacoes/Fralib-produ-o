@@ -64,8 +64,11 @@ async def get_sites(
             text("""
             SELECT id, nome, cidade, segmento, COALESCE(site_url, url_site) AS site_url, valor_venda, status, criado_em, score
             FROM leads
-            WHERE (site_url IS NOT NULL AND site_url != '') OR (url_site IS NOT NULL AND url_site != '')
-            AND user_id = :uid
+            WHERE user_id = :uid
+              AND (
+                (site_url IS NOT NULL AND site_url != '')
+                OR (url_site IS NOT NULL AND url_site != '')
+              )
             ORDER BY criado_em DESC
         """),
             {"uid": tenant_id_s},

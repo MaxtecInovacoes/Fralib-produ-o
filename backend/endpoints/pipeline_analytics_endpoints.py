@@ -57,7 +57,7 @@ async def get_analytics(
         params = {"uid": tenant_id_a}
 
     total_leads = db.execute(text(f"SELECT COUNT(*) FROM leads {where}"), params).scalar() or 0
-    total_sites = db.execute(text(f"SELECT COUNT(*) FROM leads {where} AND (site_url IS NOT NULL AND site_url != '' OR url_site IS NOT NULL AND url_site != '')"), params).scalar() or 0
+    total_sites = db.execute(text(f"SELECT COUNT(*) FROM leads {where} AND ((site_url IS NOT NULL AND site_url != '') OR (url_site IS NOT NULL AND url_site != ''))"), params).scalar() or 0
     total_vendidos = db.execute(text(f"SELECT COUNT(*) FROM leads {where} AND valor_venda > 0"), params).scalar() or 0
     receita = db.execute(text(f"SELECT COALESCE(SUM(valor_venda),0) FROM leads {where} AND valor_venda > 0"), params).scalar() or 0
     conversao_site = round((total_sites / total_leads * 100), 1) if total_leads > 0 else 0
