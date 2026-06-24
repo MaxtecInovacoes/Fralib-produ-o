@@ -8,6 +8,17 @@ sys.path.insert(0, os.path.dirname(__file__))
 from handoff_types import ValidacaoResultado
 from llm_direct import call_claude
 
+# Sprint 5 (v1.8) - tracing opt-in (zero overhead se FRALIB_TRACING=0)
+try:
+    from backend.services.tracing import trace_run
+    _HAS_TRACING = True
+except ImportError:
+    _HAS_TRACING = False
+    from contextlib import contextmanager
+    @contextmanager
+    def trace_run(*args, **kwargs):
+        yield None
+
 SYSTEM_PROMPT = """You are the Final Validator.
 
 Your role is to review the final result before deployment.
@@ -51,6 +62,24 @@ data or stats.
 All user-facing copy MUST be in Brazilian Portuguese (pt-BR)."""
 
 def validar(
+    html: str,
+    prd_text: str = "",
+    segmento: str = "",
+    task_id: str = "",
+) -> ValidacaoResultado:
+    _trace_inputs = {
+        "segmento": segmento,
+        "task_id": task_id,
+        "html_len": len(html) if html else 0,
+        "prd_len": len(prd_text) if prd_text else 0,
+    }
+    with trace_run("validador", "validar", inputs=_trace_inputs, metadata={
+        "task_id": task_id,
+    }):
+        return _validar_impl(html, prd_text, segmento, task_id)
+
+
+def _validar_impl(
     html: str,
     prd_text: str = "",
     segmento: str = "",

@@ -27,6 +27,18 @@ try:
 except Exception:  # pragma: no cover - local import variant
     from design_reference_packs import format_design_reference_pack_prompt
     from design_system_router import build_design_dna, choose_section_variant
+
+# Sprint 5 (v1.8) - tracing opt-in (zero overhead se FRALIB_TRACING=0)
+try:
+    from backend.services.tracing import trace_run
+    _HAS_TRACING = True
+except ImportError:
+    _HAS_TRACING = False
+    from contextlib import contextmanager
+    @contextmanager
+    def trace_run(*args, **kwargs):
+        yield None
+
 from prompts_arquiteto import (
     _extrair_dados_jina,
     _montar_brief_estruturado,
@@ -39,6 +51,32 @@ from prompts_arquiteto import (
 
 
 def gerar_arquiteto_mestre_prd(
+    dados_hunter: dict,
+    cidade: str,
+    segmento: str,
+    jina_insights: str,
+    caio_tier: str,
+    caio_score: int = 0,
+    caio_motivo: str = "",
+    briefing_theo: str = "",
+    dark_mode: bool = False,
+    keyword_research: str = "",
+    inteligencia: dict = None,
+    nicho_briefing: NichoBriefing = None,
+    variacao: VariacaoEstrutural = None,
+) -> DesignerPRD:
+    with trace_run("arquiteto", "gerar_prd", inputs={
+        "segmento": segmento, "cidade": cidade, "caio_tier": caio_tier,
+    }, metadata={"dark_mode": dark_mode}):
+        return _gerar_arquiteto_mestre_prd_impl(
+            dados_hunter, cidade, segmento, jina_insights,
+            caio_tier, caio_score, caio_motivo, briefing_theo,
+            dark_mode, keyword_research, inteligencia,
+            nicho_briefing, variacao,
+        )
+
+
+def _gerar_arquiteto_mestre_prd_impl(
     dados_hunter: dict,
     cidade: str,
     segmento: str,

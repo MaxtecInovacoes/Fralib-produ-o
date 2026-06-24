@@ -144,6 +144,47 @@ def render_openui_site(
     max_tokens: int = 6000,
     temperature: float = 0.35,
 ) -> OpenUIRenderResult:
+    # Sprint 5 (v1.8) - tracing opt-in (zero overhead se FRALIB_TRACING=0)
+    try:
+        from backend.services.tracing import trace_run, trace_llm_call
+        _HAS_TRACING = True
+    except ImportError:
+        _HAS_TRACING = False
+        from contextlib import contextmanager
+        @contextmanager
+        def trace_run(*args, **kwargs):
+            yield None
+        def trace_llm_call(*args, **kwargs):
+            def decorator(func):
+                return func
+            return decorator
+
+    # Inicia trace (se habilitado)
+    _trace_inputs = {
+        "primary_model": primary_model,
+        "fallback_model": fallback_model,
+        "max_tokens": max_tokens,
+        "temperature": temperature,
+        "facts_len": len(str(facts) if facts else ""),
+    }
+    with trace_run("builder", "render_openui_site", inputs=_trace_inputs) as _trace:
+        return _render_openui_site_impl(
+            builder_prompt, facts=facts, repair_context=repair_context,
+            primary_model=primary_model, fallback_model=fallback_model,
+            max_tokens=max_tokens, temperature=temperature,
+        )
+
+
+def _render_openui_site_impl(
+    builder_prompt: str,
+    *,
+    facts: dict[str, Any] | None = None,
+    repair_context: dict[str, Any] | None = None,
+    primary_model: str = "sonnet",
+    fallback_model: str = "opus",
+    max_tokens: int = 6000,
+    temperature: float = 0.35,
+) -> OpenUIRenderResult:
     """Generate a publishable HTML document using the OpenUI contract.
 
     Cascade qualidade: sonnet (primario, ~20s) -> opus (fallback se sonnet

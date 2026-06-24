@@ -9,6 +9,21 @@ from handoff_types import NichoBriefing
 from llm_direct import call_claude
 from llm_config import AGENT_MODEL_MAP
 
+# Sprint 5 (v1.8) - tracing opt-in (zero overhead se FRALIB_TRACING=0)
+try:
+    from backend.services.tracing import trace_run, trace_llm_call
+    _HAS_TRACING = True
+except ImportError:
+    _HAS_TRACING = False
+    from contextlib import contextmanager
+    @contextmanager
+    def trace_run(*args, **kwargs):
+        yield None
+    def trace_llm_call(*args, **kwargs):
+        def decorator(func):
+            return func
+        return decorator
+
 try:
     from agente_variacao import detect_subniche
 except Exception:
@@ -72,6 +87,26 @@ Then the JSON with this exact format:
 All user-facing copy MUST be in Brazilian Portuguese (pt-BR)."""
 
 def gerar_briefing(
+    dados_lead: dict,
+    segmento: str,
+    cidade: str,
+    jina_insights: str = "",
+    task_id: str = "",
+) -> NichoBriefing:
+    _trace_inputs = {
+        "segmento": segmento,
+        "cidade": cidade,
+        "task_id": task_id,
+        "lead_nome": dados_lead.get("nome", ""),
+    }
+    with trace_run("nicho", "gerar_briefing", inputs=_trace_inputs, metadata={
+        "task_id": task_id, "segmento": segmento,
+    }) as _trace:
+        _result = _gerar_briefing_impl(dados_lead, segmento, cidade, jina_insights, task_id)
+        return _result
+
+
+def _gerar_briefing_impl(
     dados_lead: dict,
     segmento: str,
     cidade: str,
