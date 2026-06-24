@@ -39,14 +39,17 @@
 
     <style>
     /* ============================================================
-       FRALIB LANDING2 — DESIGN TOKENS (from official design system)
-       Tema: bold-dark (padrão FraLib OS)
+       FRALIB LANDING2 — DESIGN TOKENS (EXATAMENTE igual ao landing.html)
        ============================================================ */
     :root {
       --fl-bg:         #0a0714;
       --fl-bg-surface: #0e0a1a;
       --fl-bg-card:    #12121a;
+      --fl-bg-card-2:  #18182280;
       --fl-bg-hover:   #1c1c28;
+      --fl-bg-overlay: rgba(6,6,8,0.92);
+
+      --fl-purple-950: #0e0718;
       --fl-purple-900: #1a0a30;
       --fl-purple-800: #2d1060;
       --fl-purple-700: #4c1d9e;
@@ -55,30 +58,47 @@
       --fl-purple-400: #a855f7;
       --fl-purple-300: #c084fc;
       --fl-purple-200: #d8b4fe;
+
+      --fl-glow-xs:  0 0 8px  rgba(147,51,234,0.20);
       --fl-glow-sm:  0 0 16px rgba(147,51,234,0.28);
       --fl-glow-md:  0 0 32px rgba(147,51,234,0.35);
-      --fl-border:    rgba(147,51,234,0.12);
-      --fl-border-md: rgba(147,51,234,0.25);
-      --fl-border-hi: rgba(147,51,234,0.50);
+      --fl-glow-lg:  0 0 60px rgba(147,51,234,0.45);
+
+      --fl-border:      rgba(147,51,234,0.12);
+      --fl-border-md:   rgba(147,51,234,0.25);
+      --fl-border-hi:   rgba(147,51,234,0.50);
+
       --fl-text:       #f0f0f5;
       --fl-text-muted: #8888a0;
       --fl-text-dim:   #44445a;
       --fl-text-brand: #c084fc;
-      --fl-success: #22c55e;
-      --fl-warning: #f59e0b;
-      --fl-danger:  #ef4444;
-      --fl-info:    #06b6d4;
+
+      --fl-success:  #22c55e;
+      --fl-warning:  #f59e0b;
+      --fl-danger:   #ef4444;
+      --fl-info:     #06b6d4;
+
       --fl-font-brand: 'Press Start 2P', monospace;
       --fl-font-ui:    'DM Sans', system-ui, sans-serif;
       --fl-font-mono:  'JetBrains Mono', monospace;
+
       --fl-r-sm: 6px;
       --fl-r-md: 10px;
       --fl-r-lg: 14px;
       --fl-r-xl: 20px;
       --fl-r-full: 9999px;
+
       --fl-ease: cubic-bezier(0.22,1,0.36,1);
       --fl-t-fast: 120ms cubic-bezier(0.22,1,0.36,1);
-      --fl-t-med:  240ms cubic-bezier(0.22,1,0.36,1);
+      --fl-t-med:  220ms cubic-bezier(0.22,1,0.36,1);
+
+      /* Cores extras do landing.html */
+      --cyan:      #00FFB3;
+      --cyan-dim:  rgba(0,255,179,0.12);
+      --cyan-glow: rgba(0,255,179,0.4);
+      --gold:      #FFB800;
+      --gold-dim:  rgba(255,184,0,0.15);
+      --gold-glow: rgba(255,184,0,0.35);
     }
 
     * {
@@ -208,7 +228,7 @@
     }
 
     .hero h1 .accent {
-      color: var(--fl-text-brand);
+      color: var(--cyan);
     }
 
     .hero p {
@@ -229,24 +249,23 @@
     }
 
     .cta-primary {
-      background: var(--fl-purple-700);
-      color: var(--fl-text);
+      background: var(--cyan);
+      color: var(--fl-bg);
       padding: 1rem 2rem;
       border-radius: var(--fl-r-md);
       text-decoration: none;
       font-weight: 600;
       display: inline-block;
       transition: var(--fl-t-med);
-      border: 1px solid var(--fl-border-md);
+      border: 1px solid var(--cyan-dim);
       cursor: pointer;
       font-family: var(--fl-font-ui);
       font-size: 1rem;
     }
 
     .cta-primary:hover {
-      background: var(--fl-purple-600);
-      border-color: var(--fl-border-hi);
-      box-shadow: var(--fl-glow-md);
+      background: var(--cyan-glow);
+      box-shadow: 0 0 20px rgba(0,255,179,0.4);
       transform: translateY(-2px);
     }
 
@@ -283,7 +302,7 @@
       font-family: var(--fl-font-mono);
       font-size: 2.25rem;
       font-weight: 700;
-      color: var(--fl-text-brand);
+      color: var(--cyan);
       margin-bottom: 0.25rem;
     }
 
@@ -328,7 +347,7 @@
       font-family: var(--fl-font-mono);
       font-size: 2.5rem;
       font-weight: 700;
-      color: var(--fl-text-brand);
+      color: var(--cyan);
       margin-bottom: 0.25rem;
     }
 
@@ -460,7 +479,7 @@
       font-family: var(--fl-font-mono);
       font-size: 3rem;
       font-weight: 700;
-      color: var(--fl-text-brand);
+      color: var(--cyan);
       margin-bottom: 0.25rem;
     }
 
@@ -556,7 +575,7 @@
       width: 48px;
       height: 48px;
       background: var(--fl-purple-800);
-      color: var(--fl-text-brand);
+      color: var(--cyan);
       border: 1px solid var(--fl-border-md);
       border-radius: var(--fl-r-md);
       display: flex;
