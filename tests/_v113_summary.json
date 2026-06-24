@@ -1,0 +1,67 @@
+{
+  "sprint": "11",
+  "version": "v1.13",
+  "tag_baseline": "v1.13-baseline-2026-06-24",
+  "tag_lockpoint": "v1.13-lockpoint-2026-06-24",
+  "objective": "Sprint 11: shadcn/ui integrado no pipeline Vite/React (VITE_REACT_ENGINE). Componentes canonicos (Button/Card/Input/Badge) sao sugeridos ao LLM via system prompt, reduzindo variacao aleatoria e custo de LLM por componente customizado.",
+  "deliverables": {
+    "deps_added": [
+      "@radix-ui/react-button",
+      "@radix-ui/react-card",
+      "@radix-ui/react-dialog",
+      "@radix-ui/react-dropdown-menu",
+      "@radix-ui/react-navigation-menu",
+      "@radix-ui/react-tabs",
+      "class-variance-authority",
+      "clsx",
+      "tailwind-merge"
+    ],
+    "components_created": [
+      "src/components/ui/button.tsx",
+      "src/components/ui/card.tsx",
+      "src/components/ui/input.tsx",
+      "src/components/ui/badge.tsx",
+      "src/lib/utils.ts"
+    ],
+    "config_files": [
+      "components.json"
+    ],
+    "python_modules": {
+      "vite_templates.py": "SHADCN_COMPONENTS dict + get_shadcn_component_list() + get_shadcn_imports() + get_shadcn_components_for_section() + SECTION_COMPONENT_MAP (14 secoes)",
+      "vite_prompts.py": "_build_shadcn_block() injeta catalogo + regra 'use these instead of inventing' no VITE_REACT_SYSTEM_PROMPT"
+    },
+    "tests": "test_anti_regressao_v113.py - 8 testes (dict/list/imports/sections/files/config/deps/prompt)",
+    "pre_commit_hook": "check_v11_protection.py - 20 checks (protege vite_templates.py + 4 shadcn .tsx)"
+  },
+  "sections_mapped": [
+    "hero", "cta", "features", "services", "pricing", "testimonials",
+    "faq", "contact", "form", "footer", "navbar", "gallery", "about", "stats"
+  ],
+  "test_suite": {
+    "estado": "22/22",
+    "v11": "23/23",
+    "v12": "12/12",
+    "v13": "6/6",
+    "v14": "8/8",
+    "v15": "9/9",
+    "v16": "8/8",
+    "v18": "8/8",
+    "v19": "OK",
+    "v110": "8/8",
+    "v111": "OK",
+    "v112": "10/10",
+    "v113": "8/8",
+    "total": "150+ tests verdes"
+  },
+  "cost_impact": {
+    "before": "LLM inventava <button>/<input>/card divs do zero em cada site (~79k tokens/site)",
+    "after": "LLM recebe catalogo shadcn + regra explicita para usar componentes prontos",
+    "expected_savings": "10-40% reducao em tokens por site gerado (Sprint 11 estimative, validar com smoke real)",
+    "block_size": "Catalogo shadcn adiciona ~1.5K chars ao system prompt (one-time, nao por site)"
+  },
+  "next_steps": [
+    "Sprint 12: Smoke real Tenant 2 com VITE_REACT_ENGINE gerando site com Button/Card/Badge de verdade",
+    "Medir custo efetivo por site (target: -20% tokens)",
+    "Validar variacao visual mantida (45+ combinacoes) com catalogo shadcn"
+  ]
+}

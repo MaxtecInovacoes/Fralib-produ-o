@@ -6,6 +6,52 @@ from typing import Any
 
 
 # ═══════════════════════════════════════════════════════════════════
+# SHADCN/UI - Sprint 11
+# ═══════════════════════════════════════════════════════════════════
+
+def _build_shadcn_block() -> str:
+    """Bloco shadcn/ui injetado no system prompt para o LLM preferir componentes prontos.
+
+    Returns:
+        String formatada com catálogo de componentes, regra de uso e imports.
+    """
+    try:
+        from backend.services.vite_templates import (
+            get_shadcn_component_list,
+            get_shadcn_imports,
+        )
+    except Exception:
+        return ""
+
+    component_list = get_shadcn_component_list()
+    example_imports = get_shadcn_imports(["Button", "Card", "Input", "Badge"])
+    imports_block = "\n".join(example_imports)
+
+    return f"""
+
+SHADCN/UI COMPONENTS (Sprint 11 — use these instead of inventing custom HTML):
+A library of pre-installed, accessible, premium-quality components is already
+available. Prefer these over hand-rolled <button>, <input> or card divs.
+
+Available components:
+{component_list}
+
+Import examples (these components are already in package.json, no extra install):
+```
+{imports_block}
+```
+
+Usage rules:
+- For CTAs (hero, contact, pricing): use <Button variant="default" size="lg">.
+- For form fields: use <Input type="..." placeholder="..." /> wrapped in <label>.
+- For service/pricing/testimonial cards: use <Card> with CardHeader/CardContent.
+- For category tags or "Novo"/"Popular" badges: use <Badge variant="secondary">.
+- Always import the component at the top of the file. Never re-define a Button.
+- Fall back to plain HTML only when the section truly needs custom markup.
+"""
+
+
+# ═══════════════════════════════════════════════════════════════════
 # SYSTEM PROMPT - Main instruction set for the LLM
 # ═══════════════════════════════════════════════════════════════════
 
@@ -51,7 +97,7 @@ def _build_few_shot_prompt() -> str:
     except Exception:
         return ""
 
-VITE_REACT_SYSTEM_PROMPT_FOOT = _build_few_shot_prompt()
+VITE_REACT_SYSTEM_PROMPT_FOOT = _build_few_shot_prompt() + _build_shadcn_block()
 
 VITE_REACT_SYSTEM_PROMPT_TAIL = """
 

@@ -630,6 +630,129 @@ export default FactualMotionContract;
 
 
 # ---------------------------------------------------------------------------
+# shadcn/ui — Sprint 11
+# ---------------------------------------------------------------------------
+# Catálogo de componentes shadcn/ui disponíveis para os projetos Vite/React
+# gerados pela pipeline. O LLM recebe esse catálogo como referência em vez de
+# inventar componentes do zero.
+
+from typing import Final
+
+
+SHADCN_COMPONENTS: Final[dict[str, dict[str, Any]]] = {
+    "Button": {
+        "import": "import { Button } from '@/components/ui/button'",
+        "variants": ["default", "destructive", "outline", "secondary", "ghost", "link"],
+        "sizes": ["default", "sm", "lg", "icon"],
+        "use_case": "CTAs, ações primárias/secundárias, submit de formulários",
+        "example": '<Button variant="default" size="lg">Agendar agora</Button>',
+    },
+    "Card": {
+        "imports": [
+            "import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card'"
+        ],
+        "parts": ["Card", "CardHeader", "CardTitle", "CardDescription", "CardContent", "CardFooter"],
+        "use_case": "Conteúdo em cards (serviços, planos, depoimentos, produtos)",
+        "example": '<Card><CardHeader><CardTitle>Plano Premium</CardTitle></CardHeader><CardContent>R$ 199/mês</CardContent></Card>',
+    },
+    "Input": {
+        "import": "import { Input } from '@/components/ui/input'",
+        "use_case": "Campos de formulário (nome, email, telefone, mensagem)",
+        "example": '<Input type="email" placeholder="seu@email.com" />',
+    },
+    "Badge": {
+        "import": "import { Badge } from '@/components/ui/badge'",
+        "variants": ["default", "secondary", "destructive", "outline"],
+        "use_case": "Tags, categorias, status, labels de destaque",
+        "example": '<Badge variant="secondary">Novo</Badge>',
+    },
+}
+
+
+# Mapeamento de seção do site → componente shadcn mais adequado.
+# Usado pelo vite_prompts.py para sugerir componentes ao LLM sem obrigar.
+SECTION_COMPONENT_MAP: Final[dict[str, list[str]]] = {
+    "hero": ["Button", "Badge"],
+    "cta": ["Button"],
+    "features": ["Card", "Badge"],
+    "services": ["Card", "Button"],
+    "pricing": ["Card", "Button", "Badge"],
+    "testimonials": ["Card", "Badge"],
+    "faq": ["Card"],
+    "contact": ["Input", "Button"],
+    "form": ["Input", "Button"],
+    "footer": ["Button"],
+    "navbar": ["Button"],
+    "gallery": ["Card"],
+    "about": ["Card", "Badge"],
+    "stats": ["Card", "Badge"],
+}
+
+
+def get_shadcn_component_list() -> str:
+    """Retorna a lista formatada de componentes shadcn disponíveis para injetar no prompt do LLM.
+
+    Returns:
+        String formatada com nome, use_case e variants de cada componente.
+    """
+    lines: list[str] = []
+    for name, meta in SHADCN_COMPONENTS.items():
+        variants = meta.get("variants")
+        sizes = meta.get("sizes")
+        parts = meta.get("parts")
+        line = f"- **{name}**: {meta['use_case']}"
+        if variants:
+            line += f" | variants: {', '.join(variants)}"
+        if sizes:
+            line += f" | sizes: {', '.join(sizes)}"
+        if parts:
+            line += f" | parts: {', '.join(parts)}"
+        lines.append(line)
+    return "\n".join(lines)
+
+
+def get_shadcn_imports(components: list[str]) -> list[str]:
+    """Gera as linhas de import para os componentes shadcn solicitados.
+
+    Args:
+        components: Lista de nomes de componentes (ex: ["Button", "Card"]).
+
+    Returns:
+        Lista de statements de import (sem duplicatas).
+    """
+    seen: set[str] = set()
+    imports: list[str] = []
+    for name in components:
+        meta = SHADCN_COMPONENTS.get(name)
+        if not meta:
+            continue
+        # Componentes com múltiplos imports (Card) ou único
+        if "imports" in meta:
+            for imp in meta["imports"]:
+                if imp not in seen:
+                    seen.add(imp)
+                    imports.append(imp)
+        elif "import" in meta:
+            imp = meta["import"]
+            if imp not in seen:
+                seen.add(imp)
+                imports.append(imp)
+    return imports
+
+
+def get_shadcn_components_for_section(section: str) -> list[str]:
+    """Sugere componentes shadcn adequados para uma seção do site.
+
+    Args:
+        section: Nome da seção (ex: "hero", "pricing").
+
+    Returns:
+        Lista de nomes de componentes. Vazio se seção desconhecida.
+    """
+    return list(SECTION_COMPONENT_MAP.get(section.lower(), []))
+
+
+# ---------------------------------------------------------------------------
 # Mapping de componentes para templates
 # ---------------------------------------------------------------------------
 
