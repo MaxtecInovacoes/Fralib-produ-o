@@ -741,6 +741,7 @@ async def _main_loop():
                 db = SessionLocal()
                 try:
                     n = job_queue.reap_dead_workers(db)
+                    spans_reaped = job_queue.reap_stale_spans(db)
                     finalized = job_queue.finalize_exhausted_jobs(db)
                     try:
                         from services import lead_supply_engine
@@ -753,6 +754,8 @@ async def _main_loop():
                         inventory_reap = {"error": str(inv_exc)}
                     if n:
                         log.warning(f"reaper ressuscitou {n} jobs travados")
+                    if spans_reaped:
+                        log.warning(f"reaper finalizou {spans_reaped} spans sem finalizacao")
                     if finalized:
                         log.warning(f"reaper finalizou {finalized} jobs sem tentativas")
                     if inventory_reap.get("actions"):

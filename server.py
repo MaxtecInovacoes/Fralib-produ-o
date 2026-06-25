@@ -408,6 +408,13 @@ except ImportError as e:
     print(f"[Server] admin_tracing_endpoints nao disponivel: {e}")
 
 try:
+    import admin_pipeline_control_endpoints
+    app.include_router(admin_pipeline_control_endpoints.router)
+    print("[Server] admin_pipeline_control_endpoints registrado")
+except ImportError as e:
+    print(f"[Server] admin_pipeline_control_endpoints nao disponivel: {e}")
+
+try:
     import diagnostico_endpoints
     app.include_router(diagnostico_endpoints.router)
     print("[Server] diagnostico_endpoints registrado")

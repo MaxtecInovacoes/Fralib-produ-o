@@ -1,0 +1,1223 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FraLib OS — Sites com IA para Freelancers</title>
+    <meta name="description" content="Crie sites em 1h, faça prospecção no Google Maps, venda pelo WhatsApp com CRM e SDR Franz.">
+    <style>
+        /* ===== FONTS ===== */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+        /* ===== VARIÁVEIS ===== */
+        :root {
+            /* Paleta 60-30-10 */
+            --bg-primary: #ffffff;
+            --bg-secondary: #f8fafc;
+            --text-primary: #0f172a;
+            --text-secondary: #64748b;
+            --accent-cyan: #00cc8e;
+            --accent-purple: #4c1d9e;
+            --accent-purple-hover: #3a147b;
+            --border-color: #e2e8f0;
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            --transition: all 0.2s ease;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            line-height: 1.6;
+            color: var(--text-primary);
+            background: var(--bg-primary);
+            overflow-x: hidden;
+        }
+
+        /* ===== NAV ===== */
+        .nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border-color);
+            z-index: 1000;
+            padding: 1rem 0;
+        }
+
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--accent-purple);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .logo-icon {
+            width: 32px;
+            height: 32px;
+            background: var(--accent-purple);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 0.625rem;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+        }
+
+        .nav-links a {
+            text-decoration: none;
+            color: var(--text-secondary);
+            font-weight: 500;
+            transition: var(--transition);
+        }
+
+        .nav-links a:hover {
+            color: var(--accent-purple);
+        }
+
+        .nav-cta {
+            background: var(--accent-purple);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: var(--transition);
+            border: none;
+            cursor: pointer;
+        }
+
+        .nav-cta:hover {
+            background: var(--accent-purple-hover);
+            transform: translateY(-1px);
+        }
+
+        /* ===== HERO ===== */
+        .hero {
+            min-height: 100vh;
+            padding: 6rem 2rem 4rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
+        }
+
+        .hero-content {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .hero h1 {
+            font-size: 3.5rem;
+            font-weight: 700;
+            line-height: 1.2;
+            margin-bottom: 1.5rem;
+            color: var(--text-primary);
+            letter-spacing: -0.02em;
+        }
+
+        .hero p {
+            font-size: 1.5rem;
+            color: var(--text-secondary);
+            margin-bottom: 2rem;
+            max-width: 640px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .hero-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin-bottom: 3rem;
+        }
+
+        .cta-primary {
+            background: var(--accent-purple);
+            color: white;
+            padding: 1rem 2rem;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            display: inline-block;
+            transition: var(--transition);
+            border: none;
+            cursor: pointer;
+        }
+
+        .cta-primary:hover {
+            background: var(--accent-purple-hover);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .cta-secondary {
+            background: transparent;
+            color: var(--accent-purple);
+            padding: 1rem 2rem;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            display: inline-block;
+            transition: var(--transition);
+            border: 2px solid var(--accent-purple);
+            cursor: pointer;
+        }
+
+        .cta-secondary:hover {
+            background: var(--accent-purple);
+            color: white;
+        }
+
+        .hero-stats {
+            display: flex;
+            gap: 4rem;
+            justify-content: center;
+            margin-bottom: 3rem;
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--accent-purple);
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            font-size: 1rem;
+            color: var(--text-secondary);
+        }
+
+        /* ===== SOCIAL PROOF ===== */
+        .social-proof {
+            padding: 5rem 2rem;
+            background: var(--bg-secondary);
+            text-align: center;
+        }
+
+        .social-proof h2 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 3rem;
+            color: var(--text-primary);
+        }
+
+        .social-proof-stats {
+            display: flex;
+            justify-content: center;
+            gap: 3rem;
+            margin-bottom: 3rem;
+        }
+
+        .social-proof-stat {
+            text-align: center;
+        }
+
+        .social-proof-stat .number {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--accent-purple);
+            margin-bottom: 0.5rem;
+        }
+
+        .social-proof-stat .label {
+            font-size: 1rem;
+            color: var(--text-secondary);
+        }
+
+        .customers {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-bottom: 3rem;
+        }
+
+        .customer-logo {
+            width: 48px;
+            height: 48px;
+            background: var(--accent-cyan);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+
+        .testimonial {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: var(--shadow-sm);
+            text-align: left;
+            border-left: 4px solid var(--accent-purple);
+        }
+
+        .testimonial p {
+            font-size: 1.125rem;
+            color: var(--text-primary);
+            margin-bottom: 1.5rem;
+            line-height: 1.8;
+            font-style: italic;
+        }
+
+        .testimonial .author {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .testimonial .author img {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+
+        .testimonial .author-info {
+            flex: 1;
+        }
+
+        .testimonial .author-name {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .testimonial .author-role {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        /* ===== PRICING ===== */
+        .pricing {
+            padding: 5rem 2rem;
+            text-align: center;
+        }
+
+        .pricing h2 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+
+        .pricing-subtitle {
+            font-size: 1.25rem;
+            color: var(--text-secondary);
+            margin-bottom: 3rem;
+        }
+
+        .pricing-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .pricing-card {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: var(--shadow-sm);
+            transition: var(--transition);
+            border: 2px solid transparent;
+        }
+
+        .pricing-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .pricing-card.featured {
+            border-color: var(--accent-purple);
+        }
+
+        .pricing-badge {
+            background: var(--accent-purple);
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            display: inline-block;
+        }
+
+        .pricing-name {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+        }
+
+        .pricing-price {
+            font-size: 3rem;
+            font-weight: 700;
+            color: var(--accent-purple);
+            margin-bottom: 0.25rem;
+        }
+
+        .pricing-period {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            margin-bottom: 1.5rem;
+        }
+
+        .pricing-features {
+            list-style: none;
+            margin-bottom: 2rem;
+        }
+
+        .pricing-features li {
+            padding: 0.5rem 0;
+            color: var(--text-secondary);
+            position: relative;
+            padding-left: 1.5rem;
+        }
+
+        .pricing-features li:before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: var(--accent-cyan);
+            font-weight: bold;
+        }
+
+        .pricing-cta {
+            background: var(--accent-purple);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            display: inline-block;
+            transition: var(--transition);
+            border: none;
+            cursor: pointer;
+            width: 100%;
+        }
+
+        .pricing-card.featured .pricing-cta {
+            background: var(--accent-purple);
+        }
+
+        .pricing-card:not(.featured) .pricing-cta {
+            background: var(--accent-cyan);
+        }
+
+        .pricing-cta:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        /* ===== HOW IT WORKS ===== */
+        .how-it-works {
+            padding: 5rem 2rem;
+            text-align: center;
+        }
+
+        .how-it-works h2 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 3rem;
+            color: var(--text-primary);
+        }
+
+        .steps {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .step {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: var(--shadow-sm);
+            transition: var(--transition);
+        }
+
+        .step:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .step-number {
+            width: 48px;
+            height: 48px;
+            background: var(--accent-purple);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin: 0 auto 1rem;
+        }
+
+        .step h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+
+        .step p {
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+        }
+
+        .step-image {
+            font-size: 2rem;
+            margin-top: 1rem;
+        }
+
+        /* ===== TESTIMONIALS ===== */
+        .testimonials {
+            padding: 5rem 2rem;
+            background: var(--bg-secondary);
+            text-align: center;
+        }
+
+        .testimonials h2 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 3rem;
+            color: var(--text-primary);
+        }
+
+        .testimonials-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .testimonial-card {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: var(--shadow-sm);
+            transition: var(--transition);
+        }
+
+        .testimonial-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .testimonial-card p {
+            font-size: 1.125rem;
+            color: var(--text-primary);
+            margin-bottom: 1.5rem;
+            line-height: 1.8;
+            font-style: italic;
+        }
+
+        .testimonial-author {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .testimonial-author img {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+
+        .testimonial-author-info {
+            flex: 1;
+            text-align: left;
+        }
+
+        .testimonial-author-name {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .testimonial-author-role {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        /* ===== FAQ ===== */
+        .faq {
+            padding: 5rem 2rem;
+            text-align: center;
+        }
+
+        .faq h2 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 3rem;
+            color: var(--text-primary);
+        }
+
+        .faq-items {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .faq-item {
+            background: white;
+            border-radius: 12px;
+            margin-bottom: 1rem;
+            overflow: hidden;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .faq-question {
+            padding: 1.5rem;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: white;
+            transition: var(--transition);
+        }
+
+        .faq-question:hover {
+            background: var(--bg-secondary);
+        }
+
+        .faq-question span {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .faq-icon {
+            width: 24px;
+            height: 24px;
+            transition: var(--transition);
+        }
+
+        .faq-item.active .faq-icon {
+            transform: rotate(180deg);
+        }
+
+        .faq-answer {
+            padding: 0 1.5rem;
+            max-height: 0;
+            overflow: hidden;
+            transition: var(--transition);
+        }
+
+        .faq-item.active .faq-answer {
+            padding: 0 1.5rem 1.5rem;
+            max-height: 200px;
+        }
+
+        .faq-answer p {
+            color: var(--text-secondary);
+            line-height: 1.8;
+        }
+
+        /* ===== BETA FORM ===== */
+        .beta {
+            padding: 5rem 2rem;
+            background: linear-gradient(135deg, var(--accent-purple) 0%, #6b46c1 100%);
+            text-align: center;
+            color: white;
+        }
+
+        .beta-form {
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        .beta h3 {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+        }
+
+        .beta p {
+            font-size: 1.125rem;
+            margin-bottom: 2rem;
+            opacity: 0.9;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+            text-align: left;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            font-size: 1rem;
+            transition: var(--transition);
+        }
+
+        .form-group input::placeholder {
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: white;
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .form-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+        }
+
+        .beta .cta-primary {
+            background: white;
+            color: var(--accent-purple);
+            padding: 1rem 2rem;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            display: inline-block;
+            transition: var(--transition);
+            border: none;
+            cursor: pointer;
+        }
+
+        .beta .cta-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        /* ===== FINAL CTA ===== */
+        .final-cta {
+            padding: 5rem 2rem;
+            text-align: center;
+        }
+
+        .final-cta h2 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+
+        .final-cta p {
+            font-size: 1.25rem;
+            color: var(--text-secondary);
+            margin-bottom: 2rem;
+        }
+
+        .final-cta .cta-primary {
+            background: var(--accent-purple);
+            color: white;
+            padding: 1rem 2rem;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            display: inline-block;
+            transition: var(--transition);
+            border: none;
+            cursor: pointer;
+        }
+
+        .final-cta .cta-primary:hover {
+            background: var(--accent-purple-hover);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        /* ===== FOOTER ===== */
+        .footer {
+            background: var(--bg-secondary);
+            padding: 3rem 2rem 1rem;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .footer-content {
+            max-width: 1200px;
+            margin: 0 auto 2rem;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+        }
+
+        .footer-section h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+
+        .footer-section ul {
+            list-style: none;
+        }
+
+        .footer-section ul li {
+            margin-bottom: 0.5rem;
+        }
+
+        .footer-section a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: var(--transition);
+        }
+
+        .footer-section a:hover {
+            color: var(--accent-purple);
+        }
+
+        .footer-bottom {
+            text-align: center;
+            padding-top: 2rem;
+            border-top: 1px solid var(--border-color);
+            color: var(--text-secondary);
+        }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2.5rem;
+            }
+
+            .hero p {
+                font-size: 1.25rem;
+            }
+
+            .hero-stats {
+                flex-direction: column;
+                gap: 1.5rem;
+            }
+
+            .social-proof-stats {
+                flex-direction: column;
+                gap: 1.5rem;
+            }
+
+            .steps {
+                grid-template-columns: 1fr;
+            }
+
+            .testimonials-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .pricing-cards {
+                grid-template-columns: 1fr;
+            }
+
+            .nav-links {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- NAV -->
+    <nav class="nav">
+        <div class="nav-container">
+            <a href="#" class="logo">
+                <div class="logo-icon">FL</div>
+                FraLib
+            </a>
+            <div class="nav-links">
+                <a href="#como-funciona">Como funciona</a>
+                <a href="#planos">Planos</a>
+                <a href="#faq">FAQ</a>
+                <a href="#beta" class="nav-cta">Quero meu site grátis</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- HERO -->
+    <section class="hero">
+        <div class="hero-content">
+            <h1>FraLib OS: Sites com IA para Freelancers</h1>
+            <p>Crie sites em 1h, faça prospecção no Google Maps, venda pelo WhatsApp com CRM e SDR Franz.</p>
+            <div class="hero-buttons">
+                <a href="#beta" class="cta-primary">Quero meu site grátis</a>
+                <a href="#como-funciona" class="cta-secondary">Como funciona</a>
+            </div>
+            <div class="hero-stats">
+                <div class="stat">
+                    <div class="stat-number">33k+</div>
+                    <div class="stat-label">Usuários</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-number">R$1.2M</div>
+                    <div class="stat-label">Em vendas</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-number">4.9⭐</div>
+                    <div class="stat-label">Satisfação</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SOCIAL PROOF -->
+    <section class="social-proof">
+        <h2>33k+ freelancers já transformaram seus negócios</h2>
+
+        <div class="social-proof-stats">
+            <div class="social-proof-stat">
+                <div class="number">98%</div>
+                <div class="label">Satisfação</div>
+            </div>
+            <div class="social-proof-stat">
+                <div class="number">5min</div>
+                <div class="label">Setup rápido</div>
+            </div>
+            <div class="social-proof-stat">
+                <div class="number">3x</div>
+                <div class="label">Mais leads</div>
+            </div>
+        </div>
+
+        <div class="customers">
+            <div class="customer-logo">🏢</div>
+            <div class="customer-logo">🚀</div>
+            <div class="customer-logo">💼</div>
+            <div class="customer-logo">🎨</div>
+            <div class="customer-logo">📱</div>
+            <div class="customer-logo">⚡</div>
+        </div>
+
+        <blockquote class="testimonial">
+            <p>"Meus leads aumentaram 300% desde que comecei a usar o FraLib. A automatização do WhatsApp economiza pelo menos 2 horas por dia."</p>
+            <div class="author">
+                <img src="https://via.placeholder.com/48x48/4c1d9e/ffffff?text=Ana" alt="Ana">
+                <div class="author-info">
+                    <div class="author-name">Ana Silva</div>
+                    <div class="author-role">Designer Freelancer, 28 anos</div>
+                </div>
+            </div>
+        </blockquote>
+    </section>
+
+    <!-- PRICING -->
+    <section class="pricing">
+        <h2>Escolha seu plano</h2>
+        <p class="pricing-subtitle">Comece de graça, pague quando estiver ganhando dinheiro</p>
+
+        <div class="pricing-cards">
+            <div class="pricing-card">
+                <h3 class="pricing-name">Free</h3>
+                <div class="pricing-price">R$0</div>
+                <div class="pricing-period">para sempre</div>
+                <ul class="pricing-features">
+                    <li>1 site básico</li>
+                    <li>WhatsApp básico</li>
+                    <li>Suporte email</li>
+                </ul>
+                <button class="pricing-cta">Começar de graça</button>
+            </div>
+
+            <div class="pricing-card featured">
+                <div class="pricing-badge">Mais popular</div>
+                <h3 class="pricing-name">Starter</h3>
+                <div class="pricing-price">R$97</div>
+                <div class="pricing-period">por mês</div>
+                <ul class="pricing-features">
+                    <li>Tudo do Free +</li>
+                    <li>Prospecção no Google Maps</li>
+                    <li>CRM básico</li>
+                    <li>5 sites</li>
+                    <li>Suporte prioritário</li>
+                </ul>
+                <button class="pricing-cta">Assinar agora</button>
+            </div>
+
+            <div class="pricing-card">
+                <h3 class="pricing-name">Pro</h3>
+                <div class="pricing-price">R$197</div>
+                <div class="pricing-period">por mês</div>
+                <ul class="pricing-features">
+                    <li>Tudo do Starter +</li>
+                    <li>SDR automatizado</li>
+                    <li>API para integração</li>
+                    <li>Sites ilimitados</li>
+                    <li>Suporte 24/7</li>
+                </ul>
+                <button class="pricing-cta">Assinar agora</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- COMO FUNCIONA -->
+    <section class="how-it-works">
+        <h2>Como funciona em 4 passos</h2>
+
+        <div class="steps">
+            <div class="step">
+                <div class="step-number">1</div>
+                <h3>Crie seu site</h3>
+                <p>Use IA para criar um site profissional em minutos</p>
+                <div class="step-image">📝</div>
+            </div>
+
+            <div class="step">
+                <div class="step-number">2</div>
+                <h3>Prospere clientes</h3>
+                <p>Encontre clientes no Google Maps com filtros inteligentes</p>
+                <div class="step-image">🔍</div>
+            </div>
+
+            <div class="step">
+                <div class="step-number">3</div>
+                <h3>Automatize vendas</h3>
+                <p>Envie mensagens automáticas pelo WhatsApp</p>
+                <div class="step-image">💬</div>
+            </div>
+
+            <div class="step">
+                <div class="step-number">4</div>
+                <h3>Cresça seu negócio</h3>
+                <p>Use o CRM para gerenciar leads e fechar vendas</p>
+                <div class="step-image">📈</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- TESTIMONIALS -->
+    <section class="testimonials">
+        <h2>O que nossos clientes dizem</h2>
+
+        <div class="testimonials-grid">
+            <div class="testimonial-card">
+                <p>"Antes do FraLib, eu passava 4 horas por dia prospectando clientes. Agora o sistema faz isso pra mim. Minhas vendas aumentaram 300%."</p>
+                <div class="testimonial-author">
+                    <img src="https://via.placeholder.com/48x48/00cc8e/ffffff?text=Carlos" alt="Carlos">
+                    <div class="testimonial-author-info">
+                        <div class="testimonial-author-name">Carlos Mendes</div>
+                        <div class="testimonial-author-role">Desenvolvedor Freelancer</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="testimonial-card">
+                <p>"FraLib transformou meu negócio. Criei 5 sites diferentes para diferentes nichos e todos estão gerando leads. O melhor investimento que fiz."</p>
+                <div class="testimonial-author">
+                    <img src="https://via.placeholder.com/48x48/4c1d9e/ffffff?text=Maria" alt="Maria">
+                    <div class="testimonial-author-info">
+                        <div class="testimonial-author-name">Maria Souza</div>
+                        <div class="testimonial-author-role">Consultora de Marketing</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="testimonial-card">
+                <p>"Como designer, preciso de clientes de alto valor. O FraLib me ajuda a encontrar e qualificar leads automaticamente. Economizo pelo menos 20h por semana."</p>
+                <div class="testimonial-author">
+                    <img src="https://via.placeholder.com/48x48/f59e0b/ffffff?text=João" alt="João">
+                    <div class="testimonial-author-info">
+                        <div class="testimonial-author-name">João Oliveira</div>
+                        <div class="testimonial-author-role">Designer Gráfico</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FAQ -->
+    <section class="faq">
+        <h2>Perguntas frequentes</h2>
+
+        <div class="faq-items">
+            <div class="faq-item">
+                <div class="faq-question">
+                    <span>O FraLib é para freelancers?</span>
+                    <svg class="faq-icon" viewBox="0 0 24 24">
+                        <path d="M7 10l5 5 5-5z"/>
+                    </svg>
+                </div>
+                <div class="faq-answer">
+                    <p>Sim! O FraLib foi criado especificamente para freelancers que precisam de sites profissionais e automação de vendas.</p>
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question">
+                    <span>Posso cancelar a qualquer momento?</span>
+                    <svg class="faq-icon" viewBox="0 0 24 24">
+                        <path d="M7 10l5 5 5-5z"/>
+                    </svg>
+                </div>
+                <div class="faq-answer">
+                    <p>Sim, você pode cancelar a qualquer momento sem multas. Mantenha o acesso até o final do seu ciclo de pagamento.</p>
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question">
+                    <span>Preciso de conhecimento técnico?</span>
+                    <svg class="faq-icon" viewBox="0 0 24 24">
+                        <path d="M7 10l5 5 5-5z"/>
+                    </svg>
+                </div>
+                <div class="faq-answer">
+                    <p>Não! O FraLib é 100% visual e intuitivo. Se você sabe usar WhatsApp e Google Maps, consegue usar o FraLib.</p>
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question">
+                    <span>Quais são os meios de pagamento?</span>
+                    <svg class="faq-icon" viewBox="0 0 24 24">
+                        <path d="M7 10l5 5 5-5z"/>
+                    </svg>
+                </div>
+                <div class="faq-answer">
+                    <p>Aceitamos cartão de crédito, PIX e boleto. Para planos anuais, oferecemos 10% de desconto.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- BETA FORM -->
+    <section class="beta">
+        <div class="beta-form">
+            <h3>Pronto para começar?</h3>
+            <p>Comece de graça sem cartão. Sem obrigação, cancelar quando quiser.</p>
+            <form id="beta-form">
+                <div class="form-group">
+                    <label for="name">Seu nome</label>
+                    <input type="text" id="name" name="name" required placeholder="João Silva">
+                </div>
+                <div class="form-group">
+                    <label for="whatsapp">Seu WhatsApp</label>
+                    <input type="tel" id="whatsapp" name="whatsapp" required placeholder="11999999999">
+                </div>
+                <div class="form-buttons">
+                    <button type="submit" class="cta-primary">Quero meu site grátis</button>
+                </div>
+            </form>
+        </div>
+    </section>
+
+    <!-- FINAL CTA -->
+    <section class="final-cta">
+        <h2>Pronto para transformar seu negócio?</h2>
+        <p>Comece hoje mesmo e veja os resultados na próxima semana</p>
+        <a href="#beta" class="cta-primary">Quero meu site grátis</a>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="footer-section">
+                <h3>Produto</h3>
+                <ul>
+                    <li><a href="#como-funciona">Como funciona</a></li>
+                    <li><a href="#planos">Planos</a></li>
+                    <li><a href="#faq">FAQ</a></li>
+                </ul>
+            </div>
+            <div class="footer-section">
+                <h3>Empresa</h3>
+                <ul>
+                    <li><a href="#">Sobre nós</a></li>
+                    <li><a href="#">Blog</a></li>
+                    <li><a href="#">Carreiras</a></li>
+                </ul>
+            </div>
+            <div class="footer-section">
+                <h3>Suporte</h3>
+                <ul>
+                    <li><a href="#">Central de Ajuda</a></li>
+                    <li><a href="#">Contato</a></li>
+                    <li><a href="#">Status</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2024 FraLib OS. Todos os direitos reservados.</p>
+        </div>
+    </footer>
+
+    <!-- SCRIPTS -->
+    <script>
+        // FAQ Toggle
+        document.querySelectorAll('.faq-question').forEach(question => {
+            question.addEventListener('click', () => {
+                const faqItem = question.parentElement;
+                const answer = faqItem.querySelector('.faq-answer');
+
+                faqItem.classList.toggle('active');
+                answer.classList.toggle('active');
+            });
+        });
+
+        // Beta Form
+        document.getElementById('beta-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+
+            const name = document.getElementById('name').value;
+            const whatsapp = document.getElementById('whatsapp').value;
+
+            alert('Obrigado! Em breve entraremos em contato pelo WhatsApp.');
+            document.getElementById('beta-form').reset();
+        });
+
+        // Smooth scroll
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+    </script>
+</body>
+</html>

@@ -252,9 +252,10 @@ def test_7_vite_config_has_shadcn_deps():
     deps = vite_config.FIXED_PACKAGE_JSON["dependencies"]
 
     # 9 deps shadcn/ui adicionadas
+    # Sprint 11.7: @radix-ui/react-button e @radix-ui/react-card NAO EXISTEM no npm.
+    # shadcn Button usa @radix-ui/react-slot; Card e div pura.
     expected = [
-        "@radix-ui/react-button",
-        "@radix-ui/react-card",
+        "@radix-ui/react-slot",
         "@radix-ui/react-dialog",
         "@radix-ui/react-dropdown-menu",
         "@radix-ui/react-navigation-menu",

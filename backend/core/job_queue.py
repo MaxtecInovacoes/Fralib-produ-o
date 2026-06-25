@@ -484,6 +484,37 @@ def reap_dead_workers(db: Session, dead_after_minutes: int = 5) -> int:
     return len(ids)
 
 
+def reap_stale_spans(db: Session, stale_after_minutes: int = 60) -> int:
+    """Mata spans 'running' que nao terminaram (worker morreu sem cleanup).
+
+    O reap_dead_workers protege a tabela jobs. Este protege pipeline_run_spans,
+    que sao registros abertos quando uma fase do pipeline comeca. Se o worker
+    crashar entre o start e o finish, o span fica running para sempre.
+
+    Retorna quantidade de spans finalizados. Default: 1 hora.
+    """
+    result = db.execute(
+        text("""
+        UPDATE pipeline_run_spans
+        SET status = 'failed',
+            finished_at = NOW(),
+            duracao_ms = COALESCE(
+                EXTRACT(EPOCH FROM (NOW() - started_at)) * 1000,
+                0
+            )::int,
+            erro = COALESCE(erro || ' | ', '') || 'reaper: span sem finalizacao'
+        WHERE status = 'running'
+          AND finished_at IS NULL
+          AND started_at < NOW() - (:mins || ' minutes')::interval
+        RETURNING id
+    """),
+        {"mins": stale_after_minutes},
+    )
+    ids = result.fetchall()
+    db.commit()
+    return len(ids)
+
+
 def finalize_exhausted_jobs(db: Session) -> int:
     """Fecha jobs pendentes que ja consumiram todas as tentativas.
 

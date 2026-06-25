@@ -315,9 +315,9 @@ def test_9_no_regression_sprint_11_core():
     # Sprint 11: get_shadcn_imports dedup
     assert len(get_shadcn_imports(["Button", "Button"])) == 1
 
-    # Sprint 11: 9 deps shadcn
+    # Sprint 11: 9 deps shadcn (Sprint 11.7: react-slot substitui react-button/react-card)
     deps = vite_config.FIXED_PACKAGE_JSON["dependencies"]
-    for d in ["@radix-ui/react-button", "@radix-ui/react-dialog", "class-variance-authority"]:
+    for d in ["@radix-ui/react-slot", "@radix-ui/react-dialog", "class-variance-authority"]:
         assert d in deps
 
     # Sprint 11: SHADCN/UI COMPONENTS no prompt

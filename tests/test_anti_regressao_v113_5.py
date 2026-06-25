@@ -368,8 +368,7 @@ def test_10_no_regression_sprint_11_core():
 
     # 9 deps shadcn em vite_config
     deps = vite_config.FIXED_PACKAGE_JSON["dependencies"]
-    for d in ["@radix-ui/react-button", "@radix-ui/react-card",
-              "@radix-ui/react-dialog", "@radix-ui/react-tabs",
+    for d in ["@radix-ui/react-slot", "@radix-ui/react-dialog", "@radix-ui/react-tabs",
               "class-variance-authority", "clsx", "tailwind-merge"]:
         assert d in deps
 

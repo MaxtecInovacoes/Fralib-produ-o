@@ -1,0 +1,260 @@
+[
+  {
+    "name": "linear",
+    "url": "https://linear.app",
+    "headline": "The product development\nsystem for teams and agents\nThe product development system for teams and agents",
+    "subheadline": "A new species of product tool. Purpose-built for modern teams with AI workflows at its core, Linear sets a new standard for planning and building products.",
+    "ctas": [
+      {
+        "text": "Sign up",
+        "y_position": 20,
+        "x_position": 1528.078125,
+        "visible": true
+      },
+      {
+        "text": "Get started",
+        "y_position": 10200.203125,
+        "x_position": 818.71875,
+        "visible": true
+      },
+      {
+        "text": "Contact sales",
+        "y_position": 10200.203125,
+        "x_position": 957.59375,
+        "visible": true
+      }
+    ],
+    "pricing_position": {
+      "text": "Pricing",
+      "in_nav": true,
+      "in_body": false
+    },
+    "nav_ctas": [
+      {
+        "text": "Sign up",
+        "x": 1528.078125,
+        "y": 20
+      }
+    ]
+  },
+  {
+    "name": "vercel",
+    "url": "https://vercel.com",
+    "headline": "Agentic Infrastructure",
+    "subheadline": "Build agents on infrastructure that thinks like them",
+    "ctas": [
+      {
+        "text": "Sign Up",
+        "y_position": 16,
+        "x_position": 1584.84375,
+        "visible": true
+      },
+      {
+        "text": "Sign Up",
+        "y_position": null,
+        "x_position": null,
+        "visible": false
+      },
+      {
+        "text": "Deploy Now",
+        "y_position": 578,
+        "x_position": 260,
+        "visible": true
+      },
+      {
+        "text": "Talk to Sales",
+        "y_position": 578,
+        "x_position": 386.96875,
+        "visible": true
+      }
+    ],
+    "pricing_position": {
+      "text": "Pricing",
+      "in_nav": true,
+      "in_body": false
+    },
+    "nav_ctas": [
+      {
+        "text": "Sign Up",
+        "x": 1584.84375,
+        "y": 16
+      },
+      {
+        "text": "Sign Up",
+        "x": null,
+        "y": null
+      },
+      {
+        "text": "Deploy Now",
+        "x": 260,
+        "y": 578
+      },
+      {
+        "text": "Talk to Sales",
+        "x": 386.96875,
+        "y": 578
+      }
+    ]
+  },
+  {
+    "name": "framer",
+    "url": "https://www.framer.com",
+    "headline": "Framer is the AI website builder for standout sites",
+    "subheadline": "Shipped with Framer",
+    "ctas": [
+      {
+        "text": "Sign up",
+        "y_position": 17,
+        "x_position": 1494.109375,
+        "visible": true
+      },
+      {
+        "text": "Get started for free",
+        "y_position": 297,
+        "x_position": 360,
+        "visible": true
+      },
+      {
+        "text": "Get started for free",
+        "y_position": 9941.859375,
+        "x_position": 819.671875,
+        "visible": true
+      }
+    ],
+    "pricing_position": {
+      "text": "Pricing",
+      "in_nav": true,
+      "in_body": false
+    },
+    "nav_ctas": [
+      {
+        "text": "Sign up",
+        "x": 1494.109375,
+        "y": 17
+      },
+      {
+        "text": "Get started for free",
+        "x": 360,
+        "y": 297
+      },
+      {
+        "text": "Get started for free",
+        "x": 819.671875,
+        "y": 9941.859375
+      }
+    ]
+  },
+  {
+    "name": "cal",
+    "url": "https://www.cal.com",
+    "headline": "The better way to schedule your meetings",
+    "subheadline": "With us, appointment scheduling is easy",
+    "ctas": [
+      {
+        "text": "Get started",
+        "y_position": 18.5,
+        "x_position": 1383.390625,
+        "visible": true
+      },
+      {
+        "text": "Sign up with Google",
+        "y_position": 563.8125,
+        "x_position": 436,
+        "visible": true
+      },
+      {
+        "text": "Sign up with email",
+        "y_position": 611.8125,
+        "x_position": 436,
+        "visible": true
+      },
+      {
+        "text": "Get started",
+        "y_position": 1198.796875,
+        "x_position": 828.171875,
+        "visible": true
+      },
+      {
+        "text": "Get started",
+        "y_position": 2075,
+        "x_position": 828.171875,
+        "visible": true
+      },
+      {
+        "text": "Get started",
+        "y_position": 4713.59375,
+        "x_position": 436,
+        "visible": true
+      },
+      {
+        "text": "Get started",
+        "y_position": 5118.390625,
+        "x_position": 828.171875,
+        "visible": true
+      },
+      {
+        "text": "Talk to sales",
+        "y_position": 6681.1875,
+        "x_position": 831.859375,
+        "visible": true
+      }
+    ],
+    "pricing_position": {
+      "text": "Pricing",
+      "in_nav": true,
+      "in_body": false
+    },
+    "nav_ctas": []
+  },
+  {
+    "name": "stripe",
+    "url": "https://www.stripe.com",
+    "headline": "Infraestrutura financeira para aumentar as suas receitas. Aceite pagamentos, ofereça serviços financeiros e implemente modelos personalizados de receita, desde a primeira transação até a bilionésima.",
+    "subheadline": "Soluções flexíveis para cada modelo de negócio.",
+    "ctas": [],
+    "pricing_position": {
+      "text": "Ver planos",
+      "in_nav": false,
+      "in_body": true
+    },
+    "nav_ctas": []
+  },
+  {
+    "name": "supabase",
+    "url": "https://supabase.com",
+    "headline": "Build in a weekend\nScale to millions",
+    "subheadline": "Postgres Database",
+    "ctas": [
+      {
+        "text": "Authentication\n\nAdd user sign ups and logins,\nsecuring your data with Row Level ",
+        "y_position": 772,
+        "x_position": 972,
+        "visible": true
+      },
+      {
+        "text": "Edge Functions\n\nEasily write custom code\nwithout deploying or scaling servers.\n\n",
+        "y_position": 772,
+        "x_position": 1250,
+        "visible": true
+      },
+      {
+        "text": "Flutter logoFlutter User ManagementGet started with Supabase and Flutter by buil",
+        "y_position": null,
+        "x_position": null,
+        "visible": false
+      },
+      {
+        "text": "Flutter User Management\n\nGet started with Supabase and Flutter by building a use",
+        "y_position": 3462.34375,
+        "x_position": 785.328125,
+        "visible": true
+      }
+    ],
+    "pricing_position": {
+      "text": "Pricing",
+      "in_nav": true,
+      "in_body": false
+    },
+    "nav_ctas": []
+  }
+]

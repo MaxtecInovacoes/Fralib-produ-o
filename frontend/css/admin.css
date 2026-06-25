@@ -121,6 +121,98 @@ body{
   padding:4px 10px;border:1px solid var(--fl-border);
   background:var(--fl-bg-card);
 }
+
+/* ============================================================
+   PIPELINE MONITOR — widget admin (status + acoes)
+   ============================================================ */
+.pipeline-monitor{position:relative;display:inline-block}
+.pm-toggle{
+  display:flex;align-items:center;gap:6px;
+  padding:4px 10px;background:var(--fl-bg-card);
+  border:1px solid var(--fl-border);cursor:pointer;
+  font-family:var(--fl-font-mono);font-size:10px;
+  color:var(--fl-text-dim);transition:all .15s;
+}
+.pm-toggle:hover{border-color:var(--fl-purple-300);color:var(--fl-text)}
+.pm-dot{
+  width:8px;height:8px;border-radius:50%;
+  background:var(--fl-text-dim);flex-shrink:0;
+  box-shadow:0 0 0 0 transparent;transition:all .25s;
+}
+.pm-dot.healthy{background:var(--success);box-shadow:0 0 8px var(--success);animation:pm-pulse 2s infinite}
+.pm-dot.warn{background:var(--warning);box-shadow:0 0 8px var(--warning)}
+.pm-dot.error{background:var(--danger);box-shadow:0 0 8px var(--danger);animation:pm-pulse 1s infinite}
+@keyframes pm-pulse{
+  0%,100%{opacity:1}50%{opacity:.5}
+}
+.pm-label{font-weight:700;letter-spacing:.5px}
+.pm-chevron{font-size:8px;opacity:.6}
+.pm-panel{
+  position:absolute;right:0;top:calc(100% + 6px);
+  width:380px;background:var(--fl-bg-card);
+  border:1px solid var(--fl-border-md);
+  border-radius:8px;box-shadow:0 12px 32px rgba(0,0,0,.4);
+  padding:12px;z-index:1000;
+}
+.pm-header{
+  display:flex;justify-content:space-between;align-items:center;
+  margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--fl-border);
+}
+.pm-title{
+  font-family:var(--fl-font-brand);font-size:9px;
+  color:var(--fl-purple-300);letter-spacing:1.5px;
+}
+.pm-updated{font-family:var(--fl-font-mono);font-size:9px;color:var(--fl-text-dim)}
+.pm-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:10px}
+.pm-card{
+  background:var(--fl-bg);border:1px solid var(--fl-border);
+  border-radius:6px;padding:8px 4px;text-align:center;
+  transition:all .2s;
+}
+.pm-card-warn{border-color:var(--warning)}
+.pm-card-warn.has-stuck{border-color:var(--danger);background:rgba(239,68,68,.08)}
+.pm-num{
+  font-family:var(--fl-font-mono);font-size:18px;font-weight:700;
+  color:var(--fl-text);line-height:1;
+}
+.pm-card-warn .pm-num{color:var(--warning)}
+.pm-card-warn.has-stuck .pm-num{color:var(--danger)}
+.pm-lbl{
+  font-family:var(--fl-font-mono);font-size:8px;
+  color:var(--fl-text-dim);margin-top:4px;letter-spacing:.5px;
+}
+.pm-stuck-list{
+  max-height:140px;overflow-y:auto;margin-bottom:10px;
+  background:var(--fl-bg);border:1px solid var(--fl-border);
+  border-radius:6px;padding:6px;
+  font-family:var(--fl-font-mono);font-size:10px;
+}
+.pm-stuck-list:empty{display:none}
+.pm-stuck-item{
+  padding:4px 6px;border-bottom:1px solid var(--fl-border);
+  display:flex;justify-content:space-between;gap:8px;
+}
+.pm-stuck-item:last-child{border-bottom:none}
+.pm-stuck-run{color:var(--cyan);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pm-stuck-age{color:var(--danger);white-space:nowrap;flex-shrink:0}
+.pm-actions{display:flex;flex-wrap:wrap;gap:4px}
+.pm-btn{
+  flex:1 1 calc(50% - 2px);
+  padding:6px 8px;background:var(--fl-bg);
+  border:1px solid var(--fl-border);border-radius:4px;
+  font-family:var(--fl-font-mono);font-size:9px;
+  color:var(--fl-text);cursor:pointer;transition:all .15s;
+  white-space:nowrap;
+}
+.pm-btn:hover{background:var(--fl-purple);color:#fff;border-color:var(--fl-purple)}
+.pm-btn-danger:hover{background:var(--danger);border-color:var(--danger)}
+.pm-btn-warn:hover{background:var(--warning);color:#000;border-color:var(--warning)}
+.pm-btn:disabled{opacity:.4;cursor:not-allowed}
+
+@media(max-width:768px){
+  .pm-panel{width:320px}
+  .pm-cards{grid-template-columns:repeat(2,1fr)}
+}
 .pipeline-status.running{border-color:var(--success);color:var(--success)}
 .pipeline-status.paused{border-color:var(--warning);color:var(--warning)}
 .pipeline-status.idle{border-color:var(--fl-text-dim);color:var(--fl-text-dim)}

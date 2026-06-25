@@ -115,6 +115,34 @@
         <button class="btn-pipeline btn-pipeline-start" id="btnIniciar">&#9654; LIGAR</button>
         <button class="btn-pipeline btn-pipeline-pause" id="btnPausar" onclick="pausarPipeline()" style="display:none">&#9646;&#9646; PAUSAR</button>
         <button class="btn-pipeline btn-pipeline-start" id="btnRetomar" onclick="retomarPipeline()" style="display:none">&#9654; RETOMAR</button>
+        <!-- Pipeline Monitor (admin) -->
+        <div class="pipeline-monitor" id="pipelineMonitor">
+          <button class="pm-toggle" id="pmToggle" onclick="togglePipelineMonitor()" title="Status do motor em tempo real">
+            <span class="pm-dot" id="pmDot"></span>
+            <span class="pm-label" id="pmLabel">--</span>
+            <span class="pm-chevron" id="pmChevron">&#9662;</span>
+          </button>
+          <div class="pm-panel" id="pmPanel" hidden>
+            <div class="pm-header">
+              <span class="pm-title">MOTOR</span>
+              <span class="pm-updated" id="pmUpdated">carregando...</span>
+            </div>
+            <div class="pm-cards">
+              <div class="pm-card"><div class="pm-num" id="pmJobsActive">0</div><div class="pm-lbl">Jobs Ativos</div></div>
+              <div class="pm-card pm-card-warn" id="pmStuckCard"><div class="pm-num" id="pmStuckCount">0</div><div class="pm-lbl">Travados</div></div>
+              <div class="pm-card"><div class="pm-num" id="pmJobsPending">0</div><div class="pm-lbl">Na Fila</div></div>
+              <div class="pm-card"><div class="pm-num" id="pmSpansRunning">0</div><div class="pm-lbl">Spans Rodando</div></div>
+            </div>
+            <div class="pm-stuck-list" id="pmStuckList"></div>
+            <div class="pm-actions">
+              <button class="pm-btn" onclick="adminPipelineRefresh()" title="Atualizar agora">&#8635; Atualizar</button>
+              <button class="pm-btn" onclick="adminPipelineReap()" title="Ressuscita jobs e finaliza spans travados">&#128260; Reap</button>
+              <button class="pm-btn pm-btn-danger" id="pmKillBtn" onclick="adminPipelineKillStuck()" title="Matar spans travados manualmente">&#128128; Matar Travados</button>
+              <button class="pm-btn pm-btn-warn" onclick="adminPipelineClearQueue()" title="Cancelar todos jobs pendentes">&#128465; Limpar Fila</button>
+              <button class="pm-btn" onclick="adminPipelineRestartWorker()" title="Reiniciar servico do worker">&#9851; Restart Worker</button>
+            </div>
+          </div>
+        </div>
       </div>
       <!-- Usuário -->
       <div class="header-user">
@@ -8194,4 +8222,159 @@ async function atualizarUtiBadge() {
 <script src="/js/admin/audio-panel/panel-dom.js?v=20260621"></script>
 <script src="/js/admin/audio-panel/panel-events.js?v=20260621"></script>
 <script src="/js/admin/audio-panel.js?v=20260621"></script>
+<script>
+/* ══ PIPELINE MONITOR — visibilidade e controle do motor ══ */
+(function(){
+  let _pmPanelOpen = false;
+  let _pmTimer = null;
+  let _pmBusy = false;
+
+  function _pmSetText(id, text){var el=document.getElementById(id); if(el) el.textContent=text;}
+  function _pmSetDot(state){
+    var d=document.getElementById('pmDot'); if(!d) return;
+    d.classList.remove('healthy','warn','error');
+    if(state) d.classList.add(state);
+  }
+
+  async function _pmFetch(){
+    try{
+      var r=await authFetch('/api/admin/pipeline/status');
+      if(!r || !r.ok) throw new Error('HTTP '+r.status);
+      return await r.json();
+    }catch(e){return null;}
+  }
+
+  function _pmRenderList(stuck){
+    var el=document.getElementById('pmStuckList');
+    if(!el) return;
+    if(!stuck || stuck.length===0){el.innerHTML=''; return;}
+    el.innerHTML = stuck.map(function(s){
+      return '<div class="pm-stuck-item" title="'+s.run_id+'">' +
+        '<span class="pm-stuck-run">'+s.run_id+' &middot; '+s.fase_nome+'</span>' +
+        '<span class="pm-stuck-age">'+s.age_human+'</span>' +
+      '</div>';
+    }).join('');
+  }
+
+  async function adminPipelineRefresh(){
+    if(_pmBusy) return;
+    _pmBusy=true;
+    var data=await _pmFetch();
+    if(!data){
+      _pmSetText('pmLabel','OFF');
+      _pmSetDot('error');
+      _pmBusy=false;
+      return;
+    }
+    var jobs=data.jobs||{};
+    var spans=data.spans||{};
+    var stuck=data.stuck||{};
+    var q=spans.running||0;
+    var p=jobs.pending||0;
+    var a=jobs.active||0;
+    var s=stuck.count||0;
+
+    _pmSetText('pmJobsActive',a);
+    _pmSetText('pmJobsPending',p);
+    _pmSetText('pmSpansRunning',q);
+    _pmSetText('pmStuckCount',s);
+
+    var sc=document.getElementById('pmStuckCard');
+    if(sc){ sc.classList.toggle('has-stuck', s>0); }
+
+    _pmRenderList(stuck.list||[]);
+
+    var alive=(data.worker&&data.worker.alive)!==false;
+    if(!alive){ _pmSetText('pmLabel','OFF'); _pmSetDot('error'); }
+    else if(s>0){ _pmSetText('pmLabel',s+' TRAV'); _pmSetDot('error'); }
+    else if(q===0 && p===0){ _pmSetText('pmLabel','IDLE'); _pmSetDot('warn'); }
+    else { _pmSetText('pmLabel','OK'); _pmSetDot('healthy'); }
+
+    var d=new Date();
+    var hh=String(d.getHours()).padStart(2,'0');
+    var mm=String(d.getMinutes()).padStart(2,'0');
+    var ss=String(d.getSeconds()).padStart(2,'0');
+    _pmSetText('pmUpdated','atualizado '+hh+':'+mm+':'+ss);
+
+    _pmBusy=false;
+  }
+
+  function togglePipelineMonitor(){
+    var p=document.getElementById('pmPanel'); if(!p) return;
+    _pmPanelOpen=!_pmPanelOpen;
+    p.hidden=!_pmPanelOpen;
+    if(_pmPanelOpen){
+      adminPipelineRefresh();
+      _pmTimer=setInterval(adminPipelineRefresh, 8000);
+    } else {
+      if(_pmTimer){clearInterval(_pmTimer); _pmTimer=null;}
+    }
+  }
+
+  async function adminPipelineReap(){
+    if(!confirm('Executar reap agora? (jobs travados + spans stale + exhausted)')) return;
+    try{
+      var r=await authFetch('/api/admin/pipeline/reap',{method:'POST'});
+      var d=r?await r.json():{};
+      mostrarToast('Reap: '+d.jobs_ressuscitados+' jobs, '+d.spans_finalizados+' spans, '+d.jobs_exhausted+' exhausted');
+      setTimeout(adminPipelineRefresh, 500);
+    }catch(e){mostrarToast('Erro: '+e.message,5000);}
+  }
+
+  async function adminPipelineKillStuck(){
+    if(!confirm('Matar todos os spans travados (>1h)?')) return;
+    try{
+      var r=await authFetch('/api/admin/pipeline/kill-stuck',{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({min_age_minutes:60})
+      });
+      var d=r?await r.json():{};
+      mostrarToast('Spans mortos: '+d.killed);
+      setTimeout(adminPipelineRefresh, 500);
+    }catch(e){mostrarToast('Erro: '+e.message,5000);}
+  }
+
+  async function adminPipelineClearQueue(){
+    if(!confirm('Limpar TODOS os jobs pendentes? (cancela a fila)')) return;
+    try{
+      var r=await authFetch('/api/admin/pipeline/clear-queue',{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({})
+      });
+      var d=r?await r.json():{};
+      mostrarToast('Jobs cancelados: '+d.cleared);
+      setTimeout(adminPipelineRefresh, 500);
+    }catch(e){mostrarToast('Erro: '+e.message,5000);}
+  }
+
+  async function adminPipelineRestartWorker(){
+    if(!confirm('Reiniciar o servico do worker? (~10s de indisponibilidade)')) return;
+    try{
+      var r=await authFetch('/api/admin/pipeline/worker/restart',{method:'POST'});
+      var d=r?await r.json():{};
+      mostrarToast(d.ok?'Worker reiniciado':'Falhou: '+(d.message||'erro'), 5000);
+      setTimeout(adminPipelineRefresh, 12000);
+    }catch(e){mostrarToast('Erro: '+e.message,5000);}
+  }
+
+  // Fechar panel ao clicar fora
+  document.addEventListener('click', function(e){
+    if(!_pmPanelOpen) return;
+    var mon=document.getElementById('pipelineMonitor');
+    if(mon && !mon.contains(e.target)){
+      var p=document.getElementById('pmPanel');
+      if(p) p.hidden=true;
+      _pmPanelOpen=false;
+      if(_pmTimer){clearInterval(_pmTimer); _pmTimer=null;}
+    }
+  });
+
+  // Refresh inicial ao carregar (sem abrir panel)
+  if(document.readyState==='loading'){
+    document.addEventListener('DOMContentLoaded', adminPipelineRefresh);
+  } else {
+    adminPipelineRefresh();
+  }
+})();
+</script>
 </body></html>

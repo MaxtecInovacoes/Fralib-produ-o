@@ -19,8 +19,10 @@ FIXED_PACKAGE_JSON = {
         "motion": "^11.11.0",
         "gsap": "^3.12.5",
         # shadcn/ui dependencies
-        "@radix-ui/react-button": "^1.1.0",
-        "@radix-ui/react-card": "^1.1.0",
+        # Sprint 11.7 fix: @radix-ui/react-button e @radix-ui/react-card NAO EXISTEM no npm.
+        # shadcn Button usa @radix-ui/react-slot internamente (que EXISTE).
+        # shadcn Card e puramente HTML/CSS (div com classes Tailwind) - sem dep radix.
+        "@radix-ui/react-slot": "^1.1.0",
         "@radix-ui/react-dialog": "^1.1.0",
         "@radix-ui/react-dropdown-menu": "^2.1.0",
         "@radix-ui/react-navigation-menu": "^1.2.0",
