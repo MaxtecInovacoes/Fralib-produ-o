@@ -1,0 +1,53 @@
+{
+  "sprint": "12.2",
+  "version": "v1.13.9",
+  "tag_baseline": "v1.13.9-baseline-2026-06-25",
+  "tag_lockpoint": "v1.13.9-lockpoint-2026-06-25",
+  "objetivo": "Ativar cascata explicita multi-modelo Opus 4.8/4.7 + Sonnet 4.6 + Haiku 4.5 + Studio fallback para VITE_REACT_ENGINE.",
+  "resultado_smoke_real": {
+    "tenant_id": 2,
+    "lead": "Academia Pump Iron SP",
+    "engine": "vite_react",
+    "cascata_tentada": [
+      { "model": "claude-opus-4-7", "elapsed_ms": 266966, "status": "llm_failed", "error": "projeto Vite sem componente studio obrigatorio: services" },
+      { "model": "claude-sonnet-4-6", "elapsed_ms": 143045, "status": "llm_failed", "error": "projeto Vite sem componente studio obrigatorio: services" },
+      { "model": "claude-haiku-4-5-20251001", "elapsed_ms": 166, "status": "llm_failed", "error": "400 Client Error: Bad Request (proxy recusou)" },
+      { "model": "studio-fallback", "elapsed_ms": 23605, "status": "success", "source_files": 20, "html_chars": 1880 }
+    ],
+    "total_elapsed_ms": 433786,
+    "manifest_path": "/tmp/fralib_builder/tenant-2/job-cascata-3m-1782340600/dist/builder-render.json"
+  },
+  "bugs_fechados_nesta_sprint": [
+    {
+      "id": "P0-12.2-A",
+      "arquivo": "backend/services/vite_react_renderer.py:688-690",
+      "titulo": "_is_namehost_base so detectava 'proxy', nunca 'llm.'",
+      "fix": "Detectar ambas as bases (proxy legacy + llm. production)"
+    },
+    {
+      "id": "P0-12.2-B",
+      "arquivo": "backend/services/vite_config_helpers.py:33-35",
+      "titulo": "_single_model_mode_enabled default True bloqueia cascata explicita",
+      "fix_documentado": "FRALIB_SINGLE_MODEL_ONLY=0 desativa; builder_job passa primary_model explicito que faz short-circuit"
+    }
+  ],
+  "envs_para_cascata": {
+    "FRALIB_BUILDER_ENGINE": "vite_react",
+    "FRALIB_SINGLE_MODEL_ONLY": "0",
+    "FRALIB_VITE_NAMEHOST_MODELS": "claude-opus-4-7,claude-sonnet-4-6,claude-haiku-4-5-20251001",
+    "FRALIB_OPENUI_PRIMARY_MODEL": "claude-opus-4-7",
+    "FRALIB_PROXY_BUILDER_MODEL": "claude-opus-4-7",
+    "FRALIB_VITE_MODEL_REPAIR_ATTEMPTS": "2"
+  },
+  "suite_anti_regressao": {
+    "v1.13": "34/34 verde",
+    "total_consolidado": "150+ testes verdes preservados"
+  },
+  "site_gerado_local": "C:/fralib/.tmp/site-cascata-3m/ (dist/index.html 3.4KB + assets/ 362KB)",
+  "site_servido_local": "http://localhost:9091",
+  "proximos_passos_sugeridos": [
+    "Sprint 12.3: Investigar por que Opus 4.7 falha em 'services' (prompt precisa exigir lista explicita de secoes)",
+    "Sprint 12.4: Validar Opus 4.8 (timing) - nao foi incluido pois consome >8min e corta antes",
+    "Sprint 12.5: Ajustar _studio_min_* para 8 componentes (atualmente minimo 8 pode estar contando errado)"
+  ]
+}
