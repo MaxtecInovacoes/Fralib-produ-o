@@ -79,6 +79,7 @@ from whatsapp.rate_limiter import (
     DEFAULT_FLOOD_WINDOW,
     DEFAULT_HUMAN_PAUSE_SECONDS,
 )
+from agents.sdr_langgraph.lead_lock import _is_duplicate_message_id  # Deduplicação por message_id
 
 # 5. Gate de billing: cache por user_id (evita query a cada msg)
 _BILLING_CACHE: Dict[int, tuple] = {}  # user_id -> (can_use: bool, expires_at: float)
@@ -244,7 +245,14 @@ def _get_ignore_contacts_setting(user_id: int) -> bool:
 def _debounce_incoming(tenant_id: str, msg_data: dict, executor, loop):
     """Debounce: acumula msgs do mesmo lead antes de processar."""
     key_data = msg_data.get("key", {})
+    msg_id = key_data.get("id", "")
     jid = key_data.get("remoteJid", "")
+
+    # Deduplicar por message_id do WhatsApp (race condition fix)
+    if msg_id and _is_duplicate_message_id(msg_id):
+        print(f"[WPP-Listener] Mensagem duplicada por ID: {msg_id[:16]}... ignorada")
+        return
+
     if "@g.us" in jid:
         return
 

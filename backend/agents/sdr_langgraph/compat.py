@@ -15,6 +15,7 @@ sys.path.insert(0, BACKEND_DIR)
 sys.path.insert(0, AGENTS_DIR)
 
 from .agent import get_sdr_graph
+from .lead_lock import _lead_lock_guard  # Fix bug 3x duplicate replies
 
 
 # ════════════════════════════════════════════════════════════════════
@@ -216,9 +217,45 @@ def responder_lead(
     """
     Responde mensagem do lead (substitui bryan.responder_lead).
     Mantém assinatura compatível.
+
+    IMPORTANTE: Wrapped em _lead_lock_guard para prevenir race condition
+    onde 2 threads/processos processam a mesma msg simultaneamente.
     """
     if not user_id:
         raise ValueError("user_id obrigatorio em responder_lead (multi-tenant)")
+
+    # Lock global por lead_id - garante que só 1 execução por vez
+    lock_key = lead_id or telefone or ""
+    with _lead_lock_guard(lock_key):
+        return _responder_lead_locked(
+            telefone=telefone,
+            mensagem_recebida=mensagem_recebida,
+            nome_negocio=nome_negocio,
+            lead_id=lead_id,
+            cidade=cidade,
+            segmento=segmento,
+            rating=rating,
+            site_url=site_url,
+            history=history,
+            sdr_stage=sdr_stage,
+            user_id=user_id,
+        )
+
+
+def _responder_lead_locked(
+    telefone: str,
+    mensagem_recebida: str,
+    nome_negocio: str = "",
+    lead_id: str = "",
+    cidade: str = "",
+    segmento: str = "",
+    rating: float = 0,
+    site_url: str = "",
+    history: list | None = None,
+    sdr_stage: str = "",
+    user_id: int = None,
+) -> BryanOutput:
+    """Implementação interna do responder_lead (wrapped em lock)."""
 
     # Carregar dados do lead da memória
     session_id = f"franz_lead_{telefone}"
