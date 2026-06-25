@@ -13,6 +13,7 @@ import json
 import os
 import re
 import threading
+import hashlib
 import logging
 import time as _time
 from typing import Dict, List
@@ -549,6 +550,28 @@ def _processar_mensagem(tenant_id: str, msg_data: dict, texto_override: str = No
                     conn.commit()
             except Exception:
                 pass
+
+        # ── CONTENT-BASED DEDUP (3ª camada anti-bug-3x) ────────────────
+        # Cada msg duplicada do WhatsApp vem com message_id ÚNICO
+        # (porque o MeoWhats regenera ID em cada reenvio).
+        # O dedup por msg_id NÃO detecta. Aqui dedupamos por CONTEÚDO:
+        # se a mesma msg do mesmo lead chegou nos últimos 5s, ignora.
+        try:
+            content_hash = hashlib.sha256(f"{telefone}:{texto}".encode()).hexdigest()[:32]
+            with engine.connect() as conn:
+                r = conn.execute(text("""
+                    SELECT criado_em FROM interacoes
+                    WHERE lead_id = :lid AND user_id = :uid
+                      AND direcao = 'entrada'
+                      AND mensagem = :msg
+                      AND criado_em > to_char(NOW() - CAST('5 seconds' AS INTERVAL), 'YYYY-MM-DD\"T\"HH24:MI:SS')
+                    LIMIT 1
+                """), {"lid": lead_id, "uid": user_id, "msg": texto})
+                if r.fetchone():
+                    print(f"[WPP-Listener] Mensagem duplicada por CONTEUDO (5s): {nome} - ignorada")
+                    return
+        except Exception as _cd_err:
+            logger.warning(f"[WPP-Listener] content dedup falhou (nao-bloqueante): {_cd_err}")
 
         # Salvar mensagem recebida sempre (histórico)
         _salvar_interacao(lead_id, texto, "entrada", user_id)
