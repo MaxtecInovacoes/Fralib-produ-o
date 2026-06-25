@@ -666,6 +666,31 @@ SHADCN_COMPONENTS: Final[dict[str, dict[str, Any]]] = {
         "use_case": "Tags, categorias, status, labels de destaque",
         "example": '<Badge variant="secondary">Novo</Badge>',
     },
+    # Sprint 11.5: Dialog/Modal — usado por BookingModal, ContactModal, Lightbox
+    # Resolve "componente studio obrigatorio: modal" no vite_react_renderer:2094
+    "Dialog": {
+        "imports": [
+            "import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog'"
+        ],
+        "parts": ["Dialog", "DialogContent", "DialogHeader", "DialogTitle", "DialogDescription", "DialogTrigger", "DialogClose"],
+        "use_case": "Modais de contato/agendamento, lightbox de galeria, confirmacoes",
+        "example": '<Dialog><DialogTrigger asChild><Button>Agendar</Button></DialogTrigger><DialogContent><DialogTitle>Agendar horario</DialogTitle></DialogContent></Dialog>',
+    },
+    # Sprint 11.5: Tabs (FAQ, detalhes de servicos)
+    "Tabs": {
+        "imports": [
+            "import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'"
+        ],
+        "parts": ["Tabs", "TabsList", "TabsTrigger", "TabsContent"],
+        "use_case": "FAQ em abas, detalhes de servicos/segmentos, secoes alternaveis",
+        "example": '<Tabs defaultValue="horarios"><TabsList><TabsTrigger value="horarios">Horarios</TabsTrigger></TabsList><TabsContent value="horarios">Seg-Sex 9h-20h</TabsContent></Tabs>',
+    },
+    # Sprint 11.5: Textarea (formulario de contato)
+    "Textarea": {
+        "import": "import { Textarea } from '@/components/ui/textarea'",
+        "use_case": "Campos de mensagem longa (contato, feedback, observacoes)",
+        "example": '<Textarea placeholder="Sua mensagem..." rows={4} />',
+    },
 }
 
 
@@ -678,14 +703,16 @@ SECTION_COMPONENT_MAP: Final[dict[str, list[str]]] = {
     "services": ["Card", "Button"],
     "pricing": ["Card", "Button", "Badge"],
     "testimonials": ["Card", "Badge"],
-    "faq": ["Card"],
-    "contact": ["Input", "Button"],
-    "form": ["Input", "Button"],
+    "faq": ["Tabs", "Card"],
+    "contact": ["Input", "Textarea", "Button", "Dialog"],
+    "form": ["Input", "Textarea", "Button"],
     "footer": ["Button"],
-    "navbar": ["Button"],
-    "gallery": ["Card"],
+    "navbar": ["Button", "Dialog"],
+    "gallery": ["Card", "Dialog"],
     "about": ["Card", "Badge"],
     "stats": ["Card", "Badge"],
+    "modal": ["Dialog", "Button"],  # Sprint 11.5: secao modal explicita
+    "booking-modal": ["Dialog", "Button"],  # requerido pelo vite_react_renderer
 }
 
 

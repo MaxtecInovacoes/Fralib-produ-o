@@ -97,7 +97,136 @@ def _build_few_shot_prompt() -> str:
     except Exception:
         return ""
 
-VITE_REACT_SYSTEM_PROMPT_FOOT = _build_few_shot_prompt() + _build_shadcn_block()
+
+def _build_premium_contract_block() -> str:
+    """Sprint 11.5: injeta o premium_delivery_contract (AIDA/PAS, archetypes,
+    motion hooks, anti-patterns 2023) no VITE_REACT_SYSTEM_PROMPT.
+
+    Antes da Sprint 11.5, este contrato so chegava ao OpenUI renderer.
+    Ver backend/agents/prompt_agent_context.py:205-303 (fonte canonica).
+    """
+    try:
+        from backend.agents.prompt_agent_context import _premium_delivery_contract
+        # contexto minimo: secao vazia + business vazio; LLM ja recebeu facts
+        # no user prompt, entao este bloco so ativa as REGRAS, nao duplica dados.
+        context = {
+            "business": {},
+            "content": {},
+            "design": {},
+            "seo": {},
+            "visual_contract": {},
+            "site_build_plan": {},
+        }
+        contract = _premium_delivery_contract(context)
+        return f"""
+
+PREMIUM VISUAL + COPY CONTRACT (Sprint 11.5 — Vite/React parity with OpenUI):
+{contract}
+"""
+    except Exception:
+        return ""
+
+
+def _build_visual_direction_block() -> str:
+    """Sprint 11.5: injeta archetype/scene/color_strategy/heroes no
+    VITE_REACT_SYSTEM_PROMPT. Antes so chegava ao OpenUI.
+    """
+    return """
+
+VISUAL DIRECTION (REQUIRED — drive the entire page from one archetype):
+The page must feel like a single coherent campaign, not a template with text swapped.
+Choose ONE archetype per build and commit hard:
+
+- BOLD_ENERGY (academia, fitness, crossfit, musculacao, eventos esportivos):
+  base preta/carvao + vermelho eletrico + branco quente. Tipografia display condensada.
+  Cortes diagonais, stats em slab perto da dobra. Manifesto forte apos hero.
+  Azul corporativo REPROVA.
+
+- ZEN_PURE (clinica estetica, nutricao, yoga, spa, bem-estar):
+  respiro, superficies leves, fotografia editorial, motion suave. Evite SaaS frio.
+
+- LUXURY_ELITE (restaurante premium, gastronomia, moda, eventos):
+  imagem full-bleed, contraste sofisticado, escala tipografica, poucas palavras fortes.
+
+- MODERN_TECH (energia solar, infraestrutura, eletrica, tecnologia):
+  luz, grade, feixes, contraste tecnico, prova economica, engeharia confiavel.
+
+- WARM_LOCAL (barbearia, salao, petshop, servicos pessoais):
+  cores quentes, comunidade, prova local, fotos reais, hero humanizado.
+
+Always include:
+- AIDA (Attention-Interest-Desire-Action) when the value prop needs quick desire
+  OR PAS (Problem-Agitate-Solution) when pain/objection drives the decision.
+- Single H1, H2/H3 hierarchy, local SEO terms distributed naturally.
+- One dominant hero idea, not a generic centered brochure.
+"""
+
+
+def _build_mobile_first_block() -> str:
+    """Sprint 11.5: mobile-first, clamp(), 44px touch targets, responsividade."""
+    return """
+
+MOBILE-FIRST RESPONSIVENESS (MANDATORY):
+- Design mobile-first. Default styles target mobile (>=375px). Use sm:/md:/lg: to enhance.
+- All headings MUST use clamp() for fluid typography: text-[clamp(1.75rem,5vw,3rem)].
+- Touch targets MUST be >= 44px height for buttons/links (min-h-[44px] py-3 px-6).
+- No horizontal overflow on any viewport (overflow-x-hidden on body).
+- Navbar MUST NOT cover hero content (sticky top with z-50 + hero has pt-16).
+- Body text always legible: min text-base (16px) on mobile, leading-relaxed.
+- Images: object-cover + sizes attribute + srcset when possible.
+- Modal/Dialog: full-screen on mobile (sm:max-w-md for tablet+).
+- Test at 375px (iPhone SE), 768px (iPad), 1280px (desktop) before delivery.
+"""
+
+
+def _build_motion_pack_block() -> str:
+    """Sprint 11.5: lista COMPLETA de hooks Awwwards — alinhada com
+    motion_runtime.js (openui_contracts.MOTION_CONTRACT) e vite_modules.
+
+    Hooks implementados em runtime (ver motion_runtime.js):
+    data-reveal, data-parallax, data-marquee, data-magnetic, data-3d-tilt,
+    data-text-scramble, data-stagger, data-horizontal-scroll, data-counter,
+    data-fralib-scroll-velocity, data-auto-animate, data-swup.
+    """
+    return """
+
+ANIMATION LIBRARY (FraLib Awwwards Pack — use data-attributes, runtime picks up):
+The deploy step injects `motion_runtime.js` (id="fralib-motion-runtime") which
+auto-binds these data-attributes. You just add them to JSX; the runtime does the rest.
+
+Available hooks (12 sistemas — IMPLEMENT THEM, do not invent custom JS):
+- data-reveal="up|down|left|right|scale|fade" — fade-in on scroll (default: up)
+- data-parallax="0.3" — image parallax (0.0=no movement, 1.0=full speed)
+- data-marquee="left|right" — infinite horizontal scroll for chips/text
+- data-magnetic — CTA buttons that follow the cursor (subtle, premium feel)
+- data-3d-tilt="10" — 3D tilt effect on hover (degrees)
+- data-text-scramble — letter scramble on scroll into view (h1, h2)
+- data-stagger — children appear in sequence (cards, list items)
+- data-horizontal-scroll — section that scrolls horizontally
+- data-counter="200" — animated number counter (reviews count, anos, etc)
+- data-fralib-scroll-velocity — text speed changes with scroll velocity
+- data-auto-animate — list/container auto-animates on add (FLIP animation)
+- [data-swup] — page transition wrapper (if used)
+
+MOTION RULES:
+- Use GSAP 3.12.5 + ScrollTrigger for any animation you write yourself.
+- Use Lenis 1.1.20 for smooth scroll (already in package.json).
+- NEVER write custom scroll handlers. Use hooks above.
+- Animate ONLY opacity + transform (GPU-accelerated).
+- Respect prefers-reduced-motion: motion runtime auto-detects and disables.
+- Include at least 3 distinct hooks per page (e.g. parallax hero + stagger cards + counter stats).
+- Hero MUST use at least one motion attribute (data-parallax or data-reveal="scale").
+"""
+
+
+VITE_REACT_SYSTEM_PROMPT_FOOT = (
+    _build_few_shot_prompt()
+    + _build_shadcn_block()
+    + _build_premium_contract_block()
+    + _build_visual_direction_block()
+    + _build_motion_pack_block()
+    + _build_mobile_first_block()
+)
 
 VITE_REACT_SYSTEM_PROMPT_TAIL = """
 

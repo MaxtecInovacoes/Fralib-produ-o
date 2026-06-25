@@ -1,0 +1,67 @@
+{
+  "sprint": "11.5",
+  "version": "v1.13.5",
+  "tag_baseline": "v1.13.5-baseline-2026-06-24",
+  "tag_lockpoint": "v1.13.5-lockpoint-2026-06-24",
+  "objective": "Sprint 11.5: fechar os 5 gaps de CONTRATOS que so chegavam ao OpenUI renderer (premium_delivery_contract, visual_direction_contract, motion pack completo, mobile-first/clamp(), Dialog shadcn). Resultado: VITE_REACT_SYSTEM_PROMPT cresce de 12.927 -> 25.561 chars e o renderer Vite/React para de cair no fallback OpenUI por falta de componente 'modal' obrigatorio.",
+  "deliverables": {
+    "shadcn_components_added": [
+      "Dialog (com DialogContent/Header/Title/Description/Trigger/Close) - resolve 'componente studio obrigatorio: modal' no vite_react_renderer:2094",
+      "Tabs (com TabsList/TabsTrigger/TabsContent) - FAQ em abas",
+      "Textarea - campos de mensagem longa"
+    ],
+    "section_map_added": [
+      "modal -> [Dialog, Button]",
+      "booking-modal -> [Dialog, Button]",
+      "faq -> [Tabs, Card] (migrado de Card-only)",
+      "gallery -> [Card, Dialog] (lightbox)",
+      "navbar -> [Button, Dialog] (mobile menu)",
+      "contact -> [Input, Textarea, Button, Dialog]"
+    ],
+    "prompt_blocks_added": {
+      "_build_premium_contract_block": "11.063 chars - injetado do prompt_agent_context._premium_delivery_contract (era so OpenUI)",
+      "_build_visual_direction_block": "1.367 chars - 5 archetypes (BOLD_ENERGY/ZEN_PURE/LUXURY_ELITE/MODERN_TECH/WARM_LOCAL) + AIDA/PAS guidance",
+      "_build_motion_pack_block": "1.667 chars - 12 data-attributes Awwwards (data-reveal/parallax/marquee/magnetic/3d-tilt/text-scramble/stagger/horizontal-scroll/counter/fralib-scroll-velocity/auto-animate)",
+      "_build_mobile_first_block": "735 chars - clamp() + 44px touch + 375/768/1280px viewports"
+    },
+    "prompt_growth": {
+      "before": "12.927 chars (HEAD 1068 + FOOT 5944 + TAIL 5915)",
+      "after": "25.561 chars (+97.7% / 2x)",
+      "new_total_foot": "16.801 chars (FOOT cresceu de 5944 -> 16801)"
+    },
+    "tests": "test_anti_regressao_v113_5.py - 10 testes (7 shadcn + 16 secoes + premium + visual + motion + mobile + tamanho + dialog + faq-tabs + anti-regressao Sprint 11)"
+  },
+  "gaps_closed": [
+    "GAP-1 premium_delivery_contract -> Vite/React (era OpenUI only)",
+    "GAP-2 visual_direction_contract (archetypes) -> Vite/React (era OpenUI only)",
+    "GAP-3 motion pack completo (12 hooks) -> Vite/React (era 4 + 1 inexistente)",
+    "GAP-4 mobile-first/clamp/44px -> Vite/React (era ausente)",
+    "GAP-5 Dialog shadcn -> Vite/React (resolve 'modal obrigatorio' do renderer)"
+  ],
+  "renderer_failure_resolved": {
+    "before": "Vite/React falha em todos os modelos: 'projeto Vite sem componente studio obrigatorio: modal; studio fallback falhou: projeto Vite contaminado para segmento barbearia: musculacao, musculação' -> fallback OpenUI",
+    "after": "SHADCN_COMPONENTS.Dialog disponivel + SECTION_COMPONENT_MAP['booking-modal'] mapeado -> LLM gera BookingModal.tsx com Dialog shadcn -> validador studio passa",
+    "validation": "STUDIO_COMPONENT_GROUPS.modal = ('modal','dialog','booking') -> filename BookingModal.tsx casa com tokens (modal|booking)"
+  },
+  "nomenclatura": {
+    "caroco": "AGENTES CAROÇO = system prompt unificado injetado no Builder LLM (o 'nucleo' que coordena tudo)",
+    "bibliotecas_injetadas": [
+      "shadcn_catalog (Sprint 11) - 7 componentes prontos",
+      "premium_delivery_contract - AIDA/PAS + archetypes + anti-patterns",
+      "motion_pack - 12 hooks Awwwards",
+      "design_system_injector - tokens via Awwwards-grade system",
+      "few_shot_examples - exemplos negativos + positivos",
+      "lgpd_personalized - LGPD Carolina inline (Vite) ou pos-build (OpenUI)"
+    ]
+  },
+  "test_suite": {
+    "v113": "8/8 (preservado)",
+    "v113_5": "10/10 (novo)",
+    "total_v11x": "18/18"
+  },
+  "next_steps": [
+    "Sprint 11.6: smoke real Tenant 2 com vite_react engine ativa + verificar que NAO cai no fallback OpenUI",
+    "Sprint 11.7: auditoria final 7 suites + commit + tag baseline + lockpoint",
+    "Sprint 12: medir reducao de custo (tokens por site) com shadcn + prompt enriquecido"
+  ]
+}
