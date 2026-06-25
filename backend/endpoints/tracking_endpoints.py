@@ -133,3 +133,133 @@ async def track_landing(
     )
     db.commit()
     return {"ok": True}
+
+
+# ============================================================
+# Lead Funnel — UTM ponta a ponta (criado 2026-06-25)
+# ============================================================
+class TrackFunnelRequest(BaseModel):
+    session_id: str = Field(..., min_length=1, max_length=64)
+    etapa: str = Field(..., min_length=1, max_length=32)
+    utm_source: Optional[str] = Field(None, max_length=64)
+    utm_medium: Optional[str] = Field(None, max_length=64)
+    utm_campaign: Optional[str] = Field(None, max_length=128)
+    utm_content: Optional[str] = Field(None, max_length=128)
+    referer: Optional[str] = Field(None, max_length=2048)
+    landing_path: Optional[str] = Field(None, max_length=255)
+    user_id: Optional[int] = None
+    whatsapp: Optional[str] = Field(None, max_length=32)
+    email: Optional[str] = Field(None, max_length=255)
+    nome: Optional[str] = Field(None, max_length=255)
+    cta_text: Optional[str] = Field(None, max_length=255)
+    url: Optional[str] = Field(None, max_length=2048)
+    ts: Optional[int] = None
+
+
+_ETAPAS_VALIDAS = {
+    "visit", "cta_clicked", "login_start",
+    "signup_done", "whatsapp_joined", "activated",
+}
+
+
+@router.post("/funnel")
+@limiter.limit("240/minute")
+async def track_funnel(
+    request: Request, req: TrackFunnelRequest, db: Session = Depends(get_db)
+):
+    """Registra etapa do funil de lead com UTM source para analytics ponta-a-ponta."""
+    if req.etapa not in _ETAPAS_VALIDAS:
+        return {"ok": False, "motivo": f"etapa invalida: {req.etapa}"}
+
+    ip = request.client.host if request.client else "unknown"
+    ua = request.headers.get("user-agent", "")
+
+    ts = req.ts or int(__import__("time").time() * 1000)
+
+    db.execute(
+        text("""
+        INSERT INTO public.lead_funnel (
+            session_id, etapa_atual,
+            utm_source, utm_medium, utm_campaign, utm_content, referer, landing_path,
+            user_id, whatsapp, email, nome, cta_text,
+            ip_hash, ua_hash, user_agent,
+            entrou_landing, clicou_cta, iniciou_login, criou_conta,
+            entrou_grupo_whatsapp, primeira_acao_app
+        ) VALUES (
+            :sid, :etapa,
+            :usrc, :umed, :ucmp, :ucon, :ref, :path,
+            :uid, :wa, :em, :nm, :cta,
+            :ih, :uh, :ua_text,
+            CASE WHEN :etapa='visit' THEN to_timestamp(:ts/1000.0) ELSE NULL END,
+            CASE WHEN :etapa='cta_clicked' THEN to_timestamp(:ts/1000.0) ELSE NULL END,
+            CASE WHEN :etapa='login_start' THEN to_timestamp(:ts/1000.0) ELSE NULL END,
+            CASE WHEN :etapa='signup_done' THEN to_timestamp(:ts/1000.0) ELSE NULL END,
+            CASE WHEN :etapa='whatsapp_joined' THEN to_timestamp(:ts/1000.0) ELSE NULL END,
+            CASE WHEN :etapa='activated' THEN to_timestamp(:ts/1000.0) ELSE NULL END
+        )
+        """),
+        {
+            "sid": req.session_id,
+            "etapa": req.etapa,
+            "usrc": req.utm_source,
+            "umed": req.utm_medium,
+            "ucmp": req.utm_campaign,
+            "ucon": req.utm_content,
+            "ref": req.referer,
+            "path": req.landing_path,
+            "uid": req.user_id,
+            "wa": req.whatsapp,
+            "em": req.email,
+            "nm": req.nome,
+            "cta": req.cta_text,
+            "ih": _hash(ip),
+            "uh": _hash(ua),
+            "ua_text": ua[:500],
+            "ts": ts,
+        },
+    )
+    db.commit()
+    return {"ok": True}
+
+
+# ============================================================
+# Lead Funnel — leitura agregada para dashboard
+# ============================================================
+@router.get("/funnel/origem")
+@limiter.limit("30/minute")
+async def track_funnel_origem(
+    request: Request, dias: int = 30, db: Session = Depends(get_db)
+):
+    """Retorna o funil agregado por utm_source para os ultimos N dias."""
+    rows = db.execute(
+        text("""
+        SELECT * FROM vw_funnel_por_origem
+        LIMIT 100
+        """)
+    ).fetchall()
+    return {
+        "ok": True,
+        "dias": dias,
+        "items": [dict(r._mapping) for r in rows],
+    }
+
+
+@router.get("/funnel/diario")
+@limiter.limit("30/minute")
+async def track_funnel_diario(
+    request: Request, dias: int = 30, db: Session = Depends(get_db)
+):
+    """Retorna o funil diario agregado."""
+    rows = db.execute(
+        text("""
+        SELECT * FROM vw_funnel_diario
+        WHERE dia > CURRENT_DATE - (:dias || ' days')::interval
+        ORDER BY dia DESC
+        """),
+        {"dias": dias},
+    ).fetchall()
+    return {
+        "ok": True,
+        "dias": dias,
+        "items": [dict(r._mapping) for r in rows],
+    }
