@@ -782,8 +782,49 @@ footer .logo{
 footer p{color:var(--fl-text-dim);font-size:13px;}
 
 /* ============================================================
+   PLANOS (do planos.html)
+   ============================================================ */
+.page-main{padding:120px 0 80px;position:relative;z-index:2}
+.planos-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:36px}
+.plano-card{background:var(--fl-bg-card);border:1px solid var(--fl-border);border-radius:var(--fl-r-lg);text-align:center;padding:32px 20px;transition:all .3s var(--fl-ease);position:relative;display:flex;flex-direction:column}
+.plano-features{flex:1}
+.plano-card .btn{margin-top:auto;padding-top:16px;width:100%}
+.plano-card:hover{transform:translateY(-4px);box-shadow:0 20px 50px rgba(0,0,0,.3)}
+.plano-card.destaque{border-color:var(--gold);box-shadow:0 0 40px var(--gold-dim),0 20px 60px rgba(0,0,0,.3)}
+.plano-card.destaque::before{content:'MAIS POPULAR';position:absolute;top:-12px;left:50%;transform:translateX(-50%);padding:4px 16px;border-radius:var(--fl-r-full);background:linear-gradient(135deg,var(--gold),#FF9500);color:#000;font-family:var(--fl-font-brand);font-size:7px;letter-spacing:1px}
+.plano-name{font-family:var(--fl-font-brand);font-size:10px;letter-spacing:2px;margin-bottom:16px}
+.plano-card:nth-child(1) .plano-name{color:var(--fl-purple-300)}
+.plano-card:nth-child(2) .plano-name{color:var(--fl-success)}
+.plano-card:nth-child(3) .plano-name{color:var(--gold)}
+.plano-card:nth-child(4) .plano-name{color:var(--cyan)}
+.plano-price{font-size:36px;font-weight:800;margin-bottom:2px}
+.plano-price span{font-size:14px;font-weight:400;color:var(--fl-text-muted)}
+.plano-period{font-size:12px;color:var(--fl-text-dim);margin-bottom:20px}
+.plano-features{list-style:none;text-align:left;margin-bottom:0;flex:1}
+.plano-features li{padding:7px 0;font-size:13px;color:var(--fl-text-muted);display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--fl-border)}
+.plano-features li:last-child{border:none}
+.plano-features li::before{content:'';width:5px;height:5px;border-radius:50%;flex-shrink:0}
+.plano-card:nth-child(1) .plano-features li::before{background:var(--fl-purple-400)}
+.plano-card:nth-child(2) .plano-features li::before{background:var(--fl-success)}
+.plano-card:nth-child(3) .plano-features li::before{background:var(--gold)}
+.plano-card:nth-child(4) .plano-features li::before{background:var(--cyan)}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:16px 32px;font-family:var(--fl-font-brand);font-size:11px;text-decoration:none;cursor:pointer;border:none;color:#fff;letter-spacing:1px;transition:transform 60ms,box-shadow 60ms;border-radius:0;box-shadow:inset -4px -4px 0 rgba(0,0,0,0.35),inset 4px 4px 0 rgba(255,255,255,0.15),0 4px 0 rgba(0,0,0,0.5)}
+.btn:active{transform:translateY(4px);box-shadow:inset -4px -4px 0 rgba(0,0,0,0.35),inset 4px 4px 0 rgba(255,255,255,0.15),0 0 0 rgba(0,0,0,0.5)}
+.btn-outline{background:transparent;color:var(--fl-text-muted);box-shadow:inset 0 0 0 3px var(--fl-border-md),0 4px 0 rgba(0,0,0,0.3)}
+.btn-outline:hover{color:var(--fl-purple-300);box-shadow:inset 0 0 0 3px var(--fl-purple),0 4px 0 rgba(0,0,0,0.3),0 0 20px var(--fl-glow-xs)}
+.btn-yellow{background:#FACC15;color:#000;font-weight:700;box-shadow:inset -4px -4px 0 #A16207,inset 4px 4px 0 #FDE68A,0 6px 0 #713F12}
+.btn-yellow:hover{background:#FDE047;box-shadow:inset -4px -4px 0 #A16207,inset 4px 4px 0 #FEF9C3,0 6px 0 #713F12,0 0 30px rgba(250,204,21,0.5)}
+
+.reveal{opacity:0;transform:translateY(28px);transition:opacity .6s var(--fl-ease),transform .6s var(--fl-ease)}
+.reveal.visible{opacity:1;transform:translateY(0)}
+.section-title{font-family:var(--fl-font-brand);font-size:clamp(11px,2vw,18px);text-align:center;line-height:2;margin-bottom:12px;background:linear-gradient(135deg,var(--fl-text) 0%,var(--fl-purple-300) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.section-subtitle{text-align:center;color:var(--fl-text-muted);font-size:15px;margin-bottom:48px;line-height:1.6}
+
+/* ============================================================
    RESPONSIVE
    ============================================================ */
+@media(max-width:1024px){.planos-grid{grid-template-columns:1fr 1fr}}
 @media(max-width:768px){
   .passo-grid,.precos-grid{grid-template-columns:1fr;}
   .comparativo-table{font-size:13px;}
@@ -793,6 +834,7 @@ footer p{color:var(--fl-text-dim);font-size:13px;}
   .hero-handoff{padding:20px;}
   .hero-handoff-steps{flex-direction:column;}
   .hero-handoff-arrow{transform:rotate(90deg);}
+  .planos-grid{grid-template-columns:1fr}
 }
 
 /* ============================================================
@@ -1085,69 +1127,95 @@ footer p{color:var(--fl-text-dim);font-size:13px;}
 </section>
 
 <!-- PREÇOS -->
-<section class="precos" id="precos">
+<section class="page-main">
   <div class="container">
-    <div class="section-label">Investimento</div>
-    <h2 class="section-title">Quanto vale fechar 3 clientes por mês?</h2>
-    <p class="section-sub">Você cobra R$2.500 por site. Com a FraLib, entrega 3 por mês. Fatura R$7.500. Custo: R$197.</p>
+    <h1 class="section-title reveal">ESCOLHA SEU PLANO</h1>
+    <p class="section-subtitle reveal">Comece com 1 pipeline grátis. Escale quando quiser. Cancele quando quiser.</p>
+    <p class="section-subtitle reveal" style="margin-top:-18px;font-size:13px">Pagamento seguro via Mercado Pago com PIX e cartão.</p>
 
-    <div class="precos-grid">
-      <!-- STARTER -->
-      <div class="preco-card">
-        <h3>STARTER</h3>
-        <div class="valor">R$97<span>/mês</span></div>
-        <div class="desc">Pra quem quer testar</div>
-        <ul>
-          <li>1 site por mês</li>
-          <li>Templates básicos</li>
-          <li>Suporte por email</li>
-          <li>LGPD incluso</li>
-          <li>SEO básico</li>
+    <div class="planos-grid" id="planos">
+
+      <!-- TRIAL -->
+      <div class="plano-card reveal">
+        <div class="plano-name">TRIAL</div>
+        <div class="plano-price">Grátis</div>
+        <p style="color:var(--fl-success);font-size:11px;margin:8px 0;font-weight:700;">1 SITE PRA TESTAR</p>
+        <div class="plano-period">Veja o sistema funcionando antes de investir.</div>
+        <ul class="plano-features">
+          <li>1 site gerado</li>
+          <li>Prospecção básica</li>
+          <li>SDR Franz (1 abordagem)</li>
+          <li>Fila com menor prioridade</li>
+          <li>Suporte comunidade</li>
         </ul>
-        <button class="btn-preco">TESTAR 14 DIAS</button>
+        <a href="/login?signup=1&plano=trial" class="btn btn-outline">TESTAR GRÁTIS</a>
       </div>
 
-      <!-- PRO - DESTAQUE -->
-      <div class="preco-card destaque">
-        <div class="preco-badge">MAIS POPULAR</div>
-        <h3>PRO</h3>
-        <div class="valor">R$197<span>/mês</span></div>
-        <div class="desc">Pra quem quer fechar de verdade</div>
-        <ul>
-          <li>3 sites por mês</li>
-          <li>Todos os templates</li>
-          <li>Suporte prioritário</li>
-          <li>SEO avançado</li>
-          <li>SDR Franz ilimitado</li>
-          <li>Prospecção automática</li>
+      <!-- STARTER -->
+      <div class="plano-card reveal">
+        <div class="plano-name">STARTER</div>
+        <div class="plano-price">R$97<span>/mês</span></div>
+        <p style="color:var(--fl-success);font-size:11px;margin:8px 0;font-weight:700;">7 DIAS DE GARANTIA</p>
+        <div class="plano-period">Pra validar e começar a faturar. Cooldown de 60 min entre sites.</div>
+        <ul class="plano-features">
+          <li>Sites ilimitados (cooldown 60min)</li>
+          <li>Prospecção automática completa</li>
+          <li>Sem disparo SDR automático</li>
+          <li>Dashboard básico</li>
+          <li>Hospedagem inclusa</li>
+          <li>Prioridade na fila (nível 2)</li>
+          <li>Suporte WhatsApp</li>
         </ul>
-        <button class="btn-preco">QUERO ESTE</button>
+        <a href="/login?signup=1&plano=starter" class="btn btn-outline">ASSINAR STARTER</a>
+      </div>
+
+      <!-- PRO -->
+      <div class="plano-card destaque reveal">
+        <div class="plano-name">PRO</div>
+        <div class="plano-price">R$197<span>/mês</span></div>
+        <p style="color:var(--cyan);font-size:11px;margin:8px 0;font-weight:700;">MAIS POPULAR</p>
+        <div class="plano-period">Pra quem quer escalar rápido. Cooldown de 30 min. Prioridade alta.</div>
+        <ul class="plano-features">
+          <li>Sites ilimitados (cooldown 30min)</li>
+          <li>Prospecção avançada</li>
+          <li>SDR Franz com retries automáticos</li>
+          <li>Dashboard completo + analytics</li>
+          <li>Domínios próprios ilimitados</li>
+          <li>Prioridade alta na fila (nível 5)</li>
+          <li>Suporte prioritário</li>
+        </ul>
+        <a href="/login?signup=1&plano=pro" class="btn btn-yellow">ASSINAR PRO</a>
+        <p style="font-size:9px;color:#A16207;margin-top:12px;text-align:center;">7 dias de garantia incondicional.</p>
       </div>
 
       <!-- AGENCY -->
-      <div class="preco-card">
-        <h3>AGENCY</h3>
-        <div class="valor">R$497<span>/mês</span></div>
-        <div class="desc">Pra quem virou agência</div>
-        <ul>
-          <li>Sites ilimitados</li>
-          <li>White-label completo</li>
-          <li>Suporte 24/7</li>
-          <li>API personalizada</li>
-          <li>Franz white-label</li>
-          <li>Relatórios mensais</li>
+      <div class="plano-card reveal">
+        <div class="plano-name">AGENCY</div>
+        <div class="plano-price">R$497<span>/mês</span></div>
+        <p style="color:var(--gold);font-size:11px;margin:8px 0;font-weight:700;">SEM COOLDOWN</p>
+        <div class="plano-period">Para operações e agências que precisam vender em volume sem esperar fila.</div>
+        <ul class="plano-features">
+          <li>Sites ilimitados (sem cooldown)</li>
+          <li>Infraestrutura com capacidade ampliada</li>
+          <li>Painel administrativo master</li>
+          <li>Subcontas para operação ou revenda</li>
+          <li>Agentes com identidade personalizada</li>
+          <li>Prioridade máxima na fila</li>
+          <li>Onboarding e suporte VIP</li>
         </ul>
-        <button class="btn-preco">FALAR COM VENDAS</button>
+        <a href="/login?signup=1&plano=agency" class="btn btn-outline" style="border-color:var(--gold);">ASSINAR AGENCY</a>
       </div>
+
     </div>
 
     <!-- GARANTIA -->
-    <div class="garantia-box">
-      <h4>SUA SEGURANÇA</h4>
-      <div class="garantia-items">
-        <div class="garantia-item"><span>✓</span> 14 dias trial grátis, sem cartão</div>
-        <div class="garantia-item"><span>✓</span> Cancela quando quiser</div>
-        <div class="garantia-item"><span>✓</span> Não fechou cliente em 60 dias? Devolvemos 100%</div>
+    <div class="reveal" style="max-width:640px;margin:48px auto 0;padding:24px;background:var(--fl-bg-card);border:1px solid rgba(0,204,142,0.3);border-radius:var(--fl-r-lg);text-align:center;display:flex;flex-direction:column;align-items:center;gap:16px;box-shadow:0 0 30px rgba(0,204,142,0.1);">
+      <div style="width:56px;height:56px;border-radius:50%;background:rgba(0,204,142,0.15);display:flex;align-items:center;justify-content:center;color:#00CC8E;box-shadow:0 0 20px rgba(0,204,142,0.2);">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><polyline points="9 12 11 14 15 10"></polyline></svg>
+      </div>
+      <div>
+        <h4 style="font-size:18px;font-weight:700;margin-bottom:8px;color:var(--fl-text);">Garantia Incondicional de 7 Dias</h4>
+        <p style="font-size:14px;color:var(--fl-text-muted);line-height:1.6;">Assine normalmente. Se você se arrepender em até 7 dias, devolvemos <strong>100% do valor</strong>. Sem perguntas, sem burocracia.</p>
       </div>
     </div>
   </div>
