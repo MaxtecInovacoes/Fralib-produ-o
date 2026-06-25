@@ -31,12 +31,13 @@ def main() -> int:
     args = parser.parse_args()
 
     prd = json.loads(Path(args.prd_json).read_text(encoding="utf-8"))
+    # Sprint 12.10: agent=vite_react (caroco system prompt)
     manifest = build_builder_job_manifest(
         prd,
         tenant_id=args.tenant_id,
         job_id=args.job_id,
         target=args.target,
-        agent="openui",
+        agent=os.getenv("FRALIB_BUILDER_ENGINE", "vite_react"),
         model=args.model,
         sandbox_root=os.getenv(
             "FRALIB_BUILDER_SANDBOX_ROOT",

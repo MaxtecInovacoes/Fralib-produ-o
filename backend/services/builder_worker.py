@@ -226,7 +226,7 @@ def render_site_with_builder(
         "FRALIB_BUILDER_MANIFEST_DIR",
         str((_ROOT / "logs" / "builder_manifests").resolve()),
     )
-    engine = _builder_engine(os.getenv("FRALIB_BUILDER_ENGINE", "openui"))
+    engine = _builder_engine(os.getenv("FRALIB_BUILDER_ENGINE", "vite_react"))
     # v1.1-baseline-2026-06-23: extrai segmento/nicho do prd_or_facts para serializar
     # no manifest e reidratar memory no OpenUI (worker process case).
     _nicho_serializado = ""
@@ -665,10 +665,10 @@ def _prompt_digest(tenant_scope: str, job_scope: str, prompt: str) -> str:
 def _builder_engine(value: str | None = None) -> str:
     """Select the Builder engine.
 
-    OpenUI remains the default. Vite/React is an explicit compatibility engine
-    for local/controlled runs while it is being split out of the old renderer.
+    Sprint 12.10: Vite/React is the default (caroco system prompt).
+    OpenUI is the legacy fallback when explicitly requested.
     """
-    engine = str(value or os.getenv("FRALIB_BUILDER_ENGINE", "openui")).strip().lower().replace("-", "_")
+    engine = str(value or os.getenv("FRALIB_BUILDER_ENGINE", "vite_react")).strip().lower().replace("-", "_")
     if engine in {"vite", "react", "vite_react", "vite-react"}:
         return "vite_react"
     if engine in {"openui", "html", "static_html"}:
