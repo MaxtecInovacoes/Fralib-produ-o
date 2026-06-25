@@ -219,6 +219,228 @@ MOTION RULES:
 """
 
 
+# ═══════════════════════════════════════════════════════════════════
+# Sprint 12.11: Modal obrigatório por nicho + Blocos pré-fabricados
+# ═══════════════════════════════════════════════════════════════════
+
+# Modal configuration por nicho (Booking/CTA/Orcamento/Agendamento)
+NICHO_MODAL_CONFIG: dict[str, dict[str, str]] = {
+    "barbearia": {
+        "title": "Agendar Horario",
+        "cta_button": "Agendar pelo WhatsApp",
+        "fields": "Nome, Telefone, Servico (Corte/Barba/Sobrancelha), Data, Horario",
+        "submit_action": "Enviar para WhatsApp com mensagem pre-formatada",
+    },
+    "academia": {
+        "title": "Matricule-se Agora",
+        "cta_button": "Falar com Consultor",
+        "fields": "Nome, Email, Telefone, Modalidade (Musculacao/Crossfit/Spinning/Yoga), Horario Preferido",
+        "submit_action": "Enviar formulario + redirecionar para WhatsApp",
+    },
+    "restaurante": {
+        "title": "Reservar Mesa",
+        "cta_button": "Reservar Mesa",
+        "fields": "Nome, Telefone, Data, Horario, Numero de Pessoas, Observacoes",
+        "submit_action": "Confirmar reserva via WhatsApp",
+    },
+    "clinica": {
+        "title": "Agendar Consulta",
+        "cta_button": "Marcar Consulta",
+        "fields": "Nome Completo, Telefone, Especialidade, Convenio (Particular/Unimed/Amil), Periodo Preferido",
+        "submit_action": "Confirmar consulta por WhatsApp",
+    },
+    "imobiliaria": {
+        "title": "Tenho Interesse",
+        "cta_button": "Quero Visitar",
+        "fields": "Nome, Email, Telefone, Tipo do Imovel, Faixa de Valor, Periodo para Mudar",
+        "submit_action": "Enviar para WhatsApp com imovel de interesse",
+    },
+    "default": {
+        "title": "Fale Conosco",
+        "cta_button": "Enviar Mensagem",
+        "fields": "Nome, Email, Telefone, Mensagem",
+        "submit_action": "Enviar formulario via WhatsApp ou email",
+    },
+}
+
+
+def _build_nicho_modal_block(facts: dict[str, Any] | None = None) -> str:
+    """Sprint 12.11: injeta regra obrigatória de <Modal> por nicho (booking/CTA).
+
+    Args:
+        facts: dict com 'business.segment' ou 'segmento' (opcional)
+
+    Returns:
+        Bloco de texto que força o LLM a gerar <Dialog> shadcn no projeto Vite/React
+    """
+    nicho = "default"
+    if facts:
+        seg = (facts.get("business") or {}).get("segment") or facts.get("segmento") or ""
+        seg_lower = str(seg).lower()
+        for key in NICHO_MODAL_CONFIG:
+            if key in seg_lower:
+                nicho = key
+                break
+
+    config = NICHO_MODAL_CONFIG[nicho]
+
+    return f"""
+
+MODAL OBRIGATORIO POR NICHO (Sprint 12.11 — NAO PULE):
+Todo projeto Vite/React DEVE incluir um componente de conversao no path
+'BookingModal' ou 'ContactModal' usando o shadcn <Dialog>.
+
+Configuracao para nicho '{nicho}':
+- Title do modal: {config['title']}
+- Botao CTA primario: {config['cta_button']}
+- Campos do formulario: {config['fields']}
+- Acao ao submit: {config['submit_action']}
+
+CODIGO OBRIGATORIO (use este padrao):
+
+```tsx
+// src/components/BookingModal.tsx
+import { useState } from 'react';
+import {{ Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger }} from '@/components/ui/dialog';
+import {{ Button }} from '@/components/ui/button';
+import {{ Input }} from '@/components/ui/input';
+import {{ Textarea }} from '@/components/ui/textarea';
+
+export function BookingModal() {{
+  const [open, setOpen] = useState(false);
+  return (
+    <Dialog open={{open}} onOpenChange={{setOpen}}>
+      <DialogTrigger asChild>
+        <Button size="lg" className="..." data-magnetic>
+          {config['cta_button']}
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-[500px] bg-zinc-950 border-amber-500/30">
+        <DialogHeader>
+          <DialogTitle className="text-2xl font-black uppercase tracking-tight text-amber-50">
+            {config['title']}
+          </DialogTitle>
+          <DialogDescription className="text-amber-100/60">
+            Preencha os dados abaixo e entraremos em contato em ate 2h.
+          </DialogDescription>
+        </DialogHeader>
+        <form className="space-y-4">
+          <Input placeholder="Nome completo" required />
+          <Input type="tel" placeholder="Telefone (WhatsApp)" required />
+          {{/* outros campos especificos do nicho */}}
+          <Textarea placeholder="Observacoes (opcional)" />
+          <Button type="submit" size="lg" className="w-full bg-amber-500 hover:bg-amber-600 text-zinc-950">
+            {config['cta_button']}
+          </Button>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}}
+```
+
+REGRA: O componente BookingModal DEVE ser:
+1. Criado em src/components/BookingModal.tsx
+2. Importado em src/pages/Index.tsx
+3. Renderizado no minimo 2x na pagina (CTA no hero + CTA no final)
+4. Aberto por botao com data-magnetic no hero
+
+VALIDACAO: o studio falha o build se nao houver BookingModal.tsx no projeto.
+"""
+
+
+def _build_nicho_blocks_block(facts: dict[str, Any] | None = None) -> str:
+    """Sprint 12.11: instrui LLM a montar via BLOCOS pré-fabricados (não codar tudo).
+
+    Blocos disponíveis:
+    - HeroBlock (1 linha de chamada)
+    - TrustBar (logos)
+    - Services (cards)
+    - Gallery (imagens)
+    - Testimonials
+    - Pricing/Planos
+    - Faq (accordion)
+    - ContactCTA
+    - Footer
+    - BookingModal (sprint 12.11)
+    """
+    return """
+
+BLOCOS PRÉ-FABRICADOS (Sprint 12.11 — USE ESTES, NAO CODIFIQUE TUDO):
+NÃO invente cada div, section, button do zero. FraLib oferece BLOCOS
+pré-fabricados que você COMPOEM no src/pages/Index.tsx:
+
+```tsx
+// src/pages/Index.tsx — exemplo de composicao com blocos
+import { Navbar } from '@/components/Navbar';
+import { HeroBlock } from '@/components/HeroBlock';
+import { TrustBar } from '@/components/TrustBar';
+import { ServicesGrid } from '@/components/ServicesGrid';
+import { GalleryMosaic } from '@/components/GalleryMosaic';
+import { Testimonials } from '@/components/Testimonials';
+import { Faq } from '@/components/Faq';
+import { BookingModal } from '@/components/BookingModal';
+import { ContactCta } from '@/components/ContactCta';
+import { Footer } from '@/components/Footer';
+
+export default function Index() {
+  return (
+    <main>
+      <Navbar />
+      <HeroBlock />              {/* hero com video ou imagem + CTA + BookingModal */}
+      <TrustBar />                {/* logos de clientes/provas sociais */}
+      <ServicesGrid />            {/* 3-6 servicos em cards */}
+      <GalleryMosaic />           {/* mosaico de fotos reais */}
+      <Testimonials />            {/* 3 depoimentos com avatar+nome+5 estrelas */}
+      <Faq />                     {/* 4-6 perguntas com <details> */}
+      <ContactCta />              {/* CTA final + BookingModal */}
+      <Footer />                   {/* LGPD + contato + redes sociais */}
+    </main>
+  );
+}
+```
+
+BLOCOS DISPONIVEIS (cada um é 1 arquivo .tsx em src/components/):
+- Navbar.tsx        → menu sticky com CTA booking
+- HeroBlock.tsx     → 1 viewport de altura, video/imagem, copy, CTA
+- TrustBar.tsx      → logos/provas sociais (5-7)
+- ServicesGrid.tsx  → 3-6 servicos em Card shadcn com Icon
+- GalleryMosaic.tsx → 6-12 fotos com data-reveal stagger
+- Testimonials.tsx  → 3 depoimentos reais ficticios (com disclaimer)
+- Faq.tsx           → 4-6 <details> com Q&A especificos do nicho
+- ContactCta.tsx    → CTA grande + BookingModal
+- Footer.tsx        → LGPD banner + contato + redes sociais
+- BookingModal.tsx  → Modal obrigatorio (Sprint 12.11)
+
+FOCO NO CONTEUDO, NÃO EM ESTILIZAR CADA ELEMENTO:
+- 80% do codigo = importar blocos + passar props
+- 20% = ajustar copy/dados do nicho especifico
+- OBRIGATORIO: src/index.css com @import tailwindcss e tokens
+- OBRIGATORIO: src/App.tsx (router) + src/main.tsx (entry)
+- OBRIGATORIO: index.html (entry HTML com <div id="root">)
+"""
+
+
+def _build_no_contamination_block(facts: dict[str, Any] | None = None) -> str:
+    """Sprint 12.11: guard contra cross-segment contamination (musculacao em barbearia)."""
+    return """
+
+ZERO CROSS-SEGMENT CONTAMINATION (Sprint 12.11 — REGRA RIGIDA):
+O LLM NAO pode inventar termos de outro nicho. Exemplos PROIBIDOS:
+- Site de barbearia: NAO pode mencionar musculacao, crossfit, spinning, academia, plano alimentar
+- Site de academia: NAO pode mencionar corte, barba, platinado, pigmentacao
+- Site de restaurante: NAO pode mencionar corte, agendamento, receita
+- Site de clinica: NAO pode mencionar prato, menu, reserva
+- Site de imobiliária: NAO pode mencionar consulta, procedimento
+
+REGRA: Use APENAS vocabulario, servicos e copywriting do segmento:
+- {{business.segment}} ou {{segmento}}
+- Se contexto nao fornece, use apenas termos GENERICOS (ex: 'servico', 'cliente', 'equipe', 'profissional')
+
+FALHA: build quebra com 'contaminated' + {{segment_key}} se detectar termos de outro nicho.
+"""
+
+
 VITE_REACT_SYSTEM_PROMPT_FOOT = (
     _build_few_shot_prompt()
     + _build_shadcn_block()
@@ -226,6 +448,9 @@ VITE_REACT_SYSTEM_PROMPT_FOOT = (
     + _build_visual_direction_block()
     + _build_motion_pack_block()
     + _build_mobile_first_block()
+    + _build_nicho_modal_block()
+    + _build_nicho_blocks_block()
+    + _build_no_contamination_block()
 )
 
 VITE_REACT_SYSTEM_PROMPT_TAIL = """
