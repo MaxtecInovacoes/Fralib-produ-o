@@ -2008,6 +2008,13 @@ def validate_vite_project_files(
     requested_paths: set[str] | None = None,
     studio_mode: bool = True,
 ) -> None:
+    # Sprint 11.6+: sanitize logger GLOBALMENTE antes de qualquer validacao.
+    # Garante que mesmo se prepare_vite_project_files nao foi chamado
+    # (ex: caminho _generate_studio_fallback_files), o logger orfao eh corrigido.
+    for path in list(files.keys()):
+        if path.endswith((".tsx", ".ts", ".jsx", ".js")):
+            files[path] = _sanitize_logger_in_source(files[path])
+
     # Backfill: if the LLM failed to deliver a requested path, fall back to
     # the deterministic studio template. This is friendlier than aborting
     # the build over a missing optional file like src/pages/Index.tsx.
