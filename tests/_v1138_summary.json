@@ -1,0 +1,95 @@
+{
+  "sprint_consolidado": "11 (11.5 + 11.6 + 11.7 + 11.8)",
+  "version": "v1.13.8",
+  "tag_baseline": "v1.13.8-baseline-2026-06-25",
+  "tag_lockpoint": "v1.13.8-lockpoint-2026-06-25",
+  "objetivo": "Levar o pipeline VITE/REACT de 0 a funcional com shadcn/ui, contratos SEO/COPY/design/animation, e deploy real de Tenant 2.",
+  "pipeline_final": {
+    "engine": "vite_react",
+    "model_primario": "claude-sonnet-4-6",
+    "fallback": "studio-fallback (deterministico compila sempre)",
+    "deploy_path": "VPS /root/fralib via PM2",
+    "lead_real_testado": "Academia Pump Iron (academia, Sao Paulo)",
+    "tenant_id": 2,
+    "resultado_smoke_real": "OK - engine=vite_react, model=studio-fallback, 20 source files, dist/index.html (3.4KB shell), bundle JS + CSS + motion runtime + SEO + JSON-LD gerados."
+  },
+  "sprints_detalhados": {
+    "sprint_11_base": {
+      "foco": "Integrar shadcn/ui no Vite/React pipeline",
+      "entregas": [
+        "9 deps shadcn/ui (Sprint 11.7 reduziu para 7 deps: removeu 404)",
+        "5 componentes .tsx (Button/Card/Input/Badge + utils)",
+        "vite_prompts.py enriquece system prompt com catalogo shadcn",
+        "SECAO_COMPONENT_MAP mapeia 14 secoes para componentes"
+      ]
+    },
+    "sprint_11_5_contratos": {
+      "foco": "Injetar contratos rich do OpenUI no Vite/React prompt",
+      "entregas": [
+        "premium_delivery_contract (AIDA/PAS, 7 secoes, motion hooks)",
+        "visual_direction (studio contract)",
+        "motion_pack (GSAP + parallax + data-attrs)",
+        "mobile_first (publication guard)",
+        "Dialog shadcn (modal obrigatorio)"
+      ]
+    },
+    "sprint_11_6_bugs_renderer": {
+      "foco": "Cortar 3 bugs P0 no vite_react_renderer.py",
+      "entregas": [
+        "logger sanitize global (injetado quando LLM gera logger. sem import)",
+        "lifestyle equivalente a gallery (obrigatoriedade studio)",
+        "contamination cross-segmento (musculacao nao vaza pra barbearia)"
+      ]
+    },
+    "sprint_11_7_npm_registry": {
+      "foco": "BUG CRITICO - pacotes radix 404",
+      "entregas": [
+        "Removidos @radix-ui/react-button e @radix-ui/react-card (404 NOT FOUND)",
+        "Adicionado @radix-ui/react-slot (200 OK, base do shadcn Button)",
+        "Card shadcn como div pura (zero deps externas)",
+        "Suite v1.13.7 nova: 6 testes fazendo HEAD request no registry.npmjs.org para CADA dep"
+      ]
+    },
+    "sprint_11_8_logger_python": {
+      "foco": "BUG NameError em 2ms - logger Python nao definido",
+      "entregas": [
+        "Adicionado import logging + logger = logging.getLogger(__name__)",
+        "Logger agora disponivel em todos os caminhos (incluindo studio fallback)"
+      ]
+    }
+  },
+  "suite_anti_regressao": {
+    "sprint_11": "8/8",
+    "sprint_11_5": "10/10",
+    "sprint_11_6": "10/10",
+    "sprint_11_7": "6/6",
+    "total_v13": "34/34 verde",
+    "outras_suites_preservadas": "150+ testes verdes (estado + v11 + v12 + v14 + v15 + v16 + v18 + v19 + v110 + v111 + v112 + v113)"
+  },
+  "smoke_real_final": {
+    "lead": "Academia Pump Iron",
+    "tenant_id": 2,
+    "engine": "vite_react",
+    "model": "studio-fallback",
+    "source_files": 20,
+    "html_chars": 1843,
+    "dist_files": ["index.html (3.4KB shell)", "assets/index-xk_LBUrN.js", "assets/motion-C_O6PfI5.js", "assets/icons-CgXI8xYI.js", "assets/index-Cr5TWGjm.css"],
+    "seo": "title + meta + og + twitter + JSON-LD LocalBusiness + JSON-LD FAQPage",
+    "publication_guard": "Mobile-first CSS injection (max-width 100vw, font-size clamp)",
+    "deployed_to_vps": true,
+    "vps_path": "/tmp/fralib_builder/tenant-2/job-smoke-real-tenant2-1782331700/dist/"
+  },
+  "gaps_resolvidos": [
+    "P0: vite_react nunca era chamado (caia sempre no openui_fallback) - Sprint 11.7 (npm 404) + 11.8 (logger Python)",
+    "P1: studio contamination cross-segmento (academia -> musculacao em barbearia) - Sprint 11.6",
+    "P1: studio obrigatoriedade lifestyle vs gallery - Sprint 11.6",
+    "P2: logger orfao do LLM quebrava build - Sprint 11.6 + 11.8",
+    "P2: shadcn deps sem verificacao npm registry - Sprint 11.7"
+  ],
+  "proximos_passos_sugeridos": [
+    "Sprint 12: Substituir Sonnet por Opus para VITE_REACT_ENGINE (LLM as vezes gera sem gallery)",
+    "Sprint 12: Validar bundle JS renderiza React components corretos (screenshot Playwright)",
+    "Sprint 13: Rollback gracioso: quando LLM entrega 8+ componentes, nao cair no studio fallback",
+    "Sprint 13: ECC loop 3 iteracoes para tunar studio prompt (reduzir contamination)"
+  ]
+}
