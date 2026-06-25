@@ -1493,8 +1493,50 @@ def _fallback_batch_files(*, paths: list[str], facts: dict[str, Any]) -> dict[st
     return {}
 
 
+def _sanitize_logger_in_source(source: str) -> str:
+    """Sprint 11.6: injeta `const logger = console;` quando o LLM usa `logger.`
+    sem import. Idempotente. Funciona para .tsx e .ts.
+
+    Resolve: 'name logger is not defined' quando Sonnet gera codigo com helper
+    custom chamado logger mas sem definir.
+    """
+    import re
+
+    # Heuristica: arquivo .tsx/.ts usa `logger.` mas nao tem `const/let/var logger`, `function logger`,
+    # `class Logger` ou `import ... logger ...` correspondente.
+    if not re.search(r"\blogger\.", source):
+        return source  # nada a fazer
+    # Verifica se ja tem alguma definicao de logger (qualquer keyword)
+    # Const/let/var: aceita tanto `=` quanto `:` (type annotation)
+    if re.search(r"\b(const|let|var)\s+[Ll]ogger\s*[=:(]", source):
+        return source  # ja tem definicao (incluindo Logger capitalizado)
+    if re.search(r"\b(function|class)\s+[Ll]ogger\b", source):
+        return source  # ja tem definicao (function/class)
+    if re.search(r"\bimport\s+.*[Ll]ogger.*from", source):
+        return source  # ja tem import
+
+    # Injeta no inicio do arquivo (depois dos imports, antes do primeiro nao-import)
+    lines = source.split("\n")
+    insert_idx = 0
+    for i, line in enumerate(lines):
+        stripped = line.strip()
+        if stripped.startswith("import ") or stripped.startswith("//") or stripped.startswith("/*") or stripped.startswith("*") or not stripped:
+            insert_idx = i + 1
+        else:
+            break
+    lines.insert(insert_idx, "// Sprint 11.6: logger shim (LLM generated code references it)")
+    lines.insert(insert_idx + 1, "const logger = console;")
+    return "\n".join(lines)
+
+
 def prepare_vite_project_files(files: dict[str, str], *, facts: dict[str, Any]) -> dict[str, str]:
     """Normalize generated files and inject deterministic Vite scaffolding."""
+    # Sprint 11.6: sanitize logger antes de qualquer outra transformacao
+    files = {
+        path: _sanitize_logger_in_source(content)
+        for path, content in files.items()
+        if path.endswith((".tsx", ".ts", ".jsx", ".js"))
+    }
     prepared = {_safe_project_path(path): content for path, content in files.items()}
     prepared["package.json"] = json.dumps(FIXED_PACKAGE_JSON, ensure_ascii=False, indent=2)
     prepared["vite.config.ts"] = vite_template_vite_config()
@@ -2016,14 +2058,35 @@ def validate_vite_project_files(
 
 
 def _segment_key_for_business(business: dict[str, Any]) -> str | None:
-    segment_text = _normalize_text(
+    # Sprint 11.6: match EXATO de token, mas dando prioridade ao campo "segment"
+    # primario (nao subniche). Antes: "musculacao" no subniche de barbearia disparava
+    # academia (bug). Aplica _normalize_text nos aliases para remover acentos.
+    segment_primary = _normalize_text(
+        " ".join(
+            str(business.get(key) or "")
+            for key in ("segment", "segmento", "category", "categoria")
+        )
+    )
+    segment_full = _normalize_text(
         " ".join(
             str(business.get(key) or "")
             for key in ("segment", "segmento", "category", "categoria", "subniche", "niche")
         )
     )
+    primary_tokens = set(segment_primary.split())
+    full_tokens = set(segment_full.split())
+
+    # 1) Match exato no campo primario (segment) — tem prioridade
     for key, rule in SEGMENT_RULES.items():
-        if any(alias in segment_text for alias in rule["aliases"]):
+        if any(_normalize_text(alias) in primary_tokens for alias in rule["aliases"]):
+            return key
+    # 2) Match exato no full text (incluindo subniche) — fallback
+    for key, rule in SEGMENT_RULES.items():
+        if any(_normalize_text(alias) in full_tokens for alias in rule["aliases"]):
+            return key
+    # 3) Match substring apenas para aliases multi-palavra
+    for key, rule in SEGMENT_RULES.items():
+        if any(" " in _normalize_text(alias) and _normalize_text(alias) in segment_full for alias in rule["aliases"]):
             return key
     return None
 
@@ -2089,9 +2152,18 @@ def _validate_studio_project(
         )
 
     basenames = {PurePosixPath(path).stem.lower() for path in component_files}
-    for label, tokens in STUDIO_COMPONENT_GROUPS.items():
-        if not any(any(token in basename for token in tokens) for basename in basenames):
-            raise ViteReactRenderError(f"projeto Vite sem componente studio obrigatorio: {label}")
+    group_hits = {
+        label: any(any(token in basename for token in tokens) for basename in basenames)
+        for label, tokens in STUDIO_COMPONENT_GROUPS.items()
+    }
+    # Sprint 11.6: lifestyle eh equivalente a gallery (visual showcase).
+    # Se o LLM gerou GallerySection.tsx mas nao LifestyleSection.tsx, aceita.
+    for label, satisfied in group_hits.items():
+        if satisfied:
+            continue
+        if label == "lifestyle" and group_hits.get("gallery"):
+            continue
+        raise ViteReactRenderError(f"projeto Vite sem componente studio obrigatorio: {label}")
 
 
 def _validate_hero_first_viewport(files: dict[str, str]) -> None:

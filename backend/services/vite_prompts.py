@@ -236,6 +236,13 @@ LANGUAGE (CRITICAL):
 - Comments in code may be in English.
 - Component names and props stay in English (React convention).
 
+CODE QUALITY (MANDATORY — Sprint 11.6):
+- NEVER use `logger` as an identifier. Logger functions are NOT available.
+  For console output use `console.log(...)` directly (already globally available).
+- For utility helpers, define inline functions or use the imported `cn()` from @/lib/utils.
+- All custom hooks must be defined inside the component file or imported from @/hooks/use-*.
+- Do NOT import from non-existent paths. If you need a helper, inline it.
+
 ACCESSIBILITY (MANDATORY):
 - Use semantic HTML: <main>, <nav>, <section>, <article>, <header>, <footer>, <h1>-<h6>.
 - Every image MUST have descriptive alt attribute in pt-BR.
