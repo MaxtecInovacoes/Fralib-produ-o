@@ -180,10 +180,13 @@ class HunterProvider:
         self.db.commit()
 
         if row:
-            # WARN quando Hunter insere lead com website E place_id vazios —
-            # sinaliza que a captura ficou incompleta (seletor quebrado,
-            # perfil de profissional autonomo sem ficha completa no Maps).
-            # Nao bloqueia o INSERT; deixa observabilidade para auditoria.
+            # AVISO: quando Hunter insere lead sem website E sem place_id, o Caio
+            # vai somar +20 pts por "sem site (oportunidade)" indevidamente —
+            # porque Caio e stateless e confia no que o Hunter entrega.
+            # O bug e do Hunter (seletor quebrado / Maps sem ficha completa).
+            # Mitigacao: whatsapp_listener atualiza retroativamente lead_inventory.
+            # website quando o lead envia URL propria em mensagem WhatsApp.
+            # Nao bloqueia o INSERT; deixa sinal para auditoria.
             if not (raw.get("website") or "").strip() and not (raw.get("place_id") or "").strip():
                 try:
                     self._log(
