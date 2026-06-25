@@ -1,0 +1,54 @@
+{
+  "sprint": "12.4",
+  "version": "v1.13.11",
+  "tag_baseline": "v1.13.11-baseline-2026-06-25",
+  "tag_lockpoint": "v1.13.11-lockpoint-2026-06-25",
+  "objetivo": "Pipeline real controlada end-to-end: Lead -> Postgres -> Pipeline.py builder-job -> Build Vite/React -> Deploy /var/www/fralib/sites/<tenant>/<slug>/ -> HTTP 200",
+  "script_criado": "scripts/pipeline_to_deploy.py (~190 linhas, 6 etapas, executa pipeline completa controlada ate deploy)",
+  "etapas_executadas": [
+    "Etapa 1: INSERT lead real no Postgres (tenant 2, lead_id=sprint12-4-1782393868)",
+    "Etapa 2: Tenta criar job pipeline_jobs (tabela nao existe na VPS atual; segue direto)",
+    "Etapa 3: pipeline.py builder-job com --prd-json --execute (3 modelos cascata Sonnet -> Haiku -> studio-fallback)",
+    "Etapa 4: Localiza dist/ gerado em /tmp/fralib_builder/tenant-2/<job_id>/dist",
+    "Etapa 5: Deploy automatizado em /var/www/fralib/sites/2/academia-pump-iron-sp-deploy-final/",
+    "Etapa 6: Validacao HTTP no link oficial FraLib (HTTP/2 200)"
+  ],
+  "duracao_total": "3 min 50s (13:24:28 -> 13:28:18)",
+  "deploy_realizado": {
+    "lead_id": "sprint12-4-1782393868",
+    "tenant_id": 2,
+    "slug": "academia-pump-iron-sp-deploy-final",
+    "engine": "Vite/React + shadcn/ui + Tailwind",
+    "deploy_path": "/var/www/fralib/sites/2/academia-pump-iron-sp-deploy-final/",
+    "deploy_url": "https://seunegociofralib.site/sites/2/academia-pump-iron-sp-deploy-final/",
+    "arquivos_deployados": [
+      "index.html",
+      "assets/index-Bf9RhhI0.js",
+      "assets/index-Cr5TWGjm.css",
+      "assets/motion-C_O6PfI5.js",
+      "assets/icons-CgXI8xYI.js",
+      "builder-render.json",
+      "vite-render.json"
+    ],
+    "cascata_LLM": [
+      { "model": "claude-sonnet-4-6", "status": "llm_failed", "elapsed_ms": "~143000" },
+      { "model": "claude-haiku-4-5", "status": "studio-fallback-success", "elapsed_ms": "~26000" }
+    ],
+    "http_status": "HTTP/2 200",
+    "content_length": 3445,
+    "html_validado": "Academia Pump Iron SP"
+  },
+  "bugs_corrigidos_durante_execucao": [
+    "Bug 1: SQLAlchemy syntax ':dados::jsonb' (psycopg2 error) -> fix CAST(:dados AS jsonb)",
+    "Bug 2: coluna 'dados' nao existe -> fix usar '_leaddata' (TEXT)",
+    "Bug 3: ON CONFLICT (id,user_id) sem constraint -> fix DELETE+INSERT (PK eh apenas id)",
+    "Bug 4: unique key telefone+cidade duplicada -> fix fone/cidade_unique por timestamp",
+    "Bug 5: tabela pipeline_jobs nao existe na VPS -> WARN + segue direto (fallback gracioso)",
+    "Bug 6: HTTP check '200 OK' vs 'HTTP/2 200' -> fix regex mais permissivo"
+  ],
+  "proximos_passos": [
+    "Sprint 12.5: criar tabela pipeline_jobs no Postgres para suportar fila assincrona",
+    "Sprint 12.6: adicionar validacao do HTML (45/45 checks) antes de considerar deploy ok",
+    "Sprint 13: ativar pipeline completa via PM2 worker (sem intervencao manual)"
+  ]
+}
