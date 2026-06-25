@@ -1773,14 +1773,21 @@ def _rewrite_editorial_images(files: dict[str, str], facts: dict[str, Any]) -> N
 
 
 def _ensure_factual_motion_contract(files: dict[str, str], facts: dict[str, Any]) -> None:
+    # Sprint 12.15: defensive — try multiple paths for name
     business = _facts_business(facts)
-    name = str(business.get("name") or "").strip()
+    _safe = facts or {}
+    name = str(
+        business.get("name")
+        or _safe.get("name")
+        or _safe.get("business_name")
+        or ""
+    ).strip()
     if not name:
         return
-    phone = str(business.get("whatsapp") or business.get("phone") or "").strip()
-    rating = str(business.get("rating") or "").strip().replace(",", ".")
-    city = str(business.get("city") or facts.get("cidade") or "").strip()
-    segment = str(business.get("segment") or business.get("segmento") or facts.get("segmento") or "").strip()
+    phone = str(business.get("whatsapp") or business.get("phone") or _safe.get("phone") or "").strip()
+    rating = str(business.get("rating") or _safe.get("rating") or "").strip().replace(",", ".")
+    city = str(business.get("city") or facts.get("cidade") or _safe.get("cidade") or "").strip()
+    segment = str(business.get("segment") or business.get("segmento") or facts.get("segmento") or _safe.get("segmento") or "").strip()
     files["src/components/FactualMotionContract.tsx"] = vite_template_factual_motion_contract(
         name=name,
         phone=phone,
@@ -1904,10 +1911,26 @@ def _ensure_hero_img_eager(match: re.Match[str]) -> str:
 def _generate_studio_fallback_files(facts: dict[str, Any] | None = None) -> dict[str, str]:
     """Compatibility fallback for tests and emergency local Studio rendering."""
     safe_facts = facts or {}
-    business = safe_facts.get("business") if isinstance(safe_facts.get("business"), dict) else {}
-    name = business.get("name") or safe_facts.get("name") or "FraLib"
-    phone = str(business.get("whatsapp") or business.get("phone") or "41999999999")
-    rating = str(business.get("rating") or "4.8")
+    # Sprint 12.15: extract name from MANY sources (defensive — pipeline may put it anywhere)
+    _biz = safe_facts.get("business") if isinstance(safe_facts.get("business"), dict) else {}
+    name = (
+        _biz.get("name")
+        or _biz.get("business_name")
+        or _biz.get("nome")
+        or safe_facts.get("name")
+        or safe_facts.get("business_name")
+        or safe_facts.get("nome")
+        or "FraLib"
+    )
+    # Also pull other fields defensively from anywhere in facts
+    def _find(k, default=""):
+        for src in (_biz, safe_facts):
+            v = src.get(k) if isinstance(src, dict) else None
+            if v:
+                return v
+        return default
+    phone = str(_find("whatsapp") or _find("phone") or "41999999999")
+    rating = str(_find("rating") or "4.8")
     city = str(business.get("city") or business.get("cidade") or safe_facts.get("cidade") or "Curitiba")
     segment = str(business.get("segment") or business.get("segmento") or "academia fitness")
     hero_img = "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?auto=format&fit=crop&w=1600&q=82"
