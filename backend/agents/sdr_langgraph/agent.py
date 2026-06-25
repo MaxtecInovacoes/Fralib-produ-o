@@ -1055,17 +1055,23 @@ def make_stage_node(stage_name: str):
 
 @sdr_traced("node_opt_out")
 def node_opt_out(state: SDRState) -> dict:
-    """Lead pediu pra parar - 2-step: pergunta confirmacao antes de encerrar.
+    """Lead pediu pra parar.
 
-    Step 1 (opt_out_pending=False): Franz PERGUNTA se quer parar.
-        "Entendi. Pra confirmar: voce quer que eu pare de mandar mensagens?
-         Responde 'sim' se quiser que eu pare, ou 'continua' se quiser seguir conversando."
+    REGRA SIMPLES: NUNCA marcar opt_out direto. Sempre perguntar confirmacao.
 
-    Step 2 (opt_out_pending=True): Lead respondeu.
-        - Se 'sim/yes/parar/stop': confirma opt_out
-        - Se 'nao/no/continua/seguir': cancela opt_out pending e volta pro funil
-        - Sem resposta clara: re-pergunta
+    O LLM (Sonnet) ja e capaz de interpretar a intencao. Quando ele classifica
+    como opt_out, a gente so pergunta confirmacao uma vez. Se lead disser
+    'sim', marca opt_out. Caso contrario, volta pro funil.
+
+    Essa logica NAO precisa de stage awareness porque:
+    1. Se o Franz ta perguntando, lead ja demonstrou intencao de sair.
+    2. Mesmo em hook, se lead disser 'sim', confirma.
+    3. Se lead disser 'nao' ou 'continua', volta pro funil.
+    4. Liberdade maxima pro LLM interpretar nuances.
+
+    Bug fix: Carolina Ragugnetti 2026-06-25.
     """
+    import re
     memory = state.get("memory")
     if not memory:
         return {}
@@ -1080,7 +1086,6 @@ def node_opt_out(state: SDRState) -> dict:
         cancelou = bool(re.search(r"\b(nao|não|no|continua|seguir|continuar|fica|nao\s+para|não\s+para)\b", incoming))
 
         if confirmou and not cancelou:
-            # CONFIRMOU - agora sim, marca opt_out
             memory.confirm_opt_out_from_pending()
             reply = "Entendido! Vou remover seu contato agora. Se mudar de ideia no futuro, pode chamar 👍"
             save_agent_note(memory, "supervisor", "Lead CONFIRMOU opt-out; encerrado.")
@@ -1091,18 +1096,17 @@ def node_opt_out(state: SDRState) -> dict:
                 "next_stage": "opt_out",
             }
         elif cancelou:
-            # CANCELOU - volta pro funil
             memory.cancel_opt_out_pending()
             save_agent_note(memory, "supervisor", "Lead cancelou opt-out pendente; volta pro funil.")
-            reply = "Beleza, sem problemas! A gente segue conversando. Me conta: qual e o foco da sua busca hoje?"
+            # Pergunta aberta - deixa LLM responder com contexto
             return {
-                "outgoing_message": reply,
-                "should_send": True,
+                "outgoing_message": "",  # vazio = deixa o LLM gerar resposta natural
+                "should_send": False,
                 "memory": memory,
-                "next_stage": "qualify",  # Volta pro funil normal
+                "next_stage": memory.stage or "qualify",
             }
         else:
-            # Sem resposta clara - re-pergunta
+            # Resposta ambigua - re-pergunta
             memory.request_opt_out_confirmation()
             reply = (
                 "So pra eu entender direito: voce quer que eu PARE de mandar mensagens? "
@@ -1115,20 +1119,19 @@ def node_opt_out(state: SDRState) -> dict:
                 "next_stage": "opt_out_pending",
             }
 
-    # STEP 1: primeira vez - PERGUNTA confirmação
+    # STEP 1: primeira vez - PERGUNTA confirmação (qualquer stage)
     memory.request_opt_out_confirmation()
     reply = (
-        "Entendi que talvez voce nao queira mais receber contato. "
-        "Pra eu ter certeza: voce quer que eu pare de mandar mensagens? "
+        "Entendi. Pra eu ter certeza: voce quer que eu pare de mandar mensagens? "
         "Responde 'sim' pra parar, ou 'continua' pra seguir conversando."
     )
-    save_agent_note(memory, "supervisor", "Franz perguntou confirmacao opt-out (nao marcou ainda).")
+    save_agent_note(memory, "supervisor", "Franz perguntou confirmacao opt-out.")
 
     return {
         "outgoing_message": reply,
         "should_send": True,
         "memory": memory,
-        "next_stage": "opt_out_pending",  # Stage especial: aguardando confirmacao
+        "next_stage": "opt_out_pending",
     }
 
 

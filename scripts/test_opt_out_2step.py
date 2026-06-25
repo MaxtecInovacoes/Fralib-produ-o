@@ -29,47 +29,61 @@ def _make_state(memory: LeadMemory, incoming: str = "") -> dict:
 
 
 class TestOptOutStep1(unittest.TestCase):
-    """Step 1: primeira vez - Franz deve PERGUNTAR, NAO marcar opt_out."""
+    """Step 1: SEMPRE pergunta confirmacao (independente do stage).
 
-    def test_step1_nao_marca_opt_out(self):
-        """Lead disse algo ambiguo - Franz NAO pode marcar opt_out ainda."""
+    Decisao do usuario: agente humanizado deve ser LIVRE.
+    Se o LLM classificou como opt_out, Franz so pergunta confirmacao.
+    Se lead disser 'nao/continua', volta pro funil normalmente.
+    """
+
+    def test_stage_hook_pergunta_confirmacao(self):
+        """Mesmo em hook, Franz pergunta confirmacao uma vez."""
         mem = LeadMemory(lead_id="L1", user_id=1, telefone="5511")
+        mem.stage = "hook"
         mem.opt_out_pending = False
 
         result = node_opt_out(_make_state(mem))
 
-        # NAO pode ter marcado opt_out ainda
-        self.assertFalse(mem.deal_status == "opt_out")
-        self.assertNotEqual(mem.stage, "opt_out")
-        # DEVE ter marcado pending
         self.assertTrue(mem.opt_out_pending, "Franz deve marcar pending")
-        # DEVE ter feito a pergunta
+        self.assertNotEqual(mem.deal_status, "opt_out")
         self.assertIn("sim", result["outgoing_message"].lower())
         self.assertIn("continua", result["outgoing_message"].lower())
-        # Stage deve ser opt_out_pending (especial, nao opt_out ainda)
         self.assertEqual(result["next_stage"], "opt_out_pending")
 
-    def test_step1_com_carolina_atleta(self):
-        """Bug original: 'Nao atendo somente atletas' - NAO marcar opt_out."""
+    def test_stage_pain_primeira_msg(self):
+        """Stage avancado: ja teve conversa. Pergunta confirmacao."""
         mem = LeadMemory(lead_id="L2", user_id=1, telefone="5511")
+        mem.stage = "pain"
+        mem.opt_out_pending = False
 
-        # Step 1: lead mandou msg de qualificacao
+        result = node_opt_out(_make_state(mem))
+
+        self.assertTrue(mem.opt_out_pending)
+        self.assertIn("sim", result["outgoing_message"].lower())
+
+    def test_primeira_msg_com_carolina_atleta(self):
+        """Bug original: 'Nao atendo somente atletas' - pergunta confirmacao."""
+        mem = LeadMemory(lead_id="L3", user_id=1, telefone="5511")
+        mem.stage = "qualify"
+
         result = node_opt_out(_make_state(mem, "Nao atendo somente atletas"))
 
-        # Confirmado: pending, nao opt_out
         self.assertTrue(mem.opt_out_pending)
         self.assertNotEqual(mem.deal_status, "opt_out")
-        # Mensagem de confirmacao
         self.assertIn("sim", result["outgoing_message"].lower())
 
 
 class TestOptOutStep2Confirm(unittest.TestCase):
-    """Step 2: lead responde 'sim' - AGORA sim marca opt_out."""
+    """Step 2: lead responde 'sim' em stage avancado - AGORA sim marca opt_out."""
+
+    def _make_pain_pending(self):
+        mem = LeadMemory(lead_id="L3", user_id=1, telefone="5511")
+        mem.stage = "pain"
+        mem.opt_out_pending = True
+        return mem
 
     def test_step2_sim_confirma(self):
-        mem = LeadMemory(lead_id="L3", user_id=1, telefone="5511")
-        mem.opt_out_pending = True  # ja perguntou antes
-
+        mem = self._make_pain_pending()
         result = node_opt_out(_make_state(mem, "sim"))
 
         self.assertEqual(mem.deal_status, "opt_out")
@@ -77,30 +91,30 @@ class TestOptOutStep2Confirm(unittest.TestCase):
         self.assertIn("remover", result["outgoing_message"].lower())
 
     def test_step2_yes_confirma(self):
-        mem = LeadMemory(lead_id="L4", user_id=1, telefone="5511")
-        mem.opt_out_pending = True
-
+        mem = self._make_pain_pending()
         result = node_opt_out(_make_state(mem, "yes quero parar"))
 
         self.assertEqual(mem.deal_status, "opt_out")
 
     def test_step2_pode_parar_confirma(self):
-        mem = LeadMemory(lead_id="L5", user_id=1, telefone="5511")
-        mem.opt_out_pending = True
-
+        mem = self._make_pain_pending()
         result = node_opt_out(_make_state(mem, "pode parar"))
 
         self.assertEqual(mem.deal_status, "opt_out")
 
 
 class TestOptOutStep2Cancel(unittest.TestCase):
-    """Step 2: lead responde 'nao/continua' - VOLTA pro funil, nao opt_out."""
+    """Step 2: lead responde 'nao/continua' - VOLTA pro funil (deixa LLM responder)."""
+
+    def _make_pain_pending(self):
+        mem = LeadMemory(lead_id="L6", user_id=1, telefone="5511")
+        mem.stage = "pain"
+        mem.opt_out_pending = True
+        return mem
 
     def test_step2_nao_cancela(self):
         """Bug fix PRINCIPAL: lead diz 'nao' e Franz volta pro funil."""
-        mem = LeadMemory(lead_id="L6", user_id=1, telefone="5511")
-        mem.opt_out_pending = True
-
+        mem = self._make_pain_pending()
         result = node_opt_out(_make_state(mem, "nao"))
 
         # NAO marcou opt_out
@@ -108,34 +122,33 @@ class TestOptOutStep2Cancel(unittest.TestCase):
         self.assertNotEqual(mem.stage, "opt_out")
         # Cancelou pending
         self.assertFalse(mem.opt_out_pending)
-        # Voltou pro funil (qualify)
-        self.assertEqual(result["next_stage"], "qualify")
-        # Mandou msg de continuidade
-        self.assertIn("conta", result["outgoing_message"].lower() or "foco" in result["outgoing_message"].lower())
+        # Voltou pro stage original (pain)
+        self.assertEqual(result["next_stage"], "pain")
+        # Deixa LLM gerar resposta natural (outgoing vazio, should_send False)
+        self.assertFalse(result["should_send"])
 
     def test_step2_continua_cancela(self):
-        mem = LeadMemory(lead_id="L7", user_id=1, telefone="5511")
-        mem.opt_out_pending = True
-
+        mem = self._make_pain_pending()
         result = node_opt_out(_make_state(mem, "continua"))
 
         self.assertNotEqual(mem.deal_status, "opt_out")
-        self.assertEqual(result["next_stage"], "qualify")
+        self.assertEqual(result["next_stage"], "pain")
+        self.assertFalse(result["should_send"])
 
     def test_step2_seguir_cancela(self):
-        mem = LeadMemory(lead_id="L8", user_id=1, telefone="5511")
-        mem.opt_out_pending = True
-
+        mem = self._make_pain_pending()
         result = node_opt_out(_make_state(mem, "quero seguir"))
 
         self.assertNotEqual(mem.deal_status, "opt_out")
+        self.assertFalse(result["should_send"])
 
 
 class TestOptOutStep2Unclear(unittest.TestCase):
-    """Step 2: lead responde ambiguo - Franz re-pergunta."""
+    """Step 2: lead responde ambiguo em stage avancado - Franz re-pergunta."""
 
     def test_step2_resposta_invalida(self):
         mem = LeadMemory(lead_id="L9", user_id=1, telefone="5511")
+        mem.stage = "pain"
         mem.opt_out_pending = True
 
         result = node_opt_out(_make_state(mem, "talvez"))
