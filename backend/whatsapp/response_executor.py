@@ -108,7 +108,12 @@ def send_response(ctx: ExecutionContext):
     delay_secs = ctx.humanized_delay_fn(ctx.resposta)
     _time.sleep(delay_secs)
 
-    # 3. Send in parts
+    # 3. Set cooldown ANTES do envio (evita race condition)
+    # Isso impede que outra thread envie enquanto esta está enviando
+    ctx.set_cooldown_fn(ctx.lead_key)
+    ctx.increment_daily_fn(ctx.lead_key)
+
+    # 4. Send in parts
     send_ok, last_error = send_text_parts(
         ctx.http_client,
         ctx.meowhats_http,
@@ -123,11 +128,11 @@ def send_response(ctx: ExecutionContext):
         logger.warning(f"Falha ao enviar resposta: {last_error}")
         return False
 
-    # 4. Persist output
+    # 5. Persist output
     ctx.save_interaction_fn(ctx.lead_id, ctx.resposta, "saida", ctx.user_id)
     ctx.update_stage_fn(ctx.lead_id, ctx.novo_stage, ctx.user_id)
 
-    # 5. Scheduled follow-up
+    # 6. Scheduled follow-up
     if ctx.raw_stage == "scheduled":
         facts = ctx.franz_output.update_facts or {}
         followup_date = facts.get("followup_date", "")
@@ -150,10 +155,6 @@ def send_response(ctx: ExecutionContext):
         f"✅ Resposta enviada para {ctx.telefone} "
         f"(partes={len(ctx.resposta_partes)} delay={delay_secs:.1f}s)"
     )
-
-    # 6. Cooldown + daily limit
-    ctx.set_cooldown_fn(ctx.lead_key)
-    ctx.increment_daily_fn(ctx.lead_key)
 
     # 7. Handoff
     if ctx.franz_output.should_handoff or ctx.raw_stage == "handoff":

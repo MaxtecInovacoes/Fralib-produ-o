@@ -17,6 +17,7 @@ Uso:
 
 import threading
 import time
+from collections import OrderedDict
 from contextlib import contextmanager
 from typing import Dict
 from functools import lru_cache
@@ -28,8 +29,10 @@ _LEAD_LOCKS: Dict[str, threading.Lock] = {}
 _LOCK_GUARD = threading.Lock()
 
 # Cache de message_ids recentes (TTL 60s)
-_MESSAGE_ID_CACHE: Dict[str, float] = {}
+# Usa OrderedDict para evict-oldest sem invalidar TUDO de uma vez
+_MESSAGE_ID_CACHE: "OrderedDict[str, float]" = OrderedDict()
 _CACHE_LOCK = threading.Lock()
+_CACHE_MAX_SIZE = 10000
 
 
 @contextmanager
@@ -79,15 +82,17 @@ def _is_duplicate_message_id(msg_id: str, ttl_seconds: int = 60) -> bool:
     with _CACHE_LOCK:
         cached_time = _MESSAGE_ID_CACHE.get(msg_id)
         if cached_time and (now - cached_time) < ttl_seconds:
+            # Atualizar timestamp para evitar evict prematuro
+            del _MESSAGE_ID_CACHE[msg_id]
+            _MESSAGE_ID_CACHE[msg_id] = now
             return True
 
         # Adicionar/atualizar cache
         _MESSAGE_ID_CACHE[msg_id] = now
 
-        # Limpar cache antigo (opcional: usar OrderedDict para limpar periodicamente)
-        if len(_MESSAGE_ID_CACHE) > 10000:
-            old_cutoff = now - ttl_seconds
-            _MESSAGE_ID_CACHE.clear()
+        # Limpar cache antigo usando evict-oldest (não clear() que invalida tudo)
+        while len(_MESSAGE_ID_CACHE) > _CACHE_MAX_SIZE:
+            _MESSAGE_ID_CACHE.popitem(last=False)  # Remove o mais antigo
 
     return False
 
