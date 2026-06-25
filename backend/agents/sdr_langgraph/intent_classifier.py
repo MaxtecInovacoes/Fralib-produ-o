@@ -28,9 +28,16 @@ class IntentResult:
 # Patterns por intent (ordenados por prioridade: do mais especifico ao mais generico)
 _PATTERNS: dict[Intent, list[re.Pattern]] = {
     Intent.OPT_OUT: [
-        re.compile(r"\b(para|parar|stop|chega|sair|sai)\b", re.I),
-        re.compile(r"\b(nao\s+quero|não\s+quero|me\s+tira|remove|remover)\b", re.I),
-        re.compile(r"\b(desculpa|desculpe)\s+(mas\s+)?(nao|não)", re.I),
+        # Opt-out tem que ser CLARO: precisa de negacao, despedida ou pedido explicito de parar.
+        # NAO casar com "para" generico (preposicao "para eu entender", "pra voce ver").
+        re.compile(r"\b(para|parar|pare|stop|chega)\s+de\s+me\s+(mandar|enviar|ligar|falar|escrever)", re.I),
+        re.compile(r"\b(nao|não)\s+(quero|preciso|tenho\s+interesse|manda|mais|desejo)\b", re.I),
+        re.compile(r"\b(me\s+tira|tire\s+me|remova|remover|exclui|excluir)\s*(me|do\s+contato)?", re.I),
+        re.compile(r"\b(sair|sai|encerrar|descadastr)\w*", re.I),
+        re.compile(r"\b(desculpa|desculpe)\s+(mas\s+)?(nao|não)\s+(quero|posso|tenho|dá|interessa)\b", re.I),
+        # Mensagens curtas que sao claramente opt-out (<=4 palavras)
+        re.compile(r"^\s*(parar|stop|sair|tchau|adeus|bye)\s*[.!]?\s*$", re.I),
+        re.compile(r"^\s*(nao|não)\s+(quero|preciso|mais|interessa)\s*[.!]?\s*$", re.I),
     ],
     Intent.GATEKEEPER: [
         re.compile(r"\b(não\s+sou|nao\s+sou)\s+(o\s+)?(dono|responsavel|encarregado)", re.I),

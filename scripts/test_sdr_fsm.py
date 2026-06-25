@@ -31,9 +31,23 @@ class TestIntentClassifier(unittest.TestCase):
             self.assertIn(r.intent, (Intent.GREETING, Intent.ACKNOWLEDGMENT), f"{msg} -> {r.intent}")
 
     def test_opt_out(self):
-        for msg in ["para", "me tira", "não quero mais", "chega"]:
+        # Opt-out deve ser CLARO: pedido explicito de parar/remover
+        for msg in ["pare de me mandar", "não quero mais", "me tira", "remover meu número", "stop"]:
             r = classify_intent(msg)
             self.assertEqual(r.intent, Intent.OPT_OUT, f"{msg} -> {r.intent}")
+
+    def test_no_opt_out_false_positive(self):
+        # "para" preposicao NAO deve ser classificado como opt_out
+        # Era o bug que fazia o Franz marcar clientes normais como perdidos
+        for msg in [
+            "Jaque Vieira Vicente Nutricionista agradecemos seu contato para eu entender",
+            "Vou para academia amanha",
+            "Vou pra academia amanha",
+            "Quero para minha empresa",
+            "Para mim isso é importante",
+        ]:
+            r = classify_intent(msg)
+            self.assertNotEqual(r.intent, Intent.OPT_OUT, f"{msg} -> {r.intent} (false positive!)")
 
     def test_question_price(self):
         for msg in ["quanto custa?", "qual o valor?", "tem desconto?", "como funciona o pagamento?"]:
