@@ -28,16 +28,19 @@ class IntentResult:
 # Patterns por intent (ordenados por prioridade: do mais especifico ao mais generico)
 _PATTERNS: dict[Intent, list[re.Pattern]] = {
     Intent.OPT_OUT: [
-        # Opt-out tem que ser CLARO: precisa de negacao, despedida ou pedido explicito de parar.
-        # NAO casar com "para" generico (preposicao "para eu entender", "pra voce ver").
-        re.compile(r"\b(para|parar|pare|stop|chega)\s+de\s+me\s+(mandar|enviar|ligar|falar|escrever)", re.I),
-        re.compile(r"\b(nao|não)\s+(quero|preciso|tenho\s+interesse|manda|mais|desejo)\b", re.I),
-        re.compile(r"\b(me\s+tira|tire\s+me|remova|remover|exclui|excluir)\s*(me|do\s+contato)?", re.I),
-        re.compile(r"\b(sair|sai|encerrar|descadastr)\w*", re.I),
-        re.compile(r"\b(desculpa|desculpe)\s+(mas\s+)?(nao|não)\s+(quero|posso|tenho|dá|interessa)\b", re.I),
+        # Opt-out EXPLICITO: precisa de pedido DIRETO de sair/remover/parar.
+        # NAO casar com "nao atendo", "nao trabalho com X", "nao sou Y" - essas sao qualificacao.
+        # Bug fix: Carolina Ragugnetti 2026-06-25 - LangGraph marcou "nao atendo atletas" como opt_out.
+        re.compile(r"\b(para|parar|pare|stop|chega)\s+de\s+me\s+(mandar|enviar|ligar|falar|escrever|contatar)", re.I),
+        re.compile(r"\b(me\s+(tira|tire|remove|remova|exclui|exclua))\s*(do\s+contato|da\s+lista|das\s+mensagens)?", re.I),
+        re.compile(r"\b(remova|remover|exclui|excluir)\s*(me|meu\s+(numero|contato))", re.I),
+        re.compile(r"\b(sair|sai|encerrar|descadastr|descadastra)\w*\s*(da\s+lista|do\s+contato)?", re.I),
+        re.compile(r"\b(desculpa|desculpe)\s+(mas\s+)?(nao|não)\s+(quero|posso|tenho\s+interesse|interessa|mais)\b", re.I),
         # Mensagens curtas que sao claramente opt-out (<=4 palavras)
         re.compile(r"^\s*(parar|stop|sair|tchau|adeus|bye)\s*[.!]?\s*$", re.I),
-        re.compile(r"^\s*(nao|não)\s+(quero|preciso|mais|interessa)\s*[.!]?\s*$", re.I),
+        # Curto e explicito: "nao quero mais" / "nao quero nada" / "nao quero"
+        re.compile(r"^\s*(nao|não)\s+(quero|preciso|mais|interessa)\s*(mais|nada)?\s*[.!]?\s*$", re.I),
+        re.compile(r"^\s*(me\s+)?(tira|remove|exclui)\s*(me|do\s+contato)?\s*[.!]?\s*$", re.I),
     ],
     Intent.GATEKEEPER: [
         re.compile(r"\b(não\s+sou|nao\s+sou)\s+(o\s+)?(dono|responsavel|encarregado)", re.I),
@@ -201,6 +204,11 @@ def classify_with_llm_fallback(text: str, message_count: int = 0, threshold: flo
 
     Returns:
         IntentResult.
+
+    IMPORTANTE: opt_out SEMPRE via regex. LLM NUNCA pode marcar opt_out
+    porque LLMs confundem "Não atendo somente atletas" com opt_out.
+    Opt_out so pode ser marcado por pedido EXPLÍCITO (me tira, me remove,
+    parar de mandar, sair). Ver bug Carolina Ragugnetti 2026-06-25.
     """
     result = classify_intent(text, message_count=message_count)
     if result.confidence >= threshold:
@@ -211,7 +219,11 @@ def classify_with_llm_fallback(text: str, message_count: int = 0, threshold: flo
         from agents.llm_direct import call_claude
         system = (
             "Voce classifica a intencao de uma mensagem de WhatsApp de um lead em UMA palavra.\n"
-            "Categorias: greeting, acknowledgment, engagement, question, objection, buying_intent, schedule, opt_out, gatekeeper, off_topic, unknown\n"
+            "Categorias: greeting, acknowledgment, engagement, question, objection, buying_intent, schedule, gatekeeper, off_topic, unknown\n"
+            "REGRA CRITICA: NUNCA retorne 'opt_out'. Opt_out so e decidido por "
+            "palavras EXPLÍCITAS (me tira, me remove, parar, sair). "
+            "Se o lead apenas nega algo especifico (ex: 'nao atendo atletas'), "
+            "use 'engagement' ou 'objection' - NAO opt_out.\n"
             "Responda apenas a categoria. Nenhuma explicacao."
         )
         llm_intent = call_claude(
@@ -225,6 +237,11 @@ def classify_with_llm_fallback(text: str, message_count: int = 0, threshold: flo
             enable_context=False,
         ).strip().lower()
 
+        # DEFESA EM PROFUNDIDADE: mesmo se o LLM retornar opt_out, sobrescreve
+        # para engagement. Opt_out so via regex (palavras explicitas).
+        if "opt_out" in llm_intent or "optout" in llm_intent:
+            llm_intent = "engagement"
+
         # Mapear string -> Intent
         try:
             intent = Intent(llm_intent)
@@ -236,6 +253,10 @@ def classify_with_llm_fallback(text: str, message_count: int = 0, threshold: flo
                     break
             else:
                 return result  # mantem resultado regex
+
+        # SEGUNDA DEFESA: nunca aceitar LLM=opt_out
+        if intent == Intent.OPT_OUT:
+            intent = Intent.ENGAGEMENT
 
         return IntentResult(
             intent=intent,
