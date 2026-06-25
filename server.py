@@ -377,6 +377,8 @@ app.include_router(agent_config_endpoints.router)
 app.include_router(falhas_endpoints.router)
 app.include_router(site_editor_endpoints.router)
 app.include_router(tracking_endpoints.router)
+import clarity_api_endpoints
+app.include_router(clarity_api_endpoints.router)
 app.include_router(lead_supply_endpoints.router)
 import cron_endpoints
 app.include_router(cron_endpoints.router)
