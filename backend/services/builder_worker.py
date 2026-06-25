@@ -343,75 +343,34 @@ def render_site_with_builder(
             from services.vite_react_renderer import render_vite_react_site  # type: ignore
 
         fallback_model = _builder_proxy_fallback_model()
-        try:
-            render_result = render_vite_react_site(
-                manifest["prompt"],
-                workspace_dir=workspace_dir,
-                facts=manifest.get("prompt_agent", {}).get("context", {}),
-                repair_context=repair_context,
-                primary_model=os.getenv("FRALIB_OPENUI_PRIMARY_MODEL", PROXY_BUILDER_MODEL),
-                fallback_model=fallback_model,
-                max_tokens=int(os.getenv("FRALIB_VITE_REACT_MAX_TOKENS", "64000")),
-                temperature=float(os.getenv("FRALIB_OPENUI_TEMPERATURE", "0.55")),
-            )
-            _write_builder_render_meta(
-                output_dir,
-                engine=engine,
-                model=render_result.model,
-                attempts=render_result.attempts,
-                elapsed_ms=render_result.elapsed_ms,
-                html_chars=len(render_result.html),
-                visual_direction=(
-                    manifest.get("prompt_agent", {})
-                    .get("context", {})
-                    .get("visual_direction", {})
-                ),
-                source_files=sorted(render_result.source_files),
-            )
-            model = render_result.model
-            attempts = render_result.attempts
-        except Exception as vite_exc:
-            # Vite/React e engine experimental explicita. OpenUI continua sendo
-            # a rota segura para nao perder publicacao quando Vite falhar.
-            from services.openui_renderer import render_openui_site
-
-            render_result = render_openui_site(
-                manifest["prompt"],
-                facts=manifest.get("prompt_agent", {}).get("context", {}),
-                repair_context=repair_context,
-                primary_model=os.getenv("FRALIB_OPENUI_PRIMARY_MODEL", PROXY_BUILDER_MODEL),
-                fallback_model=os.getenv("FRALIB_OPENUI_FALLBACK_MODEL", PROXY_OPUS_FALLBACK_MODEL),
-                max_tokens=int(os.getenv("FRALIB_OPENUI_MAX_TOKENS", "8000")),
-                temperature=float(os.getenv("FRALIB_OPENUI_TEMPERATURE", "0.35")),
-            )
-            index_target = output_dir / "index.html"
-            output_dir.mkdir(parents=True, exist_ok=True)
-            index_target.write_text(render_result.html, encoding="utf-8")
-            attempts = [
-                {
-                    "model": "vite_react",
-                    "status": "failed_openui_fallback",
-                    "error": str(vite_exc)[:1000],
-                },
-                *list(render_result.attempts or []),
-            ]
-            _write_builder_render_meta(
-                output_dir,
-                engine="openui_fallback",
-                model=render_result.model,
-                attempts=attempts,
-                elapsed_ms=render_result.elapsed_ms,
-                html_chars=len(render_result.html),
-                visual_direction=(
-                    manifest.get("prompt_agent", {})
-                    .get("context", {})
-                    .get("visual_direction", {})
-                ),
-                source_files=[],
-            )
-            engine = "openui_fallback"
-            publication_engine = "openui"
-            model = render_result.model
+        # Sprint 12.9: Vite/React é engine único - remove OpenUI fallback.
+        # Falha de validacao = raise (nao cai em OpenUI).
+        render_result = render_vite_react_site(
+            manifest["prompt"],
+            workspace_dir=workspace_dir,
+            facts=manifest.get("prompt_agent", {}).get("context", {}),
+            repair_context=repair_context,
+            primary_model=os.getenv("FRALIB_OPENUI_PRIMARY_MODEL", PROXY_BUILDER_MODEL),
+            fallback_model=fallback_model,
+            max_tokens=int(os.getenv("FRALIB_VITE_REACT_MAX_TOKENS", "64000")),
+            temperature=float(os.getenv("FRALIB_OPENUI_TEMPERATURE", "0.55")),
+        )
+        _write_builder_render_meta(
+            output_dir,
+            engine=engine,
+            model=render_result.model,
+            attempts=render_result.attempts,
+            elapsed_ms=render_result.elapsed_ms,
+            html_chars=len(render_result.html),
+            visual_direction=(
+                manifest.get("prompt_agent", {})
+                .get("context", {})
+                .get("visual_direction", {})
+            ),
+            source_files=sorted(render_result.source_files),
+        )
+        model = render_result.model
+        attempts = render_result.attempts
     else:
         raise RuntimeError(f"engine de Builder nao suportado: {engine!r}")
 
