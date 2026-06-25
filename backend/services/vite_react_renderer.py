@@ -1931,8 +1931,8 @@ def _generate_studio_fallback_files(facts: dict[str, Any] | None = None) -> dict
         return default
     phone = str(_find("whatsapp") or _find("phone") or "41999999999")
     rating = str(_find("rating") or "4.8")
-    city = str(business.get("city") or business.get("cidade") or safe_facts.get("cidade") or "Curitiba")
-    segment = str(business.get("segment") or business.get("segmento") or "academia fitness")
+    city = str(_biz.get("city") or _biz.get("cidade") or safe_facts.get("cidade") or safe_facts.get("city") or "Curitiba")
+    segment = str(_biz.get("segment") or _biz.get("segmento") or safe_facts.get("segmento") or safe_facts.get("segment") or "servicos").lower()
     hero_img = "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?auto=format&fit=crop&w=1600&q=82"
     gallery_img = "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?auto=format&fit=crop&w=1400&q=82"
 
