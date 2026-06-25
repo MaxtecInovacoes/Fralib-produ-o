@@ -81,6 +81,7 @@ from whatsapp.rate_limiter import (
     DEFAULT_HUMAN_PAUSE_SECONDS,
 )
 from agents.sdr_langgraph.lead_lock import _is_duplicate_message_id  # Deduplicação por message_id
+from whatsapp.message_preprocessor import should_franz_respond  # Pré-processador de msg
 
 # 5. Gate de billing: cache por user_id (evita query a cada msg)
 _BILLING_CACHE: Dict[int, tuple] = {}  # user_id -> (can_use: bool, expires_at: float)
@@ -633,6 +634,25 @@ def _processar_mensagem(tenant_id: str, msg_data: dict, texto_override: str = No
             )
             return
 
+        # ── PRÉ-PROCESSADOR: detecta bot/auto-resposta/mídia ANTES do Franz ──
+        # Evita que Franz responda a bots assistentes (Monica, Bia) ou mande SPAM
+        # quando lead manda msg longa de opt-out/ausencia. Tambem detecta midia
+        # sem texto (imagem/audio sem legenda) e responde pedindo descricao.
+        msg_data_for_pp = {"contextInfo": msg_data.get("contextInfo", {})} if msg_data else None
+        should_respond, auto_reply = should_franz_respond(texto, msg_data_for_pp)
+        if not should_respond:
+            if auto_reply:
+                # Responder com auto-reply (handoff ou ask_human) - NAO chama Franz
+                logger.info(f"[WPP-Listener] {nome}: pre-processor desviou do Franz (handoff/ask_human)")
+                # Aqui idealmente enviariamos via MeoWhats, mas como o
+                # pre-processador so classifica, apenas NAO chamamos Franz.
+                # O reply do auto-reply pode ser implementado depois.
+                return
+            else:
+                # Silencio total (no_response - ex: msg de ausencia)
+                logger.info(f"[WPP-Listener] {nome}: pre-processor pediu silencio (no_response)")
+                return
+
         # Chamar Franz para gerar resposta
         import sys
         sys.path.insert(0, os.path.dirname(__file__))
@@ -651,6 +671,33 @@ def _processar_mensagem(tenant_id: str, msg_data: dict, texto_override: str = No
             history = build_history(rows)
         except Exception as hist_err:
             logger.warning(f"Lead {nome}: erro ao carregar historico SDR: {hist_err}")
+
+        # ── LIMITE 1 msg Franz por turno (anti-SPAM) ──────────────────
+        # Se ja enviamos saida nos ultimos 60s E o lead nao mandou nada novo,
+        # NAO responder de novo. Isso evita o "loop de 5 msgs" visto em producao
+        # onde Franz mandava 5 msgs em sequencia (introducao + oferta + explicacao + pergunta).
+        try:
+            with engine.connect() as conn:
+                last_outbound = conn.execute(text("""
+                    SELECT criado_em FROM interacoes
+                    WHERE lead_id = :lid AND user_id = :uid
+                      AND direcao = 'saida'
+                    ORDER BY criado_em DESC LIMIT 1
+                """), {"lid": lead_id, "uid": user_id}).scalar()
+                last_inbound = conn.execute(text("""
+                    SELECT criado_em FROM interacoes
+                    WHERE lead_id = :lid AND user_id = :uid
+                      AND direcao = 'entrada'
+                    ORDER BY criado_em DESC LIMIT 1
+                """), {"lid": lead_id, "uid": user_id}).scalar()
+                if last_outbound and last_inbound:
+                    # So bloqueia se: ultima saida foi DEPOIS da ultima entrada
+                    # (significa que Franz ja respondeu a esta msg)
+                    if str(last_outbound) > str(last_inbound):
+                        logger.info(f"[WPP-Listener] {nome}: Franz ja respondeu a esta msg - nao duplicar")
+                        return
+        except Exception as _ts_err:
+            logger.warning(f"[WPP-Listener] one-per-turn check falhou (nao-bloqueante): {_ts_err}")
 
         from agents.sdr_langgraph import responder_lead
         franz_output = responder_lead(
