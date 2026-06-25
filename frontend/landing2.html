@@ -1228,23 +1228,42 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
   </div>
 
   <h1>
-    <span class="grad">CRIE SITES COM IA</span> PARA LEADS LOCAIS E VENDA PELO WHATSAPP
+    <span class="grad">4 etapas automatizadas.</span><br>
+    Você só fecha a venda.
   </h1>
 
-  <p class="hero-sub">
-    O FraLib une prospecção B2B no Google Maps, criador de sites com IA, CRM Kanban e SDR Franz para transformar negócios locais em oportunidades reais.
+  <p class="hero-sub" style="max-width:680px;">
+    A gente acha 200 clientes no Google Maps.<br>
+    Cria o site de cada um.<br>
+    Manda WhatsApp sozinho.<br>
+    <strong>Você só recebe o PIX na sua conta.</strong>
   </p>
 
-  <div class="hero-buttons">
-    <a href="/login?signup=1" class="btn btn-yellow btn-hero">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-      QUERO MEU PRIMEIRO SITE GRÁTIS
-    </a>
-    <a href="#como-funciona" class="btn btn-outline">
-      Ver como funciona
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 13l5 5 5-5M7 6l5 5 5-5"/></svg>
-    </a>
+  <!-- DELAY CTA / MINI-VSL PLACEHOLDER -->
+  <div id="vsl-block" style="max-width:720px;margin:40px auto 24px;padding:24px;border-radius:16px;background:rgba(147,51,234,0.08);border:1px solid rgba(147,51,234,0.25);text-align:center;">
+    <p style="color:var(--fl-text-muted);font-size:13px;letter-spacing:1px;margin-bottom:16px;font-family:var(--fl-font-mono);">▶ VEJA COMO FUNCIONA EM 60 SEGUNDOS</p>
+    <div id="vsl-placeholder" style="aspect-ratio:16/9;background:linear-gradient(135deg,#1a1033,#0e0a1a);border-radius:12px;display:flex;align-items:center;justify-content:center;color:var(--fl-text-dim);font-size:14px;border:1px dashed rgba(147,51,234,0.3);">
+      <div>
+        <div style="width:72px;height:72px;border-radius:50%;margin:0 auto 12px;background:linear-gradient(135deg,var(--cyan),var(--fl-purple));display:flex;align-items:center;justify-content:center;box-shadow:0 0 30px rgba(0,255,179,0.3);">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="#000"><path d="M8 5v14l11-7z"/></svg>
+        </div>
+        [VÍDEO PLACEHOLDER — substituir por &lt;video src="/videos/demo.mp4"&gt;]
+      </div>
+    </div>
+    <div id="vsl-cta" style="margin-top:24px;opacity:0;transition:opacity .8s ease;">
+      <a href="#beta-form" class="btn btn-yellow btn-hero">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+        QUERO TESTAR GRÁTIS (5 MINUTOS)
+      </a>
+    </div>
   </div>
+  <script>
+    // CTA aparece 3s depois (simula VSL — substituir por evento 'ended' do vídeo depois)
+    setTimeout(function(){
+      var el = document.getElementById('vsl-cta');
+      if(el) el.style.opacity = '1';
+    }, 3000);
+  </script>
 
   <!-- MASCOT -->
   <div class="hero-mascot"><img class="pixel-anim-idle" src="/images/Mestre Fralib - Mago da IA.png" alt="Mestre FraLib - Mago da IA">
