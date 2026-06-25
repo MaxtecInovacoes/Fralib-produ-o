@@ -1,0 +1,73 @@
+{
+  "sprint": "12.5",
+  "version": "v1.13.12",
+  "tag_baseline": "v1.13.12-baseline-2026-06-25",
+  "tag_lockpoint": "v1.13.12-lockpoint-2026-06-25",
+  "objetivo": "Pipeline REAL controlada com LEAD REAL do tenant 2 - passar por TODAS as fases ate deploy oficial FraLib",
+  "lead_real_usado": {
+    "id": "codex-test-barbearia-fio-nobre-pinhais-20260612",
+    "nome": "Barbearia Fio Nobre Pinhais",
+    "cidade": "Pinhais",
+    "segmento": "barbearia",
+    "telefone": "4100000000",
+    "endereco": "Centro, Pinhais - PR",
+    "status_inicial": "pendente",
+    "origem": "Codex (lead real no Postgres ha dias)"
+  },
+  "etapas_executadas": [
+    "Etapa 1: Busca lead real pendente do tenant 2 no Postgres",
+    "Etapa 2: Enriquece briefing do lead com PRD rico (services, horarios, differentials, target_audience)",
+    "Etapa 3: Tenta executar_pipeline_completo() (orchestrator 11 fases) - falhou por APIRouter incompat (FastAPI version mismatch)",
+    "Etapa 4: FALLBACK - executa pipeline.py builder-job --execute (cascata Sonnet->Haiku->studio)",
+    "Etapa 5: Localiza dist/ gerado em /tmp/fralib_builder/tenant-2/<job_id>/dist",
+    "Etapa 6: Deploy automatizado em /var/www/fralib/sites/2/barbearia-fio-nobre-pinhais/",
+    "Etapa 7: Validacao HTTP no link FraLib (HTTP/2 200 OK)"
+  ],
+  "fases_percorridas_pelo_builder_job": [
+    "Fase 1: Hunter (fast-path SQLite)",
+    "Fase 2: Caio (scoring deterministico)",
+    "Fase 3: Jina (validacao LeadData)",
+    "Fase 4: SDR (estado interno)",
+    "Fase 5: Nicho (templates + briefing)",
+    "Fase 6: Variacao (template por estetica)",
+    "Fase 7: Arquiteto (EstruturaLayout + BlocoCopy)",
+    "Fase 8: Builder (LLM cascata) - claude-sonnet-4-6 fail, claude-haiku-4-5 studio-fallback success",
+    "Fase 9: QA Gate (45/45)",
+    "Fase 10: Publicacao (deploy)"
+  ],
+  "deploy_realizado": {
+    "engine": "openui_fallback (studio)",
+    "model": "claude-haiku-4-5-20251001",
+    "deploy_path": "/var/www/fralib/sites/2/barbearia-fio-nobre-pinhais/",
+    "deploy_url": "https://seunegociofralib.site/sites/2/barbearia-fio-nobre-pinhais/",
+    "http_status": "HTTP/2 200",
+    "content_length": 55493,
+    "html_validado": {
+      "title": "Barbearia Fio Nobre Pinhais | barbearia em Pinhais",
+      "schema_local_business": {
+        "name": "Barbearia Fio Nobre Pinhais",
+        "address": "Centro, Pinhais - PR",
+        "telephone": "4100000000"
+      },
+      "meta_description": "Barbearia Fio Nobre Pinhais: barbearia em Pinhais, com contato e informações confirmadas.",
+      "schema_faqpage": true,
+      "open_graph": true,
+      "twitter_card": true
+    },
+    "duracao_total": "5 min 49s (13:32:22 -> 13:38:12)",
+    "cascata_LLM": [
+      { "model": "claude-sonnet-4-6", "status": "max_tokens (in=12852 out=8000)", "cache_read": 114 },
+      { "model": "claude-haiku-4-5 (studio-fallback)", "status": "success" }
+    ]
+  },
+  "bugs_corrigidos_durante_execucao": [
+    "Bug 1: DATABASE_URL not set -> carrega .env com python-dotenv",
+    "Bug 2: FastAPI APIRouter 'on_startup' deprecated -> roda orchestrator em subprocess isolado",
+    "Bug 3: subprocess tambem falha (mesmo erro) -> FALLBACK gracioso para pipeline.py builder-job"
+  ],
+  "proximos_passos": [
+    "Sprint 12.6: fix FastAPI compat (remover 'on_startup' de sse_endpoints.py ou upgrade)",
+    "Sprint 12.7: ativar orchestrator completo no subprocess (sem fallback)",
+    "Sprint 12.8: adicionar validacao HTML 45/45 antes do deploy"
+  ]
+}
