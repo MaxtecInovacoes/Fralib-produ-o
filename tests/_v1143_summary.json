@@ -1,0 +1,32 @@
+{
+  "sprint": "12.16",
+  "version": "v1.14.3",
+  "tag_baseline": "v1.14.3-baseline-2026-06-25",
+  "tag_lockpoint": "v1.14.3-lockpoint-2026-06-25",
+  "objetivo": "Inject real lead name into vite studio fallback bundle",
+  "fix_applied": {
+    "file": "backend/agents/prompt_agent_context.py",
+    "function": "_business_context",
+    "change": "Try _biz_name from nested business first, then _first, then 'Negócio local' default. Avoid short-circuit on truthy default.",
+    "tests_passed": [
+      "Studio fallback now extracts 'Barbearia Fio Nobre Pinhais' from prd.business.name",
+      "FactualMotionContract.tsx contains name: 'Barbearia Fio Nobre Pinhais'",
+      "<title> shows the real lead name"
+    ]
+  },
+  "smoke_v15d_result": {
+    "engine": "vite_react",
+    "model": "studio-fallback",
+    "title": "Barbearia Fio Nobre Pinhais",
+    "bundle_has_fio": true,
+    "http_status": 200,
+    "site_url": "https://seunegociofralib.site/sites/2/barbearia-fio-nobre-v15d/"
+  },
+  "earlier_fixes": {
+    "1f70c45": "feat(vite_studio): smoke v1.14.2 - 26 segments + clean bundle + deploy OK",
+    "2d33029": "fix(vite_studio): defensive name extraction from multiple facts paths",
+    "c760051": "fix(vite_studio): replace business. refs with _biz. after rename",
+    "29f14a7": "fix(prompt_agent): extract name from nested business.name in _business_context",
+    "7b80979": "fix(prompt_agent): order - biz_name FIRST, then _first (avoid default leak)"
+  }
+}
