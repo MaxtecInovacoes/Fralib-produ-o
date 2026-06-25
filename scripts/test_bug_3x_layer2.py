@@ -147,7 +147,7 @@ class TestMigrationIntegrity(unittest.TestCase):
         content = migration_path.read_text()
 
         self.assertIn("revision = 'interacoes_idempotency_v1'", content)
-        self.assertIn("down_revision = 'tenant_api_keys_v1'", content)
+        self.assertIn("down_revision = 'a1b2c3d4e5f6'", content)
         self.assertIn("dedup_key", content)
         self.assertIn("create_index", content)
         self.assertIn("unique=True", content)

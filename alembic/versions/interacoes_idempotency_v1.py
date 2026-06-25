@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 # revision identifiers
 revision = 'interacoes_idempotency_v1'
-down_revision = 'tenant_api_keys_v1'
+down_revision = 'a1b2c3d4e5f6'
 branch_labels = None
 depends_on = None
 
