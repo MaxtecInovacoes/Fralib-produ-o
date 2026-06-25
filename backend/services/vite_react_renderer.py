@@ -686,7 +686,9 @@ def _batch_first_enabled() -> bool:
 
 
 def _is_namehost_base() -> bool:
-    return "proxy" in _proxy_base_url().lower()
+    # Sprint 12.2: detecta base namehost tanto 'proxy' (legacy) quanto 'llm.' (production)
+    base = _proxy_base_url().lower()
+    return "proxy" in base or "llm." in base
 
 
 def _namehost_batch_mode() -> bool:
