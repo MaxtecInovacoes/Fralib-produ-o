@@ -24,6 +24,7 @@ Lógica de negócio extraída para:
 from __future__ import annotations
 
 import json
+import logging
 import os
 import re
 import shutil
@@ -35,6 +36,10 @@ from pathlib import Path, PurePosixPath
 from typing import Any
 
 import httpx
+
+# Sprint 11.8 fix: logger was missing - caused 'name logger is not defined'
+# in fallback paths (3rd attempt model in cascade).
+logger = logging.getLogger(__name__)
 
 # Import from modularized components
 try:
