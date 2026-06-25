@@ -1144,11 +1144,26 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
         0 4px 0 rgba(139,69,0,0.6),
         0 0 30px rgba(255,184,0,0.8) !important;
     }
+    /* === Forçar cards com mesma altura (botões alinhados) === */
+    #planos .planos-grid{
+      align-items:stretch;
+    }
+    #planos .plano-card{
+      display:flex;
+      flex-direction:column;
+      height:auto;
+    }
+    #planos .plano-card .plano-features{
+      flex-grow:1;
+      margin-bottom:16px;
+    }
     #planos .plano-card .btn{
       white-space:nowrap;
       font-size:10px;
       padding:14px 8px;
       letter-spacing:0.5px;
+      width:100%;
+      align-self:flex-start;
     }
   </style>
 
