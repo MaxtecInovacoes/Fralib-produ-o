@@ -1,6 +1,7 @@
 #!/bin/bash
-# post-receive hook — deploy automatico do FraLib (CORRIGIDO v2)
-# Usa systemctl (servicos systemd) em vez de pm2, que eh o gerenciador real no VPS.
+# post-receive hook — deploy automatico do FraLib (v3 - PM2 completo)
+# Reinicia TODOS os servicos PM2 para garantir que pegam codigo novo.
+# Se nao reiniciar, servicos com codigo antigo continuam respondendo leads.
 
 set -euo pipefail
 
@@ -30,27 +31,22 @@ if [ "$DEPLOY_MASTER" != "true" ]; then
     exit 0
 fi
 
-# 1. Atualizar working tree usando fetch + reset (funciona mesmo com divergencia)
+# 1. Atualizar working tree usando fetch + reset
 log "Atualizando $FRALIB_DIR..."
 cd "$FRALIB_DIR"
 
-# Backup .env antes de qualquer operacao
 ENV_BACKUP=""
 if [ -f .env ]; then
     ENV_BACKUP="$(mktemp /tmp/fralib-env.XXXXXX)"
     cp -p .env "$ENV_BACKUP"
 fi
 
-# Fetch + reset (mais confiavel que pull)
-git fetch origin master 2>&1 | tee -a "$LOG_FILE" || {
-    log "ERRO: git fetch falhou - tentando git reset direto"
-}
+git fetch origin master 2>&1 | tee -a "$LOG_FILE" || log "ERRO: git fetch falhou"
 git reset --hard origin/master 2>&1 | tee -a "$LOG_FILE" || {
     log "ERRO FATAL: git reset --hard falhou"
     exit 1
 }
 
-# Restaurar .env se existir
 if [ -n "$ENV_BACKUP" ] && [ -f "$ENV_BACKUP" ]; then
     cp -p "$ENV_BACKUP" .env
     rm -f "$ENV_BACKUP"
@@ -58,23 +54,28 @@ fi
 
 log "Codigo atualizado para: $(git rev-parse --short HEAD)"
 
-# 2. Validar frontend canonico
-log "Validando frontend canonico..."
-if [ -f "$FRALIB_DIR/scripts/verify_frontend_canonical.py" ]; then
-    "$FRALIB_DIR/venv/bin/python3" "$FRALIB_DIR/scripts/verify_frontend_canonical.py" 2>&1 | tee -a "$LOG_FILE" || true
-fi
+# 2. Clear pycache para forcar reload do codigo novo
+log "Limpando __pycache__..."
+find "$FRALIB_DIR/backend" -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
+find "$FRALIB_DIR/scripts" -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
 
 # 3. Instalar dependencias Python se mudou
 log "Verificando dependencias Python..."
-cd "$FRALIB_DIR"
 if [ -f backend/requirements.txt ]; then
     if ! "$FRALIB_DIR/venv/bin/pip" install -r backend/requirements.txt --quiet 2>&1 | tail -3 | tee -a "$LOG_FILE"; then
-        log "ATENCAO: instalacao de dependencias pode ter falhado"
+        log "ATENCAO: instalacao de dependencias pode ter falhar"
     fi
 fi
 
-# 4. Publicar frontend estatico
-log "Publicando frontend estatico em $WEB_DIR..."
+# 4. Migrations alembic
+log "Rodando migrations..."
+cd "$FRALIB_DIR"
+if [ -f alembic.ini ]; then
+    "$FRALIB_DIR/venv/bin/alembic" upgrade head 2>&1 | tail -5 | tee -a "$LOG_FILE" || log "ATENCAO: migrations falharam"
+fi
+
+# 5. Publicar frontend estatico
+log "Publicando frontend em $WEB_DIR..."
 install -d "$WEB_DIR"
 for html in admin.html dashboard.html landing.html login.html planos.html studio.html superadmin.html termos.html privacidade.html; do
     if [ -f "$FRALIB_DIR/frontend/$html" ]; then
@@ -82,19 +83,25 @@ for html in admin.html dashboard.html landing.html login.html planos.html studio
     fi
 done
 
-# Copiar assets
 for dir in blog docs css js static images; do
     if [ -d "$FRALIB_DIR/frontend/$dir" ]; then
         cp -a "$FRALIB_DIR/frontend/$dir" "$WEB_DIR"/ 2>/dev/null || true
     fi
 done
 
-# 5. Restart via systemctl (NAO pm2)
-log "Reiniciando servicos via systemctl..."
-systemctl restart fralib-api 2>&1 | tee -a "$LOG_FILE" || log "ATENCAO: fralib-api restart falhou"
-systemctl restart fralib-worker 2>&1 | tee -a "$LOG_FILE" || log "ATENCAO: fralib-worker restart falhou"
-systemctl restart fralib-franz 2>&1 | tee -a "$LOG_FILE" || log "ATENCAO: fralib-franz restart falhou"
-systemctl restart fralib-hermes 2>&1 | tee -a "$LOG_FILE" || log "ATENCAO: fralib-hermes restart falhou"
-# wpp-listener nao precisa de restart (sockets persistentes)
+# 6. CRITICAL: Reiniciar TODOS os servicos PM2 (nao so 'fralib')
+# Sem isso, fralib-franz-worker, fralib-wpp-listener, fralib-hermes-watchdog
+# continuam com codigo antigo de horas/dias atras.
+log "Reiniciando TODOS os servicos PM2 (reload + delete+start)..."
+pm2 reload ecosystem.config.js 2>&1 | tail -10 | tee -a "$LOG_FILE" || {
+    log "pm2 reload falhou - tentando kill+start"
+    pm2 kill 2>&1
+    sleep 2
+    pm2 start ecosystem.config.js 2>&1 | tail -10 | tee -a "$LOG_FILE"
+}
+
+# 7. Salvar snapshot PM2 para reviver apos reboot
+pm2 save 2>&1 | tail -2 | tee -a "$LOG_FILE" || true
 
 log "=== Deploy concluido com sucesso ==="
+log "Servicos online: $(pm2 list 2>/dev/null | grep -c online)"
