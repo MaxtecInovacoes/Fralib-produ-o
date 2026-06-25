@@ -1,0 +1,1239 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FraLib OS — Você Fecha. A FraLib Faz o Resto.</title>
+<meta name="description" content="Faz 6 meses que você prospecta todo dia. Zero fechou. A FraLib coloca seu primeiro cliente no bolso esta semana.">
+<!-- Meta Pixel -->
+<script>
+!function(f,b,e,v,n,t,s)
+{if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+n.queue=[];t=b.createElement(e);t.async=!0;
+t.src=v;s=b.getElementsByTagName(e)[0];
+s.parentNode.insertBefore(t,s)}(window, document,'script',
+'https://connect.facebook.net/en_US/fbevents.js');
+fbq('init', '1022692323751129');
+fbq('track', 'PageView');
+</script>
+<noscript><img height="1" width="1" style="display:none"
+src="https://www.facebook.com/tr?id=1022692323751129&ev=PageView&noscript=1"
+></noscript>
+<!-- Microsoft Clarity -->
+<script>
+(function(c,l,a,r,i,t,y){
+  c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+  t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+  y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+})(window, document, "clarity", "script", "wv8xiy7kvk");
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/design-system.css">
+<style>
+/* ============================================================
+   FRA LIB LANDING — DESIGN SYSTEM COMPLETO + COPY ESPECÍFICA
+   ============================================================ */
+:root {
+  --fl-bg:         #0a0714;
+  --fl-bg-surface: #0e0a1a;
+  --fl-bg-card:    #12121a;
+  --fl-bg-card-2:  #18182280;
+  --fl-bg-hover:   #1c1c28;
+  --fl-bg-overlay: rgba(6,6,8,0.92);
+
+  --fl-purple-950: #0e0718;
+  --fl-purple-900: #1a0a30;
+  --fl-purple-800: #2d1060;
+  --fl-purple-700: #4c1d9e;
+  --fl-purple-600: #7c3aed;
+  --fl-purple:     #9333ea;
+  --fl-purple-400: #a855f7;
+  --fl-purple-300: #c084fc;
+  --fl-purple-200: #d8b4fe;
+
+  --fl-glow-xs:  0 0 8px  rgba(147,51,234,0.20);
+  --fl-glow-sm:  0 0 16px rgba(147,51,234,0.28);
+  --fl-glow-md:  0 0 32px rgba(147,51,234,0.35);
+  --fl-glow-lg:  0 0 60px rgba(147,51,234,0.45);
+
+  --fl-border:      rgba(147,51,234,0.12);
+  --fl-border-md:   rgba(147,51,234,0.25);
+  --fl-border-hi:   rgba(147,51,234,0.50);
+
+  --fl-text:       #f0f0f5;
+  --fl-text-muted: #8888a0;
+  --fl-text-dim:   #44445a;
+  --fl-text-brand: #c084fc;
+
+  --fl-success:  #22c55e;
+  --fl-warning:  #f59e0b;
+  --fl-danger:   #ef4444;
+  --fl-info:     #06b6d4;
+
+  --fl-font-brand: 'Press Start 2P', monospace;
+  --fl-font-ui:    'DM Sans', system-ui, sans-serif;
+  --fl-font-mono:  'JetBrains Mono', monospace;
+
+  --fl-r-sm: 6px;
+  --fl-r-md: 10px;
+  --fl-r-lg: 14px;
+  --fl-r-xl: 20px;
+  --fl-r-full: 9999px;
+
+  --fl-ease: cubic-bezier(0.22,1,0.36,1);
+  --fl-t-fast: 120ms cubic-bezier(0.22,1,0.36,1);
+  --fl-t-med:  220ms cubic-bezier(0.22,1,0.36,1);
+
+  --cyan:      #00FFB3;
+  --cyan-dim:  rgba(0,255,179,0.12);
+  --cyan-glow: rgba(0,255,179,0.4);
+  --gold:      #FFB800;
+  --gold-dim:  rgba(255,184,0,0.15);
+  --gold-glow: rgba(255,184,0,0.35);
+}
+
+/* ============================================================
+   RESET
+   ============================================================ */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html, body {
+  overflow-x: hidden;
+  width: 100%;
+  max-width: 100vw;
+  margin: 0;
+  padding: 0;
+}
+html { scroll-behavior: smooth; }
+body{
+  font-family:var(--fl-font-ui);
+  background:var(--fl-bg);
+  color:var(--fl-text);
+  font-size:15px;line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ============================================================
+   CANVAS PARTICLES (background)
+   ============================================================ */
+#particles-canvas{
+  position:fixed;inset:0;z-index:0;
+  pointer-events:none;
+}
+
+/* ============================================================
+   FLOAT ORBS (animated gradient blobs)
+   ============================================================ */
+.orb{
+  position:absolute;border-radius:50%;
+  filter:blur(80px);pointer-events:none;
+  animation:float-orb 12s ease-in-out infinite;
+  z-index:0;
+}
+.orb-purple{
+  background:radial-gradient(circle,rgba(147,51,234,0.25),transparent 70%);
+}
+.orb-cyan{
+  background:radial-gradient(circle,rgba(0,255,179,0.15),transparent 70%);
+  animation-delay:-4s;
+}
+.orb-gold{
+  background:radial-gradient(circle,rgba(255,184,0,0.12),transparent 70%);
+  animation-delay:-8s;
+}
+@keyframes float-orb{
+  0%,100%{transform:translate(0,0) scale(1)}
+  33%{transform:translate(30px,-25px) scale(1.1)}
+  66%{transform:translate(-20px,15px) scale(0.95)}
+}
+
+/* ============================================================
+   NAV
+   ============================================================ */
+nav{
+  position:fixed;top:0;left:0;right:0;z-index:1000;
+  display:grid;grid-template-columns:1fr auto 1fr;align-items:center;
+  padding:14px 32px;
+  background:rgba(6,6,8,0.75);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--fl-border);
+}
+.nav-brand{display:flex;align-items:center;gap:12px;text-decoration:none; justify-self:start;}
+.nav-brand img{height:36px;width:auto;filter:drop-shadow(0 0 8px rgba(147,51,234,0.4))}
+.nav-links{display:flex;gap:28px;align-items:center; justify-self:center;}
+.nav-links a{
+  color:var(--fl-text-muted);text-decoration:none;
+  font-size:13px;font-weight:500;
+  transition:color .2s;
+}
+.nav-links a:hover{color:var(--fl-text)}
+.nav-cta{
+  padding:12px 24px;border-radius:0;
+  font-family:var(--fl-font-brand);font-size:9px;
+  background:#FACC15;color:#000;text-decoration:none;cursor:pointer;
+  box-shadow:
+    inset -3px -3px 0 #A16207,
+    inset 3px 3px 0 #FDE68A,
+    0 4px 0 #713F12;
+  image-rendering:pixelated;
+  letter-spacing:1px;
+  justify-self:end;
+  transition:all .1s;
+}
+.nav-cta:hover{
+  background:#FDE047;
+  box-shadow:
+    inset -3px -3px 0 #A16207,
+    inset 3px 3px 0 #FEF9C3,
+    0 4px 0 #713F12,
+    0 0 20px rgba(250,204,21,0.4);
+}
+.nav-cta:active{
+  transform:translateY(4px);
+  box-shadow:inset -3px -3px 0 #A16207,inset 3px 3px 0 #FDE68A,0 0 0 #713F12;
+}
+
+/* ============================================================
+   HERO
+   ============================================================ */
+.hero{
+  min-height:min(100vh,100dvh);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  text-align:center;padding:140px 24px 80px;
+  position:relative;overflow:hidden;
+}
+/* Pixel grid background */
+.hero-grid{
+  position:absolute;inset:0;
+  background-image:
+    linear-gradient(rgba(147,51,234,0.06) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(147,51,234,0.06) 1px,transparent 1px);
+  background-size:60px 60px;
+  mask-image:radial-gradient(ellipse at center,black 20%,transparent 70%);
+  -webkit-mask-image:radial-gradient(ellipse at center,black 20%,transparent 70%);
+  pointer-events:none;
+}
+/* Hero logo */
+.hero-logo{
+  height:clamp(100px,16vw,156px);width:auto;
+  margin-bottom:16px;
+  position:relative;z-index:2;
+  filter:drop-shadow(0 0 20px rgba(147,51,234,0.4));
+  animation:fadeUp .5s var(--fl-ease) both;
+}
+
+.hero-badge{
+  display:inline-flex;align-items:center;gap:10px;
+  padding:8px 20px;border-radius:var(--fl-r-full);
+  background:rgba(147,51,234,0.1);
+  border:1px solid rgba(147,51,234,0.3);
+  font-family:var(--fl-font-mono);font-size:11px;font-weight:500;
+  color:var(--fl-purple-300);
+  margin-bottom:36px;position:relative;z-index:2;
+  animation:fadeUp .6s var(--fl-ease) both;
+}
+.hero-badge .pulse-dot{
+  width:8px;height:8px;border-radius:50%;
+  background:var(--cyan);
+  box-shadow:0 0 12px var(--cyan-glow);
+  position:relative;
+}
+.hero-badge .pulse-dot::after{
+  content:'';position:absolute;inset:-4px;border-radius:50%;
+  border:2px solid var(--cyan);opacity:0;
+  animation:pulse-ring 2s infinite;
+}
+@keyframes pulse-ring{
+  0%{transform:scale(.8);opacity:.5}
+  100%{transform:scale(1.6);opacity:0}
+}
+
+/* Headline principal - copy específica */
+.hero h1{
+  font-family:var(--fl-font-ui);
+  font-size:clamp(24px,4vw,42px);
+  font-weight:700;line-height:1.3;max-width:900px;
+  margin-bottom:20px;position:relative;z-index:2;
+  animation:fadeUp .8s var(--fl-ease) .1s both;
+}
+.hero h1 .highlight{
+  color:var(--gold);
+  text-shadow:0 0 30px var(--gold-glow);
+}
+.hero h1 .cyan{
+  color:var(--cyan);
+  text-shadow:0 0 20px var(--cyan-glow);
+}
+
+/* Dor específica */
+.hero-dor{
+  font-size:clamp(16px,2vw,20px);color:var(--fl-danger);
+  font-weight:600;margin-bottom:16px;position:relative;z-index:2;
+  animation:fadeUp .8s var(--fl-ease) .15s both;
+}
+.hero-dor span{
+  background:rgba(239,68,68,0.15);
+  padding:4px 12px;border-radius:4px;
+  border:1px solid rgba(239,68,68,0.3);
+}
+
+.hero-sub{
+  font-size:clamp(14px,1.5vw,18px);color:var(--fl-text-muted);
+  max-width:650px;line-height:1.7;margin-bottom:16px;
+  position:relative;z-index:2;
+  animation:fadeUp .8s var(--fl-ease) .2s both;
+}
+
+/* Preço no hero */
+.hero-price{
+  font-family:var(--fl-font-mono);
+  font-size:clamp(18px,2.5vw,24px);
+  color:var(--gold);
+  font-weight:700;margin-bottom:32px;
+  text-shadow:0 0 20px var(--gold-glow);
+  position:relative;z-index:2;
+  animation:fadeUp .8s var(--fl-ease) .25s both;
+}
+
+/* CTAs */
+.hero-buttons{
+  display:flex;gap:16px;flex-wrap:wrap;justify-content:center;
+  position:relative;z-index:2;
+  animation:fadeUp .8s var(--fl-ease) .3s both;
+}
+.btn-primary{
+  padding:16px 32px;
+  font-family:var(--fl-font-brand);font-size:11px;
+  background:var(--gold);color:#000;
+  text-decoration:none;cursor:pointer;
+  box-shadow:
+    inset -4px -4px 0 #A16207,
+    inset 4px 4px 0 #FEF9C3,
+    0 6px 0 #713F12,
+    0 0 40px var(--gold-glow);
+  image-rendering:pixelated;
+  transition:all .1s;
+}
+.btn-primary:hover{
+  background:#FDE047;
+  box-shadow:
+    inset -4px -4px 0 #A16207,
+    inset 4px 4px 0 #FEF9C3,
+    0 6px 0 #713F12,
+    0 0 60px var(--gold-glow);
+}
+.btn-primary:active{
+  transform:translateY(6px);
+  box-shadow:inset -4px -4px 0 #A16207,inset 4px 4px 0 #FEF9C3,0 0 0 #713F12;
+}
+.btn-secondary{
+  padding:14px 28px;
+  font-family:var(--fl-font-brand);font-size:10px;
+  background:transparent;color:var(--cyan);
+  border:2px solid var(--cyan);
+  text-decoration:none;cursor:pointer;
+  transition:all .2s;
+}
+.btn-secondary:hover{
+  background:var(--cyan);color:#000;
+  box-shadow:0 0 30px var(--cyan-glow);
+}
+
+/* Hero stats */
+.hero-stats{
+  display:flex;gap:40px;margin-top:48px;
+  justify-content:center;flex-wrap:wrap;
+  position:relative;z-index:2;
+  animation:fadeUp .8s var(--fl-ease) .4s both;
+}
+.hero-stat{
+  text-align:center;
+}
+.hero-stat .num{
+  font-family:var(--fl-font-mono);font-size:28px;font-weight:700;
+  color:var(--cyan);
+  text-shadow:0 0 20px var(--cyan-glow);
+}
+.hero-stat .label{
+  font-size:12px;color:var(--fl-text-muted);margin-top:4px;
+}
+
+/* Handoff flow */
+.hero-handoff{
+  margin-top:48px;padding:24px 32px;
+  background:var(--fl-bg-card);
+  border:1px solid var(--fl-border);
+  backdrop-filter:blur(10px);
+  max-width:600px;
+  position:relative;z-index:2;
+  animation:fadeUp .8s var(--fl-ease) .5s both;
+}
+.hero-handoff-title{
+  font-family:var(--fl-font-brand);font-size:9px;
+  color:var(--cyan);margin-bottom:16px;
+  text-transform:uppercase;letter-spacing:2px;
+}
+.hero-handoff-steps{
+  display:flex;align-items:center;justify-content:center;gap:16px;flex-wrap:wrap;
+}
+.hero-handoff-step{
+  background:var(--fl-bg-surface);padding:10px 16px;
+  font-size:13px;color:var(--fl-text);
+  font-family:var(--fl-font-mono);
+}
+.hero-handoff-arrow{
+  color:var(--fl-text-dim);font-size:20px;
+}
+
+@keyframes fadeUp{
+  from{opacity:0;transform:translateY(20px)}
+  to{opacity:1;transform:translateY(0)}
+}
+
+/* ============================================================
+   SECTIONS
+   ============================================================ */
+.container{max-width:1140px;margin:0 auto;padding:0 24px;position:relative;z-index:2;width:100%;}
+section{padding:100px 0;position:relative}
+
+.section-label{
+  font-family:var(--fl-font-brand);font-size:10px;
+  color:var(--fl-danger);text-transform:uppercase;
+  letter-spacing:3px;margin-bottom:12px;
+  text-align:center;
+}
+.section-title{
+  font-family:var(--fl-font-ui);font-size:clamp(24px,3.5vw,36px);
+  font-weight:700;text-align:center;margin-bottom:16px;
+  line-height:1.3;
+}
+.section-sub{
+  font-size:18px;color:var(--fl-text-muted);text-align:center;
+  max-width:700px;margin:0 auto 48px;line-height:1.7;
+}
+
+/* ============================================================
+   PROBLEMA SECTION - 4 DORES
+   ============================================================ */
+.problema{background:var(--fl-bg-surface);}
+.problema-grid{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
+  gap:24px;
+}
+.problema-card{
+  background:var(--fl-bg-card);
+  border:1px solid var(--fl-border);
+  padding:32px;
+  transition:all .3s;
+  position:relative;
+  overflow:hidden;
+}
+.problema-card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:3px;
+  background:linear-gradient(90deg,var(--fl-danger),transparent);
+}
+.problema-card:hover{
+  border-color:var(--fl-border-md);
+  transform:translateY(-4px);
+  box-shadow:var(--fl-glow-sm);
+}
+.problema-card .icon{
+  font-size:40px;margin-bottom:16px;
+}
+.problema-card h3{
+  font-size:20px;font-weight:700;margin-bottom:12px;
+  color:var(--fl-danger);
+}
+.problema-card p{
+  color:var(--fl-text-muted);line-height:1.7;
+}
+.problema-card .situacao{
+  background:rgba(239,68,68,0.1);
+  border:1px solid rgba(239,68,68,0.2);
+  padding:12px 16px;margin-bottom:16px;
+  font-size:14px;color:var(--fl-text);
+  font-style:italic;
+}
+
+/* ============================================================
+   COMPARATIVO - SÓZINHO vs FRA LIB
+   ============================================================ */
+.comparativo{background:var(--fl-bg);}
+.comparativo-table{
+  background:var(--fl-bg-card);
+  border:1px solid var(--fl-border);
+  overflow:hidden;
+  max-width:900px;margin:0 auto;
+}
+.comparativo-table table{
+  width:100%;border-collapse:collapse;
+}
+.comparativo-table th{
+  padding:20px 24px;
+  font-family:var(--fl-font-brand);font-size:10px;
+  text-align:center;
+}
+.comparativo-table th:first-child{
+  text-align:left;
+}
+.comparativo-table th.vc{background:var(--fl-bg-surface);color:var(--fl-text-muted);}
+.comparativo-table th.fralib{background:rgba(147,51,234,0.2);color:var(--cyan);}
+
+.comparativo-table td{
+  padding:16px 24px;
+  border-top:1px solid var(--fl-border);
+  font-size:15px;
+}
+.comparativo-table td:first-child{
+  color:var(--fl-text);font-weight:500;
+}
+.comparativo-table td.vc{color:var(--fl-text-muted);text-align:center;}
+.comparativo-table td.fralib{
+  color:var(--fl-success);text-align:center;
+  font-family:var(--fl-font-mono);
+  background:rgba(34,197,94,0.05);
+}
+.comparativo-table tr:hover td{background:var(--fl-bg-hover);}
+
+/* ============================================================
+   COMO FUNCIONA - 3 PASSOS
+   ============================================================ */
+.como-funciona{background:var(--fl-bg-surface);}
+.passo-grid{
+  display:grid;grid-template-columns:repeat(3,1fr);
+  gap:32px;
+  margin-top:48px;
+}
+.passo-card{
+  background:var(--fl-bg-card);
+  border:1px solid var(--fl-border);
+  padding:40px 32px;text-align:center;
+  position:relative;
+}
+.passo-card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:4px;
+  background:linear-gradient(90deg,var(--fl-purple),var(--cyan),var(--gold));
+}
+.passo-num{
+  width:56px;height:56px;
+  background:var(--fl-purple-700);
+  border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--fl-font-mono);font-size:24px;font-weight:700;
+  color:var(--fl-text);
+  margin:0 auto 24px;
+  box-shadow:var(--fl-glow-sm);
+}
+.passo-card h3{
+  font-size:20px;font-weight:700;margin-bottom:16px;
+  color:var(--fl-text);
+}
+.passo-card p{
+  color:var(--fl-text-muted);line-height:1.7;
+}
+.passo-card .tempo{
+  display:inline-block;
+  background:var(--cyan-dim);
+  border:1px solid rgba(0,255,179,0.3);
+  padding:4px 12px;
+  margin-top:16px;
+  font-family:var(--fl-font-mono);font-size:12px;color:var(--cyan);
+}
+
+/* ============================================================
+   DEPOIMENTOS
+   ============================================================ */
+.depoimentos{background:var(--fl-bg);}
+.depoimento-grid{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));
+  gap:24px;
+}
+.depoimento-card{
+  background:var(--fl-bg-card);
+  border:1px solid var(--fl-border);
+  padding:32px;
+  position:relative;
+}
+.depoimento-card::before{
+  content:'"';position:absolute;top:16px;left:20px;
+  font-size:60px;color:var(--fl-purple);opacity:0.2;
+  font-family:serif;line-height:1;
+}
+.depoimento-card blockquote{
+  font-size:16px;line-height:1.8;
+  color:var(--fl-text);margin-bottom:24px;
+  font-style:italic;
+}
+.depoimento-autor{
+  display:flex;align-items:center;gap:16px;
+}
+.depoimento-avatar{
+  width:48px;height:48px;
+  background:linear-gradient(135deg,var(--fl-purple),var(--cyan));
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--fl-font-brand);font-size:10px;color:#000;
+  flex-shrink:0;
+}
+.depoimento-info h4{
+  font-size:15px;font-weight:600;color:var(--fl-text);
+}
+.depoimento-info p{
+  font-size:13px;color:var(--fl-text-muted);
+}
+.depoimento-metric{
+  margin-top:16px;
+  padding:12px 16px;
+  background:var(--fl-bg-surface);
+  font-family:var(--fl-font-mono);font-size:14px;
+}
+.depoimento-metric span{color:var(--fl-success);font-weight:700;}
+
+/* ============================================================
+   PREÇOS
+   ============================================================ */
+.precos{background:var(--fl-bg-surface);}
+.precos-grid{
+  display:grid;grid-template-columns:repeat(3,1fr);
+  gap:24px;
+  max-width:1000px;margin:0 auto;
+}
+.preco-card{
+  background:var(--fl-bg-card);
+  border:1px solid var(--fl-border);
+  padding:32px;
+  text-align:center;
+  transition:all .3s;
+  position:relative;
+}
+.preco-card:hover{
+  border-color:var(--fl-border-md);
+  transform:translateY(-4px);
+}
+.preco-card.destaque{
+  border:2px solid var(--gold);
+  box-shadow:0 0 40px var(--gold-glow);
+}
+.preco-card.destaque::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:4px;
+  background:var(--gold);
+}
+.preco-badge{
+  position:absolute;top:-14px;left:50%;transform:translateX(-50%);
+  background:var(--gold);color:#000;
+  padding:6px 20px;
+  font-family:var(--fl-font-brand);font-size:8px;
+  box-shadow:0 0 20px var(--gold-glow);
+  white-space:nowrap;
+}
+.preco-card h3{
+  font-family:var(--fl-font-brand);font-size:12px;
+  margin-bottom:16px;letter-spacing:1px;
+}
+.preco-card .valor{
+  font-family:var(--fl-font-mono);font-size:42px;font-weight:700;
+  color:var(--cyan);margin-bottom:4px;
+}
+.preco-card .valor span{
+  font-size:16px;color:var(--fl-text-muted);
+}
+.preco-card .desc{
+  font-size:14px;color:var(--fl-text-muted);margin-bottom:24px;
+}
+.preco-card ul{
+  list-style:none;text-align:left;margin-bottom:24px;
+}
+.preco-card li{
+  padding:10px 0;
+  border-bottom:1px solid var(--fl-border);
+  font-size:14px;color:var(--fl-text-muted);
+  display:flex;align-items:center;gap:12px;
+}
+.preco-card li::before{
+  content:'✓';color:var(--cyan);font-weight:700;
+}
+.preco-card .btn-preco{
+  width:100%;padding:14px;
+  font-family:var(--fl-font-brand);font-size:10px;
+  background:transparent;border:2px solid var(--cyan);
+  color:var(--cyan);cursor:pointer;
+  transition:all .2s;
+}
+.preco-card .btn-preco:hover{
+  background:var(--cyan);color:#000;
+}
+.preco-card.destaque .btn-preco{
+  background:var(--gold);border-color:var(--gold);
+  color:#000;
+}
+.preco-card.destaque .btn-preco:hover{
+  background:#FDE047;
+  box-shadow:0 0 30px var(--gold-glow);
+}
+
+/* Garantia */
+.garantia-box{
+  background:var(--fl-bg-card);
+  border:1px solid var(--fl-border);
+  padding:32px;
+  max-width:700px;margin:48px auto 0;
+  text-align:center;
+}
+.garantia-box h4{
+  font-family:var(--fl-font-brand);font-size:10px;
+  color:var(--gold);margin-bottom:16px;
+}
+.garantia-items{
+  display:flex;flex-wrap:wrap;gap:24px;justify-content:center;
+}
+.garantia-item{
+  display:flex;align-items:center;gap:8px;
+  font-size:14px;color:var(--fl-text-muted);
+}
+.garantia-item span{color:var(--fl-success);font-weight:700;}
+
+/* ============================================================
+   FAQ
+   ============================================================ */
+.faq{background:var(--fl-bg);}
+.faq-list{max-width:700px;margin:0 auto;}
+.faq-item{
+  background:var(--fl-bg-card);
+  border:1px solid var(--fl-border);
+  margin-bottom:12px;
+}
+.faq-item summary{
+  padding:20px 24px;
+  font-size:16px;font-weight:600;
+  cursor:pointer;
+  list-style:none;
+  display:flex;justify-content:space-between;align-items:center;
+}
+.faq-item summary::-webkit-details-marker{display:none}
+.faq-item summary::after{content:'+';font-size:24px;color:var(--fl-purple);}
+.faq-item[open] summary::after{content:'-'}
+.faq-item .resposta{
+  padding:0 24px 24px;
+  color:var(--fl-text-muted);line-height:1.7;
+}
+
+/* ============================================================
+   CTA FINAL
+   ============================================================ */
+.cta-final{
+  background:var(--fl-bg-surface);
+  text-align:center;
+  padding:120px 24px;
+  position:relative;
+  overflow:hidden;
+}
+.cta-final::before{
+  content:'';position:absolute;bottom:0;left:50%;transform:translateX(-50%);
+  width:800px;height:400px;
+  background:radial-gradient(circle,rgba(0,255,179,0.15),transparent 70%);
+  pointer-events:none;
+}
+.cta-final h2{
+  font-size:clamp(28px,4vw,48px);font-weight:700;
+  margin-bottom:24px;
+}
+.cta-final .urgencia{
+  font-family:var(--fl-font-mono);font-size:18px;
+  color:var(--cyan);margin-bottom:32px;
+}
+.cta-final .btn-cta{
+  padding:20px 48px;
+  font-family:var(--fl-font-brand);font-size:12px;
+  background:var(--gold);color:#000;
+  text-decoration:none;cursor:pointer;
+  box-shadow:
+    inset -4px -4px 0 #A16207,
+    inset 4px 4px 0 #FEF9C3,
+    0 6px 0 #713F12,
+    0 0 60px var(--gold-glow);
+  transition:all .1s;
+}
+.cta-final .btn-cta:hover{
+  background:#FDE047;
+  box-shadow:
+    inset -4px -4px 0 #A16207,
+    inset 4px 4px 0 #FEF9C3,
+    0 6px 0 #713F12,
+    0 0 80px var(--gold-glow);
+}
+
+/* ============================================================
+   FOOTER
+   ============================================================ */
+footer{
+  padding:48px 24px;
+  text-align:center;
+  background:var(--fl-bg);
+  border-top:1px solid var(--fl-border);
+}
+footer .logo{
+  font-family:var(--fl-font-brand);font-size:14px;
+  color:var(--cyan);margin-bottom:16px;
+  text-shadow:0 0 10px var(--cyan-glow);
+  display:block;
+}
+footer p{color:var(--fl-text-dim);font-size:13px;}
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media(max-width:768px){
+  .passo-grid,.precos-grid{grid-template-columns:1fr;}
+  .comparativo-table{font-size:13px;}
+  .comparativo-table th,.comparativo-table td{padding:12px 16px;}
+  .hero-stats{gap:24px;}
+  .nav-links{display:none;}
+  .hero-handoff{padding:20px;}
+  .hero-handoff-steps{flex-direction:column;}
+  .hero-handoff-arrow{transform:rotate(90deg);}
+}
+
+/* ============================================================
+   ANIMATIONS
+   ============================================================ */
+@keyframes fadeIn{
+  from{opacity:0}
+  to{opacity:1}
+}
+.fade-in{animation:fadeIn 1s var(--fl-ease) both;}
+</style>
+</head>
+<body>
+
+<!-- Float Orbs -->
+<div class="orb orb-purple" style="width:600px;height:600px;top:-200px;left:-100px;"></div>
+<div class="orb orb-cyan" style="width:400px;height:400px;top:20%;right:-100px;"></div>
+<div class="orb orb-gold" style="width:500px;height:500px;bottom:-100px;left:20%;"></div>
+
+<!-- Nav -->
+<nav>
+  <a href="/" class="nav-brand">
+    <img src="/assets/logo-fralib.png" alt="FraLib" onerror="this.style.display='none'">
+    <span style="font-family:var(--fl-font-brand);font-size:12px;color:var(--cyan);">FRALIB</span>
+  </a>
+  <div class="nav-links">
+    <a href="#problema">O Problema</a>
+    <a href="#como-funciona">Como Funciona</a>
+    <a href="#precos">Preços</a>
+    <a href="#faq">FAQ</a>
+  </div>
+  <a href="/login" class="nav-cta">COMEÇAR</a>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-grid"></div>
+
+  <img src="/assets/logo-fralib.png" alt="FraLib" class="hero-logo" onerror="this.style.display='none'">
+
+  <div class="hero-badge">
+    <span class="pulse-dot"></span>
+    FraLib OS — Plataforma para Freelancers
+  </div>
+
+  <!-- HEADLINE COM DOR -->
+  <h1>
+    Você passou <span class="highlight">6 meses prospectando todo dia.</span><br>
+    Zero fechou. Seu concorrente fechou <span class="cyan">3 na mesma semana.</span>
+  </h1>
+
+  <!-- DOR ESPECÍFICA -->
+  <p class="hero-dor">
+    <span>Resultado do mês: ZERO fechou. Você não é ruim. Você só tá fazendo tudo no braço.</span>
+  </p>
+
+  <!-- SUB -->
+  <p class="hero-sub">
+    A FraLib cria sites, prospecta clientes e manda no seu WhatsApp.<br>
+    Você só aprova e embolsa. Sem developer. Sem madrugada no código.
+  </p>
+
+  <!-- PREÇO -->
+  <div class="hero-price">A partir de R$197/mês — fecha 3 clientes, sobra R$7.303</div>
+
+  <!-- CTAs -->
+  <div class="hero-buttons">
+    <a href="/login" class="btn-primary">EU QUERO FECHAR 3 CLIENTES ESTE MÊS</a>
+    <a href="#como-funciona" class="btn-secondary">Como funciona?</a>
+  </div>
+
+  <!-- STATS -->
+  <div class="hero-stats">
+    <div class="hero-stat">
+      <div class="num">2.400+</div>
+      <div class="label">Freelancers</div>
+    </div>
+    <div class="hero-stat">
+      <div class="num">180</div>
+      <div class="label">Sites/ mês</div>
+    </div>
+    <div class="hero-stat">
+      <div class="num">97%</div>
+      <div class="label">Abertura WhatsApp</div>
+    </div>
+    <div class="hero-stat">
+      <div class="num">R$0</div>
+      <div class="label">Gasto com devs</div>
+    </div>
+  </div>
+
+  <!-- HANDOFF FLOW -->
+  <div class="hero-handoff">
+    <div class="hero-handoff-title">O que acontece depois do clique</div>
+    <div class="hero-handoff-steps">
+      <div class="hero-handoff-step">Cria conta em 60s</div>
+      <div class="hero-handoff-arrow">→</div>
+      <div class="hero-handoff-step">Franz te chama no Zap</div>
+      <div class="hero-handoff-arrow">→</div>
+      <div class="hero-handoff-step">Fecha 1º cliente em 7 dias</div>
+    </div>
+  </div>
+</section>
+
+<!-- PROBLEMA - 4 DORES -->
+<section class="problema" id="problema">
+  <div class="container">
+    <div class="section-label">As situações que você reconhece</div>
+    <h2 class="section-title">Você se identifica com alguma dessas?</h2>
+    <p class="section-sub">Se respondeu SIM pra pelo menos uma, a FraLib é pra você.</p>
+
+    <div class="problema-grid">
+      <!-- DOR 1 -->
+      <div class="problema-card">
+        <div class="icon">📱</div>
+        <div class="situacao">"Você passou a manhã inteira no LinkedIn. Mensagem pra cá, mensagem pra lá. Resultado do mês: ZERO fechou."</div>
+        <h3>Prospecta todo dia. Nunca fecha.</h3>
+        <p>Seu concorrente usa a mesma ferramenta e fecha 3 por semana. A diferença? Ele não prospecta no braço. Ele tem um SDR que trabalha 24h.</p>
+      </div>
+
+      <!-- DOR 2 -->
+      <div class="problema-card">
+        <div class="icon">💻</div>
+        <div class="situacao">"Você abriu 47 abas no Chrome. Figma, Canva, VS Code, Behance... São 11 da noite. Você ainda não começou o código."</div>
+        <h3>Você tenta fazer o trabalho de 4 pessoas.</h3>
+        <p>Copywriter, designer, programador, gerente de projeto. São 4 funções. Você é 1 pessoa. A FraLib faz 3 dessas. Você foca em fechar.</p>
+      </div>
+
+      <!-- DOR 3 -->
+      <div class="problema-card">
+        <div class="icon">👻</div>
+        <div class="situacao">"Você: 'Oi, viu o site que mandei?' Cliente: 'Ah sim! Preciso ver com minha esposa.' Cliente: 'Minha esposa achou meio diferente...' Você sabe como essa história termina."</div>
+        <h3>Cliente some no meio do projeto.</h3>
+        <p>Você gastou 40 horas. Ele não pagou. Na FraLib, o cliente APROVA primeiro. Você SÓ entrega depois que ele diz "sim".</p>
+      </div>
+
+      <!-- DOR 4 -->
+      <div class="problema-card">
+        <div class="icon">💸</div>
+        <div class="situacao">"O 'freelancer full-stack' te mandou o orçamento: R$12.000. Pra um site de clínica odontológica."</div>
+        <h3>O developer cobra R$12.000. Você não tem.</h3>
+        <p>A FraLib cria sites por R$197/mês. Ilimitados. Sem developer. O que sobra no seu bolso? A diferença entre R$12.000 e R$197.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- COMPARATIVO -->
+<section class="comparativo">
+  <div class="container">
+    <div class="section-label">Quanto vale seu tempo?</div>
+    <h2 class="section-title">Você fazendo tudo sozinho vs. FraLib fazendo por você</h2>
+
+    <div class="comparativo-table">
+      <table>
+        <thead>
+          <tr>
+            <th></th>
+            <th class="vc">Você Sozinho</th>
+            <th class="fralib">Com FraLib</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Tempo pra fazer 1 site</td>
+            <td class="vc">40-80 horas</td>
+            <td class="fralib">24 horas</td>
+          </tr>
+          <tr>
+            <td>Clientes prospects/ dia</td>
+            <td class="vc">5-10 manual</td>
+            <td class="fralib">100+ automatizado</td>
+          </tr>
+          <tr>
+            <td>Mensagens de follow-up</td>
+            <td class="vc">Você lembra (ou esquece)</td>
+            <td class="fralib">Franz manda automático</td>
+          </tr>
+          <tr>
+            <td>Custo por site</td>
+            <td class="vc">R$2.000-12.000</td>
+            <td class="fralib">R$65 (R$197/3 sites)</td>
+          </tr>
+          <tr>
+            <td>Precisa de developer?</td>
+            <td class="vc">Sim (R$8k+)</td>
+            <td class="fralib">Não</td>
+          </tr>
+          <tr>
+            <td>Cliente some no meio?</td>
+            <td class="vc">Perdeu as horas</td>
+            <td class="fralib">Não gastou nada</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- COMO FUNCIONA -->
+<section class="como-funciona" id="como-funciona">
+  <div class="container">
+    <div class="section-label">Simples assim</div>
+    <h2 class="section-title">Como funciona na prática</h2>
+    <p class="section-sub">Eu uso todo dia. Leva 5 minutos pra começar.</p>
+
+    <div class="passo-grid">
+      <div class="passo-card">
+        <div class="passo-num">1</div>
+        <h3>Você abre a FraLib</h3>
+        <p>Responde 5 perguntas sobre o site do cliente. Nome, área, cores, público-alvo. Se fosse fazer um briefing na mão, levaria 2 horas. Aqui: 5 minutos.</p>
+        <div class="tempo">⏱ 5 minutos</div>
+      </div>
+
+      <div class="passo-card">
+        <div class="passo-num">2</div>
+        <h3>A IA gera o site completo</h3>
+        <p>Não é template. É site ÚNICO, otimizado pro Google, com LGPD. Você recebe no WhatsApp: "Pronto! 3 opções pro cliente X."</p>
+        <div class="tempo">⚡ 30 segundos</div>
+      </div>
+
+      <div class="passo-card">
+        <div class="passo-num">3</div>
+        <h3>Cliente aprova, você entrega</h3>
+        <p>Você manda pro cliente: "Olha o que preparei!" Aprovou? Entrega. Quer ajustar? A IA ajusta. ZERO retrabalho seu.</p>
+        <div class="tempo">💰 R$2.500 no bolso</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- DEPOIMENTOS -->
+<section class="depoimentos">
+  <div class="container">
+    <div class="section-label">Funciona de verdade</div>
+    <h2 class="section-title">Eu não acreditava. Até experimentar.</h2>
+
+    <div class="depoimento-grid">
+      <div class="depoimento-card">
+        <blockquote>
+          "Eu era programador. Sim, eu SABIA fazer sites. Mas perdia finais de semana inteiros debugando CSS. Agora? Abro a FraLib, respondo as perguntas, e o site tá pronto. Fechava 2 por mês. Agora fecho 6. A diferença tá no meu bolso."
+        </blockquote>
+        <div class="depoimento-autor">
+          <div class="depoimento-avatar">RF</div>
+          <div class="depoimento-info">
+            <h4>Rafael Ferreira</h4>
+            <p>Desenvolvedor full-stack, São Paulo</p>
+          </div>
+        </div>
+        <div class="depoimento-metric">
+          Antes: 2 clientes/mês → Depois: <span>6 clientes/mês</span>
+        </div>
+      </div>
+
+      <div class="depoimento-card">
+        <blockquote>
+          "Sou designer. NUNCA consegui aprender código. Perdia dinheiro contratando devs ou ficava sem fazer site nenhum. Agora faço sites pra clientes que antes eu recusaria. Cada site: 3 horas de trabalho, R$2.500 de receita. Lucro absurdo."
+        </blockquote>
+        <div class="depoimento-autor">
+          <div class="depoimento-avatar">AM</div>
+          <div class="depoimento-info">
+            <h4>Amanda Martins</h4>
+            <p>Designer gráfico, Belo Horizonte</p>
+          </div>
+        </div>
+        <div class="depoimento-metric">
+          Antes: R$0 com sites → Depois: <span>R$10.000/mês</span>
+        </div>
+      </div>
+
+      <div class="depoimento-card">
+        <blockquote>
+          "O que mais me frustrava? Cliente que some. Eu fazia o site inteiro, mandava, silêncio. Agora o cliente APROVA antes de eu gastar tempo. Se ele some, não perco nada. Se aprova, sei que vou receber. Fechei R$18.000 este mês. Nunca tinha batido isso."
+        </blockquote>
+        <div class="depoimento-autor">
+          <div class="depoimento-avatar">MC</div>
+          <div class="depoimento-info">
+            <h4>Marcos Costa</h4>
+            <p>Freelancer digital, Porto Alegre</p>
+          </div>
+        </div>
+        <div class="depoimento-metric">
+          Antes: R$5.000/mês → Depois: <span>R$18.000/mês</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PREÇOS -->
+<section class="precos" id="precos">
+  <div class="container">
+    <div class="section-label">Investimento</div>
+    <h2 class="section-title">Quanto vale fechar 3 clientes por mês?</h2>
+    <p class="section-sub">Você cobra R$2.500 por site. Com a FraLib, entrega 3 por mês. Fatura R$7.500. Custo: R$197.</p>
+
+    <div class="precos-grid">
+      <!-- STARTER -->
+      <div class="preco-card">
+        <h3>STARTER</h3>
+        <div class="valor">R$97<span>/mês</span></div>
+        <div class="desc">Pra quem quer testar</div>
+        <ul>
+          <li>1 site por mês</li>
+          <li>Templates básicos</li>
+          <li>Suporte por email</li>
+          <li>LGPD incluso</li>
+          <li>SEO básico</li>
+        </ul>
+        <button class="btn-preco">TESTAR 14 DIAS</button>
+      </div>
+
+      <!-- PRO - DESTAQUE -->
+      <div class="preco-card destaque">
+        <div class="preco-badge">MAIS POPULAR</div>
+        <h3>PRO</h3>
+        <div class="valor">R$197<span>/mês</span></div>
+        <div class="desc">Pra quem quer fechar de verdade</div>
+        <ul>
+          <li>3 sites por mês</li>
+          <li>Todos os templates</li>
+          <li>Suporte prioritário</li>
+          <li>SEO avançado</li>
+          <li>SDR Franz ilimitado</li>
+          <li>Prospecção automática</li>
+        </ul>
+        <button class="btn-preco">QUERO ESTE</button>
+      </div>
+
+      <!-- AGENCY -->
+      <div class="preco-card">
+        <h3>AGENCY</h3>
+        <div class="valor">R$497<span>/mês</span></div>
+        <div class="desc">Pra quem virou agência</div>
+        <ul>
+          <li>Sites ilimitados</li>
+          <li>White-label completo</li>
+          <li>Suporte 24/7</li>
+          <li>API personalizada</li>
+          <li>Franz white-label</li>
+          <li>Relatórios mensais</li>
+        </ul>
+        <button class="btn-preco">FALAR COM VENDAS</button>
+      </div>
+    </div>
+
+    <!-- GARANTIA -->
+    <div class="garantia-box">
+      <h4>SUA SEGURANÇA</h4>
+      <div class="garantia-items">
+        <div class="garantia-item"><span>✓</span> 14 dias trial grátis, sem cartão</div>
+        <div class="garantia-item"><span>✓</span> Cancela quando quiser</div>
+        <div class="garantia-item"><span>✓</span> Não fechou cliente em 60 dias? Devolvemos 100%</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="faq" id="faq">
+  <div class="container">
+    <div class="section-label">Dúvidas</div>
+    <h2 class="section-title">Perguntas que você pode ter</h2>
+
+    <div class="faq-list">
+      <details class="faq-item">
+        <summary>Mas eu prefiro fazer na mão...</summary>
+        <div class="resposta">
+          Tudo bem. Eu também preferia. Até perder meu terceiro projeto porque o dev sumiu no meio. Fazer na mão = mais controle. Usar a FraLib = mais clientes. Você quer controle ou você quer dinheiro?
+        </div>
+      </details>
+
+      <details class="faq-item">
+        <summary>Parece bom demais pra ser verdade</summary>
+        <div class="resposta">
+          É. Eu também achei. Mas funciona. Não é mágica. É só o trabalho que a gente fazia no braço, agora feito por IA. Testa 14 dias. Se não gostar, cancela. Sem ressentimento.
+        </div>
+      </details>
+
+      <details class="faq-item">
+        <summary>E se o cliente não gostar do site?</summary>
+        <div class="resposta">
+          A IA gera 3 opções. Você manda a melhor. Se o cliente quer ajustar, a IA ajusta. ZERO retrabalho seu. Antes: você refazia 4 vezes e ainda assim o cliente não gostava.
+        </div>
+      </details>
+
+      <details class="faq-item">
+        <summary>Preciso saber programar?</summary>
+        <div class="resposta">
+          Não. A IA faz o código. Você só precisa saber o que o cliente quer. Se souber se explicar, a FraLib faz o resto.
+        </div>
+      </details>
+
+      <details class="faq-item">
+        <summary>Quanto tempo leva pra começar?</summary>
+        <div class="resposta">
+          5 minutos pra criar a conta. 5 minutos pra gerar seu primeiro site. 7 dias pra fechar seu primeiro cliente (eu fiz em 3). Se não fechar em 60 dias, devolvemos seu dinheiro.
+        </div>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- CTA FINAL -->
+<section class="cta-final">
+  <h2>Pronto pra parar de fazer o trabalho de 4 pessoas sozinho?</h2>
+  <p class="urgencia">Enquanto você lê isso, 3 freelancers já criaram sites com FraLib.</p>
+  <a href="/login" class="btn-cta">EU QUERO FECHAR 3 CLIENTES ESTE MÊS</a>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <span class="logo">FRALIB</span>
+  <p>© 2025 FraLib OS — Você Fecha. A FraLib Faz o Resto.</p>
+</footer>
+
+<!-- Tracking -->
+<script>
+  // Scroll tracking
+  window.addEventListener('scroll', () => {
+    const scrollPercent = (window.scrollY / (document.body.scrollHeight - window.innerHeight)) * 100;
+    if (scrollPercent >= 25 && !window.scrolled25) {
+      clarity('event', 'scroll_25_percent');
+      window.scrolled25 = true;
+    }
+    if (scrollPercent >= 50 && !window.scrolled50) {
+      clarity('event', 'scroll_50_percent');
+      window.scrolled50 = true;
+    }
+    if (scrollPercent >= 75 && !window.scrolled75) {
+      clarity('event', 'scroll_75_percent');
+      window.scrolled75 = true;
+    }
+  });
+
+  // CTA tracking
+  document.querySelectorAll('a, button').forEach(el => {
+    el.addEventListener('click', () => {
+      clarity('event', 'cta_click');
+    });
+  });
+</script>
+</body>
+</html>
