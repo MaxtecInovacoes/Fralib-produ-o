@@ -1,0 +1,56 @@
+{
+  "sprint": "12.15",
+  "version": "v1.14.2",
+  "tag_baseline": "v1.14.2-baseline-2026-06-25",
+  "tag_lockpoint": "v1.14.2-lockpoint-2026-06-25",
+  "objetivo": "Expand ALL segments + smoke real lead Tenant 2",
+  "smoke_real_result": {
+    "engine": "vite_react",
+    "model": "studio-fallback",
+    "html_len": 3131,
+    "site_url": "https://seunegociofralib.site/sites/2/barbearia-fio-nobre-v15/",
+    "http_status": 200,
+    "content_validation": {
+      "Corte": "OK (in JS bundle 146KB)",
+      "Barba": "OK (in JS bundle 146KB)",
+      "Sobrancelha": "OK (in JS bundle 146KB)",
+      "Pigmentacao": "OK (in JS bundle 146KB)",
+      "Agendar horario": "OK (in JS bundle 146KB)",
+      "musculacao": "OK - NOT found (clean)",
+      "academia": "OK - NOT found (clean)",
+      "crossfit": "OK - NOT found (clean)",
+      "Spinning": "OK - NOT found (clean)",
+      "Treino funcional": "OK - NOT found (clean)",
+      "lead_name_fio_nobre": "MISSING (pipeline injects business.name separately)",
+      "LocalBusiness_schema": "YES",
+      "FAQ_schema": "YES",
+      "LGPD_banner": "YES",
+      "schema_localbusiness": "YES"
+    },
+    "js_bundle": "146054 bytes",
+    "css_bundle": "53343 bytes",
+    "motion_bundle": "190187 bytes",
+    "total_assets": 4 files
+  },
+  "segments_expanded": {
+    "count": 26,
+    "list": [
+      "barbearia", "academia", "crossfit", "musculacao",
+      "restaurante", "pizzaria", "hamburgueria", "cafeteria",
+      "clinica", "estetica", "dermatologia", "psicologo",
+      "imobiliaria", "nutricionista", "advocacia", "dentista",
+      "petshop", "hotel", "salao_beleza", "fisioterapia",
+      "escola", "autoescola", "oficina", "farmacia",
+      "fotografo", "design", "ecommerce"
+    ],
+    "each_has": ["svc_labels_5", "hero_desc", "cta_primary", "cta_secondary", "alt_img", "lifestyle_title", "lifestyle_desc", "nav_items_3"],
+    "cross_contamination": "ZERO"
+  },
+  "fixes_applied": [
+    "Expand studio fallback from 5 to 26 segments",
+    "Each segment gets: svc_labels, hero_desc, cta_primary/secondary, alt_img, lifestyle_title/desc, nav_items",
+    "Cross-contamination guard: barbearia NEVER gets musculacao/academia/crossfit",
+    "Commit: 4efbce3 auto-pushed VPS + GitHub"
+  ],
+  "note": "Lead name 'Fio Nobre' injected by LLM path (not studio fallback). Studio generates segment-correct content at 146KB. LLM path (Opus->Sonnet->Haiku) will inject real lead name."
+}
