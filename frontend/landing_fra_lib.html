@@ -845,6 +845,59 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
 .plano-card:nth-child(4) .plano-features li::before{background:var(--cyan)}
 .planos-cta{text-align:center}
 
+/* BOTOES DOS PLANOS - padronizados na mesma linha */
+.plano-cta-wrap{
+  margin-top:auto;
+  padding-top:16px;
+  min-height:90px;
+  display:flex;
+  flex-direction:column;
+  justify-content:flex-start;
+  align-items:center;
+  gap:6px;
+}
+.plano-cta{
+  display:block;
+  width:100%;
+  padding:14px 12px;
+  font-family:var(--fl-font-brand);
+  font-size:10px;
+  letter-spacing:1px;
+  text-align:center;
+  text-decoration:none;
+  cursor:pointer;
+  transition:all .15s;
+  border:2px solid;
+}
+.plano-cta.cta-outline{
+  background:transparent;
+  color:var(--fl-text);
+  border-color:var(--fl-border-md);
+}
+.plano-cta.cta-outline:hover{
+  border-color:var(--cyan);
+  color:var(--cyan);
+  box-shadow:0 0 20px var(--cyan-glow);
+}
+.plano-cta.cta-gold{
+  background:var(--gold);
+  color:#000;
+  border-color:var(--gold);
+  box-shadow:inset -3px -3px 0 #A16207,inset 3px 3px 0 #FDE68A,0 4px 0 #713F12;
+  font-weight:700;
+}
+.plano-cta.cta-gold:hover{
+  background:#FDE047;
+  box-shadow:inset -3px -3px 0 #A16207,inset 3px 3px 0 #FEF9C3,0 4px 0 #713F12,0 0 20px var(--gold-glow);
+}
+.plano-garantia{
+  font-size:9px;
+  color:#A16207;
+  text-align:center;
+  margin:0;
+  font-weight:600;
+}
+
 /* ============================================================
    SECTION 9 — FAQ
    ============================================================ */
@@ -1614,7 +1667,9 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
           <li>Fila com menor prioridade</li>
           <li>Suporte comunidade</li>
         </ul>
-        <a href="/login?signup=1&amp;plano=trial" class="btn btn-outline" style="margin-top:20px;width:100%;">TESTAR GRÁTIS</a>
+        <div class="plano-cta-wrap">
+          <a href="/login?signup=1&amp;plano=trial" class="plano-cta cta-outline">TESTAR GRÁTIS</a>
+        </div>
       </div>
 
       <!-- STARTER -->
@@ -1632,7 +1687,9 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
           <li>Prioridade na fila (nível 2)</li>
           <li>Suporte WhatsApp</li>
         </ul>
-        <a href="/login?signup=1&amp;plano=starter" class="btn btn-outline" style="margin-top:20px;width:100%;">ASSINAR STARTER</a>
+        <div class="plano-cta-wrap">
+          <a href="/login?signup=1&amp;plano=starter" class="plano-cta cta-outline">ASSINAR STARTER</a>
+        </div>
       </div>
 
       <!-- PRO -->
@@ -1650,8 +1707,10 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
           <li>Prioridade alta na fila (nível 5)</li>
           <li>Suporte prioritário</li>
         </ul>
-        <a href="/login?signup=1&amp;plano=pro" class="btn btn-yellow" style="margin-top:20px;width:100%;">ASSINAR PRO</a>
-        <p style="font-size:9px;color:#A16207;margin-top:12px;text-align:center;">7 dias de garantia incondicional.</p>
+        <div class="plano-cta-wrap">
+          <a href="/login?signup=1&amp;plano=pro" class="plano-cta cta-gold">ASSINAR PRO</a>
+          <p class="plano-garantia">7 dias de garantia incondicional.</p>
+        </div>
       </div>
 
       <!-- AGENCY -->
@@ -1669,7 +1728,9 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
           <li>Prioridade máxima na fila</li>
           <li>Onboarding e suporte VIP</li>
         </ul>
-        <a href="/login?signup=1&amp;plano=agency" class="btn btn-outline" style="margin-top:20px;width:100%;border-color:var(--fl-purple-300);">ASSINAR AGENCY</a>
+        <div class="plano-cta-wrap">
+          <a href="/login?signup=1&amp;plano=agency" class="plano-cta cta-outline">ASSINAR AGENCY</a>
+        </div>
       </div>
     </div>
 
