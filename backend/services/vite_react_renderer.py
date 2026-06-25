@@ -93,6 +93,7 @@ try:
     from backend.services.vite_prompts import (
         VITE_REACT_SYSTEM_PROMPT,
         VITE_REACT_BATCH_SYSTEM_PROMPT,
+        _build_vite_react_system_prompt_with_facts,  # Sprint 12.13: caroço rico com briefing real
         _compose_vite_user_prompt,
         _compose_vite_file_batch_prompt,
         _summarize_builder_facts,
@@ -103,6 +104,7 @@ try:
 except ImportError:
     from services.vite_prompts import (  # type: ignore
         VITE_REACT_SYSTEM_PROMPT,
+        _build_vite_react_system_prompt_with_facts,  # Sprint 12.13: caroço rico com briefing real
         _compose_vite_user_prompt,
         _compose_vite_file_batch_prompt,
         _summarize_builder_facts,
@@ -407,6 +409,7 @@ def render_vite_react_site(
                 model=model,
                 max_tokens=max_tokens,
                 temperature=temperature,
+                facts=facts,  # Sprint 12.13: caroço rico com briefing real do lead
             )
             files = prepare_vite_project_files(
                 extract_vite_project_files(raw),
@@ -2367,7 +2370,12 @@ def validate_vite_dist(dist_dir: Path) -> None:
 
 
 def _call_vite_react_llm(
-    user_prompt: str, *, model: str, max_tokens: int, temperature: float
+    user_prompt: str,
+    *,
+    model: str,
+    max_tokens: int,
+    temperature: float,
+    facts: dict[str, Any] | None = None,  # Sprint 12.13: caroço rico com briefing real
 ) -> str:
     model_id = {
         "haiku": PROXY_LIGHT_MODEL,
@@ -2375,10 +2383,12 @@ def _call_vite_react_llm(
         "opus": PROXY_BUILDER_MODEL,
     }.get(model, model)
     effective_max_tokens = _cap_max_tokens_for_model(model_id, max_tokens)
+    # Sprint 12.13: usa caroço rico quando facts disponivel, fallback HEAD+FOOT+TAIL estatico
+    system_prompt = _build_vite_react_system_prompt_with_facts(facts or {})
     if _is_litellm_openai_chat_base():
         text_out, _usage = _call_proxy_openai_chat(
             model_id,
-            VITE_REACT_SYSTEM_PROMPT,
+            system_prompt,
             user_prompt,
             temperature=temperature,
             max_tokens=effective_max_tokens,
@@ -2395,7 +2405,7 @@ def _call_vite_react_llm(
         text_out, _usage = call_llm(
             "anthropic",
             model_id,
-            VITE_REACT_SYSTEM_PROMPT,
+            system_prompt,
             user_prompt,
             temperature=temperature,
             max_tokens=effective_max_tokens,
