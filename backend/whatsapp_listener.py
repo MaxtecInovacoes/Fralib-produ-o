@@ -714,6 +714,71 @@ def _processar_mensagem(tenant_id: str, msg_data: dict, texto_override: str = No
         resposta = franz_output.reply
         proximo_passo = franz_output.proximo_passo or ""
 
+        # ── DETECÇÃO PASSIVA: opt_out cancelado ──
+        # Se Franz ta com opt_out_pending=True e lead respondeu 'nao/continua',
+        # o lead cancelou opt_out. Lesson importante: NAO classificar msgs ambiguas.
+        try:
+            with engine.connect() as conn:
+                pending_row = conn.execute(text("""
+                    SELECT opt_out_pending FROM leads
+                    WHERE id = :lid AND user_id = :uid
+                """), {"lid": lead_id, "uid": user_id}).fetchone()
+            if pending_row and pending_row[0] is True:
+                # Lead ta com opt_out_pending - checar se respondeu cancelando
+                from agents.sdr_langgraph.learning import record_opt_out_canceled
+                cancel_result = record_opt_out_canceled(
+                    user_id=user_id, lead_id=lead_id,
+                    bot_question="Voce quer parar de receber mensagens?",
+                    lead_response=texto,
+                    context=f"segmento={segmento}",
+                )
+                if cancel_result.get("learned"):
+                    logger.info(f"[WPP-Listener] {nome}: opt_out cancelado pelo lead - lesson criada")
+        except Exception as _oc_err:
+            logger.warning(f"[WPP-Listener] opt_out cancel check falhou (nao-bloqueante): {_oc_err}")
+
+        # ── APRENDIZADO PASSIVO (auto-learning por observação) ──
+        # Detecta sinais automaticamente e cria lessons pra próximo turno:
+        # - Reclamação do lead ("entendeu errado", "sua IA não entendeu")
+        # - Engajamento positivo (lead pede link, elogia, manda sinal de compra)
+        # - Opt-out cancelado (lead respondeu "nao" depois de Franz perguntar)
+        # Inspirado em Meta WhatsApp Business AI, Chatwoot AI, Respond.io
+        try:
+            from agents.sdr_langgraph.learning import (
+                record_lead_complaint,
+                record_lead_engagement,
+            )
+            # Buscar ultima msg do bot pra contexto
+            with engine.connect() as conn:
+                last_bot_row = conn.execute(text("""
+                    SELECT mensagem FROM interacoes
+                    WHERE lead_id = :lid AND user_id = :uid AND direcao = 'saida'
+                    ORDER BY criado_em DESC LIMIT 1
+                """), {"lid": lead_id, "uid": user_id}).fetchone()
+            last_bot_msg = last_bot_row[0] if last_bot_row else ""
+
+            # Detectar reclamacao (passivo)
+            complaint_result = record_lead_complaint(
+                user_id=user_id, lead_id=lead_id,
+                lead_message=texto,
+                previous_bot_message=last_bot_msg,
+                context=f"stage={sdr_stage_atual}; segmento={segmento}",
+            )
+            if complaint_result.get("learned"):
+                logger.info(f"[WPP-Listener] {nome}: complaint detectado - lesson criada ({complaint_result.get('kinds')})")
+
+            # Detectar engajamento positivo (passivo)
+            positive_result = record_lead_engagement(
+                user_id=user_id, lead_id=lead_id,
+                lead_message=texto,
+                previous_bot_message=last_bot_msg,
+                context=f"stage={sdr_stage_atual}; segmento={segmento}",
+            )
+            if positive_result.get("learned"):
+                logger.info(f"[WPP-Listener] {nome}: engagement positivo - lesson criada ({positive_result.get('kinds')})")
+        except Exception as learn_err:
+            logger.warning(f"[WPP-Listener] auto-learning falhou (nao-bloqueante): {learn_err}")
+
         # Se reply vazio (opt_out, fila, etc) — não enviar
         if not resposta or not resposta.strip():
             logger.info(f"Lead {nome}: Franz retornou reply vazio (intent={franz_output.intent}) — não envia")

@@ -259,6 +259,224 @@ def record_human_correction(
     return {"learned": True, "similarity_to_bot": similarity}
 
 
+# ════════════════════════════════════════════════════════════════════
+# APRENDIZADO PASSIVO - detecta sinais automaticamente
+# Inspirado em Meta WhatsApp Business AI, Chatwoot AI, Respond.io
+# Aprende de: reclamacoes do lead, opt-out cancelado, conversoes
+# ════════════════════════════════════════════════════════════════════
+
+# Patterns de reclamacao do lead (em PT-BR)
+_LEAD_COMPLAINT_PATTERNS = [
+    (re.compile(r"\b(voce\s+entendeu|n[aã]o\s+entendeu|entendeu\s+errado|interpretou\s+errado)\b", re.I), "misunderstanding"),
+    (re.compile(r"\b(nao\s+e?\s+isso|nao\s+foi\s+isso|vc\s+nao\s+entendeu|voce\s+nao\s+entendeu)\b", re.I), "misunderstanding"),
+    (re.compile(r"\b(sua\s+ia|sua\s+inteligencia|seu\s+robo|seu\s+bot|ia\s+nao\s+entendeu)\b", re.I), "ai_blame"),
+    (re.compile(r"\b(para\s+de\s+me\s+(mandar|enviar|ligar))\b", re.I), "explicit_stop"),
+    (re.compile(r"\b(nao\s+quero\s+mais|chega|cansei)\b", re.I), "frustration"),
+    (re.compile(r"\b(voce\s+nao\s+sabe|nao\s+sabe\s+nada|burro|inutil)\b", re.I), "insult"),
+    (re.compile(r"\b(repete|repetindo|mesma\s+coisa|de\s+novo)\b", re.I), "repetition"),
+]
+
+# Patterns de POSITIVO (lead engajou, nao reclamou)
+_LEAD_POSITIVE_PATTERNS = [
+    (re.compile(r"\b(adorei|otimo|otima|excelente|maravilhoso|perfeito)\b", re.I), "praise"),
+    (re.compile(r"\b(pode\s+mandar|pode\s+enviar|manda\s+o\s+link|gostei|quero\s+ver)\b", re.I), "engagement"),
+    (re.compile(r"\b(como\s+contrato|como\s+fa[cç]o|fechado|bora|aceito)\b", re.I), "buying_signal"),
+]
+
+
+def record_lead_complaint(
+    *,
+    user_id: int,
+    lead_id: str,
+    lead_message: str,
+    previous_bot_message: str = "",
+    context: str = "",
+) -> dict[str, Any]:
+    """Detecta reclamacao do lead e cria licao automatica.
+
+    Quando lead diz algo como 'voce entendeu errado', 'sua IA nao entendeu',
+    'para de me mandar', etc., o sistema automaticamente aprende e injeta
+    uma licao no proximo prompt do Franz.
+
+    Inspirado em Meta WhatsApp Business AI que aprende com feedback do usuario.
+    """
+    if not (lead_message or "").strip():
+        return {"learned": False, "reason": "empty_message"}
+
+    # Detectar tipo de reclamacao
+    detected = []
+    for pattern, kind in _LEAD_COMPLAINT_PATTERNS:
+        if pattern.search(lead_message):
+            detected.append(kind)
+    if not detected:
+        return {"learned": False, "reason": "no_complaint_detected"}
+
+    # Criar lesson especifica
+    snippet = lead_message[:200]
+    lesson_text = (
+        f"Lead reclamou: '{snippet}'. "
+        "Quando lead sinaliza que o bot entendeu errado, "
+        "voltar pro contexto original, pedir confirmacao do que ele quis dizer, "
+        "e nao assumir nada automaticamente. NAO classificar como opt_out sem "
+        "pergunta de confirmacao explicita."
+    )
+    if "ai_blame" in detected or "insult" in detected:
+        lesson_text += (
+            " Lead pode estar frustrado. Reconhecer o erro brevemente e "
+            "oferecer ajuda humana se necessario."
+        )
+
+    _add_lesson(user_id, {
+        "key": f"complaint_{detected[0]}",
+        "agent": "complaint_handler",
+        "score": 9,  # alto peso: reclamacao explicita do lead
+        "text": lesson_text,
+        "last_example": snippet,
+    })
+
+    # Log no historico do lead
+    path = _lead_learning_path(user_id, lead_id)
+    lead_log = _load_json(path, {"version": 1, "events": []})
+    events = list(lead_log.get("events") or [])
+    events.append({
+        "at": datetime.now().isoformat(),
+        "agent": "complaint_handler",
+        "event": "lead_complaint",
+        "kinds": detected,
+        "previous_bot_message": previous_bot_message[:500],
+        "lead_message": lead_message[:800],
+        "context": context[:500],
+    })
+    lead_log["events"] = events[-100:]
+    lead_log["updated_at"] = datetime.now().isoformat()
+    _save_json(path, lead_log)
+    return {"learned": True, "kinds": detected, "lesson_key": f"complaint_{detected[0]}"}
+
+
+def record_lead_engagement(
+    *,
+    user_id: int,
+    lead_id: str,
+    lead_message: str,
+    previous_bot_message: str = "",
+    context: str = "",
+) -> dict[str, Any]:
+    """Detecta engajamento positivo e aprende o que funcionou.
+
+    Quando lead elogia, pede pra ver, ou manda sinal de compra,
+    salva a abordagem do bot anterior como lesson positiva.
+    """
+    if not (lead_message or "").strip():
+        return {"learned": False, "reason": "empty_message"}
+
+    detected = []
+    for pattern, kind in _LEAD_POSITIVE_PATTERNS:
+        if pattern.search(lead_message):
+            detected.append(kind)
+    if not detected:
+        return {"learned": False, "reason": "no_positive_detected"}
+
+    # Salvar contexto do que FUNCIONOU
+    snippet_bot = (previous_bot_message or "")[:200]
+    _add_lesson(user_id, {
+        "key": f"positive_{detected[0]}",
+        "agent": "positive_handler",
+        "score": 6,  # peso medio: engajamento e sinal mas menos forte que reclamacao
+        "text": (
+            f"Lead engajou quando o bot disse algo similar a: '{snippet_bot}'. "
+            f"Motivo do engajamento: {detected[0]}. "
+            "Replicar abordagem similar em leads futuros."
+        ),
+        "last_example": f"Bot: {snippet_bot} | Lead: {lead_message[:200]}",
+    })
+
+    # Log no historico
+    path = _lead_learning_path(user_id, lead_id)
+    lead_log = _load_json(path, {"version": 1, "events": []})
+    events = list(lead_log.get("events") or [])
+    events.append({
+        "at": datetime.now().isoformat(),
+        "agent": "positive_handler",
+        "event": "lead_engagement",
+        "kinds": detected,
+        "previous_bot_message": previous_bot_message[:500],
+        "lead_message": lead_message[:800],
+        "context": context[:500],
+    })
+    lead_log["events"] = events[-100:]
+    lead_log["updated_at"] = datetime.now().isoformat()
+    _save_json(path, lead_log)
+    return {"learned": True, "kinds": detected}
+
+
+def record_opt_out_canceled(
+    *,
+    user_id: int,
+    lead_id: str,
+    bot_question: str,
+    lead_response: str,
+    context: str = "",
+) -> dict[str, Any]:
+    """Lead respondeu 'nao/continua' a pergunta de opt_out.
+
+    Isso e sinal forte de que Franz estava interpretando errado.
+    Salva lesson para evitar erro similar no futuro.
+    """
+    if not (lead_response or "").strip():
+        return {"learned": False, "reason": "empty_response"}
+
+    # Detectar se e cancelamento
+    cancelou = bool(re.search(r"\b(nao|não|no|continua|seguir|continuar|fica|nao\s+para|não\s+para)\b", lead_response.lower()))
+    if not cancelou:
+        return {"learned": False, "reason": "not_cancel"}
+
+    _add_lesson(user_id, {
+        "key": "opt_out_false_positive",
+        "agent": "opt_out_handler",
+        "score": 8,
+        "text": (
+            f"Franz perguntou confirmacao de opt_out mas lead respondeu '{lead_response[:80]}' "
+            "(NAO queria parar). Licao: antes de classificar msg como opt_out, "
+            "verificar se e bloqueio explicito OU se lead esta apenas "
+            "qualificando/explicando o que nao atende. Em duvida, perguntar."
+        ),
+        "last_example": f"Bot: {bot_question[:200]} | Lead: {lead_response[:200]}",
+    })
+
+    return {"learned": True, "lesson_key": "opt_out_false_positive"}
+
+
+def record_conversion(
+    *,
+    user_id: int,
+    lead_id: str,
+    stage_reached: str,
+    last_bot_message: str = "",
+    context: str = "",
+) -> dict[str, Any]:
+    """Lead virou cliente (ganhou/won/fechou).
+
+    Salva abordagem final como lesson positiva de ALTO peso.
+    Replica o que funcionou para fechar.
+    """
+    if stage_reached not in ("won", "close"):
+        return {"learned": False, "reason": "not_conversion"}
+
+    _add_lesson(user_id, {
+        "key": f"conversion_{stage_reached}",
+        "agent": "conversion_handler",
+        "score": 10,  # maximo peso: conversao e o objetivo final
+        "text": (
+            f"Lead CONVERTEU no stage '{stage_reached}'. "
+            f"Ultima msg do bot que levou a conversao: '{last_bot_message[:200]}'. "
+            "Replicar abordagem similar em leads futuros no mesmo segmento."
+        ),
+        "last_example": last_bot_message[:300],
+    })
+
+    return {"learned": True, "lesson_key": f"conversion_{stage_reached}"}
+
+
 def learning_overlay(user_id: int, agent: str = "") -> str:
     """Return compact lessons to inject into the active agent prompt."""
 
