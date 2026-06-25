@@ -50,7 +50,8 @@ def save_interaction(
                         (lead_id, mensagem, direcao, criado_em, user_id, dedup_key)
                     VALUES
                         (:lead_id, :mensagem, :direcao, :criado_em, :user_id, :dedup_key)
-                    ON CONFLICT (dedup_key) WHERE dedup_key IS NOT NULL
+                    ON CONFLICT (lead_id, user_id, dedup_key)
+                    WHERE dedup_key IS NOT NULL
                     DO NOTHING
                     RETURNING id
                     """
