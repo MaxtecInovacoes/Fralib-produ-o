@@ -154,25 +154,34 @@ async def clarity_dashboard(days: int = 7, db: Session = Depends(get_db)):
         clarity_data = {"error": str(e.detail)}
 
     # Cruzar com nosso banco
-    nosso = db.execute(
-        text("""
-        SELECT
-          DATE(criado_em) as dia,
-          COUNT(*) FILTER (WHERE evento = 'view') as views,
-          COUNT(*) FILTER (WHERE evento = 'bounce') as bounces,
-          COUNT(*) FILTER (WHERE evento LIKE 'click_%') as clicks,
-          COUNT(*) FILTER (WHERE evento LIKE 'funnel_%') as funnel_events
-        FROM landing_analytics
-        WHERE criado_em > NOW() - (:days || ' days')::interval
-        GROUP BY DATE(criado_em)
-        ORDER BY dia DESC
-        """),
-        {"days": days},
-    ).fetchall()
+    nosso = []
+    try:
+        rows = db.execute(
+            text("""
+            SELECT
+              DATE(criado_em) as dia,
+              COUNT(*) FILTER (WHERE evento = 'view') as views,
+              COUNT(*) FILTER (WHERE evento = 'bounce') as bounces,
+              COUNT(*) FILTER (WHERE evento LIKE 'click_%') as clicks,
+              COUNT(*) FILTER (WHERE evento LIKE 'funnel_%') as funnel_events
+            FROM landing_analytics
+            WHERE criado_em > NOW() - (:days || ' days')::interval
+            GROUP BY DATE(criado_em)
+            ORDER BY dia DESC
+            """),
+            {"days": days},
+        ).fetchall()
+        nosso = [dict(r._mapping) for r in rows]
+    except Exception as e:
+        log.warning("clarity_dashboard: query landing_analytics falhou: %s", e)
+        try:
+            db.rollback()
+        except Exception:
+            pass
 
     return {
         "ok": True,
         "days": days,
         "clarity": clarity_data,
-        "nosso_banco": [dict(r._mapping) for r in nosso],
+        "nosso_banco": nosso,
     }
