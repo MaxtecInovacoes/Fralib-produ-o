@@ -1125,6 +1125,31 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
     #planos .plano-card.destaque::before{
       display:none !important;
     }
+
+    /* === Override: botão do PRO (DESTAQUE) em amarelo/dourado, e botões dos cards em 1 linha === */
+    .btn-primary{
+      background:linear-gradient(180deg,#FFD700 0%,#FFA500 100%);
+      color:#000 !important;font-weight:700;
+      box-shadow:
+        inset -3px -3px 0 rgba(0,0,0,0.25),
+        inset 3px 3px 0 rgba(255,255,255,0.4),
+        0 4px 0 rgba(139,69,0,0.6),
+        0 0 20px rgba(255,184,0,0.5) !important;
+    }
+    .btn-primary:hover{
+      background:linear-gradient(180deg,#FFE44D 0%,#FFB833 100%) !important;
+      box-shadow:
+        inset -3px -3px 0 rgba(0,0,0,0.25),
+        inset 3px 3px 0 rgba(255,255,255,0.5),
+        0 4px 0 rgba(139,69,0,0.6),
+        0 0 30px rgba(255,184,0,0.8) !important;
+    }
+    #planos .plano-card .btn{
+      white-space:nowrap;
+      font-size:10px;
+      padding:14px 8px;
+      letter-spacing:0.5px;
+    }
   </style>
 
 </head>
