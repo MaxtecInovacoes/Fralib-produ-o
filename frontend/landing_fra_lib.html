@@ -10,7 +10,7 @@
 !function(f,b,e,v,n,t,s)
 {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
 n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+if(!f._fbq)f__fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
 n.queue=[];t=b.createElement(e);t.async=!0;
 t.src=v;s=b.getElementsByTagName(e)[0];
 s.parentNode.insertBefore(t,s)}(window, document,'script',
@@ -31,341 +31,210 @@ src="https://www.facebook.com/tr?id=1022692323751129&ev=PageView&noscript=1"
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root {
-  --bg: #0d0420;
-  --bg-card: #1a0d3a;
-  --bg-card-2: #2a1655;
-  --border: rgba(168,85,247,0.3);
-  --border-hi: rgba(168,85,247,0.6);
-  --text: #f0eaff;
-  --text-muted: #a99cd9;
-  --text-dim: #6b5e8a;
-  --purple: #a855f7;
-  --purple-light: #c084fc;
-  --purple-dark: #6b21a8;
-  --cyan: #00FFB3;
-  --cyan-dim: rgba(0,255,179,0.15);
-  --gold: #FFB800;
-  --gold-dim: rgba(255,184,0,0.15);
-  --danger: #ef4444;
-  --success: #22c55e;
-  --font-pixel: 'Press Start 2P', monospace;
-  --font-ui: 'DM Sans', system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono', monospace;
+  --fl-bg:         #0a0714;
+  --fl-bg-surface: #0e0a1a;
+  --fl-bg-card:    #12121a;
+  --fl-bg-hover:   #1c1c28;
+  --fl-purple-700: #4c1d9e;
+  --fl-purple-600: #7c3aed;
+  --fl-purple-300: #c084fc;
+  --fl-purple-400: #a855f7;
+  --fl-text:       #f0f0f5;
+  --fl-text-muted: #8888a0;
+  --fl-text-dim:   #44445a;
+  --fl-border:     rgba(147,51,234,0.12);
+  --fl-border-md:  rgba(147,51,234,0.25);
+  --fl-success:    #22c55e;
+  --fl-danger:     #ef4444;
+  --fl-font-brand: 'Press Start 2P', monospace;
+  --fl-font-ui:    'DM Sans', system-ui, sans-serif;
+  --fl-font-mono:  'JetBrains Mono', monospace;
+  --fl-r-md: 10px;
+  --fl-r-lg: 14px;
+  --cyan:  #00FFB3;
+  --gold:  #FFB800;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth}
-body{
-  font-family:var(--font-ui);
-  background:var(--bg);
-  color:var(--text);
-  font-size:15px;
-  line-height:1.6;
-  -webkit-font-smoothing:antialiased;
-}
+body{font-family:var(--fl-font-ui);background:var(--fl-bg);color:var(--fl-text);font-size:16px;line-height:1.7;-webkit-font-smoothing:antialiased}
 a{color:inherit;text-decoration:none}
-img{max-width:100%;display:block}
-.container{width:100%;max-width:1200px;margin:0 auto;padding:0 24px}
+.container{max-width:860px;margin:0 auto;padding:0 24px}
 
-/* NAV */
+/* NAV - simples */
 nav{
-  position:sticky;
-  top:0;
-  z-index:1000;
-  padding:16px 24px;
-  background:rgba(13,4,32,0.9);
-  backdrop-filter:blur(8px);
-  border-bottom:1px solid var(--border);
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
+  position:fixed;top:0;left:0;right:0;z-index:1000;
+  padding:14px 24px;background:rgba(6,6,8,0.9);
+  backdrop-filter:blur(12px);border-bottom:1px solid var(--fl-border);
+  display:flex;align-items:center;justify-content:space-between;
 }
-.nav-logo{display:flex;align-items:center;gap:8px}
-.nav-logo img{height:32px}
-.nav-logo span{font-family:var(--font-pixel);font-size:10px;color:#fff}
-.nav-links{display:flex;gap:32px;align-items:center}
-.nav-links a{font-size:13px;color:var(--text-muted);transition:color .2s}
-.nav-links a:hover{color:var(--text)}
+.nav-logo{display:flex;align-items:center;gap:10px}
+.nav-logo img{height:28px}
+.nav-logo span{font-family:var(--fl-font-brand);font-size:10px;color:var(--cyan)}
+.nav-links{display:flex;gap:24px}
+.nav-links a{font-size:13px;color:var(--fl-text-muted);transition:color .2s}
+.nav-links a:hover{color:var(--fl-text)}
 .nav-cta{
-  padding:14px 24px;
-  background:var(--success);
-  color:#000;
-  font-family:var(--font-pixel);
-  font-size:10px;
-  box-shadow:inset -3px -3px 0 #16803C,inset 3px 3px 0 #4ade80,0 4px 0 #14532D;
+  padding:10px 18px;font-family:var(--fl-font-brand);font-size:8px;
+  background:var(--gold);color:#000;
+  box-shadow:inset -3px -3px 0 #A16207,inset 3px 3px 0 #FDE68A,0 4px 0 #713F12;
 }
-@media(max-width:900px){.nav-links{display:none}}
+@media(max-width:768px){.nav-links{display:none}}
 
-/* HERO */
-.hero{padding:60px 0 40px;position:relative;overflow:hidden}
-.hero-grid{display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:center}
-@media(max-width:900px){.hero-grid{grid-template-columns:1fr;text-align:center}}
-.hero-left{position:relative;text-align:center}
-.hero-mascot{
-  width:280px;height:auto;margin:0 auto;
-  filter:drop-shadow(0 0 30px rgba(168,85,247,0.4));
-}
-.hero-label{font-family:var(--font-pixel);font-size:10px;color:var(--purple-light);margin-bottom:8px;letter-spacing:1px}
-.hero-title{
-  font-family:var(--font-pixel);
-  font-size:clamp(16px,2.5vw,28px);
-  line-height:1.5;
-  margin:24px 0;
-  letter-spacing:1px;
-}
-.hero-title .grad{
-  background:linear-gradient(90deg,var(--purple-light),var(--cyan));
-  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
-  background-clip:text;
-}
+/* HERO - simples e direto */
+.hero{padding:140px 0 60px;text-align:center}
+.hero-eyebrow{font-family:var(--fl-font-brand);font-size:9px;color:var(--fl-purple-300);margin-bottom:16px;letter-spacing:1px}
+.hero h1{font-size:clamp(26px,4vw,40px);font-weight:700;line-height:1.3;margin-bottom:20px}
+.hero h1 .highlight{color:var(--cyan)}
 .hero-dor{
-  font-size:16px;color:var(--text);
-  padding:14px 18px;
-  background:rgba(239,68,68,0.1);
-  border-left:3px solid var(--danger);
-  margin-bottom:24px;
-  max-width:560px;
-  margin-left:auto;margin-right:auto;
-  text-align:left;
+  font-size:16px;color:var(--fl-text);
+  padding:14px 18px;background:var(--fl-bg-card);
+  border-left:3px solid var(--fl-danger);
+  margin:24px auto;max-width:600px;text-align:left;
 }
-.hero-sub{font-size:17px;color:var(--text-muted);max-width:600px;margin:0 auto 20px;line-height:1.6}
-.hero-price{font-family:var(--font-mono);font-size:20px;color:var(--gold);margin-bottom:24px}
-.hero-buttons{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;margin-bottom:24px}
-.btn{display:inline-block;padding:14px 28px;font-family:var(--font-pixel);font-size:10px;text-decoration:none;cursor:pointer;border:none;transition:all .15s}
-.btn-primary{background:var(--success);color:#000;box-shadow:inset -3px -3px 0 #16803C,inset 3px 3px 0 #4ade80,0 4px 0 #14532D}
-.btn-primary:hover{background:#4ade80}
+.hero-sub{font-size:17px;color:var(--fl-text-muted);max-width:600px;margin:0 auto 20px}
+.hero-price{font-family:var(--fl-font-mono);font-size:20px;color:var(--gold);margin:20px 0 32px}
+.btn{
+  display:inline-block;padding:14px 28px;font-family:var(--fl-font-brand);font-size:10px;
+  border:none;cursor:pointer;transition:all .15s;text-decoration:none;
+}
+.btn-primary{background:var(--gold);color:#000;box-shadow:inset -3px -3px 0 #A16207,inset 3px 3px 0 #FDE68A,0 4px 0 #713F12}
+.btn-primary:hover{background:#FDE047}
 .btn-outline{background:transparent;color:var(--cyan);border:2px solid var(--cyan)}
 .btn-outline:hover{background:var(--cyan);color:#000}
-.hero-features{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:32px}
-@media(max-width:600px){.hero-features{grid-template-columns:repeat(2,1fr)}}
-.hero-feature{
-  background:var(--bg-card);
-  border:1px solid var(--border);
-  padding:20px;
-  text-align:center;
-  transition:all .3s;
+.hero-buttons{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;margin-bottom:48px}
+.hero-stats{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:24px;
+  padding-top:32px;border-top:1px solid var(--fl-border);
+  max-width:600px;margin:0 auto;
 }
-.hero-feature:hover{border-color:var(--border-hi);transform:translateY(-4px)}
-.hero-feature svg{width:36px;height:36px;color:var(--cyan);margin:0 auto 12px}
-.hero-feature h4{font-family:var(--font-pixel);font-size:8px;color:var(--purple-light);margin-bottom:8px}
-.hero-feature p{font-size:12px;color:var(--text-muted);line-height:1.5}
+@media(max-width:600px){.hero-stats{grid-template-columns:repeat(2,1fr)}}
+.hero-stat{text-align:center}
+.hero-stat .num{font-family:var(--fl-font-mono);font-size:24px;font-weight:700;color:var(--cyan)}
+.hero-stat .label{font-size:12px;color:var(--fl-text-muted);margin-top:4px}
 
-/* OFFER BOX */
-.hero-right{display:flex;justify-content:center}
-.offer-box{
-  background:var(--bg-card);
-  border:2px solid var(--border-hi);
-  padding:32px;
-  text-align:center;
-  max-width:380px;
-  width:100%;
-  position:relative;
-  box-shadow:0 0 60px rgba(168,85,247,0.3);
-}
-.offer-box::before{
-  content:'';position:absolute;inset:-2px;
-  background:linear-gradient(45deg,var(--purple),var(--cyan),var(--purple));
-  background-size:200% 200%;
-  animation:shimmer 3s ease infinite;
-  z-index:-1;filter:blur(20px);opacity:0.5;
-}
-@keyframes shimmer{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
-.offer-title{font-family:var(--font-pixel);font-size:9px;color:var(--cyan);margin-bottom:8px;letter-spacing:1px}
-.offer-time{font-family:var(--font-pixel);font-size:7px;color:var(--purple-light);margin-bottom:24px}
-.offer-de{font-size:13px;color:var(--text-muted);text-decoration:line-through;margin-bottom:8px}
-.offer-de span{color:var(--text-dim);font-size:11px;display:block;margin-top:2px}
-.offer-price{font-family:var(--font-pixel);font-size:42px;color:var(--success);margin-bottom:8px}
-.offer-vista{font-family:var(--font-pixel);font-size:9px;color:var(--text-muted);margin-bottom:20px}
-.offer-bonus{
-  background:rgba(168,85,247,0.1);
-  border:1px solid var(--border);
-  padding:16px;
-  margin-bottom:20px;
-  text-align:left;
-}
-.offer-bonus-title{font-family:var(--font-pixel);font-size:8px;color:var(--purple-light);margin-bottom:12px}
-.offer-bonus ul{list-style:none}
-.offer-bonus li{font-size:13px;padding:4px 0;color:var(--text-muted);display:flex;align-items:center;gap:8px}
-.offer-bonus li::before{content:'-';color:var(--cyan);font-weight:700}
-.btn-cta{
-  display:block;
-  background:var(--success);
-  color:#000;
-  padding:18px;
-  font-family:var(--font-pixel);
-  font-size:11px;
-  text-align:center;
-  border:none;
-  cursor:pointer;
-  box-shadow:inset -4px -4px 0 #16803C,inset 4px 4px 0 #4ade80,0 6px 0 #14532D;
-  transition:all .15s;
-  text-decoration:none;
-  margin-bottom:8px;
-}
-.btn-cta:hover{background:#4ade80;transform:translateY(-2px)}
-.btn-cta-small{font-family:var(--font-ui);font-size:11px;color:var(--text);font-weight:600;text-align:center}
+/* SECTIONS - texto puro */
+section{padding:80px 0}
+.section-label{font-family:var(--fl-font-brand);font-size:10px;color:var(--fl-danger);text-transform:uppercase;letter-spacing:3px;margin-bottom:16px;text-align:center}
+.section-title{font-size:clamp(22px,3vw,32px);font-weight:700;text-align:center;margin-bottom:16px;line-height:1.3}
+.section-sub{font-size:16px;color:var(--fl-text-muted);text-align:center;max-width:600px;margin:0 auto 40px}
 
-/* PROBLEMAS (substitui o metodo 4-1 generico pela dor especifica) */
-.problemas{padding:80px 0;background:var(--bg)}
-.problemas-title{font-family:var(--font-pixel);font-size:clamp(14px,2vw,22px);text-align:center;margin-bottom:48px;color:var(--purple-light)}
-.problemas-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:20px}
-@media(max-width:768px){.problemas-grid{grid-template-columns:1fr}}
-.problema-card{
-  background:var(--bg-card);
-  border:1px solid var(--border);
-  padding:28px;
-  transition:all .3s;
-}
-.problema-card:hover{border-color:var(--border-hi)}
-.problema-num{font-family:var(--font-pixel);font-size:18px;color:var(--danger);margin-bottom:12px;opacity:0.6}
+/* PROBLEMAS */
+.problema{background:var(--fl-bg-surface);border-top:1px solid var(--fl-border);border-bottom:1px solid var(--fl-border)}
+.problema-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:20px;max-width:860px;margin:0 auto}
+@media(max-width:768px){.problema-grid{grid-template-columns:1fr}}
+.problema-card{background:var(--fl-bg-card);border:1px solid var(--fl-border);padding:28px}
+.problema-card .num{font-family:var(--fl-font-mono);font-size:28px;font-weight:700;color:var(--fl-danger);opacity:0.4;margin-bottom:8px}
 .problema-card h3{font-size:17px;font-weight:700;margin-bottom:12px}
-.problema-situacao{font-size:14px;color:var(--text);padding:12px 16px;background:rgba(239,68,68,0.08);border-left:3px solid var(--danger);margin-bottom:12px;font-style:italic}
-.problema-card p{font-size:14px;color:var(--text-muted);line-height:1.7}
+.problema-card .situacao{
+  font-size:14px;color:var(--fl-text);
+  padding:12px 14px;background:rgba(239,68,68,0.08);
+  border-left:3px solid var(--fl-danger);margin-bottom:12px;font-style:italic;
+}
+.problema-card p{font-size:14px;color:var(--fl-text-muted);line-height:1.7}
 
 /* COMPARATIVO */
-.comparativo{padding:80px 0;background:var(--bg-card)}
-.comparativo-title{font-family:var(--font-pixel);font-size:clamp(14px,2vw,22px);text-align:center;margin-bottom:48px;color:var(--purple-light)}
-.table-wrapper{overflow-x:auto}
-.comparativo-table{width:100%;background:var(--bg);border:1px solid var(--border);border-collapse:collapse}
-.comparativo-table th,.comparativo-table td{padding:14px 16px;text-align:left;border-bottom:1px solid var(--border)}
-.comparativo-table th{font-family:var(--font-pixel);font-size:8px;letter-spacing:1px;background:var(--bg-card)}
-.comparativo-table th.col-vc{color:var(--text-muted)}
+.table-wrapper{overflow-x:auto;max-width:860px;margin:0 auto}
+.comparativo-table{width:100%;background:var(--fl-bg-card);border:1px solid var(--fl-border);border-collapse:collapse}
+.comparativo-table th,.comparativo-table td{padding:14px 18px;text-align:left;border-bottom:1px solid var(--fl-border)}
+.comparativo-table th{font-family:var(--fl-font-brand);font-size:8px;letter-spacing:1px;background:var(--fl-bg-surface)}
+.comparativo-table th.col-vc{color:var(--fl-text-muted)}
 .comparativo-table th.col-fralib{color:var(--cyan);background:rgba(0,255,179,0.05)}
 .comparativo-table td{font-size:14px}
-.comparativo-table td.col-vc{color:var(--text-muted);text-align:center}
-.comparativo-table td.col-fralib{color:var(--success);text-align:center;font-family:var(--font-mono)}
+.comparativo-table td.col-vc{color:var(--fl-text-muted);text-align:center}
+.comparativo-table td.col-fralib{color:var(--fl-success);text-align:center;font-family:var(--fl-font-mono);background:rgba(34,197,94,0.05)}
 
-/* COMO FUNCIONA (passo a passo simples) */
-.como{padding:80px 0}
-.como-title{font-family:var(--font-pixel);font-size:clamp(14px,2vw,22px);text-align:center;margin-bottom:48px;color:var(--purple-light)}
-.passo-track{display:flex;gap:24px;margin-top:48px}
-.passo-card{
-  flex:1;background:var(--bg-card);border:1px solid var(--border);
-  padding:32px;text-align:center;position:relative;
+/* COMO FUNCIONA */
+.passo-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;max-width:860px;margin:0 auto}
+@media(max-width:768px){.passo-grid{grid-template-columns:1fr}}
+.passo-card{background:var(--fl-bg-card);border:1px solid var(--fl-border);padding:32px 24px;text-align:center}
+.passo-num{
+  width:48px;height:48px;background:var(--fl-purple-700);
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--fl-font-mono);font-size:22px;font-weight:700;
+  margin:0 auto 20px;
 }
-.passo-card::after{content:'';position:absolute;top:50%;right:-24px;width:24px;height:2px;background:var(--border)}
-.passo-card:last-child::after{display:none}
-.passo-num{width:48px;height:48px;background:var(--purple);display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:20px;font-weight:700;margin:0 auto 20px}
 .passo-card h3{font-size:17px;font-weight:700;margin-bottom:12px}
-.passo-card p{font-size:14px;color:var(--text-muted);line-height:1.7;margin-bottom:16px}
-.passo-tag{font-family:var(--font-mono);font-size:12px;color:var(--cyan);padding:4px 12px;background:var(--cyan-dim);display:inline-block}
-@media(max-width:900px){.passo-track{flex-direction:column}.passo-card::after{display:none}}
+.passo-card p{font-size:14px;color:var(--fl-text-muted);line-height:1.7;margin-bottom:12px}
+.passo-tag{
+  display:inline-block;font-family:var(--fl-font-mono);font-size:12px;
+  color:var(--cyan);padding:4px 12px;background:rgba(0,255,179,0.1);
+  border:1px solid rgba(0,255,179,0.2);
+}
 
 /* DEPOIMENTOS */
-.depoimentos{padding:80px 0;background:var(--bg-card)}
-.depoimentos-title{font-family:var(--font-pixel);font-size:clamp(14px,2vw,22px);text-align:center;margin-bottom:48px;color:var(--purple-light)}
-.depoimento-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
-.depoimento-card{background:var(--bg);border:1px solid var(--border);padding:24px}
-.depoimento-card blockquote{font-size:14px;line-height:1.7;margin-bottom:16px;font-style:italic;color:var(--text)}
-.depoimento-author{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.depoimentos{background:var(--fl-bg-surface);border-top:1px solid var(--fl-border);border-bottom:1px solid var(--fl-border)}
+.depoimento-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;max-width:860px;margin:0 auto}
+@media(max-width:768px){.depoimento-grid{grid-template-columns:1fr}}
+.depoimento-card{background:var(--fl-bg-card);border:1px solid var(--fl-border);padding:28px}
+.depoimento-card blockquote{font-size:15px;line-height:1.7;margin-bottom:20px;font-style:italic;color:var(--fl-text)}
+.depoimento-author{display:flex;align-items:center;gap:12px;margin-bottom:16px}
 .depoimento-avatar{
-  width:48px;height:48px;border-radius:50%;
-  background-size:cover;background-position:center;
-  flex-shrink:0;border:2px solid var(--border);
+  width:44px;height:44px;border-radius:50%;
+  background:linear-gradient(135deg,var(--fl-purple),var(--cyan));
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--fl-font-brand);font-size:9px;color:#000;
+  flex-shrink:0;
 }
 .depoimento-info h4{font-size:14px;font-weight:600}
-.depoimento-info p{font-size:12px;color:var(--text-muted)}
-.depoimento-metric{font-family:var(--font-mono);font-size:12px;padding:10px;background:var(--bg-card)}
-.depoimento-metric span{color:var(--success);font-weight:700}
-@media(max-width:900px){.depoimento-grid{grid-template-columns:1fr}}
+.depoimento-info p{font-size:12px;color:var(--fl-text-muted)}
+.depoimento-metric{font-family:var(--fl-font-mono);font-size:13px;padding:10px 12px;background:var(--fl-bg-surface)}
+.depoimento-metric span{color:var(--fl-success);font-weight:700}
 
 /* PLANOS */
-.planos{padding:80px 0}
-.planos-title{font-family:var(--font-pixel);font-size:clamp(14px,2vw,22px);text-align:center;margin-bottom:48px;color:var(--purple-light)}
-.planos-sub{text-align:center;color:var(--text-muted);margin-bottom:48px;font-size:15px}
-.planos-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
-.plano-card{background:var(--bg-card);border:1px solid var(--border);padding:24px 16px;text-align:center;position:relative;display:flex;flex-direction:column;transition:all .3s}
-.plano-card:hover{border-color:var(--border-hi);transform:translateY(-4px)}
-.plano-card.destaque{border-color:var(--gold);box-shadow:0 0 40px rgba(255,184,0,0.1)}
-.plano-card.destaque::before{content:'MAIS POPULAR';position:absolute;top:-12px;left:50%;transform:translateX(-50%);padding:4px 12px;background:var(--gold);color:#000;font-family:var(--font-pixel);font-size:7px}
-.plano-name{font-family:var(--font-pixel);font-size:9px;letter-spacing:2px;margin-bottom:16px}
-.plano-card:nth-child(1) .plano-name{color:var(--purple-light)}
-.plano-card:nth-child(2) .plano-name{color:var(--success)}
+.planos-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;max-width:860px;margin:0 auto}
+.plano-card{background:var(--fl-bg-card);border:1px solid var(--fl-border);padding:24px 16px;text-align:center;position:relative;display:flex;flex-direction:column}
+.plano-card.destaque{border-color:var(--gold);box-shadow:0 0 30px rgba(255,184,0,0.1)}
+.plano-card.destaque::before{
+  content:'MAIS POPULAR';position:absolute;top:-12px;left:50%;transform:translateX(-50%);
+  padding:4px 12px;background:var(--gold);color:#000;
+  font-family:var(--fl-font-brand);font-size:7px;
+}
+.plano-name{font-family:var(--fl-font-brand);font-size:9px;letter-spacing:2px;margin-bottom:12px}
+.plano-card:nth-child(1) .plano-name{color:var(--fl-purple-300)}
+.plano-card:nth-child(2) .plano-name{color:var(--fl-success)}
 .plano-card:nth-child(3) .plano-name{color:var(--gold)}
 .plano-card:nth-child(4) .plano-name{color:var(--cyan)}
 .plano-price{font-size:28px;font-weight:800;margin-bottom:4px}
-.plano-price span{font-size:13px;font-weight:400;color:var(--text-muted)}
-.plano-tag{font-size:10px;font-weight:700;margin:8px 0 12px}
-.plano-card:nth-child(1) .plano-tag,.plano-card:nth-child(2) .plano-tag{color:var(--success)}
+.plano-price span{font-size:13px;font-weight:400;color:var(--fl-text-muted)}
+.plano-tag{font-size:10px;font-weight:700;margin:8px 0;color:var(--fl-success)}
 .plano-card:nth-child(3) .plano-tag{color:var(--cyan)}
 .plano-card:nth-child(4) .plano-tag{color:var(--gold)}
-.plano-features{list-style:none;flex:1;text-align:left;margin-bottom:16px}
-.plano-features li{padding:6px 0;font-size:12px;color:var(--text-muted);display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--border)}
-.plano-features li::before{content:'';width:4px;height:4px;border-radius:50%;flex-shrink:0}
-.plano-card:nth-child(1) .plano-features li::before{background:var(--purple-light)}
-.plano-card:nth-child(2) .plano-features li::before{background:var(--success)}
-.plano-card:nth-child(3) .plano-features li::before{background:var(--gold)}
-.plano-card:nth-child(4) .plano-features li::before{background:var(--cyan)}
-.plano-card .btn{width:100%;justify-content:center;padding:10px;font-size:8px}
-.garantia{
-  background:var(--bg-card);
-  border:1px solid var(--gold);
-  padding:20px;
-  margin:48px auto 0;
-  max-width:600px;
-  display:flex;
-  align-items:center;
-  gap:16px;
-  text-align:left;
-}
-.garantia-icon{font-size:32px;color:var(--gold);flex-shrink:0}
-.garantia h4{font-family:var(--font-pixel);font-size:9px;color:var(--gold);margin-bottom:8px}
-.garantia p{font-size:13px;color:var(--text-muted);line-height:1.5}
+.plano-features{list-style:none;flex:1;text-align:left;margin:16px 0;font-size:12px}
+.plano-features li{padding:5px 0;color:var(--fl-text-muted);border-bottom:1px solid var(--fl-border)}
+.plano-features li:last-child{border:none}
+.plano-card .btn{width:100%;padding:10px;font-size:8px}
 @media(max-width:1024px){.planos-grid{grid-template-columns:1fr 1fr}}
 @media(max-width:640px){.planos-grid{grid-template-columns:1fr}}
 
+.garantia{
+  background:var(--fl-bg-card);border:1px solid rgba(34,197,94,0.3);
+  padding:20px;margin:32px auto 0;max-width:600px;text-align:center;
+}
+.garantia h4{font-size:14px;font-weight:700;margin-bottom:6px;color:var(--fl-text)}
+.garantia p{font-size:13px;color:var(--fl-text-muted);line-height:1.5}
+
 /* FAQ */
-.faq{padding:80px 0;background:var(--bg-card)}
-.faq-title{font-family:var(--font-pixel);font-size:clamp(14px,2vw,22px);text-align:center;margin-bottom:48px;color:var(--purple-light)}
 .faq-list{max-width:700px;margin:0 auto}
-.faq-item{background:var(--bg);border:1px solid var(--border);margin-bottom:8px}
+.faq-item{background:var(--fl-bg-card);border:1px solid var(--fl-border);margin-bottom:8px}
 .faq-item summary{padding:16px 20px;font-size:15px;font-weight:600;cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center}
-.faq-item summary::after{content:'+';color:var(--purple-light);font-size:18px}
+.faq-item summary::after{content:'+';color:var(--fl-purple-300);font-size:18px}
 .faq-item[open] summary::after{content:'-'}
-.faq-item .resposta{padding:0 20px 16px;color:var(--text-muted);line-height:1.7}
+.faq-item .resposta{padding:0 20px 16px;color:var(--fl-text-muted);line-height:1.7;font-size:14px}
 
 /* CTA FINAL */
-.cta-final{
-  padding:80px 0;
-  text-align:center;
-  background:rgba(168,85,247,0.05);
-}
-.cta-final h2{
-  font-family:var(--font-pixel);
-  font-size:clamp(18px,3vw,28px);
-  margin-bottom:16px;
-  line-height:1.5;
-}
-.cta-final h2 .grad{
-  background:linear-gradient(90deg,var(--cyan),var(--purple-light));
-  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
-  background-clip:text;
-}
-.cta-final p{font-size:15px;color:var(--text-muted);margin-bottom:32px}
-.cta-final .btn-cta{max-width:400px;margin:0 auto}
-
-.trust-badges{
-  display:flex;
-  justify-content:center;
-  gap:32px;
-  margin-top:24px;
-  flex-wrap:wrap;
-}
-.trust-badge{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-muted)}
-.trust-badge svg{width:16px;height:16px;color:var(--cyan)}
+.cta-final{padding:80px 0;text-align:center}
+.cta-final h2{font-size:clamp(22px,3vw,28px);font-weight:700;margin-bottom:16px;line-height:1.4}
+.cta-final p{font-size:15px;color:var(--cyan);margin-bottom:32px;font-family:var(--fl-font-mono)}
 
 /* FOOTER */
-footer{
-  padding:32px 0;
-  border-top:1px solid var(--border);
-  text-align:center;
-  background:rgba(13,4,32,0.5);
-}
+footer{padding:40px 0;border-top:1px solid var(--fl-border);text-align:center}
+footer .logo{font-family:var(--fl-font-brand);font-size:11px;color:var(--cyan);margin-bottom:12px}
+footer p{font-size:12px;color:var(--fl-text-dim)}
 footer .links{display:flex;justify-content:center;gap:24px;margin-bottom:16px;flex-wrap:wrap}
-footer .links a{font-size:13px;color:var(--text-muted)}
-footer p{font-size:12px;color:var(--text-dim)}
+footer .links a{font-size:13px;color:var(--fl-text-muted)}
 </style>
 </head>
 <body>
@@ -377,126 +246,92 @@ footer p{font-size:12px;color:var(--text-dim)}
     <span>FRALIB</span>
   </a>
   <div class="nav-links">
-    <a href="#problema">Método 4-1</a>
+    <a href="#problema">Problema</a>
     <a href="/docs">Docs</a>
     <a href="/blog">Blog</a>
     <a href="#planos">Planos</a>
   </div>
-  <a href="/login?signup=1" class="nav-cta">QUERO ACESSO AGORA</a>
+  <a href="/login?signup=1" class="nav-cta">CRIAR CONTA</a>
 </nav>
 
 <!-- HERO -->
 <section class="hero">
   <div class="container">
-    <div class="hero-grid">
-      <!-- LEFT: COPY -->
-      <div class="hero-left">
-        <img src="/images/Mestre Fralib - Mago da IA.png" alt="Mestre FraLib" class="hero-mascot" onerror="this.outerHTML='<div style=\'font-size:200px;text-align:center\'>🧙‍♂️</div>'">
+    <div class="hero-eyebrow">MÉTODO 4-1</div>
+    <h1>
+      Voce passou <span class="highlight">6 meses prospectando todo dia.</span><br>
+      Zero fechou.
+    </h1>
 
-        <div class="hero-label">MÉTODO 4-1</div>
-        <h1 class="hero-title">
-          VOCÊ <span class="grad">FECHA.</span><br>
-          A FRALIB FAZ O RESTO.
-        </h1>
+    <div class="hero-dor">
+      Seu concorrente fechou 3 na mesma semana. Voce nao e ruim. Voce so ta fazendo tudo no braco.
+    </div>
 
-        <div class="hero-dor">
-          Seu concorrente fechou 3 na mesma semana. Voce nao e ruim. Voce so ta fazendo tudo no braco.
-        </div>
+    <p class="hero-sub">
+      A FraLib cria sites, prospecta clientes e manda no seu WhatsApp.<br>
+      Voce so aprova e embolsa. Sem developer. Sem madrugada no codigo.
+    </p>
 
-        <p class="hero-sub">
-          A FraLib cria sites, prospecta clientes e manda no seu WhatsApp.<br>
-          Voce so aprova e embolsa. Sem developer. Sem madrugada no codigo.
-        </p>
+    <p class="hero-price">A partir de R$197/mes - fecha 3 clientes, sobra R$7.303</p>
 
-        <p class="hero-price">A partir de R$197/mes - fecha 3 clientes, sobra R$7.303</p>
+    <div class="hero-buttons">
+      <a href="/login?signup=1" class="btn btn-primary">EU QUERO FECHAR 3 CLIENTES ESTE MES</a>
+      <a href="#como-funciona" class="btn btn-outline">Como funciona?</a>
+    </div>
 
-        <div class="hero-buttons">
-          <a href="/login?signup=1" class="btn btn-primary">EU QUERO FECHAR 3 CLIENTES</a>
-          <a href="#como-funciona" class="btn btn-outline">Como funciona?</a>
-        </div>
-
-        <div class="hero-features">
-          <div class="hero-feature">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
-            <h4>MÉTODO 4-1</h4>
-            <p>Simples e aplicavel</p>
-          </div>
-          <div class="hero-feature">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 0110 10 10 10 0 01-10 10A10 10 0 012 12 10 10 0 0112 2z"/><path d="M12 6v6l4 2"/></svg>
-            <h4>IA AUTÔNOMA</h4>
-            <p>Automatize e escale</p>
-          </div>
-          <div class="hero-feature">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 5-5"/></svg>
-            <h4>RESULTADOS</h4>
-            <p>Replicaveis</p>
-          </div>
-          <div class="hero-feature">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
-            <h4>VITALICIO</h4>
-            <p>+ atualizacoes</p>
-          </div>
-        </div>
+    <div class="hero-stats">
+      <div class="hero-stat">
+        <div class="num">2.400+</div>
+        <div class="label">Freelancers</div>
       </div>
-
-      <!-- RIGHT: OFFER BOX -->
-      <div class="hero-right">
-        <div class="offer-box">
-          <div class="offer-title">OFERTA DE LANÇAMENTO</div>
-          <div class="offer-time">TEMPO LIMITADO</div>
-          <div class="offer-de">DE R$ 497,00<br><span>POR 12X DE</span></div>
-          <div class="offer-price">R$ 29,90</div>
-          <div class="offer-vista">OU R$ 297,00 À VISTA</div>
-
-          <div class="offer-bonus">
-            <div class="offer-bonus-title">BÔNUS EXCLUSIVOS</div>
-            <ul>
-              <li>Templates prontos</li>
-              <li>Scripts que vendem</li>
-              <li>IA Autônoma integrada</li>
-              <li>Comunidade fechada</li>
-            </ul>
-          </div>
-
-          <a href="/login?signup=1&oferta=launch" class="btn-cta">QUERO ACESSO AGORA</a>
-          <div class="btn-cta-small">ACESSO IMEDIATO</div>
-        </div>
+      <div class="hero-stat">
+        <div class="num">180</div>
+        <div class="label">Sites/mes</div>
+      </div>
+      <div class="hero-stat">
+        <div class="num">97%</div>
+        <div class="label">Abertura WhatsApp</div>
+      </div>
+      <div class="hero-stat">
+        <div class="num">R$0</div>
+        <div class="label">Gasto com devs</div>
       </div>
     </div>
   </div>
 </section>
 
 <!-- PROBLEMAS -->
-<section class="problemas" id="problema">
+<section class="problema" id="problema">
   <div class="container">
-    <h2 class="problemas-title">VOCÊ SE IDENTIFICA COM ALGUMA DESSAS?</h2>
+    <div class="section-label">As situacoes que voce reconhece</div>
+    <h2 class="section-title">Voce se identifica com alguma dessas?</h2>
 
-    <div class="problemas-grid">
+    <div class="problema-grid">
       <div class="problema-card">
-        <div class="problema-num">01</div>
+        <div class="num">01</div>
         <h3>Prospecta todo dia. Nunca fecha.</h3>
-        <div class="problema-situacao">"Voce passou a manha inteira no LinkedIn. Mensagem pra ca, mensagem pra la. Resultado do mes: ZERO fechou."</div>
+        <div class="situacao">"Voce passou a manha inteira no LinkedIn. Mensagem pra ca, mensagem pra la. Resultado do mes: ZERO fechou."</div>
         <p>Seu concorrente usa a mesma ferramenta e fecha 3 por semana. A diferenca? Ele nao prospecta no braco. Ele tem um SDR que trabalha 24h.</p>
       </div>
 
       <div class="problema-card">
-        <div class="problema-num">02</div>
+        <div class="num">02</div>
         <h3>Voce tenta fazer o trabalho de 4 pessoas.</h3>
-        <div class="problema-situacao">"Voce abriu 47 abas no Chrome. Figma, Canva, VS Code... Sao 11 da noite. Voce ainda nao comecou o codigo."</div>
+        <div class="situacao">"Voce abriu 47 abas no Chrome. Figma, Canva, VS Code, Behance... Sao 11 da noite. Voce ainda nao comecou o codigo."</div>
         <p>Copywriter, designer, programador, gerente de projeto. Sao 4 funcoes. Voce e 1 pessoa. A FraLib faz 3 dessas. Voce foca em fechar.</p>
       </div>
 
       <div class="problema-card">
-        <div class="problema-num">03</div>
+        <div class="num">03</div>
         <h3>Cliente some no meio do projeto.</h3>
-        <div class="problema-situacao">"Voce: 'Viu o site que mandei?' Cliente: 'Ah sim! Preciso ver com minha esposa.' Voce sabe como essa historia termina."</div>
+        <div class="situacao">"Voce: 'Oi, viu o site que mandei?' Cliente: 'Ah sim! Preciso ver com minha esposa.' Cliente: 'Minha esposa achou meio diferente...' Voce sabe como essa historia termina."</div>
         <p>Voce gastou 40 horas. Ele nao pagou. Na FraLib, o cliente APROVA primeiro. Voce SO entrega depois que ele diz "sim".</p>
       </div>
 
       <div class="problema-card">
-        <div class="problema-num">04</div>
+        <div class="num">04</div>
         <h3>O developer cobra R$12.000. Voce nao tem.</h3>
-        <div class="problema-situacao">"O 'freelancer full-stack' te mandou o orcamento: R$12.000. Pra um site de clinica odontologica."</div>
+        <div class="situacao">"O 'freelancer full-stack' te mandou o orcamento: R$12.000. Pra um site de clinica odontologica."</div>
         <p>A FraLib cria sites por R$197/mes. Ilimitados. Sem developer. O que sobra no seu bolso? A diferenca entre R$12.000 e R$197.</p>
       </div>
     </div>
@@ -504,9 +339,10 @@ footer p{font-size:12px;color:var(--text-dim)}
 </section>
 
 <!-- COMPARATIVO -->
-<section class="comparativo">
+<section>
   <div class="container">
-    <h2 class="comparativo-title">VOCÊ SOZINHO vs. FRALIB</h2>
+    <div class="section-label">Quanto vale seu tempo?</div>
+    <h2 class="section-title">Voce fazendo tudo sozinho vs. FraLib fazendo por voce</h2>
 
     <div class="table-wrapper">
       <table class="comparativo-table">
@@ -518,31 +354,12 @@ footer p{font-size:12px;color:var(--text-dim)}
           </tr>
         </thead>
         <tbody>
-          <tr>
-            <td>Tempo pra fazer 1 site</td>
-            <td class="col-vc">40-80 horas</td>
-            <td class="col-fralib">24 horas</td>
-          </tr>
-          <tr>
-            <td>Clientes prospects/dia</td>
-            <td class="col-vc">5-10 manual</td>
-            <td class="col-fralib">100+ automatizado</td>
-          </tr>
-          <tr>
-            <td>Mensagens de follow-up</td>
-            <td class="col-vc">Voce lembra (ou esquece)</td>
-            <td class="col-fralib">Franz manda automatico</td>
-          </tr>
-          <tr>
-            <td>Custo por site</td>
-            <td class="col-vc">R$2.000-12.000</td>
-            <td class="col-fralib">R$65</td>
-          </tr>
-          <tr>
-            <td>Precisa de developer?</td>
-            <td class="col-vc">Sim (R$8k+)</td>
-            <td class="col-fralib">Nao</td>
-          </tr>
+          <tr><td>Tempo pra fazer 1 site</td><td class="col-vc">40-80 horas</td><td class="col-fralib">24 horas</td></tr>
+          <tr><td>Clientes prospects/dia</td><td class="col-vc">5-10 manual</td><td class="col-fralib">100+ automatizado</td></tr>
+          <tr><td>Mensagens de follow-up</td><td class="col-vc">Voce lembra (ou esquece)</td><td class="col-fralib">Franz manda automatico</td></tr>
+          <tr><td>Custo por site</td><td class="col-vc">R$2.000-12.000</td><td class="col-fralib">R$65 (R$197/3 sites)</td></tr>
+          <tr><td>Precisa de developer?</td><td class="col-vc">Sim (R$8k+)</td><td class="col-fralib">Nao</td></tr>
+          <tr><td>Cliente some no meio?</td><td class="col-vc">Perdeu as horas</td><td class="col-fralib">Nao gastou nada</td></tr>
         </tbody>
       </table>
     </div>
@@ -550,12 +367,13 @@ footer p{font-size:12px;color:var(--text-dim)}
 </section>
 
 <!-- COMO FUNCIONA -->
-<section class="como" id="como-funciona">
+<section id="como-funciona" style="background:var(--fl-bg-surface);border-top:1px solid var(--fl-border);border-bottom:1px solid var(--fl-border)">
   <div class="container">
-    <h2 class="como-title">COMO FUNCIONA NA PRÁTICA</h2>
-    <p class="planos-sub" style="margin-bottom:0">Eu uso todo dia. Leva 5 minutos pra comecar.</p>
+    <div class="section-label">Simples assim</div>
+    <h2 class="section-title">Como funciona na pratica</h2>
+    <p class="section-sub">Eu uso todo dia. Leva 5 minutos pra comecar.</p>
 
-    <div class="passo-track">
+    <div class="passo-grid">
       <div class="passo-card">
         <div class="passo-num">1</div>
         <h3>Voce abre a FraLib</h3>
@@ -583,65 +401,55 @@ footer p{font-size:12px;color:var(--text-dim)}
 <!-- DEPOIMENTOS -->
 <section class="depoimentos">
   <div class="container">
-    <h2 class="depoimentos-title">EU NÃO ACREDITAVA. ATÉ EXPERIMENTAR.</h2>
+    <div class="section-label">Funciona de verdade</div>
+    <h2 class="section-title">Eu nao acreditava. Ate experimentar.</h2>
 
     <div class="depoimento-grid">
       <div class="depoimento-card">
-        <blockquote>
-          "Eu era programador. Sim, eu SABIA fazer sites. Mas perdia finais de semana debugando CSS. Agora? Abro a FraLib, respondo as perguntas, e o site ta pronto. Fechava 2 por mes. Agora fecho 6."
-        </blockquote>
+        <blockquote>"Eu era programador. Sim, eu SABIA fazer sites. Mas perdia finais de semana inteiros debugando CSS. Agora? Abro a FraLib, respondo as perguntas, e o site ta pronto. Fechava 2 por mes. Agora fecho 6. A diferenca ta no meu bolso."</blockquote>
         <div class="depoimento-author">
-          <div class="depoimento-avatar" style="background-image:url('https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&q=80')"></div>
+          <div class="depoimento-avatar">RF</div>
           <div class="depoimento-info">
             <h4>Rafael Ferreira</h4>
-            <p>Desenvolvedor, Sao Paulo</p>
+            <p>Desenvolvedor full-stack, Sao Paulo</p>
           </div>
         </div>
-        <div class="depoimento-metric">
-          Antes: 2 clientes/mes - Depois: <span>6 clientes/mes</span>
-        </div>
+        <div class="depoimento-metric">Antes: 2 clientes/mes - Depois: <span>6 clientes/mes</span></div>
       </div>
 
       <div class="depoimento-card">
-        <blockquote>
-          "Sou designer. NUNCA consegui aprender codigo. Perdia dinheiro contratando devs. Agora faco sites pra clientes que antes eu recusaria. Cada site: 3 horas, R$2.500 de receita."
-        </blockquote>
+        <blockquote>"Sou designer. NUNCA consegui aprender codigo. Perdia dinheiro contratando devs ou ficava sem fazer site nenhum. Agora faco sites pra clientes que antes eu recusaria. Cada site: 3 horas de trabalho, R$2.500 de receita. Lucro absurdo."</blockquote>
         <div class="depoimento-author">
-          <div class="depoimento-avatar" style="background-image:url('https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&q=80')"></div>
+          <div class="depoimento-avatar">AM</div>
           <div class="depoimento-info">
             <h4>Amanda Martins</h4>
-            <p>Designer, Belo Horizonte</p>
+            <p>Designer grafico, Belo Horizonte</p>
           </div>
         </div>
-        <div class="depoimento-metric">
-          Antes: R$0 com sites - Depois: <span>R$10.000/mes</span>
-        </div>
+        <div class="depoimento-metric">Antes: R$0 com sites - Depois: <span>R$10.000/mes</span></div>
       </div>
 
       <div class="depoimento-card">
-        <blockquote>
-          "O que mais me frustrava? Cliente que some. Eu fazia o site inteiro, mandava, silencio. Agora o cliente APROVA antes. Se ele some, nao perco nada. Fechei R$18.000 este mes."
-        </blockquote>
+        <blockquote>"O que mais me frustrava? Cliente que some. Eu fazia o site inteiro, mandava, silencio. Agora o cliente APROVA antes de eu gastar tempo. Se ele some, nao perco nada. Se aprova, sei que vou receber. Fechei R$18.000 este mes. Nunca tinha batido isso."</blockquote>
         <div class="depoimento-author">
-          <div class="depoimento-avatar" style="background-image:url('https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&q=80')"></div>
+          <div class="depoimento-avatar">MC</div>
           <div class="depoimento-info">
             <h4>Marcos Costa</h4>
-            <p>Freelancer, Porto Alegre</p>
+            <p>Freelancer digital, Porto Alegre</p>
           </div>
         </div>
-        <div class="depoimento-metric">
-          Antes: R$5.000/mes - Depois: <span>R$18.000/mes</span>
-        </div>
+        <div class="depoimento-metric">Antes: R$5.000/mes - Depois: <span>R$18.000/mes</span></div>
       </div>
     </div>
   </div>
 </section>
 
 <!-- PLANOS -->
-<section class="planos" id="planos">
+<section id="planos" style="background:var(--fl-bg-surface);border-top:1px solid var(--fl-border);border-bottom:1px solid var(--fl-border)">
   <div class="container">
-    <h2 class="planos-title">ESCOLHA SEU PLANO</h2>
-    <p class="planos-sub">Comece com 1 pipeline gratis. Escale quando quiser. Cancele quando quiser.</p>
+    <div class="section-label">ESCOLHA SEU PLANO</div>
+    <h2 class="section-title">ESCOLHA SEU PLANO</h2>
+    <p class="section-sub">Comece com 1 pipeline gratis. Escale quando quiser. Cancele quando quiser.</p>
 
     <div class="planos-grid">
       <div class="plano-card">
@@ -652,6 +460,7 @@ footer p{font-size:12px;color:var(--text-dim)}
           <li>1 site gerado</li>
           <li>Prospeccao basica</li>
           <li>SDR Franz (1 abordagem)</li>
+          <li>Fila com menor prioridade</li>
           <li>Suporte comunidade</li>
         </ul>
         <a href="/login?signup=1&plano=trial" class="btn btn-outline">TESTAR GRATIS</a>
@@ -660,15 +469,16 @@ footer p{font-size:12px;color:var(--text-dim)}
       <div class="plano-card">
         <div class="plano-name">STARTER</div>
         <div class="plano-price">R$97<span>/mes</span></div>
-        <div class="plano-tag">7 DIAS GARANTIA</div>
+        <div class="plano-tag">7 DIAS DE GARANTIA</div>
         <ul class="plano-features">
-          <li>Sites ilimitados</li>
-          <li>Prospeccao automatica</li>
+          <li>Sites ilimitados (cooldown 60min)</li>
+          <li>Prospeccao automatica completa</li>
+          <li>Sem disparo SDR automatico</li>
           <li>Dashboard basico</li>
           <li>Hospedagem inclusa</li>
           <li>Suporte WhatsApp</li>
         </ul>
-        <a href="/login?signup=1&plano=starter" class="btn btn-outline">ASSINAR</a>
+        <a href="/login?signup=1&plano=starter" class="btn btn-outline">ASSINAR STARTER</a>
       </div>
 
       <div class="plano-card destaque">
@@ -676,11 +486,11 @@ footer p{font-size:12px;color:var(--text-dim)}
         <div class="plano-price">R$197<span>/mes</span></div>
         <div class="plano-tag">MAIS POPULAR</div>
         <ul class="plano-features">
-          <li>Sites ilimitados</li>
+          <li>Sites ilimitados (cooldown 30min)</li>
           <li>Prospeccao avancada</li>
-          <li>SDR Franz ilimitado</li>
-          <li>Dashboard completo</li>
-          <li>Dominios proprios</li>
+          <li>SDR Franz com retries automaticos</li>
+          <li>Dashboard completo + analytics</li>
+          <li>Dominios proprios ilimitados</li>
           <li>Suporte prioritario</li>
         </ul>
         <a href="/login?signup=1&plano=pro" class="btn btn-primary">ASSINAR PRO</a>
@@ -691,65 +501,54 @@ footer p{font-size:12px;color:var(--text-dim)}
         <div class="plano-price">R$497<span>/mes</span></div>
         <div class="plano-tag">SEM COOLDOWN</div>
         <ul class="plano-features">
-          <li>Tudo do PRO</li>
-          <li>Sem cooldown</li>
-          <li>Subcontas revenda</li>
+          <li>Sites ilimitados (sem cooldown)</li>
+          <li>Infraestrutura ampliada</li>
+          <li>Painel administrativo master</li>
+          <li>Subcontas para revenda</li>
           <li>Franz white-label</li>
           <li>Suporte VIP</li>
         </ul>
-        <a href="/login?signup=1&plano=agency" class="btn btn-outline">ASSINAR</a>
+        <a href="/login?signup=1&plano=agency" class="btn btn-outline">ASSINAR AGENCY</a>
       </div>
     </div>
 
     <div class="garantia">
-      <div class="garantia-icon">🛡️</div>
-      <div>
-        <h4>GARANTIA INCONDICIONAL 7 DIAS</h4>
-        <p>Assine normalmente. Se voce se arrepender em ate 7 dias, devolvemos 100% do valor.</p>
-      </div>
+      <h4>Garantia Incondicional de 7 Dias</h4>
+      <p>Assine normalmente. Se voce se arrepender em ate 7 dias, devolvemos 100% do valor. Sem perguntas, sem burocracia.</p>
     </div>
   </div>
 </section>
 
 <!-- FAQ -->
-<section class="faq" id="faq">
+<section>
   <div class="container">
-    <h2 class="faq-title">PERGUNTAS FREQUENTES</h2>
+    <div class="section-label">Duvidas</div>
+    <h2 class="section-title">Perguntas que voce pode ter</h2>
 
     <div class="faq-list">
       <details class="faq-item">
         <summary>Mas eu prefiro fazer na mao...</summary>
-        <div class="resposta">
-          Tudo bem. Eu tambem preferia. Ate perder meu terceiro projeto porque o dev sumiu. Fazer na mao = mais controle. Usar a FraLib = mais clientes. Voce quer controle ou voce quer dinheiro?
-        </div>
+        <div class="resposta">Tudo bem. Eu tambem preferia. Ate perder meu terceiro projeto porque o dev sumiu. Fazer na mao = mais controle. Usar a FraLib = mais clientes. Voce quer controle ou voce quer dinheiro?</div>
       </details>
 
       <details class="faq-item">
-        <summary>Parece bom demais</summary>
-        <div class="resposta">
-          E. Eu tambem achei. Mas funciona. Nao e magica. E o trabalho que a gente fazia no braco, agora feito por IA. Testa 14 dias. Se nao gostar, cancela.
-        </div>
+        <summary>Parece bom demais pra ser verdade</summary>
+        <div class="resposta">E. Eu tambem achei. Mas funciona. Nao e magica. E o trabalho que a gente fazia no braco, agora feito por IA. Testa 14 dias. Se nao gostar, cancela.</div>
       </details>
 
       <details class="faq-item">
-        <summary>E se o cliente nao gostar?</summary>
-        <div class="resposta">
-          A IA gera 3 opcoes. Se o cliente quer ajustar, a IA ajusta. ZERO retrabalho seu. Antes: voce refazia 4 vezes e ainda assim o cliente nao gostava.
-        </div>
+        <summary>E se o cliente nao gostar do site?</summary>
+        <div class="resposta">A IA gera 3 opcoes. Se o cliente quer ajustar, a IA ajusta. ZERO retrabalho seu. Antes: voce refazia 4 vezes e ainda assim o cliente nao gostava.</div>
       </details>
 
       <details class="faq-item">
         <summary>Preciso saber programar?</summary>
-        <div class="resposta">
-          Nao. A IA faz o codigo. Voce só precisa saber o que o cliente quer. Se souber se explicar, a FraLib faz o resto.
-        </div>
+        <div class="resposta">Nao. A IA faz o codigo. Voce só precisa saber o que o cliente quer. Se souber se explicar, a FraLib faz o resto.</div>
       </details>
 
       <details class="faq-item">
-        <summary>Quanto tempo pra comecar?</summary>
-        <div class="resposta">
-          5 minutos pra criar conta. 5 minutos pra gerar seu primeiro site. 7 dias pra fechar seu primeiro cliente. Se nao fechar em 60 dias, devolvemos seu dinheiro.
-        </div>
+        <summary>Quanto tempo leva pra comecar?</summary>
+        <div class="resposta">5 minutos pra criar a conta. 5 minutos pra gerar seu primeiro site. 7 dias pra fechar seu primeiro cliente (eu fiz em 3). Se nao fechar em 60 dias, devolvemos seu dinheiro.</div>
       </details>
     </div>
   </div>
@@ -758,39 +557,21 @@ footer p{font-size:12px;color:var(--text-dim)}
 <!-- CTA FINAL -->
 <section class="cta-final">
   <div class="container">
-    <h2>
-      CHEGA DE DEPENDER DA SORTE.<br>
-      <span class="grad">USE O MÉTODO. FAÇA ACONTECER.</span>
-    </h2>
-    <a href="/login?signup=1&oferta=launch" class="btn-cta">QUERO ACESSO AGORA</a>
-    <p style="margin-top:12px">ACESSO IMEDIATO</p>
-
-    <div class="trust-badges">
-      <div class="trust-badge">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
-        Compra 100% Segura
-      </div>
-      <div class="trust-badge">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-        Acesso Imediato
-      </div>
-      <div class="trust-badge">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-        Satisfação Garantida
-      </div>
-    </div>
+    <h2>Pronto pra parar de fazer o trabalho de 4 pessoas sozinho?</h2>
+    <p>Enquanto voce le isso, 3 freelancers ja criaram sites com FraLib.</p>
+    <a href="/login?signup=1" class="btn btn-primary">EU QUERO FECHAR 3 CLIENTES ESTE MES</a>
   </div>
 </section>
 
 <!-- FOOTER -->
 <footer>
+  <span class="logo">FRALIB</span>
   <div class="links">
     <a href="/docs">Docs</a>
     <a href="/blog">Blog</a>
     <a href="/login">Login</a>
-    <a href="/suporte">Suporte</a>
   </div>
-  <p>© 2025 FraLib OS - Você Fecha. A FraLib Faz o Resto.</p>
+  <p>© 2025 FraLib OS - Voce Fecha. A FraLib Faz o Resto.</p>
 </footer>
 
 <!-- Tracking -->
@@ -801,7 +582,7 @@ footer p{font-size:12px;color:var(--text-dim)}
     if (pct >= 50 && !window.s50) { clarity('event', 'scroll_50'); window.s50 = true; }
     if (pct >= 75 && !window.s75) { clarity('event', 'scroll_75'); window.s75 = true; }
   });
-  document.querySelectorAll('a, .btn, .btn-cta').forEach(el => {
+  document.querySelectorAll('a, .btn').forEach(el => {
     el.addEventListener('click', () => clarity('event', 'cta_click'));
   });
 </script>
