@@ -1,0 +1,47 @@
+{
+  "sprint": "12.3",
+  "version": "v1.13.10",
+  "tag_baseline": "v1.13.10-baseline-2026-06-25",
+  "tag_lockpoint": "v1.13.10-lockpoint-2026-06-25",
+  "objetivo": "Validar nomes REAIS dos modelos via API direta + deploy com link publico real",
+  "modelos_validados_via_api_direta": {
+    "base_url_real": "https://api.kpalabz.com/v1",
+    "headers": "x-api-key + anthropic-version 2023-06-01",
+    "modelos_200_OK": ["claude-opus-4-8", "claude-opus-4-7", "claude-opus-4-6", "claude-sonnet-4-6", "claude-sonnet-4-20250514", "claude-3-5-sonnet", "claude-haiku-4-5"],
+    "modelos_400_fail": ["claude-opus-4-20250514", "claude-haiku-4-20250514", "gemini-2.5-flash", "gpt-5.4-mini", "fast"],
+    "bug_corrigido": "PROXY_BASE_URL default era llm.seunegociofralib.site (legacy proxy) mas VPS .env usa https://api.kpalabz.com/v1 - precisa ANTHROPIC_BASE_URL explicito"
+  },
+  "deploy_real_executado": {
+    "site": "Academia Pump Iron SP",
+    "tenant_id": 2,
+    "build": "Vite/React + Tailwind + shadcn (4 components)",
+    "cascata_executada": [
+      { "model": "claude-sonnet-4-6", "status": "llm_failed", "elapsed_ms": 143417, "error": "projeto Vite sem estrutura studio: minimo 8 componentes" },
+      { "model": "claude-haiku-4-5", "status": "llm_failed", "elapsed_ms": 109289, "error": "mesmo erro" },
+      { "model": "studio-fallback", "status": "success", "elapsed_ms": 26042, "source_files": 20, "html_chars": 1880 }
+    ],
+    "deploy_nginx": {
+      "config": "/etc/nginx/sites-enabled/academia.conf",
+      "server_name": "academia.seunegociofralib.site",
+      "root": "/var/www/academia-pump-iron/",
+      "ssl": "letsencrypt wildcard seunegociofralib.site",
+      "spa_fallback": "try_files $uri $uri/ /index.html",
+      "cache": "1y imutavel para /assets/, no-cache para HTML"
+    },
+    "tunnel_publico": {
+      "provider": "cloudflared quick tunnel",
+      "url": "https://registrar-machines-burner-aus.trycloudflare.com",
+      "backend": "http://localhost:8080",
+      "status": "HTTP 200 OK confirmado",
+      "html_validado": "Academia Pump Iron SP + meta tags SEO"
+    },
+    "acesso_local": "C:/fralib/.tmp/site-cascata-3m/ (servido em http://localhost:9091)"
+  },
+  "instrucoes_para_usuario": {
+    "link_publico_clicavel": "https://registrar-machines-burner-aus.trycloudflare.com/",
+    "site_completo_tunado_para_academia_pump_iron_SP_com_shadcn",
+    "alternativa_local": "http://localhost:9091",
+    "arquivos_Windows": "C:\\fralib\\.tmp\\site-cascata-3m\\index.html (abrir no navegador)",
+    "html_estruturado": ["Hero", "About", "Services", "Contact", "Footer"]
+  }
+}
