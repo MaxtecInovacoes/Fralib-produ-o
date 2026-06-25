@@ -29,9 +29,13 @@ _VALID_TARGETS = {"landing-page", "institutional-site", "app", "crm"}
 
 def _business_context(lead: dict[str, Any], facts: dict[str, Any]) -> dict[str, Any]:
     segment = _first(lead, facts, "segmento", "segment", "nicho", default="negócio local")
+    # Sprint 12.16: also try nested business.name (when PRD has business={name:...})
+    _biz = (lead.get("business") if isinstance(lead.get("business"), dict) else
+            facts.get("business") if isinstance(facts.get("business"), dict) else {})
+    _biz_name = (_biz.get("name") or _biz.get("business_name") or _biz.get("nome")) if _biz else ""
     return _clean_dict(
         {
-            "name": _first(lead, facts, "nome", "business_name", "name", default="Negócio local"),
+            "name": _first(lead, facts, "nome", "business_name", "name", default="Negócio local") or _biz_name,
             "segment": segment,
             "subniche": _first(lead, facts, "subnicho", "subniche", default=_infer_subniche(segment)),
             "city": _first(lead, facts, "cidade", "city", default=""),
