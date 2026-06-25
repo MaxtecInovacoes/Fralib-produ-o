@@ -1116,6 +1116,15 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
       position: fixed; width: 100%; height: 100%; top: 0; left: 0;
       z-index: 0; pointer-events: none;
     }
+
+    /* === Override: desativar borda rainbow girando + badge MAIS POPULAR do card destaque na nova seção PLANOS (#3) === */
+    #planos .plano-card.destaque::after{
+      display:none !important;
+      animation:none !important;
+    }
+    #planos .plano-card.destaque::before{
+      display:none !important;
+    }
   </style>
 
 </head>
@@ -1844,8 +1853,9 @@ const revealObserver = new IntersectionObserver((entries) => {
 }, { threshold: 0.08, rootMargin: '0px 0px -30px 0px' });
 document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
 
-// === SCROLL-TELLER (dots laterais de navegação) ===
+// === SCROLL-TELLER (dots laterais de navegação) — DESATIVADO ===
 (function(){
+  return; // scroll-teller removido (causava efeito de vidro travado com bolinhas verticais)
   // Criar container de dots
   const teller = document.createElement('nav');
   teller.className = 'scroll-teller';
