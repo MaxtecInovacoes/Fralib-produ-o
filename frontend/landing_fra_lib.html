@@ -604,14 +604,18 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
 }
 .step-card .snake-card-inner{text-align:center;padding:36px 20px}
 .step-number{
-  width:52px;height:52px;margin:0 auto 16px;border-radius:50%;
+  width:64px;height:64px;margin:0 auto 16px;border-radius:50%;
   display:flex;align-items:center;justify-content:center;
-  font-family:var(--fl-font-brand);font-size:16px;
+  font-family:var(--fl-font-brand);font-size:13px;
+  line-height:1.2;text-align:center;
   position:relative;
+  word-break:break-word;
+  padding:4px;
 }
 .step-card:nth-child(1) .step-number{background:linear-gradient(135deg,var(--fl-purple),var(--fl-purple-700));color:#fff;box-shadow:0 0 30px rgba(147,51,234,0.4)}
 .step-card:nth-child(2) .step-number{background:linear-gradient(135deg,var(--cyan),#00CC8E);color:#000;box-shadow:0 0 30px var(--cyan-glow)}
 .step-card:nth-child(3) .step-number{background:linear-gradient(135deg,var(--gold),#FF9500);color:#000;box-shadow:0 0 30px var(--gold-glow)}
+.step-card:nth-child(4) .step-number{background:linear-gradient(135deg,var(--fl-success),#16803C);color:#fff;box-shadow:0 0 30px rgba(34,197,94,0.4)}
 .step-label{
   font-family:var(--fl-font-brand);font-size:9px;
   letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;
@@ -619,8 +623,48 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
 .step-card:nth-child(1) .step-label{color:var(--fl-purple-300)}
 .step-card:nth-child(2) .step-label{color:var(--cyan)}
 .step-card:nth-child(3) .step-label{color:var(--gold)}
+.step-card:nth-child(4) .step-label{color:var(--fl-success)}
 .step-title{font-size:17px;font-weight:700;margin-bottom:10px}
 .step-desc{font-size:13px;color:var(--fl-text-muted);line-height:1.7}
+
+/* Timeline 4-col grid (para secao timeline) */
+.timeline-grid{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:20px;position:relative;
+}
+@media(max-width:1024px){.timeline-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:640px){.timeline-grid{grid-template-columns:1fr}}
+.timeline-step{
+  background:var(--fl-bg-card);
+  border:1px solid var(--fl-border);
+  padding:32px 24px;
+  text-align:center;
+  position:relative;
+}
+.timeline-step::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:3px;
+  background:linear-gradient(90deg,var(--fl-purple),var(--cyan),var(--gold),var(--fl-success));
+}
+.timeline-step .day{
+  display:inline-block;padding:8px 12px;
+  border-radius:50%;width:56px;height:56px;
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--fl-font-brand);font-size:11px;
+  margin:0 auto 16px;line-height:1.1;text-align:center;
+}
+.timeline-step:nth-child(1) .day{background:linear-gradient(135deg,var(--fl-purple),var(--fl-purple-700));color:#fff;box-shadow:0 0 30px rgba(147,51,234,0.4)}
+.timeline-step:nth-child(2) .day{background:linear-gradient(135deg,var(--cyan),#00CC8E);color:#000;box-shadow:0 0 30px var(--cyan-glow)}
+.timeline-step:nth-child(3) .day{background:linear-gradient(135deg,var(--gold),#FF9500);color:#000;box-shadow:0 0 30px var(--gold-glow)}
+.timeline-step:nth-child(4) .day{background:linear-gradient(135deg,var(--fl-success),#16803C);color:#fff;box-shadow:0 0 30px rgba(34,197,94,0.4)}
+.timeline-step .label{
+  font-family:var(--fl-font-brand);font-size:9px;
+  letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;
+}
+.timeline-step:nth-child(1) .label{color:var(--fl-purple-300)}
+.timeline-step:nth-child(2) .label{color:var(--cyan)}
+.timeline-step:nth-child(3) .label{color:var(--gold)}
+.timeline-step:nth-child(4) .label{color:var(--fl-success)}
+.timeline-step h4{font-size:17px;font-weight:700;margin-bottom:10px}
+.timeline-step p{font-size:13px;color:var(--fl-text-muted);line-height:1.7}
 
 /* Mascot in steps section */
 .steps-mascot{
@@ -1520,42 +1564,30 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
   <div class="container">
     <h2 class="section-title reveal">DO "CRIEI A CONTA" AO "FECHEI MEU PRIMEIRO CLIENTE" — EM 7 DIAS</h2>
     <p class="section-sub reveal" style="text-align:center;margin:0 auto 48px;max-width:720px;color:var(--fl-text-muted);">O que acontece na prática, do minuto zero até o primeiro fechamento:</p>
-    <div class="steps-grid">
-      <div class="steps-line"></div>
-      <div class="step-card snake-card reveal">
-        <div class="snake-top"></div><div class="snake-bottom"></div>
-        <div class="snake-card-inner">
-          <div class="step-number" style="background:linear-gradient(135deg,var(--fl-purple),var(--fl-purple-700));color:#fff;">D1</div>
-          <div class="step-label" style="color:var(--fl-purple-300);">CRIAÇÃO DA CONTA</div>
-          <div class="step-title">15 minutos</div>
-          <div class="step-desc">Você escolhe nicho + cidade (ex: "pizzaria" + "São Paulo - Zona Sul"). A FraLib já mapeia: "187 pizzarias sem site na sua região." Conecta WhatsApp.</div>
-        </div>
+    <div class="timeline-grid">
+      <div class="timeline-step reveal">
+        <div class="day">D1</div>
+        <div class="label">CRIAÇÃO DA CONTA</div>
+        <h4>15 minutos</h4>
+        <p>Você escolhe nicho + cidade (ex: "pizzaria" + "São Paulo - Zona Sul"). A FraLib já mapeia: "187 pizzarias sem site na sua região." Conecta WhatsApp.</p>
       </div>
-      <div class="step-card snake-card reveal">
-        <div class="snake-top"></div><div class="snake-bottom"></div>
-        <div class="snake-card-inner">
-          <div class="step-number" style="background:linear-gradient(135deg,var(--cyan),#00CC8E);color:#000;">D2-3</div>
-          <div class="step-label" style="color:var(--cyan);">ESTEIRA AUTOMÁTICA</div>
-          <div class="step-title">Você dorme, a FraLib trabalha</div>
-          <div class="step-desc">Lista os 187 leads. Gera site modelo pra cada um. Envia a 1ª mensagem no WhatsApp de cada lead automaticamente.</div>
-        </div>
+      <div class="timeline-step reveal">
+        <div class="day">D2-3</div>
+        <div class="label">ESTEIRA AUTOMÁTICA</div>
+        <h4>Você dorme, a FraLib trabalha</h4>
+        <p>Lista os 187 leads. Gera site modelo pra cada um. Envia a 1ª mensagem no WhatsApp de cada lead automaticamente.</p>
       </div>
-      <div class="step-card snake-card reveal">
-        <div class="snake-top"></div><div class="snake-bottom"></div>
-        <div class="snake-card-inner">
-          <div class="step-number" style="background:linear-gradient(135deg,var(--gold),#FF9500);color:#000;">D4-5</div>
-          <div class="step-label" style="color:var(--gold);">PRIMEIRAS RESPOSTAS</div>
-          <div class="step-title">~3-5% responde positivo</div>
-          <div class="step-desc">"Quero ver", "Quanto custa?", "Pode mandar". Esses leads vão pra sua fila. Você só abre o painel e atende.</div>
-        </div>
+      <div class="timeline-step reveal">
+        <div class="day">D4-5</div>
+        <div class="label">PRIMEIRAS RESPOSTAS</div>
+        <h4>~3-5% responde positivo</h4>
+        <p>"Quero ver", "Quanto custa?", "Pode mandar". Esses leads vão pra sua fila. Você só abre o painel e atende.</p>
       </div>
-      <div class="step-card snake-card reveal" style="grid-column:span 1;background:linear-gradient(135deg,rgba(0,255,179,0.08),rgba(147,51,234,0.08));border-color:var(--fl-border-hi);"><div class="snake-top"></div><div class="snake-bottom"></div>
-        <div class="snake-card-inner">
-          <div class="step-number" style="background:linear-gradient(135deg,var(--fl-success),#16803C);color:#fff;box-shadow:0 0 30px rgba(34,197,94,0.4);">D5-7</div>
-          <div class="step-label" style="color:var(--fl-success);">PRIMEIRO FECHAMENTO</div>
-          <div class="step-title">Você fecha, embola</div>
-          <div class="step-desc">Abre a fila, ajusta o site no editor visual, manda a proposta. Cliente paga via Pix. <strong style="color:var(--cyan);">100% do lucro é seu.</strong></div>
-        </div>
+      <div class="timeline-step reveal" style="background:linear-gradient(135deg,rgba(0,255,179,0.08),rgba(147,51,234,0.08));border-color:var(--fl-border-hi);">
+        <div class="day">D5-7</div>
+        <div class="label">PRIMEIRO FECHAMENTO</div>
+        <h4>Você fecha, embola</h4>
+        <p>Abre a fila, ajusta o site no editor visual, manda a proposta. Cliente paga via Pix. <strong style="color:var(--cyan);">100% do lucro é seu.</strong></p>
       </div>
     </div>
     <p class="section-sub reveal" style="text-align:center;margin:32px auto 0;max-width:720px;font-size:13px;color:var(--fl-text-muted);">A primeira venda pode acontecer na semana 1. Mas é mais comum entre semana 2 e 4 — porque o ciclo do WhatsApp tem retorno gradual. <strong style="color:var(--fl-text);">Não é mágica. É processo.</strong></p>
