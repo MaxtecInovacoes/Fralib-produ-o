@@ -1615,6 +1615,11 @@ def _normalize_page_export_contract(files: dict[str, str]) -> None:
 
 
 def _normalize_generated_imports_and_hooks(files: dict[str, str]) -> None:
+    # Sprint 12.14: fix LLM generating literal backslash-n instead of real newlines
+    for path in list(files.keys()):
+        if path.endswith((".tsx", ".ts")):
+            files[path] = files[path].replace("\\n", "\n")
+
     card_stub_needed = False
     for path, content in list(files.items()):
         if not path.endswith((".tsx", ".ts")):
@@ -1908,6 +1913,62 @@ def _generate_studio_fallback_files(facts: dict[str, Any] | None = None) -> dict
     hero_img = "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?auto=format&fit=crop&w=1600&q=82"
     gallery_img = "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?auto=format&fit=crop&w=1400&q=82"
 
+    # Sprint 12.14: segment-aware content (fixes hardcoded academia contamination)
+    if "barbearia" in segment or "barbeiro" in segment:
+        svc_labels = ["Corte", "Barba", "Sobrancelha", "Pigmentacao", "Hidratacao"]
+        hero_desc = "Barbearia premium com barbeiros experientes, produtos importados e ambiente climatizado."
+        cta_primary = "Agendar horario"
+        cta_secondary = "Ver servicos"
+        alt_img = "Barbeiro em barbearia"
+        lifestyle_title = "Tradicao em cada corte"
+        lifestyle_desc = "Um espaco dedicado ao cuidado masculino, com atendimento personalizado e toalhas quentes."
+        nav_items = [("Servicos", "#servicos"), ("Galeria", "#galeria"), ("Contato", "#contato")]
+    elif "academia" in segment or "fitness" in segment or "crossfit" in segment or "musculacao" in segment:
+        svc_labels = ["Musculacao", "Treino funcional", "Spinning", "Crossfit", "Avaliacao"]
+        hero_desc = "Academia completa com treino funcional, alunos acompanhados e ambiente moderno."
+        cta_primary = "Comecar treino"
+        cta_secondary = "Ver estrutura"
+        alt_img = "Alunos em treino fitness"
+        lifestyle_title = "Energia e constancia"
+        lifestyle_desc = "Um espaco para criar rotina, encontrar orientacao e manter frequencia sem complicar."
+        nav_items = [("Treinos", "#servicos"), ("Galeria", "#galeria"), ("Contato", "#contato")]
+    elif "restaurante" in segment or "bar" in segment or "caf" in segment:
+        svc_labels = ["Pratos", "Menu", "Reservas", "Eventos", "Delivery"]
+        hero_desc = "Restaurante com pratos feitos com ingredientes selecionados e ambiente acolhedor."
+        cta_primary = "Fazer reserva"
+        cta_secondary = "Ver menu"
+        alt_img = "Restaurante"
+        lifestyle_title = "Experiencia gastronomica"
+        lifestyle_desc = "Cada prato preparado com cuidado para proporcionar uma experiencia unica."
+        nav_items = [("Cardapio", "#servicos"), ("Galeria", "#galeria"), ("Reservar", "#contato")]
+    elif "clinica" in segment or "estetica" in segment or "medic" in segment:
+        svc_labels = ["Consulta", "Tratamento", "Avaliacao", "Procedimento", "Retorno"]
+        hero_desc = "Clinica com profissionais experientes e tratamentos personalizados para seu bem-estar."
+        cta_primary = "Agendar consulta"
+        cta_secondary = "Conhecer servicos"
+        alt_img = "Clinica"
+        lifestyle_title = "Cuidado e acolhimento"
+        lifestyle_desc = "Ambiente preparado para recebe-lo com conforto e seguranca em cada atendimento."
+        nav_items = [("Servicos", "#servicos"), ("Galeria", "#galeria"), ("Contato", "#contato")]
+    elif "imobiliaria" in segment or "imoveis" in segment:
+        svc_labels = ["Venda", "Locacao", "Avaliacao", "Consultoria", "Lancamentos"]
+        hero_desc = "Imobiliaria com imoveis selecionados e atendimento personalizado para suas necessidades."
+        cta_primary = "Ver imoveis"
+        cta_secondary = "Falar corretor"
+        alt_img = "Imovel"
+        lifestyle_title = "Seu proximo imovel"
+        lifestyle_desc = "Encontre o imovel ideal com quem entende do mercado local."
+        nav_items = [("Imoveis", "#servicos"), ("Galeria", "#galeria"), ("Contato", "#contato")]
+    else:
+        svc_labels = ["Servico 1", "Servico 2", "Servico 3", "Servico 4", "Servico 5"]
+        hero_desc = f"{name}: servicos de qualidade com atendimento personalizado em {city}."
+        cta_primary = "Saiba mais"
+        cta_secondary = "Ver servicos"
+        alt_img = f"{name}"
+        lifestyle_title = "Experiencia unica"
+        lifestyle_desc = f"Atendimento dedicado para garantir sua satisfacao em {city}."
+        nav_items = [("Servicos", "#servicos"), ("Galeria", "#galeria"), ("Contato", "#contato")]
+
     def component(export_name: str, body: str, *, imports: str = "") -> str:
         return f"""{imports}
 export function {export_name}() {{
@@ -1918,8 +1979,16 @@ export default {export_name};
 """
 
     dense_cards = "\n".join(
-        f'<div className="rounded-3xl border border-white/10 bg-white/[.04] p-5 text-white"><strong className="block text-xl text-emerald-200">0{i}</strong><span className="text-sm text-zinc-300">academia fitness treino musculacao alunos modalidade matricula</span></div>'
-        for i in range(1, 10)
+        f'<div className="rounded-3xl border border-white/10 bg-white/[.04] p-5 text-white"><strong className="block text-xl text-emerald-200">0{i}</strong><span className="text-sm text-zinc-300">{svc_labels[i-1]}</span></div>'
+        for i in range(1, 6)
+    )
+    nav_links = "\n".join(
+        f'<a className="hover:text-white" href="{href}">{label}</a>'
+        for label, href in nav_items
+    )
+    services_articles = "\n".join(
+        f'<article className="rounded-3xl border border-white/10 bg-white/[.04] p-6"><h3 className="text-xl font-bold">{svc_labels[i]}</h3><p className="mt-3 text-zinc-400">Atendimento de qualidade.</p></article>'
+        for i in range(min(3, len(svc_labels)))
     )
     files = {
         "src/components/Navbar.tsx": component(
@@ -1935,11 +2004,9 @@ export default {export_name};
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4">
         <a className="min-w-0 truncate text-sm font-black uppercase tracking-[0.24em] text-emerald-200" href="#top">{name}</a>
         <div className="hidden items-center gap-5 text-sm text-zinc-200 md:flex">
-          <a className="hover:text-white" href="#servicos">Treinos</a>
-          <a className="hover:text-white" href="#galeria">Galeria</a>
-          <a className="hover:text-white" href="#contato">Contato</a>
+          {nav_links}
         </div>
-        <a className="rounded-full bg-emerald-300 px-4 py-2 text-sm font-bold text-zinc-950 max-sm:px-3 max-sm:text-xs" href="tel:{phone}">Matricula</a>
+        <a className="rounded-full bg-emerald-300 px-4 py-2 text-sm font-bold text-zinc-950 max-sm:px-3 max-sm:text-xs" href="tel:{phone}">{cta_primary}</a>
       </div>
     </nav>
   );
@@ -1958,23 +2025,23 @@ export default {export_name};
         <motion.div data-hero-copy initial={{{{ opacity: 0 }}}} animate={{{{ opacity: 1 }}}} className="space-y-7">
           <p className="inline-flex rounded-full border border-emerald-300/30 bg-emerald-300/10 px-4 py-2 text-xs font-bold uppercase tracking-[0.24em] text-emerald-200">{segment} em {city}</p>
           <h1 className="text-[clamp(3rem,8vw,6.6rem)] font-black leading-[.9] tracking-[-.07em]">{name}</h1>
-          <p className="max-w-2xl text-lg leading-8 text-zinc-300">Academia fitness com treino funcional, musculacao, alunos acompanhados, modalidade certa e matricula simples pelo WhatsApp.</p>
+          <p className="max-w-2xl text-lg leading-8 text-zinc-300">{hero_desc}.</p>
           <div className="flex flex-wrap gap-3">
-            <a className="rounded-full bg-emerald-300 px-6 py-3 font-black text-zinc-950" href="tel:{phone}">Comecar treino</a>
-            <a className="rounded-full border border-white/20 px-6 py-3 font-semibold text-white" href="#galeria">Ver estrutura</a>
+            <a className="rounded-full bg-emerald-300 px-6 py-3 font-black text-zinc-950" href="tel:{phone}">{cta_primary}</a>
+            <a className="rounded-full border border-white/20 px-6 py-3 font-semibold text-white" href="#galeria">{cta_secondary}</a>
           </div>
           <div className="grid max-w-lg grid-cols-3 gap-3 text-sm">{dense_cards}</div>
         </motion.div>
-        <div className="relative"><img className="aspect-[4/5] w-full rounded-[2rem] object-cover shadow-2xl ring-1 ring-white/10" src="{hero_img}" alt="Alunos em treino fitness" loading="eager" decoding="async" /></div>
+        <div className="relative"><img className="aspect-[4/5] w-full rounded-[2rem] object-cover shadow-2xl ring-1 ring-white/10" src="{hero_img}" alt="{alt_img}" loading="eager" decoding="async" /></div>
       </div>
     </section>
   );
 """,
             imports="import { motion } from 'motion/react';\nimport gsap from 'gsap';\nimport { useEffect } from 'react';",
         ),
-        "src/components/ServicesSection.tsx": component("ServicesSection", """  return <section id="servicos" className="bg-zinc-950 px-6 py-24 text-white"><div className="mx-auto max-w-6xl"><p className="text-sm font-bold uppercase tracking-[0.2em] text-emerald-200">servicos</p><h2 className="mt-3 text-4xl font-black">Treinos claros para cada objetivo</h2><div className="mt-10 grid gap-4 md:grid-cols-3"><article className="rounded-3xl border border-white/10 bg-white/[.04] p-6"><h3 className="text-xl font-bold">Musculacao orientada</h3><p className="mt-3 text-zinc-400">Acompanhamento para alunos e treino seguro.</p></article><article className="rounded-3xl border border-white/10 bg-white/[.04] p-6"><h3 className="text-xl font-bold">Treino funcional</h3><p className="mt-3 text-zinc-400">Modalidade dinamica para evolucao real.</p></article><article className="rounded-3xl border border-white/10 bg-white/[.04] p-6"><h3 className="text-xl font-bold">Matricula simples</h3><p className="mt-3 text-zinc-400">Entrada rapida para comecar hoje.</p></article></div></div></section>;"""),
-        "src/components/GallerySection.tsx": component("GallerySection", f"""  return <section id="galeria" className="bg-zinc-900 px-6 py-24 text-white"><div className="mx-auto grid max-w-6xl gap-5 md:grid-cols-2"><img className="h-96 w-full rounded-[2rem] object-cover" src="{hero_img}" alt="Area de musculacao" loading="lazy" decoding="async" /><img className="h-96 w-full rounded-[2rem] object-cover" src="{gallery_img}" alt="Treino funcional" loading="lazy" decoding="async" /></div></section>;"""),
-        "src/components/LifestyleSection.tsx": component("LifestyleSection", """  return <section className="bg-zinc-950 px-6 py-24 text-white"><div className="mx-auto max-w-6xl rounded-[2rem] border border-white/10 bg-emerald-300/10 p-8"><p className="text-sm font-bold uppercase tracking-[0.2em] text-emerald-200">experiencia</p><h2 className="mt-3 text-4xl font-black">Ambiente de treino, energia e constancia</h2><p className="mt-4 max-w-3xl text-zinc-300">Um espaco local para criar rotina, encontrar orientacao e manter frequencia sem complicar.</p></div></section>;"""),
+        "src/components/ServicesSection.tsx": component("ServicesSection", f"""  return <section id="servicos" className="bg-zinc-950 px-6 py-24 text-white"><div className="mx-auto max-w-6xl"><p className="text-sm font-bold uppercase tracking-[0.2em] text-emerald-200">servicos</p><h2 className="mt-3 text-4xl font-black">Nossos servicos</h2><div className="mt-10 grid gap-4 md:grid-cols-3">{services_articles}</div></div></section>;"""),
+        "src/components/GallerySection.tsx": component("GallerySection", f"""  return <section id="galeria" className="bg-zinc-900 px-6 py-24 text-white"><div className="mx-auto grid max-w-6xl gap-5 md:grid-cols-2"><img className="h-96 w-full rounded-[2rem] object-cover" src="{hero_img}" alt="{alt_img}" loading="lazy" decoding="async" /><img className="h-96 w-full rounded-[2rem] object-cover" src="{gallery_img}" alt="{alt_img}" loading="lazy" decoding="async" /></div></section>;"""),
+        "src/components/LifestyleSection.tsx": component("LifestyleSection", """  return <section className="bg-zinc-950 px-6 py-24 text-white"><div className="mx-auto max-w-6xl rounded-[2rem] border border-white/10 bg-emerald-300/10 p-8"><p className="text-sm font-bold uppercase tracking-[0.2em] text-emerald-200">experiencia</p><h2 className="mt-3 text-4xl font-black">{lifestyle_title}</h2><p className="mt-4 max-w-3xl text-zinc-300">{lifestyle_desc}.</p></div></section>;"""),
         "src/components/BookingModal.tsx": component("BookingModal", f"""  const [open, setOpen] = useState(false);
   return <div className="bg-zinc-950 px-6 py-12 text-center text-white"><button className="rounded-full bg-white px-6 py-3 font-black text-zinc-950" onClick={{() => setOpen(true)}}>Agendar avaliacao</button>{{open && <div className="fixed inset-0 z-[80] grid place-items-center bg-black/70 p-6"><div className="max-w-md rounded-3xl bg-white p-6 text-left text-zinc-950"><h3 className="text-2xl font-black">Fale com {name}</h3><p className="mt-3">Telefone {phone}. Matricula, treino e avaliacao {rating} em {city}.</p><button className="mt-5 rounded-full bg-zinc-950 px-5 py-2 text-white" onClick={{() => setOpen(false)}}>Fechar</button></div></div>}}</div>;""", imports="import { useState } from 'react';"),
         "src/components/ContactCTA.tsx": component("ContactCTA", f"""  return <section id="contato" className="bg-emerald-300 px-6 py-20 text-zinc-950"><div className="mx-auto flex max-w-6xl flex-col gap-5 md:flex-row md:items-center md:justify-between"><div><p className="text-sm font-bold uppercase tracking-[0.2em]">contato</p><h2 className="text-4xl font-black">Comece hoje em {city}</h2><p className="mt-2 font-semibold">WhatsApp {phone} • avaliacao {rating}</p></div><a className="rounded-full bg-zinc-950 px-7 py-4 font-black text-white" href="tel:{phone}">Ligar agora</a></div></section>;"""),
