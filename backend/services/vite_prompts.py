@@ -219,9 +219,267 @@ MOTION RULES:
 """
 
 
-# ═══════════════════════════════════════════════════════════════════
-# Sprint 12.11: Modal obrigatório por nicho + Blocos pré-fabricados
-# ═══════════════════════════════════════════════════════════════════
+def _build_gsap_code_block() -> str:
+    """Sprint 12.12: bloco de código GSAP REAL para o Vite caroço.
+
+    Em vez de só listar data-attributes (que ja existe em _build_motion_pack_block),
+    este bloco injeta snippets REAIS de gsap.from(), ScrollTrigger, useGSAP,
+    Lenis, data-magnetic com refs React. O LLM sabe COMO escrever, nao so O QUE.
+    """
+    return """
+
+GSAP + SCROLLTRIGGER + LENIS — CODIGO REAL (Sprint 12.12 — NAO INVENTE OUTRO):
+Abaixo estao os snippets reais ja usados no runtime FraLib. Use estes padroes
+exatos. NAO invente helper de animacao proprio.
+
+```tsx
+// src/hooks/useReveal.ts — padrao para reveals on-scroll
+import { useEffect, useRef } from 'react';
+import { gsap } from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { useGSAP } from '@gsap/react';
+
+gsap.registerPlugin(ScrollTrigger, useGSAP);
+
+export function useReveal<T extends HTMLElement>(opts?: gsap.TweenVars) {
+  const ref = useRef<T>(null);
+  useGSAP(() => {
+    if (!ref.current) return;
+    gsap.from(ref.current, {
+      y: 24,
+      opacity: 0,
+      duration: 0.9,
+      ease: 'power3.out',
+      ...opts,
+      scrollTrigger: { trigger: ref.current, start: 'top 85%', once: true },
+    });
+  }, []);
+  return ref;
+}
+```
+
+```tsx
+// src/components/HeroParallax.tsx — padrao para hero com parallax
+import { useRef } from 'react';
+import { useGSAP } from '@gsap/react';
+import { gsap } from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+
+export function HeroParallax({ imageUrl, children }: { imageUrl: string; children: React.ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useGSAP(() => {
+    gsap.to(ref.current, {
+      yPercent: 30,
+      ease: 'none',
+      scrollTrigger: { trigger: ref.current, scrub: true, start: 'top top', end: 'bottom top' },
+    });
+  }, []);
+  return (
+    <section ref={ref} className="relative min-h-[92svh] overflow-hidden">
+      <img src={imageUrl} className="absolute inset-0 w-full h-full object-cover scale-110" alt="" loading="eager" decoding="async" />
+      <div className="relative z-10">{children}</div>
+    </section>
+  );
+}
+```
+
+```tsx
+// src/components/MagneticCTA.tsx — data-magnetic real com React ref
+import { useRef, type FC, type ReactNode } from 'react';
+
+export const MagneticCTA: FC<{ children: ReactNode; className?: string }> = ({ children, className }) => {
+  const ref = useRef<HTMLButtonElement>(null);
+  return (
+    <button
+      ref={ref}
+      data-magnetic
+      onMouseMove={(e) => {
+        const rect = ref.current?.getBoundingClientRect();
+        if (!rect) return;
+        const x = e.clientX - rect.left - rect.width / 2;
+        const y = e.clientY - rect.top - rect.height / 2;
+        ref.current!.style.transform = `translate(${x * 0.25}px, ${y * 0.25}px)`;
+      }}
+      onMouseLeave={() => { if (ref.current) ref.current.style.transform = ''; }}
+      className={className}
+    >
+      {children}
+    </button>
+  );
+};
+```
+
+REGRAS DE USO (caroço NAO PODE violar):
+1. SEMPRE importe de 'gsap', 'gsap/ScrollTrigger', '@gsap/react' e 'lenis' — ja estao em package.json.
+2. SEMPRE chame `gsap.registerPlugin(...)` antes de usar ScrollTrigger.
+3. Use `useGSAP` (nao `useLayoutEffect`) — limpa animacoes automaticamente em unmount.
+4. Para Lenis: `import Lenis from 'lenis'; new Lenis();` no main.tsx.
+5. NAO escreva handlers manuais de scroll (window.addEventListener) — use ScrollTrigger.
+6. Anime APENAS opacity + transform (GPU). NAO anime width/height/top/left.
+7. Se um efeito pode ser feito com `data-reveal` (CSS) ou `motion/react` (sem GSAP), PREFIRA — GSAP e para casos complexos (scrub, timeline, parallax).
+"""
+
+
+def _build_lead_briefing_block(facts: dict[str, Any] | None = None) -> str:
+    """Sprint 12.12: bloco de briefing REAL do lead para o Vite caroço.
+
+    Injeta no SYSTEM PROMPT:
+    - Dados reais do negocio (nome, cidade, telefone, rating)
+    - Services confirmados (NAO inventar)
+    - Horarios reais
+    - Keywords SEO validadas
+    - JSON-LD LocalBusiness pronto pra colar em <head>
+    - Fotos aprovadas (URLs reais ja validadas)
+    """
+    if not facts:
+        return ""
+
+    business = facts.get("business") if isinstance(facts.get("business"), dict) else {}
+    seo = facts.get("seo") if isinstance(facts.get("seo"), dict) else {}
+    media = facts.get("media") if isinstance(facts.get("media"), dict) else {}
+
+    name = business.get("name") or business.get("business_name") or ""
+    segment = business.get("segment") or business.get("segmento") or ""
+    city = business.get("city") or business.get("cidade") or ""
+    phone = business.get("phone") or business.get("whatsapp") or ""
+    address = business.get("address") or business.get("endereco") or ""
+    rating = business.get("rating") or ""
+    reviews = business.get("reviews_count") or business.get("total_avaliacoes") or ""
+
+    services = (
+        business.get("services") or business.get("servicos")
+        or facts.get("services") or []
+    )
+    if isinstance(services, str):
+        services = [s.strip() for s in services.split(",") if s.strip()]
+
+    hours = business.get("hours") or business.get("horarios") or facts.get("horarios") or ""
+
+    primary_terms = (
+        seo.get("primary_terms") or facts.get("seo_keywords") or facts.get("keywords") or []
+    )
+    if isinstance(primary_terms, str):
+        primary_terms = [k.strip() for k in primary_terms.split(",") if k.strip()]
+
+    photos = (
+        media.get("photos") or business.get("photos") or facts.get("photos") or []
+    )
+    if isinstance(photos, str):
+        photos = [p.strip() for p in photos.split(",") if p.strip()]
+
+    # Se nao tem name, nao ha briefing
+    if not name:
+        return ""
+
+    services_block = (
+        "\n".join(f"  - {s}" for s in services[:8])
+        if services else "  (servicos nao confirmados — NAO inventar cards de servicos)"
+    )
+
+    photos_block = (
+        "\n".join(f"  - {p}" for p in photos[:6] if p)
+        if photos else "  (sem fotos aprovadas — usar editorial stock com disclaimer)"
+    )
+
+    primary_terms_block = (
+        ", ".join(str(k) for k in primary_terms[:8] if k)
+        if primary_terms else "(sem keywords validadas)"
+    )
+
+    # JSON-LD LocalBusiness (pronto para colar em <script type="application/ld+json">)
+    json_ld = {
+        "@context": "https://schema.org",
+        "@type": "LocalBusiness",
+        "name": name,
+        "telephone": phone,
+        "address": {
+            "@type": "PostalAddress",
+            "streetAddress": address,
+            "addressLocality": city,
+        },
+    }
+    if segment:
+        json_ld["@type"] = "LocalBusiness"
+    if rating:
+        json_ld["aggregateRating"] = {
+            "@type": "AggregateRating",
+            "ratingValue": rating,
+            "reviewCount": reviews or 0,
+        }
+
+    import json as _json
+    json_ld_str = _json.dumps(json_ld, ensure_ascii=False, indent=2)
+
+    return f"""
+
+LEAD BRIEFING — DADOS REAIS CONFIRMADOS (Sprint 12.12 — NAO INVENTAR):
+Use APENAS os dados abaixo. Se um campo estiver vazio, NAO crie ficticios.
+
+Business: {name}
+Segmento: {segment or '(nao informado)'}
+Cidade: {city or '(nao informada)'}
+Telefone/WhatsApp: {phone or '(nao informado)'}
+Endereco: {address or '(nao informado)'}
+Rating: {rating or '(nao informado)'} | Reviews: {reviews or '(nao informado)'}
+
+SERVICOS CONFIRMADOS (use EXATAMENTE estes, NAO inventar):
+{services_block}
+
+HORARIOS:
+{hours or '(nao informado — NAO inventar horarios)'}
+
+KEYWORDS SEO PRIORITARIAS (distribuir com naturalidade):
+{primary_terms_block}
+
+FOTOS APROVADAS (use estas URLs - ja validadas pelo briefing):
+{photos_block}
+
+JSON-LD PRONTO PARA COLAR EM <script type="application/ld+json">:
+```json
+{json_ld_str}
+```
+"""
+
+
+def _build_caroço_block(facts: dict[str, Any] | None = None) -> str:
+    """Sprint 12.12: o CAROÇO unificado do Vite.
+
+    Agrega TUDO o que o sistema injeta para o LLM Vite/React, em um unico bloco
+    rico. Chamada canonica. Antes era VITE_REACT_SYSTEM_PROMPT_FOOT estatico;
+    agora aceita `facts` para receber briefing real do lead.
+
+    Ordem importa:
+      1. Few-shot (bons exemplos primeiro)
+      2. SHADCN/UI (biblioteca preferida)
+      3. Premium contract (regras Awwwards + AIDA/PAS + anti-patterns)
+      4. Visual direction (archetype por nicho)
+      5. Motion pack (12 hooks data-attributes)
+      6. GSAP real code (snippets executaveis)
+      7. Mobile-first (clamp, 44px, no overflow)
+      8. Lead briefing REAL (dados do briefing + JSON-LD)
+      9. Modal obrigatorio por nicho
+     10. Blocos pre-fabricados (composicao nao codar tudo)
+     11. No cross-segment contamination (musculacao em barbearia reprova)
+    """
+    return (
+        _build_few_shot_prompt()
+        + _build_shadcn_block()
+        + _build_premium_contract_block()
+        + _build_visual_direction_block()
+        + _build_motion_pack_block()
+        + _build_gsap_code_block()
+        + _build_mobile_first_block()
+        + _build_lead_briefing_block(facts)
+        + _build_nicho_modal_block(facts)
+        + _build_nicho_blocks_block(facts)
+        + _build_no_contamination_block(facts)
+    )
+
+
+def _build_vite_react_system_prompt_with_facts(facts: dict[str, Any] | None = None) -> str:
+    """Sprint 12.12: prompt FINAL com briefing real injetado."""
+    caroco = _build_caroço_block(facts)
+    return VITE_REACT_SYSTEM_PROMPT_HEAD + caroco + VITE_REACT_SYSTEM_PROMPT_TAIL
 
 # Modal configuration por nicho (Booking/CTA/Orcamento/Agendamento)
 NICHO_MODAL_CONFIG: dict[str, dict[str, str]] = {
@@ -300,7 +558,7 @@ CODIGO OBRIGATORIO (use este padrao):
 
 ```tsx
 // src/components/BookingModal.tsx
-import { useState } from 'react';
+import {{ useState }} from 'react';
 import {{ Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger }} from '@/components/ui/dialog';
 import {{ Button }} from '@/components/ui/button';
 import {{ Input }} from '@/components/ui/input';

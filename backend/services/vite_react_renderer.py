@@ -2726,32 +2726,123 @@ Previous output excerpt:
 
 
 def _summarize_builder_facts(facts: dict[str, Any]) -> str:
+    """Sprint 12.12: briefing REAL do lead para o Vite caroço.
+
+    Antes: so name/segment/city/phone.
+    Agora: services, horarios, differentials, target_audience, keywords SEO,
+    fotos reais (Unsplash/Pexels aprovados), JSON-LD pronto, schema.org.
+    Tudo do briefing REAL - nada inventado.
+    """
     business = facts.get("business") if isinstance(facts.get("business"), dict) else {}
     visual = facts.get("visual_dna") if isinstance(facts.get("visual_dna"), dict) else {}
     plan = facts.get("site_build_plan") if isinstance(facts.get("site_build_plan"), dict) else {}
     seo = facts.get("seo") if isinstance(facts.get("seo"), dict) else {}
+    content = facts.get("content") if isinstance(facts.get("content"), dict) else {}
+    media = facts.get("media") if isinstance(facts.get("media"), dict) else {}
     sections = []
     for item in plan.get("section_plan") or []:
         if isinstance(item, dict) and item.get("id"):
             sections.append(f"- {item.get('id')} ({item.get('role', '')})")
+
+    # Sprint 12.12: services + horarios + differentials + target_audience
+    services = (
+        business.get("services")
+        or business.get("servicos")
+        or content.get("services")
+        or facts.get("services")
+        or []
+    )
+    if isinstance(services, str):
+        services = [s.strip() for s in services.split(",") if s.strip()]
+
+    hours = (
+        business.get("hours")
+        or business.get("horarios")
+        or facts.get("horarios")
+        or ""
+    )
+    differentials = (
+        business.get("differentials")
+        or business.get("diferenciais")
+        or business.get("attributes")
+        or content.get("attributes")
+        or facts.get("diferenciais")
+        or []
+    )
+    if isinstance(differentials, str):
+        differentials = [d.strip() for d in differentials.split(",") if d.strip()]
+
+    target_audience = (
+        business.get("target_audience")
+        or business.get("publico_alvo")
+        or content.get("ideal_customer")
+        or facts.get("target_audience")
+        or ""
+    )
+
+    # Sprint 12.12: fotos REAIS aprovadas (Unsplash/Pexels ou do briefing)
+    photos = (
+        media.get("photos")
+        or business.get("photos")
+        or facts.get("photos")
+        or []
+    )
+    if isinstance(photos, str):
+        photos = [p.strip() for p in photos.split(",") if p.strip()]
+    approved_photos = [str(p).strip() for p in photos[:8] if str(p or "").strip()]
+
+    # Sprint 12.12: keywords SEO ja validadas (do agente Nicho/SEO)
+    primary_terms = (
+        seo.get("primary_terms")
+        or facts.get("seo_keywords")
+        or facts.get("keywords")
+        or []
+    )
+    if isinstance(primary_terms, str):
+        primary_terms = [k.strip() for k in primary_terms.split(",") if k.strip()]
+
     parts = [
         f"Business name: {business.get('name') or business.get('business_name') or ''}".strip(),
         f"Segment: {business.get('segment') or business.get('segmento') or facts.get('segmento') or ''}".strip(),
         f"Subniche: {business.get('subniche') or facts.get('subniche') or ''}".strip(),
         f"City: {business.get('cidade') or business.get('city') or ''}".strip(),
+        f"Address: {business.get('endereco') or business.get('address') or ''}".strip(),
         f"Phone/WhatsApp: {business.get('whatsapp') or business.get('phone') or ''}".strip(),
         f"Rating: {business.get('rating') or ''} | Reviews: {business.get('total_avaliacoes') or business.get('reviews') or ''}".strip(),
         f"Website: {business.get('website') or ''}".strip(),
         f"Maps: {business.get('maps_url') or ''}".strip(),
         f"Canonical: {business.get('canonical_url') or seo.get('canonical_url') or seo.get('site_url') or ''}".strip(),
         f"OG image: {business.get('og_image') or seo.get('og_image') or ''}".strip(),
-        f"Local keywords: {json.dumps(seo.get('primary_terms') or facts.get('seo_keywords') or [], ensure_ascii=False)}",
+        f"Local keywords: {json.dumps(primary_terms[:12], ensure_ascii=False)}",
         f"Archetype: {visual.get('archetype') or ''}".strip(),
         f"Palette: {json.dumps(visual.get('tokens') or {}, ensure_ascii=False)}",
         f"Style mix: {visual.get('style_mix_instruction') or ''}".strip(),
-        "Sections:",
-        *sections,
     ]
+
+    # Sprint 12.12: secao de briefing real (NAO inventar)
+    if services:
+        parts.append(f"Services (use EXATAMENTE estes, nao inventar): {json.dumps(services[:8], ensure_ascii=False)}")
+    if hours:
+        parts.append(f"Hours (usar literalmente): {hours}")
+    if differentials:
+        parts.append(f"Differentials (usar como prova): {json.dumps(differentials[:6], ensure_ascii=False)}")
+    if target_audience:
+        parts.append(f"Target audience (copy deve falar com): {target_audience}")
+
+    # Sprint 12.12: fotos reais ja validadas
+    if approved_photos:
+        parts.append("Photos APROVADAS (use estas URLs - NAO inventar outras):")
+        for photo_url in approved_photos[:6]:
+            parts.append(f"  - {photo_url}")
+
+    # Sprint 12.12: keywords SEO distribuicao natural
+    if primary_terms:
+        parts.append(f"SEO primary terms (distribuir com naturalidade, NAO keyword stuffing): {', '.join(str(k) for k in primary_terms[:8] if k)}")
+
+    if sections:
+        parts.append("Sections:")
+        parts.extend(sections)
+
     return "\n".join(part for part in parts if part and part.strip())
 
 
