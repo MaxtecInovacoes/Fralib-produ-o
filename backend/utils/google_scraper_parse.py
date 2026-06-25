@@ -301,19 +301,31 @@ async def _buscar_detalhes(
         logo = ""
         fotos = []
 
-        # Website real
+        # Website real — cadeia de fallbacks (seletor 'authority' falha em
+        # perfis de profissionais autonomos no Google Maps)
         website_real = ""
-        try:
-            site_el = await page.query_selector("a[data-item-id='authority']")
-            if site_el:
-                website_real = await site_el.get_attribute("href") or ""
-                if website_real and "google.com" in website_real:
-                    website_real = ""
-        except Exception as e_website:
-            # IMPORTANTE: website nao capturado
-            # Lead perde link para seu proprio site
-            print(f"[Scraper][WARN] captura website falhou: {e_website}")
-            pass
+        _WEBSITE_SELECTORS = (
+            "a[data-item-id='authority']",
+            "button[data-item-id='authority']",
+            "a[aria-label*='Site' i]",
+            "a[aria-label*='Website' i]",
+            "a[href^='http']:not([href*='google.com'])"
+            ":not([href*='gstatic']):not([href*='googleusercontent'])"
+            ":not([href*='schema']):not([href*='w3.org'])",
+        )
+        for _sel in _WEBSITE_SELECTORS:
+            try:
+                _el = await page.query_selector(_sel)
+                if _el:
+                    _href = await _el.get_attribute("href") or ""
+                    if _href and _href.startswith("http"):
+                        website_real = _href
+                        break
+            except Exception as _e_sel:
+                # IMPORTANTE: falha de um seletor nao deve matar captura
+                # dos demais; seguimos tentando os proximos fallbacks.
+                print(f"[Scraper][WARN] website seletor '{_sel}' falhou: {_e_sel}")
+                continue
 
         # Telefone real
         telefone_real = ""

@@ -180,6 +180,27 @@ class HunterProvider:
         self.db.commit()
 
         if row:
+            # WARN quando Hunter insere lead com website E place_id vazios —
+            # sinaliza que a captura ficou incompleta (seletor quebrado,
+            # perfil de profissional autonomo sem ficha completa no Maps).
+            # Nao bloqueia o INSERT; deixa observabilidade para auditoria.
+            if not (raw.get("website") or "").strip() and not (raw.get("place_id") or "").strip():
+                try:
+                    self._log(
+                        "warn",
+                        "Hunter inseriu lead sem website e sem place_id: {}".format(
+                            raw.get("nome") or "sem nome"
+                        ),
+                        {
+                            "lead_nome": raw.get("nome"),
+                            "segmento": raw.get("segmento"),
+                            "cidade": raw.get("cidade"),
+                            "maps_url": raw.get("maps_url"),
+                            "inventory_id": str(row[0]),
+                        },
+                    )
+                except Exception:
+                    pass  # log best-effort, nao bloqueia o fluxo
             return str(row[0]), True
 
         existing = self.db.execute(

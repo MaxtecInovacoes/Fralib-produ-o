@@ -506,6 +506,43 @@ def _processar_mensagem(tenant_id: str, msg_data: dict, texto_override: str = No
         lead_id, nome, segmento, cidade, sdr_stage_atual, status, tel_raw = lead
         lead_key = f"{user_id}:{telefone}"
 
+        # ── Retroalimentacao: lead enviou URL de site proprio no WhatsApp?
+        #    Atualiza lead_inventory.website para que o Caio nao some +20 pts
+        #    por "sem site (oportunidade)" indevidamente.
+        #    Constraints: NAO toca em site publicado (status='site_done') e
+        #    NAO sobrescreve site valido ja conhecido.
+        try:
+            from whatsapp.interactions import extrair_url_website
+            _url_site = extrair_url_website(texto)
+            if _url_site:
+                with engine.connect() as _conn_url:
+                    _upd = _conn_url.execute(
+                        text(
+                            """
+                            UPDATE lead_inventory
+                            SET website = :url, atualizado_em = NOW()
+                            WHERE lead_id = :lid
+                              AND tenant_id = :uid
+                              AND status <> 'site_done'
+                              AND (website IS NULL OR website = '')
+                            RETURNING id
+                            """
+                        ),
+                        {"url": _url_site, "lid": lead_id, "uid": user_id},
+                    )
+                    if _upd.fetchone():
+                        _conn_url.commit()
+                        logger.info(
+                            f"\U0001f517 Lead {nome}: website retroalimentado "
+                            f"via WhatsApp → {_url_site}"
+                        )
+        except Exception as _werr:
+            # IMPORTANTE: retroalimentacao NAO pode quebrar o handler.
+            # Segue o fluxo normal (salvar interacao + Franz).
+            logger.warning(
+                f"[WPP-Listener] retroalimentacao website falhou (nao-bloqueante): {_werr}"
+            )
+
         if from_me:
             try:
                 with engine.connect() as conn:

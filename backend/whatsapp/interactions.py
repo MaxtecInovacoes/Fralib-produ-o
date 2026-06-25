@@ -1,6 +1,7 @@
 """Persistencia de interacoes e estado SDR de leads."""
 
 import hashlib
+import re
 from datetime import datetime
 
 from sqlalchemy import text
@@ -118,3 +119,52 @@ def update_lead_stage(
             },
         )
         conn.commit()
+
+
+# ===== Retroalimentacao: URL de site proprio via mensagem WhatsApp =====
+
+# Redes sociais, agregadores de link e dominios Google NAO contam
+# como "site proprio" para o Caio.
+_REDES_SOCIAIS_DOMINIOS = frozenset({
+    "instagram.com", "facebook.com", "fb.com", "tiktok.com",
+    "youtube.com", "youtu.be", "x.com", "twitter.com",
+    "linkedin.com", "wa.me", "whatsapp.com", "t.me",
+    "pinterest.com", "snapchat.com", "reddit.com",
+    "linktr.ee", "bio.me", "beacons.ai",
+    # Dominios Google — URLs compartilhadas em mensagens WhatsApp
+    # frequentemente apontam para assets (lh3.googleusercontent.com),
+    # Maps, etc. Nenhum desses e "site proprio do lead".
+    "googleusercontent.com", "google.com", "google.com.br",
+    "gstatic.com", "schema.org", "w3.org",
+})
+
+# Regex captura a primeira URL com TLD "proprio" (com.br, com, net, org, etc.).
+# Requer finalizacao (espaco, /, ?, # ou fim de string) para nao capturar pedaco
+# solto de texto. Case-insensitive.
+_TLD_PROPRIO = re.compile(
+    r"(?:https?://)?(?:www\.)?"
+    r"([a-z0-9][a-z0-9-]{0,61}\."
+    r"(?:com\.br|com|net|org|io|app|dev|me|store|shop|tech|"
+    r"site|xyz|biz|info|online|page|cloud|br|co|com\.co))"
+    r"(?:[/\s?#]|$)",
+    re.IGNORECASE,
+)
+
+
+def extrair_url_website(texto: str) -> str | None:
+    """Extrai a primeira URL de site proprio presente em ``texto``.
+
+    Ignora redes sociais e dominios Google. Retorna a URL normalizada para
+    ``https://dominio`` (sem path/query/fragmento). Retorna ``None`` quando
+    nao ha site proprio.
+
+    Funcao pura (sem I/O) para permitir testes deterministicos.
+    """
+    if not texto:
+        return None
+    for match in _TLD_PROPRIO.finditer(texto):
+        dominio = match.group(1).lower()
+        if any(red in dominio for red in _REDES_SOCIAIS_DOMINIOS):
+            continue
+        return f"https://{dominio}"
+    return None

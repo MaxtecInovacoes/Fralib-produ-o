@@ -245,6 +245,14 @@ def _coerce_lead_input(lead) -> LeadInput:
 
 
 def _calcular_score(lead: LeadInput) -> tuple:
+    # PREMISSA: o score depende do `website` em LeadInput, que vem do Hunter
+    # (backend/utils/google_scraper_parse._buscar_detalhes) e persiste em
+    # lead_inventory.website. Se o Hunter falhar em extrair o website
+    # (seletor quebrado / perfil Maps sem ficha completa, comum em
+    # profissionais autonomas), o +20 pts por "sem site (oportunidade)" pode
+    # ser indevido. Mitigacao: backend/whatsapp_listener retroalimenta
+    # lead_inventory.website quando o lead envia URL propria em mensagem
+    # WhatsApp. Re-qualificar manualmente (qualificar_lead) nesses casos.
     lead = _coerce_lead_input(lead)
     score = 0
     motivos = []
