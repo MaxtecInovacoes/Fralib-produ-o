@@ -846,20 +846,26 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
 .planos-cta{text-align:center}
 
 /* BOTOES DOS PLANOS - padronizados na mesma linha */
-.plano-cta-wrap{
-  margin-top:auto;
-  padding-top:16px;
-  min-height:90px;
+.plano-card{
   display:flex;
   flex-direction:column;
-  justify-content:flex-start;
+}
+.plano-cta-wrap{
+  margin-top:auto;
+  padding-top:20px;
+  min-height:110px;
+  display:flex;
+  flex-direction:column;
+  justify-content:flex-end;
   align-items:center;
   gap:6px;
 }
 .plano-cta{
-  display:block;
+  display:flex;
+  align-items:center;
+  justify-content:center;
   width:100%;
-  padding:14px 12px;
+  height:44px;
   font-family:var(--fl-font-brand);
   font-size:10px;
   letter-spacing:1px;
@@ -868,6 +874,7 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
   cursor:pointer;
   transition:all .15s;
   border:2px solid;
+  white-space:nowrap;
 }
 .plano-cta.cta-outline{
   background:transparent;
