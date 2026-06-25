@@ -1241,53 +1241,84 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
       1 pipeline grátis para testar. Os outros 3 planos existem pra quando você estiver ganhando e quiser escalar.
     </p>
     <div class="planos-grid">
+
+      <!-- TRIAL -->
       <div class="plano-card reveal">
         <div class="plano-name">TRIAL</div>
-        <div class="plano-price">R$ 0</div>
-        <div class="plano-period" style="font-size:12px;margin-bottom:16px;color:var(--fl-text-muted);">7 dias grátis · sem cartão</div>
+        <div class="plano-price">Grátis</div>
+        <div class="plano-period" style="font-size:12px;margin-bottom:16px;color:var(--fl-text-muted);">
+          Veja o sistema funcionando antes de investir.
+        </div>
         <ul class="plano-features">
           <li>1 site gerado</li>
-          <li>Prospecção básica</li>
-          <li>SDR Franz (1 abordagem)</li>
+          <li>Prospecção ATIVADA</li>
+          <li>SDR Franz (COMPLETO)</li>
+          <li>Suporte comunidade</li>
         </ul>
-        <a href="/login?signup=1&amp;plano=trial" class="btn btn-outline" style="margin-top:20px;width:100%;">COMEÇAR GRÁTIS</a>
+        <a href="/login?signup=1&amp;plano=trial" class="btn btn-outline" style="margin-top:20px;width:100%;">TESTAR GRÁTIS</a>
       </div>
+
+      <!-- STARTER (R$97) -->
+      <div class="plano-card reveal">
+        <div class="plano-name">STARTER</div>
+        <div class="plano-price">R$ 97<span style="font-size:14px;color:var(--fl-text-muted);">/mês</span></div>
+        <div class="plano-period" style="font-size:11px;margin-bottom:6px;color:var(--gold);font-family:var(--fl-font-brand);letter-spacing:1px;">7 DIAS DE GARANTIA</div>
+        <div class="plano-period" style="font-size:12px;margin-bottom:16px;color:var(--fl-text-muted);">
+          Pra validar e começar a faturar. Cooldown de 60 min entre sites.
+        </div>
+        <ul class="plano-features">
+          <li>Sites ilimitados (cooldown 60min)</li>
+          <li>Prospecção automática completa</li>
+          <li>Sem disparo SDR automático</li>
+          <li>Dashboard básico</li>
+          <li>Hospedagem inclusa</li>
+          <li>Prioridade na fila (nível 2)</li>
+          <li>Suporte WhatsApp</li>
+        </ul>
+        <a href="/login?signup=1&amp;plano=starter" class="btn btn-outline" style="margin-top:20px;width:100%;">ASSINAR STARTER</a>
+      </div>
+
+      <!-- PRO (R$197) — MAIS POPULAR -->
       <div class="plano-card destaque reveal">
         <div class="plano-name">PRO</div>
-        <div class="plano-price">R$ 97<span style="font-size:14px;color:var(--fl-text-muted);">/mês</span></div>
-        <div class="plano-period" style="font-size:12px;margin-bottom:16px;color:var(--fl-text-muted);">Para quem fechou pelo menos 1 venda</div>
+        <div class="plano-price">R$ 197<span style="font-size:14px;color:var(--fl-text-muted);">/mês</span></div>
+        <div class="plano-period" style="font-size:11px;margin-bottom:6px;color:var(--gold);font-family:var(--fl-font-brand);letter-spacing:1px;">MAIS POPULAR</div>
+        <div class="plano-period" style="font-size:12px;margin-bottom:16px;color:var(--fl-text-muted);">
+          Pra quem quer escalar rápido. Cooldown de 30 min. Prioridade alta.
+        </div>
         <ul class="plano-features">
-          <li>Tudo do Trial +</li>
-          <li>5 sites ativos</li>
-          <li>SDR ilimitado</li>
+          <li>Sites ilimitados (cooldown 30min)</li>
+          <li>Prospecção avançada</li>
+          <li>SDR Franz com retries automáticos</li>
+          <li>Dashboard completo + analytics</li>
+          <li>Domínios próprios ilimitados</li>
+          <li>Prioridade alta na fila (nível 5)</li>
           <li>Suporte prioritário</li>
         </ul>
-        <a href="/login?signup=1&amp;plano=pro" class="btn btn-primary" style="margin-top:20px;width:100%;">ASSINAR PRO</a>
+        <a href="/login?signup=1&amp;plano=pro" class="btn btn-primary" style="margin-top:12px;width:100%;">ASSINAR PRO</a>
+        <div style="margin-top:10px;font-size:11px;color:var(--fl-text-muted);text-align:center;">7 dias de garantia incondicional.</div>
       </div>
-      <div class="plano-card reveal">
-        <div class="plano-name">SCALE</div>
-        <div class="plano-price">R$ 197<span style="font-size:14px;color:var(--fl-text-muted);">/mês</span></div>
-        <div class="plano-period" style="font-size:12px;margin-bottom:16px;color:var(--fl-text-muted);">Para quem quer escalar prospecção</div>
-        <ul class="plano-features">
-          <li>Tudo do Pro +</li>
-          <li>20 sites ativos</li>
-          <li>Multi-usuário (até 3)</li>
-          <li>API de integração</li>
-        </ul>
-        <a href="/login?signup=1&amp;plano=scale" class="btn btn-outline" style="margin-top:20px;width:100%;">ASSINAR SCALE</a>
-      </div>
+
+      <!-- AGENCY (R$497) — SEM COOLDOWN -->
       <div class="plano-card reveal">
         <div class="plano-name">AGENCY</div>
         <div class="plano-price">R$ 497<span style="font-size:14px;color:var(--fl-text-muted);">/mês</span></div>
-        <div class="plano-period" style="font-size:12px;margin-bottom:16px;color:var(--fl-text-muted);">Para agências e times</div>
+        <div class="plano-period" style="font-size:11px;margin-bottom:6px;color:var(--cyan);font-family:var(--fl-font-brand);letter-spacing:1px;">SEM COOLDOWN</div>
+        <div class="plano-period" style="font-size:12px;margin-bottom:16px;color:var(--fl-text-muted);">
+          Para operações e agências que precisam vender em volume sem esperar fila.
+        </div>
         <ul class="plano-features">
-          <li>Tudo do Scale +</li>
-          <li>Sites ilimitados</li>
-          <li>White-label completo</li>
-          <li>Onboarding VIP</li>
+          <li>Sites ilimitados (sem cooldown)</li>
+          <li>Infraestrutura com capacidade ampliada</li>
+          <li>Painel administrativo master</li>
+          <li>Subcontas para operação ou revenda</li>
+          <li>Agentes com identidade personalizada</li>
+          <li>Prioridade máxima na fila</li>
+          <li>Onboarding e suporte VIP</li>
         </ul>
         <a href="/login?signup=1&amp;plano=agency" class="btn btn-outline" style="margin-top:20px;width:100%;">FALAR COM COMERCIAL</a>
       </div>
+
     </div>
     <p class="section-sub reveal" style="text-align:center;margin:32px auto 0;max-width:720px;font-size:13px;color:var(--fl-text-muted);">
       Pagamento seguro via Mercado Pago · PIX e cartão · Cancele quando quiser
