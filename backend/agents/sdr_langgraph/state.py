@@ -99,6 +99,10 @@ class LeadMemory(BaseModel):
     deal_status: str = ""  # opt_out, won, lost
     is_human_takeover: bool = False
 
+    # Opt-out pendente (2-step: Franz pergunta, lead confirma)
+    opt_out_pending: bool = False  # True quando Franz perguntou se quer sair
+    opt_out_pending_at: Optional[str] = None  # timestamp da pergunta
+
     # Discovery
     pain_identified: str = ""
     amplify_done: bool = False
@@ -146,6 +150,29 @@ class LeadMemory(BaseModel):
     def mark_opt_out(self) -> None:
         self.stage = StageEnum.OPT_OUT.value
         self.deal_status = "opt_out"
+        self.opt_out_pending = False  # Confirmado, nao esta mais pending
+
+    def request_opt_out_confirmation(self) -> None:
+        """Marca que Franz perguntou se lead quer parar. NAO muda stage ainda.
+        Lead precisa responder 'sim' pra confirmar.
+        """
+        self.opt_out_pending = True
+        from datetime import datetime
+        self.opt_out_pending_at = datetime.now().isoformat()
+
+    def confirm_opt_out_from_pending(self) -> bool:
+        """Lead respondeu 'sim' a pergunta de opt_out. Marca opt_out.
+        Returns True se confirmou agora, False se nao estava pending.
+        """
+        if not self.opt_out_pending:
+            return False
+        self.mark_opt_out()
+        return True
+
+    def cancel_opt_out_pending(self) -> None:
+        """Lead respondeu 'nao' ou mudou de ideia. Cancela opt_out pendente."""
+        self.opt_out_pending = False
+        self.opt_out_pending_at = None
 
     def mark_lost(self) -> None:
         self.stage = StageEnum.LOST.value

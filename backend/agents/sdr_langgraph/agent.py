@@ -1055,20 +1055,80 @@ def make_stage_node(stage_name: str):
 
 @sdr_traced("node_opt_out")
 def node_opt_out(state: SDRState) -> dict:
-    """Lead pediu pra parar - encerra"""
+    """Lead pediu pra parar - 2-step: pergunta confirmacao antes de encerrar.
+
+    Step 1 (opt_out_pending=False): Franz PERGUNTA se quer parar.
+        "Entendi. Pra confirmar: voce quer que eu pare de mandar mensagens?
+         Responde 'sim' se quiser que eu pare, ou 'continua' se quiser seguir conversando."
+
+    Step 2 (opt_out_pending=True): Lead respondeu.
+        - Se 'sim/yes/parar/stop': confirma opt_out
+        - Se 'nao/no/continua/seguir': cancela opt_out pending e volta pro funil
+        - Sem resposta clara: re-pergunta
+    """
     memory = state.get("memory")
     if not memory:
         return {}
 
-    memory.mark_opt_out()
-    reply = "Entendido! Vou remover seu contato agora. Se mudar de ideia no futuro, pode chamar 👍"
-    save_agent_note(memory, "supervisor", "Lead pediu opt-out; nao retomar contato automatico.")
+    incoming = (state.get("incoming_message") or "").strip().lower()
+
+    # STEP 2: ja perguntou antes, lead respondeu agora
+    if memory.opt_out_pending:
+        # Detectar confirmação positiva
+        confirmou = bool(re.search(r"\b(sim|yes|quero|parar|stop|pode|para|cancela|tira)\b", incoming))
+        # Detectar negação (lead quer continuar)
+        cancelou = bool(re.search(r"\b(nao|não|no|continua|seguir|continuar|fica|nao\s+para|não\s+para)\b", incoming))
+
+        if confirmou and not cancelou:
+            # CONFIRMOU - agora sim, marca opt_out
+            memory.confirm_opt_out_from_pending()
+            reply = "Entendido! Vou remover seu contato agora. Se mudar de ideia no futuro, pode chamar 👍"
+            save_agent_note(memory, "supervisor", "Lead CONFIRMOU opt-out; encerrado.")
+            return {
+                "outgoing_message": reply,
+                "should_send": True,
+                "memory": memory,
+                "next_stage": "opt_out",
+            }
+        elif cancelou:
+            # CANCELOU - volta pro funil
+            memory.cancel_opt_out_pending()
+            save_agent_note(memory, "supervisor", "Lead cancelou opt-out pendente; volta pro funil.")
+            reply = "Beleza, sem problemas! A gente segue conversando. Me conta: qual e o foco da sua busca hoje?"
+            return {
+                "outgoing_message": reply,
+                "should_send": True,
+                "memory": memory,
+                "next_stage": "qualify",  # Volta pro funil normal
+            }
+        else:
+            # Sem resposta clara - re-pergunta
+            memory.request_opt_out_confirmation()
+            reply = (
+                "So pra eu entender direito: voce quer que eu PARE de mandar mensagens? "
+                "Responde 'sim' se quiser parar, ou 'continua' se quiser seguir a conversa."
+            )
+            return {
+                "outgoing_message": reply,
+                "should_send": True,
+                "memory": memory,
+                "next_stage": "opt_out_pending",
+            }
+
+    # STEP 1: primeira vez - PERGUNTA confirmação
+    memory.request_opt_out_confirmation()
+    reply = (
+        "Entendi que talvez voce nao queira mais receber contato. "
+        "Pra eu ter certeza: voce quer que eu pare de mandar mensagens? "
+        "Responde 'sim' pra parar, ou 'continua' pra seguir conversando."
+    )
+    save_agent_note(memory, "supervisor", "Franz perguntou confirmacao opt-out (nao marcou ainda).")
 
     return {
         "outgoing_message": reply,
         "should_send": True,
         "memory": memory,
-        "next_stage": "opt_out",
+        "next_stage": "opt_out_pending",  # Stage especial: aguardando confirmacao
     }
 
 
