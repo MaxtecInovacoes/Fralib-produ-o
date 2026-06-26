@@ -60,6 +60,14 @@ _BOT_PATTERNS = [
     re.compile(r"(nos|equipe)\s+entraremos?\s+em\s+contato", re.I),
     re.compile(r"(em que podemos ajudar|em que podemos te ajudar|em que posso ajudar)", re.I),
     re.compile(r"(seja bem[- ]?vind[oa])\s+(a|à)", re.I),
+    # Patterns para bots como Tropa da Nutri, canais de atendimento:
+    re.compile(r"(canal|atendimento)\s+de\s+(atendimento|suporte|apoio)\b", re.I),  # "canal de atendimento da..."
+    re.compile(r"(e|e um|e uma)\s+(prazer|um prazer|uma honra)\s+(te|em|conhecer|receber|ajudar)", re.I),  # "E um prazer te receber"
+    re.compile(r"(em breve|brevemente)\s+(nossa )?equipe\s+(vai|ira|entrara|entraremos|retornara)", re.I),  # "em breve nossa equipe vai te responder"
+    re.compile(r"(equipe|nos|time|staff)\s+(vai|ira|retornara|entrara)\s+(te|entrar|lhe|responder|contatar|ajudar)", re.I),
+    re.compile(r"^\s*ol[áa]!?\s*[!]?\s*$", re.I),  # msg "Ola!" pura
+    re.compile(r"(ap|a o|ao)\s+canal\s+de\s+atendimento", re.I),  # typo comum "ap canal" (deveria ser "ao canal")
+    re.compile(r"\b(ap\s+canal|de\s+atendimento|equipe\s+vai|em\s+breve\s+(nossa|equipe|n[ooa]s))\b", re.I),
 ]
 
 # Resposta de ausencia (recepcao)
