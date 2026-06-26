@@ -3269,43 +3269,116 @@ def _cinematic_copy(facts: dict[str, Any]) -> dict[str, Any]:
     name = str(business.get("name") or business.get("business_name") or facts.get("business_name") or "Negócio local")
     city = str(business.get("city") or business.get("cidade") or facts.get("cidade") or "sua cidade")
     segment = str(business.get("segment") or business.get("segmento") or facts.get("segmento") or "atendimento local")
+    subnicho = str(business.get("subnicho") or facts.get("subnicho") or facts.get("subniche") or "").strip().lower()
     phone = str(business.get("whatsapp") or business.get("phone") or "")
     rating = str(business.get("rating") or "")
     reviews = str(business.get("total_avaliacoes") or business.get("reviews_count") or "")
     address = str(business.get("address") or business.get("endereco") or "")
-    segment_context = _normalize_text(" ".join([name, segment, str(business.get("subniche") or "")]))
+    segment_context = _normalize_text(" ".join([name, segment, subnicho]))
     is_nutri = "nutri" in segment_context
     is_barber = any(token in segment_context for token in ("barbearia", "barbeiro", "barber"))
+    is_academia = any(token in segment_context for token in ("academia", "crossfit", "musculacao", "funcional", "personal"))
 
+    # Sprint 14.6: usa archetype_copy.v* rotation (counter ou seed)
+    _var_seed = int(business.get("__counter") or facts.get("__counter") or 0)
+
+    def _rotaciona(opcoes: list[str]) -> str:
+        if not opcoes:
+            return ""
+        return opcoes[_var_seed % len(opcoes)]
+
+    # Defaults por SUBNICHO (não só segmento) — mais personalizado
     if is_barber:
         defaults = {
-            "headline": f"Barbearia premium com corte preciso em {city}",
-            "subheadline": "Atendimento para corte masculino, barba e acabamento com horário claro e contato direto.",
-            "cta_primary": "Agendar corte",
+            "headline": _rotaciona([
+                f"Barbearia {name} em {city}: corte que combina com seu estilo",
+                f"Corte, barba e ritual em {city} com a {name}",
+                f"{name}: barbearia em {city} para quem valoriza detalhe",
+            ]),
+            "subheadline": _rotaciona([
+                "Atendimento agendado, ambiente preparado e contato direto pelo WhatsApp.",
+                "Corte masculino, barba e acabamento com barbeiros certificados.",
+                f"Na {name} cada corte tem ritual: começa no agendamento e termina no acabamento.",
+            ]),
+            "cta_primary": _rotaciona(["Agendar corte", "Marbar horário", "Reservar corte"]),
             "cta_secondary": "Ver serviços",
-            "services_title": "Serviços de barbearia sem espera",
-            "lifestyle_title": "Corte, barba e acabamento no mesmo ritual",
-            "lifestyle_description": "Visual cinematográfico, informações reais e caminho claro para agendar na barbearia.",
+            "services_title": "O que está incluso no ritual da barbearia",
+            "lifestyle_title": "Corte, barba e ambiente no mesmo lugar",
+            "lifestyle_description": f"Visual cinematográfico, dados reais da {name} e caminho único para agendar.",
             "services": [
-                {"title": "Corte masculino", "description": "Corte alinhado ao estilo, rotina e preferência do cliente."},
-                {"title": "Barba e acabamento", "description": "Ritual de barba com atenção a detalhe, contorno e finalização."},
-                {"title": "Atendimento agendado", "description": "Contato rápido para confirmar horário, endereço e próximo corte."},
+                {"title": "Corte masculino", "description": "Corte alinhado ao estilo do cliente, com avaliação antes e finalização por barbeiro certificado."},
+                {"title": "Barba e acabamento", "description": "Ritual de barba com toalha quente, contorno definido e produto finalizado."},
+                {"title": "Atendimento agendado", "description": f"Confirmação rápida pelo WhatsApp da {name} para {city} e região."},
+            ],
+        }
+    elif is_nutri:
+        defaults = {
+            "headline": _rotaciona([
+                f"{name}: nutrição esportiva em {city} que entende sua rotina",
+                f"Plano alimentar em {city} com a {name} para quem treina de verdade",
+                f"{name}: nutrição clínica e esportiva em {city} com acompanhamento real",
+            ]),
+            "subheadline": _rotaciona([
+                "Plano alimentar personalizado para rotina, treino e objetivo de cada paciente.",
+                "Atendimento com foco em performance, recuperação e decisões práticas antes da consulta.",
+                f"A {name} acompanha de perto cada paciente em {city} com plano escrito e revisão periódica.",
+            ]),
+            "cta_primary": _rotaciona(["Agendar consulta", "Marbar avaliação", "Falar com a nutri"]),
+            "cta_secondary": "Conhecer abordagem",
+            "services_title": "Como funciona o acompanhamento nutricional",
+            "lifestyle_title": "Alimentação que respeita sua rotina em " + city,
+            "lifestyle_description": f"A {name} atende em {city} com consulta presencial e online, focada em resultado sustentável.",
+            "services": [
+                {"title": "Plano alimentar", "description": "Estrutura personalizada para rotina, treino e objetivo individual."},
+                {"title": "Acompanhamento", "description": f"Consultas de retorno para ajustes finos no plano da {name}."},
+                {"title": "Atendimento presencial e online", "description": f"Pacientes em {city} e online com mesma qualidade de plano e acompanhamento."},
+            ],
+        }
+    elif is_academia:
+        defaults = {
+            "headline": _rotaciona([
+                f"Treino de verdade em {city} com a {name}",
+                f"{name}: musculação, crossfit e funcional em {city}",
+                f"{name} em {city} para quem quer resultado com estrutura",
+            ]),
+            "subheadline": _rotaciona([
+                f"Estrutura completa, horários flexíveis e plano de treino na {name}.",
+                f"A {name} atende {city} e região com musculação, crossfit e acompanhamento.",
+                f"Academia com equipamentos modernos, profissionais e ambiente preparado em {city}.",
+            ]),
+            "cta_primary": _rotaciona(["Começar treino", "Marbar aula experimental", "Conhecer estrutura"]),
+            "cta_secondary": "Ver planos",
+            "services_title": "Modalidades e estrutura da academia",
+            "lifestyle_title": "Treinar com regularidade e estrutura em " + city,
+            "lifestyle_description": f"A {name} em {city} oferece musculação, crossfit e funcional com profissionais cadastrados.",
+            "services": [
+                {"title": "Musculação", "description": "Equipamentos completos para hipertrofia, força e condicionamento."},
+                {"title": "Crossfit / Funcional", "description": f"Aulas coletivas com coach e programação variada na {name}."},
+                {"title": "Acompanhamento", "description": f"Profissionais avaliam e ajustam o treino para cada aluno da {name}."},
             ],
         }
     else:
         defaults = {
-        "headline": f"Nutrição esportiva com plano claro para evoluir em {city}" if is_nutri else f"{name}: presença local com atendimento direto em {city}",
-        "subheadline": "Acompanhamento nutricional com foco em rotina, treino, recuperação e decisões práticas antes da consulta." if is_nutri else f"Site criado com dados confirmados, prova local e CTA objetivo para {segment}.",
-        "cta_primary": "Agendar consulta" if is_nutri else "Falar no WhatsApp",
-        "cta_secondary": "Ver abordagem",
-        "services_title": "O que fica claro antes do contato",
-        "lifestyle_title": "Alimentação, treino e rotina no mesmo plano" if is_nutri else "Experiência local sem ruído",
-        "lifestyle_description": "Visual cinematográfico, informações reais e caminho claro para o próximo contato.",
-        "services": [
-            {"title": "Plano alimentar" if is_nutri else "Dados confirmados", "description": "Estrutura ajustada à rotina, objetivo e próximos passos reais."},
-            {"title": "Acompanhamento" if is_nutri else "Prova e contexto", "description": "Avaliação, endereço, contato e mídia editorial sustentam a decisão."},
-            {"title": "Consulta esportiva" if is_nutri else "Contato rápido", "description": "CTA direto para o canal oficial, sem etapas desnecessárias."},
-        ],
+            "headline": _rotaciona([
+                f"{name} em {city}: atendimento direto com {segment}",
+                f"{name} — {segment} em {city} com contato sem ruído",
+                f"{segment} em {city} pela {name} — caminho único para contato",
+            ]),
+            "subheadline": _rotaciona([
+                f"Site com dados confirmados da {name} e CTA direto para o canal oficial.",
+                f"Atendimento em {city} pela {name} com prova local e mídia editorial.",
+                f"A {name} atende {city} com dados reais e caminho único para o próximo passo.",
+            ]),
+            "cta_primary": _rotaciona(["Falar no WhatsApp", "Solicitar contato", "Marbar atendimento"]),
+            "cta_secondary": "Ver abordagem",
+            "services_title": "O que está incluso no atendimento",
+            "lifestyle_title": f"Atendimento local em {city} pela {name}",
+            "lifestyle_description": f"Visual cinematográfico, dados confirmados da {name} e caminho direto para contato.",
+            "services": [
+                {"title": "Dados confirmados", "description": f"Nome, endereço, telefone e horário da {name} em {city}."},
+                {"title": "Prova local", "description": "Mídia editorial e avaliações reais sustentam a decisão de contato."},
+                {"title": "Contato rápido", "description": f"CTA direto para o canal oficial da {name}."},
+            ],
         }
     services = defaults["services"]
     if isinstance(llm_content.get("services"), list) and llm_content["services"]:
@@ -3390,7 +3463,20 @@ def _generate_cinematic_studio_files(facts: dict[str, Any]) -> dict[str, str]:
     c_text = palette['text_light']
     c_text_muted = "#9ca3af"  # zinc-400
 
-    copy = _cinematic_copy(facts)
+    # Sprint 14.6: injeta __counter nos facts para _cinematic_copy usar
+    # rotacao de headlines/CTAs. Counter vem do variation log (counter rotation).
+    _enriched_facts = dict(facts or {})
+    if "business" not in _enriched_facts or not isinstance(_enriched_facts.get("business"), dict):
+        _enriched_facts["business"] = {}
+    else:
+        _enriched_facts["business"] = dict(_enriched_facts["business"])
+    _var_payload = _variation_payload if "_variation_payload" in dir() else (
+        _enriched_facts.get("variation") if isinstance(_enriched_facts.get("variation"), dict) else None
+    )
+    if isinstance(_var_payload, dict):
+        _enriched_facts["business"]["__counter"] = int(_var_payload.get("counter") or 0)
+
+    copy = _cinematic_copy(_enriched_facts)
     images, videos = _cinematic_media_urls(facts)
     whatsapp = f"https://wa.me/55{copy['phone_digits']}" if copy["phone_digits"] else "#contato"
 
@@ -5084,6 +5170,16 @@ def _facts_theme_color(facts: dict[str, Any]) -> str:
 
 
 def _facts_local_keywords(facts: dict[str, Any]) -> list[str]:
+    """Sprint 14.6: keywords SEO personalizados por lead.
+
+    Ordem de prioridade:
+    1. seo.primary_terms (do agente Nicho/SEO)
+    2. seo_keywords do facts (do briefing Jina)
+    3. business.cidade (sempre presente)
+    4. business.segmento/subnicho
+    5. diferencial (palavras_poder do Jina)
+    6. bairro/cidade do endereco
+    """
     business = _facts_business(facts)
     seo = facts.get("seo") if isinstance(facts.get("seo"), dict) else {}
     candidates = seo.get("primary_terms") or facts.get("seo_keywords") or business.get("seo_keywords") or []
@@ -5091,14 +5187,40 @@ def _facts_local_keywords(facts: dict[str, Any]) -> list[str]:
         candidates = re.split(r"[,;\n]", str(candidates or ""))
     keywords: list[str] = []
     seen: set[str] = set()
-    for item in candidates:
-        term = re.sub(r"\s+", " ", str(item or "")).strip(" ,.;:-")
+
+    def _add(term: str) -> None:
+        term = re.sub(r"\s+", " ", str(term or "")).strip(" ,.;:-")
         key = term.lower()
         if not term or key in seen:
-            continue
+            return
         seen.add(key)
         keywords.append(term)
-    return keywords[:10]
+
+    for item in candidates:
+        _add(item)
+
+    # cidade sempre presente (SEO local)
+    _add(business.get("city") or business.get("cidade") or facts.get("cidade") or "")
+    _add(business.get("state") or business.get("estado") or facts.get("estado") or "")
+
+    # segmento e subnicho
+    _add(business.get("segmento") or business.get("segment") or "")
+    _add(business.get("subnicho") or business.get("subniche") or "")
+
+    # diferencial (palavras_poder do Jina)
+    diferencial = business.get("diferenciais") or facts.get("diferenciais") or []
+    if isinstance(diferencial, list):
+        for d in diferencial[:3]:
+            _add(d)
+
+    # bairro/cidade do endereco
+    address = business.get("address") or business.get("endereco") or facts.get("endereco") or ""
+    if isinstance(address, str) and address:
+        parts = re.split(r"[,\-]", address)
+        for p in parts[-2:]:
+            _add(p)
+
+    return keywords[:12]
 
 
 def _facts_meta_description(facts: dict[str, Any]) -> str:
