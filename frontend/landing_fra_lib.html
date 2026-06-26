@@ -956,14 +956,17 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
   width:100%;
   height:44px;
   font-family:var(--fl-font-brand);
-  font-size:10px;
-  letter-spacing:1px;
+  font-size:9px;
+  letter-spacing:0.5px;
   text-align:center;
   text-decoration:none;
   cursor:pointer;
   transition:all .15s;
   border:2px solid;
   white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  padding:0 8px;
   border-radius:0;
 }
 .plano-cta.cta-outline{
@@ -2430,7 +2433,7 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
           <li>Sem cartao de credito</li>
         </ul>
         <div class="plano-cta-wrap">
-          <a href="/login?signup=1&amp;plano=trial" class="plano-cta cta-outline">VOU EXPERIMENTAR PRIMEIRO</a>
+          <a href="/login?signup=1&amp;plano=trial" class="plano-cta cta-outline">VOU EXPERIMENTAR</a>
         </div>
       </div>
 
@@ -2469,7 +2472,7 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
           <li>Suporte prioritario</li>
         </ul>
         <div class="plano-cta-wrap">
-          <a href="/login?signup=1&amp;plano=pro" class="plano-cta cta-gold">QUERO MINHA RENDA EXTRA</a>
+          <a href="/login?signup=1&amp;plano=pro" class="plano-cta cta-gold">QUERO RENDA EXTRA</a>
           <p class="plano-garantia">7 dias de garantia incondicional.</p>
         </div>
       </div>
