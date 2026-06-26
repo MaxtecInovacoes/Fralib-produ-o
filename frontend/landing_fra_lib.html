@@ -274,14 +274,14 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
 /* BADGE */
 .hero-badge{
   display:inline-flex;align-items:center;gap:8px;
-  padding:6px 16px;border-radius:var(--fl-r-full);
+  padding:5px 14px;border-radius:var(--fl-r-full);
   background:rgba(147,51,234,0.1);
   border:1px solid rgba(147,51,234,0.3);
-  font-family:var(--fl-font-mono);font-size:11px;font-weight:500;
+  font-family:var(--fl-font-mono);font-size:10px;font-weight:500;
   color:var(--fl-purple-300);
-  margin-bottom:32px;
+  margin-bottom:18px;
   animation:fadeUp .6s var(--fl-ease) both;
-  letter-spacing:0.5px;
+  letter-spacing:0.3px;
 }
 .hero-badge .pulse-dot{
   width:8px;height:8px;border-radius:50%;
@@ -302,12 +302,12 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
 /* H1 - 2 linhas com hierarquia */
 .hero-title{
   font-family:var(--fl-font-brand);
-  font-size:clamp(15px,3vw,28px);
-  line-height:1.5;
+  font-size:clamp(14px,2.8vw,26px);
+  line-height:1.4;
   max-width:100%;
-  margin-bottom:36px;
+  margin-bottom:18px;
   animation:fadeUp .8s var(--fl-ease) .1s both;
-  display:flex;flex-direction:column;gap:10px;
+  display:flex;flex-direction:column;gap:6px;
 }
 .hero-title .grad{
   background:linear-gradient(135deg,var(--fl-purple-300),var(--cyan));
@@ -321,7 +321,7 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
 /* CONTRASTE DOR vs SOLUÇÃO — cards horizontais compactos */
 .hero-contrast{
   display:flex;align-items:stretch;justify-content:space-between;
-  gap:10px;margin:0 0 32px;width:100%;max-width:560px;
+  gap:8px;margin:0 0 18px;width:100%;max-width:560px;
   animation:fadeUp .8s var(--fl-ease) .15s both;
 }
 .hero-pain,.hero-solution{
@@ -350,16 +350,16 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
 
 /* SUB */
 .hero-sub{
-  font-size:clamp(13px,1.3vw,15px);color:var(--fl-text-muted);
-  max-width:520px;line-height:1.7;margin-bottom:32px;
+  font-size:clamp(12px,1.2vw,14px);color:var(--fl-text-muted);
+  max-width:520px;line-height:1.5;margin-bottom:18px;
   animation:fadeUp .8s var(--fl-ease) .2s both;
 }
 
 /* CTA */
 .hero-buttons{
-  display:flex;flex-direction:column;align-items:flex-start;gap:8px;
+  display:flex;flex-direction:column;align-items:flex-start;gap:6px;
   animation:fadeUp .8s var(--fl-ease) .3s both;
-  margin-bottom:36px;
+  margin-bottom:20px;
 }
 .btn-hero-primary{
   display:inline-flex;align-items:center;justify-content:center;gap:10px;
@@ -411,9 +411,8 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
 
 /* MICRO-PROVA — stat strip horizontal */
 .hero-microproof{
-  display:flex;align-items:center;gap:24px;
+  display:flex;align-items:center;gap:18px;
   animation:fadeUp .8s var(--fl-ease) .4s both;
-  padding-top:24px;border-top:1px solid var(--fl-border);
 }
 .hero-microproof-item{
   display:flex;flex-direction:column;gap:0;
@@ -434,119 +433,103 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
   width:1px;height:20px;background:var(--fl-border-md);
 }
 
-/* DASHBOARD FRA LIB - Coluna direita (recriação da Central de Comando) */
-.hero-dashboard{
+/* MOCKUP - Coluna direita: Kanban + WhatsApp */
+.hero-mockup{
   position:relative;
   width:100%;
   max-width:520px;
+  display:flex;flex-direction:column;gap:14px;
+  animation:fadeUp 1s var(--fl-ease) .2s both;
+}
+/* Kanban mock */
+.mock-kanban{
   background:linear-gradient(180deg,rgba(18,18,26,0.95),rgba(14,14,20,0.95));
   border:1px solid var(--fl-border-hi);
   border-radius:var(--fl-r-lg);
-  padding:20px;
-  box-shadow:0 20px 60px rgba(0,0,0,.6),0 0 40px rgba(124,58,237,.2);
-  animation:fadeUp 1s var(--fl-ease) .2s both;
-  display:flex;flex-direction:column;gap:18px;
+  padding:14px;
+  box-shadow:0 20px 40px rgba(0,0,0,.5),0 0 30px rgba(124,58,237,.15);
 }
-.db-header{
-  display:flex;align-items:center;justify-content:space-between;
-  padding-bottom:12px;border-bottom:1px solid var(--fl-border);
+.mock-kanban-header{
+  display:flex;align-items:center;gap:8px;
+  margin-bottom:12px;padding-bottom:8px;
+  border-bottom:1px solid var(--fl-border);
 }
-.db-logo{display:flex;align-items:center;gap:8px}
-.db-logo-icon{
-  width:20px;height:20px;border-radius:4px;
-  background:linear-gradient(135deg,var(--fl-purple-600),var(--cyan));
+.mock-dot{width:8px;height:8px;border-radius:50%}
+.mock-title{font-family:var(--fl-font-mono);font-size:11px;color:var(--fl-text-muted);letter-spacing:0.3px}
+.mock-cols{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.mock-col{display:flex;flex-direction:column;gap:6px}
+.mock-col-title{
+  font-family:var(--fl-font-mono);font-size:9px;
+  color:var(--fl-text-dim);text-transform:uppercase;letter-spacing:0.5px;
+  margin-bottom:2px;
 }
-.db-logo-text{
-  font-family:var(--fl-font-brand);font-size:10px;
-  color:var(--fl-text);letter-spacing:1px;
-}
-.db-title{
-  font-family:var(--fl-font-brand);font-size:11px;
-  color:var(--fl-text);letter-spacing:1.5px;flex:1;text-align:center;
-}
-.db-status{
-  display:flex;align-items:center;gap:5px;
-  font-family:var(--fl-font-mono);font-size:9px;color:var(--cyan);
-}
-.db-dot{
-  width:6px;height:6px;border-radius:50%;background:var(--cyan);
-  box-shadow:0 0 8px var(--cyan-glow);
-  animation:pulse-ring 2s infinite;
-}
-.db-plan{
-  display:flex;flex-direction:column;gap:8px;
-  padding:10px 12px;background:rgba(0,0,0,.3);
-  border-radius:var(--fl-r-md);border:1px solid var(--fl-border);
-}
-.db-plan-row{
-  display:flex;align-items:center;justify-content:space-between;
+.mock-card{
+  background:rgba(0,0,0,.4);
+  border:1px solid var(--fl-border);
+  border-radius:6px;
+  padding:8px 10px;
   font-size:11px;
+  display:flex;flex-direction:column;gap:2px;
+  transition:transform .2s;
 }
-.db-label{color:var(--fl-text-muted);font-family:var(--fl-font-mono);font-size:10px;letter-spacing:0.3px}
-.db-value{color:var(--fl-text);font-weight:600;font-family:var(--fl-font-brand);font-size:10px;letter-spacing:1px}
-.db-value.cyan{color:var(--cyan)}
-/* Linha do tempo: 4 etapas com ícones */
-.db-timeline{
-  display:grid;grid-template-columns:repeat(4,1fr);gap:8px;
-  padding:12px;background:rgba(0,0,0,.2);border-radius:var(--fl-r-md);
+.mock-card:hover{transform:translateY(-2px);border-color:var(--cyan)}
+.mock-card span{color:var(--fl-text);font-weight:600}
+.mock-card em{color:var(--gold);font-style:normal;font-size:10px;font-weight:700}
+.mock-card.cyan span{color:#e0f7ec}
+.mock-card.cyan{border-color:rgba(0,255,179,.3);background:rgba(0,255,179,.05)}
+.mock-card.cyan em{color:var(--cyan)}
+.mock-card.gold{background:rgba(255,184,0,.05);border-color:rgba(255,184,0,.3)}
+.mock-card.gold em{color:var(--gold)}
+
+/* WhatsApp mock */
+.mock-whatsapp{
+  background:linear-gradient(180deg,#0a1620,#0d1b2a);
+  border:1px solid rgba(0,255,179,.3);
+  border-radius:var(--fl-r-lg);
+  padding:14px;
+  box-shadow:0 20px 40px rgba(0,0,0,.5),0 0 30px rgba(0,255,179,.15);
+  position:relative;
 }
-.db-step{display:flex;flex-direction:column;align-items:center;gap:6px}
-.db-step-icon{
+.mock-whatsapp::before{
+  content:'';position:absolute;top:-1px;left:14px;width:14px;height:14px;
+  background:linear-gradient(135deg,rgba(0,255,179,.3) 50%,transparent 50%);
+}
+.mock-wa-header{
+  display:flex;align-items:center;gap:10px;
+  padding-bottom:10px;margin-bottom:10px;
+  border-bottom:1px solid rgba(255,255,255,.1);
+}
+.mock-wa-avatar{
   width:32px;height:32px;border-radius:50%;
+  background:var(--cyan);color:#000;
   display:flex;align-items:center;justify-content:center;
-  border:1px solid currentColor;
+  font-weight:700;font-size:14px;
 }
-.db-step-icon.cyan{color:var(--cyan);background:rgba(0,255,179,.05)}
-.db-step-icon.purple{color:var(--fl-purple-300);background:rgba(147,51,234,.1)}
-.db-step-icon.gold{color:var(--gold);background:rgba(255,184,0,.05)}
-.db-step-label{
-  font-family:var(--fl-font-mono);font-size:8px;
-  color:var(--fl-text-muted);letter-spacing:0.5px;
-  text-transform:uppercase;
+.mock-wa-info{display:flex;flex-direction:column}
+.mock-wa-info strong{color:var(--fl-text);font-size:12px}
+.mock-online{color:var(--cyan);font-size:9px;font-family:var(--fl-font-mono)}
+.mock-wa-msg,.mock-wa-reply{
+  background:rgba(255,255,255,.04);
+  border-radius:8px;
+  padding:8px 10px;
+  margin-bottom:6px;
+  font-size:11px;
+  line-height:1.4;
+  position:relative;
 }
-/* KPIs em grid */
-.db-kpis{
-  display:grid;grid-template-columns:repeat(3,1fr);gap:10px;
+.mock-wa-msg{color:var(--fl-text)}
+.mock-wa-reply{
+  background:var(--cyan);color:#000;align-self:flex-end;max-width:80%;
+  margin-left:auto;margin-right:0;
+  font-weight:600;
 }
-.db-kpi{
-  background:rgba(0,0,0,.3);border:1px solid var(--fl-border);
-  border-radius:var(--fl-r-md);padding:10px 12px;
-  display:flex;flex-direction:column;gap:3px;
+.mock-wa-reply p{margin:0}
+.mock-wa-msg p{margin:0}
+.mock-wa-time{
+  display:block;font-size:9px;color:rgba(255,255,255,.4);
+  text-align:right;margin-top:2px;font-family:var(--fl-font-mono);
 }
-.db-kpi-label{
-  font-family:var(--fl-font-mono);font-size:8px;
-  color:var(--fl-text-dim);letter-spacing:0.3px;
-  text-transform:uppercase;
-}
-.db-kpi-value{
-  font-family:var(--fl-font-mono);font-size:18px;
-  font-weight:700;line-height:1.1;
-}
-.db-kpi-value.purple{color:var(--fl-purple-300)}
-.db-kpi-value.cyan{color:var(--cyan)}
-.db-kpi-value.gold{color:var(--gold)}
-/* Barra de progresso */
-.db-progress{
-  display:flex;flex-direction:column;gap:6px;
-  padding:10px 12px;background:rgba(0,0,0,.3);
-  border-radius:var(--fl-r-md);border:1px solid var(--fl-border);
-}
-.db-progress-header{
-  display:flex;justify-content:space-between;align-items:center;
-  font-size:11px;color:var(--fl-text-muted);
-  font-family:var(--fl-font-mono);
-}
-.db-progress-bar{
-  height:6px;background:rgba(255,255,255,.05);
-  border-radius:3px;overflow:hidden;
-}
-.db-progress-fill{
-  height:100%;
-  background:linear-gradient(90deg,var(--fl-purple-600),var(--cyan));
-  box-shadow:0 0 10px var(--cyan-glow);
-  border-radius:3px;
-  transition:width 1s var(--fl-ease);
-}
+.mock-wa-reply .mock-wa-time{color:rgba(0,0,0,.6)}
 
 @keyframes fadeUp{
   from{opacity:0;transform:translateY(24px)}
@@ -1810,83 +1793,51 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
       </div>
     </div>
 
-    <!-- COLUNA DIREITA: recriação do dashboard FraLib (Central de Comando) -->
+    <!-- COLUNA DIREITA: visual mockup do produto -->
     <div class="hero-right">
-      <div class="hero-dashboard">
-        <!-- Header do dashboard -->
-        <div class="db-header">
-          <div class="db-logo">
-            <span class="db-logo-icon"></span>
-            <span class="db-logo-text">FraLib OS</span>
+      <div class="hero-mockup">
+        <!-- Top: Kanban CRM mock -->
+        <div class="mock-kanban">
+          <div class="mock-kanban-header">
+            <span class="mock-dot" style="background:var(--cyan)"></span>
+            <span class="mock-title">Pipeline — Hoje</span>
           </div>
-          <div class="db-title">CENTRAL DE COMANDO</div>
-          <div class="db-status"><span class="db-dot"></span> operando</div>
-        </div>
-
-        <!-- Plano + Créditos -->
-        <div class="db-plan">
-          <div class="db-plan-row">
-            <span class="db-label">Plano atual</span>
-            <span class="db-value">PRO</span>
-          </div>
-          <div class="db-plan-row">
-            <span class="db-label">Créditos</span>
-            <span class="db-value cyan">Disponíveis</span>
-          </div>
-        </div>
-
-        <!-- Linha do tempo: 4 etapas -->
-        <div class="db-timeline">
-          <div class="db-step">
-            <div class="db-step-icon cyan">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
+          <div class="mock-cols">
+            <div class="mock-col">
+              <div class="mock-col-title">Novos</div>
+              <div class="mock-card"><span>Pizzaria São José</span><em>R$1.500</em></div>
+              <div class="mock-card"><span>Salão Beleza+</span><em>R$800</em></div>
+              <div class="mock-card"><span>Dr. Marcos</span><em>R$2.500</em></div>
             </div>
-            <div class="db-step-label">BUSCAR</div>
-          </div>
-          <div class="db-step">
-            <div class="db-step-icon purple">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z"/></svg>
+            <div class="mock-col">
+              <div class="mock-col-title">Respondeu</div>
+              <div class="mock-card cyan"><span>Clínica Vida</span><em>R$3.000</em></div>
+              <div class="mock-card cyan"><span>Barber Shop</span><em>R$1.200</em></div>
             </div>
-            <div class="db-step-label">ANALISAR</div>
-          </div>
-          <div class="db-step">
-            <div class="db-step-icon gold">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="3"/><path d="M12 1v6M12 17v6M4.22 4.22l4.24 4.24M15.54 15.54l4.24 4.24M1 12h6M17 12h6M4.22 19.78l4.24-4.24M15.54 8.46l4.24-4.24"/></svg>
+            <div class="mock-col">
+              <div class="mock-col-title">Fechou ✓</div>
+              <div class="mock-card gold"><span>Pet Shop Amigo</span><em>R$1.800</em></div>
+              <div class="mock-card gold"><span>Estética Bella</span><em>R$2.200</em></div>
             </div>
-            <div class="db-step-label">PRODUZIR</div>
-          </div>
-          <div class="db-step">
-            <div class="db-step-icon cyan">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg>
-            </div>
-            <div class="db-step-label">PUBLICAR</div>
           </div>
         </div>
 
-        <!-- KPIs em grid -->
-        <div class="db-kpis">
-          <div class="db-kpi">
-            <div class="db-kpi-label">Total de leads</div>
-            <div class="db-kpi-value purple">187</div>
+        <!-- Bottom: WhatsApp SDR Franz mock -->
+        <div class="mock-whatsapp">
+          <div class="mock-wa-header">
+            <div class="mock-wa-avatar">F</div>
+            <div class="mock-wa-info">
+              <strong>Franz · FraLib</strong>
+              <span class="mock-online">online agora</span>
+            </div>
           </div>
-          <div class="db-kpi">
-            <div class="db-kpi-label">Sites gerados</div>
-            <div class="db-kpi-value cyan">42</div>
+          <div class="mock-wa-msg">
+            <p>Olá! Sou o Franz, da FraLib. Vi que seu negócio ainda não tem site profissional. Posso te mandar um exemplo?</p>
+            <span class="mock-wa-time">10:42 ✓✓</span>
           </div>
-          <div class="db-kpi">
-            <div class="db-kpi-label">Receita gerada</div>
-            <div class="db-kpi-value gold">R$ 8.4k</div>
-          </div>
-        </div>
-
-        <!-- Barra de progresso -->
-        <div class="db-progress">
-          <div class="db-progress-header">
-            <span>Funil de conversão</span>
-            <span class="cyan">22%</span>
-          </div>
-          <div class="db-progress-bar">
-            <div class="db-progress-fill" style="width:22%"></div>
+          <div class="mock-wa-reply">
+            <p>Quero ver!</p>
+            <span class="mock-wa-time">10:45 ✓✓</span>
           </div>
         </div>
       </div>
