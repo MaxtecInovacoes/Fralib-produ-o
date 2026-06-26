@@ -227,8 +227,8 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
    ============================================================ */
 .hero{
   min-height:min(100vh,100dvh);
-  display:flex;flex-direction:column;align-items:center;justify-content:center;
-  text-align:center;padding:80px 24px 40px;gap:0;
+  display:flex;align-items:center;justify-content:center;
+  text-align:left;padding:100px 24px 60px;
   position:relative;overflow:hidden;
 }
 .hero-grid{
@@ -241,30 +241,37 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
   -webkit-mask-image:radial-gradient(ellipse at center,black 20%,transparent 70%);
   pointer-events:none;
 }
-/* Glow centralizado - substitui o mago, sem mascote */
+/* Glow descentralizado - mais brilho no lado direito (visual) */
 .hero-glow{
   position:absolute;
-  top:50%;left:50%;
-  transform:translate(-50%,-50%);
-  width:min(700px,80vw);height:min(700px,80vw);
+  top:50%;right:-10%;
+  transform:translateY(-50%);
+  width:min(700px,60vw);height:min(700px,60vw);
   background:radial-gradient(circle,rgba(124,58,237,0.18) 0%,rgba(0,255,179,0.04) 40%,transparent 70%);
   pointer-events:none;
   animation:glow-pulse 6s ease-in-out infinite;
   z-index:1;
 }
 @keyframes glow-pulse{
-  0%,100%{opacity:.7;transform:translate(-50%,-50%) scale(1)}
-  50%{opacity:1;transform:translate(-50%,-50%) scale(1.08)}
-}
-/* Logo compactada no topo - sem mago */
-.hero-logo{
-  height:clamp(48px,7vw,64px);width:auto;
-  margin-bottom:8px;
-  position:relative;z-index:3;
-  filter:drop-shadow(0 0 24px rgba(147,51,234,0.5));
-  animation:fadeUp .5s var(--fl-ease) both;
+  0%,100%{opacity:.7;transform:translateY(-50%) scale(1)}
+  50%{opacity:1;transform:translateY(-50%) scale(1.08)}
 }
 
+/* LAYOUT SPLIT: 2 colunas */
+.hero-split{
+  display:grid;
+  grid-template-columns:1.1fr 1fr;
+  gap:60px;
+  max-width:1200px;
+  width:100%;
+  align-items:center;
+  position:relative;
+  z-index:2;
+}
+.hero-left{display:flex;flex-direction:column;align-items:flex-start;text-align:left}
+.hero-right{display:flex;align-items:center;justify-content:center;position:relative}
+
+/* BADGE */
 .hero-badge{
   display:inline-flex;align-items:center;gap:8px;
   padding:5px 14px;border-radius:var(--fl-r-full);
@@ -272,7 +279,7 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
   border:1px solid rgba(147,51,234,0.3);
   font-family:var(--fl-font-mono);font-size:10px;font-weight:500;
   color:var(--fl-purple-300);
-  margin-bottom:14px;position:relative;z-index:3;
+  margin-bottom:18px;
   animation:fadeUp .6s var(--fl-ease) both;
   letter-spacing:0.3px;
 }
@@ -292,62 +299,71 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
   100%{transform:scale(1.6);opacity:0}
 }
 
-.hero h1{
+/* H1 - 2 linhas com hierarquia */
+.hero-title{
   font-family:var(--fl-font-brand);
-  font-size:clamp(13px,2.6vw,24px);
-  line-height:1.4;max-width:860px;
-  margin-bottom:14px;position:relative;z-index:3;
+  font-size:clamp(14px,2.8vw,26px);
+  line-height:1.4;
+  max-width:100%;
+  margin-bottom:18px;
   animation:fadeUp .8s var(--fl-ease) .1s both;
+  display:flex;flex-direction:column;gap:6px;
 }
-.hero h1 .grad{
+.hero-title .grad{
   background:linear-gradient(135deg,var(--fl-purple-300),var(--cyan));
   -webkit-background-clip:text;-webkit-text-fill-color:transparent;
   background-clip:text;
   filter:drop-shadow(0 0 20px rgba(147,51,234,0.4));
 }
-/* Contraste DOR vs SOLUÇÃO — gera tensão psicológica */
+.hero-title-sub{color:var(--fl-text);font-weight:400}
+.hero-title-sub strong{color:var(--cyan);font-weight:700}
+
+/* CONTRASTE DOR vs SOLUÇÃO — cards horizontais compactos */
 .hero-contrast{
-  display:flex;align-items:center;justify-content:center;
-  gap:12px;margin:0 auto 16px;max-width:780px;
-  position:relative;z-index:3;
+  display:flex;align-items:stretch;justify-content:space-between;
+  gap:8px;margin:0 0 18px;width:100%;max-width:560px;
   animation:fadeUp .8s var(--fl-ease) .15s both;
 }
 .hero-pain,.hero-solution{
-  flex:1;padding:10px 14px;border-radius:var(--fl-r-md);
-  text-align:center;font-size:12px;font-weight:600;
+  flex:1;padding:10px 12px;border-radius:var(--fl-r-md);
+  text-align:left;font-size:11px;font-weight:400;
   line-height:1.35;
+  display:flex;flex-direction:column;gap:3px;
 }
 .hero-pain{
   background:rgba(26,16,37,0.6);
   border:1px solid rgba(76,29,158,0.4);
   color:#a78bfa;
 }
-.hero-pain strong{color:var(--fl-purple-300);display:block;font-size:14px;margin-bottom:4px}
+.hero-pain strong,.hero-solution strong{font-family:var(--fl-font-brand);font-size:8px;letter-spacing:1px;display:block}
+.hero-pain strong{color:var(--fl-purple-300)}
 .hero-solution{
   background:rgba(10,31,24,0.6);
   border:1px solid rgba(0,255,179,0.3);
   color:#6ee7c0;
 }
-.hero-solution strong{color:var(--cyan);display:block;font-size:14px;margin-bottom:4px}
+.hero-solution strong{color:var(--cyan)}
 .hero-arrow{
-  color:var(--fl-text-dim);font-size:20px;flex-shrink:0;
+  color:var(--fl-text-dim);font-size:18px;flex-shrink:0;
+  display:flex;align-items:center;
 }
+
+/* SUB */
 .hero-sub{
-  font-size:clamp(13px,1.4vw,15px);color:var(--fl-text-muted);
-  max-width:560px;line-height:1.5;margin-bottom:20px;
-  position:relative;z-index:3;
+  font-size:clamp(12px,1.2vw,14px);color:var(--fl-text-muted);
+  max-width:520px;line-height:1.5;margin-bottom:18px;
   animation:fadeUp .8s var(--fl-ease) .2s both;
 }
-/* CTA único grande e dominante — sem distração de secundário */
+
+/* CTA */
 .hero-buttons{
-  display:flex;flex-direction:column;align-items:center;gap:8px;
-  position:relative;z-index:3;
+  display:flex;flex-direction:column;align-items:flex-start;gap:6px;
   animation:fadeUp .8s var(--fl-ease) .3s both;
-  margin-bottom:16px;
+  margin-bottom:20px;
 }
 .btn-hero-primary{
   display:inline-flex;align-items:center;justify-content:center;gap:10px;
-  padding:14px 32px;
+  padding:13px 30px;
   font-family:var(--fl-font-brand);font-size:11px;letter-spacing:1.2px;
   color:#000;text-decoration:none;cursor:pointer;border:none;
   background:var(--gold);
@@ -388,36 +404,132 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
     0 12px 40px rgba(255,184,0,0.7)}
 }
 .hero-cta-sub{
-  font-size:11px;color:var(--fl-text-dim);font-family:var(--fl-font-mono);
+  font-size:10px;color:var(--fl-text-dim);font-family:var(--fl-font-mono);
   letter-spacing:0.5px;
 }
 .hero-cta-sub span{color:var(--cyan);font-weight:700}
 
-/* Micro-prova logo abaixo do CTA — reduz fricção */
+/* MICRO-PROVA — stat strip horizontal */
 .hero-microproof{
-  display:flex;align-items:center;justify-content:center;
-  gap:20px;margin-top:12px;
-  position:relative;z-index:3;
+  display:flex;align-items:center;gap:18px;
   animation:fadeUp .8s var(--fl-ease) .4s both;
 }
 .hero-microproof-item{
-  display:flex;flex-direction:column;align-items:center;gap:0;
-  text-align:center;
+  display:flex;flex-direction:column;gap:0;
+  text-align:left;
 }
 .hero-microproof-num{
-  font-family:var(--fl-font-mono);font-size:16px;font-weight:700;
+  font-family:var(--fl-font-mono);font-size:18px;font-weight:700;
   color:var(--cyan);
-  line-height:1.2;
+  line-height:1.1;
 }
 .hero-microproof-label{
-  font-size:9px;color:var(--fl-text-muted);
+  font-size:8px;color:var(--fl-text-muted);
   font-family:var(--fl-font-mono);letter-spacing:0.3px;
   text-transform:uppercase;
   line-height:1.2;
 }
 .hero-microproof-sep{
-  width:1px;height:18px;background:var(--fl-border-md);
+  width:1px;height:20px;background:var(--fl-border-md);
 }
+
+/* MOCKUP - Coluna direita: Kanban + WhatsApp */
+.hero-mockup{
+  position:relative;
+  width:100%;
+  max-width:520px;
+  display:flex;flex-direction:column;gap:14px;
+  animation:fadeUp 1s var(--fl-ease) .2s both;
+}
+/* Kanban mock */
+.mock-kanban{
+  background:linear-gradient(180deg,rgba(18,18,26,0.95),rgba(14,14,20,0.95));
+  border:1px solid var(--fl-border-hi);
+  border-radius:var(--fl-r-lg);
+  padding:14px;
+  box-shadow:0 20px 40px rgba(0,0,0,.5),0 0 30px rgba(124,58,237,.15);
+}
+.mock-kanban-header{
+  display:flex;align-items:center;gap:8px;
+  margin-bottom:12px;padding-bottom:8px;
+  border-bottom:1px solid var(--fl-border);
+}
+.mock-dot{width:8px;height:8px;border-radius:50%}
+.mock-title{font-family:var(--fl-font-mono);font-size:11px;color:var(--fl-text-muted);letter-spacing:0.3px}
+.mock-cols{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.mock-col{display:flex;flex-direction:column;gap:6px}
+.mock-col-title{
+  font-family:var(--fl-font-mono);font-size:9px;
+  color:var(--fl-text-dim);text-transform:uppercase;letter-spacing:0.5px;
+  margin-bottom:2px;
+}
+.mock-card{
+  background:rgba(0,0,0,.4);
+  border:1px solid var(--fl-border);
+  border-radius:6px;
+  padding:8px 10px;
+  font-size:11px;
+  display:flex;flex-direction:column;gap:2px;
+  transition:transform .2s;
+}
+.mock-card:hover{transform:translateY(-2px);border-color:var(--cyan)}
+.mock-card span{color:var(--fl-text);font-weight:600}
+.mock-card em{color:var(--gold);font-style:normal;font-size:10px;font-weight:700}
+.mock-card.cyan span{color:#e0f7ec}
+.mock-card.cyan{border-color:rgba(0,255,179,.3);background:rgba(0,255,179,.05)}
+.mock-card.cyan em{color:var(--cyan)}
+.mock-card.gold{background:rgba(255,184,0,.05);border-color:rgba(255,184,0,.3)}
+.mock-card.gold em{color:var(--gold)}
+
+/* WhatsApp mock */
+.mock-whatsapp{
+  background:linear-gradient(180deg,#0a1620,#0d1b2a);
+  border:1px solid rgba(0,255,179,.3);
+  border-radius:var(--fl-r-lg);
+  padding:14px;
+  box-shadow:0 20px 40px rgba(0,0,0,.5),0 0 30px rgba(0,255,179,.15);
+  position:relative;
+}
+.mock-whatsapp::before{
+  content:'';position:absolute;top:-1px;left:14px;width:14px;height:14px;
+  background:linear-gradient(135deg,rgba(0,255,179,.3) 50%,transparent 50%);
+}
+.mock-wa-header{
+  display:flex;align-items:center;gap:10px;
+  padding-bottom:10px;margin-bottom:10px;
+  border-bottom:1px solid rgba(255,255,255,.1);
+}
+.mock-wa-avatar{
+  width:32px;height:32px;border-radius:50%;
+  background:var(--cyan);color:#000;
+  display:flex;align-items:center;justify-content:center;
+  font-weight:700;font-size:14px;
+}
+.mock-wa-info{display:flex;flex-direction:column}
+.mock-wa-info strong{color:var(--fl-text);font-size:12px}
+.mock-online{color:var(--cyan);font-size:9px;font-family:var(--fl-font-mono)}
+.mock-wa-msg,.mock-wa-reply{
+  background:rgba(255,255,255,.04);
+  border-radius:8px;
+  padding:8px 10px;
+  margin-bottom:6px;
+  font-size:11px;
+  line-height:1.4;
+  position:relative;
+}
+.mock-wa-msg{color:var(--fl-text)}
+.mock-wa-reply{
+  background:var(--cyan);color:#000;align-self:flex-end;max-width:80%;
+  margin-left:auto;margin-right:0;
+  font-weight:600;
+}
+.mock-wa-reply p{margin:0}
+.mock-wa-msg p{margin:0}
+.mock-wa-time{
+  display:block;font-size:9px;color:rgba(255,255,255,.4);
+  text-align:right;margin-top:2px;font-family:var(--fl-font-mono);
+}
+.mock-wa-reply .mock-wa-time{color:rgba(0,0,0,.6)}
 
 @keyframes fadeUp{
   from{opacity:0;transform:translateY(24px)}
@@ -1446,15 +1558,19 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
     border-bottom:1px solid var(--fl-border);
   }
   section{padding:64px 0}
-  .hero{padding:100px 20px 60px;min-height:auto}
+  .hero{padding:90px 20px 50px;min-height:auto;text-align:center}
+  .hero-split{grid-template-columns:1fr;gap:36px}
+  .hero-left{align-items:center;text-align:center}
+  .hero-right{order:-1}
+  .hero-mockup{max-width:420px;margin:0 auto}
   .problema-grid,.steps-grid,.feat-grid,.quem-grid,.planos-grid{grid-template-columns:1fr}
-  .hero-buttons{flex-direction:column;align-items:stretch;width:100%}
+  .hero-buttons{flex-direction:column;align-items:center;width:100%}
   .btn-hero-primary{width:100%;max-width:340px}
   .section-title{font-size:10px}
   .kanban-cols{grid-template-columns:1fr}
-  .hero-contrast{flex-direction:column;gap:8px}
-  .hero-arrow{transform:rotate(90deg)}
-  .hero-microproof{gap:14px;flex-wrap:wrap}
+  .hero-contrast{flex-direction:column;gap:8px;align-items:stretch}
+  .hero-arrow{transform:rotate(90deg);align-self:center}
+  .hero-microproof{gap:14px;flex-wrap:wrap;justify-content:center}
   .hero-microproof-sep{display:none}
   .hero-microproof-num{font-size:16px}
   .hero-microproof-label{font-size:9px}
@@ -1618,61 +1734,113 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
   <div class="hero-grid"></div>
   <div class="hero-glow"></div>
 
-  <!-- LOGO COMPACTA - SEM MAGO -->
-  <img src="/images/Logo FraLib.png" alt="FraLib OS" class="hero-logo">
+  <div class="hero-split">
+    <!-- COLUNA ESQUERDA: copy + CTA -->
+    <div class="hero-left">
+      <div class="hero-badge">
+        <span class="pulse-dot"></span>
+        COMECE DO ZERO
+      </div>
 
-  <div class="hero-badge">
-    <span class="pulse-dot"></span>
-    COMECE DO ZERO — A IA PROSPECTA, CRIA E VENDE POR VOCÊ
-  </div>
+      <h1 class="hero-title">
+        <span class="grad">Ganhe R$ 3.000 a R$ 10.000/mês</span>
+        <span class="hero-title-sub">vendendo sites. <strong>Sem saber programar.</strong></span>
+      </h1>
 
-  <h1>
-    <span class="grad">Ganhe R$ 3.000 a R$ 10.000/mês vendendo sites.</span><br>
-    Sem saber programar. Sem prospectar.
-  </h1>
+      <p class="hero-sub">
+        A FraLib encontra negócios que precisam de site, cria automaticamente e manda no WhatsApp. Você só fecha.
+      </p>
 
-  <!-- CONTRASTE DOR vs SOLUÇÃO — gera tensão psicológica imediata -->
-  <div class="hero-contrast">
-    <div class="hero-pain">
-      <strong>VOCÊ HOJE</strong>
-      Chega cansado do trabalho e não tem energia pra nada. Quer renda extra mas não sabe por onde.
+      <!-- CONTRASTE DOR vs SOLUÇÃO — cards horizontais -->
+      <div class="hero-contrast">
+        <div class="hero-pain">
+          <strong>VOCÊ HOJE</strong>
+          <span>Chega cansado do trabalho. Quer renda extra mas não sabe por onde.</span>
+        </div>
+        <span class="hero-arrow">→</span>
+        <div class="hero-solution">
+          <strong>VOCÊ COM FRALIB</strong>
+          <span>1h por dia do celular. R$ 1.500 no 1º mês — enquanto dorme.</span>
+        </div>
+      </div>
+
+      <div class="hero-buttons">
+        <a href="/login?signup=1" class="btn-hero-primary">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+          QUERO MINHA RENDA EXTRA ESTE MÊS
+        </a>
+        <div class="hero-cta-sub">
+          7 dias gratis · <span>Sem cartao de credito</span> · Cancela em 1 clique
+        </div>
+      </div>
+
+      <!-- MICRO-PROVA — stat strip -->
+      <div class="hero-microproof">
+        <div class="hero-microproof-item">
+          <div class="hero-microproof-num">+2.400</div>
+          <div class="hero-microproof-label">Prospectados</div>
+        </div>
+        <div class="hero-microproof-sep"></div>
+        <div class="hero-microproof-item">
+          <div class="hero-microproof-num">+180</div>
+          <div class="hero-microproof-label">Sites criados</div>
+        </div>
+        <div class="hero-microproof-sep"></div>
+        <div class="hero-microproof-item">
+          <div class="hero-microproof-num">97%</div>
+          <div class="hero-microproof-label">Resposta WhatsApp</div>
+        </div>
+      </div>
     </div>
-    <span class="hero-arrow">→</span>
-    <div class="hero-solution">
-      <strong>VOCÊ COM FRALIB</strong>
-      Trabalha 1h por dia do celular. Ganha R$ 1.500 no primeiro mês — enquanto dorme.
-    </div>
-  </div>
 
-  <p class="hero-sub">
-    A FraLib encontra negócios que precisam de site, cria automaticamente e manda no WhatsApp do cliente. Você só fecha.
-  </p>
+    <!-- COLUNA DIREITA: visual mockup do produto -->
+    <div class="hero-right">
+      <div class="hero-mockup">
+        <!-- Top: Kanban CRM mock -->
+        <div class="mock-kanban">
+          <div class="mock-kanban-header">
+            <span class="mock-dot" style="background:var(--cyan)"></span>
+            <span class="mock-title">Pipeline — Hoje</span>
+          </div>
+          <div class="mock-cols">
+            <div class="mock-col">
+              <div class="mock-col-title">Novos</div>
+              <div class="mock-card"><span>Pizzaria São José</span><em>R$1.500</em></div>
+              <div class="mock-card"><span>Salão Beleza+</span><em>R$800</em></div>
+              <div class="mock-card"><span>Dr. Marcos</span><em>R$2.500</em></div>
+            </div>
+            <div class="mock-col">
+              <div class="mock-col-title">Respondeu</div>
+              <div class="mock-card cyan"><span>Clínica Vida</span><em>R$3.000</em></div>
+              <div class="mock-card cyan"><span>Barber Shop</span><em>R$1.200</em></div>
+            </div>
+            <div class="mock-col">
+              <div class="mock-col-title">Fechou ✓</div>
+              <div class="mock-card gold"><span>Pet Shop Amigo</span><em>R$1.800</em></div>
+              <div class="mock-card gold"><span>Estética Bella</span><em>R$2.200</em></div>
+            </div>
+          </div>
+        </div>
 
-  <div class="hero-buttons">
-    <a href="/login?signup=1" class="btn-hero-primary">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-      QUERO MINHA RENDA EXTRA ESTE MÊS
-    </a>
-    <div class="hero-cta-sub">
-      7 dias gratis · <span>Sem cartao de credito</span> · Cancela em 1 clique
-    </div>
-  </div>
-
-  <!-- MICRO-PROVA — reduz fricção logo após o CTA -->
-  <div class="hero-microproof">
-    <div class="hero-microproof-item">
-      <div class="hero-microproof-num">+2.400</div>
-      <div class="hero-microproof-label">Negócios prospectados</div>
-    </div>
-    <div class="hero-microproof-sep"></div>
-    <div class="hero-microproof-item">
-      <div class="hero-microproof-num">+180</div>
-      <div class="hero-microproof-label">Sites criados</div>
-    </div>
-    <div class="hero-microproof-sep"></div>
-    <div class="hero-microproof-item">
-      <div class="hero-microproof-num">97%</div>
-      <div class="hero-microproof-label">Resposta no WhatsApp</div>
+        <!-- Bottom: WhatsApp SDR Franz mock -->
+        <div class="mock-whatsapp">
+          <div class="mock-wa-header">
+            <div class="mock-wa-avatar">F</div>
+            <div class="mock-wa-info">
+              <strong>Franz · FraLib</strong>
+              <span class="mock-online">online agora</span>
+            </div>
+          </div>
+          <div class="mock-wa-msg">
+            <p>Olá! Sou o Franz, da FraLib. Vi que seu negócio ainda não tem site profissional. Posso te mandar um exemplo?</p>
+            <span class="mock-wa-time">10:42 ✓✓</span>
+          </div>
+          <div class="mock-wa-reply">
+            <p>Quero ver!</p>
+            <span class="mock-wa-time">10:45 ✓✓</span>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </section>
