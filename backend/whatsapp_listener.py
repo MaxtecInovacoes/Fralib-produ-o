@@ -611,6 +611,48 @@ def _processar_mensagem(tenant_id: str, msg_data: dict, texto_override: str = No
         except Exception as _cd_err:
             logger.warning(f"[WPP-Listener] content dedup falhou (nao-bloqueante): {_cd_err}")
 
+        # ── WPP LOCK ATÔMICO (4ª camada anti-bug-3x) ───────────────────
+        # Usa wpp_lock_until na tabela leads para garantir que apenas 1 processo
+        # processa msgs deste lead por vez, mesmo entre múltiplas instâncias.
+        # SELECT FOR UPDATE SKIP LOCKED: se outra instância já tem o lock,
+        # esta instância pula e ignora a mensagem (já está sendo processada).
+        _acquired_lock = False
+        _lock_lead_id = lead_id
+        try:
+            with engine.connect() as _lock_conn:
+                # Tenta adquirir lock: atualiza wpp_lock_until para NOW() + 30s
+                # apenas se NULL (não está bloqueado) OU se expirou
+                _result = _lock_conn.execute(text("""
+                    UPDATE leads
+                    SET wpp_lock_until = NOW() + INTERVAL '30 seconds'
+                    WHERE id = :lid
+                      AND (wpp_lock_until IS NULL OR wpp_lock_until < NOW())
+                    RETURNING id
+                """), {"lid": lead_id})
+                _lock_conn.commit()
+                if _result.rowcount == 0:
+                    # Outra instância está processando — ignorar esta msg
+                    print(f"[WPP-Listener] {nome}: lock WPP ativo por outra instância — msg ignorada")
+                    return
+                _acquired_lock = True
+        except Exception as _lock_err:
+            logger.warning(f"[WPP-Listener] wpp_lock falhou: {_lock_err}")
+            # Se lock falhar por DB, prosseguir com processamento (fail-open parcial)
+
+        # Função helper para liberar lock ao fim do processamento
+        def _release_wpp_lock():
+            if not _acquired_lock:
+                return
+            try:
+                with engine.connect() as _rl_conn:
+                    _rl_conn.execute(text("""
+                        UPDATE leads SET wpp_lock_until = NULL
+                        WHERE id = :lid AND wpp_lock_until > NOW()
+                    """), {"lid": _lock_lead_id})
+                    _rl_conn.commit()
+            except Exception:
+                pass
+
         # Salvar mensagem recebida sempre (histórico)
         _salvar_interacao(lead_id, texto, "entrada", user_id)
 
@@ -834,11 +876,27 @@ def _processar_mensagem(tenant_id: str, msg_data: dict, texto_override: str = No
                 temperature=0.0,
             )
 
-        if resposta.strip().startswith('{') or '"resposta"' in resposta or '"novo_stage"' in resposta:
+        # Detecta QUALQUER formato de JSON retornado pelo LLM:
+        # - { no inicio (JSON cru)
+        # - "resposta" (campo PT)
+        # - "novo_stage" (campo PT)
+        # - "reply" (campo EN)
+        # - ```json (markdown code block)
+        # Sem essa deteccao completa, JSON do LLM vaza pro lead como texto cru!
+        looks_like_json = (
+            resposta.strip().startswith('{')
+            or '"resposta"' in resposta
+            or '"novo_stage"' in resposta
+            or '"reply"' in resposta
+            or resposta.strip().startswith('```json')
+            or resposta.strip().startswith('```')
+            or resposta.lstrip().startswith('```json')
+        )
+        if looks_like_json:
             logger.warning(f"[SDR][BUG] Resposta com JSON para lead={nome}: {resposta[:200]}")
             # Tentar regex primeiro - SEM chamar LLM extra para evitar 2 mensagens diferentes
             resposta_sanitizada = sanitize_reply(franz_output.reply, retry_extractor=None)
-            if resposta_sanitizada and not resposta_sanitizada.startswith('{') and '"resposta"' not in resposta_sanitizada:
+            if resposta_sanitizada and not resposta_sanitizada.startswith('{') and '"resposta"' not in resposta_sanitizada and '"reply"' not in resposta_sanitizada:
                 resposta = resposta_sanitizada
             else:
                 logger.error(f"[SDR][FALHA] Não conseguiu sanitizar resposta para {nome}. NÃO envia JSON puro.")
@@ -893,8 +951,10 @@ def _processar_mensagem(tenant_id: str, msg_data: dict, texto_override: str = No
                 humanized_delay_fn=_humanized_delay,
             )
             execute_response(exec_ctx)
+            _release_wpp_lock()
 
     except Exception as e:
+        _release_wpp_lock()
         logger.error(f"Erro ao processar mensagem: {e}")
         import traceback
         logger.error(traceback.format_exc())
