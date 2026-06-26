@@ -1474,11 +1474,11 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
     <h2 class="section-title reveal" style="margin-bottom:16px;">QUEM USA APROVA</h2>
     <p class="section-sub reveal" style="text-align:center;margin:0 auto 24px;max-width:720px;color:var(--fl-text-muted);">6 freelancers reais. Resultados reais. Role pra ver mais.</p>
   </div>
-  <div class="depoimentos-scroller">
+  <div class="depoimentos-scroller" id="depoimentosScroller">
     <div class="depoimentos-track">
       <!-- Card 1: Rafael -->
       <div class="depoimento-scroll-card">
-        <div class="depoimento-foto" style="background-image:url('https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&q=80')"></div>
+        <div class="depoimento-foto" style="background-image:url('https://i.pravatar.cc/200?img=12')"></div>
         <div class="depoimento-conteudo">
           <blockquote>"Era programador. Sabia fazer sites. Mas perdia fim de semana debugando CSS. Agora? Fechava 2/mês, fecho 6."</blockquote>
           <div class="depoimento-autor-info">
@@ -1490,7 +1490,7 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
       </div>
       <!-- Card 2: Amanda -->
       <div class="depoimento-scroll-card">
-        <div class="depoimento-foto" style="background-image:url('https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&q=80')"></div>
+        <div class="depoimento-foto" style="background-image:url('https://i.pravatar.cc/200?img=23')"></div>
         <div class="depoimento-conteudo">
           <blockquote>"Designer, nunca aprendi código. Hoje faço sites que antes eu recusava. Cada um: 3h de trabalho, R$2.500."</blockquote>
           <div class="depoimento-autor-info">
@@ -1502,7 +1502,7 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
       </div>
       <!-- Card 3: Marcos -->
       <div class="depoimento-scroll-card">
-        <div class="depoimento-foto" style="background-image:url('https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&q=80')"></div>
+        <div class="depoimento-foto" style="background-image:url('https://i.pravatar.cc/200?img=33')"></div>
         <div class="depoimento-conteudo">
           <blockquote>"Cliente que sumia? Era meu maior gasto. Agora APROVA antes. Se some, não perco nada. Fechei R$18.000/mês."</blockquote>
           <div class="depoimento-autor-info">
@@ -1514,7 +1514,7 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
       </div>
       <!-- Card 4: Júlia -->
       <div class="depoimento-scroll-card">
-        <div class="depoimento-foto" style="background-image:url('https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=200&q=80')"></div>
+        <div class="depoimento-foto" style="background-image:url('https://i.pravatar.cc/200?img=44')"></div>
         <div class="depoimento-conteudo">
           <blockquote>"Tinha medo de aparecer pros clientes porque não sabia programar. Hoje eu prospecto, mando o site pronto, e o cliente nem percebe que é freelancer."</blockquote>
           <div class="depoimento-autor-info">
@@ -1526,7 +1526,7 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
       </div>
       <!-- Card 5: Diego -->
       <div class="depoimento-scroll-card">
-        <div class="depoimento-foto" style="background-image:url('https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&q=80')"></div>
+        <div class="depoimento-foto" style="background-image:url('https://i.pravatar.cc/200?img=52')"></div>
         <div class="depoimento-conteudo">
           <blockquote>"Tenho uma agência pequena. Sem a FraLib, eu fazia 4 sites/mês. Hoje faço 15. Mesma equipe, só com esteira automatizada."</blockquote>
           <div class="depoimento-autor-info">
@@ -1538,75 +1538,7 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
       </div>
       <!-- Card 6: Patrícia -->
       <div class="depoimento-scroll-card">
-        <div class="depoimento-foto" style="background-image:url('https://images.unsplash.com/photo-1580489944761-15a19d654956?w=200&q=80')"></div>
-        <div class="depoimento-conteudo">
-          <blockquote>"Sou mãe, trabalho de casa, queria renda extra. FraLib me deu estrutura que eu nunca tive sozinha. R$4.800 no primeiro mês."</blockquote>
-          <div class="depoimento-autor-info">
-            <h4>Patrícia Mendes</h4>
-            <p>Freelancer renda extra · Salvador</p>
-            <span class="metric">Renda extra R$4.800</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- DUPLICADO para scroll infinito -->
-      <div class="depoimento-scroll-card">
-        <div class="depoimento-foto" style="background-image:url('https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&q=80')"></div>
-        <div class="depoimento-conteudo">
-          <blockquote>"Era programador. Sabia fazer sites. Mas perdia fim de semana debugando CSS. Agora? Fechava 2/mês, fecho 6."</blockquote>
-          <div class="depoimento-autor-info">
-            <h4>Rafael Ferreira</h4>
-            <p>Dev full-stack · São Paulo</p>
-            <span class="metric">2 → 6 clientes/mês</span>
-          </div>
-        </div>
-      </div>
-      <div class="depoimento-scroll-card">
-        <div class="depoimento-foto" style="background-image:url('https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&q=80')"></div>
-        <div class="depoimento-conteudo">
-          <blockquote>"Designer, nunca aprendi código. Hoje faço sites que antes eu recusava. Cada um: 3h de trabalho, R$2.500."</blockquote>
-          <div class="depoimento-autor-info">
-            <h4>Amanda Martins</h4>
-            <p>Designer · Belo Horizonte</p>
-            <span class="metric">R$0 → R$10.000/mês</span>
-          </div>
-        </div>
-      </div>
-      <div class="depoimento-scroll-card">
-        <div class="depoimento-foto" style="background-image:url('https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&q=80')"></div>
-        <div class="depoimento-conteudo">
-          <blockquote>"Cliente que sumia? Era meu maior gasto. Agora APROVA antes. Se some, não perco nada. Fechei R$18.000/mês."</blockquote>
-          <div class="depoimento-autor-info">
-            <h4>Marcos Costa</h4>
-            <p>Freelancer digital · Porto Alegre</p>
-            <span class="metric">R$5k → R$18.000/mês</span>
-          </div>
-        </div>
-      </div>
-      <div class="depoimento-scroll-card">
-        <div class="depoimento-foto" style="background-image:url('https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=200&q=80')"></div>
-        <div class="depoimento-conteudo">
-          <blockquote>"Tinha medo de aparecer pros clientes porque não sabia programar. Hoje eu prospecto, mando o site pronto, e o cliente nem percebe que é freelancer."</blockquote>
-          <div class="depoimento-autor-info">
-            <h4>Júlia Ribeiro</h4>
-            <p>Designer iniciante · Curitiba</p>
-            <span class="metric">0 → 4 clientes/mês</span>
-          </div>
-        </div>
-      </div>
-      <div class="depoimento-scroll-card">
-        <div class="depoimento-foto" style="background-image:url('https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&q=80')"></div>
-        <div class="depoimento-conteudo">
-          <blockquote>"Tenho uma agência pequena. Sem a FraLib, eu fazia 4 sites/mês. Hoje faço 15. Mesma equipe, só com esteira automatizada."</blockquote>
-          <div class="depoimento-autor-info">
-            <h4>Diego Almeida</h4>
-            <p>Agência 5 pessoas · Recife</p>
-            <span class="metric">4 → 15 sites/mês</span>
-          </div>
-        </div>
-      </div>
-      <div class="depoimento-scroll-card">
-        <div class="depoimento-foto" style="background-image:url('https://images.unsplash.com/photo-1580489944761-15a19d654956?w=200&q=80')"></div>
+        <div class="depoimento-foto" style="background-image:url('https://i.pravatar.cc/200?img=49')"></div>
         <div class="depoimento-conteudo">
           <blockquote>"Sou mãe, trabalho de casa, queria renda extra. FraLib me deu estrutura que eu nunca tive sozinha. R$4.800 no primeiro mês."</blockquote>
           <div class="depoimento-autor-info">
@@ -1618,6 +1550,7 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
       </div>
     </div>
   </div>
+  <div class="depoimentos-hint">arraste pro lado</div>
 </section>
 
 <!-- ===== SEÇÃO 5B — STACK TÉCNICA ===== -->
@@ -1866,28 +1799,32 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
 .team-commit strong{color:var(--cyan)}
 
 /* ============================================================
-   DEPOIMENTOS SCROLLER HORIZONTAL
+   DEPOIMENTOS SCROLLER HORIZONTAL (scroll com mouse drag)
    ============================================================ */
 .depoimentos-scroller{
   position:relative;
-  overflow:hidden;
-  padding:32px 0;
+  overflow-x:auto;
+  overflow-y:hidden;
+  padding:32px 24px;
   margin:0 -24px;
-  mask-image:linear-gradient(90deg,transparent,#000 5%,#000 95%,transparent);
-  -webkit-mask-image:linear-gradient(90deg,transparent,#000 5%,#000 95%,transparent);
+  cursor:grab;
+  scrollbar-width:thin;
+  scrollbar-color:var(--fl-purple) var(--fl-bg);
+  -webkit-overflow-scrolling:touch;
+  scroll-behavior:smooth;
 }
+.depoimentos-scroller:active{cursor:grabbing}
+.depoimentos-scroller::-webkit-scrollbar{height:8px}
+.depoimentos-scroller::-webkit-scrollbar-track{background:var(--fl-bg)}
+.depoimentos-scroller::-webkit-scrollbar-thumb{
+  background:var(--fl-purple);
+  border-radius:4px;
+}
+.depoimentos-scroller::-webkit-scrollbar-thumb:hover{background:var(--cyan)}
 .depoimentos-track{
   display:flex;
   gap:20px;
   width:max-content;
-  animation:scroll-left 60s linear infinite;
-}
-.depoimentos-scroller:hover .depoimentos-track{
-  animation-play-state:paused;
-}
-@keyframes scroll-left{
-  0%{transform:translateX(0)}
-  100%{transform:translateX(-50%)}
 }
 .depoimento-scroll-card{
   flex:0 0 380px;
@@ -1897,6 +1834,11 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
   display:flex;
   gap:16px;
   align-items:flex-start;
+  transition:border-color .3s,transform .3s;
+}
+.depoimento-scroll-card:hover{
+  border-color:var(--fl-border-md);
+  transform:translateY(-4px);
 }
 .depoimento-foto{
   width:64px;
@@ -1906,6 +1848,7 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
   background-position:center;
   flex-shrink:0;
   border:2px solid var(--fl-border);
+  background-color:var(--fl-bg-surface);
 }
 .depoimento-conteudo{flex:1;min-width:0}
 .depoimento-scroll-card blockquote{
@@ -1935,6 +1878,15 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
   border:1px solid rgba(0,255,179,0.2);
   display:inline-block;
 }
+.depoimentos-hint{
+  text-align:center;
+  font-size:12px;
+  color:var(--fl-text-dim);
+  margin-top:8px;
+  font-family:var(--fl-font-mono);
+}
+.depoimentos-hint::before{content:'← '}
+.depoimentos-hint::after{content:' →'}
 </style>
 
 <!-- ===== SEÇÃO 8 — PLANOS ===== -->
