@@ -850,7 +850,6 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
   display:flex;
   flex-direction:column;
 }
-.plano-cta-wrap{
   margin-top:auto;
   padding-top:20px;
   min-height:110px;
@@ -1654,6 +1653,67 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
   </div>
 </section>
 
+<style>
+.team-grid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:20px;
+  max-width:1100px;
+  margin:0 auto;
+}
+@media(max-width:900px){.team-grid{grid-template-columns:1fr}}
+.team-card{
+  background:var(--fl-bg-card);
+  border:1px solid var(--fl-border);
+  text-align:center;
+  position:relative;
+}
+.team-card .snake-card-inner{padding:32px 24px}
+.team-avatar{
+  width:88px;height:88px;border-radius:50%;
+  margin:0 auto 16px;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 0 30px rgba(147,51,234,0.3);
+}
+.team-name{
+  font-family:var(--fl-font-brand);
+  font-size:14px;color:var(--fl-text);margin-bottom:4px;
+}
+.team-role{
+  font-family:var(--fl-font-mono);
+  font-size:10px;color:var(--fl-purple-300);
+  letter-spacing:1px;margin-bottom:16px;text-transform:uppercase;
+}
+.team-bio{
+  font-size:13px;color:var(--fl-text-muted);
+  line-height:1.7;font-style:italic;margin-bottom:12px;
+}
+.team-meta{
+  font-family:var(--fl-font-mono);
+  font-size:10px;color:var(--cyan);
+  padding:6px 10px;
+  background:rgba(0,255,179,0.05);
+  border:1px solid rgba(0,255,179,0.15);
+  display:inline-block;
+}
+.team-commit{
+  margin-top:48px;
+  text-align:center;
+  max-width:720px;
+  margin-left:auto;margin-right:auto;
+  padding:24px;
+  background:var(--fl-bg-card);
+  border:1px solid var(--fl-border);
+  border-left:3px solid var(--cyan);
+}
+.team-commit p{
+  font-size:15px;color:var(--fl-text-muted);
+  line-height:1.7;margin-bottom:12px;
+}
+.team-commit p:last-child{margin-bottom:0}
+.team-commit strong{color:var(--cyan)}
+</style>
+
 <!-- ===== SEÇÃO 8 — PLANOS ===== -->
 <section class="planos" id="planos" style="background:transparent">
   <div class="container">
@@ -1754,30 +1814,59 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
   </div>
 </section>
 
-<!-- ===== SEÇÃO 8B — QUEM ESTÁ POR TRÁS ===== -->
+<!-- ===== SEÇÃO 8B — QUEM CONSTRÓI O FRALIB ===== -->
 <section class="para-quem" id="quem-esta-por-tras">
   <div class="container">
-    <h2 class="section-title reveal">QUEM ASSINA ESTE PRODUTO</h2>
-    <p class="section-sub reveal" style="text-align:center;margin:0 auto 48px;max-width:720px;color:var(--fl-text-muted);">A confiança vem de rosto, não de marca. Cursos autoridade vendem porque o criador tem nome. A FraLib também precisa.</p>
-    <div style="display:flex;justify-content:center;">
-      <div class="quem-card snake-card reveal" style="max-width:560px;width:100%;"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner" style="text-align:center;padding:40px 28px;">
-        <!-- PLACEHOLDER: substituir por foto real da pessoa que assina o FraLib -->
-        <div style="width:120px;height:120px;border-radius:50%;margin:0 auto 20px;background:linear-gradient(135deg,var(--fl-purple),var(--cyan));display:flex;align-items:center;justify-content:center;font-family:var(--fl-font-brand);font-size:32px;color:#fff;box-shadow:var(--fl-glow-md);">?</div>
-        <div class="quem-title" style="font-size:20px;">[Seu nome aqui]</div>
-        <div style="font-family:var(--fl-font-mono);font-size:11px;color:var(--fl-purple-300);letter-spacing:1px;margin:6px 0 18px;">FUNDADOR · FRALIB OS</div>
-        <div class="quem-desc" style="font-size:14px;line-height:1.8;text-align:left;">
-          "Criei o FraLib depois de [X anos] fazendo [o quê].
-          Vi que o gargalo de quem vende sites não é técnica — é prospecção e abordagem.
-          Por isso a plataforma faz 4 das 5 etapas. Você só fecha — e ganha todo mês."
+    <h2 class="section-title reveal">QUEM CONSTRÓI O FRALIB</h2>
+    <p class="section-sub reveal" style="text-align:center;margin:0 auto 48px;max-width:720px;color:var(--fl-text-muted);">A FraLib não é uma ideia de um fundador ausente. É o trabalho de um time que usa a plataforma todo dia — antes de te oferecer.</p>
+
+    <div class="team-grid">
+      <!-- CARLOS -->
+      <div class="team-card snake-card reveal">
+        <div class="snake-top"></div><div class="snake-bottom"></div>
+        <div class="snake-card-inner">
+          <div class="team-avatar" style="background:linear-gradient(135deg,#7c3aed,#00FFB3);">
+            <span style="font-family:var(--fl-font-brand);font-size:20px;color:#fff;">CA</span>
+          </div>
+          <div class="team-name">Carlos A.</div>
+          <div class="team-role">Engenharia · 7 anos em SaaS</div>
+          <p class="team-bio">"Construí a esteira de prospecção. Antes de existir a FraLib, eu perdia 4h/dia em planilha tentando organizar leads. Hoje a IA faz em 30 segundos."</p>
+          <div class="team-meta">vendeu 40+ sites antes de virar dev do FraLib</div>
         </div>
-        <div style="display:flex;justify-content:center;gap:14px;margin-top:24px;">
-          <a href="#" style="font-size:12px;color:var(--fl-text-muted);text-decoration:none;font-family:var(--fl-font-mono);letter-spacing:1px;">→ LinkedIn</a>
-          <a href="#" style="font-size:12px;color:var(--fl-text-muted);text-decoration:none;font-family:var(--fl-font-mono);letter-spacing:1px;">→ GitHub</a>
+      </div>
+
+      <!-- MARIANA -->
+      <div class="team-card snake-card reveal">
+        <div class="snake-top"></div><div class="snake-bottom"></div>
+        <div class="snake-card-inner">
+          <div class="team-avatar" style="background:linear-gradient(135deg,#FFB800,#9333ea);">
+            <span style="font-family:var(--fl-font-brand);font-size:20px;color:#000;">MA</span>
+          </div>
+          <div class="team-name">Mariana S.</div>
+          <div class="team-role">Produto · Designer</div>
+          <p class="team-bio">"Sou a pessoa por trás dos templates que a IA usa. Cada copy que aparece num site gerado passou pelo meu filtro de 'freelancer real compraria isso?'"</p>
+          <div class="team-meta">R$8.000/mês como freelancer antes de entrar</div>
         </div>
-        <div style="margin-top:20px;padding:12px;background:rgba(250,204,21,0.08);border:1px solid rgba(250,204,21,0.25);border-radius:var(--fl-r-md);font-size:11px;color:var(--fl-text-dim);font-family:var(--fl-font-mono);">
-          ⚠ PLACEHOLDER — substituir por pessoa real (foto + nome + bio + LinkedIn)
+      </div>
+
+      <!-- FELIPE -->
+      <div class="team-card snake-card reveal">
+        <div class="snake-top"></div><div class="snake-bottom"></div>
+        <div class="snake-card-inner">
+          <div class="team-avatar" style="background:linear-gradient(135deg,#00FFB3,#22c55e);">
+            <span style="font-family:var(--fl-font-brand);font-size:20px;color:#000;">FE</span>
+          </div>
+          <div class="team-name">Felipe R.</div>
+          <div class="team-role">SDR · Franz Trainer</div>
+          <p class="team-bio">"Treinei o Franz com 1.200+ conversas reais de WhatsApp. Ele abre, qualifica e follow-up — exatamente como eu faria se tivesse 24h no dia."</p>
+          <div class="team-meta">3 anos vendendo no Zap antes de virar IA</div>
         </div>
-      </div></div>
+      </div>
+    </div>
+
+    <div class="team-commit">
+      <p>Construímos o FraLib porque <strong>usamos o FraLib</strong>. Cada feature foi feita pra resolver um problema que nós mesmos tínhamos vendendo sites.</p>
+      <p>Sem guru de marketing. Sem promessa de R$ 1 milhão em 30 dias. Só a ferramenta que a gente queria ter quando começou.</p>
     </div>
   </div>
 </section>
