@@ -79,6 +79,24 @@ def _run_scan() -> int:
     except Exception as e:
         _log(f"key_healthcheck erro (nao bloqueia scan): {e}")
 
+    # ── Service watchdog: auto-restart servicos inativos ─────────
+    try:
+        from backend.services.service_watchdog import run_watchdog_cycle
+        wd = run_watchdog_cycle()
+        if wd.get("restarted") or wd.get("reenabled"):
+            _log(
+                f"service_watchdog ATENCAO: "
+                f"restarted={wd.get('restarted', [])} "
+                f"reenabled={wd.get('reenabled', [])}"
+            )
+        else:
+            _log(
+                f"service_watchdog ok "
+                f"({wd.get('checked', 0)} servicos verificados)"
+            )
+    except Exception as e:
+        _log(f"service_watchdog erro (nao bloqueia scan): {e}")
+
     return scan_count
 
 
