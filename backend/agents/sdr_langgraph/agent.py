@@ -526,36 +526,52 @@ def node_greeting(state: SDRState) -> dict:
         "",
     )
 
-    if prior_assistant:
+    # ANTES: templates fixos (sempre "Retomando o que te mandei...") - REPETITIVO
+    # AGORA: chamar LLM pra gerar resposta contextual e variada
+    incoming_msg = state.get("incoming_message", "")
+    try:
+        from agents.llm_direct import call_claude
+        contexto = f"Lead respondeu: '{incoming_msg}'"
         if memory.segmento:
-            reply = (
-                f"{greeting}! Retomando o que te mandei: hoje a prioridade de vocês "
-                f"é captar mais clientes para {memory.segmento} ou era outro assunto?"
-            )
-        elif memory.nome:
-            reply = (
-                f"{greeting}! Retomando o que te mandei sobre a {memory.nome}: "
-                "vocês querem mais clientes pelo online ou era outro assunto?"
-            )
+            contexto += f" | Segmento: {memory.segmento}"
+        if memory.nome:
+            contexto += f" | Nome do negocio: {memory.nome}"
+        if memory.cidade:
+            contexto += f" | Cidade: {memory.cidade}"
+        if prior_assistant:
+            contexto += f" | Ultima msg minha: '{prior_assistant[:200]}'"
+
+        system = (
+            "Voce e o Franz, assistente virtual de uma empresa local. "
+            "Lead respondeu algo. Gere resposta CURTA (1-2 frases) em portugues brasileiro "
+            "que demonstre que voce entendeu o que ele disse e faca uma pergunta aberta "
+            "para continuar a conversa. NAO use templates fixos como 'Retomando o que te mandei'. "
+            "NAO repita mensagens anteriores. NAO mencione o segmento de forma robotica. "
+            "Tom: educado, levemente informal, com 1 emoji no maximo. "
+            "Se lead parece ser bot/recepcionista automatica, faca pergunta pra confirmar se esta falando com humano."
+        )
+        llm_reply = call_claude(
+            system=system,
+            user=contexto[:500],
+            model="haiku",  # rapido e barato
+            max_tokens=200,
+            temperature=0.7,  # um pouco de variacao
+            agent_name="sdr_greeting_node",
+            respect_agent_config=False,
+            enable_context=False,
+        ).strip()
+        reply = llm_reply if llm_reply else f"{greeting}! Como posso ajudar?"
+    except Exception as _g_err:
+        # Fallback se LLM falhar
+        logger_msg = f"LLM greeting falhou: {_g_err}" if False else ""
+        if memory.segmento:
+            reply = f"{greeting}! Sobre {memory.segmento}: no que posso te ajudar?"
         else:
-            reply = (
-                f"{greeting}! Retomando minha mensagem: você quer falar sobre "
-                "captação de clientes ou era outro assunto?"
-            )
-    elif memory.segmento:
-        reply = (
-            f"{greeting}! Tudo bem? Você quer ajuda com captação de clientes para "
-            f"{memory.segmento} ou era outro assunto?"
-        )
-    else:
-        reply = (
-            f"{greeting}! Tudo bem? Me diz rapidinho: você quer falar sobre "
-            "site/captação de clientes ou é outro assunto?"
-        )
+            reply = f"{greeting}! Como posso te ajudar hoje?"
 
     memory.last_message_received = state.get("incoming_message", "")
     memory.last_message_sent = reply
-    save_agent_note(memory, state.get("selected_agent") or "atendimento", "Lead cumprimentou/abriu conversa; responder contexto antes de vender.")
+    save_agent_note(memory, state.get("selected_agent") or "atendimento", "Lead cumprimentou/abriu conversa; Franz gerou resposta contextual via LLM.")
 
     return {
         "outgoing_message": reply,
