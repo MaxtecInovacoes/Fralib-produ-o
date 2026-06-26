@@ -543,19 +543,24 @@ def node_greeting(state: SDRState) -> dict:
 
         system = (
             "Voce e o Franz, assistente virtual de uma empresa local. "
-            "Lead respondeu algo. Gere resposta CURTA (1-2 frases) em portugues brasileiro "
-            "que demonstre que voce entendeu o que ele disse e faca uma pergunta aberta "
-            "para continuar a conversa. NAO use templates fixos como 'Retomando o que te mandei'. "
-            "NAO repita mensagens anteriores. NAO mencione o segmento de forma robotica. "
-            "Tom: educado, levemente informal, com 1 emoji no maximo. "
-            "Se lead parece ser bot/recepcionista automatica, faca pergunta pra confirmar se esta falando com humano."
+            "REGRAS CRITICAS: "
+            "(1) Responda APENAS em portugues brasileiro. NAO use outros idiomas. "
+            "(2) Gere resposta CURTA (1-2 frases) que demonstre que entendeu o que lead disse. "
+            "(3) Faca uma pergunta aberta para continuar a conversa. "
+            "(4) NAO use templates fixos como 'Retomando o que te mandei'. "
+            "(5) NAO repita mensagens anteriores. "
+            "(6) NAO mencione o segmento de forma robotica. "
+            "(7) Tom: educado, levemente informal, com 1 emoji no maximo. "
+            "(8) Se lead parece ser bot/recepcionista automatica, faca pergunta pra confirmar se esta falando com humano. "
+            "(9) NUNCA use caracteres chineses, japoneses ou de outros idiomas. "
+            "(10) Responda em no MAXIMO 2 frases curtas (WhatsApp nao le texto longo)."
         )
         llm_reply = call_claude(
             system=system,
             user=contexto[:500],
             model="haiku",  # rapido e barato
             max_tokens=200,
-            temperature=0.7,  # um pouco de variacao
+            temperature=0.3,  # baixa variacao, evita chines/outros idiomas
             agent_name="sdr_greeting_node",
             respect_agent_config=False,
             enable_context=False,
@@ -757,7 +762,7 @@ def node_hook(state: SDRState) -> dict:
             user=user_prompt,
             model="sonnet",  # ← SONNET (não Haiku)
             max_tokens=400,
-            temperature=0.7,
+            temperature=0.3,
             agent_name=state.get("selected_agent") or "franz",
             enable_context=False,
         )
@@ -958,7 +963,7 @@ def make_stage_node(stage_name: str):
                 user=user_prompt,
                 model="sonnet",
                 max_tokens=500,
-                temperature=0.7,
+                temperature=0.3,
                 agent_name=state.get("selected_agent") or "franz",
                 enable_context=False,
             )
