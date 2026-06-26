@@ -91,6 +91,18 @@ _BASE_URLS = {
 
 def _get_key_for_provider(provider: str):
     """Busca key do provider via ia_manager ou .env."""
+    if provider == "anthropic" and os.getenv("FRALIB_BUILDER_FORCE_ENV_ANTHROPIC", "").strip().lower() in {"1", "true", "yes", "on"}:
+        if os.getenv("LITELLM_API_KEY"):
+            return (
+                os.getenv("LITELLM_API_KEY", ""),
+                os.getenv("LITELLM_BASE_URL", os.getenv("ANTHROPIC_BASE_URL", "https://api.aibee.cloud")),
+                None,
+            )
+        return (
+            os.getenv("ANTHROPIC_API_KEY", ""),
+            os.getenv("ANTHROPIC_BASE_URL", _BASE_URLS.get("anthropic", "")),
+            None,
+        )
     if provider == "anthropic" and os.getenv("LITELLM_API_KEY"):
         return (
             os.getenv("LITELLM_API_KEY", ""),

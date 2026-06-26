@@ -1904,12 +1904,14 @@ def _sanitize_logger_in_source(source: str) -> str:
 def prepare_vite_project_files(files: dict[str, str], *, facts: dict[str, Any]) -> dict[str, str]:
     """Normalize generated files and inject deterministic Vite scaffolding."""
     # Sprint 11.6: sanitize logger antes de qualquer outra transformacao
-    files = {
-        path: _sanitize_logger_in_source(content)
-        for path, content in files.items()
-        if path.endswith((".tsx", ".ts", ".jsx", ".js"))
-    }
-    prepared = {_safe_project_path(path): content for path, content in files.items()}
+    # Sprint 16: Preserve CSS files (don't filter them out like .tsx/.ts)
+    sanitized = {}
+    for path, content in files.items():
+        if path.endswith((".tsx", ".ts", ".jsx", ".js")):
+            sanitized[path] = _sanitize_logger_in_source(content)
+        elif path.endswith(".css"):
+            sanitized[path] = content  # CSS passes through unchanged
+    prepared = {_safe_project_path(path): content for path, content in sanitized.items()}
     prepared["package.json"] = json.dumps(FIXED_PACKAGE_JSON, ensure_ascii=False, indent=2)
     prepared["vite.config.ts"] = vite_template_vite_config()
     prepared["tsconfig.json"] = vite_template_tsconfig()
@@ -3342,6 +3344,23 @@ def _cinematic_copy(facts: dict[str, Any]) -> dict[str, Any]:
 
 
 def _generate_cinematic_studio_files(facts: dict[str, Any]) -> dict[str, str]:
+    # Sprint 16: Extract archetype and palette for per-segment design
+    _biz = facts.get("business") if isinstance(facts.get("business"), dict) else {}
+    segment = str(_biz.get("segment") or _biz.get("segmento") or facts.get("segmento") or facts.get("segment") or "servicos").lower()
+    archetype = _get_archetype_for_segment(segment)
+    palette = _get_archetype_palette(archetype)
+    typography = _get_archetype_typography(archetype)
+    fonts = _get_archetype_fonts(archetype)
+
+    # Map archetype colors to cinematic template vars
+    # Cinematic uses: bg_dark (#07110f), accent (#b7ff6a), accent_dark, accent_light
+    c_bg = palette['bg_dark']      # e.g. #1c1917 for WARM_LOCAL
+    c_accent = palette['primary']   # e.g. #d97706 for WARM_LOCAL
+    c_accent_light = palette['accent']  # e.g. #f59e0b
+    c_accent_dark = palette['secondary']  # e.g. #b45309
+    c_text = palette['text_light']
+    c_text_muted = "#9ca3af"  # zinc-400
+
     copy = _cinematic_copy(facts)
     images, videos = _cinematic_media_urls(facts)
     whatsapp = f"https://wa.me/55{copy['phone_digits']}" if copy["phone_digits"] else "#contato"
@@ -3362,31 +3381,31 @@ export const mediaImages = {json.dumps(images, ensure_ascii=False)} as const;
 export const mediaVideos = {json.dumps(videos, ensure_ascii=False)} as const;
 export const whatsappHref = {json.dumps(whatsapp, ensure_ascii=False)} as const;
 """,
-        "src/pages/Index.tsx": """import { useState } from 'react';
-import { Navbar } from '../components/Navbar';
-import { HeroSection } from '../components/HeroSection';
-import { ServicesSection } from '../components/ServicesSection';
-import { GallerySection } from '../components/GallerySection';
-import { LifestyleSection } from '../components/LifestyleSection';
-import { ContactCTA } from '../components/ContactCTA';
-import { BookingModal } from '../components/BookingModal';
-import { Footer } from '../components/Footer';
+        "src/pages/Index.tsx": f"""import {{ useState }} from 'react';
+import {{ Navbar }} from '../components/Navbar';
+import {{ HeroSection }} from '../components/HeroSection';
+import {{ ServicesSection }} from '../components/ServicesSection';
+import {{ GallerySection }} from '../components/GallerySection';
+import {{ LifestyleSection }} from '../components/LifestyleSection';
+import {{ ContactCTA }} from '../components/ContactCTA';
+import {{ BookingModal }} from '../components/BookingModal';
+import {{ Footer }} from '../components/Footer';
 
-export function Index() {
+export function Index() {{
   const [open, setOpen] = useState(false);
   return (
-    <main className="min-h-screen bg-[#07110f] text-white">
-      <Navbar onOpen={() => setOpen(true)} />
-      <HeroSection onOpen={() => setOpen(true)} />
+    <main className="min-h-screen bg-[{c_bg}] text-white">
+      <Navbar onOpen={{() => setOpen(true)}} />
+      <HeroSection onOpen={{() => setOpen(true)}} />
       <ServicesSection />
       <GallerySection />
       <LifestyleSection />
-      <ContactCTA onOpen={() => setOpen(true)} />
+      <ContactCTA onOpen={{() => setOpen(true)}} />
       <Footer />
-      <BookingModal open={open} onClose={() => setOpen(false)} />
+      <BookingModal open={{open}} onClose={{() => setOpen(false)}} />
     </main>
   );
-}
+}}
 
 export default Index;
 """,
@@ -3559,7 +3578,9 @@ export default Footer;
 def _generate_studio_fallback_files(facts: dict[str, Any] | None = None) -> dict[str, str]:
     """Compatibility fallback for tests and emergency local Studio rendering."""
     safe_facts = facts or {}
-    if os.getenv("FRALIB_VITE_CINEMATIC_STUDIO", "1").strip().lower() not in {"0", "false", "no", "off"}:
+    # O caminho aprovado para a pipeline oficial usa o Studio cinematografico.
+    # Permite desligar explicitamente por env apenas quando um teste precisar.
+    if os.getenv("FRALIB_VITE_CINEMATIC_STUDIO", "1").strip().lower() in {"1", "true", "yes", "on"}:
         return _generate_cinematic_studio_files(safe_facts)
     # Sprint 12.15: extract name from MANY sources (defensive — pipeline may put it anywhere)
     _biz = safe_facts.get("business") if isinstance(safe_facts.get("business"), dict) else {}

@@ -56,8 +56,8 @@ def test_no_forbidden_renderers_in_pipeline():
                             assert False, f"{file} importa {forbidden_mod}: {line.strip()}"
 
 
-def test_openui_is_default_and_vite_is_explicit_engine():
-    """OpenUI deve existir e Vite/React so pode ser acionado por engine explicita."""
+def test_vite_is_canonical_and_openui_is_explicit_opt_in():
+    """Vite/React deve ser o caminho padrao; OpenUI fica apenas como opt-in explicito."""
     builder_worker = ROOT / "backend/services/builder_worker.py"
     if not builder_worker.exists():
         return
@@ -65,8 +65,9 @@ def test_openui_is_default_and_vite_is_explicit_engine():
     content = builder_worker.read_text(encoding="utf-8")
     assert "render_openui_site" in content, "builder_worker deve chamar render_openui_site"
     assert "FRALIB_BUILDER_ENGINE" in content, "engine precisa ser controlada por env explicita"
-    assert 'os.getenv("FRALIB_BUILDER_ENGINE", "openui")' in content, "OpenUI deve ser fallback padrao"
+    assert 'os.getenv("FRALIB_BUILDER_ENGINE", "vite_react")' in content, "Vite/React deve ser o engine padrao"
     assert 'engine == "vite_react"' in content, "vite_react deve ser branch explicito, nao fallback implicito"
+    assert "FRALIB_ALLOW_OPENUI_FALLBACK" in content, "OpenUI fallback deve ser opt-in explicito"
 
 
 def test_pipeline_phases_dont_call_legacy():
@@ -88,7 +89,7 @@ if __name__ == "__main__":
     # Rodar testes sem pytest
     tests = [
         test_no_forbidden_renderers_in_pipeline,
-        test_openui_is_default_and_vite_is_explicit_engine,
+        test_vite_is_canonical_and_openui_is_explicit_opt_in,
         test_pipeline_phases_dont_call_legacy,
     ]
 

@@ -20,6 +20,7 @@ def test_vite_react_falls_back_to_openui(monkeypatch, tmp_path):
     from backend.services import builder_worker
 
     monkeypatch.setenv("FRALIB_BUILDER_ENGINE", "vite_react")
+    monkeypatch.setenv("FRALIB_ALLOW_OPENUI_FALLBACK", "1")
     monkeypatch.setenv(
         "FRALIB_BUILDER_SANDBOX_ROOT",
         str(tmp_path / "workspaces").replace("\\", "/"),
@@ -71,6 +72,88 @@ def test_vite_react_falls_back_to_openui(monkeypatch, tmp_path):
     meta = json.loads((Path(result["output_dir"]) / "builder-render.json").read_text(encoding="utf-8"))
     assert meta["engine"] == "openui_fallback"
     assert meta["attempts"][0]["status"] == "failed_openui_fallback"
+
+
+def test_vite_react_fails_closed_without_explicit_openui_fallback(monkeypatch, tmp_path):
+    import backend.services.vite_react_renderer as vite_mod
+    from backend.services import builder_worker
+
+    monkeypatch.setenv("FRALIB_BUILDER_ENGINE", "vite_react")
+    monkeypatch.setenv(
+        "FRALIB_BUILDER_SANDBOX_ROOT",
+        str(tmp_path / "workspaces").replace("\\", "/"),
+    )
+    monkeypatch.setenv("FRALIB_BUILDER_MANIFEST_DIR", str(tmp_path / "manifests"))
+
+    def fail_vite(*_args, **_kwargs):
+        raise RuntimeError("forced vite failure")
+
+    monkeypatch.setattr(vite_mod, "render_vite_react_site", fail_vite)
+
+    with pytest.raises(RuntimeError, match="forced vite failure"):
+        builder_worker.render_site_with_builder(
+            {
+                "business": {"name": "Fail Closed Smoke", "segmento": "academia"},
+                "seo_keywords": ["academia"],
+            },
+            tenant_id="fail-closed-smoke",
+            job_id="vite-no-openui",
+        )
+
+
+def test_vite_react_aplica_defaults_canonicos_do_runtime(monkeypatch, tmp_path):
+    import backend.services.vite_react_renderer as vite_mod
+    from backend.services import builder_worker
+
+    monkeypatch.delenv("FRALIB_VITE_LLM_POLICY", raising=False)
+    monkeypatch.delenv("FRALIB_VITE_CINEMATIC_STUDIO", raising=False)
+    monkeypatch.delenv("FRALIB_VITE_DISABLE_STUDIO_FALLBACK", raising=False)
+    monkeypatch.delenv("FRALIB_ALLOW_OPENUI_FALLBACK", raising=False)
+    monkeypatch.delenv("ANTHROPIC_BASE_URL", raising=False)
+    monkeypatch.setenv("FRALIB_BUILDER_ENGINE", "vite_react")
+    monkeypatch.setenv(
+        "FRALIB_BUILDER_SANDBOX_ROOT",
+        str(tmp_path / "workspaces").replace("\\", "/"),
+    )
+    monkeypatch.setenv("FRALIB_BUILDER_MANIFEST_DIR", str(tmp_path / "manifests"))
+
+    captured = {}
+
+    def fake_vite(*_args, **_kwargs):
+        captured["llm_policy"] = os.getenv("FRALIB_VITE_LLM_POLICY")
+        captured["cinematic"] = os.getenv("FRALIB_VITE_CINEMATIC_STUDIO")
+        captured["studio_fallback"] = os.getenv("FRALIB_VITE_DISABLE_STUDIO_FALLBACK")
+        captured["openui_fallback"] = os.getenv("FRALIB_ALLOW_OPENUI_FALLBACK")
+        captured["builder_force_env"] = os.getenv("FRALIB_BUILDER_FORCE_ENV_ANTHROPIC")
+        captured["anthropic_base_url"] = os.getenv("ANTHROPIC_BASE_URL")
+        return SimpleNamespace(
+            html="<!doctype html><html><head><title>React OK</title></head><body>" + ("x" * 300) + "</body></html>",
+            model="studio-copy-only",
+            attempts=[{"model": "studio-template", "status": "studio_copy_only_success"}],
+            elapsed_ms=11,
+            source_files=[],
+        )
+
+    monkeypatch.setattr(vite_mod, "render_vite_react_site", fake_vite)
+
+    result = builder_worker.render_site_with_builder(
+        {
+            "business": {"name": "Canonical Runtime", "segmento": "nutricionista"},
+            "seo_keywords": ["nutricionista esportivo"],
+        },
+        tenant_id="canonical-runtime",
+        job_id="vite-defaults",
+    )
+
+    assert result["engine"] == "vite_react"
+    assert captured == {
+        "llm_policy": "copy_only",
+        "cinematic": "1",
+        "studio_fallback": "1",
+        "openui_fallback": "0",
+        "builder_force_env": "1",
+        "anthropic_base_url": "https://api.kpalabz.com/v1",
+    }
 
 
 def test_builder_sandbox_cleanup_remove_apenas_jobs_antigos(tmp_path, monkeypatch):

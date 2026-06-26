@@ -41,11 +41,22 @@ _ROOT = Path(__file__).resolve().parents[2]
 _CANONICAL_BUILDER_ENGINE = "vite_react"
 
 
-def _fallbacks_disabled() -> bool:
-    env = (os.getenv("FRALIB_FAIL_CLOSED_FALLBACKS") or "").strip().lower()
-    if env in {"1", "true", "yes", "on"}:
-        return True
-    return (os.getenv("FRALIB_ENV") or "").strip().lower() == "prod"
+def _openui_fallback_allowed() -> bool:
+    env = (os.getenv("FRALIB_ALLOW_OPENUI_FALLBACK") or "").strip().lower()
+    return env in {"1", "true", "yes", "on"}
+
+
+def _apply_canonical_vite_react_runtime_defaults() -> None:
+    """Align the official builder runtime with the approved cinematic preview path."""
+    os.environ.setdefault("FRALIB_BUILDER_ENGINE", "vite_react")
+    os.environ.setdefault("FRALIB_VITE_LLM_POLICY", "copy_only")
+    os.environ.setdefault("FRALIB_VITE_CINEMATIC_STUDIO", "1")
+    os.environ.setdefault("FRALIB_VITE_DISABLE_STUDIO_FALLBACK", "1")
+    os.environ.setdefault("FRALIB_ALLOW_OPENUI_FALLBACK", "0")
+    os.environ.setdefault("FRALIB_BUILDER_FORCE_ENV_ANTHROPIC", "1")
+    current_base = (os.getenv("ANTHROPIC_BASE_URL") or "").strip()
+    if (not current_base) or ("api.aibee.cloud" in current_base):
+        os.environ["ANTHROPIC_BASE_URL"] = "https://api.kpalabz.com/v1"
 
 
 def _builder_proxy_fallback_model() -> str:
@@ -233,6 +244,8 @@ def render_site_with_builder(
         str((_ROOT / "logs" / "builder_manifests").resolve()),
     )
     engine = _builder_engine(os.getenv("FRALIB_BUILDER_ENGINE", "vite_react"))
+    if engine == "vite_react":
+        _apply_canonical_vite_react_runtime_defaults()
     assert_canonical_builder_publication_allowed(engine=engine)
     # v1.1-baseline-2026-06-23: extrai segmento/nicho do prd_or_facts para serializar
     # no manifest e reidratar memory no OpenUI (worker process case).
@@ -350,8 +363,8 @@ def render_site_with_builder(
             from services.vite_react_renderer import render_vite_react_site  # type: ignore
 
         fallback_model = _builder_proxy_fallback_model()
-        # Sprint 12.9: Vite/React é o caminho canônico.
-        # Em produção, falha fecha; fora de produção, cai para OpenUI só como compatibilidade.
+        # Vite/React é o caminho canonico.
+        # Se falhar, o job deve falhar por padrao; OpenUI so entra por opt-in explicito.
         try:
             render_result = render_vite_react_site(
                 manifest["prompt"],
@@ -364,7 +377,7 @@ def render_site_with_builder(
                 temperature=float(os.getenv("FRALIB_OPENUI_TEMPERATURE", "0.55")),
             )
         except Exception:
-            if _canonical_publication_required():
+            if not _openui_fallback_allowed():
                 raise
             from services.openui_renderer import render_openui_site
 
