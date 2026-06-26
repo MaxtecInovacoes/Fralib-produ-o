@@ -112,37 +112,9 @@
       <!-- Controles do Pipeline -->
       <div class="pipeline-controls">
         <span class="pipeline-status idle" id="pipelineStatus">&#9679; IDLE</span>
-        <button class="btn-pipeline btn-pipeline-start" id="btnIniciar">&#9654; LIGAR</button>
+        <button class="btn-pipeline btn-pipeline-start" id="btnIniciar" title="Liga a esteira Hunter + produção; não cria site sozinho">&#9654; LIGAR ESTEIRA</button>
         <button class="btn-pipeline btn-pipeline-pause" id="btnPausar" onclick="pausarPipeline()" style="display:none">&#9646;&#9646; PAUSAR</button>
         <button class="btn-pipeline btn-pipeline-start" id="btnRetomar" onclick="retomarPipeline()" style="display:none">&#9654; RETOMAR</button>
-        <!-- Pipeline Monitor (admin) -->
-        <div class="pipeline-monitor" id="pipelineMonitor">
-          <button class="pm-toggle" id="pmToggle" onclick="togglePipelineMonitor()" title="Status do motor em tempo real">
-            <span class="pm-dot" id="pmDot"></span>
-            <span class="pm-label" id="pmLabel">--</span>
-            <span class="pm-chevron" id="pmChevron">&#9662;</span>
-          </button>
-          <div class="pm-panel" id="pmPanel" hidden>
-            <div class="pm-header">
-              <span class="pm-title">MOTOR</span>
-              <span class="pm-updated" id="pmUpdated">carregando...</span>
-            </div>
-            <div class="pm-cards">
-              <div class="pm-card"><div class="pm-num" id="pmJobsActive">0</div><div class="pm-lbl">Jobs Ativos</div></div>
-              <div class="pm-card pm-card-warn" id="pmStuckCard"><div class="pm-num" id="pmStuckCount">0</div><div class="pm-lbl">Travados</div></div>
-              <div class="pm-card"><div class="pm-num" id="pmJobsPending">0</div><div class="pm-lbl">Na Fila</div></div>
-              <div class="pm-card"><div class="pm-num" id="pmSpansRunning">0</div><div class="pm-lbl">Spans Rodando</div></div>
-            </div>
-            <div class="pm-stuck-list" id="pmStuckList"></div>
-            <div class="pm-actions">
-              <button class="pm-btn" onclick="adminPipelineRefresh()" title="Atualizar agora">&#8635; Atualizar</button>
-              <button class="pm-btn" onclick="adminPipelineReap()" title="Ressuscita jobs e finaliza spans travados">&#128260; Reap</button>
-              <button class="pm-btn pm-btn-danger" id="pmKillBtn" onclick="adminPipelineKillStuck()" title="Matar spans travados manualmente">&#128128; Matar Travados</button>
-              <button class="pm-btn pm-btn-warn" onclick="adminPipelineClearQueue()" title="Cancelar todos jobs pendentes">&#128465; Limpar Fila</button>
-              <button class="pm-btn" onclick="adminPipelineRestartWorker()" title="Reiniciar servico do worker">&#9851; Restart Worker</button>
-            </div>
-          </div>
-        </div>
       </div>
       <!-- Usuário -->
       <div class="header-user">
@@ -169,8 +141,14 @@
   </div>
 
 
-  <!-- Waveform completa: visivel em todas as views (substitui o antigo banner "PIPELINE RODANDO") -->
-  <div id="pipelineWaveformGlobal" style="margin-bottom:16px;min-width:0;"></div>
+  <!-- Banner de pipeline rodando — visível em todas as views -->
+  <div id="pipeline-banner" style="display:none;background:linear-gradient(90deg,#0f172a,#1e293b);border:1px solid #0183ff;border-radius:8px;padding:10px 16px;margin-bottom:12px;display:none;align-items:center;gap:12px;">
+    <span style="width:8px;height:8px;border-radius:50%;background:#10b981;display:inline-block;animation:pulse 1s infinite;flex-shrink:0;"></span>
+    <span style="color:#10b981;font-family:var(--fl-font-brand);font-size:11px;letter-spacing:1px;flex-shrink:0;">PIPELINE RODANDO</span>
+    <span id="pipeline-banner-tempo" style="color:#e2e8f0;font-family:var(--fl-font-mono);font-size:11px;flex-shrink:0;">00:00</span>
+    <span id="pipeline-banner-fase" style="color:#94a3b8;font-family:var(--fl-font-mono);font-size:11px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Aguardando...</span>
+    <button onclick="document.querySelector('[data-view=\'config\']').click()" style="background:transparent;border:1px solid #0183ff;color:#0183ff;padding:2px 10px;font-size:10px;cursor:pointer;font-family:var(--fl-font-brand);letter-spacing:1px;flex-shrink:0;">VER LOGS</button>
+  </div>
 
   <!-- KPI Cards — 6 métricas -->
   <div class="kpi-grid" id="kpi-section" style="display: none;">
@@ -567,25 +545,58 @@
       </div>
     </div>
 
-    <!-- LINHA 1: Waveform full-width (timeline do pipeline) -->
-    <!-- (a waveform completa fica no topo global, antes das view-sections) -->
+    <!-- LINHA 1: Pixel Office + timeline lado a lado -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:16px;margin-bottom:20px;align-items:start;">
 
-    <!-- LINHA 2: Escritorio do robo full-width, ocupa todo espaco -->
-    <div id="pixelOfficeWrap" style="background:#1a1a2e;border-radius:10px;border:0;box-shadow:inset 0 0 0 1px rgba(255,255,255,.04);overflow:hidden;min-height:380px;min-width:0;display:flex;flex-direction:column;">
-      <div style="background:rgba(8,8,20,0.95);border-bottom:1px solid var(--fl-border);padding:4px 12px;display:flex;justify-content:space-between;align-items:center;font-family:'Courier New',monospace;font-size:10px;color:#a0a0c0">
-        <span style="font-weight:bold;color:#7dd3fc;letter-spacing:1px">&#128187; ESCRITORIO DO ROBO</span>
-        <div style="display:flex;gap:12px">
-          <span>AGT <strong id="po-sc" style="color:#0183ff">9</strong></span>
-          <span>PROD <strong id="po-sp" style="color:#0183ff">0%</strong></span>
-          <span>EVT <strong id="po-ev" style="color:#fbbf24">-</strong></span>
+      <!-- Pixel Office -->
+      <div id="pixelOfficeWrap" style="background:#1a1a2e;border-radius:10px;border:0;box-shadow:inset 0 0 0 1px rgba(255,255,255,.04);overflow:hidden;max-height:330px;min-width:0;">
+        <div style="background:rgba(8,8,20,0.95);border-bottom:1px solid var(--fl-border);padding:4px 12px;display:flex;justify-content:space-between;align-items:center;font-family:'Courier New',monospace;font-size:10px;color:#a0a0c0">
+          <span style="font-weight:bold;color:#7dd3fc;letter-spacing:1px">&#128187; ESCRITORIO DO ROBO</span>
+          <div style="display:flex;gap:12px">
+            <span>AGT <strong id="po-sc" style="color:#0183ff">9</strong></span>
+            <span>PROD <strong id="po-sp" style="color:#0183ff">0%</strong></span>
+            <span>EVT <strong id="po-ev" style="color:#fbbf24">-</strong></span>
+          </div>
+        </div>
+        <div class="admin-simple-help" style="border-radius:0;border-left:0;border-right:0;">
+          Mapa visual do trabalho: os agentes se movem quando o sistema esta buscando, analisando ou produzindo.
+        </div>
+        <div style="background:#1a1a2e;padding:0;line-height:0;font-size:0">
+          <canvas id="pixelOfficeCanvas" style="display:block;image-rendering:pixelated;image-rendering:crisp-edges;width:100%;height:auto;max-height:292px;aspect-ratio:2/1;margin:0 auto;"></canvas>
         </div>
       </div>
-      <div class="admin-simple-help" style="border-radius:0;border-left:0;border-right:0;">
-        Mapa visual do trabalho: os agentes se movem quando o sistema esta buscando, analisando ou produzindo.
+
+      <!-- Linha do tempo -->
+      <div class="config-section" style="display:flex;flex-direction:column;max-height:330px;overflow:hidden;">
+        <div class="config-group" style="display:flex;flex-direction:column;margin-bottom:0;overflow:hidden;">
+          <div class="config-group-title" style="display:flex;align-items:center;justify-content:space-between;">
+            <span style="display:flex;align-items:center;gap:8px;">
+              <span style="width:7px;height:7px;border-radius:50%;background:#10b981;display:inline-block;" id="sse-dot"></span>
+              &#128337; O QUE ESTA ACONTECENDO AGORA
+            </span>
+            <span id="pipelineTimelineStatus" style="font-size:10px;color:var(--fl-text-muted);font-family:var(--fl-font-mono);">aguardando</span>
+          </div>
+          <div class="admin-simple-help" style="border-radius:0;border-left:0;border-right:0;">
+            Aqui aparece o passo atual do robo em ordem: buscar, qualificar, gerar site e registrar resultado.
+          </div>
+          <div class="pipeline-time-strip" aria-label="Tempo de trabalho do robo">
+            <div>
+              <span>Trabalhando ha</span>
+              <strong id="pipelineInlineTempo">00:00</strong>
+            </div>
+            <div>
+              <span>Media normal</span>
+              <strong id="pipelineInlineMedia">8 a 15 min</strong>
+            </div>
+            <div>
+              <span>Previsao</span>
+              <strong id="pipelineInlineEta">aguardando</strong>
+            </div>
+          </div>
+          <div id="pipelineTimeline" style="display:flex;flex-direction:column;gap:7px;overflow:visible;min-height:0;padding-right:0;"></div>
+        </div>
       </div>
-      <div style="background:#1a1a2e;padding:0;line-height:0;font-size:0;flex:1;display:flex;align-items:center;justify-content:center;">
-        <canvas id="pixelOfficeCanvas" style="display:block;image-rendering:pixelated;image-rendering:crisp-edges;width:100%;height:auto;max-height:480px;aspect-ratio:2/1;"></canvas>
-      </div>
+
     </div>
 
     <!-- MOTOR DE ABASTECIMENTO: Hunter/Caio separado da pipeline -->
@@ -801,7 +812,10 @@
           </div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px;">
             <button class="btn-config-save" id="btnLeadSupplySave" onclick="salvarLeadSupplyConfig()">SALVAR</button>
-            <button class="btn-config-save" id="btnLeadSupplyStart" style="background:#10b981;border-color:#047857;" onclick="iniciarLeadSupply()">LIGAR MOTORES</button>
+            <button class="btn-config-save" id="btnLeadSupplyStart" style="background:#10b981;border-color:#047857;" onclick="iniciarLeadSupply()">LIGAR ESTEIRA</button>
+          </div>
+          <div class="admin-simple-help" style="margin-top:10px;">
+            <strong>Ligar esteira</strong> ativa Hunter e produção automática. <strong>Buscar leads agora</strong> só abastece estoque. <strong>Criar pipeline do próximo</strong> tenta abrir um site real para 1 lead aprovado.
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;">
             <button id="btnPauseHunter" onclick="toggleLeadSupplyHunter()" style="background:transparent;color:#f59e0b;border:1px solid #f59e0b;padding:9px 10px;border-radius:6px;cursor:pointer;font-size:12px;">Pausar Hunter</button>
@@ -809,7 +823,7 @@
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;">
             <button id="btnLeadSupplyRefill" onclick="forcarLeadSupplyRefill()" style="background:transparent;color:#c084fc;border:1px solid var(--fl-border-md);padding:9px 10px;border-radius:6px;cursor:pointer;font-size:12px;">Buscar leads agora</button>
-            <button id="btnLeadSupplyTick" onclick="forcarLeadSupplyTick()" style="background:transparent;color:#10b981;border:1px solid rgba(16,185,129,.5);padding:9px 10px;border-radius:6px;cursor:pointer;font-size:12px;">Gerar site do proximo</button>
+            <button id="btnLeadSupplyTick" onclick="forcarLeadSupplyTick()" style="background:transparent;color:#10b981;border:1px solid rgba(16,185,129,.5);padding:9px 10px;border-radius:6px;cursor:pointer;font-size:12px;">Criar pipeline do próximo</button>
           </div>
           <div id="leadSupplyActionMessage" class="lead-supply-action-message" aria-live="polite"></div>
         </div>
@@ -3021,7 +3035,6 @@ function _buildPipelineHealthState(data, failureMessage) {
   var spans = (data && data.spans) || {};
   var stuck = (data && data.stuck) || {};
   var worker = (data && data.worker) || {};
-  var latestError = (data && data.latest_error) || {};
   var alive = worker.alive !== false;
   var active = parseInt(jobs.active || 0, 10) || 0;
   var pending = parseInt(jobs.pending || 0, 10) || 0;
@@ -3050,22 +3063,6 @@ function _buildPipelineHealthState(data, failureMessage) {
     'Travados: ' + stuckCount
   ];
 
-  if (latestError && (latestError.job || latestError.span)) {
-    var err = latestError.job || latestError.span;
-    severity = 'critical';
-    popup = true;
-    title = 'Erro persistido na pipeline';
-    message = err.error || 'Um erro foi gravado pelo backend.';
-    details = [
-      'Origem: ' + (latestError.source || 'desconhecida'),
-      'Fase: ' + (err.last_phase || err.fase_nome || '-'),
-      'Job/Run: ' + (err.id || err.run_id || '-'),
-      'Tentativas: ' + (err.attempts != null ? err.attempts : '-')
-    ];
-    if (err.max_attempts != null) details.push('Máximo: ' + err.max_attempts);
-    details.push('Erro: ' + String(err.error || '-').slice(0, 240));
-  }
-
   if (failureMessage) {
     severity = 'critical';
     popup = true;
@@ -3076,8 +3073,6 @@ function _buildPipelineHealthState(data, failureMessage) {
       'Tente atualizar o painel ou executar reap.',
       'Se o erro persistir, o worker ou o backend podem estar indisponíveis.'
     ];
-  } else if (latestError && (latestError.job || latestError.span)) {
-    // já tratado acima
   } else if (!alive) {
     severity = 'critical';
     popup = true;
@@ -3529,7 +3524,7 @@ function _renderLeadSupplyDiagnosis(cfg, counts, jobs, events) {
   var tone = 'info';
   var title = 'Estoque sincronizado';
   var text = 'Hunter, Caio e producao estao sem bloqueio visivel.';
-  var next = 'Use Buscar leads agora para abastecer ou Gerar site do proximo quando houver aprovados.';
+  var next = 'Use Buscar leads agora para abastecer ou Criar pipeline do próximo quando houver aprovados.';
   var actionHtml = '';
   var providerAlert = _leadSupplyProviderAlert;
   var providerAlertActive = false;
@@ -3594,7 +3589,7 @@ function _renderLeadSupplyDiagnosis(cfg, counts, jobs, events) {
     title = approved + ' lead(s) aprovados no estoque';
     text = 'Estes leads ja passaram pelo Caio e podem virar site. O contador so baixa quando a producao reserva um deles.';
     next = cfg.producao_pausada ? 'Retome a Producao para puxar o proximo aprovado.' : 'Clique em Gerar site do proximo ou aguarde o controle automatico.';
-    actionHtml = cfg.producao_pausada ? '' : _leadSupplyActionButton('Gerar proximo site', 'forcarLeadSupplyTick()', 'success');
+    actionHtml = cfg.producao_pausada ? '' : _leadSupplyActionButton('Criar pipeline do próximo', 'forcarLeadSupplyTick()', 'success');
   } else if (raw > 0 || caioJob) {
     tone = 'info';
     title = raw + ' lead(s) aguardando qualificacao';
@@ -3625,7 +3620,7 @@ function _renderLeadSupplyDiagnosis(cfg, counts, jobs, events) {
     tone = 'info';
     title = 'Aguardando primeira busca';
     text = 'Nenhum lead no estoque ainda. O motor esta pronto, basta rodar a primeira busca.';
-    next = 'Clique em Buscar leads agora para iniciar o ciclo Hunter -> Caio -> Producao.';
+    next = 'Clique em Ligar esteira para ativar Hunter + produção automática, ou em Buscar leads agora para rodar só a busca.';
     if (gap > 0) actionHtml = _leadSupplyActionButton('Buscar mais leads', 'forcarLeadSupplyRefill()', 'info');
   }
 
@@ -3933,7 +3928,7 @@ async function iniciarLeadSupply() {
   var saved = await salvarLeadSupplyConfig();
   if (!saved) return;
   _setLeadSupplyButtonBusy('btnLeadSupplyStart', true, 'LIGANDO...');
-  _leadSupplySetAction('info', 'Ligando motores', 'Hunter, Caio e producao foram ativados. O estoque sobe quando houver lead novo aprovado.');
+  _leadSupplySetAction('info', 'Ligando esteira', 'Hunter e producao automatica foram ativados. Isso nao cria um site sozinho; a producao ainda precisa achar 1 lead aprovado elegivel.');
   try {
     var resp = await authFetch('/api/lead-supply/start', { method: 'POST' });
     var data = await resp.json().catch(function(){ return {}; });
@@ -3941,8 +3936,8 @@ async function iniciarLeadSupply() {
       _handleBlockedResponse(resp, data);
       return;
     }
-    _leadSupplySetAction('success', 'Motores ligados', 'Busca e producao foram enfileiradas. Acompanhe o diagnostico e o registro.', 7000);
-    if (typeof Toast !== 'undefined') Toast.success('Motores ligados. Hunter e Caio vão abastecer a fila.');
+    _leadSupplySetAction('success', 'Esteira ligada', 'Hunter e production tick foram enfileirados. Se houver lead aprovado elegivel, uma pipeline real nasce em seguida.', 7000);
+    if (typeof Toast !== 'undefined') Toast.success('Esteira ligada. Agora a fila pode abastecer e abrir pipeline.');
     _refreshLeadSupplySoon();
   } catch (e) {
     _leadSupplySetAction('error', 'Erro ao ligar motores', e.message || 'Nao foi possivel iniciar o abastecimento.', 6000);
@@ -4000,7 +3995,7 @@ async function forcarLeadSupplyRefill() {
 
 async function forcarLeadSupplyTick() {
   _setLeadSupplyButtonBusy('btnLeadSupplyTick', true, 'GERANDO...');
-  _leadSupplySetAction('info', 'Producao solicitada', 'A producao tenta reservar 1 lead aprovado. Sem aprovados, o contador nao muda.');
+  _leadSupplySetAction('info', 'Criacao de pipeline solicitada', 'A producao tenta reservar 1 lead aprovado e abrir 1 pipeline real. Sem aprovados, nada nasce.');
   try {
     var resp = await authFetch('/api/lead-supply/production/tick', { method: 'POST' });
     var data = await resp.json().catch(function(){ return {}; });
@@ -4009,7 +4004,7 @@ async function forcarLeadSupplyTick() {
       return;
     }
     if (data && data.job_id) {
-      _leadSupplySetAction('success', 'Producao enfileirada', 'Lead reservado e pipeline criada com job #' + data.job_id + '.', 7000);
+      _leadSupplySetAction('success', 'Pipeline criada', 'Lead reservado e pipeline real criada com job #' + data.job_id + '.', 7000);
       if (typeof Toast !== 'undefined') Toast.success('Pipeline criada para o próximo lead aprovado.');
       _refreshLeadSupplySoon();
       return;
@@ -4032,8 +4027,8 @@ async function forcarLeadSupplyTick() {
       _refreshLeadSupplySoon();
       return;
     }
-    _leadSupplySetAction('success', 'Producao enfileirada', 'Se havia lead aprovado, ele sai do estoque e entra na linha de producao.', 7000);
-    if (typeof Toast !== 'undefined') Toast.success('Produção vai puxar o próximo lead aprovado.');
+    _leadSupplySetAction('success', 'Production tick enfileirado', 'O tick foi aceito. So havera pipeline real se houver lead aprovado elegivel e sem duplicidade.', 7000);
+    if (typeof Toast !== 'undefined') Toast.success('Tick de produção aceito.');
     _refreshLeadSupplySoon();
   } catch (e) {
     _leadSupplySetAction('error', 'Erro na producao', e.message || 'Nao foi possivel gerar o proximo site.', 6000);
@@ -8462,7 +8457,7 @@ async function atualizarUtiBadge() {
 </script>
 <!-- Modulos extraidos do admin monolitico. -->
 <script src="/js/admin/pipeline-timeline.js?v=1782014057"></script>
-<script src="/js/admin/pipeline-waveform.js?v=20260621-avg"></script>
+<script src="/js/admin/pipeline-waveform.js?v=20260621-telemetry"></script>
 <script src="/js/admin/audio-player/events.js?v=20260621"></script>
 <script src="/js/admin/audio-player/storage.js?v=20260621"></script>
 <script src="/js/admin/audio-player/player-core.js?v=20260621"></script>
@@ -8472,187 +8467,4 @@ async function atualizarUtiBadge() {
 <script src="/js/admin/audio-panel/panel-dom.js?v=20260621"></script>
 <script src="/js/admin/audio-panel/panel-events.js?v=20260621"></script>
 <script src="/js/admin/audio-panel.js?v=20260621"></script>
-<script>
-/* ══ PIPELINE MONITOR — visibilidade e controle do motor ══ */
-(function(){
-  let _pmPanelOpen = false;
-  let _pmTimer = null;
-  let _pmBusy = false;
-
-  function _pmSetText(id, text){var el=document.getElementById(id); if(el) el.textContent=text;}
-  function _pmSetDot(state){
-    var d=document.getElementById('pmDot'); if(!d) return;
-    d.classList.remove('healthy','warn','error');
-    if(state) d.classList.add(state);
-  }
-
-  async function _pmFetch(){
-    try{
-      var r=await authFetch('/api/admin/pipeline/status');
-      if(!r || !r.ok) throw new Error('HTTP '+r.status);
-      return await r.json();
-    }catch(e){return null;}
-  }
-
-  function _pmRenderList(stuck){
-    var el=document.getElementById('pmStuckList');
-    if(!el) return;
-    if(!stuck || stuck.length===0){el.innerHTML=''; return;}
-    el.innerHTML = stuck.map(function(s){
-      return '<div class="pm-stuck-item" title="'+s.run_id+'">' +
-        '<span class="pm-stuck-run">'+s.run_id+' &middot; '+s.fase_nome+'</span>' +
-        '<span class="pm-stuck-age">'+s.age_human+'</span>' +
-      '</div>';
-    }).join('');
-  }
-
-  async function adminPipelineRefresh(){
-    if(_pmBusy) return;
-    _pmBusy=true;
-    var data=await _pmFetch();
-    if(!data){
-      _pmSetText('pmLabel','SEM DADOS');
-      _pmSetDot('error');
-      _pipelineHealthFailureStreak += 1;
-      var failureState = _buildPipelineHealthState(null, 'Não foi possível consultar o estado da pipeline.');
-      _pipelineHealthState = failureState;
-      if (_pipelineHealthFailureStreak >= 2) {
-        _showPipelineHealthModal(failureState);
-      }
-      atualizarStatusPipeline(lastStatus.rodando, lastStatus.pausado);
-      _pmBusy=false;
-      return;
-    }
-    _pipelineHealthFailureStreak = 0;
-    var jobs=data.jobs||{};
-    var spans=data.spans||{};
-    var stuck=data.stuck||{};
-    var q=spans.running||0;
-    var p=jobs.pending||0;
-    var a=jobs.active||0;
-    var s=stuck.count||0;
-
-    _pmSetText('pmJobsActive',a);
-    _pmSetText('pmJobsPending',p);
-    _pmSetText('pmSpansRunning',q);
-    _pmSetText('pmStuckCount',s);
-
-    var sc=document.getElementById('pmStuckCard');
-    if(sc){ sc.classList.toggle('has-stuck', s>0); }
-
-    _pmRenderList(stuck.list||[]);
-
-    var healthState = _buildPipelineHealthState(data);
-    _pipelineHealthState = healthState;
-    if (healthState.popup) {
-      _showPipelineHealthModal(healthState);
-    } else if (_pipelineHealthModalOpen) {
-      _hidePipelineHealthModal();
-    }
-
-    var alive=(data.worker&&data.worker.alive)!==false;
-    if(!alive){ _pmSetText('pmLabel','OFF'); _pmSetDot('error'); }
-    else if(s>0){ _pmSetText('pmLabel',s+' TRAV'); _pmSetDot('error'); }
-    else if (healthState.severity === 'warn') { _pmSetText('pmLabel', healthState.title === 'Fila aguardando worker' ? 'FILA' : 'ALERTA'); _pmSetDot('warn'); }
-  else if(q===0 && p===0){ _pmSetText('pmLabel','IDLE'); _pmSetDot('warn'); }
-  else { _pmSetText('pmLabel','OK'); _pmSetDot('healthy'); }
-
-    var d=new Date();
-    var hh=String(d.getHours()).padStart(2,'0');
-    var mm=String(d.getMinutes()).padStart(2,'0');
-    var ss=String(d.getSeconds()).padStart(2,'0');
-    _pmSetText('pmUpdated','atualizado '+hh+':'+mm+':'+ss);
-
-    atualizarStatusPipeline(lastStatus.rodando, lastStatus.pausado);
-
-    _pmBusy=false;
-  }
-
-  function togglePipelineMonitor(){
-    var p=document.getElementById('pmPanel'); if(!p) return;
-    _pmPanelOpen=!_pmPanelOpen;
-    p.hidden=!_pmPanelOpen;
-    if(_pmPanelOpen){
-      adminPipelineRefresh();
-      _pmTimer=setInterval(adminPipelineRefresh, 8000);
-    } else {
-      if(_pmTimer){clearInterval(_pmTimer); _pmTimer=null;}
-    }
-  }
-
-  async function adminPipelineReap(){
-    if(!confirm('Executar reap agora? (jobs travados + spans stale + exhausted)')) return;
-    try{
-      var r=await authFetch('/api/admin/pipeline/reap',{method:'POST'});
-      var d=r?await r.json():{};
-      mostrarToast('Reap: '+d.jobs_ressuscitados+' jobs, '+d.spans_finalizados+' spans, '+d.jobs_exhausted+' exhausted');
-      setTimeout(adminPipelineRefresh, 500);
-    }catch(e){mostrarToast('Erro: '+e.message,5000);}
-  }
-
-  window.adminPipelineRefresh = adminPipelineRefresh;
-  window.adminPipelineReap = adminPipelineReap;
-
-  async function adminPipelineKillStuck(){
-    if(!confirm('Matar todos os spans travados (>1h)?')) return;
-    try{
-      var r=await authFetch('/api/admin/pipeline/kill-stuck',{
-        method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({min_age_minutes:60})
-      });
-      var d=r?await r.json():{};
-      mostrarToast('Spans mortos: '+d.killed);
-      setTimeout(adminPipelineRefresh, 500);
-    }catch(e){mostrarToast('Erro: '+e.message,5000);}
-  }
-
-  window.adminPipelineKillStuck = adminPipelineKillStuck;
-
-  async function adminPipelineClearQueue(){
-    if(!confirm('Limpar TODOS os jobs pendentes? (cancela a fila)')) return;
-    try{
-      var r=await authFetch('/api/admin/pipeline/clear-queue',{
-        method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({})
-      });
-      var d=r?await r.json():{};
-      mostrarToast('Jobs cancelados: '+d.cleared);
-      setTimeout(adminPipelineRefresh, 500);
-    }catch(e){mostrarToast('Erro: '+e.message,5000);}
-  }
-
-  window.adminPipelineClearQueue = adminPipelineClearQueue;
-
-  async function adminPipelineRestartWorker(){
-    if(!confirm('Reiniciar o servico do worker? (~10s de indisponibilidade)')) return;
-    try{
-      var r=await authFetch('/api/admin/pipeline/worker/restart',{method:'POST'});
-      var d=r?await r.json():{};
-      mostrarToast(d.ok?'Worker reiniciado':'Falhou: '+(d.message||'erro'), 5000);
-      setTimeout(adminPipelineRefresh, 12000);
-    }catch(e){mostrarToast('Erro: '+e.message,5000);}
-  }
-
-  window.adminPipelineRestartWorker = adminPipelineRestartWorker;
-
-  // Fechar panel ao clicar fora
-  document.addEventListener('click', function(e){
-    if(!_pmPanelOpen) return;
-    var mon=document.getElementById('pipelineMonitor');
-    if(mon && !mon.contains(e.target)){
-      var p=document.getElementById('pmPanel');
-      if(p) p.hidden=true;
-      _pmPanelOpen=false;
-      if(_pmTimer){clearInterval(_pmTimer); _pmTimer=null;}
-    }
-  });
-
-  // Refresh inicial ao carregar (sem abrir panel)
-  if(document.readyState==='loading'){
-    document.addEventListener('DOMContentLoaded', adminPipelineRefresh);
-  } else {
-    adminPipelineRefresh();
-  }
-})();
-</script>
 </body></html>

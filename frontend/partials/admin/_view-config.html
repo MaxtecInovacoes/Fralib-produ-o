@@ -339,7 +339,10 @@
           </div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px;">
             <button class="btn-config-save" id="btnLeadSupplySave" onclick="salvarLeadSupplyConfig()">SALVAR</button>
-            <button class="btn-config-save" id="btnLeadSupplyStart" style="background:#10b981;border-color:#047857;" onclick="iniciarLeadSupply()">LIGAR MOTORES</button>
+            <button class="btn-config-save" id="btnLeadSupplyStart" style="background:#10b981;border-color:#047857;" onclick="iniciarLeadSupply()">LIGAR ESTEIRA</button>
+          </div>
+          <div class="admin-simple-help" style="margin-top:10px;">
+            <strong>Ligar esteira</strong> ativa Hunter e produção automática. <strong>Buscar leads agora</strong> só abastece estoque. <strong>Criar pipeline do próximo</strong> tenta abrir um site real para 1 lead aprovado.
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;">
             <button id="btnPauseHunter" onclick="toggleLeadSupplyHunter()" style="background:transparent;color:#f59e0b;border:1px solid #f59e0b;padding:9px 10px;border-radius:6px;cursor:pointer;font-size:12px;">Pausar Hunter</button>
@@ -347,7 +350,7 @@
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;">
             <button id="btnLeadSupplyRefill" onclick="forcarLeadSupplyRefill()" style="background:transparent;color:#c084fc;border:1px solid var(--fl-border-md);padding:9px 10px;border-radius:6px;cursor:pointer;font-size:12px;">Buscar leads agora</button>
-            <button id="btnLeadSupplyTick" onclick="forcarLeadSupplyTick()" style="background:transparent;color:#10b981;border:1px solid rgba(16,185,129,.5);padding:9px 10px;border-radius:6px;cursor:pointer;font-size:12px;">Gerar site do proximo</button>
+            <button id="btnLeadSupplyTick" onclick="forcarLeadSupplyTick()" style="background:transparent;color:#10b981;border:1px solid rgba(16,185,129,.5);padding:9px 10px;border-radius:6px;cursor:pointer;font-size:12px;">Criar pipeline do próximo</button>
           </div>
           <div id="leadSupplyActionMessage" class="lead-supply-action-message" aria-live="polite"></div>
         </div>

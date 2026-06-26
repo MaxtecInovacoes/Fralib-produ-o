@@ -713,7 +713,7 @@ function _renderLeadSupplyDiagnosis(cfg, counts, jobs, events) {
   var tone = 'info';
   var title = 'Estoque sincronizado';
   var text = 'Hunter, Caio e producao estao sem bloqueio visivel.';
-  var next = 'Use Buscar leads agora para abastecer ou Gerar site do proximo quando houver aprovados.';
+  var next = 'Use Buscar leads agora para abastecer ou Criar pipeline do próximo quando houver aprovados.';
   var actionHtml = '';
   var providerAlert = _leadSupplyProviderAlert;
   var providerAlertActive = false;
@@ -778,7 +778,7 @@ function _renderLeadSupplyDiagnosis(cfg, counts, jobs, events) {
     title = approved + ' lead(s) aprovados no estoque';
     text = 'Estes leads ja passaram pelo Caio e podem virar site. O contador so baixa quando a producao reserva um deles.';
     next = cfg.producao_pausada ? 'Retome a Producao para puxar o proximo aprovado.' : 'Clique em Gerar site do proximo ou aguarde o controle automatico.';
-    actionHtml = cfg.producao_pausada ? '' : _leadSupplyActionButton('Gerar proximo site', 'forcarLeadSupplyTick()', 'success');
+    actionHtml = cfg.producao_pausada ? '' : _leadSupplyActionButton('Criar pipeline do próximo', 'forcarLeadSupplyTick()', 'success');
   } else if (raw > 0 || caioJob) {
     tone = 'info';
     title = raw + ' lead(s) aguardando qualificacao';
@@ -809,7 +809,7 @@ function _renderLeadSupplyDiagnosis(cfg, counts, jobs, events) {
     tone = 'info';
     title = 'Aguardando primeira busca';
     text = 'Nenhum lead no estoque ainda. O motor esta pronto, basta rodar a primeira busca.';
-    next = 'Clique em Buscar leads agora para iniciar o ciclo Hunter -> Caio -> Producao.';
+    next = 'Clique em Ligar esteira para ativar Hunter + produção automática, ou em Buscar leads agora para rodar só a busca.';
     if (gap > 0) actionHtml = _leadSupplyActionButton('Buscar mais leads', 'forcarLeadSupplyRefill()', 'info');
   }
 
@@ -1117,7 +1117,7 @@ async function iniciarLeadSupply() {
   var saved = await salvarLeadSupplyConfig();
   if (!saved) return;
   _setLeadSupplyButtonBusy('btnLeadSupplyStart', true, 'LIGANDO...');
-  _leadSupplySetAction('info', 'Ligando motores', 'Hunter, Caio e producao foram ativados. O estoque sobe quando houver lead novo aprovado.');
+  _leadSupplySetAction('info', 'Ligando esteira', 'Hunter e producao automatica foram ativados. Isso nao cria um site sozinho; a producao ainda precisa achar 1 lead aprovado elegivel.');
   try {
     var resp = await authFetch('/api/lead-supply/start', { method: 'POST' });
     var data = await resp.json().catch(function(){ return {}; });
@@ -1125,8 +1125,8 @@ async function iniciarLeadSupply() {
       _handleBlockedResponse(resp, data);
       return;
     }
-    _leadSupplySetAction('success', 'Motores ligados', 'Busca e producao foram enfileiradas. Acompanhe o diagnostico e o registro.', 7000);
-    if (typeof Toast !== 'undefined') Toast.success('Motores ligados. Hunter e Caio vão abastecer a fila.');
+    _leadSupplySetAction('success', 'Esteira ligada', 'Hunter e production tick foram enfileirados. Se houver lead aprovado elegivel, uma pipeline real nasce em seguida.', 7000);
+    if (typeof Toast !== 'undefined') Toast.success('Esteira ligada. Agora a fila pode abastecer e abrir pipeline.');
     _refreshLeadSupplySoon();
   } catch (e) {
     _leadSupplySetAction('error', 'Erro ao ligar motores', e.message || 'Nao foi possivel iniciar o abastecimento.', 6000);
@@ -1184,7 +1184,7 @@ async function forcarLeadSupplyRefill() {
 
 async function forcarLeadSupplyTick() {
   _setLeadSupplyButtonBusy('btnLeadSupplyTick', true, 'GERANDO...');
-  _leadSupplySetAction('info', 'Producao solicitada', 'A producao tenta reservar 1 lead aprovado. Sem aprovados, o contador nao muda.');
+  _leadSupplySetAction('info', 'Criacao de pipeline solicitada', 'A producao tenta reservar 1 lead aprovado e abrir 1 pipeline real. Sem aprovados, nada nasce.');
   try {
     var resp = await authFetch('/api/lead-supply/production/tick', { method: 'POST' });
     var data = await resp.json().catch(function(){ return {}; });
@@ -1193,7 +1193,7 @@ async function forcarLeadSupplyTick() {
       return;
     }
     if (data && data.job_id) {
-      _leadSupplySetAction('success', 'Producao enfileirada', 'Lead reservado e pipeline criada com job #' + data.job_id + '.', 7000);
+      _leadSupplySetAction('success', 'Pipeline criada', 'Lead reservado e pipeline real criada com job #' + data.job_id + '.', 7000);
       if (typeof Toast !== 'undefined') Toast.success('Pipeline criada para o próximo lead aprovado.');
       _refreshLeadSupplySoon();
       return;
@@ -1216,8 +1216,8 @@ async function forcarLeadSupplyTick() {
       _refreshLeadSupplySoon();
       return;
     }
-    _leadSupplySetAction('success', 'Producao enfileirada', 'Se havia lead aprovado, ele sai do estoque e entra na linha de producao.', 7000);
-    if (typeof Toast !== 'undefined') Toast.success('Produção vai puxar o próximo lead aprovado.');
+    _leadSupplySetAction('success', 'Production tick enfileirado', 'O tick foi aceito. So havera pipeline real se houver lead aprovado elegivel e sem duplicidade.', 7000);
+    if (typeof Toast !== 'undefined') Toast.success('Tick de produção aceito.');
     _refreshLeadSupplySoon();
   } catch (e) {
     _leadSupplySetAction('error', 'Erro na producao', e.message || 'Nao foi possivel gerar o proximo site.', 6000);
