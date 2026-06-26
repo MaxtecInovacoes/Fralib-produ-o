@@ -416,7 +416,7 @@
         '</div>' +
         '<div class="pw-wave" id="pwWave">' + bars.join('') + '</div>' +
         '<div class="pw-footer">' +
-          '<div class="pw-eta">⏱ <strong id="pwElapsed">00:00</strong> &nbsp;·&nbsp; <span id="pwEta">aguardando medicoes</span> &nbsp;·&nbsp; <span id="pwAvg" class="pw-avg"></span></div>' +
+          '<div class="pw-eta"><span>⏱ tempo atual</span> <strong id="pwElapsed">00:00</strong> &nbsp;·&nbsp; <span id="pwEta">do 1º agente ao SDR</span> &nbsp;·&nbsp; <span id="pwAvg" class="pw-avg">média do site: calculando</span></div>' +
           '<div class="pw-pct" id="pwPct">0%</div>' +
         '</div>' +
       '</div>';
@@ -507,15 +507,15 @@
     var el = document.getElementById('pwAvg');
     if (!el) return;
     var avg = state.avgByMacro;
-    if (!avg) { el.textContent = ''; return; }
+    if (!avg) { el.textContent = 'média do site: calculando'; return; }
     var total = avg.total_avg_seconds;
     if (!total) {
-      el.textContent = 'média: calculando (' + avg.min_samples + '+ runs por macro)';
+      el.textContent = 'média do site: calculando (' + avg.min_samples + '+ runs por macro)';
       return;
     }
     var elapsed = measuredElapsedSeconds();
     var remaining = Math.max(0, Math.floor(total - elapsed));
-    el.textContent = 'média ' + formatElapsed(total) + ' · resta ' + formatElapsed(remaining);
+    el.textContent = 'média do site: ' + formatElapsed(total) + ' · restante estimado: ' + formatElapsed(remaining);
   }
 
   // ── Render ────────────────────────────────────────────────────────
@@ -596,8 +596,8 @@
     renderAvg();
 
     if (etaEl) {
-      if (running && state.startedAt) etaEl.textContent = 'medindo pelo inicio registrado';
-      else if (running) etaEl.textContent = 'aguardando inicio registrado';
+      if (running && state.startedAt) etaEl.textContent = 'do 1º agente até publicar/SDR';
+      else if (running) etaEl.textContent = 'aguardando inicio do 1º agente';
       else if (state.status === 'pending') etaEl.textContent = 'na fila · aguardando worker';
       else if (state.status === 'completed') etaEl.textContent = 'ultima execucao concluida';
       else etaEl.textContent = 'aguardando medicoes';
@@ -610,7 +610,6 @@
     if (document.getElementById('pwTokens')) document.getElementById('pwTokens').textContent = compactNumber(totals.total_tokens || 0);
     if (document.getElementById('pwCalls')) document.getElementById('pwCalls').textContent = totals.calls || 0;
     if (document.getElementById('pwCost')) document.getElementById('pwCost').textContent = 'US$ ' + (Number(totals.cost_usd) || 0).toFixed(4).replace('.', ',');
-    if (document.getElementById('pwAvg')) document.getElementById('pwAvg').textContent = formatElapsed(state.summary.average_elapsed_seconds || 0);
     if (document.getElementById('pwJob')) document.getElementById('pwJob').textContent = state.jobId ? 'Job #' + state.jobId + (state.runId ? ' · run ' + state.runId : '') : 'sem job ativo';
     renderCallDetails();
   }
