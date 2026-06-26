@@ -64,6 +64,12 @@ Fix via post-process `_interpolate_studio_placeholders()`.
 texto hardcoded "Matricula, treino..." e quebrava leads `nutricionista` no guard
 anti-contaminação. O modal agora usa CTA segment-aware e texto neutro.
 
+**Bug corrigido no Sprint 12.20**: leads com fotos reais em `media.photos`
+podiam falhar como `0 refs` porque `_rewrite_editorial_images()` só substituía
+URLs já existentes no código gerado. `prepare_vite_project_files()` agora chama
+`_ensure_editorial_media_contract()` para materializar Hero/Galeria com fotos
+aprovadas antes do gate.
+
 ## Como debugar
 
 ### Site mostra tela preta

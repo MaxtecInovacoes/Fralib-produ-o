@@ -316,7 +316,7 @@ def test_8_existing_prompt_blocks_intact():
 
 def test_9_studio_fallback_nutricionista_sem_contaminacao():
     """Sprint 12.20: fallback Studio de nutricionista nao herda matricula/treino."""
-    print("\n[TESTE 9/9] Studio fallback nutricionista sem contaminacao...")
+    print("\n[TESTE 9/10] Studio fallback nutricionista sem contaminacao...")
     from backend.services.vite_react_renderer import (
         _generate_studio_fallback_files,
         validate_vite_project_files,
@@ -350,6 +350,53 @@ def test_9_studio_fallback_nutricionista_sem_contaminacao():
     print("  OK validate_vite_project_files aceita nutricionista")
 
 
+def test_10_prepare_injeta_midia_aprovada_quando_llm_nao_usa_imagens():
+    """Sprint 12.20: facts com fotos reais nao podem falhar como 0 refs."""
+    print("\n[TESTE 10/10] prepare injeta midia aprovada antes do gate...")
+    from backend.services.vite_react_renderer import (
+        _generate_studio_fallback_files,
+        prepare_vite_project_files,
+        validate_vite_project_files,
+    )
+
+    facts = {
+        "business": {
+            "name": "Vitor Feitosa - Nutricionista Esportivo",
+            "segment": "nutricionista",
+            "subniche": "nutricao esportiva",
+            "city": "Sao Paulo",
+            "phone": "11984585259",
+            "rating": "5.0",
+        },
+        "media": {
+            "photos": [
+                "https://images.unsplash.com/photo-1490645935967-10de6ba17061",
+                "https://images.unsplash.com/photo-1505576399279-565b52d4ac71",
+            ]
+        },
+    }
+    files = _generate_studio_fallback_files(facts)
+    files["src/components/HeroSection.tsx"] = (
+        "export function HeroSection(){return <section id=\"topo\" "
+        "className=\"min-h-[80svh] bg-zinc-950 text-white\">Nutricionista</section>}"
+    )
+    files["src/components/GallerySection.tsx"] = (
+        "export function GallerySection(){return <section id=\"galeria\" "
+        "className=\"bg-white text-zinc-950\">Galeria sem imagem</section>}"
+    )
+
+    prepared = prepare_vite_project_files(files, facts=facts)
+    source = "\n".join(prepared.values())
+
+    assert source.count("<img") >= 2
+    assert source.count("images.unsplash.com") >= 2
+    assert "photo-1490645935967-10de6ba17061" in source
+    validate_vite_project_files(prepared, facts, requested_paths=set())
+
+    print("  OK imagens reais entram em Hero/Galeria deterministicamente")
+    print("  OK validate_vite_project_files nao acusa 0 refs")
+
+
 # ════════════════════════════════════════════════════════════════════
 # Main
 # ════════════════════════════════════════════════════════════════════
@@ -369,9 +416,10 @@ if __name__ == "__main__":
     test_7_renderer_summarize_inclui_briefing_real()
     test_8_existing_prompt_blocks_intact()
     test_9_studio_fallback_nutricionista_sem_contaminacao()
+    test_10_prepare_injeta_midia_aprovada_quando_llm_nao_usa_imagens()
 
     print("\n" + "=" * 80)
-    print("TODOS OS TESTES PASSARAM (9/9)")
+    print("TODOS OS TESTES PASSARAM (10/10)")
     print("Sprint 12.12 (v1.14) - caroco enriquecido com briefing real")
     print("Bug fix: NameError em _build_nicho_modal_block")
     print("Novo: _build_lead_briefing_block(facts) com JSON-LD + fotos reais")

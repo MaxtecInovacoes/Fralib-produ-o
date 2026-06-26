@@ -1571,6 +1571,7 @@ def prepare_vite_project_files(files: dict[str, str], *, facts: dict[str, Any]) 
     _drop_malformed_data_url_in_jsx(prepared)
     _ensure_lgpd_banner_contract(prepared, facts)
     _rewrite_editorial_images(prepared, facts)
+    _ensure_editorial_media_contract(prepared, facts)
     _ensure_factual_motion_contract(prepared, facts)
     _normalize_component_export_contract(prepared)
     _enforce_hero_visual_contract(prepared)
@@ -1902,6 +1903,52 @@ def _rewrite_editorial_images(files: dict[str, str], facts: dict[str, Any]) -> N
             return replacement
 
         files[path] = pattern.sub(replace_url, text)
+
+
+def _ensure_editorial_media_contract(files: dict[str, str], facts: dict[str, Any]) -> None:
+    """Guarantee that approved lead media reaches the Vite source before QA."""
+    source_text = "\n".join(
+        str(content or "")
+        for path, content in files.items()
+        if path.startswith("src/") and path.endswith((".tsx", ".ts", ".jsx", ".js"))
+    )
+    image_count = len(re.findall(r"<img\b", source_text, re.IGNORECASE))
+    editorial_refs = len(re.findall(r"images\.unsplash\.com", source_text, re.IGNORECASE))
+    if max(image_count, editorial_refs) >= _studio_min_images():
+        return
+
+    files["src/components/HeroSection.tsx"] = _default_hero_section_tsx(facts)
+    files["src/components/GallerySection.tsx"] = _default_gallery_section_tsx(facts)
+    _ensure_index_uses_editorial_media(files)
+
+
+def _ensure_index_uses_editorial_media(files: dict[str, str]) -> None:
+    path = "src/pages/Index.tsx"
+    content = str(files.get(path) or "")
+    if not content:
+        return
+
+    updated = content
+    if "HeroSection" not in updated:
+        updated = "import { HeroSection } from '../components/HeroSection';\n" + updated
+        updated = re.sub(
+            r"(<main\b[^>]*>)",
+            "\\1\n      <HeroSection onOpen={() => {}} />",
+            updated,
+            count=1,
+        )
+    if "GallerySection" not in updated:
+        updated = "import { GallerySection } from '../components/GallerySection';\n" + updated
+        if "</main>" in updated:
+            updated = updated.replace("</main>", "      <GallerySection />\n    </main>", 1)
+        elif "<HeroSection" in updated:
+            updated = re.sub(
+                r"(<HeroSection\b[^>]*/>)",
+                "\\1\n      <GallerySection />",
+                updated,
+                count=1,
+            )
+    files[path] = updated
 
 
 def _ensure_factual_motion_contract(files: dict[str, str], facts: dict[str, Any]) -> None:
@@ -3803,7 +3850,7 @@ const business = {data_js};
 const heroImage = {image};
 const whatsappHref = {whatsapp};
 
-export function HeroSection({{ onOpen }}: {{ onOpen: () => void }}) {{
+export function HeroSection({{ onOpen = () => {{}} }}: {{ onOpen?: () => void }}) {{
   useEffect(() => {{
     gsap.registerPlugin(ScrollTrigger);
     gsap.fromTo('[data-hero-copy]', {{ y: 24, opacity: 0 }}, {{ y: 0, opacity: 1, duration: 0.8, ease: 'power3.out' }});

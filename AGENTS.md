@@ -825,6 +825,7 @@ qualquer f-string esquecida no futuro.
 | Post-process {var} | `84a63d4` | Safety net definitivo |
 | 7 contratos no caroço | `b8bde21` (Sprint 12.14) | Briefing rico pro LLM |
 | BookingModal neutro por nicho | Sprint 12.20 | Remove "matricula/treino" hardcoded que contaminava nutricionista |
+| Contrato determinístico de mídia | Sprint 12.20 | Injeta Hero/Galeria com fotos aprovadas quando LLM ignora imagens |
 
 ### 22.7.1 Fix Sprint 12.20 — BookingModal sem contaminação
 
@@ -836,6 +837,18 @@ hardcoded de academia/escola: "Matricula, treino e avaliacao".
 **Fix**: `backend/services/vite_react_renderer.py` agora usa `{cta_primary}` no
 botão e texto neutro no modal: "Atendimento personalizado com avaliacao".
 Regressão: `tests/test_anti_regressao_v114.py::test_9_studio_fallback_nutricionista_sem_contaminacao`.
+
+**Causa raiz seguinte no mesmo lead**: o manifesto tinha fotos reais em
+`media.photos`, mas o projeto gerado podia chegar ao gate sem nenhum `<img>` ou
+URL editorial. `_rewrite_editorial_images()` só substituía URLs existentes; não
+criava superfícies visuais quando o LLM ignorava as imagens. Resultado falso:
+`projeto Vite sem galeria/imagens reais: 0 refs`.
+
+**Fix**: `prepare_vite_project_files()` agora chama
+`_ensure_editorial_media_contract()` depois de reescrever URLs. Se o source ainda
+não tem imagens suficientes, Hero/Galeria determinísticos são materializados com
+as fotos aprovadas do lead antes do `validate_vite_project_files()`.
+Regressão: `tests/test_anti_regressao_v114.py::test_10_prepare_injeta_midia_aprovada_quando_llm_nao_usa_imagens`.
 
 ### 22.8 Tags v1.14.x (Sprint 12.19)
 
