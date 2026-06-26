@@ -127,6 +127,22 @@ async def api_pipeline_status(
         LIMIT 1
     """)
     ).fetchone()
+    latest_success_at = db.execute(
+        text("""
+        SELECT GREATEST(
+            COALESCE((
+                SELECT MAX(COALESCE(concluido_em, iniciado_em, criado_em))
+                FROM jobs
+                WHERE status = 'completed'
+            ), TIMESTAMP 'epoch'),
+            COALESCE((
+                SELECT MAX(COALESCE(finished_at, started_at))
+                FROM pipeline_run_spans
+                WHERE status = 'success'
+            ), TIMESTAMP 'epoch')
+        )
+    """)
+    ).scalar()
     latest_active_job_started_at = db.execute(
         text("""
         SELECT MAX(COALESCE(iniciado_em, criado_em))
@@ -136,7 +152,8 @@ async def api_pipeline_status(
     ).scalar()
 
     def _is_stale_error(ts: Any) -> bool:
-        return bool(latest_active_job_started_at and ts and ts < latest_active_job_started_at)
+        latest_anchor = latest_active_job_started_at or latest_success_at
+        return bool(latest_anchor and ts and ts < latest_anchor)
 
     if last_job_error and _is_stale_error(last_job_error[9] or last_job_error[8]):
         last_job_error = None
