@@ -127,6 +127,21 @@ async def api_pipeline_status(
         LIMIT 1
     """)
     ).fetchone()
+    latest_active_job_started_at = db.execute(
+        text("""
+        SELECT MAX(COALESCE(iniciado_em, criado_em))
+        FROM jobs
+        WHERE status IN ('running', 'pending', 'queued')
+    """)
+    ).scalar()
+
+    def _is_stale_error(ts: Any) -> bool:
+        return bool(latest_active_job_started_at and ts and ts < latest_active_job_started_at)
+
+    if last_job_error and _is_stale_error(last_job_error[9] or last_job_error[8]):
+        last_job_error = None
+    if last_span_error and _is_stale_error(last_span_error[6] or last_span_error[5]):
+        last_span_error = None
 
     # Travados: spans running > 1h
     stuck_spans = db.execute(
