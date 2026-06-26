@@ -696,4 +696,192 @@ anti-vazamento cross-tenant.
 
 ---
 
-**Conta de linhas**: este arquivo tem ~570 linhas (vs 524 anteriores) — adição da seção 20 (Inventário Definitivo de Agentes).
+## 22. Sprints 11-12 — Migração Vite/React + 26 Segmentos + Caroço Rico (2026-06-25)
+
+> Esta seção **SUBSTITUI** a visão anterior de que OpenUI é o "único gerador".
+> A partir do Sprint 12.9, **Vite/React é o engine padrão** e OpenUI é apenas
+> fallback. O sistema produz sites React/Vite de alta qualidade, com 26
+> segmentos cobertos e briefing real do lead injetado no caroço.
+
+### 22.1 Nova arquitetura: Vite/React como engine padrão
+
+| Aspecto | Antes (até Sprint 12.8) | Depois (Sprint 12.9+) |
+|---|---|---|
+| Engine padrão | OpenUI (HTML estático) | **Vite/React** (componentes) |
+| Tailwind v4 | CDN inline classes | **Build Vite real** |
+| Frameworks | Apenas HTML+JS | **React 18 + Vite 6 + shadcn/ui** |
+| GSAP / Lenis / Motion | via motion_runtime.js | **GSAP + Lenis + Framer Motion** |
+| OpenUI fallback | engine único | **só se Vite/React falhar** |
+| Dependências | Zero build | shadcn/ui, GSAP, Lenis, framer-motion |
+| Build time | ~10s (OpenUI) | ~30s (Vite/React com build) |
+| Quality | HTML 1 arquivo | **Vite projeto completo (10+ TSX)** |
+| Deploy | copia HTML | copia `dist/` (HTML + assets) |
+
+### 22.2 Os 26 Segmentos do studio fallback
+
+O `vite_react_renderer.py:_generate_studio_fallback_files()` tem um
+**mapa segment-aware** com 26 nichos. Cada segmento gera svc_labels
+customizadas, hero_desc, CTAs, lifestyle_title, nav_items, etc.
+
+| # | Segmento | CTA primário | Cards típicos |
+|---|---|---|---|
+| 1 | barbearia | Agendar horario | Corte, Barba, Sobrancelha |
+| 2 | barbearia_premium | Agendar horario | Corte, Barba, Pigmentacao |
+| 3 | academia | Comecar treino | Musculacao, Funcional |
+| 4 | crossfit | Comecar treino | WOD, Halterofilismo |
+| 5 | musculacao | Comecar treino | Musculacao, Funcional |
+| 6 | fitness | Comecar treino | Musculacao, Funcional |
+| 7 | restaurante | Fazer reserva | Pratos, Menu, Delivery |
+| 8 | pizzaria | Fazer pedido | Pizzas, Bebidas |
+| 9 | hamburgueria | Fazer pedido | Hamburgueres, Porcoes |
+| 10 | lanchonete | Fazer pedido | Lanches, Bebidas |
+| 11 | bar | Ver cardapio | Drinks, Cervejas |
+| 12 | cafeteria | Ver cardapio | Cafes, Salgados |
+| 13 | clinica | Agendar consulta | Consulta, Tratamento |
+| 14 | estetica | Agendar horario | Tratamentos, Estetica |
+| 15 | dermatologia | Agendar consulta | Consulta, Procedimentos |
+| 16 | psicologia | Agendar sessao | Terapia, Diagnostico |
+| 17 | fisioterapia | Agendar sessao | RPG, Acupuntura |
+| 18 | imobiliaria | Ver imoveis | Venda, Locacao |
+| 19 | nutricionista | Agendar consulta | Plano alimentar |
+| 20 | advocacia | Falar com advogado | Consulta, Contratos |
+| 21 | dentista | Agendar consulta | Limpeza, Implante |
+| 22 | petshop | Agendar servico | Banho, Tosa |
+| 23 | hotel | Reservar | Quartos, Cafe |
+| 24 | salao_beleza | Agendar horario | Corte, Coloracao |
+| 25 | oficina | Agendar servico | Revisao, Reparos |
+| 26 | farmacia | Ver produtos | Medicamentos |
+
+**Adicionar novo segmento** = adicionar bloco `elif` no `_generate_studio_fallback_files()`.
+
+### 22.3 O "Caroço" (caroco) — Briefing Real do Lead
+
+Antes (Sprint 12.8): sistema prompt do LLM recebia só dados básicos.
+
+Agora (Sprint 12.12+): `vite_prompts.py` injeta briefing REAL via
+`_build_caroço_block(facts)` que agrega:
+- **7 contratos canônicos** (premium_delivery_contract, design_system, motion, A11y, factual, LGPD, deploy)
+- **Dados do lead** (nome, segmento, cidade, telefone, fotos, SEO, briefing)
+- **26 segmentos** com conteúdo segment-aware (svc_labels, hero, CTAs, lifestyle)
+- **GSAP code patterns** (useGSAP, ScrollTrigger, magnetic, useReveal)
+- **Modal obrigatório por nicho** (booking, contact, schedule)
+- **Blocos pré-fabricados** (Navbar, Hero, Services, Gallery, Lifestyle, Contact, Footer)
+- **Cross-contamination guard** (barbearia NUNCA menciona musculacao)
+
+O LLM agora recebe ~36k chars de system prompt (vs ~16k antes) com
+briefing completo e injeção segment-aware.
+
+### 22.4 Cross-contamination guard
+
+O `_build_no_contamination_block()` força regras rígidas:
+- barbearia → NAO pode mencionar musculacao, crossfit, academia, spinning
+- academia → NAO pode mencionar corte, barba, pigmentacao
+- restaurante → NAO pode mencionar corte, agendamento, receita
+- clinica → NAO pode mencionar prato, menu, reserva
+
+Se detectado, studio fallback falha com `ViteReactRenderError`.
+
+### 22.5 Pipeline nova (Vite/React)
+
+```bash
+# Build site vite_react (default)
+FRALIB_BUILDER_ENGINE=vite_react python3 pipeline.py builder-job \
+    --prd-json prd.json --tenant-id 2 --job-id X --target landing-page \
+    --model claude-sonnet-4-6 --execute
+
+# Se tudo falhar → studio-fallback (deterministico)
+# Que gera segmento-aware correto do mapa de 26
+```
+
+Cascata Opus→Sonnet→Haiku → Se TODOS falharem → Studio fallback
+
+### 22.6 Bug crítico e fix (Sprint 12.19)
+
+**Bug**: o studio fallback gerava `"""..."""` (string normal) ao invés de
+`f"""..."""` (f-string) em algumas templates, fazendo `{lifestyle_title}`
+ser literal no bundle JS → `ReferenceError: lifestyle_title is not defined`
+→ React não monta → tela preta.
+
+**Fix** (commit `84a63d4`): post-process `_interpolate_studio_placeholders()`
+em `prepare_vite_project_files()` substitui qualquer `{var}` literal nos
+.tsx pelo valor real derivado do segment-aware dict. Safety net para
+qualquer f-string esquecida no futuro.
+
+**Validado** em browser via Playwright no site
+`https://seunegociofralib.site/sites/2/barbearia-fio-nobre-v15h/`:
+- ✅ HTTP 200
+- ✅ React monta
+- ✅ Title "Barbearia Fio Nobre Pinhais"
+- ✅ Conteúdo visível (Navbar, Hero, Cards, Lifestyle)
+
+### 22.7 Outras mudanças estruturais
+
+| Mudança | Commit | Impacto |
+|---|---|---|
+| Studio fallback com 26 segmentos | `4efbce3` | Zero cross-contaminação |
+| Lead name injetado no bundle | `c3a65cb` | Title real do lead no HTML |
+| LifestyleSection f-string | `f0147d6` | LifestyleTitle interpolado |
+| Import path backend/ | `7a864c3` | Render não falha no import |
+| Post-process {var} | `84a63d4` | Safety net definitivo |
+| 7 contratos no caroço | `b8bde21` (Sprint 12.14) | Briefing rico pro LLM |
+
+### 22.8 Tags v1.14.x (Sprint 12.19)
+
+```
+v1.14.0-baseline-2026-06-25  - Migracao Vite/React engine padrao
+v1.14.0-lockpoint-2026-06-25 - backup
+v1.14.1-baseline-2026-06-25  - wire caroco rico no LLM dispatcher
+v1.14.1-lockpoint-2026-06-25
+v1.14.2-baseline-2026-06-25  - 26 segmentos + clean bundle + deploy
+v1.14.2-lockpoint-2026-06-25
+v1.14.3-baseline-2026-06-25  - lead name injection (c3a65cb)
+v1.14.3-lockpoint-2026-06-25
+v1.14.4-baseline-2026-06-25  - post-process {var} placeholders (84a63d4)
+v1.14.4-lockpoint-2026-06-25
+```
+
+### 22.9 Como verificar a nova pipeline
+
+```bash
+# Local: rodar smoke com lead real
+ssh root@100.101.18.1 "cd /root/fralib && \
+  find . -name '*.pyc' -path '*/services/*' -delete 2>/dev/null; \
+  find . -name '__pycache__' -path '*/services/*' -exec rm -rf {} + 2>/dev/null; \
+  rm -rf .tmp/builder-workspaces/tenant-2/job-X 2>/dev/null; \
+  python3 pipeline.py builder-job \
+    --prd-json .tmp/prd_X.json \
+    --tenant-id 2 --job-id X --target landing-page \
+    --model claude-sonnet-4-6 --execute"
+
+# Validar com Playwright (anti-tela-preta)
+cd C:/fralib && python scripts/_investigate_v15d_v2.py
+# Esperado: visible text (nome do lead, navegação, hero, etc)
+# Se "EMPTY" → bug de template literal ainda existe
+```
+
+### 22.10 Decisão arquitetural: por que Vite/React virou padrão
+
+| Critério | OpenUI | Vite/React |
+|---|---|---|
+| Componentes React reutilizáveis | ❌ | ✅ |
+| Tailwind v4 com build | parcial (CDN) | ✅ real |
+| shadcn/ui (biblioteca FraLib) | ❌ | ✅ |
+| Hooks GSAP/Lenis | parcial | ✅ nativos |
+| Reuso de build cache | ❌ | ✅ |
+| Browser preview local | ❌ | ✅ |
+| Interatividade JS (modais, etc) | ❌ | ✅ React state |
+| SEO + A11y (outros 46 patches) | ✅ | ✅ herdado |
+
+**Conclusão**: Vite/React dá mais poder sem perder qualidade SEO/A11y.
+OpenUI continua disponível como fallback deterministico (modo recovery).
+
+### 22.11 Próximos passos (Sprint 12.20+)
+
+- Sprint 12.20: RAG embeddings por segmento (busca semântica de templates)
+- Sprint 12.21: A/B testing automático de headlines
+- Sprint 12.22: Multi-tenant cache (template cacheado por nicho)
+- Sprint 13:   Ver seção 21.10 (Sprint 14 fine-tuning)
+
+---
+
+**Conta de linhas**: este arquivo tem ~700 linhas (vs 570 anteriores) — adição da seção 22 (Sprint 11-12 Vite/React).
