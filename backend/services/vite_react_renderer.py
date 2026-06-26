@@ -248,6 +248,23 @@ except Exception:
         cap_max_tokens_for_model,
     )
 
+# Sprint 16: Variation seed system for deterministic site variations
+try:
+    from backend.services.variation_seed import (
+        get_variation,
+        apply_variation_to_facts,
+    )
+except Exception:
+    try:
+        from services.variation_seed import (  # type: ignore
+            get_variation,
+            apply_variation_to_facts,
+        )
+    except Exception:
+        # Variation seed module not available - will use legacy seed logic
+        get_variation = None  # type: ignore
+        apply_variation_to_facts = None  # type: ignore
+
 
 # Core files always required; component names are chosen freely by the LLM
 # based on the niche, archetype and section sequence from the prompt.
@@ -367,6 +384,217 @@ class ViteReactRenderError(RuntimeError):
     """Raised when the Vite/React Builder cannot produce a publishable dist."""
 
 
+def _get_llm_policy() -> str:
+    """Return the Vite LLM policy.
+
+    copy_only is the default because the FraLib-owned Studio templates now
+    generate the React code. The LLM may only return a compact content JSON.
+    """
+    raw = os.getenv("FRALIB_VITE_LLM_POLICY", "copy_only").strip().lower().replace("-", "_")
+    aliases = {
+        "0": "none",
+        "off": "none",
+        "false": "none",
+        "no_llm": "none",
+        "copy": "copy_only",
+        "content": "copy_only",
+        "json": "copy_only",
+        "full": "full_code",
+        "code": "full_code",
+        "fullcode": "full_code",
+        "legacy": "full_code",
+    }
+    policy = aliases.get(raw, raw)
+    if policy not in {"none", "copy_only", "full_code"}:
+        return "copy_only"
+    return policy
+
+
+def _get_copy_only_system_prompt() -> str:
+    """Tiny system prompt for the low-token content pass."""
+    return (
+        "Voce e redator de conversao para landing pages locais da FraLib. "
+        "Retorne APENAS JSON valido, sem markdown e sem codigo. "
+        "Nao gere HTML, TSX, CSS, imports, componentes ou scripts. "
+        "Use somente fatos confirmados; se faltar dado, use texto neutro. "
+        "Toda copy publica deve ser em pt-BR."
+    )
+
+
+def _get_copy_only_user_prompt(facts: dict[str, Any]) -> str:
+    facts_summary = _summarize_builder_facts(facts)
+    contamination_guard = _segment_contamination_guard(facts)
+    return f"""Preencha slots curtos para um site Vite/React que a FraLib vai montar com templates proprios.
+
+CONTRATO:
+- JSON puro.
+- Maximo 3 servicos, 3 diferenciais e 4 FAQs.
+- Nao escreva codigo.
+- Nao invente fatos operacionais, preco, garantia, anos de mercado, certificacoes ou links.
+- CTA deve combinar com o nicho.
+
+SCHEMA:
+{{
+  "blueprint": "performance_plan | authority_trust | transformation_gallery | savings_offer | local_service_fast_quote | premium_appointment",
+  "hero": {{
+    "headline": "string curta",
+    "subheadline": "string com promessa especifica",
+    "cta_primary": "verbo + objeto",
+    "cta_secondary": "verbo + objeto"
+  }},
+  "services_title": "string",
+  "services": [
+    {{"title": "string", "description": "string"}}
+  ],
+  "lifestyle": {{"title": "string", "description": "string"}},
+  "differentials": ["string"],
+  "faq": [
+    {{"question": "string", "answer": "string"}}
+  ],
+  "gallery_alt": "string",
+  "modal_title": "string",
+  "modal_cta": "string",
+  "contact_headline": "string",
+  "contact_sub": "string"
+}}
+
+DADOS CONFIRMADOS:
+{facts_summary}
+
+GUARDA DE NICHO:
+{contamination_guard}
+"""
+
+
+def _clean_copy_value(value: Any, *, limit: int = 220) -> str:
+    text = re.sub(r"\s+", " ", str(value or "")).strip()
+    text = text.replace("{", "").replace("}", "").replace("<", "").replace(">", "")
+    return text[:limit].strip()
+
+
+def _sanitize_copy_only_content(content: dict[str, Any]) -> dict[str, Any]:
+    """Keep only small text slots from the copy-only LLM response."""
+    if not isinstance(content, dict):
+        return {}
+    cleaned: dict[str, Any] = {}
+    if content.get("blueprint"):
+        cleaned["blueprint"] = _clean_copy_value(content.get("blueprint"), limit=80)
+
+    hero = content.get("hero") if isinstance(content.get("hero"), dict) else {}
+    if hero:
+        cleaned["hero"] = {
+            key: _clean_copy_value(hero.get(key), limit=160)
+            for key in ("headline", "subheadline", "cta_primary", "cta_secondary")
+            if hero.get(key)
+        }
+
+    for key in ("services_title", "gallery_alt", "modal_title", "modal_cta", "contact_headline", "contact_sub"):
+        if content.get(key):
+            cleaned[key] = _clean_copy_value(content.get(key), limit=160)
+
+    lifestyle = content.get("lifestyle") if isinstance(content.get("lifestyle"), dict) else {}
+    if lifestyle:
+        cleaned["lifestyle"] = {
+            key: _clean_copy_value(lifestyle.get(key), limit=220)
+            for key in ("title", "description")
+            if lifestyle.get(key)
+        }
+
+    services = content.get("services") if isinstance(content.get("services"), list) else []
+    clean_services: list[dict[str, str]] = []
+    for item in services[:3]:
+        if isinstance(item, dict):
+            title = _clean_copy_value(item.get("title"), limit=90)
+            description = _clean_copy_value(item.get("description"), limit=180)
+        else:
+            title = _clean_copy_value(item, limit=90)
+            description = ""
+        if title:
+            clean_services.append({"title": title, "description": description})
+    if clean_services:
+        cleaned["services"] = clean_services
+
+    differentials = content.get("differentials") if isinstance(content.get("differentials"), list) else []
+    clean_differentials = [_clean_copy_value(item, limit=110) for item in differentials[:3]]
+    clean_differentials = [item for item in clean_differentials if item]
+    if clean_differentials:
+        cleaned["differentials"] = clean_differentials
+
+    faq = content.get("faq") if isinstance(content.get("faq"), list) else []
+    clean_faq: list[dict[str, str]] = []
+    for item in faq[:4]:
+        if not isinstance(item, dict):
+            continue
+        question = _clean_copy_value(item.get("question"), limit=140)
+        answer = _clean_copy_value(item.get("answer"), limit=240)
+        if question and answer:
+            clean_faq.append({"question": question, "answer": answer})
+    if clean_faq:
+        cleaned["faq"] = clean_faq
+    return cleaned
+
+
+def _parse_content_json(raw: str) -> dict[str, Any]:
+    """Parse the compact JSON returned by copy_only mode."""
+    text = str(raw or "").strip()
+    if not text:
+        return {}
+    text = re.sub(r"^```(?:json)?\s*", "", text, flags=re.IGNORECASE).strip()
+    text = re.sub(r"\s*```$", "", text).strip()
+    try:
+        parsed = json.loads(text)
+    except json.JSONDecodeError:
+        match = re.search(r"\{.*\}", text, re.DOTALL)
+        if not match:
+            return {}
+        try:
+            parsed = json.loads(match.group(0))
+        except json.JSONDecodeError:
+            return {}
+    if not isinstance(parsed, dict):
+        return {}
+    if isinstance(parsed.get("content"), dict):
+        parsed = parsed["content"]
+    return _sanitize_copy_only_content(parsed)
+
+
+def _merge_copy_only_content(facts: dict[str, Any], content: dict[str, Any]) -> dict[str, Any]:
+    try:
+        merged = json.loads(json.dumps(facts or {}, ensure_ascii=False, default=str))
+    except Exception:
+        merged = dict(facts or {})
+    if content:
+        merged["_llm_content"] = content
+    return merged
+
+
+def _render_vite_files_result(
+    *,
+    workspace: Path,
+    files: dict[str, str],
+    facts: dict[str, Any],
+    attempts: list[dict[str, Any]],
+    started: float,
+    model: str,
+    requested_paths: set[str] | None = None,
+) -> ViteReactRenderResult:
+    validate_vite_project_files(files, facts, requested_paths=requested_paths or set())
+    write_vite_project(workspace, files)
+    build_vite_project(workspace)
+    index_path = workspace / "dist" / "index.html"
+    html = index_path.read_text(encoding="utf-8")
+    validate_vite_dist(workspace / "dist")
+    return ViteReactRenderResult(
+        html=html,
+        source_files=files,
+        model=model,
+        attempts=attempts,
+        elapsed_ms=int((time.time() - started) * 1000),
+        dist_dir=str((workspace / "dist").resolve()),
+        index_path=str(index_path.resolve()),
+    )
+
+
 def render_vite_react_site(
     builder_prompt: str,
     *,
@@ -395,6 +623,84 @@ def render_vite_react_site(
     model_candidates = _select_vite_react_models_for_run(primary_model, fallback_model)
     if not model_candidates:
         model_candidates = [PROXY_BUILDER_MODEL]
+    llm_policy = _get_llm_policy()
+
+    if llm_policy in {"none", "copy_only"}:
+        policy_facts = facts
+        copy_error = ""
+        if llm_policy == "copy_only":
+            for model_idx, model in enumerate(model_candidates, start=1):
+                attempt_started = time.time()
+                try:
+                    raw = _call_copy_only_llm(
+                        _get_copy_only_user_prompt(facts),
+                        model=model,
+                        max_tokens=min(max_tokens, _env_int("FRALIB_VITE_COPY_ONLY_MAX_TOKENS", 900)),
+                        temperature=min(temperature, 0.45),
+                    )
+                    content = _parse_content_json(raw)
+                    if not content:
+                        raise ViteReactRenderError("copy_only retornou JSON vazio")
+                    policy_facts = _merge_copy_only_content(facts, content)
+                    attempts.append(
+                        {
+                            "model": model,
+                            "model_index": model_idx,
+                            "status": "copy_only_json_success",
+                            "elapsed_ms": int((time.time() - attempt_started) * 1000),
+                            "policy": llm_policy,
+                            "json_keys": sorted(content.keys()),
+                        }
+                    )
+                    break
+                except Exception as exc:
+                    copy_error = str(exc)[:500]
+                    attempts.append(
+                        {
+                            "model": model,
+                            "model_index": model_idx,
+                            "status": "copy_only_json_failed",
+                            "elapsed_ms": int((time.time() - attempt_started) * 1000),
+                            "policy": llm_policy,
+                            "error": copy_error,
+                        }
+                    )
+                    lowered = copy_error.lower()
+                    if any(marker in lowered for marker in ("401 unauthorized", "invalid api key", "permission_error")):
+                        break
+        else:
+            attempts.append(
+                {
+                    "model": "none",
+                    "model_index": 0,
+                    "status": "policy_none_deterministic",
+                    "elapsed_ms": 0,
+                    "policy": llm_policy,
+                }
+            )
+
+        fallback_started = time.time()
+        files = _generate_studio_fallback_files(policy_facts)
+        attempts.append(
+            {
+                "model": "studio-template",
+                "model_index": len(attempts) + 1,
+                "status": "studio_copy_only_success" if llm_policy == "copy_only" else "studio_deterministic_success",
+                "elapsed_ms": int((time.time() - fallback_started) * 1000),
+                "policy": llm_policy,
+                "source_files": len(files),
+                "previous_error": copy_error,
+            }
+        )
+        return _render_vite_files_result(
+            workspace=workspace,
+            files=files,
+            facts=policy_facts,
+            attempts=attempts,
+            started=started,
+            model="studio-copy-only" if llm_policy == "copy_only" else "studio-deterministic",
+            requested_paths=requested_paths,
+        )
 
     # Cascata Haiku -> Sonnet -> Opus 4.8: tenta cada modelo em sequencia ate um dar 200.
     # Sem Studio fallback. Se TODOS falharem, levanta ViteReactRenderError com diagnostico.
@@ -2111,6 +2417,769 @@ def _ensure_hero_img_eager(match: re.Match[str]) -> str:
     return body + ' loading="eager"' + closing
 
 
+# ---------------------------------------------------------------------------
+# Archetype-based palette and typography system for Studio fallback
+# ---------------------------------------------------------------------------
+
+# Archetype definitions: each archetype maps to specific segment keywords
+_ARCHETYPE_SEGMENTS = {
+    "BOLD_ENERGY": (
+        "academia", "fitness", "crossfit", "musculacao", "musculação",
+        "suplementos", "eventos esportivos", "crossfit", "funcional",
+    ),
+    "WARM_LOCAL": (
+        "barbearia", "barbeiro", "barber", "salao", "salão", "beleza",
+        "petshop", "pet shop", "manicure", "estetica", "estética",
+        "cabelo", "SPA", "spa",
+    ),
+    "ZEN_PURE": (
+        "clinica", "clínica", "nutricao", "nutrição", "nutricionista",
+        "yoga", "pilates", "fisioterapia", "fisio", "psicologia", "psicologo",
+        "medicina", "terapia", " wellness",
+    ),
+    "LUXURY_ELITE": (
+        "restaurante", "bar ", "pizzaria", "hamburgueria", "gastronomia",
+        "moda", "joalheria", "eventos", "hotel", "pousada", "hostel",
+        "buffet", "chef",
+    ),
+    "MODERN_TECH": (
+        "energia solar", "solar", "infraestrutura", "elétrica", "eletrica",
+        "tecnologia", "telecom", "dev", "software", "data center",
+        "automacao", "automação", "robotica", "robótica",
+    ),
+    "PROFESSIONAL_TRUST": (
+        "imobiliaria", "imóveis", "imoveis", "advocacia", "advogado",
+        "contabilidade", "engenharia", "arquitetura", "consultoria",
+        "B2B", "escritório", "escritorio",
+    ),
+}
+
+# Archetype color palettes
+_ARCHETYPE_PALETTES = {
+    "BOLD_ENERGY": {
+        "primary": "#ef4444",       # Vibrant red - energy, intensity
+        "primary_contrast": "#ffffff",
+        "secondary": "#f97316",     # Orange - warmth, action
+        "accent": "#fbbf24",        # Amber - highlight
+        "bg_dark": "#0f0f0f",
+        "bg_light": "#1a1a1a",
+        "text_dark": "#ffffff",
+        "text_light": "#f5f5f5",
+        "border": "rgba(239,68,68,0.2)",
+        "gradient_start": "rgba(239,68,68,0.15)",
+        "gradient_end": "rgba(249,115,22,0.05)",
+    },
+    "WARM_LOCAL": {
+        "primary": "#d97706",       # Amber/warm brown - local, welcoming
+        "primary_contrast": "#ffffff",
+        "secondary": "#b45309",     # Dark amber
+        "accent": "#f59e0b",        # Yellow accent
+        "bg_dark": "#1c1917",
+        "bg_light": "#292524",
+        "text_dark": "#fef3c7",
+        "text_light": "#fefce8",
+        "border": "rgba(217,119,6,0.2)",
+        "gradient_start": "rgba(217,119,6,0.12)",
+        "gradient_end": "rgba(180,83,9,0.04)",
+    },
+    "ZEN_PURE": {
+        "primary": "#10b981",       # Emerald green - health, balance
+        "primary_contrast": "#ffffff",
+        "secondary": "#059669",     # Darker emerald
+        "accent": "#34d399",        # Light emerald
+        "bg_dark": "#0c0f0d",
+        "bg_light": "#111413",
+        "text_dark": "#ecfdf5",
+        "text_light": "#f0fdf4",
+        "border": "rgba(16,185,129,0.2)",
+        "gradient_start": "rgba(16,185,129,0.12)",
+        "gradient_end": "rgba(5,150,105,0.04)",
+    },
+    "LUXURY_ELITE": {
+        "primary": "#a855f7",       # Purple - luxury, sophistication
+        "primary_contrast": "#ffffff",
+        "secondary": "#7c3aed",      # Darker purple
+        "accent": "#c084fc",        # Light purple
+        "bg_dark": "#0c0a14",
+        "bg_light": "#131020",
+        "text_dark": "#faf5ff",
+        "text_light": "#f3e8ff",
+        "border": "rgba(168,85,247,0.2)",
+        "gradient_start": "rgba(168,85,247,0.15)",
+        "gradient_end": "rgba(124,58,237,0.05)",
+    },
+    "MODERN_TECH": {
+        "primary": "#3b82f6",       # Blue - technology, trust
+        "primary_contrast": "#ffffff",
+        "secondary": "#2563eb",      # Darker blue
+        "accent": "#60a5fa",        # Light blue
+        "bg_dark": "#0a0f1a",
+        "bg_light": "#0f172a",
+        "text_dark": "#eff6ff",
+        "text_light": "#f8fafc",
+        "border": "rgba(59,130,246,0.2)",
+        "gradient_start": "rgba(59,130,246,0.15)",
+        "gradient_end": "rgba(37,99,235,0.05)",
+    },
+    "PROFESSIONAL_TRUST": {
+        "primary": "#0891b2",       # Cyan/teal - professional, trustworthy
+        "primary_contrast": "#ffffff",
+        "secondary": "#0e7490",     # Darker cyan
+        "accent": "#22d3ee",        # Light cyan
+        "bg_dark": "#0c1114",
+        "bg_light": "#111a1f",
+        "text_dark": "#ecfeff",
+        "text_light": "#f0fdfa",
+        "border": "rgba(8,145,178,0.2)",
+        "gradient_start": "rgba(8,145,178,0.12)",
+        "gradient_end": "rgba(14,116,144,0.04)",
+    },
+}
+
+# Archetype typography settings
+_ARCHETYPE_TYPOGRAPHY = {
+    "BOLD_ENERGY": {
+        "heading_font": "Oswald, Impact, sans-serif",
+        "body_font": "Inter, system-ui, sans-serif",
+        "heading_weight": "800",
+        "body_weight": "500",
+        "heading_tracking": "-0.04em",
+        "accent_weight": "700",
+    },
+    "WARM_LOCAL": {
+        "heading_font": "Playfair Display, Georgia, serif",
+        "body_font": "Source Sans 3, system-ui, sans-serif",
+        "heading_weight": "700",
+        "body_weight": "400",
+        "heading_tracking": "-0.02em",
+        "accent_weight": "600",
+    },
+    "ZEN_PURE": {
+        "heading_font": "Cormorant Garamond, Georgia, serif",
+        "body_font": "Nunito, system-ui, sans-serif",
+        "heading_weight": "600",
+        "body_weight": "400",
+        "heading_tracking": "-0.01em",
+        "accent_weight": "500",
+    },
+    "LUXURY_ELITE": {
+        "heading_font": "Cormorant Garamond, Georgia, serif",
+        "body_font": "Montserrat, system-ui, sans-serif",
+        "heading_weight": "700",
+        "body_weight": "400",
+        "heading_tracking": "-0.03em",
+        "accent_weight": "600",
+    },
+    "MODERN_TECH": {
+        "heading_font": "Space Grotesk, Inter, sans-serif",
+        "body_font": "Inter, system-ui, sans-serif",
+        "heading_weight": "700",
+        "body_weight": "400",
+        "heading_tracking": "-0.03em",
+        "accent_weight": "600",
+    },
+    "PROFESSIONAL_TRUST": {
+        "heading_font": "IBM Plex Sans, system-ui, sans-serif",
+        "body_font": "IBM Plex Sans, system-ui, sans-serif",
+        "heading_weight": "600",
+        "body_weight": "400",
+        "heading_tracking": "-0.02em",
+        "accent_weight": "500",
+    },
+}
+
+# Hero layout variation system
+HERO_LAYOUTS = (
+    "split",       # Current: left copy + right image (lg:grid-cols-[1.05fr_.95fr])
+    "center",      # Centered copy + image below
+    "asymmetric",   # Large image + small copy card
+    "fullbleed",   # Full-screen image + overlay copy
+    "video",       # Video background
+)
+
+# Section orders per archetype (default fallback sequence)
+SECTION_ORDERS = {
+    "BOLD_ENERGY": [
+        "navbar", "hero", "lifestyle", "services", "gallery", "reviews", "contact-cta", "footer",
+    ],
+    "WARM_LOCAL": [
+        "navbar", "hero", "about", "services", "gallery", "lifestyle", "contact-cta", "footer",
+    ],
+    "ZEN_PURE": [
+        "navbar", "hero", "about", "gallery", "services", "lifestyle", "contact-cta", "footer",
+    ],
+    "LUXURY_ELITE": [
+        "navbar", "hero", "gallery", "about", "services", "lifestyle", "reviews", "contact-cta", "footer",
+    ],
+    "MODERN_TECH": [
+        "navbar", "hero", "services", "about", "gallery", "lifestyle", "contact-cta", "footer",
+    ],
+    "PROFESSIONAL_TRUST": [
+        "navbar", "hero", "about", "services", "gallery", "reviews", "lifestyle", "contact-cta", "footer",
+    ],
+}
+
+
+def _pick_hero_layout(archetype: str, seed: int | None = None) -> str:
+    """Pick a hero layout based on archetype and optional random seed.
+
+    Uses deterministic selection based on archetype and seed to ensure
+    reproducible layouts for the same input.
+
+    Args:
+        archetype: Business archetype (e.g., 'BOLD_ENERGY', 'WARM_LOCAL')
+        seed: Optional integer seed for variation within same archetype
+
+    Returns:
+        One of: 'split', 'center', 'asymmetric', 'fullbleed', 'video'
+    """
+    # Build a deterministic index from archetype + seed
+    # Each archetype gets a preferred layout but can vary with seed
+    archetype_weights = {
+        "BOLD_ENERGY": [0, 1, 2, 3, 4],      # split, center, asymmetric, fullbleed, video
+        "WARM_LOCAL": [0, 2, 1, 3, 4],       # prefers split, asymmetric
+        "ZEN_PURE": [1, 0, 2, 4, 3],         # prefers center, split
+        "LUXURY_ELITE": [3, 4, 0, 2, 1],     # prefers fullbleed, video
+        "MODERN_TECH": [0, 1, 4, 2, 3],      # prefers split, center
+        "PROFESSIONAL_TRUST": [0, 2, 1, 3, 4],  # prefers split, asymmetric
+    }
+
+    weights = archetype_weights.get(archetype, archetype_weights["PROFESSIONAL_TRUST"])
+
+    # Sprint 16: Use full seed to determine layout index (deterministic but varied)
+    # This ensures different seeds produce different layouts
+    if seed is not None:
+        # Combine seed with archetype to get unique variation
+        # Use different operations to avoid simple patterns
+        combined = (seed // 100) % 25  # Extract middle digits for variation
+        index = weights[combined % len(weights)]
+    else:
+        index = weights[0]
+
+    return HERO_LAYOUTS[index]
+
+
+def _generate_hero_section_variation(
+    layout: str,
+    name: str,
+    segment: str,
+    city: str,
+    hero_desc: str,
+    hero_img: str,
+    cta_primary: str,
+    cta_secondary: str,
+    alt_img: str,
+    phone: str,
+    dense_cards: str,
+    palette: dict[str, str],
+    imports: str,
+) -> str:
+    """Generate HeroSection TSX based on selected layout variation.
+
+    Args:
+        layout: One of 'split', 'center', 'asymmetric', 'fullbleed', 'video'
+        ... (other params passed through)
+
+    Returns:
+        TSX component body string
+    """
+    primary_hex = palette['primary']
+    primary_contrast_hex = palette['primary_contrast']
+    primary_light = palette['accent']
+
+    if layout == "split":
+        # Current layout: left copy + right image
+        return f"""  useEffect(() => {{
+    gsap.fromTo('[data-hero-copy]', {{ y: 24, opacity: 0 }}, {{ y: 0, opacity: 1, duration: 0.7 }});
+  }}, []);
+  return (
+    <section id="top" className="relative isolate overflow-hidden px-6 pb-24 pt-36 text-white" style={{{{backgroundColor:"{palette['bg_dark']}"}}}}>
+      <div className="absolute inset-0 -z-10" style={{{{background: `radial-gradient(circle_at_20%_20%,{palette['gradient_start']},transparent_32%),linear-gradient(135deg,{palette['bg_dark']},{palette['bg_light']})`}}}} />
+      <div className="mx-auto grid max-w-6xl items-center gap-10 lg:grid-cols-[1.05fr_.95fr]">
+        <motion.div data-hero-copy initial={{{{ opacity: 0 }}}} animate={{{{ opacity: 1 }}}} className="space-y-7">
+          <p className="inline-flex rounded-full border px-4 py-2 text-xs font-bold uppercase tracking-[0.24em]" style={{{{borderColor:"{primary_hex}4d",backgroundColor:"{primary_hex}1a",color:"{primary_light}"}}}}>{segment} em {city}</p>
+          <h1 className="text-[clamp(3rem,8vw,6.6rem)] font-black leading-[.9] tracking-[-.07em]">{name}</h1>
+          <p className="max-w-2xl text-lg leading-8 text-zinc-300">{hero_desc}.</p>
+          <div className="flex flex-wrap gap-3">
+            <a className="rounded-full px-6 py-3 font-black" style={{{{backgroundColor:"{primary_hex}",color:"{primary_contrast_hex}"}}}} href="tel:{phone}">{{cta_primary}}</a>
+            <a className="rounded-full border border-white/20 px-6 py-3 font-semibold text-white" href="#galeria">{{cta_secondary}}</a>
+          </div>
+          <div className="grid max-w-lg grid-cols-3 gap-3 text-sm">{dense_cards}</div>
+        </motion.div>
+        <div className="relative"><img className="aspect-[4/5] w-full rounded-[2rem] object-cover shadow-2xl ring-1 ring-white/10" src="{hero_img}" alt="{{alt_img}}" loading="eager" decoding="async" /></div>
+      </div>
+    </section>
+  );
+"""
+
+    elif layout == "center":
+        # Centered layout: copy above, image below
+        return f"""  useEffect(() => {{
+    gsap.fromTo('[data-hero-copy]', {{ y: 24, opacity: 0 }}, {{ y: 0, opacity: 1, duration: 0.7 }});
+    gsap.fromTo('[data-hero-img]', {{ y: 32, opacity: 0 }}, {{ y: 0, opacity: 1, duration: 0.9, delay: 0.2 }});
+  }}, []);
+  return (
+    <section id="top" className="relative isolate overflow-hidden px-6 pb-24 pt-36 text-white" style={{{{backgroundColor:"{palette['bg_dark']}"}}}}>
+      <div className="absolute inset-0 -z-10" style={{{{background: `radial-gradient(ellipse_at_top,{palette['gradient_start']},transparent_60%),linear-gradient(to_bottom,{palette['bg_dark']},{palette['bg_light']})`}}}} />
+      <div className="mx-auto max-w-4xl text-center">
+        <motion.div data-hero-copy initial={{{{ opacity: 0 }}}} animate={{{{ opacity: 1 }}}} className="space-y-7">
+          <p className="inline-flex rounded-full border px-4 py-2 text-xs font-bold uppercase tracking-[0.24em]" style={{{{borderColor:"{primary_hex}4d",backgroundColor:"{primary_hex}1a",color:"{primary_light}"}}}}>{segment} em {city}</p>
+          <h1 className="text-[clamp(3rem,8vw,6.6rem)] font-black leading-[.9] tracking-[-.07em]">{name}</h1>
+          <p className="mx-auto max-w-2xl text-lg leading-8 text-zinc-300">{hero_desc}.</p>
+          <div className="flex flex-wrap justify-center gap-3">
+            <a className="rounded-full px-6 py-3 font-black" style={{{{backgroundColor:"{primary_hex}",color:"{primary_contrast_hex}"}}}} href="tel:{phone}">{{cta_primary}}</a>
+            <a className="rounded-full border border-white/20 px-6 py-3 font-semibold text-white" href="#galeria">{{cta_secondary}}</a>
+          </div>
+        </motion.div>
+        <motion.div data-hero-img initial={{{{ opacity: 0 }}}} animate={{{{ opacity: 1 }}}} className="mt-16">
+          <img className="mx-auto aspect-[16/9] w-full max-w-5xl rounded-[2rem] object-cover shadow-2xl ring-1 ring-white/10" src="{hero_img}" alt="{{alt_img}}" loading="eager" decoding="async" />
+        </motion.div>
+      </div>
+    </section>
+  );
+"""
+
+    elif layout == "asymmetric":
+        # Large image left, small copy card right
+        return f"""  useEffect(() => {{
+    gsap.fromTo('[data-hero-img]', {{ x: -40, opacity: 0 }}, {{ x: 0, opacity: 1, duration: 0.9 }});
+    gsap.fromTo('[data-hero-copy]', {{ x: 40, opacity: 0 }}, {{ x: 0, opacity: 1, duration: 0.7, delay: 0.15 }});
+  }}, []);
+  return (
+    <section id="top" className="relative isolate overflow-hidden px-6 pb-24 pt-36 text-white" style={{{{backgroundColor:"{palette['bg_dark']}"}}}}>
+      <div className="absolute inset-0 -z-10" style={{{{background: `radial-gradient(circle_at_80%_50%,{palette['gradient_start']},transparent_40%),linear-gradient(135deg,{palette['bg_dark']},{palette['bg_light']})`}}}} />
+      <div className="mx-auto grid max-w-6xl items-center gap-12 lg:grid-cols-[1.4fr_1fr]">
+        <motion.div data-hero-img initial={{{{ opacity: 0 }}}} animate={{{{ opacity: 1 }}}}>
+          <img className="aspect-[3/4] w-full rounded-[2rem] object-cover shadow-2xl ring-1 ring-white/10" src="{hero_img}" alt="{{alt_img}}" loading="eager" decoding="async" />
+        </motion.div>
+        <motion.div data-hero-copy initial={{{{ opacity: 0 }}}} animate={{{{ opacity: 1 }}}} className="space-y-6 rounded-[2rem] border border-white/10 bg-white/[.04] p-8 backdrop-blur" style={{{{borderColor:"{palette['border']}"}}}}>
+          <p className="inline-flex rounded-full border px-4 py-2 text-xs font-bold uppercase tracking-[0.24em]" style={{{{borderColor:"{primary_hex}4d",backgroundColor:"{primary_hex}1a",color:"{primary_light}"}}}}>{segment} em {city}</p>
+          <h2 className="text-4xl font-black leading-[1] tracking-[-.04em]">{name}</h2>
+          <p className="text-zinc-300">{hero_desc}.</p>
+          <div className="flex flex-col gap-3">
+            <a className="rounded-full px-6 py-3 text-center font-black" style={{{{backgroundColor:"{primary_hex}",color:"{primary_contrast_hex}"}}}} href="tel:{phone}">{{cta_primary}}</a>
+            <a className="rounded-full border border-white/20 px-6 py-3 text-center font-semibold text-white" href="#galeria">{{cta_secondary}}</a>
+          </div>
+        </motion.div>
+      </div>
+    </section>
+  );
+"""
+
+    elif layout == "fullbleed":
+        # Full-screen image with overlay copy
+        return f"""  useEffect(() => {{
+    gsap.fromTo('[data-hero-copy]', {{ y: 32, opacity: 0 }}, {{ y: 0, opacity: 1, duration: 0.8 }});
+  }}, []);
+  return (
+    <section id="top" className="relative min-h-screen overflow-hidden px-6 pb-24 pt-36 text-white">
+      <div className="absolute inset-0 -z-10">
+        <img className="h-full w-full object-cover" src="{hero_img}" alt="{{alt_img}}" loading="eager" decoding="async" />
+        <div className="absolute inset-0" style={{{{background: `linear-gradient(to right, {palette['bg_dark']}ee 0%, {palette['bg_dark']}99 40%, transparent 100%), linear-gradient(to top, {palette['bg_dark']} 0%, transparent 30%)`}}}} />
+      </div>
+      <div className="mx-auto grid max-w-6xl items-center gap-10 pt-24 lg:grid-cols-[1.2fr_1fr]">
+        <motion.div data-hero-copy initial={{{{ opacity: 0 }}}} animate={{{{ opacity: 1 }}}} className="space-y-7">
+          <p className="inline-flex rounded-full border px-4 py-2 text-xs font-bold uppercase tracking-[0.24em]" style={{{{borderColor:"{primary_hex}4d",backgroundColor:"{primary_hex}1a",color:"{primary_light}"}}}}>{segment} em {city}</p>
+          <h1 className="text-[clamp(3rem,8vw,6.6rem)] font-black leading-[.9] tracking-[-.07em]">{name}</h1>
+          <p className="max-w-xl text-lg leading-8 text-zinc-200">{hero_desc}.</p>
+          <div className="flex flex-wrap gap-3">
+            <a className="rounded-full px-6 py-3 font-black" style={{{{backgroundColor:"{primary_hex}",color:"{primary_contrast_hex}"}}}} href="tel:{phone}">{{cta_primary}}</a>
+            <a className="rounded-full border border-white/30 bg-white/10 px-6 py-3 font-semibold text-white backdrop-blur" href="#galeria">{{cta_secondary}}</a>
+          </div>
+        </motion.div>
+      </div>
+    </section>
+  );
+"""
+
+    elif layout == "video":
+        # Video background (placeholder with gradient for fallback)
+        return f"""  useEffect(() => {{
+    gsap.fromTo('[data-hero-copy]', {{ y: 24, opacity: 0 }}, {{ y: 0, opacity: 1, duration: 0.7 }});
+  }}, []);
+  return (
+    <section id="top" className="relative min-h-screen overflow-hidden px-6 pb-24 pt-36 text-white">
+      <div className="absolute inset-0 -z-10">
+        <div className="h-full w-full" style={{{{background: `linear-gradient(135deg, {palette['bg_dark']}, {palette['bg_light']})`}}}} />
+        <div className="absolute inset-0" style={{{{background: `radial-gradient(circle_at_center, {palette['gradient_start']}, transparent_50%)`}}}} />
+        <img className="h-full w-full object-cover opacity-40" src="{hero_img}" alt="" loading="eager" decoding="async" />
+      </div>
+      <div className="mx-auto max-w-5xl text-center">
+        <motion.div data-hero-copy initial={{{{ opacity: 0 }}}} animate={{{{ opacity: 1 }}}} className="space-y-8">
+          <p className="inline-flex rounded-full border px-4 py-2 text-xs font-bold uppercase tracking-[0.24em]" style={{{{borderColor:"{primary_hex}4d",backgroundColor:"{primary_hex}1a",color:"{primary_light}"}}}}>{segment} em {city}</p>
+          <h1 className="text-[clamp(3.5rem,10vw,7.5rem)] font-black leading-[.88] tracking-[-.08em]">{name}</h1>
+          <p className="mx-auto max-w-2xl text-xl leading-8 text-zinc-300">{hero_desc}.</p>
+          <div className="flex flex-wrap justify-center gap-4">
+            <a className="rounded-full px-8 py-4 text-lg font-black" style={{{{backgroundColor:"{primary_hex}",color:"{primary_contrast_hex}"}}}} href="tel:{phone}">{{cta_primary}}</a>
+            <a className="rounded-full border border-white/30 bg-white/10 px-8 py-4 text-lg font-semibold text-white backdrop-blur" href="#galeria">{{cta_secondary}}</a>
+          </div>
+        </motion.div>
+      </div>
+    </section>
+  );
+"""
+
+    # Fallback to split layout
+    return _generate_hero_section_variation(
+        "split", name, segment, city, hero_desc, hero_img,
+        cta_primary, cta_secondary, alt_img, phone, dense_cards, palette, imports
+    )
+
+
+def _get_section_order_for_archetype(archetype: str, seed: int | None = None) -> list[str]:
+    """Get the section order for an archetype with optional seed variation.
+
+    Args:
+        archetype: Business archetype
+        seed: Optional seed for deterministic variation
+
+    Returns:
+        List of section identifiers in render order
+    """
+    base_order = list(SECTION_ORDERS.get(archetype, SECTION_ORDERS["PROFESSIONAL_TRUST"]))
+    fixed_first = [section for section in ("navbar", "hero") if section in base_order]
+    fixed_last = [section for section in ("footer",) if section in base_order]
+    middle = [
+        section
+        for section in base_order
+        if section not in set(fixed_first + fixed_last)
+    ]
+    if seed is not None and middle:
+        shift = seed % len(middle)
+        middle = middle[shift:] + middle[:shift]
+    return fixed_first + middle + fixed_last
+
+
+# Google Fonts import URLs per archetype
+_ARCHETYPE_FONTS = {
+    "BOLD_ENERGY": "Oswald:wght@500;600;700;800&family=Inter:wght@400;500;600;700",
+    "WARM_LOCAL": "Playfair+Display:wght@600;700;800&family=Source+Sans+3:wght@400;500;600",
+    "ZEN_PURE": "Cormorant+Garamond:wght@500;600;700&family=Nunito:wght@400;500;600",
+    "LUXURY_ELITE": "Cormorant+Garamond:wght@600;700;800&family=Montserrat:wght@400;500;600",
+    "MODERN_TECH": "Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600",
+    "PROFESSIONAL_TRUST": "IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Sans+Condensed:wght@500;600",
+}
+
+
+def _get_archetype_for_segment(segment: str) -> str:
+    """Map a business segment to its corresponding archetype.
+
+    Args:
+        segment: Lowercase segment string (e.g., 'barbearia', 'academia')
+
+    Returns:
+        Archetype name: BOLD_ENERGY, WARM_LOCAL, ZEN_PURE, LUXURY_ELITE,
+                       MODERN_TECH, or PROFESSIONAL_TRUST
+    """
+    segment_lower = segment.lower()
+
+    # Check each archetype's segment keywords
+    for archetype, keywords in _ARCHETYPE_SEGMENTS.items():
+        for keyword in keywords:
+            if keyword in segment_lower:
+                return archetype
+
+    # Default to PROFESSIONAL_TRUST for unknown segments
+    return "PROFESSIONAL_TRUST"
+
+
+def _get_archetype_palette(archetype: str) -> dict[str, str]:
+    """Get the color palette for an archetype.
+
+    Args:
+        archetype: One of BOLD_ENERGY, WARM_LOCAL, ZEN_PURE, LUXURY_ELITE,
+                  MODERN_TECH, or PROFESSIONAL_TRUST
+
+    Returns:
+        Dictionary with color values:
+        - primary, primary_contrast: Main brand colors
+        - secondary: Supporting color
+        - accent: Highlight color
+        - bg_dark, bg_light: Background shades
+        - text_dark, text_light: Text colors
+        - border: Border/divider color
+        - gradient_start, gradient_end: Gradient colors
+    """
+    return _ARCHETYPE_PALETTES.get(archetype, _ARCHETYPE_PALETTES["PROFESSIONAL_TRUST"])
+
+
+def _get_archetype_typography(archetype: str) -> dict[str, str]:
+    """Get the typography settings for an archetype.
+
+    Args:
+        archetype: One of BOLD_ENERGY, WARM_LOCAL, ZEN_PURE, LUXURY_ELITE,
+                  MODERN_TECH, or PROFESSIONAL_TRUST
+
+    Returns:
+        Dictionary with typography values:
+        - heading_font, body_font: Font family strings
+        - heading_weight, body_weight: Font weights
+        - heading_tracking: Letter spacing for headings
+        - accent_weight: Weight for accent/emphasis text
+    """
+    return _ARCHETYPE_TYPOGRAPHY.get(archetype, _ARCHETYPE_TYPOGRAPHY["PROFESSIONAL_TRUST"])
+
+
+def _get_archetype_fonts(archetype: str) -> str:
+    """Get the Google Fonts URL for an archetype."""
+    return _ARCHETYPE_FONTS.get(archetype, _ARCHETYPE_FONTS["PROFESSIONAL_TRUST"])
+
+
+def _get_archetype_copy(archetype: str) -> dict[str, Any]:
+    """Get niche-specific copy variations for an archetype.
+
+    Returns a dictionary with:
+    - hero_title_patterns: list of 3 title pattern variations
+    - hero_subtitle_patterns: list of 3 subtitle patterns
+    - service_description_patterns: list of 3 service description patterns
+    - cta_primary: list of 3 primary CTA variations
+    - cta_secondary: list of 2 secondary CTA variations
+    - testimonial_template: template string with {rating}, {city}
+    - services_heading: section heading
+    - gallery_heading: section heading
+    - lifestyle_heading: section heading
+    - contact_heading: section heading
+    - footer_tagline: tagline for footer
+    """
+    copies = {
+        "BOLD_ENERGY": {
+            "hero_title_patterns": [
+                "{name}: Energia que transforma",
+                "{name}: Forca sem limites",
+                "{name}: Seu corpo, sua revolucao",
+            ],
+            "hero_subtitle_patterns": [
+                "Treinos que desafiam seus limites. Resultados que falam por voce.",
+                "Transforme suor em conquista. Academia com estrutura de primeira.",
+                "Aqui, cada repeticao conta. Treino personalizado para seu objetivo.",
+            ],
+            "service_description_patterns": [
+                "Treino guiado por profissionais. Infraestrutura completa para voce render.",
+                "Equipamentos de alta performance. Ambiente climatizado e seguro.",
+                "Plano personalizado para seu objetivo. Acompanhamento completo.",
+            ],
+            "cta_primary": ["Comecar treino", "Matricular ja", "Agendar aula"],
+            "cta_secondary": ["Ver estrutura", "Conhecer plano", "Falar com instrutor"],
+            "testimonial_template": "Alunos com nota {rating} em {city}. Transformacao real.",
+            "services_heading": "Modalidades e servicos",
+            "gallery_heading": "Nossa estrutura",
+            "lifestyle_heading": "Mentalidade de feras",
+            "contact_heading": "Comece sua transformacao",
+            "footer_tagline": "Energia. Disciplina. Resultados.",
+        },
+        "WARM_LOCAL": {
+            "hero_title_patterns": [
+                "{name}: Tradicao e cuidado",
+                "{name}: Arte em cada servico",
+                "{name}: O seu espaco, sua cara",
+            ],
+            "hero_subtitle_patterns": [
+                "Atendimento personalizado que faz voce se sentir em casa.",
+                "Ambiente acolhedor com profissionais dedicados ao seu bem-estar.",
+                "Servico de qualidade com toalhas quentes e cuidado de verdade.",
+            ],
+            "service_description_patterns": [
+                "Cada detalhe pensado para sua experiencia. Ambiente climatizado.",
+                "Profissional experiente com atencao aos minimos detalhes.",
+                "Atendimento exclusivo com produtos de primeira linha.",
+            ],
+            "cta_primary": ["Agendar horario", "Reservar agora", "Venha nos visitar"],
+            "cta_secondary": ["Ver servicos", "Conhecer espaco", "Falar conosco"],
+            "testimonial_template": "Avaliado {rating} por clientes em {city}. Satisfacao garantida.",
+            "services_heading": "Servicos exclusivos",
+            "gallery_heading": "Nosso espaco",
+            "lifestyle_heading": "Tradicao em cada detalhe",
+            "contact_heading": "Agende sua visita",
+            "footer_tagline": "Tradicao. Qualidade. Cuidado.",
+        },
+        "ZEN_PURE": {
+            "hero_title_patterns": [
+                "{name}: Equilibrio e bem-estar",
+                "{name}: Cuidado que transforma",
+                "{name}: Saude em primeiro lugar",
+            ],
+            "hero_subtitle_patterns": [
+                "Atendimento humanizado com acompanhamento profissional.",
+                "Ambiente preparado para recebe-lo com conforto e seguranca.",
+                "Tratamentos personalizados para sua qualidade de vida.",
+            ],
+            "service_description_patterns": [
+                "Avaliacao completa para um plano de tratamento eficaz.",
+                "Profissional capacitado com abordagem humanizada.",
+                "Infraestrutura moderna para seu conforto e recuperacao.",
+            ],
+            "cta_primary": ["Agendar consulta", "Marcar avaliacao", "Conhecer tratamento"],
+            "cta_secondary": ["Ver servicos", "Conhecer abordagem", "Falar com profissional"],
+            "testimonial_template": "Pacientes satisfeitos: {rating} em {city}. Cuidado real.",
+            "services_heading": "Tratamentos e servicos",
+            "gallery_heading": "Nosso espaco",
+            "lifestyle_heading": "Caminho para o bem-estar",
+            "contact_heading": "Comece seu tratamento",
+            "footer_tagline": "Cuidado. Equilibrio. Vida.",
+        },
+        "LUXURY_ELITE": {
+            "hero_title_patterns": [
+                "{name}: Experiencia incomparavel",
+                "{name}: Sofisticacao em cada detalhe",
+                "{name}: Onde o excepcional e padrao",
+            ],
+            "hero_subtitle_patterns": [
+                "Ambiente exclusivo com atendimento personalizado de alto nivel.",
+                "Experiencia gourmet com ingredientes selecionados e charme.",
+                "Suites premium e servicos que superam expectativas.",
+            ],
+            "service_description_patterns": [
+                "Menu elaborado por chefs renomados. Ambiente sofisticado.",
+                "Reserva VIP com atendimento exclusivo e personalizado.",
+                "Experiencia unica em lokacao privilegiada em {city}.",
+            ],
+            "cta_primary": ["Reservar mesa", "Garantir suite", "Experienciar"],
+            "cta_secondary": ["Ver menu", "Conhecer lokacao", "Ver pacotes"],
+            "testimonial_template": "Conceito avaliado {rating} em {city}. Experiencia 5 estrelas.",
+            "services_heading": "Experiencias e servicos",
+            "gallery_heading": "Ambiente exclusivo",
+            "lifestyle_heading": "O extraordinario esperado",
+            "contact_heading": "Reserve sua experiencia",
+            "footer_tagline": "Sofisticacao. Exclusividade. Memoria.",
+        },
+        "MODERN_TECH": {
+            "hero_title_patterns": [
+                "{name}: Solucao inteligente",
+                "{name}: Tecnologia que entrega",
+                "{name}: Futuro da sua empresa",
+            ],
+            "hero_subtitle_patterns": [
+                "Infraestrutura de ponta com monitoramento 24h em tempo real.",
+                "Equipamentos de ultima geracao para sua operacao render mais.",
+                "Sistemas automatizados com suporte especializado dedicado.",
+            ],
+            "service_description_patterns": [
+                "Instalacao profissional com garantia total e manutencao preventiva.",
+                "Monitoramento remoto 24h. Resposta rapida para qualquer evento.",
+                "Painel de controle intuitivo com metricas em tempo real.",
+            ],
+            "cta_primary": ["Solicitar orcamento", "Ver solucao", "Agendar visita tecnica"],
+            "cta_secondary": ["Ver projetos", "Conhecer tecnologia", "Falar com especialista"],
+            "testimonial_template": " uptime de {rating}% em {city}. Confiabilidade comprovada.",
+            "services_heading": "Solucoes tecnologicas",
+            "gallery_heading": "Projetos realizados",
+            "lifestyle_heading": "Inovacao em pratica",
+            "contact_heading": "Solicite uma proposta",
+            "footer_tagline": "Tecnologia. Eficiencia. Parceria.",
+        },
+        "PROFESSIONAL_TRUST": {
+            "hero_title_patterns": [
+                "{name}: Expertise que transmite confianca",
+                "{name}: Solucoes juridicas com seriedade",
+                "{name}: Seu negocio em boas maos",
+            ],
+            "hero_subtitle_patterns": [
+                "Escritorio com experiencia consolidada em {city}.",
+                "Atendimento transparente com foco em resultados para seu caso.",
+                "Profissional dedicado com formacao solida e actucao comprovada.",
+            ],
+            "service_description_patterns": [
+                "Analise detalhada do seu caso. Atendimento personalizado.",
+                "Estrategia juridica sob medida com acompanhamento completo.",
+                "Escritorio com infrastructure moderna para seu conforto.",
+            ],
+            "cta_primary": ["Agendar consulta", "Falar com advogado", "Ver areas de atucao"],
+            "cta_secondary": ["Ver areas", "Conhecer equipe", "Solicitar orcamento"],
+            "testimonial_template": "Cases bem-sucedidos em {city}. {rating} de satisfacao.",
+            "services_heading": "Areas de atucao",
+            "gallery_heading": "Escritorio e equipe",
+            "lifestyle_heading": "Compromisso com seu caso",
+            "contact_heading": "Fale com nosso escritorio",
+            "footer_tagline": "Seriedade. Transparencia. Resultado.",
+        },
+    }
+    return copies.get(archetype, copies["PROFESSIONAL_TRUST"])
+
+
+def _select_copy_variation(
+    patterns: list[str],
+    archetype: str,
+    seed: int | None,
+    name: str = "",
+    city: str = "",
+    rating: str = "",
+) -> str:
+    """Select a deterministic copy variation based on archetype and seed.
+
+    Uses archetype hash + seed to pick a consistent variation for the same input.
+    """
+    if not patterns:
+        return ""
+    # Build deterministic index from archetype + seed
+    archetype_hash = sum(ord(c) for c in archetype)
+    base_idx = ((archetype_hash + (seed or 0)) % len(patterns)) % len(patterns)
+    template = patterns[base_idx]
+    # Fill placeholders
+    result = template.format(name=name, city=city, rating=rating)
+    return result
+
+
+def _generate_index_tsx_with_section_order(
+    archetype: str,
+    seed: int | None,
+    palette: dict[str, str],
+) -> str:
+    """Generate Index.tsx with archetype-based section order.
+
+    Different archetypes have different section orders to match their personality:
+    - BOLD_ENERGY: lifestyle before services (action-oriented)
+    - WARM_LOCAL: about before services (trust-building)
+    - ZEN_PURE: gallery before services (visual-first)
+    - LUXURY_ELITE: gallery at top, reviews included (aspirational)
+    - MODERN_TECH: services first (solution-focused)
+    - PROFESSIONAL_TRUST: about before services (credibility-first)
+
+    Args:
+        archetype: Business archetype
+        seed: Optional seed for variation
+        palette: Color palette dict
+
+    Returns:
+        Complete Index.tsx component as string
+    """
+    section_order = _get_section_order_for_archetype(archetype, seed)
+
+    # Map section identifiers to component tags. Unknown sections are omitted:
+    # JSX comments in string-generated source are easy to break and add no value.
+    section_tags = {
+        "navbar": "<Navbar />",
+        "hero": "<HeroSection />",
+        "services": "<ServicesSection />",
+        "gallery": "<GallerySection />",
+        "lifestyle": "<LifestyleSection />",
+        "contact-cta": "<ContactCTA />",
+        "footer": "<Footer />",
+    }
+
+    ordered_sections = [section_tags[s] for s in section_order if s in section_tags]
+
+    if "<BookingModal />" not in ordered_sections:
+        insert_at = max(0, len(ordered_sections) - 1)
+        ordered_sections.insert(insert_at, "<BookingModal />")
+    sections_str = "".join(ordered_sections)
+
+    bg_dark = palette['bg_dark']
+
+    return f"""import {{ Navbar }} from '../components/Navbar';
+import {{ HeroSection }} from '../components/HeroSection';
+import {{ ServicesSection }} from '../components/ServicesSection';
+import {{ GallerySection }} from '../components/GallerySection';
+import {{ LifestyleSection }} from '../components/LifestyleSection';
+import {{ BookingModal }} from '../components/BookingModal';
+import {{ ContactCTA }} from '../components/ContactCTA';
+import {{ Footer }} from '../components/Footer';
+
+export default function Index() {{
+  return <main className="min-h-screen text-zinc-50" style={{{{backgroundColor:"{bg_dark}"}}}}>{sections_str}</main>;
+}}
+"""
+
+
 def _generate_studio_fallback_files(facts: dict[str, Any] | None = None) -> dict[str, str]:
     """Compatibility fallback for tests and emergency local Studio rendering."""
     safe_facts = facts or {}
@@ -2139,194 +3208,167 @@ def _generate_studio_fallback_files(facts: dict[str, Any] | None = None) -> dict
     hero_img = "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?auto=format&fit=crop&w=1600&q=82"
     gallery_img = "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?auto=format&fit=crop&w=1400&q=82"
 
+    # Sprint 16: Get variation seed and apply it to facts
+    # This provides deterministic randomness for hero layout, motion, copy voice, and color emphasis
+    variation = None
+    if get_variation is not None:
+        variation = get_variation(safe_facts)
+        safe_facts = apply_variation_to_facts(safe_facts, variation)
+        # Convert variation seed to integer for existing seed-based functions
+        seed = variation.seed % 1000000  # Keep seed manageable
+    else:
+        # Legacy seed generation (backward compatibility)
+        seed_source = str(
+            safe_facts.get("job_id")
+            or safe_facts.get("id")
+            or f"{name}|{segment}|{city}"
+        )
+        seed = sum((idx + 1) * ord(ch) for idx, ch in enumerate(seed_source)) % 1000000
+
+    # Sprint 15: Archetype-based palette and typography
+    archetype = _get_archetype_for_segment(segment)
+    palette = _get_archetype_palette(archetype)
+    typography = _get_archetype_typography(archetype)
+
+    # Sprint 15: Get archetype-specific copy structure
+    # (actual variation selection happens after seed is defined)
+    archetype_copy = _get_archetype_copy(archetype)
+
+    # Use archetype copy for section headings (static, no seed needed)
+    services_heading = archetype_copy["services_heading"]
+    gallery_heading = archetype_copy["gallery_heading"]
+    lifestyle_heading = archetype_copy["lifestyle_heading"]
+    contact_heading = archetype_copy["contact_heading"]
+    footer_tagline = archetype_copy["footer_tagline"]
+
     # Sprint 12.14: segment-aware content (fixes hardcoded academia contamination)
 
     if "barbearia" in segment or "barbeiro" in segment:
         svc_labels = ["Corte", "Barba", "Sobrancelha", "Pigmentacao", "Hidratacao"]
-        hero_desc = "Barbearia premium com barbeiros experientes e ambiente climatizado."
-        cta_primary = "Agendar horario"
-        cta_secondary = "Ver servicos"
         alt_img = "Barbeiro em barbearia"
-        lifestyle_title = "Tradicao em cada corte"
         lifestyle_desc = "Um espaco dedicado ao cuidado masculino, com atendimento personalizado e toalhas quentes."
         nav_items = [("Servicos", "#servicos"), ("Galeria", "#galeria"), ("Contato", "#contato")]
     elif "academia" in segment or "fitness" in segment or "musculacao" in segment or "crossfit" in segment:
         svc_labels = ["Musculacao", "Treino funcional", "Spinning", "Crossfit", "Avaliacao"]
-        hero_desc = "Academia completa com treino funcional, alunos acompanhados e ambiente moderno."
-        cta_primary = "Comecar treino"
-        cta_secondary = "Ver estrutura"
         alt_img = "Alunos em treino fitness"
-        lifestyle_title = "Energia e constancia"
         lifestyle_desc = "Um espaco para criar rotina, encontrar orientacao e manter frequencia sem complicar."
         nav_items = [("Treinos", "#servicos"), ("Galeria", "#galeria"), ("Contato", "#contato")]
     elif "restaurante" in segment or "bar " in segment or "pizzaria" in segment or "hamburgueria" in segment or "lanchonete" in segment or "cafeteria" in segment:
         svc_labels = ["Pratos", "Menu", "Reservas", "Eventos", "Delivery"]
-        hero_desc = "Restaurante com pratos feitos com ingredientes selecionados e ambiente acolhedor."
-        cta_primary = "Fazer reserva"
-        cta_secondary = "Ver menu"
         alt_img = "Restaurante"
-        lifestyle_title = "Experiencia gastronomica"
         lifestyle_desc = "Cada prato preparado com cuidado para proporcionar uma experiencia unica."
         nav_items = [("Cardapio", "#servicos"), ("Galeria", "#galeria"), ("Reservar", "#contato")]
     elif "clinica" in segment or "estetica" in segment or "dermatologia" in segment:
         svc_labels = ["Consulta", "Tratamento", "Avaliacao", "Procedimento", "Retorno"]
-        hero_desc = "Clinica com profissionais experientes e tratamentos personalizados para seu bem-estar."
-        cta_primary = "Agendar consulta"
-        cta_secondary = "Conhecer servicos"
         alt_img = "Clinica"
-        lifestyle_title = "Cuidado e acolhimento"
         lifestyle_desc = "Ambiente preparado para recebe-lo com conforto e seguranca em cada atendimento."
         nav_items = [("Servicos", "#servicos"), ("Galeria", "#galeria"), ("Contato", "#contato")]
     elif "imobiliaria" in segment or "imoveis" in segment:
         svc_labels = ["Venda", "Locacao", "Avaliacao", "Consultoria", "Lancamentos"]
-        hero_desc = "Imobiliaria com imoveis selecionados e atendimento personalizado para suas necessidades."
-        cta_primary = "Ver imoveis"
-        cta_secondary = "Falar corretor"
         alt_img = "Imovel"
-        lifestyle_title = "Seu proximo imovel"
         lifestyle_desc = "Encontre o imovel ideal com quem entende do mercado local."
         nav_items = [("Imoveis", "#servicos"), ("Galeria", "#galeria"), ("Contato", "#contato")]
     elif "nutricionista" in segment or "nutricao" in segment:
         svc_labels = ["Avaliacao", "Plano alimentar", "Acompanhamento", "Suplementacao", "Bioimpedancia"]
-        hero_desc = "Nutricionista com plano alimentar personalizado para seus objetivos de saude."
-        cta_primary = "Agendar consulta"
-        cta_secondary = "Ver planos"
         alt_img = "Nutricionista"
-        lifestyle_title = "Nutricao de verdade"
         lifestyle_desc = "Transforme sua alimentacao com acompanhamento profissional cientifico."
         nav_items = [("Servicos", "#servicos"), ("Galeria", "#galeria"), ("Contato", "#contato")]
     elif "advocacia" in segment or "advogado" in segment:
         svc_labels = ["Consulta", "Contratos", "Processos", "Assessoria", "Recursos"]
-        hero_desc = "Escritorio de advocacia com experiencia em diversas areas do direito."
-        cta_primary = "Falar com advogado"
-        cta_secondary = "Ver areas"
         alt_img = "Escritorio de advocacia"
-        lifestyle_title = "Direito com seriedade"
         lifestyle_desc = "Atendimento juridico transparente e dedicado a sua causa."
         nav_items = [("Areas", "#servicos"), ("Galeria", "#galeria"), ("Contato", "#contato")]
     elif "odonto" in segment or "dentista" in segment:
         svc_labels = ["Limpeza", "Clareamento", "Implante", "Ortodontia", "Emergencia"]
-        hero_desc = "Odontologia com tratamentos modernos e atendimento humanizado."
-        cta_primary = "Agendar consulta"
-        cta_secondary = "Ver tratamentos"
         alt_img = "Consultorio odontologico"
-        lifestyle_title = "Seu sorriso perfeito"
         lifestyle_desc = "Tecnologia de ponta e carinho em cada tratamento para seu sorriso."
         nav_items = [("Tratamentos", "#servicos"), ("Galeria", "#galeria"), ("Contato", "#contato")]
     elif "ecommerce" in segment or "loja" in segment or "roupas" in segment:
         svc_labels = ["Produtos", "Frete", "Troca", "Atendimento", "Garantia"]
-        hero_desc = "Loja online com produtos selecionados e entrega para todo o Brasil."
-        cta_primary = "Ver produtos"
-        cta_secondary = "Ver ofertas"
         alt_img = "Produtos"
-        lifestyle_title = "Qualidade garantida"
         lifestyle_desc = "Produtos selecionados com cuidado para atender suas necessidades."
         nav_items = [("Produtos", "#servicos"), ("Ofertas", "#galeria"), ("Contato", "#contato")]
     elif "petshop" in segment or "pet " in segment:
         svc_labels = ["Banho", "Tosa", "Consulta", "Produtos", "Creche"]
-        hero_desc = "Pet shop com produtos e servicos para o bem-estar do seu pet."
-        cta_primary = "Agendar servico"
-        cta_secondary = "Ver produtos"
         alt_img = "Pet shop"
-        lifestyle_title = "Amor pelos animais"
         lifestyle_desc = "Cuidamos do seu pet como se fosse nosso. Amor e dedicacao em cada servico."
         nav_items = [("Servicos", "#servicos"), ("Produtos", "#galeria"), ("Contato", "#contato")]
     elif "hotel" in segment or "pousada" in segment or "hostel" in segment:
         svc_labels = ["Quartos", "Cafe da manha", "Estacionamento", "Wi-Fi", "Piscina"]
-        hero_desc = "Hospedagem com conforto, localizacao privilegiada e atendimento diferenciado."
-        cta_primary = "Reservar"
-        cta_secondary = "Ver quartos"
         alt_img = "Hotel"
-        lifestyle_title = "Sua casa longe de casa"
         lifestyle_desc = "Conforto e acolhimento para tornar sua estadia inesquecivel."
         nav_items = [("Quartos", "#servicos"), ("Servicos", "#galeria"), ("Reservar", "#contato")]
     elif "salao_beleza" in segment or "beleza" in segment or "manicure" in segment or "cabelo" in segment:
         svc_labels = ["Corte", "Coloracao", "Manicure", "Maquiagem", "Tratamentos"]
-        hero_desc = "Salao de beleza com profissionais capacitados e ambiente acolhedor."
-        cta_primary = "Agendar horario"
-        cta_secondary = "Ver servicos"
         alt_img = "Salao de beleza"
-        lifestyle_title = "Beleza e bem-estar"
         lifestyle_desc = "Transformamos seu visual com tecnicas modernas e produtos de qualidade."
         nav_items = [("Servicos", "#servicos"), ("Galeria", "#galeria"), ("Contato", "#contato")]
     elif "fisioterapia" in segment or "fisio" in segment:
         svc_labels = ["Avaliacao", "Tratamento", "RPG", "Acupuntura", "Pilates"]
-        hero_desc = "Fisioterapia com atendimento personalizado para reabilitacao e qualidade de vida."
-        cta_primary = "Agendar sessao"
-        cta_secondary = "Ver tratamentos"
         alt_img = "Fisioterapia"
-        lifestyle_title = "Movimento com saude"
         lifestyle_desc = "Recupere sua qualidade de vida com tratamento fisioterapêutico humanizado."
         nav_items = [("Servicos", "#servicos"), ("Galeria", "#galeria"), ("Contato", "#contato")]
     elif "escola" in segment or "cursinho" in segment or "idiomas" in segment or "musica" in segment or "informatica" in segment:
         svc_labels = ["Matricula", "Cursos", "Talleres", "Eventos", "Biblioteca"]
-        hero_desc = "Instituicao de ensino com metodologia moderna e corpo docente qualificado."
-        cta_primary = "Matricular"
-        cta_secondary = "Ver cursos"
         alt_img = "Escola"
-        lifestyle_title = "Educacao que transforma"
         lifestyle_desc = "Formando cidadaos preparados para o futuro com excelencia e valores."
         nav_items = [("Cursos", "#servicos"), ("Eventos", "#galeria"), ("Contato", "#contato")]
     elif "autoescola" in segment:
         svc_labels = ["Aulas teoricas", "Aulas praticas", "Simulado", "Exame", "CNH"]
-        hero_desc = "Autoescola com aprovacao garantida e atendimento moderno."
-        cta_primary = "Matricular"
-        cta_secondary = "Ver categorias"
         alt_img = "Autoescola"
-        lifestyle_title = "Sua habilitacao na mao"
         lifestyle_desc = "Metodologia comprovada para voce passar no DETRAN de primeira."
         nav_items = [("Categorias", "#servicos"), ("Simulado", "#galeria"), ("Contato", "#contato")]
     elif "oficina" in segment or "mecanica" in segment or "eletrica" in segment or "pintura" in segment:
         svc_labels = ["Revisao", "Diagnostico", "Reparos", "Pintura", "Eletrica"]
-        hero_desc = "Oficina mecanica com profissionais experientes e equipamentos modernos."
-        cta_primary = "Agendar servico"
-        cta_secondary = "Ver servicos"
         alt_img = "Oficina mecanica"
-        lifestyle_title = "Seu carro em boas maos"
         lifestyle_desc = "Servico de qualidade com transparencia e compromisso com seu veiculo."
         nav_items = [("Servicos", "#servicos"), ("Galeria", "#galeria"), ("Contato", "#contato")]
     elif "farmacia" in segment or "manipulacao" in segment:
         svc_labels = ["Medicamentos", "Manipulacao", "Dermocosmeticos", "Atendimento", "Delivery"]
-        hero_desc = "Farmacia com variedade de medicamentos e atendimento personalizado."
-        cta_primary = "Ver produtos"
-        cta_secondary = "Ver promocoes"
         alt_img = "Farmacia"
-        lifestyle_title = "Saude e bem-estar"
         lifestyle_desc = "Farmacêuticos capacitados para orientar sobre medicamentos e cuidados."
         nav_items = [("Produtos", "#servicos"), ("Promocoes", "#galeria"), ("Contato", "#contato")]
     elif "psicologo" in segment or "psicologia" in segment:
         svc_labels = ["Consulta", "Terapia", "Avaliacao", "Diagnostico", "Acompanhamento"]
-        hero_desc = "Psicologia com atendimento humanizado para suas necessidades emocionais."
-        cta_primary = "Agendar sessao"
-        cta_secondary = "Ver abordagens"
         alt_img = "Consultorio de psicologia"
-        lifestyle_title = "Cuidado emocional"
         lifestyle_desc = "Um espaco seguro para falar sobre seus sentimentos e desenvolver seu potencial."
         nav_items = [("Abordagens", "#servicos"), ("Galeria", "#galeria"), ("Contato", "#contato")]
     elif "fotografo" in segment or "fotografia" in segment or "design" in segment or "grafico" in segment:
         svc_labels = ["Eventos", "Casamentos", "Books", "Corporativo", "Produtos"]
-        hero_desc = "Fotografia com servicos para eventos, casamentos e books corporativos."
-        cta_primary = "Ver portfolio"
-        cta_secondary = "Fazer orcamento"
         alt_img = "Fotografia"
-        lifestyle_title = "Momentos eternizados"
         lifestyle_desc = "Capturamos momentos e emocoes com sensibilidade e tecnica."
         nav_items = [("Portfolio", "#servicos"), ("Pacotes", "#galeria"), ("Contato", "#contato")]
         nav_items = [("Servicos", "#servicos"), ("Galeria", "#galeria"), ("Contato", "#contato")]
 
     else:
         svc_labels = ["Servico 1", "Servico 2", "Servico 3", "Servico 4", "Servico 5"]
-        hero_desc = f"{name}: servicos de qualidade com atendimento personalizado em {city}."
-        cta_primary = "Saiba mais"
-        cta_secondary = "Ver servicos"
         alt_img = f"{name}"
-        lifestyle_title = "Experiencia unica"
         lifestyle_desc = f"Atendimento dedicado para garantir sua satisfacao em {city}."
         nav_items = [("Servicos", "#servicos"), ("Galeria", "#galeria"), ("Contato", "#contato")]
 
     # END of segment-aware block - def component follows
     # Sprint 12.17: capture segment vars in the body strings via Python evaluation.
     # f-strings inside this scope see the segment vars (svc_labels, hero_desc, etc).
+
+    # Sprint 15: Build CSS variable declarations from archetype palette for inline style injection
+    css_vars = f"""
+    --color-primary: {palette['primary']};
+    --color-primary-contrast: {palette['primary_contrast']};
+    --color-secondary: {palette['secondary']};
+    --color-accent: {palette['accent']};
+    --color-bg-dark: {palette['bg_dark']};
+    --color-bg-light: {palette['bg_light']};
+    --color-text-dark: {palette['text_dark']};
+    --color-text-light: {palette['text_light']};
+    --color-border: {palette['border']};
+    --color-gradient-start: {palette['gradient_start']};
+    --color-gradient-end: {palette['gradient_end']};
+    --font-heading: {typography['heading_font']};
+    --font-body: {typography['body_font']};
+    --weight-heading: {typography['heading_weight']};
+    --weight-body: {typography['body_weight']};
+    """.strip()
+
     def component(export_name: str, body: str, *, imports: str = "") -> str:
         return f"""{imports}
 export function {export_name}() {{
@@ -2336,16 +3378,78 @@ export function {export_name}() {{
 export default {export_name};
 """
 
+    # Sprint 15: Use dynamic palette values instead of hardcoded emerald
+    # Extract primary color for Tailwind-style classes via inline style
+    primary_hex = palette['primary']
+    primary_contrast_hex = palette['primary_contrast']
+    primary_light = palette['accent']  # Lighter variant for badges/text
+
+    # Sprint 16: Hero layout variation - deterministic based on archetype + seed
+    # Seed is already computed at the top of the function from variation_seed module
+    hero_layout = _pick_hero_layout(archetype, seed)
+
+    # Sprint 16: Select niche-specific copy variations using archetype + seed
+    hero_title = _select_copy_variation(
+        archetype_copy["hero_title_patterns"], archetype, seed, name=name, city=city
+    )
+    hero_subtitle = _select_copy_variation(
+        archetype_copy["hero_subtitle_patterns"], archetype, seed, name=name, city=city
+    )
+    cta_primary = archetype_copy["cta_primary"][(seed or 0) % len(archetype_copy["cta_primary"])]
+    cta_secondary = archetype_copy["cta_secondary"][(seed or 0) % len(archetype_copy["cta_secondary"])]
+    llm_content = safe_facts.get("_llm_content") if isinstance(safe_facts.get("_llm_content"), dict) else {}
+    if llm_content:
+        hero = llm_content.get("hero") if isinstance(llm_content.get("hero"), dict) else {}
+        lifestyle = llm_content.get("lifestyle") if isinstance(llm_content.get("lifestyle"), dict) else {}
+        if hero.get("headline"):
+            hero_title = str(hero["headline"])
+        if hero.get("subheadline"):
+            hero_subtitle = str(hero["subheadline"])
+        if hero.get("cta_primary"):
+            cta_primary = str(hero["cta_primary"])
+        if hero.get("cta_secondary"):
+            cta_secondary = str(hero["cta_secondary"])
+        if llm_content.get("services_title"):
+            services_heading = str(llm_content["services_title"])
+        if lifestyle.get("title"):
+            lifestyle_heading = str(lifestyle["title"])
+        if lifestyle.get("description"):
+            lifestyle_desc = str(lifestyle["description"])
+        if llm_content.get("gallery_alt"):
+            alt_img = str(llm_content["gallery_alt"])
+        if isinstance(llm_content.get("services"), list) and llm_content["services"]:
+            slot_labels = []
+            for item in llm_content["services"][:5]:
+                if isinstance(item, dict) and item.get("title"):
+                    slot_labels.append(str(item["title"]))
+                elif item:
+                    slot_labels.append(str(item))
+            if slot_labels:
+                svc_labels = slot_labels + svc_labels[len(slot_labels):]
+    service_descriptions = [
+        _select_copy_variation(
+            archetype_copy["service_description_patterns"], archetype,
+            (seed + i if seed else i) % len(archetype_copy["service_description_patterns"]),
+            name=name, city=city
+        )
+        for i in range(min(3, len(svc_labels)))
+    ]
+    if llm_content and isinstance(llm_content.get("services"), list):
+        for idx, item in enumerate(llm_content["services"][:len(service_descriptions)]):
+            if isinstance(item, dict) and item.get("description"):
+                service_descriptions[idx] = str(item["description"])
+
     dense_cards = "\n".join(
-        f'<div className="rounded-3xl border border-white/10 bg-white/[.04] p-5 text-white"><strong className="block text-xl text-emerald-200">0{i}</strong><span className="text-sm text-zinc-300">{svc_labels[i-1]}</span></div>'
+        f'<div className="rounded-3xl border border-white/10 bg-white/[.04] p-5 text-white"><strong className="block text-xl" style={{{{color:"{primary_light}"}}}}>0{i}</strong><span className="text-sm text-zinc-300">{svc_labels[i-1]}</span></div>'
         for i in range(1, 6)
     )
     nav_links = "\n".join(
         f'<a className="hover:text-white" href="{href}">{label}</a>'
         for label, href in nav_items
     )
+    # Sprint 16: Generate niche-specific service descriptions using archetype copy
     services_articles = "\n".join(
-        f'<article className="rounded-3xl border border-white/10 bg-white/[.04] p-6"><h3 className="text-xl font-bold">{svc_labels[i]}</h3><p className="mt-3 text-zinc-400">Atendimento de qualidade.</p></article>'
+        f'<article className="rounded-3xl border border-white/10 bg-white/[.04] p-6"><h3 className="text-xl font-bold">{svc_labels[i]}</h3><p className="mt-3 text-zinc-400">{service_descriptions[i]}</p></article>'
         for i in range(min(3, len(svc_labels)))
     )
     files = {
@@ -2358,13 +3462,13 @@ export default {export_name};
     return () => window.removeEventListener('scroll', onScroll);
   }}, []);
   return (
-    <nav className={{`fixed inset-x-4 top-4 z-50 rounded-3xl border px-5 py-3 backdrop-blur ${{open ? 'border-white/20 bg-zinc-950/90' : 'border-white/10 bg-white/5'}}`}}>
+    <nav style={{{{background: open ? '{palette['bg_dark']}ee' : '{palette['bg_light']}08', borderColor: open ? '{palette['border']}' : '{palette['border'].replace('0.2', '0.1')}'}}}} className={{`fixed inset-x-4 top-4 z-50 rounded-3xl border px-5 py-3 backdrop-blur`}}>
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4">
-        <a className="min-w-0 truncate text-sm font-black uppercase tracking-[0.24em] text-emerald-200" href="#top">{name}</a>
+        <a className="min-w-0 truncate text-sm font-black uppercase tracking-[0.24em]" href="#top" style={{{{color:"{primary_light}"}}}}>{name}</a>
         <div className="hidden items-center gap-5 text-sm text-zinc-200 md:flex">
           {nav_links}
         </div>
-        <a className="rounded-full bg-emerald-300 px-4 py-2 text-sm font-bold text-zinc-950 max-sm:px-3 max-sm:text-xs" href="tel:{phone}">{{cta_primary}}</a>
+        <a className="rounded-full px-4 py-2 text-sm font-bold max-sm:px-3 max-sm:text-xs" style={{{{backgroundColor:"{primary_hex}",color:"{primary_contrast_hex}"}}}} href="tel:{phone}">{{cta_primary}}</a>
       </div>
     </nav>
   );
@@ -2373,49 +3477,90 @@ export default {export_name};
         ),
         "src/components/HeroSection.tsx": component(
             "HeroSection",
-            f"""  useEffect(() => {{
-    gsap.fromTo('[data-hero-copy]', {{ y: 24, opacity: 0 }}, {{ y: 0, opacity: 1, duration: 0.7 }});
-  }}, []);
-  return (
-    <section id="top" className="relative isolate overflow-hidden bg-zinc-950 px-6 pb-24 pt-36 text-white">
-      <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_20%_20%,rgba(16,185,129,.24),transparent_32%),linear-gradient(135deg,#050505,#101827)]" />
-      <div className="mx-auto grid max-w-6xl items-center gap-10 lg:grid-cols-[1.05fr_.95fr]">
-        <motion.div data-hero-copy initial={{{{ opacity: 0 }}}} animate={{{{ opacity: 1 }}}} className="space-y-7">
-          <p className="inline-flex rounded-full border border-emerald-300/30 bg-emerald-300/10 px-4 py-2 text-xs font-bold uppercase tracking-[0.24em] text-emerald-200">{segment} em {city}</p>
-          <h1 className="text-[clamp(3rem,8vw,6.6rem)] font-black leading-[.9] tracking-[-.07em]">{name}</h1>
-          <p className="max-w-2xl text-lg leading-8 text-zinc-300">{hero_desc}.</p>
-          <div className="flex flex-wrap gap-3">
-            <a className="rounded-full bg-emerald-300 px-6 py-3 font-black text-zinc-950" href="tel:{phone}">{{cta_primary}}</a>
-            <a className="rounded-full border border-white/20 px-6 py-3 font-semibold text-white" href="#galeria">{{cta_secondary}}</a>
-          </div>
-          <div className="grid max-w-lg grid-cols-3 gap-3 text-sm">{dense_cards}</div>
-        </motion.div>
-        <div className="relative"><img className="aspect-[4/5] w-full rounded-[2rem] object-cover shadow-2xl ring-1 ring-white/10" src="{hero_img}" alt="{{alt_img}}" loading="eager" decoding="async" /></div>
-      </div>
-    </section>
-  );
-""",
+            _generate_hero_section_variation(
+                layout=hero_layout,
+                name=hero_title,
+                segment=segment,
+                city=city,
+                hero_desc=hero_subtitle,
+                hero_img=hero_img,
+                cta_primary="{{cta_primary}}",
+                cta_secondary="{{cta_secondary}}",
+                alt_img="{{alt_img}}",
+                phone=phone,
+                dense_cards=dense_cards,
+                palette=palette,
+                imports="",
+            ),
             imports="import { motion } from 'motion/react';\nimport gsap from 'gsap';\nimport { useEffect } from 'react';",
         ),
-        "src/components/ServicesSection.tsx": component("ServicesSection", f"""  return <section id="servicos" className="bg-zinc-950 px-6 py-24 text-white"><div className="mx-auto max-w-6xl"><p className="text-sm font-bold uppercase tracking-[0.2em] text-emerald-200">servicos</p><h2 className="mt-3 text-4xl font-black">Nossos servicos</h2><div className="mt-10 grid gap-4 md:grid-cols-3">{services_articles}</div></div></section>;"""),
-        "src/components/GallerySection.tsx": component("GallerySection", f"""  return <section id="galeria" className="bg-zinc-900 px-6 py-24 text-white"><div className="mx-auto grid max-w-6xl gap-5 md:grid-cols-2"><img className="h-96 w-full rounded-[2rem] object-cover" src="{hero_img}" alt="{{alt_img}}" loading="lazy" decoding="async" /><img className="h-96 w-full rounded-[2rem] object-cover" src="{gallery_img}" alt="{{alt_img}}" loading="lazy" decoding="async" /></div></section>;"""),
-        "src/components/LifestyleSection.tsx": component("LifestyleSection", f"""  return <section className="bg-zinc-950 px-6 py-24 text-white"><div className="mx-auto max-w-6xl rounded-[2rem] border border-white/10 bg-emerald-300/10 p-8"><p className="text-sm font-bold uppercase tracking-[0.2em] text-emerald-200">experiencia</p><h2 className="mt-3 text-4xl font-black">{{lifestyle_title}}</h2><p className="mt-4 max-w-3xl text-zinc-300">{{lifestyle_desc}}.</p></div></section>;"""),
+        "src/components/ServicesSection.tsx": component("ServicesSection", f"""  return <section id="servicos" className="px-6 py-24 text-white" style={{{{backgroundColor:"{palette['bg_dark']}"}}}}><div className="mx-auto max-w-6xl"><p className="text-sm font-bold uppercase tracking-[0.2em]" style={{{{color:"{primary_light}"}}}}>servicos</p><h2 className="mt-3 text-4xl font-black">{services_heading}</h2><div className="mt-10 grid gap-4 md:grid-cols-3">{services_articles}</div></div></section>;"""),
+        "src/components/GallerySection.tsx": component("GallerySection", f"""  return <section id="galeria" className="px-6 py-24 text-white" style={{{{backgroundColor:"{palette['bg_light']}"}}}}><div className="mx-auto grid max-w-6xl gap-5 md:grid-cols-2"><img className="h-96 w-full rounded-[2rem] object-cover" src="{hero_img}" alt="{{alt_img}}" loading="lazy" decoding="async" /><img className="h-96 w-full rounded-[2rem] object-cover" src="{gallery_img}" alt="{{alt_img}}" loading="lazy" decoding="async" /></div></section>;"""),
+        "src/components/LifestyleSection.tsx": component("LifestyleSection", f"""  return <section className="px-6 py-24 text-white" style={{{{backgroundColor:"{palette['bg_dark']}"}}}}><div className="mx-auto max-w-6xl rounded-[2rem] border border-white/10 p-8" style={{{{borderColor:"{palette['border']}",backgroundColor:"{primary_hex}1a"}}}}><p className="text-sm font-bold uppercase tracking-[0.2em]" style={{{{color:"{primary_light}"}}}}>experiencia</p><h2 className="mt-3 text-4xl font-black">{lifestyle_heading}</h2><p className="mt-4 max-w-3xl text-zinc-300">{lifestyle_desc}.</p></div></section>;"""),
         "src/components/BookingModal.tsx": component("BookingModal", f"""  const [open, setOpen] = useState(false);
-  return <div className="bg-zinc-950 px-6 py-12 text-center text-white"><button className="rounded-full bg-white px-6 py-3 font-black text-zinc-950" onClick={{() => setOpen(true)}}>{{cta_primary}}</button>{{open && <div className="fixed inset-0 z-[80] grid place-items-center bg-black/70 p-6"><div className="max-w-md rounded-3xl bg-white p-6 text-left text-zinc-950"><h3 className="text-2xl font-black">Fale com {name}</h3><p className="mt-3">Telefone {phone}. Atendimento personalizado com avaliacao {rating} em {city}.</p><button className="mt-5 rounded-full bg-zinc-950 px-5 py-2 text-white" onClick={{() => setOpen(false)}}>Fechar</button></div></div>}}</div>;""", imports="import { useState } from 'react';"),
-        "src/components/ContactCTA.tsx": component("ContactCTA", f"""  return <section id="contato" className="bg-emerald-300 px-6 py-20 text-zinc-950"><div className="mx-auto flex max-w-6xl flex-col gap-5 md:flex-row md:items-center md:justify-between"><div><p className="text-sm font-bold uppercase tracking-[0.2em]">contato</p><h2 className="text-4xl font-black">Comece hoje em {city}</h2><p className="mt-2 font-semibold">WhatsApp {phone} • avaliacao {rating}</p></div><a className="rounded-full bg-zinc-950 px-7 py-4 font-black text-white" href="tel:{phone}">Ligar agora</a></div></section>;"""),
-        "src/components/Footer.tsx": component("Footer", f"""  return <footer className="bg-zinc-950 px-6 py-10 text-zinc-400"><div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4"><span className="font-bold text-white">{name}</span><span>{segment} • {city} • {phone}</span></div></footer>;"""),
-        "src/pages/Index.tsx": """import { Navbar } from '../components/Navbar';
-import { HeroSection } from '../components/HeroSection';
-import { ServicesSection } from '../components/ServicesSection';
-import { GallerySection } from '../components/GallerySection';
-import { LifestyleSection } from '../components/LifestyleSection';
-import { BookingModal } from '../components/BookingModal';
-import { ContactCTA } from '../components/ContactCTA';
-import { Footer } from '../components/Footer';
+  return <div className="px-6 py-12 text-center text-white" style={{{{backgroundColor:"{palette['bg_dark']}"}}}}><button className="rounded-full px-6 py-3 font-black" style={{{{backgroundColor:"{primary_contrast_hex}",color:"{palette['bg_dark']}"}}}} onClick={{() => setOpen(true)}}>{{cta_primary}}</button>{{open && <div className="fixed inset-0 z-[80] grid place-items-center bg-black/70 p-6"><div className="max-w-md rounded-3xl p-6 text-left" style={{{{backgroundColor:"{primary_contrast_hex}",color:"{palette['bg_dark']}"}}}}><h3 className="text-2xl font-black">Fale com {name}</h3><p className="mt-3">Telefone {phone}. Atendimento personalizado com avaliacao {rating} em {city}.</p><button className="mt-5 rounded-full px-5 py-2" style={{{{backgroundColor:"{palette['bg_dark']}",color:"{primary_contrast_hex}"}}}} onClick={{() => setOpen(false)}}>Fechar</button></div></div>}}</div>;""", imports="import { useState } from 'react';"),
+        "src/components/ContactCTA.tsx": component("ContactCTA", f"""  return <section id="contato" className="px-6 py-20" style={{{{backgroundColor:"{primary_hex}"}}}}><div className="mx-auto flex max-w-6xl flex-col gap-5 md:flex-row md:items-center md:justify-between"><div><p className="text-sm font-bold uppercase tracking-[0.2em]" style={{{{color:"{palette['text_dark']}"}}}}>contato</p><h2 className="text-4xl font-black" style={{{{color:"{palette['text_dark']}"}}}}>{contact_heading} em {city}</h2><p className="mt-2 font-semibold" style={{{{color:"{palette['text_dark']}"}}}}>WhatsApp {phone} • avaliacao {rating}</p></div><a className="rounded-full px-7 py-4 font-black" style={{{{backgroundColor:"{palette['bg_dark']}",color:"{primary_contrast_hex}"}}}} href="tel:{phone}">{cta_primary}</a></div></section>;"""),
+        "src/components/Footer.tsx": component("Footer", f"""  return <footer className="px-6 py-10 text-zinc-400" style={{{{backgroundColor:"{palette['bg_dark']}"}}}}><div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4"><span className="font-bold text-white">{name}</span><span>{footer_tagline} {city} • {phone}</span></div></footer>;"""),
+        # Sprint 15: Generate Index.tsx with archetype-based section order
+        "src/pages/Index.tsx": _generate_index_tsx_with_section_order(archetype, seed, palette),
+        # Sprint 15: Generate archetype-specific CSS with fonts and color variables
+        "src/index.css": f"""@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family={_get_archetype_fonts(archetype).replace('&', '&')}&display=swap');
 
-export default function Index() {
-  return <main className="min-h-screen bg-zinc-950 text-zinc-50"><Navbar /><HeroSection /><ServicesSection /><GallerySection /><LifestyleSection /><BookingModal /><ContactCTA /><Footer /></main>;
-}
+@layer base {{
+  :root {{
+    --color-primary: {palette['primary']};
+    --color-primary-contrast: {palette['primary_contrast']};
+    --color-secondary: {palette['secondary']};
+    --color-accent: {palette['accent']};
+    --color-bg-dark: {palette['bg_dark']};
+    --color-bg-light: {palette['bg_light']};
+    --color-text-dark: {palette['text_dark']};
+    --color-text-light: {palette['text_light']};
+    --color-border: {palette['border']};
+    --color-gradient-start: {palette['gradient_start']};
+    --color-gradient-end: {palette['gradient_end']};
+    --font-heading: {typography['heading_font']};
+    --font-body: {typography['body_font']};
+    --weight-heading: {typography['heading_weight']};
+    --weight-body: {typography['body_weight']};
+    --weight-accent: {typography['accent_weight']};
+    --heading-tracking: {typography['heading_tracking']};
+  }}
+
+  * {{ box-sizing: border-box; }}
+  html {{ scroll-behavior: smooth; background: {palette['bg_dark']}; }}
+  body {{
+    margin: 0;
+    min-width: 320px;
+    min-height: 100vh;
+    font-family: var(--font-body);
+    color: {palette['text_light']};
+    background: {palette['bg_dark']};
+    text-rendering: geometricPrecision;
+    font-weight: var(--weight-body);
+  }}
+  h1, h2, h3 {{
+    font-family: var(--font-heading);
+    font-weight: var(--weight-heading);
+    letter-spacing: var(--heading-tracking);
+    text-wrap: balance;
+  }}
+  p {{ text-wrap: pretty; }}
+  img {{ max-width: 100%; display: block; }}
+  a {{ color: inherit; text-decoration: none; }}
+  button, a {{ -webkit-tap-highlight-color: transparent; }}
+  ::selection {{ background: {palette['primary']}59; color: {palette['text_dark']}; }}
+}}
+
+@media (prefers-reduced-motion: reduce) {{
+  *, *::before, *::after {{
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }}
+}}
 """,
     }
     return prepare_vite_project_files(files, facts=safe_facts)
@@ -2843,6 +3988,49 @@ def _call_vite_react_llm(
     effective_max_tokens = _cap_max_tokens_for_model(model_id, max_tokens)
     # Sprint 12.13: usa caroço rico quando facts disponivel, fallback HEAD+FOOT+TAIL estatico
     system_prompt = _build_vite_react_system_prompt_with_facts(facts or {})
+    if _is_litellm_openai_chat_base():
+        text_out, _usage = _call_proxy_openai_chat(
+            model_id,
+            system_prompt,
+            user_prompt,
+            temperature=temperature,
+            max_tokens=effective_max_tokens,
+        )
+    else:
+        try:
+            from services.llm_router import call_llm
+        except Exception:
+            try:
+                from backend.services.llm_router import call_llm
+            except Exception:
+                from llm_router import call_llm
+
+        text_out, _usage = call_llm(
+            "anthropic",
+            model_id,
+            system_prompt,
+            user_prompt,
+            temperature=temperature,
+            max_tokens=effective_max_tokens,
+        )
+    return text_out
+
+
+def _call_copy_only_llm(
+    user_prompt: str,
+    *,
+    model: str,
+    max_tokens: int,
+    temperature: float,
+) -> str:
+    """Call the LLM with the small content-only contract, not the full-code prompt."""
+    model_id = {
+        "haiku": PROXY_LIGHT_MODEL,
+        "sonnet": PROXY_DEFAULT_MODEL,
+        "opus": PROXY_BUILDER_MODEL,
+    }.get(model, model)
+    effective_max_tokens = _cap_max_tokens_for_model(model_id, max_tokens)
+    system_prompt = _get_copy_only_system_prompt()
     if _is_litellm_openai_chat_base():
         text_out, _usage = _call_proxy_openai_chat(
             model_id,

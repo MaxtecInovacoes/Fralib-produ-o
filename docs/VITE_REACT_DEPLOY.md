@@ -9,7 +9,7 @@
 | Antes (até Sprint 12.8) | Depois (Sprint 12.9+) |
 |---|---|
 | Engine: `openui` (HTML estático) | Engine: `vite_react` (componentes TSX) |
-| OpenUI fallback se LLM falha | Vite/React tenta LLM, cai para **studio-fallback** se tudo falhar |
+| OpenUI fallback se LLM falha | Vite/React usa **copy-only**: LLM só retorna JSON; Studio/FraLib gera TSX |
 | 1 arquivo HTML | Vite projeto completo (10+ TSX) |
 | Tailwind CDN inline | Tailwind v4 com build |
 | shadcn/ui ❌ | shadcn/ui ✅ |
@@ -25,7 +25,7 @@
 | `backend/services/vite_templates.py` | 10+ templates TSX (shadcn, modal, etc) |
 | `backend/services/builder_worker.py` | `_builder_engine()` retorna `vite_react` por padrão |
 | `scripts/builder_worker_job.py` | `agent=vite_react` por padrão |
-| `tests/test_anti_regressao_v114.py` | **8 testes novos** validando caroço |
+| `tests/test_anti_regressao_v114.py` | **13 testes** validando caroço, mídia, guard e copy-only |
 | `tests/_v1143_summary.json` | Smoke v15h validado Playwright |
 
 ## Como funciona o pipeline
@@ -35,16 +35,33 @@
 2. build_builder_job_manifest() cria manifest
 3. render_site_with_builder(prd) é chamado
 4. engine = "vite_react" (default)
-5. render_vite_react_site() tenta LLM (cascata Opus→Sonnet→Haiku)
-6. Se TODOS falharem → studio fallback (determinístico, 26 segmentos)
-7. Build Vite real (npm run build)
-8. Publica /var/www/fralib/sites/2/<slug>/dist/
+5. render_vite_react_site() aplica `FRALIB_VITE_LLM_POLICY`
+6. `copy_only` (default): LLM retorna JSON curto; Studio/FraLib gera TSX
+7. `none`: zero LLM; Studio/FraLib gera TSX só com fatos/segmento
+8. `full_code`: legado; LLM tenta gerar projeto Vite completo
+9. Build Vite real (npm run build)
+10. Publica /var/www/fralib/sites/2/<slug>/dist/
 ```
 
-## Studio fallback (26 segmentos)
+## Política de uso do LLM
 
-Quando o LLM falha, o `_generate_studio_fallback_files()` produz
-um projeto Vite/React completo baseado no `business.segmento` do lead.
+| Policy | O que faz | Uso recomendado |
+|---|---|---|
+| `copy_only` | Chama LLM com prompt pequeno e schema JSON de slots (`hero`, `services`, `faq`, CTAs). O código React vem do Studio/FraLib. | **Default** |
+| `none` | Não chama LLM. Usa fatos confirmados + defaults segment-aware. | Testes, custo zero, contingência |
+| `full_code` | Caminho legado: LLM gera arquivos TSX completos. | Debug/experimento controlado |
+
+```bash
+FRALIB_VITE_LLM_POLICY=copy_only  # default
+FRALIB_VITE_LLM_POLICY=none       # zero chamada LLM
+FRALIB_VITE_LLM_POLICY=full_code  # legado: LLM programa o site
+```
+
+## Studio template/fallback (26 segmentos)
+
+Em `copy_only` e `none`, e também quando o caminho legado falha, o
+`_generate_studio_fallback_files()` produz um projeto Vite/React completo
+baseado no `business.segmento` do lead.
 
 **Mapa segment-aware** (26 nichos cobertos):
 
@@ -74,6 +91,12 @@ aprovadas antes do gate.
 `musculação` mesmo quando o lead era de nutrição esportiva. Agora
 `musculação/musculacao` é permitido só nesse contexto; `matrícula` continua
 bloqueado para evitar linguagem de academia.
+
+**Mudança Sprint 14**: `FRALIB_VITE_LLM_POLICY=copy_only` virou o caminho
+padrão do Vite. A chamada LLM usa um prompt curto e retorna apenas JSON de
+conteúdo. O renderer sanitiza esse JSON, injeta em `_llm_content` e o Studio
+gera o projeto React determinístico. `ServicesSection`, `HeroSection`, mídia,
+LGPD e contratos não dependem mais do LLM escrever TSX corretamente.
 
 ## Como debugar
 
@@ -132,14 +155,15 @@ pm2 restart fralib
 
 | Métrica | Vite/React (Sprint 12.19) | OpenUI legado |
 |---|---|---|
-| Tempo de build | 30s (LLM) ou 5ms (fallback) | 10s |
+| Tempo de build | JSON LLM curto + build, ou `none` sem LLM | 10s |
 | Tamanho do bundle | 150KB JS + 50KB CSS | 30KB HTML |
 | First Paint | 1.2s | 0.5s |
 | Tailwind | build real | CDN |
 | Componentes React | 10+ | 1 (HTML) |
 | GSAP/Lenis | sim | não |
 | shadcn/ui | sim | não |
-| Tela preta possível? | NÃO (post-process) | n/a |
+| LLM escreve TSX? | Só com `FRALIB_VITE_LLM_POLICY=full_code` | sim |
+| Tela preta possível? | NÃO (post-process + TSX determinístico) | n/a |
 
 ## Tags v1.14.x
 

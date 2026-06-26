@@ -768,8 +768,19 @@ Agora (Sprint 12.12+): `vite_prompts.py` injeta briefing REAL via
 - **Blocos pré-fabricados** (Navbar, Hero, Services, Gallery, Lifestyle, Contact, Footer)
 - **Cross-contamination guard** (barbearia NUNCA menciona musculacao)
 
-O LLM agora recebe ~36k chars de system prompt (vs ~16k antes) com
-briefing completo e injeção segment-aware.
+Desde Sprint 14, este caminho rico/full-code é **legado controlado**:
+por padrão `FRALIB_VITE_LLM_POLICY=copy_only` chama o LLM com prompt curto
+e pede apenas JSON de slots (`hero`, `services`, `faq`, CTAs). O TSX é gerado
+por Studio/FraLib. Use o caroço full-code só com
+`FRALIB_VITE_LLM_POLICY=full_code` para debug/experimento.
+
+Políticas válidas:
+
+| Policy | Chamada LLM | Quem gera TSX | Uso |
+|---|---|---|---|
+| `copy_only` | JSON curto de conteúdo | Studio/FraLib | **Padrão** |
+| `none` | Nenhuma | Studio/FraLib | Custo zero/contingência |
+| `full_code` | Projeto Vite completo | LLM | Legado/debug |
 
 ### 22.4 Cross-contamination guard
 
@@ -789,11 +800,14 @@ FRALIB_BUILDER_ENGINE=vite_react python3 pipeline.py builder-job \
     --prd-json prd.json --tenant-id 2 --job-id X --target landing-page \
     --model claude-sonnet-4-6 --execute
 
-# Se tudo falhar → studio-fallback (deterministico)
-# Que gera segmento-aware correto do mapa de 26
+# Default Sprint 14 → copy_only:
+# LLM retorna JSON curto; Studio/FraLib gera TSX deterministico
 ```
 
-Cascata Opus→Sonnet→Haiku → Se TODOS falharem → Studio fallback
+Cascata em `copy_only`: modelos retornam JSON de conteúdo. Se falhar, o
+Studio ainda gera site com defaults segment-aware. Em `none`, não há chamada
+LLM. Em `full_code`, o comportamento legado tenta projeto TSX completo e cai
+para Studio se todos os modelos falharem.
 
 ### 22.6 Bug crítico e fix (Sprint 12.19)
 
@@ -827,6 +841,7 @@ qualquer f-string esquecida no futuro.
 | BookingModal neutro por nicho | Sprint 12.20 | Remove "matricula/treino" hardcoded que contaminava nutricionista |
 | Contrato determinístico de mídia | Sprint 12.20 | Injeta Hero/Galeria com fotos aprovadas quando LLM ignora imagens |
 | Guard nutrição esportiva | Sprint 12.20 | Permite "musculacao" só para nutricionista esportivo; mantém "matricula" bloqueado |
+| LLM policy copy-only | Sprint 14 | LLM preenche JSON curto; Studio/FraLib gera TSX, reduzindo token/custo |
 
 ### 22.7.1 Fix Sprint 12.20 — BookingModal sem contaminação
 
@@ -860,6 +875,28 @@ nutricionista, mas libera `musculacao/musculação` quando o próprio contexto d
 lead indica nutrição esportiva (`esportivo`, `performance`, `atleta`,
 `hipertrofia`, `suplementacao`). Regressão:
 `tests/test_anti_regressao_v114.py::test_11_guard_nutricionista_esportivo_permite_musculacao_sem_matricula`.
+
+### 22.7.2 Sprint 14 — Copy-only como padrão do Vite
+
+**Problema**: mesmo com shadcn/ui, GSAP, templates e blocos pré-fabricados,
+o caminho principal ainda pedia ao LLM para gerar arquivos TSX completos. Isso
+aumentava custo/tokens e deixava a estrutura vulnerável a falhas como
+`ServicesSection` ausente.
+
+**Fix**: `render_vite_react_site()` agora lê `FRALIB_VITE_LLM_POLICY`.
+O default é `copy_only`: `_call_copy_only_llm()` usa system prompt pequeno,
+`_parse_content_json()` sanitiza a resposta, `_merge_copy_only_content()` injeta
+`_llm_content` nos facts e `_generate_studio_fallback_files()` monta o React.
+
+**Modo zero custo**: `FRALIB_VITE_LLM_POLICY=none` pula qualquer chamada LLM e
+gera o site somente com fatos confirmados + defaults segment-aware.
+
+**Modo legado**: `FRALIB_VITE_LLM_POLICY=full_code` mantém o comportamento antigo
+em que o LLM tenta devolver projeto Vite completo.
+
+Regressões:
+- `tests/test_anti_regressao_v114.py::test_12_vite_copy_only_usa_json_curto_e_codigo_deterministico`
+- `tests/test_anti_regressao_v114.py::test_13_vite_policy_none_nao_chama_llm`
 
 ### 22.8 Tags v1.14.x (Sprint 12.19)
 

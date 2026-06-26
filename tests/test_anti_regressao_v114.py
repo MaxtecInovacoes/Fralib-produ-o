@@ -424,6 +424,120 @@ def test_11_guard_nutricionista_esportivo_permite_musculacao_sem_matricula():
     print("  OK matricula segue bloqueada para nutricionista")
 
 
+def test_12_vite_copy_only_usa_json_curto_e_codigo_deterministico(monkeypatch, tmp_path):
+    """Sprint 14: LLM preenche JSON; FraLib gera TSX deterministico."""
+    print("\n[TESTE 12/13] Vite copy_only nao pede codigo completo...")
+    import backend.services.vite_react_renderer as renderer
+
+    monkeypatch.setenv("FRALIB_VITE_LLM_POLICY", "copy_only")
+
+    def fake_copy_llm(*args, **kwargs):
+        return """{
+          "blueprint": "local_service_fast_quote",
+          "hero": {
+            "headline": "Corte premium sem espera",
+            "subheadline": "Agende seu horario em Pinhais com atendimento preciso",
+            "cta_primary": "Agendar corte",
+            "cta_secondary": "Ver servicos"
+          },
+          "services_title": "Servicos de barbearia",
+          "services": [
+            {"title": "Corte masculino", "description": "Corte alinhado ao estilo e rotina."}
+          ],
+          "lifestyle": {
+            "title": "Ritual de cuidado",
+            "description": "Ambiente preparado para corte, barba e acabamento."
+          },
+          "gallery_alt": "Barbearia Fio Nobre ambiente"
+        }"""
+
+    def fake_build(workspace):
+        dist = workspace / "dist"
+        assets = dist / "assets"
+        assets.mkdir(parents=True, exist_ok=True)
+        (assets / "app.js").write_text("console.log('ok')", encoding="utf-8")
+        (dist / "index.html").write_text(
+            "<html><head></head><body>"
+            "Corte premium sem espera Agendar corte "
+            "<script type='module' src='assets/app.js'></script>"
+            + ("x" * 320)
+            + "</body></html>",
+            encoding="utf-8",
+        )
+
+    monkeypatch.setattr(renderer, "_call_copy_only_llm", fake_copy_llm)
+    monkeypatch.setattr(renderer, "build_vite_project", fake_build)
+
+    result = renderer.render_vite_react_site(
+        "",
+        workspace_dir=tmp_path,
+        facts=LEAD_TEST_FACTS,
+        primary_model="sonnet",
+        fallback_model="haiku",
+        max_tokens=1200,
+    )
+
+    source = "\n".join(result.source_files.values())
+    statuses = [attempt["status"] for attempt in result.attempts]
+    assert result.model == "studio-copy-only"
+    assert "copy_only_json_success" in statuses
+    assert "studio_copy_only_success" in statuses
+    assert "Corte premium sem espera" in source
+    assert "Agendar corte" in source
+    assert "src/components/ServicesSection.tsx" in result.source_files
+    assert "src/components/HeroSection.tsx" in result.source_files
+
+    print("  OK copy_only recebe JSON pequeno")
+    print("  OK TSX final vem do Studio/FraLib, nao do LLM")
+
+
+def test_13_vite_policy_none_nao_chama_llm(monkeypatch, tmp_path):
+    """Sprint 14: policy none gera site com 0 chamada LLM."""
+    print("\n[TESTE 13/13] Vite policy none com zero LLM...")
+    import backend.services.vite_react_renderer as renderer
+
+    monkeypatch.setenv("FRALIB_VITE_LLM_POLICY", "none")
+
+    def fail_if_called(*args, **kwargs):
+        raise AssertionError("LLM nao deveria ser chamado com FRALIB_VITE_LLM_POLICY=none")
+
+    def fake_build(workspace):
+        dist = workspace / "dist"
+        assets = dist / "assets"
+        assets.mkdir(parents=True, exist_ok=True)
+        (assets / "app.js").write_text("console.log('ok')", encoding="utf-8")
+        (dist / "index.html").write_text(
+            "<html><head></head><body>"
+            "Barbearia Fio Nobre Pinhais "
+            "<script type='module' src='assets/app.js'></script>"
+            + ("x" * 320)
+            + "</body></html>",
+            encoding="utf-8",
+        )
+
+    monkeypatch.setattr(renderer, "_call_copy_only_llm", fail_if_called)
+    monkeypatch.setattr(renderer, "_call_vite_react_llm", fail_if_called)
+    monkeypatch.setattr(renderer, "build_vite_project", fake_build)
+
+    result = renderer.render_vite_react_site(
+        "",
+        workspace_dir=tmp_path,
+        facts=LEAD_TEST_FACTS,
+        primary_model="sonnet",
+        fallback_model="haiku",
+        max_tokens=1200,
+    )
+
+    statuses = [attempt["status"] for attempt in result.attempts]
+    assert result.model == "studio-deterministic"
+    assert statuses[0] == "policy_none_deterministic"
+    assert "studio_deterministic_success" in statuses
+    assert "src/components/ServicesSection.tsx" in result.source_files
+
+    print("  OK policy none nao chama LLM")
+    print("  OK Studio deterministico ainda gera site completo")
+
+
 # ════════════════════════════════════════════════════════════════════
 # Main
 # ════════════════════════════════════════════════════════════════════
@@ -447,7 +561,8 @@ if __name__ == "__main__":
     test_11_guard_nutricionista_esportivo_permite_musculacao_sem_matricula()
 
     print("\n" + "=" * 80)
-    print("TODOS OS TESTES PASSARAM (11/11)")
+    print("TODOS OS TESTES MANUAIS PASSARAM (11/11)")
+    print("Obs: testes 12/13 usam fixtures do pytest; rode: pytest tests/test_anti_regressao_v114.py")
     print("Sprint 12.12 (v1.14) - caroco enriquecido com briefing real")
     print("Bug fix: NameError em _build_nicho_modal_block")
     print("Novo: _build_lead_briefing_block(facts) com JSON-LD + fotos reais")

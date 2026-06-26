@@ -11,6 +11,7 @@
 ## TL;DR
 - **Pipeline canônica: 11 fases** (Hunter → Caio → Jina → Nicho → Variação → Arquiteto → **Vite/React** → QA → Deploy → Franz).
 - **Gerador de site: Vite/React** (`backend/services/vite_react_renderer.py`) — engine PADRÃO desde Sprint 12.9.
+- **Política LLM do Vite**: `FRALIB_VITE_LLM_POLICY=copy_only` por padrão. O LLM retorna JSON de conteúdo; o TSX é gerado pelo Studio/FraLib.
 - **Fallback**: OpenUI (`backend/services/openui_renderer.py`) — só roda se Vite/React falhar.
 - **26 segmentos** cobertos no studio fallback (barbearia, academia, restaurante, clinica, etc).
 - **7 contratos canônicos** injetados no caroço: SEO, Design, Motion, A11y, Factual, LGPD, Deploy.
@@ -39,13 +40,18 @@ Mudou a pipeline, código, config ou docs? Atualizar **`AGENTS.md` primeiro** e 
 | [`docs/ONBOARDING_FOR_AI_AGENTS.md`](docs/ONBOARDING_FOR_AI_AGENTS.md) | Onboarding de novos agentes IA |
 | [`docs/ROLLOUT_SPRINT_5.md`](docs/ROLLOUT_SPRINT_5.md) | Tracing dos 4 agentes |
 | [`docs/ROLLOUT_SPRINT_6.md`](docs/ROLLOUT_SPRINT_6.md) | Sub-agentes por estética |
-| `docs/VITE_REACT_DEPLOY.md` (a criar) | Como Vite/React virou engine padrão |
+| [`docs/VITE_REACT_DEPLOY.md`](docs/VITE_REACT_DEPLOY.md) | Como Vite/React virou engine padrão e policy copy-only |
 
 ## Como ativar features novas (VPS)
 
 ```bash
 # Sprint 12.9 - Vite/React (default desde 2026-06-25)
 echo "FRALIB_BUILDER_ENGINE=vite_react" >> ecosystem.config.js && pm2 restart fralib
+
+# Sprint 14 - reduzir custo/token do Vite
+# default: copy_only (LLM JSON curto + TSX determinístico)
+# alternativas: none (zero LLM) ou full_code (legado, LLM gera TSX completo)
+echo "FRALIB_VITE_LLM_POLICY=copy_only" >> ecosystem.config.js && pm2 restart fralib
 
 # Sprint 5 — Tracing
 sed -i "s/FRALIB_TRACING: '0'/FRALIB_TRACING: '1'/" ecosystem.config.js && pm2 restart fralib
@@ -66,7 +72,7 @@ sed -i "s/FRALIB_AUTO_IMPROVE: '0'/FRALIB_AUTO_IMPROVE: '1'/" ecosystem.config.j
 |---|---|---|
 | Engine padrão | OpenUI HTML estático | **Vite/React** (componentes) |
 | Latência média render | 10-30s (LLM) | **5-30s** (LLM cascata) ou **5ms** (studio fallback) |
-| Custo por site | $0.003 | **$0** (fallback) ou ~$0.01 (LLM) |
+| Custo por site | $0.003 | **$0** (`none`) ou JSON curto (`copy_only`) |
 | Debug time | 30min | **2min** |
 | Variedade visual | 1 genérico | **26 segmentos + 6 Awwwards** |
 | Sinais SDK | 4/13 | **13/13** |
@@ -84,6 +90,7 @@ sed -i "s/FRALIB_AUTO_IMPROVE: '0'/FRALIB_AUTO_IMPROVE: '1'/" ecosystem.config.j
 - ✅ **Sprint 12.20** remove contaminação `matricula/treino` do BookingModal em nutricionista
 - ✅ **Sprint 12.20** garante Hero/Galeria com fotos reais quando o LLM entrega Vite sem imagens
 - ✅ **Sprint 12.20** ajusta guard: `musculação` é permitido em nutrição esportiva, `matrícula` continua bloqueado
+- ✅ **Sprint 14** ativa `copy_only`: LLM deixa de gerar TSX por padrão e só preenche JSON de slots
 - ⏳ Sub-agentes, RAG, auto-melhoria: implementados, aguardando ativação por tenant
 
 ## Tags v1.14.x (Sprint 12.19)
