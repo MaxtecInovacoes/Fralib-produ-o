@@ -241,21 +241,7 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
   -webkit-mask-image:radial-gradient(ellipse at center,black 20%,transparent 70%);
   pointer-events:none;
 }
-/* Glow descentralizado - mais brilho no lado direito (visual) */
-.hero-glow{
-  position:absolute;
-  top:50%;right:-10%;
-  transform:translateY(-50%);
-  width:min(700px,60vw);height:min(700px,60vw);
-  background:radial-gradient(circle,rgba(124,58,237,0.18) 0%,rgba(0,255,179,0.04) 40%,transparent 70%);
-  pointer-events:none;
-  animation:glow-pulse 6s ease-in-out infinite;
-  z-index:1;
-}
-@keyframes glow-pulse{
-  0%,100%{opacity:.7;transform:translateY(-50%) scale(1)}
-  50%{opacity:1;transform:translateY(-50%) scale(1.08)}
-}
+/* Glow removido */
 
 /* LAYOUT SPLIT: 2 colunas */
 .hero-split{
@@ -1732,7 +1718,6 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
 <!-- ===== SEÇÃO 1 — HERO ===== -->
 <section class="hero" id="hero">
   <div class="hero-grid"></div>
-  <div class="hero-glow"></div>
 
   <div class="hero-split">
     <!-- COLUNA ESQUERDA: copy + CTA -->
