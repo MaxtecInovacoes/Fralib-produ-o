@@ -41,11 +41,6 @@ _ROOT = Path(__file__).resolve().parents[2]
 _CANONICAL_BUILDER_ENGINE = "vite_react"
 
 
-def _openui_fallback_allowed() -> bool:
-    env = (os.getenv("FRALIB_ALLOW_OPENUI_FALLBACK") or "").strip().lower()
-    return env in {"1", "true", "yes", "on"}
-
-
 def _apply_canonical_vite_react_runtime_defaults() -> None:
     """Align the official builder runtime with the approved cinematic preview path."""
     os.environ.setdefault("FRALIB_BUILDER_ENGINE", "vite_react")
@@ -363,48 +358,18 @@ def render_site_with_builder(
             from services.vite_react_renderer import render_vite_react_site  # type: ignore
 
         fallback_model = _builder_proxy_fallback_model()
-        # Vite/React é o caminho canonico.
-        # Se falhar, o job deve falhar por padrao; OpenUI so entra por opt-in explicito.
-        try:
-            render_result = render_vite_react_site(
-                manifest["prompt"],
-                workspace_dir=workspace_dir,
-                facts=manifest.get("prompt_agent", {}).get("context", {}),
-                repair_context=repair_context,
-                primary_model=os.getenv("FRALIB_OPENUI_PRIMARY_MODEL", PROXY_BUILDER_MODEL),
-                fallback_model=fallback_model,
-                max_tokens=int(os.getenv("FRALIB_VITE_REACT_MAX_TOKENS", "64000")),
-                temperature=float(os.getenv("FRALIB_OPENUI_TEMPERATURE", "0.55")),
-            )
-        except Exception:
-            if not _openui_fallback_allowed():
-                raise
-            from services.openui_renderer import render_openui_site
-
-            fallback_render_result = render_openui_site(
-                manifest["prompt"],
-                facts=manifest.get("prompt_agent", {}).get("context", {}),
-                repair_context=repair_context,
-                primary_model=os.getenv("FRALIB_OPENUI_PRIMARY_MODEL", PROXY_BUILDER_MODEL),
-                fallback_model=os.getenv("FRALIB_OPENUI_FALLBACK_MODEL", PROXY_OPUS_FALLBACK_MODEL),
-                max_tokens=int(os.getenv("FRALIB_OPENUI_MAX_TOKENS", "8000")),
-                temperature=float(os.getenv("FRALIB_OPENUI_TEMPERATURE", "0.35")),
-            )
-            render_result = SimpleNamespace(
-                html=fallback_render_result.html,
-                model=fallback_render_result.model,
-                attempts=[
-                    {
-                        "model": "vite_react",
-                        "status": "failed_openui_fallback",
-                        "error": "vite_react render falhou; fallback OpenUI aplicado",
-                    },
-                    *list(getattr(fallback_render_result, "attempts", []) or []),
-                ],
-                elapsed_ms=getattr(fallback_render_result, "elapsed_ms", 0),
-                source_files=list(getattr(fallback_render_result, "source_files", []) or []),
-            )
-            engine = "openui_fallback"
+        # Sprint 14.3: Vite/React é o caminho CANÔNICO. NUNCA cai para OpenUI.
+        # Qualquer erro do render_vite_react_site sobe como exceção — o job falha.
+        render_result = render_vite_react_site(
+            manifest["prompt"],
+            workspace_dir=workspace_dir,
+            facts=manifest.get("prompt_agent", {}).get("context", {}),
+            repair_context=repair_context,
+            primary_model=os.getenv("FRALIB_OPENUI_PRIMARY_MODEL", PROXY_BUILDER_MODEL),
+            fallback_model=fallback_model,
+            max_tokens=int(os.getenv("FRALIB_VITE_REACT_MAX_TOKENS", "64000")),
+            temperature=float(os.getenv("FRALIB_OPENUI_TEMPERATURE", "0.55")),
+        )
         _write_builder_render_meta(
             output_dir,
             engine=engine,
