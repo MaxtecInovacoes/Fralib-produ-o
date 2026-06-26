@@ -454,16 +454,25 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
   animation:dot-pulse 1s ease-in-out infinite;
 }
 
-/* PIPELINE - container das 5 etapas */
+/* PIPELINE - container das 5 etapas (motion design v2) */
 .pipeline{
   display:flex;flex-direction:column;gap:8px;
   position:relative;
+  opacity:0;
+  animation:pipeline-fade-in .4s var(--fl-ease) .2s forwards;
 }
+@keyframes pipeline-fade-in{to{opacity:1}}
 .pipeline::before{
   content:'';position:absolute;left:18px;top:24px;bottom:24px;
   width:2px;background:linear-gradient(180deg,var(--cyan) 0%,var(--fl-purple-300) 50%,var(--gold) 100%);
   opacity:.3;
+  animation:line-pulse 4s ease-in-out infinite;
 }
+@keyframes line-pulse{
+  0%,100%{opacity:.3}50%{opacity:.55}
+}
+
+/* STEP base - com transição de status */
 .pipeline-step{
   display:flex;align-items:center;gap:12px;
   padding:10px 12px;
@@ -474,55 +483,110 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
   opacity:0;
   transform:translateX(-12px);
   animation:step-in .5s var(--fl-ease) forwards;
+  transition:border-color .3s, background .3s;
+}
+.pipeline-step.step-done{
+  border-color:rgba(0,255,179,.3);
+  background:rgba(0,255,179,.04);
+}
+.pipeline-step.step-done .step-icon{
+  background:rgba(0,255,179,.15)!important;
 }
 @keyframes step-in{to{opacity:1;transform:translateX(0)}}
-.pipeline-step.step-1{animation-delay:0.5s}
-.pipeline-step.step-2{animation-delay:3s}
-.pipeline-step.step-3{animation-delay:5.5s}
+
+/* Timing ajustado pelo motion designer */
+.pipeline-step.step-1{animation-delay:0.3s}
+.pipeline-step.step-2{animation-delay:2.3s}
+.pipeline-step.step-3{animation-delay:5s}
 .pipeline-step.step-4{animation-delay:8s}
 .pipeline-step.step-5{
-  animation:step-in .5s var(--fl-ease) 10.5s forwards, step-glow 2s ease-in-out 11s infinite;
-  background:linear-gradient(90deg,rgba(255,184,0,.12),rgba(255,184,0,.04));
+  animation:step-in .5s var(--fl-ease) 11.5s forwards,
+             screen-shake .4s ease-out 12s,
+             gradient-shift 2s ease-in-out 12.5s infinite;
+  background:linear-gradient(90deg,rgba(147,51,234,.12),rgba(255,184,0,.15));
   border-color:rgba(255,184,0,.5);
 }
-@keyframes step-glow{
-  0%,100%{box-shadow:0 0 10px rgba(255,184,0,.3)}
-  50%{box-shadow:0 0 24px rgba(255,184,0,.7),0 0 40px rgba(255,184,0,.3)}
+@keyframes gradient-shift{
+  0%,100%{
+    box-shadow:0 0 15px rgba(147,51,234,.4),
+               0 0 30px rgba(255,184,0,.2),
+               inset 0 0 20px rgba(255,184,0,.05);
+    border-color:rgba(255,184,0,.5);
+  }
+  50%{
+    box-shadow:0 0 25px rgba(255,184,0,.7),
+               0 0 50px rgba(255,184,0,.4),
+               inset 0 0 30px rgba(255,184,0,.1);
+    border-color:rgba(255,184,0,.9);
+  }
+}
+@keyframes screen-shake{
+  0%,100%{transform:translateX(0)}
+  20%,60%{transform:translateX(-2px)}
+  40%,80%{transform:translateX(2px)}
 }
 
+/* ÍCONES - cores diferenciadas por etapa */
 .step-icon{
   width:32px;height:32px;border-radius:50%;
   display:flex;align-items:center;justify-content:center;
   flex-shrink:0;
   border:1px solid currentColor;
   position:relative;z-index:1;
+  transition:all .3s var(--fl-ease);
 }
-.step-icon.icon-search{color:var(--cyan);background:rgba(0,255,179,.08)}
-.step-icon.icon-analyze{color:var(--fl-purple-300);background:rgba(147,51,234,.1)}
-.step-icon.icon-code{color:var(--cyan);background:rgba(0,255,179,.08)}
-.step-icon.icon-whatsapp{color:var(--cyan);background:rgba(0,255,179,.08)}
-.step-icon.icon-celebration{color:var(--gold);background:rgba(255,184,0,.1)}
+.step-icon.icon-search{
+  color:var(--cyan);
+  background:rgba(0,255,179,.08);
+  box-shadow:0 0 12px rgba(0,255,179,.2);
+}
+.step-icon.icon-analyze{
+  color:var(--fl-purple-300);
+  background:rgba(147,51,234,.12);
+  box-shadow:0 0 12px rgba(147,51,234,.25);
+}
+.step-icon.icon-code{
+  color:#a78bfa;
+  background:rgba(147,51,234,.1);
+  box-shadow:0 0 12px rgba(147,51,234,.2);
+}
+.step-icon.icon-whatsapp{
+  color:#6ee7c0;
+  background:rgba(0,255,179,.1);
+  box-shadow:0 0 12px rgba(0,255,179,.2);
+}
+.step-icon.icon-celebration{
+  color:var(--gold);
+  background:rgba(255,184,0,.12);
+  box-shadow:0 0 16px rgba(255,184,0,.5);
+}
 
 .step-content{flex:1;min-width:0;position:relative;z-index:1}
 .step-label{
   font-family:var(--fl-font-mono);font-size:10px;font-weight:600;
   color:var(--fl-text);letter-spacing:0.5px;
 }
-.step-label.gold{color:var(--gold);text-shadow:0 0 8px rgba(255,184,0,.6)}
+.step-label.gold{
+  color:var(--gold);
+  text-shadow:0 0 8px rgba(255,184,0,.6);
+}
 .step-desc{
   font-size:10px;color:var(--fl-text-muted);margin-top:1px;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }
 .step-desc.gold{color:var(--gold);font-weight:600}
 
-/* Spinner SVG (roda girando) */
+/* SPINNER SVG - cubic-bezier com overshoot */
 .step-spinner{
-  width:16px;height:16px;color:var(--cyan);flex-shrink:0;
-  animation:spin 1.2s linear infinite;
+  width:18px;height:18px;color:var(--cyan);flex-shrink:0;
+  animation:spin .9s cubic-bezier(.4,0,.2,1) infinite;
 }
-@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes spin{
+  0%{transform:rotate(-45deg)}
+  100%{transform:rotate(315deg)}
+}
 
-/* Barra de progresso animada */
+/* BARRA de progresso animada com glow */
 .step-bar{
   width:60px;height:4px;background:rgba(255,255,255,.08);
   border-radius:2px;overflow:hidden;flex-shrink:0;
@@ -531,71 +595,96 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
   height:100%;
   background:linear-gradient(90deg,var(--fl-purple-600),var(--cyan));
   width:0;
-  animation:bar-fill 2.5s var(--fl-ease) 3.5s forwards;
+  box-shadow:0 0 8px var(--cyan-glow);
+  animation:bar-fill 2.3s var(--fl-ease) 2.8s forwards;
 }
 @keyframes bar-fill{to{width:100%}}
 
-/* Percentual animado */
+/* PERCENTUAL animado com contador */
 .step-percent{
-  font-family:var(--fl-font-mono);font-size:10px;
+  font-family:var(--fl-font-mono);font-size:11px;
   color:var(--cyan);font-weight:700;flex-shrink:0;
-  animation:percent-grow 2.5s var(--fl-ease) 6s forwards;
+  text-shadow:0 0 8px var(--cyan-glow);
 }
-@keyframes percent-grow{0%{content:'0%'}100%{content:'100%'}}
 
-/* 3 pontinhos de digitação (typing indicator) */
+/* TYPING DOTS - pixel art (quadrados) com glow */
 .step-typing{
-  display:flex;gap:3px;align-items:center;flex-shrink:0;
+  display:flex;gap:4px;align-items:center;flex-shrink:0;
+  padding:2px 0;
 }
 .dot-typing{
-  width:5px;height:5px;border-radius:50%;background:var(--cyan);
-  animation:typing 1.4s ease-in-out infinite;
+  width:5px;height:5px;border-radius:0;
+  background:var(--cyan);
+  box-shadow:0 0 4px var(--cyan-glow);
+  animation:pixel-typing 1.4s steps(1) infinite;
 }
 .dot-typing:nth-child(2){animation-delay:.2s}
 .dot-typing:nth-child(3){animation-delay:.4s}
-@keyframes typing{
-  0%,60%,100%{transform:translateY(0);opacity:.4}
-  30%{transform:translateY(-4px);opacity:1}
+@keyframes pixel-typing{
+  0%,50%{transform:translateY(0);opacity:.3;box-shadow:none}
+  25%,75%{transform:translateY(-3px);opacity:1;box-shadow:0 0 6px var(--cyan-glow)}
+  100%{transform:translateY(0);opacity:.3;box-shadow:none}
 }
 
-/* Valor da venda (BOOM) */
+/* VALOR da venda - reveal com overshoot spring */
 .step-amount{
-  font-family:var(--fl-font-brand);font-size:11px;
-  color:var(--gold);font-weight:700;letter-spacing:0.5px;
+  font-family:var(--fl-font-brand);font-size:12px;
+  color:var(--gold);font-weight:700;letter-spacing:.5px;
   flex-shrink:0;
-  animation:amount-pulse 1.5s ease-in-out 11.5s infinite;
+  text-shadow:0 0 6px rgba(255,184,0,.5);
+  opacity:0;
+  transform:scale(.5);
+  animation:amount-reveal .8s cubic-bezier(.34,1.56,.64,1) 12s forwards;
 }
-@keyframes amount-pulse{
-  0%,100%{transform:scale(1);text-shadow:0 0 4px rgba(255,184,0,.4)}
-  50%{transform:scale(1.15);text-shadow:0 0 12px rgba(255,184,0,.9)}
+@keyframes amount-reveal{
+  0%{opacity:0;transform:scale(.3) translateY(8px)}
+  60%{transform:scale(1.25) translateY(-4px)}
+  100%{opacity:1;transform:scale(1) translateY(0)}
 }
 
-/* Burst (partículas) na venda */
+/* BURST - partículas SVG em ondas radiais */
 .step-burst{
   position:absolute;top:50%;left:50%;
-  width:100%;height:200%;transform:translate(-50%,-50%);
+  width:200px;height:200px;transform:translate(-50%,-50%);
   pointer-events:none;
   opacity:0;
-  animation:burst 2s ease-out 11s infinite;
-}
-.step-burst::before,.step-burst::after{
-  content:'';position:absolute;top:0;left:50%;
-  width:6px;height:6px;border-radius:50%;
-  background:var(--gold);
+  animation:burst-flash 1.2s ease-out 12s;
 }
 .step-burst::before{
-  animation:burst-particle 1.5s ease-out 11s infinite;
-  transform-origin:center;
-  background:radial-gradient(circle,#FFD700 0%,transparent 70%);
-  width:80px;height:80px;
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(circle,rgba(255,184,0,.4) 0%,transparent 60%);
+  border-radius:50%;
+  animation:burst-expand 1.2s ease-out 12s;
 }
-@keyframes burst{
-  0%,100%{opacity:0}
-  10%,30%{opacity:1}
+.step-burst::after{
+  content:'';position:absolute;top:50%;left:50%;
+  width:4px;height:4px;
+  border-radius:50%;
+  background:var(--gold);
+  box-shadow:
+    0 -60px 0 var(--gold),
+    0 60px 0 var(--gold),
+    -60px 0 0 var(--gold),
+    60px 0 0 var(--gold),
+    -42px -42px 0 var(--gold),
+    42px -42px 0 var(--gold),
+    -42px 42px 0 var(--gold),
+    42px 42px 0 var(--gold);
+  transform:translate(-50%,-50%);
+  animation:burst-stars 1.2s ease-out 12s;
 }
-@keyframes burst-particle{
-  0%{transform:translate(-50%,-50%) scale(0);opacity:1}
-  100%{transform:translate(-50%,-50%) scale(2.5);opacity:0}
+@keyframes burst-flash{
+  0%{opacity:0}10%,40%{opacity:1}100%{opacity:0}
+}
+@keyframes burst-expand{
+  0%{transform:scale(.3);opacity:0}
+  20%{opacity:1}
+  100%{transform:scale(2.5);opacity:0}
+}
+@keyframes burst-stars{
+  0%{transform:translate(-50%,-50%) scale(0);opacity:0}
+  20%{transform:translate(-50%,-50%) scale(1.5);opacity:1}
+  100%{transform:translate(-50%,-50%) scale(3);opacity:0}
 }
 
 @keyframes fadeUp{
@@ -1905,7 +1994,7 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
               <div class="step-label">CRIANDO SITE</div>
               <div class="step-desc">Gerando com IA · 8 min</div>
             </div>
-            <div class="step-percent">73%</div>
+            <div class="step-percent" data-counter data-target="100" data-suffix="%">0%</div>
           </div>
 
           <!-- ETAPA 4: ENVIAR WHATSAPP -->
@@ -1933,7 +2022,7 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
               <div class="step-label gold">VENDA FEITA</div>
               <div class="step-desc gold">Pizzaria São José · R$ 1.500</div>
             </div>
-            <div class="step-amount">+R$ 1.500</div>
+            <div class="step-amount" data-counter data-target="1500" data-prefix="+R$ " data-suffix="">+R$ 0</div>
             <div class="step-burst"></div>
           </div>
 
@@ -3002,6 +3091,71 @@ const nav = document.getElementById('navbar');
 window.addEventListener('scroll', () => {
   nav.classList.toggle('scrolled', window.scrollY > 50);
 }, { passive: true });
+
+// === PIPELINE COUNTERS (motion design) ===
+function animateCounter(element, target, duration, prefix = '', suffix = '') {
+  const startTime = performance.now();
+  const start = 0;
+  function update(currentTime) {
+    const elapsed = currentTime - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+    // ease-out-expo: desacelera no final (impacto)
+    const eased = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
+    const current = Math.floor(eased * (target - start) + start);
+    // Format BR: R$ 1.500 (ponto)
+    let display;
+    if (prefix.includes('R$')) {
+      display = current.toLocaleString('pt-BR');
+    } else {
+      display = current.toString();
+    }
+    element.textContent = prefix + display + suffix;
+    if (progress < 1) requestAnimationFrame(update);
+  }
+  requestAnimationFrame(update);
+}
+
+// Dispara contador quando o elemento entra em "exibição" (após delay específico)
+function startPipelineCounters() {
+  const counters = document.querySelectorAll('[data-counter]');
+  counters.forEach(el => {
+    const target = parseInt(el.dataset.target);
+    const prefix = el.dataset.prefix || '';
+    const suffix = el.dataset.suffix || '';
+    const duration = 1500; // 1.5s
+
+    // Detectar qual contador baseado na classe
+    if (el.classList.contains('step-percent')) {
+      // Step 3: 0% -> 100% durante a etapa (5s -> 7.5s)
+      setTimeout(() => animateCounter(el, target, duration, prefix, suffix), 6500);
+    } else if (el.classList.contains('step-amount')) {
+      // Step 5: 0 -> 1500 após step-5 aparecer (12s)
+      setTimeout(() => animateCounter(el, target, 1800, prefix, suffix), 12000);
+    }
+  });
+}
+
+// Marcar steps anteriores como "done" quando avançam
+function markPreviousStepsAsDone() {
+  const steps = document.querySelectorAll('.pipeline-step');
+  const stepTimings = [
+    { idx: 0, doneAt: 2300 }, // step-1 done quando step-2 entra
+    { idx: 1, doneAt: 5000 }, // step-2 done quando step-3 entra
+    { idx: 2, doneAt: 8000 }, // step-3 done quando step-4 entra
+    { idx: 3, doneAt: 11500 } // step-4 done quando step-5 entra
+  ];
+  stepTimings.forEach(({idx, doneAt}) => {
+    setTimeout(() => {
+      if (steps[idx]) steps[idx].classList.add('step-done');
+    }, doneAt);
+  });
+}
+
+// Iniciar quando DOM carregar
+document.addEventListener('DOMContentLoaded', () => {
+  setTimeout(startPipelineCounters, 300);
+  markPreviousStepsAsDone();
+});
 
 // === MOBILE MENU ===
 document.getElementById('mobileToggle').addEventListener('click', () => {
