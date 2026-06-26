@@ -1,0 +1,1940 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FraLib OS — Criador de Sites com IA, Prospecção B2B e SDR WhatsApp</title>
+<meta name="description" content="Crie sites com IA para leads locais, faça prospecção B2B no Google Maps e acompanhe vendas pelo WhatsApp com CRM e SDR Franz.">
+<!-- Meta Pixel -->
+<script>
+!function(f,b,e,v,n,t,s)
+{if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+n.queue=[];t=b.createElement(e);t.async=!0;
+t.src=v;s=b.getElementsByTagName(e)[0];
+s.parentNode.insertBefore(t,s)}(window, document,'script',
+'https://connect.facebook.net/en_US/fbevents.js');
+fbq('init', '1022692323751129');
+fbq('track', 'PageView');
+</script>
+<noscript><img height="1" width="1" style="display:none"
+src="https://www.facebook.com/tr?id=1022692323751129&ev=PageView&noscript=1"
+></noscript>
+<!-- Microsoft Clarity -->
+<script>
+(function(c,l,a,r,i,t,y){
+  c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+  t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+  y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+})(window, document, "clarity", "script", "wv8xiy7kvk");
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/design-system.css">
+<style>
+/* ============================================================
+   FRALIB LANDING — DESIGN TOKENS (from official design system)
+   ============================================================ */
+:root {
+  --fl-bg:         #0a0714;
+  --fl-bg-surface: #0e0a1a;
+  --fl-bg-card:    #12121a;
+  --fl-bg-card-2:  #18182280;
+  --fl-bg-hover:   #1c1c28;
+  --fl-bg-overlay: rgba(6,6,8,0.92);
+
+  --fl-purple-950: #0e0718;
+  --fl-purple-900: #1a0a30;
+  --fl-purple-800: #2d1060;
+  --fl-purple-700: #4c1d9e;
+  --fl-purple-600: #7c3aed;
+  --fl-purple:     #9333ea;
+  --fl-purple-400: #a855f7;
+  --fl-purple-300: #c084fc;
+  --fl-purple-200: #d8b4fe;
+
+  --fl-glow-xs:  0 0 8px  rgba(147,51,234,0.20);
+  --fl-glow-sm:  0 0 16px rgba(147,51,234,0.28);
+  --fl-glow-md:  0 0 32px rgba(147,51,234,0.35);
+  --fl-glow-lg:  0 0 60px rgba(147,51,234,0.45);
+
+  --fl-border:      rgba(147,51,234,0.12);
+  --fl-border-md:   rgba(147,51,234,0.25);
+  --fl-border-hi:   rgba(147,51,234,0.50);
+
+  --fl-text:       #f0f0f5;
+  --fl-text-muted: #8888a0;
+  --fl-text-dim:   #44445a;
+  --fl-text-brand: #c084fc;
+
+  --fl-success:  #22c55e;
+  --fl-warning:  #f59e0b;
+  --fl-danger:   #ef4444;
+  --fl-info:     #06b6d4;
+
+  --fl-font-brand: 'Press Start 2P', monospace;
+  --fl-font-ui:    'DM Sans', system-ui, sans-serif;
+  --fl-font-mono:  'JetBrains Mono', monospace;
+
+  --fl-r-sm: 6px;
+  --fl-r-md: 10px;
+  --fl-r-lg: 14px;
+  --fl-r-xl: 20px;
+  --fl-r-full: 9999px;
+
+  --fl-ease: cubic-bezier(0.22,1,0.36,1);
+  --fl-t-fast: 120ms cubic-bezier(0.22,1,0.36,1);
+  --fl-t-med:  220ms cubic-bezier(0.22,1,0.36,1);
+
+  --cyan:      #00FFB3;
+  --cyan-dim:  rgba(0,255,179,0.12);
+  --cyan-glow: rgba(0,255,179,0.4);
+  --gold:      #FFB800;
+  --gold-dim:  rgba(255,184,0,0.15);
+  --gold-glow: rgba(255,184,0,0.35);
+}
+
+/* ============================================================
+   RESET
+   ============================================================ */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html, body {
+  overflow-x: hidden;
+  width: 100%;
+  max-width: 100vw;
+  margin: 0;
+  padding: 0;
+}
+html { scroll-behavior: smooth; }
+body{
+  font-family:var(--fl-font-ui);
+  background:var(--fl-bg);
+  color:var(--fl-text);
+  font-size:15px;line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ============================================================
+   CANVAS PARTICLES (background)
+   ============================================================ */
+#particles-canvas{
+  position:fixed;inset:0;z-index:0;
+  pointer-events:none;
+}
+
+/* ============================================================
+   PARALLAX LAYERS
+   ============================================================ */
+.parallax-layer{
+  position:absolute;inset:0;pointer-events:none;
+  will-change:transform;
+}
+
+/* ============================================================
+   GLOBAL
+   ============================================================ */
+.container{max-width:1140px;margin:0 auto;padding:0 24px;position:relative;z-index:2;width:100%;}
+section{padding:100px 0;position:relative}
+.section-title{
+  font-family:var(--fl-font-brand);
+  font-size:clamp(11px,2vw,18px);
+  text-align:center;line-height:2;
+  margin-bottom:56px;
+  background:linear-gradient(135deg,var(--fl-purple-300),var(--cyan));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;
+}
+
+/* ============================================================
+   FLOAT ORBS (animated gradient blobs)
+   ============================================================ */
+.orb{
+  position:absolute;border-radius:50%;
+  filter:blur(80px);pointer-events:none;
+  animation:float-orb 12s ease-in-out infinite;
+  z-index:0;
+}
+.orb-purple{
+  background:radial-gradient(circle,rgba(147,51,234,0.25),transparent 70%);
+}
+.orb-cyan{
+  background:radial-gradient(circle,rgba(0,255,179,0.15),transparent 70%);
+  animation-delay:-4s;
+}
+.orb-gold{
+  background:radial-gradient(circle,rgba(255,184,0,0.12),transparent 70%);
+  animation-delay:-8s;
+}
+@keyframes float-orb{
+  0%,100%{transform:translate(0,0) scale(1)}
+  33%{transform:translate(30px,-25px) scale(1.1)}
+  66%{transform:translate(-20px,15px) scale(0.95)}
+}
+
+/* ============================================================
+   NAV
+   ============================================================ */
+nav{
+  position:fixed;top:0;left:0;right:0;z-index:1000;
+  display:grid;grid-template-columns:1fr auto 1fr;align-items:center;
+  padding:14px 32px;
+  background:rgba(6,6,8,0.75);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--fl-border);
+  transition:all .3s var(--fl-ease);
+}
+nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
+.nav-brand{display:flex;align-items:center;gap:12px;text-decoration:none; justify-self:start;}
+.nav-brand img{height:36px;width:auto;filter:drop-shadow(0 0 8px rgba(147,51,234,0.4))}
+.nav-links{display:flex;gap:28px;align-items:center; justify-self:center;}
+.nav-links a{
+  color:var(--fl-text-muted);text-decoration:none;
+  font-size:13px;font-weight:500;
+  transition:color .2s;
+}
+.nav-links a:hover{color:var(--fl-text)}
+.nav-cta{
+  padding:12px 24px;border-radius:0;
+  font-family:var(--fl-font-brand);font-size:9px;
+  background:#FACC15;
+  color:#000;text-decoration:none;cursor:pointer;
+  transition:transform 60ms,box-shadow 60ms;border:none;
+  box-shadow:
+    inset -3px -3px 0 #A16207,
+    inset 3px 3px 0 #FDE68A,
+    0 4px 0 #713F12;
+  image-rendering:pixelated;
+  letter-spacing:1px;
+}
+.nav-cta:hover{
+  background:#FDE047;
+  box-shadow:
+    inset -3px -3px 0 #A16207,
+    inset 3px 3px 0 #FEF9C3,
+    0 4px 0 #713F12,
+    0 0 20px rgba(250,204,21,0.4);
+}
+.nav-cta:active{
+  transform:translateY(4px);
+  box-shadow:inset -3px -3px 0 #A16207,inset 3px 3px 0 #FDE68A,0 0 0 #713F12;
+}
+.mobile-toggle{display:none;background:none;border:none;color:var(--fl-text);font-size:24px;cursor:pointer}
+
+/* ============================================================
+   HERO
+   ============================================================ */
+.hero{
+  min-height:min(100vh,100dvh);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  text-align:center;padding:140px 24px 80px;
+  position:relative;overflow:hidden;
+}
+.hero-grid{
+  position:absolute;inset:0;
+  background-image:
+    linear-gradient(rgba(147,51,234,0.06) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(147,51,234,0.06) 1px,transparent 1px);
+  background-size:60px 60px;
+  mask-image:radial-gradient(ellipse at center,black 20%,transparent 70%);
+  -webkit-mask-image:radial-gradient(ellipse at center,black 20%,transparent 70%);
+  pointer-events:none;
+}
+/* Hero logo centered above badge */
+.hero-logo{
+  height:clamp(100px,16vw,156px);width:auto;
+  margin-bottom:16px;
+  position:relative;z-index:2;
+  filter:drop-shadow(0 0 20px rgba(147,51,234,0.4));
+  animation:fadeUp .5s var(--fl-ease) both;
+}
+
+.hero-badge{
+  display:inline-flex;align-items:center;gap:10px;
+  padding:8px 20px;border-radius:var(--fl-r-full);
+  background:rgba(147,51,234,0.1);
+  border:1px solid rgba(147,51,234,0.3);
+  font-family:var(--fl-font-mono);font-size:11px;font-weight:500;
+  color:var(--fl-purple-300);
+  margin-bottom:36px;position:relative;z-index:2;
+  animation:fadeUp .6s var(--fl-ease) both;
+}
+.hero-badge .pulse-dot{
+  width:8px;height:8px;border-radius:50%;
+  background:var(--cyan);
+  box-shadow:0 0 12px var(--cyan-glow);
+  position:relative;
+}
+.hero-badge .pulse-dot::after{
+  content:'';position:absolute;inset:-4px;border-radius:50%;
+  border:2px solid var(--cyan);opacity:0;
+  animation:pulse-ring 2s infinite;
+}
+@keyframes pulse-ring{
+  0%{transform:scale(.8);opacity:.5}
+  100%{transform:scale(1.6);opacity:0}
+}
+
+.hero h1{
+  font-family:var(--fl-font-brand);
+  font-size:clamp(14px,3vw,28px);
+  line-height:2;max-width:860px;
+  margin-bottom:24px;position:relative;z-index:2;
+  animation:fadeUp .8s var(--fl-ease) .1s both;
+}
+.hero h1 .grad{
+  background:linear-gradient(135deg,var(--fl-purple-300),var(--cyan));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;
+  filter:drop-shadow(0 0 20px rgba(147,51,234,0.4));
+}
+.hero-sub{
+  font-size:clamp(14px,1.6vw,17px);color:var(--fl-text-muted);
+  max-width:600px;line-height:1.8;margin-bottom:44px;
+  position:relative;z-index:2;
+  animation:fadeUp .8s var(--fl-ease) .2s both;
+}
+.hero-buttons{
+  display:flex;gap:16px;flex-wrap:wrap;justify-content:center;
+  position:relative;z-index:2;
+  animation:fadeUp .8s var(--fl-ease) .3s both;
+}
+
+/* MASCOT in hero */
+.hero-mascot{
+  position:absolute;bottom:60px;right:8%;z-index:2;
+  animation:mago-breath 4s ease-in-out infinite;
+  pointer-events:none;
+}
+.hero-mascot img{
+  height:clamp(120px,18vw,220px);width:auto;
+  filter:drop-shadow(0 0 30px rgba(147,51,234,0.5)) drop-shadow(0 0 60px rgba(147,51,234,0.2));
+}
+@keyframes mago-breath{
+  0%,100%{transform:translateY(0) scale(1);filter:brightness(1)}
+  50%{transform:translateY(-15px) scale(1.05);filter:brightness(1.2)}
+}
+
+/* MAGIC SPARKLES near mascot */
+.sparkle{
+  position:absolute;width:4px;height:4px;border-radius:50%;
+  background:var(--gold);
+  box-shadow:0 0 6px var(--gold),0 0 12px var(--gold);
+  animation:sparkle-float 3s ease-in-out infinite;
+  pointer-events:none;
+}
+.sparkle:nth-child(2){animation-delay:.5s;left:20px;top:-10px}
+.sparkle:nth-child(3){animation-delay:1s;left:-15px;top:5px}
+.sparkle:nth-child(4){animation-delay:1.5s;left:35px;top:-20px}
+.sparkle:nth-child(5){animation-delay:2s;left:-5px;top:-30px}
+@keyframes sparkle-float{
+  0%,100%{opacity:0;transform:translateY(0) scale(0)}
+  50%{opacity:1;transform:translateY(-20px) scale(1)}
+}
+
+@keyframes fadeUp{
+  from{opacity:0;transform:translateY(24px)}
+  to{opacity:1;transform:translateY(0)}
+}
+
+/* ============================================================
+   PIXEL ART BUTTONS
+   ============================================================ */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  padding:16px 32px;
+  font-family:var(--fl-font-brand);font-size:11px;
+  text-decoration:none;cursor:pointer;
+  border:none;position:relative;
+  color:#fff;letter-spacing:1px;
+  image-rendering:pixelated;
+  transition:transform 60ms, box-shadow 60ms;
+  /* Pixel art 3D button shape */
+  border-radius:0;
+  box-shadow:
+    inset -4px -4px 0 rgba(0,0,0,0.35),
+    inset 4px 4px 0 rgba(255,255,255,0.15),
+    0 4px 0 rgba(0,0,0,0.5);
+}
+.btn:active{
+  transform:translateY(4px);
+  box-shadow:
+    inset -4px -4px 0 rgba(0,0,0,0.35),
+    inset 4px 4px 0 rgba(255,255,255,0.15),
+    0 0 0 rgba(0,0,0,0.5);
+}
+
+/* Gold / Orange START button */
+.btn-gold{
+  background:#FF8C00;
+  color:#000;font-weight:700;
+  box-shadow:
+    inset -4px -4px 0 #CC6600,
+    inset 4px 4px 0 #FFB84D,
+    0 6px 0 #8B4500;
+}
+.btn-gold:hover{
+  background:#FFA033;
+  box-shadow:
+    inset -4px -4px 0 #CC6600,
+    inset 4px 4px 0 #FFD080,
+    0 6px 0 #8B4500,
+    0 0 24px var(--gold-glow);
+}
+.btn-gold:active{
+  transform:translateY(6px);
+  box-shadow:
+    inset -4px -4px 0 #CC6600,
+    inset 4px 4px 0 #FFB84D,
+    0 0 0 #8B4500;
+}
+
+/* Green PLAY button */
+.btn-green{
+  background:#22C55E;
+  color:#000;font-weight:700;
+  box-shadow:
+    inset -4px -4px 0 #16803C,
+    inset 4px 4px 0 #4ADE80,
+    0 6px 0 #0D5A28;
+}
+.btn-green:hover{
+  background:#34D369;
+  box-shadow:
+    inset -4px -4px 0 #16803C,
+    inset 4px 4px 0 #86EFAC,
+    0 6px 0 #0D5A28,
+    0 0 24px rgba(34,197,94,0.4);
+}
+.btn-green:active{
+  transform:translateY(6px);
+  box-shadow:inset -4px -4px 0 #16803C,inset 4px 4px 0 #4ADE80,0 0 0 #0D5A28;
+}
+
+/* Outline pixel button */
+.btn-outline{
+  background:transparent;
+  color:var(--fl-text-muted);
+  box-shadow:
+    inset 0 0 0 3px var(--fl-border-md),
+    0 4px 0 rgba(0,0,0,0.3);
+}
+.btn-outline:hover{
+  color:var(--fl-purple-300);
+  box-shadow:
+    inset 0 0 0 3px var(--fl-purple),
+    0 4px 0 rgba(0,0,0,0.3),
+    0 0 20px var(--fl-glow-xs);
+}
+.btn-outline:active{
+  transform:translateY(4px);
+  box-shadow:inset 0 0 0 3px var(--fl-purple),0 0 0 rgba(0,0,0,0.3);
+}
+
+/* Purple pixel button */
+.btn-purple{
+  background:var(--fl-purple);
+  box-shadow:
+    inset -4px -4px 0 var(--fl-purple-800),
+    inset 4px 4px 0 var(--fl-purple-300),
+    0 6px 0 var(--fl-purple-950);
+}
+.btn-purple:hover{
+  background:var(--fl-purple-400);
+  box-shadow:
+    inset -4px -4px 0 var(--fl-purple-800),
+    inset 4px 4px 0 var(--fl-purple-200),
+    0 6px 0 var(--fl-purple-950),
+    0 0 24px rgba(147,51,234,0.4);
+}
+.btn-purple:active{
+  transform:translateY(6px);
+  box-shadow:inset -4px -4px 0 var(--fl-purple-800),inset 4px 4px 0 var(--fl-purple-300),0 0 0 var(--fl-purple-950);
+}
+
+/* Red STOP button (for nav CTA) */
+.btn-red{
+  background:#EF4444;
+  color:#fff;font-weight:700;
+  box-shadow:
+    inset -4px -4px 0 #B91C1C,
+    inset 4px 4px 0 #FCA5A5,
+    0 6px 0 #7F1D1D;
+}
+
+/* Yellow / DESTAQUE button */
+.btn-yellow{
+  background:#FACC15;
+  color:#000;font-weight:700;
+  box-shadow:
+    inset -4px -4px 0 #A16207,
+    inset 4px 4px 0 #FDE68A,
+    0 6px 0 #713F12;
+}
+.btn-yellow:hover{
+  background:#FDE047;
+  box-shadow:
+    inset -4px -4px 0 #A16207,
+    inset 4px 4px 0 #FEF9C3,
+    0 6px 0 #713F12,
+    0 0 30px rgba(250,204,21,0.5);
+}
+.btn-yellow:active{
+  transform:translateY(6px);
+  box-shadow:inset -4px -4px 0 #A16207,inset 4px 4px 0 #FDE68A,0 0 0 #713F12;
+}
+.btn-hero{
+  padding:20px 40px;
+  font-size:12px;
+  letter-spacing:1.5px;
+  animation:pulseGlow 2s ease-in-out infinite;
+}
+@keyframes pulseGlow{
+  0%,100%{box-shadow:inset -4px -4px 0 #A16207,inset 4px 4px 0 #FDE68A,0 6px 0 #713F12,0 0 20px rgba(250,204,21,0.2)}
+  50%{box-shadow:inset -4px -4px 0 #A16207,inset 4px 4px 0 #FDE68A,0 6px 0 #713F12,0 0 40px rgba(250,204,21,0.5)}
+}
+
+@keyframes shimmer{
+  0%{transform:translateX(-100%) skewX(-15deg)}
+  100%{transform:translateX(200%) skewX(-15deg)}
+}
+
+/* ============================================================
+   SNAKE BORDER CARD (animated border like reference)
+   ============================================================ */
+.snake-card{
+  position:relative;border-radius:var(--fl-r-lg);
+  background:var(--fl-bg-card);
+  overflow:hidden;
+  transition:transform .3s var(--fl-ease),box-shadow .3s;
+}
+.snake-card::before,.snake-card::after,
+.snake-card .snake-top,.snake-card .snake-bottom{
+  content:'';position:absolute;
+  background:linear-gradient(90deg,transparent,var(--fl-purple-400),var(--cyan),transparent);
+}
+.snake-card::before{top:0;left:0;right:0;height:1px;animation:snakeTop 4s linear infinite}
+.snake-card::after{right:0;top:0;bottom:0;width:1px;
+  background:linear-gradient(180deg,transparent,var(--fl-purple-400),var(--cyan),transparent);
+  animation:snakeRight 4s linear infinite}
+.snake-card .snake-top{bottom:0;left:0;right:0;height:1px;animation:snakeBottom 4s linear infinite}
+.snake-card .snake-bottom{left:0;top:0;bottom:0;width:1px;
+  background:linear-gradient(180deg,transparent,var(--cyan),var(--fl-purple-400),transparent);
+  animation:snakeLeft 4s linear infinite}
+.snake-card:hover{transform:translateY(-4px);box-shadow:var(--fl-glow-md)}
+
+@keyframes snakeTop{0%{transform:translateX(-100%)}25%{transform:translateX(100%)}100%{transform:translateX(100%)}}
+@keyframes snakeRight{0%,25%{transform:translateY(-100%)}50%{transform:translateY(100%)}100%{transform:translateY(100%)}}
+@keyframes snakeBottom{0%,50%{transform:translateX(100%)}75%{transform:translateX(-100%)}100%{transform:translateX(-100%)}}
+@keyframes snakeLeft{0%,75%{transform:translateY(100%)}100%{transform:translateY(-100%)}}
+
+.snake-card-inner{
+  position:relative;z-index:1;
+  background:var(--fl-bg-card);
+  border-radius:var(--fl-r-lg);
+  padding:32px 24px;
+  margin:1px;
+}
+
+/* ============================================================
+   SECTION 2 — SOCIAL PROOF
+   ============================================================ */
+.social-proof{
+  padding:32px 0;
+  border-top:1px solid var(--fl-border);
+  border-bottom:1px solid var(--fl-border);
+  background:transparent;
+  overflow:hidden;
+}
+.proof-track{
+  display:flex;gap:0;width:max-content;
+  animation:marquee 20s linear infinite;
+}
+.proof-track:hover{animation-play-state:paused}
+@keyframes marquee{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+.proof-item{
+  display:flex;align-items:center;gap:12px;
+  padding:16px 48px;white-space:nowrap;
+  border-right:1px solid var(--fl-border);
+}
+.proof-number{
+  font-family:var(--fl-font-brand);font-size:clamp(12px,2vw,18px);
+  color:var(--cyan);text-shadow:0 0 16px var(--cyan-glow);
+}
+.proof-label{font-size:12px;color:var(--fl-text-dim);text-transform:uppercase;letter-spacing:1px}
+
+/* ============================================================
+   SECTION 3 — PROBLEMA
+   ============================================================ */
+.problema-grid{
+  display:grid;grid-template-columns:repeat(2,1fr);
+  gap:16px;max-width:800px;margin:0 auto;
+}
+.problema-item{
+  display:flex;align-items:flex-start;gap:16px;
+  padding:20px 24px;
+  background:var(--fl-bg-card);
+  border:1px solid var(--fl-border);
+  border-radius:var(--fl-r-lg);
+  transition:all .3s var(--fl-ease);cursor:default;
+}
+.problema-item:hover{border-color:rgba(239,68,68,0.3);background:var(--fl-bg-hover);transform:translateY(-2px)}
+.problema-icon{
+  flex-shrink:0;width:40px;height:40px;
+  background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);
+  border-radius:var(--fl-r-md);
+  display:flex;align-items:center;justify-content:center;
+}
+.problema-icon svg{width:18px;height:18px;stroke:var(--fl-danger)}
+.problema-text{font-size:14px;color:var(--fl-text-muted);line-height:1.6}
+
+/* ============================================================
+   SECTION 4 — COMO FUNCIONA
+   ============================================================ */
+.steps-grid{
+  display:grid;grid-template-columns:repeat(3,1fr);
+  gap:24px;position:relative;
+}
+.steps-line{
+  position:absolute;top:56px;left:16.66%;right:16.66%;
+  height:2px;
+  background:linear-gradient(90deg,var(--fl-purple),var(--cyan),var(--gold));
+  opacity:.25;
+}
+.step-card .snake-card-inner{text-align:center;padding:36px 20px}
+.step-number{
+  width:52px;height:52px;margin:0 auto 16px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--fl-font-brand);font-size:16px;
+  position:relative;
+}
+.step-card:nth-child(1) .step-number{background:linear-gradient(135deg,var(--fl-purple),var(--fl-purple-700));color:#fff;box-shadow:0 0 30px rgba(147,51,234,0.4)}
+.step-card:nth-child(2) .step-number{background:linear-gradient(135deg,var(--cyan),#00CC8E);color:#000;box-shadow:0 0 30px var(--cyan-glow)}
+.step-card:nth-child(3) .step-number{background:linear-gradient(135deg,var(--gold),#FF9500);color:#000;box-shadow:0 0 30px var(--gold-glow)}
+.step-label{
+  font-family:var(--fl-font-brand);font-size:9px;
+  letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;
+}
+.step-card:nth-child(1) .step-label{color:var(--fl-purple-300)}
+.step-card:nth-child(2) .step-label{color:var(--cyan)}
+.step-card:nth-child(3) .step-label{color:var(--gold)}
+.step-title{font-size:17px;font-weight:700;margin-bottom:10px}
+.step-desc{font-size:13px;color:var(--fl-text-muted);line-height:1.7}
+
+/* Mascot in steps section */
+.steps-mascot{
+  position:absolute;left:-80px;bottom:-20px;z-index:3;
+  animation:mago-breath 5s ease-in-out infinite;
+  pointer-events:none;
+}
+.steps-mascot img{height:140px;width:auto;opacity:.7;
+  filter:drop-shadow(0 0 20px rgba(147,51,234,0.3))}
+
+/* ============================================================
+   SECTION 5 — PRODUTO EM ACAO
+   ============================================================ */
+.produto-mockup{
+  max-width:960px;margin:0 auto;
+  border-radius:var(--fl-r-xl);
+  border:1px solid var(--fl-border-md);
+  background:var(--fl-bg-card);
+  overflow:hidden;
+  box-shadow:var(--fl-glow-lg),0 40px 80px rgba(0,0,0,.5);
+  position:relative;
+}
+/* Subtle purple glow around mockup */
+.produto-mockup::before{
+  content:'';position:absolute;inset:-1px;border-radius:var(--fl-r-xl);
+  background:linear-gradient(135deg,var(--fl-purple-800),var(--fl-purple-950),var(--fl-purple-800));
+  z-index:-1;opacity:.6;
+}
+
+.mockup-topbar{
+  display:flex;align-items:center;gap:8px;
+  padding:12px 18px;background:transparent;
+  border-bottom:1px solid var(--fl-border);
+}
+.dot{width:12px;height:12px;border-radius:50%}
+.dot-r{background:#FF5F57}.dot-y{background:#FFBD2E}.dot-g{background:#28C840}
+.mockup-url{
+  margin-left:12px;padding:5px 14px;background:var(--fl-bg);
+  border-radius:6px;font-family:var(--fl-font-mono);font-size:11px;color:var(--fl-text-dim);
+  flex:1;max-width:280px;
+}
+.mockup-body{display:grid;grid-template-columns:1fr 320px;min-height:380px}
+.mockup-kanban{padding:16px;border-right:1px solid var(--fl-border)}
+.kanban-header{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+.kanban-title{font-size:13px;font-weight:700}
+.kanban-badge{
+  padding:3px 10px;border-radius:var(--fl-r-full);
+  font-family:var(--fl-font-mono);font-size:10px;font-weight:500;
+  background:var(--cyan-dim);color:var(--cyan);
+}
+.kanban-cols{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.col-title{
+  font-family:var(--fl-font-mono);font-size:10px;font-weight:600;
+  text-transform:uppercase;letter-spacing:1px;
+  margin-bottom:8px;padding:5px 8px;border-radius:6px;
+}
+.col-novo .col-title{background:rgba(147,51,234,0.12);color:var(--fl-purple-300)}
+.col-criado .col-title{background:var(--cyan-dim);color:var(--cyan)}
+.col-enviado .col-title{background:var(--gold-dim);color:var(--gold)}
+.k-card{
+  padding:8px 10px;margin-bottom:6px;
+  background:transparent;border:1px solid var(--fl-border);
+  border-radius:8px;font-size:11px;
+  transition:border-color .2s;
+}
+.k-card:hover{border-color:var(--fl-border-md)}
+.k-card .name{font-weight:600;margin-bottom:2px}
+.k-card .cat{font-size:9px;color:var(--fl-text-dim)}
+
+.mockup-wa{background:#0B141A;display:flex;flex-direction:column}
+.wa-header{
+  display:flex;align-items:center;gap:10px;
+  padding:12px 14px;background:#1F2C33;
+  border-bottom:1px solid rgba(255,255,255,.05);
+}
+.wa-avatar{
+  width:32px;height:32px;border-radius:50%;
+  background:linear-gradient(135deg,var(--fl-purple),var(--cyan));
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--fl-font-brand);font-size:10px;color:#fff;
+}
+.wa-name{font-size:13px;font-weight:600}
+.wa-status{font-size:10px;color:#8696A0}
+.wa-msgs{flex:1;padding:14px;display:flex;flex-direction:column;gap:6px;overflow:hidden}
+.wa-msg{
+  max-width:82%;padding:8px 10px;border-radius:8px;
+  font-size:12px;line-height:1.5;
+}
+.wa-msg.s{background:#005C4B;align-self:flex-end;border-bottom-right-radius:2px}
+.wa-msg.r{background:#1F2C33;align-self:flex-start;border-bottom-left-radius:2px}
+.wa-time{font-size:9px;color:rgba(255,255,255,.35);text-align:right;margin-top:3px}
+.wa-link{color:var(--cyan);text-decoration:underline}
+/* typing indicator */
+.wa-typing{display:flex;gap:4px;align-self:flex-start;padding:10px 14px;background:#1F2C33;border-radius:8px}
+.wa-typing span{width:6px;height:6px;border-radius:50%;background:#8696A0;animation:dot-pulse 1.4s infinite}
+.wa-typing span:nth-child(2){animation-delay:.2s}
+.wa-typing span:nth-child(3){animation-delay:.4s}
+@keyframes dot-pulse{0%,60%,100%{opacity:.3;transform:scale(.8)}30%{opacity:1;transform:scale(1)}}
+
+/* ============================================================
+   SECTION 6 — FUNCIONALIDADES
+   ============================================================ */
+.feat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.feat-card .snake-card-inner{padding:28px 22px}
+.feat-icon{
+  width:44px;height:44px;border-radius:var(--fl-r-md);
+  display:flex;align-items:center;justify-content:center;margin-bottom:16px;
+}
+.feat-icon svg{width:22px;height:22px}
+.feat-card:nth-child(1) .feat-icon{background:var(--gold-dim)}.feat-card:nth-child(1) .feat-icon svg{stroke:var(--gold)}
+.feat-card:nth-child(2) .feat-icon{background:var(--cyan-dim)}.feat-card:nth-child(2) .feat-icon svg{stroke:var(--cyan)}
+.feat-card:nth-child(3) .feat-icon{background:rgba(147,51,234,0.12)}.feat-card:nth-child(3) .feat-icon svg{stroke:var(--fl-purple-300)}
+.feat-card:nth-child(4) .feat-icon{background:rgba(239,68,68,0.08)}.feat-card:nth-child(4) .feat-icon svg{stroke:var(--fl-danger)}
+.feat-card:nth-child(5) .feat-icon{background:var(--cyan-dim)}.feat-card:nth-child(5) .feat-icon svg{stroke:var(--cyan)}
+.feat-card:nth-child(6) .feat-icon{background:var(--gold-dim)}.feat-card:nth-child(6) .feat-icon svg{stroke:var(--gold)}
+.feat-title{font-size:15px;font-weight:700;margin-bottom:6px}
+.feat-desc{font-size:13px;color:var(--fl-text-muted);line-height:1.6}
+
+/* ============================================================
+   SECTION 7 — PARA QUEM
+   ============================================================ */
+.quem-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.quem-card .snake-card-inner{padding:32px 24px}
+.quem-check{
+  width:36px;height:36px;border-radius:var(--fl-r-md);
+  background:var(--cyan-dim);
+  display:flex;align-items:center;justify-content:center;margin-bottom:16px;
+}
+.quem-check svg{width:18px;height:18px;stroke:var(--cyan);fill:none}
+.quem-title{font-size:16px;font-weight:700;margin-bottom:6px}
+.quem-desc{font-size:13px;color:var(--fl-text-muted);line-height:1.6}
+
+/* ============================================================
+   SECTION 8 — PLANOS
+   ============================================================ */
+.planos-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin-bottom:36px}
+.plano-card{
+  background:var(--fl-bg-card);border:1px solid var(--fl-border);
+  border-radius:var(--fl-r-lg);text-align:center;
+  padding:28px 20px;transition:all .3s var(--fl-ease);
+  position:relative;
+}
+.plano-card:hover{transform:translateY(-4px);box-shadow:0 20px 50px rgba(0,0,0,.3)}
+.plano-card.destaque{
+  border-color:var(--gold);
+  box-shadow:0 0 40px var(--gold-dim),0 20px 60px rgba(0,0,0,.3);
+}
+.plano-card.destaque::before{
+  content:'MAIS POPULAR';
+  position:absolute;top:-12px;left:50%;transform:translateX(-50%);
+  padding:4px 16px;border-radius:var(--fl-r-full);
+  background:linear-gradient(135deg,var(--gold),#FF9500);
+  color:#000;font-family:var(--fl-font-brand);font-size:7px;letter-spacing:1px;
+}
+.plano-name{
+  font-family:var(--fl-font-brand);font-size:10px;letter-spacing:2px;margin-bottom:16px;
+}
+.plano-card:nth-child(1) .plano-name{color:var(--fl-purple-300)}
+.plano-card:nth-child(2) .plano-name{color:var(--fl-success)}
+.plano-card:nth-child(3) .plano-name{color:var(--gold)}
+.plano-card:nth-child(4) .plano-name{color:var(--cyan)}
+.plano-price{font-size:clamp(24px,2.5vw,34px);font-weight:800;margin-bottom:2px}
+.plano-price span{font-size:14px;font-weight:400;color:var(--fl-text-muted)}
+.plano-period{font-size:12px;color:var(--fl-text-dim);margin-bottom:20px}
+.plano-features{list-style:none;text-align:left;margin-bottom:24px}
+.plano-features li{
+  padding:7px 0;font-size:13px;color:var(--fl-text-muted);
+  display:flex;align-items:center;gap:10px;
+  border-bottom:1px solid var(--fl-border);
+}
+.plano-features li:last-child{border:none}
+.plano-features li::before{
+  content:'';width:5px;height:5px;border-radius:50%;flex-shrink:0;
+}
+.plano-card:nth-child(1) .plano-features li::before{background:var(--fl-purple-400)}
+.plano-card:nth-child(2) .plano-features li::before{background:var(--fl-success)}
+.plano-card:nth-child(3) .plano-features li::before{background:var(--gold)}
+.plano-card:nth-child(4) .plano-features li::before{background:var(--cyan)}
+.planos-cta{text-align:center}
+
+/* ============================================================
+   SECTION 9 — FAQ
+   ============================================================ */
+.faq-list{max-width:680px;margin:0 auto;display:flex;flex-direction:column;gap:10px}
+.faq-item{
+  background:var(--fl-bg-card);border:1px solid var(--fl-border);
+  border-radius:var(--fl-r-lg);overflow:hidden;transition:border-color .3s;
+}
+.faq-item.active{border-color:var(--fl-purple)}
+.faq-question{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:18px 22px;cursor:pointer;font-size:14px;font-weight:600;
+  color:var(--fl-text);background:none;border:none;width:100%;
+  text-align:left;font-family:var(--fl-font-ui);transition:color .2s;
+}
+.faq-question:hover{color:var(--fl-purple-300)}
+.faq-chevron{
+  width:18px;height:18px;flex-shrink:0;
+  transition:transform .3s var(--fl-ease);color:var(--fl-text-dim);
+}
+.faq-item.active .faq-chevron{transform:rotate(180deg);color:var(--fl-purple-300)}
+.faq-answer{max-height:0;overflow:hidden;transition:max-height .4s var(--fl-ease)}
+.faq-item.active .faq-answer{max-height:200px}
+.faq-answer-inner{padding:0 22px 18px;font-size:13px;color:var(--fl-text-muted);line-height:1.7}
+
+/* ============================================================
+   SECTION 10 — CTA FINAL
+   ============================================================ */
+.cta-final{
+  text-align:center;padding:120px 24px;position:relative;overflow:hidden;
+}
+.cta-final .cta-glow{
+  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  width:500px;height:500px;border-radius:50%;
+  background:radial-gradient(circle,rgba(147,51,234,0.2),transparent 70%);
+  animation:glow-pulse 4s ease-in-out infinite;
+  pointer-events:none;
+}
+@keyframes glow-pulse{
+  0%,100%{transform:translate(-50%,-50%) scale(1);opacity:.5}
+  50%{transform:translate(-50%,-50%) scale(1.2);opacity:1}
+}
+.cta-final h2{
+  font-family:var(--fl-font-brand);
+  font-size:clamp(12px,2.2vw,20px);
+  line-height:2;margin-bottom:36px;
+  position:relative;z-index:1;
+}
+.cta-mascot{
+  margin-top:40px;
+  animation:mago-breath 4s ease-in-out infinite;
+}
+.cta-mascot img{
+  height:120px;width:auto;
+  filter:drop-shadow(0 0 30px rgba(147,51,234,0.5));
+}
+
+/* ============================================================
+   BETA FORM
+   ============================================================ */
+.beta-section{
+  background:transparent;
+  padding:100px 0;
+  position:relative;overflow:hidden;
+}
+.beta-section::before{
+  content:'';position:absolute;top:50%;left:50%;
+  transform:translate(-50%,-50%);
+  width:600px;height:600px;border-radius:50%;
+  background:radial-gradient(circle,rgba(250,204,21,0.08),transparent 70%);
+  pointer-events:none;
+}
+.beta-wrapper{
+  max-width:520px;margin:0 auto;
+  background:var(--fl-bg-card);
+  border:1px solid rgba(250,204,21,0.25);
+  border-radius:var(--fl-r-xl);
+  padding:40px 36px;
+  position:relative;z-index:1;
+  box-shadow:0 0 40px rgba(250,204,21,0.08),0 20px 60px rgba(0,0,0,0.4);
+}
+.beta-wrapper h2{
+  font-family:var(--fl-font-brand);
+  font-size:clamp(10px,1.8vw,14px);
+  text-align:center;line-height:2;
+  margin-bottom:8px;
+  color:#FACC15;
+}
+.beta-subtitle{
+  text-align:center;font-size:14px;color:var(--fl-text-muted);
+  margin-bottom:32px;line-height:1.6;
+}
+.beta-field{
+  display:flex;flex-direction:column;gap:6px;
+  margin-bottom:16px;
+}
+.beta-field label{
+  font-family:var(--fl-font-mono);
+  font-size:10px;color:var(--fl-text-muted);
+  text-transform:uppercase;letter-spacing:0.08em;
+}
+.beta-field input{
+  width:100%;
+  background:transparent;
+  border:2px solid var(--fl-border-md);
+  border-radius:0;
+  color:var(--fl-text);
+  font-family:var(--fl-font-ui);
+  font-size:15px;
+  padding:14px 16px;
+  outline:none;
+  transition:border-color 120ms,box-shadow 120ms;
+  image-rendering:pixelated;
+}
+.beta-field input::placeholder{color:var(--fl-text-dim)}
+.beta-field input:focus{
+  border-color:#FACC15;
+  box-shadow:0 0 12px rgba(250,204,21,0.2);
+}
+.beta-submit{
+  width:100%;margin-top:8px;
+  padding:18px 24px;
+  font-family:var(--fl-font-brand);font-size:11px;
+  background:#FACC15;color:#000;
+  border:none;cursor:pointer;
+  letter-spacing:1.5px;
+  box-shadow:
+    inset -4px -4px 0 #A16207,
+    inset 4px 4px 0 #FDE68A,
+    0 6px 0 #713F12;
+  transition:transform 60ms,box-shadow 60ms;
+  border-radius:0;
+  image-rendering:pixelated;
+}
+.beta-submit:hover{
+  background:#FDE047;
+  box-shadow:
+    inset -4px -4px 0 #A16207,
+    inset 4px 4px 0 #FEF9C3,
+    0 6px 0 #713F12,
+    0 0 30px rgba(250,204,21,0.4);
+}
+.beta-submit:active{
+  transform:translateY(6px);
+  box-shadow:inset -4px -4px 0 #A16207,inset 4px 4px 0 #FDE68A,0 0 0 #713F12;
+}
+.beta-note{
+  text-align:center;margin-top:16px;
+  font-size:11px;color:var(--fl-text-dim);
+}
+.beta-spots{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:6px 14px;border-radius:var(--fl-r-full);
+  background:rgba(239,68,68,0.1);
+  border:1px solid rgba(239,68,68,0.25);
+  font-family:var(--fl-font-mono);font-size:10px;
+  color:var(--fl-danger);
+  margin-bottom:20px;
+}
+.beta-spots .dot{
+  width:6px;height:6px;border-radius:50%;
+  background:var(--fl-danger);
+  animation:pulse 1.5s infinite;
+}
+
+/* FOOTER */
+.footer{
+  text-align:center;padding:28px 24px;
+  border-top:1px solid var(--fl-border);
+  font-size:12px;color:var(--fl-text-dim);
+}
+.footer img{height:24px;margin-bottom:8px;opacity:.5}
+
+/* ============================================================
+   SCROLL REVEAL
+   ============================================================ */
+.reveal{opacity:0;transform:translateY(28px);transition:opacity .6s var(--fl-ease),transform .6s var(--fl-ease)}
+.reveal.visible{opacity:1;transform:translateY(0)}
+
+/* ============================================================
+   REDUCED MOTION
+   ============================================================ */
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}
+  #particles-canvas{display:none}
+}
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media(max-width:1024px){
+  .steps-grid,.feat-grid,.quem-grid,.planos-grid{grid-template-columns:1fr 1fr}
+  .steps-line{display:none}
+  .mockup-body{grid-template-columns:1fr}
+  .mockup-wa{min-height:280px;border-top:1px solid var(--fl-border)}
+  .hero-mascot{right:2%;bottom:40px}
+  .steps-mascot{display:none}
+}
+@media(max-width:768px){
+  nav{padding:12px 18px}
+  .nav-links{display:none}
+  .mobile-toggle{display:block}
+  .nav-links.open{
+    display:flex;flex-direction:column;
+    position:absolute;top:100%;left:0;right:0;
+    background:rgba(6,6,8,.97);backdrop-filter:blur(20px);
+    padding:16px 24px;gap:14px;
+    border-bottom:1px solid var(--fl-border);
+  }
+  section{padding:64px 0}
+  .hero{padding:120px 20px 60px;min-height:auto}
+  .hero-mascot{position:relative;right:auto;bottom:auto;margin-top:32px}
+  .problema-grid,.steps-grid,.feat-grid,.quem-grid,.planos-grid{grid-template-columns:1fr}
+  .hero-buttons{flex-direction:column;align-items:center}
+  .btn{width:100%;max-width:300px;justify-content:center}
+  .section-title{font-size:10px}
+  .kanban-cols{grid-template-columns:1fr}
+}
+</style>
+
+  <link rel="icon" href="/images/Mestre Fralib - Mago da IA.png">
+  <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
+  <style>
+    /* Theme Toggle */
+    .theme-toggle {
+      background: none; border: none; cursor: pointer; color: var(--fl-text);
+      display: flex; align-items: center; justify-content: center; width: 36px; height: 36px;
+      border-radius: 50%; transition: background 0.2s;
+    }
+    .theme-toggle:hover { background: var(--fl-bg-hover); }
+    .sun-icon { display: none; }
+    body.light-mode .sun-icon { display: block; }
+    body.light-mode .moon-icon { display: none; }
+
+    /* Light Mode Variables */
+    body.light-mode {
+      --fl-bg: #f9f9fb;
+      --fl-bg-surface: #ffffff;
+      --fl-bg-card: #ffffff;
+      --fl-bg-hover: #f1f1f5;
+      --fl-bg-overlay: rgba(255, 255, 255, 0.92);
+
+      --fl-text: #1a1a24;
+      --fl-text-muted: #4a4a5e;
+      --fl-text-dim: #717186;
+      --fl-border: rgba(147, 51, 234, 0.15);
+      --fl-border-md: rgba(147, 51, 234, 0.3);
+
+      /* Partículas Canvas Fix */
+      --canvas-z: 0;
+    }
+
+    /* Text Contrasts in Light Mode */
+    body.light-mode .section-title,
+    body.light-mode .hero h1 .grad {
+      background: linear-gradient(135deg, var(--fl-purple-700), #0d9488);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    body.light-mode .beta-wrapper h2 {
+      color: #B45309;
+    }
+    body.light-mode .proof-number {
+      color: #0d9488;
+      text-shadow: none;
+    }
+    body.light-mode .step-card:nth-child(2) .step-number {
+      background: linear-gradient(135deg, #0d9488, #059669);
+      color: #fff;
+    }
+    body.light-mode .step-card:nth-child(3) .step-number {
+      background: linear-gradient(135deg, #d97706, #B45309);
+      color: #fff;
+    }
+    body.light-mode .beta-wrapper {
+      border-color: rgba(147, 51, 234, 0.2);
+      box-shadow: 0 10px 40px rgba(0,0,0,0.05);
+    }
+    body.light-mode nav {
+      background: rgba(255, 255, 255, 0.85);
+    }
+    body.light-mode nav.scrolled {
+      background: rgba(255, 255, 255, 0.98);
+    }
+    body.light-mode #particles-js { opacity: 0.6; } /* Reduce particle visibility in light mode */
+    body.light-mode .hero-badge { background: rgba(147,51,234,0.05); }
+
+    /* Mascot Animations */
+    @keyframes pixelWalk {
+      0%, 100% { transform: translateY(0) rotate(0); }
+      25% { transform: translateY(-3px) rotate(-2deg); }
+      75% { transform: translateY(3px) rotate(2deg); }
+    }
+    .pixel-anim-idle {
+      animation: pixelWalk 3s infinite steps(4);
+      filter: drop-shadow(0 0 15px rgba(147, 51, 234, 0.4));
+      transition: filter 0.3s;
+    }
+    .pixel-anim-idle:hover {
+      filter: drop-shadow(0 0 25px rgba(147, 51, 234, 0.8));
+      cursor: pointer;
+    }
+
+    #particles-js {
+      position: fixed; width: 100%; height: 100%; top: 0; left: 0;
+      z-index: 0; pointer-events: none;
+    }
+  </style>
+
+</head>
+<body>
+<a class="skip-link" href="#main">Pular para o conteúdo</a>
+<div id="particles-js"></div>
+
+<!-- PARTICLES CANVAS -->
+
+
+<!-- FLOAT ORBS -->
+<div class="orb orb-purple" style="width:500px;height:500px;top:-100px;left:-100px"></div>
+<div class="orb orb-cyan" style="width:400px;height:400px;top:40%;right:-80px"></div>
+<div class="orb orb-gold" style="width:350px;height:350px;bottom:10%;left:20%"></div>
+
+<!-- ===== NAV ===== -->
+<nav id="navbar">
+  <div class="nav-brand-wrapper" style="justify-self:start;">
+    <a href="/" class="nav-brand">
+      <img src="/images/Logo FraLib.png" alt="FraLib Logo" height="36">
+    </a>
+  </div>
+
+  <div class="nav-links" id="navLinks" style="justify-self:center;">
+    <a href="/">Home</a>
+    <a href="#como-funciona">Método 4-1</a>
+    <a href="#exemplos">Nichos</a>
+    <a href="#cinco-fontes">5 Fontes</a>
+    <a href="#planos">Planos</a>
+    <a href="#faq">FAQ</a>
+    <a href="/docs/">Docs</a>
+    <a href="/blog/">Blog</a>
+  </div>
+
+  <div class="nav-actions" style="display:flex; align-items:center; gap:16px; justify-self:end;">
+    <button class="theme-toggle" id="themeToggle" aria-label="Toggle Theme">
+      <svg class="moon-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+      <svg class="sun-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+    </button>
+    <a href="/login" style="color:var(--fl-text-muted); text-decoration:none; font-size:12px; font-weight:600;">ENTRAR</a>
+    <a href="/login?signup=1" class="nav-cta">CRIAR CONTA</a>
+    <button class="mobile-toggle" id="mobileToggle" aria-label="Menu">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+  </div>
+</nav>
+
+<!-- ===== SEÇÃO 1 — HERO ===== -->
+<section class="hero" id="hero">
+  <div class="hero-grid"></div>
+
+  <!-- LOGO CENTRALIZADA -->
+  <img src="/images/Logo FraLib.png" alt="FraLib OS" class="hero-logo">
+
+  <div class="hero-badge">
+    <span class="pulse-dot"></span>
+    AGORA COM IA AUTÔNOMA
+  </div>
+
+  <h1>
+    <span class="grad">VOCÊ FECHA.</span> A FRALIB FAZ O RESTO — PELO MÉTODO 4-1
+  </h1>
+
+  <p class="hero-sub">
+    O FraLib une prospecção B2B no Google Maps, criador de sites com IA, CRM Kanban e SDR Franz para transformar negócios locais em oportunidades reais.
+  </p>
+
+  <div class="hero-buttons">
+    <a href="/login?signup=1" class="btn btn-yellow btn-hero">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+      COMEÇAR COM 1 PIPELINE GRÁTIS
+    </a>
+    <a href="#como-funciona" class="btn btn-outline">
+      Ver como funciona
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 13l5 5 5-5M7 6l5 5 5-5"/></svg>
+    </a>
+  </div>
+
+  <!-- MASCOT -->
+  <div class="hero-mascot"><img class="pixel-anim-idle" src="/images/Mestre Fralib - Mago da IA.png" alt="Mestre FraLib - Mago da IA">
+    <span class="sparkle" style="top:-10px;left:10px"></span>
+    <span class="sparkle" style="top:5px;left:30px"></span>
+    <span class="sparkle" style="top:-20px;left:50px"></span>
+    <span class="sparkle" style="top:0;left:-5px"></span>
+    <span class="sparkle" style="top:-15px;left:65px"></span>
+  </div>
+</section>
+
+<!-- ===== SEÇÃO 2 — PROVA SOCIAL (MARQUEE) ===== -->
+<section class="social-proof">
+  <div class="proof-track" aria-label="Estatísticas">
+    <div class="proof-item"><div class="proof-number">+2.400</div><div class="proof-label">Leads Prospectados</div></div>
+    <div class="proof-item"><div class="proof-number">+180</div><div class="proof-label">Sites Gerados</div></div>
+    <div class="proof-item"><div class="proof-number">97%</div><div class="proof-label">Taxa de Abertura WhatsApp</div></div>
+    <div class="proof-item"><div class="proof-number">R$ 0</div><div class="proof-label">Gasto com Tráfego</div></div>
+    <!-- duplicate for seamless loop -->
+    <div class="proof-item"><div class="proof-number">+2.400</div><div class="proof-label">Leads Prospectados</div></div>
+    <div class="proof-item"><div class="proof-number">+180</div><div class="proof-label">Sites Gerados</div></div>
+    <div class="proof-item"><div class="proof-number">97%</div><div class="proof-label">Taxa de Abertura WhatsApp</div></div>
+    <div class="proof-item"><div class="proof-number">R$ 0</div><div class="proof-label">Gasto com Tráfego</div></div>
+  </div>
+</section>
+
+<!-- ===== SEÇÃO 3 — PROBLEMA ===== -->
+<section class="problema">
+  <div class="container">
+    <h2 class="section-title reveal">POR QUE A MAIORIA DESISTE DE VENDER SITES?</h2>
+    <div class="problema-grid">
+      <div class="problema-item reveal">
+        <div class="problema-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>
+        <div class="problema-text">Gastar horas prospectando manualmente sem resultado</div>
+      </div>
+      <div class="problema-item reveal">
+        <div class="problema-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>
+        <div class="problema-text">Pagar caro por tráfego pago sem garantia de retorno</div>
+      </div>
+      <div class="problema-item reveal">
+        <div class="problema-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>
+        <div class="problema-text">Não saber criar sites profissionais para oferecer</div>
+      </div>
+      <div class="problema-item reveal">
+        <div class="problema-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>
+        <div class="problema-text">Enviar mensagem e nunca receber resposta</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== SEÇÃO 4 — COMO FUNCIONA ===== -->
+<section class="como-funciona" id="como-funciona" style="background:transparent">
+  <div class="container">
+    <h2 class="section-title reveal">O MÉTODO 4-1: 4 ETAPAS DA FRALIB + 1 SUA</h2>
+    <div class="steps-grid">
+      <div class="steps-line"></div>
+      <div class="step-card snake-card reveal">
+        <div class="snake-top"></div><div class="snake-bottom"></div>
+        <div class="snake-card-inner">
+          <div class="step-number">1</div>
+          <div class="step-label">PROSPECTA</div>
+          <div class="step-title">Encontra os Leads</div>
+          <div class="step-desc">O sistema encontra negócios locais no Google Maps que não têm site. Automaticamente filtra e qualifica.</div>
+        </div>
+      </div>
+      <div class="step-card snake-card reveal">
+        <div class="snake-top"></div><div class="snake-bottom"></div>
+        <div class="snake-card-inner">
+          <div class="step-number">2</div>
+          <div class="step-label">CRIA O SITE</div>
+          <div class="step-title">IA Gera o Site</div>
+          <div class="step-desc">A IA analisa o negócio e cria um site profissional em minutos. Layout moderno, responsivo e pronto.</div>
+        </div>
+      </div>
+      <div class="step-card snake-card reveal">
+        <div class="snake-top"></div><div class="snake-bottom"></div>
+        <div class="snake-card-inner">
+          <div class="step-number">3</div>
+          <div class="step-label">VENDE</div>
+          <div class="step-title">SDR Franz Acompanha</div>
+          <div class="step-desc">Nos planos com SDR, Franz envia o site pelo WhatsApp, registra respostas e ajuda você a acompanhar quem quer fechar.</div>
+        </div>
+      </div>
+      <!-- Mascot reading book -->
+      <div class="steps-mascot"><img class="pixel-anim-idle" src="/images/Mestre Fralib estudando.png" alt="Mestre FraLib estudando"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== SEÇÃO 4B — EXEMPLOS POR NICHO ===== -->
+<section class="para-quem" id="exemplos">
+  <div class="container">
+    <h2 class="section-title reveal">QUE TIPO DE NEGÓCIO LOCAL A FRALIB PROSPECTA?</h2>
+    <p class="section-sub reveal" style="text-align:center;margin:0 auto 48px;max-width:720px;color:var(--fl-text-muted);">Funciona pra qualquer negócio local que ainda não tem site ou tem site ruim. Veja ticket médio por nicho:</p>
+    <div class="quem-grid">
+      <div class="quem-card snake-card reveal"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
+        <div class="quem-check" style="background:var(--gold-dim);"><span style="font-size:18px;">🍕</span></div>
+        <div class="quem-title">Pizzaria / Padaria / Restaurante</div>
+        <div class="quem-desc"><strong style="color:var(--gold);">R$ 500 a R$ 1.500</strong> por site. Volume fácil: uma cidade tem dezenas. Site com cardápio, localização, WhatsApp, fotos.</div>
+      </div></div>
+      <div class="quem-card snake-card reveal"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
+        <div class="quem-check" style="background:var(--cyan-dim);"><span style="font-size:18px;">🏥</span></div>
+        <div class="quem-title">Clínica / Consultório / Estética</div>
+        <div class="quem-desc"><strong style="color:var(--cyan);">R$ 1.500 a R$ 3.000</strong> por site. Mais nichado, ticket alto. Site com serviços, agendamento, fotos do consultório.</div>
+      </div></div>
+      <div class="quem-card snake-card reveal"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
+        <div class="quem-check" style="background:rgba(147,51,234,0.12);"><span style="font-size:18px;">💇</span></div>
+        <div class="quem-title">Salão / Barbearia / Manicure</div>
+        <div class="quem-desc"><strong style="color:var(--fl-purple-300);">R$ 500 a R$ 1.000</strong> por site. Volume altíssimo, conversão rápida. Site com portfólio, preços, agendamento.</div>
+      </div></div>
+      <div class="quem-card snake-card reveal"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
+        <div class="quem-check"><span style="font-size:18px;">🏠</span></div>
+        <div class="quem-title">Imobiliária / Corretor autônomo</div>
+        <div class="quem-desc"><strong style="color:var(--cyan);">R$ 1.500 a R$ 5.000</strong> por site. Ticket alto, ciclo de venda mais longo. Site com busca de imóveis.</div>
+      </div></div>
+      <div class="quem-card snake-card reveal"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
+        <div class="quem-check" style="background:var(--gold-dim);"><span style="font-size:18px;">🔧</span></div>
+        <div class="quem-title">Prestador de serviço</div>
+        <div class="quem-desc"><strong style="color:var(--gold);">R$ 500 a R$ 1.200</strong> por site. Encanador, eletricista, dedetizadora, marceneiro. Volume gigante em qualquer cidade.</div>
+      </div></div>
+      <div class="quem-card snake-card reveal"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
+        <div class="quem-check" style="background:var(--cyan-dim);"><span style="font-size:18px;">🛍️</span></div>
+        <div class="quem-title">Loja física (roupa, sapato, decoração)</div>
+        <div class="quem-desc"><strong style="color:var(--cyan);">R$ 800 a R$ 2.000</strong> por site. Site com catálogo, localização, integração com WhatsApp Business.</div>
+      </div></div>
+    </div>
+    <p class="section-sub reveal" style="text-align:center;margin:32px auto 0;max-width:680px;font-size:13px;color:var(--fl-text-muted);">Você pode rodar 1, 2 ou 10 nichos ao mesmo tempo — na mesma cidade ou em cidades diferentes.</p>
+  </div>
+</section>
+
+<!-- ===== SEÇÃO 5 — PRODUTO EM AÇÃO ===== -->
+<section class="produto" id="produto">
+  <div class="container">
+    <h2 class="section-title reveal">VEJA O MÉTODO 4-1 FUNCIONANDO AO VIVO</h2>
+    <div class="produto-mockup reveal">
+      <div class="mockup-topbar">
+        <div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div>
+        <div class="mockup-url">app.fralib.com.br/dashboard</div>
+      </div>
+      <div class="mockup-body">
+        <div class="mockup-kanban">
+          <div class="kanban-header">
+            <div class="kanban-title">Pipeline de Vendas</div>
+            <div class="kanban-badge">12 leads</div>
+          </div>
+          <div class="kanban-cols">
+            <div class="col-novo">
+              <div class="col-title">Novo</div>
+              <div class="k-card"><div class="name">Barbearia Morais</div><div class="cat">Barbearia &bull; Curitiba</div></div>
+              <div class="k-card"><div class="name">Studio Ana K.</div><div class="cat">Estética &bull; SP</div></div>
+            </div>
+            <div class="col-criado">
+              <div class="col-title">Site Criado</div>
+              <div class="k-card"><div class="name">Clínica Dra. Lohr</div><div class="cat">Dermatologia &bull; PR</div></div>
+              <div class="k-card"><div class="name">Pet Shop Amigo</div><div class="cat">Pet Shop &bull; MG</div></div>
+            </div>
+            <div class="col-enviado">
+              <div class="col-title">Enviado</div>
+              <div class="k-card"><div class="name">Restaurante Sabor</div><div class="cat">Restaurante &bull; RJ</div></div>
+            </div>
+          </div>
+        </div>
+        <div class="mockup-wa">
+          <div class="wa-header">
+            <div class="wa-avatar">F</div>
+            <div><div class="wa-name">SDR Franz</div><div class="wa-status">online</div></div>
+          </div>
+          <div class="wa-msgs">
+            <div class="wa-msg s">Olá! Sou o Franz, da FraLib. Vi que a Barbearia Morais ainda não tem um site profissional.<div class="wa-time">10:32</div></div>
+            <div class="wa-msg s">Criei uma demonstração para você avaliar: <span class="wa-link">barbearia-morais.fralib.site</span><div class="wa-time">10:32</div></div>
+            <div class="wa-msg r">Opa! Ficou muito bom! Quanto custa pra manter?<div class="wa-time">10:45</div></div>
+            <div class="wa-msg s">Que bom que gostou! Posso te explicar os planos e ajustar o site antes da publicação final.<div class="wa-time">10:46</div></div>
+            <div class="wa-typing"><span></span><span></span><span></span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== SEÇÃO 5B — STACK TÉCNICA ===== -->
+<section class="funcionalidades" id="stack">
+  <div class="container">
+    <h2 class="section-title reveal">O QUE TEM DENTRO DO SITE QUE A FRALIB GERA</h2>
+    <p class="section-sub reveal" style="text-align:center;margin:0 auto 48px;max-width:720px;color:var(--fl-text-muted);">Não é "site bonito de template". É um site que aparece no Google da cidade do seu cliente — porque usa uma stack validada de SEO local que construtor genérico não aplica.</p>
+    <div class="feat-grid">
+      <div class="feat-card snake-card reveal"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
+        <div class="feat-icon" style="background:var(--gold-dim);"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" style="stroke:var(--gold);"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg></div>
+        <div class="feat-title">Palavras-chave por volume de busca</div>
+        <div class="feat-desc">Antes de gerar, a FraLib pesquisa no Google o volume das palavras-chave do nicho do lead. O site é escrito pras palavras que o cliente do lead já busca.</div>
+      </div></div>
+      <div class="feat-card snake-card reveal"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
+        <div class="feat-icon" style="background:var(--cyan-dim);"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" style="stroke:var(--cyan);"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5M2 12l10 5 10-5"/></svg></div>
+        <div class="feat-title">Schema.org LocalBusiness</div>
+        <div class="feat-desc">Cada site sai com schema.org LocalBusiness já preenchido (endereço, telefone, horário, avaliação, geo-coordenadas). É o que o Google lê pra mostrar resultado local.</div>
+      </div></div>
+      <div class="feat-card snake-card reveal"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
+        <div class="feat-icon" style="background:rgba(147,51,234,0.12);"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" style="stroke:var(--fl-purple-300);"><path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8M16 6l-4-4-4 4M12 2v13"/></svg></div>
+        <div class="feat-title">Open Graph + meta tags</div>
+        <div class="feat-desc">Cada página tem OG tags configuradas pra WhatsApp, Facebook e LinkedIn. Quando o lead compartilha o link, aparece bonito — não link pelado.</div>
+      </div></div>
+      <div class="feat-card snake-card reveal"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
+        <div class="feat-icon" style="background:rgba(239,68,68,0.08);"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" style="stroke:var(--fl-danger);"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg></div>
+        <div class="feat-title">Copy validada por nicho</div>
+        <div class="feat-desc">A copy é gerada com base em padrões que convertem no nicho (hero, sobre, serviços, contato). Não é texto genérico — é copy que vira lead.</div>
+      </div></div>
+      <div class="feat-card snake-card reveal"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
+        <div class="feat-icon" style="background:var(--cyan-dim);"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" style="stroke:var(--cyan);"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg></div>
+        <div class="feat-title">Imagens do segmento</div>
+        <div class="feat-desc">Fotos filtradas por segmento + cidade + vibe (não "foto aleatória de pizza"). Site parece feito à mão, não "site de template".</div>
+      </div></div>
+      <div class="feat-card snake-card reveal"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
+        <div class="feat-icon" style="background:var(--gold-dim);"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" style="stroke:var(--gold);"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg></div>
+        <div class="feat-title">Core Web Vitals + HTTPS</div>
+        <div class="feat-desc">Passa nos testes de velocidade, estabilidade e tempo de resposta do Google. Google prioriza sites rápidos. Domínio próprio com SSL ativo.</div>
+      </div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== SEÇÃO 6 — FUNCIONALIDADES ===== -->
+<section class="funcionalidades" id="funcionalidades" style="background:transparent">
+  <div class="container">
+    <h2 class="section-title reveal">TUDO QUE VOCÊ RECEBE NA ASSINATURA</h2>
+    <div class="feat-grid">
+      <div class="feat-card snake-card reveal"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
+        <div class="feat-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M12 2a4 4 0 014 4v2a4 4 0 01-8 0V6a4 4 0 014-4z"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><path d="M9 18h6"/><path d="M12 18v4"/></svg></div>
+        <div class="feat-title">SDR Franz Autônomo</div>
+        <div class="feat-desc">Vendedor virtual dos planos Trial, Pro e Agency que aborda leads pelo WhatsApp com mensagens personalizadas.</div>
+      </div></div>
+      <div class="feat-card snake-card reveal"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
+        <div class="feat-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="10" r="3"/><path d="M12 2a8 8 0 00-8 8c0 5.4 8 12 8 12s8-6.6 8-12a8 8 0 00-8-8z"/></svg></div>
+        <div class="feat-title">Prospecção via Google Maps</div>
+        <div class="feat-desc">Encontra negócios locais que não possuem site profissional automaticamente.</div>
+      </div></div>
+      <div class="feat-card snake-card reveal"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
+        <div class="feat-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></div>
+        <div class="feat-title">Kanban CRM Visual</div>
+        <div class="feat-desc">Pipeline completo com drag &amp; drop. Do lead até o fechamento.</div>
+      </div></div>
+      <div class="feat-card snake-card reveal"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
+        <div class="feat-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="10"/></svg></div>
+        <div class="feat-title">Follow-up Automático</div>
+        <div class="feat-desc">Mensagens de acompanhamento nos momentos certos para fechar mais vendas.</div>
+      </div></div>
+      <div class="feat-card snake-card reveal"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
+        <div class="feat-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M15 3h6v6"/><path d="M10 14L21 3"/><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/></svg></div>
+        <div class="feat-title">Publicação Validada</div>
+        <div class="feat-desc">Site publicado com gate visual, SEO, LGPD, mapa e link profissional pronto para enviar.</div>
+      </div></div>
+      <div class="feat-card snake-card reveal"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
+        <div class="feat-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></div>
+        <div class="feat-title">Download do HTML</div>
+        <div class="feat-desc">Baixe o código fonte de qualquer site gerado. O arquivo é seu.</div>
+      </div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== SEÇÃO 6B — 5 FONTES DE RECEITA ===== -->
+<section class="funcionalidades" id="cinco-fontes">
+  <div class="container">
+    <h2 class="section-title reveal">5 FORMAS DE VOCÊ GANHAR DINHEIRO COM A FRALIB</h2>
+    <p class="section-sub reveal" style="text-align:center;margin:0 auto 48px;max-width:760px;color:var(--fl-text-muted);">Cursos de "vender sites" ensinam UMA forma: cobrar setup uma vez e acabou. A FraLib destrava 5 fontes de receita. Use 1, 3 ou todas. Quem usa todas constrói carteira previsível todo mês.</p>
+    <div class="feat-grid">
+      <div class="feat-card snake-card reveal"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
+        <div class="feat-icon" style="background:var(--gold-dim);"><span style="font-size:22px;font-weight:700;color:var(--gold);">1</span></div>
+        <div class="feat-title">Setup fee (pagamento único)</div>
+        <div class="feat-desc"><strong style="color:var(--gold);">R$ 500 a R$ 3.000</strong> por site. Você fecha e cobra uma vez. <em>Exemplo:</em> 8 sites/mês × R$ 1.200 = <strong>R$ 9.600.</strong></div>
+      </div></div>
+      <div class="feat-card snake-card reveal"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
+        <div class="feat-icon" style="background:var(--cyan-dim);"><span style="font-size:22px;font-weight:700;color:var(--cyan);">2</span></div>
+        <div class="feat-title">Assinatura mensal do site 🔁</div>
+        <div class="feat-desc"><strong style="color:var(--cyan);">R$ 100 a R$ 800/mês</strong> por cliente. Em vez de R$ 1.500 uma vez, cobra R$ 200 todo mês. <em>Exemplo:</em> 15 clientes × R$ 200 = <strong>R$ 3.000 recorrentes.</strong></div>
+      </div></div>
+      <div class="feat-card snake-card reveal"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
+        <div class="feat-icon" style="background:rgba(147,51,234,0.12);"><span style="font-size:22px;font-weight:700;color:var(--fl-purple-300);">3</span></div>
+        <div class="feat-title">Hospedagem revenda 🔁</div>
+        <div class="feat-desc">Você hospeda na Locaweb/King/Hostinger (R$ 15-50) e cobra R$ 100-200/mês. Margem de 75-90%. <em>Exemplo:</em> 30 clientes × R$ 150 = <strong>R$ 4.500 recorrentes.</strong></div>
+      </div></div>
+      <div class="feat-card snake-card reveal"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
+        <div class="feat-icon" style="background:rgba(239,68,68,0.08);"><span style="font-size:22px;font-weight:700;color:var(--fl-danger);">4</span></div>
+        <div class="feat-title">Serviços adicionais 🔁</div>
+        <div class="feat-desc">WhatsApp Business do cliente, Google Business Profile, atualização de conteúdo, tráfego local. <em>Exemplo:</em> 15 clientes × R$ 250 = <strong>R$ 3.750/mês.</strong></div>
+      </div></div>
+      <div class="feat-card snake-card reveal" style="grid-column:span 1;"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
+        <div class="feat-icon" style="background:var(--cyan-dim);"><span style="font-size:22px;font-weight:700;color:var(--cyan);">5</span></div>
+        <div class="feat-title">Revenda white-label do FraLib 🔁</div>
+        <div class="feat-desc">No plano Agency, revende o acesso à FraLib com sua marca pra outros freelancers. <em>Exemplo:</em> 10 subcontas × R$ 250 de margem = <strong>R$ 2.500 recorrentes.</strong></div>
+      </div></div>
+      <div class="feat-card snake-card reveal" style="background:linear-gradient(135deg,rgba(147,51,234,0.15),rgba(0,255,179,0.08));border-color:var(--fl-border-hi);"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
+        <div class="feat-title" style="font-size:14px;color:var(--cyan);font-family:var(--fl-font-mono);letter-spacing:1px;">CENÁRIO COMPLETO (PLANO PRO)</div>
+        <div class="feat-desc" style="color:var(--fl-text);font-size:14px;line-height:1.8;">
+          8 setups × R$ 1.200 = <strong>R$ 9.600</strong><br>
+          15 assinaturas × R$ 200 = <strong>R$ 3.000</strong><br>
+          30 hospedagens × R$ 150 = <strong>R$ 4.500</strong><br>
+          15 serviços × R$ 250 = <strong>R$ 3.750</strong><br>
+          10 subcontas × R$ 250 = <strong>R$ 2.500</strong><br>
+          <span style="color:var(--fl-text-muted);font-size:12px;">– FraLib Pro R$ 197 + hospedagem R$ 900</span><br>
+          <span style="color:var(--cyan);font-size:18px;font-weight:700;display:block;margin-top:8px;">= ~R$ 22.000/mês de lucro</span>
+        </div>
+      </div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== SEÇÃO 7 — PARA QUEM ===== -->
+<section class="para-quem">
+  <div class="container">
+    <h2 class="section-title reveal">FEITO PRA QUEM QUER GANHAR TODO MÊS, NÃO SÓ UMA VEZ</h2>
+    <div class="quem-grid">
+      <div class="quem-card snake-card reveal"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
+        <div class="quem-check"><svg viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <div class="quem-title">Renda Extra sem Programar</div>
+        <div class="quem-desc">Quer ganhar dinheiro vendendo sites mas não sabe escrever uma linha de código? O FraLib faz tudo por você.</div>
+      </div></div>
+      <div class="quem-card snake-card reveal"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
+        <div class="quem-check"><svg viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <div class="quem-title">Agências que Querem Escalar</div>
+        <div class="quem-desc">Já tem agência e quer multiplicar sua capacidade sem contratar? Escale com IA.</div>
+      </div></div>
+      <div class="quem-card snake-card reveal"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
+        <div class="quem-check"><svg viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <div class="quem-title">Operação de Vendas Solo</div>
+        <div class="quem-desc">Quer montar uma operação de vendas completa sem contratar equipe? Tenha um SDR 24/7.</div>
+      </div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== SEÇÃO 7B — TIMELINE PÓS-ASSINATURA ===== -->
+<section class="como-funciona" id="timeline" style="background:transparent">
+  <div class="container">
+    <h2 class="section-title reveal">DO "CRIEI A CONTA" AO "FECHEI MEU PRIMEIRO CLIENTE" — EM 7 DIAS</h2>
+    <p class="section-sub reveal" style="text-align:center;margin:0 auto 48px;max-width:720px;color:var(--fl-text-muted);">O que acontece na prática, do minuto zero até o primeiro fechamento:</p>
+    <div class="steps-grid">
+      <div class="steps-line"></div>
+      <div class="step-card snake-card reveal">
+        <div class="snake-top"></div><div class="snake-bottom"></div>
+        <div class="snake-card-inner">
+          <div class="step-number" style="background:linear-gradient(135deg,var(--fl-purple),var(--fl-purple-700));color:#fff;">D1</div>
+          <div class="step-label" style="color:var(--fl-purple-300);">CRIAÇÃO DA CONTA</div>
+          <div class="step-title">15 minutos</div>
+          <div class="step-desc">Você escolhe nicho + cidade (ex: "pizzaria" + "São Paulo - Zona Sul"). A FraLib já mapeia: "187 pizzarias sem site na sua região." Conecta WhatsApp.</div>
+        </div>
+      </div>
+      <div class="step-card snake-card reveal">
+        <div class="snake-top"></div><div class="snake-bottom"></div>
+        <div class="snake-card-inner">
+          <div class="step-number" style="background:linear-gradient(135deg,var(--cyan),#00CC8E);color:#000;">D2-3</div>
+          <div class="step-label" style="color:var(--cyan);">ESTEIRA AUTOMÁTICA</div>
+          <div class="step-title">Você dorme, a FraLib trabalha</div>
+          <div class="step-desc">Lista os 187 leads. Gera site modelo pra cada um. Envia a 1ª mensagem no WhatsApp de cada lead automaticamente.</div>
+        </div>
+      </div>
+      <div class="step-card snake-card reveal">
+        <div class="snake-top"></div><div class="snake-bottom"></div>
+        <div class="snake-card-inner">
+          <div class="step-number" style="background:linear-gradient(135deg,var(--gold),#FF9500);color:#000;">D4-5</div>
+          <div class="step-label" style="color:var(--gold);">PRIMEIRAS RESPOSTAS</div>
+          <div class="step-title">~3-5% responde positivo</div>
+          <div class="step-desc">"Quero ver", "Quanto custa?", "Pode mandar". Esses leads vão pra sua fila. Você só abre o painel e atende.</div>
+        </div>
+      </div>
+      <div class="step-card snake-card reveal" style="grid-column:span 1;background:linear-gradient(135deg,rgba(0,255,179,0.08),rgba(147,51,234,0.08));border-color:var(--fl-border-hi);"><div class="snake-top"></div><div class="snake-bottom"></div>
+        <div class="snake-card-inner">
+          <div class="step-number" style="background:linear-gradient(135deg,var(--fl-success),#16803C);color:#fff;box-shadow:0 0 30px rgba(34,197,94,0.4);">D5-7</div>
+          <div class="step-label" style="color:var(--fl-success);">PRIMEIRO FECHAMENTO</div>
+          <div class="step-title">Você fecha, embola</div>
+          <div class="step-desc">Abre a fila, ajusta o site no editor visual, manda a proposta. Cliente paga via Pix. <strong style="color:var(--cyan);">100% do lucro é seu.</strong></div>
+        </div>
+      </div>
+    </div>
+    <p class="section-sub reveal" style="text-align:center;margin:32px auto 0;max-width:720px;font-size:13px;color:var(--fl-text-muted);">A primeira venda pode acontecer na semana 1. Mas é mais comum entre semana 2 e 4 — porque o ciclo do WhatsApp tem retorno gradual. <strong style="color:var(--fl-text);">Não é mágica. É processo.</strong></p>
+  </div>
+</section>
+
+<!-- ===== SEÇÃO 8 — PLANOS ===== -->
+<section class="planos" id="planos" style="background:transparent">
+  <div class="container">
+    <h2 class="section-title reveal">ESCOLHA SEU PLANO</h2>
+    <p class="section-sub reveal" style="margin-top:-28px">Comece com 1 pipeline grátis. Escale quando quiser. Cancele quando quiser.</p>
+    <p class="section-sub reveal" style="margin-top:-18px;font-size:13px;color:var(--fl-text-muted)">Pagamento seguro via Mercado Pago com PIX e cartão.</p>
+    <div class="planos-grid">
+      <!-- TRIAL -->
+      <div class="plano-card reveal">
+        <div class="plano-name">TRIAL</div>
+        <div class="plano-price">Grátis</div>
+        <p style="color:var(--fl-purple-300);font-size:11px;margin:8px 0;font-weight:700;">1 SITE PRA TESTAR</p>
+        <div class="plano-period" style="font-size:12px;margin-bottom:16px;">Veja o sistema funcionando antes de investir.</div>
+        <ul class="plano-features">
+          <li>1 site gerado</li>
+          <li>Prospecção básica</li>
+          <li>SDR Franz (1 abordagem)</li>
+          <li>Fila com menor prioridade</li>
+          <li>Suporte comunidade</li>
+        </ul>
+        <a href="/login?signup=1&amp;plano=trial" class="btn btn-outline" style="margin-top:20px;width:100%;">TESTAR GRÁTIS</a>
+      </div>
+
+      <!-- STARTER -->
+      <div class="plano-card reveal">
+        <div class="plano-name">STARTER</div>
+        <div class="plano-price">R$97<span>/mês</span></div>
+        <p style="color:var(--fl-success);font-size:11px;margin:8px 0;font-weight:700;">7 DIAS DE GARANTIA</p>
+        <div class="plano-period" style="font-size:12px;margin-bottom:16px;">Pra validar e começar a faturar. Cooldown de 60 min entre sites.</div>
+        <ul class="plano-features">
+          <li>Sites ilimitados (cooldown 60min)</li>
+          <li>Prospecção automática completa</li>
+          <li>Sem disparo SDR automático</li>
+          <li>Dashboard básico</li>
+          <li>Hospedagem inclusa</li>
+          <li>Prioridade na fila (nível 2)</li>
+          <li>Suporte WhatsApp</li>
+        </ul>
+        <a href="/login?signup=1&amp;plano=starter" class="btn btn-outline" style="margin-top:20px;width:100%;">ASSINAR STARTER</a>
+      </div>
+
+      <!-- PRO -->
+      <div class="plano-card destaque reveal">
+        <div class="plano-name">PRO</div>
+        <div class="plano-price">R$197<span>/mês</span></div>
+        <p style="color:var(--gold);font-size:11px;margin:8px 0;font-weight:700;">MAIS POPULAR</p>
+        <div class="plano-period" style="font-size:12px;margin-bottom:16px;">Pra quem quer escalar rápido. Cooldown de 30 min. Prioridade alta.</div>
+        <ul class="plano-features">
+          <li>Sites ilimitados (cooldown 30min)</li>
+          <li>Prospecção avançada</li>
+          <li>SDR Franz com retries automáticos</li>
+          <li>Dashboard completo + analytics</li>
+          <li>Domínios próprios ilimitados</li>
+          <li>Prioridade alta na fila (nível 5)</li>
+          <li>Suporte prioritário</li>
+        </ul>
+        <a href="/login?signup=1&amp;plano=pro" class="btn btn-yellow" style="margin-top:20px;width:100%;">ASSINAR PRO</a>
+        <p style="font-size:9px;color:#A16207;margin-top:12px;text-align:center;">7 dias de garantia incondicional.</p>
+      </div>
+
+      <!-- AGENCY -->
+      <div class="plano-card reveal">
+        <div class="plano-name">AGENCY</div>
+        <div class="plano-price">R$497<span>/mês</span></div>
+        <p style="color:var(--cyan);font-size:11px;margin:8px 0;font-weight:700;">SEM COOLDOWN</p>
+        <div class="plano-period" style="font-size:12px;margin-bottom:16px;">Para operações e agências que precisam vender em volume sem esperar fila.</div>
+        <ul class="plano-features">
+          <li>Sites ilimitados (sem cooldown)</li>
+          <li>Infraestrutura com capacidade ampliada</li>
+          <li>Painel administrativo master</li>
+          <li>Subcontas para operação ou revenda</li>
+          <li>Agentes com identidade personalizada</li>
+          <li>Prioridade máxima na fila</li>
+          <li>Onboarding e suporte VIP</li>
+        </ul>
+        <a href="/login?signup=1&amp;plano=agency" class="btn btn-outline" style="margin-top:20px;width:100%;border-color:var(--fl-purple-300);">ASSINAR AGENCY</a>
+      </div>
+    </div>
+
+    <!-- GARANTIA 7 DIAS -->
+    <div class="guarantee-box reveal" style="max-width:720px;margin:48px auto 0;padding:24px;background:var(--fl-bg-card);border:1px solid rgba(0,204,142,0.3);border-radius:var(--fl-r-lg);text-align:center;display:flex;flex-direction:column;align-items:center;gap:16px;box-shadow:0 0 30px rgba(0,204,142,0.1);">
+      <div style="width:56px;height:56px;border-radius:50%;background:rgba(0,204,142,0.15);display:flex;align-items:center;justify-content:center;color:#00CC8E;box-shadow:0 0 20px rgba(0,204,142,0.2);">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><polyline points="9 12 11 14 15 10"></polyline></svg>
+      </div>
+      <div>
+        <h4 style="font-size:18px;font-weight:700;margin-bottom:8px;color:var(--fl-text);">Garantia Incondicional de 7 Dias</h4>
+        <p style="font-size:14px;color:var(--fl-text-muted);line-height:1.6;">Assine normalmente. Se você se arrepender em até 7 dias, devolvemos 100% do valor. Sem perguntas, sem burocracia.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== SEÇÃO 8B — QUEM ESTÁ POR TRÁS ===== -->
+<section class="para-quem" id="quem-esta-por-tras">
+  <div class="container">
+    <h2 class="section-title reveal">QUEM ASSINA ESTE PRODUTO</h2>
+    <p class="section-sub reveal" style="text-align:center;margin:0 auto 48px;max-width:720px;color:var(--fl-text-muted);">A confiança vem de rosto, não de marca. Cursos autoridade vendem porque o criador tem nome. A FraLib também precisa.</p>
+    <div style="display:flex;justify-content:center;">
+      <div class="quem-card snake-card reveal" style="max-width:560px;width:100%;"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner" style="text-align:center;padding:40px 28px;">
+        <!-- PLACEHOLDER: substituir por foto real da pessoa que assina o FraLib -->
+        <div style="width:120px;height:120px;border-radius:50%;margin:0 auto 20px;background:linear-gradient(135deg,var(--fl-purple),var(--cyan));display:flex;align-items:center;justify-content:center;font-family:var(--fl-font-brand);font-size:32px;color:#fff;box-shadow:var(--fl-glow-md);">?</div>
+        <div class="quem-title" style="font-size:20px;">[Seu nome aqui]</div>
+        <div style="font-family:var(--fl-font-mono);font-size:11px;color:var(--fl-purple-300);letter-spacing:1px;margin:6px 0 18px;">FUNDADOR · FRALIB OS</div>
+        <div class="quem-desc" style="font-size:14px;line-height:1.8;text-align:left;">
+          "Criei o FraLib depois de [X anos] fazendo [o quê].
+          Vi que o gargalo de quem vende sites não é técnica — é prospecção e abordagem.
+          Por isso a plataforma faz 4 das 5 etapas. Você só fecha — e ganha todo mês."
+        </div>
+        <div style="display:flex;justify-content:center;gap:14px;margin-top:24px;">
+          <a href="#" style="font-size:12px;color:var(--fl-text-muted);text-decoration:none;font-family:var(--fl-font-mono);letter-spacing:1px;">→ LinkedIn</a>
+          <a href="#" style="font-size:12px;color:var(--fl-text-muted);text-decoration:none;font-family:var(--fl-font-mono);letter-spacing:1px;">→ GitHub</a>
+        </div>
+        <div style="margin-top:20px;padding:12px;background:rgba(250,204,21,0.08);border:1px solid rgba(250,204,21,0.25);border-radius:var(--fl-r-md);font-size:11px;color:var(--fl-text-dim);font-family:var(--fl-font-mono);">
+          ⚠ PLACEHOLDER — substituir por pessoa real (foto + nome + bio + LinkedIn)
+        </div>
+      </div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== SEÇÃO 9 — FAQ ===== -->
+<section class="faq" id="faq">
+  <div class="container">
+    <h2 class="section-title reveal">PERGUNTAS QUE TODO MUNDO FAZ ANTES DE ASSINAR</h2>
+    <div class="faq-list">
+      <div class="faq-item reveal">
+        <button class="faq-question" aria-expanded="false">Preciso saber programar?
+          <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="faq-answer"><div class="faq-answer-inner">Não. O sistema faz tudo automaticamente. Você só define o nicho e a cidade — o FraLib cuida do resto.</div></div>
+      </div>
+      <div class="faq-item reveal">
+        <button class="faq-question" aria-expanded="false">Meu WhatsApp pode ser banido?
+          <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="faq-answer"><div class="faq-answer-inner">O WhatsApp/SDR fica disponível no Trial ativo e nos planos Pro e Agency. O sistema usa cadência controlada, mensagens personalizadas e limites operacionais para reduzir risco.</div></div>
+      </div>
+      <div class="faq-item reveal">
+        <button class="faq-question" aria-expanded="false">Como funciona o pagamento?
+          <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="faq-answer"><div class="faq-answer-inner">Assinatura mensal via cartão ou PIX. Cancele quando quiser, sem multa e sem burocracia.</div></div>
+      </div>
+      <div class="faq-item reveal">
+        <button class="faq-question" aria-expanded="false">Qual a diferença entre Trial, Starter, Pro e Agency?
+          <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="faq-answer"><div class="faq-answer-inner">Trial libera 1 pipeline completa com site e abordagem Franz. Starter tem sites ilimitados com cooldown de 60 minutos, sem SDR automático. Pro reduz o cooldown para 30 minutos, adiciona SDR Franz com retries e prioridade alta. Agency remove cooldown e amplia a operação para volume.</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== FORMULÁRIO BETA ===== -->
+<section class="beta-section" id="beta-form">
+  <div class="container">
+    <div class="beta-wrapper reveal">
+      <div style="text-align:center">
+        <span class="beta-spots"><span class="dot"></span> VAGAS LIMITADAS</span>
+      </div>
+      <h2>GARANTA SUA VAGA NA VERSÃO BETA</h2>
+      <p class="beta-subtitle">Preencha seus dados e entre no grupo exclusivo de early adopters do FraLib OS.</p>
+      <form id="betaForm">
+        <div class="beta-field">
+          <label for="beta-name">Seu nome</label>
+          <input type="text" id="beta-name" name="name" placeholder="Ex: João Silva" required>
+        </div>
+        <div class="beta-field">
+          <label for="beta-email">E-mail</label>
+          <input type="email" id="beta-email" name="email" placeholder="seu@email.com" required>
+        </div>
+        <div class="beta-field">
+          <label for="beta-phone">WhatsApp</label>
+          <input type="tel" id="beta-phone" name="phone" placeholder="(11) 99999-9999" required>
+        </div>
+        <button type="submit" class="beta-submit">QUERO PARTICIPAR DA BETA</button>
+      </form>
+      <p class="beta-note">Ao enviar, você será redirecionado para o grupo do WhatsApp.</p>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <img src="/images/Logo FraLib.png" alt="FraLib" height="24"><br>
+  Pagamento seguro &bull; Cancele quando quiser &bull; Suporte em português
+</footer>
+
+<!-- ============================================================
+     JAVASCRIPT
+     ============================================================ -->
+<script>
+// === NAV SCROLL ===
+const nav = document.getElementById('navbar');
+window.addEventListener('scroll', () => {
+  nav.classList.toggle('scrolled', window.scrollY > 50);
+}, { passive: true });
+
+// === MOBILE MENU ===
+document.getElementById('mobileToggle').addEventListener('click', () => {
+  document.getElementById('navLinks').classList.toggle('open');
+});
+
+// === SCROLL REVEAL ===
+const revealObserver = new IntersectionObserver((entries) => {
+  entries.forEach((entry, i) => {
+    if(entry.isIntersecting){
+      setTimeout(() => entry.target.classList.add('visible'), i * 60);
+      revealObserver.unobserve(entry.target);
+    }
+  });
+}, { threshold: 0.08, rootMargin: '0px 0px -30px 0px' });
+document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
+
+// === FAQ ACCORDION ===
+document.querySelectorAll('.faq-question').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const item = btn.parentElement;
+    const isActive = item.classList.contains('active');
+    document.querySelectorAll('.faq-item.active').forEach(i => i.classList.remove('active'));
+    if(!isActive) item.classList.add('active');
+    btn.setAttribute('aria-expanded', !isActive);
+  });
+});
+
+// === SMOOTH SCROLL ===
+document.querySelectorAll('a[href^="#"]').forEach(a => {
+  a.addEventListener('click', e => {
+    e.preventDefault();
+    const t = document.querySelector(a.getAttribute('href'));
+    if(t){
+      t.scrollIntoView({ behavior:'smooth', block:'start' });
+      document.getElementById('navLinks').classList.remove('open');
+    }
+  });
+});
+
+// === BETA FORM ===
+document.getElementById('betaForm').addEventListener('submit', function(e){
+  e.preventDefault();
+  const name = document.getElementById('beta-name').value.trim();
+  const email = document.getElementById('beta-email').value.trim();
+  const phone = document.getElementById('beta-phone').value.trim();
+  if(name && email && phone){
+    // Store locally for reference
+    try {
+      const leads = JSON.parse(localStorage.getItem('fralib_beta') || '[]');
+      leads.push({ name, email, phone, date: new Date().toISOString() });
+      localStorage.setItem('fralib_beta', JSON.stringify(leads));
+    } catch(err){}
+    // Redirect to WhatsApp group
+    window.open('https://chat.whatsapp.com/FSrvUIVFvjBFQrkfDQgP0A', '_blank');
+  }
+});
+
+// === PARALLAX ===
+(function(){
+  const parallaxEls = document.querySelectorAll('[data-parallax]');
+  const orbs = document.querySelectorAll('.orb');
+  const mascots = document.querySelectorAll('.hero-mascot, .steps-mascot, .cta-mascot');
+  let ticking = false;
+
+  function updateParallax(){
+    const scrollY = window.scrollY;
+    const vh = window.innerHeight;
+
+    // Orbs parallax (slow drift)
+    orbs.forEach((orb, i) => {
+      const speed = 0.03 + i * 0.015;
+      orb.style.transform = 'translateY(' + (scrollY * speed) + 'px)';
+    });
+
+    // Mascots parallax (medium)
+    mascots.forEach(m => {
+      const rect = m.getBoundingClientRect();
+      const center = rect.top + rect.height / 2;
+      const offset = (center - vh / 2) * 0.06;
+      m.style.transform = 'translateY(' + (-offset) + 'px)';
+    });
+
+    // Grid parallax
+    const heroGrid = document.querySelector('.hero-grid');
+    if(heroGrid) heroGrid.style.transform = 'translateY(' + (scrollY * 0.15) + 'px)';
+
+    // Section titles subtle parallax
+    document.querySelectorAll('.section-title').forEach(title => {
+      const rect = title.getBoundingClientRect();
+      if(rect.top < vh && rect.bottom > 0){
+        const progress = (vh - rect.top) / (vh + rect.height);
+        title.style.transform = 'translateY(' + ((progress - 0.5) * -20) + 'px)';
+      }
+    });
+
+    ticking = false;
+  }
+
+  window.addEventListener('scroll', function(){
+    if(!ticking){
+      requestAnimationFrame(updateParallax);
+      ticking = true;
+    }
+  }, { passive: true });
+})();
+</script>
+
+
+<script>
+// --- Theme Toggle Logic ---
+const tBtn = document.getElementById('themeToggle');
+const root = document.body;
+function toggleTheme() {
+  root.classList.toggle('light-mode');
+  const isLight = root.classList.contains('light-mode');
+  localStorage.setItem('fralib_theme', isLight ? 'light' : 'dark');
+  // Update particles color based on theme
+  if(window.pJSDom && window.pJSDom[0]) {
+    const lightColors = ["#4c1d9e", "#00cc8e", "#eab308"];
+    const darkColors  = ["#9333ea", "#00ffb3", "#ffb800", "#a855f7"];
+    window.pJSDom[0].pJS.particles.color.value = isLight ? lightColors : darkColors;
+    window.pJSDom[0].pJS.particles.line_linked.color = isLight ? '#7c3aed' : '#c084fc';
+    window.pJSDom[0].pJS.fn.particlesRefresh();
+  }
+}
+if(localStorage.getItem('fralib_theme') === 'light') toggleTheme();
+tBtn.addEventListener('click', toggleTheme);
+
+// --- Particles JS Init (with reduced-motion check) ---
+const initLightColors = ["#4c1d9e", "#00cc8e", "#eab308"];
+const initDarkColors  = ["#ffffff", "#dcdcdc", "#a855f7"];
+
+// Only initialize particles if user hasn't requested reduced motion
+const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+if (!prefersReducedMotion && typeof particlesJS !== 'undefined') {
+  particlesJS("particles-js", {
+    "particles": {
+      "number": { "value": 250, "density": { "enable": true, "value_area": 1000 } },
+      "color": { "value": document.body.classList.contains('light-mode') ? initLightColors : initDarkColors },
+      "shape": { "type": "circle" },
+      "opacity": {
+        "value": 0.4,
+        "random": true,
+        "anim": { "enable": true, "speed": 1, "opacity_min": 0.1, "sync": false }
+      },
+      "size": {
+        "value": 2,
+        "random": true,
+         "anim": { "enable": true, "speed": 2, "size_min": 0.3, "sync": false }
+      },
+      "line_linked": {
+        "enable": false
+      },
+      "move": {
+        "enable": true,
+        "speed": 0.3,
+        "direction": "none",
+        "random": true,
+        "straight": false,
+        "out_mode": "out",
+        "bounce": false
+      }
+    },
+    "interactivity": {
+      "detect_on": "window",
+      "events": {
+        "onhover": { "enable": false },
+        "onclick": { "enable": false }
+      }
+    },
+    "retina_detect": true
+  });
+}
+  </script>
+<script src="/js/fralib-tracker.js" defer></script>
+</body>
+</html>
