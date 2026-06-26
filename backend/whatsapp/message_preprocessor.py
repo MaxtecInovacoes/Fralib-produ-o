@@ -1,19 +1,22 @@
-"""Pre-processador de mensagens recebidas do WhatsApp.
+"""Pre-processador inteligente de mensagens recebidas do WhatsApp.
 
-Detecta ANTES do Franz processar:
-- Respostas automaticas de bots (ex: "Meu nome e Monica, sou assistente...")
-- Mensagens de ausencia de recepcao (ex: "Estamos fora do horario")
-- Midia sem legenda (ex: [imagem])
-- Mensagens reenviadas/encaminhadas
-- Mensagens de opt-out claras
+Estrategia HIBRIDA (3 niveis):
+1. Regex rapida: casos OBVIOS (midia sem texto, opt-out explicito, ausencia)
+2. Heuristicas: deteccao por features (length, emojis, sazonalidade)
+3. Sonnet LLM: juiz final pra casos ambiguos (bot vs lead real)
 
-Cada categoria tem comportamento especifico, evitando que o Franz
-responda de forma inapropriada ou spame o lead com 5 mensagens.
+Por que nao regex pra tudo? Cada lead tem contexto diferente. Regex nunca
+consegue cobrir todas variacoes. LLM com contexto do tenant faz melhor.
+
+Custo: ~$0.0003/classificacao Sonnet. Cache 24h reduz a zero em msgs repetidas.
 """
 
 from __future__ import annotations
 
+import hashlib
+import os
 import re
+import time
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Optional
@@ -22,9 +25,8 @@ from typing import Optional
 class MessageType(str, Enum):
     """Tipo da mensagem recebida."""
     LEAD_REAL = "lead_real"           # Mensagem real de um humano (lead)
-    BOT_ASSISTANT = "bot_assistant"   # Bot/assistente virtual (Mônica, Bia, etc)
+    BOT_ASSISTANT = "bot_assistant"   # Bot/assistente virtual (Mônica, Tropa da Nutri, etc)
     AUTO_AUSENTE = "auto_ausente"     # Resposta automatica de ausencia
-    AUTO_BOAS_VINDAS = "auto_bv"      # Boas-vindas automaticas
     MIDIA_SEM_TEXTO = "midia_vazia"   # Imagem/audio/video sem legenda
     ENCAMINHADA = "encaminhada"       # Mensagem encaminhada de outro chat
     OPT_OUT = "opt_out"               # Pedido explicito de opt-out
@@ -38,37 +40,24 @@ class ProcessResult:
     confidence: float
     signals: list[str] = field(default_factory=list)
     action: str = "forward_to_franz"  # forward_to_franz | ask_human | handoff | no_response
-    auto_reply: Optional[str] = None   # Resposta automatica sugerida
+    auto_reply: Optional[str] = None
 
 
-# Patterns de deteccao por tipo
+# ════════════════════════════════════════════════════════════════════
+# NIVEL 1: REGEX RAPIDA - casos obvios
+# ════════════════════════════════════════════════════════════════════
 
-# Bot/assistente virtual - geralmente se apresenta, tem horarios, fala em nome de alguem
-_BOT_PATTERNS = [
-    re.compile(r"(meu nome e|me chamo|sou a? assistente|sou o? assistente)", re.I),
-    re.compile(r"(atendente|secretaria|recepcionista)\s+(da|do|virtual)", re.I),
-    re.compile(r"(horario|horarios)\s+de\s+atendimento", re.I),
-    re.compile(r"(em breve|em alguns minutos)\s+(a (nossa |equipe )? equipe|te (respondo|atendo))", re.I),
-    re.compile(r"(retornaremos|retornaramos)\s+o?\s+seu\s+contato", re.I),
-    re.compile(r"(nao sou uma ia|nao sou um robo|nao e? um bot)", re.I),
-    re.compile(r"^\s*ol[áa]?\s*,?\s*seja\s+bem[- ]?vind[ao]?\s*\(?[ao]?\)?\s*[!.]?\s*$", re.I),
-    re.compile(r"(atendimento|digital)\s+(das|de)\s+\d", re.I),
-    re.compile(r"somos?\s+(uma? )?(clinica|empresa|consultorio|escritorio)", re.I),
-    # Patterns adicionais para Curitiba Fitness e similares
-    re.compile(r"(a (nossa )?equipe|nos)\s+(entrara|entraremos|entrarei|ira|irao)\s+(em contato|responder)", re.I),
-    re.compile(r"(em alguns minutos|a (nossa )?equipe entrara|equipe entrara em contato)", re.I),
-    re.compile(r"(nos|equipe)\s+entraremos?\s+em\s+contato", re.I),
-    re.compile(r"(em que podemos ajudar|em que podemos te ajudar|em que posso ajudar)", re.I),
-    re.compile(r"(seja bem[- ]?vind[oa])\s+(a|à)", re.I),
-    # Patterns para bots como Tropa da Nutri, canais de atendimento:
-    re.compile(r"(canal|atendimento)\s+de\s+(atendimento|suporte|apoio)\b", re.I),  # "canal de atendimento da..."
-    re.compile(r"(e|e um|e uma)\s+(prazer|um prazer|uma honra)\s+(te|em|conhecer|receber|ajudar)", re.I),  # "E um prazer te receber"
-    re.compile(r"(em breve|brevemente)\s+(nossa )?equipe\s+(vai|ira|entrara|entraremos|retornara)", re.I),  # "em breve nossa equipe vai te responder"
-    re.compile(r"(equipe|nos|time|staff)\s+(vai|ira|retornara|entrara)\s+(te|entrar|lhe|responder|contatar|ajudar)", re.I),
-    re.compile(r"^\s*ol[áa]!?\s*[!]?\s*$", re.I),  # msg "Ola!" pura
-    re.compile(r"(ap|a o|ao)\s+canal\s+de\s+atendimento", re.I),  # typo comum "ap canal" (deveria ser "ao canal")
-    re.compile(r"\b(ap\s+canal|de\s+atendimento|equipe\s+vai|em\s+breve\s+(nossa|equipe|n[ooa]s))\b", re.I),
+# Opt-out EXPLÍCITO (palavras CLARAS de bloqueio)
+_OPT_OUT_PATTERNS = [
+    re.compile(r"^\s*(nao|não)\s+quero\s+mais\s+receber", re.I),
+    re.compile(r"^\s*remover\s+meu?\s+(numero|contato)", re.I),
+    re.compile(r"^\s*me\s+(tira|tire)\s+do\s+contato", re.I),
+    re.compile(r"^\s*pare\s+de\s+me\s+(mandar|enviar|ligar)", re.I),
+    re.compile(r"^\s*(parar|stop|sair|tchau)\s*[.!]?\s*$", re.I),
 ]
+
+# Midia sem texto (placeholders do MeoWhats)
+_MEDIA_PLACEHOLDERS = {"[mídia]", "[midia]", "[imagem]", "[audio]", "[vídeo]", "[video]", "[documento]", "[sticker]"}
 
 # Resposta de ausencia (recepcao)
 _AUSENTE_PATTERNS = [
@@ -76,40 +65,179 @@ _AUSENTE_PATTERNS = [
     re.compile(r"(recepcao|atendimento)\s+encontra[- ]?se\s+fora", re.I),
     re.compile(r"(retornaremos|retornaramos)\s+o?\s+contato\s+assim\s+que", re.I),
     re.compile(r"(aberto|funcionando)\s+(das|de)\s+\d.*(as|a)s?\s+\d", re.I),
-    re.compile(r"obrigad[ao]\s+pela\s+compreensao", re.I),
-]
-
-# Opt-out claros (mensagem curta, sem ambiguidade)
-_OPT_OUT_PATTERNS = [
-    re.compile(r"^\s*(nao|não)\s+quero\s+mais\s+receber", re.I),
-    re.compile(r"^\s*remover\s+meu?\s+(numero|contato)", re.I),
-    re.compile(r"^\s*me\s+(tira|tire)\s+do\s+contato", re.I),
-    re.compile(r"^\s*pare\s+de\s+me\s+(mandar|enviar|ligar)", re.I),
-    re.compile(r"^\s*(parar|stop|sair)\s*[.!]?\s*$", re.I),
 ]
 
 
-def is_media_without_text(text: str) -> bool:
-    """Detecta se a mensagem é mídia sem texto."""
-    if not text:
-        return True
-    t = text.strip().lower()
-    return t in ("[mídia]", "[midia]", "[imagem]", "[audio]", "[vídeo]", "[video]", "[documento]", "[sticker]")
+def _check_opt_out(text: str) -> bool:
+    return any(p.search(text) for p in _OPT_OUT_PATTERNS)
 
 
-def is_forwarded_message(msg_data: dict) -> bool:
-    """Detecta se a mensagem foi encaminhada de outro chat."""
-    # whatsmeow / MeoWhats geralmente marca forwarding em contextInfo
-    context = msg_data.get("contextInfo", {}) if msg_data else {}
-    return bool(context.get("isForwarded") or context.get("forwardingScore"))
+def _check_media(text: str) -> bool:
+    return text.strip().lower() in _MEDIA_PLACEHOLDERS
 
+
+def _check_ausente(text: str) -> bool:
+    return any(p.search(text) for p in _AUSENTE_PATTERNS)
+
+
+# ════════════════════════════════════════════════════════════════════
+# NIVEL 2: HEURISTICAS - features simples
+# ════════════════════════════════════════════════════════════════════
+
+def _heuristic_features(text: str) -> dict[str, float]:
+    """Extrai features da msg pra ajudar decisao."""
+    text_lower = text.lower()
+    word_count = len(text_lower.split())
+
+    # Auto-apresentacao (comum em bots)
+    has_self_intro = bool(re.search(r"\b(meu nome|me chamo|sou [oa]? ?(assistente|recepcionista|atendente))\b", text_lower))
+
+    # Horario de atendimento (comum em recepcao automatizada)
+    has_schedule = bool(re.search(r"\b(horario|horarios|das?\s+\d.*[aá]s?\s+\d|segunda.*sexta)\b", text_lower))
+
+    # Equipe falando (comum em bots) - "nossa equipe", "minha equipe", "nos vamos"
+    has_team_speaking = bool(re.search(r"\b(nossa equipe|minha equipe|nos vamos|a gente)\b", text_lower))
+
+    # Emoji de boas-vindas (🤗👋✨ comum em bots)
+    has_welcome_emoji = bool(re.search(r"[\U0001F91F\U0001F44B✨\U0001F64C]", text))
+
+    # Texto curto (bot costuma mandar msgs curtas de boas-vindas)
+    is_short = word_count <= 8
+
+    return {
+        "word_count": word_count,
+        "has_self_intro": 1.0 if has_self_intro else 0.0,
+        "has_schedule": 1.0 if has_schedule else 0.0,
+        "has_team_speaking": 1.0 if has_team_speaking else 0.0,
+        "has_welcome_emoji": 1.0 if has_welcome_emoji else 0.0,
+        "is_short": 1.0 if is_short else 0.0,
+    }
+
+
+def _heuristic_bot_score(features: dict[str, float]) -> float:
+    """Score de 0.0 (claramente lead) a 1.0 (claramente bot).
+
+    Combina features simples. NAO decide sozinho - e heuristica inicial.
+    """
+    score = 0.0
+    # Pesos calibrados pra msgs de bot comuns
+    score += features["has_self_intro"] * 0.6       # "Meu nome e Bia, sou assistente" - muito forte
+    score += features["has_schedule"] * 0.3        # "Horarios de atendimento"
+    score += features["has_team_speaking"] * 0.4   # "nossa equipe vai te responder"
+    score += features["has_welcome_emoji"] * 0.2   # saudacao com emoji
+    score += features["is_short"] * 0.1
+    return min(score, 1.0)
+
+
+# ════════════════════════════════════════════════════════════════════
+# NIVEL 3: SONNET LLM - juiz final
+# ════════════════════════════════════════════════════════════════════
+
+_LLM_CACHE: dict[str, tuple[float, "ProcessResult"]] = {}
+_LLM_CACHE_TTL = 86400  # 24h
+_LLM_CACHE_LOCK = __import__("threading").Lock()
+
+# Prompts do Sonnet (otimizados pra baixa latencia/custo)
+_LLM_SYSTEM_PROMPT = """Voce classifica uma mensagem de WhatsApp Business de um lead em UMA categoria.
+
+CATEGORIAS:
+- LEAD_REAL: humano respondendo (pergunta, duvida, qualificacao, agendamento, conversa)
+- BOT_ASSISTANT: resposta automatica de bot/assistente virtual
+- AUTO_AUSENTE: resposta de recepcao fora do horario
+
+BOT_ASSISTANT tem estas marcas tipicas:
+- Se apresenta como assistente/atendente/recepcionista/canal de atendimento
+- Diz "em breve nossa equipe vai te responder" ou similar
+- Diz "e um prazer te receber"
+- Canal de atendimento/suporte
+- Horarios de atendimento
+
+LEAD_REAL responde perguntas, fala sobre o negocio, ou tem tom pessoal.
+
+Responda APENAS JSON: {"tipo": "LEAD_REAL"|"BOT_ASSISTANT"|"AUTO_AUSENTE", "confianca": 0.0-1.0}"""
+
+
+def _call_llm_classifier(text: str) -> tuple[str, float, str]:
+    """Chama Haiku pra classificar (rapido e barato)."""
+    try:
+        from agents.llm_direct import call_claude
+        import json
+
+        response = call_claude(
+            system=_LLM_SYSTEM_PROMPT,
+            user=text[:500],
+            model="haiku",  # Haiku mais rapido que Sonnet pra classificacao
+            max_tokens=50,
+            temperature=0.0,
+            agent_name="sdr_msg_classifier",
+            respect_agent_config=False,
+            enable_context=False,
+        ).strip()
+
+        response_clean = response.replace("```json", "").replace("```", "").strip()
+
+        # Tentar parse JSON direto
+        try:
+            data = json.loads(response_clean)
+        except json.JSONDecodeError:
+            # Tentar extrair JSON
+            import re
+            m = re.search(r'\{[^{}]*\}', response_clean)
+            if m:
+                try:
+                    data = json.loads(m.group())
+                except Exception:
+                    return _fallback_parse(response_clean)
+            else:
+                return _fallback_parse(response_clean)
+
+        tipo = data.get("tipo", "LEAD_REAL")
+        confianca = float(data.get("confianca", 0.5))
+        return tipo, confianca, "haiku_classifier"
+    except Exception as e:
+        return "LEAD_REAL", 0.3, f"llm_error: {type(e).__name__}"
+
+
+def _fallback_parse(response: str) -> tuple[str, float, str]:
+    """Fallback quando LLM nao retorna JSON valido. Procura palavras-chave."""
+    response_upper = response.upper()
+    if "BOT_ASSISTANT" in response_upper or "BOT" in response_upper:
+        return "BOT_ASSISTANT", 0.6, "fallback_keyword"
+    elif "AUTO_AUSENTE" in response_upper or "AUSENTE" in response_upper:
+        return "AUTO_AUSENTE", 0.6, "fallback_keyword"
+    return "LEAD_REAL", 0.4, "fallback_default"
+
+
+def _llm_classify_cached(text: str) -> tuple[str, float, str]:
+    """Classifica com cache 24h."""
+    cache_key = hashlib.sha256(text.strip().lower().encode()).hexdigest()[:32]
+
+    with _LLM_CACHE_LOCK:
+        cached = _LLM_CACHE.get(cache_key)
+        if cached and (time.time() - cached[0]) < _LLM_CACHE_TTL:
+            return cached[1]
+
+    tipo, confianca, motivo = _call_llm_classifier(text)
+
+    with _LLM_CACHE_LOCK:
+        # Limpar cache se muito grande
+        if len(_LLM_CACHE) > 10000:
+            _LLM_CACHE.clear()
+        _LLM_CACHE[cache_key] = (time.time(), (tipo, confianca, motivo))
+
+    return tipo, confianca, motivo
+
+
+# ════════════════════════════════════════════════════════════════════
+# ORQUESTRADOR - decide qual nivel usar
+# ════════════════════════════════════════════════════════════════════
 
 def classify_incoming_message(text: str, msg_data: Optional[dict] = None) -> ProcessResult:
-    """Classifica mensagem recebida e define acao.
+    """Classifica mensagem recebida usando estrategia hibrida.
 
     Args:
         text: Texto da mensagem
-        msg_data: Dict opcional do JSON do WhatsApp (para detectar forwarding, etc)
+        msg_data: Dict opcional do JSON do WhatsApp
 
     Returns:
         ProcessResult com tipo, confidence, signals e acao recomendada
@@ -120,90 +248,61 @@ def classify_incoming_message(text: str, msg_data: Optional[dict] = None) -> Pro
             confidence=1.0,
             signals=["empty_text"],
             action="ask_human",
-            auto_reply=(
-                "Oi! Recebi sua mensagem mas não veio texto junto. "
-                "Pode me escrever o que precisa? 🙂"
-            ),
+            auto_reply="Oi! Recebi sua mensagem mas nao veio texto junto. Pode me escrever o que precisa? 🙂",
         )
 
     text_clean = text.strip()
 
-    # 1. Verificar opt-out PRIMEIRO (mais sensivel)
-    for pat in _OPT_OUT_PATTERNS:
-        if pat.search(text_clean):
-            return ProcessResult(
-                msg_type=MessageType.OPT_OUT,
-                confidence=0.95,
-                signals=[pat.pattern[:50]],
-                action="no_response",
-                auto_reply=None,  # Franz tem mensagem propria
-            )
+    # ═══ NIVEL 1: REGEX RAPIDA (casos obvios) ═══
 
-    # 2. Detectar midia sem texto
-    if is_media_without_text(text_clean):
+    # Opt-out explicito
+    if _check_opt_out(text_clean):
+        return ProcessResult(
+            msg_type=MessageType.OPT_OUT,
+            confidence=0.95,
+            signals=["opt_out_pattern"],
+            action="no_response",
+        )
+
+    # Midia sem texto
+    if _check_media(text_clean):
         return ProcessResult(
             msg_type=MessageType.MIDIA_SEM_TEXTO,
             confidence=0.95,
-            signals=["media_only"],
+            signals=["media_placeholder"],
             action="ask_human",
-            auto_reply=(
-                "Oi! Recebi sua mídia mas não consigo ver. "
-                "Pode me mandar uma mensagem descrevendo o que precisa? 📝"
-            ),
+            auto_reply="Oi! Recebi sua midia mas nao consigo ver. Pode me mandar uma mensagem descrevendo o que precisa? 📝",
         )
 
-    # 3. Detectar encaminhada
-    if msg_data and is_forwarded_message(msg_data):
+    # Encaminhada
+    if msg_data and msg_data.get("contextInfo", {}).get("isForwarded"):
         return ProcessResult(
             msg_type=MessageType.ENCAMINHADA,
             confidence=0.7,
             signals=["forwarded"],
             action="ask_human",
-            auto_reply=(
-                "Oi! Vi que voce encaminhou uma mensagem. "
-                "Pode me contar com suas palavras o que precisa? 🙂"
-            ),
+            auto_reply="Oi! Vi que voce encaminhou uma mensagem. Pode me contar com suas palavras o que precisa? 🙂",
         )
 
-    # 4. Detectar ausencia (recepcao)
-    ausente_signals = []
-    for pat in _AUSENTE_PATTERNS:
-        if pat.search(text_clean):
-            ausente_signals.append(pat.pattern[:50])
-    if len(ausente_signals) >= 1:
+    # Ausencia de recepcao
+    if _check_ausente(text_clean):
         return ProcessResult(
             msg_type=MessageType.AUTO_AUSENTE,
-            confidence=min(0.6 + 0.2 * len(ausente_signals), 0.95),
-            signals=ausente_signals,
-            action="no_response",  # Nao responder agora, aguardar retorno
-            auto_reply=None,
+            confidence=0.9,
+            signals=["ausente_pattern"],
+            action="no_response",
         )
 
-    # 5. Detectar bot/assistente virtual
-    bot_signals = []
-    for pat in _BOT_PATTERNS:
-        if pat.search(text_clean):
-            bot_signals.append(pat.pattern[:50])
+    # ═══ NIVEL 2: HEURISTICAS (features simples) ═══
+    features = _heuristic_features(text_clean)
+    heuristic_score = _heuristic_bot_score(features)
 
-    # Sinais fortes: auto-apresentacao + falar em nome de alguem
-    strong_bot_signals = sum(
-        1 for s in bot_signals
-        if any(kw in s.lower() for kw in [
-            "meu nome", "me chamo", "sou a assistente", "sou o assistente",
-            "equipe entrara", "equipe entrara em contato",
-            "em alguns minutos", "em breve irei",
-            "horario", "horarios de atendimento",
-        ])
-    )
-
-    if len(bot_signals) >= 2 or strong_bot_signals >= 1:
-        confidence = min(0.7 + 0.1 * len(bot_signals), 0.95)
-        if strong_bot_signals >= 1 and len(bot_signals) == 1:
-            confidence = 0.8
+    # Se heuristica tem MUITA certeza (>=0.6 = bot OBVIO), nao chama LLM
+    if heuristic_score >= 0.6:
         return ProcessResult(
             msg_type=MessageType.BOT_ASSISTANT,
-            confidence=confidence,
-            signals=bot_signals,
+            confidence=heuristic_score,
+            signals=[k for k, v in features.items() if v > 0],
             action="handoff",
             auto_reply=(
                 "Oi! Sou o Franz, assistente virtual da FraLib. "
@@ -212,32 +311,59 @@ def classify_incoming_message(text: str, msg_data: Optional[dict] = None) -> Pro
             ),
         )
 
-    # 6. Se for uma msg CURTA e única, nao e bot (saudacao normal)
-    if len(bot_signals) == 1 and len(text_clean.split()) <= 5:
-        # Provavelmente saudacao simples, nao bot
-        pass
+    # ═══ NIVEL 3: SONNET LLM (juiz final) ═══
+    tipo, confianca, motivo = _llm_classify_cached(text_clean)
 
-    # Default: mensagem real de lead
+    # Fallback: se LLM nao tem certeza, usa heuristica
+    if confianca < 0.6:
+        # Heuristica comeca em 0.0; >=0.4 = sinais de bot
+        if heuristic_score >= 0.4:
+            return ProcessResult(
+                msg_type=MessageType.BOT_ASSISTANT,
+                confidence=max(0.6, heuristic_score),
+                signals=[f"llm_low_conf({confianca})", f"heuristic({heuristic_score:.2f})"] + [k for k, v in features.items() if v > 0],
+                action="handoff",
+                auto_reply=(
+                    "Oi! Sou o Franz, assistente virtual da FraLib. "
+                    "Estou entrando em contato sobre uma proposta comercial. "
+                    "Voce e o responsavel ou prefere que eu fale com alguem da equipe? 🙂"
+                ),
+            )
+
+    if tipo == "BOT_ASSISTANT":
+        return ProcessResult(
+            msg_type=MessageType.BOT_ASSISTANT,
+            confidence=confianca,
+            signals=[f"llm:{motivo}"],
+            action="handoff",
+            auto_reply=(
+                "Oi! Sou o Franz, assistente virtual da FraLib. "
+                "Estou entrando em contato sobre uma proposta comercial. "
+                "Voce e o responsavel ou prefere que eu fale com alguem da equipe? 🙂"
+            ),
+        )
+    elif tipo == "AUTO_AUSENTE":
+        return ProcessResult(
+            msg_type=MessageType.AUTO_AUSENTE,
+            confidence=confianca,
+            signals=[f"llm:{motivo}"],
+            action="no_response",
+        )
+
+    # Default: LEAD_REAL
     return ProcessResult(
         msg_type=MessageType.LEAD_REAL,
-        confidence=0.8,
-        signals=bot_signals[:2] if bot_signals else [],
+        confidence=confianca if tipo == "LEAD_REAL" else 0.5,
+        signals=[f"llm:{motivo}"] if motivo else ["heuristic_default"],
         action="forward_to_franz",
-        auto_reply=None,
     )
 
 
 def should_franz_respond(text: str, msg_data: Optional[dict] = None) -> tuple[bool, Optional[str]]:
-    """Helper rapido: Franz deve responder esta mensagem?
-
-    Returns:
-        (should_respond: bool, auto_reply_or_none: Optional[str])
-        Se should_respond=False, auto_reply e a resposta sugerida (pode ser None).
-    """
+    """Helper: Franz deve responder?"""
     result = classify_incoming_message(text, msg_data)
     if result.action == "forward_to_franz":
         return True, None
     if result.action == "no_response":
         return False, None
-    # ask_human ou handoff: responder com auto_reply, NAO mandar pro Franz
     return False, result.auto_reply
