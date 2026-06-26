@@ -735,6 +735,15 @@ async def _main_loop():
             log.info(f"Worker polling... id={WORKER_ID}")
             last_poll_log = now
 
+        # Sprint 14.9: cleanup de workspaces Vite antigos (>24h)
+        # Evita que /tmp/fralib_builder fique com 3.5G+ de workspaces
+        # orfaos que enchem o disco e quebram o pipeline com Errno 28.
+        if now - last_reap >= REAP_SECS:
+            try:
+                _cleanup_old_workspaces(max_age_hours=24)
+            except Exception as _ws_exc:
+                log.warning(f"workspace cleanup falhou: {_ws_exc}")
+
         # Reap periodico de workers mortos
         if now - last_reap >= REAP_SECS:
             try:
@@ -848,3 +857,46 @@ if __name__ == "__main__":
     _health_gate()
 
     asyncio.run(_main_loop())
+
+
+# === Sprint 14.9: cleanup de workspaces Vite antigos =================
+def _cleanup_old_workspaces(*, max_age_hours: int = 24) -> int:
+    """Remove workspaces Vite com mais de N horas. Evita /tmp cheio.
+
+    Cada job Vite cria ~137M de node_modules + dist em /tmp/fralib_builder/<tenant>/<job>/.
+    Se nenhum cleanup rodar, em ~25 jobs o /tmp enche (3.5G) e o pipeline quebra
+    com Errno 28 (No space left on device).
+    """
+    import time as _time
+    import shutil as _shutil
+
+    workspace_root = "/tmp/fralib_builder"
+    if not os.path.isdir(workspace_root):
+        return 0
+
+    removed = 0
+    now = _time.time()
+    max_age_seconds = max_age_hours * 3600
+
+    for tenant_dir in os.listdir(workspace_root):
+        tenant_path = os.path.join(workspace_root, tenant_dir)
+        if not os.path.isdir(tenant_path):
+            continue
+        try:
+            for job_dir in os.listdir(tenant_path):
+                job_path = os.path.join(tenant_path, job_dir)
+                if not os.path.isdir(job_path):
+                    continue
+                try:
+                    mtime = os.path.getmtime(job_path)
+                    if (now - mtime) > max_age_seconds:
+                        _shutil.rmtree(job_path, ignore_errors=True)
+                        removed += 1
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
+    if removed > 0:
+        log.info(f"workspace cleanup: removeu {removed} diretorios com mais de {max_age_hours}h")
+    return removed
