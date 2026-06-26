@@ -1599,6 +1599,11 @@ def _interpolate_studio_placeholders(prepared: dict[str, str], facts: dict[str, 
     """
     import re as _re
 
+    # Sprint 14: extract LLM copy_only content for content override
+    llm_content: dict[str, Any] = {}
+    if isinstance(facts.get("_llm_content"), dict):
+        llm_content = facts["_llm_content"]
+
     business = facts.get("business") if isinstance(facts.get("business"), dict) else {}
     raw_segment = str(business.get("segment") or business.get("segmento") or facts.get("segmento") or "")
     segment = raw_segment.lower()
@@ -1669,7 +1674,26 @@ def _interpolate_studio_placeholders(prepared: dict[str, str], facts: dict[str, 
         cta_primary, cta_secondary, alt_img = "Saiba mais", "Ver servicos", name
         lifestyle_title, lifestyle_desc = "Experiencia unica", f"Atendimento dedicado para garantir sua satisfacao em {city}."
 
+
+    # Sprint 14: apply LLM copy_only overrides before building var_map.
+    if llm_content:
+        hero = llm_content.get("hero", {}) if isinstance(llm_content.get("hero"), dict) else {}
+        life = llm_content.get("lifestyle") if isinstance(llm_content.get("lifestyle"), dict) else {}
+        if hero.get("cta_primary"):
+            cta_primary = str(hero["cta_primary"])
+        if hero.get("cta_secondary"):
+            cta_secondary = str(hero["cta_secondary"])
+        if llm_content.get("gallery_alt"):
+            alt_img = str(llm_content["gallery_alt"])
+        if life.get("title"):
+            lifestyle_title = str(life["title"])
+        if life.get("description"):
+            lifestyle_desc = str(life["description"])
+
     # Map of placeholder var name -> replacement value (in the order they appear)
+    # Sprint 14.2: var_map now includes ALL customizable text fields
+    # {{cta_primary}}, {{cta_secondary}}, {{alt_img}} are literals in TSX files
+    # from the studio fallback templates. This map replaces them.
     var_map = {
         "name": name,
         "phone": phone,
@@ -1695,7 +1719,7 @@ def _interpolate_studio_placeholders(prepared: dict[str, str], facts: dict[str, 
             # Replace {var} with value, but only if the var exists in our map
             # and the placeholder is standalone (not inside another string)
             content = _re.sub(
-                r"\{" + _re.escape(var_name) + r"\}",
+                r"\{\{?" + _re.escape(var_name) + r"\}?\}",
                 value.replace("\\", "\\\\").replace("$", "\\$"),
                 content,
             )
@@ -2340,7 +2364,7 @@ export default {export_name};
         <div className="hidden items-center gap-5 text-sm text-zinc-200 md:flex">
           {nav_links}
         </div>
-        <a className="rounded-full bg-emerald-300 px-4 py-2 text-sm font-bold text-zinc-950 max-sm:px-3 max-sm:text-xs" href="tel:{phone}">{cta_primary}</a>
+        <a className="rounded-full bg-emerald-300 px-4 py-2 text-sm font-bold text-zinc-950 max-sm:px-3 max-sm:text-xs" href="tel:{phone}">{{cta_primary}}</a>
       </div>
     </nav>
   );
@@ -2361,12 +2385,12 @@ export default {export_name};
           <h1 className="text-[clamp(3rem,8vw,6.6rem)] font-black leading-[.9] tracking-[-.07em]">{name}</h1>
           <p className="max-w-2xl text-lg leading-8 text-zinc-300">{hero_desc}.</p>
           <div className="flex flex-wrap gap-3">
-            <a className="rounded-full bg-emerald-300 px-6 py-3 font-black text-zinc-950" href="tel:{phone}">{cta_primary}</a>
-            <a className="rounded-full border border-white/20 px-6 py-3 font-semibold text-white" href="#galeria">{cta_secondary}</a>
+            <a className="rounded-full bg-emerald-300 px-6 py-3 font-black text-zinc-950" href="tel:{phone}">{{cta_primary}}</a>
+            <a className="rounded-full border border-white/20 px-6 py-3 font-semibold text-white" href="#galeria">{{cta_secondary}}</a>
           </div>
           <div className="grid max-w-lg grid-cols-3 gap-3 text-sm">{dense_cards}</div>
         </motion.div>
-        <div className="relative"><img className="aspect-[4/5] w-full rounded-[2rem] object-cover shadow-2xl ring-1 ring-white/10" src="{hero_img}" alt="{alt_img}" loading="eager" decoding="async" /></div>
+        <div className="relative"><img className="aspect-[4/5] w-full rounded-[2rem] object-cover shadow-2xl ring-1 ring-white/10" src="{hero_img}" alt="{{alt_img}}" loading="eager" decoding="async" /></div>
       </div>
     </section>
   );
@@ -2374,10 +2398,10 @@ export default {export_name};
             imports="import { motion } from 'motion/react';\nimport gsap from 'gsap';\nimport { useEffect } from 'react';",
         ),
         "src/components/ServicesSection.tsx": component("ServicesSection", f"""  return <section id="servicos" className="bg-zinc-950 px-6 py-24 text-white"><div className="mx-auto max-w-6xl"><p className="text-sm font-bold uppercase tracking-[0.2em] text-emerald-200">servicos</p><h2 className="mt-3 text-4xl font-black">Nossos servicos</h2><div className="mt-10 grid gap-4 md:grid-cols-3">{services_articles}</div></div></section>;"""),
-        "src/components/GallerySection.tsx": component("GallerySection", f"""  return <section id="galeria" className="bg-zinc-900 px-6 py-24 text-white"><div className="mx-auto grid max-w-6xl gap-5 md:grid-cols-2"><img className="h-96 w-full rounded-[2rem] object-cover" src="{hero_img}" alt="{alt_img}" loading="lazy" decoding="async" /><img className="h-96 w-full rounded-[2rem] object-cover" src="{gallery_img}" alt="{alt_img}" loading="lazy" decoding="async" /></div></section>;"""),
+        "src/components/GallerySection.tsx": component("GallerySection", f"""  return <section id="galeria" className="bg-zinc-900 px-6 py-24 text-white"><div className="mx-auto grid max-w-6xl gap-5 md:grid-cols-2"><img className="h-96 w-full rounded-[2rem] object-cover" src="{hero_img}" alt="{{alt_img}}" loading="lazy" decoding="async" /><img className="h-96 w-full rounded-[2rem] object-cover" src="{gallery_img}" alt="{{alt_img}}" loading="lazy" decoding="async" /></div></section>;"""),
         "src/components/LifestyleSection.tsx": component("LifestyleSection", f"""  return <section className="bg-zinc-950 px-6 py-24 text-white"><div className="mx-auto max-w-6xl rounded-[2rem] border border-white/10 bg-emerald-300/10 p-8"><p className="text-sm font-bold uppercase tracking-[0.2em] text-emerald-200">experiencia</p><h2 className="mt-3 text-4xl font-black">{{lifestyle_title}}</h2><p className="mt-4 max-w-3xl text-zinc-300">{{lifestyle_desc}}.</p></div></section>;"""),
         "src/components/BookingModal.tsx": component("BookingModal", f"""  const [open, setOpen] = useState(false);
-  return <div className="bg-zinc-950 px-6 py-12 text-center text-white"><button className="rounded-full bg-white px-6 py-3 font-black text-zinc-950" onClick={{() => setOpen(true)}}>{cta_primary}</button>{{open && <div className="fixed inset-0 z-[80] grid place-items-center bg-black/70 p-6"><div className="max-w-md rounded-3xl bg-white p-6 text-left text-zinc-950"><h3 className="text-2xl font-black">Fale com {name}</h3><p className="mt-3">Telefone {phone}. Atendimento personalizado com avaliacao {rating} em {city}.</p><button className="mt-5 rounded-full bg-zinc-950 px-5 py-2 text-white" onClick={{() => setOpen(false)}}>Fechar</button></div></div>}}</div>;""", imports="import { useState } from 'react';"),
+  return <div className="bg-zinc-950 px-6 py-12 text-center text-white"><button className="rounded-full bg-white px-6 py-3 font-black text-zinc-950" onClick={{() => setOpen(true)}}>{{cta_primary}}</button>{{open && <div className="fixed inset-0 z-[80] grid place-items-center bg-black/70 p-6"><div className="max-w-md rounded-3xl bg-white p-6 text-left text-zinc-950"><h3 className="text-2xl font-black">Fale com {name}</h3><p className="mt-3">Telefone {phone}. Atendimento personalizado com avaliacao {rating} em {city}.</p><button className="mt-5 rounded-full bg-zinc-950 px-5 py-2 text-white" onClick={{() => setOpen(false)}}>Fechar</button></div></div>}}</div>;""", imports="import { useState } from 'react';"),
         "src/components/ContactCTA.tsx": component("ContactCTA", f"""  return <section id="contato" className="bg-emerald-300 px-6 py-20 text-zinc-950"><div className="mx-auto flex max-w-6xl flex-col gap-5 md:flex-row md:items-center md:justify-between"><div><p className="text-sm font-bold uppercase tracking-[0.2em]">contato</p><h2 className="text-4xl font-black">Comece hoje em {city}</h2><p className="mt-2 font-semibold">WhatsApp {phone} • avaliacao {rating}</p></div><a className="rounded-full bg-zinc-950 px-7 py-4 font-black text-white" href="tel:{phone}">Ligar agora</a></div></section>;"""),
         "src/components/Footer.tsx": component("Footer", f"""  return <footer className="bg-zinc-950 px-6 py-10 text-zinc-400"><div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4"><span className="font-bold text-white">{name}</span><span>{segment} • {city} • {phone}</span></div></footer>;"""),
         "src/pages/Index.tsx": """import { Navbar } from '../components/Navbar';
