@@ -139,16 +139,8 @@
       <button type="button" onclick="window.iniciarTourFraLib && window.iniciarTourFraLib(true)" style="background:transparent;color:var(--fl-text-muted);border:1px solid var(--fl-border-md);border-radius:8px;padding:9px 11px;font-weight:700;cursor:pointer;">Tour</button>
     </div>
   </div>
-
-
-  <!-- Banner de pipeline rodando — visível em todas as views -->
-  <div id="pipeline-banner" style="display:none;background:linear-gradient(90deg,#0f172a,#1e293b);border:1px solid #0183ff;border-radius:8px;padding:10px 16px;margin-bottom:12px;display:none;align-items:center;gap:12px;">
-    <span style="width:8px;height:8px;border-radius:50%;background:#10b981;display:inline-block;animation:pulse 1s infinite;flex-shrink:0;"></span>
-    <span style="color:#10b981;font-family:var(--fl-font-brand);font-size:11px;letter-spacing:1px;flex-shrink:0;">PIPELINE RODANDO</span>
-    <span id="pipeline-banner-tempo" style="color:#e2e8f0;font-family:var(--fl-font-mono);font-size:11px;flex-shrink:0;">00:00</span>
-    <span id="pipeline-banner-fase" style="color:#94a3b8;font-family:var(--fl-font-mono);font-size:11px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Aguardando...</span>
-    <button onclick="document.querySelector('[data-view=\'config\']').click()" style="background:transparent;border:1px solid #0183ff;color:#0183ff;padding:2px 10px;font-size:10px;cursor:pointer;font-family:var(--fl-font-brand);letter-spacing:1px;flex-shrink:0;">VER LOGS</button>
-  </div>
+  <!-- Waveform completa: visivel em todas as views (substitui o antigo banner "PIPELINE RODANDO") -->
+  <div id="pipelineWaveformGlobal" style="margin-bottom:16px;min-width:0;"></div>
 
   <!-- KPI Cards — 6 métricas -->
   <div class="kpi-grid" id="kpi-section" style="display: none;">
@@ -545,58 +537,25 @@
       </div>
     </div>
 
-    <!-- LINHA 1: Pixel Office + timeline lado a lado -->
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:16px;margin-bottom:20px;align-items:start;">
+    <!-- LINHA 1: Waveform full-width (timeline do pipeline) -->
+    <!-- (a waveform completa fica no topo global, antes das view-sections) -->
 
-      <!-- Pixel Office -->
-      <div id="pixelOfficeWrap" style="background:#1a1a2e;border-radius:10px;border:0;box-shadow:inset 0 0 0 1px rgba(255,255,255,.04);overflow:hidden;max-height:330px;min-width:0;">
-        <div style="background:rgba(8,8,20,0.95);border-bottom:1px solid var(--fl-border);padding:4px 12px;display:flex;justify-content:space-between;align-items:center;font-family:'Courier New',monospace;font-size:10px;color:#a0a0c0">
-          <span style="font-weight:bold;color:#7dd3fc;letter-spacing:1px">&#128187; ESCRITORIO DO ROBO</span>
-          <div style="display:flex;gap:12px">
-            <span>AGT <strong id="po-sc" style="color:#0183ff">9</strong></span>
-            <span>PROD <strong id="po-sp" style="color:#0183ff">0%</strong></span>
-            <span>EVT <strong id="po-ev" style="color:#fbbf24">-</strong></span>
-          </div>
-        </div>
-        <div class="admin-simple-help" style="border-radius:0;border-left:0;border-right:0;">
-          Mapa visual do trabalho: os agentes se movem quando o sistema esta buscando, analisando ou produzindo.
-        </div>
-        <div style="background:#1a1a2e;padding:0;line-height:0;font-size:0">
-          <canvas id="pixelOfficeCanvas" style="display:block;image-rendering:pixelated;image-rendering:crisp-edges;width:100%;height:auto;max-height:292px;aspect-ratio:2/1;margin:0 auto;"></canvas>
+    <!-- LINHA 2: Escritorio do robo full-width, ocupa todo espaco -->
+    <div id="pixelOfficeWrap" style="background:#1a1a2e;border-radius:10px;border:0;box-shadow:inset 0 0 0 1px rgba(255,255,255,.04);overflow:hidden;min-height:380px;min-width:0;display:flex;flex-direction:column;">
+      <div style="background:rgba(8,8,20,0.95);border-bottom:1px solid var(--fl-border);padding:4px 12px;display:flex;justify-content:space-between;align-items:center;font-family:'Courier New',monospace;font-size:10px;color:#a0a0c0">
+        <span style="font-weight:bold;color:#7dd3fc;letter-spacing:1px">&#128187; ESCRITORIO DO ROBO</span>
+        <div style="display:flex;gap:12px">
+          <span>AGT <strong id="po-sc" style="color:#0183ff">9</strong></span>
+          <span>PROD <strong id="po-sp" style="color:#0183ff">0%</strong></span>
+          <span>EVT <strong id="po-ev" style="color:#fbbf24">-</strong></span>
         </div>
       </div>
-
-      <!-- Linha do tempo -->
-      <div class="config-section" style="display:flex;flex-direction:column;max-height:330px;overflow:hidden;">
-        <div class="config-group" style="display:flex;flex-direction:column;margin-bottom:0;overflow:hidden;">
-          <div class="config-group-title" style="display:flex;align-items:center;justify-content:space-between;">
-            <span style="display:flex;align-items:center;gap:8px;">
-              <span style="width:7px;height:7px;border-radius:50%;background:#10b981;display:inline-block;" id="sse-dot"></span>
-              &#128337; O QUE ESTA ACONTECENDO AGORA
-            </span>
-            <span id="pipelineTimelineStatus" style="font-size:10px;color:var(--fl-text-muted);font-family:var(--fl-font-mono);">aguardando</span>
-          </div>
-          <div class="admin-simple-help" style="border-radius:0;border-left:0;border-right:0;">
-            Aqui aparece o passo atual do robo em ordem: buscar, qualificar, gerar site e registrar resultado.
-          </div>
-          <div class="pipeline-time-strip" aria-label="Tempo de trabalho do robo">
-            <div>
-              <span>Trabalhando ha</span>
-              <strong id="pipelineInlineTempo">00:00</strong>
-            </div>
-            <div>
-              <span>Media normal</span>
-              <strong id="pipelineInlineMedia">8 a 15 min</strong>
-            </div>
-            <div>
-              <span>Previsao</span>
-              <strong id="pipelineInlineEta">aguardando</strong>
-            </div>
-          </div>
-          <div id="pipelineTimeline" style="display:flex;flex-direction:column;gap:7px;overflow:visible;min-height:0;padding-right:0;"></div>
-        </div>
+      <div class="admin-simple-help" style="border-radius:0;border-left:0;border-right:0;">
+        Mapa visual do trabalho: os agentes se movem quando o sistema esta buscando, analisando ou produzindo.
       </div>
-
+      <div style="background:#1a1a2e;padding:0;line-height:0;font-size:0;flex:1;display:flex;align-items:center;justify-content:center;">
+        <canvas id="pixelOfficeCanvas" style="display:block;image-rendering:pixelated;image-rendering:crisp-edges;width:100%;height:auto;max-height:480px;aspect-ratio:2/1;"></canvas>
+      </div>
     </div>
 
     <!-- MOTOR DE ABASTECIMENTO: Hunter/Caio separado da pipeline -->
