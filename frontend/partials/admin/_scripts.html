@@ -1125,6 +1125,18 @@ async function iniciarLeadSupply() {
       _handleBlockedResponse(resp, data);
       return;
     }
+    if (data && data.job_id) {
+      _leadSupplySetAction('success', 'Pipeline criada', 'A esteira ligou e a primeira pipeline real ja nasceu com job #' + data.job_id + '.', 7000);
+      if (typeof Toast !== 'undefined') Toast.success('Esteira ligada com pipeline imediata.');
+      _refreshLeadSupplySoon();
+      return;
+    }
+    if (data && data.immediate && data.immediate.duplicate_job) {
+      _leadSupplySetAction('warning', 'Esteira ligada sem job novo', 'Ja existia uma pipeline ativa ou o lead ja estava reservado. O motor ficou ligado para seguir do proximo ponto.', 7000);
+      if (typeof Toast !== 'undefined') Toast.warning('Esteira ligada, mas sem criar pipeline nova agora.');
+      _refreshLeadSupplySoon();
+      return;
+    }
     _leadSupplySetAction('success', 'Esteira ligada', 'Hunter e production tick foram enfileirados. Se houver lead aprovado elegivel, uma pipeline real nasce em seguida.', 7000);
     if (typeof Toast !== 'undefined') Toast.success('Esteira ligada. Agora a fila pode abastecer e abrir pipeline.');
     _refreshLeadSupplySoon();

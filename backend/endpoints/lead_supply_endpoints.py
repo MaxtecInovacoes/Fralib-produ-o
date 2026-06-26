@@ -86,8 +86,23 @@ async def start_lead_supply(
     _permission_or_error(db, tenant_id)
     cfg = supply.set_pause(db, tenant_id, hunter=False, production=False, active=True)
     supply.enqueue_hunter(db, tenant_id, delay_seconds=1, force=True)
-    supply.enqueue_production_tick(db, tenant_id, delay_seconds=2, reason="start")
-    return {"ok": True, "config": cfg}
+    immediate = supply.run_production_tick(db, {"reason": "start-inline"}, tenant_id)
+    should_enqueue_tick = not (
+        immediate.get("job_id")
+        or immediate.get("duplicate_job")
+        or immediate.get("waiting") == "pipeline_running"
+        or immediate.get("cooldown")
+    )
+    tick_job_id = None
+    if should_enqueue_tick:
+        tick_job_id = supply.enqueue_production_tick(db, tenant_id, delay_seconds=2, reason="start")
+    return {
+        "ok": True,
+        "config": cfg,
+        "immediate": immediate,
+        "job_id": immediate.get("job_id"),
+        "tick_job_id": tick_job_id,
+    }
 
 
 @router.post("/refill")
