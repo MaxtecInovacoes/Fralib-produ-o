@@ -219,6 +219,13 @@ except ImportError:
         _visual_media_urls,
     )
 
+# Sprint 12.18: inject backend parent dir so `from backend.services.x` imports resolve
+import os as _os
+import sys as _sys
+_BACKEND_PARENT = _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))
+if _BACKEND_PARENT not in _sys.path:
+    _sys.path.insert(0, _BACKEND_PARENT)
+
 try:
     from backend.core.proxy_models import (
         PROXY_BUILDER_MODEL,
