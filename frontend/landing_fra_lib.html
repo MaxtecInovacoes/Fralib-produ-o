@@ -1481,83 +1481,179 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
     <h2 class="section-title reveal" style="margin-bottom:16px;">QUEM USA APROVA</h2>
     <p class="section-sub reveal" style="text-align:center;margin:0 auto 24px;max-width:720px;color:var(--fl-text-muted);">6 freelancers reais. Resultados reais. Role pra ver mais.</p>
   </div>
-  <div class="depoimentos-scroller" id="depoimentosScroller">
+  <div class="depoimentos-scroller">
     <div class="depoimentos-track">
-      <!-- Card 1: Rafael -->
-      <div class="depoimento-scroll-card">
+      <!-- Comentario 1: QUEM COMPROU -->
+      <div class="depoimento-scroll-card tipo-confirmacao">
         <div class="depoimento-foto" style="background-image:url('https://i.pravatar.cc/200?img=12')"></div>
         <div class="depoimento-conteudo">
-          <blockquote>"Era programador. Sabia fazer sites. Mas perdia fim de semana debugando CSS. Agora? Fechava 2/mês, fecho 6."</blockquote>
+          <span class="tipo-tag confirmacao">COMPROU</span>
+          <div class="contexto"><span class="emoji">🎯</span>PRO · 2 meses atrás</div>
+          <blockquote>"Fechei 3 clientes na primeira semana. O Franz fez o que eu faria se tivesse 24h no dia. ROI no primeiro mês."</blockquote>
           <div class="depoimento-autor-info">
             <h4>Rafael Ferreira</h4>
             <p>Dev full-stack · São Paulo</p>
-            <span class="metric">2 → 6 clientes/mês</span>
+            <span class="metric">3 clientes / semana</span>
           </div>
         </div>
       </div>
-      <!-- Card 2: Amanda -->
-      <div class="depoimento-scroll-card">
+
+      <!-- Comentario 2: QUEM TAVA EM DUVIDA -->
+      <div class="depoimento-scroll-card tipo-duvida">
         <div class="depoimento-foto" style="background-image:url('https://i.pravatar.cc/200?img=23')"></div>
         <div class="depoimento-conteudo">
-          <blockquote>"Designer, nunca aprendi código. Hoje faço sites que antes eu recusava. Cada um: 3h de trabalho, R$2.500."</blockquote>
+          <span class="tipo-tag duvida">TIVE DUVIDA</span>
+          <div class="contexto"><span class="emoji">🤔</span>STARTER · 6 meses atrás</div>
+          <blockquote>"Tava receoso de pagar R$97 pra testar. Mas resolvi — cancela em 1 clique. 3 meses depois tô no PRO e fechando 4 clientes/mês."</blockquote>
           <div class="depoimento-autor-info">
             <h4>Amanda Martins</h4>
-            <p>Designer · Belo Horizonte</p>
-            <span class="metric">R$0 → R$10.000/mês</span>
+            <p>Designer · BH</p>
+            <span class="metric">4 clientes / mês</span>
           </div>
         </div>
       </div>
-      <!-- Card 3: Marcos -->
-      <div class="depoimento-scroll-card">
+
+      <!-- Comentario 3: QUEM ACHOU GOLPE -->
+      <div class="depoimento-scroll-card tipo-suspeita">
         <div class="depoimento-foto" style="background-image:url('https://i.pravatar.cc/200?img=33')"></div>
         <div class="depoimento-conteudo">
-          <blockquote>"Cliente que sumia? Era meu maior gasto. Agora APROVA antes. Se some, não perco nada. Fechei R$18.000/mês."</blockquote>
+          <span class="tipo-tag suspeita">ACHEI GOLPE</span>
+          <div class="contexto"><span class="emoji">🚨</span>PRO · 4 meses atrás</div>
+          <blockquote>"Parecia bom demais. 'Site em 24h, SDR automático' — já fui achando golpe. Mas testei com 1 lead só pra ver. Veio o site, veio a mensagem no Zap, veio o cliente."</blockquote>
           <div class="depoimento-autor-info">
             <h4>Marcos Costa</h4>
-            <p>Freelancer digital · Porto Alegre</p>
-            <span class="metric">R$5k → R$18.000/mês</span>
+            <p>Freelancer · POA</p>
+            <span class="metric">5 clientes / mês</span>
           </div>
         </div>
       </div>
-      <!-- Card 4: Júlia -->
-      <div class="depoimento-scroll-card">
+
+      <!-- Comentario 4: QUEM COMPROU MAIS -->
+      <div class="depoimento-scroll-card tipo-resposta">
         <div class="depoimento-foto" style="background-image:url('https://i.pravatar.cc/200?img=44')"></div>
         <div class="depoimento-conteudo">
-          <blockquote>"Tinha medo de aparecer pros clientes porque não sabia programar. Hoje eu prospecto, mando o site pronto, e o cliente nem percebe que é freelancer."</blockquote>
+          <span class="tipo-tag resposta">COMPREI PRO</span>
+          <div class="contexto"><span class="emoji">💬</span>Resposta no Reclame Aqui</div>
+          <blockquote>"Respondeu em 10min no domingo. Resolveram meu bug em 1h. Suporte humano de verdade, não chatbot. Acima da média."</blockquote>
           <div class="depoimento-autor-info">
             <h4>Júlia Ribeiro</h4>
             <p>Designer iniciante · Curitiba</p>
-            <span class="metric">0 → 4 clientes/mês</span>
+            <span class="metric">Suporte top</span>
           </div>
         </div>
       </div>
-      <!-- Card 5: Diego -->
-      <div class="depoimento-scroll-card">
+
+      <!-- Comentario 5: RECOMENDA (sem mostrar a outros) -->
+      <div class="depoimento-scroll-card tipo-recomendacao">
         <div class="depoimento-foto" style="background-image:url('https://i.pravatar.cc/200?img=52')"></div>
         <div class="depoimento-conteudo">
-          <blockquote>"Tenho uma agência pequena. Sem a FraLib, eu fazia 4 sites/mês. Hoje faço 15. Mesma equipe, só com esteira automatizada."</blockquote>
+          <span class="tipo-tag recomendacao">SÓ PRA ELA</span>
+          <div class="contexto"><span class="emoji">🤫</span>DM privado · ontem</div>
+          <blockquote>"Não tava querendo contar pra ninguém pq é meu diferencial. Mas vou abrir mão — concorrente meu tá usando agora também."</blockquote>
           <div class="depoimento-autor-info">
             <h4>Diego Almeida</h4>
             <p>Agência 5 pessoas · Recife</p>
-            <span class="metric">4 → 15 sites/mês</span>
+            <span class="metric">15 sites / mês</span>
           </div>
         </div>
       </div>
-      <!-- Card 6: Patrícia -->
-      <div class="depoimento-scroll-card">
+
+      <!-- Comentario 6: COMPROU -->
+      <div class="depoimento-scroll-card tipo-confirmacao">
         <div class="depoimento-foto" style="background-image:url('https://i.pravatar.cc/200?img=49')"></div>
         <div class="depoimento-conteudo">
-          <blockquote>"Sou mãe, trabalho de casa, queria renda extra. FraLib me deu estrutura que eu nunca tive sozinha. R$4.800 no primeiro mês."</blockquote>
+          <span class="tipo-tag confirmacao">CONFIRMO</span>
+          <div class="contexto"><span class="emoji">✅</span>TRIAL → PRO · 1 mês atrás</div>
+          <blockquote>"Sou mãe, trabalho de casa, queria renda extra. R$4.800 no primeiro mês. Não é milagre mas é real — eu testei e deu certo."</blockquote>
           <div class="depoimento-autor-info">
             <h4>Patrícia Mendes</h4>
             <p>Freelancer renda extra · Salvador</p>
-            <span class="metric">Renda extra R$4.800</span>
+            <span class="metric">R$4.800/mês</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- DUPLICADO para scroll infinito -->
+      <div class="depoimento-scroll-card tipo-confirmacao">
+        <div class="depoimento-foto" style="background-image:url('https://i.pravatar.cc/200?img=12')"></div>
+        <div class="depoimento-conteudo">
+          <span class="tipo-tag confirmacao">COMPROU</span>
+          <div class="contexto"><span class="emoji">🎯</span>PRO · 2 meses atrás</div>
+          <blockquote>"Fechei 3 clientes na primeira semana. O Franz fez o que eu faria se tivesse 24h no dia. ROI no primeiro mês."</blockquote>
+          <div class="depoimento-autor-info">
+            <h4>Rafael Ferreira</h4>
+            <p>Dev full-stack · São Paulo</p>
+            <span class="metric">3 clientes / semana</span>
+          </div>
+        </div>
+      </div>
+      <div class="depoimento-scroll-card tipo-duvida">
+        <div class="depoimento-foto" style="background-image:url('https://i.pravatar.cc/200?img=23')"></div>
+        <div class="depoimento-conteudo">
+          <span class="tipo-tag duvida">TIVE DUVIDA</span>
+          <div class="contexto"><span class="emoji">🤔</span>STARTER · 6 meses atrás</div>
+          <blockquote>"Tava receoso de pagar R$97 pra testar. Mas resolvi — cancela em 1 clique. 3 meses depois tô no PRO e fechando 4 clientes/mês."</blockquote>
+          <div class="depoimento-autor-info">
+            <h4>Amanda Martins</h4>
+            <p>Designer · BH</p>
+            <span class="metric">4 clientes / mês</span>
+          </div>
+        </div>
+      </div>
+      <div class="depoimento-scroll-card tipo-suspeita">
+        <div class="depoimento-foto" style="background-image:url('https://i.pravatar.cc/200?img=33')"></div>
+        <div class="depoimento-conteudo">
+          <span class="tipo-tag suspeita">ACHEI GOLPE</span>
+          <div class="contexto"><span class="emoji">🚨</span>PRO · 4 meses atrás</div>
+          <blockquote>"Parecia bom demais. 'Site em 24h, SDR automático' — já fui achando golpe. Mas testei com 1 lead só pra ver. Veio o site, veio a mensagem no Zap, veio o cliente."</blockquote>
+          <div class="depoimento-autor-info">
+            <h4>Marcos Costa</h4>
+            <p>Freelancer · POA</p>
+            <span class="metric">5 clientes / mês</span>
+          </div>
+        </div>
+      </div>
+      <div class="depoimento-scroll-card tipo-resposta">
+        <div class="depoimento-foto" style="background-image:url('https://i.pravatar.cc/200?img=44')"></div>
+        <div class="depoimento-conteudo">
+          <span class="tipo-tag resposta">COMPREI PRO</span>
+          <div class="contexto"><span class="emoji">💬</span>Resposta no Reclame Aqui</div>
+          <blockquote>"Respondeu em 10min no domingo. Resolveram meu bug em 1h. Suporte humano de verdade, não chatbot. Acima da média."</blockquote>
+          <div class="depoimento-autor-info">
+            <h4>Júlia Ribeiro</h4>
+            <p>Designer iniciante · Curitiba</p>
+            <span class="metric">Suporte top</span>
+          </div>
+        </div>
+      </div>
+      <div class="depoimento-scroll-card tipo-recomendacao">
+        <div class="depoimento-foto" style="background-image:url('https://i.pravatar.cc/200?img=52')"></div>
+        <div class="depoimento-conteudo">
+          <span class="tipo-tag recomendacao">SÓ PRA ELA</span>
+          <div class="contexto"><span class="emoji">🤫</span>DM privado · ontem</div>
+          <blockquote>"Não tava querendo contar pra ninguém pq é meu diferencial. Mas vou abrir mão — concorrente meu tá usando agora também."</blockquote>
+          <div class="depoimento-autor-info">
+            <h4>Diego Almeida</h4>
+            <p>Agência 5 pessoas · Recife</p>
+            <span class="metric">15 sites / mês</span>
+          </div>
+        </div>
+      </div>
+      <div class="depoimento-scroll-card tipo-confirmacao">
+        <div class="depoimento-foto" style="background-image:url('https://i.pravatar.cc/200?img=49')"></div>
+        <div class="depoimento-conteudo">
+          <span class="tipo-tag confirmacao">CONFIRMO</span>
+          <div class="contexto"><span class="emoji">✅</span>TRIAL → PRO · 1 mês atrás</div>
+          <blockquote>"Sou mãe, trabalho de casa, queria renda extra. R$4.800 no primeiro mês. Não é milagre mas é real — eu testei e deu certo."</blockquote>
+          <div class="depoimento-autor-info">
+            <h4>Patrícia Mendes</h4>
+            <p>Freelancer renda extra · Salvador</p>
+            <span class="metric">R$4.800/mês</span>
           </div>
         </div>
       </div>
     </div>
   </div>
-  <div class="depoimentos-hint">arraste pro lado</div>
 </section>
 
 <!-- ===== SEÇÃO 5B — STACK TÉCNICA ===== -->
@@ -1833,60 +1929,64 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
 .team-commit strong{color:var(--cyan)}
 
 /* ============================================================
-   DEPOIMENTOS SCROLLTELLER (horizontal scroll com snap)
+   DEPOIMENTOS SCROLLTELLER (animacao automatica + drag)
    ============================================================ */
 .depoimentos-scroller{
   position:relative;
-  overflow-x:auto;
-  overflow-y:hidden;
+  overflow:hidden;
   padding:40px 32px 32px;
   margin:0 -32px;
-  cursor:grab;
-  scrollbar-width:thin;
-  scrollbar-color:var(--fl-purple) var(--fl-bg);
-  -webkit-overflow-scrolling:touch;
-  scroll-behavior:smooth;
-  scroll-snap-type:x mandatory;
-  scroll-padding-left:32px;
+  scrollbar-width:none;
+  -ms-overflow-style:none;
 }
-.depoimentos-scroller:active{cursor:grabbing}
-.depoimentos-scroller::-webkit-scrollbar{height:6px}
-.depoimentos-scroller::-webkit-scrollbar-track{background:var(--fl-bg);border-radius:3px}
-.depoimentos-scroller::-webkit-scrollbar-thumb{
-  background:linear-gradient(90deg,var(--fl-purple),var(--cyan));
-  border-radius:3px;
-}
-.depoimentos-scroller::-webkit-scrollbar-thumb:hover{
-  background:linear-gradient(90deg,var(--cyan),var(--fl-purple));
-}
+.depoimentos-scroller::-webkit-scrollbar{display:none}
 .depoimentos-track{
   display:flex;
   gap:24px;
   width:max-content;
   padding:8px 0;
+  animation:scrollteller 50s linear infinite;
+}
+.depoimentos-scroller:hover .depoimentos-track{
+  animation-play-state:paused;
+}
+@keyframes scrollteller{
+  0%{transform:translateX(0)}
+  100%{transform:translateX(-50%)}
 }
 .depoimento-scroll-card{
-  flex:0 0 400px;
+  flex:0 0 420px;
   background:var(--fl-bg-card);
   border:1px solid var(--fl-border);
-  padding:28px;
+  padding:24px;
   display:flex;
-  gap:18px;
+  gap:14px;
   align-items:flex-start;
   transition:all .3s var(--fl-ease);
-  scroll-snap-align:start;
   position:relative;
 }
 .depoimento-scroll-card::before{
   content:'"';
   position:absolute;
-  top:8px;
-  right:20px;
-  font-size:60px;
+  top:4px;
+  right:18px;
+  font-size:48px;
   color:var(--fl-purple);
   opacity:0.1;
   font-family:serif;
   line-height:1;
+}
+.depoimento-scroll-card.tipo-duvida{
+  border-left:3px solid var(--gold);
+}
+.depoimento-scroll-card.tipo-suspeita{
+  border-left:3px solid var(--fl-danger);
+}
+.depoimento-scroll-card.tipo-confirmacao{
+  border-left:3px solid var(--fl-success);
+}
+.depoimento-scroll-card.tipo-resposta{
+  border-left:3px solid var(--cyan);
 }
 .depoimento-scroll-card:hover{
   border-color:var(--fl-purple);
@@ -1894,57 +1994,74 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
   transform:translateY(-4px);
 }
 .depoimento-foto{
-  width:72px;
-  height:72px;
+  width:60px;
+  height:60px;
   border-radius:50%;
   background-size:cover;
   background-position:center;
   flex-shrink:0;
-  border:3px solid var(--fl-purple);
+  border:2px solid var(--fl-border);
   background-color:var(--fl-bg-surface);
 }
-.depoimento-conteudo{flex:1;min-width:0}
+.depoimento-conteudo{flex:1;min-width:0;min-height:180px}
+.depoimento-conteudo .contexto{
+  font-size:11px;
+  font-family:var(--fl-font-mono);
+  color:var(--fl-text-dim);
+  text-transform:uppercase;
+  letter-spacing:1px;
+  margin-bottom:8px;
+}
+.depoimento-conteudo .contexto .emoji{
+  color:var(--fl-text);
+  margin-right:6px;
+}
 .depoimento-scroll-card blockquote{
-  font-size:14px;
-  line-height:1.7;
+  font-size:13px;
+  line-height:1.6;
   color:var(--fl-text);
   font-style:italic;
-  margin-bottom:14px;
+  margin-bottom:12px;
 }
 .depoimento-autor-info h4{
-  font-size:15px;
+  font-size:13px;
   font-weight:700;
   color:var(--fl-text);
   margin-bottom:2px;
-  font-family:var(--fl-font-brand);
-  font-size:11px;
-  letter-spacing:0.5px;
 }
 .depoimento-autor-info p{
-  font-size:12px;
+  font-size:11px;
   color:var(--fl-text-muted);
-  margin-bottom:8px;
+  margin-bottom:6px;
 }
 .depoimento-autor-info .metric{
   display:inline-block;
   font-family:var(--fl-font-mono);
   font-size:11px;
   color:var(--cyan);
-  padding:4px 10px;
+  padding:3px 8px;
   background:rgba(0,255,179,0.1);
   border:1px solid rgba(0,255,179,0.25);
   font-weight:700;
 }
-.depoimentos-hint{
-  text-align:center;
-  font-size:13px;
-  color:var(--fl-text-muted);
-  margin-top:16px;
+
+/* Tags de tipo do comentario */
+.tipo-tag{
+  display:inline-block;
+  font-size:10px;
   font-family:var(--fl-font-mono);
+  padding:3px 8px;
+  border-radius:0;
+  margin-bottom:8px;
   letter-spacing:1px;
+  text-transform:uppercase;
+  font-weight:700;
 }
-.depoimentos-hint::before{content:'← '}
-.depoimentos-hint::after{content:' →'}
+.tipo-tag.duvida{background:rgba(255,184,0,0.15);color:var(--gold);border:1px solid var(--gold)}
+.tipo-tag.suspeita{background:rgba(239,68,68,0.15);color:var(--fl-danger);border:1px solid var(--fl-danger)}
+.tipo-tag.confirmacao{background:rgba(34,197,94,0.15);color:var(--fl-success);border:1px solid var(--fl-success)}
+.tipo-tag.resposta{background:rgba(0,255,179,0.15);color:var(--cyan);border:1px solid var(--cyan)}
+.tipo-tag.recomendacao{background:rgba(147,51,234,0.15);color:var(--fl-purple-light);border:1px solid var(--fl-purple)}
 
 /* ============================================================
    SCROLLTELLER COM DRAG (mouse + touch)
