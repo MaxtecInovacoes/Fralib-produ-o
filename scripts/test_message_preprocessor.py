@@ -41,6 +41,32 @@ class TestBotDetection(unittest.TestCase):
         self.assertEqual(r.msg_type, MessageType.BOT_ASSISTANT)
         self.assertEqual(r.action, "handoff")
 
+    def test_tropa_da_nutri_canal_atendimento(self):
+        """Bug do usuario: Nutri Nathalia - bot Tropa da Nutri nao detectado."""
+        msg = (
+            "Ola! Seja bem-vindo(a) ap canal de atendimento da Tropa da Nutri\n\n"
+            "E um prazer te receber por aqui!\n\n"
+            "Em breve nossa equipe vai te responder com todas as informacoes que voce precisa."
+        )
+        r = classify_incoming_message(msg)
+        self.assertEqual(r.msg_type, MessageType.BOT_ASSISTANT, f"got {r.msg_type}: {r.signals}")
+        self.assertEqual(r.action, "handoff")
+
+    def test_clinica_prazer_receber(self):
+        """Outro padrao comum de bot: 'e um prazer te receber'."""
+        msg = (
+            "Ola! Seja bem-vindo a Clinica Saude Total. "
+            "E um prazer te receber! Em breve nossa equipe entrara em contato."
+        )
+        r = classify_incoming_message(msg)
+        self.assertEqual(r.msg_type, MessageType.BOT_ASSISTANT)
+
+    def test_ap_canal_typo(self):
+        """Typo comum: 'ap canal' (deveria ser 'ao canal')."""
+        msg = "Ola! Bem-vindo(a) ap canal de suporte da Empresa XYZ"
+        r = classify_incoming_message(msg)
+        self.assertEqual(r.msg_type, MessageType.BOT_ASSISTANT)
+
     def test_doctorfit_ausente(self):
         """Msg de recepcao fora do horario - print 1."""
         msg = (
