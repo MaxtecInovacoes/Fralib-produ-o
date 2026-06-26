@@ -3424,17 +3424,17 @@ export function Navbar({ onOpen }: { onOpen?: () => void }) {
   }, []);
   const links = [['Abordagem', '#servicos'], ['Prova visual', '#galeria'], ['Experiência', '#experiencia'], ['Contato', '#contato']];
   return (
-    <nav className={`fixed inset-x-3 top-3 z-50 rounded-[18px] border px-4 py-3 transition duration-300 md:inset-x-6 md:top-5 ${solid ? 'border-white/10 bg-[#07110f]/88 shadow-[0_10px_32px_rgba(0,0,0,.24)] backdrop-blur-xl' : 'border-white/10 bg-white/[0.04] backdrop-blur-md'}`}>
+    <nav style={{ background: solid ? 'color-mix(in srgb, var(--bg) 88%, transparent)' : 'rgba(255,255,255,0.04)' }} className={`fixed inset-x-3 top-3 z-50 rounded-[18px] border px-4 py-3 transition duration-300 md:inset-x-6 md:top-5 border-white/10 ${solid ? 'shadow-[0_10px_32px_rgba(0,0,0,.24)] backdrop-blur-xl' : 'backdrop-blur-md'}`}>
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-4">
         <a href="#hero" className="min-w-0 truncate text-sm font-semibold tracking-tight text-white md:text-base">{siteCopy.name}</a>
         <div className="hidden items-center gap-6 text-sm text-zinc-300 md:flex">{links.map(([label, href]) => <a key={href} href={href} className="transition hover:text-white">{label}</a>)}</div>
         <div className="flex items-center gap-2">
-          <a href={whatsappHref} rel="noopener noreferrer" className="hidden items-center gap-2 rounded-full bg-[#b7ff6a] px-4 py-2 text-sm font-semibold text-[#07110f] transition hover:-translate-y-0.5 md:inline-flex"><MessageCircle className="h-4 w-4" /> WhatsApp</a>
+          <a href={whatsappHref} rel="noopener noreferrer" className="hidden items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition hover:-translate-y-0.5 md:inline-flex" style={{ background: 'var(--accent)', color: 'var(--bg)' }}><MessageCircle className="h-4 w-4" /> WhatsApp</a>
           <button type="button" onClick={onOpen} className="hidden rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-white md:inline-flex">{siteCopy.cta_primary}</button>
           <button type="button" aria-label="Menu" onClick={() => setMenuOpen((value) => !value)} className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/10 text-white md:hidden">{menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}</button>
         </div>
       </div>
-      {menuOpen ? <div className="mt-3 grid gap-2 border-t border-white/10 pt-3 md:hidden">{links.map(([label, href]) => <a key={href} href={href} onClick={() => setMenuOpen(false)} className="rounded-xl px-2 py-2 text-sm text-zinc-200">{label}</a>)}<a href={whatsappHref} rel="noopener noreferrer" className="rounded-xl bg-[#b7ff6a] px-3 py-2 text-sm font-semibold text-[#07110f]">Falar no WhatsApp</a></div> : null}
+      {menuOpen ? <div className="mt-3 grid gap-2 border-t border-white/10 pt-3 md:hidden">{links.map(([label, href]) => <a key={href} href={href} onClick={() => setMenuOpen(false)} className="rounded-xl px-2 py-2 text-sm text-zinc-200">{label}</a>)}<a href={whatsappHref} rel="noopener noreferrer" className="rounded-xl px-3 py-2 text-sm font-semibold" style={{ background: 'var(--accent)', color: 'var(--bg)' }}>Falar no WhatsApp</a></div> : null}
     </nav>
   );
 }
@@ -3463,22 +3463,22 @@ export function HeroSection({ onOpen }: { onOpen?: () => void }) {
   }, []);
   return (
     <section ref={rootRef} id="hero" className="relative isolate min-h-[92svh] overflow-hidden px-5 pb-16 pt-28 text-white md:px-8 md:pb-24 md:pt-36">
-      <div className="absolute inset-0 -z-20 bg-[#07110f]" />
+      <div className="absolute inset-0 -z-20" style={{ background: 'var(--bg)' }} />
       <video data-hero-video className="absolute inset-0 -z-10 h-full w-full object-cover opacity-52 saturate-[.9]" src={mediaVideos[0]} poster={mediaImages[0]} autoPlay muted loop playsInline preload="metadata" />
-      <div className="absolute inset-0 -z-10 bg-[linear-gradient(90deg,rgba(7,17,15,.96),rgba(7,17,15,.66)_42%,rgba(7,17,15,.22)),radial-gradient(circle_at_80%_20%,rgba(183,255,106,.20),transparent_34%)]" />
+      <div className="absolute inset-0 -z-10" style={{ background: `linear-gradient(90deg, color-mix(in srgb, var(--bg) 96%, transparent), color-mix(in srgb, var(--bg) 66%, transparent) 42%, color-mix(in srgb, var(--bg) 22%, transparent)), radial-gradient(circle_at_80%_20%, color-mix(in srgb, var(--accent) 20%, transparent), transparent 34%)` }} />
       <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[1.05fr_.95fr] lg:items-end">
         <div className="max-w-4xl">
-          <motion.div data-hero-reveal className="inline-flex items-center gap-2 rounded-full border border-[#b7ff6a]/25 bg-[#b7ff6a]/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-[#d8ff9f]"><Play className="h-3.5 w-3.5" />{siteCopy.segment} em {siteCopy.city}</motion.div>
+          <motion.div data-hero-reveal className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em]" style={{ borderColor: 'color-mix(in srgb, var(--accent) 25%, transparent)', background: 'color-mix(in srgb, var(--accent) 10%, transparent)', color: 'var(--accent-soft)' }}><Play className="h-3.5 w-3.5" />{siteCopy.segment} em {siteCopy.city}</motion.div>
           <h1 data-hero-reveal className="mt-7 max-w-5xl text-[clamp(2.65rem,7.7vw,5.9rem)] font-semibold leading-[0.93] tracking-[-0.035em] text-white">{siteCopy.headline}</h1>
           <p data-hero-reveal className="mt-6 max-w-2xl text-base leading-8 text-zinc-200 md:text-lg">{siteCopy.subheadline}</p>
           <div data-hero-reveal className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-            <a href={whatsappHref} rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 rounded-full bg-[#b7ff6a] px-6 py-3.5 text-sm font-semibold text-[#07110f] transition duration-300 hover:-translate-y-0.5"><MessageCircle className="h-4 w-4" />{siteCopy.cta_primary}</a>
+            <a href={whatsappHref} rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 rounded-full px-6 py-3.5 text-sm font-semibold transition duration-300 hover:-translate-y-0.5" style={{ background: 'var(--accent)', color: 'var(--bg)' }}><MessageCircle className="h-4 w-4" />{siteCopy.cta_primary}</a>
             <button type="button" onClick={onOpen} className="inline-flex items-center justify-center gap-2 rounded-full border border-white/15 px-6 py-3.5 text-sm font-semibold text-white transition duration-300 hover:-translate-y-0.5">{siteCopy.cta_secondary}<ArrowDownRight className="h-4 w-4" /></button>
           </div>
         </div>
         <div data-hero-reveal className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
           {[['Avaliação', siteCopy.rating || '5.0'], ['Sinais locais', siteCopy.reviews || 'confirmados'], ['Contato', siteCopy.phone || 'WhatsApp']].map(([label, value]) => (
-            <div key={label} className="rounded-[18px] border border-white/10 bg-white/[0.055] p-4 backdrop-blur-md"><div className="flex items-center gap-2 text-[#b7ff6a]"><Star className="h-4 w-4" /><span className="text-xs font-semibold uppercase tracking-[0.16em]">{label}</span></div><p className="mt-2 text-lg font-semibold text-white">{value}</p></div>
+            <div key={label} className="rounded-[18px] border border-white/10 bg-white/[0.055] p-4 backdrop-blur-md"><div className="flex items-center gap-2" style={{ color: 'var(--accent)' }}><Star className="h-4 w-4" /><span className="text-xs font-semibold uppercase tracking-[0.16em]">{label}</span></div><p className="mt-2 text-lg font-semibold text-white">{value}</p></div>
           ))}
         </div>
       </div>
@@ -3488,27 +3488,60 @@ export function HeroSection({ onOpen }: { onOpen?: () => void }) {
 
 export default HeroSection;
 """,
+        "src/index.css": f"""@import "tailwindcss";
+:root {{
+  --bg: {c_bg};
+  --accent: {c_accent};
+  --accent-soft: {c_accent_light};
+  --accent-dark: {c_accent_dark};
+  --text: {c_text};
+  --text-muted: {c_text_muted};
+  --bg-light: {palette.get('bg_light', '#f4f0e6')};
+  --text-dark: {palette.get('text_dark', '#09130f')};
+}}
+@layer base {{
+  * {{ box-sizing: border-box; }}
+  html {{ scroll-behavior: smooth; background: var(--bg); }}
+  body {{ margin: 0; min-width: 320px; min-height: 100vh; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: var(--text); background: var(--bg); text-rendering: geometricPrecision; }}
+  h1, h2, h3 {{ text-wrap: balance; }}
+  p {{ text-wrap: pretty; }}
+  img, video {{ max-width: 100%; display: block; }}
+  a {{ color: inherit; text-decoration: none; }}
+  button, a {{ -webkit-tap-highlight-color: transparent; }}
+  ::selection {{ background: var(--accent); color: var(--bg); }}
+}}
+@media (prefers-reduced-motion: reduce) {{
+  *, *::before, *::after {{ animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: 0.01ms !important; }}
+}}
+""",
     }
-    source_files.update(_generate_cinematic_secondary_components(facts))
+    source_files.update(_generate_cinematic_secondary_components(facts, palette=palette))
     return prepare_vite_project_files(source_files, facts=facts)
 
 
-def _generate_cinematic_secondary_components(facts: dict[str, Any]) -> dict[str, str]:
+def _generate_cinematic_secondary_components(facts: dict[str, Any], palette: dict[str, str] | None = None) -> dict[str, str]:
     copy = _cinematic_copy(facts)
+    if palette is None:
+        _biz = facts.get("business") if isinstance(facts.get("business"), dict) else {}
+        segment = str(_biz.get("segment") or _biz.get("segmento") or facts.get("segmento") or facts.get("segment") or "servicos").lower()
+        archetype = _get_archetype_for_segment(segment)
+        palette = _get_archetype_palette(archetype)
+    c_bg_light = palette.get('bg_light', '#f4f0e6')
+    c_text_dark = palette.get('text_dark', '#09130f')
     return {
         "src/components/ServicesSection.tsx": """import { ClipboardCheck, MapPinned, Sparkles } from 'lucide-react';
 import { motion } from 'motion/react';
 import { siteCopy } from './siteData';
 const icons = [ClipboardCheck, Sparkles, MapPinned];
 export function ServicesSection() {
-  return <section id="servicos" className="bg-[#f4f0e6] px-5 py-20 text-[#09130f] md:px-8 md:py-28"><div className="mx-auto max-w-7xl"><div className="grid gap-8 lg:grid-cols-[.8fr_1.2fr] lg:items-end"><div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-800">Decisão clara</p><h2 className="mt-3 text-[clamp(2rem,4.8vw,4.4rem)] font-semibold leading-[1] tracking-[-0.025em]">{siteCopy.services_title}</h2></div><p className="max-w-2xl text-base leading-8 text-[#314039]">A estrutura evita promessa genérica: usa dados reais do lead, provas locais e um caminho único para ação.</p></div><div className="mt-12 grid gap-4 md:grid-cols-3">{siteCopy.services.map((service, index) => { const Icon = icons[index] || ClipboardCheck; return <motion.article key={service.title} initial={{ opacity: 0, y: 22 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.28 }} transition={{ delay: index * 0.06 }} className="min-h-[17rem] rounded-[18px] border border-[#09130f]/10 bg-white p-6 shadow-[0_8px_24px_rgba(9,19,15,.06)]"><Icon className="h-6 w-6 text-emerald-800" /><h3 className="mt-8 text-2xl font-semibold tracking-tight">{service.title}</h3><p className="mt-4 text-sm leading-7 text-[#425249]">{service.description}</p></motion.article>; })}</div></div></section>;
+  return <section id="servicos" style={{ background: 'var(--bg-light)', color: 'var(--text-dark)' }} className="px-5 py-20 md:px-8 md:py-28"><div className="mx-auto max-w-7xl"><div className="grid gap-8 lg:grid-cols-[.8fr_1.2fr] lg:items-end"><div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-800">Decisão clara</p><h2 className="mt-3 text-[clamp(2rem,4.8vw,4.4rem)] font-semibold leading-[1] tracking-[-0.025em]">{siteCopy.services_title}</h2></div><p className="max-w-2xl text-base leading-8" style={{ color: 'var(--accent-dark)' }}>A estrutura evita promessa genérica: usa dados reais do lead, provas locais e um caminho único para ação.</p></div><div className="mt-12 grid gap-4 md:grid-cols-3">{siteCopy.services.map((service, index) => { const Icon = icons[index] || ClipboardCheck; return <motion.article key={service.title} initial={{ opacity: 0, y: 22 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.28 }} transition={{ delay: index * 0.06 }} className="min-h-[17rem] rounded-[18px] border bg-white p-6 shadow-[0_8px_24px_rgba(0,0,0,.06)]" style={{ borderColor: 'color-mix(in srgb, var(--text-dark) 10%, transparent)' }}><Icon className="h-6 w-6 text-emerald-800" /><h3 className="mt-8 text-2xl font-semibold tracking-tight">{service.title}</h3><p className="mt-4 text-sm leading-7" style={{ color: 'var(--accent-dark)' }}>{service.description}</p></motion.article>; })}</div></div></section>;
 }
 export default ServicesSection;
 """,
         "src/components/GallerySection.tsx": """import { motion } from 'motion/react';
 import { mediaImages, siteCopy } from './siteData';
 export function GallerySection() {
-  return <section id="galeria" className="bg-[#07110f] px-5 py-20 text-white md:px-8 md:py-28"><div className="mx-auto max-w-7xl"><div className="mb-10 flex flex-col gap-4 md:flex-row md:items-end md:justify-between"><div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#b7ff6a]">Prova visual</p><h2 className="mt-3 max-w-3xl text-[clamp(2rem,4.8vw,4.4rem)] font-semibold leading-[1] tracking-[-0.025em]">Uma narrativa visual para {siteCopy.segment}.</h2></div><p className="max-w-md text-sm leading-7 text-zinc-300">As imagens são apoio editorial do nicho, não afirmação de foto real do endereço.</p></div><div className="grid auto-rows-[16rem] gap-4 md:grid-cols-4">{mediaImages.slice(0, 5).map((src, index) => <motion.figure key={src} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.25 }} transition={{ delay: index * 0.04 }} className={`group relative overflow-hidden rounded-[18px] bg-black ${index === 0 ? 'md:col-span-2 md:row-span-2' : ''}`}><img src={src} alt={`${siteCopy.gallery_alt} ${index + 1}`} className="h-full w-full object-cover opacity-90 transition duration-700 group-hover:scale-105 group-hover:opacity-100" loading={index === 0 ? 'eager' : 'lazy'} decoding="async" /><figcaption className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-5 text-sm font-semibold text-white">{index === 0 ? siteCopy.name : siteCopy.city}</figcaption></motion.figure>)}</div></div></section>;
+  return <section id="galeria" style={{ background: 'var(--bg)' }} className="px-5 py-20 text-white md:px-8 md:py-28"><div className="mx-auto max-w-7xl"><div className="mb-10 flex flex-col gap-4 md:flex-row md:items-end md:justify-between"><div><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>Prova visual</p><h2 className="mt-3 max-w-3xl text-[clamp(2rem,4.8vw,4.4rem)] font-semibold leading-[1] tracking-[-0.025em]">Uma narrativa visual para {siteCopy.segment}.</h2></div><p className="max-w-md text-sm leading-7 text-zinc-300">As imagens são apoio editorial do nicho, não afirmação de foto real do endereço.</p></div><div className="grid auto-rows-[16rem] gap-4 md:grid-cols-4">{mediaImages.slice(0, 5).map((src, index) => <motion.figure key={src} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.25 }} transition={{ delay: index * 0.04 }} className={`group relative overflow-hidden rounded-[18px] bg-black ${index === 0 ? 'md:col-span-2 md:row-span-2' : ''}`}><img src={src} alt={`${siteCopy.gallery_alt} ${index + 1}`} className="h-full w-full object-cover opacity-90 transition duration-700 group-hover:scale-105 group-hover:opacity-100" loading={index === 0 ? 'eager' : 'lazy'} decoding="async" /><figcaption className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-5 text-sm font-semibold text-white">{index === 0 ? siteCopy.name : siteCopy.city}</figcaption></motion.figure>)}</div></div></section>;
 }
 export default GallerySection;
 """,
@@ -3521,7 +3554,7 @@ gsap.registerPlugin(ScrollTrigger);
 export function LifestyleSection() {
   const sectionRef = useRef<HTMLElement | null>(null);
   useEffect(() => { const section = sectionRef.current; if (!section || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return; const ctx = gsap.context(() => { gsap.to('[data-parallax-card]', { y: -46, ease: 'none', scrollTrigger: { trigger: section, start: 'top bottom', end: 'bottom top', scrub: true } }); }, section); return () => ctx.revert(); }, []);
-  return <section ref={sectionRef} id="experiencia" className="relative overflow-hidden bg-[#0d1b17] px-5 py-20 text-white md:px-8 md:py-28"><div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_18%,rgba(183,255,106,.16),transparent_32%),linear-gradient(180deg,rgba(255,255,255,.03),transparent)]" /><div className="relative mx-auto grid max-w-7xl gap-8 lg:grid-cols-[.9fr_1.1fr] lg:items-center"><div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#b7ff6a]">Experiência</p><h2 className="mt-3 text-[clamp(2rem,4.8vw,4.4rem)] font-semibold leading-[1] tracking-[-0.025em]">{siteCopy.lifestyle_title}</h2><p className="mt-6 max-w-xl text-base leading-8 text-zinc-300">{siteCopy.lifestyle_description}</p></div><div className="relative min-h-[34rem]"><motion.img data-parallax-card src={mediaImages[1] || mediaImages[0]} alt={siteCopy.gallery_alt} initial={{ opacity: 0, rotate: -1.4, y: 24 }} whileInView={{ opacity: 1, rotate: -1.4, y: 0 }} viewport={{ once: true, amount: 0.25 }} className="absolute left-0 top-8 h-[25rem] w-[72%] rounded-[18px] object-cover shadow-[0_30px_90px_rgba(0,0,0,.30)]" loading="lazy" decoding="async" /><motion.div initial={{ opacity: 0, y: 28 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.3 }} className="absolute bottom-0 right-0 w-[68%] rounded-[18px] border border-white/10 bg-white/[.06] p-6 backdrop-blur-xl"><p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#b7ff6a]">SEO local</p><h3 className="mt-3 text-2xl font-semibold">{siteCopy.name}</h3><p className="mt-3 text-sm leading-7 text-zinc-300">{siteCopy.address || siteCopy.city}</p></motion.div></div></div></section>;
+  return <section ref={sectionRef} id="experiencia" style={{ background: 'var(--accent-dark)' }} className="relative overflow-hidden px-5 py-20 text-white md:px-8 md:py-28"><div className="absolute inset-0" style={{ background: 'radial-gradient(circle_at_18%_18%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 32%), linear-gradient(180deg, rgba(255,255,255,0.03), transparent)' }} /><div className="relative mx-auto grid max-w-7xl gap-8 lg:grid-cols-[.9fr_1.1fr] lg:items-center"><div><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>Experiência</p><h2 className="mt-3 text-[clamp(2rem,4.8vw,4.4rem)] font-semibold leading-[1] tracking-[-0.025em]">{siteCopy.lifestyle_title}</h2><p className="mt-6 max-w-xl text-base leading-8 text-zinc-300">{siteCopy.lifestyle_description}</p></div><div className="relative min-h-[34rem]"><motion.img data-parallax-card src={mediaImages[1] || mediaImages[0]} alt={siteCopy.gallery_alt} initial={{ opacity: 0, rotate: -1.4, y: 24 }} whileInView={{ opacity: 1, rotate: -1.4, y: 0 }} viewport={{ once: true, amount: 0.25 }} className="absolute left-0 top-8 h-[25rem] w-[72%] rounded-[18px] object-cover shadow-[0_30px_90px_rgba(0,0,0,.30)]" loading="lazy" decoding="async" /><motion.div initial={{ opacity: 0, y: 28 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.3 }} className="absolute bottom-0 right-0 w-[68%] rounded-[18px] border border-white/10 bg-white/[.06] p-6 backdrop-blur-xl"><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>SEO local</p><h3 className="mt-3 text-2xl font-semibold">{siteCopy.name}</h3><p className="mt-3 text-sm leading-7 text-zinc-300">{siteCopy.address || siteCopy.city}</p></motion.div></div></div></section>;
 }
 export default LifestyleSection;
 """,
@@ -3529,7 +3562,7 @@ export default LifestyleSection;
 import { motion } from 'motion/react';
 import { siteCopy, whatsappHref } from './siteData';
 export function ContactCTA({ onOpen }: { onOpen?: () => void }) {
-  return <section id="contato" className="bg-[#b7ff6a] px-5 py-20 text-[#07110f] md:px-8"><div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[1.1fr_.9fr] lg:items-center"><motion.div initial={{ opacity: 0, y: 22 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.3 }}><p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#31520f]">Conversão</p><h2 className="mt-3 max-w-4xl text-[clamp(2rem,5vw,4.8rem)] font-semibold leading-[1] tracking-[-0.03em]">{siteCopy.contact_headline}</h2><p className="mt-5 max-w-2xl text-base leading-8 text-[#244008]">{siteCopy.contact_sub}</p></motion.div><div className="rounded-[18px] bg-[#07110f] p-6 text-white"><p className="text-sm leading-7 text-zinc-300">Contato oficial</p><p className="mt-2 text-2xl font-semibold">{siteCopy.phone || 'WhatsApp'}</p><div className="mt-6 flex flex-col gap-3 sm:flex-row"><a href={whatsappHref} rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-semibold text-[#07110f]"><MessageCircle className="h-4 w-4" />Falar no WhatsApp</a><button type="button" onClick={onOpen} className="inline-flex items-center justify-center gap-2 rounded-full border border-white/15 px-5 py-3 text-sm font-semibold text-white"><Phone className="h-4 w-4" />Abrir contato</button></div></div></div></section>;
+  return <section id="contato" style={{ background: 'var(--accent)', color: 'var(--bg)' }} className="px-5 py-20 md:px-8"><div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[1.1fr_.9fr] lg:items-center"><motion.div initial={{ opacity: 0, y: 22 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.3 }}><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent-dark)' }}>Conversão</p><h2 className="mt-3 max-w-4xl text-[clamp(2rem,5vw,4.8rem)] font-semibold leading-[1] tracking-[-0.03em]">{siteCopy.contact_headline}</h2><p className="mt-5 max-w-2xl text-base leading-8" style={{ color: 'var(--accent-dark)' }}>{siteCopy.contact_sub}</p></motion.div><div style={{ background: 'var(--bg)' }} className="rounded-[18px] p-6 text-white"><p className="text-sm leading-7 text-zinc-300">Contato oficial</p><p className="mt-2 text-2xl font-semibold">{siteCopy.phone || 'WhatsApp'}</p><div className="mt-6 flex flex-col gap-3 sm:flex-row"><a href={whatsappHref} rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-semibold" style={{ color: 'var(--bg)' }}><MessageCircle className="h-4 w-4" />Falar no WhatsApp</a><button type="button" onClick={onOpen} className="inline-flex items-center justify-center gap-2 rounded-full border border-white/15 px-5 py-3 text-sm font-semibold text-white"><Phone className="h-4 w-4" />Abrir contato</button></div></div></div></section>;
 }
 export default ContactCTA;
 """,
@@ -3537,14 +3570,14 @@ export default ContactCTA;
 import { AnimatePresence, motion } from 'motion/react';
 import { siteCopy, whatsappHref } from './siteData';
 export function BookingModal({ open, onClose }: { open: boolean; onClose: () => void }) {
-  return <AnimatePresence>{open ? <motion.div className="fixed inset-0 z-[80] grid place-items-end bg-black/65 p-3 md:place-items-center md:p-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><motion.div initial={{ y: 42, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 24, opacity: 0 }} transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }} className="w-full max-w-lg rounded-[22px] bg-[#f4f0e6] p-6 text-[#07110f] shadow-2xl"><div className="flex items-start justify-between gap-4"><div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-800">Contato</p><h3 className="mt-2 text-3xl font-semibold tracking-tight">{siteCopy.modal_title}</h3></div><button type="button" aria-label="Fechar" onClick={onClose} className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[#07110f] text-white"><X className="h-4 w-4" /></button></div><p className="mt-5 text-sm leading-7 text-[#314039]">Telefone: {siteCopy.phone || 'confirme pelo WhatsApp'}. Endereço: {siteCopy.address || siteCopy.city}.</p><a href={whatsappHref} rel="noopener noreferrer" className="mt-6 inline-flex w-full items-center justify-center rounded-full bg-[#07110f] px-5 py-3 text-sm font-semibold text-white">{siteCopy.modal_cta}</a></motion.div></motion.div> : null}</AnimatePresence>;
+  return <AnimatePresence>{open ? <motion.div className="fixed inset-0 z-[80] grid place-items-end bg-black/65 p-3 md:place-items-center md:p-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><motion.div initial={{ y: 42, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 24, opacity: 0 }} transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }} style={{ background: 'var(--accent-soft)', color: 'var(--bg)' }} className="w-full max-w-lg rounded-[22px] p-6 shadow-2xl"><div className="flex items-start justify-between gap-4"><div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-800">Contato</p><h3 className="mt-2 text-3xl font-semibold tracking-tight">{siteCopy.modal_title}</h3></div><button type="button" aria-label="Fechar" onClick={onClose} className="inline-flex h-10 w-10 items-center justify-center rounded-full text-white" style={{ background: 'var(--bg)' }}><X className="h-4 w-4" /></button></div><p className="mt-5 text-sm leading-7" style={{ color: 'var(--accent-dark)' }}>Telefone: {siteCopy.phone || 'confirme pelo WhatsApp'}. Endereço: {siteCopy.address || siteCopy.city}.</p><a href={whatsappHref} rel="noopener noreferrer" className="mt-6 inline-flex w-full items-center justify-center rounded-full px-5 py-3 text-sm font-semibold text-white" style={{ background: 'var(--bg)' }}>{siteCopy.modal_cta}</a></motion.div></motion.div> : null}</AnimatePresence>;
 }
 export default BookingModal;
 """,
         "src/components/Footer.tsx": """import { MapPin, MessageCircle, ShieldCheck } from 'lucide-react';
 import { siteCopy, whatsappHref } from './siteData';
 export function Footer() {
-  return <footer className="bg-[#07110f] px-5 py-12 text-zinc-300 md:px-8"><div className="mx-auto grid max-w-7xl gap-8 md:grid-cols-[1.1fr_.8fr_.8fr]"><div><strong className="block text-2xl font-semibold text-white">{siteCopy.name}</strong><p className="mt-3 max-w-md text-sm leading-7 text-zinc-400">Site local com SEO, prova social, mídia editorial, LGPD e caminho de contato direto.</p></div><div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#b7ff6a]">Contato</p><a href={whatsappHref} rel="noopener noreferrer" className="mt-4 flex items-center gap-2 text-sm text-white"><MessageCircle className="h-4 w-4 text-[#b7ff6a]" /> WhatsApp oficial</a><p className="mt-3 text-sm text-zinc-400">{siteCopy.phone}</p></div><div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#b7ff6a]">Local</p><p className="mt-4 flex items-start gap-2 text-sm leading-6 text-zinc-400"><MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[#b7ff6a]" /> {siteCopy.address || siteCopy.city}</p><p className="mt-4 flex items-start gap-2 text-sm leading-6 text-zinc-500"><ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-[#b7ff6a]" /> Dados factuais e privacidade preservada.</p></div></div><div className="mx-auto mt-10 flex max-w-7xl flex-col gap-2 border-t border-white/10 pt-5 text-xs text-zinc-500 md:flex-row md:items-center md:justify-between"><span>{siteCopy.city}</span><span>© 2026 {siteCopy.name}. Todos os direitos reservados.</span></div></footer>;
+  return <footer style={{ background: 'var(--bg)' }} className="px-5 py-12 text-zinc-300 md:px-8"><div className="mx-auto grid max-w-7xl gap-8 md:grid-cols-[1.1fr_.8fr_.8fr]"><div><strong className="block text-2xl font-semibold text-white">{siteCopy.name}</strong><p className="mt-3 max-w-md text-sm leading-7 text-zinc-400">Site local com SEO, prova social, mídia editorial, LGPD e caminho de contato direto.</p></div><div><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>Contato</p><a href={whatsappHref} rel="noopener noreferrer" className="mt-4 flex items-center gap-2 text-sm text-white"><MessageCircle className="h-4 w-4" style={{ color: 'var(--accent)' }} /> WhatsApp oficial</a><p className="mt-3 text-sm text-zinc-400">{siteCopy.phone}</p></div><div><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>Local</p><p className="mt-4 flex items-start gap-2 text-sm leading-6 text-zinc-400"><MapPin className="mt-0.5 h-4 w-4 shrink-0" style={{ color: 'var(--accent)' }} /> {siteCopy.address || siteCopy.city}</p><p className="mt-4 flex items-start gap-2 text-sm leading-6 text-zinc-500"><ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" style={{ color: 'var(--accent)' }} /> Dados factuais e privacidade preservada.</p></div></div><div className="mx-auto mt-10 flex max-w-7xl flex-col gap-2 border-t border-white/10 pt-5 text-xs text-zinc-500 md:flex-row md:items-center md:justify-between"><span>{siteCopy.city}</span><span>© 2026 {siteCopy.name}. Todos os direitos reservados.</span></div></footer>;
 }
 export default Footer;
 """,
@@ -3556,22 +3589,6 @@ export default Footer;
             city=copy["city"],
             segment=copy["segment"],
         ),
-        "src/index.css": """@import "tailwindcss";
-@layer base {
-  * { box-sizing: border-box; }
-  html { scroll-behavior: smooth; background: #07110f; }
-  body { margin: 0; min-width: 320px; min-height: 100vh; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #f8faf7; background: #07110f; text-rendering: geometricPrecision; }
-  h1, h2, h3 { text-wrap: balance; }
-  p { text-wrap: pretty; }
-  img, video { max-width: 100%; display: block; }
-  a { color: inherit; text-decoration: none; }
-  button, a { -webkit-tap-highlight-color: transparent; }
-  ::selection { background: rgba(183, 255, 106, .34); color: #07110f; }
-}
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: 0.01ms !important; }
-}
-""",
     }
 
 
