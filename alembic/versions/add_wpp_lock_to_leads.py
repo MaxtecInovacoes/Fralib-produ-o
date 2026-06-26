@@ -12,7 +12,7 @@ from alembic import op
 import sqlalchemy as sa
 
 revision: str = 'add_wpp_lock_to_leads'
-down_revision: Union[str, Sequence[str], None] = '72bd68b42efe_sync_one_truth_mirrors'
+down_revision: Union[str, Sequence[str], None] = 'interacoes_idempotency_v1'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
