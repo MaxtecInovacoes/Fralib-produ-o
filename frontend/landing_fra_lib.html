@@ -1167,6 +1167,84 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
   padding:64px 24px 0;
   position:relative;
 }
+
+/* TRUST SEALS SECTION - secao propria ACIMA do footer */
+.trust-seals-section{
+  background:linear-gradient(180deg,var(--fl-bg) 0%,#08051a 100%);
+  padding:80px 24px;
+  position:relative;
+  overflow:hidden;
+}
+.trust-seals-section::before{
+  content:'';position:absolute;inset:0;
+  background:
+    radial-gradient(circle at 20% 50%,rgba(124,58,237,0.1) 0%,transparent 50%),
+    radial-gradient(circle at 80% 50%,rgba(0,255,179,0.06) 0%,transparent 50%);
+  pointer-events:none;
+}
+.trust-seals-header{
+  text-align:center;margin-bottom:48px;
+  position:relative;z-index:1;
+}
+.trust-seals-title{
+  font-family:var(--fl-font-brand);
+  font-size:clamp(10px,1.6vw,14px);
+  letter-spacing:3px;line-height:1.5;
+  color:var(--fl-text);
+  margin-bottom:12px;
+}
+.trust-seals-subtitle{
+  font-size:14px;color:var(--fl-text-muted);
+  max-width:520px;margin:0 auto;line-height:1.6;
+}
+.trust-seals-grid{
+  max-width:1200px;margin:0 auto;
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:20px;
+  position:relative;z-index:1;
+}
+.trust-seal{
+  display:flex;flex-direction:column;align-items:center;text-align:center;
+  padding:28px 20px;
+  background:var(--fl-bg-card);
+  border:1px solid var(--fl-border);
+  border-radius:var(--fl-r-lg);
+  transition:all .3s var(--fl-ease);
+  gap:16px;
+}
+.trust-seal:hover{
+  border-color:var(--cyan);
+  background:linear-gradient(180deg,var(--fl-bg-card) 0%,rgba(0,255,179,0.04) 100%);
+  box-shadow:0 0 30px var(--cyan-glow),0 20px 40px rgba(0,0,0,0.3);
+  transform:translateY(-4px);
+}
+.trust-seal-icon{
+  width:56px;height:56px;
+  display:flex;align-items:center;justify-content:center;
+  border-radius:50%;
+  border:2px solid;
+}
+.trust-seal-icon.pagamento{
+  background:rgba(0,204,142,0.1);color:var(--cyan);border-color:rgba(0,255,179,0.3);
+}
+.trust-seal-icon.garantia{
+  background:rgba(255,184,0,0.1);color:var(--gold);border-color:rgba(255,184,0,0.3);
+}
+.trust-seal-icon.lgpd{
+  background:rgba(124,58,237,0.1);color:var(--fl-purple-300);border-color:rgba(124,58,237,0.3);
+}
+.trust-seal-icon.suporte{
+  background:rgba(0,255,179,0.08);color:var(--cyan);border-color:rgba(0,255,179,0.3);
+}
+.trust-seal-text{display:flex;flex-direction:column;gap:6px}
+.trust-seal-title{
+  font-family:var(--fl-font-brand);font-size:9px;letter-spacing:2px;
+  color:var(--fl-text);
+}
+.trust-seal-desc{
+  font-size:11px;color:var(--fl-text-muted);line-height:1.4;
+}
 .footer-grid{
   max-width:1200px;margin:0 auto;
   display:grid;
@@ -1375,11 +1453,11 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
   .hero-microproof-label{font-size:9px}
   .footer{padding:48px 20px 0}
   .footer-grid{grid-template-columns:1fr 1fr;gap:32px}
-  .footer-seals-grid{grid-template-columns:1fr 1fr;gap:12px}
-  .footer-seal{padding:12px 8px}
-  .footer-seal-title{font-size:7px}
-  .footer-seal-desc{font-size:9px}
   .footer-bottom{flex-direction:column;text-align:center;align-items:center}
+  .trust-seals-section{padding:56px 20px}
+  .trust-seals-grid{grid-template-columns:1fr 1fr;gap:14px}
+  .trust-seal{padding:20px 14px;gap:12px}
+  .trust-seal-icon{width:48px;height:48px}
   .lgpd-banner{
     left:10px;right:10px;bottom:10px;
     padding:16px;
@@ -1390,7 +1468,7 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
 }
 @media(max-width:480px){
   .footer-grid{grid-template-columns:1fr;gap:28px}
-  .footer-seals-grid{grid-template-columns:1fr}
+  .trust-seals-grid{grid-template-columns:1fr}
 }
 </style>
 
@@ -2579,55 +2657,10 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
     </div>
   </div>
 
-  <!-- SELOS DE SEGURANCA -->
-  <div class="footer-seals">
-    <div class="footer-seals-grid">
-      <div class="footer-seal">
-        <div class="footer-seal-icon pagamento">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M2 10h20M6 16h4"/></svg>
-        </div>
-        <div class="footer-seal-text">
-          <span class="footer-seal-title">PAGAMENTO SEGURO</span>
-          <span class="footer-seal-desc">Mercado Pago - PIX e Cartao</span>
-        </div>
-      </div>
-
-      <div class="footer-seal">
-        <div class="footer-seal-icon garantia">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-        </div>
-        <div class="footer-seal-text">
-          <span class="footer-seal-title">GARANTIA 7 DIAS</span>
-          <span class="footer-seal-desc">Devolucao integral do valor</span>
-        </div>
-      </div>
-
-      <div class="footer-seal">
-        <div class="footer-seal-icon lgpd">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-        </div>
-        <div class="footer-seal-text">
-          <span class="footer-seal-title">LGPD COMPLIANT</span>
-          <span class="footer-seal-desc">Seus dados estao protegidos</span>
-        </div>
-      </div>
-
-      <div class="footer-seal">
-        <div class="footer-seal-icon suporte">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg>
-        </div>
-        <div class="footer-seal-text">
-          <span class="footer-seal-title">SUPORTE BR</span>
-          <span class="footer-seal-desc">Atendimento em portugues</span>
-        </div>
-      </div>
-    </div>
-  </div>
-
   <!-- BOTTOM -->
   <div class="footer-bottom">
     <div class="footer-copy">
-      &copy; 2026 <strong>FraLib OS</strong> · CNPJ 00.000.000/0001-00 · Todos os direitos reservados
+      &copy; 2026 <strong>FraLib OS</strong> · CNPJ 21.199.022/0001-00 · Todos os direitos reservados
     </div>
     <div class="footer-bottom-links">
       <a href="/privacidade">Politica de Privacidade</a>
@@ -2636,6 +2669,57 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
     </div>
   </div>
 </footer>
+
+<!-- ===== SEÇÃO DE SELOS DE SEGURANÇA (acima do footer) ===== -->
+<section class="trust-seals-section" id="seguranca">
+  <div class="container">
+    <div class="trust-seals-header">
+      <h3 class="trust-seals-title">SUA SEGURANÇA É PRIORIDADE</h3>
+      <p class="trust-seals-subtitle">Infraestrutura certificada e conformidade total com a legislação brasileira.</p>
+    </div>
+    <div class="trust-seals-grid">
+      <div class="trust-seal">
+        <div class="trust-seal-icon pagamento">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M2 10h20M6 16h4"/></svg>
+        </div>
+        <div class="trust-seal-text">
+          <span class="trust-seal-title">PAGAMENTO SEGURO</span>
+          <span class="trust-seal-desc">Mercado Pago - PIX e Cartao com criptografia SSL</span>
+        </div>
+      </div>
+
+      <div class="trust-seal">
+        <div class="trust-seal-icon garantia">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+        </div>
+        <div class="trust-seal-text">
+          <span class="trust-seal-title">GARANTIA 7 DIAS</span>
+          <span class="trust-seal-desc">Devolucao integral do valor sem perguntas</span>
+        </div>
+      </div>
+
+      <div class="trust-seal">
+        <div class="trust-seal-icon lgpd">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        </div>
+        <div class="trust-seal-text">
+          <span class="trust-seal-title">LGPD COMPLIANT</span>
+          <span class="trust-seal-desc">Seus dados protegidos conforme Lei 13.709/2018</span>
+        </div>
+      </div>
+
+      <div class="trust-seal">
+        <div class="trust-seal-icon suporte">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg>
+        </div>
+        <div class="trust-seal-text">
+          <span class="trust-seal-title">SUPORTE BR</span>
+          <span class="trust-seal-desc">Atendimento humanizado em portugues</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
 
 <!-- LGPD COOKIE BANNER -->
 <div class="lgpd-banner" id="lgpdBanner" role="dialog" aria-label="Aviso de cookies">
