@@ -60,6 +60,10 @@ elif "restaurante" in segment: ...
 usavam `"""` ao invés de `f"""`, fazendo `{var}` virar literal.
 Fix via post-process `_interpolate_studio_placeholders()`.
 
+**Bug corrigido no Sprint 12.20**: `BookingModal.tsx` do Studio fallback usava
+texto hardcoded "Matricula, treino..." e quebrava leads `nutricionista` no guard
+anti-contaminação. O modal agora usa CTA segment-aware e texto neutro.
+
 ## Como debugar
 
 ### Site mostra tela preta

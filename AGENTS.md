@@ -824,6 +824,18 @@ qualquer f-string esquecida no futuro.
 | Import path backend/ | `7a864c3` | Render não falha no import |
 | Post-process {var} | `84a63d4` | Safety net definitivo |
 | 7 contratos no caroço | `b8bde21` (Sprint 12.14) | Briefing rico pro LLM |
+| BookingModal neutro por nicho | Sprint 12.20 | Remove "matricula/treino" hardcoded que contaminava nutricionista |
+
+### 22.7.1 Fix Sprint 12.20 — BookingModal sem contaminação
+
+**Bug encontrado em teste real tenant 2**: lead `Vitor Feitosa - Nutricionista
+Esportivo` (`nutricionista`) acionou Vite/React, mas o Studio fallback foi
+bloqueado pelo guard de contaminação porque `BookingModal.tsx` ainda tinha texto
+hardcoded de academia/escola: "Matricula, treino e avaliacao".
+
+**Fix**: `backend/services/vite_react_renderer.py` agora usa `{cta_primary}` no
+botão e texto neutro no modal: "Atendimento personalizado com avaliacao".
+Regressão: `tests/test_anti_regressao_v114.py::test_9_studio_fallback_nutricionista_sem_contaminacao`.
 
 ### 22.8 Tags v1.14.x (Sprint 12.19)
 

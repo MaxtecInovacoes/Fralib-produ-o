@@ -81,6 +81,7 @@ sed -i "s/FRALIB_AUTO_IMPROVE: '0'/FRALIB_AUTO_IMPROVE: '1'/" ecosystem.config.j
 - ✅ **21+ checks** no pre-commit hook
 - ✅ **VPS rodando** com `FRALIB_BUILDER_ENGINE=vite_react`
 - ✅ **Sprint 12.19** commita post-process que elimina tela-preta
+- ✅ **Sprint 12.20** remove contaminação `matricula/treino` do BookingModal em nutricionista
 - ⏳ Sub-agentes, RAG, auto-melhoria: implementados, aguardando ativação por tenant
 
 ## Tags v1.14.x (Sprint 12.19)

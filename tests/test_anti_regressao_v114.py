@@ -314,6 +314,42 @@ def test_8_existing_prompt_blocks_intact():
     print("  OK + GSAP code block novo integrado no caroço")
 
 
+def test_9_studio_fallback_nutricionista_sem_contaminacao():
+    """Sprint 12.20: fallback Studio de nutricionista nao herda matricula/treino."""
+    print("\n[TESTE 9/9] Studio fallback nutricionista sem contaminacao...")
+    from backend.services.vite_react_renderer import (
+        _generate_studio_fallback_files,
+        validate_vite_project_files,
+    )
+
+    facts = {
+        "business": {
+            "name": "Vitor Feitosa - Nutricionista Esportivo",
+            "segment": "nutricionista",
+            "subniche": "nutricao esportiva",
+            "city": "Sao Paulo",
+            "phone": "11984585259",
+            "rating": "5.0",
+        },
+        "media": {
+            "photos": [
+                "https://images.unsplash.com/photo-1490645935967-10de6ba17061",
+                "https://images.unsplash.com/photo-1505576399279-565b52d4ac71",
+            ]
+        },
+    }
+    files = _generate_studio_fallback_files(facts)
+    modal = files["src/components/BookingModal.tsx"].lower()
+
+    assert "matricula" not in modal
+    assert "matrícula" not in modal
+    assert "treino" not in modal
+    validate_vite_project_files(files, facts, requested_paths=set())
+
+    print("  OK BookingModal nao contem matricula/treino")
+    print("  OK validate_vite_project_files aceita nutricionista")
+
+
 # ════════════════════════════════════════════════════════════════════
 # Main
 # ════════════════════════════════════════════════════════════════════
@@ -332,9 +368,10 @@ if __name__ == "__main__":
     test_6_backward_compat_prompt_sem_facts()
     test_7_renderer_summarize_inclui_briefing_real()
     test_8_existing_prompt_blocks_intact()
+    test_9_studio_fallback_nutricionista_sem_contaminacao()
 
     print("\n" + "=" * 80)
-    print("TODOS OS TESTES PASSARAM (8/8)")
+    print("TODOS OS TESTES PASSARAM (9/9)")
     print("Sprint 12.12 (v1.14) - caroco enriquecido com briefing real")
     print("Bug fix: NameError em _build_nicho_modal_block")
     print("Novo: _build_lead_briefing_block(facts) com JSON-LD + fotos reais")
