@@ -1912,21 +1912,84 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
   display:inline-block;
 }
 .team-commit{
-  margin-top:48px;
-  text-align:center;
-  max-width:720px;
-  margin-left:auto;margin-right:auto;
-  padding:24px;
-  background:var(--fl-bg-card);
+  margin:56px auto 0;
+  max-width:760px;
+  padding:32px 36px;
+  background:linear-gradient(135deg,var(--fl-bg-card) 0%,var(--fl-bg-surface) 100%);
   border:1px solid var(--fl-border);
-  border-left:3px solid var(--cyan);
+  border-left:4px solid var(--cyan);
+  border-radius:0;
+  position:relative;
+  overflow:hidden;
+}
+.team-commit::before{
+  content:'';
+  position:absolute;
+  top:0;
+  right:0;
+  width:120px;
+  height:120px;
+  background:radial-gradient(circle,rgba(0,255,179,0.15) 0%,transparent 70%);
+  pointer-events:none;
+}
+.team-commit .commit-icon{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:48px;
+  height:48px;
+  background:rgba(0,255,179,0.1);
+  border:1px solid rgba(0,255,179,0.3);
+  margin-bottom:16px;
+  position:relative;
+  z-index:1;
+}
+.team-commit .commit-icon svg{width:24px;height:24px;color:var(--cyan)}
+.team-commit h4{
+  font-family:var(--fl-font-ui);
+  font-size:18px;
+  font-weight:700;
+  margin-bottom:14px;
+  color:var(--fl-text);
+  position:relative;
+  z-index:1;
+}
+.team-commit h4 strong{
+  color:var(--cyan);
+  font-weight:700;
 }
 .team-commit p{
-  font-size:15px;color:var(--fl-text-muted);
-  line-height:1.7;margin-bottom:12px;
+  font-size:15px;
+  color:var(--fl-text-muted);
+  line-height:1.7;
+  margin-bottom:14px;
+  position:relative;
+  z-index:1;
 }
 .team-commit p:last-child{margin-bottom:0}
-.team-commit strong{color:var(--cyan)}
+.team-commit strong{color:var(--cyan);font-weight:700}
+.team-commit .commit-bullets{
+  list-style:none;
+  margin:16px 0;
+  padding:0;
+  position:relative;
+  z-index:1;
+}
+.team-commit .commit-bullets li{
+  font-size:14px;
+  color:var(--fl-text-muted);
+  padding:6px 0;
+  padding-left:24px;
+  position:relative;
+}
+.team-commit .commit-bullets li::before{
+  content:'✓';
+  position:absolute;
+  left:0;
+  color:var(--cyan);
+  font-weight:700;
+  font-size:16px;
+}
 
 /* ============================================================
    DEPOIMENTOS SCROLLTELLER (animacao automatica + drag)
@@ -2169,6 +2232,28 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
         <h4 style="font-size:18px;font-weight:700;margin-bottom:8px;color:var(--fl-text);">Garantia Incondicional de 7 Dias</h4>
         <p style="font-size:14px;color:var(--fl-text-muted);line-height:1.6;">Assine normalmente. Se você se arrepender em até 7 dias, devolvemos 100% do valor. Sem perguntas, sem burocracia.</p>
       </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== SEÇÃO 8B — NOSSO COMPROMISSO ===== -->
+<section class="como-funciona" id="compromisso" style="padding:80px 0;">
+  <div class="container">
+    <div class="team-commit reveal">
+      <div class="commit-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 12l2 2 4-4"/>
+          <path d="M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9 9 4.03 9 9z"/>
+        </svg>
+      </div>
+      <h4>Construímos o FraLib porque <strong>usamos o FraLib</strong>.</h4>
+      <p>Cada feature foi feita pra resolver um problema que <strong>nós mesmos tínhamos</strong> vendendo sites. Não é teoria. É o atalho que a gente queria ter quando começou.</p>
+      <ul class="commit-bullets">
+        <li>Sem guru de marketing vendendo curso de R$ 5.000</li>
+        <li>Sem promessa de R$ 1 milhão em 30 dias</li>
+        <li>Sem grupo de WhatsApp com 5.000 membros que ninguém lê</li>
+      </ul>
+      <p>Só a ferramenta que <strong>a gente queria ter</strong> quando começou a vender sites.</p>
     </div>
   </div>
 </section>
