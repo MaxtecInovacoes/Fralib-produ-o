@@ -2036,6 +2036,20 @@ function trocarAbaUTI(aba) {
 var _sitesCache = [];
 var _sitesPeriod = 'tudo';
 
+function _formatBrasiliaDateTime(value) {
+  if (!value) return '—';
+  var dt = new Date(value);
+  if (isNaN(dt.getTime())) return '—';
+  return dt.toLocaleString('pt-BR', {
+    timeZone: 'America/Sao_Paulo',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+}
+
 async function carregarSites() {
   try {
     var data = await authFetch('/api/leads/sites').then(function(r){ return r.json(); });
@@ -2098,7 +2112,7 @@ function renderSites(sites) {
   }
   if (countEl) countEl.textContent = sites.length + ' sites';
   tbody.innerHTML = sites.map(function(s) {
-    var dataStr = s.criado_em ? new Date(s.criado_em).toLocaleDateString('pt-BR') : '—';
+    var dataStr = _formatBrasiliaDateTime(s.criado_em);
     var safeUrl = sanitizeUrl(s.url_site);
     var valor = (s.valor_venda && s.valor_venda > 0)
       ? '<span style="color:#10b981;font-family:var(--fl-font-mono);font-weight:600">R$ ' + Number(s.valor_venda).toLocaleString('pt-BR', {minimumFractionDigits: 0}) + '</span>'
