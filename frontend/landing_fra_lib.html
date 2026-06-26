@@ -228,7 +228,7 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
 .hero{
   min-height:min(100vh,100dvh);
   display:flex;flex-direction:column;align-items:center;justify-content:center;
-  text-align:center;padding:140px 24px 80px;
+  text-align:center;padding:120px 24px 60px;
   position:relative;overflow:hidden;
 }
 .hero-grid{
@@ -241,12 +241,27 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
   -webkit-mask-image:radial-gradient(ellipse at center,black 20%,transparent 70%);
   pointer-events:none;
 }
-/* Hero logo centered above badge */
+/* Glow centralizado - substitui o mago, sem mascote */
+.hero-glow{
+  position:absolute;
+  top:50%;left:50%;
+  transform:translate(-50%,-50%);
+  width:min(700px,80vw);height:min(700px,80vw);
+  background:radial-gradient(circle,rgba(124,58,237,0.18) 0%,rgba(0,255,179,0.04) 40%,transparent 70%);
+  pointer-events:none;
+  animation:glow-pulse 6s ease-in-out infinite;
+  z-index:1;
+}
+@keyframes glow-pulse{
+  0%,100%{opacity:.7;transform:translate(-50%,-50%) scale(1)}
+  50%{opacity:1;transform:translate(-50%,-50%) scale(1.08)}
+}
+/* Logo compactada no topo - sem mago */
 .hero-logo{
-  height:clamp(100px,16vw,156px);width:auto;
-  margin-bottom:16px;
-  position:relative;z-index:2;
-  filter:drop-shadow(0 0 20px rgba(147,51,234,0.4));
+  height:clamp(64px,9vw,96px);width:auto;
+  margin-bottom:20px;
+  position:relative;z-index:3;
+  filter:drop-shadow(0 0 24px rgba(147,51,234,0.5));
   animation:fadeUp .5s var(--fl-ease) both;
 }
 
@@ -257,7 +272,7 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
   border:1px solid rgba(147,51,234,0.3);
   font-family:var(--fl-font-mono);font-size:11px;font-weight:500;
   color:var(--fl-purple-300);
-  margin-bottom:36px;position:relative;z-index:2;
+  margin-bottom:32px;position:relative;z-index:3;
   animation:fadeUp .6s var(--fl-ease) both;
 }
 .hero-badge .pulse-dot{
@@ -280,7 +295,7 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
   font-family:var(--fl-font-brand);
   font-size:clamp(14px,3vw,28px);
   line-height:2;max-width:860px;
-  margin-bottom:24px;position:relative;z-index:2;
+  margin-bottom:20px;position:relative;z-index:3;
   animation:fadeUp .8s var(--fl-ease) .1s both;
 }
 .hero h1 .grad{
@@ -289,48 +304,115 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
   background-clip:text;
   filter:drop-shadow(0 0 20px rgba(147,51,234,0.4));
 }
+/* Contraste DOR vs SOLUÇÃO — gera tensão psicológica */
+.hero-contrast{
+  display:flex;align-items:center;justify-content:center;
+  gap:16px;margin:0 auto 28px;max-width:780px;
+  position:relative;z-index:3;
+  animation:fadeUp .8s var(--fl-ease) .15s both;
+}
+.hero-pain,.hero-solution{
+  flex:1;padding:14px 18px;border-radius:var(--fl-r-md);
+  text-align:center;font-size:13px;font-weight:600;
+  line-height:1.4;
+}
+.hero-pain{
+  background:rgba(239,68,68,0.08);
+  border:1px solid rgba(239,68,68,0.3);
+  color:#fca5a5;
+}
+.hero-pain strong{color:#ef4444;display:block;font-size:14px;margin-bottom:4px}
+.hero-solution{
+  background:rgba(0,255,179,0.06);
+  border:1px solid rgba(0,255,179,0.3);
+  color:#86efac;
+}
+.hero-solution strong{color:var(--cyan);display:block;font-size:14px;margin-bottom:4px}
+.hero-arrow{
+  color:var(--fl-text-dim);font-size:20px;flex-shrink:0;
+}
 .hero-sub{
-  font-size:clamp(14px,1.6vw,17px);color:var(--fl-text-muted);
-  max-width:600px;line-height:1.8;margin-bottom:44px;
-  position:relative;z-index:2;
+  font-size:clamp(14px,1.5vw,16px);color:var(--fl-text-muted);
+  max-width:620px;line-height:1.7;margin-bottom:36px;
+  position:relative;z-index:3;
   animation:fadeUp .8s var(--fl-ease) .2s both;
 }
+/* CTA único grande e dominante — sem distração de secundário */
 .hero-buttons{
-  display:flex;gap:16px;flex-wrap:wrap;justify-content:center;
-  position:relative;z-index:2;
+  display:flex;flex-direction:column;align-items:center;gap:14px;
+  position:relative;z-index:3;
   animation:fadeUp .8s var(--fl-ease) .3s both;
 }
-
-/* MASCOT in hero */
-.hero-mascot{
-  position:absolute;bottom:60px;right:8%;z-index:2;
-  animation:mago-breath 4s ease-in-out infinite;
-  pointer-events:none;
-}
-.hero-mascot img{
-  height:clamp(120px,18vw,220px);width:auto;
-  filter:drop-shadow(0 0 30px rgba(147,51,234,0.5)) drop-shadow(0 0 60px rgba(147,51,234,0.2));
-}
-@keyframes mago-breath{
-  0%,100%{transform:translateY(0) scale(1);filter:brightness(1)}
-  50%{transform:translateY(-15px) scale(1.05);filter:brightness(1.2)}
-}
-
-/* MAGIC SPARKLES near mascot */
-.sparkle{
-  position:absolute;width:4px;height:4px;border-radius:50%;
+.btn-hero-primary{
+  display:inline-flex;align-items:center;justify-content:center;gap:10px;
+  padding:18px 36px;
+  font-family:var(--fl-font-brand);font-size:12px;letter-spacing:1.5px;
+  color:#000;text-decoration:none;cursor:pointer;border:none;
   background:var(--gold);
-  box-shadow:0 0 6px var(--gold),0 0 12px var(--gold);
-  animation:sparkle-float 3s ease-in-out infinite;
-  pointer-events:none;
+  box-shadow:
+    inset -4px -4px 0 #A16207,
+    inset 4px 4px 0 #FDE68A,
+    0 6px 0 #713F12,
+    0 12px 24px rgba(255,184,0,0.4);
+  transition:transform 80ms, box-shadow 80ms;
+  animation:btn-pulse 2.4s ease-in-out infinite;
 }
-.sparkle:nth-child(2){animation-delay:.5s;left:20px;top:-10px}
-.sparkle:nth-child(3){animation-delay:1s;left:-15px;top:5px}
-.sparkle:nth-child(4){animation-delay:1.5s;left:35px;top:-20px}
-.sparkle:nth-child(5){animation-delay:2s;left:-5px;top:-30px}
-@keyframes sparkle-float{
-  0%,100%{opacity:0;transform:translateY(0) scale(0)}
-  50%{opacity:1;transform:translateY(-20px) scale(1)}
+.btn-hero-primary:hover{
+  background:#FDE047;
+  box-shadow:
+    inset -4px -4px 0 #A16207,
+    inset 4px 4px 0 #FEF9C3,
+    0 6px 0 #713F12,
+    0 0 30px rgba(255,184,0,0.6);
+  transform:translateY(-2px);
+}
+.btn-hero-primary:active{
+  transform:translateY(2px);
+  box-shadow:
+    inset -4px -4px 0 #A16207,
+    inset 4px 4px 0 #FDE68A,
+    0 2px 0 #713F12;
+}
+@keyframes btn-pulse{
+  0%,100%{box-shadow:
+    inset -4px -4px 0 #A16207,
+    inset 4px 4px 0 #FDE68A,
+    0 6px 0 #713F12,
+    0 12px 24px rgba(255,184,0,0.4)}
+  50%{box-shadow:
+    inset -4px -4px 0 #A16207,
+    inset 4px 4px 0 #FDE68A,
+    0 6px 0 #713F12,
+    0 12px 40px rgba(255,184,0,0.7)}
+}
+.hero-cta-sub{
+  font-size:11px;color:var(--fl-text-dim);font-family:var(--fl-font-mono);
+  letter-spacing:0.5px;
+}
+.hero-cta-sub span{color:var(--cyan);font-weight:700}
+
+/* Micro-prova logo abaixo do CTA — reduz fricção */
+.hero-microproof{
+  display:flex;align-items:center;justify-content:center;
+  gap:32px;margin-top:48px;
+  position:relative;z-index:3;
+  animation:fadeUp .8s var(--fl-ease) .4s both;
+}
+.hero-microproof-item{
+  display:flex;flex-direction:column;align-items:center;gap:2px;
+  text-align:center;
+}
+.hero-microproof-num{
+  font-family:var(--fl-font-mono);font-size:20px;font-weight:700;
+  color:var(--cyan);
+}
+.hero-microproof-label{
+  font-size:10px;color:var(--fl-text-muted);
+  font-family:var(--fl-font-mono);letter-spacing:0.5px;
+  text-transform:uppercase;
+}
+.hero-microproof-sep{
+  width:1px;height:24px;background:var(--fl-border-md);
 }
 
 @keyframes fadeUp{
@@ -1108,7 +1190,6 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
   .steps-line{display:none}
   .mockup-body{grid-template-columns:1fr}
   .mockup-wa{min-height:280px;border-top:1px solid var(--fl-border)}
-  .hero-mascot{right:2%;bottom:40px}
   .steps-mascot{display:none}
 }
 @media(max-width:768px){
@@ -1123,13 +1204,18 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
     border-bottom:1px solid var(--fl-border);
   }
   section{padding:64px 0}
-  .hero{padding:120px 20px 60px;min-height:auto}
-  .hero-mascot{position:relative;right:auto;bottom:auto;margin-top:32px}
+  .hero{padding:100px 20px 60px;min-height:auto}
   .problema-grid,.steps-grid,.feat-grid,.quem-grid,.planos-grid{grid-template-columns:1fr}
-  .hero-buttons{flex-direction:column;align-items:center}
-  .btn{width:100%;max-width:300px;justify-content:center}
+  .hero-buttons{flex-direction:column;align-items:stretch;width:100%}
+  .btn-hero-primary{width:100%;max-width:340px}
   .section-title{font-size:10px}
   .kanban-cols{grid-template-columns:1fr}
+  .hero-contrast{flex-direction:column;gap:8px}
+  .hero-arrow{transform:rotate(90deg)}
+  .hero-microproof{gap:14px;flex-wrap:wrap}
+  .hero-microproof-sep{display:none}
+  .hero-microproof-num{font-size:16px}
+  .hero-microproof-label{font-size:9px}
 }
 </style>
 
@@ -1270,8 +1356,9 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
 <!-- ===== SEÇÃO 1 — HERO ===== -->
 <section class="hero" id="hero">
   <div class="hero-grid"></div>
+  <div class="hero-glow"></div>
 
-  <!-- LOGO CENTRALIZADA -->
+  <!-- LOGO COMPACTA - SEM MAGO -->
   <img src="/images/Logo FraLib.png" alt="FraLib OS" class="hero-logo">
 
   <div class="hero-badge">
@@ -1284,28 +1371,49 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
     Zero fechou.
   </h1>
 
+  <!-- CONTRASTE DOR vs SOLUÇÃO — gera tensão psicológica imediata -->
+  <div class="hero-contrast">
+    <div class="hero-pain">
+      <strong>VOCÊ HOJE</strong>
+      6 meses. Zero clientes. Tudo no braço.
+    </div>
+    <span class="hero-arrow">→</span>
+    <div class="hero-solution">
+      <strong>VOCÊ COM FRALIB</strong>
+      3 clientes/semana. IA faz o resto.
+    </div>
+  </div>
+
   <p class="hero-sub">
-    Seu concorrente fechou 3 na mesma semana. Resultado do mes: ZERO fechou. Voce nao e ruim. Voce so ta fazendo tudo no braco.
+    Seu concorrente fechou 3 na mesma semana. Nao e magia. E a IA prospectando, criando sites e fechando no WhatsApp enquanto voce dorme.
   </p>
 
   <div class="hero-buttons">
-    <a href="/login?signup=1" class="btn btn-yellow btn-hero">
+    <a href="/login?signup=1" class="btn-hero-primary">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
       EU QUERO FECHAR 3 CLIENTES ESTE MES
     </a>
-    <a href="#como-funciona" class="btn btn-outline">
-      Como funciona?
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 13l5 5 5-5M7 6l5 5 5-5"/></svg>
-    </a>
+    <div class="hero-cta-sub">
+      7 dias gratis · <span>Sem cartao de credito</span> · Cancela em 1 clique
+    </div>
   </div>
 
-  <!-- MASCOT -->
-  <div class="hero-mascot"><img class="pixel-anim-idle" src="/images/Mestre Fralib - Mago da IA.png" alt="Mestre FraLib - Mago da IA">
-    <span class="sparkle" style="top:-10px;left:10px"></span>
-    <span class="sparkle" style="top:5px;left:30px"></span>
-    <span class="sparkle" style="top:-20px;left:50px"></span>
-    <span class="sparkle" style="top:0;left:-5px"></span>
-    <span class="sparkle" style="top:-15px;left:65px"></span>
+  <!-- MICRO-PROVA — reduz fricção logo após o CTA -->
+  <div class="hero-microproof">
+    <div class="hero-microproof-item">
+      <div class="hero-microproof-num">+2.400</div>
+      <div class="hero-microproof-label">Leads prospectados</div>
+    </div>
+    <div class="hero-microproof-sep"></div>
+    <div class="hero-microproof-item">
+      <div class="hero-microproof-num">+180</div>
+      <div class="hero-microproof-label">Sites gerados</div>
+    </div>
+    <div class="hero-microproof-sep"></div>
+    <div class="hero-microproof-item">
+      <div class="hero-microproof-num">97%</div>
+      <div class="hero-microproof-label">Abertura WhatsApp</div>
+    </div>
   </div>
 </section>
 
