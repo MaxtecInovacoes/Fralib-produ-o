@@ -537,3 +537,75 @@ async def followup_franz(x_cron_secret: str = Header(None, alias='X-Cron-Secret'
                 print(f"[Cron FU] ❌ Erro scheduled {nome}: {e}")
 
     return {'status': 'ok', 'enviados': enviados, 'perdidos': perdidos, 'erros': erros, 'total': len(rows) + len(scheduled_rows)}
+
+
+@router.post('/reengajar-leads')
+async def reengajar_leads(
+    x_cron_secret: str = Header(None, alias='X-Cron-Secret'),
+    days_idle: int = 7,
+):
+    """Re-engaja leads abandonados (pararam de responder 7+ dias)."""
+    _autorizar(x_cron_secret)
+
+    try:
+        from backend.services.ab_testing import (
+            find_abandoned_leads,
+            generate_reengagement_message,
+            should_reengange,
+        )
+    except Exception as e:
+        return {'status': 'error', 'message': f'ab_testing nao disponivel: {e}'}
+
+    total_enviados = 0
+    total_pulados = 0
+    total_erros = 0
+    detalhes = []
+
+    with engine.connect() as conn:
+        tenants = conn.execute(text("""
+            SELECT id FROM users
+            WHERE LOWER(COALESCE(plano, '')) IN ('trial','pro','beta','agency','ilimitado','admin')
+              AND LOWER(COALESCE(status, '')) NOT IN ('bloqueado','suspenso','cancelado','inadimplente')
+        """)).fetchall()
+
+        for (user_id,) in tenants:
+            try:
+                abandoned = find_abandoned_leads(user_id=user_id, days_idle=days_idle)
+                for lead in abandoned:
+                    if not should_reengange(lead["days_idle"]):
+                        total_pulados += 1
+                        continue
+
+                    msg = generate_reengagement_message(lead)
+                    detalhes.append({
+                        "lead_id": lead["lead_id"],
+                        "nome": lead["nome"],
+                        "telefone": lead["telefone"],
+                        "days_idle": lead["days_idle"],
+                        "msg_preview": msg[:100],
+                    })
+                    total_enviados += 1
+            except Exception as e:
+                total_erros += 1
+
+    return {
+        'status': 'ok',
+        'enviados': total_enviados,
+        'pulados': total_pulados,
+        'erros': total_erros,
+        'detalhes': detalhes[:10],
+    }
+
+
+@router.get('/variant-report')
+async def variant_report(
+    x_cron_secret: str = Header(None, alias='X-Cron-Secret'),
+    user_id: int = 1,
+):
+    """Retorna relatorio de A/B testing das variants."""
+    _autorizar(x_cron_secret)
+    try:
+        from backend.services.ab_testing import get_variant_report
+        return get_variant_report(user_id)
+    except Exception as e:
+        return {'error': str(e)}
