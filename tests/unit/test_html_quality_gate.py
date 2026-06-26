@@ -43,6 +43,32 @@ def _with_experience_hero(html: str, title: str) -> str:
     return html.replace("<body>", f"<body>{hero}", 1)
 
 
+def test_sanitize_builder_html_nao_transforma_numero_de_endereco_em_copyright():
+    html = """
+    <!doctype html><html><head>
+      <title>Vitor Feitosa</title>
+      <script type="application/ld+json">
+      {"@context":"https://schema.org","@type":"LocalBusiness","name":"Vitor Feitosa","address":{"@type":"PostalAddress","streetAddress":"Av. Nova Cantareira, 2026 - Conjunto 113"}}
+      </script>
+    </head><body>
+      <footer>© 2024 Vitor Feitosa</footer>
+    </body></html>
+    """
+    prd = {
+        "business": {
+            "name": "Vitor Feitosa",
+            "address": "Av. Nova Cantareira, 2026 - Conjunto 113",
+        }
+    }
+
+    cleaned = sanitize_builder_html_for_publication(html, prd)
+
+    assert "Nova Cantareira, 2026 - Conjunto 113" in cleaned
+    assert "Nova Cantareira,© 2026" not in cleaned
+    assert "© 2024" not in cleaned
+    assert "© " in cleaned
+
+
 def _prd():
     return SimpleNamespace(
         business_name="Aquaflex Jardim Paulista",

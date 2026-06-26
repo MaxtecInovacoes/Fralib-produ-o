@@ -538,6 +538,78 @@ def test_13_vite_policy_none_nao_chama_llm(monkeypatch, tmp_path):
     print("  OK Studio deterministico ainda gera site completo")
 
 
+def test_14_vite_copy_only_rejeita_ingles_e_repassa(monkeypatch, tmp_path):
+    """Sprint 14 hardening: copy_only nao deve publicar slots em ingles."""
+    print("\n[TESTE 14/14] Vite copy_only rejeita ingles e faz retry...")
+    import backend.services.vite_react_renderer as renderer
+
+    monkeypatch.setenv("FRALIB_VITE_LLM_POLICY", "copy_only")
+    monkeypatch.setenv("FRALIB_VITE_COPY_ONLY_ATTEMPTS", "2")
+    calls = {"count": 0}
+
+    def fake_copy_llm(*args, **kwargs):
+        calls["count"] += 1
+        if calls["count"] == 1:
+            return """{
+              "hero": {
+                "headline": "Premium barber experience in Pinhais",
+                "subheadline": "Personalized grooming and haircut services for your routine",
+                "cta_primary": "Schedule haircut"
+              },
+              "services": [{"title": "Haircut service", "description": "Grooming results with precise style"}]
+            }"""
+        return """{
+          "hero": {
+            "headline": "Corte premium sem espera",
+            "subheadline": "Atendimento de barbearia em Pinhais com horário claro e acabamento preciso",
+            "cta_primary": "Agendar corte",
+            "cta_secondary": "Conhecer atendimento"
+          },
+          "services_title": "Serviços de barbearia",
+          "services": [
+            {"title": "Corte masculino", "description": "Corte alinhado ao estilo, rotina e preferência do cliente."}
+          ]
+        }"""
+
+    def fake_build(workspace):
+        dist = workspace / "dist"
+        assets = dist / "assets"
+        assets.mkdir(parents=True, exist_ok=True)
+        (assets / "app.js").write_text("console.log('ok')", encoding="utf-8")
+        (dist / "index.html").write_text(
+            "<html><head></head><body>"
+            "Corte premium sem espera Agendar corte "
+            "<script type='module' src='assets/app.js'></script>"
+            + ("x" * 320)
+            + "</body></html>",
+            encoding="utf-8",
+        )
+
+    monkeypatch.setattr(renderer, "_call_copy_only_llm", fake_copy_llm)
+    monkeypatch.setattr(renderer, "build_vite_project", fake_build)
+
+    result = renderer.render_vite_react_site(
+        "",
+        workspace_dir=tmp_path,
+        facts=LEAD_TEST_FACTS,
+        primary_model="sonnet",
+        fallback_model="",
+        max_tokens=1200,
+    )
+
+    source = "\n".join(result.source_files.values())
+    statuses = [attempt["status"] for attempt in result.attempts]
+    assert calls["count"] == 2
+    assert statuses.count("copy_only_json_failed") == 1
+    assert "copy_only_json_success" in statuses
+    assert "Premium barber experience in Pinhais" not in source
+    assert "Corte premium sem espera" in source
+    assert "Agendar corte" in source
+
+    print("  OK ingles foi descartado")
+    print("  OK segunda tentativa pt-BR entrou no Studio")
+
+
 # ════════════════════════════════════════════════════════════════════
 # Main
 # ════════════════════════════════════════════════════════════════════

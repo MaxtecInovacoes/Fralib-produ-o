@@ -472,6 +472,48 @@ def _clean_copy_value(value: Any, *, limit: int = 220) -> str:
     return text[:limit].strip()
 
 
+def _copy_only_attempts() -> int:
+    try:
+        return max(1, min(3, int(os.getenv("FRALIB_VITE_COPY_ONLY_ATTEMPTS", "2"))))
+    except (TypeError, ValueError):
+        return 2
+
+
+def _looks_like_pt_br_copy(content: dict[str, Any]) -> bool:
+    """Reject obvious English copy before it reaches the deterministic Studio."""
+    snippets: list[str] = []
+
+    def collect(value: Any) -> None:
+        if isinstance(value, str):
+            snippets.append(value)
+        elif isinstance(value, dict):
+            for child in value.values():
+                collect(child)
+        elif isinstance(value, list):
+            for child in value:
+                collect(child)
+
+    collect(content)
+    text = " ".join(snippets).lower()
+    words = re.findall(r"[a-záéíóúâêôãõç]+", text)
+    if len(words) < 12:
+        return True
+    english_markers = {
+        "the", "and", "for", "your", "with", "schedule", "learn", "about",
+        "nutrition", "performance", "training", "results", "services",
+        "consultation", "personalized", "athletic", "food", "recovery",
+    }
+    portuguese_markers = {
+        "de", "da", "do", "em", "para", "com", "seu", "sua", "consulta",
+        "agendar", "nutrição", "nutricao", "alimentar", "atendimento",
+        "plano", "resultados", "são", "voce", "você", "whatsapp",
+    }
+    english_hits = sum(1 for word in words if word in english_markers)
+    portuguese_hits = sum(1 for word in words if word in portuguese_markers)
+    accented = bool(re.search(r"[áéíóúâêôãõç]", text))
+    return portuguese_hits >= english_hits or (accented and portuguese_hits > 0)
+
+
 def _sanitize_copy_only_content(content: dict[str, Any]) -> dict[str, Any]:
     """Keep only small text slots from the copy-only LLM response."""
     if not isinstance(content, dict):
@@ -531,6 +573,8 @@ def _sanitize_copy_only_content(content: dict[str, Any]) -> dict[str, Any]:
             clean_faq.append({"question": question, "answer": answer})
     if clean_faq:
         cleaned["faq"] = clean_faq
+    if cleaned and not _looks_like_pt_br_copy(cleaned):
+        return {}
     return cleaned
 
 
@@ -630,44 +674,49 @@ def render_vite_react_site(
         copy_error = ""
         if llm_policy == "copy_only":
             for model_idx, model in enumerate(model_candidates, start=1):
-                attempt_started = time.time()
-                try:
-                    raw = _call_copy_only_llm(
-                        _get_copy_only_user_prompt(facts),
-                        model=model,
-                        max_tokens=min(max_tokens, _env_int("FRALIB_VITE_COPY_ONLY_MAX_TOKENS", 900)),
-                        temperature=min(temperature, 0.45),
-                    )
-                    content = _parse_content_json(raw)
-                    if not content:
-                        raise ViteReactRenderError("copy_only retornou JSON vazio")
-                    policy_facts = _merge_copy_only_content(facts, content)
-                    attempts.append(
-                        {
-                            "model": model,
-                            "model_index": model_idx,
-                            "status": "copy_only_json_success",
-                            "elapsed_ms": int((time.time() - attempt_started) * 1000),
-                            "policy": llm_policy,
-                            "json_keys": sorted(content.keys()),
-                        }
-                    )
-                    break
-                except Exception as exc:
-                    copy_error = str(exc)[:500]
-                    attempts.append(
-                        {
-                            "model": model,
-                            "model_index": model_idx,
-                            "status": "copy_only_json_failed",
-                            "elapsed_ms": int((time.time() - attempt_started) * 1000),
-                            "policy": llm_policy,
-                            "error": copy_error,
-                        }
-                    )
-                    lowered = copy_error.lower()
-                    if any(marker in lowered for marker in ("401 unauthorized", "invalid api key", "permission_error")):
+                for copy_try in range(1, _copy_only_attempts() + 1):
+                    attempt_started = time.time()
+                    try:
+                        raw = _call_copy_only_llm(
+                            _get_copy_only_user_prompt(facts),
+                            model=model,
+                            max_tokens=min(max_tokens, _env_int("FRALIB_VITE_COPY_ONLY_MAX_TOKENS", 900)),
+                            temperature=min(temperature, 0.35 if copy_try > 1 else 0.45),
+                        )
+                        content = _parse_content_json(raw)
+                        if not content:
+                            raise ViteReactRenderError("copy_only retornou JSON vazio ou fora de pt-BR")
+                        policy_facts = _merge_copy_only_content(facts, content)
+                        attempts.append(
+                            {
+                                "model": model,
+                                "model_index": model_idx,
+                                "copy_try": copy_try,
+                                "status": "copy_only_json_success",
+                                "elapsed_ms": int((time.time() - attempt_started) * 1000),
+                                "policy": llm_policy,
+                                "json_keys": sorted(content.keys()),
+                            }
+                        )
                         break
+                    except Exception as exc:
+                        copy_error = str(exc)[:500]
+                        attempts.append(
+                            {
+                                "model": model,
+                                "model_index": model_idx,
+                                "copy_try": copy_try,
+                                "status": "copy_only_json_failed",
+                                "elapsed_ms": int((time.time() - attempt_started) * 1000),
+                                "policy": llm_policy,
+                                "error": copy_error,
+                            }
+                        )
+                        lowered = copy_error.lower()
+                        if any(marker in lowered for marker in ("401 unauthorized", "invalid api key", "permission_error")):
+                            break
+                if policy_facts is not facts:
+                    break
         else:
             attempts.append(
                 {
@@ -1864,7 +1913,17 @@ def prepare_vite_project_files(files: dict[str, str], *, facts: dict[str, Any]) 
     prepared["package.json"] = json.dumps(FIXED_PACKAGE_JSON, ensure_ascii=False, indent=2)
     prepared["vite.config.ts"] = vite_template_vite_config()
     prepared["tsconfig.json"] = vite_template_tsconfig()
-    prepared["index.html"] = vite_template_index_html(facts)
+
+    # Sprint 16: Inject archetype palette into facts for index.html theme-color
+    facts_with_archetype = dict(facts)
+    business = facts.get("business") if isinstance(facts.get("business"), dict) else {}
+    segment = str(business.get("segment") or business.get("segmento") or facts.get("segmento") or facts.get("segment") or "servicos").lower()
+    archetype = _get_archetype_for_segment(segment)
+    palette = _get_archetype_palette(archetype)
+    facts_with_archetype["_archetype_palette"] = palette
+    facts_with_archetype["_archetype"] = archetype
+
+    prepared["index.html"] = vite_template_index_html(facts_with_archetype)
     prepared.setdefault("src/main.tsx", vite_template_main_tsx())
     prepared.setdefault("src/App.tsx", vite_template_app_tsx())
     prepared.setdefault("src/types.ts", vite_template_types_ts())
@@ -3180,9 +3239,328 @@ export default function Index() {{
 """
 
 
+def _cinematic_media_urls(facts: dict[str, Any]) -> tuple[list[str], list[str]]:
+    business = facts.get("business") if isinstance(facts.get("business"), dict) else {}
+    media = facts.get("media") if isinstance(facts.get("media"), dict) else {}
+    images = _visual_media_urls(facts) or [
+        "https://images.unsplash.com/photo-1490645935967-10de6ba17061?auto=format&fit=crop&w=1600&q=84",
+        "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=1600&q=84",
+        "https://images.unsplash.com/photo-1498837167922-ddd27525d352?auto=format&fit=crop&w=1600&q=84",
+    ]
+    videos: list[str] = []
+    for source in (media.get("videos"), business.get("videos"), facts.get("videos")):
+        if isinstance(source, list):
+            videos.extend(str(item or "").strip() for item in source)
+        elif isinstance(source, str):
+            videos.append(source.strip())
+    videos = [url for url in videos if url.startswith(("http://", "https://"))]
+    if not videos:
+        videos = ["https://videos.pexels.com/video-files/6554881/6554881-uhd_2560_1440_25fps.mp4"]
+    return images[:6], videos[:2]
+
+
+def _cinematic_copy(facts: dict[str, Any]) -> dict[str, Any]:
+    business = facts.get("business") if isinstance(facts.get("business"), dict) else {}
+    llm_content = facts.get("_llm_content") if isinstance(facts.get("_llm_content"), dict) else {}
+    hero = llm_content.get("hero") if isinstance(llm_content.get("hero"), dict) else {}
+    lifestyle = llm_content.get("lifestyle") if isinstance(llm_content.get("lifestyle"), dict) else {}
+    name = str(business.get("name") or business.get("business_name") or facts.get("business_name") or "Negócio local")
+    city = str(business.get("city") or business.get("cidade") or facts.get("cidade") or "sua cidade")
+    segment = str(business.get("segment") or business.get("segmento") or facts.get("segmento") or "atendimento local")
+    phone = str(business.get("whatsapp") or business.get("phone") or "")
+    rating = str(business.get("rating") or "")
+    reviews = str(business.get("total_avaliacoes") or business.get("reviews_count") or "")
+    address = str(business.get("address") or business.get("endereco") or "")
+    segment_context = _normalize_text(" ".join([name, segment, str(business.get("subniche") or "")]))
+    is_nutri = "nutri" in segment_context
+    is_barber = any(token in segment_context for token in ("barbearia", "barbeiro", "barber"))
+
+    if is_barber:
+        defaults = {
+            "headline": f"Barbearia premium com corte preciso em {city}",
+            "subheadline": "Atendimento para corte masculino, barba e acabamento com horário claro e contato direto.",
+            "cta_primary": "Agendar corte",
+            "cta_secondary": "Ver serviços",
+            "services_title": "Serviços de barbearia sem espera",
+            "lifestyle_title": "Corte, barba e acabamento no mesmo ritual",
+            "lifestyle_description": "Visual cinematográfico, informações reais e caminho claro para agendar na barbearia.",
+            "services": [
+                {"title": "Corte masculino", "description": "Corte alinhado ao estilo, rotina e preferência do cliente."},
+                {"title": "Barba e acabamento", "description": "Ritual de barba com atenção a detalhe, contorno e finalização."},
+                {"title": "Atendimento agendado", "description": "Contato rápido para confirmar horário, endereço e próximo corte."},
+            ],
+        }
+    else:
+        defaults = {
+        "headline": f"Nutrição esportiva com plano claro para evoluir em {city}" if is_nutri else f"{name}: presença local com atendimento direto em {city}",
+        "subheadline": "Acompanhamento nutricional com foco em rotina, treino, recuperação e decisões práticas antes da consulta." if is_nutri else f"Site criado com dados confirmados, prova local e CTA objetivo para {segment}.",
+        "cta_primary": "Agendar consulta" if is_nutri else "Falar no WhatsApp",
+        "cta_secondary": "Ver abordagem",
+        "services_title": "O que fica claro antes do contato",
+        "lifestyle_title": "Alimentação, treino e rotina no mesmo plano" if is_nutri else "Experiência local sem ruído",
+        "lifestyle_description": "Visual cinematográfico, informações reais e caminho claro para o próximo contato.",
+        "services": [
+            {"title": "Plano alimentar" if is_nutri else "Dados confirmados", "description": "Estrutura ajustada à rotina, objetivo e próximos passos reais."},
+            {"title": "Acompanhamento" if is_nutri else "Prova e contexto", "description": "Avaliação, endereço, contato e mídia editorial sustentam a decisão."},
+            {"title": "Consulta esportiva" if is_nutri else "Contato rápido", "description": "CTA direto para o canal oficial, sem etapas desnecessárias."},
+        ],
+        }
+    services = defaults["services"]
+    if isinstance(llm_content.get("services"), list) and llm_content["services"]:
+        clean_services = []
+        for item in llm_content["services"][:3]:
+            if isinstance(item, dict) and item.get("title"):
+                clean_services.append({
+                    "title": str(item.get("title")),
+                    "description": str(item.get("description") or defaults["services"][min(len(clean_services), 2)]["description"]),
+                })
+        if clean_services:
+            services = clean_services
+    return {
+        "name": name,
+        "city": city,
+        "segment": segment,
+        "phone": phone,
+        "phone_digits": re.sub(r"\D+", "", phone),
+        "rating": rating,
+        "reviews": reviews,
+        "address": address,
+        "headline": str(hero.get("headline") or defaults["headline"]),
+        "subheadline": str(hero.get("subheadline") or defaults["subheadline"]),
+        "cta_primary": str(hero.get("cta_primary") or defaults["cta_primary"]),
+        "cta_secondary": str(hero.get("cta_secondary") or defaults["cta_secondary"]),
+        "services_title": str(llm_content.get("services_title") or defaults["services_title"]),
+        "lifestyle_title": str(lifestyle.get("title") or defaults["lifestyle_title"]),
+        "lifestyle_description": str(lifestyle.get("description") or defaults["lifestyle_description"]),
+        "gallery_alt": str(llm_content.get("gallery_alt") or f"{segment} em {city}"),
+        "modal_title": str(llm_content.get("modal_title") or f"Fale com {name}"),
+        "modal_cta": str(llm_content.get("modal_cta") or "Enviar mensagem"),
+        "contact_headline": str(llm_content.get("contact_headline") or "Pronto para confirmar o próximo passo?"),
+        "contact_sub": str(llm_content.get("contact_sub") or "Use o canal oficial para tirar dúvidas e agendar."),
+        "services": services,
+    }
+
+
+def _generate_cinematic_studio_files(facts: dict[str, Any]) -> dict[str, str]:
+    copy = _cinematic_copy(facts)
+    images, videos = _cinematic_media_urls(facts)
+    whatsapp = f"https://wa.me/55{copy['phone_digits']}" if copy["phone_digits"] else "#contato"
+    source_files: dict[str, str] = {
+        "src/App.tsx": """import { Index } from './pages/Index';
+import { LgpdBanner } from './components/LgpdBanner';
+import { FactualMotionContract } from './components/FactualMotionContract';
+
+export default function App() {
+  return <><Index /><LgpdBanner /><FactualMotionContract /></>;
+}
+""",
+        "src/main.tsx": vite_template_main_tsx(),
+        "src/types.ts": vite_template_types_ts(),
+        "src/fralib-jsx.d.ts": vite_template_jsx_fallback_types(),
+        "src/components/siteData.ts": f"""export const siteCopy = {json.dumps(copy, ensure_ascii=False)} as const;
+export const mediaImages = {json.dumps(images, ensure_ascii=False)} as const;
+export const mediaVideos = {json.dumps(videos, ensure_ascii=False)} as const;
+export const whatsappHref = {json.dumps(whatsapp, ensure_ascii=False)} as const;
+""",
+        "src/pages/Index.tsx": """import { useState } from 'react';
+import { Navbar } from '../components/Navbar';
+import { HeroSection } from '../components/HeroSection';
+import { ServicesSection } from '../components/ServicesSection';
+import { GallerySection } from '../components/GallerySection';
+import { LifestyleSection } from '../components/LifestyleSection';
+import { ContactCTA } from '../components/ContactCTA';
+import { BookingModal } from '../components/BookingModal';
+import { Footer } from '../components/Footer';
+
+export function Index() {
+  const [open, setOpen] = useState(false);
+  return (
+    <main className="min-h-screen bg-[#07110f] text-white">
+      <Navbar onOpen={() => setOpen(true)} />
+      <HeroSection onOpen={() => setOpen(true)} />
+      <ServicesSection />
+      <GallerySection />
+      <LifestyleSection />
+      <ContactCTA onOpen={() => setOpen(true)} />
+      <Footer />
+      <BookingModal open={open} onClose={() => setOpen(false)} />
+    </main>
+  );
+}
+
+export default Index;
+""",
+        "src/components/Navbar.tsx": """import { useEffect, useState } from 'react';
+import { Menu, MessageCircle, X } from 'lucide-react';
+import { siteCopy, whatsappHref } from './siteData';
+
+export function Navbar({ onOpen }: { onOpen?: () => void }) {
+  const [solid, setSolid] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setSolid(window.scrollY > 36);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+  const links = [['Abordagem', '#servicos'], ['Prova visual', '#galeria'], ['Experiência', '#experiencia'], ['Contato', '#contato']];
+  return (
+    <nav className={`fixed inset-x-3 top-3 z-50 rounded-[18px] border px-4 py-3 transition duration-300 md:inset-x-6 md:top-5 ${solid ? 'border-white/10 bg-[#07110f]/88 shadow-[0_10px_32px_rgba(0,0,0,.24)] backdrop-blur-xl' : 'border-white/10 bg-white/[0.04] backdrop-blur-md'}`}>
+      <div className="mx-auto flex max-w-7xl items-center justify-between gap-4">
+        <a href="#hero" className="min-w-0 truncate text-sm font-semibold tracking-tight text-white md:text-base">{siteCopy.name}</a>
+        <div className="hidden items-center gap-6 text-sm text-zinc-300 md:flex">{links.map(([label, href]) => <a key={href} href={href} className="transition hover:text-white">{label}</a>)}</div>
+        <div className="flex items-center gap-2">
+          <a href={whatsappHref} rel="noopener noreferrer" className="hidden items-center gap-2 rounded-full bg-[#b7ff6a] px-4 py-2 text-sm font-semibold text-[#07110f] transition hover:-translate-y-0.5 md:inline-flex"><MessageCircle className="h-4 w-4" /> WhatsApp</a>
+          <button type="button" onClick={onOpen} className="hidden rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-white md:inline-flex">{siteCopy.cta_primary}</button>
+          <button type="button" aria-label="Menu" onClick={() => setMenuOpen((value) => !value)} className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/10 text-white md:hidden">{menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}</button>
+        </div>
+      </div>
+      {menuOpen ? <div className="mt-3 grid gap-2 border-t border-white/10 pt-3 md:hidden">{links.map(([label, href]) => <a key={href} href={href} onClick={() => setMenuOpen(false)} className="rounded-xl px-2 py-2 text-sm text-zinc-200">{label}</a>)}<a href={whatsappHref} rel="noopener noreferrer" className="rounded-xl bg-[#b7ff6a] px-3 py-2 text-sm font-semibold text-[#07110f]">Falar no WhatsApp</a></div> : null}
+    </nav>
+  );
+}
+
+export default Navbar;
+""",
+        "src/components/HeroSection.tsx": """import { useEffect, useRef } from 'react';
+import { ArrowDownRight, MessageCircle, Play, Star } from 'lucide-react';
+import { motion } from 'motion/react';
+import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { mediaImages, mediaVideos, siteCopy, whatsappHref } from './siteData';
+
+gsap.registerPlugin(ScrollTrigger);
+
+export function HeroSection({ onOpen }: { onOpen?: () => void }) {
+  const rootRef = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const ctx = gsap.context(() => {
+      gsap.to('[data-hero-video]', { yPercent: 10, scale: 1.08, ease: 'none', scrollTrigger: { trigger: root, start: 'top top', end: 'bottom top', scrub: true } });
+      gsap.fromTo('[data-hero-reveal]', { y: 26, opacity: 0 }, { y: 0, opacity: 1, duration: 0.9, stagger: 0.08, ease: 'power3.out' });
+    }, root);
+    return () => ctx.revert();
+  }, []);
+  return (
+    <section ref={rootRef} id="hero" className="relative isolate min-h-[92svh] overflow-hidden px-5 pb-16 pt-28 text-white md:px-8 md:pb-24 md:pt-36">
+      <div className="absolute inset-0 -z-20 bg-[#07110f]" />
+      <video data-hero-video className="absolute inset-0 -z-10 h-full w-full object-cover opacity-52 saturate-[.9]" src={mediaVideos[0]} poster={mediaImages[0]} autoPlay muted loop playsInline preload="metadata" />
+      <div className="absolute inset-0 -z-10 bg-[linear-gradient(90deg,rgba(7,17,15,.96),rgba(7,17,15,.66)_42%,rgba(7,17,15,.22)),radial-gradient(circle_at_80%_20%,rgba(183,255,106,.20),transparent_34%)]" />
+      <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[1.05fr_.95fr] lg:items-end">
+        <div className="max-w-4xl">
+          <motion.div data-hero-reveal className="inline-flex items-center gap-2 rounded-full border border-[#b7ff6a]/25 bg-[#b7ff6a]/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-[#d8ff9f]"><Play className="h-3.5 w-3.5" />{siteCopy.segment} em {siteCopy.city}</motion.div>
+          <h1 data-hero-reveal className="mt-7 max-w-5xl text-[clamp(2.65rem,7.7vw,5.9rem)] font-semibold leading-[0.93] tracking-[-0.035em] text-white">{siteCopy.headline}</h1>
+          <p data-hero-reveal className="mt-6 max-w-2xl text-base leading-8 text-zinc-200 md:text-lg">{siteCopy.subheadline}</p>
+          <div data-hero-reveal className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+            <a href={whatsappHref} rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 rounded-full bg-[#b7ff6a] px-6 py-3.5 text-sm font-semibold text-[#07110f] transition duration-300 hover:-translate-y-0.5"><MessageCircle className="h-4 w-4" />{siteCopy.cta_primary}</a>
+            <button type="button" onClick={onOpen} className="inline-flex items-center justify-center gap-2 rounded-full border border-white/15 px-6 py-3.5 text-sm font-semibold text-white transition duration-300 hover:-translate-y-0.5">{siteCopy.cta_secondary}<ArrowDownRight className="h-4 w-4" /></button>
+          </div>
+        </div>
+        <div data-hero-reveal className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
+          {[['Avaliação', siteCopy.rating || '5.0'], ['Sinais locais', siteCopy.reviews || 'confirmados'], ['Contato', siteCopy.phone || 'WhatsApp']].map(([label, value]) => (
+            <div key={label} className="rounded-[18px] border border-white/10 bg-white/[0.055] p-4 backdrop-blur-md"><div className="flex items-center gap-2 text-[#b7ff6a]"><Star className="h-4 w-4" /><span className="text-xs font-semibold uppercase tracking-[0.16em]">{label}</span></div><p className="mt-2 text-lg font-semibold text-white">{value}</p></div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+export default HeroSection;
+""",
+    }
+    source_files.update(_generate_cinematic_secondary_components(facts))
+    return prepare_vite_project_files(source_files, facts=facts)
+
+
+def _generate_cinematic_secondary_components(facts: dict[str, Any]) -> dict[str, str]:
+    copy = _cinematic_copy(facts)
+    return {
+        "src/components/ServicesSection.tsx": """import { ClipboardCheck, MapPinned, Sparkles } from 'lucide-react';
+import { motion } from 'motion/react';
+import { siteCopy } from './siteData';
+const icons = [ClipboardCheck, Sparkles, MapPinned];
+export function ServicesSection() {
+  return <section id="servicos" className="bg-[#f4f0e6] px-5 py-20 text-[#09130f] md:px-8 md:py-28"><div className="mx-auto max-w-7xl"><div className="grid gap-8 lg:grid-cols-[.8fr_1.2fr] lg:items-end"><div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-800">Decisão clara</p><h2 className="mt-3 text-[clamp(2rem,4.8vw,4.4rem)] font-semibold leading-[1] tracking-[-0.025em]">{siteCopy.services_title}</h2></div><p className="max-w-2xl text-base leading-8 text-[#314039]">A estrutura evita promessa genérica: usa dados reais do lead, provas locais e um caminho único para ação.</p></div><div className="mt-12 grid gap-4 md:grid-cols-3">{siteCopy.services.map((service, index) => { const Icon = icons[index] || ClipboardCheck; return <motion.article key={service.title} initial={{ opacity: 0, y: 22 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.28 }} transition={{ delay: index * 0.06 }} className="min-h-[17rem] rounded-[18px] border border-[#09130f]/10 bg-white p-6 shadow-[0_8px_24px_rgba(9,19,15,.06)]"><Icon className="h-6 w-6 text-emerald-800" /><h3 className="mt-8 text-2xl font-semibold tracking-tight">{service.title}</h3><p className="mt-4 text-sm leading-7 text-[#425249]">{service.description}</p></motion.article>; })}</div></div></section>;
+}
+export default ServicesSection;
+""",
+        "src/components/GallerySection.tsx": """import { motion } from 'motion/react';
+import { mediaImages, siteCopy } from './siteData';
+export function GallerySection() {
+  return <section id="galeria" className="bg-[#07110f] px-5 py-20 text-white md:px-8 md:py-28"><div className="mx-auto max-w-7xl"><div className="mb-10 flex flex-col gap-4 md:flex-row md:items-end md:justify-between"><div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#b7ff6a]">Prova visual</p><h2 className="mt-3 max-w-3xl text-[clamp(2rem,4.8vw,4.4rem)] font-semibold leading-[1] tracking-[-0.025em]">Uma narrativa visual para {siteCopy.segment}.</h2></div><p className="max-w-md text-sm leading-7 text-zinc-300">As imagens são apoio editorial do nicho, não afirmação de foto real do endereço.</p></div><div className="grid auto-rows-[16rem] gap-4 md:grid-cols-4">{mediaImages.slice(0, 5).map((src, index) => <motion.figure key={src} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.25 }} transition={{ delay: index * 0.04 }} className={`group relative overflow-hidden rounded-[18px] bg-black ${index === 0 ? 'md:col-span-2 md:row-span-2' : ''}`}><img src={src} alt={`${siteCopy.gallery_alt} ${index + 1}`} className="h-full w-full object-cover opacity-90 transition duration-700 group-hover:scale-105 group-hover:opacity-100" loading={index === 0 ? 'eager' : 'lazy'} decoding="async" /><figcaption className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-5 text-sm font-semibold text-white">{index === 0 ? siteCopy.name : siteCopy.city}</figcaption></motion.figure>)}</div></div></section>;
+}
+export default GallerySection;
+""",
+        "src/components/LifestyleSection.tsx": """import { useEffect, useRef } from 'react';
+import { motion } from 'motion/react';
+import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { mediaImages, siteCopy } from './siteData';
+gsap.registerPlugin(ScrollTrigger);
+export function LifestyleSection() {
+  const sectionRef = useRef<HTMLElement | null>(null);
+  useEffect(() => { const section = sectionRef.current; if (!section || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return; const ctx = gsap.context(() => { gsap.to('[data-parallax-card]', { y: -46, ease: 'none', scrollTrigger: { trigger: section, start: 'top bottom', end: 'bottom top', scrub: true } }); }, section); return () => ctx.revert(); }, []);
+  return <section ref={sectionRef} id="experiencia" className="relative overflow-hidden bg-[#0d1b17] px-5 py-20 text-white md:px-8 md:py-28"><div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_18%,rgba(183,255,106,.16),transparent_32%),linear-gradient(180deg,rgba(255,255,255,.03),transparent)]" /><div className="relative mx-auto grid max-w-7xl gap-8 lg:grid-cols-[.9fr_1.1fr] lg:items-center"><div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#b7ff6a]">Experiência</p><h2 className="mt-3 text-[clamp(2rem,4.8vw,4.4rem)] font-semibold leading-[1] tracking-[-0.025em]">{siteCopy.lifestyle_title}</h2><p className="mt-6 max-w-xl text-base leading-8 text-zinc-300">{siteCopy.lifestyle_description}</p></div><div className="relative min-h-[34rem]"><motion.img data-parallax-card src={mediaImages[1] || mediaImages[0]} alt={siteCopy.gallery_alt} initial={{ opacity: 0, rotate: -1.4, y: 24 }} whileInView={{ opacity: 1, rotate: -1.4, y: 0 }} viewport={{ once: true, amount: 0.25 }} className="absolute left-0 top-8 h-[25rem] w-[72%] rounded-[18px] object-cover shadow-[0_30px_90px_rgba(0,0,0,.30)]" loading="lazy" decoding="async" /><motion.div initial={{ opacity: 0, y: 28 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.3 }} className="absolute bottom-0 right-0 w-[68%] rounded-[18px] border border-white/10 bg-white/[.06] p-6 backdrop-blur-xl"><p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#b7ff6a]">SEO local</p><h3 className="mt-3 text-2xl font-semibold">{siteCopy.name}</h3><p className="mt-3 text-sm leading-7 text-zinc-300">{siteCopy.address || siteCopy.city}</p></motion.div></div></div></section>;
+}
+export default LifestyleSection;
+""",
+        "src/components/ContactCTA.tsx": """import { MessageCircle, Phone } from 'lucide-react';
+import { motion } from 'motion/react';
+import { siteCopy, whatsappHref } from './siteData';
+export function ContactCTA({ onOpen }: { onOpen?: () => void }) {
+  return <section id="contato" className="bg-[#b7ff6a] px-5 py-20 text-[#07110f] md:px-8"><div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[1.1fr_.9fr] lg:items-center"><motion.div initial={{ opacity: 0, y: 22 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.3 }}><p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#31520f]">Conversão</p><h2 className="mt-3 max-w-4xl text-[clamp(2rem,5vw,4.8rem)] font-semibold leading-[1] tracking-[-0.03em]">{siteCopy.contact_headline}</h2><p className="mt-5 max-w-2xl text-base leading-8 text-[#244008]">{siteCopy.contact_sub}</p></motion.div><div className="rounded-[18px] bg-[#07110f] p-6 text-white"><p className="text-sm leading-7 text-zinc-300">Contato oficial</p><p className="mt-2 text-2xl font-semibold">{siteCopy.phone || 'WhatsApp'}</p><div className="mt-6 flex flex-col gap-3 sm:flex-row"><a href={whatsappHref} rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-semibold text-[#07110f]"><MessageCircle className="h-4 w-4" />Falar no WhatsApp</a><button type="button" onClick={onOpen} className="inline-flex items-center justify-center gap-2 rounded-full border border-white/15 px-5 py-3 text-sm font-semibold text-white"><Phone className="h-4 w-4" />Abrir contato</button></div></div></div></section>;
+}
+export default ContactCTA;
+""",
+        "src/components/BookingModal.tsx": """import { X } from 'lucide-react';
+import { AnimatePresence, motion } from 'motion/react';
+import { siteCopy, whatsappHref } from './siteData';
+export function BookingModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  return <AnimatePresence>{open ? <motion.div className="fixed inset-0 z-[80] grid place-items-end bg-black/65 p-3 md:place-items-center md:p-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><motion.div initial={{ y: 42, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 24, opacity: 0 }} transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }} className="w-full max-w-lg rounded-[22px] bg-[#f4f0e6] p-6 text-[#07110f] shadow-2xl"><div className="flex items-start justify-between gap-4"><div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-800">Contato</p><h3 className="mt-2 text-3xl font-semibold tracking-tight">{siteCopy.modal_title}</h3></div><button type="button" aria-label="Fechar" onClick={onClose} className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[#07110f] text-white"><X className="h-4 w-4" /></button></div><p className="mt-5 text-sm leading-7 text-[#314039]">Telefone: {siteCopy.phone || 'confirme pelo WhatsApp'}. Endereço: {siteCopy.address || siteCopy.city}.</p><a href={whatsappHref} rel="noopener noreferrer" className="mt-6 inline-flex w-full items-center justify-center rounded-full bg-[#07110f] px-5 py-3 text-sm font-semibold text-white">{siteCopy.modal_cta}</a></motion.div></motion.div> : null}</AnimatePresence>;
+}
+export default BookingModal;
+""",
+        "src/components/Footer.tsx": """import { MapPin, MessageCircle, ShieldCheck } from 'lucide-react';
+import { siteCopy, whatsappHref } from './siteData';
+export function Footer() {
+  return <footer className="bg-[#07110f] px-5 py-12 text-zinc-300 md:px-8"><div className="mx-auto grid max-w-7xl gap-8 md:grid-cols-[1.1fr_.8fr_.8fr]"><div><strong className="block text-2xl font-semibold text-white">{siteCopy.name}</strong><p className="mt-3 max-w-md text-sm leading-7 text-zinc-400">Site local com SEO, prova social, mídia editorial, LGPD e caminho de contato direto.</p></div><div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#b7ff6a]">Contato</p><a href={whatsappHref} rel="noopener noreferrer" className="mt-4 flex items-center gap-2 text-sm text-white"><MessageCircle className="h-4 w-4 text-[#b7ff6a]" /> WhatsApp oficial</a><p className="mt-3 text-sm text-zinc-400">{siteCopy.phone}</p></div><div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#b7ff6a]">Local</p><p className="mt-4 flex items-start gap-2 text-sm leading-6 text-zinc-400"><MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[#b7ff6a]" /> {siteCopy.address || siteCopy.city}</p><p className="mt-4 flex items-start gap-2 text-sm leading-6 text-zinc-500"><ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-[#b7ff6a]" /> Dados factuais e privacidade preservada.</p></div></div><div className="mx-auto mt-10 flex max-w-7xl flex-col gap-2 border-t border-white/10 pt-5 text-xs text-zinc-500 md:flex-row md:items-center md:justify-between"><span>{siteCopy.city}</span><span>© 2026 {siteCopy.name}. Todos os direitos reservados.</span></div></footer>;
+}
+export default Footer;
+""",
+        "src/components/LgpdBanner.tsx": vite_template_lgpd_banner(facts),
+        "src/components/FactualMotionContract.tsx": vite_template_factual_motion_contract(
+            name=copy["name"],
+            phone=copy["phone"],
+            rating=copy["rating"],
+            city=copy["city"],
+            segment=copy["segment"],
+        ),
+        "src/index.css": """@import "tailwindcss";
+@layer base {
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; background: #07110f; }
+  body { margin: 0; min-width: 320px; min-height: 100vh; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #f8faf7; background: #07110f; text-rendering: geometricPrecision; }
+  h1, h2, h3 { text-wrap: balance; }
+  p { text-wrap: pretty; }
+  img, video { max-width: 100%; display: block; }
+  a { color: inherit; text-decoration: none; }
+  button, a { -webkit-tap-highlight-color: transparent; }
+  ::selection { background: rgba(183, 255, 106, .34); color: #07110f; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: 0.01ms !important; }
+}
+""",
+    }
+
+
 def _generate_studio_fallback_files(facts: dict[str, Any] | None = None) -> dict[str, str]:
     """Compatibility fallback for tests and emergency local Studio rendering."""
     safe_facts = facts or {}
+    if os.getenv("FRALIB_VITE_CINEMATIC_STUDIO", "1").strip().lower() not in {"0", "false", "no", "off"}:
+        return _generate_cinematic_studio_files(safe_facts)
     # Sprint 12.15: extract name from MANY sources (defensive — pipeline may put it anywhere)
     _biz = safe_facts.get("business") if isinstance(safe_facts.get("business"), dict) else {}
     name = (

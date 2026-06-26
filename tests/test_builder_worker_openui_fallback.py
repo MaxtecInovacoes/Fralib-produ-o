@@ -1,5 +1,7 @@
 import json
+import os
 import sys
+import time
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -67,3 +69,29 @@ def test_vite_react_falls_back_to_openui(monkeypatch, tmp_path):
     meta = json.loads((Path(result["output_dir"]) / "builder-render.json").read_text(encoding="utf-8"))
     assert meta["engine"] == "openui_fallback"
     assert meta["attempts"][0]["status"] == "failed_openui_fallback"
+
+
+def test_builder_sandbox_cleanup_remove_apenas_jobs_antigos(tmp_path, monkeypatch):
+    from backend.services import builder_worker
+
+    root = tmp_path / "fralib_builder"
+    old_job = root / "tenant-2" / "job-old"
+    fresh_job = root / "tenant-2" / "job-fresh"
+    outside_name = root / "tenant-2" / "not-a-job"
+    for path in (old_job, fresh_job, outside_name):
+        path.mkdir(parents=True)
+        (path / "marker.txt").write_text("ok", encoding="utf-8")
+
+    old_ts = time.time() - 48 * 3600
+    fresh_ts = time.time()
+    for path in (old_job, old_job / "marker.txt"):
+        os.utime(path, (old_ts, old_ts))
+    for path in (fresh_job, fresh_job / "marker.txt", outside_name, outside_name / "marker.txt"):
+        os.utime(path, (fresh_ts, fresh_ts))
+
+    monkeypatch.setenv("FRALIB_BUILDER_SANDBOX_MAX_AGE_HOURS", "12")
+    builder_worker._cleanup_builder_sandbox(str(root))
+
+    assert not old_job.exists()
+    assert fresh_job.exists()
+    assert outside_name.exists()

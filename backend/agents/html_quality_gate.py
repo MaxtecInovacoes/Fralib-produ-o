@@ -324,15 +324,25 @@ def sanitize_builder_html_for_publication(
     if 'property="og:type"' not in low:
         cleaned = re.sub(r"(?is)</head>", '<meta property="og:type" content="website">\n</head>', cleaned, count=1)
 
-    # Footer: ano automático
+    # Footer: ano automático. Nao transformar numeros de endereco em copyright
+    # (ex.: "Av. Nova Cantareira, 2026" deve permanecer endereco factual).
     current_year = str(datetime.datetime.now().year)
     if re.search(r"202[0-9]", cleaned):
-        def _replace_copyright_year(m):
-            return '\xa9 ' + current_year
-        cleaned = re.sub(r'(?:\xa9|\s)\s*(202[0-9])(?=\D)', _replace_copyright_year, cleaned)
-        def _replace_standalone_year(m):
-            return ' ' + current_year
-        cleaned = re.sub(r'(?:>|\s)(202[0-9])(?=\s|<)', _replace_standalone_year, cleaned)
+        cleaned = re.sub(
+            r"(?i)(?:\xa9|&copy;|copyright\s*)\s*202[0-9]",
+            f"\xa9 {current_year}",
+            cleaned,
+        )
+        cleaned = re.sub(
+            r"(?is)(<footer\b[^>]*>[^<]{0,160}?)\s+202[0-9](?=\s)",
+            lambda m: m.group(1).rstrip() + f" \xa9 {current_year}",
+            cleaned,
+        )
+        cleaned = re.sub(
+            r"(?<=[,])\s*(?:\xa9|&copy;)\s*(20[0-9]{2})(?=\s*[-–])",
+            r" \1",
+            cleaned,
+        )
 
     # Sitemap XML + Robots.txt
     if site_dir and deploy_url:

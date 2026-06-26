@@ -7,6 +7,7 @@ import logging
 import os
 import re
 import shutil
+import time
 import unicodedata
 from pathlib import Path, PurePosixPath
 from typing import Any
@@ -222,6 +223,9 @@ def render_site_with_builder(
         "FRALIB_BUILDER_SANDBOX_ROOT",
         str((_ROOT / ".tmp" / "builder-workspaces").resolve()).replace("\\", "/"),
     )
+    cleanup = os.getenv("FRALIB_BUILDER_SANDBOX_CLEANUP", "1").strip().lower()
+    if cleanup not in {"0", "false", "no", "off"}:
+        _cleanup_builder_sandbox(sandbox_root)
     manifest_dir = os.getenv(
         "FRALIB_BUILDER_MANIFEST_DIR",
         str((_ROOT / "logs" / "builder_manifests").resolve()),
@@ -800,6 +804,37 @@ def _sandbox_workspace(root: str, tenant_scope: str, job_scope: str) -> str:
         raise ValueError("sandbox_root precisa ser absoluto e sem traversal")
     workspace = root_path / f"tenant-{tenant_scope}" / f"job-{job_scope}"
     return str(workspace)
+
+
+def _cleanup_builder_sandbox(root: str) -> None:
+    """Remove stale builder job workspaces before Vite creates new node_modules."""
+    try:
+        root_path = Path(str(root or "")).resolve()
+    except Exception:
+        return
+    root_text = str(root_path).replace("\\", "/")
+    if not root_path.is_absolute() or not root_path.exists():
+        return
+    if not any(marker in root_text for marker in ("/fralib_builder", "/builder-workspaces")):
+        return
+    try:
+        max_age_hours = float(os.getenv("FRALIB_BUILDER_SANDBOX_MAX_AGE_HOURS", "12"))
+    except (TypeError, ValueError):
+        max_age_hours = 12.0
+    cutoff = time.time() - max(1.0, max_age_hours) * 3600
+    for tenant_dir in root_path.glob("tenant-*"):
+        if not tenant_dir.is_dir():
+            continue
+        for job_dir in tenant_dir.glob("job-*"):
+            try:
+                resolved = job_dir.resolve()
+                if root_path not in resolved.parents or not resolved.is_dir():
+                    continue
+                if job_dir.stat().st_mtime > cutoff:
+                    continue
+                shutil.rmtree(resolved, ignore_errors=True)
+            except Exception as exc:
+                logger.warning("[builder_worker] sandbox cleanup ignorou %s: %s", job_dir, exc)
 
 
 def validate_manifest_scope(manifest: dict[str, Any]) -> None:
