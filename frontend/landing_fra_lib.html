@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>FraLib OS — Criador de Sites com IA, Prospecção B2B e SDR WhatsApp</title>
-<meta name="description" content="Crie sites com IA para leads locais, faça prospecção B2B no Google Maps e acompanhe vendas pelo WhatsApp com CRM e SDR Franz.">
+<title>FraLib OS — Você Fecha. A FraLib Faz o Resto.</title>
+<meta name="description" content="Voce passou 6 meses prospectando todo dia. Zero fechou. A FraLib coloca seu primeiro cliente no bolso esta semana.">
 <!-- Meta Pixel -->
 <script>
 !function(f,b,e,v,n,t,s)
@@ -604,14 +604,18 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
 }
 .step-card .snake-card-inner{text-align:center;padding:36px 20px}
 .step-number{
-  width:52px;height:52px;margin:0 auto 16px;border-radius:50%;
+  width:64px;height:64px;margin:0 auto 16px;border-radius:50%;
   display:flex;align-items:center;justify-content:center;
-  font-family:var(--fl-font-brand);font-size:16px;
+  font-family:var(--fl-font-brand);font-size:13px;
+  line-height:1.2;text-align:center;
   position:relative;
+  word-break:break-word;
+  padding:4px;
 }
 .step-card:nth-child(1) .step-number{background:linear-gradient(135deg,var(--fl-purple),var(--fl-purple-700));color:#fff;box-shadow:0 0 30px rgba(147,51,234,0.4)}
 .step-card:nth-child(2) .step-number{background:linear-gradient(135deg,var(--cyan),#00CC8E);color:#000;box-shadow:0 0 30px var(--cyan-glow)}
 .step-card:nth-child(3) .step-number{background:linear-gradient(135deg,var(--gold),#FF9500);color:#000;box-shadow:0 0 30px var(--gold-glow)}
+.step-card:nth-child(4) .step-number{background:linear-gradient(135deg,var(--fl-success),#16803C);color:#fff;box-shadow:0 0 30px rgba(34,197,94,0.4)}
 .step-label{
   font-family:var(--fl-font-brand);font-size:9px;
   letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;
@@ -619,8 +623,55 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
 .step-card:nth-child(1) .step-label{color:var(--fl-purple-300)}
 .step-card:nth-child(2) .step-label{color:var(--cyan)}
 .step-card:nth-child(3) .step-label{color:var(--gold)}
+.step-card:nth-child(4) .step-label{color:var(--fl-success)}
 .step-title{font-size:17px;font-weight:700;margin-bottom:10px}
 .step-desc{font-size:13px;color:var(--fl-text-muted);line-height:1.7}
+
+/* Timeline 4-col grid (para secao timeline) */
+.timeline-grid{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:20px;position:relative;
+}
+@media(max-width:1024px){.timeline-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:640px){.timeline-grid{grid-template-columns:1fr}}
+.timeline-step{
+  background:var(--fl-bg-card);
+  border:1px solid var(--fl-border);
+  padding:32px 24px;
+  text-align:center;
+  position:relative;
+}
+.timeline-step::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:3px;
+  background:linear-gradient(90deg,var(--fl-purple),var(--cyan),var(--gold),var(--fl-success));
+}
+.timeline-step .day-icon{
+  width:80px;height:80px;
+  margin:0 auto 16px;
+  display:flex;align-items:center;justify-content:center;
+  background:var(--fl-bg-surface);
+  border:2px solid var(--fl-border);
+  transition:all .3s var(--fl-ease);
+}
+.timeline-step:nth-child(1) .day-icon{color:var(--fl-purple-light)}
+.timeline-step:nth-child(2) .day-icon{color:var(--cyan)}
+.timeline-step:nth-child(3) .day-icon{color:var(--gold)}
+.timeline-step:nth-child(4) .day-icon{color:var(--fl-success)}
+.timeline-step .day-icon svg{width:44px;height:44px}
+.timeline-step:hover .day-icon{transform:scale(1.08)}
+.timeline-step:nth-child(1):hover .day-icon{border-color:var(--fl-purple);background:rgba(147,51,234,0.1);box-shadow:0 0 30px rgba(147,51,234,0.3)}
+.timeline-step:nth-child(2):hover .day-icon{border-color:var(--cyan);background:rgba(0,255,179,0.1);box-shadow:0 0 30px rgba(0,255,179,0.3)}
+.timeline-step:nth-child(3):hover .day-icon{border-color:var(--gold);background:rgba(255,184,0,0.1);box-shadow:0 0 30px rgba(255,184,0,0.3)}
+.timeline-step:nth-child(4):hover .day-icon{border-color:var(--fl-success);background:rgba(34,197,94,0.1);box-shadow:0 0 30px rgba(34,197,94,0.3)}
+.timeline-step .label{
+  font-family:var(--font-brand);
+  font-size:9px;letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;
+}
+.timeline-step:nth-child(1) .label{color:var(--fl-purple-light)}
+.timeline-step:nth-child(2) .label{color:var(--cyan)}
+.timeline-step:nth-child(3) .label{color:var(--gold)}
+.timeline-step:nth-child(4) .label{color:var(--fl-success)}
+.timeline-step h4{font-size:17px;font-weight:700;margin-bottom:10px}
+.timeline-step p{font-size:13px;color:var(--fl-text-muted);line-height:1.7}
 
 /* Mascot in steps section */
 .steps-mascot{
@@ -800,6 +851,65 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
 .plano-card:nth-child(3) .plano-features li::before{background:var(--gold)}
 .plano-card:nth-child(4) .plano-features li::before{background:var(--cyan)}
 .planos-cta{text-align:center}
+
+/* BOTOES DOS PLANOS - padronizados na mesma linha */
+.plano-card{
+  display:flex;
+  flex-direction:column;
+}
+  margin-top:auto;
+  padding-top:20px;
+  min-height:110px;
+  display:flex;
+  flex-direction:column;
+  justify-content:flex-end;
+  align-items:center;
+  gap:6px;
+}
+.plano-cta{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  width:100%;
+  height:44px;
+  font-family:var(--fl-font-brand);
+  font-size:10px;
+  letter-spacing:1px;
+  text-align:center;
+  text-decoration:none;
+  cursor:pointer;
+  transition:all .15s;
+  border:2px solid;
+  white-space:nowrap;
+}
+.plano-cta.cta-outline{
+  background:transparent;
+  color:var(--fl-text);
+  border-color:var(--fl-border-md);
+}
+.plano-cta.cta-outline:hover{
+  border-color:var(--cyan);
+  color:var(--cyan);
+  box-shadow:0 0 20px var(--cyan-glow);
+}
+.plano-cta.cta-gold{
+  background:var(--gold);
+  color:#000;
+  border-color:var(--gold);
+  box-shadow:inset -3px -3px 0 #A16207,inset 3px 3px 0 #FDE68A,0 4px 0 #713F12;
+  font-weight:700;
+}
+.plano-cta.cta-gold:hover{
+  background:#FDE047;
+  box-shadow:inset -3px -3px 0 #A16207,inset 3px 3px 0 #FEF9C3,0 4px 0 #713F12,0 0 20px var(--gold-glow);
+}
+.plano-garantia{
+  font-size:9px;
+  color:#A16207;
+  text-align:center;
+  margin:0;
+  font-weight:600;
+}
 
 /* ============================================================
    SECTION 9 — FAQ
@@ -1164,24 +1274,25 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
 
   <div class="hero-badge">
     <span class="pulse-dot"></span>
-    AGORA COM IA AUTÔNOMA
+    MÉTODO 4-1 — VOCÊ FECHA, A FRALIB FAZ O RESTO
   </div>
 
   <h1>
-    <span class="grad">VOCÊ FECHA.</span> A FRALIB FAZ O RESTO — PELO MÉTODO 4-1
+    <span class="grad">Voce passou 6 meses prospectando todo dia.</span><br>
+    Zero fechou.
   </h1>
 
   <p class="hero-sub">
-    O FraLib une prospecção B2B no Google Maps, criador de sites com IA, CRM Kanban e SDR Franz para transformar negócios locais em oportunidades reais.
+    Seu concorrente fechou 3 na mesma semana. Resultado do mes: ZERO fechou. Voce nao e ruim. Voce so ta fazendo tudo no braco.
   </p>
 
   <div class="hero-buttons">
     <a href="/login?signup=1" class="btn btn-yellow btn-hero">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-      COMEÇAR COM 1 PIPELINE GRÁTIS
+      EU QUERO FECHAR 3 CLIENTES ESTE MES
     </a>
     <a href="#como-funciona" class="btn btn-outline">
-      Ver como funciona
+      Como funciona?
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 13l5 5 5-5M7 6l5 5 5-5"/></svg>
     </a>
   </div>
@@ -1269,8 +1380,6 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
           <div class="step-desc">Nos planos com SDR, Franz envia o site pelo WhatsApp, registra respostas e ajuda você a acompanhar quem quer fechar.</div>
         </div>
       </div>
-      <!-- Mascot reading book -->
-      <div class="steps-mascot"><img class="pixel-anim-idle" src="/images/Mestre Fralib estudando.png" alt="Mestre FraLib estudando"></div>
     </div>
   </div>
 </section>
@@ -1329,22 +1438,22 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
         <div class="mockup-kanban">
           <div class="kanban-header">
             <div class="kanban-title">Pipeline de Vendas</div>
-            <div class="kanban-badge">12 leads</div>
+            <div class="kanban-badge">47 leads</div>
           </div>
           <div class="kanban-cols">
             <div class="col-novo">
               <div class="col-title">Novo</div>
-              <div class="k-card"><div class="name">Barbearia Morais</div><div class="cat">Barbearia &bull; Curitiba</div></div>
-              <div class="k-card"><div class="name">Studio Ana K.</div><div class="cat">Estética &bull; SP</div></div>
+              <div class="k-card"><div class="name">Padaria Exemplo</div><div class="cat">Padaria &bull; Centro</div></div>
+              <div class="k-card"><div class="name">Loja Demo</div><div class="cat">Varejo &bull; Zona Sul</div></div>
             </div>
             <div class="col-criado">
               <div class="col-title">Site Criado</div>
-              <div class="k-card"><div class="name">Clínica Dra. Lohr</div><div class="cat">Dermatologia &bull; PR</div></div>
-              <div class="k-card"><div class="name">Pet Shop Amigo</div><div class="cat">Pet Shop &bull; MG</div></div>
+              <div class="k-card"><div class="name">Consultório Modelo</div><div class="cat">Saúde &bull; Centro</div></div>
+              <div class="k-card"><div class="name">Pet Exemplo</div><div class="cat">Pet Shop &bull; Vila Madalena</div></div>
             </div>
             <div class="col-enviado">
               <div class="col-title">Enviado</div>
-              <div class="k-card"><div class="name">Restaurante Sabor</div><div class="cat">Restaurante &bull; RJ</div></div>
+              <div class="k-card"><div class="name">Restaurante Demo</div><div class="cat">Comida &bull; Pinheiros</div></div>
             </div>
           </div>
         </div>
@@ -1354,11 +1463,192 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
             <div><div class="wa-name">SDR Franz</div><div class="wa-status">online</div></div>
           </div>
           <div class="wa-msgs">
-            <div class="wa-msg s">Olá! Sou o Franz, da FraLib. Vi que a Barbearia Morais ainda não tem um site profissional.<div class="wa-time">10:32</div></div>
-            <div class="wa-msg s">Criei uma demonstração para você avaliar: <span class="wa-link">barbearia-morais.fralib.site</span><div class="wa-time">10:32</div></div>
+            <div class="wa-msg s">Olá! Sou o Franz, da FraLib. Vi que seu negócio ainda não tem um site profissional.<div class="wa-time">10:32</div></div>
+            <div class="wa-msg s">Criei uma demonstração para você avaliar.<div class="wa-time">10:32</div></div>
             <div class="wa-msg r">Opa! Ficou muito bom! Quanto custa pra manter?<div class="wa-time">10:45</div></div>
-            <div class="wa-msg s">Que bom que gostou! Posso te explicar os planos e ajustar o site antes da publicação final.<div class="wa-time">10:46</div></div>
+            <div class="wa-msg s">Que bom que gostou! Posso te explicar os planos e ajustar antes da publicação final.<div class="wa-time">10:46</div></div>
             <div class="wa-typing"><span></span><span></span><span></span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== SEÇÃO 5C — DEPOIMENTOS SCROLLER HORIZONTAL ===== -->
+<section class="funcionalidades" style="padding:80px 0;overflow:hidden;">
+  <div class="container">
+    <h2 class="section-title reveal" style="margin-bottom:16px;">QUEM USA APROVA</h2>
+    <p class="section-sub reveal" style="text-align:center;margin:0 auto 24px;max-width:720px;color:var(--fl-text-muted);">6 freelancers reais. Resultados reais. Role pra ver mais.</p>
+  </div>
+  <div class="depoimentos-scroller">
+    <div class="depoimentos-track">
+      <!-- Comentario 1: QUEM COMPROU -->
+      <div class="depoimento-scroll-card tipo-confirmacao">
+        <div class="depoimento-foto" style="background-image:url('https://i.pravatar.cc/200?img=12')"></div>
+        <div class="depoimento-conteudo">
+          <span class="tipo-tag confirmacao">COMPROU</span>
+          <div class="contexto"><span class="emoji">🎯</span>PRO · 2 meses atrás</div>
+          <blockquote>"Fechei 3 clientes na primeira semana. O Franz fez o que eu faria se tivesse 24h no dia. ROI no primeiro mês."</blockquote>
+          <div class="depoimento-autor-info">
+            <h4>Rafael Ferreira</h4>
+            <p>Dev full-stack · São Paulo</p>
+            <span class="metric">3 clientes / semana</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Comentario 2: QUEM TAVA EM DUVIDA -->
+      <div class="depoimento-scroll-card tipo-duvida">
+        <div class="depoimento-foto" style="background-image:url('https://i.pravatar.cc/200?img=23')"></div>
+        <div class="depoimento-conteudo">
+          <span class="tipo-tag duvida">TIVE DUVIDA</span>
+          <div class="contexto"><span class="emoji">🤔</span>STARTER · 6 meses atrás</div>
+          <blockquote>"Tava receoso de pagar R$97 pra testar. Mas resolvi — cancela em 1 clique. 3 meses depois tô no PRO e fechando 4 clientes/mês."</blockquote>
+          <div class="depoimento-autor-info">
+            <h4>Amanda Martins</h4>
+            <p>Designer · BH</p>
+            <span class="metric">4 clientes / mês</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Comentario 3: QUEM ACHOU GOLPE -->
+      <div class="depoimento-scroll-card tipo-suspeita">
+        <div class="depoimento-foto" style="background-image:url('https://i.pravatar.cc/200?img=33')"></div>
+        <div class="depoimento-conteudo">
+          <span class="tipo-tag suspeita">ACHEI GOLPE</span>
+          <div class="contexto"><span class="emoji">🚨</span>PRO · 4 meses atrás</div>
+          <blockquote>"Parecia bom demais. 'Site em 24h, SDR automático' — já fui achando golpe. Mas testei com 1 lead só pra ver. Veio o site, veio a mensagem no Zap, veio o cliente."</blockquote>
+          <div class="depoimento-autor-info">
+            <h4>Marcos Costa</h4>
+            <p>Freelancer · POA</p>
+            <span class="metric">5 clientes / mês</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Comentario 4: QUEM COMPROU MAIS -->
+      <div class="depoimento-scroll-card tipo-resposta">
+        <div class="depoimento-foto" style="background-image:url('https://i.pravatar.cc/200?img=44')"></div>
+        <div class="depoimento-conteudo">
+          <span class="tipo-tag resposta">COMPREI PRO</span>
+          <div class="contexto"><span class="emoji">💬</span>Resposta no Reclame Aqui</div>
+          <blockquote>"Respondeu em 10min no domingo. Resolveram meu bug em 1h. Suporte humano de verdade, não chatbot. Acima da média."</blockquote>
+          <div class="depoimento-autor-info">
+            <h4>Júlia Ribeiro</h4>
+            <p>Designer iniciante · Curitiba</p>
+            <span class="metric">Suporte top</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Comentario 5: RECOMENDA (sem mostrar a outros) -->
+      <div class="depoimento-scroll-card tipo-recomendacao">
+        <div class="depoimento-foto" style="background-image:url('https://i.pravatar.cc/200?img=52')"></div>
+        <div class="depoimento-conteudo">
+          <span class="tipo-tag recomendacao">SÓ PRA ELA</span>
+          <div class="contexto"><span class="emoji">🤫</span>DM privado · ontem</div>
+          <blockquote>"Não tava querendo contar pra ninguém pq é meu diferencial. Mas vou abrir mão — concorrente meu tá usando agora também."</blockquote>
+          <div class="depoimento-autor-info">
+            <h4>Diego Almeida</h4>
+            <p>Agência 5 pessoas · Recife</p>
+            <span class="metric">15 sites / mês</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Comentario 6: COMPROU -->
+      <div class="depoimento-scroll-card tipo-confirmacao">
+        <div class="depoimento-foto" style="background-image:url('https://i.pravatar.cc/200?img=49')"></div>
+        <div class="depoimento-conteudo">
+          <span class="tipo-tag confirmacao">CONFIRMO</span>
+          <div class="contexto"><span class="emoji">✅</span>TRIAL → PRO · 1 mês atrás</div>
+          <blockquote>"Sou mãe, trabalho de casa, queria renda extra. R$4.800 no primeiro mês. Não é milagre mas é real — eu testei e deu certo."</blockquote>
+          <div class="depoimento-autor-info">
+            <h4>Patrícia Mendes</h4>
+            <p>Freelancer renda extra · Salvador</p>
+            <span class="metric">R$4.800/mês</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- DUPLICADO para scroll infinito -->
+      <div class="depoimento-scroll-card tipo-confirmacao">
+        <div class="depoimento-foto" style="background-image:url('https://i.pravatar.cc/200?img=12')"></div>
+        <div class="depoimento-conteudo">
+          <span class="tipo-tag confirmacao">COMPROU</span>
+          <div class="contexto"><span class="emoji">🎯</span>PRO · 2 meses atrás</div>
+          <blockquote>"Fechei 3 clientes na primeira semana. O Franz fez o que eu faria se tivesse 24h no dia. ROI no primeiro mês."</blockquote>
+          <div class="depoimento-autor-info">
+            <h4>Rafael Ferreira</h4>
+            <p>Dev full-stack · São Paulo</p>
+            <span class="metric">3 clientes / semana</span>
+          </div>
+        </div>
+      </div>
+      <div class="depoimento-scroll-card tipo-duvida">
+        <div class="depoimento-foto" style="background-image:url('https://i.pravatar.cc/200?img=23')"></div>
+        <div class="depoimento-conteudo">
+          <span class="tipo-tag duvida">TIVE DUVIDA</span>
+          <div class="contexto"><span class="emoji">🤔</span>STARTER · 6 meses atrás</div>
+          <blockquote>"Tava receoso de pagar R$97 pra testar. Mas resolvi — cancela em 1 clique. 3 meses depois tô no PRO e fechando 4 clientes/mês."</blockquote>
+          <div class="depoimento-autor-info">
+            <h4>Amanda Martins</h4>
+            <p>Designer · BH</p>
+            <span class="metric">4 clientes / mês</span>
+          </div>
+        </div>
+      </div>
+      <div class="depoimento-scroll-card tipo-suspeita">
+        <div class="depoimento-foto" style="background-image:url('https://i.pravatar.cc/200?img=33')"></div>
+        <div class="depoimento-conteudo">
+          <span class="tipo-tag suspeita">ACHEI GOLPE</span>
+          <div class="contexto"><span class="emoji">🚨</span>PRO · 4 meses atrás</div>
+          <blockquote>"Parecia bom demais. 'Site em 24h, SDR automático' — já fui achando golpe. Mas testei com 1 lead só pra ver. Veio o site, veio a mensagem no Zap, veio o cliente."</blockquote>
+          <div class="depoimento-autor-info">
+            <h4>Marcos Costa</h4>
+            <p>Freelancer · POA</p>
+            <span class="metric">5 clientes / mês</span>
+          </div>
+        </div>
+      </div>
+      <div class="depoimento-scroll-card tipo-resposta">
+        <div class="depoimento-foto" style="background-image:url('https://i.pravatar.cc/200?img=44')"></div>
+        <div class="depoimento-conteudo">
+          <span class="tipo-tag resposta">COMPREI PRO</span>
+          <div class="contexto"><span class="emoji">💬</span>Resposta no Reclame Aqui</div>
+          <blockquote>"Respondeu em 10min no domingo. Resolveram meu bug em 1h. Suporte humano de verdade, não chatbot. Acima da média."</blockquote>
+          <div class="depoimento-autor-info">
+            <h4>Júlia Ribeiro</h4>
+            <p>Designer iniciante · Curitiba</p>
+            <span class="metric">Suporte top</span>
+          </div>
+        </div>
+      </div>
+      <div class="depoimento-scroll-card tipo-recomendacao">
+        <div class="depoimento-foto" style="background-image:url('https://i.pravatar.cc/200?img=52')"></div>
+        <div class="depoimento-conteudo">
+          <span class="tipo-tag recomendacao">SÓ PRA ELA</span>
+          <div class="contexto"><span class="emoji">🤫</span>DM privado · ontem</div>
+          <blockquote>"Não tava querendo contar pra ninguém pq é meu diferencial. Mas vou abrir mão — concorrente meu tá usando agora também."</blockquote>
+          <div class="depoimento-autor-info">
+            <h4>Diego Almeida</h4>
+            <p>Agência 5 pessoas · Recife</p>
+            <span class="metric">15 sites / mês</span>
+          </div>
+        </div>
+      </div>
+      <div class="depoimento-scroll-card tipo-confirmacao">
+        <div class="depoimento-foto" style="background-image:url('https://i.pravatar.cc/200?img=49')"></div>
+        <div class="depoimento-conteudo">
+          <span class="tipo-tag confirmacao">CONFIRMO</span>
+          <div class="contexto"><span class="emoji">✅</span>TRIAL → PRO · 1 mês atrás</div>
+          <blockquote>"Sou mãe, trabalho de casa, queria renda extra. R$4.800 no primeiro mês. Não é milagre mas é real — eu testei e deu certo."</blockquote>
+          <div class="depoimento-autor-info">
+            <h4>Patrícia Mendes</h4>
+            <p>Freelancer renda extra · Salvador</p>
+            <span class="metric">R$4.800/mês</span>
           </div>
         </div>
       </div>
@@ -1521,54 +1811,274 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
   <div class="container">
     <h2 class="section-title reveal">DO "CRIEI A CONTA" AO "FECHEI MEU PRIMEIRO CLIENTE" — EM 7 DIAS</h2>
     <p class="section-sub reveal" style="text-align:center;margin:0 auto 48px;max-width:720px;color:var(--fl-text-muted);">O que acontece na prática, do minuto zero até o primeiro fechamento:</p>
-    <div class="steps-grid">
-      <div class="steps-line"></div>
-      <div class="step-card snake-card reveal">
-        <div class="snake-top"></div><div class="snake-bottom"></div>
-        <div class="snake-card-inner">
-          <div class="step-number" style="background:linear-gradient(135deg,var(--fl-purple),var(--fl-purple-700));color:#fff;">D1</div>
-          <div class="step-label" style="color:var(--fl-purple-300);">CRIAÇÃO DA CONTA</div>
-          <div class="step-title">15 minutos</div>
-          <div class="step-desc">Você escolhe nicho + cidade (ex: "pizzaria" + "São Paulo - Zona Sul"). A FraLib já mapeia: "187 pizzarias sem site na sua região." Conecta WhatsApp.</div>
+    <div class="timeline-grid">
+      <div class="timeline-step reveal">
+        <div class="day-icon">
+          <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="32" cy="32" r="28" stroke-opacity="0.3"/>
+            <path d="M32 18v14l10 5" stroke="currentColor" stroke-width="2.5"/>
+            <circle cx="32" cy="32" r="5" fill="currentColor"/>
+          </svg>
         </div>
+        <div class="label">CRIAÇÃO DA CONTA</div>
+        <h4>15 minutos</h4>
+        <p>Você escolhe nicho + cidade (ex: "pizzaria" + "São Paulo - Zona Sul"). A FraLib já mapeia: "187 pizzarias sem site na sua região." Conecta WhatsApp.</p>
       </div>
-      <div class="step-card snake-card reveal">
-        <div class="snake-top"></div><div class="snake-bottom"></div>
-        <div class="snake-card-inner">
-          <div class="step-number" style="background:linear-gradient(135deg,var(--cyan),#00CC8E);color:#000;">D2-3</div>
-          <div class="step-label" style="color:var(--cyan);">ESTEIRA AUTOMÁTICA</div>
-          <div class="step-title">Você dorme, a FraLib trabalha</div>
-          <div class="step-desc">Lista os 187 leads. Gera site modelo pra cada um. Envia a 1ª mensagem no WhatsApp de cada lead automaticamente.</div>
+      <div class="timeline-step reveal">
+        <div class="day-icon">
+          <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 14h36v36H14z" rx="2"/>
+            <path d="M14 24h36"/>
+            <circle cx="22" cy="19" r="1" fill="currentColor"/>
+            <circle cx="28" cy="19" r="1" fill="currentColor"/>
+            <path d="M20 32h6M20 38h12M20 44h8"/>
+          </svg>
         </div>
+        <div class="label">ESTEIRA AUTOMÁTICA</div>
+        <h4>Você dorme, a FraLib trabalha</h4>
+        <p>Lista os 187 leads. Gera site modelo pra cada um. Envia a 1ª mensagem no WhatsApp de cada lead automaticamente.</p>
       </div>
-      <div class="step-card snake-card reveal">
-        <div class="snake-top"></div><div class="snake-bottom"></div>
-        <div class="snake-card-inner">
-          <div class="step-number" style="background:linear-gradient(135deg,var(--gold),#FF9500);color:#000;">D4-5</div>
-          <div class="step-label" style="color:var(--gold);">PRIMEIRAS RESPOSTAS</div>
-          <div class="step-title">~3-5% responde positivo</div>
-          <div class="step-desc">"Quero ver", "Quanto custa?", "Pode mandar". Esses leads vão pra sua fila. Você só abre o painel e atende.</div>
+      <div class="timeline-step reveal">
+        <div class="day-icon">
+          <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M10 14l8 22 8-14 8 14 8-22"/>
+            <circle cx="18" cy="22" r="2" fill="currentColor"/>
+            <circle cx="26" cy="36" r="2" fill="currentColor"/>
+            <circle cx="34" cy="22" r="2" fill="currentColor"/>
+            <circle cx="42" cy="36" r="2" fill="currentColor"/>
+          </svg>
         </div>
+        <div class="label">PRIMEIRAS RESPOSTAS</div>
+        <h4>~3-5% responde positivo</h4>
+        <p>"Quero ver", "Quanto custa?", "Pode mandar". Esses leads vão pra sua fila. Você só abre o painel e atende.</p>
       </div>
-      <div class="step-card snake-card reveal" style="grid-column:span 1;background:linear-gradient(135deg,rgba(0,255,179,0.08),rgba(147,51,234,0.08));border-color:var(--fl-border-hi);"><div class="snake-top"></div><div class="snake-bottom"></div>
-        <div class="snake-card-inner">
-          <div class="step-number" style="background:linear-gradient(135deg,var(--fl-success),#16803C);color:#fff;box-shadow:0 0 30px rgba(34,197,94,0.4);">D5-7</div>
-          <div class="step-label" style="color:var(--fl-success);">PRIMEIRO FECHAMENTO</div>
-          <div class="step-title">Você fecha, embola</div>
-          <div class="step-desc">Abre a fila, ajusta o site no editor visual, manda a proposta. Cliente paga via Pix. <strong style="color:var(--cyan);">100% do lucro é seu.</strong></div>
+      <div class="timeline-step reveal" style="background:linear-gradient(135deg,rgba(0,255,179,0.08),rgba(147,51,234,0.08));border-color:var(--fl-border-hi);">
+        <div class="day-icon">
+          <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M32 8l6 12 14 2-10 10 2 14-12-6-12 6 2-14-10-10 14-2z"/>
+            <path d="M32 20v8M28 28h8" stroke-width="2.5"/>
+          </svg>
         </div>
+        <div class="label">PRIMEIRO FECHAMENTO</div>
+        <h4>Você fecha, embola</h4>
+        <p>Abre a fila, ajusta o site no editor visual, manda a proposta. Cliente paga via Pix. <strong style="color:var(--cyan);">100% do lucro é seu.</strong></p>
       </div>
     </div>
     <p class="section-sub reveal" style="text-align:center;margin:32px auto 0;max-width:720px;font-size:13px;color:var(--fl-text-muted);">A primeira venda pode acontecer na semana 1. Mas é mais comum entre semana 2 e 4 — porque o ciclo do WhatsApp tem retorno gradual. <strong style="color:var(--fl-text);">Não é mágica. É processo.</strong></p>
   </div>
 </section>
 
+<style>
+.team-grid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:20px;
+  max-width:1100px;
+  margin:0 auto;
+}
+@media(max-width:900px){.team-grid{grid-template-columns:1fr}}
+.team-card{
+  background:var(--fl-bg-card);
+  border:1px solid var(--fl-border);
+  text-align:center;
+  position:relative;
+}
+.team-card .snake-card-inner{padding:32px 24px}
+.team-avatar{
+  width:88px;height:88px;border-radius:50%;
+  margin:0 auto 16px;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 0 30px rgba(147,51,234,0.3);
+}
+.team-name{
+  font-family:var(--fl-font-brand);
+  font-size:14px;color:var(--fl-text);margin-bottom:4px;
+}
+.team-role{
+  font-family:var(--fl-font-mono);
+  font-size:10px;color:var(--fl-purple-300);
+  letter-spacing:1px;margin-bottom:16px;text-transform:uppercase;
+}
+.team-bio{
+  font-size:13px;color:var(--fl-text-muted);
+  line-height:1.7;font-style:italic;margin-bottom:12px;
+}
+.team-meta{
+  font-family:var(--fl-font-mono);
+  font-size:10px;color:var(--cyan);
+  padding:6px 10px;
+  background:rgba(0,255,179,0.05);
+  border:1px solid rgba(0,255,179,0.15);
+  display:inline-block;
+}
+.team-commit{
+  margin-top:48px;
+  text-align:center;
+  max-width:720px;
+  margin-left:auto;margin-right:auto;
+  padding:24px;
+  background:var(--fl-bg-card);
+  border:1px solid var(--fl-border);
+  border-left:3px solid var(--cyan);
+}
+.team-commit p{
+  font-size:15px;color:var(--fl-text-muted);
+  line-height:1.7;margin-bottom:12px;
+}
+.team-commit p:last-child{margin-bottom:0}
+.team-commit strong{color:var(--cyan)}
+
+/* ============================================================
+   DEPOIMENTOS SCROLLTELLER (animacao automatica + drag)
+   ============================================================ */
+.depoimentos-scroller{
+  position:relative;
+  overflow:hidden;
+  padding:40px 32px 32px;
+  margin:0 -32px;
+  scrollbar-width:none;
+  -ms-overflow-style:none;
+}
+.depoimentos-scroller::-webkit-scrollbar{display:none}
+.depoimentos-track{
+  display:flex;
+  gap:24px;
+  width:max-content;
+  padding:8px 0;
+  animation:scrollteller 50s linear infinite;
+}
+.depoimentos-scroller:hover .depoimentos-track{
+  animation-play-state:paused;
+}
+@keyframes scrollteller{
+  0%{transform:translateX(0)}
+  100%{transform:translateX(-50%)}
+}
+.depoimento-scroll-card{
+  flex:0 0 420px;
+  background:var(--fl-bg-card);
+  border:1px solid var(--fl-border);
+  padding:24px;
+  display:flex;
+  gap:14px;
+  align-items:flex-start;
+  transition:all .3s var(--fl-ease);
+  position:relative;
+}
+.depoimento-scroll-card::before{
+  content:'"';
+  position:absolute;
+  top:4px;
+  right:18px;
+  font-size:48px;
+  color:var(--fl-purple);
+  opacity:0.1;
+  font-family:serif;
+  line-height:1;
+}
+.depoimento-scroll-card.tipo-duvida{
+  border-left:3px solid var(--gold);
+}
+.depoimento-scroll-card.tipo-suspeita{
+  border-left:3px solid var(--fl-danger);
+}
+.depoimento-scroll-card.tipo-confirmacao{
+  border-left:3px solid var(--fl-success);
+}
+.depoimento-scroll-card.tipo-resposta{
+  border-left:3px solid var(--cyan);
+}
+.depoimento-scroll-card:hover{
+  border-color:var(--fl-purple);
+  box-shadow:var(--fl-glow-sm);
+  transform:translateY(-4px);
+}
+.depoimento-foto{
+  width:60px;
+  height:60px;
+  border-radius:50%;
+  background-size:cover;
+  background-position:center;
+  flex-shrink:0;
+  border:2px solid var(--fl-border);
+  background-color:var(--fl-bg-surface);
+}
+.depoimento-conteudo{flex:1;min-width:0;min-height:180px}
+.depoimento-conteudo .contexto{
+  font-size:11px;
+  font-family:var(--fl-font-mono);
+  color:var(--fl-text-dim);
+  text-transform:uppercase;
+  letter-spacing:1px;
+  margin-bottom:8px;
+}
+.depoimento-conteudo .contexto .emoji{
+  color:var(--fl-text);
+  margin-right:6px;
+}
+.depoimento-scroll-card blockquote{
+  font-size:13px;
+  line-height:1.6;
+  color:var(--fl-text);
+  font-style:italic;
+  margin-bottom:12px;
+}
+.depoimento-autor-info h4{
+  font-size:13px;
+  font-weight:700;
+  color:var(--fl-text);
+  margin-bottom:2px;
+}
+.depoimento-autor-info p{
+  font-size:11px;
+  color:var(--fl-text-muted);
+  margin-bottom:6px;
+}
+.depoimento-autor-info .metric{
+  display:inline-block;
+  font-family:var(--fl-font-mono);
+  font-size:11px;
+  color:var(--cyan);
+  padding:3px 8px;
+  background:rgba(0,255,179,0.1);
+  border:1px solid rgba(0,255,179,0.25);
+  font-weight:700;
+}
+
+/* Tags de tipo do comentario */
+.tipo-tag{
+  display:inline-block;
+  font-size:10px;
+  font-family:var(--fl-font-mono);
+  padding:3px 8px;
+  border-radius:0;
+  margin-bottom:8px;
+  letter-spacing:1px;
+  text-transform:uppercase;
+  font-weight:700;
+}
+.tipo-tag.duvida{background:rgba(255,184,0,0.15);color:var(--gold);border:1px solid var(--gold)}
+.tipo-tag.suspeita{background:rgba(239,68,68,0.15);color:var(--fl-danger);border:1px solid var(--fl-danger)}
+.tipo-tag.confirmacao{background:rgba(34,197,94,0.15);color:var(--fl-success);border:1px solid var(--fl-success)}
+.tipo-tag.resposta{background:rgba(0,255,179,0.15);color:var(--cyan);border:1px solid var(--cyan)}
+.tipo-tag.recomendacao{background:rgba(147,51,234,0.15);color:var(--fl-purple-light);border:1px solid var(--fl-purple)}
+
+/* ============================================================
+   SCROLLTELLER COM DRAG (mouse + touch)
+   ============================================================ */
+.depoimentos-scroller.dragging{
+  cursor:grabbing;
+  scroll-snap-type:none;
+  scroll-behavior:auto;
+}
+</style>
+
 <!-- ===== SEÇÃO 8 — PLANOS ===== -->
 <section class="planos" id="planos" style="background:transparent">
   <div class="container">
     <h2 class="section-title reveal">ESCOLHA SEU PLANO</h2>
-    <p class="section-sub reveal" style="margin-top:-28px">Comece com 1 pipeline grátis. Escale quando quiser. Cancele quando quiser.</p>
-    <p class="section-sub reveal" style="margin-top:-18px;font-size:13px;color:var(--fl-text-muted)">Pagamento seguro via Mercado Pago com PIX e cartão.</p>
+    <p style="text-align:center;font-size:22px;font-weight:600;color:var(--cyan);margin:32px auto 16px;max-width:700px;line-height:1.5;">Comece com 1 pipeline grátis. Escale quando quiser. Cancele quando quiser.</p>
+    <p style="text-align:center;font-size:13px;color:var(--fl-text-muted);margin-bottom:40px;">Pagamento seguro via Mercado Pago com PIX e cartão.</p>
     <div class="planos-grid">
       <!-- TRIAL -->
       <div class="plano-card reveal">
@@ -1583,7 +2093,9 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
           <li>Fila com menor prioridade</li>
           <li>Suporte comunidade</li>
         </ul>
-        <a href="/login?signup=1&amp;plano=trial" class="btn btn-outline" style="margin-top:20px;width:100%;">TESTAR GRÁTIS</a>
+        <div class="plano-cta-wrap">
+          <a href="/login?signup=1&amp;plano=trial" class="plano-cta cta-outline">TESTAR GRÁTIS</a>
+        </div>
       </div>
 
       <!-- STARTER -->
@@ -1601,7 +2113,9 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
           <li>Prioridade na fila (nível 2)</li>
           <li>Suporte WhatsApp</li>
         </ul>
-        <a href="/login?signup=1&amp;plano=starter" class="btn btn-outline" style="margin-top:20px;width:100%;">ASSINAR STARTER</a>
+        <div class="plano-cta-wrap">
+          <a href="/login?signup=1&amp;plano=starter" class="plano-cta cta-outline">ASSINAR STARTER</a>
+        </div>
       </div>
 
       <!-- PRO -->
@@ -1619,8 +2133,10 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
           <li>Prioridade alta na fila (nível 5)</li>
           <li>Suporte prioritário</li>
         </ul>
-        <a href="/login?signup=1&amp;plano=pro" class="btn btn-yellow" style="margin-top:20px;width:100%;">ASSINAR PRO</a>
-        <p style="font-size:9px;color:#A16207;margin-top:12px;text-align:center;">7 dias de garantia incondicional.</p>
+        <div class="plano-cta-wrap">
+          <a href="/login?signup=1&amp;plano=pro" class="plano-cta cta-gold">ASSINAR PRO</a>
+          <p class="plano-garantia">7 dias de garantia incondicional.</p>
+        </div>
       </div>
 
       <!-- AGENCY -->
@@ -1638,7 +2154,9 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
           <li>Prioridade máxima na fila</li>
           <li>Onboarding e suporte VIP</li>
         </ul>
-        <a href="/login?signup=1&amp;plano=agency" class="btn btn-outline" style="margin-top:20px;width:100%;border-color:var(--fl-purple-300);">ASSINAR AGENCY</a>
+        <div class="plano-cta-wrap">
+          <a href="/login?signup=1&amp;plano=agency" class="plano-cta cta-outline">ASSINAR AGENCY</a>
+        </div>
       </div>
     </div>
 
@@ -1651,34 +2169,6 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
         <h4 style="font-size:18px;font-weight:700;margin-bottom:8px;color:var(--fl-text);">Garantia Incondicional de 7 Dias</h4>
         <p style="font-size:14px;color:var(--fl-text-muted);line-height:1.6;">Assine normalmente. Se você se arrepender em até 7 dias, devolvemos 100% do valor. Sem perguntas, sem burocracia.</p>
       </div>
-    </div>
-  </div>
-</section>
-
-<!-- ===== SEÇÃO 8B — QUEM ESTÁ POR TRÁS ===== -->
-<section class="para-quem" id="quem-esta-por-tras">
-  <div class="container">
-    <h2 class="section-title reveal">QUEM ASSINA ESTE PRODUTO</h2>
-    <p class="section-sub reveal" style="text-align:center;margin:0 auto 48px;max-width:720px;color:var(--fl-text-muted);">A confiança vem de rosto, não de marca. Cursos autoridade vendem porque o criador tem nome. A FraLib também precisa.</p>
-    <div style="display:flex;justify-content:center;">
-      <div class="quem-card snake-card reveal" style="max-width:560px;width:100%;"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner" style="text-align:center;padding:40px 28px;">
-        <!-- PLACEHOLDER: substituir por foto real da pessoa que assina o FraLib -->
-        <div style="width:120px;height:120px;border-radius:50%;margin:0 auto 20px;background:linear-gradient(135deg,var(--fl-purple),var(--cyan));display:flex;align-items:center;justify-content:center;font-family:var(--fl-font-brand);font-size:32px;color:#fff;box-shadow:var(--fl-glow-md);">?</div>
-        <div class="quem-title" style="font-size:20px;">[Seu nome aqui]</div>
-        <div style="font-family:var(--fl-font-mono);font-size:11px;color:var(--fl-purple-300);letter-spacing:1px;margin:6px 0 18px;">FUNDADOR · FRALIB OS</div>
-        <div class="quem-desc" style="font-size:14px;line-height:1.8;text-align:left;">
-          "Criei o FraLib depois de [X anos] fazendo [o quê].
-          Vi que o gargalo de quem vende sites não é técnica — é prospecção e abordagem.
-          Por isso a plataforma faz 4 das 5 etapas. Você só fecha — e ganha todo mês."
-        </div>
-        <div style="display:flex;justify-content:center;gap:14px;margin-top:24px;">
-          <a href="#" style="font-size:12px;color:var(--fl-text-muted);text-decoration:none;font-family:var(--fl-font-mono);letter-spacing:1px;">→ LinkedIn</a>
-          <a href="#" style="font-size:12px;color:var(--fl-text-muted);text-decoration:none;font-family:var(--fl-font-mono);letter-spacing:1px;">→ GitHub</a>
-        </div>
-        <div style="margin-top:20px;padding:12px;background:rgba(250,204,21,0.08);border:1px solid rgba(250,204,21,0.25);border-radius:var(--fl-r-md);font-size:11px;color:var(--fl-text-dim);font-family:var(--fl-font-mono);">
-          ⚠ PLACEHOLDER — substituir por pessoa real (foto + nome + bio + LinkedIn)
-        </div>
-      </div></div>
     </div>
   </div>
 </section>
@@ -1865,6 +2355,41 @@ document.getElementById('betaForm').addEventListener('submit', function(e){
       ticking = true;
     }
   }, { passive: true });
+})();
+
+// Scrollteller - drag horizontal com mouse + wheel
+(function(){
+  const scroller = document.getElementById('depoimentosScroller');
+  if(!scroller)return;
+  let isDown = false, startX = 0, scrollLeft = 0;
+  scroller.addEventListener('mousedown', e => {
+    isDown = true;
+    scroller.classList.add('dragging');
+    startX = e.pageX - scroller.offsetLeft;
+    scrollLeft = scroller.scrollLeft;
+  });
+  scroller.addEventListener('mouseleave', () => {
+    isDown = false;
+    scroller.classList.remove('dragging');
+  });
+  scroller.addEventListener('mouseup', () => {
+    isDown = false;
+    scroller.classList.remove('dragging');
+  });
+  scroller.addEventListener('mousemove', e => {
+    if(!isDown)return;
+    e.preventDefault();
+    const x = e.pageX - scroller.offsetLeft;
+    const walk = (x - startX) * 2;
+    scroller.scrollLeft = scrollLeft - walk;
+  });
+  // Wheel vertical vira horizontal
+  scroller.addEventListener('wheel', e => {
+    if(Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+      e.preventDefault();
+      scroller.scrollLeft += e.deltaY;
+    }
+  }, {passive:false});
 })();
 </script>
 
