@@ -78,13 +78,43 @@ def run_production_tick(db: Session, payload: dict[str, Any], tenant_id: int) ->
     test_number = str(payload.get("_bryan_test_number") or os.getenv("BRYAN_TEST_NUMBER", "")).strip()
     if test_number:
         payload_job["_bryan_test_number"] = test_number
+    existing_job = db.execute(
+        text(
+            """
+            SELECT id, status
+            FROM jobs
+            WHERE tenant_id=:uid
+              AND tipo='pipeline_lead'
+              AND status IN ('pending','running','failed_retriable')
+              AND CAST(payload AS text) LIKE :inventory_marker
+            ORDER BY id DESC
+            LIMIT 1
+            """
+        ),
+        {"uid": tenant_id, "inventory_marker": f'%\"_inventory_id\": \"{item["id"]}\"%'},
+    ).fetchone()
+    if existing_job:
+        db.execute(
+            text(
+                """
+                UPDATE lead_inventory
+                SET status='approved', locked_by=NULL, locked_until=NULL,
+                    erro='Pipeline ativa já existe para este lead',
+                    atualizado_em=NOW()
+                WHERE id=:id AND tenant_id=:uid
+                """
+            ),
+            {"id": item["id"], "uid": tenant_id},
+        )
+        db.commit()
+        return {"ok": True, "duplicate_job": True, "existing_job_id": existing_job[0]}
     job_id = job_queue.enqueue(
         db,
         tipo="pipeline_lead",
         payload=payload_job,
         tenant_id=tenant_id,
         max_attempts=3,
-        idempotency_key=f"inventory-pipeline-{item['id']}",
+        idempotency_key=f"inventory-pipeline-{item['id']}-{run_id}",
         priority=1,
         run_id=run_id,
     )

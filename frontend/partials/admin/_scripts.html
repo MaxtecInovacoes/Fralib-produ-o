@@ -1192,6 +1192,30 @@ async function forcarLeadSupplyTick() {
       _handleBlockedResponse(resp, data);
       return;
     }
+    if (data && data.job_id) {
+      _leadSupplySetAction('success', 'Producao enfileirada', 'Lead reservado e pipeline criada com job #' + data.job_id + '.', 7000);
+      if (typeof Toast !== 'undefined') Toast.success('Pipeline criada para o próximo lead aprovado.');
+      _refreshLeadSupplySoon();
+      return;
+    }
+    if (data && data.duplicate_job) {
+      _leadSupplySetAction('warning', 'Lead ja estava em fila', 'Este lead ja tinha uma pipeline ativa ou acabava de ser reaproveitado. Nenhum job novo foi criado.', 7000);
+      if (typeof Toast !== 'undefined') Toast.warning('Nenhum job novo foi criado para esse clique.');
+      _refreshLeadSupplySoon();
+      return;
+    }
+    if (data && data.waiting === 'no_approved_lead') {
+      _leadSupplySetAction('info', 'Sem lead aprovado', 'Nao havia lead aprovado disponivel. O Hunter foi chamado para abastecer a fila.', 7000);
+      if (typeof Toast !== 'undefined') Toast.warning('Sem lead aprovado disponível agora.');
+      _refreshLeadSupplySoon();
+      return;
+    }
+    if (data && data.waiting === 'pipeline_running') {
+      _leadSupplySetAction('warning', 'Pipeline ja em andamento', 'Ja existe uma pipeline ativa para este tenant. Aguarde a conclusao antes de abrir outra.', 7000);
+      if (typeof Toast !== 'undefined') Toast.warning('Já existe pipeline ativa para este tenant.');
+      _refreshLeadSupplySoon();
+      return;
+    }
     _leadSupplySetAction('success', 'Producao enfileirada', 'Se havia lead aprovado, ele sai do estoque e entra na linha de producao.', 7000);
     if (typeof Toast !== 'undefined') Toast.success('Produção vai puxar o próximo lead aprovado.');
     _refreshLeadSupplySoon();
