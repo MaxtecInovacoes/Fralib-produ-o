@@ -258,33 +258,6 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
 .hero-right{display:flex;align-items:center;justify-content:center;position:relative}
 
 /* BADGE */
-.hero-badge{
-  display:inline-flex;align-items:center;gap:8px;
-  padding:5px 14px;border-radius:var(--fl-r-full);
-  background:rgba(147,51,234,0.1);
-  border:1px solid rgba(147,51,234,0.3);
-  font-family:var(--fl-font-mono);font-size:10px;font-weight:500;
-  color:var(--fl-purple-300);
-  margin-bottom:18px;
-  animation:fadeUp .6s var(--fl-ease) both;
-  letter-spacing:0.3px;
-}
-.hero-badge .pulse-dot{
-  width:8px;height:8px;border-radius:50%;
-  background:var(--cyan);
-  box-shadow:0 0 12px var(--cyan-glow);
-  position:relative;
-}
-.hero-badge .pulse-dot::after{
-  content:'';position:absolute;inset:-4px;border-radius:50%;
-  border:2px solid var(--cyan);opacity:0;
-  animation:pulse-ring 2s infinite;
-}
-@keyframes pulse-ring{
-  0%{transform:scale(.8);opacity:.5}
-  100%{transform:scale(1.6);opacity:0}
-}
-
 /* H1 - 2 linhas com hierarquia */
 .hero-title{
   font-family:var(--fl-font-brand);
@@ -1816,7 +1789,7 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
       background: rgba(255, 255, 255, 0.98);
     }
     body.light-mode #particles-js { opacity: 0.6; } /* Reduce particle visibility in light mode */
-    body.light-mode .hero-badge { background: rgba(147,51,234,0.05); }
+    body.light-mode .hero-mockup { border-color: rgba(124,58,237,.3); }
 
     /* Mascot Animations */
     @keyframes pixelWalk {
@@ -1892,10 +1865,6 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
   <div class="hero-split">
     <!-- COLUNA ESQUERDA: copy + CTA -->
     <div class="hero-left">
-      <div class="hero-badge">
-        <span class="pulse-dot"></span>
-        COMECE DO ZERO
-      </div>
 
       <h1 class="hero-title">
         <span class="grad">Ganhe R$ 3.000 a R$ 10.000/mês</span>
