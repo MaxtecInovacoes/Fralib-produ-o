@@ -216,6 +216,8 @@ body{
 .pipeline-status.running{border-color:var(--success);color:var(--success)}
 .pipeline-status.paused{border-color:var(--warning);color:var(--warning)}
 .pipeline-status.idle{border-color:var(--fl-text-dim);color:var(--fl-text-dim)}
+.pipeline-status.warn{border-color:var(--warning);color:var(--warning)}
+.pipeline-status.error{border-color:var(--danger);color:var(--danger)}
 
 /* ============================================================
    KPI CARDS — 6 cards em 2 linhas de 3

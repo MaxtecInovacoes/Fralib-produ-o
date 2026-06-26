@@ -107,6 +107,27 @@ async def api_pipeline_status(
     """)
     ).fetchone()
 
+    # Ultimo erro persistido em jobs/spans
+    last_job_error = db.execute(
+        text("""
+        SELECT id, tipo, tenant_id, status, last_phase, last_error, attempts, max_attempts,
+               iniciado_em, concluido_em, worker_heartbeat
+        FROM jobs
+        WHERE COALESCE(last_error, '') <> ''
+        ORDER BY COALESCE(concluido_em, iniciado_em, criado_em) DESC, id DESC
+        LIMIT 1
+    """)
+    ).fetchone()
+    last_span_error = db.execute(
+        text("""
+        SELECT run_id, tenant_id, fase_nome, agente, erro, started_at, finished_at
+        FROM pipeline_run_spans
+        WHERE COALESCE(erro, '') <> ''
+        ORDER BY COALESCE(finished_at, started_at) DESC
+        LIMIT 1
+    """)
+    ).fetchone()
+
     # Travados: spans running > 1h
     stuck_spans = db.execute(
         text("""
@@ -182,6 +203,31 @@ async def api_pipeline_status(
                 "status": last_span[2] if last_span else None,
                 "finished_at": str(last_span[3]) if last_span else None,
             } if last_span else None,
+        },
+        "latest_error": {
+            "source": "job" if last_job_error else ("span" if last_span_error else None),
+            "job": {
+                "id": last_job_error[0] if last_job_error else None,
+                "tipo": last_job_error[1] if last_job_error else None,
+                "tenant_id": last_job_error[2] if last_job_error else None,
+                "status": last_job_error[3] if last_job_error else None,
+                "last_phase": last_job_error[4] if last_job_error else None,
+                "error": last_job_error[5] if last_job_error else None,
+                "attempts": last_job_error[6] if last_job_error else None,
+                "max_attempts": last_job_error[7] if last_job_error else None,
+                "iniciado_em": str(last_job_error[8]) if last_job_error else None,
+                "concluido_em": str(last_job_error[9]) if last_job_error else None,
+                "worker_heartbeat": str(last_job_error[10]) if last_job_error else None,
+            } if last_job_error else None,
+            "span": {
+                "run_id": last_span_error[0] if last_span_error else None,
+                "tenant_id": last_span_error[1] if last_span_error else None,
+                "fase_nome": last_span_error[2] if last_span_error else None,
+                "agente": last_span_error[3] if last_span_error else None,
+                "error": last_span_error[4] if last_span_error else None,
+                "started_at": str(last_span_error[5]) if last_span_error else None,
+                "finished_at": str(last_span_error[6]) if last_span_error else None,
+            } if last_span_error else None,
         },
         "stuck": {
             "count": len(stuck_list),

@@ -2164,10 +2164,10 @@ async def executar_pipeline_completo(
         web_dir = f"/var/www/fralib/sites/{tenant_id}/{state.lead_slug}"
         os.makedirs(web_dir, exist_ok=True)
         try:
-            from backend.services.builder_worker import assert_canonical_builder_publication
+            from backend.services.builder_worker import assert_canonical_builder_publication_allowed
         except Exception:
-            from services.builder_worker import assert_canonical_builder_publication  # type: ignore
-        assert_canonical_builder_publication(
+            from services.builder_worker import assert_canonical_builder_publication_allowed  # type: ignore
+        assert_canonical_builder_publication_allowed(
             state.builder_output_dir or web_dir,
             html=state.html_final,
         )

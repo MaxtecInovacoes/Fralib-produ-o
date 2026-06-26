@@ -273,12 +273,12 @@ def publish_rendered_site(
     import subprocess as _sp
 
     try:
-        from backend.services.builder_worker import assert_canonical_builder_publication
+        from backend.services.builder_worker import assert_canonical_builder_publication_allowed
     except Exception:
-        from services.builder_worker import assert_canonical_builder_publication  # type: ignore
+        from services.builder_worker import assert_canonical_builder_publication_allowed  # type: ignore
 
     os.makedirs(web_dir, exist_ok=True)
-    assert_canonical_builder_publication(
+    assert_canonical_builder_publication_allowed(
         state.builder_output_dir or web_dir,
         html=state.html_final,
     )

@@ -11,6 +11,19 @@ var utiSearchAtual = '';
 var _crmDataCache = null;
 var _utiDataCache = null;
 var _pipelinePermissionState = null;
+var _pipelineHealthState = {
+  healthy: true,
+  severity: 'ok',
+  title: '',
+  message: '',
+  details: [],
+  updated_at: ''
+};
+var _pipelineHealthModalOpen = false;
+var _pipelineHealthFailureStreak = 0;
+var _pipelineHealthLastSnapshot = '';
+var _pipelineHealthLastProgressAt = 0;
+var _pipelineHealthSuppressUntil = 0;
 
 /* ══ AUTH GUARD ═══════════════════════════════════════════════════ */
 (function(){
@@ -110,6 +123,181 @@ function _formatSeconds(seconds) {
 function _planHasSdr(plan) {
   plan = (plan || '').toLowerCase();
   return ['trial','pro','beta','agency','ilimitado','admin'].indexOf(plan) >= 0;
+}
+
+function _pipelineFormatUpdatedAt(ts) {
+  if (!ts) return 'agora';
+  try {
+    var d = new Date(ts);
+    if (isNaN(d.getTime())) return String(ts);
+    return d.toLocaleTimeString('pt-BR', { hour12: false });
+  } catch (e) {
+    return String(ts);
+  }
+}
+
+function _pipelineSetHealthState(state) {
+  _pipelineHealthState = state || _pipelineHealthState;
+  var modal = document.getElementById('pipelineHealthModal');
+  if (!modal) return;
+
+  var titleEl = document.getElementById('pipelineHealthTitle');
+  var messageEl = document.getElementById('pipelineHealthMessage');
+  var badgeEl = document.getElementById('pipelineHealthBadge');
+  var metaEl = document.getElementById('pipelineHealthMeta');
+  var listEl = document.getElementById('pipelineHealthDetails');
+  var shell = modal.firstElementChild;
+  var accent = state.severity === 'critical' ? '#ef4444' : (state.severity === 'warn' ? '#f59e0b' : '#10b981');
+
+  modal.style.borderColor = accent;
+  if (shell) shell.style.borderColor = accent;
+  modal.dataset.severity = state.severity || 'ok';
+  if (titleEl) titleEl.textContent = state.title || 'Pipeline em observacao';
+  if (messageEl) messageEl.textContent = state.message || 'Sem detalhes.';
+  if (badgeEl) {
+    badgeEl.textContent = (state.severity || 'ok').toUpperCase();
+    badgeEl.style.color = accent;
+    badgeEl.style.borderColor = accent;
+  }
+  if (metaEl) metaEl.textContent = 'Atualizado ' + _pipelineFormatUpdatedAt(state.updated_at || new Date().toISOString());
+  if (listEl) {
+    var details = state.details || [];
+    if (!details.length) {
+      listEl.innerHTML = '';
+      listEl.style.display = 'none';
+    } else {
+      listEl.style.display = 'grid';
+      listEl.innerHTML = details.map(function(item) {
+        return '<li>' + escapeHtml(item) + '</li>';
+      }).join('');
+    }
+  }
+}
+
+function _ensurePipelineHealthModal() {
+  var modal = document.getElementById('pipelineHealthModal');
+  if (modal) return modal;
+  modal = document.createElement('div');
+  modal.id = 'pipelineHealthModal';
+  modal.style.cssText = 'position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(3,7,18,.82);backdrop-filter:blur(8px);z-index:100000;padding:20px;';
+  modal.innerHTML = '' +
+    '<div style="width:min(680px,100%);background:#0f172a;border:1px solid #334155;border-radius:16px;box-shadow:0 30px 90px rgba(0,0,0,.55);overflow:hidden;">' +
+      '<div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;padding:18px 20px;border-bottom:1px solid rgba(148,163,184,.16);">' +
+        '<div style="min-width:0;">' +
+          '<div id="pipelineHealthBadge" style="display:inline-flex;align-items:center;gap:6px;padding:3px 8px;border:1px solid #10b981;border-radius:999px;font-family:var(--fl-font-mono);font-size:10px;letter-spacing:.08em;color:#10b981;margin-bottom:10px;">OK</div>' +
+          '<div id="pipelineHealthTitle" style="font-family:var(--fl-font-brand);font-size:20px;line-height:1.2;color:#f8fafc;">Pipeline em observacao</div>' +
+          '<div id="pipelineHealthMessage" style="margin-top:8px;color:#cbd5e1;font-size:13px;line-height:1.55;">Sem detalhes.</div>' +
+        '</div>' +
+        '<button type="button" onclick="document.getElementById(\'pipelineHealthModal\').style.display=\'none\';_pipelineHealthSuppressUntil=Date.now()+60000;" style="background:transparent;border:1px solid rgba(148,163,184,.3);color:#cbd5e1;border-radius:8px;padding:8px 12px;cursor:pointer;font-size:12px;">Fechar</button>' +
+      '</div>' +
+      '<div style="padding:18px 20px 20px;">' +
+        '<div id="pipelineHealthMeta" style="font-family:var(--fl-font-mono);font-size:11px;color:#94a3b8;margin-bottom:14px;">Atualizado agora</div>' +
+        '<ul id="pipelineHealthDetails" style="list-style:none;margin:0 0 18px;padding:0;display:grid;gap:8px;"></ul>' +
+        '<div style="display:flex;flex-wrap:wrap;gap:8px;">' +
+          '<button type="button" onclick="adminPipelineRefresh()" style="background:#10b981;color:#03130d;border:none;border-radius:8px;padding:10px 14px;font-weight:800;cursor:pointer;">Atualizar agora</button>' +
+          '<button type="button" onclick="adminPipelineReap()" style="background:transparent;color:#e5e7eb;border:1px solid rgba(148,163,184,.28);border-radius:8px;padding:10px 14px;font-weight:700;cursor:pointer;">Executar reap</button>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(modal);
+  return modal;
+}
+
+function _showPipelineHealthModal(state) {
+  if (!state) return;
+  if (Date.now() < _pipelineHealthSuppressUntil) return;
+  _ensurePipelineHealthModal();
+  _pipelineHealthModalOpen = true;
+  _pipelineSetHealthState(state);
+  var modal = document.getElementById('pipelineHealthModal');
+  if (modal) modal.style.display = 'flex';
+}
+
+function _hidePipelineHealthModal() {
+  var modal = document.getElementById('pipelineHealthModal');
+  if (modal) modal.style.display = 'none';
+  _pipelineHealthModalOpen = false;
+}
+
+function _buildPipelineHealthState(data, failureMessage) {
+  var jobs = (data && data.jobs) || {};
+  var spans = (data && data.spans) || {};
+  var stuck = (data && data.stuck) || {};
+  var worker = (data && data.worker) || {};
+  var alive = worker.alive !== false;
+  var active = parseInt(jobs.active || 0, 10) || 0;
+  var pending = parseInt(jobs.pending || 0, 10) || 0;
+  var running = parseInt(spans.running || 0, 10) || 0;
+  var stuckCount = parseInt(stuck.count || 0, 10) || 0;
+  var snapshot = [alive ? 1 : 0, active, pending, running, stuckCount].join('|');
+  var now = Date.now();
+  var activeWork = (active + pending + running + stuckCount) > 0;
+
+  if (snapshot !== _pipelineHealthLastSnapshot) {
+    _pipelineHealthLastSnapshot = snapshot;
+    _pipelineHealthLastProgressAt = activeWork ? now : 0;
+  } else if (activeWork && !_pipelineHealthLastProgressAt) {
+    _pipelineHealthLastProgressAt = now;
+  }
+
+  var stalled = activeWork && _pipelineHealthLastProgressAt && (now - _pipelineHealthLastProgressAt > 60000);
+  var severity = 'ok';
+  var popup = false;
+  var title = 'Pipeline saudável';
+  var message = 'Worker online e sem travamentos detectados.';
+  var details = [
+    'Worker: ' + (alive ? 'online' : 'offline'),
+    'Jobs: ' + active + ' ativos, ' + pending + ' na fila',
+    'Spans: ' + running + ' rodando',
+    'Travados: ' + stuckCount
+  ];
+
+  if (failureMessage) {
+    severity = 'critical';
+    popup = true;
+    title = 'Painel sem resposta';
+    message = failureMessage;
+    details = [
+      'Falha ao consultar o estado da pipeline.',
+      'Tente atualizar o painel ou executar reap.',
+      'Se o erro persistir, o worker ou o backend podem estar indisponíveis.'
+    ];
+  } else if (!alive) {
+    severity = 'critical';
+    popup = true;
+    title = 'Worker offline';
+    message = 'A pipeline não recebeu heartbeat do worker.';
+    details.unshift('Ação recomendada: reiniciar o worker.');
+  } else if (stuckCount > 0) {
+    severity = 'critical';
+    popup = true;
+    title = 'Jobs travados';
+    message = 'Existem spans travados na esteira.';
+    if (stuck.list && stuck.list.length) {
+      details.unshift('Travado: ' + stuck.list[0].run_id + ' · ' + stuck.list[0].fase_nome + ' · ' + stuck.list[0].age_human);
+    }
+  } else if (stalled) {
+    severity = 'warn';
+    popup = true;
+    title = 'Pipeline sem progresso';
+    message = 'A fila não mudou por mais de 60 segundos enquanto havia trabalho pendente.';
+    details.unshift('Último avanço: ' + _pipelineFormatUpdatedAt(new Date(_pipelineHealthLastProgressAt).toISOString()));
+  } else if (pending > 0 && running === 0) {
+    severity = 'warn';
+    title = 'Fila aguardando worker';
+    message = 'Há jobs pendentes, mas nenhum span está rodando agora.';
+    details.unshift('A fila está viva, mas sem execução ativa.');
+  }
+
+  return {
+    healthy: severity === 'ok',
+    severity: severity,
+    popup: popup,
+    title: title,
+    message: message,
+    details: details,
+    updated_at: (data && data.generated_at) || new Date().toISOString(),
+  };
 }
 
 function renderPipelinePermission(data) {
@@ -1216,19 +1404,38 @@ function atualizarStatusPipeline(rodando, pausado) {
   var btnIniciar = document.getElementById('btnIniciar');
   var btnPausar = document.getElementById('btnPausar');
   var btnRetomar = document.getElementById('btnRetomar');
+  var health = _pipelineHealthState || {};
 
   if (rodando && !pausado) {
-    if (statusEl) { statusEl.textContent = '⬤ RODANDO'; statusEl.className = 'pipeline-status running'; }
+    if (health.severity === 'critical') {
+      if (statusEl) { statusEl.textContent = '⬤ RODANDO · FALHA'; statusEl.className = 'pipeline-status error'; }
+    } else if (health.severity === 'warn') {
+      if (statusEl) { statusEl.textContent = '⬤ RODANDO · ALERTA'; statusEl.className = 'pipeline-status warn'; }
+    } else {
+      if (statusEl) { statusEl.textContent = '⬤ RODANDO'; statusEl.className = 'pipeline-status running'; }
+    }
     if (btnIniciar) btnIniciar.style.display = 'none';
     if (btnPausar) btnPausar.style.display = '';
     if (btnRetomar) btnRetomar.style.display = 'none';
   } else if (pausado) {
-    if (statusEl) { statusEl.textContent = '⏸ PAUSADO'; statusEl.className = 'pipeline-status paused'; }
+    if (health.severity === 'critical') {
+      if (statusEl) { statusEl.textContent = '⏸ PAUSADO · FALHA'; statusEl.className = 'pipeline-status error'; }
+    } else if (health.severity === 'warn') {
+      if (statusEl) { statusEl.textContent = '⏸ PAUSADO · ALERTA'; statusEl.className = 'pipeline-status warn'; }
+    } else {
+      if (statusEl) { statusEl.textContent = '⏸ PAUSADO'; statusEl.className = 'pipeline-status paused'; }
+    }
     if (btnIniciar) btnIniciar.style.display = 'none';
     if (btnPausar) btnPausar.style.display = 'none';
     if (btnRetomar) btnRetomar.style.display = '';
   } else {
-    if (statusEl) { statusEl.textContent = '○ IDLE'; statusEl.className = 'pipeline-status idle'; }
+    if (health.severity === 'critical') {
+      if (statusEl) { statusEl.textContent = '○ FALHA'; statusEl.className = 'pipeline-status error'; }
+    } else if (health.severity === 'warn') {
+      if (statusEl) { statusEl.textContent = '○ ALERTA'; statusEl.className = 'pipeline-status warn'; }
+    } else {
+      if (statusEl) { statusEl.textContent = '○ IDLE'; statusEl.className = 'pipeline-status idle'; }
+    }
     if (btnIniciar) btnIniciar.style.display = '';
     if (btnPausar) btnPausar.style.display = 'none';
     if (btnRetomar) btnRetomar.style.display = 'none';

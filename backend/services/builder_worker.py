@@ -546,6 +546,20 @@ def assert_canonical_builder_publication_allowed(
         )
 
 
+def assert_canonical_builder_publication(
+    output_dir: str | os.PathLike[str] | None = None,
+    *,
+    engine: str | None = None,
+    html: str | None = None,
+) -> None:
+    """Compat alias para o nome antigo usado por partes da pipeline."""
+    assert_canonical_builder_publication_allowed(
+        output_dir,
+        engine=engine,
+        html=html,
+    )
+
+
 def _canonical_publication_required() -> bool:
     strict = os.getenv("FRALIB_STRICT_CANONICAL_PUBLISH", "").strip().lower()
     if strict in {"1", "true", "yes", "on"}:
