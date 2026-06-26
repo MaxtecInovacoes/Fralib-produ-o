@@ -3344,20 +3344,49 @@ def _cinematic_copy(facts: dict[str, Any]) -> dict[str, Any]:
 
 
 def _generate_cinematic_studio_files(facts: dict[str, Any]) -> dict[str, str]:
-    # Sprint 16: Extract archetype and palette for per-segment design
+    # Sprint 14.5: Respeita a paleta do briefing (PRD color_palette)
+    # quando ela existir — gerada pelo design_dna (OKLch deterministico
+    # por nicho + tier). Cai no archetype fixo só se briefing não trouxer.
     _biz = facts.get("business") if isinstance(facts.get("business"), dict) else {}
     segment = str(_biz.get("segment") or _biz.get("segmento") or facts.get("segmento") or facts.get("segment") or "servicos").lower()
-    archetype = _get_archetype_for_segment(segment)
-    palette = _get_archetype_palette(archetype)
+
+    _prd_palette = facts.get("color_palette")
+    if not isinstance(_prd_palette, dict):
+        _prd_palette = (
+            facts.get("design_dna", {}).get("tokens")
+            if isinstance(facts.get("design_dna"), dict)
+            else None
+        )
+
+    if isinstance(_prd_palette, dict) and _prd_palette.get("primary"):
+        # Paleta do briefing do designer PRD (preferência do nicho)
+        palette = {
+            "primary": _prd_palette.get("primary") or _prd_palette.get("accent") or "#3B82F6",
+            "primary_contrast": _prd_palette.get("primary_contrast", "#ffffff"),
+            "secondary": _prd_palette.get("secondary") or _prd_palette.get("muted") or "#1e293b",
+            "accent": _prd_palette.get("accent") or _prd_palette.get("primary") or "#3B82F6",
+            "bg_dark": _prd_palette.get("background") or _prd_palette.get("bg_dark") or "#0f0f0f",
+            "bg_light": _prd_palette.get("surface") or _prd_palette.get("bg_light") or "#f4f0e6",
+            "text_dark": _prd_palette.get("text") or _prd_palette.get("text_dark") or "#09130f",
+            "text_light": _prd_palette.get("text") or "#f8faf7",
+            "border": _prd_palette.get("border", "rgba(0,0,0,0.1)"),
+            "gradient_start": _prd_palette.get("gradient_start", "rgba(0,0,0,0.05)"),
+            "gradient_end": _prd_palette.get("gradient_end", "rgba(0,0,0,0.01)"),
+        }
+        archetype = _prd_palette.get("archetype") or _get_archetype_for_segment(segment)
+    else:
+        archetype = _get_archetype_for_segment(segment)
+        palette = _get_archetype_palette(archetype)
+
     typography = _get_archetype_typography(archetype)
     fonts = _get_archetype_fonts(archetype)
 
     # Map archetype colors to cinematic template vars
-    # Cinematic uses: bg_dark (#07110f), accent (#b7ff6a), accent_dark, accent_light
-    c_bg = palette['bg_dark']      # e.g. #1c1917 for WARM_LOCAL
-    c_accent = palette['primary']   # e.g. #d97706 for WARM_LOCAL
-    c_accent_light = palette['accent']  # e.g. #f59e0b
-    c_accent_dark = palette['secondary']  # e.g. #b45309
+    # Cinematic uses: bg_dark, accent (#b7ff6a), accent_dark, accent_light
+    c_bg = palette['bg_dark']
+    c_accent = palette['primary']
+    c_accent_light = palette['accent']
+    c_accent_dark = palette['secondary']
     c_text = palette['text_light']
     c_text_muted = "#9ca3af"  # zinc-400
 
