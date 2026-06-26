@@ -220,7 +220,7 @@ async def api_pipeline_status(
 
     return {
         "worker": {
-            "alive": _is_worker_alive(),
+            "alive": _is_worker_alive(db),
             "stuck_spans_count": len(stuck_list),
         },
         "jobs": {
@@ -289,7 +289,7 @@ async def api_pipeline_health(
     """Health check booleano rapido."""
     require_admin(usuario)
 
-    worker_alive = _is_worker_alive()
+    worker_alive = _is_worker_alive(db)
     stuck_count = db.execute(
         text("""
         SELECT COUNT(*) FROM pipeline_run_spans
@@ -482,8 +482,8 @@ async def api_worker_restart(
 
 # === Helpers ===
 
-def _is_worker_alive() -> bool:
-    """Checa se o servico systemd esta ativo."""
+def _is_worker_alive(db: Session | None = None) -> bool:
+    """Checa worker por service, heartbeat recente ou processo vivo."""
     try:
         result = subprocess.run(
             ["systemctl", "is-active", "fralib-worker.service"],
@@ -491,7 +491,37 @@ def _is_worker_alive() -> bool:
             text=True,
             timeout=5,
         )
-        return result.returncode == 0 and "active" in result.stdout
+        if result.returncode == 0 and "active" in result.stdout:
+            return True
+    except Exception:
+        pass
+
+    if db is not None:
+        try:
+            recent_heartbeat = db.execute(
+                text(
+                    """
+                    SELECT 1
+                    FROM jobs
+                    WHERE status = 'running'
+                      AND worker_heartbeat >= NOW() - INTERVAL '90 seconds'
+                    LIMIT 1
+                    """
+                )
+            ).fetchone()
+            if recent_heartbeat:
+                return True
+        except Exception:
+            db.rollback()
+
+    try:
+        proc = subprocess.run(
+            ["pgrep", "-f", "/root/fralib/worker.py"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        return proc.returncode == 0 and bool((proc.stdout or "").strip())
     except Exception:
         return False
 
