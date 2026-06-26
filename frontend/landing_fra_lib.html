@@ -1799,94 +1799,127 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
 .team-commit strong{color:var(--cyan)}
 
 /* ============================================================
-   DEPOIMENTOS SCROLLER HORIZONTAL (scroll com mouse drag)
+   DEPOIMENTOS SCROLLTELLER (horizontal scroll com snap)
    ============================================================ */
 .depoimentos-scroller{
   position:relative;
   overflow-x:auto;
   overflow-y:hidden;
-  padding:32px 24px;
-  margin:0 -24px;
+  padding:40px 32px 32px;
+  margin:0 -32px;
   cursor:grab;
   scrollbar-width:thin;
   scrollbar-color:var(--fl-purple) var(--fl-bg);
   -webkit-overflow-scrolling:touch;
   scroll-behavior:smooth;
+  scroll-snap-type:x mandatory;
+  scroll-padding-left:32px;
 }
 .depoimentos-scroller:active{cursor:grabbing}
-.depoimentos-scroller::-webkit-scrollbar{height:8px}
-.depoimentos-scroller::-webkit-scrollbar-track{background:var(--fl-bg)}
+.depoimentos-scroller::-webkit-scrollbar{height:6px}
+.depoimentos-scroller::-webkit-scrollbar-track{background:var(--fl-bg);border-radius:3px}
 .depoimentos-scroller::-webkit-scrollbar-thumb{
-  background:var(--fl-purple);
-  border-radius:4px;
+  background:linear-gradient(90deg,var(--fl-purple),var(--cyan));
+  border-radius:3px;
 }
-.depoimentos-scroller::-webkit-scrollbar-thumb:hover{background:var(--cyan)}
+.depoimentos-scroller::-webkit-scrollbar-thumb:hover{
+  background:linear-gradient(90deg,var(--cyan),var(--fl-purple));
+}
 .depoimentos-track{
   display:flex;
-  gap:20px;
+  gap:24px;
   width:max-content;
+  padding:8px 0;
 }
 .depoimento-scroll-card{
-  flex:0 0 380px;
+  flex:0 0 400px;
   background:var(--fl-bg-card);
   border:1px solid var(--fl-border);
-  padding:24px;
+  padding:28px;
   display:flex;
-  gap:16px;
+  gap:18px;
   align-items:flex-start;
-  transition:border-color .3s,transform .3s;
+  transition:all .3s var(--fl-ease);
+  scroll-snap-align:start;
+  position:relative;
+}
+.depoimento-scroll-card::before{
+  content:'"';
+  position:absolute;
+  top:8px;
+  right:20px;
+  font-size:60px;
+  color:var(--fl-purple);
+  opacity:0.1;
+  font-family:serif;
+  line-height:1;
 }
 .depoimento-scroll-card:hover{
-  border-color:var(--fl-border-md);
+  border-color:var(--fl-purple);
+  box-shadow:var(--fl-glow-sm);
   transform:translateY(-4px);
 }
 .depoimento-foto{
-  width:64px;
-  height:64px;
+  width:72px;
+  height:72px;
   border-radius:50%;
   background-size:cover;
   background-position:center;
   flex-shrink:0;
-  border:2px solid var(--fl-border);
+  border:3px solid var(--fl-purple);
   background-color:var(--fl-bg-surface);
 }
 .depoimento-conteudo{flex:1;min-width:0}
 .depoimento-scroll-card blockquote{
   font-size:14px;
-  line-height:1.6;
+  line-height:1.7;
   color:var(--fl-text);
   font-style:italic;
-  margin-bottom:12px;
+  margin-bottom:14px;
 }
 .depoimento-autor-info h4{
-  font-size:14px;
-  font-weight:600;
+  font-size:15px;
+  font-weight:700;
   color:var(--fl-text);
   margin-bottom:2px;
+  font-family:var(--fl-font-brand);
+  font-size:11px;
+  letter-spacing:0.5px;
 }
 .depoimento-autor-info p{
   font-size:12px;
   color:var(--fl-text-muted);
-  margin-bottom:6px;
+  margin-bottom:8px;
 }
 .depoimento-autor-info .metric{
+  display:inline-block;
   font-family:var(--fl-font-mono);
   font-size:11px;
   color:var(--cyan);
-  padding:3px 8px;
+  padding:4px 10px;
   background:rgba(0,255,179,0.1);
-  border:1px solid rgba(0,255,179,0.2);
-  display:inline-block;
+  border:1px solid rgba(0,255,179,0.25);
+  font-weight:700;
 }
 .depoimentos-hint{
   text-align:center;
-  font-size:12px;
-  color:var(--fl-text-dim);
-  margin-top:8px;
+  font-size:13px;
+  color:var(--fl-text-muted);
+  margin-top:16px;
   font-family:var(--fl-font-mono);
+  letter-spacing:1px;
 }
 .depoimentos-hint::before{content:'← '}
 .depoimentos-hint::after{content:' →'}
+
+/* ============================================================
+   SCROLLTELLER COM DRAG (mouse + touch)
+   ============================================================ */
+.depoimentos-scroller.dragging{
+  cursor:grabbing;
+  scroll-snap-type:none;
+  scroll-behavior:auto;
+}
 </style>
 
 <!-- ===== SEÇÃO 8 — PLANOS ===== -->
@@ -2228,6 +2261,41 @@ document.getElementById('betaForm').addEventListener('submit', function(e){
       ticking = true;
     }
   }, { passive: true });
+})();
+
+// Scrollteller - drag horizontal com mouse + wheel
+(function(){
+  const scroller = document.getElementById('depoimentosScroller');
+  if(!scroller)return;
+  let isDown = false, startX = 0, scrollLeft = 0;
+  scroller.addEventListener('mousedown', e => {
+    isDown = true;
+    scroller.classList.add('dragging');
+    startX = e.pageX - scroller.offsetLeft;
+    scrollLeft = scroller.scrollLeft;
+  });
+  scroller.addEventListener('mouseleave', () => {
+    isDown = false;
+    scroller.classList.remove('dragging');
+  });
+  scroller.addEventListener('mouseup', () => {
+    isDown = false;
+    scroller.classList.remove('dragging');
+  });
+  scroller.addEventListener('mousemove', e => {
+    if(!isDown)return;
+    e.preventDefault();
+    const x = e.pageX - scroller.offsetLeft;
+    const walk = (x - startX) * 2;
+    scroller.scrollLeft = scrollLeft - walk;
+  });
+  // Wheel vertical vira horizontal
+  scroller.addEventListener('wheel', e => {
+    if(Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+      e.preventDefault();
+      scroller.scrollLeft += e.deltaY;
+    }
+  }, {passive:false});
 })();
 </script>
 
