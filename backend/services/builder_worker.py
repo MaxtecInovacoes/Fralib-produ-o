@@ -10,6 +10,7 @@ import shutil
 import time
 import unicodedata
 from pathlib import Path, PurePosixPath
+from types import SimpleNamespace
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -37,6 +38,7 @@ except Exception:
 _SAFE_SCOPE = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9._-]{0,95}$")
 _DEFAULT_SANDBOX_ROOT = "/workspace/fralib-builder"
 _ROOT = Path(__file__).resolve().parents[2]
+_CANONICAL_BUILDER_ENGINE = "vite_react"
 
 
 def _fallbacks_disabled() -> bool:
@@ -231,6 +233,7 @@ def render_site_with_builder(
         str((_ROOT / "logs" / "builder_manifests").resolve()),
     )
     engine = _builder_engine(os.getenv("FRALIB_BUILDER_ENGINE", "vite_react"))
+    assert_canonical_builder_publication_allowed(engine=engine)
     # v1.1-baseline-2026-06-23: extrai segmento/nicho do prd_or_facts para serializar
     # no manifest e reidratar memory no OpenUI (worker process case).
     _nicho_serializado = ""
@@ -347,18 +350,48 @@ def render_site_with_builder(
             from services.vite_react_renderer import render_vite_react_site  # type: ignore
 
         fallback_model = _builder_proxy_fallback_model()
-        # Sprint 12.9: Vite/React é engine único - remove OpenUI fallback.
-        # Falha de validacao = raise (nao cai em OpenUI).
-        render_result = render_vite_react_site(
-            manifest["prompt"],
-            workspace_dir=workspace_dir,
-            facts=manifest.get("prompt_agent", {}).get("context", {}),
-            repair_context=repair_context,
-            primary_model=os.getenv("FRALIB_OPENUI_PRIMARY_MODEL", PROXY_BUILDER_MODEL),
-            fallback_model=fallback_model,
-            max_tokens=int(os.getenv("FRALIB_VITE_REACT_MAX_TOKENS", "64000")),
-            temperature=float(os.getenv("FRALIB_OPENUI_TEMPERATURE", "0.55")),
-        )
+        # Sprint 12.9: Vite/React é o caminho canônico.
+        # Em produção, falha fecha; fora de produção, cai para OpenUI só como compatibilidade.
+        try:
+            render_result = render_vite_react_site(
+                manifest["prompt"],
+                workspace_dir=workspace_dir,
+                facts=manifest.get("prompt_agent", {}).get("context", {}),
+                repair_context=repair_context,
+                primary_model=os.getenv("FRALIB_OPENUI_PRIMARY_MODEL", PROXY_BUILDER_MODEL),
+                fallback_model=fallback_model,
+                max_tokens=int(os.getenv("FRALIB_VITE_REACT_MAX_TOKENS", "64000")),
+                temperature=float(os.getenv("FRALIB_OPENUI_TEMPERATURE", "0.55")),
+            )
+        except Exception:
+            if _canonical_publication_required():
+                raise
+            from services.openui_renderer import render_openui_site
+
+            fallback_render_result = render_openui_site(
+                manifest["prompt"],
+                facts=manifest.get("prompt_agent", {}).get("context", {}),
+                repair_context=repair_context,
+                primary_model=os.getenv("FRALIB_OPENUI_PRIMARY_MODEL", PROXY_BUILDER_MODEL),
+                fallback_model=os.getenv("FRALIB_OPENUI_FALLBACK_MODEL", PROXY_OPUS_FALLBACK_MODEL),
+                max_tokens=int(os.getenv("FRALIB_OPENUI_MAX_TOKENS", "8000")),
+                temperature=float(os.getenv("FRALIB_OPENUI_TEMPERATURE", "0.35")),
+            )
+            render_result = SimpleNamespace(
+                html=fallback_render_result.html,
+                model=fallback_render_result.model,
+                attempts=[
+                    {
+                        "model": "vite_react",
+                        "status": "failed_openui_fallback",
+                        "error": "vite_react render falhou; fallback OpenUI aplicado",
+                    },
+                    *list(getattr(fallback_render_result, "attempts", []) or []),
+                ],
+                elapsed_ms=getattr(fallback_render_result, "elapsed_ms", 0),
+                source_files=list(getattr(fallback_render_result, "source_files", []) or []),
+            )
+            engine = "openui_fallback"
         _write_builder_render_meta(
             output_dir,
             engine=engine,
@@ -371,13 +404,19 @@ def render_site_with_builder(
                 .get("context", {})
                 .get("visual_direction", {})
             ),
-            source_files=sorted(render_result.source_files),
+            source_files=sorted(getattr(render_result, "source_files", []) or []),
         )
         model = render_result.model
         attempts = render_result.attempts
     else:
         raise RuntimeError(f"engine de Builder nao suportado: {engine!r}")
 
+    index_target = output_dir / "index.html"
+    if not index_target.exists():
+        output_dir.mkdir(parents=True, exist_ok=True)
+        index_target.write_text(render_result.html, encoding="utf-8")
+
+    publication_engine = "openui" if engine == "openui_fallback" else engine
     index_path = _find_builder_index(output_dir)
     html = index_path.read_text(encoding="utf-8")
     html = _prepare_builder_html_for_publication(
@@ -452,7 +491,7 @@ def _prepare_builder_html_for_publication(
     html: str, facts: dict[str, Any], *, engine: str | None = None
 ) -> str:
     """Apply canonical publication repairs to the real dist/index.html."""
-    marked = _ensure_builder_renderer_marker(html)
+    marked = _ensure_builder_renderer_marker(html, engine=engine)
     marked = _ensure_builder_publication_head(marked, facts or {})
     if engine == "vite_react":
         marked = _ensure_vite_mobile_publication_guard(marked)
@@ -471,6 +510,76 @@ def _prepare_builder_html_for_publication(
         facts or {},
         include_phase6=engine != "vite_react",
     )
+
+
+def assert_canonical_builder_publication_allowed(
+    output_dir: str | os.PathLike[str] | None = None,
+    *,
+    engine: str | None = None,
+    html: str | None = None,
+) -> None:
+    """Fail closed when a non-canonical builder artifact reaches publication.
+
+    Production is allowed to publish only the canonical Vite/React builder.
+    Local development keeps compatibility routes available unless the runtime
+    is explicitly hardened through FRALIB_STRICT_CANONICAL_PUBLISH or FRALIB_ENV=prod.
+    """
+    if not _canonical_publication_required():
+        return
+
+    output_path = None
+    if output_dir is not None:
+        output_path = Path(output_dir).resolve()
+        if not output_path.exists():
+            raise FileNotFoundError(f"builder output_dir nao encontrado: {output_path}")
+
+    effective_engine = _builder_publication_engine(output_path, engine=engine, html=html)
+    if effective_engine != _CANONICAL_BUILDER_ENGINE:
+        raise RuntimeError(
+            "publicacao bloqueada: artefato nao canonico "
+            f"(engine={effective_engine!r}, esperado={_CANONICAL_BUILDER_ENGINE!r})"
+        )
+
+    if html and 'data-builder-engine="vite_react"' not in html.lower() and "data-builder-engine='vite_react'" not in html.lower():
+        raise RuntimeError(
+            "publicacao bloqueada: HTML sem marcador canonico data-builder-engine=\"vite_react\""
+        )
+
+
+def _canonical_publication_required() -> bool:
+    strict = os.getenv("FRALIB_STRICT_CANONICAL_PUBLISH", "").strip().lower()
+    if strict in {"1", "true", "yes", "on"}:
+        return True
+    return (os.getenv("FRALIB_ENV") or "").strip().lower() == "prod"
+
+
+def _builder_publication_engine(
+    output_dir: Path | None, *, engine: str | None = None, html: str | None = None
+) -> str:
+    candidate = str(engine or "").strip().lower()
+    if candidate:
+        return candidate
+
+    if output_dir is not None:
+        for meta_name in ("builder-render.json", "vite-render.json", "openui-render.json"):
+            meta_path = output_dir / meta_name
+            if not meta_path.exists():
+                continue
+            try:
+                meta = json.loads(meta_path.read_text(encoding="utf-8"))
+            except Exception:
+                continue
+            if isinstance(meta, dict):
+                candidate = str(meta.get("engine") or "").strip().lower()
+                if candidate:
+                    return candidate
+
+    if html:
+        lower = html.lower()
+        match = re.search(r'data-builder-engine=["\']([^"\']+)["\']', lower, re.IGNORECASE)
+        if match:
+            return match.group(1).strip().lower()
+    return ""
 
 
 def _inject_motion_runtime(html: str, facts: dict[str, Any]) -> str:
@@ -646,13 +755,24 @@ def _escape_attr(value: str) -> str:
     )
 
 
-def _ensure_builder_renderer_marker(html: str) -> str:
+def _ensure_builder_renderer_marker(html: str, engine: str | None = None) -> str:
     text = html or ""
+    engine_name = str(engine or "").strip().lower().replace("-", "_")
     if 'data-renderer="builder"' in text.lower():
+        if engine_name and "data-builder-engine=" not in text.lower():
+            return re.sub(
+                r"(?is)<html\b([^>]*)>",
+                lambda match: "<html" + match.group(1) + f' data-renderer="builder" data-builder-engine="{engine_name}">',
+                text,
+                count=1,
+            )
         return text
+    attrs = ' data-renderer="builder"'
+    if engine_name:
+        attrs += f' data-builder-engine="{engine_name}"'
     return re.sub(
         r"(?is)<html\b([^>]*)>",
-        lambda match: "<html" + match.group(1) + ' data-renderer="builder">',
+        lambda match: "<html" + match.group(1) + attrs + ">",
         text,
         count=1,
     )

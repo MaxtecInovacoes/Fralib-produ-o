@@ -272,7 +272,16 @@ def publish_rendered_site(
     import shutil
     import subprocess as _sp
 
+    try:
+        from backend.services.builder_worker import assert_canonical_builder_publication
+    except Exception:
+        from services.builder_worker import assert_canonical_builder_publication  # type: ignore
+
     os.makedirs(web_dir, exist_ok=True)
+    assert_canonical_builder_publication(
+        state.builder_output_dir or web_dir,
+        html=state.html_final,
+    )
     if state.builder_output_dir:
         copy_builder_dist(state.builder_output_dir, web_dir)
     with open(f"{web_dir}/index.html", "w", encoding="utf-8") as _f:

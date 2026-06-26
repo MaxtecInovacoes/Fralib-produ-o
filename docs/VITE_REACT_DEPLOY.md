@@ -98,6 +98,21 @@ conteúdo. O renderer sanitiza esse JSON, injeta em `_llm_content` e o Studio
 gera o projeto React determinístico. `ServicesSection`, `HeroSection`, mídia,
 LGPD e contratos não dependem mais do LLM escrever TSX corretamente.
 
+## Guard de publicação canônica
+
+Em produção, o deploy falha fechado quando o artefato final não está marcado
+como `vite_react`.
+
+```bash
+FRALIB_ENV=prod
+FRALIB_STRICT_CANONICAL_PUBLISH=1
+```
+
+Nesse modo:
+- `vite_react` publica.
+- `openui` e `openui_fallback` ficam bloqueados na publicação.
+- O fallback continua disponível fora de produção para debugging e compat.
+
 ## Como debugar
 
 ### Site mostra tela preta

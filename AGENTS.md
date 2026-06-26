@@ -23,6 +23,9 @@
   recuperado e depois quebrado em módulos menores.
 - Quando `vite_react` falhar, o mesmo job deve cair para `openui_fallback` e
   ainda publicar um HTML OpenUI auditável, sem perder o pipeline.
+- Em produção, `FRALIB_STRICT_CANONICAL_PUBLISH=1` ou `FRALIB_ENV=prod`
+  fazem a publicação falhar fechado se o artefato final não estiver marcado
+  como `vite_react`.
 - Sites publicados SEM passar pela pipeline são considerados **legado** e devem ser migrados.
 
 Qualquer pessoa (humana ou IA) que tentar:

@@ -7,6 +7,8 @@
 > **Pipeline atual**: Vite/React como engine padrão (Sprint 12.9+).
 > OpenUI virou apenas fallback. 26 segmentos cobertos. Briefing real
 > injetado no caroço. Post-process contra tela-preta.
+> Em produção, publicação fora de `vite_react` falha fechado com
+> `FRALIB_STRICT_CANONICAL_PUBLISH=1` ou `FRALIB_ENV=prod`.
 
 ## TL;DR
 - **Pipeline canônica: 11 fases** (Hunter → Caio → Jina → Nicho → Variação → Arquiteto → **Vite/React** → QA → Deploy → Franz).

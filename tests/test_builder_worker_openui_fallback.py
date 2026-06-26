@@ -5,6 +5,8 @@ import time
 from pathlib import Path
 from types import SimpleNamespace
 
+import pytest
+
 
 ROOT = Path(__file__).resolve().parents[1]
 BACKEND = ROOT / "backend"
@@ -95,3 +97,39 @@ def test_builder_sandbox_cleanup_remove_apenas_jobs_antigos(tmp_path, monkeypatc
     assert not old_job.exists()
     assert fresh_job.exists()
     assert outside_name.exists()
+
+
+def test_publicacao_canonica_bloqueia_openui_em_producao(tmp_path, monkeypatch):
+    from backend.services import builder_worker
+
+    monkeypatch.setenv("FRALIB_ENV", "prod")
+    monkeypatch.setenv("FRALIB_BUILDER_ENGINE", "openui")
+
+    with pytest.raises(RuntimeError, match="publicacao bloqueada"):
+        builder_worker.render_site_with_builder(
+            {
+                "business": {"name": "Locked Smoke", "segmento": "academia"},
+                "seo_keywords": ["academia"],
+            },
+            tenant_id="locked-smoke",
+            job_id="openui-prod",
+        )
+
+
+def test_assert_canonical_builder_publication_rejeita_meta_nao_canonica(tmp_path, monkeypatch):
+    from backend.services import builder_worker
+
+    output_dir = tmp_path / "dist"
+    output_dir.mkdir()
+    (output_dir / "builder-render.json").write_text(
+        json.dumps({"engine": "openui", "model": "fake", "attempts": []}),
+        encoding="utf-8",
+    )
+
+    monkeypatch.setenv("FRALIB_STRICT_CANONICAL_PUBLISH", "1")
+
+    with pytest.raises(RuntimeError, match="artefato nao canonico"):
+        builder_worker.assert_canonical_builder_publication_allowed(
+            output_dir,
+            html='<!doctype html><html data-renderer="builder" data-builder-engine="openui"><head></head><body></body></html>',
+        )
