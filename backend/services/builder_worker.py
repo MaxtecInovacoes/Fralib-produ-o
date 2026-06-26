@@ -773,7 +773,14 @@ def _ensure_builder_renderer_marker(html: str, engine: str | None = None) -> str
     text = html or ""
     engine_name = str(engine or "").strip().lower().replace("-", "_")
     if 'data-renderer="builder"' in text.lower():
-        if engine_name and "data-builder-engine=" not in text.lower():
+        if engine_name:
+            if "data-builder-engine=" in text.lower():
+                return re.sub(
+                    r'(?is)(data-builder-engine=["\'])([^"\']*)(["\'])',
+                    lambda match: f'{match.group(1)}{engine_name}{match.group(3)}',
+                    text,
+                    count=1,
+                )
             return re.sub(
                 r"(?is)<html\b([^>]*)>",
                 lambda match: "<html" + match.group(1) + f' data-renderer="builder" data-builder-engine="{engine_name}">',

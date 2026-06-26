@@ -133,3 +133,13 @@ def test_assert_canonical_builder_publication_rejeita_meta_nao_canonica(tmp_path
             output_dir,
             html='<!doctype html><html data-renderer="builder" data-builder-engine="openui"><head></head><body></body></html>',
         )
+
+
+def test_ensure_builder_renderer_marker_normaliza_engine_divergente():
+    from backend.services.builder_worker import _ensure_builder_renderer_marker
+
+    html = '<!doctype html><html lang="pt-BR" data-renderer="builder" data-builder-engine="openui"><head></head><body></body></html>'
+    updated = _ensure_builder_renderer_marker(html, engine="vite_react")
+
+    assert 'data-builder-engine="vite_react"' in updated
+    assert 'data-builder-engine="openui"' not in updated
