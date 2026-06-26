@@ -383,6 +383,10 @@
     <!-- Painel: Pipeline travado (falhas persistentes) -->
     <div id="uti-painel-pipeline" style="display:none">
       <p class="uti-desc">Jobs que falharam ap&oacute;s tentativas autom&aacute;ticas e precisam de reprocessamento manual. O sistema retoma do <strong>checkpoint</strong>, economizando tokens.</p>
+      <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center">
+        <button class="btn-requalificar" id="btn-retry-all-pipeline" onclick="retryAllPipelineFalhas(this)" style="background:#ef4444;color:#fff;font-weight:600;padding:8px 16px;border-radius:6px;border:none;cursor:pointer">&#8635; TENTAR TODOS</button>
+        <span id="retry-all-status" style="font-size:11px;color:var(--fl-text-dim)"></span>
+      </div>
       <div class="uti-table-wrap">
         <table class="uti-table">
           <thead><tr><th>LEAD</th><th>FASE</th><th>MOTIVO</th><th>TENTATIVAS</th><th>QUANDO</th><th>A&Ccedil;&Atilde;O</th></tr></thead>
@@ -7786,6 +7790,52 @@ async function retryPipelineFalha(falhaId, btn) {
   } catch(e) {
     if (btn) { btn.disabled = false; btn.textContent = '⟳ TENTAR DE NOVO'; btn.style.opacity = '1'; }
     alert('Erro: ' + e.message);
+  }
+}
+
+/* Sprint 14.7: reenfileira TODAS as falhas pendentes de uma vez */
+async function retryAllPipelineFalhas(btn) {
+  if (btn) { btn.disabled = true; btn.textContent = 'ENFILEIRANDO TODOS...'; btn.style.opacity = '0.6'; }
+  var status = document.getElementById('retry-all-status');
+  if (status) status.textContent = '';
+  try {
+    var res = await authFetch('/api/falhas/retry-all', { method: 'POST' }).then(function(r){ return r.json(); });
+    var reenfileiradas = (res && res.reenfileiradas) || 0;
+    var ja_enfileiradas = (res && res.ja_enfileiradas) || 0;
+    var erros = (res && res.erros) || [];
+    if (reenfileiradas > 0 || ja_enfileiradas > 0) {
+      if (status) {
+        status.style.color = '#10b981';
+        status.textContent = '✓ ' + reenfileiradas + ' reenfileirada(s)' + (ja_enfileiradas ? ' + ' + ja_enfileiradas + ' ja na fila' : '');
+      }
+      if (btn) { btn.textContent = '✓ ' + reenfileiradas + ' NA FILA'; }
+      setTimeout(carregarPipelineFalhas, 1500);
+    } else {
+      if (status) {
+        status.style.color = 'var(--fl-text-dim)';
+        status.textContent = 'Nenhuma falha pendente para reprocessar';
+      }
+      if (btn) { btn.textContent = '⟳ TENTAR TODOS'; }
+    }
+    if (erros.length > 0) {
+      console.error('retry-all erros:', erros);
+      if (status) {
+        status.style.color = '#ef4444';
+        status.textContent = '⚠ ' + reenfileiradas + ' OK, ' + erros.length + ' erro(s) — ver console';
+      }
+    }
+  } catch(e) {
+    if (btn) { btn.disabled = false; btn.textContent = '⟳ TENTAR TODOS'; btn.style.opacity = '1'; }
+    if (status) { status.style.color = '#ef4444'; status.textContent = 'Erro: ' + e.message; }
+    alert('Erro: ' + e.message);
+  }
+  // Re-habilita o botao apos 3s (ja reenfileirou)
+  if (btn) {
+    setTimeout(function() {
+      btn.disabled = false;
+      btn.textContent = '⟳ TENTAR TODOS';
+      btn.style.opacity = '1';
+    }, 3000);
   }
 }
 

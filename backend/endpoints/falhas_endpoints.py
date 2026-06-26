@@ -196,3 +196,94 @@ async def retry_falha(
     db.commit()
 
     return {"ok": True, "job_id": job_id, "lead_id": lead_id}
+
+
+@router.post("/retry-all")
+@limiter.limit("5/minute")
+async def retry_all_falhas(
+    request: Request,
+    db: Session = Depends(get_db),
+    user=Depends(get_current_user),
+):
+    """
+    Sprint 14.7: reenfileira TODAS as falhas pendentes do tenant como
+    novos jobs pipeline_lead (um por falha). Mantem checkpoint_id de cada
+    falha para retomar do ponto onde parou.
+
+    Idempotency_key por falha garante que retries duplos (usuario clica 2x)
+    nao geram jobs duplicados.
+    """
+    tenant_id = int(user["id"])
+    rows = db.execute(
+        text("""
+            SELECT id, lead_id, payload, checkpoint_id, resolvido
+            FROM pipeline_failures
+            WHERE tenant_id = :tid AND resolvido = FALSE
+            ORDER BY criado_em ASC
+        """),
+        {"tid": tenant_id},
+    ).fetchall()
+
+    if not rows:
+        return {"ok": True, "reenfileiradas": 0, "ja_resolvidas": 0}
+
+    reenfileiradas = 0
+    ja_enfileiradas = 0
+    erros = []
+    for row in rows:
+        try:
+            falha_id = row[0]
+            lead_id = row[1]
+            payload = row[2] or {}
+            if not isinstance(payload, dict):
+                payload = {}
+            checkpoint_id = row[3]
+            run_id = payload.get("_run_id")
+            if not run_id:
+                run_id = uuid.uuid4().hex[:12]
+                payload = {**payload, "_run_id": run_id}
+
+            idem = f"retry-falha-{falha_id}"
+            job_id = job_queue.enqueue(
+                db,
+                tipo="pipeline_lead",
+                payload=payload,
+                tenant_id=tenant_id,
+                max_attempts=3,
+                idempotency_key=idem,
+                checkpoint_id=checkpoint_id,
+                run_id=run_id,
+            )
+
+            if job_id is None:
+                ja_enfileiradas += 1
+                # Marca como resolvido tambem para nao aparecer no badge
+                db.execute(
+                    text("""
+                        UPDATE pipeline_failures
+                        SET resolvido = TRUE, resolvido_em = NOW()
+                        WHERE id = :fid AND tenant_id = :tid
+                    """),
+                    {"fid": int(falha_id), "tid": tenant_id},
+                )
+            else:
+                reenfileiradas += 1
+                db.execute(
+                    text("""
+                        UPDATE pipeline_failures
+                        SET resolvido = TRUE, resolvido_em = NOW()
+                        WHERE id = :fid AND tenant_id = :tid
+                    """),
+                    {"fid": int(falha_id), "tid": tenant_id},
+                )
+        except Exception as e:
+            erros.append({"falha_id": row[0], "erro": str(e)[:200]})
+
+    db.commit()
+    return {
+        "ok": True,
+        "reenfileiradas": reenfileiradas,
+        "ja_enfileiradas": ja_enfileiradas,
+        "erros": erros,
+    }
+
