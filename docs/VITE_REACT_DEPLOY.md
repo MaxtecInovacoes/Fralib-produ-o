@@ -70,6 +70,11 @@ URLs já existentes no código gerado. `prepare_vite_project_files()` agora cham
 `_ensure_editorial_media_contract()` para materializar Hero/Galeria com fotos
 aprovadas antes do gate.
 
+**Bug corrigido no Sprint 12.20**: o guard de `nutricionista` bloqueava
+`musculação` mesmo quando o lead era de nutrição esportiva. Agora
+`musculação/musculacao` é permitido só nesse contexto; `matrícula` continua
+bloqueado para evitar linguagem de academia.
+
 ## Como debugar
 
 ### Site mostra tela preta

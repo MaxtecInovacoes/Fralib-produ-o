@@ -397,6 +397,33 @@ def test_10_prepare_injeta_midia_aprovada_quando_llm_nao_usa_imagens():
     print("  OK validate_vite_project_files nao acusa 0 refs")
 
 
+def test_11_guard_nutricionista_esportivo_permite_musculacao_sem_matricula():
+    """Sprint 12.20: nutricao esportiva pode citar musculacao, nao matricula."""
+    print("\n[TESTE 11/11] guard nutricionista esportivo sem falso positivo...")
+    import pytest
+    from backend.services.vite_react_renderer import (
+        ViteReactRenderError,
+        _validate_segment_specificity,
+    )
+
+    business = {
+        "name": "Vitor Feitosa - Nutricionista Esportivo",
+        "segment": "nutricionista",
+        "subniche": "nutricao esportiva",
+    }
+    valid_source = (
+        "Nutricionista com consulta, plano alimentar, saude e acompanhamento "
+        "para quem pratica musculação."
+    )
+    _validate_segment_specificity(valid_source, business)
+
+    with pytest.raises(ViteReactRenderError, match="matricula"):
+        _validate_segment_specificity(valid_source + " Faça sua matricula hoje.", business)
+
+    print("  OK musculacao liberada apenas no contexto esportivo")
+    print("  OK matricula segue bloqueada para nutricionista")
+
+
 # ════════════════════════════════════════════════════════════════════
 # Main
 # ════════════════════════════════════════════════════════════════════
@@ -417,9 +444,10 @@ if __name__ == "__main__":
     test_8_existing_prompt_blocks_intact()
     test_9_studio_fallback_nutricionista_sem_contaminacao()
     test_10_prepare_injeta_midia_aprovada_quando_llm_nao_usa_imagens()
+    test_11_guard_nutricionista_esportivo_permite_musculacao_sem_matricula()
 
     print("\n" + "=" * 80)
-    print("TODOS OS TESTES PASSARAM (10/10)")
+    print("TODOS OS TESTES PASSARAM (11/11)")
     print("Sprint 12.12 (v1.14) - caroco enriquecido com briefing real")
     print("Bug fix: NameError em _build_nicho_modal_block")
     print("Novo: _build_lead_briefing_block(facts) com JSON-LD + fotos reais")

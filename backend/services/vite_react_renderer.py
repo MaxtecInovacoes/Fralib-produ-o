@@ -2515,7 +2515,8 @@ def _validate_segment_specificity(source_text: str, business: dict[str, Any]) ->
     if not segment_key:
         return
     rule = SEGMENT_RULES[segment_key]
-    forbidden_hits = [term for term in rule["forbidden"] if _normalize_text(term) in normalized]
+    forbidden_terms = _forbidden_terms_for_business(segment_key, business)
+    forbidden_hits = [term for term in forbidden_terms if _normalize_text(term) in normalized]
     if forbidden_hits:
         raise ViteReactRenderError(
             f"projeto Vite contaminado para segmento {segment_key}: {', '.join(forbidden_hits[:4])}"
@@ -2527,6 +2528,38 @@ def _validate_segment_specificity(source_text: str, business: dict[str, Any]) ->
             f"projeto Vite sem linguagem suficiente do segmento {segment_key}: "
             f"{len(set(required_hits))}/{min_required} termos"
         )
+
+
+def _forbidden_terms_for_business(segment_key: str, business: dict[str, Any]) -> tuple[str, ...]:
+    rule = SEGMENT_RULES[segment_key]
+    forbidden = tuple(str(term) for term in rule["forbidden"])
+    if segment_key != "nutricionista" or not _is_sports_nutrition_business(business):
+        return forbidden
+    allowed = {"musculacao", "musculação"}
+    return tuple(term for term in forbidden if _normalize_text(term) not in allowed)
+
+
+def _is_sports_nutrition_business(business: dict[str, Any]) -> bool:
+    context = _normalize_text(
+        " ".join(
+            str(business.get(key) or "")
+            for key in (
+                "name",
+                "business_name",
+                "nome",
+                "segment",
+                "segmento",
+                "subniche",
+                "niche",
+                "description",
+                "descricao",
+            )
+        )
+    )
+    return "nutric" in context and any(
+        token in context
+        for token in ("esportiv", "atleta", "performance", "hipertrofia", "suplementacao")
+    )
 
 
 def _validate_studio_project(

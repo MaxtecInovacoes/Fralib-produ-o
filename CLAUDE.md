@@ -83,6 +83,7 @@ sed -i "s/FRALIB_AUTO_IMPROVE: '0'/FRALIB_AUTO_IMPROVE: '1'/" ecosystem.config.j
 - ✅ **Sprint 12.19** commita post-process que elimina tela-preta
 - ✅ **Sprint 12.20** remove contaminação `matricula/treino` do BookingModal em nutricionista
 - ✅ **Sprint 12.20** garante Hero/Galeria com fotos reais quando o LLM entrega Vite sem imagens
+- ✅ **Sprint 12.20** ajusta guard: `musculação` é permitido em nutrição esportiva, `matrícula` continua bloqueado
 - ⏳ Sub-agentes, RAG, auto-melhoria: implementados, aguardando ativação por tenant
 
 ## Tags v1.14.x (Sprint 12.19)

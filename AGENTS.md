@@ -826,6 +826,7 @@ qualquer f-string esquecida no futuro.
 | 7 contratos no caroço | `b8bde21` (Sprint 12.14) | Briefing rico pro LLM |
 | BookingModal neutro por nicho | Sprint 12.20 | Remove "matricula/treino" hardcoded que contaminava nutricionista |
 | Contrato determinístico de mídia | Sprint 12.20 | Injeta Hero/Galeria com fotos aprovadas quando LLM ignora imagens |
+| Guard nutrição esportiva | Sprint 12.20 | Permite "musculacao" só para nutricionista esportivo; mantém "matricula" bloqueado |
 
 ### 22.7.1 Fix Sprint 12.20 — BookingModal sem contaminação
 
@@ -849,6 +850,16 @@ criava superfícies visuais quando o LLM ignorava as imagens. Resultado falso:
 não tem imagens suficientes, Hero/Galeria determinísticos são materializados com
 as fotos aprovadas do lead antes do `validate_vite_project_files()`.
 Regressão: `tests/test_anti_regressao_v114.py::test_10_prepare_injeta_midia_aprovada_quando_llm_nao_usa_imagens`.
+
+**Falso positivo do guard**: o primeiro modelo válido podia mencionar
+`musculacao` em um lead `Nutricionista Esportivo`; isso é coerente para nutrição
+esportiva, mas era bloqueado junto com contaminações reais de academia.
+
+**Fix**: `_forbidden_terms_for_business()` mantém `matricula` proibido para
+nutricionista, mas libera `musculacao/musculação` quando o próprio contexto do
+lead indica nutrição esportiva (`esportivo`, `performance`, `atleta`,
+`hipertrofia`, `suplementacao`). Regressão:
+`tests/test_anti_regressao_v114.py::test_11_guard_nutricionista_esportivo_permite_musculacao_sem_matricula`.
 
 ### 22.8 Tags v1.14.x (Sprint 12.19)
 
