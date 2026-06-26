@@ -228,7 +228,7 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
 .hero{
   min-height:min(100vh,100dvh);
   display:flex;flex-direction:column;align-items:center;justify-content:center;
-  text-align:center;padding:120px 24px 60px;
+  text-align:center;padding:80px 24px 40px;gap:0;
   position:relative;overflow:hidden;
 }
 .hero-grid{
@@ -258,22 +258,23 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
 }
 /* Logo compactada no topo - sem mago */
 .hero-logo{
-  height:clamp(64px,9vw,96px);width:auto;
-  margin-bottom:20px;
+  height:clamp(48px,7vw,64px);width:auto;
+  margin-bottom:8px;
   position:relative;z-index:3;
   filter:drop-shadow(0 0 24px rgba(147,51,234,0.5));
   animation:fadeUp .5s var(--fl-ease) both;
 }
 
 .hero-badge{
-  display:inline-flex;align-items:center;gap:10px;
-  padding:8px 20px;border-radius:var(--fl-r-full);
+  display:inline-flex;align-items:center;gap:8px;
+  padding:5px 14px;border-radius:var(--fl-r-full);
   background:rgba(147,51,234,0.1);
   border:1px solid rgba(147,51,234,0.3);
-  font-family:var(--fl-font-mono);font-size:11px;font-weight:500;
+  font-family:var(--fl-font-mono);font-size:10px;font-weight:500;
   color:var(--fl-purple-300);
-  margin-bottom:32px;position:relative;z-index:3;
+  margin-bottom:14px;position:relative;z-index:3;
   animation:fadeUp .6s var(--fl-ease) both;
+  letter-spacing:0.3px;
 }
 .hero-badge .pulse-dot{
   width:8px;height:8px;border-radius:50%;
@@ -293,9 +294,9 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
 
 .hero h1{
   font-family:var(--fl-font-brand);
-  font-size:clamp(14px,3vw,28px);
-  line-height:2;max-width:860px;
-  margin-bottom:20px;position:relative;z-index:3;
+  font-size:clamp(13px,2.6vw,24px);
+  line-height:1.4;max-width:860px;
+  margin-bottom:14px;position:relative;z-index:3;
   animation:fadeUp .8s var(--fl-ease) .1s both;
 }
 .hero h1 .grad{
@@ -307,53 +308,54 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
 /* Contraste DOR vs SOLUÇÃO — gera tensão psicológica */
 .hero-contrast{
   display:flex;align-items:center;justify-content:center;
-  gap:16px;margin:0 auto 28px;max-width:780px;
+  gap:12px;margin:0 auto 16px;max-width:780px;
   position:relative;z-index:3;
   animation:fadeUp .8s var(--fl-ease) .15s both;
 }
 .hero-pain,.hero-solution{
-  flex:1;padding:14px 18px;border-radius:var(--fl-r-md);
-  text-align:center;font-size:13px;font-weight:600;
-  line-height:1.4;
+  flex:1;padding:10px 14px;border-radius:var(--fl-r-md);
+  text-align:center;font-size:12px;font-weight:600;
+  line-height:1.35;
 }
 .hero-pain{
-  background:rgba(239,68,68,0.08);
-  border:1px solid rgba(239,68,68,0.3);
-  color:#fca5a5;
+  background:rgba(26,16,37,0.6);
+  border:1px solid rgba(76,29,158,0.4);
+  color:#a78bfa;
 }
-.hero-pain strong{color:#ef4444;display:block;font-size:14px;margin-bottom:4px}
+.hero-pain strong{color:var(--fl-purple-300);display:block;font-size:14px;margin-bottom:4px}
 .hero-solution{
-  background:rgba(0,255,179,0.06);
+  background:rgba(10,31,24,0.6);
   border:1px solid rgba(0,255,179,0.3);
-  color:#86efac;
+  color:#6ee7c0;
 }
 .hero-solution strong{color:var(--cyan);display:block;font-size:14px;margin-bottom:4px}
 .hero-arrow{
   color:var(--fl-text-dim);font-size:20px;flex-shrink:0;
 }
 .hero-sub{
-  font-size:clamp(14px,1.5vw,16px);color:var(--fl-text-muted);
-  max-width:620px;line-height:1.7;margin-bottom:36px;
+  font-size:clamp(13px,1.4vw,15px);color:var(--fl-text-muted);
+  max-width:560px;line-height:1.5;margin-bottom:20px;
   position:relative;z-index:3;
   animation:fadeUp .8s var(--fl-ease) .2s both;
 }
 /* CTA único grande e dominante — sem distração de secundário */
 .hero-buttons{
-  display:flex;flex-direction:column;align-items:center;gap:14px;
+  display:flex;flex-direction:column;align-items:center;gap:8px;
   position:relative;z-index:3;
   animation:fadeUp .8s var(--fl-ease) .3s both;
+  margin-bottom:16px;
 }
 .btn-hero-primary{
   display:inline-flex;align-items:center;justify-content:center;gap:10px;
-  padding:18px 36px;
-  font-family:var(--fl-font-brand);font-size:12px;letter-spacing:1.5px;
+  padding:14px 32px;
+  font-family:var(--fl-font-brand);font-size:11px;letter-spacing:1.2px;
   color:#000;text-decoration:none;cursor:pointer;border:none;
   background:var(--gold);
   box-shadow:
-    inset -4px -4px 0 #A16207,
-    inset 4px 4px 0 #FDE68A,
-    0 6px 0 #713F12,
-    0 12px 24px rgba(255,184,0,0.4);
+    inset -3px -3px 0 #A16207,
+    inset 3px 3px 0 #FDE68A,
+    0 4px 0 #713F12,
+    0 8px 18px rgba(255,184,0,0.4);
   transition:transform 80ms, box-shadow 80ms;
   animation:btn-pulse 2.4s ease-in-out infinite;
 }
@@ -394,25 +396,27 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
 /* Micro-prova logo abaixo do CTA — reduz fricção */
 .hero-microproof{
   display:flex;align-items:center;justify-content:center;
-  gap:32px;margin-top:48px;
+  gap:20px;margin-top:12px;
   position:relative;z-index:3;
   animation:fadeUp .8s var(--fl-ease) .4s both;
 }
 .hero-microproof-item{
-  display:flex;flex-direction:column;align-items:center;gap:2px;
+  display:flex;flex-direction:column;align-items:center;gap:0;
   text-align:center;
 }
 .hero-microproof-num{
-  font-family:var(--fl-font-mono);font-size:20px;font-weight:700;
+  font-family:var(--fl-font-mono);font-size:16px;font-weight:700;
   color:var(--cyan);
+  line-height:1.2;
 }
 .hero-microproof-label{
-  font-size:10px;color:var(--fl-text-muted);
-  font-family:var(--fl-font-mono);letter-spacing:0.5px;
+  font-size:9px;color:var(--fl-text-muted);
+  font-family:var(--fl-font-mono);letter-spacing:0.3px;
   text-transform:uppercase;
+  line-height:1.2;
 }
 .hero-microproof-sep{
-  width:1px;height:24px;background:var(--fl-border-md);
+  width:1px;height:18px;background:var(--fl-border-md);
 }
 
 @keyframes fadeUp{
