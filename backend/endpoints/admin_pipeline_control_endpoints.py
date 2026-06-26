@@ -152,7 +152,11 @@ async def api_pipeline_status(
     ).scalar()
 
     def _is_stale_error(ts: Any) -> bool:
-        latest_anchor = latest_active_job_started_at or latest_success_at
+        latest_anchor = latest_success_at
+        if latest_active_job_started_at and (
+            not latest_anchor or latest_active_job_started_at > latest_anchor
+        ):
+            latest_anchor = latest_active_job_started_at
         return bool(latest_anchor and ts and ts < latest_anchor)
 
     if last_job_error and _is_stale_error(last_job_error[9] or last_job_error[8]):
