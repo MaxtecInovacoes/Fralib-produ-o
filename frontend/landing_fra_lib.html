@@ -1076,13 +1076,197 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
   animation:pulse 1.5s infinite;
 }
 
-/* FOOTER */
-.footer{
-  text-align:center;padding:28px 24px;
-  border-top:1px solid var(--fl-border);
-  font-size:12px;color:var(--fl-text-dim);
+/* ============================================================
+   BLOCO GARANTIA 30 DIAS (pre-footer)
+   ============================================================ */
+.garantia-30{padding:80px 0;background:var(--fl-bg)}
+.garantia-box{
+  display:flex;
+  align-items:center;
+  gap:40px;
+  max-width:920px;
+  margin:0 auto;
+  padding:48px;
+  background:linear-gradient(135deg,var(--fl-bg-card) 0%,var(--fl-bg-surface) 100%);
+  border:2px solid var(--fl-success);
+  position:relative;
+  overflow:hidden;
 }
-.footer img{height:24px;margin-bottom:8px;opacity:.5}
+.garantia-box::before{
+  content:'';
+  position:absolute;
+  top:-50%;right:-10%;
+  width:60%;height:200%;
+  background:radial-gradient(circle,rgba(34,197,94,0.1) 0%,transparent 60%);
+  pointer-events:none;
+}
+.garantia-shield{
+  flex-shrink:0;
+  width:120px;
+  height:120px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:rgba(34,197,94,0.1);
+  border:2px solid var(--fl-success);
+  position:relative;
+  z-index:1;
+}
+.garantia-shield svg{width:64px;height:64px;color:var(--fl-success)}
+.garantia-texto{flex:1;position:relative;z-index:1}
+.garantia-texto h3{
+  font-family:var(--fl-font-ui);
+  font-size:26px;
+  font-weight:700;
+  color:var(--fl-text);
+  margin-bottom:14px;
+  line-height:1.3;
+}
+.garantia-texto h3 strong{color:var(--fl-success);font-weight:700}
+.garantia-texto p{
+  font-size:15px;
+  color:var(--fl-text-muted);
+  line-height:1.7;
+  margin-bottom:24px;
+}
+.garantia-pasos{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:16px;
+}
+.garantia-paso{
+  background:var(--fl-bg-surface);
+  border:1px solid var(--fl-border);
+  padding:14px;
+  text-align:center;
+}
+.garantia-paso .numero{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:28px;height:28px;
+  background:var(--fl-success);
+  color:#000;
+  font-family:var(--fl-font-mono);
+  font-weight:700;
+  font-size:14px;
+  border-radius:50%;
+  margin-bottom:8px;
+}
+.garantia-paso .texto{font-size:12px;color:var(--fl-text);font-weight:600}
+@media(max-width:768px){
+  .garantia-box{flex-direction:column;text-align:center;padding:32px 24px}
+  .garantia-texto h3{font-size:20px}
+  .garantia-pasos{grid-template-columns:1fr}
+}
+
+/* ============================================================
+   FOOTER COMPLETO
+   ============================================================ */
+.footer{
+  background:var(--fl-bg);
+  border-top:1px solid var(--fl-border);
+  padding:0;
+  text-align:left;
+}
+.footer-top{padding:64px 0 48px;border-bottom:1px solid var(--fl-border)}
+.footer-grid{
+  display:grid;
+  grid-template-columns:2fr 1fr 1fr 1fr;
+  gap:48px;
+}
+@media(max-width:900px){.footer-grid{grid-template-columns:1fr 1fr;gap:32px}}
+@media(max-width:600px){.footer-grid{grid-template-columns:1fr}}
+.footer-col{padding:0}
+.footer-logo{
+  display:inline-block;
+  font-family:var(--fl-font-brand);
+  font-size:16px;
+  color:var(--cyan);
+  margin-bottom:16px;
+  letter-spacing:1px;
+}
+.footer-desc{
+  font-size:14px;
+  color:var(--fl-text-muted);
+  line-height:1.7;
+  margin-bottom:20px;
+  max-width:320px;
+}
+.footer-social{display:flex;gap:12px}
+.footer-social a{
+  width:36px;height:36px;
+  background:var(--fl-bg-card);
+  border:1px solid var(--fl-border);
+  display:flex;align-items:center;justify-content:center;
+  color:var(--fl-text-muted);
+  transition:all .2s;
+}
+.footer-social a:hover{
+  color:var(--cyan);
+  border-color:var(--cyan);
+  background:var(--fl-bg-surface);
+}
+.footer-social a svg{width:18px;height:18px}
+.footer-titulo{
+  font-family:var(--fl-font-brand);
+  font-size:11px;
+  color:var(--fl-purple-light);
+  margin-bottom:20px;
+  letter-spacing:1px;
+}
+.footer-links{list-style:none;padding:0;margin:0}
+.footer-links li{margin-bottom:10px}
+.footer-links a{
+  font-size:13px;
+  color:var(--fl-text-muted);
+  transition:color .2s;
+}
+.footer-links a:hover{color:var(--cyan)}
+.footer-selos{
+  padding:24px 0;
+  border-bottom:1px solid var(--fl-border);
+  background:rgba(0,0,0,0.2);
+}
+.selos-grid{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:24px;
+}
+@media(max-width:768px){.selos-grid{grid-template-columns:repeat(2,1fr)}}
+.selo{
+  display:flex;
+  align-items:center;
+  gap:12px;
+}
+.selo svg{
+  width:32px;height:32px;
+  color:var(--cyan);
+  flex-shrink:0;
+}
+.selo strong{
+  display:block;
+  font-size:13px;
+  color:var(--fl-text);
+  font-weight:700;
+  margin-bottom:2px;
+}
+.selo span{
+  font-size:11px;
+  color:var(--fl-text-dim);
+}
+.footer-bottom{
+  padding:20px 0;
+  background:rgba(0,0,0,0.4);
+  text-align:center;
+}
+.footer-bottom p{
+  font-size:11px;
+  color:var(--fl-text-dim);
+  margin:0;
+  padding:2px 0;
+}
+.footer-tag{opacity:.6}
 
 /* ============================================================
    SCROLL REVEAL
@@ -2320,10 +2504,136 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
   </div>
 </section>
 
-<!-- FOOTER -->
+<!-- BLOCO DE GARANTIA 30 DIAS -->
+<section class="garantia-30">
+  <div class="container">
+    <div class="garantia-box reveal">
+      <div class="garantia-shield">
+        <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M32 4L8 14v18c0 13.97 9.93 26.92 24 30 14.07-3.08 24-16.03 24-30V14L32 4z"/>
+          <path d="M22 32l8 8 14-14" stroke-width="3"/>
+        </svg>
+      </div>
+      <div class="garantia-texto">
+        <h3>Se não fizer 1 venda em 30 dias, devolvemos seu dinheiro.</h3>
+        <p>Sem letras miúdas. Sem questionário de saída. Sem burocracia. Você usa, você aplica o método 4-1, e se em 30 dias não tiver fechado pelo menos 1 cliente, basta mandar um email e a gente devolve 100% do valor na sua conta em até 5 dias úteis.</p>
+        <div class="garantia-pasos">
+          <div class="garantia-paso">
+            <div class="numero">1</div>
+            <div class="texto">Assina o PRO</div>
+          </div>
+          <div class="garantia-paso">
+            <div class="numero">2</div>
+            <div class="texto">Usa por 30 dias</div>
+          </div>
+          <div class="garantia-paso">
+            <div class="numero">3</div>
+            <div class="texto">Não fechou? Email = reembolso</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER COMPLETO -->
 <footer class="footer">
-  <img src="/images/Logo FraLib.png" alt="FraLib" height="24"><br>
-  Pagamento seguro &bull; Cancele quando quiser &bull; Suporte em português
+  <div class="footer-top">
+    <div class="container">
+      <div class="footer-grid">
+        <!-- Coluna 1: Logo + descrição -->
+        <div class="footer-col">
+          <a href="/" class="footer-logo">FRALIB</a>
+          <p class="footer-desc">A plataforma que faz a prospecção, criação e follow-up de sites para negócios locais. Você só fecha o cliente.</p>
+          <div class="footer-social">
+            <a href="#" aria-label="LinkedIn"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.5 2h-17A1.5 1.5 0 002 3.5v17A1.5 1.5 0 003.5 22h17a1.5 1.5 0 001.5-1.5v-17A1.5 1.5 0 0020.5 2zM8 19H5v-9h3zM6.5 8.25A1.75 1.75 0 118.3 6.5a1.78 1.78 0 01-1.8 1.75zM19 19h-3v-4.74c0-1.42-.6-1.93-1.38-1.93A1.74 1.74 0 0013 14.19a.66.66 0 000 .14V19h-3v-9h2.9v1.3a3.11 3.11 0 012.7-1.4c1.55 0 3.36.86 3.36 3.66z"/></svg></a>
+            <a href="#" aria-label="Instagram"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2c2.717 0 3.056.01 4.122.06 1.065.05 1.79.217 2.428.465.66.254 1.216.598 1.772 1.153a4.908 4.908 0 011.153 1.772c.247.637.415 1.363.465 2.428.047 1.066.06 1.405.06 4.122 0 2.717-.01 3.056-.06 4.122-.05 1.065-.218 1.79-.465 2.428a4.883 4.883 0 01-1.153 1.772 4.915 4.915 0 01-1.772 1.153c-.637.247-1.363.415-2.428.465-1.066.047-1.405.06-4.122.06-2.717 0-3.056-.01-4.122-.06-1.065-.05-1.79-.218-2.428-.465a4.89 4.89 0 01-1.772-1.153 4.904 4.904 0 01-1.153-1.772c-.248-.637-.415-1.363-.465-2.428C2.013 15.056 2 14.717 2 12c0-2.717.01-3.056.06-4.122.05-1.066.217-1.79.465-2.428a4.88 4.88 0 011.153-1.772A4.897 4.897 0 016.69 1.525C7.33 1.277 8.057 1.11 9.122 1.06 10.188 1.013 10.527 1 12 1c2.717 0 3.056.01 4.122.06 1.066.05 1.79.217 2.428.465.66.253 1.216.598 1.772 1.153a4.897 4.897 0 011.153 1.772c.247.638.415 1.363.465 2.428.046 1.066.06 1.405.06 4.122zM12 7a5 5 0 105 5 5 5 0 00-5-5zm6.5-.25a1.25 1.25 0 10-1.25 1.25 1.25 1.25 0 001.25-1.25zM12 9.5a2.5 2.5 0 11-2.5 2.5 2.5 2.5 0 012.5-2.5z"/></svg></a>
+            <a href="#" aria-label="YouTube"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M23 9.71a8.5 8.5 0 00-.91-4.13 2.92 2.92 0 00-1.72-1A78.36 78.36 0 0012 4.5a78.45 78.45 0 00-8.34.09 2.87 2.87 0 00-1.46.74c-.9.83-1 2.25-1.1 3.39a96.81 96.81 0 000 6.58 12.3 12.3 0 00.19 3.34 2.84 2.84 0 00.79 1.6 5 5 0 002.74 1c2.91.18 5.82.21 8.74.13a32.82 32.82 0 003.84-.5 2.72 2.72 0 001.68-1.56c.46-1.4.66-3.74.66-5.21 0-1.05-.04-5.61-.06-6.51zM9.74 14.85V8.66l5.92 3.11c-1.66.92-3.85 1.96-5.92 3.08z"/></svg></a>
+            <a href="#" aria-label="GitHub"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 0a12 12 0 00-3.79 23.39c.6.11.82-.26.82-.58v-2.17c-3.34.73-4.04-1.42-4.04-1.42-.55-1.39-1.34-1.76-1.34-1.76-1.09-.74.08-.73.08-.73 1.21.09 1.84 1.24 1.84 1.24 1.07 1.84 2.81 1.31 3.5 1 .11-.78.42-1.31.76-1.61-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.13-.31-.54-1.54.11-3.21 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 016 0c2.29-1.55 3.3-1.23 3.3-1.23.65 1.67.24 2.9.12 3.21.77.84 1.24 1.91 1.24 3.22 0 4.61-2.81 5.62-5.48 5.92.43.37.81 1.1.81 2.22v3.29c0 .32.21.69.83.58A12 12 0 0012 0z"/></svg></a>
+          </div>
+        </div>
+
+        <!-- Coluna 2: Produto -->
+        <div class="footer-col">
+          <h4 class="footer-titulo">PRODUTO</h4>
+          <ul class="footer-links">
+            <li><a href="/docs">Documentação</a></li>
+            <li><a href="#como-funciona">Como Funciona</a></li>
+            <li><a href="#precos">Planos e Preços</a></li>
+            <li><a href="#depoimentos">Depoimentos</a></li>
+            <li><a href="/blog">Blog</a></li>
+          </ul>
+        </div>
+
+        <!-- Coluna 3: Empresa -->
+        <div class="footer-col">
+          <h4 class="footer-titulo">EMPRESA</h4>
+          <ul class="footer-links">
+            <li><a href="#">Quem somos</a></li>
+            <li><a href="#">Carreiras</a></li>
+            <li><a href="#">Imprensa</a></li>
+            <li><a href="/contato">Contato</a></li>
+            <li><a href="#">Programa de afiliados</a></li>
+          </ul>
+        </div>
+
+        <!-- Coluna 4: Suporte -->
+        <div class="footer-col">
+          <h4 class="footer-titulo">SUPORTE</h4>
+          <ul class="footer-links">
+            <li><a href="#faq">Perguntas Frequentes</a></li>
+            <li><a href="/status">Status do Sistema</a></li>
+            <li><a href="/termos">Termos de Uso</a></li>
+            <li><a href="/privacidade">Política de Privacidade</a></li>
+            <li><a href="mailto:suporte@fralib.com">suporte@fralib.com</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Selos de Segurança -->
+  <div class="footer-selos">
+    <div class="container">
+      <div class="selos-grid">
+        <div class="selo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+          <div>
+            <strong>Pagamento Seguro</strong>
+            <span>SSL 256-bit · Mercado Pago</span>
+          </div>
+        </div>
+        <div class="selo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+          <div>
+            <strong>Garantia 30 Dias</strong>
+            <span>Não vendeu = dinheiro de volta</span>
+          </div>
+        </div>
+        <div class="selo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg>
+          <div>
+            <strong>LGPD Compliant</strong>
+            <span>Seus dados protegidos</span>
+          </div>
+        </div>
+        <div class="selo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+          <div>
+            <strong>Suporte em Português</strong>
+            <span>WhatsApp · Email · Chat</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer-bottom">
+    <div class="container">
+      <p>© 2025 FraLib OS · CNPJ XX.XXX.XXX/0001-XX · São Paulo, Brasil</p>
+      <p class="footer-tag">Pagamento seguro · Cancele quando quiser · Suporte em português</p>
+    </div>
+  </div>
 </footer>
 
 <!-- ============================================================
