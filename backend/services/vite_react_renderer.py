@@ -3591,12 +3591,17 @@ gsap.registerPlugin(ScrollTrigger);
 export function HeroSection({ onOpen }: { onOpen?: () => void }) {
   const rootRef = useRef<HTMLElement | null>(null);
   const heroClasses = (variation && variation.hero_classes) ? variation.hero_classes : '';
-  const rootRef = useRef<HTMLElement | null>(null);
+  // Sprint 14.6: video background so aparece em hero_layout=video ou fullbleed.
+  // Para outros layouts (split/center/asymmetric), usa imagem poster.
+  const _varLayout = (variation && variation.hero_layout) ? variation.hero_layout : 'split';
+  const _showVideo = _varLayout === 'video' || _varLayout === 'fullbleed';
   useEffect(() => {
     const root = rootRef.current;
     if (!root || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     const ctx = gsap.context(() => {
-      gsap.to('[data-hero-video]', { yPercent: 10, scale: 1.08, ease: 'none', scrollTrigger: { trigger: root, start: 'top top', end: 'bottom top', scrub: true } });
+      if (_showVideo) {
+        gsap.to('[data-hero-video]', { yPercent: 10, scale: 1.08, ease: 'none', scrollTrigger: { trigger: root, start: 'top top', end: 'bottom top', scrub: true } });
+      }
       gsap.fromTo('[data-hero-reveal]', { y: 26, opacity: 0 }, { y: 0, opacity: 1, duration: 0.9, stagger: 0.08, ease: 'power3.out' });
     }, root);
     return () => ctx.revert();
@@ -3604,7 +3609,11 @@ export function HeroSection({ onOpen }: { onOpen?: () => void }) {
   return (
     <section ref={rootRef} id="hero" className={`relative isolate min-h-[92svh] overflow-hidden px-5 pb-16 pt-28 text-white md:px-8 md:pb-24 md:pt-36 ${heroClasses}`}>
       <div className="absolute inset-0 -z-20" style={{ background: 'var(--bg)' }} />
-      <video data-hero-video className="absolute inset-0 -z-10 h-full w-full object-cover opacity-52 saturate-[.9]" src={mediaVideos[0]} poster={mediaImages[0]} autoPlay muted loop playsInline preload="metadata" />
+      {_showVideo && mediaVideos[0] ? (
+        <video data-hero-video className="absolute inset-0 -z-10 h-full w-full object-cover opacity-52 saturate-[.9]" src={mediaVideos[0]} poster={mediaImages[0]} autoPlay muted loop playsInline preload="metadata" />
+      ) : (
+        <img data-hero-poster src={mediaImages[0]} alt={siteCopy.gallery_alt} className="absolute inset-0 -z-10 h-full w-full object-cover opacity-32 saturate-[.85]" loading="eager" decoding="async" />
+      )}
       <div className="absolute inset-0 -z-10" style={{ background: `linear-gradient(90deg, color-mix(in srgb, var(--bg) 96%, transparent), color-mix(in srgb, var(--bg) 66%, transparent) 42%, color-mix(in srgb, var(--bg) 22%, transparent)), radial-gradient(circle_at_80%_20%, color-mix(in srgb, var(--accent) 20%, transparent), transparent 34%)` }} />
       <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[1.05fr_.95fr] lg:items-end">
         <div className="max-w-4xl">
