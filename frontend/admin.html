@@ -112,6 +112,7 @@
       <!-- Controles do Pipeline -->
       <div class="pipeline-controls">
         <span class="pipeline-status idle" id="pipelineStatus">&#9679; IDLE</span>
+        <span id="pipelineTempoBadge" style="font-size:11px;color:var(--fl-text-dim);margin-right:8px;display:inline-flex;align-items:center;gap:6px"></span>
         <button class="btn-pipeline btn-pipeline-start" id="btnIniciar" title="Liga a esteira Hunter + produção; não cria site sozinho">&#9654; LIGAR ESTEIRA</button>
         <button class="btn-pipeline btn-pipeline-pause" id="btnPausar" onclick="pausarPipeline()" style="display:none">&#9646;&#9646; PAUSAR</button>
         <button class="btn-pipeline btn-pipeline-start" id="btnRetomar" onclick="retomarPipeline()" style="display:none">&#9654; RETOMAR</button>
@@ -7857,6 +7858,73 @@ async function atualizarPipelineBadge() {
 /* Atualiza a cada 60s */
 setInterval(atualizarPipelineBadge, 60000);
 setTimeout(atualizarPipelineBadge, 2000);
+
+/* Sprint 14.8: telemetria - mostra quanto tempo o pipeline esta rodando/parado */
+function _fmtSegundos(s) {
+  if (s == null || s === undefined) return '—';
+  if (s < 60) return s + 's';
+  if (s < 3600) return Math.floor(s / 60) + 'min' + (s % 60 ? ' ' + (s % 60) + 's' : '');
+  return Math.floor(s / 3600) + 'h' + Math.floor((s % 3600) / 60) + 'min';
+}
+
+async function atualizarPipelineTempo() {
+  try {
+    var data = await authFetch('/api/pipeline/tempo').then(function(r){ return r.json(); });
+    var badge = document.getElementById('pipelineTempoBadge');
+    if (!badge) return;
+
+    // Se ha job ativo agora
+    if (data && data.ativo && data.ultimo_job) {
+      var job = data.ultimo_job;
+      var cor = '#10b981'; // verde - ativo
+      var faseLabel = '';
+      // Mapear fase numerica para label amigavel
+      var f = (job.fase_atual || '').toLowerCase();
+      if (/hunter|captura|supply|jina/.test(f)) faseLabel = 'buscar';
+      else if (/nicho|benchmark|variacao|arquiteto|designer|analis/.test(f)) faseLabel = 'analisar';
+      else if (/builder|renderer|vite|produzir/.test(f)) faseLabel = 'produzir';
+      else if (/deploy|public|franz|outreach|sdr/.test(f)) faseLabel = 'publicar';
+
+      var txt = '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:' + cor + ';box-shadow:0 0 8px ' + cor + ';animation:pulse 2s ease-in-out infinite"></span>';
+      txt += '<span style="color:' + cor + ';font-weight:600">ATIVO</span> ';
+      txt += '<span style="color:var(--fl-text-dim)">· ' + (faseLabel || job.fase_atual) + '</span> ';
+      txt += '<span style="color:var(--fl-text-dim)">· ' + _fmtSegundos(job.duracao_s) + '</span>';
+      if (job.lead_nome && job.lead_nome !== '—') {
+        txt += ' <span style="color:var(--fl-text-dim);font-size:10px">· ' + escapeHtml(job.lead_nome.substring(0, 30)) + '</span>';
+      }
+      badge.innerHTML = txt;
+      badge.style.display = 'inline-flex';
+      return;
+    }
+
+    // Sem job ativo - mostrar ultima conclusao
+    if (data && data.ultimo_completed) {
+      var j = data.ultimo_completed;
+      var cor = j.status === 'completed' ? '#06b6d4' : '#ef4444';
+      var txt = '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:' + cor + '"></span>';
+      txt += '<span style="color:' + cor + ';font-weight:600">' + (j.status === 'completed' ? 'PARADO' : 'FALHOU') + '</span> ';
+      txt += '<span style="color:var(--fl-text-dim)">· ultimo: ' + escapeHtml((j.lead_nome || '—').substring(0, 30)) + '</span>';
+      if (j.concluido_em) {
+        var diffMin = Math.floor((Date.now() - new Date(j.concluido_em).getTime()) / 60000);
+        if (diffMin < 1) txt += ' <span style="color:var(--fl-text-dim);font-size:10px">· agora</span>';
+        else if (diffMin < 60) txt += ' <span style="color:var(--fl-text-dim);font-size:10px">· ' + diffMin + 'min atras</span>';
+        else txt += ' <span style="color:var(--fl-text-dim);font-size:10px">· ' + Math.floor(diffMin / 60) + 'h atras</span>';
+      }
+      badge.innerHTML = txt;
+      badge.style.display = 'inline-flex';
+      return;
+    }
+
+    // Nenhum job registrado ainda
+    badge.innerHTML = '<span style="color:var(--fl-text-dim)">sem jobs ainda</span>';
+    badge.style.display = 'inline-flex';
+  } catch(e) {
+    // silencioso - nao quebra o resto
+  }
+}
+/* Atualiza a cada 5s para feedback rapido */
+setInterval(atualizarPipelineTempo, 5000);
+setTimeout(atualizarPipelineTempo, 1500);
 
 /* ── 2.1 Carregar leads incompletos/rejeitados ───────────────────── */
 async function carregarLeadsIncompletos() {

@@ -96,6 +96,7 @@ import health_endpoints
 import tenant_api_keys
 import metrics_endpoints
 import hermes_endpoints
+import pipeline_tempo_endpoints
 
 
 from contextlib import asynccontextmanager
@@ -375,6 +376,7 @@ app.include_router(provider_keys_endpoints.router)
 app.include_router(provider_alerts_endpoints.router)
 app.include_router(agent_config_endpoints.router)
 app.include_router(falhas_endpoints.router)
+app.include_router(pipeline_tempo_endpoints.router)
 app.include_router(site_editor_endpoints.router)
 app.include_router(tracking_endpoints.router)
 import clarity_api_endpoints
