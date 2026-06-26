@@ -3266,7 +3266,15 @@ def _cinematic_copy(facts: dict[str, Any]) -> dict[str, Any]:
     llm_content = facts.get("_llm_content") if isinstance(facts.get("_llm_content"), dict) else {}
     hero = llm_content.get("hero") if isinstance(llm_content.get("hero"), dict) else {}
     lifestyle = llm_content.get("lifestyle") if isinstance(llm_content.get("lifestyle"), dict) else {}
-    name = str(business.get("name") or business.get("business_name") or facts.get("business_name") or "Negócio local")
+    name = str(
+        business.get("name")
+        or business.get("business_name")
+        or business.get("nome")
+        or facts.get("business_name")
+        or facts.get("name")
+        or facts.get("nome")
+        or "Negócio local"
+    )
     city = str(business.get("city") or business.get("cidade") or facts.get("cidade") or "sua cidade")
     segment = str(business.get("segment") or business.get("segmento") or facts.get("segmento") or "atendimento local")
     subnicho = str(business.get("subnicho") or facts.get("subnicho") or facts.get("subniche") or "").strip().lower()
@@ -3405,9 +3413,17 @@ def _cinematic_copy(facts: dict[str, Any]) -> dict[str, Any]:
         "cta_primary": str(hero.get("cta_primary") or defaults["cta_primary"]),
         "cta_secondary": str(hero.get("cta_secondary") or defaults["cta_secondary"]),
         "services_title": str(llm_content.get("services_title") or defaults["services_title"]),
+        "services_subheadline": str(
+            llm_content.get("services_subheadline")
+            or f"Servicos confirmados da {name} em {city}, sem invencoes."
+        ),
         "lifestyle_title": str(lifestyle.get("title") or defaults["lifestyle_title"]),
         "lifestyle_description": str(lifestyle.get("description") or defaults["lifestyle_description"]),
         "gallery_alt": str(llm_content.get("gallery_alt") or f"{segment} em {city}"),
+        "footer_tagline": str(
+            llm_content.get("footer_tagline")
+            or f"{name} em {city} - contato direto, dados confirmados, sem promessas vazias."
+        ),
         "modal_title": str(llm_content.get("modal_title") or f"Fale com {name}"),
         "modal_cta": str(llm_content.get("modal_cta") or "Enviar mensagem"),
         "contact_headline": str(llm_content.get("contact_headline") or "Pronto para confirmar o próximo passo?"),
@@ -3658,14 +3674,14 @@ import { motion } from 'motion/react';
 import { siteCopy } from './siteData';
 const icons = [ClipboardCheck, Sparkles, MapPinned];
 export function ServicesSection() {
-  return <section id="servicos" style={{ background: 'var(--bg-light)', color: 'var(--text-dark)' }} className="px-5 py-20 md:px-8 md:py-28"><div className="mx-auto max-w-7xl"><div className="grid gap-8 lg:grid-cols-[.8fr_1.2fr] lg:items-end"><div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-800">Decisão clara</p><h2 className="mt-3 text-[clamp(2rem,4.8vw,4.4rem)] font-semibold leading-[1] tracking-[-0.025em]">{siteCopy.services_title}</h2></div><p className="max-w-2xl text-base leading-8" style={{ color: 'var(--accent-dark)' }}>A estrutura evita promessa genérica: usa dados reais do lead, provas locais e um caminho único para ação.</p></div><div className="mt-12 grid gap-4 md:grid-cols-3">{siteCopy.services.map((service, index) => { const Icon = icons[index] || ClipboardCheck; return <motion.article key={service.title} initial={{ opacity: 0, y: 22 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.28 }} transition={{ delay: index * 0.06 }} className="min-h-[17rem] rounded-[18px] border bg-white p-6 shadow-[0_8px_24px_rgba(0,0,0,.06)]" style={{ borderColor: 'color-mix(in srgb, var(--text-dark) 10%, transparent)' }}><Icon className="h-6 w-6 text-emerald-800" /><h3 className="mt-8 text-2xl font-semibold tracking-tight">{service.title}</h3><p className="mt-4 text-sm leading-7" style={{ color: 'var(--accent-dark)' }}>{service.description}</p></motion.article>; })}</div></div></section>;
+  return <section id="servicos" style={{ background: 'var(--bg-light)', color: 'var(--text-dark)' }} className="px-5 py-20 md:px-8 md:py-28"><div className="mx-auto max-w-7xl"><div className="grid gap-8 lg:grid-cols-[.8fr_1.2fr] lg:items-end"><div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-800">Como funciona</p><h2 className="mt-3 text-[clamp(2rem,4.8vw,4.4rem)] font-semibold leading-[1] tracking-[-0.025em]">{siteCopy.services_title}</h2></div><p className="max-w-2xl text-base leading-8" style={{ color: 'var(--accent-dark)' }}>{siteCopy.services_subheadline}</p></div><div className="mt-12 grid gap-4 md:grid-cols-3">{siteCopy.services.map((service, index) => { const Icon = icons[index] || ClipboardCheck; return <motion.article key={service.title} initial={{ opacity: 0, y: 22 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.28 }} transition={{ delay: index * 0.06 }} className="min-h-[17rem] rounded-[18px] border bg-white p-6 shadow-[0_8px_24px_rgba(0,0,0,.06)]" style={{ borderColor: 'color-mix(in srgb, var(--text-dark) 10%, transparent)' }}><Icon className="h-6 w-6 text-emerald-800" /><h3 className="mt-8 text-2xl font-semibold tracking-tight">{service.title}</h3><p className="mt-4 text-sm leading-7" style={{ color: 'var(--accent-dark)' }}>{service.description}</p></motion.article>; })}</div></div></section>;
 }
 export default ServicesSection;
 """,
         "src/components/GallerySection.tsx": """import { motion } from 'motion/react';
 import { mediaImages, siteCopy } from './siteData';
 export function GallerySection() {
-  return <section id="galeria" style={{ background: 'var(--bg)' }} className="px-5 py-20 text-white md:px-8 md:py-28"><div className="mx-auto max-w-7xl"><div className="mb-10 flex flex-col gap-4 md:flex-row md:items-end md:justify-between"><div><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>Prova visual</p><h2 className="mt-3 max-w-3xl text-[clamp(2rem,4.8vw,4.4rem)] font-semibold leading-[1] tracking-[-0.025em]">Uma narrativa visual para {siteCopy.segment}.</h2></div><p className="max-w-md text-sm leading-7 text-zinc-300">As imagens são apoio editorial do nicho, não afirmação de foto real do endereço.</p></div><div className="grid auto-rows-[16rem] gap-4 md:grid-cols-4">{mediaImages.slice(0, 5).map((src, index) => <motion.figure key={src} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.25 }} transition={{ delay: index * 0.04 }} className={`group relative overflow-hidden rounded-[18px] bg-black ${index === 0 ? 'md:col-span-2 md:row-span-2' : ''}`}><img src={src} alt={`${siteCopy.gallery_alt} ${index + 1}`} className="h-full w-full object-cover opacity-90 transition duration-700 group-hover:scale-105 group-hover:opacity-100" loading={index === 0 ? 'eager' : 'lazy'} decoding="async" /><figcaption className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-5 text-sm font-semibold text-white">{index === 0 ? siteCopy.name : siteCopy.city}</figcaption></motion.figure>)}</div></div></section>;
+  return <section id="galeria" style={{ background: 'var(--bg)' }} className="px-5 py-20 text-white md:px-8 md:py-28"><div className="mx-auto max-w-7xl"><div className="mb-10 flex flex-col gap-4 md:flex-row md:items-end md:justify-between"><div><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>Prova visual</p><h2 className="mt-3 max-w-3xl text-[clamp(2rem,4.8vw,4.4rem)] font-semibold leading-[1] tracking-[-0.025em]">Uma narrativa visual para {siteCopy.segment}.</h2></div><p className="max-w-md text-sm leading-7 text-zinc-300">{siteCopy.gallery_alt}</p></div><div className="grid auto-rows-[16rem] gap-4 md:grid-cols-4">{mediaImages.slice(0, 5).map((src, index) => <motion.figure key={src} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.25 }} transition={{ delay: index * 0.04 }} className={`group relative overflow-hidden rounded-[18px] bg-black ${index === 0 ? 'md:col-span-2 md:row-span-2' : ''}`}><img src={src} alt={`${siteCopy.gallery_alt} ${index + 1}`} className="h-full w-full object-cover opacity-90 transition duration-700 group-hover:scale-105 group-hover:opacity-100" loading={index === 0 ? 'eager' : 'lazy'} decoding="async" /><figcaption className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-5 text-sm font-semibold text-white">{index === 0 ? siteCopy.name : siteCopy.city}</figcaption></motion.figure>)}</div></div></section>;
 }
 export default GallerySection;
 """,
@@ -3701,7 +3717,7 @@ export default BookingModal;
         "src/components/Footer.tsx": """import { MapPin, MessageCircle, ShieldCheck } from 'lucide-react';
 import { siteCopy, whatsappHref } from './siteData';
 export function Footer() {
-  return <footer style={{ background: 'var(--bg)' }} className="px-5 py-12 text-zinc-300 md:px-8"><div className="mx-auto grid max-w-7xl gap-8 md:grid-cols-[1.1fr_.8fr_.8fr]"><div><strong className="block text-2xl font-semibold text-white">{siteCopy.name}</strong><p className="mt-3 max-w-md text-sm leading-7 text-zinc-400">Site local com SEO, prova social, mídia editorial, LGPD e caminho de contato direto.</p></div><div><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>Contato</p><a href={whatsappHref} rel="noopener noreferrer" className="mt-4 flex items-center gap-2 text-sm text-white"><MessageCircle className="h-4 w-4" style={{ color: 'var(--accent)' }} /> WhatsApp oficial</a><p className="mt-3 text-sm text-zinc-400">{siteCopy.phone}</p></div><div><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>Local</p><p className="mt-4 flex items-start gap-2 text-sm leading-6 text-zinc-400"><MapPin className="mt-0.5 h-4 w-4 shrink-0" style={{ color: 'var(--accent)' }} /> {siteCopy.address || siteCopy.city}</p><p className="mt-4 flex items-start gap-2 text-sm leading-6 text-zinc-500"><ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" style={{ color: 'var(--accent)' }} /> Dados factuais e privacidade preservada.</p></div></div><div className="mx-auto mt-10 flex max-w-7xl flex-col gap-2 border-t border-white/10 pt-5 text-xs text-zinc-500 md:flex-row md:items-center md:justify-between"><span>{siteCopy.city}</span><span>© 2026 {siteCopy.name}. Todos os direitos reservados.</span></div></footer>;
+  return <footer style={{ background: 'var(--bg)' }} className="px-5 py-12 text-zinc-300 md:px-8"><div className="mx-auto grid max-w-7xl gap-8 md:grid-cols-[1.1fr_.8fr_.8fr]"><div><strong className="block text-2xl font-semibold text-white">{siteCopy.name}</strong><p className="mt-3 max-w-md text-sm leading-7 text-zinc-400">{siteCopy.footer_tagline}</p></div><div><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>Contato</p><a href={whatsappHref} rel="noopener noreferrer" className="mt-4 flex items-center gap-2 text-sm text-white"><MessageCircle className="h-4 w-4" style={{ color: 'var(--accent)' }} /> WhatsApp oficial</a><p className="mt-3 text-sm text-zinc-400">{siteCopy.phone}</p></div><div><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>Local</p><p className="mt-4 flex items-start gap-2 text-sm leading-6 text-zinc-400"><MapPin className="mt-0.5 h-4 w-4 shrink-0" style={{ color: 'var(--accent)' }} /> {siteCopy.address || siteCopy.city}</p><p className="mt-4 flex items-start gap-2 text-sm leading-6 text-zinc-500"><ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" style={{ color: 'var(--accent)' }} /> Dados factuais e privacidade preservada.</p></div></div><div className="mx-auto mt-10 flex max-w-7xl flex-col gap-2 border-t border-white/10 pt-5 text-xs text-zinc-500 md:flex-row md:items-center md:justify-between"><span>{siteCopy.city}</span><span>© 2026 {siteCopy.name}. Todos os direitos reservados.</span></div></footer>;
 }
 export default Footer;
 """,
@@ -3713,6 +3729,9 @@ export default Footer;
             city=copy["city"],
             segment=copy["segment"],
         ),
+        # Sprint 14.6: index.html com HEAD SEO completo (title, description,
+        # keywords, OG, Twitter, canonical, JSON-LD LocalBusiness).
+        "index.html": vite_template_index_html(facts),
     }
 
 

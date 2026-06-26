@@ -399,6 +399,28 @@ def build_skill_fast_prd(state: Any) -> SimpleNamespace:
         logging.getLogger(__name__).warning(f"[pipeline_builders] variation falhou: {_ve}")
 
     return SimpleNamespace(
+        business={
+            "name": nome,
+            "business_name": nome,
+            "nome": nome,
+            "segment": segmento,
+            "segmento": segmento,
+            "subnicho": _subnicho_for_counter,
+            "subniche": _subnicho_for_counter,
+            "city": cidade,
+            "cidade": cidade,
+            "phone": telefone,
+            "whatsapp": telefone,
+            "address": endereco,
+            "endereco": endereco,
+            "rating": rating,
+            "total_avaliacoes": reviews_count,
+            "reviews_count": reviews_count,
+            "services": services,
+            "servicos": services,
+            "diferenciais": list(diferenciais) if isinstance(diferenciais, (list, tuple)) else [],
+            "horarios": horarios,
+        },
         business_name=nome,
         nome=nome,
         segmento=segmento,
