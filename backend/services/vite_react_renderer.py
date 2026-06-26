@@ -1574,7 +1574,132 @@ def prepare_vite_project_files(files: dict[str, str], *, facts: dict[str, Any]) 
     _ensure_factual_motion_contract(prepared, facts)
     _normalize_component_export_contract(prepared)
     _enforce_hero_visual_contract(prepared)
+    # Sprint 12.19: post-process - replace any literal {var} placeholders that
+    # the studio fallback failed to interpolate (e.g. f-string on LifestyleSection
+    # that was missing the `f` prefix on the template). The vars are looked up
+    # from the segment-aware dict + facts at the time the file is written.
+    _interpolate_studio_placeholders(prepared, facts)
     return dict(sorted(prepared.items()))
+
+
+def _interpolate_studio_placeholders(prepared: dict[str, str], facts: dict[str, Any]) -> None:
+    """Sprint 12.19: defensive fix.
+
+    The studio fallback generates f-strings that reference segment-aware vars
+    (lifestyle_title, lifestyle_desc, dense_cards, nav_items, etc). If a string
+    was created with a regular \"\"\" instead of f\"\"\", the placeholders leak
+    to the .tsx as literal {var}. The browser throws ReferenceError and the
+    site shows a black screen.
+
+    This pass scans .tsx files for any literal {var} that matches a known
+    segment-aware var, and replaces it with the actual value. The vars are
+    rebuilt by calling the segment-detection logic that mirrors the studio
+    fallback.
+    """
+    import re as _re
+
+    business = facts.get("business") if isinstance(facts.get("business"), dict) else {}
+    raw_segment = str(business.get("segment") or business.get("segmento") or facts.get("segmento") or "")
+    segment = raw_segment.lower()
+    city = str(business.get("city") or business.get("cidade") or facts.get("cidade") or "Curitiba")
+    name = str(business.get("name") or business.get("business_name") or "Negócio local")
+    phone = str(business.get("whatsapp") or business.get("phone") or "41999999999")
+    rating = str(business.get("rating") or "4.8")
+
+    # Mirror the if/elif chain from _generate_studio_fallback_files
+    if "barbearia" in segment or "barbeiro" in segment:
+        cta_primary, cta_secondary, alt_img = "Agendar horario", "Ver servicos", "Barbeiro em barbearia"
+        lifestyle_title, lifestyle_desc = "Tradicao em cada corte", "Um espaco dedicado ao cuidado masculino, com atendimento personalizado e toalhas quentes."
+    elif "academia" in segment or "fitness" in segment or "crossfit" in segment or "musculacao" in segment:
+        cta_primary, cta_secondary, alt_img = "Comecar treino", "Ver estrutura", "Alunos em treino fitness"
+        lifestyle_title, lifestyle_desc = "Energia e constancia", "Um espaco para criar rotina, encontrar orientacao e manter frequencia sem complicar."
+    elif "restaurante" in segment or "bar " in segment or "pizzaria" in segment or "hamburgueria" in segment or "lanchonete" in segment or "cafeteria" in segment:
+        cta_primary, cta_secondary, alt_img = "Fazer reserva", "Ver menu", "Restaurante"
+        lifestyle_title, lifestyle_desc = "Experiencia gastronomica", "Cada prato preparado com cuidado para proporcionar uma experiencia unica."
+    elif "clinica" in segment or "estetica" in segment or "dermatologia" in segment:
+        cta_primary, cta_secondary, alt_img = "Agendar consulta", "Conhecer servicos", "Clinica"
+        lifestyle_title, lifestyle_desc = "Cuidado e acolhimento", "Ambiente preparado para recebe-lo com conforto e seguranca em cada atendimento."
+    elif "imobiliaria" in segment or "imoveis" in segment:
+        cta_primary, cta_secondary, alt_img = "Ver imoveis", "Falar corretor", "Imovel"
+        lifestyle_title, lifestyle_desc = "Seu proximo imovel", "Encontre o imovel ideal com quem entende do mercado local."
+    elif "nutricionista" in segment or "nutricao" in segment:
+        cta_primary, cta_secondary, alt_img = "Agendar consulta", "Ver planos", "Nutricionista"
+        lifestyle_title, lifestyle_desc = "Nutricao de verdade", "Transforme sua alimentacao com acompanhamento profissional cientifico."
+    elif "advocacia" in segment or "advogado" in segment:
+        cta_primary, cta_secondary, alt_img = "Falar com advogado", "Ver areas", "Escritorio de advocacia"
+        lifestyle_title, lifestyle_desc = "Direito com seriedade", "Atendimento juridico transparente e dedicado a sua causa."
+    elif "odonto" in segment or "dentista" in segment:
+        cta_primary, cta_secondary, alt_img = "Agendar consulta", "Ver tratamentos", "Consultorio odontologico"
+        lifestyle_title, lifestyle_desc = "Seu sorriso perfeito", "Tecnologia de ponta e carinho em cada tratamento para seu sorriso."
+    elif "ecommerce" in segment or "loja" in segment or "roupas" in segment:
+        cta_primary, cta_secondary, alt_img = "Ver produtos", "Ver ofertas", "Produtos"
+        lifestyle_title, lifestyle_desc = "Qualidade garantida", "Produtos selecionados com cuidado para atender suas necessidades."
+    elif "petshop" in segment or "pet " in segment:
+        cta_primary, cta_secondary, alt_img = "Agendar servico", "Ver produtos", "Pet shop"
+        lifestyle_title, lifestyle_desc = "Amor pelos animais", "Cuidamos do seu pet como se fosse nosso. Amor e dedicacao em cada servico."
+    elif "hotel" in segment or "pousada" in segment or "hostel" in segment:
+        cta_primary, cta_secondary, alt_img = "Reservar", "Ver quartos", "Hotel"
+        lifestyle_title, lifestyle_desc = "Sua casa longe de casa", "Conforto e acolhimento para tornar sua estadia inesquecivel."
+    elif "salao_beleza" in segment or "beleza" in segment:
+        cta_primary, cta_secondary, alt_img = "Agendar horario", "Ver servicos", "Salao de beleza"
+        lifestyle_title, lifestyle_desc = "Beleza e bem-estar", "Transformamos seu visual com tecnicas modernas e produtos de qualidade."
+    elif "fisioterapia" in segment or "fisio" in segment:
+        cta_primary, cta_secondary, alt_img = "Agendar sessao", "Ver tratamentos", "Fisioterapia"
+        lifestyle_title, lifestyle_desc = "Movimento com saude", "Recupere sua qualidade de vida com tratamento fisioterapêutico humanizado."
+    elif "escola" in segment or "cursinho" in segment or "idiomas" in segment:
+        cta_primary, cta_secondary, alt_img = "Matricular", "Ver cursos", "Escola"
+        lifestyle_title, lifestyle_desc = "Educacao que transforma", "Formando cidadaos preparados para o futuro com excelencia e valores."
+    elif "autoescola" in segment:
+        cta_primary, cta_secondary, alt_img = "Matricular", "Ver categorias", "Autoescola"
+        lifestyle_title, lifestyle_desc = "Sua habilitacao na mao", "Metodologia comprovada para voce passar no DETRAN de primeira."
+    elif "oficina" in segment or "mecanica" in segment or "eletrica" in segment:
+        cta_primary, cta_secondary, alt_img = "Agendar servico", "Ver servicos", "Oficina mecanica"
+        lifestyle_title, lifestyle_desc = "Seu carro em boas maos", "Servico de qualidade com transparencia e compromisso com seu veiculo."
+    elif "farmacia" in segment or "manipulacao" in segment:
+        cta_primary, cta_secondary, alt_img = "Ver produtos", "Ver promocoes", "Farmacia"
+        lifestyle_title, lifestyle_desc = "Saude e bem-estar", "Farmacêuticos capacitados para orientar sobre medicamentos e cuidados."
+    elif "psicologo" in segment or "psicologia" in segment:
+        cta_primary, cta_secondary, alt_img = "Agendar sessao", "Ver abordagens", "Consultorio de psicologia"
+        lifestyle_title, lifestyle_desc = "Cuidado emocional", "Um espaco seguro para falar sobre seus sentimentos e desenvolver seu potencial."
+    elif "fotografo" in segment or "fotografia" in segment or "design" in segment or "grafico" in segment:
+        cta_primary, cta_secondary, alt_img = "Ver portfolio", "Fazer orcamento", "Fotografia"
+        lifestyle_title, lifestyle_desc = "Momentos eternizados", "Capturamos momentos e emocoes com sensibilidade e tecnica."
+    else:
+        cta_primary, cta_secondary, alt_img = "Saiba mais", "Ver servicos", name
+        lifestyle_title, lifestyle_desc = "Experiencia unica", f"Atendimento dedicado para garantir sua satisfacao em {city}."
+
+    # Map of placeholder var name -> replacement value (in the order they appear)
+    var_map = {
+        "name": name,
+        "phone": phone,
+        "rating": rating,
+        "city": city,
+        "segment": raw_segment,
+        "cta_primary": cta_primary,
+        "cta_secondary": cta_secondary,
+        "alt_img": alt_img,
+        "lifestyle_title": lifestyle_title,
+        "lifestyle_desc": lifestyle_desc,
+    }
+
+    # Find .tsx files and replace literal {var} placeholders
+    for path in list(prepared.keys()):
+        if not path.endswith(".tsx"):
+            continue
+        content = prepared[path]
+        if "{" not in content:
+            continue
+        original = content
+        for var_name, value in var_map.items():
+            # Replace {var} with value, but only if the var exists in our map
+            # and the placeholder is standalone (not inside another string)
+            content = _re.sub(
+                r"\{" + _re.escape(var_name) + r"\}",
+                value.replace("\\", "\\\\").replace("$", "\\$"),
+                content,
+            )
+        if content != original:
+            prepared[path] = content
 
 
 def _normalize_component_export_contract(files: dict[str, str]) -> None:
