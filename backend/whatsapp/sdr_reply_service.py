@@ -111,18 +111,47 @@ def sanitize_reply(reply: str, retry_extractor=None, fallback_reply="Opa, tudo b
     if not resposta.strip():
         return resposta
 
-    if resposta.strip().startswith("{") or '"resposta"' in resposta or '"novo_stage"' in resposta:
-        resp_match = re.search(r'"resposta"\s*:\s*"((?:[^"\\]|\\.)*)"', resposta)
+    # Detecta QUALQUER formato de JSON retornado pelo LLM:
+    # - JSON cru {...
+    # - Markdown code block ```json ... ```
+    # - Campo "resposta" (PT) ou "reply" (EN) solto
+    # - Campo "novo_stage" (PT) ou "next_stage" (EN)
+    looks_like_json = (
+        resposta.strip().startswith("{")
+        or '"resposta"' in resposta
+        or '"novo_stage"' in resposta
+        or '"reply"' in resposta
+        or '"next_stage"' in resposta
+        or resposta.strip().startswith("```json")
+        or resposta.strip().startswith("```")
+        or resposta.lstrip().startswith("```json")
+    )
+
+    if looks_like_json:
+        # Tentar extrair campo "resposta" (PT) ou "reply" (EN)
+        # Regex tolera string SEM fechamento (caso de LLM truncado por max_tokens)
+        resp_match = re.search(r'"(?:resposta|reply)"\s*:\s*"((?:[^"\\]|\\.)*)(?:"|$)', resposta)
         if resp_match:
             resposta = resp_match.group(1).replace('\\"', '"').replace("\\n", "\n")
         else:
-            resposta = re.sub(r"\{[\s\S]*?\}", "", resposta).strip()
-            resposta = re.sub(r"```[\s\S]*?```", "", resposta).strip()
+            # Remover blocos JSON e markdown code blocks (```json ... ```)
+            # Primeiro remove code blocks markdown
+            resposta = re.sub(r"```(?:json)?\s*[\s\S]*?\s*```", "", resposta).strip()
+            # Depois remove JSON cru (mesmo malformado/incompleto)
+            resposta = re.sub(r"\{[\s\S]*", "", resposta).strip()
+            # Remove backticks soltos que sobraram
+            resposta = re.sub(r"```\w*", "", resposta).strip()
 
-        if (not resposta or resposta.strip().startswith("{") or '"resposta"' in resposta) and retry_extractor is not None:
+        # Fallback se ainda parece JSON
+        if (
+            not resposta
+            or resposta.strip().startswith("{")
+            or '"resposta"' in resposta
+            or '"reply"' in resposta
+        ) and retry_extractor is not None:
             try:
                 fixed = (retry_extractor(reply) or "").strip().strip('"').strip()
-                if fixed and not fixed.startswith("{") and '"resposta"' not in fixed:
+                if fixed and not fixed.startswith("{") and '"resposta"' not in fixed and '"reply"' not in fixed:
                     resposta = fixed
                 else:
                     resposta = fallback_reply
