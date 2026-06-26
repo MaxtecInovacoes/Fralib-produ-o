@@ -306,23 +306,56 @@ def gerar_variacao(
     # 2) Se subnicho mapeado, usa o template canonico (NAO chama LLM)
     if subnicho in SUB_NICHO_TEMPLATES and subnicho != "default":
         _template = _get_subnicho_template(subnicho)
+
+        # Sprint 14.6: counter rotation anti-repeticao
+        # Cada novo lead do mesmo subnicho pega layout/motion/copy DIFERENTE
+        try:
+            from backend.services.site_generation_counter import get_counter
+            from backend.services.variation_seed import get_variation
+
+            _tenant_id = (
+                (nicho_briefing and getattr(nicho_briefing, "tenant_id", None))
+                or (nicho_briefing.to_dict().get("tenant_id") if hasattr(nicho_briefing, "to_dict") else None)
+            )
+            _counter = get_counter(_tenant_id, subnicho)
+            _facts_for_seed = {
+                "business": {"name": nicho_briefing.nome_negocio or subnicho if hasattr(nicho_briefing, "nome_negocio") else subnicho, "segment": nicho_briefing.nicho},
+                "segment": nicho_briefing.nicho,
+                "subnicho": subnicho,
+            }
+            _variation = get_variation(_facts_for_seed, counter=_counter)
+            _layout_v = _variation.hero_layout
+            _motion_v = _variation.motion_style
+            _copy_v = _variation.copy_voice
+        except Exception as _var_err:
+            logger.warning(f"[agente_variacao] counter/variation falhou: {_var_err}")
+            _counter = 0
+            _variation = None
+            _layout_v = _motion_v = _copy_v = "default"
+
         _elapsed = _time.time() - _start
         return VariacaoEstrutural(
             task_id=task_id,
             source_agent="agente_variacao",
             target_agent="arquiteto_mestre",
             status="ok",
-            task_summary=f"Variacao canonica subnicho '{subnicho}' em {_elapsed:.3f}s (sem LLM)",
+            task_summary=f"Variacao canonica subnicho '{subnicho}' counter={_counter} em {_elapsed:.3f}s (sem LLM)",
             subnicho=subnicho,
             template_estrutura=_template["template_estrutura"],
-            template_hero=_template["template_hero"],
+            template_hero=_layout_v if _variation else _template["template_hero"],
             template_prova_social=_template["template_prova_social"],
             template_cta=_template["template_cta"],
             template_faq=_template["template_faq"],
             ordem_das_secoes=_template["ordem_das_secoes"],
             angulo_de_comunicacao=_template["angulo_de_comunicacao"],
-            regra_antirrepeticao=f"Estrutura fixa para subnicho {subnicho}; variacao vem de cor/copy.",
-            justificativa=f"Subnicho {subnicho} mapeado em SUB_NICHO_TEMPLATES - sem chamada LLM.",
+            regra_antirrepeticao=(
+                f"Estrutura fixa para subnicho {subnicho}; "
+                f"variacao vem de cor/copy. Counter={_counter} layout={_layout_v} copy={_copy_v}."
+            ),
+            justificativa=(
+                f"Subnicho {subnicho} mapeado em SUB_NICHO_TEMPLATES - "
+                f"sem chamada LLM. Counter rotation={_counter}."
+            ),
         )
 
     # 3) Fallback: chamar Sonnet para gerar variacao livre

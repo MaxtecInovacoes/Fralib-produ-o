@@ -3393,6 +3393,12 @@ def _generate_cinematic_studio_files(facts: dict[str, Any]) -> dict[str, str]:
     copy = _cinematic_copy(facts)
     images, videos = _cinematic_media_urls(facts)
     whatsapp = f"https://wa.me/55{copy['phone_digits']}" if copy["phone_digits"] else "#contato"
+
+    # Sprint 14.6: variation counter rotation injeta hero_classes
+    # diferente baseado em facts["variation"] (gerado por agente_variacao).
+    _variation_payload = facts.get("variation") if isinstance(facts.get("variation"), dict) else {}
+    _hero_classes_override = str(_variation_payload.get("hero_classes") or "").strip()
+
     source_files: dict[str, str] = {
         "src/App.tsx": """import { Index } from './pages/Index';
 import { LgpdBanner } from './components/LgpdBanner';
@@ -3409,6 +3415,7 @@ export default function App() {
 export const mediaImages = {json.dumps(images, ensure_ascii=False)} as const;
 export const mediaVideos = {json.dumps(videos, ensure_ascii=False)} as const;
 export const whatsappHref = {json.dumps(whatsapp, ensure_ascii=False)} as const;
+export const variation = {json.dumps(_variation_payload, ensure_ascii=False)} as const;
 """,
         "src/pages/Index.tsx": f"""import {{ useState }} from 'react';
 import {{ Navbar }} from '../components/Navbar';
@@ -3473,13 +3480,15 @@ export default Navbar;
         "src/components/HeroSection.tsx": """import { useEffect, useRef } from 'react';
 import { ArrowDownRight, MessageCircle, Play, Star } from 'lucide-react';
 import { motion } from 'motion/react';
-import gsap from 'gsap';
+import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { mediaImages, mediaVideos, siteCopy, whatsappHref } from './siteData';
+import { mediaImages, mediaVideos, siteCopy, variation, whatsappHref } from './siteData';
 
 gsap.registerPlugin(ScrollTrigger);
 
 export function HeroSection({ onOpen }: { onOpen?: () => void }) {
+  const rootRef = useRef<HTMLElement | null>(null);
+  const heroClasses = (variation && variation.hero_classes) ? variation.hero_classes : '';
   const rootRef = useRef<HTMLElement | null>(null);
   useEffect(() => {
     const root = rootRef.current;
@@ -3491,7 +3500,7 @@ export function HeroSection({ onOpen }: { onOpen?: () => void }) {
     return () => ctx.revert();
   }, []);
   return (
-    <section ref={rootRef} id="hero" className="relative isolate min-h-[92svh] overflow-hidden px-5 pb-16 pt-28 text-white md:px-8 md:pb-24 md:pt-36">
+    <section ref={rootRef} id="hero" className={`relative isolate min-h-[92svh] overflow-hidden px-5 pb-16 pt-28 text-white md:px-8 md:pb-24 md:pt-36 ${heroClasses}`}>
       <div className="absolute inset-0 -z-20" style={{ background: 'var(--bg)' }} />
       <video data-hero-video className="absolute inset-0 -z-10 h-full w-full object-cover opacity-52 saturate-[.9]" src={mediaVideos[0]} poster={mediaImages[0]} autoPlay muted loop playsInline preload="metadata" />
       <div className="absolute inset-0 -z-10" style={{ background: `linear-gradient(90deg, color-mix(in srgb, var(--bg) 96%, transparent), color-mix(in srgb, var(--bg) 66%, transparent) 42%, color-mix(in srgb, var(--bg) 22%, transparent)), radial-gradient(circle_at_80%_20%, color-mix(in srgb, var(--accent) 20%, transparent), transparent 34%)` }} />

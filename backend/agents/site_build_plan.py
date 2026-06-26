@@ -21,8 +21,17 @@ except Exception:  # pragma: no cover - package import variant
     from agents.component_library import build_component_contracts
 
 
-def build_site_build_plan(facts: dict[str, Any]) -> dict[str, Any]:
-    """Create an actionable build plan without inventing business facts."""
+def build_site_build_plan(
+    facts: dict[str, Any],
+    *,
+    variacao: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Create an actionable build plan without inventing business facts.
+
+    Sprint 14.6: aceita `variacao` opcional (gerado por agente_variacao).
+    Se contiver `ordem_das_secoes` valida, usa; caso contrario cai na ordem
+    hardcoded por services/reviews/address.
+    """
     name = _first(facts, "business_name", "nome", default="Negócio local")
     segment = _first(facts, "segmento", "nicho", default="negócio local")
     city = _first(facts, "cidade", "city", default="")
@@ -51,7 +60,12 @@ def build_site_build_plan(facts: dict[str, Any]) -> dict[str, Any]:
         else visual_dna.get("typography", {})
     ) or {}
 
-    section_order = _section_order(bool(services), bool(reviews), bool(address))
+    section_order = _resolve_section_order(
+        variacao=variacao,
+        has_services=bool(services),
+        has_reviews=bool(reviews),
+        has_address=bool(address),
+    )
     primary_goal = requirements.get("primary_conversion_goal") or ("whatsapp" if phone else "map_or_contact")
     component_contracts = build_component_contracts({**facts, "visual_dna": visual_dna})
     return {
@@ -123,6 +137,80 @@ def _section_order(has_services: bool, has_reviews: bool, has_address: bool) -> 
     order.append("location_contact" if has_address else "contact")
     order.append("footer")
     return order
+
+
+def _resolve_section_order(
+    *,
+    variacao: dict[str, Any] | None,
+    has_services: bool,
+    has_reviews: bool,
+    has_address: bool,
+) -> list[str]:
+    """Sprint 14.6: usa variacao.ordem_das_secoes quando existir.
+
+    Filtra secoes opcionais baseado nos facts (servicos/reviews/address)
+    para nao inventar secoes sem dados confirmados.
+    """
+    base = _section_order(has_services, has_reviews, has_address)
+    if not isinstance(variacao, dict):
+        return base
+
+    raw = variacao.get("ordem_das_secoes")
+    if not isinstance(raw, list) or not raw:
+        return base
+
+    # Sempre precisa ter hero, contato (contact|location_contact) e footer
+    canonical_tail = []
+    if has_address:
+        canonical_tail.append("location_contact")
+    else:
+        canonical_tail.append("contact")
+    canonical_tail.append("footer")
+
+    must_have = {"hero"} | set(canonical_tail)
+
+    # Normaliza secoes do variacao (mapeia aliases para IDs canonicos do plano)
+    _ALIASES = {
+        "sobre": "about",
+        "servicos": "confirmed_services",
+        "depoimentos": "social_proof",
+        "localizacao": "location_contact",
+        "contato": "contact",
+        "faq": "faq",
+        "numeros": "trust_bar",
+        "galeria": "media_story",
+        "planos": "decision_content",
+        "equipe": "about",
+        "cta-final": "contact",
+        "modalidades": "confirmed_services",
+        "cardapio": "confirmed_services",
+        "processo": "decision_content",
+        "areas-atuacao": "confirmed_services",
+    }
+
+    normalized: list[str] = []
+    seen: set[str] = set()
+    for s in raw:
+        if not isinstance(s, str):
+            continue
+        canon = _ALIASES.get(s.strip().lower(), s.strip().lower())
+        if canon in seen:
+            continue
+        if canon not in must_have:
+            # Skip secoes opcionais nao suportadas pelo plano canonico
+            # (mas permite nomes canonicos intermediarios como trust_bar, decision_content, media_story, about)
+            if canon not in {"trust_bar", "decision_content", "media_story", "about"}:
+                continue
+        normalized.append(canon)
+        seen.add(canon)
+
+    # Garante must_have no final
+    for m in must_have:
+        if m not in seen:
+            normalized.append(m)
+            seen.add(m)
+
+    return normalized
 
 
 def _section_plan(order: list[str], *, has_services: bool, has_reviews: bool, has_address: bool) -> list[dict[str, Any]]:

@@ -274,6 +274,21 @@ def render_site_with_builder(
     manifest.setdefault("prompt_agent", {}).setdefault("context", {})["nicho"] = (
         _nicho_serializado
     )
+
+    # Sprint 14.6: injeta variation (counter rotation) no contexto do builder
+    # para o renderer cinematic usar hero_classes / layout_variant corretos
+    try:
+        if hasattr(prd_or_facts, "variation"):
+            _var_payload = getattr(prd_or_facts, "variation", None)
+        elif isinstance(prd_or_facts, dict):
+            _var_payload = prd_or_facts.get("variation")
+        else:
+            _var_payload = None
+        if isinstance(_var_payload, dict) and _var_payload:
+            manifest["prompt_agent"]["context"]["variation"] = _var_payload
+    except Exception as _v_err:
+        logger.debug(f"[builder_worker] inject variation falhou: {_v_err}")
+
     manifest_path = write_builder_job_manifest(manifest, manifest_dir=manifest_dir)
 
     workspace_dir = Path(manifest["sandbox"]["workspace"]).resolve()

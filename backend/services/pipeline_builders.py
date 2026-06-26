@@ -346,6 +346,58 @@ def build_skill_fast_prd(state: Any) -> SimpleNamespace:
             "typography": {"heading": font_heading, "body": font_body},
         }
     )
+
+    # Sprint 14.6: counter rotation anti-repeticao
+    # Cada novo lead do mesmo subnicho pega variation DIFERENTE
+    # (hero_classes, layout_variant, motion_variant, copy_variant)
+    _tenant_id_for_counter = (
+        raw.get("user_id")
+        or raw.get("tenant_id")
+        or getattr(state, "tenant_id", None)
+        or getattr(getattr(state, "lead_obj", None), "user_id", None)
+    )
+    _subnicho_for_counter = (subniche or "").strip().lower() or (segmento or "").strip().lower()
+    _variation_payload = {"hero_classes": "", "layout_variant": "", "motion_variant": "", "copy_variant": "", "counter": 0}
+    try:
+        from backend.services.site_generation_counter import (
+            get_counter,
+            log_generation,
+            hash_color_palette,
+        )
+        from backend.services.variation_seed import get_variation
+        from backend.services.archetype_resolver import (
+            archetype_for_segment,
+            resolve_archetype_variation,
+        )
+
+        _counter = get_counter(_tenant_id_for_counter, _subnicho_for_counter)
+        _var = get_variation(
+            {
+                "business": {"name": nome, "segment": segmento},
+                "segment": segmento,
+                "subnicho": _subnicho_for_counter,
+            },
+            counter=_counter,
+        )
+        _archetype = archetype_for_segment(segmento)
+        _arch_var = resolve_archetype_variation(
+            _archetype, _var, subnicho=_subnicho_for_counter, counter=_counter
+        )
+        _variation_payload = {
+            "hero_classes": _arch_var.get("hero_classes") or "",
+            "layout_variant": _arch_var.get("layout_variant") or "",
+            "motion_variant": _arch_var.get("motion_variant") or "",
+            "copy_variant": _arch_var.get("copy_variant") or "",
+            "counter": _counter,
+            "archetype": _archetype,
+            "hero_layout": _var.hero_layout,
+            "motion_style": _var.motion_style,
+            "copy_voice": _var.copy_voice,
+            "section_order": _arch_var.get("section_order") or [],
+        }
+    except Exception as _ve:
+        logging.getLogger(__name__).warning(f"[pipeline_builders] variation falhou: {_ve}")
+
     return SimpleNamespace(
         business_name=nome,
         nome=nome,
@@ -379,6 +431,10 @@ def build_skill_fast_prd(state: Any) -> SimpleNamespace:
         color_palette=dna_tokens,
         typography={"heading": font_heading, "body": font_body},
         layout_type="editorial",
+        variation=_variation_payload,
+        subnicho=_subnicho_for_counter,
+        tenant_id=_tenant_id_for_counter,
+        lead_id=str(lead_id or nome),
         instrucao_criativa_para_dev=(
             f"BRAND DNA: {nome} deve parecer confiavel, local e memoravel em {cidade}. "
             f"Arquetipo {archetype['archetype']}: {archetype['visual_voice']}. "

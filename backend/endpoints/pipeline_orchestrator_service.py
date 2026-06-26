@@ -1935,6 +1935,38 @@ async def executar_pipeline_completo(
                 )
                 state.builder_output_dir = _result.get("output_dir", "")
                 state.builder_manifest_path = _result.get("manifest_path", "")
+
+                # Sprint 14.6: log da geracao no site_generation_log
+                # para o proximo lead do mesmo subnicho pegar variation diferente.
+                try:
+                    from backend.services.site_generation_counter import (
+                        log_generation,
+                        hash_color_palette,
+                    )
+                    _variation_log = getattr(state.prd_arquiteto, "variation", None) or {}
+                    if isinstance(_variation_log, dict) and _variation_log:
+                        log_generation(
+                            tenant_id=tenant_id,
+                            lead_id=str(getattr(state, "lead_id", "") or _job_id),
+                            subnicho=str(
+                                getattr(state.prd_arquiteto, "subnicho", None)
+                                or getattr(state, "subniche", None)
+                                or state.segmento
+                                or ""
+                            ),
+                            segmento=state.segmento or "",
+                            layout_variant=str(_variation_log.get("layout_variant") or "")[:20],
+                            motion_variant=str(_variation_log.get("motion_variant") or "")[:20],
+                            copy_variant=str(_variation_log.get("copy_variant") or "")[:20],
+                            color_palette_hash=hash_color_palette(
+                                getattr(state.prd_arquiteto, "color_palette", None)
+                            ),
+                            hero_classes=str(_variation_log.get("hero_classes") or "")[:2000],
+                            section_order=list(_variation_log.get("section_order") or []),
+                        )
+                except Exception as _log_err:
+                    logger.debug(f"[Sprint 14.6] log_generation falhou: {_log_err}")
+
                 return _result["html"]
 
             state.html_final = tentar(
