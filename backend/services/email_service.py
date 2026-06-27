@@ -359,3 +359,161 @@ async def enviar_email_resumo_diario(email: str, nome: str, leads: list) -> bool
     except Exception as e:
         print(f"[Email] resumo diario falhou: {e}")
         return False
+
+
+# --- Email: Reativacao de cliente inativo (Sprint 14.3) ---
+async def enviar_email_reativacao(
+    email: str,
+    nome: str,
+    dias_cadastrado: int,
+    plano: str,
+    creditos: int,
+) -> bool:
+    """Email leve e consultivo para clientes que cadastraram mas nunca usaram.
+
+    Tom: oferecer ajuda, nao pressionar. CTA primario = responder email.
+    CTA secundario = ir direto pro painel.
+    """
+    if not RESEND_API_KEY:
+        print(f"[Email] RESEND_API_KEY nao configurada - reativacao {email}")
+        return False
+
+    # Primeiro nome para o assunto (tom pessoal)
+    primeiro_nome = (nome or email.split("@")[0]).split()[0]
+    plural_dias = "dia" if dias_cadastrado == 1 else "dias"
+    plural_creditos = "credito" if creditos == 1 else "creditos"
+    link_dashboard = f"{APP_URL}/dashboard"
+
+    html = f"""<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="color-scheme" content="dark" />
+<meta name="supported-color-schemes" content="dark" />
+<title>Oi {primeiro_nome}, ficou com duvida?</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
+</head>
+<body style="margin:0;padding:0;background-color:#08080c;font-family:'DM Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color:#08080c;min-height:100vh;">
+<tr>
+<td align="center" style="padding:40px 16px;">
+<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width:520px;">
+<tr>
+<td align="center" style="padding-bottom:32px;">
+<img src="https://seunegociofralib.site/images/Logo%20FraLib.png" alt="FraLib OS" width="140" style="display:block;border:0;outline:none;" />
+</td>
+</tr>
+<tr>
+<td>
+<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color:#12121a;border-radius:16px;border:1px solid #1e1e2e;box-shadow:0 0 60px rgba(124,58,237,0.08),0 0 120px rgba(168,85,247,0.04);">
+<tr>
+<td style="padding:48px 40px 16px 40px;" align="center">
+<table role="presentation" cellpadding="0" cellspacing="0">
+<tr>
+<td style="width:64px;height:64px;background:linear-gradient(135deg,#7c3aed,#a855f7);border-radius:50%;text-align:center;vertical-align:middle;font-size:28px;box-shadow:0 0 30px rgba(124,58,237,0.4);">&#128172;</td>
+</tr>
+</table>
+</td>
+</tr>
+<tr>
+<td style="padding:24px 40px 0 40px;" align="center">
+<h1 style="margin:0;font-family:'Press Start 2P',monospace;font-size:13px;font-weight:700;color:#ffffff;letter-spacing:-0.5px;line-height:1.8;">Oi {primeiro_nome}, ficou com duvida?</h1>
+</td>
+</tr>
+<tr>
+<td style="padding:20px 40px 0 40px;">
+<p style="margin:0;font-size:15px;line-height:24px;color:#a1a1aa;">Ola <span style="color:#e4e4e7;font-weight:500;">{nome}</span>,</p>
+<p style="margin:12px 0 0 0;font-size:15px;line-height:24px;color:#a1a1aa;">Voce criou sua conta na FraLib ha <strong style="color:#e4e4e7;">{dias_cadastrado} {plural_dias}</strong>, e eu queria saber: <strong style="color:#e4e4e7;">ficou com alguma duvida?</strong> Travou em alguma parte? Sentiu falta de alguma coisa?</p>
+<p style="margin:16px 0 0 0;font-size:15px;line-height:24px;color:#a1a1aa;">As vezes o primeiro site da uma travada - o briefing tem umas perguntas sobre seu negocio (segmento, cidade, servicos) e eu sei que nao e obvio pra todo mundo.</p>
+</td>
+</tr>
+<tr>
+<td style="padding:20px 40px 0 40px;" align="center">
+<p style="margin:0;font-size:14px;line-height:22px;color:#a1a1aa;font-style:italic;">"Me conta seu tipo de negocio que eu te ajudo a configurar."</p>
+</td>
+</tr>
+<tr>
+<td style="padding:32px 40px 0 40px;" align="center">
+<table role="presentation" cellpadding="0" cellspacing="0">
+<tr>
+<td align="center" style="border-radius:6px;background:#FFB800;box-shadow:0 4px 0 #b38200, 0 0 20px rgba(255,184,0,0.3);">
+<a href="mailto:contato@seunegociofralib.site?subject=Reativacao%20-%20Quero%20gerar%20meu%20site" style="display:inline-block;padding:14px 28px;font-family:'Press Start 2P',monospace;font-size:9px;font-weight:600;color:#08080c;text-decoration:none;letter-spacing:0.5px;">RESPONDER ESTE EMAIL</a>
+</td>
+</tr>
+</table>
+</td>
+</tr>
+<tr>
+<td style="padding:16px 40px 0 40px;" align="center">
+<p style="margin:0;font-size:12px;color:#71717a;">ou entao va direto pro painel:</p>
+</td>
+</tr>
+<tr>
+<td style="padding:14px 40px 0 40px;" align="center">
+<table role="presentation" cellpadding="0" cellspacing="0">
+<tr>
+<td align="center" style="border-radius:6px;background:transparent;border:1px solid #7c3aed;">
+<a href="{link_dashboard}" target="_blank" style="display:inline-block;padding:12px 24px;font-family:'Press Start 2P',monospace;font-size:8px;font-weight:600;color:#a855f7;text-decoration:none;letter-spacing:0.5px;">ABRIR PAINEL</a>
+</td>
+</tr>
+</table>
+</td>
+</tr>
+<tr>
+<td style="padding:24px 40px 0 40px;">
+<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color:#0a0a0f;border:1px solid #1e1e2e;border-radius:10px;">
+<tr>
+<td style="padding:16px 20px;">
+<p style="margin:0;font-size:12px;color:#71717a;text-transform:uppercase;letter-spacing:0.5px;">Sua conta</p>
+<p style="margin:8px 0 0 0;font-size:14px;color:#e4e4e7;"><strong>{creditos}</strong> {plural_creditos} {plano} esperando</p>
+</td>
+</tr>
+</table>
+</td>
+</tr>
+<tr>
+<td style="padding:24px 40px 0 40px;" align="center">
+<table role="presentation" cellpadding="0" cellspacing="0" width="100%"><tr><td style="border-top:1px solid #1e1e2e;font-size:0;line-height:0;">&nbsp;</td></tr></table>
+</td>
+</tr>
+<tr>
+<td style="padding:20px 40px 40px 40px;" align="center">
+<p style="margin:0;font-size:12px;line-height:18px;color:#52525b;">Se nao quiser mais receber emails da gente, <a href="mailto:contato@seunegociofralib.site?subject=Cancelar%20inscricao" style="color:#71717a;text-decoration:underline;">cancele sua inscricao</a>.</p>
+</td>
+</tr>
+</table>
+</td>
+</tr>
+<tr>
+<td style="padding:32px 40px 0 40px;" align="center">
+<p style="margin:0;font-family:'Press Start 2P',monospace;font-size:7px;color:#3f3f46;line-height:1.8;">FraLib OS</p>
+<p style="margin:8px 0 0 0;font-size:11px;color:#27272a;">Sites com IA para negocios locais</p>
+</td>
+</tr>
+</table>
+</td>
+</tr>
+</table>
+</body>
+</html>"""
+    try:
+        async with httpx.AsyncClient(timeout=10) as c:
+            r = await c.post(
+                "https://api.resend.com/emails",
+                headers={"Authorization": f"Bearer {RESEND_API_KEY}", "Content-Type": "application/json"},
+                json={
+                    "from": f"FraLib <{FROM_EMAIL}>",
+                    "to": [email],
+                    "subject": f"Oi {primeiro_nome}, ficou com alguma duvida sobre a FraLib?",
+                    "html": html,
+                    "reply_to": "contato@seunegociofralib.site",
+                },
+            )
+            if r.status_code != 200:
+                print(f"[Email] Reativacao falhou: {r.status_code} {r.text[:200]}")
+                return False
+            return True
+    except Exception as e:
+        print(f"[Email] reativacao erro: {e}")
+        return False

@@ -262,6 +262,45 @@ canvas{max-width:100%}
     <div id="metrics-area" class="loading"><span class="spinner"></span> carregando métricas…</div>
   </section>
 
+  <!-- ========== REATIVACAO (Sprint 14.3) ========== -->
+  <section class="panel" id="panel-reativacao">
+    <h2 class="section-title">REATIVAÇÃO DE INATIVOS</h2>
+    <div class="table-wrap">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-bottom:16px">
+        <!-- Card 1: Inativos agora -->
+        <div class="chart-card" style="padding:18px">
+          <div style="font-family:var(--fl-font-mono);font-size:11px;color:var(--fl-text-dim);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">Inativos agora</div>
+          <div style="font-family:var(--fl-font-brand);font-size:32px;color:var(--fl-purple-300);line-height:1" id="outreachInativosCount">—</div>
+          <div style="font-size:12px;color:var(--fl-text-muted);margin-top:8px" id="outreachInativosLabel">contas confirmadas que nunca usaram</div>
+        </div>
+        <!-- Card 2: Última campanha -->
+        <div class="chart-card" style="padding:18px">
+          <div style="font-family:var(--fl-font-mono);font-size:11px;color:var(--fl-text-dim);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">Última campanha</div>
+          <div style="font-family:var(--fl-font-brand);font-size:13px;color:var(--fl-text);margin-bottom:8px" id="outreachUltimaCampaign">—</div>
+          <div style="display:flex;gap:14px;flex-wrap:wrap;font-size:11px">
+            <span style="color:var(--fl-text-dim)">Enviados <strong id="outreachEnviados" style="color:var(--fl-purple-300)">0</strong></span>
+            <span style="color:var(--fl-text-dim)">Convertidos <strong id="outreachConvertidos" style="color:#10b981">0</strong></span>
+            <span style="color:var(--fl-text-dim)">Taxa <strong id="outreachTaxa" style="color:#FFB800">0%</strong></span>
+          </div>
+        </div>
+        <!-- Card 3: Disparar -->
+        <div class="chart-card" style="padding:18px;display:flex;flex-direction:column;justify-content:space-between">
+          <div>
+            <div style="font-family:var(--fl-font-mono);font-size:11px;color:var(--fl-text-dim);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">Disparar campanha</div>
+            <div style="font-size:12px;color:var(--fl-text-muted);margin-bottom:12px">Email leve e consultivo. Idempotente (não duplica).</div>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn" onclick="dispararReativacao(true)" style="background:var(--card);color:var(--fl-text);border:1px solid var(--border);flex:1">DRY RUN</button>
+            <button class="btn" onclick="dispararReativacao(false)" style="background:#FFB800;color:#08080c;border:none;flex:1;font-weight:700">DISPARAR</button>
+          </div>
+        </div>
+      </div>
+      <div id="outreachResult" style="display:none;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:14px;margin-top:8px">
+        <pre id="outreachResultPre" style="margin:0;font-family:var(--fl-font-mono);font-size:11px;color:var(--fl-text);white-space:pre-wrap;max-height:300px;overflow:auto"></pre>
+      </div>
+    </div>
+  </section>
+
   <!-- ========== USUARIOS ========== -->
   <section class="panel" id="panel-usuarios">
     <h2 class="section-title">USUÁRIOS DA PLATAFORMA</h2>
@@ -2307,6 +2346,92 @@ async function restoreSdrVersion(versionId){
     toast('Falha: ' + (e.message||e), 'error');
   }
 }
+
+// ===== REATIVACAO DE INATIVOS (Sprint 14.3) =====
+const REATIVACAO_CAMPAIGN = 'reativacao_v1_2026_06_26';
+
+async function loadOutreach() {
+  try {
+    // Card 1: inativos
+    const rInat = await authFetch('/api/admin/outreach/inativos');
+    const dInat = await rInat.json();
+    const total = dInat.total || 0;
+    const inativosCountEl = document.getElementById('outreachInativosCount');
+    const inativosLabelEl = document.getElementById('outreachInativosLabel');
+    if (inativosCountEl) inativosCountEl.textContent = total;
+    if (inativosLabelEl) {
+      const pagantes = (dInat.items || []).filter(u => u.plano === 'pro' || u.plano === 'ilimitado').length;
+      inativosLabelEl.textContent = total > 0
+        ? `${total} contas confirmadas · ${pagantes} pagante(s)`
+        : 'nenhuma conta';
+    }
+
+    // Card 2: ultima campanha
+    try {
+      const rDash = await authFetch('/api/admin/outreach/dashboard/' + encodeURIComponent(REATIVACAO_CAMPAIGN));
+      const dDash = await rDash.json();
+      const total_c = dDash.total || 0;
+      const convertidos = dDash.converted_users || 0;
+      const taxa = dDash.conversion_rate_pct || 0;
+      document.getElementById('outreachUltimaCampaign').textContent = REATIVACAO_CAMPAIGN;
+      document.getElementById('outreachEnviados').textContent = total_c;
+      document.getElementById('outreachConvertidos').textContent = convertidos;
+      document.getElementById('outreachTaxa').textContent = taxa + '%';
+    } catch (e) {
+      // campanha ainda nao disparada — ok
+      document.getElementById('outreachUltimaCampaign').textContent = REATIVACAO_CAMPAIGN + ' (não disparada)';
+    }
+  } catch (e) {
+    console.error('loadOutreach falhou:', e);
+  }
+}
+
+async function dispararReativacao(dryRun) {
+  const acao = dryRun ? 'SIMULAR' : 'ENVIAR DE VERDADE';
+  if (!dryRun && !confirm(`${acao} a campanha de reativação?\n\nIsso vai mandar email para todos os inativos. Idempotente — pode rodar de novo sem duplicar.`)) return;
+  if (dryRun && !confirm(`${acao} — apenas simular, sem enviar email?`)) return;
+
+  const resultEl = document.getElementById('outreachResult');
+  const preEl = document.getElementById('outreachResultPre');
+  if (resultEl) resultEl.style.display = 'block';
+  if (preEl) preEl.textContent = (dryRun ? 'Simulando...\n\n' : 'Enviando... (pode levar ~15min com jitter)\n\n');
+
+  try {
+    const r = await authFetch('/api/admin/outreach/disparar/' + encodeURIComponent(REATIVACAO_CAMPAIGN), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dry_run: dryRun, campaign: REATIVACAO_CAMPAIGN }),
+    });
+    const d = await r.json();
+    if (preEl) {
+      preEl.textContent = JSON.stringify({
+        campaign: d.campaign,
+        dry_run: d.dry_run,
+        total_candidatos: d.total_candidatos,
+        enviados: d.enviados,
+        pulados: d.pulados,
+        erros: d.erros,
+        detalhes_resumo: {
+          sent: (d.detalhes || []).filter(x => x.acao === 'sent').length,
+          would_send: (d.detalhes || []).filter(x => x.acao === 'would_send').length,
+          skipped: (d.detalhes || []).filter(x => x.acao === 'skipped').length,
+          failed: (d.detalhes || []).filter(x => x.acao === 'failed').length,
+        },
+        primeiros_5_detalhes: (d.detalhes || []).slice(0, 5),
+      }, null, 2);
+    }
+    toast(dryRun ? `Dry run: ${d.enviados} simulados, ${d.pulados} já enviados` : `Campanha enviada: ${d.enviados} ok, ${d.erros} erros`, d.erros > 0 ? 'error' : 'success');
+    loadOutreach();
+  } catch (e) {
+    if (preEl) preEl.textContent = 'ERRO: ' + (e.message || e);
+    toast('Falha: ' + (e.message || e), 'error');
+  }
+}
+
+// Auto-load quando a pagina abrir
+document.addEventListener('DOMContentLoaded', () => { setTimeout(loadOutreach, 1500); });
+// Recarrega a cada 60s
+setInterval(loadOutreach, 60000);
 
 </script>
 
