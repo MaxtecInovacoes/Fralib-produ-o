@@ -17,6 +17,9 @@ sys.path.insert(0, AGENTS_DIR)
 from .agent import get_sdr_graph
 from .lead_lock import _lead_lock_guard  # Fix bug 3x duplicate replies
 
+# Importar ESTADO_TO_STAGE do source of truth (DRY)
+from backend.whatsapp.connection_tracker import ESTADO_TO_STAGE
+
 
 # ════════════════════════════════════════════════════════════════════
 # OUTPUT SCHEMAS (compat com bryan.py)
@@ -486,26 +489,8 @@ ESTADOS_SDR = [
     "handoff", "won", "lost", "scheduled", "followup_24h", "followup_72h",
 ]
 
-# Mapeamento estado SDR → stage kanban (compat)
-ESTADO_TO_STAGE = {
-    "hook": "intro",
-    "qualify": "intro",
-    "pain": "followup1",
-    "amplify": "followup1",
-    "tease": "followup2",
-    "proof": "followup2",
-    "reveal": "followup2",
-    "feedback": "followup2",
-    "close": "negociacao",
-    "urgency": "negociacao",
-    "handoff": "qualificados",
-    "won": "ganhos",
-    "lost": "perdidos",
-    "opt_out": "perdidos",
-    "scheduled": "followup1",
-    "followup_24h": "followup1",
-    "followup_72h": "followup2",
-}
+# NOTE: ESTADO_TO_STAGE agora é importado de backend.whatsapp.connection_tracker
+# (linha ~23) para manter DRY - fonte unica de verdade
 
 
 # ════════════════════════════════════════════════════════════════════

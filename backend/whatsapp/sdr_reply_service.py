@@ -10,101 +10,6 @@ import pytz
 
 logger = logging.getLogger(__name__)
 
-# Sliding window config
-HISTORY_WINDOW = 30  # ultimas N mensagens vao cruas no prompt
-SUMMARY_THRESHOLD = 30  # se history > N, gera summary das mais antigas
-SUMMARY_MAX_TOKENS = 250  # limite do summary (chars estimados)
-
-
-def build_history(rows, max_messages: int = HISTORY_WINDOW):
-    """Constroi historico OpenAI-style com sliding window.
-
-    Se o numero total de mensagens > max_messages:
-    - Gera summary das mensagens mais antigas (Haiku, mais barato)
-    - Mantem as ultimas max_messages cruas no array
-    - Injeta summary como primeira mensagem do tipo "system"
-
-    Args:
-        rows: lista de tuplas (mensagem, direcao) vinda do banco.
-        max_messages: limite de mensagens raw no prompt.
-
-    Returns:
-        Lista de dicts {"role": ..., "content": ...} pronta pra OpenAI API.
-    """
-    history = []
-    rows = rows or []
-    for mensagem_hist, direcao_hist in reversed(rows):
-        history.append(
-            {
-                "role": "assistant" if direcao_hist == "saida" else "user",
-                "content": mensagem_hist or "",
-            }
-        )
-
-    if len(history) <= max_messages:
-        return history
-
-    # Sliding window: gera summary das mensagens antigas
-    older = history[:-max_messages]
-    recent = history[-max_messages:]
-    summary = _summarize_history(older)
-    if summary:
-        # summary como system message no topo
-        return [
-            {"role": "system", "content": f"[Resumo das mensagens anteriores] {summary}"}
-        ] + recent
-    return recent
-
-
-def _summarize_history(messages: list[dict]) -> str:
-    """Gera summary compacto de uma lista de mensagens.
-
-    Tenta Haiku (barato) primeiro; se falhar, faz extractive summary
-    (pega top-3 mensagens mais longas + intents detectados).
-    """
-    if not messages:
-        return ""
-
-    # 1. Fallback rapido: extractive summary sem LLM (nao bloqueia)
-    intents_seen = []
-    snippets = []
-    for msg in messages[-20:]:  # limite defensivo
-        content = (msg.get("content") or "").strip()
-        if content:
-            snippets.append(content[:120])
-
-    # 2. Tentar LLM (Haiku) pra melhor qualidade
-    try:
-        from agents.llm_direct import call_claude
-        conversation = "\n".join(
-            f"{msg.get('role', 'user')}: {(msg.get('content') or '')[:200]}"
-            for msg in messages[-50:]  # limite de 50 msgs pra nao estourar input
-        )
-        summary = call_claude(
-            system=(
-                "Voce resume conversas de WhatsApp SDR em ate 3 frases. "
-                "Foque em: (1) o que o lead quer, (2) objecoes principais, "
-                "(3) estado atual da conversa. Use portugues brasileiro. "
-                "Maximo 250 caracteres."
-            ),
-            user=f"Conversa:\n{conversation}",
-            model="sonnet",  # SONNET (consistente com resto do Franz)
-            max_tokens=300,
-            temperature=0.2,
-            agent_name="sdr_history_summarizer",
-            respect_agent_config=False,
-            enable_context=False,
-        ).strip()
-        if summary and len(summary) < 800:
-            return summary[:SUMMARY_MAX_TOKENS * 4]  # 250 tokens ~ 1000 chars
-    except Exception as e:
-        logger.warning(f"[build_history] Haiku summary falhou, usando extractive: {e}")
-
-    # 3. Fallback extractive
-    if snippets:
-        return " | ".join(snippets[-3:])[:SUMMARY_MAX_TOKENS * 4]
-    return ""
-
 
 def sanitize_reply(reply: str, retry_extractor=None, fallback_reply="Opa, tudo bem? Me dá um minuto que já te respondo! 👍"):
     resposta = reply or ""
@@ -201,3 +106,40 @@ def normalize_followup_date(raw_followup_date: str, timezone_name="America/Sao_P
         return raw_followup_date, "ok"
     except (ValueError, TypeError):
         return (hoje + timedelta(days=1)).strftime("%Y-%m-%d"), "invalid"
+
+
+def _summarize_history(messages: list) -> str:
+    """Gera summary compacto de uma lista de mensagens.
+
+    Tenta Haiku (barato) primeiro; se falhar, faz extractive summary
+    (pega top-3 mensagens mais longas + intents detectados).
+    Usado por history_helper.py quando > 30 mensagens.
+    """
+    if not messages:
+        return ""
+    intents_seen = []
+    snippets = []
+    for msg in messages[-20:]:
+        content = (msg.get("content") or "").strip()
+        if content:
+            snippets.append(content[:120])
+    try:
+        from agents.llm_direct import call_claude
+        conversation = "\n".join(f"lead: {s[:200]}" for s in snippets[:5])
+        summary = call_claude(
+            system="Voce resume conversas de WhatsApp SDR em ate 3 frases. Foque em: (1) o que o lead quer, (2) objecoes principais, (3) estado atual. Use portugues brasileiro. Maximo 250 caracteres.",
+            user=f"Conversa:\n{conversation}",
+            model="haiku",
+            max_tokens=150,
+            temperature=0.2,
+            agent_name="sdr_history_summarizer",
+            respect_agent_config=False,
+            enable_context=False,
+        ).strip()
+        if summary and len(summary) < 1000:
+            return summary[:250]
+    except Exception as e:
+        pass
+    if snippets:
+        return " | ".join(snippets[-3:])[:250]
+    return ""

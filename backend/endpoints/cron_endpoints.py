@@ -15,6 +15,7 @@ from backend.core.database import engine
 from backend.services.email_service import enviar_email_resumo_diario
 from backend.services.credits_manager import plano_tem_sdr
 from backend.whatsapp_listener import is_tenant_connected, _salvar_interacao
+from backend.whatsapp.sender import send_text_parts
 
 router = APIRouter(prefix='/api/cron', tags=['cron'])
 
@@ -119,8 +120,9 @@ async def despachar_fila_franz(x_cron_secret: str = Header(None, alias='X-Cron-S
     sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'agents'))
     from agents.sdr_langgraph import iniciar_contato, FranzInput, _dentro_do_horario, _escolher_variante
     from services.sdr_gateway import SdrMessageContext, evaluate_sdr_output, has_prior_outbound
+    from backend.services.outbound_queue import enqueue_outbound
 
-    import httpx, re as _re
+    import re as _re
     meowhats_url = os.getenv("MEOWHATS_URL", "http://localhost:3001")
     meowhats_key = os.getenv("MEOWHATS_KEY", "").strip()
     if not meowhats_key:
@@ -202,36 +204,34 @@ async def despachar_fila_franz(x_cron_secret: str = Header(None, alias='X-Cron-S
                     print(f"[Cron Franz] 🛑 Guard bloqueou {nome}: {guard.code} - {guard.reason}")
                     continue
 
-                # Enviar via meowhats
+                # Enviar via outbound queue (rate limit 2 msgs/10min)
                 tel = (whatsapp or telefone or "").strip()
                 tel = _re.sub(r'\D', '', tel)
                 if not tel.startswith('55'):
                     tel = '55' + tel
-                jid = f"{tel}@s.whatsapp.net"
 
-                with httpx.Client(timeout=10) as c:
-                    r = c.post(
-                        f"{meowhats_url}/api/sessions/{wpp_tenant}/send",
-                        headers={"X-API-Key": meowhats_key},
-                        json={"jid": jid, "type": "text", "text": franz_output.reply}
-                    )
-                    if r.status_code == 200:
-                        _salvar_interacao(lead_id, franz_output.reply, "saida", user_id)
-                        conn.execute(text(
-                            "UPDATE leads SET sdr_stage='hook', ab_variant=:var, atualizado_em=NOW()::text WHERE id=:id AND user_id=:uid"
-                        ), {"id": lead_id, "var": _escolher_variante(lead_id), "uid": user_id})
-                        conn.commit()
-                        enviados += 1
-                        print(f"[Cron Franz] ✅ Enviado para {nome} ({tel[-4:]})")
+                enqueue_outbound(
+                    engine=engine,
+                    tenant_id=user_id,
+                    lead_id=str(lead_id),
+                    phone=tel,
+                    message=franz_output.reply,
+                    source="franz",
+                    priority=5,
+                )
+                _salvar_interacao(lead_id, franz_output.reply, "saida", user_id)
+                conn.execute(text(
+                    "UPDATE leads SET sdr_stage='hook', ab_variant=:var, atualizado_em=NOW()::text WHERE id=:id AND user_id=:uid"
+                ), {"id": lead_id, "var": _escolher_variante(lead_id), "uid": user_id})
+                conn.commit()
+                enviados += 1
+                print(f"[Cron Franz] ✅ Enfileirado para {nome} ({tel[-4:]})")
 
-                        # Jitter humanizado entre envios (so apos sucesso, so se sobrou lead)
-                        if enviados < len(rows):
-                            delay = random.uniform(FRANZ_CRON_JITTER_MIN_S, FRANZ_CRON_JITTER_MAX_S)
-                            print(f"[Cron Franz] ⏳ aguardando {delay:.1f}s antes do proximo envio")
-                            time.sleep(delay)
-                    else:
-                        erros += 1
-                        print(f"[Cron Franz] ❌ Falha envio {nome}: {r.text[:80]}")
+                # Jitter humanizado entre envios (so apos sucesso, so se sobrou lead)
+                if enviados < len(rows):
+                    delay = random.uniform(FRANZ_CRON_JITTER_MIN_S, FRANZ_CRON_JITTER_MAX_S)
+                    print(f"[Cron Franz] ⏳ aguardando {delay:.1f}s antes do proximo envio")
+                    time.sleep(delay)
             except Exception as e:
                 erros += 1
                 print(f"[Cron Franz] ❌ Erro {nome}: {e}")
@@ -258,8 +258,9 @@ async def followup_franz(x_cron_secret: str = Header(None, alias='X-Cron-Secret'
     sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'agents'))
     from agents.sdr_langgraph import followup_automatico, _dentro_do_horario
     from services.sdr_gateway import SdrMessageContext, evaluate_sdr_output, has_prior_outbound
+    from backend.services.outbound_queue import enqueue_outbound
 
-    import httpx, re as _re
+    import re as _re
     meowhats_url = os.getenv("MEOWHATS_URL", "http://localhost:3001")
     meowhats_key = os.getenv("MEOWHATS_KEY", "").strip()
     if not meowhats_key:
@@ -445,22 +446,23 @@ async def followup_franz(x_cron_secret: str = Header(None, alias='X-Cron-Secret'
                     print(f"[Cron FU] 🛑 Guard bloqueou {nome}: {guard.code} - {guard.reason}")
                     continue
 
-                with httpx.Client(timeout=10) as c:
-                    r = c.post(
-                        f"{meowhats_url}/api/sessions/{wpp_tenant}/send",
-                        headers={"X-API-Key": meowhats_key},
-                        json={"jid": jid, "type": "text", "text": fu_output.reply}
-                    )
-                    if r.status_code == 200:
-                        _salvar_interacao(lead_id, fu_output.reply, "saida", user_id)
-                        conn.execute(text(
-                            "UPDATE leads SET sdr_stage=:stage, atualizado_em=NOW()::text WHERE id=:id AND user_id=:uid"
-                        ), {"id": lead_id, "stage": novo_stage, "uid": user_id})
-                        conn.commit()
-                        enviados += 1
-                        print(f"[Cron FU] ✅ Follow-up '{tipo}' para {nome}")
-                    else:
-                        erros += 1
+                # Enviar via outbound queue (rate limit 2 msgs/10min)
+                enqueue_outbound(
+                    engine=engine,
+                    tenant_id=user_id,
+                    lead_id=str(lead_id),
+                    phone=tel,
+                    message=fu_output.reply,
+                    source="followup",
+                    priority=5,
+                )
+                _salvar_interacao(lead_id, fu_output.reply, "saida", user_id)
+                conn.execute(text(
+                    "UPDATE leads SET sdr_stage=:stage, atualizado_em=NOW()::text WHERE id=:id AND user_id=:uid"
+                ), {"id": lead_id, "stage": novo_stage, "uid": user_id})
+                conn.commit()
+                enviados += 1
+                print(f"[Cron FU] ✅ Enfileirado '{tipo}' para {nome}")
             except Exception as e:
                 erros += 1
                 print(f"[Cron FU] ❌ Erro {nome}: {e}")
@@ -515,23 +517,24 @@ async def followup_franz(x_cron_secret: str = Header(None, alias='X-Cron-Secret'
                     print(f"[Cron FU] 🛑 Guard bloqueou scheduled {nome}: {guard.code} - {guard.reason}")
                     continue
 
-                with httpx.Client(timeout=10) as c:
-                    r = c.post(
-                        f"{meowhats_url}/api/sessions/{wpp_tenant}/send",
-                        headers={"X-API-Key": meowhats_key},
-                        json={"jid": jid, "type": "text", "text": fu_output.reply}
-                    )
-                    if r.status_code == 200:
-                        _salvar_interacao(lead_id, fu_output.reply, "saida", user_id)
-                        # Volta pro stage anterior ao scheduled (discovery ou qualify)
-                        conn.execute(text(
-                            "UPDATE leads SET sdr_stage='pain', followup_date=NULL, atualizado_em=NOW()::text WHERE id=:id AND user_id=:uid"
-                        ), {"id": lead_id, "uid": user_id})
-                        conn.commit()
-                        enviados += 1
-                        print(f"[Cron FU] 📅 Agendado retomado: {nome}")
-                    else:
-                        erros += 1
+                # Enviar via outbound queue (rate limit 2 msgs/10min)
+                enqueue_outbound(
+                    engine=engine,
+                    tenant_id=user_id,
+                    lead_id=str(lead_id),
+                    phone=tel,
+                    message=fu_output.reply,
+                    source="scheduled",
+                    priority=5,
+                )
+                _salvar_interacao(lead_id, fu_output.reply, "saida", user_id)
+                # Volta pro stage anterior ao scheduled (discovery ou qualify)
+                conn.execute(text(
+                    "UPDATE leads SET sdr_stage='pain', followup_date=NULL, atualizado_em=NOW()::text WHERE id=:id AND user_id=:uid"
+                ), {"id": lead_id, "uid": user_id})
+                conn.commit()
+                enviados += 1
+                print(f"[Cron FU] 📅 Enfileirado retomado: {nome}")
             except Exception as e:
                 erros += 1
                 print(f"[Cron FU] ❌ Erro scheduled {nome}: {e}")

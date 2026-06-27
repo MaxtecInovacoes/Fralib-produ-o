@@ -1,0 +1,42 @@
+{
+  "policy": "copy_only",
+  "lead": "Barbearia Fio Nobre Pinhais",
+  "tenant_id": 2,
+  "model_used": "studio-fallback",
+  "elapsed_s": 54.7,
+  "html_chars": 2017,
+  "source_files": 20,
+  "attempts": [
+    {
+      "model": "sonnet",
+      "model_index": 0,
+      "status": "copy_only_json_success",
+      "elapsed_ms": 15475,
+      "policy": "copy_only",
+      "json_keys": [
+        "hero",
+        "services_title",
+        "services",
+        "lifestyle",
+        "gallery_alt",
+        "modal_title",
+        "modal_cta",
+        "differentials",
+        "contact_headline",
+        "contact_sub",
+        "target_audience"
+      ]
+    },
+    {
+      "model": "studio-fallback",
+      "model_index": 1,
+      "status": "studio_fallback_success",
+      "elapsed_ms": 39227,
+      "source_files": 20,
+      "html_chars": 2017,
+      "previous_error": ""
+    }
+  ],
+  "has_services": false,
+  "has_lead_data": true
+}

@@ -1,0 +1,82 @@
+{
+  "sprint": "12.13",
+  "version": "v1.14.1-wired",
+  "tag_baseline": "v1.14.1-wired-baseline-2026-06-25",
+  "tag_lockpoint": "v1.14.1-wired-lockpoint-2026-06-25",
+  "objetivo": "Wire o caroco rico (Sprint 12.12) no LLM dispatcher do pipeline real",
+  "principios": [
+    "Reusar o que ja existe (zero codigo novo para QA/manifest)",
+    "Backward-compat total: facts=None cai no HEAD+FOOT+TAIL estatico",
+    "Smoke VPS via script (sem automacao), usuario rola manualmente"
+  ],
+  "mudancas_cirurgicas": {
+    "1_import_wrapper": {
+      "arquivo": "backend/services/vite_react_renderer.py:92-114",
+      "delta": "2 linhas (import + fallback)",
+      "motivo": "Tornar _build_vite_react_system_prompt_with_facts acessivel no renderer"
+    },
+    "2_call_llm_aceita_facts": {
+      "arquivo": "backend/services/vite_react_renderer.py:2369-2412",
+      "delta": "+9 -3 linhas (signature + 2 call sites)",
+      "motivo": "Substituir VITE_REACT_SYSTEM_PROMPT estatico por wrapper que injeta facts"
+    },
+    "3_render_vite_react_site_passa_facts": {
+      "arquivo": "backend/services/vite_react_renderer.py:405-410",
+      "delta": "+1 linha (kwarg facts=facts)",
+      "motivo": "facts que ja esta em escopo (linha 381) agora chega no LLM"
+    },
+    "4_smoke_vps_script": {
+      "arquivo": "scripts/smoke_v114_vps.sh",
+      "delta": "+125 linhas (novo)",
+      "motivo": "Wrapper bash para SSH + git pull + pipeline_lead_real.py + HTTP 200 + grep briefing real"
+    }
+  },
+  "validacao_suites": {
+    "test_anti_regressao_v114": "8/8",
+    "test_anti_regressao_v113_7": "6/6 (Sprint 11.7 intacto)",
+    "test_anti_regressao_v113": "8/8 (Sprint 11)",
+    "test_anti_regressao_v113_5": "10/10 (Sprint 11.5)",
+    "test_anti_regressao_v113_6": "OK (Sprint 11.6)",
+    "test_anti_regressao_v112": "10/10 (Sprint 9)",
+    "test_anti_regressao_v111": "8/8 (Sprint 8)",
+    "test_anti_regressao_v19": "8/8 (Sprint 6)",
+    "total_verdes": "58+ testes"
+  },
+  "sanity_check_wrapper": {
+    "com_facts": "35.953 chars (com briefing real do lead)",
+    "sem_facts": "34.879 chars (backward-compat HEAD+FOOT+TAIL)",
+    "diferenca": "+1.074 chars de briefing real (LEAD BRIEFING + JSON-LD)"
+  },
+  "fluxo_end_to_end": [
+    "Lead Codex Barbearia Tenant 2 (Postgres)",
+    "scripts/pipeline_lead_real.py (VPS) -> executar_pipeline_completo()",
+    "render_site_with_builder (builder_worker.py:211)",
+    "render_vite_react_site (vite_react_renderer.py:361)",
+    "_compose_vite_user_prompt (vite_react_renderer.py:2410) -> user_prompt com briefing",
+    "_call_vite_react_llm com facts -> _build_vite_react_system_prompt_with_facts(facts)",
+    "LLM recebe caroco rico (36k chars) com briefing, JSON-LD, GSAP, shadcn, modal",
+    "Site gerado com dados REAIS (Corte Masculino, Pinhais, Seg-Sex 9h-20h)",
+    "validate_generated_html -> QA 45/45",
+    "publish_rendered_site -> /var/www/fralib/sites/2/barbearia-fio-nobre-pinhais/",
+    "HTTP 200 em https://seunegociofralib.site/sites/2/barbearia-fio-nobre-pinhais/"
+  ],
+  "como_rodar_smoke_vps": [
+    "1. Garantir SSH key para root@100.101.18.1",
+    "2. Garantir VPS tem .env com DATABASE_URL=postgres...:5433 + FRALIB_BUILDER_ENGINE=vite_react",
+    "3. Garantir lead codex-test-barbearia-fio-nobre-pinhais-20260612 existe no Postgres tenant 2",
+    "4. bash scripts/smoke_v114_vps.sh",
+    "5. Checar tests/_v114_wired_smoke.json (deve ter http_status=200, real_data_hits>=3)"
+  ],
+  "git": {
+    "commit_hash": "d8a6862",
+    "branch": "master",
+    "tags": ["v1.14.1-wired-baseline-2026-06-25", "v1.14.1-wired-lockpoint-2026-06-25"],
+    "push_status": "ok (VPS + GitHub)"
+  },
+  "proximos_passos_sprint_12_14": [
+    "Rodar smoke VPS: bash scripts/smoke_v114_vps.sh",
+    "Confirmar briefing real chegou no HTML publicado",
+    "Se QA 45/45 falhar: corrigir html_quality_gate ou ajustar gerador",
+    "Se smoke OK: Sprint 12.14 (visual + copy gaps) ou 12.15 (auto-melhoria)"
+  ]
+}

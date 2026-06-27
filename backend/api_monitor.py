@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 FraLib API Usage Monitor
-Monitora uso da API Anthropic (via aibee.cloud) em tempo real
+Monitora uso da API Anthropic em tempo real
 Salva historico no banco e exibe dashboard
 """
 
@@ -24,7 +24,7 @@ from backend.config import FRALIB_ROOT as _FR_ROOT
 load_dotenv(str(_FR_ROOT / ".env"))
 
 API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
-BASE_URL = "https://api.aibee.cloud"
+BASE_URL = os.getenv("ANTHROPIC_BASE_URL", "https://api.kpalabz.com/v1")
 DB_URL = os.getenv("DATABASE_URL", "postgresql://postgres@localhost:5433/fralib_db")
 
 

@@ -1,0 +1,505 @@
+/**
+ * SolarOS - Estilos CSS
+ * Sistema de gestão inteligente para integradores solares
+ */
+
+/* ═══════════════════════════════════════════════════════════
+   VARIÁVEIS CSS
+   ═══════════════════════════════════════════════════════════ */
+
+:root {
+    /* Cores principais */
+    --solar-primary: #FFB800;
+    --solar-primary-dark: #E6A600;
+    --solar-secondary: #1E3A5F;
+    --solar-accent: #00D4AA;
+    --solar-success: #34A853;
+    --solar-warning: #FBBC04;
+    --solar-danger: #EA4335;
+    --solar-info: #4285F4;
+
+    /* Cores de fundo */
+    --solar-bg-light: #F8F9FA;
+    --solar-bg-dark: #202124;
+    --solar-bg-card: #FFFFFF;
+
+    /* Cores de status */
+    --status-no-prazo: #34A853;
+    --status-atencao: #FBBC04;
+    --status-atrasado: #EA4335;
+
+    /* Sombras */
+    --solar-shadow-sm: 0 1px 3px rgba(0,0,0,0.1);
+    --solar-shadow-md: 0 4px 6px rgba(0,0,0,0.1);
+    --solar-shadow-lg: 0 10px 25px rgba(0,0,0,0.15);
+
+    /* Bordas arredondadas */
+    --solar-radius-sm: 6px;
+    --solar-radius-md: 12px;
+    --solar-radius-lg: 16px;
+
+    /* Transições */
+    --solar-transition: all 0.3s ease;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   LAYOUT PRINCIPAL
+   ═══════════════════════════════════════════════════════════ */
+
+.solaros-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.solaros-header {
+    background: linear-gradient(135deg, var(--solar-secondary) 0%, var(--solar-primary-dark) 100%);
+    color: white;
+    padding: 30px;
+    border-radius: var(--solar-radius-lg);
+    margin-bottom: 30px;
+    box-shadow: var(--solar-shadow-lg);
+}
+
+.solaros-header h1 {
+    margin: 0;
+    font-size: 2rem;
+    font-weight: 700;
+}
+
+.solaros-header .subtitle {
+    opacity: 0.9;
+    font-size: 1rem;
+    margin-top: 5px;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   CARDS DE MÉTRICAS
+   ═══════════════════════════════════════════════════════════ */
+
+.metric-card {
+    background: var(--solar-bg-card);
+    border-radius: var(--solar-radius-md);
+    padding: 25px;
+    box-shadow: var(--solar-shadow-md);
+    transition: var(--solar-transition);
+    border: 2px solid transparent;
+    position: relative;
+    overflow: hidden;
+}
+
+.metric-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+    background: var(--solar-primary);
+}
+
+.metric-card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--solar-shadow-lg);
+}
+
+.metric-card.border-primary::before { background: var(--solar-primary); }
+.metric-card.border-success::before { background: var(--solar-success); }
+.metric-card.border-warning::before { background: var(--solar-warning); }
+.metric-card.border-info::before { background: var(--solar-info); }
+.metric-card.border-danger::before { background: var(--solar-danger); }
+
+.metric-icon {
+    font-size: 2.5rem;
+    margin-bottom: 10px;
+}
+
+.metric-value {
+    font-size: 2.5rem;
+    font-weight: 800;
+    line-height: 1;
+    margin-bottom: 8px;
+}
+
+.metric-value.text-primary { color: var(--solar-primary-dark); }
+.metric-value.text-success { color: var(--solar-success); }
+.metric-value.text-warning { color: var(--solar-warning); }
+.metric-value.text-info { color: var(--solar-info); }
+.metric-value.text-danger { color: var(--solar-danger); }
+
+.metric-label {
+    color: #5f6368;
+    font-size: 0.9rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Progress bars */
+.progress-solar {
+    height: 10px;
+    border-radius: 5px;
+    background: #e0e0e0;
+    overflow: hidden;
+}
+
+.progress-solar .progress-bar {
+    transition: width 0.6s ease;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   KANBAN
+   ═══════════════════════════════════════════════════════════ */
+
+.kanban-container {
+    display: flex;
+    gap: 15px;
+    overflow-x: auto;
+    padding-bottom: 15px;
+}
+
+.kanban-column {
+    min-width: 180px;
+    background: var(--solar-bg-light);
+    border-radius: var(--solar-radius-md);
+    padding: 15px;
+    flex-shrink: 0;
+}
+
+.kanban-column h6 {
+    margin-bottom: 15px;
+    font-weight: 600;
+}
+
+.kanban-count {
+    font-size: 2.5rem;
+    font-weight: 800;
+    text-align: center;
+    margin: 15px 0;
+}
+
+.kanban-item {
+    background: white;
+    border-radius: var(--solar-radius-sm);
+    padding: 12px;
+    margin-bottom: 10px;
+    box-shadow: var(--solar-shadow-sm);
+    cursor: pointer;
+    transition: var(--solar-transition);
+}
+
+.kanban-item:hover {
+    transform: translateX(5px);
+    box-shadow: var(--solar-shadow-md);
+}
+
+.kanban-item .title {
+    font-weight: 600;
+    font-size: 0.9rem;
+    margin-bottom: 5px;
+}
+
+.kanban-item .subtitle {
+    font-size: 0.8rem;
+    color: #666;
+}
+
+/* Drag and drop */
+.kanban-item.dragging {
+    opacity: 0.5;
+    transform: rotate(3deg);
+}
+
+.kanban-item.drag-over {
+    border: 2px dashed var(--solar-primary);
+    background: #FFF9E6;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   MAPA DE CALOR
+   ═══════════════════════════════════════════════════════════ */
+
+.heatmap-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 5px;
+}
+
+.heatmap-cell {
+    aspect-ratio: 1;
+    border-radius: var(--solar-radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: white;
+    min-width: 35px;
+    min-height: 35px;
+}
+
+.heatmap-cell.heat-low {
+    background: var(--solar-success);
+}
+
+.heatmap-cell.heat-medium {
+    background: var(--solar-warning);
+}
+
+.heatmap-cell.heat-high {
+    background: var(--solar-danger);
+}
+
+.heatmap-cell.heat-none {
+    background: #e0e0e0;
+    color: #999;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   TAREFAS
+   ═══════════════════════════════════════════════════════════ */
+
+.tarefa-critica {
+    background: linear-gradient(135deg, #FFEBEE 0%, #FFCDD2 100%);
+    border-left: 4px solid var(--solar-danger);
+}
+
+.tarefa-importante {
+    background: linear-gradient(135deg, #FFF8E1 0%, #FFECB3 100%);
+    border-left: 4px solid var(--solar-warning);
+}
+
+.tarefa-normal {
+    background: var(--solar-bg-light);
+    border-left: 4px solid var(--solar-info);
+}
+
+.badge-critica {
+    background: var(--solar-danger);
+    color: white;
+}
+
+.badge-importante {
+    background: var(--solar-warning);
+    color: #333;
+}
+
+.badge-normal {
+    background: var(--solar-info);
+    color: white;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   STATUS DA EQUIPE
+   ═══════════════════════════════════════════════════════════ */
+
+.status-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 8px;
+}
+
+.status-dot.bg-success {
+    background: var(--status-no-prazo);
+    box-shadow: 0 0 8px var(--status-no-prazo);
+}
+
+.status-dot.bg-warning {
+    background: var(--status-atencao);
+    box-shadow: 0 0 8px var(--status-atencao);
+}
+
+.status-dot.bg-danger {
+    background: var(--status-atrasado);
+    box-shadow: 0 0 8px var(--status-atrasado);
+    animation: pulse-danger 2s infinite;
+}
+
+@keyframes pulse-danger {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   ALERTAS
+   ═══════════════════════════════════════════════════════════ */
+
+.alert-solar {
+    border-radius: var(--solar-radius-md);
+    padding: 20px;
+    margin-bottom: 15px;
+    border-left: 5px solid;
+}
+
+.alert-solar.alert-danger {
+    background: #FFEBEE;
+    border-color: var(--solar-danger);
+}
+
+.alert-solar.alert-warning {
+    background: #FFF8E1;
+    border-color: var(--solar-warning);
+}
+
+.alert-solar.alert-info {
+    background: #E3F2FD;
+    border-color: var(--solar-info);
+}
+
+.alert-solar.alert-success {
+    background: #E8F5E9;
+    border-color: var(--solar-success);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   GRÁFICOS
+   ═══════════════════════════════════════════════════════════ */
+
+.chart-container {
+    position: relative;
+    height: 300px;
+    padding: 15px;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   RESPONSIVIDADE
+   ═══════════════════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+    .metric-card {
+        margin-bottom: 15px;
+    }
+
+    .metric-value {
+        font-size: 1.8rem;
+    }
+
+    .kanban-container {
+        flex-direction: column;
+    }
+
+    .kanban-column {
+        width: 100%;
+    }
+
+    .heatmap-grid {
+        grid-template-columns: repeat(5, 1fr);
+    }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   ANIMAÇÕES
+   ═══════════════════════════════════════════════════════════ */
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animate-slide-in {
+    animation: slideIn 0.5s ease forwards;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.animate-fade-in {
+    animation: fadeIn 0.3s ease forwards;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   TOASTS E NOTIFICAÇÕES
+   ═══════════════════════════════════════════════════════════ */
+
+.toast-solar {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: var(--solar-bg-card);
+    border-radius: var(--solar-radius-md);
+    box-shadow: var(--solar-shadow-lg);
+    padding: 20px;
+    min-width: 300px;
+    z-index: 9999;
+    animation: slideIn 0.3s ease;
+}
+
+.toast-solar.success {
+    border-left: 4px solid var(--solar-success);
+}
+
+.toast-solar.error {
+    border-left: 4px solid var(--solar-danger);
+}
+
+.toast-solar.warning {
+    border-left: 4px solid var(--solar-warning);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   UTILITÁRIOS
+   ═══════════════════════════════════════════════════════════ */
+
+.text-solar-primary { color: var(--solar-primary) !important; }
+.text-solar-secondary { color: var(--solar-secondary) !important; }
+.text-solar-success { color: var(--solar-success) !important; }
+.text-solar-warning { color: var(--solar-warning) !important; }
+.text-solar-danger { color: var(--solar-danger) !important; }
+
+.bg-solar-primary { background-color: var(--solar-primary) !important; }
+.bg-solar-secondary { background-color: var(--solar-secondary) !important; }
+.bg-solar-success { background-color: var(--solar-success) !important; }
+.bg-solar-warning { background-color: var(--solar-warning) !important; }
+.bg-solar-danger { background-color: var(--solar-danger) !important; }
+
+.border-solar-primary { border-color: var(--solar-primary) !important; }
+.border-solar-secondary { border-color: var(--solar-secondary) !important; }
+.border-solar-success { border-color: var(--solar-success) !important; }
+.border-solar-warning { border-color: var(--solar-warning) !important; }
+.border-solar-danger { border-color: var(--solar-danger) !important; }
+
+.shadow-solar {
+    box-shadow: var(--solar-shadow-md);
+}
+
+.shadow-solar-lg {
+    box-shadow: var(--solar-shadow-lg);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   DARK MODE
+   ═══════════════════════════════════════════════════════════ */
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --solar-bg-light: #1E1E1E;
+        --solar-bg-dark: #121212;
+        --solar-bg-card: #2D2D2D;
+    }
+
+    .metric-card {
+        background: var(--solar-bg-card);
+    }
+
+    .metric-label {
+        color: #aaa;
+    }
+
+    .kanban-column {
+        background: var(--solar-bg-dark);
+    }
+
+    .kanban-item {
+        background: var(--solar-bg-card);
+    }
+}

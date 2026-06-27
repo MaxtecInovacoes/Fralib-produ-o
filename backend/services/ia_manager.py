@@ -32,7 +32,7 @@ from backend.core.config import is_allowed_llm_url
 _DB_URL = os.getenv('DATABASE_URL', 'postgresql://postgres@localhost:5433/fralib_db')
 
 _ENV_FALLBACK_CONFIG = {
-    'anthropic': ('ANTHROPIC_API_KEY', 'ANTHROPIC_BASE_URL', 'https://api.aibee.cloud'),
+    'anthropic': ('ANTHROPIC_API_KEY', 'ANTHROPIC_BASE_URL', 'https://api.kpalabz.com/v1'),
     'deepseek': ('DEEPSEEK_API_KEY', 'DEEPSEEK_BASE_URL', 'https://api.deepseek.com'),
     'moonshot': ('MOONSHOT_API_KEY', 'MOONSHOT_BASE_URL', 'https://api.moonshot.cn/v1'),
     'qwen': (
@@ -139,7 +139,7 @@ def pick_key(provider: str, *, _attempt: int = 0) -> Optional[tuple[str, str, Op
 
 def _default_base_url(provider: str) -> str:
     return {
-        'anthropic': os.getenv('ANTHROPIC_BASE_URL', 'https://api.aibee.cloud'),
+        'anthropic': os.getenv('ANTHROPIC_BASE_URL', 'https://api.kpalabz.com/v1'),
         'openai':    'https://api.openai.com/v1',
         'google':    'https://generativelanguage.googleapis.com/v1beta',
         'custom':    '',

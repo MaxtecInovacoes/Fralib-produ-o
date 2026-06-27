@@ -8,7 +8,7 @@ from sqlalchemy import text
 router = APIRouter(prefix='/api/usage', tags=['usage'])
 
 API_KEY  = os.getenv('ANTHROPIC_API_KEY', '')
-BASE_URL = os.getenv('ANTHROPIC_BASE_URL', 'https://api.aibee.cloud')
+BASE_URL = os.getenv('ANTHROPIC_BASE_URL', 'https://api.kpalabz.com/v1')
 
 
 _usage_cache = {'data': None, 'ts': 0}

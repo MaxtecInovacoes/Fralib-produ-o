@@ -12,6 +12,7 @@ from backend.core.database import get_db
 from backend.core.auth import get_current_user
 from backend.endpoints.sse_endpoints import adicionar_log
 from backend.whatsapp_listener import is_tenant_connected, _salvar_interacao
+from backend.whatsapp.sender import send_text_parts
 from backend.services.credits_manager import plano_tem_sdr
 from backend.services.sdr_gateway import SdrMessageContext, evaluate_sdr_output, has_prior_outbound
 
@@ -272,14 +273,26 @@ async def enviar_mensagem_lead(
             "WhatsApp do usuario nao esta conectado. Pareie o QR code antes de enviar mensagens.",
         )
 
-    async with httpx.AsyncClient(timeout=10) as c:
-        r_send = await c.post(
-            f"{meowhats_url}/api/sessions/{wpp_tenant}/send",
-            headers={"X-API-Key": meowhats_key},
-            json={"jid": jid, "type": "text", "text": franz_output.reply},
-        )
-        if r_send.status_code != 200:
-            raise HTTPException(500, f"Falha no envio: {r_send.text[:100]}")
+    # Enviar via meowhats usando send_text_parts (unificado)
+    async def _enviar_whatsapp():
+        import asyncio
+        client = httpx.Client(timeout=10)
+        try:
+            ok, err = send_text_parts(
+                client,
+                meowhats_url,
+                meowhats_key,
+                wpp_tenant,
+                jid,
+                [franz_output.reply]
+            )
+            return ok, err
+        finally:
+            client.close()
+
+    ok, err = await asyncio.to_thread(_enviar_whatsapp)
+    if not ok:
+        raise HTTPException(500, f"Falha no envio: {err}")
 
     _salvar_interacao(lead_id, franz_output.reply, "saida", tenant_id)
 

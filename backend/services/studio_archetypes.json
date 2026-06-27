@@ -1,0 +1,968 @@
+{
+  "meta": {
+    "version": "1.0.0",
+    "description": "Visual identity archetypes for the Studio fallback system",
+    "total_archetypes": 6,
+    "variations_per_archetype": {
+      "layouts": 3,
+      "motion_styles": 3,
+      "copy_voices": 3
+    },
+    "segment_mapping": {
+      "BOLD_ENERGY": ["academia", "fitness", "crossfit", "musculacao", "eventos esportivos"],
+      "WARM_LOCAL": ["barbearia", "barbeiro", "petshop", "salao_beleza", "beleza", "cabelo"],
+      "ZEN_PURE": ["clinica", "estetica", "nutricionista", "nutricao", "yoga", "spa", "fisioterapia", "psicologo"],
+      "LUXURY_ELITE": ["restaurante", "pizzaria", "hamburgueria", "cafeteria", "moda", "fotografia", "eventos"],
+      "MODERN_TECH": ["energia solar", "infraestrutura", "eletrica", "tecnologia", "oficina", "mecanica"],
+      "PROFESSIONAL_TRUST": ["imobiliaria", "imoveis", "advocacia", "advogado", "contabilidade", "escola", "autoescola"]
+    }
+  },
+
+  "archetypes": {
+
+    "BOLD_ENERGY": {
+      "description": "High-intensity fitness and sports niches. Demands attention, action, transformation.",
+      "visual_mood": "Stadium lights, competition energy, raw power, sweat equity",
+
+      "palette": {
+        "primary": "#10B981",
+        "secondary": "#064E3B",
+        "accent": "#F59E0B",
+        "neutral_bg": "#0A0A0A",
+        "neutral_surface": "#171717",
+        "neutral_muted": "#52525B",
+        "semantic_success": "#34D399",
+        "semantic_warning": "#FBBF24",
+        "text_primary": "#FAFAFA",
+        "text_muted": "#A1A1AA"
+      },
+
+      "typography": {
+        "font_heading": "Oswald",
+        "font_body": "Inter",
+        "font_weights": {
+          "heading_black": 700,
+          "heading_bold": 600,
+          "body_regular": 400,
+          "body_medium": 500,
+          "cta": 800
+        },
+        "scale": {
+          "display": "clamp(3.5rem, 9vw, 7rem)",
+          "h1": "clamp(2.5rem, 6vw, 4.5rem)",
+          "h2": "clamp(1.75rem, 3vw, 2.5rem)",
+          "h3": "clamp(1.25rem, 2vw, 1.75rem)",
+          "body": "clamp(1rem, 1.5vw, 1.125rem)",
+          "small": "0.875rem"
+        },
+        "tracking": {
+          "display": "-0.04em",
+          "heading": "-0.02em",
+          "uppercase_labels": "0.15em",
+          "body": "0"
+        }
+      },
+
+      "layout": {
+        "hero_type": "split_asymmetric",
+        "grid_columns": "lg:grid-cols-[1.15fr_0.85fr]",
+        "section_order": ["hero", "stats_bar", "services", "gallery", "testimonials", "lifestyle", "cta", "footer"],
+        "card_style": "rounded-2xl border border-white/10 bg-white/[0.03] p-6",
+        "spacing_vertical": "py-20 md:py-28",
+        "container_max": "max-w-6xl"
+      },
+
+      "motion": {
+        "primary_style": "sharp_burst",
+        "speed": "fast",
+        "intensity": "high",
+        "enter_curve": "cubic-bezier(0.0, 0.0, 0.2, 1)",
+        "hover_curve": "cubic-bezier(0.34, 1.56, 0.64, 1)",
+        "durations": {
+          "micro": 100,
+          "fast": 200,
+          "standard": 350,
+          "reveal": 500
+        },
+        "scroll_reveal": {
+          "type": "stagger_up",
+          "stagger_delay": 80,
+          "translate_y": "32px"
+        },
+        "cta_pulse": true
+      },
+
+      "copy_voice": {
+        "tone": "energetic_directive",
+        "adjectives": ["transformador", "intenso", "imparavel", "poderoso", "exclusivo"],
+        "cta_formula": "[VERB_DYNAMIC] + [BENEFIT_CLARITY] + [URGENCY]",
+        "hero_title_patterns": [
+          "Treino de [MODALITY] que transforma seu corpo em [TIMEFRAME]",
+          "[RESULT] em [CITY] com metodologia de alta performance",
+          "[MODALITY] + [RESULT] = academia ideal para voce"
+        ],
+        "cta_labels": {
+          "primary": "Comecar treino",
+          "secondary": "Conhecer estrutura",
+          "tertiary": "Ver resultados"
+        }
+      },
+
+      "visual_elements": {
+        "textures": ["noise_overlay_3", "diagonal_lines"],
+        "overlays": ["gradient_radial_30", "dark_vignette"],
+        "dividers": "thick_horizontal_line",
+        "image_treatment": "contrast_saturation_boost",
+        "decorative": ["geometric_accents", "arrow_pointers"]
+      },
+
+      "layout_variations": {
+        "v1_centered_hero": {
+          "description": "Centered hero with overlapping stats cards",
+          "hero_classes": "text-center items-center",
+          "stats_position": "absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2"
+        },
+        "v2_fullscreen_video": {
+          "description": "Full-viewport hero with gradient overlay",
+          "hero_classes": "min-h-screen",
+          "hero_overlay": "bg-gradient-to-t from-black/90 via-black/50 to-transparent"
+        },
+        "v3_asymmetric_grid": {
+          "description": "Off-center hero with diagonal split",
+          "hero_classes": "clip-path-diagonal",
+          "split_angle": "skew-x-6"
+        }
+      },
+
+      "motion_variations": {
+        "v1_explosive": {
+          "description": "Burst animations with scale transforms",
+          "enter_transform": "scale(0.8) opacity-0",
+          "spring_bounce": "cubic-bezier(0.34, 1.56, 0.64, 1)",
+          "duration_multiplier": 1.3
+        },
+        "v2_kinetic": {
+          "description": "Horizontal slide reveals with blur",
+          "enter_transform": "translateX(-60px) blur-sm",
+          "stagger_axis": "x"
+        },
+        "v3_minimal": {
+          "description": "Subtle opacity-only transitions",
+          "enter_transform": "opacity-0",
+          "duration_multiplier": 0.7
+        }
+      },
+
+      "copy_variations": {
+        "v1_aggressive": {
+          "description": "High-urgency transformation language",
+          "tone_modifier": "confrontational_confidence",
+          "hero_pattern": "[CHALLENGE] + [TRANSFORMATION] = [YOUR_CHOICE]"
+        },
+        "v2_motivational": {
+          "description": "Empowering journey language",
+          "tone_modifier": "supportive_challenge",
+          "hero_pattern": "Junte-se a [NUMBER]+ transformation-seekers em [CITY]"
+        },
+        "v3_results": {
+          "description": "Metric-focused achievement language",
+          "tone_modifier": "evidence_driven",
+          "hero_pattern": "[METRIC] de resultados em [TIMEFRAME] - proves cientificamente"
+        }
+      }
+    },
+
+    "WARM_LOCAL": {
+      "description": "Personal services and neighborhood businesses. Trust, tradition, community.",
+      "visual_mood": "Warm wood tones, neighborhood feel, handwritten touches, genuine care",
+
+      "palette": {
+        "primary": "#D97706",
+        "secondary": "#78350F",
+        "accent": "#059669",
+        "neutral_bg": "#FFFBEB",
+        "neutral_surface": "#FEF3C7",
+        "neutral_muted": "#92400E",
+        "semantic_success": "#059669",
+        "semantic_warning": "#F59E0B",
+        "text_primary": "#1C1917",
+        "text_muted": "#78716C"
+      },
+
+      "typography": {
+        "font_heading": "Playfair Display",
+        "font_body": "Nunito",
+        "font_weights": {
+          "heading_bold": 700,
+          "heading_semibold": 600,
+          "body_regular": 400,
+          "body_medium": 500,
+          "cta": 600
+        },
+        "scale": {
+          "display": "clamp(2.5rem, 5vw, 4rem)",
+          "h1": "clamp(2rem, 4vw, 3rem)",
+          "h2": "clamp(1.5rem, 2.5vw, 2rem)",
+          "h3": "clamp(1.125rem, 1.5vw, 1.375rem)",
+          "body": "clamp(0.9375rem, 1.25vw, 1.0625rem)",
+          "small": "0.8125rem"
+        },
+        "tracking": {
+          "display": "-0.01em",
+          "heading": "0",
+          "uppercase_labels": "0.05em",
+          "body": "0.01em"
+        }
+      },
+
+      "layout": {
+        "hero_type": "warm_intro",
+        "grid_columns": "lg:grid-cols-[1fr_1fr]",
+        "section_order": ["hero", "about", "services", "gallery", "lifestyle", "testimonials", "location", "cta", "footer"],
+        "card_style": "rounded-3xl border border-amber-100 bg-amber-50/50 p-6 shadow-sm",
+        "spacing_vertical": "py-16 md:py-24",
+        "container_max": "max-w-5xl"
+      },
+
+      "motion": {
+        "primary_style": "gentle_fade",
+        "speed": "slow",
+        "intensity": "soft",
+        "enter_curve": "cubic-bezier(0.4, 0, 0.2, 1)",
+        "hover_curve": "cubic-bezier(0.0, 0, 0.2, 1)",
+        "durations": {
+          "micro": 150,
+          "fast": 300,
+          "standard": 500,
+          "reveal": 700
+        },
+        "scroll_reveal": {
+          "type": "fade_up",
+          "stagger_delay": 120,
+          "translate_y": "16px"
+        },
+        "cta_pulse": false
+      },
+
+      "copy_voice": {
+        "tone": "friendly_authentic",
+        "adjectives": ["dedicado", "cuidadoso", "experiente", "profissional", "tranquilo"],
+        "cta_formula": "[ACTION] + [FEELING] + [REASSURANCE]",
+        "hero_title_patterns": [
+          "Cuidado com [EXPERIENCE] anos de tradicao em [CITY]",
+          "[SERVICE] de qualidade para quem merece o melhor",
+          "Sua satisfacao e nossa prioridade em [CITY]"
+        ],
+        "cta_labels": {
+          "primary": "Agendar horario",
+          "secondary": "Conhecer servicos",
+          "tertiary": "Falar conosco"
+        }
+      },
+
+      "visual_elements": {
+        "textures": ["paper_subtle", "linen_fabric"],
+        "overlays": ["warm_tint", "soft_shadow"],
+        "dividers": "organic_wave",
+        "image_treatment": "warm_filter",
+        "decorative": ["leaf_elements", "simple_flourishes"]
+      },
+
+      "layout_variations": {
+        "v1_centered_intro": {
+          "description": "Warm centered hero with soft background",
+          "hero_classes": "text-center bg-gradient-to-b from-amber-50 to-white",
+          "image_position": "mx-auto rounded-full"
+        },
+        "v2_split_story": {
+          "description": "Left image, right text with quote highlight",
+          "hero_classes": "lg:grid-cols-[0.9fr_1.1fr]",
+          "quote_style": "border-l-4 border-amber-300 pl-6 italic"
+        },
+        "v3_asymmetric_grid": {
+          "description": "Overlapping image and text cards",
+          "hero_classes": "relative",
+          "image_position": "-translate-y-8 translate-x-4"
+        }
+      },
+
+      "motion_variations": {
+        "v1_fade_slide": {
+          "description": "Gentle horizontal slide with opacity",
+          "enter_transform": "translateX(-24px) opacity-0",
+          "stagger_axis": "x"
+        },
+        "v2_scale_in": {
+          "description": "Soft scale from 0.95 to 1",
+          "enter_transform": "scale(0.95) opacity-0",
+          "hover_scale": "1.02"
+        },
+        "v3_no_motion": {
+          "description": "Instant appearance, no animation",
+          "enter_transform": "opacity-0",
+          "duration_multiplier": 0.3
+        }
+      },
+
+      "copy_variations": {
+        "v1_community": {
+          "description": "Neighbor-focused, local pride",
+          "tone_modifier": "hometown_pride",
+          "hero_pattern": "[CITY] confia em nos ha [YEARS] anos"
+        },
+        "v2_personal": {
+          "description": "Individual attention emphasis",
+          "tone_modifier": "one_on_one_care",
+          "hero_pattern": "Atendimento personalizado para voce, nao para todos"
+        },
+        "v3_tradition": {
+          "description": "Heritage and craft language",
+          "tone_modifier": "artisan_pride",
+          "hero_pattern": "[TRADITION] em cada [SERVICE] - isso e o que nos fazemos"
+        }
+      }
+    },
+
+    "ZEN_PURE": {
+      "description": "Health, wellness, and clinical services. Balance, clarity, trust.",
+      "visual_mood": "Clean whites, soft sage greens, breathing space, calm confidence",
+
+      "palette": {
+        "primary": "#0D9488",
+        "secondary": "#134E4A",
+        "accent": "#7C3AED",
+        "neutral_bg": "#FAFAF9",
+        "neutral_surface": "#F5F5F4",
+        "neutral_muted": "#78716C",
+        "semantic_success": "#10B981",
+        "semantic_calm": "#14B8A6",
+        "text_primary": "#1C1917",
+        "text_muted": "#A8A29E"
+      },
+
+      "typography": {
+        "font_heading": "Cormorant Garamond",
+        "font_body": "DM Sans",
+        "font_weights": {
+          "heading_regular": 500,
+          "heading_semibold": 600,
+          "body_regular": 400,
+          "body_medium": 500,
+          "cta": 500
+        },
+        "scale": {
+          "display": "clamp(2.25rem, 4vw, 3.5rem)",
+          "h1": "clamp(1.75rem, 3vw, 2.5rem)",
+          "h2": "clamp(1.375rem, 2vw, 1.75rem)",
+          "h3": "clamp(1.125rem, 1.5vw, 1.375rem)",
+          "body": "clamp(0.9375rem, 1.25vw, 1.0625rem)",
+          "small": "0.8125rem"
+        },
+        "tracking": {
+          "display": "-0.01em",
+          "heading": "0",
+          "uppercase_labels": "0.08em",
+          "body": "0"
+        }
+      },
+
+      "layout": {
+        "hero_type": "breathing_space",
+        "grid_columns": "lg:grid-cols-[1fr_1fr]",
+        "section_order": ["hero", "about", "services", "process", "gallery", "testimonials", "faq", "cta", "footer"],
+        "card_style": "rounded-2xl border border-stone-100 bg-white p-6 shadow-sm",
+        "spacing_vertical": "py-20 md:py-32",
+        "container_max": "max-w-4xl"
+      },
+
+      "motion": {
+        "primary_style": "breath_sync",
+        "speed": "measured",
+        "intensity": "subtle",
+        "enter_curve": "cubic-bezier(0.4, 0, 0.2, 1)",
+        "hover_curve": "cubic-bezier(0.4, 0, 0.2, 1)",
+        "durations": {
+          "micro": 200,
+          "fast": 400,
+          "standard": 600,
+          "reveal": 900
+        },
+        "scroll_reveal": {
+          "type": "fade_only",
+          "stagger_delay": 150,
+          "translate_y": "8px"
+        },
+        "cta_pulse": false
+      },
+
+      "copy_voice": {
+        "tone": "calm_expertise",
+        "adjectives": ["equilibrado", "cuidadoso", "profundo", "humanizado", "personalizado"],
+        "cta_formula": "[ACTION] + [OUTCOME] + [TRANQUILITY]",
+        "hero_title_patterns": [
+          "Cuidado integral para sua [WELLNESS_AREA] em [CITY]",
+          "[PROFESSION] com abordagem humanizada e resultados sustentaveis",
+          "Bem-estar que transforma: [BENEFIT] para voce"
+        ],
+        "cta_labels": {
+          "primary": "Agendar consulta",
+          "secondary": "Conhecer abordagem",
+          "tertiary": "Tirar duvidas"
+        }
+      },
+
+      "visual_elements": {
+        "textures": ["clean_surface"],
+        "overlays": ["soft_light"],
+        "dividers": "thin_single_line",
+        "image_treatment": "natural_soft",
+        "decorative": ["minimal_leaves", "circle_accent"]
+      },
+
+      "layout_variations": {
+        "v1_centered_focus": {
+          "description": "Single column, centered content, maximum breathing room",
+          "hero_classes": "text-center max-w-2xl mx-auto",
+          "container_max": "max-w-3xl"
+        },
+        "v2_asymmetric_calm": {
+          "description": "Large image left, content right with generous margins",
+          "hero_classes": "lg:grid-cols-[1.2fr_1fr]",
+          "text_align": "items-start"
+        },
+        "v3_grid_focus": {
+          "description": "Card-based layout with clear hierarchy",
+          "hero_classes": "grid gap-8",
+          "card_layout": "rounded-3xl overflow-hidden"
+        }
+      },
+
+      "motion_variations": {
+        "v1_breath": {
+          "description": "Long, slow, breathing rhythm animations",
+          "enter_transform": "opacity-0 scale(0.98)",
+          "duration_multiplier": 1.4
+        },
+        "v2_silent": {
+          "description": "No scroll animations, only hover states",
+          "enter_transform": "none",
+          "hover_only": true
+        },
+        "v3_fade_up": {
+          "description": "Very gentle upward fade",
+          "enter_transform": "translateY(12px) opacity-0",
+          "duration_multiplier": 1.2
+        }
+      },
+
+      "copy_variations": {
+        "v1_holistic": {
+          "description": "Whole-person wellness language",
+          "tone_modifier": "integrative_care",
+          "hero_pattern": "Saude [AREA]: corpo, mente e estilo de vida em harmonia"
+        },
+        "v2_clinical": {
+          "description": "Professional expertise emphasis",
+          "tone_modifier": "scientific_credibility",
+          "hero_pattern": "[PROFESSION] com [CREDENTIALS] - excelencia em [CITY]"
+        },
+        "v3_supportive": {
+          "description": "Nurturing, supportive tone",
+          "tone_modifier": "empathetic_journey",
+          "hero_pattern": "Estamos aqui para voce. Seu caminho para [WELLNESS_GOAL] comeca aqui."
+        }
+      }
+    },
+
+    "LUXURY_ELITE": {
+      "description": "Fine dining, fashion, events, and premium services. Exclusivity, sophistication, aspiration.",
+      "visual_mood": "Rich blacks, gold accents, elegant serif typography, editorial photography",
+
+      "palette": {
+        "primary": "#D4AF37",
+        "secondary": "#1A1A1A",
+        "accent": "#B8860B",
+        "neutral_bg": "#0A0A0A",
+        "neutral_surface": "#141414",
+        "neutral_muted": "#525252",
+        "semantic_gold": "#FFD700",
+        "semantic_cream": "#FFFDD0",
+        "text_primary": "#FDFBF7",
+        "text_muted": "#A3A3A3"
+      },
+
+      "typography": {
+        "font_heading": "Playfair Display",
+        "font_body": "Crimson Pro",
+        "font_weights": {
+          "heading_regular": 400,
+          "heading_bold": 700,
+          "body_regular": 400,
+          "body_medium": 400,
+          "cta": 400
+        },
+        "scale": {
+          "display": "clamp(2.5rem, 5vw, 4.5rem)",
+          "h1": "clamp(2rem, 4vw, 3.25rem)",
+          "h2": "clamp(1.5rem, 2.5vw, 2rem)",
+          "h3": "clamp(1.125rem, 1.5vw, 1.5rem)",
+          "body": "clamp(0.9375rem, 1.25vw, 1.0625rem)",
+          "small": "0.75rem"
+        },
+        "tracking": {
+          "display": "-0.02em",
+          "heading": "0.02em",
+          "uppercase_labels": "0.2em",
+          "body": "0.01em"
+        }
+      },
+
+      "layout": {
+        "hero_type": "editorial_full",
+        "grid_columns": "lg:grid-cols-[1fr_1fr]",
+        "section_order": ["hero", "story", "gallery", "services", "testimonials", "reservation", "footer"],
+        "card_style": "rounded-none border border-white/10 bg-transparent p-0",
+        "spacing_vertical": "py-24 md:py-40",
+        "container_max": "max-w-6xl"
+      },
+
+      "motion": {
+        "primary_style": "elegant_reveal",
+        "speed": "deliberate",
+        "intensity": "refined",
+        "enter_curve": "cubic-bezier(0.4, 0, 0.2, 1)",
+        "hover_curve": "cubic-bezier(0.4, 0, 0.2, 1)",
+        "durations": {
+          "micro": 250,
+          "fast": 500,
+          "standard": 800,
+          "reveal": 1200
+        },
+        "scroll_reveal": {
+          "type": "line_reveal",
+          "stagger_delay": 200,
+          "translate_y": "0"
+        },
+        "cta_pulse": false
+      },
+
+      "copy_voice": {
+        "tone": "sophisticated_aspirational",
+        "adjectives": ["exclusivo", "refinado", "memoravel", "distinto", "sublime"],
+        "cta_formula": "[EXPERIENCE] + [DISTINCTION] + [INVITATION]",
+        "hero_title_patterns": [
+          "[EXPERIENCE] incomparavel em [CITY] - onde [ASPIRATION] se encontra",
+          "Descubra [CUISINE_STYLE] de outro nivel no coracao de [CITY]",
+          "[ASPIRATION] tem um endereco: [NAME] em [CITY]"
+        ],
+        "cta_labels": {
+          "primary": "Reservar",
+          "secondary": "Explorar",
+          "tertiary": "Contato"
+        }
+      },
+
+      "visual_elements": {
+        "textures": ["deep_black"],
+        "overlays": ["gradient_dark_top", "gold_foil_20"],
+        "dividers": "elegant_thin_line",
+        "image_treatment": "high_contrast_editorial",
+        "decorative": ["gold_line_accent", "monogram"]
+      },
+
+      "layout_variations": {
+        "v1_fullscreen_image": {
+          "description": "Hero image takes full viewport, text overlaid",
+          "hero_classes": "min-h-screen relative",
+          "text_position": "absolute bottom-0 left-0 right-0"
+        },
+        "v2_split_elegant": {
+          "description": "Even split with elegant typography column",
+          "hero_classes": "lg:grid-cols-[1fr_1fr]",
+          "image_treatment": "aspect-[3/4] object-cover"
+        },
+        "v3_centered_focus": {
+          "description": "Centered text with decorative frame",
+          "hero_classes": "text-center max-w-3xl mx-auto",
+          "decorative": "border border-gold-500/30 p-12"
+        }
+      },
+
+      "motion_variations": {
+        "v1_parallax_luxury": {
+          "description": "Slow parallax with depth layers",
+          "parallax_depth": 0.3,
+          "duration_multiplier": 1.5
+        },
+        "v2_line_draw": {
+          "description": "Border/dividers draw in animation",
+          "enter_transform": "scaleX(0)",
+          "transform_origin": "left"
+        },
+        "v3_fade_delayed": {
+          "description": "Slow, staged reveals",
+          "enter_transform": "opacity-0",
+          "duration_multiplier": 1.8
+        }
+      },
+
+      "copy_variations": {
+        "v1_aspirational": {
+          "description": "Dream fulfillment language",
+          "tone_modifier": "achievement_reward",
+          "hero_pattern": "Porque voce merece [EXPERIENCE] excepcional"
+        },
+        "v2_exclusive": {
+          "description": "Limited availability, VIP feel",
+          "tone_modifier": "invitation_only",
+          "hero_pattern": "[EXPERIENCE] exclusivo para [NUMBER] seletos por [PERIOD]"
+        },
+        "v3_craft": {
+          "description": "Artisan/skill mastery emphasis",
+          "tone_modifier": "mastery_pride",
+          "hero_pattern": "[CRAFTSMANSHIP] que se sente em cada [DETAIL]"
+        }
+      }
+    },
+
+    "MODERN_TECH": {
+      "description": "Solar energy, infrastructure, electrical, technology. Innovation, reliability, future-forward.",
+      "visual_mood": "Deep blues, electric accents, clean geometric shapes, data visualization aesthetics",
+
+      "palette": {
+        "primary": "#3B82F6",
+        "secondary": "#1E3A5F",
+        "accent": "#06B6D4",
+        "neutral_bg": "#0F172A",
+        "neutral_surface": "#1E293B",
+        "neutral_muted": "#64748B",
+        "semantic_solar": "#FBBF24",
+        "semantic_eco": "#22C55E",
+        "text_primary": "#F8FAFC",
+        "text_muted": "#94A3B8"
+      },
+
+      "typography": {
+        "font_heading": "Space Grotesk",
+        "font_body": "IBM Plex Sans",
+        "font_weights": {
+          "heading_bold": 700,
+          "heading_semibold": 600,
+          "body_regular": 400,
+          "body_medium": 500,
+          "cta": 600
+        },
+        "scale": {
+          "display": "clamp(2.75rem, 6vw, 4.5rem)",
+          "h1": "clamp(2rem, 4.5vw, 3rem)",
+          "h2": "clamp(1.5rem, 2.5vw, 2rem)",
+          "h3": "clamp(1.125rem, 1.5vw, 1.375rem)",
+          "body": "clamp(0.9375rem, 1.25vw, 1.0625rem)",
+          "small": "0.8125rem"
+        },
+        "tracking": {
+          "display": "-0.02em",
+          "heading": "-0.01em",
+          "uppercase_labels": "0.1em",
+          "body": "0"
+        }
+      },
+
+      "layout": {
+        "hero_type": "tech_dashboard",
+        "grid_columns": "lg:grid-cols-[1.1fr_0.9fr]",
+        "section_order": ["hero", "stats", "services", "solutions", "gallery", "process", "cta", "footer"],
+        "card_style": "rounded-xl border border-slate-700/50 bg-slate-800/30 p-6 backdrop-blur",
+        "spacing_vertical": "py-20 md:py-28",
+        "container_max": "max-w-6xl"
+      },
+
+      "motion": {
+        "primary_style": "tech_smooth",
+        "speed": "precise",
+        "intensity": "controlled",
+        "enter_curve": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "hover_curve": "cubic-bezier(0.4, 0, 0.2, 1)",
+        "durations": {
+          "micro": 100,
+          "fast": 200,
+          "standard": 400,
+          "reveal": 600
+        },
+        "scroll_reveal": {
+          "type": "tech_fade",
+          "stagger_delay": 100,
+          "translate_y": "20px"
+        },
+        "cta_pulse": true
+      },
+
+      "copy_voice": {
+        "tone": "innovative_confident",
+        "adjectives": ["inovador", "confiavel", "eficiente", "sustentavel", "tecnologico"],
+        "cta_formula": "[SOLUTION] + [IMPACT] + [ACTION]",
+        "hero_title_patterns": [
+          "[TECHNOLOGY] que reduz [COST] em ate [PERCENTAGE] para [CITY]",
+          "Energia [SOLUTION] para [BUSINESS_TYPE] em [CITY] - economia real",
+          "[INFRASTRUCTURE] profissional com [YEARS] anos de experiencia"
+        ],
+        "cta_labels": {
+          "primary": "Solicitar orcamento",
+          "secondary": "Ver solucoes",
+          "tertiary": "Simular economia"
+        }
+      },
+
+      "visual_elements": {
+        "textures": ["grid_pattern", "dot_matrix"],
+        "overlays": ["gradient_blue_dark", "glow_cyan"],
+        "dividers": "tech_divider",
+        "image_treatment": "blue_tint",
+        "decorative": ["circuit_lines", "data_nodes"]
+      },
+
+      "layout_variations": {
+        "v1_data_focused": {
+          "description": "Stats and data prominently displayed",
+          "hero_classes": "grid lg:grid-cols-[1fr_1fr]",
+          "stats_position": "grid grid-cols-2 gap-4"
+        },
+        "v2_solutions_grid": {
+          "description": "Card-based solutions overview",
+          "hero_classes": "grid gap-6 md:grid-cols-3",
+          "card_style": "border-l-4 border-cyan-500"
+        },
+        "v3_before_after": {
+          "description": "Split comparison layout",
+          "hero_classes": "lg:grid-cols-[1fr_1fr]",
+          "comparison_style": "before_red after_green"
+        }
+      },
+
+      "motion_variations": {
+        "v1_tech_fade": {
+          "description": "Clean tech fade with slight scale",
+          "enter_transform": "opacity-0 scale(0.95)",
+          "stagger_axis": "y"
+        },
+        "v2_data_stream": {
+          "description": "Left-to-right reveal like data loading",
+          "enter_transform": "translateX(-30px) opacity-0",
+          "stagger_axis": "x"
+        },
+        "v3_minimal_glitch": {
+          "description": "Subtle glitch aesthetic",
+          "enter_transform": "skewX(-1deg) opacity-0",
+          "hover_skew": "skewX(0)"
+        }
+      },
+
+      "copy_variations": {
+        "v1_economic": {
+          "description": "ROI and savings focused",
+          "tone_modifier": "cost_benefit",
+          "hero_pattern": "Economize [AMOUNT] por mes com [SOLUTION] em [CITY]"
+        },
+        "v2_environmental": {
+          "description": "Sustainability emphasis",
+          "tone_modifier": "eco_forward",
+          "hero_pattern": "[CO2_SAVINGS] menos emissoes com [SOLUTION] profissional"
+        },
+        "v3_technical": {
+          "description": "Technical specifications and expertise",
+          "tone_modifier": "engineered_precision",
+          "hero_pattern": "[WATTAGE] instalada | [YEARS] experiencia | [CITY] atendimento"
+        }
+      }
+    },
+
+    "PROFESSIONAL_TRUST": {
+      "description": "Real estate, law, accounting, B2B services. Credibility, expertise, reliability.",
+      "visual_mood": "Navy blues, clean lines, structured layouts, institutional trust",
+
+      "palette": {
+        "primary": "#1E3A8A",
+        "secondary": "#1E293B",
+        "accent": "#0EA5E9",
+        "neutral_bg": "#F8FAFC",
+        "neutral_surface": "#F1F5F9",
+        "neutral_muted": "#64748B",
+        "semantic_trust": "#2563EB",
+        "semantic_success": "#059669",
+        "text_primary": "#0F172A",
+        "text_muted": "#475569"
+      },
+
+      "typography": {
+        "font_heading": "Libre Baskerville",
+        "font_body": "Source Sans 3",
+        "font_weights": {
+          "heading_regular": 400,
+          "heading_bold": 700,
+          "body_regular": 400,
+          "body_medium": 500,
+          "cta": 600
+        },
+        "scale": {
+          "display": "clamp(2.25rem, 4vw, 3.25rem)",
+          "h1": "clamp(1.75rem, 3vw, 2.5rem)",
+          "h2": "clamp(1.375rem, 2vw, 1.75rem)",
+          "h3": "clamp(1.125rem, 1.5vw, 1.375rem)",
+          "body": "clamp(0.9375rem, 1.25vw, 1.0625rem)",
+          "small": "0.8125rem"
+        },
+        "tracking": {
+          "display": "-0.01em",
+          "heading": "0",
+          "uppercase_labels": "0.08em",
+          "body": "0"
+        }
+      },
+
+      "layout": {
+        "hero_type": "trust_establishment",
+        "grid_columns": "lg:grid-cols-[1fr_1.2fr]",
+        "section_order": ["hero", "credentials", "services", "about", "testimonials", "contact", "footer"],
+        "card_style": "rounded-lg border border-slate-200 bg-white p-6 shadow-sm",
+        "spacing_vertical": "py-16 md:py-24",
+        "container_max": "max-w-5xl"
+      },
+
+      "motion": {
+        "primary_style": "professional_steady",
+        "speed": "measured",
+        "intensity": "subtle",
+        "enter_curve": "cubic-bezier(0.4, 0, 0.2, 1)",
+        "hover_curve": "cubic-bezier(0.4, 0, 0.2, 1)",
+        "durations": {
+          "micro": 150,
+          "fast": 250,
+          "standard": 400,
+          "reveal": 600
+        },
+        "scroll_reveal": {
+          "type": "steady_fade",
+          "stagger_delay": 100,
+          "translate_y": "12px"
+        },
+        "cta_pulse": false
+      },
+
+      "copy_voice": {
+        "tone": "authoritative_reliable",
+        "adjectives": ["experiente", "dedicado", "transparente", "profissional", "estabelecido"],
+        "cta_formula": "[EXPERTISE] + [TRUST] + [ACTION]",
+        "hero_title_patterns": [
+          "[PROFESSION] com [YEARS] anos de experiencia a servico de [CLIENT_TYPE]",
+          "[EXPERTISE] especializada em [AREA] para [CLIENT_TYPE] em [CITY]",
+          "Sua [NEED] merece [EXPERTISE] - escritorio consolidado em [CITY]"
+        ],
+        "cta_labels": {
+          "primary": "Falar com especialista",
+          "secondary": "Ver areas de atencao",
+          "tertiary": "Agendar consulta"
+        }
+      },
+
+      "visual_elements": {
+        "textures": ["clean_professional"],
+        "overlays": ["subtle_blue_tint"],
+        "dividers": "section_divider",
+        "image_treatment": "professional_crop",
+        "decorative": ["institutional_badge", "verified_seal"]
+      },
+
+      "layout_variations": {
+        "v1_consultation_focus": {
+          "description": "Clear value proposition with consultation CTA",
+          "hero_classes": "lg:grid-cols-[1.1fr_0.9fr]",
+          "cta_position": "prominent bottom"
+        },
+        "v2_portfolio_grid": {
+          "description": "Case studies and proof displayed prominently",
+          "hero_classes": "grid gap-6 md:grid-cols-2",
+          "card_style": "hover:shadow-lg transition-shadow"
+        },
+        "v3_team_centered": {
+          "description": "Professional photo dominant with brief text",
+          "hero_classes": "lg:grid-cols-[0.8fr_1.2fr]",
+          "image_size": "large"
+        }
+      },
+
+      "motion_variations": {
+        "v1_subtle_fade": {
+          "description": "Minimal, professional appearance",
+          "enter_transform": "opacity-0",
+          "duration_multiplier": 0.8
+        },
+        "v2_staggered_cards": {
+          "description": "Cards animate in sequence",
+          "enter_transform": "translateY(20px) opacity-0",
+          "stagger_delay": 120
+        },
+        "v3_no_motion": {
+          "description": "Static layout, focus on content",
+          "enter_transform": "none",
+          "hover_only": true
+        }
+      },
+
+      "copy_variations": {
+        "v1_experience": {
+          "description": "Years and track record emphasis",
+          "tone_modifier": "proven_track_record",
+          "hero_pattern": "[NUMBER] mais casos resolvidos | [YEARS] de experiencia | [CITY]"
+        },
+        "v2_client_focus": {
+          "description": "Client success stories",
+          "tone_modifier": "client_centric",
+          "hero_pattern": "[NUMBER] mais [CLIENT_TYPE] atendidos - sua vez de ser atendido"
+        },
+        "v3_guarantee": {
+          "description": "Assurance and backing emphasis",
+          "tone_modifier": "commitment_focused",
+          "hero_pattern": "[GUARANTEE] em cada [SERVICE] - compromisso com [OUTCOME]"
+        }
+      }
+    }
+  },
+
+  "implementation_notes": {
+    "archetype_selection": "Deterministic selection based on segment keywords via hash of (segment + variation_seed) mod 6",
+    "variation_seed_sources": ["phone_last4", "timestamp_seconds", "business_name_length"],
+    "layout_selection": "Deterministic from (segment_hash + layout_variant_seed) mod 3",
+    "motion_selection": "Deterministic from (segment_hash + motion_variant_seed) mod 3",
+    "copy_selection": "Deterministic from (segment_hash + copy_variant_seed) mod 3",
+    "css_custom_properties": "Archetype generates CSS custom properties injected into index.css root",
+    "animation_class_prefix": "Archetype-specific animation classes prefixed with archetype name",
+    "font_loading": "All fonts loaded via Google Fonts in index.html template",
+    "image_url_strategy": "Segment-specific Unsplash collections mapped in _visual_media_urls"
+  },
+
+  "integration_points": {
+    "vite_react_renderer": {
+      "function": "_generate_studio_fallback_files",
+      "archetype_param": "Add archetype parameter to function signature",
+      "facts_enhancement": "Extract archetype from segment before calling component generators"
+    },
+    "vite_templates": {
+      "archetype_css": "Add archetype-specific CSS template function",
+      "component_variants": "Create variant functions per archetype per component"
+    },
+    "craft_rules": {
+      "archetype_context": "Add archetype-aware anti-slop rules",
+      "palette_validation": "Add 6-token palette validation"
+    }
+  },
+
+  "testing_strategy": {
+    "smoke_tests": {
+      "all_archetypes_render": "Test each archetype renders without errors",
+      "all_variations_work": "Test each variation combination",
+      "segment_mapping": "Test each known segment maps to archetype"
+    },
+    "visual_regression": "Screenshot comparison per archetype for hero plus 3 sections",
+    "performance": "Verify no archetype exceeds 500KB CSS or adds more than 200ms render"
+  }
+}

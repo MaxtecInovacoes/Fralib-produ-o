@@ -78,7 +78,7 @@ def _retry_with_backoff(
 
 # Base URLs padrão por provider
 _BASE_URLS = {
-    "anthropic": os.getenv("ANTHROPIC_BASE_URL", "https://api.aibee.cloud"),
+    "anthropic": os.getenv("ANTHROPIC_BASE_URL", "https://api.kpalabz.com/v1"),
     "openai": "https://api.openai.com/v1",
     "google": "https://generativelanguage.googleapis.com/v1beta",
     "groq": "https://api.groq.com/openai/v1",
@@ -95,7 +95,7 @@ def _get_key_for_provider(provider: str):
         if os.getenv("LITELLM_API_KEY"):
             return (
                 os.getenv("LITELLM_API_KEY", ""),
-                os.getenv("LITELLM_BASE_URL", os.getenv("ANTHROPIC_BASE_URL", "https://api.aibee.cloud")),
+                os.getenv("LITELLM_BASE_URL", os.getenv("ANTHROPIC_BASE_URL", "https://api.kpalabz.com/v1")),
                 None,
             )
         return (
@@ -106,7 +106,7 @@ def _get_key_for_provider(provider: str):
     if provider == "anthropic" and os.getenv("LITELLM_API_KEY"):
         return (
             os.getenv("LITELLM_API_KEY", ""),
-            os.getenv("LITELLM_BASE_URL", os.getenv("ANTHROPIC_BASE_URL", "https://api.aibee.cloud")),
+            os.getenv("LITELLM_BASE_URL", os.getenv("ANTHROPIC_BASE_URL", "https://api.kpalabz.com/v1")),
             None,
         )
     if provider == "anthropic" and os.getenv("ANTHROPIC_API_KEY"):

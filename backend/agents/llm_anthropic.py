@@ -13,7 +13,7 @@ import anthropic
 
 # Configurações do ambiente
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
-ANTHROPIC_BASE_URL = os.getenv("ANTHROPIC_BASE_URL", "https://api.aibee.cloud")
+ANTHROPIC_BASE_URL = os.getenv("ANTHROPIC_BASE_URL", "https://api.kpalabz.com/v1")
 
 # LiteLLM override
 LITELLM_API_KEY = os.getenv('LITELLM_API_KEY')

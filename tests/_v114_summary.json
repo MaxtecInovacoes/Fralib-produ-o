@@ -1,0 +1,82 @@
+{
+  "sprint": "12.12",
+  "version": "v1.14",
+  "tag_baseline": "v1.14-baseline-2026-06-25",
+  "tag_lockpoint": "v1.14-lockpoint-2026-06-25",
+  "objetivo": "Caroço Vite/React enriquecido com briefing REAL do lead + GSAP code snippets + bibliotecas injetadas",
+  "principios": [
+    "LIGAR o que ja existe (sem criar do zero)",
+    "Briefing REAL > briefing inventado",
+    "GSAP code > GSAP lista de data-attrs",
+    "Backward-compat: prompt sem facts continua funcionando",
+    "Caroço unificado via _build_caroço_block(facts)"
+  ],
+  "o_que_foi_ligado": [
+    "_summarize_builder_facts (renderer.py:2728) — agora inclui services, hours, differentials, target_audience, SEO keywords, fotos reais, JSON-LD",
+    "_build_premium_contract_block (vite_prompts.py:101) — ja existia (Sprint 11.5), agregado no caroço",
+    "_build_visual_direction_block — archetype + paleta",
+    "_build_motion_pack_block — 12 hooks data-attributes",
+    "_build_shadcn_block — componentes shadcn",
+    "_build_mobile_first_block — clamp + 44px + no overflow",
+    "_build_nicho_modal_block — Modal obrigatorio por nicho (Sprint 12.11)",
+    "_build_nicho_blocks_block — 10 blocos pré-fabricados",
+    "_build_no_contamination_block — guard cross-segmento"
+  ],
+  "o_que_foi_criado": [
+    "_build_gsap_code_block() — snippets REAIS (useReveal, HeroParallax, MagneticCTA)",
+    "_build_lead_briefing_block(facts) — dados REAIS + JSON-LD LocalBusiness",
+    "_build_caroço_block(facts) — agregador unificado",
+    "_build_vite_react_system_prompt_with_facts(facts) — prompt final com briefing",
+    "test_anti_regressao_v114.py — 8 testes anti-regressão"
+  ],
+  "bugs_corrigidos": [
+    "_build_nicho_modal_block: f-string escape {useState} → {{useState}} (quebrava import do modulo)"
+  ],
+  "validacoes": {
+    "test_anti_regressao_v114": "8/8 verdes",
+    "test_anti_regressao_v113_7": "6/6 verdes (suite anterior intacta)",
+    "system_prompt_len_com_facts": 36122,
+    "system_prompt_len_sem_facts": 31611,
+    "user_prompt_len": 11814,
+    "facts_summary_len": 903,
+    "manifest_gerado": "tenant-2__job-smoke-v114.json"
+  },
+  "campos_reais_injetados_no_caroço": [
+    "business.name",
+    "business.segment + subniche",
+    "business.city + address",
+    "business.phone + whatsapp",
+    "business.rating + total_avaliacoes",
+    "business.services (lista REAL, NAO inventada)",
+    "business.hours (HORARIO real)",
+    "business.differentials (prova social real)",
+    "business.target_audience",
+    "business.photos (URLs aprovadas)",
+    "seo.primary_terms (keywords validadas)",
+    "JSON-LD LocalBusiness (pronto pra colar)"
+  ],
+  "smoke_real": {
+    "lead": "codex-test-barbearia-fio-nobre-pinhais-20260612",
+    "tenant_id": 2,
+    "nicho": "barbearia",
+    "engine": "vite_react (sem openui fallback)",
+    "prd_path": ".tmp/smoke_v114/prd_fio_nobre.json",
+    "manifest_path": ".tmp/smoke_v114/manifest/tenant-2__job-smoke-v114.json",
+    "builder_prompt_len": 26856,
+    "modelo_alvo": "sonnet",
+    "resultado": "manifest gerado com sucesso, prompt de 27k chars com briefing REAL"
+  },
+  "git": {
+    "commit_hash": "f382fa8",
+    "branch": "master",
+    "tags": ["v1.14-baseline-2026-06-25", "v1.14-lockpoint-2026-06-25"],
+    "push_status": "ok (VPS + GitHub)"
+  },
+  "proximos_passos_sprint_12_13": [
+    "Adicionar briefing_block no renderer (_compose_vite_user_prompt) automatico",
+    "Wire _build_vite_react_system_prompt_with_facts no build_builder_job_manifest",
+    "Testar 6 nichos diferentes (barbearia, academia, restaurante, clinica, imobiliaria, default)",
+    "Smoke VPS com lead real Tenant 2",
+    "Validar QA 45/45 no site gerado"
+  ]
+}

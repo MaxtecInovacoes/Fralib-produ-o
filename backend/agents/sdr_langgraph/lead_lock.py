@@ -13,15 +13,69 @@ Uso:
         with _lead_lock_guard(lead_id):
             # Toda a função dentro do lock
             ...
+
+SDR 10/10 - ITEM 5: Lock distribuido via Redis
+- Substitui threading.Lock in-memory por Redis lock
+- Fallback para threading.Lock se Redis indisponivel
+- Funciona entre processos (fralib-wpp-listener + fralib-franz)
 """
 
+import os
 import threading
 import time
 from collections import OrderedDict
 from contextlib import contextmanager
-from typing import Dict
+from typing import Dict, Optional
 from functools import lru_cache
 
+import redis
+
+# ============================================================
+# Redis Client (lazy initialization com fallback)
+# ============================================================
+
+_redis_client: Optional[redis.Redis] = None
+_redis_lock = threading.Lock()
+_use_redis: bool = False
+
+
+def get_redis_client() -> Optional[redis.Redis]:
+    """
+    Retorna cliente Redis com lazy initialization.
+
+   SDR 10/10 - ITEM 5: Funcao centralizada para obter Redis.
+    Usa REDIS_URL do .env com fallback para None.
+
+    Returns:
+        redis.Redis se configurado e disponivel, None caso contrario
+    """
+    global _redis_client, _use_redis
+
+    if _redis_client is not None:
+        return _redis_client if _use_redis else None
+
+    redis_url = os.getenv("REDIS_URL", "").strip()
+    if not redis_url:
+        return None
+
+    with _redis_lock:
+        if _redis_client is None:
+            try:
+                import redis as redis_lib
+                _redis_client = redis_lib.from_url(redis_url, decode_responses=True)
+                _redis_client.ping()
+                _use_redis = True
+                print("[lead_lock] Redis conectado - lock distribuido ativo")
+            except Exception as e:
+                print(f"[lead_lock] Redis nao disponivel: {e} - usando fallback threading.Lock")
+                _redis_client = None
+                _use_redis = False
+        return _redis_client if _use_redis else None
+
+
+# ============================================================
+# Lock Cache (mantido para fallback threading.Lock)
+# ============================================================
 
 # Cache global de locks por lead_id
 # Usamos dict thread-safe com lock externo
@@ -35,10 +89,17 @@ _CACHE_LOCK = threading.Lock()
 _CACHE_MAX_SIZE = 10000
 
 
+# ============================================================
+# Lock Guard com Redis Distributed Lock
+# ============================================================
+
 @contextmanager
 def _lead_lock_guard(lead_id: str):
     """
     Garante que só 1 thread/processo por vez possa processar um lead.
+
+    SDR 10/10 - ITEM 5: Agora usa Redis lock distribuido quando disponivel.
+    Fallback para threading.Lock se Redis offline.
 
     Args:
         lead_id: Identificador único do lead (telefone ou lead_id do banco)
@@ -46,21 +107,45 @@ def _lead_lock_guard(lead_id: str):
     Yields:
         Lock para o lead_id
     """
-    with _LOCK_GUARD:
-        if lead_id not in _LEAD_LOCKS:
-            _LEAD_LOCKS[lead_id] = threading.Lock()
-        lock = _LEAD_LOCKS[lead_id]
+    redis_client = get_redis_client()
 
-    try:
-        # Adquirir lock com timeout para evitar deadlocks
-        acquired = lock.acquire(timeout=30.0)
-        if not acquired:
-            raise TimeoutError(f"Não conseguiu lock para lead {lead_id} em 30s")
+    if redis_client:
+        # Modo distribuido: Redis lock
+        lock_key = f"fralib:lead_lock:{lead_id}"
+        redis_lock = redis_client.lock(
+            lock_key,
+            timeout=30.0,
+            blocking_timeout=30.0,
+        )
+        acquired = False
+        try:
+            acquired = redis_lock.acquire(blocking=True, blocking_timeout=30.0)
+            if not acquired:
+                raise TimeoutError(f"Nao conseguiu lock Redis para lead {lead_id} em 30s")
+            yield redis_lock
+        finally:
+            if acquired:
+                try:
+                    redis_lock.release()
+                except Exception:
+                    pass
+    else:
+        # Fallback: threading.Lock in-memory (comportamento original)
+        with _LOCK_GUARD:
+            if lead_id not in _LEAD_LOCKS:
+                _LEAD_LOCKS[lead_id] = threading.Lock()
+            lock = _LEAD_LOCKS[lead_id]
 
-        yield lock
+        try:
+            # Adquirir lock com timeout para evitar deadlocks
+            acquired = lock.acquire(timeout=30.0)
+            if not acquired:
+                raise TimeoutError(f"Nao conseguiu lock para lead {lead_id} em 30s")
 
-    finally:
-        lock.release()
+            yield lock
+
+        finally:
+            lock.release()
 
 
 def _is_duplicate_message_id(msg_id: str, ttl_seconds: int = 60) -> bool:

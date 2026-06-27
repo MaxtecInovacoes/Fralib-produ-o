@@ -119,4 +119,8 @@ ESTADO_TO_STAGE = {
     "qualificado": "qualificados",
     "handoff":     "qualificados",
     "scheduled":   "followup1",
+    # Stages extras (SDR)
+    "opt_out":     "perdidos",
+    "followup_24h": "followup1",
+    "followup_72h": "followup2",
 }

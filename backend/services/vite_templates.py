@@ -59,6 +59,7 @@ def _facts_publication_url(facts: dict[str, Any]) -> str:
 
 
 def _facts_theme_color(facts: dict[str, Any]) -> str:
+    """Get theme color from facts, with archetype-based fallback."""
     for container_name in ("visual_dna", "visual_direction", "design"):
         container = facts.get(container_name)
         if not isinstance(container, dict):
@@ -70,6 +71,12 @@ def _facts_theme_color(facts: dict[str, Any]) -> str:
             color = str(tokens.get(key) or "").strip()
             if re.fullmatch(r"#[0-9a-fA-F]{6}", color):
                 return color
+
+    # Sprint 16: Use archetype palette from facts if available
+    archetype_data = facts.get("_archetype_palette") if isinstance(facts.get("_archetype_palette"), dict) else {}
+    if archetype_data.get("primary"):
+        return archetype_data["primary"]
+
     return "#111827"
 
 

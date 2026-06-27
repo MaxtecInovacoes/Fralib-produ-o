@@ -5,6 +5,9 @@ Puxa dados de heatmap, recordings e insights do Clarity.
 Salva no banco proprio pra cruzar com nosso tracking.
 
 Doc: https://learn.microsoft.com/en-us/clarity/setup-and-installation/clarity-api
+
+NOTA: A API mudou! Usar clarity.microsoft.com/api/v1/ (não clarity.ms/export-data/api/v1)
+Limites: 10 requests/dia, 3 dias de dados, 3 dimensões por request
 """
 
 import os
@@ -22,24 +25,37 @@ from backend.core.database import get_db
 router = APIRouter(prefix="/api/clarity", tags=["clarity"])
 log = logging.getLogger("uvicorn")
 
-CLARITY_PROJECT_ID = "wv8xiy7kvk"
-CLARITY_API_BASE = "https://www.clarity.ms/export-data/api/v1"
+# IMPORTANT: Use numeric project ID from token (sub claim), not the clarity tag ID
+# The token's 'sub' claim contains the actual project ID: 3338072913502064
+CLARITY_PROJECT_ID = os.getenv("CLARITY_PROJECT_ID", "3338072913502064")
+# Nova URL correta da API
+CLARITY_API_BASE = "https://clarity.microsoft.com/api/v1"
 CLARITY_TOKEN = os.getenv("CLARITY_API_TOKEN", "")
 
 
 async def clarity_request(endpoint: str, params: dict | None = None) -> dict:
-    """Faz request autenticada pra Clarity Data Export API."""
+    """Faz request autenticada pra Clarity Data Export API.
+
+    Importante: A API retorna 400 Bad Request se:
+    - Project ID estiver incorreto
+    - Limite de requests diário for atingido (10/dia)
+    - Formato dos parâmetros estiver errado
+    """
     if not CLARITY_TOKEN:
         raise HTTPException(
             status_code=503,
             detail="CLARITY_API_TOKEN nao configurado no .env",
         )
-    headers = {"Authorization": f"Bearer {CLARITY_TOKEN}"}
+    headers = {
+        "Authorization": f"Bearer {CLARITY_TOKEN}",
+        "Accept": "application/json",
+    }
     url = f"{CLARITY_API_BASE}/{endpoint}"
     async with httpx.AsyncClient(timeout=30) as client:
         r = await client.get(url, headers=headers, params=params or {})
+        log.info("Clarity API %s -> %s", endpoint, r.status_code)
         if r.status_code != 200:
-            log.error("Clarity API %s -> %s: %s", endpoint, r.status_code, r.text[:300])
+            log.error("Clarity API error: %s - %s", r.status_code, r.text[:500])
             raise HTTPException(status_code=r.status_code, detail=f"Clarity: {r.text[:200]}")
         return r.json()
 
@@ -49,11 +65,10 @@ async def clarity_info():
     """Info do projeto Clarity."""
     try:
         data = await clarity_request(
-            "project-info",
-            {"projectId": CLARITY_PROJECT_ID},
+            f"projects/{CLARITY_PROJECT_ID}",
         )
         return {"ok": True, "project": data}
-    except HTTPException:
+    except HTTPException as e:
         # fallback: retorna o que sabemos hardcoded
         return {
             "ok": True,
@@ -62,7 +77,8 @@ async def clarity_info():
                 "name": "FraLib OS",
                 "site": "seunegociofralib.site",
             },
-            "note": "Retornado do fallback - API pode estar lenta ou indisponivel",
+            "note": "API retornou erro - dados do fallback. Verifique se o token está correto.",
+            "error_detail": str(e.detail),
         }
 
 

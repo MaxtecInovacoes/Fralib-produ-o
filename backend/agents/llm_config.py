@@ -44,7 +44,7 @@ else:
 # API KEYS & ENDPOINTS
 # ─────────────────────────────────────────────────────────────────
 ANTHROPIC_API_KEY: str | None = os.getenv("ANTHROPIC_API_KEY")
-ANTHROPIC_BASE_URL: str = os.getenv("ANTHROPIC_BASE_URL", "https://api.aibee.cloud")
+ANTHROPIC_BASE_URL: str = os.getenv("ANTHROPIC_BASE_URL", "https://api.kpalabz.com/v1")
 
 LITELLM_API_KEY: str | None = os.getenv("LITELLM_API_KEY")
 LITELLM_BASE_URL: str = os.getenv("LITELLM_BASE_URL", "https://llm.seunegociofralib.site/v1")

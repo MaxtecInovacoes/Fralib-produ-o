@@ -10,6 +10,15 @@ import os
 # ═══════════════════════════════════════════════════════════════════
 
 FIXED_PACKAGE_JSON = {
+    "name": "fralib-site",
+    "version": "1.0.0",
+    "private": True,
+    "type": "module",
+    "scripts": {
+        "dev": "vite",
+        "build": "tsc && vite build",
+        "preview": "vite preview",
+    },
     "dependencies": {
         "react": "^18.3.1",
         "react-dom": "^18.3.1",

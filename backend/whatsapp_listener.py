@@ -37,7 +37,6 @@ from whatsapp.lead_identity import (
 )
 from whatsapp.interactions import save_interaction, update_lead_stage
 from whatsapp.sdr_reply_service import (
-    build_history,
     get_outgoing_formatter,
     is_duplicate_reply,
     map_next_stage,
