@@ -271,7 +271,8 @@ canvas{max-width:100%}
         <option value="30d" selected>Últimos 30 dias</option>
         <option value="90d">Últimos 90 dias</option>
       </select>
-      <button class="btn btn-primary" onclick="loadGrowthAnalytics()">Atualizar</button>
+      <button class="btn" onclick="loadGrowthAnalytics()">Atualizar</button>
+      <button class="btn btn-success" onclick="seedAnalyticsData()" style="margin-left:10px">Seed Demo Data</button>
     </div>
 
     <!-- KPI Cards -->
@@ -2887,6 +2888,25 @@ async function cdMarcarContatado(userId, nome) {
 // ============================================================
 let _chartLeadsTimeline = null;
 let _chartUtmSources = null;
+
+async function seedAnalyticsData() {
+  if (!confirm('Criar dados de exemplo para teste? Isso vai inserir 500 eventos e dados de gastos.')) return;
+
+  try {
+    toast('Criando dados...', 'success');
+    const r = await authFetch('/api/analytics/seed', { method: 'POST' });
+    const d = await r.json();
+
+    if (d.ok) {
+      toast(`Sucesso! ${d.events_created} eventos e ${d.ad_spend_created} registros de gastos criados.`, 'success');
+      loadGrowthAnalytics();
+    } else {
+      toast('Erro: ' + (d.error || 'desconhecido'), 'error');
+    }
+  } catch (e) {
+    toast('Erro: ' + e.message, 'error');
+  }
+}
 
 async function loadGrowthAnalytics() {
   const period = document.getElementById('growth-period')?.value || '30d';

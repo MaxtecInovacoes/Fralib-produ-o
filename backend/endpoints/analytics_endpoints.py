@@ -16,6 +16,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 import logging
 import json
+import random
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy import text
@@ -27,6 +28,15 @@ from backend.core.access_control import require_superadmin
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix='/api/analytics', tags=['analytics'])
+
+# Fontes UTM para seed
+SOURCES = ['facebook', 'instagram', 'google', 'tiktok', 'youtube', 'direct']
+MEDIUMS = ['cpc', 'post', 'story', 'email', 'referral']
+CAMPAIGNS = [
+    'nutricionista_mae_solo', 'advogado_iniciante', 'dentista_pequeno_negocio',
+    'fisioterapeuta_local', 'psicologo_consultorio', 'arquiteto_portfolio',
+    'contador_mei', 'fotografo_eventos'
+]
 
 
 # ============================================================
@@ -643,4 +653,115 @@ async def get_growth_dashboard(
 
     except Exception as e:
         logger.error(f"Error fetching growth dashboard: {e}")
+        return {"ok": False, "error": str(e)}
+
+
+@router.post("/seed")
+async def seed_demo_data(
+    db: Session = Depends(get_db),
+    user: dict = Depends(require_superadmin)
+):
+    """
+    Popula dados de exemplo para testar o analytics.
+    """
+    try:
+        # Criar tabelas se não existirem
+        db.execute(text("""
+            CREATE TABLE IF NOT EXISTS analytics_events (
+                id SERIAL PRIMARY KEY,
+                session_id VARCHAR(255) NOT NULL,
+                event_name VARCHAR(100) NOT NULL,
+                event_data TEXT,
+                utm_source VARCHAR(100),
+                utm_medium VARCHAR(100),
+                utm_campaign VARCHAR(100),
+                utm_content VARCHAR(100),
+                utm_term VARCHAR(100),
+                url TEXT,
+                referrer TEXT,
+                user_agent TEXT,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+            )
+        """))
+        db.execute(text("CREATE INDEX IF NOT EXISTS idx_analytics_events_session ON analytics_events(session_id)"))
+        db.execute(text("CREATE INDEX IF NOT EXISTS idx_analytics_events_event ON analytics_events(event_name)"))
+        db.execute(text("CREATE INDEX IF NOT EXISTS idx_analytics_events_date ON analytics_events(created_at)"))
+        db.execute(text("CREATE INDEX IF NOT EXISTS idx_analytics_events_utm ON analytics_events(utm_source, utm_campaign)"))
+
+        db.execute(text("""
+            CREATE TABLE IF NOT EXISTS ad_spend (
+                id SERIAL PRIMARY KEY,
+                date DATE,
+                source VARCHAR(100),
+                campaign VARCHAR(100),
+                cost FLOAT DEFAULT 0,
+                platform VARCHAR(50),
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+                updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+            )
+        """))
+        db.execute(text("CREATE INDEX IF NOT EXISTS idx_ad_spend_date ON ad_spend(date, source)"))
+
+        # Inserir eventos de analytics
+        event_count = 0
+        for i in range(500):
+            days_ago = random.randint(0, 30)
+            created_at = datetime.now() - timedelta(days=days_ago, hours=random.randint(0, 23))
+
+            source = random.choice(SOURCES)
+            medium = random.choice(MEDIUMS)
+            campaign = random.choice(CAMPAIGNS) if random.random() > 0.3 else None
+
+            event_name = random.choice([
+                'page_view', 'page_view', 'page_view', 'page_view',
+                'click', 'click', 'form_submit', 'scroll_depth'
+            ])
+
+            db.execute(text("""
+                INSERT INTO analytics_events
+                (session_id, event_name, utm_source, utm_medium, utm_campaign, url, created_at)
+                VALUES (:session_id, :event_name, :utm_source, :utm_medium, :utm_campaign, :url, :created_at)
+            """), {
+                'session_id': f'session_{random.randint(10000, 99999)}',
+                'event_name': event_name,
+                'utm_source': source,
+                'utm_medium': medium,
+                'utm_campaign': campaign,
+                'url': 'https://seunegociofralib.site/',
+                'created_at': created_at
+            })
+            event_count += 1
+
+        # Inserir gastos com ads
+        spend_count = 0
+        for days_ago in range(30, 0, -1):
+            date = datetime.now().date() - timedelta(days=days_ago)
+            for source in ['facebook', 'google', 'instagram', 'tiktok']:
+                cost = random.uniform(100, 500) if source in ['facebook', 'google'] else random.uniform(20, 150)
+                campaign = random.choice(CAMPAIGNS)
+
+                db.execute(text("""
+                    INSERT INTO ad_spend (date, source, campaign, cost, platform)
+                    VALUES (:date, :source, :campaign, :cost, :platform)
+                """), {
+                    'date': date,
+                    'source': source,
+                    'campaign': campaign,
+                    'cost': round(cost, 2),
+                    'platform': source
+                })
+                spend_count += 1
+
+        db.commit()
+
+        return {
+            "ok": True,
+            "message": "Dados de exemplo criados com sucesso!",
+            "events_created": event_count,
+            "ad_spend_created": spend_count
+        }
+
+    except Exception as e:
+        logger.error(f"Error seeding demo data: {e}")
+        db.rollback()
         return {"ok": False, "error": str(e)}

@@ -241,6 +241,56 @@ async def lifespan(app):
     except Exception as e:
         print(f"[Server] Aviso: migration sdr_horario_config falhou: {e}")
 
+    # Migration: analytics_events table para UTM tracking
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS analytics_events (
+                    id SERIAL PRIMARY KEY,
+                    session_id VARCHAR(255) NOT NULL,
+                    event_name VARCHAR(100) NOT NULL,
+                    event_data TEXT,
+                    utm_source VARCHAR(100),
+                    utm_medium VARCHAR(100),
+                    utm_campaign VARCHAR(100),
+                    utm_content VARCHAR(100),
+                    utm_term VARCHAR(100),
+                    url TEXT,
+                    referrer TEXT,
+                    user_agent TEXT,
+                    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+                )
+            """))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS idx_analytics_events_session ON analytics_events(session_id)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS idx_analytics_events_event ON analytics_events(event_name)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS idx_analytics_events_date ON analytics_events(created_at)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS idx_analytics_events_utm ON analytics_events(utm_source, utm_campaign)"))
+            conn.commit()
+        print("[Server] Migration: analytics_events OK")
+    except Exception as e:
+        print(f"[Server] Aviso: migration analytics_events falhou: {e}")
+
+    # Migration: ad_spend table para KPIs de ads
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS ad_spend (
+                    id SERIAL PRIMARY KEY,
+                    date DATE,
+                    source VARCHAR(100),
+                    campaign VARCHAR(100),
+                    cost FLOAT DEFAULT 0,
+                    platform VARCHAR(50),
+                    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+                    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+                )
+            """))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS idx_ad_spend_date ON ad_spend(date, source)"))
+            conn.commit()
+        print("[Server] Migration: ad_spend OK")
+    except Exception as e:
+        print(f"[Server] Aviso: migration ad_spend falhou: {e}")
+
     # Iniciar listener WhatsApp (recebe respostas dos leads e chama Bryan)
     try:
         import sys, os
