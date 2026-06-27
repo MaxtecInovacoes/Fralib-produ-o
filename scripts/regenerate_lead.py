@@ -128,15 +128,15 @@ def regenerate(lead_id):
         )
         print(f"  Lead {lead_id} ({row[2]}): {result.get('status', '?')}")
 
-        # Sprint 14.7: publica resultado no /var/www
+        # Sprint 14.7: publica resultado no /var/www/<slug>/
         try:
             output_dir = result.get("output_dir", "")
-            index_path = result.get("index_path", "")
-            if output_dir and index_path:
-                # Determina path de publicacao
-                import os as _os
-                _slug = _os.path.basename(_os.path.dirname(_os.path.dirname(index_path))) if index_path else ""
+            if output_dir:
+                # Determina slug do nome do lead
+                import re as _re
+                _slug = _re.sub(r'[^a-z0-9-]+', '-', row[2].lower()).strip('-')
                 publish_dir = f"/var/www/fralib/sites/{row[1]}/{_slug}"
+                from backend.services.builder_worker import copy_builder_dist
                 copy_builder_dist(output_dir, publish_dir)
                 print(f"  -> publicado em {publish_dir}")
         except Exception as pub_err:
