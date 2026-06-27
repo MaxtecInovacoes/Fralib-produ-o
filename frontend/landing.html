@@ -99,7 +99,7 @@
             "@type": "Offer",
             "name": "Starter",
             "description": "Plano inicial para começar a vender sites",
-            "price": "97",
+            "price": "67",
             "priceCurrency": "BRL",
             "availability": "https://schema.org/InStock"
           },
@@ -107,7 +107,7 @@
             "@type": "Offer",
             "name": "Pro",
             "description": "Plano profissional com recursos avançados",
-            "price": "497",
+            "price": "67",
             "priceCurrency": "BRL",
             "availability": "https://schema.org/InStock"
           },
@@ -1361,7 +1361,7 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
   box-shadow:0 0 40px var(--gold-dim),0 20px 60px rgba(0,0,0,.3);
 }
 .plano-card.destaque::before{
-  content:'MAIS POPULAR';
+  content:'OFERTA ESPECIAL';
   position:absolute;top:-12px;left:50%;transform:translateX(-50%);
   padding:4px 16px;border-radius:var(--fl-r-full);
   background:linear-gradient(135deg,var(--gold),#FF9500);
@@ -3031,39 +3031,40 @@ function trackPurchase(orderId, amount) {
       <!-- STARTER -->
       <div class="plano-card reveal">
         <div class="plano-name">STARTER</div>
-        <div class="plano-price">R$97<span>/mes</span></div>
+        <div class="plano-price">R$67<span>/mes</span></div>
         <p style="color:var(--fl-success);font-size:11px;margin:8px 0;font-weight:700;">IDEAL PRA COMEÇAR</p>
         <div class="plano-period" style="font-size:12px;margin-bottom:16px;">Pra quem quer validar se funciona de verdade. Sem pressa pra escalar.</div>
         <ul class="plano-features">
           <li>Sites ilimitados</li>
-          <li>Prospeccao automatica completa</li>
-          <li>Franz envia mensagens no WhatsApp</li>
+          <li>Prospeccao de 50 leads</li>
+          <li>WhatsApp basico</li>
           <li>1 dominio proprio</li>
           <li>Hospedagem inclusa</li>
-          <li>Suporte por WhatsApp</li>
+          <li>Suporte por email</li>
         </ul>
         <div class="plano-cta-wrap">
-          <a href="/login?signup=1&amp;plano=starter" class="plano-cta cta-outline" onclick="trackAddToCart('Starter', 97); fbq('track', 'Lead');">TESTAR 7 DIAS GRÁTIS</a>
+          <a href="/login?signup=1&amp;plano=starter" class="plano-cta cta-outline" onclick="trackAddToCart('Starter', 67); fbq('track', 'Lead');">TESTAR 7 DIAS GRÁTIS</a>
         </div>
       </div>
 
       <!-- PRO -->
       <div class="plano-card destaque reveal">
         <div class="plano-name">PRO</div>
-        <div class="plano-price">R$197<span>/mes</span></div>
+        <div class="plano-price">R$97<span>/mes</span></div>
+        <div style="background:linear-gradient(135deg,var(--gold),#FF9500);color:#000;padding:8px 12px;border-radius:8px;margin-bottom:8px;font-weight:700;font-size:10px;">🎁 STARTER GANHA: 1 MÊS GRÁTIS</div>
         <p style="color:var(--gold);font-size:11px;margin:8px 0;font-weight:700;">MAIS ESCOLHIDO</p>
-        <div class="plano-period" style="font-size:12px;margin-bottom:16px;">Pra quem ja testou e quer ganhar dinheiro de verdade. Quem ta aqui nao volta pro Starter.</div>
+        <div class="plano-period" style="font-size:12px;margin-bottom:16px;">Pra quem ja testou e quer leads ilimitados. WhatsApp completo sem cooldown.</div>
         <ul class="plano-features">
-          <li>Sites ilimitados + cooldown minimo</li>
-          <li>Prospeccao avancada com IA</li>
-          <li>Franz com retries e follow-up automatico</li>
-          <li>Dominios proprios ilimitados</li>
-          <li>Dashboard completo + analytics</li>
-          <li>Prioridade na fila de envio</li>
+          <li>Tudo do Starter +</li>
+          <li>Leads ILIMITADOS</li>
+          <li>WhatsApp completo</li>
+          <li>Briefing automatizado</li>
+          <li>Integrações RD/GCalendar</li>
+          <li>Dominios ilimitados</li>
           <li>Suporte prioritario</li>
         </ul>
         <div class="plano-cta-wrap">
-          <a href="/login?signup=1&amp;plano=pro" class="plano-cta cta-gold" onclick="trackAddToCart('Pro', 197); fbq('track', 'Lead');">QUERO TODOS OS RECURSOS</a>
+          <a href="/login?signup=1&amp;plano=pro" class="plano-cta cta-gold" onclick="trackAddToCart('Pro', 97); fbq('track', 'Lead');">QUERO PRO COM 1 MÊS GRÁTIS</a>
           <p class="plano-garantia">7 dias de garantia incondicional.</p>
         </div>
       </div>
@@ -3141,7 +3142,7 @@ function trackPurchase(orderId, amount) {
           30 hospedagens x R$ 120 = <strong>R$ 3.600</strong><br>
           15 extras x R$ 200 = <strong>R$ 3.000</strong><br>
           10 subcontas x R$ 200 = <strong>R$ 2.000</strong><br>
-          <span style="color:var(--fl-text-muted);font-size:12px;">- FraLib Pro R$ 197 + hospedagem R$ 450</span><br>
+          <span style="color:var(--fl-text-muted);font-size:12px;">- FraLib Pro R$ 97 + hospedagem R$ 450</span><br>
           <span style="color:var(--cyan);font-size:18px;font-weight:700;display:block;margin-top:8px;">= ~R$ 20.500/mes de lucro</span>
         </div>
       </div></div>
@@ -3939,8 +3940,8 @@ if (!prefersReducedMotion && !isMobileInApp && typeof particlesJS !== 'undefined
     <div class="ep-countdown">⏰ Expira em <strong id="countdownTime">14:59</strong></div>
     <h2 class="ep-title">ESPERA!<br>VOCÊ VAI PERDER ISSO</h2>
     <p class="ep-sub">
-      Assine o <strong style="color:#FACC15">Starter por R$97/mês</strong> e comece hoje.<br>
-      Quando escalar, migra pro <strong style="color:#FACC15">Pro por R$197/mês</strong> (mais escolhido).
+      Assine o <strong style="color:#FACC15">Starter por R$67/mês</strong> e comece hoje.<br>
+      Quando escalar, ganhe <strong style="color:#FACC15">1 mês GRÁTIS no Pro por R$97/mês</strong>.
     </p>
     <div class="ep-prices">
       <div class="ep-card">
