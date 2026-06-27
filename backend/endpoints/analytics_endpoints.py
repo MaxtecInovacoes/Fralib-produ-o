@@ -430,7 +430,7 @@ async def get_cohort_analysis(
     """
     try:
         # Cohorts diários - novos usuários e conversão por dia
-        cohort_data = db.execute(text("""
+        cohort_data = db.execute(text(f"""
             SELECT
                 DATE(created_at::timestamp) as cohort_date,
                 COUNT(*) as new_users,
@@ -698,7 +698,7 @@ async def seed_demo_data(
         event_count = 0
         for i in range(500):
             days_ago = random.randint(0, 30)
-            created_at::timestamp = datetime.now() - timedelta(days=days_ago, hours=random.randint(0, 23))
+            created_at = datetime.now() - timedelta(days=days_ago, hours=random.randint(0, 23))
 
             source = random.choice(SOURCES)
             medium = random.choice(MEDIUMS)
@@ -720,7 +720,7 @@ async def seed_demo_data(
                 'utm_medium': medium,
                 'utm_campaign': campaign,
                 'url': 'https://seunegociofralib.site/',
-                'created_at::timestamp': created_at::timestamp
+                'created_at': created_at
             })
             event_count += 1
 
