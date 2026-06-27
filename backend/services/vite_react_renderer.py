@@ -3479,6 +3479,63 @@ def _generate_cinematic_studio_files(facts: dict[str, Any]) -> dict[str, str]:
     c_text = palette['text_light']
     c_text_muted = "#9ca3af"  # zinc-400
 
+    # Sprint 14.12: variacao por subnicho + counter rotation para evitar
+    # que sites do mesmo subnicho (ex: 4 nutricionistas) saiam identicos.
+    _biz = facts.get("business") if isinstance(facts.get("business"), dict) else {}
+    _subnicho_norm = (
+        str(_biz.get("subnicho") or _biz.get("subniche") or facts.get("subnicho") or facts.get("subniche") or "default")
+        .strip().lower() or "default"
+    )
+    _seed_for_html = int(_biz.get("__counter") or facts.get("__counter") or 0)
+
+    # Hero class variants (5 opcoes rotacionadas por counter)
+    _HERO_CLASSES_POOL = [
+        "relative isolate min-h-[92svh] overflow-hidden px-5 pb-16 pt-28 text-white md:px-8 md:pb-24 md:pt-36",
+        "relative isolate min-h-[85svh] overflow-hidden px-6 pb-20 pt-24 text-white md:px-10 md:pb-28 md:pt-32",
+        "relative isolate min-h-[100svh] overflow-hidden px-4 pb-12 pt-20 text-white md:px-6 md:pb-16 md:pt-24",
+        "relative isolate min-h-[88svh] overflow-hidden px-5 pb-14 pt-32 text-white md:px-8 md:pb-20 md:pt-40",
+        "relative isolate min-h-[95svh] overflow-hidden px-5 pb-18 pt-26 text-white md:px-9 md:pb-22 md:pt-34",
+    ]
+    _hero_class = _HERO_CLASSES_POOL[_seed_for_html % len(_HERO_CLASSES_POOL)]
+
+    # H1 size variants (5 opcoes)
+    _H1_SIZE_POOL = [
+        "text-[clamp(2.65rem,7.7vw,5.9rem)] font-semibold leading-[0.93] tracking-[-0.035em] text-white",
+        "text-[clamp(2.4rem,7vw,5.4rem)] font-bold leading-[0.95] tracking-[-0.04em] text-white",
+        "text-[clamp(2.8rem,8.2vw,6.4rem)] font-extrabold leading-[0.9] tracking-[-0.03em] text-white",
+        "text-[clamp(2.55rem,7.3vw,5.7rem)] font-semibold leading-[1] tracking-[-0.025em] text-white",
+        "text-[clamp(2.7rem,7.9vw,6rem)] font-bold leading-[0.92] tracking-[-0.038em] text-white",
+    ]
+    _h1_size = _H1_SIZE_POOL[_seed_for_html % len(_H1_SIZE_POOL)]
+
+    # Font family variants (5 opcoes por subnicho + counter)
+    _FONT_POOL = {
+        "default": ["Inter, sans-serif", "system-ui, sans-serif", "Roboto, sans-serif", "Manrope, sans-serif", "DM Sans, sans-serif"],
+        "nutricionista_esportiva": ["'Oswald', sans-serif", "'Bebas Neue', sans-serif", "'Inter', sans-serif", "'Anton', sans-serif", "'Roboto Condensed', sans-serif"],
+        "nutricionista_clinica": ["'Lora', serif", "'Merriweather', serif", "'Nunito', sans-serif", "'Crimson Pro', serif", "'Source Serif 4', serif"],
+        "barbearia_premium": ["'Playfair Display', serif", "'Bebas Neue', sans-serif", "'Anton', sans-serif", "'Oswald', sans-serif", "'Inter', sans-serif"],
+        "academia_crossfit": ["'Oswald', sans-serif", "'Bebas Neue', sans-serif", "'Anton', sans-serif", "'Inter', sans-serif", "'Roboto Condensed', sans-serif"],
+        "academia_musculacao": ["'Anton', sans-serif", "'Bebas Neue', sans-serif", "'Oswald', sans-serif", "'Inter', sans-serif", "'Manrope', sans-serif"],
+        "restaurante_familiar": ["'Lora', serif", "'Playfair Display', serif", "'Merriweather', serif", "'Crimson Pro', serif", "'Inter', sans-serif"],
+    }
+    _font_family = _FONT_POOL.get(_subnicho_norm, _FONT_POOL["default"])[_seed_for_html % 5]
+
+    # Services icon variants (3 services, 5 icon options)
+    _SERVICE_ICONS = ["ClipboardCheck", "Sparkles", "MapPinned", "Heart", "Trophy"]
+    _services_icon_set = [
+        [_SERVICE_ICONS[_seed_for_html % 5], _SERVICE_ICONS[(_seed_for_html + 1) % 5], _SERVICE_ICONS[(_seed_for_html + 2) % 5]],
+    ][0]
+
+    # CTA button style variants (5)
+    _CTA_BTN_POOL = [
+        "rounded-full px-4 py-2 text-sm font-semibold transition hover:-translate-y-0.5",
+        "rounded-xl px-5 py-2.5 text-sm font-bold transition hover:scale-105",
+        "rounded-2xl px-6 py-3 text-base font-bold transition hover:-translate-y-1",
+        "rounded-md px-4 py-2 text-sm font-semibold transition hover:translate-x-1",
+        "rounded-lg px-5 py-3 text-sm font-semibold transition hover:shadow-lg",
+    ]
+    _cta_btn_class = _CTA_BTN_POOL[_seed_for_html % len(_CTA_BTN_POOL)]
+
     # Sprint 14.6: injeta __counter nos facts para _cinematic_copy usar
     # rotacao de headlines/CTAs. Counter vem do variation log (counter rotation).
     _enriched_facts = dict(facts or {})
@@ -3607,7 +3664,7 @@ export function HeroSection({ onOpen }: { onOpen?: () => void }) {
     return () => ctx.revert();
   }, []);
   return (
-    <section ref={rootRef} id="hero" className={`relative isolate min-h-[92svh] overflow-hidden px-5 pb-16 pt-28 text-white md:px-8 md:pb-24 md:pt-36 ${heroClasses}`}>
+    <section ref={rootRef} id="hero" className={`${heroClasses} ${_hero_class}`}>
       <div className="absolute inset-0 -z-20" style={{ background: 'var(--bg)' }} />
       {_showVideo && mediaVideos[0] ? (
         <video data-hero-video className="absolute inset-0 -z-10 h-full w-full object-cover opacity-52 saturate-[.9]" src={mediaVideos[0]} poster={mediaImages[0]} autoPlay muted loop playsInline preload="metadata" />
@@ -3618,7 +3675,7 @@ export function HeroSection({ onOpen }: { onOpen?: () => void }) {
       <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[1.05fr_.95fr] lg:items-end">
         <div className="max-w-4xl">
           <motion.div data-hero-reveal className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em]" style={{ borderColor: 'color-mix(in srgb, var(--accent) 25%, transparent)', background: 'color-mix(in srgb, var(--accent) 10%, transparent)', color: 'var(--accent-soft)' }}><Play className="h-3.5 w-3.5" />{siteCopy.segment} em {siteCopy.city}</motion.div>
-          <h1 data-hero-reveal className="mt-7 max-w-5xl text-[clamp(2.65rem,7.7vw,5.9rem)] font-semibold leading-[0.93] tracking-[-0.035em] text-white">{siteCopy.headline}</h1>
+          <h1 data-hero-reveal className={`mt-7 max-w-5xl ${_h1_size}`}>{siteCopy.headline}</h1>
           <p data-hero-reveal className="mt-6 max-w-2xl text-base leading-8 text-zinc-200 md:text-lg">{siteCopy.subheadline}</p>
           <div data-hero-reveal className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
             <a href={whatsappHref} rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 rounded-full px-6 py-3.5 text-sm font-semibold transition duration-300 hover:-translate-y-0.5" style={{ background: 'var(--accent)', color: 'var(--bg)' }}><MessageCircle className="h-4 w-4" />{siteCopy.cta_primary}</a>
@@ -3647,11 +3704,16 @@ export default HeroSection;
   --text-muted: {c_text_muted};
   --bg-light: {palette.get('bg_light', '#f4f0e6')};
   --text-dark: {palette.get('text_dark', '#09130f')};
+  --font-family: {_font_family};
+  --hero-class: {_hero_class};
+  --h1-size: {_h1_size};
+  --cta-btn: {_cta_btn_class};
 }}
 @layer base {{
   * {{ box-sizing: border-box; }}
   html {{ scroll-behavior: smooth; background: var(--bg); }}
-  body {{ margin: 0; min-width: 320px; min-height: 100vh; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: var(--text); background: var(--bg); text-rendering: geometricPrecision; }}
+  body {{ margin: 0; min-width: 320px; min-height: 100vh; font-family: var(--font-family); color: var(--text); background: var(--bg); text-rendering: geometricPrecision; }}
+  h1 {{ font-size: var(--h1-size); }}
   h1, h2, h3 {{ text-wrap: balance; }}
   p {{ text-wrap: pretty; }}
   img, video {{ max-width: 100%; display: block; }}
