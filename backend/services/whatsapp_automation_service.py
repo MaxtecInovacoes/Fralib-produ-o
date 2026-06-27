@@ -416,12 +416,12 @@ Quer continuar de onde parou?
         for row in result.fetchall():
             config = AutomationConfig(
                 tenant_id=tenant_id,
-                lead_id=row["id"],
-                lead_name=row["nome"],
-                lead_phone=row["telefone"],
-                lead_email=row["email"],
+                lead_id=row[0],
+                lead_name=row[1],
+                lead_phone=row[2],
+                lead_email=row[3],
                 lead_segment="",
-                site_url=row["site_url"],
+                site_url=row[4],
                 plan_type="trial"
             )
 
@@ -435,20 +435,23 @@ Quer continuar de onde parou?
         # Buscar leads com mensagem enviada mas sem resposta
         result = db.execute(
             text("""
-                SELECT DISTINCT l.id, l.nome, l.telefone, l.email, l.site_url
+                SELECT l.id, l.nome, l.telefone, l.email, l.site_url
                 FROM leads l
-                JOIN interacoes i ON l.id = i.lead_id
                 WHERE l.user_id = :user_id
                   AND l.status = 'concluido'
-                  AND i.direcao = 'saida'
-                  AND i.created_at < NOW() - INTERVAL '48 hours'
-                  AND NOT EXISTS (
-                      SELECT 1 FROM interacoes i2
-                      WHERE i2.lead_id = l.id
-                        AND i2.direcao = 'entrada'
-                        AND i2.created_at > i.created_at
+                  AND EXISTS (
+                      SELECT 1 FROM interacoes i
+                      WHERE i.lead_id = l.id
+                        AND i.direcao = 'saida'
+                        AND i.created_at < NOW() - INTERVAL '48 hours'
+                        AND NOT EXISTS (
+                            SELECT 1 FROM interacoes i2
+                            WHERE i2.lead_id = l.id
+                              AND i2.direcao = 'entrada'
+                              AND i2.created_at > i.created_at
+                        )
                   )
-                ORDER BY i.created_at ASC
+                ORDER BY l.id ASC
                 LIMIT 20
             """),
             {"user_id": user_id}
@@ -457,12 +460,12 @@ Quer continuar de onde parou?
         for row in result.fetchall():
             config = AutomationConfig(
                 tenant_id=tenant_id,
-                lead_id=row["id"],
-                lead_name=row["nome"],
-                lead_phone=row["telefone"],
-                lead_email=row["email"],
+                lead_id=row[0],
+                lead_name=row[1],
+                lead_phone=row[2],
+                lead_email=row[3],
                 lead_segment="",
-                site_url=row["site_url"],
+                site_url=row[4],
                 plan_type="trial"
             )
 
@@ -493,12 +496,12 @@ Quer continuar de onde parou?
         for row in result.fetchall():
             config = AutomationConfig(
                 tenant_id=tenant_id,
-                lead_id=row["id"],
-                lead_name=row["nome"],
-                lead_phone=row["telefone"],
-                lead_email=row["email"],
+                lead_id=row[0],
+                lead_name=row[1],
+                lead_phone=row[2],
+                lead_email=row[3],
                 lead_segment="",
-                site_url=row["site_url"],
+                site_url=row[4],
                 plan_type="trial"
             )
 
@@ -526,12 +529,12 @@ Quer continuar de onde parou?
         for row in result.fetchall():
             config = AutomationConfig(
                 tenant_id=tenant_id,
-                lead_id=row["id"],
-                lead_name=row["nome"],
-                lead_phone=row["telefone"],
-                lead_email=row["email"],
+                lead_id=row[0],
+                lead_name=row[1],
+                lead_phone=row[2],
+                lead_email=row[3],
                 lead_segment="",
-                site_url=row["site_url"],
+                site_url=row[4],
                 plan_type="trial",
                 trial_expires_at=row["trial_expires_at"]
             )
@@ -556,13 +559,19 @@ Quer continuar usando a plataforma?
         # Buscar leads sem interações há 3 dias
         result = db.execute(
             text("""
-                SELECT DISTINCT l.id, l.nome, l.telefone, l.email, l.site_url
+                SELECT l.id, l.nome, l.telefone, l.email, l.site_url
                 FROM leads l
-                LEFT JOIN interacoes i ON l.id = i.lead_id
                 WHERE l.user_id = :user_id
                   AND l.status = 'concluido'
-                  AND (i.created_at IS NULL OR i.created_at < NOW() - INTERVAL '3 days')
-                ORDER BY l.created_at ASC
+                  AND (
+                      NOT EXISTS (SELECT 1 FROM interacoes i WHERE i.lead_id = l.id)
+                      OR NOT EXISTS (
+                          SELECT 1 FROM interacoes i
+                          WHERE i.lead_id = l.id
+                            AND i.created_at >= NOW() - INTERVAL '3 days'
+                      )
+                  )
+                ORDER BY l.id ASC
                 LIMIT 20
             """),
             {"user_id": user_id}
@@ -571,12 +580,12 @@ Quer continuar usando a plataforma?
         for row in result.fetchall():
             config = AutomationConfig(
                 tenant_id=tenant_id,
-                lead_id=row["id"],
-                lead_name=row["nome"],
-                lead_phone=row["telefone"],
-                lead_email=row["email"],
+                lead_id=row[0],
+                lead_name=row[1],
+                lead_phone=row[2],
+                lead_email=row[3],
                 lead_segment="",
-                site_url=row["site_url"],
+                site_url=row[4],
                 plan_type="trial"
             )
 
@@ -654,12 +663,12 @@ Precisa de ajuda com algo?
         for row in result.fetchall():
             config = AutomationConfig(
                 tenant_id=tenant_id,
-                lead_id=row["id"],
-                lead_name=row["nome"],
-                lead_phone=row["telefone"],
-                lead_email=row["email"],
+                lead_id=row[0],
+                lead_name=row[1],
+                lead_phone=row[2],
+                lead_email=row[3],
                 lead_segment="",
-                site_url=row["site_url"],
+                site_url=row[4],
                 plan_type="trial"
             )
 
