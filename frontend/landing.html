@@ -3063,7 +3063,7 @@ function trackPurchase(orderId, amount) {
           <li>Suporte prioritario</li>
         </ul>
         <div class="plano-cta-wrap">
-          <a href="/login?signup=1&amp;plano=pro" class="plano-cta cta-gold" onclick="trackAddToCart('Pro', 497); fbq('track', 'Lead');">QUERO TODOS OS RECURSOS</a>
+          <a href="/login?signup=1&amp;plano=pro" class="plano-cta cta-gold" onclick="trackAddToCart('Pro', 197); fbq('track', 'Lead');">QUERO TODOS OS RECURSOS</a>
           <p class="plano-garantia">7 dias de garantia incondicional.</p>
         </div>
       </div>
@@ -3084,7 +3084,7 @@ function trackPurchase(orderId, amount) {
           <li>Onboarding VIP</li>
         </ul>
         <div class="plano-cta-wrap">
-          <a href="/login?signup=1&amp;plano=agency" class="plano-cta cta-outline" onclick="trackAddToCart('Agency', 997); fbq('track', 'Lead');">QUERO ESCALAR</a>
+          <a href="/login?signup=1&amp;plano=agency" class="plano-cta cta-outline" onclick="trackAddToCart('Agency', 497); fbq('track', 'Lead');">QUERO ESCALAR</a>
         </div>
       </div>
     </div>
@@ -3554,15 +3554,17 @@ document.getElementById('betaForm').addEventListener('submit', function(e){
   const name = document.getElementById('beta-name').value.trim();
   const email = document.getElementById('beta-email').value.trim();
   const phone = document.getElementById('beta-phone').value.trim();
-  if(name && email && phone){
+  if(name && email){
     // Store locally for reference
     try {
       const leads = JSON.parse(localStorage.getItem('fralib_beta') || '[]');
       leads.push({ name, email, phone, date: new Date().toISOString() });
       localStorage.setItem('fralib_beta', JSON.stringify(leads));
     } catch(err){}
-    // Redirect to WhatsApp group
-    window.open('https://chat.whatsapp.com/FSrvUIVFvjBFQrkfDQgP0A', '_blank');
+    // Redirect to login/signup
+    const params = new URLSearchParams({ signup: '1', name, email });
+    if (phone) params.set('phone', phone);
+    window.location.href = '/login?' + params.toString();
   }
 });
 
