@@ -666,6 +666,30 @@ async def dashboard_health(db: Session = Depends(get_db), user: dict = Depends(r
     except Exception:
         health["workers"] = {"status": "unknown"}
 
+    # SDR outbound queue
+    try:
+        from backend.services.outbound_queue import get_pending_count, get_recent_sent_count
+        pending = get_pending_count()
+        sent_last_hour = get_recent_sent_count()
+        rate_limit_ok = sent_last_hour < 12
+        redis_ok = False
+        try:
+            import redis
+            r = redis.Redis(host='localhost', port=6379, decode_responses=True, socket_timeout=1)
+            r.ping()
+            redis_ok = True
+        except Exception:
+            pass
+        health["outbound_queue"] = {
+            "status": "ok" if (rate_limit_ok and redis_ok) else "degraded",
+            "pending": pending,
+            "sent_last_hour": sent_last_hour,
+            "rate_limit_ok": rate_limit_ok,
+            "redis_ok": redis_ok,
+        }
+    except Exception:
+        health["outbound_queue"] = {"status": "unknown"}
+
     try:
         fila = db.execute(text("""
             SELECT COUNT(*) FILTER (WHERE status='pending') as pending,
