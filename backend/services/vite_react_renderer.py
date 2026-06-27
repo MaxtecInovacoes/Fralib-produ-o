@@ -3658,7 +3658,8 @@ export function HeroSection({ onOpen }: { onOpen?: () => void }) {
   // Para outros layouts (split/center/asymmetric), usa imagem poster.
   const _varLayout = (variation && variation.hero_layout) ? variation.hero_layout : 'split';
   const _showVideo = _varLayout === 'video' || _varLayout === 'fullbleed';
-  useEffect(() => {
+    const _hero_class_number = _seed_for_html % 10;
+useEffect(() => {
     const root = rootRef.current;
     if (!root || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     const ctx = gsap.context(() => {
@@ -3670,7 +3671,7 @@ export function HeroSection({ onOpen }: { onOpen?: () => void }) {
     return () => ctx.revert();
   }, []);
   return (
-    <section ref={rootRef} id="hero" className={`${{heroClasses}} hero-v14 hero-v14-v${{_seed_for_html % 10}}`}>
+    <section ref={rootRef} id="hero" className={`${{heroClasses}} hero-v14 hero-v14-v${{(_hero_class_number)}}`}>
       <div className="absolute inset-0 -z-20" style={{ background: 'var(--bg)' }} />
       {_showVideo && mediaVideos[0] ? (
         <video data-hero-video className="absolute inset-0 -z-10 h-full w-full object-cover opacity-52 saturate-[.9]" src={mediaVideos[0]} poster={mediaImages[0]} autoPlay muted loop playsInline preload="metadata" />
@@ -3756,15 +3757,8 @@ export default HeroSection;
 }}
 """,
     }
-    # Sprint 14.13: aplica .replace() DEPOIS do dict para nao substituir
-    # dentro de outras strings (CSS vars no index.css).
-    if "src/components/HeroSection.tsx" in source_files:
-        source_files["src/components/HeroSection.tsx"] = (
-            source_files["src/components/HeroSection.tsx"]
-            .replace("{_hero_class}", _hero_class)
-            .replace("{_h1_size}", _h1_size)
-            .replace("{_cta_btn_class}", _cta_btn_class)
-        )
+    # Sprint 14.13: .replace() removido - o template agora usa {VAR} que sao
+    # placeholders Python (sem $) e nao causam bug de f-string.
     source_files.update(_generate_cinematic_secondary_components(facts, palette=palette))
     return prepare_vite_project_files(source_files, facts=facts)
 
