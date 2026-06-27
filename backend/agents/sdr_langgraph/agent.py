@@ -376,7 +376,7 @@ def node_load_context(state: SDRState) -> dict:
 
     # O banco da chamada atual e a fonte de verdade para identidade do lead.
     # Isso evita memoria antiga/vazia contaminando outro contexto do mesmo telefone.
-    for field in ("lead_id", "nome", "cidade", "segmento", "site_url"):
+    for field in ("lead_id", "nome", "cidade", "segmento", "site_url", "paleta_cores"):
         value = state.get(field)
         if value:
             setattr(memory, field, value)

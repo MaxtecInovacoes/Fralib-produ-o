@@ -36,6 +36,8 @@ class BryanInput(BaseModel):
     site_url: Optional[str] = None
     score_caio: Optional[int] = 0
     concorrentes: Optional[dict] = None
+    # Sprint 14.x: paleta_cores para identidade visual no WhatsApp SDR
+    paleta_cores: Optional[Dict[str, str]] = {}
     tier: Optional[str] = "STANDARD"
     proof: Optional[str] = None
 
@@ -68,7 +70,8 @@ def _lead_payload_from_memory(memoria: dict | None) -> dict:
     lead = dict(nested)
     for key in (
         "nome", "cidade", "segmento", "telefone", "whatsapp", "rating",
-        "site_url", "score_caio", "concorrentes", "tier", "proof"
+        "site_url", "score_caio", "concorrentes", "tier", "proof",
+        "paleta_cores"
     ):
         if data.get(key) not in (None, ""):
             lead[key] = data.get(key)
@@ -106,6 +109,8 @@ def iniciar_contato(lead: BryanInput, user_id: int = None) -> BryanOutput:
             "concorrentes": lead.concorrentes,
             "tier": lead.tier or "STANDARD",
             "proof": lead.proof,
+            # Sprint 14.x: paleta_cores para identidade visual no SDR
+            "paleta_cores": getattr(lead, "paleta_cores", {}) or {},
         }
         memoria.update({
             **lead_payload,
@@ -153,6 +158,7 @@ def iniciar_contato(lead: BryanInput, user_id: int = None) -> BryanOutput:
         "segmento": lead.segmento,
         "rating": lead.rating or 0,
         "site_url": lead.site_url or "",
+        "paleta_cores": getattr(lead, "paleta_cores", {}) or {},
     }
 
     try:

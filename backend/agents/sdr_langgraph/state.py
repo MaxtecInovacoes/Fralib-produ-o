@@ -68,6 +68,7 @@ class LeadMemory(BaseModel):
     segmento: str = ""
     rating: float = 0.0
     site_url: str = ""
+    paleta_cores: Dict[str, str] = Field(default_factory=dict)
 
     # Estado do funil
     stage: str = "hook"
@@ -217,6 +218,7 @@ class SDRState(TypedDict, total=False):
     segmento: str
     rating: float
     site_url: str
+    paleta_cores: Dict[str, str]  # Sprint 14.x: cores do site para SDR
     sdr_stage: str
 
     # Detecção de intent (calculada no início)

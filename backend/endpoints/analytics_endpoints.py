@@ -62,7 +62,7 @@ async def track_events(request: Request, db: Session = Depends(get_db)):
                 INSERT INTO analytics_events (
                     session_id, event_name, event_data, utm_source,
                     utm_medium, utm_campaign, utm_content, utm_term,
-                    url, referrer, user_agent, created_at
+                    url, referrer, user_agent, created_at::timestamp
                 ) VALUES (
                     :session_id, :event_name, :event_data,
                     :utm_source, :utm_medium, :utm_campaign, :utm_content, :utm_term,
@@ -116,7 +116,7 @@ async def get_utm_analytics(
                 COUNT(CASE WHEN status = 'trial' THEN 1 END) as trials,
                 COUNT(CASE WHEN status IN ('pro', 'ilimitado', 'agency') THEN 1 END) as pagantes
             FROM users
-            WHERE created_at >= NOW() - INTERVAL ':days days'
+            WHERE created_at::timestamp >= NOW() - INTERVAL ':days days'
             GROUP BY COALESCE(utm_source, 'direct')
             ORDER BY total_leads DESC
         """.replace(':days', str(period_days)))).fetchall()
@@ -128,7 +128,7 @@ async def get_utm_analytics(
                 COUNT(*) as total_leads,
                 COUNT(CASE WHEN status = 'trial' THEN 1 END) as trials
             FROM users
-            WHERE created_at >= NOW() - INTERVAL ':days days'
+            WHERE created_at::timestamp >= NOW() - INTERVAL ':days days'
             GROUP BY COALESCE(utm_medium, 'none')
             ORDER BY total_leads DESC
         """.replace(':days', str(period_days)))).fetchall()
@@ -142,7 +142,7 @@ async def get_utm_analytics(
                 COUNT(CASE WHEN status = 'trial' THEN 1 END) as trials,
                 COUNT(CASE WHEN status IN ('pro', 'ilimitado', 'agency') THEN 1 END) as pagantes
             FROM users
-            WHERE created_at >= NOW() - INTERVAL ':days days'
+            WHERE created_at::timestamp >= NOW() - INTERVAL ':days days'
             GROUP BY COALESCE(utm_campaign, 'none'), utm_source
             ORDER BY total_leads DESC
             LIMIT 50
@@ -213,7 +213,7 @@ async def get_funnel_analytics(
         date_filter = "TRUE"
         date_params = {}
     else:
-        date_filter = "created_at >= NOW() - make_interval(days => :days)"
+        date_filter = "created_at::timestamp >= NOW() - make_interval(days => :days)"
         date_params = {"days": period_days}
 
     try:
@@ -244,7 +244,7 @@ async def get_funnel_analytics(
         # Contar retidos (usuários que usaram nos últimos 30 dias)
         retidos = db.execute(text("""
             SELECT COUNT(*) FROM users
-            WHERE ultimo_acesso >= NOW() - INTERVAL '30 days'
+            WHERE ultimo_acesso::timestamp >= NOW() - INTERVAL '30 days'
             AND plano IN ('pro', 'ilimitado', 'agency', 'starter')
         """)).scalar() or 0
 
@@ -312,7 +312,7 @@ async def get_kpi_analytics(
         # Novos usuários no período
         new_users = db.execute(text("""
             SELECT COUNT(*) FROM users
-            WHERE created_at >= NOW() - make_interval(days => :days)
+            WHERE created_at::timestamp >= NOW() - make_interval(days => :days)
         """), {"days": period_days}).scalar() or 0
 
         # Calcular MRR estimado (R$97 por usuário pago)
@@ -346,13 +346,13 @@ async def get_kpi_analytics(
         page_views = db.execute(text("""
             SELECT COUNT(*) FROM analytics_events
             WHERE event_name = 'page_view'
-            AND created_at >= NOW() - make_interval(days => :days)
+            AND created_at::timestamp >= NOW() - make_interval(days => :days)
         """), {"days": period_days}).scalar() or 0
 
         clicks = db.execute(text("""
             SELECT COUNT(*) FROM analytics_events
             WHERE event_name = 'click'
-            AND created_at >= NOW() - make_interval(days => :days)
+            AND created_at::timestamp >= NOW() - make_interval(days => :days)
         """), {"days": period_days}).scalar() or 0
 
         # CTR = Cliques / Impressões
@@ -361,7 +361,7 @@ async def get_kpi_analytics(
         # Bounce Rate = Sessoes com apenas 1 page view / Total sessoes
         sessions = db.execute(text("""
             SELECT COUNT(DISTINCT session_id) FROM analytics_events
-            WHERE created_at >= NOW() - make_interval(days => :days)
+            WHERE created_at::timestamp >= NOW() - make_interval(days => :days)
         """), {"days": period_days}).scalar() or 0
 
         single_page_sessions = db.execute(text("""
@@ -369,7 +369,7 @@ async def get_kpi_analytics(
                 SELECT session_id, COUNT(*) as views
                 FROM analytics_events
                 WHERE event_name = 'page_view'
-                AND created_at >= NOW() - make_interval(days => :days)
+                AND created_at::timestamp >= NOW() - make_interval(days => :days)
                 GROUP BY session_id
                 HAVING COUNT(*) = 1
             ) t
@@ -432,12 +432,12 @@ async def get_cohort_analysis(
         # Cohorts diários - novos usuários e conversão por dia
         cohort_data = db.execute(text("""
             SELECT
-                DATE(created_at) as cohort_date,
+                DATE(created_at::timestamp) as cohort_date,
                 COUNT(*) as new_users,
                 COUNT(CASE WHEN plano IN ('pro', 'ilimitado', 'agency', 'starter') THEN 1 END) as converted
             FROM users
-            WHERE created_at >= NOW() - INTERVAL ':days days'
-            GROUP BY DATE(created_at)
+            WHERE created_at::timestamp >= NOW() - INTERVAL ':days days'
+            GROUP BY DATE(created_at::timestamp)
             ORDER BY cohort_date DESC
             LIMIT 90
         """.replace(':days', str({"7d": 7, "30d": 30, "90d": 90}.get(period, 90))))).fetchall()
@@ -459,14 +459,14 @@ async def get_cohort_analysis(
         # Retention por cohort semanal
         retention_data = db.execute(text("""
             SELECT
-                DATE_TRUNC('week', created_at) as week,
+                DATE_TRUNC('week', created_at::timestamp) as week,
                 COUNT(*) as total_users,
-                COUNT(CASE WHEN ultimo_acesso >= NOW() - INTERVAL '7 days' THEN 1 END) as week1,
-                COUNT(CASE WHEN ultimo_acesso >= NOW() - INTERVAL '14 days' THEN 1 END) as week2,
-                COUNT(CASE WHEN ultimo_acesso >= NOW() - INTERVAL '30 days' THEN 1 END) as month1
+                COUNT(CASE WHEN ultimo_acesso::timestamp >= NOW() - INTERVAL '7 days' THEN 1 END) as week1,
+                COUNT(CASE WHEN ultimo_acesso::timestamp >= NOW() - INTERVAL '14 days' THEN 1 END) as week2,
+                COUNT(CASE WHEN ultimo_acesso::timestamp >= NOW() - INTERVAL '30 days' THEN 1 END) as month1
             FROM users
-            WHERE created_at >= NOW() - INTERVAL ':days days'
-            GROUP BY DATE_TRUNC('week', created_at)
+            WHERE created_at::timestamp >= NOW() - INTERVAL ':days days'
+            GROUP BY DATE_TRUNC('week', created_at::timestamp)
             ORDER BY week DESC
         """.replace(':days', str({"7d": 7, "30d": 30, "90d": 90}.get(period, 90))))).fetchall()
 
@@ -609,12 +609,12 @@ async def get_growth_dashboard(
         days_num = {"7d": 7, "30d": 30, "90d": 90}.get(period, 30)
         timeline = db.execute(text(f"""
             SELECT
-                DATE(created_at) as date,
+                DATE(created_at::timestamp) as date,
                 COUNT(*) as new_leads,
                 COUNT(CASE WHEN plano IN ('pro', 'ilimitado', 'agency', 'starter') THEN 1 END) as new_paid
             FROM users
-            WHERE created_at >= NOW() - INTERVAL '{int(days_num)} days'
-            GROUP BY DATE(created_at)
+            WHERE created_at::timestamp >= NOW() - INTERVAL '{int(days_num)} days'
+            GROUP BY DATE(created_at::timestamp)
             ORDER BY date DESC
         """)).fetchall()
 
@@ -672,12 +672,12 @@ async def seed_demo_data(
                 url TEXT,
                 referrer TEXT,
                 user_agent TEXT,
-                created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+                created_at::timestamp TIMESTAMP WITH TIME ZONE DEFAULT NOW()
             )
         """))
         db.execute(text("CREATE INDEX IF NOT EXISTS idx_analytics_events_session ON analytics_events(session_id)"))
         db.execute(text("CREATE INDEX IF NOT EXISTS idx_analytics_events_event ON analytics_events(event_name)"))
-        db.execute(text("CREATE INDEX IF NOT EXISTS idx_analytics_events_date ON analytics_events(created_at)"))
+        db.execute(text("CREATE INDEX IF NOT EXISTS idx_analytics_events_date ON analytics_events(created_at::timestamp)"))
         db.execute(text("CREATE INDEX IF NOT EXISTS idx_analytics_events_utm ON analytics_events(utm_source, utm_campaign)"))
 
         db.execute(text("""
@@ -688,7 +688,7 @@ async def seed_demo_data(
                 campaign VARCHAR(100),
                 cost FLOAT DEFAULT 0,
                 platform VARCHAR(50),
-                created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+                created_at::timestamp TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
                 updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
             )
         """))
@@ -698,7 +698,7 @@ async def seed_demo_data(
         event_count = 0
         for i in range(500):
             days_ago = random.randint(0, 30)
-            created_at = datetime.now() - timedelta(days=days_ago, hours=random.randint(0, 23))
+            created_at::timestamp = datetime.now() - timedelta(days=days_ago, hours=random.randint(0, 23))
 
             source = random.choice(SOURCES)
             medium = random.choice(MEDIUMS)
@@ -711,8 +711,8 @@ async def seed_demo_data(
 
             db.execute(text("""
                 INSERT INTO analytics_events
-                (session_id, event_name, utm_source, utm_medium, utm_campaign, url, created_at)
-                VALUES (:session_id, :event_name, :utm_source, :utm_medium, :utm_campaign, :url, :created_at)
+                (session_id, event_name, utm_source, utm_medium, utm_campaign, url, created_at::timestamp)
+                VALUES (:session_id, :event_name, :utm_source, :utm_medium, :utm_campaign, :url, :created_at::timestamp)
             """), {
                 'session_id': f'session_{random.randint(10000, 99999)}',
                 'event_name': event_name,
@@ -720,7 +720,7 @@ async def seed_demo_data(
                 'utm_medium': medium,
                 'utm_campaign': campaign,
                 'url': 'https://seunegociofralib.site/',
-                'created_at': created_at
+                'created_at::timestamp': created_at::timestamp
             })
             event_count += 1
 
