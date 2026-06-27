@@ -3671,7 +3671,7 @@ useEffect(() => {
     return () => ctx.revert();
   }, []);
   return (
-    <section ref={rootRef} id="hero" className={`${{heroClasses}} hero-v14 hero-v14-v${{(_hero_class_number)}}`}>
+    <section ref={rootRef} id="hero" className={('hero-v14 hero-v14-v' + _hero_class_number) + ' ' + heroClasses}>
       <div className="absolute inset-0 -z-20" style={{ background: 'var(--bg)' }} />
       {_showVideo && mediaVideos[0] ? (
         <video data-hero-video className="absolute inset-0 -z-10 h-full w-full object-cover opacity-52 saturate-[.9]" src={mediaVideos[0]} poster={mediaImages[0]} autoPlay muted loop playsInline preload="metadata" />
@@ -3682,10 +3682,10 @@ useEffect(() => {
       <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[1.05fr_.95fr] lg:items-end">
         <div className="max-w-4xl">
           <motion.div data-hero-reveal className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em]" style={{ borderColor: 'color-mix(in srgb, var(--accent) 25%, transparent)', background: 'color-mix(in srgb, var(--accent) 10%, transparent)', color: 'var(--accent-soft)' }}><Play className="h-3.5 w-3.5" />{siteCopy.segment} em {siteCopy.city}</motion.div>
-          <h1 data-hero-reveal className={`mt-7 max-w-5xl ${{_h1_size}}`}>{siteCopy.headline}</h1>
+          <h1 data-hero-reveal className={'mt-7 max-w-5xl ' + _h1_size}>{siteCopy.headline}</h1>
           <p data-hero-reveal className="mt-6 max-w-2xl text-base leading-8 text-zinc-200 md:text-lg">{siteCopy.subheadline}</p>
           <div data-hero-reveal className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-            <a href={whatsappHref} rel="noopener noreferrer" className={`inline-flex items-center justify-center gap-2 px-6 py-3.5 text-sm font-semibold transition duration-300 hover:-translate-y-0.5 ${{_cta_btn_class}}`} style={{ background: 'var(--accent)', color: 'var(--bg)' }}><MessageCircle className="h-4 w-4" />{siteCopy.cta_primary}</a>
+            <a href={whatsappHref} rel="noopener noreferrer" className={('inline-flex items-center justify-center gap-2 px-6 py-3.5 text-sm font-semibold transition duration-300 hover:-translate-y-0.5 ' + _cta_btn_class).trim()} style={{ background: 'var(--accent)', color: 'var(--bg)' }}><MessageCircle className="h-4 w-4" />{siteCopy.cta_primary}</a>
             <button type="button" onClick={onOpen} className="inline-flex items-center justify-center gap-2 rounded-full border border-white/15 px-6 py-3.5 text-sm font-semibold text-white transition duration-300 hover:-translate-y-0.5">{siteCopy.cta_secondary}<ArrowDownRight className="h-4 w-4" /></button>
           </div>
         </div>
