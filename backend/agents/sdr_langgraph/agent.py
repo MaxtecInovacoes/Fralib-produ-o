@@ -559,7 +559,7 @@ def node_greeting(state: SDRState) -> dict:
             system=system,
             user=contexto[:500],
             model="haiku",  # rapido e barato
-            max_tokens=200,
+            max_tokens=120,  # 2-3 frases curtas, NAO tagarelando
             temperature=0.3,  # baixa variacao, evita chines/outros idiomas
             agent_name="sdr_greeting_node",
             respect_agent_config=False,
