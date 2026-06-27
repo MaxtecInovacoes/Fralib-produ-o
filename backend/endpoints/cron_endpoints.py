@@ -135,7 +135,7 @@ async def despachar_fila_franz(x_cron_secret: str = Header(None, alias='X-Cron-S
         # Buscar leads pendentes (site pronto mas não abordados)
         rows = conn.execute(text("""
             SELECT l.id, l.nome, l.telefone, l.whatsapp, l.segmento, l.cidade,
-                   l.site_url, l.rating, l.user_id,
+                   l.site_url, l.rating, l.user_id, l.paleta_cores,
                    u.plano, u.status, u.trial_expires_at
             FROM leads l
             JOIN users u ON u.id = l.user_id
@@ -154,7 +154,7 @@ async def despachar_fila_franz(x_cron_secret: str = Header(None, alias='X-Cron-S
         for row in rows:
             (
                 lead_id, nome, telefone, whatsapp, segmento, cidade, site_url, rating,
-                user_id, user_plano, user_status, user_trial_expires_at,
+                user_id, paleta_cores, user_plano, user_status, user_trial_expires_at,
             ) = row
             try:
                 if not plano_tem_sdr(user_plano, user_status, user_trial_expires_at):
@@ -163,7 +163,8 @@ async def despachar_fila_franz(x_cron_secret: str = Header(None, alias='X-Cron-S
                     nome=nome or "", cidade=cidade or "", segmento=segmento or "",
                     telefone=telefone or "", whatsapp=whatsapp or "",
                     rating=rating or 0.0, site_url=site_url or "",
-                    score_caio=80, tier="STANDARD"
+                    score_caio=80, tier="STANDARD",
+                    paleta_cores=paleta_cores or {},
                 )
                 if not user_id:
                     print(f"[Cron Franz] ⚠️ lead {lead_id} sem user_id — ignorado (multi-tenant)")

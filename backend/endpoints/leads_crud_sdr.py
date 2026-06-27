@@ -179,14 +179,14 @@ async def enviar_mensagem_lead(
     # Buscar lead
     row = db.execute(
         text(
-            "SELECT nome, telefone, whatsapp, whatsapp_pendente, segmento, cidade, site_url, rating, sdr_stage FROM leads WHERE id=:id AND user_id=:uid"
+            "SELECT nome, telefone, whatsapp, whatsapp_pendente, segmento, cidade, site_url, rating, sdr_stage, paleta_cores FROM leads WHERE id=:id AND user_id=:uid"
         ),
         {"id": lead_id, "uid": tenant_id},
     ).fetchone()
     if not row:
         raise HTTPException(404, "Lead nao encontrado")
 
-    nome, telefone, whatsapp, whatsapp_pendente, segmento, cidade, site_url, rating, sdr_stage = row
+    nome, telefone, whatsapp, whatsapp_pendente, segmento, cidade, site_url, rating, sdr_stage, paleta_cores = row
 
     # Verificar se lead tem WhatsApp
     telefone_ou_whatsapp = (whatsapp or telefone or "").strip()
@@ -235,6 +235,7 @@ async def enviar_mensagem_lead(
         site_url=site_url,
         score_caio=80,
         tier="STANDARD",
+        paleta_cores=paleta_cores or {},
     )
     franz_output = iniciar_contato(franz_input, user_id=tenant_id)
 
