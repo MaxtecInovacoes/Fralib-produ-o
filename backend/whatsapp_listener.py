@@ -43,6 +43,7 @@ from whatsapp.sdr_reply_service import (
     map_next_stage,
     sanitize_reply,
 )
+from whatsapp.history_helper import get_context_with_summary as get_full_context
 from whatsapp.sender import (
     send_handoff_notification,
 )
@@ -739,15 +740,9 @@ def _processar_mensagem(tenant_id: str, msg_data: dict, texto_override: str = No
 
         history = []
         try:
-            with engine.connect() as conn:
-                rows = conn.execute(text("""
-                    SELECT mensagem, direcao
-                    FROM interacoes
-                    WHERE lead_id = :lead_id AND user_id = :user_id
-                    ORDER BY criado_em DESC
-                    LIMIT 8
-                """), {"lead_id": lead_id, "user_id": user_id}).fetchall()
-            history = build_history(rows)
+            # Pega contexto completo (ate 100 msgs) com summary se > 30.
+            # Isso garante que o Franz sabe o que foi conversado antes.
+            history = get_full_context(engine, lead_id, user_id)
         except Exception as hist_err:
             logger.warning(f"Lead {nome}: erro ao carregar historico SDR: {hist_err}")
 
