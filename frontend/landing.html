@@ -483,10 +483,11 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
   display:flex;flex-direction:column;gap:6px;
 }
 .hero-title .grad{
-  background:linear-gradient(135deg,var(--fl-purple-300),var(--cyan));
-  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
-  background-clip:text;
-  filter:drop-shadow(0 0 20px rgba(147,51,234,0.4));
+  color:var(--fl-text);
+  background:none;
+  -webkit-background-clip:initial;-webkit-text-fill-color:initial;
+  background-clip:initial;
+  filter:none;
 }
 .hero-title-sub{color:var(--fl-text);font-weight:400}
 .hero-title-sub strong{color:var(--cyan);font-weight:700}
@@ -2134,8 +2135,7 @@ function trackPurchase(orderId, amount) {
     <div class="hero-left">
 
       <h1 class="hero-title">
-        <span class="grad">FraLib acha o cliente.</span>
-        <span class="grad">Faz o site. Fecha no WPP.</span>
+        <span class="grad">FraLib acha o cliente. Faz o site. Fecha no WPP.</span>
         <span class="hero-title-sub">Você fica com <strong>100% do lucro.</strong></span>
       </h1>
 
