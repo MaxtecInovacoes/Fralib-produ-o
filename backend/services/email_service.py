@@ -902,3 +902,104 @@ async def enviar_email_reativacao_step5(email: str, nome: str, plano: str, credi
         inner_html=inner,
     )
     return await _enviar_drip(email, primeiro_nome, f"{primeiro_nome}, este e meu ultimo email (mas posso estender seus creditos)", html)
+
+
+# --- Email: Relatorio paralelo ao admin apos cada step ---
+ADMIN_EMAIL = os.getenv("REATIVACAO_ADMIN_EMAIL", "")
+
+
+async def enviar_relatorio_drip_admin(
+    campaign: str,
+    step: int,
+    enviados: int,
+    pulados: int,
+    erros: int,
+    total_candidatos: int,
+) -> bool:
+    """Manda email paralelo ao admin (Franz) resumindo o que foi disparado.
+
+    Disparado automaticamente apos cada step do drip campaign.
+    NAO conta como outreach_attempt (e separado).
+    """
+    if not ADMIN_EMAIL:
+        print("[Relatorio admin] REATIVACAO_ADMIN_EMAIL nao configurado - pulando")
+        return False
+    if not RESEND_API_KEY:
+        return False
+
+    # Buscar contadores por status
+    try:
+        from backend.core.database import engine
+        from sqlalchemy import text
+        with engine.connect() as conn:
+            row = conn.execute(text("""
+                SELECT
+                    COUNT(*) FILTER (WHERE status = 'sent') AS sent,
+                    COUNT(*) FILTER (WHERE status = 'replied') AS replied,
+                    COUNT(*) FILTER (WHERE status = 'converted') AS converted,
+                    COUNT(*) FILTER (WHERE status = 'completed') AS completed
+                FROM outreach_attempts
+                WHERE campaign = :camp
+            """), {"camp": campaign}).fetchone()
+            counts = {
+                'sent': int(row[0] or 0),
+                'replied': int(row[1] or 0),
+                'converted': int(row[2] or 0),
+                'completed': int(row[3] or 0),
+            }
+    except Exception as e:
+        print(f"[Relatorio admin] erro ao buscar contadores: {e}")
+        counts = {'sent': 0, 'replied': 0, 'converted': 0, 'completed': 0}
+
+    taxa_geral = (counts['replied'] + counts['converted']) / max(counts['sent'], 1) * 100
+
+    # Proxima execucao do cron (sempre proximo dia 14h UTC = 11h BRT)
+    from datetime import datetime, timedelta
+    amanha = (datetime.utcnow() + timedelta(days=1)).strftime("%Y-%m-%d 11:00 BRT")
+
+    subject = f"Drip {campaign} step {step}: {enviados} enviados, {pulados} pulados, {erros} erros"
+
+    html = f"""<!DOCTYPE html>
+<html><body style="font-family:system-ui,sans-serif;background:#0a0a0f;color:#e5e7eb;padding:24px;margin:0">
+<table cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;background:#12121a;border:1px solid #1e1e2e;border-radius:12px;padding:32px">
+<tr><td>
+<h2 style="margin:0 0 16px 0;font-size:18px;color:#a855f7">Drip Campaign · Relatorio</h2>
+<p style="margin:0 0 8px 0;font-size:14px;color:#a1a1aa"><strong>Campaign:</strong> {campaign}</p>
+<p style="margin:0 0 8px 0;font-size:14px;color:#a1a1aa"><strong>Step:</strong> {step} de 5</p>
+<hr style="border:0;border-top:1px solid #1e1e2e;margin:16px 0">
+<h3 style="margin:0 0 12px 0;font-size:14px;color:#FFB800">Este disparo</h3>
+<p style="margin:0 0 4px 0;font-size:14px">Enviados: <strong style="color:#10b981">{enviados}</strong> de {total_candidatos} candidatos</p>
+<p style="margin:0 0 4px 0;font-size:14px">Pulados (ja enviados): {pulados}</p>
+<p style="margin:0 0 16px 0;font-size:14px">Erros: <strong style="color:#ef4444">{erros}</strong></p>
+<h3 style="margin:0 0 12px 0;font-size:14px;color:#FFB800">Total da campanha</h3>
+<p style="margin:0 0 4px 0;font-size:14px">Total enviados: <strong>{counts['sent']}</strong></p>
+<p style="margin:0 0 4px 0;font-size:14px">Replied: <strong style="color:#FFB800">{counts['replied']}</strong></p>
+<p style="margin:0 0 4px 0;font-size:14px">Convertidos: <strong style="color:#10b981">{counts['converted']}</strong></p>
+<p style="margin:0 0 16px 0;font-size:14px">Completaram 5 steps: {counts['completed']}</p>
+<p style="margin:0 0 16px 0;font-size:14px">Taxa de resposta/conv. ate agora: <strong style="color:#a855f7">{taxa_geral:.1f}%</strong></p>
+<hr style="border:0;border-top:1px solid #1e1e2e;margin:16px 0">
+<p style="margin:0 0 4px 0;font-size:13px;color:#a1a1aa"><strong>Proximo step:</strong> step {step + 1} (se step &lt; 5)</p>
+<p style="margin:0;font-size:13px;color:#a1a1aa">Proxima execucao automatica: <strong>{amanha}</strong> via cron 0 14 * * *</p>
+<p style="margin:8px 0 0 0;font-size:12px;color:#71717a">Para parar o proximo step, marque todos como replied/converted no dashboard.</p>
+</td></tr>
+</table>
+</body></html>"""
+    try:
+        async with httpx.AsyncClient(timeout=10) as c:
+            r = await c.post(
+                "https://api.resend.com/emails",
+                headers={"Authorization": f"Bearer {RESEND_API_KEY}", "Content-Type": "application/json"},
+                json={
+                    "from": f"FraLib OS <{FROM_EMAIL}>",
+                    "to": [ADMIN_EMAIL],
+                    "subject": subject,
+                    "html": html,
+                },
+            )
+            if r.status_code != 200:
+                print(f"[Relatorio admin] Resend falhou: {r.status_code} {r.text[:200]}")
+                return False
+            return True
+    except Exception as e:
+        print(f"[Relatorio admin] erro: {e}")
+        return False

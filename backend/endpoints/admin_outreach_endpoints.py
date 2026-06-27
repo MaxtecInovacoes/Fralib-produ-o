@@ -49,6 +49,7 @@ class DispararRequest(BaseModel):
     dry_run: bool = True
     campaign: Optional[str] = None  # se None, gera nome automático
     step: int = 1  # qual step do drip disparar (1-5)
+    user_ids: Optional[list[int]] = None  # se passado, envia só para esses users (bypass filtro inativos)
 
 
 # ----------------------------------------------------------------------------
@@ -144,26 +145,40 @@ async def disparar_campanha(
     dry_run = payload.dry_run
     channel = "email"
 
-    # Lista inativos (mesmo filtro do GET /inativos)
-    candidatos = db.execute(text("""
-        SELECT
-            u.id,
-            u.email,
-            COALESCE(NULLIF(u.nome, ''), NULLIF(u.name, ''), u.email) AS nome,
-            u.plano,
-            u.creditos,
-            u.criado_em
-        FROM users u
-        WHERE u.email_confirmado = true
-          AND u.status NOT IN ('blocked', 'suspended', 'deleted', 'inativo')
-          AND u.email NOT LIKE 'test.%@test.com'
-          AND u.email NOT LIKE 'pipeline.%@test.com'
-          AND u.email NOT LIKE 'smoke.%@test.com'
-          AND COALESCE(u.sites_used, 0) = 0
-        ORDER BY
-            CASE u.plano WHEN 'ilimitado' THEN 0 WHEN 'pro' THEN 1 ELSE 2 END,
-            u.criado_em ASC
-    """)).fetchall()
+    # Lista inativos (mesmo filtro do GET /inativos) OU user_ids especificos
+    if payload.user_ids:
+        # Bypass filtro: envia só para os user_ids passados (modo manual, ex: admin demo)
+        candidatos = db.execute(text("""
+            SELECT
+                u.id,
+                u.email,
+                COALESCE(NULLIF(u.nome, ''), NULLIF(u.name, ''), u.email) AS nome,
+                u.plano,
+                u.creditos,
+                u.criado_em
+            FROM users u
+            WHERE u.id = ANY(:uids)
+        """), {"uids": payload.user_ids}).fetchall()
+    else:
+        candidatos = db.execute(text("""
+            SELECT
+                u.id,
+                u.email,
+                COALESCE(NULLIF(u.nome, ''), NULLIF(u.name, ''), u.email) AS nome,
+                u.plano,
+                u.creditos,
+                u.criado_em
+            FROM users u
+            WHERE u.email_confirmado = true
+              AND u.status NOT IN ('blocked', 'suspended', 'deleted', 'inativo')
+              AND u.email NOT LIKE 'test.%@test.com'
+              AND u.email NOT LIKE 'pipeline.%@test.com'
+              AND u.email NOT LIKE 'smoke.%@test.com'
+              AND COALESCE(u.sites_used, 0) = 0
+            ORDER BY
+                CASE u.plano WHEN 'ilimitado' THEN 0 WHEN 'pro' THEN 1 ELSE 2 END,
+                u.criado_em ASC
+        """)).fetchall()
 
     enviados = 0
     pulados = 0
@@ -291,6 +306,21 @@ async def disparar_campanha(
         if not dry_run:
             sleep_s = random.uniform(REATIVACAO_JITTER_MIN_S, REATIVACAO_JITTER_MAX_S)
             await asyncio.sleep(sleep_s)
+
+    # Relatorio paralelo ao admin (so quando envio real, nao dry_run)
+    if not dry_run and (enviados > 0 or erros > 0):
+        try:
+            from backend.services.email_service import enviar_relatorio_drip_admin
+            await enviar_relatorio_drip_admin(
+                campaign=campaign,
+                step=payload.step,
+                enviados=enviados,
+                pulados=pulados,
+                erros=erros,
+                total_candidatos=len(candidatos),
+            )
+        except Exception as e:
+            print(f"[Admin outreach] relatorio admin falhou: {e}")
 
     return {
         "campaign": campaign,

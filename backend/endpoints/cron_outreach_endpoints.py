@@ -70,11 +70,53 @@ async def drip_diario(x_cron_secret: str | None = Header(None, alias="X-Cron-Sec
     completed = 0
     waiting = 0
     erros = 0
+    novos_incluidos = 0
 
     agora = datetime.utcnow()
     limite_proximo_step = agora - timedelta(days=DRIP_STEP_INTERVAL_DAYS)
+    limite_novo_inativo = agora - timedelta(days=7)  # user precisa ter 7+ dias para entrar
 
     with engine.connect() as conn:
+        # 1. AUTO-INCLUSAO: pegar users novos que ja tem 7+ dias e nunca entraram no drip
+        # Esses serao marcados como "step 0" (ainda nao receberam nada)
+        # O step 1 sera disparado quando o admin acionar (ou pode auto-disparar via env var)
+        novos = conn.execute(text("""
+            SELECT u.id
+            FROM users u
+            WHERE u.email_confirmado = true
+              AND u.status NOT IN ('blocked', 'suspended', 'deleted', 'inativo')
+              AND u.email NOT LIKE 'test.%@test.com'
+              AND u.email NOT LIKE 'pipeline.%@test.com'
+              AND u.email NOT LIKE 'smoke.%@test.com'
+              AND COALESCE(u.sites_used, 0) = 0
+              AND COALESCE(u.tokens_used_month, 0) = 0
+              AND COALESCE(u.sdr_messages_today, 0) = 0
+              AND u.criado_em::timestamp < :limite
+              AND NOT EXISTS (
+                  SELECT 1 FROM outreach_attempts oa
+                  WHERE oa.user_id = u.id AND oa.campaign = :camp
+              )
+            LIMIT :lim
+        """), {"limite": limite_novo_inativo.isoformat(),
+               "camp": DRIP_CAMPAIGN, "lim": 50}).fetchall()
+
+        for (new_uid,) in novos:
+            try:
+                conn.execute(text("""
+                    INSERT INTO outreach_attempts
+                        (user_id, campaign, channel, status, metadata)
+                    VALUES
+                        (:uid, :camp, 'email', 'pending',
+                         CAST('{"step": 0, "source": "auto_drip_diario"}' AS JSONB))
+                """), {"uid": new_uid, "camp": DRIP_CAMPAIGN})
+                conn.commit()
+                novos_incluidos += 1
+                logger.info(f"[Drip] novo inativo incluido: user {new_uid}")
+            except Exception as e:
+                # UNIQUE violation = race, ok
+                conn.rollback()
+
+        # 2. PROCESSAR: todos os users que ja estao no drip
         # Busca todos os users que tem ALGUM outreach nesta campanha,
         # exceto os que ja chegaram ao step 5 E foram enviados.
         # Para cada user, identificar:
@@ -158,9 +200,12 @@ async def drip_diario(x_cron_secret: str | None = Header(None, alias="X-Cron-Sec
                     continue
 
                 # Se ainda nao passou o intervalo, espera
-                if ultimo_sent_at and ultimo_sent_at > limite_proximo_step:
-                    waiting += 1
-                    continue
+                # Fix: comparar naive vs aware - normalizar para naive UTC
+                if ultimo_sent_at:
+                    sent_naive = ultimo_sent_at.replace(tzinfo=None) if ultimo_sent_at.tzinfo else ultimo_sent_at
+                    if sent_naive > limite_proximo_step:
+                        waiting += 1
+                        continue
 
                 # Identifica proximo step
                 proximo_step = (max_step or 0) + 1
@@ -226,6 +271,7 @@ async def drip_diario(x_cron_secret: str | None = Header(None, alias="X-Cron-Sec
     return {
         "status": "ok",
         "campaign": DRIP_CAMPAIGN,
+        "novos_incluidos": novos_incluidos,
         "enviados": enviados,
         "pulados_replied": pulados_replied,
         "pulados_convertidos": pulados_convertidos,
