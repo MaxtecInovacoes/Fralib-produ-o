@@ -238,6 +238,7 @@ class FraLibState:
     liz_aprovado: bool = False
     liz_score: int = 0
     site_url: str = ""
+    paleta_cores: dict = field(default_factory=dict)  # Sprint 14.x: cores para SDR
     keyword_research: str = ""
     direcao_criativa: Any = None  # Output do Design Director (tokens OKLch)
 
@@ -1853,6 +1854,7 @@ async def executar_pipeline_completo(
                 _pc = getattr(state.nicho_briefing, "paleta_cores", None)
                 if _pc and isinstance(_pc, dict) and _pc.get("primary"):
                     state.prd_arquiteto.paleta_cores = _pc
+                    state.paleta_cores = _pc  # Sprint 14.x: para propagar ao SDR
                     print(f"[Pipeline] paleta_cores injetada no PRD: {_pc}")
         except Exception as _pc_err:
             print(f"[Pipeline] paleta_cores injeção falhou: {_pc_err}")
@@ -2345,6 +2347,7 @@ async def executar_pipeline_completo(
                 text("""
                 UPDATE leads SET site_url=:url, url_site=:url, processado=true,
                 processado_em=:ts, status='concluido', sdr_stage=:stage,
+                paleta_cores=:cores,
                 atualizado_em=:ts, erro_pipeline=NULL
                 WHERE id=:id AND user_id=:uid
             """),
@@ -2354,6 +2357,7 @@ async def executar_pipeline_completo(
                     "id": state.lead_id,
                     "stage": _sdr_stage_final,
                     "uid": state.tenant_id,
+                    "cores": json.dumps(state.paleta_cores) if state.paleta_cores else None,
                 },
             )
             conn.commit()

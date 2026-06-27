@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import os
 from datetime import datetime
 
@@ -153,6 +154,7 @@ async def execute_pipeline_tail(
             text("""
                 UPDATE leads SET site_url=:url, url_site=:url, processado=true,
                 processado_em=:ts, status='concluido', sdr_stage=:stage,
+                paleta_cores=:cores,
                 atualizado_em=:ts, erro_pipeline=NULL
                 WHERE id=:id AND user_id=:uid
             """),
@@ -162,6 +164,7 @@ async def execute_pipeline_tail(
                 "id": state.lead_id,
                 "stage": _sdr_stage_final,
                 "uid": state.tenant_id,
+                "cores": json.dumps(state.paleta_cores) if state.paleta_cores else None,
             },
         )
         conn.commit()

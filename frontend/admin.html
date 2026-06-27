@@ -6606,10 +6606,8 @@ async function verificarOnboarding() {
       _lockOnboarding('Complete seu perfil: nome, telefone e nicho sao obrigatorios para continuar.');
       return;
     }
-    if (status.whatsapp_required && !status.wpp_ok) {
-      _lockOnboarding('Conecte o WhatsApp para liberar a experiencia completa do SDR.');
-      return;
-    }
+    // WPP agora é OPCIONAL - usuário pode criar site sem WPP
+    // Apenas mostrar aviso, não bloquear
     _unlockOnboarding();
   } catch (e) {
     console.error('[Onboarding] Erro:', e);

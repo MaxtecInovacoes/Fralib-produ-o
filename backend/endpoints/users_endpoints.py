@@ -216,7 +216,8 @@ async def onboarding_status(
     status_conta = (row[7] or "").lower()
     trial_expires_at = row[6]
     whatsapp_allowed = plano_tem_sdr(plano, status_conta, trial_expires_at)
-    whatsapp_required = bool(whatsapp_allowed)
+    # WPP agora é OPCIONAL - usuário pode criar site sem WPP e conectar depois
+    whatsapp_required = False  # Não bloqueia mais o onboarding
 
     # Verificar WhatsApp conectado — 2 caminhos com fallback + retry
     wpp_ok = await _check_whatsapp_connected(user_id)

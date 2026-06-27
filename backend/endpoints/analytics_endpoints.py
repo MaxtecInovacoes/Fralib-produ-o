@@ -108,7 +108,7 @@ async def get_utm_analytics(
 
     try:
         # Leads por utm_source
-        by_source = db.execute(text("""
+        by_source = db.execute(text(f"""
             SELECT
                 COALESCE(utm_source, 'direct') as source,
                 COUNT(*) as total_leads,
@@ -116,25 +116,25 @@ async def get_utm_analytics(
                 COUNT(CASE WHEN status = 'trial' THEN 1 END) as trials,
                 COUNT(CASE WHEN status IN ('pro', 'ilimitado', 'agency') THEN 1 END) as pagantes
             FROM users
-            WHERE created_at::timestamp >= NOW() - INTERVAL ':days days'
+            WHERE created_at::timestamp >= NOW() - INTERVAL '{int(period_days)} days'
             GROUP BY COALESCE(utm_source, 'direct')
             ORDER BY total_leads DESC
-        """.replace(':days', str(period_days)))).fetchall()
+        """)).fetchall()
 
         # Leads por utm_medium
-        by_medium = db.execute(text("""
+        by_medium = db.execute(text(f"""
             SELECT
                 COALESCE(utm_medium, 'none') as medium,
                 COUNT(*) as total_leads,
                 COUNT(CASE WHEN status = 'trial' THEN 1 END) as trials
             FROM users
-            WHERE created_at::timestamp >= NOW() - INTERVAL ':days days'
+            WHERE created_at::timestamp >= NOW() - INTERVAL '{int(period_days)} days'
             GROUP BY COALESCE(utm_medium, 'none')
             ORDER BY total_leads DESC
-        """.replace(':days', str(period_days)))).fetchall()
+        """)).fetchall()
 
         # Leads por utm_campaign
-        by_campaign = db.execute(text("""
+        by_campaign = db.execute(text(f"""
             SELECT
                 COALESCE(utm_campaign, 'none') as campaign,
                 utm_source,
@@ -142,11 +142,11 @@ async def get_utm_analytics(
                 COUNT(CASE WHEN status = 'trial' THEN 1 END) as trials,
                 COUNT(CASE WHEN status IN ('pro', 'ilimitado', 'agency') THEN 1 END) as pagantes
             FROM users
-            WHERE created_at::timestamp >= NOW() - INTERVAL ':days days'
+            WHERE created_at::timestamp >= NOW() - INTERVAL '{int(period_days)} days'
             GROUP BY COALESCE(utm_campaign, 'none'), utm_source
             ORDER BY total_leads DESC
             LIMIT 50
-        """.replace(':days', str(period_days)))).fetchall()
+        """)).fetchall()
 
         return {
             "ok": True,
@@ -213,8 +213,8 @@ async def get_funnel_analytics(
         date_filter = "TRUE"
         date_params = {}
     else:
-        date_filter = "created_at::timestamp >= NOW() - make_interval(days => :days)"
-        date_params = {"days": period_days}
+        date_filter = f"created_at::timestamp >= NOW() - INTERVAL '{int(period_days)} days'"
+        date_params = {}
 
     try:
         # Contar visitantes (page_views)
@@ -310,19 +310,19 @@ async def get_kpi_analytics(
         """)).scalar() or 0
 
         # Novos usuários no período
-        new_users = db.execute(text("""
+        new_users = db.execute(text(f"""
             SELECT COUNT(*) FROM users
-            WHERE created_at::timestamp >= NOW() - make_interval(days => :days)
-        """), {"days": period_days}).scalar() or 0
+            WHERE created_at::timestamp >= NOW() - INTERVAL '{int(period_days)} days'
+        """)).scalar() or 0
 
         # Calcular MRR estimado (R$97 por usuário pago)
         mrr = pagantes * 97
 
         # Obter gastos com ads (mock - viria de API de anúncios)
-        ad_spend = db.execute(text("""
+        ad_spend = db.execute(text(f"""
             SELECT COALESCE(SUM(cost), 0) FROM ad_spend
-            WHERE date >= NOW() - make_interval(days => :days)
-        """), {"days": period_days}).scalar() or 0
+            WHERE date >= NOW() - INTERVAL '{int(period_days)} days'
+        """)).scalar() or 0
 
         # Se não houver dados de ads, usar valor placeholder
         if ad_spend == 0:
@@ -343,37 +343,37 @@ async def get_kpi_analytics(
         roas = round(mrr / ad_spend, 2) if ad_spend > 0 else 0
 
         # Page views e cliques
-        page_views = db.execute(text("""
+        page_views = db.execute(text(f"""
             SELECT COUNT(*) FROM analytics_events
             WHERE event_name = 'page_view'
-            AND created_at::timestamp >= NOW() - make_interval(days => :days)
-        """), {"days": period_days}).scalar() or 0
+            AND created_at::timestamp >= NOW() - INTERVAL '{int(period_days)} days'
+        """)).scalar() or 0
 
-        clicks = db.execute(text("""
+        clicks = db.execute(text(f"""
             SELECT COUNT(*) FROM analytics_events
             WHERE event_name = 'click'
-            AND created_at::timestamp >= NOW() - make_interval(days => :days)
-        """), {"days": period_days}).scalar() or 0
+            AND created_at::timestamp >= NOW() - INTERVAL '{int(period_days)} days'
+        """)).scalar() or 0
 
         # CTR = Cliques / Impressões
         ctr = round(clicks / page_views * 100, 2) if page_views > 0 else 0
 
         # Bounce Rate = Sessoes com apenas 1 page view / Total sessoes
-        sessions = db.execute(text("""
+        sessions = db.execute(text(f"""
             SELECT COUNT(DISTINCT session_id) FROM analytics_events
-            WHERE created_at::timestamp >= NOW() - make_interval(days => :days)
-        """), {"days": period_days}).scalar() or 0
+            WHERE created_at::timestamp >= NOW() - INTERVAL '{int(period_days)} days'
+        """)).scalar() or 0
 
-        single_page_sessions = db.execute(text("""
+        single_page_sessions = db.execute(text(f"""
             SELECT COUNT(*) FROM (
                 SELECT session_id, COUNT(*) as views
                 FROM analytics_events
                 WHERE event_name = 'page_view'
-                AND created_at::timestamp >= NOW() - make_interval(days => :days)
+                AND created_at::timestamp >= NOW() - INTERVAL '{int(period_days)} days'
                 GROUP BY session_id
                 HAVING COUNT(*) = 1
             ) t
-        """), {"days": period_days}).scalar() or 0
+        """)).scalar() or 0
 
         bounce_rate = round(single_page_sessions / sessions * 100, 2) if sessions > 0 else 0
 
@@ -436,7 +436,7 @@ async def get_cohort_analysis(
                 COUNT(*) as new_users,
                 COUNT(CASE WHEN plano IN ('pro', 'ilimitado', 'agency', 'starter') THEN 1 END) as converted
             FROM users
-            WHERE created_at::timestamp >= NOW() - INTERVAL ':days days'
+            WHERE created_at::timestamp >= NOW() - INTERVAL '{int(period_days)} days'
             GROUP BY DATE(created_at::timestamp)
             ORDER BY cohort_date DESC
             LIMIT 90
@@ -465,7 +465,7 @@ async def get_cohort_analysis(
                 COUNT(CASE WHEN ultimo_acesso::timestamp >= NOW() - INTERVAL '14 days' THEN 1 END) as week2,
                 COUNT(CASE WHEN ultimo_acesso::timestamp >= NOW() - INTERVAL '30 days' THEN 1 END) as month1
             FROM users
-            WHERE created_at::timestamp >= NOW() - INTERVAL ':days days'
+            WHERE created_at::timestamp >= NOW() - INTERVAL '{int(period_days)} days'
             GROUP BY DATE_TRUNC('week', created_at::timestamp)
             ORDER BY week DESC
         """.replace(':days', str({"7d": 7, "30d": 30, "90d": 90}.get(period, 90))))).fetchall()
