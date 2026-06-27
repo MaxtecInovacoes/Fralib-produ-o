@@ -103,6 +103,83 @@ body{
   background:linear-gradient(135deg,var(--fl-purple-300),var(--cyan));
   -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
 }
+
+/* ============================================================
+   WHATSAPP NOTIFICATION BANNER
+   ============================================================ */
+.whatsapp-notification{
+  background:linear-gradient(90deg,rgba(37,211,102,0.15),rgba(37,211,102,0.08));
+  border:2px solid rgba(37,211,102,0.4);
+  border-radius:12px;
+  padding:16px 20px;
+  margin-bottom:24px;
+  display:flex;
+  align-items:center;
+  gap:16px;
+  animation:slideDown 0.4s var(--fl-ease);
+}
+@keyframes slideDown{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
+.whatsapp-notification.hidden{display:none}
+.whatsapp-notification-icon{
+  width:48px;height:48px;flex-shrink:0;
+  background:rgba(37,211,102,0.2);
+  border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+}
+.whatsapp-notification-icon svg{width:24px;height:24px;fill:#25D366}
+.whatsapp-notification-content{flex:1}
+.whatsapp-notification-title{
+  font-family:var(--fl-font-brand);font-size:9px;
+  color:#25D366;letter-spacing:1px;margin-bottom:4px;
+}
+.whatsapp-notification-text{
+  font-size:13px;color:var(--fl-text-muted);line-height:1.5;
+}
+.whatsapp-notification-text strong{color:var(--fl-text)}
+.whatsapp-notification-actions{display:flex;gap:10px;flex-shrink:0}
+.btn-connect-wpp{
+  padding:10px 20px;
+  background:#25D366;color:#fff;
+  border:none;cursor:pointer;
+  font-family:var(--fl-font-brand);font-size:8px;
+  letter-spacing:1px;
+  box-shadow:inset -2px -2px 0 #1B9C38,inset 2px 2px 0 #6DED92,0 3px 0 #0F6B24;
+  transition:all .15s;
+}
+.btn-connect-wpp:hover{box-shadow:inset -2px -2px 0 #1B9C38,inset 2px 2px 0 #6DED92,0 3px 0 #0F6B24,0 0 20px rgba(37,211,102,0.3)}
+.btn-connect-wpp:active{transform:translateY(3px);box-shadow:inset -2px -2px 0 #1B9C38,inset 2px 2px 0 #6DED92}
+.btn-dismiss-wpp{
+  padding:10px 16px;
+  background:transparent;color:var(--fl-text-dim);
+  border:1px solid var(--fl-border);
+  cursor:pointer;
+  font-family:var(--fl-font-brand);font-size:8px;
+  letter-spacing:1px;
+  transition:all .15s;
+}
+.btn-dismiss-wpp:hover{border-color:var(--fl-text-dim);color:var(--fl-text-muted)}
+
+.leads-pending-list{
+  margin-top:12px;
+  display:flex;flex-direction:column;gap:8px;
+}
+.lead-pending-item{
+  background:rgba(0,0,0,0.3);
+  border:1px solid var(--fl-border);
+  border-radius:8px;
+  padding:10px 14px;
+  display:flex;align-items:center;gap:12px;
+}
+.lead-pending-name{
+  font-weight:600;font-size:13px;color:var(--fl-text);
+}
+.lead-pending-info{
+  font-size:11px;color:var(--fl-text-dim);
+}
+.lead-pending-time{
+  font-family:var(--fl-font-mono);font-size:10px;
+  color:var(--warning);margin-left:auto;flex-shrink:0;
+}
 .header-right{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 .header-user{
   display:flex;align-items:center;gap:10px;
@@ -693,6 +770,27 @@ body{
         <span>Agente Bryan</span>
         <div class="header-avatar">B</div>
       </div>
+    </div>
+  </div>
+
+  <!-- WhatsApp Notification Banner -->
+  <div class="whatsapp-notification hidden" id="whatsappNotification">
+    <div class="whatsapp-notification-icon">
+      <svg viewBox="0 0 24 24" fill="currentColor">
+        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+      </svg>
+    </div>
+    <div class="whatsapp-notification-content">
+      <div class="whatsapp-notification-title">⚠️ VOCÊ ESTÁ PERDENDO LEADS!</div>
+      <div class="whatsapp-notification-text">
+        <strong id="leadsCount">0</strong> leads querem falar com você, mas seu WhatsApp não está conectado.
+        <strong>Conecte agora</strong> para não perder esses clientes!
+      </div>
+      <div class="leads-pending-list" id="leadsPendingList"></div>
+    </div>
+    <div class="whatsapp-notification-actions">
+      <button class="btn-connect-wpp" onclick="conectarWhatsApp()">CONECTAR AGORA</button>
+      <button class="btn-dismiss-wpp" onclick="dismissWhatsAppNotification()">LEMBRAR DEPOIS</button>
     </div>
   </div>
 
@@ -1939,6 +2037,68 @@ async function atualizarUtiBadge() {
   } catch(e) {}
 }
 
+/* ══ WHATSAPP NOTIFICATION ═══════════════════════════════════════════ */
+async function verificarWhatsAppNotification() {
+  try {
+    var res = await authFetch('/api/leads/pendentes-whatsapp').then(function(r){ return r.json(); });
+    var notification = document.getElementById('whatsappNotification');
+    var leadsCount = document.getElementById('leadsCount');
+    var leadsList = document.getElementById('leadsPendingList');
+
+    if (!notification) return;
+
+    // Verificar se o usuário já descartou a notificação
+    var dismissed = localStorage.getItem('fralib_wpp_notification_dismissed');
+    var dismissedDate = dismissed ? parseInt(dismissed) : 0;
+    var oneDay = 24 * 60 * 60 * 1000;
+    if (Date.now() - dismissedDate < oneDay) return;
+
+    var count = res.count || 0;
+
+    if (count > 0) {
+      notification.classList.remove('hidden');
+      if (leadsCount) leadsCount.textContent = count;
+
+      // Listar leads pendentes
+      if (leadsList && res.leads) {
+        leadsList.innerHTML = res.leads.slice(0, 5).map(function(lead) {
+          var tempo = lead.tempo_espera || '';
+          return '<div class="lead-pending-item">' +
+            '<div>' +
+              '<div class="lead-pending-name">' + escapeHtml(lead.nome || 'Lead') + '</div>' +
+              '<div class="lead-pending-info">' + escapeHtml(lead.segmento || '') + (lead.cidade ? ' · ' + escapeHtml(lead.cidade) : '') + '</div>' +
+            '</div>' +
+            '<div class="lead-pending-time">' + tempo + '</div>' +
+          '</div>';
+        }).join('');
+      }
+    } else {
+      notification.classList.add('hidden');
+    }
+  } catch(e) {
+    console.warn('WhatsApp notification check failed:', e.message);
+  }
+}
+
+function conectarWhatsApp() {
+  // Redirecionar para a seção de configuração do WhatsApp
+  mostrarView('perfil');
+  document.querySelectorAll('.sidebar-link').forEach(function(l){ l.classList.remove('active'); });
+  var perfilLink = document.querySelector('[data-view="perfil"]');
+  if (perfilLink) perfilLink.classList.add('active');
+  // Rolar até a seção do WhatsApp
+  setTimeout(function() {
+    var whatsappSection = document.querySelector('[data-section="whatsapp"]');
+    if (whatsappSection) whatsappSection.scrollIntoView({ behavior: 'smooth' });
+  }, 100);
+}
+
+function dismissWhatsAppNotification() {
+  var notification = document.getElementById('whatsappNotification');
+  if (notification) notification.classList.add('hidden');
+  localStorage.setItem('fralib_wpp_notification_dismissed', String(Date.now()));
+}
+
 function expandirEnriquecimento(id) {
   var formRow = document.getElementById('desc-form-' + id);
   if (!formRow) return;
@@ -2218,6 +2378,7 @@ function logout() {
 document.addEventListener('DOMContentLoaded', function(){
   carregarKPIs();
   carregarKanban();
+  verificarWhatsAppNotification(); // Verificar leads pendentes sem WhatsApp
 
   // ─── WebSocket em Tempo Real (Elimina Polling) ───────────────────
   SocketClient.init().then(() => {

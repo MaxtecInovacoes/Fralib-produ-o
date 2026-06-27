@@ -1,6 +1,7 @@
 """Leads CRUD endpoints - basic operations without SDR."""
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+import logging
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, BackgroundTasks
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 import os, sys, re as _re2
@@ -13,7 +14,7 @@ from backend.core.auth import get_current_user
 from backend.core.config import SITES_DIR
 from backend.endpoints.sse_endpoints import adicionar_log
 
-from fastapi import BackgroundTasks
+logger = logging.getLogger("uvicorn")
 
 # Import models from leads_crud_models
 from backend.endpoints.leads_crud_models import (
@@ -101,7 +102,7 @@ async def get_sites(
 
         return {"sites": sites, "total": len(sites)}
     except Exception as e:
-        print(f"[Sites] Erro: {e}")
+        logger.warning("[Sites] Erro: %s", e)
         return {"sites": [], "total": 0}
 
 
@@ -131,6 +132,9 @@ async def atualizar_lead(
         # Alias: whatsapp → telefone_whatsapp
         if "whatsapp" in request_data:
             campos["telefone_whatsapp"] = request_data["whatsapp"]
+            # Se está atualizando WhatsApp, limpa flag de pendente
+            if request_data["whatsapp"]:
+                campos["whatsapp_pendente"] = False
 
         if not campos:
             return {"ok": True}
@@ -148,7 +152,7 @@ async def atualizar_lead(
         db.commit()
         return {"ok": True}
     except Exception as e:
-        print(f"[Leads] Erro ao atualizar: {e}")
+        logger.warning("[Leads] Erro ao atualizar: %s", e)
         raise HTTPException(status_code=500, detail="Erro ao atualizar lead. Tente novamente.")
 
 
@@ -177,7 +181,7 @@ async def reprocessar_lead(
     except HTTPException:
         raise
     except Exception as e:
-        print(f"[Leads] Erro: {e}")
+        logger.warning("[Leads] Erro: %s", e)
         raise HTTPException(status_code=500, detail="Erro interno. Tente novamente.")
 
 
@@ -434,10 +438,15 @@ async def criar_lead_manual(
             raise HTTPException(status_code=status_code, detail=perm)
     lead_id = str(_uuid.uuid4())
     agora = datetime.now().isoformat()
+
+    # Calcular se WhatsApp está pendente (ausente)
+    telefone_ou_whatsapp = req.whatsapp or req.telefone
+    whatsapp_pendente = not bool(telefone_ou_whatsapp)
+
     db.execute(
         text("""
-        INSERT INTO leads (id, nome, cidade, segmento, telefone, whatsapp, telefone_whatsapp, score, status, criado_em, atualizado_em, processado, tentativas, observacoes, user_id)
-        VALUES (:id, :nome, :cidade, :segmento, :telefone, :whatsapp, :whatsapp, :score, 'pendente', :criado_em, :criado_em, false, 0, :briefing, :user_id)
+        INSERT INTO leads (id, nome, cidade, segmento, telefone, whatsapp, telefone_whatsapp, score, status, criado_em, atualizado_em, processado, tentativas, observacoes, user_id, whatsapp_pendente)
+        VALUES (:id, :nome, :cidade, :segmento, :telefone, :whatsapp, :telefone_wpp, :score, 'pendente', :criado_em, :criado_em, false, 0, :briefing, :user_id, :whatsapp_pendente)
         ON CONFLICT DO NOTHING
     """),
         {
@@ -447,10 +456,12 @@ async def criar_lead_manual(
             "segmento": req.nicho,
             "telefone": req.telefone,
             "whatsapp": req.whatsapp or req.telefone,
+            "telefone_wpp": req.whatsapp or req.telefone,
             "score": req.score or 80,
             "criado_em": agora,
             "briefing": req.briefing or "",
             "user_id": tenant_id,
+            "whatsapp_pendente": whatsapp_pendente,
         },
     )
     db.commit()
@@ -481,6 +492,7 @@ async def criar_lead_manual(
         "ok": True,
         "lead_id": lead_id,
         "job_id": job_id if req.briefing else None,
+        "whatsapp_pendente": whatsapp_pendente,
         "mensagem": "Lead criado!"
         + (
             " Site enfileirado no worker."
@@ -522,7 +534,7 @@ async def deletar_lead(
     except HTTPException:
         raise
     except Exception as e:
-        print(f"[Leads] Erro: {e}")
+        logger.warning("[Leads] Erro: %s", e)
         raise HTTPException(status_code=500, detail="Erro interno. Tente novamente.")
 
 
@@ -552,7 +564,7 @@ async def aprovar_lead_pipeline(
     except HTTPException:
         raise
     except Exception as e:
-        print(f"[Leads] Erro: {e}")
+        logger.warning("[Leads] Erro: %s", e)
         raise HTTPException(status_code=500, detail="Erro interno. Tente novamente.")
 
 
@@ -582,7 +594,7 @@ async def descartar_lead(
     except HTTPException:
         raise
     except Exception as e:
-        print(f"[Leads] Erro: {e}")
+        logger.warning("[Leads] Erro: %s", e)
         raise HTTPException(status_code=500, detail="Erro interno. Tente novamente.")
 
 
@@ -608,6 +620,9 @@ async def atualizar_campos_lead(
             campos["telefone"] = req.telefone
             campos["whatsapp"] = req.telefone
             campos["telefone_whatsapp"] = req.telefone
+            # Se está definindo telefone, limpa flag de pendente
+            if req.telefone:
+                campos["whatsapp_pendente"] = False
         if req.segmento is not None:
             campos["segmento"] = req.segmento
         if req.cidade is not None:
@@ -632,5 +647,5 @@ async def atualizar_campos_lead(
     except HTTPException:
         raise
     except Exception as e:
-        print(f"[Leads] Erro: {e}")
+        logger.warning("[Leads] Erro: %s", e)
         raise HTTPException(status_code=500, detail="Erro interno. Tente novamente.")

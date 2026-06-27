@@ -545,6 +545,16 @@ body {
     margin-right: 0.5rem;
 }
 
+.upgrade-offer {
+    background: linear-gradient(135deg, #4c1d9e 0%, #6b46c1 100%);
+    color: white;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
 .pricing-cta {
     width: 100%;
     padding: 1rem;
@@ -556,8 +566,8 @@ body {
 }
 
 .pricing-card.featured .pricing-cta {
-    background: var(--accent-purple);
-    color: white;
+    background: var(--accent-cyan);
+    color: var(--text-primary);
 }
 
 .pricing-card:not(.featured) .pricing-cta {
@@ -967,11 +977,13 @@ body {
 <!-- HERO -->
 <section class="hero" id="hero">
     <div class="hero-content">
-        <h1>FraLib OS: Sites com IA para Freelancers</h1>
-        <p>Crie sites em 1h, faça prospecção no Google Maps, venda pelo WhatsApp com CRM e SDR Franz.</p>
+        <h1>Faz site profissional<br>em minutos. Vende pro seu cliente.</h1>
+        <p class="hero-sub">A gente acha seus clientes, cria o site automaticão, e manda no WhatsApp. Você só fecha.</p>
 
         <div class="hero-buttons">
-            <a href="#beta" class="cta-primary">Quero meu site grátis</a>
+            <a href="#beta" class="cta-primary">
+                Testa 7 dias grátis
+            </a>
             <a href="#como-funciona" class="cta-secondary">Como funciona</a>
         </div>
 
@@ -1077,30 +1089,32 @@ body {
         <div class="pricing-card featured">
             <div class="pricing-badge">Mais popular</div>
             <h3 class="pricing-name">Starter</h3>
-            <div class="pricing-price">R$97</div>
-            <div class="pricing-period">por mês</div>
+            <div class="pricing-price">R$67</div>
+            <div class="pricing-period">por mês • Teste 7 dias grátis</div>
             <ul class="pricing-features">
-                <li>Tudo do Free +</li>
-                <li>Prospecção no Google Maps</li>
-                <li>CRM básico</li>
-                <li>5 sites</li>
-                <li>Suporte prioritário</li>
+                <li>Sites ilimitados</li>
+                <li>50 leads por mês</li>
+                <li>WhatsApp básico</li>
+                <li>1 domínio próprio</li>
+                <li>Suporte por email</li>
             </ul>
-            <button class="pricing-cta">Assinar agora</button>
+            <button class="pricing-cta">Testar 7 dias grátis</button>
         </div>
 
         <div class="pricing-card">
             <h3 class="pricing-name">Pro</h3>
-            <div class="pricing-price">R$197</div>
-            <div class="pricing-period">por mês</div>
+            <div class="pricing-price">R$97</div>
+            <div class="pricing-period">por mês • 1º mês GRÁTIS</div>
+            <div class="upgrade-offer">🎁 Starter ganha: 1 MÊS GRÁTIS</div>
             <ul class="pricing-features">
                 <li>Tudo do Starter +</li>
-                <li>SDR automatizado</li>
-                <li>API para integração</li>
-                <li>Sites ilimitados</li>
-                <li>Suporte 24/7</li>
+                <li>Leads ILIMITADOS</li>
+                <li>WhatsApp completo</li>
+                <li>Briefing automatizado</li>
+                <li>Integrações RD/GCalendar</li>
+                <li>Suporte prioritário</li>
             </ul>
-            <button class="pricing-cta">Assinar agora</button>
+            <button class="pricing-cta">Quero Pro com 1 mês grátis</button>
         </div>
     </div>
 </section>

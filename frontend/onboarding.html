@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FraLib OS - Bem-vindo!</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --fl-bg:#0a0714;--fl-bg-surface:#0d0d12;--fl-bg-card:#12121a;
+  --fl-bg-hover:#1c1c28;--fl-bg-overlay:rgba(6,6,8,0.92);
+  --fl-purple:#9333ea;--fl-purple-300:#c084fc;--fl-purple-400:#a855f7;
+  --fl-purple-800:#2d1060;--fl-purple-900:#1a0a30;--fl-purple-950:#0e0718;
+  --fl-border:rgba(147,51,234,0.12);--fl-border-md:rgba(147,51,234,0.25);--fl-border-hi:rgba(147,51,234,0.50);
+  --fl-text:#f0f0f5;--fl-text-muted:#b0b0c8;--fl-text-dim:#5a5a70;
+  --fl-font-brand:'Press Start 2P',monospace;--fl-font-ui:'DM Sans',system-ui,sans-serif;--fl-font-mono:'JetBrains Mono',monospace;
+  --fl-ease:cubic-bezier(0.22,1,0.36,1);
+  --cyan:#00FFB3;--cyan-glow:rgba(0,255,179,0.4);--cyan-dim:rgba(0,255,179,0.12);
+  --gold:#FFB800;--gold-glow:rgba(255,184,0,0.35);--gold-dim:rgba(255,184,0,0.15);
+  --success:#22c55e;--warning:#f59e0b;--danger:#ef4444;--info:#38bdf8;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  font-family:var(--fl-font-ui);background:var(--fl-bg);color:var(--fl-text);
+  display:flex;align-items:center;justify-content:center;
+  -webkit-font-smoothing:antialiased;overflow:hidden;
+}
+
+.onboarding-container{
+  max-width:560px;width:90%;
+  background:var(--fl-bg-card);
+  border:2px solid var(--fl-purple);
+  border-radius:20px;
+  padding:48px 40px;
+  text-align:center;
+  box-shadow:0 0 60px rgba(147,51,234,0.2),0 30px 80px rgba(0,0,0,0.5);
+  animation:modalIn .5s var(--fl-ease);
+}
+@keyframes modalIn{from{opacity:0;transform:translateY(30px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+
+.success-icon{
+  width:100px;height:100px;
+  margin:0 auto 24px;
+  background:linear-gradient(135deg,var(--success),#16803C);
+  border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 0 40px rgba(34,197,94,0.4);
+  animation:successPulse 2s ease-in-out infinite;
+}
+@keyframes successPulse{0%,100%{transform:scale(1);box-shadow:0 0 40px rgba(34,197,94,0.4)}50%{transform:scale(1.05);box-shadow:0 0 60px rgba(34,197,94,0.6)}}
+.success-icon svg{width:48px;height:48px;stroke:#fff;stroke-width:3}
+
+.onboarding-title{
+  font-family:var(--fl-font-brand);font-size:clamp(12px,2vw,18px);
+  line-height:1.6;margin-bottom:16px;
+  background:linear-gradient(135deg,var(--fl-purple-300),var(--cyan));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+
+.onboarding-subtitle{
+  font-size:16px;color:var(--fl-text-muted);
+  margin-bottom:32px;line-height:1.6;
+}
+
+.leads-badge{
+  display:inline-flex;align-items:center;gap:12px;
+  background:var(--gold-dim);
+  border:2px solid var(--gold);
+  border-radius:16px;
+  padding:16px 28px;
+  margin-bottom:32px;
+  box-shadow:0 0 30px rgba(255,184,0,0.2);
+}
+.leads-badge-icon{
+  width:48px;height:48px;
+  background:var(--gold);
+  border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:24px;
+}
+.leads-badge-text{
+  text-align:left;
+}
+.leads-badge-count{
+  font-family:var(--fl-font-brand);font-size:22px;
+  color:var(--gold);display:block;
+  text-shadow:0 0 10px rgba(255,184,0,0.5);
+}
+.leads-badge-label{
+  font-size:12px;color:var(--fl-text-muted);
+  text-transform:uppercase;letter-spacing:0.5px;
+}
+
+.onboarding-actions{
+  display:flex;flex-direction:column;gap:12px;
+  margin-top:24px;
+}
+.btn-onboard{
+  display:flex;align-items:center;justify-content:center;gap:12px;
+  padding:18px 32px;
+  font-family:var(--fl-font-brand);font-size:11px;
+  cursor:pointer;border:none;letter-spacing:1px;
+  transition:all .15s;text-decoration:none;
+}
+.btn-whatsapp{
+  background:var(--success);color:#fff;
+  box-shadow:inset -3px -3px 0 #16803C,inset 3px 3px 0 #4ADE80,0 4px 0 #0D5A28;
+}
+.btn-whatsapp:hover{box-shadow:inset -3px -3px 0 #16803C,inset 3px 3px 0 #86EFAC,0 4px 0 #0D5A28,0 0 30px rgba(34,197,94,0.4)}
+.btn-whatsapp:active{transform:translateY(4px);box-shadow:inset -3px -3px 0 #16803C,inset 3px 3px 0 #4ADE80}
+
+.btn-skip{
+  background:transparent;color:var(--fl-text-muted);
+  border:2px solid var(--fl-border-md);
+  box-shadow:none;
+}
+.btn-skip:hover{border-color:var(--fl-purple);color:var(--fl-purple-300)}
+
+.whatsapp-note{
+  font-size:11px;color:var(--fl-text-dim);
+  margin-top:16px;
+}
+
+@media(max-width:480px){
+  .onboarding-container{padding:36px 24px}
+  .leads-badge{flex-direction:column;text-align:center}
+  .leads-badge-text{text-align:center}
+}
+</style>
+</head>
+<body>
+
+<div class="onboarding-container">
+  <div class="success-icon">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+      <polyline points="20 6 9 17 4 12"></polyline>
+    </svg>
+  </div>
+
+  <h1 class="onboarding-title">SITE CRIADO COM SUCESSO!</h1>
+
+  <p class="onboarding-subtitle">
+    Seu site foi gerado automaticamente. Agora, conecte seu WhatsApp para receber mensagens dos clientes interessados.
+  </p>
+
+  <div class="leads-badge" id="leadsBadge">
+    <div class="leads-badge-icon">&#128640;</div>
+    <div class="leads-badge-text">
+      <span class="leads-badge-count" id="leadsCount">0</span>
+      <span class="leads-badge-label">leads querendo falar!</span>
+    </div>
+  </div>
+
+  <div class="onboarding-actions">
+    <button class="btn-onboard btn-whatsapp" id="btnConectarWhatsApp" onclick="conectarWhatsApp()">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+      </svg>
+      CONECTAR WHATSAPP AGORA
+    </button>
+    <button class="btn-onboard btn-skip" onclick="pularWhatsApp()">
+      PULAR POR ENQUANTO
+    </button>
+  </div>
+
+  <p class="whatsapp-note">Conectar agora leva apenas 2 minutos e permite que voce receba mensagens dos leads diretamente no seu celular.</p>
+</div>
+
+<script>
+// Verificar se ha leads pendentes de WhatsApp
+async function verificarLeads() {
+  try {
+    const token = localStorage.getItem('fralib_token');
+    if (!token) {
+      // Nao esta logado, usar dados do localStorage
+      const betaData = JSON.parse(localStorage.getItem('fralib_beta') || '[]');
+      if (betaData.length > 0) {
+        document.getElementById('leadsCount').textContent = betaData.length;
+        document.getElementById('leadsBadge').style.display = 'flex';
+      }
+      return;
+    }
+
+    // Buscar leads do servidor
+    const response = await fetch('/api/leads/pendentes-whatsapp', {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      const count = data.count || 0;
+      document.getElementById('leadsCount').textContent = count;
+
+      if (count > 0) {
+        document.getElementById('leadsBadge').style.display = 'flex';
+      } else {
+        document.getElementById('leadsBadge').style.display = 'none';
+      }
+    }
+  } catch (err) {
+    console.warn('Erro ao verificar leads:', err);
+    // Fallback: usar dados locais
+    const betaData = JSON.parse(localStorage.getItem('fralib_beta') || '[]');
+    if (betaData.length > 0) {
+      document.getElementById('leadsCount').textContent = betaData.length;
+    }
+  }
+}
+
+function conectarWhatsApp() {
+  // Redirecionar para a pagina de configuracao do WhatsApp
+  window.location.href = '/dashboard.html?view=config&highlight=whatsapp';
+}
+
+function pularWhatsApp() {
+  // Marcar que o usuario pulou o onboarding
+  localStorage.setItem('fralib_onboarding_whatsapp_skip', 'true');
+  // Redirecionar para o dashboard
+  window.location.href = '/dashboard.html';
+}
+
+// Verificar leads ao carregar a pagina
+verificarLeads();
+</script>
+
+</body>
+</html>

@@ -65,7 +65,7 @@ async def iniciar_pipeline(
         )
     if not _whatsapp_connected:
         logger.warning(
-            "Tenant %s sem WhatsApp conectado; plano sem SDR ativo, pipeline segue sem Franz",
+            "[Pipeline] Tenant %s sem WhatsApp conectado; plano sem SDR ativo, pipeline segue sem Franz",
             tenant_id,
         )
 

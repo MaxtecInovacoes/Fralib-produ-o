@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 from backend.agents.builder_contract_utils import archetype_id_from_visual_dna as _archetype_id
+
+logger = logging.getLogger(__name__)
 
 
 def build_visual_contract(facts: dict[str, Any]) -> dict[str, Any]:
@@ -12,6 +15,8 @@ def build_visual_contract(facts: dict[str, Any]) -> dict[str, Any]:
     archetype = _archetype_id(visual_dna) or _archetype_from_segment(str(facts.get("segmento") or ""))
     has_address = bool(facts.get("address") or facts.get("endereco"))
     has_phone = bool(facts.get("phone") or facts.get("telefone"))
+    if not has_phone:
+        logger.debug("[visual_contract] phone/whatsapp ausente - hero usara CTA de contato generico")
     has_reviews = bool(facts.get("rating") or facts.get("reviews_rating") or facts.get("reviews_count"))
     has_photos = bool(facts.get("photos") or facts.get("fotos"))
 

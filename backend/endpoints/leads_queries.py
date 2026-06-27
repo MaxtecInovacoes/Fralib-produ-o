@@ -309,3 +309,84 @@ async def get_descartados(
     except Exception as e:
         print(f"[Leads] Erro descartados: {e}")
         return {"leads": [], "total": 0}
+
+
+@router.get("/pendentes-whatsapp")
+async def get_leads_pendentes_whatsapp(
+    db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)
+):
+    """Retorna leads que precisam de WhatsApp conectado para receber mensagens.
+
+    - Leads que responderam mas o WhatsApp do usuario nao esta conectado
+    - Mostra tempo de espera para criar urgencia
+    """
+    try:
+        tenant_id = usuario.get("tenant_id", usuario["id"])
+
+        # Buscar leads que:
+        # 1. Tiveram resposta do WhatsApp (interacoes de entrada)
+        # 2. Mas ainda nao foram convertidos em cliente
+        # 3. Ordenados por tempo de espera (mais antigos primeiro)
+        result = db.execute(
+            text("""
+            SELECT
+                l.id,
+                l.nome,
+                l.cidade,
+                l.segmento,
+                l.telefone,
+                l.telefone_whatsapp,
+                l.site_url,
+                l.score,
+                l.status,
+                l.criado_em,
+                COALESCE(ultima_interacao.criado_em, l.criado_em) as ultima_interacao_em,
+                EXTRACT(EPOCH FROM (NOW() - COALESCE(ultima_interacao.criado_em, l.criado_em))) / 3600 as horas_espera
+            FROM leads l
+            LEFT JOIN (
+                SELECT lead_id, MAX(criado_em) as criado_em
+                FROM interacoes
+                WHERE direcao = 'entrada'
+                GROUP BY lead_id
+            ) ultima_interacao ON ultima_interacao.lead_id = l.id
+            WHERE l.user_id = :uid
+              AND l.telefone_whatsapp IS NOT NULL
+              AND l.telefone_whatsapp != ''
+              AND l.status NOT IN ('won', 'convertido', 'lost', 'perdido')
+              AND (
+                  -- Teve interacao de entrada (lead respondeu)
+                  ultima_interacao.criado_em IS NOT NULL
+                  OR
+                  -- Ou foi criado nos ultimos 7 dias e ainda nao foi contatado
+                  (l.criado_em > NOW() - INTERVAL '7 days' AND l.status IN ('novo', 'capturado'))
+              )
+            ORDER BY horas_espera DESC
+            LIMIT 20
+            """),
+            {"uid": tenant_id},
+        ).fetchall()
+
+        leads = []
+        for r in result:
+            d = dict(r._mapping)
+            # Calcular tempo legivel
+            horas = d.get("horas_espera") or 0
+            if horas < 1:
+                tempo = "agora"
+            elif horas < 24:
+                tempo = f"{int(horas)}h"
+            elif horas < 168:  # 7 dias
+                dias = int(horas / 24)
+                tempo = f"{dias}d"
+            else:
+                semanas = int(horas / 168)
+                tempo = f"{semanas}s"
+            d["tempo_espera"] = tempo
+            leads.append(d)
+
+        return {"leads": leads, "count": len(leads)}
+    except Exception as e:
+        print(f"[Leads] Erro pendentes-whatsapp: {e}")
+        import traceback
+        traceback.print_exc()
+        return {"leads": [], "count": 0}

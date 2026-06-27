@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 from backend.agents.builder_contract_utils import first_value as _first, list_value as _list
+
+logger = logging.getLogger(__name__)
 
 
 def build_requirements_contract(facts: dict[str, Any]) -> dict[str, Any]:
@@ -52,6 +55,7 @@ def build_requirements_contract(facts: dict[str, Any]) -> dict[str, Any]:
         missing.append("address")
     if not phone:
         missing.append("phone")
+        logger.debug("[requirements_contract] phone/whatsapp ausente - site será gerado sem CTA de WhatsApp")
     if not services:
         missing.append("confirmed_services")
     if not photos:

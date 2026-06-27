@@ -11,7 +11,7 @@ class EditarSiteRequest(BaseModel):
 
 class LeadManualRequest(BaseModel):
     nome: str
-    telefone: str
+    telefone: Optional[str] = None
     whatsapp: Optional[str] = None
     nicho: str
     cidade: str

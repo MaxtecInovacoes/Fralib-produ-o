@@ -1,5 +1,6 @@
 """Leads SDR and WhatsApp integration endpoints."""
 
+import logging
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import text
@@ -15,6 +16,8 @@ from backend.whatsapp_listener import is_tenant_connected, _salvar_interacao
 from backend.whatsapp.sender import send_text_parts
 from backend.services.credits_manager import plano_tem_sdr
 from backend.services.sdr_gateway import SdrMessageContext, evaluate_sdr_output, has_prior_outbound
+
+logger = logging.getLogger(__name__)
 
 
 
@@ -142,7 +145,7 @@ async def registrar_feedback(
     except HTTPException:
         raise
     except Exception as e:
-        print(f"[Leads SDR] Erro: {e}")
+        logger.warning("[Leads SDR] Erro: %s", e)
         raise HTTPException(status_code=500, detail="Erro interno. Tente novamente.")
 
 
@@ -176,14 +179,19 @@ async def enviar_mensagem_lead(
     # Buscar lead
     row = db.execute(
         text(
-            "SELECT nome, telefone, whatsapp, segmento, cidade, site_url, rating, sdr_stage FROM leads WHERE id=:id AND user_id=:uid"
+            "SELECT nome, telefone, whatsapp, whatsapp_pendente, segmento, cidade, site_url, rating, sdr_stage FROM leads WHERE id=:id AND user_id=:uid"
         ),
         {"id": lead_id, "uid": tenant_id},
     ).fetchone()
     if not row:
         raise HTTPException(404, "Lead nao encontrado")
 
-    nome, telefone, whatsapp, segmento, cidade, site_url, rating, sdr_stage = row
+    nome, telefone, whatsapp, whatsapp_pendente, segmento, cidade, site_url, rating, sdr_stage = row
+
+    # Verificar se lead tem WhatsApp
+    telefone_ou_whatsapp = (whatsapp or telefone or "").strip()
+    if not telefone_ou_whatsapp:
+        raise HTTPException(400, "Lead nao tem WhatsApp/Telefone. Adicione primeiro.")
 
     if not site_url:
         raise HTTPException(400, "Lead nao tem site gerado. Rode o pipeline primeiro.")
