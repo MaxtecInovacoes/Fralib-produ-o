@@ -86,6 +86,8 @@ async def track_events(request: Request, db: Session = Depends(get_db)):
         return {"ok": True, "count": len(events)}
 
     except Exception as e:
+        try: db.rollback()
+        except: pass
         logger.error(f"Error tracking events: {e}")
         db.rollback()
         return {"ok": False, "error": str(e)}
@@ -183,6 +185,8 @@ async def get_utm_analytics(
         }
 
     except Exception as e:
+        try: db.rollback()
+        except: pass
         logger.error(f"Error fetching UTM analytics: {e}")
         return {"ok": False, "error": str(e)}
 
@@ -204,61 +208,38 @@ async def get_funnel_analytics(
         "7d": 7, "30d": 30, "90d": 90, "all": 9999
     }.get(period, 30)
 
+    # Se período é "all" (9999), sem filtro; senão, filtrar últimos N dias
+    if period_days >= 9999:
+        date_filter = "TRUE"
+        date_params = {}
+    else:
+        date_filter = "created_at >= NOW() - make_interval(days => :days)"
+        date_params = {"days": period_days}
+
     try:
         # Contar visitantes (page_views)
-        if period_days < 9999:
-            visitors_query = text("""
-                SELECT COUNT(DISTINCT session_id)
-                FROM analytics_events
-                WHERE event_name = 'page_view'
-                AND created_at >= NOW() - INTERVAL ':days days'
-            """.replace(':days', str(period_days)))
-        else:
-            visitors_query = text("""
-                SELECT COUNT(DISTINCT session_id)
-                FROM analytics_events
-                WHERE event_name = 'page_view'
-            """)
-
-        visitors = db.execute(visitors_query).scalar() or 0
+        visitors = db.execute(text(f"""
+            SELECT COUNT(DISTINCT session_id)
+            FROM analytics_events
+            WHERE event_name = 'page_view' AND {date_filter}
+        """), date_params).scalar() or 0
 
         # Contar leads (usuários criados)
-        if period_days < 9999:
-            leads_query = text("""
-                SELECT COUNT(*) FROM users
-                WHERE created_at >= NOW() - INTERVAL ':days days'
-            """.replace(':days', str(period_days)))
-        else:
-            leads_query = text("SELECT COUNT(*) FROM users")
-
-        leads = db.execute(leads_query).scalar() or 0
+        leads = db.execute(text(f"""
+            SELECT COUNT(*) FROM users WHERE {date_filter}
+        """), date_params).scalar() or 0
 
         # Contar trials
-        if period_days < 9999:
-            trials_query = text("""
-                SELECT COUNT(*) FROM users
-                WHERE plano = 'trial'
-                AND created_at >= NOW() - INTERVAL ':days days'
-            """.replace(':days', str(period_days)))
-        else:
-            trials_query = text("SELECT COUNT(*) FROM users WHERE plano = 'trial'")
-
-        trials = db.execute(trials_query).scalar() or 0
+        trials = db.execute(text(f"""
+            SELECT COUNT(*) FROM users
+            WHERE plano = 'trial' AND {date_filter}
+        """), date_params).scalar() or 0
 
         # Contar pagantes
-        if period_days < 9999:
-            pagantes_query = text("""
-                SELECT COUNT(*) FROM users
-                WHERE plano IN ('pro', 'ilimitado', 'agency', 'starter')
-                AND created_at >= NOW() - INTERVAL ':days days'
-            """.replace(':days', str(period_days)))
-        else:
-            pagantes_query = text("""
-                SELECT COUNT(*) FROM users
-                WHERE plano IN ('pro', 'ilimitado', 'agency', 'starter')
-            """)
-
-        pagantes = db.execute(pagantes_query).scalar() or 0
+        pagantes = db.execute(text(f"""
+            SELECT COUNT(*) FROM users
+            WHERE plano IN ('pro', 'ilimitado', 'agency', 'starter') AND {date_filter}
+        """), date_params).scalar() or 0
 
         # Contar retidos (usuários que usaram nos últimos 30 dias)
         retidos = db.execute(text("""
@@ -296,6 +277,8 @@ async def get_funnel_analytics(
         }
 
     except Exception as e:
+        try: db.rollback()
+        except: pass
         logger.error(f"Error fetching funnel analytics: {e}")
         return {"ok": False, "error": str(e)}
 
@@ -329,8 +312,8 @@ async def get_kpi_analytics(
         # Novos usuários no período
         new_users = db.execute(text("""
             SELECT COUNT(*) FROM users
-            WHERE created_at >= NOW() - INTERVAL ':days days'
-        """.replace(':days', str(period_days)))).scalar() or 0
+            WHERE created_at >= NOW() - make_interval(days => :days)
+        """), {"days": period_days}).scalar() or 0
 
         # Calcular MRR estimado (R$97 por usuário pago)
         mrr = pagantes * 97
@@ -338,8 +321,8 @@ async def get_kpi_analytics(
         # Obter gastos com ads (mock - viria de API de anúncios)
         ad_spend = db.execute(text("""
             SELECT COALESCE(SUM(cost), 0) FROM ad_spend
-            WHERE date >= NOW() - INTERVAL ':days days'
-        """.replace(':days', str(period_days)))).scalar() or 0
+            WHERE date >= NOW() - make_interval(days => :days)
+        """), {"days": period_days}).scalar() or 0
 
         # Se não houver dados de ads, usar valor placeholder
         if ad_spend == 0:
@@ -363,14 +346,14 @@ async def get_kpi_analytics(
         page_views = db.execute(text("""
             SELECT COUNT(*) FROM analytics_events
             WHERE event_name = 'page_view'
-            AND created_at >= NOW() - INTERVAL ':days days'
-        """.replace(':days', str(period_days)))).scalar() or 0
+            AND created_at >= NOW() - make_interval(days => :days)
+        """), {"days": period_days}).scalar() or 0
 
         clicks = db.execute(text("""
             SELECT COUNT(*) FROM analytics_events
             WHERE event_name = 'click'
-            AND created_at >= NOW() - INTERVAL ':days days'
-        """.replace(':days', str(period_days)))).scalar() or 0
+            AND created_at >= NOW() - make_interval(days => :days)
+        """), {"days": period_days}).scalar() or 0
 
         # CTR = Cliques / Impressões
         ctr = round(clicks / page_views * 100, 2) if page_views > 0 else 0
@@ -378,19 +361,19 @@ async def get_kpi_analytics(
         # Bounce Rate = Sessoes com apenas 1 page view / Total sessoes
         sessions = db.execute(text("""
             SELECT COUNT(DISTINCT session_id) FROM analytics_events
-            WHERE created_at >= NOW() - INTERVAL ':days days'
-        """.replace(':days', str(period_days)))).scalar() or 0
+            WHERE created_at >= NOW() - make_interval(days => :days)
+        """), {"days": period_days}).scalar() or 0
 
         single_page_sessions = db.execute(text("""
             SELECT COUNT(*) FROM (
                 SELECT session_id, COUNT(*) as views
                 FROM analytics_events
                 WHERE event_name = 'page_view'
-                AND created_at >= NOW() - INTERVAL ':days days'
+                AND created_at >= NOW() - make_interval(days => :days)
                 GROUP BY session_id
                 HAVING COUNT(*) = 1
             ) t
-        """.replace(':days', str(period_days)))).scalar() or 0
+        """), {"days": period_days}).scalar() or 0
 
         bounce_rate = round(single_page_sessions / sessions * 100, 2) if sessions > 0 else 0
 
@@ -426,6 +409,8 @@ async def get_kpi_analytics(
         }
 
     except Exception as e:
+        try: db.rollback()
+        except: pass
         logger.error(f"Error fetching KPI analytics: {e}")
         return {"ok": False, "error": str(e)}
 
@@ -504,6 +489,8 @@ async def get_cohort_analysis(
         }
 
     except Exception as e:
+        try: db.rollback()
+        except: pass
         logger.error(f"Error fetching cohort analytics: {e}")
         return {"ok": False, "error": str(e)}
 
@@ -583,6 +570,8 @@ async def get_lead_score_analytics(
         }
 
     except Exception as e:
+        try: db.rollback()
+        except: pass
         logger.error(f"Error fetching lead score analytics: {e}")
         return {"ok": False, "error": str(e)}
 
@@ -624,10 +613,10 @@ async def get_growth_dashboard(
                 COUNT(*) as new_leads,
                 COUNT(CASE WHEN plano IN ('pro', 'ilimitado', 'agency', 'starter') THEN 1 END) as new_paid
             FROM users
-            WHERE created_at >= NOW() - (:days || ' days')::interval
+            WHERE created_at >= NOW() - make_interval(days => :days)
             GROUP BY DATE(created_at)
             ORDER BY date DESC
-        """), {"days": str(days_num)}).fetchall()
+        """), {"days": days_num}).fetchall()
 
         return {
             "ok": True,
@@ -653,6 +642,8 @@ async def get_growth_dashboard(
         }
 
     except Exception as e:
+        try: db.rollback()
+        except: pass
         logger.error(f"Error fetching growth dashboard: {e}")
         return {"ok": False, "error": str(e)}
 
@@ -763,6 +754,8 @@ async def seed_demo_data(
         }
 
     except Exception as e:
+        try: db.rollback()
+        except: pass
         logger.error(f"Error seeding demo data: {e}")
         db.rollback()
         return {"ok": False, "error": str(e)}
