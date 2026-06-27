@@ -64,8 +64,15 @@ class TestCanSendNow(unittest.TestCase):
             mock_conn = MagicMock()
             mock_engine.connect.return_value.__enter__.return_value = mock_conn
             # Mock da query que pega sent_at
-            mock_conn.execute.return_value.fetchone.return_value = (datetime.now(),)
-            can, wait = can_send_now(mock_engine, tenant_id=1)
+            from datetime import datetime, timedelta
+            last_sent = datetime.utcnow() - timedelta(seconds=30)
+            mock_conn.execute.return_value.fetchone.return_value = (last_sent,)
+            with patch("backend.services.outbound_queue.datetime") as mock_dt:
+                # Configura datetime.utcnow() mockado
+                mock_now = last_sent + timedelta(seconds=30)  # mesmo time
+                mock_dt.utcnow.return_value = mock_now
+                mock_dt.now.return_value = mock_now
+                can, wait = can_send_now(mock_engine, tenant_id=1)
         self.assertFalse(can)
         self.assertGreater(wait, 0)
         self.assertLessEqual(wait, RATE_LIMIT_WINDOW_SEC)

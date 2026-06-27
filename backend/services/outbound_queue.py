@@ -144,13 +144,16 @@ def can_send_now(engine, tenant_id: int) -> tuple[bool, int]:
         if not row or not row[0]:
             return True, 0
         last_sent = row[0]
-        # Normaliza: se tem timezone, converte pra naive (assume UTC)
+        # Normaliza: BOTH tem que ser naive ou BOTH tem que ser aware
+        # O DB retorna timezone-aware (UTC), entao usamos datetime.now() naive
+        # OU convertemos ambos pra UTC
+        from datetime import timezone
         if hasattr(last_sent, 'tzinfo') and last_sent.tzinfo is not None:
+            # last_sent e aware (UTC). Converter pra naive = subtrair tz
             last_sent = last_sent.replace(tzinfo=None)
-        # Pode enviar X segundos depois
-        now = datetime.now()
-        if hasattr(now, 'tzinfo') and now.tzinfo is not None:
-            now = now.replace(tzinfo=None)
+        # Agora datetime.now() (naive) - AMBOS no mesmo timezone (server local)
+        # Se server local != UTC, isso quebra. Solucao robusta: usar utcnow()
+        now = datetime.utcnow()
         wait = (last_sent + timedelta(seconds=RATE_LIMIT_WINDOW_SEC)) - now
         return False, max(0, int(wait.total_seconds()))
 
