@@ -298,6 +298,29 @@ canvas{max-width:100%}
       <div id="outreachResult" style="display:none;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:14px;margin-top:8px">
         <pre id="outreachResultPre" style="margin:0;font-family:var(--fl-font-mono);font-size:11px;color:var(--fl-text);white-space:pre-wrap;max-height:300px;overflow:auto"></pre>
       </div>
+
+      <!-- Drip progress: mostra os 5 steps e status de cada -->
+      <div style="margin-top:18px;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:14px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+          <div style="font-family:var(--fl-font-mono);font-size:11px;color:var(--fl-text-dim);text-transform:uppercase;letter-spacing:0.5px">Progresso do Drip · 5 emails / 3 dias cada</div>
+          <div style="font-size:11px;color:var(--fl-text-dim)" id="dripCronInfo">próxima execução via cron (0 14 * * *)</div>
+        </div>
+        <table style="width:100%;border-collapse:collapse;font-size:12px">
+          <thead>
+            <tr style="border-bottom:1px solid var(--border)">
+              <th style="text-align:left;padding:6px 8px;color:var(--fl-text-dim);font-weight:600;font-size:10px;text-transform:uppercase;letter-spacing:0.5px">Step</th>
+              <th style="text-align:left;padding:6px 8px;color:var(--fl-text-dim);font-weight:600;font-size:10px;text-transform:uppercase;letter-spacing:0.5px">Ângulo</th>
+              <th style="text-align:left;padding:6px 8px;color:var(--fl-text-dim);font-weight:600;font-size:10px;text-transform:uppercase;letter-spacing:0.5px">Dia</th>
+              <th style="text-align:right;padding:6px 8px;color:var(--fl-text-dim);font-weight:600;font-size:10px;text-transform:uppercase;letter-spacing:0.5px">Enviados</th>
+              <th style="text-align:right;padding:6px 8px;color:var(--fl-text-dim);font-weight:600;font-size:10px;text-transform:uppercase;letter-spacing:0.5px">Replied</th>
+              <th style="text-align:right;padding:6px 8px;color:var(--fl-text-dim);font-weight:600;font-size:10px;text-transform:uppercase;letter-spacing:0.5px">Convertidos</th>
+            </tr>
+          </thead>
+          <tbody id="dripProgressBody">
+            <tr><td colspan="6" style="padding:14px;text-align:center;color:var(--fl-text-dim)">carregando…</td></tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   </section>
 
@@ -2348,7 +2371,15 @@ async function restoreSdrVersion(versionId){
 }
 
 // ===== REATIVACAO DE INATIVOS (Sprint 14.3) =====
-const REATIVACAO_CAMPAIGN = 'reativacao_v1_2026_06_26';
+const REATIVACAO_CAMPAIGN = 'reativacao_drip_v1_2026_06_26';
+
+const DRIP_STEPS = [
+  { n: 1, angulo: 'Ajuda 1-a-1',         dia: 'D0' },
+  { n: 2, angulo: 'Case de sucesso',      dia: 'D3' },
+  { n: 3, angulo: 'Monetização direta',   dia: 'D6' },
+  { n: 4, angulo: 'Tour de recursos',     dia: 'D9' },
+  { n: 5, angulo: 'Urgência / última',    dia: 'D12' },
+];
 
 async function loadOutreach() {
   try {
@@ -2366,7 +2397,7 @@ async function loadOutreach() {
         : 'nenhuma conta';
     }
 
-    // Card 2: ultima campanha
+    // Card 2: ultima campanha (dashboard simples)
     try {
       const rDash = await authFetch('/api/admin/outreach/dashboard/' + encodeURIComponent(REATIVACAO_CAMPAIGN));
       const dDash = await rDash.json();
@@ -2378,8 +2409,37 @@ async function loadOutreach() {
       document.getElementById('outreachConvertidos').textContent = convertidos;
       document.getElementById('outreachTaxa').textContent = taxa + '%';
     } catch (e) {
-      // campanha ainda nao disparada — ok
       document.getElementById('outreachUltimaCampaign').textContent = REATIVACAO_CAMPAIGN + ' (não disparada)';
+    }
+
+    // Card 3: progresso detalhado por step
+    try {
+      const rProg = await authFetch('/api/admin/outreach/drip-progresso/' + encodeURIComponent(REATIVACAO_CAMPAIGN));
+      const dProg = await rProg.json();
+      const byStep = {};
+      (dProg.steps || []).forEach(s => { byStep[s.step] = s; });
+
+      const tbody = document.getElementById('dripProgressBody');
+      if (tbody) {
+        tbody.innerHTML = DRIP_STEPS.map(s => {
+          const data = byStep[s.n] || { sent: 0, replied: 0, converted: 0 };
+          const sentColor = data.sent > 0 ? '#a855f7' : 'var(--fl-text-dim)';
+          const repliedColor = data.replied > 0 ? '#FFB800' : 'var(--fl-text-dim)';
+          const convColor = data.converted > 0 ? '#10b981' : 'var(--fl-text-dim)';
+          return `
+            <tr style="border-bottom:1px solid var(--border)">
+              <td style="padding:8px;font-family:var(--fl-font-mono);color:var(--fl-purple-300)">#${s.n}</td>
+              <td style="padding:8px;color:var(--fl-text)">${s.angulo}</td>
+              <td style="padding:8px;color:var(--fl-text-dim);font-family:var(--fl-font-mono)">${s.dia}</td>
+              <td style="padding:8px;text-align:right;color:${sentColor};font-weight:600">${data.sent}</td>
+              <td style="padding:8px;text-align:right;color:${repliedColor};font-weight:600">${data.replied}</td>
+              <td style="padding:8px;text-align:right;color:${convColor};font-weight:600">${data.converted}</td>
+            </tr>
+          `;
+        }).join('');
+      }
+    } catch (e) {
+      console.error('drip-progresso falhou:', e);
     }
   } catch (e) {
     console.error('loadOutreach falhou:', e);
@@ -2388,39 +2448,33 @@ async function loadOutreach() {
 
 async function dispararReativacao(dryRun) {
   const acao = dryRun ? 'SIMULAR' : 'ENVIAR DE VERDADE';
-  if (!dryRun && !confirm(`${acao} a campanha de reativação?\n\nIsso vai mandar email para todos os inativos. Idempotente — pode rodar de novo sem duplicar.`)) return;
-  if (dryRun && !confirm(`${acao} — apenas simular, sem enviar email?`)) return;
+  if (!dryRun && !confirm(`${acao} o step 1 do drip (D0)?\n\nOs proximos 4 steps serao automaticos via cron (a cada 3 dias).`)) return;
+  if (dryRun && !confirm(`${acao} — apenas listar candidatos, sem enviar email?`)) return;
 
   const resultEl = document.getElementById('outreachResult');
   const preEl = document.getElementById('outreachResultPre');
   if (resultEl) resultEl.style.display = 'block';
-  if (preEl) preEl.textContent = (dryRun ? 'Simulando...\n\n' : 'Enviando... (pode levar ~15min com jitter)\n\n');
+  if (preEl) preEl.textContent = (dryRun ? 'Simulando step 1...\n\n' : 'Enviando step 1... (pode levar ~14min)\n\n');
 
   try {
     const r = await authFetch('/api/admin/outreach/disparar/' + encodeURIComponent(REATIVACAO_CAMPAIGN), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ dry_run: dryRun, campaign: REATIVACAO_CAMPAIGN }),
+      body: JSON.stringify({ dry_run: dryRun, campaign: REATIVACAO_CAMPAIGN, step: 1 }),
     });
     const d = await r.json();
     if (preEl) {
       preEl.textContent = JSON.stringify({
         campaign: d.campaign,
+        step: d.step,
         dry_run: d.dry_run,
         total_candidatos: d.total_candidatos,
         enviados: d.enviados,
         pulados: d.pulados,
         erros: d.erros,
-        detalhes_resumo: {
-          sent: (d.detalhes || []).filter(x => x.acao === 'sent').length,
-          would_send: (d.detalhes || []).filter(x => x.acao === 'would_send').length,
-          skipped: (d.detalhes || []).filter(x => x.acao === 'skipped').length,
-          failed: (d.detalhes || []).filter(x => x.acao === 'failed').length,
-        },
-        primeiros_5_detalhes: (d.detalhes || []).slice(0, 5),
       }, null, 2);
     }
-    toast(dryRun ? `Dry run: ${d.enviados} simulados, ${d.pulados} já enviados` : `Campanha enviada: ${d.enviados} ok, ${d.erros} erros`, d.erros > 0 ? 'error' : 'success');
+    toast(dryRun ? `Dry run: ${d.enviados} simulados` : `Step 1 enviado: ${d.enviados} ok`, d.erros > 0 ? 'error' : 'success');
     loadOutreach();
   } catch (e) {
     if (preEl) preEl.textContent = 'ERRO: ' + (e.message || e);

@@ -426,6 +426,13 @@ except ImportError as e:
     print(f"[Server] admin_outreach_endpoints nao disponivel: {e}")
 
 try:
+    import cron_outreach_endpoints
+    app.include_router(cron_outreach_endpoints.router)
+    print("[Server] cron_outreach_endpoints registrado (Sprint 14.4)")
+except ImportError as e:
+    print(f"[Server] cron_outreach_endpoints nao disponivel: {e}")
+
+try:
     import diagnostico_endpoints
     app.include_router(diagnostico_endpoints.router)
     print("[Server] diagnostico_endpoints registrado")

@@ -25,7 +25,13 @@ from sqlalchemy.orm import Session
 
 from backend.core.access_control import require_superadmin
 from backend.core.database import get_db
-from backend.services.email_service import enviar_email_reativacao
+from backend.services.email_service import (
+    enviar_email_reativacao_step1,
+    enviar_email_reativacao_step2,
+    enviar_email_reativacao_step3,
+    enviar_email_reativacao_step4,
+    enviar_email_reativacao_step5,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +48,7 @@ REATIVACAO_JITTER_MAX_S = 75
 class DispararRequest(BaseModel):
     dry_run: bool = True
     campaign: Optional[str] = None  # se None, gera nome automático
+    step: int = 1  # qual step do drip disparar (1-5)
 
 
 # ----------------------------------------------------------------------------
@@ -125,7 +132,7 @@ async def listar_inativos(
 @router.post("/disparar/{campaign}")
 async def disparar_campanha(
     campaign: str,
-    payload: DispararRequest = Depends(),
+    payload: DispararRequest,
     db: Session = Depends(get_db),
     user: dict = Depends(require_superadmin),
 ):
@@ -163,17 +170,34 @@ async def disparar_campanha(
     erros = 0
     detalhes = []
 
+    step_funcs = {
+        1: enviar_email_reativacao_step1,
+        2: enviar_email_reativacao_step2,
+        3: enviar_email_reativacao_step3,
+        4: enviar_email_reativacao_step4,
+        5: enviar_email_reativacao_step5,
+    }
+
+    if payload.step not in step_funcs:
+        raise HTTPException(400, f"step deve ser 1-5, recebido {payload.step}")
+
+    send_func = step_funcs[payload.step]
+
     for row in candidatos:
         user_id, email, nome, plano, creditos, criado_em = (
             int(row[0]), row[1], row[2], row[3], int(row[4] or 0), row[5]
         )
         dias = _dias_cadastrado(criado_em)
 
-        # Verifica idempotência: outreach_attempts UNIQUE (user_id, campaign, channel)
+        # Verifica idempotencia por step: outreach_attempts UNIQUE (user_id, campaign, channel)
+        # mas cada step e uma row diferente (step fica em metadata.jsonb)
+        # entao a dedup e (user_id, campaign, channel, step)
         existing = db.execute(text("""
             SELECT id, status FROM outreach_attempts
-            WHERE user_id = :uid AND campaign = :camp AND channel = :ch
-        """), {"uid": user_id, "camp": campaign, "ch": channel}).fetchone()
+            WHERE user_id = :uid AND campaign = :camp
+              AND channel = :ch
+              AND metadata->>'step' = :step
+        """), {"uid": user_id, "camp": campaign, "ch": channel, "step": str(payload.step)}).fetchone()
 
         if existing:
             pulados += 1
@@ -181,7 +205,7 @@ async def disparar_campanha(
                 "user_id": user_id,
                 "email": email,
                 "acao": "skipped",
-                "motivo": f"ja_enviado (status={existing[1]})",
+                "motivo": f"step_{payload.step}_ja_enviado (status={existing[1]})",
             })
             continue
 
@@ -190,6 +214,7 @@ async def disparar_campanha(
                 "user_id": user_id,
                 "email": email,
                 "acao": "would_send",
+                "step": payload.step,
                 "dias_cadastrado": dias,
                 "plano": plano,
                 "creditos": creditos,
@@ -205,7 +230,7 @@ async def disparar_campanha(
                 "uid": user_id,
                 "camp": campaign,
                 "ch": channel,
-                "meta": '{"source": "admin_outreach_disparar"}',
+                "meta": f'{{"step": {payload.step}, "source": "admin_outreach_disparar"}}',
             })
             db.commit()
         except Exception as e:
@@ -220,14 +245,19 @@ async def disparar_campanha(
             })
             continue
 
-        # Envia
-        ok = await enviar_email_reativacao(
-            email=email,
-            nome=nome,
-            dias_cadastrado=dias,
-            plano=plano or "trial",
-            creditos=creditos,
-        )
+        # Envia - cada step tem assinatura diferente
+        try:
+            if payload.step == 1:
+                ok = await send_func(email=email, nome=nome, dias_cadastrado=dias,
+                                     plano=plano or "trial", creditos=creditos)
+            elif payload.step == 5:
+                ok = await send_func(email=email, nome=nome, plano=plano or "trial",
+                                     creditos=creditos)
+            else:
+                ok = await send_func(email=email, nome=nome)
+        except Exception as e:
+            ok = False
+            print(f"[Admin outreach] erro ao enviar step {payload.step} para user {user_id}: {e}")
 
         if ok:
             db.execute(text("""
@@ -264,12 +294,116 @@ async def disparar_campanha(
 
     return {
         "campaign": campaign,
+        "step": payload.step,
         "dry_run": dry_run,
         "total_candidatos": len(candidatos),
         "enviados": enviados,
         "pulados": pulados,
         "erros": erros,
         "detalhes": detalhes,
+    }
+
+
+# ----------------------------------------------------------------------------
+# POST /marcar-replied/{campaign}/{user_id} — tracking manual de resposta
+# ----------------------------------------------------------------------------
+class MarcarRepliedRequest(BaseModel):
+    nota: Optional[str] = None
+
+
+@router.post("/marcar-replied/{campaign}/{user_id}")
+async def marcar_replied(
+    campaign: str,
+    user_id: int,
+    payload: MarcarRepliedRequest = MarcarRepliedRequest(),
+    db: Session = Depends(get_db),
+    user: dict = Depends(require_superadmin),
+):
+    """Marca outreach como 'replied' manualmente.
+
+    Use quando o admin recebe resposta do cliente por qualquer canal
+    (email, WhatsApp, telefone) e quer parar a sequencia de drip.
+
+    Tambem atualiza replied_at na row para o dashboard refletir.
+    """
+    # Atualiza todas as rows sent dessa campanha+user
+    result = db.execute(text("""
+        UPDATE outreach_attempts
+        SET status = 'replied',
+            replied_at = NOW(),
+            atualizado_em = NOW()
+        WHERE user_id = :uid
+          AND campaign = :camp
+          AND channel = 'email'
+          AND status = 'sent'
+        RETURNING id
+    """), {"uid": user_id, "camp": campaign})
+    updated = len(result.fetchall())
+    db.commit()
+
+    if updated == 0:
+        return {
+            "ok": False,
+            "mensagem": f"Nenhum outreach 'sent' encontrado para user {user_id} na campanha {campaign}",
+        }
+
+    return {
+        "ok": True,
+        "user_id": user_id,
+        "campaign": campaign,
+        "rows_atualizadas": updated,
+        "mensagem": "Sequencia de drip parada para este usuario.",
+    }
+
+
+# ----------------------------------------------------------------------------
+# GET /drip-progresso/{campaign} — progresso detalhado por step
+# ----------------------------------------------------------------------------
+@router.get("/drip-progresso/{campaign}")
+async def drip_progresso(
+    campaign: str,
+    db: Session = Depends(get_db),
+    user: dict = Depends(require_superadmin),
+):
+    """Mostra quantos usuarios estao em cada step do drip + status."""
+    rows = db.execute(text("""
+        SELECT
+            COALESCE((metadata->>'step')::int, 0) AS step,
+            COUNT(*) FILTER (WHERE status = 'sent') AS sent,
+            COUNT(*) FILTER (WHERE status = 'pending') AS pending,
+            COUNT(*) FILTER (WHERE status = 'failed') AS failed,
+            COUNT(*) FILTER (WHERE status = 'replied') AS replied,
+            COUNT(*) FILTER (WHERE status = 'converted') AS converted,
+            COUNT(*) FILTER (WHERE status = 'completed') AS completed
+        FROM outreach_attempts
+        WHERE campaign = :camp AND channel = 'email'
+        GROUP BY step
+        ORDER BY step
+    """), {"camp": campaign}).fetchall()
+
+    steps = []
+    for row in rows:
+        steps.append({
+            "step": int(row[0]),
+            "sent": int(row[1]),
+            "pending": int(row[2]),
+            "failed": int(row[3]),
+            "replied": int(row[4]),
+            "converted": int(row[5]),
+            "completed": int(row[6]),
+        })
+
+    # Total geral
+    total_users = db.execute(text("""
+        SELECT COUNT(DISTINCT user_id)
+        FROM outreach_attempts
+        WHERE campaign = :camp
+    """), {"camp": campaign}).scalar() or 0
+
+    return {
+        "campaign": campaign,
+        "total_users": int(total_users),
+        "steps": steps,
     }
 
 
