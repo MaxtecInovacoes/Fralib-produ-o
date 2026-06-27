@@ -20,10 +20,13 @@ from dotenv import load_dotenv
 load_dotenv('/root/fralib/.env')
 
 from backend.core.database import SessionLocal, inicializar_database
-
 from sqlalchemy import text
 
-inicializar_database()
+# Pula inicializar_database se causar lock (assume schema ja criado)
+try:
+    inicializar_database()
+except Exception as _e:
+    print(f"[regen] inicializar_database pulou: {_e}")
 
 
 def regenerate(lead_id):
