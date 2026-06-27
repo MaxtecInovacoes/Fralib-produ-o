@@ -7873,6 +7873,19 @@ async function atualizarPipelineTempo() {
     var badge = document.getElementById('pipelineTempoBadge');
     if (!badge) return;
 
+    // Sprint 14.10: alerta de jobs zumbis (running + heartbeat velho)
+    if (data && data.tem_zumbi && data.zumbis && data.zumbis.length > 0) {
+      var z = data.zumbis[0];
+      var ageMin = Math.floor((z.heartbeat_age_s || 0) / 60);
+      var txt = '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#ef4444;animation:pulse 1s ease-in-out infinite"></span>';
+      txt += '<span style="color:#ef4444;font-weight:700">ZUMBI</span> ';
+      txt += '<span style="color:var(--fl-text-dim)">· job #' + z.id + ' · ' + ageMin + 'min sem heartbeat</span> ';
+      txt += '<button onclick="ressuscitarZumbis(this)" style="background:#ef4444;color:#fff;border:none;padding:2px 8px;border-radius:4px;cursor:pointer;font-size:10px;margin-left:4px">⚠ RESSUSCITAR ' + data.zumbis.length + '</button>';
+      badge.innerHTML = txt;
+      badge.style.display = 'inline-flex';
+      return;
+    }
+
     // Se ha job ativo agora
     if (data && data.ativo && data.ultimo_job) {
       var job = data.ultimo_job;
@@ -7920,6 +7933,21 @@ async function atualizarPipelineTempo() {
     badge.style.display = 'inline-flex';
   } catch(e) {
     // silencioso - nao quebra o resto
+  }
+}
+
+/* Sprint 14.10: ressuscita jobs zumbis manualmente */
+async function ressuscitarZumbis(btn) {
+  if (btn) { btn.disabled = true; btn.textContent = 'RESSUSCITANDO...'; }
+  try {
+    var res = await authFetch('/api/pipeline/zumbis/ressuscitar', { method: 'POST' }).then(function(r){ return r.json(); });
+    var count = (res && res.count) || 0;
+    if (btn) { btn.textContent = '✓ ' + count + ' ressuscitado(s)'; }
+    setTimeout(atualizarPipelineTempo, 1500);
+    setTimeout(atualizarPipelineFalhas, 1500);
+  } catch(e) {
+    if (btn) { btn.textContent = 'ERRO'; btn.disabled = false; }
+    console.error('ressuscitar zumbis falhou:', e);
   }
 }
 /* Atualiza a cada 5s para feedback rapido */

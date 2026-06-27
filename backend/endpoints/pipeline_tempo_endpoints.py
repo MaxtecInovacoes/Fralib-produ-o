@@ -176,12 +176,48 @@ async def pipeline_tempo(
             "concluido_em": jconc.isoformat() if jconc else None,
         }
 
+    # Sprint 14.10: detecta jobs zumbis (running + heartbeat velho) ANTES
+    # do reap_dead_workers do worker agir. Retorna lista explicita para
+    # o admin alertar.
+    zumbi_rows = db.execute(
+        text("""
+            SELECT j.id, j.tipo, j.worker_id, j.last_phase,
+                   j.iniciado_em, j.worker_heartbeat,
+                   EXTRACT(EPOCH FROM (NOW() - j.worker_heartbeat))::INT AS heartbeat_age_s,
+                   j.last_error
+            FROM jobs j
+            WHERE j.tenant_id = :tid
+              AND j.status = 'running'
+              AND (j.worker_heartbeat IS NULL
+                   OR j.worker_heartbeat < NOW() - INTERVAL '5 minutes')
+            ORDER BY j.worker_heartbeat NULLS FIRST
+            LIMIT 20
+        """),
+        {"tid": tenant_id},
+    ).fetchall()
+
+    zumbis = [
+        {
+            "id": r[0],
+            "tipo": r[1],
+            "worker_id": r[2],
+            "fase": r[3],
+            "started_at": r[4].isoformat() if r[4] else None,
+            "heartbeat_at": r[5].isoformat() if r[5] else None,
+            "heartbeat_age_s": r[6],
+            "last_error": r[7],
+        }
+        for r in zumbi_rows
+    ]
+
     return {
         "tenant_id": tenant_id,
         "ativo": ativo,
         "ultimo_job": ultimo_job,
         "ultimo_completed": ultimo_completed,
         "fases": phases_data,
+        "zumbis": zumbis,
+        "tem_zumbi": len(zumbis) > 0,
     }
 
 
@@ -189,3 +225,46 @@ def datetime_utcnow():
     """Wrapper para evitar import circular no topo."""
     from datetime import datetime, timezone
     return datetime.now(timezone.utc)
+
+
+@router.post("/zumbis/ressuscitar")
+async def ressuscitar_zumbis(
+    db: Session = Depends(get_db),
+    user=Depends(get_current_user),
+):
+    """Sprint 14.10: ressuscita manualmente jobs zumbis do tenant.
+
+    Job zumbi = status='running' + heartbeat > 5min OU heartbeat NULL.
+    Acao: UPDATE status='pending', attempts-=1, last_error+=worker_died,
+          worker_id=NULL, next_retry_at=NOW().
+
+    Retorna { ressuscitados, ja_ressuscitados } para feedback no admin.
+    """
+    from sqlalchemy import text
+    tenant_id = int(user["id"])
+
+    # Ressuscita jobs com heartbeat NULL ou > 5min
+    result = db.execute(
+        text("""
+            UPDATE jobs
+            SET status = 'pending',
+                attempts = GREATEST(attempts - 1, 0),
+                last_error = COALESCE(last_error || ' | ', '') || 'zumbi_ressuscitado_manual',
+                worker_id = NULL,
+                worker_heartbeat = NULL,
+                next_retry_at = NOW()
+            WHERE tenant_id = :tid
+              AND status = 'running'
+              AND (worker_heartbeat IS NULL
+                   OR worker_heartbeat < NOW() - INTERVAL '5 minutes')
+            RETURNING id
+        """),
+        {"tid": tenant_id},
+    )
+    ressuscitados = [row[0] for row in result.fetchall()]
+    db.commit()
+    return {
+        "ok": True,
+        "ressuscitados": ressuscitados,
+        "count": len(ressuscitados),
+    }
