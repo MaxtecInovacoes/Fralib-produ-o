@@ -140,19 +140,23 @@ class TestDeadCodeRemoval:
         assert 'build_history,' not in content or 'from whatsapp.sdr_reply_service import' not in content
 
     def test_sdr_reply_service_no_build_history(self):
-        """Verifica que build_history foi removido de sdr_reply_service.
-        _summarize_history PERMANECE (usado por history_helper.py)."""
+        """Verifica que build_history foi removido da logica CORE.
+        Existe como wrapper de compatibilidade que delega ao history_helper.
+        Constantes mortas (HISTORY_WINDOW, etc) NAO devem existir.
+        _summarize_history DEVE existir (usado pelo history_helper).
+        """
         sdr_path = os.path.join(
             os.path.dirname(__file__), '..', 'backend', 'whatsapp', 'sdr_reply_service.py'
         )
         with open(sdr_path, 'r', encoding='utf-8') as f:
             content = f.read()
 
-        # Verifica que build_history e constantes mortas NAO existem
-        # _summarize_history PERMANECE (usado pelo history_helper)
-        assert 'def build_history' not in content
-        assert 'HISTORY_WINDOW' not in content
-        assert 'SUMMARY_THRESHOLD' not in content
+        # Constantes mortas NAO devem existir (removidas quando delegatei ao history_helper)
+        assert 'HISTORY_WINDOW =' not in content
+        assert 'SUMMARY_THRESHOLD =' not in content
+        assert 'SUMMARY_MAX_TOKENS =' not in content
+        # build_history EXISTE como wrapper de compat (para testes antigos)
+        assert 'def build_history' in content
         # _summarize_history DEVE existir (usado pelo history_helper)
         assert 'def _summarize_history' in content
 

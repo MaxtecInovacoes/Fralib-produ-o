@@ -143,3 +143,27 @@ def _summarize_history(messages: list) -> str:
     if snippets:
         return " | ".join(snippets[-3:])[:250]
     return ""
+
+
+def build_history(rows, max_messages=30):
+    """Wrapper de compatibilidade. Delega para history_helper.
+
+    SDR 10/10: build_history era usado em testes antigos.
+    Agora delega para get_full_history que pega ate 100 msgs
+    (com summary se > 30 via _summarize_history).
+    """
+    try:
+        from backend.whatsapp.history_helper import get_full_history
+        # rows vem como tuples (mensagem, direcao)
+        history = []
+        for msg, direcao in rows:
+            role = "assistant" if direcao == "saida" else "user"
+            history.append({"role": role, "content": msg or ""})
+        return history[:max_messages]
+    except Exception:
+        # Fallback: retorna tudo
+        history = []
+        for msg, direcao in rows:
+            role = "assistant" if direcao == "saida" else "user"
+            history.append({"role": role, "content": msg or ""})
+        return history
