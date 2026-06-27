@@ -609,3 +609,44 @@ async def variant_report(
         return get_variant_report(user_id)
     except Exception as e:
         return {'error': str(e)}
+
+
+@router.post('/processar-fila-outbound')
+async def processar_fila_outbound(
+    x_cron_secret: str = Header(None, alias='X-Cron-Secret'),
+):
+    """Processa 1 ciclo da fila outbound com rate limit.
+
+    Cron: rodar a cada 1-2 minutos.
+    Respeita o limite de 2 msgs/10min por tenant.
+    """
+    _autorizar(x_cron_secret)
+
+    try:
+        from backend.services.outbound_queue import process_queue_once
+        from backend.whatsapp.sender import send_text_parts
+        import httpx
+    except Exception as e:
+        return {'status': 'error', 'message': str(e)}
+
+    async def sender(phone: str, message: str) -> bool:
+        """Envia msg via MeoWhats."""
+        try:
+            async with httpx.AsyncClient(timeout=15) as client:
+                # tenant_id NAO esta disponivel aqui, use default
+                r = await client.post(
+                    f"{MEOWHATS_HTTP}/api/sessions/default/send",
+                    headers={"X-API-Key": MEOWHATS_KEY},
+                    json={"jid": f"{phone}@s.whatsapp.net", "type": "text", "text": message},
+                )
+                return r.status_code == 200
+        except Exception:
+            return False
+
+    # Wrappa o async sender pra chamada sincrona do process_queue_once
+    def sync_sender(phone: str, message: str) -> bool:
+        import asyncio
+        return asyncio.run(sender(phone, message))
+
+    result = process_queue_once(engine, sync_sender)
+    return result
