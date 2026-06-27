@@ -188,7 +188,7 @@ canvas{max-width:100%}
   <button class="tab" data-tab="playground" onclick="switchTab('playground')">Playground</button>
   <button class="tab" data-tab="sdrstudio" onclick="switchTab('sdrstudio')">SDR Studio</button>
   <button class="tab" data-tab="alertas" onclick="switchTab('alertas')">Alertas</button>
-  <button class="tab" data-tab="contatodireto" onclick="switchTab('contatodireto')">Contato Direto</button>
+  <button class="tab" data-tab="contato-direto" onclick="switchTab('contato-direto')">Contato Direto</button>
 </div>
 
 <div class="main">
@@ -775,6 +775,7 @@ function switchTab(tab){
   if(tab==='agentes') loadAgentConfigs();
   if(tab==='playground') initPlayground();
   if(tab==='sdrstudio' && !document.getElementById('panel-sdrstudio').dataset.loaded) loadSdrStudio();
+  if(tab==='contato-direto' && !document.getElementById('panel-contato-direto').dataset.loaded) loadContatoDireto();
 }
 
 // ===== toast =====
@@ -2579,6 +2580,10 @@ async function loadContatoDireto() {
     document.getElementById('cdSemContato').textContent = d.sem_contato || 0;
     document.getElementById('cdReplied').textContent = d.replied || 0;
     document.getElementById('cdConvertidos').textContent = d.convertidos || 0;
+
+    // Marca como carregado
+    const panel = document.getElementById('panel-contato-direto');
+    if (panel) panel.dataset.loaded = 'true';
 
     const items = d.items || [];
     if (items.length === 0) {
