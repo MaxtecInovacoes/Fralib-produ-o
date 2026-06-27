@@ -3670,7 +3670,7 @@ export function HeroSection({ onOpen }: { onOpen?: () => void }) {
     return () => ctx.revert();
   }, []);
   return (
-    <section ref={rootRef} id="hero" className={`${{heroClasses}} ${{_hero_class}}`}>
+    <section ref={rootRef} id="hero" className={`${{heroClasses}} hero-v14 hero-v14-v${{_seed_for_html % 10}}`}>
       <div className="absolute inset-0 -z-20" style={{ background: 'var(--bg)' }} />
       {_showVideo && mediaVideos[0] ? (
         <video data-hero-video className="absolute inset-0 -z-10 h-full w-full object-cover opacity-52 saturate-[.9]" src={mediaVideos[0]} poster={mediaImages[0]} autoPlay muted loop playsInline preload="metadata" />
@@ -3711,10 +3711,34 @@ export default HeroSection;
   --bg-light: {palette.get('bg_light', '#f4f0e6')};
   --text-dark: {palette.get('text_dark', '#09130f')};
   --font-family: {_font_family};
-  --hero-class: {_hero_class};
   --h1-size: {_h1_size};
   --cta-btn: {_cta_btn_class};
 }}
+.hero-v14 {{
+  min-height: 92svh;
+  padding: 7rem 1.25rem 4rem;
+  background: var(--bg);
+  color: #fff;
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}}
+@media (min-width: 768px) {{
+  .hero-v14 {{
+    min-height: 88svh;
+    padding: 10rem 2rem 6rem;
+  }}
+}}
+.hero-v14.hero-v14-v0 {{ min-height: 92svh; padding-top: 7rem; padding-bottom: 4rem; display: grid; place-items: center; }}
+.hero-v14.hero-v14-v1 {{ min-height: 85svh; padding-top: 6rem; padding-bottom: 5rem; display: flex; flex-direction: column; justify-content: center; }}
+.hero-v14.hero-v14-v2 {{ min-height: 100svh; padding-top: 5rem; padding-bottom: 3rem; display: grid; place-items: end; }}
+.hero-v14.hero-v14-v3 {{ min-height: 88svh; padding-top: 8rem; padding-bottom: 3.5rem; display: flex; align-items: end; }}
+.hero-v14.hero-v14-v4 {{ min-height: 95svh; padding-top: 6.5rem; padding-bottom: 4.5rem; display: grid; place-items: start; }}
+.hero-v14.hero-v14-v5 {{ min-height: 78svh; padding-top: 5rem; padding-bottom: 6rem; display: flex; flex-direction: column; justify-content: space-between; }}
+.hero-v14.hero-v14-v6 {{ min-height: 102svh; padding-top: 7.5rem; padding-bottom: 2.5rem; display: grid; grid-template-rows: 1fr 1fr; }}
+.hero-v14.hero-v14-v7 {{ min-height: 80svh; padding-top: 4rem; padding-bottom: 7rem; display: flex; align-items: center; }}
+.hero-v14.hero-v14-v8 {{ min-height: 98svh; padding-top: 9rem; padding-bottom: 2rem; display: grid; place-items: center; }}
+.hero-v14.hero-v14-v9 {{ min-height: 90svh; padding-top: 5.5rem; padding-bottom: 5.5rem; display: flex; flex-direction: row; }}
 @layer base {{
   * {{ box-sizing: border-box; }}
   html {{ scroll-behavior: smooth; background: var(--bg); }}
