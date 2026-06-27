@@ -116,9 +116,8 @@ async def pipeline_tempo(
     # Job ativo: o mais recente que esta rodando agora
     ativo_row = db.execute(
         text("""
-            SELECT j.id, j.tipo, j.status, l.nome, j.iniciado_em, j.last_phase
+            SELECT j.id, j.tipo, j.status, j.iniciado_em, j.last_phase
             FROM jobs j
-            LEFT JOIN leads l ON l.id = j.lead_id AND l.user_id = j.tenant_id
             WHERE j.tenant_id = :tid
               AND j.status = 'running'
               AND j.worker_heartbeat > NOW() - INTERVAL '120 seconds'
@@ -132,7 +131,7 @@ async def pipeline_tempo(
     ultimo_job = None
     if ativo_row:
         ativo = True
-        jid, jtipo, jstatus, lnome, jiniciado, jphase = ativo_row
+        jid, jtipo, jstatus, jiniciado, jphase = ativo_row
         duracao_s = None
         if jiniciado:
             try:
@@ -144,7 +143,7 @@ async def pipeline_tempo(
             "id": jid,
             "tipo": jtipo,
             "status": jstatus,
-            "lead_nome": lnome or "—",
+            "lead_nome": "—",
             "fase_atual": jphase or "—",
             "duracao_s": duracao_s,
             "started_at": jiniciado.isoformat() if jiniciado else None,
@@ -153,9 +152,8 @@ async def pipeline_tempo(
     # Ultimo job completed (mesmo que nao esteja rodando agora)
     ultimo_completed_row = db.execute(
         text("""
-            SELECT j.id, j.tipo, j.status, l.nome, j.concluido_em, j.last_phase
+            SELECT j.id, j.tipo, j.status, j.concluido_em, j.last_phase
             FROM jobs j
-            LEFT JOIN leads l ON l.id = j.lead_id AND l.user_id = j.tenant_id
             WHERE j.tenant_id = :tid
               AND j.status IN ('completed', 'failed_permanent')
             ORDER BY j.concluido_em DESC NULLS LAST
@@ -166,12 +164,12 @@ async def pipeline_tempo(
 
     ultimo_completed = None
     if ultimo_completed_row:
-        jid, jtipo, jstatus, lnome, jconc, jphase = ultimo_completed_row
+        jid, jtipo, jstatus, jconc, jphase = ultimo_completed_row
         ultimo_completed = {
             "id": jid,
             "tipo": jtipo,
             "status": jstatus,
-            "lead_nome": lnome or "—",
+            "lead_nome": "—",
             "fase_atual": jphase or "—",
             "concluido_em": jconc.isoformat() if jconc else None,
         }
