@@ -1,0 +1,509 @@
+<!-- Exit-Intent Popup FraLib -->
+<style>
+#exitPopupOverlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.85);
+  z-index: 99999;
+  display: none;
+  align-items: center; justify-content: center;
+  animation: fadeIn 0.3s;
+  backdrop-filter: blur(8px);
+}
+
+#exitPopup {
+  background: linear-gradient(135deg, #0a0714 0%, #1a0a30 100%);
+  border: 2px solid #FACC15;
+  border-radius: 20px;
+  padding: 40px 36px;
+  max-width: 480px;
+  width: 90%;
+  text-align: center;
+  position: relative;
+  box-shadow: 0 0 60px rgba(250, 204, 21, 0.4);
+  animation: popIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+@keyframes popIn { from { transform:scale(0.7); opacity:0; } to { transform:scale(1); opacity:1; } }
+
+.exit-popup-badge {
+  display: inline-block;
+  background: #ef4444;
+  color: #fff;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 9px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  letter-spacing: 1px;
+  margin-bottom: 16px;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+.exit-popup-title {
+  font-family: 'Press Start 2P', monospace;
+  font-size: clamp(12px, 2.4vw, 16px);
+  line-height: 1.4;
+  color: #FACC15;
+  margin-bottom: 8px;
+  text-shadow: 0 0 20px rgba(250, 204, 21, 0.5);
+}
+
+.exit-popup-sub {
+  font-size: 13px;
+  color: #b0b0c8;
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+
+.exit-popup-prices {
+  display: flex;
+  gap: 12px;
+  margin: 24px 0;
+  justify-content: center;
+}
+
+.exit-popup-price-card {
+  flex: 1;
+  background: rgba(0,0,0,0.5);
+  border: 1px solid rgba(147, 51, 234, 0.4);
+  border-radius: 12px;
+  padding: 16px 12px;
+  position: relative;
+}
+
+.exit-popup-price-card.featured {
+  border-color: #FACC15;
+  background: rgba(250, 204, 21, 0.1);
+  transform: scale(1.05);
+}
+
+.exit-popup-price-label {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: #c084fc;
+  margin-bottom: 8px;
+  letter-spacing: 1px;
+}
+
+.exit-popup-price-card.featured .exit-popup-price-label {
+  color: #FACC15;
+}
+
+.exit-popup-price-value {
+  font-size: 22px;
+  font-weight: 800;
+  color: #fff;
+  margin-bottom: 2px;
+}
+
+.exit-popup-price-value span {
+  font-size: 11px;
+  color: #8888a0;
+  font-weight: 400;
+}
+
+.exit-popup-price-period {
+  font-size: 10px;
+  color: #8888a0;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.exit-popup-form {
+  margin-top: 24px;
+}
+
+.exit-popup-input {
+  width: 100%;
+  background: rgba(0,0,0,0.6);
+  border: 2px solid rgba(147, 51, 234, 0.4);
+  color: #fff;
+  padding: 14px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: 'DM Sans', sans-serif;
+  margin-bottom: 12px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.exit-popup-input:focus {
+  border-color: #FACC15;
+  box-shadow: 0 0 16px rgba(250, 204, 21, 0.3);
+}
+
+.exit-popup-input::placeholder {
+  color: #5a5a70;
+}
+
+.exit-popup-submit {
+  width: 100%;
+  background: #FACC15;
+  color: #000;
+  border: none;
+  padding: 16px 24px;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  cursor: pointer;
+  border-radius: 0;
+  box-shadow:
+    inset -4px -4px 0 #A16207,
+    inset 4px 4px 0 #FDE68A,
+    0 4px 0 #713F12;
+  transition: transform 80ms, box-shadow 80ms;
+  margin-top: 4px;
+}
+
+.exit-popup-submit:hover {
+  background: #FDE047;
+  box-shadow:
+    inset -4px -4px 0 #A16207,
+    inset 4px 4px 0 #FEF9C3,
+    0 4px 0 #713F12,
+    0 0 30px rgba(250, 204, 21, 0.6);
+}
+
+.exit-popup-submit:active {
+  transform: translateY(4px);
+  box-shadow: inset -4px -4px 0 #A16207, inset 4px 4px 0 #FDE68A;
+}
+
+.exit-popup-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: rgba(0,0,0,0.4);
+  border: 1px solid rgba(255,255,255,0.2);
+  color: #b0b0c8;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  transition: all 0.15s;
+}
+
+.exit-popup-close:hover {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: #ef4444;
+  color: #ef4444;
+}
+
+.exit-popup-trust {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 16px;
+  font-size: 10px;
+  color: #8888a0;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.exit-popup-trust span::before {
+  content: "✓ ";
+  color: #22c55e;
+  font-weight: bold;
+}
+
+.exit-popup-countdown {
+  display: inline-block;
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: #fca5a5;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-family: 'JetBrains Mono', monospace;
+  margin-bottom: 12px;
+}
+
+@media (max-width: 480px) {
+  #exitPopup { padding: 28px 20px; }
+  .exit-popup-prices { flex-direction: column; }
+  .exit-popup-price-card.featured { transform: none; }
+}
+</style>
+
+<div id="exitPopupOverlay">
+  <div id="exitPopup">
+    <button class="exit-popup-close" id="exitPopupClose" aria-label="Fechar">×</button>
+
+    <div class="exit-popup-badge">⚡ OFERTA RELÂMPAGO</div>
+    <div class="exit-popup-countdown" id="exitPopupCountdown">⏰ Expira em <strong id="countdownTime">14:59</strong></div>
+
+    <h2 class="exit-popup-title">ESPERA!<br>VOCÊ VAI PERDER ISSO</h2>
+    <p class="exit-popup-sub">
+      Assine o <strong style="color:#FACC15">Starter por 1 mês</strong> e teste sem compromisso.<br>
+      Depois migra pro <strong style="color:#FACC15">Pro</strong> com desconto exclusivo.
+    </p>
+
+    <div class="exit-popup-prices">
+      <div class="exit-popup-price-card featured">
+        <div class="exit-popup-price-label">MÊS 1</div>
+        <div class="exit-popup-price-value">R$97</div>
+        <div class="exit-popup-price-period">/mês · STARTER</div>
+      </div>
+      <div class="exit-popup-price-card">
+        <div class="exit-popup-price-label">MÊS 2+</div>
+        <div class="exit-popup-price-value">R$497</div>
+        <div class="exit-popup-price-period">/mês · PRO</div>
+      </div>
+    </div>
+
+    <form class="exit-popup-form" id="exitPopupForm">
+      <input
+        type="email"
+        class="exit-popup-input"
+        id="exitPopupEmail"
+        placeholder="Seu melhor email..."
+        required
+        autocomplete="email"
+      />
+      <input
+        type="tel"
+        class="exit-popup-input"
+        id="exitPopupPhone"
+        placeholder="WhatsApp (com DDD)..."
+        required
+        autocomplete="tel"
+      />
+      <button type="submit" class="exit-popup-submit">
+        🎁 QUERO APROVEITAR
+      </button>
+    </form>
+
+    <div class="exit-popup-trust">
+      <span>Cancele quando quiser</span>
+      <span>Sem cartão</span>
+      <span>7 dias garantia</span>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  'use strict';
+
+  // Configuração
+  const POPUP_KEY = 'fralib_exit_popup_dismissed';
+  const POPUP_COOLDOWN_HOURS = 24; // Não mostrar de novo por 24h
+  const SHOW_AFTER_SECONDS = 30;   // Esconder 30s antes de habilitar exit-intent
+
+  let popupShown = false;
+  let exitEnabled = false;
+
+  // Verificar se foi dismissado recentemente
+  function wasDismissedRecently() {
+    const dismissed = localStorage.getItem(POPUP_KEY);
+    if (!dismissed) return false;
+    const dismissedAt = parseInt(dismissed);
+    const hoursAgo = (Date.now() - dismissedAt) / (1000 * 60 * 60);
+    return hoursAgo < POPUP_COOLDOWN_HOURS;
+  }
+
+  // Detectar exit-intent (mouse saindo pelo topo)
+  function handleMouseLeave(e) {
+    if (popupShown) return;
+    if (!exitEnabled) return;
+    if (wasDismissedRecently()) return;
+    if (e.clientY <= 0) {
+      showPopup();
+    }
+  }
+
+  function showPopup() {
+    popupShown = true;
+    document.getElementById('exitPopupOverlay').style.display = 'flex';
+    startCountdown();
+    // Marcar como visto (para não mostrar imediatamente de novo)
+    sessionStorage.setItem('fralib_popup_shown_session', '1');
+  }
+
+  function hidePopup(reason) {
+    document.getElementById('exitPopupOverlay').style.display = 'none';
+    if (reason === 'dismiss' || reason === 'submit') {
+      localStorage.setItem(POPUP_KEY, String(Date.now()));
+    }
+  }
+
+  // Countdown de 15 minutos
+  function startCountdown() {
+    const el = document.getElementById('countdownTime');
+    if (!el) return;
+    let seconds = 15 * 60;
+    const tick = () => {
+      if (seconds <= 0) {
+        el.textContent = '00:00';
+        document.getElementById('exitPopupCountdown').textContent = '⏰ Oferta expirou';
+        return;
+      }
+      const m = Math.floor(seconds / 60);
+      const s = seconds % 60;
+      el.textContent = `${m}:${String(s).padStart(2, '0')}`;
+      seconds--;
+      setTimeout(tick, 1000);
+    };
+    tick();
+  }
+
+  // Enviar lead para API
+  async function submitLead(email, phone) {
+    const sessionId = getOrCreateSessionId();
+    const utm = getUtmParams();
+
+    const payload = {
+      session_id: sessionId,
+      email: email,
+      telefone: phone,
+      utm_source: utm.utm_source,
+      utm_medium: utm.utm_medium,
+      utm_campaign: utm.utm_campaign,
+      pagina_visitada: window.location.pathname,
+      tempo_permanencia_s: Math.floor((Date.now() - pageLoadTime) / 1000),
+      scroll_depth_pct: getScrollDepth(),
+      clicou_cta: !!window.sessionStorage.getItem('fralib_cta_clicked'),
+      origem: 'exit_popup',
+      user_agent: navigator.userAgent.substring(0, 200),
+    };
+
+    try {
+      const r = await fetch('/api/retargeting/track', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const d = await r.json();
+      return d.ok !== false;
+    } catch (e) {
+      console.warn('Falha ao salvar lead do popup:', e);
+      return false;
+    }
+  }
+
+  // Helpers
+  function getOrCreateSessionId() {
+    let sid = sessionStorage.getItem('fralib_session_id');
+    if (!sid) {
+      sid = 'sess_' + Date.now() + '_' + Math.random().toString(36).slice(2, 9);
+      sessionStorage.setItem('fralib_session_id', sid);
+    }
+    return sid;
+  }
+
+  function getUtmParams() {
+    const params = new URLSearchParams(window.location.search);
+    return {
+      utm_source: params.get('utm_source') || '',
+      utm_medium: params.get('utm_medium') || '',
+      utm_campaign: params.get('utm_campaign') || '',
+    };
+  }
+
+  let pageLoadTime = Date.now();
+  let maxScroll = 0;
+  function trackScroll() {
+    const h = document.documentElement;
+    const scrolled = h.scrollTop || document.body.scrollTop;
+    const max = h.scrollHeight - h.clientHeight;
+    const pct = max > 0 ? Math.min(100, Math.floor((scrolled / max) * 100)) : 0;
+    if (pct > maxScroll) maxScroll = pct;
+  }
+  function getScrollDepth() {
+    return maxScroll;
+  }
+
+  // Form submit
+  document.getElementById('exitPopupForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const email = document.getElementById('exitPopupEmail').value.trim();
+    const phone = document.getElementById('exitPopupPhone').value.trim();
+    const submitBtn = this.querySelector('button');
+
+    if (!email || !phone) return;
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = '⏳ ENVIANDO...';
+
+    const success = await submitLead(email, phone);
+
+    if (success) {
+      // Esconder popup
+      hidePopup('submit');
+      // Mostrar confirmação inline
+      document.getElementById('exitPopup').innerHTML = `
+        <div style="padding: 20px 0">
+          <div style="font-size: 64px; margin-bottom: 16px">🎉</div>
+          <h2 style="font-family: 'Press Start 2P', monospace; font-size: 14px; color: #22c55e; margin-bottom: 12px">PRONTO!</h2>
+          <p style="color: #b0b0c8; font-size: 14px; line-height: 1.6; margin-bottom: 24px">
+            Oferta enviada pro seu email:<br>
+            <strong style="color: #FACC15">${escapeHtml(email)}</strong>
+          </p>
+          <a href="/login.html?plano=starter" style="display: inline-block; background: #FACC15; color: #000; padding: 14px 28px; font-family: 'Press Start 2P', monospace; font-size: 10px; text-decoration: none; letter-spacing: 1px; box-shadow: inset -3px -3px 0 #A16207, inset 3px 3px 0 #FDE68A, 0 4px 0 #713F12;">
+            ATIVAR MINHA CONTA →
+          </a>
+        </div>
+      `;
+      setTimeout(() => hidePopup('submit'), 8000);
+    } else {
+      submitBtn.disabled = false;
+      submitBtn.textContent = '🎁 QUERO APROVEITAR';
+      alert('Erro ao enviar. Tente novamente.');
+    }
+  });
+
+  // Fechar popup
+  document.getElementById('exitPopupClose').addEventListener('click', () => hidePopup('dismiss'));
+
+  // Fechar ao clicar fora
+  document.getElementById('exitPopupOverlay').addEventListener('click', function(e) {
+    if (e.target === this) hidePopup('dismiss');
+  });
+
+  // ESC fecha
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && popupShown) hidePopup('dismiss');
+  });
+
+  // Habilitar exit-intent após 30s na página
+  setTimeout(() => {
+    exitEnabled = true;
+  }, SHOW_AFTER_SECONDS * 1000);
+
+  // Detectar saída do mouse
+  document.addEventListener('mouseleave', handleMouseLeave);
+
+  // Também mostrar depois de 60s sem interação (oportunidade extra)
+  let interacted = false;
+  ['click', 'scroll', 'keydown'].forEach(ev => {
+    document.addEventListener(ev, () => { interacted = true; }, { once: true, passive: true });
+  });
+  setTimeout(() => {
+    if (!interacted && !popupShown && !wasDismissedRecently()) {
+      showPopup();
+    }
+  }, 90000); // 90s sem interação
+
+  // Rastrear scroll
+  window.addEventListener('scroll', trackScroll, { passive: true });
+
+  // Marcar CTA clicks
+  document.addEventListener('click', e => {
+    const t = e.target.closest('a, button');
+    if (t && /cta|comece|test|plano|saber|whats/i.test(t.textContent || '')) {
+      sessionStorage.setItem('fralib_cta_clicked', '1');
+    }
+  });
+
+  // Helper
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+})();
+</script>

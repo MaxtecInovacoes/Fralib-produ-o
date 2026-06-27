@@ -98,6 +98,7 @@ import metrics_endpoints
 import hermes_endpoints
 import pipeline_tempo_endpoints
 import automation_endpoints
+import retargeting_endpoints
 
 from contextlib import asynccontextmanager
 
@@ -398,6 +399,7 @@ app.include_router(tenant_api_keys.router)
 app.include_router(metrics_endpoints.router)
 app.include_router(hermes_endpoints.router)
 app.include_router(automation_endpoints.router)
+app.include_router(retargeting_endpoints.router)
 
 # Analytics endpoints
 try:
