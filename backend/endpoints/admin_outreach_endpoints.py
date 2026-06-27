@@ -6,6 +6,7 @@ Endpoints:
 - POST /api/admin/outreach/disparar/{campaign}   → dispara (DRY_RUN por padrão)
 - GET  /api/admin/outreach/dashboard/{campaign}  → métricas
 - GET  /api/admin/outreach/respostas             → inbox de replies
+- GET  /api/admin/outreach/contato-direto        → leads com wa.me (Sprint 14.6)
 
 Idempotência: UNIQUE INDEX (user_id, campaign, channel) garante 1 envio/user/campanha.
 """
@@ -519,4 +520,185 @@ async def listar_respostas(
             }
             for r in rows
         ],
+    }
+
+
+# ----------------------------------------------------------------------------
+# GET /contato-direto — lista users com telefone valido + outreach atual
+# ----------------------------------------------------------------------------
+@router.get("/contato-direto")
+async def contato_direto(
+    plano: str = Query("todos", description="trial|todos|pro|ilimitado|..."),
+    status: str = Query("todos", description="todos|sem_outreach|replied|converted"),
+    q: str = Query("", description="busca por nome ou email"),
+    db: Session = Depends(get_db),
+    user: dict = Depends(require_superadmin),
+):
+    """Lista usuarios com telefone valido para contato direto via WhatsApp.
+
+    Filtros:
+    - plano: filtra por plano do usuario (default: todos)
+    - status: sem_outreach|replied|converted|todos
+    - q: busca livre por nome ou email
+
+    Gera wa_link no formato: https://wa.me/55{numero}?text={msg_encoded}
+    """
+    # Query principal: users com telefone valido + outreach atual
+    # Status 'converted' = user que voltou a usar (sites_used > 0 ou tokens > 0)
+    # Status 'replied' = tem outreach_attempts com status replied
+    # Status 'sem_outreach' = nao tem outreach_attempts para esta campanha
+    rows = db.execute(text("""
+        WITH outreach_status AS (
+            SELECT
+                oa.user_id,
+                MAX(oa.status) AS outreach_status,
+                MAX(oa.replied_at) AS replied_at,
+                COUNT(*) FILTER (WHERE oa.status = 'sent') AS outreach_sent,
+                MAX(oa.campaign) AS last_campaign
+            FROM outreach_attempts oa
+            WHERE oa.campaign = 'reativacao_drip_v1_2026_06_26'
+            GROUP BY oa.user_id
+        ),
+        user_with_outreach AS (
+            SELECT
+                u.id AS user_id,
+                u.email,
+                COALESCE(NULLIF(u.nome, ''), NULLIF(u.name, ''), u.email) AS nome,
+                u.plano,
+                u.status AS user_status,
+                u.telefone,
+                u.criado_em,
+                COALESCE(u.sites_used, 0) AS sites_used,
+                COALESCE(u.tokens_used_month, 0) AS tokens_used_month,
+                COALESCE(u.sdr_messages_today, 0) AS sdr_messages_today,
+                COALESCE(os.outreach_status, 'none') AS outreach_status,
+                COALESCE(os.replied_at, NULL) AS replied_at,
+                COALESCE(os.outreach_sent, 0) AS outreach_sent,
+                COALESCE(os.last_campaign, '') AS last_campaign
+            FROM users u
+            LEFT JOIN outreach_status os ON os.user_id = u.id
+            WHERE u.email_confirmado = true
+              AND u.status NOT IN ('blocked', 'suspended', 'deleted', 'inativo')
+              AND u.email NOT LIKE 'test.%@test.com'
+              AND u.email NOT LIKE 'pipeline.%@test.com'
+              AND u.email NOT LIKE 'smoke.%@test.com'
+              -- Telefone valido: existe e tem 10-11 digitos (DDD + numero)
+              AND u.telefone IS NOT NULL
+              AND LENGTH(REGEXP_REPLACE(u.telefone, '[^0-9]', '', 'g')) BETWEEN 10 AND 11
+        )
+        SELECT * FROM user_with_outreach
+        WHERE 1=1
+          -- Filtro plano
+          AND (:plano = 'todos' OR plano = :plano)
+          -- Filtro status outreach
+          AND (
+            (:status = 'todos')
+            OR (:status = 'sem_outreach' AND outreach_status = 'none')
+            OR (:status = 'replied' AND outreach_status = 'replied')
+            OR (:status = 'converted' AND (
+                outreach_status = 'converted'
+                OR sites_used > 0
+                OR tokens_used_month > 0
+                OR sdr_messages_today > 0
+            ))
+          )
+          -- Busca livre
+          AND (
+            :q = ''
+            OR LOWER(nome) LIKE '%' || LOWER(:q) || '%'
+            OR LOWER(email) LIKE '%' || LOWER(:q) || '%'
+          )
+        ORDER BY
+            CASE
+                WHEN :status = 'sem_outreach' THEN 0
+                WHEN outreach_status = 'replied' THEN 1
+                WHEN sites_used > 0 OR tokens_used_month > 0 OR sdr_messages_today > 0 THEN 2
+                ELSE 3
+            END,
+            outreach_sent DESC,
+            nome ASC
+    """), {
+        "plano": plano if plano != "todos" else "todos",
+        "status": status,
+        "q": q,
+    }).fetchall()
+
+    items = []
+    for r in rows:
+        user_id = int(r[0])
+        email = str(r[1])
+        nome = str(r[2])
+        plano_val = str(r[3]) if r[3] else "trial"
+        user_status = str(r[4]) if r[4] else "trial"
+        telefone = str(r[5]) if r[5] else ""
+        criado_em = r[6]
+        sites_used = int(r[7] or 0)
+        tokens_used_month = int(r[8] or 0)
+        sdr_messages_today = int(r[9] or 0)
+        outreach_status = str(r[10]) if r[10] else "none"
+        replied_at = r[11]
+        outreach_sent = int(r[12] or 0)
+        last_campaign = str(r[13]) if r[13] else ""
+
+        # Normalizar telefone para wa.me
+        # Remove tudo que nao e digito
+        digits_only = "".join(filter(str.isdigit, telefone))
+        # Se comeca com 0 (prefixo internacional), remove
+        if digits_only.startswith("0"):
+            digits_only = digits_only[1:]
+        # Garante 10-11 digitos (DDD + 9 digitos ou DDD + 8 digitos)
+        if len(digits_only) >= 10:
+            # Usa apenas os 11 primeiros digitos se tiver mais
+            numero_normalizado = digits_only[:11]
+            # Mensagem padrao
+            msg = f"Oi {nome.split()[0]}, tudo bem? Vi que voce tem um site do FraLib esperando por voce. Posso te ajudar a finalizar? 😊"
+            from urllib.parse import quote
+            msg_encoded = quote(msg)
+            wa_link = f"https://wa.me/55{numero_normalizado}?text={msg_encoded}"
+        else:
+            wa_link = None
+            numero_normalizado = None
+
+        # Determinar status final para exibicao
+        if sites_used > 0 or tokens_used_month > 0 or sdr_messages_today > 0:
+            display_status = "converted"
+        elif outreach_status == "replied":
+            display_status = "replied"
+        elif outreach_status == "none":
+            display_status = "sem_outreach"
+        else:
+            display_status = outreach_status
+
+        items.append({
+            "user_id": user_id,
+            "email": email,
+            "nome": nome,
+            "plano": plano_val,
+            "user_status": user_status,
+            "telefone": telefone,
+            "telefone_normalizado": numero_normalizado,
+            "wa_link": wa_link,
+            "criado_em": str(criado_em) if criado_em else None,
+            "sites_used": sites_used,
+            "tokens_used_month": tokens_used_month,
+            "sdr_messages_today": sdr_messages_today,
+            "outreach_status": outreach_status,
+            "outreach_sent": outreach_sent,
+            "last_campaign": last_campaign,
+            "display_status": display_status,
+            "replied_at": replied_at.isoformat() if replied_at else None,
+        })
+
+    # Estatisticas para os cards do topo
+    total = len(items)
+    sem_contato = sum(1 for i in items if i["display_status"] == "sem_outreach")
+    replied = sum(1 for i in items if i["display_status"] == "replied")
+    convertidos = sum(1 for i in items if i["display_status"] == "converted")
+
+    return {
+        "total": total,
+        "sem_contato": sem_contato,
+        "replied": replied,
+        "convertidos": convertidos,
+        "items": items,
     }

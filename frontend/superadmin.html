@@ -188,6 +188,7 @@ canvas{max-width:100%}
   <button class="tab" data-tab="playground" onclick="switchTab('playground')">Playground</button>
   <button class="tab" data-tab="sdrstudio" onclick="switchTab('sdrstudio')">SDR Studio</button>
   <button class="tab" data-tab="alertas" onclick="switchTab('alertas')">Alertas</button>
+  <button class="tab" data-tab="contatodireto" onclick="switchTab('contatodireto')">Contato Direto</button>
 </div>
 
 <div class="main">
@@ -260,6 +261,54 @@ canvas{max-width:100%}
   <section class="panel" id="panel-metricas">
     <h2 class="section-title">VISÃO GERAL DO SISTEMA</h2>
     <div id="metrics-area" class="loading"><span class="spinner"></span> carregando métricas…</div>
+  </section>
+
+  <!-- ========== CONTATO DIRETO (Sprint 14.6) ========== -->
+  <section class="panel" id="panel-contato-direto">
+    <h2 class="section-title">CONTATO DIRETO &middot; WHATSAPP</h2>
+    <div class="table-wrap">
+      <!-- Cards de totais -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:16px">
+        <div class="chart-card" style="padding:14px">
+          <div style="font-family:var(--fl-font-mono);font-size:10px;color:var(--fl-text-dim);text-transform:uppercase;letter-spacing:0.5px">Total leads com WPP</div>
+          <div style="font-family:var(--fl-font-brand);font-size:24px;color:var(--fl-purple-300);line-height:1" id="cdTotal">&mdash;</div>
+        </div>
+        <div class="chart-card" style="padding:14px">
+          <div style="font-family:var(--fl-font-mono);font-size:10px;color:var(--fl-text-dim);text-transform:uppercase;letter-spacing:0.5px">Sem contato</div>
+          <div style="font-family:var(--fl-font-brand);font-size:24px;color:#FFB800;line-height:1" id="cdSemContato">&mdash;</div>
+        </div>
+        <div class="chart-card" style="padding:14px">
+          <div style="font-family:var(--fl-font-mono);font-size:10px;color:var(--fl-text-dim);text-transform:uppercase;letter-spacing:0.5px">Replied</div>
+          <div style="font-family:var(--fl-font-brand);font-size:24px;color:#10b981;line-height:1" id="cdReplied">&mdash;</div>
+        </div>
+        <div class="chart-card" style="padding:14px">
+          <div style="font-family:var(--fl-font-mono);font-size:10px;color:var(--fl-text-dim);text-transform:uppercase;letter-spacing:0.5px">Convertidos</div>
+          <div style="font-family:var(--fl-font-brand);font-size:24px;color:#06b6d4;line-height:1" id="cdConvertidos">&mdash;</div>
+        </div>
+      </div>
+
+      <!-- Filtros -->
+      <div class="table-toolbar" style="border:1px solid var(--border);background:var(--card);margin-bottom:14px">
+        <span class="muted">Filtro:</span>
+        <select id="cdPlano" class="select" onchange="loadContatoDireto()">
+          <option value="todos">Todos os planos</option>
+          <option value="trial">trial</option>
+          <option value="pro">pro</option>
+          <option value="ilimitado">ilimitado</option>
+        </select>
+        <select id="cdStatus" class="select" onchange="loadContatoDireto()">
+          <option value="todos">Todos os status</option>
+          <option value="sem_outreach">Sem contato (novos)</option>
+          <option value="sent">Ja receberam outreach</option>
+          <option value="replied">Replied (respondeu)</option>
+          <option value="converted">Convertidos</option>
+        </select>
+        <input type="text" id="cdSearch" class="input" placeholder="Buscar nome ou email..." oninput="loadContatoDireto()" style="flex:1">
+        <button class="btn" onclick="loadContatoDireto()">Atualizar</button>
+      </div>
+
+      <div id="contatoDiretoArea" class="loading"><span class="spinner"></span> carregando leads...</div>
+    </div>
   </section>
 
   <!-- ========== REATIVACAO (Sprint 14.3) ========== -->
@@ -2486,6 +2535,132 @@ async function dispararReativacao(dryRun) {
 document.addEventListener('DOMContentLoaded', () => { setTimeout(loadOutreach, 1500); });
 // Recarrega a cada 60s
 setInterval(loadOutreach, 60000);
+
+
+// ===== CONTATO DIRETO VIA WHATSAPP (Sprint 14.6) =====
+let _cdCache = null;
+let _cdCacheTs = 0;
+const CD_CACHE_MS = 15000;
+
+function _cdIniciais(nome) {
+  if (!nome) return '?';
+  const parts = nome.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+function _cdStatusBadge(display) {
+  const colors = {
+    'sem_outreach':  { color: '#FFB800', label: 'Sem contato' },
+    'sent':          { color: '#a855f7', label: 'Outreach enviado' },
+    'replied':       { color: '#10b981', label: 'Replied' },
+    'converted':     { color: '#06b6d4', label: 'Convertido' },
+  };
+  const s = colors[display] || { color: '#71717a', label: display };
+  return `<span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:600;background:${s.color}22;color:${s.color};border:1px solid ${s.color}44">${s.label}</span>`;
+}
+
+async function loadContatoDireto() {
+  const plano = document.getElementById('cdPlano')?.value || 'todos';
+  const status = document.getElementById('cdStatus')?.value || 'todos';
+  const q = document.getElementById('cdSearch')?.value || '';
+  const area = document.getElementById('contatoDiretoArea');
+  if (area) area.innerHTML = '<div class="loading"><span class="spinner"></span> carregando...</div>';
+
+  const params = new URLSearchParams({ plano, status, q });
+  const url = `/api/admin/outreach/contato-direto?${params.toString()}`;
+
+  try {
+    const r = await authFetch(url);
+    const d = await r.json();
+
+    // Cards
+    document.getElementById('cdTotal').textContent = d.total || 0;
+    document.getElementById('cdSemContato').textContent = d.sem_contato || 0;
+    document.getElementById('cdReplied').textContent = d.replied || 0;
+    document.getElementById('cdConvertidos').textContent = d.convertidos || 0;
+
+    const items = d.items || [];
+    if (items.length === 0) {
+      if (area) area.innerHTML = '<div class="empty" style="padding:24px;text-align:center;color:var(--fl-text-dim)">Nenhum lead com WhatsApp encontrado para esses filtros.</div>';
+      return;
+    }
+
+    let html = '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">';
+    html += `<thead>
+      <tr style="border-bottom:1px solid var(--border);background:var(--card)">
+        <th style="text-align:left;padding:10px 12px;font-size:10px;color:var(--fl-text-dim);text-transform:uppercase;letter-spacing:0.5px">Lead</th>
+        <th style="text-align:left;padding:10px 12px;font-size:10px;color:var(--fl-text-dim);text-transform:uppercase;letter-spacing:0.5px">WhatsApp</th>
+        <th style="text-align:left;padding:10px 12px;font-size:10px;color:var(--fl-text-dim);text-transform:uppercase;letter-spacing:0.5px">Plano</th>
+        <th style="text-align:left;padding:10px 12px;font-size:10px;color:var(--fl-text-dim);text-transform:uppercase;letter-spacing:0.5px">Status</th>
+        <th style="text-align:right;padding:10px 12px;font-size:10px;color:var(--fl-text-dim);text-transform:uppercase;letter-spacing:0.5px">Acoes</th>
+      </tr>
+    </thead><tbody>`;
+
+    for (const u of items) {
+      const initials = _cdIniciais(u.nome);
+      const statusBadge = _cdStatusBadge(u.display_status);
+      const waLink = u.wa_link;
+      const telDisplay = u.telefone || 'sem telefone';
+
+      html += `<tr style="border-bottom:1px solid var(--border);transition:background 0.15s" onmouseover="this.style.background='var(--card)'" onmouseout="this.style.background='transparent'">
+        <td style="padding:10px 12px">
+          <div style="display:flex;align-items:center;gap:10px">
+            <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0">${initials}</div>
+            <div style="min-width:0">
+              <div style="font-weight:600;color:var(--fl-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(u.nome)}</div>
+              <div style="font-size:11px;color:var(--fl-text-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(u.email)}</div>
+            </div>
+          </div>
+        </td>
+        <td style="padding:10px 12px">
+          <div style="font-family:var(--fl-font-mono);color:var(--fl-text);font-size:13px">${escapeHtml(telDisplay)}</div>
+          ${waLink ? `<div style="font-size:10px;color:var(--fl-text-dim);font-family:var(--fl-font-mono);margin-top:2px">wa.me/55${escapeHtml(u.telefone_normalizado || '')}</div>` : '<div style="font-size:10px;color:#ef4444;margin-top:2px">numero invalido</div>'}
+        </td>
+        <td style="padding:10px 12px">
+          <span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;background:var(--card);color:var(--fl-text);border:1px solid var(--border);font-family:var(--fl-font-mono)">${escapeHtml(u.plano || 'trial')}</span>
+          ${u.sites_used > 0 ? `<div style="font-size:10px;color:var(--fl-text-dim);margin-top:2px">${u.sites_used} sites</div>` : ''}
+        </td>
+        <td style="padding:10px 12px">${statusBadge}</td>
+        <td style="padding:10px 12px;text-align:right">
+          <div style="display:flex;gap:6px;justify-content:flex-end">
+            ${waLink ? `<a href="${escapeHtml(waLink)}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:4px;padding:6px 12px;background:#25D366;color:#fff;border-radius:6px;text-decoration:none;font-weight:600;font-size:11px;box-shadow:0 2px 0 #128C7E">CHAMAR NO WPP</a>` : ''}
+            <button onclick="cdMarcarContatado(${u.user_id}, '${escapeHtml(u.nome)}')" style="padding:6px 12px;background:var(--card);color:var(--fl-text);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:11px">Marcar contatado</button>
+          </div>
+        </td>
+      </tr>`;
+    }
+
+    html += '</tbody></table></div>';
+    if (area) area.innerHTML = html;
+  } catch (e) {
+    if (area) area.innerHTML = `<div class="empty" style="padding:24px;text-align:center;color:#ef4444">Erro: ${escapeHtml(String(e))}</div>`;
+  }
+}
+
+async function cdMarcarContatado(userId, nome) {
+  if (!confirm(`Marcar ${nome} como contatado? Para a sequencia de drip.`)) return;
+  try {
+    const r = await authFetch(`/api/admin/outreach/marcar-replied/reativacao_drip_v1_2026_06_26/${userId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nota: 'contato_direto_whatsapp' }),
+    });
+    const d = await r.json();
+    if (d.ok) {
+      toast(`${nome} marcado como contatado`, 'success');
+      loadContatoDireto();
+    } else {
+      toast(d.mensagem || 'Erro', 'error');
+    }
+  } catch (e) {
+    toast('Erro: ' + e.message, 'error');
+  }
+}
+
+// Auto-load
+document.addEventListener('DOMContentLoaded', () => { setTimeout(loadContatoDireto, 2000); });
+setInterval(loadContatoDireto, 30000);
 
 </script>
 
