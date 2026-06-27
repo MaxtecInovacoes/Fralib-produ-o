@@ -118,7 +118,7 @@ def regenerate(lead_id):
         }
 
         # Render via builder_worker
-        from backend.services.builder_worker import render_site_with_builder
+        from backend.services.builder_worker import render_site_with_builder, copy_builder_dist
         result = render_site_with_builder(
             facts,
             tenant_id=row[1],
@@ -127,6 +127,20 @@ def regenerate(lead_id):
             publication_url=f"https://seunegociofralib.site/sites/{row[1]}/{row[2].lower().replace(' ', '-').replace('|', '').replace(',', '').replace('.', '')}/",
         )
         print(f"  Lead {lead_id} ({row[2]}): {result.get('status', '?')}")
+
+        # Sprint 14.7: publica resultado no /var/www
+        try:
+            output_dir = result.get("output_dir", "")
+            index_path = result.get("index_path", "")
+            if output_dir and index_path:
+                # Determina path de publicacao
+                import os as _os
+                _slug = _os.path.basename(_os.path.dirname(_os.path.dirname(index_path))) if index_path else ""
+                publish_dir = f"/var/www/fralib/sites/{row[1]}/{_slug}"
+                copy_builder_dist(output_dir, publish_dir)
+                print(f"  -> publicado em {publish_dir}")
+        except Exception as pub_err:
+            print(f"  WARN: publicacao falhou: {pub_err}")
         return True
     except Exception as e:
         print(f"  Lead {lead_id} ERRO: {e}")
