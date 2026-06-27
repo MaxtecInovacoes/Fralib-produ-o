@@ -4012,11 +4012,13 @@ if (!prefersReducedMotion && !isMobileInApp && typeof particlesJS !== 'undefined
   function showPopup() {
     if (popupShown) return;
     popupShown = true;
+    popupShowing = true;
     document.getElementById('exitPopupOverlay').style.display = 'flex';
     startCountdown();
   }
 
   function hidePopup(reason) {
+    popupShowing = false;
     document.getElementById('exitPopupOverlay').style.display = 'none';
     if (reason === 'dismiss' || reason === 'submit') {
       localStorage.setItem(POPUP_KEY, String(Date.now()));
@@ -4130,6 +4132,43 @@ if (!prefersReducedMotion && !isMobileInApp && typeof particlesJS !== 'undefined
   document.getElementById('exitPopupClose').addEventListener('click', () => hidePopup('dismiss'));
   document.getElementById('exitPopupOverlay').addEventListener('click', function(e) {
     if (e.target === this) hidePopup('dismiss');
+  });
+
+  // === MOUSE PROXIMITY DETECTION ===
+  // Quando mouse se aproxima do botão X (canto superior direito), popup fecha
+  const closeBtn = document.getElementById('exitPopupClose');
+  let proximityHideTimer = null;
+  let popupShowing = false;
+
+  document.addEventListener('mousemove', function(e) {
+    if (!popupShowing || !popupShown) return;
+
+    // Distância até o canto superior direito (onde fica o X)
+    const xBtnRect = closeBtn.getBoundingClientRect();
+    const xCenter = xBtnRect.left + xBtnRect.width / 2;
+    const yCenter = xBtnRect.top + xBtnRect.height / 2;
+
+    const dx = e.clientX - xCenter;
+    const dy = e.clientY - yCenter;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+
+    // Se mouse está a menos de 80px do botão X
+    if (distance < 80) {
+      // Aguarda 200ms antes de fechar (evita fechar por acaso)
+      if (!proximityHideTimer) {
+        proximityHideTimer = setTimeout(() => {
+          // Confirma que mouse ainda está perto
+          hidePopup('dismiss');
+          proximityHideTimer = null;
+        }, 200);
+      }
+    } else {
+      // Mouse se afastou - cancela o timer
+      if (proximityHideTimer) {
+        clearTimeout(proximityHideTimer);
+        proximityHideTimer = null;
+      }
+    }
   });
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape' && popupShown) hidePopup('dismiss');
