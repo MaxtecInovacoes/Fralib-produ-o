@@ -4137,14 +4137,34 @@ function atualizarTempoInlinePipeline(total) {
 }
 function atualizarCronometroPipelineAdmin() {
   var el = document.getElementById('pipeline-banner-tempo');
-  if (!_pipelineInicioAdmin) {
+  var _start = _getPipelineStartFromBackend() || _pipelineInicioAdmin;
+  if (!_start) {
     atualizarTempoInlinePipeline(0);
     return;
   }
-  var total = Math.max(0, Math.floor((Date.now() - _pipelineInicioAdmin) / 1000));
+  var total = Math.max(0, Math.floor((Date.now() - _start) / 1000));
   if (el) el.textContent = _formatarDuracaoPipeline(total);
   atualizarTempoInlinePipeline(total);
 }
+
+// Sprint 14.11: cronometro sincronizado com backend (ultimo_job.started_at)
+// Caso o job esteja rodando no worker mas o admin nao clicou em LIGAR,
+// o cronometro ainda conta o tempo real baseado no started_at do banco.
+var _pipelineStartFromBackend = 0;
+function _getPipelineStartFromBackend() { return _pipelineStartFromBackend; }
+async function sincronizarCronometroComBackend() {
+  try {
+    var data = await authFetch('/api/pipeline/tempo').then(function(r){ return r.json(); });
+    if (data && data.ativo && data.ultimo_job && data.ultimo_job.started_at) {
+      _pipelineStartFromBackend = new Date(data.ultimo_job.started_at).getTime();
+    } else {
+      _pipelineStartFromBackend = 0;
+    }
+  } catch(e) { _pipelineStartFromBackend = 0; }
+}
+// Sincroniza a cada 10s (complementa o _pipelineInicioAdmin local)
+setInterval(sincronizarCronometroComBackend, 10000);
+setTimeout(sincronizarCronometroComBackend, 1500);
 function iniciarCronometroPipelineAdmin() {
   if (!_pipelineInicioAdmin) _pipelineInicioAdmin = Date.now();
   // EXPORTAR para a waveform consumir o MESMO cronometro (fonte da verdade)
