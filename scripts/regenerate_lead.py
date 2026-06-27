@@ -32,8 +32,8 @@ def regenerate(lead_id):
         row = db.execute(
             text("""
                 SELECT id, user_id, nome, segmento, cidade,
-                       telefone, whatsapp, rating, total_avaliacoes, address,
-                       services, horarios, description, diferenciais
+                       telefone, whatsapp, score, address,
+                       services, horarios, description, diferenciais, briefing_json
                 FROM leads WHERE id = :id
             """),
             {"id": lead_id}
@@ -43,19 +43,30 @@ def regenerate(lead_id):
             print(f"  Lead {lead_id} nao encontrado")
             return False
 
+        # Tenta extrair rating e reviews de briefing_json
+        rating = 5.0
+        reviews = 21
+        if row[13]:
+            try:
+                bj = json.loads(row[13])
+                rating = float(bj.get("rating") or bj.get("score") or 5.0)
+                reviews = int(bj.get("total_avaliacoes") or bj.get("reviews_count") or 21)
+            except Exception:
+                pass
+
         facts = {
             "business": {
                 "name": row[2], "nome": row[2], "business_name": row[2],
                 "segmento": row[3], "segment": row[3], "subnicho": "nutricionista_esportiva",
                 "cidade": row[4], "city": row[4],
                 "whatsapp": row[6] or row[5] or "", "phone": row[6] or row[5] or "",
-                "rating": str(row[7] or 5.0),
-                "total_avaliacoes": str(row[8] or 21),
-                "address": row[9] or "", "endereco": row[9] or "",
-                "services": row[10] or ["Atendimento personalizado", "Plano alimentar", "Acompanhamento"],
-                "horarios": row[11] or "",
-                "description": row[12] or "",
-                "diferenciais": row[13] or ["Atendimento personalizado"],
+                "rating": str(rating),
+                "total_avaliacoes": str(reviews),
+                "address": row[8] or "", "endereco": row[8] or "",
+                "services": (row[9] if isinstance(row[9], list) else (json.loads(row[9]) if row[9] else None)) or ["Atendimento personalizado", "Plano alimentar", "Acompanhamento"],
+                "horarios": row[10] or "",
+                "description": row[11] or "",
+                "diferenciais": (row[12] if isinstance(row[12], list) else (json.loads(row[12]) if row[12] else None)) or ["Atendimento personalizado"],
             },
             "segmento": row[3],
             "city": row[4],
