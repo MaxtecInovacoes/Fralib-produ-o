@@ -32,8 +32,7 @@ def regenerate(lead_id):
         row = db.execute(
             text("""
                 SELECT id, user_id, nome, segmento, cidade,
-                       telefone, whatsapp, score, address,
-                       services, horarios, description, diferenciais, briefing_json
+                       telefone, telefone_whatsapp, score, briefing_json
                 FROM leads WHERE id = :id
             """),
             {"id": lead_id}
@@ -43,14 +42,24 @@ def regenerate(lead_id):
             print(f"  Lead {lead_id} nao encontrado")
             return False
 
-        # Tenta extrair rating e reviews de briefing_json
+        # Tenta extrair dados do briefing_json (ja contem todos os facts do lead)
         rating = 5.0
         reviews = 21
-        if row[13]:
+        address = ""
+        services_list = ["Atendimento personalizado", "Plano alimentar", "Acompanhamento"]
+        diferenciais_list = ["Atendimento personalizado"]
+        if row[8]:
             try:
-                bj = json.loads(row[13])
+                bj = json.loads(row[8])
                 rating = float(bj.get("rating") or bj.get("score") or 5.0)
                 reviews = int(bj.get("total_avaliacoes") or bj.get("reviews_count") or 21)
+                address = bj.get("address") or bj.get("endereco") or ""
+                svcs = bj.get("services") or bj.get("servicos")
+                if isinstance(svcs, list) and svcs:
+                    services_list = svcs
+                difs = bj.get("diferenciais")
+                if isinstance(difs, list) and difs:
+                    diferenciais_list = difs
             except Exception:
                 pass
 
@@ -62,11 +71,11 @@ def regenerate(lead_id):
                 "whatsapp": row[6] or row[5] or "", "phone": row[6] or row[5] or "",
                 "rating": str(rating),
                 "total_avaliacoes": str(reviews),
-                "address": row[8] or "", "endereco": row[8] or "",
-                "services": (row[9] if isinstance(row[9], list) else (json.loads(row[9]) if row[9] else None)) or ["Atendimento personalizado", "Plano alimentar", "Acompanhamento"],
-                "horarios": row[10] or "",
-                "description": row[11] or "",
-                "diferenciais": (row[12] if isinstance(row[12], list) else (json.loads(row[12]) if row[12] else None)) or ["Atendimento personalizado"],
+                "address": address, "endereco": address,
+                "services": services_list,
+                "horarios": "",
+                "description": "",
+                "diferenciais": diferenciais_list,
             },
             "segmento": row[3],
             "city": row[4],
