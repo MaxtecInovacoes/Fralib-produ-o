@@ -14,11 +14,13 @@ import sys
 # Setup path
 sys.path.insert(0, '/root/fralib')
 sys.path.insert(0, '/root/fralib/backend')
+sys.path.insert(0, '/root/fralib/backend/core')
 
 from dotenv import load_dotenv
 load_dotenv('/root/fralib/.env')
 
-from database import SessionLocal, inicializar_database
+from backend.core.database import SessionLocal, inicializar_database
+
 from sqlalchemy import text
 
 inicializar_database()
