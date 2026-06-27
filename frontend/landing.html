@@ -499,7 +499,7 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
   animation:fadeUp .8s var(--fl-ease) .15s both;
 }
 .hero-pain,.hero-solution{
-  flex:1;padding:10px 12px;border-radius:var(--fl-r-md);
+  flex:1;padding:10px 12px;border-radius:0;
   text-align:left;font-size:11px;font-weight:400;
   line-height:1.35;
   display:flex;flex-direction:column;gap:3px;
@@ -1046,7 +1046,7 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
    SNAKE BORDER CARD (animated border like reference)
    ============================================================ */
 .snake-card{
-  position:relative;border-radius:var(--fl-r-lg);
+  position:relative;border-radius:0;
   background:var(--fl-bg-card);
   overflow:hidden;
   transition:transform .3s var(--fl-ease),box-shadow .3s;
@@ -1074,7 +1074,7 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
 .snake-card-inner{
   position:relative;z-index:1;
   background:var(--fl-bg-card);
-  border-radius:var(--fl-r-lg);
+  border-radius:0;
   padding:32px 24px;
   margin:1px;
 }
@@ -1118,7 +1118,7 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
   padding:20px 24px;
   background:var(--fl-bg-card);
   border:1px solid var(--fl-border);
-  border-radius:var(--fl-r-lg);
+  border-radius:0;
   transition:all .3s var(--fl-ease);cursor:default;
 }
 .problema-item:hover{border-color:rgba(239,68,68,0.3);background:var(--fl-bg-hover);transform:translateY(-2px)}
@@ -1229,17 +1229,17 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
    ============================================================ */
 .produto-mockup{
   max-width:960px;margin:0 auto;
-  border-radius:var(--fl-r-xl);
+  border-radius:0;
   border:1px solid var(--fl-border-md);
   background:var(--fl-bg-card);
   overflow:hidden;
-  box-shadow:var(--fl-glow-lg),0 40px 80px rgba(0,0,0,.5);
+  box-shadow:0 40px 80px rgba(0,0,0,.5);
   position:relative;
 }
 /* Subtle purple glow around mockup */
 .produto-mockup::before{
-  content:'';position:absolute;inset:-1px;border-radius:var(--fl-r-xl);
-  background:linear-gradient(135deg,var(--fl-purple-800),var(--fl-purple-950),var(--fl-purple-800));
+  content:'';position:absolute;inset:-1px;border-radius:0;
+  background:var(--fl-purple-800);
   z-index:-1;opacity:.6;
 }
 
@@ -1352,7 +1352,7 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
 .planos-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin-bottom:36px}
 .plano-card{
   background:var(--fl-bg-card);border:1px solid var(--fl-border);
-  border-radius:var(--fl-r-lg);text-align:center;
+  border-radius:0;text-align:center;
   padding:28px 20px;transition:all .3s var(--fl-ease);
   position:relative;
 }
@@ -1464,7 +1464,7 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
 .faq-list{max-width:680px;margin:0 auto;display:flex;flex-direction:column;gap:10px}
 .faq-item{
   background:var(--fl-bg-card);border:1px solid var(--fl-border);
-  border-radius:var(--fl-r-lg);overflow:hidden;transition:border-color .3s;
+  border-radius:0;overflow:hidden;transition:border-color .3s;
 }
 .faq-item.active{border-color:var(--fl-purple)}
 .faq-question{
@@ -1534,10 +1534,10 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
   max-width:520px;margin:0 auto;
   background:var(--fl-bg-card);
   border:1px solid rgba(250,204,21,0.25);
-  border-radius:var(--fl-r-xl);
+  border-radius:0;
   padding:40px 36px;
   position:relative;z-index:1;
-  box-shadow:0 0 40px rgba(250,204,21,0.08),0 20px 60px rgba(0,0,0,0.4);
+  box-shadow:0 20px 60px rgba(0,0,0,0.4);
 }
 .beta-wrapper h2{
   font-family:var(--fl-font-brand);
@@ -1610,7 +1610,7 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
 }
 .beta-spots{
   display:inline-flex;align-items:center;gap:6px;
-  padding:6px 14px;border-radius:var(--fl-r-full);
+  padding:6px 14px;border-radius:0;
   background:rgba(239,68,68,0.1);
   border:1px solid rgba(239,68,68,0.25);
   font-family:var(--fl-font-mono);font-size:10px;
@@ -1672,7 +1672,7 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
   padding:28px 20px;
   background:var(--fl-bg-card);
   border:1px solid var(--fl-border);
-  border-radius:var(--fl-r-lg);
+  border-radius:0;
   transition:all .3s var(--fl-ease);
   gap:16px;
 }
@@ -3091,7 +3091,7 @@ function trackPurchase(orderId, amount) {
     </div>
 
     <!-- GARANTIA 7 DIAS -->
-    <div class="guarantee-box reveal" style="max-width:720px;margin:48px auto 0;padding:24px;background:var(--fl-bg-card);border:1px solid rgba(0,204,142,0.3);border-radius:var(--fl-r-lg);text-align:center;display:flex;flex-direction:column;align-items:center;gap:16px;box-shadow:0 0 30px rgba(0,204,142,0.1);">
+    <div class="guarantee-box reveal" style="max-width:720px;margin:48px auto 0;padding:24px;background:var(--fl-bg-card);border:1px solid rgba(0,204,142,0.3);border-radius:0;text-align:center;display:flex;flex-direction:column;align-items:center;gap:16px;">
       <div style="width:56px;height:56px;border-radius:50%;background:rgba(0,204,142,0.15);display:flex;align-items:center;justify-content:center;color:#00CC8E;box-shadow:0 0 20px rgba(0,204,142,0.2);">
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><polyline points="9 12 11 14 15 10"></polyline></svg>
       </div>
