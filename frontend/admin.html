@@ -2460,6 +2460,11 @@ window.initPixelOffice = function(){
         <label class="config-label">BRIEFING DO SITE <span style="color:var(--fl-purple-300)">(opcional - gera o site automaticamente)</span></label>
         <textarea class="config-input" id="lm-briefing" placeholder="Ex: Site moderno para academia feminina, foco em agendamento de aulas, cores roxo e branco..." style="resize:vertical;min-height:90px;"></textarea>
       </div>
+      <div class="config-field">
+        <label class="config-label">REFERÊNCIAS VISUAIS <span style="color:var(--fl-text-muted);font-weight:normal;">(opcional)</span></label>
+        <input class="config-input" type="text" id="lm-refs-visuais" placeholder="Ex: Quero um site como Nubank, clean e moderno">
+        <span style="font-size:11px;color:var(--fl-text-dim);">Descreva sites que você gosta ou referências visuais para o design.</span>
+      </div>
       <div id="lm-status" style="font-size:12px;color:var(--fl-text-muted);display:none;padding:8px;background:rgba(147,51,234,0.1);border-radius:6px;border:1px solid var(--fl-purple)"></div>
       <div style="display:flex;gap:10px;padding-top:4px;">
         <button onclick="fecharModalLeadManual()" style="flex:1;background:var(--fl-bg-card);border:2px solid var(--fl-border);color:var(--fl-text-muted);padding:11px;border-radius:6px;cursor:pointer;font-size:13px;font-family:var(--fl-font-brand);letter-spacing:1px;">CANCELAR</button>
@@ -7652,6 +7657,7 @@ async function salvarLeadManual() {
   var statusEl = document.getElementById('lm-status');
   if (statusEl) { statusEl.style.display = 'block'; statusEl.textContent = 'Cadastrando lead...'; }
   var briefing = (document.getElementById('lm-briefing') || {}).value || '';
+  var refsVisuais = (document.getElementById('lm-refs-visuais') || {}).value || '';
   try {
     var res = await authFetch('/api/leads/manual', {
       method: 'POST',
@@ -7660,7 +7666,9 @@ async function salvarLeadManual() {
         nome: nome, nicho: nicho, cidade: cidade,
         telefone: telefone,
         whatsapp: (document.getElementById('lm-whatsapp') || {}).value || telefone,
-        briefing: briefing, score: 80
+        briefing: briefing,
+        refs_visuais: refsVisuais,
+        score: 80
       })
     }).then(function(r){ return r.json(); });
     if (res.ok) {

@@ -16,6 +16,7 @@ class LeadManualRequest(BaseModel):
     nicho: str
     cidade: str
     briefing: Optional[str] = None
+    refs_visuais: Optional[str] = None  # Sprint 14.x: referências visuais do usuário
     score: Optional[int] = 80
 
 

@@ -54,18 +54,11 @@ async def iniciar_pipeline(
     config_limpo["_whatsapp_connected"] = _whatsapp_connected
     _sdr_required = plano_tem_sdr(_plano_user, _status_user, _trial_expires_at)
     config_limpo["_sdr_required"] = _sdr_required
-    if _sdr_required and not _whatsapp_connected:
-        raise HTTPException(
-            status_code=428,
-            detail={
-                "reason": "whatsapp_required",
-                "message": "Conecte seu WhatsApp para rodar este ciclo com SDR ativo.",
-                "action": "Abra Meu Perfil, clique em CONECTAR / QR CODE e escaneie o QR.",
-            },
-        )
+    # WPP agora é OPCIONAL - pipeline roda sem bloquear por WhatsApp
+    # Se WPP não estiver conectado, Franz SDR não envia mensagens, mas o pipeline continua
     if not _whatsapp_connected:
         logger.warning(
-            "[Pipeline] Tenant %s sem WhatsApp conectado; plano sem SDR ativo, pipeline segue sem Franz",
+            "[Pipeline] Tenant %s sem WhatsApp conectado; rodando sem SDR (WPP opcional)",
             tenant_id,
         )
 

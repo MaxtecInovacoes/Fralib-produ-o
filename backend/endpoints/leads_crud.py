@@ -445,8 +445,8 @@ async def criar_lead_manual(
 
     db.execute(
         text("""
-        INSERT INTO leads (id, nome, cidade, segmento, telefone, whatsapp, telefone_whatsapp, score, status, criado_em, atualizado_em, processado, tentativas, observacoes, user_id, whatsapp_pendente)
-        VALUES (:id, :nome, :cidade, :segmento, :telefone, :whatsapp, :telefone_wpp, :score, 'pendente', :criado_em, :criado_em, false, 0, :briefing, :user_id, :whatsapp_pendente)
+        INSERT INTO leads (id, nome, cidade, segmento, telefone, whatsapp, telefone_whatsapp, score, status, criado_em, atualizado_em, processado, tentativas, observacoes, user_id, whatsapp_pendente, refs_visuais)
+        VALUES (:id, :nome, :cidade, :segmento, :telefone, :whatsapp, :telefone_wpp, :score, 'pendente', :criado_em, :criado_em, false, 0, :briefing, :user_id, :whatsapp_pendente, :refs_visuais)
         ON CONFLICT DO NOTHING
     """),
         {
@@ -462,6 +462,7 @@ async def criar_lead_manual(
             "briefing": req.briefing or "",
             "user_id": tenant_id,
             "whatsapp_pendente": whatsapp_pendente,
+            "refs_visuais": req.refs_visuais or "",
         },
     )
     db.commit()
