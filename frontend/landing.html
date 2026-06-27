@@ -3043,7 +3043,7 @@ function trackPurchase(orderId, amount) {
           <li>Suporte por WhatsApp</li>
         </ul>
         <div class="plano-cta-wrap">
-          <a href="/login?signup=1&amp;plano=starter" class="plano-cta cta-outline">TESTAR 7 DIAS GRÁTIS</a>
+          <a href="/login?signup=1&amp;plano=starter" class="plano-cta cta-outline" onclick="trackAddToCart('Starter', 97); fbq('track', 'Lead');">TESTAR 7 DIAS GRÁTIS</a>
         </div>
       </div>
 
@@ -3063,7 +3063,7 @@ function trackPurchase(orderId, amount) {
           <li>Suporte prioritario</li>
         </ul>
         <div class="plano-cta-wrap">
-          <a href="/login?signup=1&amp;plano=pro" class="plano-cta cta-gold">QUERO TODOS OS RECURSOS</a>
+          <a href="/login?signup=1&amp;plano=pro" class="plano-cta cta-gold" onclick="trackAddToCart('Pro', 497); fbq('track', 'Lead');">QUERO TODOS OS RECURSOS</a>
           <p class="plano-garantia">7 dias de garantia incondicional.</p>
         </div>
       </div>
@@ -3084,7 +3084,7 @@ function trackPurchase(orderId, amount) {
           <li>Onboarding VIP</li>
         </ul>
         <div class="plano-cta-wrap">
-          <a href="/login?signup=1&amp;plano=agency" class="plano-cta cta-outline">QUERO ESCALAR</a>
+          <a href="/login?signup=1&amp;plano=agency" class="plano-cta cta-outline" onclick="trackAddToCart('Agency', 997); fbq('track', 'Lead');">QUERO ESCALAR</a>
         </div>
       </div>
     </div>
@@ -3169,7 +3169,8 @@ function trackPurchase(orderId, amount) {
         </div>
         <div class="beta-field">
           <label for="beta-phone">WhatsApp</label>
-          <input type="tel" id="beta-phone" name="phone" placeholder="(11) 99999-9999" required>
+          <input type="tel" id="beta-phone" name="phone" placeholder="(11) 99999-9999">
+          <span style="font-size:11px;color:var(--fl-text-dim);font-style:italic;margin-top:4px">Opcional - voce pode conectar depois</span>
         </div>
         <button type="submit" class="beta-submit">QUERO MEU ACESSO GRATIS</button>
       </form>
