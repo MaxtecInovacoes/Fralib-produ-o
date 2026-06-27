@@ -3488,13 +3488,19 @@ def _generate_cinematic_studio_files(facts: dict[str, Any]) -> dict[str, str]:
     )
     _seed_for_html = int(_biz.get("__counter") or facts.get("__counter") or 0)
 
-    # Hero class variants (5 opcoes rotacionadas por counter)
+    # Hero class variants (10 opcoes rotacionadas por counter)
+    # Mais variabilidade para forcar Tailwind a gerar CSS diferente por lead
     _HERO_CLASSES_POOL = [
-        "relative isolate min-h-[92svh] overflow-hidden px-5 pb-16 pt-28 text-white md:px-8 md:pb-24 md:pt-36",
-        "relative isolate min-h-[85svh] overflow-hidden px-6 pb-20 pt-24 text-white md:px-10 md:pb-28 md:pt-32",
-        "relative isolate min-h-[100svh] overflow-hidden px-4 pb-12 pt-20 text-white md:px-6 md:pb-16 md:pt-24",
-        "relative isolate min-h-[88svh] overflow-hidden px-5 pb-14 pt-32 text-white md:px-8 md:pb-20 md:pt-40",
-        "relative isolate min-h-[95svh] overflow-hidden px-5 pb-18 pt-26 text-white md:px-9 md:pb-22 md:pt-34",
+        "relative isolate min-h-[92svh] overflow-hidden px-5 pb-16 pt-28 text-white md:px-8 md:pb-24 md:pt-36 grid place-items-center",
+        "relative isolate min-h-[85svh] overflow-hidden px-6 pb-20 pt-24 text-white md:px-10 md:pb-28 md:pt-32 flex flex-col justify-center",
+        "relative isolate min-h-[100svh] overflow-hidden px-4 pb-12 pt-20 text-white md:px-6 md:pb-16 md:pt-24 grid place-items-end",
+        "relative isolate min-h-[88svh] overflow-hidden px-5 pb-14 pt-32 text-white md:px-8 md:pb-20 md:pt-40 flex items-end",
+        "relative isolate min-h-[95svh] overflow-hidden px-5 pb-18 pt-26 text-white md:px-9 md:pb-22 md:pt-34 grid place-items-start",
+        "relative isolate min-h-[78svh] overflow-hidden px-8 pb-24 pt-20 text-white md:px-12 md:pb-32 md:pt-28 flex flex-col justify-between",
+        "relative isolate min-h-[102svh] overflow-hidden px-3 pb-10 pt-30 text-white md:px-4 md:pb-12 md:pt-32 grid grid-rows-2",
+        "relative isolate min-h-[80svh] overflow-hidden px-7 pb-28 pt-16 text-white md:px-14 md:pb-36 md:pt-20 flex items-center",
+        "relative isolate min-h-[98svh] overflow-hidden px-2 pb-8 pt-36 text-white md:px-3 md:pb-10 md:pt-40 grid place-items-center",
+        "relative isolate min-h-[90svh] overflow-hidden px-9 pb-22 pt-22 text-white md:px-16 md:pb-26 md:pt-26 flex flex-row",
     ]
     _hero_class = _HERO_CLASSES_POOL[_seed_for_html % len(_HERO_CLASSES_POOL)]
 
@@ -3664,7 +3670,7 @@ export function HeroSection({ onOpen }: { onOpen?: () => void }) {
     return () => ctx.revert();
   }, []);
   return (
-    <section ref={rootRef} id="hero" className={`${heroClasses} ${_hero_class}`}>
+    <section ref={rootRef} id="hero" className={`${{heroClasses}} ${{_hero_class}}`}>
       <div className="absolute inset-0 -z-20" style={{ background: 'var(--bg)' }} />
       {_showVideo && mediaVideos[0] ? (
         <video data-hero-video className="absolute inset-0 -z-10 h-full w-full object-cover opacity-52 saturate-[.9]" src={mediaVideos[0]} poster={mediaImages[0]} autoPlay muted loop playsInline preload="metadata" />
@@ -3675,10 +3681,10 @@ export function HeroSection({ onOpen }: { onOpen?: () => void }) {
       <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[1.05fr_.95fr] lg:items-end">
         <div className="max-w-4xl">
           <motion.div data-hero-reveal className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em]" style={{ borderColor: 'color-mix(in srgb, var(--accent) 25%, transparent)', background: 'color-mix(in srgb, var(--accent) 10%, transparent)', color: 'var(--accent-soft)' }}><Play className="h-3.5 w-3.5" />{siteCopy.segment} em {siteCopy.city}</motion.div>
-          <h1 data-hero-reveal className={`mt-7 max-w-5xl ${_h1_size}`}>{siteCopy.headline}</h1>
+          <h1 data-hero-reveal className={`mt-7 max-w-5xl ${{_h1_size}}`}>{siteCopy.headline}</h1>
           <p data-hero-reveal className="mt-6 max-w-2xl text-base leading-8 text-zinc-200 md:text-lg">{siteCopy.subheadline}</p>
           <div data-hero-reveal className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-            <a href={whatsappHref} rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 rounded-full px-6 py-3.5 text-sm font-semibold transition duration-300 hover:-translate-y-0.5" style={{ background: 'var(--accent)', color: 'var(--bg)' }}><MessageCircle className="h-4 w-4" />{siteCopy.cta_primary}</a>
+            <a href={whatsappHref} rel="noopener noreferrer" className={`inline-flex items-center justify-center gap-2 px-6 py-3.5 text-sm font-semibold transition duration-300 hover:-translate-y-0.5 ${{_cta_btn_class}}`} style={{ background: 'var(--accent)', color: 'var(--bg)' }}><MessageCircle className="h-4 w-4" />{siteCopy.cta_primary}</a>
             <button type="button" onClick={onOpen} className="inline-flex items-center justify-center gap-2 rounded-full border border-white/15 px-6 py-3.5 text-sm font-semibold text-white transition duration-300 hover:-translate-y-0.5">{siteCopy.cta_secondary}<ArrowDownRight className="h-4 w-4" /></button>
           </div>
         </div>
@@ -3726,6 +3732,15 @@ export default HeroSection;
 }}
 """,
     }
+    # Sprint 14.13: aplica .replace() DEPOIS do dict para nao substituir
+    # dentro de outras strings (CSS vars no index.css).
+    if "src/components/HeroSection.tsx" in source_files:
+        source_files["src/components/HeroSection.tsx"] = (
+            source_files["src/components/HeroSection.tsx"]
+            .replace("{_hero_class}", _hero_class)
+            .replace("{_h1_size}", _h1_size)
+            .replace("{_cta_btn_class}", _cta_btn_class)
+        )
     source_files.update(_generate_cinematic_secondary_components(facts, palette=palette))
     return prepare_vite_project_files(source_files, facts=facts)
 
