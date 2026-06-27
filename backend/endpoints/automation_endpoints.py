@@ -203,6 +203,23 @@ async def trigger_automation(
             await service.trigger_upsell(db, tenant_id)
             triggered = 1
 
+        elif body.trigger_type == "all":
+            # Dispara todas as automações em sequência
+            await service.trigger_sequence_7_days(db, tenant_id)
+            await service.trigger_followups(db, tenant_id)
+            await service.trigger_urgency(db, tenant_id)
+            triggered = 3
+
+        elif body.trigger_type in ("no_open", "no_response", "interest", "cart"):
+            # Follow-up específico
+            if body.trigger_type == "no_open":
+                await service._trigger_followup_no_open(db, tenant_id)
+            elif body.trigger_type == "no_response":
+                await service._trigger_followup_no_response(db, tenant_id)
+            elif body.trigger_type == "interest":
+                await service._trigger_followup_interest(db, tenant_id)
+            triggered = 1
+
         elif body.trigger_type == "custom_leads" and body.lead_ids:
             for lead_id in body.lead_ids:
                 try:
