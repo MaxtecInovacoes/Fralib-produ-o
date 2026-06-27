@@ -38,3 +38,6 @@ qa-site-*.png
 backup.zip
 *.zip
 .venv/
+
+# Repos cloned acidentalmente
+claude-cookbooks/
