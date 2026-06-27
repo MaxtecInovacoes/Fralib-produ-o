@@ -87,8 +87,64 @@ from backend.agents.llm_tracking import (
 
 
 # ─────────────────────────────────────────────────────────────────
-# PUBLIC API — call_claude
+# PUBLIC API — call_claude + cascata fallback
 # ─────────────────────────────────────────────────────────────────
+FALLBACK_MODELS = [
+    "claude-opus-4-8",    # mais caro, mais capaz
+    "claude-opus-4-7",
+    "claude-sonnet-4-6",  # atual, mid-tier
+    "claude-haiku-4-5",   # mais barato
+]
+
+
+def _call_claude_with_fallback(
+    system,
+    user,
+    model="opus",
+    max_tokens=4000,
+    temperature=0.7,
+    agent_name=None,
+    base_url=None,
+    respect_agent_config=True,
+    enable_context=True,
+):
+    """Chama Claude com cascata fallback.
+
+    Modelos em ordem de preferencia: mais capaz -> mais barato.
+    Se modelo solicitado falhar, tenta o proximo na lista.
+    """
+    # Se modelo especificado existe na lista, comeca por ele
+    if model in FALLBACK_MODELS:
+        models_to_try = [model] + [m for m in FALLBACK_MODELS if m != model]
+    else:
+        # Se modelo nao existe, comeca pelo mais capaz
+        models_to_try = list(FALLBACK_MODELS)
+
+    last_error = None
+    for model_id in models_to_try:
+        print(f"[LLM Fallback] Tentando modelo: {model_id}")
+        try:
+            return call_claude(
+                system=system,
+                user=user,
+                model=model_id,
+                max_tokens=max_tokens,
+                temperature=temperature,
+                agent_name=agent_name,
+                base_url=base_url,
+                respect_agent_config=respect_agent_config,
+                enable_context=enable_context,
+            )
+        except Exception as e:
+            last_error = e
+            print(f"[LLM Fallback] Modelo {model_id} falhou: {str(e)[:100]}")
+            if model_id == models_to_try[-1]:
+                raise
+            continue
+
+    raise last_error
+
+
 def call_claude(
     system,
     user,
