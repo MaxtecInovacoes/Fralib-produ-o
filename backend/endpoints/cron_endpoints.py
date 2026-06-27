@@ -632,24 +632,19 @@ async def processar_fila_outbound(
     except Exception as e:
         return {'status': 'error', 'message': str(e)}
 
-    async def sender(phone: str, message: str) -> bool:
-        """Envia msg via MeoWhats."""
+    def sync_sender(phone: str, message: str) -> bool:
+        """Envia msg via MeoWhats (sincrono, nao usa asyncio)."""
+        import requests
         try:
-            async with httpx.AsyncClient(timeout=15) as client:
-                # tenant_id NAO esta disponivel aqui, use default
-                r = await client.post(
-                    f"{MEOWHATS_HTTP}/api/sessions/default/send",
-                    headers={"X-API-Key": MEOWHATS_KEY},
-                    json={"jid": f"{phone}@s.whatsapp.net", "type": "text", "text": message},
-                )
-                return r.status_code == 200
+            r = requests.post(
+                f"{MEOWHATS_HTTP}/api/sessions/default/send",
+                headers={"X-API-Key": MEOWHATS_KEY},
+                json={"jid": f"{phone}@s.whatsapp.net", "type": "text", "text": message},
+                timeout=15,
+            )
+            return r.status_code == 200
         except Exception:
             return False
-
-    # Wrappa o async sender pra chamada sincrona do process_queue_once
-    def sync_sender(phone: str, message: str) -> bool:
-        import asyncio
-        return asyncio.run(sender(phone, message))
 
     result = process_queue_once(engine, sync_sender)
     return result
