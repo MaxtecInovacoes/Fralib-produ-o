@@ -54,7 +54,7 @@ async def pipeline_tempo(
         text("""
             SELECT id, fase_nome, agente, modelo,
                    started_at, finished_at, duracao_ms, status,
-                   lead_id, error_message
+                   lead_id, erro
             FROM pipeline_run_spans
             WHERE tenant_id = :tid
               AND started_at > NOW() - INTERVAL '24 hours'
