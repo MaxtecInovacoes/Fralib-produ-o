@@ -607,16 +607,16 @@ async def get_growth_dashboard(
 
         # Timeline de leads (últimos 30 dias)
         days_num = {"7d": 7, "30d": 30, "90d": 90}.get(period, 30)
-        timeline = db.execute(text("""
+        timeline = db.execute(text(f"""
             SELECT
                 DATE(created_at) as date,
                 COUNT(*) as new_leads,
                 COUNT(CASE WHEN plano IN ('pro', 'ilimitado', 'agency', 'starter') THEN 1 END) as new_paid
             FROM users
-            WHERE created_at >= NOW() - make_interval(days => :days)
+            WHERE created_at >= NOW() - INTERVAL '{int(days_num)} days'
             GROUP BY DATE(created_at)
             ORDER BY date DESC
-        """), {"days": days_num}).fetchall()
+        """)).fetchall()
 
         return {
             "ok": True,
