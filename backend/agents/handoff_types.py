@@ -1,4 +1,5 @@
 from pydantic import BaseModel, Field
+from typing import Dict
 
 
 class HandoffBase(BaseModel):
@@ -26,6 +27,8 @@ class NichoBriefing(HandoffBase):
     competidores: list[str] = Field(default_factory=list)
     regras: list[str] = Field(default_factory=list)
     nao_fazer: list[str] = Field(default_factory=list)
+    # Sprint 14.x: cores extraídas do briefing livre
+    paleta_cores: Dict[str, str] = Field(default_factory=dict)
 
     def to_markdown(self) -> str:
         lines = ["## Briefing de Nicho", f"**Nicho:** {self.nicho}"]

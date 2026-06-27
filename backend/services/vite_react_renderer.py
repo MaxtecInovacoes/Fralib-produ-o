@@ -3439,8 +3439,18 @@ def _generate_cinematic_studio_files(facts: dict[str, Any]) -> dict[str, str]:
     _biz = facts.get("business") if isinstance(facts.get("business"), dict) else {}
     segment = str(_biz.get("segment") or _biz.get("segmento") or facts.get("segmento") or facts.get("segment") or "servicos").lower()
 
+    # Sprint 14.x: Prioridade de palette:
+    # 1. color_palette do DesignerPRD (LLM generated)
+    # 2. paleta_cores do NichoBriefing (extraído do briefing livre "cores roxo e branco")
+    # 3. design_dna.tokens (fallback determinístico)
+    # 4. archetype fixo (último fallback)
     _prd_palette = facts.get("color_palette")
-    if not isinstance(_prd_palette, dict):
+
+    # Sprint 14.x: também tenta paleta_cores (cores do briefing livre)
+    if not isinstance(_prd_palette, dict) or not _prd_palette.get("primary"):
+        _prd_palette = facts.get("paleta_cores")  # do NichoBriefing
+
+    if not isinstance(_prd_palette, dict) or not _prd_palette.get("primary"):
         _prd_palette = (
             facts.get("design_dna", {}).get("tokens")
             if isinstance(facts.get("design_dna"), dict)

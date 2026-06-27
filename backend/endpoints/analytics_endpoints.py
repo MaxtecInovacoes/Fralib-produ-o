@@ -1,0 +1,646 @@
+"""
+FraLib Analytics Endpoints - UTM Tracking, KPIs, Funil de Conversão
+
+Este módulo implementa:
+- UTM parameter tracking
+- Event collection
+- Funnel analytics
+- KPI calculations
+- Cohort analysis
+- Lead scoring
+"""
+
+from __future__ import annotations
+
+from datetime import datetime, timedelta
+from typing import Optional
+import logging
+import json
+
+from fastapi import APIRouter, Depends, HTTPException, Request
+from sqlalchemy import text
+from sqlalchemy.orm import Session
+
+from backend.core.database import get_db
+from backend.core.access_control import require_superadmin
+
+logger = logging.getLogger(__name__)
+
+router = APIRouter(prefix='/api/analytics', tags=['analytics'])
+
+
+# ============================================================
+# UTM PARAMETER TRACKING
+# ============================================================
+
+@router.post("/events")
+async def track_events(request: Request, db: Session = Depends(get_db)):
+    """
+    Recebe eventos de analytics do frontend e armazena.
+    """
+    try:
+        body = await request.json()
+        session_id = body.get('session_id')
+        events = body.get('events', [])
+
+        if not session_id or not events:
+            return {"ok": False, "error": "session_id and events required"}
+
+        for event in events:
+            # Salvar evento na tabela analytics_events
+            db.execute(text("""
+                INSERT INTO analytics_events (
+                    session_id, event_name, event_data, utm_source,
+                    utm_medium, utm_campaign, utm_content, utm_term,
+                    url, referrer, user_agent, created_at
+                ) VALUES (
+                    :session_id, :event_name, :event_data,
+                    :utm_source, :utm_medium, :utm_campaign, :utm_content, :utm_term,
+                    :url, :referrer, :user_agent, NOW()
+                )
+            """), {
+                "session_id": session_id,
+                "event_name": event.get('event_name'),
+                "event_data": json.dumps(event.get('data', {})),
+                "utm_source": event.get('data', {}).get('utm', {}).get('utm_source'),
+                "utm_medium": event.get('data', {}).get('utm', {}).get('utm_medium'),
+                "utm_campaign": event.get('data', {}).get('utm', {}).get('utm_campaign'),
+                "utm_content": event.get('data', {}).get('utm', {}).get('utm_content'),
+                "utm_term": event.get('data', {}).get('utm', {}).get('utm_term'),
+                "url": event.get('data', {}).get('url'),
+                "referrer": event.get('data', {}).get('referrer'),
+                "user_agent": event.get('data', {}).get('user_agent'),
+            })
+
+        db.commit()
+        return {"ok": True, "count": len(events)}
+
+    except Exception as e:
+        logger.error(f"Error tracking events: {e}")
+        db.rollback()
+        return {"ok": False, "error": str(e)}
+
+
+@router.get("/utm")
+async def get_utm_analytics(
+    period: str = "7d",
+    db: Session = Depends(get_db),
+    user: dict = Depends(require_superadmin)
+):
+    """
+    Retorna métricas de UTM: leads por source, medium, campaign.
+    """
+    period_days = {
+        "24h": 1, "7d": 7, "30d": 30, "90d": 90
+    }.get(period, 7)
+
+    try:
+        # Leads por utm_source
+        by_source = db.execute(text("""
+            SELECT
+                COALESCE(utm_source, 'direct') as source,
+                COUNT(*) as total_leads,
+                COUNT(DISTINCT user_id) as unique_users,
+                COUNT(CASE WHEN status = 'trial' THEN 1 END) as trials,
+                COUNT(CASE WHEN status IN ('pro', 'ilimitado', 'agency') THEN 1 END) as pagantes
+            FROM users
+            WHERE created_at >= NOW() - INTERVAL ':days days'
+            GROUP BY COALESCE(utm_source, 'direct')
+            ORDER BY total_leads DESC
+        """.replace(':days', str(period_days)))).fetchall()
+
+        # Leads por utm_medium
+        by_medium = db.execute(text("""
+            SELECT
+                COALESCE(utm_medium, 'none') as medium,
+                COUNT(*) as total_leads,
+                COUNT(CASE WHEN status = 'trial' THEN 1 END) as trials
+            FROM users
+            WHERE created_at >= NOW() - INTERVAL ':days days'
+            GROUP BY COALESCE(utm_medium, 'none')
+            ORDER BY total_leads DESC
+        """.replace(':days', str(period_days)))).fetchall()
+
+        # Leads por utm_campaign
+        by_campaign = db.execute(text("""
+            SELECT
+                COALESCE(utm_campaign, 'none') as campaign,
+                utm_source,
+                COUNT(*) as total_leads,
+                COUNT(CASE WHEN status = 'trial' THEN 1 END) as trials,
+                COUNT(CASE WHEN status IN ('pro', 'ilimitado', 'agency') THEN 1 END) as pagantes
+            FROM users
+            WHERE created_at >= NOW() - INTERVAL ':days days'
+            GROUP BY COALESCE(utm_campaign, 'none'), utm_source
+            ORDER BY total_leads DESC
+            LIMIT 50
+        """.replace(':days', str(period_days)))).fetchall()
+
+        return {
+            "ok": True,
+            "period": period,
+            "by_source": [
+                {
+                    "source": row[0],
+                    "total_leads": row[1],
+                    "unique_users": row[2],
+                    "trials": row[3],
+                    "pagantes": row[4],
+                    "conversion_rate": round(row[4] / row[1] * 100, 2) if row[1] > 0 else 0
+                }
+                for row in by_source
+            ],
+            "by_medium": [
+                {
+                    "medium": row[0],
+                    "total_leads": row[1],
+                    "trials": row[2],
+                    "conversion_rate": round(row[2] / row[1] * 100, 2) if row[1] > 0 else 0
+                }
+                for row in by_medium
+            ],
+            "by_campaign": [
+                {
+                    "campaign": row[0],
+                    "source": row[1],
+                    "total_leads": row[2],
+                    "trials": row[3],
+                    "pagantes": row[4],
+                    "conversion_rate": round(row[4] / row[2] * 100, 2) if row[2] > 0 else 0
+                }
+                for row in by_campaign
+            ]
+        }
+
+    except Exception as e:
+        logger.error(f"Error fetching UTM analytics: {e}")
+        return {"ok": False, "error": str(e)}
+
+
+# ============================================================
+# FUNNEL DE CONVERSÃO
+# ============================================================
+
+@router.get("/funnel")
+async def get_funnel_analytics(
+    period: str = "30d",
+    db: Session = Depends(get_db),
+    user: dict = Depends(require_superadmin)
+):
+    """
+    Retorna o funil de conversão completo.
+    """
+    period_days = {
+        "7d": 7, "30d": 30, "90d": 90, "all": 9999
+    }.get(period, 30)
+
+    try:
+        # Contar visitantes (page_views)
+        if period_days < 9999:
+            visitors_query = text("""
+                SELECT COUNT(DISTINCT session_id)
+                FROM analytics_events
+                WHERE event_name = 'page_view'
+                AND created_at >= NOW() - INTERVAL ':days days'
+            """.replace(':days', str(period_days)))
+        else:
+            visitors_query = text("""
+                SELECT COUNT(DISTINCT session_id)
+                FROM analytics_events
+                WHERE event_name = 'page_view'
+            """)
+
+        visitors = db.execute(visitors_query).scalar() or 0
+
+        # Contar leads (usuários criados)
+        if period_days < 9999:
+            leads_query = text("""
+                SELECT COUNT(*) FROM users
+                WHERE created_at >= NOW() - INTERVAL ':days days'
+            """.replace(':days', str(period_days)))
+        else:
+            leads_query = text("SELECT COUNT(*) FROM users")
+
+        leads = db.execute(leads_query).scalar() or 0
+
+        # Contar trials
+        if period_days < 9999:
+            trials_query = text("""
+                SELECT COUNT(*) FROM users
+                WHERE plano = 'trial'
+                AND created_at >= NOW() - INTERVAL ':days days'
+            """.replace(':days', str(period_days)))
+        else:
+            trials_query = text("SELECT COUNT(*) FROM users WHERE plano = 'trial'")
+
+        trials = db.execute(trials_query).scalar() or 0
+
+        # Contar pagantes
+        if period_days < 9999:
+            pagantes_query = text("""
+                SELECT COUNT(*) FROM users
+                WHERE plano IN ('pro', 'ilimitado', 'agency', 'starter')
+                AND created_at >= NOW() - INTERVAL ':days days'
+            """.replace(':days', str(period_days)))
+        else:
+            pagantes_query = text("""
+                SELECT COUNT(*) FROM users
+                WHERE plano IN ('pro', 'ilimitado', 'agency', 'starter')
+            """)
+
+        pagantes = db.execute(pagantes_query).scalar() or 0
+
+        # Contar retidos (usuários que usaram nos últimos 30 dias)
+        retidos = db.execute(text("""
+            SELECT COUNT(*) FROM users
+            WHERE ultimo_acesso >= NOW() - INTERVAL '30 days'
+            AND plano IN ('pro', 'ilimitado', 'agency', 'starter')
+        """)).scalar() or 0
+
+        # Calcular taxas
+        visitantes_to_leads = round(leads / visitors * 100, 2) if visitors > 0 else 0
+        leads_to_trials = round(trials / leads * 100, 2) if leads > 0 else 0
+        trials_to_pagantes = round(pagantes / trials * 100, 2) if trials > 0 else 0
+        pagantes_to_retidos = round(retidos / pagantes * 100, 2) if pagantes > 0 else 0
+
+        return {
+            "ok": True,
+            "period": period,
+            "funnel": {
+                "visitantes": {"count": visitors, "rate": 100},
+                "leads": {"count": leads, "rate": visitantes_to_leads},
+                "trials": {"count": trials, "rate": leads_to_trials},
+                "pagantes": {"count": pagantes, "rate": trials_to_pagantes},
+                "retidos": {"count": retidos, "rate": pagantes_to_retidos}
+            },
+            "conversion_rates": {
+                "visitor_to_lead": visitantes_to_leads,
+                "lead_to_trial": leads_to_trials,
+                "trial_to_pago": trials_to_pagantes,
+                "pago_to_retained": pagantes_to_retidos
+            },
+            "metrics": {
+                "overall_conversion": round(pagantes / visitors * 100, 4) if visitors > 0 else 0,
+                "total_conversions": pagantes
+            }
+        }
+
+    except Exception as e:
+        logger.error(f"Error fetching funnel analytics: {e}")
+        return {"ok": False, "error": str(e)}
+
+
+# ============================================================
+# KPIs
+# ============================================================
+
+@router.get("/kpi")
+async def get_kpi_analytics(
+    period: str = "30d",
+    db: Session = Depends(get_db),
+    user: dict = Depends(require_superadmin)
+):
+    """
+    Retorna KPIs principais: CPL, CAC, LTV, ROAS, CTR, Bounce Rate.
+    """
+    period_days = {
+        "7d": 7, "30d": 30, "90d": 90
+    }.get(period, 30)
+
+    try:
+        # Totais de usuários
+        total_users = db.execute(text("SELECT COUNT(*) FROM users")).scalar() or 0
+        trials = db.execute(text("SELECT COUNT(*) FROM users WHERE plano = 'trial'")).scalar() or 0
+        pagantes = db.execute(text("""
+            SELECT COUNT(*) FROM users
+            WHERE plano IN ('pro', 'ilimitado', 'agency', 'starter')
+        """)).scalar() or 0
+
+        # Novos usuários no período
+        new_users = db.execute(text("""
+            SELECT COUNT(*) FROM users
+            WHERE created_at >= NOW() - INTERVAL ':days days'
+        """.replace(':days', str(period_days)))).scalar() or 0
+
+        # Calcular MRR estimado (R$97 por usuário pago)
+        mrr = pagantes * 97
+
+        # Obter gastos com ads (mock - viria de API de anúncios)
+        ad_spend = db.execute(text("""
+            SELECT COALESCE(SUM(cost), 0) FROM ad_spend
+            WHERE date >= NOW() - INTERVAL ':days days'
+        """.replace(':days', str(period_days)))).scalar() or 0
+
+        # Se não houver dados de ads, usar valor placeholder
+        if ad_spend == 0:
+            ad_spend = new_users * 15  # CPL estimado de R$15
+
+        # CPL = Gasto Ads / Total Leads
+        cpl = round(ad_spend / new_users, 2) if new_users > 0 else 0
+
+        # CAC = Gasto Ads / Total Clientes
+        cac = round(ad_spend / pagantes, 2) if pagantes > 0 else 0
+
+        # LTV = ARPU * Lifespan (assumindo ARPU de R$97, lifespan de 12 meses)
+        arpu = 97
+        lifespan_months = 12
+        ltv = arpu * lifespan_months
+
+        # ROAS = Receita / Gasto Ads (receita = MRR)
+        roas = round(mrr / ad_spend, 2) if ad_spend > 0 else 0
+
+        # Page views e cliques
+        page_views = db.execute(text("""
+            SELECT COUNT(*) FROM analytics_events
+            WHERE event_name = 'page_view'
+            AND created_at >= NOW() - INTERVAL ':days days'
+        """.replace(':days', str(period_days)))).scalar() or 0
+
+        clicks = db.execute(text("""
+            SELECT COUNT(*) FROM analytics_events
+            WHERE event_name = 'click'
+            AND created_at >= NOW() - INTERVAL ':days days'
+        """.replace(':days', str(period_days)))).scalar() or 0
+
+        # CTR = Cliques / Impressões
+        ctr = round(clicks / page_views * 100, 2) if page_views > 0 else 0
+
+        # Bounce Rate = Sessoes com apenas 1 page view / Total sessoes
+        sessions = db.execute(text("""
+            SELECT COUNT(DISTINCT session_id) FROM analytics_events
+            WHERE created_at >= NOW() - INTERVAL ':days days'
+        """.replace(':days', str(period_days)))).scalar() or 0
+
+        single_page_sessions = db.execute(text("""
+            SELECT COUNT(*) FROM (
+                SELECT session_id, COUNT(*) as views
+                FROM analytics_events
+                WHERE event_name = 'page_view'
+                AND created_at >= NOW() - INTERVAL ':days days'
+                GROUP BY session_id
+                HAVING COUNT(*) = 1
+            ) t
+        """.replace(':days', str(period_days)))).scalar() or 0
+
+        bounce_rate = round(single_page_sessions / sessions * 100, 2) if sessions > 0 else 0
+
+        # Taxa de conversão trial
+        trial_rate = round(trials / total_users * 100, 2) if total_users > 0 else 0
+
+        return {
+            "ok": True,
+            "period": period,
+            "overview": {
+                "total_leads": total_users,
+                "total_trials": trials,
+                "total_pagantes": pagantes,
+                "mrr": mrr,
+                "new_leads_period": new_users
+            },
+            "kpis": {
+                "cpl": cpl,  # Custo por Lead
+                "cac": cac,  # Custo de Aquisição de Cliente
+                "ltv": ltv,  # Lifetime Value
+                "roas": roas,  # Return on Ad Spend
+                "bounce_rate": bounce_rate,
+                "ctr": ctr,  # Click Through Rate
+                "trial_conversion_rate": trial_rate,
+                "paid_conversion_rate": round(pagantes / trials * 100, 2) if trials > 0 else 0
+            },
+            "period_stats": {
+                "ad_spend": ad_spend,
+                "page_views": page_views,
+                "clicks": clicks,
+                "sessions": sessions
+            }
+        }
+
+    except Exception as e:
+        logger.error(f"Error fetching KPI analytics: {e}")
+        return {"ok": False, "error": str(e)}
+
+
+# ============================================================
+# COHORT ANALYSIS
+# ============================================================
+
+@router.get("/cohorts")
+async def get_cohort_analysis(
+    period: str = "90d",
+    db: Session = Depends(get_db),
+    user: dict = Depends(require_superadmin)
+):
+    """
+    Retorna análise de cohorts - conversão ao longo do tempo.
+    """
+    try:
+        # Cohorts diários - novos usuários e conversão por dia
+        cohort_data = db.execute(text("""
+            SELECT
+                DATE(created_at) as cohort_date,
+                COUNT(*) as new_users,
+                COUNT(CASE WHEN plano IN ('pro', 'ilimitado', 'agency', 'starter') THEN 1 END) as converted
+            FROM users
+            WHERE created_at >= NOW() - INTERVAL ':days days'
+            GROUP BY DATE(created_at)
+            ORDER BY cohort_date DESC
+            LIMIT 90
+        """.replace(':days', str({"7d": 7, "30d": 30, "90d": 90}.get(period, 90))))).fetchall()
+
+        # Calcular taxa de conversão por cohort
+        cohorts = []
+        for row in cohort_data:
+            converted = row[1] or 0
+            new_users = row[2] or 0
+            conversion_rate = round(converted / new_users * 100, 2) if new_users > 0 else 0
+
+            cohorts.append({
+                "date": str(row[0]),
+                "new_users": new_users,
+                "converted": converted,
+                "conversion_rate": conversion_rate
+            })
+
+        # Retention por cohort semanal
+        retention_data = db.execute(text("""
+            SELECT
+                DATE_TRUNC('week', created_at) as week,
+                COUNT(*) as total_users,
+                COUNT(CASE WHEN ultimo_acesso >= NOW() - INTERVAL '7 days' THEN 1 END) as week1,
+                COUNT(CASE WHEN ultimo_acesso >= NOW() - INTERVAL '14 days' THEN 1 END) as week2,
+                COUNT(CASE WHEN ultimo_acesso >= NOW() - INTERVAL '30 days' THEN 1 END) as month1
+            FROM users
+            WHERE created_at >= NOW() - INTERVAL ':days days'
+            GROUP BY DATE_TRUNC('week', created_at)
+            ORDER BY week DESC
+        """.replace(':days', str({"7d": 7, "30d": 30, "90d": 90}.get(period, 90))))).fetchall()
+
+        retention = []
+        for row in retention_data:
+            total = row[1] or 0
+            retention.append({
+                "week": str(row[0]),
+                "total_users": total,
+                "retention_week1": round(row[2] / total * 100, 2) if total > 0 else 0,
+                "retention_week2": round(row[3] / total * 100, 2) if total > 0 else 0,
+                "retention_month1": round(row[4] / total * 100, 2) if total > 0 else 0
+            })
+
+        return {
+            "ok": True,
+            "period": period,
+            "daily_cohorts": cohorts,
+            "weekly_retention": retention
+        }
+
+    except Exception as e:
+        logger.error(f"Error fetching cohort analytics: {e}")
+        return {"ok": False, "error": str(e)}
+
+
+# ============================================================
+# LEAD SCORE
+# ============================================================
+
+@router.get("/lead-score")
+async def get_lead_score_analytics(
+    db: Session = Depends(get_db),
+    user: dict = Depends(require_superadmin)
+):
+    """
+    Retorna distribuição de lead scores e análise.
+    """
+    try:
+        # Distribuição de leads por status/score
+        status_dist = db.execute(text("""
+            SELECT
+                plano as status,
+                COUNT(*) as count,
+                AVG(COALESCE(sites_prontos, 0)) as avg_sites,
+                AVG(COALESCE(total_leads, 0)) as avg_leads
+            FROM users
+            GROUP BY plano
+            ORDER BY count DESC
+        """)).fetchall()
+
+        # Leads por source (UTM)
+        source_dist = db.execute(text("""
+            SELECT
+                COALESCE(utm_source, 'direct') as source,
+                COUNT(*) as total,
+                COUNT(CASE WHEN plano IN ('pro', 'ilimitado', 'agency', 'starter') THEN 1 END) as converted
+            FROM users
+            GROUP BY COALESCE(utm_source, 'direct')
+            ORDER BY total DESC
+        """)).fetchall()
+
+        # Score médio por source
+        avg_score_by_source = []
+        for row in source_dist:
+            source = row[0]
+            total = row[1] or 0
+            converted = row[2] or 0
+            score = round(converted / total * 100, 2) if total > 0 else 0
+
+            # Classificar: quente (>30%), morno (10-30%), frio (<10%)
+            classification = "hot" if score > 30 else ("warm" if score > 10 else "cold")
+
+            avg_score_by_source.append({
+                "source": source,
+                "total_leads": total,
+                "converted": converted,
+                "score": score,
+                "classification": classification
+            })
+
+        return {
+            "ok": True,
+            "status_distribution": [
+                {
+                    "status": row[0],
+                    "count": row[1],
+                    "avg_sites": round(row[2], 2) if row[2] else 0,
+                    "avg_leads": round(row[3], 2) if row[3] else 0
+                }
+                for row in status_dist
+            ],
+            "source_performance": avg_score_by_source,
+            "summary": {
+                "hot_sources": [s for s in avg_score_by_source if s["classification"] == "hot"],
+                "warm_sources": [s for s in avg_score_by_source if s["classification"] == "warm"],
+                "cold_sources": [s for s in avg_score_by_source if s["classification"] == "cold"]
+            }
+        }
+
+    except Exception as e:
+        logger.error(f"Error fetching lead score analytics: {e}")
+        return {"ok": False, "error": str(e)}
+
+
+# ============================================================
+# DASHBOARD GROWTH ANALYTICS (resumo para superadmin)
+# ============================================================
+
+@router.get("/growth-dashboard")
+async def get_growth_dashboard(
+    period: str = "30d",
+    db: Session = Depends(get_db),
+    user: dict = Depends(require_superadmin)
+):
+    """
+    Retorna dados consolidados para o dashboard de Growth Analytics.
+    """
+    try:
+        # Obter dados do funil
+        funnel_data = await get_funnel_analytics(period, db)
+
+        # Obter KPIs
+        kpi_data = await get_kpi_analytics(period, db)
+
+        # Obter UTM data
+        utm_data = await get_utm_analytics(period, db)
+
+        # Obter cohorts
+        cohort_data = await get_cohort_analysis(period, db)
+
+        # Obter lead scores
+        score_data = await get_lead_score_analytics(db)
+
+        # Timeline de leads (últimos 30 dias)
+        timeline = db.execute(text("""
+            SELECT
+                DATE(created_at) as date,
+                COUNT(*) as new_leads,
+                COUNT(CASE WHEN plano IN ('pro', 'ilimitado', 'agency', 'starter') THEN 1 END) as new_paid
+            FROM users
+            WHERE created_at >= NOW() - INTERVAL ':days days'
+            GROUP BY DATE(created_at)
+            ORDER BY date DESC
+        """.replace(':days', str({"7d": 7, "30d": 30, "90d": 90}.get(period, 30))))).fetchall()
+
+        return {
+            "ok": True,
+            "period": period,
+            "funnel": funnel_data.get("funnel", {}),
+            "kpis": kpi_data.get("kpis", {}),
+            "overview": kpi_data.get("overview", {}),
+            "utm": {
+                "by_source": utm_data.get("by_source", [])[:10],
+                "by_medium": utm_data.get("by_medium", [])
+            },
+            "cohorts": cohort_data.get("daily_cohorts", [])[:30],
+            "retention": cohort_data.get("weekly_retention", []),
+            "lead_scores": score_data.get("source_performance", []),
+            "timeline": [
+                {
+                    "date": str(row[0]),
+                    "new_leads": row[1],
+                    "new_paid": row[2]
+                }
+                for row in timeline
+            ]
+        }
+
+    except Exception as e:
+        logger.error(f"Error fetching growth dashboard: {e}")
+        return {"ok": False, "error": str(e)}

@@ -1,0 +1,519 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
+
+    <!-- SEO -->
+    <title>Simulação Solar Gratuita | MaxTec Inovações - Curitiba e Litoral PR</title>
+    <meta name="description" content="Descubra quanto pode economizar com energia solar. Simulação gratuita em 2 minutos." />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://solar.maxtecinovacoes.com.br" />
+
+    <!-- Anti-cache -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+
+    <!-- Microsoft Clarity -->
+    <script>(function(c,l,a,r,t,y,s){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};y=l.createElement(r);y.async=1;y.src="https://www.clarity.ms/s/"+t+"/s?"+s;s=l.getElementsByTagName(r)[0];s.parentNode.insertBefore(y,s);})(window,document,"clarity","script","v13kz5upd3");</script>
+
+    <style>
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body {
+        background: #020205;
+        color: #e2e8f0;
+        font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        min-height: 100vh;
+        padding: 16px;
+      }
+      .container { max-width: 480px; margin: 0 auto; padding-top: 32px; }
+      .logo { display: flex; align-items: center; gap: 12px; padding-bottom: 32px; }
+      .logo-icon {
+        width: 48px; height: 48px; border-radius: 50%;
+        background: linear-gradient(135deg, #f97316, #f59e0b);
+        display: flex; align-items: center; justify-content: center;
+      }
+      .logo-icon svg { width: 26px; height: 26px; color: #020205; }
+      .logo-text { font-weight: 700; font-size: 18px; letter-spacing: 0.5px; }
+      .logo-text span { color: #f97316; }
+      .header-info { text-align: right; font-size: 12px; color: #94a3b8; padding-bottom: 24px; }
+      .header-info strong { color: #e2e8f0; }
+      .step { display: none; }
+      .step.active { display: block; }
+      .progress { display: flex; gap: 6px; margin-bottom: 24px; }
+      .progress div { flex: 1; height: 4px; background: #1e293b; border-radius: 2px; }
+      .progress div.done { background: #f97316; }
+      .progress-label { font-size: 12px; color: #64748b; margin-bottom: 8px; }
+      h2 { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
+      .subtitle { font-size: 14px; color: #94a3b8; margin-bottom: 24px; }
+      .options { display: grid; gap: 12px; margin-bottom: 24px; }
+      .option {
+        padding: 16px; border: 2px solid #1e293b; background: #0f172a;
+        border-radius: 12px; cursor: pointer; transition: all 0.15s;
+        display: flex; align-items: center;
+        color: #cbd5e1; font-size: 15px;
+      }
+      .option:hover { border-color: #334155; }
+      .option.selected { border-color: #f97316; background: rgba(249,115,22,0.1); color: #fff; }
+      .option .icon { display: none; }
+      .nav { display: flex; gap: 12px; margin-top: 16px; }
+      .btn {
+        flex: 1; padding: 14px; border: none; border-radius: 12px;
+        font-weight: 600; cursor: pointer; font-size: 15px;
+        transition: all 0.15s; display: flex; align-items: center;
+        justify-content: center; gap: 8px;
+      }
+      .btn-primary { background: linear-gradient(90deg, #f97316, #f59e0b); color: #020205; }
+      .btn-primary:hover { transform: translateY(-1px); }
+      .btn-primary:disabled { background: #1e293b; color: #475569; cursor: not-allowed; transform: none; }
+      .btn-ghost { background: transparent; color: #94a3b8; }
+      .btn-ghost:hover { color: #cbd5e1; }
+      .btn svg { width: 18px; height: 18px; }
+      input {
+        width: 100%; padding: 14px; border-radius: 12px;
+        background: #0f172a; border: 2px solid #1e293b;
+        color: #fff; font-size: 15px; outline: none;
+        transition: border-color 0.15s;
+      }
+      input:focus { border-color: #f97316; }
+      input.error { border-color: #ef4444; }
+      label { font-size: 12px; color: #94a3b8; display: block; margin-bottom: 6px; }
+      .field { margin-bottom: 16px; }
+      .error-msg { color: #ef4444; font-size: 12px; margin-top: 4px; }
+      .intro-card {
+        background: rgba(15,23,42,0.5); border: 1px solid #1e293b;
+        border-radius: 12px; padding: 16px; margin-bottom: 24px;
+        text-align: left;
+      }
+      .intro-item { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+      .intro-item:last-child { margin-bottom: 0; }
+      .intro-item .num {
+        width: 28px; height: 28px; flex-shrink: 0;
+        background: rgba(249,115,22,0.15); color: #f97316;
+        border-radius: 50%; display: flex; align-items: center;
+        justify-content: center; font-weight: 700; font-size: 13px;
+      }
+      .intro-item p { font-size: 14px; color: #cbd5e1; }
+      .shield {
+        background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.2);
+        border-radius: 8px; padding: 12px; font-size: 12px; color: #93c5fd;
+        margin-bottom: 16px; display: flex; align-items: flex-start; gap: 8px;
+      }
+      .shield svg { width: 16px; height: 16px; flex-shrink: 0; margin-top: 1px; }
+      .title-center { text-align: center; }
+      .disqualified-card {
+        background: rgba(15,23,42,0.8); border: 1px solid #1e293b;
+        border-radius: 16px; padding: 32px 24px; text-align: center;
+      }
+      .disqualified-icon {
+        width: 64px; height: 64px; margin: 0 auto 16px;
+        background: rgba(249,115,22,0.15); border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+      }
+      .disqualified-icon svg { width: 32px; height: 32px; color: #f97316; }
+      .time-estimate {
+        text-align: center; font-size: 12px; color: #64748b;
+        margin-bottom: 24px;
+      }
+      .time-estimate svg { width: 12px; height: 12px; vertical-align: -2px; margin-right: 4px; }
+      .loading-spinner {
+        width: 64px; height: 64px; margin: 0 auto 24px;
+        border: 3px solid #1e293b; border-top-color: #f97316;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+      @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="logo">
+        <div class="logo-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+        </div>
+        <div class="logo-text">MAXTEC <span>INOVAÇÕES</span></div>
+      </div>
+      <div class="header-info">
+        Atuação: <strong>Curitiba, RMC e Litoral - PR</strong>
+      </div>
+
+      <!-- STEP 0: INTRO -->
+      <div id="step-0" class="step active">
+        <div class="title-center">
+          <h1 style="font-size: 24px; margin-bottom: 12px;">
+            Descubra se energia solar<br>vale a pena pra você
+          </h1>
+          <p class="subtitle">Responda 4 perguntas rápidas</p>
+        </div>
+
+        <div class="intro-card">
+          <div class="intro-item">
+            <div class="num">1</div>
+            <p>Responde 4 perguntas simples</p>
+          </div>
+          <div class="intro-item">
+            <div class="num">2</div>
+            <p>Recebe uma análise do seu perfil</p>
+          </div>
+          <div class="intro-item">
+            <div class="num">3</div>
+            <p>Fala com um consultor pelo WhatsApp</p>
+          </div>
+        </div>
+
+        <p class="time-estimate">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          Tempo estimado: menos de 2 minutos
+        </p>
+
+        <div class="shield">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          <span>Seus dados são protegidos pela LGPD.</span>
+        </div>
+
+        <button class="btn btn-primary" onclick="goTo(1)">
+          Começar Diagnóstico
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+      </div>
+
+      <!-- STEP 1: CONTA DE LUZ -->
+      <div id="step-1" class="step">
+        <div class="progress"><div class="done"></div><div></div><div></div><div></div></div>
+        <p class="progress-label">Passo 1 de 4</p>
+        <p style="font-size: 12px; color: #f97316; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">Valor médio mensal</p>
+        <h2>Qual o valor da sua conta de luz?</h2>
+        <div class="options" id="opt-conta_luz">
+          <div class="option" data-value="350" onclick="selectOption('conta_luz', this, 2)">
+            <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1v6m0 10v6m11-11h-6m-10 0H1m17.07-7.07-4.24 4.24m-7.07 7.07-4.24 4.24m12.73 0-4.24-4.24M6.34 6.34 2.1 2.1"/></svg>
+            Até R$ 350
+          </div>
+          <div class="option" data-value="500" onclick="selectOption('conta_luz', this, 2)">
+            <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+            R$ 350 a R$ 600
+          </div>
+          <div class="option" data-value="800" onclick="selectOption('conta_luz', this, 2)">
+            <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/></svg>
+            R$ 600 a R$ 1.000
+          </div>
+          <div class="option" data-value="1500" onclick="selectOption('conta_luz', this, 2)">
+            <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>
+            R$ 1.000 a R$ 2.500
+          </div>
+          <div class="option" data-value="3000" onclick="selectOption('conta_luz', this, 2)">
+            <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>
+            Acima de R$ 2.500
+          </div>
+        </div>
+        <div class="nav">
+          <button class="btn btn-ghost" onclick="goTo(0)">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            Voltar
+          </button>
+        </div>
+      </div>
+
+      <!-- STEP 2: TIPO DE IMÓVEL -->
+      <div id="step-2" class="step">
+        <div class="progress"><div class="done"></div><div class="done"></div><div></div><div></div></div>
+        <p class="progress-label">Passo 2 de 4</p>
+        <p style="font-size: 12px; color: #f97316; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">Tipo de imóvel</p>
+        <h2>Onde vai instalar?</h2>
+        <div class="options" id="opt-proprietario">
+          <div class="option" data-value="Casa" onclick="selectOption('proprietario', this, 3)">
+            <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+            Casa
+          </div>
+          <div class="option" data-value="Empresa" onclick="selectOption('proprietario', this, 3)">
+            <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="16" height="20" x="4" y="2" rx="2" ry="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01"/><path d="M16 6h.01"/><path d="M12 6h.01"/><path d="M12 10h.01"/><path d="M12 14h.01"/><path d="M16 10h.01"/><path d="M16 14h.01"/><path d="M8 10h.01"/><path d="M8 14h.01"/></svg>
+            Empresa
+          </div>
+          <div class="option" data-value="Fazenda" onclick="selectOption('proprietario', this, 3)">
+            <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 22h18"/><path d="M6 18v-7a6 6 0 0 1 12 0v7"/><path d="M6 22v-4"/><path d="M18 22v-4"/><path d="M12 11v11"/></svg>
+            Fazenda
+          </div>
+          <div class="option" data-value="Condomínio" onclick="selectOption('proprietario', this, 3)">
+            <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 22h20"/><path d="M7 10v10"/><path d="M12 10v10"/><path d="M17 10v10"/><path d="M2 10h20"/><path d="M5 6l7-3 7 3"/><path d="M5 6v4"/><path d="M19 6v4"/><path d="M9 6v4"/><path d="M15 6v4"/></svg>
+            Condomínio
+          </div>
+        </div>
+        <div class="nav">
+          <button class="btn btn-ghost" onclick="goTo(1)">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            Voltar
+          </button>
+        </div>
+      </div>
+
+      <!-- STEP 3: SOL -->
+      <div id="step-3" class="step">
+        <div class="progress"><div class="done"></div><div class="done"></div><div class="done"></div><div></div></div>
+        <p class="progress-label">Passo 3 de 4</p>
+        <p style="font-size: 12px; color: #f97316; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">Exposição solar</p>
+        <h2>Tem sol no telhado?</h2>
+        <div class="options" id="opt-sol">
+          <div class="option" data-value="Sim" onclick="selectOption('sol', this, 4)">
+            <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+            Sim, bastante sol
+          </div>
+          <div class="option" data-value="Parcialmente" onclick="selectOption('sol', this, 4)">
+            <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="M20 12h2"/><path d="m19.07 4.93-1.41 1.41"/><path d="M15.947 12.65a4 4 0 0 0-5.925-4.128"/><path d="M13 22H7a5 5 0 1 1 4.9-6H13a3 3 0 0 1 0 6Z"/></svg>
+            Um pouco de sombra
+          </div>
+          <div class="option" data-value="Não sei" onclick="selectOption('sol', this, 4)">
+            <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
+            Não tenho certeza
+          </div>
+        </div>
+        <div class="nav">
+          <button class="btn btn-ghost" onclick="goTo(2)">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            Voltar
+          </button>
+        </div>
+      </div>
+
+      <!-- STEP 4: PRAZO -->
+      <div id="step-4" class="step">
+        <div class="progress"><div class="done"></div><div class="done"></div><div class="done"></div><div class="done"></div></div>
+        <p class="progress-label">Passo 4 de 4</p>
+        <p style="font-size: 12px; color: #f97316; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">Prazo</p>
+        <h2>Quando quer instalar?</h2>
+        <div class="options" id="opt-prazo">
+          <div class="option" data-value="Imediatamente" onclick="selectOption('prazo', this, 5)">
+            <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>
+            Agora
+          </div>
+          <div class="option" data-value="Próximos 30 dias" onclick="selectOption('prazo', this, 5)">
+            <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            Em 30 dias
+          </div>
+          <div class="option" data-value="Só pesquisando" onclick="selectOption('prazo', this, 'disqualified')">
+            <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+            Só olhando
+          </div>
+        </div>
+        <div class="nav">
+          <button class="btn btn-ghost" onclick="goTo(3)">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            Voltar
+          </button>
+        </div>
+      </div>
+
+      <!-- STEP 5: CONTATO -->
+      <div id="step-5" class="step">
+        <div class="progress"><div class="done"></div><div class="done"></div><div class="done"></div><div class="done"></div></div>
+        <p class="progress-label">Quase lá!</p>
+        <h2 style="text-align: center;">Seus dados</h2>
+        <p class="subtitle" style="text-align: center;">
+          Para receber sua análise personalizada
+        </p>
+
+        <div class="field">
+          <label>Seu nome *</label>
+          <input id="input-nome" type="text" placeholder="Nome completo" />
+          <div id="err-nome" class="error-msg" style="display:none;">Digite seu nome completo</div>
+        </div>
+
+        <div class="field">
+          <label>WhatsApp com DDD *</label>
+          <input id="input-whatsapp" type="tel" placeholder="(00) 00000-0000" maxlength="15" />
+          <div id="err-whatsapp" class="error-msg" style="display:none;">Digite WhatsApp com DDD</div>
+        </div>
+
+        <div class="field">
+          <label>E-mail (opcional)</label>
+          <input id="input-email" type="email" placeholder="seu@email.com" />
+        </div>
+
+        <div class="field">
+          <label>Cidade (opcional)</label>
+          <input id="input-cidade" type="text" placeholder="Sua cidade" />
+        </div>
+
+        <div class="shield">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          <span>Ao enviar, você concorda com nossa política de privacidade.</span>
+        </div>
+
+        <button id="btn-submit" class="btn btn-primary" onclick="submitLead()">
+          Ver minha análise
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+        <div style="margin-top: 12px;">
+          <button class="btn btn-ghost" onclick="goTo(4)">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            Voltar
+          </button>
+        </div>
+      </div>
+
+      <!-- STEP 6: LOADING -->
+      <div id="step-6" class="step">
+        <div class="title-center" style="padding: 60px 0;">
+          <div class="loading-spinner"></div>
+          <h2>Calculando sua economia...</h2>
+          <p class="subtitle" style="margin-top: 12px;">Analisando seu perfil</p>
+        </div>
+      </div>
+
+      <!-- STEP 7: DESQUALIFICADO -->
+      <div id="step-disqualified" class="step">
+        <div class="disqualified-card">
+          <div class="disqualified-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          </div>
+          <h2 style="margin-bottom: 12px;">Entendemos que hoje...</h2>
+          <p class="subtitle" style="margin-bottom: 24px;">
+            Para contas abaixo de R$ 600/mês, o retorno do investimento pode demorar mais de 5 anos.
+            Por isso, focamos em clientes com potencial máximo de economia.
+          </p>
+          <p style="font-size: 12px; color: #64748b; margin-bottom: 24px;">
+            Quando sua conta aumentar ou se tiver uma situação especial, estamos aqui!
+          </p>
+          <a href="https://wa.me/5541985134105?text=Ol%C3%A1%2C%20tenho%20interesse%20em%20energia%20solar%20e%20gostaria%20de%20uma%20avalia%C3%A7%C3%A3o" target="_blank" rel="noopener noreferrer" class="btn btn-primary" style="text-decoration: none;">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+            Falar com Consultor
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const answers = {
+        conta_luz: null,
+        proprietario: null,
+        sol: null,
+        prazo: null
+      };
+
+      function goTo(step) {
+        document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+        const target = typeof step === 'string' ? 'step-' + step : 'step-' + step;
+        const el = document.getElementById(target);
+        if (el) {
+          el.classList.add('active');
+        }
+        window.scrollTo(0, 0);
+      }
+
+      function isDisqualified() {
+        // Desqualificado se conta < 600 OU prazo = "só pesquisando"
+        const conta = parseInt(answers.conta_luz || '0');
+        if (conta > 0 && conta < 600) return true;
+        if (answers.prazo === 'Só pesquisando') return true;
+        return false;
+      }
+
+      function selectOption(field, el, nextStep) {
+        const container = el.parentElement;
+        container.querySelectorAll('.option').forEach(o => o.classList.remove('selected'));
+        el.classList.add('selected');
+        answers[field] = el.dataset.value;
+
+        setTimeout(() => {
+          // Se for a conta de luz, checa desqualificação
+          if (field === 'conta_luz' || field === 'prazo') {
+            if (isDisqualified()) {
+              goTo('disqualified');
+              return;
+            }
+          }
+          goTo(nextStep);
+        }, 300);
+      }
+
+      function formatPhone(value) {
+        const digits = value.replace(/\D/g, '').slice(0, 11);
+        if (digits.length === 0) return '';
+        if (digits.length <= 2) return `(${digits}`;
+        if (digits.length <= 7) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+        return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+      }
+
+      document.addEventListener('DOMContentLoaded', function() {
+        const phoneInput = document.getElementById('input-whatsapp');
+        if (phoneInput) {
+          phoneInput.addEventListener('input', function(e) {
+            e.target.value = formatPhone(e.target.value);
+          });
+        }
+      });
+
+      async function submitLead() {
+        const nome = document.getElementById('input-nome').value.trim();
+        const whatsapp = document.getElementById('input-whatsapp').value;
+        const email = document.getElementById('input-email').value.trim();
+        const cidade = document.getElementById('input-cidade').value.trim();
+
+        let hasError = false;
+        if (nome.length < 3) {
+          document.getElementById('err-nome').style.display = 'block';
+          document.getElementById('input-nome').classList.add('error');
+          hasError = true;
+        } else {
+          document.getElementById('err-nome').style.display = 'none';
+          document.getElementById('input-nome').classList.remove('error');
+        }
+
+        const phoneDigits = whatsapp.replace(/\D/g, '');
+        if (phoneDigits.length < 10) {
+          document.getElementById('err-whatsapp').style.display = 'block';
+          document.getElementById('input-whatsapp').classList.add('error');
+          hasError = true;
+        } else {
+          document.getElementById('err-whatsapp').style.display = 'none';
+          document.getElementById('input-whatsapp').classList.remove('error');
+        }
+
+        if (hasError) return;
+
+        const btn = document.getElementById('btn-submit');
+        btn.disabled = true;
+        btn.innerHTML = 'Enviando...';
+        goTo(6);
+
+        // Mapear valor numérico para texto compatível com o backend
+        const contaMap = { '350': 'Até R$350', '500': 'R$350–600', '800': 'R$600–1000', '1500': 'R$1000–2500', '3000': 'Acima de R$2500' };
+        const payload = {
+          nome: nome,
+          whatsapp: whatsapp,
+          email: email || null,
+          cidade: cidade || 'Curitiba',
+          conta_luz: contaMap[answers.conta_luz] || answers.conta_luz,
+          proprietario: answers.proprietario,
+          prazo: answers.prazo
+        };
+
+        try {
+          const res = await fetch('/api/lead?' + Date.now(), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' },
+            body: JSON.stringify(payload)
+          });
+
+          if (res.ok) {
+            const data = await res.json().catch(() => ({}));
+            const qualified = data.prioridade && data.prioridade !== 'disqualified' && data.prioridade !== 'cold' ? 1 : 0;
+            window.location.href = '/obrigado.html?qualified=' + qualified + '&nome=' + encodeURIComponent(nome) + '&conta=' + encodeURIComponent(payload.conta_luz) + '&tipo=' + encodeURIComponent(payload.proprietario) + '&prazo=' + encodeURIComponent(payload.prazo) + '&t=' + Date.now();
+          } else {
+            const errText = await res.text();
+            console.error('Erro API:', errText);
+            alert('Erro ao enviar. Tente novamente.');
+            goTo(5);
+            btn.disabled = false;
+            btn.innerHTML = 'Ver minha análise <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>';
+          }
+        } catch (e) {
+          console.error('Erro:', e);
+          alert('Erro de conexão. Tente novamente.');
+          goTo(5);
+          btn.disabled = false;
+          btn.innerHTML = 'Ver minha análise <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>';
+        }
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Obrigado | Maxtec Inovações</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', Tahoma, sans-serif;
+    background: #0a0a14;
+    color: #fff;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .container {
+    max-width: 550px;
+    width: 100%;
+    text-align: center;
+  }
+  .icon-circle {
+    width: 80px;
+    height: 80px;
+    margin: 0 auto 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .icon-circle.green {
+    background: linear-gradient(135deg, #22c55e, #16a34a);
+  }
+  .icon-circle.orange {
+    background: linear-gradient(135deg, #f97316, #ea580c);
+  }
+  .icon-circle svg { width: 40px; height: 40px; color: #fff; }
+  .badge {
+    display: inline-block;
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 12px;
+    letter-spacing: 1px;
+    margin-bottom: 20px;
+  }
+  .badge.qualified { background: rgba(34,197,94,0.15); color: #22c55e; }
+  .badge.disqualified { background: rgba(251,146,60,0.15); color: #fb923c; }
+  h1 { font-size: 28px; margin-bottom: 16px; line-height: 1.3; }
+  .highlight { color: #f97316; font-weight: 700; }
+  .highlight.green { color: #22c55e; }
+  p { font-size: 17px; color: #94a3b8; margin-bottom: 14px; line-height: 1.6; }
+  .timer-box { border-radius: 16px; padding: 24px; margin: 28px 0; }
+  .timer-box.qualified { background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.2); }
+  .timer-box.disqualified { background: rgba(251,146,60,0.08); border: 1px solid rgba(251,146,60,0.2); }
+  .timer-label { font-size: 13px; color: #94a3b8; margin-bottom: 12px; }
+  .countdown { font-size: 52px; font-weight: bold; margin-bottom: 8px; }
+  .countdown.qualified { color: #22c55e; }
+  .countdown.disqualified { color: #fb923c; }
+  .timer-sub { font-size: 13px; color: #64748b; }
+  .cta-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    padding: 18px 36px;
+    border-radius: 14px;
+    font-size: 17px;
+    font-weight: 700;
+    text-decoration: none;
+    margin-top: 8px;
+    transition: all 0.2s;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+  }
+  .cta-button.wpp { background: #25D366; color: #fff; }
+  .cta-button.wpp:hover { transform: translateY(-2px); box-shadow: 0 12px 40px rgba(37,211,102,0.35); }
+  .cta-button.site { background: #f97316; color: #fff; }
+  .cta-button.site:hover { transform: translateY(-2px); box-shadow: 0 12px 40px rgba(249,115,22,0.35); }
+  .cta-button svg { width: 24px; height: 24px; fill: white; }
+  .info-card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 20px; margin-top: 24px; text-align: left; }
+  .info-card h3 { font-size: 12px; color: #64748b; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
+  .info-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 14px; }
+  .info-row:last-child { border-bottom: none; }
+  .info-row strong { color: #cbd5e1; }
+  .info-row span { color: #94a3b8; }
+  .footer { margin-top: 28px; font-size: 12px; color: #475569; display: flex; align-items: center; justify-content: center; gap: 6px; }
+  .footer svg { width: 14px; height: 14px; }
+</style>
+</head>
+<body>
+<div class="container" id="app"></div>
+
+<script>
+const WHATSAPP_NUMBER = "5541985134105";
+const SITE_URL = "https://www.maxtecinovacoes.com.br";
+
+const params = new URLSearchParams(window.location.search);
+const isQualified = params.get("qualified") === "1";
+const nome = params.get("nome") || "Cliente";
+const conta = params.get("conta") || "";
+const tipo = params.get("tipo") || "";
+const prazo = params.get("prazo") || "";
+const countdownTime = isQualified ? 5 : 10;
+
+const wppMsg = encodeURIComponent(
+  "Ola! Acabei de fazer o diagnostico solar no site da Maxtec.\n\n" +
+  "Dados:\n" +
+  (nome ? "Nome: " + nome + "\n" : "") +
+  (conta ? "Conta de luz: " + conta + "\n" : "") +
+  (tipo ? "Tipo: " + tipo + "\n" : "") +
+  (prazo ? "Prazo: " + prazo : "") +
+  "\n\nGostaria de receber uma proposta tecnica!"
+);
+
+const wppUrl = "https://wa.me/" + WHATSAPP_NUMBER + "?text=" + wppMsg;
+
+let timeLeft = countdownTime;
+const app = document.getElementById("app");
+
+function render() {
+  if (isQualified) {
+    app.innerHTML = `
+      <div class="icon-circle green">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+          <polyline points="22 4 12 14.01 9 11.01"/>
+        </svg>
+      </div>
+      <div class="badge qualified">ANALISE CONCLUIDA</div>
+      <h1>Muito obrigado, <span class="highlight green">${nome}</span>!</h1>
+      <p>Voce tem <strong>potencial enorme</strong> para economizar com energia solar.</p>
+      <p><span class="highlight">Payback de ate 2,5 anos!</span></p>
+      <p>Em breve um dos nossos especialistas entrara em contato com voce.</p>
+
+      <a href="${wppUrl}" class="cta-button wpp">
+        <svg viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+        Falar com Especialista Agora
+      </a>
+
+      <div class="timer-box qualified">
+        <div class="timer-label">Se nao clicar, redirecionamos para WhatsApp em:</div>
+        <div class="countdown qualified" id="countdown">${timeLeft}s</div>
+        <div class="timer-sub">Contato automatico via WhatsApp</div>
+      </div>
+
+      <div class="info-card">
+        <h3>Seus dados</h3>
+        <div class="info-row"><strong>Nome</strong><span>${nome}</span></div>
+        <div class="info-row"><strong>Conta de luz</strong><span>${conta || "-"}</span></div>
+        <div class="info-row"><strong>Tipo</strong><span>${tipo || "-"}</span></div>
+        <div class="info-row"><strong>Prazo</strong><span>${prazo || "-"}</span></div>
+      </div>
+
+      <div class="footer">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        Seus dados estao protegidos pela LGPD
+      </div>
+    `;
+  } else {
+    app.innerHTML = `
+      <div class="icon-circle orange">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/>
+          <polyline points="12 6 12 12 16 14"/>
+        </svg>
+      </div>
+      <div class="badge disqualified">DIAGNOSTICO RECEBIDO</div>
+      <h1>Obrigado, <span class="highlight">${nome}</span>!</h1>
+      <p>Recebemos suas informacoes e salvamos no nosso sistema.</p>
+      <p>Aproveite para conhecer outros servicos da Maxtec Inovacoes!</p>
+
+      <a href="${SITE_URL}" class="cta-button site">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+        Visitar Site da Maxtec
+      </a>
+
+      <div class="timer-box disqualified">
+        <div class="timer-label">Redirecionando para o site em:</div>
+        <div class="countdown disqualified" id="countdown">${timeLeft}s</div>
+        <div class="timer-sub">ou clique no botao acima</div>
+      </div>
+
+      <div class="info-card">
+        <h3>Outros servicos Maxtec</h3>
+        <div class="info-row"><strong>Energia Solar</strong><span>Residencial e Comercial</span></div>
+        <div class="info-row"><strong>Aquecimento</strong><span>Solar para agua</span></div>
+        <div class="info-row"><strong>Piscinas</strong><span>Aquecimento e tratamento</span></div>
+        <div class="info-row"><strong>Projetos</strong><span>Engenharia especializada</span></div>
+      </div>
+
+      <div class="footer">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        Seus dados estao protegidos pela LGPD
+      </div>
+    `;
+  }
+}
+
+render();
+
+const timer = setInterval(() => {
+  timeLeft--;
+  const el = document.getElementById("countdown");
+  if (el) el.textContent = timeLeft + "s";
+
+  if (timeLeft <= 0) {
+    clearInterval(timer);
+    if (isQualified) {
+      window.location.href = wppUrl;
+    } else {
+      window.location.href = SITE_URL;
+    }
+  }
+}, 1000);
+</script>
+</body>
+</html>

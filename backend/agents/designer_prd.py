@@ -258,6 +258,9 @@ class DesignerPRD(BaseModel):
     requirements_contract: Dict[str, Any] = Field(default_factory=dict)
     visual_contract: Dict[str, Any] = Field(default_factory=dict)
     site_build_plan: Dict[str, Any] = Field(default_factory=dict)
+    # Sprint 14.x: cores extraídas do briefing livre (ex: "cores roxo e branco")
+    # Passado pelo nicho_briefing. Sobrescreve color_palette se existir.
+    paleta_cores: Dict[str, str] = Field(default_factory=dict)
 
     @field_validator("typography", mode="before")
     @classmethod

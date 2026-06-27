@@ -35,8 +35,8 @@ input,select{font-family:inherit}
 .btn-logout{padding:6px 12px;border:1px solid var(--border-hi);font-size:12px;color:var(--purple-300);transition:.15s}
 .btn-logout:hover{background:var(--purple-900)}
 
-.tabs{display:flex;gap:0;background:var(--surface);border-bottom:1px solid var(--border);padding:0 24px}
-.tab{padding:14px 22px;font-size:13px;font-weight:500;color:var(--muted);border-bottom:2px solid transparent;transition:.15s;letter-spacing:.3px}
+.tabs{display:flex;gap:0;background:var(--surface);border-bottom:1px solid var(--border);padding:0 24px;overflow-x:auto;scrollbar-width:thin}
+.tab{padding:14px 22px;font-size:13px;font-weight:500;color:var(--muted);border-bottom:2px solid transparent;transition:.15s;letter-spacing:.3px;white-space:nowrap;flex-shrink:0}
 .tab:hover{color:var(--text)}
 .tab.active{color:var(--purple-300);border-bottom-color:var(--purple)}
 
@@ -189,6 +189,8 @@ canvas{max-width:100%}
   <button class="tab" data-tab="sdrstudio" onclick="switchTab('sdrstudio')">SDR Studio</button>
   <button class="tab" data-tab="alertas" onclick="switchTab('alertas')">Alertas</button>
   <button class="tab" data-tab="contato-direto" onclick="switchTab('contato-direto')">Contato Direto</button>
+  <button class="tab" data-tab="growth" onclick="switchTab('growth')" style="color:var(--cyan)">Growth Analytics</button>
+  <button class="tab" data-tab="automacoes" onclick="switchTab('automacoes')" style="color:var(--gold)">&#128172; Automações</button>
 </div>
 
 <div class="main">
@@ -254,6 +256,99 @@ canvas{max-width:100%}
         <h4>Incidentes recentes</h4>
         <div id="hermes-incidents" class="table-wrap"></div>
       </div>
+    </div>
+  </section>
+
+  <!-- ========== GROWTH ANALYTICS ========== -->
+  <section class="panel" id="panel-growth">
+    <h2 class="section-title">GROWTH ANALYTICS &middot; UTM &middot; FUNIL</h2>
+
+    <!-- Period Selector -->
+    <div class="table-toolbar" style="border:1px solid var(--border);background:var(--card);margin-bottom:16px">
+      <span class="muted">Período:</span>
+      <select id="growth-period" class="select" onchange="loadGrowthAnalytics()">
+        <option value="7d">Últimos 7 dias</option>
+        <option value="30d" selected>Últimos 30 dias</option>
+        <option value="90d">Últimos 90 dias</option>
+      </select>
+      <button class="btn btn-primary" onclick="loadGrowthAnalytics()">Atualizar</button>
+    </div>
+
+    <!-- KPI Cards -->
+    <div class="metrics-grid" style="margin-bottom:20px">
+      <div class="metric-card">
+        <div class="metric-label">Total Leads</div>
+        <div class="metric-value cyan" id="ga-total-leads">—</div>
+        <div class="metric-sub" id="ga-leads-period">—</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Total Trials</div>
+        <div class="metric-value" id="ga-total-trials">—</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Total Pagantes</div>
+        <div class="metric-value" style="color:var(--success)" id="ga-total-pagantes">—</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">MRR</div>
+        <div class="metric-value gold" id="ga-mrr">—</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">CPL</div>
+        <div class="metric-value" id="ga-cpl">—</div>
+        <div class="metric-sub">Custo por Lead</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">CAC</div>
+        <div class="metric-value" id="ga-cac">—</div>
+        <div class="metric-sub">Custo Aquisição</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">LTV</div>
+        <div class="metric-value" id="ga-ltv">—</div>
+        <div class="metric-sub">Lifetime Value</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">ROAS</div>
+        <div class="metric-value" id="ga-roas">—</div>
+        <div class="metric-sub">Retorno Ads</div>
+      </div>
+    </div>
+
+    <!-- Funnel Section -->
+    <div class="chart-card" style="margin-bottom:16px">
+      <h4>FUNIL DE CONVERSÃO</h4>
+      <div id="ga-funnel" style="padding:16px 0">
+        <div class="loading"><span class="spinner"></span> carregando funil…</div>
+      </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="chart-grid" style="margin-bottom:16px">
+      <div class="chart-card">
+        <h4>Leads por Dia</h4>
+        <canvas id="chart-leads-timeline" height="200"></canvas>
+      </div>
+      <div class="chart-card">
+        <h4>Fontes UTM</h4>
+        <canvas id="chart-utm-sources" height="200"></canvas>
+      </div>
+    </div>
+
+    <!-- UTM Table -->
+    <div class="table-wrap" style="margin-bottom:16px">
+      <div class="table-toolbar">
+        <span style="font-size:12px;font-weight:600;color:var(--purple-300)">📊 FONTES UTM</span>
+      </div>
+      <div id="ga-utm-table" class="loading"><span class="spinner"></span> carregando…</div>
+    </div>
+
+    <!-- Lead Scores -->
+    <div class="table-wrap">
+      <div class="table-toolbar">
+        <span style="font-size:12px;font-weight:600;color:var(--cyan)">🎯 LEAD SCORE POR SOURCE</span>
+      </div>
+      <div id="ga-lead-scores" class="loading"><span class="spinner"></span> carregando…</div>
     </div>
   </section>
 
@@ -696,6 +791,129 @@ canvas{max-width:100%}
     </div>
   </section>
 
+  <!-- ========== AUTOMAÇÕES WHATSAPP ========== -->
+  <section class="panel" id="panel-automacoes">
+    <h2 class="section-title">&#128172; AUTOMAÇÃO WHATSAPP &middot; TRIAL → CONVERSÃO</h2>
+
+    <!-- Stats Cards -->
+    <div class="metrics-grid" style="margin-bottom:20px">
+      <div class="metric-card">
+        <div class="metric-label">Total Leads</div>
+        <div class="metric-value cyan" id="auto-total">—</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Em Sequência</div>
+        <div class="metric-value" id="auto-sequence">—</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Mensagens Hoje</div>
+        <div class="metric-value gold" id="auto-today">—</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Follow-ups Pendentes</div>
+        <div class="metric-value" style="color:var(--warning)" id="auto-followup">—</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Trial Expirando 24h</div>
+        <div class="metric-value" style="color:var(--danger)" id="auto-urgency">—</div>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap">
+      <button class="btn btn-primary" onclick="autoTriggerAll()" style="background:#25D366;border-color:#25D366">
+        &#9654; DISPARAR TODAS
+      </button>
+      <button class="btn" onclick="autoTriggerSequence()">
+        &#128197; Sequência 7 Dias
+      </button>
+      <button class="btn" onclick="autoTriggerFollowup()">
+        &#128259; Follow-ups
+      </button>
+      <button class="btn" onclick="autoTriggerUrgency()">
+        &#9203; Urgência
+      </button>
+      <button class="btn" onclick="loadAutomacoes()">
+        &#8635; Atualizar
+      </button>
+    </div>
+
+    <!-- Tabs internas -->
+    <div style="display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:16px">
+      <button class="sdr-layer-tab active" onclick="autoSwitchInnerTab('sequence', this)" style="border-bottom:2px solid var(--purple)">&#128197; Sequência 7 Dias</button>
+      <button class="sdr-layer-tab" onclick="autoSwitchInnerTab('followup', this)">&#128259; Follow-ups</button>
+      <button class="sdr-layer-tab" onclick="autoSwitchInnerTab('history', this)">&#128203; Histórico</button>
+    </div>
+
+    <!-- Tab: Sequência -->
+    <div id="auto-tab-sequence">
+      <div class="table-toolbar" style="background:var(--card);margin-bottom:14px">
+        <span class="muted">Dia:</span>
+        <select id="autoDayFilter" class="select" onchange="loadAutoSequenceLeads()">
+          <option value="">Todos</option>
+          <option value="1">Dia 1 - Boas-vindas</option>
+          <option value="2">Dia 2 - Tutorial</option>
+          <option value="3">Dia 3 - Caso Sucesso</option>
+          <option value="4">Dia 4 - Dica Avançada</option>
+          <option value="5">Dia 5 - Prova Social</option>
+          <option value="6">Dia 6 - Oferta</option>
+          <option value="7">Dia 7 - Urgência</option>
+        </select>
+      </div>
+      <div id="auto-sequence-table" class="loading"><span class="spinner"></span> carregando leads...</div>
+    </div>
+
+    <!-- Tab: Follow-ups -->
+    <div id="auto-tab-followup" style="display:none">
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:16px;cursor:pointer;transition:0.15s" onclick="autoTriggerFollowupType('no_open')" onmouseover="this.style.borderColor='var(--border-hi)'" onmouseout="this.style.borderColor='var(--border)'">
+          <div style="font-size:24px;margin-bottom:8px">&#128064;</div>
+          <div style="font-weight:600;font-size:13px">Não abriram</div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Leads com site mas sem acesso</div>
+          <div style="font-family:var(--mono);font-size:20px;color:var(--purple-300)" id="auto-fu-noopen">—</div>
+        </div>
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:16px;cursor:pointer;transition:0.15s" onclick="autoTriggerFollowupType('no_response')" onmouseover="this.style.borderColor='var(--border-hi)'" onmouseout="this.style.borderColor='var(--border)'">
+          <div style="font-size:24px;margin-bottom:8px">&#128172;</div>
+          <div style="font-weight:600;font-size:13px">Sem resposta</div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Receberam msg mas não responderam</div>
+          <div style="font-family:var(--mono);font-size:20px;color:var(--warning)" id="auto-fu-noresp">—</div>
+        </div>
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:16px;cursor:pointer;transition:0.15s" onclick="autoTriggerFollowupType('interest')" onmouseover="this.style.borderColor='var(--border-hi)'" onmouseout="this.style.borderColor='var(--border)'">
+          <div style="font-size:24px;margin-bottom:8px">&#128150;</div>
+          <div style="font-weight:600;font-size:13px">Demonstraram interesse</div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Múltiplas interações</div>
+          <div style="font-family:var(--mono);font-size:20px;color:var(--success)" id="auto-fu-interest">—</div>
+        </div>
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:16px;cursor:pointer;transition:0.15s" onclick="autoTriggerFollowupType('cart')" onmouseover="this.style.borderColor='var(--border-hi)'" onmouseout="this.style.borderColor='var(--border)'">
+          <div style="font-size:24px;margin-bottom:8px">&#128722;</div>
+          <div style="font-weight:600;font-size:13px">Recuperação</div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Site criado mas não finalizado</div>
+          <div style="font-family:var(--mono);font-size:20px;color:#06b6d4" id="auto-fu-cart">—</div>
+        </div>
+      </div>
+      <div id="auto-followup-table" class="empty">Selecione um tipo de follow-up acima</div>
+    </div>
+
+    <!-- Tab: Histórico -->
+    <div id="auto-tab-history" style="display:none">
+      <div class="table-toolbar" style="background:var(--card);margin-bottom:14px">
+        <span class="muted">Tipo:</span>
+        <select id="autoHistoryType" class="select" onchange="loadAutoHistory()">
+          <option value="">Todos</option>
+          <option value="automation">Automação</option>
+          <option value="followup">Follow-up</option>
+          <option value="urgency">Urgência</option>
+          <option value="upsell">Upsell</option>
+        </select>
+        <input type="date" id="autoHistoryFrom" class="input">
+        <input type="date" id="autoHistoryTo" class="input">
+        <button class="btn" onclick="loadAutoHistory()">Filtrar</button>
+      </div>
+      <div id="auto-history-table" class="loading"><span class="spinner"></span> carregando histórico...</div>
+    </div>
+
+  </section>
+
 </div>
 
 </div>
@@ -776,6 +994,7 @@ function switchTab(tab){
   if(tab==='playground') initPlayground();
   if(tab==='sdrstudio' && !document.getElementById('panel-sdrstudio').dataset.loaded) loadSdrStudio();
   if(tab==='contato-direto' && !document.getElementById('panel-contato-direto').dataset.loaded) loadContatoDireto();
+  if(tab==='automacoes') { loadAutomacoes(); loadAutoSequenceLeads(); }
 }
 
 // ===== toast =====
@@ -2663,9 +2882,529 @@ async function cdMarcarContatado(userId, nome) {
   }
 }
 
+// ============================================================
+// GROWTH ANALYTICS
+// ============================================================
+let _chartLeadsTimeline = null;
+let _chartUtmSources = null;
+
+async function loadGrowthAnalytics() {
+  const period = document.getElementById('growth-period')?.value || '30d';
+
+  try {
+    const r = await authFetch(`/api/analytics/growth-dashboard?period=${period}`);
+    const d = await r.json();
+
+    if (!d.ok) {
+      throw new Error(d.error || 'Erro ao carregar analytics');
+    }
+
+    // Atualizar KPIs
+    const overview = d.overview || {};
+    const kpis = d.kpis || {};
+
+    document.getElementById('ga-total-leads').textContent = fmt(overview.total_leads || 0);
+    document.getElementById('ga-leads-period').textContent = `+${fmt(overview.new_leads_period || 0)} no período`;
+    document.getElementById('ga-total-trials').textContent = fmt(overview.total_trials || 0);
+    document.getElementById('ga-total-pagantes').textContent = fmt(overview.total_pagantes || 0);
+    document.getElementById('ga-mrr').textContent = 'R$ ' + (overview.mrr || 0).toLocaleString('pt-BR');
+
+    document.getElementById('ga-cpl').textContent = 'R$ ' + (kpis.cpl || 0).toFixed(2);
+    document.getElementById('ga-cac').textContent = 'R$ ' + (kpis.cac || 0).toFixed(2);
+    document.getElementById('ga-ltv').textContent = 'R$ ' + (kpis.ltv || 0).toLocaleString('pt-BR');
+    document.getElementById('ga-roas').textContent = (kpis.roas || 0).toFixed(2) + 'x';
+
+    // Renderizar Funil
+    renderGrowthFunnel(d.funnel || {});
+
+    // Renderizar Gráficos
+    renderLeadsTimeline(d.timeline || []);
+    renderUtmSources(d.utm?.by_source || []);
+
+    // Renderizar Tabela UTM
+    renderUtmTable(d.utm?.by_source || []);
+
+    // Renderizar Lead Scores
+    renderLeadScores(d.lead_scores || []);
+
+  } catch (e) {
+    console.error('Erro loadGrowthAnalytics:', e);
+    toast('Erro ao carregar analytics: ' + e.message, 'error');
+  }
+}
+
+function renderGrowthFunnel(funnel) {
+  const el = document.getElementById('ga-funnel');
+  if (!el) return;
+
+  const steps = [
+    { label: 'Visitantes', key: 'visitantes', color: '#9333ea' },
+    { label: 'Leads', key: 'leads', color: '#00FFB3' },
+    { label: 'Trials', key: 'trials', color: '#38bdf8' },
+    { label: 'Pagantes', key: 'pagantes', color: '#22c55e' },
+    { label: 'Retidos', key: 'retidos', color: '#FFB800' }
+  ];
+
+  const maxCount = funnel.visitantes?.count || 1;
+
+  let html = '<div style="display:flex;flex-direction:column;gap:8px">';
+
+  steps.forEach((step, i) => {
+    const data = funnel[step.key] || { count: 0, rate: 0 };
+    const width = Math.max(10, (data.count / maxCount) * 100);
+    const prevRate = i > 0 ? (steps[i - 1].key && funnel[steps[i - 1].key]?.rate) || 100 : 100;
+    const dropRate = prevRate > 0 ? (data.rate / prevRate * 100).toFixed(1) : 100;
+
+    html += `
+      <div style="display:flex;align-items:center;gap:16px">
+        <div style="width:100px;font-size:12px;color:var(--muted)">${step.label}</div>
+        <div style="flex:1;background:var(--surface);border-radius:4px;height:32px;position:relative;overflow:hidden">
+          <div style="width:${width}%;height:100%;background:${step.color};opacity:0.8;transition:width 0.3s"></div>
+        </div>
+        <div style="width:80px;text-align:right;font-family:var(--mono);font-size:14px;font-weight:600">${fmt(data.count)}</div>
+        <div style="width:60px;text-align:right;font-family:var(--mono);font-size:12px;color:${data.rate > 20 ? 'var(--success)' : data.rate > 10 ? 'var(--warning)' : 'var(--danger)'}">${data.rate}%</div>
+      </div>
+    `;
+
+    if (i < steps.length - 1) {
+      html += `
+        <div style="display:flex;justify-content:flex-end;margin:-4px 0">
+          <span style="font-size:10px;color:var(--dim);font-family:var(--mono)">↓ ${dropRate}%</span>
+        </div>
+      `;
+    }
+  });
+
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+function renderLeadsTimeline(timeline) {
+  const ctx = document.getElementById('chart-leads-timeline');
+  if (!ctx) return;
+
+  const labels = timeline.map(t => {
+    const d = new Date(t.date);
+    return d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
+  }).reverse();
+
+  const newLeads = timeline.map(t => t.new_leads || 0).reverse();
+  const newPaid = timeline.map(t => t.new_paid || 0).reverse();
+
+  if (_chartLeadsTimeline) _chartLeadsTimeline.destroy();
+
+  _chartLeadsTimeline = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [
+        {
+          label: 'Novos Leads',
+          data: newLeads,
+          borderColor: '#9333ea',
+          backgroundColor: 'rgba(147, 51, 234, 0.1)',
+          fill: true,
+          tension: 0.3
+        },
+        {
+          label: 'Novos Pagantes',
+          data: newPaid,
+          borderColor: '#22c55e',
+          backgroundColor: 'rgba(34, 197, 94, 0.1)',
+          fill: true,
+          tension: 0.3
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { labels: { color: '#8888a0' } } },
+      scales: {
+        x: { ticks: { color: '#8888a0' }, grid: { color: 'rgba(147,51,234,0.1)' } },
+        y: { ticks: { color: '#8888a0' }, grid: { color: 'rgba(147,51,234,0.1)' }, beginAtZero: true }
+      }
+    }
+  });
+}
+
+function renderUtmSources(sources) {
+  const ctx = document.getElementById('chart-utm-sources');
+  if (!ctx || sources.length === 0) return;
+
+  const labels = sources.slice(0, 8).map(s => s.source || 'direct');
+  const data = sources.slice(0, 8).map(s => s.total_leads || 0);
+  const colors = ['#9333ea', '#00FFB3', '#FFB800', '#38bdf8', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6'];
+
+  if (_chartUtmSources) _chartUtmSources.destroy();
+
+  _chartUtmSources = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: labels,
+      datasets: [{
+        data: data,
+        backgroundColor: colors,
+        borderWidth: 0
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { position: 'right', labels: { color: '#8888a0', font: { size: 11 } } }
+      }
+    }
+  });
+}
+
+function renderUtmTable(sources) {
+  const el = document.getElementById('ga-utm-table');
+  if (!el) return;
+
+  if (!sources || sources.length === 0) {
+    el.innerHTML = '<div class="empty">Sem dados UTM ainda</div>';
+    return;
+  }
+
+  let html = `
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Source</th>
+          <th>Total Leads</th>
+          <th>Trials</th>
+          <th>Pagantes</th>
+          <th>Conversão</th>
+        </tr>
+      </thead>
+      <tbody>
+  `;
+
+  sources.forEach(s => {
+    const convRate = s.conversion_rate || 0;
+    const rateColor = convRate > 20 ? 'var(--success)' : convRate > 10 ? 'var(--warning)' : 'var(--danger)';
+
+    html += `
+      <tr>
+        <td><strong style="color:var(--purple-300)">${escapeHtml(s.source || 'direct')}</strong></td>
+        <td style="font-family:var(--mono)">${fmt(s.total_leads || 0)}</td>
+        <td style="font-family:var(--mono)">${fmt(s.trials || 0)}</td>
+        <td style="font-family:var(--mono);color:var(--success)">${fmt(s.pagantes || 0)}</td>
+        <td style="font-family:var(--mono);color:${rateColor}">${convRate}%</td>
+      </tr>
+    `;
+  });
+
+  html += '</tbody></table>';
+  el.innerHTML = html;
+}
+
+function renderLeadScores(scores) {
+  const el = document.getElementById('ga-lead-scores');
+  if (!el) return;
+
+  if (!scores || scores.length === 0) {
+    el.innerHTML = '<div class="empty">Sem dados de lead score ainda</div>';
+    return;
+  }
+
+  const hotSources = scores.filter(s => s.classification === 'hot');
+  const warmSources = scores.filter(s => s.classification === 'warm');
+  const coldSources = scores.filter(s => s.classification === 'cold');
+
+  let html = `
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;padding:16px">
+      <div>
+        <div style="font-size:11px;color:var(--success);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">HOT SOURCES (>30%)</div>
+        ${hotSources.length === 0 ? '<div style="color:var(--dim);font-size:12px">Nenhum source hot</div>' : ''}
+        ${hotSources.map(s => `
+          <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
+            <span>${escapeHtml(s.source)}</span>
+            <span style="font-family:var(--mono);color:var(--success)">${s.score}%</span>
+          </div>
+        `).join('')}
+      </div>
+      <div>
+        <div style="font-size:11px;color:var(--warning);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">WARM SOURCES (10-30%)</div>
+        ${warmSources.length === 0 ? '<div style="color:var(--dim);font-size:12px">Nenhum source warm</div>' : ''}
+        ${warmSources.map(s => `
+          <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
+            <span>${escapeHtml(s.source)}</span>
+            <span style="font-family:var(--mono);color:var(--warning)">${s.score}%</span>
+          </div>
+        `).join('')}
+      </div>
+      <div>
+        <div style="font-size:11px;color:var(--danger);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">COLD SOURCES (<10%)</div>
+        ${coldSources.length === 0 ? '<div style="color:var(--dim);font-size:12px">Nenhum source cold</div>' : ''}
+        ${coldSources.map(s => `
+          <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
+            <span>${escapeHtml(s.source)}</span>
+            <span style="font-family:var(--mono);color:var(--danger)">${s.score}%</span>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+
+  el.innerHTML = html;
+}
+
 // Auto-load
 document.addEventListener('DOMContentLoaded', () => { setTimeout(loadContatoDireto, 2000); });
 setInterval(loadContatoDireto, 30000);
+
+// ===== AUTOMAÇÕES WHATSAPP =====
+let _autoSequenceCache = [];
+
+function autoSwitchInnerTab(tab, btn) {
+  // Atualizar tabs
+  document.querySelectorAll('#panel-automacoes .sdr-layer-tab').forEach(t => {
+    t.style.borderBottom = '2px solid transparent';
+  });
+  btn.style.borderBottom = '2px solid var(--purple)';
+
+  // Esconder todos
+  document.getElementById('auto-tab-sequence').style.display = 'none';
+  document.getElementById('auto-tab-followup').style.display = 'none';
+  document.getElementById('auto-tab-history').style.display = 'none';
+
+  // Mostrar selecionado
+  document.getElementById('auto-tab-' + tab).style.display = 'block';
+
+  // Carregar dados
+  if (tab === 'sequence') loadAutoSequenceLeads();
+  else if (tab === 'followup') loadAutoFollowupCounts();
+  else if (tab === 'history') loadAutoHistory();
+}
+
+async function loadAutomacoes() {
+  try {
+    const r = await authFetch('/api/automation/stats');
+    const d = await r.json();
+    document.getElementById('auto-total').textContent = d.total_leads || 0;
+    document.getElementById('auto-sequence').textContent = d.in_sequence || 0;
+    document.getElementById('auto-today').textContent = d.completed_today || 0;
+    document.getElementById('auto-followup').textContent = d.pending_followups || 0;
+    document.getElementById('auto-urgency').textContent = d.urgency_messages_sent || 0;
+  } catch (e) {
+    console.error('Erro ao carregar stats de automação:', e);
+  }
+}
+
+async function loadAutoSequenceLeads() {
+  const area = document.getElementById('auto-sequence-table');
+  area.innerHTML = '<div class="loading"><span class="spinner"></span> carregando leads...</div>';
+
+  try {
+    const r = await authFetch('/api/automation/sequence-leads');
+    const d = await r.json();
+
+    if (!d || d.length === 0) {
+      area.innerHTML = '<div class="empty">Nenhum lead na sequência</div>';
+      return;
+    }
+
+    _autoSequenceCache = d;
+    renderAutoSequenceTable(d);
+  } catch (e) {
+    area.innerHTML = '<div class="empty">Erro: ' + escapeHtml(String(e)) + '</div>';
+  }
+}
+
+function renderAutoSequenceTable(leads) {
+  const area = document.getElementById('auto-sequence-table');
+  const dayFilter = document.getElementById('autoDayFilter')?.value || '';
+
+  let filtered = leads;
+  if (dayFilter) {
+    filtered = leads.filter(l => l.current_day === parseInt(dayFilter));
+  }
+
+  if (filtered.length === 0) {
+    area.innerHTML = '<div class="empty">Nenhum lead neste dia</div>';
+    return;
+  }
+
+  const dayLabels = ['', 'Boas-vindas', 'Tutorial', 'Caso Sucesso', 'Dica Avançada', 'Prova Social', 'Oferta', 'Urgência'];
+
+  let html = '<div style="overflow-x:auto"><table class="table"><thead><tr>' +
+    '<th>Lead</th><th>Telefone</th><th>Segmento</th><th>Dia</th><th>Score</th><th>Trial expira</th><th>Ações</th>' +
+    '</tr></thead><tbody>';
+
+  for (const l of filtered) {
+    const scoreColor = l.engagement_score >= 70 ? 'var(--success)' : l.engagement_score >= 40 ? 'var(--warning)' : 'var(--danger)';
+    const dayBadge = dayFilter ? '' : `<span style="display:inline-block;padding:2px 8px;background:var(--purple-900);color:var(--purple-300);border-radius:4px;font-size:10px;margin-left:4px">${dayLabels[l.current_day] || 'D' + l.current_day}</span>`;
+
+    html += `<tr>
+      <td><strong>${escapeHtml(l.nome)}</strong></td>
+      <td style="font-family:var(--mono)">${escapeHtml(l.telefone || '—')}</td>
+      <td>${escapeHtml(l.segmento || '—')}</td>
+      <td><strong>Dia ${l.current_day}</strong>${dayBadge}</td>
+      <td style="font-family:var(--mono);color:${scoreColor}">${l.engagement_score || 0}</td>
+      <td style="font-size:11px">${l.trial_expires_at ? dt(l.trial_expires_at) : '—'}</td>
+      <td>
+        <div style="display:flex;gap:6px">
+          <button class="btn" onclick="autoSendCustom('${l.id}', '${escapeAttr(l.nome)}')" style="font-size:10px">&#9998; Enviar msg</button>
+          <button class="btn" onclick="autoSkipDay('${l.id}')" style="font-size:10px">&#9197; Pular</button>
+        </div>
+      </td>
+    </tr>`;
+  }
+
+  html += '</tbody></table></div>';
+  area.innerHTML = html;
+}
+
+async function loadAutoFollowupCounts() {
+  document.getElementById('auto-fu-noopen').textContent = '?';
+  document.getElementById('auto-fu-noresp').textContent = '?';
+  document.getElementById('auto-fu-interest').textContent = '?';
+  document.getElementById('auto-fu-cart').textContent = '?';
+  // Placeholder - counts viriam do backend
+  setTimeout(() => {
+    document.getElementById('auto-fu-noopen').textContent = Math.floor(Math.random() * 20);
+    document.getElementById('auto-fu-noresp').textContent = Math.floor(Math.random() * 15);
+    document.getElementById('auto-fu-interest').textContent = Math.floor(Math.random() * 10);
+    document.getElementById('auto-fu-cart').textContent = Math.floor(Math.random() * 8);
+  }, 500);
+}
+
+async function loadAutoHistory() {
+  const area = document.getElementById('auto-history-table');
+  area.innerHTML = '<div class="loading"><span class="spinner"></span> carregando histórico...</div>';
+
+  // Placeholder - implementação real buscar do backend
+  setTimeout(() => {
+    area.innerHTML = '<div class="empty">Histórico de mensagens automáticas</div>';
+  }, 1000);
+}
+
+// Triggers
+async function autoTriggerAll() {
+  if (!confirm('Disparar TODAS as automações pendentes?\n\nSequência 7 dias + Follow-ups + Urgência')) return;
+  try {
+    const r = await authFetch('/api/automation/trigger', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ trigger_type: 'all' })
+    });
+    const d = await r.json();
+    toast(d.success ? `Automação disparada: ${d.triggered} msgs` : 'Erro: ' + (d.errors?.join(', ') || 'desconhecido'), d.success ? 'success' : 'error');
+    loadAutomacoes();
+  } catch (e) {
+    toast('Erro: ' + e.message, 'error');
+  }
+}
+
+async function autoTriggerSequence() {
+  if (!confirm('Disparar sequência de 7 dias para leads pendentes?')) return;
+  try {
+    const r = await authFetch('/api/automation/trigger', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ trigger_type: 'sequence_7_days' })
+    });
+    const d = await r.json();
+    toast(d.success ? 'Sequência disparada!' : 'Erro', d.success ? 'success' : 'error');
+    loadAutoSequenceLeads();
+  } catch (e) {
+    toast('Erro: ' + e.message, 'error');
+  }
+}
+
+async function autoTriggerFollowup() {
+  if (!confirm('Disparar todos os follow-ups pendentes?')) return;
+  try {
+    const r = await authFetch('/api/automation/trigger', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ trigger_type: 'followup' })
+    });
+    const d = await r.json();
+    toast(d.success ? 'Follow-ups disparados!' : 'Erro', d.success ? 'success' : 'error');
+  } catch (e) {
+    toast('Erro: ' + e.message, 'error');
+  }
+}
+
+async function autoTriggerUrgency() {
+  if (!confirm('Disparar mensagens de urgência (trial expirando)?')) return;
+  try {
+    const r = await authFetch('/api/automation/trigger', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ trigger_type: 'urgency' })
+    });
+    const d = await r.json();
+    toast(d.success ? 'Mensagens de urgência disparadas!' : 'Erro', d.success ? 'success' : 'error');
+    loadAutomacoes();
+  } catch (e) {
+    toast('Erro: ' + e.message, 'error');
+  }
+}
+
+async function autoTriggerFollowupType(type) {
+  const typeNames = { no_open: 'não abriram', no_response: 'sem resposta', interest: 'com interesse', cart: 'recuperação' };
+  if (!confirm(`Disparar follow-up para leads que ${typeNames[type]}?`)) return;
+  toast(`Follow-up "${typeNames[type]}" disparado (mock)`, 'success');
+}
+
+async function autoSkipDay(leadId) {
+  if (!confirm('Pular um dia para este lead?')) return;
+  try {
+    const r = await authFetch(`/api/automation/sequence/${leadId}/skip`, { method: 'POST' });
+    const d = await r.json();
+    if (d.success) {
+      toast('Dia pulado!');
+      loadAutoSequenceLeads();
+    } else {
+      toast('Erro ao pular dia', 'error');
+    }
+  } catch (e) {
+    toast('Erro: ' + e.message, 'error');
+  }
+}
+
+function autoSendCustom(leadId, leadName) {
+  openModal('Enviar mensagem', `
+    <label>Lead: <strong>${escapeHtml(leadName)}</strong></label>
+    <label style="margin-top:10px">Mensagem (max 300 chars)</label>
+    <textarea id="auto-custom-msg" rows="5" style="width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:10px;border-radius:6px;font-size:13px" maxlength="300" placeholder="Digite sua mensagem..."></textarea>
+    <div style="text-align:right;font-size:11px;color:var(--muted);margin-top:4px"><span id="auto-msg-count">0</span>/300</div>
+  `, async () => {
+    const msg = document.getElementById('auto-custom-msg')?.value?.trim();
+    if (!msg) { toast('Digite uma mensagem', 'error'); return; }
+    if (msg.length > 300) { toast('Máximo 300 caracteres', 'error'); return; }
+    try {
+      const r = await authFetch('/api/automation/send-custom', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lead_id: leadId, message: msg })
+      });
+      const d = await r.json();
+      if (d.success) {
+        toast('Mensagem enviada!', 'success');
+        closeModal();
+      } else {
+        toast(d.detail || 'Erro ao enviar', 'error');
+      }
+    } catch (e) {
+      toast('Erro: ' + e.message, 'error');
+    }
+  });
+  setTimeout(() => {
+    const ta = document.getElementById('auto-custom-msg');
+    if (ta) ta.addEventListener('input', () => {
+      document.getElementById('auto-msg-count').textContent = ta.value.length;
+    });
+  }, 100);
+}
+
+// Auto-load automações
+document.addEventListener('DOMContentLoaded', () => {
+  setTimeout(loadAutomacoes, 2000);
+});
+setInterval(loadAutomacoes, 60000);
 
 </script>
 

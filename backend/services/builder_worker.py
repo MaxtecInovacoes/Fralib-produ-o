@@ -289,6 +289,30 @@ def render_site_with_builder(
     except Exception as _v_err:
         logger.debug(f"[builder_worker] inject variation falhou: {_v_err}")
 
+    # Sprint 14.x: injeta color_palette do nicho_briefing (cores extraídas do briefing livre)
+    # para o renderer usar cores solicitadas pelo usuário em vez do archetype fixo
+    try:
+        _palette = None
+        if hasattr(prd_or_facts, "paleta_cores"):
+            _palette = getattr(prd_or_facts, "paleta_cores", None)
+        elif isinstance(prd_or_facts, dict):
+            # Tenta direto no dict
+            _palette = prd_or_facts.get("color_palette") or prd_or_facts.get("paleta_cores")
+            # Tenta em sub-keys
+            if not _palette:
+                _nicho = prd_or_facts.get("nicho_briefing")
+                if isinstance(_nicho, dict):
+                    _palette = _nicho.get("paleta_cores") or _nicho.get("color_palette")
+                elif hasattr(_nicho, "paleta_cores"):
+                    _palette = getattr(_nicho, "paleta_cores", None)
+        if isinstance(_palette, dict) and _palette:
+            # Injeta como AMBAS as chaves para compatibilidade
+            manifest["prompt_agent"]["context"]["paleta_cores"] = _palette
+            manifest["prompt_agent"]["context"]["color_palette"] = _palette
+            logger.info(f"[builder_worker] paleta_cores injetado: {_palette}")
+    except Exception as _p_err:
+        logger.debug(f"[builder_worker] inject paleta_cores falhou: {_p_err}")
+
     manifest_path = write_builder_job_manifest(manifest, manifest_dir=manifest_dir)
 
     workspace_dir = Path(manifest["sandbox"]["workspace"]).resolve()

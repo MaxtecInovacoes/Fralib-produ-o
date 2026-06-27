@@ -410,6 +410,32 @@ def _build_lead_briefing_block(facts: dict[str, Any] | None = None) -> str:
     import json as _json
     json_ld_str = _json.dumps(json_ld, ensure_ascii=False, indent=2)
 
+    # Sprint 14.x: Extrair cores do briefing do usuário
+    # Prioridade: paleta_cores (NichoBriefing) > color_palette (DesignerPRD)
+    _paleta = None
+    if facts:
+        _paleta = facts.get("paleta_cores") or facts.get("color_palette") or {}
+        # Tentar em sub-chaves
+        if not _paleta:
+            _nicho = facts.get("nicho_briefing")
+            if isinstance(_nicho, dict):
+                _paleta = _nicho.get("paleta_cores") or _nicho.get("color_palette") or {}
+            elif hasattr(_nicho, "paleta_cores"):
+                _paleta = getattr(_nicho, "paleta_cores", {}) or {}
+
+    if _paleta and _paleta.get("primary"):
+        colors_block = f"""
+CORES SOLICITADAS PELO USUÁRIO (OBRIGATÓRIO USAR ESTAS CORES):
+- Primary: {_paleta.get('primary', '')}
+- Secondary: {_paleta.get('secondary', '')}
+- Accent: {_paleta.get('accent', '')}
+- Background: {_paleta.get('background', '')}
+- Text: {_paleta.get('text', '')}
+ESSAS CORES FORAM SOLICITADAS PELO USUÁRIO NO FORMULÁRIO — RESPEITE-AS.
+"""
+    else:
+        colors_block = ""
+
     return f"""
 
 LEAD BRIEFING — DADOS REAIS CONFIRMADOS (Sprint 12.12 — NAO INVENTAR):
@@ -421,6 +447,8 @@ Cidade: {city or '(nao informada)'}
 Telefone/WhatsApp: {phone or '(nao informado)'}
 Endereco: {address or '(nao informado)'}
 Rating: {rating or '(nao informado)'} | Reviews: {reviews or '(nao informado)'}
+
+{colors_block}
 
 SERVICOS CONFIRMADOS (use EXATAMENTE estes, NAO inventar):
 {services_block}

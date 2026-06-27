@@ -97,7 +97,7 @@ import tenant_api_keys
 import metrics_endpoints
 import hermes_endpoints
 import pipeline_tempo_endpoints
-
+import automation_endpoints
 
 from contextlib import asynccontextmanager
 
@@ -397,6 +397,16 @@ app.include_router(closer_endpoints.router)
 app.include_router(tenant_api_keys.router)
 app.include_router(metrics_endpoints.router)
 app.include_router(hermes_endpoints.router)
+app.include_router(automation_endpoints.router)
+
+# Analytics endpoints
+try:
+    import analytics_endpoints
+    app.include_router(analytics_endpoints.router)
+    print("[Server] analytics_endpoints registrado")
+except ImportError as e:
+    print(f"[Server] analytics_endpoints nao disponivel: {e}")
+
 try:
     import admin_services_endpoints
     app.include_router(admin_services_endpoints.router)
@@ -431,6 +441,13 @@ try:
     print("[Server] cron_outreach_endpoints registrado (Sprint 14.4)")
 except ImportError as e:
     print(f"[Server] cron_outreach_endpoints nao disponivel: {e}")
+
+try:
+    import cron_automation_endpoints
+    app.include_router(cron_automation_endpoints.router)
+    print("[Server] cron_automation_endpoints registrado")
+except ImportError as e:
+    print(f"[Server] cron_automation_endpoints nao disponivel: {e}")
 
 try:
     import diagnostico_endpoints

@@ -1,13 +1,96 @@
 """Agente de Inteligência de Nicho Local — analisa dados brutos do lead + concorrentes
 e devolve briefing estruturado para os próximos agentes."""
 
-import sys, os
+import re
+import sys
+import os
 
 sys.path.insert(0, os.path.dirname(__file__))
 
 from handoff_types import NichoBriefing
 from llm_direct import call_claude
 from llm_config import AGENT_MODEL_MAP
+
+# Sprint 14.x: Mapeamento de cores nominais para hex
+# Usado para extrair cores do texto livre do briefing.
+NOMINAL_COLOR_MAP = {
+    # Roxo/Violeta
+    "roxo": "#800080", "violeta": "#800080", "purple": "#800080",
+    "lilás": "#C8A2C8", "lilas": "#C8A2C8",
+    # Branco/Cinza
+    "branco": "#FFFFFF", "white": "#FFFFFF",
+    "preto": "#1a1a1a", "black": "#1a1a1a",
+    "cinza": "#6B7280", "gray": "#6B7280", "cinza": "#6B7280",
+    # Verde
+    "verde": "#22C55A", "green": "#22C55A",
+    "verde-escuro": "#166534", "verde escuro": "#166534",
+    # Azul
+    "azul": "#3B82F6", "blue": "#3B82F6",
+    "azul-escuro": "#1E40AF", "azul escuro": "#1E40AF",
+    "azul-royal": "#4169E1", "azul royal": "#4169E1",
+    # Vermelho/Rosa
+    "vermelho": "#EF4444", "red": "#EF4444",
+    "rosa": "#EC4899", "pink": "#EC4899",
+    # Amarelo/Dourado/Laranja
+    "amarelo": "#EAB308", "yellow": "#EAB308",
+    "dourado": "#D4AF37", "gold": "#D4AF37",
+    "laranja": "#F97316", "orange": "#F97316",
+    # Outras
+    "marrom": "#8B4513", "brown": "#8B4513",
+    "bege": "#F5F5DC", "bege": "#F5F5DC",
+    "turquesa": "#40E0D0", "turquoise": "#40E0D0",
+    " coral": "#FF7F50", "coral": "#FF7F50",
+    "salmão": "#FA8072", "salmao": "#FA8072",
+}
+
+
+def parse_colors_from_briefing_text(text: str) -> dict:
+    """Extrai cores do texto livre do briefing.
+
+    Reconhece:
+    - Hex codes diretos (#RGB ou #RRGGBB)
+    - Nomes de cores em português/inglês
+
+    Args:
+        text: Texto livre do briefing do lead
+
+    Returns:
+        Dict com chaves 'primary', 'secondary', 'accent' e valores hex
+    """
+    if not text or not isinstance(text, str):
+        return {}
+
+    result = {}
+
+    # 1. Hex codes diretos (#RGB ou #RRGGBB)
+    hex_pattern = r'#([0-9A-Fa-f]{6}|[0-9A-Fa-f]{3})\b'
+    hex_matches = re.findall(hex_pattern, text, re.IGNORECASE)
+    if hex_matches:
+        hex_val = hex_matches[0]
+        if len(hex_val) == 3:
+            hex_val = ''.join(c * 2 for c in hex_val)
+        result["primary"] = f"#{hex_val.upper()}"
+
+    # 2. Nomes de cores nominais (busca em texto lower)
+    text_lower = text.lower()
+    found_colors = []
+    for color_name, hex_code in NOMINAL_COLOR_MAP.items():
+        if color_name in text_lower:
+            found_colors.append((color_name, hex_code))
+
+    # Remove duplicatas (mesmo hex)
+    seen = set()
+    for _name, hex_code in found_colors:
+        if hex_code not in seen:
+            seen.add(hex_code)
+            if "primary" not in result:
+                result["primary"] = hex_code
+            elif "secondary" not in result:
+                result["secondary"] = hex_code
+            elif "accent" not in result:
+                result["accent"] = hex_code
+
+    return result
 
 # Sprint 5 (v1.8) - tracing opt-in (zero overhead se FRALIB_TRACING=0)
 try:
@@ -122,6 +205,11 @@ def _gerar_briefing_impl(
     _reviews = dados_lead.get("reviews", [])
     _atributos = dados_lead.get("atributos", [])
     _faixa_preco = dados_lead.get("faixa_preco", "")
+    _briefing_text = dados_lead.get("briefing", "")  # Campo livre do formulário
+
+    # Sprint 14.x: Extrair cores do briefing livre
+    # Ex: "Site para academia feminina, cores roxo e branco" → {"primary": "#800080", "secondary": "#FFFFFF"}
+    _paleta_cores = parse_colors_from_briefing_text(_briefing_text)
 
     _reviews_text = []
     for r in _reviews[:6]:
@@ -235,4 +323,6 @@ Gere o briefing seguindo o formato obrigatório: MARKDOWN primeiro, depois JSON.
         confianca=_dados.get("confianca", "media"),
         dados_ausentes=_dados.get("dados_ausentes", []),
         competidores=_competidores[:6],
+        # Sprint 14.x: cores extraídas do briefing livre
+        paleta_cores=_paleta_cores,
     )

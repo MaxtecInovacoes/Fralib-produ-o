@@ -1,0 +1,1 @@
+          <div class="option" data-value="Só pesquisando" onclick="selectOption('prazo', this, 5)">

@@ -350,20 +350,55 @@ def _gerar_arquiteto_mestre_prd_impl(
     _tokens = _design_dna.get("tokens") or _design_dict.get("tokens", {})
     _tokens["_craft"] = _design_dict.get("craft", {})
     _tokens["_animation_profile"] = _design_dict.get("animation_profile", {})
-    dados["color_palette"] = {
-        "primary": _tokens.get("--fg", ""),
-        "secondary": _tokens.get("--surface", ""),
-        "accent": _tokens.get("--accent", ""),
-        "background": _tokens.get("--bg", ""),
-        "text": _tokens.get("--fg", ""),
-        "surface": _tokens.get("--surface", ""),
-        "muted": _tokens.get("--muted", ""),
-        "border": _tokens.get("--border", ""),
-        "tokens_oklch": _tokens,
-        "hero_style": _design_dict.get("hero_style")
-        or get_hero_style(_design_dict.get("dir_key", "")),
-        "reasoning": f"OKLch deterministico. Direcao={_design_dict.get('dir_nome', '')} Nicho={segmento} Tier={caio_tier}.",
-    }
+
+    # Sprint 14.x: PRIORIDADE DE CORES - briefing do usuário SOBRESCREVE design_dna
+    # Se o usuário especificou cores no formulário (ex: "cores roxo e branco"),
+    # usar essas cores em vez das cores determinísticas do archetype.
+    _paleta_briefing = None
+    if nicho_briefing and hasattr(nicho_briefing, "paleta_cores") and nicho_briefing.paleta_cores:
+        _paleta_briefing = nicho_briefing.paleta_cores
+        print(f"[Arquiteto Mestre] Usando cores do briefing: {_paleta_briefing}")
+
+    if _paleta_briefing and _paleta_briefing.get("primary"):
+        # Usar cores do briefing do usuário (PRIORIDADE MÁXIMA)
+        dados["color_palette"] = {
+            "primary": _paleta_briefing.get("primary", _tokens.get("--fg", "")),
+            "primary_contrast": _paleta_briefing.get("primary_contrast", "#ffffff"),
+            "secondary": _paleta_briefing.get("secondary", _tokens.get("--surface", "")),
+            "accent": _paleta_briefing.get("accent", _paleta_briefing.get("primary", _tokens.get("--accent", ""))),
+            "background": _paleta_briefing.get("background") or _tokens.get("--bg", ""),
+            "bg_dark": _paleta_briefing.get("bg_dark") or _tokens.get("--bg", ""),
+            "bg_light": _paleta_briefing.get("bg_light") or _tokens.get("--surface", ""),
+            "text": _paleta_briefing.get("text") or _tokens.get("--fg", ""),
+            "text_dark": _paleta_briefing.get("text_dark") or "#09130f",
+            "text_light": _paleta_briefing.get("text_light") or "#f8faf7",
+            "surface": _paleta_briefing.get("surface") or _tokens.get("--surface", ""),
+            "muted": _tokens.get("--muted", ""),
+            "border": _tokens.get("--border", ""),
+            "tokens_oklch": _tokens,
+            "hero_style": _design_dict.get("hero_style")
+            or get_hero_style(_design_dict.get("dir_key", "")),
+            "source": "briefing_usuario",
+            "reasoning": f"Cores do briefing: {_paleta_briefing}. Nicho={segmento} Tier={caio_tier}.",
+        }
+        # Também guardar como paleta_cores para compatibilidade com builder_worker
+        dados["paleta_cores"] = _paleta_briefing
+    else:
+        # Fallback: usar design_dna determinístico (comportamento original)
+        dados["color_palette"] = {
+            "primary": _tokens.get("--fg", ""),
+            "secondary": _tokens.get("--surface", ""),
+            "accent": _tokens.get("--accent", ""),
+            "background": _tokens.get("--bg", ""),
+            "text": _tokens.get("--fg", ""),
+            "surface": _tokens.get("--surface", ""),
+            "muted": _tokens.get("--muted", ""),
+            "border": _tokens.get("--border", ""),
+            "tokens_oklch": _tokens,
+            "hero_style": _design_dict.get("hero_style")
+            or get_hero_style(_design_dict.get("dir_key", "")),
+            "reasoning": f"OKLch deterministico. Direcao={_design_dict.get('dir_nome', '')} Nicho={segmento} Tier={caio_tier}.",
+        }
     _archetype = _design_dna["archetype"]
     _visual_seed = _design_dna["visual_seed"]
     dados["visual_direction"] = {

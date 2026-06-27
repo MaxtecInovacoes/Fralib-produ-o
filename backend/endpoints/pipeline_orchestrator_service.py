@@ -1841,6 +1841,22 @@ async def executar_pipeline_completo(
                 _log("  Contracts: requirements + visual OK", "info")
             except Exception as _pack_err:
                 logger.warning(f"[Pipeline] Design reference pack skip: {_pack_err}")
+
+        # Sprint 14.x: injetar paleta_cores do nicho_briefing no PRD
+        # para o renderer usar cores solicitadas pelo usuário ("cores roxo e branco")
+        try:
+            if (
+                hasattr(state, "nicho_briefing")
+                and state.nicho_briefing
+                and hasattr(state.nicho_briefing, "paleta_cores")
+            ):
+                _pc = getattr(state.nicho_briefing, "paleta_cores", None)
+                if _pc and isinstance(_pc, dict) and _pc.get("primary"):
+                    state.prd_arquiteto.paleta_cores = _pc
+                    print(f"[Pipeline] paleta_cores injetada no PRD: {_pc}")
+        except Exception as _pc_err:
+            print(f"[Pipeline] paleta_cores injeção falhou: {_pc_err}")
+
         # Salvar PRD no trace para auditoria
         try:
             import json as _json

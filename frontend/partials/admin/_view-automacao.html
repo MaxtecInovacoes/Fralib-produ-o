@@ -1,0 +1,1048 @@
+<!-- ========== VIEW: AUTOMAÇÃO WHATSAPP ========== -->
+
+<section class="view-section" id="view-automacao">
+
+  <div class="automacao-header">
+    <h2>&#128172; AUTOMAÇÃO WHATSAPP</h2>
+    <div class="automacao-actions">
+      <button class="btn-auto-action" onclick="triggerAllAutomation()" title="Disparar todas automações">
+        <span class="icon">&#9654;</span> DISPARAR TUDO
+      </button>
+      <button class="btn-auto-action secondary" onclick="refreshAutomationStats()" title="Atualizar estatísticas">
+        <span class="icon">&#8635;</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Stats Cards -->
+  <div class="automacao-stats" id="automacaoStats">
+    <div class="stat-card">
+      <div class="stat-value" id="statTotalLeads">0</div>
+      <div class="stat-label">TOTAL LEADS</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" id="statInSequence">0</div>
+      <div class="stat-label">EM SEQUÊNCIA</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" id="statCompletedToday">0</div>
+      <div class="stat-label">HOJE</div>
+    </div>
+    <div class="stat-card warning">
+      <div class="stat-value" id="statPendingFollowup">0</div>
+      <div class="stat-label">FOLLOW-UP</div>
+    </div>
+    <div class="stat-card danger">
+      <div class="stat-value" id="statUrgency">0</div>
+      <div class="stat-label">URGÊNCIA</div>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="automacao-tabs">
+    <button class="auto-tab active" onclick="switchAutomationTab('sequence')">
+      &#128197; SEQUÊNCIA 7 DIAS
+    </button>
+    <button class="auto-tab" onclick="switchAutomationTab('followup')">
+      &#128259; FOLLOW-UPS
+    </button>
+    <button class="auto-tab" onclick="switchAutomationTab('scoring')">
+      &#9733; LEAD SCORING
+    </button>
+    <button class="auto-tab" onclick="switchAutomationTab('history')">
+      &#128203; HISTÓRICO
+    </button>
+  </div>
+
+  <!-- Tab: Sequência 7 Dias -->
+  <div id="automacao-sequence" class="automacao-content">
+    <div class="sequence-header">
+      <div class="sequence-day-selector">
+        <span class="label">Dia:</span>
+        <select id="sequenceDayFilter" onchange="loadSequenceLeads()">
+          <option value="">Todos</option>
+          <option value="1">Dia 1 - Boas-vindas</option>
+          <option value="2">Dia 2 - Tutorial</option>
+          <option value="3">Dia 3 - Sucesso</option>
+          <option value="4">Dia 4 - Dica</option>
+          <option value="5">Dia 5 - Prova</option>
+          <option value="6">Dia 6 - Oferta</option>
+          <option value="7">Dia 7 - Urgência</option>
+        </select>
+      </div>
+      <div class="sequence-actions">
+        <button class="btn-sequence-action" onclick="triggerSequence()">
+          &#9654; INICIAR SEQUÊNCIA
+        </button>
+      </div>
+    </div>
+
+    <div class="sequence-timeline" id="sequenceTimeline">
+      <!-- Timeline das mensagens da sequência -->
+    </div>
+
+    <div class="leads-table-wrap">
+      <table class="leads-auto-table">
+        <thead>
+          <tr>
+            <th>LEAD</th>
+            <th>TELEFONE</th>
+            <th>SEGMENTO</th>
+            <th>DIA ATUAL</th>
+            <th>SCORE</th>
+            <th>TRIAL expira</th>
+            <th>AÇÕES</th>
+          </tr>
+        </thead>
+        <tbody id="sequenceLeadsBody">
+          <tr><td colspan="7"><div class="empty-state">Carregando leads...</div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Tab: Follow-ups -->
+  <div id="automacao-followup" class="automacao-content" style="display:none">
+    <div class="followup-header">
+      <div class="followup-types">
+        <div class="followup-card" onclick="triggerFollowup('no_open')">
+          <div class="followup-icon">&#128064;</div>
+          <div class="followup-info">
+            <div class="followup-title">Não abriram</div>
+            <div class="followup-desc">Leads com site pronto mas sem acesso</div>
+          </div>
+          <div class="followup-count" id="followupNoOpenCount">0</div>
+        </div>
+        <div class="followup-card" onclick="triggerFollowup('no_response')">
+          <div class="followup-icon">&#128172;</div>
+          <div class="followup-info">
+            <div class="followup-title">Sem resposta</div>
+            <div class="followup-desc">Mensagem enviada mas não respondeu</div>
+          </div>
+          <div class="followup-count" id="followupNoResponseCount">0</div>
+        </div>
+        <div class="followup-card" onclick="triggerFollowup('interest')">
+          <div class="followup-icon">&#128150;</div>
+          <div class="followup-info">
+            <div class="followup-title">Demonstraram interesse</div>
+            <div class="followup-desc">Múltiplas interações positivas</div>
+          </div>
+          <div class="followup-count" id="followupInterestCount">0</div>
+        </div>
+        <div class="followup-card" onclick="triggerFollowup('cart')">
+          <div class="followup-icon">&#128722;</div>
+          <div class="followup-info">
+            <div class="followup-title">Recuperação</div>
+            <div class="followup-desc">Site criado mas não finalizado</div>
+          </div>
+          <div class="followup-count" id="followupCartCount">0</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="leads-table-wrap">
+      <table class="leads-auto-table">
+        <thead>
+          <tr>
+            <th>TIPO</th>
+            <th>LEAD</th>
+            <th>ÚLTIMA INTERAÇÃO</th>
+            <th>STATUS</th>
+            <th>AÇÃO</th>
+          </tr>
+        </thead>
+        <tbody id="followupLeadsBody">
+          <tr><td colspan="5"><div class="empty-state">Selecione um tipo de follow-up acima</div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Tab: Lead Scoring -->
+  <div id="automacao-scoring" class="automacao-content" style="display:none">
+    <div class="scoring-header">
+      <div class="scoring-info">
+        <h3>Cálculo de Score</h3>
+        <p>Score baseado em engajamento (0-100)</p>
+      </div>
+      <div class="scoring-legend">
+        <div class="legend-item high">&#9679; Alto (70+)</div>
+        <div class="legend-item medium">&#9679; Médio (40-69)</div>
+        <div class="legend-item low">&#9679; Baixo (0-39)</div>
+      </div>
+    </div>
+
+    <div class="leads-table-wrap">
+      <table class="leads-auto-table scoring">
+        <thead>
+          <tr>
+            <th>LEAD</th>
+            <th>RESPOSTAS</th>
+            <th>PERGUNTAS</th>
+            <th>DÚVIDAS</th>
+            <th>DIAS ATIVO</th>
+            <th>SCORE</th>
+            <th>NÍVEL</div>
+            <th>AÇÃO</th>
+          </tr>
+        </thead>
+        <tbody id="scoringLeadsBody">
+          <tr><td colspan="8"><div class="empty-state">Carregando leads...</div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Tab: Histórico -->
+  <div id="automacao-history" class="automacao-content" style="display:none">
+    <div class="history-filters">
+      <select id="historyTypeFilter" onchange="loadHistory()">
+        <option value="">Todos os tipos</option>
+        <option value="automation">Automação</option>
+        <option value="followup">Follow-up</option>
+        <option value="urgency">Urgência</option>
+        <option value="upsell">Upsell</option>
+      </select>
+      <input type="date" id="historyDateFrom">
+      <input type="date" id="historyDateTo">
+      <button class="btn-small" onclick="loadHistory()">Filtrar</button>
+    </div>
+
+    <div class="leads-table-wrap">
+      <table class="leads-auto-table history">
+        <thead>
+          <tr>
+            <th>DATA</th>
+            <th>LEAD</th>
+            <th>TIPO</th>
+            <th>ETAPA</th>
+            <th>DIREÇÃO</th>
+            <th>MENSAGEM</th>
+          </tr>
+        </thead>
+        <tbody id="historyBody">
+          <tr><td colspan="6"><div class="empty-state">Carregando histórico...</div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</section>
+
+<!-- Modal: Visualizar/Editar Mensagem -->
+<div id="modalAutomationMessage" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:9999;align-items:center;justify-content:center;">
+  <div style="background:#0a0a0f;border:1px solid var(--fl-border);border-radius:12px;padding:28px;max-width:600px;width:90%;max-height:80vh;overflow-y:auto;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+      <h3 style="color:var(--fl-text);font-family:var(--fl-font-brand);letter-spacing:1px;margin:0;" id="modalMsgTitle">MENSAGEM</h3>
+      <button onclick="closeModalMessage()" style="background:none;border:none;color:var(--fl-text-muted);font-size:24px;cursor:pointer;">&times;</button>
+    </div>
+    <input type="hidden" id="modalMsgLeadId">
+    <div style="margin-bottom:16px;">
+      <label style="font-size:11px;color:var(--fl-text-muted);font-family:var(--fl-font-mono);display:block;margin-bottom:6px;">MENSAGEM (max 300 chars)</label>
+      <textarea id="modalMsgContent" style="width:100%;height:150px;background:var(--fl-bg-card);border:1px solid var(--fl-border);color:var(--fl-text);padding:12px;border-radius:8px;font-size:13px;resize:vertical;" maxlength="300"></textarea>
+      <div style="text-align:right;font-size:11px;color:var(--fl-text-dim);margin-top:4px;"><span id="modalMsgCount">0</span>/300</div>
+    </div>
+    <div style="display:flex;gap:12px;justify-content:flex-end;">
+      <button onclick="closeModalMessage()" style="background:var(--fl-bg-card);border:1px solid var(--fl-border);color:var(--fl-text-muted);padding:10px 20px;border-radius:8px;cursor:pointer;font-family:var(--fl-font-brand);">CANCELAR</button>
+      <button onclick="sendCustomMessage()" style="background:#22c55e;border:none;color:#fff;padding:10px 20px;border-radius:8px;cursor:pointer;font-family:var(--fl-font-brand);letter-spacing:1px;">ENVIAR</button>
+    </div>
+  </div>
+</div>
+
+<style>
+/* Automação WhatsApp Styles */
+.view-section#view-automacao {
+  padding: 20px;
+}
+
+.automacao-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.automacao-header h2 {
+  font-family: var(--fl-font-brand);
+  font-size: 14px;
+  letter-spacing: 2px;
+  color: var(--fl-text);
+  margin: 0;
+}
+
+.automacao-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-auto-action {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: var(--fl-purple);
+  border: none;
+  color: #fff;
+  font-family: var(--fl-font-brand);
+  font-size: 9px;
+  letter-spacing: 1px;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.btn-auto-action:hover {
+  background: var(--fl-purple-400);
+  box-shadow: 0 0 16px rgba(147, 51, 234, 0.4);
+}
+
+.btn-auto-action.secondary {
+  background: var(--fl-bg-card);
+  border: 1px solid var(--fl-border);
+  color: var(--fl-text-muted);
+}
+
+.btn-auto-action.secondary:hover {
+  border-color: var(--fl-purple);
+  color: var(--fl-purple);
+}
+
+/* Stats */
+.automacao-stats {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.stat-card {
+  background: var(--fl-bg-card);
+  border: 1px solid var(--fl-border);
+  border-radius: 10px;
+  padding: 16px;
+  text-align: center;
+  transition: all 0.2s;
+}
+
+.stat-card:hover {
+  border-color: var(--fl-border-md);
+  transform: translateY(-2px);
+}
+
+.stat-card.warning {
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+.stat-card.warning .stat-value {
+  color: var(--fl-warning);
+}
+
+.stat-card.danger {
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.stat-card.danger .stat-value {
+  color: var(--fl-danger);
+}
+
+.stat-value {
+  font-family: var(--fl-font-mono);
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--cyan);
+  margin-bottom: 4px;
+}
+
+.stat-label {
+  font-size: 10px;
+  color: var(--fl-text-muted);
+  font-family: var(--fl-font-mono);
+  letter-spacing: 1px;
+}
+
+/* Tabs */
+.automacao-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--fl-border);
+  margin-bottom: 20px;
+}
+
+.auto-tab {
+  padding: 12px 20px;
+  background: transparent;
+  border: none;
+  color: var(--fl-text-muted);
+  font-family: var(--fl-font-ui);
+  font-size: 13px;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+}
+
+.auto-tab:hover {
+  color: var(--fl-text);
+}
+
+.auto-tab.active {
+  color: var(--fl-purple);
+  border-bottom-color: var(--fl-purple);
+}
+
+/* Content */
+.automacao-content {
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Sequence */
+.sequence-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding: 16px;
+  background: var(--fl-bg-card);
+  border: 1px solid var(--fl-border);
+  border-radius: 10px;
+}
+
+.sequence-day-selector {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sequence-day-selector .label {
+  font-size: 12px;
+  color: var(--fl-text-muted);
+  font-family: var(--fl-font-mono);
+}
+
+.sequence-day-selector select {
+  padding: 8px 16px;
+  background: var(--fl-bg);
+  border: 1px solid var(--fl-border);
+  color: var(--fl-text);
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.btn-sequence-action {
+  padding: 10px 20px;
+  background: linear-gradient(135deg, var(--fl-purple), var(--fl-purple-600));
+  border: none;
+  color: #fff;
+  font-family: var(--fl-font-brand);
+  font-size: 10px;
+  letter-spacing: 1px;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.btn-sequence-action:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(147, 51, 234, 0.4);
+}
+
+/* Timeline */
+.sequence-timeline {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+  overflow-x: auto;
+  padding: 10px 0;
+}
+
+.timeline-day {
+  flex: 1;
+  min-width: 100px;
+  padding: 12px;
+  background: var(--fl-bg-card);
+  border: 1px solid var(--fl-border);
+  border-radius: 8px;
+  text-align: center;
+  transition: all 0.2s;
+}
+
+.timeline-day.active {
+  border-color: var(--cyan);
+  background: rgba(0, 255, 179, 0.05);
+}
+
+.timeline-day.completed {
+  border-color: var(--fl-success);
+  background: rgba(34, 197, 94, 0.05);
+}
+
+.timeline-day-number {
+  font-family: var(--fl-font-brand);
+  font-size: 11px;
+  color: var(--fl-purple);
+  margin-bottom: 4px;
+}
+
+.timeline-day-label {
+  font-size: 10px;
+  color: var(--fl-text-muted);
+}
+
+/* Table */
+.leads-table-wrap {
+  background: var(--fl-bg-card);
+  border: 1px solid var(--fl-border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.leads-auto-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.leads-auto-table th {
+  padding: 12px 16px;
+  text-align: left;
+  font-family: var(--fl-font-mono);
+  font-size: 10px;
+  letter-spacing: 1px;
+  color: var(--fl-text-muted);
+  background: var(--fl-bg-surface);
+  border-bottom: 1px solid var(--fl-border);
+}
+
+.leads-auto-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--fl-border);
+  font-size: 13px;
+  color: var(--fl-text);
+}
+
+.leads-auto-table tr:last-child td {
+  border-bottom: none;
+}
+
+.leads-auto-table tr:hover td {
+  background: var(--fl-bg-hover);
+}
+
+.leads-auto-table .lead-name {
+  font-weight: 600;
+}
+
+.leads-auto-table .lead-phone {
+  font-family: var(--fl-font-mono);
+  color: var(--fl-text-muted);
+}
+
+.leads-auto-table .score-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-family: var(--fl-font-mono);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.score-badge.high {
+  background: rgba(34, 197, 94, 0.15);
+  color: var(--fl-success);
+}
+
+.score-badge.medium {
+  background: rgba(245, 158, 11, 0.15);
+  color: var(--fl-warning);
+}
+
+.score-badge.low {
+  background: rgba(239, 68, 68, 0.15);
+  color: var(--fl-danger);
+}
+
+.empty-state {
+  text-align: center;
+  padding: 40px;
+  color: var(--fl-text-dim);
+  font-size: 13px;
+}
+
+/* Action Buttons */
+.btn-small {
+  padding: 6px 12px;
+  background: var(--fl-bg);
+  border: 1px solid var(--fl-border);
+  color: var(--fl-text-muted);
+  font-family: var(--fl-font-mono);
+  font-size: 10px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.btn-small:hover {
+  border-color: var(--fl-purple);
+  color: var(--fl-purple);
+}
+
+.btn-small.primary {
+  background: var(--fl-purple);
+  border-color: var(--fl-purple);
+  color: #fff;
+}
+
+/* Followup Cards */
+.followup-header {
+  margin-bottom: 20px;
+}
+
+.followup-types {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+.followup-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: var(--fl-bg-card);
+  border: 1px solid var(--fl-border);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.followup-card:hover {
+  border-color: var(--fl-purple);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+.followup-icon {
+  font-size: 24px;
+}
+
+.followup-info {
+  flex: 1;
+}
+
+.followup-title {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--fl-text);
+  margin-bottom: 2px;
+}
+
+.followup-desc {
+  font-size: 11px;
+  color: var(--fl-text-muted);
+}
+
+.followup-count {
+  font-family: var(--fl-font-mono);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--fl-purple);
+}
+
+/* History */
+.history-filters {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+  align-items: center;
+}
+
+.history-filters select,
+.history-filters input {
+  padding: 8px 12px;
+  background: var(--fl-bg-card);
+  border: 1px solid var(--fl-border);
+  color: var(--fl-text);
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .automacao-stats {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .followup-types {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .automacao-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .followup-types {
+    grid-template-columns: 1fr;
+  }
+}
+</style>
+
+<script>
+// ============================================
+// AUTOMAÇÃO WHATSAPP - JavaScript
+// ============================================
+
+let _automacaoCache = {
+  sequence: [],
+  followup: { no_open: [], no_response: [], interest: [], cart: [] },
+  scoring: [],
+  history: []
+};
+
+// Carregar stats ao abrir a view
+function loadAutomacaoView() {
+  refreshAutomationStats();
+  loadSequenceLeads();
+}
+
+// Atualizar estatísticas
+async function refreshAutomationStats() {
+  try {
+    const resp = await fetch('/api/automation/stats', { headers: getAuthHeaders() });
+    if (resp.ok) {
+      const data = await resp.json();
+      document.getElementById('statTotalLeads').textContent = data.total_leads || 0;
+      document.getElementById('statInSequence').textContent = data.in_sequence || 0;
+      document.getElementById('statCompletedToday').textContent = data.completed_today || 0;
+      document.getElementById('statPendingFollowup').textContent = data.pending_followups || 0;
+      document.getElementById('statUrgency').textContent = data.urgency_messages_sent || 0;
+    }
+  } catch (e) {
+    console.error('Erro ao carregar stats:', e);
+  }
+}
+
+// Trocar tab de automação
+function switchAutomationTab(tab) {
+  // Remover active de todas as tabs
+  document.querySelectorAll('.auto-tab').forEach(t => t.classList.remove('active'));
+  // Adicionar active na tab clicada
+  event.target.classList.add('active');
+
+  // Esconder todos os conteúdos
+  document.querySelectorAll('.automacao-content').forEach(c => c.style.display = 'none');
+
+  // Mostrar conteúdo selecionado
+  document.getElementById('automacao-' + tab).style.display = 'block';
+
+  // Carregar dados específicos
+  if (tab === 'sequence') loadSequenceLeads();
+  else if (tab === 'followup') loadFollowupCounts();
+  else if (tab === 'scoring') loadScoringLeads();
+  else if (tab === 'history') loadHistory();
+}
+
+// Carregar leads da sequência
+async function loadSequenceLeads() {
+  const dayFilter = document.getElementById('sequenceDayFilter')?.value || '';
+
+  try {
+    let url = '/api/automation/sequence-leads';
+    if (dayFilter) url += '?status=active';
+
+    const resp = await fetch(url, { headers: getAuthHeaders() });
+    if (resp.ok) {
+      const leads = await resp.json();
+      _automacaoCache.sequence = leads;
+      renderSequenceLeads(leads, dayFilter);
+      updateTimeline(leads);
+    }
+  } catch (e) {
+    console.error('Erro ao carregar leads da sequência:', e);
+  }
+}
+
+// Renderizar leads da sequência
+function renderSequenceLeads(leads, dayFilter) {
+  const tbody = document.getElementById('sequenceLeadsBody');
+  if (!tbody) return;
+
+  let filtered = leads;
+  if (dayFilter) {
+    filtered = leads.filter(l => l.current_day === parseInt(dayFilter));
+  }
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state">Nenhum lead na sequência</div></td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = filtered.map(lead => `
+    <tr>
+      <td class="lead-name">${escapeHtml(lead.nome)}</td>
+      <td class="lead-phone">${escapeHtml(lead.telefone || '-')}</td>
+      <td>${escapeHtml(lead.segmento || '-')}</td>
+      <td><strong>Dia ${lead.current_day}</strong></td>
+      <td><span class="score-badge ${getScoreClass(lead.engagement_score)}">${lead.engagement_score || 0}</span></td>
+      <td>${lead.trial_expires_at ? formatDate(lead.trial_expires_at) : '-'}</td>
+      <td>
+        <button class="btn-small" onclick="openCustomMessage('${lead.id}', '${escapeHtml(lead.nome)}')">&#9998; EDITAR</button>
+        <button class="btn-small" onclick="skipSequenceDay('${lead.id}')">&#9197; PULAR</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+// Atualizar timeline visual
+function updateTimeline(leads) {
+  const container = document.getElementById('sequenceTimeline');
+  if (!container) return;
+
+  const days = [
+    { day: 1, label: 'Boas-vindas' },
+    { day: 2, label: 'Tutorial' },
+    { day: 3, label: 'Sucesso' },
+    { day: 4, label: 'Dica' },
+    { day: 5, label: 'Prova Social' },
+    { day: 6, label: 'Oferta' },
+    { day: 7, label: 'Urgência' }
+  ];
+
+  const counts = {};
+  leads.forEach(l => {
+    counts[l.current_day] = (counts[l.current_day] || 0) + 1;
+  });
+
+  container.innerHTML = days.map(d => {
+    const count = counts[d.day] || 0;
+    const isActive = count > 0;
+    const isCompleted = days.filter(dd => dd.day < d.day).every(dd => counts[dd.day] > 0);
+
+    return `
+      <div class="timeline-day ${isActive ? 'active' : ''} ${isCompleted ? 'completed' : ''}">
+        <div class="timeline-day-number">DIA ${d.day}</div>
+        <div class="timeline-day-label">${d.label}</div>
+        <div style="margin-top:8px;font-family:var(--fl-font-mono);font-size:12px;color:var(--cyan)">${count} leads</div>
+      </div>
+    `;
+  }).join('');
+}
+
+// Carregar counts de follow-up
+async function loadFollowupCounts() {
+  // Counts são mostrados nos cards - implementação real busca do backend
+  ['followupNoOpenCount', 'followupNoResponseCount', 'followupInterestCount', 'followupCartCount'].forEach(id => {
+    if (document.getElementById(id)) {
+      document.getElementById(id).textContent = Math.floor(Math.random() * 20); // Placeholder
+    }
+  });
+}
+
+// Trigger follow-up específico
+function triggerFollowup(type) {
+  console.log('Trigger followup:', type);
+  // Implementar chamada ao backend
+}
+
+// Carregar leads para scoring
+async function loadScoringLeads() {
+  try {
+    const resp = await fetch('/api/automation/stats', { headers: getAuthHeaders() });
+    if (resp.ok) {
+      const data = await resp.json();
+      // Placeholder - implementação real
+      document.getElementById('scoringLeadsBody').innerHTML = `
+        <tr><td colspan="8"><div class="empty-state">Carregue leads do CRM para ver scoring</div></td></tr>
+      `;
+    }
+  } catch (e) {
+    console.error('Erro ao carregar scoring:', e);
+  }
+}
+
+// Carregar histórico
+async function loadHistory() {
+  const typeFilter = document.getElementById('historyTypeFilter')?.value || '';
+  const dateFrom = document.getElementById('historyDateFrom')?.value || '';
+  const dateTo = document.getElementById('historyDateTo')?.value || '';
+
+  try {
+    let url = '/api/automation/history';
+    const params = new URLSearchParams();
+    if (typeFilter) params.append('type', typeFilter);
+    if (dateFrom) params.append('from', dateFrom);
+    if (dateTo) params.append('to', dateTo);
+    if (params.toString()) url += '?' + params.toString();
+
+    // Placeholder - implementação real busca do backend
+    document.getElementById('historyBody').innerHTML = `
+      <tr><td colspan="6"><div class="empty-state">Histórico vazio ou não disponível</div></td></tr>
+    `;
+  } catch (e) {
+    console.error('Erro ao carregar histórico:', e);
+  }
+}
+
+// Disparar sequência
+async function triggerSequence() {
+  if (!confirm('Deseja iniciar/disparar a sequência de 7 dias?')) return;
+
+  try {
+    const resp = await fetch('/api/automation/trigger', {
+      method: 'POST',
+      headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ trigger_type: 'sequence_7_days' })
+    });
+
+    if (resp.ok) {
+      const result = await resp.json();
+      showNotification(result.success ? 'Sequência disparada!' : 'Erro ao disparar', result.success);
+      refreshAutomationStats();
+      loadSequenceLeads();
+    }
+  } catch (e) {
+    console.error('Erro ao disparar sequência:', e);
+    showNotification('Erro ao disparar sequência', false);
+  }
+}
+
+// Disparar todas automações
+async function triggerAllAutomation() {
+  if (!confirm('Deseja disparar TODAS as automações pendentes?')) return;
+
+  try {
+    const resp = await fetch('/api/automation/trigger', {
+      method: 'POST',
+      headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ trigger_type: 'all' })
+    });
+
+    if (resp.ok) {
+      const result = await resp.json();
+      showNotification(`${result.triggered} automações disparadas!`, result.success);
+      refreshAutomationStats();
+    }
+  } catch (e) {
+    console.error('Erro ao disparar automações:', e);
+  }
+}
+
+// Pular dia da sequência
+async function skipSequenceDay(leadId) {
+  try {
+    const resp = await fetch(`/api/automation/sequence/${leadId}/skip`, {
+      method: 'POST',
+      headers: getAuthHeaders()
+    });
+
+    if (resp.ok) {
+      showNotification('Dia pulado com sucesso!');
+      loadSequenceLeads();
+    }
+  } catch (e) {
+    console.error('Erro ao pular dia:', e);
+  }
+}
+
+// Abrir modal de mensagem customizada
+function openCustomMessage(leadId, leadName) {
+  document.getElementById('modalMsgLeadId').value = leadId;
+  document.getElementById('modalMsgTitle').textContent = 'MENSAGEM PARA: ' + leadName.toUpperCase();
+  document.getElementById('modalMsgContent').value = '';
+  document.getElementById('modalMsgCount').textContent = '0';
+  document.getElementById('modalAutomationMessage').style.display = 'flex';
+
+  // Contador de caracteres
+  document.getElementById('modalMsgContent').oninput = function() {
+    document.getElementById('modalMsgCount').textContent = this.value.length;
+  };
+}
+
+// Fechar modal
+function closeModalMessage() {
+  document.getElementById('modalAutomationMessage').style.display = 'none';
+}
+
+// Enviar mensagem customizada
+async function sendCustomMessage() {
+  const leadId = document.getElementById('modalMsgLeadId').value;
+  const message = document.getElementById('modalMsgContent').value;
+
+  if (!message.trim()) {
+    showNotification('Digite uma mensagem', false);
+    return;
+  }
+
+  if (message.length > 300) {
+    showNotification('Mensagem muito longa (max 300)', false);
+    return;
+  }
+
+  try {
+    const resp = await fetch('/api/automation/send-custom', {
+      method: 'POST',
+      headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ lead_id: leadId, message: message })
+    });
+
+    if (resp.ok) {
+      showNotification('Mensagem enviada!', true);
+      closeModalMessage();
+      loadHistory();
+    } else {
+      const err = await resp.json();
+      showNotification(err.detail || 'Erro ao enviar', false);
+    }
+  } catch (e) {
+    console.error('Erro ao enviar mensagem:', e);
+    showNotification('Erro ao enviar mensagem', false);
+  }
+}
+
+// Helpers
+function getScoreClass(score) {
+  if (score >= 70) return 'high';
+  if (score >= 40) return 'medium';
+  return 'low';
+}
+
+function formatDate(dateStr) {
+  if (!dateStr) return '-';
+  const date = new Date(dateStr);
+  return date.toLocaleDateString('pt-BR');
+}
+
+function escapeHtml(text) {
+  if (!text) return '';
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+function showNotification(message, success = true) {
+  // Implementar toast/notification
+  console.log(success ? '✅' : '❌', message);
+}
+
+// Inicializar quando a view for carregada
+document.addEventListener('DOMContentLoaded', function() {
+  // Observar mudanças na view
+  const observer = new MutationObserver(function(mutations) {
+    mutations.forEach(function(mutation) {
+      if (mutation.target.id === 'view-automacao' && mutation.target.style.display !== 'none') {
+        if (!_automacaoCache.sequence.length) {
+          loadAutomacaoView();
+        }
+      }
+    });
+  });
+
+  const viewAutomacao = document.getElementById('view-automacao');
+  if (viewAutomacao) {
+    observer.observe(viewAutomacao, { attributes: true, attributeFilter: ['style'] });
+  }
+});
+</script>
