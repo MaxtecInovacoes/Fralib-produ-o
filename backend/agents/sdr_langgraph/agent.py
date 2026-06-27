@@ -561,7 +561,7 @@ def node_greeting(state: SDRState) -> dict:
         llm_reply = call_claude(
             system=system,
             user=contexto[:500],
-            model="haiku",  # rapido e barato
+            model="sonnet",  # Sonnet (Haiku falha no proxy kpalabz)
             max_tokens=120,  # 2-3 frases curtas, NAO tagarelando
             temperature=0.3,  # baixa variacao, evita chines/outros idiomas
             agent_name="sdr_greeting_node",
