@@ -40,7 +40,7 @@ PROOF_STYLES = ["score_wall", "quote_spotlight", "card_marquee", "editorial_case
 SURFACE_STYLES = ["glass", "solid", "outline", "soft_tint"]
 
 # Visual lane tokens (resolved later per niche/subniche)
-VISUAL_LANES = ["lane_a", "lane_b", "lane_c", "lane_d"]
+VISUAL_LANES = ["lane_a", "lane_b", "lane_c", "lane_d", "lane_e", "lane_f", "lane_g", "lane_h"]
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

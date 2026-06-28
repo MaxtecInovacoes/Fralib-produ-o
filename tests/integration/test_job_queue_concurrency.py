@@ -131,7 +131,7 @@ def test_claim_next_nao_roda_duas_pipelines_do_mesmo_tenant_em_paralelo():
 
 
 @pytest.mark.integration
-def test_claim_next_permite_tenant_ilimitado_rodar_multiplas_pipelines():
+def test_claim_next_tenant_ilimitado_nao_roda_pipeline_em_paralelo():
     job_queue._MAX_PIPELINES_GLOBAL = 10
     job_queue._UNLIMITED_PIPELINE_TENANTS = {2}
     db = SessionLocal()
@@ -145,7 +145,8 @@ def test_claim_next_permite_tenant_ilimitado_rodar_multiplas_pipelines():
         db.close()
 
     assert claimed_1["id"] == first
-    assert claimed_2["id"] == second
+    assert claimed_2 is None
+    assert second != first
 
 
 @pytest.mark.integration

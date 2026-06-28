@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 
-_LANE_KEYS = ["lane_a", "lane_b", "lane_c", "lane_d"]
+_LANE_KEYS = ["lane_a", "lane_b", "lane_c", "lane_d", "lane_e", "lane_f", "lane_g", "lane_h"]
 
 
 def _segment_family(segment: str, subnicho: str = "") -> str:
@@ -285,6 +285,130 @@ _FAMILY_COPY_DEFAULTS: dict[str, dict[str, str]] = {
 }
 
 
+_LANE_REMIXES: dict[str, list[dict[str, Any]]] = {
+    "academia": [
+        {
+            "id": "academia-competition-redline",
+            "name": "Competition Redline",
+            "fallback_palette": {"primary": "#ff1010", "secondary": "#f5f5f5", "bg_dark": "#050505", "bg_light": "#f3f3f3", "text_dark": "#111111"},
+            "blocks": {"hero_variant": "fullbleed", "services_variant": "stats_then_cards", "reviews_variant": "score_wall", "faq_variant": "inline", "location_variant": "feature_local", "surface_style": "outline"},
+            "copy": {"hero_badge": "Treino competitivo", "about_kicker": "Performance", "about_title": "Energia de prova, rotina forte e presença sem promessa vazia.", "about_body": "{name} ganha uma direção mais atlética para quem procura intensidade, horários claros e decisão rápida em {city}.", "gallery_title": "Carga, suor e composição de impacto.", "gallery_intro": "As imagens entram com contraste alto, marca forte e sensação de treino em andamento.", "reviews_title": "Reputação para quem compara estrutura e ritmo.", "reviews_intro": "Score, cidade e contato aparecem com linguagem direta.", "faq_title": "Antes de puxar o primeiro treino.", "faq_intro": "Perguntas curtas sobre matrícula, aula experimental e modalidade.", "location_title": "Rota rápida para começar em {city}.", "location_intro": "Contato, endereço e CTA fecham a página com urgência controlada.", "lifestyle_kicker": "Competição", "contact_kicker": "Partida"},
+        },
+        {
+            "id": "academia-recovery-lab",
+            "name": "Recovery Lab",
+            "fallback_palette": {"primary": "#66e3c4", "secondary": "#264653", "bg_dark": "#eef8f5", "bg_light": "#ffffff", "text_dark": "#17312d"},
+            "blocks": {"hero_variant": "split", "services_variant": "split_editorial", "reviews_variant": "quote_spotlight", "faq_variant": "panel", "location_variant": "split_local", "surface_style": "soft_tint"},
+            "copy": {"hero_badge": "Treino com técnica e cuidado", "about_kicker": "Equilíbrio", "about_title": "Força, mobilidade e constância com leitura mais limpa.", "about_body": "{name} aparece com uma estética menos agressiva para quem quer evoluir sem perder conforto e orientação.", "gallery_title": "Movimento, cuidado e espaço respirado.", "gallery_intro": "A direção visual valoriza clareza, orientação e rotina sustentável.", "reviews_title": "Confiança para quem está começando ou voltando.", "reviews_intro": "A prova social tem tom humano e direto.", "faq_title": "Dúvidas antes de encaixar o treino na rotina.", "faq_intro": "Sem jargão e sem pressão artificial.", "location_title": "Comece em {city} com informação clara.", "location_intro": "O contato aparece como próximo passo simples.", "lifestyle_kicker": "Cuidado", "contact_kicker": "Começo"},
+        },
+        {
+            "id": "academia-urban-box",
+            "name": "Urban Box",
+            "fallback_palette": {"primary": "#facc15", "secondary": "#222222", "bg_dark": "#0b0b0b", "bg_light": "#fff7cc", "text_dark": "#181818"},
+            "blocks": {"hero_variant": "asymmetric", "services_variant": "stacked_cards", "reviews_variant": "card_marquee", "faq_variant": "inline", "location_variant": "feature_local", "surface_style": "solid"},
+            "copy": {"hero_badge": "Treino urbano", "about_kicker": "Ritmo", "about_title": "Uma academia com linguagem de rua, foco e presença local.", "about_body": "{name} assume uma leitura mais gráfica para destacar rotina, modalidades e decisão sem enrolação.", "gallery_title": "Blocos fortes, equipamento e cidade.", "gallery_intro": "A página ganha ritmo mais editorial e menos aparência de template.", "reviews_title": "Sinais locais que sustentam a escolha.", "reviews_intro": "A reputação entra como parte da narrativa, não como bloco solto.", "faq_title": "O que decidir antes de entrar.", "faq_intro": "Perguntas rápidas para levar ao WhatsApp.", "location_title": "Chegue ao treino em {city}.", "location_intro": "A rota de ação é curta: ver, entender, falar.", "lifestyle_kicker": "Rua", "contact_kicker": "Entrada"},
+        },
+        {
+            "id": "academia-endurance-blue",
+            "name": "Endurance Blue",
+            "fallback_palette": {"primary": "#38bdf8", "secondary": "#0f172a", "bg_dark": "#07111f", "bg_light": "#eaf6ff", "text_dark": "#0f172a"},
+            "blocks": {"hero_variant": "video", "services_variant": "split_editorial", "reviews_variant": "editorial_case", "faq_variant": "panel", "location_variant": "split_local", "surface_style": "glass"},
+            "copy": {"hero_badge": "Treino de longo prazo", "about_kicker": "Evolução", "about_title": "Constância, resistência e uma narrativa mais premium.", "about_body": "{name} aparece com ritmo mais cinematográfico para quem procura estrutura, acompanhamento e progresso em {city}.", "gallery_title": "Uma sequência visual de evolução.", "gallery_intro": "A galeria trabalha como narrativa de percurso, não como grade repetida.", "reviews_title": "Credibilidade para continuar voltando.", "reviews_intro": "Depoimentos e sinais locais reforçam permanência.", "faq_title": "Antes de manter a rotina.", "faq_intro": "Perguntas para entender encaixe, horário e contato.", "location_title": "Presença local com rota limpa.", "location_intro": "O site fecha sem ruído e com CTA claro.", "lifestyle_kicker": "Evolução", "contact_kicker": "Ritmo"},
+        },
+    ],
+    "nutricionista": [
+        {
+            "id": "nutri-hormone-care",
+            "name": "Hormone Care",
+            "fallback_palette": {"primary": "#9f7aea", "secondary": "#2f2546", "bg_dark": "#f7f2ff", "bg_light": "#ffffff", "text_dark": "#251f33"},
+            "blocks": {"hero_variant": "split", "services_variant": "stacked_cards", "reviews_variant": "quote_spotlight", "faq_variant": "panel", "location_variant": "split_local", "surface_style": "soft_tint"},
+            "copy": {"hero_badge": "Nutrição com escuta e precisão", "about_kicker": "Acolhimento", "about_title": "Cuidado nutricional com leitura delicada e estratégica.", "about_body": "{name} ganha uma presença mais acolhedora para consultas que pedem escuta, rotina e acompanhamento próximo.", "gallery_title": "Detalhes leves, consultório e confiança.", "gallery_intro": "A estética evita excesso clínico e melhora a sensação de cuidado.", "reviews_title": "Pacientes, confiança e evolução possível.", "reviews_intro": "A prova social aparece sem tom agressivo.", "faq_title": "Perguntas antes da primeira consulta.", "faq_intro": "Tudo com linguagem clara e sem pressão.", "location_title": "Atendimento em {city} com acesso simples.", "location_intro": "Endereço e contato aparecem com calma e legibilidade.", "lifestyle_kicker": "Cuidado", "contact_kicker": "Consulta"},
+        },
+        {
+            "id": "nutri-family-table",
+            "name": "Family Table",
+            "fallback_palette": {"primary": "#d49a3a", "secondary": "#3e5f45", "bg_dark": "#fff8ee", "bg_light": "#ffffff", "text_dark": "#2a251b"},
+            "blocks": {"hero_variant": "center", "services_variant": "split_editorial", "reviews_variant": "editorial_case", "faq_variant": "panel", "location_variant": "feature_local", "surface_style": "solid"},
+            "copy": {"hero_badge": "Alimentação possível na vida real", "about_kicker": "Rotina", "about_title": "Estratégia nutricional que cabe na mesa e na semana.", "about_body": "{name} aparece com narrativa mais humana para quem procura organização alimentar sem radicalismo.", "gallery_title": "Comida, rotina e orientação sem ruído.", "gallery_intro": "A página troca estética fria por proximidade e clareza.", "reviews_title": "Confiança de quem sentiu o processo acontecer.", "reviews_intro": "Depoimentos entram com tom de continuidade.", "faq_title": "Antes de mudar a rotina alimentar.", "faq_intro": "Perguntas sobre consulta, retorno e acompanhamento.", "location_title": "Agende em {city} sem complicar.", "location_intro": "Contato e localização ficam no mesmo raciocínio.", "lifestyle_kicker": "Mesa", "contact_kicker": "Agenda"},
+        },
+        {
+            "id": "nutri-sports-lab",
+            "name": "Sports Lab",
+            "fallback_palette": {"primary": "#b7ff3c", "secondary": "#111827", "bg_dark": "#101318", "bg_light": "#f3ffe1", "text_dark": "#111827"},
+            "blocks": {"hero_variant": "fullbleed", "services_variant": "stats_then_cards", "reviews_variant": "score_wall", "faq_variant": "inline", "location_variant": "feature_local", "surface_style": "outline"},
+            "copy": {"hero_badge": "Nutrição esportiva com método", "about_kicker": "Performance", "about_title": "Plano alimentar para quem mede evolução, treino e rotina.", "about_body": "{name} assume uma direção mais esportiva quando o lead pede intensidade, objetivo e acompanhamento técnico.", "gallery_title": "Energia, treino e estratégia visual.", "gallery_intro": "A composição conversa com rotina ativa e decisão rápida.", "reviews_title": "Prova para quem compara performance e confiança.", "reviews_intro": "Score e depoimentos entram com mais impacto.", "faq_title": "Antes de ajustar treino e alimentação.", "faq_intro": "FAQ curto, prático e direto ao WhatsApp.", "location_title": "Atendimento esportivo em {city}.", "location_intro": "A rota para marcar consulta fica evidente.", "lifestyle_kicker": "Performance", "contact_kicker": "Plano"},
+        },
+        {
+            "id": "nutri-premium-clinic",
+            "name": "Premium Clinic",
+            "fallback_palette": {"primary": "#d6b86a", "secondary": "#102a43", "bg_dark": "#0d1f31", "bg_light": "#f7f2e7", "text_dark": "#102033"},
+            "blocks": {"hero_variant": "asymmetric", "services_variant": "stacked_cards", "reviews_variant": "card_marquee", "faq_variant": "panel", "location_variant": "split_local", "surface_style": "glass"},
+            "copy": {"hero_badge": "Atendimento nutricional premium", "about_kicker": "Autoridade", "about_title": "Consultório com presença elegante e decisão segura.", "about_body": "{name} ganha uma estética mais sofisticada para reforçar autoridade, privacidade e atendimento bem conduzido.", "gallery_title": "Consultório, detalhe e acabamento de marca.", "gallery_intro": "A direção visual usa respiro e contraste para parecer mais exclusiva.", "reviews_title": "Confiança tratada com cuidado editorial.", "reviews_intro": "A reputação aparece como prova de autoridade local.", "faq_title": "Perguntas de quem busca atendimento qualificado.", "faq_intro": "Informação objetiva sem banalizar a consulta.", "location_title": "Localização e contato com leitura premium.", "location_intro": "O CTA final mantém elegância e clareza.", "lifestyle_kicker": "Autoridade", "contact_kicker": "Agendar"},
+        },
+    ],
+    "barbearia": [
+        {
+            "id": "barber-old-money-green",
+            "name": "Old Money Green",
+            "fallback_palette": {"primary": "#d9b86c", "secondary": "#12392d", "bg_dark": "#071c16", "bg_light": "#f3ead8", "text_dark": "#14221c"},
+            "blocks": {"hero_variant": "center", "services_variant": "split_editorial", "reviews_variant": "editorial_case", "faq_variant": "panel", "location_variant": "split_local", "surface_style": "solid"},
+            "copy": {"hero_badge": "Barbearia clássica", "about_kicker": "Tradição", "about_title": "Corte com aparência de clube reservado e atenção ao detalhe.", "about_body": "{name} ganha uma presença mais elegante para valorizar tradição, reserva e acabamento em {city}.", "gallery_title": "Madeira, metal e ritual em composição premium.", "gallery_intro": "A galeria deixa de parecer catálogo e vira atmosfera.", "reviews_title": "Clientes que voltam pelo atendimento e acabamento.", "reviews_intro": "A reputação é tratada como confiança recorrente.", "faq_title": "Antes de reservar o horário.", "faq_intro": "Serviços, agenda e chegada em linguagem direta.", "location_title": "Encontre a barbearia em {city}.", "location_intro": "Contato e endereço fecham a reserva sem atrito.", "lifestyle_kicker": "Tradição", "contact_kicker": "Reserva"},
+        },
+        {
+            "id": "barber-street-red",
+            "name": "Street Red",
+            "fallback_palette": {"primary": "#ef233c", "secondary": "#111111", "bg_dark": "#050505", "bg_light": "#f7f7f7", "text_dark": "#111111"},
+            "blocks": {"hero_variant": "fullbleed", "services_variant": "stats_then_cards", "reviews_variant": "score_wall", "faq_variant": "inline", "location_variant": "feature_local", "surface_style": "outline"},
+            "copy": {"hero_badge": "Corte urbano", "about_kicker": "Atitude", "about_title": "Uma barbearia com presença forte, direta e memorável.", "about_body": "{name} assume uma linha mais urbana quando a marca precisa parecer atual, rápida e com personalidade.", "gallery_title": "Rua, contraste e acabamento em destaque.", "gallery_intro": "O visual trabalha impacto e clareza no primeiro scroll.", "reviews_title": "Prova local com energia de marca.", "reviews_intro": "Score e comentários entram com ritmo mais agressivo.", "faq_title": "O que saber antes de chamar.", "faq_intro": "FAQ curto para levar o usuário direto ao WhatsApp.", "location_title": "Reserve em {city} sem enrolação.", "location_intro": "Endereço, contato e ação aparecem no mesmo bloco.", "lifestyle_kicker": "Atitude", "contact_kicker": "Chamar"},
+        },
+        {
+            "id": "barber-atelier-light",
+            "name": "Atelier Light",
+            "fallback_palette": {"primary": "#1f2937", "secondary": "#c9a46a", "bg_dark": "#f6f1ea", "bg_light": "#ffffff", "text_dark": "#1f2937"},
+            "blocks": {"hero_variant": "split", "services_variant": "stacked_cards", "reviews_variant": "quote_spotlight", "faq_variant": "panel", "location_variant": "split_local", "surface_style": "soft_tint"},
+            "copy": {"hero_badge": "Barbearia autoral", "about_kicker": "Atelier", "about_title": "Corte e barba com estética mais clara, limpa e autoral.", "about_body": "{name} aparece como atelier de atendimento, com foco em detalhe e experiência sem peso visual excessivo.", "gallery_title": "Acabamento, luz e proximidade.", "gallery_intro": "A composição respira mais e valoriza o trabalho manual.", "reviews_title": "Clientes e confiança com tom mais humano.", "reviews_intro": "A prova social fica leve, mas convincente.", "faq_title": "Perguntas antes do atendimento.", "faq_intro": "Informação prática sobre serviço, reserva e chegada.", "location_title": "Chegue com clareza em {city}.", "location_intro": "Contato e rota aparecem sem poluição.", "lifestyle_kicker": "Atelier", "contact_kicker": "Horário"},
+        },
+        {
+            "id": "barber-brutal-mono",
+            "name": "Brutal Mono",
+            "fallback_palette": {"primary": "#ffffff", "secondary": "#000000", "bg_dark": "#000000", "bg_light": "#eeeeee", "text_dark": "#111111"},
+            "blocks": {"hero_variant": "asymmetric", "services_variant": "split_editorial", "reviews_variant": "card_marquee", "faq_variant": "inline", "location_variant": "feature_local", "surface_style": "outline"},
+            "copy": {"hero_badge": "Corte sem excesso", "about_kicker": "Contraste", "about_title": "Uma barbearia com linguagem gráfica, seca e marcante.", "about_body": "{name} usa alto contraste e composição mais ousada para não parecer mais uma página escura comum.", "gallery_title": "Preto, branco e recorte preciso.", "gallery_intro": "A identidade vem da composição, não de ornamento.", "reviews_title": "Reputação em blocos fortes.", "reviews_intro": "A prova social ganha peso visual e leitura rápida.", "faq_title": "Perguntas objetivas.", "faq_intro": "Sem discurso longo: serviço, horário, contato.", "location_title": "Endereço e reserva no mesmo golpe.", "location_intro": "A página fecha com clareza e impacto.", "lifestyle_kicker": "Contraste", "contact_kicker": "Reservar"},
+        },
+    ],
+    "default": [
+        {
+            "id": "default-health-trust",
+            "name": "Health Trust",
+            "fallback_palette": {"primary": "#0ea5a4", "secondary": "#164e63", "bg_dark": "#ecfeff", "bg_light": "#ffffff", "text_dark": "#12343b"},
+            "blocks": {"hero_variant": "split", "services_variant": "stacked_cards", "reviews_variant": "quote_spotlight", "faq_variant": "panel", "location_variant": "split_local", "surface_style": "soft_tint"},
+            "copy": {"hero_badge": "Atendimento com confiança", "about_kicker": "Cuidado", "lifestyle_kicker": "Confiança", "contact_kicker": "Agendar"},
+        },
+        {
+            "id": "default-local-craft",
+            "name": "Local Craft",
+            "fallback_palette": {"primary": "#b45309", "secondary": "#365314", "bg_dark": "#1c160f", "bg_light": "#fff7ed", "text_dark": "#21160d"},
+            "blocks": {"hero_variant": "center", "services_variant": "split_editorial", "reviews_variant": "editorial_case", "faq_variant": "panel", "location_variant": "feature_local", "surface_style": "solid"},
+            "copy": {"hero_badge": "Serviço local com presença", "about_kicker": "Ofício", "lifestyle_kicker": "Detalhe", "contact_kicker": "Contato"},
+        },
+        {
+            "id": "default-technical-precision",
+            "name": "Technical Precision",
+            "fallback_palette": {"primary": "#60a5fa", "secondary": "#1e293b", "bg_dark": "#0f172a", "bg_light": "#eff6ff", "text_dark": "#0f172a"},
+            "blocks": {"hero_variant": "asymmetric", "services_variant": "stats_then_cards", "reviews_variant": "score_wall", "faq_variant": "inline", "location_variant": "split_local", "surface_style": "outline"},
+            "copy": {"hero_badge": "Serviço técnico", "about_kicker": "Precisão", "lifestyle_kicker": "Processo", "contact_kicker": "Solicitar"},
+        },
+        {
+            "id": "default-hospitality-warm",
+            "name": "Hospitality Warm",
+            "fallback_palette": {"primary": "#f97316", "secondary": "#7c2d12", "bg_dark": "#21130b", "bg_light": "#fff3e8", "text_dark": "#24150c"},
+            "blocks": {"hero_variant": "video", "services_variant": "split_editorial", "reviews_variant": "card_marquee", "faq_variant": "panel", "location_variant": "feature_local", "surface_style": "glass"},
+            "copy": {"hero_badge": "Experiência local", "about_kicker": "Recepção", "lifestyle_kicker": "Ambiente", "contact_kicker": "Reservar"},
+        },
+    ],
+}
+
+
 _LANE_COPY_ENRICHMENTS: dict[str, dict[str, str]] = {
     "academia-iron-pulse": {
         "services_kicker": "Treino real",
@@ -404,7 +528,8 @@ def resolve_visual_lane(
     visual_lane: str = "",
 ) -> dict[str, Any]:
     family = _segment_family(segment, subnicho)
-    lanes = _LANES.get(family) or _LANES["default"]
+    lanes = list(_LANES.get(family) or _LANES["default"])
+    lanes.extend(_LANE_REMIXES.get(family) or _LANE_REMIXES.get("default") or [])
     try:
         index = _LANE_KEYS.index(str(visual_lane or "").strip())
     except ValueError:

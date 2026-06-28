@@ -267,6 +267,9 @@ Os **20 contratos** que saem do PRD, passam pelo OpenUI, e chegam no HTML public
 
 - `claim_next()` com `SELECT ... FOR UPDATE SKIP LOCKED` + filtro `tenant_id`.
 - Limite global `_MAX_PIPELINES_GLOBAL` (env `MAX_PIPELINES_GLOBAL`, default 1).
+- Tenant ilimitado remove trava comercial/cooldown, mas **não** libera duas
+  pipelines de site simultâneas para o mesmo tenant. A regra canônica é: vários
+  tenants podem rodar em paralelo; o mesmo tenant roda pipeline de site em série.
 - Backoff: 30/120/480s padrão; 60-960s para `franz`/`bryan`.
 - `reap_dead_workers` reseta jobs com heartbeat > 5 min.
 

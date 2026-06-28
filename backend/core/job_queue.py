@@ -131,11 +131,13 @@ def claim_next(
               )
         """
         params["max_pipelines_global"] = _MAX_PIPELINES_GLOBAL
-    unlimited_tenants = sorted(_UNLIMITED_PIPELINE_TENANTS)
+    # "Unlimited" tenants skip commercial throttles elsewhere, but a single
+    # tenant must not run two site pipelines at once. Parallel jobs for the same
+    # tenant caused two workers to publish different renderer versions for the
+    # same production lane.
     filtro_tenant_lock = """
               AND NOT (
                 tipo IN ('pipeline_lead', 'pipeline_multiplos', 'pipeline_main')
-                AND NOT (tenant_id = ANY(:unlimited_pipeline_tenants))
                 AND EXISTS (
                     SELECT 1 FROM jobs running
                     WHERE running.tenant_id = jobs.tenant_id
@@ -144,20 +146,6 @@ def claim_next(
                 )
               )
     """
-    if not unlimited_tenants:
-        filtro_tenant_lock = """
-              AND NOT (
-                tipo IN ('pipeline_lead', 'pipeline_multiplos', 'pipeline_main')
-                AND EXISTS (
-                    SELECT 1 FROM jobs running
-                    WHERE running.tenant_id = jobs.tenant_id
-                      AND running.status = 'running'
-                      AND running.tipo IN ('pipeline_lead', 'pipeline_multiplos', 'pipeline_main')
-                )
-              )
-        """
-    else:
-        params["unlimited_pipeline_tenants"] = unlimited_tenants
 
     row = db.execute(
         text(f"""
