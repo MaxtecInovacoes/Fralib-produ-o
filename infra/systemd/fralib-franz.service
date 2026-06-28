@@ -13,6 +13,8 @@ Group=root
 WorkingDirectory=/root/fralib
 Environment="PATH=/root/fralib/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 EnvironmentFile=/etc/fralib/fralib.env
+Environment="WORKER_JOB_TYPES=franz_outreach"
+Environment="MAX_PIPELINES_GLOBAL=0"
 ExecStart=/root/fralib/venv/bin/python3 /root/fralib/worker.py
 
 # Recursos
