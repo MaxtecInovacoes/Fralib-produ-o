@@ -410,10 +410,10 @@ class ViteReactRenderError(RuntimeError):
 def _get_llm_policy() -> str:
     """Return the Vite LLM policy.
 
-    copy_only is the default because the FraLib-owned Studio templates now
-    generate the React code. The LLM may only return a compact content JSON.
+    deterministic none is the default because the FraLib-owned Studio templates
+    already generate structure, sections, visuals and CTA scaffolding.
     """
-    raw = os.getenv("FRALIB_VITE_LLM_POLICY", "copy_only").strip().lower().replace("-", "_")
+    raw = os.getenv("FRALIB_VITE_LLM_POLICY", "none").strip().lower().replace("-", "_")
     aliases = {
         "0": "none",
         "off": "none",
@@ -429,7 +429,7 @@ def _get_llm_policy() -> str:
     }
     policy = aliases.get(raw, raw)
     if policy not in {"none", "copy_only", "full_code"}:
-        return "copy_only"
+        return "none"
     return policy
 
 
@@ -553,7 +553,7 @@ def _sanitize_copy_only_content(content: dict[str, Any]) -> dict[str, Any]:
             if hero.get(key)
         }
 
-    for key in ("services_title", "gallery_alt", "modal_title", "modal_cta", "contact_headline", "contact_sub"):
+    for key in ("gallery_alt", "modal_title", "modal_cta"):
         if content.get(key):
             cleaned[key] = _clean_copy_value(content.get(key), limit=160)
 
@@ -596,6 +596,20 @@ def _sanitize_copy_only_content(content: dict[str, Any]) -> dict[str, Any]:
             clean_faq.append({"question": question, "answer": answer})
     if clean_faq:
         cleaned["faq"] = clean_faq
+    banned_fragments = (
+        "uma narrativa visual para",
+        "pronto para confirmar o próximo passo",
+        "pronto para confirmar o proximo passo",
+        "use o canal oficial para tirar dúvidas e agendar",
+        "use o canal oficial para tirar duvidas e agendar",
+        "serviços confirmados da",
+        "servicos confirmados da",
+        "chegue à {name} pelo canal oficial",
+        "chegue a {name} pelo canal oficial",
+    )
+    serialized = json.dumps(cleaned, ensure_ascii=False).lower()
+    if any(fragment in serialized for fragment in banned_fragments):
+        return {}
     if cleaned and not _looks_like_pt_br_copy(cleaned):
         return {}
     return cleaned

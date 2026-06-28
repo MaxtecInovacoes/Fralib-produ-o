@@ -463,6 +463,21 @@ def test_cinematic_site_data_differs_between_families():
     assert "reserva" in rendered["barbearia"].lower() or "barba" in rendered["barbearia"].lower()
 
 
+def test_vite_llm_policy_defaults_to_none_and_rejects_generic_copy(monkeypatch):
+    from backend.services.vite_react_renderer import _get_llm_policy, _sanitize_copy_only_content
+
+    monkeypatch.delenv("FRALIB_VITE_LLM_POLICY", raising=False)
+    assert _get_llm_policy() == "none"
+
+    rejected = _sanitize_copy_only_content(
+        {
+            "contact_headline": "Pronto para confirmar o próximo passo?",
+            "contact_sub": "Use o canal oficial para tirar dúvidas e agendar.",
+        }
+    )
+    assert rejected == {}
+
+
 def run_all_tests():
     """Run all tests and report results."""
     print("=" * 60)
@@ -482,6 +497,7 @@ def run_all_tests():
         test_visual_lane_changes_palette_and_copy,
         test_visual_lane_catalog_avoids_generic_cinematic_copy,
         test_cinematic_site_data_differs_between_families,
+        test_vite_llm_policy_defaults_to_none_and_rejects_generic_copy,
     ]
 
     results = []
