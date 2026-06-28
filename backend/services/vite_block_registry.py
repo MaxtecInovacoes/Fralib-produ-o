@@ -20,6 +20,24 @@ _NAV_LINK_MAP = {
 }
 
 
+def _resolve_nav_label(section: str, lane_copy: dict[str, Any]) -> str:
+    copy_key_map = {
+        "about": "nav_about",
+        "services": "nav_services",
+        "gallery": "nav_gallery",
+        "faq": "nav_faq",
+        "reviews": "nav_reviews",
+        "location": "nav_location",
+        "lifestyle": "nav_lifestyle",
+        "contact-cta": "nav_contact",
+    }
+    key = copy_key_map.get(section, "")
+    value = str(lane_copy.get(key) or "").strip()
+    if value:
+        return value
+    return _NAV_LINK_MAP[section][0]
+
+
 def resolve_cinematic_block_plan(
     *,
     section_order: list[str],
@@ -35,6 +53,7 @@ def resolve_cinematic_block_plan(
     visual_lane = str(variation.get("visual_lane") or "")
     lane = resolve_visual_lane(segment=segment, subnicho=str(variation.get("subnicho") or ""), visual_lane=visual_lane)
     lane_blocks = lane.get("blocks") if isinstance(lane.get("blocks"), dict) else {}
+    lane_copy = lane.get("copy") if isinstance(lane.get("copy"), dict) else {}
 
     services_variant = str(lane_blocks.get("services_variant") or "split_editorial")
     if surface_style in {"solid", "soft_tint"}:
@@ -55,8 +74,8 @@ def resolve_cinematic_block_plan(
     surface_style = str(lane_blocks.get("surface_style") or surface_style)
 
     nav_links = [
-        {"label": label, "href": href}
-        for section, (label, href) in _NAV_LINK_MAP.items()
+        {"label": _resolve_nav_label(section, lane_copy), "href": href}
+        for section, (_label, href) in _NAV_LINK_MAP.items()
         if section in section_order
     ]
     return {
