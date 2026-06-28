@@ -121,8 +121,25 @@ async def tick_lead_production(
 ):
     tenant_id = _tenant_id(usuario)
     _permission_or_error(db, tenant_id)
-    job_id = supply.enqueue_production_tick(db, tenant_id, delay_seconds=1, reason="manual")
-    return {"ok": True, "job_id": job_id}
+    immediate = supply.run_production_tick(db, {"reason": "manual-inline"}, tenant_id)
+    should_enqueue_tick = not (
+        immediate.get("job_id")
+        or immediate.get("duplicate_job")
+        or immediate.get("waiting") == "pipeline_running"
+        or immediate.get("cooldown")
+    )
+    tick_job_id = None
+    if should_enqueue_tick:
+        tick_job_id = supply.enqueue_production_tick(db, tenant_id, delay_seconds=1, reason="manual")
+    return {
+        "ok": True,
+        "immediate": immediate,
+        "job_id": immediate.get("job_id"),
+        "tick_job_id": tick_job_id,
+        "duplicate_job": immediate.get("duplicate_job"),
+        "waiting": immediate.get("waiting"),
+        "cooldown": immediate.get("cooldown"),
+    }
 
 
 @router.post("/leads/{inventory_id}/discard")

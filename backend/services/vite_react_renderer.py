@@ -3668,7 +3668,7 @@ export function HeroSection({ onOpen }: { onOpen?: () => void }) {
   // Para outros layouts (split/center/asymmetric), usa imagem poster.
   const _varLayout = (variation && variation.hero_layout) ? variation.hero_layout : 'split';
   const _showVideo = _varLayout === 'video' || _varLayout === 'fullbleed';
-    const _hero_class_number = _seed_for_html % 10;
+  const heroClassNumber = Number((variation && variation.hero_variant) || 0) % 10;
 useEffect(() => {
     const root = rootRef.current;
     if (!root || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
@@ -3681,7 +3681,7 @@ useEffect(() => {
     return () => ctx.revert();
   }, []);
   return (
-    <section ref={rootRef} id="hero" className={('hero-v14 hero-v14-v' + _hero_class_number) + ' ' + heroClasses}>
+    <section ref={rootRef} id="hero" className={('hero-v14 hero-v14-v' + heroClassNumber) + ' ' + heroClasses}>
       <div className="absolute inset-0 -z-20" style={{ background: 'var(--bg)' }} />
       {_showVideo && mediaVideos[0] ? (
         <video data-hero-video className="absolute inset-0 -z-10 h-full w-full object-cover opacity-52 saturate-[.9]" src={mediaVideos[0]} poster={mediaImages[0]} autoPlay muted loop playsInline preload="metadata" />
@@ -3692,10 +3692,10 @@ useEffect(() => {
       <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[1.05fr_.95fr] lg:items-end">
         <div className="max-w-4xl">
           <motion.div data-hero-reveal className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em]" style={{ borderColor: 'color-mix(in srgb, var(--accent) 25%, transparent)', background: 'color-mix(in srgb, var(--accent) 10%, transparent)', color: 'var(--accent-soft)' }}><Play className="h-3.5 w-3.5" />{siteCopy.segment} em {siteCopy.city}</motion.div>
-          <h1 data-hero-reveal className={'mt-7 max-w-5xl ' + _h1_size}>{siteCopy.headline}</h1>
+          <h1 data-hero-reveal className="mt-7 max-w-5xl text-[clamp(2.65rem,7.7vw,5.9rem)] font-semibold leading-[0.93] tracking-[-0.035em] text-white">{siteCopy.headline}</h1>
           <p data-hero-reveal className="mt-6 max-w-2xl text-base leading-8 text-zinc-200 md:text-lg">{siteCopy.subheadline}</p>
           <div data-hero-reveal className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-            <a href={whatsappHref} rel="noopener noreferrer" className={('inline-flex items-center justify-center gap-2 px-6 py-3.5 text-sm font-semibold transition duration-300 hover:-translate-y-0.5 ' + _cta_btn_class).trim()} style={{ background: 'var(--accent)', color: 'var(--bg)' }}><MessageCircle className="h-4 w-4" />{siteCopy.cta_primary}</a>
+            <a href={whatsappHref} rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 rounded-full px-6 py-3.5 text-sm font-semibold transition duration-300 hover:-translate-y-0.5" style={{ background: 'var(--accent)', color: 'var(--bg)' }}><MessageCircle className="h-4 w-4" />{siteCopy.cta_primary}</a>
             <button type="button" onClick={onOpen} className="inline-flex items-center justify-center gap-2 rounded-full border border-white/15 px-6 py-3.5 text-sm font-semibold text-white transition duration-300 hover:-translate-y-0.5">{siteCopy.cta_secondary}<ArrowDownRight className="h-4 w-4" /></button>
           </div>
         </div>
@@ -4300,6 +4300,7 @@ def validate_vite_project_files(
     source_text = "\n".join(
         content for path, content in files.items() if path.startswith("src/")
     )
+    _validate_no_studio_template_leaks(source_text)
     business = facts.get("business") if isinstance(facts.get("business"), dict) else {}
     name = str(business.get("name") or "").strip()
     if name and _normalize_text(name) not in _normalize_text(source_text):
@@ -4315,6 +4316,26 @@ def validate_vite_project_files(
         _validate_hero_first_viewport(files)
         _validate_mobile_navbar(files)
         _validate_studio_project(files, source_text, component_files)
+
+
+def _validate_no_studio_template_leaks(source_text: str) -> None:
+    leaked_identifiers = [
+        "_seed_for_html",
+        "_h1_size",
+        "_cta_btn_class",
+        "_hero_class_number",
+    ]
+    hits = [identifier for identifier in leaked_identifiers if identifier in source_text]
+    if hits:
+        raise ViteReactRenderError(
+            "projeto Vite contem placeholders internos vazando para React: " + ", ".join(hits)
+        )
+    duplicate_class = re.search(
+        r"<[A-Za-z][^>\n]*\bclassName\s*=[^>\n]*\bclassName\s*=",
+        source_text,
+    )
+    if duplicate_class:
+        raise ViteReactRenderError("projeto Vite contem className duplicado no mesmo elemento")
 
 
 def _segment_key_for_business(business: dict[str, Any]) -> str | None:
@@ -4592,6 +4613,24 @@ def build_vite_project(workspace: Path) -> None:
         output = str(exc)
         if "vite build falhou:" in output and "built" in output and (workspace / "dist" / "index.html").exists():
             pass
+        elif "ERR_MODULE_NOT_FOUND" in output and "plugin-react" in output:
+            # npm install falhou parcialmente - @vitejs/plugin-react nao foi instalado.
+            # Limpa node_modules e tenta novamente (1 retry automatico).
+            import shutil as _shutil
+
+            _shutil.rmtree(node_modules, ignore_errors=True)
+            _run(
+                [npm_cmd, "install", "--ignore-scripts", "--no-audit", "--no-fund"],
+                cwd=workspace,
+                timeout=timeout,
+                label="npm install (retry)",
+            )
+            _run(
+                [node_cmd, str(workspace / "node_modules" / "vite" / "bin" / "vite.js"), "build"],
+                cwd=workspace,
+                timeout=timeout,
+                label="vite build (retry)",
+            )
         else:
             raise
     rewrite_vite_dist_asset_paths(workspace / "dist")
