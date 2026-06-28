@@ -39,6 +39,9 @@ PROOF_STYLES = ["score_wall", "quote_spotlight", "card_marquee", "editorial_case
 # Surface treatment styles
 SURFACE_STYLES = ["glass", "solid", "outline", "soft_tint"]
 
+# Visual lane tokens (resolved later per niche/subniche)
+VISUAL_LANES = ["lane_a", "lane_b", "lane_c", "lane_d"]
+
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # DATA CLASSES
@@ -55,6 +58,7 @@ class VariationSeed:
     section_order_style: str
     proof_style: str
     surface_style: str
+    visual_lane: str
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -66,6 +70,7 @@ class VariationSeed:
             "section_order_style": self.section_order_style,
             "proof_style": self.proof_style,
             "surface_style": self.surface_style,
+            "visual_lane": self.visual_lane,
         }
 
 
@@ -276,6 +281,9 @@ def get_variation(facts: dict[str, Any] | None = None, *, counter: int = 0) -> V
     # Offset of 6: surface/card treatment
     surface_style = _seeded_choice(SURFACE_STYLES, seed, offset=6)
 
+    # Offset of 7: visual lane token
+    visual_lane = _seeded_choice(VISUAL_LANES, seed, offset=7)
+
     return VariationSeed(
         seed=seed,
         hero_layout=hero_layout,
@@ -285,6 +293,7 @@ def get_variation(facts: dict[str, Any] | None = None, *, counter: int = 0) -> V
         section_order_style=section_order_style,
         proof_style=proof_style,
         surface_style=surface_style,
+        visual_lane=visual_lane,
     )
 
 

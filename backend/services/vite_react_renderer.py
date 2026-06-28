@@ -100,6 +100,11 @@ except ImportError:
     from services.vite_theme_guard import resolve_cinematic_theme  # type: ignore
 
 try:
+    from backend.services.vite_visual_lanes import resolve_visual_lane
+except ImportError:
+    from services.vite_visual_lanes import resolve_visual_lane  # type: ignore
+
+try:
     from backend.services.vite_prompts import (
         VITE_REACT_SYSTEM_PROMPT,
         VITE_REACT_BATCH_SYSTEM_PROMPT,
@@ -3384,6 +3389,13 @@ def _cinematic_copy(facts: dict[str, Any]) -> dict[str, Any]:
     is_nutri = "nutri" in segment_context
     is_barber = any(token in segment_context for token in ("barbearia", "barbeiro", "barber"))
     is_academia = any(token in segment_context for token in ("academia", "crossfit", "musculacao", "funcional", "personal"))
+    variation = facts.get("variation") if isinstance(facts.get("variation"), dict) else {}
+    lane = resolve_visual_lane(
+        segment=segment,
+        subnicho=subnicho,
+        visual_lane=str(variation.get("visual_lane") or ""),
+    )
+    lane_copy = lane.get("copy") if isinstance(lane.get("copy"), dict) else {}
 
     # Sprint 14.6: usa archetype_copy.v* rotation (counter ou seed)
     _var_seed = int(business.get("__counter") or facts.get("__counter") or 0)
@@ -3406,11 +3418,12 @@ def _cinematic_copy(facts: dict[str, Any]) -> dict[str, Any]:
                 "Corte masculino, barba e acabamento com barbeiros certificados.",
                 f"Na {name} cada corte tem ritual: começa no agendamento e termina no acabamento.",
             ]),
-            "cta_primary": _rotaciona(["Agendar corte", "Marbar horário", "Reservar corte"]),
+            "cta_primary": _rotaciona(["Agendar corte", "Marcar horario", "Reservar corte"]),
             "cta_secondary": "Ver serviços",
             "services_title": "O que está incluso no ritual da barbearia",
+            "services_subheadline": f"Corte, barba e acabamento organizados para {city}, com linguagem fiel ao que a {name} entrega.",
             "lifestyle_title": "Corte, barba e ambiente no mesmo lugar",
-            "lifestyle_description": f"Visual cinematográfico, dados reais da {name} e caminho único para agendar.",
+            "lifestyle_description": f"A {name} usa uma assinatura visual mais forte para transformar presença local em reserva real.",
             "services": [
                 {"title": "Corte masculino", "description": "Corte alinhado ao estilo do cliente, com avaliação antes e finalização por barbeiro certificado."},
                 {"title": "Barba e acabamento", "description": "Ritual de barba com toalha quente, contorno definido e produto finalizado."},
@@ -3429,9 +3442,10 @@ def _cinematic_copy(facts: dict[str, Any]) -> dict[str, Any]:
                 "Atendimento com foco em performance, recuperação e decisões práticas antes da consulta.",
                 f"A {name} acompanha de perto cada paciente em {city} com plano escrito e revisão periódica.",
             ]),
-            "cta_primary": _rotaciona(["Agendar consulta", "Marbar avaliação", "Falar com a nutri"]),
+            "cta_primary": _rotaciona(["Agendar consulta", "Marcar avaliacao", "Falar com a nutri"]),
             "cta_secondary": "Conhecer abordagem",
             "services_title": "Como funciona o acompanhamento nutricional",
+            "services_subheadline": f"Consulta, planejamento e retorno com foco em {city}, sem promessas genéricas e sem texto inventado.",
             "lifestyle_title": "Alimentação que respeita sua rotina em " + city,
             "lifestyle_description": f"A {name} atende em {city} com consulta presencial e online, focada em resultado sustentável.",
             "services": [
@@ -3452,9 +3466,10 @@ def _cinematic_copy(facts: dict[str, Any]) -> dict[str, Any]:
                 f"A {name} atende {city} e região com musculação, crossfit e acompanhamento.",
                 f"Academia com equipamentos modernos, profissionais e ambiente preparado em {city}.",
             ]),
-            "cta_primary": _rotaciona(["Começar treino", "Marbar aula experimental", "Conhecer estrutura"]),
+            "cta_primary": _rotaciona(["Comecar treino", "Marcar aula experimental", "Conhecer estrutura"]),
             "cta_secondary": "Ver planos",
             "services_title": "Modalidades e estrutura da academia",
+            "services_subheadline": f"Treino, modalidades e rotina organizados para quem está em {city} e quer decidir com clareza.",
             "lifestyle_title": "Treinar com regularidade e estrutura em " + city,
             "lifestyle_description": f"A {name} em {city} oferece musculação, crossfit e funcional com profissionais cadastrados.",
             "services": [
@@ -3475,9 +3490,10 @@ def _cinematic_copy(facts: dict[str, Any]) -> dict[str, Any]:
                 f"Atendimento em {city} pela {name} com prova local e mídia editorial.",
                 f"A {name} atende {city} com dados reais e caminho único para o próximo passo.",
             ]),
-            "cta_primary": _rotaciona(["Falar no WhatsApp", "Solicitar contato", "Marbar atendimento"]),
+            "cta_primary": _rotaciona(["Falar no WhatsApp", "Solicitar contato", "Marcar atendimento"]),
             "cta_secondary": "Ver abordagem",
             "services_title": "O que está incluso no atendimento",
+            "services_subheadline": f"Informações confirmadas da {name} em {city}, organizadas para contato direto.",
             "lifestyle_title": f"Atendimento local em {city} pela {name}",
             "lifestyle_description": f"Visual cinematográfico, dados confirmados da {name} e caminho direto para contato.",
             "services": [
@@ -3497,15 +3513,25 @@ def _cinematic_copy(facts: dict[str, Any]) -> dict[str, Any]:
                 })
         if clean_services:
             services = clean_services
+
+    def _fmt(template: str, fallback: str) -> str:
+        raw = str(template or fallback or "").strip()
+        if not raw:
+            raw = fallback
+        return raw.format(name=name, city=city, segment=segment)
+
     return {
         "name": name,
         "city": city,
         "segment": segment,
+        "visual_lane": str(lane.get("id") or ""),
+        "visual_lane_name": str(lane.get("name") or ""),
         "phone": phone,
         "phone_digits": re.sub(r"\D+", "", phone),
         "rating": rating,
         "reviews": reviews,
         "address": address,
+        "hero_badge": _fmt(lane_copy.get("hero_badge", ""), f"{segment} em {city}"),
         "headline": str(hero.get("headline") or defaults["headline"]),
         "subheadline": str(hero.get("subheadline") or defaults["subheadline"]),
         "cta_primary": str(hero.get("cta_primary") or defaults["cta_primary"]),
@@ -3513,8 +3539,26 @@ def _cinematic_copy(facts: dict[str, Any]) -> dict[str, Any]:
         "services_title": str(llm_content.get("services_title") or defaults["services_title"]),
         "services_subheadline": str(
             llm_content.get("services_subheadline")
-            or f"Servicos confirmados da {name} em {city}, sem invencoes."
+            or defaults.get("services_subheadline")
+            or f"Informacoes confirmadas da {name} em {city}, organizadas para conversao local."
         ),
+        "about_kicker": _fmt(lane_copy.get("about_kicker", ""), "Direção"),
+        "about_title": _fmt(lane_copy.get("about_title", ""), f"{name} em {city} com presença local e construção visual própria."),
+        "about_body": _fmt(lane_copy.get("about_body", ""), f"{name} nasce a partir do lead real, da cidade e do contexto confirmado para não parecer um site clonado."),
+        "gallery_kicker": "Prova visual",
+        "gallery_title": _fmt(lane_copy.get("gallery_title", ""), f"Uma presença visual coerente com {name}."),
+        "gallery_intro": _fmt(lane_copy.get("gallery_intro", ""), f"Imagens, textura e composição reforçam o contexto de {city}."),
+        "reviews_kicker": "Sinais locais",
+        "reviews_title": _fmt(lane_copy.get("reviews_title", ""), f"Confiança local para {name}."),
+        "reviews_intro": _fmt(lane_copy.get("reviews_intro", ""), f"A prova social entra para reduzir atrito e aumentar convicção em {city}."),
+        "proof_quote": _fmt(lane_copy.get("proof_quote", ""), f"{name} aparece com mais clareza quando prova, mídia e CTA trabalham na mesma direção."),
+        "faq_kicker": "Dúvidas",
+        "faq_title": _fmt(lane_copy.get("faq_title", ""), "Perguntas que ajudam a avançar."),
+        "faq_intro": _fmt(lane_copy.get("faq_intro", ""), f"FAQ curto para quem está avaliando {name} em {city}."),
+        "location_kicker": "Presença local",
+        "location_title": _fmt(lane_copy.get("location_title", ""), city),
+        "location_intro": _fmt(lane_copy.get("location_intro", ""), f"Endereço, contato e CTA aparecem com clareza para {city}."),
+        "lifestyle_kicker": _fmt(lane_copy.get("lifestyle_kicker", ""), "Experiência"),
         "lifestyle_title": str(lifestyle.get("title") or defaults["lifestyle_title"]),
         "lifestyle_description": str(lifestyle.get("description") or defaults["lifestyle_description"]),
         "gallery_alt": str(llm_content.get("gallery_alt") or f"{segment} em {city}"),
@@ -3524,8 +3568,9 @@ def _cinematic_copy(facts: dict[str, Any]) -> dict[str, Any]:
         ),
         "modal_title": str(llm_content.get("modal_title") or f"Fale com {name}"),
         "modal_cta": str(llm_content.get("modal_cta") or "Enviar mensagem"),
-        "contact_headline": str(llm_content.get("contact_headline") or "Pronto para confirmar o próximo passo?"),
-        "contact_sub": str(llm_content.get("contact_sub") or "Use o canal oficial para tirar dúvidas e agendar."),
+        "contact_kicker": _fmt(lane_copy.get("contact_kicker", ""), "Contato"),
+        "contact_headline": str(llm_content.get("contact_headline") or _fmt(lane_copy.get("contact_headline", ""), "Pronto para confirmar o próximo passo?")),
+        "contact_sub": str(llm_content.get("contact_sub") or _fmt(lane_copy.get("contact_sub", ""), "Use o canal oficial para tirar dúvidas e agendar.")),
         "services": services,
     }
 
@@ -3751,13 +3796,14 @@ import { ArrowDownRight, MessageCircle, Play, Star } from 'lucide-react';
 import { motion } from 'motion/react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { mediaImages, mediaVideos, siteCopy, variation, whatsappHref } from './siteData';
+import { blockPlan, mediaImages, mediaVideos, siteCopy, variation, whatsappHref } from './siteData';
 
 gsap.registerPlugin(ScrollTrigger);
 
 export function HeroSection({ onOpen }: { onOpen?: () => void }) {
   const rootRef = useRef<HTMLElement | null>(null);
   const heroClasses = (variation as any)?.hero_classes ? (variation as any).hero_classes : '';
+  const heroVariant = String((blockPlan as any)?.hero_variant || (variation as any)?.hero_layout || 'split');
   // Sprint 14.6: video background so aparece em hero_layout=video ou fullbleed.
   // Para outros layouts (split/center/asymmetric), usa imagem poster.
   const _varLayout = String((variation as any)?.hero_layout ? (variation as any).hero_layout : 'split');
@@ -3773,6 +3819,19 @@ useEffect(() => {
     }, root);
     return () => ctx.revert();
   }, []);
+  const shellClass = heroVariant === 'center'
+    ? 'mx-auto flex max-w-6xl flex-col items-center gap-10 text-center'
+    : heroVariant === 'asymmetric'
+      ? 'mx-auto grid max-w-7xl gap-10 lg:grid-cols-[0.92fr_1.08fr] lg:items-center'
+      : heroVariant === 'video' || heroVariant === 'fullbleed'
+        ? 'mx-auto grid max-w-7xl gap-10 lg:grid-cols-[1.15fr_.85fr] lg:items-end'
+        : 'mx-auto grid max-w-7xl gap-10 lg:grid-cols-[1.05fr_.95fr] lg:items-end';
+  const copyClass = heroVariant === 'center' ? 'mx-auto max-w-4xl' : heroVariant === 'asymmetric' ? 'order-2 lg:order-2 max-w-4xl' : 'max-w-4xl';
+  const statsClass = heroVariant === 'center'
+    ? 'grid gap-3 sm:grid-cols-3'
+    : heroVariant === 'asymmetric'
+      ? 'order-1 grid gap-3 sm:grid-cols-3 lg:order-1 lg:grid-cols-1'
+      : 'grid gap-3 sm:grid-cols-3 lg:grid-cols-1';
   return (
     <section ref={rootRef} id="hero" className={'hero-v14 ' + heroClasses}>
       <div className="absolute inset-0 -z-20" style={{ background: 'var(--bg)' }} />
@@ -3782,9 +3841,9 @@ useEffect(() => {
         <img data-hero-poster src={mediaImages[0]} alt={siteCopy.gallery_alt} className="absolute inset-0 -z-10 h-full w-full object-cover opacity-32 saturate-[.85]" loading="eager" decoding="async" />
       )}
       <div className="absolute inset-0 -z-10" style={{ background: `linear-gradient(90deg, color-mix(in srgb, var(--bg) 96%, transparent), color-mix(in srgb, var(--bg) 66%, transparent) 42%, color-mix(in srgb, var(--bg) 22%, transparent)), radial-gradient(circle_at_80%_20%, color-mix(in srgb, var(--accent) 20%, transparent), transparent 34%)` }} />
-      <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[1.05fr_.95fr] lg:items-end">
-        <div className="max-w-4xl">
-          <motion.div data-hero-reveal className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em]" style={{ borderColor: 'color-mix(in srgb, var(--accent) 25%, transparent)', background: 'color-mix(in srgb, var(--accent) 10%, transparent)', color: 'var(--accent-soft)' }}><Play className="h-3.5 w-3.5" />{siteCopy.segment} em {siteCopy.city}</motion.div>
+      <div className={shellClass}>
+        <div className={copyClass}>
+          <motion.div data-hero-reveal className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em]" style={{ borderColor: 'color-mix(in srgb, var(--accent) 25%, transparent)', background: 'color-mix(in srgb, var(--accent) 10%, transparent)', color: 'var(--accent-soft)' }}><Play className="h-3.5 w-3.5" />{siteCopy.hero_badge || `${siteCopy.segment} em ${siteCopy.city}`}</motion.div>
           <h1 data-hero-reveal className="mt-7 max-w-5xl text-[clamp(2.65rem,7.7vw,5.9rem)] font-semibold leading-[0.93] tracking-[-0.035em] text-white">{siteCopy.headline}</h1>
           <p data-hero-reveal className="mt-6 max-w-2xl text-base leading-8 text-zinc-200 md:text-lg">{siteCopy.subheadline}</p>
           <div data-hero-reveal className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
@@ -3792,7 +3851,7 @@ useEffect(() => {
             <button type="button" onClick={onOpen} className="inline-flex items-center justify-center gap-2 rounded-full border border-white/15 px-6 py-3.5 text-sm font-semibold text-white transition duration-300 hover:-translate-y-0.5">{siteCopy.cta_secondary}<ArrowDownRight className="h-4 w-4" /></button>
           </div>
         </div>
-        <div data-hero-reveal className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
+        <div data-hero-reveal className={statsClass}>
           {[['Avaliação', siteCopy.rating || '5.0'], ['Sinais locais', siteCopy.reviews || 'confirmados'], ['Contato', siteCopy.phone || 'WhatsApp']].map(([label, value]) => (
             <div key={label} className="rounded-[18px] border border-white/10 bg-white/[0.055] p-4 backdrop-blur-md"><div className="flex items-center gap-2" style={{ color: 'var(--accent)' }}><Star className="h-4 w-4" /><span className="text-xs font-semibold uppercase tracking-[0.16em]">{label}</span></div><p className="mt-2 text-lg font-semibold text-white">{value}</p></div>
           ))}
@@ -3905,7 +3964,7 @@ export function AboutSection() {
   const surfaceStyle = String((variation as any)?.surface_style || '');
   const servicesVariant = String((blockPlan as any)?.services_variant || '');
   const leadClass = surfaceStyle === 'solid' ? 'bg-white text-[var(--text-dark)] shadow-[0_24px_80px_rgba(0,0,0,0.18)]' : 'bg-white/[0.04] text-white backdrop-blur-xl';
-  return <section id="sobre" style={{ background: 'var(--bg)' }} className="px-5 py-20 text-white md:px-8 md:py-28"><div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[0.88fr_1.12fr] lg:items-end"><motion.div initial={{ opacity: 0, y: 22 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.28 }}><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>Direção</p><h2 className="mt-3 max-w-3xl text-[clamp(2rem,5vw,4.5rem)] font-semibold leading-[0.98] tracking-[-0.03em]">A presença digital de __ABOUT_NAME__ não precisa parecer igual ao resto do estoque.</h2><p className="mt-6 max-w-2xl text-base leading-8 text-zinc-300">O site nasce a partir do lead real, do nicho confirmado, da cidade e da variação estrutural definida antes do renderer. A composição muda sem perder factualidade.</p></motion.div><div className={`grid gap-4 ${servicesVariant === 'split_editorial' ? 'md:grid-cols-2 xl:grid-cols-3' : 'md:grid-cols-3'}`}>{pillars.map((pillar, index) => { const Icon = pillar.icon; return <motion.article key={pillar.title} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.24 }} transition={{ delay: index * 0.05 }} className="min-h-[15rem] rounded-[18px] p-6 __CARD_SHELL__"><Icon className="h-5 w-5" style={{ color: 'var(--accent)' }} /><h3 className="mt-8 text-xl font-semibold tracking-tight text-white">{pillar.title}</h3><p className="mt-4 text-sm leading-7 text-zinc-300">{pillar.text}</p></motion.article>; })}</div><motion.aside initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.24 }} className={'rounded-[22px] border border-white/10 p-6 ' + leadClass}><div className="flex items-center justify-between gap-4"><div><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>Construção</p><p className="mt-3 text-2xl font-semibold">__ABOUT_CITY__</p></div><ArrowUpRight className="h-5 w-5" style={{ color: 'var(--accent)' }} /></div><p className="mt-4 text-sm leading-7 opacity-80">Layout, ordem e ritmo foram escolhidos pela variação da esteira, não por um bloco fixo colado em todos os nichos.</p></motion.aside></div></section>;
+  return <section id="sobre" style={{ background: 'var(--bg)' }} className="px-5 py-20 text-white md:px-8 md:py-28"><div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[0.88fr_1.12fr] lg:items-end"><motion.div initial={{ opacity: 0, y: 22 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.28 }}><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>{siteCopy.about_kicker}</p><h2 className="mt-3 max-w-3xl text-[clamp(2rem,5vw,4.5rem)] font-semibold leading-[0.98] tracking-[-0.03em]">{siteCopy.about_title}</h2><p className="mt-6 max-w-2xl text-base leading-8 text-zinc-300">{siteCopy.about_body}</p></motion.div><div className={`grid gap-4 ${servicesVariant === 'split_editorial' ? 'md:grid-cols-2 xl:grid-cols-3' : 'md:grid-cols-3'}`}>{pillars.map((pillar, index) => { const Icon = pillar.icon; return <motion.article key={pillar.title} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.24 }} transition={{ delay: index * 0.05 }} className="min-h-[15rem] rounded-[18px] p-6 __CARD_SHELL__"><Icon className="h-5 w-5" style={{ color: 'var(--accent)' }} /><h3 className="mt-8 text-xl font-semibold tracking-tight text-white">{pillar.title}</h3><p className="mt-4 text-sm leading-7 text-zinc-300">{pillar.text}</p></motion.article>; })}</div><motion.aside initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.24 }} className={'rounded-[22px] border border-white/10 p-6 ' + leadClass}><div className="flex items-center justify-between gap-4"><div><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>Construção</p><p className="mt-3 text-2xl font-semibold">__ABOUT_CITY__</p></div><ArrowUpRight className="h-5 w-5" style={{ color: 'var(--accent)' }} /></div><p className="mt-4 text-sm leading-7 opacity-80">Layout, ordem e ritmo foram escolhidos pela variação da esteira e calibrados para o contexto local.</p></motion.aside></div></section>;
 }
 export default AboutSection;
 """.replace("__PROOF_STYLE__", proof_style.replace("_", " ")).replace("__SURFACE_STYLE__", surface_style.replace("_", " ")).replace("__CARD_SHELL__", card_shell).replace("__ABOUT_NAME__", copy["name"]).replace("__ABOUT_CITY__", copy["city"])
@@ -3913,7 +3972,7 @@ export default AboutSection;
 import { motion } from 'motion/react';
 import { mediaImages, siteCopy } from './siteData';
 export function GallerySection() {
-  return <section id="galeria" style={{ background: 'var(--bg)' }} className="px-5 py-20 text-white md:px-8 md:py-28"><div className="mx-auto max-w-7xl"><div className="mb-10 flex flex-col gap-4 md:flex-row md:items-end md:justify-between"><div><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>Prova visual</p><h2 className="mt-3 max-w-3xl text-[clamp(2rem,4.8vw,4.4rem)] font-semibold leading-[1] tracking-[-0.025em]">Uma narrativa visual para {siteCopy.segment}.</h2></div><p className="max-w-md text-sm leading-7 text-zinc-300">{siteCopy.gallery_alt}</p></div><div className="__GALLERY_GRID_CLASS__">{mediaImages.slice(0, 5).map((src, index) => <motion.figure key={src} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.25 }} transition={{ delay: index * 0.04 }} className={`group relative overflow-hidden rounded-[18px] bg-black ${index === 0 ? 'md:col-span-2 md:row-span-2' : ''}`}><img src={src} alt={`${siteCopy.gallery_alt} ${index + 1}`} className="h-full w-full object-cover opacity-90 transition duration-700 group-hover:scale-105 group-hover:opacity-100" loading={index === 0 ? 'eager' : 'lazy'} decoding="async" /><figcaption className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-5 text-sm font-semibold text-white">{index === 0 ? siteCopy.name : siteCopy.city}</figcaption></motion.figure>)}</div></div></section>;
+  return <section id="galeria" style={{ background: 'var(--bg)' }} className="px-5 py-20 text-white md:px-8 md:py-28"><div className="mx-auto max-w-7xl"><div className="mb-10 flex flex-col gap-4 md:flex-row md:items-end md:justify-between"><div><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>{siteCopy.gallery_kicker}</p><h2 className="mt-3 max-w-3xl text-[clamp(2rem,4.8vw,4.4rem)] font-semibold leading-[1] tracking-[-0.025em]">{siteCopy.gallery_title}</h2></div><p className="max-w-md text-sm leading-7 text-zinc-300">{siteCopy.gallery_intro}</p></div><div className="__GALLERY_GRID_CLASS__">{mediaImages.slice(0, 5).map((src, index) => <motion.figure key={src} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.25 }} transition={{ delay: index * 0.04 }} className={`group relative overflow-hidden rounded-[18px] bg-black ${index === 0 ? 'md:col-span-2 md:row-span-2' : ''}`}><img src={src} alt={`${siteCopy.gallery_alt} ${index + 1}`} className="h-full w-full object-cover opacity-90 transition duration-700 group-hover:scale-105 group-hover:opacity-100" loading={index === 0 ? 'eager' : 'lazy'} decoding="async" /><figcaption className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-5 text-sm font-semibold text-white">{index === 0 ? siteCopy.name : siteCopy.city}</figcaption></motion.figure>)}</div></div></section>;
 }
 export default GallerySection;
 """.replace("__GALLERY_GRID_CLASS__", gallery_grid_class)
@@ -3932,7 +3991,7 @@ export function ReviewsSection() {
   const proofStyle = String((variation as any)?.proof_style || '');
   const spotlight = proofStyle === 'quote_spotlight';
   const marquee = proofStyle === 'card_marquee';
-  return <section id="avaliacoes" style={{ background: 'var(--bg)' }} className="overflow-hidden px-5 py-20 text-white md:px-8 md:py-28"><div className="mx-auto max-w-7xl"><div className="mb-10 flex flex-col gap-4 md:flex-row md:items-end md:justify-between"><div><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>Sinais locais</p><h2 className="mt-3 max-w-3xl text-[clamp(2rem,4.8vw,4.4rem)] font-semibold leading-[1] tracking-[-0.025em]">Prova social com tratamento __PROOF_STYLE__.</h2></div><div className="flex gap-3 text-sm text-zinc-300"><span className="rounded-full border border-white/10 bg-white/5 px-4 py-2">{siteCopy.rating || '5.0'} avaliação</span><span className="rounded-full border border-white/10 bg-white/5 px-4 py-2">{siteCopy.city}</span></div></div>{marquee ? <div className="flex gap-4 overflow-hidden">{[...proofs, ...proofs].map((item, index) => <motion.article key={`${item.title}-${index}`} initial={{ opacity: 0, x: 24 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true, amount: 0.18 }} className="min-w-[18rem] rounded-[18px] border border-white/10 bg-white/[0.05] p-6"><div className="flex items-center gap-3"><Avatar><AvatarFallback>{item.initials}</AvatarFallback></Avatar><div><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>{item.badge}</p><h3 className="mt-1 text-lg font-semibold text-white">{item.title}</h3></div></div><Separator className="my-4" /><p className="text-sm leading-7 text-zinc-300">{item.body}</p></motion.article>)}</div> : <div className={`grid gap-4 ${spotlight ? 'lg:grid-cols-[1.15fr_0.85fr]' : 'md:grid-cols-3'}`}><motion.article initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.24 }} className="rounded-[22px] border border-white/10 bg-white/[0.05] p-7"><p className="text-2xl leading-10 text-white">“{siteCopy.name} aparece com mais intenção quando a prova, a mídia e o CTA não competem entre si.”</p><p className="mt-6 text-sm font-semibold text-zinc-300">{siteCopy.city} • {siteCopy.segment}</p></motion.article><div className={`grid gap-4 ${spotlight ? '' : 'md:col-span-2 md:grid-cols-2'}`}>{proofs.slice(0, spotlight ? 2 : 4).map((item, index) => <motion.article key={item.title} initial={{ opacity: 0, y: 18 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.24 }} transition={{ delay: index * 0.05 }} className="rounded-[18px] border border-white/10 bg-white/[0.04] p-6"><div className="flex items-center gap-3"><Avatar className="h-10 w-10"><AvatarFallback>{item.initials}</AvatarFallback></Avatar><div><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>{item.badge}</p><h3 className="mt-1 text-lg font-semibold text-white">{item.title}</h3></div></div><Separator className="my-4" /><p className="text-sm leading-7 text-zinc-300">{item.body}</p></motion.article>)}</div></div>}</div></section>;
+  return <section id="avaliacoes" style={{ background: 'var(--bg)' }} className="overflow-hidden px-5 py-20 text-white md:px-8 md:py-28"><div className="mx-auto max-w-7xl"><div className="mb-10 flex flex-col gap-4 md:flex-row md:items-end md:justify-between"><div><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>{siteCopy.reviews_kicker}</p><h2 className="mt-3 max-w-3xl text-[clamp(2rem,4.8vw,4.4rem)] font-semibold leading-[1] tracking-[-0.025em]">{siteCopy.reviews_title}</h2></div><div className="max-w-md text-sm leading-7 text-zinc-300">{siteCopy.reviews_intro}</div></div>{marquee ? <div className="flex gap-4 overflow-hidden">{[...proofs, ...proofs].map((item, index) => <motion.article key={`${item.title}-${index}`} initial={{ opacity: 0, x: 24 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true, amount: 0.18 }} className="min-w-[18rem] rounded-[18px] border border-white/10 bg-white/[0.05] p-6"><div className="flex items-center gap-3"><Avatar><AvatarFallback>{item.initials}</AvatarFallback></Avatar><div><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>{item.badge}</p><h3 className="mt-1 text-lg font-semibold text-white">{item.title}</h3></div></div><Separator className="my-4" /><p className="text-sm leading-7 text-zinc-300">{item.body}</p></motion.article>)}</div> : <div className={`grid gap-4 ${spotlight ? 'lg:grid-cols-[1.15fr_0.85fr]' : 'md:grid-cols-3'}`}><motion.article initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.24 }} className="rounded-[22px] border border-white/10 bg-white/[0.05] p-7"><p className="text-2xl leading-10 text-white">“{siteCopy.proof_quote}”</p><p className="mt-6 text-sm font-semibold text-zinc-300">{siteCopy.city} • {siteCopy.segment}</p></motion.article><div className={`grid gap-4 ${spotlight ? '' : 'md:col-span-2 md:grid-cols-2'}`}>{proofs.slice(0, spotlight ? 2 : 4).map((item, index) => <motion.article key={item.title} initial={{ opacity: 0, y: 18 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.24 }} transition={{ delay: index * 0.05 }} className="rounded-[18px] border border-white/10 bg-white/[0.04] p-6"><div className="flex items-center gap-3"><Avatar className="h-10 w-10"><AvatarFallback>{item.initials}</AvatarFallback></Avatar><div><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>{item.badge}</p><h3 className="mt-1 text-lg font-semibold text-white">{item.title}</h3></div></div><Separator className="my-4" /><p className="text-sm leading-7 text-zinc-300">{item.body}</p></motion.article>)}</div></div>}</div></section>;
 }
 export default ReviewsSection;
 """.replace("__PROOF_STYLE__", proof_style.replace("_", " "))
@@ -3948,9 +4007,9 @@ const items = [
 export function FaqSection() {
   const variant = String((blockPlan as any)?.faq_variant || 'panel');
   if (variant === 'inline') {
-    return <section id="faq" style={{ background: 'var(--bg)' }} className="px-5 py-20 text-white md:px-8 md:py-28"><div className="mx-auto max-w-7xl"><div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between"><div><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>Dúvidas</p><h2 className="mt-3 text-[clamp(2rem,4.8vw,4.2rem)] font-semibold leading-[1] tracking-[-0.025em]">Perguntas que destravam o clique.</h2></div><p className="max-w-xl text-sm leading-7 text-zinc-300">FAQ curto, factual e direto ao ponto para reduzir atrito sem poluir a página.</p></div><div className="grid gap-4">{items.map((item) => <div key={item.value} className="rounded-[18px] border border-white/10 bg-white/[0.04] px-5 py-4"><Accordion type="single" collapsible className="w-full"><AccordionItem value={item.value}><AccordionTrigger>{item.question}</AccordionTrigger><AccordionContent>{item.answer}</AccordionContent></AccordionItem></Accordion></div>)}</div></div></section>;
+    return <section id="faq" style={{ background: 'var(--bg)' }} className="px-5 py-20 text-white md:px-8 md:py-28"><div className="mx-auto max-w-7xl"><div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between"><div><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>{siteCopy.faq_kicker}</p><h2 className="mt-3 text-[clamp(2rem,4.8vw,4.2rem)] font-semibold leading-[1] tracking-[-0.025em]">{siteCopy.faq_title}</h2></div><p className="max-w-xl text-sm leading-7 text-zinc-300">{siteCopy.faq_intro}</p></div><div className="grid gap-4">{items.map((item) => <div key={item.value} className="rounded-[18px] border border-white/10 bg-white/[0.04] px-5 py-4"><Accordion type="single" collapsible className="w-full"><AccordionItem value={item.value}><AccordionTrigger>{item.question}</AccordionTrigger><AccordionContent>{item.answer}</AccordionContent></AccordionItem></Accordion></div>)}</div></div></section>;
   }
-  return <section id="faq" style={{ background: 'var(--bg)' }} className="px-5 py-20 text-white md:px-8 md:py-28"><div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[0.85fr_1.15fr]"><div><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>Dúvidas</p><h2 className="mt-3 text-[clamp(2rem,4.8vw,4.2rem)] font-semibold leading-[1] tracking-[-0.025em]">Perguntas que destravam o clique.</h2><p className="mt-5 max-w-xl text-sm leading-7 text-zinc-300">FAQ curto, factual e direto ao ponto para reduzir atrito sem poluir a página.</p></div><div className="rounded-[22px] border border-white/10 bg-white/[0.04] p-6"><Accordion type="single" collapsible className="w-full">{items.map((item) => <AccordionItem key={item.value} value={item.value}><AccordionTrigger>{item.question}</AccordionTrigger><AccordionContent>{item.answer}</AccordionContent></AccordionItem>)}</Accordion></div></div></section>;
+  return <section id="faq" style={{ background: 'var(--bg)' }} className="px-5 py-20 text-white md:px-8 md:py-28"><div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[0.85fr_1.15fr]"><div><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>{siteCopy.faq_kicker}</p><h2 className="mt-3 text-[clamp(2rem,4.8vw,4.2rem)] font-semibold leading-[1] tracking-[-0.025em]">{siteCopy.faq_title}</h2><p className="mt-5 max-w-xl text-sm leading-7 text-zinc-300">{siteCopy.faq_intro}</p></div><div className="rounded-[22px] border border-white/10 bg-white/[0.04] p-6"><Accordion type="single" collapsible className="w-full">{items.map((item) => <AccordionItem key={item.value} value={item.value}><AccordionTrigger>{item.question}</AccordionTrigger><AccordionContent>{item.answer}</AccordionContent></AccordionItem>)}</Accordion></div></div></section>;
 }
 export default FaqSection;
 """
@@ -3984,7 +4043,7 @@ import { motion } from 'motion/react';
 import { blockPlan, siteCopy, whatsappHref } from './siteData';
 export function LocationSection() {
   const feature = String((blockPlan as any)?.location_variant || '') === 'feature_local';
-  return <section id="localizacao" style={{ background: 'var(--bg-light)' }} className="px-5 py-20 md:px-8 md:py-28"><div className={`mx-auto grid max-w-7xl gap-4 ${feature ? 'lg:grid-cols-[0.95fr_1.05fr]' : 'lg:grid-cols-[1.05fr_0.95fr]'}`}><motion.article initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.24 }} className="rounded-[18px] border border-black/5 bg-white p-7 shadow-[0_18px_60px_rgba(0,0,0,0.08)]"><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>Presença local</p><h2 className="mt-3 text-[clamp(1.8rem,4vw,3.6rem)] font-semibold tracking-[-0.025em] text-zinc-950">{siteCopy.city}</h2><p className="mt-4 max-w-xl text-sm leading-7 text-zinc-600">{siteCopy.address || siteCopy.city}</p><div className="mt-8 grid gap-4 sm:grid-cols-2"><div className="rounded-[16px] border border-zinc-200 p-5"><MapPin className="h-5 w-5" style={{ color: 'var(--accent)' }} /><p className="mt-3 text-sm font-semibold text-zinc-950">Endereço</p><p className="mt-2 text-sm leading-6 text-zinc-600">{siteCopy.address || siteCopy.city}</p></div><div className="rounded-[16px] border border-zinc-200 p-5"><Phone className="h-5 w-5" style={{ color: 'var(--accent)' }} /><p className="mt-3 text-sm font-semibold text-zinc-950">Contato</p><p className="mt-2 text-sm leading-6 text-zinc-600">{siteCopy.phone}</p></div></div></motion.article><motion.article initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.24 }} transition={{ delay: 0.06 }} className="rounded-[18px] border border-transparent p-7" style={{ background: 'linear-gradient(135deg, var(--accent-soft), color-mix(in srgb, var(--accent) 22%, white))' }}><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent-dark)' }}>Ação</p><h3 className="mt-3 text-3xl font-semibold tracking-tight" style={{ color: 'var(--accent-contrast)' }}>Chegue pelo canal oficial</h3><p className="mt-4 text-sm leading-7" style={{ color: 'var(--accent-dark)' }}>A rota e o contato ficam organizados para diminuir fricção no momento do clique.</p><div className="mt-8 flex flex-col gap-3 sm:flex-row"><a href={whatsappHref} rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 rounded-full px-5 py-3 text-sm font-semibold" style={{ background: 'var(--bg)', color: 'var(--text)' }}><MessageCircle className="h-4 w-4" /> WhatsApp</a><a href="#contato" className="inline-flex items-center justify-center gap-2 rounded-full border border-black/10 px-5 py-3 text-sm font-semibold" style={{ color: 'var(--accent-contrast)' }}><MapPin className="h-4 w-4" /> Ver CTA</a></div></motion.article></div></section>;
+  return <section id="localizacao" style={{ background: 'var(--bg-light)' }} className="px-5 py-20 md:px-8 md:py-28"><div className={`mx-auto grid max-w-7xl gap-4 ${feature ? 'lg:grid-cols-[0.95fr_1.05fr]' : 'lg:grid-cols-[1.05fr_0.95fr]'}`}><motion.article initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.24 }} className="rounded-[18px] border border-black/5 bg-white p-7 shadow-[0_18px_60px_rgba(0,0,0,0.08)]"><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>{siteCopy.location_kicker}</p><h2 className="mt-3 text-[clamp(1.8rem,4vw,3.6rem)] font-semibold tracking-[-0.025em] text-zinc-950">{siteCopy.location_title}</h2><p className="mt-4 max-w-xl text-sm leading-7 text-zinc-600">{siteCopy.location_intro}</p><div className="mt-8 grid gap-4 sm:grid-cols-2"><div className="rounded-[16px] border border-zinc-200 p-5"><MapPin className="h-5 w-5" style={{ color: 'var(--accent)' }} /><p className="mt-3 text-sm font-semibold text-zinc-950">Endereço</p><p className="mt-2 text-sm leading-6 text-zinc-600">{siteCopy.address || siteCopy.city}</p></div><div className="rounded-[16px] border border-zinc-200 p-5"><Phone className="h-5 w-5" style={{ color: 'var(--accent)' }} /><p className="mt-3 text-sm font-semibold text-zinc-950">Contato</p><p className="mt-2 text-sm leading-6 text-zinc-600">{siteCopy.phone}</p></div></div></motion.article><motion.article initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.24 }} transition={{ delay: 0.06 }} className="rounded-[18px] border border-transparent p-7" style={{ background: 'linear-gradient(135deg, var(--accent-soft), color-mix(in srgb, var(--accent) 22%, white))' }}><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent-dark)' }}>Ação</p><h3 className="mt-3 text-3xl font-semibold tracking-tight" style={{ color: 'var(--accent-contrast)' }}>Chegue pelo canal oficial</h3><p className="mt-4 text-sm leading-7" style={{ color: 'var(--accent-dark)' }}>A rota e o contato ficam organizados para diminuir fricção no momento do clique.</p><div className="mt-8 flex flex-col gap-3 sm:flex-row"><a href={whatsappHref} rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 rounded-full px-5 py-3 text-sm font-semibold" style={{ background: 'var(--bg)', color: 'var(--text)' }}><MessageCircle className="h-4 w-4" /> WhatsApp</a><a href="#contato" className="inline-flex items-center justify-center gap-2 rounded-full border border-black/10 px-5 py-3 text-sm font-semibold" style={{ color: 'var(--accent-contrast)' }}><MapPin className="h-4 w-4" /> Ver CTA</a></div></motion.article></div></section>;
 }
 export default LocationSection;
 """,
@@ -3997,7 +4056,7 @@ gsap.registerPlugin(ScrollTrigger);
 export function LifestyleSection() {
   const sectionRef = useRef<HTMLElement | null>(null);
   useEffect(() => { const section = sectionRef.current; if (!section || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return; const ctx = gsap.context(() => { gsap.to('[data-parallax-card]', { y: -46, ease: 'none', scrollTrigger: { trigger: section, start: 'top bottom', end: 'bottom top', scrub: true } }); }, section); return () => ctx.revert(); }, []);
-  return <section ref={sectionRef} id="experiencia" style={{ background: 'var(--accent-dark)' }} className="relative overflow-hidden px-5 py-20 text-white md:px-8 md:py-28"><div className="absolute inset-0" style={{ background: 'radial-gradient(circle_at_18%_18%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 32%), linear-gradient(180deg, rgba(255,255,255,0.03), transparent)' }} /><div className="relative mx-auto grid max-w-7xl gap-8 lg:grid-cols-[.9fr_1.1fr] lg:items-center"><div><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>Experiência</p><h2 className="mt-3 text-[clamp(2rem,4.8vw,4.4rem)] font-semibold leading-[1] tracking-[-0.025em]">{siteCopy.lifestyle_title}</h2><p className="mt-6 max-w-xl text-base leading-8 text-zinc-300">{siteCopy.lifestyle_description}</p></div><div className="relative min-h-[34rem]"><motion.img data-parallax-card src={mediaImages[1] || mediaImages[0]} alt={siteCopy.gallery_alt} initial={{ opacity: 0, rotate: -1.4, y: 24 }} whileInView={{ opacity: 1, rotate: -1.4, y: 0 }} viewport={{ once: true, amount: 0.25 }} className="absolute left-0 top-8 h-[25rem] w-[72%] rounded-[18px] object-cover shadow-[0_30px_90px_rgba(0,0,0,.30)]" loading="lazy" decoding="async" /><motion.div initial={{ opacity: 0, y: 28 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.3 }} className="absolute bottom-0 right-0 w-[68%] rounded-[18px] border border-white/10 bg-white/[.06] p-6 backdrop-blur-xl"><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>SEO local</p><h3 className="mt-3 text-2xl font-semibold">{siteCopy.name}</h3><p className="mt-3 text-sm leading-7 text-zinc-300">{siteCopy.address || siteCopy.city}</p></motion.div></div></div></section>;
+  return <section ref={sectionRef} id="experiencia" style={{ background: 'var(--accent-dark)' }} className="relative overflow-hidden px-5 py-20 text-white md:px-8 md:py-28"><div className="absolute inset-0" style={{ background: 'radial-gradient(circle_at_18%_18%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 32%), linear-gradient(180deg, rgba(255,255,255,0.03), transparent)' }} /><div className="relative mx-auto grid max-w-7xl gap-8 lg:grid-cols-[.9fr_1.1fr] lg:items-center"><div><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>{siteCopy.lifestyle_kicker}</p><h2 className="mt-3 text-[clamp(2rem,4.8vw,4.4rem)] font-semibold leading-[1] tracking-[-0.025em]">{siteCopy.lifestyle_title}</h2><p className="mt-6 max-w-xl text-base leading-8 text-zinc-300">{siteCopy.lifestyle_description}</p></div><div className="relative min-h-[34rem]"><motion.img data-parallax-card src={mediaImages[1] || mediaImages[0]} alt={siteCopy.gallery_alt} initial={{ opacity: 0, rotate: -1.4, y: 24 }} whileInView={{ opacity: 1, rotate: -1.4, y: 0 }} viewport={{ once: true, amount: 0.25 }} className="absolute left-0 top-8 h-[25rem] w-[72%] rounded-[18px] object-cover shadow-[0_30px_90px_rgba(0,0,0,.30)]" loading="lazy" decoding="async" /><motion.div initial={{ opacity: 0, y: 28 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.3 }} className="absolute bottom-0 right-0 w-[68%] rounded-[18px] border border-white/10 bg-white/[.06] p-6 backdrop-blur-xl"><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>{siteCopy.location_kicker}</p><h3 className="mt-3 text-2xl font-semibold">{siteCopy.name}</h3><p className="mt-3 text-sm leading-7 text-zinc-300">{siteCopy.address || siteCopy.city}</p></motion.div></div></div></section>;
 }
 export default LifestyleSection;
 """,
@@ -4005,7 +4064,7 @@ export default LifestyleSection;
 import { motion } from 'motion/react';
 import { siteCopy, whatsappHref } from './siteData';
 export function ContactCTA({ onOpen }: { onOpen?: () => void }) {
-  return <section id="contato" style={{ background: 'var(--accent)', color: 'var(--accent-contrast)' }} className="px-5 py-20 md:px-8"><div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[1.1fr_.9fr] lg:items-center"><motion.div initial={{ opacity: 0, y: 22 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.3 }}><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent-dark)' }}>Conversão</p><h2 className="mt-3 max-w-4xl text-[clamp(2rem,5vw,4.8rem)] font-semibold leading-[1] tracking-[-0.03em]">{siteCopy.contact_headline}</h2><p className="mt-5 max-w-2xl text-base leading-8" style={{ color: 'var(--accent-dark)' }}>{siteCopy.contact_sub}</p></motion.div><div style={{ background: 'var(--bg)' }} className="rounded-[18px] p-6 text-white"><p className="text-sm leading-7 text-zinc-300">Contato oficial</p><p className="mt-2 text-2xl font-semibold">{siteCopy.phone || 'WhatsApp'}</p><div className="mt-6 flex flex-col gap-3 sm:flex-row"><a href={whatsappHref} rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-semibold" style={{ color: 'var(--bg)' }}><MessageCircle className="h-4 w-4" />Falar no WhatsApp</a><button type="button" onClick={onOpen} className="inline-flex items-center justify-center gap-2 rounded-full border border-white/15 px-5 py-3 text-sm font-semibold text-white"><Phone className="h-4 w-4" />Abrir contato</button></div></div></div></section>;
+  return <section id="contato" style={{ background: 'var(--accent)', color: 'var(--accent-contrast)' }} className="px-5 py-20 md:px-8"><div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[1.1fr_.9fr] lg:items-center"><motion.div initial={{ opacity: 0, y: 22 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.3 }}><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent-dark)' }}>{siteCopy.contact_kicker}</p><h2 className="mt-3 max-w-4xl text-[clamp(2rem,5vw,4.8rem)] font-semibold leading-[1] tracking-[-0.03em]">{siteCopy.contact_headline}</h2><p className="mt-5 max-w-2xl text-base leading-8" style={{ color: 'var(--accent-dark)' }}>{siteCopy.contact_sub}</p></motion.div><div style={{ background: 'var(--bg)' }} className="rounded-[18px] p-6 text-white"><p className="text-sm leading-7 text-zinc-300">Contato oficial</p><p className="mt-2 text-2xl font-semibold">{siteCopy.phone || 'WhatsApp'}</p><div className="mt-6 flex flex-col gap-3 sm:flex-row"><a href={whatsappHref} rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-semibold" style={{ color: 'var(--bg)' }}><MessageCircle className="h-4 w-4" />Falar no WhatsApp</a><button type="button" onClick={onOpen} className="inline-flex items-center justify-center gap-2 rounded-full border border-white/15 px-5 py-3 text-sm font-semibold text-white"><Phone className="h-4 w-4" />Abrir contato</button></div></div></div></section>;
 }
 export default ContactCTA;
 """,

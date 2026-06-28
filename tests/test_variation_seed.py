@@ -311,9 +311,10 @@ def test_cinematic_studio_uses_dynamic_sections_and_local_primitives():
     assert "<LocationSection />" in index_tsx
     assert "export const navLinks =" in site_data
     assert "export const blockPlan =" in site_data
+    assert '"visual_lane"' in site_data
     assert "#faq" in site_data
     assert "stats_then_cards" in site_data
-    assert "Perguntas que destravam o clique." in faq_section
+    assert "Perguntas que destravam o clique." not in faq_section
     assert "const variant = String((blockPlan as any)?.faq_variant || 'panel');" in faq_section
     assert "function Accordion(" in accordion_ui
     assert "function Avatar(" in avatar_ui
@@ -352,6 +353,38 @@ def test_cinematic_theme_guard_picks_readable_accent_contrast():
     assert palette["accent_soft"].startswith("#")
 
 
+def test_visual_lane_changes_palette_and_copy():
+    from backend.services.vite_react_renderer import _generate_cinematic_studio_files
+
+    base_business = {
+        "name": "Academia Norte",
+        "address": "Rua A, 123 - Curitiba",
+        "segment": "academia",
+        "city": "Curitiba",
+    }
+    facts_a = {"business": dict(base_business), "variation": {"visual_lane": "lane_a", "hero_layout": "split"}}
+    facts_b = {"business": dict(base_business), "variation": {"visual_lane": "lane_c", "hero_layout": "center"}}
+
+    files_a = _generate_cinematic_studio_files(facts_a)
+    files_b = _generate_cinematic_studio_files(facts_b)
+
+    css_a = files_a.get("src/index.css", "")
+    css_b = files_b.get("src/index.css", "")
+    site_data_a = files_a.get("src/components/siteData.ts", "")
+    site_data_b = files_b.get("src/components/siteData.ts", "")
+    gallery_a = files_a.get("src/components/GallerySection.tsx", "")
+    reviews_a = files_a.get("src/components/ReviewsSection.tsx", "")
+
+    assert css_a != css_b
+    assert "hero_badge" in site_data_a
+    assert "gallery_title" in site_data_a
+    assert "reviews_title" in site_data_a
+    assert "Uma narrativa visual para" not in gallery_a
+    assert "Prova social com tratamento" not in reviews_a
+    assert "academia-iron-pulse" in site_data_a
+    assert "academia-sunset-track" in site_data_b
+
+
 def run_all_tests():
     """Run all tests and report results."""
     print("=" * 60)
@@ -368,6 +401,7 @@ def run_all_tests():
         test_variation_affects_hero_layout,
         test_full_pipeline_integration,
         test_cinematic_studio_uses_dynamic_sections_and_local_primitives,
+        test_visual_lane_changes_palette_and_copy,
     ]
 
     results = []

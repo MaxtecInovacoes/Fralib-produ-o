@@ -2,6 +2,11 @@ from __future__ import annotations
 
 from typing import Any
 
+try:
+    from backend.services.vite_visual_lanes import resolve_visual_lane
+except ImportError:
+    from services.vite_visual_lanes import resolve_visual_lane  # type: ignore
+
 
 def _normalize_hex(value: str | None, fallback: str) -> str:
     raw = str(value or "").strip()
@@ -86,6 +91,22 @@ def resolve_cinematic_theme(
         or "servicos"
     ).lower()
 
+    variation = facts.get("variation") if isinstance(facts.get("variation"), dict) else {}
+    lane = resolve_visual_lane(
+        segment=segment,
+        subnicho=str(facts.get("subnicho") or facts.get("subniche") or ""),
+        visual_lane=str(variation.get("visual_lane") or ""),
+    )
+
+    lane_palette = lane.get("fallback_palette") if isinstance(lane.get("fallback_palette"), dict) else {}
+    effective_fallback = {
+        "primary": lane_palette.get("primary", fallback_palette["primary"]),
+        "secondary": lane_palette.get("secondary", fallback_palette["secondary"]),
+        "bg_dark": lane_palette.get("bg_dark", fallback_palette["bg_dark"]),
+        "bg_light": lane_palette.get("bg_light", fallback_palette["bg_light"]),
+        "text_dark": lane_palette.get("text_dark", fallback_palette["text_dark"]),
+    }
+
     source = facts.get("color_palette")
     if not isinstance(source, dict) or not source.get("primary"):
         source = facts.get("paleta_cores")
@@ -94,17 +115,17 @@ def resolve_cinematic_theme(
         source = design_dna.get("tokens") if isinstance(design_dna, dict) else None
 
     if not isinstance(source, dict) or not source.get("primary"):
-        source = fallback_palette
+        source = effective_fallback
         archetype = fallback_archetype
     else:
         archetype = str(source.get("archetype") or fallback_archetype).strip() or fallback_archetype
 
-    primary = _normalize_hex(source.get("primary") or source.get("accent"), fallback_palette["primary"])
-    secondary = _normalize_hex(source.get("secondary") or source.get("muted"), fallback_palette["secondary"])
+    primary = _normalize_hex(source.get("primary") or source.get("accent"), effective_fallback["primary"])
+    secondary = _normalize_hex(source.get("secondary") or source.get("muted"), effective_fallback["secondary"])
     accent = _normalize_hex(source.get("accent") or primary, primary)
-    bg_dark = _normalize_hex(source.get("background") or source.get("bg_dark"), fallback_palette["bg_dark"])
-    bg_light = _normalize_hex(source.get("surface") or source.get("bg_light"), fallback_palette["bg_light"])
-    text_dark = _normalize_hex(source.get("text") or source.get("text_dark"), fallback_palette["text_dark"])
+    bg_dark = _normalize_hex(source.get("background") or source.get("bg_dark"), effective_fallback["bg_dark"])
+    bg_light = _normalize_hex(source.get("surface") or source.get("bg_light"), effective_fallback["bg_light"])
+    text_dark = _normalize_hex(source.get("text") or source.get("text_dark"), effective_fallback["text_dark"])
     text_light = best_text_for_background(bg_dark)
     accent_contrast = best_text_for_background(primary)
     accent_dark = _mix_hex(primary, bg_dark, 0.3) if contrast_ratio(primary, bg_dark) < 2.4 else secondary
@@ -133,6 +154,8 @@ def resolve_cinematic_theme(
     return {
         "segment": segment,
         "archetype": archetype,
+        "visual_lane": lane.get("id") or "",
+        "visual_lane_name": lane.get("name") or "",
         "palette": palette,
         "typography": typography or {},
         "fonts": fonts or {},
