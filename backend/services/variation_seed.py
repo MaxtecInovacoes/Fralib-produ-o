@@ -30,6 +30,15 @@ COPY_VOICES = ["aggressive", "friendly", "authoritative"]
 # Color emphasis options
 COLOR_EMPHASIS = ["primary_dominant", "secondary_dominant", "balanced"]
 
+# Section order strategies
+SECTION_ORDER_STYLES = ["credibility_first", "visual_first", "offer_first", "story_first"]
+
+# Proof section styles
+PROOF_STYLES = ["score_wall", "quote_spotlight", "card_marquee", "editorial_case"]
+
+# Surface treatment styles
+SURFACE_STYLES = ["glass", "solid", "outline", "soft_tint"]
+
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # DATA CLASSES
@@ -43,6 +52,9 @@ class VariationSeed:
     motion_style: str
     copy_voice: str
     color_emphasis: str
+    section_order_style: str
+    proof_style: str
+    surface_style: str
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -51,6 +63,9 @@ class VariationSeed:
             "motion_style": self.motion_style,
             "copy_voice": self.copy_voice,
             "color_emphasis": self.color_emphasis,
+            "section_order_style": self.section_order_style,
+            "proof_style": self.proof_style,
+            "surface_style": self.surface_style,
         }
 
 
@@ -211,6 +226,9 @@ def get_variation(facts: dict[str, Any] | None = None, *, counter: int = 0) -> V
     - motion_style: Animation style (sharp/smooth/minimal)
     - copy_voice: Tone of voice for copy (aggressive/friendly/authoritative)
     - color_emphasis: Which color is dominant (primary_dominant/secondary_dominant/balanced)
+    - section_order_style: Narrative order preference for the page
+    - proof_style: Social proof visual treatment
+    - surface_style: Card/surface treatment language
 
     Args:
         facts: Dictionary containing business facts for seed generation
@@ -249,12 +267,24 @@ def get_variation(facts: dict[str, Any] | None = None, *, counter: int = 0) -> V
     # Offset of 3: color emphasis
     color_emphasis = _seeded_choice(COLOR_EMPHASIS, seed, offset=3)
 
+    # Offset of 4: section order strategy
+    section_order_style = _seeded_choice(SECTION_ORDER_STYLES, seed, offset=4)
+
+    # Offset of 5: social proof style
+    proof_style = _seeded_choice(PROOF_STYLES, seed, offset=5)
+
+    # Offset of 6: surface/card treatment
+    surface_style = _seeded_choice(SURFACE_STYLES, seed, offset=6)
+
     return VariationSeed(
         seed=seed,
         hero_layout=hero_layout,
         motion_style=motion_style,
         copy_voice=copy_voice,
         color_emphasis=color_emphasis,
+        section_order_style=section_order_style,
+        proof_style=proof_style,
+        surface_style=surface_style,
     )
 
 

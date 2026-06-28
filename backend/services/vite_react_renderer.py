@@ -90,6 +90,16 @@ except ImportError:
     )
 
 try:
+    from backend.services.vite_block_registry import resolve_cinematic_block_plan
+except ImportError:
+    from services.vite_block_registry import resolve_cinematic_block_plan  # type: ignore
+
+try:
+    from backend.services.vite_theme_guard import resolve_cinematic_theme
+except ImportError:
+    from services.vite_theme_guard import resolve_cinematic_theme  # type: ignore
+
+try:
     from backend.services.vite_prompts import (
         VITE_REACT_SYSTEM_PROMPT,
         VITE_REACT_BATCH_SYSTEM_PROMPT,
@@ -197,6 +207,10 @@ try:
         vite_template_types_ts,
         vite_template_index_css,
         vite_template_jsx_fallback_types,
+        vite_template_utils_ts,
+        vite_template_avatar_ui,
+        vite_template_separator_ui,
+        vite_template_accordion_ui,
         vite_template_lgpd_banner,
         vite_template_factual_motion_contract,
         _visual_business_payload,
@@ -213,6 +227,10 @@ except ImportError:
         vite_template_types_ts,
         vite_template_index_css,
         vite_template_jsx_fallback_types,
+        vite_template_utils_ts,
+        vite_template_avatar_ui,
+        vite_template_separator_ui,
+        vite_template_accordion_ui,
         vite_template_lgpd_banner,
         vite_template_factual_motion_contract,
         _visual_business_payload,
@@ -2911,6 +2929,86 @@ def _get_section_order_for_archetype(archetype: str, seed: int | None = None) ->
     return fixed_first + middle + fixed_last
 
 
+def _normalize_cinematic_section_order(order: list[str] | None) -> list[str]:
+    aliases = {
+        "sobre": "about",
+        "stats_bar": "about",
+        "servicos": "services",
+        "galeria": "gallery",
+        "faq": "faq",
+        "depoimentos": "reviews",
+        "testimonials": "reviews",
+        "avaliacoes": "reviews",
+        "localizacao": "location",
+        "experiencia": "lifestyle",
+        "contato": "contact-cta",
+        "cta": "contact-cta",
+    }
+    allowed = {
+        "navbar",
+        "hero",
+        "about",
+        "services",
+        "gallery",
+        "faq",
+        "reviews",
+        "location",
+        "lifestyle",
+        "contact-cta",
+        "footer",
+    }
+    normalized: list[str] = []
+    for item in order or []:
+        key = aliases.get(str(item or "").strip().lower(), str(item or "").strip().lower())
+        if key in allowed and key not in normalized:
+            normalized.append(key)
+    return normalized
+
+
+def _resolve_cinematic_section_order(archetype: str, seed: int | None, variation: dict[str, Any]) -> list[str]:
+    preferred = _normalize_cinematic_section_order(
+        variation.get("section_order") if isinstance(variation, dict) else []
+    )
+    if not preferred:
+        preferred = _normalize_cinematic_section_order(_get_section_order_for_archetype(archetype, seed))
+
+    if "navbar" not in preferred:
+        preferred.insert(0, "navbar")
+    elif preferred[0] != "navbar":
+        preferred.remove("navbar")
+        preferred.insert(0, "navbar")
+
+    if "hero" not in preferred:
+        preferred.insert(1, "hero")
+    elif preferred.index("hero") != 1:
+        preferred.remove("hero")
+        preferred.insert(1, "hero")
+
+    body_required = ["about", "reviews", "faq", "location"]
+    for section in body_required:
+        if section not in preferred:
+            insert_at = preferred.index("contact-cta") if "contact-cta" in preferred else len(preferred)
+            preferred.insert(insert_at, section)
+
+    if "contact-cta" not in preferred:
+        insert_at = preferred.index("footer") if "footer" in preferred else len(preferred)
+        preferred.insert(insert_at, "contact-cta")
+    elif "footer" in preferred and preferred.index("contact-cta") > preferred.index("footer"):
+        preferred.remove("contact-cta")
+        preferred.insert(preferred.index("footer"), "contact-cta")
+
+    if "footer" not in preferred:
+        preferred.append("footer")
+    elif preferred[-1] != "footer":
+        preferred.remove("footer")
+        preferred.append("footer")
+
+    if "contact-cta" in preferred and "footer" in preferred:
+        preferred.remove("contact-cta")
+        preferred.insert(preferred.index("footer"), "contact-cta")
+    return preferred
+
+
 # Google Fonts import URLs per archetype
 _ARCHETYPE_FONTS = {
     "BOLD_ENERGY": "Oswald:wght@500;600;700;800&family=Inter:wght@400;500;600;700",
@@ -3433,61 +3531,28 @@ def _cinematic_copy(facts: dict[str, Any]) -> dict[str, Any]:
 
 
 def _generate_cinematic_studio_files(facts: dict[str, Any]) -> dict[str, str]:
-    # Sprint 14.5: Respeita a paleta do briefing (PRD color_palette)
-    # quando ela existir — gerada pelo design_dna (OKLch deterministico
-    # por nicho + tier). Cai no archetype fixo só se briefing não trouxer.
     _biz = facts.get("business") if isinstance(facts.get("business"), dict) else {}
     segment = str(_biz.get("segment") or _biz.get("segmento") or facts.get("segmento") or facts.get("segment") or "servicos").lower()
-
-    # Sprint 14.x: Prioridade de palette:
-    # 1. color_palette do DesignerPRD (LLM generated)
-    # 2. paleta_cores do NichoBriefing (extraído do briefing livre "cores roxo e branco")
-    # 3. design_dna.tokens (fallback determinístico)
-    # 4. archetype fixo (último fallback)
-    _prd_palette = facts.get("color_palette")
-
-    # Sprint 14.x: também tenta paleta_cores (cores do briefing livre)
-    if not isinstance(_prd_palette, dict) or not _prd_palette.get("primary"):
-        _prd_palette = facts.get("paleta_cores")  # do NichoBriefing
-
-    if not isinstance(_prd_palette, dict) or not _prd_palette.get("primary"):
-        _prd_palette = (
-            facts.get("design_dna", {}).get("tokens")
-            if isinstance(facts.get("design_dna"), dict)
-            else None
-        )
-
-    if isinstance(_prd_palette, dict) and _prd_palette.get("primary"):
-        # Paleta do briefing do designer PRD (preferência do nicho)
-        palette = {
-            "primary": _prd_palette.get("primary") or _prd_palette.get("accent") or "#3B82F6",
-            "primary_contrast": _prd_palette.get("primary_contrast", "#ffffff"),
-            "secondary": _prd_palette.get("secondary") or _prd_palette.get("muted") or "#1e293b",
-            "accent": _prd_palette.get("accent") or _prd_palette.get("primary") or "#3B82F6",
-            "bg_dark": _prd_palette.get("background") or _prd_palette.get("bg_dark") or "#0f0f0f",
-            "bg_light": _prd_palette.get("surface") or _prd_palette.get("bg_light") or "#f4f0e6",
-            "text_dark": _prd_palette.get("text") or _prd_palette.get("text_dark") or "#09130f",
-            "text_light": _prd_palette.get("text") or "#f8faf7",
-            "border": _prd_palette.get("border", "rgba(0,0,0,0.1)"),
-            "gradient_start": _prd_palette.get("gradient_start", "rgba(0,0,0,0.05)"),
-            "gradient_end": _prd_palette.get("gradient_end", "rgba(0,0,0,0.01)"),
-        }
-        archetype = _prd_palette.get("archetype") or _get_archetype_for_segment(segment)
-    else:
-        archetype = _get_archetype_for_segment(segment)
-        palette = _get_archetype_palette(archetype)
-
+    archetype = _get_archetype_for_segment(segment)
+    fallback_palette = _get_archetype_palette(archetype)
     typography = _get_archetype_typography(archetype)
     fonts = _get_archetype_fonts(archetype)
+    theme = resolve_cinematic_theme(
+        facts,
+        fallback_palette=fallback_palette,
+        fallback_archetype=archetype,
+        typography=typography,
+        fonts=fonts,
+    )
+    archetype = str(theme["archetype"] or archetype)
+    palette = dict(theme["palette"])
 
-    # Map archetype colors to cinematic template vars
-    # Cinematic uses: bg_dark, accent (#b7ff6a), accent_dark, accent_light
     c_bg = palette['bg_dark']
     c_accent = palette['primary']
-    c_accent_light = palette['accent']
-    c_accent_dark = palette['secondary']
+    c_accent_light = palette['accent_soft']
+    c_accent_dark = palette['accent_dark']
     c_text = palette['text_light']
-    c_text_muted = "#9ca3af"  # zinc-400
+    c_text_muted = palette['text_muted']
 
     # Sprint 14.12: variacao por subnicho + counter rotation para evitar
     # que sites do mesmo subnicho (ex: 4 nutricionistas) saiam identicos.
@@ -3573,6 +3638,46 @@ def _generate_cinematic_studio_files(facts: dict[str, Any]) -> dict[str, str]:
     # diferente baseado em facts["variation"] (gerado por agente_variacao).
     _variation_payload = facts.get("variation") if isinstance(facts.get("variation"), dict) else {}
     _hero_classes_override = str(_variation_payload.get("hero_classes") or "").strip()
+    _section_order = _resolve_cinematic_section_order(archetype, _seed_for_html, _variation_payload)
+    _section_import_map = {
+        "navbar": "import { Navbar } from '../components/Navbar';",
+        "hero": "import { HeroSection } from '../components/HeroSection';",
+        "about": "import { AboutSection } from '../components/AboutSection';",
+        "services": "import { ServicesSection } from '../components/ServicesSection';",
+        "gallery": "import { GallerySection } from '../components/GallerySection';",
+        "faq": "import { FaqSection } from '../components/FaqSection';",
+        "reviews": "import { ReviewsSection } from '../components/ReviewsSection';",
+        "location": "import { LocationSection } from '../components/LocationSection';",
+        "lifestyle": "import { LifestyleSection } from '../components/LifestyleSection';",
+        "contact-cta": "import { ContactCTA } from '../components/ContactCTA';",
+        "footer": "import { Footer } from '../components/Footer';",
+    }
+    _section_markup_map = {
+        "navbar": "      <Navbar onOpen={() => setOpen(true)} />",
+        "hero": "      <HeroSection onOpen={() => setOpen(true)} />",
+        "about": "      <AboutSection />",
+        "services": "      <ServicesSection />",
+        "gallery": "      <GallerySection />",
+        "faq": "      <FaqSection />",
+        "reviews": "      <ReviewsSection />",
+        "location": "      <LocationSection />",
+        "lifestyle": "      <LifestyleSection />",
+        "contact-cta": "      <ContactCTA onOpen={() => setOpen(true)} />",
+        "footer": "      <Footer />",
+    }
+    _index_imports = "\n".join(
+        _section_import_map[section] for section in _section_order if section in _section_import_map
+    )
+    _index_sections = "\n".join(
+        _section_markup_map[section] for section in _section_order if section in _section_markup_map
+    )
+    _block_plan = resolve_cinematic_block_plan(
+        section_order=_section_order,
+        variation=_variation_payload,
+        archetype=archetype,
+        segment=segment,
+    )
+    _nav_links = list(_block_plan.get("nav_links") or [])
 
     source_files: dict[str, str] = {
         "src/App.tsx": """import { Index } from './pages/Index';
@@ -3591,28 +3696,18 @@ export const mediaImages = {json.dumps(images, ensure_ascii=False)} as const;
 export const mediaVideos = {json.dumps(videos, ensure_ascii=False)} as const;
 export const whatsappHref = {json.dumps(whatsapp, ensure_ascii=False)} as const;
 export const variation = {json.dumps(_variation_payload, ensure_ascii=False)} as const;
+export const blockPlan = {json.dumps(_block_plan, ensure_ascii=False)} as const;
+export const navLinks = {json.dumps(_nav_links, ensure_ascii=False)} as const;
 """,
         "src/pages/Index.tsx": f"""import {{ useState }} from 'react';
-import {{ Navbar }} from '../components/Navbar';
-import {{ HeroSection }} from '../components/HeroSection';
-import {{ ServicesSection }} from '../components/ServicesSection';
-import {{ GallerySection }} from '../components/GallerySection';
-import {{ LifestyleSection }} from '../components/LifestyleSection';
-import {{ ContactCTA }} from '../components/ContactCTA';
+{_index_imports}
 import {{ BookingModal }} from '../components/BookingModal';
-import {{ Footer }} from '../components/Footer';
 
 export function Index() {{
   const [open, setOpen] = useState(false);
   return (
     <main className="min-h-screen bg-[{c_bg}] text-white">
-      <Navbar onOpen={{() => setOpen(true)}} />
-      <HeroSection onOpen={{() => setOpen(true)}} />
-      <ServicesSection />
-      <GallerySection />
-      <LifestyleSection />
-      <ContactCTA onOpen={{() => setOpen(true)}} />
-      <Footer />
+{_index_sections}
       <BookingModal open={{open}} onClose={{() => setOpen(false)}} />
     </main>
   );
@@ -3622,7 +3717,7 @@ export default Index;
 """,
         "src/components/Navbar.tsx": """import { useEffect, useState } from 'react';
 import { Menu, MessageCircle, X } from 'lucide-react';
-import { siteCopy, whatsappHref } from './siteData';
+import { navLinks, siteCopy, whatsappHref } from './siteData';
 
 export function Navbar({ onOpen }: { onOpen?: () => void }) {
   const [solid, setSolid] = useState(false);
@@ -3633,19 +3728,18 @@ export function Navbar({ onOpen }: { onOpen?: () => void }) {
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
-  const links = [['Abordagem', '#servicos'], ['Prova visual', '#galeria'], ['Experiência', '#experiencia'], ['Contato', '#contato']];
   return (
     <nav style={{ background: solid ? 'color-mix(in srgb, var(--bg) 88%, transparent)' : 'rgba(255,255,255,0.04)' }} className={`fixed inset-x-3 top-3 z-50 rounded-[18px] border px-4 py-3 transition duration-300 md:inset-x-6 md:top-5 border-white/10 ${solid ? 'shadow-[0_10px_32px_rgba(0,0,0,.24)] backdrop-blur-xl' : 'backdrop-blur-md'}`}>
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-4">
         <a href="#hero" className="min-w-0 truncate text-sm font-semibold tracking-tight text-white md:text-base">{siteCopy.name}</a>
-        <div className="hidden items-center gap-6 text-sm text-zinc-300 md:flex">{links.map(([label, href]) => <a key={href} href={href} className="transition hover:text-white">{label}</a>)}</div>
+        <div className="hidden items-center gap-6 text-sm text-zinc-300 md:flex">{navLinks.map((item) => <a key={item.href} href={item.href} className="transition hover:text-white">{item.label}</a>)}</div>
         <div className="flex items-center gap-2">
           <a href={whatsappHref} rel="noopener noreferrer" className="hidden items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition hover:-translate-y-0.5 md:inline-flex" style={{ background: 'var(--accent)', color: 'var(--bg)' }}><MessageCircle className="h-4 w-4" /> WhatsApp</a>
           <button type="button" onClick={onOpen} className="hidden rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-white md:inline-flex">{siteCopy.cta_primary}</button>
           <button type="button" aria-label="Menu" onClick={() => setMenuOpen((value) => !value)} className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/10 text-white md:hidden">{menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}</button>
         </div>
       </div>
-      {menuOpen ? <div className="mt-3 grid gap-2 border-t border-white/10 pt-3 md:hidden">{links.map(([label, href]) => <a key={href} href={href} onClick={() => setMenuOpen(false)} className="rounded-xl px-2 py-2 text-sm text-zinc-200">{label}</a>)}<a href={whatsappHref} rel="noopener noreferrer" className="rounded-xl px-3 py-2 text-sm font-semibold" style={{ background: 'var(--accent)', color: 'var(--bg)' }}>Falar no WhatsApp</a></div> : null}
+      {menuOpen ? <div className="mt-3 grid gap-2 border-t border-white/10 pt-3 md:hidden">{navLinks.map((item) => <a key={item.href} href={item.href} onClick={() => setMenuOpen(false)} className="rounded-xl px-2 py-2 text-sm text-zinc-200">{item.label}</a>)}<a href={whatsappHref} rel="noopener noreferrer" className="rounded-xl px-3 py-2 text-sm font-semibold" style={{ background: 'var(--accent)', color: 'var(--bg)' }}>Falar no WhatsApp</a></div> : null}
     </nav>
   );
 }
@@ -3663,12 +3757,11 @@ gsap.registerPlugin(ScrollTrigger);
 
 export function HeroSection({ onOpen }: { onOpen?: () => void }) {
   const rootRef = useRef<HTMLElement | null>(null);
-  const heroClasses = (variation && variation.hero_classes) ? variation.hero_classes : '';
+  const heroClasses = (variation as any)?.hero_classes ? (variation as any).hero_classes : '';
   // Sprint 14.6: video background so aparece em hero_layout=video ou fullbleed.
   // Para outros layouts (split/center/asymmetric), usa imagem poster.
-  const _varLayout = (variation && variation.hero_layout) ? variation.hero_layout : 'split';
+  const _varLayout = String((variation as any)?.hero_layout ? (variation as any).hero_layout : 'split');
   const _showVideo = _varLayout === 'video' || _varLayout === 'fullbleed';
-  const heroClassNumber = Number((variation && variation.hero_variant) || 0) % 10;
 useEffect(() => {
     const root = rootRef.current;
     if (!root || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
@@ -3681,7 +3774,7 @@ useEffect(() => {
     return () => ctx.revert();
   }, []);
   return (
-    <section ref={rootRef} id="hero" className={('hero-v14 hero-v14-v' + heroClassNumber) + ' ' + heroClasses}>
+    <section ref={rootRef} id="hero" className={'hero-v14 ' + heroClasses}>
       <div className="absolute inset-0 -z-20" style={{ background: 'var(--bg)' }} />
       {_showVideo && mediaVideos[0] ? (
         <video data-hero-video className="absolute inset-0 -z-10 h-full w-full object-cover opacity-52 saturate-[.9]" src={mediaVideos[0]} poster={mediaImages[0]} autoPlay muted loop playsInline preload="metadata" />
@@ -3717,10 +3810,12 @@ export default HeroSection;
   --accent: {c_accent};
   --accent-soft: {c_accent_light};
   --accent-dark: {c_accent_dark};
+  --accent-contrast: {palette.get('accent_contrast', '#09130f')};
   --text: {c_text};
   --text-muted: {c_text_muted};
   --bg-light: {palette.get('bg_light', '#f4f0e6')};
   --text-dark: {palette.get('text_dark', '#09130f')};
+  --panel-text: {palette.get('panel_text', palette.get('text_dark', '#09130f'))};
   --font-family: {_font_family};
   --h1-size: {_h1_size};
   --cta-btn: {_cta_btn_class};
@@ -3782,22 +3877,116 @@ def _generate_cinematic_secondary_components(facts: dict[str, Any], palette: dic
         palette = _get_archetype_palette(archetype)
     c_bg_light = palette.get('bg_light', '#f4f0e6')
     c_text_dark = palette.get('text_dark', '#09130f')
-    return {
-        "src/components/ServicesSection.tsx": """import { ClipboardCheck, MapPinned, Sparkles } from 'lucide-react';
+    variation = facts.get("variation") if isinstance(facts.get("variation"), dict) else {}
+    proof_style = str(variation.get("proof_style") or "score_wall")
+    surface_style = str(variation.get("surface_style") or "glass")
+    card_shell_map = {
+        "glass": "border border-white/10 bg-white/[0.055] backdrop-blur-md",
+        "solid": "border border-black/5 bg-white shadow-[0_18px_60px_rgba(0,0,0,0.18)]",
+        "outline": "border border-white/20 bg-transparent",
+        "soft_tint": "border border-transparent bg-white/[0.08]",
+    }
+    card_shell = card_shell_map.get(surface_style, card_shell_map["glass"])
+    gallery_grid_class = "grid auto-rows-[16rem] gap-4 md:grid-cols-4"
+    if proof_style == "editorial_case":
+        gallery_grid_class = "grid auto-rows-[14rem] gap-4 md:grid-cols-[1.2fr_0.8fr_0.8fr]"
+    elif proof_style == "card_marquee":
+        gallery_grid_class = "grid auto-rows-[15rem] gap-4 md:grid-cols-3"
+    about_section = """
+import { ArrowUpRight, Award, MapPin, Sparkles } from 'lucide-react';
 import { motion } from 'motion/react';
-import { siteCopy } from './siteData';
+import { blockPlan, siteCopy, variation } from './siteData';
+const pillars = [
+  { title: 'Posicionamento local', text: `Narrativa calibrada para ${siteCopy.city} e para o nicho ${siteCopy.segment}.`, icon: MapPin },
+  { title: 'Prova utilizável', text: `Estrutura, mídia e CTA montados para tirar ruído antes do contato com ${siteCopy.name}.`, icon: Award },
+  { title: 'Direção visual', text: 'Composição guiada por variação __PROOF_STYLE__ com superfície __SURFACE_STYLE__.', icon: Sparkles },
+];
+export function AboutSection() {
+  const surfaceStyle = String((variation as any)?.surface_style || '');
+  const servicesVariant = String((blockPlan as any)?.services_variant || '');
+  const leadClass = surfaceStyle === 'solid' ? 'bg-white text-[var(--text-dark)] shadow-[0_24px_80px_rgba(0,0,0,0.18)]' : 'bg-white/[0.04] text-white backdrop-blur-xl';
+  return <section id="sobre" style={{ background: 'var(--bg)' }} className="px-5 py-20 text-white md:px-8 md:py-28"><div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[0.88fr_1.12fr] lg:items-end"><motion.div initial={{ opacity: 0, y: 22 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.28 }}><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>Direção</p><h2 className="mt-3 max-w-3xl text-[clamp(2rem,5vw,4.5rem)] font-semibold leading-[0.98] tracking-[-0.03em]">A presença digital de __ABOUT_NAME__ não precisa parecer igual ao resto do estoque.</h2><p className="mt-6 max-w-2xl text-base leading-8 text-zinc-300">O site nasce a partir do lead real, do nicho confirmado, da cidade e da variação estrutural definida antes do renderer. A composição muda sem perder factualidade.</p></motion.div><div className={`grid gap-4 ${servicesVariant === 'split_editorial' ? 'md:grid-cols-2 xl:grid-cols-3' : 'md:grid-cols-3'}`}>{pillars.map((pillar, index) => { const Icon = pillar.icon; return <motion.article key={pillar.title} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.24 }} transition={{ delay: index * 0.05 }} className="min-h-[15rem] rounded-[18px] p-6 __CARD_SHELL__"><Icon className="h-5 w-5" style={{ color: 'var(--accent)' }} /><h3 className="mt-8 text-xl font-semibold tracking-tight text-white">{pillar.title}</h3><p className="mt-4 text-sm leading-7 text-zinc-300">{pillar.text}</p></motion.article>; })}</div><motion.aside initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.24 }} className={'rounded-[22px] border border-white/10 p-6 ' + leadClass}><div className="flex items-center justify-between gap-4"><div><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>Construção</p><p className="mt-3 text-2xl font-semibold">__ABOUT_CITY__</p></div><ArrowUpRight className="h-5 w-5" style={{ color: 'var(--accent)' }} /></div><p className="mt-4 text-sm leading-7 opacity-80">Layout, ordem e ritmo foram escolhidos pela variação da esteira, não por um bloco fixo colado em todos os nichos.</p></motion.aside></div></section>;
+}
+export default AboutSection;
+""".replace("__PROOF_STYLE__", proof_style.replace("_", " ")).replace("__SURFACE_STYLE__", surface_style.replace("_", " ")).replace("__CARD_SHELL__", card_shell).replace("__ABOUT_NAME__", copy["name"]).replace("__ABOUT_CITY__", copy["city"])
+    gallery_section = """
+import { motion } from 'motion/react';
+import { mediaImages, siteCopy } from './siteData';
+export function GallerySection() {
+  return <section id="galeria" style={{ background: 'var(--bg)' }} className="px-5 py-20 text-white md:px-8 md:py-28"><div className="mx-auto max-w-7xl"><div className="mb-10 flex flex-col gap-4 md:flex-row md:items-end md:justify-between"><div><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>Prova visual</p><h2 className="mt-3 max-w-3xl text-[clamp(2rem,4.8vw,4.4rem)] font-semibold leading-[1] tracking-[-0.025em]">Uma narrativa visual para {siteCopy.segment}.</h2></div><p className="max-w-md text-sm leading-7 text-zinc-300">{siteCopy.gallery_alt}</p></div><div className="__GALLERY_GRID_CLASS__">{mediaImages.slice(0, 5).map((src, index) => <motion.figure key={src} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.25 }} transition={{ delay: index * 0.04 }} className={`group relative overflow-hidden rounded-[18px] bg-black ${index === 0 ? 'md:col-span-2 md:row-span-2' : ''}`}><img src={src} alt={`${siteCopy.gallery_alt} ${index + 1}`} className="h-full w-full object-cover opacity-90 transition duration-700 group-hover:scale-105 group-hover:opacity-100" loading={index === 0 ? 'eager' : 'lazy'} decoding="async" /><figcaption className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-5 text-sm font-semibold text-white">{index === 0 ? siteCopy.name : siteCopy.city}</figcaption></motion.figure>)}</div></div></section>;
+}
+export default GallerySection;
+""".replace("__GALLERY_GRID_CLASS__", gallery_grid_class)
+    reviews_section = """
+import { motion } from 'motion/react';
+import { Avatar, AvatarFallback } from './ui/avatar';
+import { Separator } from './ui/separator';
+import { siteCopy, variation } from './siteData';
+const proofs = siteCopy.services.map((service, index) => ({
+  title: service.title,
+  body: service.description,
+  badge: index === 0 ? `${siteCopy.rating || '5.0'} estrelas` : siteCopy.city,
+  initials: service.title.slice(0, 2).toUpperCase(),
+}));
+export function ReviewsSection() {
+  const proofStyle = String((variation as any)?.proof_style || '');
+  const spotlight = proofStyle === 'quote_spotlight';
+  const marquee = proofStyle === 'card_marquee';
+  return <section id="avaliacoes" style={{ background: 'var(--bg)' }} className="overflow-hidden px-5 py-20 text-white md:px-8 md:py-28"><div className="mx-auto max-w-7xl"><div className="mb-10 flex flex-col gap-4 md:flex-row md:items-end md:justify-between"><div><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>Sinais locais</p><h2 className="mt-3 max-w-3xl text-[clamp(2rem,4.8vw,4.4rem)] font-semibold leading-[1] tracking-[-0.025em]">Prova social com tratamento __PROOF_STYLE__.</h2></div><div className="flex gap-3 text-sm text-zinc-300"><span className="rounded-full border border-white/10 bg-white/5 px-4 py-2">{siteCopy.rating || '5.0'} avaliação</span><span className="rounded-full border border-white/10 bg-white/5 px-4 py-2">{siteCopy.city}</span></div></div>{marquee ? <div className="flex gap-4 overflow-hidden">{[...proofs, ...proofs].map((item, index) => <motion.article key={`${item.title}-${index}`} initial={{ opacity: 0, x: 24 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true, amount: 0.18 }} className="min-w-[18rem] rounded-[18px] border border-white/10 bg-white/[0.05] p-6"><div className="flex items-center gap-3"><Avatar><AvatarFallback>{item.initials}</AvatarFallback></Avatar><div><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>{item.badge}</p><h3 className="mt-1 text-lg font-semibold text-white">{item.title}</h3></div></div><Separator className="my-4" /><p className="text-sm leading-7 text-zinc-300">{item.body}</p></motion.article>)}</div> : <div className={`grid gap-4 ${spotlight ? 'lg:grid-cols-[1.15fr_0.85fr]' : 'md:grid-cols-3'}`}><motion.article initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.24 }} className="rounded-[22px] border border-white/10 bg-white/[0.05] p-7"><p className="text-2xl leading-10 text-white">“{siteCopy.name} aparece com mais intenção quando a prova, a mídia e o CTA não competem entre si.”</p><p className="mt-6 text-sm font-semibold text-zinc-300">{siteCopy.city} • {siteCopy.segment}</p></motion.article><div className={`grid gap-4 ${spotlight ? '' : 'md:col-span-2 md:grid-cols-2'}`}>{proofs.slice(0, spotlight ? 2 : 4).map((item, index) => <motion.article key={item.title} initial={{ opacity: 0, y: 18 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.24 }} transition={{ delay: index * 0.05 }} className="rounded-[18px] border border-white/10 bg-white/[0.04] p-6"><div className="flex items-center gap-3"><Avatar className="h-10 w-10"><AvatarFallback>{item.initials}</AvatarFallback></Avatar><div><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>{item.badge}</p><h3 className="mt-1 text-lg font-semibold text-white">{item.title}</h3></div></div><Separator className="my-4" /><p className="text-sm leading-7 text-zinc-300">{item.body}</p></motion.article>)}</div></div>}</div></section>;
+}
+export default ReviewsSection;
+""".replace("__PROOF_STYLE__", proof_style.replace("_", " "))
+    faq_section = """
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
+import { blockPlan, siteCopy } from './siteData';
+const items = [
+  { value: 'item-1', question: `Como funciona o primeiro contato com ${siteCopy.name}?`, answer: 'O visitante encontra o CTA principal, entra no canal oficial e recebe orientação sem rota paralela.' },
+  { value: 'item-2', question: `Esse atendimento serve para quem está em ${siteCopy.city}?`, answer: `Sim. A página já foi estruturada para contexto local, prova visível e ação direta em ${siteCopy.city}.` },
+  { value: 'item-3', question: 'Os dados do site são genéricos?', answer: 'Não. Nome, cidade, contato, endereço e contexto do nicho entram como fatos confirmados da esteira.' },
+  { value: 'item-4', question: 'Qual é o próximo passo?', answer: 'Abrir o WhatsApp ou o modal de contato e avançar pelo canal oficial do negócio.' },
+];
+export function FaqSection() {
+  const variant = String((blockPlan as any)?.faq_variant || 'panel');
+  if (variant === 'inline') {
+    return <section id="faq" style={{ background: 'var(--bg)' }} className="px-5 py-20 text-white md:px-8 md:py-28"><div className="mx-auto max-w-7xl"><div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between"><div><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>Dúvidas</p><h2 className="mt-3 text-[clamp(2rem,4.8vw,4.2rem)] font-semibold leading-[1] tracking-[-0.025em]">Perguntas que destravam o clique.</h2></div><p className="max-w-xl text-sm leading-7 text-zinc-300">FAQ curto, factual e direto ao ponto para reduzir atrito sem poluir a página.</p></div><div className="grid gap-4">{items.map((item) => <div key={item.value} className="rounded-[18px] border border-white/10 bg-white/[0.04] px-5 py-4"><Accordion type="single" collapsible className="w-full"><AccordionItem value={item.value}><AccordionTrigger>{item.question}</AccordionTrigger><AccordionContent>{item.answer}</AccordionContent></AccordionItem></Accordion></div>)}</div></div></section>;
+  }
+  return <section id="faq" style={{ background: 'var(--bg)' }} className="px-5 py-20 text-white md:px-8 md:py-28"><div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[0.85fr_1.15fr]"><div><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>Dúvidas</p><h2 className="mt-3 text-[clamp(2rem,4.8vw,4.2rem)] font-semibold leading-[1] tracking-[-0.025em]">Perguntas que destravam o clique.</h2><p className="mt-5 max-w-xl text-sm leading-7 text-zinc-300">FAQ curto, factual e direto ao ponto para reduzir atrito sem poluir a página.</p></div><div className="rounded-[22px] border border-white/10 bg-white/[0.04] p-6"><Accordion type="single" collapsible className="w-full">{items.map((item) => <AccordionItem key={item.value} value={item.value}><AccordionTrigger>{item.question}</AccordionTrigger><AccordionContent>{item.answer}</AccordionContent></AccordionItem>)}</Accordion></div></div></section>;
+}
+export default FaqSection;
+"""
+    return {
+        "src/lib/utils.ts": vite_template_utils_ts(),
+        "src/components/ui/avatar.tsx": vite_template_avatar_ui(),
+        "src/components/ui/separator.tsx": vite_template_separator_ui(),
+        "src/components/ui/accordion.tsx": vite_template_accordion_ui(),
+        "src/components/AboutSection.tsx": about_section,
+        "src/components/ServicesSection.tsx": """import { BarChart3, ClipboardCheck, MapPinned, Sparkles } from 'lucide-react';
+import { motion } from 'motion/react';
+import { blockPlan, siteCopy } from './siteData';
 const icons = [ClipboardCheck, Sparkles, MapPinned];
 export function ServicesSection() {
-  return <section id="servicos" style={{ background: 'var(--bg-light)', color: 'var(--text-dark)' }} className="px-5 py-20 md:px-8 md:py-28"><div className="mx-auto max-w-7xl"><div className="grid gap-8 lg:grid-cols-[.8fr_1.2fr] lg:items-end"><div><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>Como funciona</p><h2 className="mt-3 text-[clamp(2rem,4.8vw,4.4rem)] font-semibold leading-[1] tracking-[-0.025em]">{siteCopy.services_title}</h2></div><p className="max-w-2xl text-base leading-8 text-zinc-300">{siteCopy.services_subheadline}</p></div><div className="mt-12 grid gap-4 md:grid-cols-3">{siteCopy.services.map((service, index) => { const Icon = icons[index] || ClipboardCheck; return <motion.article key={service.title} initial={{ opacity: 0, y: 22 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.28 }} transition={{ delay: index * 0.06 }} className="min-h-[17rem] rounded-[18px] border border-white/10 bg-white/[0.055] p-6 backdrop-blur-md"><Icon className="h-6 w-6" style={{ color: 'var(--accent)' }} /><h3 className="mt-8 text-2xl font-semibold tracking-tight text-white">{service.title}</h3><p className="mt-4 text-sm leading-7 text-zinc-300">{service.description}</p></motion.article>; })}</div></div></section>;
+  const variant = String((blockPlan as any)?.services_variant || 'stacked_cards');
+  if (variant === 'stats_then_cards') {
+    return <section id="servicos" style={{ background: 'var(--bg-light)' }} className="px-5 py-20 md:px-8 md:py-28"><div className="mx-auto max-w-7xl"><div className="grid gap-6 lg:grid-cols-[0.72fr_1.28fr] lg:items-start"><div className="rounded-[22px] border border-black/5 bg-white p-7 shadow-[0_18px_60px_rgba(0,0,0,0.08)]"><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>Como funciona</p><h2 className="mt-3 text-[clamp(2rem,4.8vw,4.2rem)] font-semibold leading-[1] tracking-[-0.025em] text-zinc-950">{siteCopy.services_title}</h2><p className="mt-5 text-sm leading-7 text-zinc-600">{siteCopy.services_subheadline}</p><div className="mt-8 grid gap-3"><div className="rounded-[16px] bg-zinc-950 px-4 py-4 text-white"><div className="flex items-center gap-3"><BarChart3 className="h-5 w-5" style={{ color: 'var(--accent)' }} /><strong>{siteCopy.rating || '5.0'}</strong></div><p className="mt-2 text-xs uppercase tracking-[0.18em] text-zinc-400">avaliação</p></div><div className="rounded-[16px] border border-zinc-200 px-4 py-4"><strong className="text-zinc-950">{siteCopy.city}</strong><p className="mt-2 text-sm text-zinc-600">Estrutura organizada para decisão rápida.</p></div></div></div><div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{siteCopy.services.map((service, index) => { const Icon = icons[index] || ClipboardCheck; return <motion.article key={service.title} initial={{ opacity: 0, y: 22 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.28 }} transition={{ delay: index * 0.06 }} className="min-h-[16rem] rounded-[18px] border border-black/5 bg-white p-6 shadow-[0_18px_60px_rgba(0,0,0,0.08)]"><Icon className="h-6 w-6" style={{ color: 'var(--accent)' }} /><h3 className="mt-8 text-2xl font-semibold tracking-tight text-zinc-950">{service.title}</h3><p className="mt-4 text-sm leading-7 text-zinc-600">{service.description}</p></motion.article>; })}</div></div></div></section>;
+  }
+  if (variant === 'split_editorial') {
+    return <section id="servicos" style={{ background: 'var(--bg-light)' }} className="px-5 py-20 md:px-8 md:py-28"><div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[0.85fr_1.15fr]"><div><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>Como funciona</p><h2 className="mt-3 text-[clamp(2rem,4.8vw,4.4rem)] font-semibold leading-[1] tracking-[-0.025em] text-zinc-950">{siteCopy.services_title}</h2><p className="mt-5 max-w-xl text-base leading-8 text-zinc-600">{siteCopy.services_subheadline}</p></div><div className="grid gap-4">{siteCopy.services.map((service, index) => { const Icon = icons[index] || ClipboardCheck; return <motion.article key={service.title} initial={{ opacity: 0, x: 24 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true, amount: 0.28 }} transition={{ delay: index * 0.05 }} className="grid gap-4 rounded-[18px] border border-black/5 bg-white p-6 shadow-[0_18px_60px_rgba(0,0,0,0.08)] md:grid-cols-[auto_1fr] md:items-start"><Icon className="mt-1 h-6 w-6" style={{ color: 'var(--accent)' }} /><div><h3 className="text-2xl font-semibold tracking-tight text-zinc-950">{service.title}</h3><p className="mt-3 text-sm leading-7 text-zinc-600">{service.description}</p></div></motion.article>; })}</div></div></section>;
+  }
+  return <section id="servicos" style={{ background: 'var(--bg-light)' }} className="px-5 py-20 md:px-8 md:py-28"><div className="mx-auto max-w-7xl"><div className="grid gap-8 lg:grid-cols-[.8fr_1.2fr] lg:items-end"><div><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>Como funciona</p><h2 className="mt-3 text-[clamp(2rem,4.8vw,4.4rem)] font-semibold leading-[1] tracking-[-0.025em] text-zinc-950">{siteCopy.services_title}</h2></div><p className="max-w-2xl text-base leading-8 text-zinc-600">{siteCopy.services_subheadline}</p></div><div className="mt-12 grid gap-4 md:grid-cols-3">{siteCopy.services.map((service, index) => { const Icon = icons[index] || ClipboardCheck; return <motion.article key={service.title} initial={{ opacity: 0, y: 22 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.28 }} transition={{ delay: index * 0.06 }} className="min-h-[17rem] rounded-[18px] border border-black/5 bg-white p-6 shadow-[0_18px_60px_rgba(0,0,0,0.08)]"><Icon className="h-6 w-6" style={{ color: 'var(--accent)' }} /><h3 className="mt-8 text-2xl font-semibold tracking-tight text-zinc-950">{service.title}</h3><p className="mt-4 text-sm leading-7 text-zinc-600">{service.description}</p></motion.article>; })}</div></div></section>;
 }
 export default ServicesSection;
 """,
-        "src/components/GallerySection.tsx": """import { motion } from 'motion/react';
-import { mediaImages, siteCopy } from './siteData';
-export function GallerySection() {
-  return <section id="galeria" style={{ background: 'var(--bg)' }} className="px-5 py-20 text-white md:px-8 md:py-28"><div className="mx-auto max-w-7xl"><div className="mb-10 flex flex-col gap-4 md:flex-row md:items-end md:justify-between"><div><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>Prova visual</p><h2 className="mt-3 max-w-3xl text-[clamp(2rem,4.8vw,4.4rem)] font-semibold leading-[1] tracking-[-0.025em]">Uma narrativa visual para {siteCopy.segment}.</h2></div><p className="max-w-md text-sm leading-7 text-zinc-300">{siteCopy.gallery_alt}</p></div><div className="grid auto-rows-[16rem] gap-4 md:grid-cols-4">{mediaImages.slice(0, 5).map((src, index) => <motion.figure key={src} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.25 }} transition={{ delay: index * 0.04 }} className={`group relative overflow-hidden rounded-[18px] bg-black ${index === 0 ? 'md:col-span-2 md:row-span-2' : ''}`}><img src={src} alt={`${siteCopy.gallery_alt} ${index + 1}`} className="h-full w-full object-cover opacity-90 transition duration-700 group-hover:scale-105 group-hover:opacity-100" loading={index === 0 ? 'eager' : 'lazy'} decoding="async" /><figcaption className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-5 text-sm font-semibold text-white">{index === 0 ? siteCopy.name : siteCopy.city}</figcaption></motion.figure>)}</div></div></section>;
+        "src/components/GallerySection.tsx": gallery_section,
+        "src/components/FaqSection.tsx": faq_section,
+        "src/components/ReviewsSection.tsx": reviews_section,
+        "src/components/LocationSection.tsx": """import { MapPin, MessageCircle, Phone } from 'lucide-react';
+import { motion } from 'motion/react';
+import { blockPlan, siteCopy, whatsappHref } from './siteData';
+export function LocationSection() {
+  const feature = String((blockPlan as any)?.location_variant || '') === 'feature_local';
+  return <section id="localizacao" style={{ background: 'var(--bg-light)' }} className="px-5 py-20 md:px-8 md:py-28"><div className={`mx-auto grid max-w-7xl gap-4 ${feature ? 'lg:grid-cols-[0.95fr_1.05fr]' : 'lg:grid-cols-[1.05fr_0.95fr]'}`}><motion.article initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.24 }} className="rounded-[18px] border border-black/5 bg-white p-7 shadow-[0_18px_60px_rgba(0,0,0,0.08)]"><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>Presença local</p><h2 className="mt-3 text-[clamp(1.8rem,4vw,3.6rem)] font-semibold tracking-[-0.025em] text-zinc-950">{siteCopy.city}</h2><p className="mt-4 max-w-xl text-sm leading-7 text-zinc-600">{siteCopy.address || siteCopy.city}</p><div className="mt-8 grid gap-4 sm:grid-cols-2"><div className="rounded-[16px] border border-zinc-200 p-5"><MapPin className="h-5 w-5" style={{ color: 'var(--accent)' }} /><p className="mt-3 text-sm font-semibold text-zinc-950">Endereço</p><p className="mt-2 text-sm leading-6 text-zinc-600">{siteCopy.address || siteCopy.city}</p></div><div className="rounded-[16px] border border-zinc-200 p-5"><Phone className="h-5 w-5" style={{ color: 'var(--accent)' }} /><p className="mt-3 text-sm font-semibold text-zinc-950">Contato</p><p className="mt-2 text-sm leading-6 text-zinc-600">{siteCopy.phone}</p></div></div></motion.article><motion.article initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.24 }} transition={{ delay: 0.06 }} className="rounded-[18px] border border-transparent p-7" style={{ background: 'linear-gradient(135deg, var(--accent-soft), color-mix(in srgb, var(--accent) 22%, white))' }}><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent-dark)' }}>Ação</p><h3 className="mt-3 text-3xl font-semibold tracking-tight" style={{ color: 'var(--accent-contrast)' }}>Chegue pelo canal oficial</h3><p className="mt-4 text-sm leading-7" style={{ color: 'var(--accent-dark)' }}>A rota e o contato ficam organizados para diminuir fricção no momento do clique.</p><div className="mt-8 flex flex-col gap-3 sm:flex-row"><a href={whatsappHref} rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 rounded-full px-5 py-3 text-sm font-semibold" style={{ background: 'var(--bg)', color: 'var(--text)' }}><MessageCircle className="h-4 w-4" /> WhatsApp</a><a href="#contato" className="inline-flex items-center justify-center gap-2 rounded-full border border-black/10 px-5 py-3 text-sm font-semibold" style={{ color: 'var(--accent-contrast)' }}><MapPin className="h-4 w-4" /> Ver CTA</a></div></motion.article></div></section>;
 }
-export default GallerySection;
+export default LocationSection;
 """,
         "src/components/LifestyleSection.tsx": """import { useEffect, useRef } from 'react';
 import { motion } from 'motion/react';
@@ -3816,7 +4005,7 @@ export default LifestyleSection;
 import { motion } from 'motion/react';
 import { siteCopy, whatsappHref } from './siteData';
 export function ContactCTA({ onOpen }: { onOpen?: () => void }) {
-  return <section id="contato" style={{ background: 'var(--accent)', color: 'var(--bg)' }} className="px-5 py-20 md:px-8"><div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[1.1fr_.9fr] lg:items-center"><motion.div initial={{ opacity: 0, y: 22 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.3 }}><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent-dark)' }}>Conversão</p><h2 className="mt-3 max-w-4xl text-[clamp(2rem,5vw,4.8rem)] font-semibold leading-[1] tracking-[-0.03em]">{siteCopy.contact_headline}</h2><p className="mt-5 max-w-2xl text-base leading-8" style={{ color: 'var(--accent-dark)' }}>{siteCopy.contact_sub}</p></motion.div><div style={{ background: 'var(--bg)' }} className="rounded-[18px] p-6 text-white"><p className="text-sm leading-7 text-zinc-300">Contato oficial</p><p className="mt-2 text-2xl font-semibold">{siteCopy.phone || 'WhatsApp'}</p><div className="mt-6 flex flex-col gap-3 sm:flex-row"><a href={whatsappHref} rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-semibold" style={{ color: 'var(--bg)' }}><MessageCircle className="h-4 w-4" />Falar no WhatsApp</a><button type="button" onClick={onOpen} className="inline-flex items-center justify-center gap-2 rounded-full border border-white/15 px-5 py-3 text-sm font-semibold text-white"><Phone className="h-4 w-4" />Abrir contato</button></div></div></div></section>;
+  return <section id="contato" style={{ background: 'var(--accent)', color: 'var(--accent-contrast)' }} className="px-5 py-20 md:px-8"><div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[1.1fr_.9fr] lg:items-center"><motion.div initial={{ opacity: 0, y: 22 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.3 }}><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent-dark)' }}>Conversão</p><h2 className="mt-3 max-w-4xl text-[clamp(2rem,5vw,4.8rem)] font-semibold leading-[1] tracking-[-0.03em]">{siteCopy.contact_headline}</h2><p className="mt-5 max-w-2xl text-base leading-8" style={{ color: 'var(--accent-dark)' }}>{siteCopy.contact_sub}</p></motion.div><div style={{ background: 'var(--bg)' }} className="rounded-[18px] p-6 text-white"><p className="text-sm leading-7 text-zinc-300">Contato oficial</p><p className="mt-2 text-2xl font-semibold">{siteCopy.phone || 'WhatsApp'}</p><div className="mt-6 flex flex-col gap-3 sm:flex-row"><a href={whatsappHref} rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-semibold" style={{ color: 'var(--bg)' }}><MessageCircle className="h-4 w-4" />Falar no WhatsApp</a><button type="button" onClick={onOpen} className="inline-flex items-center justify-center gap-2 rounded-full border border-white/15 px-5 py-3 text-sm font-semibold text-white"><Phone className="h-4 w-4" />Abrir contato</button></div></div></div></section>;
 }
 export default ContactCTA;
 """,

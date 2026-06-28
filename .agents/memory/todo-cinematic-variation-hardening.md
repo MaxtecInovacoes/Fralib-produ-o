@@ -1,0 +1,8 @@
+- [ ] Extrair theme guard do renderer monolítico
+- [ ] Extrair block registry do renderer monolítico
+- [ ] Ligar renderer ao theme guard e block plan
+- [ ] Variar ServicesSection e FaqSection por block plan
+- [ ] Exportar blockPlan para `siteData.ts`
+- [ ] Adicionar testes para theme guard e block plan
+- [ ] Rodar pytest + build real
+- [ ] Commitar e dar push

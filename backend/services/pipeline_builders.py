@@ -393,6 +393,10 @@ def build_skill_fast_prd(state: Any) -> SimpleNamespace:
             "hero_layout": _var.hero_layout,
             "motion_style": _var.motion_style,
             "copy_voice": _var.copy_voice,
+            "color_emphasis": _var.color_emphasis,
+            "section_order_style": getattr(_var, "section_order_style", ""),
+            "proof_style": getattr(_var, "proof_style", ""),
+            "surface_style": getattr(_var, "surface_style", ""),
             "section_order": _arch_var.get("section_order") or [],
         }
     except Exception as _ve:

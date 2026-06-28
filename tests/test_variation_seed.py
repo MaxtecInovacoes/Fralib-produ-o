@@ -278,6 +278,80 @@ def test_full_pipeline_integration():
         return False
 
 
+def test_cinematic_studio_uses_dynamic_sections_and_local_primitives():
+    """Cinematic studio must honor dynamic sections without extra runtime deps."""
+    from backend.services.vite_react_renderer import _generate_cinematic_studio_files
+
+    facts = {
+        "business": {
+            "name": "Viva Academia",
+            "address": "R. Anita Ribas, 477 - Bacacheri, Curitiba - PR",
+            "segment": "academia",
+            "city": "Curitiba",
+        },
+        "variation": {
+            "section_order": ["hero", "reviews", "faq", "location", "contact-cta"],
+            "proof_style": "card_marquee",
+            "surface_style": "solid",
+        },
+    }
+
+    files = _generate_cinematic_studio_files(facts)
+    index_tsx = files.get("src/pages/Index.tsx", "")
+    site_data = files.get("src/components/siteData.ts", "")
+    faq_section = files.get("src/components/FaqSection.tsx", "")
+    accordion_ui = files.get("src/components/ui/accordion.tsx", "")
+    avatar_ui = files.get("src/components/ui/avatar.tsx", "")
+    separator_ui = files.get("src/components/ui/separator.tsx", "")
+    package_json = files.get("package.json", "")
+
+    assert "import { FaqSection } from '../components/FaqSection';" in index_tsx
+    assert "<ReviewsSection />" in index_tsx
+    assert "<FaqSection />" in index_tsx
+    assert "<LocationSection />" in index_tsx
+    assert "export const navLinks =" in site_data
+    assert "export const blockPlan =" in site_data
+    assert "#faq" in site_data
+    assert "stats_then_cards" in site_data
+    assert "Perguntas que destravam o clique." in faq_section
+    assert "const variant = String((blockPlan as any)?.faq_variant || 'panel');" in faq_section
+    assert "function Accordion(" in accordion_ui
+    assert "function Avatar(" in avatar_ui
+    assert "function Separator(" in separator_ui
+    assert "@radix-ui/react-accordion" not in package_json
+    assert "@radix-ui/react-avatar" not in package_json
+    assert "@radix-ui/react-separator" not in package_json
+
+
+def test_cinematic_theme_guard_picks_readable_accent_contrast():
+    from backend.services.vite_theme_guard import resolve_cinematic_theme
+
+    theme = resolve_cinematic_theme(
+        {
+            "color_palette": {
+                "primary": "#ff6a00",
+                "secondary": "#552200",
+                "background": "#0f0f0f",
+                "surface": "#fff7ed",
+                "text": "#111111",
+            }
+        },
+        fallback_palette={
+            "primary": "#3b82f6",
+            "secondary": "#1e293b",
+            "bg_dark": "#0f0f0f",
+            "bg_light": "#f4f0e6",
+            "text_dark": "#09130f",
+        },
+        fallback_archetype="BOLD",
+    )
+
+    palette = theme["palette"]
+    assert palette["accent_contrast"] in {"#09130f", "#f8faf7"}
+    assert palette["panel_text"] in {"#111111", "#09130f", "#f8faf7"}
+    assert palette["accent_soft"].startswith("#")
+
+
 def run_all_tests():
     """Run all tests and report results."""
     print("=" * 60)
@@ -293,6 +367,7 @@ def run_all_tests():
         test_segment_affects_archetype,
         test_variation_affects_hero_layout,
         test_full_pipeline_integration,
+        test_cinematic_studio_uses_dynamic_sections_and_local_primitives,
     ]
 
     results = []
@@ -322,7 +397,7 @@ def run_all_tests():
     # Return structured result for the report
     return {
         "seed_function": "_get_variation_seed",
-        "variations": 5 * 3 * 3 * 3,  # hero * motion * copy * color = 135 combinations
+        "variations": 5 * 3 * 3 * 3,  # baseline historico; repertorio atual ja excede isso
         "deterministic_test": "passed" if all(results[:4]) else "failed",
         "total_tests": total,
         "passed_tests": passed,

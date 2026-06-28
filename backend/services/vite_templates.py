@@ -525,6 +525,125 @@ export function CardContent({ className = '', ...props }: DivProps) {
 """
 
 
+def vite_template_utils_ts() -> str:
+    return """import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
+"""
+
+
+def vite_template_avatar_ui() -> str:
+    return """import { cn } from '../../lib/utils';
+
+function Avatar({ className, children, ...props }: any) {
+  return (
+    <div
+      className={cn('relative flex h-11 w-11 shrink-0 overflow-hidden rounded-full border border-white/10 bg-white/10', className)}
+      {...props}
+    >
+      {children}
+    </div>
+  );
+}
+
+function AvatarImage({ className, ...props }: any) {
+  return <img className={cn('aspect-square h-full w-full object-cover', className)} {...props} />;
+}
+
+function AvatarFallback({ className, children, ...props }: any) {
+  return (
+    <div
+      className={cn('flex h-full w-full items-center justify-center bg-white/10 text-sm font-semibold text-white', className)}
+      {...props}
+    >
+      {children}
+    </div>
+  );
+}
+
+export { Avatar, AvatarFallback, AvatarImage };
+"""
+
+
+def vite_template_separator_ui() -> str:
+    return """import { cn } from '../../lib/utils';
+
+function Separator({ className, orientation = 'horizontal', ...props }: any) {
+  return (
+    <div
+      aria-hidden="true"
+      className={cn(
+        'shrink-0 bg-white/10',
+        orientation === 'horizontal' ? 'h-px w-full' : 'h-full w-px',
+        className
+      )}
+      {...props}
+    />
+  );
+}
+
+export { Separator };
+"""
+
+
+def vite_template_accordion_ui() -> str:
+    return """import { useState } from 'react';
+import { ChevronDown } from 'lucide-react';
+import { cn } from '../../lib/utils';
+
+function Accordion({ children, className = '' }: any) {
+  return <div className={className}>{children}</div>;
+}
+
+function AccordionItem({ value, children, className = '' }: any) {
+  const [open, setOpen] = useState(false);
+  const childArray = Array.isArray(children) ? children : [children];
+  const trigger = childArray.find((child: any) => child?.type?.displayName === 'FraAccordionTrigger');
+  const content = childArray.find((child: any) => child?.type?.displayName === 'FraAccordionContent');
+  return (
+    <div className={cn('border-b border-white/10', className)} data-value={value}>
+      {trigger ? trigger.type({ ...trigger.props, open, onToggle: () => setOpen((prev: boolean) => !prev) }) : null}
+      {content ? content.type({ ...content.props, open }) : null}
+    </div>
+  );
+}
+
+function AccordionTrigger({ className, children, open = false, onToggle, ...props }: any) {
+  return (
+    <button
+      type="button"
+      className={cn(
+        'flex w-full items-center justify-between py-4 text-left text-base font-semibold transition hover:text-white',
+        className
+      )}
+      aria-expanded={open}
+      onClick={onToggle}
+      {...props}
+    >
+      <span>{children}</span>
+      <ChevronDown className={cn('h-4 w-4 shrink-0 transition-transform duration-200', open ? 'rotate-180' : '')} />
+    </button>
+  );
+}
+AccordionTrigger.displayName = 'FraAccordionTrigger';
+
+function AccordionContent({ className, children, open = false, ...props }: any) {
+  if (!open) return null;
+  return (
+    <div className={cn('overflow-hidden pb-4 text-sm leading-7 text-zinc-300', className)} {...props}>
+      {children}
+    </div>
+  );
+}
+AccordionContent.displayName = 'FraAccordionContent';
+
+export { Accordion, AccordionContent, AccordionItem, AccordionTrigger };
+"""
+
+
 def vite_template_lgpd_banner(facts: dict[str, Any] | None = None) -> str:
     """Template do componente LgpdBanner (banner de consentimento LGPD).
 

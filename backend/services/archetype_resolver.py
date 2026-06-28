@@ -82,6 +82,36 @@ def _pick_key(mapping: dict[str, str], value: str) -> str:
     return mapping.get(value) or next(iter(mapping.values()), "")
 
 
+def _rotate_section_order(
+    sections: list[str],
+    *,
+    style: str,
+    counter: int,
+) -> list[str]:
+    if not sections:
+        return []
+
+    fixed_first = [section for section in sections if section in {"navbar", "hero"}]
+    fixed_last = [section for section in sections if section in {"footer"}]
+    middle = [section for section in sections if section not in set(fixed_first + fixed_last)]
+    if not middle:
+        return fixed_first + fixed_last
+
+    preferred_orders = {
+        "credibility_first": ["about", "reviews", "services", "gallery", "location", "lifestyle", "contact-cta"],
+        "visual_first": ["gallery", "services", "reviews", "about", "lifestyle", "location", "contact-cta"],
+        "offer_first": ["services", "about", "reviews", "gallery", "location", "lifestyle", "contact-cta"],
+        "story_first": ["about", "gallery", "services", "lifestyle", "reviews", "location", "contact-cta"],
+    }
+    preferred = preferred_orders.get(style, preferred_orders["credibility_first"])
+    rank = {name: idx for idx, name in enumerate(preferred)}
+    middle.sort(key=lambda item: rank.get(item, len(preferred)))
+
+    shift = counter % len(middle)
+    middle = middle[shift:] + middle[:shift]
+    return fixed_first + middle + fixed_last
+
+
 def resolve_archetype_variation(
     archetype: str,
     variation,
@@ -136,7 +166,11 @@ def resolve_archetype_variation(
     hero_classes = str(layout_config.get("hero_classes") or "").strip()
 
     # Section order canonica do archetype (baseline) — pode ser overridada por subnicho
-    section_order = list(base_layout.get("section_order") or [])
+    section_order = _rotate_section_order(
+        list(base_layout.get("section_order") or []),
+        style=getattr(variation, "section_order_style", "credibility_first") or "credibility_first",
+        counter=counter,
+    )
 
     return {
         "archetype": archetype,
