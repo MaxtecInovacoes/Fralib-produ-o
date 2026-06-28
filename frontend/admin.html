@@ -2465,6 +2465,17 @@ window.initPixelOffice = function(){
         <input class="config-input" type="text" id="lm-refs-visuais" placeholder="Ex: Quero um site como Nubank, clean e moderno">
         <span style="font-size:11px;color:var(--fl-text-dim);">Descreva sites que você gosta ou referências visuais para o design.</span>
       </div>
+      <div class="config-field">
+        <label class="config-label">PREFERÊNCIA DE FONTE <span style="color:var(--fl-text-muted);font-weight:normal;">(opcional)</span></label>
+        <select class="config-input" id="lm-font-preferencia" style="cursor:pointer;">
+          <option value="">Padrão (Sans-serif)</option>
+          <option value="sans-serif">Sans-serif</option>
+          <option value="serif">Serif</option>
+          <option value="display">Display</option>
+          <option value="monospace">Monospace</option>
+        </select>
+        <span style="font-size:11px;color:var(--fl-text-dim);">Escolha o estilo de fonte preferido para o site.</span>
+      </div>
       <div id="lm-status" style="font-size:12px;color:var(--fl-text-muted);display:none;padding:8px;background:rgba(147,51,234,0.1);border-radius:6px;border:1px solid var(--fl-purple)"></div>
       <div style="display:flex;gap:10px;padding-top:4px;">
         <button onclick="fecharModalLeadManual()" style="flex:1;background:var(--fl-bg-card);border:2px solid var(--fl-border);color:var(--fl-text-muted);padding:11px;border-radius:6px;cursor:pointer;font-size:13px;font-family:var(--fl-font-brand);letter-spacing:1px;">CANCELAR</button>
@@ -7643,7 +7654,7 @@ function abrirModalLeadManual() {
 function fecharModalLeadManual() {
   var m = document.getElementById('modalLeadManual');
   if (m) { m.classList.remove('open'); }
-  ['lm-nome','lm-nicho','lm-cidade','lm-telefone','lm-whatsapp','lm-briefing'].forEach(function(id){
+  ['lm-nome','lm-nicho','lm-cidade','lm-telefone','lm-whatsapp','lm-briefing','lm-font-preferencia'].forEach(function(id){
     var el = document.getElementById(id); if (el) el.value = '';
   });
   var s = document.getElementById('lm-status'); if (s) s.style.display = 'none';
@@ -7668,6 +7679,7 @@ async function salvarLeadManual() {
         whatsapp: (document.getElementById('lm-whatsapp') || {}).value || telefone,
         briefing: briefing,
         refs_visuais: refsVisuais,
+        font_preferencia: (document.getElementById('lm-font-preferencia') || {}).value || '',
         score: 80
       })
     }).then(function(r){ return r.json(); });

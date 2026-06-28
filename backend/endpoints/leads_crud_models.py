@@ -17,6 +17,7 @@ class LeadManualRequest(BaseModel):
     cidade: str
     briefing: Optional[str] = None
     refs_visuais: Optional[str] = None  # Sprint 14.x: referências visuais do usuário
+    font_preferencia: Optional[str] = None  # Sprint 14.x: preferência de fonte (sans-serif, serif, display, monospace)
     score: Optional[int] = 80
 
 
@@ -28,6 +29,8 @@ class CamposLeadRequest(BaseModel):
     observacao: Optional[str] = None
     sdr_stage: Optional[str] = None
     status: Optional[str] = None
+    refs_visuais: Optional[str] = None  # Sprint 14.x: referências visuais
+    font_preferencia: Optional[str] = None  # Sprint 14.x: preferência de fonte
 
 
 class FeedbackRequest(BaseModel):

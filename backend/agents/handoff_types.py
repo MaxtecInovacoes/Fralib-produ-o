@@ -29,6 +29,10 @@ class NichoBriefing(HandoffBase):
     nao_fazer: list[str] = Field(default_factory=list)
     # Sprint 14.x: cores extraídas do briefing livre
     paleta_cores: Dict[str, str] = Field(default_factory=dict)
+    # Sprint 14.x: referências visuais do usuário (ex: "Quero um site como Nubank")
+    refs_visuais: str = ""
+    # Sprint 14.x: preferência de fonte (sans-serif, serif, display, monospace)
+    font_preferencia: str = ""
 
     def to_markdown(self) -> str:
         lines = ["## Briefing de Nicho", f"**Nicho:** {self.nicho}"]
@@ -52,6 +56,10 @@ class NichoBriefing(HandoffBase):
             lines.append(f"**Tom de voz:** {self.tom_de_voz}")
         if self.notas:
             lines.append(f"**Notas:** {self.notas}")
+        if self.refs_visuais:
+            lines.append(f"**Referências visuais:** {self.refs_visuais}")
+        if self.font_preferencia:
+            lines.append(f"**Preferência de fonte:** {self.font_preferencia}")
         if self.dados_ausentes:
             lines.append(f"**Dados ausentes:** {', '.join(self.dados_ausentes)}")
         if self.competidores:

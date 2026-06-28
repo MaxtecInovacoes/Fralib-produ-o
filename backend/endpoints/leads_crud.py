@@ -445,8 +445,8 @@ async def criar_lead_manual(
 
     db.execute(
         text("""
-        INSERT INTO leads (id, nome, cidade, segmento, telefone, whatsapp, telefone_whatsapp, score, status, criado_em, atualizado_em, processado, tentativas, observacoes, user_id, whatsapp_pendente, refs_visuais)
-        VALUES (:id, :nome, :cidade, :segmento, :telefone, :whatsapp, :telefone_wpp, :score, 'pendente', :criado_em, :criado_em, false, 0, :briefing, :user_id, :whatsapp_pendente, :refs_visuais)
+        INSERT INTO leads (id, nome, cidade, segmento, telefone, whatsapp, telefone_whatsapp, score, status, criado_em, atualizado_em, processado, tentativas, observacoes, user_id, whatsapp_pendente, refs_visuais, font_preferencia)
+        VALUES (:id, :nome, :cidade, :segmento, :telefone, :whatsapp, :telefone_wpp, :score, 'pendente', :criado_em, :criado_em, false, 0, :briefing, :user_id, :whatsapp_pendente, :refs_visuais, :font_preferencia)
         ON CONFLICT DO NOTHING
     """),
         {
@@ -463,6 +463,7 @@ async def criar_lead_manual(
             "user_id": tenant_id,
             "whatsapp_pendente": whatsapp_pendente,
             "refs_visuais": req.refs_visuais or "",
+            "font_preferencia": req.font_preferencia or "",
         },
     )
     db.commit()
@@ -634,6 +635,10 @@ async def atualizar_campos_lead(
             campos["sdr_stage"] = req.sdr_stage
         if req.status is not None:
             campos["status"] = req.status
+        if req.refs_visuais is not None:
+            campos["refs_visuais"] = req.refs_visuais
+        if req.font_preferencia is not None:
+            campos["font_preferencia"] = req.font_preferencia
         if not campos:
             return {"ok": True, "mensagem": "Nenhum campo para atualizar"}
         tenant_id = usuario.get("tenant_id", usuario["id"])

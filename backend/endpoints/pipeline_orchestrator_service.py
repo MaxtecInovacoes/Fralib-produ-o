@@ -239,6 +239,8 @@ class FraLibState:
     liz_score: int = 0
     site_url: str = ""
     paleta_cores: dict = field(default_factory=dict)  # Sprint 14.x: cores para SDR
+    refs_visuais: str = ""  # Sprint 14.x: referências visuais do usuário
+    font_preferencia: str = ""  # Sprint 14.x: preferência de fonte (sans-serif, serif, display, monospace)
     keyword_research: str = ""
     direcao_criativa: Any = None  # Output do Design Director (tokens OKLch)
 
@@ -517,6 +519,9 @@ async def executar_pipeline_completo(
             )
             state.lead_raw_data["reviews"] = _reviews_r
             state.lead_raw_data["logo_url"] = _dados_r.get("logo_url")
+            state.lead_raw_data["briefing"] = _ld.get("observacoes", "")  # Sprint 14.x: briefing do lead
+            state.refs_visuais = _ld.get("refs_visuais", "")  # Sprint 14.x: referências visuais
+            state.font_preferencia = _ld.get("font_preferencia", "")  # Sprint 14.x: preferência de fonte
             _aplicar_segmento_inferido(state, _log)
             _atualizar_pipeline_id_para_lead(state, tenant_id, queue_id)
             # Caio: pular — usar qualificação anterior
@@ -1543,6 +1548,8 @@ async def executar_pipeline_completo(
                 nicho=state.segmento or state.lead_obj.lead.segmento or "negocio local",
                 cidade=state.cidade or state.lead_obj.lead.cidade or "",
                 confianca="media",
+                refs_visuais=state.refs_visuais,  # Sprint 14.x: referências visuais
+                font_preferencia=state.font_preferencia,  # Sprint 14.x: preferência de fonte
             )
             _log(
                 "  Nicho: pulado; dados seguem direto para o Agente de Prompt"
@@ -1571,6 +1578,8 @@ async def executar_pipeline_completo(
                 cidade=state.cidade,
                 jina_insights=state.jina_insights or "",
                 task_id=state.pipeline_id,
+                refs_visuais=state.refs_visuais,  # Sprint 14.x: referências visuais
+                font_preferencia=state.font_preferencia,  # Sprint 14.x: preferência de fonte
             )
             _log(
                 f"  Nicho: {state.nicho_briefing.nicho} | confianca={state.nicho_briefing.confianca}",

@@ -175,6 +175,8 @@ def gerar_briefing(
     cidade: str,
     jina_insights: str = "",
     task_id: str = "",
+    refs_visuais: str = "",  # Sprint 14.x: referências visuais do usuário
+    font_preferencia: str = "",  # Sprint 14.x: preferência de fonte
 ) -> NichoBriefing:
     _trace_inputs = {
         "segmento": segmento,
@@ -185,7 +187,7 @@ def gerar_briefing(
     with trace_run("nicho", "gerar_briefing", inputs=_trace_inputs, metadata={
         "task_id": task_id, "segmento": segmento,
     }) as _trace:
-        _result = _gerar_briefing_impl(dados_lead, segmento, cidade, jina_insights, task_id)
+        _result = _gerar_briefing_impl(dados_lead, segmento, cidade, jina_insights, task_id, refs_visuais, font_preferencia)
         return _result
 
 
@@ -195,6 +197,8 @@ def _gerar_briefing_impl(
     cidade: str,
     jina_insights: str = "",
     task_id: str = "",
+    refs_visuais: str = "",  # Sprint 14.x: referências visuais do usuário
+    font_preferencia: str = "",  # Sprint 14.x: preferência de fonte
 ) -> NichoBriefing:
     _nome = dados_lead.get("nome", "")
     _rating = dados_lead.get("rating", 0)
@@ -241,6 +245,12 @@ Atributos: {", ".join(_atributos[:10]) if _atributos else "não informado"}
 
 == REVIEWS REAIS ==
 {chr(10).join(f"- {r}" for r in _reviews_text) if _reviews_text else "nenhuma review disponível"}
+
+== REFERÊNCIAS VISUAIS DO CLIENTE ==
+{refs_visuais if refs_visuais else "nenhuma referência visual informada"}
+
+== PREFERÊNCIA DE FONTE DO CLIENTE ==
+{font_preferencia if font_preferencia else "nenhuma preferência de fonte informada"}
 
 == DADOS DOS CONCORRENTES (Jina) ==
 {jina_insights[:4000] if jina_insights else "dados de concorrentes não disponíveis"}
@@ -325,4 +335,8 @@ Gere o briefing seguindo o formato obrigatório: MARKDOWN primeiro, depois JSON.
         competidores=_competidores[:6],
         # Sprint 14.x: cores extraídas do briefing livre
         paleta_cores=_paleta_cores,
+        # Sprint 14.x: referências visuais do usuário
+        refs_visuais=refs_visuais,
+        # Sprint 14.x: preferência de fonte
+        font_preferencia=font_preferencia,
     )
