@@ -22,6 +22,7 @@ ENV_DIR="/etc/fralib"
 SERVICES=(
     "fralib-api.service"
     "fralib-worker.service"
+    "fralib-worker@.service"
     "fralib-franz.service"
     "fralib-wpp-listener.service"
     "fralib-hermes.service"

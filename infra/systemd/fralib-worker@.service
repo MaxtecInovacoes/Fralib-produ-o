@@ -1,5 +1,5 @@
 [Unit]
-Description=FraLib Pipeline Worker (no SDR outbound)
+Description=FraLib Pipeline Worker Instance %i
 Documentation=https://github.com/...
 After=network-online.target postgresql.service
 Wants=network-online.target
@@ -13,31 +13,29 @@ Group=root
 WorkingDirectory=/root/fralib
 Environment="PATH=/root/fralib/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 EnvironmentFile=/etc/fralib/fralib.env
-Environment="WORKER_JOB_TYPES=pipeline_lead,pipeline_multiplos,lead_supply_hunter,lead_supply_caio,lead_production_tick"
+Environment="WORKER_JOB_TYPES=pipeline_lead,pipeline_multiplos"
+Environment="LEAD_SUPPLY_SYNC_SECS=0"
 Environment="MAX_PIPELINES_GLOBAL=2"
 Environment="FRALIB_UNLIMITED_PIPELINE_TENANTS=2"
 ExecStart=/root/fralib/venv/bin/python3 /root/fralib/worker.py
 
-# Recursos (worker pesado — gera sites)
+# Extra pipeline instances only render/build. Keep concurrency conservative.
 MemoryMax=2G
 MemoryHigh=1536M
 CPUQuota=200%
 TasksMax=200
 LimitNOFILE=65535
 
-# Restart policy
 Restart=on-failure
 RestartSec=10s
 
-# Segurança
 NoNewPrivileges=yes
 PrivateTmp=yes
 ProtectSystem=full
 
-# Logs via journal
 StandardOutput=journal
 StandardError=journal
-SyslogIdentifier=fralib-worker
+SyslogIdentifier=fralib-worker-%i
 
 [Install]
 WantedBy=multi-user.target
