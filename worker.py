@@ -54,6 +54,8 @@ HEARTBEAT_SECS = int(os.environ.get("WORKER_HEARTBEAT_SECS", "30"))
 REAP_SECS = int(os.environ.get("WORKER_REAP_SECS", "60"))
 JOB_MAX_SECS = int(os.environ.get("WORKER_JOB_MAX_SECS", "1800"))
 LEAD_SUPPLY_SYNC_SECS = int(os.environ.get("LEAD_SUPPLY_SYNC_SECS", "300"))
+TMP_CLEANUP_HIGH_WATERMARK = float(os.environ.get("WORKER_TMP_CLEANUP_HIGH_WATERMARK", "0.50"))
+TMP_CLEANUP_CRITICAL_WATERMARK = float(os.environ.get("WORKER_TMP_CLEANUP_CRITICAL_WATERMARK", "0.80"))
 WORKER_JOB_TYPES = [
     item.strip()
     for item in os.environ.get(
@@ -787,16 +789,29 @@ async def _main_loop():
             except Exception as _ws_exc:
                 log.warning(f"workspace cleanup falhou: {_ws_exc}")
 
-        # Cleanup por espaco em disco: se /tmp > 80%, limpa workspaces velhos
+        # Cleanup por espaco em disco: se /tmp passar do watermark, limpa workspaces recentes.
         if now - last_reap >= REAP_SECS:
             try:
                 import shutil as _shutil
                 result = _shutil.disk_usage("/tmp")
                 if result.total > 0:
                     pct = result.used / result.total
-                    if pct > 0.80:
+                    if pct > TMP_CLEANUP_CRITICAL_WATERMARK:
+                        n = _cleanup_old_workspaces(max_age_hours=0)
+                        log.warning(
+                            "disco /tmp em %.0f%%: limpou %s workspaces (critical %.0f%%)",
+                            pct * 100,
+                            n,
+                            TMP_CLEANUP_CRITICAL_WATERMARK * 100,
+                        )
+                    elif pct > TMP_CLEANUP_HIGH_WATERMARK:
                         n = _cleanup_old_workspaces(max_age_hours=1)
-                        log.warning(f"disco /tmp em {pct:.0%}: limpou {n} workspaces (>80%)")
+                        log.warning(
+                            "disco /tmp em %.0f%%: limpou %s workspaces (high %.0f%%)",
+                            pct * 100,
+                            n,
+                            TMP_CLEANUP_HIGH_WATERMARK * 100,
+                        )
             except Exception as _disk_exc:
                 pass
         if now - last_reap >= REAP_SECS:
