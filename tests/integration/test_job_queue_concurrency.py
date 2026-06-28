@@ -28,6 +28,7 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=_engine)
 @pytest.fixture(autouse=True)
 def ensure_jobs_schema():
     original_max_global = job_queue._MAX_PIPELINES_GLOBAL
+    original_unlimited_tenants = set(job_queue._UNLIMITED_PIPELINE_TENANTS)
     db = SessionLocal()
     try:
         db.execute(
@@ -65,6 +66,7 @@ def ensure_jobs_schema():
         yield
     finally:
         job_queue._MAX_PIPELINES_GLOBAL = original_max_global
+        job_queue._UNLIMITED_PIPELINE_TENANTS = original_unlimited_tenants
         cleanup = SessionLocal()
         try:
             cleanup.execute(text("DELETE FROM jobs"))
@@ -111,11 +113,12 @@ def test_claim_next_nao_duplica_job_em_workers_concorrentes():
 @pytest.mark.integration
 def test_claim_next_nao_roda_duas_pipelines_do_mesmo_tenant_em_paralelo():
     job_queue._MAX_PIPELINES_GLOBAL = 10
+    job_queue._UNLIMITED_PIPELINE_TENANTS = set()
     db = SessionLocal()
     try:
-        first = job_queue.enqueue(db, tipo="pipeline_multiplos", payload={"i": 1}, tenant_id=2, priority=1)
-        second = job_queue.enqueue(db, tipo="pipeline_lead", payload={"i": 2}, tenant_id=2, priority=1)
-        other = job_queue.enqueue(db, tipo="pipeline_lead", payload={"i": 3}, tenant_id=31, priority=1)
+        first = job_queue.enqueue(db, tipo="pipeline_multiplos", payload={"i": 1}, tenant_id=31, priority=1)
+        second = job_queue.enqueue(db, tipo="pipeline_lead", payload={"i": 2}, tenant_id=31, priority=1)
+        other = job_queue.enqueue(db, tipo="pipeline_lead", payload={"i": 3}, tenant_id=32, priority=1)
 
         claimed_1 = job_queue.claim_next(db, worker_id="w-1", tipos=["pipeline_lead", "pipeline_multiplos"])
         claimed_2 = job_queue.claim_next(db, worker_id="w-2", tipos=["pipeline_lead", "pipeline_multiplos"])
@@ -125,6 +128,24 @@ def test_claim_next_nao_roda_duas_pipelines_do_mesmo_tenant_em_paralelo():
     assert claimed_1["id"] == first
     assert claimed_2["id"] == other
     assert claimed_2["id"] != second
+
+
+@pytest.mark.integration
+def test_claim_next_permite_tenant_ilimitado_rodar_multiplas_pipelines():
+    job_queue._MAX_PIPELINES_GLOBAL = 10
+    job_queue._UNLIMITED_PIPELINE_TENANTS = {2}
+    db = SessionLocal()
+    try:
+        first = job_queue.enqueue(db, tipo="pipeline_multiplos", payload={"i": 1}, tenant_id=2, priority=1)
+        second = job_queue.enqueue(db, tipo="pipeline_lead", payload={"i": 2}, tenant_id=2, priority=1)
+
+        claimed_1 = job_queue.claim_next(db, worker_id="w-1", tipos=["pipeline_lead", "pipeline_multiplos"])
+        claimed_2 = job_queue.claim_next(db, worker_id="w-2", tipos=["pipeline_lead", "pipeline_multiplos"])
+    finally:
+        db.close()
+
+    assert claimed_1["id"] == first
+    assert claimed_2["id"] == second
 
 
 @pytest.mark.integration

@@ -218,6 +218,49 @@ signal.signal(signal.SIGTERM, _shutdown)
 signal.signal(signal.SIGINT, _shutdown)
 
 
+def _cleanup_old_workspaces(*, max_age_hours: int = 24) -> int:
+    """Remove old or incomplete Vite workspaces so /tmp cannot fill up silently."""
+    import shutil as _shutil
+    import time as _time
+
+    workspace_root = os.environ.get("FRALIB_BUILDER_SANDBOX_ROOT", "/tmp/fralib_builder")
+    if not os.path.isdir(workspace_root):
+        return 0
+
+    removed = 0
+    now = _time.time()
+    max_age_seconds = max_age_hours * 3600
+
+    for tenant_dir in os.listdir(workspace_root):
+        tenant_path = os.path.join(workspace_root, tenant_dir)
+        if not os.path.isdir(tenant_path):
+            continue
+        try:
+            for job_dir in os.listdir(tenant_path):
+                job_path = os.path.join(tenant_path, job_dir)
+                if not os.path.isdir(job_path):
+                    continue
+                try:
+                    mtime = os.path.getmtime(job_path)
+                    node_modules = os.path.join(job_path, "node_modules")
+                    plugin_react = os.path.join(node_modules, "@vitejs", "plugin-react")
+                    old = (now - mtime) > max_age_seconds
+                    incomplete = os.path.isdir(node_modules) and not os.path.isdir(plugin_react)
+                    if old or incomplete:
+                        _shutil.rmtree(job_path, ignore_errors=True)
+                        removed += 1
+                        if incomplete:
+                            log.warning("workspace cleanup: node_modules incompleto em %s", job_path)
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
+    if removed > 0:
+        log.info("workspace cleanup: removeu %s diretorios (max_age=%sh)", removed, max_age_hours)
+    return removed
+
+
 def _heartbeat_loop(job_id: int, stop_event: threading.Event):
     """Roda em thread real para sobreviver a chamadas bloqueantes do pipeline."""
     while not stop_event.is_set():
@@ -868,54 +911,3 @@ if __name__ == "__main__":
     _health_gate()
 
     asyncio.run(_main_loop())
-
-
-# === Sprint 14.9: cleanup de workspaces Vite antigos =================
-def _cleanup_old_workspaces(*, max_age_hours: int = 24) -> int:
-    """Remove workspaces Vite com mais de N horas OU com node_modules incompleto.
-    Evita /tmp cheio. Limpa também workspaces com npm install corrompido
-    (ex: faltando @vitejs/plugin-react, que quebra o vite build).
-    """
-    import shutil as _shutil
-    import time as _time
-
-    workspace_root = "/tmp/fralib_builder"
-    if not os.path.isdir(workspace_root):
-        return 0
-
-    removed = 0
-    now = _time.time()
-    max_age_seconds = max_age_hours * 3600
-
-    for tenant_dir in os.listdir(workspace_root):
-        tenant_path = os.path.join(workspace_root, tenant_dir)
-        if not os.path.isdir(tenant_path):
-            continue
-        try:
-            for job_dir in os.listdir(tenant_path):
-                job_path = os.path.join(tenant_path, job_dir)
-                if not os.path.isdir(job_path):
-                    continue
-                try:
-                    mtime = os.path.getmtime(job_path)
-                    node_modules = os.path.join(job_path, "node_modules")
-                    plugin_react = os.path.join(node_modules, "@vitejs", "plugin-react")
-                    # Limpa se: velho OU node_modules incompleto (npm install falhou)
-                    velho = (now - mtime) > max_age_seconds
-                    incompleto = (
-                        os.path.isdir(node_modules)
-                        and not os.path.isdir(plugin_react)
-                    )
-                    if velho or incompleto:
-                        _shutil.rmtree(job_path, ignore_errors=True)
-                        removed += 1
-                        if incompleto:
-                            log.warning(f"workspace cleanup: node_modules incompleto em {job_path}")
-                except Exception:
-                    pass
-        except Exception:
-            pass
-
-    if removed > 0:
-        log.info(f"workspace cleanup: removeu {removed} diretorios (max_age={max_age_hours}h)")
-    return removed

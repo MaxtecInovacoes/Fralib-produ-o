@@ -37,6 +37,24 @@ _PIPELINE_JOB_TYPES = ("pipeline_lead", "pipeline_multiplos", "pipeline_main")
 _MAX_PIPELINES_GLOBAL = int(os.environ.get("MAX_PIPELINES_GLOBAL", "4"))
 
 
+def _parse_int_set(value: str) -> set[int]:
+    parsed: set[int] = set()
+    for item in (value or "").split(","):
+        item = item.strip()
+        if not item:
+            continue
+        try:
+            parsed.add(int(item))
+        except ValueError:
+            continue
+    return parsed
+
+
+_UNLIMITED_PIPELINE_TENANTS = _parse_int_set(
+    os.environ.get("FRALIB_UNLIMITED_PIPELINE_TENANTS", "2")
+)
+
+
 def enqueue(
     db: Session,
     tipo: str,
@@ -113,15 +131,21 @@ def claim_next(
               )
         """
         params["max_pipelines_global"] = _MAX_PIPELINES_GLOBAL
-
-    row = db.execute(
-        text(f"""
-        WITH claimed AS (
-            SELECT id FROM jobs
-            WHERE status = 'pending'
-              AND attempts < max_attempts
-              AND next_retry_at <= NOW() {filtro_tipo}
-              {filtro_global}
+    unlimited_tenants = sorted(_UNLIMITED_PIPELINE_TENANTS)
+    filtro_tenant_lock = """
+              AND NOT (
+                tipo IN ('pipeline_lead', 'pipeline_multiplos', 'pipeline_main')
+                AND NOT (tenant_id = ANY(:unlimited_pipeline_tenants))
+                AND EXISTS (
+                    SELECT 1 FROM jobs running
+                    WHERE running.tenant_id = jobs.tenant_id
+                      AND running.status = 'running'
+                      AND running.tipo IN ('pipeline_lead', 'pipeline_multiplos', 'pipeline_main')
+                )
+              )
+    """
+    if not unlimited_tenants:
+        filtro_tenant_lock = """
               AND NOT (
                 tipo IN ('pipeline_lead', 'pipeline_multiplos', 'pipeline_main')
                 AND EXISTS (
@@ -131,6 +155,19 @@ def claim_next(
                       AND running.tipo IN ('pipeline_lead', 'pipeline_multiplos', 'pipeline_main')
                 )
               )
+        """
+    else:
+        params["unlimited_pipeline_tenants"] = unlimited_tenants
+
+    row = db.execute(
+        text(f"""
+        WITH claimed AS (
+            SELECT id FROM jobs
+            WHERE status = 'pending'
+              AND attempts < max_attempts
+              AND next_retry_at <= NOW() {filtro_tipo}
+              {filtro_global}
+              {filtro_tenant_lock}
             ORDER BY
                 CASE WHEN tipo IN ('pipeline_lead', 'pipeline_multiplos', 'pipeline_main') THEN 0 ELSE 1 END,
                 priority ASC,
