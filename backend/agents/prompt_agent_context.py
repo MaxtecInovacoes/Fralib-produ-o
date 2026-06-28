@@ -394,14 +394,14 @@ def _visual_direction_contract(context: dict[str, Any]) -> dict[str, Any]:
     return {
         "version": "fralib-visual-director-v2",
         "runtime_output": {
-            "engine": "OpenUI static HTML + Tailwind utility classes inline + data-attributes for motion",
-            "format": "single self-contained HTML document with inline Tailwind classes; deploy injects Motion Runtime JS for data-attributes",
+            "engine": "Vite/React Studio project + Tailwind utility classes + motion/react + GSAP hooks",
+            "format": "compiled Vite/React dist with semantic React sections, local SEO head tags and hashed assets",
             "studio_contract": [
-                "Tailwind v4 utility classes inline (no build step)",
-                "data-attribute motion (data-reveal, data-parallax, data-marquee, data-mask-reveal, data-card-stagger) picked up by FraLib Motion Runtime",
+                "Tailwind v4 utility classes compiled by Vite",
+                "React components with motion/react and GSAP/ScrollTrigger where useful",
                 "Hero image-led plus gallery/lifestyle sections",
-                "Modal/lightbox via native <dialog> element",
-                "dense semantic HTML comparable to AI Studio output",
+                "Modal/lightbox via React state",
+                "dense semantic React output comparable to AI Studio output",
             ],
             "creates": [
                 "package.json",

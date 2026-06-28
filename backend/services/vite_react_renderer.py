@@ -3788,7 +3788,7 @@ import { motion } from 'motion/react';
 import { siteCopy } from './siteData';
 const icons = [ClipboardCheck, Sparkles, MapPinned];
 export function ServicesSection() {
-  return <section id="servicos" style={{ background: 'var(--bg-light)', color: 'var(--text-dark)' }} className="px-5 py-20 md:px-8 md:py-28"><div className="mx-auto max-w-7xl"><div className="grid gap-8 lg:grid-cols-[.8fr_1.2fr] lg:items-end"><div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-800">Como funciona</p><h2 className="mt-3 text-[clamp(2rem,4.8vw,4.4rem)] font-semibold leading-[1] tracking-[-0.025em]">{siteCopy.services_title}</h2></div><p className="max-w-2xl text-base leading-8" style={{ color: 'var(--accent-dark)' }}>{siteCopy.services_subheadline}</p></div><div className="mt-12 grid gap-4 md:grid-cols-3">{siteCopy.services.map((service, index) => { const Icon = icons[index] || ClipboardCheck; return <motion.article key={service.title} initial={{ opacity: 0, y: 22 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.28 }} transition={{ delay: index * 0.06 }} className="min-h-[17rem] rounded-[18px] border bg-white p-6 shadow-[0_8px_24px_rgba(0,0,0,.06)]" style={{ borderColor: 'color-mix(in srgb, var(--text-dark) 10%, transparent)' }}><Icon className="h-6 w-6 text-emerald-800" /><h3 className="mt-8 text-2xl font-semibold tracking-tight">{service.title}</h3><p className="mt-4 text-sm leading-7" style={{ color: 'var(--accent-dark)' }}>{service.description}</p></motion.article>; })}</div></div></section>;
+  return <section id="servicos" style={{ background: 'var(--bg-light)', color: 'var(--text-dark)' }} className="px-5 py-20 md:px-8 md:py-28"><div className="mx-auto max-w-7xl"><div className="grid gap-8 lg:grid-cols-[.8fr_1.2fr] lg:items-end"><div><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>Como funciona</p><h2 className="mt-3 text-[clamp(2rem,4.8vw,4.4rem)] font-semibold leading-[1] tracking-[-0.025em]">{siteCopy.services_title}</h2></div><p className="max-w-2xl text-base leading-8 text-zinc-300">{siteCopy.services_subheadline}</p></div><div className="mt-12 grid gap-4 md:grid-cols-3">{siteCopy.services.map((service, index) => { const Icon = icons[index] || ClipboardCheck; return <motion.article key={service.title} initial={{ opacity: 0, y: 22 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.28 }} transition={{ delay: index * 0.06 }} className="min-h-[17rem] rounded-[18px] border border-white/10 bg-white/[0.055] p-6 backdrop-blur-md"><Icon className="h-6 w-6" style={{ color: 'var(--accent)' }} /><h3 className="mt-8 text-2xl font-semibold tracking-tight text-white">{service.title}</h3><p className="mt-4 text-sm leading-7 text-zinc-300">{service.description}</p></motion.article>; })}</div></div></section>;
 }
 export default ServicesSection;
 """,
@@ -4315,6 +4315,7 @@ def validate_vite_project_files(
     if studio_mode:
         _validate_hero_first_viewport(files)
         _validate_mobile_navbar(files)
+        _validate_no_low_contrast_card_patterns(files)
         _validate_studio_project(files, source_text, component_files)
 
 
@@ -4336,6 +4337,21 @@ def _validate_no_studio_template_leaks(source_text: str) -> None:
     )
     if duplicate_class:
         raise ViteReactRenderError("projeto Vite contem className duplicado no mesmo elemento")
+
+
+def _validate_no_low_contrast_card_patterns(files: dict[str, str]) -> None:
+    low_contrast_patterns = [
+        ("section_text_dark_with_white_cards", r"color:\s*'var\(--text-dark\)'.{0,1400}(?<![\w/-])bg-white(?![\w/-])"),
+        ("white_card_with_accent_dark_body", r"(?<![\w/-])bg-white(?![\w/-]).{0,900}color:\s*'var\(--accent-dark\)'"),
+    ]
+    for path, content in files.items():
+        if not path.startswith("src/components/") or not path.endswith(".tsx"):
+            continue
+        for label, pattern in low_contrast_patterns:
+            if re.search(pattern, content, re.DOTALL):
+                raise ViteReactRenderError(
+                    f"projeto Vite contem padrao de baixo contraste em {path}: {label}"
+                )
 
 
 def _segment_key_for_business(business: dict[str, Any]) -> str | None:
