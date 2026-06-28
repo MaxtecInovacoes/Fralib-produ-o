@@ -4560,8 +4560,9 @@ def build_vite_project(workspace: Path) -> None:
     timeout = int(os.getenv("FRALIB_VITE_BUILD_TIMEOUT", "420"))
     preview_fast = _preview_fast_enabled()
     node_modules = workspace / "node_modules"
+    plugin_react = node_modules / "@vitejs" / "plugin-react"
     should_install = True
-    if preview_fast and node_modules.exists() and (node_modules / "vite").exists():
+    if preview_fast and node_modules.exists() and plugin_react.exists():
         should_install = False
     if should_install:
         _run(

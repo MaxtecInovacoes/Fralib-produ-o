@@ -34,7 +34,7 @@ _BACKOFF = [30, 120, 480]
 # Franz/SDR: mais tentativas com backoff mais longo (WhatsApp instável)
 _BACKOFF_BRYAN = [60, 120, 240, 480, 960]
 _PIPELINE_JOB_TYPES = ("pipeline_lead", "pipeline_multiplos", "pipeline_main")
-_MAX_PIPELINES_GLOBAL = int(os.environ.get("MAX_PIPELINES_GLOBAL", "1"))
+_MAX_PIPELINES_GLOBAL = int(os.environ.get("MAX_PIPELINES_GLOBAL", "4"))
 
 
 def enqueue(

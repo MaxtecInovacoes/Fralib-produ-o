@@ -735,7 +735,7 @@ async def _main_loop():
             log.info(f"Worker polling... id={WORKER_ID}")
             last_poll_log = now
 
-        # Sprint 14.9: cleanup de workspaces Vite antigos (>24h)
+        # Sprint 14.9: cleanup de workspaces Vite antigos (>24h) ou disco >80%
         # Evita que /tmp/fralib_builder fique com 3.5G+ de workspaces
         # orfaos que enchem o disco e quebram o pipeline com Errno 28.
         if now - last_reap >= REAP_SECS:
@@ -744,7 +744,18 @@ async def _main_loop():
             except Exception as _ws_exc:
                 log.warning(f"workspace cleanup falhou: {_ws_exc}")
 
-        # Reap periodico de workers mortos
+        # Cleanup por espaco em disco: se /tmp > 80%, limpa workspaces velhos
+        if now - last_reap >= REAP_SECS:
+            try:
+                import shutil as _shutil
+                result = _shutil.disk_usage("/tmp")
+                if result.total > 0:
+                    pct = result.used / result.total
+                    if pct > 0.80:
+                        n = _cleanup_old_workspaces(max_age_hours=1)
+                        log.warning(f"disco /tmp em {pct:.0%}: limpou {n} workspaces (>80%)")
+            except Exception as _disk_exc:
+                pass
         if now - last_reap >= REAP_SECS:
             try:
                 db = SessionLocal()
@@ -861,14 +872,12 @@ if __name__ == "__main__":
 
 # === Sprint 14.9: cleanup de workspaces Vite antigos =================
 def _cleanup_old_workspaces(*, max_age_hours: int = 24) -> int:
-    """Remove workspaces Vite com mais de N horas. Evita /tmp cheio.
-
-    Cada job Vite cria ~137M de node_modules + dist em /tmp/fralib_builder/<tenant>/<job>/.
-    Se nenhum cleanup rodar, em ~25 jobs o /tmp enche (3.5G) e o pipeline quebra
-    com Errno 28 (No space left on device).
+    """Remove workspaces Vite com mais de N horas OU com node_modules incompleto.
+    Evita /tmp cheio. Limpa também workspaces com npm install corrompido
+    (ex: faltando @vitejs/plugin-react, que quebra o vite build).
     """
-    import time as _time
     import shutil as _shutil
+    import time as _time
 
     workspace_root = "/tmp/fralib_builder"
     if not os.path.isdir(workspace_root):
@@ -889,14 +898,24 @@ def _cleanup_old_workspaces(*, max_age_hours: int = 24) -> int:
                     continue
                 try:
                     mtime = os.path.getmtime(job_path)
-                    if (now - mtime) > max_age_seconds:
+                    node_modules = os.path.join(job_path, "node_modules")
+                    plugin_react = os.path.join(node_modules, "@vitejs", "plugin-react")
+                    # Limpa se: velho OU node_modules incompleto (npm install falhou)
+                    velho = (now - mtime) > max_age_seconds
+                    incompleto = (
+                        os.path.isdir(node_modules)
+                        and not os.path.isdir(plugin_react)
+                    )
+                    if velho or incompleto:
                         _shutil.rmtree(job_path, ignore_errors=True)
                         removed += 1
+                        if incompleto:
+                            log.warning(f"workspace cleanup: node_modules incompleto em {job_path}")
                 except Exception:
                     pass
         except Exception:
             pass
 
     if removed > 0:
-        log.info(f"workspace cleanup: removeu {removed} diretorios com mais de {max_age_hours}h")
+        log.info(f"workspace cleanup: removeu {removed} diretorios (max_age={max_age_hours}h)")
     return removed
