@@ -63,34 +63,58 @@ TRENDING_TOPICS = [
         "intent": "commercial",
     },
     {
-        "topic": "Prospecção B2B automatizada",
-        "category": "vendas",
-        "keywords": ["prospecção", "b2b", "automatizada", "leads"],
-        "intent": "commercial",
-    },
-    {
-        "topic": "Marketing digital para freelancers",
-        "category": "freelancer",
-        "keywords": ["freelancer", "marketing", "digital", "clientes"],
-        "intent": "informational",
-    },
-    {
-        "topic": "SDR de IA vendendo no WhatsApp",
+        "topic": "SDR de IA: o vendedor que nunca dorme",
         "category": "ia",
-        "keywords": ["sdr", "ia", "whatsapp", "vendedor"],
+        "keywords": ["sdr", "ia", "whatsapp", "vendas automáticas"],
         "intent": "commercial",
     },
     {
-        "topic": "Google Maps como fonte de leads",
+        "topic": "Google Maps como máquina de leads",
         "category": "marketing",
-        "keywords": ["google maps", "leads", "negócios locais"],
+        "keywords": ["google maps", "leads", "prospecção", "negócios locais"],
+        "intent": "commercial",
+    },
+    {
+        "topic": "Como cobrar R$1.500 por site em 2026",
+        "category": "freelancer",
+        "keywords": ["preço", "site", "freelancer", "tabela"],
+        "intent": "commercial",
+    },
+    {
+        "topic": "Prospecção B2B que funciona sem LinkedIn",
+        "category": "vendas",
+        "keywords": ["prospecção", "b2b", "whatsapp", "leads"],
+        "intent": "commercial",
+    },
+    {
+        "topic": "Site que vende: 7 erros que freelancers cometem",
+        "category": "marketing",
+        "keywords": ["site", "erros", "freelancer", "vendas"],
         "intent": "informational",
     },
     {
-        "topic": "Como cobrar por site em 2024",
-        "category": "freelancer",
-        "keywords": ["preço", "site", "freelancer", "cobrança"],
+        "topic": "Como automatizar 100% do funil de vendas",
+        "category": "ia",
+        "keywords": ["automação", "funil", "vendas", "ia"],
         "intent": "commercial",
+    },
+    {
+        "topic": "FraLib OS: o case que mudou a prospecção no Brasil",
+        "category": "tech",
+        "keywords": ["fralib", "prospecção", "ia", "case"],
+        "intent": "informational",
+    },
+    {
+        "topic": "Quanto cobrar por gestão de WhatsApp em 2026",
+        "category": "freelancer",
+        "keywords": ["whatsapp", "gestão", "freelancer", "preço"],
+        "intent": "commercial",
+    },
+    {
+        "topic": "Marketing digital para freelancers: o que mudou",
+        "category": "marketing",
+        "keywords": ["marketing", "freelancer", "2026", "tendências"],
+        "intent": "informational",
     },
 ]
 
@@ -214,10 +238,12 @@ a:hover{{text-decoration:underline}}
 
 
 def call_llm_for_content(topic: str, category: str, keywords: List[str]) -> Optional[str]:
-    """Tenta gerar conteúdo via LLM (OpenRouter)."""
+    """Tenta gerar conteúdo via LLM (kpalabz)."""
     try:
         import requests
-        api_key = os.environ.get("OPENROUTER_API_KEY")
+        api_key = os.environ.get("ANTHROPIC_API_KEY")
+        base_url = os.environ.get("ANTHROPIC_BASE_URL", "https://api.kpalabz.com/v1")
+
         if not api_key:
             return None
 
@@ -236,13 +262,17 @@ Mencione o FraLib na conclusão.
 Retorne APENAS o HTML com h2 e p, sem doctype."""
 
         resp = requests.post(
-            "https://openrouter.ai/api/v1/chat/completions",
-            headers={"Authorization": f"Bearer {api_key}"},
-            json={
-                "model": "anthropic/claude-haiku-4-5",
-                "messages": [{"role": "user", "content": prompt}],
+            f"{base_url}/chat/completions",
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
             },
-            timeout=30,
+            json={
+                "model": "claude-haiku-4-5",
+                "messages": [{"role": "user", "content": prompt}],
+                "max_tokens": 2500,
+            },
+            timeout=60,
         )
 
         if resp.ok:
@@ -447,9 +477,11 @@ def main() -> int:
     update_index_file(all_posts)
     update_sitemap(generated_posts)
 
-    print(f"\n✓ Concluído: {len(generated_posts)} posts novos, {len(all_posts)} total no blog")
+    print(f"\n[OK] Concluido: {len(generated_posts)} posts novos, {len(all_posts)} total no blog")
     return 0
 
 
 if __name__ == "__main__":
+    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+    sys.stderr.reconfigure(encoding='utf-8', errors='replace')
     sys.exit(main())
