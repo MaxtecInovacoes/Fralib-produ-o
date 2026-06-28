@@ -1,0 +1,27 @@
+{
+  "generated_at": "2026-06-27T21:48:13.975680",
+  "site_url": "https://seunegociofralib.site",
+  "posts_optimized": 12,
+  "sitemap_urls": 17,
+  "robots_txt": true,
+  "schema_types": [
+    "Organization",
+    "WebSite",
+    "SoftwareApplication",
+    "Article (BlogPosting)",
+    "BreadcrumbList",
+    "FAQPage",
+    "HowTo",
+    "SpeakableSpecification"
+  ],
+  "features": {
+    "open_graph": true,
+    "twitter_cards": true,
+    "schema_org": true,
+    "canonical_urls": true,
+    "internal_linking": true,
+    "image_optimization": "WebP 1200x630",
+    "mobile_optimized": true,
+    "core_web_vitals": "LCP < 2.5s, CLS < 0.1"
+  }
+}

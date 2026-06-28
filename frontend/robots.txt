@@ -1,59 +1,33 @@
-# ===========================================
 # FraLib OS - robots.txt
 # https://seunegociofralib.site
-# ===========================================
 
 User-agent: *
 Allow: /
-
-# Sitemap
-Sitemap: https://seunegociofralib.site/sitemap.xml
-
-# Crawl-delay for polite bots
-Crawl-delay: 1
-
-# Block admin areas (no SEO value)
-User-agent: *
-Disallow: /admin
-Disallow: /superadmin
-
-# Block staging/dev areas
-Disallow: /*.json$
-Disallow: /*.xml$
+Disallow: /admin/
+Disallow: /login
 Disallow: /api/
-Disallow: /backend/
+Disallow: /dashboard
+Disallow: /_next/
+Disallow: /*.json$
 
-# Allow search engines to access static assets
-Allow: /static/
-Allow: /favicon.ico
-Allow: /og-image.png
-
-# Specific crawler instructions
+# Googlebot
 User-agent: Googlebot
 Allow: /
-Crawl-delay: 1
+Crawl-delay: 0
 
+# Bing
 User-agent: Bingbot
 Allow: /
-Crawl-delay: 2
+Crawl-delay: 0
 
-User-agent: DuckDuckBot
+# Yandex
+User-agent: YandexBot
 Allow: /
-Crawl-delay: 5
 
-# Block bad bots
-User-agent: AhrefsBot
-Disallow: /
+# Sitemaps
+Sitemap: {SITE_URL}/sitemap.xml
+Sitemap: {SITE_URL}/blog/sitemap.xml
+Sitemap: {SITE_URL}/blog/rss.xml
 
-User-agent: SemrushBot
-Disallow: /
-
-User-agent: MJ12bot
-Disallow: /
-
-# ===========================================
-# NOTES:
-# - Sitemap submitted to Google Search Console
-# - Update lastmod dates when content changes
-# - Review Search Console for crawl errors
-# ===========================================
+# Host
+Host: https://seunegociofralib.site
