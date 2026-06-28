@@ -141,6 +141,170 @@ _LANES: dict[str, list[dict[str, Any]]] = {
 }
 
 
+_FAMILY_COPY_DEFAULTS: dict[str, dict[str, str]] = {
+    "academia": {
+        "services_kicker": "Treino",
+        "gallery_kicker": "Ambiente",
+        "reviews_kicker": "Reputação",
+        "faq_kicker": "Dúvidas reais",
+        "location_kicker": "Presença local",
+        "location_cta_kicker": "Acesso",
+        "location_cta_primary": "Falar no WhatsApp",
+        "location_cta_secondary": "Ver contato",
+        "modal_kicker": "Contato",
+        "contact_sub": "Use o canal oficial para confirmar horário, aula experimental e próximo passo.",
+    },
+    "nutricionista": {
+        "services_kicker": "Acompanhamento",
+        "gallery_kicker": "Contexto",
+        "reviews_kicker": "Confiança",
+        "faq_kicker": "Perguntas práticas",
+        "location_kicker": "Consultório",
+        "location_cta_kicker": "Agenda",
+        "location_cta_primary": "Agendar WhatsApp",
+        "location_cta_secondary": "Ver localização",
+        "modal_kicker": "Consulta",
+        "contact_sub": "Fale pelo canal oficial para confirmar consulta, formato de atendimento e próximos horários.",
+    },
+    "barbearia": {
+        "services_kicker": "Serviços",
+        "gallery_kicker": "Atmosfera",
+        "reviews_kicker": "Clientes",
+        "faq_kicker": "Antes da reserva",
+        "location_kicker": "Endereço",
+        "location_cta_kicker": "Reserva",
+        "location_cta_primary": "Reservar pelo WhatsApp",
+        "location_cta_secondary": "Ver rota",
+        "modal_kicker": "Reserva",
+        "contact_sub": "Entre pelo canal oficial para confirmar horário, serviço e chegada sem ruído.",
+    },
+    "default": {
+        "services_kicker": "Serviços",
+        "gallery_kicker": "Visual",
+        "reviews_kicker": "Reputação",
+        "faq_kicker": "Perguntas",
+        "location_kicker": "Local",
+        "location_cta_kicker": "Contato",
+        "location_cta_primary": "Falar no WhatsApp",
+        "location_cta_secondary": "Ver contato",
+        "modal_kicker": "Contato",
+        "contact_sub": "Use o canal oficial para confirmar atendimento e próximos passos.",
+    },
+}
+
+
+_LANE_COPY_ENRICHMENTS: dict[str, dict[str, str]] = {
+    "academia-iron-pulse": {
+        "services_kicker": "Treino real",
+        "gallery_kicker": "Carga e ambiente",
+        "reviews_kicker": "Prova local",
+        "faq_kicker": "Antes da primeira série",
+        "location_cta_title": "Fale com a equipe e entre no ritmo.",
+        "location_cta_body": "WhatsApp, endereço e decisão aparecem juntos para não perder impulso.",
+        "contact_headline": "Pronto para começar o treino com estrutura de verdade?",
+    },
+    "academia-neon-grid": {
+        "services_kicker": "Alta energia",
+        "gallery_kicker": "Luz e movimento",
+        "reviews_kicker": "Sinais da cidade",
+        "faq_kicker": "O que trava o clique",
+        "location_cta_title": "Chegue pelo canal mais rápido.",
+        "location_cta_body": "A página empurra para ação imediata, sem etapa morta nem menu inútil.",
+        "contact_headline": "Entre agora e puxe seu próximo treino para perto.",
+    },
+    "academia-sunset-track": {
+        "services_kicker": "Rotina viável",
+        "gallery_kicker": "Treino de perto",
+        "reviews_kicker": "Confiança da rotina",
+        "faq_kicker": "Antes de voltar ou começar",
+        "location_cta_title": "Veja o caminho e marque sua entrada.",
+        "location_cta_body": "Cidade, contato e estrutura aparecem com leitura mais humana e direta.",
+        "contact_headline": "Seu próximo treino pode começar com menos ruído e mais constância.",
+    },
+    "academia-graphite-core": {
+        "services_kicker": "Método",
+        "gallery_kicker": "Forma e execução",
+        "reviews_kicker": "Credibilidade",
+        "faq_kicker": "Perguntas objetivas",
+        "location_cta_title": "Fale com a academia sem desvio.",
+        "location_cta_body": "A informação fecha o site com clareza técnica, contato rápido e presença local.",
+        "contact_headline": "Quer confirmar a estrutura e falar direto com a equipe?",
+    },
+    "nutri-botanical-editorial": {
+        "services_kicker": "Consulta e método",
+        "gallery_kicker": "Consultório e rotina",
+        "reviews_kicker": "Pacientes",
+        "faq_kicker": "Antes da consulta",
+        "location_cta_title": "Agende com calma e contato direto.",
+        "location_cta_body": "Consultório, WhatsApp e próximos passos aparecem sem poluição visual.",
+        "contact_headline": "Pronto para começar um acompanhamento nutricional com direção clara?",
+    },
+    "nutri-clinical-soft": {
+        "services_kicker": "Atendimento clínico",
+        "gallery_kicker": "Ambiente claro",
+        "reviews_kicker": "Confiança gradual",
+        "faq_kicker": "Perguntas do primeiro atendimento",
+        "location_cta_title": "Veja o consultório e fale sem atrito.",
+        "location_cta_body": "Tudo foi organizado para leitura confortável, decisão rápida e contato saudável.",
+        "contact_headline": "Quer tirar dúvidas e marcar sua primeira consulta?",
+    },
+    "nutri-performance-fuel": {
+        "services_kicker": "Estratégia e performance",
+        "gallery_kicker": "Rotina ativa",
+        "reviews_kicker": "Resultados percebidos",
+        "faq_kicker": "Perguntas de quem quer começar logo",
+        "location_cta_title": "Entre pelo canal oficial e acelere a decisão.",
+        "location_cta_body": "A rota de contato aparece com mais energia para quem compara profissionais e quer agir agora.",
+        "contact_headline": "Vamos transformar objetivo em rotina alimentar aplicável?",
+    },
+    "nutri-coastal-light": {
+        "services_kicker": "Cuidado nutricional",
+        "gallery_kicker": "Leveza com contexto",
+        "reviews_kicker": "Opiniões de confiança",
+        "faq_kicker": "Dúvidas antes de cuidar da rotina",
+        "location_cta_title": "Fale com leveza, mas com direção.",
+        "location_cta_body": "Consultório, contato e ação aparecem num arranjo mais calmo e muito mais legível.",
+        "contact_headline": "Seu próximo passo pode começar com uma conversa mais clara.",
+    },
+    "barber-heritage-reserve": {
+        "services_kicker": "Corte e ritual",
+        "gallery_kicker": "Detalhe e textura",
+        "reviews_kicker": "Clientes recorrentes",
+        "faq_kicker": "Antes do horário",
+        "location_cta_title": "Reserve e chegue pelo canal oficial.",
+        "location_cta_body": "A reserva fecha o site com presença clássica, rota objetiva e menos fricção.",
+        "contact_headline": "Quer garantir seu horário com corte, barba e acabamento bem alinhados?",
+    },
+    "barber-studio-mono": {
+        "services_kicker": "Assinatura contemporânea",
+        "gallery_kicker": "Forma e recorte",
+        "reviews_kicker": "Confiança editorial",
+        "faq_kicker": "Antes de reservar",
+        "location_cta_title": "Agende sem excesso de conversa.",
+        "location_cta_body": "O CTA é seco, direto e acompanhado de localização para fechar a decisão na hora.",
+        "contact_headline": "Seu próximo corte pode ser marcado agora, sem ruído.",
+    },
+    "barber-copper-smoke": {
+        "services_kicker": "Noite e acabamento",
+        "gallery_kicker": "Luz baixa e cobre",
+        "reviews_kicker": "Sinais locais",
+        "faq_kicker": "Perguntas de quem quer reservar hoje",
+        "location_cta_title": "Abra o WhatsApp e puxe sua reserva.",
+        "location_cta_body": "Contato, rota e sensação de convite trabalham no mesmo pulso visual.",
+        "contact_headline": "Vamos confirmar seu horário e deixar o corte na agenda?",
+    },
+    "barber-midnight-club": {
+        "services_kicker": "Marca autoral",
+        "gallery_kicker": "Clube e atmosfera",
+        "reviews_kicker": "Reputação de marca",
+        "faq_kicker": "O cliente quer saber",
+        "location_cta_title": "Chegue pelo contato oficial e feche a reserva.",
+        "location_cta_body": "A navegação termina em contato direto, identidade forte e caminho sem distrações.",
+        "contact_headline": "Pronto para reservar um horário com assinatura mais autoral?",
+    },
+}
+
+
 def resolve_visual_lane(
     *,
     segment: str = "",
@@ -153,7 +317,12 @@ def resolve_visual_lane(
         index = _LANE_KEYS.index(str(visual_lane or "").strip())
     except ValueError:
         index = 0
+    lane = dict(lanes[index % len(lanes)])
+    lane_copy = dict(_FAMILY_COPY_DEFAULTS.get(family, {}))
+    lane_copy.update(_LANE_COPY_ENRICHMENTS.get(str(lane.get("id") or ""), {}))
+    lane_copy.update(lane.get("copy") or {})
+    lane["copy"] = lane_copy
     return {
         "family": family,
-        **lanes[index % len(lanes)],
+        **lane,
     }

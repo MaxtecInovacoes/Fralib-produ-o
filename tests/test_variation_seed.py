@@ -385,6 +385,84 @@ def test_visual_lane_changes_palette_and_copy():
     assert "academia-sunset-track" in site_data_b
 
 
+def test_visual_lane_catalog_avoids_generic_cinematic_copy():
+    from backend.services.vite_visual_lanes import resolve_visual_lane
+
+    lane_ids = [
+        ("academia", "lane_a"),
+        ("academia", "lane_b"),
+        ("nutricionista", "lane_c"),
+        ("nutricionista", "lane_d"),
+        ("barbearia", "lane_a"),
+        ("barbearia", "lane_d"),
+    ]
+    banned_fragments = {
+        "Uma narrativa visual para",
+        "Pronto para confirmar o próximo passo?",
+        "Chegue à {name} pelo canal oficial.",
+        "Use o canal oficial para tirar dúvidas e agendar.",
+    }
+
+    for segment, token in lane_ids:
+        lane = resolve_visual_lane(segment=segment, visual_lane=token)
+        copy = lane["copy"]
+        assert copy["services_kicker"]
+        assert copy["gallery_kicker"]
+        assert copy["reviews_kicker"]
+        assert copy["faq_kicker"]
+        assert copy["location_cta_title"]
+        assert copy["contact_headline"]
+        for value in copy.values():
+            if isinstance(value, str):
+                for banned in banned_fragments:
+                    assert banned not in value
+
+
+def test_cinematic_site_data_differs_between_families():
+    from backend.services.vite_react_renderer import _generate_cinematic_studio_files
+
+    fixtures = {
+        "academia": {
+            "business": {
+                "name": "Academia Norte",
+                "address": "Rua A, 123 - Curitiba",
+                "segment": "academia",
+                "city": "Curitiba",
+            },
+            "variation": {"visual_lane": "lane_b"},
+        },
+        "nutricionista": {
+            "business": {
+                "name": "Priscyla Nutri",
+                "address": "Rua B, 55 - Campina Grande",
+                "segment": "nutricionista",
+                "city": "Campina Grande",
+            },
+            "variation": {"visual_lane": "lane_c"},
+        },
+        "barbearia": {
+            "business": {
+                "name": "Romeu Barbershop",
+                "address": "Rua C, 88 - Curitiba",
+                "segment": "barbearia",
+                "city": "Curitiba",
+            },
+            "variation": {"visual_lane": "lane_d"},
+        },
+    }
+
+    rendered = {
+        key: _generate_cinematic_studio_files(facts).get("src/components/siteData.ts", "")
+        for key, facts in fixtures.items()
+    }
+    assert rendered["academia"] != rendered["nutricionista"]
+    assert rendered["academia"] != rendered["barbearia"]
+    assert rendered["nutricionista"] != rendered["barbearia"]
+    assert "Treino" in rendered["academia"] or "treino" in rendered["academia"]
+    assert "consulta" in rendered["nutricionista"].lower() or "nutric" in rendered["nutricionista"].lower()
+    assert "reserva" in rendered["barbearia"].lower() or "barba" in rendered["barbearia"].lower()
+
+
 def run_all_tests():
     """Run all tests and report results."""
     print("=" * 60)
@@ -402,6 +480,8 @@ def run_all_tests():
         test_full_pipeline_integration,
         test_cinematic_studio_uses_dynamic_sections_and_local_primitives,
         test_visual_lane_changes_palette_and_copy,
+        test_visual_lane_catalog_avoids_generic_cinematic_copy,
+        test_cinematic_site_data_differs_between_families,
     ]
 
     results = []
