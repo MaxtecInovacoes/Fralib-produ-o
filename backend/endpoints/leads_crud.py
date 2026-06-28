@@ -63,14 +63,24 @@ async def get_sites(
         tenant_id_s = usuario.get("tenant_id", usuario["id"])
         result = db.execute(
             text("""
-            SELECT id, nome, cidade, segmento, COALESCE(site_url, url_site) AS site_url, valor_venda, status, criado_em, score
+            SELECT
+                id,
+                nome,
+                cidade,
+                segmento,
+                COALESCE(site_url, url_site) AS site_url,
+                valor_venda,
+                status,
+                COALESCE(atualizado_em, criado_em) AS gerado_em,
+                criado_em AS lead_criado_em,
+                score
             FROM leads
             WHERE user_id = :uid
               AND (
                 (site_url IS NOT NULL AND site_url != '')
                 OR (url_site IS NOT NULL AND url_site != '')
               )
-            ORDER BY criado_em DESC
+            ORDER BY COALESCE(atualizado_em, criado_em) DESC
         """),
             {"uid": tenant_id_s},
         ).fetchall()
@@ -95,7 +105,10 @@ async def get_sites(
                     "thumb": thumb,
                     "valor_venda": float(d["valor_venda"] or 0),
                     "status": d["status"] or "—",
-                    "criado_em": str(d["criado_em"] or ""),
+                    # Compat frontend: this field means "site generated at" in the sites view.
+                    "criado_em": str(d["gerado_em"] or ""),
+                    "gerado_em": str(d["gerado_em"] or ""),
+                    "lead_criado_em": str(d["lead_criado_em"] or ""),
                     "score": d["score"] or 0,
                 }
             )
