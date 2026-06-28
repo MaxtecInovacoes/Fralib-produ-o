@@ -146,6 +146,104 @@ def save_post(slug: str, html: str) -> Path:
 
 
 # ============================================================================
+# GOOGLE TRENDS REAL
+# ============================================================================
+
+def fetch_google_trends_br() -> List[Dict]:
+    """Busca Google Trends Brasil via RSS oficial."""
+    trends = []
+    try:
+        import requests
+        # RSS oficial do Google Trends
+        resp = requests.get(
+            "https://trends.google.com.br/trends/trendingsearches/daily/rss?geo=BR",
+            timeout=15,
+            headers={"User-Agent": "Mozilla/5.0 (FraLib Bot)"},
+        )
+        if resp.ok:
+            import re
+            items = re.findall(r"<title>([^<]+)</title>", resp.text)
+            for i, title in enumerate(items[:10]):
+                trends.append({
+                    "topic": title,
+                    "category": classify_topic(title),
+                    "keywords": title.lower().split(),
+                    "intent": "trending",
+                })
+    except Exception as e:
+        print(f"  Google Trends error: {e}", file=sys.stderr)
+    return trends
+
+
+def classify_topic(topic: str) -> str:
+    """Classifica tópico automaticamente."""
+    t = topic.lower()
+    if any(k in t for k in ["ia", "inteligência", "chatgpt", "gemini", "automação", "robô"]):
+        return "ia"
+    if any(k in t for k in ["marketing", "publicidade", "redes", "instagram", "tiktok"]):
+        return "marketing"
+    if any(k in t for k in ["venda", "e-commerce", "loja", "consumidor", "whatsapp"]):
+        return "vendas"
+    if any(k in t for k in ["freelancer", "autônomo", "mei", "empreendedor"]):
+        return "freelancer"
+    if any(k in t for k in ["tecnologia", "aplicativo", "app", "software", "startup"]):
+        return "tech"
+    return "negócios"
+
+
+# ============================================================================
+# NOTIFICAÇÃO (Webhook Slack/Discord)
+# ============================================================================
+
+def notify_new_post(slug: str, topic: str, category: str) -> None:
+    """Envia notificação webhook quando novo post sai."""
+    webhook = os.environ.get("WEBHOOK_URL")
+    if not webhook:
+        return
+
+    try:
+        import requests
+        cat_name = CATEGORIES.get(category, {}).get("name", category)
+        url = f"{SITE_URL}/blog/posts/{slug}.html"
+
+        # Slack/Discord format
+        payload = {
+            "text": f"📝 Novo post no blog: *{topic}*\n🏷️ {cat_name}\n🔗 {url}",
+        }
+
+        requests.post(webhook, json=payload, timeout=10)
+    except Exception as e:
+        print(f"  Webhook error: {e}", file=sys.stderr)
+
+
+# ============================================================================
+# DASHBOARD DE METRICAS
+# ============================================================================
+
+def save_dashboard() -> None:
+    """Salva dashboard simples com métricas do blog."""
+    dashboard = BLOG_DIR / "dashboard.json"
+    posts = []
+    if POSTS_DIR.exists():
+        for f in sorted(POSTS_DIR.glob("*.html"), reverse=True):
+            posts.append({
+                "slug": f.stem,
+                "date": f.stat().st_mtime,
+                "size_kb": round(f.stat().st_size / 1024, 1),
+            })
+
+    import time
+    data = {
+        "generated_at": datetime.now().isoformat(),
+        "total_posts": len(posts),
+        "latest": posts[:5],
+        "categories": list(CATEGORIES.keys()),
+    }
+    dashboard.write_text(json.dumps(data, indent=2), encoding="utf-8")
+    print(f"  Dashboard: {dashboard} ({len(posts)} posts)")
+
+
+# ============================================================================
 # GERADOR DE POST
 # ============================================================================
 
@@ -411,9 +509,14 @@ def main() -> int:
     POSTS_DIR.mkdir(parents=True, exist_ok=True)
     BLOG_DIR.mkdir(parents=True, exist_ok=True)
 
+    # Combina curados + Google Trends real
+    google_trends = fetch_google_trends_br()
+    all_topics = list(TRENDING_TOPICS) + google_trends
+    print(f"  {len(all_topics)} tendências ({len(TRENDING_TOPICS)} curados + {len(google_trends)} Google Trends)")
+
     generated_posts = []
 
-    for i, topic_data in enumerate(TRENDING_TOPICS[:POSTS_PER_DAY]):
+    for i, topic_data in enumerate(all_topics[:POSTS_PER_DAY]):
         topic = topic_data["topic"]
         category = topic_data["category"]
         keywords = topic_data["keywords"]
@@ -476,6 +579,11 @@ def main() -> int:
 
     update_index_file(all_posts)
     update_sitemap(generated_posts)
+    save_dashboard()
+
+    # Notificação webhook
+    for post in generated_posts:
+        notify_new_post(post["slug"], post["topic"], post["category"])
 
     print(f"\n[OK] Concluido: {len(generated_posts)} posts novos, {len(all_posts)} total no blog")
     return 0
