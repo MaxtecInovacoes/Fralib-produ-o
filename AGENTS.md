@@ -431,6 +431,14 @@ depois. Não promover para padrão sem auditoria, testes e decisão explícita.
 registra `engine=openui_fallback`, grava `builder-render.json` com
 `failed_openui_fallback` e publica HTML OpenUI.
 
+**Variação visual React/Vite**: no modo `creative_plan`, a LLM escolhe apenas
+campos de um contrato JSON barato; ela não escreve React/CSS livre. Quando o
+contrato não trouxer `visual_lane`, o Studio React deve preencher
+deterministicamente a variação por lead antes de resolver tema/blocos. O
+`blockPlan` resolvido é a fonte única para hero, about, serviços, reviews,
+galeria, FAQ, localização e CTA; componentes não devem voltar a ler defaults
+crus de `variation` quando o `blockPlan` já existe.
+
 **Arquivos mantidos por compatibilidade** (não usados no caminho canônico, mas
 mantidos para evitar imports quebrados em outros módulos):
 - `backend/services/pipeline_renderer_support.py` — nome herdado, mas o conteúdo

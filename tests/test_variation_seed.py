@@ -848,6 +848,68 @@ def test_cinematic_about_section_has_structural_variants():
     assert '"about_variant": "manifesto_split"' in site_data
 
 
+def test_cinematic_studio_seeds_visual_lane_when_missing():
+    from backend.services.vite_react_renderer import _generate_cinematic_studio_files
+
+    names = [
+        "Academia Alpha",
+        "Academia Beta",
+        "Academia CWB Fit",
+        "Viva Academia",
+        "High Fitness",
+    ]
+    lanes = set()
+    heroes = set()
+    reviews = set()
+    for name in names:
+        files = _generate_cinematic_studio_files(
+            {
+                "business": {
+                    "name": name,
+                    "segment": "academia",
+                    "city": "Curitiba",
+                    "address": "Rua Teste, 10 - Curitiba",
+                }
+            }
+        )
+        site_data = files.get("src/components/siteData.ts", "")
+        assert '"visual_lane": "lane_' in site_data
+        for token in ["visual_lane_name", "hero_variant", "reviews_variant", "gallery_density", "cta_style"]:
+            assert f'"{token}":' in site_data
+        lanes.add(site_data.split('"visual_lane_name": "')[1].split('"')[0])
+        heroes.add(site_data.split('"hero_variant": "')[1].split('"')[0])
+        reviews.add(site_data.split('"reviews_variant": "')[1].split('"')[0])
+
+    assert len(lanes) >= 3
+    assert len(heroes) >= 3
+    assert len(reviews) >= 2
+    return True
+
+
+def test_reviews_component_uses_resolved_block_plan():
+    from backend.services.vite_react_renderer import _generate_cinematic_studio_files
+
+    files = _generate_cinematic_studio_files(
+        {
+            "business": {
+                "name": "Academia Plano Final",
+                "segment": "academia",
+                "city": "Curitiba",
+                "address": "Rua Teste, 10 - Curitiba",
+            },
+            "variation": {"visual_lane": "lane_b"},
+        }
+    )
+    reviews = files.get("src/components/ReviewsSection.tsx", "")
+    site_data = files.get("src/components/siteData.ts", "")
+
+    assert "blockPlan as any)?.reviews_variant" in reviews
+    assert '"reviews_variant": "card_marquee"' in site_data
+    assert '"gallery_density": "mosaic"' in site_data
+    assert '"cta_style": "split_card"' in site_data
+    return True
+
+
 def test_block_registry_anti_repetition_avoids_default_glass():
     from backend.services.vite_block_registry import resolve_cinematic_block_plan
 
@@ -909,6 +971,8 @@ def run_all_tests():
         test_block_registry_respects_explicit_video_hero_and_about_variant,
         test_cinematic_footer_uses_theme_tokens_not_fixed_default_colors,
         test_cinematic_about_section_has_structural_variants,
+        test_cinematic_studio_seeds_visual_lane_when_missing,
+        test_reviews_component_uses_resolved_block_plan,
         test_block_registry_anti_repetition_avoids_default_glass,
         test_segment_contamination_uses_word_boundaries_for_names,
     ]

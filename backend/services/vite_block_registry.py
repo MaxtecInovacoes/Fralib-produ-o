@@ -89,6 +89,28 @@ def resolve_cinematic_block_plan(
     if anti_repetition_rule == "avoid_glass" and surface_style == "glass":
         surface_style = "solid" if services_variant == "split_editorial" else "outline"
 
+    gallery_density = str(variation.get("gallery_density") or "")
+    if not gallery_density:
+        if reviews_variant == "editorial_case":
+            gallery_density = "editorial_grid"
+        elif reviews_variant == "card_marquee":
+            gallery_density = "mosaic"
+        elif hero_variant in {"video", "fullbleed"}:
+            gallery_density = "cinematic_strip"
+        else:
+            gallery_density = "balanced_grid"
+
+    cta_style = str(variation.get("cta_style") or "")
+    if not cta_style:
+        if hero_variant in {"video", "fullbleed"}:
+            cta_style = "poster_band"
+        elif reviews_variant == "card_marquee":
+            cta_style = "split_card"
+        elif services_variant == "split_editorial":
+            cta_style = "minimal_inline"
+        else:
+            cta_style = "solid_panel"
+
     surface_mix = variation.get("surface_mix") if isinstance(variation.get("surface_mix"), list) else []
     if anti_repetition_rule == "avoid_glass":
         surface_mix = [item for item in surface_mix if item != "glass"]
@@ -120,8 +142,8 @@ def resolve_cinematic_block_plan(
         "section_surface_map": section_surface_map,
         "color_strategy": str(variation.get("color_strategy") or ""),
         "typography_mood": str(variation.get("typography_mood") or ""),
-        "gallery_density": str(variation.get("gallery_density") or ""),
-        "cta_style": str(variation.get("cta_style") or ""),
+        "gallery_density": gallery_density,
+        "cta_style": cta_style,
         "prompt_priority": str(variation.get("prompt_priority") or ""),
         "anti_repetition_rule": anti_repetition_rule,
         "motion_style": str(variation.get("motion_style") or ""),

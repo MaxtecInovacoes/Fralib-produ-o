@@ -4041,7 +4041,27 @@ def _cinematic_copy(facts: dict[str, Any]) -> dict[str, Any]:
     return data
 
 
+def _with_cinematic_variation_defaults(facts: dict[str, Any]) -> dict[str, Any]:
+    """Fill missing visual knobs before theme and block resolution."""
+    enriched = dict(facts or {})
+    variation = dict(enriched.get("variation") if isinstance(enriched.get("variation"), dict) else {})
+    if get_variation is not None:
+        try:
+            seeded = get_variation(
+                enriched,
+                counter=int(variation.get("counter") or enriched.get("__counter") or 0),
+            ).to_dict()
+        except Exception:
+            seeded = {}
+        for key, value in seeded.items():
+            variation.setdefault(key, value)
+    variation.setdefault("anti_repetition_rule", "avoid_glass")
+    enriched["variation"] = variation
+    return enriched
+
+
 def _generate_cinematic_studio_files(facts: dict[str, Any]) -> dict[str, str]:
+    facts = _with_cinematic_variation_defaults(facts)
     _biz = facts.get("business") if isinstance(facts.get("business"), dict) else {}
     segment = str(_biz.get("segment") or _biz.get("segmento") or facts.get("segmento") or facts.get("segment") or "servicos").lower()
     archetype = _get_archetype_for_segment(segment)
@@ -4420,20 +4440,26 @@ export default HeroSection;
 
 def _generate_cinematic_secondary_components(facts: dict[str, Any], palette: dict[str, str] | None = None) -> dict[str, str]:
     copy = _cinematic_copy(facts)
+    _biz = facts.get("business") if isinstance(facts.get("business"), dict) else {}
+    segment = str(_biz.get("segment") or _biz.get("segmento") or facts.get("segmento") or facts.get("segment") or "servicos").lower()
     if palette is None:
-        _biz = facts.get("business") if isinstance(facts.get("business"), dict) else {}
-        segment = str(_biz.get("segment") or _biz.get("segmento") or facts.get("segmento") or facts.get("segment") or "servicos").lower()
         archetype = _get_archetype_for_segment(segment)
         palette = _get_archetype_palette(archetype)
     c_bg_light = palette.get('bg_light', '#f4f0e6')
     c_text_dark = palette.get('text_dark', '#09130f')
     variation = facts.get("variation") if isinstance(facts.get("variation"), dict) else {}
-    proof_style = str(variation.get("proof_style") or "score_wall")
-    surface_style = str(variation.get("surface_style") or "solid")
+    block_plan = resolve_cinematic_block_plan(
+        section_order=["about", "services", "gallery", "reviews", "faq", "location", "contact-cta"],
+        variation=variation,
+        archetype=_get_archetype_for_segment(segment),
+        segment=segment,
+    )
+    proof_style = str(block_plan.get("reviews_variant") or variation.get("proof_style") or "score_wall")
+    surface_style = str(block_plan.get("surface_style") or variation.get("surface_style") or "solid")
     section_surface_map = variation.get("section_surface_map") if isinstance(variation.get("section_surface_map"), dict) else {}
     about_surface = str(section_surface_map.get("about") or surface_style)
-    gallery_density = str(variation.get("gallery_density") or "")
-    cta_style = str(variation.get("cta_style") or "")
+    gallery_density = str(block_plan.get("gallery_density") or variation.get("gallery_density") or "")
+    cta_style = str(block_plan.get("cta_style") or variation.get("cta_style") or "")
     card_shell_map = {
         "glass": "border border-white/10 bg-white/[0.055] backdrop-blur-md",
         "solid": "border border-black/5 bg-white shadow-[0_18px_60px_rgba(0,0,0,0.18)]",
@@ -4486,7 +4512,7 @@ export default GallerySection;
 import { motion } from 'motion/react';
 import { Avatar, AvatarFallback } from './ui/avatar';
 import { Separator } from './ui/separator';
-import { siteCopy, variation } from './siteData';
+import { blockPlan, siteCopy, variation } from './siteData';
 const proofs = siteCopy.services.map((service, index) => ({
   title: service.title,
   body: service.description,
@@ -4494,7 +4520,7 @@ const proofs = siteCopy.services.map((service, index) => ({
   initials: service.title.slice(0, 2).toUpperCase(),
 }));
 export function ReviewsSection() {
-  const proofStyle = String((variation as any)?.proof_style || '');
+  const proofStyle = String((blockPlan as any)?.reviews_variant || (variation as any)?.proof_style || '');
   const spotlight = proofStyle === 'quote_spotlight';
   const marquee = proofStyle === 'card_marquee';
   return <section id="avaliacoes" style={{ background: 'var(--bg)' }} className="overflow-hidden px-5 py-20 text-white md:px-8 md:py-28"><div className="mx-auto max-w-7xl"><div className="mb-10 flex flex-col gap-4 md:flex-row md:items-end md:justify-between"><div><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>{siteCopy.reviews_kicker}</p><h2 className="mt-3 max-w-3xl text-[clamp(2rem,4.8vw,4.4rem)] font-semibold leading-[1] tracking-[-0.025em]">{siteCopy.reviews_title}</h2></div><div className="max-w-md text-sm leading-7 text-zinc-300">{siteCopy.reviews_intro}</div></div>{marquee ? <div className="flex gap-4 overflow-hidden">{[...proofs, ...proofs].map((item, index) => <motion.article key={`${item.title}-${index}`} initial={{ opacity: 0, x: 24 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true, amount: 0.18 }} className="min-w-[18rem] rounded-[18px] border border-white/10 bg-white/[0.05] p-6"><div className="flex items-center gap-3"><Avatar><AvatarFallback>{item.initials}</AvatarFallback></Avatar><div><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>{item.badge}</p><h3 className="mt-1 text-lg font-semibold text-white">{item.title}</h3></div></div><Separator className="my-4" /><p className="text-sm leading-7 text-zinc-300">{item.body}</p></motion.article>)}</div> : <div className={`grid gap-4 ${spotlight ? 'lg:grid-cols-[1.15fr_0.85fr]' : 'md:grid-cols-3'}`}><motion.article initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.24 }} className="rounded-[22px] border border-white/10 bg-white/[0.05] p-7"><p className="text-2xl leading-10 text-white">“{siteCopy.proof_quote}”</p><p className="mt-6 text-sm font-semibold text-zinc-300">{siteCopy.city} • {siteCopy.segment}</p></motion.article><div className={`grid gap-4 ${spotlight ? '' : 'md:col-span-2 md:grid-cols-2'}`}>{proofs.slice(0, spotlight ? 2 : 4).map((item, index) => <motion.article key={item.title} initial={{ opacity: 0, y: 18 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.24 }} transition={{ delay: index * 0.05 }} className="rounded-[18px] border border-white/10 bg-white/[0.04] p-6"><div className="flex items-center gap-3"><Avatar className="h-10 w-10"><AvatarFallback>{item.initials}</AvatarFallback></Avatar><div><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>{item.badge}</p><h3 className="mt-1 text-lg font-semibold text-white">{item.title}</h3></div></div><Separator className="my-4" /><p className="text-sm leading-7 text-zinc-300">{item.body}</p></motion.article>)}</div></div>}</div></section>;
