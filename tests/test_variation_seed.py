@@ -406,6 +406,12 @@ def test_visual_lane_catalog_avoids_generic_cinematic_copy():
         "sem ruído",
         "sem inventar",
         "site clonado",
+        "canal oficial",
+        "prova social",
+        "direção visual",
+        "mídia editorial",
+        "estética menos agressiva",
+        "próximo passo",
     }
 
     for segment, token in lane_ids:
@@ -513,7 +519,59 @@ def test_cinematic_copy_removes_internal_design_commentary():
         assert fragment not in site_data
     assert "barbearia em Curitiba" in index_html
     assert "corte masculino Curitiba" in index_html
-    assert site_data.count("headline") == 1
+    assert '"headline":' in site_data
+    assert '"contact_headline":' in site_data
+
+
+def test_cinematic_copy_prioritizes_prompt_contract_and_sanitizes_public_text():
+    from backend.services.vite_react_renderer import _generate_cinematic_studio_files, _merge_copy_only_content, _sanitize_copy_only_content
+
+    content = _sanitize_copy_only_content(
+        {
+            "about_body": "Contrato do prompt: treino orientado com horários claros em Curitiba.",
+            "gallery_intro": "Contrato do prompt: equipamentos e rotina real aparecem com contexto.",
+            "reviews_intro": "Contrato do prompt: avaliações ajudam novos alunos a decidir.",
+            "location_cta_title": "Contrato do prompt: fale pelo WhatsApp da academia.",
+            "contact_headline": "Contrato do prompt: marque uma visita.",
+            "contact_sub": "Contrato do prompt: confirme horários e modalidades pelo WhatsApp.",
+            "creative_plan": {
+                "visual_lane": "lane_f",
+                "surface_style": "solid",
+                "anti_repetition_rule": "avoid_glass",
+            },
+        }
+    )
+    facts = _merge_copy_only_content(
+        {
+            "business": {
+                "name": "JK Academia",
+                "address": "Rua Teste, 10 - Curitiba",
+                "segment": "Sala de fitness",
+                "city": "Curitiba",
+            },
+            "variation": {"visual_lane": "lane_b", "surface_style": "glass"},
+        },
+        content,
+    )
+
+    site_data = _generate_cinematic_studio_files(facts).get("src/components/siteData.ts", "")
+    assert "Contrato do prompt: treino orientado" in site_data
+    assert "Contrato do prompt: equipamentos" in site_data
+    assert "Contrato do prompt: marque uma visita" in site_data
+    banned = [
+        "Fale pelo canal oficial",
+        "canal oficial",
+        "Cards e ritmo",
+        "composição mistura",
+        "prova social",
+        "direção visual",
+        "mídia editorial",
+        "estética menos agressiva",
+        "próximo passo",
+        '"surface_style": "glass"',
+    ]
+    for fragment in banned:
+        assert fragment not in site_data
 
 
 def test_cinematic_components_keep_seo_heading_hierarchy():
@@ -698,6 +756,8 @@ def run_all_tests():
         test_visual_lane_changes_palette_and_copy,
         test_visual_lane_catalog_avoids_generic_cinematic_copy,
         test_cinematic_site_data_differs_between_families,
+        test_cinematic_copy_removes_internal_design_commentary,
+        test_cinematic_copy_prioritizes_prompt_contract_and_sanitizes_public_text,
         test_vite_llm_policy_defaults_to_none_and_rejects_generic_copy,
         test_creative_plan_enriches_existing_variation_contract,
         test_block_registry_respects_creative_plan_over_lane_defaults,

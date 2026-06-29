@@ -47,7 +47,7 @@ def resolve_cinematic_block_plan(
 ) -> dict[str, Any]:
     variation = variation if isinstance(variation, dict) else {}
     proof_style = str(variation.get("proof_style") or "score_wall")
-    surface_style = str(variation.get("surface_style") or "glass")
+    surface_style = str(variation.get("surface_style") or "solid")
     anti_repetition_rule = str(variation.get("anti_repetition_rule") or "")
     hero_layout = str(variation.get("hero_layout") or "")
     section_order_style = str(variation.get("section_order_style") or "credibility_first")
@@ -67,11 +67,12 @@ def resolve_cinematic_block_plan(
     if section_order_style in {"conversion_first", "gallery_first"}:
         faq_variant = "inline"
 
+    has_explicit_location = bool(variation.get("location_variant"))
     location_variant = str(variation.get("location_variant") or lane_blocks.get("location_variant") or "split_local")
-    if "academia" in segment.lower() or hero_layout in {"fullbleed", "video"}:
+    if not has_explicit_location and ("academia" in segment.lower() or hero_layout in {"fullbleed", "video"}):
         location_variant = "feature_local"
 
-    hero_variant = str(variation.get("hero_variant") or lane_blocks.get("hero_variant") or hero_layout or "split")
+    hero_variant = str(variation.get("hero_variant") or hero_layout or lane_blocks.get("hero_variant") or "split")
     reviews_variant = str(variation.get("reviews_variant") or lane_blocks.get("reviews_variant") or proof_style)
     surface_style = str(variation.get("surface_style") or lane_blocks.get("surface_style") or surface_style)
     if anti_repetition_rule == "avoid_glass" and surface_style == "glass":

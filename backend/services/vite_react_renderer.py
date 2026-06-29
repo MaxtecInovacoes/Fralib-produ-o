@@ -703,9 +703,39 @@ def _sanitize_copy_only_content(content: dict[str, Any]) -> dict[str, Any]:
             if hero.get(key)
         }
 
-    for key in ("gallery_alt", "modal_title", "modal_cta"):
+    public_text_keys = (
+        "services_title",
+        "services_subheadline",
+        "about_title",
+        "about_body",
+        "gallery_title",
+        "gallery_intro",
+        "reviews_title",
+        "reviews_intro",
+        "proof_quote",
+        "faq_title",
+        "faq_intro",
+        "location_title",
+        "location_intro",
+        "location_cta_title",
+        "location_cta_body",
+        "location_cta_primary",
+        "location_cta_secondary",
+        "about_card_1_text",
+        "about_card_2_text",
+        "about_card_3_text",
+        "about_aside_body",
+        "services_city_body",
+        "contact_headline",
+        "contact_sub",
+        "footer_tagline",
+        "gallery_alt",
+        "modal_title",
+        "modal_cta",
+    )
+    for key in public_text_keys:
         if content.get(key):
-            cleaned[key] = _clean_copy_value(content.get(key), limit=160)
+            cleaned[key] = _clean_copy_value(content.get(key), limit=240)
 
     lifestyle = content.get("lifestyle") if isinstance(content.get("lifestyle"), dict) else {}
     if lifestyle:
@@ -756,6 +786,16 @@ def _sanitize_copy_only_content(content: dict[str, Any]) -> dict[str, Any]:
         "servicos confirmados da",
         "chegue à {name} pelo canal oficial",
         "chegue a {name} pelo canal oficial",
+        "canal oficial para confirmar",
+        "prova social tem",
+        "a prova social entra",
+        "a prova social aparece",
+        "direção visual",
+        "mídia editorial",
+        "composição mistura",
+        "cards e ritmo",
+        "estética menos agressiva",
+        "próximo passo simples",
     )
     serialized = json.dumps(cleaned, ensure_ascii=False).lower()
     if any(fragment in serialized for fragment in banned_fragments):
@@ -3682,9 +3722,9 @@ def _cinematic_copy(facts: dict[str, Any]) -> dict[str, Any]:
                 f"{segment} em {city} pela {name} — caminho único para contato",
             ]),
             "subheadline": _rotaciona([
-                f"Site com dados confirmados da {name} e CTA direto para o canal oficial.",
-                f"Atendimento em {city} pela {name} com prova local e mídia editorial.",
-                f"A {name} atende {city} com dados reais e caminho único para o próximo passo.",
+                f"Site com dados confirmados da {name} e WhatsApp visível para contato.",
+                f"Atendimento em {city} pela {name} com avaliações e imagens do negócio.",
+                f"A {name} atende {city} com dados reais e caminho direto para contato.",
             ]),
             "cta_primary": _rotaciona(["Falar no WhatsApp", "Solicitar contato", "Marcar atendimento"]),
             "cta_secondary": "Ver abordagem",
@@ -3694,8 +3734,8 @@ def _cinematic_copy(facts: dict[str, Any]) -> dict[str, Any]:
             "lifestyle_description": f"Visual cinematográfico, dados confirmados da {name} e caminho direto para contato.",
             "services": [
                 {"title": "Dados confirmados", "description": f"Nome, endereço, telefone e horário da {name} em {city}."},
-                {"title": "Prova local", "description": "Mídia editorial e avaliações reais sustentam a decisão de contato."},
-                {"title": "Contato rápido", "description": f"CTA direto para o canal oficial da {name}."},
+                {"title": "Avaliações locais", "description": "Imagens do negócio e avaliações reais sustentam a decisão de contato."},
+                {"title": "Contato rápido", "description": f"WhatsApp direto para falar com {name}."},
             ],
         }
     services = defaults["services"]
@@ -3716,6 +3756,13 @@ def _cinematic_copy(facts: dict[str, Any]) -> dict[str, Any]:
             raw = fallback
         return raw.format(name=name, city=city, segment=segment)
 
+    def _copy_slot(key: str, fallback: str, lane_key: str | None = None) -> str:
+        """The prompt/LLM contract is authoritative; lane copy only fills blanks."""
+        raw = llm_content.get(key)
+        if raw not in (None, ""):
+            return str(raw)
+        return _fmt(lane_copy.get(lane_key or key, ""), fallback)
+
     public_copy_rewrites = {
         "usa uma assinatura visual mais forte para transformar presença local em reserva real": "reúne atendimento, endereço e WhatsApp para facilitar a reserva do próximo horário",
         "ganha uma assinatura mais respirada": "apresenta consulta, rotina e contato com leitura mais leve",
@@ -3733,7 +3780,8 @@ def _cinematic_copy(facts: dict[str, Any]) -> dict[str, Any]:
         "entram organizadas": "ficam organizadas",
         "entram com": "aparecem com",
         "entra como": "ajuda como",
-        "trabalham na mesma direção": "apontam para o mesmo próximo passo",
+        "trabalham na mesma direção": "ajudam a pessoa a decidir",
+        "apontam para o mesmo próximo passo": "ajudam a pessoa a decidir",
         "trabalham para reduzir atrito": "ajudam a simplificar a decisão",
         "foram montados": "ficam organizados",
         "A página fecha esse bloco": "Este trecho reúne",
@@ -3753,11 +3801,21 @@ def _cinematic_copy(facts: dict[str, Any]) -> dict[str, Any]:
         "primeiro scroll": "primeira visita",
         "Score": "Avaliação",
         "score": "avaliação",
+        "prova social tem tom humano e direto": "avaliações ajudam a entender a experiência de outros clientes",
+        "A prova social tem tom humano e direto": "As avaliações ajudam a entender a experiência de outros clientes",
+        "A prova social entra": "As avaliações aparecem",
+        "a prova social entra": "as avaliações aparecem",
+        "A prova social aparece": "As avaliações aparecem",
+        "a prova social aparece": "as avaliações aparecem",
+        "prova social": "avaliações",
         "mostra com mais clareza quando prova, mídia e contato apontam para o mesmo próximo passo": "mostra serviços, avaliações e contato no mesmo caminho",
+        "mostra serviços, avaliações e contato no mesmo caminho": "reúne serviços, avaliações e contato para facilitar a decisão",
         "A direção visual": "A página",
+        "direção visual": "organização da página",
         "o site precisa parecer": "o site deve mostrar",
         "reputação local com recorte de marca": "reputação local com serviços e contato claros",
         "mídia editorial": "imagens do negócio",
+        "mídia": "imagens",
         "prova local": "avaliações e informações locais",
         "CTA": "contato",
         "contato final": "caminho final",
@@ -3785,6 +3843,25 @@ def _cinematic_copy(facts: dict[str, Any]) -> dict[str, Any]:
         "construção visual própria": "informação clara",
         "parecer um site clonado": "ficar genérico",
         "linguagem fiel": "informações fiéis",
+        "próximo passo simples": "agendamento mais simples",
+        "próximo passo": "agendamento",
+        "canal oficial": "WhatsApp",
+        "Chegue pelo WhatsApp": "Fale pelo WhatsApp",
+        "Chegue à": "Fale com",
+        "chegue à": "fale com",
+        "Chegue a": "Fale com",
+        "chegue a": "fale com",
+        "com uma estética menos agressiva": "com treino orientado, rotina clara e ambiente acolhedor",
+        "aparece com uma estética menos agressiva": "apresenta treino orientado, rotina clara e ambiente acolhedor",
+        "mostra com uma estética menos agressiva": "apresenta treino orientado, rotina clara e ambiente acolhedor",
+        "A página valoriza": "A seção reúne",
+        "a página valoriza": "a seção reúne",
+        "página valoriza": "a seção reúne",
+        "Cards e ritmo mais vivos": "Avaliações e detalhes mais claros",
+        "cards e ritmo mais vivos": "avaliações e detalhes mais claros",
+        "A composição mistura": "A seção reúne",
+        "a composição mistura": "a seção reúne",
+        "composição mistura": "a seção reúne",
     }
 
     def _public_text(value: Any, fallback: str = "") -> str:
@@ -3835,32 +3912,31 @@ def _cinematic_copy(facts: dict[str, Any]) -> dict[str, Any]:
         "subheadline": str(hero.get("subheadline") or defaults["subheadline"]),
         "cta_primary": str(hero.get("cta_primary") or defaults["cta_primary"]),
         "cta_secondary": str(hero.get("cta_secondary") or defaults["cta_secondary"]),
-        "services_title": str(llm_content.get("services_title") or _fmt(lane_copy.get("services_title", ""), defaults["services_title"])),
+        "services_title": _copy_slot("services_title", defaults["services_title"]),
         "services_kicker": _fmt(lane_copy.get("services_kicker", ""), "Serviços"),
-        "services_subheadline": str(
-            llm_content.get("services_subheadline")
-            or defaults.get("services_subheadline")
-            or f"Informacoes confirmadas da {name} em {city}, organizadas para conversao local."
+        "services_subheadline": _copy_slot(
+            "services_subheadline",
+            defaults.get("services_subheadline") or f"Informações confirmadas da {name} em {city}, organizadas para contato direto.",
         ),
         "about_kicker": _fmt(lane_copy.get("about_kicker", ""), "Direção"),
-        "about_title": _fmt(lane_copy.get("about_title", ""), f"{name} em {city} com presença local e construção visual própria."),
-        "about_body": _fmt(lane_copy.get("about_body", ""), f"{name} nasce a partir do lead real, da cidade e do contexto confirmado para não parecer um site clonado."),
+        "about_title": _copy_slot("about_title", f"{name} em {city} com informações claras para decidir."),
+        "about_body": _copy_slot("about_body", f"{name} reúne endereço, contato e atendimento confirmado para quem está em {city}."),
         "gallery_kicker": _fmt(lane_copy.get("gallery_kicker", ""), "Ambiente"),
-        "gallery_title": _fmt(lane_copy.get("gallery_title", ""), f"Uma presença visual coerente com {name}."),
-        "gallery_intro": _fmt(lane_copy.get("gallery_intro", ""), f"Imagens, textura e composição reforçam o contexto de {city}."),
+        "gallery_title": _copy_slot("gallery_title", f"Ambiente, rotina e detalhes da {name}."),
+        "gallery_intro": _copy_slot("gallery_intro", f"As imagens ajudam a entender o espaço, o atendimento e o contexto de {city}."),
         "reviews_kicker": _fmt(lane_copy.get("reviews_kicker", ""), "Reputação"),
-        "reviews_title": _fmt(lane_copy.get("reviews_title", ""), f"Confiança local para {name}."),
-        "reviews_intro": _fmt(lane_copy.get("reviews_intro", ""), f"A prova social entra para reduzir atrito e aumentar convicção em {city}."),
-        "proof_quote": _fmt(lane_copy.get("proof_quote", ""), f"{name} aparece com mais clareza quando prova, mídia e CTA trabalham na mesma direção."),
+        "reviews_title": _copy_slot("reviews_title", f"Avaliações que ajudam a escolher {name}."),
+        "reviews_intro": _copy_slot("reviews_intro", f"Avaliações, cidade e contato ajudam a decidir com mais segurança em {city}."),
+        "proof_quote": _copy_slot("proof_quote", f"{name} reúne atendimento, avaliações e contato para facilitar a decisão."),
         "faq_kicker": _fmt(lane_copy.get("faq_kicker", ""), "Perguntas"),
-        "faq_title": _fmt(lane_copy.get("faq_title", ""), "Perguntas que ajudam a avançar."),
-        "faq_intro": _fmt(lane_copy.get("faq_intro", ""), f"FAQ curto para quem está avaliando {name} em {city}."),
+        "faq_title": _copy_slot("faq_title", "Perguntas antes de chamar no WhatsApp."),
+        "faq_intro": _copy_slot("faq_intro", f"Respostas rápidas para quem está avaliando {name} em {city}."),
         "location_kicker": _fmt(lane_copy.get("location_kicker", ""), "Presença local"),
-        "location_title": _fmt(lane_copy.get("location_title", ""), city),
-        "location_intro": _fmt(lane_copy.get("location_intro", ""), f"Endereço, contato e CTA aparecem com clareza para {city}."),
+        "location_title": _copy_slot("location_title", f"Atendimento em {city}."),
+        "location_intro": _copy_slot("location_intro", f"Endereço e WhatsApp aparecem juntos para facilitar contato em {city}."),
         "location_cta_kicker": _fmt(lane_copy.get("location_cta_kicker", ""), "Acesso"),
-        "location_cta_title": _fmt(lane_copy.get("location_cta_title", ""), f"Chegue à {name} pelo canal oficial."),
-        "location_cta_body": _fmt(lane_copy.get("location_cta_body", ""), "Contato e rota aparecem juntos para facilitar a decisão e o clique."),
+        "location_cta_title": _copy_slot("location_cta_title", f"Fale com {name} pelo WhatsApp."),
+        "location_cta_body": _copy_slot("location_cta_body", "Contato e endereço ficam juntos para facilitar a decisão."),
         "location_cta_primary": str(llm_content.get("location_cta_primary") or _fmt(lane_copy.get("location_cta_primary", ""), "Falar no WhatsApp")),
         "location_cta_secondary": str(llm_content.get("location_cta_secondary") or _fmt(lane_copy.get("location_cta_secondary", ""), "Ver contato")),
         "lifestyle_kicker": _fmt(lane_copy.get("lifestyle_kicker", ""), "Experiência"),
@@ -3875,17 +3951,17 @@ def _cinematic_copy(facts: dict[str, Any]) -> dict[str, Any]:
         "modal_cta": str(llm_content.get("modal_cta") or "Enviar mensagem"),
         "modal_kicker": _fmt(lane_copy.get("modal_kicker", ""), "Contato"),
         "about_card_1_title": _fmt(lane_copy.get("about_card_1_title", ""), "Presença local"),
-        "about_card_1_text": _fmt(lane_copy.get("about_card_1_text", ""), f"{name} aparece com cidade, contato e contexto alinhados para quem está em {city}."),
+        "about_card_1_text": _copy_slot("about_card_1_text", f"{name} reúne cidade, contato e informações úteis para quem está em {city}."),
         "about_card_2_title": _fmt(lane_copy.get("about_card_2_title", ""), "Serviço principal"),
-        "about_card_2_text": _fmt(lane_copy.get("about_card_2_text", ""), "As principais frentes de atendimento entram organizadas para leitura rápida e decisão sem ruído."),
+        "about_card_2_text": _copy_slot("about_card_2_text", "As principais frentes de atendimento ficam organizadas para leitura rápida e decisão sem complicação."),
         "about_card_3_title": _fmt(lane_copy.get("about_card_3_title", ""), "Marca em contexto"),
-        "about_card_3_text": _fmt(lane_copy.get("about_card_3_text", ""), f"Ambiente, imagem e composição sustentam a identidade de {name} sem inventar promessa."),
+        "about_card_3_text": _copy_slot("about_card_3_text", f"Ambiente, imagens e atendimento sustentam o estilo de {name} com informações confirmadas."),
         "about_city_label": _fmt(lane_copy.get("about_city_label", ""), "Cidade"),
-        "about_aside_body": _fmt(lane_copy.get("about_aside_body", ""), "Contato direto, informação confirmada e uma narrativa visual coerente para quem está decidindo agora."),
+        "about_aside_body": _copy_slot("about_aside_body", "Contato direto e informação confirmada para quem está decidindo agora."),
         "services_city_body": _fmt(lane_copy.get("services_city_body", ""), "Estrutura organizada para leitura rápida e decisão mais clara."),
         "contact_kicker": _fmt(lane_copy.get("contact_kicker", ""), "Contato"),
-        "contact_headline": str(llm_content.get("contact_headline") or _fmt(lane_copy.get("contact_headline", ""), "Pronto para confirmar o próximo passo?")),
-        "contact_sub": str(llm_content.get("contact_sub") or _fmt(lane_copy.get("contact_sub", ""), "Envie uma mensagem para tirar dúvidas e combinar o melhor horário.")),
+        "contact_headline": _copy_slot("contact_headline", "Quer falar com a equipe agora?"),
+        "contact_sub": _copy_slot("contact_sub", "Envie uma mensagem para tirar dúvidas e combinar o melhor horário."),
         "contact_card_label": _fmt(lane_copy.get("contact_card_label", ""), "Contato oficial"),
         "contact_primary_label": _fmt(lane_copy.get("contact_primary_label", ""), "Falar no WhatsApp"),
         "contact_secondary_label": _fmt(lane_copy.get("contact_secondary_label", ""), "Abrir contato"),
@@ -4300,7 +4376,7 @@ def _generate_cinematic_secondary_components(facts: dict[str, Any], palette: dic
     c_text_dark = palette.get('text_dark', '#09130f')
     variation = facts.get("variation") if isinstance(facts.get("variation"), dict) else {}
     proof_style = str(variation.get("proof_style") or "score_wall")
-    surface_style = str(variation.get("surface_style") or "glass")
+    surface_style = str(variation.get("surface_style") or "solid")
     section_surface_map = variation.get("section_surface_map") if isinstance(variation.get("section_surface_map"), dict) else {}
     about_surface = str(section_surface_map.get("about") or surface_style)
     gallery_density = str(variation.get("gallery_density") or "")
@@ -4369,7 +4445,7 @@ export default ReviewsSection;
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
 import { blockPlan, siteCopy } from './siteData';
 const items = [
-  { value: 'item-1', question: `Como falar com ${siteCopy.name}?`, answer: 'Use o botão principal ou o bloco final para abrir o canal oficial e confirmar atendimento, agenda ou visita.' },
+  { value: 'item-1', question: `Como falar com ${siteCopy.name}?`, answer: 'Use o botão principal ou o bloco final para abrir o WhatsApp e confirmar atendimento, agenda ou visita.' },
   { value: 'item-2', question: `Onde fica ${siteCopy.name}?`, answer: `A cidade, o endereço e o contato aparecem nesta página para facilitar a ida até ${siteCopy.name}.` },
   { value: 'item-3', question: 'O que foi confirmado nesta página?', answer: 'Nome do negócio, cidade, contato, endereço e a linha principal de atendimento mostrada nas seções acima.' },
   { value: 'item-4', question: 'Posso tirar dúvidas antes de fechar?', answer: 'Sim. O caminho recomendado é abrir o WhatsApp e confirmar detalhes diretamente com o negócio.' },
