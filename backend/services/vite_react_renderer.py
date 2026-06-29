@@ -468,6 +468,13 @@ def _get_copy_only_user_prompt(facts: dict[str, Any], policy: str = "copy_only")
     "section_order": ["hero", "about", "services", "gallery", "reviews", "faq", "location", "lifestyle", "contact-cta"],
     "surface_style": "solid | outline | soft_tint | glass",
     "surface_mix": ["solid", "outline", "soft_tint"],
+    "section_surface_map": {"about": "solid", "services": "outline", "reviews": "soft_tint", "faq": "solid", "location": "soft_tint", "contact-cta": "solid"},
+    "color_strategy": "restrained | committed | full_palette | drenched",
+    "typography_mood": "clean_sans | condensed_sport | luxury_display | editorial_serif | technical_grotesk",
+    "gallery_density": "mosaic | cinematic_strip | editorial_grid",
+    "cta_style": "poster_band | solid_panel | split_card | minimal_inline",
+    "prompt_priority": "visual_drama | local_seo | conversion | trust",
+    "anti_repetition_rule": "avoid_same_lane | avoid_glass | avoid_same_hero | avoid_same_order",
     "services_variant": "stacked_cards | split_editorial | stats_then_cards",
     "reviews_variant": "score_wall | quote_spotlight | card_marquee | editorial_case",
     "faq_variant": "panel | inline",
@@ -592,6 +599,12 @@ def _sanitize_creative_plan(content: dict[str, Any]) -> dict[str, Any]:
         "hero_layout": {"split", "center", "asymmetric", "fullbleed", "video"},
         "hero_text_side": {"left", "right", "center"},
         "surface_style": {"glass", "solid", "outline", "soft_tint"},
+        "color_strategy": {"restrained", "committed", "full_palette", "drenched"},
+        "typography_mood": {"clean_sans", "condensed_sport", "luxury_display", "editorial_serif", "technical_grotesk"},
+        "gallery_density": {"mosaic", "cinematic_strip", "editorial_grid"},
+        "cta_style": {"poster_band", "solid_panel", "split_card", "minimal_inline"},
+        "prompt_priority": {"visual_drama", "local_seo", "conversion", "trust"},
+        "anti_repetition_rule": {"avoid_same_lane", "avoid_glass", "avoid_same_hero", "avoid_same_order"},
         "services_variant": {"stacked_cards", "split_editorial", "stats_then_cards"},
         "reviews_variant": {"score_wall", "quote_spotlight", "card_marquee", "editorial_case"},
         "proof_style": {"score_wall", "quote_spotlight", "card_marquee", "editorial_case"},
@@ -608,6 +621,17 @@ def _sanitize_creative_plan(content: dict[str, Any]) -> dict[str, Any]:
     surface_mix = _clean_choice_list(source.get("surface_mix"), {"glass", "solid", "outline", "soft_tint"}, limit=4)
     if surface_mix:
         cleaned["surface_mix"] = surface_mix
+    raw_surface_map = source.get("section_surface_map")
+    if isinstance(raw_surface_map, dict):
+        surface_map: dict[str, str] = {}
+        for raw_key, raw_value in raw_surface_map.items():
+            section_key = str(raw_key or "").strip().lower().replace("_", "-")
+            section_key = section_aliases.get(section_key, section_key)
+            surface_value = _one_of(raw_value, {"glass", "solid", "outline", "soft_tint"})
+            if section_key in section_allowed and section_key != "hero" and surface_value:
+                surface_map[section_key] = surface_value
+        if len(set(surface_map.values())) >= 2:
+            cleaned["section_surface_map"] = surface_map
     motion_mix = _clean_choice_list(
         source.get("motion_mix"),
         {"mask_reveal", "parallax_video", "stagger_cards", "hover_depth", "line_draw", "marquee", "subtle_fade"},
@@ -781,6 +805,13 @@ def _merge_copy_only_content(facts: dict[str, Any], content: dict[str, Any]) -> 
             "hero_text_side",
             "surface_style",
             "surface_mix",
+            "section_surface_map",
+            "color_strategy",
+            "typography_mood",
+            "gallery_density",
+            "cta_style",
+            "prompt_priority",
+            "anti_repetition_rule",
             "services_variant",
             "reviews_variant",
             "faq_variant",
@@ -3949,6 +3980,19 @@ def _generate_cinematic_studio_files(facts: dict[str, Any]) -> dict[str, str]:
         "restaurante_familiar": ["'Lora', serif", "'Playfair Display', serif", "'Merriweather', serif", "'Crimson Pro', serif", "'Inter', sans-serif"],
     }
     _font_family = _FONT_POOL.get(_subnicho_norm, _FONT_POOL["default"])[_seed_for_html % 5]
+    _typography_mood = ""
+    _variation_for_type = facts.get("variation") if isinstance(facts.get("variation"), dict) else {}
+    if isinstance(_variation_for_type, dict):
+        _typography_mood = str(_variation_for_type.get("typography_mood") or "")
+    _TYPOGRAPHY_MOOD_FONT = {
+        "clean_sans": "Manrope, system-ui, sans-serif",
+        "condensed_sport": "'Roboto Condensed', 'Arial Narrow', sans-serif",
+        "luxury_display": "'Libre Baskerville', Georgia, serif",
+        "editorial_serif": "'Source Serif 4', Georgia, serif",
+        "technical_grotesk": "'Arial Narrow', 'Roboto Condensed', sans-serif",
+    }
+    if _typography_mood in _TYPOGRAPHY_MOOD_FONT:
+        _font_family = _TYPOGRAPHY_MOOD_FONT[_typography_mood]
 
     # Services icon variants (3 services, 5 icon options)
     _SERVICE_ICONS = ["ClipboardCheck", "Sparkles", "MapPinned", "Heart", "Trophy"]
@@ -4257,17 +4301,25 @@ def _generate_cinematic_secondary_components(facts: dict[str, Any], palette: dic
     variation = facts.get("variation") if isinstance(facts.get("variation"), dict) else {}
     proof_style = str(variation.get("proof_style") or "score_wall")
     surface_style = str(variation.get("surface_style") or "glass")
+    section_surface_map = variation.get("section_surface_map") if isinstance(variation.get("section_surface_map"), dict) else {}
+    about_surface = str(section_surface_map.get("about") or surface_style)
+    gallery_density = str(variation.get("gallery_density") or "")
+    cta_style = str(variation.get("cta_style") or "")
     card_shell_map = {
         "glass": "border border-white/10 bg-white/[0.055] backdrop-blur-md",
         "solid": "border border-black/5 bg-white shadow-[0_18px_60px_rgba(0,0,0,0.18)]",
         "outline": "border border-white/20 bg-transparent",
         "soft_tint": "border border-transparent bg-white/[0.08]",
     }
-    card_shell = card_shell_map.get(surface_style, card_shell_map["glass"])
+    card_shell = card_shell_map.get(about_surface, card_shell_map["glass"])
+    card_title_class = "text-zinc-950" if about_surface == "solid" else "text-white"
+    card_text_class = "text-zinc-600" if about_surface == "solid" else "text-zinc-300"
     gallery_grid_class = "grid auto-rows-[16rem] gap-4 md:grid-cols-4"
-    if proof_style == "editorial_case":
+    if gallery_density == "cinematic_strip":
+        gallery_grid_class = "grid auto-rows-[18rem] gap-4 md:grid-cols-[1.5fr_0.85fr_0.85fr]"
+    elif gallery_density == "editorial_grid" or proof_style == "editorial_case":
         gallery_grid_class = "grid auto-rows-[14rem] gap-4 md:grid-cols-[1.2fr_0.8fr_0.8fr]"
-    elif proof_style == "card_marquee":
+    elif gallery_density == "mosaic" or proof_style == "card_marquee":
         gallery_grid_class = "grid auto-rows-[15rem] gap-4 md:grid-cols-3"
     about_section = """
 import { ArrowUpRight, Award, MapPin, Sparkles } from 'lucide-react';
@@ -4282,10 +4334,10 @@ export function AboutSection() {
   const surfaceStyle = String((variation as any)?.surface_style || '');
   const servicesVariant = String((blockPlan as any)?.services_variant || '');
   const leadClass = surfaceStyle === 'solid' ? 'bg-white text-[var(--text-dark)] shadow-[0_24px_80px_rgba(0,0,0,0.18)]' : 'bg-white/[0.04] text-white backdrop-blur-xl';
-  return <section id="sobre" style={{ background: 'var(--bg)' }} className="px-5 py-20 text-white md:px-8 md:py-28"><div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[0.88fr_1.12fr] lg:items-end"><motion.div initial={{ opacity: 0, y: 22 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.28 }}><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>{siteCopy.about_kicker}</p><h2 className="mt-3 max-w-3xl text-[clamp(2rem,5vw,4.5rem)] font-semibold leading-[0.98] tracking-[-0.03em]">{siteCopy.about_title}</h2><p className="mt-6 max-w-2xl text-base leading-8 text-zinc-300">{siteCopy.about_body}</p></motion.div><div className={`grid gap-4 ${servicesVariant === 'split_editorial' ? 'md:grid-cols-2 xl:grid-cols-3' : 'md:grid-cols-3'}`}>{pillars.map((pillar, index) => { const Icon = pillar.icon; return <motion.article key={pillar.title} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.24 }} transition={{ delay: index * 0.05 }} className="min-h-[15rem] rounded-[18px] p-6 __CARD_SHELL__"><Icon className="h-5 w-5" style={{ color: 'var(--accent)' }} /><h3 className="mt-8 text-xl font-semibold tracking-tight text-white">{pillar.title}</h3><p className="mt-4 text-sm leading-7 text-zinc-300">{pillar.text}</p></motion.article>; })}</div><motion.aside initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.24 }} className={'rounded-[22px] border border-white/10 p-6 ' + leadClass}><div className="flex items-center justify-between gap-4"><div><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>{siteCopy.about_city_label}</p><p className="mt-3 text-2xl font-semibold">__ABOUT_CITY__</p></div><ArrowUpRight className="h-5 w-5" style={{ color: 'var(--accent)' }} /></div><p className="mt-4 text-sm leading-7 opacity-80">{siteCopy.about_aside_body}</p></motion.aside></div></section>;
+  return <section id="sobre" style={{ background: 'var(--bg)' }} className="px-5 py-20 text-white md:px-8 md:py-28"><div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[0.88fr_1.12fr] lg:items-end"><motion.div initial={{ opacity: 0, y: 22 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.28 }}><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>{siteCopy.about_kicker}</p><h2 className="mt-3 max-w-3xl text-[clamp(2rem,5vw,4.5rem)] font-semibold leading-[0.98] tracking-[-0.03em]">{siteCopy.about_title}</h2><p className="mt-6 max-w-2xl text-base leading-8 text-zinc-300">{siteCopy.about_body}</p></motion.div><div className={`grid gap-4 ${servicesVariant === 'split_editorial' ? 'md:grid-cols-2 xl:grid-cols-3' : 'md:grid-cols-3'}`}>{pillars.map((pillar, index) => { const Icon = pillar.icon; return <motion.article key={pillar.title} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.24 }} transition={{ delay: index * 0.05 }} className="min-h-[15rem] rounded-[18px] p-6 __CARD_SHELL__"><Icon className="h-5 w-5" style={{ color: 'var(--accent)' }} /><h3 className="mt-8 text-xl font-semibold tracking-tight __CARD_TITLE_CLASS__">{pillar.title}</h3><p className="mt-4 text-sm leading-7 __CARD_TEXT_CLASS__">{pillar.text}</p></motion.article>; })}</div><motion.aside initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.24 }} className={'rounded-[22px] border border-white/10 p-6 ' + leadClass}><div className="flex items-center justify-between gap-4"><div><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>{siteCopy.about_city_label}</p><p className="mt-3 text-2xl font-semibold">__ABOUT_CITY__</p></div><ArrowUpRight className="h-5 w-5" style={{ color: 'var(--accent)' }} /></div><p className="mt-4 text-sm leading-7 opacity-80">{siteCopy.about_aside_body}</p></motion.aside></div></section>;
 }
 export default AboutSection;
-""".replace("__PROOF_STYLE__", proof_style.replace("_", " ")).replace("__SURFACE_STYLE__", surface_style.replace("_", " ")).replace("__CARD_SHELL__", card_shell).replace("__ABOUT_NAME__", copy["name"]).replace("__ABOUT_CITY__", copy["city"])
+""".replace("__PROOF_STYLE__", proof_style.replace("_", " ")).replace("__SURFACE_STYLE__", surface_style.replace("_", " ")).replace("__CARD_SHELL__", card_shell).replace("__CARD_TITLE_CLASS__", card_title_class).replace("__CARD_TEXT_CLASS__", card_text_class).replace("__ABOUT_NAME__", copy["name"]).replace("__ABOUT_CITY__", copy["city"])
     gallery_section = """
 import { motion } from 'motion/react';
 import { mediaImages, siteCopy } from './siteData';
@@ -4380,9 +4432,16 @@ export default LifestyleSection;
 """,
         "src/components/ContactCTA.tsx": """import { MessageCircle, Phone } from 'lucide-react';
 import { motion } from 'motion/react';
-import { siteCopy, whatsappHref } from './siteData';
+import { blockPlan, siteCopy, whatsappHref } from './siteData';
 export function ContactCTA({ onOpen }: { onOpen?: () => void }) {
-  return <section id="contato" style={{ background: 'var(--accent)', color: 'var(--accent-contrast)' }} className="px-5 py-20 md:px-8"><div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[1.1fr_.9fr] lg:items-center"><motion.div initial={{ opacity: 0, y: 22 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.3 }}><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent-dark)' }}>{siteCopy.contact_kicker}</p><h2 className="mt-3 max-w-4xl text-[clamp(2rem,5vw,4.8rem)] font-semibold leading-[1] tracking-[-0.03em]">{siteCopy.contact_headline}</h2><p className="mt-5 max-w-2xl text-base leading-8" style={{ color: 'var(--accent-dark)' }}>{siteCopy.contact_sub}</p></motion.div><div style={{ background: 'var(--bg)' }} className="rounded-[18px] p-6 text-white"><p className="text-sm leading-7 text-zinc-300">{siteCopy.contact_card_label}</p><p className="mt-2 text-2xl font-semibold">{siteCopy.phone || 'WhatsApp'}</p><div className="mt-6 flex flex-col gap-3 sm:flex-row"><a href={whatsappHref} rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-semibold" style={{ color: 'var(--bg)' }}><MessageCircle className="h-4 w-4" />{siteCopy.contact_primary_label}</a><button type="button" onClick={onOpen} className="inline-flex items-center justify-center gap-2 rounded-full border border-white/15 px-5 py-3 text-sm font-semibold text-white"><Phone className="h-4 w-4" />{siteCopy.contact_secondary_label}</button></div></div></div></section>;
+  const ctaStyle = String((blockPlan as any)?.cta_style || 'solid_panel');
+  const poster = ctaStyle === 'poster_band';
+  const split = ctaStyle === 'split_card';
+  const minimal = ctaStyle === 'minimal_inline';
+  const sectionClass = minimal ? 'px-5 py-14 md:px-8' : poster ? 'px-5 py-24 md:px-8 md:py-32' : 'px-5 py-20 md:px-8';
+  const gridClass = split ? 'mx-auto grid max-w-7xl gap-4 lg:grid-cols-2 lg:items-stretch' : 'mx-auto grid max-w-7xl gap-8 lg:grid-cols-[1.1fr_.9fr] lg:items-center';
+  const cardClass = minimal ? 'border-t border-black/10 pt-6' : 'rounded-[18px] p-6 text-white';
+  return <section id="contato" style={{ background: poster ? 'var(--bg)' : 'var(--accent)', color: poster ? 'white' : 'var(--accent-contrast)' }} className={sectionClass}><div className={gridClass}><motion.div initial={{ opacity: 0, y: 22 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.3 }}><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: poster ? 'var(--accent)' : 'var(--accent-dark)' }}>{siteCopy.contact_kicker}</p><h2 className="mt-3 max-w-4xl text-[clamp(2rem,5vw,4.8rem)] font-semibold leading-[1] tracking-[-0.03em]">{siteCopy.contact_headline}</h2><p className="mt-5 max-w-2xl text-base leading-8" style={{ color: poster ? 'rgb(212 212 216)' : 'var(--accent-dark)' }}>{siteCopy.contact_sub}</p></motion.div><div style={{ background: minimal ? 'transparent' : 'var(--bg)' }} className={cardClass}><p className="text-sm leading-7 text-zinc-300">{siteCopy.contact_card_label}</p><p className="mt-2 text-2xl font-semibold">{siteCopy.phone || 'WhatsApp'}</p><div className="mt-6 flex flex-col gap-3 sm:flex-row"><a href={whatsappHref} rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-semibold" style={{ color: 'var(--bg)' }}><MessageCircle className="h-4 w-4" />{siteCopy.contact_primary_label}</a><button type="button" onClick={onOpen} className="inline-flex items-center justify-center gap-2 rounded-full border border-white/15 px-5 py-3 text-sm font-semibold text-white"><Phone className="h-4 w-4" />{siteCopy.contact_secondary_label}</button></div></div></div></section>;
 }
 export default ContactCTA;
 """,

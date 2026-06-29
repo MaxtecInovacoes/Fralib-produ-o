@@ -567,6 +567,13 @@ def test_creative_plan_enriches_existing_variation_contract():
                 "section_order": ["hero", "services", "gallery", "reviews", "faq", "location", "contact-cta"],
                 "surface_style": "solid",
                 "surface_mix": ["solid", "outline", "soft_tint"],
+                "section_surface_map": {"about": "solid", "services": "outline", "reviews": "soft_tint"},
+                "color_strategy": "committed",
+                "typography_mood": "condensed_sport",
+                "gallery_density": "cinematic_strip",
+                "cta_style": "poster_band",
+                "prompt_priority": "visual_drama",
+                "anti_repetition_rule": "avoid_glass",
                 "services_variant": "stats_then_cards",
                 "reviews_variant": "card_marquee",
                 "faq_variant": "inline",
@@ -581,12 +588,18 @@ def test_creative_plan_enriches_existing_variation_contract():
     )
     assert content["creative_plan"]["hero_layout"] == "video"
     assert content["creative_plan"]["services_variant"] == "stats_then_cards"
+    assert content["creative_plan"]["section_surface_map"]["about"] == "solid"
+    assert content["creative_plan"]["typography_mood"] == "condensed_sport"
+    assert content["creative_plan"]["cta_style"] == "poster_band"
     assert "unknown" not in content["creative_plan"]
 
     merged = _merge_copy_only_content({"variation": {"surface_style": "glass"}}, content)
     variation = merged["variation"]
     assert variation["hero_layout"] == "video"
     assert variation["surface_style"] == "solid"
+    assert variation["section_surface_map"]["services"] == "outline"
+    assert variation["color_strategy"] == "committed"
+    assert variation["anti_repetition_rule"] == "avoid_glass"
     assert variation["proof_style"] == "card_marquee"
     assert variation["section_order"][0] == "hero"
 
@@ -603,6 +616,13 @@ def test_block_registry_respects_creative_plan_over_lane_defaults():
             "hero_layout": "video",
             "hero_text_side": "right",
             "surface_style": "solid",
+            "section_surface_map": {"about": "solid", "services": "outline", "reviews": "soft_tint"},
+            "color_strategy": "committed",
+            "typography_mood": "condensed_sport",
+            "gallery_density": "cinematic_strip",
+            "cta_style": "poster_band",
+            "prompt_priority": "visual_drama",
+            "anti_repetition_rule": "avoid_glass",
             "services_variant": "stats_then_cards",
             "reviews_variant": "card_marquee",
             "faq_variant": "inline",
@@ -614,10 +634,34 @@ def test_block_registry_respects_creative_plan_over_lane_defaults():
     assert plan["hero_variant"] == "video"
     assert plan["hero_text_side"] == "right"
     assert plan["surface_style"] == "solid"
+    assert plan["section_surface_map"]["about"] == "solid"
+    assert plan["color_strategy"] == "committed"
+    assert plan["typography_mood"] == "condensed_sport"
+    assert plan["gallery_density"] == "cinematic_strip"
+    assert plan["cta_style"] == "poster_band"
+    assert plan["prompt_priority"] == "visual_drama"
+    assert plan["anti_repetition_rule"] == "avoid_glass"
     assert plan["services_variant"] == "stats_then_cards"
     assert plan["reviews_variant"] == "card_marquee"
     assert plan["faq_variant"] == "inline"
     assert plan["motion_style"] == "sharp"
+
+
+def test_block_registry_anti_repetition_avoids_default_glass():
+    from backend.services.vite_block_registry import resolve_cinematic_block_plan
+
+    plan = resolve_cinematic_block_plan(
+        section_order=["hero", "about", "services", "reviews", "faq", "location", "contact-cta"],
+        archetype="BOLD_ENERGY",
+        segment="academia",
+        variation={
+            "surface_style": "glass",
+            "services_variant": "split_editorial",
+            "anti_repetition_rule": "avoid_glass",
+        },
+    )
+    assert plan["surface_style"] == "solid"
+    assert "glass" not in plan["surface_mix"]
 
 
 def run_all_tests():
@@ -642,6 +686,7 @@ def run_all_tests():
         test_vite_llm_policy_defaults_to_none_and_rejects_generic_copy,
         test_creative_plan_enriches_existing_variation_contract,
         test_block_registry_respects_creative_plan_over_lane_defaults,
+        test_block_registry_anti_repetition_avoids_default_glass,
     ]
 
     results = []

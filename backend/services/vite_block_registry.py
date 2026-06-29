@@ -48,6 +48,7 @@ def resolve_cinematic_block_plan(
     variation = variation if isinstance(variation, dict) else {}
     proof_style = str(variation.get("proof_style") or "score_wall")
     surface_style = str(variation.get("surface_style") or "glass")
+    anti_repetition_rule = str(variation.get("anti_repetition_rule") or "")
     hero_layout = str(variation.get("hero_layout") or "")
     section_order_style = str(variation.get("section_order_style") or "credibility_first")
     visual_lane = str(variation.get("visual_lane") or "")
@@ -73,6 +74,18 @@ def resolve_cinematic_block_plan(
     hero_variant = str(variation.get("hero_variant") or lane_blocks.get("hero_variant") or hero_layout or "split")
     reviews_variant = str(variation.get("reviews_variant") or lane_blocks.get("reviews_variant") or proof_style)
     surface_style = str(variation.get("surface_style") or lane_blocks.get("surface_style") or surface_style)
+    if anti_repetition_rule == "avoid_glass" and surface_style == "glass":
+        surface_style = "solid" if services_variant == "split_editorial" else "outline"
+
+    surface_mix = variation.get("surface_mix") if isinstance(variation.get("surface_mix"), list) else []
+    if anti_repetition_rule == "avoid_glass":
+        surface_mix = [item for item in surface_mix if item != "glass"]
+    if not surface_mix and surface_style == "glass":
+        surface_mix = ["solid", "outline", "soft_tint"]
+
+    section_surface_map = variation.get("section_surface_map")
+    if not isinstance(section_surface_map, dict):
+        section_surface_map = {}
 
     nav_links = [
         {"label": _resolve_nav_label(section, lane_copy), "href": href}
@@ -90,7 +103,14 @@ def resolve_cinematic_block_plan(
         "faq_variant": faq_variant,
         "location_variant": location_variant,
         "surface_style": surface_style,
-        "surface_mix": variation.get("surface_mix") if isinstance(variation.get("surface_mix"), list) else [],
+        "surface_mix": surface_mix,
+        "section_surface_map": section_surface_map,
+        "color_strategy": str(variation.get("color_strategy") or ""),
+        "typography_mood": str(variation.get("typography_mood") or ""),
+        "gallery_density": str(variation.get("gallery_density") or ""),
+        "cta_style": str(variation.get("cta_style") or ""),
+        "prompt_priority": str(variation.get("prompt_priority") or ""),
+        "anti_repetition_rule": anti_repetition_rule,
         "motion_style": str(variation.get("motion_style") or ""),
         "motion_mix": variation.get("motion_mix") if isinstance(variation.get("motion_mix"), list) else [],
         "hero_text_side": str(variation.get("hero_text_side") or ""),
