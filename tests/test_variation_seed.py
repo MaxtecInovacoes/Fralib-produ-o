@@ -906,7 +906,121 @@ def test_reviews_component_uses_resolved_block_plan():
     assert "blockPlan as any)?.reviews_variant" in reviews
     assert '"reviews_variant": "card_marquee"' in site_data
     assert '"gallery_density": "mosaic"' in site_data
-    assert '"cta_style": "split_card"' in site_data
+    assert '"cta_style": "poster_band"' in site_data
+    return True
+
+
+def test_cinematic_planner_forces_distinct_section_orders_and_tokens():
+    from backend.services.vite_react_renderer import _generate_cinematic_studio_files
+
+    common_palette = {
+        "primary": "#22c55e",
+        "secondary": "#14532d",
+        "background": "#071611",
+        "surface": "#ecfdf5",
+        "text": "#0f172a",
+    }
+    files_a = _generate_cinematic_studio_files(
+        {
+            "business": {"name": "Academia Planner A", "segment": "academia", "city": "Rio de Janeiro"},
+            "color_palette": dict(common_palette),
+            "variation": {"visual_lane": "lane_a"},
+        }
+    )
+    files_b = _generate_cinematic_studio_files(
+        {
+            "business": {"name": "Academia Planner B", "segment": "academia", "city": "Rio de Janeiro"},
+            "color_palette": dict(common_palette),
+            "variation": {"visual_lane": "lane_b"},
+        }
+    )
+    site_a = files_a.get("src/components/siteData.ts", "")
+    site_b = files_b.get("src/components/siteData.ts", "")
+
+    assert '"hero_variant": "split"' in site_a
+    assert '"hero_variant": "video"' in site_b
+    assert '"section_order": ["navbar", "hero", "about", "services", "gallery"' in site_a
+    assert '"section_order": ["navbar", "hero", "gallery", "about", "services"' in site_b
+    assert '"color_strategy": "committed"' in site_a
+    assert '"color_strategy": "drenched"' in site_b
+    return True
+
+
+def test_cinematic_theme_prefers_visual_lane_palette_unless_locked():
+    from backend.services.vite_theme_guard import resolve_cinematic_theme
+
+    generic_palette = {
+        "primary": "#22c55e",
+        "secondary": "#14532d",
+        "bg_dark": "#071611",
+        "bg_light": "#ecfdf5",
+        "text_dark": "#0f172a",
+        "background": "#071611",
+        "surface": "#ecfdf5",
+        "text": "#0f172a",
+    }
+    unlocked = resolve_cinematic_theme(
+        {
+            "business": {"segment": "academia"},
+            "variation": {"visual_lane": "lane_b"},
+            "color_palette": dict(generic_palette),
+        },
+        fallback_palette=generic_palette,
+        fallback_archetype="BOLD_ENERGY",
+    )
+    locked = resolve_cinematic_theme(
+        {
+            "business": {"segment": "academia"},
+            "variation": {"visual_lane": "lane_b"},
+            "color_palette": {**generic_palette, "locked": True},
+        },
+        fallback_palette=generic_palette,
+        fallback_archetype="BOLD_ENERGY",
+    )
+
+    assert unlocked["palette"]["primary"] == "#41ffd9"
+    assert unlocked["palette"]["bg_dark"] == "#061018"
+    assert locked["palette"]["primary"] == "#22c55e"
+    return True
+
+
+def test_cinematic_hero_contains_structural_branches_not_only_class_rotation():
+    from backend.services.vite_react_renderer import _generate_cinematic_studio_files
+
+    files = _generate_cinematic_studio_files(
+        {
+            "business": {"name": "Academia Hero Branch", "segment": "academia", "city": "Curitiba"},
+            "variation": {"visual_lane": "lane_d"},
+        }
+    )
+    hero = files.get("src/components/HeroSection.tsx", "")
+    site_data = files.get("src/components/siteData.ts", "")
+
+    assert "const hasMediaPanel = heroVariant === 'asymmetric' || heroVariant === 'center';" in hero
+    assert "lg:grid-cols-[0.82fr_1.05fr_0.68fr]" in hero
+    assert "<motion.figure data-hero-reveal" in hero
+    assert '"hero_variant": "asymmetric"' in site_data
+    assert '"about_variant": "proof_sidebar"' in site_data
+    return True
+
+
+def test_cinematic_motion_does_not_hide_essential_sections_by_default():
+    from backend.services.vite_react_renderer import _generate_cinematic_studio_files
+
+    files = _generate_cinematic_studio_files(
+        {
+            "business": {"name": "Academia Motion Visivel", "segment": "academia", "city": "Curitiba"},
+            "variation": {"visual_lane": "lane_b"},
+        }
+    )
+    hidden_patterns = [
+        (path, content)
+        for path, content in files.items()
+        if path.endswith((".tsx", ".jsx"))
+        and "LgpdBanner" not in path
+        and "initial={{ opacity: 0" in content
+    ]
+    assert hidden_patterns == []
     return True
 
 
@@ -973,6 +1087,10 @@ def run_all_tests():
         test_cinematic_about_section_has_structural_variants,
         test_cinematic_studio_seeds_visual_lane_when_missing,
         test_reviews_component_uses_resolved_block_plan,
+        test_cinematic_planner_forces_distinct_section_orders_and_tokens,
+        test_cinematic_theme_prefers_visual_lane_palette_unless_locked,
+        test_cinematic_hero_contains_structural_branches_not_only_class_rotation,
+        test_cinematic_motion_does_not_hide_essential_sections_by_default,
         test_block_registry_anti_repetition_avoids_default_glass,
         test_segment_contamination_uses_word_boundaries_for_names,
     ]

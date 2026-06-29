@@ -118,6 +118,21 @@ def resolve_cinematic_theme(
         source = effective_fallback
         archetype = fallback_archetype
     else:
+        palette_locked = bool(
+            facts.get("palette_locked")
+            or facts.get("brand_palette_locked")
+            or source.get("locked")
+            or source.get("strict")
+        )
+        if lane_palette and not palette_locked:
+            source = {
+                **source,
+                "primary": lane_palette.get("primary", source.get("primary")),
+                "secondary": lane_palette.get("secondary", source.get("secondary")),
+                "background": lane_palette.get("bg_dark", source.get("background") or source.get("bg_dark")),
+                "surface": lane_palette.get("bg_light", source.get("surface") or source.get("bg_light")),
+                "text": lane_palette.get("text_dark", source.get("text") or source.get("text_dark")),
+            }
         archetype = str(source.get("archetype") or fallback_archetype).strip() or fallback_archetype
 
     primary = _normalize_hex(source.get("primary") or source.get("accent"), effective_fallback["primary"])
@@ -125,6 +140,8 @@ def resolve_cinematic_theme(
     accent = _normalize_hex(source.get("accent") or primary, primary)
     bg_dark = _normalize_hex(source.get("background") or source.get("bg_dark"), effective_fallback["bg_dark"])
     bg_light = _normalize_hex(source.get("surface") or source.get("bg_light"), effective_fallback["bg_light"])
+    if _luminance(bg_light) < 0.42:
+        bg_light = _mix_hex(primary, "#ffffff", 0.08)
     text_dark = _normalize_hex(source.get("text") or source.get("text_dark"), effective_fallback["text_dark"])
     text_light = best_text_for_background(bg_dark)
     accent_contrast = best_text_for_background(primary)

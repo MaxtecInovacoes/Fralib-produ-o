@@ -439,6 +439,15 @@ deterministicamente a variação por lead antes de resolver tema/blocos. O
 galeria, FAQ, localização e CTA; componentes não devem voltar a ler defaults
 crus de `variation` quando o `blockPlan` já existe.
 
+Desde 2026-06-29, o Studio React também aplica um **diversity planner** antes
+do tema: cada lane resolve um pacote coerente de `hero_layout`, `section_order`,
+`about_variant`, `services_variant`, `reviews_variant`, `gallery_density`,
+`cta_style`, superfície, tipografia e motion. Paletas de lane vencem paletas
+genéricas do upstream, salvo quando `palette_locked`/`brand_palette_locked` ou
+`color_palette.locked=true` estiverem presentes. Conteúdo essencial não pode
+nascer com `opacity: 0`; motion deve animar sem deixar seções invisíveis em QA,
+SEO screenshot ou headless full-page capture.
+
 **Arquivos mantidos por compatibilidade** (não usados no caminho canônico, mas
 mantidos para evitar imports quebrados em outros módulos):
 - `backend/services/pipeline_renderer_support.py` — nome herdado, mas o conteúdo

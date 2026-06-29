@@ -4053,11 +4053,169 @@ def _with_cinematic_variation_defaults(facts: dict[str, Any]) -> dict[str, Any]:
             ).to_dict()
         except Exception:
             seeded = {}
-        for key, value in seeded.items():
-            variation.setdefault(key, value)
+        for key in ("seed", "counter", "visual_lane", "motion_style", "copy_voice", "color_emphasis", "section_order_style"):
+            if key in seeded:
+                variation.setdefault(key, seeded[key])
+    combo = _cinematic_diversity_combo(variation)
+    for key, value in combo.items():
+        variation.setdefault(key, value)
+    if variation.get("reviews_variant"):
+        variation.setdefault("proof_style", variation["reviews_variant"])
     variation.setdefault("anti_repetition_rule", "avoid_glass")
     enriched["variation"] = variation
     return enriched
+
+
+def _cinematic_diversity_combo(variation: dict[str, Any]) -> dict[str, Any]:
+    lane = str(variation.get("visual_lane") or "").strip().lower()
+    lane_index = 0
+    if lane.startswith("lane_") and len(lane) >= 6:
+        lane_index = max(0, min(7, ord(lane[-1]) - ord("a")))
+    elif variation.get("seed") is not None:
+        try:
+            lane_index = int(variation.get("seed") or 0) % 8
+        except Exception:
+            lane_index = 0
+    combos: list[dict[str, Any]] = [
+        {
+            "hero_layout": "split",
+            "hero_text_side": "left",
+            "about_variant": "feature_grid",
+            "services_variant": "stacked_cards",
+            "reviews_variant": "score_wall",
+            "faq_variant": "panel",
+            "location_variant": "feature_local",
+            "gallery_density": "balanced_grid",
+            "cta_style": "solid_panel",
+            "surface_style": "outline",
+            "typography_mood": "condensed_sport",
+            "color_strategy": "committed",
+            "motion_mix": ["stagger_cards", "line_draw"],
+            "section_order": ["hero", "about", "services", "gallery", "reviews", "faq", "location", "contact-cta"],
+        },
+        {
+            "hero_layout": "video",
+            "hero_text_side": "left",
+            "about_variant": "manifesto_split",
+            "services_variant": "stats_then_cards",
+            "reviews_variant": "card_marquee",
+            "faq_variant": "inline",
+            "location_variant": "feature_local",
+            "gallery_density": "mosaic",
+            "cta_style": "poster_band",
+            "surface_style": "outline",
+            "typography_mood": "technical_grotesk",
+            "color_strategy": "drenched",
+            "motion_mix": ["parallax_video", "mask_reveal", "marquee"],
+            "section_order": ["hero", "gallery", "about", "services", "reviews", "faq", "location", "contact-cta"],
+        },
+        {
+            "hero_layout": "center",
+            "hero_text_side": "center",
+            "about_variant": "manifesto_split",
+            "services_variant": "split_editorial",
+            "reviews_variant": "quote_spotlight",
+            "faq_variant": "panel",
+            "location_variant": "split_local",
+            "gallery_density": "editorial_grid",
+            "cta_style": "minimal_inline",
+            "surface_style": "soft_tint",
+            "typography_mood": "clean_sans",
+            "color_strategy": "restrained",
+            "motion_mix": ["subtle_fade", "stagger_cards"],
+            "section_order": ["hero", "about", "reviews", "services", "gallery", "faq", "location", "contact-cta"],
+        },
+        {
+            "hero_layout": "asymmetric",
+            "hero_text_side": "right",
+            "about_variant": "proof_sidebar",
+            "services_variant": "stacked_cards",
+            "reviews_variant": "editorial_case",
+            "faq_variant": "inline",
+            "location_variant": "split_local",
+            "gallery_density": "editorial_grid",
+            "cta_style": "split_card",
+            "surface_style": "solid",
+            "typography_mood": "technical_grotesk",
+            "color_strategy": "full_palette",
+            "motion_mix": ["hover_depth", "line_draw"],
+            "section_order": ["hero", "about", "services", "gallery", "reviews", "location", "faq", "contact-cta"],
+        },
+        {
+            "hero_layout": "fullbleed",
+            "hero_text_side": "left",
+            "about_variant": "proof_sidebar",
+            "services_variant": "stats_then_cards",
+            "reviews_variant": "card_marquee",
+            "faq_variant": "inline",
+            "location_variant": "feature_local",
+            "gallery_density": "cinematic_strip",
+            "cta_style": "poster_band",
+            "surface_style": "outline",
+            "typography_mood": "condensed_sport",
+            "color_strategy": "drenched",
+            "motion_mix": ["mask_reveal", "parallax_video", "stagger_cards"],
+            "section_order": ["hero", "services", "gallery", "reviews", "about", "faq", "location", "contact-cta"],
+        },
+        {
+            "hero_layout": "split",
+            "hero_text_side": "right",
+            "about_variant": "manifesto_split",
+            "services_variant": "split_editorial",
+            "reviews_variant": "editorial_case",
+            "faq_variant": "panel",
+            "location_variant": "split_local",
+            "gallery_density": "editorial_grid",
+            "cta_style": "minimal_inline",
+            "surface_style": "solid",
+            "typography_mood": "luxury_display",
+            "color_strategy": "committed",
+            "motion_mix": ["subtle_fade", "line_draw"],
+            "section_order": ["hero", "about", "gallery", "services", "reviews", "location", "faq", "contact-cta"],
+        },
+        {
+            "hero_layout": "asymmetric",
+            "hero_text_side": "left",
+            "about_variant": "proof_sidebar",
+            "services_variant": "stats_then_cards",
+            "reviews_variant": "score_wall",
+            "faq_variant": "panel",
+            "location_variant": "feature_local",
+            "gallery_density": "balanced_grid",
+            "cta_style": "solid_panel",
+            "surface_style": "outline",
+            "typography_mood": "clean_sans",
+            "color_strategy": "full_palette",
+            "motion_mix": ["hover_depth", "stagger_cards"],
+            "section_order": ["hero", "reviews", "about", "services", "gallery", "faq", "location", "contact-cta"],
+        },
+        {
+            "hero_layout": "video",
+            "hero_text_side": "right",
+            "about_variant": "manifesto_split",
+            "services_variant": "split_editorial",
+            "reviews_variant": "quote_spotlight",
+            "faq_variant": "panel",
+            "location_variant": "split_local",
+            "gallery_density": "cinematic_strip",
+            "cta_style": "poster_band",
+            "surface_style": "soft_tint",
+            "typography_mood": "editorial_serif",
+            "color_strategy": "committed",
+            "motion_mix": ["parallax_video", "mask_reveal"],
+            "section_order": ["hero", "gallery", "services", "about", "reviews", "faq", "location", "contact-cta"],
+        },
+    ]
+    combo = dict(combos[lane_index % len(combos)])
+    combo["section_surface_map"] = {
+        "about": combo["surface_style"],
+        "services": "solid" if combo["services_variant"] == "stats_then_cards" else combo["surface_style"],
+        "reviews": "outline" if combo["reviews_variant"] == "card_marquee" else combo["surface_style"],
+        "faq": "solid" if combo["faq_variant"] == "panel" else "outline",
+        "location": "soft_tint" if combo["location_variant"] == "feature_local" else "solid",
+        "contact-cta": "solid",
+    }
+    return combo
 
 
 def _generate_cinematic_studio_files(facts: dict[str, Any]) -> dict[str, str]:
@@ -4318,18 +4476,26 @@ useEffect(() => {
     }, root);
     return () => ctx.revert();
   }, []);
-  const shellClass = heroVariant === 'center'
+  const hasMediaPanel = heroVariant === 'asymmetric' || heroVariant === 'center';
+  const shellClass = heroVariant === 'video' || heroVariant === 'fullbleed'
+    ? 'mx-auto flex min-h-[58svh] max-w-6xl flex-col items-center justify-end gap-8 text-center'
+    : heroVariant === 'center'
     ? 'mx-auto flex max-w-6xl flex-col items-center gap-10 text-center'
     : heroVariant === 'asymmetric'
-      ? 'mx-auto grid max-w-7xl gap-10 lg:grid-cols-[0.92fr_1.08fr] lg:items-center'
-      : heroVariant === 'video' || heroVariant === 'fullbleed'
-        ? 'mx-auto grid max-w-7xl gap-10 lg:grid-cols-[1.15fr_.85fr] lg:items-end'
-        : 'mx-auto grid max-w-7xl gap-10 lg:grid-cols-[1.05fr_.95fr] lg:items-end';
-  const copyClass = heroVariant === 'center' ? 'mx-auto max-w-4xl' : heroVariant === 'asymmetric' ? (heroTextSide === 'left' ? 'order-1 lg:order-1 max-w-4xl' : 'order-2 lg:order-2 max-w-4xl') : 'max-w-4xl';
-  const statsClass = heroVariant === 'center'
+      ? 'mx-auto grid max-w-7xl gap-8 lg:grid-cols-[0.82fr_1.05fr_0.68fr] lg:items-center'
+      : 'mx-auto grid max-w-7xl gap-10 lg:grid-cols-[1.05fr_.95fr] lg:items-end';
+  const copyClass = heroVariant === 'video' || heroVariant === 'fullbleed' ? 'mx-auto max-w-5xl' : heroVariant === 'center' ? 'mx-auto max-w-4xl' : heroVariant === 'asymmetric' ? (heroTextSide === 'left' ? 'order-1 max-w-4xl' : 'order-2 max-w-4xl') : 'max-w-4xl';
+  const mediaPanelClass = heroVariant === 'center'
+    ? 'relative order-2 aspect-[16/8] w-full max-w-5xl overflow-hidden rounded-[26px] border border-white/10 shadow-[0_30px_90px_rgba(0,0,0,.38)]'
+    : heroTextSide === 'left'
+      ? 'relative order-2 min-h-[34rem] overflow-hidden rounded-[26px] border border-white/10 shadow-[0_30px_90px_rgba(0,0,0,.38)]'
+      : 'relative order-1 min-h-[34rem] overflow-hidden rounded-[26px] border border-white/10 shadow-[0_30px_90px_rgba(0,0,0,.38)]';
+  const statsClass = heroVariant === 'video' || heroVariant === 'fullbleed'
+    ? 'grid w-full gap-3 sm:grid-cols-3'
+    : heroVariant === 'center'
     ? 'grid gap-3 sm:grid-cols-3'
     : heroVariant === 'asymmetric'
-      ? (heroTextSide === 'left' ? 'order-2 grid gap-3 sm:grid-cols-3 lg:order-2 lg:grid-cols-1' : 'order-1 grid gap-3 sm:grid-cols-3 lg:order-1 lg:grid-cols-1')
+      ? (heroTextSide === 'left' ? 'order-3 grid gap-3 sm:grid-cols-3 lg:grid-cols-1' : 'order-3 grid gap-3 sm:grid-cols-3 lg:grid-cols-1')
       : 'grid gap-3 sm:grid-cols-3 lg:grid-cols-1';
   const surfaceStyle = String((variation as any)?.surface_style || '');
   const statCardClass = surfaceStyle === 'solid'
@@ -4345,9 +4511,9 @@ useEffect(() => {
       {_showVideo && mediaVideos[0] ? (
         <video data-hero-video className="absolute inset-0 -z-10 h-full w-full object-cover opacity-52 saturate-[.9]" src={mediaVideos[0]} poster={mediaImages[0]} autoPlay muted loop playsInline preload="metadata" />
       ) : (
-        <img data-hero-poster src={mediaImages[0]} alt={siteCopy.gallery_alt} className="absolute inset-0 -z-10 h-full w-full object-cover opacity-32 saturate-[.85]" loading="eager" decoding="async" />
+        <img data-hero-poster src={mediaImages[0]} alt={siteCopy.gallery_alt} className={`absolute inset-0 -z-10 h-full w-full object-cover saturate-[.85] ${hasMediaPanel ? 'opacity-16' : 'opacity-32'}`} loading="eager" decoding="async" />
       )}
-      <div className="absolute inset-0 -z-10" style={{ background: `linear-gradient(90deg, color-mix(in srgb, var(--bg) 96%, transparent), color-mix(in srgb, var(--bg) 66%, transparent) 42%, color-mix(in srgb, var(--bg) 22%, transparent)), radial-gradient(circle_at_80%_20%, color-mix(in srgb, var(--accent) 20%, transparent), transparent 34%)` }} />
+      <div className="absolute inset-0 -z-10" style={{ background: heroVariant === 'video' || heroVariant === 'fullbleed' ? `linear-gradient(180deg, color-mix(in srgb, var(--bg) 58%, transparent), color-mix(in srgb, var(--bg) 92%, transparent) 72%, var(--bg)), radial-gradient(circle_at_50%_28%, color-mix(in srgb, var(--accent) 18%, transparent), transparent 42%)` : heroVariant === 'center' ? `linear-gradient(180deg, color-mix(in srgb, var(--bg) 92%, transparent), color-mix(in srgb, var(--bg) 76%, transparent)), radial-gradient(circle_at_50%_18%, color-mix(in srgb, var(--accent) 26%, transparent), transparent 34%)` : heroVariant === 'asymmetric' ? `linear-gradient(115deg, color-mix(in srgb, var(--bg) 96%, transparent), color-mix(in srgb, var(--bg) 82%, transparent) 52%, color-mix(in srgb, var(--accent) 16%, transparent)), radial-gradient(circle_at_12%_72%, color-mix(in srgb, var(--accent) 18%, transparent), transparent 30%)` : `linear-gradient(90deg, color-mix(in srgb, var(--bg) 96%, transparent), color-mix(in srgb, var(--bg) 66%, transparent) 42%, color-mix(in srgb, var(--bg) 22%, transparent)), radial-gradient(circle_at_80%_20%, color-mix(in srgb, var(--accent) 20%, transparent), transparent 34%)` }} />
       <div className={shellClass}>
         <div className={copyClass}>
           <motion.div data-hero-reveal className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em]" style={{ borderColor: 'color-mix(in srgb, var(--accent) 25%, transparent)', background: 'color-mix(in srgb, var(--accent) 10%, transparent)', color: 'var(--accent-soft)' }}><Play className="h-3.5 w-3.5" />{siteCopy.hero_badge || `${siteCopy.segment} em ${siteCopy.city}`}</motion.div>
@@ -4358,6 +4524,12 @@ useEffect(() => {
             <button type="button" onClick={onOpen} className="inline-flex items-center justify-center gap-2 rounded-full border border-white/15 px-6 py-3.5 text-sm font-semibold text-white transition duration-300 hover:-translate-y-0.5">{siteCopy.cta_secondary}<ArrowDownRight className="h-4 w-4" /></button>
           </div>
         </div>
+        {hasMediaPanel ? (
+          <motion.figure data-hero-reveal className={mediaPanelClass}>
+            <img src={mediaImages[1] || mediaImages[0]} alt={siteCopy.gallery_alt} className="h-full w-full object-cover opacity-90" loading="eager" decoding="async" />
+            <figcaption className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/78 to-transparent p-5 text-sm font-semibold text-white">{siteCopy.name}</figcaption>
+          </motion.figure>
+        ) : null}
         <div data-hero-reveal className={statsClass}>
           {[['Avaliação', siteCopy.rating || '5.0'], ['Sinais locais', siteCopy.reviews || 'confirmados'], ['Contato', siteCopy.phone || 'WhatsApp']].map(([label, value]) => (
             <div key={label} className={statCardClass}><div className="flex items-center gap-2" style={{ color: surfaceStyle === 'solid' ? 'var(--accent-contrast)' : 'var(--accent)' }}><Star className="h-4 w-4" /><span className="text-xs font-semibold uppercase tracking-[0.12em]">{label}</span></div><p className="mt-2 text-lg font-semibold" style={{ color: surfaceStyle === 'solid' ? 'var(--accent-contrast)' : '#fff' }}>{value}</p></div>
@@ -4435,6 +4607,9 @@ export default HeroSection;
     # Sprint 14.13: .replace() removido - o template agora usa {VAR} que sao
     # placeholders Python (sem $) e nao causam bug de f-string.
     source_files.update(_generate_cinematic_secondary_components(facts, palette=palette))
+    for path, content in list(source_files.items()):
+        if path.endswith((".tsx", ".jsx")):
+            source_files[path] = content.replace("initial={{ opacity: 0", "initial={{ opacity: 1")
     return prepare_vite_project_files(source_files, facts=facts)
 
 
