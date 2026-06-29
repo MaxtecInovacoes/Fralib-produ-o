@@ -401,6 +401,11 @@ def test_visual_lane_catalog_avoids_generic_cinematic_copy():
         "Pronto para confirmar o próximo passo?",
         "Chegue à {name} pelo canal oficial.",
         "Use o canal oficial para tirar dúvidas e agendar.",
+        "assinatura visual",
+        "presença local",
+        "sem ruído",
+        "sem inventar",
+        "site clonado",
     }
 
     for segment, token in lane_ids:
@@ -474,6 +479,63 @@ def test_cinematic_site_data_differs_between_families():
     assert "Treino" in rendered["academia"] or "treino" in rendered["academia"]
     assert "consulta" in rendered["nutricionista"].lower() or "nutric" in rendered["nutricionista"].lower()
     assert "reserva" in rendered["barbearia"].lower() or "barba" in rendered["barbearia"].lower()
+
+
+def test_cinematic_copy_removes_internal_design_commentary():
+    from backend.services.vite_react_renderer import _generate_cinematic_studio_files
+
+    facts = {
+        "business": {
+            "name": "Romeu Barbershop Centro de Curitiba",
+            "address": "R. Nilo Cairo, 279 - Centro, Curitiba - PR",
+            "segment": "barbearia",
+            "city": "Curitiba",
+            "phone": "(41) 99739-2472",
+            "rating": "4.8",
+        },
+        "variation": {"visual_lane": "lane_a", "surface_style": "solid"},
+    }
+    files = _generate_cinematic_studio_files(facts)
+    site_data = files.get("src/components/siteData.ts", "")
+    index_html = files.get("index.html", "")
+    banned = [
+        "assinatura visual",
+        "transformar presença local",
+        "linguagem fiel",
+        "sem ruído",
+        "sem promessas vazias",
+        "site clonado",
+        "primeiro scroll",
+        "seção mostra",
+        "Score e comentários",
+    ]
+    for fragment in banned:
+        assert fragment not in site_data
+    assert "barbearia em Curitiba" in index_html
+    assert "corte masculino Curitiba" in index_html
+    assert site_data.count("headline") == 1
+
+
+def test_cinematic_components_keep_seo_heading_hierarchy():
+    from backend.services.vite_react_renderer import _generate_cinematic_studio_files
+
+    files = _generate_cinematic_studio_files(
+        {
+            "business": {
+                "name": "Academia Hierarquia",
+                "segment": "academia",
+                "city": "Curitiba",
+                "address": "Rua Teste, 10 - Curitiba",
+            },
+            "variation": {"visual_lane": "lane_h", "surface_style": "outline"},
+        }
+    )
+    hero = files.get("src/components/HeroSection.tsx", "")
+    h2_total = sum(content.count("<h2") for path, content in files.items() if path.endswith(".tsx"))
+    assert hero.count("<h1") == 1
+    assert h2_total >= 5
+    assert "summary_large_image" in files.get("index.html", "")
+    assert "application/ld+json" in files.get("index.html", "")
 
 
 def test_vite_llm_policy_defaults_to_none_and_rejects_generic_copy(monkeypatch):

@@ -3435,9 +3435,9 @@ def _cinematic_copy(facts: dict[str, Any]) -> dict[str, Any]:
             "cta_primary": _rotaciona(["Agendar corte", "Marcar horario", "Reservar corte"]),
             "cta_secondary": "Ver serviços",
             "services_title": "O que está incluso no ritual da barbearia",
-            "services_subheadline": f"Corte, barba e acabamento organizados para {city}, com linguagem fiel ao que a {name} entrega.",
+            "services_subheadline": f"Corte, barba e acabamento em {city}, com serviços apresentados de forma direta para agendar sem complicação.",
             "lifestyle_title": "Corte, barba e ambiente no mesmo lugar",
-            "lifestyle_description": f"A {name} usa uma assinatura visual mais forte para transformar presença local em reserva real.",
+            "lifestyle_description": f"A {name} reúne atendimento, endereço e WhatsApp para facilitar a reserva do próximo horário.",
             "services": [
                 {"title": "Corte masculino", "description": "Corte alinhado ao estilo do cliente, com avaliação antes e finalização por barbeiro certificado."},
                 {"title": "Barba e acabamento", "description": "Ritual de barba com toalha quente, contorno definido e produto finalizado."},
@@ -3459,7 +3459,7 @@ def _cinematic_copy(facts: dict[str, Any]) -> dict[str, Any]:
             "cta_primary": _rotaciona(["Agendar consulta", "Marcar avaliacao", "Falar com a nutri"]),
             "cta_secondary": "Conhecer abordagem",
             "services_title": "Consulta, estratégia e acompanhamento",
-            "services_subheadline": f"Consulta, planejamento e retorno com foco em {city}, sem promessas genéricas e sem texto inventado.",
+            "services_subheadline": f"Consulta, planejamento e retorno com foco em {city}, usando informações confirmadas do atendimento.",
             "lifestyle_title": "Alimentação que respeita sua rotina em " + city,
             "lifestyle_description": f"A {name} atende em {city} com consulta presencial e online, focada em resultado sustentável.",
             "services": [
@@ -3496,7 +3496,7 @@ def _cinematic_copy(facts: dict[str, Any]) -> dict[str, Any]:
         defaults = {
             "headline": _rotaciona([
                 f"{name} em {city}: atendimento direto com {segment}",
-                f"{name} — {segment} em {city} com contato sem ruído",
+                f"{name} — {segment} em {city} com contato sem complicação",
                 f"{segment} em {city} pela {name} — caminho único para contato",
             ]),
             "subheadline": _rotaciona([
@@ -3534,7 +3534,110 @@ def _cinematic_copy(facts: dict[str, Any]) -> dict[str, Any]:
             raw = fallback
         return raw.format(name=name, city=city, segment=segment)
 
-    return {
+    public_copy_rewrites = {
+        "usa uma assinatura visual mais forte para transformar presença local em reserva real": "reúne atendimento, endereço e WhatsApp para facilitar a reserva do próximo horário",
+        "ganha uma assinatura mais respirada": "apresenta consulta, rotina e contato com leitura mais leve",
+        "ganha uma presença mais acolhedora": "mostra consulta, escuta e acompanhamento de forma acolhedora",
+        "ganha uma presença mais elegante": "apresenta serviços, endereço e reserva com acabamento mais elegante",
+        "ganha uma estética mais sofisticada": "organiza consulta, privacidade e agendamento com leitura mais cuidadosa",
+        "assume uma estética mais refinada": "valoriza corte, atendimento e experiência presencial",
+        "assume uma direção mais esportiva": "prioriza treino, rotina alimentar e acompanhamento técnico",
+        "assume uma direção mais atlética": "prioriza intensidade, horários claros e decisão rápida",
+        "assume uma leitura mais gráfica": "destaca rotina, modalidades e decisão sem enrolação",
+        "assume uma linha mais urbana": "destaca corte, agenda e personalidade do atendimento",
+        "assume uma linha mais contemporânea": "apresenta corte, atendimento e reserva com leitura mais atual",
+        "assume uma linha mais autoral": "apresenta corte, barba e reserva com identidade própria",
+        "aparece com cidade, contato e contexto alinhados": "reúne cidade, contato e informações úteis",
+        "entram organizadas": "ficam organizadas",
+        "entram com": "aparecem com",
+        "entra como": "ajuda como",
+        "trabalham na mesma direção": "apontam para o mesmo próximo passo",
+        "trabalham para reduzir atrito": "ajudam a simplificar a decisão",
+        "foram montados": "ficam organizados",
+        "A página fecha esse bloco": "Este trecho reúne",
+        "página fecha esse bloco": "este trecho reúne",
+        "para transformar visita em horário marcado": "para facilitar a reserva do horário",
+        "sem rodeio": "sem complicação",
+        "precisa parecer atual": "precisa comunicar atendimento atual",
+        "marca precisa parecer atual": "barbearia precisa comunicar atendimento atual",
+        "quando marca precisa comunicar atendimento atual, rápida e com personalidade": "com agenda clara e personalidade no atendimento",
+        "marca precisa comunicar atendimento atual, rápida e com personalidade": "agenda clara e personalidade no atendimento",
+        "quando agenda clara e personalidade no atendimento": "com agenda clara e personalidade no atendimento",
+        "não como lista genérica": "com clareza para quem quer escolher",
+        "não como lista": "com clareza",
+        "não de ornamento": "de informação útil",
+        "O visual trabalha": "A seção mostra",
+        "seção mostra": "As imagens mostram",
+        "primeiro scroll": "primeira visita",
+        "Score": "Avaliação",
+        "score": "avaliação",
+        "mostra com mais clareza quando prova, mídia e contato apontam para o mesmo próximo passo": "mostra serviços, avaliações e contato no mesmo caminho",
+        "A direção visual": "A página",
+        "o site precisa parecer": "o site deve mostrar",
+        "reputação local com recorte de marca": "reputação local com serviços e contato claros",
+        "mídia editorial": "imagens do negócio",
+        "prova local": "avaliações e informações locais",
+        "CTA": "contato",
+        "contato final": "caminho final",
+        "mostra com atendimento": "mostra atendimento",
+        "aparecem como parte": "fazem parte",
+        "aparecem arrumados": "ficam organizados",
+        "Este trecho reúne com": "Este trecho reúne",
+        "este trecho reúne com": "este trecho reúne",
+        "facilitar reserva": "facilitar a reserva",
+        "facilitar a a reserva": "facilitar a reserva",
+        "sem ruído": "sem complicação",
+        "sem etapa morta": "sem caminho confuso",
+        "sem menus mortos": "sem caminho confuso",
+        "sem inventar promessa": "com informações confirmadas",
+        "sem promessas vazias": "com informações confirmadas",
+        "não como decoração": "como apoio real para decidir",
+        "não como bloco solto": "junto da decisão de contato",
+        "não como grade repetida": "com ritmo visual diferente",
+        "não um mosaico genérico": "com imagens organizadas por contexto",
+        "não catálogo": "com contexto real",
+        "narrativa visual": "sequência de informações",
+        "presença local": "atendimento na cidade",
+        "identidade visual": "identidade do negócio",
+        "estética própria": "estilo próprio",
+        "construção visual própria": "informação clara",
+        "parecer um site clonado": "ficar genérico",
+        "linguagem fiel": "informações fiéis",
+    }
+
+    def _public_text(value: Any, fallback: str = "") -> str:
+        text = str(value if value not in (None, "") else fallback).strip()
+        for source, target in public_copy_rewrites.items():
+            text = re.sub(re.escape(source), target, text, flags=re.IGNORECASE)
+        text = re.sub(r"\b[Aa]\s+([A-ZÁÉÍÓÚÂÊÔÃÕÇ][\wÁÉÍÓÚÂÊÔÃÕÇáéíóúâêôãõç ]{1,80})\s+aparece\b", r"\1 mostra", text)
+        text = re.sub(r"\b[Aa]\s+", "", text)
+        text = re.sub(r"\baparece\b", "mostra", text, flags=re.IGNORECASE)
+        text = re.sub(r"\bentra\b", "aparece", text, flags=re.IGNORECASE)
+        text = re.sub(r"\bganha\b", "recebe", text, flags=re.IGNORECASE)
+        text = re.sub(r"\bassume\b", "apresenta", text, flags=re.IGNORECASE)
+        text = re.sub(r"\bparecer\b", "mostrar", text, flags=re.IGNORECASE)
+        text = text.replace(
+            "quando agenda clara e personalidade no atendimento",
+            "com agenda clara e personalidade no atendimento",
+        )
+        text = text.replace(
+            "destaca corte, agenda e personalidade do atendimento com agenda clara e personalidade no atendimento",
+            "destaca corte, agenda clara e atendimento com personalidade",
+        )
+        text = text.replace("mostra com atendimento", "mostra atendimento")
+        text = text.replace(
+            "Este trecho reúne reserva, localização e identidade forte para facilitar reserva do horário",
+            "Reserva, localização e estilo do atendimento facilitam a escolha do horário",
+        )
+        text = text.replace(
+            "este trecho reúne reserva, localização e identidade forte para facilitar reserva do horário",
+            "reserva, localização e estilo do atendimento facilitam a escolha do horário",
+        )
+        text = text.replace("facilitar a a reserva", "facilitar a reserva")
+        text = text.replace("facilitar reserva", "facilitar a reserva")
+        return re.sub(r"\s+", " ", text).strip()
+
+    data = {
         "name": name,
         "city": city,
         "segment": segment,
@@ -3584,7 +3687,7 @@ def _cinematic_copy(facts: dict[str, Any]) -> dict[str, Any]:
         "gallery_alt": str(llm_content.get("gallery_alt") or f"{segment} em {city}"),
         "footer_tagline": str(
             llm_content.get("footer_tagline")
-            or f"{name} em {city} - contato direto, dados confirmados, sem promessas vazias."
+            or f"{name} em {city}: contato direto, endereço confirmado e WhatsApp oficial."
         ),
         "modal_title": str(llm_content.get("modal_title") or f"Fale com {name}"),
         "modal_cta": str(llm_content.get("modal_cta") or "Enviar mensagem"),
@@ -3609,6 +3712,20 @@ def _cinematic_copy(facts: dict[str, Any]) -> dict[str, Any]:
         "footer_privacy_note": _fmt(lane_copy.get("footer_privacy_note", ""), "Dados factuais e privacidade preservada."),
         "services": services,
     }
+    for key, value in list(data.items()):
+        if isinstance(value, str):
+            data[key] = _public_text(value)
+    clean_services = []
+    for service in services:
+        if isinstance(service, dict):
+            clean_services.append(
+                {
+                    "title": _public_text(service.get("title", "")),
+                    "description": _public_text(service.get("description", "")),
+                }
+            )
+    data["services"] = clean_services or services
+    return data
 
 
 def _generate_cinematic_studio_files(facts: dict[str, Any]) -> dict[str, str]:
@@ -3664,7 +3781,7 @@ def _generate_cinematic_studio_files(facts: dict[str, Any]) -> dict[str, str]:
     _H1_SIZE_POOL = [
         "text-[clamp(2.65rem,7.7vw,5.9rem)] font-semibold leading-[0.93] tracking-[-0.035em] text-white",
         "text-[clamp(2.4rem,7vw,5.4rem)] font-bold leading-[0.95] tracking-[-0.04em] text-white",
-        "text-[clamp(2.8rem,8.2vw,6.4rem)] font-extrabold leading-[0.9] tracking-[-0.03em] text-white",
+        "text-[clamp(2.8rem,8.2vw,6rem)] font-extrabold leading-[0.9] tracking-[-0.03em] text-white",
         "text-[clamp(2.55rem,7.3vw,5.7rem)] font-semibold leading-[1] tracking-[-0.025em] text-white",
         "text-[clamp(2.7rem,7.9vw,6rem)] font-bold leading-[0.92] tracking-[-0.038em] text-white",
     ]
@@ -3868,6 +3985,14 @@ useEffect(() => {
     : heroVariant === 'asymmetric'
       ? 'order-1 grid gap-3 sm:grid-cols-3 lg:order-1 lg:grid-cols-1'
       : 'grid gap-3 sm:grid-cols-3 lg:grid-cols-1';
+  const surfaceStyle = String((variation as any)?.surface_style || '');
+  const statCardClass = surfaceStyle === 'solid'
+    ? 'rounded-[14px] bg-[var(--accent)] p-4 text-[var(--accent-contrast)]'
+    : surfaceStyle === 'outline'
+      ? 'rounded-[10px] border border-[color-mix(in_srgb,var(--accent)_55%,transparent)] bg-transparent p-4'
+      : surfaceStyle === 'soft_tint'
+        ? 'rounded-[18px] border border-transparent bg-[color-mix(in_srgb,var(--accent)_16%,transparent)] p-4'
+        : 'rounded-[18px] border border-white/10 bg-white/[0.055] p-4 backdrop-blur-md';
   return (
     <section ref={rootRef} id="hero" className={'hero-v14 ' + heroClasses}>
       <div className="absolute inset-0 -z-20" style={{ background: 'var(--bg)' }} />
@@ -3889,7 +4014,7 @@ useEffect(() => {
         </div>
         <div data-hero-reveal className={statsClass}>
           {[['Avaliação', siteCopy.rating || '5.0'], ['Sinais locais', siteCopy.reviews || 'confirmados'], ['Contato', siteCopy.phone || 'WhatsApp']].map(([label, value]) => (
-            <div key={label} className="rounded-[18px] border border-white/10 bg-white/[0.055] p-4 backdrop-blur-md"><div className="flex items-center gap-2" style={{ color: 'var(--accent)' }}><Star className="h-4 w-4" /><span className="text-xs font-semibold uppercase tracking-[0.16em]">{label}</span></div><p className="mt-2 text-lg font-semibold text-white">{value}</p></div>
+            <div key={label} className={statCardClass}><div className="flex items-center gap-2" style={{ color: surfaceStyle === 'solid' ? 'var(--accent-contrast)' : 'var(--accent)' }}><Star className="h-4 w-4" /><span className="text-xs font-semibold uppercase tracking-[0.12em]">{label}</span></div><p className="mt-2 text-lg font-semibold" style={{ color: surfaceStyle === 'solid' ? 'var(--accent-contrast)' : '#fff' }}>{value}</p></div>
           ))}
         </div>
       </div>
@@ -3913,6 +4038,9 @@ export default HeroSection;
   --panel-text: {palette.get('panel_text', palette.get('text_dark', '#09130f'))};
   --font-family: {_font_family};
   --h1-size: {_h1_size};
+  --container: min(1120px, calc(100vw - clamp(2rem, 7vw, 6rem)));
+  --section-pad: clamp(4.5rem, 9vw, 8.5rem);
+  --section-pad-mobile: clamp(3.25rem, 14vw, 5rem);
   --cta-btn: {_cta_btn_class};
 }}
 .hero-v14 {{
@@ -3947,6 +4075,7 @@ export default HeroSection;
   h1 {{ font-size: var(--h1-size); }}
   h1, h2, h3 {{ text-wrap: balance; }}
   p {{ text-wrap: pretty; }}
+  section {{ scroll-margin-top: 5rem; }}
   img, video {{ max-width: 100%; display: block; }}
   a {{ color: inherit; text-decoration: none; }}
   button, a {{ -webkit-tap-highlight-color: transparent; }}
@@ -5673,12 +5802,31 @@ def _facts_local_keywords(facts: dict[str, Any]) -> list[str]:
         _add(item)
 
     # cidade sempre presente (SEO local)
-    _add(business.get("city") or business.get("cidade") or facts.get("cidade") or "")
+    city = str(business.get("city") or business.get("cidade") or facts.get("cidade") or "").strip()
+    segment = str(business.get("segmento") or business.get("segment") or "").strip()
+    subniche = str(business.get("subnicho") or business.get("subniche") or "").strip()
+    segment_context = _normalize_text(f"{segment} {subniche}")
+    _add(city)
     _add(business.get("state") or business.get("estado") or facts.get("estado") or "")
 
     # segmento e subnicho
-    _add(business.get("segmento") or business.get("segment") or "")
-    _add(business.get("subnicho") or business.get("subniche") or "")
+    _add(segment)
+    _add(subniche)
+    if city and segment:
+        _add(f"{segment} em {city}")
+        _add(f"{segment} {city}")
+    if city and any(token in segment_context for token in ("barbearia", "barber", "barbeiro")):
+        _add(f"barbearia em {city}")
+        _add(f"corte masculino {city}")
+        _add(f"barba e cabelo {city}")
+    if city and any(token in segment_context for token in ("nutri", "nutric")):
+        _add(f"nutricionista em {city}")
+        _add(f"nutricionista esportivo {city}")
+        _add(f"consulta nutricional {city}")
+    if city and any(token in segment_context for token in ("academia", "crossfit", "musculacao", "funcional", "personal")):
+        _add(f"academia em {city}")
+        _add(f"musculação {city}")
+        _add(f"aula experimental academia {city}")
 
     # diferencial (palavras_poder do Jina)
     diferencial = business.get("diferenciais") or facts.get("diferenciais") or []

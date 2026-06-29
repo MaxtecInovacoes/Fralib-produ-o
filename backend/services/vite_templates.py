@@ -88,14 +88,46 @@ def _facts_local_keywords(facts: dict[str, Any]) -> list[str]:
         candidates = re.split(r"[,;\n]", str(candidates or ""))
     keywords: list[str] = []
     seen: set[str] = set()
-    for item in candidates:
+
+    def _add(item: Any) -> None:
         term = re.sub(r"\s+", " ", str(item or "")).strip(" ,.;:-")
         key = term.lower()
         if not term or key in seen:
-            continue
+            return
         seen.add(key)
         keywords.append(term)
-    return keywords[:10]
+
+    for item in candidates:
+        _add(item)
+
+    city = str(business.get("city") or business.get("cidade") or facts.get("cidade") or "").strip()
+    state = str(business.get("state") or business.get("estado") or facts.get("estado") or "").strip()
+    segment = str(business.get("segmento") or business.get("segment") or facts.get("segmento") or "").strip()
+    subniche = str(business.get("subnicho") or business.get("subniche") or facts.get("subnicho") or facts.get("subniche") or "").strip()
+    context = f"{segment} {subniche}".lower()
+    _add(city)
+    _add(state)
+    _add(segment)
+    _add(subniche)
+    if city and segment:
+        _add(f"{segment} em {city}")
+        _add(f"{segment} {city}")
+    if city and any(token in context for token in ("barbearia", "barber", "barbeiro")):
+        _add(f"barbearia em {city}")
+        _add(f"corte masculino {city}")
+        _add(f"barba e cabelo {city}")
+    if city and any(token in context for token in ("nutri", "nutric")):
+        _add(f"nutricionista em {city}")
+        _add(f"nutricionista esportivo {city}")
+        _add(f"consulta nutricional {city}")
+    if city and any(token in context for token in ("academia", "crossfit", "muscul", "fitness", "funcional", "personal")):
+        _add(f"academia em {city}")
+        _add(f"musculação {city}")
+        _add(f"aula experimental academia {city}")
+    address = str(business.get("address") or business.get("endereco") or facts.get("endereco") or "")
+    for part in re.split(r"[,\-]", address)[-2:]:
+        _add(part)
+    return keywords[:12]
 
 
 def _facts_meta_description(facts: dict[str, Any]) -> str:
