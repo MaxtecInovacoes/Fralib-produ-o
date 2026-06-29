@@ -5020,7 +5020,7 @@ def _validate_segment_specificity(source_text: str, business: dict[str, Any]) ->
         return
     rule = SEGMENT_RULES[segment_key]
     forbidden_terms = _forbidden_terms_for_business(segment_key, business)
-    forbidden_hits = [term for term in forbidden_terms if _normalize_text(term) in normalized]
+    forbidden_hits = [term for term in forbidden_terms if _contains_normalized_term(normalized, term)]
     if forbidden_hits:
         raise ViteReactRenderError(
             f"projeto Vite contaminado para segmento {segment_key}: {', '.join(forbidden_hits[:4])}"
@@ -5032,6 +5032,19 @@ def _validate_segment_specificity(source_text: str, business: dict[str, Any]) ->
             f"projeto Vite sem linguagem suficiente do segmento {segment_key}: "
             f"{len(set(required_hits))}/{min_required} termos"
         )
+
+
+def _contains_normalized_term(normalized_text: str, term: str) -> bool:
+    """Match forbidden contamination terms as words/phrases, not name substrings.
+
+    Example: "barba" must block a nutrition site that says "servico de barba",
+    but must not block a real lead called "Barbara".
+    """
+    normalized_term = _normalize_text(term)
+    if not normalized_text or not normalized_term:
+        return False
+    pattern = r"(?<![\w])" + re.escape(normalized_term) + r"(?![\w])"
+    return bool(re.search(pattern, normalized_text))
 
 
 def _forbidden_terms_for_business(segment_key: str, business: dict[str, Any]) -> tuple[str, ...]:

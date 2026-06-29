@@ -664,6 +664,21 @@ def test_block_registry_anti_repetition_avoids_default_glass():
     assert "glass" not in plan["surface_mix"]
 
 
+def test_segment_contamination_uses_word_boundaries_for_names():
+    from backend.services.vite_react_renderer import _validate_segment_specificity, ViteReactRenderError
+
+    business = {"name": "Barbara Nara Nutricionista em Curitiba", "segment": "nutricionista"}
+    source = "Barbara Nara Nutricionista em Curitiba atende pacientes com consulta nutricional e plano alimentar."
+    _validate_segment_specificity(source, business)
+
+    try:
+        _validate_segment_specificity(source + " Tambem oferece barba e navalha.", business)
+    except ViteReactRenderError as exc:
+        assert "barba" in str(exc)
+    else:
+        raise AssertionError("contaminacao real com palavra barba deveria ser bloqueada")
+
+
 def run_all_tests():
     """Run all tests and report results."""
     print("=" * 60)
@@ -687,6 +702,7 @@ def run_all_tests():
         test_creative_plan_enriches_existing_variation_contract,
         test_block_registry_respects_creative_plan_over_lane_defaults,
         test_block_registry_anti_repetition_avoids_default_glass,
+        test_segment_contamination_uses_word_boundaries_for_names,
     ]
 
     results = []
