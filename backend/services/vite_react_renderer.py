@@ -3641,7 +3641,7 @@ def _cinematic_copy(facts: dict[str, Any]) -> dict[str, Any]:
             "cta_primary": _rotaciona(["Agendar consulta", "Marcar avaliacao", "Falar com a nutri"]),
             "cta_secondary": "Conhecer abordagem",
             "services_title": "Consulta, estratégia e acompanhamento",
-            "services_subheadline": f"Consulta, planejamento e retorno com foco em {city}, usando informações confirmadas do atendimento.",
+            "services_subheadline": f"Consulta, planejamento alimentar e retorno com foco na rotina do paciente em {city}.",
             "lifestyle_title": "Alimentação que respeita sua rotina em " + city,
             "lifestyle_description": f"A {name} atende em {city} com consulta presencial e online, focada em resultado sustentável.",
             "services": [
@@ -3885,7 +3885,7 @@ def _cinematic_copy(facts: dict[str, Any]) -> dict[str, Any]:
         "services_city_body": _fmt(lane_copy.get("services_city_body", ""), "Estrutura organizada para leitura rápida e decisão mais clara."),
         "contact_kicker": _fmt(lane_copy.get("contact_kicker", ""), "Contato"),
         "contact_headline": str(llm_content.get("contact_headline") or _fmt(lane_copy.get("contact_headline", ""), "Pronto para confirmar o próximo passo?")),
-        "contact_sub": str(llm_content.get("contact_sub") or _fmt(lane_copy.get("contact_sub", ""), "Use o canal oficial para tirar dúvidas e agendar.")),
+        "contact_sub": str(llm_content.get("contact_sub") or _fmt(lane_copy.get("contact_sub", ""), "Envie uma mensagem para tirar dúvidas e combinar o melhor horário.")),
         "contact_card_label": _fmt(lane_copy.get("contact_card_label", ""), "Contato oficial"),
         "contact_primary_label": _fmt(lane_copy.get("contact_primary_label", ""), "Falar no WhatsApp"),
         "contact_secondary_label": _fmt(lane_copy.get("contact_secondary_label", ""), "Abrir contato"),

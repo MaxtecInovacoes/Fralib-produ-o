@@ -23,7 +23,7 @@ _LANES: dict[str, list[dict[str, Any]]] = {
             "id": "academia-iron-pulse",
             "name": "Iron Pulse",
             "fallback_palette": {"primary": "#ff4d2d", "secondary": "#6b0f1a", "bg_dark": "#0a0a0a", "bg_light": "#1b1b1b", "text_dark": "#111111"},
-            "blocks": {"hero_variant": "split", "services_variant": "stacked_cards", "reviews_variant": "score_wall", "faq_variant": "panel", "location_variant": "feature_local", "surface_style": "glass"},
+            "blocks": {"hero_variant": "split", "services_variant": "stacked_cards", "reviews_variant": "score_wall", "faq_variant": "panel", "location_variant": "feature_local", "surface_style": "outline"},
             "copy": {"hero_badge": "Treino de alta intensidade", "about_kicker": "Método", "about_title": "Estrutura, carga e constância para evoluir em {city}.", "about_body": "{name} organiza o treino com leitura de objetivo, rotina e progressão de carga sem prometer atalhos.", "gallery_title": "Estrutura real, ritmo forte e presença local.", "gallery_intro": "Cada quadro reforça o ambiente, a densidade visual e a sensação de treino sério em {city}.", "reviews_title": "Resultados percebidos por quem já pisa no treino.", "reviews_intro": "A prova social entra como confiança local, não como decoração.", "faq_title": "Perguntas antes da primeira série.", "faq_intro": "Respostas curtas para matrícula, aula experimental e rotina.", "location_title": "Treine em {city} com rota direta.", "location_intro": "Contato e endereço aparecem sem atrito para não perder o clique.", "lifestyle_kicker": "Experiência", "contact_kicker": "Próximo passo"},
         },
         {
@@ -66,9 +66,9 @@ _LANES: dict[str, list[dict[str, Any]]] = {
         {
             "id": "nutri-performance-fuel",
             "name": "Performance Fuel",
-            "fallback_palette": {"primary": "#e36b4d", "secondary": "#572b49", "bg_dark": "#1f1420", "bg_light": "#fff2ea", "text_dark": "#241826"},
-            "blocks": {"hero_variant": "asymmetric", "services_variant": "stats_then_cards", "reviews_variant": "card_marquee", "faq_variant": "inline", "location_variant": "feature_local", "surface_style": "glass"},
-            "copy": {"hero_badge": "Nutrição para performance", "about_kicker": "Energia", "about_title": "Uma leitura mais esportiva para quem vive rotina intensa.", "about_body": "{name} assume tom de performance quando o contexto pede treino, recuperação e estratégia nutricional mais ativa.", "gallery_title": "Alimentação, performance e disciplina visual.", "gallery_intro": "A composição mistura detalhe, movimento e materiais ligados à rotina de treino.", "reviews_title": "Sinais de confiança em movimento.", "reviews_intro": "Cards e ritmo mais vivos para contextos esportivos.", "faq_title": "Perguntas de quem quer começar rápido.", "faq_intro": "Mais dinâmica, menos contemplativa.", "location_title": "Atendimento rápido, rota clara.", "location_intro": "O visitante entende onde está e como falar em segundos.", "lifestyle_kicker": "Performance", "contact_kicker": "Entrada"},
+            "fallback_palette": {"primary": "#00a676", "secondary": "#273469", "bg_dark": "#101820", "bg_light": "#eefaf4", "text_dark": "#14231f"},
+            "blocks": {"hero_variant": "asymmetric", "services_variant": "stats_then_cards", "reviews_variant": "card_marquee", "faq_variant": "inline", "location_variant": "feature_local", "surface_style": "outline"},
+            "copy": {"hero_badge": "Nutrição para performance", "about_kicker": "Energia", "about_title": "Rotina alimentar para treinar, recuperar e manter constância.", "about_body": "{name} conecta alimentação, rotina e acompanhamento para pacientes que querem evoluir com método em {city}.", "gallery_title": "Alimentos, consulta e rotina em composição ativa.", "gallery_intro": "As imagens destacam preparo, orientação e hábitos possíveis para o dia a dia.", "reviews_title": "Confiança para quem quer acompanhamento consistente.", "reviews_intro": "Avaliações, cidade e contato ajudam o paciente a decidir com segurança.", "faq_title": "Perguntas de quem quer começar rápido.", "faq_intro": "Respostas diretas sobre consulta, retorno e forma de atendimento.", "location_title": "Atendimento em {city} com rota clara.", "location_intro": "Endereço, WhatsApp e próximos passos ficam visíveis em poucos segundos.", "lifestyle_kicker": "Performance", "contact_kicker": "Entrada"},
         },
         {
             "id": "nutri-coastal-light",
@@ -97,7 +97,7 @@ _LANES: dict[str, list[dict[str, Any]]] = {
             "id": "barber-copper-smoke",
             "name": "Copper Smoke",
             "fallback_palette": {"primary": "#b96d3c", "secondary": "#4e281b", "bg_dark": "#160f0d", "bg_light": "#f6ece6", "text_dark": "#231511"},
-            "blocks": {"hero_variant": "asymmetric", "services_variant": "stats_then_cards", "reviews_variant": "card_marquee", "faq_variant": "panel", "location_variant": "feature_local", "surface_style": "glass"},
+            "blocks": {"hero_variant": "asymmetric", "services_variant": "stats_then_cards", "reviews_variant": "card_marquee", "faq_variant": "panel", "location_variant": "feature_local", "surface_style": "outline"},
             "copy": {"hero_badge": "Corte e barba com atmosfera noturna", "about_kicker": "Presença", "about_title": "Uma barbearia mais quente, escura e cinematográfica.", "about_body": "{name} ganha contraste de cobre e fumaça para enfatizar ritual, noite e personalidade.", "gallery_title": "Luz baixa, metal quente e acabamento forte.", "gallery_intro": "O visual trabalha atmosfera e proximidade.", "reviews_title": "Sinais locais em ritmo mais vivo.", "reviews_intro": "A prova social pode ganhar movimento sem parecer aleatória.", "faq_title": "Perguntas para quem quer reservar hoje.", "faq_intro": "Menos texto e mais ação.", "location_title": "Localização e contato no mesmo pulso.", "location_intro": "A página fecha com sensação de convite imediato.", "lifestyle_kicker": "Noite", "contact_kicker": "Agende"},
         },
         {
@@ -113,7 +113,7 @@ _LANES: dict[str, list[dict[str, Any]]] = {
             "id": "default-professional-dark",
             "name": "Professional Dark",
             "fallback_palette": {"primary": "#4f46e5", "secondary": "#1f2937", "bg_dark": "#0b1220", "bg_light": "#f8fafc", "text_dark": "#0f172a"},
-            "blocks": {"hero_variant": "split", "services_variant": "stacked_cards", "reviews_variant": "score_wall", "faq_variant": "panel", "location_variant": "split_local", "surface_style": "glass"},
+            "blocks": {"hero_variant": "split", "services_variant": "stacked_cards", "reviews_variant": "score_wall", "faq_variant": "panel", "location_variant": "split_local", "surface_style": "outline"},
             "copy": {"hero_badge": "Atendimento local", "about_kicker": "Direção", "lifestyle_kicker": "Presença", "contact_kicker": "Contato"},
         },
         {
@@ -175,7 +175,7 @@ _FAMILY_COPY_DEFAULTS: dict[str, dict[str, str]] = {
         "footer_contact_label": "Contato",
         "footer_location_label": "Local",
         "footer_privacy_note": "Dados factuais e privacidade preservada.",
-        "contact_sub": "Use o canal oficial para confirmar horário, aula experimental e próximo passo.",
+        "contact_sub": "Envie uma mensagem para confirmar horários disponíveis, visita e primeiro treino.",
     },
     "nutricionista": {
         "nav_about": "Método",
@@ -210,7 +210,7 @@ _FAMILY_COPY_DEFAULTS: dict[str, dict[str, str]] = {
         "footer_contact_label": "Contato",
         "footer_location_label": "Consultório",
         "footer_privacy_note": "Dados confirmados e privacidade preservada.",
-        "contact_sub": "Fale pelo canal oficial para confirmar consulta, formato de atendimento e próximos horários.",
+        "contact_sub": "Envie uma mensagem para confirmar agenda, modalidade de consulta e retorno.",
     },
     "barbearia": {
         "nav_about": "Ritual",
@@ -245,7 +245,7 @@ _FAMILY_COPY_DEFAULTS: dict[str, dict[str, str]] = {
         "footer_contact_label": "Reserva",
         "footer_location_label": "Endereço",
         "footer_privacy_note": "Dados confirmados e privacidade preservada.",
-        "contact_sub": "Entre pelo canal oficial para confirmar horário, serviço e chegada sem ruído.",
+        "contact_sub": "Reserve pelo WhatsApp e confirme horário, serviço e endereço antes de sair.",
     },
     "default": {
         "nav_about": "Sobre",
@@ -280,7 +280,7 @@ _FAMILY_COPY_DEFAULTS: dict[str, dict[str, str]] = {
         "footer_contact_label": "Contato",
         "footer_location_label": "Local",
         "footer_privacy_note": "Dados factuais e privacidade preservada.",
-        "contact_sub": "Use o canal oficial para confirmar atendimento e próximos passos.",
+        "contact_sub": "Envie uma mensagem para confirmar atendimento, endereço e melhor horário.",
     },
 }
 
@@ -312,7 +312,7 @@ _LANE_REMIXES: dict[str, list[dict[str, Any]]] = {
             "id": "academia-endurance-blue",
             "name": "Endurance Blue",
             "fallback_palette": {"primary": "#38bdf8", "secondary": "#0f172a", "bg_dark": "#07111f", "bg_light": "#eaf6ff", "text_dark": "#0f172a"},
-            "blocks": {"hero_variant": "video", "services_variant": "split_editorial", "reviews_variant": "editorial_case", "faq_variant": "panel", "location_variant": "split_local", "surface_style": "glass"},
+            "blocks": {"hero_variant": "video", "services_variant": "split_editorial", "reviews_variant": "editorial_case", "faq_variant": "panel", "location_variant": "split_local", "surface_style": "outline"},
             "copy": {"hero_badge": "Treino de longo prazo", "about_kicker": "Evolução", "about_title": "Constância, resistência e uma narrativa mais premium.", "about_body": "{name} aparece com ritmo mais cinematográfico para quem procura estrutura, acompanhamento e progresso em {city}.", "gallery_title": "Uma sequência visual de evolução.", "gallery_intro": "A galeria trabalha como narrativa de percurso, não como grade repetida.", "reviews_title": "Credibilidade para continuar voltando.", "reviews_intro": "Depoimentos e sinais locais reforçam permanência.", "faq_title": "Antes de manter a rotina.", "faq_intro": "Perguntas para entender encaixe, horário e contato.", "location_title": "Presença local com rota limpa.", "location_intro": "O site fecha sem ruído e com CTA claro.", "lifestyle_kicker": "Evolução", "contact_kicker": "Ritmo"},
         },
     ],
@@ -342,7 +342,7 @@ _LANE_REMIXES: dict[str, list[dict[str, Any]]] = {
             "id": "nutri-premium-clinic",
             "name": "Premium Clinic",
             "fallback_palette": {"primary": "#d6b86a", "secondary": "#102a43", "bg_dark": "#0d1f31", "bg_light": "#f7f2e7", "text_dark": "#102033"},
-            "blocks": {"hero_variant": "asymmetric", "services_variant": "stacked_cards", "reviews_variant": "card_marquee", "faq_variant": "panel", "location_variant": "split_local", "surface_style": "glass"},
+            "blocks": {"hero_variant": "asymmetric", "services_variant": "stacked_cards", "reviews_variant": "card_marquee", "faq_variant": "panel", "location_variant": "split_local", "surface_style": "outline"},
             "copy": {"hero_badge": "Atendimento nutricional premium", "about_kicker": "Autoridade", "about_title": "Consultório com presença elegante e decisão segura.", "about_body": "{name} ganha uma estética mais sofisticada para reforçar autoridade, privacidade e atendimento bem conduzido.", "gallery_title": "Consultório, detalhe e acabamento de marca.", "gallery_intro": "A direção visual usa respiro e contraste para parecer mais exclusiva.", "reviews_title": "Confiança tratada com cuidado editorial.", "reviews_intro": "A reputação aparece como prova de autoridade local.", "faq_title": "Perguntas de quem busca atendimento qualificado.", "faq_intro": "Informação objetiva sem banalizar a consulta.", "location_title": "Localização e contato com leitura premium.", "location_intro": "O CTA final mantém elegância e clareza.", "lifestyle_kicker": "Autoridade", "contact_kicker": "Agendar"},
         },
     ],
@@ -402,7 +402,7 @@ _LANE_REMIXES: dict[str, list[dict[str, Any]]] = {
             "id": "default-hospitality-warm",
             "name": "Hospitality Warm",
             "fallback_palette": {"primary": "#f97316", "secondary": "#7c2d12", "bg_dark": "#21130b", "bg_light": "#fff3e8", "text_dark": "#24150c"},
-            "blocks": {"hero_variant": "video", "services_variant": "split_editorial", "reviews_variant": "card_marquee", "faq_variant": "panel", "location_variant": "feature_local", "surface_style": "glass"},
+            "blocks": {"hero_variant": "video", "services_variant": "split_editorial", "reviews_variant": "card_marquee", "faq_variant": "panel", "location_variant": "feature_local", "surface_style": "outline"},
             "copy": {"hero_badge": "Experiência local", "about_kicker": "Recepção", "lifestyle_kicker": "Ambiente", "contact_kicker": "Reservar"},
         },
     ],
@@ -469,7 +469,7 @@ _LANE_COPY_ENRICHMENTS: dict[str, dict[str, str]] = {
         "gallery_kicker": "Rotina ativa",
         "reviews_kicker": "Resultados percebidos",
         "faq_kicker": "Perguntas de quem quer começar logo",
-        "location_cta_title": "Entre pelo canal oficial e acelere a decisão.",
+        "location_cta_title": "Confirme pelo WhatsApp e avance com segurança.",
         "location_cta_body": "A rota de contato aparece com mais energia para quem compara profissionais e quer agir agora.",
         "contact_headline": "Vamos transformar objetivo em rotina alimentar aplicável?",
     },
