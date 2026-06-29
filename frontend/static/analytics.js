@@ -15,7 +15,7 @@ class FraLibAnalytics {
     this.sessionId = this.generateSessionId();
     this.events = [];
     this.userId = null;
-    this.pixelId = '1022692323751129';
+    this.pixelId = '1029635012917024';
     this.clarityId = 'wv8xiy7kvk';
 
     this.init();

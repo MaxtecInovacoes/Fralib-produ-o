@@ -5,6 +5,30 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>FraLib OS - Bem-vindo!</title>
 <meta name="robots" content="noindex, nofollow">
+
+<!-- Meta Pixel Code - FraLib OS -->
+<script>
+!function(f,b,e,v,n,t,s)
+{if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+n.queue=[];t=b.createElement(e);t.async=!0;
+t.src=v;s=b.getElementsByTagName(e)[0];
+s.parentNode.insertBefore(t,s)}(window, document,'script',
+'https://connect.facebook.net/en_US/fbevents.js');
+
+fbq('init', '1029635012917024');
+fbq('track', 'PageView');
+fbq('track', 'CompleteRegistration', {
+  content_name: 'FraLib Trial',
+  status: 'completed'
+});
+</script>
+<noscript><img height="1" width="1" style="display:none"
+src="https://www.facebook.com/tr?id=1029635012917024&ev=PageView&noscript=1"
+/></noscript>
+<!-- End Meta Pixel Code -->
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -215,6 +239,32 @@ function conectarWhatsApp() {
   // Redirecionar para a pagina de configuracao do WhatsApp
   window.location.href = '/dashboard.html?view=config&highlight=whatsapp';
 }
+
+// Rastrear Purchase se veio de um plano pago (exceto trial)
+(function trackPurchaseOnLoad() {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const plano = (params.get('plano') || '').toLowerCase();
+    const trial = plano === 'trial' || plano === '';
+
+    if (trial) return;
+
+    const planos = {
+      starter: { value: 97, currency: 'BRL', content_name: 'FraLib Starter' },
+      pro: { value: 197, currency: 'BRL', content_name: 'FraLib Pro' },
+      agency: { value: 497, currency: 'BRL', content_name: 'FraLib Agency' }
+    };
+
+    const planoInfo = planos[plano];
+    if (!planoInfo) return;
+
+    if (typeof fbq === 'function') {
+      fbq('track', 'Purchase', planoInfo);
+    }
+  } catch (err) {
+    console.warn('Erro ao registrar Purchase:', err);
+  }
+})();
 
 function pularWhatsApp() {
   // Marcar que o usuario pulou o onboarding
