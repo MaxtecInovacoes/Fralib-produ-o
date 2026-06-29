@@ -1,0 +1,218 @@
+{
+  "last_node_id": 20,
+  "last_link_id": 20,
+  "nodes": [
+    {
+      "id": 1,
+      "type": "CLIPTextEncode",
+      "pos": [50, 50],
+      "size": {"0": 422.84503173828125, "1": 164.61553955078125},
+      "flags": {},
+      "order": 0,
+      "mode": "default",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "CLIP",
+          "type": "CLIP",
+          "links": [2],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "CLIPTextEncode"
+      },
+      "widgets_values": ["Anime style, Brazilian flag waving majestically with golden light effects, dramatic lighting, 4k resolution, cinematic, vibrant colors, detailed fabric texture, flowing motion blur"]
+    },
+    {
+      "id": 2,
+      "type": "CheckpointLoaderSimple",
+      "pos": [50, 250],
+      "size": {"0": 315.815, "1": 98.34375},
+      "flags": {},
+      "order": 1,
+      "mode": "default",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [3],
+          "slot_index": 0
+        },
+        {
+          "name": "CLIP",
+          "type": "CLIP",
+          "links": [4],
+          "slot_index": 1
+        },
+        {
+          "name": "VAE",
+          "type": "VAE",
+          "links": [5],
+          "slot_index": 2
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "CheckpointLoaderSimple"
+      },
+      "widgets_values": ["v1-5-pruned-emaonly.safetensors"]
+    },
+    {
+      "id": 3,
+      "type": "KSampler",
+      "pos": [50, 450],
+      "size": {"0": 315, "1": 262},
+      "flags": {},
+      "order": 2,
+      "mode": "default",
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 3
+        },
+        {
+          "name": "positive",
+          "type": "CLIP",
+          "link": 4
+        },
+        {
+          "name": "negative",
+          "type": "CLIP",
+          "link": 6
+        },
+        {
+          "name": "latent_image",
+          "type": "LATENT",
+          "link": 7
+        }
+      ],
+      "outputs": [
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "links": [8],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "KSampler"
+      },
+      "widgets_values": [1020176, "fixed", 20, 7, "euler", "normal", 1]
+    },
+    {
+      "id": 4,
+      "type": "CLIPTextEncode",
+      "pos": [50, 50],
+      "size": {"0": 422.84503173828125, "1": 164.61553955078125},
+      "flags": {},
+      "order": 0,
+      "mode": "default",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "CLIP",
+          "type": "CLIP",
+          "links": [6],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "CLIPTextEncode"
+      },
+      "widgets_values": ["blurry, low quality, distorted, static, plain background"]
+    },
+    {
+      "id": 5,
+      "type": "EmptyLatentImage",
+      "pos": [50, 350],
+      "size": {"0": 315, "1": 106},
+      "flags": {},
+      "order": 1,
+      "mode": "default",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "links": [7],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "EmptyLatentImage"
+      },
+      "widgets_values": [512, 512, 1]
+    },
+    {
+      "id": 6,
+      "type": "VAEDecode",
+      "pos": [50, 650],
+      "size": {"0": 210, "1": 46},
+      "flags": {},
+      "order": 3,
+      "mode": "default",
+      "inputs": [
+        {
+          "name": "samples",
+          "type": "LATENT",
+          "link": 8
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": 5
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [9],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "VAEDecode"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 7,
+      "type": "SaveImage",
+      "pos": [50, 750],
+      "size": {"0": 210.76458740234375, "1": 106},
+      "flags": {},
+      "order": 4,
+      "mode": "default",
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 9
+        }
+      ],
+      "outputs": [],
+      "properties": {
+        "Node name for S&R": "SaveImage",
+        "Node name for S&R::Filename": "world_cup_scene_1"
+      },
+      "widgets_values": ["output/world_cup_scene_1.png", "png"]
+    }
+  ],
+  "links": [
+    [2, 1, 0, 3, 0, "CLIP"],
+    [3, 2, 0, 3, 0, "MODEL"],
+    [4, 2, 1, 3, 1, "CLIP"],
+    [5, 2, 2, 5, 0, "VAE"],
+    [6, 4, 0, 3, 2, "CLIP"],
+    [7, 5, 0, 3, 3, "LATENT"],
+    [8, 3, 0, 6, 0, "LATENT"],
+    [9, 6, 0, 7, 0, "IMAGE"]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {},
+  "version": 0.4
+}

@@ -1,0 +1,57 @@
+# Vídeo da Copa do Mundo do Brasil - Prompts Detalhados
+
+## CENA 1: Abertura
+**Prompt:**
+"Anime style, Brazilian flag waving majestically with golden light effects, dramatic lighting, 4k resolution, cinematic, vibrant colors, detailed fabric texture, flowing motion blur"
+
+**Negative Prompt:**
+"blurry, low quality, distorted, static, plain background"
+
+## CENA 2: Pelé Lendário
+**Prompt:**
+"Anime style, Pelé kicking a football leaving a trail of golden light, legendary soccer player, iconic pose, dynamic movement, stadium background, green field, cheering crowd"
+
+**Negative Prompt:**
+"modern player, blurry face, distorted anatomy, poor quality"
+
+## CENA 3: Neymar Driblando
+**Prompt:**
+"Anime style, Neymar dribbling opponents with fluid movements, Brazilian football star, colorful jersey, skillful footwork, motion blur, dynamic pose, stadium atmosphere"
+
+**Negative Prompt:**
+"static pose, poor quality, blurry, distorted"
+
+## CENA 4: Torcida Brasileira
+**Prompt:**
+"Anime style, massive Brazilian crowd singing and dancing in stadium, thousands of fans with yellow and green, waving flags, confetti, vibrant atmosphere, celebration mood"
+
+**Negative Prompt:**
+"empty stadium, quiet crowd, dull colors, poor quality"
+
+## CENA 5: Comemoração do Gol
+**Prompt:**
+"Anime style, Brazilian team celebrating goal, players jumping together, coach cheering, confetti flying, golden trophy in background, stadium full of fans, celebration"
+
+**Negative Prompt:**
+"losing team, sad faces, empty stadium, poor quality"
+
+## CENA 6: Levantamento da Taça
+**Prompt:**
+"Anime style, Brazil lifting World Cup trophy, golden trophy shining, confetti rain, players crying with joy, captain holding trophy, stadium erupting in celebration"
+
+**Negative Prompt:**
+"second place, silver medal, no celebration, poor quality"
+
+## CENA 7: Fim - "BRASIL CAMPEÃO"
+**Prompt:**
+"Anime style, BRASIL CAMPEÃO in 3D golden text with fire effects, dramatic lighting, celebration background, confetti and fireworks, Brazilian flag colors, victory atmosphere"
+
+**Negative Prompt:**
+"blurry text, poor quality, dark, sad"
+
+## Configurações Técnicas
+- Resolution: 512x512
+- Frames per scene: 16
+- FPS: 8
+- Style: Consistent anime style throughout
+- Color palette: Yellow, green, blue (Brazilian colors)

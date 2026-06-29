@@ -7,6 +7,7 @@
 <meta name="robots" content="noindex, nofollow">
 <meta name="description" content="Painel de controle interno do FraLib OS.">
 <link rel="stylesheet" href="/design-system.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 :root{--fl-bg:#0a0714;--fl-bg-card:#12121a;--fl-bg-hover:#1c1c28;--fl-border:rgba(147,51,234,0.12);--fl-border-md:rgba(147,51,234,0.25);--fl-text:#f0f0f5;--fl-text-muted:#8888a0;--fl-text-dim:#44445a;--fl-purple:#9333ea;--fl-purple-300:#c084fc;--cyan:#00FFB3;--gold:#FFB800;--red:#ef4444;--green:#22c55e}
 *{box-sizing:border-box;margin:0;padding:0}
@@ -155,6 +156,7 @@ tr:hover td{background:var(--fl-bg-hover)}
   <button class="tab" onclick="showTab('cron', this)">Pipeline</button>
   <button class="tab" onclick="showTab('notifications', this)">Notificações</button>
   <button class="tab" onclick="showTab('health', this)">Health</button>
+  <button class="tab" onclick="showTab('analytics', this)" style="color:var(--cyan)">Growth Analytics</button>
 </div>
 
 <!-- TAB: BLOG -->
@@ -472,6 +474,85 @@ bash /opt/fralib/scripts/pipeline_completo.sh</pre>
   </div>
 </div>
 
+<!-- TAB: ANALYTICS (GROWTH) -->
+<div id="tab-analytics" class="tab-content">
+  <div class="section">
+    <div class="section-header">
+      <h3 class="section-title">GROWTH ANALYTICS</h3>
+      <select id="ga-period" onchange="loadGrowthAnalytics()" style="background:var(--surface);border:1px solid var(--border);color:var(--text);padding:6px 10px;border-radius:4px">
+        <option value="7d">7 dias</option>
+        <option value="30d" selected>30 dias</option>
+        <option value="90d">90 dias</option>
+      </select>
+      <button onclick="seedAnalyticsData()" class="btn" style="background:var(--cyan);color:#000;border:none;font-weight:600">Seed Demo Data</button>
+    </div>
+  </div>
+
+  <!-- KPIs Overview -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin:20px 0">
+    <div class="card" style="padding:16px;background:var(--surface);border:1px solid var(--border);border-radius:8px">
+      <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px">TOTAL LEADS</div>
+      <div id="ga-leads" style="font-size:28px;font-weight:700;color:var(--cyan);font-family:var(--font-mono)">—</div>
+      <div id="ga-leads-period" style="font-size:11px;color:var(--text-dim)">carregando...</div>
+    </div>
+    <div class="card" style="padding:16px;background:var(--surface);border:1px solid var(--border);border-radius:8px">
+      <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px">TOTAL TRIALS</div>
+      <div id="ga-trials" style="font-size:28px;font-weight:700;color:var(--text);font-family:var(--font-mono)">—</div>
+    </div>
+    <div class="card" style="padding:16px;background:var(--surface);border:1px solid var(--border);border-radius:8px">
+      <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px">PAGANTES</div>
+      <div id="ga-pagantes" style="font-size:28px;font-weight:700;color:var(--success);font-family:var(--font-mono)">—</div>
+    </div>
+    <div class="card" style="padding:16px;background:var(--surface);border:1px solid var(--border);border-radius:8px">
+      <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px">MRR</div>
+      <div id="ga-mrr" style="font-size:28px;font-weight:700;color:var(--gold);font-family:var(--font-mono)">—</div>
+    </div>
+  </div>
+
+  <!-- KPIs Secondary -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:20px 0">
+    <div class="card" style="padding:12px;background:var(--surface);border:1px solid var(--border);border-radius:6px;text-align:center">
+      <div style="font-size:10px;color:var(--text-dim)">CPL</div>
+      <div id="ga-cpl" style="font-size:18px;font-weight:600;color:var(--text);font-family:var(--font-mono)">—</div>
+    </div>
+    <div class="card" style="padding:12px;background:var(--surface);border:1px solid var(--border);border-radius:6px;text-align:center">
+      <div style="font-size:10px;color:var(--text-dim)">CAC</div>
+      <div id="ga-cac" style="font-size:18px;font-weight:600;color:var(--text);font-family:var(--font-mono)">—</div>
+    </div>
+    <div class="card" style="padding:12px;background:var(--surface);border:1px solid var(--border);border-radius:6px;text-align:center">
+      <div style="font-size:10px;color:var(--text-dim)">LTV</div>
+      <div id="ga-ltv" style="font-size:18px;font-weight:600;color:var(--text);font-family:var(--font-mono)">—</div>
+    </div>
+    <div class="card" style="padding:12px;background:var(--surface);border:1px solid var(--border);border-radius:6px;text-align:center">
+      <div style="font-size:10px;color:var(--text-dim)">ROAS</div>
+      <div id="ga-roas" style="font-size:18px;font-weight:600;color:var(--success);font-family:var(--font-mono)">—</div>
+    </div>
+  </div>
+
+  <!-- Funil -->
+  <div class="section" style="margin-top:20px">
+    <h3 class="section-title">FUNIL DE CONVERSÃO</h3>
+    <div id="ga-funnel" style="padding:16px;background:var(--surface);border:1px solid var(--border);border-radius:8px">
+      <div style="text-align:center;color:var(--text-dim)">carregando...</div>
+    </div>
+  </div>
+
+  <!-- UTM Sources -->
+  <div class="section" style="margin-top:20px">
+    <h3 class="section-title">FONTES UTM</h3>
+    <div style="display:grid;grid-template-columns:1fr 2fr;gap:16px">
+      <canvas id="chart-utm" height="200"></canvas>
+      <div id="ga-utm-table" style="padding:12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;max-height:300px;overflow-y:auto"></div>
+    </div>
+  </div>
+
+  <!-- Timeline -->
+  <div class="section" style="margin-top:20px">
+    <h3 class="section-title">TIMELINE LEADS</h3>
+    <canvas id="chart-timeline" height="120" style="background:var(--surface);border:1px solid var(--border);border-radius:8px"></canvas>
+  </div>
+</div>
+
 <!-- NOTIFICAÇÕES TOAST -->
 <div class="notifications" id="notif-container"></div>
 
@@ -526,6 +607,172 @@ setInterval(() => {
 // Notificações demo
 setTimeout(() => notify('Pipeline executado', '3 posts gerados às 8h00 hoje', 'success'), 2000);
 setTimeout(() => notify('SEO master aplicado', '12 posts otimizados, 8 tipos schema', 'success'), 5000);
-</script>
-</body>
+
+// ============================================================
+// GROWTH ANALYTICS
+// ============================================================
+let _gaChartUtm = null;
+let _gaChartTimeline = null;
+
+async function seedAnalyticsData() {
+  if (!confirm('Criar dados de exemplo? Isso insere 500 eventos + gastos de ads.')) return;
+  try {
+    const r = await fetch('/api/analytics/seed', { method: 'POST' });
+    const d = await r.json();
+    if (d.ok) {
+      notify('Seed OK', `${d.events_created} eventos + ${d.ad_spend_created} gastos criados`, 'success');
+      loadGrowthAnalytics();
+    } else {
+      notify('Erro', d.error || 'Falha ao criar dados', 'error');
+    }
+  } catch (e) {
+    notify('Erro', e.message, 'error');
+  }
+}
+
+async function loadGrowthAnalytics() {
+  const period = document.getElementById('ga-period')?.value || '30d';
+  try {
+    const r = await fetch(`/api/analytics/growth-dashboard?period=${period}`);
+    const d = await r.json();
+
+    if (!d.ok) {
+      document.getElementById('ga-leads').textContent = 'Erro';
+      return;
+    }
+
+    // KPIs Overview
+    document.getElementById('ga-leads').textContent = (d.overview?.total_leads || 0).toLocaleString('pt-BR');
+    document.getElementById('ga-leads-period').textContent = `+${(d.overview?.new_leads_period || 0)} no período`;
+    document.getElementById('ga-trials').textContent = (d.overview?.total_trials || 0).toLocaleString('pt-BR');
+    document.getElementById('ga-pagantes').textContent = (d.overview?.total_pagantes || 0).toLocaleString('pt-BR');
+    document.getElementById('ga-mrr').textContent = 'R$ ' + ((d.overview?.mrr || 0) || 0).toLocaleString('pt-BR');
+
+    // KPIs Secundários
+    const kpis = d.kpis || {};
+    document.getElementById('ga-cpl').textContent = 'R$ ' + ((kpis.cpl || 0) || 0).toFixed(2);
+    document.getElementById('ga-cac').textContent = 'R$ ' + ((kpis.cac || 0) || 0).toFixed(2);
+    document.getElementById('ga-ltv').textContent = 'R$ ' + ((kpis.ltv || 0) || 0).toLocaleString('pt-BR');
+    document.getElementById('ga-roas').textContent = ((kpis.roas || 0) || 0).toFixed(1) + 'x';
+
+    // Funil
+    renderGaFunnel(d.funnel || {});
+
+    // UTM Table
+    renderGaUtmTable(d.utm?.by_source || []);
+
+    // Charts
+    renderGaUtmChart(d.utm?.by_source || []);
+    renderGaTimelineChart(d.timeline || []);
+
+  } catch (e) {
+    console.error('Erro loadGrowthAnalytics:', e);
+    notify('Erro', 'Falha ao carregar analytics', 'error');
+  }
+}
+
+function renderGaFunnel(funnel) {
+  const el = document.getElementById('ga-funnel');
+  if (!el) return;
+
+  const steps = [
+    { label: 'Visitantes', key: 'visitantes', color: '#9333ea' },
+    { label: 'Leads', key: 'leads', color: '#00FFB3' },
+    { label: 'Trials', key: 'trials', color: '#38bdf8' },
+    { label: 'Pagantes', key: 'pagantes', color: '#22c55e' }
+  ];
+
+  let html = '<div style="display:flex;flex-direction:column;gap:8px">';
+  steps.forEach((step, i) => {
+    const data = funnel[step.key] || { count: 0, rate: 0 };
+    const pct = (data.rate || 0).toFixed(1);
+    html += `
+      <div style="display:flex;align-items:center;gap:16px;padding:8px 0;border-bottom:1px solid var(--border)">
+        <div style="width:100px;color:var(--text-muted);font-size:12px">${step.label}</div>
+        <div style="flex:1;height:24px;background:var(--bg);border-radius:4px;overflow:hidden">
+          <div style="width:${pct}%;height:100%;background:${step.color};opacity:0.7"></div>
+        </div>
+        <div style="width:80px;text-align:right;font-family:var(--font-mono);font-weight:600">${(data.count || 0).toLocaleString('pt-BR')}</div>
+        <div style="width:60px;text-align:right;font-family:var(--font-mono);color:${pct > 20 ? 'var(--success)' : 'var(--text-dim)'}">${pct}%</div>
+      </div>
+    `;
+  });
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+function renderGaUtmTable(sources) {
+  const el = document.getElementById('ga-utm-table');
+  if (!el) return;
+
+  if (!sources || sources.length === 0) {
+    el.innerHTML = '<div style="text-align:center;color:var(--text-dim);padding:40px">Sem dados UTM</div>';
+    return;
+  }
+
+  let html = '<table style="width:100%;border-collapse:collapse;font-size:12px">';
+  html += '<thead><tr style="border-bottom:1px solid var(--border)"><th style="text-align:left;padding:8px;color:var(--text-dim)">Source</th><th style="text-align:right;padding:8px;color:var(--text-dim)">Leads</th><th style="text-align:right;padding:8px;color:var(--text-dim)">Conv%</th></tr></thead><tbody>';
+  sources.forEach(s => {
+    const rate = (s.conversion_rate || 0).toFixed(1);
+    html += `<tr style="border-bottom:1px solid var(--border)">
+      <td style="padding:8px"><strong style="color:var(--cyan)">${s.source || 'direct'}</strong></td>
+      <td style="padding:8px;text-align:right;font-family:var(--font-mono)">${(s.total_leads || 0).toLocaleString('pt-BR')}</td>
+      <td style="padding:8px;text-align:right;font-family:var(--font-mono);color:${rate > 10 ? 'var(--success)' : 'var(--text-dim)'}">${rate}%</td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  el.innerHTML = html;
+}
+
+function renderGaUtmChart(sources) {
+  const ctx = document.getElementById('chart-utm');
+  if (!ctx || !sources.length) return;
+
+  if (_gaChartUtm) _gaChartUtm.destroy();
+
+  const colors = ['#9333ea', '#00FFB3', '#FFB800', '#38bdf8', '#22c55e', '#f59e0b'];
+  _gaChartUtm = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: sources.slice(0, 6).map(s => s.source || 'direct'),
+      datasets: [{
+        data: sources.slice(0, 6).map(s => s.total_leads || 0),
+        backgroundColor: colors,
+        borderWidth: 0
+      }]
+    },
+    options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { color: '#8888a0', font: { size: 10 } } } } }
+  });
+}
+
+function renderGaTimelineChart(timeline) {
+  const ctx = document.getElementById('chart-timeline');
+  if (!ctx || !timeline.length) return;
+
+  if (_gaChartTimeline) _gaChartTimeline.destroy();
+
+  const labels = timeline.map(t => new Date(t.date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })).reverse();
+  const leads = timeline.map(t => t.new_leads || 0).reverse();
+  const paid = timeline.map(t => t.new_paid || 0).reverse();
+
+  _gaChartTimeline = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [
+        { label: 'Leads', data: leads, borderColor: '#9333ea', backgroundColor: 'rgba(147,51,234,0.1)', fill: true, tension: 0.3 },
+        { label: 'Pagantes', data: paid, borderColor: '#22c55e', backgroundColor: 'rgba(34,197,94,0.1)', fill: true, tension: 0.3 }
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { labels: { color: '#8888a0' } } },
+      scales: {
+        x: { ticks: { color: '#8888a0' }, grid: { color: 'rgba(147,51,234,0.1)' } },
+        y: { ticks: { color: '#8888a0' }, grid: { color: 'rgba(147,51,234,0.1)' }, beginAtZero: true }
+      }
+    }
+  });
+}
+</script></body>
 </html>
