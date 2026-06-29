@@ -785,8 +785,20 @@ Políticas válidas:
 | Policy | Chamada LLM | Quem gera TSX | Uso |
 |---|---|---|---|
 | `copy_only` | JSON curto de conteúdo | Studio/FraLib | **Padrão** |
+| `creative_plan` | JSON curto de copy + direção de marca | Studio/FraLib | **Padrão premium**: LLM escolhe Brand DNA, emoção, hero, blocos, superfícies e motion sem codar TSX |
 | `none` | Nenhuma | Studio/FraLib | Custo zero/contingência |
 | `full_code` | Projeto Vite completo | LLM | Legado/debug |
+
+Desde 2026-06-29, `creative_plan` é a política premium recomendada para
+sites cinematográficos com baixo custo. O LLM atua como estrategista de marca,
+diretor criativo, UX/CRO e SEO local, mas retorna apenas JSON validado. O
+renderer determinístico aplica o plano em blocos Vite/React, priorizando:
+- Brand DNA antes de nicho/template.
+- Hero imersivo (`video`/`fullbleed`) quando houver drama visual, performance,
+  ritual ou exclusividade.
+- Footer e seções sempre usando tokens do tema (`--bg`, `--text`,
+  `--text-muted`, `--accent`), sem cor padrão solta.
+- OG/Twitter e JSON-LD alinhados no publicador.
 
 ### 22.4 Cross-contamination guard
 

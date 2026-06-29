@@ -72,7 +72,17 @@ def resolve_cinematic_block_plan(
     if not has_explicit_location and ("academia" in segment.lower() or hero_layout in {"fullbleed", "video"}):
         location_variant = "feature_local"
 
-    hero_variant = str(variation.get("hero_variant") or hero_layout or lane_blocks.get("hero_variant") or "split")
+    has_explicit_hero = bool(variation.get("hero_variant") or variation.get("hero_layout"))
+    motion_mix = variation.get("motion_mix") if isinstance(variation.get("motion_mix"), list) else []
+    wants_immersive_hero = (
+        str(variation.get("prompt_priority") or "") == "visual_drama"
+        or str(variation.get("cinematic_direction") or "") in {"luxury", "contrast_heavy", "energetic"}
+        or "parallax_video" in motion_mix
+    )
+    if not has_explicit_hero and wants_immersive_hero:
+        hero_variant = "video"
+    else:
+        hero_variant = str(variation.get("hero_variant") or hero_layout or lane_blocks.get("hero_variant") or "split")
     reviews_variant = str(variation.get("reviews_variant") or lane_blocks.get("reviews_variant") or proof_style)
     surface_style = str(variation.get("surface_style") or lane_blocks.get("surface_style") or surface_style)
     if anti_repetition_rule == "avoid_glass" and surface_style == "glass":
@@ -113,9 +123,16 @@ def resolve_cinematic_block_plan(
         "prompt_priority": str(variation.get("prompt_priority") or ""),
         "anti_repetition_rule": anti_repetition_rule,
         "motion_style": str(variation.get("motion_style") or ""),
-        "motion_mix": variation.get("motion_mix") if isinstance(variation.get("motion_mix"), list) else [],
+        "motion_mix": motion_mix,
         "hero_text_side": str(variation.get("hero_text_side") or ""),
         "creative_concept": str(variation.get("creative_concept") or ""),
+        "brand_archetype": str(variation.get("brand_archetype") or ""),
+        "emotional_outcome": str(variation.get("emotional_outcome") or ""),
+        "anti_identity": str(variation.get("anti_identity") or ""),
+        "story_arc": str(variation.get("story_arc") or ""),
+        "cinematic_direction": str(variation.get("cinematic_direction") or ""),
+        "conversion_strategy": str(variation.get("conversion_strategy") or ""),
+        "visual_metaphor": str(variation.get("visual_metaphor") or ""),
         "section_order_style": section_order_style,
         "visual_lane": lane.get("id") or visual_lane,
         "visual_lane_name": lane.get("name") or "",

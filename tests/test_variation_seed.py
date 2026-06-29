@@ -662,6 +662,52 @@ def test_creative_plan_enriches_existing_variation_contract():
     assert variation["section_order"][0] == "hero"
 
 
+def test_creative_plan_system_prompt_has_brand_strategy_layer():
+    from backend.services.vite_react_renderer import _get_copy_only_system_prompt, _get_copy_only_user_prompt
+
+    system_prompt = _get_copy_only_system_prompt("creative_plan")
+    user_prompt = _get_copy_only_user_prompt(
+        {
+            "business": {
+                "name": "Romeu Barbershop",
+                "segment": "barbearia",
+                "city": "Curitiba",
+            }
+        },
+        policy="creative_plan",
+    )
+
+    assert "estrategista de marca" in system_prompt
+    assert "diretor de fotografia" in system_prompt
+    assert "negocio -> marca" in system_prompt
+    assert '"brand_archetype"' in user_prompt
+    assert '"cinematic_direction"' in user_prompt
+    assert '"conversion_strategy"' in user_prompt
+    assert "nicho -> template" in user_prompt
+
+
+def test_creative_plan_visual_drama_defaults_to_video_hero():
+    from backend.services.vite_react_renderer import _merge_copy_only_content, _sanitize_copy_only_content
+
+    content = _sanitize_copy_only_content(
+        {
+            "creative_plan": {
+                "concept": "campanha noturna de treino",
+                "prompt_priority": "visual_drama",
+                "cinematic_direction": "energetic",
+                "motion_mix": ["parallax_video", "mask_reveal"],
+                "anti_identity": "generic",
+            }
+        }
+    )
+    merged = _merge_copy_only_content({"variation": {"visual_lane": "lane_a"}}, content)
+    variation = merged["variation"]
+
+    assert variation["hero_layout"] == "video"
+    assert variation["surface_style"] == "solid"
+    assert variation["anti_repetition_rule"] == "avoid_same_hero"
+
+
 def test_block_registry_respects_creative_plan_over_lane_defaults():
     from backend.services.vite_block_registry import resolve_cinematic_block_plan
 
@@ -703,6 +749,56 @@ def test_block_registry_respects_creative_plan_over_lane_defaults():
     assert plan["reviews_variant"] == "card_marquee"
     assert plan["faq_variant"] == "inline"
     assert plan["motion_style"] == "sharp"
+
+
+def test_block_registry_uses_video_when_creative_direction_requires_immersive_hero():
+    from backend.services.vite_block_registry import resolve_cinematic_block_plan
+
+    plan = resolve_cinematic_block_plan(
+        section_order=["navbar", "hero", "services", "gallery", "contact-cta", "footer"],
+        archetype="BOLD_ENERGY",
+        segment="academia",
+        variation={
+            "visual_lane": "lane_a",
+            "prompt_priority": "visual_drama",
+            "cinematic_direction": "energetic",
+            "motion_mix": ["parallax_video", "mask_reveal"],
+        },
+    )
+
+    assert plan["hero_variant"] == "video"
+    assert plan["cinematic_direction"] == "energetic"
+    assert plan["motion_mix"] == ["parallax_video", "mask_reveal"]
+
+
+def test_cinematic_footer_uses_theme_tokens_not_fixed_default_colors():
+    from backend.services.vite_react_renderer import _generate_cinematic_studio_files
+
+    files = _generate_cinematic_studio_files(
+        {
+            "business": {
+                "name": "Academia Video",
+                "segment": "academia",
+                "city": "Curitiba",
+                "address": "Rua Teste, 10 - Curitiba",
+            },
+            "variation": {
+                "hero_layout": "video",
+                "prompt_priority": "visual_drama",
+                "cinematic_direction": "energetic",
+                "motion_mix": ["parallax_video", "mask_reveal"],
+            },
+        }
+    )
+    footer = files.get("src/components/Footer.tsx", "")
+    hero = files.get("src/components/HeroSection.tsx", "")
+    site_data = files.get("src/components/siteData.ts", "")
+
+    assert "var(--text-muted)" in footer
+    assert "var(--text)" in footer
+    assert "text-zinc-400" not in footer
+    assert "const _showVideo = heroVariant === 'video' || heroVariant === 'fullbleed';" in hero
+    assert '"hero_variant": "video"' in site_data
 
 
 def test_block_registry_anti_repetition_avoids_default_glass():

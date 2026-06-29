@@ -171,3 +171,23 @@ def test_ensure_builder_renderer_marker_normaliza_engine_divergente():
 
     assert 'data-builder-engine="vite_react"' in updated
     assert 'data-builder-engine="openui"' not in updated
+
+
+def test_publication_head_keeps_og_and_json_ld_image_aligned():
+    from backend.services.builder_worker import _ensure_builder_publication_head
+
+    html = """<!doctype html><html><head>
+<meta property="og:image" content="https://old.example/old.jpg">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"LocalBusiness","name":"Academia","image":"https://old.example/schema.jpg"}</script>
+</head><body></body></html>"""
+    updated = _ensure_builder_publication_head(
+        html,
+        {
+            "publication": {"og_image": "https://cdn.example/new.jpg"},
+            "business": {"name": "Academia"},
+        },
+    )
+
+    assert 'property="og:image" content="https://cdn.example/new.jpg"' in updated
+    assert '"image":"https://cdn.example/new.jpg"' in updated
+    assert "schema.jpg" not in updated

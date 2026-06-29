@@ -702,6 +702,7 @@ def _ensure_builder_publication_head(html: str, facts: dict[str, Any]) -> str:
                 text,
                 count=1,
             )
+        text = _ensure_publication_json_ld_image(text, og_image)
         if 'name="twitter:image"' not in text.lower():
             inserts.append(f'<meta name="twitter:image" content="{_escape_attr(og_image)}">')
         else:
@@ -718,6 +719,30 @@ def _ensure_builder_publication_head(html: str, facts: dict[str, Any]) -> str:
     if inserts:
         text = re.sub(r"(?is)</head>", "\n".join(inserts) + "\n</head>", text, count=1)
     return text
+
+
+def _ensure_publication_json_ld_image(html: str, og_image: str) -> str:
+    """Keep LocalBusiness JSON-LD aligned with the published OG image."""
+    if not og_image:
+        return html
+
+    def replace_json_ld(match: re.Match[str]) -> str:
+        prefix, raw, suffix = match.group(1), match.group(2), match.group(3)
+        try:
+            data = json.loads(raw)
+        except json.JSONDecodeError:
+            return match.group(0)
+        if isinstance(data, dict) and data.get("@type") == "LocalBusiness":
+            data["image"] = og_image
+            return prefix + json.dumps(data, ensure_ascii=False, separators=(",", ":")) + suffix
+        return match.group(0)
+
+    return re.sub(
+        r"""(?is)(<script\s+type=["']application/ld\+json["'][^>]*>)(.*?)(</script>)""",
+        replace_json_ld,
+        html,
+        count=1,
+    )
 
 
 def _publication_canonical_url(facts: dict[str, Any]) -> str:

@@ -449,8 +449,14 @@ def _get_copy_only_system_prompt(policy: str = "copy_only") -> str:
     if policy == "creative_plan":
         return (
             base
-            + " Voce tambem atua como diretor criativo: escolha somente variantes "
-              "permitidas de blocos, superficies e motion. Nao crie novos nomes fora do schema."
+            + " Voce tambem atua como uma equipe premium: estrategista de marca, "
+              "diretor criativo, diretor de fotografia, UX, CRO e SEO local. "
+              "Nunca comece por nicho -> template. Raciocine por negocio -> marca "
+              "-> cliente -> emocao -> historia -> linguagem visual -> conversao. "
+              "Traduza 'cinematografico' em decisoes objetivas: luz, ritmo, "
+              "profundidade, composicao, motion e materiais. Escolha somente "
+              "variantes permitidas de blocos, superficies e motion. Nao crie "
+              "novos nomes fora do schema."
         )
     return base
 
@@ -463,6 +469,13 @@ def _get_copy_only_user_prompt(facts: dict[str, Any], policy: str = "copy_only")
         creative_schema = """
   "creative_plan": {
     "concept": "string curta em pt-BR",
+    "brand_archetype": "ruler | rebel | explorer | creator | sage | caregiver | hero | magician",
+    "emotional_outcome": "trust | status | belonging | exclusivity | transformation | security | aspiration",
+    "anti_identity": "cheap | generic | corporate | startup | fintech | amateur | mass_market",
+    "visual_metaphor": "string curta em pt-BR",
+    "story_arc": "attention_problem_authority_proof_transformation_action",
+    "cinematic_direction": "editorial | documentary | luxury | contrast_heavy | natural_light | energetic",
+    "conversion_strategy": "quick_whatsapp | appointment_ritual | proof_first | local_trust | premium_consultation",
     "hero_layout": "split | center | asymmetric | fullbleed | video",
     "hero_text_side": "left | right | center",
     "section_order": ["hero", "about", "services", "gallery", "reviews", "faq", "location", "lifestyle", "contact-cta"],
@@ -493,6 +506,11 @@ CONTRATO:
 - Nao invente fatos operacionais, preco, garantia, anos de mercado, certificacoes ou links.
 - CTA deve combinar com o nicho.
 - Se creative_plan estiver ativo, escolha apenas opcoes do schema. O renderer vai aplicar os blocos.
+- Nunca escolha pelo caminho nicho -> template. Escolha por marca -> emocao -> historia -> visual -> conversao.
+- Se a marca pedir impacto, ritual, performance ou exclusividade, prefira hero_layout "video" ou "fullbleed".
+- Use "surface_style" glass somente se houver motivo real; por padrao prefira solid/outline/soft_tint.
+- O site precisa parecer pertencer a esta empresa mesmo sem logo.
+- SEO deve priorizar intencao local/transacional/comercial sem keyword stuffing.
 
 SCHEMA:
 {{
@@ -593,9 +611,19 @@ def _sanitize_creative_plan(content: dict[str, Any]) -> dict[str, Any]:
             sections.append(key)
 
     cleaned: dict[str, Any] = {}
-    if source.get("concept"):
-        cleaned["concept"] = _clean_copy_value(source.get("concept"), limit=140)
+    for text_key, limit in {
+        "concept": 140,
+        "visual_metaphor": 120,
+    }.items():
+        if source.get(text_key):
+            cleaned[text_key] = _clean_copy_value(source.get(text_key), limit=limit)
     for key, allowed in {
+        "brand_archetype": {"ruler", "rebel", "explorer", "creator", "sage", "caregiver", "hero", "magician"},
+        "emotional_outcome": {"trust", "status", "belonging", "exclusivity", "transformation", "security", "aspiration"},
+        "anti_identity": {"cheap", "generic", "corporate", "startup", "fintech", "amateur", "mass_market"},
+        "story_arc": {"attention_problem_authority_proof_transformation_action"},
+        "cinematic_direction": {"editorial", "documentary", "luxury", "contrast_heavy", "natural_light", "energetic"},
+        "conversion_strategy": {"quick_whatsapp", "appointment_ritual", "proof_first", "local_trust", "premium_consultation"},
         "hero_layout": {"split", "center", "asymmetric", "fullbleed", "video"},
         "hero_text_side": {"left", "right", "center"},
         "surface_style": {"glass", "solid", "outline", "soft_tint"},
@@ -639,6 +667,20 @@ def _sanitize_creative_plan(content: dict[str, Any]) -> dict[str, Any]:
     )
     if motion_mix:
         cleaned["motion_mix"] = motion_mix
+    if not cleaned.get("hero_layout"):
+        wants_immersive = (
+            cleaned.get("prompt_priority") == "visual_drama"
+            or cleaned.get("cinematic_direction") in {"luxury", "contrast_heavy", "energetic"}
+            or "parallax_video" in motion_mix
+        )
+        if wants_immersive:
+            cleaned["hero_layout"] = "video"
+    if cleaned.get("hero_layout") == "video":
+        cleaned.setdefault("motion_mix", ["parallax_video", "mask_reveal", "stagger_cards"])
+        cleaned.setdefault("hero_text_side", "left")
+    if cleaned.get("anti_identity") in {"generic", "startup", "fintech"}:
+        cleaned.setdefault("anti_repetition_rule", "avoid_same_hero")
+        cleaned.setdefault("surface_style", "solid")
     return cleaned
 
 
@@ -860,6 +902,13 @@ def _merge_copy_only_content(facts: dict[str, Any], content: dict[str, Any]) -> 
             "motion_mix",
             "visual_lane",
             "section_order",
+            "brand_archetype",
+            "emotional_outcome",
+            "anti_identity",
+            "story_arc",
+            "cinematic_direction",
+            "conversion_strategy",
+            "visual_metaphor",
         ):
             if key in creative_plan:
                 variation[key] = creative_plan[key]
@@ -4241,10 +4290,8 @@ export function HeroSection({ onOpen }: { onOpen?: () => void }) {
   const heroVariant = String((blockPlan as any)?.hero_variant || (variation as any)?.hero_layout || 'split');
   const heroTextSide = String((blockPlan as any)?.hero_text_side || '');
   const motionStyle = String((blockPlan as any)?.motion_style || (variation as any)?.motion_style || 'smooth');
-  // Sprint 14.6: video background so aparece em hero_layout=video ou fullbleed.
-  // Para outros layouts (split/center/asymmetric), usa imagem poster.
-  const _varLayout = String((variation as any)?.hero_layout ? (variation as any).hero_layout : 'split');
-  const _showVideo = _varLayout === 'video' || _varLayout === 'fullbleed';
+  // Video follows the final block plan, not only the raw variation payload.
+  const _showVideo = heroVariant === 'video' || heroVariant === 'fullbleed';
 useEffect(() => {
     const root = rootRef.current;
     if (!root || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
@@ -4543,7 +4590,7 @@ export default BookingModal;
         "src/components/Footer.tsx": """import { MapPin, MessageCircle, ShieldCheck } from 'lucide-react';
 import { siteCopy, whatsappHref } from './siteData';
 export function Footer() {
-  return <footer style={{ background: 'var(--bg)' }} className="px-5 py-12 text-zinc-300 md:px-8"><div className="mx-auto grid max-w-7xl gap-8 md:grid-cols-[1.1fr_.8fr_.8fr]"><div><strong className="block text-2xl font-semibold text-white">{siteCopy.name}</strong><p className="mt-3 max-w-md text-sm leading-7 text-zinc-400">{siteCopy.footer_tagline}</p></div><div><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>{siteCopy.footer_contact_label}</p><a href={whatsappHref} rel="noopener noreferrer" className="mt-4 flex items-center gap-2 text-sm text-white"><MessageCircle className="h-4 w-4" style={{ color: 'var(--accent)' }} /> WhatsApp oficial</a><p className="mt-3 text-sm text-zinc-400">{siteCopy.phone}</p></div><div><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>{siteCopy.footer_location_label}</p><p className="mt-4 flex items-start gap-2 text-sm leading-6 text-zinc-400"><MapPin className="mt-0.5 h-4 w-4 shrink-0" style={{ color: 'var(--accent)' }} /> {siteCopy.address || siteCopy.city}</p><p className="mt-4 flex items-start gap-2 text-sm leading-6 text-zinc-500"><ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" style={{ color: 'var(--accent)' }} /> {siteCopy.footer_privacy_note}</p></div></div><div className="mx-auto mt-10 flex max-w-7xl flex-col gap-2 border-t border-white/10 pt-5 text-xs text-zinc-500 md:flex-row md:items-center md:justify-between"><span>{siteCopy.city}</span><span>© 2026 {siteCopy.name}. Todos os direitos reservados.</span></div></footer>;
+  return <footer style={{ background: 'linear-gradient(180deg, var(--bg), color-mix(in srgb, var(--bg) 88%, var(--accent) 12%))', color: 'var(--text)' }} className="px-5 py-12 md:px-8"><div className="mx-auto grid max-w-7xl gap-8 md:grid-cols-[1.1fr_.8fr_.8fr]"><div><strong className="block text-2xl font-semibold" style={{ color: 'var(--text)' }}>{siteCopy.name}</strong><p className="mt-3 max-w-md text-sm leading-7" style={{ color: 'var(--text-muted)' }}>{siteCopy.footer_tagline}</p></div><div><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>{siteCopy.footer_contact_label}</p><a href={whatsappHref} rel="noopener noreferrer" className="mt-4 flex items-center gap-2 text-sm font-semibold" style={{ color: 'var(--text)' }}><MessageCircle className="h-4 w-4" style={{ color: 'var(--accent)' }} /> WhatsApp oficial</a><p className="mt-3 text-sm" style={{ color: 'var(--text-muted)' }}>{siteCopy.phone}</p></div><div><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>{siteCopy.footer_location_label}</p><p className="mt-4 flex items-start gap-2 text-sm leading-6" style={{ color: 'var(--text-muted)' }}><MapPin className="mt-0.5 h-4 w-4 shrink-0" style={{ color: 'var(--accent)' }} /> {siteCopy.address || siteCopy.city}</p><p className="mt-4 flex items-start gap-2 text-sm leading-6" style={{ color: 'color-mix(in srgb, var(--text-muted) 82%, var(--accent) 18%)' }}><ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" style={{ color: 'var(--accent)' }} /> {siteCopy.footer_privacy_note}</p></div></div><div className="mx-auto mt-10 flex max-w-7xl flex-col gap-2 border-t pt-5 text-xs md:flex-row md:items-center md:justify-between" style={{ borderColor: 'color-mix(in srgb, var(--accent) 18%, transparent)', color: 'color-mix(in srgb, var(--text-muted) 88%, var(--accent) 12%)' }}><span>{siteCopy.city}</span><span>© 2026 {siteCopy.name}. Todos os direitos reservados.</span></div></footer>;
 }
 export default Footer;
 """,
