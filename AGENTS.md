@@ -43,7 +43,9 @@ está **quebrando o sistema**. Faça pela pipeline.
 - **Nunca** editar direto na VPS, usar SCP, rsync ou copiar arquivos manualmente.
 - Fluxo único: editar local em `C:\fralib` → `git add` → `git commit` → `git push origin master`.
 - Push em `master` dispara `scripts/post-receive` no bare repo VPS, que valida,
-  publica e reinicia serviços.
+  publica e reinicia serviços systemd (`fralib-api`, `fralib-worker`,
+  `fralib-franz`, `fralib-wpp-listener`, `fralib-hermes`), usando PM2 apenas
+  como fallback legado.
 - Código em produção precisa ser reproduzível a partir do Git.
 - Fonte canônica local: `C:\fralib`; fonte canônica VPS: `/root/fralib`.
 - Pastas antigas fora desses caminhos, caches de IDE e backups são **legado** — ignorar.

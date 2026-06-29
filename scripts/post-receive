@@ -111,10 +111,21 @@ fi
 
 # 5. Restart do FraLib
 log "Restartando fralib..."
-pm2 restart fralib --update-env 2>&1 | tee -a "$LOG_FILE"
-pm2 startOrReload ecosystem.config.js --only fralib-worker --update-env 2>&1 | tee -a "$LOG_FILE"
-pm2 delete fralib-bryan-worker 2>/dev/null || true
-pm2 startOrReload ecosystem.config.js --only fralib-franz-worker --update-env 2>&1 | tee -a "$LOG_FILE"
-pm2 startOrReload ecosystem.config.js --only fralib-hermes-watchdog --update-env 2>&1 | tee -a "$LOG_FILE"
+if command -v systemctl >/dev/null 2>&1 && systemctl list-unit-files 'fralib-*.service' --no-legend 2>/dev/null | grep -q '^fralib-'; then
+    for svc in fralib-api fralib-worker fralib-franz fralib-wpp-listener fralib-hermes; do
+        if systemctl list-unit-files "${svc}.service" --no-legend 2>/dev/null | grep -q "^${svc}.service"; then
+            log "Restart systemd: ${svc}"
+            systemctl restart "$svc" 2>&1 | tee -a "$LOG_FILE"
+            systemctl is-active "$svc" 2>&1 | tee -a "$LOG_FILE"
+        fi
+    done
+else
+    log "systemd fralib nao encontrado; usando PM2 legado"
+    pm2 restart fralib --update-env 2>&1 | tee -a "$LOG_FILE"
+    pm2 startOrReload ecosystem.config.js --only fralib-worker --update-env 2>&1 | tee -a "$LOG_FILE"
+    pm2 delete fralib-bryan-worker 2>/dev/null || true
+    pm2 startOrReload ecosystem.config.js --only fralib-franz-worker --update-env 2>&1 | tee -a "$LOG_FILE"
+    pm2 startOrReload ecosystem.config.js --only fralib-hermes-watchdog --update-env 2>&1 | tee -a "$LOG_FILE"
+fi
 
 log "=== Deploy concluido ==="
