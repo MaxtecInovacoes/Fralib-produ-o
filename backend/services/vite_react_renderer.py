@@ -3869,7 +3869,6 @@ def _cinematic_copy(facts: dict[str, Any]) -> dict[str, Any]:
         for source, target in public_copy_rewrites.items():
             text = re.sub(re.escape(source), target, text, flags=re.IGNORECASE)
         text = re.sub(r"\b[Aa]\s+([A-ZÁÉÍÓÚÂÊÔÃÕÇ][\wÁÉÍÓÚÂÊÔÃÕÇáéíóúâêôãõç ]{1,80})\s+aparece\b", r"\1 mostra", text)
-        text = re.sub(r"\b[Aa]\s+", "", text)
         text = re.sub(r"\baparece\b", "mostra", text, flags=re.IGNORECASE)
         text = re.sub(r"\bentra\b", "aparece", text, flags=re.IGNORECASE)
         text = re.sub(r"\bganha\b", "recebe", text, flags=re.IGNORECASE)
@@ -3894,6 +3893,18 @@ def _cinematic_copy(facts: dict[str, Any]) -> dict[str, Any]:
         )
         text = text.replace("facilitar a a reserva", "facilitar a reserva")
         text = text.replace("facilitar reserva", "facilitar a reserva")
+        text = text.replace("Flexibility de horarios", "horários flexíveis")
+        text = text.replace("Flexibility de horários", "horários flexíveis")
+        text = text.replace("horarios", "horários")
+        text = text.replace("alcanzar", "alcançar")
+        text = text.replace("resistencia", "resistência")
+        text = text.replace("forca", "força")
+        text = text.replace("equite", "equipe")
+        text = text.replace("condiconamento", "condicionamento")
+        text = text.replace("deevolucao", "de evolução")
+        text = text.replace("paravoces", "para vocês")
+        text = text.replace("coracao", "coração")
+        text = text.replace("Mercês", "Mercês")
         return re.sub(r"\s+", " ", text).strip()
 
     data = {
