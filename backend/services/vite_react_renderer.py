@@ -422,31 +422,61 @@ def _get_llm_policy() -> str:
         "copy": "copy_only",
         "content": "copy_only",
         "json": "copy_only",
+        "creative": "creative_plan",
+        "plan": "creative_plan",
+        "creative_json": "creative_plan",
+        "creative_director": "creative_plan",
         "full": "full_code",
         "code": "full_code",
         "fullcode": "full_code",
         "legacy": "full_code",
     }
     policy = aliases.get(raw, raw)
-    if policy not in {"none", "copy_only", "full_code"}:
+    if policy not in {"none", "copy_only", "creative_plan", "full_code"}:
         return "none"
     return policy
 
 
-def _get_copy_only_system_prompt() -> str:
+def _get_copy_only_system_prompt(policy: str = "copy_only") -> str:
     """Tiny system prompt for the low-token content pass."""
-    return (
+    base = (
         "Voce e redator de conversao para landing pages locais da FraLib. "
         "Retorne APENAS JSON valido, sem markdown e sem codigo. "
         "Nao gere HTML, TSX, CSS, imports, componentes ou scripts. "
         "Use somente fatos confirmados; se faltar dado, use texto neutro. "
         "Toda copy publica deve ser em pt-BR."
     )
+    if policy == "creative_plan":
+        return (
+            base
+            + " Voce tambem atua como diretor criativo: escolha somente variantes "
+              "permitidas de blocos, superficies e motion. Nao crie novos nomes fora do schema."
+        )
+    return base
 
 
-def _get_copy_only_user_prompt(facts: dict[str, Any]) -> str:
+def _get_copy_only_user_prompt(facts: dict[str, Any], policy: str = "copy_only") -> str:
     facts_summary = _summarize_builder_facts(facts)
     contamination_guard = _segment_contamination_guard(facts)
+    creative_schema = ""
+    if policy == "creative_plan":
+        creative_schema = """
+  "creative_plan": {
+    "concept": "string curta em pt-BR",
+    "hero_layout": "split | center | asymmetric | fullbleed | video",
+    "hero_text_side": "left | right | center",
+    "section_order": ["hero", "about", "services", "gallery", "reviews", "faq", "location", "lifestyle", "contact-cta"],
+    "surface_style": "solid | outline | soft_tint | glass",
+    "surface_mix": ["solid", "outline", "soft_tint"],
+    "services_variant": "stacked_cards | split_editorial | stats_then_cards",
+    "reviews_variant": "score_wall | quote_spotlight | card_marquee | editorial_case",
+    "faq_variant": "panel | inline",
+    "location_variant": "split_local | feature_local",
+    "motion_style": "sharp | smooth | minimal",
+    "motion_mix": ["mask_reveal", "parallax_video", "stagger_cards"],
+    "visual_lane": "lane_a | lane_b | lane_c | lane_d | lane_e | lane_f | lane_g | lane_h"
+  },
+"""
     return f"""Preencha slots curtos para um site Vite/React que a FraLib vai montar com templates proprios.
 
 CONTRATO:
@@ -455,10 +485,12 @@ CONTRATO:
 - Nao escreva codigo.
 - Nao invente fatos operacionais, preco, garantia, anos de mercado, certificacoes ou links.
 - CTA deve combinar com o nicho.
+- Se creative_plan estiver ativo, escolha apenas opcoes do schema. O renderer vai aplicar os blocos.
 
 SCHEMA:
 {{
   "blueprint": "performance_plan | authority_trust | transformation_gallery | savings_offer | local_service_fast_quote | premium_appointment",
+{creative_schema}
   "hero": {{
     "headline": "string curta",
     "subheadline": "string com promessa especifica",
@@ -493,6 +525,97 @@ def _clean_copy_value(value: Any, *, limit: int = 220) -> str:
     text = re.sub(r"\s+", " ", str(value or "")).strip()
     text = text.replace("{", "").replace("}", "").replace("<", "").replace(">", "")
     return text[:limit].strip()
+
+
+def _one_of(value: Any, allowed: set[str]) -> str:
+    candidate = str(value or "").strip().lower().replace("-", "_")
+    aliases = {
+        "full_bleed": "fullbleed",
+        "hero_video": "video",
+        "video_split": "video",
+        "poster_split_video": "video",
+        "middle": "center",
+        "centre": "center",
+        "cards": "stacked_cards",
+        "editorial": "split_editorial",
+        "marquee": "card_marquee",
+        "spotlight": "quote_spotlight",
+        "local_feature": "feature_local",
+    }
+    candidate = aliases.get(candidate, candidate)
+    return candidate if candidate in allowed else ""
+
+
+def _clean_choice_list(values: Any, allowed: set[str], *, limit: int = 8) -> list[str]:
+    raw_values = values if isinstance(values, list) else []
+    cleaned: list[str] = []
+    for item in raw_values[:limit]:
+        value = _one_of(item, allowed)
+        if value and value not in cleaned:
+            cleaned.append(value)
+    return cleaned
+
+
+def _sanitize_creative_plan(content: dict[str, Any]) -> dict[str, Any]:
+    """Validate creative direction while keeping the existing Studio path."""
+    source = content.get("creative_plan") if isinstance(content.get("creative_plan"), dict) else content
+    if not isinstance(source, dict):
+        return {}
+
+    section_allowed = {
+        "hero", "about", "services", "gallery", "reviews", "faq",
+        "location", "lifestyle", "contact-cta",
+    }
+    section_aliases = {
+        "sobre": "about",
+        "servicos": "services",
+        "prova": "reviews",
+        "depoimentos": "reviews",
+        "avaliacoes": "reviews",
+        "localizacao": "location",
+        "experiencia": "lifestyle",
+        "contato": "contact-cta",
+        "cta": "contact-cta",
+    }
+    sections: list[str] = []
+    raw_sections = source.get("section_order") if isinstance(source.get("section_order"), list) else []
+    for item in raw_sections:
+        key = str(item or "").strip().lower().replace("_", "-")
+        key = section_aliases.get(key, key)
+        if key in section_allowed and key not in sections:
+            sections.append(key)
+
+    cleaned: dict[str, Any] = {}
+    if source.get("concept"):
+        cleaned["concept"] = _clean_copy_value(source.get("concept"), limit=140)
+    for key, allowed in {
+        "hero_layout": {"split", "center", "asymmetric", "fullbleed", "video"},
+        "hero_text_side": {"left", "right", "center"},
+        "surface_style": {"glass", "solid", "outline", "soft_tint"},
+        "services_variant": {"stacked_cards", "split_editorial", "stats_then_cards"},
+        "reviews_variant": {"score_wall", "quote_spotlight", "card_marquee", "editorial_case"},
+        "proof_style": {"score_wall", "quote_spotlight", "card_marquee", "editorial_case"},
+        "faq_variant": {"panel", "inline"},
+        "location_variant": {"split_local", "feature_local"},
+        "motion_style": {"sharp", "smooth", "minimal"},
+        "visual_lane": {"lane_a", "lane_b", "lane_c", "lane_d", "lane_e", "lane_f", "lane_g", "lane_h"},
+    }.items():
+        value = _one_of(source.get(key), allowed)
+        if value:
+            cleaned[key] = value
+    if sections:
+        cleaned["section_order"] = sections
+    surface_mix = _clean_choice_list(source.get("surface_mix"), {"glass", "solid", "outline", "soft_tint"}, limit=4)
+    if surface_mix:
+        cleaned["surface_mix"] = surface_mix
+    motion_mix = _clean_choice_list(
+        source.get("motion_mix"),
+        {"mask_reveal", "parallax_video", "stagger_cards", "hover_depth", "line_draw", "marquee", "subtle_fade"},
+        limit=5,
+    )
+    if motion_mix:
+        cleaned["motion_mix"] = motion_mix
+    return cleaned
 
 
 def _copy_only_attempts() -> int:
@@ -544,6 +667,9 @@ def _sanitize_copy_only_content(content: dict[str, Any]) -> dict[str, Any]:
     cleaned: dict[str, Any] = {}
     if content.get("blueprint"):
         cleaned["blueprint"] = _clean_copy_value(content.get("blueprint"), limit=80)
+    creative_plan = _sanitize_creative_plan(content)
+    if creative_plan:
+        cleaned["creative_plan"] = creative_plan
 
     hero = content.get("hero") if isinstance(content.get("hero"), dict) else {}
     if hero:
@@ -646,6 +772,31 @@ def _merge_copy_only_content(facts: dict[str, Any], content: dict[str, Any]) -> 
         merged = dict(facts or {})
     if content:
         merged["_llm_content"] = content
+    creative_plan = content.get("creative_plan") if isinstance(content.get("creative_plan"), dict) else {}
+    if creative_plan:
+        variation = merged.get("variation") if isinstance(merged.get("variation"), dict) else {}
+        variation = dict(variation)
+        for key in (
+            "hero_layout",
+            "hero_text_side",
+            "surface_style",
+            "surface_mix",
+            "services_variant",
+            "reviews_variant",
+            "faq_variant",
+            "location_variant",
+            "motion_style",
+            "motion_mix",
+            "visual_lane",
+            "section_order",
+        ):
+            if key in creative_plan:
+                variation[key] = creative_plan[key]
+        if "reviews_variant" in creative_plan and "proof_style" not in variation:
+            variation["proof_style"] = creative_plan["reviews_variant"]
+        if "concept" in creative_plan:
+            variation["creative_concept"] = creative_plan["concept"]
+        merged["variation"] = variation
     return merged
 
 
@@ -706,30 +857,30 @@ def render_vite_react_site(
         model_candidates = [PROXY_BUILDER_MODEL]
     llm_policy = _get_llm_policy()
 
-    if llm_policy in {"none", "copy_only"}:
+    if llm_policy in {"none", "copy_only", "creative_plan"}:
         policy_facts = facts
         copy_error = ""
-        if llm_policy == "copy_only":
+        if llm_policy in {"copy_only", "creative_plan"}:
             for model_idx, model in enumerate(model_candidates, start=1):
                 for copy_try in range(1, _copy_only_attempts() + 1):
                     attempt_started = time.time()
                     try:
                         raw = _call_copy_only_llm(
-                            _get_copy_only_user_prompt(facts),
+                            _get_copy_only_user_prompt(facts, policy=llm_policy),
                             model=model,
-                            max_tokens=min(max_tokens, _env_int("FRALIB_VITE_COPY_ONLY_MAX_TOKENS", 900)),
+                            max_tokens=min(max_tokens, _env_int("FRALIB_VITE_COPY_ONLY_MAX_TOKENS", 1300 if llm_policy == "creative_plan" else 900)),
                             temperature=min(temperature, 0.35 if copy_try > 1 else 0.45),
                         )
                         content = _parse_content_json(raw)
                         if not content:
-                            raise ViteReactRenderError("copy_only retornou JSON vazio ou fora de pt-BR")
+                            raise ViteReactRenderError(f"{llm_policy} retornou JSON vazio ou fora de pt-BR")
                         policy_facts = _merge_copy_only_content(facts, content)
                         attempts.append(
                             {
                                 "model": model,
                                 "model_index": model_idx,
                                 "copy_try": copy_try,
-                                "status": "copy_only_json_success",
+                                "status": f"{llm_policy}_json_success",
                                 "elapsed_ms": int((time.time() - attempt_started) * 1000),
                                 "policy": llm_policy,
                                 "json_keys": sorted(content.keys()),
@@ -743,7 +894,7 @@ def render_vite_react_site(
                                 "model": model,
                                 "model_index": model_idx,
                                 "copy_try": copy_try,
-                                "status": "copy_only_json_failed",
+                                "status": f"{llm_policy}_json_failed",
                                 "elapsed_ms": int((time.time() - attempt_started) * 1000),
                                 "policy": llm_policy,
                                 "error": copy_error,
@@ -771,7 +922,7 @@ def render_vite_react_site(
             {
                 "model": "studio-template",
                 "model_index": len(attempts) + 1,
-                "status": "studio_copy_only_success" if llm_policy == "copy_only" else "studio_deterministic_success",
+                "status": "studio_deterministic_success" if llm_policy == "none" else f"studio_{llm_policy}_success",
                 "elapsed_ms": int((time.time() - fallback_started) * 1000),
                 "policy": llm_policy,
                 "source_files": len(files),
@@ -784,7 +935,7 @@ def render_vite_react_site(
             facts=policy_facts,
             attempts=attempts,
             started=started,
-            model="studio-copy-only" if llm_policy == "copy_only" else "studio-deterministic",
+            model="studio-deterministic" if llm_policy == "none" else f"studio-{llm_policy.replace('_', '-')}",
             requested_paths=requested_paths,
         )
 
@@ -3957,6 +4108,8 @@ export function HeroSection({ onOpen }: { onOpen?: () => void }) {
   const rootRef = useRef<HTMLElement | null>(null);
   const heroClasses = (variation as any)?.hero_classes ? (variation as any).hero_classes : '';
   const heroVariant = String((blockPlan as any)?.hero_variant || (variation as any)?.hero_layout || 'split');
+  const heroTextSide = String((blockPlan as any)?.hero_text_side || '');
+  const motionStyle = String((blockPlan as any)?.motion_style || (variation as any)?.motion_style || 'smooth');
   // Sprint 14.6: video background so aparece em hero_layout=video ou fullbleed.
   // Para outros layouts (split/center/asymmetric), usa imagem poster.
   const _varLayout = String((variation as any)?.hero_layout ? (variation as any).hero_layout : 'split');
@@ -3966,9 +4119,9 @@ useEffect(() => {
     if (!root || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     const ctx = gsap.context(() => {
       if (_showVideo) {
-        gsap.to('[data-hero-video]', { yPercent: 10, scale: 1.08, ease: 'none', scrollTrigger: { trigger: root, start: 'top top', end: 'bottom top', scrub: true } });
+        gsap.to('[data-hero-video]', { yPercent: motionStyle === 'minimal' ? 4 : 10, scale: motionStyle === 'sharp' ? 1.12 : 1.08, ease: 'none', scrollTrigger: { trigger: root, start: 'top top', end: 'bottom top', scrub: true } });
       }
-      gsap.fromTo('[data-hero-reveal]', { y: 26, opacity: 0 }, { y: 0, opacity: 1, duration: 0.9, stagger: 0.08, ease: 'power3.out' });
+      gsap.fromTo('[data-hero-reveal]', { y: motionStyle === 'sharp' ? 18 : 26, opacity: 0 }, { y: 0, opacity: 1, duration: motionStyle === 'minimal' ? 0.55 : 0.9, stagger: motionStyle === 'sharp' ? 0.045 : 0.08, ease: motionStyle === 'sharp' ? 'power4.out' : 'power3.out' });
     }, root);
     return () => ctx.revert();
   }, []);
@@ -3979,11 +4132,11 @@ useEffect(() => {
       : heroVariant === 'video' || heroVariant === 'fullbleed'
         ? 'mx-auto grid max-w-7xl gap-10 lg:grid-cols-[1.15fr_.85fr] lg:items-end'
         : 'mx-auto grid max-w-7xl gap-10 lg:grid-cols-[1.05fr_.95fr] lg:items-end';
-  const copyClass = heroVariant === 'center' ? 'mx-auto max-w-4xl' : heroVariant === 'asymmetric' ? 'order-2 lg:order-2 max-w-4xl' : 'max-w-4xl';
+  const copyClass = heroVariant === 'center' ? 'mx-auto max-w-4xl' : heroVariant === 'asymmetric' ? (heroTextSide === 'left' ? 'order-1 lg:order-1 max-w-4xl' : 'order-2 lg:order-2 max-w-4xl') : 'max-w-4xl';
   const statsClass = heroVariant === 'center'
     ? 'grid gap-3 sm:grid-cols-3'
     : heroVariant === 'asymmetric'
-      ? 'order-1 grid gap-3 sm:grid-cols-3 lg:order-1 lg:grid-cols-1'
+      ? (heroTextSide === 'left' ? 'order-2 grid gap-3 sm:grid-cols-3 lg:order-2 lg:grid-cols-1' : 'order-1 grid gap-3 sm:grid-cols-3 lg:order-1 lg:grid-cols-1')
       : 'grid gap-3 sm:grid-cols-3 lg:grid-cols-1';
   const surfaceStyle = String((variation as any)?.surface_style || '');
   const statCardClass = surfaceStyle === 'solid'
@@ -5164,6 +5317,7 @@ def _call_copy_only_llm(
     model: str,
     max_tokens: int,
     temperature: float,
+    policy: str = "copy_only",
 ) -> str:
     """Call the LLM with the small content-only contract, not the full-code prompt."""
     model_id = {
@@ -5172,7 +5326,8 @@ def _call_copy_only_llm(
         "opus": PROXY_BUILDER_MODEL,
     }.get(model, model)
     effective_max_tokens = _cap_max_tokens_for_model(model_id, max_tokens)
-    system_prompt = _get_copy_only_system_prompt()
+    inferred_policy = "creative_plan" if policy == "copy_only" and '"creative_plan"' in user_prompt else policy
+    system_prompt = _get_copy_only_system_prompt(inferred_policy)
     if _is_litellm_openai_chat_base():
         text_out, _usage = _call_proxy_openai_chat(
             model_id,

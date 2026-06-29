@@ -55,23 +55,24 @@ def resolve_cinematic_block_plan(
     lane_blocks = lane.get("blocks") if isinstance(lane.get("blocks"), dict) else {}
     lane_copy = lane.get("copy") if isinstance(lane.get("copy"), dict) else {}
 
-    services_variant = str(lane_blocks.get("services_variant") or "split_editorial")
-    if surface_style in {"solid", "soft_tint"}:
+    has_explicit_services = bool(variation.get("services_variant"))
+    services_variant = str(variation.get("services_variant") or lane_blocks.get("services_variant") or "split_editorial")
+    if not has_explicit_services and surface_style in {"solid", "soft_tint"}:
         services_variant = "stacked_cards"
-    if proof_style == "card_marquee":
+    if not has_explicit_services and proof_style == "card_marquee":
         services_variant = "stats_then_cards"
 
-    faq_variant = str(lane_blocks.get("faq_variant") or "panel")
+    faq_variant = str(variation.get("faq_variant") or lane_blocks.get("faq_variant") or "panel")
     if section_order_style in {"conversion_first", "gallery_first"}:
         faq_variant = "inline"
 
-    location_variant = str(lane_blocks.get("location_variant") or "split_local")
+    location_variant = str(variation.get("location_variant") or lane_blocks.get("location_variant") or "split_local")
     if "academia" in segment.lower() or hero_layout in {"fullbleed", "video"}:
         location_variant = "feature_local"
 
-    hero_variant = str(lane_blocks.get("hero_variant") or hero_layout or "split")
-    reviews_variant = str(lane_blocks.get("reviews_variant") or proof_style)
-    surface_style = str(lane_blocks.get("surface_style") or surface_style)
+    hero_variant = str(variation.get("hero_variant") or lane_blocks.get("hero_variant") or hero_layout or "split")
+    reviews_variant = str(variation.get("reviews_variant") or lane_blocks.get("reviews_variant") or proof_style)
+    surface_style = str(variation.get("surface_style") or lane_blocks.get("surface_style") or surface_style)
 
     nav_links = [
         {"label": _resolve_nav_label(section, lane_copy), "href": href}
@@ -89,6 +90,11 @@ def resolve_cinematic_block_plan(
         "faq_variant": faq_variant,
         "location_variant": location_variant,
         "surface_style": surface_style,
+        "surface_mix": variation.get("surface_mix") if isinstance(variation.get("surface_mix"), list) else [],
+        "motion_style": str(variation.get("motion_style") or ""),
+        "motion_mix": variation.get("motion_mix") if isinstance(variation.get("motion_mix"), list) else [],
+        "hero_text_side": str(variation.get("hero_text_side") or ""),
+        "creative_concept": str(variation.get("creative_concept") or ""),
         "section_order_style": section_order_style,
         "visual_lane": lane.get("id") or visual_lane,
         "visual_lane_name": lane.get("name") or "",

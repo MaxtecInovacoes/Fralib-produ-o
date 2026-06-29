@@ -543,6 +543,8 @@ def test_vite_llm_policy_defaults_to_none_and_rejects_generic_copy(monkeypatch):
 
     monkeypatch.delenv("FRALIB_VITE_LLM_POLICY", raising=False)
     assert _get_llm_policy() == "none"
+    monkeypatch.setenv("FRALIB_VITE_LLM_POLICY", "creative_plan")
+    assert _get_llm_policy() == "creative_plan"
 
     rejected = _sanitize_copy_only_content(
         {
@@ -551,6 +553,71 @@ def test_vite_llm_policy_defaults_to_none_and_rejects_generic_copy(monkeypatch):
         }
     )
     assert rejected == {}
+
+
+def test_creative_plan_enriches_existing_variation_contract():
+    from backend.services.vite_react_renderer import _merge_copy_only_content, _sanitize_copy_only_content
+
+    content = _sanitize_copy_only_content(
+        {
+            "creative_plan": {
+                "concept": "academia noturna com energia vermelha",
+                "hero_layout": "video",
+                "hero_text_side": "right",
+                "section_order": ["hero", "services", "gallery", "reviews", "faq", "location", "contact-cta"],
+                "surface_style": "solid",
+                "surface_mix": ["solid", "outline", "soft_tint"],
+                "services_variant": "stats_then_cards",
+                "reviews_variant": "card_marquee",
+                "faq_variant": "inline",
+                "location_variant": "feature_local",
+                "motion_style": "sharp",
+                "motion_mix": ["parallax_video", "mask_reveal", "stagger_cards"],
+                "visual_lane": "lane_b",
+                "unknown": "ignore-me",
+            },
+            "hero": {"headline": "Treino forte em Curitiba", "cta_primary": "Começar treino"},
+        }
+    )
+    assert content["creative_plan"]["hero_layout"] == "video"
+    assert content["creative_plan"]["services_variant"] == "stats_then_cards"
+    assert "unknown" not in content["creative_plan"]
+
+    merged = _merge_copy_only_content({"variation": {"surface_style": "glass"}}, content)
+    variation = merged["variation"]
+    assert variation["hero_layout"] == "video"
+    assert variation["surface_style"] == "solid"
+    assert variation["proof_style"] == "card_marquee"
+    assert variation["section_order"][0] == "hero"
+
+
+def test_block_registry_respects_creative_plan_over_lane_defaults():
+    from backend.services.vite_block_registry import resolve_cinematic_block_plan
+
+    plan = resolve_cinematic_block_plan(
+        section_order=["navbar", "hero", "services", "reviews", "faq", "location", "contact-cta", "footer"],
+        archetype="BOLD_ENERGY",
+        segment="academia",
+        variation={
+            "visual_lane": "lane_a",
+            "hero_layout": "video",
+            "hero_text_side": "right",
+            "surface_style": "solid",
+            "services_variant": "stats_then_cards",
+            "reviews_variant": "card_marquee",
+            "faq_variant": "inline",
+            "location_variant": "feature_local",
+            "motion_style": "sharp",
+            "motion_mix": ["parallax_video", "mask_reveal"],
+        },
+    )
+    assert plan["hero_variant"] == "video"
+    assert plan["hero_text_side"] == "right"
+    assert plan["surface_style"] == "solid"
+    assert plan["services_variant"] == "stats_then_cards"
+    assert plan["reviews_variant"] == "card_marquee"
+    assert plan["faq_variant"] == "inline"
+    assert plan["motion_style"] == "sharp"
 
 
 def run_all_tests():
@@ -573,6 +640,8 @@ def run_all_tests():
         test_visual_lane_catalog_avoids_generic_cinematic_copy,
         test_cinematic_site_data_differs_between_families,
         test_vite_llm_policy_defaults_to_none_and_rejects_generic_copy,
+        test_creative_plan_enriches_existing_variation_contract,
+        test_block_registry_respects_creative_plan_over_lane_defaults,
     ]
 
     results = []
