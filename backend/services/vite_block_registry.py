@@ -72,18 +72,19 @@ def resolve_cinematic_block_plan(
     if not has_explicit_location and ("academia" in segment.lower() or hero_layout in {"fullbleed", "video"}):
         location_variant = "feature_local"
 
-    has_explicit_hero = bool(variation.get("hero_variant") or variation.get("hero_layout"))
     motion_mix = variation.get("motion_mix") if isinstance(variation.get("motion_mix"), list) else []
-    wants_immersive_hero = (
-        str(variation.get("prompt_priority") or "") == "visual_drama"
-        or str(variation.get("cinematic_direction") or "") in {"luxury", "contrast_heavy", "energetic"}
-        or "parallax_video" in motion_mix
-    )
-    if not has_explicit_hero and wants_immersive_hero:
-        hero_variant = "video"
-    else:
-        hero_variant = str(variation.get("hero_variant") or hero_layout or lane_blocks.get("hero_variant") or "split")
+    hero_variant = str(variation.get("hero_variant") or hero_layout or lane_blocks.get("hero_variant") or "split")
     reviews_variant = str(variation.get("reviews_variant") or lane_blocks.get("reviews_variant") or proof_style)
+    about_variant = str(variation.get("about_variant") or lane_blocks.get("about_variant") or "")
+    if not about_variant:
+        if hero_variant in {"video", "fullbleed", "center"}:
+            about_variant = "manifesto_split"
+        elif hero_variant == "asymmetric" or services_variant == "stats_then_cards":
+            about_variant = "proof_sidebar"
+        elif services_variant == "split_editorial":
+            about_variant = "manifesto_split"
+        else:
+            about_variant = "feature_grid"
     surface_style = str(variation.get("surface_style") or lane_blocks.get("surface_style") or surface_style)
     if anti_repetition_rule == "avoid_glass" and surface_style == "glass":
         surface_style = "solid" if services_variant == "split_editorial" else "outline"
@@ -110,6 +111,7 @@ def resolve_cinematic_block_plan(
         "nav_links": nav_links,
         "hero_variant": hero_variant,
         "services_variant": services_variant,
+        "about_variant": about_variant,
         "reviews_variant": reviews_variant,
         "faq_variant": faq_variant,
         "location_variant": location_variant,

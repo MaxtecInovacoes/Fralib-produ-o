@@ -479,6 +479,7 @@ def _get_copy_only_user_prompt(facts: dict[str, Any], policy: str = "copy_only")
     "hero_layout": "split | center | asymmetric | fullbleed | video",
     "hero_text_side": "left | right | center",
     "section_order": ["hero", "about", "services", "gallery", "reviews", "faq", "location", "lifestyle", "contact-cta"],
+    "about_variant": "manifesto_split | proof_sidebar | feature_grid",
     "surface_style": "solid | outline | soft_tint | glass",
     "surface_mix": ["solid", "outline", "soft_tint"],
     "section_surface_map": {"about": "solid", "services": "outline", "reviews": "soft_tint", "faq": "solid", "location": "soft_tint", "contact-cta": "solid"},
@@ -507,7 +508,7 @@ CONTRATO:
 - CTA deve combinar com o nicho.
 - Se creative_plan estiver ativo, escolha apenas opcoes do schema. O renderer vai aplicar os blocos.
 - Nunca escolha pelo caminho nicho -> template. Escolha por marca -> emocao -> historia -> visual -> conversao.
-- Se a marca pedir impacto, ritual, performance ou exclusividade, prefira hero_layout "video" ou "fullbleed".
+- Hero com video NAO e padrao. Use "video" apenas quando a variacao pedir video explicitamente; caso contrario escolha split, center, asymmetric ou fullbleed conforme a marca.
 - Use "surface_style" glass somente se houver motivo real; por padrao prefira solid/outline/soft_tint.
 - O site precisa parecer pertencer a esta empresa mesmo sem logo.
 - SEO deve priorizar intencao local/transacional/comercial sem keyword stuffing.
@@ -626,6 +627,7 @@ def _sanitize_creative_plan(content: dict[str, Any]) -> dict[str, Any]:
         "conversion_strategy": {"quick_whatsapp", "appointment_ritual", "proof_first", "local_trust", "premium_consultation"},
         "hero_layout": {"split", "center", "asymmetric", "fullbleed", "video"},
         "hero_text_side": {"left", "right", "center"},
+        "about_variant": {"manifesto_split", "proof_sidebar", "feature_grid"},
         "surface_style": {"glass", "solid", "outline", "soft_tint"},
         "color_strategy": {"restrained", "committed", "full_palette", "drenched"},
         "typography_mood": {"clean_sans", "condensed_sport", "luxury_display", "editorial_serif", "technical_grotesk"},
@@ -667,14 +669,6 @@ def _sanitize_creative_plan(content: dict[str, Any]) -> dict[str, Any]:
     )
     if motion_mix:
         cleaned["motion_mix"] = motion_mix
-    if not cleaned.get("hero_layout"):
-        wants_immersive = (
-            cleaned.get("prompt_priority") == "visual_drama"
-            or cleaned.get("cinematic_direction") in {"luxury", "contrast_heavy", "energetic"}
-            or "parallax_video" in motion_mix
-        )
-        if wants_immersive:
-            cleaned["hero_layout"] = "video"
     if cleaned.get("hero_layout") == "video":
         cleaned.setdefault("motion_mix", ["parallax_video", "mask_reveal", "stagger_cards"])
         cleaned.setdefault("hero_text_side", "left")
@@ -888,6 +882,7 @@ def _merge_copy_only_content(facts: dict[str, Any], content: dict[str, Any]) -> 
             "surface_style",
             "surface_mix",
             "section_surface_map",
+            "about_variant",
             "color_strategy",
             "typography_mood",
             "gallery_density",
@@ -4467,7 +4462,14 @@ const pillars = [
 export function AboutSection() {
   const surfaceStyle = String((variation as any)?.surface_style || '');
   const servicesVariant = String((blockPlan as any)?.services_variant || '');
+  const aboutVariant = String((blockPlan as any)?.about_variant || 'feature_grid');
   const leadClass = surfaceStyle === 'solid' ? 'bg-white text-[var(--text-dark)] shadow-[0_24px_80px_rgba(0,0,0,0.18)]' : 'bg-white/[0.04] text-white backdrop-blur-xl';
+  if (aboutVariant === 'manifesto_split') {
+    return <section id="sobre" style={{ background: 'var(--bg)' }} className="px-5 py-20 text-white md:px-8 md:py-28"><div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[1.16fr_.84fr] lg:items-start"><motion.div initial={{ opacity: 0, y: 22 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.28 }} className="max-w-4xl"><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>{siteCopy.about_kicker}</p><h2 className="mt-3 text-[clamp(2.4rem,6vw,5.4rem)] font-semibold leading-[0.92] tracking-[-0.035em]">{siteCopy.about_title}</h2><p className="mt-7 max-w-2xl text-lg leading-9 text-zinc-300">{siteCopy.about_body}</p></motion.div><div className="grid gap-4">{pillars.map((pillar, index) => { const Icon = pillar.icon; return <motion.article key={pillar.title} initial={{ opacity: 0, x: 22 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true, amount: 0.24 }} transition={{ delay: index * 0.05 }} className="grid grid-cols-[auto_1fr] gap-4 border-t border-white/12 py-5"><Icon className="mt-1 h-5 w-5" style={{ color: 'var(--accent)' }} /><div><h3 className="text-xl font-semibold tracking-tight text-white">{pillar.title}</h3><p className="mt-3 text-sm leading-7 text-zinc-300">{pillar.text}</p></div></motion.article>; })}</div></div></section>;
+  }
+  if (aboutVariant === 'proof_sidebar') {
+    return <section id="sobre" style={{ background: 'var(--bg)' }} className="px-5 py-20 text-white md:px-8 md:py-28"><div className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[.72fr_1.28fr]"><motion.aside initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.24 }} className={'rounded-[22px] border border-white/10 p-7 ' + leadClass}><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>{siteCopy.about_city_label}</p><p className="mt-3 text-4xl font-semibold">__ABOUT_CITY__</p><p className="mt-5 text-sm leading-7 opacity-80">{siteCopy.about_aside_body}</p><ArrowUpRight className="mt-8 h-6 w-6" style={{ color: 'var(--accent)' }} /></motion.aside><div><motion.div initial={{ opacity: 0, y: 22 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.28 }}><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>{siteCopy.about_kicker}</p><h2 className="mt-3 max-w-4xl text-[clamp(2rem,5vw,4.8rem)] font-semibold leading-[0.98] tracking-[-0.03em]">{siteCopy.about_title}</h2><p className="mt-6 max-w-3xl text-base leading-8 text-zinc-300">{siteCopy.about_body}</p></motion.div><div className="mt-8 grid gap-4 md:grid-cols-3">{pillars.map((pillar, index) => { const Icon = pillar.icon; return <motion.article key={pillar.title} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.24 }} transition={{ delay: index * 0.05 }} className="min-h-[13rem] rounded-[18px] p-5 __CARD_SHELL__"><Icon className="h-5 w-5" style={{ color: 'var(--accent)' }} /><h3 className="mt-6 text-lg font-semibold tracking-tight __CARD_TITLE_CLASS__">{pillar.title}</h3><p className="mt-3 text-sm leading-7 __CARD_TEXT_CLASS__">{pillar.text}</p></motion.article>; })}</div></div></div></section>;
+  }
   return <section id="sobre" style={{ background: 'var(--bg)' }} className="px-5 py-20 text-white md:px-8 md:py-28"><div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[0.88fr_1.12fr] lg:items-end"><motion.div initial={{ opacity: 0, y: 22 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.28 }}><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>{siteCopy.about_kicker}</p><h2 className="mt-3 max-w-3xl text-[clamp(2rem,5vw,4.5rem)] font-semibold leading-[0.98] tracking-[-0.03em]">{siteCopy.about_title}</h2><p className="mt-6 max-w-2xl text-base leading-8 text-zinc-300">{siteCopy.about_body}</p></motion.div><div className={`grid gap-4 ${servicesVariant === 'split_editorial' ? 'md:grid-cols-2 xl:grid-cols-3' : 'md:grid-cols-3'}`}>{pillars.map((pillar, index) => { const Icon = pillar.icon; return <motion.article key={pillar.title} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.24 }} transition={{ delay: index * 0.05 }} className="min-h-[15rem] rounded-[18px] p-6 __CARD_SHELL__"><Icon className="h-5 w-5" style={{ color: 'var(--accent)' }} /><h3 className="mt-8 text-xl font-semibold tracking-tight __CARD_TITLE_CLASS__">{pillar.title}</h3><p className="mt-4 text-sm leading-7 __CARD_TEXT_CLASS__">{pillar.text}</p></motion.article>; })}</div><motion.aside initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.24 }} className={'rounded-[22px] border border-white/10 p-6 ' + leadClass}><div className="flex items-center justify-between gap-4"><div><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>{siteCopy.about_city_label}</p><p className="mt-3 text-2xl font-semibold">__ABOUT_CITY__</p></div><ArrowUpRight className="h-5 w-5" style={{ color: 'var(--accent)' }} /></div><p className="mt-4 text-sm leading-7 opacity-80">{siteCopy.about_aside_body}</p></motion.aside></div></section>;
 }
 export default AboutSection;

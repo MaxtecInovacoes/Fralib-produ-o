@@ -686,7 +686,7 @@ def test_creative_plan_system_prompt_has_brand_strategy_layer():
     assert "nicho -> template" in user_prompt
 
 
-def test_creative_plan_visual_drama_defaults_to_video_hero():
+def test_creative_plan_visual_drama_does_not_force_video_hero():
     from backend.services.vite_react_renderer import _merge_copy_only_content, _sanitize_copy_only_content
 
     content = _sanitize_copy_only_content(
@@ -697,13 +697,15 @@ def test_creative_plan_visual_drama_defaults_to_video_hero():
                 "cinematic_direction": "energetic",
                 "motion_mix": ["parallax_video", "mask_reveal"],
                 "anti_identity": "generic",
+                "about_variant": "proof_sidebar",
             }
         }
     )
     merged = _merge_copy_only_content({"variation": {"visual_lane": "lane_a"}}, content)
     variation = merged["variation"]
 
-    assert variation["hero_layout"] == "video"
+    assert "hero_layout" not in variation
+    assert variation["about_variant"] == "proof_sidebar"
     assert variation["surface_style"] == "solid"
     assert variation["anti_repetition_rule"] == "avoid_same_hero"
 
@@ -751,7 +753,7 @@ def test_block_registry_respects_creative_plan_over_lane_defaults():
     assert plan["motion_style"] == "sharp"
 
 
-def test_block_registry_uses_video_when_creative_direction_requires_immersive_hero():
+def test_block_registry_does_not_default_to_video_without_explicit_hero_variation():
     from backend.services.vite_block_registry import resolve_cinematic_block_plan
 
     plan = resolve_cinematic_block_plan(
@@ -766,9 +768,29 @@ def test_block_registry_uses_video_when_creative_direction_requires_immersive_he
         },
     )
 
-    assert plan["hero_variant"] == "video"
+    assert plan["hero_variant"] == "split"
+    assert plan["about_variant"] == "feature_grid"
     assert plan["cinematic_direction"] == "energetic"
     assert plan["motion_mix"] == ["parallax_video", "mask_reveal"]
+
+
+def test_block_registry_respects_explicit_video_hero_and_about_variant():
+    from backend.services.vite_block_registry import resolve_cinematic_block_plan
+
+    plan = resolve_cinematic_block_plan(
+        section_order=["navbar", "hero", "about", "services", "gallery", "contact-cta", "footer"],
+        archetype="BOLD_ENERGY",
+        segment="academia",
+        variation={
+            "visual_lane": "lane_a",
+            "hero_layout": "video",
+            "about_variant": "proof_sidebar",
+            "services_variant": "stats_then_cards",
+        },
+    )
+
+    assert plan["hero_variant"] == "video"
+    assert plan["about_variant"] == "proof_sidebar"
 
 
 def test_cinematic_footer_uses_theme_tokens_not_fixed_default_colors():
@@ -799,6 +821,31 @@ def test_cinematic_footer_uses_theme_tokens_not_fixed_default_colors():
     assert "text-zinc-400" not in footer
     assert "const _showVideo = heroVariant === 'video' || heroVariant === 'fullbleed';" in hero
     assert '"hero_variant": "video"' in site_data
+
+
+def test_cinematic_about_section_has_structural_variants():
+    from backend.services.vite_react_renderer import _generate_cinematic_studio_files
+
+    files = _generate_cinematic_studio_files(
+        {
+            "business": {
+                "name": "Academia Blocos",
+                "segment": "academia",
+                "city": "Curitiba",
+                "address": "Rua Teste, 10 - Curitiba",
+            },
+            "variation": {
+                "about_variant": "manifesto_split",
+                "services_variant": "split_editorial",
+            },
+        }
+    )
+    about = files.get("src/components/AboutSection.tsx", "")
+    site_data = files.get("src/components/siteData.ts", "")
+
+    assert "aboutVariant === 'manifesto_split'" in about
+    assert "aboutVariant === 'proof_sidebar'" in about
+    assert '"about_variant": "manifesto_split"' in site_data
 
 
 def test_block_registry_anti_repetition_avoids_default_glass():
@@ -856,7 +903,12 @@ def run_all_tests():
         test_cinematic_copy_prioritizes_prompt_contract_and_sanitizes_public_text,
         test_vite_llm_policy_defaults_to_none_and_rejects_generic_copy,
         test_creative_plan_enriches_existing_variation_contract,
+        test_creative_plan_visual_drama_does_not_force_video_hero,
         test_block_registry_respects_creative_plan_over_lane_defaults,
+        test_block_registry_does_not_default_to_video_without_explicit_hero_variation,
+        test_block_registry_respects_explicit_video_hero_and_about_variant,
+        test_cinematic_footer_uses_theme_tokens_not_fixed_default_colors,
+        test_cinematic_about_section_has_structural_variants,
         test_block_registry_anti_repetition_avoids_default_glass,
         test_segment_contamination_uses_word_boundaries_for_names,
     ]

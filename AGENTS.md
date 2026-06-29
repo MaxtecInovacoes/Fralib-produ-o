@@ -794,8 +794,9 @@ sites cinematográficos com baixo custo. O LLM atua como estrategista de marca,
 diretor criativo, UX/CRO e SEO local, mas retorna apenas JSON validado. O
 renderer determinístico aplica o plano em blocos Vite/React, priorizando:
 - Brand DNA antes de nicho/template.
-- Hero imersivo (`video`/`fullbleed`) quando houver drama visual, performance,
-  ritual ou exclusividade.
+- Hero imersivo conforme a variação (`split`, `center`, `asymmetric`,
+  `fullbleed` ou `video`). `video` nunca é padrão; só entra quando
+  `hero_layout`/lane/creative_plan pedir explicitamente.
 - Footer e seções sempre usando tokens do tema (`--bg`, `--text`,
   `--text-muted`, `--accent`), sem cor padrão solta.
 - OG/Twitter e JSON-LD alinhados no publicador.
