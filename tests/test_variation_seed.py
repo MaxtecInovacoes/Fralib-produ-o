@@ -1024,6 +1024,63 @@ def test_cinematic_motion_does_not_hide_essential_sections_by_default():
     return True
 
 
+def test_cinematic_lgpd_uses_site_theme_tokens():
+    from backend.services.vite_react_renderer import _generate_cinematic_studio_files
+
+    files = _generate_cinematic_studio_files(
+        {
+            "business": {"name": "Academia LGPD Tema", "segment": "academia", "city": "Curitiba"},
+            "variation": {"visual_lane": "lane_b"},
+        }
+    )
+    banner = files.get("src/components/LgpdBanner.tsx", "")
+
+    assert "var(--accent)" in banner
+    assert "var(--bg)" in banner
+    assert "emerald" not in banner
+    assert "bg-zinc-950/94" not in banner
+    return True
+
+
+def test_cinematic_light_surface_avoids_salmon_fallback():
+    from backend.services.vite_react_renderer import _generate_cinematic_studio_files
+
+    files = _generate_cinematic_studio_files(
+        {
+            "business": {"name": "Academia Sem Salmao", "segment": "academia", "city": "Rio"},
+            "variation": {"visual_lane": "lane_a"},
+        }
+    )
+    css = files.get("src/index.css", "")
+
+    assert "--bg-light: #f6f7f4;" in css
+    assert "#fff1ee" not in css
+    return True
+
+
+def test_cinematic_motion_mix_materializes_in_generated_code():
+    from backend.services.vite_react_renderer import _generate_cinematic_studio_files
+
+    files = _generate_cinematic_studio_files(
+        {
+            "business": {"name": "Academia Motion Mix", "segment": "academia", "city": "Rio"},
+            "variation": {"visual_lane": "lane_b"},
+        }
+    )
+    hero = files.get("src/components/HeroSection.tsx", "")
+    reviews = files.get("src/components/ReviewsSection.tsx", "")
+    css = files.get("src/index.css", "")
+    site_data = files.get("src/components/siteData.ts", "")
+
+    assert '"motion_mix": ["parallax_video", "mask_reveal", "marquee"]' in site_data
+    assert "motionClass" in hero
+    assert "data-motion-mask" in hero
+    assert "motion-marquee-rail" in reviews
+    assert "@keyframes fralib-mask-reveal" in css
+    assert "@keyframes fralib-marquee" in css
+    return True
+
+
 def test_block_registry_anti_repetition_avoids_default_glass():
     from backend.services.vite_block_registry import resolve_cinematic_block_plan
 
@@ -1091,6 +1148,9 @@ def run_all_tests():
         test_cinematic_theme_prefers_visual_lane_palette_unless_locked,
         test_cinematic_hero_contains_structural_branches_not_only_class_rotation,
         test_cinematic_motion_does_not_hide_essential_sections_by_default,
+        test_cinematic_lgpd_uses_site_theme_tokens,
+        test_cinematic_light_surface_avoids_salmon_fallback,
+        test_cinematic_motion_mix_materializes_in_generated_code,
         test_block_registry_anti_repetition_avoids_default_glass,
         test_segment_contamination_uses_word_boundaries_for_names,
     ]

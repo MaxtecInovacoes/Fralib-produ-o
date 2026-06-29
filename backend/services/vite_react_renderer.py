@@ -4463,6 +4463,8 @@ export function HeroSection({ onOpen }: { onOpen?: () => void }) {
   const heroVariant = String((blockPlan as any)?.hero_variant || (variation as any)?.hero_layout || 'split');
   const heroTextSide = String((blockPlan as any)?.hero_text_side || '');
   const motionStyle = String((blockPlan as any)?.motion_style || (variation as any)?.motion_style || 'smooth');
+  const motionMix = Array.isArray((blockPlan as any)?.motion_mix) ? (blockPlan as any).motion_mix : [];
+  const motionClass = motionMix.map((item: string) => `motion-${item}`).join(' ');
   // Video follows the final block plan, not only the raw variation payload.
   const _showVideo = heroVariant === 'video' || heroVariant === 'fullbleed';
 useEffect(() => {
@@ -4506,7 +4508,7 @@ useEffect(() => {
         ? 'rounded-[18px] border border-transparent bg-[color-mix(in_srgb,var(--accent)_16%,transparent)] p-4'
         : 'rounded-[18px] border border-white/10 bg-white/[0.055] p-4 backdrop-blur-md';
   return (
-    <section ref={rootRef} id="hero" className={'hero-v14 ' + heroClasses}>
+    <section ref={rootRef} id="hero" className={'hero-v14 ' + heroClasses + ' ' + motionClass}>
       <div className="absolute inset-0 -z-20" style={{ background: 'var(--bg)' }} />
       {_showVideo && mediaVideos[0] ? (
         <video data-hero-video className="absolute inset-0 -z-10 h-full w-full object-cover opacity-52 saturate-[.9]" src={mediaVideos[0]} poster={mediaImages[0]} autoPlay muted loop playsInline preload="metadata" />
@@ -4516,8 +4518,8 @@ useEffect(() => {
       <div className="absolute inset-0 -z-10" style={{ background: heroVariant === 'video' || heroVariant === 'fullbleed' ? `linear-gradient(180deg, color-mix(in srgb, var(--bg) 58%, transparent), color-mix(in srgb, var(--bg) 92%, transparent) 72%, var(--bg)), radial-gradient(circle_at_50%_28%, color-mix(in srgb, var(--accent) 18%, transparent), transparent 42%)` : heroVariant === 'center' ? `linear-gradient(180deg, color-mix(in srgb, var(--bg) 92%, transparent), color-mix(in srgb, var(--bg) 76%, transparent)), radial-gradient(circle_at_50%_18%, color-mix(in srgb, var(--accent) 26%, transparent), transparent 34%)` : heroVariant === 'asymmetric' ? `linear-gradient(115deg, color-mix(in srgb, var(--bg) 96%, transparent), color-mix(in srgb, var(--bg) 82%, transparent) 52%, color-mix(in srgb, var(--accent) 16%, transparent)), radial-gradient(circle_at_12%_72%, color-mix(in srgb, var(--accent) 18%, transparent), transparent 30%)` : `linear-gradient(90deg, color-mix(in srgb, var(--bg) 96%, transparent), color-mix(in srgb, var(--bg) 66%, transparent) 42%, color-mix(in srgb, var(--bg) 22%, transparent)), radial-gradient(circle_at_80%_20%, color-mix(in srgb, var(--accent) 20%, transparent), transparent 34%)` }} />
       <div className={shellClass}>
         <div className={copyClass}>
-          <motion.div data-hero-reveal className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em]" style={{ borderColor: 'color-mix(in srgb, var(--accent) 25%, transparent)', background: 'color-mix(in srgb, var(--accent) 10%, transparent)', color: 'var(--accent-soft)' }}><Play className="h-3.5 w-3.5" />{siteCopy.hero_badge || `${siteCopy.segment} em ${siteCopy.city}`}</motion.div>
-          <h1 data-hero-reveal className="mt-7 max-w-5xl text-[clamp(2.65rem,7.7vw,5.9rem)] font-semibold leading-[0.93] tracking-[-0.035em] text-white">{siteCopy.headline}</h1>
+          <motion.div data-hero-reveal data-motion-line className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em]" style={{ borderColor: 'color-mix(in srgb, var(--accent) 25%, transparent)', background: 'color-mix(in srgb, var(--accent) 10%, transparent)', color: 'var(--accent-soft)' }}><Play className="h-3.5 w-3.5" />{siteCopy.hero_badge || `${siteCopy.segment} em ${siteCopy.city}`}</motion.div>
+          <h1 data-hero-reveal data-motion-mask className="mt-7 max-w-5xl text-[clamp(2.65rem,7.7vw,5.9rem)] font-semibold leading-[0.93] tracking-[-0.035em] text-white">{siteCopy.headline}</h1>
           <p data-hero-reveal className="mt-6 max-w-2xl text-base leading-8 text-zinc-200 md:text-lg">{siteCopy.subheadline}</p>
           <div data-hero-reveal className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
             <a href={whatsappHref} rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 rounded-full px-6 py-3.5 text-sm font-semibold transition duration-300 hover:-translate-y-0.5" style={{ background: 'var(--accent)', color: 'var(--bg)' }}><MessageCircle className="h-4 w-4" />{siteCopy.cta_primary}</a>
@@ -4525,7 +4527,7 @@ useEffect(() => {
           </div>
         </div>
         {hasMediaPanel ? (
-          <motion.figure data-hero-reveal className={mediaPanelClass}>
+          <motion.figure data-hero-reveal data-motion-depth className={mediaPanelClass}>
             <img src={mediaImages[1] || mediaImages[0]} alt={siteCopy.gallery_alt} className="h-full w-full object-cover opacity-90" loading="eager" decoding="async" />
             <figcaption className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/78 to-transparent p-5 text-sm font-semibold text-white">{siteCopy.name}</figcaption>
           </motion.figure>
@@ -4601,6 +4603,32 @@ export default HeroSection;
 }}
 @media (prefers-reduced-motion: reduce) {{
   *, *::before, *::after {{ animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: 0.01ms !important; }}
+}}
+.motion-mask_reveal [data-motion-mask] {{
+  animation: fralib-mask-reveal 900ms cubic-bezier(.16,1,.3,1) both;
+}}
+.motion-line_draw [data-motion-line] {{
+  box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--accent) 70%, transparent);
+}}
+.motion-hover_depth [data-motion-depth] {{
+  transform-style: preserve-3d;
+  transition: transform .55s cubic-bezier(.16,1,.3,1), box-shadow .55s cubic-bezier(.16,1,.3,1);
+}}
+.motion-hover_depth [data-motion-depth]:hover {{
+  transform: translateY(-8px) rotateX(1deg) rotateY(-1deg);
+  box-shadow: 0 40px 110px color-mix(in srgb, var(--accent) 18%, rgba(0,0,0,.42));
+}}
+.motion-marquee-rail {{
+  animation: fralib-marquee 28s linear infinite;
+  width: max-content;
+}}
+@keyframes fralib-mask-reveal {{
+  from {{ clip-path: inset(0 0 100% 0); transform: translateY(16px); }}
+  to {{ clip-path: inset(0 0 0 0); transform: translateY(0); }}
+}}
+@keyframes fralib-marquee {{
+  from {{ transform: translateX(0); }}
+  to {{ transform: translateX(-50%); }}
 }}
 """,
     }
@@ -4696,9 +4724,11 @@ const proofs = siteCopy.services.map((service, index) => ({
 }));
 export function ReviewsSection() {
   const proofStyle = String((blockPlan as any)?.reviews_variant || (variation as any)?.proof_style || '');
+  const motionMix = Array.isArray((blockPlan as any)?.motion_mix) ? (blockPlan as any).motion_mix : [];
   const spotlight = proofStyle === 'quote_spotlight';
   const marquee = proofStyle === 'card_marquee';
-  return <section id="avaliacoes" style={{ background: 'var(--bg)' }} className="overflow-hidden px-5 py-20 text-white md:px-8 md:py-28"><div className="mx-auto max-w-7xl"><div className="mb-10 flex flex-col gap-4 md:flex-row md:items-end md:justify-between"><div><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>{siteCopy.reviews_kicker}</p><h2 className="mt-3 max-w-3xl text-[clamp(2rem,4.8vw,4.4rem)] font-semibold leading-[1] tracking-[-0.025em]">{siteCopy.reviews_title}</h2></div><div className="max-w-md text-sm leading-7 text-zinc-300">{siteCopy.reviews_intro}</div></div>{marquee ? <div className="flex gap-4 overflow-hidden">{[...proofs, ...proofs].map((item, index) => <motion.article key={`${item.title}-${index}`} initial={{ opacity: 0, x: 24 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true, amount: 0.18 }} className="min-w-[18rem] rounded-[18px] border border-white/10 bg-white/[0.05] p-6"><div className="flex items-center gap-3"><Avatar><AvatarFallback>{item.initials}</AvatarFallback></Avatar><div><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>{item.badge}</p><h3 className="mt-1 text-lg font-semibold text-white">{item.title}</h3></div></div><Separator className="my-4" /><p className="text-sm leading-7 text-zinc-300">{item.body}</p></motion.article>)}</div> : <div className={`grid gap-4 ${spotlight ? 'lg:grid-cols-[1.15fr_0.85fr]' : 'md:grid-cols-3'}`}><motion.article initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.24 }} className="rounded-[22px] border border-white/10 bg-white/[0.05] p-7"><p className="text-2xl leading-10 text-white">“{siteCopy.proof_quote}”</p><p className="mt-6 text-sm font-semibold text-zinc-300">{siteCopy.city} • {siteCopy.segment}</p></motion.article><div className={`grid gap-4 ${spotlight ? '' : 'md:col-span-2 md:grid-cols-2'}`}>{proofs.slice(0, spotlight ? 2 : 4).map((item, index) => <motion.article key={item.title} initial={{ opacity: 0, y: 18 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.24 }} transition={{ delay: index * 0.05 }} className="rounded-[18px] border border-white/10 bg-white/[0.04] p-6"><div className="flex items-center gap-3"><Avatar className="h-10 w-10"><AvatarFallback>{item.initials}</AvatarFallback></Avatar><div><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>{item.badge}</p><h3 className="mt-1 text-lg font-semibold text-white">{item.title}</h3></div></div><Separator className="my-4" /><p className="text-sm leading-7 text-zinc-300">{item.body}</p></motion.article>)}</div></div>}</div></section>;
+  const railClass = motionMix.includes('marquee') ? 'motion-marquee-rail' : '';
+  return <section id="avaliacoes" style={{ background: 'var(--bg)' }} className="overflow-hidden px-5 py-20 text-white md:px-8 md:py-28"><div className="mx-auto max-w-7xl"><div className="mb-10 flex flex-col gap-4 md:flex-row md:items-end md:justify-between"><div><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>{siteCopy.reviews_kicker}</p><h2 className="mt-3 max-w-3xl text-[clamp(2rem,4.8vw,4.4rem)] font-semibold leading-[1] tracking-[-0.025em]">{siteCopy.reviews_title}</h2></div><div className="max-w-md text-sm leading-7 text-zinc-300">{siteCopy.reviews_intro}</div></div>{marquee ? <div data-proof-rail className={`flex gap-4 overflow-hidden ${railClass}`}>{[...proofs, ...proofs].map((item, index) => <motion.article key={`${item.title}-${index}`} initial={{ opacity: 0, x: 24 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true, amount: 0.18 }} className="min-w-[18rem] rounded-[18px] border border-white/10 bg-white/[0.05] p-6"><div className="flex items-center gap-3"><Avatar><AvatarFallback>{item.initials}</AvatarFallback></Avatar><div><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>{item.badge}</p><h3 className="mt-1 text-lg font-semibold text-white">{item.title}</h3></div></div><Separator className="my-4" /><p className="text-sm leading-7 text-zinc-300">{item.body}</p></motion.article>)}</div> : <div className={`grid gap-4 ${spotlight ? 'lg:grid-cols-[1.15fr_0.85fr]' : 'md:grid-cols-3'}`}><motion.article initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.24 }} className="rounded-[22px] border border-white/10 bg-white/[0.05] p-7"><p className="text-2xl leading-10 text-white">“{siteCopy.proof_quote}”</p><p className="mt-6 text-sm font-semibold text-zinc-300">{siteCopy.city} • {siteCopy.segment}</p></motion.article><div className={`grid gap-4 ${spotlight ? '' : 'md:col-span-2 md:grid-cols-2'}`}>{proofs.slice(0, spotlight ? 2 : 4).map((item, index) => <motion.article key={item.title} initial={{ opacity: 0, y: 18 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.24 }} transition={{ delay: index * 0.05 }} className="rounded-[18px] border border-white/10 bg-white/[0.04] p-6"><div className="flex items-center gap-3"><Avatar className="h-10 w-10"><AvatarFallback>{item.initials}</AvatarFallback></Avatar><div><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>{item.badge}</p><h3 className="mt-1 text-lg font-semibold text-white">{item.title}</h3></div></div><Separator className="my-4" /><p className="text-sm leading-7 text-zinc-300">{item.body}</p></motion.article>)}</div></div>}</div></section>;
 }
 export default ReviewsSection;
 """.replace("__PROOF_STYLE__", proof_style.replace("_", " "))
@@ -7200,17 +7230,18 @@ export function LgpdBanner() {
       data-lgpd-banner
       initial={{ opacity: 0, y: 24 }}
       animate={{ opacity: 1, y: 0 }}
-      className="fixed inset-x-4 bottom-4 z-[9999] mx-auto grid max-w-3xl grid-cols-[auto_1fr_auto] items-center gap-3 rounded-2xl border border-white/15 bg-zinc-950/94 p-4 text-white shadow-2xl backdrop-blur"
+      className="fixed inset-x-4 bottom-4 z-[9999] mx-auto grid max-w-3xl grid-cols-[auto_1fr_auto] items-center gap-3 rounded-2xl p-4 shadow-2xl backdrop-blur"
+      style={{ background: 'color-mix(in srgb, var(--bg) 94%, black 6%)', color: 'var(--text)', border: '1px solid color-mix(in srgb, var(--accent) 26%, transparent)' }}
       role="dialog"
       aria-label="Aviso de privacidade"
     >
-      <ShieldCheck className="h-5 w-5 text-emerald-300" />
-      <p className="text-sm leading-5 text-zinc-200">Tratamos dados de contato apenas para atendimento, segurança e melhoria da experiência.</p>
+      <ShieldCheck className="h-5 w-5" style={{ color: 'var(--accent)' }} />
+      <p className="text-sm leading-5" style={{ color: 'var(--text-muted)' }}>Tratamos dados de contato apenas para atendimento, segurança e melhoria da experiência.</p>
       <div className="flex items-center gap-2">
-        <button type="button" data-lgpd-accept onClick={accept} className="rounded-full bg-emerald-300 px-4 py-2 text-sm font-semibold text-zinc-950">
+        <button type="button" data-lgpd-accept onClick={accept} className="rounded-full px-4 py-2 text-sm font-semibold" style={{ background: 'var(--accent)', color: 'var(--accent-contrast)' }}>
           Aceitar
         </button>
-        <button type="button" aria-label="Fechar aviso de privacidade" onClick={accept} className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/10 text-white">
+        <button type="button" aria-label="Fechar aviso de privacidade" onClick={accept} className="inline-flex h-9 w-9 items-center justify-center rounded-full" style={{ color: 'var(--text)', border: '1px solid color-mix(in srgb, var(--accent) 18%, transparent)' }}>
           <X className="h-4 w-4" />
         </button>
       </div>

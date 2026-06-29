@@ -81,17 +81,18 @@ export function LgpdBanner({ businessName, city, customMessage }: LgpdBannerProp
       data-lgpd-banner
       initial={{ opacity: 0, y: 24 }}
       animate={{ opacity: 1, y: 0 }}
-      className="fixed inset-x-4 bottom-4 z-[9999] mx-auto grid max-w-3xl grid-cols-[auto_1fr_auto] items-center gap-3 rounded-2xl border border-white/15 bg-zinc-950/94 p-4 text-white shadow-2xl backdrop-blur"
+      className="fixed inset-x-4 bottom-4 z-[9999] mx-auto grid max-w-3xl grid-cols-[auto_1fr_auto] items-center gap-3 rounded-2xl p-4 shadow-2xl backdrop-blur"
+      style={{ background: 'color-mix(in srgb, var(--bg) 94%, black 6%)', color: 'var(--text)', border: '1px solid color-mix(in srgb, var(--accent) 26%, transparent)' }}
       role="dialog"
       aria-label="Aviso de privacidade"
     >
-      <ShieldCheck className="h-5 w-5 text-emerald-300" />
-      <p className="text-sm leading-5 text-zinc-200">{message}</p>
+      <ShieldCheck className="h-5 w-5" style={{ color: 'var(--accent)' }} />
+      <p className="text-sm leading-5" style={{ color: 'var(--text-muted)' }}>{message}</p>
       <div className="flex items-center gap-2">
-        <button type="button" data-lgpd-accept onClick={accept} className="rounded-full bg-emerald-300 px-4 py-2 text-sm font-semibold text-zinc-950">
+        <button type="button" data-lgpd-accept onClick={accept} className="rounded-full px-4 py-2 text-sm font-semibold" style={{ background: 'var(--accent)', color: 'var(--accent-contrast)' }}>
           Aceitar
         </button>
-        <button type="button" aria-label="Fechar aviso de privacidade" onClick={accept} className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/10 text-white">
+        <button type="button" aria-label="Fechar aviso de privacidade" onClick={accept} className="inline-flex h-9 w-9 items-center justify-center rounded-full" style={{ color: 'var(--text)', border: '1px solid color-mix(in srgb, var(--accent) 18%, transparent)' }}>
           <X className="h-4 w-4" />
         </button>
       </div>

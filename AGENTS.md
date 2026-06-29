@@ -448,6 +448,13 @@ genéricas do upstream, salvo quando `palette_locked`/`brand_palette_locked` ou
 nascer com `opacity: 0`; motion deve animar sem deixar seções invisíveis em QA,
 SEO screenshot ou headless full-page capture.
 
+Desde 2026-06-29, o Studio React deve materializar a variação no código
+gerado: `motion_mix` precisa virar classe/atributo/CSS reais, LGPD deve usar
+tokens do tema (`--bg`, `--accent`, `--text`) em vez de cor padrão fixa, e
+fallback de superfície clara não pode misturar vermelho com branco gerando bloco
+salmão genérico. Se uma animação for planejada mas não houver elemento compatível
+no bloco escolhido, ela não conta como entregue.
+
 **Arquivos mantidos por compatibilidade** (não usados no caminho canônico, mas
 mantidos para evitar imports quebrados em outros módulos):
 - `backend/services/pipeline_renderer_support.py` — nome herdado, mas o conteúdo
