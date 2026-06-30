@@ -480,6 +480,7 @@ def _process_outbound_queue_cycle() -> dict:
     """Processa 1 mensagem automatica respeitando fila por tenant."""
 
     from services.outbound_queue import process_queue_once
+    from sdr_langgraph import _dentro_do_horario
     import requests
 
     meowhats_url = os.getenv("MEOWHATS_URL", "http://localhost:3001").rstrip("/")
