@@ -68,6 +68,20 @@ class TestNoFallbackInCode:
         assert "render_openui_site(" not in template_block
         assert "sem fallback" in template_block
 
+    def test_vite_cinematic_media_nao_usa_imagem_generica(self):
+        """Hero/galeria cinematica deve falhar se nao houver midia real no facts."""
+        from pathlib import Path
+        renderer_path = Path(__file__).resolve().parents[2] / "backend" / "services" / "vite_react_renderer.py"
+        content = renderer_path.read_text(encoding="utf-8")
+        block = content[
+            content.index("def _cinematic_media_urls") : content.index("def _cinematic_copy")
+        ]
+
+        assert "ImageNotAvailableError" in block
+        assert "images.unsplash.com/photo-1490645935967" not in block
+        assert "images.unsplash.com/photo-1512621776951" not in block
+        assert "images.unsplash.com/photo-1498837167922" not in block
+
     def test_sem_fallback_google_maps_no_rag(self):
         """FRANZ_RAG.md nao pode conter exemplo 'Google Maps'."""
         from pathlib import Path
