@@ -237,7 +237,7 @@ async function verificarLeads() {
 
 function conectarWhatsApp() {
   // Redirecionar para a pagina de configuracao do WhatsApp
-  window.location.href = '/dashboard.html?view=config&highlight=whatsapp';
+  window.location.href = '/admin.html?view=config&highlight=whatsapp';
 }
 
 // Rastrear Purchase se veio de um plano pago (exceto trial)
@@ -269,8 +269,8 @@ function conectarWhatsApp() {
 function pularWhatsApp() {
   // Marcar que o usuario pulou o onboarding
   localStorage.setItem('fralib_onboarding_whatsapp_skip', 'true');
-  // Redirecionar para o dashboard
-  window.location.href = '/dashboard.html';
+  // Redirecionar para o painel canonico
+  window.location.href = '/admin.html';
 }
 
 // Verificar leads ao carregar a pagina

@@ -313,7 +313,7 @@ async def enviar_email_resumo_diario(email: str, nome: str, leads: list) -> bool
 <table role="presentation" cellpadding="0" cellspacing="0">
 <tr>
 <td align="center" style="border-radius:6px;background:#FFB800;box-shadow:0 4px 0 #b38200, 0 0 20px rgba(255,184,0,0.3);">
-<a href="{APP_URL}/dashboard" target="_blank" style="display:inline-block;padding:14px 28px;font-family:'Press Start 2P',monospace;font-size:9px;font-weight:600;color:#08080c;text-decoration:none;letter-spacing:0.5px;">ABRIR DASHBOARD</a>
+<a href="{APP_URL}/admin.html" target="_blank" style="display:inline-block;padding:14px 28px;font-family:'Press Start 2P',monospace;font-size:9px;font-weight:600;color:#08080c;text-decoration:none;letter-spacing:0.5px;">ABRIR PAINEL</a>
 </td>
 </tr>
 </table>
@@ -382,7 +382,7 @@ async def enviar_email_reativacao(
     primeiro_nome = (nome or email.split("@")[0]).split()[0]
     plural_dias = "dia" if dias_cadastrado == 1 else "dias"
     plural_creditos = "credito" if creditos == 1 else "creditos"
-    link_dashboard = f"{APP_URL}/dashboard"
+    link_dashboard = f"{APP_URL}/admin.html"
 
     html = f"""<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
@@ -707,7 +707,7 @@ async def enviar_email_reativacao_step2(email: str, nome: str) -> bool:
 </tr>
 <tr>
 <td style="padding:10px 40px 0 40px;" align="center">
-<a href="{APP_URL}/dashboard" style="color:#a855f7;font-size:13px;font-weight:600;text-decoration:none">ABRIR PAINEL &rarr;</a>
+<a href="{APP_URL}/admin.html" style="color:#a855f7;font-size:13px;font-weight:600;text-decoration:none">ABRIR PAINEL &rarr;</a>
 </td>
 </tr>"""
     html = _base_layout(
@@ -827,7 +827,7 @@ async def enviar_email_reativacao_step4(email: str, nome: str) -> bool:
 <table role="presentation" cellpadding="0" cellspacing="0">
 <tr>
 <td align="center" style="border-radius:6px;background:#FFB800;box-shadow:0 4px 0 #b38200, 0 0 20px rgba(255,184,0,0.3);">
-<a href="{APP_URL}/dashboard" style="display:inline-block;padding:14px 28px;font-family:'Press Start 2P',monospace;font-size:9px;font-weight:600;color:#08080c;text-decoration:none;letter-spacing:0.5px;">EXPLORAR O PAINEL</a>
+<a href="{APP_URL}/admin.html" style="display:inline-block;padding:14px 28px;font-family:'Press Start 2P',monospace;font-size:9px;font-weight:600;color:#08080c;text-decoration:none;letter-spacing:0.5px;">EXPLORAR O PAINEL</a>
 </td>
 </tr>
 </table>
@@ -892,7 +892,7 @@ async def enviar_email_reativacao_step5(email: str, nome: str, plano: str, credi
 </tr>
 <tr>
 <td style="padding:10px 40px 0 40px;" align="center">
-<a href="{APP_URL}/dashboard" style="color:#a855f7;font-size:13px;font-weight:600;text-decoration:none">GERAR MEU PRIMEIRO SITE &rarr;</a>
+<a href="{APP_URL}/admin.html" style="color:#a855f7;font-size:13px;font-weight:600;text-decoration:none">GERAR MEU PRIMEIRO SITE &rarr;</a>
 </td>
 </tr>"""
     html = _base_layout(

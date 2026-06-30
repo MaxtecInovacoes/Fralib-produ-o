@@ -389,6 +389,15 @@ branch explícito `FRALIB_BUILDER_ENGINE=vite_react`.
 - `/api/observability/*` — traces e gargalos.
 - `/api/whatsapp/*` — status/conexão.
 
+### 16.1 UI canônica
+
+- `admin.html` é a única UI operacional canônica para tenants e usuários novos.
+- `/admin` deve redirecionar para `/admin.html`.
+- `/dashboard` e `/dashboard.html` são legado e devem redirecionar para
+  `/admin.html`, preservando querystring.
+- Emails, checkout, onboarding, login e cadastro não devem criar links novos
+  para `/dashboard` ou `/dashboard.html`.
+
 ---
 
 ## 17. Top 5 Arquivos para Entender/Alterar a Pipeline

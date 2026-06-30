@@ -31,8 +31,10 @@ def main() -> int:
 
     if 'frontend/*.html' in hook:
         problems.append("post-receive ainda publica frontend/*.html por glob")
-    if 'location = /dashboard {' not in nginx or 'return 302 /dashboard.html;' not in nginx:
-        problems.append("Nginx nao preserva a rota tenant /dashboard")
+    if 'location = /dashboard {' not in nginx or 'return 302 /admin.html$is_args$args;' not in nginx:
+        problems.append("Nginx nao redireciona /dashboard para admin.html")
+    if 'location = /dashboard.html {' not in nginx or 'return 302 /admin.html$is_args$args;' not in nginx:
+        problems.append("Nginx nao redireciona /dashboard.html para admin.html")
     if 'location = /admin {' not in nginx or 'return 302 /admin.html;' not in nginx:
         problems.append("Nginx nao preserva a rota operacional /admin")
     if 'return 301 /admin;' in nginx or 'return 302 /admin;' in nginx:

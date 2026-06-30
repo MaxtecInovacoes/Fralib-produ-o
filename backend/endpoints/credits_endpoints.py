@@ -268,7 +268,7 @@ def _criar_assinatura_mercadopago(plano: str, usuario: dict) -> dict:
             "transaction_amount": config["valor"],
             "currency_id": "BRL",
         },
-        "back_url": f"{app_url}/dashboard?upgrade=ok&provider=mercadopago&plano={plano}",
+        "back_url": f"{app_url}/admin.html?upgrade=ok&provider=mercadopago&plano={plano}",
         "status": "pending",
     }
     if notification_url:
@@ -309,9 +309,9 @@ def _criar_recarga_mercadopago(valor: float | Decimal, usuario: dict) -> dict:
             "creditos": str(pacote["creditos_totais"]),
         },
         "back_urls": {
-            "success": f"{app_url}/dashboard?credits=ok&provider=mercadopago",
-            "failure": f"{app_url}/dashboard?credits=cancel&provider=mercadopago",
-            "pending": f"{app_url}/dashboard?credits=pending&provider=mercadopago",
+            "success": f"{app_url}/admin.html?credits=ok&provider=mercadopago",
+            "failure": f"{app_url}/admin.html?credits=cancel&provider=mercadopago",
+            "pending": f"{app_url}/admin.html?credits=pending&provider=mercadopago",
         },
         "auto_return": "approved",
         "payment_methods": {
