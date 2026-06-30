@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>FraLib OS — Você Fecha. A FraLib Faz o Resto.</title>
-<meta name="description" content="Ganhe R$ 3.000 a R$ 10.000/mês vendendo sites, sem saber programar. A FraLib encontra negócios, cria sites automaticamente e fecha no WhatsApp. Teste grátis por 7 dias.">
+<title>FraLib OS — Criador de Sites com IA, Prospecção B2B e SDR WhatsApp</title>
+<meta name="description" content="Crie sites com IA para leads locais, faça prospecção B2B no Google Maps e acompanhe vendas pelo WhatsApp com CRM e SDR Franz.">
 <!-- Meta Pixel -->
 <script>
 !function(f,b,e,v,n,t,s)
@@ -15,11 +15,11 @@ n.queue=[];t=b.createElement(e);t.async=!0;
 t.src=v;s=b.getElementsByTagName(e)[0];
 s.parentNode.insertBefore(t,s)}(window, document,'script',
 'https://connect.facebook.net/en_US/fbevents.js');
-fbq('init', '1022692323751129');
+fbq('init', '1029635012917024');
 fbq('track', 'PageView');
 </script>
 <noscript><img height="1" width="1" style="display:none"
-src="https://www.facebook.com/tr?id=1022692323751129&ev=PageView&noscript=1"
+src="https://www.facebook.com/tr?id=1029635012917024&ev=PageView&noscript=1"
 ></noscript>
 <!-- Microsoft Clarity -->
 <script>
@@ -65,8 +65,8 @@ src="https://www.facebook.com/tr?id=1022692323751129&ev=PageView&noscript=1"
   --fl-border-hi:   rgba(147,51,234,0.50);
 
   --fl-text:       #f0f0f5;
-  --fl-text-muted: #b0b0c8;
-  --fl-text-dim:   #44445a;
+  --fl-text-muted: #8888a0;
+  --fl-text-dim:   #5a5a70;
   --fl-text-brand: #c084fc;
 
   --fl-success:  #22c55e;
@@ -74,7 +74,7 @@ src="https://www.facebook.com/tr?id=1022692323751129&ev=PageView&noscript=1"
   --fl-danger:   #ef4444;
   --fl-info:     #06b6d4;
 
-  --fl-font-brand: 'Press Start 2P', monospace;
+  --fl-font-brand: 'Syne', 'Playfair Display', serif;  /* FIX: trocado Press Start 2P por Syne approved */
   --fl-font-ui:    'DM Sans', system-ui, sans-serif;
   --fl-font-mono:  'JetBrains Mono', monospace;
 
@@ -95,6 +95,12 @@ src="https://www.facebook.com/tr?id=1022692323751129&ev=PageView&noscript=1"
   --gold-dim:  rgba(255,184,0,0.15);
   --gold-glow: rgba(255,184,0,0.35);
 }
+:focus-visible{outline:2px solid #9333ea;outline-offset:2px}
+
+/* ============================================================
+   SKIP LINK (WCAG 2.4.1)
+   ============================================================ */
+.skip-link{position:absolute;top:-40px;left:0;background:#9333ea;color:#fff;padding:8px 16px;z-index:9999;transition:top .2s}.skip-link:focus{top:0}
 
 /* ============================================================
    RESET
@@ -180,17 +186,10 @@ nav{
   position:fixed;top:0;left:0;right:0;z-index:1000;
   display:grid;grid-template-columns:1fr auto 1fr;align-items:center;
   padding:14px 32px;
-  background:rgba(6,6,8,0.95);
-  -webkit-backdrop-filter:blur(20px);
-  backdrop-filter:blur(20px);
+  background:rgba(6,6,8,0.75);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
   border-bottom:1px solid var(--fl-border);
   transition:all .3s var(--fl-ease);
-}
-@supports not (backdrop-filter:blur(1px)) {
-  nav{background:rgba(6,6,8,0.98)}
-}
-@supports not (-webkit-backdrop-filter:blur(1px)) {
-  nav{background:rgba(6,6,8,0.98)}
 }
 nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
 .nav-brand{display:flex;align-items:center;gap:12px;text-decoration:none; justify-self:start;}
@@ -234,9 +233,8 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
    ============================================================ */
 .hero{
   min-height:100vh;
-  min-height:100dvh;
-  display:flex;align-items:center;justify-content:center;
-  text-align:left;padding:100px 24px 60px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  text-align:center;padding:140px 24px 80px;
   position:relative;overflow:hidden;
 }
 .hero-grid{
@@ -249,423 +247,96 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
   -webkit-mask-image:radial-gradient(ellipse at center,black 20%,transparent 70%);
   pointer-events:none;
 }
-/* Glow removido */
+/* Hero logo centered above badge */
+.hero-logo{
+  height:clamp(100px,16vw,156px);width:auto;
+  margin-bottom:16px;
+  position:relative;z-index:2;
+  filter:drop-shadow(0 0 20px rgba(147,51,234,0.4));
+  animation:fadeUp .5s var(--fl-ease) both;
+}
 
-/* LAYOUT SPLIT: 2 colunas */
-.hero-split{
-  display:grid;
-  grid-template-columns:1.1fr 1fr;
-  gap:60px;
-  max-width:1200px;
-  width:100%;
-  align-items:center;
+.hero-badge{
+  display:inline-flex;align-items:center;gap:10px;
+  padding:8px 20px;border-radius:var(--fl-r-full);
+  background:rgba(147,51,234,0.1);
+  border:1px solid rgba(147,51,234,0.3);
+  font-family:var(--fl-font-mono);font-size:11px;font-weight:500;
+  color:var(--fl-purple-300);
+  margin-bottom:36px;position:relative;z-index:2;
+  animation:fadeUp .6s var(--fl-ease) both;
+}
+.hero-badge .pulse-dot{
+  width:8px;height:8px;border-radius:50%;
+  background:var(--cyan);
+  box-shadow:0 0 12px var(--cyan-glow);
   position:relative;
-  z-index:2;
 }
-.hero-left{display:flex;flex-direction:column;align-items:flex-start;text-align:left}
-.hero-right{display:flex;align-items:center;justify-content:center;position:relative}
+.hero-badge .pulse-dot::after{
+  content:'';position:absolute;inset:-4px;border-radius:50%;
+  border:2px solid var(--cyan);opacity:0;
+  animation:pulse-ring 2s infinite;
+}
+@keyframes pulse-ring{
+  0%{transform:scale(.8);opacity:.5}
+  100%{transform:scale(1.6);opacity:0}
+}
 
-/* BADGE */
-/* H1 - 2 linhas com hierarquia */
-.hero-title{
+.hero h1{
   font-family:var(--fl-font-brand);
-  font-size:clamp(14px,2.8vw,26px);
-  line-height:1.4;
-  max-width:100%;
-  margin-bottom:18px;
+  font-size:clamp(14px,3vw,28px);
+  line-height:2;max-width:860px;
+  margin-bottom:24px;position:relative;z-index:2;
   animation:fadeUp .8s var(--fl-ease) .1s both;
-  display:flex;flex-direction:column;gap:6px;
 }
-.hero-title .grad{
+.hero h1 .grad{
   background:linear-gradient(135deg,var(--fl-purple-300),var(--cyan));
   -webkit-background-clip:text;-webkit-text-fill-color:transparent;
   background-clip:text;
   filter:drop-shadow(0 0 20px rgba(147,51,234,0.4));
 }
-.hero-title-sub{color:var(--fl-text);font-weight:400}
-.hero-title-sub strong{color:var(--cyan);font-weight:700}
-
-/* CONTRASTE DOR vs SOLUÇÃO — cards horizontais compactos */
-.hero-contrast{
-  display:flex;align-items:stretch;justify-content:space-between;
-  gap:8px;margin:0 0 18px;width:100%;max-width:560px;
-  animation:fadeUp .8s var(--fl-ease) .15s both;
-}
-.hero-pain,.hero-solution{
-  flex:1;padding:10px 12px;border-radius:var(--fl-r-md);
-  text-align:left;font-size:11px;font-weight:400;
-  line-height:1.35;
-  display:flex;flex-direction:column;gap:3px;
-}
-.hero-pain{
-  background:rgba(26,16,37,0.6);
-  border:1px solid rgba(76,29,158,0.4);
-  color:#a78bfa;
-}
-.hero-pain strong,.hero-solution strong{font-family:var(--fl-font-brand);font-size:8px;letter-spacing:1px;display:block}
-.hero-pain strong{color:var(--fl-purple-300)}
-.hero-solution{
-  background:rgba(10,31,24,0.6);
-  border:1px solid rgba(0,255,179,0.3);
-  color:#6ee7c0;
-}
-.hero-solution strong{color:var(--cyan)}
-.hero-arrow{
-  color:var(--fl-text-dim);font-size:18px;flex-shrink:0;
-  display:flex;align-items:center;
-}
-
-/* SUB */
 .hero-sub{
-  font-size:clamp(12px,1.2vw,14px);color:var(--fl-text-muted);
-  max-width:520px;line-height:1.5;margin-bottom:18px;
+  font-size:clamp(14px,1.6vw,17px);color:var(--fl-text-muted);
+  max-width:600px;line-height:1.8;margin-bottom:44px;
+  position:relative;z-index:2;
   animation:fadeUp .8s var(--fl-ease) .2s both;
 }
-
-/* CTA */
 .hero-buttons{
-  display:flex;flex-direction:column;align-items:flex-start;gap:6px;
+  display:flex;gap:16px;flex-wrap:wrap;justify-content:center;
+  position:relative;z-index:2;
   animation:fadeUp .8s var(--fl-ease) .3s both;
-  margin-bottom:20px;
-}
-.btn-hero-primary{
-  display:inline-flex;align-items:center;justify-content:center;gap:10px;
-  padding:13px 30px;
-  font-family:var(--fl-font-brand);font-size:11px;letter-spacing:1.2px;
-  color:#000;text-decoration:none;cursor:pointer;border:none;
-  background:var(--gold);
-  box-shadow:
-    inset -3px -3px 0 #A16207,
-    inset 3px 3px 0 #FDE68A,
-    0 4px 0 #713F12,
-    0 8px 18px rgba(255,184,0,0.4);
-  transition:transform 80ms, box-shadow 80ms;
-  animation:btn-pulse 2.4s ease-in-out infinite;
-}
-.btn-hero-primary:hover{
-  background:#FDE047;
-  box-shadow:
-    inset -4px -4px 0 #A16207,
-    inset 4px 4px 0 #FEF9C3,
-    0 6px 0 #713F12,
-    0 0 30px rgba(255,184,0,0.6);
-  transform:translateY(-2px);
-}
-.btn-hero-primary:active{
-  transform:translateY(2px);
-  box-shadow:
-    inset -4px -4px 0 #A16207,
-    inset 4px 4px 0 #FDE68A,
-    0 2px 0 #713F12;
-}
-@keyframes btn-pulse{
-  0%,100%{box-shadow:
-    inset -4px -4px 0 #A16207,
-    inset 4px 4px 0 #FDE68A,
-    0 6px 0 #713F12,
-    0 12px 24px rgba(255,184,0,0.4)}
-  50%{box-shadow:
-    inset -4px -4px 0 #A16207,
-    inset 4px 4px 0 #FDE68A,
-    0 6px 0 #713F12,
-    0 12px 40px rgba(255,184,0,0.7)}
-}
-.hero-cta-sub{
-  font-size:10px;color:var(--fl-text-dim);font-family:var(--fl-font-mono);
-  letter-spacing:0.5px;
-}
-.hero-cta-sub span{color:var(--cyan);font-weight:700}
-
-/* MICRO-PROVA — stat strip horizontal */
-.hero-microproof{
-  display:flex;align-items:center;gap:18px;
-  animation:fadeUp .8s var(--fl-ease) .4s both;
-}
-.hero-microproof-item{
-  display:flex;flex-direction:column;gap:0;
-  text-align:left;
-}
-.hero-microproof-num{
-  font-family:var(--fl-font-mono);font-size:18px;font-weight:700;
-  color:var(--cyan);
-  line-height:1.1;
-}
-.hero-microproof-label{
-  font-size:8px;color:var(--fl-text-muted);
-  font-family:var(--fl-font-mono);letter-spacing:0.3px;
-  text-transform:uppercase;
-  line-height:1.2;
-}
-.hero-microproof-sep{
-  width:1px;height:20px;background:var(--fl-border-md);
 }
 
-/* MOCKUP - Coluna direita: PIPELINE ANIMADA (motion design) */
-.hero-mockup{
-  position:relative;
-  width:100%;
-  max-width:520px;
-  background:linear-gradient(180deg,rgba(18,18,26,0.95),rgba(14,14,20,0.95));
-  border:1px solid var(--fl-border-hi);
-  border-radius:var(--fl-r-lg);
-  padding:18px;
-  box-shadow:0 20px 40px rgba(0,0,0,.5),0 0 30px rgba(124,58,237,.15);
-  animation:fadeUp 1s var(--fl-ease) .2s both;
-}
-.mock-kanban-header{
-  display:flex;align-items:center;gap:8px;
-  margin-bottom:16px;padding-bottom:12px;
-  border-bottom:1px solid var(--fl-border);
-}
-.mock-dot{
-  width:8px;height:8px;border-radius:50%;
-  background:var(--cyan);
-  box-shadow:0 0 8px var(--cyan-glow);
-}
-.mock-dot.pulsing{animation:dot-pulse 1.5s ease-in-out infinite}
-@keyframes dot-pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.7)}}
-.mock-title{
-  font-family:var(--fl-font-mono);font-size:11px;
-  color:var(--fl-text);letter-spacing:1px;font-weight:600;flex:1;
-}
-.mock-status{display:flex;align-items:center}
-.mock-dot-live{
-  width:6px;height:6px;border-radius:50%;background:var(--fl-danger);
-  box-shadow:0 0 8px rgba(239,68,68,.6);
-  animation:dot-pulse 1s ease-in-out infinite;
-}
-
-/* PIPELINE - container das 5 etapas (motion design v2) */
-.pipeline{
-  display:flex;flex-direction:column;gap:8px;
-  position:relative;
-  opacity:0;
-  animation:pipeline-fade-in .4s var(--fl-ease) .2s forwards;
-}
-@keyframes pipeline-fade-in{to{opacity:1}}
-.pipeline::before{
-  content:'';position:absolute;left:18px;top:24px;bottom:24px;
-  width:2px;background:linear-gradient(180deg,var(--cyan) 0%,var(--fl-purple-300) 50%,var(--gold) 100%);
-  opacity:.3;
-  animation:line-pulse 4s ease-in-out infinite;
-}
-@keyframes line-pulse{
-  0%,100%{opacity:.3}50%{opacity:.55}
-}
-
-/* STEP base - com transição de status */
-.pipeline-step{
-  display:flex;align-items:center;gap:12px;
-  padding:10px 12px;
-  background:rgba(0,0,0,.4);
-  border:1px solid var(--fl-border);
-  border-radius:8px;
-  position:relative;
-  opacity:0;
-  transform:translateX(-12px);
-  animation:step-in .5s var(--fl-ease) forwards;
-  transition:border-color .3s, background .3s;
-}
-.pipeline-step.step-done{
-  border-color:rgba(0,255,179,.3);
-  background:rgba(0,255,179,.04);
-}
-.pipeline-step.step-done .step-icon{
-  background:rgba(0,255,179,.15)!important;
-}
-@keyframes step-in{to{opacity:1;transform:translateX(0)}}
-
-/* Timing ajustado pelo motion designer */
-.pipeline-step.step-1{animation-delay:0.3s}
-.pipeline-step.step-2{animation-delay:2.3s}
-.pipeline-step.step-3{animation-delay:5s}
-.pipeline-step.step-4{animation-delay:8s}
-.pipeline-step.step-5{
-  animation:step-in .5s var(--fl-ease) 11.5s forwards,
-             screen-shake .4s ease-out 12s,
-             gradient-shift 2s ease-in-out 12.5s infinite;
-  background:linear-gradient(90deg,rgba(147,51,234,.12),rgba(255,184,0,.15));
-  border-color:rgba(255,184,0,.5);
-}
-@keyframes gradient-shift{
-  0%,100%{
-    box-shadow:0 0 15px rgba(147,51,234,.4),
-               0 0 30px rgba(255,184,0,.2),
-               inset 0 0 20px rgba(255,184,0,.05);
-    border-color:rgba(255,184,0,.5);
-  }
-  50%{
-    box-shadow:0 0 25px rgba(255,184,0,.7),
-               0 0 50px rgba(255,184,0,.4),
-               inset 0 0 30px rgba(255,184,0,.1);
-    border-color:rgba(255,184,0,.9);
-  }
-}
-@keyframes screen-shake{
-  0%,100%{transform:translateX(0)}
-  20%,60%{transform:translateX(-2px)}
-  40%,80%{transform:translateX(2px)}
-}
-
-/* ÍCONES - cores diferenciadas por etapa */
-.step-icon{
-  width:32px;height:32px;border-radius:50%;
-  display:flex;align-items:center;justify-content:center;
-  flex-shrink:0;
-  border:1px solid currentColor;
-  position:relative;z-index:1;
-  transition:all .3s var(--fl-ease);
-}
-.step-icon.icon-search{
-  color:var(--cyan);
-  background:rgba(0,255,179,.08);
-  box-shadow:0 0 12px rgba(0,255,179,.2);
-}
-.step-icon.icon-analyze{
-  color:var(--fl-purple-300);
-  background:rgba(147,51,234,.12);
-  box-shadow:0 0 12px rgba(147,51,234,.25);
-}
-.step-icon.icon-code{
-  color:#a78bfa;
-  background:rgba(147,51,234,.1);
-  box-shadow:0 0 12px rgba(147,51,234,.2);
-}
-.step-icon.icon-whatsapp{
-  color:#6ee7c0;
-  background:rgba(0,255,179,.1);
-  box-shadow:0 0 12px rgba(0,255,179,.2);
-}
-.step-icon.icon-celebration{
-  color:var(--gold);
-  background:rgba(255,184,0,.12);
-  box-shadow:0 0 16px rgba(255,184,0,.5);
-}
-
-.step-content{flex:1;min-width:0;position:relative;z-index:1}
-.step-label{
-  font-family:var(--fl-font-mono);font-size:10px;font-weight:600;
-  color:var(--fl-text);letter-spacing:0.5px;
-}
-.step-label.gold{
-  color:var(--gold);
-  text-shadow:0 0 8px rgba(255,184,0,.6);
-}
-.step-desc{
-  font-size:10px;color:var(--fl-text-muted);margin-top:1px;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-}
-.step-desc.gold{color:var(--gold);font-weight:600}
-
-/* SPINNER SVG - cubic-bezier com overshoot */
-.step-spinner{
-  width:18px;height:18px;color:var(--cyan);flex-shrink:0;
-  animation:spin .9s cubic-bezier(.4,0,.2,1) infinite;
-}
-@keyframes spin{
-  0%{transform:rotate(-45deg)}
-  100%{transform:rotate(315deg)}
-}
-
-/* BARRA de progresso animada com glow */
-.step-bar{
-  width:60px;height:4px;background:rgba(255,255,255,.08);
-  border-radius:2px;overflow:hidden;flex-shrink:0;
-}
-.step-bar-fill{
-  height:100%;
-  background:linear-gradient(90deg,var(--fl-purple-600),var(--cyan));
-  width:0;
-  box-shadow:0 0 8px var(--cyan-glow);
-  animation:bar-fill 2.3s var(--fl-ease) 2.8s forwards;
-}
-@keyframes bar-fill{to{width:100%}}
-
-/* PERCENTUAL animado com contador */
-.step-percent{
-  font-family:var(--fl-font-mono);font-size:11px;
-  color:var(--cyan);font-weight:700;flex-shrink:0;
-  text-shadow:0 0 8px var(--cyan-glow);
-}
-
-/* TYPING DOTS - pixel art (quadrados) com glow */
-.step-typing{
-  display:flex;gap:4px;align-items:center;flex-shrink:0;
-  padding:2px 0;
-}
-.dot-typing{
-  width:5px;height:5px;border-radius:0;
-  background:var(--cyan);
-  box-shadow:0 0 4px var(--cyan-glow);
-  animation:pixel-typing 1.4s steps(1) infinite;
-}
-.dot-typing:nth-child(2){animation-delay:.2s}
-.dot-typing:nth-child(3){animation-delay:.4s}
-@keyframes pixel-typing{
-  0%,50%{transform:translateY(0);opacity:.3;box-shadow:none}
-  25%,75%{transform:translateY(-3px);opacity:1;box-shadow:0 0 6px var(--cyan-glow)}
-  100%{transform:translateY(0);opacity:.3;box-shadow:none}
-}
-
-/* VALOR da venda - reveal com overshoot spring */
-.step-amount{
-  font-family:var(--fl-font-brand);font-size:12px;
-  color:var(--gold);font-weight:700;letter-spacing:.5px;
-  flex-shrink:0;
-  text-shadow:0 0 6px rgba(255,184,0,.5);
-  opacity:0;
-  transform:scale(.5);
-  animation:amount-reveal .8s cubic-bezier(.34,1.56,.64,1) 12s forwards;
-}
-@keyframes amount-reveal{
-  0%{opacity:0;transform:scale(.3) translateY(8px)}
-  60%{transform:scale(1.25) translateY(-4px)}
-  100%{opacity:1;transform:scale(1) translateY(0)}
-}
-
-/* BURST - partículas SVG em ondas radiais */
-.step-burst{
-  position:absolute;top:50%;left:50%;
-  width:200px;height:200px;transform:translate(-50%,-50%);
+/* MASCOT in hero */
+.hero-mascot{
+  position:absolute;bottom:60px;right:8%;z-index:2;
+  animation:mago-breath 4s ease-in-out infinite;
   pointer-events:none;
-  opacity:0;
-  animation:burst-flash 1.2s ease-out 12s;
 }
-.step-burst::before{
-  content:'';position:absolute;inset:0;
-  background:radial-gradient(circle,rgba(255,184,0,.4) 0%,transparent 60%);
-  border-radius:50%;
-  animation:burst-expand 1.2s ease-out 12s;
+.hero-mascot img{
+  height:clamp(120px,18vw,220px);width:auto;
+  filter:drop-shadow(0 0 30px rgba(147,51,234,0.5)) drop-shadow(0 0 60px rgba(147,51,234,0.2));
 }
-.step-burst::after{
-  content:'';position:absolute;top:50%;left:50%;
-  width:4px;height:4px;
-  border-radius:50%;
+@keyframes mago-breath{
+  0%,100%{transform:translateY(0) scale(1);filter:brightness(1)}
+  50%{transform:translateY(-15px) scale(1.05);filter:brightness(1.2)}
+}
+
+/* MAGIC SPARKLES near mascot */
+.sparkle{
+  position:absolute;width:4px;height:4px;border-radius:50%;
   background:var(--gold);
-  box-shadow:
-    0 -60px 0 var(--gold),
-    0 60px 0 var(--gold),
-    -60px 0 0 var(--gold),
-    60px 0 0 var(--gold),
-    -42px -42px 0 var(--gold),
-    42px -42px 0 var(--gold),
-    -42px 42px 0 var(--gold),
-    42px 42px 0 var(--gold);
-  transform:translate(-50%,-50%);
-  animation:burst-stars 1.2s ease-out 12s;
+  box-shadow:0 0 6px var(--gold),0 0 12px var(--gold);
+  animation:sparkle-float 3s ease-in-out infinite;
+  pointer-events:none;
 }
-@keyframes burst-flash{
-  0%{opacity:0}10%,40%{opacity:1}100%{opacity:0}
-}
-@keyframes burst-expand{
-  0%{transform:scale(.3);opacity:0}
-  20%{opacity:1}
-  100%{transform:scale(2.5);opacity:0}
-}
-@keyframes burst-stars{
-  0%{transform:translate(-50%,-50%) scale(0);opacity:0}
-  20%{transform:translate(-50%,-50%) scale(1.5);opacity:1}
-  100%{transform:translate(-50%,-50%) scale(3);opacity:0}
+.sparkle:nth-child(2){animation-delay:.5s;left:20px;top:-10px}
+.sparkle:nth-child(3){animation-delay:1s;left:-15px;top:5px}
+.sparkle:nth-child(4){animation-delay:1.5s;left:35px;top:-20px}
+.sparkle:nth-child(5){animation-delay:2s;left:-5px;top:-30px}
+@keyframes sparkle-float{
+  0%,100%{opacity:0;transform:translateY(0) scale(0)}
+  50%{opacity:1;transform:translateY(-20px) scale(1)}
 }
 
 @keyframes fadeUp{
@@ -939,18 +610,14 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
 }
 .step-card .snake-card-inner{text-align:center;padding:36px 20px}
 .step-number{
-  width:64px;height:64px;margin:0 auto 16px;border-radius:50%;
+  width:52px;height:52px;margin:0 auto 16px;border-radius:50%;
   display:flex;align-items:center;justify-content:center;
-  font-family:var(--fl-font-brand);font-size:13px;
-  line-height:1.2;text-align:center;
+  font-family:var(--fl-font-brand);font-size:16px;
   position:relative;
-  word-break:break-word;
-  padding:4px;
 }
 .step-card:nth-child(1) .step-number{background:linear-gradient(135deg,var(--fl-purple),var(--fl-purple-700));color:#fff;box-shadow:0 0 30px rgba(147,51,234,0.4)}
 .step-card:nth-child(2) .step-number{background:linear-gradient(135deg,var(--cyan),#00CC8E);color:#000;box-shadow:0 0 30px var(--cyan-glow)}
 .step-card:nth-child(3) .step-number{background:linear-gradient(135deg,var(--gold),#FF9500);color:#000;box-shadow:0 0 30px var(--gold-glow)}
-.step-card:nth-child(4) .step-number{background:linear-gradient(135deg,var(--fl-success),#16803C);color:#fff;box-shadow:0 0 30px rgba(34,197,94,0.4)}
 .step-label{
   font-family:var(--fl-font-brand);font-size:9px;
   letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;
@@ -958,55 +625,8 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
 .step-card:nth-child(1) .step-label{color:var(--fl-purple-300)}
 .step-card:nth-child(2) .step-label{color:var(--cyan)}
 .step-card:nth-child(3) .step-label{color:var(--gold)}
-.step-card:nth-child(4) .step-label{color:var(--fl-success)}
 .step-title{font-size:17px;font-weight:700;margin-bottom:10px}
 .step-desc{font-size:13px;color:var(--fl-text-muted);line-height:1.7}
-
-/* Timeline 4-col grid (para secao timeline) */
-.timeline-grid{
-  display:grid;grid-template-columns:repeat(4,1fr);gap:20px;position:relative;
-}
-@media(max-width:1024px){.timeline-grid{grid-template-columns:repeat(2,1fr)}}
-@media(max-width:640px){.timeline-grid{grid-template-columns:1fr}}
-.timeline-step{
-  background:var(--fl-bg-card);
-  border:1px solid var(--fl-border);
-  padding:32px 24px;
-  text-align:center;
-  position:relative;
-}
-.timeline-step::before{
-  content:'';position:absolute;top:0;left:0;right:0;height:3px;
-  background:linear-gradient(90deg,var(--fl-purple),var(--cyan),var(--gold),var(--fl-success));
-}
-.timeline-step .day-icon{
-  width:80px;height:80px;
-  margin:0 auto 16px;
-  display:flex;align-items:center;justify-content:center;
-  background:var(--fl-bg-surface);
-  border:2px solid var(--fl-border);
-  transition:all .3s var(--fl-ease);
-}
-.timeline-step:nth-child(1) .day-icon{color:var(--fl-purple-light)}
-.timeline-step:nth-child(2) .day-icon{color:var(--cyan)}
-.timeline-step:nth-child(3) .day-icon{color:var(--gold)}
-.timeline-step:nth-child(4) .day-icon{color:var(--fl-success)}
-.timeline-step .day-icon svg{width:44px;height:44px}
-.timeline-step:hover .day-icon{transform:scale(1.08)}
-.timeline-step:nth-child(1):hover .day-icon{border-color:var(--fl-purple);background:rgba(147,51,234,0.1);box-shadow:0 0 30px rgba(147,51,234,0.3)}
-.timeline-step:nth-child(2):hover .day-icon{border-color:var(--cyan);background:rgba(0,255,179,0.1);box-shadow:0 0 30px rgba(0,255,179,0.3)}
-.timeline-step:nth-child(3):hover .day-icon{border-color:var(--gold);background:rgba(255,184,0,0.1);box-shadow:0 0 30px rgba(255,184,0,0.3)}
-.timeline-step:nth-child(4):hover .day-icon{border-color:var(--fl-success);background:rgba(34,197,94,0.1);box-shadow:0 0 30px rgba(34,197,94,0.3)}
-.timeline-step .label{
-  font-family:var(--font-brand);
-  font-size:9px;letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;
-}
-.timeline-step:nth-child(1) .label{color:var(--fl-purple-light)}
-.timeline-step:nth-child(2) .label{color:var(--cyan)}
-.timeline-step:nth-child(3) .label{color:var(--gold)}
-.timeline-step:nth-child(4) .label{color:var(--fl-success)}
-.timeline-step h4{font-size:17px;font-weight:700;margin-bottom:10px}
-.timeline-step p{font-size:13px;color:var(--fl-text-muted);line-height:1.7}
 
 /* Mascot in steps section */
 .steps-mascot{
@@ -1187,70 +807,6 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
 .plano-card:nth-child(4) .plano-features li::before{background:var(--cyan)}
 .planos-cta{text-align:center}
 
-/* BOTOES DOS PLANOS - padronizados na mesma linha */
-.plano-card{
-  display:flex;
-  flex-direction:column;
-}
-.plano-cta-wrap{
-  margin-top:auto;
-  padding-top:20px;
-  min-height:110px;
-  display:flex;
-  flex-direction:column;
-  justify-content:flex-end;
-  align-items:stretch;
-  gap:6px;
-}
-.plano-cta{
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  width:100%;
-  height:44px;
-  font-family:var(--fl-font-brand);
-  font-size:9px;
-  letter-spacing:0.5px;
-  text-align:center;
-  text-decoration:none;
-  cursor:pointer;
-  transition:all .15s;
-  border:2px solid;
-  white-space:nowrap;
-  overflow:hidden;
-  text-overflow:ellipsis;
-  padding:0 8px;
-  border-radius:0;
-}
-.plano-cta.cta-outline{
-  background:transparent;
-  color:var(--fl-text);
-  border-color:var(--fl-border-md);
-}
-.plano-cta.cta-outline:hover{
-  border-color:var(--cyan);
-  color:var(--cyan);
-  box-shadow:0 0 20px var(--cyan-glow);
-}
-.plano-cta.cta-gold{
-  background:var(--gold);
-  color:#000;
-  border-color:var(--gold);
-  box-shadow:inset -3px -3px 0 #A16207,inset 3px 3px 0 #FDE68A,0 4px 0 #713F12;
-  font-weight:700;
-}
-.plano-cta.cta-gold:hover{
-  background:#FDE047;
-  box-shadow:inset -3px -3px 0 #A16207,inset 3px 3px 0 #FEF9C3,0 4px 0 #713F12,0 0 20px var(--gold-glow);
-}
-.plano-garantia{
-  font-size:9px;
-  color:#A16207;
-  text-align:center;
-  margin:0;
-  font-weight:600;
-}
-
 /* ============================================================
    SECTION 9 — FAQ
    ============================================================ */
@@ -1418,246 +974,11 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
 
 /* FOOTER */
 .footer{
-  background:linear-gradient(180deg,var(--fl-bg) 0%,#060410 100%);
+  text-align:center;padding:28px 24px;
   border-top:1px solid var(--fl-border);
-  padding:64px 24px 0;
-  position:relative;
+  font-size:12px;color:var(--fl-text-dim);
 }
-
-/* TRUST SEALS SECTION - secao propria ACIMA do footer */
-.trust-seals-section{
-  background:linear-gradient(180deg,var(--fl-bg) 0%,#08051a 100%);
-  padding:80px 24px;
-  position:relative;
-  overflow:hidden;
-}
-.trust-seals-section::before{
-  content:'';position:absolute;inset:0;
-  background:
-    radial-gradient(circle at 20% 50%,rgba(124,58,237,0.1) 0%,transparent 50%),
-    radial-gradient(circle at 80% 50%,rgba(0,255,179,0.06) 0%,transparent 50%);
-  pointer-events:none;
-}
-.trust-seals-header{
-  text-align:center;margin-bottom:48px;
-  position:relative;z-index:1;
-}
-.trust-seals-title{
-  font-family:var(--fl-font-brand);
-  font-size:clamp(10px,1.6vw,14px);
-  letter-spacing:3px;line-height:1.5;
-  color:var(--fl-text);
-  margin-bottom:12px;
-}
-.trust-seals-subtitle{
-  font-size:14px;color:var(--fl-text-muted);
-  max-width:520px;margin:0 auto;line-height:1.6;
-}
-.trust-seals-grid{
-  max-width:1200px;margin:0 auto;
-  display:grid;
-  grid-template-columns:repeat(4,1fr);
-  gap:20px;
-  position:relative;z-index:1;
-}
-.trust-seal{
-  display:flex;flex-direction:column;align-items:center;text-align:center;
-  padding:28px 20px;
-  background:var(--fl-bg-card);
-  border:1px solid var(--fl-border);
-  border-radius:var(--fl-r-lg);
-  transition:all .3s var(--fl-ease);
-  gap:16px;
-}
-.trust-seal:hover{
-  border-color:var(--cyan);
-  background:linear-gradient(180deg,var(--fl-bg-card) 0%,rgba(0,255,179,0.04) 100%);
-  box-shadow:0 0 30px var(--cyan-glow),0 20px 40px rgba(0,0,0,0.3);
-  transform:translateY(-4px);
-}
-.trust-seal-icon{
-  width:56px;height:56px;
-  display:flex;align-items:center;justify-content:center;
-  border-radius:50%;
-  border:2px solid;
-}
-.trust-seal-icon.pagamento{
-  background:rgba(0,204,142,0.1);color:var(--cyan);border-color:rgba(0,255,179,0.3);
-}
-.trust-seal-icon.garantia{
-  background:rgba(255,184,0,0.1);color:var(--gold);border-color:rgba(255,184,0,0.3);
-}
-.trust-seal-icon.lgpd{
-  background:rgba(124,58,237,0.1);color:var(--fl-purple-300);border-color:rgba(124,58,237,0.3);
-}
-.trust-seal-icon.suporte{
-  background:rgba(0,255,179,0.08);color:var(--cyan);border-color:rgba(0,255,179,0.3);
-}
-.trust-seal-text{display:flex;flex-direction:column;gap:6px}
-.trust-seal-title{
-  font-family:var(--fl-font-brand);font-size:9px;letter-spacing:2px;
-  color:var(--fl-text);
-}
-.trust-seal-desc{
-  font-size:11px;color:var(--fl-text-muted);line-height:1.4;
-}
-.footer-grid{
-  max-width:1200px;margin:0 auto;
-  display:grid;
-  grid-template-columns:1.5fr 1fr 1fr 1.2fr;
-  gap:48px;
-  padding-bottom:48px;
-}
-.footer-col h4{
-  font-family:var(--fl-font-brand);font-size:9px;letter-spacing:2px;
-  color:var(--fl-purple-300);margin-bottom:18px;
-}
-.footer-brand-logo{
-  height:42px;width:auto;
-  filter:drop-shadow(0 0 16px rgba(147,51,234,0.4));
-  margin-bottom:16px;
-}
-.footer-brand-desc{
-  font-size:13px;color:var(--fl-text-muted);
-  line-height:1.7;margin-bottom:20px;max-width:280px;
-}
-.footer-social{
-  display:flex;gap:10px;
-}
-.footer-social a{
-  width:34px;height:34px;
-  display:inline-flex;align-items:center;justify-content:center;
-  background:var(--fl-bg-card);
-  border:1px solid var(--fl-border-md);
-  color:var(--fl-text-muted);
-  transition:all .2s;
-  text-decoration:none;
-}
-.footer-social a:hover{
-  border-color:var(--cyan);color:var(--cyan);
-  box-shadow:0 0 12px var(--cyan-glow);
-}
-.footer-links{list-style:none;display:flex;flex-direction:column;gap:10px}
-.footer-links a{
-  font-size:13px;color:var(--fl-text-muted);
-  text-decoration:none;transition:color .2s;
-}
-.footer-links a:hover{color:var(--cyan)}
-.footer-contact-item{
-  display:flex;align-items:flex-start;gap:10px;
-  font-size:13px;color:var(--fl-text-muted);
-  margin-bottom:12px;line-height:1.5;
-}
-.footer-contact-item svg{flex-shrink:0;margin-top:2px;color:var(--fl-purple-300)}
-
-/* SEALS — selos de seguranca */
-.footer-seals{
-  background:rgba(0,0,0,0.3);
-  border-top:1px solid var(--fl-border);
-  border-bottom:1px solid var(--fl-border);
-  padding:32px 24px;
-}
-.footer-seals-grid{
-  max-width:1200px;margin:0 auto;
-  display:grid;
-  grid-template-columns:repeat(4,1fr);
-  gap:24px;align-items:center;
-}
-.footer-seal{
-  display:flex;align-items:center;justify-content:center;gap:14px;
-  padding:16px 12px;
-  background:var(--fl-bg-card);
-  border:1px solid var(--fl-border);
-  transition:all .3s;
-}
-.footer-seal:hover{
-  border-color:var(--cyan);
-  box-shadow:0 0 20px var(--cyan-glow);
-  transform:translateY(-2px);
-}
-.footer-seal-icon{
-  width:40px;height:40px;flex-shrink:0;
-  display:flex;align-items:center;justify-content:center;
-  border-radius:50%;
-}
-.footer-seal-icon.pagamento{background:rgba(0,204,142,0.12);color:var(--cyan)}
-.footer-seal-icon.garantia{background:rgba(255,184,0,0.12);color:var(--gold)}
-.footer-seal-icon.lgpd{background:rgba(124,58,237,0.12);color:var(--fl-purple-300)}
-.footer-seal-icon.suporte{background:rgba(0,255,179,0.08);color:var(--cyan)}
-.footer-seal-text{display:flex;flex-direction:column;gap:2px;min-width:0}
-.footer-seal-title{
-  font-family:var(--fl-font-brand);font-size:8px;letter-spacing:1.5px;
-  color:var(--fl-text);
-}
-.footer-seal-desc{font-size:10px;color:var(--fl-text-muted);line-height:1.3}
-
-/* BOTTOM BAR */
-.footer-bottom{
-  max-width:1200px;margin:0 auto;
-  padding:24px 0;
-  border-top:1px solid var(--fl-border);
-  display:flex;align-items:center;justify-content:space-between;
-  flex-wrap:wrap;gap:16px;
-}
-.footer-copy{
-  font-size:11px;color:var(--fl-text-dim);font-family:var(--fl-font-mono);
-}
-.footer-copy strong{color:var(--fl-text-muted);font-weight:600}
-.footer-bottom-links{
-  display:flex;gap:18px;flex-wrap:wrap;
-}
-.footer-bottom-links a{
-  font-size:11px;color:var(--fl-text-dim);
-  text-decoration:none;font-family:var(--fl-font-mono);
-  transition:color .2s;
-}
-.footer-bottom-links a:hover{color:var(--cyan)}
-
-/* LGPD COOKIE BANNER */
-.lgpd-banner{
-  position:fixed;bottom:20px;left:20px;right:20px;
-  max-width:680px;margin:0 auto;
-  background:var(--fl-bg-card);
-  border:1px solid var(--fl-purple);
-  box-shadow:0 10px 40px rgba(0,0,0,0.5),0 0 30px rgba(147,51,234,0.3);
-  padding:20px 24px;
-  display:flex;align-items:center;gap:16px;flex-wrap:wrap;
-  z-index:9999;
-  transform:translateY(150%);
-  transition:transform .5s var(--fl-ease);
-}
-.lgpd-banner.show{transform:translateY(0)}
-.lgpd-icon{
-  width:36px;height:36px;flex-shrink:0;
-  background:rgba(124,58,237,0.15);
-  border:1px solid var(--fl-purple);
-  display:flex;align-items:center;justify-content:center;
-  color:var(--fl-purple-300);
-}
-.lgpd-content{flex:1;min-width:200px}
-.lgpd-title{
-  font-family:var(--fl-font-brand);font-size:8px;letter-spacing:1.5px;
-  color:var(--fl-purple-300);margin-bottom:4px;
-}
-.lgpd-text{font-size:12px;color:var(--fl-text-muted);line-height:1.5;margin:0}
-.lgpd-text a{color:var(--cyan);text-decoration:underline}
-.lgpd-actions{display:flex;gap:8px;flex-shrink:0}
-.lgpd-btn{
-  padding:10px 18px;
-  font-family:var(--fl-font-brand);font-size:8px;letter-spacing:1px;
-  border:none;cursor:pointer;
-  transition:all .2s;
-}
-.lgpd-btn-accept{
-  background:var(--cyan);color:#000;
-  box-shadow:inset -2px -2px 0 #059669,inset 2px 2px 0 #6EE7B7;
-}
-.lgpd-btn-accept:hover{background:#6EE7B7}
-.lgpd-btn-reject{
-  background:transparent;color:var(--fl-text-muted);
-  border:1px solid var(--fl-border-md);
-}
-.lgpd-btn-reject:hover{border-color:var(--fl-text-muted);color:var(--fl-text)}
+.footer img{height:24px;margin-bottom:8px;opacity:.5}
 
 /* ============================================================
    SCROLL REVEAL
@@ -1669,15 +990,8 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
    REDUCED MOTION
    ============================================================ */
 @media(prefers-reduced-motion:reduce){
-  *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important;animation-iteration-count:1!important}
+  *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}
   #particles-canvas{display:none}
-}
-/* Mobile + Instagram in-app: desativar animacoes pesadas para performance */
-@media(max-width:768px){
-  *,*::before,*::after{animation-duration:0.3s!important}
-  .orb,.btn-pulse,.glow-pulse,.dot-pulse,.mago-breath,.pixelWalk,
-  .float-orb,.pulseGlow,.gradient-shift,.line-pulse{animation:none!important}
-  .filter\:drop-shadow{filter:none!important}
 }
 
 /* ============================================================
@@ -1688,6 +1002,7 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
   .steps-line{display:none}
   .mockup-body{grid-template-columns:1fr}
   .mockup-wa{min-height:280px;border-top:1px solid var(--fl-border)}
+  .hero-mascot{right:2%;bottom:40px}
   .steps-mascot{display:none}
 }
 @media(max-width:768px){
@@ -1697,47 +1012,18 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
   .nav-links.open{
     display:flex;flex-direction:column;
     position:absolute;top:100%;left:0;right:0;
-    background:rgba(6,6,8,0.99);
-    -webkit-backdrop-filter:blur(20px);
-    backdrop-filter:blur(20px);
+    background:rgba(6,6,8,.97);backdrop-filter:blur(20px);
     padding:16px 24px;gap:14px;
     border-bottom:1px solid var(--fl-border);
   }
   section{padding:64px 0}
-  .hero{padding:90px 20px 50px;min-height:auto;text-align:center}
-  .hero-split{grid-template-columns:1fr;gap:36px}
-  .hero-left{align-items:center;text-align:center}
-  .hero-right{order:-1}
-  .hero-mockup{max-width:420px;margin:0 auto}
+  .hero{padding:120px 20px 60px;min-height:auto}
+  .hero-mascot{position:relative;right:auto;bottom:auto;margin-top:32px}
   .problema-grid,.steps-grid,.feat-grid,.quem-grid,.planos-grid{grid-template-columns:1fr}
-  .hero-buttons{flex-direction:column;align-items:center;width:100%}
-  .btn-hero-primary{width:100%;max-width:340px}
+  .hero-buttons{flex-direction:column;align-items:center}
+  .btn{width:100%;max-width:300px;justify-content:center}
   .section-title{font-size:10px}
   .kanban-cols{grid-template-columns:1fr}
-  .hero-contrast{flex-direction:column;gap:8px;align-items:stretch}
-  .hero-arrow{transform:rotate(90deg);align-self:center}
-  .hero-microproof{gap:14px;flex-wrap:wrap;justify-content:center}
-  .hero-microproof-sep{display:none}
-  .hero-microproof-num{font-size:16px}
-  .hero-microproof-label{font-size:9px}
-  .footer{padding:48px 20px 0}
-  .footer-grid{grid-template-columns:1fr 1fr;gap:32px}
-  .footer-bottom{flex-direction:column;text-align:center;align-items:center}
-  .trust-seals-section{padding:56px 20px}
-  .trust-seals-grid{grid-template-columns:1fr 1fr;gap:14px}
-  .trust-seal{padding:20px 14px;gap:12px}
-  .trust-seal-icon{width:48px;height:48px}
-  .lgpd-banner{
-    left:10px;right:10px;bottom:10px;
-    padding:16px;
-    flex-direction:column;align-items:flex-start;
-  }
-  .lgpd-actions{width:100%;justify-content:flex-end}
-  .lgpd-btn{flex:1}
-}
-@media(max-width:480px){
-  .footer-grid{grid-template-columns:1fr;gap:28px}
-  .trust-seals-grid{grid-template-columns:1fr}
 }
 </style>
 
@@ -1806,7 +1092,7 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
       background: rgba(255, 255, 255, 0.98);
     }
     body.light-mode #particles-js { opacity: 0.6; } /* Reduce particle visibility in light mode */
-    body.light-mode .hero-mockup { border-color: rgba(124,58,237,.3); }
+    body.light-mode .hero-badge { background: rgba(147,51,234,0.05); }
 
     /* Mascot Animations */
     @keyframes pixelWalk {
@@ -1832,7 +1118,6 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
 
 </head>
 <body>
-<a class="skip-link" href="#main">Pular para o conteúdo</a>
 <div id="particles-js"></div>
 
 <!-- PARTICLES CANVAS -->
@@ -2103,32 +1388,32 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
 <!-- ===== SEÇÃO 5 — PRODUTO EM AÇÃO ===== -->
 <section class="produto" id="produto">
   <div class="container">
-    <h2 class="section-title reveal">VEJA O MÉTODO 4-1 FUNCIONANDO AO VIVO</h2>
+    <h2 class="section-title reveal">VEJA O SISTEMA TRABALHANDO</h2>
     <div class="produto-mockup reveal">
       <div class="mockup-topbar">
         <div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div>
-        <div class="mockup-url">app.fralib.com.br/dashboard</div>
+        <div class="mockup-url">app.fralib.com.br/admin.html</div>
       </div>
       <div class="mockup-body">
         <div class="mockup-kanban">
           <div class="kanban-header">
             <div class="kanban-title">Pipeline de Vendas</div>
-            <div class="kanban-badge">47 leads</div>
+            <div class="kanban-badge">12 leads</div>
           </div>
           <div class="kanban-cols">
             <div class="col-novo">
               <div class="col-title">Novo</div>
-              <div class="k-card"><div class="name">Padaria Exemplo</div><div class="cat">Padaria &bull; Centro</div></div>
-              <div class="k-card"><div class="name">Loja Demo</div><div class="cat">Varejo &bull; Zona Sul</div></div>
+              <div class="k-card"><div class="name">Barbearia Morais</div><div class="cat">Barbearia &bull; Curitiba</div></div>
+              <div class="k-card"><div class="name">Studio Ana K.</div><div class="cat">Estética &bull; SP</div></div>
             </div>
             <div class="col-criado">
               <div class="col-title">Site Criado</div>
-              <div class="k-card"><div class="name">Consultório Modelo</div><div class="cat">Saúde &bull; Centro</div></div>
-              <div class="k-card"><div class="name">Pet Exemplo</div><div class="cat">Pet Shop &bull; Vila Madalena</div></div>
+              <div class="k-card"><div class="name">Clínica Dra. Lohr</div><div class="cat">Dermatologia &bull; PR</div></div>
+              <div class="k-card"><div class="name">Pet Shop Amigo</div><div class="cat">Pet Shop &bull; MG</div></div>
             </div>
             <div class="col-enviado">
               <div class="col-title">Enviado</div>
-              <div class="k-card"><div class="name">Restaurante Demo</div><div class="cat">Comida &bull; Pinheiros</div></div>
+              <div class="k-card"><div class="name">Restaurante Sabor</div><div class="cat">Restaurante &bull; RJ</div></div>
             </div>
           </div>
         </div>
@@ -2138,192 +1423,11 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
             <div><div class="wa-name">SDR Franz</div><div class="wa-status">online</div></div>
           </div>
           <div class="wa-msgs">
-            <div class="wa-msg s">Olá! Sou o Franz, da FraLib. Vi que seu negócio ainda não tem um site profissional.<div class="wa-time">10:32</div></div>
-            <div class="wa-msg s">Criei uma demonstração para você avaliar.<div class="wa-time">10:32</div></div>
+            <div class="wa-msg s">Olá! Sou o Franz, da FraLib. Vi que a Barbearia Morais ainda não tem um site profissional.<div class="wa-time">10:32</div></div>
+            <div class="wa-msg s">Criei uma demonstração para você avaliar: <span class="wa-link">barbearia-morais.fralib.site</span><div class="wa-time">10:32</div></div>
             <div class="wa-msg r">Opa! Ficou muito bom! Quanto custa pra manter?<div class="wa-time">10:45</div></div>
-            <div class="wa-msg s">Que bom que gostou! Posso te explicar os planos e ajustar antes da publicação final.<div class="wa-time">10:46</div></div>
+            <div class="wa-msg s">Que bom que gostou! Posso te explicar os planos e ajustar o site antes da publicação final.<div class="wa-time">10:46</div></div>
             <div class="wa-typing"><span></span><span></span><span></span></div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ===== SEÇÃO 5C — DEPOIMENTOS SCROLLER HORIZONTAL ===== -->
-<section class="funcionalidades" style="padding:80px 0;overflow:hidden;">
-  <div class="container">
-    <h2 class="section-title reveal" style="margin-bottom:16px;">VEJA QUEM ESTÁ GANHANDO RENDA EXTRA</h2>
-    <p class="section-sub reveal" style="text-align:center;margin:0 auto 24px;max-width:720px;color:var(--fl-text-muted);">6 historias de pessoas comuns. Resultados comuns. Role pra ver mais.</p>
-  </div>
-  <div class="depoimentos-scroller">
-    <div class="depoimentos-track">
-      <!-- Comentario 1: QUEM COMPROU -->
-      <div class="depoimento-scroll-card tipo-confirmacao">
-        <div class="depoimento-foto" style="background-image:url('https://i.pravatar.cc/200?img=12')"></div>
-        <div class="depoimento-conteudo">
-          <span class="tipo-tag confirmacao">COMPROU</span>
-          <div class="contexto"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6" fill="#0a0714"/><circle cx="12" cy="12" r="2"/></svg>PRO · 2 meses atrás</div>
-          <blockquote>"Fechei 3 clientes na primeira semana. O Franz fez o que eu faria se tivesse 24h no dia. ROI no primeiro mês."</blockquote>
-          <div class="depoimento-autor-info">
-            <h4>Rafael Ferreira</h4>
-            <p>Dev full-stack · São Paulo</p>
-            <span class="metric">3 clientes / semana</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Comentario 2: QUEM TAVA EM DUVIDA -->
-      <div class="depoimento-scroll-card tipo-duvida">
-        <div class="depoimento-foto" style="background-image:url('https://i.pravatar.cc/200?img=23')"></div>
-        <div class="depoimento-conteudo">
-          <span class="tipo-tag duvida">TIVE DUVIDA</span>
-          <div class="contexto"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>STARTER · 6 meses atrás</div>
-          <blockquote>"Tava receoso de pagar R$97 pra testar. Mas resolvi — cancela em 1 clique. 3 meses depois tô no PRO e fechando 4 clientes/mês."</blockquote>
-          <div class="depoimento-autor-info">
-            <h4>Amanda Martins</h4>
-            <p>Designer · BH</p>
-            <span class="metric">4 clientes / mês</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Comentario 3: QUEM ACHOU GOLPE -->
-      <div class="depoimento-scroll-card tipo-suspeita">
-        <div class="depoimento-foto" style="background-image:url('https://i.pravatar.cc/200?img=33')"></div>
-        <div class="depoimento-conteudo">
-          <span class="tipo-tag suspeita">ACHEI GOLPE</span>
-          <div class="contexto"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>PRO · 4 meses atrás</div>
-          <blockquote>"Parecia bom demais. 'Site em 24h, SDR automático' — já fui achando golpe. Mas testei com 1 lead só pra ver. Veio o site, veio a mensagem no Zap, veio o cliente."</blockquote>
-          <div class="depoimento-autor-info">
-            <h4>Marcos Costa</h4>
-            <p>Freelancer · POA</p>
-            <span class="metric">5 clientes / mês</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Comentario 4: QUEM COMPROU MAIS -->
-      <div class="depoimento-scroll-card tipo-resposta">
-        <div class="depoimento-foto" style="background-image:url('https://i.pravatar.cc/200?img=44')"></div>
-        <div class="depoimento-conteudo">
-          <span class="tipo-tag resposta">COMPREI PRO</span>
-          <div class="contexto"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>Resposta no Reclame Aqui</div>
-          <blockquote>"Respondeu em 10min no domingo. Resolveram meu bug em 1h. Suporte humano de verdade, não chatbot. Acima da média."</blockquote>
-          <div class="depoimento-autor-info">
-            <h4>Júlia Ribeiro</h4>
-            <p>Designer iniciante · Curitiba</p>
-            <span class="metric">Suporte top</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Comentario 5: RECOMENDA (sem mostrar a outros) -->
-      <div class="depoimento-scroll-card tipo-recomendacao">
-        <div class="depoimento-foto" style="background-image:url('https://i.pravatar.cc/200?img=52')"></div>
-        <div class="depoimento-conteudo">
-          <span class="tipo-tag recomendacao">SÓ PRA ELA</span>
-          <div class="contexto"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 8a3 3 0 10-3-3"/><path d="M15 22v-4a3 3 0 00-3-3H6a3 3 0 00-3 3v4"/><circle cx="9" cy="8" r="1"/><path d="M15 22v-4a3 3 0 013-3h2a3 3 0 013 3v4"/><circle cx="18" cy="5" r="1"/></svg>DM privado · ontem</div>
-          <blockquote>"Não tava querendo contar pra ninguém pq é meu diferencial. Mas vou abrir mão — concorrente meu tá usando agora também."</blockquote>
-          <div class="depoimento-autor-info">
-            <h4>Diego Almeida</h4>
-            <p>Agência 5 pessoas · Recife</p>
-            <span class="metric">15 sites / mês</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Comentario 6: COMPROU -->
-      <div class="depoimento-scroll-card tipo-confirmacao">
-        <div class="depoimento-foto" style="background-image:url('https://i.pravatar.cc/200?img=49')"></div>
-        <div class="depoimento-conteudo">
-          <span class="tipo-tag confirmacao">CONFIRMO</span>
-          <div class="contexto"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>TRIAL → PRO · 1 mês atrás</div>
-          <blockquote>"Sou mãe, trabalho de casa, queria renda extra. R$4.800 no primeiro mês. Não é milagre mas é real — eu testei e deu certo."</blockquote>
-          <div class="depoimento-autor-info">
-            <h4>Patrícia Mendes</h4>
-            <p>Freelancer renda extra · Salvador</p>
-            <span class="metric">R$4.800/mês</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- DUPLICADO para scroll infinito -->
-      <div class="depoimento-scroll-card tipo-confirmacao">
-        <div class="depoimento-foto" style="background-image:url('https://i.pravatar.cc/200?img=12')"></div>
-        <div class="depoimento-conteudo">
-          <span class="tipo-tag confirmacao">COMPROU</span>
-          <div class="contexto"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6" fill="#0a0714"/><circle cx="12" cy="12" r="2"/></svg>PRO · 2 meses atrás</div>
-          <blockquote>"Fechei 3 clientes na primeira semana. O Franz fez o que eu faria se tivesse 24h no dia. ROI no primeiro mês."</blockquote>
-          <div class="depoimento-autor-info">
-            <h4>Rafael Ferreira</h4>
-            <p>Dev full-stack · São Paulo</p>
-            <span class="metric">3 clientes / semana</span>
-          </div>
-        </div>
-      </div>
-      <div class="depoimento-scroll-card tipo-duvida">
-        <div class="depoimento-foto" style="background-image:url('https://i.pravatar.cc/200?img=23')"></div>
-        <div class="depoimento-conteudo">
-          <span class="tipo-tag duvida">TIVE DUVIDA</span>
-          <div class="contexto"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>STARTER · 6 meses atrás</div>
-          <blockquote>"Tava receoso de pagar R$97 pra testar. Mas resolvi — cancela em 1 clique. 3 meses depois tô no PRO e fechando 4 clientes/mês."</blockquote>
-          <div class="depoimento-autor-info">
-            <h4>Amanda Martins</h4>
-            <p>Designer · BH</p>
-            <span class="metric">4 clientes / mês</span>
-          </div>
-        </div>
-      </div>
-      <div class="depoimento-scroll-card tipo-suspeita">
-        <div class="depoimento-foto" style="background-image:url('https://i.pravatar.cc/200?img=33')"></div>
-        <div class="depoimento-conteudo">
-          <span class="tipo-tag suspeita">ACHEI GOLPE</span>
-          <div class="contexto"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>PRO · 4 meses atrás</div>
-          <blockquote>"Parecia bom demais. 'Site em 24h, SDR automático' — já fui achando golpe. Mas testei com 1 lead só pra ver. Veio o site, veio a mensagem no Zap, veio o cliente."</blockquote>
-          <div class="depoimento-autor-info">
-            <h4>Marcos Costa</h4>
-            <p>Freelancer · POA</p>
-            <span class="metric">5 clientes / mês</span>
-          </div>
-        </div>
-      </div>
-      <div class="depoimento-scroll-card tipo-resposta">
-        <div class="depoimento-foto" style="background-image:url('https://i.pravatar.cc/200?img=44')"></div>
-        <div class="depoimento-conteudo">
-          <span class="tipo-tag resposta">COMPREI PRO</span>
-          <div class="contexto"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>Resposta no Reclame Aqui</div>
-          <blockquote>"Respondeu em 10min no domingo. Resolveram meu bug em 1h. Suporte humano de verdade, não chatbot. Acima da média."</blockquote>
-          <div class="depoimento-autor-info">
-            <h4>Júlia Ribeiro</h4>
-            <p>Designer iniciante · Curitiba</p>
-            <span class="metric">Suporte top</span>
-          </div>
-        </div>
-      </div>
-      <div class="depoimento-scroll-card tipo-recomendacao">
-        <div class="depoimento-foto" style="background-image:url('https://i.pravatar.cc/200?img=52')"></div>
-        <div class="depoimento-conteudo">
-          <span class="tipo-tag recomendacao">SÓ PRA ELA</span>
-          <div class="contexto"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 8a3 3 0 10-3-3"/><path d="M15 22v-4a3 3 0 00-3-3H6a3 3 0 00-3 3v4"/><circle cx="9" cy="8" r="1"/><path d="M15 22v-4a3 3 0 013-3h2a3 3 0 013 3v4"/><circle cx="18" cy="5" r="1"/></svg>DM privado · ontem</div>
-          <blockquote>"Não tava querendo contar pra ninguém pq é meu diferencial. Mas vou abrir mão — concorrente meu tá usando agora também."</blockquote>
-          <div class="depoimento-autor-info">
-            <h4>Diego Almeida</h4>
-            <p>Agência 5 pessoas · Recife</p>
-            <span class="metric">15 sites / mês</span>
-          </div>
-        </div>
-      </div>
-      <div class="depoimento-scroll-card tipo-confirmacao">
-        <div class="depoimento-foto" style="background-image:url('https://i.pravatar.cc/200?img=49')"></div>
-        <div class="depoimento-conteudo">
-          <span class="tipo-tag confirmacao">CONFIRMO</span>
-          <div class="contexto"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>TRIAL → PRO · 1 mês atrás</div>
-          <blockquote>"Sou mãe, trabalho de casa, queria renda extra. R$4.800 no primeiro mês. Não é milagre mas é real — eu testei e deu certo."</blockquote>
-          <div class="depoimento-autor-info">
-            <h4>Patrícia Mendes</h4>
-            <p>Freelancer renda extra · Salvador</p>
-            <span class="metric">R$4.800/mês</span>
           </div>
         </div>
       </div>
@@ -2334,425 +1438,62 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
 <!-- ===== SEÇÃO 6 — FUNCIONALIDADES ===== -->
 <section class="funcionalidades" id="funcionalidades" style="background:transparent">
   <div class="container">
-    <h2 class="section-title reveal">TUDO QUE VOCÊ RECEBE PRA COMEÇAR A GANHAR HOJE</h2>
+    <h2 class="section-title reveal">TUDO QUE VOCÊ PRECISA PARA VENDER SITES SEM CRIAR NADA</h2>
     <div class="feat-grid">
       <div class="feat-card snake-card reveal"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
         <div class="feat-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M12 2a4 4 0 014 4v2a4 4 0 01-8 0V6a4 4 0 014-4z"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><path d="M9 18h6"/><path d="M12 18v4"/></svg></div>
-        <div class="feat-title">Prospecção automática</div>
-        <div class="feat-desc">A IA varre o Google Maps e acha pizzarias, clinicas, saloes — negocios que precisam de site mas nao tem. Voce so escolhe o nicho.</div>
+        <div class="feat-title">SDR Franz Autônomo</div>
+        <div class="feat-desc">Vendedor virtual dos planos Trial, Pro e Agency que aborda leads pelo WhatsApp com mensagens personalizadas.</div>
       </div></div>
       <div class="feat-card snake-card reveal"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
         <div class="feat-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="10" r="3"/><path d="M12 2a8 8 0 00-8 8c0 5.4 8 12 8 12s8-6.6 8-12a8 8 0 00-8-8z"/></svg></div>
-        <div class="feat-title">Site criado em minutos</div>
-        <div class="feat-desc">Site profissional com fotos, texto, WhatsApp e mapa. Nao e template — e site feito pro negocio especifico. Pronto pra mostrar.</div>
+        <div class="feat-title">Prospecção via Google Maps</div>
+        <div class="feat-desc">Encontra negócios locais que não possuem site profissional automaticamente.</div>
       </div></div>
       <div class="feat-card snake-card reveal"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
         <div class="feat-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></div>
-        <div class="feat-title">Painel visual</div>
-        <div class="feat-desc">Voce ve tudo num lugar so: quem respondeu, quem quer proposta, quem fechou. Arrasta, atualiza, pronto.</div>
+        <div class="feat-title">Kanban CRM Visual</div>
+        <div class="feat-desc">Pipeline completo com drag &amp; drop. Do lead até o fechamento.</div>
       </div></div>
       <div class="feat-card snake-card reveal"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
         <div class="feat-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="10"/></svg></div>
-        <div class="feat-title">Follow-up automatico</div>
-        <div class="feat-desc">Se o lead nao respondeu, o Franz insiste na hora certa. Sem parecer chato. Funciona enquanto voce dorme.</div>
+        <div class="feat-title">Follow-up Automático</div>
+        <div class="feat-desc">Mensagens de acompanhamento nos momentos certos para fechar mais vendas.</div>
       </div></div>
       <div class="feat-card snake-card reveal"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
         <div class="feat-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M15 3h6v6"/><path d="M10 14L21 3"/><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/></svg></div>
-        <div class="feat-title">Site pronto pra mandar</div>
-        <div class="feat-desc">Site publicado com link proprio, mapa, WhatsApp, LGPD. Voce so compartilha o link com o cliente.</div>
+        <div class="feat-title">Publicação Validada</div>
+        <div class="feat-desc">Site publicado com gate visual, SEO, LGPD, mapa e link profissional pronto para enviar.</div>
       </div></div>
       <div class="feat-card snake-card reveal"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
         <div class="feat-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></div>
-        <div class="feat-title">Editor visual</div>
-        <div class="feat-desc">Quer mudar uma foto, um texto, um preço? Arrasta no editor, salva, e ja era. Sem codigo, sem dor de cabeca.</div>
+        <div class="feat-title">Download do HTML</div>
+        <div class="feat-desc">Baixe o código fonte de qualquer site gerado. O arquivo é seu.</div>
       </div></div>
     </div>
-  </div>
-</section>
-
-<!-- ===== SEÇÃO 6B — EXEMPLOS POR NICHO (MOVIDO PARA DEPOIS DE FUNCIONALIDADES) ===== -->
-<section class="para-quem" id="exemplos">
-  <div class="container">
-    <h2 class="section-title reveal">QUANTO DA PRA GANHAR EM CADA NICHO?</h2>
-    <p class="section-sub reveal" style="text-align:center;margin:0 auto 48px;max-width:720px;color:var(--fl-text-muted);">Voce escolhe o nicho da sua cidade. A IA acha os clientes, voce fecha. Veja quanto cada negocio paga:</p>
-    <div class="quem-grid">
-      <div class="quem-card snake-card reveal"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
-        <div class="quem-check" style="background:var(--gold-dim);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--gold);"><path d="M3 11h18M5 11V8a7 7 0 0114 0v3M6 11v8a2 2 0 002 2h8a2 2 0 002-2v-8M9 16h6"/></svg></div>
-        <div class="quem-title">Pizzaria / Padaria / Restaurante</div>
-        <div class="quem-desc"><strong style="color:var(--gold);">R$ 500 a R$ 1.500</strong> por site. Volume fácil: uma cidade tem dezenas. Site com cardápio, localização, WhatsApp, fotos.</div>
-      </div></div>
-      <div class="quem-card snake-card reveal"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
-        <div class="quem-check" style="background:var(--cyan-dim);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--cyan);"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0016.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 002 8.5c0 2.29 1.51 4.04 3 5.5l7 7z"/></svg></div>
-        <div class="quem-title">Clínica / Consultório / Estética</div>
-        <div class="quem-desc"><strong style="color:var(--cyan);">R$ 1.500 a R$ 3.000</strong> por site. Mais nichado, ticket alto. Site com serviços, agendamento, fotos do consultório.</div>
-      </div></div>
-      <div class="quem-card snake-card reveal"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
-        <div class="quem-check" style="background:rgba(147,51,234,0.12);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--fl-purple-300);"><path d="M6 3v12M18 3v12M3 6h6M15 6h6M3 12h6M15 12h6M3 18h6M15 18h6"/></svg></div>
-        <div class="quem-title">Salão / Barbearia / Manicure</div>
-        <div class="quem-desc"><strong style="color:var(--fl-purple-300);">R$ 500 a R$ 1.000</strong> por site. Volume altíssimo, conversão rápida. Site com portfólio, preços, agendamento.</div>
-      </div></div>
-      <div class="quem-card snake-card reveal"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
-        <div class="quem-check"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--cyan);"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div>
-        <div class="quem-title">Imobiliária / Corretor autônomo</div>
-        <div class="quem-desc"><strong style="color:var(--cyan);">R$ 1.500 a R$ 5.000</strong> por site. Ticket alto, ciclo de venda mais longo. Site com busca de imóveis.</div>
-      </div></div>
-      <div class="quem-card snake-card reveal"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
-        <div class="quem-check" style="background:var(--gold-dim);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--gold);"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg></div>
-        <div class="quem-title">Prestador de serviço</div>
-        <div class="quem-desc"><strong style="color:var(--gold);">R$ 500 a R$ 1.200</strong> por site. Encanador, eletricista, dedetizadora, marceneiro. Volume gigante em qualquer cidade.</div>
-      </div></div>
-      <div class="quem-card snake-card reveal"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
-        <div class="quem-check" style="background:var(--cyan-dim);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--cyan);"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4zM3 6h18M16 10a4 4 0 01-8 0"/></svg></div>
-        <div class="quem-title">Loja física (roupa, sapato, decoração)</div>
-        <div class="quem-desc"><strong style="color:var(--cyan);">R$ 800 a R$ 2.000</strong> por site. Site com catálogo, localização, integração com WhatsApp Business.</div>
-      </div></div>
-    </div>
-    <p class="section-sub reveal" style="text-align:center;margin:32px auto 0;max-width:680px;font-size:13px;color:var(--fl-text-muted);">Você pode rodar 1, 2 ou 10 nichos ao mesmo tempo — na mesma cidade ou em cidades diferentes.</p>
   </div>
 </section>
 
 <!-- ===== SEÇÃO 7 — PARA QUEM ===== -->
 <section class="para-quem">
   <div class="container">
-    <h2 class="section-title reveal">PRA QUEM A FRALIB É?</h2>
+    <h2 class="section-title reveal">FEITO PARA QUEM QUER RESULTADOS SEM COMPLICAÇÃO</h2>
     <div class="quem-grid">
       <div class="quem-card snake-card reveal"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
         <div class="quem-check"><svg viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
-        <div class="quem-title">Pra quem chega em casa sem energia</div>
-        <div class="quem-desc">CLT das 8h as 18h. Quando chega so quer dormir. Mas quer renda extra pra ter folga. Com 30 minutos por dia no celular, voce prospecta, fecha, embolsa.</div>
+        <div class="quem-title">Renda Extra sem Programar</div>
+        <div class="quem-desc">Quer ganhar dinheiro vendendo sites mas não sabe escrever uma linha de código? O FraLib faz tudo por você.</div>
       </div></div>
       <div class="quem-card snake-card reveal"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
         <div class="quem-check"><svg viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
-        <div class="quem-title">Pra mae solo / pai solo</div>
-        <div class="quem-desc">Nao tem babá. Nao tem tempo pra curso. Precisa ganhar dinheiro de casa, no celular, enquanto cuida dos filhos. A FraLib funciona no automatico.</div>
+        <div class="quem-title">Agências que Querem Escalar</div>
+        <div class="quem-desc">Já tem agência e quer multiplicar sua capacidade sem contratar? Escale com IA.</div>
       </div></div>
       <div class="quem-card snake-card reveal"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
         <div class="quem-check"><svg viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
-        <div class="quem-title">Pra quem precisa de renda agora</div>
-        <div class="quem-desc">Perdeu o emprego? Quer recomecar? A FraLib nao exige experiencia, nao exige diploma. So exige vontade. Muitos fecharam primeiro cliente na primeira semana.</div>
+        <div class="quem-title">Operação de Vendas Solo</div>
+        <div class="quem-desc">Quer montar uma operação de vendas completa sem contratar equipe? Tenha um SDR 24/7.</div>
       </div></div>
-      <div class="quem-card snake-card reveal"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
-        <div class="quem-check"><svg viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
-        <div class="quem-title">Pra quem quer liberdade financeira</div>
-        <div class="quem-desc">Aposentado ou quer complementacao. O sistema e simples. Voce manda. Trabalha no seu ritmo. Sem chefe, sem horario fixo, sem desculpa pra chegar atrasado.</div>
-      </div></div>
-      <div class="quem-card snake-card reveal"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
-        <div class="quem-check"><svg viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
-        <div class="quem-title">Pra quem nunca vendeu nada</div>
-        <div class="quem-desc">Sem portfolio, sem network, sem experiencia. A FraLib te da a infraestrutura. Nao precisa ter fama — precisa querer.</div>
-      </div></div>
-    </div>
-  </div>
-</section>
-
-<!-- ===== SEÇÃO 7B — TIMELINE PÓS-ASSINATURA ===== -->
-<section class="como-funciona" id="timeline" style="background:transparent">
-  <div class="container">
-    <h2 class="section-title reveal">DO ZERO AO PRIMEIRO R$ 1.500 — EM 7 DIAS</h2>
-    <p class="section-sub reveal" style="text-align:center;margin:0 auto 48px;max-width:720px;color:var(--fl-text-muted);">O que acontece na pratica, do momento que voce cria a conta ate o primeiro Pix no seu banco:</p>
-    <div class="timeline-grid">
-      <div class="timeline-step reveal">
-        <div class="day-icon">
-          <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="32" cy="32" r="28" stroke-opacity="0.3"/>
-            <path d="M32 18v14l10 5" stroke="currentColor" stroke-width="2.5"/>
-            <circle cx="32" cy="32" r="5" fill="currentColor"/>
-          </svg>
-        </div>
-        <div class="label">CRIA A CONTA</div>
-        <h4>15 minutos</h4>
-        <p>Voce abre a conta, escolhe nicho + cidade (ex: "pizzaria" + "Sao Paulo - Zona Sul"). A FraLib ja mostra: "Encontramos 187 pizzarias sem site na sua regiao."</p>
-      </div>
-      <div class="timeline-step reveal">
-        <div class="day-icon">
-          <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M14 14h36v36H14z" rx="2"/>
-            <path d="M14 24h36"/>
-            <circle cx="22" cy="19" r="1" fill="currentColor"/>
-            <circle cx="28" cy="19" r="1" fill="currentColor"/>
-            <path d="M20 32h6M20 38h12M20 44h8"/>
-          </svg>
-        </div>
-        <div class="label">VOCE DORME, A FRALIB TRABALHA</div>
-        <h4>1 a 7 dias</h4>
-        <p>A IA cria site pra cada uma das 187 pizzarias. Envia mensagem no WhatsApp de cada uma. Voce abre o painel pela manha: 23 abriram, 7 responderam "quero ver".</p>
-      </div>
-      <div class="timeline-step reveal">
-        <div class="day-icon">
-          <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M10 14l8 22 8-14 8 14 8-22"/>
-            <circle cx="18" cy="22" r="2" fill="currentColor"/>
-            <circle cx="26" cy="36" r="2" fill="currentColor"/>
-            <circle cx="34" cy="22" r="2" fill="currentColor"/>
-            <circle cx="42" cy="36" r="2" fill="currentColor"/>
-          </svg>
-        </div>
-        <div class="label">PRIMEIROS RESPONDEM</div>
-        <h4>5-7% querem ver</h4>
-        <p>"Quero ver", "Quanto custa?", "Pode mandar". Esses vao pra sua fila. Voce so abre o WhatsApp, manda a proposta, ajusta o que precisar.</p>
-      </div>
-      <div class="timeline-step reveal" style="background:linear-gradient(135deg,rgba(0,255,179,0.08),rgba(147,51,234,0.08));border-color:var(--fl-border-hi);">
-        <div class="day-icon">
-          <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M32 8l6 12 14 2-10 10 2 14-12-6-12 6 2-14-10-10 14-2z"/>
-            <path d="M32 20v8M28 28h8" stroke-width="2.5"/>
-          </svg>
-        </div>
-        <div class="label">PRIMEIRO PIX</div>
-        <h4>R$ 800 a R$ 1.500</h4>
-        <p>Voce ajusta o site, manda proposta por WhatsApp. Cliente aceita. Pix cai na sua conta. <strong style="color:var(--cyan);">100% do lucro e seu. Sem chefe, sem dividir.</strong></p>
-      </div>
-    </div>
-    <p class="section-sub reveal" style="text-align:center;margin:32px auto 0;max-width:720px;font-size:13px;color:var(--fl-text-muted);">A primeira venda pode acontecer na semana 1. Mas e mais comum entre semana 2 e 4 — porque o ciclo do WhatsApp tem retorno gradual. <strong style="color:var(--fl-text);">Nao e magica. E processo. Mas funciona.</strong></p>
-  </div>
-</section>
-
-<style>
-.team-grid{
-  display:grid;
-  grid-template-columns:repeat(3,1fr);
-  gap:20px;
-  max-width:1100px;
-  margin:0 auto;
-}
-@media(max-width:900px){.team-grid{grid-template-columns:1fr}}
-.team-card{
-  background:var(--fl-bg-card);
-  border:1px solid var(--fl-border);
-  text-align:center;
-  position:relative;
-}
-.team-card .snake-card-inner{padding:32px 24px}
-.team-avatar{
-  width:88px;height:88px;border-radius:50%;
-  margin:0 auto 16px;
-  display:flex;align-items:center;justify-content:center;
-  box-shadow:0 0 30px rgba(147,51,234,0.3);
-}
-.team-name{
-  font-family:var(--fl-font-brand);
-  font-size:14px;color:var(--fl-text);margin-bottom:4px;
-}
-.team-role{
-  font-family:var(--fl-font-mono);
-  font-size:10px;color:var(--fl-purple-300);
-  letter-spacing:1px;margin-bottom:16px;text-transform:uppercase;
-}
-.team-bio{
-  font-size:13px;color:var(--fl-text-muted);
-  line-height:1.7;font-style:italic;margin-bottom:12px;
-}
-.team-meta{
-  font-family:var(--fl-font-mono);
-  font-size:10px;color:var(--cyan);
-  padding:6px 10px;
-  background:rgba(0,255,179,0.05);
-  border:1px solid rgba(0,255,179,0.15);
-  display:inline-block;
-}
-.team-commit{
-  margin-top:48px;
-  text-align:center;
-  max-width:720px;
-  margin-left:auto;margin-right:auto;
-  padding:24px;
-  background:var(--fl-bg-card);
-  border:1px solid var(--fl-border);
-  border-left:3px solid var(--cyan);
-}
-.team-commit p{
-  font-size:15px;color:var(--fl-text-muted);
-  line-height:1.7;margin-bottom:12px;
-}
-.team-commit p:last-child{margin-bottom:0}
-.team-commit strong{color:var(--cyan)}
-
-/* ============================================================
-   DEPOIMENTOS SCROLLTELLER (animacao automatica + drag)
-   ============================================================ */
-.depoimentos-scroller{
-  position:relative;
-  overflow:hidden;
-  padding:40px 32px 32px;
-  margin:0 -32px;
-  scrollbar-width:none;
-  -ms-overflow-style:none;
-}
-.depoimentos-scroller::-webkit-scrollbar{display:none}
-.depoimentos-track{
-  display:flex;
-  gap:24px;
-  width:max-content;
-  padding:8px 0;
-  animation:scrollteller 50s linear infinite;
-}
-.depoimentos-scroller:hover .depoimentos-track{
-  animation-play-state:paused;
-}
-@keyframes scrollteller{
-  0%{transform:translateX(0)}
-  100%{transform:translateX(-50%)}
-}
-.depoimento-scroll-card{
-  flex:0 0 420px;
-  background:var(--fl-bg-card);
-  border:1px solid var(--fl-border);
-  padding:24px;
-  display:flex;
-  gap:14px;
-  align-items:flex-start;
-  transition:all .3s var(--fl-ease);
-  position:relative;
-}
-.depoimento-scroll-card::before{
-  content:'"';
-  position:absolute;
-  top:4px;
-  right:18px;
-  font-size:48px;
-  color:var(--fl-purple);
-  opacity:0.1;
-  font-family:serif;
-  line-height:1;
-}
-.depoimento-scroll-card.tipo-duvida{
-  border-left:3px solid var(--gold);
-}
-.depoimento-scroll-card.tipo-suspeita{
-  border-left:3px solid var(--fl-danger);
-}
-.depoimento-scroll-card.tipo-confirmacao{
-  border-left:3px solid var(--fl-success);
-}
-.depoimento-scroll-card.tipo-resposta{
-  border-left:3px solid var(--cyan);
-}
-.depoimento-scroll-card:hover{
-  border-color:var(--fl-purple);
-  box-shadow:var(--fl-glow-sm);
-  transform:translateY(-4px);
-}
-.depoimento-foto{
-  width:60px;
-  height:60px;
-  border-radius:50%;
-  background-size:cover;
-  background-position:center;
-  flex-shrink:0;
-  border:2px solid var(--fl-border);
-  background-color:var(--fl-bg-surface);
-}
-.depoimento-conteudo{flex:1;min-width:0;min-height:180px}
-.depoimento-conteudo .contexto{
-  font-size:11px;
-  font-family:var(--fl-font-mono);
-  color:var(--fl-text-dim);
-  text-transform:uppercase;
-  letter-spacing:1px;
-  margin-bottom:8px;
-}
-.depoimento-conteudo .contexto .emoji{
-  color:var(--fl-text);
-  margin-right:6px;
-}
-.depoimento-scroll-card blockquote{
-  font-size:13px;
-  line-height:1.6;
-  color:var(--fl-text);
-  font-style:italic;
-  margin-bottom:12px;
-}
-.depoimento-autor-info h4{
-  font-size:13px;
-  font-weight:700;
-  color:var(--fl-text);
-  margin-bottom:2px;
-}
-.depoimento-autor-info p{
-  font-size:11px;
-  color:var(--fl-text-muted);
-  margin-bottom:6px;
-}
-.depoimento-autor-info .metric{
-  display:inline-block;
-  font-family:var(--fl-font-mono);
-  font-size:11px;
-  color:var(--cyan);
-  padding:3px 8px;
-  background:rgba(0,255,179,0.1);
-  border:1px solid rgba(0,255,179,0.25);
-  font-weight:700;
-}
-
-/* Tags de tipo do comentario */
-.tipo-tag{
-  display:inline-block;
-  font-size:10px;
-  font-family:var(--fl-font-mono);
-  padding:3px 8px;
-  border-radius:0;
-  margin-bottom:8px;
-  letter-spacing:1px;
-  text-transform:uppercase;
-  font-weight:700;
-}
-.tipo-tag.duvida{background:rgba(255,184,0,0.15);color:var(--gold);border:1px solid var(--gold)}
-.tipo-tag.suspeita{background:rgba(239,68,68,0.15);color:var(--fl-danger);border:1px solid var(--fl-danger)}
-.tipo-tag.confirmacao{background:rgba(34,197,94,0.15);color:var(--fl-success);border:1px solid var(--fl-success)}
-.tipo-tag.resposta{background:rgba(0,255,179,0.15);color:var(--cyan);border:1px solid var(--cyan)}
-.tipo-tag.recomendacao{background:rgba(147,51,234,0.15);color:var(--fl-purple-light);border:1px solid var(--fl-purple)}
-
-/* ============================================================
-   SCROLLTELLER COM DRAG (mouse + touch)
-   ============================================================ */
-.depoimentos-scroller.dragging{
-  cursor:grabbing;
-  scroll-snap-type:none;
-  scroll-behavior:auto;
-}
-</style>
-
-<!-- ===== SEÇÃO 8A — FAQ (MOVIDO PARA ANTES DOS PLANOS) ===== -->
-<section class="faq" id="faq">
-  <div class="container">
-    <h2 class="section-title reveal">PERGUNTAS QUE VOCÊ PRECISA FAZER ANTES DE COMEÇAR</h2>
-    <div class="faq-list">
-      <div class="faq-item reveal">
-        <button class="faq-question" aria-expanded="false">Preciso saber programar?
-          <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
-        </button>
-        <div class="faq-answer"><div class="faq-answer-inner">Nao. Zero. Voce escolhe o nicho e a cidade, e a IA faz o resto. O site e criado automatico, a mensagem e enviada automatica, voce so responde quando o cliente te procura. Literalmente: se voce sabe usar WhatsApp, sabe usar o FraLib.</div></div>
-      </div>
-      <div class="faq-item reveal">
-        <button class="faq-question" aria-expanded="false">E se eu nunca vendi nada na vida?
-          <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
-        </button>
-        <div class="faq-answer"><div class="faq-answer-inner">Funciona melhor ainda. A FraLib foi feita pra quem ta comecando do zero. Nao precisa de portfolio, nao precisa de experiencia, nao precisa ter fama. So precisa ter 15 minutos por dia e querer ganhar dinheiro. Muitos dos nossos usuarios nunca tinham vendido nada antes.</div></div>
-      </div>
-      <div class="faq-item reveal">
-        <button class="faq-question" aria-expanded="false">Preciso ter empresa ou CNPJ?
-          <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
-        </button>
-        <div class="faq-answer"><div class="faq-answer-inner">Nao. Voce pode comecar como pessoa fisica. Alguns usuarios formalizam depois que comecam a faturar. Mas pra comecar, e so criar sua conta. A parte fiscal e sua responsabilidade — cada um sabe sua situacao.</div></div>
-      </div>
-      <div class="faq-item reveal">
-        <button class="faq-question" aria-expanded="false">Funciona em qualquer cidade?
-          <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
-        </button>
-        <div class="faq-answer"><div class="faq-answer-inner">Sim. Qualquer cidade do Brasil. A prospeccao funciona no Google Maps. Se tem negocio local, tem lead pra prospectar. Claro: cidades maiores dao mais leads. Mas cidade de 50 mil habitantes ja tem potencial.</div></div>
-      </div>
-      <div class="faq-item reveal">
-        <button class="faq-question" aria-expanded="false">E se eu nao fechar nenhum cliente?
-          <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
-        </button>
-        <div class="faq-answer"><div class="faq-answer-inner">A gente devolve seu dinheiro, se solicitar em ate 7 dias. A gente te da a ferramenta funcionando, leads qualificados e suporte. Resultado depende de acao. Mas a gente poe a faca e o queijo na sua mao.</div></div>
-      </div>
-      <div class="faq-item reveal">
-        <button class="faq-question" aria-expanded="false">Como funciona o pagamento?
-          <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
-        </button>
-        <div class="faq-answer"><div class="faq-answer-inner">PIX ou cartao de credito. A assinatura e mensal. Pode cancelar quando quiser, sem multa, sem burocracia. Pagamento via Mercado Pago: seguro e rapido.</div></div>
-      </div>
     </div>
   </div>
 </section>
@@ -2760,86 +1501,79 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
 <!-- ===== SEÇÃO 8 — PLANOS ===== -->
 <section class="planos" id="planos" style="background:transparent">
   <div class="container">
-    <h2 class="section-title reveal">ESCOLHA ONDE COMEÇAR — SEM COMPROMISSO</h2>
-    <p style="text-align:center;font-size:22px;font-weight:600;color:var(--cyan);margin:32px auto 16px;max-width:700px;line-height:1.5;">Comece gratis. Evolua quando quiser. Cancele quando precisar.</p>
-    <p style="text-align:center;font-size:13px;color:var(--fl-text-muted);margin-bottom:40px;">Pagamento seguro via Mercado Pago com PIX e cartao.</p>
+    <h2 class="section-title reveal">ESCOLHA SEU PLANO</h2>
+    <p class="section-sub reveal" style="text-align:center;margin:0 auto 24px;max-width:680px;">Comece com 1 pipeline grátis. Escale quando quiser. Cancele quando quiser.</p>
+    <p class="section-sub reveal" style="text-align:center;margin:0 auto 36px;font-size:13px;color:var(--fl-text-muted);">Pagamento seguro via Mercado Pago com PIX e cartão.</p>
     <div class="planos-grid">
       <!-- TRIAL -->
       <div class="plano-card reveal">
         <div class="plano-name">TRIAL</div>
-        <div class="plano-price">Gratis</div>
-        <p style="color:var(--fl-purple-300);font-size:11px;margin:8px 0;font-weight:700;">7 DIAS PRA TESTAR</p>
-        <div class="plano-period" style="font-size:12px;margin-bottom:16px;">Da uma volta antes de decidir. Veja como funciona, sem compromisso.</div>
+        <div class="plano-price">Grátis</div>
+        <p style="color:var(--fl-purple-300);font-size:11px;margin:8px 0;font-weight:700;">1 SITE PRA TESTAR</p>
+        <div class="plano-period" style="font-size:12px;margin-bottom:16px;">Veja o sistema funcionando antes de investir.</div>
         <ul class="plano-features">
-          <li>1 site criado automaticamente</li>
-          <li>Prospeccao de 50 leads</li>
-          <li>Franz envia 1 mensagem</li>
-          <li>Acesso ao painel completo</li>
-          <li>Sem cartao de credito</li>
+          <li>1 site gerado</li>
+          <li>Prospecção básica</li>
+          <li>SDR Franz (1 abordagem)</li>
+          <li>Fila com menor prioridade</li>
+          <li>Suporte comunidade</li>
         </ul>
-        <div class="plano-cta-wrap">
-          <a href="/login?signup=1&amp;plano=trial" class="plano-cta cta-outline">VOU EXPERIMENTAR</a>
-        </div>
+        <a href="/login?signup=1&amp;plano=trial" class="btn btn-outline" style="margin-top:20px;width:100%;">TESTAR GRÁTIS</a>
       </div>
 
       <!-- STARTER -->
       <div class="plano-card reveal">
         <div class="plano-name">STARTER</div>
-        <div class="plano-price">R$97<span>/mes</span></div>
-        <p style="color:var(--fl-success);font-size:11px;margin:8px 0;font-weight:700;">IDEAL PRA COMEÇAR</p>
-        <div class="plano-period" style="font-size:12px;margin-bottom:16px;">Pra quem quer validar se funciona de verdade. Sem pressa pra escalar.</div>
+        <div class="plano-price">R$97<span>/mês</span></div>
+        <p style="color:var(--fl-success);font-size:11px;margin:8px 0;font-weight:700;">7 DIAS DE GARANTIA</p>
+        <div class="plano-period" style="font-size:12px;margin-bottom:16px;">Pra validar e começar a faturar. Cooldown de 60 min entre sites.</div>
         <ul class="plano-features">
-          <li>Sites ilimitados</li>
-          <li>Prospeccao automatica completa</li>
-          <li>Franz envia mensagens no WhatsApp</li>
-          <li>1 dominio proprio</li>
+          <li>Sites ilimitados (cooldown 60min)</li>
+          <li>Prospecção automática completa</li>
+          <li>Sem disparo SDR automático</li>
+          <li>Dashboard básico</li>
           <li>Hospedagem inclusa</li>
-          <li>Suporte por WhatsApp</li>
+          <li>Prioridade na fila (nível 2)</li>
+          <li>Suporte WhatsApp</li>
         </ul>
-        <div class="plano-cta-wrap">
-          <a href="/login?signup=1&amp;plano=starter" class="plano-cta cta-outline">COMEÇAR COM R$ 97</a>
-        </div>
+        <a href="/login?signup=1&amp;plano=starter" class="btn btn-outline" style="margin-top:20px;width:100%;">ASSINAR STARTER</a>
       </div>
 
       <!-- PRO -->
       <div class="plano-card destaque reveal">
         <div class="plano-name">PRO</div>
-        <div class="plano-price">R$197<span>/mes</span></div>
-        <p style="color:var(--gold);font-size:11px;margin:8px 0;font-weight:700;">MAIS ESCOLHIDO</p>
-        <div class="plano-period" style="font-size:12px;margin-bottom:16px;">Pra quem ja testou e quer ganhar dinheiro de verdade. Quem ta aqui nao volta pro Starter.</div>
+        <div class="plano-price">R$197<span>/mês</span></div>
+        <p style="color:var(--gold);font-size:11px;margin:8px 0;font-weight:700;">MAIS POPULAR</p>
+        <div class="plano-period" style="font-size:12px;margin-bottom:16px;">Pra quem quer escalar rápido. Cooldown de 30 min. Prioridade alta.</div>
         <ul class="plano-features">
-          <li>Sites ilimitados + cooldown minimo</li>
-          <li>Prospeccao avancada com IA</li>
-          <li>Franz com retries e follow-up automatico</li>
-          <li>Dominios proprios ilimitados</li>
+          <li>Sites ilimitados (cooldown 30min)</li>
+          <li>Prospecção avançada</li>
+          <li>SDR Franz com retries automáticos</li>
           <li>Dashboard completo + analytics</li>
-          <li>Prioridade na fila de envio</li>
-          <li>Suporte prioritario</li>
+          <li>Domínios próprios ilimitados</li>
+          <li>Prioridade alta na fila (nível 5)</li>
+          <li>Suporte prioritário</li>
         </ul>
-        <div class="plano-cta-wrap">
-          <a href="/login?signup=1&amp;plano=pro" class="plano-cta cta-gold">QUERO RENDA EXTRA</a>
-          <p class="plano-garantia">7 dias de garantia incondicional.</p>
-        </div>
+        <a href="/login?signup=1&amp;plano=pro" class="btn btn-yellow" style="margin-top:20px;width:100%;">ASSINAR PRO</a>
+        <p style="font-size:9px;color:#A16207;margin-top:12px;text-align:center;">7 dias de garantia incondicional.</p>
       </div>
 
       <!-- AGENCY -->
       <div class="plano-card reveal">
         <div class="plano-name">AGENCY</div>
-        <div class="plano-price">R$497<span>/mes</span></div>
+        <div class="plano-price">R$497<span>/mês</span></div>
         <p style="color:var(--cyan);font-size:11px;margin:8px 0;font-weight:700;">SEM COOLDOWN</p>
-        <div class="plano-period" style="font-size:12px;margin-bottom:16px;">Pra quem quer montar operacao ou revender. Sem fila, sem limite.</div>
+        <div class="plano-period" style="font-size:12px;margin-bottom:16px;">Para operações e agências que precisam vender em volume sem esperar fila.</div>
         <ul class="plano-features">
-          <li>Sites ilimitados SEM cooldown</li>
-          <li>Infraestrutura de alto volume</li>
-          <li>Painel admin master</li>
-          <li>Subcontas pra revenda</li>
-          <li>Agentes com sua marca</li>
-          <li>Prioridade maxima</li>
-          <li>Onboarding VIP</li>
+          <li>Sites ilimitados (sem cooldown)</li>
+          <li>Infraestrutura com capacidade ampliada</li>
+          <li>Painel administrativo master</li>
+          <li>Subcontas para operação ou revenda</li>
+          <li>Agentes com identidade personalizada</li>
+          <li>Prioridade máxima na fila</li>
+          <li>Onboarding e suporte VIP</li>
         </ul>
-        <div class="plano-cta-wrap">
-          <a href="/login?signup=1&amp;plano=agency" class="plano-cta cta-outline">QUERO ESCALAR</a>
-        </div>
+        <a href="/login?signup=1&amp;plano=agency" class="btn btn-outline" style="margin-top:20px;width:100%;border-color:var(--fl-purple-300);">ASSINAR AGENCY</a>
       </div>
     </div>
 
@@ -2849,56 +1583,42 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><polyline points="9 12 11 14 15 10"></polyline></svg>
       </div>
       <div>
-        <h4 style="font-size:18px;font-weight:700;margin-bottom:8px;color:var(--fl-text);">7 dias pra testar — se nao gostar, devolvo seu dinheiro</h4>
-        <p style="font-size:14px;color:var(--fl-text-muted);line-height:1.6;">Sem pergunta. Sem "mas". Sem burocracia. Voce assina, testa, ve se faz sentido pra sua vida. Em 7 dias, se decidir que nao e pra voce, e so mandar um e-mail e devolvemos 100% do valor. Nao tem pegadinha.</p>
+        <h4 style="font-size:18px;font-weight:700;margin-bottom:8px;color:var(--fl-text);">Garantia Incondicional de 7 Dias</h4>
+        <p style="font-size:14px;color:var(--fl-text-muted);line-height:1.6;">Assine normalmente. Se você se arrepender em até 7 dias, devolvemos 100% do valor. Sem perguntas, sem burocracia.</p>
       </div>
     </div>
   </div>
 </section>
 
-<!-- ===== 5 FONTES DE RECEITA (MOVIDO PARA DEPOIS DOS PLANOS) ===== -->
-<section class="funcionalidades" id="cinco-fontes">
+<!-- ===== SEÇÃO 9 — FAQ ===== -->
+<section class="faq" id="faq">
   <div class="container">
-    <h2 class="section-title reveal">5 FORMAS DE CONSTRUIR SUA LIBERDADE FINANCEIRA</h2>
-    <p class="section-sub reveal" style="text-align:center;margin:0 auto 48px;max-width:760px;color:var(--fl-text-muted);">Cada fonte e uma engrenagem de renda. Voce pode usar 1, 2 ou todas. Quem usa todas ta construindo patrimonio.</p>
-    <div class="feat-grid">
-      <div class="feat-card snake-card reveal"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
-        <div class="feat-icon" style="background:var(--gold-dim);"><span style="font-size:22px;font-weight:700;color:var(--gold);">1</span></div>
-        <div class="feat-title">Cobre pela criacao do site (uma vez)</div>
-        <div class="feat-desc"><strong style="color:var(--gold);">R$ 500 a R$ 3.000</strong> por site. Pizzaria, clinica, salao — cada um precisa de um. <em>Exemplo:</em> 8 sites/mes x R$ 1.200 = <strong>R$ 9.600 de entrada.</strong></div>
-      </div></div>
-      <div class="feat-card snake-card reveal"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
-        <div class="feat-icon" style="background:var(--cyan-dim);"><span style="font-size:22px;font-weight:700;color:var(--cyan);">2</span></div>
-        <div class="feat-title">Faca renda que entra todo mes</div>
-        <div class="feat-desc"><strong style="color:var(--cyan);">R$ 100 a R$ 800/mes</strong> por cliente. Em vez de R$ 1.500 uma vez, cobra R$ 200 todo mes. <em>Exemplo:</em> 15 clientes x R$ 200 = <strong>R$ 3.000 todo mes — chove ou faz sol.</strong></div>
-      </div></div>
-      <div class="feat-card snake-card reveal"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
-        <div class="feat-icon" style="background:rgba(147,51,234,0.12);"><span style="font-size:22px;font-weight:700;color:var(--fl-purple-300);">3</span></div>
-        <div class="feat-title">Hospeda os sites e cobra a mais</div>
-        <div class="feat-desc">Voce paga R$ 15-50 de hospedagem e cobra R$ 80-150 do cliente. Margem de 80%. <em>Exemplo:</em> 30 clientes x R$ 120 = <strong>R$ 3.600 com custo de R$ 450.</strong></div>
-      </div></div>
-      <div class="feat-card snake-card reveal"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
-        <div class="feat-icon" style="background:rgba(239,68,68,0.08);"><span style="font-size:22px;font-weight:700;color:var(--fl-danger);">4</span></div>
-        <div class="feat-title">Venda servicos extras</div>
-        <div class="feat-desc">Google Business, WhatsApp Business, fotos pro site, atualizacao. <em>Exemplo:</em> 15 clientes x R$ 200 extras = <strong>R$ 3.000 por mes.</strong></div>
-      </div></div>
-      <div class="feat-card snake-card reveal" style="grid-column:span 1;"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
-        <div class="feat-icon" style="background:var(--cyan-dim);"><span style="font-size:22px;font-weight:700;color:var(--cyan);">5</span></div>
-        <div class="feat-title">Monte sua agencia sob demanda</div>
-        <div class="feat-desc">No plano Agency, cria subcontas e revende acesso pra outros profissionais. <em>Exemplo:</em> 10 subcontas x R$ 200 de margem = <strong>R$ 2.000 recorrentes. Outros trabalham, voce embola.</strong></div>
-      </div></div>
-      <div class="feat-card snake-card reveal" style="background:linear-gradient(135deg,rgba(147,51,234,0.15),rgba(0,255,179,0.08));border-color:var(--fl-border-hi);"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
-        <div class="feat-title" style="font-size:14px;color:var(--cyan);font-family:var(--fl-font-mono);letter-spacing:1px;">QUEM USA TUDO CONSTRÓI PATRIMÔNIO</div>
-        <div class="feat-desc" style="color:var(--fl-text);font-size:14px;line-height:1.8;">
-          8 setups x R$ 1.200 = <strong>R$ 9.600</strong><br>
-          15 assinaturas x R$ 200 = <strong>R$ 3.000</strong><br>
-          30 hospedagens x R$ 120 = <strong>R$ 3.600</strong><br>
-          15 extras x R$ 200 = <strong>R$ 3.000</strong><br>
-          10 subcontas x R$ 200 = <strong>R$ 2.000</strong><br>
-          <span style="color:var(--fl-text-muted);font-size:12px;">- FraLib Pro R$ 197 + hospedagem R$ 450</span><br>
-          <span style="color:var(--cyan);font-size:18px;font-weight:700;display:block;margin-top:8px;">= ~R$ 20.500/mes de lucro</span>
-        </div>
-      </div></div>
+    <h2 class="section-title reveal">PERGUNTAS FREQUENTES</h2>
+    <div class="faq-list">
+      <div class="faq-item reveal">
+        <button class="faq-question" aria-expanded="false">Preciso saber programar?
+          <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="faq-answer"><div class="faq-answer-inner">Não. O sistema faz tudo automaticamente. Você só define o nicho e a cidade — o FraLib cuida do resto.</div></div>
+      </div>
+      <div class="faq-item reveal">
+        <button class="faq-question" aria-expanded="false">Meu WhatsApp pode ser banido?
+          <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="faq-answer"><div class="faq-answer-inner">O WhatsApp/SDR fica disponível no Trial ativo e nos planos Pro e Agency. O sistema usa cadência controlada, mensagens personalizadas e limites operacionais para reduzir risco.</div></div>
+      </div>
+      <div class="faq-item reveal">
+        <button class="faq-question" aria-expanded="false">Como funciona o pagamento?
+          <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="faq-answer"><div class="faq-answer-inner">Assinatura mensal via cartão ou PIX. Cancele quando quiser, sem multa e sem burocracia.</div></div>
+      </div>
+      <div class="faq-item reveal">
+        <button class="faq-question" aria-expanded="false">Qual a diferença entre Trial, Starter, Pro e Agency?
+          <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="faq-answer"><div class="faq-answer-inner">Trial libera 1 pipeline completa com site e abordagem Franz. Starter tem sites ilimitados com cooldown de 60 minutos, sem SDR automático. Pro reduz o cooldown para 30 minutos, adiciona SDR Franz com retries e prioridade alta. Agency remove cooldown e amplia a operação para volume.</div></div>
+      </div>
     </div>
   </div>
 </section>
@@ -2908,14 +1628,14 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
   <div class="container">
     <div class="beta-wrapper reveal">
       <div style="text-align:center">
-        <span class="beta-spots"><span class="dot"></span> TESTE GRATIS</span>
+        <span class="beta-spots"><span class="dot"></span> VAGAS LIMITADAS</span>
       </div>
-      <h2>QUER TESTAR ANTES DE DECIDIR?</h2>
-      <p class="beta-subtitle">Manda seu nome, e-mail e WhatsApp. A gente te manda o acesso pro Trial de 7 dias + entrada no grupo exclusivo onde a galera compartilha resultado. Nao e spam. E acesso real.</p>
+      <h2>GARANTA SUA VAGA NA VERSÃO BETA</h2>
+      <p class="beta-subtitle">Preencha seus dados e entre no grupo exclusivo de early adopters do FraLib OS.</p>
       <form id="betaForm">
         <div class="beta-field">
           <label for="beta-name">Seu nome</label>
-          <input type="text" id="beta-name" name="name" placeholder="Ex: Joao Silva" required>
+          <input type="text" id="beta-name" name="name" placeholder="Ex: João Silva" required>
         </div>
         <div class="beta-field">
           <label for="beta-email">E-mail</label>
@@ -2925,342 +1645,28 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
           <label for="beta-phone">WhatsApp</label>
           <input type="tel" id="beta-phone" name="phone" placeholder="(11) 99999-9999" required>
         </div>
-        <button type="submit" class="beta-submit">QUERO MEU ACESSO GRATIS</button>
+        <button type="submit" class="beta-submit">QUERO PARTICIPAR DA BETA</button>
       </form>
-      <p class="beta-note">Apos enviar, voce recebe o login do Trial e entra no grupo de resultados.</p>
+      <p class="beta-note">Ao enviar, você será redirecionado para o grupo do WhatsApp.</p>
     </div>
   </div>
 </section>
-
-<!-- ===== SEÇÃO DE SELOS DE SEGURANÇA (acima do footer) ===== -->
-<section class="trust-seals-section" id="seguranca">
-  <div class="container">
-    <div class="trust-seals-header">
-      <h3 class="trust-seals-title">SUA SEGURANÇA É PRIORIDADE</h3>
-      <p class="trust-seals-subtitle">Infraestrutura certificada e conformidade total com a legislação brasileira.</p>
-    </div>
-    <div class="trust-seals-grid">
-      <div class="trust-seal">
-        <div class="trust-seal-icon pagamento">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M2 10h20M6 16h4"/></svg>
-        </div>
-        <div class="trust-seal-text">
-          <span class="trust-seal-title">PAGAMENTO SEGURO</span>
-          <span class="trust-seal-desc">Mercado Pago - PIX e Cartao com criptografia SSL</span>
-        </div>
-      </div>
-
-      <div class="trust-seal">
-        <div class="trust-seal-icon garantia">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-        </div>
-        <div class="trust-seal-text">
-          <span class="trust-seal-title">GARANTIA 7 DIAS</span>
-          <span class="trust-seal-desc">Devolucao integral do valor sem perguntas</span>
-        </div>
-      </div>
-
-      <div class="trust-seal">
-        <div class="trust-seal-icon lgpd">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-        </div>
-        <div class="trust-seal-text">
-          <span class="trust-seal-title">LGPD COMPLIANT</span>
-          <span class="trust-seal-desc">Seus dados protegidos conforme Lei 13.709/2018</span>
-        </div>
-      </div>
-
-      <div class="trust-seal">
-        <div class="trust-seal-icon suporte">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg>
-        </div>
-        <div class="trust-seal-text">
-          <span class="trust-seal-title">SUPORTE BR</span>
-          <span class="trust-seal-desc">Atendimento humanizado em portugues</span>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- FLOATING WHATSAPP WIDGET -->
-<a href="https://wa.me/5511999999999?text=Oi%2C%20vi%20na%20landing%20da%20FraLib" target="_blank" rel="noopener" id="whatsapp-float" aria-label="Falar no WhatsApp">
-  <svg width="28" height="28" viewBox="0 0 24 24" fill="#fff"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-</a>
-
-<style>
-#whatsapp-float{
-  position:fixed;bottom:24px;right:24px;z-index:9999;
-  width:60px;height:60px;
-  background:#25D366;border-radius:50%;
-  display:flex;align-items:center;justify-content:center;
-  box-shadow:0 4px 20px rgba(37,211,102,0.5);
-  transition:transform .2s,box-shadow .2s;
-  animation:wa-pulse 2s infinite;
-}
-#whatsapp-float:hover{
-  transform:scale(1.1);
-  box-shadow:0 6px 30px rgba(37,211,102,0.7);
-}
-@keyframes wa-pulse{
-  0%,100%{box-shadow:0 4px 20px rgba(37,211,102,0.5)}
-  50%{box-shadow:0 4px 30px rgba(37,211,102,0.8)}
-}
-@media(max-width:768px){#whatsapp-float{bottom:16px;right:16px;width:56px;height:56px}}
-</style>
-
-<script>
-document.getElementById('whatsapp-float').addEventListener('click', function(){
-  if(typeof fbq!=='undefined') fbq('track','WhatsAppClick');
-});
-</script>
 
 <!-- FOOTER -->
 <footer class="footer">
-  <div class="footer-grid">
-    <!-- COL 1: Brand + Social -->
-    <div class="footer-col">
-      <img src="/images/Logo FraLib.png" alt="FraLib OS" class="footer-brand-logo">
-      <p class="footer-brand-desc">
-        A primeira agencia autonoma de IA do Brasil. Voce fecha, a FraLib faz o resto.
-      </p>
-      <div class="footer-social">
-        <a href="#" aria-label="Instagram"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37zM17.5 6.5h.01"/></svg></a>
-        <a href="#" aria-label="YouTube"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22.54 6.42a2.78 2.78 0 00-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 00-1.94 2A29 29 0 001 11.75a29 29 0 00.46 5.33A2.78 2.78 0 003.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 001.94-2 29 29 0 00.46-5.25 29 29 0 00-.46-5.33z"/><polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02"/></svg></a>
-        <a href="#" aria-label="LinkedIn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-4 0v7h-4v-7a6 6 0 016-6zM2 9h4v12H2zM4 6a2 2 0 100-4 2 2 0 000 4z"/></svg></a>
-        <a href="#" aria-label="WhatsApp"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg></a>
-      </div>
-    </div>
-
-    <!-- COL 2: Produto -->
-    <div class="footer-col">
-      <h4>PRODUTO</h4>
-      <ul class="footer-links">
-        <li><a href="#como-funciona">Como funciona</a></li>
-        <li><a href="#planos">Planos e precos</a></li>
-        <li><a href="#funcionalidades">Funcionalidades</a></li>
-        <li><a href="#depoimentos">Casos de sucesso</a></li>
-        <li><a href="/login?signup=1">Criar conta gratis</a></li>
-      </ul>
-    </div>
-
-    <!-- COL 3: Suporte -->
-    <div class="footer-col">
-      <h4>SUPORTE</h4>
-      <ul class="footer-links">
-        <li><a href="#faq">Perguntas frequentes</a></li>
-        <li><a href="#contato">Central de ajuda</a></li>
-        <li><a href="/docs">Documentacao</a></li>
-        <li><a href="/status">Status do sistema</a></li>
-        <li><a href="/afiliados">Programa de afiliados</a></li>
-      </ul>
-    </div>
-
-    <!-- COL 4: Recursos -->
-    <div class="footer-col">
-      <h4>RECURSOS</h4>
-      <ul class="footer-links">
-        <li><a href="/blog">Blog &amp; Tutoriais</a></li>
-        <li><a href="/casos">Casos de sucesso</a></li>
-        <li><a href="/eventos">Eventos &amp; Webinars</a></li>
-        <li><a href="/parcerias">Parcerias &amp; Agencias</a></li>
-        <li><a href="/changelog">Changelog</a></li>
-      </ul>
-    </div>
-  </div>
-
-  <!-- BOTTOM -->
-  <div class="footer-bottom">
-    <div class="footer-copy">
-      &copy; 2026 <strong>FraLib OS</strong> · CNPJ 21.199.022/0001-00 · Todos os direitos reservados
-    </div>
-    <div class="footer-bottom-links">
-      <a href="/privacidade">Politica de Privacidade</a>
-      <a href="/termos">Termos de Uso</a>
-      <a href="/cookies">Cookies</a>
-    </div>
-  </div>
+  <img src="/images/Logo FraLib.png" alt="FraLib" height="24"><br>
+  Pagamento seguro &bull; Cancele quando quiser &bull; Suporte em português
 </footer>
-
-<!-- LGPD COOKIE BANNER -->
-<div class="lgpd-banner" id="lgpdBanner" role="dialog" aria-label="Aviso de cookies">
-  <div class="lgpd-icon">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-  </div>
-  <div class="lgpd-content">
-    <div class="lgpd-title">VALORIZAMOS SUA PRIVACIDADE</div>
-    <p class="lgpd-text">
-      Usamos cookies para melhorar sua experiencia, analisar o trafego e personalizar conteudo.
-      Ao clicar em "Aceitar", voce concorda com nossa <a href="/privacidade">Politica de Privacidade</a> e <a href="/cookies">uso de cookies</a> conforme a LGPD.
-    </p>
-  </div>
-  <div class="lgpd-actions">
-    <button class="lgpd-btn lgpd-btn-reject" id="lgpdReject">Recusar</button>
-    <button class="lgpd-btn lgpd-btn-accept" id="lgpdAccept">Aceitar</button>
-  </div>
-</div>
 
 <!-- ============================================================
      JAVASCRIPT
      ============================================================ -->
 <script>
-// === TRACKING: Helper para enviar eventos para Meta Pixel + Clarity ===
-function trackEvent(eventName, params = {}) {
-  // Meta Pixel
-  if (typeof fbq !== 'undefined') {
-    fbq('track', eventName, params);
-  }
-  // Microsoft Clarity (custom event)
-  if (typeof clarity !== 'undefined') {
-    clarity('event', eventName);
-  }
-  // Console log para debug
-  if (window.console && console.log) {
-    console.log('[track]', eventName, params);
-  }
-}
-
-// === TRACKING: Scroll Depth (25%, 50%, 75%, 100%) ===
-let scrollMarks = { 25: false, 50: false, 75: false, 100: false };
-window.addEventListener('scroll', () => {
-  const docHeight = document.documentElement.scrollHeight - window.innerHeight;
-  if (docHeight <= 0) return;
-  const scrollPercent = Math.round((window.scrollY / docHeight) * 100);
-  Object.keys(scrollMarks).forEach(mark => {
-    const pct = parseInt(mark);
-    if (!scrollMarks[mark] && scrollPercent >= pct) {
-      scrollMarks[mark] = true;
-      trackEvent('scroll_depth', { percent: pct });
-    }
-  });
-}, { passive: true });
-
-// === TRACKING: CTA Hero click ===
-document.addEventListener('click', (e) => {
-  const cta = e.target.closest('.btn-hero-primary');
-  if (cta) {
-    trackEvent('cta_hero_click', { location: 'hero' });
-  }
-});
-
-// === TRACKING: Pricing plan clicks ===
-document.addEventListener('click', (e) => {
-  const plan = e.target.closest('.plano-cta');
-  if (plan) {
-    const planName = plan.textContent.trim().replace(/\s+/g, '_').toLowerCase();
-    trackEvent('pricing_cta_click', { plan: planName });
-  }
-});
-
-// === TRACKING: Beta form submit ===
-document.addEventListener('submit', (e) => {
-  if (e.target.id === 'betaForm') {
-    trackEvent('beta_form_submit', { form: 'lead_capture' });
-  }
-});
-
-// === TRACKING: Section views (hero, social-proof, planos, faq, footer) ===
-const sectionObserver = new IntersectionObserver((entries) => {
-  entries.forEach(entry => {
-    if (entry.isIntersecting && entry.intersectionRatio >= 0.4) {
-      const sectionName = entry.target.id || entry.target.className.split(' ')[0];
-      if (sectionName) {
-        trackEvent('section_view', { section: sectionName });
-      }
-    }
-  });
-}, { threshold: 0.4 });
-
-document.addEventListener('DOMContentLoaded', () => {
-  // Observar seções principais
-  ['hero', 'planos', 'faq', 'cinco-fontes', 'seguranca'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) sectionObserver.observe(el);
-  });
-});
-
-// === TRACKING: Pipeline animation completude ===
-document.addEventListener('DOMContentLoaded', () => {
-  setTimeout(() => {
-    trackEvent('pipeline_venda_animation_complete');
-  }, 14500);
-});
-
-// === DETECTAR INSTAGRAM IN-APP BROWSER (desativar features pesadas) ===
-const isInstagram = /Instagram/i.test(navigator.userAgent);
-const isLowEndDevice = /Android.*Mobile|iPhone/i.test(navigator.userAgent) && navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4;
-const isMobileInApp = isInstagram || isLowEndDevice;
-
 // === NAV SCROLL ===
 const nav = document.getElementById('navbar');
 window.addEventListener('scroll', () => {
   nav.classList.toggle('scrolled', window.scrollY > 50);
 }, { passive: true });
-
-// === PIPELINE COUNTERS (motion design) ===
-function animateCounter(element, target, duration, prefix = '', suffix = '') {
-  const startTime = performance.now();
-  const start = 0;
-  function update(currentTime) {
-    const elapsed = currentTime - startTime;
-    const progress = Math.min(elapsed / duration, 1);
-    // ease-out-expo: desacelera no final (impacto)
-    const eased = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
-    const current = Math.floor(eased * (target - start) + start);
-    // Format BR: R$ 1.500 (ponto)
-    let display;
-    if (prefix.includes('R$')) {
-      display = current.toLocaleString('pt-BR');
-    } else {
-      display = current.toString();
-    }
-    element.textContent = prefix + display + suffix;
-    if (progress < 1) requestAnimationFrame(update);
-  }
-  requestAnimationFrame(update);
-}
-
-// Dispara contador quando o elemento entra em "exibição" (após delay específico)
-function startPipelineCounters() {
-  const counters = document.querySelectorAll('[data-counter]');
-  counters.forEach(el => {
-    const target = parseInt(el.dataset.target);
-    const prefix = el.dataset.prefix || '';
-    const suffix = el.dataset.suffix || '';
-    const duration = 1500; // 1.5s
-
-    // Detectar qual contador baseado na classe
-    if (el.classList.contains('step-percent')) {
-      // Step 3: 0% -> 100% durante a etapa (5s -> 7.5s)
-      setTimeout(() => animateCounter(el, target, duration, prefix, suffix), 6500);
-    } else if (el.classList.contains('step-amount')) {
-      // Step 5: 0 -> 1500 após step-5 aparecer (12s)
-      setTimeout(() => animateCounter(el, target, 1800, prefix, suffix), 12000);
-    }
-  });
-}
-
-// Marcar steps anteriores como "done" quando avançam
-function markPreviousStepsAsDone() {
-  const steps = document.querySelectorAll('.pipeline-step');
-  const stepTimings = [
-    { idx: 0, doneAt: 2300 }, // step-1 done quando step-2 entra
-    { idx: 1, doneAt: 5000 }, // step-2 done quando step-3 entra
-    { idx: 2, doneAt: 8000 }, // step-3 done quando step-4 entra
-    { idx: 3, doneAt: 11500 } // step-4 done quando step-5 entra
-  ];
-  stepTimings.forEach(({idx, doneAt}) => {
-    setTimeout(() => {
-      if (steps[idx]) steps[idx].classList.add('step-done');
-    }, doneAt);
-  });
-}
-
-// Iniciar quando DOM carregar
-document.addEventListener('DOMContentLoaded', () => {
-  setTimeout(startPipelineCounters, 300);
-  markPreviousStepsAsDone();
-});
 
 // === MOBILE MENU ===
 document.getElementById('mobileToggle').addEventListener('click', () => {
@@ -3319,38 +1725,8 @@ document.getElementById('betaForm').addEventListener('submit', function(e){
   }
 });
 
-// === LGPD COOKIE BANNER ===
+// === PARALLAX ===
 (function(){
-  const banner = document.getElementById('lgpdBanner');
-  const acceptBtn = document.getElementById('lgpdAccept');
-  const rejectBtn = document.getElementById('lgpdReject');
-  if(!banner) return;
-
-  const STORAGE_KEY = 'fralib_lgpd_consent';
-  const stored = localStorage.getItem(STORAGE_KEY);
-
-  // Show banner only if user hasn't chosen yet
-  if(!stored){
-    setTimeout(() => banner.classList.add('show'), 1200);
-  }
-
-  function dismiss(consent){
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({
-      consent: consent,
-      timestamp: Date.now()
-    }));
-    banner.classList.remove('show');
-    // Dispatch event for analytics
-    window.dispatchEvent(new CustomEvent('lgpd:consent', {detail:{consent}}));
-  }
-
-  if(acceptBtn) acceptBtn.addEventListener('click', () => dismiss('accepted'));
-  if(rejectBtn) rejectBtn.addEventListener('click', () => dismiss('rejected'));
-})();
-
-// === PARALLAX === (desativado em Instagram in-app para performance)
-(function(){
-  if(isMobileInApp){return}  // Skip parallax no Instagram/mobile in-app
   const parallaxEls = document.querySelectorAll('[data-parallax]');
   const orbs = document.querySelectorAll('.orb');
   const mascots = document.querySelectorAll('.hero-mascot, .steps-mascot, .cta-mascot');
@@ -3397,41 +1773,6 @@ document.getElementById('betaForm').addEventListener('submit', function(e){
     }
   }, { passive: true });
 })();
-
-// Scrollteller - drag horizontal com mouse + wheel
-(function(){
-  const scroller = document.getElementById('depoimentosScroller');
-  if(!scroller)return;
-  let isDown = false, startX = 0, scrollLeft = 0;
-  scroller.addEventListener('mousedown', e => {
-    isDown = true;
-    scroller.classList.add('dragging');
-    startX = e.pageX - scroller.offsetLeft;
-    scrollLeft = scroller.scrollLeft;
-  });
-  scroller.addEventListener('mouseleave', () => {
-    isDown = false;
-    scroller.classList.remove('dragging');
-  });
-  scroller.addEventListener('mouseup', () => {
-    isDown = false;
-    scroller.classList.remove('dragging');
-  });
-  scroller.addEventListener('mousemove', e => {
-    if(!isDown)return;
-    e.preventDefault();
-    const x = e.pageX - scroller.offsetLeft;
-    const walk = (x - startX) * 2;
-    scroller.scrollLeft = scrollLeft - walk;
-  });
-  // Wheel vertical vira horizontal
-  scroller.addEventListener('wheel', e => {
-    if(Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
-      e.preventDefault();
-      scroller.scrollLeft += e.deltaY;
-    }
-  }, {passive:false});
-})();
 </script>
 
 
@@ -3455,54 +1796,46 @@ function toggleTheme() {
 if(localStorage.getItem('fralib_theme') === 'light') toggleTheme();
 tBtn.addEventListener('click', toggleTheme);
 
-// --- Particles JS Init (with reduced-motion check) ---
+// --- Particles JS Init ---
 const initLightColors = ["#4c1d9e", "#00cc8e", "#eab308"];
 const initDarkColors  = ["#ffffff", "#dcdcdc", "#a855f7"];
-
-// Only initialize particles if user hasn't requested reduced motion
-// E se NÃO for Instagram in-app (desabilita para performance)
-const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-if (!prefersReducedMotion && !isMobileInApp && typeof particlesJS !== 'undefined') {
-  // Reduzir particles para 60 em mobile (perf), manter 250 em desktop
-  const isMobile = window.innerWidth < 768;
-  particlesJS("particles-js", {
-    "particles": {
-      "number": { "value": isMobile ? 60 : 250, "density": { "enable": true, "value_area": isMobile ? 2500 : 1000 } },
-      "color": { "value": document.body.classList.contains('light-mode') ? initLightColors : initDarkColors },
-      "shape": { "type": "circle" },
-      "opacity": {
-        "value": 0.4,
-        "random": true,
-        "anim": { "enable": !isMobile, "speed": 1, "opacity_min": 0.1, "sync": false }
-      },
-      "size": {
-        "value": 2,
-        "random": true,
-        "anim": { "enable": !isMobile, "speed": 2, "size_min": 0.3, "sync": false }
-      },
-      "line_linked": {
-        "enable": false
-      },
-      "move": {
-        "enable": true,
-        "speed": 0.3,
-        "direction": "none",
-        "random": true,
-        "straight": false,
-        "out_mode": "out",
-        "bounce": false
-      }
+particlesJS("particles-js", {
+  "particles": {
+    "number": { "value": 250, "density": { "enable": true, "value_area": 1000 } },
+    "color": { "value": document.body.classList.contains('light-mode') ? initLightColors : initDarkColors },
+    "shape": { "type": "circle" },
+    "opacity": {
+      "value": 0.4,
+      "random": true,
+      "anim": { "enable": true, "speed": 1, "opacity_min": 0.1, "sync": false }
     },
-    "interactivity": {
-      "detect_on": "window",
-      "events": {
-        "onhover": { "enable": false },
-        "onclick": { "enable": false }
-      }
+    "size": {
+      "value": 2,
+      "random": true,
+       "anim": { "enable": true, "speed": 2, "size_min": 0.3, "sync": false }
     },
-    "retina_detect": true
-  });
-}
+    "line_linked": {
+      "enable": false
+    },
+    "move": {
+      "enable": true,
+      "speed": 0.3,
+      "direction": "none",
+      "random": true,
+      "straight": false,
+      "out_mode": "out",
+      "bounce": false
+    }
+  },
+  "interactivity": {
+    "detect_on": "window",
+    "events": {
+      "onhover": { "enable": false },
+      "onclick": { "enable": false }
+    }
+  },
+  "retina_detect": true
+});
   </script>
 <script src="/js/fralib-tracker.js" defer></script>
 </body>
