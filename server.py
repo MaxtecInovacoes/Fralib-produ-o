@@ -320,6 +320,17 @@ app = FastAPI(title="FraLib API", version="2.0.0")  # lifespan=lifespan desabili
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
+# Exception handler global para evitar "Unexpected token" em erros 500
+@app.exception_handler(Exception)
+async def global_exception_handler(request, exc):
+    import traceback
+    logger = logging.getLogger("fralib.server")
+    logger.error(f"Unhandled exception: {exc}\n{traceback.format_exc()}")
+    return JSONResponse(
+        status_code=500,
+        content={"detail": str(exc), "type": type(exc).__name__}
+    )
+
 
 @app.middleware("http")
 async def _attach_user_id_for_rate_limit(request, call_next):
