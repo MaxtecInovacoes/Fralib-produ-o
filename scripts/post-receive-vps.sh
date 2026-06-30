@@ -77,11 +77,12 @@ fi
 # 5. Publicar frontend estatico
 log "Publicando frontend em $WEB_DIR..."
 install -d "$WEB_DIR"
-for html in admin.html dashboard.html landing.html login.html planos.html studio.html superadmin.html termos.html privacidade.html; do
+for html in admin.html landing.html login.html planos.html studio.html superadmin.html termos.html privacidade.html; do
     if [ -f "$FRALIB_DIR/frontend/$html" ]; then
         cp -a "$FRALIB_DIR/frontend/$html" "$WEB_DIR/$html"
     fi
 done
+rm -f "$WEB_DIR/dashboard.html"
 
 for dir in blog docs css js static images; do
     if [ -d "$FRALIB_DIR/frontend/$dir" ]; then

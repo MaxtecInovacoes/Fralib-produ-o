@@ -3,7 +3,7 @@ load_dotenv()
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
@@ -563,6 +563,11 @@ except ImportError as e:
 
 # Servir frontend
 
+def _redirect_to(path: str, request: Request) -> RedirectResponse:
+    query = request.url.query
+    target = path + (f"?{query}" if query else "")
+    return RedirectResponse(url=target, status_code=302)
+
 @app.get("/api/version")
 @limiter.exempt
 async def api_version():
@@ -582,6 +587,31 @@ async def llms_txt():
     if not os.path.exists(path):
         raise HTTPException(status_code=404, detail="llms.txt not found")
     return FileResponse(path, media_type="text/plain; charset=utf-8")
+
+
+@app.get("/dashboard")
+@app.get("/dashboard.html")
+@limiter.exempt
+async def legacy_dashboard_redirect(request: Request):
+    return _redirect_to("/admin.html", request)
+
+
+@app.get("/admin")
+@limiter.exempt
+async def admin_redirect():
+    return RedirectResponse(url="/admin.html", status_code=302)
+
+
+@app.get("/login.html")
+@limiter.exempt
+async def legacy_login_redirect(request: Request):
+    return _redirect_to("/login", request)
+
+
+@app.get("/planos.html")
+@limiter.exempt
+async def legacy_planos_redirect(request: Request):
+    return _redirect_to("/planos", request)
 
 
 @app.get("/termos")

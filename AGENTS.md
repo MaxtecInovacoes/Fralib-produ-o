@@ -395,8 +395,14 @@ branch explícito `FRALIB_BUILDER_ENGINE=vite_react`.
 - `/admin` deve redirecionar para `/admin.html`.
 - `/dashboard` e `/dashboard.html` são legado e devem redirecionar para
   `/admin.html`, preservando querystring.
+- `dashboard.html` não deve ser publicado em `/var/www/fralib`; o deploy deve
+  remover a cópia legada se ela existir.
+- `/login.html` deve redirecionar para `/login`, preservando querystring.
+- `/planos.html` deve redirecionar para `/planos`, preservando querystring.
 - Emails, checkout, onboarding, login e cadastro não devem criar links novos
   para `/dashboard` ou `/dashboard.html`.
+- Novos usuários devem nascer com `config_pipeline` e `lead_supply_config`
+  criados, para reduzir divergência operacional entre tenants.
 
 ---
 

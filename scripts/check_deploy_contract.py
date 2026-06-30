@@ -31,12 +31,20 @@ def main() -> int:
 
     if 'frontend/*.html' in hook:
         problems.append("post-receive ainda publica frontend/*.html por glob")
+    if "dashboard.html landing.html" in hook or "admin.html dashboard.html" in hook:
+        problems.append("post-receive ainda publica dashboard.html")
+    if "dashboard.html" not in hook or "rm -f" not in hook:
+        problems.append("post-receive nao remove dashboard.html legado")
     if 'location = /dashboard {' not in nginx or 'return 302 /admin.html$is_args$args;' not in nginx:
         problems.append("Nginx nao redireciona /dashboard para admin.html")
     if 'location = /dashboard.html {' not in nginx or 'return 302 /admin.html$is_args$args;' not in nginx:
         problems.append("Nginx nao redireciona /dashboard.html para admin.html")
     if 'location = /admin {' not in nginx or 'return 302 /admin.html;' not in nginx:
         problems.append("Nginx nao preserva a rota operacional /admin")
+    if 'location = /login.html {' not in nginx or 'return 302 /login$is_args$args;' not in nginx:
+        problems.append("Nginx nao redireciona /login.html para /login")
+    if 'location = /planos.html {' not in nginx or 'return 302 /planos$is_args$args;' not in nginx:
+        problems.append("Nginx nao redireciona /planos.html para /planos")
     if 'return 301 /admin;' in nginx or 'return 302 /admin;' in nginx:
         problems.append("Nginx redireciona outra superficie para /admin")
     for token in ('nginx -t', 'systemctl reload nginx', 'deploy/nginx/seunegociofralib.conf'):

@@ -49,6 +49,17 @@ def ensure_schema(db: Session) -> None:
     db.execute(
         text(
             """
+            INSERT INTO lead_supply_config (tenant_id)
+            SELECT id
+            FROM users
+            WHERE id IS NOT NULL
+            ON CONFLICT (tenant_id) DO NOTHING
+            """
+        )
+    )
+    db.execute(
+        text(
+            """
             CREATE TABLE IF NOT EXISTS lead_inventory (
                 id VARCHAR(80) PRIMARY KEY,
                 tenant_id INTEGER NOT NULL,

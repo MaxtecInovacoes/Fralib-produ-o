@@ -7,8 +7,8 @@ O produto combina Lead Supply, qualificacao factual, pesquisa de mercado, Builde
 ## Links principais
 
 - Site: https://fralib.com.br/
-- Login: https://fralib.com.br/login.html
-- Planos: https://fralib.com.br/planos.html
+- Login: https://fralib.com.br/login
+- Planos: https://fralib.com.br/planos
 - Blog: https://fralib.com.br/blog/
 - Documentacao publica: https://fralib.com.br/docs/
 

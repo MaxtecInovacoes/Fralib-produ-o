@@ -70,7 +70,7 @@ cd "$FRALIB_DIR"
 # 4. Publicar frontend estatico servido pelo Nginx
 log "Publicando frontend estatico em $WEB_DIR..."
 install -d "$WEB_DIR"
-for html in admin.html dashboard.html landing.html login.html planos.html studio.html superadmin.html termos.html privacidade.html; do
+for html in admin.html landing.html login.html planos.html studio.html superadmin.html termos.html privacidade.html; do
     cp -a "$FRALIB_DIR/frontend/$html" "$WEB_DIR/$html"
 done
 if [ -f "$FRALIB_DIR/frontend/llms.txt" ]; then
@@ -84,7 +84,7 @@ done
 if [ -d "$FRALIB_DIR/frontend/images" ]; then
     cp -a "$FRALIB_DIR/frontend/images" "$WEB_DIR"/
 fi
-for legacy_html in landing-b.html landing-c.html landing-new.html landing-backup-20260511.html landing2.html landing_backup.html; do
+for legacy_html in dashboard.html landing-b.html landing-c.html landing-new.html landing-backup-20260511.html landing2.html landing_backup.html; do
     if [ -f "$WEB_DIR/$legacy_html" ]; then
         rm -f "$WEB_DIR/$legacy_html"
     fi

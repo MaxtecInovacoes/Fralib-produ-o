@@ -2337,7 +2337,7 @@ function trackPurchase(orderId, amount) {
     <div class="produto-mockup reveal">
       <div class="mockup-topbar">
         <div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div>
-        <div class="mockup-url">app.fralib.com.br/dashboard</div>
+        <div class="mockup-url">app.fralib.com.br/admin.html</div>
       </div>
       <div class="mockup-body">
         <div class="mockup-kanban">
@@ -3917,7 +3917,7 @@ if (!prefersReducedMotion && !isMobileInApp && typeof particlesJS !== 'undefined
           <p style="color: #b0b0c8; font-size: 14px; line-height: 1.6; margin-bottom: 24px">
             Oferta enviada pro seu email:<br><strong style="color: #FACC15">${email}</strong>
           </p>
-          <a href="/login.html?plano=starter&utm_source=exit_popup" style="display: inline-block; background: #FACC15; color: #000; padding: 14px 28px; font-family: 'Press Start 2P', monospace; font-size: 10px; text-decoration: none; letter-spacing: 1px; box-shadow: inset -3px -3px 0 #A16207, inset 3px 3px 0 #FDE68A, 0 4px 0 #713F12;">
+          <a href="/login?plano=starter&utm_source=exit_popup" style="display: inline-block; background: #FACC15; color: #000; padding: 14px 28px; font-family: 'Press Start 2P', monospace; font-size: 10px; text-decoration: none; letter-spacing: 1px; box-shadow: inset -3px -3px 0 #A16207, inset 3px 3px 0 #FDE68A, 0 4px 0 #713F12;">
             ATIVAR MINHA CONTA →
           </a>
         </div>`;

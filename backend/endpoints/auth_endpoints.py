@@ -110,6 +110,15 @@ def _inicializar_tenant(db: Session, user_id: int, nome: str, email: str, now: s
     except Exception as e:
         print(f"[Tenant Init] Erro ao criar config_pipeline: {e}")
 
+    # 4. Criar lead_supply_config padrao (se nao existir)
+    try:
+        from backend.services.lead_supply_storage import get_or_create_config
+
+        get_or_create_config(db, user_id)
+        print(f"[Tenant Init] Lead supply config criada para user_id={user_id}")
+    except Exception as e:
+        print(f"[Tenant Init] Erro ao criar lead_supply_config: {e}")
+
 SECRET_KEY = get_jwt_secret()
 
 class LoginRequest(BaseModel):

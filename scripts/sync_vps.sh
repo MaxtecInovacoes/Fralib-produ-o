@@ -32,12 +32,13 @@ git pull origin master
 echo ""
 echo "2. Copiar frontend/ para $WEB_DIR/"
 # HTMLs canonicos
-for html in admin.html dashboard.html landing.html login.html planos.html studio.html superadmin.html termos.html privacidade.html; do
+for html in admin.html landing.html login.html planos.html studio.html superadmin.html termos.html privacidade.html; do
     if [ -f "\$FRALIB_DIR/frontend/\$html" ]; then
         cp -a "\$FRALIB_DIR/frontend/\$html" "\$WEB_DIR/\$html"
         echo "  copiado: \$html"
     fi
 done
+rm -f "\$WEB_DIR/dashboard.html"
 
 # Diretorios estaticos (sobrescreve se mudou)
 for dir in blog docs css js static images; do

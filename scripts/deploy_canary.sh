@@ -33,7 +33,7 @@ fi
 ENDPOINTS=(
     "/api/health"
     "/login"
-    "/dashboard"
+    "/admin.html"
     "/plans"
     "/api/version"
 )
