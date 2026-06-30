@@ -99,6 +99,10 @@ import hermes_endpoints
 import pipeline_tempo_endpoints
 import automation_endpoints
 import retargeting_endpoints
+import analytics_endpoints as fralib_analytics_endpoints
+import competitive_intelligence
+import linkedin_outreach
+import crm_integration
 
 from contextlib import asynccontextmanager
 
@@ -450,6 +454,11 @@ app.include_router(metrics_endpoints.router)
 app.include_router(hermes_endpoints.router)
 app.include_router(automation_endpoints.router)
 app.include_router(retargeting_endpoints.router)
+
+# SuperAdmin: Competitive Intelligence
+app.include_router(competitive_intelligence.router)
+app.include_router(linkedin_outreach.router)
+app.include_router(crm_integration.router)
 
 # Analytics endpoints
 try:

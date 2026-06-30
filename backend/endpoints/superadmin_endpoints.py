@@ -249,6 +249,201 @@ async def toggle_user(user_id: int, request: Request, db: Session = Depends(get_
         raise HTTPException(status_code=500, detail="Erro interno. Tente novamente.")
 
 
+@router.get("/ghost-users")
+async def list_ghost_users(
+    db: Session = Depends(get_db),
+    user: dict = Depends(require_superadmin)
+):
+    """Lista usuarios fantasmas (suspeitos de serem testes/devs/admin interno).
+
+    Criterios:
+    - Email contem: test, demo, fake, example, admin, codex, fralib, suporte, jesus, noreply
+    - Ou nunca acessaram (ultimo_acesso null ou 'Nunca')
+    - Ou cadastrados via terminal (sem nicho definido)
+    EXCLUI: superadmins e emails de dominios reais (gmail, hotmail, outlook, etc)
+    """
+    try:
+        rows = db.execute(text("""
+            SELECT
+                u.id, u.email, u.nome, u.role, u.plano, u.status,
+                u.creditos, u.criado_em, u.ultimo_acesso,
+                u.email_confirmado,
+                COALESCE(u.telefone, '') as telefone,
+                COALESCE(u.nicho, '') as nicho,
+                (
+                    SELECT COUNT(*) FROM leads WHERE user_id = u.id
+                ) as total_leads,
+                (
+                    SELECT COUNT(*) FROM token_transactions WHERE user_id = u.id
+                ) as total_tokens
+            FROM users u
+            WHERE (
+                LOWER(u.email) LIKE '%test%'
+                OR LOWER(u.email) LIKE '%demo%'
+                OR LOWER(u.email) LIKE '%fake%'
+                OR LOWER(u.email) LIKE '%example%'
+                OR LOWER(u.email) LIKE '%admin@%'
+                OR LOWER(u.email) LIKE '%codex%'
+                OR LOWER(u.email) LIKE '%@fralib%'
+                OR LOWER(u.email) LIKE '%suporte@%'
+                OR LOWER(u.email) LIKE '%jesus%'
+                OR LOWER(u.email) LIKE '%noreply%'
+                OR LOWER(u.email) LIKE '%pipeline%'
+                OR LOWER(u.email) LIKE '%@test.com%'
+                OR LOWER(u.email) LIKE '%@teste.com%'
+                OR u.ultimo_acesso IS NULL
+                OR u.ultimo_acesso = ''
+                OR u.ultimo_acesso = 'Nunca'
+            )
+            AND u.role != 'superadmin'
+            ORDER BY u.id DESC
+        """)).fetchall()
+
+        ghosts = []
+        for r in rows:
+            email = r[1] or ""
+            ghosts.append({
+                "id": r[0],
+                "email": email,
+                "nome": r[2] or "",
+                "role": r[3] or "user",
+                "plano": r[4] or "trial",
+                "status": r[5] or "trial",
+                "creditos": r[6] or 0,
+                "criado_em": str(r[7]) if r[7] else None,
+                "ultimo_acesso": r[8] or "Nunca",
+                "email_confirmado": r[9] or False,
+                "telefone": r[10] or "",
+                "nicho": r[11] or "",
+                "total_leads": r[12] or 0,
+                "total_tokens": r[13] or 0,
+                "is_suspect": True,
+                "reason": _classify_ghost_reason(email, r[8], r[11])
+            })
+
+        return {
+            "ok": True,
+            "total": len(ghosts),
+            "ghosts": ghosts
+        }
+    except Exception as e:
+        print(f"[Superadmin] Erro ghost-users: {e}")
+        raise HTTPException(status_code=500, detail=f"Erro ao listar fantasmas: {e}")
+
+
+def _classify_ghost_reason(email: str, ultimo_acesso, nicho: str) -> str:
+    """Classifica o motivo pelo qual o usuario eh suspeito."""
+    reasons = []
+    e = email.lower() if email else ""
+
+    if "test" in e or "@teste" in e or "@test." in e:
+        reasons.append("email de teste")
+    if "demo" in e:
+        reasons.append("email demo")
+    if "fake" in e:
+        reasons.append("email fake")
+    if "example" in e:
+        reasons.append("email example")
+    if "admin@" in e:
+        reasons.append("email admin@")
+    if "codex" in e:
+        reasons.append("codex/internal")
+    if "@fralib" in e:
+        reasons.append("dominio interno")
+    if "suporte" in e:
+        reasons.append("suporte interno")
+    if "jesus" in e:
+        reasons.append("dev interno")
+    if "noreply" in e:
+        reasons.append("noreply")
+    if "pipeline" in e:
+        reasons.append("test pipeline")
+
+    if not ultimo_acesso or ultimo_acesso == "" or ultimo_acesso == "Nunca":
+        reasons.append("nunca acessou")
+
+    if not nicho:
+        reasons.append("sem nicho")
+
+    return " | ".join(reasons) if reasons else "suspeito"
+
+
+@router.post("/ghost-users/delete-batch")
+async def delete_ghost_users_batch(
+    request: Request,
+    db: Session = Depends(get_db),
+    user: dict = Depends(require_superadmin)
+):
+    """Exclui em massa usuarios fantasmas. Recebe {user_ids: [1,2,3]} no body."""
+    try:
+        body = await request.json()
+        user_ids = body.get("user_ids", [])
+
+        if not user_ids or not isinstance(user_ids, list):
+            raise HTTPException(status_code=400, detail="user_ids deve ser uma lista de inteiros")
+
+        # Filtrar para garantir que nao exclui superadmin
+        safe_ids = db.execute(text("""
+            SELECT id FROM users
+            WHERE id = ANY(:ids) AND role != 'superadmin'
+        """), {"ids": user_ids}).fetchall()
+        safe_ids = [r[0] for r in safe_ids]
+
+        if not safe_ids:
+            return {"ok": False, "error": "Nenhum usuario elegivel para exclusao"}
+
+        deleted_count = 0
+        details = {}
+
+        # Excluir dependencias em ordem
+        dependencies = [
+            ("leads", "user_id"),
+            ("token_transactions", "user_id"),
+            ("llm_usage", "user_id"),
+            ("site_visitas", "lead_id"),
+        ]
+
+        for table, col in dependencies:
+            try:
+                if col == "lead_id":
+                    result = db.execute(text(f"""
+                        DELETE FROM {table}
+                        WHERE {col} IN (SELECT id FROM leads WHERE user_id = ANY(:ids))
+                    """), {"ids": safe_ids})
+                else:
+                    result = db.execute(text(f"""
+                        DELETE FROM {table} WHERE {col} = ANY(:ids)
+                    """), {"ids": safe_ids})
+                details[table] = result.rowcount
+            except Exception as e:
+                details[table] = f"skip: {str(e)[:50]}"
+
+        # Excluir users
+        result = db.execute(text("""
+            DELETE FROM users WHERE id = ANY(:ids)
+        """), {"ids": safe_ids})
+        deleted_count = result.rowcount
+
+        # Audit log
+        _audit(db, user, "delete_ghost_users_batch", None,
+               metadata={"deleted_ids": safe_ids, "details": details}, request=request)
+
+        db.commit()
+
+        return {
+            "ok": True,
+            "deleted": deleted_count,
+            "details": details,
+            "ids": safe_ids
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        print(f"[Superadmin] Erro delete ghosts: {e}")
+        raise HTTPException(status_code=500, detail=f"Erro ao excluir: {e}")
+
+
 @router.post("/users/{user_id}/set-plan")
 async def set_plan(user_id: int, request: Request, db: Session = Depends(get_db), user: dict = Depends(require_superadmin)):
     """Alterar plano do usuario - recebe JSON {plano: 'trial'|'starter'|'pro'}"""

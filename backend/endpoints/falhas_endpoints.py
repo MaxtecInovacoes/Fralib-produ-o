@@ -167,6 +167,32 @@ async def retry_falha(
         run_id = uuid.uuid4().hex[:12]
         payload = {**payload, "_run_id": run_id}
 
+    # FIX: garantir que payload tem segmento/cidade. Se nao tiver (caso comum
+    # quando o job original veio do lead_supply que so passou force/True),
+    # buscar do lead ou do lead_supply_config.
+    if not payload.get("segmento") or not payload.get("cidade"):
+        # Tentar do lead
+        if lead_id:
+            lead_row = db.execute(
+                text("SELECT segmento, cidade FROM leads WHERE id=:id AND user_id=:uid"),
+                {"id": lead_id, "uid": tenant_id},
+            ).fetchone()
+            if lead_row:
+                payload.setdefault("segmento", lead_row[0] or "")
+                payload.setdefault("cidade", lead_row[1] or "")
+        # Fallback: lead_supply_config
+        if not payload.get("segmento") or not payload.get("cidade"):
+            cfg_row = db.execute(
+                text("SELECT segmentos, cidades FROM lead_supply_config WHERE tenant_id=:uid"),
+                {"uid": tenant_id},
+            ).fetchone()
+            if cfg_row:
+                import json as _json_f
+                _seg = cfg_row[0] if isinstance(cfg_row[0], list) else (_json_f.loads(cfg_row[0]) if cfg_row[0] else [])
+                _cid = cfg_row[1] if isinstance(cfg_row[1], list) else (_json_f.loads(cfg_row[1]) if cfg_row[1] else [])
+                payload.setdefault("segmento", (_seg[0] if _seg else "") or "")
+                payload.setdefault("cidade", (_cid[0] if _cid else "") or "")
+
     # Idempotency_key garante que retries duplos (usuario clica 2x) virem 1 job
     idem = f"retry-falha-{falha_id}"
 

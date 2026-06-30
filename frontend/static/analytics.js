@@ -153,6 +153,8 @@ class FraLibAnalytics {
   trackScrollDepth() {
     let maxScroll = 0;
     let scrollTimer;
+    let lastReportedDepth = 0;
+    const REPORT_INTERVALS = [25, 50, 75, 100]; // Throttle: only report at these depths
 
     window.addEventListener('scroll', () => {
       clearTimeout(scrollTimer);
@@ -162,18 +164,22 @@ class FraLibAnalytics {
       if (scrollPercent > maxScroll) {
         maxScroll = scrollPercent;
 
-        this.track('scroll_depth', {
-          depth: scrollPercent,
-          max_depth: maxScroll
-        });
+        // Only track at specific intervals to reduce events
+        if (scrollPercent >= lastReportedDepth + 25 || scrollPercent === 100) {
+          this.track('scroll_depth', {
+            depth: scrollPercent,
+            max_depth: maxScroll
+          });
+          lastReportedDepth = scrollPercent;
+        }
       }
 
       scrollTimer = setTimeout(() => {
         this.track('scroll_complete', {
           max_depth: maxScroll
         });
-      }, 1000);
-    });
+      }, 2000);
+    }, { passive: true });
   }
 
   initPixel() {

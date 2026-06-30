@@ -491,6 +491,7 @@ canvas{max-width:100%}
         </select>
         <button class="btn" onclick="loadUsers()">Atuavalidadorar</button>
         <span class="muted" id="users-count" style="margin-left:auto"></span>
+        <button class="btn btn-danger" onclick="loadGhostUsers()" style="margin-left:8px">👻 Limpar Fantasmas</button>
       </div>
       <div id="users-area">
         <div class="loading"><span class="spinner"></span> carregando…</div>
@@ -1777,6 +1778,160 @@ async function reprocessLead(leadId){
       toast('Lead reenfileirado');
     }catch(e){ toast('Falha: '+(e.message||e),'error'); }
   });
+}
+
+// ============================================================
+// GHOST USERS — Limpeza de usuarios fantasma/teste
+// ============================================================
+let GHOST_USERS = [];
+
+async function loadGhostUsers(){
+  try {
+    const r = await authFetch('/api/superadmin/ghost-users');
+    const d = await r.json();
+    if(!d.ok) throw new Error(d.error || 'erro');
+    GHOST_USERS = d.ghosts || [];
+    renderGhostUsersModal();
+  } catch(e) {
+    toast('Erro ao listar fantasmas: ' + (e.message||e), 'error');
+  }
+}
+
+function renderGhostUsersModal(){
+  const ghosts = GHOST_USERS;
+  const total = ghosts.length;
+
+  let body = `
+    <div style="margin-bottom:14px;padding:12px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.3);border-radius:6px">
+      <div style="font-size:13px;color:var(--danger);font-weight:600;margin-bottom:4px">⚠️ Atenção: Esta ação é irreversível</div>
+      <div style="font-size:12px;color:var(--muted)">Os usuarios abaixo serao EXCLUIDOS junto com seus leads, tokens e dados relacionados. O superadmin nao pode ser excluido.</div>
+    </div>
+
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
+      <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer">
+        <input type="checkbox" id="ghost-select-all" onchange="toggleSelectAllGhosts(this.checked)">
+        Selecionar todos
+      </label>
+      <span style="margin-left:auto;font-size:12px;color:var(--muted)">
+        <b id="ghost-selected-count">0</b> selecionados de <b>${total}</b>
+      </span>
+      <button class="btn btn-danger" onclick="deleteSelectedGhosts()" id="ghost-delete-btn" disabled>
+        🗑️ Excluir Selecionados
+      </button>
+    </div>
+
+    <div style="max-height:50vh;overflow-y:auto;border:1px solid var(--border);border-radius:6px">
+  `;
+
+  if (total === 0) {
+    body += `<div style="padding:30px;text-align:center;color:var(--success);font-size:13px">✅ Nenhum usuario fantasma encontrado!</div>`;
+  } else {
+    body += `<table class="table" style="font-size:12px">
+      <thead>
+        <tr>
+          <th style="width:30px"></th>
+          <th>ID</th>
+          <th>Email</th>
+          <th>Nome</th>
+          <th>Plano</th>
+          <th>Criado em</th>
+          <th>Último acesso</th>
+          <th>Motivo</th>
+        </tr>
+      </thead>
+      <tbody>`;
+
+    ghosts.forEach(g => {
+      body += `<tr>
+        <td><input type="checkbox" class="ghost-checkbox" data-id="${g.id}" onchange="updateGhostSelectedCount()"></td>
+        <td style="font-family:var(--mono);color:var(--muted)">#${g.id}</td>
+        <td><strong>${escapeHtml(g.email)}</strong></td>
+        <td style="color:var(--muted)">${escapeHtml(g.nome || '—')}</td>
+        <td><span class="pill ${g.plano === 'trial' ? 'pill-trial' : 'pill-pago'}">${g.plano}</span></td>
+        <td style="font-size:11px;color:var(--muted)">${g.criado_em ? new Date(g.criado_em).toLocaleDateString('pt-BR') : '—'}</td>
+        <td style="font-size:11px;color:var(--muted)">${g.ultimo_acesso === 'Nunca' || !g.ultimo_acesso ? '<span style="color:var(--danger)">Nunca</span>' : new Date(g.ultimo_acesso).toLocaleDateString('pt-BR')}</td>
+        <td style="font-size:11px;color:var(--warning)">${escapeHtml(g.reason || '—')}</td>
+      </tr>`;
+    });
+
+    body += `</tbody></table>`;
+  }
+
+  body += `</div>`;
+
+  openModal(
+    `👻 Usuários Fantasma (${total})`,
+    body,
+    null
+  );
+
+  // Esconder botao OK do modal (acao eh pelos botoes internos)
+  const okBtn = document.getElementById('modal-ok');
+  if (okBtn) okBtn.style.display = 'none';
+  const cancelBtn = document.querySelector('#modal .modal-actions .btn:not(.btn-primary)');
+  if (cancelBtn) cancelBtn.textContent = 'Fechar';
+}
+
+function toggleSelectAllGhosts(checked) {
+  document.querySelectorAll('.ghost-checkbox').forEach(cb => {
+    cb.checked = checked;
+  });
+  updateGhostSelectedCount();
+}
+
+function updateGhostSelectedCount() {
+  const checked = document.querySelectorAll('.ghost-checkbox:checked');
+  const count = checked.length;
+  const countEl = document.getElementById('ghost-selected-count');
+  const delBtn = document.getElementById('ghost-delete-btn');
+  if (countEl) countEl.textContent = count;
+  if (delBtn) delBtn.disabled = count === 0;
+}
+
+async function deleteSelectedGhosts() {
+  const checked = document.querySelectorAll('.ghost-checkbox:checked');
+  if (checked.length === 0) {
+    toast('Nenhum usuario selecionado', 'error');
+    return;
+  }
+
+  const ids = Array.from(checked).map(cb => parseInt(cb.dataset.id));
+  const emails = ids.map(id => {
+    const g = GHOST_USERS.find(x => x.id === id);
+    return g ? g.email : `#${id}`;
+  });
+
+  if (!confirm(`Excluir ${ids.length} usuario(s) fantasma?\n\n${emails.join('\n')}\n\nEsta acao NAO pode ser desfeita!`)) {
+    return;
+  }
+
+  try {
+    toast('Excluindo...', 'success');
+    const r = await authFetch('/api/superadmin/ghost-users/delete-batch', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({user_ids: ids})
+    });
+    const d = await r.json();
+
+    if (!d.ok) throw new Error(d.error || 'Erro desconhecido');
+
+    let msg = `✅ ${d.deleted} usuario(s) excluido(s)!`;
+    if (d.details) {
+      const details = Object.entries(d.details)
+        .filter(([k, v]) => typeof v === 'number' && v > 0)
+        .map(([k, v]) => `${v} ${k}`)
+        .join(', ');
+      if (details) msg += ` Limpos: ${details}`;
+    }
+    toast(msg, 'success');
+    closeModal();
+
+    // Recarregar lista de usuarios
+    if (typeof loadUsers === 'function') loadUsers();
+  } catch(e) {
+    toast('Erro: ' + (e.message||e), 'error');
+  }
 }
 
 // ============================================================
