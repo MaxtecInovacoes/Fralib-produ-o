@@ -1,7 +1,7 @@
 """Fila de mensagens outbound com cooldown + rate limit.
 
 Pre-protege o numero do WhatsApp de bloqueio pelo Meta:
-- Max 2 mensagens a cada 10 minutos (por tenant)
+- Max 1 mensagem automática a cada 10 minutos (por tenant)
 - Tempo aleatorio entre msgs (1-10 min)
 - NUNCA 2 msgs no mesmo minuto
 - Persistencia (se worker cair, msgs ficam na fila)
@@ -22,8 +22,8 @@ logger = logging.getLogger("outbound_queue")
 # CONFIGURACAO
 # ════════════════════════════════════════════════════════════════════
 
-# Max mensagens em janela de 10 min por tenant
-RATE_LIMIT_MAX = 2
+# Max mensagens automáticas em janela de 10 min por tenant
+RATE_LIMIT_MAX = 1
 RATE_LIMIT_WINDOW_SEC = 600  # 10 min
 
 # Intervalo aleatorio entre msgs (segundos)
@@ -179,7 +179,7 @@ def dequeue_and_send(engine, sender_func) -> dict:
             FROM outbound_queue
             WHERE status = 'pending'
               AND scheduled_at <= NOW()
-            ORDER BY priority ASC, scheduled_at ASC
+            ORDER BY scheduled_at ASC, id ASC
             LIMIT 1
         """)).fetchall()
 
@@ -206,14 +206,66 @@ def dequeue_and_send(engine, sender_func) -> dict:
 
     # Envia
     try:
-        success = sender_func(phone, message)
+        try:
+            success = sender_func(phone, message, tenant_id)
+        except TypeError:
+            success = sender_func(phone, message)
+        if success is None:
+            with engine.connect() as c:
+                c.execute(text("""
+                    UPDATE outbound_queue
+                    SET status = 'pending',
+                        scheduled_at = NOW() + INTERVAL '10 minutes',
+                        error = 'tenant whatsapp disconnected'
+                    WHERE id = :id
+                """), {"id": msg_id})
+                c.commit()
+            result["skipped"] = 1
+            result["waiting_sec"] = 600
+            return result
         if success:
             with engine.connect() as c:
                 c.execute(text("""
                     UPDATE outbound_queue SET status = 'sent', sent_at = NOW()
                     WHERE id = :id
                 """), {"id": msg_id})
+                c.execute(text("""
+                    UPDATE leads
+                    SET sdr_stage = CASE
+                        WHEN COALESCE(sdr_stage, '') IN ('', 'pendente_wpp', 'manual_test_no_wpp') THEN 'hook'
+                        ELSE sdr_stage
+                    END,
+                    atualizado_em = NOW()::text
+                    WHERE id = :lead_id AND user_id = :tenant_id
+                """), {"lead_id": lead_id, "tenant_id": tenant_id})
+                c.execute(text("""
+                    INSERT INTO interacoes
+                        (lead_id, lead_nome, nicho, cidade, direcao, mensagem, criado_em, user_id, tipo)
+                    SELECT id, nome, segmento, cidade, 'saida', :message,
+                           to_char(NOW() AT TIME ZONE 'America/Sao_Paulo', 'YYYY-MM-DD"T"HH24:MI:SS.US'),
+                           user_id, 'whatsapp'
+                    FROM leads
+                    WHERE id = :lead_id AND user_id = :tenant_id
+                """), {"message": message, "lead_id": lead_id, "tenant_id": tenant_id})
                 c.commit()
+            try:
+                from sqlalchemy.orm import sessionmaker
+                from services.credits_manager import consumir_credito_trial_entregue
+
+                Session = sessionmaker(bind=engine)
+                db = Session()
+                try:
+                    consumed = consumir_credito_trial_entregue(
+                        db,
+                        int(tenant_id),
+                        str(lead_id or ""),
+                    )
+                    if consumed:
+                        logger.info("[outbound] credito trial consumido tenant=%s lead=%s", tenant_id, lead_id)
+                finally:
+                    db.close()
+            except Exception as e:
+                logger.warning("[outbound] falha ao consumir credito trial tenant=%s lead=%s: %s", tenant_id, lead_id, e)
             result["sent"] = 1
             result["msgs"].append({"id": msg_id, "phone": phone, "source": source})
             logger.info(f"[outbound] msg {msg_id} ENVIADA para {phone}")

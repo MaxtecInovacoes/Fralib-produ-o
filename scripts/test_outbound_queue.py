@@ -41,9 +41,9 @@ def _mock_engine_with_rows(rows):
 class TestRateLimitConfig(unittest.TestCase):
     """Configuracao do rate limit."""
 
-    def test_max_2_por_janela(self):
-        """Max 2 msgs por janela de 10 min."""
-        self.assertEqual(RATE_LIMIT_MAX, 2)
+    def test_max_1_por_janela(self):
+        """Max 1 msg automatica por janela de 10 min."""
+        self.assertEqual(RATE_LIMIT_MAX, 1)
         self.assertEqual(RATE_LIMIT_WINDOW_SEC, 600)
 
 
@@ -58,8 +58,8 @@ class TestCanSendNow(unittest.TestCase):
         self.assertEqual(wait, 0)
 
     def test_nao_pode_enviar_se_atingiu_limite(self):
-        """Se ja enviou 2 msgs, nao pode enviar mais."""
-        with patch("backend.services.outbound_queue.get_recent_sent_count", return_value=2):
+        """Se ja enviou 1 msg, nao pode enviar mais."""
+        with patch("backend.services.outbound_queue.get_recent_sent_count", return_value=1):
             mock_engine = MagicMock()
             mock_conn = MagicMock()
             mock_engine.connect.return_value.__enter__.return_value = mock_conn

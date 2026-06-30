@@ -94,21 +94,21 @@ def test_env_flag_activated():
     print("[OK] FRALIB_USE_OUTBOUND_QUEUE=1 encontrado no .env")
 
 
-def test_response_executor_has_queue_flag():
-    """Verifica que response_executor.py verifica a flag FRALIB_USE_OUTBOUND_QUEUE."""
+def test_response_executor_sends_replies_directly():
+    """Verifica que resposta a inbound nao usa fila de prospeccao."""
     executor_file = Path("C:/fralib/backend/whatsapp/response_executor.py")
     assert executor_file.exists(), f"Arquivo nao encontrado: {executor_file}"
 
     content = executor_file.read_text(encoding="utf-8")
 
-    # Verifica que a logica com flag existe
-    assert "FRALIB_USE_OUTBOUND_QUEUE" in content, (
-        "response_executor.py deve verificar FRALIB_USE_OUTBOUND_QUEUE"
+    assert "FRALIB_USE_OUTBOUND_QUEUE" not in content, (
+        "response_executor.py nao deve enfileirar respostas a leads que responderam"
     )
-    assert "enqueue_outbound" in content, (
-        "response_executor.py deve usar enqueue_outbound quando flag ativa"
+    assert "enqueue_outbound" not in content, (
+        "response_executor.py nao deve usar outbound_queue para respostas inbound"
     )
-    print("[OK] response_executor.py tem logica de flag e enqueue_outbound")
+    assert "send_text_parts" in content, "response_executor.py deve enviar resposta direta"
+    print("[OK] response_executor.py envia respostas inbound diretamente")
 
 
 if __name__ == "__main__":
@@ -121,7 +121,7 @@ if __name__ == "__main__":
         test_no_httpx_post_in_cron_functions,
         test_enqueue_outbound_calls_present,
         test_env_flag_activated,
-        test_response_executor_has_queue_flag,
+        test_response_executor_sends_replies_directly,
     ]
 
     passed = 0

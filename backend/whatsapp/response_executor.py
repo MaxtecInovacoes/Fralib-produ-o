@@ -98,9 +98,6 @@ def send_response(ctx: ExecutionContext):
 
     Returns True if message was sent successfully, False otherwise.
     """
-    import os
-    USE_QUEUE = os.getenv("FRALIB_USE_OUTBOUND_QUEUE", "0") == "1"
-
     # 1. Composing presence
     try:
         send_presence_composing(ctx.http_client, ctx.meowhats_http, ctx.meowhats_key, ctx.tenant_id, ctx.jid)
@@ -116,33 +113,8 @@ def send_response(ctx: ExecutionContext):
     ctx.set_cooldown_fn(ctx.lead_key)
     ctx.increment_daily_fn(ctx.lead_key)
 
-    # 3.5. SE FEATURE FLAG ATIVA: enfileira ao inves de enviar direto
-    # O cron processa a fila com rate limit (max 2 msgs/10min por tenant)
-    if USE_QUEUE:
-        try:
-            from backend.services.outbound_queue import enqueue_outbound
-            # Extrai phone do jid (formato: 5511999999999@s.whatsapp.net)
-            phone = ctx.jid.split("@")[0] if "@" in ctx.jid else ctx.jid
-            for parte in ctx.resposta_partes:
-                enqueue_outbound(
-                    engine=ctx.engine,
-                    tenant_id=ctx.user_id,
-                    lead_id=ctx.lead_id,
-                    phone=phone,
-                    message=parte,
-                    source="franz",
-                    priority=5,
-                )
-            logger.info(f"[response_executor] {len(ctx.resposta_partes)} msg(s) enfileirada(s) para lead {ctx.lead_name}")
-            # Persiste no DB
-            ctx.save_interaction_fn(ctx.lead_id, ctx.resposta, "saida", ctx.user_id)
-            ctx.update_stage_fn(ctx.lead_id, ctx.novo_stage, ctx.user_id)
-            return True
-        except Exception as e:
-            logger.error(f"[response_executor] Falha ao enfileirar: {e}, enviando direto")
-            # Cai no caminho normal abaixo
-
-    # 4. Send in parts
+    # 4. Send in parts. Resposta a inbound nunca entra na fila de prospeccao:
+    # lead respondeu, entao o atendimento precisa continuar imediatamente.
     send_ok, last_error = send_text_parts(
         ctx.http_client,
         ctx.meowhats_http,

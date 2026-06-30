@@ -56,7 +56,8 @@ JOB_MAX_SECS = int(os.environ.get("WORKER_JOB_MAX_SECS", "1800"))
 LEAD_SUPPLY_SYNC_SECS = int(os.environ.get("LEAD_SUPPLY_SYNC_SECS", "300"))
 FRANZ_RECONCILE_SECS = int(os.environ.get("FRALIB_FRANZ_RECONCILE_SECS", "300"))
 FRANZ_RECONCILE_LIMIT = int(os.environ.get("FRALIB_FRANZ_RECONCILE_LIMIT", "25"))
-FRANZ_OUTREACH_SPACING_SECS = int(os.environ.get("FRALIB_FRANZ_OUTREACH_SPACING_SECS", "90"))
+FRANZ_OUTREACH_SPACING_SECS = int(os.environ.get("FRALIB_FRANZ_OUTREACH_SPACING_SECS", "600"))
+OUTBOUND_QUEUE_PROCESS_SECS = int(os.environ.get("FRALIB_OUTBOUND_QUEUE_PROCESS_SECS", "30"))
 TMP_CLEANUP_HIGH_WATERMARK = float(os.environ.get("WORKER_TMP_CLEANUP_HIGH_WATERMARK", "0.50"))
 TMP_CLEANUP_CRITICAL_WATERMARK = float(os.environ.get("WORKER_TMP_CLEANUP_CRITICAL_WATERMARK", "0.80"))
 WORKER_JOB_TYPES = [
@@ -467,6 +468,65 @@ def _tenant_recent_outbound_wait_seconds(db, tenant_id: int | None) -> int:
     return max(0, int(FRANZ_OUTREACH_SPACING_SECS) - int(elapsed))
 
 
+def _normalize_outbound_jid(target: str) -> str:
+    target = (target or "").strip()
+    if "@" in target:
+        return target
+    digits = "".join(ch for ch in target if ch.isdigit())
+    return f"{digits}@s.whatsapp.net" if digits else target
+
+
+def _process_outbound_queue_cycle() -> dict:
+    """Processa 1 mensagem automatica respeitando fila por tenant."""
+
+    from services.outbound_queue import process_queue_once
+    import requests
+
+    meowhats_url = os.getenv("MEOWHATS_URL", "http://localhost:3001").rstrip("/")
+    meowhats_key = os.getenv("MEOWHATS_KEY", "").strip()
+    if not meowhats_key:
+        return {"sent": 0, "skipped": 0, "failed": 1, "error": "MEOWHATS_KEY ausente"}
+
+    def _send(target: str, message: str, tenant_id: int | None = None):
+        if not tenant_id:
+            return False
+        tenant_key = f"fralib_user_{int(tenant_id)}"
+        try:
+            status = requests.get(
+                f"{meowhats_url}/api/sessions/{tenant_key}/status",
+                headers={"X-API-Key": meowhats_key},
+                timeout=8,
+            )
+            if status.status_code != 200 or "connected" not in status.text.lower():
+                return None
+        except Exception:
+            return None
+
+        jid = _normalize_outbound_jid(target)
+        if not jid:
+            return False
+        response = requests.post(
+            f"{meowhats_url}/api/sessions/{tenant_key}/send",
+            headers={"X-API-Key": meowhats_key},
+            json={"jid": jid, "type": "text", "text": message},
+            timeout=15,
+        )
+        if response.status_code != 200:
+            log.warning(
+                "outbound_queue send failed tenant=%s status=%s body=%s",
+                tenant_id,
+                response.status_code,
+                (response.text or "")[:160],
+            )
+        return response.status_code == 200
+
+    db = SessionLocal()
+    try:
+        return process_queue_once(db.get_bind(), _send)
+    finally:
+        db.close()
+
+
 async def _executar_job(job: dict) -> tuple[bool, Optional[str], Optional[str]]:
     """
     Executa o job de acordo com seu tipo. Retorna (sucesso, fase_em_erro, mensagem_erro).
@@ -735,57 +795,42 @@ async def _executar_job(job: dict) -> tuple[bool, Optional[str], Optional[str]]:
                     return False, fase, _guard.reason
                 return False, "franz_guard", _guard.reason
 
-            # Enviar via WhatsApp
-            meowhats_url = _os.getenv("MEOWHATS_URL", "http://localhost:3001")
-            meowhats_key = _os.getenv("MEOWHATS_KEY", "")
-            if not meowhats_key:
-                return False, "franz", "MEOWHATS_KEY ausente"
-
             tel = (payload.get("whatsapp") or payload.get("telefone") or "").strip()
             tel = _re.sub(r'\D', '', tel)
             if not tel.startswith('55'):
                 tel = '55' + tel
-            jid = f"{tel}@s.whatsapp.net"
 
             test_number = str(payload.get("_bryan_test_number") or _os.getenv("BRYAN_TEST_NUMBER", "")).strip()
             if test_number:
                 test_number = _re.sub(r'\D', '', test_number)
                 if not test_number.startswith('55'):
                     test_number = '55' + test_number
-                jid = f"{test_number}@s.whatsapp.net"
+                tel = test_number
 
-            with httpx.Client(timeout=10) as c:
-                r = c.post(
-                    f"{meowhats_url}/api/sessions/{_tenant_key}/send",
-                    headers={"X-API-Key": meowhats_key},
-                    json={"jid": jid, "type": "text", "text": franz_output.reply}
+            if not payload.get("lead_id"):
+                return False, "franz", "lead_id ausente para enfileirar primeiro contato"
+
+            _db_queue = SessionLocal()
+            try:
+                from services.outbound_queue import enqueue_outbound
+
+                enqueue_outbound(
+                    engine=_db_queue.get_bind(),
+                    tenant_id=int(tenant_id),
+                    lead_id=payload.get("lead_id"),
+                    phone=tel,
+                    message=franz_output.reply,
+                    source="franz_outreach",
+                    priority=10,
                 )
-                if r.status_code == 200:
-                    if payload.get("lead_id"):
-                        _salvar_interacao(
-                            payload.get("lead_id"),
-                            franz_output.reply,
-                            "saida",
-                            tenant_id,
-                        )
-                        # Atualizar lead como contatado e consumir trial so com lead rastreavel.
-                        _db_b = SessionLocal()
-                        try:
-                            _db_b.execute(_txt("UPDATE leads SET sdr_stage='hook' WHERE id=:id AND user_id=:uid"),
-                                          {"id": payload.get("lead_id"), "uid": tenant_id})
-                            if consumir_credito_trial_entregue(
-                                _db_b, tenant_id, payload.get("nome") or ""
-                            ):
-                                log.info(f"Franz: credito trial consumido apos envio tenant={tenant_id}")
-                            _db_b.commit()
-                        finally:
-                            _db_b.close()
-                    else:
-                        log.warning(f"Franz: envio confirmado sem lead_id; trial nao consumido tenant={tenant_id}")
-                    log.info(f"Franz: mensagem enviada para {tel[-4:]}*** | lead={payload.get('nome')}")
-                    return True, None, None
-                else:
-                    return False, "franz", f"Envio falhou: {r.text[:200]}"
+                log.info(
+                    "Franz: primeiro contato enfileirado tenant=%s lead=%s",
+                    tenant_id,
+                    payload.get("nome"),
+                )
+                return True, None, None
+            finally:
+                _db_queue.close()
         except Exception as e:
             return False, "franz", str(e)
 
@@ -937,6 +982,7 @@ async def _main_loop():
     last_poll_log = 0.0
     last_supply_sync = 0.0
     last_franz_reconcile = 0.0
+    last_outbound_queue = 0.0
 
     while _running:
         now = time.time()
@@ -1046,6 +1092,19 @@ async def _main_loop():
             except Exception as e:
                 log.warning(f"franz reconcile falhou: {e}")
             last_franz_reconcile = now
+
+        if (
+            "franz_outreach" in WORKER_JOB_TYPES
+            and OUTBOUND_QUEUE_PROCESS_SECS > 0
+            and now - last_outbound_queue >= OUTBOUND_QUEUE_PROCESS_SECS
+        ):
+            try:
+                queue_result = _process_outbound_queue_cycle()
+                if queue_result.get("sent") or queue_result.get("failed") or queue_result.get("waiting_sec"):
+                    log.info("outbound_queue cycle: %s", queue_result)
+            except Exception as e:
+                log.warning(f"outbound_queue cycle falhou: {e}")
+            last_outbound_queue = now
 
         # Reap periodico de checkpoints expirados (a cada 1h)
         if now - last_ckpt_reap >= 3600:
