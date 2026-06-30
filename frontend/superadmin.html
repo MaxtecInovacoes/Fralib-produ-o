@@ -382,6 +382,10 @@ canvas{max-width:100%}
           <div style="font-family:var(--fl-font-mono);font-size:10px;color:var(--fl-text-dim);text-transform:uppercase;letter-spacing:0.5px">Convertidos</div>
           <div style="font-family:var(--fl-font-brand);font-size:24px;color:#06b6d4;line-height:1" id="cdConvertidos">&mdash;</div>
         </div>
+        <div class="chart-card" style="padding:14px;background:rgba(255,0,128,0.08);border:1px solid rgba(255,0,128,0.3)">
+          <div style="font-family:var(--fl-font-mono);font-size:10px;color:#FF0080;text-transform:uppercase;letter-spacing:0.5px">🆕 Leads Novos (24h)</div>
+          <div style="font-family:var(--fl-font-brand);font-size:24px;color:#FF0080;line-height:1" id="cdNovos">&mdash;</div>
+        </div>
       </div>
 
       <!-- Filtros -->
@@ -395,7 +399,8 @@ canvas{max-width:100%}
         </select>
         <select id="cdStatus" class="select" onchange="loadContatoDireto()">
           <option value="todos">Todos os status</option>
-          <option value="sem_outreach">Sem contato (novos)</option>
+          <option value="novo">🆕 Leads novos (24h)</option>
+          <option value="sem_outreach">Sem contato</option>
           <option value="sent">Ja receberam outreach</option>
           <option value="replied">Replied (respondeu)</option>
           <option value="converted">Convertidos</option>
@@ -2928,6 +2933,7 @@ function _cdIniciais(nome) {
 
 function _cdStatusBadge(display) {
   const colors = {
+    'novo':          { color: '#FF0080', label: '🆕 LEAD NOVO' },
     'sem_outreach':  { color: '#FFB800', label: 'Sem contato' },
     'sent':          { color: '#a855f7', label: 'Outreach enviado' },
     'replied':       { color: '#10b981', label: 'Replied' },
@@ -2945,7 +2951,7 @@ async function loadContatoDireto() {
   if (area) area.innerHTML = '<div class="loading"><span class="spinner"></span> carregando...</div>';
 
   const params = new URLSearchParams({ plano, status, q });
-  const url = `/api/admin/outreach/contato-direto?${params.toString()}`;
+  const url = `/api/admin/outreach/contato-direto-v2?${params.toString()}`;
 
   try {
     const r = await authFetch(url);
@@ -2956,6 +2962,8 @@ async function loadContatoDireto() {
     document.getElementById('cdSemContato').textContent = d.sem_contato || 0;
     document.getElementById('cdReplied').textContent = d.replied || 0;
     document.getElementById('cdConvertidos').textContent = d.convertidos || 0;
+    const cdNovos = document.getElementById('cdNovos');
+    if (cdNovos) cdNovos.textContent = d.novos || 0;
 
     // Marca como carregado
     const panel = document.getElementById('panel-contato-direto');
@@ -2983,14 +2991,16 @@ async function loadContatoDireto() {
       const statusBadge = _cdStatusBadge(u.display_status);
       const waLink = u.wa_link;
       const telDisplay = u.telefone || 'sem telefone';
+      const newBadge = u.is_new_lead ? '<span style="display:inline-block;padding:1px 6px;background:#FF0080;color:#fff;font-size:9px;font-weight:700;border-radius:3px;margin-left:6px;letter-spacing:0.5px">NOVO</span>' : '';
+      const diasBadge = u.dias_cadastro <= 7 ? `<span style="font-size:10px;color:var(--fl-text-dim)">ha ${u.dias_cadastro}d</span>` : '';
 
-      html += `<tr style="border-bottom:1px solid var(--border);transition:background 0.15s" onmouseover="this.style.background='var(--card)'" onmouseout="this.style.background='transparent'">
+      html += `<tr style="border-bottom:1px solid var(--border);transition:background 0.15s${u.is_new_lead ? ';background:rgba(255,0,128,0.04)' : ''}" onmouseover="this.style.background='var(--card)'" onmouseout="this.style.background='${u.is_new_lead ? 'rgba(255,0,128,0.04)' : 'transparent'}'">
         <td style="padding:10px 12px">
           <div style="display:flex;align-items:center;gap:10px">
             <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0">${initials}</div>
             <div style="min-width:0">
-              <div style="font-weight:600;color:var(--fl-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(u.nome)}</div>
-              <div style="font-size:11px;color:var(--fl-text-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(u.email)}</div>
+              <div style="font-weight:600;color:var(--fl-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(u.nome)}${newBadge}</div>
+              <div style="font-size:11px;color:var(--fl-text-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(u.email)} ${diasBadge}</div>
             </div>
           </div>
         </td>

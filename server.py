@@ -484,6 +484,13 @@ except ImportError as e:
     print(f"[Server] whatsapp_disparo_endpoints nao disponivel: {e}")
 
 try:
+    import contato_direto_v2_endpoints
+    app.include_router(contato_direto_v2_endpoints.router)
+    print("[Server] contato_direto_v2_endpoints registrado")
+except ImportError as e:
+    print(f"[Server] contato_direto_v2_endpoints nao disponivel: {e}")
+
+try:
     import admin_services_endpoints
     app.include_router(admin_services_endpoints.router)
     print("[Server] admin_services_endpoints registrado")
