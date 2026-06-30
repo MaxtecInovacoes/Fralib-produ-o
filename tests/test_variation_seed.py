@@ -1081,6 +1081,57 @@ def test_cinematic_motion_mix_materializes_in_generated_code():
     return True
 
 
+def test_cinematic_surfaces_use_theme_tokens_not_default_glass():
+    from backend.services.vite_react_renderer import _generate_cinematic_studio_files
+
+    files = _generate_cinematic_studio_files(
+        {
+            "business": {"name": "Gabriel Greco Nutricionista", "segment": "nutricionista", "city": "Sao Paulo"},
+            "variation": {"visual_lane": "lane_c", "seed": 83931, "counter": 2},
+        }
+    )
+    about = files.get("src/components/AboutSection.tsx", "")
+    gallery = files.get("src/components/GallerySection.tsx", "")
+    reviews = files.get("src/components/ReviewsSection.tsx", "")
+    faq = files.get("src/components/FaqSection.tsx", "")
+    lifestyle = files.get("src/components/LifestyleSection.tsx", "")
+    hero = files.get("src/components/HeroSection.tsx", "")
+
+    assert "bg-white/[0.04] text-white backdrop-blur-xl" not in about
+    assert "backdrop-blur-xl" not in lifestyle
+    assert "style={{ background: 'var(--bg)', color: 'var(--text)' }}" in gallery
+    assert "style={{ background: 'var(--bg)', color: 'var(--text)' }}" in reviews
+    assert "style={{ background: 'var(--bg)', color: 'var(--text)' }}" in faq
+    assert "rgba(0,0,0,.66)" in hero
+    return True
+
+
+def test_cinematic_seed_expands_variation_beyond_visual_lane():
+    from backend.services.vite_react_renderer import _generate_cinematic_studio_files
+
+    signatures = set()
+    for index in range(8):
+        files = _generate_cinematic_studio_files(
+            {
+                "business": {"name": f"Academia Variacao Real {index}", "segment": "academia", "city": "Curitiba"},
+                "variation": {"seed": 12000 + index * 97, "counter": index},
+            }
+        )
+        site_data = files.get("src/components/siteData.ts", "")
+        signature = (
+            '"hero_variant": "video"' in site_data,
+            '"hero_variant": "fullbleed"' in site_data,
+            '"gallery_density": "cinematic_strip"' in site_data,
+            '"cta_style": "poster_band"' in site_data,
+            '"surface_style": "soft_tint"' in site_data,
+            '"motion_mix": ["parallax_video", "stagger_cards", "mask_reveal"]' in site_data,
+        )
+        signatures.add(signature)
+
+    assert len(signatures) >= 4
+    return True
+
+
 def test_block_registry_anti_repetition_avoids_default_glass():
     from backend.services.vite_block_registry import resolve_cinematic_block_plan
 
@@ -1151,6 +1202,8 @@ def run_all_tests():
         test_cinematic_lgpd_uses_site_theme_tokens,
         test_cinematic_light_surface_avoids_salmon_fallback,
         test_cinematic_motion_mix_materializes_in_generated_code,
+        test_cinematic_surfaces_use_theme_tokens_not_default_glass,
+        test_cinematic_seed_expands_variation_beyond_visual_lane,
         test_block_registry_anti_repetition_avoids_default_glass,
         test_segment_contamination_uses_word_boundaries_for_names,
     ]
