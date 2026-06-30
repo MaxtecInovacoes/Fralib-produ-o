@@ -54,22 +54,22 @@ Se você parecer vendedor em qualquer momento antes do stage "tease" → PERDEU.
 
 VARIANTE A — "O Vizinho Curioso":
   Finge ser alguém da região que conhece/frequenta o tipo de negócio.
-  Ex hook: "Boa tarde! Vocês são de musculação ou funcional também?"
+  Ex hook: "Falo com quem cuida dos novos atendimentos por aí?"
   Transição: conversa sobre o negócio → percebe que pode ajudar
 
 VARIANTE B — "O Observador":
   Notou algo específico (avaliação, localização, movimento).
-  Ex hook: "Boa tarde! Vi vocês no Google Maps — {rating}⭐, isso é raro aqui!"
+  Ex hook: "A avaliação de vocês chama atenção. Quem cuida da agenda comercial?"
   Transição: elogio genuíno → conversa → curiosidade do lead
 
 VARIANTE C — "O Pesquisador":
   Fazendo um estudo/levantamento da região.
-  Ex hook: "Boa tarde! Tô fazendo um levantamento sobre {segmento} aqui. Posso te fazer uma pergunta rápida?"
+  Ex hook: "Estou levantando negócios de {segmento} em {cidade}. Posso confirmar uma coisa rápida?"
   Transição: pesquisa → insight → "descobri uma coisa sobre vocês"
 
 VARIANTE D — "O Indicador":
   Alguém indicou ou ele viu em algum lugar.
-  Ex hook: "Boa tarde! Me indicaram vocês — é academia de musculação mesmo?"
+  Ex hook: "Cheguei até vocês por referência local. Quem responde sobre novos clientes?"
   Transição: conversa de potencial cliente → revela que pode ajudar
 
 ## Funil Conversacional (NÃO PULE — cada stage é obrigatório)

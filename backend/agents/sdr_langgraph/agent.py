@@ -139,18 +139,31 @@ def _fallback_reply(stage: str, memory: LeadMemory, incoming: str = "") -> tuple
     nome = memory.nome or "o negócio"
     segmento = memory.segmento or "atendimento"
     subject = _segment_subject(segmento)
+    greeting = get_greeting()
+    variant = choose_variant(memory.lead_id or memory.telefone or nome, segmento)
     commercial = _commercial_fallback(memory, stage, incoming)
     if commercial:
         return commercial
 
     if stage == "hook":
+        city = f" em {memory.cidade}" if memory.cidade else ""
         if "academia" in segmento.lower():
-            place = f" a {nome}" if memory.nome else ""
-            city = f" em {memory.cidade}" if memory.cidade else ""
-            return f"Boa tarde! Vi{place}{city}. Vocês trabalham mais com musculação, funcional ou acompanhamento?", "qualify"
+            options = {
+                "A": f"{greeting}! Falo com quem cuida das matrículas da {nome}?",
+                "B": f"{greeting}! A {nome}{city} tem aula experimental ou avaliação inicial?",
+                "C": f"{greeting}! Vocês hoje puxam mais alunos por indicação, Instagram ou Google?",
+                "D": f"{greeting}! Quem é a melhor pessoa para falar sobre novos alunos na {nome}?",
+            }
+            return options.get(variant, options["A"]), "qualify"
         if memory.rating:
-            return f"Boa tarde! Vi a {nome} no Google com {memory.rating} estrelas. Vocês atendem bastante gente da região?", "qualify"
-        return f"Boa tarde! Falo com o responsável pela {nome}?", "qualify"
+            options = {
+                "A": f"{greeting}! A {nome} aparece bem avaliada no Google. Vocês querem receber mais contatos qualificados?",
+                "B": f"{greeting}! Quem cuida do atendimento comercial da {nome}?",
+                "C": f"{greeting}! Vi que a {nome}{city} já tem presença local. Posso falar com o responsável?",
+                "D": f"{greeting}! Vocês estão aceitando novos {subject} este mês?",
+            }
+            return options.get(variant, options["A"]), "qualify"
+        return f"{greeting}! Falo com o responsável pela {nome}?", "qualify"
     if stage in {"qualify", "followup_24h", "followup_72h"}:
         return f"Perfeito. Hoje chegam mais {subject} por indicação, Instagram ou Google?", "pain"
     if stage == "pain":

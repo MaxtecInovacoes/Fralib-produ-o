@@ -33,6 +33,35 @@ FRANZ_CRON_JITTER_MAX_S = 75
 FRANZ_CRON_BATCH_LIMIT = 5
 
 
+def _normalizar_phone(phone: str) -> str:
+    import re as _re
+
+    tel = _re.sub(r"\D", "", (phone or "").strip())
+    if tel and not tel.startswith("55"):
+        tel = "55" + tel
+    return tel
+
+
+def _send_sdr_direct(user_id: int, phone: str, message: str) -> tuple[bool, str]:
+    """Envia follow-up/conversa ja iniciada direto, sem fila de primeiro contato."""
+    import httpx
+
+    meowhats_url = os.getenv("MEOWHATS_URL", "http://localhost:3001").rstrip("/")
+    meowhats_key = os.getenv("MEOWHATS_KEY", "").strip()
+    if not meowhats_key:
+        return False, "MEOWHATS_KEY ausente"
+    tel = _normalizar_phone(phone)
+    if not tel:
+        return False, "telefone ausente"
+    tenant_key = f"fralib_user_{int(user_id)}"
+    jid = f"{tel}@s.whatsapp.net"
+    client = httpx.Client(timeout=15)
+    try:
+        return send_text_parts(client, meowhats_url, meowhats_key, tenant_key, jid, [message])
+    finally:
+        client.close()
+
+
 def _autorizar(x_cron_secret: str):
     if not CRON_SECRET:
         raise HTTPException(500, 'CRON_SECRET nao configurado no .env')
@@ -107,7 +136,6 @@ async def email_resumo_diario(x_cron_secret: str = Header(None, alias='X-Cron-Se
     return {'status': 'ok', 'enviados': enviados, 'pulados': pulados, 'erros': erros}
 
 
-@router.post('/despachar-fila-bryan')
 @router.post('/despachar-fila-franz')
 async def despachar_fila_franz(x_cron_secret: str = Header(None, alias='X-Cron-Secret')):
     """
@@ -118,21 +146,17 @@ async def despachar_fila_franz(x_cron_secret: str = Header(None, alias='X-Cron-S
 
     import sys
     sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'agents'))
-    from agents.sdr_langgraph import iniciar_contato, FranzInput, _dentro_do_horario, _escolher_variante
+    from agents.sdr_langgraph import iniciar_contato, FranzInput, _escolher_variante
     from services.sdr_gateway import SdrMessageContext, evaluate_sdr_output, has_prior_outbound
     from backend.services.outbound_queue import enqueue_outbound
-
-    import re as _re
-    meowhats_url = os.getenv("MEOWHATS_URL", "http://localhost:3001")
-    meowhats_key = os.getenv("MEOWHATS_KEY", "").strip()
-    if not meowhats_key:
-        return {'status': 'erro_config', 'mensagem': 'MEOWHATS_KEY ausente', 'enviados': 0}
 
     enviados = 0
     erros = 0
 
     with engine.connect() as conn:
         # Buscar leads pendentes (site pronto mas não abordados)
+        # USA FOR UPDATE SKIP LOCKED para evitar que múltiplas instâncias do cron
+        # processem o mesmo lead simultaneamente
         rows = conn.execute(text("""
             SELECT l.id, l.nome, l.telefone, l.whatsapp, l.segmento, l.cidade,
                    l.site_url, l.rating, l.user_id, l.paleta_cores,
@@ -146,6 +170,7 @@ async def despachar_fila_franz(x_cron_secret: str = Header(None, alias='X-Cron-S
               AND lower(COALESCE(u.status, '')) NOT IN ('bloqueado','suspenso','cancelado','inadimplente')
             ORDER BY l.processado_em ASC
             LIMIT :batch_limit
+            FOR UPDATE SKIP LOCKED
         """), {"batch_limit": FRANZ_CRON_BATCH_LIMIT}).fetchall()
 
         if not rows:
@@ -168,13 +193,6 @@ async def despachar_fila_franz(x_cron_secret: str = Header(None, alias='X-Cron-S
                 )
                 if not user_id:
                     print(f"[Cron Franz] ⚠️ lead {lead_id} sem user_id — ignorado (multi-tenant)")
-                    continue
-                wpp_tenant = f"fralib_user_{user_id}"
-                if not _dentro_do_horario(user_id):
-                    print(f"[Cron Franz] ⏰ Lead {nome}: fora do horario do tenant {user_id} — aguardando janela")
-                    continue
-                if not is_tenant_connected(wpp_tenant):
-                    print(f"[Cron Franz] ⏸ Lead {nome}: tenant {wpp_tenant} sem WhatsApp conectado — pulando")
                     continue
                 franz_output = iniciar_contato(franz_input, user_id=user_id)
 
@@ -205,24 +223,29 @@ async def despachar_fila_franz(x_cron_secret: str = Header(None, alias='X-Cron-S
                     print(f"[Cron Franz] 🛑 Guard bloqueou {nome}: {guard.code} - {guard.reason}")
                     continue
 
-                # Enviar via outbound queue (rate limit 2 msgs/10min)
-                tel = (whatsapp or telefone or "").strip()
-                tel = _re.sub(r'\D', '', tel)
-                if not tel.startswith('55'):
-                    tel = '55' + tel
+                # Primeiro contato nunca envia direto: entra na fila FIFO por tenant.
+                tel = _normalizar_phone(whatsapp or telefone or "")
+                if not tel:
+                    erros += 1
+                    print(f"[Cron Franz] ⚠️ Lead {nome}: telefone ausente — pulando")
+                    continue
 
-                enqueue_outbound(
+                msg_id = enqueue_outbound(
                     engine=engine,
                     tenant_id=user_id,
                     lead_id=str(lead_id),
                     phone=tel,
                     message=franz_output.reply,
                     source="franz",
-                    priority=5,
+                    priority=10,
                 )
-                _salvar_interacao(lead_id, franz_output.reply, "saida", user_id)
+                # Se msg_id eh None, a mensagem ja foi enviada anteriormente - pular
+                if msg_id is None:
+                    erros += 1
+                    print(f"[Cron Franz] ⚠️ Lead {nome}: mensagem ja enviada anteriormente — pulando")
+                    continue
                 conn.execute(text(
-                    "UPDATE leads SET sdr_stage='hook', ab_variant=:var, atualizado_em=NOW()::text WHERE id=:id AND user_id=:uid"
+                    "UPDATE leads SET sdr_stage='pending_sdr_send', ab_variant=:var, atualizado_em=NOW()::text WHERE id=:id AND user_id=:uid"
                 ), {"id": lead_id, "var": _escolher_variante(lead_id), "uid": user_id})
                 conn.commit()
                 enviados += 1
@@ -240,7 +263,6 @@ async def despachar_fila_franz(x_cron_secret: str = Header(None, alias='X-Cron-S
     return {'status': 'ok', 'enviados': enviados, 'erros': erros, 'total_fila': len(rows)}
 
 
-@router.post('/followup-bryan')
 @router.post('/followup-franz')
 async def followup_franz(x_cron_secret: str = Header(None, alias='X-Cron-Secret')):
     """
@@ -259,10 +281,7 @@ async def followup_franz(x_cron_secret: str = Header(None, alias='X-Cron-Secret'
     sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'agents'))
     from agents.sdr_langgraph import followup_automatico, _dentro_do_horario
     from services.sdr_gateway import SdrMessageContext, evaluate_sdr_output, has_prior_outbound
-    from backend.services.outbound_queue import enqueue_outbound
 
-    import re as _re
-    meowhats_url = os.getenv("MEOWHATS_URL", "http://localhost:3001")
     meowhats_key = os.getenv("MEOWHATS_KEY", "").strip()
     if not meowhats_key:
         return {'status': 'erro_config', 'mensagem': 'MEOWHATS_KEY ausente', 'enviados': 0}
@@ -274,6 +293,7 @@ async def followup_franz(x_cron_secret: str = Header(None, alias='X-Cron-Secret'
     with engine.connect() as conn:
         # ============================================================
         # FOLLOW-UP 1: leads com 24h+ sem resposta após intro
+        # USA FOR UPDATE SKIP LOCKED para evitar duplicação entre instâncias do cron
         # ============================================================
         rows_fu1 = conn.execute(text("""
             SELECT l.id, l.nome, l.telefone, l.whatsapp, l.segmento, l.cidade,
@@ -298,10 +318,12 @@ async def followup_franz(x_cron_secret: str = Header(None, alias='X-Cron-Secret'
               )
             ORDER BY l.atualizado_em ASC
             LIMIT 15
+            FOR UPDATE SKIP LOCKED
         """), {"limite_24h": (datetime.utcnow() - timedelta(hours=24)).isoformat()}).fetchall()
 
         # ============================================================
         # FOLLOW-UP 2: leads com 72h+ sem resposta após FU1
+        # USA FOR UPDATE SKIP LOCKED
         # ============================================================
         rows_fu2 = conn.execute(text("""
             SELECT l.id, l.nome, l.telefone, l.whatsapp, l.segmento, l.cidade,
@@ -315,10 +337,12 @@ async def followup_franz(x_cron_secret: str = Header(None, alias='X-Cron-Secret'
               AND l.atualizado_em < :limite_72h
             ORDER BY l.atualizado_em ASC
             LIMIT 15
+            FOR UPDATE SKIP LOCKED
         """), {"limite_72h": (datetime.utcnow() - timedelta(hours=72)).isoformat()}).fetchall()
 
         # ============================================================
         # LOST: leads com 24h+ sem resposta após FU2
+        # USA FOR UPDATE SKIP LOCKED
         # ============================================================
         rows_lost = conn.execute(text("""
             SELECT l.id, l.nome, l.telefone, l.whatsapp, l.segmento, l.cidade,
@@ -332,12 +356,14 @@ async def followup_franz(x_cron_secret: str = Header(None, alias='X-Cron-Secret'
               AND l.atualizado_em < :limite_24h_lost
             ORDER BY l.atualizado_em ASC
             LIMIT 15
+            FOR UPDATE SKIP LOCKED
         """), {"limite_24h_lost": (datetime.utcnow() - timedelta(hours=24)).isoformat()}).fetchall()
 
         # Combinar FU1 e FU2 (lost é tratado separado)
         rows = list(rows_fu1) + list(rows_fu2)
 
         # Also fetch scheduled leads whose followup_date has arrived
+        # USA FOR UPDATE SKIP LOCKED
         scheduled_rows = conn.execute(text("""
             SELECT l.id, l.nome, l.telefone, l.whatsapp, l.segmento, l.cidade,
                    l.site_url, l.sdr_stage, l.user_id, l.atualizado_em
@@ -351,6 +377,7 @@ async def followup_franz(x_cron_secret: str = Header(None, alias='X-Cron-Secret'
               AND l.followup_date <= :hoje
             ORDER BY l.followup_date ASC
             LIMIT 10
+            FOR UPDATE SKIP LOCKED
         """), {"hoje": datetime.utcnow().strftime('%Y-%m-%d')}).fetchall()
 
         if not rows and not rows_lost and not scheduled_rows:
@@ -404,12 +431,12 @@ async def followup_franz(x_cron_secret: str = Header(None, alias='X-Cron-Secret'
                 if not user_id:
                     print(f"[Cron FU] ⚠️ lead {lead_id} sem user_id — pulando")
                     continue
-                tel = (whatsapp or telefone or "").strip()
-                tel = _re.sub(r'\D', '', tel)
-                if not tel.startswith('55'):
-                    tel = '55' + tel
-                jid = f"{tel}@s.whatsapp.net"
+                tel = _normalizar_phone(whatsapp or telefone or "")
                 wpp_tenant = f"fralib_user_{user_id}"
+                if not tel:
+                    erros += 1
+                    print(f"[Cron FU] ⚠️ lead {lead_id}: telefone ausente — pulando")
+                    continue
 
                 if not _dentro_do_horario(user_id):
                     print(f"[Cron FU] ⏰ lead {lead_id}: fora do horario do tenant {user_id} — aguardando janela")
@@ -447,23 +474,18 @@ async def followup_franz(x_cron_secret: str = Header(None, alias='X-Cron-Secret'
                     print(f"[Cron FU] 🛑 Guard bloqueou {nome}: {guard.code} - {guard.reason}")
                     continue
 
-                # Enviar via outbound queue (rate limit 2 msgs/10min)
-                enqueue_outbound(
-                    engine=engine,
-                    tenant_id=user_id,
-                    lead_id=str(lead_id),
-                    phone=tel,
-                    message=fu_output.reply,
-                    source="followup",
-                    priority=5,
-                )
+                ok, err = _send_sdr_direct(user_id, tel, fu_output.reply)
+                if not ok:
+                    erros += 1
+                    print(f"[Cron FU] ❌ Falha envio direto {nome}: {err}")
+                    continue
                 _salvar_interacao(lead_id, fu_output.reply, "saida", user_id)
                 conn.execute(text(
                     "UPDATE leads SET sdr_stage=:stage, atualizado_em=NOW()::text WHERE id=:id AND user_id=:uid"
                 ), {"id": lead_id, "stage": novo_stage, "uid": user_id})
                 conn.commit()
                 enviados += 1
-                print(f"[Cron FU] ✅ Enfileirado '{tipo}' para {nome}")
+                print(f"[Cron FU] ✅ Enviado direto '{tipo}' para {nome}")
             except Exception as e:
                 erros += 1
                 print(f"[Cron FU] ❌ Erro {nome}: {e}")
@@ -475,12 +497,12 @@ async def followup_franz(x_cron_secret: str = Header(None, alias='X-Cron-Secret'
                 if not user_id:
                     print(f"[Cron FU] ⚠️ lead {lead_id} sem user_id — pulando scheduled")
                     continue
-                tel = (whatsapp or telefone or "").strip()
-                tel = _re.sub(r'\D', '', tel)
-                if not tel.startswith('55'):
-                    tel = '55' + tel
-                jid = f"{tel}@s.whatsapp.net"
+                tel = _normalizar_phone(whatsapp or telefone or "")
                 wpp_tenant = f"fralib_user_{user_id}"
+                if not tel:
+                    erros += 1
+                    print(f"[Cron FU] ⚠️ scheduled lead {lead_id}: telefone ausente — pulando")
+                    continue
 
                 if not _dentro_do_horario(user_id):
                     print(f"[Cron FU] ⏰ Agendado lead {lead_id}: fora do horario do tenant {user_id} — aguardando janela")
@@ -518,16 +540,11 @@ async def followup_franz(x_cron_secret: str = Header(None, alias='X-Cron-Secret'
                     print(f"[Cron FU] 🛑 Guard bloqueou scheduled {nome}: {guard.code} - {guard.reason}")
                     continue
 
-                # Enviar via outbound queue (rate limit 2 msgs/10min)
-                enqueue_outbound(
-                    engine=engine,
-                    tenant_id=user_id,
-                    lead_id=str(lead_id),
-                    phone=tel,
-                    message=fu_output.reply,
-                    source="scheduled",
-                    priority=5,
-                )
+                ok, err = _send_sdr_direct(user_id, tel, fu_output.reply)
+                if not ok:
+                    erros += 1
+                    print(f"[Cron FU] ❌ Falha envio direto scheduled {nome}: {err}")
+                    continue
                 _salvar_interacao(lead_id, fu_output.reply, "saida", user_id)
                 # Volta pro stage anterior ao scheduled (discovery ou qualify)
                 conn.execute(text(
@@ -535,7 +552,7 @@ async def followup_franz(x_cron_secret: str = Header(None, alias='X-Cron-Secret'
                 ), {"id": lead_id, "uid": user_id})
                 conn.commit()
                 enviados += 1
-                print(f"[Cron FU] 📅 Enfileirado retomado: {nome}")
+                print(f"[Cron FU] 📅 Enviado direto retomado: {nome}")
             except Exception as e:
                 erros += 1
                 print(f"[Cron FU] ❌ Erro scheduled {nome}: {e}")
@@ -622,25 +639,44 @@ async def processar_fila_outbound(
     """Processa 1 ciclo da fila outbound com rate limit.
 
     Cron: rodar a cada 1-2 minutos.
-    Respeita o limite de 2 msgs/10min por tenant.
+    Respeita o limite da fila por tenant.
     """
     _autorizar(x_cron_secret)
 
     try:
         from backend.services.outbound_queue import process_queue_once
-        from backend.whatsapp.sender import send_text_parts
-        import httpx
+        from agents.sdr_langgraph import _dentro_do_horario
     except Exception as e:
         return {'status': 'error', 'message': str(e)}
 
-    def sync_sender(phone: str, message: str) -> bool:
-        """Envia msg via MeoWhats (sincrono, nao usa asyncio)."""
+    def sync_sender(phone: str, message: str, tenant_id: int | None = None):
+        """Envia msg via WhatsApp do tenant; None reprograma sem falhar."""
         import requests
+
+        if not tenant_id:
+            return False
+        if not _dentro_do_horario(int(tenant_id)):
+            return None
+        meowhats_url = os.getenv("MEOWHATS_URL", "http://localhost:3001").rstrip("/")
+        meowhats_key = os.getenv("MEOWHATS_KEY", "").strip()
+        if not meowhats_key:
+            return None
+        tenant_key = f"fralib_user_{int(tenant_id)}"
         try:
+            status = requests.get(
+                f"{meowhats_url}/api/sessions/{tenant_key}/status",
+                headers={"X-API-Key": meowhats_key},
+                timeout=8,
+            )
+            if status.status_code != 200 or "connected" not in status.text.lower():
+                return None
+            tel = _normalizar_phone(phone)
+            if not tel:
+                return False
             r = requests.post(
-                f"{MEOWHATS_HTTP}/api/sessions/default/send",
-                headers={"X-API-Key": MEOWHATS_KEY},
-                json={"jid": f"{phone}@s.whatsapp.net", "type": "text", "text": message},
+                f"{meowhats_url}/api/sessions/{tenant_key}/send",
+                headers={"X-API-Key": meowhats_key},
+                json={"jid": f"{tel}@s.whatsapp.net", "type": "text", "text": message},
                 timeout=15,
             )
             return r.status_code == 200
@@ -649,3 +685,39 @@ async def processar_fila_outbound(
 
     result = process_queue_once(engine, sync_sender)
     return result
+
+
+@router.get('/queue-stats')
+async def queue_stats(x_cron_secret: str = Header(None, alias='X-Cron-Secret')):
+    """Retorna estatísticas da fila outbound para monitoramento.
+
+    Inclui contadores, alertas e métricas de backlog.
+    Use para Grafana/Prometheus ou dashboards de ops.
+    """
+    _autorizar(x_cron_secret)
+
+    try:
+        from backend.services.outbound_queue import get_queue_stats
+        stats = get_queue_stats(engine)
+
+        # Log de alerta se necessário
+        if stats.get("backlog_alert"):
+            print(f"[Queue Stats] ⚠️ ALERTA: backlog crescente ({stats['total_pending']} pending)")
+        if stats.get("dlq_alert"):
+            print(f"[Queue Stats] 🔴 ALERTA: DLQ com {stats['total_dlq']} mensagens")
+
+        return {
+            "status": "ok",
+            "pending": stats["total_pending"],
+            "failed": stats["total_failed"],
+            "dlq": stats["total_dlq"],
+            "sent_today": stats["total_sent_today"],
+            "oldest_pending_minutes": stats.get("oldest_pending_minutes"),
+            "alerts": {
+                "backlog": stats.get("backlog_alert", False),
+                "dlq": stats.get("dlq_alert", False),
+            }
+        }
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+

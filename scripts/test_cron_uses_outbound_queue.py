@@ -64,8 +64,8 @@ def test_no_httpx_post_in_cron_functions():
     print("[OK] Nenhuma chamada httpx.Client/post encontrada em cron jobs SDR")
 
 
-def test_enqueue_outbound_calls_present():
-    """Verifica que enqueue_outbound() e chamado 3 vezes (uma para cada cron job)."""
+def test_enqueue_outbound_only_for_first_contact():
+    """Verifica que só primeiro contato usa outbound_queue."""
     cron_file = Path("C:/fralib/backend/endpoints/cron_endpoints.py")
     content = cron_file.read_text(encoding="utf-8")
 
@@ -73,11 +73,14 @@ def test_enqueue_outbound_calls_present():
     pattern = r'enqueue_outbound\s*\('
     matches = list(re.finditer(pattern, content))
 
-    assert len(matches) == 3, (
-        f"Esperadas 3 chamadas a enqueue_outbound(), encontradas {len(matches)}. "
-        f"Verificar se todas as 3 substituicoes foram feitas."
+    assert len(matches) == 1, (
+        f"Esperada 1 chamada a enqueue_outbound() para primeiro contato, encontradas {len(matches)}. "
+        f"Follow-up e scheduled devem enviar direto apos historico de contato."
     )
-    print(f"[OK] Encontradas {len(matches)} chamadas a enqueue_outbound()")
+    assert "source=\"followup\"" not in content
+    assert "source=\"scheduled\"" not in content
+    assert "_send_sdr_direct(user_id, tel, fu_output.reply)" in content
+    print(f"[OK] enqueue_outbound restrito a primeiro contato")
 
 
 def test_env_flag_activated():
@@ -119,7 +122,7 @@ if __name__ == "__main__":
     tests = [
         test_cron_endpoints_imports_enqueue_outbound,
         test_no_httpx_post_in_cron_functions,
-        test_enqueue_outbound_calls_present,
+        test_enqueue_outbound_only_for_first_contact,
         test_env_flag_activated,
         test_response_executor_sends_replies_directly,
     ]

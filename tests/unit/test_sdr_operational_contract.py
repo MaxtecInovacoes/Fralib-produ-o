@@ -11,19 +11,20 @@ def _read(relative: str) -> str:
     return (ROOT / relative).read_text(encoding="utf-8")
 
 
-def test_bryan_worker_checks_whatsapp_before_generating_intro():
+def test_worker_first_contact_enqueues_without_direct_whatsapp_send():
     source = _read("worker.py")
     block = source[
         source.index("if tipo in SDR_OUTREACH_JOB_TYPES") :
         source.index('return False, "desconhecido"')
     ]
 
-    assert block.index("if not is_tenant_connected(_tenant_key):") < block.index(
-        "franz_output = iniciar_contato"
-    )
+    assert "enqueue_outbound(" in block
+    assert "source=\"franz_outreach\"" in block
+    assert "f\"{meowhats_url}/api/sessions/{_tenant_key}/send\"" not in block
+    assert "_salvar_interacao(" not in block
 
 
-def test_cron_checks_whatsapp_before_generating_intro_or_followup():
+def test_cron_enqueues_intro_and_sends_followup_directly():
     source = _read("backend/endpoints/cron_endpoints.py")
     intro_block = source[
         source.index("async def despachar_fila_franz") :
@@ -31,13 +32,15 @@ def test_cron_checks_whatsapp_before_generating_intro_or_followup():
     ]
     followup_block = source[source.index("async def followup_franz") :]
 
-    assert intro_block.index("if not is_tenant_connected(wpp_tenant):") < intro_block.index(
-        "franz_output = iniciar_contato"
-    )
+    assert "enqueue_outbound(" in intro_block
+    assert "sdr_stage='pending_sdr_send'" in intro_block
+    assert "_salvar_interacao(" not in intro_block
 
     first_followup = followup_block.index('fu_output = followup_automatico(telefone or whatsapp or "", tipo')
     first_guard = followup_block.index("if not is_tenant_connected(wpp_tenant):")
     assert first_guard < first_followup
+    assert "_send_sdr_direct(user_id, tel, fu_output.reply)" in followup_block
+    assert "source=\"followup\"" not in followup_block
 
     second_followup = followup_block.index(
         'fu_output = followup_automatico(telefone or whatsapp or "", "scheduled"'
@@ -60,10 +63,11 @@ def test_listener_records_outbound_only_after_send_success():
     assert process_block.index("if opt_out_like:") < process_block.index(
         "from agents.sdr_langgraph import responder_lead"
     )
+    persist_marker = 'ctx.save_interaction_fn(ctx.lead_id, ctx.resposta, "saida", ctx.user_id)'
     assert send_block.index("if not send_ok:") < send_block.index(
-        'ctx.save_interaction_fn(ctx.lead_id, ctx.resposta, "saida", ctx.user_id)'
+        persist_marker
     )
-    assert "return False" in send_block[send_block.index("if not send_ok:") : send_block.index("# 4. Persist output")]
+    assert "return False" in send_block[send_block.index("if not send_ok:") : send_block.index(persist_marker)]
     assert "sera reenviada quando reconectar" not in source
 
 
@@ -155,14 +159,17 @@ def test_worker_and_cron_persist_successful_outbound_history():
         worker.index("if tipo in SDR_OUTREACH_JOB_TYPES") :
         worker.index('return False, "desconhecido"')
     ]
-    assert "from whatsapp_listener import is_tenant_connected, _salvar_interacao" in bryan_block
-    assert bryan_block.index("if r.status_code == 200:") < bryan_block.index(
-        '_salvar_interacao('
-    ) < bryan_block.index("UPDATE leads SET sdr_stage='hook'")
+    assert "enqueue_outbound(" in bryan_block
+    assert "_salvar_interacao(" not in bryan_block
 
     cron = _read("backend/endpoints/cron_endpoints.py")
     assert "from backend.whatsapp_listener import is_tenant_connected, _salvar_interacao" in cron
-    assert cron.count('_salvar_interacao(lead_id,') >= 3
+    assert cron.count('_salvar_interacao(lead_id,') >= 2
+    assert "_send_sdr_direct(user_id, tel, fu_output.reply)" in cron
+
+    queue = _read("backend/services/outbound_queue.py")
+    assert "UPDATE outbound_queue SET status = 'sent'" in queue
+    assert "INSERT INTO interacoes" in queue
 
 
 def test_worker_does_not_mark_empty_bryan_reply_as_generic_success():
@@ -173,7 +180,7 @@ def test_worker_does_not_mark_empty_bryan_reply_as_generic_success():
     ]
     empty_reply_block = bryan_block[
         bryan_block.index("if not franz_output or not franz_output.reply") :
-        bryan_block.index("# Enviar via WhatsApp")
+        bryan_block.index("tel = (payload.get(\"whatsapp\")")
     ]
 
     assert "Não é erro, só fora do horário" not in empty_reply_block
@@ -195,7 +202,7 @@ def test_all_real_sdr_send_paths_run_output_guard_before_send():
     )
     assert "evaluate_sdr_output" in bryan_worker_block
     assert bryan_worker_block.index("evaluate_sdr_output") < bryan_worker_block.index(
-        "f\"{meowhats_url}/api/sessions/{_tenant_key}/send\""
+        "enqueue_outbound("
     )
 
     executor = _read("backend/whatsapp/response_executor.py")
@@ -205,9 +212,7 @@ def test_all_real_sdr_send_paths_run_output_guard_before_send():
 
     cron = _read("backend/endpoints/cron_endpoints.py")
     assert cron.count("evaluate_sdr_output(") >= 3
-    assert cron.index("evaluate_sdr_output") < cron.index(
-        "f\"{meowhats_url}/api/sessions/{wpp_tenant}/send\""
-    )
+    assert cron.index("evaluate_sdr_output") < cron.index("_send_sdr_direct(user_id, tel, fu_output.reply)")
 
 
 def test_manual_sdr_send_persists_outbound_and_uses_guard():
@@ -215,12 +220,22 @@ def test_manual_sdr_send_persists_outbound_and_uses_guard():
     block = source[source.index("async def enviar_mensagem_lead") :]
 
     assert "evaluate_sdr_output" in block
-    assert block.index("evaluate_sdr_output") < block.index(
-        "f\"{meowhats_url}/api/sessions/{wpp_tenant}/send\""
-    )
-    assert block.index("if r_send.status_code != 200") < block.index(
+    assert block.index("evaluate_sdr_output") < block.index("send_text_parts(")
+    assert block.index("if not ok:") < block.index(
         '_salvar_interacao(lead_id, franz_output.reply, "saida", tenant_id)'
     ) < block.index("UPDATE leads SET sdr_stage=:stage")
+    assert "async def _enviar_whatsapp" not in block
+
+
+def test_outbound_watchdog_is_not_forced_as_lead_responded():
+    compat = _read("backend/agents/sdr_langgraph/compat.py")
+    watchdog_block = compat[
+        compat.index("def _verificar_watchdog_outbound") : compat.index("def responder_lead")
+    ]
+
+    assert "lead_responded: bool = False" in watchdog_block
+    assert "lead_responded=lead_responded" in watchdog_block
+    assert "lead_responded=True" not in watchdog_block
 
 
 def test_listener_passes_current_database_stage_to_franz_graph():

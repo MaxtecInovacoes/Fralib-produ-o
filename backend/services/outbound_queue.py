@@ -46,8 +46,12 @@ def enqueue_outbound(
     source: str = "franz",
     priority: int = 5,
     delay_sec: int = 0,
-) -> int:
+) -> int | None:
     """Adiciona msg na fila outbound.
+
+    IDEMPOTENCIA: Se a mesma mensagem (mesmo lead + mesmo texto) já estiver
+    na fila com status pending/sending, NAO insere novamente. Retorna o ID
+    existente.
 
     Args:
         engine: SQLAlchemy engine
@@ -60,15 +64,60 @@ def enqueue_outbound(
         delay_sec: delay extra antes de enviar (alem do rate limit)
 
     Returns:
-        ID da msg enfileirada
+        ID da msg enfileirada, ou ID existente se duplicado, ou None se
+        a mesma msg ja foi enviada com sucesso.
     """
     from sqlalchemy import text
+    import hashlib
 
     # Calcula scheduled_at baseado em delay
     # O worker aplica rate limit tambem
     scheduled_at = datetime.now() + timedelta(seconds=delay_sec)
 
+    # Gerar hash unico para idempotencia
+    # Usamos tenant_id + lead_id + message_hash para identificar duplicatas
+    msg_hash = hashlib.md5(f"{tenant_id}:{lead_id}:{message}".encode()).hexdigest()[:16]
+
     with engine.connect() as c:
+        # IDEMPOTENCIA: Verificar se a mesma msg ja existe na fila (pending/sending)
+        existing = c.execute(text("""
+            SELECT id, status FROM outbound_queue
+            WHERE tenant_id = :tid
+              AND lead_id = :lid
+              AND message = :msg
+              AND status IN ('pending', 'sending')
+            LIMIT 1
+        """), {
+            "tid": tenant_id,
+            "lid": lead_id,
+            "msg": message,
+        }).fetchone()
+
+        if existing:
+            existing_id = existing[0]
+            existing_status = existing[1] if len(existing) > 1 else "pending"
+            logger.info(f"[outbound] msg duplicada detectada id={existing_id} status={existing_status}")
+            return existing_id  # Ja existe, retorna ID existente
+
+        # Tambem verificar se ja foi enviada (para logs)
+        already_sent = c.execute(text("""
+            SELECT id FROM outbound_queue
+            WHERE tenant_id = :tid
+              AND lead_id = :lid
+              AND message = :msg
+              AND status = 'sent'
+            LIMIT 1
+        """), {
+            "tid": tenant_id,
+            "lid": lead_id,
+            "msg": message,
+        }).fetchone()
+
+        if already_sent:
+            logger.info(f"[outbound] msg ja enviada anteriormente id={already_sent[0]}, pulando")
+            return None  # Ja enviada, no need to reenviar
+
+        # Inserir nova mensagem
         result = c.execute(text("""
             INSERT INTO outbound_queue
                 (tenant_id, lead_id, phone, message, source, priority, scheduled_at)
@@ -174,6 +223,9 @@ def dequeue_and_send(engine, sender_func) -> dict:
 
     with engine.connect() as c:
         # Pega a msg mais antiga que esteja pronta
+        # USA FOR UPDATE SKIP LOCKED para evitar race condition:
+        # - Se outra instância pegou a mesma msg, essa pula
+        # - Garante que cada msg é processada por exatamente 1 worker
         rows = c.execute(text("""
             SELECT id, tenant_id, lead_id, phone, message, source, attempts
             FROM outbound_queue
@@ -181,6 +233,7 @@ def dequeue_and_send(engine, sender_func) -> dict:
               AND scheduled_at <= NOW()
             ORDER BY scheduled_at ASC, id ASC
             LIMIT 1
+            FOR UPDATE SKIP LOCKED
         """)).fetchall()
 
     if not rows:
@@ -232,7 +285,7 @@ def dequeue_and_send(engine, sender_func) -> dict:
                 c.execute(text("""
                     UPDATE leads
                     SET sdr_stage = CASE
-                        WHEN COALESCE(sdr_stage, '') IN ('', 'pendente_wpp', 'manual_test_no_wpp') THEN 'hook'
+                        WHEN COALESCE(sdr_stage, '') IN ('', 'pendente_wpp', 'pending_sdr_send', 'manual_test_no_wpp') THEN 'hook'
                         ELSE sdr_stage
                     END,
                     atualizado_em = NOW()::text
@@ -270,13 +323,35 @@ def dequeue_and_send(engine, sender_func) -> dict:
             result["msgs"].append({"id": msg_id, "phone": phone, "source": source})
             logger.info(f"[outbound] msg {msg_id} ENVIADA para {phone}")
         else:
-            with engine.connect() as c:
-                c.execute(text("""
-                    UPDATE outbound_queue SET status = 'failed', error = 'sender returned False'
-                    WHERE id = :id
-                """), {"id": msg_id})
-                c.commit()
-            result["failed"] = 1
+            failure_reason = "sender returned False"
+            # Retry com backoff exponencial: 1min, 2min, 4min, 8min, 16min (max)
+            # Após 3 tentativas (attempts >= 3 antes do incremento), mover para DLQ
+            if attempts >= 3:
+                # Mover para DLQ após 3 tentativas falhas
+                with engine.connect() as c:
+                    c.execute(text("""
+                        UPDATE outbound_queue
+                        SET status = 'dlq', error = :err
+                        WHERE id = :id
+                    """), {"id": msg_id, "err": f"Max retries exceeded (3): {failure_reason}"})
+                    c.commit()
+                logger.warning(f"[outbound] msg {msg_id} movida para DLQ após 3 tentativas")
+                result["failed"] = 1
+            else:
+                # Backoff: 2^attempts * 60 segundos (1min, 2min, 4min...)
+                backoff_seconds = (2 ** attempts) * 60
+                next_retry = datetime.now() + timedelta(seconds=backoff_seconds)
+                with engine.connect() as c:
+                    c.execute(text("""
+                        UPDATE outbound_queue
+                        SET status = 'pending',
+                            scheduled_at = :next_retry,
+                            error = :err
+                        WHERE id = :id
+                    """), {"id": msg_id, "next_retry": next_retry, "err": f"Retry scheduled in {backoff_seconds}s: {failure_reason}"})
+                    c.commit()
+                logger.warning(f"[outbound] msg {msg_id} agendada para retry em {backoff_seconds}s (attempt {attempts + 1})")
+                result["failed"] = 1
     except Exception as e:
         with engine.connect() as c:
             c.execute(text("""
@@ -291,15 +366,43 @@ def dequeue_and_send(engine, sender_func) -> dict:
 
 
 def cleanup_old_messages(engine, days: int = HISTORY_DAYS) -> int:
-    """Remove msgs enviadas ha mais de X dias."""
+    """Remove msgs enviadas e com falha ha mais de X dias.
+
+    Cleanup cobre:
+    - msgs 'sent' com mais de 7 dias (HISTORY_DAYS)
+    - msgs 'failed' com mais de 30 dias (hardcoded, não usa param)
+    - msgs 'pending' com mais de 30 dias (limpeza de orphan)
+
+    Msgs em DLQ (status='dlq') são mantidas para análise manual.
+    """
     from sqlalchemy import text
-    cutoff = datetime.now() - timedelta(days=days)
+
+    deleted = 0
     with engine.connect() as c:
+        # Msgs enviadas
+        cutoff_sent = datetime.now() - timedelta(days=days)
         r = c.execute(text("""
             DELETE FROM outbound_queue
             WHERE status = 'sent' AND sent_at < :cutoff
-        """), {"cutoff": cutoff})
-        deleted = r.rowcount
+        """), {"cutoff": cutoff_sent})
+        deleted += r.rowcount
+
+        # Msgs com falha (30 dias)
+        cutoff_failed = datetime.now() - timedelta(days=30)
+        r = c.execute(text("""
+            DELETE FROM outbound_queue
+            WHERE status = 'failed' AND sent_at < :cutoff
+        """), {"cutoff": cutoff_failed})
+        deleted += r.rowcount
+
+        # Msgs pending órfãs (30 dias sem processamento)
+        cutoff_pending = datetime.now() - timedelta(days=30)
+        r = c.execute(text("""
+            DELETE FROM outbound_queue
+            WHERE status = 'pending' AND scheduled_at < :cutoff
+        """), {"cutoff": cutoff_pending})
+        deleted += r.rowcount
+
         c.commit()
     if deleted:
         logger.info(f"[outbound] cleanup: {deleted} msgs antigas removidas")
@@ -369,6 +472,60 @@ def process_queue_once(engine, sender_func) -> dict:
     return result
 
 
+def get_queue_stats(engine, tenant_id: int | None = None) -> dict:
+    """Retorna estatísticas da fila para monitoramento/alertas.
+
+    Returns:
+        {
+            "total_pending": N,
+            "total_failed": N,
+            "total_dlq": N,
+            "total_sent_today": N,
+            "oldest_pending_minutes": N or None,
+            "by_tenant": [{tenant_id, pending, failed, dlq}, ...]
+        }
+    """
+    from sqlalchemy import text
+
+    result = {"total_pending": 0, "total_failed": 0, "total_dlq": 0, "total_sent_today": 0}
+
+    with engine.connect() as c:
+        # Counts globais
+        counts = c.execute(text("""
+            SELECT status, COUNT(*)
+            FROM outbound_queue
+            WHERE :tenant_filter OR tenant_id = :tid
+            GROUP BY status
+        """), {"tid": tenant_id or 0, "tenant_filter": tenant_id is None}).fetchall()
+
+        for status, count in counts:
+            if status == "pending":
+                result["total_pending"] = count
+            elif status == "failed":
+                result["total_failed"] = count
+            elif status == "dlq":
+                result["total_dlq"] = count
+            elif status == "sent":
+                result["total_sent_today"] = count
+
+        # Mensagem mais antiga pendente
+        if result["total_pending"] > 0:
+            oldest = c.execute(text("""
+                SELECT EXTRACT(EPOCH FROM (NOW() - scheduled_at)) / 60
+                FROM outbound_queue
+                WHERE status = 'pending'
+                ORDER BY scheduled_at ASC
+                LIMIT 1
+            """)).scalar()
+            result["oldest_pending_minutes"] = int(oldest) if oldest else None
+
+        # Alerta: backlog crescente
+        result["backlog_alert"] = result["total_pending"] > 100
+        result["dlq_alert"] = result["total_dlq"] > 10
+
+    return result
+
+
 # ════════════════════════════════════════════════════════════════════
 # EXPORTAR
 # ════════════════════════════════════════════════════════════════════
@@ -383,4 +540,5 @@ __all__ = [
     "dequeue_and_send",
     "cleanup_old_messages",
     "process_queue_once",
+    "get_queue_stats",  # Nova: estatísticas da fila
 ]

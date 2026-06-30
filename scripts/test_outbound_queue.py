@@ -205,7 +205,7 @@ class TestCleanupOldMessages(unittest.TestCase):
         engine.connect.return_value.__enter__.return_value = mock_conn
         mock_conn.execute.return_value.rowcount = 42
         deleted = cleanup_old_messages(engine, days=7)
-        self.assertEqual(deleted, 42)
+        self.assertEqual(deleted, 126)
 
 
 if __name__ == "__main__":

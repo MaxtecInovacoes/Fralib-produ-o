@@ -283,8 +283,7 @@ async def enviar_mensagem_lead(
         )
 
     # Enviar via meowhats usando send_text_parts (unificado)
-    async def _enviar_whatsapp():
-        import asyncio
+    def _enviar_whatsapp():
         client = httpx.Client(timeout=10)
         try:
             ok, err = send_text_parts(

@@ -194,7 +194,12 @@ def iniciar_contato(lead: BryanInput, user_id: int = None) -> BryanOutput:
     )
 
 
-def _verificar_watchdog_outbound(telefone: str, user_id: int, sdr_stage: str) -> tuple:
+def _verificar_watchdog_outbound(
+    telefone: str,
+    user_id: int,
+    sdr_stage: str,
+    lead_responded: bool = False,
+) -> tuple:
     """
     Watchdog: previne vícios do bryan antigo.
     Bloqueia envio se:
@@ -203,8 +208,12 @@ def _verificar_watchdog_outbound(telefone: str, user_id: int, sdr_stage: str) ->
     """
     try:
         from .watchdog import can_send_next_outbound
-        # FIX: lead_responded=True para respostas (inbound) - ignora rate limit
-        pode_enviar, motivo = can_send_next_outbound(telefone, user_id, sdr_stage, lead_responded=True)
+        pode_enviar, motivo = can_send_next_outbound(
+            telefone,
+            user_id,
+            sdr_stage,
+            lead_responded=lead_responded,
+        )
         return pode_enviar, motivo
     except Exception as e:
         print(f"[Compat] Erro watchdog: {e}")

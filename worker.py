@@ -67,7 +67,7 @@ WORKER_JOB_TYPES = [
     ).split(",")
     if item.strip()
 ]
-SDR_OUTREACH_JOB_TYPES = {"franz_outreach", "bryan_outreach"}
+SDR_OUTREACH_JOB_TYPES = {"franz_outreach"}
 
 WORKER_ID = job_queue.generate_worker_id()
 _running = True
@@ -798,7 +798,7 @@ async def _executar_job(job: dict) -> tuple[bool, Optional[str], Optional[str]]:
             try:
                 from services.outbound_queue import enqueue_outbound
 
-                enqueue_outbound(
+                msg_id = enqueue_outbound(
                     engine=_db_queue.get_bind(),
                     tenant_id=int(tenant_id),
                     lead_id=payload.get("lead_id"),
@@ -807,8 +807,17 @@ async def _executar_job(job: dict) -> tuple[bool, Optional[str], Optional[str]]:
                     source="franz_outreach",
                     priority=10,
                 )
+                # Se msg_id eh None, a mensagem ja foi enviada - considerar sucesso
+                if msg_id is None:
+                    log.info(
+                        "Franz: msg ja enviada anteriormente tenant=%s lead=%s",
+                        tenant_id,
+                        payload.get("nome"),
+                    )
+                    return True, None, None
                 log.info(
-                    "Franz: primeiro contato enfileirado tenant=%s lead=%s",
+                    "Franz: primeiro contato enfileirado msg_id=%s tenant=%s lead=%s",
+                    msg_id,
                     tenant_id,
                     payload.get("nome"),
                 )

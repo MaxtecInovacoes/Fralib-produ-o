@@ -326,10 +326,10 @@ STAGE_PROMPTS = {
 
 
 VARIANT_EXAMPLES = {
-    "A": 'Neighbor signal: "Boa tarde! Voces trabalham mais com {segmento} ou atendem outro foco tambem?"',
-    "B": 'Observation signal: "Vi voces no Google com {rating} estrelas, isso chama atencao."',
-    "C": 'Research signal: "Estou fazendo um levantamento rapido sobre {segmento} em {cidade}."',
-    "D": 'Referral signal: "Me indicaram voces e eu queria confirmar uma coisa rapida."',
+    "A": 'Neighbor signal: "Falo com quem cuida dos novos atendimentos por ai?"',
+    "B": 'Observation signal: "A avaliacao de voces chama atencao. Quem cuida da agenda comercial?"',
+    "C": 'Research signal: "Estou levantando negocios de {segmento} em {cidade}. Posso confirmar uma coisa rapida?"',
+    "D": 'Referral signal: "Cheguei ate voces por referencia local. Quem responde sobre novos clientes?"',
 }
 
 
