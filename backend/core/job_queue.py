@@ -157,7 +157,14 @@ def claim_next(
               {filtro_global}
               {filtro_tenant_lock}
             ORDER BY
-                CASE WHEN tipo IN ('pipeline_lead', 'pipeline_multiplos', 'pipeline_main') THEN 0 ELSE 1 END,
+                CASE
+                    WHEN tipo IN ('pipeline_lead', 'pipeline_multiplos', 'pipeline_main') THEN 0
+                    WHEN tipo = 'lead_production_tick' THEN 1
+                    WHEN tipo = 'lead_supply_caio' THEN 2
+                    WHEN tipo = 'lead_supply_hunter' THEN 3
+                    WHEN tipo IN ('franz_outreach', 'bryan_outreach') THEN 4
+                    ELSE 5
+                END,
                 priority ASC,
                 COALESCE((
                     SELECT MAX(COALESCE(done.concluido_em, done.iniciado_em, done.criado_em))

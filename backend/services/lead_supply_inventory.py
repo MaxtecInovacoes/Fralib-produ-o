@@ -338,6 +338,15 @@ def _store_candidate(db: Session, tenant_id: int, candidate: Any, segmento: str,
 
 def _enqueue_caio(db: Session, tenant_id: int, inventory_id: str) -> None:
     """Enqueue a Caio qualification job for a lead."""
+    existing = _find_active_job(
+        db,
+        tenant_id,
+        SUPPLY_CAIO_JOB,
+        "payload->>'inventory_id' = :inventory_id",
+        {"inventory_id": inventory_id},
+    )
+    if existing:
+        return
     job_queue.enqueue(
         db,
         tipo=SUPPLY_CAIO_JOB,
@@ -348,6 +357,37 @@ def _enqueue_caio(db: Session, tenant_id: int, inventory_id: str) -> None:
         priority=1,
         run_id=uuid.uuid4().hex[:12],
     )
+
+
+def _find_active_job(
+    db: Session,
+    tenant_id: int,
+    job_type: str,
+    extra_where: str = "",
+    extra_params: dict[str, Any] | None = None,
+) -> int | None:
+    """Return an already queued/running job for the same tenant/work lane."""
+    where = ""
+    params: dict[str, Any] = {"uid": tenant_id, "job_type": job_type}
+    if extra_where:
+        where = f"AND {extra_where}"
+        params.update(extra_params or {})
+    row = db.execute(
+        text(
+            f"""
+            SELECT id
+            FROM jobs
+            WHERE tenant_id=:uid
+              AND tipo=:job_type
+              AND status IN ('pending','running','failed_retriable')
+              {where}
+            ORDER BY id DESC
+            LIMIT 1
+            """
+        ),
+        params,
+    ).fetchone()
+    return int(row[0]) if row else None
 
 
 def _existing_names(db: Session, tenant_id: int, cidade: str) -> set[str]:
@@ -709,6 +749,9 @@ def sync_supply(db: Session, tenant_id: int) -> dict[str, Any]:
 
 def enqueue_hunter(db: Session, tenant_id: int, *, delay_seconds: int = 0, force: bool = False) -> int | None:
     """Enqueue a Hunter job."""
+    existing = _find_active_job(db, tenant_id, SUPPLY_HUNTER_JOB)
+    if existing:
+        return existing
     run_id = uuid.uuid4().hex[:12]
     idem = f"lead-supply-hunter-{tenant_id}-{int(datetime.utcnow().timestamp() // 60)}"
     return job_queue.enqueue(

@@ -272,6 +272,12 @@ Os **20 contratos** que saem do PRD, passam pelo OpenUI, e chegam no HTML public
 - Tenant ilimitado remove trava comercial/cooldown, mas **não** libera duas
   pipelines de site simultâneas para o mesmo tenant. A regra canônica é: vários
   tenants podem rodar em paralelo; o mesmo tenant roda pipeline de site em série.
+- Ordem de claim operacional: `pipeline_*` primeiro, depois
+  `lead_production_tick`, `lead_supply_caio`, `lead_supply_hunter` e só então
+  `franz_outreach`/`bryan_outreach`. Jobs antigos de SDR não podem bloquear
+  abastecimento de leads nem geração de sites.
+- A conexão Postgres deve usar `client_encoding=UTF8`. `LATIN1` quebra jobs
+  com payload/erro contendo acentos, travessão ou dados reais de empresas.
 - Backoff: 30/120/480s padrão; 60-960s para `franz`/`bryan`.
 - `reap_dead_workers` reseta jobs com heartbeat > 5 min.
 

@@ -30,7 +30,7 @@ if not DATABASE_URL:
 _is_postgres = DATABASE_URL.startswith(("postgresql://", "postgresql+psycopg2://"))
 _connect_args = {
     "options": "-csearch_path=public",
-    "client_encoding": "LATIN1",  # Corrige encoding com caracteres especiais
+    "client_encoding": "UTF8",
 }
 
 # Connection pool otimizado para produção

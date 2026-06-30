@@ -170,6 +170,42 @@ def test_claim_next_prioriza_pipeline_antes_de_franz():
 
 
 @pytest.mark.integration
+def test_claim_next_prioriza_abastecimento_antes_de_franz_antigo():
+    job_queue._MAX_PIPELINES_GLOBAL = 10
+    db = SessionLocal()
+    try:
+        franz = job_queue.enqueue(db, tipo="franz_outreach", payload={"i": 1}, tenant_id=2, priority=1)
+        hunter = job_queue.enqueue(db, tipo="lead_supply_hunter", payload={"i": 2}, tenant_id=31, priority=2)
+        caio = job_queue.enqueue(db, tipo="lead_supply_caio", payload={"i": 3}, tenant_id=31, priority=2)
+        tick = job_queue.enqueue(db, tipo="lead_production_tick", payload={"i": 4}, tenant_id=31, priority=2)
+
+        claimed_1 = job_queue.claim_next(
+            db,
+            worker_id="w-1",
+            tipos=["franz_outreach", "lead_supply_hunter", "lead_supply_caio", "lead_production_tick"],
+        )
+        claimed_2 = job_queue.claim_next(
+            db,
+            worker_id="w-2",
+            tipos=["franz_outreach", "lead_supply_hunter", "lead_supply_caio", "lead_production_tick"],
+        )
+        claimed_3 = job_queue.claim_next(
+            db,
+            worker_id="w-3",
+            tipos=["franz_outreach", "lead_supply_hunter", "lead_supply_caio", "lead_production_tick"],
+        )
+        claimed_4 = job_queue.claim_next(
+            db,
+            worker_id="w-4",
+            tipos=["franz_outreach", "lead_supply_hunter", "lead_supply_caio", "lead_production_tick"],
+        )
+    finally:
+        db.close()
+
+    assert [claimed_1["id"], claimed_2["id"], claimed_3["id"], claimed_4["id"]] == [tick, caio, hunter, franz]
+
+
+@pytest.mark.integration
 def test_claim_next_respeita_limite_global_de_pipelines():
     job_queue._MAX_PIPELINES_GLOBAL = 1
     db = SessionLocal()

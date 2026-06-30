@@ -123,9 +123,12 @@ async def buscar_gosom(
         "name": f"{segmento}_{cidade}_{int(time.time())}",
         "keywords": [query],
         "lang": lang,
+        "zoom": 0,
+        "lat": "",
+        "lon": "",
         "depth": 1,
         "max_time": GOSOM_TIMEOUT,
-        "fast_mode": True,
+        "fast_mode": False,
     }
 
     try:
@@ -134,6 +137,8 @@ async def buscar_gosom(
             r = await client.post(f"{GOSOM_BASE_URL}/api/v1/jobs", json=payload)
             if r.status_code not in (200, 201):
                 print(f"[Gosom] Erro ao submeter job: {r.status_code} {r.text}")
+                if r.status_code == 422 and "geo" in r.text.lower():
+                    _abrir_circuito("job recusado por coordenadas ausentes")
                 return None
 
             job_data = r.json()
