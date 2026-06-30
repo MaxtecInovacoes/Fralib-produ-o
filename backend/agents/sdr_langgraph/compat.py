@@ -6,7 +6,7 @@ Permite que o resto do sistema continue usando responder_lead(), iniciar_contato
 from __future__ import annotations
 import os
 import sys
-from typing import Optional
+from typing import Dict, Optional
 from pydantic import BaseModel
 
 AGENTS_DIR = os.path.dirname(os.path.abspath(__file__))
