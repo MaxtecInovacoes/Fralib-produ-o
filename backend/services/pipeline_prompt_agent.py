@@ -177,6 +177,9 @@ def build_prompt_agent_prd(state: Any, tenant_id: int | str = "") -> SimpleNames
         media.get("photos") or raw.get("fotos") or [],
         media.get("og_image") or raw.get("og_image") or "",
     )
+    # Sprint 16: extrair variation seed de variacao_estrutural para passar ao builder
+    _var_estrutural = object_to_dict(getattr(state, "variacao_estrutural", None)) or {}
+    _variation = _var_estrutural.get("variation") or {}
     return SimpleNamespace(
         contract="fralib-prompt-agent-v1",
         prompt_agent_payload=payload,
@@ -205,4 +208,6 @@ def build_prompt_agent_prd(state: Any, tenant_id: int | str = "") -> SimpleNames
         sections=context.get("sections") or [],
         renderer_owns_headings=True,
         heading_preservation_min=0,
+        # Sprint 16: variation seed completo para o builder usar
+        variation=_variation,
     )

@@ -12,7 +12,9 @@ Output: VariacaoEstrutural com paleta, tipografia, motion style, tom de voz
 Fluxo:
 1. Primeiro tenta chamar design_context.get_design_context() para tokens OKLch
 2. Se sucesso, usa tokens como base da decisão
-3. Se falhar, usa fallback determinístico
+3. Se falhar, lança DesignDirectionError (fail-fast)
+
+Fail-fast: não usa fallbacks determinísticos.
 """
 
 from __future__ import annotations
@@ -28,6 +30,7 @@ from typing import Any
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+from backend.pipeline_exceptions import DesignDirectionError
 from llm_direct import call_claude
 from backend.agents.design_context import get_design_context
 
@@ -283,63 +286,14 @@ Retorne APENAS o JSON com a direção criativa."""
 
     except Exception as e:
         logger.error(f"[DesignDirector] Erro: {e}")
-        # Fallback determinístico baseado no nicho
-        fallback = _fallback_direction(nicho, design_tokens)
-        # Salvar fallback no cache também
-        _cache_set(nicho, cidade, segment, fallback)
-        return fallback
+        raise DesignDirectionError(
+            f"Design direction failed for '{nicho}' in '{cidade}'.",
+            context={
+                "nicho": nicho,
+                "cidade": cidade,
+                "segmento": segment,
+                "erro": str(e),
+                "acao": "Check design_context connectivity and retry",
+            },
+        )
 
-
-def _fallback_direction(nicho: str, design_tokens: dict[str, Any] | None = None) -> dict[str, Any]:
-    """Direção fallback se LLM falhar.
-
-    Se design_tokens disponível (de design_context), usa-os.
-    """
-    paletas = {
-        "nutricionista": {
-            "paleta_primaria": "#7A9B7E",
-            "paleta_secundaria": "#F5F1E8",
-            "paleta_acento": "#D4866A",
-        },
-        "dentista": {
-            "paleta_primaria": "#1A2B4A",
-            "paleta_secundaria": "#FFFFFF",
-            "paleta_acento": "#C9A961",
-        },
-        "academia": {
-            "paleta_primaria": "#0A0A0A",
-            "paleta_secundaria": "#1F1F1F",
-            "paleta_acento": "#FFD60A",
-        },
-    }
-    nicho_lower = nicho.lower()
-    paleta = {"paleta_primaria": "#3B82F6", "paleta_secundaria": "#FFFFFF", "paleta_acento": "#10B981"}
-    for key, val in paletas.items():
-        if key in nicho_lower:
-            paleta = val
-            break
-
-    result = {
-        "direcao_visual": {**paleta, "estilo": "minimal", "fonte_titulo": "Inter", "fonte_corpo": "Inter"},
-        "motion_style": {"intensidade": "subtle", "efeito_principal": "fade-up", "scroll_speed": "normal"},
-        "tom_de_voz": {"registro": "semi-formal", "personalidade": "profissional"},
-        "estrutura_unica": {"ordem_secoes": ["hero", "servicos", "sobre", "contato"]},
-        "anti_repeticao": {"evitar": ["genérico"]},
-    }
-
-    # Injetar design_tokens mesmo no fallback
-    if design_tokens:
-        result["design_tokens"] = {
-            "dir_key": design_tokens.get("dir_key"),
-            "tokens": design_tokens.get("tokens"),
-            "font_heading": design_tokens.get("font_heading"),
-            "font_body": design_tokens.get("font_body"),
-            "animation_profile": design_tokens.get("animation_profile"),
-            "hero_style": design_tokens.get("hero_style"),
-            "craft": design_tokens.get("craft"),
-            "vibe": design_tokens.get("vibe"),
-            "animation": design_tokens.get("animation"),
-            "source": "design_context_fallback",
-        }
-
-    return result

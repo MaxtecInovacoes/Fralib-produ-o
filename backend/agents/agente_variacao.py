@@ -6,17 +6,21 @@ detect_subniche() identifica o subnicho canonico, a estrutura (template
 + ordem das secoes + angulo de comunicacao) vem do mapping canonico,
 NAO do LLM. Isso garante variacao REAL entre subnichos.
 
-Para subnichos nao mapeados, cai no fallback "default" que chama o
-LLM (Sonnet) para gerar a variacao como antes.
+Para subnichos nao mapeados, LANÇA SubnichoNaoMapeadoError - fail-fast.
 """
 
-import sys, os
+import logging
+import sys
+import os
 
 sys.path.insert(0, os.path.dirname(__file__))
 
+from backend.pipeline_exceptions import SubnichoNaoMapeadoError, VariationSeedError
 from handoff_types import NichoBriefing, VariacaoEstrutural
 from llm_direct import call_claude
 from llm_config import AGENT_MODEL_MAP
+
+logger = logging.getLogger("uvicorn")
 
 
 # ─── Subnicho detection (heuristica canonica) ──────────────────────────────
@@ -309,29 +313,23 @@ def gerar_variacao(
 
         # Sprint 14.6: counter rotation anti-repeticao
         # Cada novo lead do mesmo subnicho pega layout/motion/copy DIFERENTE
-        try:
-            from backend.services.site_generation_counter import get_counter
-            from backend.services.variation_seed import get_variation
+        from backend.services.site_generation_counter import get_counter
+        from backend.services.variation_seed import get_variation
 
-            _tenant_id = (
-                (nicho_briefing and getattr(nicho_briefing, "tenant_id", None))
-                or (nicho_briefing.to_dict().get("tenant_id") if hasattr(nicho_briefing, "to_dict") else None)
-            )
-            _counter = get_counter(_tenant_id, subnicho)
-            _facts_for_seed = {
-                "business": {"name": nicho_briefing.nome_negocio or subnicho if hasattr(nicho_briefing, "nome_negocio") else subnicho, "segment": nicho_briefing.nicho},
-                "segment": nicho_briefing.nicho,
-                "subnicho": subnicho,
-            }
-            _variation = get_variation(_facts_for_seed, counter=_counter)
-            _layout_v = _variation.hero_layout
-            _motion_v = _variation.motion_style
-            _copy_v = _variation.copy_voice
-        except Exception as _var_err:
-            logger.warning(f"[agente_variacao] counter/variation falhou: {_var_err}")
-            _counter = 0
-            _variation = None
-            _layout_v = _motion_v = _copy_v = "default"
+        _tenant_id = (
+            (nicho_briefing and getattr(nicho_briefing, "tenant_id", None))
+            or (nicho_briefing.to_dict().get("tenant_id") if hasattr(nicho_briefing, "to_dict") else None)
+        )
+        _counter = get_counter(_tenant_id, subnicho)
+        _facts_for_seed = {
+            "business": {"name": nicho_briefing.nome_negocio or subnicho if hasattr(nicho_briefing, "nome_negocio") else subnicho, "segment": nicho_briefing.nicho},
+            "segment": nicho_briefing.nicho,
+            "subnicho": subnicho,
+        }
+        _variation = get_variation(_facts_for_seed, counter=_counter)
+        _layout_v = _variation.hero_layout
+        _motion_v = _variation.motion_style
+        _copy_v = _variation.copy_voice
 
         _elapsed = _time.time() - _start
         return VariacaoEstrutural(
@@ -342,7 +340,7 @@ def gerar_variacao(
             task_summary=f"Variacao canonica subnicho '{subnicho}' counter={_counter} em {_elapsed:.3f}s (sem LLM)",
             subnicho=subnicho,
             template_estrutura=_template["template_estrutura"],
-            template_hero=_layout_v if _variation else _template["template_hero"],
+            template_hero=_layout_v,
             template_prova_social=_template["template_prova_social"],
             template_cta=_template["template_cta"],
             template_faq=_template["template_faq"],
@@ -356,65 +354,17 @@ def gerar_variacao(
                 f"Subnicho {subnicho} mapeado em SUB_NICHO_TEMPLATES - "
                 f"sem chamada LLM. Counter rotation={_counter}."
             ),
+            # Sprint 16: salvar variation seed completo para o builder usar
+            variation=_variation.to_dict(),
         )
 
-    # 3) Fallback: chamar Sonnet para gerar variacao livre
-    _briefing_md = nicho_briefing.to_markdown()
-    user_prompt = f"""Escolha a variacao estrutural para este lead.
-
-{_briefing_md}
-
-== DADOS DE CONCORRENCIA ==
-{concorrentes_raw[:2000] if concorrentes_raw else "nao disponivel"}
-
-Regiao: {nicho_briefing.cidade}
-Nicho: {nicho_briefing.nicho}
-
-Retorne APENAS o JSON - sem markdown, sem explicacao extra."""
-
-    resposta = call_claude(
-        system=SYSTEM_PROMPT,
-        user=user_prompt,
-        model=AGENT_MODEL_MAP["agente_variacao"],
-        max_tokens=1500,
-        temperature=0.4,
-        agent_name="agente_variacao",
-    )
-
-    _elapsed = _time.time() - _start
-
-    # Extrair JSON da resposta
-    import json as _json, re as _re
-
-    _json_match = _re.search(r"\{.*\}", resposta, _re.DOTALL)
-    _dados = {}
-    if _json_match:
-        try:
-            _dados = _json.loads(_json_match.group(0))
-        except _json.JSONDecodeError:
-            pass
-
-    # Fallback seguro
-    _estrutura = _dados.get("template_estrutura", "corporate")
-    _hero = _dados.get("template_hero", "hero-split")
-    _ordem = _dados.get(
-        "ordem_das_secoes", ["hero", "sobre", "localizacao", "contato", "footer"]
-    )
-
-    return VariacaoEstrutural(
-        task_id=task_id,
-        source_agent="agente_variacao",
-        target_agent="arquiteto_mestre",
-        status="ok",
-        task_summary=f"Variacao Sonnet para subnicho '{subnicho}' em {_elapsed:.1f}s",
-        subnicho=subnicho,
-        template_estrutura=_estrutura,
-        template_hero=_hero,
-        template_prova_social=_dados.get("template_prova_social", "reviews-carousel"),
-        template_cta=_dados.get("template_cta", "cta-central"),
-        template_faq=_dados.get("template_faq", "faq-accordion"),
-        ordem_das_secoes=_ordem,
-        angulo_de_comunicacao=_dados.get("angulo_de_comunicacao", ""),
-        regra_antirrepeticao=_dados.get("regra_antirrepeticao", ""),
-        justificativa=_dados.get("justificativa", ""),
+    # 3) Subnicho NÃO mapeado = ERRO (fail-fast)
+    raise SubnichoNaoMapeadoError(
+        f"Subnicho '{subnicho}' nao esta em SUB_NICHO_TEMPLATES e LLM foi desabilitado.",
+        context={
+            "subnicho": subnicho,
+            "segmento": nicho_briefing.nicho,
+            "cidade": nicho_briefing.cidade,
+            "acao": "Adicione o subnicho em SUB_NICHO_TEMPLATES ou use subnicho mapeado",
+        },
     )

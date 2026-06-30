@@ -1,6 +1,8 @@
 """Bloco 1 — Estrutura + Layout.
 LLM call focada em definir layout_type, direcao criativa e lista de secoes.
 Retorno: Markdown parseado via markdown_prd_parser.
+
+Fail-fast: se LLM falhar, lança EstruturaInvalidaError — não usa fallbacks.
 """
 
 import re as _re
@@ -8,6 +10,7 @@ import sys, os
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+from backend.pipeline_exceptions import EstruturaInvalidaError
 from llm_direct import call_claude
 from markdown_prd_parser import parse_bloco1_with_fallback
 from prompts_arquiteto import (
@@ -244,37 +247,15 @@ def executar_bloco_estrutura(
             "sections": sections,
         }
 
-    print("[BlocoEstrutura] Parse falhou — usando estrutura padrao")
-    return {
-        "layout_type": "editorial",
-        "instrucao_criativa_para_dev": _fallback_instrucao_criativa(nome, cidade, segmento, design_dict),
-        "sections": _garantir_secoes_obrigatorias([
-            {"name": "hero", "layout_type": "hero-diagonal", "required": True},
-            {"name": "sobre", "layout_type": "sobre-story", "required": True},
-            {"name": "servicos", "layout_type": "services-bento", "required": True},
-            {
-                "name": "depoimentos",
-                "layout_type": "reviews-spotlight",
-                "required": True,
-            },
-            {"name": "faq", "layout_type": "faq-two-col", "required": True},
-            {"name": "localizacao", "layout_type": "location-full", "required": True},
-            {"name": "contato", "layout_type": "contact-minimal", "required": True},
-            {"name": "footer", "layout_type": "footer-darkbar", "required": True},
-        ]),
-    }
-
-
-def _fallback_instrucao_criativa(nome: str, cidade: str, segmento: str, design_dict: dict) -> str:
-    tokens = design_dict.get("tokens", {}) if isinstance(design_dict, dict) else {}
-    return (
-        f"BRAND DNA: {nome} deve parecer um negocio local serio em {cidade}, com energia propria de {segmento}, "
-        "sem prometer servicos, estrutura ou resultados nao confirmados.\n"
-        "COMPOSICAO: hero assimetrico e dominante, uma secao aberta de respiro, uma faixa de impacto e blocos editoriais; "
-        "evitar pilha simetrica de cards iguais.\n"
-        "MOTION: Lenis scroll, reveal por mascara em titulos, line reveal, stagger 80-120ms nos blocos e parallax leve em imagens.\n"
-        "MIDIA: usar somente midias recebidas como narrativa editorial, sem afirmar que sao fotos reais do espaco.\n"
-        "ANTI-PATTERNS: sem emoji, sem grid SaaS, sem serif de blog para fitness, sem copy generica, sem footer minimo.\n"
-        f"CSS VARS CONFIRMADAS: bg={tokens.get('--bg','')}; fg={tokens.get('--fg','')}; "
-        f"surface={tokens.get('--surface','')}; accent={tokens.get('--accent','')}."
+    print("[BlocoEstrutura] Parse falhou — fail-fast")
+    raise EstruturaInvalidaError(
+        f"Estrutura generation failed for {nome} in {cidade}.",
+        context={
+            "nome": nome,
+            "cidade": cidade,
+            "segmento": segmento,
+            "acao": "Check LLM response format and retry",
+        },
     )
+
+

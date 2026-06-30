@@ -78,6 +78,9 @@ class VariacaoEstrutural(HandoffBase):
     angulo_de_comunicacao: str = ""
     regra_antirrepeticao: str = ""
     justificativa: str = ""
+    # Sprint 16: variation seed completo (hero_layout, motion_style, copy_voice, etc)
+    # Usado pelo vite_react_renderer para gerar CSS único por lead
+    variation: Dict = Field(default_factory=dict)
 
 
 class ValidacaoResultado(HandoffBase):

@@ -1,6 +1,8 @@
 """Bloco 2 — Copy por secao.
 LLM call focada em escrever copy (h1, subtitulo, cta, body) para cada secao.
 Retorno: Markdown parseado via markdown_prd_parser.
+
+Fail-fast: se LLM falhar, lança CopyGenerationError — não usa fallbacks.
 """
 
 import re as _re
@@ -8,6 +10,7 @@ import sys, os
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+from backend.pipeline_exceptions import CopyGenerationError
 from llm_direct import call_claude
 from markdown_prd_parser import parse_bloco2_with_fallback
 from prompts_arquiteto import SYSTEM_COPY_SENIOR
@@ -173,95 +176,6 @@ def _primeira_linha_review(review: dict) -> str:
     return f'"{texto}" - {autor}'
 
 
-def _copy_deterministica_fallback(
-    nome: str,
-    cidade: str,
-    segmento: str,
-    telefone: str,
-    endereco: str,
-    rating: float,
-    total_av: int,
-    secoes_nomes: list,
-    reviews_raw: list,
-) -> dict:
-    """Gera copy factual minima quando LLM fica indisponivel.
-
-    Mantem o pipeline vivo sem inventar servicos, endereco, metricas ou claims.
-    """
-    nome = _texto_curto(nome)
-    cidade = _texto_curto(cidade)
-    segmento = _texto_curto(segmento).lower() or "negocio local"
-    telefone = _texto_curto(telefone)
-    endereco = _texto_curto(endereco)
-    reviews_raw = reviews_raw or []
-    total_label = f"{total_av} avaliacoes" if total_av else "avaliacoes no perfil"
-    rating_label = f"Nota {rating}/5" if rating else "Perfil local verificado"
-    contato_body = telefone or "Entre em contato para confirmar atendimento."
-
-    copy_por_secao = {
-        "hero": {
-            "h1": f"{segmento.capitalize()} em {cidade} para treinar com mais clareza",
-            "subtitulo": f"Conheca a {nome} com informacoes reais do perfil local, contato direto e detalhes para decidir sua proxima visita.",
-            "cta": "Chamar no WhatsApp" if telefone else "Falar com a equipe",
-            "eyebrow": f"{segmento.capitalize()} em {cidade}",
-        },
-        "sobre": {
-            "h2": f"Sobre a {nome}",
-            "body": f"A {nome} atende em {cidade}. {rating_label} com {total_label}. Consulte a equipe para confirmar atividades, planos e disponibilidade.",
-            "cta": "Ver informacoes",
-        },
-        "servicos": {
-            "omitir": True,
-            "h2": "Confirme o atendimento pelo contato",
-            "body": "A lista de atividades nao foi confirmada por fonte estruturada nesta coleta. Fale com a equipe antes de visitar.",
-            "items": "",
-            "cta": "Falar com a equipe",
-        },
-        "depoimentos": {
-            "omitir": not bool(reviews_raw),
-            "h2": "O que aparece nas avaliacoes",
-            "body": "\n".join(
-                line for line in (_primeira_linha_review(r) for r in reviews_raw[:3]) if line
-            )
-            or "Depoimentos indisponiveis nesta coleta.",
-        },
-        "faq": {
-            "h2": "Perguntas frequentes",
-            "body": f"Como falar com a {nome}? Use o telefone informado no site.\nOnde fica? {endereco or cidade}.\nQuais atividades oferece? Confirme diretamente com a equipe.",
-        },
-        "localizacao": {
-            "omitir": not bool(endereco),
-            "h2": "Localizacao",
-            "body": endereco or cidade,
-            "cta": "Ver rota",
-        },
-        "contato": {
-            "h2": f"Contato da {nome}",
-            "body": contato_body,
-            "cta": "Enviar mensagem",
-        },
-    }
-
-    sections = []
-    nomes = secoes_nomes or list(copy_por_secao.keys())
-    for secao in nomes:
-        nome_secao = _texto_curto(secao).lower()
-        copy = copy_por_secao.get(
-            nome_secao,
-            {
-                "h2": nome_secao.capitalize() or "Informacoes",
-                "body": f"Informacoes da {nome} em {cidade}.",
-                "cta": "Falar com a equipe",
-            },
-        )
-        sections.append(
-            {
-                "name": nome_secao,
-                "copy": {k: v for k, v in copy.items() if k != "omitir"},
-                "omitir": bool(copy.get("omitir", False)),
-            }
-        )
-    return {"sections": sections, "_fallback": "deterministic_copy"}
 
 
 def executar_bloco_copy(
@@ -347,17 +261,16 @@ def executar_bloco_copy(
                 respect_agent_config=False,
             )
         except Exception as e2:
-            print(f"[BlocoCopy] Haiku tambem falhou — fallback deterministico: {e2}")
-            return _copy_deterministica_fallback(
-                nome=nome,
-                cidade=cidade,
-                segmento=segmento,
-                telefone=telefone,
-                endereco=endereco,
-                rating=rating,
-                total_av=total_av,
-                secoes_nomes=secoes_nomes,
-                reviews_raw=reviews_raw,
+            print(f"[BlocoCopy] Haiku tambem falhou: {e2}")
+            raise CopyGenerationError(
+                f"Copy generation failed for {nome} in {cidade} after retry.",
+                context={
+                    "nome": nome,
+                    "cidade": cidade,
+                    "segmento": segmento,
+                    "erro_haiku": str(e2),
+                    "acao": "Check LLM connectivity and API key",
+                },
             )
 
     resp = _re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f]", " ", resp)
@@ -406,17 +319,16 @@ def executar_bloco_copy(
                 respect_agent_config=False,
             )
         except Exception as e2:
-            print(f"[BlocoCopy] Retry haiku falhou — fallback deterministico: {e2}")
-            return _copy_deterministica_fallback(
-                nome=nome,
-                cidade=cidade,
-                segmento=segmento,
-                telefone=telefone,
-                endereco=endereco,
-                rating=rating,
-                total_av=total_av,
-                secoes_nomes=secoes_nomes,
-                reviews_raw=reviews_raw,
+            print(f"[BlocoCopy] Retry haiku falhou: {e2}")
+            raise CopyGenerationError(
+                f"Copy retry failed for {nome} in {cidade} after retry.",
+                context={
+                    "nome": nome,
+                    "cidade": cidade,
+                    "segmento": segmento,
+                    "erro_haiku_retry": str(e2),
+                    "acao": "Check LLM connectivity and API key",
+                },
             )
     resp2 = _re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f]", " ", resp2)
     dados2 = parse_bloco2_with_fallback(resp2)
@@ -424,15 +336,13 @@ def executar_bloco_copy(
         print(f"[BlocoCopy] Retry OK: {len(dados2['sections'])} secoes")
         return dados2
 
-    print("[BlocoCopy] Retry tambem falhou — fallback deterministico")
-    return _copy_deterministica_fallback(
-        nome=nome,
-        cidade=cidade,
-        segmento=segmento,
-        telefone=telefone,
-        endereco=endereco,
-        rating=rating,
-        total_av=total_av,
-        secoes_nomes=secoes_nomes,
-        reviews_raw=reviews_raw,
+    # Parse falhou após retry
+    raise CopyGenerationError(
+        f"Copy parse failed for {nome} in {cidade} after retry.",
+        context={
+            "nome": nome,
+            "cidade": cidade,
+            "segmento": segmento,
+            "acao": "Check LLM response format and retry",
+        },
     )

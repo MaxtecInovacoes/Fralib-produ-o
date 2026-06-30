@@ -51,18 +51,20 @@ VISUAL_LANES = ["lane_a", "lane_b", "lane_c", "lane_d", "lane_e", "lane_f", "lan
 class VariationSeed:
     """Container for all variation parameters determined by the seed."""
     seed: int
-    hero_layout: str
-    motion_style: str
-    copy_voice: str
-    color_emphasis: str
-    section_order_style: str
-    proof_style: str
-    surface_style: str
-    visual_lane: str
+    counter: int = 0  # Sprint 16: para o renderer usar na geração de CSS único
+    hero_layout: str = ""
+    motion_style: str = ""
+    copy_voice: str = ""
+    color_emphasis: str = ""
+    section_order_style: str = ""
+    proof_style: str = ""
+    surface_style: str = ""
+    visual_lane: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         return {
             "seed": self.seed,
+            "counter": self.counter,
             "hero_layout": self.hero_layout,
             "motion_style": self.motion_style,
             "copy_voice": self.copy_voice,
@@ -286,6 +288,7 @@ def get_variation(facts: dict[str, Any] | None = None, *, counter: int = 0) -> V
 
     return VariationSeed(
         seed=seed,
+        counter=counter,  # Sprint 16: salvar counter para o renderer usar
         hero_layout=hero_layout,
         motion_style=motion_style,
         copy_voice=copy_voice,

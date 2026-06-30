@@ -11,10 +11,18 @@ import pytz
 logger = logging.getLogger(__name__)
 
 
-def sanitize_reply(reply: str, retry_extractor=None, fallback_reply="Opa, tudo bem? Me dá um minuto que já te respondo! 👍"):
-    resposta = reply or ""
+def sanitize_reply(reply: str, retry_extractor=None) -> str:
+    """Extrai texto legível de resposta JSON do LLM.
+
+    NAO USA FALLBACK - se LLM falhar, lancha excecao para retry.
+    O sistema deve gerar resposta via LLM, nao usar templates pre-definidos.
+    """
+    if not reply or not (reply or "").strip():
+        raise ValueError("LLM returned empty reply - cannot use fallback")
+
+    resposta = reply
     if not resposta.strip():
-        return resposta
+        raise ValueError("LLM returned empty reply - cannot use fallback")
 
     # Detecta QUALQUER formato de JSON retornado pelo LLM:
     # - JSON cru {...
@@ -47,21 +55,29 @@ def sanitize_reply(reply: str, retry_extractor=None, fallback_reply="Opa, tudo b
             # Remove backticks soltos que sobraram
             resposta = re.sub(r"```\w*", "", resposta).strip()
 
-        # Fallback se ainda parece JSON
+        # Se ainda parece JSON após extração, tentar retry_extractor
         if (
             not resposta
             or resposta.strip().startswith("{")
             or '"resposta"' in resposta
             or '"reply"' in resposta
-        ) and retry_extractor is not None:
-            try:
-                fixed = (retry_extractor(reply) or "").strip().strip('"').strip()
-                if fixed and not fixed.startswith("{") and '"resposta"' not in fixed and '"reply"' not in fixed:
-                    resposta = fixed
-                else:
-                    resposta = fallback_reply
-            except Exception:
-                resposta = fallback_reply
+        ):
+            if retry_extractor is not None:
+                try:
+                    fixed = (retry_extractor(reply) or "").strip().strip('"').strip()
+                    if fixed and not fixed.startswith("{") and '"resposta"' not in fixed and '"reply"' not in fixed:
+                        resposta = fixed
+                    else:
+                        # NAO USA FALLBACK - lancar erro para forcar retry
+                        raise ValueError(f"Cannot extract reply from LLM response. Raw: {reply[:200]}")
+                except ValueError:
+                    # Relancar erro para retry
+                    raise
+                except Exception:
+                    raise ValueError(f"Failed to extract reply from LLM: {reply[:200]}")
+            else:
+                # Sem retry_extractor E nao conseguiu extrair = ERRO
+                raise ValueError(f"Cannot extract reply from LLM response (no retry available). Raw: {reply[:200]}")
 
     return resposta
 

@@ -44,16 +44,26 @@ Mudou a pipeline, código, config ou docs? Atualizar **`AGENTS.md` primeiro** e 
 | [`docs/ROLLOUT_SPRINT_6.md`](docs/ROLLOUT_SPRINT_6.md) | Sub-agentes por estética |
 | [`docs/VITE_REACT_DEPLOY.md`](docs/VITE_REACT_DEPLOY.md) | Como Vite/React virou engine padrão e policy copy-only |
 
+## ⚠️ CORREÇÃO IMPORTANTE (2026-06)
+
+> Esta seção foi corrigida após auditoria independente do código-fonte.
+> As informações anteriores podem estar **DESATUALIZADAS**.
+
 ## Como ativar features novas (VPS)
 
 ```bash
 # Sprint 12.9 - Vite/React (default desde 2026-06-25)
 echo "FRALIB_BUILDER_ENGINE=vite_react" >> ecosystem.config.js && pm2 restart fralib
 
-# Sprint 14 - reduzir custo/token do Vite
-# default: copy_only (LLM JSON curto + TSX determinístico)
-# alternativas: none (zero LLM) ou full_code (legado, LLM gera TSX completo)
-echo "FRALIB_VITE_LLM_POLICY=copy_only" >> ecosystem.config.js && pm2 restart fralib
+# Sprint 14 - Política LLM do Vite (CÓDIGO MOSTRA: "none" é o PADRÃO!)
+# O código real em builder_worker.py:47 mostra:
+#   os.environ.setdefault("FRALIB_VITE_LLM_POLICY", "none")
+#
+# Política REAL (verificado no código):
+#   - none (PADRÃO): ZERO LLM, studio determinístico
+#   - copy_only: LLM mínimo só para texto
+#   - creative_plan: LLM para copy + planejamento
+echo "FRALIB_VITE_LLM_POLICY=none" >> ecosystem.config.js && pm2 restart fralib
 
 # Sprint 5 — Tracing
 sed -i "s/FRALIB_TRACING: '0'/FRALIB_TRACING: '1'/" ecosystem.config.js && pm2 restart fralib
@@ -82,18 +92,42 @@ sed -i "s/FRALIB_AUTO_IMPROVE: '0'/FRALIB_AUTO_IMPROVE: '1'/" ecosystem.config.j
 | Tela preta no site | comum (sem React) | **impossível** (post-process {var}) |
 | Lead name injetado | ❌ | ✅ via `_business_context` |
 
+## Sistema de Variação Visual (Sprint 14.6+)
+
+> **⚠️ PROBLEMA REPORTADO**: Sites saindo iguais!
+> Verificar: `docs/DIAGNOSTICO_VARIACAO_SITES.md`
+
+### 4 Eixos de Variação:
+```python
+hero_layout:     split | center | asymmetric | fullbleed | video
+motion_style:    sharp | smooth | minimal
+copy_voice:      aggressive | friendly | authoritative
+color_emphasis:  primary_dominant | secondary_dominant | balanced
+```
+
+### 6 Archetypes Visuais:
+| Archetype | Segmentos | Estilo |
+|-----------|-----------|--------|
+| BOLD_ENERGY | academia, fitness, crossfit | Alto impacto |
+| WARM_LOCAL | barbearia, salao_beleza | Tons quentes |
+| ZEN_PURE | clinica, estetica, nutri | Minimalista |
+| LUXURY_ELITE | restaurante, pizzaria | Premium |
+| MODERN_TECH | energia solar, mecanica | Tech |
+| PROFESSIONAL_TRUST | advocacia, contabilidade | Profissional |
+
+### Arquivos de Variação:
+- `variation_seed.py` - Geração determinística
+- `studio_archetypes.json` - 6 archetypes
+- `archetype_resolver.py` - Seleção por segmento
+
 ## Status atual
 
 - ✅ **Site v15h deployado e FUNCIONANDO** (`seunegociofralib.site/sites/2/barbearia-fio-nobre-v15h/`)
 - ✅ **130+ testes verdes** (12+ suites anti-regressão)
 - ✅ **21+ checks** no pre-commit hook
 - ✅ **VPS rodando** com `FRALIB_BUILDER_ENGINE=vite_react`
-- ✅ **Sprint 12.19** commita post-process que elimina tela-preta
-- ✅ **Sprint 12.20** remove contaminação `matricula/treino` do BookingModal em nutricionista
-- ✅ **Sprint 12.20** garante Hero/Galeria com fotos reais quando o LLM entrega Vite sem imagens
-- ✅ **Sprint 12.20** ajusta guard: `musculação` é permitido em nutrição esportiva, `matrícula` continua bloqueado
-- ✅ **Sprint 14** ativa `copy_only`: LLM deixa de gerar TSX por padrão e só preenche JSON de slots
-- ⏳ Sub-agentes, RAG, auto-melhoria: implementados, aguardando ativação por tenant
+- ✅ **Política LLM real**: `none` (ZERO custo por padrão!)
+- ⚠️ **SITES SAINDO IGUAIS?** → Verificar `docs/DIAGNOSTICO_VARIACAO_SITES.md`
 
 ## Tags v1.14.x (Sprint 12.19)
 

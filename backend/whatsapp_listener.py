@@ -889,12 +889,16 @@ def _processar_mensagem(tenant_id: str, msg_data: dict, texto_override: str = No
         if looks_like_json:
             logger.warning(f"[SDR][BUG] Resposta com JSON para lead={nome}: {resposta[:200]}")
             # Tentar regex primeiro - SEM chamar LLM extra para evitar 2 mensagens diferentes
-            resposta_sanitizada = sanitize_reply(franz_output.reply, retry_extractor=None)
-            if resposta_sanitizada and not resposta_sanitizada.startswith('{') and '"resposta"' not in resposta_sanitizada and '"reply"' not in resposta_sanitizada:
-                resposta = resposta_sanitizada
-            else:
-                logger.error(f"[SDR][FALHA] Não conseguiu sanitizar resposta para {nome}. NÃO envia JSON puro.")
-                return  # NÃO envia lixo para o cliente
+            # NAO USA FALLBACK - se falhar, nao envia nada
+            try:
+                resposta_sanitizada = sanitize_reply(franz_output.reply, retry_extractor=None)
+                if resposta_sanitizada and not resposta_sanitizada.startswith('{') and '"resposta"' not in resposta_sanitizada and '"reply"' not in resposta_sanitizada:
+                    resposta = resposta_sanitizada
+                else:
+                    raise ValueError("sanitize_reply retornou resultado invalido")
+            except ValueError as e:
+                logger.error(f"[SDR][FALHA] Nao conseguiu sanitizar resposta para {nome}: {e}. Mensagem NAO enviada.")
+                return  # NAO envia lixo para o cliente
 
         try:
             from agents.sdr_langgraph import learning as _learning_module

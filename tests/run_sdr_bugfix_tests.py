@@ -55,13 +55,16 @@ def test_sanitize_chama_retry_se_regex_falhar():
     assert call_count["count"] == 1
     assert result == "Fallback texto"
 
-# BUG 1: responder_nao_envia_json_puro
-def test_responder_nao_envia_json_puro():
+# BUG 1: sanitize_lanca_excecao_em_json_invalido
+def test_sanitize_lanca_excecao_em_json_invalido():
+    """JSON invalido deve LANÇAR EXCEÇÃO - não usa fallback."""
     from whatsapp.sdr_reply_service import sanitize_reply
     raw = "{invalid json}"
-    result = sanitize_reply(raw, retry_extractor=None)
-    should_send = not (result.startswith("{") or '"resposta"' in result or not result.strip())
-    assert should_send is False
+    try:
+        result = sanitize_reply(raw, retry_extractor=None)
+        assert False, "Deveria ter lancado ValueError"
+    except ValueError as e:
+        assert "Cannot extract reply" in str(e)
 
 # BUG 2: watchdog_libera_quando_lead_respondeu
 def test_watchdog_libera_quando_lead_respondeu():

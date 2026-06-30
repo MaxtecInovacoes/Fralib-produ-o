@@ -1,54 +1,46 @@
-<!-- ===== SEÇÃO 1 — HERO ===== -->
+<!-- ===== SEÇÃO 1 — HERO (clean, low friction) ===== -->
 <section class="hero" id="hero">
   <div class="hero-grid"></div>
 
   <div class="hero-split">
-    <!-- COLUNA ESQUERDA: copy + CTA -->
+    <!-- COLUNA ESQUERDA: copy minimalista + CTA primária -->
     <div class="hero-left">
-      <span class="hero-eyebrow">FraLib · Prospecção com prévia pronta</span>
+      <h1 class="hero-headline">Descubra empresas da sua região que precisam de um site vendável</h1>
 
-      <h1 class="hero-title">
-        <span class="grad">Descubra empresas da sua região</span>
-        <span class="hero-title-sub">que ainda precisam de um <strong>site vendável.</strong></span>
-      </h1>
-
-      <p class="hero-sub">
-        A FraLib encontra leads locais, cria uma prévia de site com IA e gera uma abordagem pronta para você chamar o cliente <strong>mostrando algo concreto</strong> — não só uma mensagem fria.
-      </p>
+      <p class="hero-subheadline">A FraLib encontra leads locais, cria uma prévia de site com IA e gera a abordagem para você chamar o cliente mostrando algo pronto.</p>
 
       <ul class="hero-bullets">
-        <li>Encontre negócios locais com presença digital fraca</li>
-        <li>Gere uma prévia de site baseada nos dados do negócio</li>
+        <li>Encontre oportunidades por cidade e nicho</li>
+        <li>Gere uma prévia de site em minutos</li>
         <li>Aborde no WhatsApp com efeito wow</li>
-        <li>Organize tudo em um painel simples</li>
-        <li>Comece mesmo sem equipe, portfólio ou experiência técnica</li>
       </ul>
 
       <div class="hero-buttons">
-        <a href="#simulador" class="btn-hero-primary">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-          SIMULAR MINHA REGIÃO
+        <a href="#simulador" class="btn-hero-primary" id="cta-hero-primary">
+          SIMULAR MINHA CIDADE GRÁTIS
         </a>
-        <a href="#" onclick="window.location=CHECKOUT_URL;return false;" class="btn-hero-secondary">
-          ENTRAR NO BETA POR R$97
+        <a href="#como-funciona" class="btn-hero-secondary" id="cta-hero-secondary">
+          VER COMO FUNCIONA
         </a>
-        <div class="hero-cta-sub">
-          Acesso imediato · <span>Grupo WhatsApp</span> · Garantia de 30 dias
-        </div>
       </div>
+
+      <p class="hero-microcopy">
+        Beta Pro por R$97 no primeiro mês &bull; Grupo WhatsApp &bull; Garantia de 30 dias
+      </p>
     </div>
 
-    <!-- COLUNA DIREITA: mockup de dashboard -->
+    <!-- COLUNA DIREITA: mockup enxuto do sistema -->
     <div class="hero-right">
       <div class="hero-mockup">
-        <!-- Topbar do dashboard -->
-        <div class="mock-kanban-header">
-          <span class="mock-dot pulsing"></span>
-          <span class="mock-title">DASHBOARD · BUSCA ATIVA</span>
-          <span class="mock-status"><span class="mock-dot-live"></span></span>
+        <!-- Topbar -->
+        <div class="mock-topbar">
+          <span class="mock-dot"></span>
+          <span class="mock-dot"></span>
+          <span class="mock-dot"></span>
+          <span class="mock-url">app.fralib.com.br</span>
         </div>
 
-        <!-- Parâmetros da busca -->
+        <!-- Params -->
         <div class="mock-params">
           <div class="mock-param">
             <span class="mock-param-label">CIDADE</span>
@@ -60,48 +52,23 @@
           </div>
         </div>
 
-        <!-- Métricas -->
-        <div class="mock-metrics">
-          <div class="mock-metric">
-            <div class="mock-metric-num">187</div>
-            <div class="mock-metric-label">Empresas<br>encontradas</div>
+        <!-- Stats -->
+        <div class="mock-stats">
+          <div class="mock-stat">
+            <div class="mock-stat-num">187</div>
+            <div class="mock-stat-label">Empresas encontradas</div>
           </div>
-          <div class="mock-metric alt">
-            <div class="mock-metric-num">42</div>
-            <div class="mock-metric-label">Sem site<br>detectado</div>
-          </div>
-          <div class="mock-metric alt2">
-            <div class="mock-metric-num">18</div>
-            <div class="mock-metric-label">Boas<br>oportunidades</div>
+          <div class="mock-stat">
+            <div class="mock-stat-num">42</div>
+            <div class="mock-stat-label">Sem site detectado</div>
           </div>
         </div>
 
         <!-- Lead gerado -->
-        <div class="mock-lead-card">
-          <div class="mock-lead-row">
-            <span class="mock-lead-tag">PRÉVIA GERADA</span>
-            <span class="mock-lead-time">agora</span>
-          </div>
+        <div class="mock-lead">
+          <div class="mock-lead-tag">PRÉVIA CRIADA</div>
           <div class="mock-lead-name">Pizzaria São José</div>
-          <div class="mock-lead-meta">Rua XV de Novembro · Centro · WhatsApp público</div>
-
-          <!-- Pipeline de status -->
-          <div class="mock-pipeline">
-            <div class="mock-pipe-step done">
-              <span class="mock-pipe-dot"></span>
-              <span>Lead encontrado</span>
-            </div>
-            <span class="mock-pipe-arrow">→</span>
-            <div class="mock-pipe-step done">
-              <span class="mock-pipe-dot"></span>
-              <span>Site gerado</span>
-            </div>
-            <span class="mock-pipe-arrow">→</span>
-            <div class="mock-pipe-step ready">
-              <span class="mock-pipe-dot"></span>
-              <span>Pronto para abordagem</span>
-            </div>
-          </div>
+          <div class="mock-lead-status">Abordagem pronta para WhatsApp</div>
         </div>
       </div>
     </div>

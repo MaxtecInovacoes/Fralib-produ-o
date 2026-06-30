@@ -177,10 +177,13 @@ class TestSanitizeReply:
         result = sanitize_reply(raw)
         assert "你好" in result or "朋友" in result
 
-    def test_sanitize_reply_empty_returns_empty(self):
-        """Test that empty input returns empty."""
-        assert sanitize_reply("") == ""
-        assert sanitize_reply(None) == ""
+    def test_sanitize_reply_empty_lanca_excecao(self):
+        """Test that empty input LANÇA EXCEÇÃO - não usa fallback."""
+        import pytest
+        with pytest.raises(ValueError):
+            sanitize_reply("")
+        with pytest.raises(ValueError):
+            sanitize_reply(None)
 
     def test_sanitize_reply_with_retry_extractor(self):
         """Test retry_extractor fallback when JSON parse fails."""

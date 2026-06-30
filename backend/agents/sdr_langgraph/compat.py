@@ -14,7 +14,7 @@ BACKEND_DIR = os.path.dirname(AGENTS_DIR)
 sys.path.insert(0, BACKEND_DIR)
 sys.path.insert(0, AGENTS_DIR)
 
-from .agent import get_sdr_graph
+from .agent import get_sdr_graph, SDRFallbackError
 from .lead_lock import _lead_lock_guard  # Fix bug 3x duplicate replies
 
 # Importar ESTADO_TO_STAGE do source of truth (DRY)
@@ -163,6 +163,9 @@ def iniciar_contato(lead: BryanInput, user_id: int = None) -> BryanOutput:
 
     try:
         result = graph.invoke(initial_state)
+    except SDRFallbackError:
+        # LLM falhou e NAO pode usar fallback - relancar para retry
+        raise
     except Exception as e:
         print(f"[SDR Compat] Erro no grafo: {e}")
         return BryanOutput(
@@ -336,10 +339,13 @@ def _responder_lead_locked(
 
     try:
         result = graph.invoke(initial_state)
+    except SDRFallbackError:
+        # LLM falhou e NAO pode usar fallback - relancar para retry
+        raise
     except Exception as e:
         print(f"[SDR Compat] Erro no grafo: {e}")
         return BryanOutput(
-            reply="Opa, tudo bem? Me dá um minuto que já te respondo!",
+            reply="",
             intent="error",
             next_stage="hook",
             estrategia="fila",
@@ -448,29 +454,55 @@ _PRE_REVEAL_STAGES = {
 
 def gerar_followup(lead: dict, tipo: str = "24h", user_id: int = None) -> str:
     """
-    Compat leve com o Bryan antigo para previews/testes determinísticos.
-    Nunca revela URL antes do estágio de prova/reveal.
+    Gera followup via LLM - NAO usa templates fixos.
     """
-    nome = (lead or {}).get("nome") or "seu negócio"
-    segmento = (lead or {}).get("segmento") or "captação"
+    nome = (lead or {}).get("nome") or "voces"
+    segmento = (lead or {}).get("segmento") or "negocio local"
+    cidade = (lead or {}).get("cidade") or ""
     stage = str((lead or {}).get("sdr_stage") or "hook").lower()
     agent_name = _agent_name_for_user(user_id)
 
-    if stage in _PRE_REVEAL_STAGES:
-        if tipo == "72h":
-            return (
-                f"{agent_name} aqui. Última tentativa por aqui: vocês ainda "
-                f"querem melhorar a captação de clientes para {nome}?"
-            )
-        return (
-            f"{agent_name} aqui. Minha mensagem passou batido; vocês ainda "
-            f"querem avaliar uma ideia simples para {segmento}?"
-        )
+    # Contexto para o LLM
+    contexto = f"Lead: {nome}"
+    if segmento:
+        contexto += f" | Segmento: {segmento}"
+    if cidade:
+        contexto += f" | Cidade: {cidade}"
+    contexto += f" | Estagio atual: {stage}"
+    contexto += f" | Tipo followup: {tipo}"
 
-    return (
-        f"{agent_name} aqui. Você conseguiu olhar a ideia que mandei? "
-        "Me diz se faz sentido ajustar com a cara de vocês."
+    system = (
+        f"Voce e o {agent_name}, assistente de uma empresa local brasileira. "
+        "Gere mensagem de follow-up curta e natural.\n"
+        "REGRAS:\n"
+        "1. MAXIMO 2 frases curtas\n"
+        "2. NAO use templates fixos\n"
+        "3. Faca referencia ao contexto especifico do lead\n"
+        "4. 1 emoji maximo se fizer sentido\n"
+        "5. Tom: respeitoso, nao insistente\n"
+        "6. Maximo 1 pergunta\n"
+        "Exemplo BOM: 'Oi Maria! Vi que voces tem restaurante em SP. Conseguiu dar uma olhada?'\n"
+        "Exemplo RUIM: 'Oi! Estamos entrando em contato para fazer um follow-up.'"
     )
+
+    try:
+        from agents.llm_direct import call_claude
+        reply = call_claude(
+            system=system,
+            user=contexto,
+            model="sonnet",
+            max_tokens=100,
+            temperature=0.3,
+            agent_name="sdr_followup",
+            enable_context=False,
+        ).strip()
+        if reply:
+            return reply
+    except Exception as e:
+        print(f"[SDR] gerar_followup LLM failed: {e}")
+
+    # Se LLM falhar, NAO retorna template - retorna vazio para o sistema tentar novamente
+    raise SDRFallbackError(f"LLM falhou ao gerar followup para {nome}")
 
 
 # ════════════════════════════════════════════════════════════════════

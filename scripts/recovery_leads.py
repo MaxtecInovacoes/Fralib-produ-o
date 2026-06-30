@@ -190,6 +190,11 @@ def main():
             source="franz_recovery",
             priority=5,
         )
+        # Se msg_id eh None, a msg ja foi enviada - pular
+        if msg_id is None:
+            logger.info(f"SKIPPED {nome} (msg ja enviada anteriormente)")
+            skipped += 1
+            continue
         logger.info(f"QUEUED {nome} (id={msg_id}, msg={msg[:50]}...)")
         queued += 1
 

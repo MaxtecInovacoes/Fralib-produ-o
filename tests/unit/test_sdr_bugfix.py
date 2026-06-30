@@ -60,6 +60,7 @@ def test_sanitize_nao_chama_retry_extractor_quando_regex_funciona():
 def test_sanitize_chama_retry_apenas_se_regex_falhar():
     """
     retry_extractor deve ser chamado SÓ quando regex falha.
+    Se retry_extractor retornar válido, deve usar. Se falhar, LANÇA EXCEÇÃO.
     """
     from whatsapp.sdr_reply_service import sanitize_reply
 
@@ -78,18 +79,37 @@ def test_sanitize_chama_retry_apenas_se_regex_falhar():
     assert result == "Fallback texto"
 
 
-def test_responder_nao_envia_json_puro():
+def test_sanitize_lanca_excecao_quando_retry_extractor_falha():
     """
-    JSON invalido deve virar resposta vazia, que o listener nao envia.
+    Se regex E retry_extractor falharem, deve LANÇAR EXCEÇÃO (não usar fallback).
+    """
+    from whatsapp.sdr_reply_service import sanitize_reply
+
+    def mock_retry_extractor_falho(raw):
+        return "{invalid}"  # retorna JSON inválido
+
+    raw = '{"foo": "bar", "baz": 123}'
+
+    with pytest.raises(ValueError) as exc_info:
+        sanitize_reply(raw, retry_extractor=mock_retry_extractor_falho)
+
+    assert "Cannot extract reply" in str(exc_info.value)
+
+
+def test_sanitize_lanca_excecao_em_json_invalido():
+    """
+    BUGFIX: JSON invalido deve LANÇAR EXCEÇÃO, não retornar string vazia.
+    Sistema NAO pode usar fallback - deve forçar retry.
     """
     from whatsapp.sdr_reply_service import sanitize_reply
 
     # JSON inválido que sanitization não consegue processar
     raw = '{invalid json}'
-    result = sanitize_reply(raw, retry_extractor=None)
 
-    assert result == ""
-    assert not bool(result.strip())
+    with pytest.raises(ValueError) as exc_info:
+        sanitize_reply(raw, retry_extractor=None)
+
+    assert "Cannot extract reply" in str(exc_info.value)
 
 
 # ════════════════════════════════════════════════════════════════════

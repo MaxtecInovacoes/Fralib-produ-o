@@ -134,51 +134,21 @@ def _commercial_fallback(memory: LeadMemory, stage: str, incoming: str = "") -> 
     return None
 
 
-def _fallback_reply(stage: str, memory: LeadMemory, incoming: str = "") -> tuple[str, str]:
-    """Fallback contextual quando o LLM/proxy falha."""
-    nome = memory.nome or "o negócio"
-    segmento = memory.segmento or "atendimento"
-    subject = _segment_subject(segmento)
-    greeting = get_greeting()
-    variant = choose_variant(memory.lead_id or memory.telefone or nome, segmento)
-    commercial = _commercial_fallback(memory, stage, incoming)
-    if commercial:
-        return commercial
+class SDRFallbackError(Exception):
+    """Exceção quando LLM falha - NAO usa fallback pre-definido."""
+    pass
 
-    if stage == "hook":
-        city = f" em {memory.cidade}" if memory.cidade else ""
-        if "academia" in segmento.lower():
-            options = {
-                "A": f"{greeting}! Falo com quem cuida das matrículas da {nome}?",
-                "B": f"{greeting}! A {nome}{city} tem aula experimental ou avaliação inicial?",
-                "C": f"{greeting}! Vocês hoje puxam mais alunos por indicação, Instagram ou Google?",
-                "D": f"{greeting}! Quem é a melhor pessoa para falar sobre novos alunos na {nome}?",
-            }
-            return options.get(variant, options["A"]), "qualify"
-        if memory.rating:
-            options = {
-                "A": f"{greeting}! A {nome} aparece bem avaliada no Google. Vocês querem receber mais contatos qualificados?",
-                "B": f"{greeting}! Quem cuida do atendimento comercial da {nome}?",
-                "C": f"{greeting}! Vi que a {nome}{city} já tem presença local. Posso falar com o responsável?",
-                "D": f"{greeting}! Vocês estão aceitando novos {subject} este mês?",
-            }
-            return options.get(variant, options["A"]), "qualify"
-        return f"{greeting}! Falo com o responsável pela {nome}?", "qualify"
-    if stage in {"qualify", "followup_24h", "followup_72h"}:
-        return f"Perfeito. Hoje chegam mais {subject} por indicação, Instagram ou Google?", "pain"
-    if stage == "pain":
-        return f"Entendi. E quando alguém procura {segmento} em {memory.cidade or 'sua região'}, vocês aparecem bem no Google?", "amplify"
-    if stage == "amplify":
-        return f"Faz sentido. Se tivesse uma forma simples de aparecer melhor para {subject}, você avaliaria?", "tease"
-    if stage == "tease":
-        return "Posso te mostrar uma ideia curta antes de qualquer decisão?", "proof"
-    if stage in {"proof", "reveal"} and memory.site_url:
-        return f"Show. Montei esta prévia para vocês: {memory.site_url}. O que achou da ideia?", "feedback"
-    if stage == "feedback":
-        return "O que você mudaria para ficar com a cara de vocês?", "close"
-    if stage == "close":
-        return "Quer que eu deixe isso pronto para vocês avaliarem com calma?", "close"
-    return f"Entendi. Me conta melhor como a {nome} recebe {subject} hoje?", stage or "qualify"
+
+def _fallback_reply(stage: str, memory: LeadMemory, incoming: str = "") -> tuple[str, str]:
+    """REMOVIDO: Sistema NAO pode usar fallbacks pre-definidos.
+
+    Se LLM falhar, deve lancar SDRFallbackError para o sistema tentar novamente.
+    Respostas geradas por template sao ruins - sempre repetitivas.
+    """
+    raise SDRFallbackError(
+        f"LLM falhou no stage '{stage}'. "
+        "Sistema NAO pode usar fallback. Deve registrar erro e tentar novamente."
+    )
 
 
 def _next_stage(current: str, suggested: str, fallback: str) -> str:
@@ -581,14 +551,12 @@ def node_greeting(state: SDRState) -> dict:
             respect_agent_config=False,
             enable_context=False,
         ).strip()
-        reply = llm_reply if llm_reply else f"{greeting}! Como posso ajudar?"
+        if not llm_reply:
+            raise SDRFallbackError("LLM greeting returned empty reply")
+        reply = llm_reply
     except Exception as _g_err:
-        # Fallback se LLM falhar
-        logger_msg = f"LLM greeting falhou: {_g_err}" if False else ""
-        if memory.segmento:
-            reply = f"{greeting}! Sobre {memory.segmento}: no que posso te ajudar?"
-        else:
-            reply = f"{greeting}! Como posso te ajudar hoje?"
+        # NAO USA FALLBACK - lancar erro para retry
+        raise SDRFallbackError(f"LLM greeting failed: {_g_err}") from _g_err
 
     memory.last_message_received = state.get("incoming_message", "")
     memory.last_message_sent = reply
@@ -617,29 +585,11 @@ def node_hook(state: SDRState) -> dict:
     variant = state.get("variant", "A")
 
     if state.get("is_outbound") and not state.get("incoming_message"):
-        reply, next_stage = _fallback_reply("hook", memory, "")
-        memory.update_stage(next_stage)
-        memory.last_message_sent = reply
-        save_agent_note(memory, state.get("selected_agent") or "abordagem", "Abordagem inicial enviada; proximo agente deve validar permissao/interesse antes de vender.")
-        memory.attempts += 1
-        # === Memory extraction (Feature #1 do roadmap 10/10) ===
-        try:
-            from .memory_hook import extract_and_persist_learning
-            extract_and_persist_learning(
-                memory=memory,
-                incoming_message=state.get("incoming_message", ""),
-                intent_str=memory.last_intent or "",
-                reply=reply,
-                next_stage=memory.stage,
-            )
-        except Exception as _mem_err:
-            print(f"[SDR] memory hook extract falhou (nao-bloqueante): {_mem_err}")
-        return {
-            "outgoing_message": reply,
-            "should_send": bool(reply and is_valid_length(reply) and has_one_question(reply)),
-            "memory": memory,
-            "next_stage": memory.stage,
-        }
+        # NAO USA FALLBACK - lancha erro para retry
+        raise SDRFallbackError(
+            f"Outbound hook requires LLM generation for lead {memory.nome or memory.telefone}. "
+            "Sistema NAO pode usar template fixo."
+        )
 
     # Tentar LLM
     try:
@@ -797,8 +747,8 @@ def node_hook(state: SDRState) -> dict:
             update_facts = {}
     except Exception as e:
         print(f"[SDR] hook LLM falhou: {e}")
-        reply, next_stage = _fallback_reply("hook", memory, state.get("incoming_message", ""))
-        update_facts = {}
+        # NAO USA FALLBACK - lancar erro para retry
+        raise SDRFallbackError(f"LLM hook failed: {e}") from e
 
     # === Sprint 3A: save_sdr_lesson (se turno significativo) ===
     # Persiste lesson quando: stage terminal (won/lost/opt_out) OU intent == objection_price
@@ -997,8 +947,8 @@ def make_stage_node(stage_name: str):
                 update_facts = {}
         except Exception as e:
             print(f"[SDR] {stage_name} LLM falhou: {e}")
-            reply, next_stage = _fallback_reply(stage_name, memory, incoming)
-            update_facts = {}
+            # NAO USA FALLBACK - lancar erro para retry
+            raise SDRFallbackError(f"LLM {stage_name} failed: {e}") from e
 
         # Validar
         if not is_valid_length(reply) or not has_one_question(reply):
@@ -1174,17 +1124,45 @@ def node_opt_out(state: SDRState) -> dict:
 
 @sdr_traced("node_is_decisor")
 def node_is_decisor(state: SDRState) -> dict:
-    """Lead confirmou que é decisor - atualiza e segue funil"""
+    """Lead confirmou que é decisor - gerar resposta via LLM (NAO usa fallback)"""
     memory = state.get("memory")
     if not memory:
         return {}
 
     memory.is_decisor = True
     memory.gatekeeper_level = 0
-    memory.last_message_received = state.get("incoming_message", "")
-    reply, next_stage = _fallback_reply("qualify", memory, memory.last_message_received)
-    memory.update_stage(next_stage)
+    incoming = memory.last_message_received or state.get("incoming_message", "")
+
+    # Gerar resposta via LLM - NAO usa template fixo
+    try:
+        from agents.llm_direct import call_claude
+        contexto = f"Lead confirmou ser decisor. Respondeu: '{incoming}'"
+        if memory.nome:
+            contexto += f" | Negocio: {memory.nome}"
+        if memory.segmento:
+            contexto += f" | Segmento: {memory.segmento}"
+
+        system = (
+            "Voce e o Franz. Lead confirmou que e o decisor. "
+            "Gere resposta curta (max 2 linhas) perguntando sobre o negocio.\n"
+            "REGRAS: max 2 frases, 1 pergunta, tom consultivo."
+        )
+        reply = call_claude(
+            system=system,
+            user=contexto,
+            model="sonnet",
+            max_tokens=100,
+            temperature=0.3,
+            agent_name="sdr_is_decisor",
+            enable_context=False,
+        ).strip()
+        if not reply:
+            raise SDRFallbackError("LLM returned empty reply")
+    except Exception as e:
+        raise SDRFallbackError(f"Failed to generate decisor response: {e}") from e
+
     memory.last_message_sent = reply
+    memory.update_stage("qualify")
     save_agent_note(memory, state.get("selected_agent") or "qualificacao", "Lead confirmou ser decisor; pode qualificar dor e canal de captacao.")
 
     return {
