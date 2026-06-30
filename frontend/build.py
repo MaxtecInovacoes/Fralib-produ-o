@@ -10,10 +10,16 @@ BASE = os.path.dirname(os.path.abspath(__file__))
 def build(name, partials_order):
     parts_dir = os.path.join(BASE, 'partials', name)
     output_path = os.path.join(BASE, f'{name}.html')
+    if not os.path.isdir(parts_dir):
+        print(f'SKIP {name}.html: partials ausentes em {parts_dir}')
+        return False
 
     chunks = []
     for partial in partials_order:
         path = os.path.join(parts_dir, partial)
+        if not os.path.exists(path):
+            print(f'SKIP {name}.html: partial ausente {path}')
+            return False
         with open(path, 'r', encoding='utf-8') as f:
             chunks.append(f.read())
 
@@ -21,6 +27,7 @@ def build(name, partials_order):
         f.write('\n'.join(chunks))
 
     print(f'OK {name}.html gerado ({len(chunks)} blocos)')
+    return True
 
 DASHBOARD_ORDER = [
     '_head.html',

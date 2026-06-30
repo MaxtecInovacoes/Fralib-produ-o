@@ -112,7 +112,6 @@
       <!-- Controles do Pipeline -->
       <div class="pipeline-controls">
         <span class="pipeline-status idle" id="pipelineStatus">&#9679; IDLE</span>
-        <span id="pipelineTempoBadge" style="font-size:11px;color:var(--fl-text-dim);margin-right:8px;display:inline-flex;align-items:center;gap:6px"></span>
         <button class="btn-pipeline btn-pipeline-start" id="btnIniciar" title="Liga a esteira Hunter + produção; não cria site sozinho">&#9654; LIGAR ESTEIRA</button>
         <button class="btn-pipeline btn-pipeline-pause" id="btnPausar" onclick="pausarPipeline()" style="display:none">&#9646;&#9646; PAUSAR</button>
         <button class="btn-pipeline btn-pipeline-start" id="btnRetomar" onclick="retomarPipeline()" style="display:none">&#9654; RETOMAR</button>
@@ -384,10 +383,6 @@
     <!-- Painel: Pipeline travado (falhas persistentes) -->
     <div id="uti-painel-pipeline" style="display:none">
       <p class="uti-desc">Jobs que falharam ap&oacute;s tentativas autom&aacute;ticas e precisam de reprocessamento manual. O sistema retoma do <strong>checkpoint</strong>, economizando tokens.</p>
-      <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center">
-        <button class="btn-requalificar" id="btn-retry-all-pipeline" onclick="retryAllPipelineFalhas(this)" style="background:#ef4444;color:#fff;font-weight:600;padding:8px 16px;border-radius:6px;border:none;cursor:pointer">&#8635; TENTAR TODOS</button>
-        <span id="retry-all-status" style="font-size:11px;color:var(--fl-text-dim)"></span>
-      </div>
       <div class="uti-table-wrap">
         <table class="uti-table">
           <thead><tr><th>LEAD</th><th>FASE</th><th>MOTIVO</th><th>TENTATIVAS</th><th>QUANDO</th><th>A&Ccedil;&Atilde;O</th></tr></thead>
@@ -2460,22 +2455,6 @@ window.initPixelOffice = function(){
         <label class="config-label">BRIEFING DO SITE <span style="color:var(--fl-purple-300)">(opcional - gera o site automaticamente)</span></label>
         <textarea class="config-input" id="lm-briefing" placeholder="Ex: Site moderno para academia feminina, foco em agendamento de aulas, cores roxo e branco..." style="resize:vertical;min-height:90px;"></textarea>
       </div>
-      <div class="config-field">
-        <label class="config-label">REFERÊNCIAS VISUAIS <span style="color:var(--fl-text-muted);font-weight:normal;">(opcional)</span></label>
-        <input class="config-input" type="text" id="lm-refs-visuais" placeholder="Ex: Quero um site como Nubank, clean e moderno">
-        <span style="font-size:11px;color:var(--fl-text-dim);">Descreva sites que você gosta ou referências visuais para o design.</span>
-      </div>
-      <div class="config-field">
-        <label class="config-label">PREFERÊNCIA DE FONTE <span style="color:var(--fl-text-muted);font-weight:normal;">(opcional)</span></label>
-        <select class="config-input" id="lm-font-preferencia" style="cursor:pointer;">
-          <option value="">Padrão (Sans-serif)</option>
-          <option value="sans-serif">Sans-serif</option>
-          <option value="serif">Serif</option>
-          <option value="display">Display</option>
-          <option value="monospace">Monospace</option>
-        </select>
-        <span style="font-size:11px;color:var(--fl-text-dim);">Escolha o estilo de fonte preferido para o site.</span>
-      </div>
       <div id="lm-status" style="font-size:12px;color:var(--fl-text-muted);display:none;padding:8px;background:rgba(147,51,234,0.1);border-radius:6px;border:1px solid var(--fl-purple)"></div>
       <div style="display:flex;gap:10px;padding-top:4px;">
         <button onclick="fecharModalLeadManual()" style="flex:1;background:var(--fl-bg-card);border:2px solid var(--fl-border);color:var(--fl-text-muted);padding:11px;border-radius:6px;cursor:pointer;font-size:13px;font-family:var(--fl-font-brand);letter-spacing:1px;">CANCELAR</button>
@@ -4153,34 +4132,14 @@ function atualizarTempoInlinePipeline(total) {
 }
 function atualizarCronometroPipelineAdmin() {
   var el = document.getElementById('pipeline-banner-tempo');
-  var _start = _getPipelineStartFromBackend() || _pipelineInicioAdmin;
-  if (!_start) {
+  if (!_pipelineInicioAdmin) {
     atualizarTempoInlinePipeline(0);
     return;
   }
-  var total = Math.max(0, Math.floor((Date.now() - _start) / 1000));
+  var total = Math.max(0, Math.floor((Date.now() - _pipelineInicioAdmin) / 1000));
   if (el) el.textContent = _formatarDuracaoPipeline(total);
   atualizarTempoInlinePipeline(total);
 }
-
-// Sprint 14.11: cronometro sincronizado com backend (ultimo_job.started_at)
-// Caso o job esteja rodando no worker mas o admin nao clicou em LIGAR,
-// o cronometro ainda conta o tempo real baseado no started_at do banco.
-var _pipelineStartFromBackend = 0;
-function _getPipelineStartFromBackend() { return _pipelineStartFromBackend; }
-async function sincronizarCronometroComBackend() {
-  try {
-    var data = await authFetch('/api/pipeline/tempo').then(function(r){ return r.json(); });
-    if (data && data.ativo && data.ultimo_job && data.ultimo_job.started_at) {
-      _pipelineStartFromBackend = new Date(data.ultimo_job.started_at).getTime();
-    } else {
-      _pipelineStartFromBackend = 0;
-    }
-  } catch(e) { _pipelineStartFromBackend = 0; }
-}
-// Sincroniza a cada 10s (complementa o _pipelineInicioAdmin local)
-setInterval(sincronizarCronometroComBackend, 10000);
-setTimeout(sincronizarCronometroComBackend, 1500);
 function iniciarCronometroPipelineAdmin() {
   if (!_pipelineInicioAdmin) _pipelineInicioAdmin = Date.now();
   // EXPORTAR para a waveform consumir o MESMO cronometro (fonte da verdade)
@@ -6623,7 +6582,6 @@ async function verificarOnboarding() {
       return;
     }
     // WPP agora é OPCIONAL - usuário pode criar site sem WPP
-    // Apenas mostrar aviso, não bloquear
     _unlockOnboarding();
   } catch (e) {
     console.error('[Onboarding] Erro:', e);
@@ -7654,7 +7612,7 @@ function abrirModalLeadManual() {
 function fecharModalLeadManual() {
   var m = document.getElementById('modalLeadManual');
   if (m) { m.classList.remove('open'); }
-  ['lm-nome','lm-nicho','lm-cidade','lm-telefone','lm-whatsapp','lm-briefing','lm-font-preferencia'].forEach(function(id){
+  ['lm-nome','lm-nicho','lm-cidade','lm-telefone','lm-whatsapp','lm-briefing'].forEach(function(id){
     var el = document.getElementById(id); if (el) el.value = '';
   });
   var s = document.getElementById('lm-status'); if (s) s.style.display = 'none';
@@ -7668,7 +7626,6 @@ async function salvarLeadManual() {
   var statusEl = document.getElementById('lm-status');
   if (statusEl) { statusEl.style.display = 'block'; statusEl.textContent = 'Cadastrando lead...'; }
   var briefing = (document.getElementById('lm-briefing') || {}).value || '';
-  var refsVisuais = (document.getElementById('lm-refs-visuais') || {}).value || '';
   try {
     var res = await authFetch('/api/leads/manual', {
       method: 'POST',
@@ -7677,10 +7634,7 @@ async function salvarLeadManual() {
         nome: nome, nicho: nicho, cidade: cidade,
         telefone: telefone,
         whatsapp: (document.getElementById('lm-whatsapp') || {}).value || telefone,
-        briefing: briefing,
-        refs_visuais: refsVisuais,
-        font_preferencia: (document.getElementById('lm-font-preferencia') || {}).value || '',
-        score: 80
+        briefing: briefing, score: 80
       })
     }).then(function(r){ return r.json(); });
     if (res.ok) {
@@ -7832,52 +7786,6 @@ async function retryPipelineFalha(falhaId, btn) {
   }
 }
 
-/* Sprint 14.7: reenfileira TODAS as falhas pendentes de uma vez */
-async function retryAllPipelineFalhas(btn) {
-  if (btn) { btn.disabled = true; btn.textContent = 'ENFILEIRANDO TODOS...'; btn.style.opacity = '0.6'; }
-  var status = document.getElementById('retry-all-status');
-  if (status) status.textContent = '';
-  try {
-    var res = await authFetch('/api/falhas/retry-all', { method: 'POST' }).then(function(r){ return r.json(); });
-    var reenfileiradas = (res && res.reenfileiradas) || 0;
-    var ja_enfileiradas = (res && res.ja_enfileiradas) || 0;
-    var erros = (res && res.erros) || [];
-    if (reenfileiradas > 0 || ja_enfileiradas > 0) {
-      if (status) {
-        status.style.color = '#10b981';
-        status.textContent = '✓ ' + reenfileiradas + ' reenfileirada(s)' + (ja_enfileiradas ? ' + ' + ja_enfileiradas + ' ja na fila' : '');
-      }
-      if (btn) { btn.textContent = '✓ ' + reenfileiradas + ' NA FILA'; }
-      setTimeout(carregarPipelineFalhas, 1500);
-    } else {
-      if (status) {
-        status.style.color = 'var(--fl-text-dim)';
-        status.textContent = 'Nenhuma falha pendente para reprocessar';
-      }
-      if (btn) { btn.textContent = '⟳ TENTAR TODOS'; }
-    }
-    if (erros.length > 0) {
-      console.error('retry-all erros:', erros);
-      if (status) {
-        status.style.color = '#ef4444';
-        status.textContent = '⚠ ' + reenfileiradas + ' OK, ' + erros.length + ' erro(s) — ver console';
-      }
-    }
-  } catch(e) {
-    if (btn) { btn.disabled = false; btn.textContent = '⟳ TENTAR TODOS'; btn.style.opacity = '1'; }
-    if (status) { status.style.color = '#ef4444'; status.textContent = 'Erro: ' + e.message; }
-    alert('Erro: ' + e.message);
-  }
-  // Re-habilita o botao apos 3s (ja reenfileirou)
-  if (btn) {
-    setTimeout(function() {
-      btn.disabled = false;
-      btn.textContent = '⟳ TENTAR TODOS';
-      btn.style.opacity = '1';
-    }, 3000);
-  }
-}
-
 /* Badge no sidebar: chama /api/falhas/contador */
 async function atualizarPipelineBadge() {
   try {
@@ -7896,101 +7804,6 @@ async function atualizarPipelineBadge() {
 /* Atualiza a cada 60s */
 setInterval(atualizarPipelineBadge, 60000);
 setTimeout(atualizarPipelineBadge, 2000);
-
-/* Sprint 14.8: telemetria - mostra quanto tempo o pipeline esta rodando/parado */
-function _fmtSegundos(s) {
-  if (s == null || s === undefined) return '—';
-  if (s < 60) return s + 's';
-  if (s < 3600) return Math.floor(s / 60) + 'min' + (s % 60 ? ' ' + (s % 60) + 's' : '');
-  return Math.floor(s / 3600) + 'h' + Math.floor((s % 3600) / 60) + 'min';
-}
-
-async function atualizarPipelineTempo() {
-  try {
-    var data = await authFetch('/api/pipeline/tempo').then(function(r){ return r.json(); });
-    var badge = document.getElementById('pipelineTempoBadge');
-    if (!badge) return;
-
-    // Sprint 14.10: alerta de jobs zumbis (running + heartbeat velho)
-    if (data && data.tem_zumbi && data.zumbis && data.zumbis.length > 0) {
-      var z = data.zumbis[0];
-      var ageMin = Math.floor((z.heartbeat_age_s || 0) / 60);
-      var txt = '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#ef4444;animation:pulse 1s ease-in-out infinite"></span>';
-      txt += '<span style="color:#ef4444;font-weight:700">ZUMBI</span> ';
-      txt += '<span style="color:var(--fl-text-dim)">· job #' + z.id + ' · ' + ageMin + 'min sem heartbeat</span> ';
-      txt += '<button onclick="ressuscitarZumbis(this)" style="background:#ef4444;color:#fff;border:none;padding:2px 8px;border-radius:4px;cursor:pointer;font-size:10px;margin-left:4px">⚠ RESSUSCITAR ' + data.zumbis.length + '</button>';
-      badge.innerHTML = txt;
-      badge.style.display = 'inline-flex';
-      return;
-    }
-
-    // Se ha job ativo agora
-    if (data && data.ativo && data.ultimo_job) {
-      var job = data.ultimo_job;
-      var cor = '#10b981'; // verde - ativo
-      var faseLabel = '';
-      // Mapear fase numerica para label amigavel
-      var f = (job.fase_atual || '').toLowerCase();
-      if (/hunter|captura|supply|jina/.test(f)) faseLabel = 'buscar';
-      else if (/nicho|benchmark|variacao|arquiteto|designer|analis/.test(f)) faseLabel = 'analisar';
-      else if (/builder|renderer|vite|produzir/.test(f)) faseLabel = 'produzir';
-      else if (/deploy|public|franz|outreach|sdr/.test(f)) faseLabel = 'publicar';
-
-      var txt = '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:' + cor + ';box-shadow:0 0 8px ' + cor + ';animation:pulse 2s ease-in-out infinite"></span>';
-      txt += '<span style="color:' + cor + ';font-weight:600">ATIVO</span> ';
-      txt += '<span style="color:var(--fl-text-dim)">· ' + (faseLabel || job.fase_atual) + '</span> ';
-      txt += '<span style="color:var(--fl-text-dim)">· ' + _fmtSegundos(job.duracao_s) + '</span>';
-      if (job.lead_nome && job.lead_nome !== '—') {
-        txt += ' <span style="color:var(--fl-text-dim);font-size:10px">· ' + escapeHtml(job.lead_nome.substring(0, 30)) + '</span>';
-      }
-      badge.innerHTML = txt;
-      badge.style.display = 'inline-flex';
-      return;
-    }
-
-    // Sem job ativo - mostrar ultima conclusao
-    if (data && data.ultimo_completed) {
-      var j = data.ultimo_completed;
-      var cor = j.status === 'completed' ? '#06b6d4' : '#ef4444';
-      var txt = '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:' + cor + '"></span>';
-      txt += '<span style="color:' + cor + ';font-weight:600">' + (j.status === 'completed' ? 'PARADO' : 'FALHOU') + '</span> ';
-      txt += '<span style="color:var(--fl-text-dim)">· ultimo: ' + escapeHtml((j.lead_nome || '—').substring(0, 30)) + '</span>';
-      if (j.concluido_em) {
-        var diffMin = Math.floor((Date.now() - new Date(j.concluido_em).getTime()) / 60000);
-        if (diffMin < 1) txt += ' <span style="color:var(--fl-text-dim);font-size:10px">· agora</span>';
-        else if (diffMin < 60) txt += ' <span style="color:var(--fl-text-dim);font-size:10px">· ' + diffMin + 'min atras</span>';
-        else txt += ' <span style="color:var(--fl-text-dim);font-size:10px">· ' + Math.floor(diffMin / 60) + 'h atras</span>';
-      }
-      badge.innerHTML = txt;
-      badge.style.display = 'inline-flex';
-      return;
-    }
-
-    // Nenhum job registrado ainda
-    badge.innerHTML = '<span style="color:var(--fl-text-dim)">sem jobs ainda</span>';
-    badge.style.display = 'inline-flex';
-  } catch(e) {
-    // silencioso - nao quebra o resto
-  }
-}
-
-/* Sprint 14.10: ressuscita jobs zumbis manualmente */
-async function ressuscitarZumbis(btn) {
-  if (btn) { btn.disabled = true; btn.textContent = 'RESSUSCITANDO...'; }
-  try {
-    var res = await authFetch('/api/pipeline/zumbis/ressuscitar', { method: 'POST' }).then(function(r){ return r.json(); });
-    var count = (res && res.count) || 0;
-    if (btn) { btn.textContent = '✓ ' + count + ' ressuscitado(s)'; }
-    setTimeout(atualizarPipelineTempo, 1500);
-    setTimeout(atualizarPipelineFalhas, 1500);
-  } catch(e) {
-    if (btn) { btn.textContent = 'ERRO'; btn.disabled = false; }
-    console.error('ressuscitar zumbis falhou:', e);
-  }
-}
-/* Atualiza a cada 5s para feedback rapido */
-setInterval(atualizarPipelineTempo, 5000);
-setTimeout(atualizarPipelineTempo, 1500);
 
 /* ── 2.1 Carregar leads incompletos/rejeitados ───────────────────── */
 async function carregarLeadsIncompletos() {
