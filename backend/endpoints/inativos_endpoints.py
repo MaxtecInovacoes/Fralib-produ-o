@@ -49,7 +49,7 @@ async def analisar_inativos(
                 COALESCE(u.cidade, '') as cidade,
                 u.trial_expires_at,
                 u.plan_expires_at,
-                EXTRACT(DAY FROM NOW() - u.criado_em)::int as dias_desde_cadastro,
+                EXTRACT(DAY FROM NOW() - u.criado_em::timestamp)::int as dias_desde_cadastro,
                 (
                     SELECT COUNT(*) FROM leads WHERE user_id = u.id
                 ) as total_leads,

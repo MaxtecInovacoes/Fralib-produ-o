@@ -127,7 +127,7 @@ async def disparar_gradual(
             SELECT u.id, u.email, u.nome,
                    COALESCE(u.telefone, '') as telefone,
                    COALESCE(u.nicho, '') as nicho,
-                   EXTRACT(DAY FROM NOW() - u.criado_em)::int as dias_cadastro
+                   COALESCE(EXTRACT(DAY FROM (NOW() - u.criado_em::timestamp))::int, 0) as dias_cadastro
             FROM users u
             WHERE u.id = ANY(:ids)
         """), {"ids": payload.user_ids}).fetchall()
