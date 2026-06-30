@@ -27,11 +27,13 @@ async def contato_direto_v2(
     plano: str = Query("todos", description="trial|todos|pro|ilimitado|..."),
     status: str = Query("todos", description="todos|sem_outreach|replied|converted|novo"),
     q: str = Query("", description="busca livre por nome, email ou telefone"),
+    incluir_sem_telefone: bool = Query(True, description="incluir usuarios sem telefone"),
     db: Session = Depends(get_db),
     user: dict = Depends(require_superadmin)
 ):
     """
-    Lista TODOS os usuarios com telefone valido (incluindo nao confirmados).
+    Lista TODOS os usuarios da plataforma com WhatsApp OU sem telefone.
+    Por padrao inclui usuarios sem telefone para que o admin veja todos.
 
     - Mostra leads novos (cadastrados ha menos de 7 dias)
     - Mostra leads antigos
@@ -39,8 +41,13 @@ async def contato_direto_v2(
     - Permite filtrar por status outreach
     """
     try:
-        # Query principal - SEM filtro de email_confirmado para pegar leads novos
-        rows = db.execute(text("""
+        # Query principal - TODOS os usuarios (com ou sem telefone)
+        if incluir_sem_telefone:
+            where_telefone = "(u.telefone IS NULL OR (LENGTH(REGEXP_REPLACE(u.telefone, '[^0-9]', '', 'g')) BETWEEN 10 AND 13))"
+        else:
+            where_telefone = "u.telefone IS NOT NULL AND LENGTH(REGEXP_REPLACE(u.telefone, '[^0-9]', '', 'g')) BETWEEN 10 AND 11"
+
+        rows = db.execute(text(f"""
             WITH outreach_status AS (
                 SELECT
                     oa.user_id,
@@ -75,8 +82,7 @@ async def contato_direto_v2(
             FROM users u
             LEFT JOIN outreach_status os ON os.user_id = u.id
             WHERE u.role != 'superadmin'
-              AND u.telefone IS NOT NULL
-              AND LENGTH(REGEXP_REPLACE(u.telefone, '[^0-9]', '', 'g')) BETWEEN 10 AND 11
+              AND {where_telefone}
               -- Excluir apenas fantasmas conhecidos
               AND u.email NOT LIKE 'test.%@test.com'
               AND u.email NOT LIKE 'pipeline.%@test.com'
@@ -106,17 +112,20 @@ async def contato_direto_v2(
             dias_cadastro = r[16] or 0
             horas_cadastro = r[17] or 0
 
-            # Normalizar telefone para wa.me
-            telefone_limpo = ''.join(c for c in str(telefone) if c.isdigit())
+            # Normalizar telefone para wa.me (se tiver)
+            telefone_str = str(telefone) if telefone else ""
+            telefone_limpo = ''.join(c for c in telefone_str if c.isdigit())
 
             # Adicionar 55 se nao tiver codigo do pais
             if telefone_limpo and not telefone_limpo.startswith("55") and len(telefone_limpo) <= 11:
                 telefone_limpo = "55" + telefone_limpo
 
             wa_link = None
+            tem_whatsapp = False
             if telefone_limpo and len(telefone_limpo) >= 12:
                 msg = f"Ola! Vi seu cadastro no FraLib e quero ajuda com meu site."
                 wa_link = f"https://wa.me/{telefone_limpo}?text={msg.replace(' ', '%20')}"
+                tem_whatsapp = True
 
             # Determinar status de outreach
             if outreach_status == 'replied':
@@ -143,9 +152,10 @@ async def contato_direto_v2(
                 "nome": nome or email.split('@')[0],
                 "plano": plano_user or "trial",
                 "user_status": user_status or "trial",
-                "telefone": telefone,
+                "telefone": telefone_str if telefone_str else None,
                 "telefone_normalizado": telefone_limpo,
                 "wa_link": wa_link,
+                "tem_whatsapp": tem_whatsapp,
                 "email_confirmado": email_confirmado,
                 "criado_em": str(criado_em) if criado_em else None,
                 "dias_cadastro": dias_cadastro,
@@ -209,3 +219,99 @@ async def contato_direto_v2(
             "error": str(e),
             "items": []
         }
+
+
+@router.post("/marcar-contatado/{user_id}")
+async def marcar_contatado_v2(
+    user_id: int,
+    db: Session = Depends(get_db),
+    user: dict = Depends(require_superadmin)
+):
+    """
+    Marca usuario como contatado manualmente.
+    - Registra outreach_attempts com status='replied'
+    - Cria entrada em interacoes_admin
+    - Retorna wa_link pronto para abrir conversa
+    """
+    try:
+        # Verificar se usuario existe
+        u = db.execute(text("""
+            SELECT id, email, nome, COALESCE(telefone, '') as telefone
+            FROM users WHERE id = :id AND role != 'superadmin'
+        """), {"id": user_id}).fetchone()
+
+        if not u:
+            raise HTTPException(404, "Usuario nao encontrado")
+
+        email = u[1]
+        nome = u[2]
+        telefone = u[3]
+
+        # Verificar se ja existe outreach para esta campanha
+        existing = db.execute(text("""
+            SELECT id, status FROM outreach_attempts
+            WHERE user_id = :uid AND campaign = 'reativacao_drip_v1_2026_06_26'
+            ORDER BY id DESC LIMIT 1
+        """), {"uid": user_id}).fetchone()
+
+        if existing:
+            # Atualizar para replied
+            db.execute(text("""
+                UPDATE outreach_attempts
+                SET status = 'replied',
+                    replied_at = NOW(),
+                    metadata = COALESCE(metadata, '{}'::jsonb) || '{"manual_contact": true}'::jsonb
+                WHERE id = :id
+            """), {"id": existing[0]})
+        else:
+            # Criar novo registro como replied (manual)
+            db.execute(text("""
+                INSERT INTO outreach_attempts
+                (user_id, campaign, channel, status, replied_at, sent_at, metadata)
+                VALUES (:uid, 'reativacao_drip_v1_2026_06_26', 'whatsapp', 'replied', NOW(), NOW(),
+                        '{"manual_contact": true, "canal": "contato_direto_admin"}'::jsonb)
+            """), {"uid": user_id})
+
+        # Criar tabela interacoes se nao existir
+        db.execute(text("""
+            CREATE TABLE IF NOT EXISTS interacoes_admin (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER NOT NULL,
+                canal VARCHAR(20),
+                tipo VARCHAR(50),
+                nota TEXT,
+                criado_por VARCHAR(255),
+                criado_em TIMESTAMP DEFAULT NOW()
+            )
+        """))
+        db.execute(text("""
+            INSERT INTO interacoes_admin (user_id, canal, tipo, nota, criado_por)
+            VALUES (:uid, 'whatsapp', 'contato_manual_direto', 'Marcado como contatado via painel admin', :criado_por)
+        """), {"uid": user_id, "criado_por": user.get("email", "superadmin")})
+
+        db.commit()
+
+        # Gerar wa_link
+        wa_link = None
+        tel_limpo = ''.join(c for c in str(telefone) if c.isdigit())
+        if tel_limpo:
+            if not tel_limpo.startswith("55") and len(tel_limpo) <= 11:
+                tel_limpo = "55" + tel_limpo
+            if len(tel_limpo) >= 12:
+                wa_link = f"https://wa.me/{tel_limpo}"
+
+        return {
+            "ok": True,
+            "user_id": user_id,
+            "email": email,
+            "nome": nome,
+            "telefone": telefone,
+            "wa_link": wa_link,
+            "message": f"{nome} marcado como contatado!"
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Erro marcar contatado: {e}")
+        raise HTTPException(500, f"Erro: {e}")
