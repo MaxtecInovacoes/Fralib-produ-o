@@ -48,22 +48,125 @@ document.querySelectorAll('a[href^="#"]').forEach(a => {
 });
 
 // === BETA FORM ===
-document.getElementById('betaForm').addEventListener('submit', function(e){
+document.getElementById('betaForm')?.addEventListener('submit', function(e){
   e.preventDefault();
   const name = document.getElementById('beta-name').value.trim();
   const email = document.getElementById('beta-email').value.trim();
   const phone = document.getElementById('beta-phone').value.trim();
   if(name && email && phone){
-    // Store locally for reference
     try {
       const leads = JSON.parse(localStorage.getItem('fralib_beta') || '[]');
       leads.push({ name, email, phone, date: new Date().toISOString() });
       localStorage.setItem('fralib_beta', JSON.stringify(leads));
     } catch(err){}
-    // Redirect to WhatsApp group
-    window.open('https://chat.whatsapp.com/FSrvUIVFvjBFQrkfDQgP0A', '_blank');
+    if(typeof fbq !== 'undefined') fbq('track', 'Lead');
+    window.open(WHATSAPP_URL, '_blank');
   }
 });
+
+// === CTA FINAL FORM ===
+document.getElementById('ctaForm')?.addEventListener('submit', function(e){
+  e.preventDefault();
+  const name = document.getElementById('cta-name').value.trim();
+  const email = document.getElementById('cta-email').value.trim();
+  const phone = document.getElementById('cta-phone').value.trim();
+  const cidade = document.getElementById('cta-cidade').value.trim();
+  const nicho = document.getElementById('cta-nicho').value.trim();
+  if(name && email && phone && cidade && nicho){
+    try {
+      const leads = JSON.parse(localStorage.getItem('fralib_leads') || '[]');
+      leads.push({ name, email, phone, cidade, nicho, date: new Date().toISOString() });
+      localStorage.setItem('fralib_leads', JSON.stringify(leads));
+    } catch(err){}
+    if(typeof fbq !== 'undefined') fbq('track', 'Lead', { cidade, nicho });
+    setTimeout(() => { window.location = CHECKOUT_URL; }, 300);
+  }
+});
+
+// === SIMULADOR DE OPORTUNIDADES ===
+(function(){
+  const simForm = document.getElementById('simForm');
+  if(!simForm) return;
+
+  const ticketGroup = document.getElementById('sim-ticket-group');
+  const ticketInput = document.getElementById('sim-ticket');
+  const ticketLabel = document.getElementById('simTicketLabel');
+
+  ticketGroup?.addEventListener('click', function(e){
+    const btn = e.target.closest('.sim-ticket-btn');
+    if(!btn) return;
+    ticketGroup.querySelectorAll('.sim-ticket-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const val = btn.dataset.ticket;
+    if(val === 'custom'){
+      const custom = prompt('Digite o ticket em R$ (apenas números):');
+      if(custom && /^\d+$/.test(custom) && parseInt(custom) > 0){
+        ticketInput.value = custom;
+        ticketLabel.textContent = 'R$ ' + parseInt(custom).toLocaleString('pt-BR');
+        btn.textContent = 'R$ ' + parseInt(custom).toLocaleString('pt-BR');
+      } else {
+        ticketInput.value = 1000;
+        ticketLabel.textContent = 'R$ 1.000';
+        ticketGroup.querySelector('[data-ticket="1000"]').classList.add('active');
+      }
+    } else {
+      ticketInput.value = val;
+      ticketLabel.textContent = 'R$ ' + parseInt(val).toLocaleString('pt-BR');
+    }
+  });
+
+  simForm.addEventListener('submit', function(e){
+    e.preventDefault();
+    const cidade = document.getElementById('sim-cidade').value;
+    const nicho = document.getElementById('sim-nicho').value;
+    if(!cidade || !nicho) return;
+
+    if(typeof fbq !== 'undefined') fbq('track', 'Lead', { cidade, nicho });
+
+    simForm.style.display = 'none';
+    const loading = document.getElementById('simLoading');
+    const result = document.getElementById('simResult');
+    loading.classList.add('active');
+    result.classList.remove('active');
+
+    const steps = loading.querySelectorAll('.sim-loading-step');
+    steps.forEach((s, i) => {
+      setTimeout(() => {
+        s.style.opacity = '1';
+        s.style.transform = 'translateX(0)';
+        s.classList.add('active');
+      }, (i + 1) * 500);
+    });
+
+    setTimeout(() => {
+      loading.classList.remove('active');
+      result.classList.add('active');
+      result.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 3200);
+  });
+})();
+
+// === META PIXEL EVENTS ===
+(function(){
+  if(typeof fbq !== 'undefined'){
+    fbq('track', 'ViewContent', { content_name: 'landing-page' });
+  }
+
+  document.addEventListener('click', function(e){
+    const target = e.target.closest('a[onclick*="CHECKOUT_URL"], a[href*="checkout"]');
+    if(target && typeof fbq !== 'undefined'){
+      fbq('track', 'InitiateCheckout', { content_name: 'beta-pro' });
+    }
+    const wa = e.target.closest('a[onclick*="WHATSAPP_URL"], a[href*="wa.me"], a[href*="whatsapp"], .wa-float');
+    if(wa && typeof fbq !== 'undefined'){
+      fbq('track', 'Contact', { method: 'whatsapp' });
+    }
+    const trial = e.target.closest('a[onclick*="TRIAL_URL"], a[href*="trial"]');
+    if(trial && typeof fbq !== 'undefined'){
+      fbq('track', 'CompleteRegistration', { content_name: 'trial' });
+    }
+  });
+})();
 
 // === PARALLAX ===
 (function(){

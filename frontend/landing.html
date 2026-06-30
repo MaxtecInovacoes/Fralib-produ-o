@@ -232,6 +232,138 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
 /* ============================================================
    HERO
    ============================================================ */
+.hero-eyebrow{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:6px 14px;border-radius:var(--fl-r-full);
+  background:rgba(0,255,179,0.08);
+  border:1px solid rgba(0,255,179,0.25);
+  font-family:var(--fl-font-mono);font-size:10px;letter-spacing:1.5px;
+  color:var(--cyan);text-transform:uppercase;
+  margin-bottom:16px;
+  animation:fadeUp .6s var(--fl-ease) both;
+}
+.hero-eyebrow::before{
+  content:'';width:6px;height:6px;border-radius:50%;
+  background:var(--cyan);
+  box-shadow:0 0 8px var(--cyan-glow);
+  animation:dot-pulse 1.5s ease-in-out infinite;
+}
+.hero-bullets{
+  list-style:none;padding:0;margin:0 0 20px;
+  display:flex;flex-direction:column;gap:8px;max-width:520px;
+}
+.hero-bullets li{
+  font-size:13px;color:var(--fl-text);
+  padding-left:24px;position:relative;line-height:1.5;
+}
+.hero-bullets li::before{
+  content:'✓';position:absolute;left:0;top:0;
+  color:var(--cyan);font-weight:700;font-size:14px;
+}
+.btn-hero-secondary{
+  display:inline-flex;align-items:center;justify-content:center;
+  padding:12px 24px;
+  font-family:var(--fl-font-brand);font-size:10px;letter-spacing:1.2px;
+  color:var(--fl-text);text-decoration:none;
+  border:1px solid var(--fl-border-md);background:transparent;
+  margin-left:8px;transition:all 0.2s;
+}
+.btn-hero-secondary:hover{
+  border-color:var(--cyan);color:var(--cyan);
+  box-shadow:0 0 20px rgba(0,255,179,0.2);
+}
+@media(max-width:640px){
+  .btn-hero-secondary{display:block;margin-left:0;margin-top:8px;width:100%}
+}
+
+/* Mockup do hero - dashboard */
+.mock-params{
+  display:grid;grid-template-columns:1fr 1fr;gap:8px;
+  margin-bottom:14px;
+}
+.mock-param{
+  background:rgba(0,0,0,0.3);
+  border:1px solid var(--fl-border);
+  border-radius:var(--fl-r-sm);
+  padding:8px 12px;
+}
+.mock-param-label{
+  display:block;font-family:var(--fl-font-mono);font-size:8px;
+  color:var(--fl-text-dim);text-transform:uppercase;letter-spacing:1px;
+  margin-bottom:2px;
+}
+.mock-param-value{
+  font-family:var(--fl-font-mono);font-size:13px;font-weight:600;
+  color:var(--fl-text);
+}
+.mock-metrics{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:8px;
+  margin-bottom:14px;
+}
+.mock-metric{
+  background:rgba(0,0,0,0.3);
+  border:1px solid var(--fl-border);
+  border-radius:var(--fl-r-sm);
+  padding:12px 8px;text-align:center;
+}
+.mock-metric.alt{border-color:rgba(147,51,234,0.3)}
+.mock-metric.alt2{border-color:rgba(255,184,0,0.3)}
+.mock-metric-num{
+  font-family:var(--fl-font-mono);font-size:20px;font-weight:700;
+  color:var(--cyan);line-height:1;
+}
+.mock-metric.alt .mock-metric-num{color:var(--fl-purple-300)}
+.mock-metric.alt2 .mock-metric-num{color:var(--gold)}
+.mock-metric-label{
+  font-family:var(--fl-font-mono);font-size:8px;
+  color:var(--fl-text-muted);text-transform:uppercase;
+  letter-spacing:0.3px;margin-top:6px;line-height:1.3;
+}
+.mock-lead-card{
+  background:linear-gradient(135deg,rgba(147,51,234,0.08),rgba(0,255,179,0.04));
+  border:1px solid rgba(0,255,179,0.2);
+  border-radius:var(--fl-r-md);
+  padding:14px;
+}
+.mock-lead-row{
+  display:flex;justify-content:space-between;align-items:center;
+  margin-bottom:8px;
+}
+.mock-lead-tag{
+  font-family:var(--fl-font-mono);font-size:8px;letter-spacing:1px;
+  color:var(--cyan);text-transform:uppercase;font-weight:600;
+}
+.mock-lead-time{
+  font-family:var(--fl-font-mono);font-size:9px;color:var(--fl-text-dim);
+}
+.mock-lead-name{
+  font-size:15px;font-weight:700;color:#fff;margin-bottom:4px;
+}
+.mock-lead-meta{
+  font-size:11px;color:var(--fl-text-muted);
+  margin-bottom:12px;line-height:1.4;
+}
+.mock-pipeline{
+  display:flex;align-items:center;gap:6px;flex-wrap:wrap;
+  padding-top:10px;border-top:1px solid rgba(255,255,255,0.06);
+}
+.mock-pipe-step{
+  display:flex;align-items:center;gap:6px;
+  font-family:var(--fl-font-mono);font-size:9px;
+  color:var(--fl-text-muted);
+  padding:3px 8px;border-radius:var(--fl-r-sm);
+  background:rgba(0,0,0,0.3);
+  border:1px solid var(--fl-border);
+}
+.mock-pipe-step.done{color:var(--cyan);border-color:rgba(0,255,179,0.3);background:rgba(0,255,179,0.04)}
+.mock-pipe-step.ready{color:var(--gold);border-color:rgba(255,184,0,0.4);background:rgba(255,184,0,0.05)}
+.mock-pipe-dot{
+  width:5px;height:5px;border-radius:50%;
+  background:var(--fl-text-dim);
+}
+.mock-pipe-step.done .mock-pipe-dot{background:var(--cyan);box-shadow:0 0 6px var(--cyan-glow)}
+.mock-pipe-step.ready .mock-pipe-dot{background:var(--gold);box-shadow:0 0 6px var(--gold-glow);animation:dot-pulse 1s ease-in-out infinite}
+.mock-pipe-arrow{color:var(--fl-text-dim);font-size:11px}
 .hero{
   min-height:100vh;
   min-height:100dvh;
@@ -1739,6 +1871,551 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
   .footer-grid{grid-template-columns:1fr;gap:28px}
   .trust-seals-grid{grid-template-columns:1fr}
 }
+
+/* ============================================================
+   SIMULADOR DE OPORTUNIDADES
+   ============================================================ */
+.sim-section{
+  background:linear-gradient(180deg,rgba(147,51,234,0.04),transparent);
+  position:relative;
+  overflow:hidden;
+}
+.sim-wrapper{
+  max-width:780px;margin:0 auto;
+  background:var(--fl-bg-card);
+  border:1px solid var(--fl-border-md);
+  border-radius:var(--fl-r-xl);
+  padding:36px;
+  position:relative;
+  z-index:1;
+  box-shadow:0 20px 60px rgba(0,0,0,0.4),0 0 40px rgba(147,51,234,0.08);
+}
+.sim-form{
+  display:grid;grid-template-columns:1fr 1fr;gap:14px;
+  margin-bottom:18px;
+}
+.sim-form-full{grid-column:1 / -1}
+.sim-field{display:flex;flex-direction:column;gap:6px}
+.sim-field label{
+  font-family:var(--fl-font-mono);font-size:10px;
+  color:var(--fl-text-muted);text-transform:uppercase;letter-spacing:0.08em;
+}
+.sim-field select,.sim-field input{
+  background:var(--fl-bg);
+  border:1px solid var(--fl-border-md);
+  border-radius:var(--fl-r-md);
+  color:var(--fl-text);
+  font-family:var(--fl-font-ui);
+  font-size:14px;padding:12px 14px;
+  outline:none;transition:border-color 120ms;
+}
+.sim-field select:focus,.sim-field input:focus{
+  border-color:var(--cyan);
+  box-shadow:0 0 0 3px rgba(0,255,179,0.1);
+}
+.sim-ticket-group{display:flex;gap:6px;flex-wrap:wrap}
+.sim-ticket-btn{
+  flex:1;min-width:80px;padding:10px 8px;
+  background:transparent;border:1px solid var(--fl-border-md);
+  color:var(--fl-text-muted);
+  font-family:var(--fl-font-mono);font-size:11px;
+  cursor:pointer;border-radius:var(--fl-r-sm);
+  transition:all 120ms;
+}
+.sim-ticket-btn:hover{border-color:var(--cyan);color:var(--fl-text)}
+.sim-ticket-btn.active{background:var(--cyan-dim);border-color:var(--cyan);color:var(--cyan)}
+.sim-submit{
+  width:100%;margin-top:8px;
+  padding:16px 24px;
+  font-family:var(--fl-font-brand);font-size:11px;letter-spacing:1.2px;
+  background:var(--gold);color:#000;
+  border:none;cursor:pointer;
+  box-shadow:
+    inset -3px -3px 0 #A16207,
+    inset 3px 3px 0 #FDE68A,
+    0 4px 0 #713F12;
+  transition:transform 80ms,box-shadow 80ms;
+  border-radius:0;
+}
+.sim-submit:hover{background:#FDE047;transform:translateY(-2px);box-shadow:inset -3px -3px 0 #A16207,inset 3px 3px 0 #FEF9C3,0 6px 0 #713F12,0 0 30px rgba(255,184,0,0.5)}
+.sim-submit:active{transform:translateY(2px);box-shadow:inset -3px -3px 0 #A16207,inset 3px 3px 0 #FDE68A,0 2px 0 #713F12}
+
+/* Loading do simulador */
+.sim-loading{display:none;padding:30px 0;text-align:center}
+.sim-loading.active{display:block}
+.sim-loading-step{
+  display:flex;align-items:center;gap:12px;
+  padding:10px 16px;margin:6px auto;
+  max-width:380px;
+  background:rgba(0,0,0,0.3);
+  border:1px solid var(--fl-border);
+  border-radius:var(--fl-r-md);
+  font-family:var(--fl-font-mono);font-size:12px;
+  color:var(--fl-text-muted);
+  opacity:0;transform:translateX(-8px);
+  animation:step-in 0.4s var(--fl-ease) forwards;
+}
+.sim-loading-step.active{color:var(--cyan);border-color:rgba(0,255,179,0.3);background:rgba(0,255,179,0.04)}
+.sim-loading-step .step-bullet{
+  width:8px;height:8px;border-radius:50%;
+  background:var(--fl-text-dim);
+  flex-shrink:0;
+}
+.sim-loading-step.active .step-bullet{
+  background:var(--cyan);
+  box-shadow:0 0 10px var(--cyan-glow);
+  animation:dot-pulse 1s ease-in-out infinite;
+}
+@keyframes step-in{to{opacity:1;transform:translateX(0)}}
+
+/* Resultado do simulador */
+.sim-result{display:none;padding:20px 0}
+.sim-result.active{display:block;animation:fadeUp 0.5s var(--fl-ease)}
+.sim-metric-grid{
+  display:grid;grid-template-columns:repeat(5,1fr);gap:10px;
+  margin:20px 0;
+}
+.sim-metric{
+  background:var(--fl-bg-surface);
+  border:1px solid var(--fl-border);
+  border-radius:var(--fl-r-md);
+  padding:14px 10px;text-align:center;
+}
+.sim-metric-num{
+  font-family:var(--fl-font-mono);font-size:22px;font-weight:700;
+  color:var(--cyan);
+  line-height:1;
+}
+.sim-metric:nth-child(2) .sim-metric-num{color:var(--fl-purple-300)}
+.sim-metric:nth-child(3) .sim-metric-num{color:var(--gold)}
+.sim-metric:nth-child(4) .sim-metric-num{color:var(--fl-success)}
+.sim-metric:nth-child(5) .sim-metric-num{color:var(--fl-text)}
+.sim-metric-label{
+  font-family:var(--fl-font-mono);font-size:9px;
+  color:var(--fl-text-muted);text-transform:uppercase;
+  letter-spacing:0.3px;margin-top:6px;line-height:1.2;
+}
+.sim-potential{
+  background:linear-gradient(135deg,rgba(255,184,0,0.06),rgba(147,51,234,0.04));
+  border:1px solid rgba(255,184,0,0.2);
+  border-radius:var(--fl-r-md);
+  padding:18px 20px;margin:18px 0;
+}
+.sim-potential h4{
+  font-family:var(--fl-font-brand);font-size:9px;
+  color:var(--gold);letter-spacing:1.5px;margin-bottom:12px;
+}
+.sim-potential-row{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.04);
+  font-family:var(--fl-font-mono);font-size:13px;
+}
+.sim-potential-row:last-child{border:none}
+.sim-potential-row strong{color:var(--gold);font-weight:700}
+.sim-disclaimer{
+  font-size:11px;color:var(--fl-text-dim);
+  font-style:italic;line-height:1.5;
+  margin-top:14px;padding-top:14px;
+  border-top:1px solid var(--fl-border);
+}
+
+@media(max-width:640px){
+  .sim-form{grid-template-columns:1fr}
+  .sim-metric-grid{grid-template-columns:repeat(2,1fr)}
+  .sim-ticket-group{flex-wrap:wrap}
+  .sim-ticket-btn{min-width:60px}
+}
+
+/* ============================================================
+   ANTES vs COM FRALIB
+   ============================================================ */
+.ba-section{background:transparent}
+.ba-grid{
+  display:grid;grid-template-columns:1fr 1fr;gap:20px;max-width:980px;margin:0 auto;
+}
+.ba-col{
+  background:var(--fl-bg-card);
+  border:1px solid var(--fl-border);
+  border-radius:var(--fl-r-lg);
+  padding:32px 28px;
+}
+.ba-col.before{border-color:rgba(239,68,68,0.2)}
+.ba-col.after{border-color:rgba(0,255,179,0.25);box-shadow:0 0 30px rgba(0,255,179,0.06)}
+.ba-col h3{
+  font-family:var(--fl-font-brand);font-size:11px;letter-spacing:1.5px;
+  margin-bottom:20px;
+}
+.ba-col.before h3{color:var(--fl-danger)}
+.ba-col.after h3{color:var(--cyan)}
+.ba-col ul{list-style:none;padding:0;margin:0}
+.ba-col li{
+  padding:10px 0;padding-left:32px;
+  position:relative;font-size:14px;color:var(--fl-text-muted);line-height:1.5;
+  border-bottom:1px solid var(--fl-border);
+}
+.ba-col li:last-child{border:none}
+.ba-col.before li::before{
+  content:'✕';position:absolute;left:0;top:10px;
+  color:var(--fl-danger);font-weight:700;font-size:16px;line-height:1.4;
+}
+.ba-col.after li::before{
+  content:'✓';position:absolute;left:0;top:10px;
+  color:var(--cyan);font-weight:700;font-size:16px;line-height:1.4;
+}
+.ba-closer{
+  max-width:780px;margin:32px auto 0;padding:20px 24px;
+  background:linear-gradient(135deg,rgba(147,51,234,0.08),rgba(0,255,179,0.04));
+  border:1px solid var(--fl-border-md);
+  border-radius:var(--fl-r-lg);
+  text-align:center;
+  font-size:16px;color:var(--fl-text);line-height:1.6;
+  font-weight:500;
+}
+.ba-closer strong{color:var(--cyan)}
+@media(max-width:768px){
+  .ba-grid{grid-template-columns:1fr;gap:16px}
+}
+
+/* ============================================================
+   DEMO VIDEO
+   ============================================================ */
+.demo-section{background:transparent}
+.demo-wrapper{
+  display:grid;grid-template-columns:1.4fr 1fr;gap:40px;align-items:center;
+  max-width:1100px;margin:0 auto;
+}
+.demo-video{
+  position:relative;aspect-ratio:16/9;
+  background:linear-gradient(135deg,var(--fl-bg-card),var(--fl-bg-surface));
+  border:1px solid var(--fl-border-md);
+  border-radius:var(--fl-r-xl);
+  display:flex;align-items:center;justify-content:center;
+  overflow:hidden;
+  box-shadow:0 30px 60px rgba(0,0,0,0.4);
+}
+.demo-video::before{
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(circle at 30% 50%,rgba(147,51,234,0.15),transparent 60%),
+             radial-gradient(circle at 70% 50%,rgba(0,255,179,0.1),transparent 60%);
+}
+.demo-play{
+  position:relative;z-index:1;
+  width:80px;height:80px;border-radius:50%;
+  background:var(--gold);
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 0 40px rgba(255,184,0,0.5);
+  cursor:pointer;transition:transform 0.2s;
+}
+.demo-play:hover{transform:scale(1.1)}
+.demo-play svg{width:30px;height:30px;fill:#000;margin-left:4px}
+.demo-steps{counter-reset:stepcounter}
+.demo-step{
+  display:flex;align-items:flex-start;gap:12px;
+  padding:12px 0;
+  border-bottom:1px solid var(--fl-border);
+}
+.demo-step:last-child{border:none}
+.demo-step-num{
+  flex-shrink:0;width:32px;height:32px;border-radius:50%;
+  background:var(--cyan-dim);color:var(--cyan);
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--fl-font-mono);font-size:13px;font-weight:700;
+  border:1px solid rgba(0,255,179,0.3);
+}
+.demo-step-text{font-size:14px;color:var(--fl-text);line-height:1.5;padding-top:4px}
+@media(max-width:900px){
+  .demo-wrapper{grid-template-columns:1fr;gap:24px}
+  .demo-video{order:-1}
+}
+
+/* ============================================================
+   MOCKUP WHATSAPP (conversa ilustrativa)
+   ============================================================ */
+.wa-demo-section{
+  background:linear-gradient(180deg,transparent,rgba(0,255,179,0.03),transparent);
+}
+.wa-mockup{
+  max-width:480px;margin:0 auto;
+  background:#0B141A;
+  border:1px solid rgba(255,255,255,0.08);
+  border-radius:var(--fl-r-xl);
+  overflow:hidden;
+  box-shadow:0 30px 60px rgba(0,0,0,0.5);
+}
+.wa-demo-header{
+  display:flex;align-items:center;gap:12px;
+  padding:16px 20px;background:#1F2C33;
+  border-bottom:1px solid rgba(255,255,255,0.05);
+}
+.wa-demo-avatar{
+  width:40px;height:40px;border-radius:50%;
+  background:linear-gradient(135deg,var(--fl-purple),var(--cyan));
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--fl-font-brand);font-size:11px;color:#fff;font-weight:700;
+}
+.wa-demo-name{font-size:14px;font-weight:600;color:#fff}
+.wa-demo-status{font-size:11px;color:#8696A0}
+.wa-demo-msgs{
+  padding:20px;
+  display:flex;flex-direction:column;gap:8px;
+  background:linear-gradient(180deg,#0B141A,#0d1620);
+  min-height:300px;
+}
+.wa-demo-msg{
+  max-width:82%;padding:10px 12px;
+  border-radius:8px;font-size:13px;line-height:1.5;
+}
+.wa-demo-msg.s{
+  background:#005C4B;align-self:flex-end;
+  border-bottom-right-radius:2px;color:#e9edef;
+}
+.wa-demo-msg.r{
+  background:#1F2C33;align-self:flex-start;
+  border-bottom-left-radius:2px;color:#e9edef;
+}
+.wa-demo-time{font-size:10px;color:rgba(255,255,255,0.4);text-align:right;margin-top:4px}
+.wa-demo-disclaimer{
+  font-size:11px;color:var(--fl-text-dim);font-style:italic;
+  text-align:center;margin-top:18px;line-height:1.5;
+}
+.approach-callout{
+  max-width:680px;margin:32px auto 0;padding:18px 22px;
+  background:linear-gradient(135deg,rgba(0,255,179,0.06),rgba(147,51,234,0.04));
+  border:1px solid rgba(0,255,179,0.2);
+  border-radius:var(--fl-r-md);
+  font-style:italic;color:var(--cyan);
+  font-size:14px;line-height:1.6;
+  text-align:center;
+}
+
+/* ============================================================
+   PROVA DO BETA
+   ============================================================ */
+.beta-proof-section{background:transparent}
+.beta-proof-grid{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:16px;max-width:980px;margin:0 auto;
+}
+.beta-proof-card{
+  background:var(--fl-bg-card);
+  border:1px solid var(--fl-border);
+  border-radius:var(--fl-r-lg);
+  padding:24px 18px;text-align:center;
+  transition:all 0.3s var(--fl-ease);
+}
+.beta-proof-card:hover{
+  border-color:rgba(0,255,179,0.3);
+  transform:translateY(-4px);
+  box-shadow:0 10px 30px rgba(0,0,0,0.3);
+}
+.beta-proof-num{
+  font-family:var(--fl-font-brand);font-size:24px;font-weight:700;
+  background:linear-gradient(135deg,var(--fl-purple-300),var(--cyan));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;
+  margin-bottom:8px;line-height:1;
+}
+.beta-proof-label{
+  font-size:11px;color:var(--fl-text-muted);
+  text-transform:uppercase;letter-spacing:1px;
+  line-height:1.3;
+}
+.beta-proof-disclaimer{
+  max-width:780px;margin:32px auto 0;padding:16px 20px;
+  background:rgba(255,184,0,0.04);
+  border:1px solid rgba(255,184,0,0.15);
+  border-radius:var(--fl-r-md);
+  font-size:12px;color:var(--fl-text-muted);
+  text-align:center;line-height:1.5;font-style:italic;
+}
+@media(max-width:768px){
+  .beta-proof-grid{grid-template-columns:repeat(2,1fr)}
+}
+
+/* ============================================================
+   OFERTA BETA PRO
+   ============================================================ */
+.offer-section{
+  background:linear-gradient(180deg,transparent,rgba(255,184,0,0.04),transparent);
+  position:relative;
+}
+.offer-card{
+  max-width:560px;margin:0 auto;
+  background:var(--fl-bg-card);
+  border:2px solid var(--gold);
+  border-radius:var(--fl-r-xl);
+  padding:40px 36px;
+  text-align:center;
+  position:relative;
+  box-shadow:0 0 50px rgba(255,184,0,0.15),0 30px 60px rgba(0,0,0,0.4);
+  overflow:hidden;
+}
+.offer-card::before{
+  content:'';position:absolute;inset:-2px;
+  background:linear-gradient(135deg,var(--gold),transparent,var(--gold));
+  z-index:-1;opacity:0.3;
+  border-radius:var(--fl-r-xl);
+}
+.offer-badge{
+  position:absolute;top:-12px;left:50%;transform:translateX(-50%);
+  padding:5px 18px;background:var(--gold);color:#000;
+  font-family:var(--fl-font-brand);font-size:9px;letter-spacing:1.5px;
+  font-weight:700;border-radius:var(--fl-r-full);
+}
+.offer-title{
+  font-family:var(--fl-font-brand);font-size:13px;letter-spacing:1.5px;
+  color:var(--gold);margin-bottom:18px;
+}
+.offer-price-row{
+  display:flex;align-items:baseline;justify-content:center;gap:10px;
+  margin-bottom:8px;
+}
+.offer-price{
+  font-size:48px;font-weight:800;color:#fff;line-height:1;
+}
+.offer-price-old{
+  font-size:18px;color:var(--fl-text-dim);
+  text-decoration:line-through;
+}
+.offer-period{
+  font-size:14px;color:var(--fl-text-muted);margin-bottom:24px;
+}
+.offer-period strong{color:var(--cyan);font-weight:600}
+.offer-features{
+  list-style:none;text-align:left;margin:0 0 28px;
+  padding:20px 0;border-top:1px solid var(--fl-border);border-bottom:1px solid var(--fl-border);
+}
+.offer-features li{
+  padding:8px 0 8px 28px;position:relative;
+  font-size:14px;color:var(--fl-text);line-height:1.5;
+}
+.offer-features li::before{
+  content:'✓';position:absolute;left:0;top:8px;
+  color:var(--cyan);font-weight:700;font-size:16px;
+}
+.offer-cta{
+  width:100%;padding:18px 24px;
+  font-family:var(--fl-font-brand);font-size:11px;letter-spacing:1.5px;
+  background:var(--gold);color:#000;
+  border:none;cursor:pointer;
+  box-shadow:
+    inset -3px -3px 0 #A16207,
+    inset 3px 3px 0 #FDE68A,
+    0 6px 0 #713F12;
+  transition:transform 80ms,box-shadow 80ms;
+  margin-bottom:14px;
+  text-decoration:none;display:inline-block;text-align:center;
+  border-radius:0;
+}
+.offer-cta:hover{
+  background:#FDE047;transform:translateY(-2px);
+  box-shadow:inset -3px -3px 0 #A16207,inset 3px 3px 0 #FEF9C3,0 8px 0 #713F12,0 0 30px rgba(255,184,0,0.5);
+}
+.offer-cta:active{transform:translateY(3px);box-shadow:inset -3px -3px 0 #A16207,inset 3px 3px 0 #FDE68A,0 3px 0 #713F12}
+.offer-microcopy{
+  font-size:11px;color:var(--fl-text-dim);line-height:1.5;
+}
+.offer-microcopy span{color:var(--cyan)}
+
+/* ============================================================
+   GARANTIA
+   ============================================================ */
+.guarantee-section{background:transparent}
+.guarantee-card{
+  max-width:720px;margin:0 auto;
+  background:var(--fl-bg-card);
+  border:1px solid rgba(34,197,94,0.25);
+  border-radius:var(--fl-r-xl);
+  padding:32px 36px;
+  display:flex;align-items:center;gap:20px;
+  box-shadow:0 0 30px rgba(34,197,94,0.08);
+}
+.guarantee-icon{
+  flex-shrink:0;width:60px;height:60px;border-radius:50%;
+  background:rgba(34,197,94,0.12);
+  display:flex;align-items:center;justify-content:center;
+  color:var(--fl-success);
+  border:1px solid rgba(34,197,94,0.3);
+}
+.guarantee-icon svg{width:30px;height:30px}
+.guarantee-content h3{
+  font-size:20px;font-weight:700;color:var(--fl-text);margin-bottom:6px;
+}
+.guarantee-content p{
+  font-size:14px;color:var(--fl-text-muted);line-height:1.6;margin:0;
+}
+@media(max-width:640px){
+  .guarantee-card{flex-direction:column;text-align:center;padding:28px 24px}
+}
+
+/* ============================================================
+   WHATSAPP FLOAT
+   ============================================================ */
+.wa-float{
+  position:fixed;bottom:24px;right:24px;z-index:998;
+  width:56px;height:56px;border-radius:50%;
+  background:#22C55E;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 8px 20px rgba(34,197,94,0.4);
+  color:#fff;text-decoration:none;
+  transition:transform 0.2s,box-shadow 0.2s;
+}
+.wa-float:hover{transform:scale(1.1);box-shadow:0 10px 30px rgba(34,197,94,0.6)}
+.wa-float svg{width:28px;height:28px;fill:#fff}
+.wa-float::after{
+  content:'';position:absolute;inset:-4px;border-radius:50%;
+  border:2px solid #22C55E;opacity:0;
+  animation:wa-pulse 2s infinite;
+}
+@keyframes wa-pulse{
+  0%{transform:scale(1);opacity:0.6}
+  100%{transform:scale(1.4);opacity:0}
+}
+
+/* ============================================================
+   STICKY CTA MOBILE
+   ============================================================ */
+.sticky-cta-mobile{
+  display:none;
+  position:fixed;bottom:0;left:0;right:0;z-index:997;
+  padding:12px 16px;background:rgba(10,7,20,0.98);
+  border-top:1px solid var(--fl-border);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  box-shadow:0 -4px 20px rgba(0,0,0,0.5);
+}
+.sticky-cta-mobile a{
+  display:block;text-align:center;
+  padding:14px;
+  font-family:var(--fl-font-brand);font-size:11px;letter-spacing:1.2px;
+  background:var(--gold);color:#000;text-decoration:none;
+  box-shadow:
+    inset -3px -3px 0 #A16207,
+    inset 3px 3px 0 #FDE68A,
+    0 4px 0 #713F12;
+}
+@media(max-width:768px){
+  .sticky-cta-mobile{display:block}
+  body{padding-bottom:80px}
+  .wa-float{bottom:88px}
+}
+
+/* ============================================================
+   FOOTER NOVO
+   ============================================================ */
+.footer-bottom-bar{
+  max-width:1200px;margin:0 auto;
+  padding:24px 0;
+  border-top:1px solid var(--fl-border);
+  display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;
+  font-size:12px;color:var(--fl-text-dim);
+}
+.footer-bottom-bar a{color:var(--fl-text-muted);text-decoration:none;margin:0 8px}
+.footer-bottom-bar a:hover{color:var(--cyan)}
+.footer-disclaimer{
+  max-width:1200px;margin:0 auto;
+  padding:0 0 32px;
+  font-size:11px;color:var(--fl-text-dim);
+  font-style:italic;line-height:1.6;text-align:center;
+}
 </style>
 
   <link rel="icon" href="/images/Mestre Fralib - Mago da IA.png">
@@ -1830,6 +2507,13 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
     }
   </style>
 
+<script>
+// === URLS DE CHECKOUT (substituir pelos links reais) ===
+const CHECKOUT_URL = "/checkout?plan=beta-pro&src=landing";
+const WHATSAPP_URL = "https://chat.whatsapp.com/FSrvUIVFvjBFQrkfDQgP0A";
+const TRIAL_URL = "/login?signup=1&plano=trial";
+</script>
+
 </head>
 <body>
 <div id="particles-js"></div>
@@ -1851,23 +2535,15 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
   </div>
 
   <div class="nav-links" id="navLinks" style="justify-self:center;">
-    <a href="/">Home</a>
-    <a href="#como-funciona">Método 4-1</a>
-    <a href="#exemplos">Nichos</a>
-    <a href="#cinco-fontes">5 Fontes</a>
+    <a href="#como-funciona">Como funciona</a>
+    <a href="#simulador">Simulador</a>
+    <a href="#beneficios">Benefícios</a>
     <a href="#planos">Planos</a>
     <a href="#faq">FAQ</a>
-    <a href="/docs/">Docs</a>
-    <a href="/blog/">Blog</a>
   </div>
 
   <div class="nav-actions" style="display:flex; align-items:center; gap:16px; justify-self:end;">
-    <button class="theme-toggle" id="themeToggle" aria-label="Toggle Theme">
-      <svg class="moon-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
-      <svg class="sun-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
-    </button>
-    <a href="/login" style="color:var(--fl-text-muted); text-decoration:none; font-size:12px; font-weight:600;">ENTRAR</a>
-    <a href="/login?signup=1" class="nav-cta">CRIAR CONTA</a>
+    <a href="#" onclick="window.location=CHECKOUT_URL;return false;" class="nav-cta">ENTRAR NO BETA</a>
     <button class="mobile-toggle" id="mobileToggle" aria-label="Menu">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
     </button>
@@ -1881,777 +2557,770 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
   <div class="hero-split">
     <!-- COLUNA ESQUERDA: copy + CTA -->
     <div class="hero-left">
+      <span class="hero-eyebrow">FraLib · Prospecção com prévia pronta</span>
 
       <h1 class="hero-title">
-        <span class="grad">Ganhe R$ 3.000 a R$ 10.000/mês</span>
-        <span class="hero-title-sub">vendendo sites. <strong>Sem saber programar.</strong></span>
+        <span class="grad">Descubra empresas da sua região</span>
+        <span class="hero-title-sub">que ainda precisam de um <strong>site vendável.</strong></span>
       </h1>
 
       <p class="hero-sub">
-        A FraLib encontra negócios que precisam de site, cria automaticamente e manda no WhatsApp. Você só fecha.
+        A FraLib encontra leads locais, cria uma prévia de site com IA e gera uma abordagem pronta para você chamar o cliente <strong>mostrando algo concreto</strong> — não só uma mensagem fria.
       </p>
 
-      <!-- CONTRASTE DOR vs SOLUÇÃO — cards horizontais -->
-      <div class="hero-contrast">
-        <div class="hero-pain">
-          <strong>VOCÊ HOJE</strong>
-          <span>Chega cansado do trabalho. Quer renda extra mas não sabe por onde.</span>
-        </div>
-        <span class="hero-arrow">→</span>
-        <div class="hero-solution">
-          <strong>VOCÊ COM FRALIB</strong>
-          <span>1h por dia do celular. R$ 1.500 no 1º mês — enquanto dorme.</span>
-        </div>
-      </div>
+      <ul class="hero-bullets">
+        <li>Encontre negócios locais com presença digital fraca</li>
+        <li>Gere uma prévia de site baseada nos dados do negócio</li>
+        <li>Aborde no WhatsApp com efeito wow</li>
+        <li>Organize tudo em um painel simples</li>
+        <li>Comece mesmo sem equipe, portfólio ou experiência técnica</li>
+      </ul>
 
       <div class="hero-buttons">
-        <a href="/login?signup=1" class="btn-hero-primary">
+        <a href="#simulador" class="btn-hero-primary">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-          QUERO MINHA RENDA EXTRA ESTE MÊS
+          SIMULAR MINHA REGIÃO
+        </a>
+        <a href="#" onclick="window.location=CHECKOUT_URL;return false;" class="btn-hero-secondary">
+          ENTRAR NO BETA POR R$97
         </a>
         <div class="hero-cta-sub">
-          7 dias gratis · <span>Sem cartao de credito</span> · Cancela em 1 clique
-        </div>
-      </div>
-
-      <!-- MICRO-PROVA — stat strip -->
-      <div class="hero-microproof">
-        <div class="hero-microproof-item">
-          <div class="hero-microproof-num">+2.400</div>
-          <div class="hero-microproof-label">Prospectados</div>
-        </div>
-        <div class="hero-microproof-sep"></div>
-        <div class="hero-microproof-item">
-          <div class="hero-microproof-num">+180</div>
-          <div class="hero-microproof-label">Sites criados</div>
-        </div>
-        <div class="hero-microproof-sep"></div>
-        <div class="hero-microproof-item">
-          <div class="hero-microproof-num">97%</div>
-          <div class="hero-microproof-label">Resposta WhatsApp</div>
+          Acesso imediato · <span>Grupo WhatsApp</span> · Garantia de 30 dias
         </div>
       </div>
     </div>
 
-    <!-- COLUNA DIREITA: pipeline animada SVG (motion design) -->
+    <!-- COLUNA DIREITA: mockup de dashboard -->
     <div class="hero-right">
       <div class="hero-mockup">
-        <!-- Header da pipeline -->
+        <!-- Topbar do dashboard -->
         <div class="mock-kanban-header">
           <span class="mock-dot pulsing"></span>
-          <span class="mock-title">PIPELINE ATIVA · AGORA</span>
+          <span class="mock-title">DASHBOARD · BUSCA ATIVA</span>
           <span class="mock-status"><span class="mock-dot-live"></span></span>
         </div>
 
-        <!-- Pipeline animada: 5 etapas sequenciais -->
-        <div class="pipeline">
-
-          <!-- ETAPA 1: BUSCAR LEAD -->
-          <div class="pipeline-step step-1">
-            <div class="step-icon icon-search">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
-            </div>
-            <div class="step-content">
-              <div class="step-label">BUSCANDO LEAD</div>
-              <div class="step-desc">Mapeando Google Maps...</div>
-            </div>
-            <div class="step-spinner"><svg width="16" height="16" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="rgba(255,255,255,.1)" stroke-width="3"/><path d="M21 12a9 9 0 0 0-9-9" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg></div>
+        <!-- Parâmetros da busca -->
+        <div class="mock-params">
+          <div class="mock-param">
+            <span class="mock-param-label">CIDADE</span>
+            <span class="mock-param-value">Curitiba</span>
           </div>
-
-          <!-- ETAPA 2: ANALISAR -->
-          <div class="pipeline-step step-2">
-            <div class="step-icon icon-analyze">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M8 11l2 2 4-4"/></svg>
-            </div>
-            <div class="step-content">
-              <div class="step-label">ANALISANDO</div>
-              <div class="step-desc">Pizzaria São José · sem site</div>
-            </div>
-            <div class="step-bar"><div class="step-bar-fill"></div></div>
+          <div class="mock-param">
+            <span class="mock-param-label">NICHO</span>
+            <span class="mock-param-value">Pizzarias</span>
           </div>
+        </div>
 
-          <!-- ETAPA 3: CRIAR SITE -->
-          <div class="pipeline-step step-3">
-            <div class="step-icon icon-code">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
-            </div>
-            <div class="step-content">
-              <div class="step-label">CRIANDO SITE</div>
-              <div class="step-desc">Gerando com IA · 8 min</div>
-            </div>
-            <div class="step-percent" data-counter data-target="100" data-suffix="%">0%</div>
+        <!-- Métricas -->
+        <div class="mock-metrics">
+          <div class="mock-metric">
+            <div class="mock-metric-num">187</div>
+            <div class="mock-metric-label">Empresas<br>encontradas</div>
           </div>
+          <div class="mock-metric alt">
+            <div class="mock-metric-num">42</div>
+            <div class="mock-metric-label">Sem site<br>detectado</div>
+          </div>
+          <div class="mock-metric alt2">
+            <div class="mock-metric-num">18</div>
+            <div class="mock-metric-label">Boas<br>oportunidades</div>
+          </div>
+        </div>
 
-          <!-- ETAPA 4: ENVIAR WHATSAPP -->
-          <div class="pipeline-step step-4">
-            <div class="step-icon icon-whatsapp">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+        <!-- Lead gerado -->
+        <div class="mock-lead-card">
+          <div class="mock-lead-row">
+            <span class="mock-lead-tag">PRÉVIA GERADA</span>
+            <span class="mock-lead-time">agora</span>
+          </div>
+          <div class="mock-lead-name">Pizzaria São José</div>
+          <div class="mock-lead-meta">Rua XV de Novembro · Centro · WhatsApp público</div>
+
+          <!-- Pipeline de status -->
+          <div class="mock-pipeline">
+            <div class="mock-pipe-step done">
+              <span class="mock-pipe-dot"></span>
+              <span>Lead encontrado</span>
             </div>
-            <div class="step-content">
-              <div class="step-label">ENVIANDO WHATSAPP</div>
-              <div class="step-desc">Franz abordando lead...</div>
+            <span class="mock-pipe-arrow">→</span>
+            <div class="mock-pipe-step done">
+              <span class="mock-pipe-dot"></span>
+              <span>Site gerado</span>
             </div>
-            <div class="step-typing">
-              <span class="dot-typing"></span>
-              <span class="dot-typing"></span>
-              <span class="dot-typing"></span>
+            <span class="mock-pipe-arrow">→</span>
+            <div class="mock-pipe-step ready">
+              <span class="mock-pipe-dot"></span>
+              <span>Pronto para abordagem</span>
             </div>
           </div>
-
-          <!-- ETAPA 5: VENDA FEITA! BOOM! -->
-          <div class="pipeline-step step-5">
-            <div class="step-icon icon-celebration">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 2l2.4 7.4H22l-6.2 4.5L18.2 22 12 17.5 5.8 22l2.4-8.1L2 9.4h7.6z"/></svg>
-            </div>
-            <div class="step-content">
-              <div class="step-label gold">VENDA FEITA</div>
-              <div class="step-desc gold">Pizzaria São José · R$ 1.500</div>
-            </div>
-            <div class="step-amount" data-counter data-target="1500" data-prefix="+R$ " data-suffix="">+R$ 0</div>
-            <div class="step-burst"></div>
-          </div>
-
         </div>
       </div>
     </div>
   </div>
 </section>
 
-<!-- ===== SEÇÃO 2 — PROVA SOCIAL (MARQUEE) ===== -->
-<section class="social-proof">
-  <div class="proof-track" aria-label="Estatísticas">
-    <div class="proof-item"><div class="proof-number">+2.400</div><div class="proof-label">Negocios Prospectados</div></div>
-    <div class="proof-item"><div class="proof-number">+180</div><div class="proof-label">Sites Criados</div></div>
-    <div class="proof-item"><div class="proof-number">+847</div><div class="proof-label">Clientes Fechados</div></div>
-    <div class="proof-item"><div class="proof-number">R$ 2.3M</div><div class="proof-label">em Vendas Geradas</div></div>
-    <div class="proof-item"><div class="proof-number">97%</div><div class="proof-label">de Resposta WhatsApp</div></div>
-    <div class="proof-item"><div class="proof-number">R$ 0</div><div class="proof-label">Gasto com Trafego</div></div>
-    <!-- duplicate for seamless loop -->
-    <div class="proof-item"><div class="proof-number">+2.400</div><div class="proof-label">Negocios Prospectados</div></div>
-    <div class="proof-item"><div class="proof-number">+180</div><div class="proof-label">Sites Criados</div></div>
-    <div class="proof-item"><div class="proof-number">+847</div><div class="proof-label">Clientes Fechados</div></div>
-    <div class="proof-item"><div class="proof-number">R$ 2.3M</div><div class="proof-label">em Vendas Geradas</div></div>
-    <div class="proof-item"><div class="proof-number">97%</div><div class="proof-label">de Resposta WhatsApp</div></div>
-    <div class="proof-item"><div class="proof-number">R$ 0</div><div class="proof-label">Gasto com Trafego</div></div>
-  </div>
-</section>
-
-<!-- ===== SEÇÃO 3 — PROBLEMA ===== -->
-<section class="problema">
+<!-- ===== SEÇÃO 2 — SIMULADOR DE OPORTUNIDADES ===== -->
+<section class="sim-section" id="simulador">
   <div class="container">
-    <h2 class="section-title reveal">POR QUE A MAIORIA NUNCA COMEÇA A GANHAR DINHEIRO ONLINE?</h2>
-    <div class="problema-grid">
-      <div class="problema-item reveal">
-        <div class="problema-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>
-        <div class="problema-text">Trabalha o dia inteiro e sobra zero no bolso. Queria renda extra mas não tem tempo nem energia pra um "bico".</div>
+    <h2 class="section-title reveal">QUANTAS OPORTUNIDADES EXISTEM NA SUA CIDADE AGORA?</h2>
+    <p class="section-sub reveal" style="text-align:center;margin:0 auto 36px;max-width:720px;color:var(--fl-text-muted);font-size:14px;">
+      Antes de vender site, você precisa saber quem abordar. A FraLib ajuda você a encontrar empresas locais com sinais de oportunidade e transforma esses dados em prévias de site e abordagens prontas.
+    </p>
+
+    <div class="sim-wrapper">
+      <!-- Formulário -->
+      <form id="simForm">
+        <div class="sim-form">
+          <div class="sim-field">
+            <label for="sim-cidade">Cidade</label>
+            <select id="sim-cidade" name="cidade" required>
+              <option value="">Selecione sua cidade</option>
+              <option>São Paulo</option>
+              <option>Rio de Janeiro</option>
+              <option>Belo Horizonte</option>
+              <option>Curitiba</option>
+              <option>Porto Alegre</option>
+              <option>Salvador</option>
+              <option>Recife</option>
+              <option>Fortaleza</option>
+              <option>Brasília</option>
+              <option>Florianópolis</option>
+              <option>Campinas</option>
+              <option>Goiânia</option>
+              <option>Vitória</option>
+              <option>Outra</option>
+            </select>
+          </div>
+          <div class="sim-field">
+            <label for="sim-nicho">Nicho</label>
+            <select id="sim-nicho" name="nicho" required>
+              <option value="">Selecione o nicho</option>
+              <option>Pizzarias</option>
+              <option>Padarias</option>
+              <option>Restaurantes</option>
+              <option>Clínicas</option>
+              <option>Salões de Beleza</option>
+              <option>Barbearias</option>
+              <option>Pet Shops</option>
+              <option>Lojas de Roupa</option>
+              <option>Prestadores de Serviço</option>
+              <option>Imobiliárias</option>
+              <option>Outro</option>
+            </select>
+          </div>
+          <div class="sim-field sim-form-full">
+            <label>Ticket que pretende cobrar (R$)</label>
+            <div class="sim-ticket-group" id="sim-ticket-group">
+              <button type="button" class="sim-ticket-btn" data-ticket="500">R$ 500</button>
+              <button type="button" class="sim-ticket-btn active" data-ticket="1000">R$ 1.000</button>
+              <button type="button" class="sim-ticket-btn" data-ticket="1500">R$ 1.500</button>
+              <button type="button" class="sim-ticket-btn" data-ticket="custom">Personalizado</button>
+              <input type="hidden" id="sim-ticket" name="ticket" value="1000">
+            </div>
+          </div>
+        </div>
+        <button type="submit" class="sim-submit">ANALISAR OPORTUNIDADES</button>
+      </form>
+
+      <!-- Loading -->
+      <div class="sim-loading" id="simLoading">
+        <div class="sim-loading-step" data-step="1">
+          <span class="step-bullet"></span>
+          <span>Buscando empresas locais...</span>
+        </div>
+        <div class="sim-loading-step" data-step="2">
+          <span class="step-bullet"></span>
+          <span>Verificando presença digital...</span>
+        </div>
+        <div class="sim-loading-step" data-step="3">
+          <span class="step-bullet"></span>
+          <span>Analisando dados públicos...</span>
+        </div>
+        <div class="sim-loading-step" data-step="4">
+          <span class="step-bullet"></span>
+          <span>Identificando oportunidades...</span>
+        </div>
+        <div class="sim-loading-step" data-step="5">
+          <span class="step-bullet"></span>
+          <span>Preparando prévias de site...</span>
+        </div>
       </div>
-      <div class="problema-item reveal">
-        <div class="problema-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>
-        <div class="problema-text">Queria começar mas não sabe por onde. Cansou de assistir vídeo sem fim no YouTube. Queria algo que funcionasse de verdade.</div>
-      </div>
-      <div class="problema-item reveal">
-        <div class="problema-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>
-        <div class="problema-text">Nunca vendeu nada na vida. Não é programador, não é designer. Acha que não tem skill pra vender, mas quer tentar.</div>
-      </div>
-      <div class="problema-item reveal">
-        <div class="problema-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>
-        <div class="problema-text">CLT mata o dia. Quando chega em casa só quer dormir. Precisa de algo que funcione enquanto faz nada.</div>
+
+      <!-- Resultado -->
+      <div class="sim-result" id="simResult">
+        <div class="sim-metric-grid">
+          <div class="sim-metric">
+            <div class="sim-metric-num">187</div>
+            <div class="sim-metric-label">Empresas<br>encontradas</div>
+          </div>
+          <div class="sim-metric">
+            <div class="sim-metric-num">42</div>
+            <div class="sim-metric-label">Sem site<br>detectado</div>
+          </div>
+          <div class="sim-metric">
+            <div class="sim-metric-num">68</div>
+            <div class="sim-metric-label">Presença<br>fraca</div>
+          </div>
+          <div class="sim-metric">
+            <div class="sim-metric-num">31</div>
+            <div class="sim-metric-label">WhatsApp<br>público</div>
+          </div>
+          <div class="sim-metric">
+            <div class="sim-metric-num">18</div>
+            <div class="sim-metric-label">Oportunidades<br>fortes</div>
+          </div>
+        </div>
+
+        <div class="sim-potential" id="simPotential">
+          <h4>SE VOCÊ COBRAR <span id="simTicketLabel">R$ 1.000</span> POR SITE:</h4>
+          <div class="sim-potential-row"><span>1 venda</span><strong>+ R$ 1.000</strong></div>
+          <div class="sim-potential-row"><span>3 vendas</span><strong>+ R$ 3.000</strong></div>
+          <div class="sim-potential-row"><span>5 vendas</span><strong>+ R$ 5.000</strong></div>
+        </div>
+
+        <p class="sim-disclaimer">
+          Estimativa demonstrativa baseada no nicho e região simulados. A FraLib não garante vendas ou faturamento. Resultados dependem da execução, oferta, abordagem e follow-up.
+        </p>
+
+        <a href="#" onclick="window.location=CHECKOUT_URL;return false;" class="sim-submit" style="text-decoration:none;text-align:center;display:block;margin-top:20px;">
+          GERAR MINHAS PRIMEIRAS PRÉVIAS
+        </a>
       </div>
     </div>
   </div>
 </section>
 
-<!-- ===== SEÇÃO 4 — COMO FUNCIONA ===== -->
+<!-- ===== SEÇÃO 3 — DEMO: LEAD → SITE → ABORDAGEM ===== -->
+<section class="demo-section" id="demo">
+  <div class="container">
+    <h2 class="section-title reveal">VEJA O FLUXO COMPLETO EM MENOS DE 90 SEGUNDOS</h2>
+    <p class="section-sub reveal" style="text-align:center;margin:0 auto 40px;max-width:720px;color:var(--fl-text-muted);font-size:14px;">
+      A FraLib não entrega só uma lista. Ela transforma o lead em uma oportunidade visual para você abordar com algo pronto.
+    </p>
+
+    <div class="demo-wrapper">
+      <!-- Placeholder de vídeo -->
+      <div class="demo-video">
+        <div class="demo-play" aria-label="Reproduzir vídeo demo">
+          <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+        </div>
+        <div style="position:absolute;bottom:16px;left:20px;font-family:var(--fl-font-mono);font-size:10px;color:var(--fl-text-dim);letter-spacing:1px;">
+          [VIDEO_DEMO_90S] · 1:23
+        </div>
+      </div>
+
+      <!-- 7 Steps do fluxo -->
+      <div class="demo-steps">
+        <div class="demo-step">
+          <div class="demo-step-num">1</div>
+          <div class="demo-step-text">Escolha cidade + nicho</div>
+        </div>
+        <div class="demo-step">
+          <div class="demo-step-num">2</div>
+          <div class="demo-step-text">Veja empresas encontradas</div>
+        </div>
+        <div class="demo-step">
+          <div class="demo-step-num">3</div>
+          <div class="demo-step-text">Selecione um lead</div>
+        </div>
+        <div class="demo-step">
+          <div class="demo-step-num">4</div>
+          <div class="demo-step-text">Gere uma prévia de site</div>
+        </div>
+        <div class="demo-step">
+          <div class="demo-step-num">5</div>
+          <div class="demo-step-text">Gere a abordagem</div>
+        </div>
+        <div class="demo-step">
+          <div class="demo-step-num">6</div>
+          <div class="demo-step-text">Salve no CRM</div>
+        </div>
+        <div class="demo-step">
+          <div class="demo-step-num">7</div>
+          <div class="demo-step-text">Chame no WhatsApp</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="text-align:center;margin-top:40px;">
+      <a href="#" onclick="window.location=CHECKOUT_URL;return false;" class="btn-hero-primary" style="text-decoration:none;">
+        QUERO TESTAR ESSE FLUXO
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ===== SEÇÃO 4 — ANTES vs COM FRALIB ===== -->
+<section class="ba-section" id="antes-depois">
+  <div class="container">
+    <h2 class="section-title reveal">PROSPECTAR MANUALMENTE LIMITA SUA ESCALA</h2>
+
+    <div class="ba-grid">
+      <!-- Coluna 1: Hoje -->
+      <div class="ba-col before reveal">
+        <h3>HOJE, FAZENDO TUDO NA MÃO</h3>
+        <ul>
+          <li>Você abre o Google</li>
+          <li>Procura empresa por empresa</li>
+          <li>Analisa se tem site</li>
+          <li>Tenta entender se vale abordar</li>
+          <li>Escreve uma mensagem fria</li>
+          <li>Cria site ou proposta só depois que alguém responde</li>
+          <li>Perde horas em tarefas repetitivas</li>
+        </ul>
+      </div>
+
+      <!-- Coluna 2: Com FraLib -->
+      <div class="ba-col after reveal">
+        <h3>COM A FRALIB</h3>
+        <ul>
+          <li>Você escolhe cidade e nicho</li>
+          <li>A FraLib encontra oportunidades</li>
+          <li>A IA cria uma prévia de site</li>
+          <li>A plataforma gera a abordagem</li>
+          <li>Você chama o lead mostrando algo concreto</li>
+          <li>Tudo fica organizado no painel</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="ba-closer reveal">
+      O problema não é só criar site com IA. O problema é <strong>saber quem abordar e como chamar atenção logo no primeiro contato.</strong>
+    </div>
+
+    <div style="text-align:center;margin-top:36px;">
+      <a href="#" onclick="window.location=CHECKOUT_URL;return false;" class="btn-hero-primary" style="text-decoration:none;">
+        PARAR DE PROSPECTAR NO ESCURO
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ===== SEÇÃO 5 — COMO FUNCIONA ===== -->
 <section class="como-funciona" id="como-funciona" style="background:transparent">
   <div class="container">
-    <h2 class="section-title reveal">15 MINUTOS POR DIA. R$ 1.500 NO PRIMEIRO MÊS.</h2>
-    <p class="section-sub reveal" style="text-align:center;margin:0 auto 36px;max-width:680px;color:var(--fl-text-muted);font-size:14px;">Voce nao precisa saber programar, prospectar ou vender. A IA faz tudo. Voce so fecha.</p>
+    <h2 class="section-title reveal">A FRALIB FAZ O CAMINHO MAIS DIFÍCIL ANTES DA VENDA</h2>
+    <p class="section-sub reveal" style="text-align:center;margin:0 auto 48px;max-width:680px;color:var(--fl-text-muted);font-size:14px;">
+      Você escolhe cidade e nicho. A plataforma encontra o lead, gera a prévia do site e cria a abordagem. Você só precisa chamar.
+    </p>
+
     <div class="steps-grid">
-      <div class="steps-line"></div>
+      <!-- Card 1 -->
       <div class="step-card snake-card reveal">
         <div class="snake-top"></div><div class="snake-bottom"></div>
         <div class="snake-card-inner">
           <div class="step-number">1</div>
-          <div class="step-label">A IA ENCONTRA</div>
-          <div class="step-title">Acha os negocios pra voce</div>
-          <div class="step-desc">A IA varre o Google Maps da sua cidade e acha pizzarias, clinicas, saloes — negocios que precisam de site mas nao tem. Mostra 187 leads em 15 segundos. Voce escolhe o nicho.</div>
+          <div class="step-label">ENCONTRA O LEAD</div>
+          <div class="step-title">Você escolhe cidade e nicho. A FraLib busca empresas locais com sinais de oportunidade, como ausência de site detectado ou presença digital fraca.</div>
         </div>
       </div>
+
+      <!-- Card 2 -->
       <div class="step-card snake-card reveal">
         <div class="snake-top"></div><div class="snake-bottom"></div>
         <div class="snake-card-inner">
           <div class="step-number">2</div>
-          <div class="step-label">A IA CRIA</div>
-          <div class="step-title">Site pronto em minutos</div>
-          <div class="step-desc">Site profissional feito pro negocio especifico. Com fotos, texto, WhatsApp, mapa. Nao e template — e site que parece feito a mao, pronto pra mandar pro cliente.</div>
+          <div class="step-label">CRIA A PRÉVIA DO SITE</div>
+          <div class="step-title">A IA usa dados públicos do negócio para montar uma prévia visual com nome, serviços, endereço, mapa e botão de WhatsApp.</div>
         </div>
       </div>
+
+      <!-- Card 3 -->
       <div class="step-card snake-card reveal">
         <div class="snake-top"></div><div class="snake-bottom"></div>
         <div class="snake-card-inner">
           <div class="step-number">3</div>
-          <div class="step-label">A IA FECHA</div>
-          <div class="step-title">Franz envia no WhatsApp</div>
-          <div class="step-desc">O Franz manda o site direto no WhatsApp do dono do negocio. Com mensagem personalizada. Follow-up automatico. Voce so responde quando o cliente te procura.</div>
+          <div class="step-label">GERA A ABORDAGEM</div>
+          <div class="step-title">Em vez de mandar "faço sites", você chama com uma demonstração pronta para despertar curiosidade.</div>
         </div>
       </div>
+    </div>
+
+    <!-- Exemplo de abordagem em callout -->
+    <div class="approach-callout reveal">
+      Exemplo de abordagem: <em>"Oi, montei uma prévia de como o site da sua empresa poderia ficar. Posso te mostrar?"</em>
+    </div>
+
+    <div style="text-align:center;margin-top:36px;">
+      <a href="#" onclick="window.location=CHECKOUT_URL;return false;" class="btn-hero-primary" style="text-decoration:none;">
+        GERAR UMA PRÉVIA AGORA
+      </a>
     </div>
   </div>
 </section>
 
-<!-- ===== SEÇÃO 5 — PRODUTO EM AÇÃO ===== -->
-<section class="produto" id="produto">
+<!-- ===== SEÇÃO 6 — EFEITO WOW NO WHATSAPP ===== -->
+<section class="wa-demo-section" id="whatsapp">
   <div class="container">
-    <h2 class="section-title reveal">VEJA O SISTEMA TRABALHANDO</h2>
-    <div class="produto-mockup reveal">
-      <div class="mockup-topbar">
-        <div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div>
-        <div class="mockup-url">app.fralib.com.br/admin.html</div>
-      </div>
-      <div class="mockup-body">
-        <div class="mockup-kanban">
-          <div class="kanban-header">
-            <div class="kanban-title">Pipeline de Vendas</div>
-            <div class="kanban-badge">12 leads</div>
-          </div>
-          <div class="kanban-cols">
-            <div class="col-novo">
-              <div class="col-title">Novo</div>
-              <div class="k-card"><div class="name">Barbearia Morais</div><div class="cat">Barbearia &bull; Curitiba</div></div>
-              <div class="k-card"><div class="name">Studio Ana K.</div><div class="cat">Estética &bull; SP</div></div>
-            </div>
-            <div class="col-criado">
-              <div class="col-title">Site Criado</div>
-              <div class="k-card"><div class="name">Clínica Dra. Lohr</div><div class="cat">Dermatologia &bull; PR</div></div>
-              <div class="k-card"><div class="name">Pet Shop Amigo</div><div class="cat">Pet Shop &bull; MG</div></div>
-            </div>
-            <div class="col-enviado">
-              <div class="col-title">Enviado</div>
-              <div class="k-card"><div class="name">Restaurante Sabor</div><div class="cat">Restaurante &bull; RJ</div></div>
-            </div>
-          </div>
-        </div>
-        <div class="mockup-wa">
-          <div class="wa-header">
-            <div class="wa-avatar">F</div>
-            <div><div class="wa-name">SDR Franz</div><div class="wa-status">online</div></div>
-          </div>
-          <div class="wa-msgs">
-            <div class="wa-msg s">Olá! Sou o Franz, da FraLib. Vi que a Barbearia Morais ainda não tem um site profissional.<div class="wa-time">10:32</div></div>
-            <div class="wa-msg s">Criei uma demonstração para você avaliar: <span class="wa-link">barbearia-morais.fralib.site</span><div class="wa-time">10:32</div></div>
-            <div class="wa-msg r">Opa! Ficou muito bom! Quanto custa pra manter?<div class="wa-time">10:45</div></div>
-            <div class="wa-msg s">Que bom que gostou! Posso te explicar os planos e ajustar o site antes da publicação final.<div class="wa-time">10:46</div></div>
-            <div class="wa-typing"><span></span><span></span><span></span></div>
-          </div>
+    <h2 class="section-title reveal">VOCÊ NÃO VENDE SÓ FALANDO. VOCÊ VENDE MOSTRANDO.</h2>
+    <p class="section-sub reveal" style="text-align:center;margin:0 auto 40px;max-width:720px;color:var(--fl-text-muted);font-size:14px;">
+      A maioria dos freelancers manda mensagens iguais. A FraLib ajuda você a chegar com uma prévia pronta, aumentando a curiosidade e a percepção de valor.
+    </p>
+
+    <div class="wa-mockup reveal">
+      <div class="wa-demo-header">
+        <div class="wa-demo-avatar">V</div>
+        <div>
+          <div class="wa-demo-name">Você</div>
+          <div class="wa-demo-status">online · conversa com cliente</div>
         </div>
       </div>
+
+      <div class="wa-demo-msgs">
+        <div class="wa-demo-msg s">
+          Oi, tudo bem? Vi que sua empresa aparece no Google, mas não encontrei um site profissional.
+          <div class="wa-demo-time">10:32</div>
+        </div>
+        <div class="wa-demo-msg s">
+          Montei uma prévia gratuita de como o site de vocês poderia ficar. Posso te mandar?
+          <div class="wa-demo-time">10:33</div>
+        </div>
+        <div class="wa-demo-msg r">
+          Pode sim, manda aí.
+          <div class="wa-demo-time">10:41</div>
+        </div>
+        <div class="wa-demo-msg s">
+          Aqui está a prévia: pizzaria-sao-jose.fralib.site
+          <div class="wa-demo-time">10:42</div>
+        </div>
+        <div class="wa-demo-msg r">
+          Ficou muito bom. Quanto ficaria pra deixar no ar?
+          <div class="wa-demo-time">10:50</div>
+        </div>
+      </div>
+    </div>
+
+    <p class="wa-demo-disclaimer reveal">
+      Conversa ilustrativa. Resultados dependem da abordagem, nicho e execução.
+    </p>
+
+    <div style="text-align:center;margin-top:28px;">
+      <a href="#" onclick="window.location=CHECKOUT_URL;return false;" class="btn-hero-primary" style="text-decoration:none;">
+        USAR ABORDAGEM COM EFEITO WOW
+      </a>
     </div>
   </div>
 </section>
 
-<!-- ===== SEÇÃO 5C — DEPOIMENTOS SCROLLER HORIZONTAL ===== -->
-<section class="funcionalidades" style="padding:80px 0;overflow:hidden;">
+<!-- ===== SEÇÃO 7 — O QUE VOCÊ RECEBE ===== -->
+<section class="funcionalidades" id="beneficios" style="background:transparent">
   <div class="container">
-    <h2 class="section-title reveal" style="margin-bottom:16px;">VEJA QUEM ESTÁ GANHANDO RENDA EXTRA</h2>
-    <p class="section-sub reveal" style="text-align:center;margin:0 auto 24px;max-width:720px;color:var(--fl-text-muted);">6 historias de pessoas comuns. Resultados comuns. Role pra ver mais.</p>
-  </div>
-  <div class="depoimentos-scroller">
-    <div class="depoimentos-track">
-      <div class="depoimento-scroll-card tipo-confirmacao">
-        <div class="depoimento-foto" style="background-image:url('https://i.pravatar.cc/200?img=12')"></div>
-        <div class="depoimento-conteudo">
-          <span class="tipo-tag confirmacao">COMPROU</span>
-          <div class="contexto"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6" fill="#0a0714"/><circle cx="12" cy="12" r="2"/></svg>PRO · 2 meses atrás</div>
-          <blockquote>"Fechei 3 clientes na primeira semana. O Franz fez o que eu faria se tivesse 24h no dia. ROI no primeiro mês."</blockquote>
-          <div class="depoimento-autor-info">
-            <h4>Rafael Ferreira</h4>
-            <p>Dev full-stack · São Paulo</p>
-            <span class="metric">3 clientes / semana</span>
-          </div>
-        </div>
-      </div>
+    <h2 class="section-title reveal">TUDO PARA TRANSFORMAR DADOS LOCAIS EM OPORTUNIDADES DE VENDA</h2>
 
-      <div class="depoimento-scroll-card tipo-duvida">
-        <div class="depoimento-foto" style="background-image:url('https://i.pravatar.cc/200?img=23')"></div>
-        <div class="depoimento-conteudo">
-          <span class="tipo-tag duvida">TIVE DUVIDA</span>
-          <div class="contexto"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>STARTER · 6 meses atrás</div>
-          <blockquote>"Tava receoso de pagar R$97 pra testar. Mas resolvi — cancela em 1 clique. 3 meses depois tô no PRO e fechando 4 clientes/mês."</blockquote>
-          <div class="depoimento-autor-info">
-            <h4>Amanda Martins</h4>
-            <p>Designer · BH</p>
-            <span class="metric">4 clientes / mês</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="depoimento-scroll-card tipo-suspeita">
-        <div class="depoimento-foto" style="background-image:url('https://i.pravatar.cc/200?img=33')"></div>
-        <div class="depoimento-conteudo">
-          <span class="tipo-tag suspeita">ACHEI GOLPE</span>
-          <div class="contexto"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>PRO · 4 meses atrás</div>
-          <blockquote>"Parecia bom demais. 'Site em 24h, SDR automático' — já fui achando golpe. Mas testei com 1 lead só pra ver. Veio o site, veio a mensagem no Zap, veio o cliente."</blockquote>
-          <div class="depoimento-autor-info">
-            <h4>Marcos Costa</h4>
-            <p>Freelancer · POA</p>
-            <span class="metric">5 clientes / mês</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="depoimento-scroll-card tipo-resposta">
-        <div class="depoimento-foto" style="background-image:url('https://i.pravatar.cc/200?img=44')"></div>
-        <div class="depoimento-conteudo">
-          <span class="tipo-tag resposta">COMPREI PRO</span>
-          <div class="contexto"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>Resposta no Reclame Aqui</div>
-          <blockquote>"Respondeu em 10min no domingo. Resolveram meu bug em 1h. Suporte humano de verdade, não chatbot. Acima da média."</blockquote>
-          <div class="depoimento-autor-info">
-            <h4>Júlia Ribeiro</h4>
-            <p>Designer iniciante · Curitiba</p>
-            <span class="metric">Suporte top</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="depoimento-scroll-card tipo-recomendacao">
-        <div class="depoimento-foto" style="background-image:url('https://i.pravatar.cc/200?img=52')"></div>
-        <div class="depoimento-conteudo">
-          <span class="tipo-tag recomendacao">SÓ PRA ELA</span>
-          <div class="contexto"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 8a3 3 0 10-3-3"/><path d="M15 22v-4a3 3 0 00-3-3H6a3 3 0 00-3 3v4"/><circle cx="9" cy="8" r="1"/><path d="M15 22v-4a3 3 0 013-3h2a3 3 0 013 3v4"/><circle cx="18" cy="5" r="1"/></svg>DM privado · ontem</div>
-          <blockquote>"Não tava querendo contar pra ninguém pq é meu diferencial. Mas vou abrir mão — concorrente meu tá usando agora também."</blockquote>
-          <div class="depoimento-autor-info">
-            <h4>Diego Almeida</h4>
-            <p>Agência 5 pessoas · Recife</p>
-            <span class="metric">15 sites / mês</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="depoimento-scroll-card tipo-confirmacao">
-        <div class="depoimento-foto" style="background-image:url('https://i.pravatar.cc/200?img=49')"></div>
-        <div class="depoimento-conteudo">
-          <span class="tipo-tag confirmacao">CONFIRMO</span>
-          <div class="contexto"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>TRIAL → PRO · 1 mês atrás</div>
-          <blockquote>"Sou mãe, trabalho de casa, queria renda extra. R$4.800 no primeiro mês. Não é milagre mas é real — eu testei e deu certo."</blockquote>
-          <div class="depoimento-autor-info">
-            <h4>Patrícia Mendes</h4>
-            <p>Freelancer renda extra · Salvador</p>
-            <span class="metric">R$4.800/mês</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ===== SEÇÃO 6 — FUNCIONALIDADES ===== -->
-<section class="funcionalidades" id="funcionalidades" style="background:transparent">
-  <div class="container">
-    <h2 class="section-title reveal">TUDO QUE VOCÊ PRECISA PARA VENDER SITES SEM CRIAR NADA</h2>
     <div class="feat-grid">
       <div class="feat-card snake-card reveal"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
-        <div class="feat-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M12 2a4 4 0 014 4v2a4 4 0 01-8 0V6a4 4 0 014-4z"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><path d="M9 18h6"/><path d="M12 18v4"/></svg></div>
-        <div class="feat-title">SDR Franz Autônomo</div>
-        <div class="feat-desc">Vendedor virtual dos planos Trial, Pro e Agency que aborda leads pelo WhatsApp com mensagens personalizadas.</div>
+        <div class="feat-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg></div>
+        <div class="feat-title">Busca de leads locais</div>
+        <div class="feat-desc">Encontre empresas por cidade e nicho, sem ficar pesquisando manualmente.</div>
       </div></div>
+
       <div class="feat-card snake-card reveal"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
-        <div class="feat-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="10" r="3"/><path d="M12 2a8 8 0 00-8 8c0 5.4 8 12 8 12s8-6.6 8-12a8 8 0 00-8-8z"/></svg></div>
-        <div class="feat-title">Prospecção via Google Maps</div>
-        <div class="feat-desc">Encontra negócios locais que não possuem site profissional automaticamente.</div>
+        <div class="feat-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M12 2l2.4 7.4H22l-6.2 4.5L18.2 22 12 17.5 5.8 22l2.4-8.1L2 9.4h7.6z"/></svg></div>
+        <div class="feat-title">Análise de oportunidade</div>
+        <div class="feat-desc">Veja sinais que ajudam a decidir quem vale abordar primeiro.</div>
       </div></div>
+
       <div class="feat-card snake-card reveal"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
         <div class="feat-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></div>
-        <div class="feat-title">Kanban CRM Visual</div>
-        <div class="feat-desc">Pipeline completo com drag &amp; drop. Do lead até o fechamento.</div>
+        <div class="feat-title">Prévia de site com IA</div>
+        <div class="feat-desc">Gere uma demonstração visual baseada nos dados públicos do negócio.</div>
       </div></div>
+
       <div class="feat-card snake-card reveal"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
-        <div class="feat-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="10"/></svg></div>
-        <div class="feat-title">Follow-up Automático</div>
-        <div class="feat-desc">Mensagens de acompanhamento nos momentos certos para fechar mais vendas.</div>
+        <div class="feat-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></div>
+        <div class="feat-title">Abordagem personalizada</div>
+        <div class="feat-desc">Receba mensagens prontas para iniciar conversa no WhatsApp.</div>
       </div></div>
+
       <div class="feat-card snake-card reveal"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
-        <div class="feat-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M15 3h6v6"/><path d="M10 14L21 3"/><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/></svg></div>
-        <div class="feat-title">Publicação Validada</div>
-        <div class="feat-desc">Site publicado com gate visual, SEO, LGPD, mapa e link profissional pronto para enviar.</div>
+        <div class="feat-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M3 3h18v18H3z"/><path d="M3 9h18M9 3v18"/></svg></div>
+        <div class="feat-title">CRM simples</div>
+        <div class="feat-desc">Organize leads por status: novo, site criado, enviado, respondeu, proposta, fechado.</div>
       </div></div>
+
       <div class="feat-card snake-card reveal"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
-        <div class="feat-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></div>
-        <div class="feat-title">Download do HTML</div>
-        <div class="feat-desc">Baixe o código fonte de qualquer site gerado. O arquivo é seu.</div>
+        <div class="feat-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></div>
+        <div class="feat-title">Grupo WhatsApp</div>
+        <div class="feat-desc">Acesso ao grupo para suporte, networking, troca de nichos, scripts e aprendizados.</div>
       </div></div>
+    </div>
+
+    <div style="text-align:center;margin-top:40px;">
+      <a href="#" onclick="window.location=CHECKOUT_URL;return false;" class="btn-hero-primary" style="text-decoration:none;">
+        ENTRAR NO BETA POR R$97
+      </a>
     </div>
   </div>
 </section>
 
-<!-- ===== SEÇÃO 6B — EXEMPLOS POR NICHO (MOVIDO PARA DEPOIS DE FUNCIONALIDADES) ===== -->
-<section class="para-quem" id="exemplos">
+<!-- ===== SEÇÃO 8 — NICHOS E TICKETS POSSÍVEIS ===== -->
+<section class="para-quem" id="nichos" style="background:transparent">
   <div class="container">
-    <h2 class="section-title reveal">QUANTO DA PRA GANHAR EM CADA NICHO?</h2>
-    <p class="section-sub reveal" style="text-align:center;margin:0 auto 48px;max-width:720px;color:var(--fl-text-muted);">Voce escolhe o nicho da sua cidade. A IA acha os clientes, voce fecha. Veja quanto cada negocio paga:</p>
+    <h2 class="section-title reveal">ESCOLHA UM NICHO E DEFINA QUANTO QUER COBRAR</h2>
+    <p class="section-sub reveal" style="text-align:center;margin:0 auto 48px;max-width:720px;color:var(--fl-text-muted);font-size:14px;">
+      A FraLib não define seu preço. Ela ajuda você a encontrar oportunidades, criar a prévia e iniciar a abordagem. Você decide sua oferta.
+    </p>
+
     <div class="quem-grid">
       <div class="quem-card snake-card reveal"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
-        <div class="quem-check" style="background:var(--gold-dim);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--gold);"><path d="M3 11h18M5 11V8a7 7 0 0114 0v3M6 11v8a2 2 0 002 2h8a2 2 0 002-2v-8M9 16h6"/></svg></div>
-        <div class="quem-title">Pizzaria / Padaria / Restaurante</div>
-        <div class="quem-desc"><strong style="color:var(--gold);">R$ 500 a R$ 1.500</strong> por site. Volume fácil: uma cidade tem dezenas. Site com cardápio, localização, WhatsApp, fotos.</div>
+        <div class="quem-check"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11h18M5 11V8a7 7 0 0114 0v3M6 11v8a2 2 0 002 2h8a2 2 0 002-2v-8"/></svg></div>
+        <div class="quem-title">Pizzarias, padarias e restaurantes</div>
+        <div class="quem-desc">Sites com cardápio, localização, WhatsApp e fotos.<br><strong style="color:var(--gold);">Exemplo de cobrança praticada no mercado: R$ 500 a R$ 1.500.</strong></div>
       </div></div>
+
       <div class="quem-card snake-card reveal"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
-        <div class="quem-check" style="background:var(--cyan-dim);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--cyan);"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0016.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 002 8.5c0 2.29 1.51 4.04 3 5.5l7 7z"/></svg></div>
-        <div class="quem-title">Clínica / Consultório / Estética</div>
-        <div class="quem-desc"><strong style="color:var(--cyan);">R$ 1.500 a R$ 3.000</strong> por site. Mais nichado, ticket alto. Site com serviços, agendamento, fotos do consultório.</div>
+        <div class="quem-check"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0016.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 002 8.5c0 2.29 1.51 4.04 3 5.5l7 7z"/></svg></div>
+        <div class="quem-title">Clínicas, consultórios e estética</div>
+        <div class="quem-desc">Sites com serviços, agendamento, localização e autoridade.<br><strong style="color:var(--cyan);">Exemplo de cobrança praticada no mercado: R$ 1.500 a R$ 3.000.</strong></div>
       </div></div>
+
       <div class="quem-card snake-card reveal"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
-        <div class="quem-check" style="background:rgba(147,51,234,0.12);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--fl-purple-300);"><path d="M6 3v12M18 3v12M3 6h6M15 6h6M3 12h6M15 12h6M3 18h6M15 18h6"/></svg></div>
-        <div class="quem-title">Salão / Barbearia / Manicure</div>
-        <div class="quem-desc"><strong style="color:var(--fl-purple-300);">R$ 500 a R$ 1.000</strong> por site. Volume altíssimo, conversão rápida. Site com portfólio, preços, agendamento.</div>
+        <div class="quem-check"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 10v6M4.22 4.22l4.24 4.24m7.07 7.07l4.24 4.24M1 12h6m10 0h6M4.22 19.78l4.24-4.24m7.07-7.07l4.24-4.24"/></svg></div>
+        <div class="quem-title">Salões, barbearias e manicures</div>
+        <div class="quem-desc">Sites com portfólio, serviços, preços e WhatsApp.<br><strong style="color:var(--fl-purple-300);">Exemplo de cobrança praticada no mercado: R$ 500 a R$ 1.000.</strong></div>
       </div></div>
+
       <div class="quem-card snake-card reveal"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
-        <div class="quem-check"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--cyan);"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div>
-        <div class="quem-title">Imobiliária / Corretor autônomo</div>
-        <div class="quem-desc"><strong style="color:var(--cyan);">R$ 1.500 a R$ 5.000</strong> por site. Ticket alto, ciclo de venda mais longo. Site com busca de imóveis.</div>
+        <div class="quem-check"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg></div>
+        <div class="quem-title">Prestadores de serviço</div>
+        <div class="quem-desc">Encanador, eletricista, dedetizadora, marceneiro e outros.<br><strong style="color:var(--gold);">Exemplo de cobrança praticada no mercado: R$ 500 a R$ 1.200.</strong></div>
       </div></div>
+
       <div class="quem-card snake-card reveal"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
-        <div class="quem-check" style="background:var(--gold-dim);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--gold);"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg></div>
-        <div class="quem-title">Prestador de serviço</div>
-        <div class="quem-desc"><strong style="color:var(--gold);">R$ 500 a R$ 1.200</strong> por site. Encanador, eletricista, dedetizadora, marceneiro. Volume gigante em qualquer cidade.</div>
-      </div></div>
-      <div class="quem-card snake-card reveal"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
-        <div class="quem-check" style="background:var(--cyan-dim);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--cyan);"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4zM3 6h18M16 10a4 4 0 01-8 0"/></svg></div>
-        <div class="quem-title">Loja física (roupa, sapato, decoração)</div>
-        <div class="quem-desc"><strong style="color:var(--cyan);">R$ 800 a R$ 2.000</strong> por site. Site com catálogo, localização, integração com WhatsApp Business.</div>
+        <div class="quem-check"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4zM3 6h18M16 10a4 4 0 01-8 0"/></svg></div>
+        <div class="quem-title">Lojas físicas</div>
+        <div class="quem-desc">Sites com catálogo, endereço, WhatsApp e fotos dos produtos.<br><strong style="color:var(--cyan);">Exemplo de cobrança praticada no mercado: R$ 800 a R$ 2.000.</strong></div>
       </div></div>
     </div>
-    <p class="section-sub reveal" style="text-align:center;margin:32px auto 0;max-width:680px;font-size:13px;color:var(--fl-text-muted);">Você pode rodar 1, 2 ou 10 nichos ao mesmo tempo — na mesma cidade ou em cidades diferentes.</p>
+
+    <p style="max-width:780px;margin:32px auto 0;padding:14px 20px;background:rgba(255,184,0,0.04);border:1px solid rgba(255,184,0,0.15);border-radius:var(--fl-r-md);font-size:12px;color:var(--fl-text-muted);font-style:italic;line-height:1.6;text-align:center;">
+      Os valores são exemplos de mercado e podem variar por cidade, nicho, qualidade da entrega e negociação. A FraLib não garante vendas ou faturamento.
+    </p>
+
+    <div style="text-align:center;margin-top:32px;">
+      <a href="#simulador" class="btn-hero-primary" style="text-decoration:none;">
+        SIMULAR UM NICHO NA MINHA CIDADE
+      </a>
+    </div>
   </div>
 </section>
 
-<!-- ===== SEÇÃO 7 — PARA QUEM ===== -->
-<section class="para-quem">
+<!-- ===== SEÇÃO 9 — PARA QUEM É ===== -->
+<section class="para-quem" id="para-quem">
   <div class="container">
-    <h2 class="section-title reveal">PRA QUEM A FRALIB É?</h2>
-    <div class="quem-grid">
-      <div class="quem-card snake-card reveal"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
+    <h2 class="section-title reveal">FEITO PARA QUEM QUER VENDER SERVIÇOS DIGITAIS COM MAIS VELOCIDADE</h2>
+
+    <div class="quem-grid" style="grid-template-columns:repeat(4,1fr);gap:16px;">
+      <div class="quem-card snake-card reveal"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner" style="padding:24px 20px;">
         <div class="quem-check"><svg viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
-        <div class="quem-title">Pra quem chega em casa sem energia</div>
-        <div class="quem-desc">CLT das 8h as 18h. Quando chega so quer dormir. Mas quer renda extra pra ter folga. Com 30 minutos por dia no celular, voce prospecta, fecha, embolsa.</div>
+        <div class="quem-title">Freelancer</div>
+        <div class="quem-desc">Para quem vende site, landing page ou serviço digital e quer encontrar oportunidades sem depender só de indicação.</div>
       </div></div>
-      <div class="quem-card snake-card reveal"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
+
+      <div class="quem-card snake-card reveal"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner" style="padding:24px 20px;">
         <div class="quem-check"><svg viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
-        <div class="quem-title">Pra mae solo / pai solo</div>
-        <div class="quem-desc">Nao tem babá. Nao tem tempo pra curso. Precisa ganhar dinheiro de casa, no celular, enquanto cuida dos filhos. A FraLib funciona no automatico.</div>
+        <div class="quem-title">Social media</div>
+        <div class="quem-desc">Para quem quer abrir conversa com empresas locais e oferecer site, presença digital, conteúdo ou recorrência.</div>
       </div></div>
-      <div class="quem-card snake-card reveal"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
+
+      <div class="quem-card snake-card reveal"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner" style="padding:24px 20px;">
         <div class="quem-check"><svg viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
-        <div class="quem-title">Pra quem precisa de renda agora</div>
-        <div class="quem-desc">Perdeu o emprego? Quer recomecar? A FraLib nao exige experiencia, nao exige diploma. So exige vontade. Muitos fecharam primeiro cliente na primeira semana.</div>
+        <div class="quem-title">Gestor de tráfego</div>
+        <div class="quem-desc">Para quem precisa de uma porta de entrada antes de vender anúncios, landing pages ou captação.</div>
       </div></div>
-      <div class="quem-card snake-card reveal"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
+
+      <div class="quem-card snake-card reveal"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner" style="padding:24px 20px;">
         <div class="quem-check"><svg viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
-        <div class="quem-title">Pra quem quer liberdade financeira</div>
-        <div class="quem-desc">Aposentado ou quer complementacao. O sistema e simples. Voce manda. Trabalha no seu ritmo. Sem chefe, sem horario fixo, sem desculpa pra chegar atrasado.</div>
+        <div class="quem-title">Agência pequena</div>
+        <div class="quem-desc">Para quem quer escalar prospecção e criar prévias sem sobrecarregar a equipe.</div>
       </div></div>
-      <div class="quem-card snake-card reveal"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
+
+      <div class="quem-card snake-card reveal"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner" style="padding:24px 20px;">
         <div class="quem-check"><svg viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
-        <div class="quem-title">Pra quem nunca vendeu nada</div>
-        <div class="quem-desc">Sem portfolio, sem network, sem experiencia. A FraLib te da a infraestrutura. Nao precisa ter fama — precisa querer.</div>
+        <div class="quem-title">Designer/criador</div>
+        <div class="quem-desc">Para quem cria sites e quer chegar na conversa com prévia pronta, em vez de abordagem genérica.</div>
+      </div></div>
+
+      <div class="quem-card snake-card reveal"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner" style="padding:24px 20px;">
+        <div class="quem-check"><svg viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <div class="quem-title">Iniciante</div>
+        <div class="quem-desc">Para quem ainda não sabe onde encontrar clientes e precisa de um caminho mais claro para começar.</div>
+      </div></div>
+
+      <div class="quem-card snake-card reveal"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner" style="padding:24px 20px;">
+        <div class="quem-check"><svg viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <div class="quem-title">Já usa IA</div>
+        <div class="quem-desc">Para quem usa tecnologia, mas ainda perde tempo fazendo busca, análise e abordagem na mão.</div>
       </div></div>
     </div>
   </div>
 </section>
 
-
-<!-- ===== SEÇÃO 7 — PARA QUEM ===== -->
-<section class="para-quem">
+<!-- ===== SEÇÃO 10 — PROVA DO BETA ===== -->
+<section class="beta-proof-section" id="prova-beta">
   <div class="container">
-    <h2 class="section-title reveal">FEITO PARA QUEM QUER RESULTADOS SEM COMPLICAÇÃO</h2>
-    <div class="quem-grid">
-      <div class="quem-card snake-card reveal"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
-        <div class="quem-check"><svg viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
-        <div class="quem-title">Renda Extra sem Programar</div>
-        <div class="quem-desc">Quer ganhar dinheiro vendendo sites mas não sabe escrever uma linha de código? O FraLib faz tudo por você.</div>
-      </div></div>
-      <div class="quem-card snake-card reveal"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
-        <div class="quem-check"><svg viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
-        <div class="quem-title">Agências que Querem Escalar</div>
-        <div class="quem-desc">Já tem agência e quer multiplicar sua capacidade sem contratar? Escale com IA.</div>
-      </div></div>
-      <div class="quem-card snake-card reveal"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
-        <div class="quem-check"><svg viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
-        <div class="quem-title">Operação de Vendas Solo</div>
-        <div class="quem-desc">Quer montar uma operação de vendas completa sem contratar equipe? Tenha um SDR 24/7.</div>
-      </div></div>
+    <h2 class="section-title reveal">O BETA JÁ ESTÁ RODANDO</h2>
+    <p class="section-sub reveal" style="text-align:center;margin:0 auto 40px;max-width:720px;color:var(--fl-text-muted);font-size:14px;">
+      A FraLib ainda está em evolução, mas já está sendo usada para testar buscas, prévias e abordagens com empresas locais.
+    </p>
+
+    <div class="beta-proof-grid reveal">
+      <div class="beta-proof-card">
+        <div class="beta-proof-num">40</div>
+        <div class="beta-proof-label">Usuários beta</div>
+      </div>
+      <div class="beta-proof-card">
+        <div class="beta-proof-num">+1.000</div>
+        <div class="beta-proof-label">Buscas feitas em 1 mês</div>
+      </div>
+      <div class="beta-proof-card">
+        <div class="beta-proof-num">+1.000</div>
+        <div class="beta-proof-label">Leads encontrados</div>
+      </div>
+      <div class="beta-proof-card">
+        <div class="beta-proof-num">2</div>
+        <div class="beta-proof-label">Vendas reportadas por usuários beta</div>
+      </div>
+    </div>
+
+    <p class="beta-proof-disclaimer reveal">
+      Resultados iniciais do beta. A FraLib não garante vendas ou faturamento. Os resultados dependem da execução, oferta, nicho, abordagem e follow-up de cada usuário.
+    </p>
+
+    <div style="text-align:center;margin-top:32px;">
+      <a href="#" onclick="window.location=CHECKOUT_URL;return false;" class="btn-hero-primary" style="text-decoration:none;">
+        FAZER PARTE DO BETA
+      </a>
     </div>
   </div>
 </section>
 
-<!-- ===== SEÇÃO 7B — TIMELINE PÓS-ASSINATURA ===== -->
-<section class="como-funciona" id="timeline" style="background:transparent">
+<!-- ===== SEÇÃO 11 — OFERTA BETA PRO ===== -->
+<section class="offer-section" id="oferta">
   <div class="container">
-    <h2 class="section-title reveal">DO ZERO AO PRIMEIRO R$ 1.500 — EM 7 DIAS</h2>
-    <p class="section-sub reveal" style="text-align:center;margin:0 auto 48px;max-width:720px;color:var(--fl-text-muted);">O que acontece na pratica, do momento que voce cria a conta ate o primeiro Pix no seu banco:</p>
-    <div class="timeline-grid">
-      <div class="timeline-step reveal">
-        <div class="day-icon">
-          <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="32" cy="32" r="28" stroke-opacity="0.3"/>
-            <path d="M32 18v14l10 5" stroke="currentColor" stroke-width="2.5"/>
-            <circle cx="32" cy="32" r="5" fill="currentColor"/>
-          </svg>
-        </div>
-        <div class="label">CRIA A CONTA</div>
-        <h4>15 minutos</h4>
-        <p>Voce abre a conta, escolhe nicho + cidade (ex: "pizzaria" + "Sao Paulo - Zona Sul"). A FraLib ja mostra: "Encontramos 187 pizzarias sem site na sua regiao."</p>
+    <h2 class="section-title reveal">ENTRE NO BETA FRALIB PRO POR R$97</h2>
+    <p class="section-sub reveal" style="text-align:center;margin:0 auto 40px;max-width:720px;color:var(--fl-text-muted);font-size:14px;">
+      Use o plano Pro por 30 dias, gere seus primeiros leads, crie prévias de site e teste a abordagem com efeito wow.
+    </p>
+
+    <div class="offer-card reveal">
+      <div class="offer-badge">MAIS ESCOLHIDO</div>
+      <div class="offer-title">BETA FRALIB PRO</div>
+
+      <div class="offer-price-row">
+        <span class="offer-price">R$ 97</span>
+        <span class="offer-price-old">R$ 197</span>
       </div>
-      <div class="timeline-step reveal">
-        <div class="day-icon">
-          <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M14 14h36v36H14z" rx="2"/>
-            <path d="M14 24h36"/>
-            <circle cx="22" cy="19" r="1" fill="currentColor"/>
-            <circle cx="28" cy="19" r="1" fill="currentColor"/>
-            <path d="M20 32h6M20 38h12M20 44h8"/>
-          </svg>
-        </div>
-        <div class="label">VOCE DORME, A FRALIB TRABALHA</div>
-        <h4>1 a 7 dias</h4>
-        <p>A IA cria site pra cada uma das 187 pizzarias. Envia mensagem no WhatsApp de cada uma. Voce abre o painel pela manha: 23 abriram, 7 responderam "quero ver".</p>
-      </div>
-      <div class="timeline-step reveal">
-        <div class="day-icon">
-          <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M10 14l8 22 8-14 8 14 8-22"/>
-            <circle cx="18" cy="22" r="2" fill="currentColor"/>
-            <circle cx="26" cy="36" r="2" fill="currentColor"/>
-            <circle cx="34" cy="22" r="2" fill="currentColor"/>
-            <circle cx="42" cy="36" r="2" fill="currentColor"/>
-          </svg>
-        </div>
-        <div class="label">PRIMEIROS RESPONDEM</div>
-        <h4>5-7% querem ver</h4>
-        <p>"Quero ver", "Quanto custa?", "Pode mandar". Esses vao pra sua fila. Voce so abre o WhatsApp, manda a proposta, ajusta o que precisar.</p>
-      </div>
-      <div class="timeline-step reveal" style="background:linear-gradient(135deg,rgba(0,255,179,0.08),rgba(147,51,234,0.08));border-color:var(--fl-border-hi);">
-        <div class="day-icon">
-          <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M32 8l6 12 14 2-10 10 2 14-12-6-12 6 2-14-10-10 14-2z"/>
-            <path d="M32 20v8M28 28h8" stroke-width="2.5"/>
-          </svg>
-        </div>
-        <div class="label">PRIMEIRO PIX</div>
-        <h4>R$ 800 a R$ 1.500</h4>
-        <p>Voce ajusta o site, manda proposta por WhatsApp. Cliente aceita. Pix cai na sua conta. <strong style="color:var(--cyan);">100% do lucro e seu. Sem chefe, sem dividir.</strong></p>
-      </div>
+      <p class="offer-period">no primeiro mês · depois <strong>R$ 197/mês</strong></p>
+
+      <ul class="offer-features">
+        <li>Acesso imediato ao SaaS</li>
+        <li>Busca de leads locais</li>
+        <li>Geração de prévias de site</li>
+        <li>Abordagens com IA</li>
+        <li>CRM simples</li>
+        <li>Grupo WhatsApp</li>
+        <li>Suporte de ativação</li>
+        <li>Garantia de 30 dias</li>
+      </ul>
+
+      <a href="#" onclick="window.location=CHECKOUT_URL;return false;" class="offer-cta">
+        ENTRAR NO BETA POR R$97
+      </a>
+
+      <p class="offer-microcopy">
+        Pagamento seguro · <span>Acesso imediato</span> · Cancele quando quiser
+      </p>
     </div>
-    <p class="section-sub reveal" style="text-align:center;margin:32px auto 0;max-width:720px;font-size:13px;color:var(--fl-text-muted);">A primeira venda pode acontecer na semana 1. Mas e mais comum entre semana 2 e 4 — porque o ciclo do WhatsApp tem retorno gradual. <strong style="color:var(--fl-text);">Nao e magica. E processo. Mas funciona.</strong></p>
   </div>
 </section>
 
-<style>
-.team-grid{
-  display:grid;
-  grid-template-columns:repeat(3,1fr);
-  gap:20px;
-  max-width:1100px;
-  margin:0 auto;
-}
-@media(max-width:900px){.team-grid{grid-template-columns:1fr}}
-.team-card{
-  background:var(--fl-bg-card);
-  border:1px solid var(--fl-border);
-  text-align:center;
-  position:relative;
-}
-.team-card .snake-card-inner{padding:32px 24px}
-.team-avatar{
-  width:88px;height:88px;border-radius:50%;
-  margin:0 auto 16px;
-  display:flex;align-items:center;justify-content:center;
-  box-shadow:0 0 30px rgba(147,51,234,0.3);
-}
-.team-name{
-  font-family:var(--fl-font-brand);
-  font-size:14px;color:var(--fl-text);margin-bottom:4px;
-}
-.team-role{
-  font-family:var(--fl-font-mono);
-  font-size:10px;color:var(--fl-purple-300);
-  letter-spacing:1px;margin-bottom:16px;text-transform:uppercase;
-}
-.team-bio{
-  font-size:13px;color:var(--fl-text-muted);
-  line-height:1.7;font-style:italic;margin-bottom:12px;
-}
-.team-meta{
-  font-family:var(--fl-font-mono);
-  font-size:10px;color:var(--cyan);
-  padding:6px 10px;
-  background:rgba(0,255,179,0.05);
-  border:1px solid rgba(0,255,179,0.15);
-  display:inline-block;
-}
-.team-commit{
-  margin-top:48px;
-  text-align:center;
-  max-width:720px;
-  margin-left:auto;margin-right:auto;
-  padding:24px;
-  background:var(--fl-bg-card);
-  border:1px solid var(--fl-border);
-  border-left:3px solid var(--cyan);
-}
-.team-commit p{
-  font-size:15px;color:var(--fl-text-muted);
-  line-height:1.7;margin-bottom:12px;
-}
-.team-commit p:last-child{margin-bottom:0}
-.team-commit strong{color:var(--cyan)}
+<!-- ===== SEÇÃO 12 — PLANOS ===== -->
+<section class="planos" id="planos" style="background:transparent">
+  <div class="container">
+    <h2 class="section-title reveal">PLANOS FRA LIB</h2>
+    <p class="section-sub reveal" style="text-align:center;margin:0 auto 24px;max-width:680px;">Comece com o Trial, escale com o Beta Pro, ou domine o mercado com o Agency.</p>
 
-/* ============================================================
-   DEPOIMENTOS SCROLLTELLER (animacao automatica + drag)
-   ============================================================ */
-.depoimentos-scroller{
-  position:relative;
-  overflow:hidden;
-  padding:40px 32px 32px;
-  margin:0 -32px;
-  scrollbar-width:none;
-  -ms-overflow-style:none;
-}
-.depoimentos-scroller::-webkit-scrollbar{display:none}
-.depoimentos-track{
-  display:flex;
-  gap:24px;
-  width:max-content;
-  padding:8px 0;
-  animation:scrollteller 50s linear infinite;
-}
-.depoimentos-scroller:hover .depoimentos-track{
-  animation-play-state:paused;
-}
-@keyframes scrollteller{
-  0%{transform:translateX(0)}
-  100%{transform:translateX(-50%)}
-}
-.depoimento-scroll-card{
-  flex:0 0 420px;
-  background:var(--fl-bg-card);
-  border:1px solid var(--fl-border);
-  padding:24px;
-  display:flex;
-  gap:14px;
-  align-items:flex-start;
-  transition:all .3s var(--fl-ease);
-  position:relative;
-}
-.depoimento-scroll-card::before{
-  content:'"';
-  position:absolute;
-  top:4px;
-  right:18px;
-  font-size:48px;
-  color:var(--fl-purple);
-  opacity:0.1;
-  font-family:serif;
-  line-height:1;
-}
-.depoimento-scroll-card.tipo-duvida{
-  border-left:3px solid var(--gold);
-}
-.depoimento-scroll-card.tipo-suspeita{
-  border-left:3px solid var(--fl-danger);
-}
-.depoimento-scroll-card.tipo-confirmacao{
-  border-left:3px solid var(--fl-success);
-}
-.depoimento-scroll-card.tipo-resposta{
-  border-left:3px solid var(--cyan);
-}
-.depoimento-scroll-card:hover{
-  border-color:var(--fl-purple);
-  box-shadow:var(--fl-glow-sm);
-  transform:translateY(-4px);
-}
-.depoimento-foto{
-  width:60px;
-  height:60px;
-  border-radius:50%;
-  background-size:cover;
-  background-position:center;
-  flex-shrink:0;
-  border:2px solid var(--fl-border);
-  background-color:var(--fl-bg-surface);
-}
-.depoimento-conteudo{flex:1;min-width:0;min-height:180px}
-.depoimento-conteudo .contexto{
-  font-size:11px;
-  font-family:var(--fl-font-mono);
-  color:var(--fl-text-dim);
-  text-transform:uppercase;
-  letter-spacing:1px;
-  margin-bottom:8px;
-}
-.depoimento-conteudo .contexto .emoji{
-  color:var(--fl-text);
-  margin-right:6px;
-}
-.depoimento-scroll-card blockquote{
-  font-size:13px;
-  line-height:1.6;
-  color:var(--fl-text);
-  font-style:italic;
-  margin-bottom:12px;
-}
-.depoimento-autor-info h4{
-  font-size:13px;
-  font-weight:700;
-  color:var(--fl-text);
-  margin-bottom:2px;
-}
-.depoimento-autor-info p{
-  font-size:11px;
-  color:var(--fl-text-muted);
-  margin-bottom:6px;
-}
-.depoimento-autor-info .metric{
-  display:inline-block;
-  font-family:var(--fl-font-mono);
-  font-size:11px;
-  color:var(--cyan);
-  padding:3px 8px;
-  background:rgba(0,255,179,0.1);
-  border:1px solid rgba(0,255,179,0.25);
-  font-weight:700;
-}
+    <div class="planos-grid" style="grid-template-columns:repeat(3,1fr);">
+      <!-- TRIAL -->
+      <div class="plano-card reveal">
+        <div class="plano-name">TRIAL</div>
+        <div class="plano-price">Grátis</div>
+        <p style="color:var(--fl-purple-300);font-size:11px;margin:8px 0;font-weight:700;">PARA TESTAR O CONCEITO</p>
+        <ul class="plano-features">
+          <li>1 prévia de site</li>
+          <li>10 leads limitados</li>
+          <li>1 abordagem gerada</li>
+          <li>Acesso limitado ao painel</li>
+        </ul>
+        <a href="#" onclick="window.location=TRIAL_URL;return false;" class="btn btn-outline" style="margin-top:20px;width:100%;text-decoration:none;">TESTAR GRÁTIS</a>
+      </div>
 
-/* Tags de tipo do comentario */
-.tipo-tag{
-  display:inline-block;
-  font-size:10px;
-  font-family:var(--fl-font-mono);
-  padding:3px 8px;
-  border-radius:0;
-  margin-bottom:8px;
-  letter-spacing:1px;
-  text-transform:uppercase;
-  font-weight:700;
-}
-.tipo-tag.duvida{background:rgba(255,184,0,0.15);color:var(--gold);border:1px solid var(--gold)}
-.tipo-tag.suspeita{background:rgba(239,68,68,0.15);color:var(--fl-danger);border:1px solid var(--fl-danger)}
-.tipo-tag.confirmacao{background:rgba(34,197,94,0.15);color:var(--fl-success);border:1px solid var(--fl-success)}
-.tipo-tag.resposta{background:rgba(0,255,179,0.15);color:var(--cyan);border:1px solid var(--cyan)}
-.tipo-tag.recomendacao{background:rgba(147,51,234,0.15);color:var(--fl-purple-light);border:1px solid var(--fl-purple)}
+      <!-- BETA PRO (DESTAQUE) -->
+      <div class="plano-card destaque reveal">
+        <div class="plano-name">BETA PRO</div>
+        <div class="plano-price">R$ 97<span>/mês</span></div>
+        <p style="color:var(--gold);font-size:11px;margin:8px 0;font-weight:700;">MAIS ESCOLHIDO</p>
+        <div class="plano-period" style="font-size:12px;margin-bottom:16px;">no primeiro mês · depois R$ 197/mês</div>
+        <ul class="plano-features">
+          <li>Leads locais</li>
+          <li>Prévias de site</li>
+          <li>Abordagens com IA</li>
+          <li>CRM</li>
+          <li>Grupo WhatsApp</li>
+          <li>Suporte de ativação</li>
+          <li>Garantia 30 dias</li>
+        </ul>
+        <a href="#" onclick="window.location=CHECKOUT_URL;return false;" class="btn btn-yellow" style="margin-top:20px;width:100%;text-decoration:none;">ENTRAR NO BETA</a>
+        <p style="font-size:9px;color:#A16207;margin-top:12px;text-align:center;">30 dias de garantia incondicional.</p>
+      </div>
 
-/* ============================================================
-   SCROLLTELLER COM DRAG (mouse + touch)
-   ============================================================ */
-.depoimentos-scroller.dragging{
-  cursor:grabbing;
-  scroll-snap-type:none;
-  scroll-behavior:auto;
-}
-</style>
+      <!-- AGENCY -->
+      <div class="plano-card reveal">
+        <div class="plano-name">AGENCY</div>
+        <div class="plano-price">R$ 497<span>/mês</span></div>
+        <p style="color:var(--cyan);font-size:11px;margin:8px 0;font-weight:700;">PARA OPERAÇÃO MAIOR OU REVENDA</p>
+        <ul class="plano-features">
+          <li>Volume maior de buscas</li>
+          <li>Múltiplas cidades e nichos</li>
+          <li>Subcontas</li>
+          <li>Prioridade na fila</li>
+          <li>Suporte avançado</li>
+        </ul>
+        <a href="#" onclick="window.location=WHATSAPP_URL;return false;" class="btn btn-outline" style="margin-top:20px;width:100%;text-decoration:none;border-color:var(--fl-purple-300);">FALAR COM A EQUIPE</a>
+      </div>
+    </div>
+  </div>
+</section>
 
+<!-- ===== SEÇÃO 13 — GARANTIA ===== -->
+<section class="guarantee-section" id="garantia">
+  <div class="container">
+    <h2 class="section-title reveal">TESTE SEM RISCO POR 30 DIAS</h2>
 
-<!-- ===== SEÇÃO 9 — FAQ ===== -->
+    <div class="guarantee-card reveal">
+      <div class="guarantee-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          <polyline points="9 12 11 14 15 10"/>
+        </svg>
+      </div>
+      <div class="guarantee-content">
+        <h3>Garantia incondicional de 30 dias</h3>
+        <p>Entre, configure sua primeira busca, gere seu primeiro lead, crie sua primeira prévia e veja se a FraLib faz sentido para sua operação. Se não gostar, devolvemos seu dinheiro dentro de 30 dias.</p>
+      </div>
+    </div>
+
+    <div style="text-align:center;margin-top:32px;">
+      <a href="#" onclick="window.location=CHECKOUT_URL;return false;" class="btn-hero-primary" style="text-decoration:none;">
+        COMEÇAR COM GARANTIA
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ===== SEÇÃO 14 — FAQ ===== -->
 <section class="faq" id="faq">
   <div class="container">
     <h2 class="section-title reveal">PERGUNTAS FREQUENTES</h2>
@@ -2660,323 +3329,167 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
         <button class="faq-question" aria-expanded="false">Preciso saber programar?
           <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
         </button>
-        <div class="faq-answer"><div class="faq-answer-inner">Não. O sistema faz tudo automaticamente. Você só define o nicho e a cidade — o FraLib cuida do resto.</div></div>
+        <div class="faq-answer"><div class="faq-answer-inner">Não. A FraLib foi pensada para quem quer usar IA para encontrar oportunidades, criar prévias de site e iniciar abordagens sem código.</div></div>
       </div>
+
       <div class="faq-item reveal">
-        <button class="faq-question" aria-expanded="false">Meu WhatsApp pode ser banido?
+        <button class="faq-question" aria-expanded="false">A FraLib garante vendas?
           <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
         </button>
-        <div class="faq-answer"><div class="faq-answer-inner">O WhatsApp/SDR fica disponível no Trial ativo e nos planos Pro e Agency. O sistema usa cadência controlada, mensagens personalizadas e limites operacionais para reduzir risco.</div></div>
+        <div class="faq-answer"><div class="faq-answer-inner">Não. A FraLib entrega ferramentas para encontrar leads, criar prévias e gerar abordagens. Vendas dependem da execução, oferta, nicho, preço e follow-up.</div></div>
       </div>
+
       <div class="faq-item reveal">
-        <button class="faq-question" aria-expanded="false">Como funciona o pagamento?
+        <button class="faq-question" aria-expanded="false">A prévia é o site oficial do cliente?
           <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
         </button>
-        <div class="faq-answer"><div class="faq-answer-inner">Assinatura mensal via cartão ou PIX. Cancele quando quiser, sem multa e sem burocracia.</div></div>
+        <div class="faq-answer"><div class="faq-answer-inner">Não. É uma demonstração/prévia criada com base em dados públicos para mostrar como o site poderia ficar.</div></div>
       </div>
+
       <div class="faq-item reveal">
-        <button class="faq-question" aria-expanded="false">Qual a diferença entre Trial, Starter, Pro e Agency?
+        <button class="faq-question" aria-expanded="false">Posso usar para vender automação também?
           <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
         </button>
-        <div class="faq-answer"><div class="faq-answer-inner">Trial libera 1 pipeline completa com site e abordagem Franz. Starter tem sites ilimitados com cooldown de 60 minutos, sem SDR automático. Pro reduz o cooldown para 30 minutos, adiciona SDR Franz com retries e prioridade alta. Agency remove cooldown e amplia a operação para volume.</div></div>
+        <div class="faq-answer"><div class="faq-answer-inner">Sim. Muitos usuários podem usar o site como porta de entrada e depois oferecer automações, atendimento no WhatsApp, CRM, captação de leads ou recorrência.</div></div>
+      </div>
+
+      <div class="faq-item reveal">
+        <button class="faq-question" aria-expanded="false">Posso começar mesmo sem experiência?
+          <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="faq-answer"><div class="faq-answer-inner">Sim. A plataforma ajuda no processo, mas você ainda precisa executar a abordagem e negociar com o cliente.</div></div>
+      </div>
+
+      <div class="faq-item reveal">
+        <button class="faq-question" aria-expanded="false">Quanto eu posso cobrar?
+          <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="faq-answer"><div class="faq-answer-inner">Você define seu preço. Na página mostramos exemplos de ticket por nicho, mas os valores variam por cidade, entrega e negociação.</div></div>
+      </div>
+
+      <div class="faq-item reveal">
+        <button class="faq-question" aria-expanded="false">Tem grupo de suporte?
+          <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="faq-answer"><div class="faq-answer-inner">Sim. Quem entra no beta recebe acesso ao grupo de WhatsApp para suporte, troca de experiências e orientação de uso.</div></div>
+      </div>
+
+      <div class="faq-item reveal">
+        <button class="faq-question" aria-expanded="false">Posso cancelar?
+          <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="faq-answer"><div class="faq-answer-inner">Sim. A assinatura é mensal e você pode cancelar quando quiser.</div></div>
       </div>
     </div>
   </div>
 </section>
 
-<!-- ===== SEÇÃO 8 — PLANOS ===== -->
-<section class="planos" id="planos" style="background:transparent">
+<!-- ===== SEÇÃO 15 — CTA FINAL / FORMULÁRIO ===== -->
+<section class="beta-section" id="cta-final">
   <div class="container">
-    <h2 class="section-title reveal">ESCOLHA SEU PLANO</h2>
-    <p class="section-sub reveal" style="text-align:center;margin:0 auto 24px;max-width:680px;">Comece com 1 pipeline grátis. Escale quando quiser. Cancele quando quiser.</p>
-    <p class="section-sub reveal" style="text-align:center;margin:0 auto 36px;font-size:13px;color:var(--fl-text-muted);">Pagamento seguro via Mercado Pago com PIX e cartão.</p>
-    <div class="planos-grid">
-      <!-- TRIAL -->
-      <div class="plano-card reveal">
-        <div class="plano-name">TRIAL</div>
-        <div class="plano-price">Grátis</div>
-        <p style="color:var(--fl-purple-300);font-size:11px;margin:8px 0;font-weight:700;">1 SITE PRA TESTAR</p>
-        <div class="plano-period" style="font-size:12px;margin-bottom:16px;">Veja o sistema funcionando antes de investir.</div>
-        <ul class="plano-features">
-          <li>1 site gerado</li>
-          <li>Prospecção básica</li>
-          <li>SDR Franz (1 abordagem)</li>
-          <li>Fila com menor prioridade</li>
-          <li>Suporte comunidade</li>
-        </ul>
-        <a href="/login?signup=1&amp;plano=trial" class="btn btn-outline" style="margin-top:20px;width:100%;">TESTAR GRÁTIS</a>
+    <div class="beta-wrapper reveal">
+      <div style="text-align:center">
+        <span class="beta-spots"><span class="dot"></span> VAGAS DO BETA ABERTAS</span>
       </div>
-
-      <!-- STARTER -->
-      <div class="plano-card reveal">
-        <div class="plano-name">STARTER</div>
-        <div class="plano-price">R$97<span>/mês</span></div>
-        <p style="color:var(--fl-success);font-size:11px;margin:8px 0;font-weight:700;">7 DIAS DE GARANTIA</p>
-        <div class="plano-period" style="font-size:12px;margin-bottom:16px;">Pra validar e começar a faturar. Cooldown de 60 min entre sites.</div>
-        <ul class="plano-features">
-          <li>Sites ilimitados (cooldown 60min)</li>
-          <li>Prospecção automática completa</li>
-          <li>Sem disparo SDR automático</li>
-          <li>Dashboard básico</li>
-          <li>Hospedagem inclusa</li>
-          <li>Prioridade na fila (nível 2)</li>
-          <li>Suporte WhatsApp</li>
-        </ul>
-        <a href="/login?signup=1&amp;plano=starter" class="btn btn-outline" style="margin-top:20px;width:100%;">ASSINAR STARTER</a>
-      </div>
-
-      <!-- PRO -->
-      <div class="plano-card destaque reveal">
-        <div class="plano-name">PRO</div>
-        <div class="plano-price">R$197<span>/mês</span></div>
-        <p style="color:var(--gold);font-size:11px;margin:8px 0;font-weight:700;">MAIS POPULAR</p>
-        <div class="plano-period" style="font-size:12px;margin-bottom:16px;">Pra quem quer escalar rápido. Cooldown de 30 min. Prioridade alta.</div>
-        <ul class="plano-features">
-          <li>Sites ilimitados (cooldown 30min)</li>
-          <li>Prospecção avançada</li>
-          <li>SDR Franz com retries automáticos</li>
-          <li>Dashboard completo + analytics</li>
-          <li>Domínios próprios ilimitados</li>
-          <li>Prioridade alta na fila (nível 5)</li>
-          <li>Suporte prioritário</li>
-        </ul>
-        <a href="/login?signup=1&amp;plano=pro" class="btn btn-yellow" style="margin-top:20px;width:100%;">ASSINAR PRO</a>
-        <p style="font-size:9px;color:#A16207;margin-top:12px;text-align:center;">7 dias de garantia incondicional.</p>
-      </div>
-
-      <!-- AGENCY -->
-      <div class="plano-card reveal">
-        <div class="plano-name">AGENCY</div>
-        <div class="plano-price">R$497<span>/mês</span></div>
-        <p style="color:var(--cyan);font-size:11px;margin:8px 0;font-weight:700;">SEM COOLDOWN</p>
-        <div class="plano-period" style="font-size:12px;margin-bottom:16px;">Para operações e agências que precisam vender em volume sem esperar fila.</div>
-        <ul class="plano-features">
-          <li>Sites ilimitados (sem cooldown)</li>
-          <li>Infraestrutura com capacidade ampliada</li>
-          <li>Painel administrativo master</li>
-          <li>Subcontas para operação ou revenda</li>
-          <li>Agentes com identidade personalizada</li>
-          <li>Prioridade máxima na fila</li>
-          <li>Onboarding e suporte VIP</li>
-        </ul>
-        <a href="/login?signup=1&amp;plano=agency" class="btn btn-outline" style="margin-top:20px;width:100%;border-color:var(--fl-purple-300);">ASSINAR AGENCY</a>
-      </div>
-    </div>
-
-    <!-- GARANTIA 7 DIAS -->
-    <div class="guarantee-box reveal" style="max-width:720px;margin:48px auto 0;padding:24px;background:var(--fl-bg-card);border:1px solid rgba(0,204,142,0.3);border-radius:var(--fl-r-lg);text-align:center;display:flex;flex-direction:column;align-items:center;gap:16px;box-shadow:0 0 30px rgba(0,204,142,0.1);">
-      <div style="width:56px;height:56px;border-radius:50%;background:rgba(0,204,142,0.15);display:flex;align-items:center;justify-content:center;color:#00CC8E;box-shadow:0 0 20px rgba(0,204,142,0.2);">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><polyline points="9 12 11 14 15 10"></polyline></svg>
-      </div>
-      <div>
-        <h4 style="font-size:18px;font-weight:700;margin-bottom:8px;color:var(--fl-text);">Garantia Incondicional de 7 Dias</h4>
-        <p style="font-size:14px;color:var(--fl-text-muted);line-height:1.6;">Assine normalmente. Se você se arrepender em até 7 dias, devolvemos 100% do valor. Sem perguntas, sem burocracia.</p>
-      </div>
+      <h2 style="background:linear-gradient(135deg,var(--cyan),var(--fl-purple-300));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">PARE DE PROCURAR CLIENTE NO ESCURO</h2>
+      <p class="beta-subtitle">Simule sua região, encontre oportunidades locais e use a FraLib para gerar lead, prévia de site e abordagem pronta.</p>
+      <form id="ctaForm">
+        <div class="beta-field">
+          <label for="cta-name">Seu nome</label>
+          <input type="text" id="cta-name" name="name" placeholder="Ex: João Silva" required>
+        </div>
+        <div class="beta-field">
+          <label for="cta-email">E-mail</label>
+          <input type="email" id="cta-email" name="email" placeholder="seu@email.com" required>
+        </div>
+        <div class="beta-field">
+          <label for="cta-phone">WhatsApp</label>
+          <input type="tel" id="cta-phone" name="phone" placeholder="(11) 99999-9999" required>
+        </div>
+        <div class="beta-field">
+          <label for="cta-cidade">Cidade</label>
+          <input type="text" id="cta-cidade" name="cidade" placeholder="Ex: São Paulo" required>
+        </div>
+        <div class="beta-field">
+          <label for="cta-nicho">Nicho que quer atacar</label>
+          <input type="text" id="cta-nicho" name="nicho" placeholder="Ex: Pizzarias, Clínicas..." required>
+        </div>
+        <button type="submit" class="beta-submit">QUERO SIMULAR MINHA REGIÃO</button>
+      </form>
+      <p class="beta-note">Você recebe acesso ao beta, grupo WhatsApp e instruções para começar.</p>
     </div>
   </div>
 </section>
-
-<!-- ===== SEÇÃO DE SELOS DE SEGURANÇA (acima do footer) ===== -->
-<section class="trust-seals-section" id="seguranca">
-  <div class="container">
-    <div class="trust-seals-header">
-      <h3 class="trust-seals-title">SUA SEGURANÇA É PRIORIDADE</h3>
-      <p class="trust-seals-subtitle">Infraestrutura certificada e conformidade total com a legislação brasileira.</p>
-    </div>
-    <div class="trust-seals-grid">
-      <div class="trust-seal">
-        <div class="trust-seal-icon pagamento">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M2 10h20M6 16h4"/></svg>
-        </div>
-        <div class="trust-seal-text">
-          <span class="trust-seal-title">PAGAMENTO SEGURO</span>
-          <span class="trust-seal-desc">Mercado Pago - PIX e Cartao com criptografia SSL</span>
-        </div>
-      </div>
-
-      <div class="trust-seal">
-        <div class="trust-seal-icon garantia">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-        </div>
-        <div class="trust-seal-text">
-          <span class="trust-seal-title">GARANTIA 7 DIAS</span>
-          <span class="trust-seal-desc">Devolucao integral do valor sem perguntas</span>
-        </div>
-      </div>
-
-      <div class="trust-seal">
-        <div class="trust-seal-icon lgpd">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-        </div>
-        <div class="trust-seal-text">
-          <span class="trust-seal-title">LGPD COMPLIANT</span>
-          <span class="trust-seal-desc">Seus dados protegidos conforme Lei 13.709/2018</span>
-        </div>
-      </div>
-
-      <div class="trust-seal">
-        <div class="trust-seal-icon suporte">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg>
-        </div>
-        <div class="trust-seal-text">
-          <span class="trust-seal-title">SUPORTE BR</span>
-          <span class="trust-seal-desc">Atendimento humanizado em portugues</span>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- FLOATING WHATSAPP WIDGET -->
-<a href="https://wa.me/5511999999999?text=Oi%2C%20vi%20na%20landing%20da%20FraLib" target="_blank" rel="noopener" id="whatsapp-float" aria-label="Falar no WhatsApp">
-  <svg width="28" height="28" viewBox="0 0 24 24" fill="#fff"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-</a>
-
-<style>
-#whatsapp-float{
-  position:fixed;bottom:24px;right:24px;z-index:9999;
-  width:60px;height:60px;
-  background:#25D366;border-radius:50%;
-  display:flex;align-items:center;justify-content:center;
-  box-shadow:0 4px 20px rgba(37,211,102,0.5);
-  transition:transform .2s,box-shadow .2s;
-  animation:wa-pulse 2s infinite;
-}
-#whatsapp-float:hover{
-  transform:scale(1.1);
-  box-shadow:0 6px 30px rgba(37,211,102,0.7);
-}
-@keyframes wa-pulse{
-  0%,100%{box-shadow:0 4px 20px rgba(37,211,102,0.5)}
-  50%{box-shadow:0 4px 30px rgba(37,211,102,0.8)}
-}
-@media(max-width:768px){#whatsapp-float{bottom:16px;right:16px;width:56px;height:56px}}
-</style>
-
-<script>
-document.getElementById('whatsapp-float').addEventListener('click', function(){
-  if(typeof fbq!=='undefined') fbq('track','WhatsAppClick');
-});
-</script>
 
 <!-- FOOTER -->
-<footer class="footer">
+<footer class="footer" style="padding:64px 0 0;">
   <div class="footer-grid">
-    <!-- COL 1: Brand + Social -->
+    <!-- Coluna 1: Brand -->
     <div class="footer-col">
-      <img src="/images/Logo FraLib.png" alt="FraLib OS" class="footer-brand-logo">
-      <p class="footer-brand-desc">
-        A primeira agencia autonoma de IA do Brasil. Voce fecha, a FraLib faz o resto.
-      </p>
+      <img src="/images/Logo FraLib.png" alt="FraLib" class="footer-brand-logo">
+      <p class="footer-brand-desc">Plataforma de prospecção com prévia de site pronta. Encontre leads, gere demonstração e aborode mostrando algo concreto.</p>
       <div class="footer-social">
-        <a href="#" aria-label="Instagram"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37zM17.5 6.5h.01"/></svg></a>
-        <a href="#" aria-label="YouTube"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22.54 6.42a2.78 2.78 0 00-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 00-1.94 2A29 29 0 001 11.75a29 29 0 00.46 5.33A2.78 2.78 0 003.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 001.94-2 29 29 0 00.46-5.25 29 29 0 00-.46-5.33z"/><polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02"/></svg></a>
-        <a href="#" aria-label="LinkedIn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-4 0v7h-4v-7a6 6 0 016-6zM2 9h4v12H2zM4 6a2 2 0 100-4 2 2 0 000 4z"/></svg></a>
-        <a href="#" aria-label="WhatsApp"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg></a>
+        <a href="#" aria-label="Instagram"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg></a>
+        <a href="#" aria-label="LinkedIn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-4 0v7h-4v-7a6 6 0 016-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg></a>
+        <a href="#" aria-label="YouTube"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22.54 6.42a2.78 2.78 0 00-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 00-1.94 2A29 29 0 001 11.75a29 29 0 00.46 5.33A2.78 2.78 0 003.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 001.94-2 29 29 0 00.46-5.25 29 29 0 00-.46-5.33z"/><polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02"/></svg></a>
       </div>
     </div>
 
-    <!-- COL 2: Produto -->
+    <!-- Coluna 2: Produto -->
     <div class="footer-col">
       <h4>PRODUTO</h4>
       <ul class="footer-links">
         <li><a href="#como-funciona">Como funciona</a></li>
-        <li><a href="#planos">Planos e precos</a></li>
-        <li><a href="#funcionalidades">Funcionalidades</a></li>
-        <li><a href="#depoimentos">Casos de sucesso</a></li>
-        <li><a href="/login?signup=1">Criar conta gratis</a></li>
+        <li><a href="#simulador">Simulador</a></li>
+        <li><a href="#beneficios">Benefícios</a></li>
+        <li><a href="#planos">Planos</a></li>
+        <li><a href="#oferta">Beta Pro</a></li>
       </ul>
     </div>
 
-    <!-- COL 3: Suporte -->
+    <!-- Coluna 3: Suporte -->
     <div class="footer-col">
       <h4>SUPORTE</h4>
       <ul class="footer-links">
-        <li><a href="#faq">Perguntas frequentes</a></li>
-        <li><a href="#contato">Central de ajuda</a></li>
-        <li><a href="/docs">Documentacao</a></li>
-        <li><a href="/status">Status do sistema</a></li>
-        <li><a href="/afiliados">Programa de afiliados</a></li>
+        <li><a href="#faq">FAQ</a></li>
+        <li><a href="#" onclick="window.open(WHATSAPP_URL,'_blank');return false;">Grupo WhatsApp</a></li>
+        <li><a href="/docs/">Documentação</a></li>
+        <li><a href="mailto:suporte@fralib.site">suporte@fralib.site</a></li>
       </ul>
     </div>
 
-    <!-- COL 4: Recursos -->
+    <!-- Coluna 4: Legal -->
     <div class="footer-col">
-      <h4>RECURSOS</h4>
+      <h4>LEGAL</h4>
       <ul class="footer-links">
-        <li><a href="/blog">Blog &amp; Tutoriais</a></li>
-        <li><a href="/casos">Casos de sucesso</a></li>
-        <li><a href="/eventos">Eventos &amp; Webinars</a></li>
-        <li><a href="/parcerias">Parcerias &amp; Agencias</a></li>
-        <li><a href="/changelog">Changelog</a></li>
+        <li><a href="/termos.html">Termos de uso</a></li>
+        <li><a href="/privacidade.html">Política de privacidade</a></li>
+        <li><a href="/privacidade.html#lgpd">LGPD</a></li>
       </ul>
     </div>
   </div>
 
-  <!-- BOTTOM -->
-  <div class="footer-bottom">
-    <div class="footer-copy">
-      &copy; 2026 <strong>FraLib OS</strong> · CNPJ 21.199.022/0001-00 · Todos os direitos reservados
-    </div>
-    <div class="footer-bottom-links">
-      <a href="/privacidade">Politica de Privacidade</a>
-      <a href="/termos">Termos de Uso</a>
-      <a href="/cookies">Cookies</a>
-    </div>
+  <div class="footer-disclaimer">
+    A FraLib não garante vendas, faturamento ou resultados específicos. A plataforma fornece ferramentas para prospecção, criação de prévias e abordagem. Resultados dependem da execução, oferta, nicho e follow-up de cada usuário.
+  </div>
+
+  <div class="footer-bottom-bar">
+    <span>© 2026 FraLib OS · Todos os direitos reservados</span>
+    <span>CNPJ XX.XXX.XXX/0001-XX</span>
   </div>
 </footer>
 
-<!-- LGPD COOKIE BANNER -->
-<div class="lgpd-banner" id="lgpdBanner" role="dialog" aria-label="Aviso de cookies">
-  <div class="lgpd-icon">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-  </div>
-  <div class="lgpd-content">
-    <div class="lgpd-title">VALORIZAMOS SUA PRIVACIDADE</div>
-    <p class="lgpd-text">
-      Usamos cookies para melhorar sua experiencia, analisar o trafego e personalizar conteudo.
-      Ao clicar em "Aceitar", voce concorda com nossa <a href="/privacidade">Politica de Privacidade</a> e <a href="/cookies">uso de cookies</a> conforme a LGPD.
-    </p>
-  </div>
-  <div class="lgpd-actions">
-    <button class="lgpd-btn lgpd-btn-reject" id="lgpdReject">Recusar</button>
-    <button class="lgpd-btn lgpd-btn-accept" id="lgpdAccept">Aceitar</button>
-  </div>
+<!-- BOTÃO WHATSAPP FLUTUANTE -->
+<a href="#" onclick="window.open(WHATSAPP_URL,'_blank');return false;" class="wa-float" aria-label="Falar no grupo WhatsApp">
+  <svg viewBox="0 0 24 24">
+    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+  </svg>
+</a>
 
-<!-- ===== FORMULÁRIO BETA ===== -->
-<section class="beta-section" id="beta-form">
-  <div class="container">
-    <div class="beta-wrapper reveal">
-      <div style="text-align:center">
-        <span class="beta-spots"><span class="dot"></span> VAGAS LIMITADAS</span>
-      </div>
-      <h2>GARANTA SUA VAGA NA VERSÃO BETA</h2>
-      <p class="beta-subtitle">Preencha seus dados e entre no grupo exclusivo de early adopters do FraLib OS.</p>
-      <form id="betaForm">
-        <div class="beta-field">
-          <label for="beta-name">Seu nome</label>
-          <input type="text" id="beta-name" name="name" placeholder="Ex: João Silva" required>
-        </div>
-        <div class="beta-field">
-          <label for="beta-email">E-mail</label>
-          <input type="email" id="beta-email" name="email" placeholder="seu@email.com" required>
-        </div>
-        <div class="beta-field">
-          <label for="beta-phone">WhatsApp</label>
-          <input type="tel" id="beta-phone" name="phone" placeholder="(11) 99999-9999" required>
-        </div>
-        <button type="submit" class="beta-submit">QUERO PARTICIPAR DA BETA</button>
-      </form>
-      <p class="beta-note">Ao enviar, você será redirecionado para o grupo do WhatsApp.</p>
-    </div>
-  </div>
-</section>
-
-<!-- FOOTER -->
-<footer class="footer">
-  <img src="/images/Logo FraLib.png" alt="FraLib" height="24"><br>
-  Pagamento seguro &bull; Cancele quando quiser &bull; Suporte em português
-</footer>
+<!-- CTA STICKY MOBILE -->
+<div class="sticky-cta-mobile">
+  <a href="#simulador">SIMULAR MINHA CIDADE</a>
+</div>
 
 <!-- ============================================================
      JAVASCRIPT
@@ -3028,22 +3541,125 @@ document.querySelectorAll('a[href^="#"]').forEach(a => {
 });
 
 // === BETA FORM ===
-document.getElementById('betaForm').addEventListener('submit', function(e){
+document.getElementById('betaForm')?.addEventListener('submit', function(e){
   e.preventDefault();
   const name = document.getElementById('beta-name').value.trim();
   const email = document.getElementById('beta-email').value.trim();
   const phone = document.getElementById('beta-phone').value.trim();
   if(name && email && phone){
-    // Store locally for reference
     try {
       const leads = JSON.parse(localStorage.getItem('fralib_beta') || '[]');
       leads.push({ name, email, phone, date: new Date().toISOString() });
       localStorage.setItem('fralib_beta', JSON.stringify(leads));
     } catch(err){}
-    // Redirect to WhatsApp group
-    window.open('https://chat.whatsapp.com/FSrvUIVFvjBFQrkfDQgP0A', '_blank');
+    if(typeof fbq !== 'undefined') fbq('track', 'Lead');
+    window.open(WHATSAPP_URL, '_blank');
   }
 });
+
+// === CTA FINAL FORM ===
+document.getElementById('ctaForm')?.addEventListener('submit', function(e){
+  e.preventDefault();
+  const name = document.getElementById('cta-name').value.trim();
+  const email = document.getElementById('cta-email').value.trim();
+  const phone = document.getElementById('cta-phone').value.trim();
+  const cidade = document.getElementById('cta-cidade').value.trim();
+  const nicho = document.getElementById('cta-nicho').value.trim();
+  if(name && email && phone && cidade && nicho){
+    try {
+      const leads = JSON.parse(localStorage.getItem('fralib_leads') || '[]');
+      leads.push({ name, email, phone, cidade, nicho, date: new Date().toISOString() });
+      localStorage.setItem('fralib_leads', JSON.stringify(leads));
+    } catch(err){}
+    if(typeof fbq !== 'undefined') fbq('track', 'Lead', { cidade, nicho });
+    setTimeout(() => { window.location = CHECKOUT_URL; }, 300);
+  }
+});
+
+// === SIMULADOR DE OPORTUNIDADES ===
+(function(){
+  const simForm = document.getElementById('simForm');
+  if(!simForm) return;
+
+  const ticketGroup = document.getElementById('sim-ticket-group');
+  const ticketInput = document.getElementById('sim-ticket');
+  const ticketLabel = document.getElementById('simTicketLabel');
+
+  ticketGroup?.addEventListener('click', function(e){
+    const btn = e.target.closest('.sim-ticket-btn');
+    if(!btn) return;
+    ticketGroup.querySelectorAll('.sim-ticket-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const val = btn.dataset.ticket;
+    if(val === 'custom'){
+      const custom = prompt('Digite o ticket em R$ (apenas números):');
+      if(custom && /^\d+$/.test(custom) && parseInt(custom) > 0){
+        ticketInput.value = custom;
+        ticketLabel.textContent = 'R$ ' + parseInt(custom).toLocaleString('pt-BR');
+        btn.textContent = 'R$ ' + parseInt(custom).toLocaleString('pt-BR');
+      } else {
+        ticketInput.value = 1000;
+        ticketLabel.textContent = 'R$ 1.000';
+        ticketGroup.querySelector('[data-ticket="1000"]').classList.add('active');
+      }
+    } else {
+      ticketInput.value = val;
+      ticketLabel.textContent = 'R$ ' + parseInt(val).toLocaleString('pt-BR');
+    }
+  });
+
+  simForm.addEventListener('submit', function(e){
+    e.preventDefault();
+    const cidade = document.getElementById('sim-cidade').value;
+    const nicho = document.getElementById('sim-nicho').value;
+    if(!cidade || !nicho) return;
+
+    if(typeof fbq !== 'undefined') fbq('track', 'Lead', { cidade, nicho });
+
+    simForm.style.display = 'none';
+    const loading = document.getElementById('simLoading');
+    const result = document.getElementById('simResult');
+    loading.classList.add('active');
+    result.classList.remove('active');
+
+    const steps = loading.querySelectorAll('.sim-loading-step');
+    steps.forEach((s, i) => {
+      setTimeout(() => {
+        s.style.opacity = '1';
+        s.style.transform = 'translateX(0)';
+        s.classList.add('active');
+      }, (i + 1) * 500);
+    });
+
+    setTimeout(() => {
+      loading.classList.remove('active');
+      result.classList.add('active');
+      result.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 3200);
+  });
+})();
+
+// === META PIXEL EVENTS ===
+(function(){
+  if(typeof fbq !== 'undefined'){
+    fbq('track', 'ViewContent', { content_name: 'landing-page' });
+  }
+
+  document.addEventListener('click', function(e){
+    const target = e.target.closest('a[onclick*="CHECKOUT_URL"], a[href*="checkout"]');
+    if(target && typeof fbq !== 'undefined'){
+      fbq('track', 'InitiateCheckout', { content_name: 'beta-pro' });
+    }
+    const wa = e.target.closest('a[onclick*="WHATSAPP_URL"], a[href*="wa.me"], a[href*="whatsapp"], .wa-float');
+    if(wa && typeof fbq !== 'undefined'){
+      fbq('track', 'Contact', { method: 'whatsapp' });
+    }
+    const trial = e.target.closest('a[onclick*="TRIAL_URL"], a[href*="trial"]');
+    if(trial && typeof fbq !== 'undefined'){
+      fbq('track', 'CompleteRegistration', { content_name: 'trial' });
+    }
+  });
+})();
 
 // === PARALLAX ===
 (function(){

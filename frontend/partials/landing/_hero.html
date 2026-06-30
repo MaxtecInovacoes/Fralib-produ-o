@@ -5,136 +5,103 @@
   <div class="hero-split">
     <!-- COLUNA ESQUERDA: copy + CTA -->
     <div class="hero-left">
+      <span class="hero-eyebrow">FraLib · Prospecção com prévia pronta</span>
 
       <h1 class="hero-title">
-        <span class="grad">Ganhe R$ 3.000 a R$ 10.000/mês</span>
-        <span class="hero-title-sub">vendendo sites. <strong>Sem saber programar.</strong></span>
+        <span class="grad">Descubra empresas da sua região</span>
+        <span class="hero-title-sub">que ainda precisam de um <strong>site vendável.</strong></span>
       </h1>
 
       <p class="hero-sub">
-        A FraLib encontra negócios que precisam de site, cria automaticamente e manda no WhatsApp. Você só fecha.
+        A FraLib encontra leads locais, cria uma prévia de site com IA e gera uma abordagem pronta para você chamar o cliente <strong>mostrando algo concreto</strong> — não só uma mensagem fria.
       </p>
 
-      <!-- CONTRASTE DOR vs SOLUÇÃO — cards horizontais -->
-      <div class="hero-contrast">
-        <div class="hero-pain">
-          <strong>VOCÊ HOJE</strong>
-          <span>Chega cansado do trabalho. Quer renda extra mas não sabe por onde.</span>
-        </div>
-        <span class="hero-arrow">→</span>
-        <div class="hero-solution">
-          <strong>VOCÊ COM FRALIB</strong>
-          <span>1h por dia do celular. R$ 1.500 no 1º mês — enquanto dorme.</span>
-        </div>
-      </div>
+      <ul class="hero-bullets">
+        <li>Encontre negócios locais com presença digital fraca</li>
+        <li>Gere uma prévia de site baseada nos dados do negócio</li>
+        <li>Aborde no WhatsApp com efeito wow</li>
+        <li>Organize tudo em um painel simples</li>
+        <li>Comece mesmo sem equipe, portfólio ou experiência técnica</li>
+      </ul>
 
       <div class="hero-buttons">
-        <a href="/login?signup=1" class="btn-hero-primary">
+        <a href="#simulador" class="btn-hero-primary">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-          QUERO MINHA RENDA EXTRA ESTE MÊS
+          SIMULAR MINHA REGIÃO
+        </a>
+        <a href="#" onclick="window.location=CHECKOUT_URL;return false;" class="btn-hero-secondary">
+          ENTRAR NO BETA POR R$97
         </a>
         <div class="hero-cta-sub">
-          7 dias gratis · <span>Sem cartao de credito</span> · Cancela em 1 clique
-        </div>
-      </div>
-
-      <!-- MICRO-PROVA — stat strip -->
-      <div class="hero-microproof">
-        <div class="hero-microproof-item">
-          <div class="hero-microproof-num">+2.400</div>
-          <div class="hero-microproof-label">Prospectados</div>
-        </div>
-        <div class="hero-microproof-sep"></div>
-        <div class="hero-microproof-item">
-          <div class="hero-microproof-num">+180</div>
-          <div class="hero-microproof-label">Sites criados</div>
-        </div>
-        <div class="hero-microproof-sep"></div>
-        <div class="hero-microproof-item">
-          <div class="hero-microproof-num">97%</div>
-          <div class="hero-microproof-label">Resposta WhatsApp</div>
+          Acesso imediato · <span>Grupo WhatsApp</span> · Garantia de 30 dias
         </div>
       </div>
     </div>
 
-    <!-- COLUNA DIREITA: pipeline animada SVG (motion design) -->
+    <!-- COLUNA DIREITA: mockup de dashboard -->
     <div class="hero-right">
       <div class="hero-mockup">
-        <!-- Header da pipeline -->
+        <!-- Topbar do dashboard -->
         <div class="mock-kanban-header">
           <span class="mock-dot pulsing"></span>
-          <span class="mock-title">PIPELINE ATIVA · AGORA</span>
+          <span class="mock-title">DASHBOARD · BUSCA ATIVA</span>
           <span class="mock-status"><span class="mock-dot-live"></span></span>
         </div>
 
-        <!-- Pipeline animada: 5 etapas sequenciais -->
-        <div class="pipeline">
-
-          <!-- ETAPA 1: BUSCAR LEAD -->
-          <div class="pipeline-step step-1">
-            <div class="step-icon icon-search">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
-            </div>
-            <div class="step-content">
-              <div class="step-label">BUSCANDO LEAD</div>
-              <div class="step-desc">Mapeando Google Maps...</div>
-            </div>
-            <div class="step-spinner"><svg width="16" height="16" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="rgba(255,255,255,.1)" stroke-width="3"/><path d="M21 12a9 9 0 0 0-9-9" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg></div>
+        <!-- Parâmetros da busca -->
+        <div class="mock-params">
+          <div class="mock-param">
+            <span class="mock-param-label">CIDADE</span>
+            <span class="mock-param-value">Curitiba</span>
           </div>
-
-          <!-- ETAPA 2: ANALISAR -->
-          <div class="pipeline-step step-2">
-            <div class="step-icon icon-analyze">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M8 11l2 2 4-4"/></svg>
-            </div>
-            <div class="step-content">
-              <div class="step-label">ANALISANDO</div>
-              <div class="step-desc">Pizzaria São José · sem site</div>
-            </div>
-            <div class="step-bar"><div class="step-bar-fill"></div></div>
+          <div class="mock-param">
+            <span class="mock-param-label">NICHO</span>
+            <span class="mock-param-value">Pizzarias</span>
           </div>
+        </div>
 
-          <!-- ETAPA 3: CRIAR SITE -->
-          <div class="pipeline-step step-3">
-            <div class="step-icon icon-code">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
-            </div>
-            <div class="step-content">
-              <div class="step-label">CRIANDO SITE</div>
-              <div class="step-desc">Gerando com IA · 8 min</div>
-            </div>
-            <div class="step-percent" data-counter data-target="100" data-suffix="%">0%</div>
+        <!-- Métricas -->
+        <div class="mock-metrics">
+          <div class="mock-metric">
+            <div class="mock-metric-num">187</div>
+            <div class="mock-metric-label">Empresas<br>encontradas</div>
           </div>
+          <div class="mock-metric alt">
+            <div class="mock-metric-num">42</div>
+            <div class="mock-metric-label">Sem site<br>detectado</div>
+          </div>
+          <div class="mock-metric alt2">
+            <div class="mock-metric-num">18</div>
+            <div class="mock-metric-label">Boas<br>oportunidades</div>
+          </div>
+        </div>
 
-          <!-- ETAPA 4: ENVIAR WHATSAPP -->
-          <div class="pipeline-step step-4">
-            <div class="step-icon icon-whatsapp">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+        <!-- Lead gerado -->
+        <div class="mock-lead-card">
+          <div class="mock-lead-row">
+            <span class="mock-lead-tag">PRÉVIA GERADA</span>
+            <span class="mock-lead-time">agora</span>
+          </div>
+          <div class="mock-lead-name">Pizzaria São José</div>
+          <div class="mock-lead-meta">Rua XV de Novembro · Centro · WhatsApp público</div>
+
+          <!-- Pipeline de status -->
+          <div class="mock-pipeline">
+            <div class="mock-pipe-step done">
+              <span class="mock-pipe-dot"></span>
+              <span>Lead encontrado</span>
             </div>
-            <div class="step-content">
-              <div class="step-label">ENVIANDO WHATSAPP</div>
-              <div class="step-desc">Franz abordando lead...</div>
+            <span class="mock-pipe-arrow">→</span>
+            <div class="mock-pipe-step done">
+              <span class="mock-pipe-dot"></span>
+              <span>Site gerado</span>
             </div>
-            <div class="step-typing">
-              <span class="dot-typing"></span>
-              <span class="dot-typing"></span>
-              <span class="dot-typing"></span>
+            <span class="mock-pipe-arrow">→</span>
+            <div class="mock-pipe-step ready">
+              <span class="mock-pipe-dot"></span>
+              <span>Pronto para abordagem</span>
             </div>
           </div>
-
-          <!-- ETAPA 5: VENDA FEITA! BOOM! -->
-          <div class="pipeline-step step-5">
-            <div class="step-icon icon-celebration">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 2l2.4 7.4H22l-6.2 4.5L18.2 22 12 17.5 5.8 22l2.4-8.1L2 9.4h7.6z"/></svg>
-            </div>
-            <div class="step-content">
-              <div class="step-label gold">VENDA FEITA</div>
-              <div class="step-desc gold">Pizzaria São José · R$ 1.500</div>
-            </div>
-            <div class="step-amount" data-counter data-target="1500" data-prefix="+R$ " data-suffix="">+R$ 0</div>
-            <div class="step-burst"></div>
-          </div>
-
         </div>
       </div>
     </div>

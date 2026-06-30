@@ -1,0 +1,130 @@
+<!-- ===== SEÇÃO 2 — SIMULADOR DE OPORTUNIDADES ===== -->
+<section class="sim-section" id="simulador">
+  <div class="container">
+    <h2 class="section-title reveal">QUANTAS OPORTUNIDADES EXISTEM NA SUA CIDADE AGORA?</h2>
+    <p class="section-sub reveal" style="text-align:center;margin:0 auto 36px;max-width:720px;color:var(--fl-text-muted);font-size:14px;">
+      Antes de vender site, você precisa saber quem abordar. A FraLib ajuda você a encontrar empresas locais com sinais de oportunidade e transforma esses dados em prévias de site e abordagens prontas.
+    </p>
+
+    <div class="sim-wrapper">
+      <!-- Formulário -->
+      <form id="simForm">
+        <div class="sim-form">
+          <div class="sim-field">
+            <label for="sim-cidade">Cidade</label>
+            <select id="sim-cidade" name="cidade" required>
+              <option value="">Selecione sua cidade</option>
+              <option>São Paulo</option>
+              <option>Rio de Janeiro</option>
+              <option>Belo Horizonte</option>
+              <option>Curitiba</option>
+              <option>Porto Alegre</option>
+              <option>Salvador</option>
+              <option>Recife</option>
+              <option>Fortaleza</option>
+              <option>Brasília</option>
+              <option>Florianópolis</option>
+              <option>Campinas</option>
+              <option>Goiânia</option>
+              <option>Vitória</option>
+              <option>Outra</option>
+            </select>
+          </div>
+          <div class="sim-field">
+            <label for="sim-nicho">Nicho</label>
+            <select id="sim-nicho" name="nicho" required>
+              <option value="">Selecione o nicho</option>
+              <option>Pizzarias</option>
+              <option>Padarias</option>
+              <option>Restaurantes</option>
+              <option>Clínicas</option>
+              <option>Salões de Beleza</option>
+              <option>Barbearias</option>
+              <option>Pet Shops</option>
+              <option>Lojas de Roupa</option>
+              <option>Prestadores de Serviço</option>
+              <option>Imobiliárias</option>
+              <option>Outro</option>
+            </select>
+          </div>
+          <div class="sim-field sim-form-full">
+            <label>Ticket que pretende cobrar (R$)</label>
+            <div class="sim-ticket-group" id="sim-ticket-group">
+              <button type="button" class="sim-ticket-btn" data-ticket="500">R$ 500</button>
+              <button type="button" class="sim-ticket-btn active" data-ticket="1000">R$ 1.000</button>
+              <button type="button" class="sim-ticket-btn" data-ticket="1500">R$ 1.500</button>
+              <button type="button" class="sim-ticket-btn" data-ticket="custom">Personalizado</button>
+              <input type="hidden" id="sim-ticket" name="ticket" value="1000">
+            </div>
+          </div>
+        </div>
+        <button type="submit" class="sim-submit">ANALISAR OPORTUNIDADES</button>
+      </form>
+
+      <!-- Loading -->
+      <div class="sim-loading" id="simLoading">
+        <div class="sim-loading-step" data-step="1">
+          <span class="step-bullet"></span>
+          <span>Buscando empresas locais...</span>
+        </div>
+        <div class="sim-loading-step" data-step="2">
+          <span class="step-bullet"></span>
+          <span>Verificando presença digital...</span>
+        </div>
+        <div class="sim-loading-step" data-step="3">
+          <span class="step-bullet"></span>
+          <span>Analisando dados públicos...</span>
+        </div>
+        <div class="sim-loading-step" data-step="4">
+          <span class="step-bullet"></span>
+          <span>Identificando oportunidades...</span>
+        </div>
+        <div class="sim-loading-step" data-step="5">
+          <span class="step-bullet"></span>
+          <span>Preparando prévias de site...</span>
+        </div>
+      </div>
+
+      <!-- Resultado -->
+      <div class="sim-result" id="simResult">
+        <div class="sim-metric-grid">
+          <div class="sim-metric">
+            <div class="sim-metric-num">187</div>
+            <div class="sim-metric-label">Empresas<br>encontradas</div>
+          </div>
+          <div class="sim-metric">
+            <div class="sim-metric-num">42</div>
+            <div class="sim-metric-label">Sem site<br>detectado</div>
+          </div>
+          <div class="sim-metric">
+            <div class="sim-metric-num">68</div>
+            <div class="sim-metric-label">Presença<br>fraca</div>
+          </div>
+          <div class="sim-metric">
+            <div class="sim-metric-num">31</div>
+            <div class="sim-metric-label">WhatsApp<br>público</div>
+          </div>
+          <div class="sim-metric">
+            <div class="sim-metric-num">18</div>
+            <div class="sim-metric-label">Oportunidades<br>fortes</div>
+          </div>
+        </div>
+
+        <div class="sim-potential" id="simPotential">
+          <h4>SE VOCÊ COBRAR <span id="simTicketLabel">R$ 1.000</span> POR SITE:</h4>
+          <div class="sim-potential-row"><span>1 venda</span><strong>+ R$ 1.000</strong></div>
+          <div class="sim-potential-row"><span>3 vendas</span><strong>+ R$ 3.000</strong></div>
+          <div class="sim-potential-row"><span>5 vendas</span><strong>+ R$ 5.000</strong></div>
+        </div>
+
+        <p class="sim-disclaimer">
+          Estimativa demonstrativa baseada no nicho e região simulados. A FraLib não garante vendas ou faturamento. Resultados dependem da execução, oferta, abordagem e follow-up.
+        </p>
+
+        <a href="#" onclick="window.location=CHECKOUT_URL;return false;" class="sim-submit" style="text-decoration:none;text-align:center;display:block;margin-top:20px;">
+          GERAR MINHAS PRIMEIRAS PRÉVIAS
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
