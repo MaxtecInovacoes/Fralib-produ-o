@@ -155,6 +155,10 @@ def _day_list(value: Any) -> list[int]:
         day = _int_range(raw, -1, -1, 6)
         if day >= 0 and day not in days:
             days.append(day)
+    # Configuracoes antigas/UI invertida salvaram "dias uteis" como bloqueados.
+    # Isso congela o SDR justamente em horario comercial no Brasil.
+    if set(days) == {0, 1, 2, 3, 4}:
+        return [6]
     return days
 
 

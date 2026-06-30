@@ -86,6 +86,22 @@ def test_sdr_schedule_blocks_configured_days_and_hours():
     assert is_within_outbound_schedule(cfg, datetime(2026, 6, 7, 10, 0)) is False
 
 
+def test_sdr_schedule_repairs_legacy_weekday_block_inversion():
+    cfg = normalize_sdr_settings(
+        {
+            "outbound_schedule": {
+                "mode": "custom",
+                "hora_inicio": 8,
+                "hora_fim": 18,
+                "dias_bloqueados": [0, 1, 2, 3, 4],
+            }
+        }
+    )
+
+    assert cfg["outbound_schedule"]["dias_bloqueados"] == [6]
+    assert is_within_outbound_schedule(cfg, datetime(2026, 6, 30, 16, 45)) is True
+
+
 def test_sdr_prompt_customization_cannot_override_platform_guardrails():
     cfg = normalize_sdr_settings(
         {
