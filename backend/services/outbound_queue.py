@@ -216,7 +216,7 @@ def dequeue_and_send(engine, sender_func) -> dict:
                     UPDATE outbound_queue
                     SET status = 'pending',
                         scheduled_at = NOW() + INTERVAL '10 minutes',
-                        error = 'tenant whatsapp disconnected'
+                        error = 'tenant whatsapp unavailable or outside schedule'
                     WHERE id = :id
                 """), {"id": msg_id})
                 c.commit()

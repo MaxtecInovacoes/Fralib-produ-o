@@ -491,6 +491,9 @@ def _process_outbound_queue_cycle() -> dict:
         if not tenant_id:
             return False
         tenant_key = f"fralib_user_{int(tenant_id)}"
+        if not _dentro_do_horario(int(tenant_id)):
+            log.info("outbound_queue aguardando horario tenant=%s", tenant_id)
+            return None
         try:
             status = requests.get(
                 f"{meowhats_url}/api/sessions/{tenant_key}/status",
