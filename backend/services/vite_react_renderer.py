@@ -433,7 +433,7 @@ def _get_llm_policy() -> str:
     }
     policy = aliases.get(raw, raw)
     if policy not in {"none", "copy_only", "creative_plan", "full_code"}:
-        return "none"
+        raise ViteReactRenderError(f"FRALIB_VITE_LLM_POLICY invalida: {raw!r}")
     return policy
 
 

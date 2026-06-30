@@ -18,6 +18,8 @@ FORBIDDEN_PATTERNS = [
     ("Boa tarde! Vi", "fallback hook genérico"),
     ("DEFAULT_REPLY", "constante de fallback"),
     ('fallback_reply="', "parâmetro fallback"),
+    ("fallback to legacy", "fallback legado de orquestrador"),
+    ("usando fallback", "fallback textual por contaminação"),
 ]
 
 # Padroes que devem gerar excecao, nao fallback
@@ -32,6 +34,39 @@ INVALID_JSON_CASES = [
 
 class TestNoFallbackInCode:
     """Verifica que fallbacks hardcoded foram removidos."""
+
+    def test_sdr_nao_tem_fallback_de_orquestrador_ou_contaminacao(self):
+        """SDR deve falhar/retry, nao criar resposta legacy/template."""
+        from pathlib import Path
+        agent_path = Path(__file__).resolve().parents[2] / "backend" / "agents" / "sdr_langgraph" / "agent.py"
+        content = agent_path.read_text(encoding="utf-8")
+
+        assert "fallback to legacy" not in content
+        assert "_build_legacy_decision(" not in content
+        assert "usando fallback" not in content
+        assert "hook reply contaminated" in content
+        assert "reply contaminated" in content
+
+    def test_watchdog_error_bloqueia_outbound(self):
+        """Se o watchdog quebrar, outbound deve bloquear em vez de liberar spam."""
+        from pathlib import Path
+        compat_path = Path(__file__).resolve().parents[2] / "backend" / "agents" / "sdr_langgraph" / "compat.py"
+        content = compat_path.read_text(encoding="utf-8")
+        block = content[content.index("def _verificar_watchdog_outbound") : content.index("def responder_lead")]
+
+        assert 'return False, "watchdog_error"' in block
+        assert 'return True, "watchdog_error"' not in block
+
+    def test_builder_template_nao_cai_para_llm_silencioso(self):
+        """Template route nao pode cair para outro renderer sem falhar o job."""
+        from pathlib import Path
+        worker_path = Path(__file__).resolve().parents[2] / "backend" / "services" / "builder_worker.py"
+        content = worker_path.read_text(encoding="utf-8")
+        template_block = content[content.index("if use_templates:") : content.index("else:", content.index("if use_templates:"))]
+
+        assert "fallback LLM" not in template_block
+        assert "render_openui_site(" not in template_block
+        assert "sem fallback" in template_block
 
     def test_sem_fallback_google_maps_no_rag(self):
         """FRANZ_RAG.md nao pode conter exemplo 'Google Maps'."""

@@ -188,12 +188,7 @@ def _orchestrator_decide(
         update_lead_memory_after_turn(memory, decision)
         return decision
     except Exception as e:
-        print(f"[orchestrator] fallback to legacy _next_stage: {e}")
-        legacy_stage = _next_stage(memory.stage, llm_suggested_stage, "qualify")
-        memory.stage = legacy_stage
-        memory.conversation_state = memory.conversation_state or "waiting_response"
-        from .state_machine import ConversationState
-        return _build_legacy_decision(memory, legacy_stage, incoming_message, str(e))
+        raise SDRFallbackError(f"orchestrator failed: {e}") from e
 
 
 def _build_legacy_decision(memory, legacy_stage: str, incoming: str, err: str):
@@ -826,11 +821,7 @@ def node_hook(state: SDRState) -> dict:
     # Validar
     contaminado = check_segment_contamination(reply, memory.segmento)
     if contaminado:
-        print(f"[SDR] hook: contaminação detectada {contaminado}, usando fallback")
-        if memory.segmento and "academia" in memory.segmento.lower():
-            reply = f"{greeting}! Vocês trabalham mais com musculação, funcional ou acompanhamento?"
-        else:
-            reply = f"{greeting}! Falo com o responsável pela {memory.nome}?"
+        raise SDRFallbackError(f"hook reply contaminated: {contaminado}")
 
     # === FSM + Intent orchestrator (substitui _next_stage legado) ===
     # BUG FIX: stage-loop quando lead só cumprimenta. Orchestrator classifica intent +
@@ -965,11 +956,7 @@ def make_stage_node(stage_name: str):
         # Contaminação
         contaminado = check_segment_contamination(reply, memory.segmento)
         if contaminado:
-            print(f"[SDR] {stage_name}: contaminado {contaminado}, fallback")
-            if "academia" in memory.segmento.lower():
-                reply = f"Desculpa, me expressei mal. Falando da {memory.nome}: como vocês captam alunos novos hoje?"
-            else:
-                reply = f"Quero entender melhor a {memory.nome}: como vocês captam clientes novos hoje?"
+            raise SDRFallbackError(f"{stage_name} reply contaminated: {contaminado}")
 
         # Atualizar memory
         previous_stage = memory.stage

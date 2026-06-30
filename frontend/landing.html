@@ -2120,113 +2120,16 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
   position:relative;
 }
 .offer-card{
-  max-width:560px;margin:0 auto;
-  background:var(--fl-bg-card);
-  border:2px solid var(--gold);
+  max-width:620px;margin:0 auto;
+  background:#151026;
+  border:1px solid var(--fl-success);
   border-radius:var(--fl-r-xl);
-  padding:40px 36px;
+  padding:44px 36px 36px;
   text-align:center;
   position:relative;
-  box-shadow:0 0 50px rgba(255,184,0,0.15),0 30px 60px rgba(0,0,0,0.4);
-  overflow:hidden;
+  box-shadow:0 12px 36px rgba(0,0,0,0.4);
 }
-.offer-card::before{
-  content:'';position:absolute;inset:-2px;
-  background:linear-gradient(135deg,var(--gold),transparent,var(--gold));
-  z-index:-1;opacity:0.3;
-  border-radius:var(--fl-r-xl);
-}
-.offer-badge{
-  position:absolute;top:-12px;left:50%;transform:translateX(-50%);
-  padding:5px 18px;background:var(--gold);color:#000;
-  font-family:var(--fl-font-brand);font-size:9px;letter-spacing:1.5px;
-  font-weight:700;border-radius:var(--fl-r-full);
-}
-.offer-title{
-  font-family:var(--fl-font-brand);font-size:13px;letter-spacing:1.5px;
-  color:var(--gold);margin-bottom:18px;
-}
-.offer-price-row{
-  display:flex;align-items:baseline;justify-content:center;gap:10px;
-  margin-bottom:8px;
-}
-.offer-price{
-  font-size:48px;font-weight:800;color:#fff;line-height:1;
-}
-.offer-price-old{
-  font-size:18px;color:var(--fl-text-dim);
-  text-decoration:line-through;
-}
-.offer-period{
-  font-size:14px;color:var(--fl-text-muted);margin-bottom:24px;
-}
-.offer-period strong{color:var(--cyan);font-weight:600}
-.offer-features{
-  list-style:none;text-align:left;margin:0 0 28px;
-  padding:20px 0;border-top:1px solid var(--fl-border);border-bottom:1px solid var(--fl-border);
-}
-.offer-features li{
-  padding:8px 0 8px 28px;position:relative;
-  font-size:14px;color:var(--fl-text);line-height:1.5;
-}
-.offer-features li::before{
-  content:'✓';position:absolute;left:0;top:8px;
-  color:var(--cyan);font-weight:700;font-size:16px;
-}
-.offer-cta{
-  width:100%;padding:18px 24px;
-  font-family:var(--fl-font-brand);font-size:11px;letter-spacing:1.5px;
-  background:var(--gold);color:#000;
-  border:none;cursor:pointer;
-  box-shadow:
-    inset -3px -3px 0 #A16207,
-    inset 3px 3px 0 #FDE68A,
-    0 6px 0 #713F12;
-  transition:transform 80ms,box-shadow 80ms;
-  margin-bottom:14px;
-  text-decoration:none;display:inline-block;text-align:center;
-  border-radius:0;
-}
-.offer-cta:hover{
-  background:#FDE047;transform:translateY(-2px);
-  box-shadow:inset -3px -3px 0 #A16207,inset 3px 3px 0 #FEF9C3,0 8px 0 #713F12,0 0 30px rgba(255,184,0,0.5);
-}
-.offer-cta:active{transform:translateY(3px);box-shadow:inset -3px -3px 0 #A16207,inset 3px 3px 0 #FDE68A,0 3px 0 #713F12}
-.offer-microcopy{
-  font-size:11px;color:var(--fl-text-dim);line-height:1.5;
-}
-.offer-microcopy span{color:var(--cyan)}
 
-/* ============================================================
-   GARANTIA
-   ============================================================ */
-.guarantee-section{background:transparent}
-.guarantee-card{
-  max-width:720px;margin:0 auto;
-  background:var(--fl-bg-card);
-  border:1px solid rgba(34,197,94,0.25);
-  border-radius:var(--fl-r-xl);
-  padding:32px 36px;
-  display:flex;align-items:center;gap:20px;
-  box-shadow:0 0 30px rgba(34,197,94,0.08);
-}
-.guarantee-icon{
-  flex-shrink:0;width:60px;height:60px;border-radius:50%;
-  background:rgba(34,197,94,0.12);
-  display:flex;align-items:center;justify-content:center;
-  color:var(--fl-success);
-  border:1px solid rgba(34,197,94,0.3);
-}
-.guarantee-icon svg{width:30px;height:30px}
-.guarantee-content h3{
-  font-size:20px;font-weight:700;color:var(--fl-text);margin-bottom:6px;
-}
-.guarantee-content p{
-  font-size:14px;color:var(--fl-text-muted);line-height:1.6;margin:0;
-}
-@media(max-width:640px){
-  .guarantee-card{flex-direction:column;text-align:center;padding:28px 24px}
-}
 
 /* ============================================================
    WHATSAPP FLOAT
@@ -2940,99 +2843,127 @@ const TRIAL_URL = "/login?signup=1&plano=trial";
   </div>
 </section>
 
-<!-- ===== SEÇÃO 11 — OFERTA BETA PRO ===== -->
+<!-- ===== SEÇÃO 11 — OFERTA STARTER → PRO (1º mês) ===== -->
 <section class="offer-section" id="oferta">
   <div class="container">
-    <h2 class="section-title reveal">ENTRE NO BETA FRALIB PRO POR R$97</h2>
+    <h2 class="section-title reveal">ASSINE O STARTER E GANHE UPGRADE PARA O PRO NO PRIMEIRO MÊS</h2>
     <p class="section-sub reveal" style="text-align:center;margin:0 auto 40px;max-width:720px;color:var(--fl-text-muted);font-size:14px;">
-      Use o plano Pro por 30 dias, gere seus primeiros leads, crie prévias de site e teste a abordagem com efeito wow.
+      Você entra no plano Starter (R$ 97/mês) e, durante o primeiro mês inteiro, usa a força total do Pro: cooldown reduzido, SDR com retries automáticos, prioridade alta na fila e domínio próprio. No segundo mês a assinatura segue pelo valor padrão do plano escolhido.
     </p>
 
     <div class="offer-card reveal">
-      <div class="offer-badge">MAIS ESCOLHIDO</div>
-      <div class="offer-title">BETA FRALIB PRO</div>
+      <div class="offer-badge" style="background:var(--fl-success);">STARTER + UPGRADE PRO · 1º MÊS</div>
+      <div class="offer-title">STARTER R$ 97 COM PODERES DE PRO</div>
 
-      <div class="offer-price-row">
+      <div class="offer-price-row" style="justify-content:center;gap:14px;">
         <span class="offer-price">R$ 97</span>
-        <span class="offer-price-old">R$ 197</span>
       </div>
-      <p class="offer-period">no primeiro mês · depois <strong>R$ 197/mês</strong></p>
+      <p class="offer-period">no primeiro mês você usa <strong>Tudo do Pro</strong> &bull; depois segue pelo valor do plano escolhido</p>
 
       <ul class="offer-features">
-        <li>Acesso imediato ao SaaS</li>
-        <li>Busca de leads locais</li>
-        <li>Geração de prévias de site</li>
-        <li>Abordagens com IA</li>
-        <li>CRM simples</li>
-        <li>Grupo WhatsApp</li>
-        <li>Suporte de ativação</li>
+        <li>Plano Starter de R$ 97/mês</li>
+        <li>Durante o 1º mês: upgrade automático para Pro</li>
+        <li>Cooldown reduzido de 60 → 30 min</li>
+        <li>SDR Franz com retries automáticos</li>
+        <li>Prioridade alta na fila (nível 5)</li>
+        <li>Dashboard completo + analytics</li>
+        <li>Domínios próprios ilimitados</li>
+        <li>Suporte prioritário + grupo WhatsApp</li>
         <li>Garantia de 30 dias</li>
       </ul>
 
-      <a href="#" onclick="window.location=CHECKOUT_URL;return false;" class="offer-cta">
-        ENTRAR NO BETA POR R$97
+      <a href="#" onclick="window.location=CHECKOUT_URL+'?plan=starter-upgrade-pro';return false;" class="offer-cta">
+        ATIVAR STARTER + PRO POR R$ 97
       </a>
 
       <p class="offer-microcopy">
-        Pagamento seguro · <span>Acesso imediato</span> · Cancele quando quiser
+        Assinatura mensal &bull; <span>Sem cartão pré-autorizado</span> &bull; Cancele em 1 clique
+      </p>
+
+      <p class="offer-disclaimer">
+        Promoção de ativação do beta. O upgrade Pro é válido apenas para o primeiro mês da assinatura. A partir do segundo mês a conta segue no plano e valor contratados, sem cobrança adicional ou mudança automática.
       </p>
     </div>
   </div>
 </section>
 
-<!-- ===== SEÇÃO 12 — PLANOS ===== -->
+<!-- ===== SEÇÃO 12 — PLANOS (modelo seunegociofralib.site/planos) ===== -->
 <section class="planos" id="planos" style="background:transparent">
   <div class="container">
-    <h2 class="section-title reveal">PLANOS FRA LIB</h2>
-    <p class="section-sub reveal" style="text-align:center;margin:0 auto 24px;max-width:680px;">Comece com o Trial, escale com o Beta Pro, ou domine o mercado com o Agency.</p>
+    <h2 class="section-title reveal">ESCOLHA SEU PLANO</h2>
+    <p class="section-sub reveal" style="text-align:center;margin:0 auto 24px;max-width:680px;">Comece com 1 pipeline gratis. Escale quando quiser. Cancele quando quiser.</p>
+    <p class="section-sub reveal" style="text-align:center;margin:0 auto 36px;font-size:13px;">Pagamento seguro via Mercado Pago com PIX e cartao.</p>
 
-    <div class="planos-grid" style="grid-template-columns:repeat(3,1fr);">
+    <div class="planos-grid" id="planos">
       <!-- TRIAL -->
       <div class="plano-card reveal">
         <div class="plano-name">TRIAL</div>
-        <div class="plano-price">Grátis</div>
-        <p style="color:var(--fl-purple-300);font-size:11px;margin:8px 0;font-weight:700;">PARA TESTAR O CONCEITO</p>
+        <div class="plano-price">Gratis</div>
+        <p style="color:var(--fl-success);font-size:11px;margin:8px 0;font-weight:700;">1 SITE PRA TESTAR</p>
+        <div class="plano-period">Veja o sistema funcionando antes de investir.</div>
         <ul class="plano-features">
-          <li>1 prévia de site</li>
-          <li>10 leads limitados</li>
-          <li>1 abordagem gerada</li>
-          <li>Acesso limitado ao painel</li>
+          <li>1 site gerado</li>
+          <li>Prospeccao basica</li>
+          <li>SDR Franz (1 abordagem)</li>
+          <li>Fila com menor prioridade</li>
+          <li>Suporte comunidade</li>
         </ul>
-        <a href="#" onclick="window.location=TRIAL_URL;return false;" class="btn btn-outline" style="margin-top:20px;width:100%;text-decoration:none;">TESTAR GRÁTIS</a>
+        <a href="#" onclick="window.location=TRIAL_URL;return false;" class="btn btn-outline">TESTAR GRATIS</a>
       </div>
 
-      <!-- BETA PRO (DESTAQUE) -->
-      <div class="plano-card destaque reveal">
-        <div class="plano-name">BETA PRO</div>
-        <div class="plano-price">R$ 97<span>/mês</span></div>
-        <p style="color:var(--gold);font-size:11px;margin:8px 0;font-weight:700;">MAIS ESCOLHIDO</p>
-        <div class="plano-period" style="font-size:12px;margin-bottom:16px;">no primeiro mês · depois R$ 197/mês</div>
+      <!-- STARTER -->
+      <div class="plano-card reveal">
+        <div class="plano-name">STARTER</div>
+        <div class="plano-price">R$97<span>/mes</span></div>
+        <p style="color:var(--fl-success);font-size:11px;margin:8px 0;font-weight:700;">7 DIAS DE GARANTIA</p>
+        <div class="plano-period">Pra validar e comecar a faturar. Cooldown de 60 min entre sites.</div>
         <ul class="plano-features">
-          <li>Leads locais</li>
-          <li>Prévias de site</li>
-          <li>Abordagens com IA</li>
-          <li>CRM</li>
-          <li>Grupo WhatsApp</li>
-          <li>Suporte de ativação</li>
-          <li>Garantia 30 dias</li>
+          <li>Sites ilimitados (cooldown 60min)</li>
+          <li>Prospeccao automatica completa</li>
+          <li>Sem disparo SDR automatico</li>
+          <li>Dashboard basico</li>
+          <li>Hospedagem inclusa</li>
+          <li>Prioridade na fila (nivel 2)</li>
+          <li>Suporte WhatsApp</li>
         </ul>
-        <a href="#" onclick="window.location=CHECKOUT_URL;return false;" class="btn btn-yellow" style="margin-top:20px;width:100%;text-decoration:none;">ENTRAR NO BETA</a>
+        <a href="#" onclick="window.location=CHECKOUT_URL+'?plan=starter';return false;" class="btn btn-outline">ASSINAR STARTER</a>
+      </div>
+
+      <!-- PRO (DESTAQUE) -->
+      <div class="plano-card destaque reveal">
+        <div class="plano-name">PRO</div>
+        <div class="plano-price">R$197<span>/mes</span></div>
+        <p style="color:var(--cyan);font-size:11px;margin:8px 0;font-weight:700;">MAIS POPULAR</p>
+        <div class="plano-period">Pra quem quer escalar rapido. Cooldown de 30 min. Prioridade alta.</div>
+        <ul class="plano-features">
+          <li>Sites ilimitados (cooldown 30min)</li>
+          <li>Prospeccao avancada</li>
+          <li>SDR Franz com retries automaticos</li>
+          <li>Dashboard completo + analytics</li>
+          <li>Dominios proprios ilimitados</li>
+          <li>Prioridade alta na fila (nivel 5)</li>
+          <li>Suporte prioritario</li>
+        </ul>
+        <a href="#" onclick="window.location=CHECKOUT_URL+'?plan=pro';return false;" class="btn btn-yellow">ASSINAR PRO</a>
         <p style="font-size:9px;color:#A16207;margin-top:12px;text-align:center;">30 dias de garantia incondicional.</p>
       </div>
 
       <!-- AGENCY -->
       <div class="plano-card reveal">
         <div class="plano-name">AGENCY</div>
-        <div class="plano-price">R$ 497<span>/mês</span></div>
-        <p style="color:var(--cyan);font-size:11px;margin:8px 0;font-weight:700;">PARA OPERAÇÃO MAIOR OU REVENDA</p>
+        <div class="plano-price">R$497<span>/mes</span></div>
+        <p style="color:var(--gold);font-size:11px;margin:8px 0;font-weight:700;">SEM COOLDOWN</p>
+        <div class="plano-period">Para operações e agências que precisam vender em volume sem esperar fila.</div>
         <ul class="plano-features">
-          <li>Volume maior de buscas</li>
-          <li>Múltiplas cidades e nichos</li>
-          <li>Subcontas</li>
-          <li>Prioridade na fila</li>
-          <li>Suporte avançado</li>
+          <li>Sites ilimitados (sem cooldown)</li>
+          <li>Infraestrutura com capacidade ampliada</li>
+          <li>Painel administrativo master</li>
+          <li>Subcontas para operação ou revenda</li>
+          <li>Agentes com identidade personalizada</li>
+          <li>Prioridade máxima na fila</li>
+          <li>Onboarding e suporte VIP</li>
         </ul>
-        <a href="#" onclick="window.location=WHATSAPP_URL;return false;" class="btn btn-outline" style="margin-top:20px;width:100%;text-decoration:none;border-color:var(--fl-purple-300);">FALAR COM A EQUIPE</a>
+        <a href="#" onclick="window.location=WHATSAPP_URL;return false;" class="btn btn-outline" style="border-color:var(--gold);">ASSINAR AGENCY</a>
       </div>
     </div>
   </div>

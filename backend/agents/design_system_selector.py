@@ -2,6 +2,8 @@
 
 Usa os DESIGN.md de FRALIB_DS_DIR
 como referência criativa para o ArquitetoMestre gerar sites por nicho.
+
+Fail-fast: se segmento não mapeado, lança DesignSystemNotFoundError.
 """
 
 import os
@@ -9,6 +11,7 @@ import re
 import hashlib
 import json
 from backend.config import DS_DIR as _CFG_DS_DIR
+from backend.pipeline_exceptions import DesignSystemNotFoundError
 
 DS_DIR = _CFG_DS_DIR
 DESIGN_DNA_CACHE_VERSION = "design-dna-v2"
@@ -333,11 +336,16 @@ def select_design_system(
     slugs = SEGMENT_DESIGN_MAP.get(seg, [])
 
     if not slugs:
-        # Fallback: usar índice para encontrar design systems por categoria
-        slugs = _fallback_slugs_for_segment(seg)
-
-    if not slugs:
-        slugs = ["modern", "clean", "professional", "elegant"]
+        # Fail-fast: segmento não mapeado
+        raise DesignSystemNotFoundError(
+            f"Segmento '{seg}' nao tem design system mapeado.",
+            context={
+                "segmento": seg,
+                "segmento_original": segmento,
+                "nome_negocio": nome_negocio,
+                "acao": f"Adicione '{seg}' em SEGMENT_DESIGN_MAP ou use um segmento existente",
+            },
+        )
 
     slugs = _prioritize_curated_slugs(slugs)
 
@@ -395,26 +403,6 @@ def _prioritize_curated_slugs(slugs: list[str]) -> list[str]:
     generic = [slug for slug in slugs if slug in GENERIC_TEMPLATE_SLUGS]
     return list(dict.fromkeys(strong + real + generic))
 
-
-def _fallback_slugs_for_segment(seg: str) -> list:
-    """Para segmentos não mapeados, infere slugs por afinidade de categoria."""
-    # Heurísticas por palavras-chave no nome do segmento
-    keywords_map = {
-        "bold": ["academia", "crossfit", "barbearia", "esporte", "fight", "mma", "box"],
-        "elegant": ["luxo", "joalheria", "relojoaria", "moda", "boutique", "atelier"],
-        "warm": [
-            "cafe",
-            "restaurante",
-            "padaria",
-            "doceria",
-            "confeitaria",
-            "sorveteria",
-        ],
-        "clean": ["clinica", "medic", "saude", "hospital", "laboratorio", "fisio"],
-        "professional": ["escritorio", "consultoria", "empresa", "servico"],
-        "friendly": ["infantil", "brinquedo", "pet", "creche", "escola"],
-        "energetic": ["academia", "esporte", "fitness", "personal", "funcional"],
-    }
 
     # Mapear keyword → design slugs
     keyword_to_slugs = {

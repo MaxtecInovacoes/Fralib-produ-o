@@ -1,5 +1,8 @@
 """Agente de Inteligência de Nicho Local — analisa dados brutos do lead + concorrentes
-e devolve briefing estruturado para os próximos agentes."""
+e devolve briefing estruturado para os próximos agentes.
+
+Fail-fast: se LLM não retornar JSON válido, lança erro em vez de usar dados genéricos.
+"""
 
 import re
 import sys
@@ -7,6 +10,7 @@ import os
 
 sys.path.insert(0, os.path.dirname(__file__))
 
+from backend.pipeline_exceptions import RequiredDataMissingError
 from handoff_types import NichoBriefing
 from llm_direct import call_claude
 from llm_config import AGENT_MODEL_MAP
@@ -279,24 +283,26 @@ Gere o briefing seguindo o formato obrigatório: MARKDOWN primeiro, depois JSON.
     if _json_match:
         try:
             _dados = _json.loads(_json_match.group(0))
-        except _json.JSONDecodeError:
-            pass
-
-    # Fallback se JSON não foi parseado
-    if not _dados:
-        _dados = {
-            "nicho": segmento,
-            "subnichos": [],
-            "publico_alvo": [],
-            "usp": [],
-            "diferenciais": [],
-            "objeções": [],
-            "keywords": [],
-            "tom_de_voz": "profissional",
-            "notas": "",
-            "confianca": "baixa",
-            "dados_ausentes": ["JSON não foi extraído corretamente"],
-        }
+        except _json.JSONDecodeError as _jde:
+            raise RequiredDataMissingError(
+                f"agente_nicho: Falha ao parsear JSON da resposta LLM para '{_nome}'.",
+                context={
+                    "nome": _nome,
+                    "segmento": segmento,
+                    "erro": str(_jde),
+                    "acao": "Verifique o prompt/system do agente_nicho e tente novamente",
+                },
+            )
+    else:
+        raise RequiredDataMissingError(
+            f"agente_nicho: Nao encontrou JSON na resposta LLM para '{_nome}'.",
+            context={
+                "nome": _nome,
+                "segmento": segmento,
+                "resposta_preview": resposta[:200] if resposta else "",
+                "acao": "Verifique o prompt/system do agente_nicho",
+            },
+        )
 
     # Extrair nomes dos concorrentes do jina_insights (heurística simples)
     _competidores = []

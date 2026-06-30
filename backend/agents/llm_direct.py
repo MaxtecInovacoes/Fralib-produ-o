@@ -108,26 +108,18 @@ def _call_claude_with_fallback(
     respect_agent_config=True,
     enable_context=True,
 ):
-    """Chama Claude com cascata fallback.
+    """Chama Claude com 1 retry em caso de erro transitório.
 
-    Modelos em ordem de preferencia: mais capaz -> mais barato.
-    Se modelo solicitado falhar, tenta o proximo na lista.
+    Fail-fast: se retry também falhar, lança erro imediatamente.
+    Não usa cascata de modelos — usa o modelo solicitado.
     """
-    # Se modelo especificado existe na lista, comeca por ele
-    if model in FALLBACK_MODELS:
-        models_to_try = [model] + [m for m in FALLBACK_MODELS if m != model]
-    else:
-        # Se modelo nao existe, comeca pelo mais capaz
-        models_to_try = list(FALLBACK_MODELS)
-
     last_error = None
-    for model_id in models_to_try:
-        print(f"[LLM Fallback] Tentando modelo: {model_id}")
+    for attempt in range(1, 3):  # 2 tentativas: original + 1 retry
         try:
             return call_claude(
                 system=system,
                 user=user,
-                model=model_id,
+                model=model,
                 max_tokens=max_tokens,
                 temperature=temperature,
                 agent_name=agent_name,
@@ -137,12 +129,13 @@ def _call_claude_with_fallback(
             )
         except Exception as e:
             last_error = e
-            print(f"[LLM Fallback] Modelo {model_id} falhou: {str(e)[:100]}")
-            if model_id == models_to_try[-1]:
-                raise
+            print(f"[LLM Retry] Tentativa {attempt} falhou: {str(e)[:100]}")
+            if attempt == 2:
+                # Já fez retry, não há mais o que tentar
+                break
             continue
 
-    raise last_error
+    raise last_error or RuntimeError("[LLM] Falhou sem具体的 erro")
 
 
 def call_claude(
@@ -496,8 +489,8 @@ def call_claude(
             _ia.mark_success(_key_id)
         return chat_text
 
-    # ── SDK retry loop ──
-    MAX_ATTEMPTS = 5
+    # ── SDK retry loop (1 retry = 2 tentativas total) ──
+    MAX_ATTEMPTS = 2
     response = None
     print(
         f"[LLM] model={model_id} cache={'on' if cache_ativo else 'off'} agent={agent_name or '-'}"
@@ -728,7 +721,7 @@ def call_claude_structured(
     except Exception:
         _ia = None
 
-    for _attempt in range(1, 4):
+    for _attempt in range(1, 3):  # 2 tentativas: original + 1 retry
         _enforce_call_spacing()
         client = _create_client(_api_key, _base)
         try:

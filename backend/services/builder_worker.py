@@ -324,8 +324,8 @@ def render_site_with_builder(
         # Mais rapido, sem truncamento de output, gera landing page completa.
         #
         # FRALIB_USE_TEMPLATES=1: usa template estatico + variation 4-eixos
-        # (rota deterministica, SEM LLM). Fallback automatico para LLM se
-        # template_loader falhar (qualquer erro).
+        # (rota deterministica, SEM LLM). Se o template falhar, o job falha
+        # fechado para nao publicar outro gerador silenciosamente.
         use_templates = (
             os.getenv("FRALIB_USE_TEMPLATES", "0").strip().lower() in {"1", "true", "yes", "on"}
         )
@@ -343,22 +343,7 @@ def render_site_with_builder(
                     repair_context=repair_context,
                 )
             except Exception as template_exc:
-                # Fallback graceful: rota LLM (comportamento classico)
-                logger.warning(
-                    "[builder_worker] template route falhou, fallback LLM: %s",
-                    template_exc,
-                )
-                from services.openui_renderer import render_openui_site
-
-                render_result = render_openui_site(
-                    manifest["prompt"],
-                    facts=manifest.get("prompt_agent", {}).get("context", {}),
-                    repair_context=repair_context,
-                    primary_model=os.getenv("FRALIB_OPENUI_PRIMARY_MODEL", PROXY_BUILDER_MODEL),
-                    fallback_model=os.getenv("FRALIB_OPENUI_FALLBACK_MODEL", PROXY_OPUS_FALLBACK_MODEL),
-                    max_tokens=int(os.getenv("FRALIB_OPENUI_MAX_TOKENS", "8000")),
-                    temperature=float(os.getenv("FRALIB_OPENUI_TEMPERATURE", "0.35")),
-                )
+                raise RuntimeError(f"template route falhou sem fallback: {template_exc}") from template_exc
         else:
             from services.openui_renderer import render_openui_site
 

@@ -1,9 +1,15 @@
-"""Media validations for generated HTML (images, videos, placeholders, URLs)."""
+"""Media validations for generated HTML (images, videos, placeholders, URLs).
+
+Fail-fast: usa SVG placeholders niche-aware quando imagens reais falham.
+Não usa Unsplash genéricos.
+"""
 
 from __future__ import annotations
 
 import re
 from typing import TYPE_CHECKING
+
+from backend.agents.niche_svg_placeholders import get_placeholder_url
 
 if TYPE_CHECKING:
     from typing import Any
@@ -125,17 +131,12 @@ def safe_photo_url(url: str, prd) -> str:
 
 
 def image_fallback_for_segment(prd) -> str:
-    """Get fallback image URL based on business segment."""
+    """Get fallback SVG placeholder URL based on business segment.
+
+    Usa SVG placeholders niche-aware em vez de Unsplash genéricos.
+    """
     segment = _normalize(_get_field(prd, "segmento", "segment", "nicho", default=""))
-    if any(token in segment for token in ("otica", "optica", "oculos")):
-        return "https://images.unsplash.com/photo-1511499767150-a48a237f0083?auto=format&fit=crop&w=1400&q=82"
-    if any(token in segment for token in ("dentista", "odontologia")):
-        return "https://images.unsplash.com/photo-1606811971618-4486d14f3f99?auto=format&fit=crop&w=1400&q=82"
-    if any(token in segment for token in ("nutricionista", "nutricao")):
-        return "https://images.unsplash.com/photo-1498837167922-ddd27525d352?auto=format&fit=crop&w=1400&q=82"
-    if any(token in segment for token in ("academia", "fitness", "treino")):
-        return "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?auto=format&fit=crop&w=1400&q=82"
-    return "https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=1400&q=82"
+    return get_placeholder_url(segment)
 
 
 def _get_field(obj: Any, *names: str, default=None) -> Any:

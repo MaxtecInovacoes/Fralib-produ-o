@@ -220,7 +220,7 @@ def _verificar_watchdog_outbound(
         return pode_enviar, motivo
     except Exception as e:
         print(f"[Compat] Erro watchdog: {e}")
-        return True, "watchdog_error"
+        return False, "watchdog_error"
 
 
 def responder_lead(
