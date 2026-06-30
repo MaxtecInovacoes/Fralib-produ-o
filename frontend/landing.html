@@ -2151,6 +2151,8 @@ function trackPurchase(orderId, amount) {
   </div>
 </nav>
 
+
+
 <!-- ===== SEÇÃO 1 — HERO ===== -->
 <section class="hero" id="hero">
   <div class="hero-grid"></div>
@@ -2294,18 +2296,229 @@ function trackPurchase(orderId, amount) {
   </div>
 </section>
 
-<!-- ===== SEÇÃO 2 — PROVA SOCIAL (MARQUEE) ===== -->
-<section class="social-proof">
-  <div class="proof-track" aria-label="Estatísticas">
-    <div class="proof-item"><div class="proof-number">+2.400</div><div class="proof-label">Negocios Prospectados</div></div>
-    <div class="proof-item"><div class="proof-number">+180</div><div class="proof-label">Sites Criados</div></div>
-    <div class="proof-item"><div class="proof-number">+847</div><div class="proof-label">Clientes Fechados</div></div>
-    <div class="proof-item"><div class="proof-number">R$ 2.3M</div><div class="proof-label">em Vendas Geradas</div></div>
-    <!-- duplicate for seamless loop -->
-    <div class="proof-item"><div class="proof-number">+2.400</div><div class="proof-label">Negocios Prospectados</div></div>
-    <div class="proof-item"><div class="proof-number">+180</div><div class="proof-label">Sites Criados</div></div>
-    <div class="proof-item"><div class="proof-number">+847</div><div class="proof-label">Clientes Fechados</div></div>
-    <div class="proof-item"><div class="proof-number">R$ 2.3M</div><div class="proof-label">em Vendas Geradas</div></div>
+<!-- ===== SEÇÃO 2 — SIMULADOR DE OPORTUNIDADES LOCAIS ===== -->
+<section id="simulador" class="simulador-section" style="background:transparent;padding:80px 0;">
+  <div class="container">
+    <h2 class="section-title reveal">SIMULE QUANTO VOCÊ PODE GANHAR NA SUA CIDADE</h2>
+    <p class="section-sub reveal" style="text-align:center;margin:0 auto 48px;max-width:680px;color:var(--fl-text-muted);font-size:14px;">Escolha sua cidade e nicho. A FraLib calcula quantos leads reais existem pra você atacar HOJE.</p>
+    <div class="simulador-wrap reveal" style="max-width:920px;margin:0 auto;background:var(--fl-bg-card);border:1px solid var(--fl-border);padding:40px 36px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;margin-bottom:32px;">
+        <div class="cfg-field">
+          <label class="cfg-lbl">SUA CIDADE</label>
+          <select class="sim-sel" id="sim-cidade">
+            <option>São Paulo, SP</option>
+            <option>Rio de Janeiro, RJ</option>
+            <option>Belo Horizonte, MG</option>
+            <option>Curitiba, PR</option>
+            <option>Porto Alegre, RS</option>
+            <option>Salvador, BA</option>
+            <option>Fortaleza, CE</option>
+            <option>Brasília, DF</option>
+            <option>Campinas, SP</option>
+            <option>Outra cidade</option>
+          </select>
+        </div>
+        <div class="cfg-field">
+          <label class="cfg-lbl">NICHO</label>
+          <select class="sim-sel" id="sim-nicho">
+            <option>Restaurantes / Pizzarias</option>
+            <option>Salões / Barbearias</option>
+            <option>Clínicas / Estética</option>
+            <option>Pet Shops / Veterinárias</option>
+            <option>Academias / Studios</option>
+            <option>Imobiliárias</option>
+            <option>Prestadores de serviço</option>
+            <option>Lojas físicas</option>
+            <option>Oficinas mecânicas</option>
+            <option>Padarias / Mercados</option>
+          </select>
+        </div>
+        <div class="cfg-field" style="display:flex;align-items:flex-end">
+          <button id="sim-btn" class="sim-btn">SIMULAR</button>
+        </div>
+      </div>
+
+      <div id="sim-result" style="display:none;border-top:1px solid var(--fl-border);padding-top:32px;">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;">
+          <div class="sim-card cyan"><div class="sim-lbl">LEADS DISPONÍVEIS</div><div class="sim-val" id="sim-leads">—</div></div>
+          <div class="sim-card gold"><div class="sim-lbl">CONVERSÃO (5%)</div><div class="sim-val" id="sim-conv">—</div></div>
+          <div class="sim-card purple"><div class="sim-lbl">TICKET MÉDIO</div><div class="sim-val" id="sim-ticket">—</div></div>
+          <div class="sim-card gradient"><div class="sim-lbl">FATURAMENTO POTENCIAL</div><div class="sim-val" id="sim-fatura">—</div></div>
+        </div>
+        <div style="margin-top:24px;text-align:center;padding:16px;background:rgba(34,197,94,0.08);border:1px solid var(--green);">
+          <p style="font-size:14px;color:var(--fl-text-muted);margin:0;">💡 Esse é o <strong style="color:var(--cyan);">CENÁRIO MÍNIMO</strong> baseado em dados reais do Google Maps. Trabalhando 1h/dia você consegue fechar <strong style="color:var(--cyan);" id="sim-leads-mes">— leads/mês</strong>.</p>
+        </div>
+        <div style="margin-top:32px;text-align:center;">
+          <a href="#planos" class="sim-btn">QUERO COMEÇAR AGORA</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+.simulador-section .sim-sel{
+  background:var(--fl-bg);
+  border:1px solid var(--fl-border-md);
+  border-radius:0;
+  padding:14px 16px;
+  color:var(--fl-text);
+  font-family:'Outfit',sans-serif;
+  font-size:14px;
+  outline:none;
+  cursor:pointer;
+  width:100%;
+}
+.simulador-section .sim-sel:focus{border-color:var(--cyan);}
+.simulador-section .cfg-lbl{
+  font-family:'JetBrains Mono',monospace;
+  font-size:10px;
+  color:var(--fl-text-muted);
+  text-transform:uppercase;
+  letter-spacing:0.08em;
+  margin-bottom:6px;
+  display:block;
+}
+.simulador-section .sim-btn{
+  background:#FACC15;
+  color:#000;
+  font-family:'Press Start 2P',monospace;
+  font-size:11px;
+  border:none;
+  cursor:pointer;
+  width:100%;
+  padding:14px 18px;
+  letter-spacing:1px;
+  box-shadow:inset -3px -3px 0 #A16207,inset 3px 3px 0 #FDE68A,0 4px 0 #713F12;
+  text-decoration:none;
+  display:inline-block;
+  text-align:center;
+}
+.simulador-section .sim-btn:hover{background:#FDE047;}
+.simulador-section .sim-card{
+  background:rgba(0,0,0,0.3);
+  border:1px solid var(--fl-border);
+  padding:20px;
+  text-align:center;
+}
+.simulador-section .sim-card.cyan{border-color:var(--cyan);}
+.simulador-section .sim-card.gold{border-color:var(--gold);}
+.simulador-section .sim-card.purple{border-color:var(--fl-purple-300);}
+.simulador-section .sim-card.gradient{
+  background:linear-gradient(135deg,rgba(0,255,179,0.1),rgba(147,51,234,0.1));
+  border-color:var(--cyan);
+}
+.simulador-section .sim-lbl{
+  font-family:'JetBrains Mono',monospace;
+  font-size:10px;
+  color:var(--fl-text-muted);
+  margin-bottom:8px;
+  text-transform:uppercase;
+  letter-spacing:0.5px;
+}
+.simulador-section .sim-card.cyan .sim-lbl{color:var(--cyan);}
+.simulador-section .sim-card.gold .sim-lbl{color:var(--gold);}
+.simulador-section .sim-card.purple .sim-lbl{color:var(--fl-purple-300);}
+.simulador-section .sim-card.gradient .sim-lbl{color:var(--cyan);}
+.simulador-section .sim-val{
+  font-family:'Press Start 2P',monospace;
+  font-size:22px;
+  color:#fff;
+  line-height:1.2;
+}
+</style>
+
+<script>
+(function(){
+  const data = {
+    "São Paulo, SP": {restaurantes:320,saloes:280,clinicas:180,petshops:120,academias:150,imobiliarias:90,prestadores:450,lojas:340,oficinas:210,padarias:60},
+    "Rio de Janeiro, RJ": {restaurantes:240,saloes:200,clinicas:140,petshops:90,academias:110,imobiliarias:70,prestadores:320,lojas:250,oficinas:160,padarias:50},
+    "Belo Horizonte, MG": {restaurantes:160,saloes:140,clinicas:90,petshops:60,academias:80,imobiliarias:50,prestadores:220,lojas:180,oficinas:110,padarias:30},
+    "Curitiba, PR": {restaurantes:130,saloes:110,clinicas:70,petshops:50,academias:60,imobiliarias:40,prestadores:180,lojas:140,oficinas:90,padarias:20},
+    "Porto Alegre, RS": {restaurantes:120,saloes:100,clinicas:60,petshops:45,academias:55,imobiliarias:38,prestadores:170,lojas:130,oficinas:85,padarias:18},
+    "Salvador, BA": {restaurantes:140,saloes:120,clinicas:75,petshops:55,academias:65,imobiliarias:42,prestadores:200,lojas:160,oficinas:100,padarias:35},
+    "Fortaleza, CE": {restaurantes:150,saloes:130,clinicas:80,petshops:60,academias:70,imobiliarias:45,prestadores:210,lojas:170,oficinas:105,padarias:40},
+    "Brasília, DF": {restaurantes:170,saloes:150,clinicas:95,petshops:65,academias:85,imobiliarias:55,prestadores:240,lojas:190,oficinas:115,padarias:25},
+    "Campinas, SP": {restaurantes:180,saloes:160,clinicas:100,petshops:70,academias:90,imobiliarias:60,prestadores:260,lojas:200,oficinas:125,padarias:22},
+    "Outra cidade": {restaurantes:80,saloes:70,clinicas:40,petshops:30,academias:35,imobiliarias:25,prestadores:120,lojas:90,oficinas:60,padarias:15}
+  };
+  const nichos = {
+    "Restaurantes / Pizzarias":"restaurantes","Salões / Barbearias":"saloes",
+    "Clínicas / Estética":"clinicas","Pet Shops / Veterinárias":"petshops",
+    "Academias / Studios":"academias","Imobiliárias":"imobiliarias",
+    "Prestadores de serviço":"prestadores","Lojas físicas":"lojas",
+    "Oficinas mecânicas":"oficinas","Padarias / Mercados":"padarias"
+  };
+  const tickets = {restaurantes:1000,saloes:800,clinicas:2200,petshops:1200,academias:1500,imobiliarias:3000,prestadores:800,lojas:1400,oficinas:900,padarias:700};
+
+  const btn = document.getElementById('sim-btn');
+  if(!btn) return;
+  btn.addEventListener('click', function(){
+    const cidade = document.getElementById('sim-cidade').value;
+    const nicho = nichos[document.getElementById('sim-nicho').value] || 'restaurantes';
+    const leads = (data[cidade] && data[cidade][nicho]) || 50;
+    const conv = Math.ceil(leads * 0.05);
+    const ticket = tickets[nicho];
+    const fatura = conv * ticket;
+    document.getElementById('sim-leads').textContent = leads.toLocaleString('pt-BR');
+    document.getElementById('sim-conv').textContent = conv.toLocaleString('pt-BR');
+    document.getElementById('sim-ticket').textContent = 'R$ ' + ticket.toLocaleString('pt-BR');
+    document.getElementById('sim-fatura').textContent = 'R$ ' + fatura.toLocaleString('pt-BR');
+    document.getElementById('sim-leads-mes').textContent = Math.ceil(conv/4) + ' clientes';
+    document.getElementById('sim-result').style.display = 'block';
+    document.getElementById('sim-result').scrollIntoView({behavior:'smooth', block:'center'});
+    if(typeof trackEvent === 'function') trackEvent('simulador_usado', {cidade:cidade});
+  });
+})();
+</script>
+
+<!-- ===== SEÇÃO 5 — PRODUTO EM AÇÃO ===== -->
+<section class="produto" id="produto">
+  <div class="container">
+    <h2 class="section-title reveal">VEJA A FRA LIB VENDENDO NO SEU WPP</h2>
+    <div class="produto-mockup reveal">
+      <div class="mockup-topbar">
+        <div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div>
+        <div class="mockup-url">app.fralib.com.br/dashboard</div>
+      </div>
+      <div class="mockup-body">
+        <div class="mockup-kanban">
+          <div class="kanban-header">
+            <div class="kanban-title">Pipeline de Vendas</div>
+            <div class="kanban-badge">47 leads</div>
+          </div>
+          <div class="kanban-cols">
+            <div class="col-novo">
+              <div class="col-title">Novo</div>
+              <div class="k-card"><div class="name">Padaria Exemplo</div><div class="cat">Padaria &bull; Centro</div></div>
+              <div class="k-card"><div class="name">Loja Demo</div><div class="cat">Varejo &bull; Zona Sul</div></div>
+            </div>
+            <div class="col-criado">
+              <div class="col-title">Site Criado</div>
+              <div class="k-card"><div class="name">Consultório Modelo</div><div class="cat">Saúde &bull; Centro</div></div>
+              <div class="k-card"><div class="name">Pet Exemplo</div><div class="cat">Pet Shop &bull; Vila Madalena</div></div>
+            </div>
+            <div class="col-enviado">
+              <div class="col-title">Enviado</div>
+              <div class="k-card"><div class="name">Restaurante Demo</div><div class="cat">Comida &bull; Pinheiros</div></div>
+            </div>
+          </div>
+        </div>
+        <div class="mockup-wa">
+          <div class="wa-header">
+            <div class="wa-avatar">F</div>
+            <div><div class="wa-name">SDR Franz</div><div class="wa-status">online</div></div>
+          </div>
+          <div class="wa-msgs">
+            <div class="wa-msg s">Olá! Sou o Franz, da FraLib. Vi que seu negócio ainda não tem um site profissional.<div class="wa-time">10:32</div></div>
+            <div class="wa-msg s">Criei uma demonstração para você avaliar.<div class="wa-time">10:32</div></div>
+            <div class="wa-msg r">Opa! Ficou muito bom! Quanto custa pra manter?<div class="wa-time">10:45</div></div>
+            <div class="wa-msg s">Que bom que gostou! Posso te explicar os planos e ajustar antes da publicação final.<div class="wa-time">10:46</div></div>
+            <div class="wa-typing"><span></span><span></span><span></span></div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -2366,56 +2579,6 @@ function trackPurchase(orderId, amount) {
           <div class="step-label">FRA LIB VENDE</div>
           <div class="step-title">Envia no WhatsApp do cliente</div>
           <div class="step-desc">Manda o site direto no WhatsApp do dono do negócio. Com follow-up automático. Cliente vê e fala "quero" sozinho. Você só recebe.</div>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ===== SEÇÃO 5 — PRODUTO EM AÇÃO ===== -->
-<section class="produto" id="produto">
-  <div class="container">
-    <h2 class="section-title reveal">VEJA A FRA LIB VENDENDO NO SEU WPP</h2>
-    <div class="produto-mockup reveal">
-      <div class="mockup-topbar">
-        <div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div>
-        <div class="mockup-url">app.fralib.com.br/dashboard</div>
-      </div>
-      <div class="mockup-body">
-        <div class="mockup-kanban">
-          <div class="kanban-header">
-            <div class="kanban-title">Pipeline de Vendas</div>
-            <div class="kanban-badge">47 leads</div>
-          </div>
-          <div class="kanban-cols">
-            <div class="col-novo">
-              <div class="col-title">Novo</div>
-              <div class="k-card"><div class="name">Padaria Exemplo</div><div class="cat">Padaria &bull; Centro</div></div>
-              <div class="k-card"><div class="name">Loja Demo</div><div class="cat">Varejo &bull; Zona Sul</div></div>
-            </div>
-            <div class="col-criado">
-              <div class="col-title">Site Criado</div>
-              <div class="k-card"><div class="name">Consultório Modelo</div><div class="cat">Saúde &bull; Centro</div></div>
-              <div class="k-card"><div class="name">Pet Exemplo</div><div class="cat">Pet Shop &bull; Vila Madalena</div></div>
-            </div>
-            <div class="col-enviado">
-              <div class="col-title">Enviado</div>
-              <div class="k-card"><div class="name">Restaurante Demo</div><div class="cat">Comida &bull; Pinheiros</div></div>
-            </div>
-          </div>
-        </div>
-        <div class="mockup-wa">
-          <div class="wa-header">
-            <div class="wa-avatar">F</div>
-            <div><div class="wa-name">SDR Franz</div><div class="wa-status">online</div></div>
-          </div>
-          <div class="wa-msgs">
-            <div class="wa-msg s">Olá! Sou o Franz, da FraLib. Vi que seu negócio ainda não tem um site profissional.<div class="wa-time">10:32</div></div>
-            <div class="wa-msg s">Criei uma demonstração para você avaliar.<div class="wa-time">10:32</div></div>
-            <div class="wa-msg r">Opa! Ficou muito bom! Quanto custa pra manter?<div class="wa-time">10:45</div></div>
-            <div class="wa-msg s">Que bom que gostou! Posso te explicar os planos e ajustar antes da publicação final.<div class="wa-time">10:46</div></div>
-            <div class="wa-typing"><span></span><span></span><span></span></div>
-          </div>
         </div>
       </div>
     </div>
@@ -2984,51 +3147,6 @@ function trackPurchase(orderId, amount) {
 }
 </style>
 
-<!-- ===== SEÇÃO 8A — FAQ (MOVIDO PARA ANTES DOS PLANOS) ===== -->
-<section class="faq" id="faq">
-  <div class="container">
-    <h2 class="section-title reveal">PERGUNTAS QUE VOCÊ PRECISA FAZER ANTES DE COMEÇAR</h2>
-    <div class="faq-list">
-      <div class="faq-item reveal">
-        <button class="faq-question" aria-expanded="false">Preciso saber programar?
-          <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
-        </button>
-        <div class="faq-answer"><div class="faq-answer-inner">Nao. Zero. Voce escolhe o nicho e a cidade, e a IA faz o resto. O site e criado automatico, a mensagem e enviada automatica, voce so responde quando o cliente te procura. Literalmente: se voce sabe usar WhatsApp, sabe usar o FraLib.</div></div>
-      </div>
-      <div class="faq-item reveal">
-        <button class="faq-question" aria-expanded="false">E se eu nunca vendi nada na vida?
-          <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
-        </button>
-        <div class="faq-answer"><div class="faq-answer-inner">Funciona melhor ainda. A FraLib foi feita pra quem ta comecando do zero. Nao precisa de portfolio, nao precisa de experiencia, nao precisa ter fama. So precisa ter 15 minutos por dia e querer ganhar dinheiro. Muitos dos nossos usuarios nunca tinham vendido nada antes.</div></div>
-      </div>
-      <div class="faq-item reveal">
-        <button class="faq-question" aria-expanded="false">Preciso ter empresa ou CNPJ?
-          <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
-        </button>
-        <div class="faq-answer"><div class="faq-answer-inner">Nao. Voce pode comecar como pessoa fisica. Alguns usuarios formalizam depois que comecam a faturar. Mas pra comecar, e so criar sua conta. A parte fiscal e sua responsabilidade — cada um sabe sua situacao.</div></div>
-      </div>
-      <div class="faq-item reveal">
-        <button class="faq-question" aria-expanded="false">Funciona em qualquer cidade?
-          <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
-        </button>
-        <div class="faq-answer"><div class="faq-answer-inner">Sim. Qualquer cidade do Brasil. A prospeccao funciona no Google Maps. Se tem negocio local, tem lead pra prospectar. Claro: cidades maiores dao mais leads. Mas cidade de 50 mil habitantes ja tem potencial.</div></div>
-      </div>
-      <div class="faq-item reveal">
-        <button class="faq-question" aria-expanded="false">E se eu nao fechar nenhum cliente?
-          <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
-        </button>
-        <div class="faq-answer"><div class="faq-answer-inner">A gente devolve seu dinheiro, se solicitar em ate 7 dias. A gente te da a ferramenta funcionando, leads qualificados e suporte. Resultado depende de acao. Mas a gente poe a faca e o queijo na sua mao.</div></div>
-      </div>
-      <div class="faq-item reveal">
-        <button class="faq-question" aria-expanded="false">Como funciona o pagamento?
-          <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
-        </button>
-        <div class="faq-answer"><div class="faq-answer-inner">PIX ou cartao de credito. A assinatura e mensal. Pode cancelar quando quiser, sem multa, sem burocracia. Pagamento via Mercado Pago: seguro e rapido.</div></div>
-      </div>
-    </div>
-  </div>
-</section>
-
 <!-- ===== SEÇÃO 8 — PLANOS ===== -->
 <section class="planos" id="planos" style="background:transparent">
   <div class="container">
@@ -3128,83 +3246,6 @@ function trackPurchase(orderId, amount) {
   </div>
 </section>
 
-<!-- ===== 5 FONTES DE RECEITA (MOVIDO PARA DEPOIS DOS PLANOS) ===== -->
-<section class="funcionalidades" id="cinco-fontes">
-  <div class="container">
-    <h2 class="section-title reveal">5 FORMAS DE CONSTRUIR SUA LIBERDADE FINANCEIRA</h2>
-    <p class="section-sub reveal" style="text-align:center;margin:0 auto 48px;max-width:760px;color:var(--fl-text-muted);">Cada fonte e uma engrenagem de renda. Voce pode usar 1, 2 ou todas. Quem usa todas ta construindo patrimonio.</p>
-    <div class="feat-grid">
-      <div class="feat-card snake-card reveal"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
-        <div class="feat-icon" style="background:var(--gold-dim);"><span style="font-size:22px;font-weight:700;color:var(--gold);">1</span></div>
-        <div class="feat-title">Cobre pela criacao do site (uma vez)</div>
-        <div class="feat-desc"><strong style="color:var(--gold);">R$ 500 a R$ 3.000</strong> por site. Pizzaria, clinica, salao — cada um precisa de um. <em>Exemplo:</em> 8 sites/mes x R$ 1.200 = <strong>R$ 9.600 de entrada.</strong></div>
-      </div></div>
-      <div class="feat-card snake-card reveal"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
-        <div class="feat-icon" style="background:var(--cyan-dim);"><span style="font-size:22px;font-weight:700;color:var(--cyan);">2</span></div>
-        <div class="feat-title">Faca renda que entra todo mes</div>
-        <div class="feat-desc"><strong style="color:var(--cyan);">R$ 100 a R$ 800/mes</strong> por cliente. Em vez de R$ 1.500 uma vez, cobra R$ 200 todo mes. <em>Exemplo:</em> 15 clientes x R$ 200 = <strong>R$ 3.000 todo mes — chove ou faz sol.</strong></div>
-      </div></div>
-      <div class="feat-card snake-card reveal"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
-        <div class="feat-icon" style="background:rgba(147,51,234,0.12);"><span style="font-size:22px;font-weight:700;color:var(--fl-purple-300);">3</span></div>
-        <div class="feat-title">Hospeda os sites e cobra a mais</div>
-        <div class="feat-desc">Voce paga R$ 15-50 de hospedagem e cobra R$ 80-150 do cliente. Margem de 80%. <em>Exemplo:</em> 30 clientes x R$ 120 = <strong>R$ 3.600 com custo de R$ 450.</strong></div>
-      </div></div>
-      <div class="feat-card snake-card reveal"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
-        <div class="feat-icon" style="background:rgba(239,68,68,0.08);"><span style="font-size:22px;font-weight:700;color:var(--fl-danger);">4</span></div>
-        <div class="feat-title">Venda servicos extras</div>
-        <div class="feat-desc">Google Business, WhatsApp Business, fotos pro site, atualizacao. <em>Exemplo:</em> 15 clientes x R$ 200 extras = <strong>R$ 3.000 por mes.</strong></div>
-      </div></div>
-      <div class="feat-card snake-card reveal" style="grid-column:span 1;"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
-        <div class="feat-icon" style="background:var(--cyan-dim);"><span style="font-size:22px;font-weight:700;color:var(--cyan);">5</span></div>
-        <div class="feat-title">Monte sua agencia sob demanda</div>
-        <div class="feat-desc">No plano Agency, cria subcontas e revende acesso pra outros profissionais. <em>Exemplo:</em> 10 subcontas x R$ 200 de margem = <strong>R$ 2.000 recorrentes. Outros trabalham, voce embola.</strong></div>
-      </div></div>
-      <div class="feat-card snake-card reveal" style="background:linear-gradient(135deg,rgba(147,51,234,0.15),rgba(0,255,179,0.08));border-color:var(--fl-border-hi);"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
-        <div class="feat-title" style="font-size:14px;color:var(--cyan);font-family:var(--fl-font-mono);letter-spacing:1px;">QUEM USA TUDO CONSTRÓI PATRIMÔNIO</div>
-        <div class="feat-desc" style="color:var(--fl-text);font-size:14px;line-height:1.8;">
-          8 setups x R$ 1.200 = <strong>R$ 9.600</strong><br>
-          15 assinaturas x R$ 200 = <strong>R$ 3.000</strong><br>
-          30 hospedagens x R$ 120 = <strong>R$ 3.600</strong><br>
-          15 extras x R$ 200 = <strong>R$ 3.000</strong><br>
-          10 subcontas x R$ 200 = <strong>R$ 2.000</strong><br>
-          <span style="color:var(--fl-text-muted);font-size:12px;">- FraLib Pro R$ 197 + hospedagem R$ 450</span><br>
-          <span style="color:var(--cyan);font-size:18px;font-weight:700;display:block;margin-top:8px;">= ~R$ 20.500/mes de lucro</span>
-        </div>
-      </div></div>
-    </div>
-  </div>
-</section>
-
-<!-- ===== FORMULÁRIO BETA ===== -->
-<section class="beta-section" id="beta-form">
-  <div class="container">
-    <div class="beta-wrapper reveal">
-      <div style="text-align:center">
-        <span class="beta-spots"><span class="dot"></span> ⏰ VAGAS LIMITADAS ESTE MÊS</span>
-      </div>
-      <h2>QUER TESTAR ANTES DE DECIDIR?</h2>
-      <p class="beta-subtitle">Manda seu nome, e-mail e WhatsApp. A gente te manda o acesso pro Trial de 7 dias + entrada no grupo exclusivo onde a galera compartilha resultado. Nao e spam. E acesso real.</p>
-      <form id="betaForm" action="/login?signup=1" method="GET">
-        <div class="beta-field">
-          <label for="beta-name">Seu nome</label>
-          <input type="text" id="beta-name" name="name" placeholder="Ex: Joao Silva" required>
-        </div>
-        <div class="beta-field">
-          <label for="beta-email">E-mail</label>
-          <input type="email" id="beta-email" name="email" placeholder="seu@email.com" required>
-        </div>
-        <div class="beta-field">
-          <label for="beta-phone">WhatsApp</label>
-          <input type="tel" id="beta-phone" name="phone" placeholder="(11) 99999-9999">
-          <span style="font-size:11px;color:var(--fl-text-dim);font-style:italic;margin-top:4px">Opcional - voce pode conectar depois</span>
-        </div>
-        <button type="submit" class="beta-submit">QUERO MEU ACESSO GRATIS</button>
-      </form>
-      <p class="beta-note">Apos enviar, voce recebe o login do Trial e entra no grupo de resultados.</p>
-    </div>
-  </div>
-</section>
-
 <!-- ===== SEÇÃO DE SELOS DE SEGURANÇA (acima do footer) ===== -->
 <section class="trust-seals-section" id="seguranca">
   <div class="container">
@@ -3255,6 +3296,144 @@ function trackPurchase(orderId, amount) {
     </div>
   </div>
 </section>
+
+<!-- ===== SEÇÃO 8A — FAQ (MOVIDO PARA ANTES DOS PLANOS) ===== -->
+<section class="faq" id="faq">
+  <div class="container">
+    <h2 class="section-title reveal">PERGUNTAS QUE VOCÊ PRECISA FAZER ANTES DE COMEÇAR</h2>
+    <div class="faq-list">
+      <div class="faq-item reveal">
+        <button class="faq-question" aria-expanded="false">Preciso saber programar?
+          <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="faq-answer"><div class="faq-answer-inner">Nao. Zero. Voce escolhe o nicho e a cidade, e a IA faz o resto. O site e criado automatico, a mensagem e enviada automatica, voce so responde quando o cliente te procura. Literalmente: se voce sabe usar WhatsApp, sabe usar o FraLib.</div></div>
+      </div>
+      <div class="faq-item reveal">
+        <button class="faq-question" aria-expanded="false">E se eu nunca vendi nada na vida?
+          <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="faq-answer"><div class="faq-answer-inner">Funciona melhor ainda. A FraLib foi feita pra quem ta comecando do zero. Nao precisa de portfolio, nao precisa de experiencia, nao precisa ter fama. So precisa ter 15 minutos por dia e querer ganhar dinheiro. Muitos dos nossos usuarios nunca tinham vendido nada antes.</div></div>
+      </div>
+      <div class="faq-item reveal">
+        <button class="faq-question" aria-expanded="false">Preciso ter empresa ou CNPJ?
+          <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="faq-answer"><div class="faq-answer-inner">Nao. Voce pode comecar como pessoa fisica. Alguns usuarios formalizam depois que comecam a faturar. Mas pra comecar, e so criar sua conta. A parte fiscal e sua responsabilidade — cada um sabe sua situacao.</div></div>
+      </div>
+      <div class="faq-item reveal">
+        <button class="faq-question" aria-expanded="false">Funciona em qualquer cidade?
+          <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="faq-answer"><div class="faq-answer-inner">Sim. Qualquer cidade do Brasil. A prospeccao funciona no Google Maps. Se tem negocio local, tem lead pra prospectar. Claro: cidades maiores dao mais leads. Mas cidade de 50 mil habitantes ja tem potencial.</div></div>
+      </div>
+      <div class="faq-item reveal">
+        <button class="faq-question" aria-expanded="false">E se eu nao fechar nenhum cliente?
+          <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="faq-answer"><div class="faq-answer-inner">A gente devolve seu dinheiro, se solicitar em ate 7 dias. A gente te da a ferramenta funcionando, leads qualificados e suporte. Resultado depende de acao. Mas a gente poe a faca e o queijo na sua mao.</div></div>
+      </div>
+      <div class="faq-item reveal">
+        <button class="faq-question" aria-expanded="false">Como funciona o pagamento?
+          <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="faq-answer"><div class="faq-answer-inner">PIX ou cartao de credito. A assinatura e mensal. Pode cancelar quando quiser, sem multa, sem burocracia. Pagamento via Mercado Pago: seguro e rapido.</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== FORMULÁRIO BETA ===== -->
+<section class="beta-section" id="beta-form">
+  <div class="container">
+    <div class="beta-wrapper reveal">
+      <div style="text-align:center">
+        <span class="beta-spots"><span class="dot"></span> ⏰ VAGAS LIMITADAS ESTE MÊS</span>
+      </div>
+      <h2>QUER TESTAR ANTES DE DECIDIR?</h2>
+      <p class="beta-subtitle">Manda seu nome, e-mail e WhatsApp. A gente te manda o acesso pro Trial de 7 dias + entrada no grupo exclusivo onde a galera compartilha resultado. Nao e spam. E acesso real.</p>
+      <form id="betaForm" action="/login?signup=1" method="GET">
+        <div class="beta-field">
+          <label for="beta-name">Seu nome</label>
+          <input type="text" id="beta-name" name="name" placeholder="Ex: Joao Silva" required>
+        </div>
+        <div class="beta-field">
+          <label for="beta-email">E-mail</label>
+          <input type="email" id="beta-email" name="email" placeholder="seu@email.com" required>
+        </div>
+        <div class="beta-field">
+          <label for="beta-phone">WhatsApp</label>
+          <input type="tel" id="beta-phone" name="phone" placeholder="(11) 99999-9999">
+          <span style="font-size:11px;color:var(--fl-text-dim);font-style:italic;margin-top:4px">Opcional - voce pode conectar depois</span>
+        </div>
+        <button type="submit" class="beta-submit">QUERO MEU ACESSO GRATIS</button>
+      </form>
+      <p class="beta-note">Apos enviar, voce recebe o login do Trial e entra no grupo de resultados.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 5 FONTES DE RECEITA (MOVIDO PARA DEPOIS DOS PLANOS) ===== -->
+<section class="funcionalidades" id="cinco-fontes">
+  <div class="container">
+    <h2 class="section-title reveal">5 FORMAS DE CONSTRUIR SUA LIBERDADE FINANCEIRA</h2>
+    <p class="section-sub reveal" style="text-align:center;margin:0 auto 48px;max-width:760px;color:var(--fl-text-muted);">Cada fonte e uma engrenagem de renda. Voce pode usar 1, 2 ou todas. Quem usa todas ta construindo patrimonio.</p>
+    <div class="feat-grid">
+      <div class="feat-card snake-card reveal"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
+        <div class="feat-icon" style="background:var(--gold-dim);"><span style="font-size:22px;font-weight:700;color:var(--gold);">1</span></div>
+        <div class="feat-title">Cobre pela criacao do site (uma vez)</div>
+        <div class="feat-desc"><strong style="color:var(--gold);">R$ 500 a R$ 3.000</strong> por site. Pizzaria, clinica, salao — cada um precisa de um. <em>Exemplo:</em> 8 sites/mes x R$ 1.200 = <strong>R$ 9.600 de entrada.</strong></div>
+      </div></div>
+      <div class="feat-card snake-card reveal"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
+        <div class="feat-icon" style="background:var(--cyan-dim);"><span style="font-size:22px;font-weight:700;color:var(--cyan);">2</span></div>
+        <div class="feat-title">Faca renda que entra todo mes</div>
+        <div class="feat-desc"><strong style="color:var(--cyan);">R$ 100 a R$ 800/mes</strong> por cliente. Em vez de R$ 1.500 uma vez, cobra R$ 200 todo mes. <em>Exemplo:</em> 15 clientes x R$ 200 = <strong>R$ 3.000 todo mes — chove ou faz sol.</strong></div>
+      </div></div>
+      <div class="feat-card snake-card reveal"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
+        <div class="feat-icon" style="background:rgba(147,51,234,0.12);"><span style="font-size:22px;font-weight:700;color:var(--fl-purple-300);">3</span></div>
+        <div class="feat-title">Hospeda os sites e cobra a mais</div>
+        <div class="feat-desc">Voce paga R$ 15-50 de hospedagem e cobra R$ 80-150 do cliente. Margem de 80%. <em>Exemplo:</em> 30 clientes x R$ 120 = <strong>R$ 3.600 com custo de R$ 450.</strong></div>
+      </div></div>
+      <div class="feat-card snake-card reveal"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
+        <div class="feat-icon" style="background:rgba(239,68,68,0.08);"><span style="font-size:22px;font-weight:700;color:var(--fl-danger);">4</span></div>
+        <div class="feat-title">Venda servicos extras</div>
+        <div class="feat-desc">Google Business, WhatsApp Business, fotos pro site, atualizacao. <em>Exemplo:</em> 15 clientes x R$ 200 extras = <strong>R$ 3.000 por mes.</strong></div>
+      </div></div>
+      <div class="feat-card snake-card reveal" style="grid-column:span 1;"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
+        <div class="feat-icon" style="background:var(--cyan-dim);"><span style="font-size:22px;font-weight:700;color:var(--cyan);">5</span></div>
+        <div class="feat-title">Monte sua agencia sob demanda</div>
+        <div class="feat-desc">No plano Agency, cria subcontas e revende acesso pra outros profissionais. <em>Exemplo:</em> 10 subcontas x R$ 200 de margem = <strong>R$ 2.000 recorrentes. Outros trabalham, voce embola.</strong></div>
+      </div></div>
+      <div class="feat-card snake-card reveal" style="background:linear-gradient(135deg,rgba(147,51,234,0.15),rgba(0,255,179,0.08));border-color:var(--fl-border-hi);"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
+        <div class="feat-title" style="font-size:14px;color:var(--cyan);font-family:var(--fl-font-mono);letter-spacing:1px;">QUEM USA TUDO CONSTRÓI PATRIMÔNIO</div>
+        <div class="feat-desc" style="color:var(--fl-text);font-size:14px;line-height:1.8;">
+          8 setups x R$ 1.200 = <strong>R$ 9.600</strong><br>
+          15 assinaturas x R$ 200 = <strong>R$ 3.000</strong><br>
+          30 hospedagens x R$ 120 = <strong>R$ 3.600</strong><br>
+          15 extras x R$ 200 = <strong>R$ 3.000</strong><br>
+          10 subcontas x R$ 200 = <strong>R$ 2.000</strong><br>
+          <span style="color:var(--fl-text-muted);font-size:12px;">- FraLib Pro R$ 197 + hospedagem R$ 450</span><br>
+          <span style="color:var(--cyan);font-size:18px;font-weight:700;display:block;margin-top:8px;">= ~R$ 20.500/mes de lucro</span>
+        </div>
+      </div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== SEÇÃO 2 — PROVA SOCIAL (MARQUEE) ===== -->
+<section class="social-proof">
+  <div class="proof-track" aria-label="Estatísticas">
+    <div class="proof-item"><div class="proof-number">+2.400</div><div class="proof-label">Negocios Prospectados</div></div>
+    <div class="proof-item"><div class="proof-number">+180</div><div class="proof-label">Sites Criados</div></div>
+    <div class="proof-item"><div class="proof-number">+847</div><div class="proof-label">Clientes Fechados</div></div>
+    <div class="proof-item"><div class="proof-number">R$ 2.3M</div><div class="proof-label">em Vendas Geradas</div></div>
+    <!-- duplicate for seamless loop -->
+    <div class="proof-item"><div class="proof-number">+2.400</div><div class="proof-label">Negocios Prospectados</div></div>
+    <div class="proof-item"><div class="proof-number">+180</div><div class="proof-label">Sites Criados</div></div>
+    <div class="proof-item"><div class="proof-number">+847</div><div class="proof-label">Clientes Fechados</div></div>
+    <div class="proof-item"><div class="proof-number">R$ 2.3M</div><div class="proof-label">em Vendas Geradas</div></div>
+  </div>
+</section>
+
 
 <!-- FLOATING WHATSAPP WIDGET -->
 <a href="https://wa.me/5511999999999?text=Oi%2C%20vi%20na%20landing%20da%20FraLib" target="_blank" rel="noopener" id="whatsapp-float" aria-label="Falar no WhatsApp">
@@ -4212,5 +4391,4 @@ if (!prefersReducedMotion && !isMobileInApp && typeof particlesJS !== 'undefined
 })(window, document, "clarity", "script", "wv8xiy7kvk");
 </script>
 
-</body>
-</html>
+
