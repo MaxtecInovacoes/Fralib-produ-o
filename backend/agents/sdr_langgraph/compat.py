@@ -203,7 +203,8 @@ def _verificar_watchdog_outbound(telefone: str, user_id: int, sdr_stage: str) ->
     """
     try:
         from .watchdog import can_send_next_outbound
-        pode_enviar, motivo = can_send_next_outbound(telefone, user_id, sdr_stage)
+        # FIX: lead_responded=True para respostas (inbound) - ignora rate limit
+        pode_enviar, motivo = can_send_next_outbound(telefone, user_id, sdr_stage, lead_responded=True)
         return pode_enviar, motivo
     except Exception as e:
         print(f"[Compat] Erro watchdog: {e}")
