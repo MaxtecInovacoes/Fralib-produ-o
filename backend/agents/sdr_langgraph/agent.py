@@ -79,61 +79,6 @@ def _normalize_memory_payload(raw: dict | None) -> dict:
     return data
 
 
-def _segment_subject(segmento: str) -> str:
-    segment = (segmento or "").lower()
-    if any(term in segment for term in ("academia", "fitness", "gym", "crossfit", "pilates")):
-        return "alunos novos"
-    if any(term in segment for term in ("clinica", "clínica", "odont", "estetica", "estética")):
-        return "pacientes novos"
-    return "clientes novos"
-
-
-def _mentions_price_or_payment(incoming: str) -> bool:
-    text = (incoming or "").lower()
-    return any(
-        term in text
-        for term in (
-            "preco", "preço", "valor", "quanto custa", "custa quanto",
-            "pagamento", "parcela", "parcelado", "pix", "cartao", "cartão",
-        )
-    )
-
-
-def _mentions_link_or_site(incoming: str) -> bool:
-    text = (incoming or "").lower()
-    return any(term in text for term in ("site", "link", "pagina", "página", "ver", "manda"))
-
-
-def _commercial_fallback(memory: LeadMemory, stage: str, incoming: str = "") -> tuple[str, str] | None:
-    if _mentions_link_or_site(incoming) and memory.site_url:
-        return (
-            f"Claro. A prévia que montei pra {memory.nome or 'vocês'} está aqui: {memory.site_url}\n"
-            "Dá pra ajustar cores, fotos e textos. O que você mudaria primeiro?",
-            "feedback",
-        )
-
-    if _mentions_price_or_payment(incoming) or stage == "close":
-        if stage == "followup_72h":
-            return (
-                "Pra ser bem direto: o projeto completo é R$ 1.499 em até 12x.\n"
-                "Como última tentativa, dá pra avaliar um início mais simples por R$ 999 no Pix. Faz sentido pra você?",
-                "close",
-            )
-        if stage == "followup_24h":
-            return (
-                "O projeto completo fica R$ 1.499 em até 12x, só depois de aprovado.\n"
-                "Se o valor era o ponto, consigo tentar uma condição de follow-up por R$ 1.299. Quer que eu veja isso?",
-                "close",
-            )
-        return (
-            "O projeto completo fica R$ 1.499 em até 12x, e vocês só pagam depois de aprovar tudo.\n"
-            "Se preferir Pix, eu chamo uma pessoa pra confirmar a melhor condição. Faz sentido seguir?",
-            "close",
-        )
-
-    return None
-
-
 class SDRFallbackError(Exception):
     """Exceção quando LLM falha - NAO usa fallback pre-definido."""
     pass
@@ -173,7 +118,7 @@ def _orchestrator_decide(
     """Wrapper do Orchestrator. Substitui o _next_stage antigo na logica de decisao.
 
     Mantem compatibilidade: retorna OrchestratorDecision com state + stage.
-    Na duvida, prioriza o Orchestrator (intent-based). Fallback: _next_stage legado.
+    Na duvida, falha fechado para retry em vez de escolher estado legado.
     """
     try:
         from .orchestrator import orchestrate, update_lead_memory_after_turn
@@ -189,27 +134,6 @@ def _orchestrator_decide(
         return decision
     except Exception as e:
         raise SDRFallbackError(f"orchestrator failed: {e}") from e
-
-
-def _build_legacy_decision(memory, legacy_stage: str, incoming: str, err: str):
-    """Constroi OrchestratorDecision quando o orchestrator falha (fallback)."""
-    from .orchestrator import OrchestratorDecision
-    from .state_machine import ConversationState, Intent
-    from .intent_classifier import classify_intent
-    intent_result = classify_intent(incoming or "")
-    return OrchestratorDecision(
-        intent=intent_result.intent,
-        intent_confidence=intent_result.confidence,
-        intent_signals=intent_result.signals,
-        state_before=ConversationState.IDLE,
-        state_after=ConversationState.WAITING_RESPONSE,
-        stage_before=memory.stage,
-        stage_after=legacy_stage,
-        reasoning=f"legacy fallback: {err}",
-        should_advance=True,
-        in_loop=False,
-        force_break_loop=False,
-    )
 
 
 # ════════════════════════════════════════════════════════════════════

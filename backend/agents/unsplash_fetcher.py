@@ -3,6 +3,8 @@ Unsplash Fetcher — busca fotos de alta qualidade por nicho.
 Usa UNSPLASH_ACCESS_KEY do .env.
 Cache por negócio (segmento+nome+cidade) — cada cliente tem fotos únicas.
 Rate limit: 50 req/hora no plano free.
+
+Fail-fast: se API falhar, lança ImageNotAvailableError — não usa fallbacks.
 """
 
 import os
@@ -11,6 +13,8 @@ import time
 import hashlib
 import random
 import requests
+
+from backend.pipeline_exceptions import ImageNotAvailableError
 
 UNSPLASH_ACCESS_KEY = os.getenv("UNSPLASH_ACCESS_KEY", "")
 CACHE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "unsplash_cache")
@@ -156,22 +160,6 @@ QUERIES_VARIADAS = {
     ],
 }
 
-CURATED_FALLBACK_IMAGES = {
-    "otica": [
-        "https://images.unsplash.com/photo-1511499767150-a48a237f0083?auto=format&fit=crop&w=1400&q=82",
-        "https://images.unsplash.com/photo-1574258495973-f010dfbb5371?auto=format&fit=crop&w=1400&q=82",
-        "https://images.unsplash.com/photo-1556306535-38febf6782e7?auto=format&fit=crop&w=1400&q=82",
-        "https://images.unsplash.com/photo-1509695507497-903c140c43b0?auto=format&fit=crop&w=1400&q=82",
-        "https://images.unsplash.com/photo-1524255684952-d7185b509571?auto=format&fit=crop&w=1400&q=82",
-    ],
-    "nutricionista": [
-        "https://images.unsplash.com/photo-1498837167922-ddd27525d352?auto=format&fit=crop&w=1400&q=82",
-        "https://images.unsplash.com/photo-1505576399279-565b52d4ac71?auto=format&fit=crop&w=1400&q=82",
-    ],
-    "dentista": [
-        "https://images.unsplash.com/photo-1606811971618-4486d14f3f99?auto=format&fit=crop&w=1400&q=82",
-    ],
-}
 
 WATER_FITNESS_KEYWORDS = (
     "natacao",
@@ -309,18 +297,14 @@ def buscar_fotos_unsplash(
         except Exception:
             pass
 
-    # Sem chave — fallback curado com URLs diretas e estáveis do Unsplash.
+    # Sem chave — fail-fast
     if not UNSPLASH_ACCESS_KEY:
-        print(
-            "[Unsplash] AVISO: UNSPLASH_ACCESS_KEY nao configurada. Usando fallback."
+        raise ImageNotAvailableError(
+            "UNSPLASH_ACCESS_KEY nao configurada.",
+            context={
+                "acao": "Configure UNSPLASH_ACCESS_KEY no .env ou use fotos reais do cliente",
+            },
         )
-        urls = _fallback_urls(query, quantidade, nome, segmento)
-        try:
-            with open(cache_file, "w") as f:
-                json.dump(urls, f)
-        except Exception:
-            pass
-        return urls
 
     # API oficial — busca pool de 20 para ter variedade
     pool_size = min(20, 50)  # máximo razoável sem estourar rate limit
@@ -386,8 +370,16 @@ def buscar_fotos_unsplash(
                     pool.append(url)
 
         if not pool:
-            print(f"[Unsplash] Sem resultados para '{query}', usando fallback")
-            return _fallback_urls(query, quantidade, nome, segmento)
+            raise ImageNotAvailableError(
+                f"Unsplash: Sem resultados para query '{query}'.",
+                context={
+                    "query": query,
+                    "nome": nome,
+                    "segmento": segmento,
+                    "quantidade_solicitada": quantidade,
+                    "acao": "Verifique se nicho tem fotos no Unsplash ou use fotos reais do cliente",
+                },
+            )
 
         # Salvar pool completo no cache
         try:
@@ -402,27 +394,18 @@ def buscar_fotos_unsplash(
         )
         return selected
 
+    except ImageNotAvailableError:
+        raise
     except Exception as e:
-        print(f"[Unsplash] Erro API: {e}. Usando fallback.")
-        return _fallback_urls(query, quantidade, nome, segmento)
+        raise ImageNotAvailableError(
+            f"Unsplash API error: {e}",
+            context={
+                "query": query,
+                "nome": nome,
+                "segmento": segmento,
+                "erro": str(e),
+                "acao": "Verifique UNSPLASH_ACCESS_KEY e connectivity",
+            },
+        ) from e
 
 
-def _fallback_urls(query: str, quantidade: int, nome: str = "", segmento: str = "") -> list:
-    """Fallback com URLs diretas e estáveis; source.unsplash.com não é confiável."""
-    query_key = _infer_query_key(segmento or query, nome)
-    pool: list[str] = []
-    for key, urls in CURATED_FALLBACK_IMAGES.items():
-        if key in query_key or key in (query or "").lower():
-            pool.extend(urls)
-    if not pool:
-        pool = [
-            "https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=1400&q=82",
-            "https://images.unsplash.com/photo-1497366811353-6870744d04b2?auto=format&fit=crop&w=1400&q=82",
-            "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1400&q=82",
-            "https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=1400&q=82",
-            "https://images.unsplash.com/photo-1497215728101-856f4ea42174?auto=format&fit=crop&w=1400&q=82",
-        ]
-    selected = _select_unique(pool, nome or segmento or query, min(quantidade, len(pool)))
-    while len(selected) < quantidade:
-        selected.append(pool[len(selected) % len(pool)])
-    return selected[:quantidade]

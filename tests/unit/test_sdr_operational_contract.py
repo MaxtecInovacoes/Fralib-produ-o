@@ -87,8 +87,14 @@ def test_listener_cooldown_waits_instead_of_dropping_inbound_reply():
 
 def test_followup_does_not_reveal_site_before_reveal(monkeypatch):
     import sdr_langgraph as bryan
+    import agents.llm_direct as llm_direct
 
     monkeypatch.setattr(bryan, "_agent_name_for_user", lambda user_id=None: "Franz")
+    monkeypatch.setattr(
+        llm_direct,
+        "call_claude",
+        lambda **kwargs: "Oi! Ainda faz sentido conversar sobre isso esta semana?",
+    )
     url = "https://seunegociofralib.site/sites/2/start-academia/"
     pre_reveal_stages = [
         "hook",
