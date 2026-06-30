@@ -370,32 +370,66 @@ def _reconcile_missing_franz_jobs(db) -> dict:
     ).fetchall()
 
     enqueued = 0
+    reopened = 0
     for row in rows:
         lead_id, tenant_id, nome, cidade, segmento, whatsapp, telefone, rating, score, tier, site_url = row
+        payload = {
+            "nome": nome or "",
+            "cidade": cidade or "",
+            "segmento": segmento or "",
+            "telefone": telefone or whatsapp or "",
+            "whatsapp": whatsapp or telefone or "",
+            "rating": float(rating or 0),
+            "site_url": site_url or "",
+            "score_caio": int(score or 0),
+            "tier": tier or "STANDARD",
+            "lead_id": str(lead_id),
+            "tenant_id": int(tenant_id),
+            "_reconciled": True,
+        }
+        idem = f"franz-{lead_id}"
+        reopened_row = db.execute(
+            _txt(
+                """
+                UPDATE jobs
+                SET status = 'pending',
+                    payload = CAST(:payload AS jsonb),
+                    tenant_id = :tenant_id,
+                    attempts = 0,
+                    max_attempts = GREATEST(max_attempts, 5),
+                    next_retry_at = NOW(),
+                    last_phase = 'franz_reconcile',
+                    last_error = 'Reaberto por reconcile: site publicado sem contato ativo',
+                    worker_id = NULL,
+                    worker_heartbeat = NULL
+                WHERE tipo = 'franz_outreach'
+                  AND idempotency_key = :idem
+                  AND status IN ('failed_permanent', 'failed_retriable')
+                RETURNING id
+                """
+            ),
+            {
+                "payload": json.dumps(payload),
+                "tenant_id": int(tenant_id),
+                "idem": idem,
+            },
+        ).fetchone()
+        if reopened_row:
+            db.commit()
+            reopened += 1
+            continue
+
         job_id = job_queue.enqueue(
             db,
             tipo="franz_outreach",
-            payload={
-                "nome": nome or "",
-                "cidade": cidade or "",
-                "segmento": segmento or "",
-                "telefone": telefone or whatsapp or "",
-                "whatsapp": whatsapp or telefone or "",
-                "rating": float(rating or 0),
-                "site_url": site_url or "",
-                "score_caio": int(score or 0),
-                "tier": tier or "STANDARD",
-                "lead_id": str(lead_id),
-                "tenant_id": int(tenant_id),
-                "_reconciled": True,
-            },
+            payload=payload,
             tenant_id=int(tenant_id),
             max_attempts=5,
-            idempotency_key=f"franz-{lead_id}",
+            idempotency_key=idem,
         )
         if job_id:
             enqueued += 1
-    return {"checked": len(rows), "enqueued": enqueued}
+    return {"checked": len(rows), "enqueued": enqueued, "reopened": reopened}
 
 
 async def _executar_job(job: dict) -> tuple[bool, Optional[str], Optional[str]]:
