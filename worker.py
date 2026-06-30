@@ -56,6 +56,7 @@ JOB_MAX_SECS = int(os.environ.get("WORKER_JOB_MAX_SECS", "1800"))
 LEAD_SUPPLY_SYNC_SECS = int(os.environ.get("LEAD_SUPPLY_SYNC_SECS", "300"))
 FRANZ_RECONCILE_SECS = int(os.environ.get("FRALIB_FRANZ_RECONCILE_SECS", "300"))
 FRANZ_RECONCILE_LIMIT = int(os.environ.get("FRALIB_FRANZ_RECONCILE_LIMIT", "25"))
+FRANZ_OUTREACH_SPACING_SECS = int(os.environ.get("FRALIB_FRANZ_OUTREACH_SPACING_SECS", "90"))
 TMP_CLEANUP_HIGH_WATERMARK = float(os.environ.get("WORKER_TMP_CLEANUP_HIGH_WATERMARK", "0.50"))
 TMP_CLEANUP_CRITICAL_WATERMARK = float(os.environ.get("WORKER_TMP_CLEANUP_CRITICAL_WATERMARK", "0.80"))
 WORKER_JOB_TYPES = [
@@ -432,6 +433,40 @@ def _reconcile_missing_franz_jobs(db) -> dict:
     return {"checked": len(rows), "enqueued": enqueued, "reopened": reopened}
 
 
+def _tenant_recent_outbound_wait_seconds(db, tenant_id: int | None) -> int:
+    """Evita rajada de primeiro contato quando muitos jobs ficam elegiveis."""
+
+    if not tenant_id or FRANZ_OUTREACH_SPACING_SECS <= 0:
+        return 0
+    from sqlalchemy import text as _txt
+
+    row = db.execute(
+        _txt(
+            """
+            WITH recent AS (
+                SELECT MAX(criado_em::timestamp) AS last_outbound_at
+                FROM interacoes
+                WHERE user_id = :uid
+                  AND direcao = 'saida'
+                  AND criado_em ~ '^\\d{4}-\\d{2}-\\d{2}'
+                  AND criado_em::timestamp >= (
+                      NOW() AT TIME ZONE 'America/Sao_Paulo'
+                  ) - (:spacing || ' seconds')::interval
+            )
+            SELECT EXTRACT(EPOCH FROM (
+                (NOW() AT TIME ZONE 'America/Sao_Paulo') - last_outbound_at
+            ))::int AS elapsed
+            FROM recent
+            """
+        ),
+        {"uid": int(tenant_id), "spacing": int(FRANZ_OUTREACH_SPACING_SECS)},
+    ).fetchone()
+    elapsed = None if not row else row[0]
+    if elapsed is None:
+        return 0
+    return max(0, int(FRANZ_OUTREACH_SPACING_SECS) - int(elapsed))
+
+
 async def _executar_job(job: dict) -> tuple[bool, Optional[str], Optional[str]]:
     """
     Executa o job de acordo com seu tipo. Retorna (sucesso, fase_em_erro, mensagem_erro).
@@ -606,6 +641,18 @@ async def _executar_job(job: dict) -> tuple[bool, Optional[str], Optional[str]]:
             if not _dentro_do_horario(tenant_id):
                 log.info(f"Franz: fora do horario do SDR para tenant {tenant_id}")
                 return False, "franz_schedule", "Fora do horario do SDR"
+            _db_spacing = SessionLocal()
+            try:
+                _wait_seconds = _tenant_recent_outbound_wait_seconds(_db_spacing, tenant_id)
+            finally:
+                _db_spacing.close()
+            if _wait_seconds > 0:
+                log.info(
+                    "Franz: espacamento de envio tenant=%s wait=%ss",
+                    tenant_id,
+                    _wait_seconds,
+                )
+                return False, "franz_rate", f"Rate limit — cooldown {_wait_seconds}s"
 
             franz_input = FranzInput(
                 nome=payload.get("nome", ""),
