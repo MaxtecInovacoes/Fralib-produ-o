@@ -113,7 +113,7 @@ async def execute_pipeline_tail(
     state.site_url = f"https://seunegociofralib.site/sites/{tenant_id}/{state.lead_slug}/"
     _progress(11, "Enviando contato...")
     _log("FASE 11: FRANZ", "info")
-    _sdr_stage_final = "pending_sdr_send"
+    _sdr_stage_final = "pendente_wpp"
     _sdr_allowed = False
     _skip_franz = bool(config.get("_skip_franz_outreach"))
     if _skip_franz:
@@ -144,7 +144,7 @@ async def execute_pipeline_tail(
                     run_id=state.run_id,
                 )
             _log("  Franz: enfileirado como job separado", "info")
-            _sdr_stage_final = "pending_sdr_send"
+            _sdr_stage_final = "pendente_wpp"
     except Exception as exc:
         logger.warning(f"[Pipeline] Franz enqueue erro (não bloqueia): {exc}")
         _log(f"  Franz: falha ao enfileirar ({exc}). Site gerado OK.", "warning")

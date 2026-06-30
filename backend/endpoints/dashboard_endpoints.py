@@ -109,8 +109,8 @@ async def get_crm(
             if status in ("pendente", "processando", "capturado", "erro"):
                 continue
             elif status == "concluido":
-                if sdr_stage in ("hook", "pendente_wpp"):
-                    # Site pronto, aguardando SDR enviar primeira msg
+                if sdr_stage in ("hook", "pendente_wpp", "pending_sdr_send", "sdr_enqueue_failed", "blocked_quality_incident"):
+                    # Site pronto, aguardando SDR enviar primeira msg → FILA DE ATENDIMENTO
                     data["fila"].append(lead)
                 elif sdr_stage in ("qualify", "intro"):
                     data["intro"].append(lead)

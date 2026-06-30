@@ -142,7 +142,7 @@ def test_trial_credit_is_consumed_only_after_franz_send_success():
     worker = _read("worker.py")
 
     assert "trial_delivery_pending" in credits
-    assert "pending_sdr_send" in pipeline
+    assert "pendente_wpp" in pipeline
     assert "trial_credit_waits_for_sdr_delivery" in pipeline
     assert "consumir_credito_trial_entregue" in worker
 

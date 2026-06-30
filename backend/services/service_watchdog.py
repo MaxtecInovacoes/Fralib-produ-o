@@ -27,6 +27,7 @@ SERVICES_TO_WATCH = [
     "fralib-worker.service",
     "fralib-hermes.service",
     "fralib-franz.service",
+    "gosom-scraper.service",  # Scraper de leads
     # fralib-wpp-listener NAO reinicia (sockets persistentes)
     # fralib-dashboard NAO (menos critico)
 ]

@@ -49,6 +49,19 @@ async def iniciar_pipeline(
             status_code=400, detail="Segmento e cidade são obrigatórios."
         )
 
+    # Sincroniza com lead_supply_config para que o Lead Supply (Hunter) saiba o que buscar
+    try:
+        from backend.services.lead_supply_storage import save_config as _save_ls_config
+        _save_ls_config(db, tenant_id, {
+            "segmentos": [config_limpo["segmento"]],
+            "cidades": [config_limpo["cidade"]],
+            "ativo": True,
+        })
+        logger.info(f"[Pipeline] Sincronizado lead_supply_config para tenant {tenant_id}: {config_limpo['segmento']} em {config_limpo['cidade']}")
+    except Exception as e:
+        logger.warning(f"[Pipeline] Falha ao sincronizar lead_supply_config: {e}")
+        # Não bloqueia o pipeline se falhar
+
     _tenant_wpp = f"fralib_user_{tenant_id}"
     _whatsapp_connected = is_tenant_connected(_tenant_wpp)
     config_limpo["_whatsapp_connected"] = _whatsapp_connected

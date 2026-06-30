@@ -203,6 +203,24 @@ def run_health_checks() -> list[Alert]:
         except Exception as e:
             logger.error(f"Erro no check {check.__name__}: {e}")
 
+    # Lead Supply checks (async)
+    try:
+        from backend.services.lead_supply_watchdog import run_lead_supply_health_check
+        import asyncio
+        supply_alerts = asyncio.run(run_lead_supply_health_check())
+        for alert in supply_alerts:
+            # Converte LeadSupplyAlert para Alert
+            generic_alert = Alert(
+                level=alert.level,
+                title=f"[Lead Supply] {alert.title}",
+                message=alert.message,
+                details=alert.details,
+            )
+            alerts.append(generic_alert)
+            logger.warning(str(alert))
+    except Exception as e:
+        logger.error(f"Erro no check de lead_supply: {e}")
+
     return alerts
 
 

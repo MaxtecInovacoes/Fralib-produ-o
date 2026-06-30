@@ -420,7 +420,7 @@ def executar_fase11_franz(
     Retorna (sdr_stage_final, sdr_allowed).
     """
 
-    _sdr_stage_final = "pending_sdr_send"
+    _sdr_stage_final = "pendente_wpp"
     _sdr_allowed = False
     _skip_franz = bool(config.get("_skip_franz_outreach"))
 
@@ -478,7 +478,7 @@ def executar_fase11_franz(
             _db_franz.close()
             if log_fn:
                 log_fn("  Franz: enfileirado como job separado", "info")
-            _sdr_stage_final = "pending_sdr_send"
+            _sdr_stage_final = "pendente_wpp"
         except Exception:
             _db_franz.close()
             raise
@@ -486,7 +486,7 @@ def executar_fase11_franz(
         logger.warning(f"[Pipeline] Franz enqueue erro (não bloqueia): {e}")
         if log_fn:
             log_fn(f"  Franz: falha ao enfileirar ({e}). Site gerado OK.", "warning")
-        _sdr_stage_final = "s_enqueue_failed"
+        _sdr_stage_final = "sdr_enqueue_failed"
 
     return _sdr_stage_final, _sdr_allowed
 

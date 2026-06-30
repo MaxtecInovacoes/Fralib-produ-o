@@ -2283,7 +2283,7 @@ async def executar_pipeline_completo(
             else None
         )
         # O worker ainda entende bryan_outreach apenas para historico/fila antiga.
-        _sdr_stage_final = "pending_sdr_send"
+        _sdr_stage_final = "pendente_wpp"
         _sdr_allowed = False
         _skip_franz = bool(config.get("_skip_franz_outreach"))
         if _skip_franz:
@@ -2342,7 +2342,7 @@ async def executar_pipeline_completo(
                 )
                 _db_franz.close()
                 _log("  Franz: enfileirado como job separado", "info")
-                _sdr_stage_final = "pending_sdr_send"
+                _sdr_stage_final = "pendente_wpp"
             except Exception:
                 _db_franz.close()
                 raise

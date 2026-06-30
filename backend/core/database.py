@@ -28,7 +28,10 @@ if not DATABASE_URL:
     raise ValueError("❌ DATABASE_URL não configurado no .env")
 
 _is_postgres = DATABASE_URL.startswith(("postgresql://", "postgresql+psycopg2://"))
-_connect_args = {"options": "-csearch_path=public"} if _is_postgres else {}
+_connect_args = {
+    "options": "-csearch_path=public",
+    "client_encoding": "LATIN1",  # Corrige encoding com caracteres especiais
+}
 
 # Connection pool otimizado para produção
 # pool_size: conexões mantidas abertas (default 5)
