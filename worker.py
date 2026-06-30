@@ -54,6 +54,8 @@ HEARTBEAT_SECS = int(os.environ.get("WORKER_HEARTBEAT_SECS", "30"))
 REAP_SECS = int(os.environ.get("WORKER_REAP_SECS", "60"))
 JOB_MAX_SECS = int(os.environ.get("WORKER_JOB_MAX_SECS", "1800"))
 LEAD_SUPPLY_SYNC_SECS = int(os.environ.get("LEAD_SUPPLY_SYNC_SECS", "300"))
+FRANZ_RECONCILE_SECS = int(os.environ.get("FRALIB_FRANZ_RECONCILE_SECS", "300"))
+FRANZ_RECONCILE_LIMIT = int(os.environ.get("FRALIB_FRANZ_RECONCILE_LIMIT", "25"))
 TMP_CLEANUP_HIGH_WATERMARK = float(os.environ.get("WORKER_TMP_CLEANUP_HIGH_WATERMARK", "0.50"))
 TMP_CLEANUP_CRITICAL_WATERMARK = float(os.environ.get("WORKER_TMP_CLEANUP_CRITICAL_WATERMARK", "0.80"))
 WORKER_JOB_TYPES = [
@@ -314,6 +316,86 @@ def _sync_all_lead_supply(db) -> dict:
             db.rollback()
             errors.append({"tenant_id": str(tenant_id), "error": str(exc)[:160]})
     return {"checked": checked, "synced": synced, "errors": errors[:5]}
+
+
+def _reconcile_missing_franz_jobs(db) -> dict:
+    """Enfileira sites prontos que ficaram sem job do Franz.
+
+    O envio continua respeitando janela/guard do Franz. Aqui apenas criamos
+    jobs idempotentes para leads que ja deveriam estar aguardando contato.
+    """
+    if "franz_outreach" not in WORKER_JOB_TYPES:
+        return {"checked": 0, "enqueued": 0, "skipped": "franz_disabled"}
+
+    from sqlalchemy import text as _txt
+
+    rows = db.execute(
+        _txt(
+            """
+            SELECT
+                l.id,
+                l.user_id,
+                l.nome,
+                l.cidade,
+                l.segmento,
+                COALESCE(NULLIF(l.telefone_whatsapp, ''), NULLIF(l.whatsapp, ''), l.telefone, '') AS whatsapp,
+                l.telefone,
+                COALESCE(l.rating, 0) AS rating,
+                COALESCE(l.score, 0) AS score,
+                COALESCE(NULLIF(l.tier, ''), 'STANDARD') AS tier,
+                COALESCE(l.site_url, l.url_site, '') AS site_url
+            FROM leads l
+            WHERE l.status = 'concluido'
+              AND COALESCE(l.sdr_stage, '') IN (
+                  'pending_sdr_send',
+                  'pendente_wpp',
+                  'hook',
+                  'sdr_enqueue_failed'
+              )
+              AND COALESCE(l.site_url, l.url_site, '') <> ''
+              AND COALESCE(NULLIF(l.telefone_whatsapp, ''), NULLIF(l.whatsapp, ''), l.telefone, '') <> ''
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM jobs j
+                  WHERE j.tenant_id = l.user_id
+                    AND j.tipo = 'franz_outreach'
+                    AND j.idempotency_key = 'franz-' || l.id
+                    AND j.status IN ('pending', 'running', 'completed', 'done_finished')
+              )
+            ORDER BY l.processado_em DESC NULLS LAST, l.criado_em DESC NULLS LAST
+            LIMIT :limit
+            """
+        ),
+        {"limit": max(1, FRANZ_RECONCILE_LIMIT)},
+    ).fetchall()
+
+    enqueued = 0
+    for row in rows:
+        lead_id, tenant_id, nome, cidade, segmento, whatsapp, telefone, rating, score, tier, site_url = row
+        job_id = job_queue.enqueue(
+            db,
+            tipo="franz_outreach",
+            payload={
+                "nome": nome or "",
+                "cidade": cidade or "",
+                "segmento": segmento or "",
+                "telefone": telefone or whatsapp or "",
+                "whatsapp": whatsapp or telefone or "",
+                "rating": float(rating or 0),
+                "site_url": site_url or "",
+                "score_caio": int(score or 0),
+                "tier": tier or "STANDARD",
+                "lead_id": str(lead_id),
+                "tenant_id": int(tenant_id),
+                "_reconciled": True,
+            },
+            tenant_id=int(tenant_id),
+            max_attempts=5,
+            idempotency_key=f"franz-{lead_id}",
+        )
+        if job_id:
+            enqueued += 1
+    return {"checked": len(rows), "enqueued": enqueued}
 
 
 async def _executar_job(job: dict) -> tuple[bool, Optional[str], Optional[str]]:
@@ -773,6 +855,7 @@ async def _main_loop():
     last_ckpt_reap = 0.0
     last_poll_log = 0.0
     last_supply_sync = 0.0
+    last_franz_reconcile = 0.0
 
     while _running:
         now = time.time()
@@ -865,6 +948,23 @@ async def _main_loop():
             except Exception as e:
                 log.warning(f"lead_supply sync global falhou: {e}")
             last_supply_sync = now
+
+        # Garante que site pronto sem contato tenha job do Franz.
+        if FRANZ_RECONCILE_SECS > 0 and now - last_franz_reconcile >= FRANZ_RECONCILE_SECS:
+            try:
+                db = SessionLocal()
+                try:
+                    franz_sync = _reconcile_missing_franz_jobs(db)
+                    if franz_sync.get("enqueued"):
+                        log.warning(
+                            "franz reconcile enfileirou %s site(s) sem contato",
+                            franz_sync.get("enqueued", 0),
+                        )
+                finally:
+                    db.close()
+            except Exception as e:
+                log.warning(f"franz reconcile falhou: {e}")
+            last_franz_reconcile = now
 
         # Reap periodico de checkpoints expirados (a cada 1h)
         if now - last_ckpt_reap >= 3600:

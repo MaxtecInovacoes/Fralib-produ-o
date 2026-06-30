@@ -1913,11 +1913,51 @@ function renderKanban(data) {
   }
   if (emptyEl) emptyEl.classList.remove('show');
   var mapeamento = { fila:[], intro:[], followup1:[], followup2:[], negociacao:[], qualificados:[], perdidos:[], ganhos:[] };
+  function pushLead(col, lead) {
+    if (!lead || !lead.id) return;
+    if (!mapeamento[col]) col = 'fila';
+    mapeamento[col].push(lead);
+  }
+  [
+    ['fila', 'fila'],
+    ['intro', 'intro'],
+    ['f1', 'followup1'],
+    ['f2', 'followup2'],
+    ['negotiation', 'negociacao'],
+    ['qualificado', 'qualificados'],
+    ['lost', 'perdidos'],
+    ['won', 'ganhos']
+  ].forEach(function(pair) {
+    var sourceKey = pair[0], colKey = pair[1];
+    (data[sourceKey] || []).forEach(function(lead) {
+      if (todos.indexOf(lead) !== -1) pushLead(colKey, lead);
+    });
+  });
+  if (Object.values(mapeamento).some(function(list){ return list.length > 0; })) {
+    var cols = {};
+    document.querySelectorAll('.kanban-col-body').forEach(function(c){ cols[c.dataset.col] = c; });
+    Object.values(cols).forEach(function(c){ c.innerHTML = ''; });
+    Object.keys(mapeamento).forEach(function(colKey){
+      var col = cols[colKey];
+      if (!col) return;
+      mapeamento[colKey].forEach(function(lead){ col.appendChild(criarCard(lead)); });
+    });
+    updateCounts();
+    if (countEl) countEl.textContent = todos.length + ' leads';
+    return;
+  }
   todos.forEach(function(lead) {
     if (!lead.segmento && lead.nicho) lead.segmento = lead.nicho;
     var status = (lead.status || 'pendente').toLowerCase();
     var sdr = (lead.sdr_stage || 'intro').toLowerCase();
-    if (status === 'pendente' || status === 'processando' || status === 'erro') {
+    if (
+      sdr === 'pending_sdr_send' ||
+      sdr === 'pendente_wpp' ||
+      sdr === 'sdr_enqueue_failed' ||
+      sdr === 'blocked_quality_incident'
+    ) {
+      mapeamento.fila.push(lead);
+    } else if (status === 'pendente' || status === 'processando' || status === 'erro') {
       mapeamento.fila.push(lead);
     } else if (status === 'concluido') {
       if (sdr === 'intro') mapeamento.intro.push(lead);
