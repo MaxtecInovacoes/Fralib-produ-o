@@ -1332,7 +1332,7 @@ function impersonate(id, email){
       if(!d.ok) throw new Error(d.detail||'erro');
       localStorage.setItem('fralib_token', d.token);
       toast('Logado como '+email);
-      setTimeout(()=>{ window.location.href='/dashboard'; }, 600);
+      setTimeout(()=>{ window.location.href='/admin'; }, 600);
     }catch(e){ toast('Falha: '+(e.message||e),'error'); }
   });
 }

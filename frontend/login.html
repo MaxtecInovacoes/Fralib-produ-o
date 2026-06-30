@@ -512,7 +512,7 @@ tabSignup.addEventListener('click',function(){setModo('signup')});
 var token=localStorage.getItem('fralib_token');
 if(token){
   if(planoPendente&&PLANOS_VALIDOS[planoPendente])iniciarCheckout(planoPendente);
-  else window.location.href='/dashboard';
+  else window.location.href='/admin';
 }
 
 async function iniciarCheckout(plano){
@@ -524,15 +524,15 @@ async function iniciarCheckout(plano){
     var r=await fetch('/api/credits/criar-checkout',{method:'POST',headers:headers,credentials:'include',body:JSON.stringify({plano:plano})});
     var d=await r.json();
     if(r.ok&&d.checkout_url){localStorage.removeItem('fralib_pending_plano');window.location.href=d.checkout_url}
-    else{errorDiv.textContent='Falha checkout: '+(d.detail||'tente em /dashboard');errorDiv.classList.add('show');setTimeout(function(){window.location.href='/dashboard'},3000)}
-  }catch(e){window.location.href='/dashboard'}
+    else{errorDiv.textContent='Falha checkout: '+(d.detail||'tente em /dashboard');errorDiv.classList.add('show');setTimeout(function(){window.location.href='/admin'},3000)}
+  }catch(e){window.location.href='/admin'}
 }
 
 function finalizarLogin(d){
   localStorage.removeItem('fralib_token');
   var pp=localStorage.getItem('fralib_pending_plano')||'';
   if(pp&&PLANOS_VALIDOS[pp]){btnLogin.textContent='CHECKOUT...';iniciarCheckout(pp)}
-  else window.location.href='/dashboard';
+  else window.location.href='/admin';
 }
 
 // ── Signup ─────────────────────────────────────────────────────
