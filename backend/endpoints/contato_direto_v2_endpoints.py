@@ -221,7 +221,7 @@ async def contato_direto_v2(
         }
 
 
-@router.post("/marcar-contatado/{user_id}")
+@router.post("/outreach/marcar-contatado/{user_id}")
 async def marcar_contatado_v2(
     user_id: int,
     db: Session = Depends(get_db),
