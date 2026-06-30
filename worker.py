@@ -694,26 +694,6 @@ async def _executar_job(job: dict) -> tuple[bool, Optional[str], Optional[str]]:
             finally:
                 _db_quality.close()
 
-            _tenant_key = f"fralib_user_{tenant_id}"
-            if not is_tenant_connected(_tenant_key):
-                log.warning(f"Franz: WPP não conectado para tenant {tenant_id}")
-                return False, "franz", "WhatsApp não conectado"
-            if not _dentro_do_horario(tenant_id):
-                log.info(f"Franz: fora do horario do SDR para tenant {tenant_id}")
-                return False, "franz_schedule", "Fora do horario do SDR"
-            _db_spacing = SessionLocal()
-            try:
-                _wait_seconds = _tenant_recent_outbound_wait_seconds(_db_spacing, tenant_id)
-            finally:
-                _db_spacing.close()
-            if _wait_seconds > 0:
-                log.info(
-                    "Franz: espacamento de envio tenant=%s wait=%ss",
-                    tenant_id,
-                    _wait_seconds,
-                )
-                return False, "franz_rate", f"Rate limit — cooldown {_wait_seconds}s"
-
             franz_input = FranzInput(
                 nome=payload.get("nome", ""),
                 cidade=payload.get("cidade", ""),
