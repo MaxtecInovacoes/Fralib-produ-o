@@ -28,42 +28,107 @@ def _get_redis():
         return None
 
 
-def _is_token_revoked(token: str) -> bool:
-    """Verifica se token está na blacklist."""
-    redis = _get_redis()
-    if not redis:
-        return False
-    token_hash = hashlib.sha256(token.encode()).hexdigest()
-    return redis.exists(f"revoked_token:{token_hash}")
-
-
-def revoke_token(token: str) -> None:
-    """Adiciona token à blacklist até expiração.
-    ATENÇÃO: Se Redis estiver indisponível, token NÃO é revogado.
-    Em produção crítica, considere falhar de forma segura (raise exception).
-    """
-    redis = _get_redis()
-    if not redis:
-        # FIX: Falhar de forma SEGURA em vez de falhar silenciosamente
-        # Em produção: log erro crítico e considera logout como "pendente"
-        import logging
-        logging.getLogger("uvicorn").critical(
-            "[AUTH] CRÍTICO: Redis indisponível - token NÃO pode ser revogado! "
-            f"Token hash: {hashlib.sha256(token.encode()).hexdigest()[:16]}..."
-        )
-        # Opção 1: Raise exception (mais seguro, mas quebra UX)
-        # raise RuntimeError("Redis indisponível - token não pode ser revogado")
-        # Opção 2: Retornar false para caller decidir (menos agressivo)
-        return False
+def _get_db_engine():
+    """Retorna engine PostgreSQL para fallback de blacklist."""
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM], options={"verify_exp": False})
-        exp = payload.get("exp", 0)
+        from backend.core.database import engine
+        return engine
     except Exception:
-        exp = int(time.time()) + 86400  # Default 24h
-    ttl = max(1, exp - int(time.time()))
-    token_hash = hashlib.sha256(token.encode()).hexdigest()
-    redis.setex(f"revoked_token:{token_hash}", ttl, "1")
-    return True
+        return None
+
+
+def _is_token_revoked(token: str) -> bool:
+    """Verifica se token está na blacklist (Redis ou PostgreSQL)."""
+    import logging
+    logger = logging.getLogger("uvicorn")
+
+    redis = _get_redis()
+    if redis:
+        try:
+            token_hash = hashlib.sha256(token.encode()).hexdigest()
+            if redis.exists(f"revoked_token:{token_hash}"):
+                return True
+        except Exception as e:
+            logger.warning(f"[AUTH] Redis check failed: {e}")
+
+    # Fallback PostgreSQL
+    engine = _get_db_engine()
+    if engine:
+        try:
+            token_hash = hashlib.sha256(token.encode()).hexdigest()
+            with engine.connect() as conn:
+                result = conn.execute(
+                    sa_text("SELECT 1 FROM revoked_tokens WHERE token_hash = :hash LIMIT 1"),
+                    {"hash": token_hash}
+                ).fetchone()
+                if result:
+                    return True
+        except Exception as e:
+            logger.warning(f"[AUTH] PostgreSQL blacklist check failed: {e}")
+
+    return False
+
+
+def revoke_token(token: str) -> bool:
+    """Adiciona token à blacklist até expiração (Redis + PostgreSQL fallback).
+
+    Se Redis falhar, usa PostgreSQL como fallback.
+    Em produção, monitore este fallback - indica problema no Redis.
+    """
+    import logging
+    logger = logging.getLogger("uvicorn")
+
+    redis = _get_redis()
+    success = False
+
+    if redis:
+        try:
+            payload = jwt.decode(token, get_jwt_secret(), algorithms=[ALGORITHM], options={"verify_exp": False})
+            exp = payload.get("exp", 0)
+        except Exception:
+            exp = int(time.time()) + 86400  # Default 24h
+        ttl = max(1, exp - int(time.time()))
+        token_hash = hashlib.sha256(token.encode()).hexdigest()
+        redis.setex(f"revoked_token:{token_hash}", ttl, "1")
+        success = True
+    else:
+        logger.warning("[AUTH] Redis indisponível - usando PostgreSQL fallback")
+
+    # Fallback PostgreSQL
+    engine = _get_db_engine()
+    if engine:
+        try:
+            payload = jwt.decode(token, get_jwt_secret(), algorithms=[ALGORITHM], options={"verify_exp": False})
+            exp = payload.get("exp", 0)
+        except Exception:
+            exp = int(time.time()) + 86400
+        ttl = max(1, exp - int(time.time()))
+        token_hash = hashlib.sha256(token.encode()).hexdigest()
+
+        with engine.connect() as conn:
+            # Criar tabela se não existir
+            conn.execute(sa_text("""
+                CREATE TABLE IF NOT EXISTS revoked_tokens (
+                    token_hash VARCHAR(64) PRIMARY KEY,
+                    revoked_at TIMESTAMP DEFAULT NOW(),
+                    expires_at TIMESTAMP
+                )
+            """))
+            conn.execute(sa_text("""
+                INSERT INTO revoked_tokens (token_hash, expires_at)
+                VALUES (:hash, NOW() + INTERVAL '1 second' * :ttl)
+                ON CONFLICT (token_hash) DO UPDATE SET expires_at = EXCLUDED.expires_at
+            """), {"hash": token_hash, "ttl": ttl})
+            conn.commit()
+        success = True
+    else:
+        logger.critical("[AUTH] CRÍTICO: Redis E PostgreSQL indisponíveis - token NÃO pode ser revogado!")
+        return False
+
+    if not redis:
+        logger.warning(f"[AUTH] Blacklist via PostgreSQL (Redis indisponível) - token hash: {hashlib.sha256(token.encode()).hexdigest()[:16]}...")
+
+    return success
 
 security = HTTPBearer(auto_error=False)
 BLOCKED_USER_STATUSES = {"bloqueado", "suspenso", "cancelado", "inadimplente", "desativado"}

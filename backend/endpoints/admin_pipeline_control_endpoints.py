@@ -10,6 +10,12 @@ Permitem ao admin:
 - Limpar fila pendente
 - Reiniciar o servico systemd do worker
 
+SEGURANCA:
+- Queries agregadas NAO filtram por tenant porque sao consultas de ADMIN GLOBAL
+- Requer role='superadmin' verificado via require_admin()
+- Logs de auditoria em todas as operacoes de write
+- Rate limiting protege contra abuses
+
 Rotas:
   GET  /api/admin/pipeline/status           - Resumo agregado
   GET  /api/admin/pipeline/health           - Health check booleano
@@ -17,6 +23,9 @@ Rotas:
   POST /api/admin/pipeline/kill-stuck       - Mata spans running antigos
   POST /api/admin/pipeline/clear-queue      - Cancela jobs pending
   POST /api/admin/pipeline/worker/restart   - systemctl restart fralib-worker
+
+NOTA: Os endpoints de admin veem TODOS os tenants por design (superadmin precisa
+de visibilidade global). Se multi-tenant admin for necessario, adicionar filtro.
 """
 from __future__ import annotations
 

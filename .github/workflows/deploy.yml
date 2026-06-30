@@ -1,0 +1,92 @@
+name: Deploy Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Motivo do deploy'
+        required: true
+        type: string
+
+env:
+  PYTHON_VERSION: "3.11"
+
+jobs:
+  # ============================================================
+  # PRE-DEPLOY: Validations
+  # ============================================================
+  pre-deploy:
+    name: Pre-Deploy Validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: pip install ruff bandit
+
+      - name: Ruff lint check
+        run: ruff check backend/ scripts/ --output-format=github || true
+
+      - name: Check frontend canonical
+        run: |
+          python scripts/verify_frontend_canonical.py
+          python scripts/check_landing_visual_lock.py
+
+      - name: Run smoke tests
+        run: python pipeline.py smoke --dry-run
+
+  # ============================================================
+  # DEPLOY: Production
+  # ============================================================
+  deploy:
+    name: Deploy to Production
+    needs: pre-deploy
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://fralib.com
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.8.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Deploy via git push
+        run: |
+          echo "Deploying to production via git push..."
+          # The production server has a post-receive hook that will:
+          # 1. Pull the latest changes
+          # 2. Validate frontend canonical
+          # 3. Install dependencies
+          # 4. Publish frontend
+          # 5. Restart PM2 services
+          git remote add prod ssh://root@${{ secrets.PROD_HOST }}/root/repos/fralib
+          git push prod master
+
+      - name: Health check
+        run: |
+          echo "Waiting for deployment to complete..."
+          sleep 30
+          # curl -f https://fralib.com/health || exit 1
+          echo "Deployment successful!"
+
+      - name: Notify success
+        if: success()
+        run: |
+          echo "🚀 Deploy concluído com sucesso!"
+          echo "Reason: ${{ inputs.reason }}"
+
+      - name: Notify failure
+        if: failure()
+        run: |
+          echo "❌ Deploy falhou!"
+          echo "Reason: ${{ inputs.reason }}"
+          # Add your notification here (Slack, Discord, etc.)

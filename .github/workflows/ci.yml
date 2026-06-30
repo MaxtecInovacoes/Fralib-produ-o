@@ -1,0 +1,198 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+    branches: [master, main]
+
+env:
+  PYTHON_VERSION: "3.11"
+  NODE_VERSION: "18"
+
+jobs:
+  # ============================================================
+  # JOB 1: Lint & Security
+  # ============================================================
+  lint:
+    name: Lint & Security
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          pip install ruff safety bandit
+
+      - name: Ruff lint
+        run: ruff check backend/ scripts/ --output-format=github
+
+      - name: Bandit security
+        run: bandit -r backend/ -f github
+
+      - name: Safety check
+        run: safety check --json --output=safety.json || true
+
+  # ============================================================
+  # JOB 2: Unit Tests
+  # ============================================================
+  tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: fralib_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          pip install -r backend/requirements.txt
+          pip install pytest pytest-cov pytest-asyncio
+
+      - name: Run smoke tests
+        run: python pipeline.py smoke --dry-run
+
+      - name: Run regression patches
+        run: pytest tests/test_regression_patches.py -v
+
+      - name: Run unit tests
+        run: pytest tests/unit/ -v --cov=backend --cov-report=xml
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./coverage.xml
+          fail_ci_if_error: false
+
+  # ============================================================
+  # JOB 3: Frontend Build
+  # ============================================================
+  frontend:
+    name: Frontend Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Check frontend canonical
+        run: |
+          python scripts/verify_frontend_canonical.py
+
+      - name: Check landing visual lock
+        run: |
+          python scripts/check_landing_visual_lock.py
+
+  # ============================================================
+  # JOB 4: Database Migrations
+  # ============================================================
+  migrations:
+    name: Database Migrations
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: fralib_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          pip install alembic psycopg2-binary
+
+      - name: Run migrations (dry-run)
+        run: |
+          export DATABASE_URL="postgresql://test:test@localhost:5432/fralib_test"
+          alembic upgrade head --sql | head -20
+
+  # ============================================================
+  # JOB 5: Deploy Staging (on master push)
+  # ============================================================
+  deploy-staging:
+    name: Deploy Staging
+    runs-on: ubuntu-latest
+    needs: [lint, tests, frontend, migrations]
+    if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+    environment:
+      name: staging
+      url: https://staging.fralib.com
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy to staging
+        run: |
+          echo "Deploying to staging..."
+          # Add your staging deployment script here
+          # Example: ./scripts/deploy.sh staging
+
+      - name: Health check
+        run: |
+          echo "Checking health endpoint..."
+          # curl -f https://staging.fralib.com/health || exit 1
+
+  # ============================================================
+  # JOB 6: Security Scan
+  # ============================================================
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+
+      - name: Upload Trivy scan results
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: 'trivy-results.sarif'
