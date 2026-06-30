@@ -19,6 +19,7 @@ set -euo pipefail
 VPS_HOST="root@187.77.37.72"
 FRALIB_DIR="/root/fralib"
 WEB_DIR="/var/www/fralib"
+LEGACY_FRONTEND_CRON="/etc/cron.d/fralib-frontend-sync"
 
 echo "=== Sync VPS iniciado em $(date) ==="
 
@@ -28,6 +29,11 @@ set -e
 echo "1. git pull origin master"
 cd "$FRALIB_DIR"
 git pull origin master
+
+if [ -f "$LEGACY_FRONTEND_CRON" ]; then
+    rm -f "$LEGACY_FRONTEND_CRON"
+    echo "  removido cron legado: $LEGACY_FRONTEND_CRON"
+fi
 
 echo ""
 echo "2. Copiar frontend/ para $WEB_DIR/"

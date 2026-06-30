@@ -37,6 +37,8 @@ def main() -> int:
         problems.append("post-receive nao remove dashboard.html legado")
     if "HTML legado ainda publicado" not in hook:
         problems.append("post-receive nao falha fechado se HTML legado sobreviver")
+    if "/etc/cron.d/fralib-frontend-sync" not in hook:
+        problems.append("post-receive nao remove cron legado que republica frontend/*.html")
     if 'location = /dashboard {' not in nginx or 'return 302 /admin.html$is_args$args;' not in nginx:
         problems.append("Nginx nao redireciona /dashboard para admin.html")
     if 'location = /dashboard.html {' not in nginx or 'return 302 /admin.html$is_args$args;' not in nginx:

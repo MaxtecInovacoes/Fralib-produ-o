@@ -8,6 +8,7 @@ set -euo pipefail
 FRALIB_DIR="/root/fralib"
 WEB_DIR="/var/www/fralib"
 LOG_FILE="/root/fralib-logs/deploy.log"
+LEGACY_FRONTEND_CRON="/etc/cron.d/fralib-frontend-sync"
 
 mkdir -p "$(dirname "$LOG_FILE")"
 
@@ -53,6 +54,11 @@ if [ -n "$ENV_BACKUP" ] && [ -f "$ENV_BACKUP" ]; then
 fi
 
 log "Codigo atualizado para: $(git rev-parse --short HEAD)"
+
+if [ -f "$LEGACY_FRONTEND_CRON" ]; then
+    rm -f "$LEGACY_FRONTEND_CRON"
+    log "Removido cron legado de frontend: $LEGACY_FRONTEND_CRON"
+fi
 
 # 2. Clear pycache para forcar reload do codigo novo
 log "Limpando __pycache__..."

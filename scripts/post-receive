@@ -7,6 +7,7 @@ set -euo pipefail
 FRALIB_DIR="/root/fralib"
 WEB_DIR="/var/www/fralib"
 LOG_FILE="/root/fralib-logs/deploy.log"
+LEGACY_FRONTEND_CRON="/etc/cron.d/fralib-frontend-sync"
 
 mkdir -p "$(dirname "$LOG_FILE")"
 
@@ -55,6 +56,11 @@ trap - EXIT
 
 log "Validando frontend canonico..."
 "$FRALIB_DIR/venv/bin/python3" "$FRALIB_DIR/scripts/verify_frontend_canonical.py" 2>&1 | tee -a "$LOG_FILE"
+
+if [ -f "$LEGACY_FRONTEND_CRON" ]; then
+    rm -f "$LEGACY_FRONTEND_CRON"
+    log "Removido cron legado de frontend: $LEGACY_FRONTEND_CRON"
+fi
 
 # 2. Instalar dependencias Python se requirements mudou
 log "Verificando dependencias Python..."
