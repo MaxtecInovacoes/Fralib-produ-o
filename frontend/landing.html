@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>FraLib OS — Acha Cliente, Faz Site e Vende no WPP Automaticamente</title>
-<meta name="description" content="FraLib acha o cliente que quer site, faz o site automaticão e vende no WhatsApp. Você só recebe o dinheiro. 100% do lucro é seu.">
+<title>FraLib — Encontre Empresas Locais que Precisam de Site e Venda com Pré-via de IA</title>
+<meta name="description" content="FraLib encontra empresas locais com presença digital fraca, gera uma prévia de site com IA e produz abordagem pronta para WhatsApp. Beta por R$97.">
 <meta name="keywords" content="criar sites automaticamente, vender sites, prospecção automática, IA para sites, plataforma SaaS">
 <meta name="author" content="FraLib OS">
 <meta name="robots" content="index, follow">
@@ -550,6 +550,54 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
   display:flex;align-items:center;
 }
 
+/* BULLETS - Nova copy */
+.hero-bullets{
+  list-style:none;
+  padding:0;margin:0 0 20px;
+  display:flex;flex-direction:column;gap:8px;
+  max-width:560px;
+  animation:fadeUp .8s var(--fl-ease) .25s both;
+}
+.hero-bullets li{
+  font-size:13px;
+  color:var(--fl-text);
+  padding-left:24px;
+  position:relative;
+  line-height:1.5;
+}
+.hero-bullets li::before{
+  content:'✓';
+  position:absolute;left:0;top:0;
+  color:var(--cyan);
+  font-weight:700;
+  font-size:14px;
+}
+
+/* CTA secundário */
+.btn-hero-secondary{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:13px 30px;
+  font-family:var(--fl-font-brand);
+  font-size:10px;
+  letter-spacing:1.2px;
+  color:var(--fl-text);
+  text-decoration:none;
+  border:2px solid var(--fl-border-md);
+  background:transparent;
+  margin-left:8px;
+  transition:all .2s;
+}
+.btn-hero-secondary:hover{
+  border-color:var(--cyan);
+  color:var(--cyan);
+}
+@media(max-width:640px){
+  .btn-hero-secondary{display:block;margin-left:0;margin-top:8px}
+  .hero-bullets{font-size:12px}
+}
+
 /* SUB */
 .hero-sub{
   font-size:clamp(12px,1.2vw,14px);color:var(--fl-text-muted);
@@ -667,7 +715,70 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
   animation:dot-pulse 1s ease-in-out infinite;
 }
 
-/* PIPELINE - container das 5 etapas (motion design v2) */
+/* MOCKUP SISTEMA - Hero v2 (substitui pipeline) */
+.mock-system{
+  padding:8px 4px;
+  display:flex;flex-direction:column;gap:10px;
+}
+.mock-row{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:6px 10px;
+  background:rgba(0,0,0,0.3);
+  border:1px solid var(--fl-border);
+  font-size:12px;
+}
+.mock-label{color:var(--fl-text-muted);font-family:var(--fl-font-mono);font-size:10px;text-transform:uppercase;letter-spacing:.5px}
+.mock-value{color:var(--fl-text);font-weight:600}
+.mock-divider{height:1px;background:var(--fl-border);margin:4px 0}
+.mock-stats{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:6px;
+}
+.mock-stat{
+  text-align:center;
+  padding:10px 4px;
+  background:rgba(0,0,0,0.3);
+  border:1px solid var(--fl-border);
+}
+.mock-stat.highlight{border-color:var(--gold);background:rgba(255,184,0,0.05)}
+.mock-num{
+  display:block;
+  font-family:var(--fl-font-mono);
+  font-size:18px;font-weight:700;
+  color:var(--fl-text);line-height:1;
+  margin-bottom:4px;
+}
+.mock-num.gold{color:var(--gold)}
+.mock-num.cyan{color:var(--cyan)}
+.mock-desc{
+  display:block;
+  font-size:9px;
+  color:var(--fl-text-dim);
+  line-height:1.2;
+}
+.mock-lead{
+  background:rgba(0,255,179,0.05);
+  border:1px solid var(--cyan);
+  padding:10px 12px;
+}
+.mock-lead-header{
+  display:flex;justify-content:space-between;align-items:center;
+  margin-bottom:6px;
+}
+.mock-lead-name{
+  font-size:12px;font-weight:600;color:var(--fl-text);
+}
+.mock-lead-status{
+  font-size:8px;font-family:var(--fl-font-mono);
+  color:var(--cyan);text-transform:uppercase;letter-spacing:.5px;
+  background:rgba(0,255,179,0.1);
+  padding:2px 6px;
+}
+.mock-lead-message{
+  font-size:11px;color:var(--fl-text-muted);font-style:italic;
+  line-height:1.4;
+}
+
+/* PIPELINE (mantida para compat) */
 .pipeline{
   display:flex;flex-direction:column;gap:8px;
   position:relative;
@@ -2162,134 +2273,99 @@ function trackPurchase(orderId, amount) {
     <div class="hero-left">
 
       <h1 class="hero-title">
-        <span class="grad">FraLib acha o cliente. Faz o site. Fecha no WPP.</span>
-        <span class="hero-title-sub">Você fica com <strong>100% do lucro.</strong></span>
+        <span class="grad">Descubra empresas da sua região que ainda precisam de um site vendável</span>
       </h1>
 
       <p class="hero-sub">
-        Você configura 1x. Todo dia sai site pronto pra comprador no seu WPP.
+        A FraLib encontra leads locais, cria uma prévia de site com IA e gera uma abordagem pronta para você chamar o cliente mostrando algo concreto — não só uma mensagem fria.
       </p>
 
-      <!-- CONTRASTE DOR vs SOLUÇÃO — cards horizontais -->
-      <div class="hero-contrast">
-        <div class="hero-pain">
-          <strong>HOJE</strong>
-          <span>Você prospecta, faz site e corre atrás do cliente. Sobra o quê? Cansaço.</span>
-        </div>
-        <span class="hero-arrow">→</span>
-        <div class="hero-solution">
-          <strong>COM FRALIB</strong>
-          <span>Acorda com cliente novo no WPP querendo comprar site. Todo dia. Sozinho.</span>
-        </div>
-      </div>
+      <!-- BULLETS RÁPIDOS -->
+      <ul class="hero-bullets">
+        <li>Encontre negócios locais com presença digital fraca</li>
+        <li>Gere uma prévia de site baseada nos dados do negócio</li>
+        <li>Aborde no WhatsApp com efeito wow</li>
+        <li>Organize tudo em um painel simples</li>
+        <li>Comece mesmo sem equipe, portfólio ou experiência técnica</li>
+      </ul>
 
       <div class="hero-buttons">
-        <a href="/login?signup=1" class="btn-hero-primary">
+        <a href="#simulador" class="btn-hero-primary">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-          TESTA 7 DIAS GRÁTIS
+          SIMULAR MINHA REGIÃO
+        </a>
+        <a href="#oferta" class="btn-hero-secondary">
+          ENTRAR NO BETA POR R$97
         </a>
         <div class="hero-cta-sub">
-          7 dias gratis · <span>Sem cartao de credito</span> · Cancela em 1 clique
+          Acesso imediato • Grupo WhatsApp • Garantia de 30 dias
         </div>
       </div>
 
       <!-- MICRO-PROVA — stat strip -->
       <div class="hero-microproof">
         <div class="hero-microproof-item">
-          <div class="hero-microproof-num">+2.400</div>
-          <div class="hero-microproof-label">Prospectados</div>
+          <div class="hero-microproof-num">40+</div>
+          <div class="hero-microproof-label">Usuários Beta</div>
         </div>
         <div class="hero-microproof-sep"></div>
         <div class="hero-microproof-item">
-          <div class="hero-microproof-num">+180</div>
-          <div class="hero-microproof-label">Sites criados</div>
+          <div class="hero-microproof-num">+1.000</div>
+          <div class="hero-microproof-label">Buscas Feitas</div>
         </div>
         <div class="hero-microproof-sep"></div>
         <div class="hero-microproof-item">
-          <div class="hero-microproof-num">+847</div>
-          <div class="hero-microproof-label">Clientes Fechados</div>
+          <div class="hero-microproof-num">+1.000</div>
+          <div class="hero-microproof-label">Leads Encontrados</div>
         </div>
       </div>
     </div>
 
-    <!-- COLUNA DIREITA: pipeline animada SVG (motion design) -->
+    <!-- COLUNA DIREITA: MOCKUP NOVO -->
     <div class="hero-right">
       <div class="hero-mockup">
-        <!-- Header da pipeline -->
+        <!-- Header -->
         <div class="mock-kanban-header">
           <span class="mock-dot pulsing"></span>
-          <span class="mock-title">PIPELINE ATIVA · AGORA</span>
+          <span class="mock-title">FRA LIB · PAINEL</span>
           <span class="mock-status"><span class="mock-dot-live"></span></span>
         </div>
 
-        <!-- Pipeline animada: 5 etapas sequenciais -->
-        <div class="pipeline">
-
-          <!-- ETAPA 1: BUSCAR LEAD -->
-          <div class="pipeline-step step-1">
-            <div class="step-icon icon-search">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
-            </div>
-            <div class="step-content">
-              <div class="step-label">BUSCANDO LEAD</div>
-              <div class="step-desc">Mapeando Google Maps...</div>
-            </div>
-            <div class="step-spinner"><svg width="16" height="16" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="rgba(255,255,255,.1)" stroke-width="3"/><path d="M21 12a9 9 0 0 0-9-9" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg></div>
+        <!-- Mockup sistema -->
+        <div class="mock-system">
+          <div class="mock-row">
+            <span class="mock-label">Cidade:</span>
+            <span class="mock-value">Curitiba</span>
           </div>
-
-          <!-- ETAPA 2: ANALISAR -->
-          <div class="pipeline-step step-2">
-            <div class="step-icon icon-analyze">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M8 11l2 2 4-4"/></svg>
-            </div>
-            <div class="step-content">
-              <div class="step-label">ANALISANDO</div>
-              <div class="step-desc">Pizzaria São José · sem site</div>
-            </div>
-            <div class="step-bar"><div class="step-bar-fill"></div></div>
+          <div class="mock-row">
+            <span class="mock-label">Nicho:</span>
+            <span class="mock-value">Pizzarias</span>
           </div>
-
-          <!-- ETAPA 3: CRIAR SITE -->
-          <div class="pipeline-step step-3">
-            <div class="step-icon icon-code">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+          <div class="mock-divider"></div>
+          <div class="mock-stats">
+            <div class="mock-stat">
+              <span class="mock-num">187</span>
+              <span class="mock-desc">empresas encontradas</span>
             </div>
-            <div class="step-content">
-              <div class="step-label">CRIANDO SITE</div>
-              <div class="step-desc">Gerando com IA · 8 min</div>
+            <div class="mock-stat highlight">
+              <span class="mock-num gold">42</span>
+              <span class="mock-desc">sem site detectado</span>
             </div>
-            <div class="step-percent" data-counter data-target="100" data-suffix="%">0%</div>
-          </div>
-
-          <!-- ETAPA 4: ENVIAR WHATSAPP -->
-          <div class="pipeline-step step-4">
-            <div class="step-icon icon-whatsapp">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
-            </div>
-            <div class="step-content">
-              <div class="step-label">ENVIANDO WHATSAPP</div>
-              <div class="step-desc">Franz abordando lead...</div>
-            </div>
-            <div class="step-typing">
-              <span class="dot-typing"></span>
-              <span class="dot-typing"></span>
-              <span class="dot-typing"></span>
+            <div class="mock-stat">
+              <span class="mock-num cyan">18</span>
+              <span class="mock-desc">boas oportunidades</span>
             </div>
           </div>
-
-          <!-- ETAPA 5: VENDA FEITA! BOOM! -->
-          <div class="pipeline-step step-5">
-            <div class="step-icon icon-celebration">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 2l2.4 7.4H22l-6.2 4.5L18.2 22 12 17.5 5.8 22l2.4-8.1L2 9.4h7.6z"/></svg>
+          <div class="mock-divider"></div>
+          <div class="mock-lead">
+            <div class="mock-lead-header">
+              <span class="mock-lead-name">Pizzaria São José</span>
+              <span class="mock-lead-status">PRÉVIA PRONTA</span>
             </div>
-            <div class="step-content">
-              <div class="step-label gold">VENDA FEITA</div>
-              <div class="step-desc gold">Pizzaria São José · R$ 1.500</div>
+            <div class="mock-lead-message">
+              "Montei uma prévia de site para vocês avaliarem..."
             </div>
-            <div class="step-amount" data-counter data-target="1500" data-prefix="+R$ " data-suffix="">+R$ 1.500</div>
-            <div class="step-burst"></div>
           </div>
-
         </div>
       </div>
     </div>
@@ -2522,27 +2598,33 @@ function trackPurchase(orderId, amount) {
   </div>
 </section>
 
-<!-- ===== SEÇÃO 3 — PROBLEMA ===== -->
-<section class="problema">
+<!-- ===== SEÇÃO 5 — COMO FUNCIONA ===== -->
+<section class="como-funciona" id="como-funciona" style="background:transparent;padding:80px 0;">
   <div class="container">
-    <h2 class="section-title reveal">POR QUE A MAIORIA NUNCA COMEÇA A GANHAR DINHEIRO ONLINE?</h2>
-    <div class="problema-grid">
-      <div class="problema-item reveal">
-        <div class="problema-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>
-        <div class="problema-text">Trabalha o dia inteiro e sobra zero no bolso. Queria renda extra mas não tem tempo nem energia pra um "bico".</div>
+    <h2 class="section-title reveal">A FraLib faz o caminho mais difícil antes da venda</h2>
+    <p class="section-sub reveal" style="text-align:center;margin:0 auto 48px;max-width:680px;color:var(--fl-text-muted);font-size:15px;">Você define o nicho. A FraLib busca, gera prévia e prepara a abordagem. Você chama o lead no WhatsApp mostrando algo concreto.</p>
+    <div class="steps-grid">
+      <div class="step-card reveal">
+        <div class="step-num">1</div>
+        <div class="step-icon-wrap"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg></div>
+        <h3 class="step-title">Encontra o lead</h3>
+        <p class="step-desc">Escolha cidade e nicho. A FraLib busca empresas locais com sinais de oportunidade, como ausência de site detectado ou presença digital fraca.</p>
       </div>
-      <div class="problema-item reveal">
-        <div class="problema-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>
-        <div class="problema-text">Queria começar mas não sabe por onde. Cansou de assistir vídeo sem fim no YouTube. Queria algo que funcionasse de verdade.</div>
+      <div class="step-card reveal">
+        <div class="step-num">2</div>
+        <div class="step-icon-wrap"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg></div>
+        <h3 class="step-title">Cria a prévia do site</h3>
+        <p class="step-desc">A IA usa dados públicos do negócio para montar uma prévia visual com nome, serviços, endereço, mapa e botão de WhatsApp.</p>
       </div>
-      <div class="problema-item reveal">
-        <div class="problema-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>
-        <div class="problema-text">Nunca vendeu nada na vida. Não é programador, não é designer. Acha que não tem skill pra vender, mas quer tentar.</div>
+      <div class="step-card reveal">
+        <div class="step-num">3</div>
+        <div class="step-icon-wrap"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg></div>
+        <h3 class="step-title">Gera a abordagem</h3>
+        <p class="step-desc">Em vez de mandar "faço sites", você chama com uma demonstração: "Oi, montei uma prévia de como o site da sua empresa poderia ficar."</p>
       </div>
-      <div class="problema-item reveal">
-        <div class="problema-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>
-        <div class="problema-text">CLT mata o dia. Quando chega em casa só quer dormir. Precisa de algo que funcione enquanto faz nada.</div>
-      </div>
+    </div>
+    <div class="section-cta reveal" style="text-align:center;margin-top:48px;">
+      <a href="#simulador" class="btn-hero-primary">GERAR UMA PRÉVIA AGORA</a>
     </div>
   </div>
 </section>
@@ -2585,222 +2667,94 @@ function trackPurchase(orderId, amount) {
   </div>
 </section>
 
-<!-- ===== SEÇÃO 5C — DEPOIMENTOS SCROLLER HORIZONTAL ===== -->
-<section class="funcionalidades" style="padding:80px 0;overflow:hidden;">
+<!-- ===== SEÇÃO 6 — EFEITO WOW NO WHATSAPP ===== -->
+<section id="whatsapp-wow" style="padding:80px 0;background:linear-gradient(180deg,transparent 0%,rgba(0,255,179,0.03) 100%);">
   <div class="container">
-    <h2 class="section-title reveal" style="margin-bottom:16px;">VEJA QUEM ESTÁ GANHANDO RENDA EXTRA</h2>
-    <p class="section-sub reveal" style="text-align:center;margin:0 auto 24px;max-width:720px;color:var(--fl-text-muted);">6 historias de pessoas comuns. Resultados comuns. Role pra ver mais.</p>
-  </div>
-  <div class="depoimentos-scroller">
-    <div class="depoimentos-track">
-      <!-- Comentario 1: QUEM COMPROU -->
-      <div class="depoimento-scroll-card tipo-confirmacao">
-        <div class="depoimento-foto" style="background-image:url('https://i.pravatar.cc/200?img=12'); background-size:cover; background-position:center; background-repeat:no-repeat;" loading="lazy"></div>
-        <div class="depoimento-conteudo">
-          <span class="tipo-tag confirmacao">COMPROU</span>
-          <div class="contexto"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6" fill="#0a0714"/><circle cx="12" cy="12" r="2"/></svg>PRO · 2 meses atrás</div>
-          <blockquote>"Fechei 3 clientes na primeira semana. O Franz fez o que eu faria se tivesse 24h no dia. ROI no primeiro mês."</blockquote>
-          <div class="depoimento-autor-info">
-            <h4>Rafael Ferreira</h4>
-            <p>Dev full-stack · São Paulo</p>
-            <span class="metric">3 clientes / semana</span>
-          </div>
-        </div>
-      </div>
+    <h2 class="section-title reveal">Você não vende só falando. Você vende mostrando.</h2>
+    <p class="section-sub reveal" style="text-align:center;margin:0 auto 56px;max-width:680px;color:var(--fl-text-muted);font-size:15px;line-height:1.7;">A maioria dos freelancers manda mensagens iguais. A FraLib ajuda você a chegar com uma prévia pronta, aumentando a curiosidade e a percepção de valor.</p>
 
-      <!-- Comentario 2: QUEM TAVA EM DUVIDA -->
-      <div class="depoimento-scroll-card tipo-duvida">
-        <div class="depoimento-foto" style="background-image:url('https://i.pravatar.cc/200?img=23')"></div>
-        <div class="depoimento-conteudo">
-          <span class="tipo-tag duvida">TIVE DUVIDA</span>
-          <div class="contexto"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>STARTER · 6 meses atrás</div>
-          <blockquote>"Tava receoso de pagar R$97 pra testar. Mas resolvi — cancela em 1 clique. 3 meses depois tô no PRO e fechando 4 clientes/mês."</blockquote>
-          <div class="depoimento-autor-info">
-            <h4>Amanda Martins</h4>
-            <p>Designer · BH</p>
-            <span class="metric">4 clientes / mês</span>
-          </div>
+    <div class="wa-demo reveal" style="max-width:680px;margin:0 auto;background:var(--fl-bg-card);border:1px solid var(--fl-border);">
+      <div class="wa-demo-header">
+        <div class="wa-avatar">F</div>
+        <div>
+          <div class="wa-name">Conversa real · Efeito wow</div>
+          <div class="wa-status">Prévia enviada</div>
         </div>
       </div>
+      <div class="wa-demo-msgs">
+        <div class="wa-bubble sent">
+          <div class="wa-msg-text">Oi, tudo bem? Vi que sua empresa aparece no Google, mas não encontrei um site profissional.</div>
+          <div class="wa-msg-time">10:32</div>
+        </div>
+        <div class="wa-bubble sent">
+          <div class="wa-msg-text">Montei uma prévia gratuita de como o site de vocês poderia ficar. Posso te mandar?</div>
+          <div class="wa-msg-time">10:33</div>
+        </div>
+        <div class="wa-bubble received">
+          <div class="wa-msg-text">Pode sim, manda aí.</div>
+          <div class="wa-msg-time">10:41</div>
+        </div>
+        <div class="wa-bubble sent">
+          <div class="wa-msg-text">Aqui está a prévia: <span class="wa-link">[link-da-demo]</span></div>
+          <div class="wa-msg-time">10:42</div>
+        </div>
+        <div class="wa-bubble received">
+          <div class="wa-msg-text">Ficou muito bom. Quanto ficaria pra deixar no ar?</div>
+          <div class="wa-msg-time">10:50</div>
+        </div>
+        <div class="wa-bubble typing">
+          <span></span><span></span><span></span>
+        </div>
+      </div>
+    </div>
 
-      <!-- Comentario 3: QUEM ACHOU GOLPE -->
-      <div class="depoimento-scroll-card tipo-suspeita">
-        <div class="depoimento-foto" style="background-image:url('https://i.pravatar.cc/200?img=33')"></div>
-        <div class="depoimento-conteudo">
-          <span class="tipo-tag suspeita">ACHEI GOLPE</span>
-          <div class="contexto"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>PRO · 4 meses atrás</div>
-          <blockquote>"Parecia bom demais. 'Site em 24h, SDR automático' — já fui achando golpe. Mas testei com 1 lead só pra ver. Veio o site, veio a mensagem no Zap, veio o cliente."</blockquote>
-          <div class="depoimento-autor-info">
-            <h4>Marcos Costa</h4>
-            <p>Freelancer · POA</p>
-            <span class="metric">5 clientes / mês</span>
-          </div>
-        </div>
-      </div>
+    <p style="text-align:center;color:var(--fl-text-dim);font-size:12px;margin:24px auto 0;font-style:italic;">Conversa ilustrativa. Resultados dependem da abordagem, nicho e execução.</p>
 
-      <!-- Comentario 4: QUEM COMPROU MAIS -->
-      <div class="depoimento-scroll-card tipo-resposta">
-        <div class="depoimento-foto" style="background-image:url('https://i.pravatar.cc/200?img=44')"></div>
-        <div class="depoimento-conteudo">
-          <span class="tipo-tag resposta">COMPREI PRO</span>
-          <div class="contexto"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>Resposta no Reclame Aqui</div>
-          <blockquote>"Respondeu em 10min no domingo. Resolveram meu bug em 1h. Suporte humano de verdade, não chatbot. Acima da média."</blockquote>
-          <div class="depoimento-autor-info">
-            <h4>Júlia Ribeiro</h4>
-            <p>Designer iniciante · Curitiba</p>
-            <span class="metric">Suporte top</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Comentario 5: RECOMENDA (sem mostrar a outros) -->
-      <div class="depoimento-scroll-card tipo-recomendacao">
-        <div class="depoimento-foto" style="background-image:url('https://i.pravatar.cc/200?img=52')"></div>
-        <div class="depoimento-conteudo">
-          <span class="tipo-tag recomendacao">SÓ PRA ELA</span>
-          <div class="contexto"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 8a3 3 0 10-3-3"/><path d="M15 22v-4a3 3 0 00-3-3H6a3 3 0 00-3 3v4"/><circle cx="9" cy="8" r="1"/><path d="M15 22v-4a3 3 0 013-3h2a3 3 0 013 3v4"/><circle cx="18" cy="5" r="1"/></svg>DM privado · ontem</div>
-          <blockquote>"Não tava querendo contar pra ninguém pq é meu diferencial. Mas vou abrir mão — concorrente meu tá usando agora também."</blockquote>
-          <div class="depoimento-autor-info">
-            <h4>Diego Almeida</h4>
-            <p>Agência 5 pessoas · Recife</p>
-            <span class="metric">15 sites / mês</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Comentario 6: COMPROU -->
-      <div class="depoimento-scroll-card tipo-confirmacao">
-        <div class="depoimento-foto" style="background-image:url('https://i.pravatar.cc/200?img=49')"></div>
-        <div class="depoimento-conteudo">
-          <span class="tipo-tag confirmacao">CONFIRMO</span>
-          <div class="contexto"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>TRIAL → PRO · 1 mês atrás</div>
-          <blockquote>"Sou mãe, trabalho de casa, queria renda extra. R$4.800 no primeiro mês. Não é milagre mas é real — eu testei e deu certo."</blockquote>
-          <div class="depoimento-autor-info">
-            <h4>Patrícia Mendes</h4>
-            <p>Freelancer renda extra · Salvador</p>
-            <span class="metric">R$4.800/mês</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- DUPLICADO para scroll infinito -->
-      <div class="depoimento-scroll-card tipo-confirmacao">
-        <div class="depoimento-foto" style="background-image:url('https://i.pravatar.cc/200?img=12'); background-size:cover; background-position:center; background-repeat:no-repeat;" loading="lazy"></div>
-        <div class="depoimento-conteudo">
-          <span class="tipo-tag confirmacao">COMPROU</span>
-          <div class="contexto"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6" fill="#0a0714"/><circle cx="12" cy="12" r="2"/></svg>PRO · 2 meses atrás</div>
-          <blockquote>"Fechei 3 clientes na primeira semana. O Franz fez o que eu faria se tivesse 24h no dia. ROI no primeiro mês."</blockquote>
-          <div class="depoimento-autor-info">
-            <h4>Rafael Ferreira</h4>
-            <p>Dev full-stack · São Paulo</p>
-            <span class="metric">3 clientes / semana</span>
-          </div>
-        </div>
-      </div>
-      <div class="depoimento-scroll-card tipo-duvida">
-        <div class="depoimento-foto" style="background-image:url('https://i.pravatar.cc/200?img=23')"></div>
-        <div class="depoimento-conteudo">
-          <span class="tipo-tag duvida">TIVE DUVIDA</span>
-          <div class="contexto"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>STARTER · 6 meses atrás</div>
-          <blockquote>"Tava receoso de pagar R$97 pra testar. Mas resolvi — cancela em 1 clique. 3 meses depois tô no PRO e fechando 4 clientes/mês."</blockquote>
-          <div class="depoimento-autor-info">
-            <h4>Amanda Martins</h4>
-            <p>Designer · BH</p>
-            <span class="metric">4 clientes / mês</span>
-          </div>
-        </div>
-      </div>
-      <div class="depoimento-scroll-card tipo-suspeita">
-        <div class="depoimento-foto" style="background-image:url('https://i.pravatar.cc/200?img=33')"></div>
-        <div class="depoimento-conteudo">
-          <span class="tipo-tag suspeita">ACHEI GOLPE</span>
-          <div class="contexto"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>PRO · 4 meses atrás</div>
-          <blockquote>"Parecia bom demais. 'Site em 24h, SDR automático' — já fui achando golpe. Mas testei com 1 lead só pra ver. Veio o site, veio a mensagem no Zap, veio o cliente."</blockquote>
-          <div class="depoimento-autor-info">
-            <h4>Marcos Costa</h4>
-            <p>Freelancer · POA</p>
-            <span class="metric">5 clientes / mês</span>
-          </div>
-        </div>
-      </div>
-      <div class="depoimento-scroll-card tipo-resposta">
-        <div class="depoimento-foto" style="background-image:url('https://i.pravatar.cc/200?img=44')"></div>
-        <div class="depoimento-conteudo">
-          <span class="tipo-tag resposta">COMPREI PRO</span>
-          <div class="contexto"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>Resposta no Reclame Aqui</div>
-          <blockquote>"Respondeu em 10min no domingo. Resolveram meu bug em 1h. Suporte humano de verdade, não chatbot. Acima da média."</blockquote>
-          <div class="depoimento-autor-info">
-            <h4>Júlia Ribeiro</h4>
-            <p>Designer iniciante · Curitiba</p>
-            <span class="metric">Suporte top</span>
-          </div>
-        </div>
-      </div>
-      <div class="depoimento-scroll-card tipo-recomendacao">
-        <div class="depoimento-foto" style="background-image:url('https://i.pravatar.cc/200?img=52')"></div>
-        <div class="depoimento-conteudo">
-          <span class="tipo-tag recomendacao">SÓ PRA ELA</span>
-          <div class="contexto"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 8a3 3 0 10-3-3"/><path d="M15 22v-4a3 3 0 00-3-3H6a3 3 0 00-3 3v4"/><circle cx="9" cy="8" r="1"/><path d="M15 22v-4a3 3 0 013-3h2a3 3 0 013 3v4"/><circle cx="18" cy="5" r="1"/></svg>DM privado · ontem</div>
-          <blockquote>"Não tava querendo contar pra ninguém pq é meu diferencial. Mas vou abrir mão — concorrente meu tá usando agora também."</blockquote>
-          <div class="depoimento-autor-info">
-            <h4>Diego Almeida</h4>
-            <p>Agência 5 pessoas · Recife</p>
-            <span class="metric">15 sites / mês</span>
-          </div>
-        </div>
-      </div>
-      <div class="depoimento-scroll-card tipo-confirmacao">
-        <div class="depoimento-foto" style="background-image:url('https://i.pravatar.cc/200?img=49')"></div>
-        <div class="depoimento-conteudo">
-          <span class="tipo-tag confirmacao">CONFIRMO</span>
-          <div class="contexto"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>TRIAL → PRO · 1 mês atrás</div>
-          <blockquote>"Sou mãe, trabalho de casa, queria renda extra. R$4.800 no primeiro mês. Não é milagre mas é real — eu testei e deu certo."</blockquote>
-          <div class="depoimento-autor-info">
-            <h4>Patrícia Mendes</h4>
-            <p>Freelancer renda extra · Salvador</p>
-            <span class="metric">R$4.800/mês</span>
-          </div>
-        </div>
-      </div>
+    <div class="section-cta reveal" style="text-align:center;margin-top:40px;">
+      <a href="#oferta" class="btn-hero-primary">USAR ABORDAGEM COM EFEITO WOW</a>
     </div>
   </div>
 </section>
 
-<!-- ===== SEÇÃO 6 — FUNCIONALIDADES ===== -->
-<section class="funcionalidades" id="funcionalidades" style="background:transparent">
+<!-- ===== SEÇÃO 7 — O QUE VOCÊ RECEBE ===== -->
+<section class="funcionalidades" id="funcionalidades" style="background:transparent;padding:80px 0;">
   <div class="container">
-    <h2 class="section-title reveal">TUDO QUE VOCÊ RECEBE PRA COMEÇAR A GANHAR HOJE</h2>
+    <h2 class="section-title reveal">Tudo para transformar dados locais em oportunidades de venda</h2>
+    <p class="section-sub reveal" style="text-align:center;margin:0 auto 48px;max-width:680px;color:var(--fl-text-muted);font-size:15px;">Seis blocos prontos. Você conecta, busca, gera prévia, aborda e organiza. Sem código.</p>
     <div class="feat-grid">
-      <div class="feat-card snake-card reveal"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
-        <div class="feat-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M12 2a4 4 0 014 4v2a4 4 0 01-8 0V6a4 4 0 014-4z"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><path d="M9 18h6"/><path d="M12 18v4"/></svg></div>
-        <div class="feat-title">Prospecção automática</div>
-        <div class="feat-desc">A IA varre o Google Maps e acha pizzarias, clinicas, saloes — negocios que precisam de site mas nao tem. Voce so escolhe o nicho.</div>
-      </div></div>
-      <div class="feat-card snake-card reveal"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
-        <div class="feat-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="10" r="3"/><path d="M12 2a8 8 0 00-8 8c0 5.4 8 12 8 12s8-6.6 8-12a8 8 0 00-8-8z"/></svg></div>
-        <div class="feat-title">Site criado em minutos</div>
-        <div class="feat-desc">Site profissional com fotos, texto, WhatsApp e mapa. Nao e template — e site feito pro negocio especifico. Pronto pra mostrar.</div>
-      </div></div>
-      <div class="feat-card snake-card reveal"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
-        <div class="feat-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></div>
-        <div class="feat-title">Painel visual</div>
-        <div class="feat-desc">Voce ve tudo num lugar so: quem respondeu, quem quer proposta, quem fechou. Arrasta, atualiza, pronto.</div>
-      </div></div>
-      <div class="feat-card snake-card reveal"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
-        <div class="feat-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="10"/></svg></div>
-        <div class="feat-title">Follow-up automatico</div>
-        <div class="feat-desc">Se o lead nao respondeu, o Franz insiste na hora certa. Sem parecer chato. Funciona enquanto voce dorme.</div>
-      </div></div>
-      <div class="feat-card snake-card reveal"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
-        <div class="feat-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M15 3h6v6"/><path d="M10 14L21 3"/><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/></svg></div>
-        <div class="feat-title">Site pronto pra mandar</div>
-        <div class="feat-desc">Site publicado com link proprio, mapa, WhatsApp, LGPD. Voce so compartilha o link com o cliente.</div>
-      </div></div>
-      <div class="feat-card snake-card reveal"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
-        <div class="feat-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></div>
-        <div class="feat-title">Editor visual</div>
-        <div class="feat-desc">Quer mudar uma foto, um texto, um preço? Arrasta no editor, salva, e ja era. Sem codigo, sem dor de cabeca.</div>
-      </div></div>
+      <div class="feat-card reveal">
+        <div class="feat-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg></div>
+        <h3 class="feat-title">Busca de leads locais</h3>
+        <p class="feat-desc">Encontre empresas por cidade e nicho, sem ficar pesquisando manualmente.</p>
+      </div>
+      <div class="feat-card reveal">
+        <div class="feat-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="9"/></svg></div>
+        <h3 class="feat-title">Análise de oportunidade</h3>
+        <p class="feat-desc">Veja sinais que ajudam a decidir quem vale abordar primeiro.</p>
+      </div>
+      <div class="feat-card reveal">
+        <div class="feat-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div>
+        <h3 class="feat-title">Prévia de site com IA</h3>
+        <p class="feat-desc">Gere uma demonstração visual baseada nos dados públicos do negócio.</p>
+      </div>
+      <div class="feat-card reveal">
+        <div class="feat-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
+        <h3 class="feat-title">Abordagem personalizada</h3>
+        <p class="feat-desc">Receba mensagens prontas para iniciar conversa no WhatsApp.</p>
+      </div>
+      <div class="feat-card reveal">
+        <div class="feat-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></div>
+        <h3 class="feat-title">CRM simples</h3>
+        <p class="feat-desc">Organize leads por status: novo, site criado, enviado, respondeu, proposta, fechado.</p>
+      </div>
+      <div class="feat-card reveal">
+        <div class="feat-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+        <h3 class="feat-title">Grupo WhatsApp</h3>
+        <p class="feat-desc">Acesso ao grupo para suporte, networking, troca de nichos, scripts e aprendizados.</p>
+      </div>
+    </div>
+    <div class="section-cta reveal" style="text-align:center;margin-top:48px;">
+      <a href="#oferta" class="btn-hero-primary">ENTRAR NO BETA POR R$97</a>
     </div>
   </div>
 </section>
@@ -2880,65 +2834,33 @@ function trackPurchase(orderId, amount) {
   </div>
 </section>
 
-<!-- ===== SEÇÃO 7B — TIMELINE PÓS-ASSINATURA ===== -->
-<section class="como-funciona" id="timeline" style="background:transparent">
+<!-- ===== SEÇÃO 10 — PROVA DO BETA ===== -->
+<section class="prova-beta" id="prova-beta" style="background:transparent;padding:80px 0;">
   <div class="container">
-    <h2 class="section-title reveal">DO ZERO AO PRIMEIRO R$ 1.500 — EM 7 DIAS</h2>
-    <p class="section-sub reveal" style="text-align:center;margin:0 auto 48px;max-width:720px;color:var(--fl-text-muted);">O que acontece na pratica, do momento que voce cria a conta ate o primeiro Pix no seu banco:</p>
-    <div class="timeline-grid">
-      <div class="timeline-step reveal">
-        <div class="day-icon">
-          <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="32" cy="32" r="28" stroke-opacity="0.3"/>
-            <path d="M32 18v14l10 5" stroke="currentColor" stroke-width="2.5"/>
-            <circle cx="32" cy="32" r="5" fill="currentColor"/>
-          </svg>
-        </div>
-        <div class="label">CRIA A CONTA</div>
-        <h4>15 minutos</h4>
-        <p>Voce abre a conta, escolhe nicho + cidade (ex: "pizzaria" + "Sao Paulo - Zona Sul"). A FraLib ja mostra: "Encontramos 187 pizzarias sem site na sua regiao."</p>
+    <h2 class="section-title reveal">O beta já está rodando</h2>
+    <p class="section-sub reveal" style="text-align:center;margin:0 auto 48px;max-width:680px;color:var(--fl-text-muted);font-size:15px;">A FraLib ainda está em evolução, mas já está sendo usada para testar buscas, prévias e abordagens com empresas locais.</p>
+    <div class="beta-stats">
+      <div class="beta-stat reveal">
+        <div class="beta-num">40</div>
+        <div class="beta-lbl">usuários beta</div>
       </div>
-      <div class="timeline-step reveal">
-        <div class="day-icon">
-          <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M14 14h36v36H14z" rx="2"/>
-            <path d="M14 24h36"/>
-            <circle cx="22" cy="19" r="1" fill="currentColor"/>
-            <circle cx="28" cy="19" r="1" fill="currentColor"/>
-            <path d="M20 32h6M20 38h12M20 44h8"/>
-          </svg>
-        </div>
-        <div class="label">VOCE DORME, A FRALIB TRABALHA</div>
-        <h4>1 a 7 dias</h4>
-        <p>A IA cria site pra cada uma das 187 pizzarias. Envia mensagem no WhatsApp de cada uma. Voce abre o painel pela manha: 23 abriram, 7 responderam "quero ver".</p>
+      <div class="beta-stat reveal">
+        <div class="beta-num cyan">+1.000</div>
+        <div class="beta-lbl">buscas feitas em 1 mês</div>
       </div>
-      <div class="timeline-step reveal">
-        <div class="day-icon">
-          <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M10 14l8 22 8-14 8 14 8-22"/>
-            <circle cx="18" cy="22" r="2" fill="currentColor"/>
-            <circle cx="26" cy="36" r="2" fill="currentColor"/>
-            <circle cx="34" cy="22" r="2" fill="currentColor"/>
-            <circle cx="42" cy="36" r="2" fill="currentColor"/>
-          </svg>
-        </div>
-        <div class="label">PRIMEIROS RESPONDEM</div>
-        <h4>5-7% querem ver</h4>
-        <p>"Quero ver", "Quanto custa?", "Pode mandar". Esses vao pra sua fila. Voce so abre o WhatsApp, manda a proposta, ajusta o que precisar.</p>
+      <div class="beta-stat reveal">
+        <div class="beta-num gold">+1.000</div>
+        <div class="beta-lbl">leads encontrados</div>
       </div>
-      <div class="timeline-step reveal" style="background:linear-gradient(135deg,rgba(0,255,179,0.08),rgba(147,51,234,0.08));border-color:var(--fl-border-hi);">
-        <div class="day-icon">
-          <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M32 8l6 12 14 2-10 10 2 14-12-6-12 6 2-14-10-10 14-2z"/>
-            <path d="M32 20v8M28 28h8" stroke-width="2.5"/>
-          </svg>
-        </div>
-        <div class="label">PRIMEIRO PIX</div>
-        <h4>R$ 800 a R$ 1.500</h4>
-        <p>Voce ajusta o site, manda proposta por WhatsApp. Cliente aceita. Pix cai na sua conta. <strong style="color:var(--cyan);">100% do lucro e seu. Sem chefe, sem dividir.</strong></p>
+      <div class="beta-stat reveal">
+        <div class="beta-num green">2</div>
+        <div class="beta-lbl">vendas reportadas por usuários beta</div>
       </div>
     </div>
-    <p class="section-sub reveal" style="text-align:center;margin:32px auto 0;max-width:720px;font-size:13px;color:var(--fl-text-muted);">A primeira venda pode acontecer na semana 1. Mas e mais comum entre semana 2 e 4 — porque o ciclo do WhatsApp tem retorno gradual. <strong style="color:var(--fl-text);">Nao e magica. E processo. Mas funciona.</strong></p>
+    <p style="text-align:center;color:var(--fl-text-dim);font-size:12px;margin:32px auto 0;font-style:italic;max-width:680px;">Resultados iniciais do beta. A FraLib não garante vendas ou faturamento. Os resultados dependem da execução, oferta, nicho, abordagem e follow-up de cada usuário.</p>
+    <div class="section-cta reveal" style="text-align:center;margin-top:32px;">
+      <a href="#oferta" class="btn-hero-primary">FAZER PARTE DO BETA</a>
+    </div>
   </div>
 </section>
 
@@ -3297,64 +3219,73 @@ function trackPurchase(orderId, amount) {
   </div>
 </section>
 
-<!-- ===== SEÇÃO 8A — FAQ (MOVIDO PARA ANTES DOS PLANOS) ===== -->
+<!-- ===== SEÇÃO 13 — FAQ ===== -->
 <section class="faq" id="faq">
   <div class="container">
-    <h2 class="section-title reveal">PERGUNTAS QUE VOCÊ PRECISA FAZER ANTES DE COMEÇAR</h2>
+    <h2 class="section-title reveal">Perguntas que você precisa fazer antes de começar</h2>
     <div class="faq-list">
       <div class="faq-item reveal">
         <button class="faq-question" aria-expanded="false">Preciso saber programar?
           <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
         </button>
-        <div class="faq-answer"><div class="faq-answer-inner">Nao. Zero. Voce escolhe o nicho e a cidade, e a IA faz o resto. O site e criado automatico, a mensagem e enviada automatica, voce so responde quando o cliente te procura. Literalmente: se voce sabe usar WhatsApp, sabe usar o FraLib.</div></div>
+        <div class="faq-answer"><div class="faq-answer-inner">Não. A FraLib foi pensada para quem quer usar IA para encontrar oportunidades, criar prévias de site e iniciar abordagens sem código.</div></div>
       </div>
       <div class="faq-item reveal">
-        <button class="faq-question" aria-expanded="false">E se eu nunca vendi nada na vida?
+        <button class="faq-question" aria-expanded="false">A FraLib garante vendas?
           <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
         </button>
-        <div class="faq-answer"><div class="faq-answer-inner">Funciona melhor ainda. A FraLib foi feita pra quem ta comecando do zero. Nao precisa de portfolio, nao precisa de experiencia, nao precisa ter fama. So precisa ter 15 minutos por dia e querer ganhar dinheiro. Muitos dos nossos usuarios nunca tinham vendido nada antes.</div></div>
+        <div class="faq-answer"><div class="faq-answer-inner">Não. A FraLib entrega ferramentas para encontrar leads, criar prévias e gerar abordagens. Vendas dependem da execução, oferta, nicho, preço e follow-up.</div></div>
       </div>
       <div class="faq-item reveal">
-        <button class="faq-question" aria-expanded="false">Preciso ter empresa ou CNPJ?
+        <button class="faq-question" aria-expanded="false">A prévia é o site oficial do cliente?
           <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
         </button>
-        <div class="faq-answer"><div class="faq-answer-inner">Nao. Voce pode comecar como pessoa fisica. Alguns usuarios formalizam depois que comecam a faturar. Mas pra comecar, e so criar sua conta. A parte fiscal e sua responsabilidade — cada um sabe sua situacao.</div></div>
+        <div class="faq-answer"><div class="faq-answer-inner">Não. É uma demonstração/prévia criada com base em dados públicos para mostrar como o site poderia ficar.</div></div>
       </div>
       <div class="faq-item reveal">
-        <button class="faq-question" aria-expanded="false">Funciona em qualquer cidade?
+        <button class="faq-question" aria-expanded="false">Posso usar para vender automação também?
           <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
         </button>
-        <div class="faq-answer"><div class="faq-answer-inner">Sim. Qualquer cidade do Brasil. A prospeccao funciona no Google Maps. Se tem negocio local, tem lead pra prospectar. Claro: cidades maiores dao mais leads. Mas cidade de 50 mil habitantes ja tem potencial.</div></div>
+        <div class="faq-answer"><div class="faq-answer-inner">Sim. Muitos usuários podem usar o site como porta de entrada e depois oferecer automações, atendimento no WhatsApp, CRM, captação de leads ou recorrência.</div></div>
       </div>
       <div class="faq-item reveal">
-        <button class="faq-question" aria-expanded="false">E se eu nao fechar nenhum cliente?
+        <button class="faq-question" aria-expanded="false">Posso começar mesmo sem experiência?
           <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
         </button>
-        <div class="faq-answer"><div class="faq-answer-inner">A gente devolve seu dinheiro, se solicitar em ate 7 dias. A gente te da a ferramenta funcionando, leads qualificados e suporte. Resultado depende de acao. Mas a gente poe a faca e o queijo na sua mao.</div></div>
+        <div class="faq-answer"><div class="faq-answer-inner">Sim. A plataforma ajuda no processo, mas você ainda precisa executar a abordagem e negociar com o cliente.</div></div>
       </div>
       <div class="faq-item reveal">
-        <button class="faq-question" aria-expanded="false">Como funciona o pagamento?
+        <button class="faq-question" aria-expanded="false">Quanto eu posso cobrar?
           <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
         </button>
-        <div class="faq-answer"><div class="faq-answer-inner">PIX ou cartao de credito. A assinatura e mensal. Pode cancelar quando quiser, sem multa, sem burocracia. Pagamento via Mercado Pago: seguro e rapido.</div></div>
+        <div class="faq-answer"><div class="faq-answer-inner">Você define seu preço. Na página mostramos exemplos de ticket por nicho, mas os valores variam por cidade, entrega e negociação.</div></div>
+      </div>
+      <div class="faq-item reveal">
+        <button class="faq-question" aria-expanded="false">Tem grupo de suporte?
+          <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="faq-answer"><div class="faq-answer-inner">Sim. Quem entra no beta recebe acesso ao grupo de WhatsApp para suporte, troca de experiências e orientação de uso.</div></div>
+      </div>
+      <div class="faq-item reveal">
+        <button class="faq-question" aria-expanded="false">Posso cancelar?
+          <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="faq-answer"><div class="faq-answer-inner">Sim. A assinatura é mensal e você pode cancelar quando quiser.</div></div>
       </div>
     </div>
   </div>
 </section>
 
-<!-- ===== FORMULÁRIO BETA ===== -->
-<section class="beta-section" id="beta-form">
+<!-- ===== SEÇÃO 14 — CTA FINAL / FORMULÁRIO ===== -->
+<section class="beta-section" id="cta-final">
   <div class="container">
     <div class="beta-wrapper reveal">
-      <div style="text-align:center">
-        <span class="beta-spots"><span class="dot"></span> ⏰ VAGAS LIMITADAS ESTE MÊS</span>
-      </div>
-      <h2>QUER TESTAR ANTES DE DECIDIR?</h2>
-      <p class="beta-subtitle">Manda seu nome, e-mail e WhatsApp. A gente te manda o acesso pro Trial de 7 dias + entrada no grupo exclusivo onde a galera compartilha resultado. Nao e spam. E acesso real.</p>
+      <h2 style="text-align:center;margin-bottom:8px;">Pare de procurar cliente no escuro</h2>
+      <p class="beta-subtitle" style="text-align:center;margin-bottom:32px;font-size:15px;">Simule sua região, encontre oportunidades locais e use a FraLib para gerar lead, prévia de site e abordagem pronta.</p>
       <form id="betaForm" action="/login?signup=1" method="GET">
         <div class="beta-field">
-          <label for="beta-name">Seu nome</label>
-          <input type="text" id="beta-name" name="name" placeholder="Ex: Joao Silva" required>
+          <label for="beta-name">Nome</label>
+          <input type="text" id="beta-name" name="name" placeholder="Seu nome" required>
         </div>
         <div class="beta-field">
           <label for="beta-email">E-mail</label>
@@ -3362,15 +3293,33 @@ function trackPurchase(orderId, amount) {
         </div>
         <div class="beta-field">
           <label for="beta-phone">WhatsApp</label>
-          <input type="tel" id="beta-phone" name="phone" placeholder="(11) 99999-9999">
-          <span style="font-size:11px;color:var(--fl-text-dim);font-style:italic;margin-top:4px">Opcional - voce pode conectar depois</span>
+          <input type="tel" id="beta-phone" name="phone" placeholder="(11) 99999-9999" required>
         </div>
-        <button type="submit" class="beta-submit">QUERO MEU ACESSO GRATIS</button>
+        <div class="beta-field">
+          <label for="beta-cidade">Cidade</label>
+          <input type="text" id="beta-cidade" name="cidade" placeholder="Ex: Curitiba" required>
+        </div>
+        <div class="beta-field">
+          <label for="beta-nicho">Nicho que quer atacar</label>
+          <input type="text" id="beta-nicho" name="nicho" placeholder="Ex: pizzarias, clínicas" required>
+        </div>
+        <button type="submit" class="beta-submit">QUERO SIMULAR MINHA REGIÃO</button>
       </form>
-      <p class="beta-note">Apos enviar, voce recebe o login do Trial e entra no grupo de resultados.</p>
+      <p class="beta-note" style="text-align:center;margin-top:20px;">Você recebe acesso ao beta, grupo WhatsApp e instruções para começar.</p>
     </div>
   </div>
 </section>
+
+<!-- BOTAO MOBILE FIXO -->
+<div id="mobile-cta" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:999;background:var(--fl-bg);border-top:1px solid var(--fl-border);padding:12px 16px;box-shadow:0 -4px 20px rgba(0,0,0,0.4);">
+  <a href="#simulador" class="btn-hero-primary" style="width:100%;display:flex;justify-content:center;align-items:center;">SIMULAR MINHA CIDADE</a>
+</div>
+<style>
+@media(max-width:768px){
+  #mobile-cta{display:block !important}
+  body{padding-bottom:80px}
+}
+</style>
 
 <!-- ===== 5 FONTES DE RECEITA (MOVIDO PARA DEPOIS DOS PLANOS) ===== -->
 <section class="funcionalidades" id="cinco-fontes">
