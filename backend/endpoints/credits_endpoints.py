@@ -205,7 +205,7 @@ def _mercadopago_payload_matches_user(payload: dict, usuario: dict) -> bool:
 
 
 def _upgrade_link() -> str:
-    return os.getenv("MERCADOPAGO_PAYMENT_LINK") or os.getenv("PAYMENT_LINK") or "/planos.html"
+    return os.getenv("MERCADOPAGO_PAYMENT_LINK") or os.getenv("PAYMENT_LINK") or "/planos"
 
 
 @router.post("/portal")
@@ -216,7 +216,7 @@ async def criar_portal_session(
     """Mercado Pago nao expoe portal self-service equivalente no FraLib."""
     return {
         "provider": "mercadopago",
-        "portal_url": "/planos.html",
+        "portal_url": "/planos",
         "message": "Gerenciamento de plano Mercado Pago: use a pagina de planos ou suporte FraLib.",
     }
 

@@ -14,7 +14,7 @@ for f in files:
     try:
         with open(f, 'r', encoding='utf-8') as file:
             content = file.read()
-        new_content = re.sub(r"location\.href='/dashboard'", "location.href='/admin'", content)
+        new_content = re.sub(r"location\.href='/dashboard'", "location.href='/admin.html'", content)
         with open(f, 'w', encoding='utf-8') as file:
             file.write(new_content)
         count = content.count("dashboard")

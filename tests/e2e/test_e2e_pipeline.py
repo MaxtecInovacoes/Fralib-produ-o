@@ -1,7 +1,7 @@
 """
 test_e2e_pipeline.py - Testes E2E do fluxo de pipeline
 
-Testa o fluxo completo de gerenciamento de pipeline no dashboard.
+Testa o fluxo completo de gerenciamento de pipeline no admin canonico.
 """
 import pytest
 import sys
@@ -13,8 +13,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'backend'
 
 @pytest.mark.e2e
 def test_dashboard_page_loads(page):
-    """Testa que a página do dashboard carrega corretamente."""
-    page.goto("http://localhost:8000/dashboard.html")
+    """Testa que a página do admin carrega corretamente."""
+    page.goto("http://localhost:8000/admin.html")
     page.wait_for_load_state("networkidle")
     title = page.title()
     assert title is not None
@@ -22,21 +22,21 @@ def test_dashboard_page_loads(page):
 
 @pytest.mark.e2e
 def test_dashboard_requires_authentication(page):
-    """Testa que dashboard carrega (autenticação via frontend)."""
+    """Testa que admin carrega (autenticação via frontend)."""
     page.context.clear_cookies()
 
-    page.goto("http://localhost:8000/dashboard.html")
+    page.goto("http://localhost:8000/admin.html")
     page.wait_for_timeout(2000)
 
-    # Dashboard pode carregar sem autenticação (validação no frontend)
+    # Admin pode carregar sem autenticação (validação no frontend)
     current_url = page.url
-    assert "dashboard" in current_url.lower() or "login" in current_url.lower()
+    assert "admin" in current_url.lower() or "login" in current_url.lower()
 
 
 @pytest.mark.e2e
 def test_pipeline_control_buttons_exist(page):
     """Testa que botões de controle do pipeline existem."""
-    page.goto("http://localhost:8000/dashboard.html")
+    page.goto("http://localhost:8000/admin.html")
     page.wait_for_load_state("networkidle")
 
     # Procurar botões de controle
@@ -52,7 +52,7 @@ def test_pipeline_control_buttons_exist(page):
 @pytest.mark.e2e
 def test_pipeline_status_display(page):
     """Testa que o status do pipeline é exibido."""
-    page.goto("http://localhost:8000/dashboard.html")
+    page.goto("http://localhost:8000/admin.html")
     page.wait_for_load_state("networkidle")
     page.wait_for_timeout(1000)
 
@@ -66,7 +66,7 @@ def test_pipeline_status_display(page):
 @pytest.mark.e2e
 def test_pipeline_config_form_exists(page):
     """Testa que formulário de configuração do pipeline existe."""
-    page.goto("http://localhost:8000/dashboard.html")
+    page.goto("http://localhost:8000/admin.html")
     page.wait_for_load_state("networkidle")
 
     # Procurar campos de configuração
@@ -81,7 +81,7 @@ def test_pipeline_config_form_exists(page):
 @pytest.mark.e2e
 def test_dashboard_navigation_menu(page):
     """Testa que menu de navegação existe."""
-    page.goto("http://localhost:8000/dashboard.html")
+    page.goto("http://localhost:8000/admin.html")
     page.wait_for_load_state("networkidle")
 
     # Procurar elementos de navegação
@@ -94,7 +94,7 @@ def test_dashboard_navigation_menu(page):
 @pytest.mark.e2e
 def test_dashboard_logout_button(page):
     """Testa que botão de logout existe."""
-    page.goto("http://localhost:8000/dashboard.html")
+    page.goto("http://localhost:8000/admin.html")
     page.wait_for_load_state("networkidle")
 
     # Procurar botão de logout
@@ -107,7 +107,7 @@ def test_dashboard_logout_button(page):
 @pytest.mark.e2e
 def test_dashboard_user_info_display(page):
     """Testa que informações do usuário são exibidas."""
-    page.goto("http://localhost:8000/dashboard.html")
+    page.goto("http://localhost:8000/admin.html")
     page.wait_for_load_state("networkidle")
     page.wait_for_timeout(1000)
 
@@ -121,7 +121,7 @@ def test_dashboard_user_info_display(page):
 @pytest.mark.e2e
 def test_dashboard_responsive_layout(page):
     """Testa que dashboard é responsivo."""
-    page.goto("http://localhost:8000/dashboard.html")
+    page.goto("http://localhost:8000/admin.html")
     page.wait_for_load_state("networkidle")
 
     viewports = [
@@ -142,7 +142,7 @@ def test_dashboard_responsive_layout(page):
 @pytest.mark.e2e
 def test_dashboard_analytics_section(page):
     """Testa que seção de analytics existe."""
-    page.goto("http://localhost:8000/dashboard.html")
+    page.goto("http://localhost:8000/admin.html")
     page.wait_for_load_state("networkidle")
 
     # Procurar seção de analytics/estatísticas
@@ -155,7 +155,7 @@ def test_dashboard_analytics_section(page):
 @pytest.mark.e2e
 def test_dashboard_leads_table(page):
     """Testa que tabela de leads existe."""
-    page.goto("http://localhost:8000/dashboard.html")
+    page.goto("http://localhost:8000/admin.html")
     page.wait_for_load_state("networkidle")
     page.wait_for_timeout(1000)
 
@@ -177,7 +177,7 @@ def test_dashboard_no_javascript_errors(page):
 
     page.on('console', handle_console)
 
-    page.goto("http://localhost:8000/dashboard.html")
+    page.goto("http://localhost:8000/admin.html")
     page.wait_for_load_state("networkidle")
     page.wait_for_timeout(2000)
 

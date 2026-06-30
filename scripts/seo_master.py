@@ -131,7 +131,7 @@ def generate_sitemap() -> str:
         {"loc": f"{SITE_URL}/", "priority": "1.0", "changefreq": "daily", "lastmod": now},
         {"loc": f"{SITE_URL}/blog/", "priority": "0.9", "changefreq": "daily", "lastmod": now},
         {"loc": f"{SITE_URL}/docs/", "priority": "0.8", "changefreq": "weekly", "lastmod": now},
-        {"loc": f"{SITE_URL}/planos.html", "priority": "0.9", "changefreq": "monthly", "lastmod": now},
+        {"loc": f"{SITE_URL}/planos", "priority": "0.9", "changefreq": "monthly", "lastmod": now},
         {"loc": f"{SITE_URL}/login?signup=1", "priority": "0.7", "changefreq": "monthly", "lastmod": now},
     ]
 

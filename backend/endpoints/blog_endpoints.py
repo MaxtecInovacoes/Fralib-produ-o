@@ -49,14 +49,14 @@ INTERNAL_LINKS = {
     "SDR": "/docs/sdr-bryan.html",
     "WhatsApp": "/blog/whatsapp-vendas-automatizar-sem-banir.html",
     "pipeline": "/docs/pipeline.html",
-    "planos": "/planos.html",
+    "planos": "/planos",
     "como funciona": "/docs/como-funciona.html",
     "negocios locais": "/blog/nicho-sites-negocios-locais-2026.html",
     "freelancer": "/blog/freelancer-sites-como-ganhar-5000-por-mes.html",
     "Google Maps": "/blog/encontrar-negocios-sem-site-google-maps.html",
     "criar site com IA": "/blog/criar-site-com-inteligencia-artificial.html",
-    "FraLib": "/planos.html",
-    "trial": "/planos.html",
+    "FraLib": "/planos",
+    "trial": "/planos",
 }
 
 ARTICLE_SYSTEM_PROMPT = """Voce e um copywriter SEO senior especializado em marketing digital e tecnologia.
@@ -72,7 +72,7 @@ REGRAS:
 7. NUNCA usar emojis no texto
 8. NUNCA inventar estatisticas sem fonte
 9. Sempre mencionar FraLib OS como solucao no contexto (1-2x no artigo, natural, nao forcado)
-10. CTA final: convidar a testar gratis, link para /planos.html
+10. CTA final: convidar a testar gratis, link para /planos
 11. Linguagem: portugues BR, informal-profissional, sem gírias excessivas
 12. SEO: usar variações da keyword (sinonimos, long-tail) nos H2s
 13. Atualidade: mencionar ano 2026, tendencias atuais, ferramentas reais
@@ -206,7 +206,7 @@ nav{{position:fixed;top:0;left:0;right:0;z-index:1000;display:grid;grid-template
 <canvas id="particles-canvas"></canvas>
 <nav>
   <div style="justify-self:start"><a href="/" class="nav-brand"><img src="/images/Logo FraLib.png" alt="FraLib" height="36"></a></div>
-  <div class="nav-links"><a href="/">Home</a><a href="/docs/">Docs</a><a href="/blog/">Blog</a><a href="/planos.html">Planos</a></div>
+  <div class="nav-links"><a href="/">Home</a><a href="/docs/">Docs</a><a href="/blog/">Blog</a><a href="/planos">Planos</a></div>
   <div style="justify-self:end;display:flex;align-items:center;gap:16px"><a href="/login" style="color:var(--fl-text-muted);text-decoration:none;font-size:12px;font-weight:600">ENTRAR</a><a href="/login?signup=1" class="nav-cta">CRIAR CONTA</a></div>
 </nav>
 <article class="article-content">
@@ -217,7 +217,7 @@ nav{{position:fixed;top:0;left:0;right:0;z-index:1000;display:grid;grid-template
   <div class="cta-box">
     <h3>Pronto para automatizar suas vendas?</h3>
     <p>Teste o FraLib OS gratis. Crie seu primeiro site com IA em 5 minutos.</p>
-    <a href="/planos.html" class="btn">VER PLANOS</a>
+    <a href="/planos" class="btn">VER PLANOS</a>
   </div>
 </article>
 <script>

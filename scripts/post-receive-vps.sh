@@ -82,7 +82,16 @@ for html in admin.html landing.html login.html planos.html studio.html superadmi
         cp -a "$FRALIB_DIR/frontend/$html" "$WEB_DIR/$html"
     fi
 done
-rm -f "$WEB_DIR/dashboard.html"
+for legacy_html in dashboard.html landing-b.html landing-c.html landing-new.html landing-backup-20260511.html landing2.html landing_backup.html; do
+    if [ -f "$WEB_DIR/$legacy_html" ]; then
+        rm -f "$WEB_DIR/$legacy_html"
+        log "Removido HTML legado: $legacy_html"
+    fi
+    if [ -e "$WEB_DIR/$legacy_html" ]; then
+        log "ERRO: HTML legado ainda publicado: $WEB_DIR/$legacy_html"
+        exit 1
+    fi
+done
 
 for dir in blog docs css js static images; do
     if [ -d "$FRALIB_DIR/frontend/$dir" ]; then

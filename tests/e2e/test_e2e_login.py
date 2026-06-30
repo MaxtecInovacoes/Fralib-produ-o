@@ -14,7 +14,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'backend'
 @pytest.mark.e2e
 def test_login_page_loads(page):
     """Testa que a página de login carrega corretamente."""
-    page.goto("http://localhost:8000/login.html")
+    page.goto("http://localhost:8000/login")
     page.wait_for_load_state("networkidle")
     title = page.title()
     assert title is not None
@@ -23,7 +23,7 @@ def test_login_page_loads(page):
 @pytest.mark.e2e
 def test_login_form_elements_exist(page):
     """Testa que os elementos do formulário de login existem."""
-    page.goto("http://localhost:8000/login.html")
+    page.goto("http://localhost:8000/login")
     page.wait_for_load_state("networkidle")
 
     email_input = page.locator('input[type="email"], input[name="email"], #email')
@@ -38,7 +38,7 @@ def test_login_form_elements_exist(page):
 @pytest.mark.e2e
 def test_login_with_valid_credentials(page, test_user, test_user_data):
     """Testa login com credenciais válidas."""
-    page.goto("http://localhost:8000/login.html")
+    page.goto("http://localhost:8000/login")
     page.wait_for_load_state("networkidle")
 
     email_input = page.locator('input[type="email"], input[name="email"], #email').first
@@ -59,7 +59,7 @@ def test_login_with_valid_credentials(page, test_user, test_user_data):
 @pytest.mark.e2e
 def test_login_with_invalid_credentials(page):
     """Testa login com credenciais inválidas."""
-    page.goto("http://localhost:8000/login.html")
+    page.goto("http://localhost:8000/login")
     page.wait_for_load_state("networkidle")
 
     email_input = page.locator('input[type="email"], input[name="email"], #email').first
@@ -80,7 +80,7 @@ def test_login_with_invalid_credentials(page):
 @pytest.mark.e2e
 def test_login_with_empty_fields(page):
     """Testa que não é possível fazer login com campos vazios."""
-    page.goto("http://localhost:8000/login.html")
+    page.goto("http://localhost:8000/login")
     page.wait_for_load_state("networkidle")
 
     submit_button = page.locator('button[type="submit"], button:has-text("Entrar"), button:has-text("Login")').first
@@ -95,7 +95,7 @@ def test_login_with_empty_fields(page):
 @pytest.mark.e2e
 def test_login_email_validation(page):
     """Testa validação de formato de email."""
-    page.goto("http://localhost:8000/login.html")
+    page.goto("http://localhost:8000/login")
     page.wait_for_load_state("networkidle")
 
     email_input = page.locator('input[type="email"], input[name="email"], #email').first
@@ -116,7 +116,7 @@ def test_login_email_validation(page):
 @pytest.mark.e2e
 def test_login_password_visibility_toggle(page):
     """Testa botão de mostrar/ocultar senha (se existir)."""
-    page.goto("http://localhost:8000/login.html")
+    page.goto("http://localhost:8000/login")
     page.wait_for_load_state("networkidle")
 
     password_input = page.locator('input[type="password"], input[name="password"], #password').first
@@ -137,7 +137,7 @@ def test_login_password_visibility_toggle(page):
 @pytest.mark.e2e
 def test_login_remember_me_checkbox(page):
     """Testa checkbox 'Lembrar-me' (se existir)."""
-    page.goto("http://localhost:8000/login.html")
+    page.goto("http://localhost:8000/login")
     page.wait_for_load_state("networkidle")
 
     remember_checkbox = page.locator('input[type="checkbox"][name*="remember"], input[type="checkbox"]:near(:text("Lembrar"))')
@@ -152,7 +152,7 @@ def test_login_remember_me_checkbox(page):
 @pytest.mark.e2e
 def test_login_page_responsive(page):
     """Testa que a página de login é responsiva."""
-    page.goto("http://localhost:8000/login.html")
+    page.goto("http://localhost:8000/login")
     page.wait_for_load_state("networkidle")
 
     viewports = [
