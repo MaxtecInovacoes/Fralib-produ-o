@@ -130,3 +130,25 @@ class RateLimiter:
     @property
     def flood_tracker(self) -> dict:
         return self._guards.flood_tracker
+
+    # ── Compatibility (can_send) ──────────────────────────────────────────
+
+    def can_send(self, lead_key: str) -> bool:
+        """Verifica se pode enviar mensagem para o lead.
+
+        Combina: cooldown, flood, daily_limit, human_pause.
+        Retorna True se PODE enviar.
+        """
+        if not self.check_cooldown(lead_key):
+            return False
+        if not self.check_flood(lead_key):
+            return False
+        if not self.check_daily_limit(lead_key):
+            return False
+        if self.is_human_paused(lead_key):
+            return False
+        return True
+
+    def get_remaining_cooldown(self, lead_key: str) -> float:
+        """Retorna segundos restantes de cooldown (0 se pode enviar)."""
+        return self.cooldown_remaining(lead_key)

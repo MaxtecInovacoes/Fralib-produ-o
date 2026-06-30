@@ -103,6 +103,7 @@ import analytics_endpoints as fralib_analytics_endpoints
 import competitive_intelligence
 import linkedin_outreach
 import crm_integration
+import inativos_endpoints
 
 from contextlib import asynccontextmanager
 
@@ -467,6 +468,20 @@ try:
     print("[Server] analytics_endpoints registrado")
 except ImportError as e:
     print(f"[Server] analytics_endpoints nao disponivel: {e}")
+
+try:
+    import inativos_endpoints
+    app.include_router(inativos_endpoints.router)
+    print("[Server] inativos_endpoints registrado")
+except ImportError as e:
+    print(f"[Server] inativos_endpoints nao disponivel: {e}")
+
+try:
+    import whatsapp_disparo_endpoints
+    app.include_router(whatsapp_disparo_endpoints.router)
+    print("[Server] whatsapp_disparo_endpoints registrado")
+except ImportError as e:
+    print(f"[Server] whatsapp_disparo_endpoints nao disponivel: {e}")
 
 try:
     import admin_services_endpoints
