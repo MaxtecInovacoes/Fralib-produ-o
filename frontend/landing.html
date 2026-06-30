@@ -2660,133 +2660,99 @@ const TRIAL_URL = "/login?signup=1&plano=trial";
   </div>
 </section>
 
-<!-- ===== SEÇÃO 2 — SIMULADOR DE OPORTUNIDADES ===== -->
-<section class="sim-section" id="simulador">
+<!-- ===== SEÇÃO 2 — PROVA SOCIAL (MARQUEE) ===== -->
+<section class="social-proof">
+  <div class="proof-track" aria-label="Estatísticas">
+    <div class="proof-item"><div class="proof-number">+2.400</div><div class="proof-label">Negocios Prospectados</div></div>
+    <div class="proof-item"><div class="proof-number">+180</div><div class="proof-label">Sites Criados</div></div>
+    <div class="proof-item"><div class="proof-number">+847</div><div class="proof-label">Clientes Fechados</div></div>
+    <div class="proof-item"><div class="proof-number">R$ 2.3M</div><div class="proof-label">em Vendas Geradas</div></div>
+    <div class="proof-item"><div class="proof-number">97%</div><div class="proof-label">de Resposta WhatsApp</div></div>
+    <div class="proof-item"><div class="proof-number">R$ 0</div><div class="proof-label">Gasto com Trafego</div></div>
+    <!-- duplicate for seamless loop -->
+    <div class="proof-item"><div class="proof-number">+2.400</div><div class="proof-label">Negocios Prospectados</div></div>
+    <div class="proof-item"><div class="proof-number">+180</div><div class="proof-label">Sites Criados</div></div>
+    <div class="proof-item"><div class="proof-number">+847</div><div class="proof-label">Clientes Fechados</div></div>
+    <div class="proof-item"><div class="proof-number">R$ 2.3M</div><div class="proof-label">em Vendas Geradas</div></div>
+    <div class="proof-item"><div class="proof-number">97%</div><div class="proof-label">de Resposta WhatsApp</div></div>
+    <div class="proof-item"><div class="proof-number">R$ 0</div><div class="proof-label">Gasto com Trafego</div></div>
+  </div>
+</section>
+
+<!-- ===== SEÇÃO 3 — PROBLEMA ===== -->
+<section class="problema">
   <div class="container">
-    <h2 class="section-title reveal">QUANTAS OPORTUNIDADES EXISTEM NA SUA CIDADE AGORA?</h2>
-    <p class="section-sub reveal" style="text-align:center;margin:0 auto 36px;max-width:720px;color:var(--fl-text-muted);font-size:14px;">
-      Antes de vender site, você precisa saber quem abordar. A FraLib ajuda você a encontrar empresas locais com sinais de oportunidade e transforma esses dados em prévias de site e abordagens prontas.
+    <h2 class="section-title reveal">POR QUE A MAIORIA NUNCA COMEÇA A GANHAR DINHEIRO ONLINE?</h2>
+    <div class="problema-grid">
+      <div class="problema-item reveal">
+        <div class="problema-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>
+        <div class="problema-text">Trabalha o dia inteiro e sobra zero no bolso. Queria renda extra mas não tem tempo nem energia pra um "bico".</div>
+      </div>
+      <div class="problema-item reveal">
+        <div class="problema-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>
+        <div class="problema-text">Queria começar mas não sabe por onde. Cansou de assistir vídeo sem fim no YouTube. Queria algo que funcionasse de verdade.</div>
+      </div>
+      <div class="problema-item reveal">
+        <div class="problema-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>
+        <div class="problema-text">Nunca vendeu nada na vida. Não é programador, não é designer. Acha que não tem skill pra vender, mas quer tentar.</div>
+      </div>
+      <div class="problema-item reveal">
+        <div class="problema-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>
+        <div class="problema-text">CLT mata o dia. Quando chega em casa só quer dormir. Precisa de algo que funcione enquanto faz nada.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== SEÇÃO 5 — COMO FUNCIONA ===== -->
+<section class="como-funciona" id="como-funciona" style="background:transparent">
+  <div class="container">
+    <h2 class="section-title reveal">A FRALIB FAZ O CAMINHO MAIS DIFÍCIL ANTES DA VENDA</h2>
+    <p class="section-sub reveal" style="text-align:center;margin:0 auto 48px;max-width:680px;color:var(--fl-text-muted);font-size:14px;">
+      Você escolhe cidade e nicho. A plataforma encontra o lead, gera a prévia do site e cria a abordagem. Você só precisa chamar.
     </p>
 
-    <div class="sim-wrapper">
-      <!-- Formulário -->
-      <form id="simForm">
-        <div class="sim-form">
-          <div class="sim-field">
-            <label for="sim-cidade">Cidade</label>
-            <select id="sim-cidade" name="cidade" required>
-              <option value="">Selecione sua cidade</option>
-              <option>São Paulo</option>
-              <option>Rio de Janeiro</option>
-              <option>Belo Horizonte</option>
-              <option>Curitiba</option>
-              <option>Porto Alegre</option>
-              <option>Salvador</option>
-              <option>Recife</option>
-              <option>Fortaleza</option>
-              <option>Brasília</option>
-              <option>Florianópolis</option>
-              <option>Campinas</option>
-              <option>Goiânia</option>
-              <option>Vitória</option>
-              <option>Outra</option>
-            </select>
-          </div>
-          <div class="sim-field">
-            <label for="sim-nicho">Nicho</label>
-            <select id="sim-nicho" name="nicho" required>
-              <option value="">Selecione o nicho</option>
-              <option>Pizzarias</option>
-              <option>Padarias</option>
-              <option>Restaurantes</option>
-              <option>Clínicas</option>
-              <option>Salões de Beleza</option>
-              <option>Barbearias</option>
-              <option>Pet Shops</option>
-              <option>Lojas de Roupa</option>
-              <option>Prestadores de Serviço</option>
-              <option>Imobiliárias</option>
-              <option>Outro</option>
-            </select>
-          </div>
-          <div class="sim-field sim-form-full">
-            <label>Ticket que pretende cobrar (R$)</label>
-            <div class="sim-ticket-group" id="sim-ticket-group">
-              <button type="button" class="sim-ticket-btn" data-ticket="500">R$ 500</button>
-              <button type="button" class="sim-ticket-btn active" data-ticket="1000">R$ 1.000</button>
-              <button type="button" class="sim-ticket-btn" data-ticket="1500">R$ 1.500</button>
-              <button type="button" class="sim-ticket-btn" data-ticket="custom">Personalizado</button>
-              <input type="hidden" id="sim-ticket" name="ticket" value="1000">
-            </div>
-          </div>
-        </div>
-        <button type="submit" class="sim-submit">ANALISAR OPORTUNIDADES</button>
-      </form>
-
-      <!-- Loading -->
-      <div class="sim-loading" id="simLoading">
-        <div class="sim-loading-step" data-step="1">
-          <span class="step-bullet"></span>
-          <span>Buscando empresas locais...</span>
-        </div>
-        <div class="sim-loading-step" data-step="2">
-          <span class="step-bullet"></span>
-          <span>Verificando presença digital...</span>
-        </div>
-        <div class="sim-loading-step" data-step="3">
-          <span class="step-bullet"></span>
-          <span>Analisando dados públicos...</span>
-        </div>
-        <div class="sim-loading-step" data-step="4">
-          <span class="step-bullet"></span>
-          <span>Identificando oportunidades...</span>
-        </div>
-        <div class="sim-loading-step" data-step="5">
-          <span class="step-bullet"></span>
-          <span>Preparando prévias de site...</span>
+    <div class="steps-grid">
+      <!-- Card 1 -->
+      <div class="step-card snake-card reveal">
+        <div class="snake-top"></div><div class="snake-bottom"></div>
+        <div class="snake-card-inner">
+          <div class="step-number">1</div>
+          <div class="step-label">ENCONTRA O LEAD</div>
+          <div class="step-title">Você escolhe cidade e nicho. A FraLib busca empresas locais com sinais de oportunidade, como ausência de site detectado ou presença digital fraca.</div>
         </div>
       </div>
 
-      <!-- Resultado -->
-      <div class="sim-result" id="simResult">
-        <div class="sim-metric-grid">
-          <div class="sim-metric">
-            <div class="sim-metric-num">187</div>
-            <div class="sim-metric-label">Empresas<br>encontradas</div>
-          </div>
-          <div class="sim-metric">
-            <div class="sim-metric-num">42</div>
-            <div class="sim-metric-label">Sem site<br>detectado</div>
-          </div>
-          <div class="sim-metric">
-            <div class="sim-metric-num">68</div>
-            <div class="sim-metric-label">Presença<br>fraca</div>
-          </div>
-          <div class="sim-metric">
-            <div class="sim-metric-num">31</div>
-            <div class="sim-metric-label">WhatsApp<br>público</div>
-          </div>
-          <div class="sim-metric">
-            <div class="sim-metric-num">18</div>
-            <div class="sim-metric-label">Oportunidades<br>fortes</div>
-          </div>
+      <!-- Card 2 -->
+      <div class="step-card snake-card reveal">
+        <div class="snake-top"></div><div class="snake-bottom"></div>
+        <div class="snake-card-inner">
+          <div class="step-number">2</div>
+          <div class="step-label">CRIA A PRÉVIA DO SITE</div>
+          <div class="step-title">A IA usa dados públicos do negócio para montar uma prévia visual com nome, serviços, endereço, mapa e botão de WhatsApp.</div>
         </div>
-
-        <div class="sim-potential" id="simPotential">
-          <h4>SE VOCÊ COBRAR <span id="simTicketLabel">R$ 1.000</span> POR SITE:</h4>
-          <div class="sim-potential-row"><span>1 venda</span><strong>+ R$ 1.000</strong></div>
-          <div class="sim-potential-row"><span>3 vendas</span><strong>+ R$ 3.000</strong></div>
-          <div class="sim-potential-row"><span>5 vendas</span><strong>+ R$ 5.000</strong></div>
-        </div>
-
-        <p class="sim-disclaimer">
-          Estimativa demonstrativa baseada no nicho e região simulados. A FraLib não garante vendas ou faturamento. Resultados dependem da execução, oferta, abordagem e follow-up.
-        </p>
-
-        <a href="#" onclick="window.location=CHECKOUT_URL;return false;" class="sim-submit" style="text-decoration:none;text-align:center;display:block;margin-top:20px;">
-          GERAR MINHAS PRIMEIRAS PRÉVIAS
-        </a>
       </div>
+
+      <!-- Card 3 -->
+      <div class="step-card snake-card reveal">
+        <div class="snake-top"></div><div class="snake-bottom"></div>
+        <div class="snake-card-inner">
+          <div class="step-number">3</div>
+          <div class="step-label">GERA A ABORDAGEM</div>
+          <div class="step-title">Em vez de mandar "faço sites", você chama com uma demonstração pronta para despertar curiosidade.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Exemplo de abordagem em callout -->
+    <div class="approach-callout reveal">
+      Exemplo de abordagem: <em>"Oi, montei uma prévia de como o site da sua empresa poderia ficar. Posso te mostrar?"</em>
+    </div>
+
+    <div style="text-align:center;margin-top:36px;">
+      <a href="#" onclick="window.location=CHECKOUT_URL;return false;" class="btn-hero-primary" style="text-decoration:none;">
+        GERAR UMA PRÉVIA AGORA
+      </a>
     </div>
   </div>
 </section>
@@ -2851,158 +2817,6 @@ const TRIAL_URL = "/login?signup=1&plano=trial";
   </div>
 </section>
 
-<!-- ===== SEÇÃO 4 — ANTES vs COM FRALIB ===== -->
-<section class="ba-section" id="antes-depois">
-  <div class="container">
-    <h2 class="section-title reveal">PROSPECTAR MANUALMENTE LIMITA SUA ESCALA</h2>
-
-    <div class="ba-grid">
-      <!-- Coluna 1: Hoje -->
-      <div class="ba-col before reveal">
-        <h3>HOJE, FAZENDO TUDO NA MÃO</h3>
-        <ul>
-          <li>Você abre o Google</li>
-          <li>Procura empresa por empresa</li>
-          <li>Analisa se tem site</li>
-          <li>Tenta entender se vale abordar</li>
-          <li>Escreve uma mensagem fria</li>
-          <li>Cria site ou proposta só depois que alguém responde</li>
-          <li>Perde horas em tarefas repetitivas</li>
-        </ul>
-      </div>
-
-      <!-- Coluna 2: Com FraLib -->
-      <div class="ba-col after reveal">
-        <h3>COM A FRALIB</h3>
-        <ul>
-          <li>Você escolhe cidade e nicho</li>
-          <li>A FraLib encontra oportunidades</li>
-          <li>A IA cria uma prévia de site</li>
-          <li>A plataforma gera a abordagem</li>
-          <li>Você chama o lead mostrando algo concreto</li>
-          <li>Tudo fica organizado no painel</li>
-        </ul>
-      </div>
-    </div>
-
-    <div class="ba-closer reveal">
-      O problema não é só criar site com IA. O problema é <strong>saber quem abordar e como chamar atenção logo no primeiro contato.</strong>
-    </div>
-
-    <div style="text-align:center;margin-top:36px;">
-      <a href="#" onclick="window.location=CHECKOUT_URL;return false;" class="btn-hero-primary" style="text-decoration:none;">
-        PARAR DE PROSPECTAR NO ESCURO
-      </a>
-    </div>
-  </div>
-</section>
-
-<!-- ===== SEÇÃO 5 — COMO FUNCIONA ===== -->
-<section class="como-funciona" id="como-funciona" style="background:transparent">
-  <div class="container">
-    <h2 class="section-title reveal">A FRALIB FAZ O CAMINHO MAIS DIFÍCIL ANTES DA VENDA</h2>
-    <p class="section-sub reveal" style="text-align:center;margin:0 auto 48px;max-width:680px;color:var(--fl-text-muted);font-size:14px;">
-      Você escolhe cidade e nicho. A plataforma encontra o lead, gera a prévia do site e cria a abordagem. Você só precisa chamar.
-    </p>
-
-    <div class="steps-grid">
-      <!-- Card 1 -->
-      <div class="step-card snake-card reveal">
-        <div class="snake-top"></div><div class="snake-bottom"></div>
-        <div class="snake-card-inner">
-          <div class="step-number">1</div>
-          <div class="step-label">ENCONTRA O LEAD</div>
-          <div class="step-title">Você escolhe cidade e nicho. A FraLib busca empresas locais com sinais de oportunidade, como ausência de site detectado ou presença digital fraca.</div>
-        </div>
-      </div>
-
-      <!-- Card 2 -->
-      <div class="step-card snake-card reveal">
-        <div class="snake-top"></div><div class="snake-bottom"></div>
-        <div class="snake-card-inner">
-          <div class="step-number">2</div>
-          <div class="step-label">CRIA A PRÉVIA DO SITE</div>
-          <div class="step-title">A IA usa dados públicos do negócio para montar uma prévia visual com nome, serviços, endereço, mapa e botão de WhatsApp.</div>
-        </div>
-      </div>
-
-      <!-- Card 3 -->
-      <div class="step-card snake-card reveal">
-        <div class="snake-top"></div><div class="snake-bottom"></div>
-        <div class="snake-card-inner">
-          <div class="step-number">3</div>
-          <div class="step-label">GERA A ABORDAGEM</div>
-          <div class="step-title">Em vez de mandar "faço sites", você chama com uma demonstração pronta para despertar curiosidade.</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Exemplo de abordagem em callout -->
-    <div class="approach-callout reveal">
-      Exemplo de abordagem: <em>"Oi, montei uma prévia de como o site da sua empresa poderia ficar. Posso te mostrar?"</em>
-    </div>
-
-    <div style="text-align:center;margin-top:36px;">
-      <a href="#" onclick="window.location=CHECKOUT_URL;return false;" class="btn-hero-primary" style="text-decoration:none;">
-        GERAR UMA PRÉVIA AGORA
-      </a>
-    </div>
-  </div>
-</section>
-
-<!-- ===== SEÇÃO 6 — EFEITO WOW NO WHATSAPP ===== -->
-<section class="wa-demo-section" id="whatsapp">
-  <div class="container">
-    <h2 class="section-title reveal">VOCÊ NÃO VENDE SÓ FALANDO. VOCÊ VENDE MOSTRANDO.</h2>
-    <p class="section-sub reveal" style="text-align:center;margin:0 auto 40px;max-width:720px;color:var(--fl-text-muted);font-size:14px;">
-      A maioria dos freelancers manda mensagens iguais. A FraLib ajuda você a chegar com uma prévia pronta, aumentando a curiosidade e a percepção de valor.
-    </p>
-
-    <div class="wa-mockup reveal">
-      <div class="wa-demo-header">
-        <div class="wa-demo-avatar">V</div>
-        <div>
-          <div class="wa-demo-name">Você</div>
-          <div class="wa-demo-status">online · conversa com cliente</div>
-        </div>
-      </div>
-
-      <div class="wa-demo-msgs">
-        <div class="wa-demo-msg s">
-          Oi, tudo bem? Vi que sua empresa aparece no Google, mas não encontrei um site profissional.
-          <div class="wa-demo-time">10:32</div>
-        </div>
-        <div class="wa-demo-msg s">
-          Montei uma prévia gratuita de como o site de vocês poderia ficar. Posso te mandar?
-          <div class="wa-demo-time">10:33</div>
-        </div>
-        <div class="wa-demo-msg r">
-          Pode sim, manda aí.
-          <div class="wa-demo-time">10:41</div>
-        </div>
-        <div class="wa-demo-msg s">
-          Aqui está a prévia: pizzaria-sao-jose.fralib.site
-          <div class="wa-demo-time">10:42</div>
-        </div>
-        <div class="wa-demo-msg r">
-          Ficou muito bom. Quanto ficaria pra deixar no ar?
-          <div class="wa-demo-time">10:50</div>
-        </div>
-      </div>
-    </div>
-
-    <p class="wa-demo-disclaimer reveal">
-      Conversa ilustrativa. Resultados dependem da abordagem, nicho e execução.
-    </p>
-
-    <div style="text-align:center;margin-top:28px;">
-      <a href="#" onclick="window.location=CHECKOUT_URL;return false;" class="btn-hero-primary" style="text-decoration:none;">
-        USAR ABORDAGEM COM EFEITO WOW
-      </a>
-    </div>
-  </div>
-</section>
-
 <!-- ===== SEÇÃO 7 — O QUE VOCÊ RECEBE ===== -->
 <section class="funcionalidades" id="beneficios" style="background:transparent">
   <div class="container">
@@ -3049,58 +2863,6 @@ const TRIAL_URL = "/login?signup=1&plano=trial";
     <div style="text-align:center;margin-top:40px;">
       <a href="#" onclick="window.location=CHECKOUT_URL;return false;" class="btn-hero-primary" style="text-decoration:none;">
         ENTRAR NO BETA POR R$97
-      </a>
-    </div>
-  </div>
-</section>
-
-<!-- ===== SEÇÃO 8 — NICHOS E TICKETS POSSÍVEIS ===== -->
-<section class="para-quem" id="nichos" style="background:transparent">
-  <div class="container">
-    <h2 class="section-title reveal">ESCOLHA UM NICHO E DEFINA QUANTO QUER COBRAR</h2>
-    <p class="section-sub reveal" style="text-align:center;margin:0 auto 48px;max-width:720px;color:var(--fl-text-muted);font-size:14px;">
-      A FraLib não define seu preço. Ela ajuda você a encontrar oportunidades, criar a prévia e iniciar a abordagem. Você decide sua oferta.
-    </p>
-
-    <div class="quem-grid">
-      <div class="quem-card snake-card reveal"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
-        <div class="quem-check"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11h18M5 11V8a7 7 0 0114 0v3M6 11v8a2 2 0 002 2h8a2 2 0 002-2v-8"/></svg></div>
-        <div class="quem-title">Pizzarias, padarias e restaurantes</div>
-        <div class="quem-desc">Sites com cardápio, localização, WhatsApp e fotos.<br><strong style="color:var(--gold);">Exemplo de cobrança praticada no mercado: R$ 500 a R$ 1.500.</strong></div>
-      </div></div>
-
-      <div class="quem-card snake-card reveal"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
-        <div class="quem-check"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0016.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 002 8.5c0 2.29 1.51 4.04 3 5.5l7 7z"/></svg></div>
-        <div class="quem-title">Clínicas, consultórios e estética</div>
-        <div class="quem-desc">Sites com serviços, agendamento, localização e autoridade.<br><strong style="color:var(--cyan);">Exemplo de cobrança praticada no mercado: R$ 1.500 a R$ 3.000.</strong></div>
-      </div></div>
-
-      <div class="quem-card snake-card reveal"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
-        <div class="quem-check"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 10v6M4.22 4.22l4.24 4.24m7.07 7.07l4.24 4.24M1 12h6m10 0h6M4.22 19.78l4.24-4.24m7.07-7.07l4.24-4.24"/></svg></div>
-        <div class="quem-title">Salões, barbearias e manicures</div>
-        <div class="quem-desc">Sites com portfólio, serviços, preços e WhatsApp.<br><strong style="color:var(--fl-purple-300);">Exemplo de cobrança praticada no mercado: R$ 500 a R$ 1.000.</strong></div>
-      </div></div>
-
-      <div class="quem-card snake-card reveal"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
-        <div class="quem-check"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg></div>
-        <div class="quem-title">Prestadores de serviço</div>
-        <div class="quem-desc">Encanador, eletricista, dedetizadora, marceneiro e outros.<br><strong style="color:var(--gold);">Exemplo de cobrança praticada no mercado: R$ 500 a R$ 1.200.</strong></div>
-      </div></div>
-
-      <div class="quem-card snake-card reveal"><div class="snake-top"></div><div class="snake-bottom"></div><div class="snake-card-inner">
-        <div class="quem-check"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4zM3 6h18M16 10a4 4 0 01-8 0"/></svg></div>
-        <div class="quem-title">Lojas físicas</div>
-        <div class="quem-desc">Sites com catálogo, endereço, WhatsApp e fotos dos produtos.<br><strong style="color:var(--cyan);">Exemplo de cobrança praticada no mercado: R$ 800 a R$ 2.000.</strong></div>
-      </div></div>
-    </div>
-
-    <p style="max-width:780px;margin:32px auto 0;padding:14px 20px;background:rgba(255,184,0,0.04);border:1px solid rgba(255,184,0,0.15);border-radius:var(--fl-r-md);font-size:12px;color:var(--fl-text-muted);font-style:italic;line-height:1.6;text-align:center;">
-      Os valores são exemplos de mercado e podem variar por cidade, nicho, qualidade da entrega e negociação. A FraLib não garante vendas ou faturamento.
-    </p>
-
-    <div style="text-align:center;margin-top:32px;">
-      <a href="#simulador" class="btn-hero-primary" style="text-decoration:none;">
-        SIMULAR UM NICHO NA MINHA CIDADE
       </a>
     </div>
   </div>
@@ -3153,85 +2915,6 @@ const TRIAL_URL = "/login?signup=1&plano=trial";
         <div class="quem-title">Já usa IA</div>
         <div class="quem-desc">Para quem usa tecnologia, mas ainda perde tempo fazendo busca, análise e abordagem na mão.</div>
       </div></div>
-    </div>
-  </div>
-</section>
-
-<!-- ===== SEÇÃO 10 — PROVA DO BETA ===== -->
-<section class="beta-proof-section" id="prova-beta">
-  <div class="container">
-    <h2 class="section-title reveal">O BETA JÁ ESTÁ RODANDO</h2>
-    <p class="section-sub reveal" style="text-align:center;margin:0 auto 40px;max-width:720px;color:var(--fl-text-muted);font-size:14px;">
-      A FraLib ainda está em evolução, mas já está sendo usada para testar buscas, prévias e abordagens com empresas locais.
-    </p>
-
-    <div class="beta-proof-grid reveal">
-      <div class="beta-proof-card">
-        <div class="beta-proof-num">40</div>
-        <div class="beta-proof-label">Usuários beta</div>
-      </div>
-      <div class="beta-proof-card">
-        <div class="beta-proof-num">+1.000</div>
-        <div class="beta-proof-label">Buscas feitas em 1 mês</div>
-      </div>
-      <div class="beta-proof-card">
-        <div class="beta-proof-num">+1.000</div>
-        <div class="beta-proof-label">Leads encontrados</div>
-      </div>
-      <div class="beta-proof-card">
-        <div class="beta-proof-num">2</div>
-        <div class="beta-proof-label">Vendas reportadas por usuários beta</div>
-      </div>
-    </div>
-
-    <p class="beta-proof-disclaimer reveal">
-      Resultados iniciais do beta. A FraLib não garante vendas ou faturamento. Os resultados dependem da execução, oferta, nicho, abordagem e follow-up de cada usuário.
-    </p>
-
-    <div style="text-align:center;margin-top:32px;">
-      <a href="#" onclick="window.location=CHECKOUT_URL;return false;" class="btn-hero-primary" style="text-decoration:none;">
-        FAZER PARTE DO BETA
-      </a>
-    </div>
-  </div>
-</section>
-
-<!-- ===== SEÇÃO 11 — OFERTA BETA PRO ===== -->
-<section class="offer-section" id="oferta">
-  <div class="container">
-    <h2 class="section-title reveal">ENTRE NO BETA FRALIB PRO POR R$97</h2>
-    <p class="section-sub reveal" style="text-align:center;margin:0 auto 40px;max-width:720px;color:var(--fl-text-muted);font-size:14px;">
-      Use o plano Pro por 30 dias, gere seus primeiros leads, crie prévias de site e teste a abordagem com efeito wow.
-    </p>
-
-    <div class="offer-card reveal">
-      <div class="offer-badge">MAIS ESCOLHIDO</div>
-      <div class="offer-title">BETA FRALIB PRO</div>
-
-      <div class="offer-price-row">
-        <span class="offer-price">R$ 97</span>
-        <span class="offer-price-old">R$ 197</span>
-      </div>
-      <p class="offer-period">no primeiro mês · depois <strong>R$ 197/mês</strong></p>
-
-      <ul class="offer-features">
-        <li>Acesso imediato ao SaaS</li>
-        <li>Busca de leads locais</li>
-        <li>Geração de prévias de site</li>
-        <li>Abordagens com IA</li>
-        <li>CRM simples</li>
-        <li>Grupo WhatsApp</li>
-        <li>Suporte de ativação</li>
-        <li>Garantia de 30 dias</li>
-      </ul>
-
-      <a href="#" onclick="window.location=CHECKOUT_URL;return false;" class="offer-cta">
-        ENTRAR NO BETA POR R$97
-      </a>
-
-      <p class="offer-microcopy">
-        Pagamento seguro · <span>Acesso imediato</span> · Cancele quando quiser
-      </p>
     </div>
   </div>
 </section>
@@ -3290,32 +2973,6 @@ const TRIAL_URL = "/login?signup=1&plano=trial";
         </ul>
         <a href="#" onclick="window.location=WHATSAPP_URL;return false;" class="btn btn-outline" style="margin-top:20px;width:100%;text-decoration:none;border-color:var(--fl-purple-300);">FALAR COM A EQUIPE</a>
       </div>
-    </div>
-  </div>
-</section>
-
-<!-- ===== SEÇÃO 13 — GARANTIA ===== -->
-<section class="guarantee-section" id="garantia">
-  <div class="container">
-    <h2 class="section-title reveal">TESTE SEM RISCO POR 30 DIAS</h2>
-
-    <div class="guarantee-card reveal">
-      <div class="guarantee-icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-          <polyline points="9 12 11 14 15 10"/>
-        </svg>
-      </div>
-      <div class="guarantee-content">
-        <h3>Garantia incondicional de 30 dias</h3>
-        <p>Entre, configure sua primeira busca, gere seu primeiro lead, crie sua primeira prévia e veja se a FraLib faz sentido para sua operação. Se não gostar, devolvemos seu dinheiro dentro de 30 dias.</p>
-      </div>
-    </div>
-
-    <div style="text-align:center;margin-top:32px;">
-      <a href="#" onclick="window.location=CHECKOUT_URL;return false;" class="btn-hero-primary" style="text-decoration:none;">
-        COMEÇAR COM GARANTIA
-      </a>
     </div>
   </div>
 </section>
@@ -3478,18 +3135,6 @@ const TRIAL_URL = "/login?signup=1&plano=trial";
     <span>CNPJ XX.XXX.XXX/0001-XX</span>
   </div>
 </footer>
-
-<!-- BOTÃO WHATSAPP FLUTUANTE -->
-<a href="#" onclick="window.open(WHATSAPP_URL,'_blank');return false;" class="wa-float" aria-label="Falar no grupo WhatsApp">
-  <svg viewBox="0 0 24 24">
-    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-  </svg>
-</a>
-
-<!-- CTA STICKY MOBILE -->
-<div class="sticky-cta-mobile">
-  <a href="#simulador">SIMULAR MINHA CIDADE</a>
-</div>
 
 <!-- ============================================================
      JAVASCRIPT

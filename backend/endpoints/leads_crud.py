@@ -539,10 +539,14 @@ async def deletar_lead(
         if not deleted:
             raise HTTPException(status_code=404, detail="Lead não encontrado")
 
-        # Deletar interações - ja sabemos que o lead existe
+        # Deletar interações - ja sabemos que o lead existe e pertence ao tenant
         db.execute(
-            text("DELETE FROM interacoes WHERE lead_id = :lead_id"),
-            {"lead_id": lead_id},
+            text("""
+                DELETE FROM interacoes
+                WHERE lead_id = :lead_id
+                AND lead_id IN (SELECT id FROM leads WHERE user_id = :uid)
+            """),
+            {"lead_id": lead_id, "uid": tenant_id},
         )
         db.commit()
         return {"ok": True, "mensagem": "Lead deletado com sucesso"}
