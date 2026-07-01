@@ -226,6 +226,7 @@ class FraLibState:
     lead_id: str = ""
     lead_nome: str = ""
     lead_slug: str = ""
+    _inventory_id: str = ""  # Sprint 16: ID do lead_inventory para marcar error_retry
     qualificacao_caio: Any = None
     alex_result: Any = None
     jina_insights: str = ""
@@ -512,6 +513,7 @@ async def executar_pipeline_completo(
                 :50
             ]
             state.lead_id = _lead_id_existente
+            state._inventory_id = config.get("_inventory_id", "")
             _aplicar_segmento_inferido(state, _log)
             state.lead_raw_data = build_lead_raw_data(
                 _lead_raw_r,

@@ -71,7 +71,7 @@ def ensure_keyword_research(state, logger, warning_fn=None) -> None:
 
 
 def ensure_jina_insights(state, log_fn, fallback_researcher, warning_fn) -> None:
-    """Populate Jina intelligence with fallback support."""
+    """Populate Jina intelligence or fail closed."""
     try:
         if buscar_inteligencia_jina is None or formatar_inteligencia_para_arquiteto is None:
             raise RuntimeError("jina_intelligence indisponivel")
@@ -88,20 +88,10 @@ def ensure_jina_insights(state, log_fn, fallback_researcher, warning_fn) -> None
             "success",
         )
     except Exception as exc:
-        try:
-            state.jina_intel_dict = {}
-            state.jina_insights = fallback_researcher(
-                state.lead_obj.lead.segmento,
-                cidade=state.lead_obj.lead.cidade,
-            )
-            log_fn(
-                f"  Jina fallback v1: {len(state.jina_insights)} chars",
-                "warning",
-            )
-        except Exception:
-            state.jina_intel_dict = {}
-            state.jina_insights = ""
+        state.jina_intel_dict = {}
+        state.jina_insights = ""
         warning_fn(f"[Pipeline] Jina Intel erro: {exc}")
+        raise
 
 
 def curate_lead_assets(state, logger) -> None:
@@ -186,15 +176,8 @@ def build_prompt_phase_outputs(
                 task_id=state.pipeline_id,
             )
         except Exception as exc:
-            warning_fn(f"[Pipeline] agente_nicho erro (fallback): {exc}")
-            state.nicho_briefing = NichoBriefing(
-                task_id=state.pipeline_id,
-                source_agent="pipeline",
-                target_agent="arquiteto_mestre",
-                nicho=seg,
-                cidade=cid,
-                confianca="media",
-            )
+            warning_fn(f"[Pipeline] agente_nicho erro: {exc}")
+            raise
 
     if builder_fast_path:
         state.variacao_estrutural = VariacaoEstrutural(
@@ -213,23 +196,8 @@ def build_prompt_phase_outputs(
                 task_id=state.pipeline_id,
             )
         except Exception as exc:
-            warning_fn(f"[Pipeline] agente_variacao erro (fallback): {exc}")
-            state.variacao_estrutural = VariacaoEstrutural(
-                task_id=state.pipeline_id,
-                source_agent="pipeline",
-                target_agent="arquiteto_mestre",
-                template_estrutura="corporate",
-                template_hero="hero-split",
-                ordem_das_secoes=[
-                    "hero",
-                    "sobre",
-                    "servicos",
-                    "depoimentos",
-                    "faq",
-                    "contato",
-                    "footer",
-                ],
-            )
+            warning_fn(f"[Pipeline] agente_variacao erro: {exc}")
+            raise
 
     if prompt_agent_flow:
         state.prd_arquiteto = build_prompt_prd(state, tenant_id)

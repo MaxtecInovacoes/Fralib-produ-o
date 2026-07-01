@@ -216,15 +216,16 @@ def executar_bloco_estrutura(
             agent_name="arquiteto_mestre",
         )
     except Exception as e:
-        print(f"[BlocoEstrutura] LLM falhou, tentando haiku fallback: {e}")
-        resp = call_claude(
-            system=SYSTEM_DESIGN_DIRECTOR,
-            user=prompt,
-            model="haiku",
-            max_tokens=2000,
-            temperature=0.3,
-            agent_name="arquiteto_mestre",
-            respect_agent_config=False,
+        raise EstruturaInvalidaError(
+            f"Estrutura LLM failed for {nome} in {cidade}.",
+            context={
+                "nome": nome,
+                "cidade": cidade,
+                "segmento": segmento,
+                "erro": str(e),
+                "acao": "Corrigir LLM/conectividade; nao usar modelo alternativo automatico",
+            },
+        ) from e
         )
 
     resp = _re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f]", " ", resp)
@@ -257,5 +258,4 @@ def executar_bloco_estrutura(
             "acao": "Check LLM response format and retry",
         },
     )
-
 

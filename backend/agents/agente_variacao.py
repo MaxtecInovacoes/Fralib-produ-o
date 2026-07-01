@@ -61,7 +61,7 @@ SUBNICHO_PATTERNS = {
 def detect_subniche(segmento: str, servicos: list[str] | None = None, atributos: list[str] | None = None) -> str:
     """Detecta o subnicho canonico a partir de segmento + servicos + atributos.
 
-    Retorna chave canonica (ex: "nutricionista_esportiva") ou "default".
+    Retorna chave canonica (ex: "nutricionista_esportiva").
     """
     segmento = (segmento or "").lower().strip()
     servicos = [str(s).lower() for s in (servicos or []) if s]
@@ -76,15 +76,7 @@ def detect_subniche(segmento: str, servicos: list[str] | None = None, atributos:
             for p in patterns:
                 if p in corpus:
                     return subnicho
-            # Se nao achou padrao mais especifico, retorna o segmento_base mais comum
-            if segmento_base == "nutricionista":
-                return "nutricionista_clinica"  # fallback conservador
-            if segmento_base == "clinica":
-                return "clinica_medica"
-            if segmento_base == "academia":
-                return "academia_musculacao"
-            if segmento_base == "advocacia":
-                return "advocacia_familia"
+            break
 
     # Match fuzzy nos servicos/atributos
     for subnicho, patterns in SUBNICHO_PATTERNS.items():
@@ -92,7 +84,7 @@ def detect_subniche(segmento: str, servicos: list[str] | None = None, atributos:
             if p in corpus:
                 return subnicho
 
-    return "default"
+    return ""
 
 
 # ─── Subnicho templates (mapping canonico subnicho -> estrutura) ──────────
@@ -214,8 +206,13 @@ SUB_NICHO_TEMPLATES: dict[str, dict] = {
 
 
 def _get_subnicho_template(subnicho: str) -> dict:
-    """Retorna o template canonico do subnicho, ou o default."""
-    return SUB_NICHO_TEMPLATES.get(subnicho, SUB_NICHO_TEMPLATES["default"])
+    """Retorna o template canonico do subnicho ou falha fechado."""
+    if subnicho not in SUB_NICHO_TEMPLATES or subnicho == "default":
+        raise SubnichoNaoMapeadoError(
+            f"Subnicho '{subnicho}' nao esta mapeado para variacao estrutural.",
+            context={"subnicho": subnicho, "acao": "Adicionar entrada em SUB_NICHO_TEMPLATES"},
+        )
+    return SUB_NICHO_TEMPLATES[subnicho]
 
 
 # ─── System prompt (fallback para subnichos nao mapeados) ────────────────

@@ -249,29 +249,16 @@ def executar_bloco_copy(
             agent_name="arquiteto_mestre",
         )
     except Exception as e:
-        print(f"[BlocoCopy] Sonnet falhou, tentando haiku: {e}")
-        try:
-            resp = call_claude(
-                system=SYSTEM_COPY_SENIOR,
-                user=prompt,
-                model="haiku",
-                max_tokens=1800,
-                temperature=0.3,
-                agent_name="arquiteto_mestre",
-                respect_agent_config=False,
-            )
-        except Exception as e2:
-            print(f"[BlocoCopy] Haiku tambem falhou: {e2}")
-            raise CopyGenerationError(
-                f"Copy generation failed for {nome} in {cidade} after retry.",
-                context={
-                    "nome": nome,
-                    "cidade": cidade,
-                    "segmento": segmento,
-                    "erro_haiku": str(e2),
-                    "acao": "Check LLM connectivity and API key",
-                },
-            )
+        raise CopyGenerationError(
+            f"Copy generation failed for {nome} in {cidade}.",
+            context={
+                "nome": nome,
+                "cidade": cidade,
+                "segmento": segmento,
+                "erro": str(e),
+                "acao": "Corrigir LLM/conectividade; nao usar modelo alternativo automatico",
+            },
+        ) from e
 
     resp = _re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f]", " ", resp)
     dados = parse_bloco2_with_fallback(resp)
@@ -307,29 +294,16 @@ def executar_bloco_copy(
             agent_name="arquiteto_mestre",
         )
     except Exception as e:
-        print(f"[BlocoCopy] Retry sonnet falhou, haiku fallback: {e}")
-        try:
-            resp2 = call_claude(
-                system=SYSTEM_COPY_SENIOR,
-                user=prompt_retry,
-                model="haiku",
-                max_tokens=1800,
-                temperature=0.2,
-                agent_name="arquiteto_mestre",
-                respect_agent_config=False,
-            )
-        except Exception as e2:
-            print(f"[BlocoCopy] Retry haiku falhou: {e2}")
-            raise CopyGenerationError(
-                f"Copy retry failed for {nome} in {cidade} after retry.",
-                context={
-                    "nome": nome,
-                    "cidade": cidade,
-                    "segmento": segmento,
-                    "erro_haiku_retry": str(e2),
-                    "acao": "Check LLM connectivity and API key",
-                },
-            )
+        raise CopyGenerationError(
+            f"Copy retry failed for {nome} in {cidade}.",
+            context={
+                "nome": nome,
+                "cidade": cidade,
+                "segmento": segmento,
+                "erro": str(e),
+                "acao": "Corrigir LLM/conectividade; nao usar modelo alternativo automatico",
+            },
+        ) from e
     resp2 = _re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f]", " ", resp2)
     dados2 = parse_bloco2_with_fallback(resp2)
     if dados2 and dados2.get("sections"):
