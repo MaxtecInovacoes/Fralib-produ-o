@@ -560,6 +560,16 @@ ESTADOS_SDR = [
 # ════════════════════════════════════════════════════════════════════
 
 _HORARIO_CACHE = {}  # {cache_key: (config, expiry_timestamp)}
+_HORARIO_CACHE_TTL = 300  # 5 minutos
+
+
+def _cleanup_horario_cache():
+    """Remove entradas expiradas do cache de horario."""
+    import time
+    expired = [k for k, v in _HORARIO_CACHE.items() if time.time() >= v[1]]
+    for k in expired:
+        del _HORARIO_CACHE[k]
+    return len(expired)
 
 
 def _get_horario_config(user_id: int) -> dict:
@@ -569,13 +579,16 @@ def _get_horario_config(user_id: int) -> dict:
     cached = _HORARIO_CACHE.get(_cache_key)
     if cached and time.time() < cached[1]:
         return cached[0]
+    # Cleanup periodico para evitar memory leak
+    if len(_HORARIO_CACHE) > 100:
+        _cleanup_horario_cache()
     try:
         from . import _get_sdr_settings_for_user as _local_settings
         from services.sdr_settings import outbound_schedule_from_settings
 
         settings = _local_settings(user_id)
         config = outbound_schedule_from_settings(settings) if settings else None
-        _HORARIO_CACHE[_cache_key] = (config, time.time() + 300)
+        _HORARIO_CACHE[_cache_key] = (config, time.time() + _HORARIO_CACHE_TTL)
         return config
     except Exception:
         return None
