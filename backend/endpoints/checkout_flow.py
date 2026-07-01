@@ -522,16 +522,20 @@ async def checkout_me(request: Request, db: Session = Depends(get_db)):
     # Calcular acesso
     can_access = False
     reason = ""
-    if user["status"] == "active" and user["access"] == "released":
+    # Aceitar tanto o status em PT ("ativo") quanto em EN ("active")
+    user_status = (user["status"] or "").lower()
+    user_access = (user.get("access") or "released").lower()
+
+    if user_status in ("active", "ativo") and user_access == "released":
         can_access = True
         reason = "active_paid"
-    elif user["status"] == "trialing" and user["access"] == "released":
+    elif user_status == "trialing" and user_access == "released":
         if trial_ends_dt and trial_ends_dt > now:
             can_access = True
             reason = "trial_valid"
         else:
             reason = "trial_expired_needs_payment"
-    elif user["status"] == "trial_expired" or user["access"] == "blocked":
+    elif user_status == "trial_expired" or user_access == "blocked":
         reason = "blocked_pending_payment"
     elif user["status"] == "pending_payment":
         reason = "pending_payment"
