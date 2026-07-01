@@ -41,9 +41,10 @@ está **quebrando o sistema**. Faça pela pipeline.
 - **Nunca** editar direto na VPS, usar SCP, rsync ou copiar arquivos manualmente.
 - Fluxo único: editar local em `C:\fralib` → `git add` → `git commit` → `git push origin master`.
 - Push em `master` dispara `scripts/post-receive` no bare repo VPS, que valida,
-  publica e reinicia serviços systemd (`fralib-api`, `fralib-worker`,
-  `fralib-franz`, `fralib-wpp-listener`, `fralib-hermes`), usando PM2 apenas
-  como fallback legado.
+  publica, remove workers PM2 legados (`fralib-worker`, `fralib-franz-worker`,
+  `fralib-bryan-worker`) e reinicia todos os serviços systemd (`fralib-api`,
+  `fralib-worker`, `fralib-worker@*.service`, `fralib-franz`,
+  `fralib-wpp-listener`, `fralib-hermes`).
 - Código em produção precisa ser reproduzível a partir do Git.
 - Fonte canônica local: `C:\fralib`; fonte canônica VPS: `/root/fralib`.
 - Pastas antigas fora desses caminhos, caches de IDE e backups são **legado** — ignorar.
@@ -328,16 +329,23 @@ Os **20 contratos** que saem do PRD, passam pelo OpenUI, e chegam no HTML public
 
 ---
 
-## 10. Runtime: systemd (canônico) com PM2 legado
+## 10. Runtime: systemd (canônico)
 
-5 serviços systemd:
+Serviços systemd:
 - `fralib-api` (porta 8000) — 1G RAM / 150% CPU
 - `fralib-worker` — 2G RAM / 200% CPU
+- `fralib-worker@N` — instâncias paralelas opcionais do worker; se estiverem
+  ativas, o deploy deve reiniciar todas junto com `fralib-worker`.
 - `fralib-franz` — 512M RAM / 100% CPU
 - `fralib-wpp-listener` — 512M RAM / 100% CPU
 - `fralib-hermes` — 256M RAM / 50% CPU
 
 `whatsmeow` é externo (porta 3001).
+
+PM2 não pode rodar `worker.py` em paralelo com systemd. Se `fralib-worker`,
+`fralib-franz-worker` ou `fralib-bryan-worker` existirem no PM2, o
+`post-receive` deve removê-los antes de reiniciar systemd; caso contrário jobs
+podem ser processados por código antigo em memória.
 
 **Regra**: usar `backend/services/service_manager.py` (abstração canônica).
 
@@ -348,7 +356,8 @@ Os **20 contratos** que saem do PRD, passam pelo OpenUI, e chegam no HTML public
 1. Editar em `C:\fralib`.
 2. `git add` → `git commit` (bloqueado por pre-commit hook se houver secrets).
 3. `git push origin master` para `root@100.101.18.1:/root/repos/fralib`.
-4. Hook canônico: `scripts/post-receive` valida, publica e reinicia.
+4. Hook canônico: `scripts/post-receive` valida, publica, remove workers PM2
+   legados e reinicia todos os workers systemd, inclusive `fralib-worker@N`.
 
 ---
 
@@ -453,8 +462,8 @@ branch explícito `FRALIB_BUILDER_ENGINE=vite_react`.
 
 ## 17. Top 5 Arquivos para Entender/Alterar a Pipeline
 
-1. **`backend/services/openui_renderer.py`** — gerador canônico de sites.
-2. **`backend/services/openui_contracts.py`** — injeta os 7 contratos.
+1. **`backend/services/vite_react_renderer.py`** — gerador canônico de sites.
+2. **`backend/services/vite_contracts.py`** — injeta contratos do builder Vite/React.
 3. **`backend/endpoints/pipeline_orchestrator_service.py`** — coordena 11 fases.
 4. **`backend/services/pipeline_phases.py`** — enum canônico de 11 fases.
 5. **`backend/core/job_queue.py`** — fila Postgres com `claim_next`, `enqueue`.
@@ -465,25 +474,25 @@ branch explícito `FRALIB_BUILDER_ENGINE=vite_react`.
 
 ---
 
-## 18. Arquivos Legados e Compatibilidade React/Vite
+## 18. Arquivos do Builder Vite/React
 
-Em 2026-06-23, o builder React/Vite foi recuperado como compatibilidade
-explícita a pedido do usuário. Ele ainda contém monólito e deve ser quebrado
-depois. Não promover para padrão sem auditoria, testes e decisão explícita.
+Vite/React é o builder canônico. Alguns arquivos ainda carregam nomes herdados
+como `fallback` por compatibilidade interna, mas isso não autoriza fallback de
+produto nem publicação OpenUI automática quando Vite falha.
 
 | Arquivo | Estado |
 |---|---|
-| `backend/services/vite_react_renderer.py` | Renderer Vite/React recuperado como compat explícito; ainda monolítico e precisa ser quebrado |
-| `backend/services/vite_renderer_models.py` | Compat React/Vite |
-| `backend/services/vite_build_executor.py` | Compat React/Vite |
-| `backend/services/vite_config.py` | Compat React/Vite |
-| `backend/services/vite_config_helpers.py` | Compat React/Vite |
-| `backend/services/vite_facts.py` | Compat React/Vite |
-| `backend/services/vite_file_extractor.py` | Compat React/Vite |
-| `backend/services/vite_modules.py` | Compat React/Vite |
-| `backend/services/vite_prompts.py` | Compat React/Vite |
-| `backend/services/vite_templates.py` | Compat React/Vite |
-| `backend/services/vite_validator.py` | Compat React/Vite |
+| `backend/services/vite_react_renderer.py` | Renderer canônico Vite/React; ainda monolítico e deve ser quebrado por módulos menores |
+| `backend/services/vite_renderer_models.py` | Tipos/resultado do renderer Vite/React |
+| `backend/services/vite_build_executor.py` | Instala/build/teste do projeto Vite |
+| `backend/services/vite_config.py` | Configuração do builder Vite |
+| `backend/services/vite_config_helpers.py` | Helpers de config |
+| `backend/services/vite_facts.py` | Normalização factual do lead |
+| `backend/services/vite_file_extractor.py` | Extração/validação de arquivos gerados |
+| `backend/services/vite_modules.py` | Dependências e módulos do sandbox |
+| `backend/services/vite_prompts.py` | Prompt/contrato do builder Vite |
+| `backend/services/vite_templates.py` | Templates auxiliares Vite |
+| `backend/services/vite_validator.py` | Validação do projeto Vite |
 | `scripts/test_build_only.py` | Teste órfão do Vite/React |
 | `scripts/test_builder_llm_only.py` | Teste órfão do Vite/React |
 | `tests/unit/test_vite_config.py` | Teste órfão |
@@ -493,11 +502,10 @@ depois. Não promover para padrão sem auditoria, testes e decisão explícita.
 | `tests/unit/test_vite_renderer_models.py` | Teste órfão |
 | `tests/unit/test_vite_validator.py` | Teste órfão |
 
-**Caminho padrão**: `backend/services/openui_renderer.py`.
-**Compat explícito**: `FRALIB_BUILDER_ENGINE=vite_react`.
-**Fallback de segurança**: se `vite_react` falhar, `backend/services/builder_worker.py`
-registra `engine=openui_fallback`, grava `builder-render.json` com
-`failed_openui_fallback` e publica HTML OpenUI.
+**Caminho padrão**: `backend/services/vite_react_renderer.py`.
+**Rota alternativa explícita**: `FRALIB_BUILDER_ENGINE=openui`.
+**Fail-fast**: se `vite_react` falhar, o job falha com erro claro. Não deve
+publicar HTML OpenUI automático para mascarar o erro.
 
 **Variação visual React/Vite**: no modo `creative_plan`, a LLM escolhe apenas
 campos de um contrato JSON barato; ela não escreve React/CSS livre. Quando o
@@ -680,8 +688,7 @@ O Claude Agent SDK tem 4 features que a gente **NÃO tem** ainda:
 
 ```bash
 # Ativar (VPS)
-ssh root@100.101.18.1 "sed -i \"s/FRALIB_TRACING: '0'/FRALIB_TRACING: '1'/\" \
-  /root/fralib/ecosystem.config.js && pm2 restart fralib"
+FRALIB_TRACING=1
 
 # Inspecionar
 curl http://localhost:8000/api/admin/tracing/summary
@@ -753,7 +760,7 @@ anti-vazamento cross-tenant.
 ```
 [Lead] → Hunter → Caio → Jina → Nicho → Variação → Arquiteto
                                               ↓
-                          [Builder — OpenUI + 6 sub-agentes RAG]
+                          [Builder — Vite/React + Studio React]
                                               ↓
                                        QA → Deploy → Franz (SDR)
                                               ↓
@@ -809,16 +816,17 @@ anti-vazamento cross-tenant.
 | Tailwind v4 | CDN inline classes | **Build Vite real** |
 | Frameworks | Apenas HTML+JS | **React 18 + Vite 6 + shadcn/ui** |
 | GSAP / Lenis / Motion | via motion_runtime.js | **GSAP + Lenis + Framer Motion** |
-| OpenUI fallback | engine único | **só se Vite/React falhar** |
+| OpenUI | engine único | rota alternativa explícita (`FRALIB_BUILDER_ENGINE=openui`) |
 | Dependências | Zero build | shadcn/ui, GSAP, Lenis, framer-motion |
 | Build time | ~10s (OpenUI) | ~30s (Vite/React com build) |
 | Quality | HTML 1 arquivo | **Vite projeto completo (10+ TSX)** |
 | Deploy | copia HTML | copia `dist/` (HTML + assets) |
 
-### 22.2 Os 26 Segmentos do studio fallback
+### 22.2 Os 26 Segmentos do Studio React Determinístico
 
 O `vite_react_renderer.py:_generate_studio_fallback_files()` tem um
-**mapa segment-aware** com 26 nichos. Cada segmento gera svc_labels
+**mapa segment-aware** com 26 nichos. O nome da função é legado; no caminho
+canônico ela é o Studio React determinístico. Cada segmento gera svc_labels
 customizadas, hero_desc, CTAs, lifestyle_title, nav_items, etc.
 
 | # | Segmento | CTA primário | Cards típicos |
@@ -915,10 +923,10 @@ FRALIB_BUILDER_ENGINE=vite_react python3 pipeline.py builder-job \
 # LLM retorna JSON curto; Studio/FraLib gera TSX deterministico
 ```
 
-Cascata em `copy_only`: modelos retornam JSON de conteúdo. Se falhar, o
-Studio ainda gera site com defaults segment-aware. Em `none`, não há chamada
-LLM. Em `full_code`, o comportamento legado tenta projeto TSX completo e cai
-para Studio se todos os modelos falharem.
+Cascata em `copy_only`: modelos retornam JSON de conteúdo. Se todos falharem,
+o job falha. Em `none`, não há chamada LLM. Em `full_code`, o comportamento
+legado tenta projeto TSX completo; se falhar, o job falha em vez de publicar
+um site genérico.
 
 ### 22.6 Bug crítico e fix (Sprint 12.19)
 
@@ -1057,7 +1065,8 @@ cd C:/fralib && python scripts/_investigate_v15d_v2.py
 | SEO + A11y (outros 46 patches) | ✅ | ✅ herdado |
 
 **Conclusão**: Vite/React dá mais poder sem perder qualidade SEO/A11y.
-OpenUI continua disponível como fallback deterministico (modo recovery).
+OpenUI continua disponível como rota alternativa explícita, não como fallback
+automático do Vite/React.
 
 ### 22.11 Próximos passos (Sprint 12.20+)
 

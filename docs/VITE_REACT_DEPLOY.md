@@ -1,20 +1,20 @@
 # Vite/React Deploy Guide (Sprint 12.9+)
 
 > **Sprint 12.9 mudou o engine padrão de OpenUI para Vite/React.**
-> Este doc explica a arquitetura nova, como debugar, e como voltar para
-> OpenUI se algo der errado.
+> Este doc explica a arquitetura nova, como debugar e como usar OpenUI apenas
+> por seleção explícita.
 
 ## O que mudou
 
 | Antes (até Sprint 12.8) | Depois (Sprint 12.9+) |
 |---|---|
 | Engine: `openui` (HTML estático) | Engine: `vite_react` (componentes TSX) |
-| OpenUI fallback se LLM falha | Vite/React usa **copy-only**: LLM só retorna JSON; Studio/FraLib gera TSX |
+| Fallback genérico se LLM falha | Vite/React falha fechado se a geração não passar |
 | 1 arquivo HTML | Vite projeto completo (10+ TSX) |
 | Tailwind CDN inline | Tailwind v4 com build |
 | shadcn/ui ❌ | shadcn/ui ✅ |
 | GSAP/Lenis ❌ | GSAP/Lenis ✅ |
-| Cross-contamination: tudo passa | **Studio fallback com 26 segmentos** |
+| Cross-contamination: tudo passa | **Studio React segment-aware com 26 segmentos** |
 
 ## Arquivos novos / modificados
 
@@ -36,9 +36,9 @@
 3. render_site_with_builder(prd) é chamado
 4. engine = "vite_react" (default)
 5. render_vite_react_site() aplica `FRALIB_VITE_LLM_POLICY`
-6. `copy_only` (default): LLM retorna JSON curto; Studio/FraLib gera TSX
+6. `full_code` (default atual): LLM cascade tenta gerar projeto Vite completo
 7. `none`: zero LLM; Studio/FraLib gera TSX só com fatos/segmento
-8. `full_code`: legado; LLM tenta gerar projeto Vite completo
+8. `copy_only`/`creative_plan`: LLM retorna JSON curto; Studio/FraLib gera TSX
 9. Build Vite real (npm run build)
 10. Publica /var/www/fralib/sites/2/<slug>/dist/
 ```
@@ -47,21 +47,23 @@
 
 | Policy | O que faz | Uso recomendado |
 |---|---|---|
-| `copy_only` | Chama LLM com prompt pequeno e schema JSON de slots (`hero`, `services`, `faq`, CTAs). O código React vem do Studio/FraLib. | **Default** |
+| `copy_only` | Chama LLM com prompt pequeno e schema JSON de slots (`hero`, `services`, `faq`, CTAs). O código React vem do Studio/FraLib. | Baixo custo |
+| `creative_plan` | Chama LLM para copy + direção criativa em JSON validado. | Premium baixo custo |
 | `none` | Não chama LLM. Usa fatos confirmados + defaults segment-aware. | Testes, custo zero, contingência |
-| `full_code` | Caminho legado: LLM gera arquivos TSX completos. | Debug/experimento controlado |
+| `full_code` | LLM cascade gera arquivos TSX completos. | **Default atual** |
 
 ```bash
-FRALIB_VITE_LLM_POLICY=copy_only  # default
+FRALIB_VITE_LLM_POLICY=full_code  # default atual da pipeline oficial
+FRALIB_VITE_LLM_POLICY=copy_only  # baixo custo
+FRALIB_VITE_LLM_POLICY=creative_plan  # direção criativa sem TSX livre
 FRALIB_VITE_LLM_POLICY=none       # zero chamada LLM
-FRALIB_VITE_LLM_POLICY=full_code  # legado: LLM programa o site
 ```
 
-## Studio template/fallback (26 segmentos)
+## Studio React determinístico (26 segmentos)
 
-Em `copy_only` e `none`, e também quando o caminho legado falha, o
-`_generate_studio_fallback_files()` produz um projeto Vite/React completo
-baseado no `business.segmento` do lead.
+Em `copy_only`, `creative_plan` e `none`, o `_generate_studio_fallback_files()`
+produz um projeto Vite/React completo baseado no `business.segmento` do lead.
+O nome da função é legado; não significa fallback automático de publicação.
 
 **Mapa segment-aware** (26 nichos cobertos):
 
@@ -73,11 +75,11 @@ elif "restaurante" in segment: ...
 # ... até 26 segmentos
 ```
 
-**Bug CRÍTICO corrigido no Sprint 12.19**: template strings do fallback
+**Bug CRÍTICO corrigido no Sprint 12.19**: template strings do Studio
 usavam `"""` ao invés de `f"""`, fazendo `{var}` virar literal.
 Fix via post-process `_interpolate_studio_placeholders()`.
 
-**Bug corrigido no Sprint 12.20**: `BookingModal.tsx` do Studio fallback usava
+**Bug corrigido no Sprint 12.20**: `BookingModal.tsx` do Studio usava
 texto hardcoded "Matricula, treino..." e quebrava leads `nutricionista` no guard
 anti-contaminação. O modal agora usa CTA segment-aware e texto neutro.
 
@@ -110,8 +112,9 @@ FRALIB_STRICT_CANONICAL_PUBLISH=1
 
 Nesse modo:
 - `vite_react` publica.
-- `openui` e `openui_fallback` ficam bloqueados na publicação.
-- O fallback continua disponível fora de produção para debugging e compat.
+- `openui` só publica se `FRALIB_BUILDER_ENGINE=openui` for escolhido
+  explicitamente e a política de produção permitir.
+- `openui_fallback` automático fica bloqueado.
 
 ## Como debugar
 
@@ -137,7 +140,7 @@ python scripts/_investigate_v15d_v2.py
 ```bash
 # Verificar API keys
 grep ANTHROPIC .env
-# Fallback automático para studio (mesmo que render_vite_react falhe)
+# Sem fallback automático: corrigir chave/modelo ou deixar o job falhar claro.
 ```
 
 ### Lead name não aparece
@@ -153,7 +156,7 @@ print(biz.get('name'), biz.get('segmento'))
 # Esperado: Barbearia Fio Nobre Pinhais barbearia
 ```
 
-## Voltar para OpenUI (se necessário)
+## Usar OpenUI explicitamente (se necessário)
 
 ```bash
 # Local
@@ -162,8 +165,7 @@ git add .env && git commit -m "fix: revert to openui engine"
 git push origin master
 
 # VPS
-ssh root@100.101.18.1 "cd /root/repos/fralib && git pull"
-pm2 restart fralib
+ssh root@100.101.18.1 "systemctl restart fralib-worker 'fralib-worker@*.service'"
 ```
 
 ## Métricas esperadas
@@ -189,4 +191,4 @@ Todas as tags estão em `2026-06-25`:
 - `v1.14.3-baseline` / `v1.14.3-lockpoint`
 - `v1.14.4-baseline` / `v1.14.4-lockpoint` ← **ATUAL**
 
-Rollback para qualquer tag: `git checkout v1.14.0-baseline && pm2 restart fralib`.
+Rollback para qualquer tag: `git checkout v1.14.0-baseline && systemctl restart fralib-worker`.

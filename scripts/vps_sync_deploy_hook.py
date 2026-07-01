@@ -20,7 +20,10 @@ REQUIRED_TOKENS = (
     "verify_frontend_canonical.py",
     "frontend/llms.txt",
     "fralib-worker",
-    "fralib-hermes-watchdog",
+    "fralib-worker@*.service",
+    'pm2 delete "$pm2_legacy"',
+    "fralib-franz-worker",
+    "deploy bloqueado para evitar runtime PM2 legado",
 )
 
 

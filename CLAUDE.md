@@ -53,26 +53,28 @@ Mudou a pipeline, código, config ou docs? Atualizar **`AGENTS.md` primeiro** e 
 
 ```bash
 # Sprint 12.9+ - Vite/React (engine PADRÃO desde 2026-06-25)
-echo "FRALIB_BUILDER_ENGINE=vite_react" >> ecosystem.config.js && pm2 restart fralib
+# Produção usa systemd. Depois de mudar env em /etc/fralib/fralib.env,
+# reiniciar fralib-worker e todas as instâncias fralib-worker@N.
+sudo systemctl restart fralib-worker 'fralib-worker@*.service'
 
 # Política LLM do Vite (CÓDIGO MOSTRA: "full_code" é o PADRÃO!)
 # Comportamento real (verificado no código):
 #   - full_code (PADRÃO): LLM cascade Haiku→Sonnet→Opus, fail-fast se todos falham
 #   - copy_only: LLM mínimo para copy, TSX gerado localmente
 #   - creative_plan: LLM para copy + planejamento
-echo "FRALIB_VITE_LLM_POLICY=full_code" >> ecosystem.config.js && pm2 restart fralib
+FRALIB_VITE_LLM_POLICY=full_code
 
 # Sprint 5 — Tracing
-sed -i "s/FRALIB_TRACING: '0'/FRALIB_TRACING: '1'/" ecosystem.config.js && pm2 restart fralib
+FRALIB_TRACING=1
 
 # Sprint 6 — Sub-agentes por estética
-sed -i "s/FRALIB_USE_SUB_AGENTS: '0'/FRALIB_USE_SUB_AGENTS: '1'/" ecosystem.config.js && pm2 restart fralib
+FRALIB_USE_SUB_AGENTS=1
 
 # Sprint 7 — RAG Templates
-sed -i "s/FRALIB_USE_TEMPLATE_RAG: '0'/FRALIB_USE_TEMPLATE_RAG: '1'/" ecosystem.config.js && pm2 restart fralib
+FRALIB_USE_TEMPLATE_RAG=1
 
 # Sprint 8 — Auto-melhoria
-sed -i "s/FRALIB_AUTO_IMPROVE: '0'/FRALIB_AUTO_IMPROVE: '1'/" ecosystem.config.js && pm2 restart fralib
+FRALIB_AUTO_IMPROVE=1
 ```
 
 ## O que ganhamos (Sprints 5-14)

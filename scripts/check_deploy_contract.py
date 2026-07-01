@@ -22,6 +22,10 @@ def main() -> int:
         'cd "$FRALIB_DIR"\n\n# 4. Publicar frontend',
         'frontend/llms.txt',
         '$WEB_DIR/llms.txt',
+        "fralib-worker@*.service",
+        "pm2 delete \"$pm2_legacy\"",
+        "fralib-franz-worker",
+        "deploy bloqueado para evitar runtime PM2 legado",
         "landing2.html",
         "landing_backup.html",
     )

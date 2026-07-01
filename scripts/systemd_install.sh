@@ -3,7 +3,7 @@
 # systemd_install.sh - Instala serviços systemd do FraLib (idempotente)
 # =========================================================================
 # Pode rodar várias vezes sem efeito colateral.
-# Preserva PM2 como fallback (não remove).
+# PM2 não deve rodar worker.py em paralelo com systemd.
 # =========================================================================
 set -e
 
@@ -82,4 +82,4 @@ echo "ℹ️  [5/5] Serviços instalados mas NÃO iniciados."
 echo "   Para migrar gradualmente do PM2, rode:"
 echo "   bash $PROJECT_ROOT/scripts/migrate_pm2_to_systemd.sh"
 echo ""
-ok "Instalação completa! PM2 continua rodando como fallback."
+ok "Instalação completa! Antes de produção, remova workers PM2 legados e use systemd."
