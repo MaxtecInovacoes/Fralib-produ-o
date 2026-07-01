@@ -580,6 +580,7 @@ def test_cinematic_copy_prioritizes_prompt_contract_and_sanitizes_public_text():
                 "city": "Curitiba",
             },
             "variation": {"visual_lane": "lane_b", "surface_style": "glass"},
+            "media": {"photos": TEST_PHOTOS},
         },
         content,
     )
@@ -602,6 +603,44 @@ def test_cinematic_copy_prioritizes_prompt_contract_and_sanitizes_public_text():
     ]
     for fragment in banned:
         assert fragment not in site_data
+
+
+def test_cinematic_estetica_uses_specific_lane_and_public_copy():
+    from backend.services.vite_react_renderer import _generate_cinematic_studio_files
+
+    files = _generate_cinematic_studio_files(
+        {
+            "business": {
+                "name": "Estética Spa Florescer Bacacheri Curitiba",
+                "address": "Rua Hildebrando Didio, 344 - Curitiba",
+                "segment": "Estética Spa",
+                "city": "Curitiba",
+                "phone": "(41) 98876-5288",
+                "rating": "5.0",
+            },
+            "variation": {"visual_lane": "lane_b", "seed": 12345, "counter": 7},
+            "media": {"photos": TEST_PHOTOS},
+        }
+    )
+    joined = "\n".join(files.values())
+    site_data = files.get("src/components/siteData.ts", "")
+    hero = files.get("src/components/HeroSection.tsx", "")
+    lgpd = files.get("src/components/LgpdBanner.tsx", "")
+
+    assert '"visual_lane": "estetica-' in site_data
+    assert "Tratamentos" in site_data or "cuidado estético" in site_data
+    for fragment in [
+        "Informações confirmadas",
+        "dados confirmados",
+        "organizadas para contato direto",
+        "backdrop-blur",
+        "bg-white/[.04]",
+        "bg-white/[0.04]",
+        "bg-white/[0.03]",
+    ]:
+        assert fragment not in joined
+    assert "bg-black/72" in hero
+    assert "var(--bg-light)" in lgpd
 
 
 def test_cinematic_components_keep_seo_heading_hierarchy():
@@ -1062,12 +1101,15 @@ def test_cinematic_lgpd_uses_site_theme_tokens():
         {
             "business": {"name": "Academia LGPD Tema", "segment": "academia", "city": "Curitiba"},
             "variation": {"visual_lane": "lane_b"},
+            "media": {"photos": TEST_PHOTOS},
         }
     )
     banner = files.get("src/components/LgpdBanner.tsx", "")
 
     assert "var(--accent)" in banner
-    assert "var(--bg)" in banner
+    assert "var(--bg-light)" in banner
+    assert "var(--text-dark)" in banner
+    assert "backdrop-blur" not in banner
     assert "emerald" not in banner
     assert "bg-zinc-950/94" not in banner
     return True
@@ -1119,6 +1161,7 @@ def test_cinematic_surfaces_use_theme_tokens_not_default_glass():
         {
             "business": {"name": "Gabriel Greco Nutricionista", "segment": "nutricionista", "city": "Sao Paulo"},
             "variation": {"visual_lane": "lane_c", "seed": 83931, "counter": 2},
+            "media": {"photos": TEST_PHOTOS},
         }
     )
     about = files.get("src/components/AboutSection.tsx", "")
@@ -1133,7 +1176,8 @@ def test_cinematic_surfaces_use_theme_tokens_not_default_glass():
     assert "style={{ background: 'var(--bg)', color: 'var(--text)' }}" in gallery
     assert "style={{ background: 'var(--bg)', color: 'var(--text)' }}" in reviews
     assert "style={{ background: 'var(--bg)', color: 'var(--text)' }}" in faq
-    assert "rgba(0,0,0,.66)" in hero
+    assert "rgba(0,0,0,.80)" in hero
+    assert "backdrop-blur" not in hero
     return True
 
 

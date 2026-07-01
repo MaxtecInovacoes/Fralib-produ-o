@@ -711,18 +711,18 @@ export function LgpdBanner() {
       data-lgpd-banner
       initial={{ opacity: 0, y: 24 }}
       animate={{ opacity: 1, y: 0 }}
-      className="fixed inset-x-4 bottom-4 z-[9999] mx-auto grid max-w-3xl grid-cols-[auto_1fr_auto] items-center gap-3 rounded-2xl p-4 shadow-2xl backdrop-blur"
-      style={{ background: 'color-mix(in srgb, var(--bg) 94%, black 6%)', color: 'var(--text)', border: '1px solid color-mix(in srgb, var(--accent) 26%, transparent)' }}
+      className="fixed inset-x-4 bottom-4 z-[9999] mx-auto grid max-w-3xl grid-cols-[auto_1fr_auto] items-center gap-3 rounded-2xl p-4 shadow-2xl"
+      style={{ background: 'var(--bg-light)', color: 'var(--text-dark)', border: '1px solid color-mix(in srgb, var(--accent) 26%, transparent)' }}
       role="dialog"
       aria-label="Aviso de privacidade"
     >
       <ShieldCheck className="h-5 w-5" style={{ color: 'var(--accent)' }} />
-      <p className="text-sm leading-5" style={{ color: 'var(--text-muted)' }}>Tratamos dados de contato apenas para atendimento, segurança e melhoria da experiência.</p>
+      <p className="text-sm leading-5" style={{ color: 'var(--text-dark)' }}>Tratamos dados de contato apenas para atendimento, segurança e melhoria da experiência.</p>
       <div className="flex items-center gap-2">
         <button type="button" data-lgpd-accept onClick={accept} className="rounded-full px-4 py-2 text-sm font-semibold" style={{ background: 'var(--accent)', color: 'var(--accent-contrast)' }}>
           Aceitar
         </button>
-        <button type="button" aria-label="Fechar aviso de privacidade" onClick={accept} className="inline-flex h-9 w-9 items-center justify-center rounded-full" style={{ color: 'var(--text)', border: '1px solid color-mix(in srgb, var(--accent) 18%, transparent)' }}>
+        <button type="button" aria-label="Fechar aviso de privacidade" onClick={accept} className="inline-flex h-9 w-9 items-center justify-center rounded-full" style={{ color: 'var(--text-dark)', border: '1px solid color-mix(in srgb, var(--accent) 18%, transparent)' }}>
           <X className="h-4 w-4" />
         </button>
       </div>

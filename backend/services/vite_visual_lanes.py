@@ -12,6 +12,8 @@ def _segment_family(segment: str, subnicho: str = "") -> str:
         return "barbearia"
     if any(token in raw for token in ("nutri", "nutric")):
         return "nutricionista"
+    if any(token in raw for token in ("estetic", "estética", "estetica", "spa", "beleza", "facial", "pele", "harmoniz")):
+        return "estetica"
     if any(token in raw for token in ("academia", "crossfit", "muscul", "fitness", "funcional", "personal")):
         return "academia"
     return "default"
@@ -106,6 +108,36 @@ _LANES: dict[str, list[dict[str, Any]]] = {
             "fallback_palette": {"primary": "#8b7cf7", "secondary": "#1d153d", "bg_dark": "#080712", "bg_light": "#f2efff", "text_dark": "#16112e"},
             "blocks": {"hero_variant": "video", "services_variant": "stacked_cards", "reviews_variant": "score_wall", "faq_variant": "inline", "location_variant": "split_local", "surface_style": "soft_tint"},
             "copy": {"hero_badge": "Barbearia com assinatura autoral", "about_kicker": "Assinatura", "about_title": "Direção mais ousada para marcas que querem parecer únicas.", "about_body": "{name} assume uma linha mais autoral, com luz fria, composição noturna e CTA de reserva como foco central.", "gallery_title": "Uma estética de clube privado.", "gallery_intro": "O site precisa parecer menos genérico e mais memorável.", "reviews_title": "Reputação local com recorte de marca.", "reviews_intro": "A confiança vem sem perder identidade visual.", "faq_title": "O que o cliente quer saber antes do corte.", "faq_intro": "Objetivo, curto e acionável.", "location_title": "Chegue pelo contato oficial.", "location_intro": "A navegação fecha em reserva direta.", "lifestyle_kicker": "Assinatura", "contact_kicker": "Horário"},
+        },
+    ],
+    "estetica": [
+        {
+            "id": "estetica-clinic-ivory",
+            "name": "Clinic Ivory",
+            "fallback_palette": {"primary": "#8f6a4f", "secondary": "#4b2f25", "bg_dark": "#2a201c", "bg_light": "#f8f3ee", "text_dark": "#1e1714"},
+            "blocks": {"hero_variant": "split", "services_variant": "split_editorial", "reviews_variant": "quote_spotlight", "faq_variant": "panel", "location_variant": "split_local", "surface_style": "solid"},
+            "copy": {"hero_badge": "Estética com cuidado e técnica", "about_kicker": "Cuidado", "about_title": "Pele, conforto e autoestima com leitura clara.", "about_body": "{name} apresenta tratamentos, ambiente e WhatsApp para quem busca cuidado estético em {city}.", "gallery_title": "Textura, calma e detalhes do atendimento.", "gallery_intro": "As imagens reforçam pele, sala, toque e sensação de cuidado presencial.", "reviews_title": "Avaliações que ajudam a escolher com segurança.", "reviews_intro": "Reputação, atendimento e localização aparecem com leitura tranquila.", "faq_title": "Dúvidas antes da avaliação.", "faq_intro": "Perguntas diretas sobre agenda, procedimentos e WhatsApp.", "location_title": "Atendimento estético em {city}.", "location_intro": "Endereço e contato ficam visíveis para marcar a avaliação.", "lifestyle_kicker": "Ambiente", "contact_kicker": "Agendamento"},
+        },
+        {
+            "id": "estetica-chrome-spa",
+            "name": "Chrome Spa",
+            "fallback_palette": {"primary": "#0f8f84", "secondary": "#1f4f52", "bg_dark": "#082f34", "bg_light": "#edf8f6", "text_dark": "#0b2f31"},
+            "blocks": {"hero_variant": "video", "services_variant": "stats_then_cards", "reviews_variant": "card_marquee", "faq_variant": "inline", "location_variant": "feature_local", "surface_style": "outline"},
+            "copy": {"hero_badge": "Spa urbano", "about_kicker": "Ritual", "about_title": "Um espaço de beleza com ritmo calmo e presença moderna.", "about_body": "{name} combina tratamentos, acolhimento e acesso rápido pelo WhatsApp em {city}.", "gallery_title": "Luz, pele e rotina de autocuidado.", "gallery_intro": "A galeria mostra atmosfera limpa, detalhes de tratamento e contexto humano.", "reviews_title": "Confiança para marcar o primeiro horário.", "reviews_intro": "Avaliações aparecem junto de serviços e contato para facilitar a escolha.", "faq_title": "O que perguntar antes de agendar.", "faq_intro": "FAQ curto sobre avaliação, atendimento e preparo.", "location_title": "Chegue ao cuidado em {city}.", "location_intro": "Rota, telefone e WhatsApp entram no mesmo bloco.", "lifestyle_kicker": "Spa", "contact_kicker": "Consulta"},
+        },
+        {
+            "id": "estetica-rose-clay",
+            "name": "Rose Clay",
+            "fallback_palette": {"primary": "#b85c4d", "secondary": "#6d2f38", "bg_dark": "#2d1418", "bg_light": "#fff2ee", "text_dark": "#2a1416"},
+            "blocks": {"hero_variant": "fullbleed", "services_variant": "stacked_cards", "reviews_variant": "score_wall", "faq_variant": "panel", "location_variant": "split_local", "surface_style": "solid"},
+            "copy": {"hero_badge": "Beleza com presença", "about_kicker": "Transformação", "about_title": "Tratamentos com acolhimento, detalhe e confiança.", "about_body": "{name} valoriza uma jornada estética confortável, com contato simples para quem está em {city}.", "gallery_title": "Corpo, pele e ambiente em composição quente.", "gallery_intro": "A sequência visual aproxima cuidado, textura e resultado esperado sem exagero.", "reviews_title": "Quem já conhece ajuda a decidir.", "reviews_intro": "Avaliações e serviços entram com tom humano e direto.", "faq_title": "Antes de chamar no WhatsApp.", "faq_intro": "Respostas simples para agenda, avaliação e atendimento.", "location_title": "Endereço e beleza no mesmo caminho.", "location_intro": "Tudo para marcar sem perder tempo.", "lifestyle_kicker": "Toque", "contact_kicker": "Marcar"},
+        },
+        {
+            "id": "estetica-noir-gold",
+            "name": "Noir Gold",
+            "fallback_palette": {"primary": "#d6ad60", "secondary": "#18120d", "bg_dark": "#090705", "bg_light": "#f4eee2", "text_dark": "#1c150f"},
+            "blocks": {"hero_variant": "asymmetric", "services_variant": "split_editorial", "reviews_variant": "editorial_case", "faq_variant": "inline", "location_variant": "feature_local", "surface_style": "outline"},
+            "copy": {"hero_badge": "Estética premium", "about_kicker": "Experiência", "about_title": "Cuidado estético com atmosfera mais exclusiva.", "about_body": "{name} apresenta ambiente, serviços e agendamento em uma leitura mais elegante para {city}.", "gallery_title": "Luz baixa, textura e acabamento de clínica premium.", "gallery_intro": "O visual destaca detalhe, conforto e sensação de atendimento reservado.", "reviews_title": "Reputação com leitura premium.", "reviews_intro": "Avaliações, cidade e contato sustentam a decisão sem poluir a página.", "faq_title": "Perguntas antes de reservar.", "faq_intro": "Serviços, localização e WhatsApp em linguagem objetiva.", "location_title": "Reserve em {city} com acesso claro.", "location_intro": "Contato e endereço fecham a jornada sem atrito.", "lifestyle_kicker": "Premium", "contact_kicker": "Reserva"},
         },
     ],
     "default": [
@@ -246,6 +278,41 @@ _FAMILY_COPY_DEFAULTS: dict[str, dict[str, str]] = {
         "footer_location_label": "Endereço",
         "footer_privacy_note": "Dados confirmados e privacidade preservada.",
         "contact_sub": "Reserve pelo WhatsApp e confirme horário, serviço e endereço antes de sair.",
+    },
+    "estetica": {
+        "nav_about": "Cuidado",
+        "nav_services": "Tratamentos",
+        "nav_gallery": "Ambiente",
+        "nav_reviews": "Avaliações",
+        "nav_faq": "Perguntas",
+        "nav_location": "Local",
+        "nav_lifestyle": "Experiência",
+        "nav_contact": "Agendar",
+        "services_kicker": "Tratamentos",
+        "gallery_kicker": "Ambiente",
+        "reviews_kicker": "Reputação",
+        "faq_kicker": "Antes da avaliação",
+        "location_kicker": "Local",
+        "location_cta_kicker": "Agenda",
+        "location_cta_primary": "Agendar WhatsApp",
+        "location_cta_secondary": "Ver contato",
+        "modal_kicker": "Agendamento",
+        "about_card_1_title": "Avaliação estética",
+        "about_card_1_text": "{name} apresenta tratamentos, cidade e contato para quem busca cuidado estético em {city}.",
+        "about_card_2_title": "Cuidado com conforto",
+        "about_card_2_text": "Serviços, ambiente e preparo aparecem com leitura simples antes da avaliação.",
+        "about_card_3_title": "Agendamento claro",
+        "about_card_3_text": "WhatsApp, endereço e próximos passos ajudam a marcar sem caminho confuso.",
+        "about_city_label": "Atendimento",
+        "about_aside_body": "A página reúne tratamentos, localização e WhatsApp para facilitar a primeira conversa.",
+        "services_city_body": "Tratamentos, avaliação e agendamento aparecem com leitura clara.",
+        "contact_card_label": "Canal de agendamento",
+        "contact_primary_label": "Agendar WhatsApp",
+        "contact_secondary_label": "Abrir contato",
+        "footer_contact_label": "Contato",
+        "footer_location_label": "Local",
+        "footer_privacy_note": "Privacidade preservada no atendimento.",
+        "contact_sub": "Envie uma mensagem para confirmar avaliação, procedimento e melhor horário.",
     },
     "default": {
         "nav_about": "Sobre",

@@ -480,7 +480,7 @@ def _get_copy_only_user_prompt(facts: dict[str, Any], policy: str = "copy_only")
     "hero_text_side": "left | right | center",
     "section_order": ["hero", "about", "services", "gallery", "reviews", "faq", "location", "lifestyle", "contact-cta"],
     "about_variant": "manifesto_split | proof_sidebar | feature_grid",
-    "surface_style": "solid | outline | soft_tint | glass",
+    "surface_style": "solid | outline | soft_tint",
     "surface_mix": ["solid", "outline", "soft_tint"],
     "section_surface_map": {"about": "solid", "services": "outline", "reviews": "soft_tint", "faq": "solid", "location": "soft_tint", "contact-cta": "solid"},
     "color_strategy": "restrained | committed | full_palette | drenched",
@@ -509,7 +509,7 @@ CONTRATO:
 - Se creative_plan estiver ativo, escolha apenas opcoes do schema. O renderer vai aplicar os blocos.
 - Nunca escolha pelo caminho nicho -> template. Escolha por marca -> emocao -> historia -> visual -> conversao.
 - Hero com video NAO e padrao. Use "video" apenas quando a variacao pedir video explicitamente; caso contrario escolha split, center, asymmetric ou fullbleed conforme a marca.
-- Use "surface_style" glass somente se houver motivo real; por padrao prefira solid/outline/soft_tint.
+- Use superficies solidas ou outline; glass/transparencia nao deve ser usado como efeito padrao.
 - O site precisa parecer pertencer a esta empresa mesmo sem logo.
 - SEO deve priorizar intencao local/transacional/comercial sem keyword stuffing.
 
@@ -628,7 +628,7 @@ def _sanitize_creative_plan(content: dict[str, Any]) -> dict[str, Any]:
         "hero_layout": {"split", "center", "asymmetric", "fullbleed", "video"},
         "hero_text_side": {"left", "right", "center"},
         "about_variant": {"manifesto_split", "proof_sidebar", "feature_grid"},
-        "surface_style": {"glass", "solid", "outline", "soft_tint"},
+        "surface_style": {"solid", "outline", "soft_tint"},
         "color_strategy": {"restrained", "committed", "full_palette", "drenched"},
         "typography_mood": {"clean_sans", "condensed_sport", "luxury_display", "editorial_serif", "technical_grotesk"},
         "gallery_density": {"mosaic", "cinematic_strip", "editorial_grid"},
@@ -648,7 +648,7 @@ def _sanitize_creative_plan(content: dict[str, Any]) -> dict[str, Any]:
             cleaned[key] = value
     if sections:
         cleaned["section_order"] = sections
-    surface_mix = _clean_choice_list(source.get("surface_mix"), {"glass", "solid", "outline", "soft_tint"}, limit=4)
+    surface_mix = _clean_choice_list(source.get("surface_mix"), {"solid", "outline", "soft_tint"}, limit=4)
     if surface_mix:
         cleaned["surface_mix"] = surface_mix
     raw_surface_map = source.get("section_surface_map")
@@ -657,7 +657,7 @@ def _sanitize_creative_plan(content: dict[str, Any]) -> dict[str, Any]:
         for raw_key, raw_value in raw_surface_map.items():
             section_key = str(raw_key or "").strip().lower().replace("_", "-")
             section_key = section_aliases.get(section_key, section_key)
-            surface_value = _one_of(raw_value, {"glass", "solid", "outline", "soft_tint"})
+            surface_value = _one_of(raw_value, {"solid", "outline", "soft_tint"})
             if section_key in section_allowed and section_key != "hero" and surface_value:
                 surface_map[section_key] = surface_value
         if len(set(surface_map.values())) >= 2:
@@ -3084,7 +3084,7 @@ def _generate_hero_section_variation(
         <motion.div data-hero-img initial={{{{ opacity: 0 }}}} animate={{{{ opacity: 1 }}}}>
           <img className="aspect-[3/4] w-full rounded-[2rem] object-cover shadow-2xl ring-1 ring-white/10" src="{hero_img}" alt="{{alt_img}}" loading="eager" decoding="async" />
         </motion.div>
-        <motion.div data-hero-copy initial={{{{ opacity: 0 }}}} animate={{{{ opacity: 1 }}}} className="space-y-6 rounded-[2rem] border border-white/10 bg-white/[.04] p-8 backdrop-blur" style={{{{borderColor:"{palette['border']}"}}}}>
+        <motion.div data-hero-copy initial={{{{ opacity: 0 }}}} animate={{{{ opacity: 1 }}}} className="space-y-6 rounded-[2rem] border border-white/10 bg-black/70 p-8 shadow-[0_24px_80px_rgba(0,0,0,0.28)]" style={{{{borderColor:"{palette['border']}"}}}}>
           <p className="inline-flex rounded-full border px-4 py-2 text-xs font-bold uppercase tracking-[0.24em]" style={{{{borderColor:"{primary_hex}4d",backgroundColor:"{primary_hex}1a",color:"{primary_light}"}}}}>{segment} em {city}</p>
           <h2 className="text-4xl font-black leading-[1] tracking-[-.04em]">{name}</h2>
           <p className="text-zinc-300">{hero_desc}.</p>
@@ -3116,7 +3116,7 @@ def _generate_hero_section_variation(
           <p className="max-w-xl text-lg leading-8 text-zinc-200">{hero_desc}.</p>
           <div className="flex flex-wrap gap-3">
             <a className="rounded-full px-6 py-3 font-black" style={{{{backgroundColor:"{primary_hex}",color:"{primary_contrast_hex}"}}}} href="tel:{phone}">{{cta_primary}}</a>
-            <a className="rounded-full border border-white/30 bg-white/10 px-6 py-3 font-semibold text-white backdrop-blur" href="#galeria">{{cta_secondary}}</a>
+            <a className="rounded-full border border-white/30 bg-black/70 px-6 py-3 font-semibold text-white" href="#galeria">{{cta_secondary}}</a>
           </div>
         </motion.div>
       </div>
@@ -3143,7 +3143,7 @@ def _generate_hero_section_variation(
           <p className="mx-auto max-w-2xl text-xl leading-8 text-zinc-300">{hero_desc}.</p>
           <div className="flex flex-wrap justify-center gap-4">
             <a className="rounded-full px-8 py-4 text-lg font-black" style={{{{backgroundColor:"{primary_hex}",color:"{primary_contrast_hex}"}}}} href="tel:{phone}">{{cta_primary}}</a>
-            <a className="rounded-full border border-white/30 bg-white/10 px-8 py-4 text-lg font-semibold text-white backdrop-blur" href="#galeria">{{cta_secondary}}</a>
+            <a className="rounded-full border border-white/30 bg-black/70 px-8 py-4 text-lg font-semibold text-white" href="#galeria">{{cta_secondary}}</a>
           </div>
         </motion.div>
       </div>
@@ -3643,6 +3643,7 @@ def _cinematic_copy(facts: dict[str, Any]) -> dict[str, Any]:
     is_nutri = "nutri" in segment_context
     is_barber = any(token in segment_context for token in ("barbearia", "barbeiro", "barber"))
     is_academia = any(token in segment_context for token in ("academia", "crossfit", "musculacao", "funcional", "personal"))
+    is_estetica = any(token in segment_context for token in ("estetica", "spa", "beleza", "facial", "pele", "harmoniz", "massagem", "laser"))
     variation = facts.get("variation") if isinstance(facts.get("variation"), dict) else {}
     lane = resolve_visual_lane(
         segment=segment,
@@ -3741,26 +3742,50 @@ def _cinematic_copy(facts: dict[str, Any]) -> dict[str, Any]:
                 {"title": "Acompanhamento", "description": f"Profissionais avaliam e ajustam o treino para cada aluno da {name}."},
             ],
         }
+    elif is_estetica:
+        defaults = {
+            "headline": _rotaciona([
+                f"Tratamentos estéticos em {city} com a {name}",
+                f"{name}: cuidado com a pele, corpo e autoestima em {city}",
+                f"Estética em {city} com avaliação e agendamento pela {name}",
+            ]),
+            "subheadline": _rotaciona([
+                "Tratamentos faciais, corporais e cuidados de beleza com agendamento pelo WhatsApp.",
+                f"A {name} atende {city} com foco em avaliação, conforto e cuidado estético.",
+                "Ambiente preparado para cuidar da pele, orientar o procedimento e facilitar o agendamento.",
+            ]),
+            "cta_primary": _rotaciona(["Agendar avaliação", "Marcar horário", "Falar com a clínica"]),
+            "cta_secondary": "Conhecer tratamentos",
+            "services_title": "Tratamentos para pele, corpo e bem-estar",
+            "services_subheadline": f"Facial, corporal e cuidados de beleza da {name} aparecem com clareza para quem está em {city}.",
+            "lifestyle_title": "Cuidado estético com conforto e atenção aos detalhes",
+            "lifestyle_description": f"A {name} em {city} apresenta ambiente, endereço e WhatsApp para facilitar a primeira avaliação.",
+            "services": [
+                {"title": "Tratamentos faciais", "description": "Protocolos para limpeza, hidratação e cuidado da pele antes do próximo agendamento."},
+                {"title": "Estética corporal", "description": "Procedimentos corporais apresentados com orientação clara e contato fácil pelo WhatsApp."},
+                {"title": "Avaliação estética", "description": f"Conversa inicial com a {name} para entender objetivo, rotina e melhor procedimento."},
+            ],
+        }
     else:
         defaults = {
             "headline": _rotaciona([
-                f"{name} em {city}: atendimento direto com {segment}",
-                f"{name} — {segment} em {city} com contato sem complicação",
-                f"{segment} em {city} pela {name} — caminho único para contato",
+                f"{name} em {city}: atendimento claro para {segment}",
+                f"{name} — {segment} em {city} com WhatsApp fácil",
+                f"{segment} em {city} pela {name}",
             ]),
             "subheadline": _rotaciona([
-                f"Site com dados confirmados da {name} e WhatsApp visível para contato.",
+                f"Serviços, endereço e WhatsApp da {name} aparecem de forma clara.",
                 f"Atendimento em {city} pela {name} com avaliações e imagens do negócio.",
-                f"A {name} atende {city} com dados reais e caminho direto para contato.",
+                f"A {name} atende {city} com informações úteis e contato visível.",
             ]),
             "cta_primary": _rotaciona(["Falar no WhatsApp", "Solicitar contato", "Marcar atendimento"]),
             "cta_secondary": "Ver abordagem",
             "services_title": "O que está incluso no atendimento",
-            "services_subheadline": f"Informações confirmadas da {name} em {city}, organizadas para contato direto.",
+            "services_subheadline": f"Serviços, localização e WhatsApp da {name} ficam claros para quem está em {city}.",
             "lifestyle_title": f"Atendimento local em {city} pela {name}",
-            "lifestyle_description": f"Visual cinematográfico, dados confirmados da {name} e caminho direto para contato.",
+            "lifestyle_description": f"{name} apresenta ambiente, atendimento e WhatsApp com leitura simples.",
             "services": [
-                {"title": "Dados confirmados", "description": f"Nome, endereço, telefone e horário da {name} em {city}."},
+                {"title": "Atendimento", "description": f"Serviços e forma de contato da {name} em {city}."},
                 {"title": "Avaliações locais", "description": "Imagens do negócio e avaliações reais sustentam a decisão de contato."},
                 {"title": "Contato rápido", "description": f"WhatsApp direto para falar com {name}."},
             ],
@@ -3856,8 +3881,8 @@ def _cinematic_copy(facts: dict[str, Any]) -> dict[str, Any]:
         "sem ruído": "sem complicação",
         "sem etapa morta": "sem caminho confuso",
         "sem menus mortos": "sem caminho confuso",
-        "sem inventar promessa": "com informações confirmadas",
-        "sem promessas vazias": "com informações confirmadas",
+        "sem inventar promessa": "com clareza no atendimento",
+        "sem promessas vazias": "com clareza no atendimento",
         "não como decoração": "como apoio real para decidir",
         "não como bloco solto": "junto da decisão de contato",
         "não como grade repetida": "com ritmo visual diferente",
@@ -3895,6 +3920,27 @@ def _cinematic_copy(facts: dict[str, Any]) -> dict[str, Any]:
         text = str(value if value not in (None, "") else fallback).strip()
         for source, target in public_copy_rewrites.items():
             text = re.sub(re.escape(source), target, text, flags=re.IGNORECASE)
+        text = re.sub(
+            r"Informações confirmadas da ([^.,]+?) em ([^.,]+?), organizadas para contato direto\.?",
+            r"Serviços, localização e WhatsApp de \1 ficam claros para quem está em \2.",
+            text,
+            flags=re.IGNORECASE,
+        )
+        text = re.sub(
+            r"Visual cinematográfico, dados confirmados da ([^.,]+?) e caminho direto para contato\.?",
+            r"\1 apresenta ambiente, atendimento e WhatsApp com leitura simples.",
+            text,
+            flags=re.IGNORECASE,
+        )
+        text = re.sub(r"\bcom informações confirmadas\b", "com clareza no atendimento", text, flags=re.IGNORECASE)
+        text = re.sub(r"\bdados confirmados\b", "informações úteis", text, flags=re.IGNORECASE)
+        text = re.sub(r"\binformações confirmadas\b", "informações úteis", text, flags=re.IGNORECASE)
+        text = re.sub(
+            r"\borganizadas? para contato direto\b",
+            "com caminho claro para falar pelo WhatsApp",
+            text,
+            flags=re.IGNORECASE,
+        )
         text = re.sub(r"\b[Aa]\s+([A-ZÁÉÍÓÚÂÊÔÃÕÇ][\wÁÉÍÓÚÂÊÔÃÕÇáéíóúâêôãõç ]{1,80})\s+aparece\b", r"\1 mostra", text)
         text = re.sub(r"\baparece\b", "mostra", text, flags=re.IGNORECASE)
         text = re.sub(r"\bentra\b", "aparece", text, flags=re.IGNORECASE)
@@ -3954,7 +4000,7 @@ def _cinematic_copy(facts: dict[str, Any]) -> dict[str, Any]:
         "services_kicker": _fmt(lane_copy.get("services_kicker", ""), "Serviços"),
         "services_subheadline": _copy_slot(
             "services_subheadline",
-            defaults.get("services_subheadline") or f"Informações confirmadas da {name} em {city}, organizadas para contato direto.",
+            defaults.get("services_subheadline") or f"Serviços, localização e WhatsApp da {name} ficam claros para quem está em {city}.",
         ),
         "about_kicker": _fmt(lane_copy.get("about_kicker", ""), "Direção"),
         "about_title": _copy_slot("about_title", f"{name} em {city} com informações claras para decidir."),
@@ -3993,9 +4039,9 @@ def _cinematic_copy(facts: dict[str, Any]) -> dict[str, Any]:
         "about_card_2_title": _fmt(lane_copy.get("about_card_2_title", ""), "Serviço principal"),
         "about_card_2_text": _copy_slot("about_card_2_text", "As principais frentes de atendimento ficam organizadas para leitura rápida e decisão sem complicação."),
         "about_card_3_title": _fmt(lane_copy.get("about_card_3_title", ""), "Marca em contexto"),
-        "about_card_3_text": _copy_slot("about_card_3_text", f"Ambiente, imagens e atendimento sustentam o estilo de {name} com informações confirmadas."),
+        "about_card_3_text": _copy_slot("about_card_3_text", f"Ambiente, imagens e atendimento sustentam o estilo de {name} com clareza."),
         "about_city_label": _fmt(lane_copy.get("about_city_label", ""), "Cidade"),
-        "about_aside_body": _copy_slot("about_aside_body", "Contato direto e informação confirmada para quem está decidindo agora."),
+        "about_aside_body": _copy_slot("about_aside_body", "Contato e informações úteis para quem está decidindo agora."),
         "services_city_body": _fmt(lane_copy.get("services_city_body", ""), "Estrutura organizada para leitura rápida e decisão mais clara."),
         "contact_kicker": _fmt(lane_copy.get("contact_kicker", ""), "Contato"),
         "contact_headline": _copy_slot("contact_headline", "Quer falar com a equipe agora?"),
@@ -4005,7 +4051,7 @@ def _cinematic_copy(facts: dict[str, Any]) -> dict[str, Any]:
         "contact_secondary_label": _fmt(lane_copy.get("contact_secondary_label", ""), "Abrir contato"),
         "footer_contact_label": _fmt(lane_copy.get("footer_contact_label", ""), "Contato"),
         "footer_location_label": _fmt(lane_copy.get("footer_location_label", ""), "Local"),
-        "footer_privacy_note": _fmt(lane_copy.get("footer_privacy_note", ""), "Dados factuais e privacidade preservada."),
+        "footer_privacy_note": _fmt(lane_copy.get("footer_privacy_note", ""), "Privacidade preservada no atendimento."),
         "services": services,
     }
     for key, value in list(data.items()):
@@ -4102,7 +4148,7 @@ def _cinematic_diversity_combo(variation: dict[str, Any]) -> dict[str, Any]:
             "location_variant": "split_local",
             "gallery_density": "editorial_grid",
             "cta_style": "minimal_inline",
-            "surface_style": "soft_tint",
+            "surface_style": "solid",
             "typography_mood": "clean_sans",
             "color_strategy": "restrained",
             "motion_mix": ["subtle_fade", "stagger_cards"],
@@ -4182,7 +4228,7 @@ def _cinematic_diversity_combo(variation: dict[str, Any]) -> dict[str, Any]:
             "location_variant": "split_local",
             "gallery_density": "cinematic_strip",
             "cta_style": "poster_band",
-            "surface_style": "soft_tint",
+            "surface_style": "outline",
             "typography_mood": "editorial_serif",
             "color_strategy": "committed",
             "motion_mix": ["parallax_video", "mask_reveal"],
@@ -4202,7 +4248,7 @@ def _cinematic_diversity_combo(variation: dict[str, Any]) -> dict[str, Any]:
     hero_layouts = ["split", "video", "center", "asymmetric", "fullbleed", "split", "video", "asymmetric"]
     gallery_densities = ["balanced_grid", "mosaic", "editorial_grid", "cinematic_strip"]
     cta_styles = ["solid_panel", "poster_band", "split_card", "minimal_inline"]
-    surface_styles = ["solid", "outline", "soft_tint", "solid", "outline"]
+    surface_styles = ["solid", "outline", "solid", "outline", "solid"]
     motion_sets = [
         ["stagger_cards", "line_draw"],
         ["parallax_video", "mask_reveal"],
@@ -4223,12 +4269,14 @@ def _cinematic_diversity_combo(variation: dict[str, Any]) -> dict[str, Any]:
         combo["cta_style"] = cta_styles[(lane_index + sub_index) % len(cta_styles)]
         combo["surface_style"] = surface_styles[(lane_index + sub_index) % len(surface_styles)]
         combo["motion_mix"] = motion_sets[(lane_index + sub_index) % len(motion_sets)]
+    if combo.get("surface_style") == "soft_tint":
+        combo["surface_style"] = "solid"
     combo["section_surface_map"] = {
         "about": combo["surface_style"],
         "services": "solid" if combo["services_variant"] == "stats_then_cards" else combo["surface_style"],
         "reviews": "outline" if combo["reviews_variant"] == "card_marquee" else combo["surface_style"],
         "faq": "solid" if combo["faq_variant"] == "panel" else "outline",
-        "location": "soft_tint" if combo["location_variant"] == "feature_local" else "solid",
+        "location": "solid",
         "contact-cta": "solid",
     }
     return combo
@@ -4462,7 +4510,7 @@ export function Navbar({ onOpen }: { onOpen?: () => void }) {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
   return (
-    <nav style={{ background: solid ? 'color-mix(in srgb, var(--bg) 88%, transparent)' : 'rgba(255,255,255,0.04)' }} className={`fixed inset-x-3 top-3 z-50 rounded-[18px] border px-4 py-3 transition duration-300 md:inset-x-6 md:top-5 border-white/10 ${solid ? 'shadow-[0_10px_32px_rgba(0,0,0,.24)] backdrop-blur-xl' : 'backdrop-blur-md'}`}>
+    <nav style={{ background: solid ? 'var(--bg)' : 'rgba(0,0,0,0.76)' }} className={`fixed inset-x-3 top-3 z-50 rounded-[18px] border px-4 py-3 transition duration-300 md:inset-x-6 md:top-5 border-white/10 ${solid ? 'shadow-[0_10px_32px_rgba(0,0,0,.24)]' : 'shadow-[0_14px_40px_rgba(0,0,0,.28)]'}`}>
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-4">
         <a href="#hero" className="min-w-0 truncate text-sm font-semibold tracking-tight text-white md:text-base">{siteCopy.name}</a>
         <div className="hidden items-center gap-6 text-sm text-zinc-300 md:flex">{navLinks.map((item) => <a key={item.href} href={item.href} className="transition hover:text-white">{item.label}</a>)}</div>
@@ -4533,11 +4581,7 @@ useEffect(() => {
   const surfaceStyle = String((variation as any)?.surface_style || '');
   const statCardClass = surfaceStyle === 'solid'
     ? 'rounded-[14px] bg-[var(--accent)] p-4 text-[var(--accent-contrast)]'
-    : surfaceStyle === 'outline'
-      ? 'rounded-[10px] border border-[color-mix(in_srgb,var(--accent)_55%,transparent)] bg-transparent p-4'
-      : surfaceStyle === 'soft_tint'
-        ? 'rounded-[18px] border border-transparent bg-[color-mix(in_srgb,var(--accent)_16%,transparent)] p-4'
-        : 'rounded-[14px] border border-[color-mix(in_srgb,var(--accent)_35%,transparent)] bg-[color-mix(in_srgb,var(--bg)_88%,var(--accent)_12%)] p-4';
+    : 'rounded-[14px] border border-[color-mix(in_srgb,var(--accent)_34%,white_10%)] bg-black/72 p-4 shadow-[0_18px_55px_rgba(0,0,0,.32)]';
   return (
     <section ref={rootRef} id="hero" className={'hero-v14 ' + heroClasses + ' ' + motionClass}>
       <div className="absolute inset-0 -z-20" style={{ background: 'var(--bg)' }} />
@@ -4546,7 +4590,7 @@ useEffect(() => {
       ) : (
         <img data-hero-poster src={mediaImages[0]} alt={siteCopy.gallery_alt} className={`absolute inset-0 -z-10 h-full w-full object-cover saturate-[.85] ${hasMediaPanel ? 'opacity-16' : 'opacity-32'}`} loading="eager" decoding="async" />
       )}
-      <div className="absolute inset-0 -z-10" style={{ background: heroVariant === 'video' || heroVariant === 'fullbleed' ? `linear-gradient(180deg, rgba(0,0,0,.66), rgba(0,0,0,.80) 72%, color-mix(in srgb, var(--bg) 70%, black 30%)), radial-gradient(circle_at_50%_28%, color-mix(in srgb, var(--accent) 24%, transparent), transparent 42%)` : heroVariant === 'center' ? `linear-gradient(180deg, rgba(0,0,0,.58), rgba(0,0,0,.76)), radial-gradient(circle_at_50%_18%, color-mix(in srgb, var(--accent) 26%, transparent), transparent 34%)` : heroVariant === 'asymmetric' ? `linear-gradient(115deg, rgba(0,0,0,.84), rgba(0,0,0,.58) 52%, color-mix(in srgb, var(--accent) 16%, transparent)), radial-gradient(circle_at_12%_72%, color-mix(in srgb, var(--accent) 18%, transparent), transparent 30%)` : `linear-gradient(90deg, rgba(0,0,0,.86), rgba(0,0,0,.62) 42%, rgba(0,0,0,.28)), radial-gradient(circle_at_80%_20%, color-mix(in srgb, var(--accent) 20%, transparent), transparent 34%)` }} />
+      <div className="absolute inset-0 -z-10" style={{ background: heroVariant === 'video' || heroVariant === 'fullbleed' ? `linear-gradient(180deg, rgba(0,0,0,.80), rgba(0,0,0,.90) 72%, rgba(0,0,0,.94)), radial-gradient(circle_at_50%_28%, color-mix(in srgb, var(--accent) 20%, transparent), transparent 42%)` : heroVariant === 'center' ? `linear-gradient(180deg, rgba(0,0,0,.74), rgba(0,0,0,.86)), radial-gradient(circle_at_50%_18%, color-mix(in srgb, var(--accent) 20%, transparent), transparent 34%)` : heroVariant === 'asymmetric' ? `linear-gradient(115deg, rgba(0,0,0,.90), rgba(0,0,0,.72) 52%, rgba(0,0,0,.64)), radial-gradient(circle_at_12%_72%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 30%)` : `linear-gradient(90deg, rgba(0,0,0,.92), rgba(0,0,0,.78) 42%, rgba(0,0,0,.62)), radial-gradient(circle_at_80%_20%, color-mix(in srgb, var(--accent) 18%, transparent), transparent 34%)` }} />
       <div className={shellClass}>
         <div className={copyClass}>
           <motion.div data-hero-reveal data-motion-line className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em]" style={{ borderColor: 'color-mix(in srgb, var(--accent) 25%, transparent)', background: 'color-mix(in srgb, var(--accent) 10%, transparent)', color: 'var(--accent-soft)' }}><Play className="h-3.5 w-3.5" />{siteCopy.hero_badge || `${siteCopy.segment} em ${siteCopy.city}`}</motion.div>
@@ -4565,7 +4609,7 @@ useEffect(() => {
         ) : null}
         <div data-hero-reveal className={statsClass}>
           {[['Avaliação', siteCopy.rating || '5.0'], ['Sinais locais', siteCopy.reviews || 'confirmados'], ['Contato', siteCopy.phone || 'WhatsApp']].map(([label, value]) => (
-            <div key={label} className={statCardClass}><div className="flex items-center gap-2" style={{ color: surfaceStyle === 'solid' ? 'var(--accent-contrast)' : 'var(--accent)' }}><Star className="h-4 w-4" /><span className="text-xs font-semibold uppercase tracking-[0.12em]">{label}</span></div><p className="mt-2 text-lg font-semibold" style={{ color: surfaceStyle === 'solid' ? 'var(--accent-contrast)' : '#fff' }}>{value}</p></div>
+            <div key={label} className={statCardClass}><div className="flex items-center gap-2" style={{ color: surfaceStyle === 'solid' ? 'var(--accent-contrast)' : 'var(--accent-soft)' }}><Star className="h-4 w-4" /><span className="text-xs font-semibold uppercase tracking-[0.12em]">{label}</span></div><p className="mt-2 text-lg font-semibold" style={{ color: surfaceStyle === 'solid' ? 'var(--accent-contrast)' : '#fff' }}>{value}</p></div>
           ))}
         </div>
       </div>
@@ -4695,10 +4739,10 @@ def _generate_cinematic_secondary_components(facts: dict[str, Any], palette: dic
     gallery_density = str(block_plan.get("gallery_density") or variation.get("gallery_density") or "")
     cta_style = str(block_plan.get("cta_style") or variation.get("cta_style") or "")
     card_shell_map = {
-        "glass": "border border-[color-mix(in_srgb,var(--accent)_24%,transparent)] bg-[color-mix(in_srgb,var(--bg)_88%,var(--accent)_12%)]",
+        "glass": "border border-black/5 bg-white shadow-[0_14px_34px_rgba(0,0,0,0.10)]",
         "solid": "border border-black/5 bg-white shadow-[0_14px_34px_rgba(0,0,0,0.10)]",
         "outline": "border border-[color-mix(in_srgb,var(--accent)_24%,transparent)] bg-transparent",
-        "soft_tint": "border border-transparent bg-[color-mix(in_srgb,var(--bg-light)_82%,var(--accent)_18%)]",
+        "soft_tint": "border border-black/5 bg-[var(--bg-light)] shadow-[0_14px_34px_rgba(0,0,0,0.08)]",
     }
     card_shell = card_shell_map.get(about_surface, card_shell_map["outline"])
     light_surface = about_surface in {"solid", "soft_tint", "glass"}
@@ -4816,7 +4860,7 @@ import { motion } from 'motion/react';
 import { blockPlan, siteCopy, whatsappHref } from './siteData';
 export function LocationSection() {
   const feature = String((blockPlan as any)?.location_variant || '') === 'feature_local';
-  return <section id="localizacao" style={{ background: 'var(--bg-light)' }} className="px-5 py-20 md:px-8 md:py-28"><div className={`mx-auto grid max-w-7xl gap-4 ${feature ? 'lg:grid-cols-[0.95fr_1.05fr]' : 'lg:grid-cols-[1.05fr_0.95fr]'}`}><motion.article initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.24 }} className="rounded-[18px] border border-black/5 bg-white p-7 shadow-[0_18px_60px_rgba(0,0,0,0.08)]"><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>{siteCopy.location_kicker}</p><h2 className="mt-3 text-[clamp(1.8rem,4vw,3.6rem)] font-semibold tracking-[-0.025em] text-zinc-950">{siteCopy.location_title}</h2><p className="mt-4 max-w-xl text-sm leading-7 text-zinc-600">{siteCopy.location_intro}</p><div className="mt-8 grid gap-4 sm:grid-cols-2"><div className="rounded-[16px] border border-zinc-200 p-5"><MapPin className="h-5 w-5" style={{ color: 'var(--accent)' }} /><p className="mt-3 text-sm font-semibold text-zinc-950">Endereço</p><p className="mt-2 text-sm leading-6 text-zinc-600">{siteCopy.address || siteCopy.city}</p></div><div className="rounded-[16px] border border-zinc-200 p-5"><Phone className="h-5 w-5" style={{ color: 'var(--accent)' }} /><p className="mt-3 text-sm font-semibold text-zinc-950">Contato</p><p className="mt-2 text-sm leading-6 text-zinc-600">{siteCopy.phone}</p></div></div></motion.article><motion.article initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.24 }} transition={{ delay: 0.06 }} className="rounded-[18px] border border-transparent p-7" style={{ background: 'linear-gradient(135deg, var(--accent-soft), color-mix(in srgb, var(--accent) 22%, white))' }}><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent-dark)' }}>{siteCopy.location_cta_kicker}</p><h3 className="mt-3 text-3xl font-semibold tracking-tight" style={{ color: 'var(--accent-contrast)' }}>{siteCopy.location_cta_title}</h3><p className="mt-4 text-sm leading-7" style={{ color: 'var(--accent-dark)' }}>{siteCopy.location_cta_body}</p><div className="mt-8 flex flex-col gap-3 sm:flex-row"><a href={whatsappHref} rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 rounded-full px-5 py-3 text-sm font-semibold" style={{ background: 'var(--bg)', color: 'var(--text)' }}><MessageCircle className="h-4 w-4" /> {siteCopy.location_cta_primary}</a><a href="#contato" className="inline-flex items-center justify-center gap-2 rounded-full border border-black/10 px-5 py-3 text-sm font-semibold" style={{ color: 'var(--accent-contrast)' }}><MapPin className="h-4 w-4" /> {siteCopy.location_cta_secondary}</a></div></motion.article></div></section>;
+  return <section id="localizacao" style={{ background: 'var(--bg-light)' }} className="px-5 py-20 md:px-8 md:py-28"><div className={`mx-auto grid max-w-7xl gap-4 ${feature ? 'lg:grid-cols-[0.95fr_1.05fr]' : 'lg:grid-cols-[1.05fr_0.95fr]'}`}><motion.article initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.24 }} className="rounded-[18px] border border-black/5 bg-white p-7 shadow-[0_18px_60px_rgba(0,0,0,0.08)]"><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>{siteCopy.location_kicker}</p><h2 className="mt-3 text-[clamp(1.8rem,4vw,3.6rem)] font-semibold tracking-[-0.025em] text-zinc-950">{siteCopy.location_title}</h2><p className="mt-4 max-w-xl text-sm leading-7 text-zinc-600">{siteCopy.location_intro}</p><div className="mt-8 grid gap-4 sm:grid-cols-2"><div className="rounded-[16px] border border-zinc-200 p-5"><MapPin className="h-5 w-5" style={{ color: 'var(--accent)' }} /><p className="mt-3 text-sm font-semibold text-zinc-950">Endereço</p><p className="mt-2 text-sm leading-6 text-zinc-600">{siteCopy.address || siteCopy.city}</p></div><div className="rounded-[16px] border border-zinc-200 p-5"><Phone className="h-5 w-5" style={{ color: 'var(--accent)' }} /><p className="mt-3 text-sm font-semibold text-zinc-950">Contato</p><p className="mt-2 text-sm leading-6 text-zinc-600">{siteCopy.phone}</p></div></div></motion.article><motion.article initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.24 }} transition={{ delay: 0.06 }} className="rounded-[18px] border border-transparent p-7 shadow-[0_18px_60px_rgba(0,0,0,0.12)]" style={{ background: 'var(--accent-dark)', color: '#fff' }}><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent-soft)' }}>{siteCopy.location_cta_kicker}</p><h3 className="mt-3 text-3xl font-semibold tracking-tight text-white">{siteCopy.location_cta_title}</h3><p className="mt-4 text-sm leading-7 text-white/75">{siteCopy.location_cta_body}</p><div className="mt-8 flex flex-col gap-3 sm:flex-row"><a href={whatsappHref} rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 rounded-full px-5 py-3 text-sm font-semibold" style={{ background: 'var(--accent)', color: 'var(--accent-contrast)' }}><MessageCircle className="h-4 w-4" /> {siteCopy.location_cta_primary}</a><a href="#contato" className="inline-flex items-center justify-center gap-2 rounded-full border border-white/20 px-5 py-3 text-sm font-semibold text-white"><MapPin className="h-4 w-4" /> {siteCopy.location_cta_secondary}</a></div></motion.article></div></section>;
 }
 export default LocationSection;
 """,
@@ -4843,8 +4887,8 @@ export function ContactCTA({ onOpen }: { onOpen?: () => void }) {
   const minimal = ctaStyle === 'minimal_inline';
   const sectionClass = minimal ? 'px-5 py-14 md:px-8' : poster ? 'px-5 py-24 md:px-8 md:py-32' : 'px-5 py-20 md:px-8';
   const gridClass = split ? 'mx-auto grid max-w-7xl gap-4 lg:grid-cols-2 lg:items-stretch' : 'mx-auto grid max-w-7xl gap-8 lg:grid-cols-[1.1fr_.9fr] lg:items-center';
-  const cardClass = minimal ? 'border-t border-black/10 pt-6' : 'rounded-[18px] p-6 text-white';
-  return <section id="contato" style={{ background: poster ? 'var(--bg)' : 'var(--accent)', color: poster ? 'white' : 'var(--accent-contrast)' }} className={sectionClass}><div className={gridClass}><motion.div initial={{ opacity: 0, y: 22 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.3 }}><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: poster ? 'var(--accent)' : 'var(--accent-dark)' }}>{siteCopy.contact_kicker}</p><h2 className="mt-3 max-w-4xl text-[clamp(2rem,5vw,4.8rem)] font-semibold leading-[1] tracking-[-0.03em]">{siteCopy.contact_headline}</h2><p className="mt-5 max-w-2xl text-base leading-8" style={{ color: poster ? 'rgb(212 212 216)' : 'var(--accent-dark)' }}>{siteCopy.contact_sub}</p></motion.div><div style={{ background: minimal ? 'transparent' : 'var(--bg)' }} className={cardClass}><p className="text-sm leading-7 text-zinc-300">{siteCopy.contact_card_label}</p><p className="mt-2 text-2xl font-semibold">{siteCopy.phone || 'WhatsApp'}</p><div className="mt-6 flex flex-col gap-3 sm:flex-row"><a href={whatsappHref} rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-semibold" style={{ color: 'var(--bg)' }}><MessageCircle className="h-4 w-4" />{siteCopy.contact_primary_label}</a><button type="button" onClick={onOpen} className="inline-flex items-center justify-center gap-2 rounded-full border border-white/15 px-5 py-3 text-sm font-semibold text-white"><Phone className="h-4 w-4" />{siteCopy.contact_secondary_label}</button></div></div></div></section>;
+  const cardClass = minimal ? 'border-t border-white/20 pt-6' : 'rounded-[18px] p-6 shadow-[0_22px_70px_rgba(0,0,0,.22)]';
+  return <section id="contato" style={{ background: poster ? 'var(--bg)' : 'var(--accent-dark)', color: 'white' }} className={sectionClass}><div className={gridClass}><motion.div initial={{ opacity: 0, y: 22 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.3 }}><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent-soft)' }}>{siteCopy.contact_kicker}</p><h2 className="mt-3 max-w-4xl text-[clamp(2rem,5vw,4.8rem)] font-semibold leading-[1] tracking-[-0.03em]">{siteCopy.contact_headline}</h2><p className="mt-5 max-w-2xl text-base leading-8 text-white/75">{siteCopy.contact_sub}</p></motion.div><div style={{ background: minimal ? 'transparent' : 'var(--bg-light)', color: 'var(--text-dark)' }} className={cardClass}><p className="text-sm leading-7" style={{ color: 'var(--text-dark)' }}>{siteCopy.contact_card_label}</p><p className="mt-2 text-2xl font-semibold">{siteCopy.phone || 'WhatsApp'}</p><div className="mt-6 flex flex-col gap-3 sm:flex-row"><a href={whatsappHref} rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 rounded-full px-5 py-3 text-sm font-semibold" style={{ background: 'var(--accent)', color: 'var(--accent-contrast)' }}><MessageCircle className="h-4 w-4" />{siteCopy.contact_primary_label}</a><button type="button" onClick={onOpen} className="inline-flex items-center justify-center gap-2 rounded-full border border-black/10 px-5 py-3 text-sm font-semibold" style={{ color: 'var(--text-dark)' }}><Phone className="h-4 w-4" />{siteCopy.contact_secondary_label}</button></div></div></div></section>;
 }
 export default ContactCTA;
 """,
@@ -4852,7 +4896,7 @@ export default ContactCTA;
 import { AnimatePresence, motion } from 'motion/react';
 import { siteCopy, whatsappHref } from './siteData';
 export function BookingModal({ open, onClose }: { open: boolean; onClose: () => void }) {
-  return <AnimatePresence>{open ? <motion.div className="fixed inset-0 z-[80] grid place-items-end bg-black/65 p-3 md:place-items-center md:p-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><motion.div initial={{ y: 42, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 24, opacity: 0 }} transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }} style={{ background: 'var(--accent-soft)', color: 'var(--bg)' }} className="w-full max-w-lg rounded-[22px] p-6 shadow-2xl"><div className="flex items-start justify-between gap-4"><div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-800">{siteCopy.modal_kicker}</p><h3 className="mt-2 text-3xl font-semibold tracking-tight">{siteCopy.modal_title}</h3></div><button type="button" aria-label="Fechar" onClick={onClose} className="inline-flex h-10 w-10 items-center justify-center rounded-full text-white" style={{ background: 'var(--bg)' }}><X className="h-4 w-4" /></button></div><p className="mt-5 text-sm leading-7" style={{ color: 'var(--accent-dark)' }}>Telefone: {siteCopy.phone || 'confirme pelo WhatsApp'}. Endereço: {siteCopy.address || siteCopy.city}.</p><a href={whatsappHref} rel="noopener noreferrer" className="mt-6 inline-flex w-full items-center justify-center rounded-full px-5 py-3 text-sm font-semibold text-white" style={{ background: 'var(--bg)' }}>{siteCopy.modal_cta}</a></motion.div></motion.div> : null}</AnimatePresence>;
+  return <AnimatePresence>{open ? <motion.div className="fixed inset-0 z-[80] grid place-items-end bg-black/65 p-3 md:place-items-center md:p-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><motion.div initial={{ y: 42, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 24, opacity: 0 }} transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }} style={{ background: 'var(--bg-light)', color: 'var(--text-dark)' }} className="w-full max-w-lg rounded-[22px] p-6 shadow-2xl"><div className="flex items-start justify-between gap-4"><div><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>{siteCopy.modal_kicker}</p><h3 className="mt-2 text-3xl font-semibold tracking-tight">{siteCopy.modal_title}</h3></div><button type="button" aria-label="Fechar" onClick={onClose} className="inline-flex h-10 w-10 items-center justify-center rounded-full text-white" style={{ background: 'var(--accent-dark)' }}><X className="h-4 w-4" /></button></div><p className="mt-5 text-sm leading-7" style={{ color: 'var(--text-dark)' }}>Telefone: {siteCopy.phone || 'confirme pelo WhatsApp'}. Endereço: {siteCopy.address || siteCopy.city}.</p><a href={whatsappHref} rel="noopener noreferrer" className="mt-6 inline-flex w-full items-center justify-center rounded-full px-5 py-3 text-sm font-semibold" style={{ background: 'var(--accent)', color: 'var(--accent-contrast)' }}>{siteCopy.modal_cta}</a></motion.div></motion.div> : null}</AnimatePresence>;
 }
 export default BookingModal;
 """,
@@ -5166,7 +5210,7 @@ export default {export_name};
                 service_descriptions[idx] = str(item["description"])
 
     dense_cards = "\n".join(
-        f'<div className="rounded-3xl border border-white/10 bg-white/[.04] p-5 text-white"><strong className="block text-xl" style={{{{color:"{primary_light}"}}}}>0{i}</strong><span className="text-sm text-zinc-300">{svc_labels[i-1]}</span></div>'
+        f'<div className="rounded-3xl border border-white/10 bg-black/70 p-5 text-white"><strong className="block text-xl" style={{{{color:"{primary_light}"}}}}>0{i}</strong><span className="text-sm text-zinc-300">{svc_labels[i-1]}</span></div>'
         for i in range(1, 6)
     )
     nav_links = "\n".join(
@@ -5175,7 +5219,7 @@ export default {export_name};
     )
     # Sprint 16: Generate niche-specific service descriptions using archetype copy
     services_articles = "\n".join(
-        f'<article className="rounded-3xl border border-white/10 bg-white/[.04] p-6"><h3 className="text-xl font-bold">{svc_labels[i]}</h3><p className="mt-3 text-zinc-400">{service_descriptions[i]}</p></article>'
+        f'<article className="rounded-3xl border border-white/10 bg-black/70 p-6"><h3 className="text-xl font-bold">{svc_labels[i]}</h3><p className="mt-3 text-zinc-400">{service_descriptions[i]}</p></article>'
         for i in range(min(3, len(svc_labels)))
     )
     files = {
@@ -5188,7 +5232,7 @@ export default {export_name};
     return () => window.removeEventListener('scroll', onScroll);
   }}, []);
   return (
-    <nav style={{{{background: open ? '{palette['bg_dark']}ee' : '{palette['bg_light']}08', borderColor: open ? '{palette['border']}' : '{palette['border'].replace('0.2', '0.1')}'}}}} className={{`fixed inset-x-4 top-4 z-50 rounded-3xl border px-5 py-3 backdrop-blur`}}>
+    <nav style={{{{background: open ? '{palette['bg_dark']}ee' : 'rgba(0,0,0,.76)', borderColor: open ? '{palette['border']}' : '{palette['border'].replace('0.2', '0.1')}'}}}} className={{`fixed inset-x-4 top-4 z-50 rounded-3xl border px-5 py-3 shadow-[0_14px_40px_rgba(0,0,0,.28)]`}}>
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4">
         <a className="min-w-0 truncate text-sm font-black uppercase tracking-[0.24em]" href="#top" style={{{{color:"{primary_light}"}}}}>{name}</a>
         <div className="hidden items-center gap-5 text-sm text-zinc-200 md:flex">
@@ -6828,7 +6872,7 @@ export function Navbar({{ onOpen }}: {{ onOpen: () => void }}) {{
       initial={{{{ y: -16, opacity: 0 }}}}
       animate={{{{ y: 0, opacity: 1 }}}}
       transition={{{{ duration: 0.35 }}}}
-      className={{`fixed inset-x-0 top-0 z-50 transition-all duration-300 ${{scrolled ? 'border-b border-zinc-200/70 bg-white/88 shadow-sm backdrop-blur-md' : 'bg-transparent'}}`}}
+      className={{`fixed inset-x-0 top-0 z-50 transition-all duration-300 ${{scrolled ? 'border-b border-zinc-200/70 bg-white shadow-sm' : 'bg-transparent'}}`}}
     >
       <nav aria-label="Navegação principal" className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 md:h-20 md:px-8">
         <a href="#topo" className="min-w-0">
@@ -6863,7 +6907,7 @@ export function Navbar({{ onOpen }}: {{ onOpen: () => void }}) {{
         </button>
       </nav>
       {{open && (
-        <div className="border-t border-zinc-200/70 bg-white/95 px-4 py-4 backdrop-blur md:hidden">
+        <div className="border-t border-zinc-200/70 bg-white px-4 py-4 md:hidden">
           <ul className="space-y-1">
             {{links.map((link) => (
               <li key={{link.href}}>
@@ -6981,7 +7025,7 @@ export function HeroSection({{ onOpen = () => {{}} }}: {{ onOpen?: () => void }}
             <a href={{whatsappHref}} rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 rounded-full bg-emerald-400 px-6 py-3.5 text-sm font-semibold text-[#071611]">
               <MessageCircle className="h-4 w-4" /> WhatsApp
             </a>
-            <button type="button" onClick={{onOpen}} className="inline-flex items-center justify-center gap-2 rounded-full border border-white/20 bg-white/8 px-6 py-3.5 text-sm font-semibold text-white backdrop-blur">
+            <button type="button" onClick={{onOpen}} className="inline-flex items-center justify-center gap-2 rounded-full border border-white/20 bg-black/70 px-6 py-3.5 text-sm font-semibold text-white">
               Agendar <ArrowRight className="h-4 w-4" />
             </button>
           </div>
@@ -7141,7 +7185,7 @@ export function LifestyleSection() {{
         </div>
         <div className="grid gap-4 md:grid-cols-3">
           {{['Scroll com intenção', 'Prova clara', 'CTA sempre objetivo'].map((title, index) => (
-            <motion.article key={{title}} initial={{{{ opacity: 0, x: 20 }}}} whileInView={{{{ opacity: 1, x: 0 }}}} viewport={{{{ once: true, amount: 0.3 }}}} transition={{{{ delay: index * 0.06 }}}} className="rounded-[28px] border border-white/10 bg-white/[0.04] p-6">
+            <motion.article key={{title}} initial={{{{ opacity: 0, x: 20 }}}} whileInView={{{{ opacity: 1, x: 0 }}}} viewport={{{{ once: true, amount: 0.3 }}}} transition={{{{ delay: index * 0.06 }}}} className="rounded-[28px] border border-white/10 bg-black/70 p-6">
               <span className="text-sm font-semibold text-emerald-300">0{{index + 1}}</span>
               <h3 className="mt-5 text-lg font-semibold text-white">{{title}}</h3>
               <p className="mt-3 text-sm leading-6 text-zinc-300">Contrato visual aplicado para {{business.segment}} em {{business.city}}.</p>
@@ -7212,7 +7256,7 @@ export function ReviewsSection() {{
             <span className="rounded-full border border-white/10 bg-white/5 px-4 py-2">{{reviewCount || String(cards.length)}} sinais locais</span>
           </div>
         </div>
-        <div className="relative min-h-[21rem] overflow-hidden rounded-[32px] border border-white/10 bg-white/[0.04] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.24)] backdrop-blur md:p-8">
+        <div className="relative min-h-[21rem] overflow-hidden rounded-[32px] border border-white/10 bg-black/70 p-6 shadow-[0_24px_80px_rgba(0,0,0,0.24)] md:p-8">
           <AnimatePresence mode="wait">
             <motion.article
               key={{active}}
@@ -7297,18 +7341,18 @@ export function LgpdBanner() {
       data-lgpd-banner
       initial={{ opacity: 0, y: 24 }}
       animate={{ opacity: 1, y: 0 }}
-      className="fixed inset-x-4 bottom-4 z-[9999] mx-auto grid max-w-3xl grid-cols-[auto_1fr_auto] items-center gap-3 rounded-2xl p-4 shadow-2xl backdrop-blur"
-      style={{ background: 'color-mix(in srgb, var(--bg) 94%, black 6%)', color: 'var(--text)', border: '1px solid color-mix(in srgb, var(--accent) 26%, transparent)' }}
+      className="fixed inset-x-4 bottom-4 z-[9999] mx-auto grid max-w-3xl grid-cols-[auto_1fr_auto] items-center gap-3 rounded-2xl p-4 shadow-2xl"
+      style={{ background: 'var(--bg-light)', color: 'var(--text-dark)', border: '1px solid color-mix(in srgb, var(--accent) 26%, transparent)' }}
       role="dialog"
       aria-label="Aviso de privacidade"
     >
       <ShieldCheck className="h-5 w-5" style={{ color: 'var(--accent)' }} />
-      <p className="text-sm leading-5" style={{ color: 'var(--text-muted)' }}>Tratamos dados de contato apenas para atendimento, segurança e melhoria da experiência.</p>
+      <p className="text-sm leading-5" style={{ color: 'var(--text-dark)' }}>Tratamos dados de contato apenas para atendimento, segurança e melhoria da experiência.</p>
       <div className="flex items-center gap-2">
         <button type="button" data-lgpd-accept onClick={accept} className="rounded-full px-4 py-2 text-sm font-semibold" style={{ background: 'var(--accent)', color: 'var(--accent-contrast)' }}>
           Aceitar
         </button>
-        <button type="button" aria-label="Fechar aviso de privacidade" onClick={accept} className="inline-flex h-9 w-9 items-center justify-center rounded-full" style={{ color: 'var(--text)', border: '1px solid color-mix(in srgb, var(--accent) 18%, transparent)' }}>
+        <button type="button" aria-label="Fechar aviso de privacidade" onClick={accept} className="inline-flex h-9 w-9 items-center justify-center rounded-full" style={{ color: 'var(--text-dark)', border: '1px solid color-mix(in srgb, var(--accent) 18%, transparent)' }}>
           <X className="h-4 w-4" />
         </button>
       </div>
@@ -7346,7 +7390,7 @@ export function LocationSection() {{
           initial={{{{ opacity: 0, y: 22 }}}}
           whileInView={{{{ opacity: 1, y: 0 }}}}
           viewport={{{{ once: true, amount: 0.25 }}}}
-          className="rounded-[32px] border border-white/10 bg-white/[0.04] p-8 backdrop-blur"
+          className="rounded-[32px] border border-white/10 bg-black/70 p-8"
         >
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-300/80">Localização</p>
           <h2 className="mt-3 text-3xl font-semibold tracking-tight text-white md:text-5xl">Atendimento em {{city}}</h2>
@@ -7477,12 +7521,12 @@ export function ContactCTA({{ onOpen }}: {{ onOpen?: () => void }}) {{
           transition={{{{ delay: 0.08 }}}}
           className="grid gap-4 md:grid-cols-2 lg:grid-cols-1"
         >
-          <div className="rounded-[28px] border border-white/10 bg-white/[0.03] p-6 backdrop-blur">
+          <div className="rounded-[28px] border border-white/10 bg-black/70 p-6">
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-emerald-300/80">Contato direto</p>
             <p className="mt-3 text-lg font-semibold text-white">{{business.phoneLabel}}</p>
             <p className="mt-2 text-sm leading-6 text-zinc-300">Canal oficial para agendamento, dúvidas e confirmação de horário.</p>
           </div>
-          <div className="rounded-[28px] border border-white/10 bg-white/[0.03] p-6 backdrop-blur">
+          <div className="rounded-[28px] border border-white/10 bg-black/70 p-6">
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-emerald-300/80">Endereço e rota</p>
             <p className="mt-3 text-sm leading-6 text-zinc-300">{{business.address || business.city}}</p>
             {{business.mapsHref ? (
@@ -7547,7 +7591,7 @@ export function Footer() {{
           </div>
         </div>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
-          <div className="rounded-[24px] border border-white/8 bg-white/[0.03] p-5">
+          <div className="rounded-[24px] border border-white/8 bg-black/70 p-5">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-300/80">Contato</p>
             <a className="mt-3 flex items-center gap-2 text-sm font-medium text-white" href={{business.phoneHref}}>
               <Phone className="h-4 w-4 text-emerald-300" />
@@ -7558,7 +7602,7 @@ export function Footer() {{
               WhatsApp oficial
             </a>
           </div>
-          <div className="rounded-[24px] border border-white/8 bg-white/[0.03] p-5">
+          <div className="rounded-[24px] border border-white/8 bg-black/70 p-5">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-300/80">Localização</p>
             <p className="mt-3 text-sm leading-6 text-zinc-300">{{business.address || business.city}}</p>
             {{business.mapsHref ? (
@@ -7570,7 +7614,7 @@ export function Footer() {{
             ) : null}}
           </div>
         </div>
-        <div className="rounded-[24px] border border-white/8 bg-white/[0.03] p-5">
+        <div className="rounded-[24px] border border-white/8 bg-black/70 p-5">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-300/80">Navegação e confiança</p>
           <nav className="mt-3 grid gap-3 text-sm text-zinc-300" aria-label="Links finais do site">
             <a href="#hero">Início</a>
