@@ -1,14 +1,14 @@
 """Pre-processador inteligente de mensagens recebidas do WhatsApp.
 
-Estrategia HIBRIDA (3 niveis):
+Estrategia fail-closed (3 niveis):
 1. Regex rapida: casos OBVIOS (midia sem texto, opt-out explicito, ausencia)
-2. Heuristicas: deteccao por features (length, emojis, sazonalidade)
-3. Sonnet LLM: juiz final pra casos ambiguos (bot vs lead real)
+2. Heuristicas: bloqueio apenas quando ha certeza alta de bot
+3. LLM: juiz final pra casos ambiguos (bot vs lead real)
 
 Por que nao regex pra tudo? Cada lead tem contexto diferente. Regex nunca
 consegue cobrir todas variacoes. LLM com contexto do tenant faz melhor.
 
-Custo: ~$0.0003/classificacao Sonnet. Cache 24h reduz a zero em msgs repetidas.
+Custo: cache 24h reduz a zero em msgs repetidas.
 """
 
 from __future__ import annotations
@@ -158,54 +158,43 @@ Responda APENAS JSON: {"tipo": "LEAD_REAL"|"BOT_ASSISTANT"|"AUTO_AUSENTE", "conf
 
 
 def _call_llm_classifier(text: str) -> tuple[str, float, str]:
-    """Chama Haiku pra classificar (rapido e barato)."""
+    """Chama LLM pra classificar. Se falhar, levanta erro e bloqueia automacao."""
+    from agents.llm_direct import call_claude
+    import json
+
+    response = call_claude(
+        system=_LLM_SYSTEM_PROMPT,
+        user=text[:500],
+        model="haiku",  # classificador barato, mas sem fallback silencioso
+        max_tokens=50,
+        temperature=0.0,
+        agent_name="sdr_msg_classifier",
+        respect_agent_config=False,
+        enable_context=False,
+    ).strip()
+
+    response_clean = response.replace("```json", "").replace("```", "").strip()
+
+    # Tentar parse JSON direto
     try:
-        from agents.llm_direct import call_claude
-        import json
-
-        response = call_claude(
-            system=_LLM_SYSTEM_PROMPT,
-            user=text[:500],
-            model="haiku",  # Haiku mais rapido que Sonnet pra classificacao
-            max_tokens=50,
-            temperature=0.0,
-            agent_name="sdr_msg_classifier",
-            respect_agent_config=False,
-            enable_context=False,
-        ).strip()
-
-        response_clean = response.replace("```json", "").replace("```", "").strip()
-
-        # Tentar parse JSON direto
+        data = json.loads(response_clean)
+    except json.JSONDecodeError as exc:
+        # Tentar extrair JSON, mas sem inferir por palavra-chave.
+        m = re.search(r'\{[^{}]*\}', response_clean)
+        if not m:
+            raise ValueError("message classifier returned non-json output") from exc
         try:
-            data = json.loads(response_clean)
-        except json.JSONDecodeError:
-            # Tentar extrair JSON
-            import re
-            m = re.search(r'\{[^{}]*\}', response_clean)
-            if m:
-                try:
-                    data = json.loads(m.group())
-                except Exception:
-                    return _fallback_parse(response_clean)
-            else:
-                return _fallback_parse(response_clean)
+            data = json.loads(m.group())
+        except Exception as nested_exc:
+            raise ValueError("message classifier returned invalid json object") from nested_exc
 
-        tipo = data.get("tipo", "LEAD_REAL")
-        confianca = float(data.get("confianca", 0.5))
-        return tipo, confianca, "haiku_classifier"
-    except Exception as e:
-        return "LEAD_REAL", 0.3, f"llm_error: {type(e).__name__}"
-
-
-def _fallback_parse(response: str) -> tuple[str, float, str]:
-    """Fallback quando LLM nao retorna JSON valido. Procura palavras-chave."""
-    response_upper = response.upper()
-    if "BOT_ASSISTANT" in response_upper or "BOT" in response_upper:
-        return "BOT_ASSISTANT", 0.6, "fallback_keyword"
-    elif "AUTO_AUSENTE" in response_upper or "AUSENTE" in response_upper:
-        return "AUTO_AUSENTE", 0.6, "fallback_keyword"
-    return "LEAD_REAL", 0.4, "fallback_default"
+    tipo = str(data.get("tipo", "")).strip().upper()
+    if tipo not in {"LEAD_REAL", "BOT_ASSISTANT", "AUTO_AUSENTE"}:
+        raise ValueError(f"message classifier returned unsupported tipo: {tipo!r}")
+    confianca = float(data.get("confianca", 0.0))
+    if not 0.0 <= confianca <= 1.0:
+        raise ValueError(f"message classifier returned invalid confianca: {confianca!r}")
+    return tipo, confianca, "haiku_classifier"
 
 
 def _llm_classify_cached(text: str) -> tuple[str, float, str]:
@@ -311,24 +300,25 @@ def classify_incoming_message(text: str, msg_data: Optional[dict] = None) -> Pro
             ),
         )
 
-    # ═══ NIVEL 3: SONNET LLM (juiz final) ═══
-    tipo, confianca, motivo = _llm_classify_cached(text_clean)
+    # ═══ NIVEL 3: LLM (juiz final) ═══
+    try:
+        tipo, confianca, motivo = _llm_classify_cached(text_clean)
+    except Exception as exc:
+        return ProcessResult(
+            msg_type=MessageType.UNKNOWN,
+            confidence=0.0,
+            signals=[f"llm_classifier_error:{type(exc).__name__}"],
+            action="ask_human",
+        )
 
-    # Fallback: se LLM nao tem certeza, usa heuristica
+    # Se LLM nao tem certeza, bloqueia automacao em vez de inferir por fallback.
     if confianca < 0.6:
-        # Heuristica comeca em 0.0; >=0.4 = sinais de bot
-        if heuristic_score >= 0.4:
-            return ProcessResult(
-                msg_type=MessageType.BOT_ASSISTANT,
-                confidence=max(0.6, heuristic_score),
-                signals=[f"llm_low_conf({confianca})", f"heuristic({heuristic_score:.2f})"] + [k for k, v in features.items() if v > 0],
-                action="handoff",
-                auto_reply=(
-                    "Oi! Sou o Franz, assistente virtual da FraLib. "
-                    "Estou entrando em contato sobre uma proposta comercial. "
-                    "Voce e o responsavel ou prefere que eu fale com alguem da equipe? 🙂"
-                ),
-            )
+        return ProcessResult(
+            msg_type=MessageType.UNKNOWN,
+            confidence=confianca,
+            signals=[f"llm_low_conf({confianca})", f"heuristic({heuristic_score:.2f})"],
+            action="ask_human",
+        )
 
     if tipo == "BOT_ASSISTANT":
         return ProcessResult(
@@ -350,12 +340,19 @@ def classify_incoming_message(text: str, msg_data: Optional[dict] = None) -> Pro
             action="no_response",
         )
 
-    # Default: LEAD_REAL
+    if tipo == "LEAD_REAL":
+        return ProcessResult(
+            msg_type=MessageType.LEAD_REAL,
+            confidence=confianca,
+            signals=[f"llm:{motivo}"],
+            action="forward_to_franz",
+        )
+
     return ProcessResult(
-        msg_type=MessageType.LEAD_REAL,
-        confidence=confianca if tipo == "LEAD_REAL" else 0.5,
-        signals=[f"llm:{motivo}"] if motivo else ["heuristic_default"],
-        action="forward_to_franz",
+        msg_type=MessageType.UNKNOWN,
+        confidence=confianca,
+        signals=[f"llm_unsupported:{tipo}"],
+        action="ask_human",
     )
 
 

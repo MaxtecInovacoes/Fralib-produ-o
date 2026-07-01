@@ -73,7 +73,7 @@ Return only the category name, no explanation."""
 
 
 def detect_intent_with_llm(message: str, agent_name: str = "franz") -> str:
-    """Detecta intent usando LLM (Haiku é suficiente, é tarefa simples)"""
+    """Detecta intent usando regex para casos obvios e LLM para ambiguos."""
     if not message or not message.strip():
         return "other"
     regex_intent = detect_intent_regex(message)
@@ -100,14 +100,13 @@ def detect_intent_with_llm(message: str, agent_name: str = "franz") -> str:
         }
         if intent in valid_intents:
             return intent
-        return "other"
+        raise ValueError(f"LLM returned invalid intent: {intent!r}")
     except Exception as e:
-        print(f"[intent] Erro LLM, usando regex fallback: {e}")
-        return detect_intent_regex(message)
+        raise RuntimeError(f"intent detection failed: {type(e).__name__}: {e}") from e
 
 
 def detect_intent_regex(message: str) -> str:
-    """Fallback de detecção de intent por regex"""
+    """Deteccao deterministica para intents obvios."""
     l = message.lower().strip()
     compact = l.strip(" .,!?\n\t")
     if compact in {"oi", "ola", "olá", "bom dia", "boa tarde", "boa noite"}:

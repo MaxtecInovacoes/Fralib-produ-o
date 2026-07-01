@@ -17,7 +17,7 @@ from agents.design_director import (
     _cache_get,
     _cache_set,
     _cache_key,
-    _fallback_direction,
+    # _fallback_direction removido (fail-fast - nao ha mais fallback)
 )
 from services.pipeline_validators import normalize_segment, sanitize_keyword_term
 from whatsapp.sdr_reply_service import sanitize_reply, is_duplicate_reply
