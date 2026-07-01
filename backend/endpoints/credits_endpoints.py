@@ -228,7 +228,7 @@ async def criar_portal_session(
 
 
 def _extrair_usuario_request(request: Request) -> dict:
-    """Extrai usuario do cookie fralib_session ou Authorization header (JWT).
+    """Extrai usuario do cookie fralib_session OU Authorization Bearer token.
     Levanta HTTPException 401 se nao autenticado.
     """
     from backend.core.database import engine
@@ -238,7 +238,7 @@ def _extrair_usuario_request(request: Request) -> dict:
     from backend.core.auth import SECRET_KEY as _SECRET_KEY
     import jwt as _jwt
 
-    # Tenta pegar credenciais do header
+    # Tenta pegar credenciais do header Authorization (Bearer)
     auth = request.headers.get("Authorization", "")
     credentials = None
     if auth.startswith("Bearer "):
@@ -250,14 +250,14 @@ def _extrair_usuario_request(request: Request) -> dict:
     except HTTPException:
         raise HTTPException(401, "Autenticacao necessaria para checkout.")
 
-    # Valida CSRF se for via cookie
+    # Valida CSRF apenas se for via cookie (Bearer token ja foi validado)
     if used_cookie:
         try:
             _verify_cookie_csrf(request, used_cookie)
         except HTTPException:
             raise HTTPException(401, "CSRF token invalido")
 
-    # Decodifica JWT
+    # Decodifica JWT (mesma logica para cookie ou Bearer)
     try:
         payload = _jwt.decode(token, _SECRET_KEY, algorithms=[ALGORITHM])
     except Exception as exc:
