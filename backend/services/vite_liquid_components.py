@@ -47,6 +47,7 @@ POLO_TOKENS: dict[str, dict[str, Any]] = {
         # Geometria
         "radius": "40px",
         "section_overlap": "0px",
+        "overlap": "0px",
         "text_skew": "0deg",
         # Tipografia
         "heading_font": "'Playfair Display', Georgia, serif",
@@ -80,6 +81,7 @@ POLO_TOKENS: dict[str, dict[str, Any]] = {
         # Geometria
         "radius": "0px",
         "section_overlap": "-80px",
+        "overlap": "-80px",
         "text_skew": "-5deg",
         # Tipografia
         "heading_font": "'Anton', Impact, sans-serif",
@@ -115,6 +117,7 @@ POLO_TOKENS: dict[str, dict[str, Any]] = {
         # Geometria
         "radius": "6px",
         "section_overlap": "0px",
+        "overlap": "0px",
         "text_skew": "0deg",
         # Tipografia
         "heading_font": "'Inter', system-ui, sans-serif",
@@ -148,6 +151,7 @@ POLO_TOKENS: dict[str, dict[str, Any]] = {
         # Geometria
         "radius": "12px",
         "section_overlap": "-40px",
+        "overlap": "-40px",
         "text_skew": "2deg",
         # Tipografia
         "heading_font": "'Space Grotesk', system-ui, sans-serif",
@@ -477,8 +481,9 @@ def get_hero_display_mode(pole: str, mode: str | None = None) -> dict[str, Any]:
     if mode and mode in modes:
         return modes[mode]
 
-    # Default display mode - usar primeiro modo disponível como fallback
-    default_mode = POLE_TRIGGERS[pole]["default_display_mode"]
+    # Default display mode - usar corporate quando o polo vier desconhecido.
+    trigger = POLE_TRIGGERS.get(pole, POLE_TRIGGERS["corporate"])
+    default_mode = trigger["default_display_mode"]
     if default_mode in modes:
         return modes[default_mode]
 

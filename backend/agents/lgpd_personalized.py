@@ -82,17 +82,17 @@ export function LgpdBanner({ businessName, city, customMessage }: LgpdBannerProp
       initial={{ opacity: 0, y: 24 }}
       animate={{ opacity: 1, y: 0 }}
       className="fixed inset-x-4 bottom-4 z-[9999] mx-auto grid max-w-3xl grid-cols-[auto_1fr_auto] items-center gap-3 rounded-2xl p-4 shadow-2xl"
-      style={{ background: 'var(--bg-light)', color: 'var(--text-dark)', border: '1px solid color-mix(in srgb, var(--accent) 26%, transparent)' }}
+      style={{ background: 'var(--lgpd-bg, var(--bg-light))', color: 'var(--lgpd-text, var(--text-dark))', border: '1px solid var(--lgpd-border, color-mix(in srgb, var(--accent) 26%, transparent))' }}
       role="dialog"
       aria-label="Aviso de privacidade"
     >
       <ShieldCheck className="h-5 w-5" style={{ color: 'var(--accent)' }} />
-      <p className="text-sm leading-5" style={{ color: 'var(--text-dark)' }}>{message}</p>
+      <p className="text-sm leading-5" style={{ color: 'var(--lgpd-text, var(--text-dark))' }}>{message}</p>
       <div className="flex items-center gap-2">
         <button type="button" data-lgpd-accept onClick={accept} className="rounded-full px-4 py-2 text-sm font-semibold" style={{ background: 'var(--accent)', color: 'var(--accent-contrast)' }}>
           Aceitar
         </button>
-        <button type="button" aria-label="Fechar aviso de privacidade" onClick={accept} className="inline-flex h-9 w-9 items-center justify-center rounded-full" style={{ color: 'var(--text-dark)', border: '1px solid color-mix(in srgb, var(--accent) 18%, transparent)' }}>
+        <button type="button" aria-label="Fechar aviso de privacidade" onClick={accept} className="inline-flex h-9 w-9 items-center justify-center rounded-full" style={{ color: 'var(--lgpd-text, var(--text-dark))', border: '1px solid color-mix(in srgb, var(--accent) 18%, transparent)' }}>
           <X className="h-4 w-4" />
         </button>
       </div>

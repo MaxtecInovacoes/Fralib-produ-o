@@ -469,7 +469,7 @@ def build_liquid_system_prompt(
     return f"""
 ╔══════════════════════════════════════════════════════════════════════════════╗
 ║              LIQUID DESIGN SYSTEM - {heat_label} MODE                          ║
-║              Design Heat: {design_heat:.1f} | Polo: {pole.upper():<10}                  ║
+║              POLO {pole.upper():<10} | Design Heat: {design_heat:.1f}                      ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
 
 {system}

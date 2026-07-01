@@ -57,6 +57,16 @@ def resolve_cinematic_block_plan(
     lane_copy = lane.get("copy") if isinstance(lane.get("copy"), dict) else {}
     pricing_variant = str(variation.get("pricing_variant") or lane_blocks.get("pricing_variant") or "plan_grid")
     stats_variant = str(variation.get("stats_variant") or lane_blocks.get("stats_variant") or "inline_hero_stats")
+    aesthetic_mode = str(variation.get("aesthetic_mode") or lane_blocks.get("aesthetic_mode") or "balanced")
+    spacing_density = str(variation.get("spacing_density") or lane_blocks.get("spacing_density") or "normal")
+    radius_mode = str(variation.get("radius_mode") or lane_blocks.get("radius_mode") or "balanced")
+    container_strategy = str(variation.get("container_strategy") or lane_blocks.get("container_strategy") or "contained")
+    typography_scale = str(variation.get("typography_scale") or lane_blocks.get("typography_scale") or "strong")
+    heading_style = str(variation.get("heading_style") or lane_blocks.get("heading_style") or "clean")
+    surface_depth = str(variation.get("surface_depth") or lane_blocks.get("surface_depth") or "elevated")
+    overlap_mode = str(variation.get("overlap_mode") or lane_blocks.get("overlap_mode") or "none")
+    motion_intensity = str(variation.get("motion_intensity") or lane_blocks.get("motion_intensity") or "composed")
+    image_treatment = str(variation.get("image_treatment") or lane_blocks.get("image_treatment") or "clean")
 
     has_explicit_services = bool(variation.get("services_variant"))
     services_variant = str(variation.get("services_variant") or lane_blocks.get("services_variant") or "split_editorial")
@@ -141,6 +151,16 @@ def resolve_cinematic_block_plan(
         "location_variant": location_variant,
         "pricing_variant": pricing_variant,
         "stats_variant": stats_variant,
+        "aesthetic_mode": aesthetic_mode,
+        "spacing_density": spacing_density,
+        "radius_mode": radius_mode,
+        "container_strategy": container_strategy,
+        "typography_scale": typography_scale,
+        "heading_style": heading_style,
+        "surface_depth": surface_depth,
+        "overlap_mode": overlap_mode,
+        "motion_intensity": motion_intensity,
+        "image_treatment": image_treatment,
         "surface_style": surface_style,
         "surface_mix": surface_mix,
         "section_surface_map": section_surface_map,

@@ -1226,6 +1226,92 @@ def test_cinematic_seed_materializes_hero_shell_classes():
     assert len(hero_classes) >= 2
 
 
+def test_visual_lane_exports_liquid_attitude_tokens():
+    from backend.services.vite_visual_lanes import resolve_visual_lane
+
+    impact_lane = resolve_visual_lane(segment="academia", visual_lane="lane_a")
+    wellness_lane = resolve_visual_lane(segment="nutricionista", visual_lane="lane_b")
+
+    assert impact_lane["blocks"]["aesthetic_mode"] == "impact"
+    assert impact_lane["blocks"]["spacing_density"] == "compressed"
+    assert impact_lane["blocks"]["radius_mode"] == "sharp"
+    assert impact_lane["blocks"]["container_strategy"] == "edge_to_edge"
+    assert impact_lane["blocks"]["overlap_mode"] == "strong"
+    assert wellness_lane["blocks"]["aesthetic_mode"] == "wellness"
+    assert wellness_lane["blocks"]["spacing_density"] == "spacious"
+    assert wellness_lane["blocks"]["radius_mode"] == "soft"
+
+
+def test_block_plan_carries_liquid_attitude_contract():
+    from backend.services.vite_block_registry import resolve_cinematic_block_plan
+
+    plan = resolve_cinematic_block_plan(
+        section_order=["hero", "about", "services", "reviews", "faq", "location", "contact-cta"],
+        archetype="BOLD_ENERGY",
+        segment="academia",
+        variation={"visual_lane": "lane_a"},
+    )
+
+    assert plan["aesthetic_mode"] == "impact"
+    assert plan["spacing_density"] == "compressed"
+    assert plan["radius_mode"] == "sharp"
+    assert plan["container_strategy"] == "edge_to_edge"
+    assert plan["typography_scale"] == "heroic"
+    assert plan["surface_depth"] == "cutout"
+    assert plan["image_treatment"] == "high_contrast"
+
+
+def test_cinematic_studio_materializes_liquid_attitude_css():
+    from backend.services.vite_react_renderer import _generate_cinematic_studio_files
+
+    files = _generate_cinematic_studio_files(
+        {
+            "business": {"name": "High Fitness Teste", "segment": "academia", "city": "Curitiba"},
+            "variation": {"visual_lane": "lane_a", "seed": 92001, "counter": 0},
+            "media": {"photos": TEST_PHOTOS},
+        }
+    )
+
+    index = files.get("src/pages/Index.tsx", "")
+    css = files.get("src/index.css", "")
+    site_data = files.get("src/components/siteData.ts", "")
+
+    assert 'data-attitude="impact"' in index
+    assert 'data-spacing="compressed"' in index
+    assert 'data-radius="sharp"' in index
+    assert 'data-container="edge_to_edge"' in index
+    assert "--radius-card: 4px;" in css
+    assert "--overlap-shift: -7rem;" in css
+    assert "clip-path: polygon" in css
+    assert "main[data-attitude] h1" in css
+    assert '"aesthetic_mode": "impact"' in site_data
+
+
+def test_creative_plan_accepts_attitude_fields_and_aliases():
+    from backend.services.vite_react_renderer import _sanitize_creative_plan
+
+    cleaned = _sanitize_creative_plan(
+        {
+            "creative_plan": {
+                "aesthetic_mode": "BRUTALIST",
+                "container_strategy": "edge-to-edge",
+                "typography_scale": "HERO",
+                "spacing_density": "compressed",
+                "radius_mode": "sharp",
+                "surface_depth": "cutout",
+                "overlap_mode": "strong",
+                "image_treatment": "high_contrast",
+                "section_order": ["hero", "planos", "stats", "services", "contato"],
+            }
+        }
+    )
+
+    assert cleaned["aesthetic_mode"] == "impact"
+    assert cleaned["container_strategy"] == "edge_to_edge"
+    assert cleaned["typography_scale"] == "heroic"
+    assert cleaned["section_order"] == ["hero", "pricing", "stats-bar", "services", "contact-cta"]
+
+
 def test_block_registry_anti_repetition_avoids_default_glass():
     from backend.services.vite_block_registry import resolve_cinematic_block_plan
 

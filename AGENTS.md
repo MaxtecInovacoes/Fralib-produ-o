@@ -533,6 +533,13 @@ fallback de superfície clara não pode misturar vermelho com branco gerando blo
 salmão genérico. Se uma animação for planejada mas não houver elemento compatível
 no bloco escolhido, ela não conta como entregue.
 
+Desde 2026-07-01, o caminho oficial promove `copy_only`/políticas antigas para
+`creative_plan` no worker canônico, normaliza bases Anthropic antigas
+`api.aibee.cloud` para `https://api.kpalabz.com/v1`, e materializa os polos
+líquidos no wrapper do app (`data-pole`) para que hero, seções, planos, LGPD e
+CTAs herdem a mesma geometria/cor/tipografia. O polo `bold` deve sair com
+superfícies sólidas, alto contraste e sem glass padrão em cards críticos.
+
 **Arquivos mantidos por compatibilidade** (não usados no caminho canônico, mas
 mantidos para evitar imports quebrados em outros módulos):
 - `backend/services/pipeline_renderer_support.py` — nome herdado, mas o conteúdo

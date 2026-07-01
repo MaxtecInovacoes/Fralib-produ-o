@@ -274,6 +274,76 @@ def _visual_media_urls(facts: dict[str, Any]) -> list[str]:
 # Templates de infraestrutura (index.html, vite.config.ts, tsconfig.json)
 # ---------------------------------------------------------------------------
 
+_GOOGLE_FONT_FAMILIES = {
+    "Bebas Neue": "Bebas+Neue",
+    "Oswald": "Oswald:wght@500;600;700",
+    "Anton": "Anton",
+    "Roboto Condensed": "Roboto+Condensed:wght@500;700",
+    "Roboto": "Roboto:wght@400;500;700",
+    "Inter": "Inter:wght@400;500;600;700",
+    "Manrope": "Manrope:wght@400;500;600;700",
+    "DM Sans": "DM+Sans:wght@400;500;700",
+    "Playfair Display": "Playfair+Display:wght@500;700",
+    "Libre Baskerville": "Libre+Baskerville:wght@400;700",
+    "Source Serif 4": "Source+Serif+4:wght@500;700",
+    "Lora": "Lora:wght@500;700",
+    "Merriweather": "Merriweather:wght@400;700",
+    "Crimson Pro": "Crimson+Pro:wght@500;700",
+    "Nunito": "Nunito:wght@400;600;700",
+}
+
+
+def _google_fonts_link_for_facts(facts: dict[str, Any]) -> str:
+    """Build a <link> tag with preconnect + Google Fonts CSS for the chosen
+    heading/body fonts (Mudança 4)."""
+    pool: dict[str, list[str]] = {
+        "default": ["Inter", "Manrope"],
+        "nutricionista_esportiva": ["Bebas Neue", "Anton", "Oswald", "Roboto Condensed", "Inter"],
+        "nutricionista_clinica": ["Source Serif 4", "Lora", "Crimson Pro", "Merriweather", "Nunito", "Inter"],
+        "barbearia_premium": ["Playfair Display", "Bebas Neue", "Anton", "Oswald", "Libre Baskerville", "Inter"],
+        "academia_crossfit": ["Bebas Neue", "Anton", "Oswald", "Roboto Condensed", "Inter"],
+        "academia_musculacao": ["Anton", "Bebas Neue", "Oswald", "Inter", "Manrope"],
+        "restaurante_familiar": ["Playfair Display", "Lora", "Merriweather", "Crimson Pro", "Inter"],
+    }
+    biz = facts.get("business") if isinstance(facts.get("business"), dict) else {}
+    subnicho = str(
+        biz.get("subnicho")
+        or biz.get("subniche")
+        or facts.get("subnicho")
+        or facts.get("subniche")
+        or "default"
+    ).strip().lower() or "default"
+    families_pool = pool.get(subnicho) or pool["default"]
+    variation = facts.get("variation") if isinstance(facts.get("variation"), dict) else {}
+    try:
+        seed = int(variation.get("seed") or 0) or 1
+    except (TypeError, ValueError):
+        seed = 1
+    try:
+        counter = int(variation.get("counter") or 0) or 1
+    except (TypeError, ValueError):
+        counter = 1
+    seed_abs = abs((seed ^ ((counter + 1) * 0x9E3779B9)) or counter)
+    heading_family = families_pool[seed_abs % len(families_pool)]
+    families: list[str] = []
+    for fam in (heading_family, "Inter"):
+        if not fam:
+            continue
+        css2_name = _GOOGLE_FONT_FAMILIES.get(fam)
+        if css2_name and css2_name not in families:
+            families.append(css2_name)
+    if not families:
+        return ""
+    href = "https://fonts.googleapis.com/css2?" + "&".join(
+        f"family={name}" for name in families
+    ) + "&display=swap"
+    return (
+        '<link rel="preconnect" href="https://fonts.googleapis.com" />\n'
+        '    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />\n'
+        f'    <link href="{href}" rel="stylesheet" />'
+    )
+
+
 def vite_template_index_html(facts: dict[str, Any]) -> str:
     """Template do index.html base."""
     business = _facts_business(facts)
@@ -284,11 +354,13 @@ def vite_template_index_html(facts: dict[str, Any]) -> str:
     og_image = _facts_og_image(facts)
     theme_color = _facts_theme_color(facts)
     json_ld = _facts_json_ld(facts)
+    font_link = _google_fonts_link_for_facts(facts)
     return f"""<!doctype html>
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    {font_link}
     <title>{_meta_escape(title)}</title>
     <meta name="description" content="{_meta_escape(description)}" />
     <meta name="keywords" content="{_meta_escape(keywords)}" />
@@ -712,17 +784,17 @@ export function LgpdBanner() {
       initial={{ opacity: 0, y: 24 }}
       animate={{ opacity: 1, y: 0 }}
       className="fixed inset-x-4 bottom-4 z-[9999] mx-auto grid max-w-3xl grid-cols-[auto_1fr_auto] items-center gap-3 rounded-2xl p-4 shadow-2xl"
-      style={{ background: 'var(--bg-light)', color: 'var(--text-dark)', border: '1px solid color-mix(in srgb, var(--accent) 26%, transparent)' }}
+      style={{ background: 'var(--lgpd-bg, var(--bg-light))', color: 'var(--lgpd-text, var(--text-dark))', border: '1px solid var(--lgpd-border, color-mix(in srgb, var(--accent) 26%, transparent))' }}
       role="dialog"
       aria-label="Aviso de privacidade"
     >
       <ShieldCheck className="h-5 w-5" style={{ color: 'var(--accent)' }} />
-      <p className="text-sm leading-5" style={{ color: 'var(--text-dark)' }}>Tratamos dados de contato apenas para atendimento, segurança e melhoria da experiência.</p>
+      <p className="text-sm leading-5" style={{ color: 'var(--lgpd-text, var(--text-dark))' }}>Tratamos dados de contato apenas para atendimento, segurança e melhoria da experiência.</p>
       <div className="flex items-center gap-2">
         <button type="button" data-lgpd-accept onClick={accept} className="rounded-full px-4 py-2 text-sm font-semibold" style={{ background: 'var(--accent)', color: 'var(--accent-contrast)' }}>
           Aceitar
         </button>
-        <button type="button" aria-label="Fechar aviso de privacidade" onClick={accept} className="inline-flex h-9 w-9 items-center justify-center rounded-full" style={{ color: 'var(--text-dark)', border: '1px solid color-mix(in srgb, var(--accent) 18%, transparent)' }}>
+        <button type="button" aria-label="Fechar aviso de privacidade" onClick={accept} className="inline-flex h-9 w-9 items-center justify-center rounded-full" style={{ color: 'var(--lgpd-text, var(--text-dark))', border: '1px solid color-mix(in srgb, var(--accent) 18%, transparent)' }}>
           <X className="h-4 w-4" />
         </button>
       </div>

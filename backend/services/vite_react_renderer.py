@@ -1302,11 +1302,14 @@ def _batch_first_error_allows_repair(error: Exception) -> bool:
 
 
 def _proxy_base_url() -> str:
-    return (
+    base = (
         os.getenv("LITELLM_BASE_URL")
         or os.getenv("ANTHROPIC_BASE_URL")
         or "https://llm.seunegociofralib.site"
     ).rstrip("/")
+    if "api.aibee.cloud" in base.lower():
+        return os.getenv("FRALIB_ANTHROPIC_CANONICAL_BASE_URL", "https://api.kpalabz.com/v1").rstrip("/")
+    return base
 
 
 def _proxy_api_key() -> str:
@@ -1316,6 +1319,13 @@ def _proxy_api_key() -> str:
 def _proxy_credentials() -> tuple[str, str, int | None, Any | None]:
     """Resolve LiteLLM credentials through the shared provider key manager."""
     if os.getenv("LITELLM_API_KEY"):
+        return _proxy_api_key(), _proxy_base_url(), None, None
+    if os.getenv("FRALIB_BUILDER_FORCE_ENV_ANTHROPIC", "").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }:
         return _proxy_api_key(), _proxy_base_url(), None, None
 
     if os.getenv("FRALIB_BUILDER_USE_PROVIDER_KEYS", "1").strip().lower() not in {
@@ -1334,7 +1344,10 @@ def _proxy_credentials() -> tuple[str, str, int | None, Any | None]:
 
             picked = ia_manager.pick_key("anthropic")
             if picked and picked[0]:
-                return picked[0], (picked[1] or _proxy_base_url()).rstrip("/"), picked[2], ia_manager
+                picked_base = (picked[1] or _proxy_base_url()).rstrip("/")
+                if "api.aibee.cloud" in picked_base.lower():
+                    picked_base = os.getenv("FRALIB_ANTHROPIC_CANONICAL_BASE_URL", "https://api.kpalabz.com/v1").rstrip("/")
+                return picked[0], picked_base, picked[2], ia_manager
         except Exception as exc:
             print(f"[ViteReact] provider key lookup falhou: {exc}")
     return _proxy_api_key(), _proxy_base_url(), None, None
@@ -4642,6 +4655,16 @@ def _generate_cinematic_studio_files(facts: dict[str, Any]) -> dict[str, str]:
         "grain": "contrast(1.08) saturate(.88)",
         "high_contrast": "contrast(1.18) saturate(.75)",
     }.get(_image_treatment, "none")
+    _pole = str(facts.get("pole") or "").strip().lower()
+    if _pole not in {"soft", "bold", "corporate", "minimal"}:
+        _pole = {
+            "impact": "bold",
+            "wellness": "soft",
+            "premium": "soft",
+            "technical": "minimal",
+            "dynamic": "minimal",
+        }.get(_aesthetic_mode, "corporate")
+    _pole_css = _get_pole_css_tokens(_pole)
 
     source_files: dict[str, str] = {
         "src/App.tsx": """import { Index } from './pages/Index';
@@ -4649,9 +4672,15 @@ import { LgpdBanner } from './components/LgpdBanner';
 import { FactualMotionContract } from './components/FactualMotionContract';
 
 export default function App() {
-  return <><Index /><LgpdBanner /><FactualMotionContract /></>;
+  return (
+    <div data-pole="__FRALIB_POLE__" className="min-h-screen">
+      <Index />
+      <LgpdBanner />
+      <FactualMotionContract />
+    </div>
+  );
 }
-""",
+""".replace("__FRALIB_POLE__", _pole),
         "src/main.tsx": vite_template_main_tsx(),
         "src/types.ts": vite_template_types_ts(),
         "src/fralib-jsx.d.ts": vite_template_jsx_fallback_types(),
@@ -4685,6 +4714,7 @@ export function Index() {{
       data-overlap="{_overlap_mode}"
       data-motion="{_motion_intensity}"
       data-image-treatment="{_image_treatment}"
+      data-pole="{_pole}"
       className="min-h-screen bg-[{c_bg}] text-white"
     >
 {_index_sections}
@@ -4714,12 +4744,12 @@ export function Navbar({ onOpen }: { onOpen?: () => void }) {
         <a href="#hero" className="min-w-0 truncate text-sm font-semibold tracking-tight text-white md:text-base">{siteCopy.name}</a>
         <div className="hidden items-center gap-6 text-sm text-zinc-300 md:flex">{navLinks.map((item) => <a key={item.href} href={item.href} className="transition hover:text-white">{item.label}</a>)}</div>
         <div className="flex items-center gap-2">
-          <a href={whatsappHref} rel="noopener noreferrer" className="hidden items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition hover:-translate-y-0.5 md:inline-flex" style={{ background: 'var(--accent)', color: 'var(--bg)' }}><MessageCircle className="h-4 w-4" /> WhatsApp</a>
+          <a href={whatsappHref} rel="noopener noreferrer" className="hidden items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition hover:-translate-y-0.5 md:inline-flex" style={{ background: 'var(--accent)', color: 'var(--accent-contrast)' }}><MessageCircle className="h-4 w-4" /> WhatsApp</a>
           <button type="button" onClick={onOpen} className="hidden rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-white md:inline-flex">{siteCopy.cta_primary}</button>
           <button type="button" aria-label="Menu" onClick={() => setMenuOpen((value) => !value)} className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/10 text-white md:hidden">{menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}</button>
         </div>
       </div>
-      {menuOpen ? <div className="mt-3 grid gap-2 border-t border-white/10 pt-3 md:hidden">{navLinks.map((item) => <a key={item.href} href={item.href} onClick={() => setMenuOpen(false)} className="rounded-xl px-2 py-2 text-sm text-zinc-200">{item.label}</a>)}<a href={whatsappHref} rel="noopener noreferrer" className="rounded-xl px-3 py-2 text-sm font-semibold" style={{ background: 'var(--accent)', color: 'var(--bg)' }}>Falar no WhatsApp</a></div> : null}
+      {menuOpen ? <div className="mt-3 grid gap-2 border-t border-white/10 pt-3 md:hidden">{navLinks.map((item) => <a key={item.href} href={item.href} onClick={() => setMenuOpen(false)} className="rounded-xl px-2 py-2 text-sm text-zinc-200">{item.label}</a>)}<a href={whatsappHref} rel="noopener noreferrer" className="rounded-xl px-3 py-2 text-sm font-semibold" style={{ background: 'var(--accent)', color: 'var(--accent-contrast)' }}>Falar no WhatsApp</a></div> : null}
     </nav>
   );
 }
@@ -4796,7 +4826,7 @@ useEffect(() => {
           <h1 data-hero-reveal data-motion-mask className="mt-7 max-w-5xl text-[clamp(2.65rem,7.7vw,5.9rem)] font-semibold leading-[0.93] tracking-[-0.035em] text-white">{siteCopy.headline}</h1>
           <p data-hero-reveal className="mt-6 max-w-2xl text-base leading-8 text-zinc-200 md:text-lg">{siteCopy.subheadline}</p>
           <div data-hero-reveal className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-            <a href={whatsappHref} rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 rounded-full px-6 py-3.5 text-sm font-semibold transition duration-300 hover:-translate-y-0.5" style={{ background: 'var(--accent)', color: 'var(--bg)' }}><MessageCircle className="h-4 w-4" />{siteCopy.cta_primary}</a>
+            <a href={whatsappHref} rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 rounded-full px-6 py-3.5 text-sm font-semibold transition duration-300 hover:-translate-y-0.5" style={{ background: 'var(--accent)', color: 'var(--accent-contrast)' }}><MessageCircle className="h-4 w-4" />{siteCopy.cta_primary}</a>
             <button type="button" onClick={onOpen} className="inline-flex items-center justify-center gap-2 rounded-full border border-white/15 px-6 py-3.5 text-sm font-semibold text-white transition duration-300 hover:-translate-y-0.5">{siteCopy.cta_secondary}<ArrowDownRight className="h-4 w-4" /></button>
           </div>
         </div>
@@ -4808,7 +4838,7 @@ useEffect(() => {
         ) : null}
         <div data-hero-reveal className={statsClass}>
           {[['Avaliação', siteCopy.rating || '5.0'], ['Sinais locais', siteCopy.reviews || 'confirmados'], ['Contato', siteCopy.phone || 'WhatsApp']].map(([label, value]) => (
-            <div key={label} className={statCardClass}><div className="flex items-center gap-2" style={{ color: surfaceStyle === 'solid' ? 'var(--accent-contrast)' : 'var(--accent-soft)' }}><Star className="h-4 w-4" /><span className="text-xs font-semibold uppercase tracking-[0.12em]">{label}</span></div><p className="mt-2 text-lg font-semibold" style={{ color: surfaceStyle === 'solid' ? 'var(--accent-contrast)' : '#fff' }}>{value}</p></div>
+            <div key={label} data-hero-stat className={statCardClass}><div className="flex items-center gap-2" style={{ color: surfaceStyle === 'solid' ? 'var(--accent-contrast)' : 'var(--accent-soft)' }}><Star className="h-4 w-4" /><span className="text-xs font-semibold uppercase tracking-[0.12em]">{label}</span></div><p className="mt-2 text-lg font-semibold" style={{ color: surfaceStyle === 'solid' ? 'var(--accent-contrast)' : '#fff' }}>{value}</p></div>
           ))}
         </div>
       </div>
@@ -4848,6 +4878,134 @@ export default HeroSection;
   --surface-shadow: {_surface_shadow};
   --image-treatment: {_image_filter};
   --cta-btn: {_cta_btn_class};
+  --plan-section: var(--bg);
+  --plan-ink: var(--text);
+  --plan-card: color-mix(in srgb, var(--bg) 90%, var(--accent) 7%);
+  --plan-card-ink: var(--text);
+  --plan-featured: var(--accent);
+  --plan-featured-ink: var(--accent-contrast);
+  --plan-border: color-mix(in srgb, var(--accent) 35%, transparent);
+  --lgpd-bg: var(--bg-light);
+  --lgpd-text: var(--text-dark);
+  --lgpd-border: color-mix(in srgb, var(--accent) 26%, transparent);
+}}
+{_pole_css}
+[data-pole="soft"] {{
+  --radius-card: var(--radius);
+  --radius-panel: var(--radius);
+  --section-pad: var(--section-padding-y);
+  --h1-size: clamp(2.6rem, 7vw, 5.6rem);
+  --h2-size: var(--heading-scale);
+  --heading-transform: none;
+  --heading-skew: none;
+  --surface-shadow: var(--shadow-card);
+  --plan-section: var(--bg-light);
+  --plan-ink: var(--text-dark);
+  --plan-card: #fff;
+  --plan-card-ink: var(--text-dark);
+  --plan-border: color-mix(in srgb, var(--accent) 20%, transparent);
+}}
+[data-pole="bold"] {{
+  --bg: #030303;
+  --accent: #ff1f1f;
+  --accent-soft: #ff5a45;
+  --accent-dark: #870812;
+  --accent-contrast: #ffffff;
+  --text: #f7f2ee;
+  --text-muted: rgba(247,242,238,.72);
+  --bg-light: #0a0a0b;
+  --text-dark: #f7f2ee;
+  --panel-text: #f7f2ee;
+  --radius-card: 0px;
+  --radius-panel: 0px;
+  --section-pad: clamp(2.75rem, 6.2vw, 5.4rem);
+  --h1-size: clamp(3.25rem, 10.5vw, 6rem);
+  --h2-size: clamp(2.7rem, 7.6vw, 5.8rem);
+  --heading-weight: 950;
+  --heading-tracking: -0.035em;
+  --heading-transform: uppercase;
+  --heading-skew: skewX(-4deg);
+  --surface-shadow: 8px 8px 0 color-mix(in srgb, var(--accent) 76%, transparent);
+  --plan-section: #050505;
+  --plan-ink: #fff;
+  --plan-card: #0f0f10;
+  --plan-card-ink: #fff;
+  --plan-featured: var(--accent);
+  --plan-featured-ink: var(--accent-contrast);
+  --plan-border: color-mix(in srgb, var(--accent) 54%, transparent);
+  --lgpd-bg: #080808;
+  --lgpd-text: #fff;
+  --lgpd-border: color-mix(in srgb, var(--accent) 58%, transparent);
+}}
+[data-pole="corporate"] {{
+  --radius-card: var(--radius);
+  --radius-panel: calc(var(--radius) + 4px);
+  --section-pad: var(--section-padding-y);
+  --h2-size: var(--heading-scale);
+  --heading-transform: none;
+  --heading-skew: none;
+  --surface-shadow: var(--shadow-card);
+}}
+[data-pole="minimal"] {{
+  --radius-card: var(--radius);
+  --radius-panel: calc(var(--radius) + 8px);
+  --section-pad: var(--section-padding-y);
+  --h2-size: var(--heading-scale);
+  --heading-transform: lowercase;
+  --heading-skew: skewX(1.5deg);
+  --surface-shadow: var(--shadow-card);
+  --plan-section: #071018;
+  --plan-ink: #f7fbff;
+  --plan-card: color-mix(in srgb, #071018 86%, var(--accent) 10%);
+  --plan-card-ink: #f7fbff;
+}}
+[data-pole="bold"] .hero-v14 h1,
+[data-pole="bold"] h2 {{
+  font-style: italic;
+}}
+[data-pole="bold"] .fralib-display-shadow {{
+  -webkit-text-stroke: 1px color-mix(in srgb, var(--accent) 70%, white 4%);
+  color: transparent;
+}}
+[data-pole="bold"] #servicos,
+[data-pole="bold"] #avaliacoes,
+[data-pole="bold"] #localizacao,
+[data-pole="bold"] #contato {{
+  background: #050505 !important;
+  color: #fff !important;
+}}
+[data-pole="bold"] .bg-white,
+[data-pole="bold"] .bg-zinc-50,
+[data-pole="bold"] #servicos article,
+[data-pole="bold"] #avaliacoes article,
+[data-pole="bold"] #localizacao article {{
+  background: var(--plan-card) !important;
+  color: #fff !important;
+  border-color: var(--plan-border) !important;
+}}
+[data-pole="bold"] .text-zinc-950,
+[data-pole="bold"] .text-zinc-900,
+[data-pole="bold"] .text-zinc-800 {{
+  color: #fff !important;
+}}
+[data-pole="bold"] .text-zinc-700,
+[data-pole="bold"] .text-zinc-600,
+[data-pole="bold"] .text-zinc-500 {{
+  color: rgba(255,255,255,.72) !important;
+}}
+[data-pole="bold"] [data-hero-stat] {{
+  background: #080808 !important;
+  color: #fff !important;
+  border-color: color-mix(in srgb, var(--accent) 70%, transparent) !important;
+  border-radius: 0 !important;
+  box-shadow: 6px 6px 0 color-mix(in srgb, var(--accent-dark) 82%, transparent) !important;
+}}
+[data-pole="bold"] [data-lgpd-banner] {{
+  background: var(--lgpd-bg) !important;
+  color: var(--lgpd-text) !important;
+  border-color: var(--lgpd-border) !important;
+  border-radius: 0 !important;
+  box-shadow: 6px 6px 0 color-mix(in srgb, var(--accent-dark) 75%, transparent) !important;
 }}
 .hero-v14 {{
   min-height: 92svh;
@@ -5261,27 +5419,27 @@ function _buildPlans(): Plan[] {
   if (seg.includes('academia') || seg.includes('fitness') || seg.includes('crossfit')) {
     return [
       { name: 'Aula experimental', perks: ['Acesso a uma sessão', 'Avaliação inicial', 'Plano de treino'], highlight: false, note: 'Sem compromisso' },
-      { name: 'Plano mensal', perks: ['Acesso completo', 'Acompanhamento semanal', 'Reavaliação mensal', city ? `Vincular em ${city}` : 'Horários flexíveis'], highlight: true, note: 'Mais escolhido' },
+      { name: 'Plano mensal', perks: ['Acesso completo', 'Acompanhamento semanal', 'Reavaliação mensal', city ? 'Vincular em ' + city : 'Horários flexíveis'], highlight: true, note: 'Mais escolhido' },
       { name: 'Plano trimestral', perks: ['Acesso completo', 'Avaliação mensal', 'Suporte prioritário', 'Desconto progressivo'], highlight: false, note: 'Melhor custo' },
     ];
   }
   if (seg.includes('nutri')) {
     return [
       { name: 'Consulta inicial', perks: ['Avaliação completa', 'Plano alimentar', 'Material de apoio'], highlight: false, note: 'Sem compromisso' },
-      { name: 'Acompanhamento', perks: ['Consultas de retorno', 'Ajustes no plano', 'Suporte por mensagem', city ? `Atendimento em ${city}` : 'Online ou presencial'], highlight: true, note: 'Mais escolhido' },
+      { name: 'Acompanhamento', perks: ['Consultas de retorno', 'Ajustes no plano', 'Suporte por mensagem', city ? 'Atendimento em ' + city : 'Online ou presencial'], highlight: true, note: 'Mais escolhido' },
       { name: 'Plano premium', perks: ['Consultas ilimitadas', 'Bioimpedância mensal', 'Suporte prioritário', 'Acesso a conteúdo'], highlight: false, note: 'Completo' },
     ];
   }
   if (seg.includes('estetic') || seg.includes('beleza')) {
     return [
-      { name: 'Avaliação', perks: ['Diagnóstico da pele', 'Orientação inicial', city ? `Atendimento em ${city}` : 'Horário flexível'], highlight: false, note: 'Sem compromisso' },
+      { name: 'Avaliação', perks: ['Diagnóstico da pele', 'Orientação inicial', city ? 'Atendimento em ' + city : 'Horário flexível'], highlight: false, note: 'Sem compromisso' },
       { name: 'Pacote essencial', perks: ['Sessão completa', 'Produtos profissionais', 'Acompanhamento'], highlight: true, note: 'Mais escolhido' },
       { name: 'Pacote premium', perks: ['Múltiplas sessões', 'Produtos premium', 'Suporte dedicado', 'Acompanhamento estendido'], highlight: false, note: 'Completo' },
     ];
   }
   return [
     { name: 'Primeira sessão', perks: ['Acolhimento inicial', 'Diagnóstico', 'Orientação'], highlight: false, note: 'Sem compromisso' },
-    { name: 'Plano recorrente', perks: ['Atendimento regular', city ? `Em ${city}` : 'Horário flexível', 'Acompanhamento'], highlight: true, note: 'Mais escolhido' },
+    { name: 'Plano recorrente', perks: ['Atendimento regular', city ? 'Em ' + city : 'Horário flexível', 'Acompanhamento'], highlight: true, note: 'Mais escolhido' },
     { name: 'Plano estendido', perks: ['Sessões extras', 'Suporte dedicado', 'Prioridade na agenda'], highlight: false, note: 'Completo' },
   ];
 }
@@ -5293,14 +5451,14 @@ export function PricingSection() {
   if (variant === 'single_plan') {
     const plan = plans.find((p) => p.highlight) || plans[1] || plans[0];
     return (
-      <section id="planos" style={{ background: 'var(--bg-light)', color: 'var(--text-dark)' }} className="px-5 py-20 md:px-8 md:py-28">
-        <div className="mx-auto max-w-3xl rounded-[26px] border border-black/5 bg-white p-10 shadow-[0_30px_90px_rgba(0,0,0,0.12)] md:p-14">
+      <section id="planos" style={{ background: 'var(--plan-section)', color: 'var(--plan-ink)' }} className="px-5 py-20 md:px-8 md:py-28">
+        <div className="mx-auto max-w-3xl border p-10 md:p-14" style={{ background: 'var(--plan-card)', color: 'var(--plan-card-ink)', borderColor: 'var(--plan-border)', boxShadow: 'var(--surface-shadow)' }}>
           <p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>{plan.note}</p>
-          <h2 className="mt-4 text-[clamp(2rem,5vw,3.6rem)] font-extrabold leading-[1.02] tracking-[-0.03em] text-zinc-950">{plan.name}</h2>
-          <p className="mt-3 text-sm leading-7 text-zinc-600">Plano principal recomendado para {siteCopy.name} em {siteCopy.city}.</p>
+          <h2 className="mt-4 text-[clamp(2rem,5vw,3.6rem)] font-extrabold leading-[1.02] tracking-[-0.03em]">{plan.name}</h2>
+          <p className="mt-3 text-sm leading-7 opacity-75">Plano principal recomendado para {siteCopy.name} em {siteCopy.city}.</p>
           <ul className="mt-8 grid gap-3">
             {plan.perks.map((perk, i) => (
-              <li key={i} className="flex items-start gap-3 text-sm leading-7 text-zinc-700">
+              <li key={i} className="flex items-start gap-3 text-sm leading-7 opacity-85">
                 <Check className="mt-0.5 h-5 w-5 shrink-0" style={{ color: 'var(--accent)' }} />
                 <span>{perk}</span>
               </li>
@@ -5328,7 +5486,7 @@ export function PricingSection() {
                 <ul className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-zinc-300">
                   {plan.perks.map((perk, j) => <li key={j} className="flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full" style={{ background: 'var(--accent)' }} />{perk}</li>)}
                 </ul>
-                <a href={whatsappHref} rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 rounded-full border border-white/20 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-white/5" data-price-emphasis={plan.highlight ? 'true' : undefined}>Conversar</a>
+                <a href={whatsappHref} rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 rounded-full border border-white/20 px-5 py-2.5 text-sm font-semibold text-white transition hover:opacity-80" data-price-emphasis={plan.highlight ? 'true' : undefined}>Conversar</a>
               </motion.div>
             ))}
           </div>
@@ -5338,32 +5496,32 @@ export function PricingSection() {
   }
 
   return (
-    <section id="planos" style={{ background: 'var(--bg-light)', color: 'var(--text-dark)' }} className="px-5 py-20 md:px-8 md:py-28">
+    <section id="planos" style={{ background: 'var(--plan-section)', color: 'var(--plan-ink)' }} className="px-5 py-20 md:px-8 md:py-28">
       <div className="mx-auto max-w-7xl">
         <div className="mb-10 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>Planos</p>
-            <h2 className="mt-3 text-[clamp(2rem,4.8vw,4.2rem)] font-semibold leading-[1] tracking-[-0.025em] text-zinc-950">Como começar com {siteCopy.name}</h2>
+            <h2 className="mt-3 text-[clamp(2rem,4.8vw,4.2rem)] font-semibold leading-[1] tracking-[-0.025em]">Como começar com {siteCopy.name}</h2>
           </div>
-          <p className="max-w-md text-sm leading-7 text-zinc-600">Valores sob consulta. Comece pela conversa direta para entender o que faz sentido para você.</p>
+          <p className="max-w-md text-sm leading-7 opacity-75">Valores sob consulta. Comece pela conversa direta para entender o que faz sentido para você.</p>
         </div>
         <div className="grid gap-5 md:grid-cols-3">
           {plans.map((plan, i) => (
-            <motion.div key={i} initial={{ opacity: 0, y: 22 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.3 }} transition={{ delay: i * 0.06 }} className={`relative rounded-[22px] border p-7 shadow-[0_18px_60px_rgba(0,0,0,0.08)] ${plan.highlight ? 'border-transparent bg-zinc-950 text-white' : 'border-black/5 bg-white text-zinc-950'}`} data-price-emphasis={plan.highlight ? 'true' : undefined}>
+            <motion.div key={i} initial={{ opacity: 0, y: 22 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.3 }} transition={{ delay: i * 0.06 }} className="relative border p-7" style={{ background: plan.highlight ? 'var(--plan-featured)' : 'var(--plan-card)', color: plan.highlight ? 'var(--plan-featured-ink)' : 'var(--plan-card-ink)', borderColor: plan.highlight ? 'var(--accent)' : 'var(--plan-border)', boxShadow: plan.highlight ? 'var(--surface-shadow)' : 'none' }} data-price-emphasis={plan.highlight ? 'true' : undefined}>
               {plan.highlight ? (
                 <span className="absolute -top-3 left-7 inline-flex items-center gap-1 rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em]" style={{ background: 'var(--accent)', color: 'var(--accent-contrast)' }}><Sparkles className="h-3 w-3" />{plan.note}</span>
               ) : null}
-              <p className={`text-xs font-semibold uppercase tracking-[0.18em] ${plan.highlight ? 'text-zinc-400' : 'text-zinc-500'}`}>{plan.note}</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] opacity-65">{plan.note}</p>
               <h3 className="mt-3 text-2xl font-semibold tracking-tight">{plan.name}</h3>
               <ul className="mt-6 grid gap-2.5">
                 {plan.perks.map((perk, j) => (
-                  <li key={j} className={`flex items-start gap-2.5 text-sm leading-7 ${plan.highlight ? 'text-zinc-200' : 'text-zinc-700'}`}>
+                  <li key={j} className="flex items-start gap-2.5 text-sm leading-7 opacity-85">
                     <Check className={`mt-0.5 h-4 w-4 shrink-0`} style={{ color: 'var(--accent)' }} />
                     <span>{perk}</span>
                   </li>
                 ))}
               </ul>
-              <a href={whatsappHref} rel="noopener noreferrer" className={`mt-8 inline-flex w-full items-center justify-center gap-2 rounded-full px-5 py-3 text-sm font-bold transition hover:-translate-y-0.5 ${plan.highlight ? '' : 'border border-zinc-200 bg-zinc-50 text-zinc-950'}`} style={plan.highlight ? { background: 'var(--accent)', color: 'var(--accent-contrast)' } : undefined}>
+              <a href={whatsappHref} rel="noopener noreferrer" className="mt-8 inline-flex w-full items-center justify-center gap-2 border px-5 py-3 text-sm font-bold transition hover:-translate-y-0.5" style={{ background: plan.highlight ? 'var(--bg)' : 'transparent', color: plan.highlight ? 'var(--text)' : 'inherit', borderColor: 'var(--plan-border)' }}>
                 {plan.highlight ? 'Quero este plano' : 'Conversar'}
               </a>
             </motion.div>
@@ -7951,17 +8109,17 @@ export function LgpdBanner() {
       initial={{ opacity: 0, y: 24 }}
       animate={{ opacity: 1, y: 0 }}
       className="fixed inset-x-4 bottom-4 z-[9999] mx-auto grid max-w-3xl grid-cols-[auto_1fr_auto] items-center gap-3 rounded-2xl p-4 shadow-2xl"
-      style={{ background: 'var(--bg-light)', color: 'var(--text-dark)', border: '1px solid color-mix(in srgb, var(--accent) 26%, transparent)' }}
+      style={{ background: 'var(--lgpd-bg, var(--bg-light))', color: 'var(--lgpd-text, var(--text-dark))', border: '1px solid var(--lgpd-border, color-mix(in srgb, var(--accent) 26%, transparent))' }}
       role="dialog"
       aria-label="Aviso de privacidade"
     >
       <ShieldCheck className="h-5 w-5" style={{ color: 'var(--accent)' }} />
-      <p className="text-sm leading-5" style={{ color: 'var(--text-dark)' }}>Tratamos dados de contato apenas para atendimento, segurança e melhoria da experiência.</p>
+      <p className="text-sm leading-5" style={{ color: 'var(--lgpd-text, var(--text-dark))' }}>Tratamos dados de contato apenas para atendimento, segurança e melhoria da experiência.</p>
       <div className="flex items-center gap-2">
         <button type="button" data-lgpd-accept onClick={accept} className="rounded-full px-4 py-2 text-sm font-semibold" style={{ background: 'var(--accent)', color: 'var(--accent-contrast)' }}>
           Aceitar
         </button>
-        <button type="button" aria-label="Fechar aviso de privacidade" onClick={accept} className="inline-flex h-9 w-9 items-center justify-center rounded-full" style={{ color: 'var(--text-dark)', border: '1px solid color-mix(in srgb, var(--accent) 18%, transparent)' }}>
+        <button type="button" aria-label="Fechar aviso de privacidade" onClick={accept} className="inline-flex h-9 w-9 items-center justify-center rounded-full" style={{ color: 'var(--lgpd-text, var(--text-dark))', border: '1px solid color-mix(in srgb, var(--accent) 18%, transparent)' }}>
           <X className="h-4 w-4" />
         </button>
       </div>

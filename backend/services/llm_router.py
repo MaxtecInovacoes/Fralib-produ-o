@@ -89,6 +89,13 @@ _BASE_URLS = {
 }
 
 
+def _canonical_anthropic_base_url(base_url: str | None) -> str:
+    base = (base_url or "").rstrip("/")
+    if "api.aibee.cloud" in base.lower():
+        return os.getenv("FRALIB_ANTHROPIC_CANONICAL_BASE_URL", "https://api.kpalabz.com/v1").rstrip("/")
+    return base
+
+
 def _get_key_for_provider(provider: str):
     """Busca key do provider via ia_manager ou .env."""
     if provider == "anthropic" and os.getenv("FRALIB_BUILDER_FORCE_ENV_ANTHROPIC", "").strip().lower() in {"1", "true", "yes", "on"}:
@@ -203,6 +210,7 @@ def _call_anthropic(model_id, system, user, temperature, max_tokens):
     api_key, base_url, key_id = _get_key_for_provider("anthropic")
     if not api_key:
         raise Exception("Nenhuma API key Anthropic disponível")
+    base_url = _canonical_anthropic_base_url(base_url)
 
     url = _join_url(base_url, "/v1/messages")
     headers = {

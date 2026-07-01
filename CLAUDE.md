@@ -15,6 +15,7 @@
 - **Gerador de site: Vite/React** (`backend/services/vite_react_renderer.py`) — engine PADRÃO desde Sprint 12.9.
 - **OpenUI** (`backend/services/openui_renderer.py`) — rota alternativa, também fail-fast.
 - **Política LLM do Vite**: `FRALIB_VITE_LLM_POLICY=creative_plan` por padrão. LLM escolhe copy/direção em JSON; Studio React gera TSX.
+- **Blocos líquidos**: `creative_plan` agora materializa `data-pole` no app, tokens de geometria/cor/tipografia, LGPD e CTAs do mesmo tema.
 - **Fail-fast total**: qualquer erro na geração levanta exceção clara — sem sites genéricos.
 - **7 contratos canônicos** injetados no caroço: SEO, Design, Motion, A11y, Factual, LGPD, Deploy.
 - **Briefing real** do lead: nome, segmento, cidade, telefone, fotos, SEO, services, horários.
