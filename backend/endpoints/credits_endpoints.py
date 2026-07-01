@@ -274,43 +274,61 @@ def _extrair_usuario_request(request: Request) -> dict:
 
     # Carrega usuario do banco
     try:
-        with engine.connect() as conn:
-            # Tenta com tenant_id (schema novo); se nao existir, faz fallback
-            row = None
-            try:
-                result = conn.execute(
+        # Tenta primeiro com tenant_id (schema novo)
+        user_dict = None
+        try:
+            with engine.connect() as _c1:
+                _row1 = _c1.execute(
                     _text("SELECT id, email, plano, status, creditos, creditos_max, role, tenant_id FROM users WHERE id=:id"),
                     {"id": int(user_id)},
-                )
-                row = result.fetchone()
-                cols = ["id","email","plano","status","creditos","creditos_max","role","tenant_id"]
-                conn.rollback()  # garante transacao limpa
-            except Exception:
-                conn.rollback()
-                try:
-                    result2 = conn.execute(
+                ).fetchone()
+                if _row1:
+                    user_dict = {
+                        "id": int(_row1[0]),
+                        "email": _row1[1],
+                        "plano": _row1[2],
+                        "status": _row1[3],
+                        "creditos": _row1[4],
+                        "creditos_max": _row1[5],
+                        "role": _row1[6],
+                        "tenant_id": _row1[7],
+                    }
+        except Exception:
+            pass
+        # Fallback: schema sem tenant_id
+        if not user_dict:
+            try:
+                with engine.connect() as _c2:
+                    _row2 = _c2.execute(
                         _text("SELECT id, email, plano, status, creditos, creditos_max, role FROM users WHERE id=:id"),
                         {"id": int(user_id)},
-                    )
-                    row = result2.fetchone()
-                    cols = ["id","email","plano","status","creditos","creditos_max","role",None]
-                    conn.rollback()
-                except Exception:
-                    conn.rollback()
-                    raise
-            if not row:
-                raise HTTPException(401, "Usuario nao encontrado")
-            user_dict = dict(zip(cols, row))
-            return {
-                "id": int(user_dict.get("id")),
-                "email": user_dict.get("email") or email,
-                "plano": user_dict.get("plano") or "trial",
-                "status": user_dict.get("status") or "ativo",
-                "creditos": user_dict.get("creditos") or 0,
-                "creditos_max": user_dict.get("creditos_max") or 5,
-                "role": user_dict.get("role") or "user",
-                "tenant_id": user_dict.get("tenant_id"),
-            }
+                    ).fetchone()
+                    if _row2:
+                        user_dict = {
+                            "id": int(_row2[0]),
+                            "email": _row2[1],
+                            "plano": _row2[2],
+                            "status": _row2[3],
+                            "creditos": _row2[4],
+                            "creditos_max": _row2[5],
+                            "role": _row2[6],
+                            "tenant_id": None,
+                        }
+            except Exception:
+                pass
+        if not user_dict:
+            raise HTTPException(401, "Usuario nao encontrado")
+        # Normaliza valores nulos
+        return {
+            "id": int(user_dict.get("id")),
+            "email": user_dict.get("email") or email,
+            "plano": user_dict.get("plano") or "trial",
+            "status": user_dict.get("status") or "ativo",
+            "creditos": user_dict.get("creditos") or 0,
+            "creditos_max": user_dict.get("creditos_max") or 5,
+            "role": user_dict.get("role") or "user",
+            "tenant_id": user_dict.get("tenant_id"),
+        }
     except HTTPException:
         raise
     except Exception as exc:
