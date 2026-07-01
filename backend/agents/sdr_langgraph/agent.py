@@ -138,11 +138,41 @@ def _simplify_language(reply: str) -> str:
 
     Aplica transformacoes leves. NAO muda o conteudo, so a forma.
     """
-    if not reply or len(reply) < 20:
+    if not reply:
         return reply
 
     import re
     result = reply
+
+    # Gírias e palavras em inglês - aplica em TODAS as mensagens
+    gíria_replacements = [
+        (r"\bvc\b", "você"),
+        (r"\bvcs\b", "vocês"),
+        (r"\bpq\b", "porque"),
+        (r"\bq\b\b", "que"),
+        (r"\btmj\b", "tamo junto"),
+        (r"\bmsm\b", "mesmo"),
+        (r"\btb\b", "também"),
+        (r"\blgpd\b", "LGPD"),
+        (r"\bmto\b", "muito"),
+        (r"\bhj\b", "hoje"),
+        (r"\bflw\b", "falou"),
+        (r"\bvlw\b", "valeu"),
+        (r"\btd\b", "tudo"),
+        (r"\bmds\b", "meu Deus"),
+        (r"\bsds\b", "meu Deus"),
+        (r"\bpdc\b", "pode crer"),
+        (r"\bkkkk\b", "kk"),
+        (r"\bfeedback\b", "opinião"),
+        (r"\bfollow\s*up\b", "retorno"),
+        (r"\blead\b", "cliente"),
+    ]
+    for pattern, replacement in gíria_replacements:
+        result = re.sub(pattern, replacement, result, flags=re.IGNORECASE)
+
+    # Só simplifica conteúdo de mensagens longas
+    if len(result) < 20:
+        return result
 
     # Substituicoes: jargao -> linguagem simples
     # Ordem importa: regras mais especificas ANTES das genericas.
@@ -194,13 +224,10 @@ def _simplify_language(reply: str) -> str:
         (r"\balavancagem\b", "crescimento"),
         (r"\boptimi[zs]e\b", "melhore"),
         (r"\butilizar\b", "usar"),
-        # Brazilian casual expressions
-        (r"\bmas\s+né\b", ", né"),
-        (r"\bvc\b", "você"),
-        (r"\bvcs\b", "vocês"),
-        (r"\bpq\b", "porque"),
-        (r"\bq\b\b", "que"),
-        (r"\btmj\b", "tmj"),
+        (r"\bfeedback\b", "opinião"),
+        (r"\bfollow\s*up\b", "retorno"),
+        (r"\blead\b", "cliente"),
+        (r"\bonline\b", "online"),
     ]
     for pattern, replacement in replacements:
         result = re.sub(pattern, replacement, result, flags=re.IGNORECASE)
