@@ -8,10 +8,12 @@
     <div class="planos-grid" id="planos">
       <!-- TRIAL -->
       <div class="plano-card reveal">
-        <div class="plano-name">TRIAL</div>
-        <div class="plano-price">Gratis</div>
-        <p style="color:var(--fl-success);font-size:11px;margin:8px 0;font-weight:700;">1 SITE PRA TESTAR</p>
-        <div class="plano-period">Veja o sistema funcionando antes de investir.</div>
+        <div class="plano-head">
+          <div class="plano-name">TRIAL</div>
+          <div class="plano-price">Gratis</div>
+          <p style="color:var(--fl-success);font-size:11px;margin:8px 0;font-weight:700;">1 SITE PRA TESTAR</p>
+          <div class="plano-period">Veja o sistema funcionando antes de investir.</div>
+        </div>
         <ul class="plano-features">
           <li>1 site gerado</li>
           <li>Prospeccao basica</li>
@@ -19,15 +21,19 @@
           <li>Fila com menor prioridade</li>
           <li>Suporte comunidade</li>
         </ul>
-        <a href="#" onclick="window.location=TRIAL_URL;return false;" class="btn btn-outline">TESTAR GRATIS</a>
+        <div class="plano-cta-wrap">
+          <a href="#" onclick="window.location=TRIAL_URL;return false;" class="btn-plano btn-plano-outline">TESTAR GRATIS</a>
+        </div>
       </div>
 
       <!-- STARTER -->
       <div class="plano-card reveal">
-        <div class="plano-name">STARTER</div>
-        <div class="plano-price">R$97<span>/mes</span></div>
-        <p style="color:var(--fl-success);font-size:11px;margin:8px 0;font-weight:700;">7 DIAS DE GARANTIA</p>
-        <div class="plano-period">Pra validar e comecar a faturar. Cooldown de 60 min entre sites.</div>
+        <div class="plano-head">
+          <div class="plano-name">STARTER</div>
+          <div class="plano-price">R$97<span>/mes</span></div>
+          <p style="color:var(--fl-success);font-size:11px;margin:8px 0;font-weight:700;">7 DIAS DE GARANTIA</p>
+          <div class="plano-period">Pra validar e comecar a faturar. Cooldown de 60 min entre sites.</div>
+        </div>
         <ul class="plano-features">
           <li>Sites ilimitados (cooldown 60min)</li>
           <li>Prospeccao automatica completa</li>
@@ -37,15 +43,19 @@
           <li>Prioridade na fila (nivel 2)</li>
           <li>Suporte WhatsApp</li>
         </ul>
-        <a href="#" onclick="window.location=CHECKOUT_URL+'?plan=starter';return false;" class="btn btn-outline">ASSINAR STARTER</a>
+        <div class="plano-cta-wrap">
+          <a href="#" onclick="window.location=CHECKOUT_URL+'?plan=starter';return false;" class="btn-plano btn-plano-outline">ASSINAR STARTER</a>
+        </div>
       </div>
 
       <!-- PRO (DESTAQUE) -->
       <div class="plano-card destaque reveal">
-        <div class="plano-name">PRO</div>
-        <div class="plano-price">R$197<span>/mes</span></div>
-        <p style="color:var(--cyan);font-size:11px;margin:8px 0;font-weight:700;">MAIS POPULAR</p>
-        <div class="plano-period">Pra quem quer escalar rapido. Cooldown de 30 min. Prioridade alta.</div>
+        <div class="plano-head">
+          <div class="plano-name">PRO</div>
+          <div class="plano-price">R$197<span>/mes</span></div>
+          <p style="color:var(--cyan);font-size:11px;margin:8px 0;font-weight:700;">MAIS POPULAR</p>
+          <div class="plano-period">Pra quem quer escalar rapido. Cooldown de 30 min. Prioridade alta.</div>
+        </div>
         <ul class="plano-features">
           <li>Sites ilimitados (cooldown 30min)</li>
           <li>Prospeccao avancada</li>
@@ -54,16 +64,20 @@
           <li>Prioridade alta na fila (nivel 5)</li>
           <li>Suporte prioritario</li>
         </ul>
-        <a href="#" onclick="window.location=CHECKOUT_URL+'?plan=pro';return false;" class="btn btn-yellow">ASSINAR PRO</a>
-        <p style="font-size:9px;color:#A16207;margin-top:12px;text-align:center;">30 dias de garantia incondicional.</p>
+        <div class="plano-cta-wrap">
+          <a href="#" onclick="window.location=CHECKOUT_URL+'?plan=pro';return false;" class="btn-plano btn-plano-yellow">ASSINAR PRO</a>
+          <p class="plano-micro">30 dias de garantia incondicional.</p>
+        </div>
       </div>
 
       <!-- AGENCY -->
       <div class="plano-card reveal">
-        <div class="plano-name">AGENCY</div>
-        <div class="plano-price">R$497<span>/mes</span></div>
-        <p style="color:var(--gold);font-size:11px;margin:8px 0;font-weight:700;">SEM COOLDOWN</p>
-        <div class="plano-period">Para operações e agências que precisam vender em volume sem esperar fila.</div>
+        <div class="plano-head">
+          <div class="plano-name">AGENCY</div>
+          <div class="plano-price">R$497<span>/mes</span></div>
+          <p style="color:var(--gold);font-size:11px;margin:8px 0;font-weight:700;">SEM COOLDOWN</p>
+          <div class="plano-period">Para operações e agências que precisam vender em volume sem esperar fila.</div>
+        </div>
         <ul class="plano-features">
           <li>Sites ilimitados (sem cooldown)</li>
           <li>Infraestrutura com capacidade ampliada</li>
@@ -73,7 +87,9 @@
           <li>Prioridade máxima na fila</li>
           <li>Onboarding e suporte VIP</li>
         </ul>
-        <a href="#" onclick="window.location=WHATSAPP_URL;return false;" class="btn btn-outline" style="border-color:var(--gold);">ASSINAR AGENCY</a>
+        <div class="plano-cta-wrap">
+          <a href="#" onclick="window.location=WHATSAPP_URL;return false;" class="btn-plano btn-plano-outline btn-plano-gold">ASSINAR AGENCY</a>
+        </div>
       </div>
     </div>
   </div>

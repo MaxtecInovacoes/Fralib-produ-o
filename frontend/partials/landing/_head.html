@@ -1233,9 +1233,14 @@ section{padding:100px 0;position:relative}
    ============================================================ */
 .planos-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin-bottom:36px}
 .plano-card{
-  background:var(--fl-bg-card);border:1px solid var(--fl-border);
-  border-radius:var(--fl-r-lg);text-align:center;
-  padding:28px 20px;transition:all .3s var(--fl-ease);
+  display:flex;
+  flex-direction:column;
+  background:var(--fl-bg-card);
+  border:1px solid var(--fl-border);
+  border-radius:var(--fl-r-lg);
+  text-align:center;
+  padding:28px 20px;
+  transition:all .3s var(--fl-ease);
   position:relative;
 }
 .plano-card:hover{transform:translateY(-4px);box-shadow:0 20px 50px rgba(0,0,0,.3)}
@@ -1250,6 +1255,7 @@ section{padding:100px 0;position:relative}
   background:linear-gradient(135deg,var(--gold),#FF9500);
   color:#000;font-family:var(--fl-font-brand);font-size:7px;letter-spacing:1px;
 }
+.plano-head{flex:0 0 auto}
 .plano-name{
   font-family:var(--fl-font-brand);font-size:10px;letter-spacing:2px;margin-bottom:16px;
 }
@@ -1260,7 +1266,7 @@ section{padding:100px 0;position:relative}
 .plano-price{font-size:clamp(24px,2.5vw,34px);font-weight:800;margin-bottom:2px}
 .plano-price span{font-size:14px;font-weight:400;color:var(--fl-text-muted)}
 .plano-period{font-size:12px;color:var(--fl-text-dim);margin-bottom:20px}
-.plano-features{list-style:none;text-align:left;margin-bottom:24px}
+.plano-features{list-style:none;text-align:left;margin:0 0 20px;padding:0;flex:1 1 auto}
 .plano-features li{
   padding:7px 0;font-size:13px;color:var(--fl-text-muted);
   display:flex;align-items:center;gap:10px;
@@ -1274,63 +1280,92 @@ section{padding:100px 0;position:relative}
 .plano-card:nth-child(2) .plano-features li::before{background:var(--fl-success)}
 .plano-card:nth-child(3) .plano-features li::before{background:var(--gold)}
 .plano-card:nth-child(4) .plano-features li::before{background:var(--cyan)}
-.planos-cta{text-align:center}
 
-/* BOTOES DOS PLANOS - padronizados na mesma linha */
-.plano-card{
-  display:flex;
-  flex-direction:column;
-}
+/* CTA wrapper: empurra botao para o rodape do card */
 .plano-cta-wrap{
   margin-top:auto;
-  padding-top:20px;
-  min-height:110px;
+  padding-top:16px;
   display:flex;
   flex-direction:column;
-  justify-content:flex-end;
-  align-items:stretch;
   gap:6px;
 }
-.plano-cta{
+.plano-micro{
+  font-size:9px;color:#A16207;margin:0;text-align:center;
+}
+.planos-cta{text-align:center}
+
+/* ============================================================
+   SISTEMA DE BOTOES PADRONIZADO (.btn-plano)
+   - Mesma altura, padding, tipografia, raio em todos
+   - Variantes: .btn-plano-outline (escuro) | .btn-plano-yellow (primario)
+   ============================================================ */
+.btn-plano{
   display:flex;
   align-items:center;
   justify-content:center;
   width:100%;
+  min-height:44px;
   height:44px;
+  padding:0 18px;
   font-family:var(--fl-font-brand);
-  font-size:9px;
-  letter-spacing:0.5px;
+  font-size:10px;
+  font-weight:800;
+  letter-spacing:1px;
+  text-transform:uppercase;
   text-align:center;
   text-decoration:none;
   cursor:pointer;
-  transition:all .15s;
-  border:2px solid;
+  border-radius:6px;
   white-space:nowrap;
   overflow:hidden;
   text-overflow:ellipsis;
-  padding:0 8px;
-  border-radius:0;
+  transition:all .15s ease;
+  box-sizing:border-box;
 }
-.plano-cta.cta-outline{
+.btn-plano-outline{
   background:transparent;
   color:var(--fl-text);
-  border-color:var(--fl-border-md);
+  border:2px solid var(--fl-border);
 }
-.plano-cta.cta-outline:hover{
+.btn-plano-outline:hover{
+  background:rgba(255,255,255,0.04);
   border-color:var(--cyan);
   color:var(--cyan);
-  box-shadow:0 0 20px var(--cyan-glow);
+  transform:translateY(-1px);
 }
-.plano-cta.cta-gold{
-  background:var(--gold);
+.btn-plano-outline:active{transform:translateY(0)}
+.btn-plano-yellow{
+  background:#FFB800;
   color:#000;
-  border-color:var(--gold);
-  box-shadow:inset -3px -3px 0 #A16207,inset 3px 3px 0 #FDE68A,0 4px 0 #713F12;
-  font-weight:700;
+  border:2px solid #FFB800;
+  box-shadow:0 4px 12px rgba(255,184,0,0.3);
 }
-.plano-cta.cta-gold:hover{
-  background:#FDE047;
-  box-shadow:inset -3px -3px 0 #A16207,inset 3px 3px 0 #FEF9C3,0 4px 0 #713F12,0 0 20px var(--gold-glow);
+.btn-plano-yellow:hover{
+  background:#FFC833;
+  border-color:#FFC833;
+  transform:translateY(-1px);
+  box-shadow:0 6px 18px rgba(255,184,0,0.5);
+}
+.btn-plano-yellow:active{transform:translateY(0)}
+.btn-plano-gold{
+  border-color:var(--gold);
+  color:var(--gold);
+}
+.btn-plano-gold:hover{
+  border-color:var(--gold);
+  color:#0a0714;
+  background:var(--gold);
+}
+.plano-cta-wrap{
+  margin-top:auto;
+  padding-top:16px;
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+.plano-micro{
+  font-size:9px;color:#A16207;margin:0;text-align:center;
+}
 }
 .plano-garantia{
   font-size:9px;
