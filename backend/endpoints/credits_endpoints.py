@@ -512,7 +512,7 @@ async def criar_pagamento_pix_unico(
         },
         "external_reference": external_reference,
         "notification_url": notification_url,
-        "date_of_expiration": (datetime.utcnow() + timedelta(hours=24)).isoformat() + "Z",
+        "date_of_expiration": (datetime.utcnow() + timedelta(hours=24)).strftime("%Y-%m-%dT%H:%M:%S.000-03:00"),
     }
 
     try:
