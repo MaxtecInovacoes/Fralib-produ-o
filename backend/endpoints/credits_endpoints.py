@@ -262,7 +262,12 @@ def _extrair_usuario_request(request: Request) -> dict:
         payload = _jwt.decode(token, _SECRET_KEY, algorithms=[ALGORITHM])
     except Exception as exc:
         raise HTTPException(401, f"Token invalido: {exc}")
-    user_id = payload.get("sub")
+    user_id_raw = payload.get("sub")
+    # pyjwt exige sub como string; alguns sistemas gravam como int
+    try:
+        user_id = int(user_id_raw) if user_id_raw is not None else None
+    except (TypeError, ValueError):
+        user_id = None
     email = payload.get("email")
     if not user_id:
         raise HTTPException(401, "Token sem user_id")
