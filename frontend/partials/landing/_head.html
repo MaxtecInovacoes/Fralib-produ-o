@@ -153,11 +153,9 @@ section{padding:100px 0;position:relative}
   -webkit-backdrop-filter:blur(18px);
   backdrop-filter:blur(18px);
   border-bottom:1px solid var(--fl-border);
-  transition:padding .25s ease, background .25s ease;
-  padding:32px 0;
   box-sizing:border-box;
 }
-.site-header.scrolled{padding:22px 0;background:rgba(6,6,8,0.97)}
+.site-header.scrolled{background:rgba(6,6,8,0.97)}
 .header-container{
   display:flex;
   align-items:center;
@@ -166,17 +164,19 @@ section{padding:100px 0;position:relative}
   width:100%;
   max-width:1240px;
   margin:0 auto;
-  padding:0 clamp(20px, 4vw, 40px);
+  padding:16px clamp(20px, 4vw, 40px);
+  min-height:76px;
   box-sizing:border-box;
 }
 .header-logo{
-  display:inline-flex;align-items:center;
+  display:flex;align-items:center;align-self:center;
   text-decoration:none;
   flex:0 0 auto;
   line-height:1;
+  max-height:42px;
 }
 .header-logo img{
-  height:44px;width:auto;display:block;
+  height:42px;max-height:42px;width:auto;display:block;
   filter:drop-shadow(0 0 6px rgba(124,58,237,0.35));
   transition:filter .25s ease;
 }
@@ -202,6 +202,7 @@ section{padding:100px 0;position:relative}
 .header-actions{
   display:flex;
   align-items:center;
+  align-self:center;
   gap:12px;
   flex:0 0 auto;
 }
@@ -216,7 +217,8 @@ section{padding:100px 0;position:relative}
 .header-entrar:hover{color:var(--fl-text)}
 .header-cta{
   display:inline-flex;align-items:center;justify-content:center;
-  padding:12px 22px;
+  min-height:42px;height:42px;
+  padding:0 22px;
   font-family:var(--fl-font-brand);
   font-size:10px;
   letter-spacing:1px;
@@ -285,9 +287,9 @@ section{padding:100px 0;position:relative}
 
 /* ===== MOBILE PEQUENO (<560px): reduz logo e CTA ===== */
 @media (max-width:560px){
-  .site-header{padding:20px 0}
-  .header-logo img{height:34px}
-  .header-cta{padding:10px 16px;font-size:9px;letter-spacing:0.5px}
+  .header-container{padding:12px clamp(16px, 4vw, 24px);min-height:64px;gap:12px}
+  .header-logo img{height:32px;max-height:32px}
+  .header-cta{min-height:38px;height:38px;padding:0 14px;font-size:9px;letter-spacing:0.5px}
 }
 
 /* ===== Fallback sem backdrop-filter ===== */
