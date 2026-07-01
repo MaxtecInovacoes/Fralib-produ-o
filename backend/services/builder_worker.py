@@ -44,7 +44,7 @@ _CANONICAL_BUILDER_ENGINE = "vite_react"
 def _apply_canonical_vite_react_runtime_defaults() -> None:
     """Align the official builder runtime with the approved cinematic preview path."""
     os.environ.setdefault("FRALIB_BUILDER_ENGINE", "vite_react")
-    os.environ.setdefault("FRALIB_VITE_LLM_POLICY", "none")
+    os.environ.setdefault("FRALIB_VITE_LLM_POLICY", "full_code")
     os.environ.setdefault("FRALIB_VITE_CINEMATIC_STUDIO", "1")
     os.environ.setdefault("FRALIB_VITE_DISABLE_STUDIO_FALLBACK", "1")
     os.environ.setdefault("FRALIB_ALLOW_OPENUI_FALLBACK", "0")
