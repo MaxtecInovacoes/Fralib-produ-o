@@ -242,25 +242,39 @@ def responder_lead(
 
     IMPORTANTE: Wrapped em _lead_lock_guard para prevenir race condition
     onde 2 threads/processos processam a mesma msg simultaneamente.
+    FAIL-CLOSED: Se Redis offline, retorna erro em vez de processar.
     """
     if not user_id:
         raise ValueError("user_id obrigatorio em responder_lead (multi-tenant)")
 
     # Lock global por lead_id - garante que só 1 execução por vez
     lock_key = lead_id or telefone or ""
-    with _lead_lock_guard(lock_key):
-        return _responder_lead_locked(
-            telefone=telefone,
-            mensagem_recebida=mensagem_recebida,
-            nome_negocio=nome_negocio,
-            lead_id=lead_id,
-            cidade=cidade,
-            segmento=segmento,
-            rating=rating,
-            site_url=site_url,
-            history=history,
-            sdr_stage=sdr_stage,
-            user_id=user_id,
+    try:
+        with _lead_lock_guard(lock_key):
+            return _responder_lead_locked(
+                telefone=telefone,
+                mensagem_recebida=mensagem_recebida,
+                nome_negocio=nome_negocio,
+                lead_id=lead_id,
+                cidade=cidade,
+                segmento=segmento,
+                rating=rating,
+                site_url=site_url,
+                history=history,
+                sdr_stage=sdr_stage,
+                user_id=user_id,
+            )
+    except RuntimeError as e:
+        # Redis offline = fail-closed
+        print(f"[SDR] Lock falhou (Redis offline): {e}")
+        return BryanOutput(
+            reply="",
+            intent="system_error",
+            next_stage="hook",
+            estrategia="retry",
+            proximo_passo="Redis offline - mensagem será reprocessada na proxima tentativa",
+            enviado=False,
+            guard="redis_offline",
         )
 
 

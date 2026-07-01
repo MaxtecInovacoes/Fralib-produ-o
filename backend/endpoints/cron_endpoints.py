@@ -721,3 +721,101 @@ async def queue_stats(x_cron_secret: str = Header(None, alias='X-Cron-Secret')):
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
+
+# ============================================================
+# Health Check: Redis + Sistema
+# ============================================================
+
+@router.get('/health')
+async def health_check(x_cron_secret: str = Header(None, alias='X-Cron-Secret')):
+    """Health check completo do sistema SDR.
+
+    Verifica:
+    - Redis (lock distribuido)
+    - Banco de dados
+    - Meowhats (conectividade)
+
+    Use para cron de monitoramento /healthz.
+    """
+    _autorizar(x_cron_secret)
+
+    result = {
+        "timestamp": datetime.utcnow().isoformat(),
+        "redis": None,
+        "database": None,
+        "meowhats": None,
+    }
+
+    # Redis health check
+    try:
+        from backend.agents.sdr_langgraph.lead_lock import (
+            is_redis_available,
+            get_redis_status,
+            force_redis_reconnect,
+        )
+        redis_status = get_redis_status()
+        if not redis_status.get("available"):
+            # Tenta recovery automático
+            recovered = force_redis_reconnect()
+            redis_status = get_redis_status()
+            redis_status["auto_recovery_attempted"] = True
+            redis_status["recovered"] = recovered
+        result["redis"] = redis_status
+    except Exception as e:
+        result["redis"] = {"available": False, "error": str(e)}
+
+    # Database health check
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        result["database"] = {"available": True}
+    except Exception as e:
+        result["database"] = {"available": False, "error": str(e)}
+
+    # Meowhats health check
+    try:
+        meowhats_url = os.getenv("MEOWHATS_URL", "http://localhost:3001")
+        import httpx
+        with httpx.Client(timeout=5) as client:
+            r = client.get(f"{meowhats_url}/health")
+            result["meowhats"] = {"available": r.status_code == 200, "status_code": r.status_code}
+    except Exception as e:
+        result["meowhats"] = {"available": False, "error": str(e)}
+
+    # Status geral
+    all_healthy = (
+        result["redis"] and result["redis"].get("available", False) and
+        result["database"] and result["database"].get("available", False)
+    )
+    result["status"] = "healthy" if all_healthy else "degraded"
+
+    # Log se não está saudável
+    if not all_healthy:
+        print(f"[Health] ⚠️ Sistema em modo DEGRADADO: {result}")
+
+    return result
+
+
+@router.post('/redis-reconnect')
+async def redis_reconnect(x_cron_secret: str = Header(None, alias='X-Cron-Secret')):
+    """Força tentativa de reconexão ao Redis.
+
+    Útil para recovery manual via cron quando auto-recovery falha.
+    """
+    _autorizar(x_cron_secret)
+
+    try:
+        from backend.agents.sdr_langgraph.lead_lock import (
+            force_redis_reconnect,
+            get_redis_status,
+        )
+        recovered = force_redis_reconnect()
+        status = get_redis_status()
+        return {
+            "status": "ok",
+            "reconnected": recovered,
+            "redis_status": status,
+        }
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
