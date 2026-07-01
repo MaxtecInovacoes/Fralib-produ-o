@@ -97,6 +97,27 @@ def _create_cache(workspace: Path) -> bool:
         return False
 
 
+def _has_vite_react_plugin(workspace: Path) -> bool:
+    return (workspace / "node_modules" / "@vitejs" / "plugin-react").exists()
+
+
+def _ensure_vite_react_plugin(workspace: Path, *, npm: str, timeout: int) -> None:
+    if _has_vite_react_plugin(workspace):
+        return
+    result = subprocess.run(
+        [npm, "install", "--include=dev", "--prefer-offline", "@vitejs/plugin-react@^4.3.3"],
+        capture_output=True,
+        text=True,
+        timeout=timeout,
+        cwd=workspace,
+    )
+    if result.returncode != 0:
+        stderr = result.stderr[-500:] if result.stderr else ""
+        raise RuntimeError(f"npm install @vitejs/plugin-react failed: {stderr}")
+    if not _has_vite_react_plugin(workspace):
+        raise RuntimeError("npm install completed but @vitejs/plugin-react is missing")
+
+
 # ═══════════════════════════════════════════════════════════════════
 # PROJECT FILE OPERATIONS
 # ═══════════════════════════════════════════════════════════════════
@@ -190,6 +211,7 @@ def build_vite_project(
 
             except subprocess.TimeoutExpired:
                 raise RuntimeError(f"npm install timed out after {node_timeout}s")
+        _ensure_vite_react_plugin(workspace, npm=npm, timeout=node_timeout)
 
         # Step 4: vite build
         print("[ViteBuild] Running vite build...")

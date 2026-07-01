@@ -5528,6 +5528,7 @@ def build_vite_project(workspace: Path) -> None:
             timeout=timeout,
             label="npm install",
         )
+    _ensure_vite_react_plugin_installed(workspace, npm_cmd=npm_cmd, timeout=timeout)
     if not preview_fast:
         _run(
             [node_cmd, str(workspace / "node_modules" / "typescript" / "bin" / "tsc"), "--noEmit"],
@@ -5561,6 +5562,7 @@ def build_vite_project(workspace: Path) -> None:
                 timeout=timeout,
                 label="npm install (retry)",
             )
+            _ensure_vite_react_plugin_installed(workspace, npm_cmd=npm_cmd, timeout=timeout)
             _run(
                 [node_cmd, str(workspace / "node_modules" / "vite" / "bin" / "vite.js"), "build"],
                 cwd=workspace,
@@ -5570,6 +5572,23 @@ def build_vite_project(workspace: Path) -> None:
         else:
             raise
     rewrite_vite_dist_asset_paths(workspace / "dist")
+
+
+def _ensure_vite_react_plugin_installed(workspace: Path, *, npm_cmd: str, timeout: int) -> None:
+    """Guarantee vite.config.ts can import @vitejs/plugin-react before build."""
+    plugin_react = workspace / "node_modules" / "@vitejs" / "plugin-react"
+    if plugin_react.exists():
+        return
+    _run(
+        [npm_cmd, "install", "--include=dev", "--ignore-scripts", "--no-audit", "--no-fund", "@vitejs/plugin-react@^4.3.3"],
+        cwd=workspace,
+        timeout=timeout,
+        label="npm install @vitejs/plugin-react",
+    )
+    if not plugin_react.exists():
+        raise ViteReactRenderError(
+            "npm install concluiu, mas node_modules/@vitejs/plugin-react nao existe"
+        )
 
 
 def rewrite_vite_dist_asset_paths(dist_dir: Path) -> None:
