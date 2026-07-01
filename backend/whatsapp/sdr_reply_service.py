@@ -92,7 +92,29 @@ def get_outgoing_formatter(learning_module=None):
     return _format_outgoing_messages
 
 
+def _jaccard_similarity(set1: set, set2: set) -> float:
+    """Calcula similaridade Jaccard entre dois sets."""
+    if not set1 or not set2:
+        return 0.0
+    intersection = len(set1 & set2)
+    union = len(set1 | set2)
+    return intersection / union if union > 0 else 0.0
+
+
+def _words_set(text: str) -> set:
+    """Extrai palavras de um texto (lowercase, sem pontuação)."""
+    import re
+    return set(re.sub(r"[^a-záàâãéèêíïóôõúüç0-9\s]", " ", text.lower()).split())
+
+
 def is_duplicate_reply(history, reply: str) -> bool:
+    """
+    Detecta se a reply é duplicata da última mensagem do bot.
+
+    Usa 2 estratégias:
+    1. Substring exata (mantém compatibilidade com testes)
+    2. Similaridade Jaccard >= 0.7 (detecta msgs com palavras trocadas)
+    """
     try:
         last_bot_msg = next(
             (
@@ -102,7 +124,23 @@ def is_duplicate_reply(history, reply: str) -> bool:
             ),
             "",
         )
-        return bool(last_bot_msg and reply.strip() and reply.strip() in last_bot_msg)
+        if not last_bot_msg or not reply.strip():
+            return False
+
+        reply_clean = reply.strip()
+        bot_clean = last_bot_msg.strip()
+
+        # Estratégia 1: substring exata (comportamento original)
+        if reply_clean in bot_clean:
+            return True
+
+        # Estratégia 2: similaridade Jaccard >= 0.7
+        # Captura msgs com palavras trocadas mas mesmo significado
+        reply_words = _words_set(reply_clean)
+        bot_words = _words_set(bot_clean)
+        similarity = _jaccard_similarity(reply_words, bot_words)
+
+        return similarity >= 0.7
     except Exception:
         return False
 
