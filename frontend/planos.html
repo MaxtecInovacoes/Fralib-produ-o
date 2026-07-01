@@ -127,6 +127,24 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
   .section-title{font-size:10px}
   .btn{width:100%;max-width:300px;justify-content:center}
 }
+
+/* Botao secundario: PAGAR VIA PIX */
+.btn-pix-pill{
+  display:block;
+  margin-top:8px;
+  padding:9px 14px;
+  background:transparent;
+  color:#00C896;
+  border:1px solid #00C896;
+  border-radius:8px;
+  font-weight:700;
+  font-size:11px;
+  letter-spacing:0.5px;
+  text-align:center;
+  text-decoration:none;
+  transition:all 0.15s;
+}
+.btn-pix-pill:hover{background:#00C896;color:#000}
 </style>
 </head>
 <body>
@@ -193,6 +211,7 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
           <li>Suporte WhatsApp</li>
         </ul>
         <a href="#" onclick="return fralibCheckout('starter')" class="btn-plano btn-plano-outline">ASSINAR STARTER</a>
+        <a href="/pagamento/pagar-pix.html?plan=starter" target="_blank" rel="noopener noreferrer" class="btn-pix-pill" title="Pagar mensalmente via PIX sem recorrencia automatica">PAGAR VIA PIX</a>
       </div>
 
       <!-- PRO -->
@@ -211,6 +230,7 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
           <li>Suporte prioritario</li>
         </ul>
         <a href="#" onclick="return fralibCheckout('pro')" class="btn-plano btn-plano-yellow">ASSINAR PRO</a>
+        <a href="/pagamento/pagar-pix.html?plan=pro" target="_blank" rel="noopener noreferrer" class="btn-pix-pill" title="Pagar mensalmente via PIX sem recorrencia automatica">PAGAR VIA PIX</a>
         <p style="font-size:9px;color:#A16207;margin-top:12px;text-align:center;">7 dias de garantia incondicional.</p>
       </div>
 
@@ -230,6 +250,7 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
           <li>Onboarding e suporte VIP</li>
         </ul>
         <a href="#" onclick="return fralibCheckout('agency')" class="btn-plano btn-plano-outline btn-plano-gold">ASSINAR AGENCY</a>
+        <a href="/pagamento/pagar-pix.html?plan=agency" target="_blank" rel="noopener noreferrer" class="btn-pix-pill" title="Pagar mensalmente via PIX sem recorrencia automatica">PAGAR VIA PIX</a>
       </div>
 
     </div>
