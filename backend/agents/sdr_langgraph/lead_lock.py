@@ -116,14 +116,14 @@ def _lead_lock_guard(lead_id: str):
         lock_key = f"fralib:lead_lock:{lead_id}"
         redis_lock = redis_client.lock(
             lock_key,
-            timeout=30.0,
-            blocking_timeout=30.0,
+            timeout=60.0,
+            blocking_timeout=60.0,
         )
         acquired = False
         try:
-            acquired = redis_lock.acquire(blocking=True, blocking_timeout=30.0)
+            acquired = redis_lock.acquire(blocking=True, blocking_timeout=60.0)
             if not acquired:
-                raise TimeoutError(f"Nao conseguiu lock Redis para lead {lead_id} em 30s")
+                raise TimeoutError(f"Nao conseguiu lock Redis para lead {lead_id} em 60s")
             yield redis_lock
         finally:
             if acquired:
@@ -140,9 +140,9 @@ def _lead_lock_guard(lead_id: str):
 
         try:
             # Adquirir lock com timeout para evitar deadlocks
-            acquired = lock.acquire(timeout=30.0)
+            acquired = lock.acquire(timeout=60.0)
             if not acquired:
-                raise TimeoutError(f"Nao conseguiu lock para lead {lead_id} em 30s")
+                raise TimeoutError(f"Nao conseguiu lock para lead {lead_id} em 60s")
 
             yield lock
 
