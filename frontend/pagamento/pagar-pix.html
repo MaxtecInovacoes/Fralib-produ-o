@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Gerar PIX - FraLib</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#0a0714;color:#e5e7eb;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+  .card{max-width:440px;background:#151026;border:1px solid #2a2a30;border-radius:16px;padding:32px;width:100%}
+  .head{display:flex;align-items:center;gap:12px;margin-bottom:24px}
+  .pix-icon{width:48px;height:48px;border-radius:12px;background:rgba(0,200,150,0.15);display:flex;align-items:center;justify-content:center;color:#00C896;font-weight:900;font-size:14px}
+  h1{font-size:20px;font-weight:800;color:#fff}
+  .plano-display{font-size:13px;color:#B8B4C8;margin-top:4px}
+  .plano-display b{color:#00C896}
+  .label{display:block;font-size:12px;color:#7D7890;margin-bottom:6px;margin-top:14px;text-transform:uppercase;letter-spacing:0.5px;font-weight:700}
+  input,select{width:100%;background:#0a0714;border:1px solid #7D7890;color:#fff;padding:14px;border-radius:8px;font-size:14px;font-family:inherit}
+  input:focus,select:focus{outline:none;border-color:#00C896;box-shadow:0 0 0 3px rgba(0,200,150,0.15)}
+  .info{background:rgba(255,184,0,0.06);border:1px solid rgba(255,184,0,0.15);border-radius:8px;padding:14px;margin-top:18px;font-size:12px;color:#B8B4C8;line-height:1.6}
+  .info b{color:#FFB800}
+  .info b.green{color:#00C896}
+  .btn{display:block;width:100%;padding:14px;border-radius:8px;font-weight:800;font-size:13px;letter-spacing:1px;border:none;cursor:pointer;margin-top:20px;text-transform:uppercase;transition:opacity 0.15s}
+  .btn-primary{background:#00C896;color:#000}
+  .btn-primary:hover{background:#0BD9A4}
+  .btn-primary:disabled{opacity:0.5;cursor:not-allowed}
+  .btn-secondary{background:transparent;color:#B8B4C8;border:1px solid #2a2a30;margin-top:8px}
+  .error{background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:8px;padding:12px;margin-top:14px;font-size:13px;color:#ef4444;display:none}
+  .error.show{display:block}
+  .spinner{display:inline-block;width:12px;height:12px;border:2px solid currentColor;border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite;vertical-align:middle;margin-right:6px}
+  @keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="head">
+    <div class="pix-icon">PIX</div>
+    <div>
+      <h1>Pagar com PIX</h1>
+      <div class="plano-display" id="planoDisplay">Plano <b id="planoBold">PRO</b> - pagamento mensal</div>
+    </div>
+  </div>
+
+  <label class="label">Plano</label>
+  <select id="plano">
+    <option value="starter">STARTER - R$ 97,00</option>
+    <option value="pro" selected>PRO - R$ 197,00</option>
+    <option value="agency">AGENCY - R$ 497,00</option>
+  </select>
+
+  <label class="label">Seu e-mail</label>
+  <input type="email" id="email" placeholder="voce@exemplo.com" autocomplete="email" required>
+
+  <div class="info">
+    <b class="green">PIX Mensal:</b> Sem recorrencia automatica - todo mes voce gera um novo PIX por aqui. Pague no app do seu banco, e o acesso libera por 30 dias.
+  </div>
+
+  <div class="info">
+    <b>Cartao (recorrencia):</b> Se preferir pagamento automatico mensal, use a <a href="/planos" style="color:#FFB800;text-decoration:underline">pagina de planos</a> e escolha cartao de credito.
+  </div>
+
+  <div class="error" id="errorBox"></div>
+
+  <button class="btn btn-primary" id="btnGerar" onclick="gerarPIX()">
+    GERAR PIX
+  </button>
+  <a href="/" class="btn btn-secondary" style="text-decoration:none;text-align:center">
+    VOLTAR
+  </a>
+</div>
+
+<script>
+const url = new URLSearchParams(window.location.search);
+const planoParam = url.get('plan') || 'pro';
+document.getElementById('plano').value = planoParam;
+const planLabels = { starter: 'STARTER (R$97)', pro: 'PRO (R$197)', agency: 'AGENCY (R$497)' };
+document.getElementById('planoBold').textContent = planLabels[planoParam] || planLabels.pro;
+
+async function gerarPIX() {
+  const btn = document.getElementById('btnGerar');
+  const errorBox = document.getElementById('errorBox');
+  errorBox.classList.remove('show');
+
+  const plano = document.getElementById('plano').value;
+  const email = document.getElementById('email').value.trim();
+
+  if (!email || !email.includes('@') || email.indexOf('@') < 1) {
+    errorBox.textContent = 'Por favor informe um e-mail valido.';
+    errorBox.classList.add('show');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>GERANDO PIX...';
+
+  try {
+    const r = await fetch('/api/credits/criar-pagamento-pix', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ plano, email })
+    });
+    const data = await r.json();
+
+    if (!r.ok) {
+      throw new Error(data.detail || 'Erro ao gerar PIX');
+    }
+
+    // Salva pagamento completo e redireciona pra pagina do QR
+    sessionStorage.setItem('fralib_pix_payment', JSON.stringify(data));
+    window.location.href = data.redirect || `/pagamento/pix-manual?payment_id=${data.payment_id}&plano=${plano}`;
+  } catch (err) {
+    errorBox.textContent = err.message || 'Erro ao gerar PIX. Tente novamente.';
+    errorBox.classList.add('show');
+    btn.disabled = false;
+    btn.innerHTML = 'GERAR PIX';
+  }
+}
+
+// Auto-clica se vier com plan
+if (url.get('plan') && url.get('email')) {
+  document.getElementById('email').value = url.get('email');
+}
+</script>
+</body>
+</html>

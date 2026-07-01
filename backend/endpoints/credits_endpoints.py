@@ -1,4 +1,5 @@
 from decimal import Decimal, ROUND_DOWN
+from datetime import datetime, timedelta
 from typing import Optional
 import hashlib
 import hmac
@@ -59,6 +60,11 @@ class CheckoutRequest(BaseModel):
 class CheckoutAnonimoRequest(BaseModel):
     plano: str = Field(..., description="starter, pro ou agency")
     email: str = Field(..., description="Email para vinculacao pos-cadastro")
+
+
+class CheckoutPixUnicoRequest(BaseModel):
+    plano: str = Field(..., description="starter, pro ou agency")
+    email: str = Field(..., description="Email do pagador para recibo/PIX")
 
 
 class MercadoPagoSyncRequest(BaseModel):
@@ -451,6 +457,99 @@ async def _get_user_from_request(request: Request, db: Session):
         return await get_current_user(request=request)
     except Exception:
         return None
+
+
+@router.post("/criar-pagamento-pix")
+async def criar_pagamento_pix_unico(
+    body: CheckoutPixUnicoRequest,
+    request: Request,
+):
+    """Cria pagamento PIX unico (sem recorrencia) via /v1/payments do Mercado Pago.
+
+    Limitacao conhecida: o endpoint /preapproval do MP nao expoe PIX como opcao
+    para clientes de assinatura recorrente no Brasil. Por isso, oferecemos o
+    pagamento avulso (mensalidade paga via PIX todo mes) por este endpoint.
+
+    Fluxo:
+      1. Cliente clica ASSINAR PRO -> escolhe "Pagar via PIX"
+      2. Backend cria pagamento avulso de R$ 197 com expiracao de 24h
+      3. Retorna qr_code (texto copia-cola) e qr_code_base64 (imagem PNG)
+      4. Frontend exibe tela /pagamento/pix-manual com QR Code
+      5. Cliente paga no app do banco
+      6. Webhook dispara -> libera 30 dias de acesso
+      7. Mes seguinte: cliente gera novo pagamento PIX manualmente
+    """
+    email = (body.email or "").strip().lower()
+    plano = (body.plano or "").strip().lower()
+
+    if not email or "@" not in email or len(email) < 5:
+        raise HTTPException(400, "Email invalido para geracao do PIX.")
+    if plano not in PLANOS:
+        raise HTTPException(400, f"Plano invalido. Use: {', '.join(PLANOS.keys())}.")
+
+    config = PLANOS[plano]
+    app_url = _app_url()
+    notification_url = _notification_url()
+
+    # Nome derivado do email (PIX exige first/last name)
+    email_user = email.split("@")[0]
+    nome_parte = email_user.replace(".", " ").replace("_", " ").title()
+    nome_parts = nome_parte.split(" ", 1)
+    first_name = nome_parts[0] if len(nome_parts) >= 1 else "Cliente"
+    last_name = nome_parts[1] if len(nome_parts) >= 2 else "FraLib"
+
+    external_reference = f"fralib:pix:{plano}:{uuid.uuid4().hex[:12]}"
+    idempotency_key = f"fralib_pix_{uuid.uuid4().hex}"
+
+    payload = {
+        "transaction_amount": float(config["valor"]),
+        "description": config["titulo"],
+        "payment_method_id": "pix",
+        "payer": {
+            "email": email,
+            "first_name": first_name,
+            "last_name": last_name,
+        },
+        "external_reference": external_reference,
+        "notification_url": notification_url,
+        "date_of_expiration": (datetime.utcnow() + timedelta(hours=24)).isoformat() + "Z",
+    }
+
+    try:
+        response = requests.post(
+            f"{MERCADOPAGO_API_BASE}/v1/payments",
+            headers={
+                **_mercadopago_headers(),
+                "X-Idempotency-Key": idempotency_key,
+            },
+            json=payload,
+            timeout=20,
+        )
+        response.raise_for_status()
+    except requests.RequestException as exc:
+        detail = getattr(exc.response, "text", "")[:400] if getattr(exc, "response", None) is not None else str(exc)
+        raise HTTPException(502, f"Erro ao gerar PIX no Mercado Pago: {detail}")
+
+    data = response.json()
+    poi = data.get("point_of_interaction", {}).get("transaction_data", {})
+    qr_code = poi.get("qr_code", "")
+    qr_base64 = poi.get("qr_code_base64", "")
+    ticket_url = poi.get("ticket_url", "")
+
+    return {
+        "status": "ok",
+        "payment_id": data.get("id"),
+        "external_reference": external_reference,
+        "plano": plano,
+        "valor": float(config["valor"]),
+        "qr_code": qr_code,
+        "qr_code_base64": qr_base64,
+        "ticket_url": ticket_url,
+        "expira_em": data.get("date_of_expiration"),
+        "redirect": f"/pagamento/pix-manual?payment_id={data.get('id')}&plano={plano}",
+        "payment_methods_available": ["pix"],
+        "kind": "pix_unique_monthly",
+    }
 
 
 def _post_mercadopago(path: str, payload: dict) -> dict:
