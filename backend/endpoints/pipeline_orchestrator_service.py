@@ -2707,6 +2707,23 @@ async def executar_pipeline_completo(
                     conn.commit()
             except Exception:
                 pass
+            # Marcar lead_inventory com error_retry para não perder o lead
+            try:
+                from backend.services.lead_supply_inventory import handle_pipeline_job_finished
+                from backend.core.database import SessionLocal
+                _inv_payload = {"_inventory_id": getattr(state, "_inventory_id", None)}
+                _inv_job = {"payload": _inv_payload, "tenant_id": tenant_id}
+                with SessionLocal() as _inv_db:
+                    handle_pipeline_job_finished(
+                        db=_inv_db,
+                        job=_inv_job,
+                        success=False,
+                        job_status="error",
+                        fase=_fase_erro,
+                        mensagem=str(e)[:200],
+                    )
+            except Exception as _inv_err:
+                print(f"[Pipeline] Erro ao marcar lead_inventory: {_inv_err}")
         # PRD #6: Ledger — salvar com erro
         if _ledger:
             _fase_atual = _ledger.assignments.get("fase_atual", 0)

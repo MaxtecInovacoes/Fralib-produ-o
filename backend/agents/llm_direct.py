@@ -89,11 +89,12 @@ from backend.agents.llm_tracking import (
 # ─────────────────────────────────────────────────────────────────
 # PUBLIC API — call_claude + cascata fallback
 # ─────────────────────────────────────────────────────────────────
+# Cascata de 3 modelos: opus -> sonnet -> haiku
+# Se Modelo A falhar → tenta B → tenta C (fail-fast se todos falharem)
 FALLBACK_MODELS = [
-    "claude-opus-4-8",    # mais caro, mais capaz
-    "claude-opus-4-7",
-    "claude-sonnet-4-6",  # atual, mid-tier
-    "claude-haiku-4-5",   # mais barato
+    "claude-opus-4-8",     # principal, mais capaz
+    "claude-sonnet-4-6",  # backup 1
+    "claude-haiku-4-5",    # backup 2
 ]
 
 
@@ -108,34 +109,58 @@ def _call_claude_with_fallback(
     respect_agent_config=True,
     enable_context=True,
 ):
-    """Chama Claude com 1 retry em caso de erro transitório.
+    """Chama Claude com cascata de 3 modelos diferentes.
 
-    Fail-fast: se retry também falhar, lança erro imediatamente.
-    Não usa cascata de modelos — usa o modelo solicitado.
+    Se Modelo A falhar → tenta Modelo B → tenta Modelo C.
+    Se todos falharem → LLMError (fail-fast, sem fallback).
+
+    Timeout: retry automático em caso de erro transitório.
     """
+    # Mapear aliases curtos para IDs completos
+    model_prefixes = {
+        "opus": "claude-opus-4-8",
+        "sonnet": "claude-sonnet-4-6",
+        "haiku": "claude-haiku-4-5",
+    }
+    requested_model = model_prefixes.get(model.lower(), model)
+
+    # Cascata: modelo solicitado primeiro, depois os outros 2
+    models_to_try = [requested_model] + [m for m in FALLBACK_MODELS if m != requested_model]
+
     last_error = None
-    for attempt in range(1, 3):  # 2 tentativas: original + 1 retry
+    for idx, model_id in enumerate(models_to_try, 1):
+        print(f"[LLM Cascade] Tentando {idx}/3: {model_id}")
         try:
             return call_claude(
                 system=system,
                 user=user,
-                model=model,
+                model=model_id,
                 max_tokens=max_tokens,
                 temperature=temperature,
                 agent_name=agent_name,
                 base_url=base_url,
-                respect_agent_config=respect_agent_config,
+                respect_agent_config=False,  # Não respeitar config DB na cascata
                 enable_context=enable_context,
             )
         except Exception as e:
             last_error = e
-            print(f"[LLM Retry] Tentativa {attempt} falhou: {str(e)[:100]}")
-            if attempt == 2:
-                # Já fez retry, não há mais o que tentar
-                break
-            continue
+            print(f"[LLM Cascade] {model_id} falhou: {str(e)[:100]}")
+            if idx < len(models_to_try):
+                print(f"[LLM Cascade] Tentando próximo modelo...")
+                continue
+            # Último modelo falhou
+            break
 
-    raise last_error or RuntimeError("[LLM] Falhou sem具体的 erro")
+    # Todos os 3 modelos falharam → fail-fast
+    from backend.pipeline_exceptions import LLMError
+    raise LLMError(
+        f"LLM: Todos os 3 modelos falharam. Ultimo erro: {last_error}",
+        context={
+            "modelos_tentados": models_to_try,
+            "ultimo_erro": str(last_error) if last_error else None,
+            "acao": "Verifique conectividade, budget, e tente novamente",
+        },
+    )
 
 
 def call_claude(
@@ -489,11 +514,11 @@ def call_claude(
             _ia.mark_success(_key_id)
         return chat_text
 
-    # ── SDK retry loop (1 retry = 2 tentativas total) ──
-    MAX_ATTEMPTS = 2
+    # ── SDK retry loop (3 retries com timeout = 4 tentativas por modelo) ──
+    MAX_ATTEMPTS = 4
     response = None
     print(
-        f"[LLM] model={model_id} cache={'on' if cache_ativo else 'off'} agent={agent_name or '-'}"
+        f"[LLM] model={model_id} cache={'on' if cache_ativo else 'off'} agent={agent_name or '-'} max_attempts={MAX_ATTEMPTS}"
     )
 
     for _attempt in range(1, MAX_ATTEMPTS + 1):
@@ -721,7 +746,7 @@ def call_claude_structured(
     except Exception:
         _ia = None
 
-    for _attempt in range(1, 3):  # 2 tentativas: original + 1 retry
+    for _attempt in range(1, 4):  # 3 retries = 4 tentativas total
         _enforce_call_spacing()
         client = _create_client(_api_key, _base)
         try:

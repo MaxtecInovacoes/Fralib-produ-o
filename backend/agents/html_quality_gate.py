@@ -263,8 +263,14 @@ def sanitize_builder_html_for_publication(
             if 'name="twitter:description"' not in cleaned.lower():
                 cleaned = re.sub(r"(?is)</head>", f'<meta name="twitter:description" content="{_escape(og_desc)}">\n</head>', cleaned, count=1)
     # og:image
+    og_image = _get_og_image_from_prd(prd)
+    if not og_image:
+        from backend.pipeline_exceptions import ImageNotAvailableError
+        raise ImageNotAvailableError(
+            "og:image: Sem OG image no PRD.",
+            context={"acao": "Forneca og_image no lead ou use unsplash_fetcher"},
+        )
     if 'property="og:image"' not in low or 'content=""' in low:
-        og_image = _get_og_image_from_prd(prd) or "https://images.unsplash.com/photo-1497366216548-37526070297c?w=1200&h=630&fit=crop"
         cleaned = re.sub(
             r'(?is)(<meta\s+property=["\']og:image["\']\s+content=)""',
             f'\\1"{_escape(og_image)}"',
@@ -272,8 +278,6 @@ def sanitize_builder_html_for_publication(
         )
         if 'property="og:image"' not in cleaned.lower():
             cleaned = re.sub(r"(?is)</head>", f'<meta property="og:image" content="{_escape(og_image)}">\n</head>', cleaned, count=1)
-    else:
-        og_image = _get_og_image_from_prd(prd) or "https://images.unsplash.com/photo-1497366216548-37526070297c?w=1200&h=630&fit=crop"
     if canonical:
         if re.search(r'(?is)<link\s+rel=["\']canonical["\']\s+href=["\'][^"\']*["\']', cleaned):
             cleaned = re.sub(

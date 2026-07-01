@@ -2,6 +2,8 @@
 
 This module contains functions for handling editorial images, media URLs,
 and text cleaning used across the pipeline.
+
+Fail-fast: não usa fotos hardcoded. Se lead não tem fotos, lança erro.
 """
 
 from __future__ import annotations
@@ -15,38 +17,10 @@ from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
 import httpx
 
+from backend.pipeline_exceptions import ImageNotAvailableError
 
-NICHE_MEDIA_LIBRARY: dict[str, dict[str, Any]] = {
-    "nutricionista": {
-        "aliases": ("nutricionista", "nutricao", "nutrição", "nutricional"),
-        "photos": [
-            "https://images.unsplash.com/photo-1490645935967-10de6ba17061?auto=format&fit=crop&w=1600&q=80",
-            "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=1600&q=80",
-            "https://images.unsplash.com/photo-1498837167922-ddd27525d352?auto=format&fit=crop&w=1600&q=80",
-            "https://images.unsplash.com/photo-1505576399279-565b52d4ac71?auto=format&fit=crop&w=1600&q=80",
-            "https://images.unsplash.com/photo-1467453678174-768ec283a940?auto=format&fit=crop&w=1600&q=80",
-        ],
-        "og_image": "https://images.unsplash.com/photo-1490645935967-10de6ba17061?auto=format&fit=crop&w=1600&q=80",
-    },
-    "academia": {
-        "aliases": ("academia", "fitness", "gym", "crossfit", "musculacao", "musculação"),
-        "photos": [
-            "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?auto=format&fit=crop&w=1600&q=80",
-            "https://images.unsplash.com/photo-1518611012118-696072aa579a?auto=format&fit=crop&w=1600&q=80",
-            "https://images.unsplash.com/photo-1571902943202-507ec2618e8f?auto=format&fit=crop&w=1600&q=80",
-        ],
-        "og_image": "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?auto=format&fit=crop&w=1600&q=80",
-    },
-    "clinica": {
-        "aliases": ("clinica", "clínica", "medico", "médico", "saude", "saúde"),
-        "photos": [
-            "https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&w=1600&q=80",
-            "https://images.unsplash.com/photo-1584515933487-779824d29309?auto=format&fit=crop&w=1600&q=80",
-            "https://images.unsplash.com/photo-1666214280557-f1b5022eb634?auto=format&fit=crop&w=1600&q=80",
-        ],
-        "og_image": "https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&w=1600&q=80",
-    },
-}
+
+NICHE_MEDIA_LIBRARY: dict[str, dict[str, Any]] = {}  # Deprecado: não usar mais fallback de fotos
 
 
 def is_supported_editorial_image_url(url: str) -> bool:
@@ -136,36 +110,22 @@ def editorial_image_reachable(url: str) -> bool:
 
 
 def media_defaults_for_segment(segmento: Any) -> dict[str, Any]:
-    """Get default media library for a segment.
+    """DEPRECADO: Não use mais fotos hardcoded.
 
-    Returns curated photos and OG image for the given segment,
-    or generic defaults if segment not found.
+    Esta função agora lança erro em vez de retornar fallbacks.
 
-    Args:
-        segmento: The business segment to get defaults for.
+    Raises:
+        ImageNotAvailableError: Sempre — não há mais fallbacks de imagem.
 
-    Returns:
-        Dictionary with 'photos' and 'og_image' keys.
-
-    Example:
-        >>> defaults = media_defaults_for_segment("nutricionista")
-        >>> "photos" in defaults
-        True
+    Use fotos reais do lead ou use unsplash_fetcher.buscar_fotos().
     """
-    from backend.services.pipeline_validators import normalize_segment
-
-    normalized = normalize_segment(segmento)
-    for key, item in NICHE_MEDIA_LIBRARY.items():
-        aliases = {normalize_segment(alias) for alias in item.get("aliases") or ()}
-        if normalized == normalize_segment(key) or normalized in aliases:
-            return item
-    return {
-        "photos": [
-            "https://images.unsplash.com/photo-1524758631624-e2822e304c36?auto=format&fit=crop&w=1600&q=80",
-            "https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=1600&q=80",
-        ],
-        "og_image": "https://images.unsplash.com/photo-1524758631624-e2822e304c36?auto=format&fit=crop&w=1600&q=80",
-    }
+    raise ImageNotAvailableError(
+        f"media_defaults_for_segment: Sem fotos default para '{segmento}'.",
+        context={
+            "segmento": str(segmento),
+            "acao": "Forneca fotos reais do lead ou use unsplash_fetcher.buscar_fotos()",
+        },
+    )
 
 
 def deterministic_media_bundle(
@@ -173,40 +133,39 @@ def deterministic_media_bundle(
     raw_photos: Any,
     raw_og_image: Any = "",
 ) -> tuple[list[str], str]:
-    """Build a deterministic media bundle from photos and OG image.
+    """Build a deterministic media bundle from photos provided by lead.
 
-    Merges provided photos with defaults, ensuring uniqueness and
-    reachability. Selects OG image from photos or defaults.
+    Fail-fast: se não houver fotos fornecidas, lança erro.
+    Não usa mais fallbacks de fotos.
 
     Args:
-        segmento: The business segment for defaults.
-        raw_photos: List of photo URLs or dicts with url/src keys.
+        segmento: The business segment (informational only).
+        raw_photos: List of photo URLs or dicts with url/src keys. REQUIRED.
         raw_og_image: Optional OG image URL.
 
     Returns:
         Tuple of (photos list, og_image URL).
 
-    Example:
-        >>> photos, og = deterministic_media_bundle("nutricionista", [], "")
-        >>> len(photos) > 0
-        True
+    Raises:
+        ImageNotAvailableError: Se raw_photos estiver vazio ou inválido.
     """
     photos = extract_media_urls(raw_photos)
-    defaults = media_defaults_for_segment(segmento)
-    default_photos = [
-        normalized
-        for raw in list(defaults.get("photos") or [])
-        if (normalized := normalize_editorial_image_url(raw))
-        and editorial_image_reachable(normalized)
-    ]
-    merged = list(dict.fromkeys(photos + default_photos))[:8]
+
+    if not photos:
+        raise ImageNotAvailableError(
+            "deterministic_media_bundle: Nenhuma foto fornecida para o lead.",
+            context={
+                "segmento": str(segmento),
+                "acao": "Forneca fotos reais do cliente ou use unsplash_fetcher.buscar_fotos()",
+            },
+        )
+
     og_image = normalize_editorial_image_url(raw_og_image, og=True)
     if not og_image or not editorial_image_reachable(og_image):
-        candidate = str((merged[:1] or [defaults.get("og_image") or ""])[0] or "")
-        og_image = normalize_editorial_image_url(candidate, og=True)
-    if og_image and og_image not in merged and editorial_image_reachable(og_image):
-        merged = [og_image, *merged][:8]
-    return merged, og_image
+        # Usar primeira foto como OG se não fornecer uma
+        og_image = normalize_editorial_image_url(photos[0], og=True)
+
+    return photos[:8], og_image
 
 
 def extract_media_urls(raw: Any) -> list[str]:

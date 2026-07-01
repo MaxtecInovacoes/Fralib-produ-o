@@ -171,19 +171,6 @@ def msg_hash(text: str) -> str:
     return hashlib.sha256(text.lower().strip().encode("utf-8")).hexdigest()[:16]
 
 
-def pick_abertura(context: str = "lead_novo") -> str:
-    """Pega uma abertura variavel."""
-    pool = ABERTURAS.get(context, ABERTURAS["lead_novo"])
-    return random.choice(pool)
-
-
-def pick_closing(use_wall_street: bool = False, segment: str = "") -> str:
-    """Pega um closing natural ou Wall Street close."""
-    if use_wall_street:
-        return random.choice(WALL_STREET_CLOSES)
-    return random.choice(CLOSINGS_NATURAIS)
-
-
 def pick_wall_street_close(segment: str = "") -> str:
     """Wrapper retrocompativel: pega Wall Street close especifico do segmento."""
     base = random.choice(WALL_STREET_CLOSES)
@@ -191,23 +178,6 @@ def pick_wall_street_close(segment: str = "") -> str:
     if segment and "modelo pronto pro seu segmento" in base:
         return base.replace("pro seu segmento", f"pro {segment}")
     return base
-
-
-def inject_variation(msg: str) -> str:
-    """Injega variação sutil pra evitar repetição (ex: 'Tá' em vez de 'Está')."""
-    substitutions = [
-        (r"\bestá\b", "tá"),
-        (r"\bvocê\b", "vc"),
-        (r"\bpara\b", "pra"),
-        (r"\bcom\b", "cm"),
-        (r"\bmuito\b", "mt"),
-        (r"\bestou\b", "tô"),
-    ]
-    out = msg
-    for pattern, repl in substitutions:
-        if random.random() < 0.3:  # 30% chance de aplicar
-            out = re.sub(pattern, repl, out, flags=re.IGNORECASE)
-    return out
 
 
 def is_robot_like(msg: str) -> bool:
@@ -223,37 +193,3 @@ def is_robot_like(msg: str) -> bool:
         r"💪🔥🚀|✨💯|🎉🎊",
     ]
     return any(re.search(p, msg) for p in robot_signals)
-
-
-def build_humanization_profile(history: list[dict[str, Any]]) -> dict[str, Any]:
-    """Constroi perfil de humanização baseado no histórico do lead."""
-    if not history:
-        return {"avg_response_time_min": None, "msg_length_pref": "unknown"}
-    inbound_msgs = [m for m in history if m.get("direction") == "inbound"]
-    if not inbound_msgs:
-        return {"avg_response_time_min": None, "msg_length_pref": "unknown"}
-    avg_len = sum(len(m.get("text", "")) for m in inbound_msgs) / len(inbound_msgs)
-    if avg_len < 50:
-        length_pref = "short"
-    elif avg_len < 200:
-        length_pref = "medium"
-    else:
-        length_pref = "long"
-    # Calcula tempo médio entre msgs
-    times = [m.get("criado_em") for m in inbound_msgs if m.get("criado_em")]
-    if len(times) >= 2:
-        try:
-            from datetime import datetime
-            parsed = [datetime.fromisoformat(t) if isinstance(t, str) else t for t in times]
-            diffs = [(parsed[i] - parsed[i - 1]).total_seconds() / 60 for i in range(1, len(parsed))]
-            avg_min = sum(diffs) / len(diffs) if diffs else None
-        except Exception:
-            avg_min = None
-    else:
-        avg_min = None
-    return {
-        "avg_response_time_min": avg_min,
-        "msg_length_pref": length_pref,
-        "total_msgs": len(inbound_msgs),
-        "uses_emoji": any(ord(c) > 127 for m in inbound_msgs for c in m.get("text", "") for c in c if 0x1F300 <= ord(c) <= 0x1FAFF),
-    }

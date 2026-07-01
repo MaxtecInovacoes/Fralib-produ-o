@@ -152,37 +152,3 @@ def _notify_closer_via_whatsapp(
         log.info(f"[HANDOFF] Notificaria closer {closer_phone}: {message[:120]}")
     except Exception as e:
         log.warning(f"[HANDOFF] Erro ao notificar closer: {e}")
-
-
-def should_handoff(memory: Any, current_msg: str) -> tuple[bool, str]:
-    """Decide se deve fazer handoff para closer humano.
-
-    Returns:
-        (should_handoff: bool, reason: str)
-    """
-    # 1. BANT completo + lead pediu fechamento
-    bant_complete = bool(memory.bant_budget and memory.bant_authority and memory.bant_timeline)
-    if bant_complete and memory.stage in ("close", "won"):
-        return True, "bant_complete_close"
-
-    # 2. Lead pediu contato humano explicitamente
-    triggers_human = ["falar com humano", "pessoa real", "atendente", "gerente", "responsavel"]
-    msg_lower = current_msg.lower()
-    if any(t in msg_lower for t in triggers_human):
-        return True, "lead_pediu_humano"
-
-    # 3. Lead quente (respondeu rapido + quer ver)
-    if memory.lead_temperature == "quente" and memory.stage in ("reveal", "feedback"):
-        return True, "lead_quente_revel"
-
-    # 4. Score alto de qualificacao
-    bant_score = (
-        (10 if memory.bant_budget else 0)
-        + (5 if memory.bant_authority else 0)
-        + memory.bant_need_score
-        + (10 if memory.bant_timeline else 0)
-    )
-    if bant_score >= 25 and memory.stage == "close":
-        return True, "bant_score_alto"
-
-    return False, ""

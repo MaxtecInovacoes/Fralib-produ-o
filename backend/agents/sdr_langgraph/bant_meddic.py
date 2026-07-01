@@ -288,13 +288,3 @@ def compute_meddic(messages: list[str]) -> MeddicResult:
         champion=champion,
         total_score=min(score, 10),
     )
-
-
-def lead_temperature(bant: BantResult, meddic: MeddicResult) -> str:
-    """Infere temperatura do lead baseado em BANT + MEDDIC."""
-    score = bant.total_score + meddic.total_score
-    if score >= 30:
-        return "quente"
-    if score >= 15:
-        return "morno"
-    return "frio"

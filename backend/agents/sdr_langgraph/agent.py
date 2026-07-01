@@ -84,18 +84,6 @@ class SDRFallbackError(Exception):
     pass
 
 
-def _fallback_reply(stage: str, memory: LeadMemory, incoming: str = "") -> tuple[str, str]:
-    """REMOVIDO: Sistema NAO pode usar fallbacks pre-definidos.
-
-    Se LLM falhar, deve lancar SDRFallbackError para o sistema tentar novamente.
-    Respostas geradas por template sao ruins - sempre repetitivas.
-    """
-    raise SDRFallbackError(
-        f"LLM falhou no stage '{stage}'. "
-        "Sistema NAO pode usar fallback. Deve registrar erro e tentar novamente."
-    )
-
-
 def _next_stage(current: str, suggested: str, fallback: str) -> str:
     current = current or "hook"
     suggested = suggested or fallback or current

@@ -251,7 +251,10 @@ def _visual_business_payload(facts: dict[str, Any]) -> dict[str, str]:
 
 
 def _visual_media_urls(facts: dict[str, Any]) -> list[str]:
-    """Retorna URLs de imagens para uso nos templates de componentes."""
+    """Retorna URLs de imagens para uso nos templates de componentes.
+
+    Fail-fast: retorna lista vazia se não houver fotos — não usa fallbacks.
+    """
     business = _facts_business(facts)
     media = facts.get("media") if isinstance(facts.get("media"), dict) else {}
     urls: list[str] = []
@@ -259,25 +262,11 @@ def _visual_media_urls(facts: dict[str, Any]) -> list[str]:
         if isinstance(source, list):
             urls.extend(str(item or "").strip() for item in source if str(item or "").strip())
     if not urls:
-        segment = _normalize_text(str(business.get("segment") or business.get("segmento") or facts.get("segmento") or ""))
-        if "nutric" in segment:
-            urls = [
-                "https://images.unsplash.com/photo-1498837167922-ddd27525d352?auto=format&fit=crop&w=1600&q=82",
-                "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=1400&q=82",
-                "https://images.unsplash.com/photo-1543352634-a1c51d9f1fa7?auto=format&fit=crop&w=1400&q=82",
-            ]
-        elif any(token in segment for token in ("academia", "fitness", "treino")):
-            urls = [
-                "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?auto=format&fit=crop&w=1600&q=82",
-                "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?auto=format&fit=crop&w=1400&q=82",
-                "https://images.unsplash.com/photo-1518611012118-696072aa579a?auto=format&fit=crop&w=1400&q=82",
-            ]
-        else:
-            urls = [
-                "https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=1600&q=82",
-                "https://images.unsplash.com/photo-1556761175-b413da4baf72?auto=format&fit=crop&w=1400&q=82",
-                "https://images.unsplash.com/photo-1551836022-d5d88e9218df?auto=format&fit=crop&w=1400&q=82",
-            ]
+        from backend.pipeline_exceptions import ImageNotAvailableError
+        raise ImageNotAvailableError(
+            "_visual_media_urls: Sem imagens no facts.",
+            context={"segmento": business.get("segment", ""), "acao": "Forneca fotos no lead"},
+        )
     return list(dict.fromkeys(urls))[:5]
 
 
