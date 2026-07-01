@@ -169,6 +169,9 @@ def _summarize_history(messages: list) -> str:
     (pega top-3 mensagens mais longas + intents detectados).
     Usado por history_helper.py quando > 30 mensagens.
     """
+    import logging
+    logger = logging.getLogger("sdr")
+
     if not messages:
         return ""
     intents_seen = []
@@ -193,7 +196,7 @@ def _summarize_history(messages: list) -> str:
         if summary and len(summary) < 1000:
             return summary[:250]
     except Exception as e:
-        pass
+        logger.warning(f"[sdr] _summarize_history Haiku falhou: {e} - usando extractive fallback")
     if snippets:
         return " | ".join(snippets[-3:])[:250]
     return ""
