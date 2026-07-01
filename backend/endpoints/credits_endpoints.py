@@ -227,11 +227,74 @@ async def criar_portal_session(
     }
 
 
+def _extrair_usuario_request(request: Request) -> dict:
+    """Extrai usuario do cookie fralib_session ou Authorization header (JWT).
+    Levanta HTTPException 401 se nao autenticado.
+    """
+    from backend.core.database import engine
+    from sqlalchemy import text as _text
+    from backend.core.auth import _token_from_request, _verify_cookie_csrf
+    from backend.core.jwt_config import SECRET_KEY, ALGORITHM
+    import jwt as _jwt
+
+    # Tenta pegar credenciais do header
+    auth = request.headers.get("Authorization", "")
+    credentials = None
+    if auth.startswith("Bearer "):
+        from fastapi.security import HTTPAuthorizationCredentials
+        credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials=auth[7:])
+
+    try:
+        token, used_cookie = _token_from_request(credentials, request)
+    except HTTPException:
+        raise HTTPException(401, "Autenticacao necessaria para checkout.")
+
+    # Valida CSRF se for via cookie
+    if used_cookie:
+        try:
+            _verify_cookie_csrf(request, used_cookie)
+        except HTTPException:
+            raise HTTPException(401, "CSRF token invalido")
+
+    # Decodifica JWT
+    try:
+        payload = _jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+    except Exception as exc:
+        raise HTTPException(401, f"Token invalido: {exc}")
+    user_id = payload.get("sub")
+    email = payload.get("email")
+    if not user_id:
+        raise HTTPException(401, "Token sem user_id")
+
+    # Carrega usuario do banco
+    try:
+        with engine.connect() as conn:
+            row = conn.execute(
+                _text("SELECT id, email, plano, status, creditos, creditos_max, role, tenant_id FROM users WHERE id=:id"),
+                {"id": int(user_id)},
+            ).fetchone()
+            if not row:
+                raise HTTPException(401, "Usuario nao encontrado")
+            return {
+                "id": int(row[0]),
+                "email": row[1] or email,
+                "plano": row[2] or "trial",
+                "status": row[3] or "ativo",
+                "creditos": row[4] or 0,
+                "creditos_max": row[5] or 5,
+                "role": row[6] or "user",
+                "tenant_id": row[7],
+            }
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(401, f"Erro ao carregar usuario: {exc}")
+
+
 @router.post("/criar-checkout")
 async def criar_checkout(
     body: CheckoutRequest,
     request: Request,
-    db: Session = Depends(get_db),
 ):
     """Cria checkout MercadoPago via sessao de cookie (sem Bearer token).
     Se nao autenticado, retorna 401 para o frontend redirecionar para cadastro.
@@ -240,13 +303,7 @@ async def criar_checkout(
     if not plano:
         raise HTTPException(400, "Plano invalido.")
 
-    # Pega usuario via sessao de cookie (Authorization OU cookie fralib_session)
-    try:
-        usuario = await get_current_user(request=request)
-    except HTTPException as exc:
-        if exc.status_code in (401, 403):
-            raise HTTPException(401, "Autenticacao necessaria para checkout.")
-        raise
+    usuario = _extrair_usuario_request(request)
 
     if body.valor is not None:
         return _criar_recarga_mercadopago(body.valor, usuario)
