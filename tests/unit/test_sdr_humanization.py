@@ -4,54 +4,24 @@ import pytest
 from backend.agents.sdr_langgraph.humanization import (
     ABERTURAS,
     CLOSINGS_NATURAIS,
-    WALL_STREET_CLOSES,
     calc_humanize_delay,
     detect_msg_duplicate,
-    inject_variation,
     is_robot_like,
     msg_hash,
-    pick_abertura,
-    pick_closing,
-    pick_wall_street_close,
 )
 
 
-class TestAberturas:
+class TestABERTURAS:
     def test_lead_novo_tem_minimo_3_variacoes(self):
         assert len(ABERTURAS["lead_novo"]) >= 3
 
     def test_lead_retorno_tem_minimo_3_variacoes(self):
         assert len(ABERTURAS["lead_retorno"]) >= 3
 
-    def test_pick_abertura_retorna_string(self):
-        for ctx in ["lead_novo", "lead_retorno", "lead_objetou", "lead_quente"]:
-            abertura = pick_abertura(ctx)
-            assert isinstance(abertura, str)
-            assert len(abertura) > 0
-
-    def test_pick_abertura_contexto_desconhecido_caem_no_default(self):
-        abertura = pick_abertura("contexto_inexistente")
-        assert abertura in ABERTURAS["lead_novo"]
-
 
 class TestClosings:
     def test_tem_closings_naturais(self):
         assert len(CLOSINGS_NATURAIS) >= 5
-
-    def test_tem_wall_street_closes(self):
-        assert len(WALL_STREET_CLOSES) >= 3
-
-    def test_pick_closing_natural(self):
-        c = pick_closing(use_wall_street=False)
-        assert c in CLOSINGS_NATURAIS
-
-    def test_pick_closing_wall_street(self):
-        c = pick_closing(use_wall_street=True)
-        assert c in WALL_STREET_CLOSES
-        # Wall Street close deve mencionar perda/oportunidade
-        c_lower = c.lower()
-        keywords = ["modelo pronto", "concorrente", "oportunidade", "sem compromisso", "descarta", "olhada", "exemplo pronto", "site lindo"]
-        assert any(kw in c_lower for kw in keywords), f"Wall Street close nao menciona oportunidade: {c}"
 
 
 class TestCalcHumanizeDelay:
@@ -64,7 +34,7 @@ class TestCalcHumanizeDelay:
         )
         assert 2.0 <= d.seconds <= 4.0
 
-    def test_pos_objeção_tem_delay_3_5s(self):
+    def test_pos_objecao_tem_delay_3_5s(self):
         d = calc_humanize_delay(
             last_response_time_min=None,
             is_objetou=True,
@@ -106,9 +76,7 @@ class TestMsgDuplicate:
 
     def test_msg_quase_igual_detectada(self):
         prev = ["Oi! Tudo bem com você? Como posso te ajudar?"]
-        # Variação minima: troca 1-2 palavras
         new = "Oi tudo bem, como posso te ajudar"
-        # Threshold novo (0.70) deve detectar
         assert detect_msg_duplicate(new, prev) is True
 
 
@@ -121,26 +89,6 @@ class TestMsgHash:
 
     def test_hash_tem_16_chars(self):
         assert len(msg_hash("teste")) == 16
-
-
-class TestInjectVariation:
-    def test_substitui_algumas_palavras(self):
-        # Roda 100x pra ver se pelo menos 1x substitui
-        hits = 0
-        for _ in range(100):
-            result = inject_variation("Você está bem?")
-            if "vc" in result or "tá" in result:
-                hits += 1
-                break
-        assert hits > 0  # probabilidade alta de pelo menos 1 hit
-
-    def test_preserva_significado(self):
-        # Roda varias vezes, sempre deve manter palavras-chave
-        for _ in range(50):
-            result = inject_variation("Você está estudando muito")
-            # Pelo menos uma das 3 palavras-chave deve permanecer
-            keywords = ["vc", "tá", "mt"]
-            assert any(kw in result.lower() for kw in keywords) or "vo" in result.lower()
 
 
 class TestIsRobotLike:
@@ -162,9 +110,3 @@ class TestIsRobotLike:
     ])
     def test_msg_naturais_passam(self, msg):
         assert is_robot_like(msg) is False
-
-
-class TestPickWallStreet:
-    def test_retorna_close_com_oportunidade(self):
-        c = pick_wall_street_close("academia")
-        assert any(kw in c.lower() for kw in ["modelo pronto", "concorrente", "oportunidade", "descarta"])

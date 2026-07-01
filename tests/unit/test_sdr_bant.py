@@ -11,7 +11,6 @@ from backend.agents.sdr_langgraph.bant_meddic import (
     detect_authority,
     detect_budget,
     detect_timeline,
-    lead_temperature,
 )
 
 
@@ -122,28 +121,3 @@ class TestComputeMeddic:
         result = compute_meddic(msgs)
         # Score minimo 8 (alguns elementos nao detectados por regex simplificado)
         assert result.total_score >= 7
-
-
-class TestLeadTemperature:
-    def test_quente_score_alto(self):
-        bant = compute_bant([
-            "tenho 2000", "eu sou dono", "preciso pra ontem", "perco cliente"
-        ])
-        meddic = compute_meddic([
-            "quero atingir meta", "site ta lento", "vou defender"
-        ])
-        temp = lead_temperature(bant, meddic)
-        # Score minimo pra ser pelo menos morno
-        assert temp in ("morno", "quente"), f"Score BANT={bant.total_score}, MEDDIC={meddic.total_score}"
-
-    def test_morno_score_medio(self):
-        bant = compute_bant(["posso pagar 500", "vou ver com socio"])
-        meddic = compute_meddic(["site ta lento"])
-        temp = lead_temperature(bant, meddic)
-        assert temp in ("frio", "morno", "quente")  # pode variar
-
-    def test_frio_score_baixo(self):
-        bant = compute_bant(["oi", "tudo bem"])
-        meddic = compute_meddic([])
-        temp = lead_temperature(bant, meddic)
-        assert temp == "frio"

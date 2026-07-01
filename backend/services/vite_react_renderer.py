@@ -970,92 +970,14 @@ def render_vite_react_site(
     model_candidates = _select_vite_react_models_for_run(primary_model, fallback_model)
     if not model_candidates:
         model_candidates = [PROXY_BUILDER_MODEL]
+    # Fail-fast total: sem studio-fallback para nenhum policy.
+    # Se llm_policy=="none": fail-fast (era studio determinístico, agora erro)
+    # Se llm_policy=="copy_only"/"creative_plan": retry LLM, fail-fast se todos falham
+    # Se llm_policy=="full_code": LLM cascade, fail-fast se todos falham
     llm_policy = _get_llm_policy()
 
-    if llm_policy in {"none", "copy_only", "creative_plan"}:
-        policy_facts = facts
-        copy_error = ""
-        if llm_policy in {"copy_only", "creative_plan"}:
-            for model_idx, model in enumerate(model_candidates, start=1):
-                for copy_try in range(1, _copy_only_attempts() + 1):
-                    attempt_started = time.time()
-                    try:
-                        raw = _call_copy_only_llm(
-                            _get_copy_only_user_prompt(facts, policy=llm_policy),
-                            model=model,
-                            max_tokens=min(max_tokens, _env_int("FRALIB_VITE_COPY_ONLY_MAX_TOKENS", 1300 if llm_policy == "creative_plan" else 900)),
-                            temperature=min(temperature, 0.35 if copy_try > 1 else 0.45),
-                        )
-                        content = _parse_content_json(raw)
-                        if not content:
-                            raise ViteReactRenderError(f"{llm_policy} retornou JSON vazio ou fora de pt-BR")
-                        policy_facts = _merge_copy_only_content(facts, content)
-                        attempts.append(
-                            {
-                                "model": model,
-                                "model_index": model_idx,
-                                "copy_try": copy_try,
-                                "status": f"{llm_policy}_json_success",
-                                "elapsed_ms": int((time.time() - attempt_started) * 1000),
-                                "policy": llm_policy,
-                                "json_keys": sorted(content.keys()),
-                            }
-                        )
-                        break
-                    except Exception as exc:
-                        copy_error = str(exc)[:500]
-                        attempts.append(
-                            {
-                                "model": model,
-                                "model_index": model_idx,
-                                "copy_try": copy_try,
-                                "status": f"{llm_policy}_json_failed",
-                                "elapsed_ms": int((time.time() - attempt_started) * 1000),
-                                "policy": llm_policy,
-                                "error": copy_error,
-                            }
-                        )
-                        lowered = copy_error.lower()
-                        if any(marker in lowered for marker in ("401 unauthorized", "invalid api key", "permission_error")):
-                            break
-                if policy_facts is not facts:
-                    break
-        else:
-            attempts.append(
-                {
-                    "model": "none",
-                    "model_index": 0,
-                    "status": "policy_none_deterministic",
-                    "elapsed_ms": 0,
-                    "policy": llm_policy,
-                }
-            )
-
-        fallback_started = time.time()
-        files = _generate_studio_fallback_files(policy_facts)
-        attempts.append(
-            {
-                "model": "studio-template",
-                "model_index": len(attempts) + 1,
-                "status": "studio_deterministic_success" if llm_policy == "none" else f"studio_{llm_policy}_success",
-                "elapsed_ms": int((time.time() - fallback_started) * 1000),
-                "policy": llm_policy,
-                "source_files": len(files),
-                "previous_error": copy_error,
-            }
-        )
-        return _render_vite_files_result(
-            workspace=workspace,
-            files=files,
-            facts=policy_facts,
-            attempts=attempts,
-            started=started,
-            model="studio-deterministic" if llm_policy == "none" else f"studio-{llm_policy.replace('_', '-')}",
-            requested_paths=requested_paths,
-        )
-
     # Cascata Haiku -> Sonnet -> Opus 4.8: tenta cada modelo em sequencia ate um dar 200.
-    # Sem Studio fallback. Se TODOS falharem, levanta ViteReactRenderError com diagnostico.
+    # Fail-fast: se TODOS falharem, levanta ViteReactRenderError com diagnostico.
     last_error: str | None = None
     files: dict[str, str] = {}
     html = ""
@@ -5265,14 +5187,7 @@ def validate_vite_project_files(
         if path.endswith((".tsx", ".ts", ".jsx", ".js")):
             files[path] = _sanitize_logger_in_source(files[path])
 
-    # Backfill: if the LLM failed to deliver a requested path, fall back to
-    # the deterministic studio template. This is friendlier than aborting
-    # the build over a missing optional file like src/pages/Index.tsx.
-    if requested_paths:
-        for path in list(requested_paths):
-            if path not in files or not files.get(path):
-                if path == "src/pages/Index.tsx":
-                    files[path] = _generate_studio_fallback_files(facts)["src/pages/Index.tsx"]
+    # Fail-fast: se arquivo opcional falta, erro. Sem studio-fallback.
     missing = sorted(REQUIRED_PROJECT_FILES.difference(files))
     if missing:
         raise ViteReactRenderError("projeto Vite sem arquivos obrigatorios: " + ", ".join(missing))
