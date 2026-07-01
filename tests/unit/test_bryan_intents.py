@@ -48,8 +48,14 @@ def test_load_context_uses_nested_memory_and_database_stage(monkeypatch):
 
 
 def test_outbound_hook_is_deterministic_and_does_not_reveal_site():
+    """Outbound hook NAO pode usar template fixo - deve lancar SDRFallbackError.
+
+    Este teste verifica que o sistema NAO usa template fixo para outbound hooks.
+    O comportamento correto é lancar excecao (forcando operador a criar hook manual).
+    """
     from agents.sdr_langgraph import agent
     from agents.sdr_langgraph.state import LeadMemory
+    from agents.sdr_langgraph.agent import SDRFallbackError
 
     memory = LeadMemory(
         lead_id="lead-1",
@@ -61,12 +67,9 @@ def test_outbound_hook_is_deterministic_and_does_not_reveal_site():
         site_url="https://seunegociofralib.site/sites/2/start-academia/",
     )
 
-    result = agent.node_hook({"memory": memory, "is_outbound": True, "incoming_message": ""})
-
-    assert result["should_send"]
-    assert "http" not in result["outgoing_message"].lower()
-    assert "site" not in result["outgoing_message"].lower()
-    assert memory.stage == "qualify"
+    # Sistema deve lancar excecao em vez de usar template fixo
+    with pytest.raises(SDRFallbackError, match="Outbound hook"):
+        agent.node_hook({"memory": memory, "is_outbound": True, "incoming_message": ""})
 
 
 def test_is_decisor_returns_contextual_reply_instead_of_empty_message():
