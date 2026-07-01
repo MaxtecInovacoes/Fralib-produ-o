@@ -761,7 +761,7 @@ export function FactualMotionContract() {{
     <section
       data-fralib-contract
       className="sr-only"
-      aria-label="Dados confirmados do lead"
+      aria-label="Informações públicas do negócio"
     >
       <span>{{confirmed.name}}</span>
       <span>{{confirmed.segment}}</span>

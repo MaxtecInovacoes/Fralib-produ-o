@@ -2660,7 +2660,7 @@ export function FactualMotionContract() {{
     <section
       data-fralib-contract
       className="sr-only"
-      aria-label="Dados confirmados do lead"
+      aria-label="Informações públicas do negócio"
     >
       <span>{{confirmed.name}}</span>
       <span>{{confirmed.segment}}</span>
@@ -4004,7 +4004,7 @@ def _cinematic_copy(facts: dict[str, Any]) -> dict[str, Any]:
         ),
         "about_kicker": _fmt(lane_copy.get("about_kicker", ""), "Direção"),
         "about_title": _copy_slot("about_title", f"{name} em {city} com informações claras para decidir."),
-        "about_body": _copy_slot("about_body", f"{name} reúne endereço, contato e atendimento confirmado para quem está em {city}."),
+        "about_body": _copy_slot("about_body", f"{name} reúne endereço, contato e próximos passos para quem está em {city}."),
         "gallery_kicker": _fmt(lane_copy.get("gallery_kicker", ""), "Ambiente"),
         "gallery_title": _copy_slot("gallery_title", f"Ambiente, rotina e detalhes da {name}."),
         "gallery_intro": _copy_slot("gallery_intro", f"As imagens ajudam a entender o espaço, o atendimento e o contexto de {city}."),
@@ -4029,7 +4029,7 @@ def _cinematic_copy(facts: dict[str, Any]) -> dict[str, Any]:
         "gallery_alt": str(llm_content.get("gallery_alt") or f"{segment} em {city}"),
         "footer_tagline": str(
             llm_content.get("footer_tagline")
-            or f"{name} em {city}: contato direto, endereço confirmado e WhatsApp oficial."
+            or f"{name} em {city}: contato direto, endereço claro e WhatsApp oficial."
         ),
         "modal_title": str(llm_content.get("modal_title") or f"Fale com {name}"),
         "modal_cta": str(llm_content.get("modal_cta") or "Enviar mensagem"),
@@ -4807,7 +4807,15 @@ export function ReviewsSection() {
   const motionMix = Array.isArray((blockPlan as any)?.motion_mix) ? (blockPlan as any).motion_mix : [];
   const spotlight = proofStyle === 'quote_spotlight';
   const marquee = proofStyle === 'card_marquee';
+  const scoreWall = proofStyle === 'score_wall';
+  const editorialCase = proofStyle === 'editorial_case';
   const railClass = motionMix.includes('marquee') ? 'motion-marquee-rail' : '';
+  if (scoreWall) {
+    return <section id="avaliacoes" style={{ background: 'var(--bg)' }} className="px-5 py-20 md:px-8 md:py-28"><div className="mx-auto max-w-7xl"><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>{siteCopy.reviews_kicker}</p><h2 className="mt-3 max-w-3xl text-[clamp(2rem,4.8vw,4.4rem)] font-semibold leading-[1] tracking-[-0.025em] text-[var(--text)]">{siteCopy.reviews_title}</h2><div className="mt-10 grid grid-cols-2 gap-3 md:grid-cols-4">{[ { label: 'avaliação', value: siteCopy.rating || '5.0' }, { label: 'cidade', value: siteCopy.city }, { label: 'segmento', value: siteCopy.segment }, { label: 'contato', value: 'WhatsApp' } ].map((stat, i) => <motion.div key={i} initial={{ opacity: 0, y: 14 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.4 }} transition={{ delay: i * 0.05 }} className="rounded-[18px] border border-[color-mix(in_srgb,var(--accent)_20%,transparent)] bg-[color-mix(in_srgb,var(--bg)_92%,var(--accent)_8%)] p-6"><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>{stat.label}</p><p className="mt-3 text-2xl font-extrabold tracking-tight text-[var(--text)] md:text-3xl">{stat.value}</p></motion.div>)}</div><div className="mt-10 grid gap-4 md:grid-cols-3">{proofs.slice(0, 3).map((item, index) => <motion.article key={item.title} initial={{ opacity: 0, y: 18 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.24 }} transition={{ delay: index * 0.05 }} className="rounded-[18px] border border-[color-mix(in_srgb,var(--accent)_20%,transparent)] bg-[color-mix(in_srgb,var(--bg)_94%,var(--accent)_6%)] p-6"><div className="flex items-center gap-3"><Avatar className="h-10 w-10"><AvatarFallback>{item.initials}</AvatarFallback></Avatar><div><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>{item.badge}</p><h3 className="mt-1 text-lg font-semibold text-[var(--text)]">{item.title}</h3></div></div><Separator className="my-4" /><p className="text-sm leading-7 text-[var(--text-muted)]">{item.body}</p></motion.article>)}</div></div></section>;
+  }
+  if (editorialCase) {
+    return <section id="avaliacoes" style={{ background: 'var(--bg-light)' }} className="px-5 py-20 md:px-8 md:py-28"><div className="mx-auto grid max-w-6xl gap-10 lg:grid-cols-[1.15fr_0.85fr] lg:items-start"><div><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>{siteCopy.reviews_kicker}</p><h2 className="mt-3 text-[clamp(2rem,4.8vw,4rem)] font-semibold leading-[1.05] tracking-[-0.03em] text-zinc-950">{siteCopy.reviews_title}</h2><p className="mt-6 max-w-2xl text-base leading-8 text-zinc-600">{siteCopy.reviews_intro}</p><blockquote className="mt-10 border-l-2 pl-6 text-2xl font-medium leading-[1.3] tracking-[-0.02em] text-zinc-900 md:text-3xl" style={{ borderColor: 'var(--accent)' }}>"{siteCopy.proof_quote}"</blockquote><p className="mt-4 text-sm font-semibold text-zinc-500">{siteCopy.city} · {siteCopy.segment}</p></div><div className="grid gap-4">{proofs.slice(0, 2).map((item, index) => <motion.article key={item.title} initial={{ opacity: 0, y: 18 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.3 }} transition={{ delay: index * 0.06 }} className="rounded-[18px] border border-zinc-200 bg-white p-6"><div className="flex items-center gap-3"><Avatar className="h-10 w-10"><AvatarFallback>{item.initials}</AvatarFallback></Avatar><div><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>{item.badge}</p><h3 className="mt-1 text-lg font-semibold text-zinc-950">{item.title}</h3></div></div><Separator className="my-4" /><p className="text-sm leading-7 text-zinc-600">{item.body}</p></motion.article>)}</div></div></section>;
+  }
   return <section id="avaliacoes" style={{ background: 'var(--bg)', color: 'var(--text)' }} className="overflow-hidden px-5 py-20 md:px-8 md:py-28"><div className="mx-auto max-w-7xl"><div className="mb-10 flex flex-col gap-4 md:flex-row md:items-end md:justify-between"><div><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>{siteCopy.reviews_kicker}</p><h2 className="mt-3 max-w-3xl text-[clamp(2rem,4.8vw,4.4rem)] font-semibold leading-[1] tracking-[-0.025em]">{siteCopy.reviews_title}</h2></div><div className="max-w-md text-sm leading-7 text-[var(--text-muted)]">{siteCopy.reviews_intro}</div></div>{marquee ? <div data-proof-rail className={`flex gap-4 overflow-hidden ${railClass}`}>{[...proofs, ...proofs].map((item, index) => <motion.article key={`${item.title}-${index}`} initial={{ opacity: 0, x: 24 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true, amount: 0.18 }} className="min-w-[18rem] rounded-[18px] border border-[color-mix(in_srgb,var(--accent)_20%,transparent)] bg-[color-mix(in_srgb,var(--bg)_92%,var(--accent)_8%)] p-6"><div className="flex items-center gap-3"><Avatar><AvatarFallback>{item.initials}</AvatarFallback></Avatar><div><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>{item.badge}</p><h3 className="mt-1 text-lg font-semibold text-[var(--text)]">{item.title}</h3></div></div><Separator className="my-4" /><p className="text-sm leading-7 text-[var(--text-muted)]">{item.body}</p></motion.article>)}</div> : <div className={`grid gap-4 ${spotlight ? 'lg:grid-cols-[1.15fr_0.85fr]' : 'md:grid-cols-3'}`}><motion.article initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.24 }} className="rounded-[22px] border border-[color-mix(in_srgb,var(--accent)_20%,transparent)] bg-[color-mix(in_srgb,var(--bg)_92%,var(--accent)_8%)] p-7"><p className="text-2xl leading-10 text-[var(--text)]">“{siteCopy.proof_quote}”</p><p className="mt-6 text-sm font-semibold text-[var(--text-muted)]">{siteCopy.city} • {siteCopy.segment}</p></motion.article><div className={`grid gap-4 ${spotlight ? '' : 'md:col-span-2 md:grid-cols-2'}`}>{proofs.slice(0, spotlight ? 2 : 4).map((item, index) => <motion.article key={item.title} initial={{ opacity: 0, y: 18 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.24 }} transition={{ delay: index * 0.05 }} className="rounded-[18px] border border-[color-mix(in_srgb,var(--accent)_20%,transparent)] bg-[color-mix(in_srgb,var(--bg)_94%,var(--accent)_6%)] p-6"><div className="flex items-center gap-3"><Avatar className="h-10 w-10"><AvatarFallback>{item.initials}</AvatarFallback></Avatar><div><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>{item.badge}</p><h3 className="mt-1 text-lg font-semibold text-[var(--text)]">{item.title}</h3></div></div><Separator className="my-4" /><p className="text-sm leading-7 text-[var(--text-muted)]">{item.body}</p></motion.article>)}</div></div>}</div></section>;
 }
 export default ReviewsSection;
@@ -4847,6 +4855,9 @@ export function ServicesSection() {
   }
   if (variant === 'split_editorial') {
     return <section id="servicos" style={{ background: 'var(--bg-light)' }} className="px-5 py-20 md:px-8 md:py-28"><div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[0.85fr_1.15fr]"><div><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>{siteCopy.services_kicker}</p><h2 className="mt-3 text-[clamp(2rem,4.8vw,4.4rem)] font-semibold leading-[1] tracking-[-0.025em] text-zinc-950">{siteCopy.services_title}</h2><p className="mt-5 max-w-xl text-base leading-8 text-zinc-600">{siteCopy.services_subheadline}</p></div><div className="grid gap-4">{siteCopy.services.map((service, index) => { const Icon = icons[index] || ClipboardCheck; return <motion.article key={service.title} initial={{ opacity: 0, x: 24 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true, amount: 0.28 }} transition={{ delay: index * 0.05 }} className="grid gap-4 rounded-[18px] border border-black/5 bg-white p-6 shadow-[0_18px_60px_rgba(0,0,0,0.08)] md:grid-cols-[auto_1fr] md:items-start"><Icon className="mt-1 h-6 w-6" style={{ color: 'var(--accent)' }} /><div><h3 className="text-2xl font-semibold tracking-tight text-zinc-950">{service.title}</h3><p className="mt-3 text-sm leading-7 text-zinc-600">{service.description}</p></div></motion.article>; })}</div></div></section>;
+  }
+  if (variant === 'editorial_rows') {
+    return <section id="servicos" style={{ background: 'var(--bg)' }} className="px-5 py-20 text-white md:px-8 md:py-28"><div className="mx-auto max-w-7xl"><div className="grid gap-8 md:grid-cols-[0.7fr_1.3fr] md:items-end"><div><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>{siteCopy.services_kicker}</p><h2 className="mt-3 text-[clamp(2rem,4.8vw,4.4rem)] font-semibold leading-[1] tracking-[-0.025em]">{siteCopy.services_title}</h2><p className="mt-5 max-w-xl text-base leading-8 text-zinc-300">{siteCopy.services_subheadline}</p></div><div className="hidden md:block"><span className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-400">{siteCopy.services.length} frentes em operação</span></div></div><div className="mt-12 divide-y divide-white/10 border-y border-white/10">{siteCopy.services.map((service, index) => { const Icon = icons[index] || ClipboardCheck; return <motion.div key={service.title} initial={{ opacity: 0, y: 14 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.4 }} transition={{ delay: index * 0.05 }} className="grid items-start gap-6 py-7 md:grid-cols-[auto_0.6fr_1.4fr]"><div className="flex items-center gap-3"><span className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">0{index + 1}</span><Icon className="h-6 w-6" style={{ color: 'var(--accent)' }} /></div><h3 className="text-2xl font-semibold tracking-tight md:text-3xl">{service.title}</h3><p className="text-sm leading-7 text-zinc-300">{service.description}</p></motion.div>; })}</div></div></section>;
   }
   return <section id="servicos" style={{ background: 'var(--bg-light)' }} className="px-5 py-20 md:px-8 md:py-28"><div className="mx-auto max-w-7xl"><div className="grid gap-8 lg:grid-cols-[.8fr_1.2fr] lg:items-end"><div><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>{siteCopy.services_kicker}</p><h2 className="mt-3 text-[clamp(2rem,4.8vw,4.4rem)] font-semibold leading-[1] tracking-[-0.025em] text-zinc-950">{siteCopy.services_title}</h2></div><p className="max-w-2xl text-base leading-8 text-zinc-600">{siteCopy.services_subheadline}</p></div><div className="mt-12 grid gap-4 md:grid-cols-3">{siteCopy.services.map((service, index) => { const Icon = icons[index] || ClipboardCheck; return <motion.article key={service.title} initial={{ opacity: 0, y: 22 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.28 }} transition={{ delay: index * 0.06 }} className="min-h-[17rem] rounded-[18px] border border-black/5 bg-white p-6 shadow-[0_18px_60px_rgba(0,0,0,0.08)]"><Icon className="h-6 w-6" style={{ color: 'var(--accent)' }} /><h3 className="mt-8 text-2xl font-semibold tracking-tight text-zinc-950">{service.title}</h3><p className="mt-4 text-sm leading-7 text-zinc-600">{service.description}</p></motion.article>; })}</div></div></section>;
 }
@@ -7019,7 +7030,7 @@ export function HeroSection({{ onOpen = () => {{}} }}: {{ onOpen?: () => void }}
             {{business.name}}
           </h1>
           <p className="mt-5 max-w-2xl text-base leading-7 text-zinc-100 md:text-lg">
-            Atendimento local com dados confirmados, contato direto e uma apresentação clara para quem precisa decidir rápido.
+            Atendimento local com contato direto e uma apresentação clara para quem precisa decidir rápido.
           </p>
           <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
             <a href={{whatsappHref}} rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 rounded-full bg-emerald-400 px-6 py-3.5 text-sm font-semibold text-[#071611]">
@@ -7060,13 +7071,13 @@ export function AboutSection() {{
             {{business.segment}} com presença local em {{business.city}}.
           </h2>
           <p className="mt-5 max-w-2xl text-base leading-7 text-zinc-700">
-            Página construída com dados confirmados do lead: nome, cidade, contato, endereço, avaliação e contexto de atendimento. O foco é deixar claro o que a empresa faz e como o visitante deve avançar.
+            Página construída para deixar claro o que a empresa faz, onde atende e como o visitante deve avançar.
           </p>
         </motion.div>
         <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-1">
           {{[
             [Award, 'Prova local', `${{business.rating}} de avaliação`],
-            [CheckCircle2, 'Dados confirmados', 'Sem placeholder ou texto genérico'],
+            [CheckCircle2, 'Informação clara', 'Sem placeholder ou texto genérico'],
             [MapPin, 'Atendimento', business.city],
           ].map(([Icon, title, text]) => (
             <article key={{title}} className="rounded-[28px] border border-emerald-900/10 bg-white p-5 shadow-sm">

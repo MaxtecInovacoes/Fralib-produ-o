@@ -40,7 +40,7 @@ _LANES: dict[str, list[dict[str, Any]]] = {
             "name": "Sunset Track",
             "fallback_palette": {"primary": "#ff7a00", "secondary": "#7f2d00", "bg_dark": "#14110f", "bg_light": "#fff1e2", "text_dark": "#1d130c"},
             "blocks": {"hero_variant": "center", "services_variant": "split_editorial", "reviews_variant": "quote_spotlight", "faq_variant": "panel", "location_variant": "split_local", "surface_style": "soft_tint"},
-            "copy": {"hero_badge": "Treino com acolhimento e disciplina", "about_kicker": "Rotina", "about_title": "Disciplina diária com linguagem mais humana.", "about_body": "{name} conversa com quem quer resultado consistente, mas também precisa encaixar o treino na vida real em {city}.", "gallery_title": "Treino visto de perto, sem pose vazia.", "gallery_intro": "As imagens reforçam constância, detalhe e clareza visual.", "reviews_title": "Confiança construída na rotina.", "reviews_intro": "A reputação entra como sinal de recorrência e cuidado.", "faq_title": "Dúvidas de quem vai começar ou voltar.", "faq_intro": "Resposta curta, sem jargão e com dados confirmados.", "location_title": "Tudo pronto para visitar e começar.", "location_intro": "Mapa simples: cidade, endereço, contato e WhatsApp.", "lifestyle_kicker": "Constância", "contact_kicker": "Convite"},
+            "copy": {"hero_badge": "Treino com acolhimento e disciplina", "about_kicker": "Rotina", "about_title": "Disciplina diária com linguagem mais humana.", "about_body": "{name} conversa com quem quer resultado consistente, mas também precisa encaixar o treino na vida real em {city}.", "gallery_title": "Treino visto de perto, sem pose vazia.", "gallery_intro": "As imagens reforçam constância, detalhe e clareza visual.", "reviews_title": "Confiança construída na rotina.", "reviews_intro": "A reputação entra como sinal de recorrência e cuidado.", "faq_title": "Dúvidas de quem vai começar ou voltar.", "faq_intro": "Resposta curta, sem jargão e com orientação prática.", "location_title": "Tudo pronto para visitar e começar.", "location_intro": "Mapa simples: cidade, endereço, contato e WhatsApp.", "lifestyle_kicker": "Constância", "contact_kicker": "Convite"},
         },
         {
             "id": "academia-graphite-core",
@@ -241,7 +241,7 @@ _FAMILY_COPY_DEFAULTS: dict[str, dict[str, str]] = {
         "contact_secondary_label": "Abrir contato",
         "footer_contact_label": "Contato",
         "footer_location_label": "Consultório",
-        "footer_privacy_note": "Dados confirmados e privacidade preservada.",
+        "footer_privacy_note": "Privacidade preservada no atendimento.",
         "contact_sub": "Envie uma mensagem para confirmar agenda, modalidade de consulta e retorno.",
     },
     "barbearia": {
@@ -276,7 +276,7 @@ _FAMILY_COPY_DEFAULTS: dict[str, dict[str, str]] = {
         "contact_secondary_label": "Abrir contato",
         "footer_contact_label": "Reserva",
         "footer_location_label": "Endereço",
-        "footer_privacy_note": "Dados confirmados e privacidade preservada.",
+        "footer_privacy_note": "Privacidade preservada no atendimento.",
         "contact_sub": "Reserve pelo WhatsApp e confirme horário, serviço e endereço antes de sair.",
     },
     "estetica": {

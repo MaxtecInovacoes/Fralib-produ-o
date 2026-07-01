@@ -235,7 +235,7 @@ def _ensure_builder_seo_schema_contract(html: str, prd) -> str:
                     "name": f"Como falar com {business.get('name') or 'este negocio'}?",
                     "acceptedAnswer": {
                         "@type": "Answer",
-                        "text": "Use o WhatsApp ou os contatos confirmados nesta pagina.",
+                        "text": "Use o WhatsApp ou o contato informado nesta página para falar com a equipe.",
                     },
                 }
             ],

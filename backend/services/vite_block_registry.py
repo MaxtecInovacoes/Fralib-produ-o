@@ -55,6 +55,8 @@ def resolve_cinematic_block_plan(
     lane = resolve_visual_lane(segment=segment, subnicho=str(variation.get("subnicho") or ""), visual_lane=visual_lane)
     lane_blocks = lane.get("blocks") if isinstance(lane.get("blocks"), dict) else {}
     lane_copy = lane.get("copy") if isinstance(lane.get("copy"), dict) else {}
+    pricing_variant = str(variation.get("pricing_variant") or lane_blocks.get("pricing_variant") or "plan_grid")
+    stats_variant = str(variation.get("stats_variant") or lane_blocks.get("stats_variant") or "inline_hero_stats")
 
     has_explicit_services = bool(variation.get("services_variant"))
     services_variant = str(variation.get("services_variant") or lane_blocks.get("services_variant") or "split_editorial")
@@ -137,6 +139,8 @@ def resolve_cinematic_block_plan(
         "reviews_variant": reviews_variant,
         "faq_variant": faq_variant,
         "location_variant": location_variant,
+        "pricing_variant": pricing_variant,
+        "stats_variant": stats_variant,
         "surface_style": surface_style,
         "surface_mix": surface_mix,
         "section_surface_map": section_surface_map,
