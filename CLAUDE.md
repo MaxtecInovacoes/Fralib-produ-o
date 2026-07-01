@@ -120,6 +120,59 @@ color_emphasis:  primary_dominant | secondary_dominant | balanced
 - `studio_archetypes.json` - 6 archetypes
 - `archetype_resolver.py` - Seleção por segmento
 
+## Regras de Auditoria (ANTI-FALSOS POSITIVOS)
+
+> **PROBLEMA CONHECIDO**: Claude tende a declarar "pronto" ou "fail-fast total" sem verificar contradições, documentação desatualizada e código ainda existente.
+> Estas regras PREVINEM falsos positivos.
+
+### Antes de Declarar "Pronto", "Feito", "Completo" ou "Fail-Fast Total"
+
+**OBRIGATORIAMENTE, use estas skills nesta ordem:**
+
+1. **`/the-fool`** — Advocado do diabo
+   - Desafie SUA própria conclusão
+   - Liste evidências CONTRA o que você acabou de afirmar
+   - Se não conseguir listar 3+ evidências contra, você está sendo tendencioso
+
+2. **`/fp-check`** — Verificação de falsidade
+   - Para CADA claim feito ("foi removido", "não existe mais", "passou")
+   - Produza evidência CONCRETA: arquivo, linha, git diff
+   - "O código mostra" não é evidência — mostre a linha exata
+
+3. **`/completion-verifier`** — Verificação de completude
+   - Testes novos foram adicionados para provar o novo contrato?
+   - Documentação foi atualizada no mesmo commit?
+   - Contradições com AGENTS.md foram resolvidas?
+   - Testes em timeout foram tratados (deletados ou corrigidos)?
+
+4. **`/agent-self-evaluation`** — Auto-avaliação crítica
+   - Avalie-se em 5 eixos com NOTA e EVIDÊNCIA
+   - Se dar nota 5 em qualquer eixo, prove com citação de linha
+
+### Checklist Anti-Falso-Positivo
+
+Para commits técnicos, antes de declarar "pronto", verificar:
+
+- [ ] **Documentação atualizada?** AGENTS.md, CLAUDE.md, docs/ — todos no mesmo commit?
+- [ ] **Código ainda existe?** Buscar por funções/variáveis que "foram removidas"
+- [ ] **Testes timeout?** Testes em timeout não são "pass" — precisam de atenção
+- [ ] **Contradições resolvidas?** AGENTS.md linha 24 e 773 dizem X, commit fez Y?
+- [ ] **Variáveis de ambiente?** `FRALIB_ALLOW_OPENUI_FALLBACK` ainda existe?
+
+### Quando USAR estas skills
+
+- Após qualquer commit
+- Quando Claude disser "pronto", "completo", "fail-fast total"
+- Antes de fazer merge ou deploy
+- Ao auditar código de outro agente
+
+### Quando NÃO USAR
+
+- Correções triviais (typos, formatação)
+- Tarefas de busca sem claim de completude
+
+---
+
 ## Status atual
 
 - ✅ **Site v15h deployado e FUNCIONANDO** (`seunegociofralib.site/sites/2/barbearia-fio-nobre-v15h/`)
