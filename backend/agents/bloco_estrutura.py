@@ -2,7 +2,8 @@
 LLM call focada em definir layout_type, direcao criativa e lista de secoes.
 Retorno: Markdown parseado via markdown_prd_parser.
 
-Fail-fast: se LLM falhar, lança EstruturaInvalidaError — não usa fallbacks.
+Fail-fast: parse_bloco1_with_fallback tenta JSON→Markdown→JSON,
+mas se resultar vazio, lança EstruturaInvalidaError.
 """
 
 import re as _re

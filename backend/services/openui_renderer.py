@@ -803,11 +803,15 @@ def build_openui_document(
 ) -> str:
     """Wrap OpenUI body output in FraLib's publishable static document.
 
-    Se facts for passado, sobrescreve o <title> generico com o nome real
-    do negocio + segmento + cidade (corrige o bug do OpenUI que as vezes
-    retorna <title>FraLib Site</title>).
+    Fail-fast: se body_or_document for vazio/inválido, levanta OpenUIRenderError.
+    Não usa fallback HTML genérico.
     """
     content = (body_or_document or "").strip()
+    if not content:
+        raise OpenUIRenderError(
+            "OpenUI renderer recebeu HTML vazio. "
+            "Check LLM response or retry pipeline."
+        )
     if re.search(r"<!doctype|<html\b", content, re.IGNORECASE):
         document = content
         if "data-renderer=" not in document[:400].lower():
@@ -842,59 +846,11 @@ def build_openui_document(
         document = _enrich_seo_and_runtime(document, facts=facts)
         return document
 
-    fallback_html = f"""<!doctype html>
-<html lang="pt-BR" data-renderer="builder" data-builder-engine="openui">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="generator" content="FraLib OpenUI Builder">
-  <title>FraLib Site</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    :root {{
-      --background: 12 12 14;
-      --foreground: 248 250 252;
-      --primary: 225 29 72;
-      --primary-foreground: 255 255 255;
-      --secondary: 210 179 110;
-      --secondary-foreground: 12 12 14;
-      --muted: 39 39 42;
-      --muted-foreground: 161 161 170;
-      --card: 24 24 27;
-      --card-foreground: 250 250 250;
-      --border: 63 63 70;
-      --input: 39 39 42;
-      --ring: 210 179 110;
-      --accent: 127 29 29;
-      --accent-foreground: 255 255 255;
-    }}
-    html {{ scroll-behavior: smooth; }}
-    body {{
-      margin: 0;
-      background: rgb(var(--background));
-      color: rgb(var(--foreground));
-      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    }}
-    img {{ max-width: 100%; height: auto; }}
-    .bg-background {{ background-color: rgb(var(--background)); }}
-    .text-foreground {{ color: rgb(var(--foreground)); }}
-    .bg-primary {{ background-color: rgb(var(--primary)); }}
-    .text-primary {{ color: rgb(var(--primary)); }}
-    .text-primary-foreground {{ color: rgb(var(--primary-foreground)); }}
-    .bg-secondary {{ background-color: rgb(var(--secondary)); }}
-    .text-secondary {{ color: rgb(var(--secondary)); }}
-    .text-secondary-foreground {{ color: rgb(var(--secondary-foreground)); }}
-    .bg-card {{ background-color: rgb(var(--card)); }}
-    .text-card-foreground {{ color: rgb(var(--card-foreground)); }}
-    .text-muted-foreground {{ color: rgb(var(--muted-foreground)); }}
-    .border-border {{ border-color: rgb(var(--border)); }}
-  </style>
-</head>
-<body>
-{content}
-</body>
-</html>"""
-    return _enrich_seo_and_runtime(fallback_html, facts=facts)
+    # HTML inválido (não é documento completo)
+    raise OpenUIRenderError(
+        f"OpenUI renderer recebeu HTML inválido (sem <!doctype ou <html>). "
+        f"Content preview: {content[:200]!r}"
+    )
 
 
 def validate_openui_document(

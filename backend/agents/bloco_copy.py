@@ -2,7 +2,8 @@
 LLM call focada em escrever copy (h1, subtitulo, cta, body) para cada secao.
 Retorno: Markdown parseado via markdown_prd_parser.
 
-Fail-fast: se LLM falhar, lança CopyGenerationError — não usa fallbacks.
+Fail-safe: retry com prompt simplificado se parse inicial falhar.
+Se retry falhar, lança CopyGenerationError.
 """
 
 import re as _re
