@@ -124,13 +124,13 @@ fi
 log "Restartando fralib..."
 if command -v systemctl >/dev/null 2>&1 && systemctl list-unit-files 'fralib-*.service' --no-legend 2>/dev/null | grep -q '^fralib-'; then
     if command -v pm2 >/dev/null 2>&1; then
-        for pm2_legacy in fralib fralib-worker fralib-franz-worker fralib-bryan-worker fralib-wpp-listener fralib-hermes-watchdog; do
+        for pm2_legacy in fralib fralib-worker fralib-franz-worker fralib-bryan-worker fralib-wpp-listener fralib-hermes-watchdog fralib-dreamer; do
             if pm2 describe "$pm2_legacy" >/dev/null 2>&1; then
                 log "Removendo worker PM2 legado: ${pm2_legacy}"
                 pm2 delete "$pm2_legacy" 2>&1 | tee -a "$LOG_FILE" || true
             fi
         done
-        pm2 save 2>&1 | tail -2 | tee -a "$LOG_FILE" || true
+        pm2 save --force 2>&1 | tail -2 | tee -a "$LOG_FILE" || true
     fi
 
     for svc in fralib-api fralib-worker fralib-franz fralib-wpp-listener fralib-hermes; do
