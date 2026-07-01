@@ -1203,34 +1203,48 @@ def node_save_and_send(state: SDRState) -> dict:
 
     # === LLM-as-judge quality gate (Feature 2 do roadmap 10/10) ===
     # Avalia a resposta antes de enviar. Bloqueia se score < 3.
+    # PULA para intents óbvios: greeting, acknowledgment, opt_out
     if reply:
         try:
-            from .quality_judge import evaluate_reply
-            incoming = state.get("incoming_message", "")
-            stage = state.get("current_stage") or memory.stage or "hook"
-            segmento = memory.segmento or ""
-            quality = evaluate_reply(
-                incoming=incoming,
-                reply=reply,
-                stage=stage,
-                segmento=segmento,
-                min_score_to_send=3,
-                enable_llm=True,
-            )
+            # Detectar intent para pular judge em casos obvios
+            detected_intent = state.get("detected_intent", "") or ""
+            skip_judge = detected_intent.lower() in ("greeting", "acknowledgment", "opt_out")
+            if skip_judge:
+                # Para intents óbvios, usa score alto automático
+                quality_score = 5
+                quality_issues = []
+                quality_should_send = True
+            else:
+                from .quality_judge import evaluate_reply
+                incoming = state.get("incoming_message", "")
+                stage = state.get("current_stage") or memory.stage or "hook"
+                segmento = memory.segmento or ""
+                quality = evaluate_reply(
+                    incoming=incoming,
+                    reply=reply,
+                    stage=stage,
+                    segmento=segmento,
+                    min_score_to_send=3,
+                    enable_llm=True,
+                )
+                quality_score = quality.score
+                quality_issues = quality.issues
+                quality_should_send = quality.should_send
+
             # Persistir score na LeadMemory
             if not hasattr(memory, "last_quality_score") or memory.last_quality_score is None:
                 memory.last_quality_score = 0
-            memory.last_quality_score = quality.score
-            memory.last_quality_issues = quality.issues
+            memory.last_quality_score = quality_score
+            memory.last_quality_issues = quality_issues
             # Logar
             from .turn_tracing import get_active_trace
             trace = get_active_trace(str(state.get("lead_id") or memory.telefone or ""))
             if trace:
-                span = trace.start_span("quality_judge", modelo="haiku", score=quality.score)
-                trace.end_span(span, status="completed", score=quality.score, should_send=quality.should_send)
+                span = trace.start_span("quality_judge", modelo="skip" if skip_judge else "haiku", score=quality_score)
+                trace.end_span(span, status="completed", score=quality_score, should_send=quality_should_send)
             # Bloquear envio se score < 3
-            if not quality.should_send:
-                print(f"[SDR] JUDGE BLOQUEOU ENVIO: score={quality.score}, issues={quality.issues}")
+            if not quality_should_send:
+                print(f"[SDR] JUDGE BLOQUEOU ENVIO: score={quality_score}, issues={quality_issues}")
                 print(f"[SDR] Reply rejeitada: {reply[:100]}")
                 return {}  # nao envia
         except Exception as _judge_err:

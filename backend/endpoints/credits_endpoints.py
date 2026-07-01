@@ -242,7 +242,7 @@ async def criar_checkout(
 
     # Pega usuario via sessao de cookie (Authorization OU cookie fralib_session)
     try:
-        usuario = await get_current_user(request=request, db=db)
+        usuario = await get_current_user(request=request)
     except HTTPException as exc:
         if exc.status_code in (401, 403):
             raise HTTPException(401, "Autenticacao necessaria para checkout.")
@@ -347,7 +347,7 @@ async def criar_checkout_anonimo(
 async def _get_user_from_request(request: Request, db: Session):
     """Compat: wrapper para extrair usuario via sessao de cookie."""
     try:
-        return await get_current_user(request=request, db=db)
+        return await get_current_user(request=request)
     except Exception:
         return None
 
