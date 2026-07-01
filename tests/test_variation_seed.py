@@ -332,6 +332,70 @@ def test_cinematic_studio_uses_dynamic_sections_and_local_primitives():
     assert "@radix-ui/react-separator" not in package_json
 
 
+def test_cinematic_location_uses_single_live_map_and_stats_wraps_long_city():
+    from backend.services.vite_react_renderer import _generate_cinematic_studio_files
+
+    files = _generate_cinematic_studio_files(
+        {
+            "business": {
+                "name": "High Fitness Academia",
+                "address": "R. Manoel Jacinto de Oliveira Santos, 29 - Centro, Campina Grande do Sul - PR",
+                "segment": "academia",
+                "city": "Campina Grande do Sul",
+                "phone": "(41) 99111-4140",
+                "rating": "4.6",
+                "maps_url": "https://www.google.com/maps/search/?api=1&query=High+Fitness+Campina+Grande+do+Sul",
+            },
+            "variation": {
+                "visual_lane": "lane_b",
+                "location_variant": "feature_local",
+                "stats_variant": "dedicated_band",
+            },
+            "media": {"photos": TEST_PHOTOS},
+        }
+    )
+
+    site_data = files.get("src/components/siteData.ts", "")
+    location = files.get("src/components/LocationSection.tsx", "")
+    stats = files.get("src/components/StatsBar.tsx", "")
+    css = files.get("src/index.css", "")
+    index_html = files.get("index.html", "")
+
+    assert "mapsHref" in site_data
+    assert "mapsEmbedSrc" in site_data
+    assert "google.com/maps?q=" in site_data
+    assert location.count("<iframe") == 1
+    assert "Abrir no Google Maps" in location
+    assert "mapsEmbedSrc" in location
+    assert "absolute inset-0 h-full w-full" in location
+    assert "lg:min-h-[48rem]" in location
+    assert "break-words" in stats
+    assert "lg:grid-cols-[minmax(14rem,0.72fr)_minmax(0,2fr)]" in stats
+    assert "#stats + section" in css
+    assert "melhor academia em Campina Grande do Sul" in index_html
+    assert "agendar academia em Campina Grande do Sul" in index_html
+
+
+def test_local_keywords_include_regional_search_intent():
+    from backend.services.vite_react_renderer import _facts_local_keywords as renderer_keywords
+    from backend.services.vite_templates import _facts_local_keywords as template_keywords
+
+    facts = {
+        "business": {
+            "name": "High Fitness Academia",
+            "address": "R. Manoel Jacinto de Oliveira Santos, 29 - Centro, Campina Grande do Sul - PR",
+            "segment": "academia",
+            "city": "Campina Grande do Sul",
+        }
+    }
+
+    for keywords in (renderer_keywords(facts), template_keywords(facts)):
+        assert "academia perto de mim Campina Grande do Sul" in keywords
+        assert "agendar academia em Campina Grande do Sul" in keywords
+        assert "preço academia Campina Grande do Sul" in keywords
+        assert "plano de academia Campina Grande do Sul" in keywords
+
+
 def test_cinematic_theme_guard_picks_readable_accent_contrast():
     from backend.services.vite_theme_guard import resolve_cinematic_theme
 
@@ -603,6 +667,43 @@ def test_cinematic_copy_prioritizes_prompt_contract_and_sanitizes_public_text():
     ]
     for fragment in banned:
         assert fragment not in site_data
+
+
+def test_cinematic_copy_rejects_mixed_language_public_fields_only():
+    from backend.services.vite_react_renderer import _generate_cinematic_studio_files, _merge_copy_only_content, _sanitize_copy_only_content
+
+    content = _sanitize_copy_only_content(
+        {
+            "creative_plan": {
+                "visual_lane": "lane_b",
+                "surface_style": "solid",
+                "motion_mix": ["parallax_video", "mask_reveal"],
+            },
+            "lifestyle": {
+                "title": "Aqui não tem espaço para desculpa",
+                "description": "Cada滴 de suor cuenta. Treino forte para vencer.",
+            },
+        }
+    )
+    facts = _merge_copy_only_content(
+        {
+            "business": {
+                "name": "High Fitness Academia",
+                "address": "Rua Teste, 10 - Campina Grande do Sul",
+                "segment": "academia",
+                "city": "Campina Grande do Sul",
+            },
+            "variation": {"visual_lane": "lane_a"},
+            "media": {"photos": TEST_PHOTOS},
+        },
+        content,
+    )
+
+    site_data = _generate_cinematic_studio_files(facts).get("src/components/siteData.ts", "")
+    assert '"visual_lane": "academia-' in site_data
+    assert "Cada滴" not in site_data
+    assert "cuenta" not in site_data
+    assert "suor cuenta" not in site_data
 
 
 def test_cinematic_estetica_uses_specific_lane_and_public_copy():

@@ -34,6 +34,7 @@ import unicodedata
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from typing import Any
+from urllib.parse import quote_plus
 
 import httpx
 
@@ -579,6 +580,10 @@ GUARDA DE NICHO:
 def _clean_copy_value(value: Any, *, limit: int = 220) -> str:
     text = re.sub(r"\s+", " ", str(value or "")).strip()
     text = text.replace("{", "").replace("}", "").replace("<", "").replace(">", "")
+    if re.search(r"[\u3400-\u9fff\u3040-\u30ff\uac00-\ud7af]", text):
+        return ""
+    if re.search(r"\b(cuenta|entrenamiento|sudor|alcanzar|rutina de entrenamiento)\b", text, flags=re.IGNORECASE):
+        return ""
     return text[:limit].strip()
 
 
@@ -3723,6 +3728,26 @@ def _cinematic_media_urls(facts: dict[str, Any]) -> tuple[list[str], list[str]]:
     return images[:6], videos[:2]
 
 
+def _build_google_maps_targets(
+    *,
+    name: str,
+    city: str,
+    address: str,
+    maps_url: str = "",
+) -> tuple[str, str]:
+    """Return a live Google Maps link and an embeddable map URL."""
+    href = str(maps_url or "").strip()
+    query = " ".join(part for part in (address, name, city) if str(part or "").strip()).strip()
+    if not query and href:
+        query = href
+    if not query:
+        return href, ""
+    embed = f"https://www.google.com/maps?q={quote_plus(query)}&output=embed&z=15"
+    if not href:
+        href = f"https://www.google.com/maps/search/?api=1&query={quote_plus(query)}"
+    return href, embed
+
+
 def _cinematic_copy(facts: dict[str, Any]) -> dict[str, Any]:
     business = facts.get("business") if isinstance(facts.get("business"), dict) else {}
     llm_content = facts.get("_llm_content") if isinstance(facts.get("_llm_content"), dict) else {}
@@ -3744,6 +3769,12 @@ def _cinematic_copy(facts: dict[str, Any]) -> dict[str, Any]:
     rating = str(business.get("rating") or "")
     reviews = str(business.get("total_avaliacoes") or business.get("reviews_count") or "")
     address = str(business.get("address") or business.get("endereco") or "")
+    maps_href, maps_embed_src = _build_google_maps_targets(
+        name=name,
+        city=city,
+        address=address,
+        maps_url=str(business.get("maps_url") or business.get("map_url") or ""),
+    )
     segment_context = _normalize_text(" ".join([name, segment, subnicho]))
     is_nutri = "nutri" in segment_context
     is_barber = any(token in segment_context for token in ("barbearia", "barbeiro", "barber"))
@@ -4096,6 +4127,8 @@ def _cinematic_copy(facts: dict[str, Any]) -> dict[str, Any]:
         "rating": rating,
         "reviews": reviews,
         "address": address,
+        "mapsHref": maps_href,
+        "mapsEmbedSrc": maps_embed_src,
         "hero_badge": _fmt(lane_copy.get("hero_badge", ""), f"{segment} em {city}"),
         "headline": str(hero.get("headline") or defaults["headline"]),
         "subheadline": str(hero.get("subheadline") or defaults["subheadline"]),
@@ -5095,6 +5128,13 @@ main[data-overlap="strong"] section:nth-of-type(4) {{
   position: relative;
   z-index: 4;
 }}
+main[data-attitude] #stats {{
+  position: relative;
+  z-index: 6;
+}}
+main[data-overlap] #stats + section {{
+  margin-top: 0 !important;
+}}
 main[data-image-treatment] img:not([src*="data:"]),
 main[data-image-treatment] video {{
   filter: var(--image-treatment);
@@ -5387,16 +5427,16 @@ export function StatsBar() {
 
   // dedicated_band (default)
   return (
-    <section ref={rootRef} id="stats" style={{ background: 'var(--accent-dark)' }} className="px-5 py-12 md:px-8 md:py-16">
-      <div className="mx-auto grid max-w-7xl items-center gap-8 md:grid-cols-[1fr_2fr]">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent-soft)' }}>Números que sustentam a decisão</p>
-        <div className="grid grid-cols-2 gap-6 md:grid-cols-4">
+    <section ref={rootRef} id="stats" style={{ background: 'var(--accent-dark)' }} className="px-5 py-14 md:px-8 md:py-16">
+      <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[minmax(14rem,0.72fr)_minmax(0,2fr)] lg:items-start">
+        <p className="max-w-[18rem] text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent-soft)' }}>Números que sustentam a decisão</p>
+        <div className="grid min-w-0 gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {stats.map((s, i) => {
             const Icon = ICON_MAP[s.icon] || Star;
             return (
-              <motion.div key={i} data-stats-counter className="flex flex-col gap-2">
+              <motion.div key={i} data-stats-counter className="min-w-0 border-t pt-4" style={{ borderColor: 'color-mix(in srgb, var(--accent) 38%, transparent)' }}>
                 <div className="flex items-center gap-2"><Icon className="h-4 w-4" style={{ color: 'var(--accent)' }} /><span className="text-xs uppercase tracking-[0.18em]" style={{ color: 'var(--accent-soft)' }}>{s.label}</span></div>
-                <p className="text-3xl font-extrabold leading-none tracking-[-0.025em] text-white md:text-4xl">{s.value}</p>
+                <p className="mt-3 break-words text-2xl font-extrabold leading-[0.95] tracking-[-0.025em] text-white md:text-3xl">{s.value}</p>
               </motion.div>
             );
           })}
@@ -5539,9 +5579,41 @@ export default PricingSection;
         "src/components/LocationSection.tsx": """import { MapPin, MessageCircle, Phone } from 'lucide-react';
 import { motion } from 'motion/react';
 import { blockPlan, siteCopy, whatsappHref } from './siteData';
+
 export function LocationSection() {
   const feature = String((blockPlan as any)?.location_variant || '') === 'feature_local';
-  return <section id="localizacao" style={{ background: 'var(--bg-light)' }} className="px-5 py-20 md:px-8 md:py-28"><div className={`mx-auto grid max-w-7xl gap-4 ${feature ? 'lg:grid-cols-[0.95fr_1.05fr]' : 'lg:grid-cols-[1.05fr_0.95fr]'}`}><motion.article initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.24 }} className="rounded-[18px] border border-black/5 bg-white p-7 shadow-[0_18px_60px_rgba(0,0,0,0.08)]"><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>{siteCopy.location_kicker}</p><h2 className="mt-3 text-[clamp(1.8rem,4vw,3.6rem)] font-semibold tracking-[-0.025em] text-zinc-950">{siteCopy.location_title}</h2><p className="mt-4 max-w-xl text-sm leading-7 text-zinc-600">{siteCopy.location_intro}</p><div className="mt-8 grid gap-4 sm:grid-cols-2"><div className="rounded-[16px] border border-zinc-200 p-5"><MapPin className="h-5 w-5" style={{ color: 'var(--accent)' }} /><p className="mt-3 text-sm font-semibold text-zinc-950">Endereço</p><p className="mt-2 text-sm leading-6 text-zinc-600">{siteCopy.address || siteCopy.city}</p></div><div className="rounded-[16px] border border-zinc-200 p-5"><Phone className="h-5 w-5" style={{ color: 'var(--accent)' }} /><p className="mt-3 text-sm font-semibold text-zinc-950">Contato</p><p className="mt-2 text-sm leading-6 text-zinc-600">{siteCopy.phone}</p></div></div></motion.article><motion.article initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.24 }} transition={{ delay: 0.06 }} className="rounded-[18px] border border-transparent p-7 shadow-[0_18px_60px_rgba(0,0,0,0.12)]" style={{ background: 'var(--accent-dark)', color: '#fff' }}><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent-soft)' }}>{siteCopy.location_cta_kicker}</p><h3 className="mt-3 text-3xl font-semibold tracking-tight text-white">{siteCopy.location_cta_title}</h3><p className="mt-4 text-sm leading-7 text-white/75">{siteCopy.location_cta_body}</p><div className="mt-8 flex flex-col gap-3 sm:flex-row"><a href={whatsappHref} rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 rounded-full px-5 py-3 text-sm font-semibold" style={{ background: 'var(--accent)', color: 'var(--accent-contrast)' }}><MessageCircle className="h-4 w-4" /> {siteCopy.location_cta_primary}</a><a href="#contato" className="inline-flex items-center justify-center gap-2 rounded-full border border-white/20 px-5 py-3 text-sm font-semibold text-white"><MapPin className="h-4 w-4" /> {siteCopy.location_cta_secondary}</a></div></motion.article></div></section>;
+  const mapsHref = String((siteCopy as any)?.mapsHref || '');
+  const mapsEmbedSrc = String((siteCopy as any)?.mapsEmbedSrc || '');
+  const gridClass = feature ? 'lg:grid-cols-[0.85fr_1.15fr]' : 'lg:grid-cols-[1fr_1fr]';
+  const mapHeightClass = feature ? 'min-h-[30rem] lg:min-h-[48rem]' : 'min-h-[26rem] lg:min-h-[36rem]';
+  return (
+    <section id="localizacao" className="px-5 py-20 md:px-8 md:py-28" style={{ background: 'var(--plan-section)', color: 'var(--plan-ink)' }}>
+      <div className={`mx-auto grid max-w-7xl gap-5 ${gridClass}`}>
+        <motion.article initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.24 }} className="border p-7 md:p-8" style={{ background: 'var(--plan-card)', color: 'var(--plan-card-ink)', borderColor: 'var(--plan-border)' }}>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>{siteCopy.location_kicker}</p>
+          <h2 className="mt-3 text-[clamp(1.8rem,4vw,3.6rem)] font-semibold leading-[1.02] tracking-[-0.025em]">{siteCopy.location_title}</h2>
+          <p className="mt-4 max-w-xl text-sm leading-7 opacity-75">{siteCopy.location_intro}</p>
+          <div className="mt-8 grid gap-4 sm:grid-cols-2">
+            <div className="border p-5" style={{ borderColor: 'var(--plan-border)' }}><MapPin className="h-5 w-5" style={{ color: 'var(--accent)' }} /><p className="mt-3 text-sm font-semibold">Endereço</p><p className="mt-2 text-sm leading-6 opacity-75">{siteCopy.address || siteCopy.city}</p></div>
+            <div className="border p-5" style={{ borderColor: 'var(--plan-border)' }}><Phone className="h-5 w-5" style={{ color: 'var(--accent)' }} /><p className="mt-3 text-sm font-semibold">Contato</p><p className="mt-2 text-sm leading-6 opacity-75">{siteCopy.phone}</p></div>
+          </div>
+          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+            <a href={whatsappHref} rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 px-5 py-3 text-sm font-semibold" style={{ background: 'var(--accent)', color: 'var(--accent-contrast)' }}><MessageCircle className="h-4 w-4" /> {siteCopy.location_cta_primary}</a>
+            {mapsHref ? <a href={mapsHref} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 border px-5 py-3 text-sm font-semibold" style={{ borderColor: 'var(--plan-border)' }}><MapPin className="h-4 w-4" /> Abrir no Google Maps</a> : null}
+          </div>
+        </motion.article>
+        <motion.article initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.24 }} transition={{ delay: 0.06 }} className={`relative overflow-hidden border ${mapHeightClass}`} style={{ background: 'var(--bg)', borderColor: 'var(--plan-border)' }}>
+          {mapsEmbedSrc ? (
+            <iframe title={`Mapa de ${siteCopy.name}`} src={mapsEmbedSrc} className="absolute inset-0 h-full w-full border-0 grayscale contrast-125" loading="lazy" referrerPolicy="no-referrer-when-downgrade" />
+          ) : (
+            <div className={`grid h-full place-items-center p-8 text-center ${mapHeightClass}`}>
+              <div><MapPin className="mx-auto h-8 w-8" style={{ color: 'var(--accent)' }} /><h3 className="mt-4 text-2xl font-semibold">{siteCopy.location_cta_title}</h3><p className="mt-3 text-sm leading-7 opacity-75">{siteCopy.address || siteCopy.city}</p></div>
+            </div>
+          )}
+        </motion.article>
+      </div>
+    </section>
+  );
 }
 export default LocationSection;
 """,
@@ -6834,7 +6906,7 @@ def _compose_vite_file_batch_prompt(
         "lifestyle": "- LifestyleSection: use at most 3 editorial proof blocks; avoid long paragraphs.",
         "reviews": "- ReviewsSection: build a moving rail/marquee of proof cards with real horizontal motion; avoid a static centered quote.",
         "booking-modal": "- BookingModal: keep only title, short body, two buttons and close control; no long lists.",
-        "location": "- LocationSection: concise address/contact/map CTA only; no embedded maps iframe and no decorative map mockup.",
+        "location": "- LocationSection: concise address/contact plus one real Google Maps iframe when maps/address is present; never duplicate maps.",
         "footer": "- Footer: compact integrated closure only; avoid visual duplication with the CTA block and keep year 2026.",
     }.get(batch_name, "- Keep this batch compact and focused on its own component contract.\n- CRITICAL: Use export function ComponentName (named export). NOT export default.\n- CRITICAL: Use relative imports only (../components/X). NO @/ or ~/ aliases.")
     prompt = f"""Generate one Vite React project batch for FraLib Builder.
@@ -7293,18 +7365,35 @@ def _facts_local_keywords(facts: dict[str, Any]) -> list[str]:
     if city and segment:
         _add(f"{segment} em {city}")
         _add(f"{segment} {city}")
+        _add(f"melhor {segment} em {city}")
+        _add(f"{segment} perto de mim {city}")
+        _add(f"agendar {segment} em {city}")
+        _add(f"{segment} WhatsApp {city}")
+        _add(f"preço {segment} {city}")
     if city and any(token in segment_context for token in ("barbearia", "barber", "barbeiro")):
         _add(f"barbearia em {city}")
         _add(f"corte masculino {city}")
         _add(f"barba e cabelo {city}")
+        _add(f"agendar barbearia {city}")
+        _add(f"corte masculino preço {city}")
     if city and any(token in segment_context for token in ("nutri", "nutric")):
         _add(f"nutricionista em {city}")
         _add(f"nutricionista esportivo {city}")
         _add(f"consulta nutricional {city}")
+        _add(f"consulta nutricionista {city}")
+        _add(f"nutricionista perto de mim {city}")
     if city and any(token in segment_context for token in ("academia", "crossfit", "musculacao", "funcional", "personal")):
         _add(f"academia em {city}")
         _add(f"musculação {city}")
         _add(f"aula experimental academia {city}")
+        _add(f"plano de academia {city}")
+        _add(f"academia com aula experimental {city}")
+        _add(f"personal trainer {city}")
+    if city and any(token in segment_context for token in ("estetic", "spa", "beleza", "facial", "pele", "laser")):
+        _add(f"clínica estética em {city}")
+        _add(f"agendar estética {city}")
+        _add(f"limpeza de pele {city}")
+        _add(f"estética perto de mim {city}")
 
     # diferencial (palavras_poder do Jina)
     diferencial = business.get("diferenciais") or facts.get("diferenciais") or []
@@ -7318,8 +7407,10 @@ def _facts_local_keywords(facts: dict[str, Any]) -> list[str]:
         parts = re.split(r"[,\-]", address)
         for p in parts[-2:]:
             _add(p)
+            if city and segment:
+                _add(f"{segment} {p} {city}")
 
-    return keywords[:12]
+    return keywords[:18]
 
 
 def _facts_meta_description(facts: dict[str, Any]) -> str:

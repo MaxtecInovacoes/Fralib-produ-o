@@ -112,22 +112,41 @@ def _facts_local_keywords(facts: dict[str, Any]) -> list[str]:
     if city and segment:
         _add(f"{segment} em {city}")
         _add(f"{segment} {city}")
+        _add(f"melhor {segment} em {city}")
+        _add(f"{segment} perto de mim {city}")
+        _add(f"agendar {segment} em {city}")
+        _add(f"{segment} WhatsApp {city}")
+        _add(f"preço {segment} {city}")
     if city and any(token in context for token in ("barbearia", "barber", "barbeiro")):
         _add(f"barbearia em {city}")
         _add(f"corte masculino {city}")
         _add(f"barba e cabelo {city}")
+        _add(f"agendar barbearia {city}")
+        _add(f"corte masculino preço {city}")
     if city and any(token in context for token in ("nutri", "nutric")):
         _add(f"nutricionista em {city}")
         _add(f"nutricionista esportivo {city}")
         _add(f"consulta nutricional {city}")
+        _add(f"consulta nutricionista {city}")
+        _add(f"nutricionista perto de mim {city}")
     if city and any(token in context for token in ("academia", "crossfit", "muscul", "fitness", "funcional", "personal")):
         _add(f"academia em {city}")
         _add(f"musculação {city}")
         _add(f"aula experimental academia {city}")
+        _add(f"plano de academia {city}")
+        _add(f"academia com aula experimental {city}")
+        _add(f"personal trainer {city}")
+    if city and any(token in context for token in ("estetic", "spa", "beleza", "facial", "pele", "laser")):
+        _add(f"clínica estética em {city}")
+        _add(f"agendar estética {city}")
+        _add(f"limpeza de pele {city}")
+        _add(f"estética perto de mim {city}")
     address = str(business.get("address") or business.get("endereco") or facts.get("endereco") or "")
     for part in re.split(r"[,\-]", address)[-2:]:
         _add(part)
-    return keywords[:12]
+        if city and segment:
+            _add(f"{segment} {part} {city}")
+    return keywords[:18]
 
 
 def _facts_meta_description(facts: dict[str, Any]) -> str:

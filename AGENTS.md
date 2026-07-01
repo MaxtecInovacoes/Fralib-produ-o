@@ -540,6 +540,14 @@ líquidos no wrapper do app (`data-pole`) para que hero, seções, planos, LGPD 
 CTAs herdem a mesma geometria/cor/tipografia. O polo `bold` deve sair com
 superfícies sólidas, alto contraste e sem glass padrão em cards críticos.
 
+Desde 2026-07-01, `LocationSection` do Studio React deve renderizar **um único
+iframe real do Google Maps** quando houver endereço ou `maps_url`; o link externo
+deve abrir no Google Maps e mapas duplicados continuam bloqueados pelo Quality
+Gate. Keywords SEO devem incluir intenção local/regional (`perto de mim`,
+`agendar`, `preço`, `WhatsApp`, bairro/cidade), não só termos de volume. O CSS
+líquido pode usar overlap entre seções, mas **nunca** deve sobrepor a seção que
+vem logo após `#stats`; cidades longas precisam quebrar linha sem cortar texto.
+
 **Arquivos mantidos por compatibilidade** (não usados no caminho canônico, mas
 mantidos para evitar imports quebrados em outros módulos):
 - `backend/services/pipeline_renderer_support.py` — nome herdado, mas o conteúdo
