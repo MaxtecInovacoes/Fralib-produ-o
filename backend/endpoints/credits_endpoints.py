@@ -285,7 +285,7 @@ def _extrair_usuario_request(request: Request) -> dict:
         try:
             with engine.connect() as _c1:
                 _row1 = _c1.execute(
-                    _text("SELECT id, email, plano, status, creditos, creditos_max, role, tenant_id FROM users WHERE id=:id"),
+                    _text("SELECT id, email, plano, status, creditos, creditos_max, role, tenant_id, access, trial_ends_at, current_plan_id FROM users WHERE id=:id"),
                     {"id": int(user_id)},
                 ).fetchone()
                 if _row1:
@@ -298,6 +298,9 @@ def _extrair_usuario_request(request: Request) -> dict:
                         "creditos_max": _row1[5],
                         "role": _row1[6],
                         "tenant_id": _row1[7],
+                        "access": _row1[8] or "released",
+                        "trial_ends_at": _row1[9],
+                        "current_plan_id": _row1[10],
                     }
         except Exception:
             pass
@@ -306,7 +309,7 @@ def _extrair_usuario_request(request: Request) -> dict:
             try:
                 with engine.connect() as _c2:
                     _row2 = _c2.execute(
-                        _text("SELECT id, email, plano, status, creditos, creditos_max, role FROM users WHERE id=:id"),
+                        _text("SELECT id, email, plano, status, creditos, creditos_max, role, access, trial_ends_at, current_plan_id FROM users WHERE id=:id"),
                         {"id": int(user_id)},
                     ).fetchone()
                     if _row2:
@@ -319,6 +322,9 @@ def _extrair_usuario_request(request: Request) -> dict:
                             "creditos_max": _row2[5],
                             "role": _row2[6],
                             "tenant_id": None,
+                            "access": _row2[7] or "released",
+                            "trial_ends_at": _row2[8],
+                            "current_plan_id": _row2[9],
                         }
             except Exception:
                 pass
@@ -334,6 +340,9 @@ def _extrair_usuario_request(request: Request) -> dict:
             "creditos_max": user_dict.get("creditos_max") or 5,
             "role": user_dict.get("role") or "user",
             "tenant_id": user_dict.get("tenant_id"),
+            "access": user_dict.get("access") or "released",
+            "trial_ends_at": user_dict.get("trial_ends_at"),
+            "current_plan_id": user_dict.get("current_plan_id"),
         }
     except HTTPException:
         raise
