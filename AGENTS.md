@@ -41,10 +41,11 @@ está **quebrando o sistema**. Faça pela pipeline.
 - **Nunca** editar direto na VPS, usar SCP, rsync ou copiar arquivos manualmente.
 - Fluxo único: editar local em `C:\fralib` → `git add` → `git commit` → `git push origin master`.
 - Push em `master` dispara `scripts/post-receive` no bare repo VPS, que valida,
-  publica, remove workers PM2 legados (`fralib-worker`, `fralib-franz-worker`,
-  `fralib-bryan-worker`) e reinicia todos os serviços systemd (`fralib-api`,
-  `fralib-worker`, `fralib-worker@*.service`, `fralib-franz`,
-  `fralib-wpp-listener`, `fralib-hermes`).
+  publica, remove processos PM2 legados que tenham equivalente systemd
+  (`fralib`, `fralib-worker`, `fralib-franz-worker`, `fralib-bryan-worker`,
+  `fralib-wpp-listener`, `fralib-hermes-watchdog`) e reinicia todos os serviços
+  systemd (`fralib-api`, `fralib-worker`, `fralib-worker@*.service`,
+  `fralib-franz`, `fralib-wpp-listener`, `fralib-hermes`).
 - Código em produção precisa ser reproduzível a partir do Git.
 - Fonte canônica local: `C:\fralib`; fonte canônica VPS: `/root/fralib`.
 - Pastas antigas fora desses caminhos, caches de IDE e backups são **legado** — ignorar.
@@ -342,10 +343,11 @@ Serviços systemd:
 
 `whatsmeow` é externo (porta 3001).
 
-PM2 não pode rodar `worker.py` em paralelo com systemd. Se `fralib-worker`,
-`fralib-franz-worker` ou `fralib-bryan-worker` existirem no PM2, o
-`post-receive` deve removê-los antes de reiniciar systemd; caso contrário jobs
-podem ser processados por código antigo em memória.
+PM2 não pode rodar serviços que já têm unit systemd (`fralib`,
+`fralib-worker`, `fralib-franz-worker`, `fralib-bryan-worker`,
+`fralib-wpp-listener`, `fralib-hermes-watchdog`). O `post-receive` deve
+removê-los antes de reiniciar systemd; caso contrário API, WhatsApp, Hermes ou
+jobs podem ser processados por código antigo em memória.
 
 **Regra**: usar `backend/services/service_manager.py` (abstração canônica).
 
