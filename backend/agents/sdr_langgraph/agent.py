@@ -1209,7 +1209,11 @@ def node_save_and_send(state: SDRState) -> dict:
     # === Site Offer proativo (Feature: oferecer site pronto) ===
     # Antes de qualquer envio, verifica se deve oferecer o site pronto.
     # Adiciona a oferta ANTES da reply se ainda nao foi oferecida 2x.
-    reply = state.get("proposed_reply", "") or state.get("draft", "")
+    reply = (
+        state.get("proposed_reply", "")
+        or state.get("draft", "")
+        or state.get("outgoing_message", "")
+    )
     if reply:
         try:
             from .site_offer import should_offer_site, offer_proactive, increment_offer_count
@@ -1299,7 +1303,11 @@ def node_save_and_send(state: SDRState) -> dict:
     # - Detecta msg parece-robo
     # - Aplica Wall Street close se hesitou
     # ════════════════════════════════════════════════════════════════
-    reply = state.get("proposed_reply", "") or state.get("draft", "")
+    reply = (
+        state.get("proposed_reply", "")
+        or state.get("draft", "")
+        or state.get("outgoing_message", "")
+    )
     if reply:
         try:
             from agents.sdr_langgraph.humanization import (
@@ -1351,6 +1359,7 @@ def node_save_and_send(state: SDRState) -> dict:
 
             # Re-inject no state pra envio
             state["proposed_reply"] = reply
+            state["outgoing_message"] = reply
             state["send_delay_seconds"] = delay.seconds
         except Exception as e:
             print(f"[SDR-HUMANIZE] Erro humanizacao (nao-fatal): {e}")

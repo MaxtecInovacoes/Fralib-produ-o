@@ -728,6 +728,14 @@ async def _executar_job(job: dict) -> tuple[bool, Optional[str], Optional[str]]:
                     )
                     return False, "franz_schedule", "Aguardando watchdog do SDR"
 
+                if "outside_schedule" in diagnostico:
+                    log.info(
+                        "Franz: fora do horario tenant=%s lead=%s",
+                        tenant_id,
+                        payload.get("nome"),
+                    )
+                    return False, "franz_schedule", "Fora do horario comercial do SDR"
+
                 if (
                     intent == "fila"
                     or "horario" in diagnostico

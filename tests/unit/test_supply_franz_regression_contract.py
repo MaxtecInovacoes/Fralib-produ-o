@@ -31,6 +31,8 @@ def test_franz_watchdog_block_is_not_pipeline_failure_loop():
     assert '"max_2_messages_without_response" in diagnostico' in block
     assert "return True, None, None" in block
     assert "Aguardando watchdog do SDR" in block
+    assert '"outside_schedule" in diagnostico' in block
+    assert "Fora do horario comercial do SDR" in block
 
 
 def test_pipeline_failures_are_deduped_and_resolved_on_success():
@@ -56,3 +58,14 @@ def test_lead_supply_sync_recovers_caio_backlog():
     assert "status IN ('raw', 'error_retry')" in source
     assert "idempotency_key=:idem" in caio_block
     assert "status IN ('failed_permanent','failed_retriable')" in caio_block
+
+
+def test_sdr_save_and_send_preserves_generated_outgoing_message():
+    source = _read("backend/agents/sdr_langgraph/agent.py")
+    block = source[
+        source.index("def node_save_and_send") :
+        source.index("def build_sdr_graph")
+    ]
+
+    assert 'state.get("outgoing_message", "")' in block
+    assert 'state["outgoing_message"] = reply' in block
