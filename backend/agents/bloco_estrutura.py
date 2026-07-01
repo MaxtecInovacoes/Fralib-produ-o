@@ -226,7 +226,6 @@ def executar_bloco_estrutura(
                 "acao": "Corrigir LLM/conectividade; nao usar modelo alternativo automatico",
             },
         ) from e
-        )
 
     resp = _re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f]", " ", resp)
     dados = parse_bloco1_with_fallback(resp)
@@ -258,4 +257,3 @@ def executar_bloco_estrutura(
             "acao": "Check LLM response format and retry",
         },
     )
-

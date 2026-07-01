@@ -2113,6 +2113,39 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
 }
 
 /* ============================================================
+   GARANTIA (30 dias)
+   ============================================================ */
+.guarantee-section{background:transparent}
+.guarantee-card{
+  max-width:720px;margin:0 auto;
+  background:#151026;
+  border:1px solid rgba(34,197,94,0.25);
+  border-radius:20px;
+  padding:32px 36px;
+  display:flex;align-items:center;gap:20px;
+  box-shadow:0 0 30px rgba(34,197,94,0.06);
+}
+.guarantee-icon{
+  flex-shrink:0;width:60px;height:60px;
+  background:rgba(34,197,94,0.12);
+  border:1px solid rgba(34,197,94,0.3);
+  border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  color:var(--fl-success);
+}
+.guarantee-icon svg{width:30px;height:30px;display:block}
+.guarantee-content h3{
+  font-family:'Inter','DM Sans',system-ui,sans-serif;
+  font-size:18px;font-weight:700;color:#FFFFFF;margin-bottom:6px;
+}
+.guarantee-content p{
+  font-size:14px;color:#B8B4C8;line-height:1.6;margin:0;
+}
+@media(max-width:640px){
+  .guarantee-card{flex-direction:column;text-align:center;padding:28px 24px}
+}
+
+/* ============================================================
    OFERTA STARTER → PRO (layout limpo, sem bullets visíveis)
    ============================================================ */
 .offer-section{
@@ -2614,6 +2647,50 @@ const TRIAL_URL = "/login?signup=1&plano=trial";
   </div>
 </section>
 
+<!-- ===== SEÇÃO 11 — OFERTA STARTER → PRO (1º mês) ===== -->
+<section class="offer-section" id="oferta">
+  <div class="container">
+    <h2 class="section-title reveal">ASSINE O STARTER E GANHE UPGRADE PARA O PRO NO PRIMEIRO MÊS</h2>
+    <p class="section-sub reveal" style="text-align:center;margin:0 auto 40px;max-width:720px;color:var(--fl-text-muted);font-size:14px;">
+      Você entra no plano Starter (R$ 97/mês) e, durante o primeiro mês inteiro, usa a força total do Pro: cooldown reduzido, SDR com retries automáticos, prioridade alta na fila e domínio próprio. No segundo mês a assinatura segue pelo valor padrão do plano escolhido.
+    </p>
+
+    <div class="offer-wrapper reveal">
+      <span class="offer-badge">STARTER + UPGRADE PRO · 1º MÊS</span>
+      <div class="offer-title">STARTER R$ 97 COM PODERES DE PRO</div>
+
+      <div class="offer-price-row">
+        <span class="offer-price">R$ 97</span>
+      </div>
+      <p class="offer-period">no primeiro mês você usa <strong>Tudo do Pro</strong> &bull; depois segue pelo valor do plano escolhido</p>
+
+      <ul class="offer-features">
+        <li>Plano Starter de R$ 97/mês</li>
+        <li>Durante o 1º mês: upgrade automático para Pro</li>
+        <li>Cooldown reduzido de 60 para 30 min</li>
+        <li>SDR Franz com retries automáticos</li>
+        <li>Prioridade alta na fila (nível 5)</li>
+        <li>Dashboard completo com analytics</li>
+        <li>Domínios próprios ilimitados</li>
+        <li>Suporte prioritário + grupo WhatsApp</li>
+        <li>Garantia de 30 dias</li>
+      </ul>
+
+      <a href="#" onclick="window.location=CHECKOUT_URL+'?plan=starter-upgrade-pro';return false;" class="offer-cta">
+        ATIVAR STARTER + PRO POR R$ 97
+      </a>
+
+      <p class="offer-microcopy">
+        Assinatura mensal &bull; <span>Sem cartão pré-autorizado</span> &bull; Cancele em 1 clique
+      </p>
+
+      <p class="offer-disclaimer">
+        Promoção de ativação do beta. O upgrade Pro é válido apenas para o primeiro mês. A partir do segundo mês a conta segue no plano e valor contratados.
+      </p>
+    </div>
+  </div>
+</section>
+
 <!-- ===== SEÇÃO 3 — DEMO: LEAD → SITE → ABORDAGEM ===== -->
 <section class="demo-section" id="demo">
   <div class="container">
@@ -3020,50 +3097,6 @@ const TRIAL_URL = "/login?signup=1&plano=trial";
       <a href="#" onclick="window.location=CHECKOUT_URL;return false;" class="btn-hero-primary" style="text-decoration:none;">
         COMEÇAR COM GARANTIA
       </a>
-    </div>
-  </div>
-</section>
-
-<!-- ===== SEÇÃO 11 — OFERTA STARTER → PRO (1º mês) ===== -->
-<section class="offer-section" id="oferta">
-  <div class="container">
-    <h2 class="section-title reveal">ASSINE O STARTER E GANHE UPGRADE PARA O PRO NO PRIMEIRO MÊS</h2>
-    <p class="section-sub reveal" style="text-align:center;margin:0 auto 40px;max-width:720px;color:var(--fl-text-muted);font-size:14px;">
-      Você entra no plano Starter (R$ 97/mês) e, durante o primeiro mês inteiro, usa a força total do Pro: cooldown reduzido, SDR com retries automáticos, prioridade alta na fila e domínio próprio. No segundo mês a assinatura segue pelo valor padrão do plano escolhido.
-    </p>
-
-    <div class="offer-wrapper reveal">
-      <span class="offer-badge">STARTER + UPGRADE PRO · 1º MÊS</span>
-      <div class="offer-title">STARTER R$ 97 COM PODERES DE PRO</div>
-
-      <div class="offer-price-row">
-        <span class="offer-price">R$ 97</span>
-      </div>
-      <p class="offer-period">no primeiro mês você usa <strong>Tudo do Pro</strong> &bull; depois segue pelo valor do plano escolhido</p>
-
-      <ul class="offer-features">
-        <li>Plano Starter de R$ 97/mês</li>
-        <li>Durante o 1º mês: upgrade automático para Pro</li>
-        <li>Cooldown reduzido de 60 para 30 min</li>
-        <li>SDR Franz com retries automáticos</li>
-        <li>Prioridade alta na fila (nível 5)</li>
-        <li>Dashboard completo com analytics</li>
-        <li>Domínios próprios ilimitados</li>
-        <li>Suporte prioritário + grupo WhatsApp</li>
-        <li>Garantia de 30 dias</li>
-      </ul>
-
-      <a href="#" onclick="window.location=CHECKOUT_URL+'?plan=starter-upgrade-pro';return false;" class="offer-cta">
-        ATIVAR STARTER + PRO POR R$ 97
-      </a>
-
-      <p class="offer-microcopy">
-        Assinatura mensal &bull; <span>Sem cartão pré-autorizado</span> &bull; Cancele em 1 clique
-      </p>
-
-      <p class="offer-disclaimer">
-        Promoção de ativação do beta. O upgrade Pro é válido apenas para o primeiro mês. A partir do segundo mês a conta segue no plano e valor contratados.
-      </p>
     </div>
   </div>
 </section>

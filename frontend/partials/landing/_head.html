@@ -2113,6 +2113,39 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
 }
 
 /* ============================================================
+   GARANTIA (30 dias)
+   ============================================================ */
+.guarantee-section{background:transparent}
+.guarantee-card{
+  max-width:720px;margin:0 auto;
+  background:#151026;
+  border:1px solid rgba(34,197,94,0.25);
+  border-radius:20px;
+  padding:32px 36px;
+  display:flex;align-items:center;gap:20px;
+  box-shadow:0 0 30px rgba(34,197,94,0.06);
+}
+.guarantee-icon{
+  flex-shrink:0;width:60px;height:60px;
+  background:rgba(34,197,94,0.12);
+  border:1px solid rgba(34,197,94,0.3);
+  border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  color:var(--fl-success);
+}
+.guarantee-icon svg{width:30px;height:30px;display:block}
+.guarantee-content h3{
+  font-family:'Inter','DM Sans',system-ui,sans-serif;
+  font-size:18px;font-weight:700;color:#FFFFFF;margin-bottom:6px;
+}
+.guarantee-content p{
+  font-size:14px;color:#B8B4C8;line-height:1.6;margin:0;
+}
+@media(max-width:640px){
+  .guarantee-card{flex-direction:column;text-align:center;padding:28px 24px}
+}
+
+/* ============================================================
    OFERTA STARTER → PRO (layout limpo, sem bullets visíveis)
    ============================================================ */
 .offer-section{

@@ -198,8 +198,16 @@ def gerar_direcao_criativa(
             f"tokens={len(design_tokens.get('tokens', {}))} vars"
         )
     except Exception as _dc_err:
-        logger.warning(f"[DesignDirector] design_context falhou (usando fallback): {_dc_err}")
-        design_tokens = None
+        raise DesignDirectionError(
+            f"design_context failed for '{nicho}' in '{cidade}'.",
+            context={
+                "nicho": nicho,
+                "cidade": cidade,
+                "segmento": segment,
+                "erro": str(_dc_err),
+                "acao": "Corrigir design_context; nao usar direcao visual generica",
+            },
+        ) from _dc_err
 
     # ─── PASSO 2: Decidir direção criativa via LLM (usando tokens se disponível) ───
     _tokens_info = ""
@@ -256,10 +264,19 @@ Retorne APENAS o JSON com a direção criativa."""
         else:
             parsed = result
 
-        fallback_shape = _fallback_direction(nicho, design_tokens=None)
-        parsed.setdefault("direcao_visual", fallback_shape["direcao_visual"])
-        for key in ("motion_style", "tom_de_voz", "estrutura_unica", "anti_repeticao"):
-            parsed.setdefault(key, fallback_shape[key])
+        required = ("direcao_visual", "motion_style", "tom_de_voz", "estrutura_unica", "anti_repeticao")
+        missing = [key for key in required if not isinstance(parsed.get(key), dict)]
+        if missing:
+            raise DesignDirectionError(
+                f"Design Director retornou JSON incompleto: {', '.join(missing)}",
+                context={
+                    "nicho": nicho,
+                    "cidade": cidade,
+                    "segmento": segment,
+                    "missing": missing,
+                    "acao": "Corrigir prompt/modelo; nao preencher direcao visual generica",
+                },
+            )
 
         # ─── INJETAR design_tokens no resultado se disponível ───
         if design_tokens:
@@ -296,4 +313,3 @@ Retorne APENAS o JSON com a direção criativa."""
                 "acao": "Check design_context connectivity and retry",
             },
         )
-
