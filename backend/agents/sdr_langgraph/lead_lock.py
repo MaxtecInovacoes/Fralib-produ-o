@@ -15,9 +15,11 @@ Uso:
             ...
 
 SDR 10/10 - ITEM 5: Lock distribuido via Redis
-- Substitui threading.Lock in-memory por Redis lock
-- Fallback para threading.Lock se Redis indisponivel
-- Funciona entre processos (fralib-wpp-listener + fralib-franz)
+- Lock principal: Redis (distribuído entre processos)
+- FALLBACK TÉCNICO: threading.Lock local se Redis offline
+  ⚠️ RISCO: Lock local não funciona em ambientes distribuídos multi-worker
+  Justificativa: Lock local é melhor que nada para deduplicação
+  Não afeta resposta do bot, só previne duplicatas no mesmo processo
 """
 
 import os

@@ -116,7 +116,6 @@ def _orchestrator_decide(
             current_stage=memory.stage or "hook",
             turn_count=memory.turn_count or 0,
             suggested_stage=llm_suggested_stage,
-            enable_llm_fallback=False,  # nao chamar Haiku em runtime ainda; manter barato
         )
         update_lead_memory_after_turn(memory, decision)
         return decision

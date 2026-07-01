@@ -50,7 +50,6 @@ def orchestrate(
     current_stage: str,
     turn_count: int,
     suggested_stage: Optional[str] = None,
-    enable_llm_fallback: bool = False,
 ) -> OrchestratorDecision:
     """Decide o que fazer com base na mensagem do lead + estado atual.
 
@@ -60,7 +59,6 @@ def orchestrate(
         current_stage: stage legado (ex: "hook", "qualify"). Usado so pra UI.
         turn_count: quantas mensagens o lead ja mandou.
         suggested_stage: stage que o LLM sugeriu no JSON (legado, ignoravel).
-        enable_llm_fallback: se True, chama Haiku quando regex nao tem confidence alta.
 
     Returns:
         OrchestratorDecision com tudo que o caller precisa pra compor a resposta.
