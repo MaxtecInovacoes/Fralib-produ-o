@@ -239,6 +239,16 @@ def mark_success(db: Session, job_id: int) -> None:
     """),
         {"id": job_id},
     )
+    db.execute(
+        text("""
+        UPDATE pipeline_failures
+        SET resolvido = TRUE,
+            resolvido_em = NOW()
+        WHERE job_id = :id
+          AND resolvido = FALSE
+    """),
+        {"id": job_id},
+    )
     db.commit()
 
 
@@ -392,6 +402,37 @@ def mark_failure(
     )
 
     mensagem_amigavel = _formatar_mensagem_amigavel(fase, error)
+    existing_failure = db.execute(
+        text("""
+        UPDATE pipeline_failures
+        SET mensagem_amigavel = :msg,
+            tentativas_automaticas = :tent,
+            checkpoint_id = :ckpt,
+            payload = CAST(:payload AS jsonb),
+            visto_pelo_usuario = FALSE,
+            criado_em = NOW()
+        WHERE job_id = :jid
+          AND fase = :fase
+          AND erro_tecnico = :err
+          AND resolvido = FALSE
+        RETURNING id
+    """),
+        {
+            "jid": job_id,
+            "fase": fase,
+            "msg": mensagem_amigavel,
+            "err": error[:2000],
+            "tent": attempts,
+            "ckpt": checkpoint_id,
+            "payload": json.dumps(payload)
+            if isinstance(payload, dict)
+            else (payload or "{}"),
+        },
+    ).fetchone()
+    if existing_failure:
+        db.commit()
+        return "failed_permanent"
+
     db.execute(
         text("""
         INSERT INTO pipeline_failures

@@ -336,7 +336,7 @@ def _store_candidate(db: Session, tenant_id: int, candidate: Any, segmento: str,
     return str(existing[0]) if existing else inv_id, False
 
 
-def _enqueue_caio(db: Session, tenant_id: int, inventory_id: str) -> None:
+def _enqueue_caio(db: Session, tenant_id: int, inventory_id: str) -> int | None:
     """Enqueue a Caio qualification job for a lead."""
     existing = _find_active_job(
         db,
@@ -346,17 +346,77 @@ def _enqueue_caio(db: Session, tenant_id: int, inventory_id: str) -> None:
         {"inventory_id": inventory_id},
     )
     if existing:
-        return
-    job_queue.enqueue(
+        return existing
+    idem = f"lead-caio-{inventory_id}"
+    reopened = db.execute(
+        text(
+            """
+            UPDATE jobs
+            SET status='pending',
+                attempts=0,
+                last_error=NULL,
+                last_phase=NULL,
+                next_retry_at=NOW(),
+                worker_id=NULL,
+                worker_heartbeat=NULL
+            WHERE tenant_id=:uid
+              AND tipo=:tipo
+              AND idempotency_key=:idem
+              AND status IN ('failed_permanent','failed_retriable')
+            RETURNING id
+            """
+        ),
+        {"uid": tenant_id, "tipo": SUPPLY_CAIO_JOB, "idem": idem},
+    ).fetchone()
+    if reopened:
+        db.commit()
+        return int(reopened[0])
+    return job_queue.enqueue(
         db,
         tipo=SUPPLY_CAIO_JOB,
         payload={"inventory_id": inventory_id},
         tenant_id=tenant_id,
         max_attempts=2,
-        idempotency_key=f"lead-caio-{inventory_id}",
+        idempotency_key=idem,
         priority=1,
         run_id=uuid.uuid4().hex[:12],
     )
+
+
+def _sync_caio_backlog(db: Session, tenant_id: int, *, limit: int = 20) -> int:
+    """Guarantee raw/error_retry inventory keeps moving through Caio."""
+    rows = db.execute(
+        text(
+            """
+            SELECT li.id
+            FROM lead_inventory li
+            WHERE li.tenant_id=:uid
+              AND li.status IN ('raw', 'error_retry')
+              AND li.attempts < 4
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM jobs j
+                  WHERE j.tenant_id = li.tenant_id
+                    AND j.tipo = 'lead_supply_caio'
+                    AND j.payload->>'inventory_id' = li.id
+                    AND j.status IN ('pending','running','failed_retriable')
+              )
+            ORDER BY
+              CASE WHEN li.status='error_retry' THEN 0 ELSE 1 END,
+              li.atualizado_em ASC NULLS FIRST,
+              li.criado_em ASC NULLS FIRST
+            LIMIT :limit
+            """
+        ),
+        {"uid": tenant_id, "limit": max(1, int(limit or 20))},
+    ).fetchall()
+    enqueued = 0
+    for row in rows:
+        if _enqueue_caio(db, tenant_id, str(row[0])):
+            enqueued += 1
+    if enqueued:
+        _event(db, tenant_id, "caio", "info", f"Sync reativou {enqueued} lead(s) para qualificação")
+    return enqueued
 
 
 def _find_active_job(
@@ -738,12 +798,20 @@ def sync_supply(db: Session, tenant_id: int) -> dict[str, Any]:
     cfg = current["config"]
     counts = current["counts"]
     hunter_configured = bool(cfg.get("segmentos")) and bool(cfg.get("cidades"))
+    caio_requeued = 0
+    if cfg["ativo"]:
+        caio_requeued = _sync_caio_backlog(
+            db,
+            tenant_id,
+            limit=int(cfg.get("estoque_alvo") or 20),
+        )
     if cfg["ativo"] and not cfg["hunter_pausado"] and hunter_configured:
         useful = sum(counts.get(k, 0) for k in ("raw", "qualifying", "approved", "reserved", "in_production"))
         if useful < int(cfg["estoque_minimo"]):
             enqueue_hunter(db, tenant_id, delay_seconds=1, force=True)
     if cfg["ativo"] and not cfg["producao_pausada"] and counts.get("approved", 0) > 0:
         enqueue_production_tick(db, tenant_id, delay_seconds=1, reason="sync")
+    current["caio_requeued"] = caio_requeued
     return current
 
 
@@ -789,6 +857,7 @@ __all__ = [
     "sync_supply",
     "_store_candidate",
     "_enqueue_caio",
+    "_sync_caio_backlog",
     "_reserve_next",
     "_ensure_lead_row",
     "_lead_to_dict",

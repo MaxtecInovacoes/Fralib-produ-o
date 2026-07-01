@@ -323,6 +323,15 @@ Os **20 contratos** que saem do PRD, passam pelo OpenUI, e chegam no HTML public
   `lead_production_tick`, `lead_supply_caio`, `lead_supply_hunter` e só então
   `franz_outreach`/`bryan_outreach`. Jobs antigos de SDR não podem bloquear
   abastecimento de leads nem geração de sites.
+- Lead Supply é contínuo e independente da publicação: `sync_supply()` deve
+  recuperar itens `raw`/`error_retry` para o Caio mesmo quando não há pipeline
+  ativa, e `_enqueue_caio()` deve reabrir job Caio falhado com a mesma
+  idempotência em vez de silenciar conflito.
+- Franz reconcile só cria job quando não existe nenhum `franz_outreach` para o
+  lead. Ele **não** reabre `failed_permanent` automaticamente; retry de contato
+  é ação explícita. `watchdog_blocked/max_2_messages_without_response` significa
+  lead já contatado sem resposta e não deve virar falha de pipeline nem novo
+  disparo WhatsApp.
 - A conexão Postgres deve usar `client_encoding=UTF8`. `LATIN1` quebra jobs
   com payload/erro contendo acentos, travessão ou dados reais de empresas.
 - Backoff: 30/120/480s padrão; 60-960s para `franz`/`bryan`.

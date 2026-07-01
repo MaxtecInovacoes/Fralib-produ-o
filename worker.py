@@ -362,7 +362,6 @@ def _reconcile_missing_franz_jobs(db) -> dict:
                   WHERE j.tenant_id = l.user_id
                     AND j.tipo = 'franz_outreach'
                     AND j.idempotency_key = 'franz-' || l.id
-                    AND j.status IN ('pending', 'running', 'completed', 'done_finished')
               )
             ORDER BY l.processado_em DESC NULLS LAST, l.criado_em DESC NULLS LAST
             LIMIT :limit
@@ -372,7 +371,6 @@ def _reconcile_missing_franz_jobs(db) -> dict:
     ).fetchall()
 
     enqueued = 0
-    reopened = 0
     for row in rows:
         lead_id, tenant_id, nome, cidade, segmento, whatsapp, telefone, rating, score, tier, site_url = row
         payload = {
@@ -390,37 +388,6 @@ def _reconcile_missing_franz_jobs(db) -> dict:
             "_reconciled": True,
         }
         idem = f"franz-{lead_id}"
-        reopened_row = db.execute(
-            _txt(
-                """
-                UPDATE jobs
-                SET status = 'pending',
-                    payload = CAST(:payload AS jsonb),
-                    tenant_id = :tenant_id,
-                    attempts = 0,
-                    max_attempts = GREATEST(max_attempts, 5),
-                    next_retry_at = NOW(),
-                    last_phase = 'franz_reconcile',
-                    last_error = 'Reaberto por reconcile: site publicado sem contato ativo',
-                    worker_id = NULL,
-                    worker_heartbeat = NULL
-                WHERE tipo = 'franz_outreach'
-                  AND idempotency_key = :idem
-                  AND status IN ('failed_permanent', 'failed_retriable')
-                RETURNING id
-                """
-            ),
-            {
-                "payload": json.dumps(payload),
-                "tenant_id": int(tenant_id),
-                "idem": idem,
-            },
-        ).fetchone()
-        if reopened_row:
-            db.commit()
-            reopened += 1
-            continue
-
         job_id = job_queue.enqueue(
             db,
             tipo="franz_outreach",
@@ -431,7 +398,7 @@ def _reconcile_missing_franz_jobs(db) -> dict:
         )
         if job_id:
             enqueued += 1
-    return {"checked": len(rows), "enqueued": enqueued, "reopened": reopened}
+    return {"checked": len(rows), "enqueued": enqueued, "reopened": 0}
 
 
 def _tenant_recent_outbound_wait_seconds(db, tenant_id: int | None) -> int:
@@ -717,7 +684,49 @@ async def _executar_job(job: dict) -> tuple[bool, Optional[str], Optional[str]]:
                 intent = (getattr(franz_output, "intent", "") or "").lower()
                 next_stage = (getattr(franz_output, "next_stage", "") or "").lower()
                 proximo_passo = (getattr(franz_output, "proximo_passo", "") or "").lower()
-                diagnostico = f"{intent} {next_stage} {proximo_passo}"
+                guard = (getattr(franz_output, "guard", "") or "").lower()
+                diagnostico = f"{intent} {next_stage} {proximo_passo} {guard}"
+
+                if intent == "watchdog_blocked" or "watchdog" in diagnostico:
+                    if "max_2_messages_without_response" in diagnostico:
+                        if payload.get("lead_id"):
+                            _db_watchdog = SessionLocal()
+                            try:
+                                _db_watchdog.execute(
+                                    _txt(
+                                        """
+                                        UPDATE leads
+                                        SET sdr_stage = CASE
+                                                WHEN COALESCE(sdr_stage, '') IN (
+                                                    '', 'pendente_wpp', 'pending_sdr_send',
+                                                    'manual_test_no_wpp', 'sdr_enqueue_failed'
+                                                ) THEN 'hook'
+                                                ELSE sdr_stage
+                                            END,
+                                            atualizado_em = NOW()::text
+                                        WHERE id=:id AND user_id=:uid
+                                        """
+                                    ),
+                                    {"id": payload.get("lead_id"), "uid": tenant_id},
+                                )
+                                _db_watchdog.commit()
+                            finally:
+                                _db_watchdog.close()
+                        log.info(
+                            "Franz: watchdog bloqueou novo outbound para lead ja contatado "
+                            "tenant=%s lead=%s",
+                            tenant_id,
+                            payload.get("nome"),
+                        )
+                        return True, None, None
+
+                    log.info(
+                        "Franz: watchdog pediu espera tenant=%s lead=%s motivo=%s",
+                        tenant_id,
+                        payload.get("nome"),
+                        proximo_passo or guard or intent,
+                    )
+                    return False, "franz_schedule", "Aguardando watchdog do SDR"
 
                 if (
                     intent == "fila"
@@ -884,6 +893,7 @@ async def _process_one(job: dict) -> None:
             is_rate_limit = "rate limit" in _msg_lower or "limite de uso" in _msg_lower or "429" in _msg_lower
             is_budget = "budget" in _msg_lower or "limite diário" in _msg_lower or "tokens esgotado" in _msg_lower
             is_schedule_wait = "fora do horario" in _msg_lower or "fora do horário" in _msg_lower
+            is_watchdog_wait = "aguardando watchdog" in _msg_lower or "watchdog do sdr" in _msg_lower
             is_whatsapp_wait = (
                 "whatsapp não conectado" in _msg_lower
                 or "whatsapp nao conectado" in _msg_lower
@@ -897,9 +907,9 @@ async def _process_one(job: dict) -> None:
                 or "sem leads" in _msg_lower
             )
 
-            if is_schedule_wait or is_whatsapp_wait:
-                delay = 1800 if is_schedule_wait else 300
-                reason = "SDR fora do horario" if is_schedule_wait else "WhatsApp desconectado"
+            if is_schedule_wait or is_watchdog_wait or is_whatsapp_wait:
+                delay = 1800 if (is_schedule_wait or is_watchdog_wait) else 300
+                reason = "SDR aguardando janela/watchdog" if (is_schedule_wait or is_watchdog_wait) else "WhatsApp desconectado"
                 log.warning(f"[{trace_id}] job {job_id} {reason} — adiando sem consumir tentativa por {delay}s")
                 status = job_queue.defer_without_attempt(
                     db,
