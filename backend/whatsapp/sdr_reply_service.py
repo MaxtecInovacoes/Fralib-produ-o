@@ -208,6 +208,9 @@ def build_history(rows, max_messages=30):
     SDR 10/10: build_history era usado em testes antigos.
     Agora delega para get_full_history que pega ate 100 msgs
     (com summary se > 30 via _summarize_history).
+
+    IMPORTANTE: DB retorna DESC (mais novo primeiro), mas precisamos
+    ASC (mais antigo primeiro) para contexto correto do LLM.
     """
     try:
         from backend.whatsapp.history_helper import get_full_history
@@ -216,11 +219,13 @@ def build_history(rows, max_messages=30):
         for msg, direcao in rows:
             role = "assistant" if direcao == "saida" else "user"
             history.append({"role": role, "content": msg or ""})
+        # Reverter para ordem cronológica (mais antigo primeiro)
+        history = list(reversed(history))
         return history[:max_messages]
     except Exception:
-        # Fallback: retorna tudo
+        # Fallback: retorna tudo em ordem reversa
         history = []
         for msg, direcao in rows:
             role = "assistant" if direcao == "saida" else "user"
             history.append({"role": role, "content": msg or ""})
-        return history
+        return list(reversed(history))
