@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from .vite_liquid_components import infer_aesthetic_pole
+
 
 _LANE_KEYS = ["lane_a", "lane_b", "lane_c", "lane_d", "lane_e", "lane_f", "lane_g", "lane_h"]
 
@@ -588,11 +590,162 @@ _LANE_COPY_ENRICHMENTS: dict[str, dict[str, str]] = {
 }
 
 
+def _lane_variant_defaults(lane_id: str) -> dict[str, str]:
+    """Per-lane defaults for pricing/stats visual variants.
+
+    Deterministic mapping from lane id to layout choice. Keeps the lane
+    catalog compact while ensuring each lane gets a distinct feel.
+    """
+    if not lane_id:
+        return {"pricing_variant": "plan_grid", "stats_variant": "inline_hero_stats"}
+
+    if lane_id.endswith("-iron-pulse") or "iron-pulse" in lane_id:
+        return {"pricing_variant": "plan_grid", "stats_variant": "dedicated_band"}
+    if lane_id.endswith("-neon-grid") or "neon-grid" in lane_id:
+        return {"pricing_variant": "single_plan", "stats_variant": "mosaic_grid"}
+    if lane_id.endswith("-sunset-track") or "sunset-track" in lane_id:
+        return {"pricing_variant": "editorial_plan", "stats_variant": "vertical_stack"}
+    if lane_id.endswith("-graphite-core") or "graphite-core" in lane_id:
+        return {"pricing_variant": "plan_grid", "stats_variant": "dedicated_band"}
+
+    if "premium-clinic" in lane_id or "noir-gold" in lane_id:
+        return {"pricing_variant": "editorial_plan", "stats_variant": "vertical_stack"}
+    if "sports-lab" in lane_id or "performance-fuel" in lane_id:
+        return {"pricing_variant": "single_plan", "stats_variant": "mosaic_grid"}
+    if "botanical-editorial" in lane_id or "coastal-light" in lane_id:
+        return {"pricing_variant": "plan_grid", "stats_variant": "dedicated_band"}
+    if "clinical-soft" in lane_id or "rose-clay" in lane_id:
+        return {"pricing_variant": "editorial_plan", "stats_variant": "inline_hero_stats"}
+
+    if "midnight-club" in lane_id or "brutal-mono" in lane_id:
+        return {"pricing_variant": "single_plan", "stats_variant": "mosaic_grid"}
+    if "copper-smoke" in lane_id or "street-red" in lane_id:
+        return {"pricing_variant": "plan_grid", "stats_variant": "dedicated_band"}
+    if "atelier-light" in lane_id or "studio-mono" in lane_id:
+        return {"pricing_variant": "editorial_plan", "stats_variant": "inline_hero_stats"}
+    if "heritage-reserve" in lane_id or "old-money-green" in lane_id:
+        return {"pricing_variant": "plan_grid", "stats_variant": "vertical_stack"}
+
+    if "local-craft" in lane_id or "hospitality-warm" in lane_id:
+        return {"pricing_variant": "plan_grid", "stats_variant": "dedicated_band"}
+    if "technical-precision" in lane_id or "cinematic-soft" in lane_id:
+        return {"pricing_variant": "single_plan", "stats_variant": "mosaic_grid"}
+    if "editorial-light" in lane_id or "health-trust" in lane_id:
+        return {"pricing_variant": "editorial_plan", "stats_variant": "inline_hero_stats"}
+    if "professional-dark" in lane_id or "conversion-bold" in lane_id:
+        return {"pricing_variant": "plan_grid", "stats_variant": "dedicated_band"}
+
+    return {"pricing_variant": "plan_grid", "stats_variant": "inline_hero_stats"}
+
+
+def _lane_attitude_defaults(lane_id: str) -> dict[str, str]:
+    """Physical design tokens that make existing blocks behave like liquid blocks."""
+    lane_id = str(lane_id or "")
+    if not lane_id:
+        return {
+            "aesthetic_mode": "balanced",
+            "spacing_density": "normal",
+            "radius_mode": "balanced",
+            "container_strategy": "contained",
+            "typography_scale": "strong",
+            "heading_style": "clean",
+            "surface_depth": "elevated",
+            "overlap_mode": "none",
+            "motion_intensity": "composed",
+            "image_treatment": "clean",
+        }
+
+    if any(token in lane_id for token in ("iron-pulse", "neon-grid", "brutal-mono", "street-red", "conversion-bold")):
+        return {
+            "aesthetic_mode": "impact",
+            "spacing_density": "compressed",
+            "radius_mode": "sharp",
+            "container_strategy": "edge_to_edge",
+            "typography_scale": "heroic",
+            "heading_style": "condensed",
+            "surface_depth": "cutout",
+            "overlap_mode": "strong",
+            "motion_intensity": "sharp",
+            "image_treatment": "high_contrast",
+        }
+
+    if any(token in lane_id for token in ("graphite-core", "studio-mono", "technical-precision")):
+        return {
+            "aesthetic_mode": "technical",
+            "spacing_density": "normal",
+            "radius_mode": "sharp",
+            "container_strategy": "wide",
+            "typography_scale": "strong",
+            "heading_style": "condensed",
+            "surface_depth": "bordered",
+            "overlap_mode": "subtle",
+            "motion_intensity": "composed",
+            "image_treatment": "duotone",
+        }
+
+    if any(token in lane_id for token in ("botanical-editorial", "clinical-soft", "coastal-light", "clinic-ivory", "rose-clay", "health-trust", "editorial-light")):
+        return {
+            "aesthetic_mode": "wellness",
+            "spacing_density": "spacious",
+            "radius_mode": "soft",
+            "container_strategy": "contained",
+            "typography_scale": "soft",
+            "heading_style": "editorial",
+            "surface_depth": "elevated",
+            "overlap_mode": "none",
+            "motion_intensity": "minimal",
+            "image_treatment": "clean",
+        }
+
+    if any(token in lane_id for token in ("heritage-reserve", "noir-gold", "midnight-club", "premium-clinic", "old-money-green", "copper-smoke")):
+        return {
+            "aesthetic_mode": "premium",
+            "spacing_density": "spacious",
+            "radius_mode": "balanced",
+            "container_strategy": "wide",
+            "typography_scale": "strong",
+            "heading_style": "editorial",
+            "surface_depth": "bordered",
+            "overlap_mode": "subtle",
+            "motion_intensity": "cinematic",
+            "image_treatment": "grain",
+        }
+
+    if any(token in lane_id for token in ("performance-fuel", "sports-lab", "cinematic-soft")):
+        return {
+            "aesthetic_mode": "dynamic",
+            "spacing_density": "normal",
+            "radius_mode": "balanced",
+            "container_strategy": "wide",
+            "typography_scale": "strong",
+            "heading_style": "kinetic",
+            "surface_depth": "cutout",
+            "overlap_mode": "subtle",
+            "motion_intensity": "cinematic",
+            "image_treatment": "high_contrast",
+        }
+
+    return {
+        "aesthetic_mode": "balanced",
+        "spacing_density": "normal",
+        "radius_mode": "balanced",
+        "container_strategy": "contained",
+        "typography_scale": "strong",
+        "heading_style": "clean",
+        "surface_depth": "elevated",
+        "overlap_mode": "none",
+        "motion_intensity": "composed",
+        "image_treatment": "clean",
+    }
+
+
 def resolve_visual_lane(
     *,
     segment: str = "",
     subnicho: str = "",
     visual_lane: str = "",
+    tags: list[str] | None = None,
+    description: str = "",
 ) -> dict[str, Any]:
     family = _segment_family(segment, subnicho)
     lanes = list(_LANES.get(family) or _LANES["default"])
@@ -602,11 +755,32 @@ def resolve_visual_lane(
     except ValueError:
         index = 0
     lane = dict(lanes[index % len(lanes)])
+    lane_blocks = dict(lane.get("blocks") or {})
+    variant_defaults = _lane_variant_defaults(str(lane.get("id") or ""))
+    attitude_defaults = _lane_attitude_defaults(str(lane.get("id") or ""))
+    for key, value in {**variant_defaults, **attitude_defaults}.items():
+        lane_blocks.setdefault(key, value)
+    lane["blocks"] = lane_blocks
     lane_copy = dict(_FAMILY_COPY_DEFAULTS.get(family, {}))
     lane_copy.update(_LANE_COPY_ENRICHMENTS.get(str(lane.get("id") or ""), {}))
     lane_copy.update(lane.get("copy") or {})
     lane["copy"] = lane_copy
+
+    # Inferir polo estético para Blocos Líquidos
+    pole_info = infer_aesthetic_pole(
+        segment=segment,
+        subniche=subnicho,
+        tags=tags,
+        description=description,
+    )
+
     return {
         "family": family,
         **lane,
+        # Adicionar informações do polo para Blocos Líquidos
+        "pole": pole_info["pole"],
+        "pole_heat": pole_info["heat"],
+        "pole_temperature": pole_info["temperature"],
+        "pole_display_mode": pole_info["display_mode"],
+        "pole_tokens": pole_info["tokens"],
     }

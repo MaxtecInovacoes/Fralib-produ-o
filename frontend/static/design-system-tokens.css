@@ -1,0 +1,486 @@
+/**
+ * ============================================================================
+ * FRA LIB - DESIGN SYSTEM TOKENS
+ * ============================================================================
+ * Sistema de Blocos Líquidos - 4 Polos Estéticos
+ *
+ * Polos: SOFT | BOLD | CORPORATE | MINIMAL
+ *
+ * Para ativar um polo, adicione data-pole="X" no elemento HTML:
+ * <html data-pole="bold"> ou <body data-pole="soft">
+ *
+ * ============================================================================
+ */
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   TOKENS BASE (herdados por todos os polos)
+   ═══════════════════════════════════════════════════════════════════════════ */
+:root {
+  /* Cores Primárias */
+  --fralib-primary: #4f46e5;
+  --fralib-primary-hover: #4338ca;
+  --fralib-accent: #f59e0b;
+  --fralib-accent-contrast: #ffffff;
+
+  /* Backgrounds */
+  --fralib-bg-dark: #0a0a0a;
+  --fralib-bg-light: #ffffff;
+  --fralib-bg-surface: #1a1a1a;
+
+  /* Cores de Texto */
+  --fralib-text-dark: #111827;
+  --fralib-text-light: #f9fafb;
+  --fralib-text-muted: #6b7280;
+
+  /* Bordas */
+  --fralib-border: rgba(255, 255, 255, 0.1);
+  --fralib-border-strong: rgba(255, 255, 255, 0.2);
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     TOKENS DINÂMICOS (setados pelo polo escolhido)
+     ═══════════════════════════════════════════════════════════════════════════ */
+
+  /* Geometria */
+  --pole-radius: 8px;
+  --pole-section-overlap: 0px;
+  --pole-text-skew: 0deg;
+
+  /* Tipografia */
+  --pole-heading-font: 'Inter', system-ui, sans-serif;
+  --pole-heading-case: capitalize;
+  --pole-heading-style: normal;
+  --pole-heading-letter-spacing: -0.01em;
+  --pole-heading-scale: clamp(2rem, 5vw, 4rem);
+  --pole-hero-scale: clamp(3rem, 10vw, 8rem);
+
+  /* Espaçamento */
+  --pole-section-gap: 4rem;
+  --pole-section-padding-y: 4rem;
+  --pole-card-padding: 1.5rem;
+  --pole-grid-gap: 2rem;
+
+  /* Shadows */
+  --pole-shadow-card: 0 4px 6px rgba(0, 0, 0, 0.1);
+  --pole-shadow-button: 0 2px 4px rgba(0, 0, 0, 0.1);
+  --pole-shadow-glow: 0 0 20px rgba(79, 70, 229, 0.3);
+
+  /* Motion */
+  --pole-motion-intensity: 0.5;
+  --pole-motion-speed: 300ms;
+  --pole-motion-ease: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Text Effects */
+  --pole-text-stroke-width: 0px;
+  --pole-text-stroke-color: transparent;
+
+  /* Glass Effect */
+  --pole-glass-bg: rgba(255, 255, 255, 0.05);
+  --pole-glass-blur: 12px;
+
+  /* Container */
+  --fralib-container-max: 1280px;
+  --fralib-container-padding: 1rem;
+
+  /* Touch Targets */
+  --fralib-touch-target: 44px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   POLO SOFT: Orgânico/Acolhedor
+   Nichos: Nutricionistas, Spas, Psicólogos, Clínicas Estéticas, Pet Shops
+   ═══════════════════════════════════════════════════════════════════════════ */
+[data-pole="soft"] {
+  /* Geometria */
+  --pole-radius: 40px;
+  --pole-section-overlap: 0px;
+  --pole-text-skew: 0deg;
+
+  /* Tipografia - Serifada e elegante */
+  --pole-heading-font: 'Playfair Display', Georgia, serif;
+  --pole-heading-case: capitalize;
+  --pole-heading-style: normal;
+  --pole-heading-letter-spacing: 0.03em;
+  --pole-heading-scale: clamp(1.75rem, 4vw, 3rem);
+  --pole-hero-scale: clamp(2.5rem, 7vw, 5rem);
+
+  /* Espaçamento - Generoso */
+  --pole-section-gap: 6rem;
+  --pole-section-padding-y: 6rem;
+  --pole-card-padding: 2rem;
+  --pole-grid-gap: 3rem;
+
+  /* Shadows - Difusas e coloridas */
+  --pole-shadow-card: 0 8px 32px rgba(139, 92, 246, 0.12);
+  --pole-shadow-button: 0 4px 16px rgba(139, 92, 246, 0.25);
+  --pole-shadow-glow: 0 8px 32px rgba(139, 92, 246, 0.2);
+
+  /* Motion - Suave e lento */
+  --pole-motion-intensity: 0.3;
+  --pole-motion-speed: 600ms;
+  --pole-motion-ease: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Text Effects */
+  --pole-text-stroke-width: 0px;
+
+  /* Cores - Pastéis */
+  --fralib-primary: #8b5cf6;
+  --fralib-primary-hover: #7c3aed;
+  --fralib-accent: #f472b6;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   POLO BOLD: Agressivo/Impacto
+   Nichos: Academias, Crossfit, Eventos, Marketing Digital, Festivais
+   ═══════════════════════════════════════════════════════════════════════════ */
+[data-pole="bold"] {
+  /* Geometria - CORTANTE */
+  --pole-radius: 0px;
+  --pole-section-overlap: -80px;
+  --pole-text-skew: -5deg;
+
+  /* Tipografia - Impacto máximo */
+  --pole-heading-font: 'Anton', Impact, sans-serif;
+  --pole-heading-case: uppercase;
+  --pole-heading-style: italic;
+  --pole-heading-letter-spacing: -0.02em;
+  --pole-heading-scale: clamp(2.5rem, 8vw, 5rem);
+  --pole-hero-scale: clamp(4rem, 15vw, 12vw);
+
+  /* Espaçamento - Apertado */
+  --pole-section-gap: 0rem;
+  --pole-section-padding-y: 2rem;
+  --pole-card-padding: 1.5rem;
+  --pole-grid-gap: 0rem;
+
+  /* Shadows - Brutas com offset */
+  --pole-shadow-card: 8px 8px 0px var(--fralib-primary);
+  --pole-shadow-button: 4px 4px 0px var(--fralib-accent);
+  --pole-shadow-glow: 0 0 40px rgba(239, 68, 68, 0.4);
+
+  /* Motion - Rápido e intenso */
+  --pole-motion-intensity: 1;
+  --pole-motion-speed: 150ms;
+  --pole-motion-ease: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+
+  /* Text Effects - TEXT STROKE */
+  --pole-text-stroke-width: 2px;
+  --pole-text-stroke-color: var(--fralib-primary);
+
+  /* Cores - Vibrantes */
+  --fralib-primary: #ef4444;
+  --fralib-primary-hover: #dc2626;
+  --fralib-accent: #fbbf24;
+  --fralib-bg-dark: #0f0f0f;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   POLO CORPORATE: Sério/Seguro
+   Nichos: Advogados, Contadores, Logística, Engenharia, B2B, Clínicas
+   ═══════════════════════════════════════════════════════════════════════════ */
+[data-pole="corporate"] {
+  /* Geometria - SÓBRIA */
+  --pole-radius: 6px;
+  --pole-section-overlap: 0px;
+  --pole-text-skew: 0deg;
+
+  /* Tipografia - Limpa e profissional */
+  --pole-heading-font: 'Inter', system-ui, sans-serif;
+  --pole-heading-case: capitalize;
+  --pole-heading-style: normal;
+  --pole-heading-letter-spacing: -0.01em;
+  --pole-heading-scale: clamp(1.75rem, 4vw, 3rem);
+  --pole-hero-scale: clamp(2.5rem, 6vw, 4.5rem);
+
+  /* Espaçamento - Padrão */
+  --pole-section-gap: 4rem;
+  --pole-section-padding-y: 4rem;
+  --pole-card-padding: 1.5rem;
+  --pole-grid-gap: 2rem;
+
+  /* Shadows - Sutis e monocromáticas */
+  --pole-shadow-card: 0 1px 3px rgba(0, 0, 0, 0.1);
+  --pole-shadow-button: none;
+  --pole-shadow-glow: 0 0 20px rgba(59, 130, 246, 0.15);
+
+  /* Motion - Discreto */
+  --pole-motion-intensity: 0.4;
+  --pole-motion-speed: 300ms;
+  --pole-motion-ease: ease;
+
+  /* Text Effects */
+  --pole-text-stroke-width: 0px;
+
+  /* Cores - Azul/Cinza corporativo */
+  --fralib-primary: #1e40af;
+  --fralib-primary-hover: #1e3a8a;
+  --fralib-accent: #3b82f6;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   POLO MINIMAL: Moderno/Limpo
+   Nichos: Startups, SaaS, Arquitetura, Design, Tecnologia, Energia Solar
+   ═══════════════════════════════════════════════════════════════════════════ */
+[data-pole="minimal"] {
+  /* Geometria - GEOMÉTRICA */
+  --pole-radius: 12px;
+  --pole-section-overlap: -40px;
+  --pole-text-skew: 2deg;
+
+  /* Tipografia - Mono/Geométrica */
+  --pole-heading-font: 'Space Grotesk', system-ui, sans-serif;
+  --pole-heading-case: lowercase;
+  --pole-heading-style: normal;
+  --pole-heading-letter-spacing: -0.02em;
+  --pole-heading-scale: clamp(1.75rem, 4vw, 3rem);
+  --pole-hero-scale: clamp(3rem, 8vw, 6rem);
+
+  /* Espaçamento - Preciso */
+  --pole-section-gap: 5rem;
+  --pole-section-padding-y: 5rem;
+  --pole-card-padding: 2rem;
+  --pole-grid-gap: 1.5rem;
+
+  /* Shadows - Neon/Glow */
+  --pole-shadow-card: 0 0 40px rgba(59, 130, 246, 0.15);
+  --pole-shadow-button: 0 0 20px rgba(59, 130, 246, 0.4);
+  --pole-shadow-glow: 0 0 60px rgba(59, 130, 246, 0.3);
+
+  /* Motion - Baseado em scroll */
+  --pole-motion-intensity: 0.6;
+  --pole-motion-speed: 400ms;
+  --pole-motion-ease: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+
+  /* Text Effects */
+  --pole-text-stroke-width: 0px;
+
+  /* Glass Effect */
+  --pole-glass-bg: rgba(255, 255, 255, 0.05);
+  --pole-glass-blur: 12px;
+
+  /* Cores - Tech */
+  --fralib-primary: #3b82f6;
+  --fralib-primary-hover: #2563eb;
+  --fralib-accent: #06b6d4;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   CLASSES UTILITÁRIAS POR POLO
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Hero Headline - Aplica tipografia do polo */
+.hero-headline {
+  font-family: var(--pole-heading-font);
+  text-transform: var(--pole-heading-case);
+  font-style: var(--pole-heading-style);
+  letter-spacing: var(--pole-heading-letter-spacing);
+  font-size: var(--pole-hero-scale);
+  line-height: 1.1;
+  transform: skewX(var(--pole-text-skew));
+  -webkit-text-stroke: var(--pole-text-stroke-width) var(--pole-text-stroke-color);
+  text-stroke: var(--pole-text-stroke-width) var(--pole-text-stroke-color);
+  color: transparent;
+  background: linear-gradient(
+    to bottom,
+    var(--fralib-text-light) 0%,
+    var(--fralib-text-light) 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+/* Para polos sem text-stroke, mostra cor normal */
+[data-pole="soft"] .hero-headline,
+[data-pole="corporate"] .hero-headline,
+[data-pole="minimal"] .hero-headline {
+  -webkit-text-stroke: 0px transparent;
+  color: var(--fralib-text-light);
+}
+
+/* Section Overlap - Sobreposição de seções */
+.section-overlap {
+  margin-top: var(--pole-section-overlap);
+}
+
+/* Skew container - Para efeitos de inclinação */
+.skew-container {
+  transform: skewY(calc(var(--pole-text-skew) * -0.5));
+}
+
+.skew-content {
+  transform: skewY(calc(var(--pole-text-skew) * 0.5));
+}
+
+/* Card Pole - Estilo de card baseado no polo */
+.card-pole {
+  border-radius: var(--pole-radius);
+  padding: var(--pole-card-padding);
+  box-shadow: var(--pole-shadow-card);
+  transition: all var(--pole-motion-speed) var(--pole-motion-ease);
+}
+
+.card-pole:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--pole-shadow-glow);
+}
+
+/* Button Pole - Estilo de botão baseado no polo */
+.btn-pole {
+  border-radius: var(--pole-radius);
+  padding: 0.75rem 1.5rem;
+  font-family: var(--pole-heading-font);
+  text-transform: var(--pole-heading-case);
+  transition: all var(--pole-motion-speed) var(--pole-motion-ease);
+  box-shadow: var(--pole-shadow-button);
+}
+
+.btn-pole:hover {
+  transform: translateY(-2px);
+}
+
+/* POLO BOLD - Button especial com offset */
+[data-pole="bold"] .btn-pole:hover {
+  transform: translate(2px, 2px);
+  box-shadow: none;
+}
+
+/* Glass Card - Para polo MINIMAL */
+.glass-card {
+  background: var(--pole-glass-bg);
+  backdrop-filter: blur(var(--pole-glass-blur));
+  -webkit-backdrop-filter: blur(var(--pole-glass-blur));
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--pole-radius);
+}
+
+/* Fallback para browsers sem backdrop-filter */
+@supports not (backdrop-filter: blur(1px)) {
+  .glass-card {
+    background: rgba(255, 255, 255, 0.95);
+  }
+}
+
+/* Grid Pole - Layout de grid baseado no polo */
+.grid-pole {
+  display: grid;
+  gap: var(--pole-grid-gap);
+}
+
+/* Section Pole - Seção completa com tokens do polo */
+.section-pole {
+  padding-top: var(--pole-section-padding-y);
+  padding-bottom: var(--pole-section-padding-y);
+  margin-top: var(--pole-section-overlap);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   UTILITÁRIOS DE MOTION
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Reveal animation - Baseado na intensidade do polo */
+[data-reveal] {
+  opacity: 0;
+  transform: translateY(20px);
+  transition:
+    opacity var(--pole-motion-speed) var(--pole-motion-ease),
+    transform var(--pole-motion-speed) var(--pole-motion-ease);
+}
+
+[data-reveal].revealed {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Reveal directions */
+[data-reveal="up"] {
+  transform: translateY(30px);
+}
+
+[data-reveal="down"] {
+  transform: translateY(-30px);
+}
+
+[data-reveal="left"] {
+  transform: translateX(30px);
+}
+
+[data-reveal="right"] {
+  transform: translateX(-30px);
+}
+
+/* Scale reveal */
+[data-reveal="scale"] {
+  transform: scale(0.9);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   RESPONSIVIDADE
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Mobile - Desativa overlap em telas pequenas */
+@media (max-width: 768px) {
+  [data-pole="bold"] {
+    --pole-section-overlap: 0px;
+    --pole-hero-scale: clamp(2.5rem, 12vw, 4rem);
+  }
+
+  [data-pole="minimal"] {
+    --pole-section-overlap: 0px;
+  }
+
+  .section-overlap {
+    margin-top: 0;
+  }
+
+  .skew-container,
+  .skew-content {
+    transform: none;
+  }
+}
+
+/* Tablet */
+@media (min-width: 769px) and (max-width: 1024px) {
+  [data-pole="bold"] {
+    --pole-section-overlap: -40px;
+  }
+
+  [data-pole="minimal"] {
+    --pole-section-overlap: -20px;
+  }
+}
+
+/* Desktop */
+@media (min-width: 1025px) {
+  /* Desktop mantém as configurações do polo */
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ANIMAÇÕES DE ENTRADA (Baseadas em --pole-motion-intensity)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Intensidade baixa (Soft, Corporate) */
+[data-pole="soft"] *,
+[data-pole="corporate"] * {
+  transition-timing-function: var(--pole-motion-ease);
+}
+
+/* Intensidade alta (Bold, Minimal) */
+[data-pole="bold"] *,
+[data-pole="minimal"] * {
+  transition-timing-function: var(--pole-motion-ease);
+}
+
+/* Stagger delays */
+[data-stagger] > *:nth-child(1) { transition-delay: 0ms; }
+[data-stagger] > *:nth-child(2) { transition-delay: 50ms; }
+[data-stagger] > *:nth-child(3) { transition-delay: 100ms; }
+[data-stagger] > *:nth-child(4) { transition-delay: 150ms; }
+[data-stagger] > *:nth-child(5) { transition-delay: 200ms; }
+[data-stagger] > *:nth-child(6) { transition-delay: 250ms; }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   DEBUG - Para desenvolvimento
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+[data-debug-pole="true"] * {
+  outline: 1px dashed rgba(255, 0, 0, 0.3);
+}

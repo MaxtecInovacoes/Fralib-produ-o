@@ -43,6 +43,24 @@ logger = logging.getLogger(__name__)
 
 # Import from modularized components
 try:
+    from backend.services.vite_liquid_components import (
+        infer_aesthetic_pole,
+        get_liquid_component_guide,
+        POLO_TOKENS,
+        get_hero_display_mode,
+    )
+    from backend.services.vite_liquid_prompts import (
+        build_liquid_system_prompt,
+        build_hero_prompt,
+        get_temperature_for_agent,
+        POLE_SYSTEM_PROMPTS,
+    )
+    LIQUID_COMPONENTS_AVAILABLE = True
+except ImportError:
+    LIQUID_COMPONENTS_AVAILABLE = False
+    logger.warning("vite_liquid_components not available - running in legacy mode")
+
+try:
     from backend.services.vite_config import (
         VITE_REACT_FILE_BATCHES,
         FIXED_PACKAGE_JSON,
@@ -478,6 +496,16 @@ def _get_copy_only_user_prompt(facts: dict[str, Any], policy: str = "copy_only")
     "conversion_strategy": "quick_whatsapp | appointment_ritual | proof_first | local_trust | premium_consultation",
     "hero_layout": "split | center | asymmetric | fullbleed | video",
     "hero_text_side": "left | right | center",
+    "aesthetic_mode": "wellness | impact | editorial | premium | technical | dynamic | minimal | balanced",
+    "spacing_density": "compressed | normal | spacious",
+    "radius_mode": "sharp | balanced | soft | pill",
+    "container_strategy": "contained | wide | edge_to_edge | overlap",
+    "typography_scale": "soft | strong | heroic",
+    "heading_style": "clean | display | condensed | editorial | kinetic",
+    "surface_depth": "flat | bordered | elevated | cutout",
+    "overlap_mode": "none | subtle | strong",
+    "motion_intensity": "minimal | composed | cinematic | sharp",
+    "image_treatment": "clean | duotone | grain | high_contrast",
     "section_order": ["hero", "about", "services", "gallery", "reviews", "faq", "location", "lifestyle", "contact-cta"],
     "about_variant": "manifesto_split | proof_sidebar | feature_grid",
     "surface_style": "solid | outline | soft_tint",
@@ -508,6 +536,7 @@ CONTRATO:
 - CTA deve combinar com o nicho.
 - Se creative_plan estiver ativo, escolha apenas opcoes do schema. O renderer vai aplicar os blocos.
 - Nunca escolha pelo caminho nicho -> template. Escolha por marca -> emocao -> historia -> visual -> conversao.
+- Escolha a atitude fisica do layout: impacto comprime, usa quinas, tipografia forte e overlap; wellness/editorial abre respiro, arredonda e reduz agressividade.
 - Hero com video NAO e padrao. Use "video" apenas quando a variacao pedir video explicitamente; caso contrario escolha split, center, asymmetric ou fullbleed conforme a marca.
 - Use superficies solidas ou outline; glass/transparencia nao deve ser usado como efeito padrao.
 - O site precisa parecer pertencer a esta empresa mesmo sem logo.
@@ -567,6 +596,17 @@ def _one_of(value: Any, allowed: set[str]) -> str:
         "marquee": "card_marquee",
         "spotlight": "quote_spotlight",
         "local_feature": "feature_local",
+        "brutalist": "impact",
+        "aggressive": "impact",
+        "sharp": "impact",
+        "soft": "wellness",
+        "minimalist": "minimal",
+        "cinematic": "premium",
+        "edge-to-edge": "edge_to_edge",
+        "edge": "edge_to_edge",
+        "compressed_spacing": "compressed",
+        "wide_container": "wide",
+        "hero": "heroic",
     }
     candidate = aliases.get(candidate, candidate)
     return candidate if candidate in allowed else ""
@@ -590,7 +630,7 @@ def _sanitize_creative_plan(content: dict[str, Any]) -> dict[str, Any]:
 
     section_allowed = {
         "hero", "about", "services", "gallery", "reviews", "faq",
-        "location", "lifestyle", "contact-cta",
+        "location", "lifestyle", "contact-cta", "pricing", "stats-bar",
     }
     section_aliases = {
         "sobre": "about",
@@ -602,6 +642,10 @@ def _sanitize_creative_plan(content: dict[str, Any]) -> dict[str, Any]:
         "experiencia": "lifestyle",
         "contato": "contact-cta",
         "cta": "contact-cta",
+        "planos": "pricing",
+        "precos": "pricing",
+        "stats": "stats-bar",
+        "numeros": "stats-bar",
     }
     sections: list[str] = []
     raw_sections = source.get("section_order") if isinstance(source.get("section_order"), list) else []
@@ -627,6 +671,16 @@ def _sanitize_creative_plan(content: dict[str, Any]) -> dict[str, Any]:
         "conversion_strategy": {"quick_whatsapp", "appointment_ritual", "proof_first", "local_trust", "premium_consultation"},
         "hero_layout": {"split", "center", "asymmetric", "fullbleed", "video"},
         "hero_text_side": {"left", "right", "center"},
+        "aesthetic_mode": {"wellness", "impact", "editorial", "premium", "technical", "dynamic", "minimal", "balanced"},
+        "spacing_density": {"compressed", "normal", "spacious"},
+        "radius_mode": {"sharp", "balanced", "soft", "pill"},
+        "container_strategy": {"contained", "wide", "edge_to_edge", "overlap"},
+        "typography_scale": {"soft", "strong", "heroic"},
+        "heading_style": {"clean", "display", "condensed", "editorial", "kinetic"},
+        "surface_depth": {"flat", "bordered", "elevated", "cutout"},
+        "overlap_mode": {"none", "subtle", "strong"},
+        "motion_intensity": {"minimal", "composed", "cinematic", "sharp"},
+        "image_treatment": {"clean", "duotone", "grain", "high_contrast"},
         "about_variant": {"manifesto_split", "proof_sidebar", "feature_grid"},
         "surface_style": {"solid", "outline", "soft_tint"},
         "color_strategy": {"restrained", "committed", "full_palette", "drenched"},
@@ -962,6 +1016,8 @@ def render_vite_react_site(
     """
     started = time.time()
     facts = facts or {}
+    # Injetar tokens de polo estético (Blocos Líquidos)
+    facts = _inject_pole_tokens(facts)
     attempts: list[dict[str, Any]] = []
     requested_paths = extract_requested_vite_project_paths(builder_prompt)
     workspace = Path(workspace_dir).resolve()
@@ -3209,6 +3265,8 @@ def _normalize_cinematic_section_order(order: list[str] | None) -> list[str]:
         "lifestyle",
         "contact-cta",
         "footer",
+        "pricing",
+        "stats-bar",
     }
     normalized: list[str] = []
     for item in order or []:
@@ -3236,6 +3294,40 @@ def _resolve_cinematic_section_order(archetype: str, seed: int | None, variation
     elif preferred.index("hero") != 1:
         preferred.remove("hero")
         preferred.insert(1, "hero")
+
+    # Mudança 5: injeta stats-bar e pricing de acordo com stats/pricing variant.
+    # Lê a lane para garantir stats/pricing variant mesmo se o variation
+    # nao trouxer explicitamente (resolver ja acontece no block_plan).
+    _stats_variant = str((variation or {}).get("stats_variant") or "")
+    _pricing_variant = str((variation or {}).get("pricing_variant") or "")
+    if not _stats_variant or not _pricing_variant:
+        try:
+            from backend.services.vite_visual_lanes import resolve_visual_lane
+            _lane = resolve_visual_lane(
+                segment=str(archetype or "").lower(),
+                subnicho=str((variation or {}).get("subnicho") or ""),
+                visual_lane=str((variation or {}).get("visual_lane") or ""),
+            )
+            _lane_blocks = _lane.get("blocks") or {}
+            if not _stats_variant:
+                _stats_variant = str(_lane_blocks.get("stats_variant") or "inline_hero_stats")
+            if not _pricing_variant:
+                _pricing_variant = str(_lane_blocks.get("pricing_variant") or "plan_grid")
+        except Exception:
+            _stats_variant = _stats_variant or "inline_hero_stats"
+            _pricing_variant = _pricing_variant or "plan_grid"
+    _order_style = str((variation or {}).get("section_order_style") or "credibility_first")
+
+    if _stats_variant != "inline_hero_stats" and "stats-bar" not in preferred:
+        preferred.insert(2, "stats-bar")
+
+    if (_pricing_variant != "plan_grid" or _order_style == "conversion_first") and "pricing" not in preferred:
+        if _order_style == "conversion_first":
+            insert_at = preferred.index("about") if "about" in preferred else 3
+            preferred.insert(insert_at, "pricing")
+        else:
+            insert_at = preferred.index("location") if "location" in preferred else len(preferred)
+            preferred.insert(insert_at, "pricing")
 
     body_required = ["about", "reviews", "faq", "location"]
     for section in body_required:
@@ -4346,40 +4438,48 @@ def _generate_cinematic_studio_files(facts: dict[str, Any]) -> dict[str, str]:
     ]
     _hero_class = _HERO_CLASSES_POOL[_seed_for_html % len(_HERO_CLASSES_POOL)]
 
-    # H1 size variants (5 opcoes)
+    # H1 size variants (8 opcoes) — inclui display gigante scraped/condensado
     _H1_SIZE_POOL = [
         "text-[clamp(2.65rem,7.7vw,5.9rem)] font-semibold leading-[0.93] tracking-[-0.035em] text-white",
         "text-[clamp(2.4rem,7vw,5.4rem)] font-bold leading-[0.95] tracking-[-0.04em] text-white",
         "text-[clamp(2.8rem,8.2vw,6rem)] font-extrabold leading-[0.9] tracking-[-0.03em] text-white",
         "text-[clamp(2.55rem,7.3vw,5.7rem)] font-semibold leading-[1] tracking-[-0.025em] text-white",
         "text-[clamp(2.7rem,7.9vw,6rem)] font-bold leading-[0.92] tracking-[-0.038em] text-white",
+        # Display scraped/condensado (estilo High Fitness) — para lanes BOLD_ENERGY
+        "text-[clamp(3.5rem,11vw,8rem)] font-black leading-[0.85] tracking-[-0.045em] uppercase text-white",
+        "text-[clamp(3.2rem,10vw,7.4rem)] font-extrabold leading-[0.86] tracking-[-0.05em] uppercase text-white",
+        "text-[clamp(3rem,9vw,6.6rem)] font-extrabold leading-[0.9] tracking-[-0.04em] uppercase text-white",
     ]
     _h1_size = _H1_SIZE_POOL[_seed_for_html % len(_H1_SIZE_POOL)]
 
-    # Font family variants (5 opcoes por subnicho + counter)
+    # Font family variants (heading e body separados).
     _FONT_POOL = {
-        "default": ["Inter, sans-serif", "system-ui, sans-serif", "Roboto, sans-serif", "Manrope, sans-serif", "DM Sans, sans-serif"],
-        "nutricionista_esportiva": ["'Oswald', sans-serif", "'Bebas Neue', sans-serif", "'Inter', sans-serif", "'Anton', sans-serif", "'Roboto Condensed', sans-serif"],
-        "nutricionista_clinica": ["'Lora', serif", "'Merriweather', serif", "'Nunito', sans-serif", "'Crimson Pro', serif", "'Source Serif 4', serif"],
-        "barbearia_premium": ["'Playfair Display', serif", "'Bebas Neue', sans-serif", "'Anton', sans-serif", "'Oswald', sans-serif", "'Inter', sans-serif"],
-        "academia_crossfit": ["'Oswald', sans-serif", "'Bebas Neue', sans-serif", "'Anton', sans-serif", "'Inter', sans-serif", "'Roboto Condensed', sans-serif"],
-        "academia_musculacao": ["'Anton', sans-serif", "'Bebas Neue', sans-serif", "'Oswald', sans-serif", "'Inter', sans-serif", "'Manrope', sans-serif"],
-        "restaurante_familiar": ["'Lora', serif", "'Playfair Display', serif", "'Merriweather', serif", "'Crimson Pro', serif", "'Inter', sans-serif"],
+        "default": (["Manrope, sans-serif"] * 4 + ["Inter, sans-serif"], ["Inter, sans-serif"] * 4 + ["Manrope, sans-serif"]),
+        "nutricionista_esportiva": (["'Bebas Neue', sans-serif", "'Anton', sans-serif", "'Oswald', sans-serif", "'Roboto Condensed', sans-serif", "'Bebas Neue', sans-serif"], ["Inter, sans-serif", "Manrope, sans-serif", "Roboto, sans-serif", "DM Sans, sans-serif", "system-ui, sans-serif"]),
+        "nutricionista_clinica": (["'Source Serif 4', serif", "'Lora', serif", "'Crimson Pro', serif", "'Merriweather', serif", "'Lora', serif"], ["'Nunito', sans-serif", "Inter, sans-serif", "system-ui, sans-serif", "Manrope, sans-serif", "Inter, sans-serif"]),
+        "barbearia_premium": (["'Playfair Display', serif", "'Bebas Neue', sans-serif", "'Anton', sans-serif", "'Oswald', sans-serif", "'Libre Baskerville', serif"], ["Inter, sans-serif", "Manrope, sans-serif", "system-ui, sans-serif", "DM Sans, sans-serif", "Inter, sans-serif"]),
+        "academia_crossfit": (["'Bebas Neue', sans-serif", "'Anton', sans-serif", "'Oswald', sans-serif", "'Roboto Condensed', sans-serif", "'Bebas Neue', sans-serif"], ["Inter, sans-serif", "Manrope, sans-serif", "Roboto, sans-serif", "system-ui, sans-serif", "DM Sans, sans-serif"]),
+        "academia_musculacao": (["'Anton', sans-serif", "'Bebas Neue', sans-serif", "'Oswald', sans-serif", "'Bebas Neue', sans-serif", "'Anton', sans-serif"], ["Inter, sans-serif", "Manrope, sans-serif", "system-ui, sans-serif", "Roboto, sans-serif", "Inter, sans-serif"]),
+        "restaurante_familiar": (["'Playfair Display', serif", "'Lora', serif", "'Merriweather', serif", "'Crimson Pro', serif", "'Playfair Display', serif"], ["Inter, sans-serif", "system-ui, sans-serif", "Manrope, sans-serif", "Inter, sans-serif", "DM Sans, sans-serif"]),
     }
-    _font_family = _FONT_POOL.get(_subnicho_norm, _FONT_POOL["default"])[_seed_for_html % 5]
+    _heading_font_pool, _body_font_pool = _FONT_POOL.get(_subnicho_norm, _FONT_POOL["default"])
+    _heading_font = _heading_font_pool[_seed_for_html % len(_heading_font_pool)]
+    _body_font = _body_font_pool[_seed_for_html % len(_body_font_pool)]
+    _font_family = _body_font
     _typography_mood = ""
     _variation_for_type = facts.get("variation") if isinstance(facts.get("variation"), dict) else {}
     if isinstance(_variation_for_type, dict):
         _typography_mood = str(_variation_for_type.get("typography_mood") or "")
     _TYPOGRAPHY_MOOD_FONT = {
-        "clean_sans": "Manrope, system-ui, sans-serif",
-        "condensed_sport": "'Roboto Condensed', 'Arial Narrow', sans-serif",
-        "luxury_display": "'Libre Baskerville', Georgia, serif",
-        "editorial_serif": "'Source Serif 4', Georgia, serif",
-        "technical_grotesk": "'Arial Narrow', 'Roboto Condensed', sans-serif",
+        "clean_sans": ("Manrope, system-ui, sans-serif", "Manrope, system-ui, sans-serif"),
+        "condensed_sport": ("'Bebas Neue', 'Oswald', sans-serif", "Inter, sans-serif"),
+        "luxury_display": ("'Libre Baskerville', Georgia, serif", "Inter, sans-serif"),
+        "editorial_serif": ("'Source Serif 4', Georgia, serif", "Inter, sans-serif"),
+        "technical_grotesk": ("'Arial Narrow', 'Roboto Condensed', sans-serif", "Inter, sans-serif"),
     }
     if _typography_mood in _TYPOGRAPHY_MOOD_FONT:
-        _font_family = _TYPOGRAPHY_MOOD_FONT[_typography_mood]
+        _heading_font, _body_font = _TYPOGRAPHY_MOOD_FONT[_typography_mood]
+        _font_family = _body_font
 
     # Services icon variants (3 services, 5 icon options)
     _SERVICE_ICONS = ["ClipboardCheck", "Sparkles", "MapPinned", "Heart", "Trophy"]
@@ -4432,6 +4532,8 @@ def _generate_cinematic_studio_files(facts: dict[str, Any]) -> dict[str, str]:
         "lifestyle": "import { LifestyleSection } from '../components/LifestyleSection';",
         "contact-cta": "import { ContactCTA } from '../components/ContactCTA';",
         "footer": "import { Footer } from '../components/Footer';",
+        "pricing": "import { PricingSection } from '../components/PricingSection';",
+        "stats-bar": "import { StatsBar } from '../components/StatsBar';",
     }
     _section_markup_map = {
         "navbar": "      <Navbar onOpen={() => setOpen(true)} />",
@@ -4445,6 +4547,8 @@ def _generate_cinematic_studio_files(facts: dict[str, Any]) -> dict[str, str]:
         "lifestyle": "      <LifestyleSection />",
         "contact-cta": "      <ContactCTA onOpen={() => setOpen(true)} />",
         "footer": "      <Footer />",
+        "pricing": "      <PricingSection />",
+        "stats-bar": "      <StatsBar />",
     }
     _index_imports = "\n".join(
         _section_import_map[section] for section in _section_order if section in _section_import_map
@@ -4459,6 +4563,85 @@ def _generate_cinematic_studio_files(facts: dict[str, Any]) -> dict[str, str]:
         segment=segment,
     )
     _nav_links = list(_block_plan.get("nav_links") or [])
+    _aesthetic_mode = str(_block_plan.get("aesthetic_mode") or "balanced")
+    _spacing_density = str(_block_plan.get("spacing_density") or "normal")
+    _radius_mode = str(_block_plan.get("radius_mode") or "balanced")
+    _container_strategy = str(_block_plan.get("container_strategy") or "contained")
+    _typography_scale = str(_block_plan.get("typography_scale") or "strong")
+    _heading_style = str(_block_plan.get("heading_style") or "clean")
+    _surface_depth = str(_block_plan.get("surface_depth") or "elevated")
+    _overlap_mode = str(_block_plan.get("overlap_mode") or "none")
+    _motion_intensity = str(_block_plan.get("motion_intensity") or "composed")
+    _image_treatment = str(_block_plan.get("image_treatment") or "clean")
+    _section_pad = {
+        "compressed": "clamp(3rem, 6vw, 5.25rem)",
+        "normal": "clamp(4.5rem, 9vw, 8.5rem)",
+        "spacious": "clamp(6rem, 11vw, 11rem)",
+    }.get(_spacing_density, "clamp(4.5rem, 9vw, 8.5rem)")
+    _section_pad_mobile = {
+        "compressed": "clamp(2.75rem, 11vw, 4.25rem)",
+        "normal": "clamp(3.25rem, 14vw, 5rem)",
+        "spacious": "clamp(4.5rem, 16vw, 6rem)",
+    }.get(_spacing_density, "clamp(3.25rem, 14vw, 5rem)")
+    _radius_card = {
+        "sharp": "4px",
+        "balanced": "18px",
+        "soft": "28px",
+        "pill": "36px",
+    }.get(_radius_mode, "18px")
+    _radius_panel = {
+        "sharp": "8px",
+        "balanced": "26px",
+        "soft": "42px",
+        "pill": "56px",
+    }.get(_radius_mode, "26px")
+    _container_max = {
+        "contained": "min(1120px, calc(100vw - clamp(2rem, 7vw, 6rem)))",
+        "wide": "min(1320px, calc(100vw - clamp(1.5rem, 5vw, 5rem)))",
+        "edge_to_edge": "min(1480px, calc(100vw - clamp(0.75rem, 2.5vw, 2rem)))",
+        "overlap": "min(1360px, calc(100vw - clamp(1rem, 4vw, 4rem)))",
+    }.get(_container_strategy, "min(1120px, calc(100vw - clamp(2rem, 7vw, 6rem)))")
+    _overlap_shift = {
+        "none": "0px",
+        "subtle": "-3.5rem",
+        "strong": "-7rem",
+    }.get(_overlap_mode, "0px")
+    _h1_css_size = {
+        "soft": "clamp(2.4rem, 6.8vw, 5.1rem)",
+        "strong": "clamp(2.65rem, 7.7vw, 5.9rem)",
+        "heroic": "clamp(3.2rem, 10.5vw, 6.5rem)",
+    }.get(_typography_scale, "clamp(2.65rem, 7.7vw, 5.9rem)")
+    _h2_css_size = {
+        "soft": "clamp(2rem, 4.8vw, 4.2rem)",
+        "strong": "clamp(2.2rem, 5.4vw, 4.8rem)",
+        "heroic": "clamp(2.7rem, 7.6vw, 6rem)",
+    }.get(_typography_scale, "clamp(2.2rem, 5.4vw, 4.8rem)")
+    _heading_weight = {
+        "soft": "650",
+        "strong": "780",
+        "heroic": "920",
+    }.get(_typography_scale, "780")
+    _heading_tracking = {
+        "clean": "-0.02em",
+        "display": "-0.035em",
+        "condensed": "-0.04em",
+        "editorial": "-0.015em",
+        "kinetic": "-0.035em",
+    }.get(_heading_style, "-0.02em")
+    _heading_transform = "uppercase" if _heading_style in {"condensed", "kinetic"} or _aesthetic_mode == "impact" else "none"
+    _heading_skew = "skewX(-4deg)" if _aesthetic_mode == "impact" and _heading_style in {"condensed", "kinetic"} else "none"
+    _surface_shadow = {
+        "flat": "none",
+        "bordered": "inset 0 0 0 1px color-mix(in srgb, var(--accent) 18%, transparent)",
+        "elevated": "0 24px 80px rgba(0,0,0,.14)",
+        "cutout": "12px 12px 0 color-mix(in srgb, var(--accent) 72%, transparent)",
+    }.get(_surface_depth, "0 24px 80px rgba(0,0,0,.14)")
+    _image_filter = {
+        "clean": "none",
+        "duotone": "grayscale(.45) contrast(1.1) saturate(.85)",
+        "grain": "contrast(1.08) saturate(.88)",
+        "high_contrast": "contrast(1.18) saturate(.75)",
+    }.get(_image_treatment, "none")
 
     source_files: dict[str, str] = {
         "src/App.tsx": """import { Index } from './pages/Index';
@@ -4479,6 +4662,10 @@ export const whatsappHref = {json.dumps(whatsapp, ensure_ascii=False)} as const;
 export const variation = {json.dumps(_variation_payload, ensure_ascii=False)} as const;
 export const blockPlan = {json.dumps(_block_plan, ensure_ascii=False)} as const;
 export const navLinks = {json.dumps(_nav_links, ensure_ascii=False)} as const;
+if (typeof window !== 'undefined') {{
+  (window as any).__fralib_pricing_variant = {json.dumps(_block_plan.get("pricing_variant", "plan_grid"))};
+  (window as any).__fralib_stats_variant = {json.dumps(_block_plan.get("stats_variant", "inline_hero_stats"))};
+}}
 """,
         "src/pages/Index.tsx": f"""import {{ useState }} from 'react';
 {_index_imports}
@@ -4487,7 +4674,19 @@ import {{ BookingModal }} from '../components/BookingModal';
 export function Index() {{
   const [open, setOpen] = useState(false);
   return (
-    <main className="min-h-screen bg-[{c_bg}] text-white">
+    <main
+      data-attitude="{_aesthetic_mode}"
+      data-spacing="{_spacing_density}"
+      data-radius="{_radius_mode}"
+      data-container="{_container_strategy}"
+      data-typography="{_typography_scale}"
+      data-heading="{_heading_style}"
+      data-surface="{_surface_depth}"
+      data-overlap="{_overlap_mode}"
+      data-motion="{_motion_intensity}"
+      data-image-treatment="{_image_treatment}"
+      className="min-h-screen bg-[{c_bg}] text-white"
+    >
 {_index_sections}
       <BookingModal open={{open}} onClose={{() => setOpen(false)}} />
     </main>
@@ -4632,10 +4831,22 @@ export default HeroSection;
   --text-dark: {palette.get('text_dark', '#09130f')};
   --panel-text: {palette.get('panel_text', palette.get('text_dark', '#09130f'))};
   --font-family: {_font_family};
-  --h1-size: {_h1_size};
-  --container: min(1120px, calc(100vw - clamp(2rem, 7vw, 6rem)));
-  --section-pad: clamp(4.5rem, 9vw, 8.5rem);
-  --section-pad-mobile: clamp(3.25rem, 14vw, 5rem);
+  --font-family-body: {_body_font};
+  --font-family-heading: {_heading_font};
+  --h1-size: {_h1_css_size};
+  --h2-size: {_h2_css_size};
+  --heading-weight: {_heading_weight};
+  --heading-tracking: {_heading_tracking};
+  --heading-transform: {_heading_transform};
+  --heading-skew: {_heading_skew};
+  --container: {_container_max};
+  --section-pad: {_section_pad};
+  --section-pad-mobile: {_section_pad_mobile};
+  --radius-card: {_radius_card};
+  --radius-panel: {_radius_panel};
+  --overlap-shift: {_overlap_shift};
+  --surface-shadow: {_surface_shadow};
+  --image-treatment: {_image_filter};
   --cta-btn: {_cta_btn_class};
 }}
 .hero-v14 {{
@@ -4666,9 +4877,9 @@ export default HeroSection;
 @layer base {{
   * {{ box-sizing: border-box; }}
   html {{ scroll-behavior: smooth; background: var(--bg); }}
-  body {{ margin: 0; min-width: 320px; min-height: 100vh; font-family: var(--font-family); color: var(--text); background: var(--bg); text-rendering: geometricPrecision; }}
-  h1 {{ font-size: var(--h1-size); }}
-  h1, h2, h3 {{ text-wrap: balance; }}
+  body {{ margin: 0; min-width: 320px; min-height: 100vh; font-family: var(--font-family-body); color: var(--text); background: var(--bg); text-rendering: geometricPrecision; }}
+  h1 {{ font-size: var(--h1-size); font-family: var(--font-family-heading); font-weight: var(--heading-weight); line-height: .9; letter-spacing: var(--heading-tracking); text-transform: var(--heading-transform); }}
+  h1, h2, h3 {{ font-family: var(--font-family-heading); letter-spacing: var(--heading-tracking); text-wrap: balance; }}
   p {{ text-wrap: pretty; }}
   section {{ scroll-margin-top: 5rem; }}
   img, video {{ max-width: 100%; display: block; }}
@@ -4676,8 +4887,81 @@ export default HeroSection;
   button, a {{ -webkit-tap-highlight-color: transparent; }}
   ::selection {{ background: var(--accent); color: var(--bg); }}
 }}
+main[data-attitude] section:not(#hero):not(#stats) {{ padding-block: var(--section-pad); }}
+main[data-attitude] section:not(#hero):not(#stats) > .mx-auto,
+main[data-attitude] nav > .mx-auto {{
+  max-width: var(--container) !important;
+}}
+main[data-attitude] h1 {{
+  font-size: var(--h1-size) !important;
+  font-weight: var(--heading-weight) !important;
+  letter-spacing: var(--heading-tracking) !important;
+  text-transform: var(--heading-transform);
+  transform: var(--heading-skew);
+  transform-origin: left center;
+}}
+main[data-attitude] h2 {{
+  font-size: var(--h2-size) !important;
+  font-weight: var(--heading-weight) !important;
+  letter-spacing: var(--heading-tracking) !important;
+}}
+main[data-radius] article,
+main[data-radius] figure,
+main[data-radius] aside,
+main[data-radius] [class*="rounded-"] {{
+  border-radius: var(--radius-card) !important;
+}}
+main[data-radius] section > .mx-auto > [class*="rounded-"],
+main[data-radius] [data-price-emphasis],
+main[data-radius] button,
+main[data-radius] a[class*="rounded-"] {{
+  border-radius: var(--radius-panel) !important;
+}}
+main[data-surface="flat"] article,
+main[data-surface="bordered"] article,
+main[data-surface="elevated"] article,
+main[data-surface="cutout"] article {{
+  box-shadow: var(--surface-shadow) !important;
+}}
+main[data-container="edge_to_edge"] section:not(#hero) > .mx-auto {{
+  width: min(100%, var(--container));
+}}
+main[data-overlap="subtle"] section:nth-of-type(3),
+main[data-overlap="strong"] section:nth-of-type(3) {{
+  margin-top: var(--overlap-shift);
+  position: relative;
+  z-index: 5;
+}}
+main[data-overlap="strong"] section:nth-of-type(4) {{
+  margin-top: calc(var(--overlap-shift) / 2);
+  position: relative;
+  z-index: 4;
+}}
+main[data-image-treatment] img:not([src*="data:"]),
+main[data-image-treatment] video {{
+  filter: var(--image-treatment);
+}}
+main[data-attitude="impact"] .hero-v14 {{
+  clip-path: polygon(0 0,100% 0,100% 96%,0 100%);
+}}
+main[data-attitude="impact"] h2 {{
+  text-transform: uppercase;
+}}
+main[data-attitude="impact"] section:not(#hero):not(#stats) {{
+  border-top: 1px solid color-mix(in srgb, var(--accent) 26%, transparent);
+}}
+main[data-attitude="wellness"] section:not(#hero):not(#stats),
+main[data-attitude="premium"] section:not(#hero):not(#stats) {{
+  padding-block: var(--section-pad);
+}}
 @media (prefers-reduced-motion: reduce) {{
   *, *::before, *::after {{ animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: 0.01ms !important; }}
+}}
+@media (max-width: 767px) {{
+  main[data-attitude] section:not(#hero):not(#stats) {{ padding-block: var(--section-pad-mobile); }}
+  main[data-attitude] h1 {{ transform: none; }}
+  main[data-overlap] section:nth-of-type(3),
+  main[data-overlap] section:nth-of-type(4) {{ margin-top: 0; }}
 }}
 .motion-mask_reveal [data-motion-mask] {{
   animation: fralib-mask-reveal 900ms cubic-bezier(.16,1,.3,1) both;
@@ -4862,6 +5146,234 @@ export function ServicesSection() {
   return <section id="servicos" style={{ background: 'var(--bg-light)' }} className="px-5 py-20 md:px-8 md:py-28"><div className="mx-auto max-w-7xl"><div className="grid gap-8 lg:grid-cols-[.8fr_1.2fr] lg:items-end"><div><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>{siteCopy.services_kicker}</p><h2 className="mt-3 text-[clamp(2rem,4.8vw,4.4rem)] font-semibold leading-[1] tracking-[-0.025em] text-zinc-950">{siteCopy.services_title}</h2></div><p className="max-w-2xl text-base leading-8 text-zinc-600">{siteCopy.services_subheadline}</p></div><div className="mt-12 grid gap-4 md:grid-cols-3">{siteCopy.services.map((service, index) => { const Icon = icons[index] || ClipboardCheck; return <motion.article key={service.title} initial={{ opacity: 0, y: 22 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.28 }} transition={{ delay: index * 0.06 }} className="min-h-[17rem] rounded-[18px] border border-black/5 bg-white p-6 shadow-[0_18px_60px_rgba(0,0,0,0.08)]"><Icon className="h-6 w-6" style={{ color: 'var(--accent)' }} /><h3 className="mt-8 text-2xl font-semibold tracking-tight text-zinc-950">{service.title}</h3><p className="mt-4 text-sm leading-7 text-zinc-600">{service.description}</p></motion.article>; })}</div></div></section>;
 }
 export default ServicesSection;
+""",
+        "src/components/StatsBar.tsx": """import { useEffect, useRef } from 'react';
+import { motion } from 'motion/react';
+import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { Clock, MapPin, Star, Users } from 'lucide-react';
+import { siteCopy } from './siteData';
+
+gsap.registerPlugin(ScrollTrigger);
+
+type Stat = { icon: string; value: string; label: string };
+
+function _buildStats(): Stat[] {
+  const out: Stat[] = [];
+  const rating = (siteCopy as any)?.rating;
+  const city = (siteCopy as any)?.city;
+  const phone = (siteCopy as any)?.phone;
+  const hours = (siteCopy as any)?.hours;
+  if (rating) out.push({ icon: 'star', value: String(rating), label: 'avaliação' });
+  if (hours) out.push({ icon: 'clock', value: String(hours), label: 'horário' });
+  if (city) out.push({ icon: 'map', value: String(city), label: 'localização' });
+  if (phone) out.push({ icon: 'phone', value: 'WhatsApp', label: 'contato' });
+  if (!out.length) out.push({ icon: 'star', value: '5.0', label: 'avaliação' });
+  return out.slice(0, 4);
+}
+
+const ICON_MAP: Record<string, any> = { star: Star, clock: Clock, map: MapPin, phone: Users };
+
+export function StatsBar() {
+  const rootRef = useRef<HTMLElement | null>(null);
+  const variant = String(((window as any).__fralib_stats_variant) || 'dedicated_band');
+  const stats = _buildStats();
+
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const ctx = gsap.context(() => {
+      gsap.fromTo('[data-stats-counter]', { y: 18, opacity: 0 }, { y: 0, opacity: 1, duration: 0.7, stagger: 0.08, ease: 'power3.out', scrollTrigger: { trigger: root, start: 'top 80%' } });
+    }, root);
+    return () => ctx.revert();
+  }, []);
+
+  if (variant === 'inline_hero_stats') return null;
+
+  if (variant === 'vertical_stack') {
+    return (
+      <section ref={rootRef} id="stats" style={{ background: 'var(--bg)' }} className="px-5 py-14 md:px-8">
+        <div className="mx-auto grid max-w-md gap-3">
+          {stats.map((s, i) => {
+            const Icon = ICON_MAP[s.icon] || Star;
+            return (
+              <motion.div key={i} data-stats-counter className="flex items-center gap-4 rounded-[14px] border border-white/10 bg-white/5 p-4">
+                <Icon className="h-5 w-5" style={{ color: 'var(--accent)' }} />
+                <div><p className="text-2xl font-extrabold tracking-tight" style={{ color: 'var(--text)' }}>{s.value}</p><p className="text-xs uppercase tracking-[0.18em]" style={{ color: 'var(--text-muted)' }}>{s.label}</p></div>
+              </motion.div>
+            );
+          })}
+        </div>
+      </section>
+    );
+  }
+
+  if (variant === 'mosaic_grid') {
+    return (
+      <section ref={rootRef} id="stats" style={{ background: 'var(--bg)' }} className="px-5 py-16 md:px-8 md:py-24">
+        <div className="mx-auto grid max-w-6xl grid-cols-2 gap-3 md:grid-cols-4">
+          {stats.map((s, i) => {
+            const Icon = ICON_MAP[s.icon] || Star;
+            return (
+              <motion.div key={i} data-stats-counter className="rounded-[18px] border border-white/10 bg-[color-mix(in_srgb,var(--bg)_92%,var(--accent)_8%)] p-5">
+                <Icon className="h-5 w-5" style={{ color: 'var(--accent)' }} />
+                <p className="mt-4 text-2xl font-extrabold tracking-tight" style={{ color: 'var(--text)' }}>{s.value}</p>
+                <p className="mt-1 text-xs uppercase tracking-[0.16em]" style={{ color: 'var(--text-muted)' }}>{s.label}</p>
+              </motion.div>
+            );
+          })}
+        </div>
+      </section>
+    );
+  }
+
+  // dedicated_band (default)
+  return (
+    <section ref={rootRef} id="stats" style={{ background: 'var(--accent-dark)' }} className="px-5 py-12 md:px-8 md:py-16">
+      <div className="mx-auto grid max-w-7xl items-center gap-8 md:grid-cols-[1fr_2fr]">
+        <p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent-soft)' }}>Números que sustentam a decisão</p>
+        <div className="grid grid-cols-2 gap-6 md:grid-cols-4">
+          {stats.map((s, i) => {
+            const Icon = ICON_MAP[s.icon] || Star;
+            return (
+              <motion.div key={i} data-stats-counter className="flex flex-col gap-2">
+                <div className="flex items-center gap-2"><Icon className="h-4 w-4" style={{ color: 'var(--accent)' }} /><span className="text-xs uppercase tracking-[0.18em]" style={{ color: 'var(--accent-soft)' }}>{s.label}</span></div>
+                <p className="text-3xl font-extrabold leading-none tracking-[-0.025em] text-white md:text-4xl">{s.value}</p>
+              </motion.div>
+            );
+          })}
+        </div>
+      </div>
+    </section>
+  );
+}
+export default StatsBar;
+""",
+        "src/components/PricingSection.tsx": """import { motion } from 'motion/react';
+import { Check, Sparkles } from 'lucide-react';
+import { siteCopy, whatsappHref } from './siteData';
+
+type Plan = { name: string; perks: string[]; highlight: boolean; note: string };
+
+function _buildPlans(): Plan[] {
+  const seg = String((siteCopy as any)?.segment || 'servicos').toLowerCase();
+  const city = String((siteCopy as any)?.city || '');
+  if (seg.includes('academia') || seg.includes('fitness') || seg.includes('crossfit')) {
+    return [
+      { name: 'Aula experimental', perks: ['Acesso a uma sessão', 'Avaliação inicial', 'Plano de treino'], highlight: false, note: 'Sem compromisso' },
+      { name: 'Plano mensal', perks: ['Acesso completo', 'Acompanhamento semanal', 'Reavaliação mensal', city ? `Vincular em ${city}` : 'Horários flexíveis'], highlight: true, note: 'Mais escolhido' },
+      { name: 'Plano trimestral', perks: ['Acesso completo', 'Avaliação mensal', 'Suporte prioritário', 'Desconto progressivo'], highlight: false, note: 'Melhor custo' },
+    ];
+  }
+  if (seg.includes('nutri')) {
+    return [
+      { name: 'Consulta inicial', perks: ['Avaliação completa', 'Plano alimentar', 'Material de apoio'], highlight: false, note: 'Sem compromisso' },
+      { name: 'Acompanhamento', perks: ['Consultas de retorno', 'Ajustes no plano', 'Suporte por mensagem', city ? `Atendimento em ${city}` : 'Online ou presencial'], highlight: true, note: 'Mais escolhido' },
+      { name: 'Plano premium', perks: ['Consultas ilimitadas', 'Bioimpedância mensal', 'Suporte prioritário', 'Acesso a conteúdo'], highlight: false, note: 'Completo' },
+    ];
+  }
+  if (seg.includes('estetic') || seg.includes('beleza')) {
+    return [
+      { name: 'Avaliação', perks: ['Diagnóstico da pele', 'Orientação inicial', city ? `Atendimento em ${city}` : 'Horário flexível'], highlight: false, note: 'Sem compromisso' },
+      { name: 'Pacote essencial', perks: ['Sessão completa', 'Produtos profissionais', 'Acompanhamento'], highlight: true, note: 'Mais escolhido' },
+      { name: 'Pacote premium', perks: ['Múltiplas sessões', 'Produtos premium', 'Suporte dedicado', 'Acompanhamento estendido'], highlight: false, note: 'Completo' },
+    ];
+  }
+  return [
+    { name: 'Primeira sessão', perks: ['Acolhimento inicial', 'Diagnóstico', 'Orientação'], highlight: false, note: 'Sem compromisso' },
+    { name: 'Plano recorrente', perks: ['Atendimento regular', city ? `Em ${city}` : 'Horário flexível', 'Acompanhamento'], highlight: true, note: 'Mais escolhido' },
+    { name: 'Plano estendido', perks: ['Sessões extras', 'Suporte dedicado', 'Prioridade na agenda'], highlight: false, note: 'Completo' },
+  ];
+}
+
+export function PricingSection() {
+  const variant = String(((window as any).__fralib_pricing_variant) || 'plan_grid');
+  const plans = _buildPlans();
+
+  if (variant === 'single_plan') {
+    const plan = plans.find((p) => p.highlight) || plans[1] || plans[0];
+    return (
+      <section id="planos" style={{ background: 'var(--bg-light)', color: 'var(--text-dark)' }} className="px-5 py-20 md:px-8 md:py-28">
+        <div className="mx-auto max-w-3xl rounded-[26px] border border-black/5 bg-white p-10 shadow-[0_30px_90px_rgba(0,0,0,0.12)] md:p-14">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>{plan.note}</p>
+          <h2 className="mt-4 text-[clamp(2rem,5vw,3.6rem)] font-extrabold leading-[1.02] tracking-[-0.03em] text-zinc-950">{plan.name}</h2>
+          <p className="mt-3 text-sm leading-7 text-zinc-600">Plano principal recomendado para {siteCopy.name} em {siteCopy.city}.</p>
+          <ul className="mt-8 grid gap-3">
+            {plan.perks.map((perk, i) => (
+              <li key={i} className="flex items-start gap-3 text-sm leading-7 text-zinc-700">
+                <Check className="mt-0.5 h-5 w-5 shrink-0" style={{ color: 'var(--accent)' }} />
+                <span>{perk}</span>
+              </li>
+            ))}
+          </ul>
+          <a href={whatsappHref} rel="noopener noreferrer" className="mt-10 inline-flex items-center justify-center gap-2 rounded-full px-6 py-3 text-sm font-bold transition hover:-translate-y-0.5" style={{ background: 'var(--accent)', color: 'var(--accent-contrast)' }} data-price-emphasis>Quero este plano</a>
+        </div>
+      </section>
+    );
+  }
+
+  if (variant === 'editorial_plan') {
+    return (
+      <section id="planos" style={{ background: 'var(--bg)' }} className="px-5 py-20 text-white md:px-8 md:py-28">
+        <div className="mx-auto max-w-6xl">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>Planos editoriais</p>
+          <h2 className="mt-3 text-[clamp(2rem,4.8vw,4.4rem)] font-semibold leading-[1] tracking-[-0.025em]">Como começar com {siteCopy.name}</h2>
+          <div className="mt-12 divide-y divide-white/10 border-y border-white/10">
+            {plans.map((plan, i) => (
+              <motion.div key={i} initial={{ opacity: 0, y: 14 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.4 }} transition={{ delay: i * 0.06 }} className="grid items-center gap-6 py-8 md:grid-cols-[1.4fr_2fr_auto]">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.18em]" style={{ color: 'var(--accent-soft)' }}>{plan.note}</p>
+                  <h3 className="mt-2 text-2xl font-semibold tracking-tight text-white md:text-3xl">{plan.name}</h3>
+                </div>
+                <ul className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-zinc-300">
+                  {plan.perks.map((perk, j) => <li key={j} className="flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full" style={{ background: 'var(--accent)' }} />{perk}</li>)}
+                </ul>
+                <a href={whatsappHref} rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 rounded-full border border-white/20 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-white/5" data-price-emphasis={plan.highlight ? 'true' : undefined}>Conversar</a>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <section id="planos" style={{ background: 'var(--bg-light)', color: 'var(--text-dark)' }} className="px-5 py-20 md:px-8 md:py-28">
+      <div className="mx-auto max-w-7xl">
+        <div className="mb-10 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>Planos</p>
+            <h2 className="mt-3 text-[clamp(2rem,4.8vw,4.2rem)] font-semibold leading-[1] tracking-[-0.025em] text-zinc-950">Como começar com {siteCopy.name}</h2>
+          </div>
+          <p className="max-w-md text-sm leading-7 text-zinc-600">Valores sob consulta. Comece pela conversa direta para entender o que faz sentido para você.</p>
+        </div>
+        <div className="grid gap-5 md:grid-cols-3">
+          {plans.map((plan, i) => (
+            <motion.div key={i} initial={{ opacity: 0, y: 22 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.3 }} transition={{ delay: i * 0.06 }} className={`relative rounded-[22px] border p-7 shadow-[0_18px_60px_rgba(0,0,0,0.08)] ${plan.highlight ? 'border-transparent bg-zinc-950 text-white' : 'border-black/5 bg-white text-zinc-950'}`} data-price-emphasis={plan.highlight ? 'true' : undefined}>
+              {plan.highlight ? (
+                <span className="absolute -top-3 left-7 inline-flex items-center gap-1 rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em]" style={{ background: 'var(--accent)', color: 'var(--accent-contrast)' }}><Sparkles className="h-3 w-3" />{plan.note}</span>
+              ) : null}
+              <p className={`text-xs font-semibold uppercase tracking-[0.18em] ${plan.highlight ? 'text-zinc-400' : 'text-zinc-500'}`}>{plan.note}</p>
+              <h3 className="mt-3 text-2xl font-semibold tracking-tight">{plan.name}</h3>
+              <ul className="mt-6 grid gap-2.5">
+                {plan.perks.map((perk, j) => (
+                  <li key={j} className={`flex items-start gap-2.5 text-sm leading-7 ${plan.highlight ? 'text-zinc-200' : 'text-zinc-700'}`}>
+                    <Check className={`mt-0.5 h-4 w-4 shrink-0`} style={{ color: 'var(--accent)' }} />
+                    <span>{perk}</span>
+                  </li>
+                ))}
+              </ul>
+              <a href={whatsappHref} rel="noopener noreferrer" className={`mt-8 inline-flex w-full items-center justify-center gap-2 rounded-full px-5 py-3 text-sm font-bold transition hover:-translate-y-0.5 ${plan.highlight ? '' : 'border border-zinc-200 bg-zinc-50 text-zinc-950'}`} style={plan.highlight ? { background: 'var(--accent)', color: 'var(--accent-contrast)' } : undefined}>
+                {plan.highlight ? 'Quero este plano' : 'Conversar'}
+              </a>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+export default PricingSection;
 """,
         "src/components/GallerySection.tsx": gallery_section,
         "src/components/FaqSection.tsx": faq_section,
@@ -6464,6 +6976,92 @@ def _meta_escape(value: Any) -> str:
 
 def _facts_business(facts: dict[str, Any]) -> dict[str, Any]:
     return facts.get("business") if isinstance(facts.get("business"), dict) else {}
+
+
+def _inject_pole_tokens(facts: dict[str, Any]) -> dict[str, Any]:
+    """
+    Injeta tokens de polo estético nos facts para Blocos Líquidos.
+
+    Esta função infere o polo baseado nos dados do lead e adiciona
+    os tokens de design ao facts para uso pelo LLM.
+
+    Args:
+        facts: Dicionário de facts do builder
+
+    Returns:
+        Facts com tokens de polo injetados
+    """
+    if not LIQUID_COMPONENTS_AVAILABLE:
+        return facts
+
+    # Extrair dados do lead
+    business = _facts_business(facts)
+    segment = str(business.get("segment", "") or facts.get("segment", ""))
+    subniche = str(business.get("subniche", "") or facts.get("subniche", ""))
+    tags = business.get("tags") or facts.get("tags") or []
+    description = str(business.get("description", "") or facts.get("description", ""))
+
+    # Inferir polo
+    pole_info = infer_aesthetic_pole(
+        segment=segment,
+        subniche=subniche,
+        tags=tags if isinstance(tags, list) else [],
+        description=description,
+    )
+
+    # Adicionar ao facts
+    facts = dict(facts)  # Cópia para não mutar
+    facts["pole"] = pole_info["pole"]
+    facts["pole_heat"] = pole_info["heat"]
+    facts["pole_temperature"] = pole_info["temperature"]
+    facts["pole_display_mode"] = pole_info["display_mode"]
+    facts["pole_tokens"] = pole_info["tokens"]
+
+    # Adicionar prompt de tokens para o LLM
+    if "llm_context" not in facts:
+        facts["llm_context"] = {}
+    facts["llm_context"]["pole_prompt"] = get_liquid_component_guide(
+        pole=pole_info["pole"],
+        hero_mode=pole_info["display_mode"],
+    )
+
+    return facts
+
+
+def _get_pole_css_tokens(pole: str) -> str:
+    """
+    Gera string CSS com tokens do polo para injeção no projeto.
+
+    Args:
+        pole: Nome do polo (soft, bold, corporate, minimal)
+
+    Returns:
+        String CSS com variáveis customizadas
+    """
+    tokens = POLO_TOKENS.get(pole, POLO_TOKENS["corporate"])
+
+    lines = [
+        "/* ═══════════════════════════════════════════════════════════════════════════",
+        f"   POLO {pole.upper()} - DESIGN TOKENS",
+        "   Gerado automaticamente pelo FraLib Blocos Líquidos",
+        "   ═══════════════════════════════════════════════════════════════════════════ */",
+        "",
+        f"[data-pole=\"{pole}\"] {{",
+    ]
+
+    # Converter tokens para CSS
+    for key, value in tokens.items():
+        css_key = key.replace("_", "-")
+        if isinstance(value, bool):
+            lines.append(f"  --{css_key}: {'true' if value else 'false'};")
+        elif isinstance(value, (int, float)):
+            lines.append(f"  --{css_key}: {value};")
+        else:
+            lines.append(f"  --{css_key}: {value};")
+
+    lines.append("}")
+
+    return "\n".join(lines)
 
 
 def _facts_publication_url(facts: dict[str, Any]) -> str:

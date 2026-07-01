@@ -6,6 +6,119 @@ from typing import Any
 
 
 # ═══════════════════════════════════════════════════════════════════
+# POLE TOKENS BLOCK - Blocos Líquidos
+# ═══════════════════════════════════════════════════════════════════
+
+def _build_pole_tokens_block(facts: dict[str, Any] | None = None) -> str:
+    """Sprint 12.x: injeta tokens de polo estético para Blocos Líquidos.
+
+    Se facts contém 'pole', adiciona um bloco de tokens CSS que o LLM
+    deve usar para gerar o design correto.
+
+    Args:
+        facts: Facts do builder com pole info
+
+    Returns:
+        String com tokens de polo ou string vazia
+    """
+    if not facts:
+        return ""
+
+    pole = facts.get("pole")
+    if not pole:
+        return ""
+
+    pole_heat = facts.get("pole_heat", 0.5)
+    pole_display_mode = facts.get("pole_display_mode", "default")
+    pole_tokens = facts.get("pole_tokens", {})
+
+    # Mapear polo para tokens CSS
+    css_tokens = []
+    for key, value in pole_tokens.items():
+        css_key = key.replace("_", "-")
+        if isinstance(value, bool):
+            css_tokens.append(f"  --{css_key}: {'true' if value else 'false'};")
+        elif isinstance(value, (int, float)):
+            css_tokens.append(f"  --{css_key}: {value};")
+        else:
+            css_tokens.append(f"  --{css_key}: {value};")
+
+    css_block = "\n".join(css_tokens) if css_tokens else ""
+
+    # Mapear polo para descrição
+    pole_descriptions = {
+        "soft": "SOFT (Orgânico/Acolhedor) - Bordas 40px, serifada, motion lento, cores pastéis",
+        "bold": "BOLD (Agressivo/Impacto) - Zero radius, UPPERCASE, text-stroke, motion rápido, overlap",
+        "corporate": "CORPORATE (Sério/Seguro) - Radius 6px, sans-serif, grid alinhado, motion discreto",
+        "minimal": "MINIMAL (Moderno/Limpo) - Radius 12px, geométrica, glassmorphism, neon glow",
+    }
+    pole_desc = pole_descriptions.get(pole, f"POLO {pole.upper()}")
+
+    return f"""
+
+═══════════════════════════════════════════════════════════════════════════════
+LIQUID DESIGN SYSTEM - POLO: {pole.upper()}
+═══════════════════════════════════════════════════════════════════════════════
+
+DESIGN HEAT: {pole_heat:.1f} | DISPLAY MODE: {pole_display_mode}
+
+{pole_desc}
+
+CSS TOKENS TO USE (obedeça rigorosamente):
+{css_block or "/* Use default tokens */"}
+
+RULES FOR POLO {pole.upper()}:
+{_get_pole_rules(pole)}
+
+═══════════════════════════════════════════════════════════════════════════════
+"""
+
+
+def _get_pole_rules(pole: str) -> str:
+    """Retorna as regras específicas do polo para o LLM seguir."""
+    rules = {
+        "soft": """- Border radius: 40px (cards, botões, imagens)
+- Font: Playfair Display ou serif elegante
+- Text transform: capitalize (primeira letra maiúscula)
+- Espaçamento: Generoso (py-32, gap-12, p-8)
+- Shadows: Difusas e coloridas (blur alto)
+- Motion: Lento e suave (600ms+, ease)
+- Cores: Pastéis (roxo, rosa, pêssego)
+- NUNCA: radius 0, UPPERCASE, text-stroke, overlap""",
+        "bold": """- Border radius: 0px (cortante/agressivo)
+- Font: Anton/Impact ou bold condensed
+- Text transform: UPPERCASE + ITALIC
+- Espaçamento: Apertado (py-4, gap-2, p-4)
+- Shadows: Offset brutas (8px 8px 0)
+- Motion: Rápido e intenso (150ms, spring)
+- Overlap: -80px entre seções
+- Text-stroke: -webkit-text-stroke: 2px var(--primary)
+- Skew: transform: skewX(-5deg)
+- NUNCA: radius > 0, centered layouts, safe designs""",
+        "corporate": """- Border radius: 6px (subtle)
+- Font: Inter ou sans-serif profissional
+- Text transform: capitalize
+- Espaçamento: Padrão (py-16, gap-8, p-6)
+- Shadows: Sutis e monocromáticas
+- Motion: Discreto (300ms, ease)
+- Grid: Alinhado e centrado
+- Cores: Azul/cinza corporativo
+- NUNCA: decoration excessiva, overlap, text-stroke""",
+        "minimal": """- Border radius: 12px (geométrico)
+- Font: Space Grotesk ou geométrica/mono
+- Text transform: lowercase
+- Espaçamento: Preciso (py-20, gap-6)
+- Shadows: Neon/glow (box-shadow colorido)
+- Motion: Baseado em scroll (400ms)
+- Efeitos: Glassmorphism (backdrop-blur)
+- Grid: Bento grid ou assimétrico
+- Slight skew: 2deg
+- NUNCA: decorative excess, pill shapes, slow animations""",
+    }
+    return rules.get(pole, rules["corporate"])
+
+
+# ═══════════════════════════════════════════════════════════════════
 # SHADCN/UI - Sprint 11
 # ═══════════════════════════════════════════════════════════════════
 
@@ -494,6 +607,7 @@ def _build_caroço_block(facts: dict[str, Any] | None = None) -> str:
         + _build_shadcn_block()
         + _build_premium_contract_block()
         + _build_visual_direction_block()
+        + _build_pole_tokens_block(facts)  # Blocos Líquidos - Tokens de polo
         + _build_motion_pack_block()
         + _build_gsap_code_block()
         + _build_mobile_first_block()
