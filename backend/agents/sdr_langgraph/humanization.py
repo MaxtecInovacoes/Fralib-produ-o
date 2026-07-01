@@ -180,6 +180,46 @@ def pick_wall_street_close(segment: str = "") -> str:
     return base
 
 
+def pick_opening(context: str = "lead_novo") -> str:
+    """Pega abertura variavel baseada no contexto da conversa.
+
+    Args:
+        context: tipo de lead
+            - lead_novo: primeira interacao
+            - lead_retorno: voltou apos tempo
+            - lead_objetou: acabou de objetar
+            - lead_quente: engajado e interessado
+
+    Returns:
+        String com abertura natural para usar na msg
+    """
+    openings = ABERTURAS.get(context, ABERTURAS["lead_novo"])
+    return random.choice(openings)
+
+
+def pick_closing(natural: bool = True) -> str:
+    """Pega closing variavel natural ou Wall Street.
+
+    Args:
+        natural: True = closing natural (CTAs), False = Wall Street close
+
+    Returns:
+        String com closing para append na msg
+    """
+    if natural:
+        return random.choice(CLOSINGS_NATURAIS)
+    return pick_wall_street_close()
+
+
+def pick_concordancia() -> str:
+    """Pega variacao de concordancia/resposta.
+
+    Returns:
+        String como "Faz sentido", "Justo", etc.
+    """
+    return random.choice(CONCORDANCIA_VARIAVEL)
+
+
 def is_robot_like(msg: str) -> bool:
     """Detecta se msg parece robô. Retorna True se parecer."""
     robot_signals = [

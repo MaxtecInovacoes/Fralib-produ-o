@@ -194,6 +194,13 @@ def _simplify_language(reply: str) -> str:
         (r"\balavancagem\b", "crescimento"),
         (r"\boptimi[zs]e\b", "melhore"),
         (r"\butilizar\b", "usar"),
+        # Brazilian casual expressions
+        (r"\bmas\s+né\b", ", né"),
+        (r"\bvc\b", "você"),
+        (r"\bvcs\b", "vocês"),
+        (r"\bpq\b", "porque"),
+        (r"\bq\b\b", "que"),
+        (r"\btmj\b", "tmj"),
     ]
     for pattern, replacement in replacements:
         result = re.sub(pattern, replacement, result, flags=re.IGNORECASE)
