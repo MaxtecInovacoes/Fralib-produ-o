@@ -276,19 +276,28 @@ def _extrair_usuario_request(request: Request) -> dict:
     try:
         with engine.connect() as conn:
             # Tenta com tenant_id (schema novo); se nao existir, faz fallback
+            row = None
             try:
-                row = conn.execute(
+                result = conn.execute(
                     _text("SELECT id, email, plano, status, creditos, creditos_max, role, tenant_id FROM users WHERE id=:id"),
                     {"id": int(user_id)},
-                ).fetchone()
+                )
+                row = result.fetchone()
                 cols = ["id","email","plano","status","creditos","creditos_max","role","tenant_id"]
+                conn.rollback()  # garante transacao limpa
             except Exception:
-                # Fallback para schemas sem tenant_id
-                row = conn.execute(
-                    _text("SELECT id, email, plano, status, creditos, creditos_max, role FROM users WHERE id=:id"),
-                    {"id": int(user_id)},
-                ).fetchone()
-                cols = ["id","email","plano","status","creditos","creditos_max","role",None]
+                conn.rollback()
+                try:
+                    result2 = conn.execute(
+                        _text("SELECT id, email, plano, status, creditos, creditos_max, role FROM users WHERE id=:id"),
+                        {"id": int(user_id)},
+                    )
+                    row = result2.fetchone()
+                    cols = ["id","email","plano","status","creditos","creditos_max","role",None]
+                    conn.rollback()
+                except Exception:
+                    conn.rollback()
+                    raise
             if not row:
                 raise HTTPException(401, "Usuario nao encontrado")
             user_dict = dict(zip(cols, row))
