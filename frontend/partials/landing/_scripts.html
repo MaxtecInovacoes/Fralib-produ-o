@@ -257,7 +257,15 @@ document.getElementById('ctaForm')?.addEventListener('submit', function(e){
       if (resp.status === 200) {
         const data = await resp.json();
         if (data.checkout_url) {
-          window.location = data.checkout_url;
+          // Abre checkout em NOVA ABA para nao perder o estado da landing
+          const w = window.open(data.checkout_url, '_blank', 'noopener,noreferrer');
+          if (!w) {
+            // Popup bloqueado: fallback para mesma aba
+            window.location = data.checkout_url;
+          } else {
+            // Marca estado no localStorage para pagina de sucesso nao liberar acesso
+            try { localStorage.setItem('fralib_pending_checkout', JSON.stringify({ plan: plan, ts: Date.now() })); } catch(e) {}
+          }
           return;
         }
       }
@@ -274,9 +282,14 @@ document.getElementById('ctaForm')?.addEventListener('submit', function(e){
         });
         const d2 = await r2.json();
         if (r2.ok && d2.checkout_url) {
-          // Salva pending para depois do cadastro
           try { localStorage.setItem('fralib_pending_plano', plan); } catch(e) {}
-          window.location = d2.checkout_url;
+          // Abre checkout em NOVA ABA
+          const w = window.open(d2.checkout_url, '_blank', 'noopener,noreferrer');
+          if (!w) {
+            window.location = d2.checkout_url;
+          } else {
+            try { localStorage.setItem('fralib_pending_checkout', JSON.stringify({ plan: plan, email: email, signup_url: d2.signup_url, ts: Date.now() })); } catch(e) {}
+          }
           return;
         }
         throw new Error(d2.detail || 'Checkout anonimo indisponivel');

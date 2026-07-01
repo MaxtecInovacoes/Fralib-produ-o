@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Confirmando pagamento - FraLib</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#0a0714;color:#e5e7eb;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+  .card{max-width:520px;background:#151026;border:1px solid #2a2a30;border-radius:16px;padding:48px 40px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.5)}
+  .icon{width:80px;height:80px;margin:0 auto 24px;border-radius:50%;background:rgba(255,184,0,0.15);display:flex;align-items:center;justify-content:center;animation:pulse 2s ease-in-out infinite}
+  .icon svg{width:40px;height:40px;color:#FFB800}
+  @keyframes pulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.05);opacity:0.85}}
+  h1{font-size:24px;font-weight:700;margin-bottom:12px;color:#fff}
+  p{color:#B8B4C8;line-height:1.6;margin-bottom:20px;font-size:14px}
+  .plano{font-size:18px;font-weight:700;color:#FFB800;margin:16px 0}
+  .info{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:16px;margin:24px 0;font-size:13px;color:#B8B4C8;text-align:left}
+  .info b{color:#fff}
+  .actions{display:flex;gap:12px;flex-direction:column;margin-top:24px}
+  .btn{display:block;padding:14px 24px;border-radius:8px;font-weight:700;font-size:13px;letter-spacing:0.5px;text-decoration:none;text-align:center;cursor:pointer;border:none;transition:transform 0.15s}
+  .btn-primary{background:#FFB800;color:#000}
+  .btn-primary:hover{background:#FFC833;transform:translateY(-1px)}
+  .btn-secondary{background:transparent;color:#B8B4C8;border:1px solid #2a2a30}
+  .btn-secondary:hover{color:#fff;border-color:#FFB800}
+  .spinner{display:inline-block;width:14px;height:14px;border:2px solid #FFB800;border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite;vertical-align:middle;margin-right:6px}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  small{font-size:11px;color:#7D7890;margin-top:16px;display:block;line-height:1.5}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="icon">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10"></circle>
+      <polyline points="12 6 12 12 16 14"></polyline>
+    </svg>
+  </div>
+  <h1>Confirmando seu pagamento</h1>
+  <p>Recebemos a confirmação do Mercado Pago e estamos validando sua assinatura.</p>
+  <div class="plano" id="planoNome">Plano PRO</div>
+  <div class="info">
+    <b>Como funciona:</b><br>
+    1. O Mercado Pago enviou a confirmação<br>
+    2. Estamos validando o pagamento<br>
+    3. Seu acesso será liberado automaticamente<br>
+    4. Esta página <b>NÃO</b> libera acesso — isso é feito pelo nosso sistema após validação
+  </div>
+  <p style="font-size:13px"><span class="spinner"></span>Verificando com o Mercado Pago...</p>
+  <div class="actions">
+    <a href="/admin.html" class="btn btn-primary" id="btnDashboard">VERIFICAR E IR PARA DASHBOARD</a>
+    <a href="/" class="btn btn-secondary">VOLTAR PARA A LANDING</a>
+  </div>
+  <small>
+    Esta janela pode ser fechada com segurança. O acesso será ativado automaticamente
+    em alguns instantes. Você receberá um e-mail de confirmação.
+  </small>
+</div>
+
+<script>
+// Parametros via URL
+const url = new URLSearchParams(window.location.search);
+const orderId = url.get('order') || '';
+const plano = url.get('plano') || 'starter';
+const STATUS_POLL_INTERVAL = 5000; // 5 segundos
+
+// Mostra nome do plano
+const planNames = { starter: 'STARTER (R$97/mês)', pro: 'PRO (R$197/mês)', agency: 'AGENCY (R$497/mês)' };
+const el = document.getElementById('planoNome');
+if (el && planNames[plano]) el.textContent = planNames[plano];
+
+// Polling para verificar status
+let pollCount = 0;
+const MAX_POLLS = 24; // 24 * 5s = 2 min
+
+async function verificarStatus() {
+  pollCount++;
+  try {
+    const r = await fetch('/api/checkout/me', { credentials: 'include' });
+    const data = await r.json();
+    if (data.can_access_dashboard && (data.status === 'active' || data.status === 'trialing')) {
+      // Pagamento aprovado! Redirecionar
+      window.location.href = '/admin.html?welcome=paid&plano=' + encodeURIComponent(plano);
+      return;
+    }
+    if (pollCount >= MAX_POLLS) {
+      // Apos 2 min, para o polling e mostra mensagem
+      const msg = document.querySelector('p:nth-of-type(2)');
+      if (msg) {
+        msg.innerHTML = '<b style="color:#FFB800">Ainda processando...</b> Pode levar ate 5 minutos. Pode fechar esta janela e voltar mais tarde.';
+      }
+    }
+  } catch(e) {
+    console.error('Erro polling:', e);
+  }
+  setTimeout(verificarStatus, STATUS_POLL_INTERVAL);
+}
+
+// Inicia polling
+setTimeout(verificarStatus, STATUS_POLL_INTERVAL);
+
+// Botao "Verificar agora"
+document.getElementById('btnDashboard').addEventListener('click', async (e) => {
+  e.preventDefault();
+  const btn = e.currentTarget;
+  btn.style.opacity = '0.6';
+  btn.style.pointerEvents = 'none';
+  btn.textContent = 'VERIFICANDO...';
+  try {
+    const r = await fetch('/api/checkout/me', { credentials: 'include' });
+    const data = await r.json();
+    if (data.can_access_dashboard) {
+      window.location.href = '/admin.html?welcome=paid&plano=' + encodeURIComponent(plano);
+    } else {
+      btn.textContent = 'AINDA PROCESSANDO - TENTE EM 1 MIN';
+      btn.style.opacity = '1';
+      btn.style.pointerEvents = 'auto';
+      setTimeout(() => {
+        btn.textContent = 'VERIFICAR E IR PARA DASHBOARD';
+        btn.style.opacity = '';
+        btn.style.pointerEvents = '';
+      }, 5000);
+    }
+  } catch(e) {
+    btn.textContent = 'ERRO - TENTE NOVAMENTE';
+    btn.style.opacity = '1';
+    btn.style.pointerEvents = 'auto';
+  }
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pagamento pendente - FraLib</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#0a0714;color:#e5e7eb;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+  .card{max-width:520px;background:#151026;border:1px solid #FFB800;border-radius:16px;padding:48px 40px;text-align:center;box-shadow:0 0 60px rgba(255,184,0,0.15)}
+  .icon{width:80px;height:80px;margin:0 auto 24px;border-radius:50%;background:rgba(255,184,0,0.15);display:flex;align-items:center;justify-content:center}
+  .icon svg{width:40px;height:40px;color:#FFB800}
+  h1{font-size:24px;font-weight:700;margin-bottom:12px;color:#FFB800}
+  p{color:#B8B4C8;line-height:1.6;margin-bottom:20px;font-size:14px}
+  .plano{font-size:18px;font-weight:700;color:#FFB800;margin:16px 0}
+  .info{background:rgba(255,184,0,0.08);border:1px solid rgba(255,184,0,0.2);border-radius:8px;padding:16px;margin:24px 0;font-size:13px;color:#B8B4C8;text-align:left}
+  .info b{color:#FFB800}
+  .actions{display:flex;gap:12px;flex-direction:column;margin-top:24px}
+  .btn{display:block;padding:14px 24px;border-radius:8px;font-weight:700;font-size:13px;letter-spacing:0.5px;text-decoration:none;text-align:center;cursor:pointer;border:none;transition:transform 0.15s}
+  .btn-primary{background:#FFB800;color:#000}
+  .btn-primary:hover{background:#FFC833;transform:translateY(-1px)}
+  .btn-secondary{background:transparent;color:#B8B4C8;border:1px solid #2a2a30}
+  .btn-secondary:hover{color:#fff;border-color:#FFB800}
+  small{font-size:11px;color:#7D7890;margin-top:16px;display:block;line-height:1.5}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="icon">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10"></circle>
+      <path d="M12 6v6l4 2"></path>
+    </svg>
+  </div>
+  <h1>Pagamento pendente</h1>
+  <p>Seu pagamento ainda está sendo processado pelo Mercado Pago.</p>
+  <div class="plano" id="planoNome">Plano PRO</div>
+  <div class="info">
+    <b>Possíveis motivos:</b><br>
+    • Boleto: compensação em até 3 dias úteis<br>
+    • PIX: pode levar alguns minutos para confirmar<br>
+    • Cartão: pode haver análise anti-fraude
+  </div>
+  <p>Você receberá um e-mail quando o pagamento for confirmado.</p>
+  <p style="font-size:13px"><b>Esta página NÃO libera acesso.</b> O acesso será ativado automaticamente quando o Mercado Pago confirmar.</p>
+  <div class="actions">
+    <a href="/admin.html" class="btn btn-primary">IR PARA DASHBOARD</a>
+    <a href="/" class="btn btn-secondary">VOLTAR PARA A LANDING</a>
+  </div>
+  <small>Você pode fechar esta janela. O acesso será ativado assim que o pagamento for confirmado.</small>
+</div>
+<script>
+const url = new URLSearchParams(window.location.search);
+const planNames = { starter: 'STARTER (R$97/mês)', pro: 'PRO (R$197/mês)', agency: 'AGENCY (R$497/mês)' };
+const plano = url.get('plano') || 'starter';
+const el = document.getElementById('planoNome');
+if (el && planNames[plano]) el.textContent = planNames[plano];
+</script>
+</body>
+</html>
