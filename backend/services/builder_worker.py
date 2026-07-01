@@ -841,7 +841,8 @@ def _builder_engine(value: str | None = None) -> str:
     """Select the Builder engine.
 
     Sprint 12.10: Vite/React is the default (caroco system prompt).
-    OpenUI is the legacy fallback when explicitly requested.
+    OpenUI is a separate explicit engine when requested, not a fallback from
+    Vite/React failures.
     """
     engine = str(value or os.getenv("FRALIB_BUILDER_ENGINE", "vite_react")).strip().lower().replace("-", "_")
     if engine in {"vite", "react", "vite_react", "vite-react"}:

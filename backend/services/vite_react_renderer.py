@@ -38,7 +38,7 @@ from typing import Any
 import httpx
 
 # Sprint 11.8 fix: logger was missing - caused 'name logger is not defined'
-# in fallback paths (3rd attempt model in cascade).
+# on later model-cascade attempts.
 logger = logging.getLogger(__name__)
 
 # Import from modularized components
@@ -410,8 +410,8 @@ class ViteReactRenderError(RuntimeError):
 def _get_llm_policy() -> str:
     """Return the Vite LLM policy.
 
-    deterministic none is the default because the FraLib-owned Studio templates
-    already generate structure, sections, visuals and CTA scaffolding.
+    Production defaults are set by builder_worker. Policies that do not call
+    LLM are not allowed to publish a generated substitute in production.
     """
     raw = os.getenv("FRALIB_VITE_LLM_POLICY", "none").strip().lower().replace("-", "_")
     aliases = {
@@ -957,9 +957,8 @@ def render_vite_react_site(
 
     Single-pass pipeline: LLM gera 1x -> build direto. Sem repair_retry,
     sem preview_fast, sem injecao de template sobre o output do LLM. Se o
-    LLM ou o build falhar, cai direto no FraLib Studio template
-    deterministico (que sempre compila). O site vai para QA com o output
-    do LLM ou com o Studio, sem retrabalho.
+    LLM ou o build falhar, o erro sobe e o job falha fechado. Nao publica
+    Studio/OpenUI/template alternativo para mascarar erro de runtime.
     """
     started = time.time()
     facts = facts or {}
@@ -1591,10 +1590,6 @@ def _generate_vite_project_files_in_batches(
                             break
                     except Exception:
                         pass
-                fallback_files = _fallback_batch_files(paths=paths, facts=facts)
-                if fallback_files:
-                    files.update(fallback_files)
-                    break
                 batch_prompt = _compose_vite_file_batch_prompt(
                     builder_prompt,
                     facts=facts,
@@ -2031,15 +2026,6 @@ def _extract_single_requested_file(raw: str, paths: list[str]) -> dict[str, str]
     return {paths[0]: text}
 
 
-def _fallback_batch_files(*, paths: list[str], facts: dict[str, Any]) -> dict[str, str]:
-    if len(paths) != 1:
-        return {}
-    path = paths[0]
-    if path == "src/components/Navbar.tsx":
-        return {path: _default_navbar_tsx(facts)}
-    return {}
-
-
 def _sanitize_logger_in_source(source: str) -> str:
     """Sprint 11.6: injeta `const logger = console;` quando o LLM usa `logger.`
     sem import. Idempotente. Funciona para .tsx e .ts.
@@ -2154,7 +2140,7 @@ def _interpolate_studio_placeholders(prepared: dict[str, str], facts: dict[str, 
     phone = str(business.get("whatsapp") or business.get("phone") or "41999999999")
     rating = str(business.get("rating") or "4.8")
 
-    # Mirror the if/elif chain from _generate_studio_fallback_files
+    # Mirror the legacy segment copy chain used by the cinematic studio.
     if "barbearia" in segment or "barbeiro" in segment:
         cta_primary, cta_secondary, alt_img = "Agendar horario", "Ver servicos", "Barbeiro em barbearia"
         lifestyle_title, lifestyle_desc = "Tradicao em cada corte", "Um espaco dedicado ao cuidado masculino, com atendimento personalizado e toalhas quentes."
@@ -4757,8 +4743,17 @@ export default Footer;
     }
 
 
-def _generate_studio_fallback_files(facts: dict[str, Any] | None = None) -> dict[str, str]:
-    """Compatibility fallback for tests and emergency local Studio rendering."""
+def _removed_studio_legacy_entrypoint(facts: dict[str, Any] | None = None) -> dict[str, str]:
+    """Removed legacy Studio entry point.
+
+    Kept temporarily as a fail-fast guard for old scripts/tests that still
+    import this name. The official builder path must use LLM-generated files
+    through render_vite_react_site().
+    """
+    raise ViteReactRenderError(
+        "Studio legacy entry point foi removido do runtime. "
+        "Use render_vite_react_site() com FRALIB_VITE_LLM_POLICY=full_code."
+    )
     safe_facts = facts or {}
     # O caminho aprovado para a pipeline oficial usa o Studio cinematografico.
     # Permite desligar explicitamente por env apenas quando um teste precisar.
@@ -4796,7 +4791,7 @@ def _generate_studio_fallback_files(facts: dict[str, Any] | None = None) -> dict
     else:
         from backend.pipeline_exceptions import ImageNotAvailableError
         raise ImageNotAvailableError(
-            "_generate_studio_fallback_files: Sem imagens no facts.",
+            "Studio legacy entry point: Sem imagens no facts.",
             context={"segmento": segment, "acao": "Forneca fotos no lead ou use unsplash_fetcher"},
         )
 
@@ -5182,7 +5177,7 @@ def validate_vite_project_files(
 ) -> None:
     # Sprint 11.6+: sanitize logger GLOBALMENTE antes de qualquer validacao.
     # Garante que mesmo se prepare_vite_project_files nao foi chamado
-    # (ex: caminho _generate_studio_fallback_files), o logger orfao eh corrigido.
+    # (ex: caminho legado de Studio), o logger orfao eh corrigido.
     for path in list(files.keys()):
         if path.endswith((".tsx", ".ts", ".jsx", ".js")):
             files[path] = _sanitize_logger_in_source(files[path])
@@ -5528,7 +5523,7 @@ def build_vite_project(workspace: Path) -> None:
         should_install = False
     if should_install:
         _run(
-            [npm_cmd, "install", "--ignore-scripts", "--no-audit", "--no-fund"],
+            [npm_cmd, "install", "--include=dev", "--ignore-scripts", "--no-audit", "--no-fund"],
             cwd=workspace,
             timeout=timeout,
             label="npm install",
@@ -5561,7 +5556,7 @@ def build_vite_project(workspace: Path) -> None:
 
             _shutil.rmtree(node_modules, ignore_errors=True)
             _run(
-                [npm_cmd, "install", "--ignore-scripts", "--no-audit", "--no-fund"],
+                [npm_cmd, "install", "--include=dev", "--ignore-scripts", "--no-audit", "--no-fund"],
                 cwd=workspace,
                 timeout=timeout,
                 label="npm install (retry)",

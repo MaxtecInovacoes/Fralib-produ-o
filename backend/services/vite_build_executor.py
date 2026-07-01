@@ -55,7 +55,7 @@ def _try_cache_restore(workspace: Path) -> bool:
             return True
         return False
     except Exception as e:
-        print(f"[ViteBuild] Cache restore failed: {e}, falling back to npm install")
+        print(f"[ViteBuild] Cache restore failed: {e}; running npm install")
         return False
 
 
@@ -162,7 +162,7 @@ def build_vite_project(
     try:
         os.chdir(workspace)
 
-        # Step 1: Try cache restore first, fallback to npm install
+        # Step 1: Try cache restore first; install dependencies on cache miss.
         cache_hit = _try_cache_restore(workspace)
 
         if cache_hit:
@@ -172,7 +172,7 @@ def build_vite_project(
             print("[ViteBuild] Running npm install...")
             try:
                 result = subprocess.run(
-                    [npm, "install", "--prefer-offline"],
+                    [npm, "install", "--include=dev", "--prefer-offline"],
                     capture_output=True,
                     text=True,
                     timeout=node_timeout,
