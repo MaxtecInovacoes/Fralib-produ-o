@@ -5,6 +5,8 @@ RAG, memória, validação, envio.
 
 from __future__ import annotations
 import os
+import time
+import hashlib
 from typing import Optional, List
 
 import sys
@@ -16,13 +18,38 @@ sys.path.insert(0, BACKEND_DIR)
 sys.path.insert(0, AGENTS_DIR)
 
 
+# ════════════════════════════════════════════════════════════════════
+# CACHE DE RAG
+# ════════════════════════════════════════════════════════════════════
+
+_RAG_CACHE_TTL = 3600  # 1 hora
+_RAG_CACHE: dict[str, tuple[str, float]] = {}  # key -> (content, timestamp)
+
+
+def _get_rag_cache_key(agent_key: str) -> str:
+    """Gera chave de cache baseada no agent_key."""
+    return hashlib.md5(agent_key.encode()).hexdigest()[:8]
+
 
 # ════════════════════════════════════════════════════════════════════
 # TOOL: RAG (buscar contexto de conhecimento)
 # ════════════════════════════════════════════════════════════════════
 
-def load_rag(agent_key: str = "") -> str:
-    """Carrega RAG base + conhecimento especifico do agente ativo."""
+def load_rag(agent_key: str = "", force_reload: bool = False) -> str:
+    """Carrega RAG base + conhecimento especifico do agente ativo.
+
+    Usa cache com TTL de 1 hora para evitar ler disco toda vez.
+    """
+    cache_key = _get_rag_cache_key(agent_key)
+    now = time.time()
+
+    # Retorna do cache se valido
+    if not force_reload and cache_key in _RAG_CACHE:
+        cached_content, cached_time = _RAG_CACHE[cache_key]
+        if now - cached_time < _RAG_CACHE_TTL:
+            return cached_content
+
+    # Carrega do disco
     chunks: list[str] = []
     try:
         rag_path = os.path.join(BACKEND_DIR, "rag_knowledge", "franz.md")
@@ -40,13 +67,24 @@ def load_rag(agent_key: str = "") -> str:
 
             try:
                 from .multi_agent import agent_rag_overlay
-
                 chunks.append(agent_rag_overlay(agent_key))
             except Exception as e:
                 print(f"[RAG] Overlay agente falhou: {e}")
     except Exception as e:
         print(f"[RAG] Erro: {e}")
-    return "\n\n".join(chunk for chunk in chunks if chunk)
+
+    content = "\n\n".join(chunk for chunk in chunks if chunk)
+
+    # Salva no cache
+    _RAG_CACHE[cache_key] = (content, now)
+
+    # Cleanup do cache se muito grande
+    if len(_RAG_CACHE) > 50:
+        expired = [k for k, (_, t) in _RAG_CACHE.items() if now - t >= _RAG_CACHE_TTL]
+        for k in expired:
+            del _RAG_CACHE[k]
+
+    return content
 
 
 # ════════════════════════════════════════════════════════════════════
