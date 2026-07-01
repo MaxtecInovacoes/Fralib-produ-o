@@ -203,7 +203,7 @@ document.getElementById('ctaForm')?.addEventListener('submit', function(e){
         credentials: 'include',
         body: JSON.stringify({ plano: plan })
       });
-      if (resp.status === 401) {
+      if (resp.status === 401 || resp.status === 403) {
         // Nao autenticado: vai para cadastro com plano selecionado
         window.location = SIGNUP_URL + '&plan=' + plan;
         return;

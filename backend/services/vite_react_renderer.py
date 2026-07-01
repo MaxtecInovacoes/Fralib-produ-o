@@ -3541,8 +3541,17 @@ def _cinematic_copy(facts: dict[str, Any]) -> dict[str, Any]:
     )
     lane_copy = lane.get("copy") if isinstance(lane.get("copy"), dict) else {}
 
-    # Sprint 14.6: usa archetype_copy.v* rotation (counter ou seed)
-    _var_seed = int(business.get("__counter") or facts.get("__counter") or 0)
+    # Usa seed + counter para a copy variar entre leads diferentes e tambem
+    # entre reprocessamentos controlados do mesmo subnicho.
+    try:
+        _copy_seed = int(variation.get("seed") or 0)
+    except Exception:
+        _copy_seed = 0
+    try:
+        _copy_counter = int(variation.get("counter") or business.get("__counter") or facts.get("__counter") or 0)
+    except Exception:
+        _copy_counter = 0
+    _var_seed = abs((_copy_seed ^ ((_copy_counter + 1) * 0x9E3779B9)) or _copy_counter)
 
     def _rotaciona(opcoes: list[str]) -> str:
         if not opcoes:
@@ -4147,7 +4156,21 @@ def _generate_cinematic_studio_files(facts: dict[str, Any]) -> dict[str, str]:
         str(_biz.get("subnicho") or _biz.get("subniche") or facts.get("subnicho") or facts.get("subniche") or "default")
         .strip().lower() or "default"
     )
-    _seed_for_html = int(_biz.get("__counter") or facts.get("__counter") or 0)
+    _variation_for_seed = facts.get("variation") if isinstance(facts.get("variation"), dict) else {}
+    try:
+        _seed_base_for_html = int(_variation_for_seed.get("seed") or 0)
+    except Exception:
+        _seed_base_for_html = 0
+    try:
+        _counter_for_html = int(
+            _biz.get("__counter")
+            or facts.get("__counter")
+            or _variation_for_seed.get("counter")
+            or 0
+        )
+    except Exception:
+        _counter_for_html = 0
+    _seed_for_html = abs((_seed_base_for_html ^ ((_counter_for_html + 1) * 0x9E3779B9)) or _counter_for_html)
 
     # Hero class variants (10 opcoes rotacionadas por counter)
     # Mais variabilidade para forcar Tailwind a gerar CSS diferente por lead
@@ -4235,8 +4258,9 @@ def _generate_cinematic_studio_files(facts: dict[str, Any]) -> dict[str, str]:
 
     # Sprint 14.6: variation counter rotation injeta hero_classes
     # diferente baseado em facts["variation"] (gerado por agente_variacao).
-    _variation_payload = facts.get("variation") if isinstance(facts.get("variation"), dict) else {}
+    _variation_payload = dict(facts.get("variation") if isinstance(facts.get("variation"), dict) else {})
     _hero_classes_override = str(_variation_payload.get("hero_classes") or "").strip()
+    _variation_payload["hero_classes"] = _hero_classes_override or _hero_class
     _section_order = _resolve_cinematic_section_order(archetype, _seed_for_html, _variation_payload)
     _section_import_map = {
         "navbar": "import { Navbar } from '../components/Navbar';",

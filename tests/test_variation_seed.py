@@ -442,6 +442,28 @@ def test_visual_lane_catalog_has_eight_distinct_premium_lanes():
         assert len(set(lane_ids)) == 8
 
 
+def test_nutrition_lane_avoids_internal_gallery_commentary_and_green_on_green():
+    from backend.services.vite_theme_guard import contrast_ratio
+    from backend.services.vite_visual_lanes import resolve_visual_lane
+
+    lane = resolve_visual_lane(segment="nutricionista", visual_lane="lane_a")
+    copy = lane["copy"]
+    palette = lane["fallback_palette"]
+
+    banned_fragments = [
+        "A galeria mostra",
+        "textura, alimento, ambiente e contexto humano",
+        "A página",
+        "composição conversa",
+        "sem exagero publicitário",
+    ]
+    public_text = " ".join(str(value) for value in copy.values())
+    for fragment in banned_fragments:
+        assert fragment not in public_text
+
+    assert contrast_ratio(palette["primary"], palette["bg_dark"]) >= 2.4
+
+
 def test_cinematic_site_data_differs_between_families():
     from backend.services.vite_react_renderer import _generate_cinematic_studio_files
 
