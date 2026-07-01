@@ -2290,6 +2290,7 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
 <script>
 // === URLS DE CHECKOUT (substituir pelos links reais) ===
 const CHECKOUT_URL = "/planos?plan=starter-upgrade-pro&src=landing";
+const SIGNUP_URL = "/login?signup=1&src=landing";
 const WHATSAPP_URL = "https://chat.whatsapp.com/FSrvUIVFvjBFQrkfDQgP0A";
 const TRIAL_URL = "/login?signup=1&plano=trial";
 </script>
@@ -2315,7 +2316,7 @@ const TRIAL_URL = "/login?signup=1&plano=trial";
 
   <div class="nav-actions">
     <a href="/login" class="nav-entrar">ENTRAR</a>
-    <a href="#" onclick="window.location=CHECKOUT_URL;return false;" class="nav-cta">ENTRAR NO BETA</a>
+    <a href="#" onclick="window.location=SIGNUP_URL;return false;" class="nav-cta">ENTRAR NO BETA</a>
     <button class="mobile-toggle" id="mobileToggle" aria-label="Menu">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
     </button>
@@ -2521,7 +2522,7 @@ const TRIAL_URL = "/login?signup=1&plano=trial";
           Estimativa demonstrativa baseada no nicho e região simulados. A FraLib não garante vendas ou faturamento. Resultados dependem da execução, oferta, abordagem e follow-up.
         </p>
 
-        <a href="#" onclick="window.location=CHECKOUT_URL;return false;" class="sim-submit" style="text-decoration:none;text-align:center;display:block;margin-top:20px;">
+        <a href="#" onclick="window.location=SIGNUP_URL;return false;" class="sim-submit" style="text-decoration:none;text-align:center;display:block;margin-top:20px;">
           GERAR MINHAS PRIMEIRAS PRÉVIAS
         </a>
       </div>
@@ -2558,7 +2559,7 @@ const TRIAL_URL = "/login?signup=1&plano=trial";
         <li>Garantia de 30 dias</li>
       </ul>
 
-      <a href="#" onclick="window.location=CHECKOUT_URL+'?plan=starter-upgrade-pro';return false;" class="offer-cta">
+      <a href="#" onclick="window.location=SIGNUP_URL+'&plan=starter-upgrade-pro';return false;" class="offer-cta">
         ATIVAR STARTER + PRO POR R$ 97
       </a>
 
