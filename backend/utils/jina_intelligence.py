@@ -49,6 +49,56 @@ REFERENCIAS_NICHO = {
     "mecanica": "https://www.dpaschoal.com.br",
 }
 
+
+def _normalizar_nicho_jina(nicho: str) -> str:
+    """Normalize noisy lead segments to the canonical market key used by Jina."""
+    raw = (nicho or "").strip().lower()
+    compact = re.sub(r"\s+", " ", raw)
+    ascii_key = (
+        compact.replace("á", "a")
+        .replace("à", "a")
+        .replace("â", "a")
+        .replace("ã", "a")
+        .replace("é", "e")
+        .replace("ê", "e")
+        .replace("í", "i")
+        .replace("ó", "o")
+        .replace("ô", "o")
+        .replace("õ", "o")
+        .replace("ú", "u")
+        .replace("ç", "c")
+    )
+
+    aliases = (
+        ("nutricion", "nutricionista"),
+        ("sala de fitness", "academia"),
+        ("academia", "academia"),
+        ("crossfit", "crossfit"),
+        ("barbear", "barbearia"),
+        ("salao", "salao"),
+        ("beleza", "salao"),
+        ("estetic", "estetica"),
+        ("clinica", "clinica"),
+        ("advog", "advocacia"),
+        ("jurid", "advocacia"),
+        ("restaurante", "restaurante"),
+        ("pizzaria", "pizzaria"),
+        ("hamburg", "hamburgueria"),
+        ("dent", "dentista"),
+        ("odont", "dentista"),
+        ("pet", "pet"),
+        ("pilates", "pilates"),
+        ("contabil", "contabilidade"),
+        ("imobili", "imobiliaria"),
+        ("escola", "escola"),
+        ("mecanic", "mecanica"),
+    )
+    for needle, canonical in aliases:
+        if needle in ascii_key:
+            return canonical
+    return compact.rstrip("s") or "negocio local"
+
+
 # Frases genéricas comuns do mercado. São contexto, não regra para o Builder.
 FRASES_GENERICAS_PADRAO = [
     "atendimento personalizado",
@@ -71,6 +121,8 @@ def buscar_inteligencia_jina(
     Retorna dict estruturado. Síncrono (compatível com pipeline atual).
     Cache de 48h por nicho+cidade.
     """
+    nicho_original = nicho
+    nicho = _normalizar_nicho_jina(nicho)
 
     # Cache
     _cache_dir = os.path.join(
@@ -105,9 +157,10 @@ def buscar_inteligencia_jina(
     # Fail-fast: se resultado inválido, lançar erro
     if not resultado or not resultado.get("palavras_poder"):
         raise JinaIntelligenceError(
-            f"Jina nao retornou inteligencia valida para '{nicho}' em '{cidade}'.",
+            f"Jina nao retornou inteligencia valida para '{nicho_original}' em '{cidade}'.",
             context={
-                "nicho": nicho,
+                "nicho": nicho_original,
+                "nicho_normalizado": nicho,
                 "cidade": cidade,
                 "nome_negocio": nome_negocio,
                 "acao": "Verifique API key JINA_API_KEY e connectivity",
@@ -133,6 +186,8 @@ def _buscar_real(
 ) -> dict:
     """Busca real via Jina Reader — lê sites concorrentes e analisa."""
     import requests
+
+    nicho = _normalizar_nicho_jina(nicho)
 
     urls_analisar = []
 
@@ -185,6 +240,7 @@ def _buscar_concorrentes_google(nicho: str, cidade: str) -> list:
     """Busca URLs de concorrentes via Jina Search."""
     import requests
 
+    nicho = _normalizar_nicho_jina(nicho)
     query = f"melhor {nicho} {cidade} site oficial"
     headers = {"X-Return-Format": "markdown", "X-Timeout": "15"}
     if JINA_API_KEY:
