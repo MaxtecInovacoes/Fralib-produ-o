@@ -22,8 +22,10 @@ REQUIRED_TOKENS = (
     "fralib-worker",
     "fralib-worker@*.service",
     'pm2 delete "$pm2_legacy"',
+    "pm2 save --force",
     "fralib-wpp-listener",
     "fralib-hermes-watchdog",
+    "fralib-dreamer",
     "fralib-franz-worker",
     "deploy bloqueado para evitar runtime PM2 legado",
 )
