@@ -418,7 +418,10 @@ def render_site_with_builder(
         output_dir.mkdir(parents=True, exist_ok=True)
         index_target.write_text(render_result.html, encoding="utf-8")
 
-    publication_engine = "openui" if engine == "openui_fallback" else engine
+    # Fail-fast: apenas vite_react e vite sao motores canonicos
+    if engine not in ("vite_react", "vite", "openui"):
+        raise ValueError(f"Motor de publicacao desconhecido: {engine}. Use 'vite_react' ou 'vite'.")
+    publication_engine = engine
     index_path = _find_builder_index(output_dir)
     html = index_path.read_text(encoding="utf-8")
     html = _prepare_builder_html_for_publication(

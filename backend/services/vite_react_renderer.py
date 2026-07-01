@@ -1122,58 +1122,8 @@ def render_vite_react_site(
                 break
             # Caso contrario, tenta proximo modelo da cascata
 
-    # Todos os modelos falharam validacao/build. Mantem a pipeline viva com
-    # Studio fallback deterministico, mas registra a falha LLM nos attempts.
-    if os.getenv("FRALIB_VITE_DISABLE_STUDIO_FALLBACK", "").strip().lower() not in {
-        "1",
-        "true",
-        "yes",
-        "on",
-    }:
-        fallback_started = time.time()
-        try:
-            files = _generate_studio_fallback_files(facts)
-            validate_vite_project_files(files, facts, requested_paths=set())
-            write_vite_project(workspace, files)
-            build_vite_project(workspace)
-            index_path = workspace / "dist" / "index.html"
-            html = index_path.read_text(encoding="utf-8")
-            validate_vite_dist(workspace / "dist")
-            attempts.append(
-                {
-                    "model": "studio-fallback",
-                    "model_index": len(model_candidates) + 1,
-                    "status": "studio_fallback_success",
-                    "elapsed_ms": int((time.time() - fallback_started) * 1000),
-                    "source_files": len(files),
-                    "html_chars": len(html),
-                    "previous_error": last_error or "",
-                }
-            )
-            return ViteReactRenderResult(
-                html=html,
-                source_files=files,
-                model="studio-fallback",
-                attempts=attempts,
-                elapsed_ms=int((time.time() - started) * 1000),
-                dist_dir=str((workspace / "dist").resolve()),
-                index_path=str(index_path.resolve()),
-            )
-        except Exception as fallback_exc:
-            last_error = (
-                f"{last_error or '(sem erro capturado)'}; "
-                f"studio fallback falhou: {fallback_exc}"
-            )[:800]
-            attempts.append(
-                {
-                    "model": "studio-fallback",
-                    "model_index": len(model_candidates) + 1,
-                    "status": "studio_fallback_failed",
-                    "elapsed_ms": int((time.time() - fallback_started) * 1000),
-                    "error": str(fallback_exc)[:500],
-                }
-            )
-
+    # Fail-fast: todos os modelos da cascata falharam. Nao publica site genérico
+    # para mascarar o erro. O lead fica em error_retry para reprocessamento.
     raise ViteReactRenderError(
         "Vite React renderer falhou em todos os modelos da cascata "
         f"({len(model_candidates)} tentados: {', '.join(model_candidates)}). "
