@@ -224,10 +224,24 @@ async def criar_portal_session(
 @router.post("/criar-checkout")
 async def criar_checkout(
     body: CheckoutRequest,
+    request: Request,
     db: Session = Depends(get_db),
-    usuario: dict = Depends(get_current_user),
 ):
+    """Cria checkout MercadoPago via sessao de cookie (sem Bearer token).
+    Se nao autenticado, retorna 401 para o frontend redirecionar para cadastro.
+    """
     plano = (body.plano or "").strip().lower()
+    if not plano:
+        raise HTTPException(400, "Plano invalido.")
+
+    # Pega usuario via sessao de cookie (Authorization OU cookie fralib_session)
+    try:
+        usuario = await get_current_user(request=request, db=db)
+    except HTTPException as exc:
+        if exc.status_code in (401, 403):
+            raise HTTPException(401, "Autenticacao necessaria para checkout.")
+        raise
+
     if body.valor is not None:
         return _criar_recarga_mercadopago(body.valor, usuario)
     if plano in {"recarga", "tokens", "creditos"}:
@@ -236,6 +250,14 @@ async def criar_checkout(
     if plano in PLANOS:
         return _criar_assinatura_mercadopago(plano, usuario)
     raise HTTPException(400, "Plano invalido. Use starter, pro, agency ou informe valor para recarga.")
+
+
+async def _get_user_from_request(request: Request, db: Session):
+    """Compat: wrapper para extrair usuario via sessao de cookie."""
+    try:
+        return await get_current_user(request=request, db=db)
+    except Exception:
+        return None
 
 
 def _post_mercadopago(path: str, payload: dict) -> dict:

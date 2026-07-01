@@ -3573,6 +3573,8 @@ document.getElementById('ctaForm')?.addEventListener('submit', function(e){
 
 // === CHECKOUT MERCADO PAGO ===
 // Intercepta cliques em botoes de pagamento e chama /api/credits/criar-checkout
+// Usa cookie de sessao (mais seguro que Bearer token em localStorage).
+// Se 401: redireciona para cadastro. Se 200: redireciona para init_point MP.
 (function(){
   const isCheckoutBtn = (el) => {
     if(!el) return false;
@@ -3580,7 +3582,7 @@ document.getElementById('ctaForm')?.addEventListener('submit', function(e){
     const onclick = el.getAttribute('onclick') || '';
     const text = (el.textContent || '').toLowerCase();
     if (onclick.includes('CHECKOUT_URL') || href.includes('checkout')) return true;
-    if (text.includes('assinar') || text.includes('ativar') || text.includes('contratar')) return true;
+    if (text.includes('assinar') || text.includes('ativar') || text.includes('contratar') || text.includes('testar gratis') || text.includes('entrar no beta')) return true;
     return false;
   };
   const extractPlan = (el, fallback) => {
@@ -3595,6 +3597,11 @@ document.getElementById('ctaForm')?.addEventListener('submit', function(e){
       const idMatch = section.id && section.id.match(/(starter|pro|agency|trial|upgrade)/i);
       if (idMatch) return idMatch[1].toLowerCase();
     }
+    const text = (el.textContent || '').toLowerCase();
+    if (text.includes('agency')) return 'agency';
+    if (text.includes('pro')) return 'pro';
+    if (text.includes('starter')) return 'starter';
+    if (text.includes('trial') || text.includes('testar')) return 'trial';
     return fallback;
   };
   document.addEventListener('click', async function(e){
@@ -3605,25 +3612,17 @@ document.getElementById('ctaForm')?.addEventListener('submit', function(e){
 
     const plan = extractPlan(btn, 'starter');
 
-    // Tenta autenticar via localStorage (token gravado apos login)
-    const token = localStorage.getItem('fralib_token') || sessionStorage.getItem('fralib_token');
-    if (!token) {
-      // Sem login: manda para cadastro com plano selecionado
-      window.location = SIGNUP_URL + '&plan=' + plan;
-      return;
-    }
-
     btn.style.opacity = '0.6';
     btn.style.pointerEvents = 'none';
     try {
       const resp = await fetch('/api/credits/criar-checkout', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ plano: plan })
       });
-      if (resp.status === 401 || resp.status === 403) {
-        // Token invalido: refaz login
-        localStorage.removeItem('fralib_token');
+      if (resp.status === 401) {
+        // Nao autenticado: vai para cadastro com plano selecionado
         window.location = SIGNUP_URL + '&plan=' + plan;
         return;
       }
