@@ -16,7 +16,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Optional
 
-from .intent_classifier import classify_with_llm_fallback, IntentResult
+from .intent_classifier import IntentResult
 from .state_machine import (
     ConversationState,
     Intent,
@@ -87,14 +87,9 @@ def orchestrate(
     in_loop = detect_loop(turn_count, current_state)
     force_break_loop = in_loop
 
-    # 3) Classifica intent
-    if enable_llm_fallback:
-        intent_result: IntentResult = classify_with_llm_fallback(
-            incoming_message, message_count=turn_count + 1, threshold=0.6
-        )
-    else:
-        from .intent_classifier import classify_intent
-        intent_result = classify_intent(incoming_message, message_count=turn_count + 1)
+    # 3) Classifica intent (regex only - sem fallback LLM)
+    from .intent_classifier import classify_intent
+    intent_result = classify_intent(incoming_message, message_count=turn_count + 1)
 
     # 4) Decide transicao via FSM
     decision: StateDecision = decide_transition(
