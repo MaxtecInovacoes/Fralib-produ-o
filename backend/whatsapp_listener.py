@@ -751,18 +751,16 @@ def _processar_mensagem(tenant_id: str, msg_data: dict, texto_override: str = No
         # onde Franz mandava 5 msgs em sequencia (introducao + oferta + explicacao + pergunta).
         try:
             with engine.connect() as conn:
-                last_outbound = conn.execute(text("""
-                    SELECT criado_em FROM interacoes
+                # OPTIMIZADO: 1 query em vez de 2 (N+1 fix)
+                row = conn.execute(text("""
+                    SELECT
+                        MAX(CASE WHEN direcao = 'saida' THEN criado_em END) as last_outbound,
+                        MAX(CASE WHEN direcao = 'entrada' THEN criado_em END) as last_inbound
+                    FROM interacoes
                     WHERE lead_id = :lid AND user_id = :uid
-                      AND direcao = 'saida'
-                    ORDER BY criado_em DESC LIMIT 1
-                """), {"lid": lead_id, "uid": user_id}).scalar()
-                last_inbound = conn.execute(text("""
-                    SELECT criado_em FROM interacoes
-                    WHERE lead_id = :lid AND user_id = :uid
-                      AND direcao = 'entrada'
-                    ORDER BY criado_em DESC LIMIT 1
-                """), {"lid": lead_id, "uid": user_id}).scalar()
+                """), {"lid": lead_id, "uid": user_id}).fetchone()
+                last_outbound = row.last_outbound if row else None
+                last_inbound = row.last_inbound if row else None
                 if last_outbound and last_inbound:
                     # So bloqueia se: ultima saida foi DEPOIS da ultima entrada
                     # (significa que Franz ja respondeu a esta msg)
