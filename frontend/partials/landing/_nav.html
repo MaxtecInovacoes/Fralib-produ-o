@@ -1,24 +1,24 @@
-<!-- ===== NAV ===== -->
-<nav id="navbar">
-  <div class="nav-brand-wrapper" style="justify-self:start;">
-    <a href="/" class="nav-brand">
+<!-- ===== HEADER PROFISSIONAL ===== -->
+<header class="site-header" id="siteHeader">
+  <div class="header-container">
+    <a href="/" class="header-logo" aria-label="FraLib - página inicial">
       <img src="/static/images/fralib-wordmark.png" alt="FraLib" height="36">
     </a>
-  </div>
 
-  <div class="nav-links" id="navLinks" style="justify-self:center;">
-    <a href="#como-funciona">Como funciona</a>
-    <a href="#simulador">Simulador</a>
-    <a href="#beneficios">Benefícios</a>
-    <a href="#planos">Planos</a>
-    <a href="#faq">FAQ</a>
-  </div>
+    <nav class="header-nav" id="headerNav" aria-label="Navegação principal">
+      <a href="#como-funciona">Como funciona</a>
+      <a href="#simulador">Simulador</a>
+      <a href="#beneficios">Benefícios</a>
+      <a href="#planos">Planos</a>
+      <a href="#faq">FAQ</a>
+    </nav>
 
-  <div class="nav-actions" style="justify-self:end;">
-    <a href="/login" class="nav-entrar">ENTRAR</a>
-    <a href="#" onclick="window.location=SIGNUP_URL;return false;" class="nav-cta">ENTRAR NO BETA</a>
-    <button class="mobile-toggle" id="mobileToggle" aria-label="Menu">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-    </button>
+    <div class="header-actions">
+      <a href="/login" class="header-entrar">ENTRAR</a>
+      <a href="#" class="header-cta" onclick="window.location=SIGNUP_URL;return false;">ENTRAR NO BETA</a>
+      <button class="header-burger" id="headerBurger" aria-label="Abrir menu" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
   </div>
-</nav>
+</header>

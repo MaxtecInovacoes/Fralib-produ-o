@@ -138,47 +138,100 @@ section{padding:100px 0;position:relative}
 /* ============================================================
    NAV
    ============================================================ */
-nav{
+/* ============================================================
+   HEADER PROFISSIONAL (SaaS premium)
+   Estrutura:
+     <header.site-header>
+       <div.header-container>
+         <a.header-logo>
+         <nav.header-nav>
+         <div.header-actions>
+   ============================================================ */
+.site-header{
   position:fixed;top:0;left:0;right:0;z-index:1000;
-  display:grid;grid-template-columns:1fr auto 1fr;align-items:center;
-  padding:14px 32px;
-  background:rgba(6,6,8,0.95);
-  -webkit-backdrop-filter:blur(20px);
-  backdrop-filter:blur(20px);
+  background:rgba(6,6,8,0.92);
+  -webkit-backdrop-filter:blur(18px);
+  backdrop-filter:blur(18px);
   border-bottom:1px solid var(--fl-border);
-  transition:all .3s var(--fl-ease);
+  transition:padding .25s ease, background .25s ease;
+  padding:18px 0;
+  box-sizing:border-box;
 }
-@supports not (backdrop-filter:blur(1px)) {
-  nav{background:rgba(6,6,8,0.98)}
+.site-header.scrolled{padding:12px 0;background:rgba(6,6,8,0.97)}
+.header-container{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:24px;
+  width:100%;
+  max-width:1240px;
+  margin:0 auto;
+  padding:0 clamp(20px, 4vw, 40px);
+  box-sizing:border-box;
 }
-@supports not (-webkit-backdrop-filter:blur(1px)) {
-  nav{background:rgba(6,6,8,0.98)}
+.header-logo{
+  display:inline-flex;align-items:center;
+  text-decoration:none;
+  flex:0 0 auto;
+  line-height:1;
 }
-nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
-.nav-brand{display:flex;align-items:center;gap:12px;text-decoration:none; justify-self:start;}
-.nav-brand img{height:36px;width:auto;filter:drop-shadow(0 0 8px rgba(147,51,234,0.4))}
-.nav-links{display:flex;gap:28px;align-items:center; justify-self:center;}
-.nav-links a{
-  color:var(--fl-text-muted);text-decoration:none;
+.header-logo img{
+  height:36px;width:auto;display:block;
+  filter:drop-shadow(0 0 6px rgba(124,58,237,0.35));
+  transition:filter .25s ease;
+}
+.header-logo:hover img{filter:drop-shadow(0 0 12px rgba(124,58,237,0.65))}
+.header-nav{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:32px;
+  flex:1 1 auto;
+  min-width:0;
+  list-style:none;
+  margin:0;padding:0;
+}
+.header-nav a{
+  color:var(--fl-text-muted);
+  text-decoration:none;
   font-size:13px;font-weight:500;
-  transition:color .2s;
+  white-space:nowrap;
+  transition:color .2s ease;
 }
-.nav-links a:hover{color:var(--fl-text)}
-.nav-cta{padding:12px 24px;border-radius:0;
-  font-family:var(--fl-font-brand);font-size:9px;
-  background:#FACC15;
-  color:#000;text-decoration:none;cursor:pointer;
-  transition:transform 60ms,box-shadow 60ms;border:none;
+.header-nav a:hover{color:var(--fl-text)}
+.header-actions{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  flex:0 0 auto;
+}
+.header-entrar{
+  color:var(--fl-text-muted);
+  text-decoration:none;
+  font-size:13px;font-weight:600;
+  white-space:nowrap;
+  padding:8px 4px;
+  transition:color .2s ease;
+}
+.header-entrar:hover{color:var(--fl-text)}
+.header-cta{
+  display:inline-flex;align-items:center;justify-content:center;
+  padding:12px 22px;
+  font-family:var(--fl-font-brand);
+  font-size:10px;
+  letter-spacing:1px;
+  background:#FACC15;color:#000;
+  text-decoration:none;cursor:pointer;
+  border:none;
+  border-radius:0;
   box-shadow:
     inset -3px -3px 0 #A16207,
     inset 3px 3px 0 #FDE68A,
     0 4px 0 #713F12;
+  transition:transform 60ms,box-shadow 60ms,background .2s;
   image-rendering:pixelated;
-  letter-spacing:1px;
 }
-.nav-entrar{color:var(--fl-text-muted);text-decoration:none;font-size:13px;font-weight:600;transition:color .2s}
-.nav-entrar:hover{color:var(--fl-text)}
-.nav-cta:hover{
+.header-cta:hover{
   background:#FDE047;
   box-shadow:
     inset -3px -3px 0 #A16207,
@@ -186,11 +239,64 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
     0 4px 0 #713F12,
     0 0 20px rgba(250,204,21,0.4);
 }
-.nav-cta:active{
+.header-cta:active{
   transform:translateY(4px);
   box-shadow:inset -3px -3px 0 #A16207,inset 3px 3px 0 #FDE68A,0 0 0 #713F12;
 }
-.mobile-toggle{display:none;background:none;border:none;color:var(--fl-text);font-size:24px;cursor:pointer}
+
+/* Hamburguer (mobile) */
+.header-burger{
+  display:none;
+  background:none;border:none;
+  color:var(--fl-text);
+  width:44px;height:44px;
+  padding:10px;cursor:pointer;
+  flex-direction:column;justify-content:center;gap:5px;
+}
+.header-burger span{
+  display:block;height:2px;width:22px;
+  background:currentColor;border-radius:2px;
+  transition:transform .25s ease,opacity .25s ease;
+}
+.header-burger[aria-expanded="true"] span:nth-child(1){transform:translateY(7px) rotate(45deg)}
+.header-burger[aria-expanded="true"] span:nth-child(2){opacity:0}
+.header-burger[aria-expanded="true"] span:nth-child(3){transform:translateY(-7px) rotate(-45deg)}
+
+/* ===== TABLET (até 1100px): mostra burger, esconde nav; esconde ENTRAR, mantém CTA ===== */
+@media (max-width:1100px){
+  .header-nav{display:none}
+  .header-nav.open{
+    display:flex;flex-direction:column;
+    position:absolute;top:100%;left:0;right:0;
+    gap:0;
+    background:rgba(6,6,8,0.98);
+    border-bottom:1px solid var(--fl-border);
+    padding:12px 0;
+  }
+  .header-nav.open a{
+    width:100%;
+    padding:14px clamp(20px, 4vw, 40px);
+    border-bottom:1px solid rgba(255,255,255,0.04);
+    font-size:14px;
+  }
+  .header-entrar{display:none}
+  .header-burger{display:flex}
+}
+
+/* ===== MOBILE PEQUENO (<560px): reduz logo e CTA ===== */
+@media (max-width:560px){
+  .site-header{padding:14px 0}
+  .header-logo img{height:30px}
+  .header-cta{padding:10px 16px;font-size:9px;letter-spacing:0.5px}
+}
+
+/* ===== Fallback sem backdrop-filter ===== */
+@supports not (backdrop-filter:blur(1px)) {
+  .site-header{background:rgba(6,6,8,0.98)}
+}
+@supports not (-webkit-backdrop-filter:blur(1px)) {
+  .site-header{background:rgba(6,6,8,0.98)}
+}
 
 /* ============================================================
    HERO (clean, low friction — tipografia obrigatória)
@@ -2303,30 +2409,30 @@ const TRIAL_URL = "/login?signup=1&plano=trial";
 </head>
 <body><!-- PARTICLES CANVAS -->
 
-<!-- ===== NAV ===== -->
-<nav id="navbar">
-  <div class="nav-brand-wrapper" style="justify-self:start;">
-    <a href="/" class="nav-brand">
+<!-- ===== HEADER PROFISSIONAL ===== -->
+<header class="site-header" id="siteHeader">
+  <div class="header-container">
+    <a href="/" class="header-logo" aria-label="FraLib - página inicial">
       <img src="/static/images/fralib-wordmark.png" alt="FraLib" height="36">
     </a>
-  </div>
 
-  <div class="nav-links" id="navLinks" style="justify-self:center;">
-    <a href="#como-funciona">Como funciona</a>
-    <a href="#simulador">Simulador</a>
-    <a href="#beneficios">Benefícios</a>
-    <a href="#planos">Planos</a>
-    <a href="#faq">FAQ</a>
-  </div>
+    <nav class="header-nav" id="headerNav" aria-label="Navegação principal">
+      <a href="#como-funciona">Como funciona</a>
+      <a href="#simulador">Simulador</a>
+      <a href="#beneficios">Benefícios</a>
+      <a href="#planos">Planos</a>
+      <a href="#faq">FAQ</a>
+    </nav>
 
-  <div class="nav-actions" style="justify-self:end;">
-    <a href="/login" class="nav-entrar">ENTRAR</a>
-    <a href="#" onclick="window.location=SIGNUP_URL;return false;" class="nav-cta">ENTRAR NO BETA</a>
-    <button class="mobile-toggle" id="mobileToggle" aria-label="Menu">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-    </button>
+    <div class="header-actions">
+      <a href="/login" class="header-entrar">ENTRAR</a>
+      <a href="#" class="header-cta" onclick="window.location=SIGNUP_URL;return false;">ENTRAR NO BETA</a>
+      <button class="header-burger" id="headerBurger" aria-label="Abrir menu" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
   </div>
-</nav>
+</header>
 
 <!-- ===== SEÇÃO 1 — HERO (clean, low friction) ===== -->
 <section class="hero" id="hero">
@@ -3262,15 +3368,22 @@ const TRIAL_URL = "/login?signup=1&plano=trial";
      ============================================================ -->
 <script>
 // === NAV SCROLL ===
-const nav = document.getElementById('navbar');
+const header = document.getElementById('siteHeader');
 window.addEventListener('scroll', () => {
-  nav.classList.toggle('scrolled', window.scrollY > 50);
+  header.classList.toggle('scrolled', window.scrollY > 50);
 }, { passive: true });
 
 // === MOBILE MENU ===
-document.getElementById('mobileToggle').addEventListener('click', () => {
-  document.getElementById('navLinks').classList.toggle('open');
+const burger = document.getElementById('headerBurger');
+const headerNav = document.getElementById('headerNav');
+burger?.addEventListener('click', () => {
+  const open = headerNav.classList.toggle('open');
+  burger.setAttribute('aria-expanded', open ? 'true' : 'false');
 });
+headerNav?.querySelectorAll('a').forEach(a => a.addEventListener('click', () => {
+  headerNav.classList.remove('open');
+  burger.setAttribute('aria-expanded', 'false');
+}));
 
 // === SCROLL REVEAL ===
 const revealObserver = new IntersectionObserver((entries) => {

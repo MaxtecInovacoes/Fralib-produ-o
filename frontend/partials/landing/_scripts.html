@@ -3,15 +3,22 @@
      ============================================================ -->
 <script>
 // === NAV SCROLL ===
-const nav = document.getElementById('navbar');
+const header = document.getElementById('siteHeader');
 window.addEventListener('scroll', () => {
-  nav.classList.toggle('scrolled', window.scrollY > 50);
+  header.classList.toggle('scrolled', window.scrollY > 50);
 }, { passive: true });
 
 // === MOBILE MENU ===
-document.getElementById('mobileToggle').addEventListener('click', () => {
-  document.getElementById('navLinks').classList.toggle('open');
+const burger = document.getElementById('headerBurger');
+const headerNav = document.getElementById('headerNav');
+burger?.addEventListener('click', () => {
+  const open = headerNav.classList.toggle('open');
+  burger.setAttribute('aria-expanded', open ? 'true' : 'false');
 });
+headerNav?.querySelectorAll('a').forEach(a => a.addEventListener('click', () => {
+  headerNav.classList.remove('open');
+  burger.setAttribute('aria-expanded', 'false');
+}));
 
 // === SCROLL REVEAL ===
 const revealObserver = new IntersectionObserver((entries) => {
