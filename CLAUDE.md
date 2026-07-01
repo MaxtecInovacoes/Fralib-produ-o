@@ -4,18 +4,18 @@
 > Toda a arquitetura, pipeline, contratos, atalhos, caches, testes e plano de ação estão lá.
 > Se `CLAUDE.md` e `AGENTS.md` divergirem, **`AGENTS.md` vence**.
 >
-> **Pipeline atual**: Vite/React como engine padrão (Sprint 12.9+).
-> OpenUI virou apenas fallback. 26 segmentos cobertos. Briefing real
-> injetado no caroço. Post-process contra tela-preta.
+> **Pipeline atual**: Vite/React como engine PADRÃO (Sprint 12.9+).
+> 26 segmentos cobertos via LLM cascade. Fail-fast total implementado.
+> Qualquer erro na geração falha fechado — sem fallbacks genéricos.
 > Em produção, publicação fora de `vite_react` falha fechado com
 > `FRALIB_STRICT_CANONICAL_PUBLISH=1` ou `FRALIB_ENV=prod`.
 
 ## TL;DR
 - **Pipeline canônica: 11 fases** (Hunter → Caio → Jina → Nicho → Variação → Arquiteto → **Vite/React** → QA → Deploy → Franz).
 - **Gerador de site: Vite/React** (`backend/services/vite_react_renderer.py`) — engine PADRÃO desde Sprint 12.9.
-- **Política LLM do Vite**: `FRALIB_VITE_LLM_POLICY=copy_only` por padrão. O LLM retorna JSON de conteúdo; o TSX é gerado pelo Studio/FraLib.
-- **Fallback**: OpenUI (`backend/services/openui_renderer.py`) — só roda se Vite/React falhar.
-- **26 segmentos** cobertos no studio fallback (barbearia, academia, restaurante, clinica, etc).
+- **OpenUI** (`backend/services/openui_renderer.py`) — rota alternativa, também fail-fast.
+- **Política LLM do Vite**: `FRALIB_VITE_LLM_POLICY=full_code` por padrão. LLM cascade Haiku→Sonnet→Opus.
+- **Fail-fast total**: qualquer erro na geração levanta exceção clara — sem sites genéricos.
 - **7 contratos canônicos** injetados no caroço: SEO, Design, Motion, A11y, Factual, LGPD, Deploy.
 - **Briefing real** do lead: nome, segmento, cidade, telefone, fotos, SEO, services, horários.
 - **Cross-contamination guard**: barbearia NUNCA menciona musculacao, academia NUNCA menciona corte.
@@ -52,18 +52,15 @@ Mudou a pipeline, código, config ou docs? Atualizar **`AGENTS.md` primeiro** e 
 ## Como ativar features novas (VPS)
 
 ```bash
-# Sprint 12.9 - Vite/React (default desde 2026-06-25)
+# Sprint 12.9+ - Vite/React (engine PADRÃO desde 2026-06-25)
 echo "FRALIB_BUILDER_ENGINE=vite_react" >> ecosystem.config.js && pm2 restart fralib
 
-# Sprint 14 - Política LLM do Vite (CÓDIGO MOSTRA: "none" é o PADRÃO!)
-# O código real em builder_worker.py:47 mostra:
-#   os.environ.setdefault("FRALIB_VITE_LLM_POLICY", "none")
-#
-# Política REAL (verificado no código):
-#   - none (PADRÃO): ZERO LLM, studio determinístico
-#   - copy_only: LLM mínimo só para texto
+# Política LLM do Vite (CÓDIGO MOSTRA: "full_code" é o PADRÃO!)
+# Comportamento real (verificado no código):
+#   - full_code (PADRÃO): LLM cascade Haiku→Sonnet→Opus, fail-fast se todos falham
+#   - copy_only: LLM mínimo para copy, TSX gerado localmente
 #   - creative_plan: LLM para copy + planejamento
-echo "FRALIB_VITE_LLM_POLICY=none" >> ecosystem.config.js && pm2 restart fralib
+echo "FRALIB_VITE_LLM_POLICY=full_code" >> ecosystem.config.js && pm2 restart fralib
 
 # Sprint 5 — Tracing
 sed -i "s/FRALIB_TRACING: '0'/FRALIB_TRACING: '1'/" ecosystem.config.js && pm2 restart fralib
@@ -78,19 +75,21 @@ sed -i "s/FRALIB_USE_TEMPLATE_RAG: '0'/FRALIB_USE_TEMPLATE_RAG: '1'/" ecosystem.
 sed -i "s/FRALIB_AUTO_IMPROVE: '0'/FRALIB_AUTO_IMPROVE: '1'/" ecosystem.config.js && pm2 restart fralib
 ```
 
-## O que ganhamos (Sprints 5-12)
+## O que ganhamos (Sprints 5-14)
 
-| Métrica | Antes (Sprint 4) | Depois (Sprint 12.19) |
+| Métrica | Antes (Sprint 4) | Depois (Sprint 14+) |
 |---|---|---|
 | Engine padrão | OpenUI HTML estático | **Vite/React** (componentes) |
-| Latência média render | 10-30s (LLM) | **5-30s** (LLM cascata) ou **5ms** (studio fallback) |
-| Custo por site | $0.003 | **$0** (`none`) ou JSON curto (`copy_only`) |
+| Latência média render | 10-30s (LLM) | **5-30s** (LLM cascade) |
+| Custo por site | variável | **Previsível** (Haiku→Sonnet→Opus) |
+| Fail-fast | Studio fallback genérico | **Erro claro** se LLM falhar |
 | Debug time | 30min | **2min** |
 | Variedade visual | 1 genérico | **26 segmentos + 6 Awwwards** |
 | Sinais SDK | 4/13 | **13/13** |
 | Cobertura testes | 76 | **130+** (12+ suites) |
 | Tela preta no site | comum (sem React) | **impossível** (post-process {var}) |
 | Lead name injetado | ❌ | ✅ via `_business_context` |
+| Fallbacks genéricos | Sim | ❌ **Fail-fast total** |
 
 ## Sistema de Variação Visual (Sprint 14.6+)
 
@@ -179,7 +178,8 @@ Para commits técnicos, antes de declarar "pronto", verificar:
 - ✅ **130+ testes verdes** (12+ suites anti-regressão)
 - ✅ **21+ checks** no pre-commit hook
 - ✅ **VPS rodando** com `FRALIB_BUILDER_ENGINE=vite_react`
-- ✅ **Política LLM real**: `none` (ZERO custo por padrão!)
+- ✅ **Política LLM real**: `full_code` (LLM cascade Haiku→Sonnet→Opus)
+- ✅ **Fail-fast total**: Qualquer erro na geração levanta exceção clara — sem sites genéricos
 - ⚠️ **SITES SAINDO IGUAIS?** → Verificar `docs/DIAGNOSTICO_VARIACAO_SITES.md`
 
 ## Tags v1.14.x (Sprint 12.19)

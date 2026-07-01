@@ -17,12 +17,10 @@
 **A Pipeline canônica é o caminho padrão para gerar sites na FraLib.**
 
 - Todo site gerado pela FraLib passa pelas **11 fases canônicas** (seção 4).
-- O gerador padrão de site é **OpenUI** (seção 5).
-- `vite_react` existe apenas como engine de compatibilidade explícita
-  (`FRALIB_BUILDER_ENGINE=vite_react`) enquanto o builder React/Vite antigo é
-  recuperado e depois quebrado em módulos menores.
-- Quando `vite_react` falhar, o mesmo job deve cair para `openui_fallback` e
-  ainda publicar um HTML OpenUI auditável, sem perder o pipeline.
+- O gerador padrão de site é **Vite/React** (seção 5).
+- `openui` existe como rota alternativa quando `FRALIB_BUILDER_ENGINE=openui`.
+- **Fail-fast total**: Se qualquer fase da geração falhar, levanta exceção clara.
+  Não usa fallbacks genéricos ("FraLib Site", templates universais).
 - Em produção, `FRALIB_STRICT_CANONICAL_PUBLISH=1` ou `FRALIB_ENV=prod`
   fazem a publicação falhar fechado se o artefato final não estiver marcado
   como `vite_react`.
@@ -69,12 +67,13 @@ está **quebrando o sistema**. Faça pela pipeline.
 | Backend HTTP | FastAPI + Uvicorn | `server.py` (porta 8000) | Endpoints REST que disparam jobs |
 | Orquestrador | FastAPI router + serviço | `backend/endpoints/pipeline_orchestrator_service.py` | Coordena as 11 fases |
 | Worker daemon | Python + asyncio | `worker.py` (raiz) | Processa jobs da fila |
-| **Gerador de site padrão** | **OpenUI** | `backend/services/openui_renderer.py` | **Fase 9 — renderiza HTML** |
-| Contratos OpenUI | 7 contratos injetados | `backend/services/openui_contracts.py` | SEO, design, motion, A11y, factual, LGPD, deploy |
+| **Gerador de site PADRÃO** | **Vite/React** | `backend/services/vite_react_renderer.py` | **Fase 9 — renderiza TSX** |
+| **Gerador alternativo** | **OpenUI** | `backend/services/openui_renderer.py` | **Fase 9 — HTML Tailwind** |
+| Contratos Vite/React | 7 contratos injetados | `backend/services/vite_contracts.py` | SEO, design, motion, A11y, factual, LGPD, deploy |
 | Fila/Locks | PostgreSQL | `backend/core/job_queue.py` + tabela `public.jobs` | Tabela canônica de jobs |
-| Builder Worker | Python daemon | `backend/services/builder_worker.py` | **Dispara OpenUI padrão ou Vite/React compat explícito** |
+| Builder Worker | Python daemon | `backend/services/builder_worker.py` | **Dispara Vite/React PADRÃO ou OpenUI alternativo** |
 | Quality Gate | Determinístico (não pula) | `backend/agents/html_quality_gate.py` | **Fase 9b — valida HTML** |
-| LLM | Anthropic direto | `backend/agents/llm_direct.py` | Cascata Haiku→Sonnet |
+| LLM | Anthropic direto | `backend/agents/llm_direct.py` | Cascata Haiku→Sonnet→Opus (fail-fast se todos falham) |
 | WhatsApp | whatsmeow externo | `:3001` (systemd próprio) | Fase 11 (Franz) |
 | ServiceManager | Auto-detect systemd/pm2 | `backend/services/service_manager.py` | Gerencia serviços |
 | Frontend | HTML estático canônico | `frontend/` | Admin/dashboard/landing |
@@ -97,7 +96,7 @@ está **quebrando o sistema**. Faça pela pipeline.
 | 6 | Analisando nicho... | `agente_nicho` | Gerar briefing | Sonnet | `agents/agente_nicho.py` |
 | 7 | Definindo variação estrutural... | `agente_variacao` | Gerar variação | Haiku | `agents/agente_variacao.py` |
 | 8 | Arquitetando site... | `arquiteto_mestre` | Orquestra Arquiteto + Bloco Estrutura + Bloco Copy | Sonnet | `services/pipeline_fases/fase_08_arquiteto.py` |
-| **9** | **Gerando site...** | **`builder_renderer`** | **`render_openui_site` padrão / `render_vite_react_site` compat explícito** | Haiku→Sonnet | **`services/openui_renderer.py` / `services/vite_react_renderer.py`** |
+| **9** | **Gerando site...** | **`builder_renderer`** | **`render_vite_react_site` PADRÃO / `render_openui_site` alternativo** | Haiku→Sonnet→Opus | **`services/vite_react_renderer.py` / `services/openui_renderer.py`** |
 | **9b** | **Validando HTML...** | **`quality_gate`** | **`audit_generated_html` (loop ≤ 3 retries)** | N/A | **`agents/html_quality_gate.py`** |
 | 10 | Publicando site... | `deploy` | `publish_rendered_site` | N/A | `endpoints/pipeline_phase_helpers.py` |
 | 11 | Enviando contato... | `franz` | SDR LangGraph | Sonnet | `services/pipeline_executors.py` + `agents/sdr_langgraph/compat.py` |
@@ -107,26 +106,23 @@ está **quebrando o sistema**. Faça pela pipeline.
 
 ---
 
-## 6. OpenUI: Gerador Padrão de Site
+## 6. Vite/React: Gerador Padrão de Site
 
 ### 6.1 Decisão arquitetural (a fonte da verdade)
 
-A FraLib usa **OpenUI como motor padrão de geração de sites**. OpenUI é um contrato
-de UI generation: um system prompt compacto pede ao LLM que retorne HTML Tailwind
-pronto para renderizar. A FraLib mantém isso in-process — não precisa de servidor
-externo, sessão de browser, build Node ou Sandbox.
+A FraLib usa **Vite/React como motor PADRÃO de geração de sites**.
+Vite/React gera componentes TSX que são compilados pelo Studio FraLib.
+OpenUI (`openui_renderer.py`) existe como **rota alternativa** quando
+`FRALIB_BUILDER_ENGINE=openui` — mas **NÃO é mais o padrão**.
 
-**Importante**: `vite_react_renderer.py` voltou como motor de compatibilidade
-explícita para recuperar o builder React/Vite antigo. Ele só deve rodar quando
-`FRALIB_BUILDER_ENGINE=vite_react`. `liam_renderer.py` e
-`skill_based_renderer.py` continuam proibidos.
+**Importante**: `vite_react_renderer.py` é o motor PADRÃO.
+`liam_renderer.py` e `skill_based_renderer.py` continuam proibidos.
 
-### 6.2 Como o OpenUI produz um site
+### 6.2 Como o Vite/React produz um site
 
 1. `backend/services/builder_worker.py` recebe o brief do Arquiteto Mestre.
-2. Por padrão chama `render_openui_site()` em `backend/services/openui_renderer.py`.
-   Se `FRALIB_BUILDER_ENGINE=vite_react`, tenta `render_vite_react_site()`; se
-   Vite/React falhar, cai para `openui_fallback` no mesmo job.
+2. Por padrão chama `render_vite_react_site()` em `backend/services/vite_react_renderer.py`.
+   Se `FRALIB_BUILDER_ENGINE=openui`, chama `render_openui_site()` (rota alternativa).
 3. O renderer monta o system prompt injetando os **7 contratos**:
    1. **SEO Framework** por nicho
    2. **Design System** (cores, fontes, espaçamentos)
@@ -135,21 +131,70 @@ explícita para recuperar o builder React/Vite antigo. Ele só deve rodar quando
    5. **Factual Contract** (JSON-LD + section data-fralib-contract)
    6. **LGPD personalizado** (segmento-aware)
    7. **Deploy Rules** (Tailwind CDN, links wa.me/tel:, sem iframes/scripts)
-4. Cascata de LLM: **Haiku** primário → **Sonnet** fallback se Haiku falhar.
-5. Resultado: `OpenUIRenderResult { html, body_html, model, attempts, elapsed_ms }`.
+4. **LLM Cascade**: **Haiku** primário → **Sonnet** fallback → **Opus 4.8** se necessário.
+5. **Fail-fast**: Se TODOS os modelos falharem, levanta `ViteReactRenderError`.
+   Não há fallback genérico.
 6. **Patches determinísticos** (46 patches — ver seção 7) são aplicados.
 7. **Quality Gate** valida em loop ≤ 3 retries.
 8. Deploy publica em `/var/www/fralib/sites/<tenant_id>/<lead_slug>/`.
 
-### 6.3 Por que OpenUI é o caminho padrão
+### 6.3 Por que Vite/React é o caminho padrão
 
-| Critério | OpenUI |
+| Critério | Vite/React |
 |---|---|
-| Tempo médio | ~10-30s (Haiku) |
-| Custo por site | baixo (Haiku primário) |
-| Complexidade | 1 processo Python |
-| Tailwind motion | via data-attributes + `motion_runtime.js` (CDN) |
+| Qualidade | Componentes TSX compilados |
+| Customização | Variação 4-eixos + 6 archetypes |
+| Custo | Previsível (cascata de modelos) |
 | Quando usar | **100% dos sites FraLib** |
+
+---
+
+## 6.2 Fail-Fast: Comportamento de Erro
+
+### Filosofia
+
+> "Se a geração falhar, deve falhar com erro claro — nunca publicar site genérico."
+
+### O que NÃO é mais aceito
+
+| Antes (FALLBACK) | Agora (FAIL-FAST) |
+|---|---|
+| Studio fallback determinístico | Erro claro (`ViteReactRenderError`) |
+| Site genérico "FraLib Site" | Exceção com diagnóstico |
+| openui_fallback automático | Fail-fast em ambos engines |
+| retry infinito | Retry controlado + fail-fast |
+
+### Cascata LLM (Vite/React)
+
+```
+Haiku → Sonnet → Opus 4.8
+   ↓         ↓         ↓
+(ok)     (ok)      (ok)
+   └─────────┴─────────┴──→ Sucesso
+             
+(erro)  (erro)    (erro)
+   └─────────┴─────────┴──→ ViteReactRenderError ❌
+```
+
+### Arquivos que implementam fail-fast
+
+| Arquivo | Comportamento |
+|---------|---------------|
+| `vite_react_renderer.py` | `ViteReactRenderError` se cascade falhar |
+| `openui_renderer.py` | `OpenUIRenderError` se HTML vazio/inválido |
+| `builder_worker.py` | Erro sobe, não cai para fallback |
+| `bloco_copy.py` | `CopyGenerationError` após retry |
+| `bloco_estrutura.py` | `EstruturaInvalidaError` se parse falhar |
+
+### Fallbacks Técnicos Aceitos
+
+Estes fallbacks são **técnicos**, não de produto:
+
+| Arquivo | Fallback | Justificativa |
+|---------|----------|---------------|
+| `parse_bloco*_with_fallback` | JSON→Markdown→JSON | Parsing robusto |
+| `lead_lock.py` | Redis→threading | Lock local se Redis offline |
+| `agent_memory.py` | Windows sem flock | Compatibilidade |
 
 ---
 
