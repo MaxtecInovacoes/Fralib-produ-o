@@ -493,6 +493,14 @@ if(planoPendente&&PLANOS_VALIDOS[planoPendente]){
   planoBanner.classList.add('show');
 }
 
+// Pre-preencher e-mail se vier via ?email= (fluxo pagamento MP)
+var emailFromUrl=(params.get('email')||'').trim();
+if(emailFromUrl&&document.getElementById('signupEmail')){
+  document.getElementById('signupEmail').value=emailFromUrl;
+  document.getElementById('signupEmail').readOnly=true;
+  document.getElementById('signupEmail').style.background='rgba(255,184,0,0.1)';
+}
+
 // ── Tabs ───────────────────────────────────────────────────────
 function setModo(modo){
   if(modo==='signup'){

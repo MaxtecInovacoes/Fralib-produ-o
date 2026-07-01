@@ -3572,9 +3572,11 @@ document.getElementById('ctaForm')?.addEventListener('submit', function(e){
 })();
 
 // === CHECKOUT MERCADO PAGO ===
-// Intercepta cliques em botoes de pagamento e chama /api/credits/criar-checkout
-// Usa cookie de sessao (mais seguro que Bearer token em localStorage).
-// Se 401: redireciona para cadastro. Se 200: redireciona para init_point MP.
+// Intercepta cliques em botoes de pagamento e chama MercadoPago.
+// 3 fluxos:
+//   1. Logado: chama /criar-checkout (com cookie de sessao) -> init_point MP
+//   2. Nao logado: mostra modal pedindo email, chama /criar-checkout-anonimo -> init_point MP
+//   3. Apos pagamento, back_url leva para /login?signup=1&email=X&plan=Y (cadastro pre-preenchido)
 (function(){
   const isCheckoutBtn = (el) => {
     if(!el) return false;
@@ -3604,6 +3606,54 @@ document.getElementById('ctaForm')?.addEventListener('submit', function(e){
     if (text.includes('trial') || text.includes('testar')) return 'trial';
     return fallback;
   };
+
+  // Modal de e-mail para checkout anonimo
+  function showEmailModal(plan) {
+    return new Promise((resolve) => {
+      // Remove modal existente se houver
+      const existing = document.getElementById('fralib-checkout-email-modal');
+      if (existing) existing.remove();
+
+      const planName = (plan || 'starter').toUpperCase();
+      const modal = document.createElement('div');
+      modal.id = 'fralib-checkout-email-modal';
+      modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px);';
+      modal.innerHTML = `
+        <div style="background:#151026;border:2px solid #FFB800;border-radius:16px;padding:32px;max-width:420px;width:90%;position:relative;box-shadow:0 20px 60px rgba(0,0,0,0.5);">
+          <button id="fralib-modal-close" style="position:absolute;top:12px;right:12px;background:none;border:none;color:#fff;font-size:24px;cursor:pointer;line-height:1;">&times;</button>
+          <h3 style="margin:0 0 8px;font-size:18px;color:#FFB800;">Quase la!</h3>
+          <p style="margin:0 0 20px;color:#B8B4C8;font-size:13px;line-height:1.5;">
+            Para liberar o acesso ao plano <strong style="color:#fff;">${planName}</strong> apos o pagamento, informe seu e-mail.
+          </p>
+          <input type="email" id="fralib-modal-email" placeholder="seu@email.com" autocomplete="email" required
+            style="width:100%;padding:12px 14px;background:#0a0714;border:1px solid #7D7890;border-radius:8px;color:#fff;font-size:14px;box-sizing:border-box;margin-bottom:16px;" />
+          <button id="fralib-modal-go" style="width:100%;padding:14px;background:#FFB800;color:#000;border:none;border-radius:8px;font-weight:800;font-size:13px;letter-spacing:1px;cursor:pointer;text-transform:uppercase;">
+            IR PARA PAGAMENTO
+          </button>
+          <p style="margin:12px 0 0;color:#7D7890;font-size:11px;line-height:1.4;text-align:center;">
+            Apos pagar, voce cria sua conta em 1 clique (e-mail ja preenchido).
+          </p>
+        </div>`;
+      document.body.appendChild(modal);
+      const emailInput = document.getElementById('fralib-modal-email');
+      emailInput.focus();
+      const cleanup = () => { modal.remove(); };
+      const submit = () => {
+        const email = emailInput.value.trim();
+        if (!email || email.indexOf('@') < 1) {
+          emailInput.style.borderColor = '#ff4444';
+          return;
+        }
+        cleanup();
+        resolve(email);
+      };
+      document.getElementById('fralib-modal-go').onclick = submit;
+      emailInput.onkeydown = (e) => { if (e.key === 'Enter') submit(); };
+      document.getElementById('fralib-modal-close').onclick = () => { cleanup(); resolve(null); };
+      modal.onclick = (e) => { if (e.target === modal) { cleanup(); resolve(null); } };
+    });
+  }
+
   document.addEventListener('click', async function(e){
     const btn = e.target.closest('a, button');
     if(!isCheckoutBtn(btn)) return;
@@ -3611,29 +3661,47 @@ document.getElementById('ctaForm')?.addEventListener('submit', function(e){
     if(typeof fbq !== 'undefined') fbq('track', 'InitiateCheckout');
 
     const plan = extractPlan(btn, 'starter');
-
     btn.style.opacity = '0.6';
     btn.style.pointerEvents = 'none';
+
     try {
+      // Tenta rota autenticada primeiro
       const resp = await fetch('/api/credits/criar-checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({ plano: plan })
       });
+      if (resp.status === 200) {
+        const data = await resp.json();
+        if (data.checkout_url) {
+          window.location = data.checkout_url;
+          return;
+        }
+      }
       if (resp.status === 401 || resp.status === 403) {
-        // Nao autenticado: vai para cadastro com plano selecionado
-        window.location = SIGNUP_URL + '&plan=' + plan;
-        return;
+        // Nao logado: mostra modal de email
+        const email = await showEmailModal(plan);
+        if (!email) return;
+        // Cria checkout anonimo (vincula email)
+        const r2 = await fetch('/api/credits/criar-checkout-anonimo', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ plano: plan, email: email })
+        });
+        const d2 = await r2.json();
+        if (r2.ok && d2.checkout_url) {
+          // Salva pending para depois do cadastro
+          try { localStorage.setItem('fralib_pending_plano', plan); } catch(e) {}
+          window.location = d2.checkout_url;
+          return;
+        }
+        throw new Error(d2.detail || 'Checkout anonimo indisponivel');
       }
-      const data = await resp.json();
-      if (data.checkout_url) {
-        window.location = data.checkout_url;
-        return;
-      }
-      throw new Error(data.detail || 'Checkout indisponivel');
+      throw new Error('Checkout indisponivel');
     } catch (err) {
-      // Fallback: vai para /planos para ver opcoes
+      // Fallback: vai para /planos
       window.location = '/planos?plan=' + plan;
     } finally {
       btn.style.opacity = '';

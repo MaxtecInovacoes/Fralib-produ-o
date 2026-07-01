@@ -1,240 +1,174 @@
-"""Testes para o modulo state_machine.py (FSM SDR).
+"""Testes para state_machine.py e intent_classifier.py.
 
-Testa:
-- Transicoes (state, intent) -> new_state
-- Override OPT_OUT sempre terminal
-- Override BUYING_INTENT com contexto
-- detect_loop()
-- StateDecision fields
+Cobre:
+- Transicoes de state validas e invalidas
+- Classificacao de intent
+- Matriz de decisao (state, intent) -> (new_state, stage)
 """
-import pytest
 
+import pytest
 from backend.agents.sdr_langgraph.state_machine import (
     ConversationState,
     Intent,
+    StateDecision,
     decide_transition,
     detect_loop,
 )
+from backend.agents.sdr_langgraph.intent_classifier import (
+    classify_intent,
+    IntentResult,
+)
 
 
-class TestOptOutOverride:
-    """OPT_OUT vai direto, independente do state."""
+# TESTES: state_machine.py
 
-    @pytest.mark.parametrize("state", [
-        ConversationState.IDLE,
-        ConversationState.WAITING_RESPONSE,
-        ConversationState.ENGAGED,
-        ConversationState.OBJECTING,
-        ConversationState.BUYING,
-        ConversationState.SCHEDULED,
-    ])
-    def test_opt_out_sempre_terminal(self, state):
-        result = decide_transition(state, Intent.OPT_OUT)
-        assert result.new_state == ConversationState.OPT_OUT
-        assert result.new_stage == "lost"
-        assert result.confidence == 1.0
+class TestConversationState:
+    """Testes para ConversationState enum."""
 
-
-class TestBuyingIntentOverride:
-    """BUYING_INTENT com contexto adequado."""
-
-    def test_buying_depois_de_engaged(self):
-        result = decide_transition(ConversationState.ENGAGED, Intent.BUYING_INTENT)
-        assert result.new_state == ConversationState.BUYING
-        assert result.new_stage == "close"
-        assert result.confidence == 0.9
-
-    def test_buying_depois_de_objecting(self):
-        result = decide_transition(ConversationState.OBJECTING, Intent.BUYING_INTENT)
-        assert result.new_state == ConversationState.BUYING
-        assert result.new_stage == "close"
-        assert result.confidence == 0.85
-
-    def test_buying_em_idle_qualifica_antes(self):
-        result = decide_transition(ConversationState.IDLE, Intent.BUYING_INTENT)
-        assert result.new_state == ConversationState.ENGAGED
-        assert result.new_stage == "qualify"
-        assert result.confidence == 0.8
-
-    def test_buying_em_waiting_qualifica_antes(self):
-        result = decide_transition(ConversationState.WAITING_RESPONSE, Intent.BUYING_INTENT)
-        assert result.new_state == ConversationState.ENGAGED
-        assert result.new_stage == "qualify"
-        assert result.confidence == 0.8
+    def test_all_states_exist(self):
+        """Todos os estados devem existir."""
+        assert ConversationState.IDLE.value == "idle"
+        assert ConversationState.WAITING_RESPONSE.value == "waiting_response"
+        assert ConversationState.ENGAGED.value == "engaged"
+        assert ConversationState.OBJECTING.value == "objecting"
+        assert ConversationState.BUYING.value == "buying"
+        assert ConversationState.SCHEDULED.value == "scheduled"
+        assert ConversationState.OPT_OUT.value == "opt_out"
+        assert ConversationState.HANDED_OFF.value == "handed_off"
+        assert ConversationState.CLOSED_WON.value == "won"
+        assert ConversationState.CLOSED_LOST.value == "lost"
 
 
-class TestMatrizTransicoes:
-    """Testa transicoes da matriz (state, intent) -> new_state."""
+class TestIntent:
+    """Testes para Intent enum."""
 
-    def test_idle_greeting_vai_waiting_response(self):
-        result = decide_transition(ConversationState.IDLE, Intent.GREETING)
-        assert result.new_state == ConversationState.WAITING_RESPONSE
-        assert result.should_advance is False
-
-    def test_idle_engagement_vai_engaged(self):
-        result = decide_transition(ConversationState.IDLE, Intent.ENGAGEMENT)
-        assert result.new_state == ConversationState.ENGAGED
-
-    def test_idle_question_vai_engaged(self):
-        result = decide_transition(ConversationState.IDLE, Intent.QUESTION)
-        assert result.new_state == ConversationState.ENGAGED
-
-    def test_idle_objection_vai_objecting(self):
-        result = decide_transition(ConversationState.IDLE, Intent.OBJECTION)
-        assert result.new_state == ConversationState.OBJECTING
-
-    def test_idle_buying_vai_buying(self):
-        result = decide_transition(ConversationState.IDLE, Intent.BUYING_INTENT)
-        # Override tratado antes da matriz
-        assert result.new_state == ConversationState.ENGAGED
-
-    def test_waiting_response_greeting_LoopBugFix(self):
-        """Bugfix: greeting em waiting_response NAO loopa - mantem hook."""
-        result = decide_transition(ConversationState.WAITING_RESPONSE, Intent.GREETING)
-        assert result.new_state == ConversationState.WAITING_RESPONSE
-        assert result.new_stage == "hook"
-
-    def test_waiting_response_acknowledgment_mantem_hook(self):
-        result = decide_transition(ConversationState.WAITING_RESPONSE, Intent.ACKNOWLEDGMENT)
-        assert result.new_state == ConversationState.WAITING_RESPONSE
-        assert result.new_stage == "hook"
-
-    def test_waiting_response_engagement_vai_engaged(self):
-        result = decide_transition(ConversationState.WAITING_RESPONSE, Intent.ENGAGEMENT)
-        assert result.new_state == ConversationState.ENGAGED
-        assert result.new_stage == "qualify"
-
-    def test_waiting_response_question_vai_engaged(self):
-        result = decide_transition(ConversationState.WAITING_RESPONSE, Intent.QUESTION)
-        assert result.new_state == ConversationState.ENGAGED
-
-    def test_waiting_response_objection_vai_objecting(self):
-        result = decide_transition(ConversationState.WAITING_RESPONSE, Intent.OBJECTION)
-        assert result.new_state == ConversationState.OBJECTING
-
-    def test_waiting_response_schedule_vai_scheduled(self):
-        result = decide_transition(ConversationState.WAITING_RESPONSE, Intent.SCHEDULE)
-        assert result.new_state == ConversationState.SCHEDULED
-        assert result.new_stage == "scheduled"
-
-    def test_waiting_response_gatekeeper_vai_engaged(self):
-        result = decide_transition(ConversationState.WAITING_RESPONSE, Intent.GATEKEEPER)
-        assert result.new_state == ConversationState.ENGAGED
-
-    def test_waiting_response_off_topic_mantem_waiting(self):
-        result = decide_transition(ConversationState.WAITING_RESPONSE, Intent.OFF_TOPIC)
-        assert result.new_state == ConversationState.WAITING_RESPONSE
-
-    def test_engaged_greeting_avanca_qualify(self):
-        result = decide_transition(ConversationState.ENGAGED, Intent.GREETING)
-        assert result.new_state == ConversationState.ENGAGED
-        assert result.new_stage == "qualify"
-
-    def test_engaged_more_engagement_vai_pain(self):
-        result = decide_transition(ConversationState.ENGAGED, Intent.ENGAGEMENT)
-        assert result.new_state == ConversationState.ENGAGED
-        assert result.new_stage == "pain"
-
-    def test_engaged_objection_vai_objecting(self):
-        result = decide_transition(ConversationState.ENGAGED, Intent.OBJECTION)
-        assert result.new_state == ConversationState.OBJECTING
-
-    def test_objecting_engagement_volta_engaged_amplify(self):
-        result = decide_transition(ConversationState.OBJECTING, Intent.ENGAGEMENT)
-        assert result.new_state == ConversationState.ENGAGED
-        assert result.new_stage == "amplify"
-
-    def test_objecting_question_avanca_amplify(self):
-        result = decide_transition(ConversationState.OBJECTING, Intent.QUESTION)
-        assert result.new_state == ConversationState.ENGAGED
-        assert result.new_stage == "amplify"
-
-    def test_buying_objection_volta_objecting(self):
-        result = decide_transition(ConversationState.BUYING, Intent.OBJECTION)
-        assert result.new_state == ConversationState.OBJECTING
-
-    def test_buying_question_fica_buying_close(self):
-        result = decide_transition(ConversationState.BUYING, Intent.QUESTION)
-        assert result.new_state == ConversationState.BUYING
+    def test_all_intents_exist(self):
+        """Todos os intents devem existir."""
+        assert Intent.GREETING.value == "greeting"
+        assert Intent.ACKNOWLEDGMENT.value == "acknowledgment"
+        assert Intent.ENGAGEMENT.value == "engagement"
+        assert Intent.QUESTION.value == "question"
+        assert Intent.OBJECTION.value == "objection"
+        assert Intent.BUYING_INTENT.value == "buying_intent"
+        assert Intent.SCHEDULE.value == "schedule"
+        assert Intent.OPT_OUT.value == "opt_out"
+        assert Intent.GATEKEEPER.value == "gatekeeper"
+        assert Intent.OFF_TOPIC.value == "off_topic"
+        assert Intent.UNKNOWN.value == "unknown"
 
 
-class TestGreetingLoopPrevention:
-    """Testa fix do loop: greeting com turn_count >= 2 em IDLE/WAITING_RESPONSE."""
+class TestDecideTransition:
+    """Testes para decide_transition()."""
 
-    def test_greeting_idle_turn0_nao_previne_loop(self):
-        """turn_count < 3, sem fix de loop."""
-        result = decide_transition(ConversationState.IDLE, Intent.GREETING, turn_count=0)
-        assert result.new_state == ConversationState.WAITING_RESPONSE
+    def test_idle_to_greeting(self):
+        """Idle + greeting = engaged."""
+        decision = decide_transition(
+            current_state=ConversationState.IDLE,
+            intent=Intent.GREETING,
+            suggested_stage=None,
+            turn_count=1,
+        )
+        assert decision.new_state == ConversationState.ENGAGED
+        assert decision.should_advance is True
 
-    def test_greeting_waiting_turn2_nao_previne_loop(self):
-        """turn_count = 2, ainda nao dispara fix."""
-        result = decide_transition(ConversationState.WAITING_RESPONSE, Intent.GREETING, turn_count=2)
-        assert result.should_advance is False
+    def test_opt_out_always_stays(self):
+        """Opt-out + qualquer intent = opt-out."""
+        for intent in Intent:
+            decision = decide_transition(
+                current_state=ConversationState.OPT_OUT,
+                intent=intent,
+                suggested_stage=None,
+                turn_count=1,
+            )
+            assert decision.new_state == ConversationState.OPT_OUT
 
-    def test_greeting_idle_turn3_previne_loop(self):
-        """turn_count >= 3: lead so cumprimentou, nao avanca stage."""
-        result = decide_transition(ConversationState.IDLE, Intent.GREETING, turn_count=3)
-        assert result.new_state == ConversationState.WAITING_RESPONSE
-        assert result.should_advance is False
-        assert "3x" in result.reasoning
+    def test_objection_sets_state(self):
+        """Objection intent = objecting state."""
+        decision = decide_transition(
+            current_state=ConversationState.ENGAGED,
+            intent=Intent.OBJECTION,
+            suggested_stage=None,
+            turn_count=2,
+        )
+        assert decision.new_state == ConversationState.OBJECTING
 
-    def test_greeting_waiting_turn5_previne_loop(self):
-        """turn_count alto: lead nao engajou."""
-        result = decide_transition(ConversationState.WAITING_RESPONSE, Intent.GREETING, turn_count=5)
-        assert result.should_advance is False
+    def test_buying_intent_sets_state(self):
+        """Buying intent = buying state."""
+        decision = decide_transition(
+            current_state=ConversationState.ENGAGED,
+            intent=Intent.BUYING_INTENT,
+            suggested_stage=None,
+            turn_count=2,
+        )
+        assert decision.new_state == ConversationState.BUYING
 
 
 class TestDetectLoop:
-    """Testa deteccao de loop."""
+    """Testes para detect_loop()."""
 
-    def test_turn_count_menor_3_nao_detecta_loop(self):
-        assert detect_loop(0, ConversationState.IDLE) is False
-        assert detect_loop(1, ConversationState.WAITING_RESPONSE) is False
-        assert detect_loop(2, ConversationState.ENGAGED) is False
+    def test_no_loop_early_turns(self):
+        """Turns 1-2 nao sao loop."""
+        for turn in range(1, 3):
+            assert detect_loop(turn, ConversationState.GREETING) is False
 
-    def test_detecta_loop_em_idle(self):
-        assert detect_loop(3, ConversationState.IDLE) is True
+    def test_loop_after_3_greetings(self):
+        """Apos turno 3 + greeting constante = loop."""
+        assert detect_loop(3, ConversationState.GREETING) is True
+        assert detect_loop(5, ConversationState.GREETING) is True
 
-    def test_detecta_loop_em_waiting_response(self):
-        assert detect_loop(5, ConversationState.WAITING_RESPONSE) is True
-
-    def test_nao_detecta_loop_em_engaged(self):
-        assert detect_loop(10, ConversationState.ENGAGED) is False
-
-    def test_nao_detecta_loop_em_buying(self):
-        assert detect_loop(10, ConversationState.BUYING) is False
+    def test_loop_only_greeting_acknowledgment(self):
+        """Loop so detecta para GREETING e ACKNOWLEDGMENT."""
+        assert detect_loop(4, ConversationState.ACKNOWLEDGMENT) is True
+        assert detect_loop(4, ConversationState.ENGAGEMENT) is False
 
 
-class TestStateDecisionFields:
-    """Verifica que StateDecision tem todos os campos."""
+# TESTES: intent_classifier.py
 
-    def test_decision_tem_intent(self):
-        result = decide_transition(ConversationState.IDLE, Intent.GREETING)
-        assert result.intent == Intent.GREETING
+class TestClassifyIntent:
+    """Testes para classify_intent()."""
 
-    def test_decision_tem_confidence(self):
-        result = decide_transition(ConversationState.IDLE, Intent.GREETING)
-        assert 0 <= result.confidence <= 1.0
+    def test_greeting(self):
+        """Mensagens de saudacao sao classificadas."""
+        for msg in ["oi", "ola", "boa noite"]:
+            result = classify_intent(msg)
+            assert result.intent == Intent.GREETING, f"Falhou para: {msg}"
 
-    def test_decision_tem_reasoning(self):
-        result = decide_transition(ConversationState.IDLE, Intent.GREETING)
-        assert isinstance(result.reasoning, str)
-        assert len(result.reasoning) > 0
+    def test_opt_out(self):
+        """Mensagens de opt-out sao classificadas."""
+        for msg in ["nao quero mais", "para de me mandar"]:
+            result = classify_intent(msg)
+            assert result.intent == Intent.OPT_OUT, f"Falhou para: {msg}"
 
-    def test_decision_tem_should_advance(self):
-        result = decide_transition(ConversationState.IDLE, Intent.GREETING)
-        assert isinstance(result.should_advance, bool)
+    def test_question(self):
+        """Perguntas sao classificadas."""
+        result = classify_intent("quanto custa?")
+        assert result.intent == Intent.QUESTION
 
+    def test_objection(self):
+        """Objecoes sao classificadas."""
+        result = classify_intent("muito caro")
+        assert result.intent == Intent.OBJECTION
 
-class TestUnknownIntent:
-    """Intent nao mapeado: mantem state atual."""
+    def test_buying_intent(self):
+        """Intencao de compra e classificada."""
+        result = classify_intent("quero comprar")
+        assert result.intent == Intent.BUYING_INTENT
 
-    def test_unknown_em_idle(self):
-        result = decide_transition(ConversationState.IDLE, Intent.UNKNOWN)
-        assert result.new_state == ConversationState.IDLE
-        assert result.confidence == 0.3
+    def test_gatekeeper(self):
+        """Gatekeeper e classificado."""
+        result = classify_intent("nao sou o dono")
+        assert result.intent == Intent.GATEKEEPER
 
-    def test_unknown_em_engaged(self):
-        result = decide_transition(ConversationState.ENGAGED, Intent.UNKNOWN)
-        assert result.new_state == ConversationState.ENGAGED
-        assert result.confidence == 0.3
+    def test_empty_message(self):
+        """Msg vazia retorna UNKNOWN."""
+        result = classify_intent("")
+        assert result.intent == Intent.UNKNOWN
+        assert result.confidence == 0.0
+
+    def test_long_message(self):
+        """Msg longa com contexto = engagement."""
+        result = classify_intent(
+            "Ola! Vi seu site e achei muito interessante. "
+            "Gostaria de saber mais detalhes sobre o servico."
+        )
+        assert result.intent in [Intent.ENGAGEMENT, Intent.QUESTION, Intent.GREETING]

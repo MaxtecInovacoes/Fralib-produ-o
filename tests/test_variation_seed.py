@@ -20,6 +20,14 @@ from backend.services.variation_seed import (
     VariationSeed,
 )
 
+TEST_PHOTOS = [
+    "https://images.unsplash.com/photo-1534438327276-14e5300c3a48",
+    "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b",
+    "https://images.unsplash.com/photo-1517836357463-d25dfeac3438",
+    "https://images.unsplash.com/photo-1490645935967-10de6ba17061",
+    "https://images.unsplash.com/photo-1546069901-ba9599a7e63c",
+]
+
 
 def test_same_seed_same_output():
     """Test that the same seed produces identical variations."""
@@ -891,7 +899,8 @@ def test_cinematic_studio_seeds_visual_lane_when_missing():
                     "segment": "academia",
                     "city": "Curitiba",
                     "address": "Rua Teste, 10 - Curitiba",
-                }
+                },
+                "photos": TEST_PHOTOS,
             }
         )
         site_data = files.get("src/components/siteData.ts", "")
@@ -1152,6 +1161,25 @@ def test_cinematic_seed_expands_variation_beyond_visual_lane():
 
     assert len(signatures) >= 4
     return True
+
+
+def test_cinematic_seed_materializes_hero_shell_classes():
+    from backend.services.vite_react_renderer import _generate_cinematic_studio_files
+
+    hero_classes = set()
+    for seed in (12001, 12002, 12003):
+        files = _generate_cinematic_studio_files(
+            {
+                "business": {"name": f"Academia Seed {seed}", "segment": "academia", "city": "Curitiba"},
+                "variation": {"seed": seed, "counter": 0},
+                "photos": TEST_PHOTOS,
+            }
+        )
+        site_data = files.get("src/components/siteData.ts", "")
+        assert '"hero_classes": "' in site_data
+        hero_classes.add(site_data.split('"hero_classes": "')[1].split('"')[0])
+
+    assert len(hero_classes) >= 2
 
 
 def test_block_registry_anti_repetition_avoids_default_glass():

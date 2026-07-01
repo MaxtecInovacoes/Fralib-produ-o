@@ -53,6 +53,12 @@ router = APIRouter(prefix="/api/credits", tags=["credits"])
 class CheckoutRequest(BaseModel):
     plano: Optional[str] = Field(default=None, description="starter, pro, recarga ou tokens")
     valor: Optional[float] = Field(default=None, description="Valor livre da recarga em BRL")
+    email: Optional[str] = Field(default=None, description="Email do pagador (quando nao logado)")
+
+
+class CheckoutAnonimoRequest(BaseModel):
+    plano: str = Field(..., description="starter, pro ou agency")
+    email: str = Field(..., description="Email para vinculacao pos-cadastro")
 
 
 class MercadoPagoSyncRequest(BaseModel):
@@ -250,6 +256,92 @@ async def criar_checkout(
     if plano in PLANOS:
         return _criar_assinatura_mercadopago(plano, usuario)
     raise HTTPException(400, "Plano invalido. Use starter, pro, agency ou informe valor para recarga.")
+
+
+@router.post("/criar-checkout-anonimo")
+async def criar_checkout_anonimo(
+    body: CheckoutAnonimoRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """Cria checkout MercadoPago para visitante NAO logado.
+    - Requer apenas email + plano
+    - Cria usuario "pending" com email pre-cadastrado (sem senha)
+    - Webhook MP vincula pagamento ao user_id quando confirmar
+    - Retorna checkout_url + signup_url com pre-fill de email
+    """
+    from database import engine
+
+    email = (body.email or "").strip().lower()
+    plano = (body.plano or "").strip().lower()
+
+    if not email or "@" not in email or len(email) < 5:
+        raise HTTPException(400, "Email invalido.")
+    if plano not in PLANOS:
+        raise HTTPException(400, "Plano invalido. Use starter, pro ou agency.")
+
+    config = PLANOS[plano]
+    app_url = _app_url()
+    notification_url = _notification_url()
+
+    with engine.connect() as conn:
+        # 1. Verifica se ja existe usuario com esse email
+        existing = conn.execute(
+            text("SELECT id, plano, status FROM users WHERE email=:e LIMIT 1"),
+            {"e": email},
+        ).fetchone()
+
+        if existing:
+            # Usuario ja existe: usa ele direto
+            user_id = int(existing[0])
+        else:
+            # Cria usuario "pending" (sem senha) para vincular o pagamento
+            result = conn.execute(
+                text("""
+                    INSERT INTO users (email, plano, status, criado_em, trial_expires_at, plano_pago)
+                    VALUES (:email, 'trial', 'pending', NOW(), NOW() + INTERVAL '7 days', false)
+                    ON CONFLICT (email) DO UPDATE SET email=EXCLUDED.email
+                    RETURNING id
+                """),
+                {"email": email},
+            )
+            row = result.fetchone()
+            user_id = int(row[0])
+        conn.commit()
+
+    # 2. Cria assinatura MP
+    external_reference = f"fralib:{user_id}:{plano}:{uuid.uuid4().hex[:12]}"
+    preapproval = {
+        "reason": config["titulo"],
+        "external_reference": external_reference,
+        "payer_email": email,
+        "auto_recurring": {
+            "frequency": 1,
+            "frequency_type": "months",
+            "transaction_amount": config["valor"],
+            "currency_id": "BRL",
+        },
+        "back_url": f"{app_url}/login?signup=1&email={email}&plan={plano}&from=mp",
+        "status": "pending",
+    }
+    if notification_url:
+        preapproval["notification_url"] = notification_url
+
+    data = _post_mercadopago("/preapproval", preapproval)
+    checkout_url = data.get("init_point") or data.get("sandbox_init_point")
+    if not checkout_url:
+        raise HTTPException(502, "Mercado Pago nao retornou init_point")
+
+    return {
+        "checkout_url": checkout_url,
+        "provider": "mercadopago",
+        "checkout_type": "subscription",
+        "preapproval_id": data.get("id"),
+        "plano": plano,
+        "user_id": user_id,
+        "email": email,
+        "signup_url": f"/login?signup=1&email={email}&plan={plano}&from=mp",
+    }
 
 
 async def _get_user_from_request(request: Request, db: Session):
