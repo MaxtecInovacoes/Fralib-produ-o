@@ -234,7 +234,8 @@ def _extrair_usuario_request(request: Request) -> dict:
     from backend.core.database import engine
     from sqlalchemy import text as _text
     from backend.core.auth import _token_from_request, _verify_cookie_csrf
-    from backend.core.jwt_config import SECRET_KEY, ALGORITHM
+    from backend.core.jwt_config import ALGORITHM
+    from backend.core.auth import SECRET_KEY as _SECRET_KEY
     import jwt as _jwt
 
     # Tenta pegar credenciais do header
@@ -258,7 +259,7 @@ def _extrair_usuario_request(request: Request) -> dict:
 
     # Decodifica JWT
     try:
-        payload = _jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = _jwt.decode(token, _SECRET_KEY, algorithms=[ALGORITHM])
     except Exception as exc:
         raise HTTPException(401, f"Token invalido: {exc}")
     user_id = payload.get("sub")
