@@ -140,7 +140,7 @@ section{padding:100px 0;position:relative}
    ============================================================ */
 nav{
   position:fixed;top:0;left:0;right:0;z-index:1000;
-  display:grid;grid-template-columns:1fr auto 1fr;align-items:center;
+  display:grid;grid-template-columns:auto 1fr auto;align-items:center;
   padding:14px 32px;
   background:rgba(6,6,8,0.95);
   -webkit-backdrop-filter:blur(20px);
@@ -157,6 +157,7 @@ nav{
 nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
 .nav-brand{display:flex;align-items:center;gap:12px;text-decoration:none; justify-self:start;}
 .nav-brand img{height:36px;width:auto;filter:drop-shadow(0 0 8px rgba(147,51,234,0.4))}
+.nav-brand-wrapper{display:flex;align-items:center}
 .nav-links{display:flex;gap:28px;align-items:center; justify-self:center;}
 .nav-links a{
   color:var(--fl-text-muted);text-decoration:none;
@@ -177,6 +178,8 @@ nav.scrolled{padding:10px 32px;background:rgba(6,6,8,0.95)}
   image-rendering:pixelated;
   letter-spacing:1px;
 }
+.nav-entrar{color:var(--fl-text-muted);text-decoration:none;font-size:13px;font-weight:600;transition:color .2s}
+.nav-entrar:hover{color:var(--fl-text)}
 .nav-cta:hover{
   background:#FDE047;
   box-shadow:
@@ -2284,13 +2287,13 @@ const TRIAL_URL = "/login?signup=1&plano=trial";
 
 <!-- ===== NAV ===== -->
 <nav id="navbar">
-  <div class="nav-brand-wrapper" style="justify-self:start;">
+  <div class="nav-brand-wrapper">
     <a href="/" class="nav-brand">
       <img src="/images/Logo FraLib.png" alt="FraLib Logo" height="36">
     </a>
   </div>
 
-  <div class="nav-links" id="navLinks" style="justify-self:center;">
+  <div class="nav-links" id="navLinks">
     <a href="#como-funciona">Como funciona</a>
     <a href="#simulador">Simulador</a>
     <a href="#beneficios">Benefícios</a>
@@ -2298,7 +2301,8 @@ const TRIAL_URL = "/login?signup=1&plano=trial";
     <a href="#faq">FAQ</a>
   </div>
 
-  <div class="nav-actions" style="display:flex; align-items:center; gap:16px; justify-self:end;">
+  <div class="nav-actions">
+    <a href="/login" class="nav-entrar">ENTRAR</a>
     <a href="#" onclick="window.location=CHECKOUT_URL;return false;" class="nav-cta">ENTRAR NO BETA</a>
     <button class="mobile-toggle" id="mobileToggle" aria-label="Menu">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
@@ -2513,10 +2517,10 @@ const TRIAL_URL = "/login?signup=1&plano=trial";
   </div>
 </section>
 
-<!-- ===== SEÇÃO 11 — OFERTA STARTER → PRO (1º mês) ===== -->
+<!-- ===== SEÇÃO 11 — OFERTA DE R$ 197 POR R$ 97 (Starter + Upgrade Pro) ===== -->
 <section class="offer-section" id="oferta">
   <div class="container">
-    <h2 class="section-title reveal">ASSINE O STARTER E GANHE UPGRADE PARA O PRO NO PRIMEIRO MÊS</h2>
+    <h2 class="section-title reveal">DE R$ 197 POR R$ 97</h2>
     <p class="section-sub reveal" style="text-align:center;margin:0 auto 40px;max-width:720px;color:var(--fl-text-muted);font-size:14px;">
       Você entra no plano Starter (R$ 97/mês) e, durante o primeiro mês inteiro, usa a força total do Pro: cooldown reduzido, SDR com retries automáticos e prioridade alta na fila. No segundo mês a assinatura segue pelo valor padrão do plano escolhido.
     </p>
@@ -2526,6 +2530,7 @@ const TRIAL_URL = "/login?signup=1&plano=trial";
       <div class="offer-title">STARTER R$ 97 COM PODERES DE PRO</div>
 
       <div class="offer-price-row">
+        <span class="offer-price-old">R$ 197</span>
         <span class="offer-price">R$ 97</span>
       </div>
       <p class="offer-period">no primeiro mês você usa <strong>Tudo do Pro</strong> &bull; depois segue pelo valor do plano escolhido</p>
@@ -2555,7 +2560,6 @@ const TRIAL_URL = "/login?signup=1&plano=trial";
     </div>
   </div>
 </section>
-
 <!-- ===== SEÇÃO 3 — DEMO: LEAD → SITE → ABORDAGEM ===== -->
 <section class="demo-section" id="demo">
   <div class="container">
