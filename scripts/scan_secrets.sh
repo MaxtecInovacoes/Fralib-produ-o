@@ -16,7 +16,7 @@ echo -e "${YELLOW}Scanning for secrets...${NC}"
 # Patterns that indicate a REAL secret (not a placeholder ending with ...)
 # - Real tokens have at least 30+ alnum chars after the prefix
 # - Placeholders usually end with '...' or are examples like 'sk-ant-api-key-aqui'
-PATTERNS='(sk_live_[A-Za-z0-9]{30,}|sk_test_[A-Za-z0-9]{30,}|pk_live_[A-Za-z0-9]{30,}|pk_test_[A-Za-z0-9]{30,}|AKIA[A-Z0-9]{16}|sk-[A-Za-z0-9]{40,}|sk-ant-[A-Za-z0-9]{40,}|AIza[A-Za-z0-9]{30,}|ghp_[A-Za-z0-9]{36}|gho_[A-Za-z0-9]{36}|ghu_[A-Za-z0-9]{36}|ghs_[A-Za-z0-9]{36}|ghr_[A-Za-z0-9]{36}|xox[baprs]-[A-Za-z0-9-]{30,}|APP_USR-[A-Za-z0-9-]{40,}|TEST-[A-Za-z0-9-]{40,}|whsec_[A-Za-z0-9]{30,}|-----BEGIN.*PRIVATE KEY-----|MERCADOPAGO_ACCESS_TOKEN=APP_USR-[A-Za-z0-9]{30,}|MERCADOPAGO_WEBHOOK_SECRET=[^[:space:]\$\{\}]+|[^a-z_]sk_live_[a-zA-Z0-9]{30,}|[^a-z_]sk_test_[a-zA-Z0-9]{30,})'
+PATTERNS='(sk_live_[A-Za-z0-9]{30,}|sk_test_[A-Za-z0-9]{30,}|pk_live_[A-Za-z0-9]{30,}|pk_test_[A-Za-z0-9]{30,}|AKIA[A-Z0-9]{16}|sk-[A-Za-z0-9]{40,}|sk-ant-[A-Za-z0-9]{40,}|AIza[A-Za-z0-9]{30,}|ghp_[A-Za-z0-9]{36}|gho_[A-Za-z0-9]{36}|ghu_[A-Za-z0-9]{36}|ghs_[A-Za-z0-9]{36}|ghr_[A-Za-z0-9]{36}|xox[baprs]-[A-Za-z0-9-]{30,}|APP_USR-[A-Za-z0-9-]{40,}|TEST-[A-Za-z0-9-]{40,}|whsec_[A-Za-z0-9]{30,}|-----BEGIN [A-Z]+ PRIVATE KEY-----|MERCADOPAGO_ACCESS_TOKEN=APP_USR-[A-Za-z0-9]{30,}|MERCADOPAGO_WEBHOOK_SECRET=[^[:space:]\$\{\}]+|[^a-z_]sk_live_[a-zA-Z0-9]{30,}|[^a-z_]sk_test_[a-zA-Z0-9]{30,})'
 
 STAGED=$(git diff --cached --name-only --diff-filter=ACM 2>/dev/null)
 SECRETS=""
