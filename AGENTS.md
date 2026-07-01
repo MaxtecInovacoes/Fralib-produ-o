@@ -877,17 +877,17 @@ Agora (Sprint 12.12+): `vite_prompts.py` injeta briefing REAL via
 - **Cross-contamination guard** (barbearia NUNCA menciona musculacao)
 
 Desde Sprint 14, este caminho rico/full-code é **legado controlado**:
-por padrão `FRALIB_VITE_LLM_POLICY=copy_only` chama o LLM com prompt curto
-e pede apenas JSON de slots (`hero`, `services`, `faq`, CTAs). O TSX é gerado
-por Studio/FraLib. Use o caroço full-code só com
+por padrão `FRALIB_VITE_LLM_POLICY=creative_plan` chama o LLM com prompt curto
+e pede apenas JSON de copy + direção criativa. O TSX é gerado por
+Studio/FraLib. Use o caroço full-code só com
 `FRALIB_VITE_LLM_POLICY=full_code` para debug/experimento.
 
 Políticas válidas:
 
 | Policy | Chamada LLM | Quem gera TSX | Uso |
 |---|---|---|---|
-| `copy_only` | JSON curto de conteúdo | Studio/FraLib | **Padrão** |
-| `creative_plan` | JSON curto de copy + direção de marca | Studio/FraLib | **Padrão premium**: LLM escolhe Brand DNA, emoção, hero, blocos, superfícies e motion sem codar TSX |
+| `creative_plan` | JSON curto de copy + direção de marca | Studio/FraLib | **Padrão oficial**: LLM escolhe Brand DNA, emoção, hero, blocos, superfícies e motion sem codar TSX |
+| `copy_only` | JSON curto de conteúdo | Studio/FraLib | Baixo custo |
 | `none` | Nenhuma | Studio/FraLib | Custo zero/contingência |
 | `full_code` | Projeto Vite completo | LLM | Legado/debug |
 
@@ -921,14 +921,14 @@ FRALIB_BUILDER_ENGINE=vite_react python3 pipeline.py builder-job \
     --prd-json prd.json --tenant-id 2 --job-id X --target landing-page \
     --model claude-sonnet-4-6 --execute
 
-# Default Sprint 14 → copy_only:
+# Default Sprint 14 → creative_plan:
 # LLM retorna JSON curto; Studio/FraLib gera TSX deterministico
 ```
 
-Cascata em `copy_only`: modelos retornam JSON de conteúdo. Se todos falharem,
-o job falha. Em `none`, não há chamada LLM. Em `full_code`, o comportamento
-legado tenta projeto TSX completo; se falhar, o job falha em vez de publicar
-um site genérico.
+Cascata em `creative_plan`/`copy_only`: modelos retornam JSON de conteúdo. Se
+todos falharem, o job falha. Em `none`, não há chamada LLM. Em `full_code`, o
+comportamento experimental tenta projeto TSX completo; se falhar, o job falha
+em vez de publicar um site genérico.
 
 ### 22.6 Bug crítico e fix (Sprint 12.19)
 
@@ -1005,7 +1005,7 @@ aumentava custo/tokens e deixava a estrutura vulnerável a falhas como
 `ServicesSection` ausente.
 
 **Fix**: `render_vite_react_site()` agora lê `FRALIB_VITE_LLM_POLICY`.
-O default é `copy_only`: `_call_copy_only_llm()` usa system prompt pequeno,
+O default é `creative_plan`: `_call_copy_only_llm()` usa system prompt pequeno,
 `_parse_content_json()` sanitiza a resposta, `_merge_copy_only_content()` injeta
 `_llm_content` nos facts e `_generate_studio_fallback_files()` monta o React.
 

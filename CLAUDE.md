@@ -14,7 +14,7 @@
 - **Pipeline canônica: 11 fases** (Hunter → Caio → Jina → Nicho → Variação → Arquiteto → **Vite/React** → QA → Deploy → Franz).
 - **Gerador de site: Vite/React** (`backend/services/vite_react_renderer.py`) — engine PADRÃO desde Sprint 12.9.
 - **OpenUI** (`backend/services/openui_renderer.py`) — rota alternativa, também fail-fast.
-- **Política LLM do Vite**: `FRALIB_VITE_LLM_POLICY=full_code` por padrão. LLM cascade Haiku→Sonnet→Opus.
+- **Política LLM do Vite**: `FRALIB_VITE_LLM_POLICY=creative_plan` por padrão. LLM escolhe copy/direção em JSON; Studio React gera TSX.
 - **Fail-fast total**: qualquer erro na geração levanta exceção clara — sem sites genéricos.
 - **7 contratos canônicos** injetados no caroço: SEO, Design, Motion, A11y, Factual, LGPD, Deploy.
 - **Briefing real** do lead: nome, segmento, cidade, telefone, fotos, SEO, services, horários.
@@ -57,12 +57,12 @@ Mudou a pipeline, código, config ou docs? Atualizar **`AGENTS.md` primeiro** e 
 # reiniciar fralib-worker e todas as instâncias fralib-worker@N.
 sudo systemctl restart fralib-worker 'fralib-worker@*.service'
 
-# Política LLM do Vite (CÓDIGO MOSTRA: "full_code" é o PADRÃO!)
+# Política LLM do Vite (padrão oficial: creative_plan)
 # Comportamento real (verificado no código):
-#   - full_code (PADRÃO): LLM cascade Haiku→Sonnet→Opus, fail-fast se todos falham
+#   - creative_plan (PADRÃO): LLM escolhe copy + direção criativa em JSON, Studio gera TSX
 #   - copy_only: LLM mínimo para copy, TSX gerado localmente
-#   - creative_plan: LLM para copy + planejamento
-FRALIB_VITE_LLM_POLICY=full_code
+#   - full_code: LLM cascade tenta codar TSX completo; usar só em experimento
+FRALIB_VITE_LLM_POLICY=creative_plan
 
 # Sprint 5 — Tracing
 FRALIB_TRACING=1
@@ -180,7 +180,7 @@ Para commits técnicos, antes de declarar "pronto", verificar:
 - ✅ **130+ testes verdes** (12+ suites anti-regressão)
 - ✅ **21+ checks** no pre-commit hook
 - ✅ **VPS rodando** com `FRALIB_BUILDER_ENGINE=vite_react`
-- ✅ **Política LLM real**: `full_code` (LLM cascade Haiku→Sonnet→Opus)
+- ✅ **Política LLM real**: `creative_plan` (JSON criativo + Studio React)
 - ✅ **Fail-fast total**: Qualquer erro na geração levanta exceção clara — sem sites genéricos
 - ⚠️ **SITES SAINDO IGUAIS?** → Verificar `docs/DIAGNOSTICO_VARIACAO_SITES.md`
 

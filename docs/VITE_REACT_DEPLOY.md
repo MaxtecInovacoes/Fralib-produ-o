@@ -36,27 +36,28 @@
 3. render_site_with_builder(prd) é chamado
 4. engine = "vite_react" (default)
 5. render_vite_react_site() aplica `FRALIB_VITE_LLM_POLICY`
-6. `full_code` (default atual): LLM cascade tenta gerar projeto Vite completo
+6. `creative_plan` (default atual): LLM retorna JSON de copy + direção criativa
 7. `none`: zero LLM; Studio/FraLib gera TSX só com fatos/segmento
-8. `copy_only`/`creative_plan`: LLM retorna JSON curto; Studio/FraLib gera TSX
-9. Build Vite real (npm run build)
-10. Publica /var/www/fralib/sites/2/<slug>/dist/
+8. `copy_only`: LLM retorna JSON curto de copy; Studio/FraLib gera TSX
+9. `full_code`: LLM tenta gerar projeto Vite completo (experimento)
+10. Build Vite real (npm run build)
+11. Publica /var/www/fralib/sites/2/<slug>/dist/
 ```
 
 ## Política de uso do LLM
 
 | Policy | O que faz | Uso recomendado |
 |---|---|---|
+| `creative_plan` | Chama LLM para copy + direção criativa em JSON validado. O código React vem do Studio/FraLib. | **Default atual** |
 | `copy_only` | Chama LLM com prompt pequeno e schema JSON de slots (`hero`, `services`, `faq`, CTAs). O código React vem do Studio/FraLib. | Baixo custo |
-| `creative_plan` | Chama LLM para copy + direção criativa em JSON validado. | Premium baixo custo |
 | `none` | Não chama LLM. Usa fatos confirmados + defaults segment-aware. | Testes, custo zero, contingência |
-| `full_code` | LLM cascade gera arquivos TSX completos. | **Default atual** |
+| `full_code` | LLM cascade gera arquivos TSX completos. | Experimento controlado |
 
 ```bash
-FRALIB_VITE_LLM_POLICY=full_code  # default atual da pipeline oficial
+FRALIB_VITE_LLM_POLICY=creative_plan  # default atual da pipeline oficial
 FRALIB_VITE_LLM_POLICY=copy_only  # baixo custo
-FRALIB_VITE_LLM_POLICY=creative_plan  # direção criativa sem TSX livre
 FRALIB_VITE_LLM_POLICY=none       # zero chamada LLM
+FRALIB_VITE_LLM_POLICY=full_code  # LLM codando TSX inteiro, experimental
 ```
 
 ## Studio React determinístico (26 segmentos)

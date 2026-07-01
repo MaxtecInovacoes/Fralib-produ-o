@@ -85,6 +85,7 @@ def test_vite_react_aplica_defaults_canonicos_do_runtime(monkeypatch, tmp_path):
         {
             "business": {"name": "Canonical Runtime", "segmento": "nutricionista"},
             "seo_keywords": ["nutricionista esportivo"],
+            "og_image": "https://example.com/og.jpg",
         },
         tenant_id="canonical-runtime",
         job_id="vite-defaults",
@@ -92,7 +93,7 @@ def test_vite_react_aplica_defaults_canonicos_do_runtime(monkeypatch, tmp_path):
 
     assert result["engine"] == "vite_react"
     assert captured == {
-        "llm_policy": "copy_only",
+        "llm_policy": "creative_plan",
         "cinematic": "1",
         "studio_fallback": "1",
         "openui_fallback": "0",

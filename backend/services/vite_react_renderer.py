@@ -970,10 +970,120 @@ def render_vite_react_site(
     if not model_candidates:
         model_candidates = [PROXY_BUILDER_MODEL]
     # Fail-fast total: sem studio-fallback para nenhum policy.
-    # Se llm_policy=="none": fail-fast (era studio determinístico, agora erro)
-    # Se llm_policy=="copy_only"/"creative_plan": retry LLM, fail-fast se todos falham
+    # Se llm_policy=="none": Studio determinístico explícito, sem LLM.
+    # Se llm_policy=="copy_only"/"creative_plan": JSON curto -> Studio; fail-fast se JSON/build falhar.
     # Se llm_policy=="full_code": LLM cascade, fail-fast se todos falham
     llm_policy = _get_llm_policy()
+
+    if llm_policy == "none":
+        attempts.append(
+            {
+                "model": "studio-deterministic",
+                "model_index": 0,
+                "status": "policy_none_deterministic",
+                "elapsed_ms": 0,
+                "policy": llm_policy,
+            }
+        )
+        deterministic_files = prepare_vite_project_files(
+            _generate_cinematic_studio_files(facts),
+            facts=facts,
+        )
+        attempts.append(
+            {
+                "model": "studio-deterministic",
+                "model_index": 0,
+                "status": "studio_deterministic_success",
+                "elapsed_ms": int((time.time() - started) * 1000),
+                "source_files": len(deterministic_files),
+                "policy": llm_policy,
+            }
+        )
+        return _render_vite_files_result(
+            workspace=workspace,
+            files=deterministic_files,
+            facts=facts,
+            attempts=attempts,
+            started=started,
+            model="studio-deterministic",
+            requested_paths=requested_paths,
+        )
+
+    if llm_policy in {"copy_only", "creative_plan"}:
+        copy_prompt = _get_copy_only_user_prompt(facts, policy=llm_policy)
+        copy_models = list(model_candidates)
+        if not copy_models:
+            copy_models = [PROXY_DEFAULT_MODEL]
+        while len(copy_models) < _copy_only_attempts():
+            copy_models.append(copy_models[-1])
+        copy_models = copy_models[: _copy_only_attempts()]
+        last_error = None
+        studio_model = "studio-creative-plan" if llm_policy == "creative_plan" else "studio-copy-only"
+        for model_idx, model in enumerate(copy_models, start=1):
+            attempt_started = time.time()
+            try:
+                raw = _call_copy_only_llm(
+                    copy_prompt,
+                    model=model,
+                    max_tokens=min(max_tokens, 4000),
+                    temperature=temperature,
+                    policy=llm_policy,
+                )
+                content = _parse_content_json(raw)
+                if not content:
+                    raise ViteReactRenderError("copy_only retornou JSON vazio ou invalido")
+                attempts.append(
+                    {
+                        "model": model,
+                        "model_index": model_idx,
+                        "status": "copy_only_json_success",
+                        "elapsed_ms": int((time.time() - attempt_started) * 1000),
+                        "policy": llm_policy,
+                    }
+                )
+                studio_facts = _merge_copy_only_content(facts, content)
+                studio_files = prepare_vite_project_files(
+                    _generate_cinematic_studio_files(studio_facts),
+                    facts=studio_facts,
+                )
+                attempts.append(
+                    {
+                        "model": studio_model,
+                        "model_index": model_idx,
+                        "status": "studio_copy_only_success",
+                        "elapsed_ms": int((time.time() - attempt_started) * 1000),
+                        "source_files": len(studio_files),
+                        "policy": llm_policy,
+                    }
+                )
+                return _render_vite_files_result(
+                    workspace=workspace,
+                    files=studio_files,
+                    facts=studio_facts,
+                    attempts=attempts,
+                    started=started,
+                    model=studio_model,
+                    requested_paths=requested_paths,
+                )
+            except Exception as exc:
+                last_error = str(exc)[:500]
+                attempts.append(
+                    {
+                        "model": model,
+                        "model_index": model_idx,
+                        "status": "copy_only_json_failed",
+                        "elapsed_ms": int((time.time() - attempt_started) * 1000),
+                        "error": last_error,
+                        "policy": llm_policy,
+                    }
+                )
+                if any(marker in last_error.lower() for marker in ("401 unauthorized", "invalid api key", "permission_error")):
+                    break
+        raise ViteReactRenderError(
+            "Vite React renderer falhou no modo "
+            f"{llm_policy} apos {len(copy_models)} tentativa(s). "
+            "Ultimo erro: " + (last_error or "(sem erro capturado)")
+        )
 
     # Cascata Haiku -> Sonnet -> Opus 4.8: tenta cada modelo em sequencia ate um dar 200.
     # Fail-fast: se TODOS falharem, levanta ViteReactRenderError com diagnostico.
@@ -4765,6 +4875,11 @@ export default Footer;
         # keywords, OG, Twitter, canonical, JSON-LD LocalBusiness).
         "index.html": vite_template_index_html(facts),
     }
+
+
+def _generate_studio_fallback_files(facts: dict[str, Any] | None = None) -> dict[str, str]:
+    """Legacy import alias for the canonical cinematic Studio renderer."""
+    return _generate_cinematic_studio_files(facts or {})
 
 
 def _removed_studio_legacy_entrypoint(facts: dict[str, Any] | None = None) -> dict[str, str]:

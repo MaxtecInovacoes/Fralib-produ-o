@@ -488,6 +488,12 @@ def _criar_assinatura_mercadopago(plano: str, usuario: dict) -> dict:
     }
     if notification_url:
         preapproval["notification_url"] = notification_url
+    # Metodos de pagamento aceitos (env: MERCADOPAGO_PAYMENT_METHODS, ex: "pix,credit_card")
+    payment_methods_str = os.getenv("MERCADOPAGO_PAYMENT_METHODS", "pix,credit_card").strip()
+    if payment_methods_str and payment_methods_str.lower() != "all":
+        payment_methods = [m.strip() for m in payment_methods_str.split(",") if m.strip()]
+        if payment_methods:
+            preapproval["payment_methods_allowed"] = payment_methods
     data = _post_mercadopago("/preapproval", preapproval)
     checkout_url = data.get("init_point") or data.get("sandbox_init_point")
     if not checkout_url:
@@ -498,6 +504,7 @@ def _criar_assinatura_mercadopago(plano: str, usuario: dict) -> dict:
         "checkout_type": "subscription",
         "preapproval_id": data.get("id"),
         "plano": plano,
+        "payment_methods_allowed": preapproval.get("payment_methods_allowed", "all"),
     }
 
 
