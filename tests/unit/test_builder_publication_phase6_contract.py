@@ -25,6 +25,7 @@ def test_vite_publication_shell_gets_phase6_video_and_seo_contracts():
             "address": "Rua Teste, 123",
             "phone": "5541999999999",
             "canonical_url": "https://energia.example.com/sites/2/academia-energia-total/",
+            "og_image": "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=1200&h=630&fit=crop",
         },
         "seo": {
             "canonical_url": "https://energia.example.com/sites/2/academia-energia-total/",
