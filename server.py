@@ -461,6 +461,8 @@ import cron_endpoints
 app.include_router(cron_endpoints.router)
 import blog_endpoints
 app.include_router(blog_endpoints.router)
+import blog_analytics_endpoints
+app.include_router(blog_analytics_endpoints.router)
 import obs_endpoints
 app.include_router(obs_endpoints.router)
 import queue_endpoints

@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """
-Blog Automatizado FraLib OS
+Blog Automatizado FraLib OS v2.0
 - Busca tendências do Google Trends Brasil
-- Gera post otimizado para SEO
+- Topics de HYPE global (IA, tech, cultura)
+- Gera post otimizado para SEO com CTAs e links internos
 - Salva como HTML em frontend/blog/posts/
 - Atualiza index.html automaticamente
 
-Cron: 0 8 * * * (todo dia 8h)
+Cron: 0 8,14,20 * * * (3x/dia)
 """
 
 import os
@@ -37,84 +38,234 @@ CATEGORIES = {
     "freelancer": {"name": "Freelancer", "color": "#7c3aed"},
     "tech": {"name": "Tecnologia", "color": "#c084fc"},
     "negócios": {"name": "Negócios", "color": "#22d3a0"},
+    "hype": {"name": "🔥 Hype", "color": "#FF6B6B"},
 }
 
 # ============================================================================
-# TENDÊNCIAS (simuladas - em produção, integra com Google Trends API)
+# LINKS INTERNOS PARA INJEÇÃO AUTOMÁTICA
+# ============================================================================
+
+INTERNAL_LINKS = {
+    "FraLib": {
+        "url": "/planos",
+        "text": "FraLib OS",
+        "cta": "Testar grátis 7 dias"
+    },
+    "planos": {
+        "url": "/planos",
+        "text": "nossos planos",
+        "cta": "Começar agora"
+    },
+    "trial": {
+        "url": "/login?signup=1",
+        "text": "trial grátis",
+        "cta": "Criar conta grátis"
+    },
+    "whatsapp": {
+        "url": "/docs/como-funciona.html#whatsapp",
+        "text": "WhatsApp Business",
+        "cta": "Automação WhatsApp"
+    },
+    "sites": {
+        "url": "/docs/como-funciona.html#sites",
+        "text": "criar sites",
+        "cta": "Gerar site com IA"
+    },
+    "prospectar": {
+        "url": "/docs/como-funciona.html#prospectar",
+        "text": "prospectar clientes",
+        "cta": "Automatizar prospecção"
+    },
+    "sdr": {
+        "url": "/docs/sdr-bryan.html",
+        "text": "SDR automático",
+        "cta": "Conhecer o Franz"
+    },
+    "ia": {
+        "url": "/docs/ia-generativa.html",
+        "text": "IA para negócios",
+        "cta": "IA que vende"
+    },
+}
+
+# ============================================================================
+# TENDÊNCIAS DO SETOR (curadas)
 # ============================================================================
 
 TRENDING_TOPICS = [
     {
         "topic": "Automação com IA para PMEs",
         "category": "ia",
-        "keywords": ["automação", "ia", "pequenas empresas", "pmarketing"],
+        "keywords": ["automação", "ia", "pequenas empresas", "vendas"],
         "intent": "search",
+        "angle": "Como IA substitui vendedor repetitivo"
     },
     {
-        "topic": "WhatsApp Business API 2024",
+        "topic": "WhatsApp Business API 2026",
         "category": "vendas",
-        "keywords": ["whatsapp", "business", "api", "vendas"],
+        "keywords": ["whatsapp", "business", "api", "vendas", "automação"],
         "intent": "commercial",
+        "angle": "Vender pelo WhatsApp sem mexer no celular"
     },
     {
         "topic": "Gerador de sites com IA",
         "category": "tech",
-        "keywords": ["site", "ia", "gerador", "criar site"],
+        "keywords": ["site", "ia", "gerador", "criar site", "automatizado"],
         "intent": "commercial",
+        "angle": "Site profissional em 5 minutos, sem saber programar"
     },
     {
         "topic": "SDR de IA: o vendedor que nunca dorme",
         "category": "ia",
-        "keywords": ["sdr", "ia", "whatsapp", "vendas automáticas"],
+        "keywords": ["sdr", "ia", "whatsapp", "vendas automáticas", "follow-up"],
         "intent": "commercial",
+        "angle": "Franz, o vendedor que prospecta 24/7 no WhatsApp"
     },
     {
         "topic": "Google Maps como máquina de leads",
         "category": "marketing",
         "keywords": ["google maps", "leads", "prospecção", "negócios locais"],
         "intent": "commercial",
+        "angle": "Encontrar clientes sem site na sua região automaticamente"
     },
     {
         "topic": "Como cobrar R$1.500 por site em 2026",
         "category": "freelancer",
-        "keywords": ["preço", "site", "freelancer", "tabela"],
+        "keywords": ["preço", "site", "freelancer", "tabela", " quanto cobrar"],
         "intent": "commercial",
+        "angle": "Tabela de preços para freelancers de sites"
     },
     {
         "topic": "Prospecção B2B que funciona sem LinkedIn",
         "category": "vendas",
-        "keywords": ["prospecção", "b2b", "whatsapp", "leads"],
+        "keywords": ["prospecção", "b2b", "whatsapp", "leads", "vendas b2b"],
         "intent": "commercial",
+        "angle": "Abandonar LinkedIn e prospectar pelo WhatsApp"
     },
     {
         "topic": "Site que vende: 7 erros que freelancers cometem",
         "category": "marketing",
-        "keywords": ["site", "erros", "freelancer", "vendas"],
+        "keywords": ["site", "erros", "freelancer", "vendas", "conversão"],
         "intent": "informational",
+        "angle": "Site bonito que não vende - o que fazer diferente"
     },
     {
         "topic": "Como automatizar 100% do funil de vendas",
         "category": "ia",
-        "keywords": ["automação", "funil", "vendas", "ia"],
+        "keywords": ["automação", "funil", "vendas", "ia", "pipeline"],
         "intent": "commercial",
+        "angle": "Do lead ao fechamento sem mover um dedo"
     },
     {
         "topic": "FraLib OS: o case que mudou a prospecção no Brasil",
         "category": "tech",
-        "keywords": ["fralib", "prospecção", "ia", "case"],
+        "keywords": ["fralib", "prospecção", "ia", "case", "sucesso"],
         "intent": "informational",
+        "angle": "História real de quem fatura R$10k/mês com site"
     },
     {
         "topic": "Quanto cobrar por gestão de WhatsApp em 2026",
         "category": "freelancer",
-        "keywords": ["whatsapp", "gestão", "freelancer", "preço"],
+        "keywords": ["whatsapp", "gestão", "freelancer", "preço", "serviço"],
         "intent": "commercial",
+        "angle": "Novo serviço digital que todo cliente precisa"
     },
     {
         "topic": "Marketing digital para freelancers: o que mudou",
         "category": "marketing",
-        "keywords": ["marketing", "freelancer", "2026", "tendências"],
+        "keywords": ["marketing", "freelancer", "2026", "tendências", "digital"],
         "intent": "informational",
+        "angle": "O que funciona agora para vender serviços digitais"
+    },
+]
+
+# ============================================================================
+# TOPICS DE HYPE GLOBAL (adaptar para FraLib)
+# ============================================================================
+
+HYPE_TOPICS = [
+    # IA/Tech Hype
+    {
+        "topic": "DeepSeek: a IA open source que está mudando tudo",
+        "hype": "DeepSeek",
+        "category": "hype",
+        "keywords": ["deepseek", "ia open source", "inteligência artificial", "2026"],
+        "angle": "Como DeepSeek está barateando IA e o que isso significa pra vender sites",
+        "fralib_hook": "A mesma IA que barateou o DeepSeek é usada no FraLib para criar sites automaticamente."
+    },
+    {
+        "topic": "GPT-5 da OpenAI: o que mudou para profissionais",
+        "hype": "GPT-5",
+        "category": "hype",
+        "keywords": ["gpt-5", "openai", "ia", "profissionais", "2026"],
+        "angle": "IA generativa cada vez mais poderosa - como usar pra vender mais",
+        "fralib_hook": "O FraLib já usa IA avançada para gerar sites. Com GPT-5, fica ainda melhor."
+    },
+    {
+        "topic": "Agentes autônomos de IA: amigos ou inimigos do emprego?",
+        "hype": "AI Agents",
+        "category": "hype",
+        "keywords": ["agentes ia", "automação", "emprego", "futuro"],
+        "angle": "IA que trabalha sozinha - oportunidade pra freelancers",
+        "fralib_hook": "O FraLib é um agente de IA que trabalha 24/7 vendendo sites pra você."
+    },
+    {
+        "topic": "Cursor AI e a revolução da programação",
+        "hype": "Cursor AI",
+        "category": "hype",
+        "keywords": ["cursor", "ia", "programação", "codigo"],
+        "angle": "IA que programa sozinha - ainda vale aprender a codar?",
+        "fralib_hook": "O FraLib cria sites sem código. O Cursor pode ajudar freelancer a entregar mais."
+    },
+    # Tech/Produtos Hype
+    {
+        "topic": "Pixel 10: Google copia Apple e muda fotografia mobile",
+        "hype": "Pixel 10",
+        "category": "hype",
+        "keywords": ["pixel", "google", "smartphone", "fotografia"],
+        "angle": "Novo celular tem câmera que edita fotos com IA - oportunidades pra negócios locais",
+        "fralib_hook": "Negócios com site profissional têm 3x mais chance de aparecer no Google Maps."
+    },
+    {
+        "topic": "Figure AI: robô humanoide entra no mercado de trabalho",
+        "hype": "Figure AI",
+        "category": "hype",
+        "keywords": ["robô", "figure ai", "trabalho", "futuro"],
+        "angle": "Robôs entrando no mercado - como se preparar com automação",
+        "fralib_hook": "Automação não espera. Quem não se atualiza, perde clients para quem usa IA."
+    },
+    {
+        "topic": "Apple Vision Pro 2: realidade mista no dia a dia",
+        "hype": "Vision Pro 2",
+        "category": "hype",
+        "keywords": ["apple", "vision pro", "realidade mista", "vr"],
+        "angle": "Nova tecnologia cria demanda por presença digital - seu cliente precisa de site",
+        "fralib_hook": "Seus clientes vão precisar de site imersivo. O FraLib já cria."
+    },
+    # Negócios/Cultura Hype
+    {
+        "topic": "Micro SaaS: a nova febre do empreendedorismo digital",
+        "hype": "Micro SaaS",
+        "category": "hype",
+        "keywords": ["micro saas", "software", "negócios", "renda passiva"],
+        "angle": "Vender software como serviço - como começar do zero",
+        "fralib_hook": "O FraLib ajuda a criar sua presença digital. Primeiro site, depois SaaS."
+    },
+    {
+        "topic": "Trabalho remoto em 2026: vale a pena mesmo?",
+        "hype": "Trabalho remoto",
+        "category": "hype",
+        "keywords": ["trabalho remoto", "home office", "produtividade", "freelancer"],
+        "angle": "Modelo híbrido exige presença digital forte",
+        "fralib_hook": "Freelancers remotos que têm site próprio fecham contratos 2x mais rápido."
+    },
+    {
+        "topic": "Criptomoedas em 2026: recuperação ou nova queda?",
+        "hype": "Bitcoin 2026",
+        "category": "hype",
+        "keywords": ["bitcoin", "criptomoeda", "investimento", "2026"],
+        "angle": "Mercado instável - como criar renda previsível com serviços",
+        "fralib_hook": "Em vez de investir em risco, invista em presença digital. Site que vende traz R$todo mês."
     },
 ]
 
