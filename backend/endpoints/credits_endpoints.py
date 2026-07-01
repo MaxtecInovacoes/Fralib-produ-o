@@ -275,21 +275,32 @@ def _extrair_usuario_request(request: Request) -> dict:
     # Carrega usuario do banco
     try:
         with engine.connect() as conn:
-            row = conn.execute(
-                _text("SELECT id, email, plano, status, creditos, creditos_max, role, tenant_id FROM users WHERE id=:id"),
-                {"id": int(user_id)},
-            ).fetchone()
+            # Tenta com tenant_id (schema novo); se nao existir, faz fallback
+            try:
+                row = conn.execute(
+                    _text("SELECT id, email, plano, status, creditos, creditos_max, role, tenant_id FROM users WHERE id=:id"),
+                    {"id": int(user_id)},
+                ).fetchone()
+                cols = ["id","email","plano","status","creditos","creditos_max","role","tenant_id"]
+            except Exception:
+                # Fallback para schemas sem tenant_id
+                row = conn.execute(
+                    _text("SELECT id, email, plano, status, creditos, creditos_max, role FROM users WHERE id=:id"),
+                    {"id": int(user_id)},
+                ).fetchone()
+                cols = ["id","email","plano","status","creditos","creditos_max","role",None]
             if not row:
                 raise HTTPException(401, "Usuario nao encontrado")
+            user_dict = dict(zip(cols, row))
             return {
-                "id": int(row[0]),
-                "email": row[1] or email,
-                "plano": row[2] or "trial",
-                "status": row[3] or "ativo",
-                "creditos": row[4] or 0,
-                "creditos_max": row[5] or 5,
-                "role": row[6] or "user",
-                "tenant_id": row[7],
+                "id": int(user_dict.get("id")),
+                "email": user_dict.get("email") or email,
+                "plano": user_dict.get("plano") or "trial",
+                "status": user_dict.get("status") or "ativo",
+                "creditos": user_dict.get("creditos") or 0,
+                "creditos_max": user_dict.get("creditos_max") or 5,
+                "role": user_dict.get("role") or "user",
+                "tenant_id": user_dict.get("tenant_id"),
             }
     except HTTPException:
         raise
