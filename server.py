@@ -432,6 +432,8 @@ app.include_router(pipeline_start_endpoints.router)
 app.include_router(pipeline_edit_endpoints.router)
 app.include_router(sse_endpoints.router)
 app.include_router(credits_endpoints.router)
+import checkout_flow
+app.include_router(checkout_flow.router)
 app.include_router(users_endpoints.router)
 app.include_router(leads_endpoints.router)
 app.include_router(beta_endpoints.router)
