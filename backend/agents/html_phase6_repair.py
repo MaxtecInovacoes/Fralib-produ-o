@@ -191,8 +191,14 @@ def _phase6_contract_header(prd, hero_type: str, video_asset: dict[str, str]) ->
             'autoplay muted loop playsinline preload="metadata"></video>'
         )
     else:
-        from backend.agents.html_media_validator import image_fallback_for_segment
-        image = phase6_image_asset(prd) or image_fallback_for_segment(prd)
+        image = phase6_image_asset(prd)
+        if not image:
+            from backend.pipeline_exceptions import ImageNotAvailableError
+
+            raise ImageNotAvailableError(
+                "phase6_contract_header: hero sem imagem real disponível.",
+                context={"segmento": phase6_business_segment(prd), "business": name},
+            )
         media = f'<img class="fralib-hero-image" src="{_escape(image)}" alt="{_escape(title)}" loading="eager" decoding="async">'
     return (
         f'<header id="hero" class="fralib-contract-hero" data-hero-type="{hero_type}" data-parallax>'

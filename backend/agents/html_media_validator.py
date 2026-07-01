@@ -1,7 +1,6 @@
 """Media validations for generated HTML (images, videos, placeholders, URLs).
 
-Fail-fast: usa SVG placeholders niche-aware quando imagens reais falham.
-Não usa Unsplash genéricos.
+Fail-fast: não injeta placeholders nem imagens genéricas quando a mídia real falha.
 """
 
 from __future__ import annotations
@@ -9,7 +8,7 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING
 
-from backend.agents.niche_svg_placeholders import get_placeholder_url
+from backend.pipeline_exceptions import ImageNotAvailableError
 
 if TYPE_CHECKING:
     from typing import Any
@@ -123,20 +122,22 @@ def validate_address_in_html(html: str, text: str, address: str, normalized_text
 
 
 def safe_photo_url(url: str, prd) -> str:
-    """Return safe photo URL or fallback for segment."""
+    """Return safe photo URL or raise when media is missing/unsafe."""
     low = (url or "").lower()
     if not url or any(bad in low for bad in _FORBIDDEN_MEDIA_SOURCES):
-        return image_fallback_for_segment(prd)
+        raise ImageNotAvailableError(
+            "safe_photo_url: URL de imagem ausente ou proibida.",
+            context={"url": url, "segmento": _get_field(prd, "segmento", "segment", "nicho", default="")},
+        )
     return url
 
 
 def image_fallback_for_segment(prd) -> str:
-    """Get fallback SVG placeholder URL based on business segment.
-
-    Usa SVG placeholders niche-aware em vez de Unsplash genéricos.
-    """
-    segment = _normalize(_get_field(prd, "segmento", "segment", "nicho", default=""))
-    return get_placeholder_url(segment)
+    """Compatibility shim: image fallbacks are forbidden."""
+    raise ImageNotAvailableError(
+        "image_fallback_for_segment: fallback de imagem desativado.",
+        context={"segmento": _get_field(prd, "segmento", "segment", "nicho", default="")},
+    )
 
 
 def _get_field(obj: Any, *names: str, default=None) -> Any:

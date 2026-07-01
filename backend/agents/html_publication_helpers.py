@@ -18,7 +18,6 @@ import unicodedata
 from urllib.parse import quote_plus
 
 from backend.agents.html_media_validator import (
-    image_fallback_for_segment,
     media_urls_from_html,
     minimum_required_media,
     photo_urls,
@@ -162,15 +161,8 @@ def remove_unknown_emails(html: str, prd) -> str:
 
 
 def add_image_error_fallbacks(html: str, prd) -> str:
-    fallback = image_fallback_for_segment(prd)
-
-    def repl(match: re.Match) -> str:
-        tag = match.group(0)
-        if " onerror=" in tag.lower():
-            return tag
-        return tag[:-1] + f' onerror="this.onerror=null;this.src=\'{fallback}\'">'
-
-    return re.sub(r"(?is)<img\b[^>]*>", repl, html or "")
+    """Compatibility shim: publication must not mask broken image URLs."""
+    return html or ""
 
 
 # ─── Media Section Management ───────────────────────────────────────────────
@@ -191,7 +183,14 @@ def ensure_required_media_section(html: str, prd) -> str:
     title = _media_title_for_segment(segment)
     body = _media_body_for_segment(segment, city)
     cards = []
-    for idx, url in enumerate((photos + [image_fallback_for_segment(prd)] * required)[:required], 1):
+    if len(photos) < required:
+        from backend.pipeline_exceptions import ImageNotAvailableError
+
+        raise ImageNotAvailableError(
+            "ensure_required_media_section: mídia insuficiente para seção editorial.",
+            context={"required": required, "available": len(photos)},
+        )
+    for idx, url in enumerate(photos[:required], 1):
         cards.append(
             '<figure class="fralib-photo-frame">'
             f'<img src="{escape(url)}" alt="{escape(name)}: imagem editorial {idx} relacionada a {escape(segment)}" '
