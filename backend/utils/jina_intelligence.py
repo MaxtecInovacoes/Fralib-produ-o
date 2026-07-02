@@ -17,6 +17,7 @@ import json
 import hashlib
 import time
 import sys
+import requests  # top-level para que testes possam monkey-patchar
 
 sys.path.insert(
     0,
@@ -220,6 +221,27 @@ def _buscar_real(
         try:
             print(f"[Jina Intel] Lendo: {url}")
             resp = requests.get(f"https://r.jina.ai/{url}", headers=headers, timeout=20)
+            # Instrumentação cost_tracker (Sprint 0.3) — fail-safe
+            try:
+                from backend.agents.cost_tracker import record_cost_event
+
+                record_cost_event(
+                    provider="jina",
+                    service="jina_reader",
+                    units=1,
+                    custo_usd=0.001 * len(resp.text or "") / 1000,  # proxy: $1/1M chars
+                    latency_ms=int(resp.elapsed.total_seconds() * 1000)
+                    if hasattr(resp, "elapsed")
+                    else None,
+                    status="success" if resp.status_code == 200 else "error",
+                    error_message=None
+                    if resp.status_code == 200
+                    else f"HTTP {resp.status_code}",
+                    metadata={"url": url, "status_code": resp.status_code},
+                )
+            except Exception as iexc:  # pragma: no cover
+                print(f"[Jina Intel] cost_event instrumentation falhou: {iexc}")
+
             if resp.status_code == 200 and len(resp.text) > 200:
                 conteudo = resp.text[:5000]
                 analise = _analisar_conteudo_llm(conteudo, nicho, cidade, nome_negocio)
@@ -228,6 +250,21 @@ def _buscar_real(
                     resultados.append(analise)
                     print(f"[Jina Intel] Análise OK: {url}")
         except Exception as e:
+            # Instrumentação de falha também
+            try:
+                from backend.agents.cost_tracker import record_cost_event
+
+                record_cost_event(
+                    provider="jina",
+                    service="jina_reader",
+                    units=1,
+                    custo_usd=0.0,
+                    status="error",
+                    error_message=str(e)[:200],
+                    metadata={"url": url},
+                )
+            except Exception:
+                pass
             print(f"[Jina Intel] Erro lendo {url}: {e}")
 
     if not resultados:

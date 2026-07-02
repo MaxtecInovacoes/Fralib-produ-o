@@ -875,3 +875,119 @@ async def refresh_provider_health(x_cron_secret: str = Header(None, alias='X-Cro
         "snapshot_at": datetime.utcnow().isoformat(),
     }
 
+
+# ── Sprint 0.3 — Custos ─────────────────────────────────────────────────
+
+
+@router.post('/refresh-facebook-ads-spend')
+async def refresh_facebook_ads_spend(
+    days: int = 1,
+    x_cron_secret: str = Header(None, alias='X-Cron-Secret'),
+) -> dict:
+    """Busca spend FB Ads do(s) último(s) N dia(s) e grava cost_events.
+
+    Lê credenciais de env (FB_ACCESS_TOKEN, FB_AD_ACCOUNT_ID). Sem credenciais,
+    retorna 200 com status='skipped' e mensagem clara.
+
+    Cron sugerido: ``0 1 * * * curl -X POST -H "X-Cron-Secret: $CRON_SECRET" \\
+        https://api.fralib.com/api/cron/refresh-facebook-ads-spend``
+    """
+    _autorizar(x_cron_secret)
+
+    token = os.getenv("FB_ACCESS_TOKEN", "").strip()
+    account_id = os.getenv("FB_AD_ACCOUNT_ID", "").strip()
+    if not token or not account_id:
+        return {
+            "status": "skipped",
+            "reason": "FB_ACCESS_TOKEN ou FB_AD_ACCOUNT_ID ausentes",
+        }
+
+    try:
+        from backend.services.facebook_ads_service import (
+            FacebookAdsConfigError,
+            FacebookAdsService,
+        )
+        from backend.agents.cost_tracker import record_cost_event
+    except Exception as e:
+        logger.exception("imports falharam em refresh_facebook_ads_spend")
+        return {"status": "error", "reason": f"imports: {e!s}"}
+
+    persisted = 0
+    skipped = 0
+    errors = 0
+    try:
+        service = FacebookAdsService(
+            access_token=token, ad_account_id=account_id
+        )
+        insights = await service.get_overall_insights(days=days)
+    except FacebookAdsConfigError as fc:
+        return {"status": "skipped", "reason": str(fc)}
+    except Exception as exc:
+        logger.exception("get_overall_insights falhou")
+        return {"status": "error", "reason": f"fb_api: {exc!s}"}
+
+    total_spend_cents = int(insights.get("total_spend", 0) or 0)
+    spend_brl = total_spend_cents / 100.0
+    # FB Ads cobra em BRL (currency BRL por default)
+    spend_usd = 0.0
+    days_period = int(insights.get("period_days", days) or days)
+
+    if spend_brl > 0:
+        ok = record_cost_event(
+            provider="facebook_ads",
+            service="refresh_spend",
+            units=int(insights.get("total_eventos", 1) or 1),
+            custo_usd=spend_usd,
+            custo_brl=spend_brl,
+            status="success",
+            metadata={
+                "days": days_period,
+                "total_impressions": int(
+                    insights.get("total_impressions", 0) or 0
+                ),
+                "total_clicks": int(insights.get("total_clicks", 0) or 0),
+                "total_leads": int(insights.get("total_leads", 0) or 0),
+                "campaigns_count": len(insights.get("campaigns", []) or []),
+            },
+        )
+        persisted = 1 if ok else 0
+        if not ok:
+            errors += 1
+    else:
+        skipped += 1
+
+    return {
+        "status": "ok" if errors == 0 else "partial",
+        "provider": "facebook_ads",
+        "days": days_period,
+        "spend_brl": spend_brl,
+        "persisted": persisted,
+        "skipped": skipped,
+        "errors": errors,
+        "snapshot_at": datetime.utcnow().isoformat(),
+    }
+
+
+@router.post('/refresh-usd-brl-rate')
+async def refresh_usd_brl_rate(
+    x_cron_secret: str = Header(None, alias='X-Cron-Secret'),
+) -> dict:
+    """Atualiza cotação USD/BRL via API pública e grava 1 cost_event.
+
+    Cron sugerido: ``0 8 * * * curl -X POST -H "X-Cron-Secret: $CRON_SECRET" \\
+        https://api.fralib.com/api/cron/refresh-usd-brl-rate``
+    """
+    _autorizar(x_cron_secret)
+    try:
+        from backend.services.currency_service import refresh_usd_brl_rate as _fn
+    except Exception as exc:
+        logger.exception("imports falharam em refresh_usd_brl_rate")
+        return {"status": "error", "reason": f"imports: {exc!s}"}
+
+    try:
+        result = _fn(engine)
+        return {"status": "ok", **result}
+    except Exception as exc:
+        logger.exception("refresh_usd_brl_rate falhou")
+        return {"status": "error", "reason": str(exc)}
+

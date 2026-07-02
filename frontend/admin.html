@@ -558,7 +558,7 @@
       </div>
     </div>
 
-    <!-- PHONE HEALTH: saúde do número WhatsApp do tenant (Trilha A) -->
+    <!-- PHONE HEALTH: saude do numero WhatsApp do tenant -->
     <div class="config-section" id="phoneHealthCard" style="margin-bottom:24px;">
       <div class="config-group" style="margin-bottom:16px;">
         <div class="config-group-title" style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
@@ -2241,10 +2241,10 @@ window.initPixelOffice = function(){
           Nao responder contatos salvos na agenda do WhatsApp conectado
         </label>
 
-        <!-- Phone Health widget (Trilha A) -->
+        <!-- Phone Health widget -->
         <div id="sdrPhoneHealthWidget" style="margin-top:16px;padding:12px 14px;background:rgba(56,189,248,.06);border:1px solid rgba(56,189,248,.18);border-radius:8px;">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;gap:12px;">
-            <strong style="font-size:13px;color:var(--fl-text);">📱 Saúde do número (Trilha A)</strong>
+            <strong style="font-size:13px;color:var(--fl-text);">📱 Saúde do número</strong>
             <span id="sdrPhoneHealthSync" style="font-size:10px;color:var(--fl-text-muted);font-family:var(--fl-font-mono);">—</span>
           </div>
           <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;">
@@ -2263,7 +2263,7 @@ window.initPixelOffice = function(){
           </div>
           <label style="display:flex;align-items:center;gap:10px;margin-top:12px;font-size:12px;color:var(--fl-text);">
             <input id="sdrAutoThrottleEnabled" type="checkbox">
-            Auto-throttle (reduzir limite diário proporcional ao score)
+            Auto-throttle (reduzir limite diario proporcional ao score)
           </label>
         </div>
 
@@ -6411,8 +6411,7 @@ async function carregarSdrConfig() {
     _sdrSetChecked('sdrAutoThrottleEnabled', cfg.auto_throttle_enabled !== false);
     _sdrUpdateScheduleState();
     if (statusEl) statusEl.textContent = 'Configuracao carregada.';
-    // Carrega widget phone-health em paralelo (não bloqueia)
-    if (typeof loadSdrPhoneHealthWidget === 'function') loadSdrPhoneHealthWidget();
+    if (typeof loadPhoneHealth === 'function') loadPhoneHealth();
   } catch(e) {
     console.warn('[SDR Config] erro:', e);
     if (statusEl) { statusEl.textContent = 'Nao foi possivel carregar.'; statusEl.style.color = '#f59e0b'; }
@@ -6471,81 +6470,6 @@ async function salvarSdrConfig() {
     if (typeof Toast !== 'undefined') Toast.error(e.message);
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = 'SALVAR CONTROLE DO SDR'; }
-  }
-}
-
-/* ══ SDR Phone Health Widget (Trilha A) ════════════════════════════ */
-
-var _sdrPhoneHealthState = null;
-
-function _sdrPhColor(status) {
-  if (status === 'healthy') return '#10b981';
-  if (status === 'degraded') return '#f59e0b';
-  if (status === 'restricted') return '#ef4444';
-  if (status === 'banned') return '#b91c1c';
-  return '#94a3b8';
-}
-
-function _sdrPhLabel(status) {
-  if (status === 'healthy') return 'Saudável';
-  if (status === 'degraded') return 'Degradado';
-  if (status === 'restricted') return 'Restrito';
-  if (status === 'banned') return 'Banido';
-  return status || '—';
-}
-
-/**
- * Busca /api/admin/phone-health e popula os 4 campos do widget.
- * @returns {Promise<void>}
- */
-async function loadSdrPhoneHealthWidget() {
-  var syncEl = document.getElementById('sdrPhoneHealthSync');
-  if (syncEl) syncEl.textContent = 'sincronizando';
-  try {
-    var resp = await authFetch('/api/admin/phone-health');
-    if (!resp.ok) {
-      if (syncEl) syncEl.textContent = 'erro HTTP ' + resp.status;
-      return;
-    }
-    var data = await resp.json();
-    _sdrPhoneHealthState = data;
-
-    var scoreEl = document.getElementById('sdrPhoneHealthScore');
-    var statusEl = document.getElementById('sdrPhoneHealthStatus');
-    var limitEl = document.getElementById('sdrPhoneHealthEffectiveLimit');
-    var color = _sdrPhColor(data.status);
-
-    if (scoreEl) {
-      scoreEl.textContent = String(data.score);
-      scoreEl.style.color = color;
-    }
-    if (statusEl) {
-      statusEl.textContent = _sdrPhLabel(data.status);
-      statusEl.style.color = color;
-    }
-    if (limitEl) {
-      // Estimativa: aplica o mesmo fator do backend (100%/70%/50%/10%)
-      var base = 50;
-      var factor = 1.0;
-      if (data.score != null) {
-        if (data.score >= 80) factor = 1.0;
-        else if (data.score >= 50) factor = 0.7;
-        else if (data.score >= 20) factor = 0.5;
-        else factor = 0.1;
-      }
-      var effective = Math.max(1, Math.floor(base * factor));
-      limitEl.textContent = effective + ' msgs/lead (auto-throttle)';
-      limitEl.style.color = color;
-    }
-    if (syncEl) {
-      var d = data.atualizado_em ? new Date(data.atualizado_em) : null;
-      var txt = d && !isNaN(d.getTime())
-        ? 'atualizado ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
-        : '—';
-      syncEl.textContent = txt;
-    }
-  } catch (err) {
-    if (syncEl) syncEl.textContent = 'erro';
   }
 }
 
@@ -8634,7 +8558,6 @@ async function atualizarUtiBadge() {
 <!-- Modulos extraidos do admin monolitico. -->
 <script src="/js/admin/pipeline-timeline.js?v=1782014057"></script>
 <script src="/js/admin/pipeline-waveform.js?v=20260626-elapsed-avg"></script>
-<script src="/js/admin/phone-health.js?v=20260701"></script>
 <script src="/js/admin/audio-player/events.js?v=20260621"></script>
 <script src="/js/admin/audio-player/storage.js?v=20260621"></script>
 <script src="/js/admin/audio-player/player-core.js?v=20260621"></script>
@@ -8644,4 +8567,5 @@ async function atualizarUtiBadge() {
 <script src="/js/admin/audio-panel/panel-dom.js?v=20260621"></script>
 <script src="/js/admin/audio-panel/panel-events.js?v=20260621"></script>
 <script src="/js/admin/audio-panel.js?v=20260621"></script>
+<script src="/js/admin/phone-health.js?v=20260702"></script>
 </body></html>

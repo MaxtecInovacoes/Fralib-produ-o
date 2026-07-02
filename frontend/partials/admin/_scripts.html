@@ -3563,8 +3563,10 @@ async function carregarSdrConfig() {
     _sdrSetValue('sdrDailyLimit', limits.daily_limit_per_lead || 50);
     _sdrSetValue('sdrHumanPauseSeconds', limits.human_pause_seconds || 300);
     _sdrSetChecked('sdrIgnoreSavedContacts', cfg.bot_ignore_saved_contacts);
+    _sdrSetChecked('sdrAutoThrottleEnabled', cfg.auto_throttle_enabled !== false);
     _sdrUpdateScheduleState();
     if (statusEl) statusEl.textContent = 'Configuracao carregada.';
+    if (typeof loadPhoneHealth === 'function') loadPhoneHealth();
   } catch(e) {
     console.warn('[SDR Config] erro:', e);
     if (statusEl) { statusEl.textContent = 'Nao foi possivel carregar.'; statusEl.style.color = '#f59e0b'; }
@@ -3601,7 +3603,8 @@ async function salvarSdrConfig() {
       daily_limit_per_lead: _sdrNumber('sdrDailyLimit', 50),
       human_pause_seconds: _sdrNumber('sdrHumanPauseSeconds', 300)
     },
-    bot_ignore_saved_contacts: !!((document.getElementById('sdrIgnoreSavedContacts') || {}).checked)
+    bot_ignore_saved_contacts: !!((document.getElementById('sdrIgnoreSavedContacts') || {}).checked),
+    auto_throttle_enabled: !!((document.getElementById('sdrAutoThrottleEnabled') || {}).checked)
   };
 
   try {
@@ -5719,4 +5722,5 @@ async function atualizarUtiBadge() {
 <script src="/js/admin/audio-panel/panel-dom.js?v=20260621"></script>
 <script src="/js/admin/audio-panel/panel-events.js?v=20260621"></script>
 <script src="/js/admin/audio-panel.js?v=20260621"></script>
+<script src="/js/admin/phone-health.js?v=20260702"></script>
 </body></html>

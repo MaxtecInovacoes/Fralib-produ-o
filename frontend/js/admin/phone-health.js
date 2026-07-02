@@ -118,6 +118,19 @@ function _phStatusLabel(status) {
   }
 }
 
+function _phEffectiveLimit(score) {
+  var n = Number(score);
+  var base = 50;
+  var factor = 1.0;
+  if (!Number.isNaN(n)) {
+    if (n >= 80) factor = 1.0;
+    else if (n >= 50) factor = 0.7;
+    else if (n >= 20) factor = 0.5;
+    else factor = 0.1;
+  }
+  return Math.max(1, Math.floor(base * factor));
+}
+
 /**
  * @param {string|null} isoDate
  * @returns {string}
@@ -151,7 +164,8 @@ function _phGetErrorMessage(err) {
  */
 function renderPhoneHealth() {
   var card = document.getElementById('phoneHealthCard');
-  if (!card) return;
+  var sdrWidget = document.getElementById('sdrPhoneHealthWidget');
+  if (!card && !sdrWidget) return;
 
   if (!_phoneHealthState) {
     _phSetHtml('phoneHealthBody', '<div class="ph-loading">Carregando saúde do número…</div>');
@@ -163,46 +177,53 @@ function renderPhoneHealth() {
   var label = _phStatusLabel(state.status);
   var signals = state.signals || { events_24h: 0, dlq_24h: 0, optouts_24h: 0 };
 
-  // Score grande
-  _phSetText('phoneHealthScore', String(state.score));
-  _phSetHtml('phoneHealthScore', '<span style="color:' + color + ';">' + state.score + '</span>');
-  _phSetText('phoneHealthStatus', label);
-  var badge = document.getElementById('phoneHealthStatus');
-  if (badge) {
-    badge.style.background = color;
-    badge.style.color = '#fff';
-  }
-  _phSetText('phoneHealthEvents', String(signals.events_24h || 0));
-  _phSetText('phoneHealthDlq', String(signals.dlq_24h || 0));
-  _phSetText('phoneHealthOptouts', String(signals.optouts_24h || 0));
-  _phSetText('phoneHealthRecommendation', state.recommendation || '—');
-  _phSetText('phoneHealthUpdatedAt', 'Atualizado: ' + _phFormatDate(state.atualizado_em));
-
-  var restricaoEl = document.getElementById('phoneHealthLastRestricao');
-  if (restricaoEl) {
-    if (state.ultima_restricao_em) {
-      restricaoEl.textContent = 'Última restrição: ' + _phFormatDate(state.ultima_restricao_em);
-      restricaoEl.style.display = 'block';
-    } else {
-      restricaoEl.style.display = 'none';
+  if (card) {
+    _phSetText('phoneHealthSync', 'ok');
+    _phSetText('phoneHealthScore', String(state.score));
+    _phSetHtml('phoneHealthScore', '<span style="color:' + color + ';">' + state.score + '</span>');
+    _phSetText('phoneHealthStatus', label);
+    var badge = document.getElementById('phoneHealthStatus');
+    if (badge) {
+      badge.style.background = color;
+      badge.style.color = '#fff';
     }
-  }
+    _phSetText('phoneHealthEvents', String(signals.events_24h || 0));
+    _phSetText('phoneHealthDlq', String(signals.dlq_24h || 0));
+    _phSetText('phoneHealthOptouts', String(signals.optouts_24h || 0));
+    _phSetText('phoneHealthRecommendation', state.recommendation || '—');
+    _phSetText('phoneHealthUpdatedAt', 'Atualizado: ' + _phFormatDate(state.atualizado_em));
 
-  // Pause indicator
-  var pauseIndicator = document.getElementById('phoneHealthPausedIndicator');
-  if (pauseIndicator) {
-    if (state.pause_franz_until) {
-      var until = _phFormatDate(state.pause_franz_until);
-      pauseIndicator.innerHTML = '⏸ <strong>Franz pausado</strong> até ' + until;
-      pauseIndicator.style.display = 'block';
-    } else {
-      pauseIndicator.style.display = 'none';
+    var restricaoEl = document.getElementById('phoneHealthLastRestricao');
+    if (restricaoEl) {
+      if (state.ultima_restricao_em) {
+        restricaoEl.textContent = 'Última restrição: ' + _phFormatDate(state.ultima_restricao_em);
+        restricaoEl.style.display = 'block';
+      } else {
+        restricaoEl.style.display = 'none';
+      }
     }
+
+    var pauseIndicator = document.getElementById('phoneHealthPausedIndicator');
+    if (pauseIndicator) {
+      if (state.pause_franz_until) {
+        var until = _phFormatDate(state.pause_franz_until);
+        pauseIndicator.innerHTML = '⏸ <strong>Franz pausado</strong> até ' + until;
+        pauseIndicator.style.display = 'block';
+      } else {
+        pauseIndicator.style.display = 'none';
+      }
+    }
+
+    _phSetDisplay('phoneHealthLoading', 'none');
+    _phSetDisplay('phoneHealthBody', 'block');
   }
 
-  // Esconde estado de loading
-  _phSetDisplay('phoneHealthLoading', 'none');
-  _phSetDisplay('phoneHealthBody', 'block');
+  if (sdrWidget) {
+    _phSetText('sdrPhoneHealthSync', _phFormatDate(state.atualizado_em));
+    _phSetHtml('sdrPhoneHealthScore', '<span style="color:' + color + ';">' + state.score + '</span>');
+    _phSetHtml('sdrPhoneHealthStatus', '<span style="color:' + color + ';">' + label + '</span>');
+    _phSetText('sdrPhoneHealthEffectiveLimit', _phEffectiveLimit(state.score) + ' msgs/lead');
+  }
 }
 
 /* ══ FETCH ════════════════════════════════════════════════════════════ */
@@ -216,6 +237,8 @@ async function loadPhoneHealth() {
     var resp = await authFetch('/api/admin/phone-health');
     if (!resp.ok) {
       _phSetHtml('phoneHealthBody', '<div class="ph-error">Erro ao carregar (HTTP ' + resp.status + ')</div>');
+      _phSetText('phoneHealthSync', 'erro HTTP ' + resp.status);
+      _phSetText('sdrPhoneHealthSync', 'erro HTTP ' + resp.status);
       return;
     }
     var data = await resp.json();
@@ -223,6 +246,8 @@ async function loadPhoneHealth() {
     renderPhoneHealth();
   } catch (err) {
     _phSetHtml('phoneHealthBody', '<div class="ph-error">Erro: ' + _phGetErrorMessage(err) + '</div>');
+    _phSetText('phoneHealthSync', 'erro');
+    _phSetText('sdrPhoneHealthSync', 'erro');
   }
 }
 

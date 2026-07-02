@@ -1,9 +1,16 @@
 """
 Facebook Ads Service
 Servico para gerenciar campanhas do Facebook Ads
+
+SEGURANCA: tokens NUNCA sao hardcoded. Devem vir de:
+  1) Parametros do construtor (injetados em testes / endpoints)
+  2) Env vars FB_ACCESS_TOKEN e FB_AD_ACCOUNT_ID
+  3) app_settings (tabela settings do banco)
+Sem credenciais validas, levantar FacebookAdsConfigError com mensagem clara.
 """
 import httpx
 import json
+import os
 from datetime import datetime, timedelta
 from typing import Optional, List, Dict, Any
 import logging
@@ -11,17 +18,52 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+class FacebookAdsConfigError(RuntimeError):
+    """Erro de configuracao: tokens ausentes."""
+
+
 class FacebookAdsService:
     """Servico para gerenciar campanhas do Facebook Ads"""
 
     def __init__(self, access_token: str = None, ad_account_id: str = None):
-        self.access_token = access_token or "EAAdwIb4KeDsBRt3KXEifZCUOFTeYUVNero2dKLqXRWCHgw1RMXdmJZATh9sIt8l24dS6N8msNhvibTUe1EOD41DgCgjJWE6ho31wjyBc9axPv1ks3uYEE3ZBPPgGPOdtxq3toi3xqZCJjAoPVZCN3l4VQhSpOl1JkH8ZBHf3cBscQD6pQdhHWSoiO3OdNLZADM8DuyuNM5LvZA0fQoceASVy"
-        self.ad_account_id = ad_account_id or "1130263065183327"
+        # Ordem de precedencia: arg > env > None (raise lazy)
+        self.access_token = (
+            access_token
+            or os.getenv("FB_ACCESS_TOKEN", "").strip()
+            or None
+        )
+        self.ad_account_id = (
+            ad_account_id
+            or os.getenv("FB_AD_ACCOUNT_ID", "").strip()
+            or None
+        )
+        if not self.access_token:
+            logger.warning(
+                "[facebook_ads] FB_ACCESS_TOKEN ausente (defina em env ou passe ao construtor)"
+            )
+        if not self.ad_account_id:
+            logger.warning(
+                "[facebook_ads] FB_AD_ACCOUNT_ID ausente (defina em env ou passe ao construtor)"
+            )
         self.api_version = "v18.0"
         self.api_base = "https://graph.facebook.com"
 
+    def _ensure_credentials(self) -> None:
+        """Garante credenciais validas antes de chamar API."""
+        if not self.access_token:
+            raise FacebookAdsConfigError(
+                "FB_ACCESS_TOKEN ausente. Defina em env FB_ACCESS_TOKEN ou "
+                "passe access_token= ao construtor."
+            )
+        if not self.ad_account_id:
+            raise FacebookAdsConfigError(
+                "FB_AD_ACCOUNT_ID ausente. Defina em env FB_AD_ACCOUNT_ID ou "
+                "passe ad_account_id= ao construtor."
+            )
+
     async def fb_get(self, endpoint: str, params: dict = None) -> dict:
         """Faz requisicao GET para a API do Facebook"""
+        self._ensure_credentials()
         url = f"{self.api_base}/{self.api_version}/{endpoint}"
         params = params or {}
         params["access_token"] = self.access_token
@@ -32,6 +74,7 @@ class FacebookAdsService:
 
     async def fb_post(self, endpoint: str, data: dict = None) -> dict:
         """Faz requisicao POST para a API do Facebook"""
+        self._ensure_credentials()
         url = f"{self.api_base}/{self.api_version}/{endpoint}"
         data = data or {}
         data["access_token"] = self.access_token
@@ -276,6 +319,10 @@ _facebook_service: Optional[FacebookAdsService] = None
 
 
 def get_facebook_service() -> FacebookAdsService:
+    """Singleton lazy. Requer FB_ACCESS_TOKEN e FB_AD_ACCOUNT_ID em env.
+
+    Se ausentes, retorna servico sem credenciais (raise lazy ao chamar API).
+    """
     global _facebook_service
     if _facebook_service is None:
         _facebook_service = FacebookAdsService()

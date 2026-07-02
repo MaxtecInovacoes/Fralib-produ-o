@@ -93,6 +93,55 @@
       </div>
     </div>
 
+    <!-- PHONE HEALTH: saude do numero WhatsApp do tenant -->
+    <div class="config-section" id="phoneHealthCard" style="margin-bottom:24px;">
+      <div class="config-group" style="margin-bottom:16px;">
+        <div class="config-group-title" style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+          <span>📱 SAÚDE DO NÚMERO WHATSAPP</span>
+          <span id="phoneHealthSync" style="font-family:var(--fl-font-mono);font-size:10px;color:var(--fl-text-muted);">sincronizando</span>
+        </div>
+        <div id="phoneHealthLoading" style="padding:24px;text-align:center;color:var(--fl-text-muted);">
+          Carregando saúde do número…
+        </div>
+        <div id="phoneHealthBody" style="display:none;">
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-top:12px;">
+            <div class="lead-supply-metric">
+              <div class="lead-supply-metric-label">Score</div>
+              <div id="phoneHealthScore" class="lead-supply-metric-value" style="font-size:32px;font-weight:800;">—</div>
+              <div id="phoneHealthStatus" class="lead-supply-metric-hint" style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;">—</div>
+            </div>
+            <div class="lead-supply-metric">
+              <div class="lead-supply-metric-label">Eventos (24h)</div>
+              <div id="phoneHealthEvents" class="lead-supply-metric-value" style="color:#38bdf8;">0</div>
+              <div class="lead-supply-metric-hint">erros detectados</div>
+            </div>
+            <div class="lead-supply-metric">
+              <div class="lead-supply-metric-label">Fila morta (24h)</div>
+              <div id="phoneHealthDlq" class="lead-supply-metric-value" style="color:#f59e0b;">0</div>
+              <div class="lead-supply-metric-hint">msgs que falharam</div>
+            </div>
+            <div class="lead-supply-metric">
+              <div class="lead-supply-metric-label">Opt-outs (24h)</div>
+              <div id="phoneHealthOptouts" class="lead-supply-metric-value" style="color:#c084fc;">0</div>
+              <div class="lead-supply-metric-hint">leads que pararam</div>
+            </div>
+          </div>
+          <div id="phoneHealthPausedIndicator" style="display:none;margin-top:12px;padding:10px 14px;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:8px;color:#f59e0b;font-size:13px;"></div>
+          <div style="margin-top:14px;padding:12px 14px;background:rgba(56,189,248,.06);border:1px solid rgba(56,189,248,.18);border-radius:8px;">
+            <div style="font-size:11px;color:var(--fl-text-muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;">Recomendação</div>
+            <div id="phoneHealthRecommendation" style="font-size:14px;color:var(--fl-text);">—</div>
+          </div>
+          <div id="phoneHealthLastRestricao" style="display:none;margin-top:8px;font-size:12px;color:var(--danger,#ef4444);"></div>
+          <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;">
+            <button type="button" onclick="refreshPhoneHealth()" style="background:#10b981;color:#03130d;border:none;border-radius:8px;padding:8px 14px;font-weight:700;cursor:pointer;font-size:13px;">Atualizar</button>
+            <button type="button" onclick="pausePhoneHealth(24)" style="background:transparent;color:#f59e0b;border:1px solid rgba(245,158,11,.4);border-radius:8px;padding:8px 14px;font-weight:700;cursor:pointer;font-size:13px;">Pausar Franz 24h</button>
+            <button type="button" onclick="pausePhoneHealth(72)" style="background:transparent;color:#f59e0b;border:1px solid rgba(245,158,11,.2);border-radius:8px;padding:8px 14px;font-weight:600;cursor:pointer;font-size:12px;">Pausar 72h</button>
+          </div>
+          <div id="phoneHealthUpdatedAt" style="margin-top:10px;font-family:var(--fl-font-mono);font-size:10px;color:var(--fl-text-muted);">—</div>
+        </div>
+      </div>
+    </div>
+
     <!-- MOTOR DE ABASTECIMENTO: Hunter/Caio separado da pipeline -->
     <div class="config-section" id="leadSupplyPanel" style="margin-bottom:24px;">
       <div class="config-group" style="margin-bottom:16px;">

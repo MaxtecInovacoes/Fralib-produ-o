@@ -304,6 +304,32 @@
           Nao responder contatos salvos na agenda do WhatsApp conectado
         </label>
 
+        <!-- Phone Health widget -->
+        <div id="sdrPhoneHealthWidget" style="margin-top:16px;padding:12px 14px;background:rgba(56,189,248,.06);border:1px solid rgba(56,189,248,.18);border-radius:8px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;gap:12px;">
+            <strong style="font-size:13px;color:var(--fl-text);">📱 Saúde do número</strong>
+            <span id="sdrPhoneHealthSync" style="font-size:10px;color:var(--fl-text-muted);font-family:var(--fl-font-mono);">—</span>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;">
+            <div>
+              <div style="font-size:10px;color:var(--fl-text-muted);text-transform:uppercase;letter-spacing:.04em;">Score</div>
+              <div id="sdrPhoneHealthScore" style="font-size:22px;font-weight:800;color:var(--success,#10b981);">—</div>
+            </div>
+            <div>
+              <div style="font-size:10px;color:var(--fl-text-muted);text-transform:uppercase;letter-spacing:.04em;">Status</div>
+              <div id="sdrPhoneHealthStatus" style="font-size:13px;font-weight:700;">—</div>
+            </div>
+            <div>
+              <div style="font-size:10px;color:var(--fl-text-muted);text-transform:uppercase;letter-spacing:.04em;">Limite efetivo</div>
+              <div id="sdrPhoneHealthEffectiveLimit" style="font-size:13px;font-weight:700;">—</div>
+            </div>
+          </div>
+          <label style="display:flex;align-items:center;gap:10px;margin-top:12px;font-size:12px;color:var(--fl-text);">
+            <input id="sdrAutoThrottleEnabled" type="checkbox">
+            Auto-throttle (reduzir limite diario proporcional ao score)
+          </label>
+        </div>
+
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
           <button class="btn-config-save" id="btn-sdr-save" style="padding:10px 16px;">SALVAR CONTROLE DO SDR</button>
           <span id="sdrConfigStatus" style="font-size:12px;color:var(--fl-text-muted);"></span>

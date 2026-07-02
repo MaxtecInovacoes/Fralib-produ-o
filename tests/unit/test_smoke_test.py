@@ -86,8 +86,10 @@ def test_smoke_health_endpoint_returns_200() -> None:
     with patch.object(smoke_test, "httpx") as httpx_mod:
         httpx_mod.AsyncClient.return_value = client_mock
         # MOCK também a parte de DB e LLM para não chamar rede
-        with patch.object(smoke_test, "_check_db_select_1", new=AsyncMock(return_value=True)):
-            with patch.object(smoke_test, "_check_llm_ping", new=AsyncMock(return_value=True)):
+        with patch.object(smoke_test, "_check_db_select_1", return_value=True):
+            with patch.object(
+                smoke_test, "_check_llm_ping", new=AsyncMock(return_value=True)
+            ):
                 rc = smoke_test.run_smoke(env="dev", base_url="http://x", timeout=5.0)
 
     assert rc == 0, f"Esperava exit code 0, veio {rc}"
@@ -163,8 +165,10 @@ def test_exit_code_success() -> None:
 
     with patch.object(smoke_test, "httpx") as httpx_mod:
         httpx_mod.AsyncClient.return_value = client_mock
-        with patch.object(smoke_test, "_check_db_select_1", new=AsyncMock(return_value=True)):
-            with patch.object(smoke_test, "_check_llm_ping", new=AsyncMock(return_value=True)):
+        with patch.object(smoke_test, "_check_db_select_1", return_value=True):
+            with patch.object(
+                smoke_test, "_check_llm_ping", new=AsyncMock(return_value=True)
+            ):
                 rc = smoke_test.run_smoke(env="dev", base_url="http://x", timeout=5.0)
 
     assert rc == 0
@@ -184,8 +188,10 @@ def test_exit_code_failure() -> None:
 
     with patch.object(smoke_test, "httpx") as httpx_mod:
         httpx_mod.AsyncClient.return_value = client_mock
-        with patch.object(smoke_test, "_check_db_select_1", new=AsyncMock(return_value=True)):
-            with patch.object(smoke_test, "_check_llm_ping", new=AsyncMock(return_value=True)):
+        with patch.object(smoke_test, "_check_db_select_1", return_value=True):
+            with patch.object(
+                smoke_test, "_check_llm_ping", new=AsyncMock(return_value=True)
+            ):
                 rc = smoke_test.run_smoke(env="dev", base_url="http://x", timeout=5.0)
 
     assert rc == 1

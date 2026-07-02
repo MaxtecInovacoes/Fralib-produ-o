@@ -155,6 +155,39 @@ def _get_key_for_provider(provider: str):
     return key, base, None
 
 
+def _instrument_cost_event(
+    provider: str,
+    model_id: str,
+    usage: dict,
+    latency_ms: int | None = None,
+) -> None:
+    """Registra cost_event após cada chamada LLM. Fail-safe."""
+    try:
+        from backend.agents.cost_tracker import record_cost_event
+
+        input_tokens = int(usage.get("input_tokens", 0) or 0)
+        output_tokens = int(usage.get("output_tokens", 0) or 0)
+        cache_read = int(
+            usage.get("cache_read_input_tokens", 0)
+            or usage.get("cache_read", 0)
+            or 0
+        )
+        record_cost_event(
+            provider=provider,
+            model=model_id,
+            service="call_llm",
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            cache_read_tokens=cache_read,
+            latency_ms=latency_ms,
+            status="success",
+            metadata={"via": "llm_router"},
+        )
+    except Exception as exc:  # pragma: no cover - defensivo
+        # Nunca quebrar o call_llm por causa de tracking
+        print(f"[llm_router] cost_event instrumentation falhou: {exc}")
+
+
 def call_llm(
     provider: str,
     model_id: str,
@@ -166,23 +199,38 @@ def call_llm(
     """
     Router universal. Retorna (response_text, usage_dict).
     usage_dict: {'input_tokens': int, 'output_tokens': int}
+
+    Instrumentado com cost_tracker (Sprint 0.3): cada chamada gera 1 cost_event.
+    Falhas no tracking NÃO levantam exceção (fail-safe).
     """
     provider = provider.lower()
+    start = time.time()
     if provider == "anthropic":
-        return _call_anthropic(model_id, system, user, temperature, max_tokens)
+        text_out, usage = _call_anthropic(model_id, system, user, temperature, max_tokens)
     elif provider == "openai":
-        return _call_openai(model_id, system, user, temperature, max_tokens)
+        text_out, usage = _call_openai(model_id, system, user, temperature, max_tokens)
     elif provider == "google":
-        return _call_google(model_id, system, user, temperature, max_tokens)
+        text_out, usage = _call_google(model_id, system, user, temperature, max_tokens)
     elif provider == "groq":
-        return _call_groq(model_id, system, user, temperature, max_tokens)
+        text_out, usage = _call_groq(model_id, system, user, temperature, max_tokens)
     elif provider == "openrouter":
-        return _call_openrouter(model_id, system, user, temperature, max_tokens)
+        text_out, usage = _call_openrouter(model_id, system, user, temperature, max_tokens)
     else:
         # Custom OpenAI-compatible
-        return _call_openai(
+        text_out, usage = _call_openai(
             model_id, system, user, temperature, max_tokens, provider=provider
         )
+
+    # Instrumentação fail-safe — nunca quebra o call_llm
+    latency_ms = int((time.time() - start) * 1000)
+    _instrument_cost_event(
+        provider=provider,
+        model_id=model_id,
+        usage=usage if isinstance(usage, dict) else {},
+        latency_ms=latency_ms,
+    )
+
+    return text_out, usage
 
 
 def _join_url(base_url: str, suffix: str) -> str:
