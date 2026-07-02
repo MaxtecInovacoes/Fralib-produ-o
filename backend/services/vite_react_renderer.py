@@ -3467,6 +3467,7 @@ def _resolve_cinematic_section_order(archetype: str, seed: int | None, variation
                 segment=str(archetype or "").lower(),
                 subnicho=str((variation or {}).get("subnicho") or ""),
                 visual_lane=str((variation or {}).get("visual_lane") or ""),
+                prompt_priority=str((variation or {}).get("prompt_priority") or ""),
             )
             _lane_blocks = _lane.get("blocks") or {}
             if not _stats_variant:
@@ -3927,6 +3928,8 @@ def _cinematic_copy(facts: dict[str, Any]) -> dict[str, Any]:
         segment=segment,
         subnicho=subnicho,
         visual_lane=str(variation.get("visual_lane") or ""),
+        prompt_priority=str(variation.get("prompt_priority") or ""),
+        tier=str(facts.get("tier") or ""),
     )
     lane_copy = lane.get("copy") if isinstance(lane.get("copy"), dict) else {}
 
@@ -4396,6 +4399,8 @@ def _enforce_premium_visual_floor(variation: dict[str, Any], facts: dict[str, An
             segment=segment,
             subnicho=subnicho,
             visual_lane=str(v.get("visual_lane") or ""),
+            prompt_priority=str(v.get("prompt_priority") or ""),
+            tier=str((facts or {}).get("tier") or ""),
         )
         lane_blocks = lane.get("blocks") if isinstance(lane.get("blocks"), dict) else {}
     except Exception:
@@ -7667,6 +7672,7 @@ def _inject_pole_tokens(facts: dict[str, Any]) -> dict[str, Any]:
         subniche=subniche,
         tags=tags if isinstance(tags, list) else [],
         description=description,
+        tier=str(facts.get("tier") or ""),
     )
 
     # Adicionar ao facts

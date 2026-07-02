@@ -52,7 +52,12 @@ def resolve_cinematic_block_plan(
     hero_layout = str(variation.get("hero_layout") or "")
     section_order_style = str(variation.get("section_order_style") or "credibility_first")
     visual_lane = str(variation.get("visual_lane") or "")
-    lane = resolve_visual_lane(segment=segment, subnicho=str(variation.get("subnicho") or ""), visual_lane=visual_lane)
+    lane = resolve_visual_lane(
+        segment=segment,
+        subnicho=str(variation.get("subnicho") or ""),
+        visual_lane=visual_lane,
+        prompt_priority=str(variation.get("prompt_priority") or ""),
+    )
     lane_blocks = lane.get("blocks") if isinstance(lane.get("blocks"), dict) else {}
     lane_copy = lane.get("copy") if isinstance(lane.get("copy"), dict) else {}
     pricing_variant = str(variation.get("pricing_variant") or lane_blocks.get("pricing_variant") or "plan_grid")

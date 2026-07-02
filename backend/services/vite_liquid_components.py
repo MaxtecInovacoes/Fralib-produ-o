@@ -188,6 +188,54 @@ POLO_TOKENS: dict[str, dict[str, Any]] = {
 
 
 # ═══════════════════════════════════════════════════════════════════════════
+# POLO_TOKENS_BY_TIER — overrides de tokens por tier do lead
+# ═══════════════════════════════════════════════════════════════════════════
+# Quick Win (feedback 2026-07-02):
+#   - Sistema era unidimensional: nicho -> polo + intensity.
+#   - Agora tier (ELITE/PREMIUM) aumenta a ambicao visual nos tokens.
+#   - Isso corrige o caso "Academia High Fitness" caindo em wellness com
+#     motion=minimal — o tier premium sobe para visible/cinematic.
+#   - ELITE > PREMIUM > STANDARD (cada nivel adiciona mais overrides).
+
+_POLO_TIER_MOTION: dict[str, tuple[str, str]] = {
+    # (tier_upper, (fallback_base, elited_premium_override))
+    # wellness lane (minimal -> visible)
+    "minimal": ("visible", "composed"),
+    # bold lane (sharp -> max)
+    "sharp": ("cinematic", "max"),
+    # corporate lane (composed -> cinematic)
+    "composed": ("cinematic", "max"),
+}
+
+POLO_TOKENS_BY_TIER: dict[str, dict[str, Any]] = {
+    "ELITE": {
+        # Motion mais presente
+        "motion_intensity": 0.8,
+        # Hero mais impactante
+        "hero_scale": "clamp(3.5rem, 9vw, 7rem)",
+        # Secoes com mais impacto
+        "section_gap": "0rem",
+        "section_padding_y": "3rem",
+        # Sombras mais profundas
+        "shadow_card": "0 16px 48px rgba(0,0,0,0.15)",
+        "shadow_glow": "0 16px 48px rgba(59,130,246,0.3)",
+    },
+    "PREMIUM": {
+        "motion_intensity": 0.6,
+        "hero_scale": "clamp(3rem, 8vw, 6rem)",
+        "section_gap": "1rem",
+        "section_padding_y": "4rem",
+        "shadow_card": "0 12px 36px rgba(0,0,0,0.12)",
+        "shadow_glow": "0 12px 36px rgba(59,130,246,0.25)",
+    },
+    "STANDARD": {
+        # Mantem o que o polo ja definiu — nenhuma intervencao.
+    },
+}
+
+
+
+# ═══════════════════════════════════════════════════════════════════════════
 # HERO DISPLAY MODES - Por polo
 # ═══════════════════════════════════════════════════════════════════════════
 
@@ -410,6 +458,7 @@ def infer_aesthetic_pole(
     subniche: str = "",
     tags: list[str] | None = None,
     description: str = "",
+    tier: str | None = None,
 ) -> PoleInfo:
     """
     Infere o polo estético baseado no segmento, subnicho e contexto.
@@ -419,6 +468,8 @@ def infer_aesthetic_pole(
         subniche: Subnicho ou especialidade (ex: "musculacao")
         tags: Tags adicionais do lead (ex: ["crossfit", "funcional"])
         description: Descrição do negócio
+        tier: Tier do lead — ELITE/PREMIUM/STANDARD. Defaults para
+              STANDARD se omitido. Aplica overrides de ambicao visual.
 
     Returns:
         PoleInfo com polo, heat, tokens, temperature e display_mode
@@ -427,6 +478,9 @@ def infer_aesthetic_pole(
         >>> pole = infer_aesthetic_pole("academia", "musculacao")
         >>> print(pole["pole"])
         "bold"
+        >>> pole = infer_aesthetic_pole("nutri", tier="ELITE")
+        >>> print(pole["tokens"]["motion_intensity"])
+        0.8
     """
     # Combinar texto para análise
     text = " ".join([
@@ -454,7 +508,14 @@ def infer_aesthetic_pole(
 
     # Obter config do polo
     config = POLE_TRIGGERS[pole]
-    tokens = POLO_TOKENS[pole]
+    tokens = dict(POLO_TOKENS[pole])
+
+    # Quick Win (feedback 2026-07-02): tier override — ELITE/PREMIUM
+    # aumentam a ambicao visual nos tokens liquidos.
+    tier_upper = str(tier or "").upper()
+    if tier_upper in POLO_TOKENS_BY_TIER:
+        tier_overrides = POLO_TOKENS_BY_TIER[tier_upper]
+        tokens.update(tier_overrides)
 
     return {
         "pole": pole,

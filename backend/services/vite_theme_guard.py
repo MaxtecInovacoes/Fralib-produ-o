@@ -96,6 +96,8 @@ def resolve_cinematic_theme(
         segment=segment,
         subnicho=str(facts.get("subnicho") or facts.get("subniche") or ""),
         visual_lane=str(variation.get("visual_lane") or ""),
+        prompt_priority=str(variation.get("prompt_priority") or ""),
+        tier=str(facts.get("tier") or ""),
     )
 
     lane_palette = lane.get("fallback_palette") if isinstance(lane.get("fallback_palette"), dict) else {}

@@ -85,11 +85,14 @@ class TestAnalisarConcorrencia:
         assert "tratamentos" in result["patterns"]["secoes_obrigatorias"]
 
     def test_analisar_concorrencia_unknown_uses_default(self):
-        """Test that unknown niche falls back to default."""
+        """Test that unknown niche falls back explicitly (QW #2: 'academia' silencioso removido)."""
         result = analisar_concorrencia(nicho="xyz_unknown_niche_12345")
 
-        # Should use default fallback
-        assert result["nicho"] in ["academia"]  # Default fallback
+        # QW #2: nicho retorna None para indicar que nao ha mapeamento.
+        # Padroes ainda usam fallback explicito internamente.
+        assert result["nicho"] is None
+        assert result["is_fallback"] is True
+        assert result["source"] == "fallback-explicito"
 
     def test_analisar_concorrencia_cidade_preserved(self):
         """Test that cidade is preserved in output."""

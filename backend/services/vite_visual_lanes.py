@@ -818,11 +818,35 @@ def _lane_variant_defaults(lane_id: str) -> dict[str, str]:
     return {"pricing_variant": "plan_grid", "stats_variant": "inline_hero_stats"}
 
 
-def _lane_attitude_defaults(lane_id: str) -> dict[str, str]:
-    """Physical design tokens that make existing blocks behave like liquid blocks."""
+def _lane_attitude_with_boosts(
+    lane_id: str,
+    prompt_priority: str | None = None,
+    tier: str | None = None,
+) -> dict[str, str]:
+    """Physical design tokens — supports optional boosts from prompt_priority and tier.
+
+    Quick Win (feedback 2026-07-02):
+      - Sistema era unidimensional (nicho -> polo + intensity).
+      - Agora aceita boosts por prompt_priority e tier em wellness lanes.
+      - Defaults nao dependem desses sinais (fallback estavel).
+    """
     lane_id = str(lane_id or "")
+
+    # ── Wellness lanes: health-trust, botanical-editorial, clinical-soft, etc.
+    WELLNESS_LANES = (
+        "botanical-editorial",
+        "clinical-soft",
+        "coastal-light",
+        "clinic-ivory",
+        "rose-clay",
+        "health-trust",
+        "editorial-light",
+    )
+    is_wellness = any(token in lane_id for token in WELLNESS_LANES)
+
+    # ── Collect base tokens ────────────────────────────────────────────────
     if not lane_id:
-        return {
+        base = {
             "aesthetic_mode": "balanced",
             "spacing_density": "normal",
             "radius_mode": "balanced",
@@ -835,8 +859,8 @@ def _lane_attitude_defaults(lane_id: str) -> dict[str, str]:
             "image_treatment": "clean",
         }
 
-    if any(token in lane_id for token in ("iron-pulse", "neon-grid", "brutal-mono", "street-red", "conversion-bold")):
-        return {
+    elif any(token in lane_id for token in ("iron-pulse", "neon-grid", "brutal-mono", "street-red", "conversion-bold")):
+        base = {
             "aesthetic_mode": "impact",
             "spacing_density": "compressed",
             "radius_mode": "sharp",
@@ -849,8 +873,8 @@ def _lane_attitude_defaults(lane_id: str) -> dict[str, str]:
             "image_treatment": "high_contrast",
         }
 
-    if any(token in lane_id for token in ("graphite-core", "studio-mono", "technical-precision")):
-        return {
+    elif any(token in lane_id for token in ("graphite-core", "studio-mono", "technical-precision")):
+        base = {
             "aesthetic_mode": "technical",
             "spacing_density": "normal",
             "radius_mode": "sharp",
@@ -863,8 +887,8 @@ def _lane_attitude_defaults(lane_id: str) -> dict[str, str]:
             "image_treatment": "duotone",
         }
 
-    if any(token in lane_id for token in ("botanical-editorial", "clinical-soft", "coastal-light", "clinic-ivory", "rose-clay", "health-trust", "editorial-light")):
-        return {
+    elif is_wellness:
+        base = {
             "aesthetic_mode": "wellness",
             "spacing_density": "spacious",
             "radius_mode": "soft",
@@ -877,8 +901,8 @@ def _lane_attitude_defaults(lane_id: str) -> dict[str, str]:
             "image_treatment": "clean",
         }
 
-    if any(token in lane_id for token in ("heritage-reserve", "noir-gold", "midnight-club", "premium-clinic", "old-money-green", "copper-smoke")):
-        return {
+    elif any(token in lane_id for token in ("heritage-reserve", "noir-gold", "midnight-club", "premium-clinic", "old-money-green", "copper-smoke")):
+        base = {
             "aesthetic_mode": "premium",
             "spacing_density": "spacious",
             "radius_mode": "balanced",
@@ -891,8 +915,8 @@ def _lane_attitude_defaults(lane_id: str) -> dict[str, str]:
             "image_treatment": "grain",
         }
 
-    if any(token in lane_id for token in ("performance-fuel", "sports-lab", "cinematic-soft")):
-        return {
+    elif any(token in lane_id for token in ("performance-fuel", "sports-lab", "cinematic-soft")):
+        base = {
             "aesthetic_mode": "dynamic",
             "spacing_density": "normal",
             "radius_mode": "balanced",
@@ -905,18 +929,49 @@ def _lane_attitude_defaults(lane_id: str) -> dict[str, str]:
             "image_treatment": "high_contrast",
         }
 
-    return {
-        "aesthetic_mode": "balanced",
-        "spacing_density": "normal",
-        "radius_mode": "balanced",
-        "container_strategy": "contained",
-        "typography_scale": "strong",
-        "heading_style": "clean",
-        "surface_depth": "elevated",
-        "overlap_mode": "none",
-        "motion_intensity": "composed",
-        "image_treatment": "clean",
-    }
+    else:
+        base = {
+            "aesthetic_mode": "balanced",
+            "spacing_density": "normal",
+            "radius_mode": "balanced",
+            "container_strategy": "contained",
+            "typography_scale": "strong",
+            "heading_style": "clean",
+            "surface_depth": "elevated",
+            "overlap_mode": "none",
+            "motion_intensity": "composed",
+            "image_treatment": "clean",
+        }
+
+    # ── Boost: wellness lanes respond to prompt_priority ───────────────────
+    if is_wellness and prompt_priority:
+        pp = prompt_priority.lower()
+        if pp == "trust":
+            # "Academia High Fitness" caso: wellness lane com sinal de
+            # confianca. motion sobe de minimal -> visible (presenca discreta).
+            base["motion_intensity"] = "visible"
+        elif pp == "presence":
+            # presenca maxima: motion sobe para sharp.
+            base["motion_intensity"] = "sharp"
+
+    # ── Boost: tier multiplier on all lanes ───────────────────────────────
+    if tier:
+        tier_upper = tier.upper()
+        current = base["motion_intensity"]
+        if tier_upper in ("ELITE", "PREMIUM"):
+            if current == "minimal":
+                base["motion_intensity"] = "visible"
+            elif current == "visible":
+                base["motion_intensity"] = "composed"
+            elif current == "composed":
+                base["motion_intensity"] = "cinematic"
+
+    return base
+
+
+def _lane_attitude_defaults(lane_id: str) -> dict[str, str]:
+    """Physical design tokens that make existing blocks behave like liquid blocks."""
+    return _lane_attitude_with_boosts(lane_id)
 
 
 def get_family_copy_defaults(family: str) -> dict[str, str]:
@@ -961,6 +1016,8 @@ def resolve_visual_lane(
     visual_lane: str = "",
     tags: list[str] | None = None,
     description: str = "",
+    prompt_priority: str | None = None,
+    tier: str | None = None,
 ) -> dict[str, Any]:
     family = _segment_family(segment, subnicho)
     lanes = list(_LANES.get(family) or _LANES["default"])
@@ -975,7 +1032,13 @@ def resolve_visual_lane(
     lane = dict(lanes[index % len(lanes)])
     lane_blocks = dict(lane.get("blocks") or {})
     variant_defaults = _lane_variant_defaults(str(lane.get("id") or ""))
-    attitude_defaults = _lane_attitude_defaults(str(lane.get("id") or ""))
+    # Quick Win (feedback 2026-07-02): boosts de prompt_priority e tier
+    # agora chegam aqui e afetam motion_intensity em wellness lanes.
+    attitude_defaults = _lane_attitude_with_boosts(
+        str(lane.get("id") or ""),
+        prompt_priority=prompt_priority,
+        tier=tier,
+    )
     for key, value in {**variant_defaults, **attitude_defaults}.items():
         lane_blocks.setdefault(key, value)
     lane["blocks"] = lane_blocks
@@ -990,6 +1053,7 @@ def resolve_visual_lane(
         subniche=subnicho,
         tags=tags,
         description=description,
+        tier=tier,
     )
 
     return {
