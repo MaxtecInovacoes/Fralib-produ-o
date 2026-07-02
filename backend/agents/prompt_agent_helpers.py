@@ -130,7 +130,7 @@ def _extract_keyword_candidates(text: str) -> list[str]:
 
 
 def _sanitize_primary_term(value: Any) -> str:
-    clean = " ".join(str(value or "").split()).strip(" -–—:;,.")
+    clean = " ".join(str(value or "").replace("_", " ").split()).strip(" -–—:;,.")
     if not clean:
         return ""
     low = _normalize(clean)

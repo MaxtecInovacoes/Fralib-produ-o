@@ -5,7 +5,7 @@
 > Se `CLAUDE.md` e `AGENTS.md` divergirem, **`AGENTS.md` vence**.
 >
 > **Pipeline atual**: Vite/React como engine PADRÃO (Sprint 12.9+).
-> 26 segmentos cobertos via LLM cascade. Fail-fast total implementado.
+> 13 famílias canônicas + 22 subnichos líquidos cobertos no Studio React. Fail-fast total implementado.
 > Qualquer erro na geração falha fechado — sem fallbacks genéricos.
 > Em produção, publicação fora de `vite_react` falha fechado com
 > `FRALIB_STRICT_CANONICAL_PUBLISH=1` ou `FRALIB_ENV=prod`.
@@ -15,7 +15,7 @@
 - **Gerador de site: Vite/React** (`backend/services/vite_react_renderer.py`) — engine PADRÃO desde Sprint 12.9.
 - **OpenUI** (`backend/services/openui_renderer.py`) — rota alternativa, também fail-fast.
 - **Política LLM do Vite**: `FRALIB_VITE_LLM_POLICY=creative_plan` por padrão. LLM escolhe copy/direção em JSON; Studio React gera TSX.
-- **Blocos líquidos**: `creative_plan` agora materializa `data-pole` no app, tokens de geometria/cor/tipografia, LGPD e CTAs do mesmo tema.
+- **Blocos líquidos**: `creative_plan` agora materializa `data-pole`, tokens de geometria/cor/tipografia/motion/hero no `blockPlan`; `DESIGN.md` entra no prompt Vite.
 - **SEO/localização Vite**: keywords agora combinam nicho + intenção regional (`agendar`, `preço`, `perto de mim`, WhatsApp) e `LocationSection` usa um único Google Maps real quando há endereço.
 - **Lead Supply contínuo**: Hunter/Caio alimentam inventário fora do ciclo do site; sync recupera Caio `raw/error_retry`, e Franz não reabre falha permanente automaticamente.
 - **Fail-fast total**: qualquer erro na geração levanta exceção clara — sem sites genéricos.
@@ -37,7 +37,7 @@ Mudou a pipeline, código, config ou docs? Atualizar **`AGENTS.md` primeiro** e 
 | Doc | Função |
 |---|---|
 | [`AGENTS.md`](AGENTS.md) | Fonte canônica — arquitetura, pipeline, sprints 0-12, ROI |
-| `AGENTS.md` seção 22 | Sprint 11-12: Migração Vite/React, 26 segmentos, caroço rico |
+| `AGENTS.md` seção 22 | Migração Vite/React, famílias/subnichos líquidos, caroço rico |
 | `AGENTS.md` seção 21 | Sprints 5-9 SDK: tracing, sub-agentes, RAG, auto-melhoria |
 | `AGENTS.md` seção 7 | Os 46 patches canônicos (OpenUI path) |
 | [`docs/ONE_TRUTH_CANONICAL_STATE.md`](docs/ONE_TRUTH_CANONICAL_STATE.md) | Estado canônico de filas, locks, billing |
@@ -89,7 +89,7 @@ FRALIB_AUTO_IMPROVE=1
 | Custo por site | variável | **Previsível** (Haiku→Sonnet→Opus) |
 | Fail-fast | Studio fallback genérico | **Erro claro** se LLM falhar |
 | Debug time | 30min | **2min** |
-| Variedade visual | 1 genérico | **26 segmentos + 6 Awwwards** |
+| Variedade visual | 1 genérico | **13 famílias + 22 subnichos + creative_plan líquido** |
 | Sinais SDK | 4/13 | **13/13** |
 | Cobertura testes | 76 | **130+** (12+ suites) |
 | Tela preta no site | comum (sem React) | **impossível** (post-process {var}) |
@@ -184,6 +184,7 @@ Para commits técnicos, antes de declarar "pronto", verificar:
 - ✅ **21+ checks** no pre-commit hook
 - ✅ **VPS rodando** com `FRALIB_BUILDER_ENGINE=vite_react`
 - ✅ **Política LLM real**: `creative_plan` (JSON criativo + Studio React)
+- ✅ **Variação líquida validada**: 13 famílias canônicas, 22 subnichos com FAQ/contato/footer e teste `tests/test_vite_liquid_contract.py`
 - ✅ **Fail-fast total**: Qualquer erro na geração levanta exceção clara — sem sites genéricos
 - ⚠️ **SITES SAINDO IGUAIS?** → Verificar `docs/DIAGNOSTICO_VARIACAO_SITES.md`
 
@@ -193,7 +194,7 @@ Para commits técnicos, antes de declarar "pronto", verificar:
 |---|---|
 | `v1.14.0-baseline` | Migração Vite/React engine padrão |
 | `v1.14.1-baseline` | Wire caroço rico no LLM dispatcher |
-| `v1.14.2-baseline` | 26 segmentos + clean bundle + deploy |
+| `v1.14.2-baseline` | catálogo segment-aware + clean bundle + deploy |
 | `v1.14.3-baseline` | Lead name injection (Fio Nobre) |
 | `v1.14.4-baseline` | Post-process {var} placeholders |
 

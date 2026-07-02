@@ -35,12 +35,12 @@ def _assert_safe_test_database_url(value: str) -> None:
 
 _assert_safe_test_database_url(os.environ["DATABASE_URL"])
 
-# Adicionar backend ao path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'backend'))
-
-# Importar app FastAPI
-from server import app
-
+# Adicionar raiz e backend ao path
+_TESTS_DIR = os.path.dirname(__file__)
+_PROJECT_ROOT = os.path.dirname(_TESTS_DIR)
+for _path in (_PROJECT_ROOT, os.path.join(_PROJECT_ROOT, "backend")):
+    if _path not in sys.path:
+        sys.path.insert(0, _path)
 
 # ===== FIXTURES DE BANCO DE DADOS =====
 
@@ -89,6 +89,8 @@ async def client() -> Generator[AsyncClient, None, None]:
     Cliente HTTP assíncrono para testar a API.
     """
     from httpx import ASGITransport
+    from server import app
+
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         yield ac
@@ -214,9 +216,16 @@ def test_config():
 @pytest.fixture(autouse=True)
 def disable_rate_limiter():
     """Evita que cenarios independentes compartilhem o bucket por IP."""
-    from rate_limiter import limiter
+    try:
+        from backend.core.rate_limiter import limiter
+    except Exception:
+        yield
+        return
 
-    previous = limiter.enabled
+    previous = getattr(limiter, "enabled", None)
+    if previous is None:
+        yield
+        return
     limiter.enabled = False
     try:
         yield
@@ -225,8 +234,14 @@ def disable_rate_limiter():
 
 
 @pytest.fixture(autouse=True)
-def cleanup_test_database(db_session):
+def cleanup_test_database(request):
     """Limpa o banco de dados antes e depois de cada teste."""
+    db_fixtures = {"db_session", "test_user", "test_user_token", "auth_headers", "client"}
+    if not (db_fixtures & set(getattr(request, "fixturenames", ()))):
+        yield
+        return
+
+    db_session = request.getfixturevalue("db_session")
     try:
         db_session.execute(text('TRUNCATE TABLE users, licencas, pipeline_state, jobs, pipeline_queue RESTART IDENTITY CASCADE'))
         db_session.commit()

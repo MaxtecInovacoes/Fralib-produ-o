@@ -575,7 +575,7 @@ async def executar_pipeline_completo(
                     from agents.keyword_research import pesquisar_keywords_nicho
 
                     state.keyword_research = pesquisar_keywords_nicho(
-                        state.segmento, state.lead_obj.lead.cidade
+                        state.segmento, state.lead_obj.lead.cidade, tenant_id=tenant_id
                     )
                 except Exception as e:
                     # FIX CRÍTICO: silent failure - SEO do site pode estar incompleto
@@ -618,7 +618,7 @@ async def executar_pipeline_completo(
 
         def _run_kw():
             try:
-                _kw_result[0] = pesquisar_keywords_nicho(state.segmento, state.cidade)
+                _kw_result[0] = pesquisar_keywords_nicho(state.segmento, state.cidade, tenant_id=tenant_id)
                 _log("  Keywords: OK", "success")
             except Exception as _e:
                 logger.warning(f"[Pipeline] Keyword research erro: {_e}")
@@ -3360,4 +3360,3 @@ async def _executar_pipeline_a_partir_fase2(state, tenant_id, config):
             update_pipeline_state,
             SessionLocal,
         )
-

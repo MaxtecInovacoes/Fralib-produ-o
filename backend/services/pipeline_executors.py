@@ -48,7 +48,7 @@ async def executar_fase1_hunter(
 
     def _run_kw():
         try:
-            _kw_result[0] = pesquisar_keywords_nicho(state.segmento, state.cidade)
+            _kw_result[0] = pesquisar_keywords_nicho(state.segmento, state.cidade, tenant_id=tenant_id)
             if log_fn:
                 log_fn("  Keywords: OK", "success")
         except Exception as _e:
@@ -158,6 +158,7 @@ async def executar_fase3_jina(
                     cidade=state.cidade,
                     nome_negocio=state.lead_nome or "",
                     concorrentes_urls=getattr(state, "_concorrentes_urls", None),
+                    tenant_id=getattr(state, "tenant_id", None),
                 )
                 state.jina_intel_dict = _jina_intel
                 if formatar_inteligencia:

@@ -26,19 +26,24 @@ QUERIES_TRANSACIONAIS = {
     "barbearia": "barbearia {cidade} corte masculino agendamento preço",
     "salao": "salão de beleza {cidade} progressiva coloração agendamento",
     "clinica": "clínica médica {cidade} consulta particular agendamento preço",
+    "dentista": "dentista {cidade} consulta avaliação implante clareamento preço",
     "odontologia": "dentista {cidade} implante clareamento consulta preço",
     "estetica": "clínica estética {cidade} tratamento preço agendamento",
     "nutricionista": "nutricionista {cidade} consulta preço plano alimentar",
     "psicologia": "psicólogo {cidade} consulta particular preço agendamento",
+    "advogado": "advogado {cidade} consulta honorários trabalhista família",
     "advocacia": "advogado {cidade} consulta honorários trabalhista",
     "contabilidade": "contador {cidade} MEI abertura empresa preço",
     "imobiliaria": "imobiliária {cidade} apartamento comprar alugar",
+    "energia_solar": "energia solar {cidade} orçamento simulação financiamento fotovoltaica",
     "restaurante": "restaurante {cidade} delivery reserva cardápio",
     "pizzaria": "pizzaria {cidade} delivery pedido promoção",
     "padaria": "padaria {cidade} encomenda bolo pão artesanal",
+    "pet_shop": "pet shop {cidade} banho tosa veterinário preço agendamento",
     "pet": "pet shop {cidade} banho tosa veterinário preço",
     "farmacia": "farmácia {cidade} manipulação delivery plantão",
     "escola": "escola {cidade} matrícula mensalidade ensino",
+    "oficina": "oficina mecânica {cidade} orçamento revisão freio troca óleo",
     "auto_pecas": "mecânica {cidade} orçamento revisão preço",
     "arquitetura": "arquiteto {cidade} projeto residencial preço",
     "fotografia": "fotógrafo {cidade} ensaio casamento preço",
@@ -49,11 +54,72 @@ QUERIES_CONCORRENCIA = {
     "academia": "melhor academia {cidade} avaliações",
     "barbearia": "melhor barbearia {cidade} avaliações",
     "nutricionista": "melhor nutricionista {cidade} avaliações resultado",
+    "dentista": "melhor dentista {cidade} avaliações implante",
     "odontologia": "melhor dentista {cidade} avaliações implante",
     "estetica": "melhor clínica estética {cidade} resultado antes depois",
     "restaurante": "melhor restaurante {cidade} avaliações",
+    "salao": "melhor salão de beleza {cidade} avaliações",
+    "clinica": "melhor clínica médica {cidade} avaliações consulta",
+    "imobiliaria": "melhor imobiliária {cidade} avaliações imóveis",
+    "energia_solar": "melhor empresa energia solar {cidade} avaliações",
+    "oficina": "melhor oficina mecânica {cidade} avaliações",
+    "pet_shop": "melhor pet shop {cidade} avaliações banho tosa",
+    "advogado": "melhor advogado {cidade} avaliações consulta",
     "advocacia": "melhor advogado {cidade} trabalhista resultado",
 }
+
+SEGMENT_ALIASES = {
+    "advogado": "advogado",
+    "advocacia": "advogado",
+    "dentista": "dentista",
+    "odontologia": "dentista",
+    "odontologico": "dentista",
+    "oficina": "oficina",
+    "mecanica": "oficina",
+    "auto pecas": "oficina",
+    "auto_pecas": "oficina",
+    "pet_shop": "pet_shop",
+    "pet shop": "pet_shop",
+    "pet": "pet_shop",
+    "energia_solar": "energia_solar",
+    "energia solar": "energia_solar",
+    "solar": "energia_solar",
+}
+
+INTENT_TEMPLATES = {
+    "academia": ("academia perto de mim", "aula experimental", "mensalidade", "horário de funcionamento"),
+    "barbearia": ("barbearia perto de mim", "agendar corte", "preço corte masculino", "barba e cabelo"),
+    "nutricionista": ("nutricionista perto de mim", "consulta nutricional", "preço nutricionista", "plano alimentar"),
+    "estetica": ("clínica estética perto de mim", "limpeza de pele", "agendar avaliação estética", "tratamento facial preço"),
+    "clinica": ("clínica perto de mim", "consulta particular", "marcar consulta", "convênio ou particular"),
+    "dentista": ("dentista perto de mim", "avaliação odontológica", "clareamento preço", "implante dentário"),
+    "advogado": ("advogado perto de mim", "consulta advogado", "honorários advogado", "advogado trabalhista"),
+    "energia_solar": ("energia solar orçamento", "simulação energia solar", "financiamento fotovoltaico", "placas solares"),
+    "imobiliaria": ("imobiliária perto de mim", "apartamento para alugar", "comprar casa", "agendar visita imóvel"),
+    "oficina": ("oficina mecânica perto de mim", "orçamento revisão", "troca de óleo", "mecânico de confiança"),
+    "pet_shop": ("pet shop perto de mim", "banho e tosa", "veterinário", "agendar banho pet"),
+    "restaurante": ("restaurante perto de mim", "delivery", "cardápio", "reservar mesa"),
+    "salao": ("salão de beleza perto de mim", "agendar salão", "escova preço", "manicure"),
+}
+
+
+def _normalize_segment_key(segmento: str) -> str:
+    raw = re.sub(r"\s+", " ", str(segmento or "").lower().replace("_", " ")).strip()
+    if raw in SEGMENT_ALIASES:
+        return SEGMENT_ALIASES[raw]
+    for key in QUERIES_TRANSACIONAIS:
+        if key.replace("_", " ") in raw or raw in key.replace("_", " "):
+            return key
+    for alias, target in SEGMENT_ALIASES.items():
+        if alias in raw:
+            return target
+    return raw.replace(" ", "_")
+
+
+def _cache_segment(segmento: str, tenant_id: int | str | None = None) -> str:
+    scope = str(tenant_id or "global").strip().lower()
+    safe_scope = re.sub(r"[^a-z0-9_.-]+", "_", scope)[:60] or "global"
+    return f"{safe_scope}::{_normalize_segment_key(segmento)}"
 
 
 def _get_db_conn():
@@ -92,14 +158,14 @@ def _garantir_tabela():
         print(f"[KW] Erro ao criar tabela: {e}")
 
 
-def _cache_get(segmento: str, cidade: str) -> str | None:
+def _cache_get(segmento: str, cidade: str, tenant_id: int | str | None = None) -> str | None:
     """Retorna dados do cache se válidos (< 30 dias)."""
     try:
         conn = _get_db_conn()
         cur = conn.cursor()
         cur.execute(
             "SELECT dados, atualizado_em FROM keyword_cache WHERE segmento=%s AND cidade=%s",
-            (segmento.lower(), cidade.lower()),
+            (_cache_segment(segmento, tenant_id), cidade.lower()),
         )
         row = cur.fetchone()
         conn.close()
@@ -118,7 +184,7 @@ def _cache_get(segmento: str, cidade: str) -> str | None:
         return None
 
 
-def _cache_set(segmento: str, cidade: str, dados: str):
+def _cache_set(segmento: str, cidade: str, dados: str, tenant_id: int | str | None = None):
     """Salva ou atualiza cache."""
     try:
         conn = _get_db_conn()
@@ -130,7 +196,7 @@ def _cache_set(segmento: str, cidade: str, dados: str):
             ON CONFLICT (segmento, cidade) DO UPDATE
                 SET dados = EXCLUDED.dados, atualizado_em = NOW()
         """,
-            (segmento.lower(), cidade.lower(), dados),
+            (_cache_segment(segmento, tenant_id), cidade.lower(), dados),
         )
         conn.commit()
         conn.close()
@@ -181,7 +247,7 @@ def _extrair_keywords_do_texto(texto: str, segmento: str, cidade: str) -> list:
     return keywords
 
 
-def pesquisar_keywords_nicho(segmento: str, cidade: str) -> str:
+def pesquisar_keywords_nicho(segmento: str, cidade: str, tenant_id: int | str | None = None) -> str:
     """
     Pesquisa keywords transacionais do nicho+cidade via Jina.
     Cache 30 dias no PostgreSQL.
@@ -190,13 +256,13 @@ def pesquisar_keywords_nicho(segmento: str, cidade: str) -> str:
     _garantir_tabela()
 
     # Verificar cache
-    cached = _cache_get(segmento, cidade)
+    cached = _cache_get(segmento, cidade, tenant_id=tenant_id)
     if cached:
         return cached
 
     print(f"[KW] Pesquisando keywords: {segmento} em {cidade}...")
 
-    seg_lower = segmento.lower()
+    seg_lower = _normalize_segment_key(segmento)
 
     # Encontrar query transacional para o nicho
     query_transacional = None
@@ -253,6 +319,13 @@ def pesquisar_keywords_nicho(segmento: str, cidade: str) -> str:
             linhas.append(f"  - {t}")
         linhas.append("")
 
+    intent_terms = INTENT_TEMPLATES.get(seg_lower, ())
+    if intent_terms:
+        linhas.append("OPORTUNIDADES POR INTENÇÃO LOCAL:")
+        for term in intent_terms:
+            linhas.append(f"  - {term} {cidade}")
+        linhas.append("")
+
     if kw_transacionais:
         linhas.append("INTENÇÃO TRANSACIONAL (pessoas prontas para pagar):")
         for kw in kw_transacionais[:8]:
@@ -275,6 +348,6 @@ def pesquisar_keywords_nicho(segmento: str, cidade: str) -> str:
     resultado = "\n".join(linhas)
 
     # Salvar no cache
-    _cache_set(segmento, cidade, resultado)
+    _cache_set(segmento, cidade, resultado, tenant_id=tenant_id)
 
     return resultado

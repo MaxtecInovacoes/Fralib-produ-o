@@ -71,7 +71,7 @@ está **quebrando o sistema**. Faça pela pipeline.
 | Worker daemon | Python + asyncio | `worker.py` (raiz) | Processa jobs da fila |
 | **Gerador de site PADRÃO** | **Vite/React** | `backend/services/vite_react_renderer.py` | **Fase 9 — renderiza TSX** |
 | **Gerador alternativo** | **OpenUI** | `backend/services/openui_renderer.py` | **Fase 9 — HTML Tailwind** |
-| Contratos Vite/React | 7 contratos injetados | `backend/services/vite_contracts.py` | SEO, design, motion, A11y, factual, LGPD, deploy |
+| Contratos Vite/React | Contratos injetados | `backend/services/vite_react_renderer.py` + `DESIGN.md` | SEO, design, motion, A11y, factual, LGPD, deploy |
 | Fila/Locks | PostgreSQL | `backend/core/job_queue.py` + tabela `public.jobs` | Tabela canônica de jobs |
 | Builder Worker | Python daemon | `backend/services/builder_worker.py` | **Dispara Vite/React PADRÃO ou OpenUI alternativo** |
 | Quality Gate | Determinístico (não pula) | `backend/agents/html_quality_gate.py` | **Fase 9b — valida HTML** |
@@ -415,8 +415,8 @@ em produção.
 
 | Cache | Localização | Escopo |
 |---|---|---|
-| `keyword_cache` | Postgres | **deveria ser por tenant; hoje é global** |
-| `jina_cache` | arquivo | **global** |
+| `keyword_cache` | Postgres | por `tenant_id::segmento` ✓ |
+| `jina_cache` | arquivo | por `tenant_id+nicho+cidade` ✓ |
 | `design_director_cache` | `/tmp` | **global** |
 | `unsplash_cache` | arquivo | **global** |
 | `pexels_cache` | arquivo | **global** |
@@ -424,7 +424,8 @@ em produção.
 | `leads_cache` | Postgres | por `user_id` ✓ |
 | `pipeline_checkpoint` | arquivo | por `pipeline_id` ✓ |
 
-**Ação obrigatória**: 6 caches globais precisam ganhar `user_id`/`tenant_id` na chave.
+**Ação obrigatória**: 4 caches globais ainda precisam ganhar `user_id`/`tenant_id`
+na chave (`design_director_cache`, `unsplash_cache`, `pexels_cache`, `prd_cache`).
 
 ---
 
@@ -474,7 +475,7 @@ branch explícito `FRALIB_BUILDER_ENGINE=vite_react`.
 ## 17. Top 5 Arquivos para Entender/Alterar a Pipeline
 
 1. **`backend/services/vite_react_renderer.py`** — gerador canônico de sites.
-2. **`backend/services/vite_contracts.py`** — injeta contratos do builder Vite/React.
+2. **`DESIGN.md` + `backend/services/vite_react_renderer.py`** — contrato visual raiz e injeção do builder Vite/React.
 3. **`backend/endpoints/pipeline_orchestrator_service.py`** — coordena 11 fases.
 4. **`backend/services/pipeline_phases.py`** — enum canônico de 11 fases.
 5. **`backend/core/job_queue.py`** — fila Postgres com `claim_next`, `enqueue`.
@@ -557,6 +558,17 @@ Gate. Keywords SEO devem incluir intenção local/regional (`perto de mim`,
 líquido pode usar overlap entre seções, mas **nunca** deve sobrepor a seção que
 vem logo após `#stats`; cidades longas precisam quebrar linha sem cortar texto.
 
+Desde 2026-07-02, o caminho `creative_plan` precisa materializar todos os tokens
+líquidos escolhidos pela LLM (`aesthetic_mode`, `spacing_density`,
+`typography_scale`, `motion_intensity`, `hero_layout`, variantes de bloco,
+superfícies e `motion_mix`) no `blockPlan` final. O prompt Vite injeta
+`DESIGN.md` como contrato visual raiz. O resolvedor visual cobre 13 famílias
+canônicas (`academia`, `advogado`, `barbearia`, `clinica`, `dentista`,
+`energia_solar`, `estetica`, `imobiliaria`, `nutricionista`, `oficina`,
+`pet_shop`, `restaurante`, `salao`) e o `agente_variacao` cobre 22 subnichos
+mapeados, todos com `hero`, `faq`, `contato` e `footer`. Teste canônico:
+`tests/test_vite_liquid_contract.py`.
+
 **Arquivos mantidos por compatibilidade** (não usados no caminho canônico, mas
 mantidos para evitar imports quebrados em outros módulos):
 - `backend/services/pipeline_renderer_support.py` — nome herdado, mas o conteúdo
@@ -577,7 +589,7 @@ mantidos para evitar imports quebrados em outros módulos):
 | 2 | `agents/caio.py` | 2 | Scorer determinístico de lead | ❌ Não | ❌ | 0/8 |
 | 3 | `utils/jina_intelligence.py` | utils | Análise Jina (web scraping + LLM) | ✅ Sim (chama `call_claude`) | ❌ | 0/8 |
 | 4 | `agents/agente_nicho.py` | 6 | Briefing do nicho + subnicho | ✅ Sim (1 call/lead) | ⚠️ Memória tier-1 | 1/8 |
-| 5 | `agents/agente_variacao.py` | 7 | Ordem de seções + templates | ⚠️ **Só fallback** (template canônico p/ 8 subnichos) | ⚠️ Memória tier-1 | 1/8 |
+| 5 | `agents/agente_variacao.py` | 7 | Ordem de seções + templates | ⚠️ **Só fallback** (template canônico p/ 22 subnichos) | ⚠️ Memória tier-1 | 1/8 |
 | 6 | `agents/arquiteto_mestre.py` | 8 | Orquestrador: 1 call própria + delega p/ bloco_estrutura (2 calls) e bloco_copy (4 calls) = **~7 calls/lead** | ✅ Sim (orquestrador LLM, delega 2 helpers) | ⚠️ Tem cache | 1/8 |
 | 7 | `agents/site_prompt_agent.py` | 8b | **Re-exporter** de 3 helpers: `prompt_agent_builder` (210L), `prompt_agent_context` (582L), `prompt_agent_helpers` (369L) = 1161 linhas. **NÃO é vazio** — é o **ponto de entrada canônico** que monta o `builder_prompt` antes do OpenUI | ❌ Não chama LLM (monta string) | ❌ | 0/8 |
 | 8 | `agents/sdr_langgraph/agent.py` | 11 | FSM do Franz (WhatsApp) | ✅ Sim (2 calls/turno) | ✅ **Tem** feedback/learning | 2/8 |
@@ -884,7 +896,11 @@ customizadas, hero_desc, CTAs, lifestyle_title, nav_items, etc.
 | 25 | oficina | Agendar servico | Revisao, Reparos |
 | 26 | farmacia | Ver produtos | Medicamentos |
 
-**Adicionar novo segmento** = adicionar bloco `elif` no `_generate_studio_fallback_files()`.
+No caminho líquido atual, esses termos comerciais são normalizados para 13
+famílias canônicas em `vite_visual_lanes.py` e 22 subnichos em
+`agente_variacao.py`. **Adicionar novo segmento/subnicho** = mapear família,
+lane/remix visual, keywords de intenção e template de subnicho; não criar HTML
+paralelo.
 
 ### 22.3 O "Caroço" (caroco) — Briefing Real do Lead
 
@@ -894,7 +910,9 @@ Agora (Sprint 12.12+): `vite_prompts.py` injeta briefing REAL via
 `_build_caroço_block(facts)` que agrega:
 - **7 contratos canônicos** (premium_delivery_contract, design_system, motion, A11y, factual, LGPD, deploy)
 - **Dados do lead** (nome, segmento, cidade, telefone, fotos, SEO, briefing)
-- **26 segmentos** com conteúdo segment-aware (svc_labels, hero, CTAs, lifestyle)
+- **13 famílias canônicas + 22 subnichos** com conteúdo segment-aware,
+  intenção local, svc_labels, hero, CTAs, lifestyle e FAQ
+- **Contrato raiz `DESIGN.md`** (spacing, contraste, motion, mapa, footer)
 - **GSAP code patterns** (useGSAP, ScrollTrigger, magnetic, useReveal)
 - **Modal obrigatório por nicho** (booking, contact, schedule)
 - **Blocos pré-fabricados** (Navbar, Hero, Services, Gallery, Lifestyle, Contact, Footer)
@@ -977,7 +995,7 @@ qualquer f-string esquecida no futuro.
 
 | Mudança | Commit | Impacto |
 |---|---|---|
-| Studio fallback com 26 segmentos | `4efbce3` | Zero cross-contaminação |
+| Studio catalog segment-aware | `4efbce3` | Zero cross-contaminação |
 | Lead name injetado no bundle | `c3a65cb` | Title real do lead no HTML |
 | LifestyleSection f-string | `f0147d6` | LifestyleTitle interpolado |
 | Import path backend/ | `7a864c3` | Render não falha no import |
@@ -987,6 +1005,7 @@ qualquer f-string esquecida no futuro.
 | Contrato determinístico de mídia | Sprint 12.20 | Injeta Hero/Galeria com fotos aprovadas quando LLM ignora imagens |
 | Guard nutrição esportiva | Sprint 12.20 | Permite "musculacao" só para nutricionista esportivo; mantém "matricula" bloqueado |
 | LLM policy copy-only | Sprint 14 | LLM preenche JSON curto; Studio/FraLib gera TSX, reduzindo token/custo |
+| Blocos líquidos + intenção SEO | 2026-07-02 | 13 famílias, 22 subnichos, `DESIGN.md` injetado, `creative_plan` materializado |
 
 ### 22.7.1 Fix Sprint 12.20 — BookingModal sem contaminação
 
@@ -1050,7 +1069,7 @@ v1.14.0-baseline-2026-06-25  - Migracao Vite/React engine padrao
 v1.14.0-lockpoint-2026-06-25 - backup
 v1.14.1-baseline-2026-06-25  - wire caroco rico no LLM dispatcher
 v1.14.1-lockpoint-2026-06-25
-v1.14.2-baseline-2026-06-25  - 26 segmentos + clean bundle + deploy
+v1.14.2-baseline-2026-06-25  - catalogo segment-aware + clean bundle + deploy
 v1.14.2-lockpoint-2026-06-25
 v1.14.3-baseline-2026-06-25  - lead name injection (c3a65cb)
 v1.14.3-lockpoint-2026-06-25

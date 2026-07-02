@@ -108,7 +108,7 @@ def sanitize_keyword_term(value: Any, *, limit: int = 60) -> str:
         >>> sanitize_keyword_term("  nutrition, clinic  ")
         'nutrition clinic'
     """
-    text = re.sub(r"\s+", " ", str(value or "")).strip(" ,.;:-")
+    text = re.sub(r"\s+", " ", str(value or "").replace("_", " ")).strip(" ,.;:-")
     if not text:
         return ""
     if len(text) > limit:

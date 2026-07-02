@@ -121,6 +121,20 @@ SUB_NICHO_TEMPLATES: dict[str, dict] = {
             "Tom acolhedor, cuidador, com linguagem tecnica mas acessivel."
         ),
     },
+    "nutricionista_infantil": {
+        "template_estrutura": "organic",
+        "template_hero": "hero-split",
+        "template_prova_social": "reviews-spotlight",
+        "template_cta": "cta-central",
+        "template_faq": "faq-two-col",
+        "ordem_das_secoes": [
+            "hero", "sobre", "servicos", "processo", "depoimentos", "faq", "contato", "footer",
+        ],
+        "angulo_de_comunicacao": (
+            "Cuidado familiar + linguagem simples para pais. Foco em rotina infantil, "
+            "orientacao alimentar e acompanhamento sem radicalismo. Tom acolhedor e seguro."
+        ),
+    },
     "clinica_estetica": {
         "template_estrutura": "minimal",
         "template_hero": "hero-center",
@@ -135,6 +149,48 @@ SUB_NICHO_TEMPLATES: dict[str, dict] = {
             "resultados visiveis, equipe qualificada. Tom sofisticado, premium."
         ),
     },
+    "clinica_odontologica": {
+        "template_estrutura": "minimal",
+        "template_hero": "hero-split",
+        "template_prova_social": "stats-cards",
+        "template_cta": "cta-central",
+        "template_faq": "faq-two-col",
+        "ordem_das_secoes": [
+            "hero", "sobre", "procedimentos", "processo", "depoimentos", "faq", "localizacao", "contato", "footer",
+        ],
+        "angulo_de_comunicacao": (
+            "Saude bucal + clareza de tratamento. Foco em avaliacao, orcamento, "
+            "procedimentos odontologicos e seguranca do paciente. Tom clinico e tranquilizador."
+        ),
+    },
+    "clinica_medica": {
+        "template_estrutura": "corporate",
+        "template_hero": "hero-split",
+        "template_prova_social": "stats-cards",
+        "template_cta": "cta-central",
+        "template_faq": "faq-two-col",
+        "ordem_das_secoes": [
+            "hero", "sobre", "especialidades", "processo", "depoimentos", "faq", "localizacao", "contato", "footer",
+        ],
+        "angulo_de_comunicacao": (
+            "Atendimento medico + confianca. Foco em consulta, exames, agenda e "
+            "continuidade de cuidado. Tom responsavel, claro e sem promessas clinicas."
+        ),
+    },
+    "estetica_facial": {
+        "template_estrutura": "minimal",
+        "template_hero": "hero-center",
+        "template_prova_social": "reviews-grid",
+        "template_cta": "cta-banner",
+        "template_faq": "faq-accordion",
+        "ordem_das_secoes": [
+            "hero", "procedimentos", "antes-depois", "processo", "depoimentos", "faq", "contato", "footer",
+        ],
+        "angulo_de_comunicacao": (
+            "Pele + autoestima. Foco em limpeza de pele, peeling, skincare e "
+            "avaliacao. Tom leve, elegante e orientado a agendamento."
+        ),
+    },
     "barbearia_premium": {
         "template_estrutura": "brutalist",
         "template_hero": "hero-diagonal",
@@ -142,11 +198,25 @@ SUB_NICHO_TEMPLATES: dict[str, dict] = {
         "template_cta": "cta-bottom",
         "template_faq": "faq-minimal",
         "ordem_das_secoes": [
-            "hero", "servicos", "galeria", "equipe", "depoimentos", "localizacao", "contato", "footer",
+            "hero", "servicos", "galeria", "equipe", "depoimentos", "faq", "localizacao", "contato", "footer",
         ],
         "angulo_de_comunicacao": (
             "Estilo + experiencia masculina. Foco em corte, barba, ambiente. "
             "Tom descontraido, masculino, com humor e atitude."
+        ),
+    },
+    "salao_beleza": {
+        "template_estrutura": "editorial",
+        "template_hero": "hero-split",
+        "template_prova_social": "reviews-grid",
+        "template_cta": "cta-bottom",
+        "template_faq": "faq-accordion",
+        "ordem_das_secoes": [
+            "hero", "servicos", "galeria", "experiencia", "depoimentos", "faq", "contato", "footer",
+        ],
+        "angulo_de_comunicacao": (
+            "Beleza + ritual de agenda. Foco em cabelo, cor, escova, manicure e "
+            "resultado visual. Tom caloroso, visual e orientado a reserva."
         ),
     },
     "academia_crossfit": {
@@ -163,6 +233,48 @@ SUB_NICHO_TEMPLATES: dict[str, dict] = {
             "comunidade. Tom intenso, motivacional, com energia alta."
         ),
     },
+    "academia_musculacao": {
+        "template_estrutura": "brutalist",
+        "template_hero": "hero-fullscreen",
+        "template_prova_social": "stats-horizontal",
+        "template_cta": "cta-floating",
+        "template_faq": "faq-minimal",
+        "ordem_das_secoes": [
+            "hero", "numeros", "modalidades", "estrutura", "depoimentos", "faq", "contato", "footer",
+        ],
+        "angulo_de_comunicacao": (
+            "Forca + estrutura. Foco em musculacao, hipertrofia, condicionamento "
+            "e aula experimental. Tom direto, visual forte e sem promessa vazia."
+        ),
+    },
+    "pilates_estudio": {
+        "template_estrutura": "organic",
+        "template_hero": "hero-split",
+        "template_prova_social": "reviews-spotlight",
+        "template_cta": "cta-central",
+        "template_faq": "faq-two-col",
+        "ordem_das_secoes": [
+            "hero", "sobre", "metodo", "beneficios", "depoimentos", "faq", "localizacao", "contato", "footer",
+        ],
+        "angulo_de_comunicacao": (
+            "Movimento consciente + cuidado postural. Foco em pilates, rotina, "
+            "mobilidade e acompanhamento. Tom calmo, preciso e acolhedor."
+        ),
+    },
+    "yoga_estudio": {
+        "template_estrutura": "organic",
+        "template_hero": "hero-center",
+        "template_prova_social": "reviews-spotlight",
+        "template_cta": "cta-central",
+        "template_faq": "faq-minimal",
+        "ordem_das_secoes": [
+            "hero", "sobre", "metodo", "aulas", "depoimentos", "faq", "localizacao", "contato", "footer",
+        ],
+        "angulo_de_comunicacao": (
+            "Presenca + bem-estar. Foco em pratica, respiracao, aulas e rotina. "
+            "Tom sereno, simples e com boa leitura mobile."
+        ),
+    },
     "restaurante_familiar": {
         "template_estrutura": "organic",
         "template_hero": "hero-split",
@@ -170,11 +282,53 @@ SUB_NICHO_TEMPLATES: dict[str, dict] = {
         "template_cta": "cta-central",
         "template_faq": "faq-accordion",
         "ordem_das_secoes": [
-            "hero", "cardapio", "sobre", "galeria", "depoimentos", "localizacao", "contato", "footer",
+            "hero", "cardapio", "sobre", "galeria", "depoimentos", "faq", "localizacao", "contato", "footer",
         ],
         "angulo_de_comunicacao": (
             "Sabor + acolhimento familiar. Foco em pratos caseiros, ingredientes "
             "frescos, ambiente acolhedor. Tom caloroso, tradicional."
+        ),
+    },
+    "pizzaria_tradicional": {
+        "template_estrutura": "organic",
+        "template_hero": "hero-fullscreen",
+        "template_prova_social": "reviews-carousel",
+        "template_cta": "cta-banner",
+        "template_faq": "faq-accordion",
+        "ordem_das_secoes": [
+            "hero", "cardapio", "sobre", "galeria", "depoimentos", "faq", "localizacao", "contato", "footer",
+        ],
+        "angulo_de_comunicacao": (
+            "Forno + pedido rapido. Foco em pizza, delivery, retirada e reserva. "
+            "Tom apetitoso, visual e orientado a WhatsApp."
+        ),
+    },
+    "hamburgueria_artesanal": {
+        "template_estrutura": "brutalist",
+        "template_hero": "hero-fullscreen",
+        "template_prova_social": "reviews-masonry",
+        "template_cta": "cta-banner",
+        "template_faq": "faq-minimal",
+        "ordem_das_secoes": [
+            "hero", "cardapio", "diferenciais", "galeria", "depoimentos", "faq", "localizacao", "contato", "footer",
+        ],
+        "angulo_de_comunicacao": (
+            "Sabor + impacto visual. Foco em burger artesanal, combo, pedido e "
+            "experiencia local. Tom forte, direto e com desejo de compra."
+        ),
+    },
+    "cafeteria_especial": {
+        "template_estrutura": "editorial",
+        "template_hero": "hero-split",
+        "template_prova_social": "reviews-spotlight",
+        "template_cta": "cta-central",
+        "template_faq": "faq-accordion",
+        "ordem_das_secoes": [
+            "hero", "menu", "sobre", "galeria", "depoimentos", "faq", "localizacao", "contato", "footer",
+        ],
+        "angulo_de_comunicacao": (
+            "Cafe + pausa urbana. Foco em bebida, ambiente, encontro e visita. "
+            "Tom editorial, sensorial e local."
         ),
     },
     "advocacia_trabalhista": {
@@ -189,6 +343,62 @@ SUB_NICHO_TEMPLATES: dict[str, dict] = {
         "angulo_de_comunicacao": (
             "Confianca + expertise juridica. Foco em direitos trabalhistas, "
             "rescisoes, FGTS. Tom serio, profissional, com clareza juridica."
+        ),
+    },
+    "advocacia_familia": {
+        "template_estrutura": "corporate",
+        "template_hero": "hero-split",
+        "template_prova_social": "stats-cards",
+        "template_cta": "cta-central",
+        "template_faq": "faq-two-col",
+        "ordem_das_secoes": [
+            "hero", "sobre", "areas-atuacao", "processo", "faq", "localizacao", "contato", "footer",
+        ],
+        "angulo_de_comunicacao": (
+            "Direito de familia + sigilo. Foco em divorcio, inventario, pensao e "
+            "orientacao inicial. Tom humano, serio e cuidadoso."
+        ),
+    },
+    "escritorio_contabil": {
+        "template_estrutura": "corporate",
+        "template_hero": "hero-split",
+        "template_prova_social": "stats-cards",
+        "template_cta": "cta-central",
+        "template_faq": "faq-two-col",
+        "ordem_das_secoes": [
+            "hero", "sobre", "servicos", "processo", "depoimentos", "faq", "contato", "footer",
+        ],
+        "angulo_de_comunicacao": (
+            "Contabilidade + previsibilidade. Foco em MEI, empresa, impostos, "
+            "abertura e rotina fiscal. Tom objetivo, confiavel e sem juridiquês."
+        ),
+    },
+    "imobiliaria_residencial": {
+        "template_estrutura": "editorial",
+        "template_hero": "hero-split",
+        "template_prova_social": "reviews-grid",
+        "template_cta": "cta-central",
+        "template_faq": "faq-two-col",
+        "ordem_das_secoes": [
+            "hero", "imoveis", "sobre", "prova", "faq", "localizacao", "contato", "footer",
+        ],
+        "angulo_de_comunicacao": (
+            "Moradia + visita. Foco em compra, aluguel, bairro, financiamento e "
+            "atendimento local. Tom seguro, visual e orientado a agendamento."
+        ),
+    },
+    "autoescola": {
+        "template_estrutura": "corporate",
+        "template_hero": "hero-split",
+        "template_prova_social": "stats-cards",
+        "template_cta": "cta-banner",
+        "template_faq": "faq-accordion",
+        "ordem_das_secoes": [
+            "hero", "sobre", "aulas", "processo", "depoimentos", "faq", "contato", "footer",
+        ],
+        "angulo_de_comunicacao": (
+            "CNH + clareza de processo. Foco em matricula, aulas, prova, horarios "
+            "e WhatsApp. Tom direto, confiavel e sem burocracia."
         ),
     },
     "default": {

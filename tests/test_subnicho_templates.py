@@ -76,6 +76,7 @@ class TestSubNichoTemplates:
             assert "footer" in t["ordem_das_secoes"], f"{subnicho} sem footer"
             assert t["ordem_das_secoes"][0] == "hero", f"{subnicho} deve comecar com hero"
             assert "contato" in t["ordem_das_secoes"], f"{subnicho} sem contato"
+            assert "faq" in t["ordem_das_secoes"], f"{subnicho} sem faq"
 
     def test_todos_subnichos_minimo_5_secoes(self):
         for subnicho, t in SUB_NICHO_TEMPLATES.items():

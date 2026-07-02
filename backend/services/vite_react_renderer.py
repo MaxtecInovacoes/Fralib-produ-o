@@ -411,6 +411,66 @@ SEGMENT_RULES = {
         "forbidden": ("plano alimentar", "consulta nutricional", "musculacao", "musculação"),
         "min_required": 2,
     },
+    "advogado": {
+        "aliases": ("advogado", "advocacia", "juridico", "jurídico", "direito"),
+        "required": ("advogado", "advocacia", "juridico", "jurídico", "direito", "consulta", "cliente"),
+        "forbidden": ("barbearia", "academia", "musculacao", "plano alimentar", "pizza", "pet shop"),
+        "min_required": 2,
+    },
+    "clinica": {
+        "aliases": ("clinica", "clínica", "medica", "médica", "medico", "médico"),
+        "required": ("clinica", "clínica", "consulta", "atendimento", "paciente", "exame", "saude", "saúde"),
+        "forbidden": ("barbearia", "musculacao", "corte masculino", "pizza", "hamburguer", "imovel"),
+        "min_required": 2,
+    },
+    "dentista": {
+        "aliases": ("dentista", "odontologia", "odontologico", "odontológico", "odonto"),
+        "required": ("dentista", "odontologia", "odontologico", "odontológico", "consulta", "avaliacao", "avaliação"),
+        "forbidden": ("barbearia", "musculacao", "plano alimentar", "pizza", "imovel", "energia solar"),
+        "min_required": 2,
+    },
+    "estetica": {
+        "aliases": ("estetica", "estética", "spa", "beleza", "facial", "pele"),
+        "required": ("estetica", "estética", "tratamento", "pele", "beleza", "avaliacao", "avaliação"),
+        "forbidden": ("barbearia", "musculacao", "plano alimentar", "pizza", "imovel", "advocacia"),
+        "min_required": 2,
+    },
+    "energia_solar": {
+        "aliases": ("energia_solar", "energia solar", "solar", "fotovoltaica", "painel solar"),
+        "required": ("energia", "solar", "fotovoltaica", "projeto", "instalacao", "instalação", "economia"),
+        "forbidden": ("barbearia", "musculacao", "plano alimentar", "consulta juridica", "pizza", "pet shop"),
+        "min_required": 2,
+    },
+    "imobiliaria": {
+        "aliases": ("imobiliaria", "imobiliária", "imovel", "imóvel", "imoveis", "imóveis"),
+        "required": ("imobiliaria", "imobiliária", "imovel", "imóvel", "imoveis", "imóveis", "visita", "bairro"),
+        "forbidden": ("barbearia", "musculacao", "plano alimentar", "painel solar", "pizza", "dentista"),
+        "min_required": 2,
+    },
+    "oficina": {
+        "aliases": ("oficina", "mecanica", "mecânica", "automotivo", "auto pecas", "autopeças"),
+        "required": ("oficina", "mecanica", "mecânica", "carro", "automotivo", "orcamento", "orçamento"),
+        "forbidden": ("barbearia", "plano alimentar", "consulta nutricional", "imovel", "pizza", "dentista"),
+        "min_required": 2,
+    },
+    "pet_shop": {
+        "aliases": ("pet_shop", "pet shop", "petshop", "veterinario", "veterinário", "banho", "tosa"),
+        "required": ("pet", "banho", "tosa", "veterinario", "veterinário", "tutor", "animal"),
+        "forbidden": ("barbearia", "musculacao", "plano alimentar", "imovel", "painel solar", "advocacia"),
+        "min_required": 2,
+    },
+    "restaurante": {
+        "aliases": ("restaurante", "pizzaria", "hamburgueria", "cafeteria", "padaria", "delivery", "cardapio", "cardápio"),
+        "required": ("restaurante", "cardapio", "cardápio", "pedido", "delivery", "reserva", "mesa", "sabor"),
+        "forbidden": ("barbearia", "musculacao", "plano alimentar", "painel solar", "advocacia", "dentista"),
+        "min_required": 2,
+    },
+    "salao": {
+        "aliases": ("salao", "salão", "salao de beleza", "salão de beleza", "cabeleireiro", "cabelo"),
+        "required": ("salao", "salão", "beleza", "cabelo", "escova", "mechas", "agenda"),
+        "forbidden": ("barbearia", "musculacao", "plano alimentar", "imovel", "painel solar", "advocacia"),
+        "min_required": 2,
+    },
 }
 
 @dataclass(frozen=True)
@@ -619,7 +679,9 @@ def _one_of(value: Any, allowed: set[str]) -> str:
         "wide_container": "wide",
         "hero": "heroic",
     }
-    candidate = aliases.get(candidate, candidate)
+    alias = aliases.get(candidate)
+    if alias and alias in allowed:
+        return alias
     return candidate if candidate in allowed else ""
 
 
@@ -638,6 +700,10 @@ def _sanitize_creative_plan(content: dict[str, Any]) -> dict[str, Any]:
     source = content.get("creative_plan") if isinstance(content.get("creative_plan"), dict) else content
     if not isinstance(source, dict):
         return {}
+
+    source = dict(source)
+    if source.get("hero_variant") and not source.get("hero_layout"):
+        source["hero_layout"] = source.get("hero_variant")
 
     section_allowed = {
         "hero", "about", "services", "gallery", "reviews", "faq",
@@ -955,6 +1021,16 @@ def _merge_copy_only_content(facts: dict[str, Any], content: dict[str, Any]) -> 
         for key in (
             "hero_layout",
             "hero_text_side",
+            "aesthetic_mode",
+            "spacing_density",
+            "radius_mode",
+            "container_strategy",
+            "typography_scale",
+            "heading_style",
+            "surface_depth",
+            "overlap_mode",
+            "motion_intensity",
+            "image_treatment",
             "surface_style",
             "surface_mix",
             "section_surface_map",
@@ -983,6 +1059,8 @@ def _merge_copy_only_content(facts: dict[str, Any], content: dict[str, Any]) -> 
         ):
             if key in creative_plan:
                 variation[key] = creative_plan[key]
+        if "hero_layout" in creative_plan and "hero_variant" not in variation:
+            variation["hero_variant"] = creative_plan["hero_layout"]
         if "reviews_variant" in creative_plan and "proof_style" not in variation:
             variation["proof_style"] = creative_plan["reviews_variant"]
         if "concept" in creative_plan:
@@ -6968,6 +7046,22 @@ def _compose_vite_user_prompt(
     facts_summary = _summarize_builder_facts(facts)
     contamination_guard = _segment_contamination_guard(facts)
 
+    design_contract_ref = ""
+    try:
+        repo_root = Path(__file__).resolve().parents[2]
+        design_contract = (repo_root / "DESIGN.md").read_text(encoding="utf-8").strip()
+        if design_contract:
+            design_contract_ref = f"""
+=== ROOT DESIGN CONTRACT ===
+{design_contract[:6000]}
+=== END ROOT DESIGN CONTRACT ===
+
+CRITICAL: Treat this as the visual quality floor for spacing, contrast, motion,
+map behavior, footer behavior and section rhythm.
+"""
+    except Exception:
+        design_contract_ref = ""
+
     # Injetar design system por segmento para garantir diferenciação visual
     design_system_ref = ""
     design_reference_ref = ""
@@ -7044,7 +7138,7 @@ choose the best hero type for this business type.
     prompt = f"""Use this FraLib Prompt Agent request as the complete business brief.
 
 Return one JSON object with a `files` mapping for a complete Vite React
-TypeScript project. The compiled artifact must be `dist/index.html`.{skill_pack_ref}{design_reference_ref}{design_system_ref}{variacao_ref}
+TypeScript project. The compiled artifact must be `dist/index.html`.{skill_pack_ref}{design_contract_ref}{design_reference_ref}{design_system_ref}{variacao_ref}
 
 Studio-grade visual contract:
 - Use Tailwind v4 through `@tailwindcss/vite`, `@import "tailwindcss";`,
@@ -7610,6 +7704,37 @@ def _facts_theme_color(facts: dict[str, Any]) -> str:
     return "#111827"
 
 
+SEO_SEGMENT_LABELS = {
+    "advogado": "advogado",
+    "advocacia": "advogado",
+    "clinica": "clínica médica",
+    "dentista": "dentista",
+    "odontologia": "dentista",
+    "energia_solar": "energia solar",
+    "energia solar": "energia solar",
+    "estetica": "clínica estética",
+    "imobiliaria": "imobiliária",
+    "oficina": "oficina mecânica",
+    "pet_shop": "pet shop",
+    "pet shop": "pet shop",
+    "salao": "salão de beleza",
+    "restaurante": "restaurante",
+}
+
+
+def _seo_label(value: Any) -> str:
+    raw = re.sub(r"\s+", " ", str(value or "").replace("_", " ")).strip()
+    if not raw:
+        return ""
+    normalized = _normalize_text(raw).replace("_", " ")
+    if normalized in SEO_SEGMENT_LABELS:
+        return SEO_SEGMENT_LABELS[normalized]
+    for key, label in SEO_SEGMENT_LABELS.items():
+        if key.replace("_", " ") in normalized:
+            return label
+    return raw
+
+
 def _facts_local_keywords(facts: dict[str, Any]) -> list[str]:
     """Sprint 14.6: keywords SEO personalizados por lead.
 
@@ -7630,7 +7755,7 @@ def _facts_local_keywords(facts: dict[str, Any]) -> list[str]:
     seen: set[str] = set()
 
     def _add(term: str) -> None:
-        term = re.sub(r"\s+", " ", str(term or "")).strip(" ,.;:-")
+        term = re.sub(r"\s+", " ", str(term or "").replace("_", " ")).strip(" ,.;:-")
         key = term.lower()
         if not term or key in seen:
             return
@@ -7642,9 +7767,11 @@ def _facts_local_keywords(facts: dict[str, Any]) -> list[str]:
 
     # cidade sempre presente (SEO local)
     city = str(business.get("city") or business.get("cidade") or facts.get("cidade") or "").strip()
-    segment = str(business.get("segmento") or business.get("segment") or "").strip()
-    subniche = str(business.get("subnicho") or business.get("subniche") or "").strip()
-    segment_context = _normalize_text(f"{segment} {subniche}")
+    segment_raw = str(business.get("segmento") or business.get("segment") or "").strip()
+    subniche_raw = str(business.get("subnicho") or business.get("subniche") or "").strip()
+    segment = _seo_label(segment_raw)
+    subniche = _seo_label(subniche_raw) if subniche_raw else ""
+    segment_context = _normalize_text(f"{segment_raw} {subniche_raw} {segment} {subniche}").replace("_", " ")
     _add(city)
     _add(business.get("state") or business.get("estado") or facts.get("estado") or "")
 
@@ -7683,6 +7810,51 @@ def _facts_local_keywords(facts: dict[str, Any]) -> list[str]:
         _add(f"agendar estética {city}")
         _add(f"limpeza de pele {city}")
         _add(f"estética perto de mim {city}")
+    if city and any(token in segment_context for token in ("advogado", "advocacia", "juridico", "direito")):
+        _add(f"advogado em {city}")
+        _add(f"consulta advogado {city}")
+        _add(f"advogado trabalhista {city}")
+        _add(f"honorários advogado {city}")
+    if city and any(token in segment_context for token in ("clinica", "medica", "medico", "consulta")):
+        _add(f"clínica médica em {city}")
+        _add(f"consulta particular {city}")
+        _add(f"marcar consulta {city}")
+        _add(f"clínica perto de mim {city}")
+    if city and any(token in segment_context for token in ("dentista", "odontologia", "odonto")):
+        _add(f"dentista em {city}")
+        _add(f"avaliação odontológica {city}")
+        _add(f"clareamento dental {city}")
+        _add(f"dentista perto de mim {city}")
+    if city and any(token in segment_context for token in ("energia solar", "solar", "fotovoltaica")):
+        _add(f"energia solar em {city}")
+        _add(f"orçamento energia solar {city}")
+        _add(f"simulação energia solar {city}")
+        _add(f"placas solares {city}")
+    if city and any(token in segment_context for token in ("imobiliaria", "imovel", "imoveis")):
+        _add(f"imobiliária em {city}")
+        _add(f"apartamento para alugar {city}")
+        _add(f"comprar imóvel {city}")
+        _add(f"agendar visita imóvel {city}")
+    if city and any(token in segment_context for token in ("oficina", "mecanica", "automotivo")):
+        _add(f"oficina mecânica em {city}")
+        _add(f"orçamento revisão {city}")
+        _add(f"troca de óleo {city}")
+        _add(f"mecânico perto de mim {city}")
+    if city and any(token in segment_context for token in ("pet shop", "petshop", "veterinario", "banho", "tosa")):
+        _add(f"pet shop em {city}")
+        _add(f"banho e tosa {city}")
+        _add(f"veterinário {city}")
+        _add(f"pet shop perto de mim {city}")
+    if city and any(token in segment_context for token in ("restaurante", "pizzaria", "hamburgueria", "cafeteria", "padaria")):
+        _add(f"restaurante em {city}")
+        _add(f"delivery {city}")
+        _add(f"cardápio {city}")
+        _add(f"reservar mesa {city}")
+    if city and any(token in segment_context for token in ("salao", "salão", "cabeleireiro", "cabelo", "manicure")):
+        _add(f"salão de beleza em {city}")
+        _add(f"agendar salão {city}")
+        _add(f"escova preço {city}")
+        _add(f"manicure {city}")
 
     # diferencial (palavras_poder do Jina)
     diferencial = business.get("diferenciais") or facts.get("diferenciais") or []
@@ -7706,8 +7878,8 @@ def _facts_meta_description(facts: dict[str, Any]) -> str:
     business = _facts_business(facts)
     name = str(business.get("name") or business.get("business_name") or "").strip()
     city = str(business.get("city") or business.get("cidade") or facts.get("cidade") or "").strip()
-    segment = str(business.get("segment") or business.get("segmento") or facts.get("segmento") or "negócio local").strip()
-    subniche = str(business.get("subniche") or facts.get("subniche") or "").strip()
+    segment = _seo_label(business.get("segment") or business.get("segmento") or facts.get("segmento") or "negócio local")
+    subniche = _seo_label(business.get("subniche") or facts.get("subniche") or "")
     phone = str(business.get("whatsapp") or business.get("phone") or "").strip()
     rating = str(business.get("rating") or "").strip()
     summary = subniche or segment
@@ -8746,7 +8918,7 @@ export function Footer() {{
           <div>
             <strong className="block text-2xl font-semibold tracking-tight text-white">{{business.name}}</strong>
             <p className="mt-2 max-w-md text-sm leading-7 text-zinc-400">
-              Presença local, contato oficial e navegação objetiva para o visitante sair desta página sabendo onde falar e como chegar.
+              WhatsApp, endereço e informações essenciais reunidos para facilitar seu próximo contato.
             </p>
           </div>
         </div>
@@ -8759,7 +8931,7 @@ export function Footer() {{
             </a>
             <a className="mt-3 flex items-center gap-2 text-sm font-medium text-white" href={{business.whatsappHref}} rel="noopener noreferrer">
               <MessageCircle className="h-4 w-4 text-emerald-300" />
-              WhatsApp oficial
+              WhatsApp
             </a>
           </div>
           <div className="rounded-[24px] border border-white/8 bg-black/70 p-5">

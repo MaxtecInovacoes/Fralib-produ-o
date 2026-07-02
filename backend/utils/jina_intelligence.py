@@ -115,7 +115,11 @@ FRASES_GENERICAS_PADRAO = [
 
 
 def buscar_inteligencia_jina(
-    nicho: str, cidade: str, nome_negocio: str, concorrentes_urls: list = None
+    nicho: str,
+    cidade: str,
+    nome_negocio: str,
+    concorrentes_urls: list = None,
+    tenant_id: int | str | None = None,
 ) -> dict:
     """
     Busca inteligência real de mercado via Jina Reader.
@@ -132,8 +136,9 @@ def buscar_inteligencia_jina(
         "jina_cache",
     )
     os.makedirs(_cache_dir, exist_ok=True)
+    _scope = str(tenant_id or "global").strip().lower()
     _cache_key = hashlib.md5(
-        (nicho.lower() + cidade.lower() + "v2").encode()
+        (_scope + "::" + nicho.lower() + "::" + cidade.lower() + "::v3").encode()
     ).hexdigest()[:12]
     _cache_file = os.path.join(_cache_dir, f"jina_intel_{_cache_key}.json")
     _TTL = 48 * 3600

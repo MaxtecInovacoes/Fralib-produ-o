@@ -57,7 +57,9 @@ def ensure_keyword_research(state, logger, warning_fn=None) -> None:
         if pesquisar_keywords_nicho is None:
             raise RuntimeError("pesquisar_keywords_nicho indisponivel")
         state.keyword_research = pesquisar_keywords_nicho(
-            state.lead_obj.lead.segmento, state.lead_obj.lead.cidade
+            state.lead_obj.lead.segmento,
+            state.lead_obj.lead.cidade,
+            tenant_id=getattr(state, "tenant_id", None),
         )
         logger("  Keywords: OK (cache)", "success")
     except Exception as exc:
@@ -80,6 +82,7 @@ def ensure_jina_insights(state, log_fn, fallback_researcher, warning_fn) -> None
             cidade=state.lead_obj.lead.cidade,
             nome_negocio=state.lead_nome,
             concorrentes_urls=getattr(state, "_concorrentes_urls", None),
+            tenant_id=getattr(state, "tenant_id", None),
         )
         state.jina_intel_dict = jina_intel
         state.jina_insights = formatar_inteligencia_para_arquiteto(jina_intel)
