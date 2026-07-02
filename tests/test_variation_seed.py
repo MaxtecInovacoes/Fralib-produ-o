@@ -1445,6 +1445,124 @@ def test_segment_contamination_uses_word_boundaries_for_names():
         raise AssertionError("contaminacao real com palavra barba deveria ser bloqueada")
 
 
+def test_cinematic_premium_floor_blocks_flat_wellness_plan_and_sanitizes_copy():
+    from backend.services.vite_react_renderer import (
+        _generate_cinematic_studio_files,
+        validate_vite_project_files,
+    )
+
+    facts = {
+        "business": {
+            "name": "Nutricionista João Nico",
+            "segment": "nutricionista",
+            "city": "Colombo",
+            "address": "R. Antônio Betinardi, 713 - Jardim Guaraituba, Colombo - PR",
+            "phone": "(41) 99878-3513",
+            "whatsapp": "(41) 99878-3513",
+            "rating": 4.5,
+        },
+        "media": {"photos": TEST_PHOTOS},
+        "_llm_content": {
+            "hero": {
+                "headline": "Alimentação que funciona.",
+                "subheadline": "Acompanhamento em Colombo para finally sentir que funciona.",
+                "cta_primary": "Agendar consulta",
+                "cta_secondary": "Conhecer o método",
+            }
+        },
+        "variation": {
+            "visual_lane": "lane_a",
+            "seed": 14127527599785089363,
+            "aesthetic_mode": "wellness",
+            "hero_layout": "center",
+            "spacing_density": "spacious",
+            "motion_intensity": "minimal",
+            "typography_scale": "soft",
+            "surface_style": "soft_tint",
+            "motion_mix": ["subtle_fade"],
+        },
+    }
+
+    files = _generate_cinematic_studio_files(facts)
+    site_data = files["src/components/siteData.ts"]
+    location = files["src/components/LocationSection.tsx"]
+
+    assert "finally" not in site_data.lower()
+    assert '"motion_intensity": "minimal"' not in site_data
+    assert '"typography_scale": "soft"' not in site_data
+    assert '"hero_variant": "center"' not in site_data
+    assert '"motion_mix": ["mask_reveal", "stagger_cards"]' in site_data
+    assert "mapsEmbedSrc" in site_data and "output=embed" in site_data
+    assert "<iframe" in location and "mapsEmbedSrc" in location
+    validate_vite_project_files(files, facts)
+
+
+def test_creative_plan_validator_rejects_weak_flat_plan():
+    from backend.services.vite_react_renderer import (
+        _validate_creative_plan_materialization,
+        ViteReactRenderError,
+    )
+
+    files = {
+        "src/components/siteData.ts": (
+            'export const variation = {"anti_repetition_rule": "avoid_glass"} as const;\n'
+            'export const blockPlan = {"visual_lane":"lane_a","aesthetic_mode":"wellness",'
+            '"spacing_density":"spacious","typography_scale":"soft","motion_intensity":"minimal",'
+            '"motion_mix":["subtle_fade"],"hero_variant":"center","surface_style":"solid",'
+            '"section_surface_map":{"about":"solid","services":"solid"}} as const;\n'
+        ),
+        "src/pages/Index.tsx": '<main data-motion="minimal"></main>',
+    }
+
+    try:
+        _validate_creative_plan_materialization(files, {"business": {"name": "Teste"}})
+    except ViteReactRenderError as exc:
+        assert "motion_mix" in str(exc) or "creative_plan fraco" in str(exc)
+    else:
+        raise AssertionError("plano creative_plan fraco deveria falhar fechado")
+
+
+def test_public_copy_validator_rejects_internal_commentary_and_translation_artifacts():
+    from backend.services.vite_react_renderer import _validate_public_copy_quality, ViteReactRenderError
+
+    bad_source = "A composição mistura detalhe e movimento para finally sentir que funciona."
+    try:
+        _validate_public_copy_quality(bad_source)
+    except ViteReactRenderError as exc:
+        assert "artefato" in str(exc)
+    else:
+        raise AssertionError("copy publica com comentario interno deveria falhar")
+
+
+def test_cinematic_pricing_is_segment_specific_and_not_cross_contaminated():
+    from backend.services.vite_react_renderer import (
+        _generate_cinematic_studio_files,
+        validate_vite_project_files,
+    )
+
+    facts = {
+        "business": {
+            "name": "Romeu Barbershop",
+            "segment": "barbearia",
+            "city": "Curitiba",
+            "address": "Rua Teste, 123, Curitiba - PR",
+            "phone": "(41) 99999-9999",
+            "whatsapp": "(41) 99999-9999",
+            "rating": 4.8,
+        },
+        "media": {"photos": TEST_PHOTOS},
+        "variation": {"seed": 12355, "counter": 10},
+    }
+
+    files = _generate_cinematic_studio_files(facts)
+    pricing = files["src/components/PricingSection.tsx"]
+
+    assert "Corte e barba" in pricing
+    assert "Plano alimentar" not in pricing
+    assert "Bioimpedância" not in pricing
+    validate_vite_project_files(files, facts)
+
+
 def run_all_tests():
     """Run all tests and report results."""
     print("=" * 60)

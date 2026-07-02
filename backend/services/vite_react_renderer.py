@@ -582,6 +582,10 @@ GUARDA DE NICHO:
 def _clean_copy_value(value: Any, *, limit: int = 220) -> str:
     text = re.sub(r"\s+", " ", str(value or "")).strip()
     text = text.replace("{", "").replace("}", "").replace("<", "").replace(">", "")
+    text = re.sub(r"\bpara\s+finally\s+", "para ", text, flags=re.IGNORECASE)
+    text = re.sub(r"\bfinally\s+", "", text, flags=re.IGNORECASE)
+    text = re.sub(r"\bfinally\b", "", text, flags=re.IGNORECASE)
+    text = re.sub(r"\s+", " ", text).strip()
     if re.search(r"[\u3400-\u9fff\u3040-\u30ff\uac00-\ud7af]", text):
         return ""
     if re.search(r"\b(cuenta|entrenamiento|sudor|alcanzar|rutina de entrenamiento)\b", text, flags=re.IGNORECASE):
@@ -891,6 +895,17 @@ def _sanitize_copy_only_content(content: dict[str, Any]) -> dict[str, Any]:
         "mídia editorial",
         "composição mistura",
         "cards e ritmo",
+        "informações confirmadas da",
+        "informacoes confirmadas da",
+        "organizadas para contato direto",
+        "organizados para contato direto",
+        "canal oficial para confirmar",
+        "a galeria mostra",
+        "a seção mostra",
+        "a secao mostra",
+        "essa seção",
+        "essa secao",
+        "finally",
         "estética menos agressiva",
         "próximo passo simples",
     )
@@ -4106,6 +4121,9 @@ def _cinematic_copy(facts: dict[str, Any]) -> dict[str, Any]:
         text = text.replace("facilitar reserva", "facilitar a reserva")
         text = text.replace("Flexibility de horarios", "horários flexíveis")
         text = text.replace("Flexibility de horários", "horários flexíveis")
+        text = re.sub(r"\bpara\s+finally\s+", "para ", text, flags=re.IGNORECASE)
+        text = re.sub(r"\bfinally\s+", "", text, flags=re.IGNORECASE)
+        text = re.sub(r"\bfinally\b", "", text, flags=re.IGNORECASE)
         text = text.replace("horarios", "horários")
         text = text.replace("alcanzar", "alcançar")
         text = text.replace("resistencia", "resistência")
@@ -4231,8 +4249,119 @@ def _with_cinematic_variation_defaults(facts: dict[str, Any]) -> dict[str, Any]:
     if variation.get("reviews_variant"):
         variation.setdefault("proof_style", variation["reviews_variant"])
     variation.setdefault("anti_repetition_rule", "avoid_glass")
+    variation = _enforce_premium_visual_floor(variation, enriched)
     enriched["variation"] = variation
     return enriched
+
+
+def _enforce_premium_visual_floor(variation: dict[str, Any], facts: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Prevent the Studio from publishing a visually flat creative plan.
+
+    The creative LLM can still choose a calm/wellness direction, but production
+    sites must keep agency-level presence: visible motion, strong type, readable
+    solid surfaces and a hero composition with enough tension.
+    """
+    v = dict(variation or {})
+    facts = facts or {}
+    business = facts.get("business") if isinstance(facts.get("business"), dict) else {}
+    segment = str(business.get("segment") or business.get("segmento") or facts.get("segment") or facts.get("segmento") or "")
+    subnicho = str(business.get("subniche") or business.get("subnicho") or facts.get("subniche") or facts.get("subnicho") or "")
+    try:
+        lane = resolve_visual_lane(
+            segment=segment,
+            subnicho=subnicho,
+            visual_lane=str(v.get("visual_lane") or ""),
+        )
+        lane_blocks = lane.get("blocks") if isinstance(lane.get("blocks"), dict) else {}
+    except Exception:
+        lane_blocks = {}
+    for key in (
+        "aesthetic_mode",
+        "spacing_density",
+        "radius_mode",
+        "container_strategy",
+        "typography_scale",
+        "heading_style",
+        "surface_depth",
+        "overlap_mode",
+        "motion_intensity",
+        "image_treatment",
+    ):
+        if not v.get(key) and lane_blocks.get(key):
+            v[key] = lane_blocks[key]
+
+    media = facts.get("media") if isinstance(facts.get("media"), dict) else {}
+    videos = media.get("videos") if isinstance(media.get("videos"), list) else []
+
+    aesthetic = str(v.get("aesthetic_mode") or "").strip().lower()
+    hero_layout = str(v.get("hero_layout") or "").strip().lower()
+    spacing = str(v.get("spacing_density") or "").strip().lower()
+    motion = str(v.get("motion_intensity") or "").strip().lower()
+    typography = str(v.get("typography_scale") or "").strip().lower()
+    priority = str(v.get("prompt_priority") or "").strip().lower()
+    weak_wellness = aesthetic in {"wellness", "balanced", "minimal", ""}
+    weak_combo = (
+        hero_layout in {"", "center"}
+        and spacing in {"", "spacious"}
+        and motion in {"", "minimal"}
+        and typography in {"", "soft"}
+    )
+
+    if weak_wellness or weak_combo:
+        v["motion_intensity"] = "composed" if motion in {"", "minimal"} else v.get("motion_intensity")
+        v["typography_scale"] = "strong" if typography in {"", "soft"} else v.get("typography_scale")
+        if spacing in {"", "spacious"} and hero_layout in {"", "center"}:
+            v["spacing_density"] = "normal"
+        if hero_layout in {"", "center"}:
+            try:
+                seed = abs(int(v.get("seed") or 0))
+            except Exception:
+                seed = 0
+            if videos and seed % 5 == 0:
+                v["hero_layout"] = "video"
+            else:
+                v["hero_layout"] = "asymmetric" if seed % 2 else "split"
+            v.setdefault("hero_text_side", "left" if seed % 3 else "right")
+        if str(v.get("container_strategy") or "").strip().lower() in {"", "contained"}:
+            v["container_strategy"] = "wide"
+        if str(v.get("surface_depth") or "").strip().lower() in {"", "elevated"}:
+            v["surface_depth"] = "bordered"
+        if str(v.get("overlap_mode") or "").strip().lower() in {"", "none"} and priority in {"visual_drama", "trust", "conversion", ""}:
+            v["overlap_mode"] = "subtle"
+        if str(v.get("heading_style") or "").strip().lower() in {"", "clean"}:
+            v["heading_style"] = "display" if aesthetic != "wellness" else "editorial"
+
+    motion_mix = v.get("motion_mix") if isinstance(v.get("motion_mix"), list) else []
+    motion_mix = [str(item) for item in motion_mix if str(item).strip()]
+    if not motion_mix or set(motion_mix).issubset({"subtle_fade"}):
+        motion_mix = ["mask_reveal", "stagger_cards"]
+    if v.get("hero_layout") in {"video", "fullbleed"} and "parallax_video" not in motion_mix:
+        motion_mix.insert(0, "parallax_video")
+    if len(motion_mix) < 2:
+        motion_mix.append("line_draw")
+    v["motion_mix"] = list(dict.fromkeys(motion_mix[:4]))
+
+    if str(v.get("surface_style") or "").strip().lower() in {"", "glass", "soft_tint"}:
+        v["surface_style"] = "solid"
+    surface_mix = v.get("surface_mix") if isinstance(v.get("surface_mix"), list) else []
+    surface_mix = [str(item) for item in surface_mix if str(item) not in {"glass"}]
+    if len(set(surface_mix)) < 2:
+        surface_mix = ["solid", "outline"]
+    v["surface_mix"] = surface_mix[:4]
+
+    section_map = v.get("section_surface_map") if isinstance(v.get("section_surface_map"), dict) else {}
+    if not section_map or len(set(str(value) for value in section_map.values())) < 2:
+        v["section_surface_map"] = {
+            "about": "solid",
+            "services": "outline",
+            "reviews": "solid",
+            "faq": "outline",
+            "location": "solid",
+            "contact-cta": "solid",
+        }
+
+    v.setdefault("anti_repetition_rule", "avoid_glass")
+    return v
 
 
 def _cinematic_diversity_combo(variation: dict[str, Any]) -> dict[str, Any]:
@@ -4475,13 +4604,13 @@ def _generate_cinematic_studio_files(facts: dict[str, Any]) -> dict[str, str]:
     _HERO_CLASSES_POOL = [
         "relative isolate min-h-[92svh] overflow-hidden px-5 pb-16 pt-28 text-white md:px-8 md:pb-24 md:pt-36 grid place-items-center",
         "relative isolate min-h-[85svh] overflow-hidden px-6 pb-20 pt-24 text-white md:px-10 md:pb-28 md:pt-32 flex flex-col justify-center",
-        "relative isolate min-h-[100svh] overflow-hidden px-4 pb-12 pt-20 text-white md:px-6 md:pb-16 md:pt-24 grid place-items-end",
+        "relative isolate min-h-[92svh] overflow-hidden px-4 pb-12 pt-20 text-white md:px-6 md:pb-16 md:pt-24 grid place-items-end",
         "relative isolate min-h-[88svh] overflow-hidden px-5 pb-14 pt-32 text-white md:px-8 md:pb-20 md:pt-40 flex items-end",
         "relative isolate min-h-[95svh] overflow-hidden px-5 pb-18 pt-26 text-white md:px-9 md:pb-22 md:pt-34 grid place-items-start",
         "relative isolate min-h-[78svh] overflow-hidden px-8 pb-24 pt-20 text-white md:px-12 md:pb-32 md:pt-28 flex flex-col justify-between",
-        "relative isolate min-h-[102svh] overflow-hidden px-3 pb-10 pt-30 text-white md:px-4 md:pb-12 md:pt-32 grid grid-rows-2",
+        "relative isolate min-h-[92svh] overflow-hidden px-3 pb-10 pt-30 text-white md:px-4 md:pb-12 md:pt-32 grid grid-rows-2",
         "relative isolate min-h-[80svh] overflow-hidden px-7 pb-28 pt-16 text-white md:px-14 md:pb-36 md:pt-20 flex items-center",
-        "relative isolate min-h-[98svh] overflow-hidden px-2 pb-8 pt-36 text-white md:px-3 md:pb-10 md:pt-40 grid place-items-center",
+        "relative isolate min-h-[90svh] overflow-hidden px-2 pb-10 pt-28 text-white md:px-4 md:pb-14 md:pt-32 grid place-items-center",
         "relative isolate min-h-[90svh] overflow-hidden px-9 pb-22 pt-22 text-white md:px-16 md:pb-26 md:pt-26 flex flex-row",
     ]
     _hero_class = _HERO_CLASSES_POOL[_seed_for_html % len(_HERO_CLASSES_POOL)]
@@ -4926,6 +5055,13 @@ export default HeroSection;
 }}
 {_pole_css}
 [data-pole="soft"] {{
+  --primary: {c_accent};
+  --primary-hover: {c_accent_dark};
+  --accent: {c_accent};
+  --accent-soft: {c_accent_light};
+  --shadow-card: 0 18px 58px color-mix(in srgb, var(--accent) 16%, transparent);
+  --shadow-button: 0 6px 18px color-mix(in srgb, var(--accent) 24%, transparent);
+  --shadow-glow: 0 10px 38px color-mix(in srgb, var(--accent) 18%, transparent);
   --radius-card: var(--radius);
   --radius-panel: var(--radius);
   --section-pad: var(--section-padding-y);
@@ -5059,13 +5195,13 @@ export default HeroSection;
 }}
 .hero-v14.hero-v14-v0 {{ min-height: 92svh; padding-top: 7rem; padding-bottom: 4rem; display: grid; place-items: center; }}
 .hero-v14.hero-v14-v1 {{ min-height: 85svh; padding-top: 6rem; padding-bottom: 5rem; display: flex; flex-direction: column; justify-content: center; }}
-.hero-v14.hero-v14-v2 {{ min-height: 100svh; padding-top: 5rem; padding-bottom: 3rem; display: grid; place-items: end; }}
+.hero-v14.hero-v14-v2 {{ min-height: 92svh; padding-top: 5rem; padding-bottom: 3rem; display: grid; place-items: end; }}
 .hero-v14.hero-v14-v3 {{ min-height: 88svh; padding-top: 8rem; padding-bottom: 3.5rem; display: flex; align-items: end; }}
 .hero-v14.hero-v14-v4 {{ min-height: 95svh; padding-top: 6.5rem; padding-bottom: 4.5rem; display: grid; place-items: start; }}
 .hero-v14.hero-v14-v5 {{ min-height: 78svh; padding-top: 5rem; padding-bottom: 6rem; display: flex; flex-direction: column; justify-content: space-between; }}
-.hero-v14.hero-v14-v6 {{ min-height: 102svh; padding-top: 7.5rem; padding-bottom: 2.5rem; display: grid; grid-template-rows: 1fr 1fr; }}
+.hero-v14.hero-v14-v6 {{ min-height: 92svh; padding-top: 7rem; padding-bottom: 3rem; display: grid; grid-template-rows: 1fr 1fr; }}
 .hero-v14.hero-v14-v7 {{ min-height: 80svh; padding-top: 4rem; padding-bottom: 7rem; display: flex; align-items: center; }}
-.hero-v14.hero-v14-v8 {{ min-height: 98svh; padding-top: 9rem; padding-bottom: 2rem; display: grid; place-items: center; }}
+.hero-v14.hero-v14-v8 {{ min-height: 90svh; padding-top: 7rem; padding-bottom: 3.5rem; display: grid; place-items: center; }}
 .hero-v14.hero-v14-v9 {{ min-height: 90svh; padding-top: 5.5rem; padding-bottom: 5.5rem; display: flex; flex-direction: row; }}
 @layer base {{
   * {{ box-sizing: border-box; }}
@@ -5200,6 +5336,41 @@ main[data-attitude="premium"] section:not(#hero):not(#stats) {{
     return prepare_vite_project_files(source_files, facts=facts)
 
 
+def _cinematic_pricing_plans_for_segment(segment: str, copy: dict[str, Any]) -> list[dict[str, Any]]:
+    city = str(copy.get("city") or "").strip()
+    city_suffix = f" em {city}" if city else ""
+    seg = (segment or "").lower()
+    if any(token in seg for token in ("academia", "fitness", "crossfit", "musculacao", "musculação")):
+        return [
+            {"name": "Aula experimental", "perks": ["Acesso a uma sessão", "Avaliação inicial", "Plano de treino"], "highlight": False, "note": "Sem compromisso"},
+            {"name": "Plano mensal", "perks": ["Acesso completo", "Acompanhamento semanal", "Reavaliação mensal", f"Rotina flexível{city_suffix}"], "highlight": True, "note": "Mais escolhido"},
+            {"name": "Plano trimestral", "perks": ["Acesso completo", "Avaliação mensal", "Suporte prioritário", "Condição progressiva"], "highlight": False, "note": "Melhor custo"},
+        ]
+    if "nutri" in seg:
+        return [
+            {"name": "Consulta inicial", "perks": ["Avaliação completa", "Plano alimentar", "Material de apoio"], "highlight": False, "note": "Sem compromisso"},
+            {"name": "Acompanhamento", "perks": ["Consultas de retorno", "Ajustes no plano", "Suporte por mensagem", f"Atendimento{city_suffix}"], "highlight": True, "note": "Mais escolhido"},
+            {"name": "Plano premium", "perks": ["Consultas recorrentes", "Bioimpedância quando disponível", "Suporte prioritário", "Acesso a conteúdo"], "highlight": False, "note": "Completo"},
+        ]
+    if any(token in seg for token in ("barbearia", "barbeiro", "barber")):
+        return [
+            {"name": "Corte clássico", "perks": ["Corte masculino", "Finalização", "Agendamento direto"], "highlight": False, "note": "Essencial"},
+            {"name": "Corte e barba", "perks": ["Corte completo", "Barba alinhada", "Acabamento", f"Reserva rápida{city_suffix}"], "highlight": True, "note": "Mais pedido"},
+            {"name": "Ritual premium", "perks": ["Atendimento completo", "Toalha quente", "Produto finalizador", "Horário reservado"], "highlight": False, "note": "Experiência"},
+        ]
+    if any(token in seg for token in ("estetic", "estética", "beleza", "spa")):
+        return [
+            {"name": "Avaliação", "perks": ["Diagnóstico inicial", "Orientação do procedimento", f"Atendimento{city_suffix}"], "highlight": False, "note": "Primeiro passo"},
+            {"name": "Pacote essencial", "perks": ["Sessão completa", "Produtos profissionais", "Acompanhamento"], "highlight": True, "note": "Mais escolhido"},
+            {"name": "Pacote premium", "perks": ["Múltiplas sessões", "Produtos premium", "Suporte dedicado", "Acompanhamento estendido"], "highlight": False, "note": "Completo"},
+        ]
+    return [
+        {"name": "Primeira sessão", "perks": ["Acolhimento inicial", "Diagnóstico", "Orientação"], "highlight": False, "note": "Sem compromisso"},
+        {"name": "Plano recorrente", "perks": ["Atendimento regular", f"Agenda{city_suffix}", "Acompanhamento"], "highlight": True, "note": "Mais escolhido"},
+        {"name": "Plano estendido", "perks": ["Sessões extras", "Suporte dedicado", "Prioridade na agenda"], "highlight": False, "note": "Completo"},
+    ]
+
+
 def _generate_cinematic_secondary_components(facts: dict[str, Any], palette: dict[str, str] | None = None) -> dict[str, str]:
     copy = _cinematic_copy(facts)
     _biz = facts.get("business") if isinstance(facts.get("business"), dict) else {}
@@ -5219,6 +5390,7 @@ def _generate_cinematic_secondary_components(facts: dict[str, Any], palette: dic
     proof_style = str(block_plan.get("reviews_variant") or variation.get("proof_style") or "score_wall")
     surface_style = str(block_plan.get("surface_style") or variation.get("surface_style") or "solid")
     section_surface_map = variation.get("section_surface_map") if isinstance(variation.get("section_surface_map"), dict) else {}
+    pricing_plans = _cinematic_pricing_plans_for_segment(segment, copy)
     about_surface = str(section_surface_map.get("about") or surface_style)
     gallery_density = str(block_plan.get("gallery_density") or variation.get("gallery_density") or "")
     cta_style = str(block_plan.get("cta_style") or variation.get("cta_style") or "")
@@ -5455,40 +5627,10 @@ import { siteCopy, whatsappHref } from './siteData';
 
 type Plan = { name: string; perks: string[]; highlight: boolean; note: string };
 
-function _buildPlans(): Plan[] {
-  const seg = String((siteCopy as any)?.segment || 'servicos').toLowerCase();
-  const city = String((siteCopy as any)?.city || '');
-  if (seg.includes('academia') || seg.includes('fitness') || seg.includes('crossfit')) {
-    return [
-      { name: 'Aula experimental', perks: ['Acesso a uma sessão', 'Avaliação inicial', 'Plano de treino'], highlight: false, note: 'Sem compromisso' },
-      { name: 'Plano mensal', perks: ['Acesso completo', 'Acompanhamento semanal', 'Reavaliação mensal', city ? 'Vincular em ' + city : 'Horários flexíveis'], highlight: true, note: 'Mais escolhido' },
-      { name: 'Plano trimestral', perks: ['Acesso completo', 'Avaliação mensal', 'Suporte prioritário', 'Desconto progressivo'], highlight: false, note: 'Melhor custo' },
-    ];
-  }
-  if (seg.includes('nutri')) {
-    return [
-      { name: 'Consulta inicial', perks: ['Avaliação completa', 'Plano alimentar', 'Material de apoio'], highlight: false, note: 'Sem compromisso' },
-      { name: 'Acompanhamento', perks: ['Consultas de retorno', 'Ajustes no plano', 'Suporte por mensagem', city ? 'Atendimento em ' + city : 'Online ou presencial'], highlight: true, note: 'Mais escolhido' },
-      { name: 'Plano premium', perks: ['Consultas ilimitadas', 'Bioimpedância mensal', 'Suporte prioritário', 'Acesso a conteúdo'], highlight: false, note: 'Completo' },
-    ];
-  }
-  if (seg.includes('estetic') || seg.includes('beleza')) {
-    return [
-      { name: 'Avaliação', perks: ['Diagnóstico da pele', 'Orientação inicial', city ? 'Atendimento em ' + city : 'Horário flexível'], highlight: false, note: 'Sem compromisso' },
-      { name: 'Pacote essencial', perks: ['Sessão completa', 'Produtos profissionais', 'Acompanhamento'], highlight: true, note: 'Mais escolhido' },
-      { name: 'Pacote premium', perks: ['Múltiplas sessões', 'Produtos premium', 'Suporte dedicado', 'Acompanhamento estendido'], highlight: false, note: 'Completo' },
-    ];
-  }
-  return [
-    { name: 'Primeira sessão', perks: ['Acolhimento inicial', 'Diagnóstico', 'Orientação'], highlight: false, note: 'Sem compromisso' },
-    { name: 'Plano recorrente', perks: ['Atendimento regular', city ? 'Em ' + city : 'Horário flexível', 'Acompanhamento'], highlight: true, note: 'Mais escolhido' },
-    { name: 'Plano estendido', perks: ['Sessões extras', 'Suporte dedicado', 'Prioridade na agenda'], highlight: false, note: 'Completo' },
-  ];
-}
+const plans: Plan[] = __PRICING_PLANS__;
 
 export function PricingSection() {
   const variant = String(((window as any).__fralib_pricing_variant) || 'plan_grid');
-  const plans = _buildPlans();
 
   if (variant === 'single_plan') {
     const plan = plans.find((p) => p.highlight) || plans[1] || plans[0];
@@ -5574,7 +5716,7 @@ export function PricingSection() {
   );
 }
 export default PricingSection;
-""",
+""".replace("__PRICING_PLANS__", json.dumps(pricing_plans, ensure_ascii=False)),
         "src/components/GallerySection.tsx": gallery_section,
         "src/components/FaqSection.tsx": faq_section,
         "src/components/ReviewsSection.tsx": reviews_section,
@@ -6146,6 +6288,7 @@ def validate_vite_project_files(
         content for path, content in files.items() if path.startswith("src/")
     )
     _validate_no_studio_template_leaks(source_text)
+    _validate_public_copy_quality(source_text)
     business = facts.get("business") if isinstance(facts.get("business"), dict) else {}
     name = str(business.get("name") or "").strip()
     if name and _normalize_text(name) not in _normalize_text(source_text):
@@ -6161,6 +6304,8 @@ def validate_vite_project_files(
         _validate_hero_first_viewport(files)
         _validate_mobile_navbar(files)
         _validate_no_low_contrast_card_patterns(files)
+        _validate_required_runtime_map(files, facts)
+        _validate_creative_plan_materialization(files, facts)
         _validate_studio_project(files, source_text, component_files)
 
 
@@ -6197,6 +6342,125 @@ def _validate_no_low_contrast_card_patterns(files: dict[str, str]) -> None:
                 raise ViteReactRenderError(
                     f"projeto Vite contem padrao de baixo contraste em {path}: {label}"
                 )
+
+
+def _validate_public_copy_quality(source_text: str) -> None:
+    """Block internal planning commentary and translation artifacts in public copy."""
+    normalized = _normalize_text(source_text)
+    banned_terms = (
+        "finally",
+        "informacoes confirmadas da",
+        "organizadas para contato direto",
+        "organizados para contato direto",
+        "canal oficial para confirmar",
+        "composicao mistura",
+        "cards e ritmo",
+        "direcao visual",
+        "midia editorial",
+        "a galeria mostra",
+        "essa secao",
+        "este bloco",
+    )
+    hits = [term for term in banned_terms if term in normalized]
+    if hits:
+        raise ViteReactRenderError(
+            "projeto Vite contem copy publica com comentario interno/artefato de traducao: "
+            + ", ".join(hits[:4])
+        )
+
+
+def _extract_export_const_json(source: str, const_name: str) -> Any:
+    needle = f"export const {const_name} ="
+    start = source.find(needle)
+    if start < 0:
+        return None
+    start = source.find("=", start)
+    if start < 0:
+        return None
+    payload_start = -1
+    for idx in range(start + 1, len(source)):
+        if source[idx] in "{[":
+            payload_start = idx
+            break
+    if payload_start < 0:
+        return None
+    try:
+        return json.JSONDecoder().raw_decode(source[payload_start:])[0]
+    except Exception:
+        return None
+
+
+def _facts_have_location_signal(facts: dict[str, Any]) -> bool:
+    business = facts.get("business") if isinstance(facts.get("business"), dict) else {}
+    content = facts.get("content") if isinstance(facts.get("content"), dict) else {}
+    for container in (business, facts, content):
+        if not isinstance(container, dict):
+            continue
+        for key in ("address", "endereco", "maps_url", "mapsHref", "mapsEmbedSrc", "google_maps_embed"):
+            if str(container.get(key) or "").strip():
+                return True
+    return False
+
+
+def _validate_required_runtime_map(files: dict[str, str], facts: dict[str, Any]) -> None:
+    if not _facts_have_location_signal(facts):
+        return
+    site_data = files.get("src/components/siteData.ts", "")
+    location = files.get("src/components/LocationSection.tsx", "")
+    site_copy = _extract_export_const_json(site_data, "siteCopy")
+    maps_embed = ""
+    if isinstance(site_copy, dict):
+        maps_embed = str(site_copy.get("mapsEmbedSrc") or "")
+    if not maps_embed or "output=embed" not in maps_embed:
+        raise ViteReactRenderError("lead com endereco/mapa, mas siteData nao carrega mapsEmbedSrc real")
+    if "<iframe" not in location or "mapsEmbedSrc" not in location:
+        raise ViteReactRenderError("lead com endereco/mapa, mas LocationSection nao renderiza iframe real")
+
+
+def _validate_creative_plan_materialization(files: dict[str, str], facts: dict[str, Any]) -> None:
+    site_data = files.get("src/components/siteData.ts", "")
+    index = files.get("src/pages/Index.tsx", "")
+    block_plan = _extract_export_const_json(site_data, "blockPlan")
+    variation = _extract_export_const_json(site_data, "variation")
+    if not isinstance(block_plan, dict):
+        raise ViteReactRenderError("Studio Vite sem blockPlan materializado em siteData.ts")
+
+    required = (
+        "visual_lane",
+        "aesthetic_mode",
+        "spacing_density",
+        "typography_scale",
+        "motion_intensity",
+        "motion_mix",
+        "hero_variant",
+        "surface_style",
+        "section_surface_map",
+    )
+    missing = [key for key in required if not block_plan.get(key)]
+    if missing:
+        raise ViteReactRenderError("blockPlan incompleto para publicacao premium: " + ", ".join(missing))
+
+    motion_mix = block_plan.get("motion_mix")
+    if not isinstance(motion_mix, list) or len([item for item in motion_mix if item]) < 2:
+        raise ViteReactRenderError("blockPlan sem motion_mix visivel suficiente")
+    surface_map = block_plan.get("section_surface_map")
+    if not isinstance(surface_map, dict) or len(set(str(value) for value in surface_map.values())) < 2:
+        raise ViteReactRenderError("blockPlan sem variacao real de superficies por secao")
+
+    hero = str(block_plan.get("hero_variant") or "")
+    spacing = str(block_plan.get("spacing_density") or "")
+    motion = str(block_plan.get("motion_intensity") or "")
+    typography = str(block_plan.get("typography_scale") or "")
+    if hero == "center" and spacing == "spacious" and motion == "minimal" and typography == "soft":
+        raise ViteReactRenderError("creative_plan fraco bloqueado: hero=center + spacious + minimal + soft")
+    if motion == "minimal" or typography == "soft":
+        raise ViteReactRenderError("creative_plan abaixo do piso premium: motion minimal ou tipografia soft")
+    if "data-motion={" not in index and 'data-motion="' not in index:
+        raise ViteReactRenderError("Index.tsx nao materializa data-motion do blockPlan")
+    if isinstance(variation, dict) and variation.get("anti_repetition_rule") == "avoid_glass":
+        source = "\n".join(files.values()).lower()
+        if "backdrop-blur" in source:
+            raise ViteReactRenderError("avoid_glass ativo, mas projeto ainda usa backdrop-blur")
 
 
 def _segment_key_for_business(business: dict[str, Any]) -> str | None:
