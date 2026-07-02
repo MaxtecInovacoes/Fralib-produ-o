@@ -266,7 +266,16 @@ def _visual_business_payload(facts: dict[str, Any]) -> dict[str, str]:
     city = str(business.get("city") or business.get("cidade") or facts.get("cidade") or "").strip()
     address = str(business.get("address") or business.get("endereco") or "").strip()
     phone = str(business.get("phone") or business.get("whatsapp") or "").strip()
-    rating = str(business.get("rating") or "5.0").strip().replace(",", ".")
+    rating_raw = business.get("rating")
+    # Quick Win #3 (auditoria_agentes_2026_07): antes era 'or "5.0"' o que
+    # inventava rating perfeito. Agora respeita o dado: 0 fica 0, ausente fica "".
+    # rating_is_fallback=True so se a chave nao existir.
+    if rating_raw is None or rating_raw == "":
+        rating = ""
+        rating_is_fallback = True
+    else:
+        rating = str(rating_raw).strip().replace(",", ".")
+        rating_is_fallback = False
     count = str(business.get("total_avaliacoes") or business.get("reviews_count") or "").strip()
     maps = str(business.get("maps_url") or business.get("map_url") or "").strip()
     return {
@@ -277,6 +286,7 @@ def _visual_business_payload(facts: dict[str, Any]) -> dict[str, str]:
         "address": address,
         "phone": phone,
         "rating": rating,
+        "rating_is_fallback": rating_is_fallback,
         "count": count,
         "maps": maps,
     }

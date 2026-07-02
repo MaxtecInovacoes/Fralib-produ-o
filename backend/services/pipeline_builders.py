@@ -7,10 +7,32 @@ requirements, visual, and build contracts for the Builder renderer.
 from __future__ import annotations
 
 import logging
+import re
 from types import SimpleNamespace
 from typing import Any
 
 logger = logging.getLogger("uvicorn")
+
+
+def _safe_str(value: Any) -> str:
+    """Return value coerced to stripped string, or empty string if absent/None.
+
+    Quick Win #1 helper (auditoria_agentes_2026_07): explicit absence instead
+    of magic defaults like "negocio local" that mask lack of data.
+    """
+    if value is None:
+        return ""
+    return str(value).strip()
+
+
+def _phone_digits(value: Any) -> str:
+    """Return only digits from a phone string. Empty if absent.
+
+    Used for tel: links, WhatsApp deep-links, and any click-to-call UI.
+    """
+    if not value:
+        return ""
+    return re.sub(r"\D", "", str(value))
 
 
 def _contract_builders():
@@ -696,6 +718,40 @@ def ensure_prd_contracts(prd: Any, state: Any) -> None:
         "layout_blueprint": getattr(prd, "layout_blueprint", []) or [],
         "color_palette": getattr(prd, "color_palette", {}) or {},
         "typography": getattr(prd, "typography", {}) or {},
+        # Quick Win #1 (auditoria_agentes_2026_07): 5 chaves que se perdiam
+        # silenciosamente entre Hunter e o site final. Cada uma usa helpers
+        # que retornam string vazia (ausencia explicita) em vez de magic default.
+        "maps_url": _safe_str(
+            getattr(prd, "maps_url", None)
+            or (getattr(prd, "_dados_completos", {}) or {}).get("maps_url")
+            or (getattr(state, "lead_raw_data", {}) or {}).get("maps_url")
+        ),
+        "google_maps_embed": _safe_str(
+            getattr(prd, "google_maps_embed", None)
+            or (getattr(prd, "_dados_completos", {}) or {}).get("google_maps_embed")
+        ),
+        "whatsapp": _safe_str(
+            getattr(prd, "whatsapp", None)
+            or getattr(prd, "telefone_whatsapp", None)
+            or (getattr(state, "lead_raw_data", {}) or {}).get("whatsapp")
+        ),
+        "phone_digits": _phone_digits(
+            getattr(prd, "phone", None)
+            or getattr(prd, "telefone", None)
+            or (getattr(state, "lead_raw_data", {}) or {}).get("telefone", "")
+        ),
+        "price_range": _safe_str(
+            getattr(prd, "price_range", None)
+            or getattr(prd, "faixa_preco", None)
+            or (getattr(prd, "_dados_completos", {}) or {}).get("price_range")
+        ),
+        "is_fallback": {
+            "maps_url": False,
+            "google_maps_embed": False,
+            "whatsapp": False,
+            "phone_digits": False,
+            "price_range": False,
+        },
     }
     build_requirements_contract, build_visual_contract, build_site_build_plan = _contract_builders()
     if not getattr(prd, "requirements_contract", None):

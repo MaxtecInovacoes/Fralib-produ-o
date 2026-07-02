@@ -187,8 +187,14 @@ def _match_nicho(nicho: str) -> str:
         if keyword in nicho_lower:
             return nicho_key
 
-    # Default
-    return "academia"
+    # Quick Win #2 (auditoria_agentes_2026_07): default explicito em vez de
+    # mascarar ausencia como "academia". Retornar None força o caller a
+    # tomar decisao consciente (fallback explicito, log de aviso, ou raise).
+    logger.warning(
+        "[Benchmarker] Nicho '%s' nao mapeado em NICHO_PATTERNS; retornando None",
+        nicho,
+    )
+    return None
 
 
 def analisar_concorrencia(nicho: str, cidade: str = "") -> dict[str, Any]:
@@ -217,15 +223,20 @@ def analisar_concorrencia(nicho: str, cidade: str = "") -> dict[str, Any]:
     """
     nicho_normalizado = _match_nicho(nicho)
 
-    if nicho_normalizado in NICHO_PATTERNS:
+    if nicho_normalizado is not None and nicho_normalizado in NICHO_PATTERNS:
         patterns = NICHO_PATTERNS[nicho_normalizado]
         logger.info(f"[Benchmarker] Usando padroes para nicho: {nicho_normalizado}")
     else:
+        # Quick Win #2: quando nao mapeado, usa academia como FALLBACK EXPLICITO
+        # (nao como default escondido). Caller fica sabendo via campo 'is_fallback'.
         patterns = NICHO_PATTERNS["academia"]
-        logger.warning(f"[Benchmarker] Nicho '{nicho}' nao encontrado, usando default")
+        logger.warning(
+            f"[Benchmarker] Nicho '{nicho}' nao encontrado em NICHO_PATTERNS; "
+            f"usando academia como fallback explicito."
+        )
 
     return {
-        "nicho": nicho_normalizado,
+        "nicho": nicho_normalizado,  # pode ser None se nao mapeado
         "cidade": cidade or "local",
         "patterns": {
             "estrutura_comum": patterns["estrutura_comum"],
@@ -235,7 +246,8 @@ def analisar_concorrencia(nicho: str, cidade: str = "") -> dict[str, Any]:
         },
         "diferenciacao_sugerida": patterns["diferenciacao_sugerida"],
         "elementos_extras": patterns.get("elementos_extras", []),
-        "source": "fallback-inteligente",
+        "source": "fallback-inteligente" if nicho_normalizado else "fallback-explicito",
+        "is_fallback": nicho_normalizado is None,
     }
 
 
@@ -245,9 +257,19 @@ def get_nichos_disponiveis() -> list[str]:
 
 
 def get_patterns_por_nicho(nicho: str) -> dict[str, Any]:
-    """Retorna os patterns completos para um nicho especifico."""
+    """Retorna os patterns completos para um nicho especifico.
+
+    Quick Win #2: quando nicho nao mapeado, retorna academia como fallback
+    EXPLICITO e marca o dict com 'is_fallback: True' para o caller detectar.
+    """
     nicho_normalizado = _match_nicho(nicho)
-    return NICHO_PATTERNS.get(nicho_normalizado, NICHO_PATTERNS["academia"])
+    if nicho_normalizado is not None and nicho_normalizado in NICHO_PATTERNS:
+        result = dict(NICHO_PATTERNS[nicho_normalizado])
+        result["is_fallback"] = False
+        return result
+    result = dict(NICHO_PATTERNS["academia"])
+    result["is_fallback"] = True
+    return result
 
 
 # Exports
