@@ -14,7 +14,6 @@ from sqlalchemy import text
 from backend.core.database import engine
 from backend.services.email_service import enviar_email_resumo_diario
 from backend.services.credits_manager import plano_tem_sdr
-from backend.whatsapp_listener import is_tenant_connected, _salvar_interacao
 from backend.whatsapp.sender import send_text_parts
 
 router = APIRouter(prefix='/api/cron', tags=['cron'])
@@ -149,6 +148,7 @@ async def despachar_fila_franz(x_cron_secret: str = Header(None, alias='X-Cron-S
     from agents.sdr_langgraph import iniciar_contato, FranzInput, _escolher_variante
     from services.sdr_gateway import SdrMessageContext, evaluate_sdr_output, has_prior_outbound
     from backend.services.outbound_queue import enqueue_outbound
+    from backend.whatsapp_listener import is_tenant_connected
     # === Sprint 1.2 — Bug #3: lock por lead para evitar que 2 ciclos
     # paralelos do cron processem o mesmo lead simultaneamente.
     # Mesmo padrão de ``responder_lead`` em whatsapp_listener.
@@ -297,6 +297,7 @@ async def followup_franz(x_cron_secret: str = Header(None, alias='X-Cron-Secret'
     sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'agents'))
     from agents.sdr_langgraph import followup_automatico, _dentro_do_horario
     from services.sdr_gateway import SdrMessageContext, evaluate_sdr_output, has_prior_outbound
+    from backend.whatsapp_listener import is_tenant_connected, _salvar_interacao
 
     meowhats_key = os.getenv("MEOWHATS_KEY", "").strip()
     if not meowhats_key:
@@ -1006,4 +1007,3 @@ async def refresh_usd_brl_rate(
     except Exception as exc:
         logger.exception("refresh_usd_brl_rate falhou")
         return {"status": "error", "reason": str(exc)}
-

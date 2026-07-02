@@ -25,7 +25,13 @@ import json
 import re
 from typing import Any
 
-from langgraph.graph import StateGraph, END
+try:
+    from langgraph.graph import StateGraph, END
+    _LANGGRAPH_IMPORT_ERROR: Exception | None = None
+except Exception as _exc:
+    StateGraph = None  # type: ignore[assignment]
+    END = "__end__"
+    _LANGGRAPH_IMPORT_ERROR = _exc
 
 # Setup paths
 AGENTS_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -1503,8 +1509,12 @@ def node_save_and_send(state: SDRState) -> dict:
 # CONSTRUÇÃO DO GRAFO
 # ════════════════════════════════════════════════════════════════════
 
-def build_sdr_graph() -> StateGraph:
+def build_sdr_graph() -> Any:
     """Constrói o grafo SDR"""
+    if StateGraph is None:
+        raise SDRFallbackError(
+            f"LangGraph indisponivel ou incompativel: {_LANGGRAPH_IMPORT_ERROR}"
+        )
 
     workflow = StateGraph(SDRState)
 
@@ -1800,4 +1810,3 @@ def record_sdr_turn(
         # NAO quebra o agente se a tabela nao existir.
         print(f"[SDR] record_sdr_turn no-op (tabela ausente?): {exc}")
         return None
-

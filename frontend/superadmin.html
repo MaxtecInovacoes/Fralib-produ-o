@@ -202,6 +202,7 @@ canvas{max-width:100%}
   <button class="tab" data-tab="growth" onclick="switchTab('growth')" style="color:var(--cyan)">Growth Analytics</button>
   <button class="tab" data-tab="conversas" onclick="switchTab('conversas')" style="color:var(--gold)">💬 Conversas</button>
   <button class="tab" data-tab="automacoes" onclick="switchTab('automacoes')" style="color:var(--gold)">&#128172; Automações</button>
+  <button class="tab" data-tab="silent-tenants" onclick="switchTab('silent-tenants')" style="color:var(--danger,#ef4444);">🔕 Silenciosos</button>
 </div>
 
 <div class="main">
@@ -233,6 +234,31 @@ canvas{max-width:100%}
 
     <!-- Pipeline Stats -->
     <div id="dash-pipeline" style="margin:16px 0"></div>
+
+    <!-- Sprint 3.3 — Tenants Silenciosos (widget) -->
+    <div class="chart-card" style="margin:16px 0;padding:18px" id="silentTenantsWidget">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+        <h4 style="font-size:12px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin:0">🔕 TENANTS SILENCIOSOS</h4>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <span style="font-size:11px;color:var(--muted)">abertos:
+            <strong id="stWidgetTotal" style="color:#ef4444">—</strong>
+          </span>
+          <span style="font-size:11px;color:var(--muted)">critical:
+            <strong id="stWidgetCritical" style="color:#ef4444">—</strong>
+          </span>
+          <span style="font-size:11px;color:var(--muted)">warning:
+            <strong id="stWidgetWarning" style="color:#FFB800">—</strong>
+          </span>
+        </div>
+      </div>
+      <div id="stWidgetList" class="loading" style="font-size:12px">
+        <span class="spinner"></span> carregando…
+      </div>
+      <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+        <button class="btn" onclick="switchTab('silent-tenants')">Ver todos</button>
+        <button class="btn" onclick="runSilentTenantsDetector()" style="background:#FFB800;color:#08080c;border:none;font-weight:700">Rodar detector agora</button>
+      </div>
+    </div>
 
     <!-- Failed Jobs + Queue Controls -->
     <div style="display:flex;gap:14px;align-items:center;margin:16px 0">
@@ -846,6 +872,62 @@ canvas{max-width:100%}
     </div>
   </section>
 
+  <!-- ========== TENANTS SILENCIOSOS (Sprint 3.3) ========== -->
+  <section class="panel" id="panel-silent-tenants">
+    <h2 class="section-title">🔕 TENANTS SILENCIOSOS</h2>
+
+    <!-- Contadores por severity -->
+    <div class="metrics-grid" style="margin-bottom:18px" id="silent-tenants-counts">
+      <div class="metric-card">
+        <div class="metric-label">Total abertos</div>
+        <div class="metric-value" id="stCountTotal">—</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Critical</div>
+        <div class="metric-value" style="color:#ef4444" id="stCountCritical">—</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Warning</div>
+        <div class="metric-value" style="color:#FFB800" id="stCountWarning">—</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Info</div>
+        <div class="metric-value" style="color:var(--cyan)" id="stCountInfo">—</div>
+      </div>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="table-toolbar" style="border:1px solid var(--border);background:var(--card);margin-bottom:14px">
+      <span class="muted">Filtro:</span>
+      <select id="stSeverityFilter" class="select" onchange="loadSilentTenantsList()">
+        <option value="">Todas severities</option>
+        <option value="critical">Critical</option>
+        <option value="warning">Warning</option>
+        <option value="info">Info</option>
+      </select>
+      <select id="stTypeFilter" class="select" onchange="loadSilentTenantsList()">
+        <option value="">Todos os tipos</option>
+        <option value="admin_inactive_7d">Admin inativo 7d</option>
+        <option value="no_new_leads_15d">Sem leads 15d</option>
+        <option value="no_cost_events_3d">Sem custo 3d</option>
+        <option value="subscription_expiring_7d">Plano vence 7d</option>
+        <option value="trial_active_no_use_14d">Trial sem uso 14d</option>
+      </select>
+      <button class="btn btn-primary" onclick="loadSilentTenantsList()">Atualizar</button>
+      <button class="btn" onclick="runSilentTenantsDetector()" style="background:#FFB800;color:#08080c;border:none;font-weight:700">Rodar detector agora</button>
+    </div>
+
+    <!-- Tabela completa -->
+    <div class="table-wrap">
+      <div class="table-toolbar">
+        <span style="font-size:12px;font-weight:600;color:var(--danger,#ef4444)">LISTA DE ALERTAS</span>
+      </div>
+      <div id="silent-tenants-table" class="loading">
+        <span class="spinner"></span> carregando…
+      </div>
+    </div>
+  </section>
+
   <!-- ========== ALERTAS ========== -->
   <section class="panel" id="panel-alertas">
     <h2 class="section-title">ALERTAS DE PROVEDORES DE IA</h2>
@@ -1065,6 +1147,7 @@ function switchTab(tab){
   if(tab==='consumo' && !document.getElementById('usage-area').dataset.loaded) loadUsage();
   if(tab==='apikeys') loadApiKeys();
   if(tab==='alertas') loadAlerts();
+  if(tab==='silent-tenants') { loadSilentTenantsWidget(); loadSilentTenantsList(); }
   if(tab==='agentes') loadAgentConfigs();
   if(tab==='playground') initPlayground();
   if(tab==='sdrstudio' && !document.getElementById('panel-sdrstudio').dataset.loaded) loadSdrStudio();
@@ -2370,6 +2453,7 @@ let _chartFalhas = null;
 async function loadDashboard(){
   document.getElementById('dash-kpis').dataset.loaded = '1';
   await Promise.all([loadDashHealth(), loadDashOverview(), loadDashAlerts(), loadDashCosts(), loadDashPipeline(), loadDashJobs()]);
+  loadSilentTenantsWidget();
 }
 
 async function loadDashHealth(){
@@ -2531,6 +2615,164 @@ async function resumeQueue(){
     const d = await r.json();
     toast(d.message||'Fila retomada', 'success');
   }catch(e){ toast('Erro: '+e.message, 'error'); }
+}
+
+// ============================================================
+// Sprint 3.3 — TENANTS SILENCIOSOS (widget + listagem)
+// ============================================================
+/**
+ * Carrega widget compacto (contadores + top 5) para o dashboard.
+ * Falha silenciosa: nunca bloqueia o resto do dashboard.
+ * @returns {Promise<void>}
+ */
+async function loadSilentTenantsWidget() {
+  try {
+    var resp = await authFetch('/api/superadmin/silent-tenants/summary');
+    if (!resp.ok) {
+      var el = document.getElementById('stWidgetList');
+      if (el) el.innerHTML = '<div style="text-align:center;padding:8px;color:#ef4444;">Erro HTTP ' + resp.status + '</div>';
+      return;
+    }
+    var data = await resp.json();
+    var counts = (data && data.counts) || {info: 0, warning: 0, critical: 0, total: 0};
+    document.getElementById('stWidgetTotal').textContent = counts.total;
+    document.getElementById('stWidgetCritical').textContent = counts.critical;
+    document.getElementById('stWidgetWarning').textContent = counts.warning;
+    var list = document.getElementById('stWidgetList');
+    if (!list) return;
+    var top5 = data.top5 || [];
+    if (top5.length === 0) {
+      list.classList.remove('loading');
+      list.innerHTML = '<div style="text-align:center;padding:12px;color:var(--muted)">Nenhum alerta aberto 🎉</div>';
+      return;
+    }
+    var rows = top5.map(function (a) {
+      var sevColor = a.severity === 'critical' ? '#ef4444' : (a.severity === 'warning' ? '#FFB800' : 'var(--cyan)');
+      return '<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)">'
+        + '<div style="display:flex;align-items:center;gap:8px">'
+        +   '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:' + sevColor + '"></span>'
+        +   '<span style="color:var(--text);font-weight:500">' + (a.tenant_email || ('#'+a.tenant_id)) + '</span>'
+        +   '<span style="color:var(--muted);font-size:11px">· ' + a.alert_type + '</span>'
+        + '</div>'
+        + '<span style="font-size:11px;color:var(--muted)">' + (a.criado_em || '') + '</span>'
+        + '</div>';
+    }).join('');
+    list.classList.remove('loading');
+    list.innerHTML = rows;
+  } catch (err) {
+    var list2 = document.getElementById('stWidgetList');
+    if (list2) {
+      list2.classList.remove('loading');
+      list2.innerHTML = '<div style="text-align:center;padding:8px;color:#ef4444;">Erro: ' + (err instanceof Error ? err.message : String(err)) + '</div>';
+    }
+  }
+}
+
+/**
+ * Carrega lista completa de alertas (painel) com filtros aplicados.
+ * @returns {Promise<void>}
+ */
+async function loadSilentTenantsList() {
+  try {
+    var sev = document.getElementById('stSeverityFilter').value;
+    var type = document.getElementById('stTypeFilter').value;
+    var params = new URLSearchParams();
+    if (sev) params.set('severity', sev);
+    if (type) params.set('alert_type', type);
+    var url = '/api/superadmin/silent-tenants/?' + params.toString();
+    var resp = await authFetch(url);
+    if (!resp.ok) {
+      document.getElementById('silent-tenants-table').innerHTML = '<div style="text-align:center;padding:24px;color:#ef4444;">Erro HTTP ' + resp.status + '</div>';
+      return;
+    }
+    var data = await resp.json();
+    var alerts = data.alerts || [];
+    document.getElementById('stCountTotal').textContent = data.total || 0;
+    // Render tabela
+    if (alerts.length === 0) {
+      document.getElementById('silent-tenants-table').innerHTML = '<div style="text-align:center;padding:24px;color:var(--muted)">Nenhum alerta no filtro atual.</div>';
+      return;
+    }
+    var tableHtml = '<table class="data-table" style="width:100%;font-size:13px">'
+      + '<thead><tr>'
+      +   '<th style="text-align:left">ID</th>'
+      +   '<th style="text-align:left">Tenant</th>'
+      +   '<th style="text-align:left">Tipo</th>'
+      +   '<th>Severidade</th>'
+      +   '<th style="text-align:left">Detalhe</th>'
+      +   '<th style="text-align:left">Criado em</th>'
+      +   '<th style="text-align:right">Ações</th>'
+      + '</tr></thead><tbody>';
+    alerts.forEach(function (a) {
+      var sevColor = a.severity === 'critical' ? '#ef4444' : (a.severity === 'warning' ? '#FFB800' : 'var(--cyan)');
+      var detailStr = a.detail ? JSON.stringify(a.detail) : '';
+      if (detailStr.length > 60) detailStr = detailStr.substring(0, 60) + '...';
+      tableHtml += '<tr>'
+        + '<td style="font-family:var(--fl-font-mono)">#' + a.id + '</td>'
+        + '<td>' + (a.tenant_email || ('#'+a.tenant_id)) + '</td>'
+        + '<td style="font-family:var(--fl-font-mono);font-size:11px">' + a.alert_type + '</td>'
+        + '<td><span style="display:inline-block;padding:2px 8px;border-radius:4px;background:' + sevColor + '22;color:' + sevColor + ';font-size:11px;font-weight:600">' + a.severity + '</span></td>'
+        + '<td style="font-family:var(--fl-font-mono);font-size:11px;color:var(--muted)">' + detailStr + '</td>'
+        + '<td style="font-size:11px">' + (a.criado_em || '') + '</td>'
+        + '<td style="text-align:right">'
+        +   '<button class="btn" onclick="stAcknowledge(' + a.id + ')" style="font-size:11px;padding:4px 8px">ACK</button> '
+        +   '<button class="btn btn-danger" onclick="stResolve(' + a.id + ')" style="font-size:11px;padding:4px 8px">RESOLVE</button>'
+        + '</td>'
+        + '</tr>';
+    });
+    tableHtml += '</tbody></table>';
+    document.getElementById('silent-tenants-table').innerHTML = tableHtml;
+  } catch (err) {
+    document.getElementById('silent-tenants-table').innerHTML = '<div style="text-align:center;padding:24px;color:#ef4444;">Erro: ' + (err instanceof Error ? err.message : String(err)) + '</div>';
+  }
+}
+
+/**
+ * Reconhece um alerta via API e recarrega lista + widget.
+ * @param {number} alertId
+ * @returns {Promise<void>}
+ */
+async function stAcknowledge(alertId) {
+  if (!confirm('Reconhecer alerta #' + alertId + '?')) return;
+  try {
+    var r = await authFetch('/api/superadmin/silent-tenants/' + alertId + '/acknowledge', { method: 'POST' });
+    if (!r.ok) { alert('Erro HTTP ' + r.status); return; }
+    toast('Alerta #' + alertId + ' reconhecido', 'success');
+    loadSilentTenantsList();
+    loadSilentTenantsWidget();
+  } catch (err) { alert('Erro: ' + (err instanceof Error ? err.message : String(err))); }
+}
+
+/**
+ * Resolve um alerta via API e recarrega lista + widget.
+ * @param {number} alertId
+ * @returns {Promise<void>}
+ */
+async function stResolve(alertId) {
+  if (!confirm('Marcar alerta #' + alertId + ' como resolvido?')) return;
+  try {
+    var r = await authFetch('/api/superadmin/silent-tenants/' + alertId + '/resolve', { method: 'POST' });
+    if (!r.ok) { alert('Erro HTTP ' + r.status); return; }
+    toast('Alerta #' + alertId + ' resolvido', 'success');
+    loadSilentTenantsList();
+    loadSilentTenantsWidget();
+  } catch (err) { alert('Erro: ' + (err instanceof Error ? err.message : String(err))); }
+}
+
+/**
+ * Forca execucao manual do detector (util para superadmin testar).
+ * @returns {Promise<void>}
+ */
+async function runSilentTenantsDetector() {
+  if (!confirm('Rodar detector agora? Pode demorar alguns segundos.')) return;
+  try {
+    var r = await authFetch('/api/superadmin/silent-tenants/run-detector', { method: 'POST' });
+    var data = await r.json();
+    if (!r.ok) { alert('Erro HTTP ' + r.status + ': ' + (data.detail || '')); return; }
+    toast('Detector rodou: ' + data.detected + ' novos alertas', 'success');
+    loadSilentTenantsList();
+    loadSilentTenantsWidget();
+  } catch (err) { alert('Erro: ' + (err instanceof Error ? err.message : String(err))); }
 }
 
 // ============================================================

@@ -318,7 +318,40 @@ async def lifespan(app):
 
 app = FastAPI(title="FraLib API", version="2.0.0")  # lifespan=lifespan desabilitado temporariamente
 app.state.limiter = limiter
+try:
+    from database import engine as _app_engine
+
+    app.state.engine = _app_engine
+except Exception as _app_engine_err:
+    print(f"[Startup] app.state.engine nao registrado: {_app_engine_err}")
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# ──────────────────────────────────────────────────────────────────────────
+# Sprint 3.1 — Rate limit HTTP por IP (Redis + fallback Postgres)
+# Whitelist: GET /api/health, /, /docs, /openapi.json, /static/*, *.html, *.js, *.css
+# Buckets: auth.login=10/min, cron.*=5/min, public.*=30/min, default=60/min
+# Fail-open: se Redis E Postgres falharem, permite a request.
+# ──────────────────────────────────────────────────────────────────────────
+try:
+    from database import engine as _ip_rl_engine
+    from middleware import ip_rate_limit_middleware
+
+    _ip_rl_redis = None  # Redis opcional — middleware cai no Postgres automaticamente
+    try:
+        from database import redis_client as _ip_rl_redis  # type: ignore
+    except Exception:
+        _ip_rl_redis = None
+
+    app.middleware("http")(
+        ip_rate_limit_middleware(_ip_rl_engine, redis_client=_ip_rl_redis)
+    )
+except Exception as _ip_rl_err:
+    # Não derrubar startup por causa do middleware — log e segue
+    import logging as _ip_rl_logging
+
+    _ip_rl_logging.getLogger("fralib.server").warning(
+        f"[Startup] IP rate limit middleware não registrado: {_ip_rl_err}"
+    )
 
 # Exception handler global para evitar "Unexpected token" em erros 500
 @app.exception_handler(Exception)
@@ -514,6 +547,14 @@ app.include_router(competitive_intelligence.router)
 app.include_router(linkedin_outreach.router)
 app.include_router(crm_integration.router)
 
+# Sprint 2.2 — Trilha de Auditoria Unificada
+try:
+    import audit_endpoints
+    app.include_router(audit_endpoints.router)
+    print("[Server] audit_endpoints registrado")
+except ImportError as e:
+    print(f"[Server] audit_endpoints nao disponivel: {e}")
+
 # Analytics endpoints
 try:
     import analytics_endpoints
@@ -528,6 +569,14 @@ try:
     print("[Server] inativos_endpoints registrado")
 except ImportError as e:
     print(f"[Server] inativos_endpoints nao disponivel: {e}")
+
+# Sprint 3.3 — Alerta de Tenant Silencioso
+try:
+    import superadmin_silent_tenants_endpoints
+    app.include_router(superadmin_silent_tenants_endpoints.router)
+    print("[Server] superadmin_silent_tenants_endpoints registrado (Sprint 3.3)")
+except ImportError as e:
+    print(f"[Server] superadmin_silent_tenants_endpoints nao disponivel: {e}")
 
 try:
     import whatsapp_disparo_endpoints
