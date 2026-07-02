@@ -1,25 +1,34 @@
-#!/usr/bin/env python3
-"""
-Script para gerar vídeos usando ComfyUI com prompts da API KPLabs
-"""
+"""Script para gerar vídeos usando ComfyUI com prompts da API KPLabs."""
 
-import requests
 import json
-import time
 import os
+import time
 from pathlib import Path
 
+import requests
+from dotenv import load_dotenv
+
+load_dotenv()
+
+# SEGURANÇA (Sprint 12.x): chave NUNCA hardcoded — obrigatória via env var.
+KPLABS_API_KEY = os.environ.get("KPLABS_API_KEY")
+if not KPLABS_API_KEY:
+    raise RuntimeError(
+        "KPLABS_API_KEY nao configurada. Defina no .env antes de usar este script."
+    )
+
+
 class VideoGenerator:
-    def __init__(self):
-        # Configurações
-        self.kplabs_api = "https://api.kpalabz.com"
-        self.kplabs_key = "sk-kpa-fa199fc49d1744a966e0ab4055ea5b11f39bc6bb24619465b68dbfbdc2e9746a"
-        self.comfyui_url = "http://localhost:8188"
+    def __init__(self) -> None:
+        # Configurações — chave via env var (nunca mais hardcoded)
+        self.kplabs_api: str = "https://api.kpalabz.com"
+        self.kplabs_key: str = KPLABS_API_KEY
+        self.comfyui_url: str = "http://localhost:8188"
 
         # Diretórios
-        self.base_dir = Path("C:/fralib/ComfyUI")
-        self.input_dir = self.base_dir / "input"
-        self.output_dir = self.base_dir / "output"
+        self.base_dir: Path = Path("C:/fralib/ComfyUI")
+        self.input_dir: Path = self.base_dir / "input"
+        self.output_dir: Path = self.base_dir / "output"
 
         # Criar diretórios necessários
         self.input_dir.mkdir(exist_ok=True)

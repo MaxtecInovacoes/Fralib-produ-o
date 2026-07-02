@@ -1,18 +1,27 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
+"""Script para gerar prompts para video da Copa do Mundo.
+
+Usa a API KPLabs para criar prompts detalhados.
 """
-Script para gerar prompts para video da Copa do Mundo
-Usa a API KPLabs para criar prompts detalhados
-"""
+
+import os
 
 import requests
-import json
-from datetime import datetime
+from dotenv import load_dotenv
+
+load_dotenv()
+
+# SEGURANÇA (Sprint 12.x): chave NUNCA hardcoded — obrigatória via env var.
+KPLABS_API_KEY = os.environ.get("KPLABS_API_KEY")
+if not KPLABS_API_KEY:
+    raise RuntimeError(
+        "KPLABS_API_KEY nao configurada. Defina no .env antes de usar este script."
+    )
+
 
 class CopaDoMundoPromptGenerator:
-    def __init__(self):
-        self.kplabs_api = "https://api.kpalabz.com"
-        self.kplabs_key = "sk-kpa-fa199fc49d1744a966e0ab4055ea5b11f39bc6bb24619465b68dbfbdc2e9746a"
+    def __init__(self) -> None:
+        self.kplabs_api: str = "https://api.kpalabz.com"
+        self.kplabs_key: str = KPLABS_API_KEY  # carregada de variável de ambiente
 
     def gerar_prompts_copa_mundo(self):
         """Gerar prompts detalhados para video da Copa do Mundo"""

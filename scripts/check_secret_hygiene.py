@@ -15,13 +15,27 @@ SENSITIVE_BACKUP_GLOBS = ("**/.env.backup*", "**/*.env.backup*")
 SECRET_PATTERNS = [
     re.compile(r"\bsk-[A-Za-z0-9_-]{20,}\b"),
     re.compile(r"\bsk-ant-[A-Za-z0-9_-]{20,}\b"),
+    re.compile(r"\bsk-or-[A-Za-z0-9_-]{20,}\b"),
+    re.compile(r"\bsk-kpa-[A-Za-z0-9_-]{20,}\b"),  # KPLabs / kie.ai
+    re.compile(r"\bsk-proj-[A-Za-z0-9_-]{20,}\b"),  # OpenAI project keys
+    re.compile(r"\bgsk_[A-Za-z0-9_-]{20,}\b"),  # Groq
     re.compile(r"\bAIza[0-9A-Za-z_-]{20,}\b"),
+    re.compile(r"\bAKIA[0-9A-Z]{16}\b"),  # AWS Access Key
     re.compile(r"\bghp_[0-9A-Za-z]{20,}\b"),
+    re.compile(r"\bgho_[0-9A-Za-z]{20,}\b"),  # GitHub OAuth
+    re.compile(r"\bghu_[0-9A-Za-z]{20,}\b"),  # GitHub User
+    re.compile(r"\bghs_[0-9A-Za-z]{20,}\b"),  # GitHub Server
+    re.compile(r"\bghr_[0-9A-Za-z]{20,}\b"),  # GitHub Refresh
     re.compile(r"\bxox[baprs]-[0-9A-Za-z-]{20,}\b"),
     re.compile(r"\bsk_(?:live|test)_[0-9A-Za-z]{16,}\b"),
+    re.compile(r"\bpk_(?:live|test)_[0-9A-Za-z]{16,}\b"),  # Stripe publishable
+    re.compile(r"\bAPP_USR-[0-9]+-[0-9]+-[A-Za-z0-9-]+"),  # MercadoPago
     re.compile(r"\bwhsec_[0-9A-Za-z]{16,}\b"),
     re.compile(r"postgres(?:ql)?://[^\s'\":/]+:[^@\s'\"]+@", re.IGNORECASE),
+    re.compile(r"mysql://[^\s'\":/]+:[^@\s'\"]+@", re.IGNORECASE),
+    re.compile(r"mongodb(?:\+srv)?://[^\s'\":/]+:[^@\s'\"]+@", re.IGNORECASE),
     re.compile(r"\bJWT_SECRET_KEY\s*=\s*['\"]?[A-Za-z0-9_-]{24,}", re.IGNORECASE),
+    re.compile(r"\bFERNET_KEY\s*=\s*['\"]?[A-Za-z0-9_=-]{30,}", re.IGNORECASE),
     re.compile(
         r"\b(?:POSTGRES_PASSWORD|DB_PASSWORD|DATABASE_PASSWORD)\s*=\s*['\"]?[^'\"\s#]+",
         re.IGNORECASE,

@@ -1,19 +1,27 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Script para gerar video animado da Copa do Mundo do Brasil
-"""
+"""Script para gerar video animado da Copa do Mundo do Brasil."""
 
-import requests
-import json
+import os
 import time
 from pathlib import Path
 
+import requests
+from dotenv import load_dotenv
+
+load_dotenv()
+
+# SEGURANÇA (Sprint 12.x): chave NUNCA hardcoded — obrigatória via env var.
+KPLABS_API_KEY = os.environ.get("KPLABS_API_KEY")
+if not KPLABS_API_KEY:
+    raise RuntimeError(
+        "KPLABS_API_KEY nao configurada. Defina no .env antes de usar este script."
+    )
+
+
 class WorldCupVideoGenerator:
-    def __init__(self):
-        self.kplabs_api = "https://api.kpalabz.com"
-        self.kplabs_key = "sk-kpa-fa199fc49d1744a966e0ab4055ea5b11f39bc6bb24619465b68dbfbdc2e9746a"
-        self.comfyui_url = "http://localhost:8188"
+    def __init__(self) -> None:
+        self.kplabs_api: str = "https://api.kpalabz.com"
+        self.kplabs_key: str = KPLABS_API_KEY  # carregada de variável de ambiente
+        self.comfyui_url: str = "http://localhost:8188"
 
     def generate_world_cup_prompts(self):
         """Gerar prompts para video da Copa do Mundo"""
