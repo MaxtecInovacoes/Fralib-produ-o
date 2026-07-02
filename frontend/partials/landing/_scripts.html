@@ -260,7 +260,7 @@ document.getElementById('ctaForm')?.addEventListener('submit', function(e){
           // Abre checkout em NOVA ABA para nao perder o estado da landing
           const w = window.open(data.checkout_url, '_blank', 'noopener,noreferrer');
           if (!w) {
-            // Popup bloqueado: fallback para mesma aba
+            // Popup bloqueado: usa mesma aba.
             window.location = data.checkout_url;
           } else {
             // Marca estado no localStorage para pagina de sucesso nao liberar acesso
