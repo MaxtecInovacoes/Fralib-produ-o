@@ -3,7 +3,7 @@
 # setup_github.sh - Configura token do GitHub para backup automatico
 # =============================================================================
 # Uso: ./scripts/setup_github.sh SEU_TOKEN
-# Exemplo: ./scripts/setup_github.sh ghp_xxxxxxxxxxxx
+# Exemplo: ./scripts/setup_github.sh SEU_TOKEN_GITHUB_AQUI
 # =============================================================================
 
 set +e
@@ -25,7 +25,7 @@ if [ -z "$TOKEN" ]; then
     echo "  3. Marque apenas 'repo'"
     echo "  4. Copie o token"
     echo ""
-    echo "Uso: ./scripts/setup_github.sh ghp_seu_token_aqui"
+    echo "Uso: ./scripts/setup_github.sh SEU_TOKEN_GITHUB_AQUI"
     exit 1
 fi
 

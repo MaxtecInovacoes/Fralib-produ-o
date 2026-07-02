@@ -60,7 +60,7 @@ Adicionalmente, o mesmo token aparece em 5 arquivos `.js` do **submódulo `open-
 ## 🚨 CRÍTICO #2 — Token GitHub antigo em 4 arquivos JSONL de sessão
 
 ### Achado
-O token `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` (rotacionado) aparece em **4 arquivos JSONL** de sessão do Claude Desktop:
+O token GitHub antigo `[REDACTED_GITHUB_TOKEN]` (rotacionado) aparece em **4 arquivos JSONL** de sessão do Claude Desktop:
 
 | Arquivo | Localização | Tipo |
 |---|---|---|
@@ -148,7 +148,7 @@ O submódulo `open-generative-ai/` (5 arquivos JS de teste) contém a mesma chav
 7. **CORS configurado** via env var `FRALIB_CORS_ORIGINS` (não hardcoded)
 8. **JWT/Fernet** validados em `backend/core/jwt_config.py` com checagem de tamanho mínimo
 9. **Nenhum `.pem`, `.key`, `.p12`** commitado
-10. **Token GitHub novo** `ghp_pTDP6CZFW...` está apenas na URL do remote (você rotacionou corretamente)
+10. **Token GitHub novo** `[REDACTED_GITHUB_TOKEN]` está apenas na URL do remote (você rotacionou corretamente)
 
 ---
 
