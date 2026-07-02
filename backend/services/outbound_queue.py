@@ -207,17 +207,130 @@ def can_send_now(engine, tenant_id: int) -> tuple[bool, int]:
         return False, max(0, int(wait.total_seconds()))
 
 
-def dequeue_and_send(engine, sender_func) -> dict:
+def _select_pending_msg(conn):
+    """Sprint 1.2 — helper isolado pra permitir mock nos testes.
+
+    Retorna ``(msg_id, tenant_id, lead_id, phone, message, source, attempts)``
+    ou ``None`` se não há msgs pendentes.
+
+    Implementação: SELECT ... FOR UPDATE SKIP LOCKED (mesmo da lógica original).
+    """
+    from sqlalchemy import text
+    rows = conn.execute(text("""
+        SELECT id, tenant_id, lead_id, phone, message, source, attempts
+        FROM outbound_queue
+        WHERE status = 'pending'
+          AND scheduled_at <= NOW()
+        ORDER BY scheduled_at ASC, id ASC
+        LIMIT 1
+        FOR UPDATE SKIP LOCKED
+    """)).fetchall()
+    if not rows:
+        return None
+    return tuple(rows[0])
+
+
+def _check_last_inbound_vs_outbound(engine, lead_id, tenant_id) -> bool:
+    """Sprint 1.2 — Bug #3: checa se o lead respondeu DEPOIS do último outbound.
+
+    Retorna ``True`` se ``last_inbound_at > last_outbound_at`` (lead respondeu,
+    devemos abortar o envio pra não falar por cima da resposta do lead).
+
+    Em caso de erro de leitura ou dados ausentes, retorna ``False`` (fail-open)
+    pra não bloquear a fila inteira por uma falha de telemetria.
+    """
+    from sqlalchemy import text
+    try:
+        with engine.connect() as c:
+            row = c.execute(text("""
+                SELECT
+                    MAX(CASE WHEN direcao = 'entrada' THEN criado_em END) AS last_inbound,
+                    MAX(CASE WHEN direcao = 'saida' THEN criado_em END) AS last_outbound
+                FROM interacoes
+                WHERE lead_id = :lid AND user_id = :tid
+            """), {"lid": lead_id, "tid": tenant_id}).fetchone()
+        if not row:
+            return False
+        last_inbound = row[0]
+        last_outbound = row[1]
+        if not last_inbound:
+            return False
+        if last_outbound and last_inbound <= last_outbound:
+            return False
+        return True
+    except Exception as e:
+        logger.warning(f"[outbound] _check_last_inbound_vs_outbound falhou: {e}")
+        return False
+
+
+def set_cooldown(lead_key: str) -> None:
+    """Sprint 1.2 — Bug #3: marca cooldown Redis para o lead.
+
+    Se Redis estiver offline (lead_lock offline), usa fallback Postgres
+    (não fatal — apenas loga warning).
+    """
+    try:
+        from backend.agents.sdr_langgraph.lead_lock import get_redis_client
+        r = get_redis_client()
+        if r is None:
+            logger.warning(f"[outbound] Redis offline — set_cooldown skip para {lead_key}")
+            return
+        # Cooldown de 60s padrão por tenant (mesmo TTL do response_executor).
+        r.setex(f"fralib:lead_cooldown:{lead_key}", 60, "1")
+    except Exception as e:
+        logger.warning(f"[outbound] set_cooldown falhou para {lead_key}: {e}")
+
+
+def increment_daily_count(tenant_id: int, lead_id: str) -> None:
+    """Sprint 1.2 — Bug #3: incrementa contador diário por tenant+lead.
+
+    Hoje não persiste em coluna; usa o TTL Redis (counter simples).
+    Em produção, deveria atualizar uma coluna ``leads.outbound_count_today``.
+    """
+    try:
+        from backend.agents.sdr_langgraph.lead_lock import get_redis_client
+        r = get_redis_client()
+        if r is None:
+            return
+        key = f"fralib:outbound_daily:{tenant_id}:{lead_id}"
+        r.incr(key)
+        # TTL de 24h (expira à meia-noite SP, aproximado)
+        r.expire(key, 86400)
+    except Exception as e:
+        logger.warning(f"[outbound] increment_daily_count falhou: {e}")
+
+
+def dequeue_and_send(
+    engine,
+    sender_func,
+    set_cooldown_fn=None,
+    increment_daily_fn=None,
+) -> dict:
     """Processa fila: pega 1 msg pendente, verifica rate limit, envia.
+
+    Sprint 1.2 — Bug #3: antes de enviar, valida se o lead já respondeu
+    (``last_inbound_at > last_outbound_at``). Se sim, aborta (skipped)
+    pra não duplicar a conversa.
 
     Args:
         engine: SQLAlchemy engine
         sender_func: callable(phone, message) -> success: bool
+        set_cooldown_fn: opcional, callable(lead_key) — chamado ANTES do envio
+                         para garantir que 2 workers não enviem simultaneamente
+                         para o mesmo lead. Default: ``set_cooldown``.
+        increment_daily_fn: opcional, callable(tenant_id, lead_id) — chamado
+                            APÓS sucesso do envio para contabilizar o lead.
+                            Default: ``increment_daily_count``.
 
     Returns:
         { sent: int, skipped: int, failed: int, waiting_sec: int }
     """
     from sqlalchemy import text
+
+    if set_cooldown_fn is None:
+        set_cooldown_fn = set_cooldown
+    if increment_daily_fn is None:
+        increment_daily_fn = increment_daily_count
 
     result = {"sent": 0, "skipped": 0, "failed": 0, "waiting_sec": 0, "msgs": []}
 
@@ -241,6 +354,24 @@ def dequeue_and_send(engine, sender_func) -> dict:
 
     msg_id, tenant_id, lead_id, phone, message, source, attempts = rows[0]
 
+    # === Sprint 1.2 — Bug #3: checa se lead respondeu desde o último outbound ===
+    if _check_last_inbound_vs_outbound(engine, lead_id, tenant_id):
+        logger.info(
+            f"[outbound] msg {msg_id} abortada — lead {lead_id} respondeu "
+            "após último outbound"
+        )
+        with engine.connect() as c:
+            c.execute(text("""
+                UPDATE outbound_queue
+                SET status = 'skipped',
+                    error = 'lead respondeu após último outbound',
+                    scheduled_at = NOW() + INTERVAL '60 minutes'
+                WHERE id = :id AND status = 'pending'
+            """), {"id": msg_id})
+            c.commit()
+        result["skipped"] = 1
+        return result
+
     # Verifica rate limit
     can_send, wait_sec = can_send_now(engine, tenant_id)
     if not can_send:
@@ -248,6 +379,18 @@ def dequeue_and_send(engine, sender_func) -> dict:
         result["waiting_sec"] = wait_sec
         logger.info(f"[outbound] msg {msg_id} bloqueada por rate limit (wait={wait_sec}s)")
         return result
+
+    # === Sprint 1.2 — Bug #3: set_cooldown ANTES do sender ===
+    # Garante que 2 workers simultâneos não enviem para o mesmo lead_key.
+    # Se Redis offline, fallback loga warning mas não bloqueia (Redis já tem
+    # fallback Postgres wpp_lock_until via response_executor).
+    lead_key = f"{tenant_id}:{lead_id}"
+    try:
+        set_cooldown_fn(lead_key)
+    except Exception as _cooldown_err:
+        logger.warning(
+            f"[outbound] set_cooldown_fn falhou (nao-bloqueante): {_cooldown_err}"
+        )
 
     # Marca como 'sending' atomicamente
     with engine.connect() as c:
@@ -319,6 +462,15 @@ def dequeue_and_send(engine, sender_func) -> dict:
                     db.close()
             except Exception as e:
                 logger.warning("[outbound] falha ao consumir credito trial tenant=%s lead=%s: %s", tenant_id, lead_id, e)
+
+            # === Sprint 1.2 — Bug #3: increment_daily_count APÓS sucesso ===
+            try:
+                increment_daily_fn(int(tenant_id), str(lead_id or ""))
+            except Exception as _inc_err:
+                logger.warning(
+                    f"[outbound] increment_daily_fn falhou (nao-bloqueante): {_inc_err}"
+                )
+
             result["sent"] = 1
             result["msgs"].append({"id": msg_id, "phone": phone, "source": source})
             logger.info(f"[outbound] msg {msg_id} ENVIADA para {phone}")

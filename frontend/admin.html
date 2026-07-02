@@ -607,6 +607,41 @@
       </div>
     </div>
 
+    <!-- SIMULADOR FRANZ (Sprint 1.1): admin roda mensagem e ve resposta + action Kanban -->
+    <div class="config-section" id="sdrSimulatorCard" style="margin-bottom:24px;">
+      <div class="config-group" style="margin-bottom:16px;">
+        <div class="config-group-title" style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+          <span>🧪 SIMULADOR FRANZ</span>
+          <span id="sdrSimulatorSync" style="font-family:var(--fl-font-mono);font-size:10px;color:var(--fl-text-muted);">pronto</span>
+        </div>
+        <div style="font-size:12px;color:var(--fl-text-muted);margin-bottom:10px;">
+          Digite uma mensagem como se fosse um lead e veja como o Franz responderia,
+          qual <code>intent</code> ele detecta, em qual coluna do Kanban o lead
+          cairia (<code>stage_after</code>) e qual <code>kanban_action</code> ele executaria.
+          <strong>Não dispara no WhatsApp real.</strong>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr;gap:10px;">
+          <div>
+            <label style="font-size:11px;color:var(--fl-text-muted);text-transform:uppercase;letter-spacing:.04em;">Histórico (opcional, 1 turno por linha — <code>lead: ...</code> ou <code>franz: ...</code>)</label>
+            <textarea id="sdrSimulatorHistoryInput" rows="3" placeholder="lead: oi&#10;franz: ola! em que posso ajudar?" style="width:100%;background:rgba(255,255,255,.04);color:var(--fl-text);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:10px;font-family:var(--fl-font-mono,monospace);font-size:12px;resize:vertical;"></textarea>
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--fl-text-muted);text-transform:uppercase;letter-spacing:.04em;">Mensagem do lead</label>
+            <textarea id="sdrSimulatorMessage" rows="3" placeholder="Ex: quero contratar, manda link" style="width:100%;background:rgba(255,255,255,.04);color:var(--fl-text);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:10px;font-family:var(--fl-font-mono,monospace);font-size:13px;resize:vertical;"></textarea>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:10px;align-items:center;flex-wrap:wrap;">
+          <button type="button" id="sdrSimulatorSubmit" style="background:#10b981;color:#03130d;border:none;border-radius:8px;padding:8px 14px;font-weight:700;cursor:pointer;font-size:13px;">Testar mensagem</button>
+          <span style="font-size:11px;color:var(--fl-text-muted);">Ctrl+Enter para enviar</span>
+        </div>
+        <div id="sdrSimulatorOutput" style="margin-top:14px;"></div>
+        <div style="margin-top:18px;">
+          <div style="font-size:11px;color:var(--fl-text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">Histórico recente</div>
+          <div id="sdrSimulatorHistory"></div>
+        </div>
+      </div>
+    </div>
+
     <!-- MOTOR DE ABASTECIMENTO: Hunter/Caio separado da pipeline -->
     <div class="config-section" id="leadSupplyPanel" style="margin-bottom:24px;">
       <div class="config-group" style="margin-bottom:16px;">
@@ -2111,6 +2146,120 @@ window.initPixelOffice = function(){
             <p style="color:var(--fl-text-muted);font-size:12px;line-height:1.5;margin:0;">Use o motor nativo ou personalize nome, horario, abordagem, limites e base de conhecimento deste tenant.</p>
           </div>
           <span id="sdrPlanStatus" style="font-size:11px;color:var(--fl-text-muted);border:1px solid var(--fl-border);padding:5px 9px;border-radius:6px;">verificando plano</span>
+        </div>
+
+        <!-- 🤖 CONFIGURAR FRANZ (Sprint 1.3): personalizacao granular por campo
+             com toggle "Personalizar" + botao "Restaurar nativo" e preview
+             do system prompt em tempo real. Integra com /api/users/sdr-config. -->
+        <div id="sdrPersonalizationCard" style="border:1px solid rgba(99,102,241,.25);background:rgba(99,102,241,.05);border-radius:12px;padding:14px 16px;margin-bottom:18px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px;">
+            <div>
+              <div style="font-size:13px;font-weight:700;letter-spacing:.04em;color:#a5b4fc;">🤖 CONFIGURAR FRANZ</div>
+              <div style="font-size:12px;color:var(--fl-text-muted);margin-top:2px;">Cada campo tem toggle "Personalizar" — quando OFF, usa o motor nativo FraLib (default seguro).</div>
+            </div>
+            <span id="sdrPersStatus" style="font-size:11px;color:var(--fl-text-muted);">pronto</span>
+          </div>
+
+          <!-- Tabs -->
+          <div style="display:flex;gap:6px;border-bottom:1px solid rgba(255,255,255,.08);margin-bottom:12px;">
+            <button type="button" class="sdr-pers-tab sdr-pers-tab--active" data-tab="basico" style="background:transparent;border:none;color:#a5b4fc;font-weight:700;font-size:12px;padding:8px 14px;cursor:pointer;border-bottom:2px solid #6366f1;">Básico</button>
+            <button type="button" class="sdr-pers-tab" data-tab="avancado" style="background:transparent;border:none;color:var(--fl-text-muted);font-weight:700;font-size:12px;padding:8px 14px;cursor:pointer;border-bottom:2px solid transparent;">Avançado</button>
+            <button type="button" class="sdr-pers-tab" data-tab="base" style="background:transparent;border:none;color:var(--fl-text-muted);font-weight:700;font-size:12px;padding:8px 14px;cursor:pointer;border-bottom:2px solid transparent;">Base de conhecimento</button>
+          </div>
+
+          <!-- Tab: Basico -->
+          <div class="sdr-pers-panel" data-panel="basico" style="display:block;">
+            <div style="display:grid;grid-template-columns:1fr;gap:12px;">
+              <div>
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px;">
+                  <label style="font-size:11px;color:var(--fl-text-muted);text-transform:uppercase;letter-spacing:.04em;" for="sdrPersAgentName">Nome do agente</label>
+                  <label style="font-size:11px;color:var(--fl-text-muted);display:flex;align-items:center;gap:6px;"><input class="sdr-pers-toggle" type="checkbox" data-target="sdrPersAgentName"> Personalizar</label>
+                </div>
+                <input class="config-input" id="sdrPersAgentName" type="text" maxlength="40" placeholder="Franz" disabled>
+                <button type="button" class="sdr-pers-restore" data-target="sdrPersAgentName" style="margin-top:4px;background:transparent;border:1px solid rgba(255,255,255,.12);color:var(--fl-text-muted);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;">Restaurar nativo</button>
+              </div>
+              <div>
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px;">
+                  <label style="font-size:11px;color:var(--fl-text-muted);text-transform:uppercase;letter-spacing:.04em;" for="sdrPersAgentSignature">Assinatura do agente</label>
+                  <label style="font-size:11px;color:var(--fl-text-muted);display:flex;align-items:center;gap:6px;"><input class="sdr-pers-toggle" type="checkbox" data-target="sdrPersAgentSignature"> Personalizar</label>
+                </div>
+                <input class="config-input" id="sdrPersAgentSignature" type="text" maxlength="90" placeholder="— Equipe XYZ" disabled>
+                <button type="button" class="sdr-pers-restore" data-target="sdrPersAgentSignature" style="margin-top:4px;background:transparent;border:1px solid rgba(255,255,255,.12);color:var(--fl-text-muted);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;">Restaurar nativo</button>
+              </div>
+              <div>
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px;">
+                  <label style="font-size:11px;color:var(--fl-text-muted);text-transform:uppercase;letter-spacing:.04em;" for="sdrPersTone">Tom / personalidade</label>
+                  <label style="font-size:11px;color:var(--fl-text-muted);display:flex;align-items:center;gap:6px;"><input class="sdr-pers-toggle" type="checkbox" data-target="sdrPersTone"> Personalizar</label>
+                </div>
+                <textarea class="config-input" id="sdrPersTone" rows="3" maxlength="900" placeholder="Ex: consultivo, direto, sem girias, nunca pressionar." disabled></textarea>
+                <button type="button" class="sdr-pers-restore" data-target="sdrPersTone" style="margin-top:4px;background:transparent;border:1px solid rgba(255,255,255,.12);color:var(--fl-text-muted);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;">Restaurar nativo</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tab: Avancado -->
+          <div class="sdr-pers-panel" data-panel="avancado" style="display:none;">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+              <div>
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px;">
+                  <label style="font-size:11px;color:var(--fl-text-muted);text-transform:uppercase;letter-spacing:.04em;" for="sdrPersAllowedActions">Ações permitidas (1 por linha)</label>
+                  <label style="font-size:11px;color:var(--fl-text-muted);display:flex;align-items:center;gap:6px;"><input class="sdr-pers-toggle" type="checkbox" data-target="sdrPersAllowedActions"> Personalizar</label>
+                </div>
+                <textarea class="config-input" id="sdrPersAllowedActions" rows="4" placeholder="qualificar o lead&#10;mostrar o site quando houver interesse" disabled></textarea>
+                <button type="button" class="sdr-pers-restore" data-target="sdrPersAllowedActions" style="margin-top:4px;background:transparent;border:1px solid rgba(255,255,255,.12);color:var(--fl-text-muted);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;">Restaurar nativo</button>
+              </div>
+              <div>
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px;">
+                  <label style="font-size:11px;color:var(--fl-text-muted);text-transform:uppercase;letter-spacing:.04em;" for="sdrPersBlockedActions">Ações bloqueadas (1 por linha)</label>
+                  <label style="font-size:11px;color:var(--fl-text-muted);display:flex;align-items:center;gap:6px;"><input class="sdr-pers-toggle" type="checkbox" data-target="sdrPersBlockedActions"> Personalizar</label>
+                </div>
+                <textarea class="config-input" id="sdrPersBlockedActions" rows="4" placeholder="inventar promessa de resultado&#10;parecer spam" disabled></textarea>
+                <button type="button" class="sdr-pers-restore" data-target="sdrPersBlockedActions" style="margin-top:4px;background:transparent;border:1px solid rgba(255,255,255,.12);color:var(--fl-text-muted);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;">Restaurar nativo</button>
+              </div>
+              <div>
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px;">
+                  <label style="font-size:11px;color:var(--fl-text-muted);text-transform:uppercase;letter-spacing:.04em;" for="sdrPersHandoffTriggers">Gatilhos de handoff (1 por linha)</label>
+                  <label style="font-size:11px;color:var(--fl-text-muted);display:flex;align-items:center;gap:6px;"><input class="sdr-pers-toggle" type="checkbox" data-target="sdrPersHandoffTriggers"> Personalizar</label>
+                </div>
+                <textarea class="config-input" id="sdrPersHandoffTriggers" rows="4" placeholder="lead pediu humano&#10;lead pediu contrato ou pagamento" disabled></textarea>
+                <button type="button" class="sdr-pers-restore" data-target="sdrPersHandoffTriggers" style="margin-top:4px;background:transparent;border:1px solid rgba(255,255,255,.12);color:var(--fl-text-muted);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;">Restaurar nativo</button>
+              </div>
+              <div>
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px;">
+                  <label style="font-size:11px;color:var(--fl-text-muted);text-transform:uppercase;letter-spacing:.04em;" for="sdrPersHandoffNote">Nota de handoff</label>
+                  <label style="font-size:11px;color:var(--fl-text-muted);display:flex;align-items:center;gap:6px;"><input class="sdr-pers-toggle" type="checkbox" data-target="sdrPersHandoffNote"> Personalizar</label>
+                </div>
+                <textarea class="config-input" id="sdrPersHandoffNote" rows="4" maxlength="700" placeholder="Chame humano em lead quente, pedido de pagamento..." disabled></textarea>
+                <button type="button" class="sdr-pers-restore" data-target="sdrPersHandoffNote" style="margin-top:4px;background:transparent;border:1px solid rgba(255,255,255,.12);color:var(--fl-text-muted);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;">Restaurar nativo</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tab: Base de conhecimento -->
+          <div class="sdr-pers-panel" data-panel="base" style="display:none;">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px;">
+              <label style="font-size:11px;color:var(--fl-text-muted);text-transform:uppercase;letter-spacing:.04em;" for="sdrPersCustomKnowledge">Base de conhecimento (FAQ do negocio)</label>
+              <label style="font-size:11px;color:var(--fl-text-muted);display:flex;align-items:center;gap:6px;"><input class="sdr-pers-toggle" type="checkbox" data-target="sdrPersCustomKnowledge"> Personalizar</label>
+            </div>
+            <textarea class="config-input" id="sdrPersCustomKnowledge" rows="6" maxlength="8000" placeholder="FAQ, ofertas, objecoes, limites comerciais, forma de falar, quem chamar, diferenciais e politicas." disabled></textarea>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:6px;">
+              <span id="sdrPersCharCounter" style="font-size:11px;color:var(--fl-text-muted);">8000 restantes (máx 8000)</span>
+              <button type="button" class="sdr-pers-restore" data-target="sdrPersCustomKnowledge" style="background:transparent;border:1px solid rgba(255,255,255,.12);color:var(--fl-text-muted);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;">Restaurar nativo</button>
+            </div>
+          </div>
+
+          <!-- Preview do system prompt em tempo real -->
+          <div style="margin-top:14px;">
+            <label style="font-size:11px;color:var(--fl-text-muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:4px;">Preview do system prompt (tempo real)</label>
+            <textarea id="sdrPersPromptPreview" readonly rows="8" style="width:100%;background:rgba(0,0,0,.3);color:#a5b4fc;border:1px solid rgba(99,102,241,.2);border-radius:8px;padding:10px;font-family:var(--fl-font-mono,monospace);font-size:12px;resize:vertical;"></textarea>
+          </div>
+
+          <!-- Botoes finais -->
+          <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;align-items:center;">
+            <button type="button" id="sdrPersSaveBtn" style="background:#6366f1;color:white;border:none;border-radius:8px;padding:8px 14px;font-weight:700;cursor:pointer;font-size:13px;">SALVAR PERSONALIZACAO</button>
+            <button type="button" id="sdrPersTestSimulator" style="background:#10b981;color:#03130d;border:none;border-radius:8px;padding:8px 14px;font-weight:700;cursor:pointer;font-size:13px;">Testar no simulador</button>
+            <span style="font-size:11px;color:var(--fl-text-muted);">Salvamento usa os mesmos campos do painel Controle do SDR. Toggle off = nativo.</span>
+          </div>
         </div>
 
         <div class="config-row">
@@ -8568,4 +8717,6 @@ async function atualizarUtiBadge() {
 <script src="/js/admin/audio-panel/panel-events.js?v=20260621"></script>
 <script src="/js/admin/audio-panel.js?v=20260621"></script>
 <script src="/js/admin/phone-health.js?v=20260702"></script>
+<script src="/js/admin/sdr-simulator.js?v=20260702-sprint11"></script>
+<script src="/js/admin/sdr-personalization.js?v=20260702-sprint13"></script>
 </body></html>

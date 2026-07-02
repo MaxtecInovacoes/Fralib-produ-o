@@ -74,6 +74,10 @@ DEFAULT_SDR_SETTINGS: dict[str, Any] = {
         "human_pause_seconds": 300,
     },
     "bot_ignore_saved_contacts": False,
+    # Sprint 1.5 — Transparencia pro Lead. Quando True, o whatsapp_listener
+    # enfileira uma msg curta de status (ex: "Ja te respondo em 5 min, ta?")
+    # ANTES de silenciar o Franz em estado cooldown/paused/handoff.
+    "transparency_enabled": True,
     # Trilha A — auto-throttle: quando True, daily_limit_per_lead é reduzido
     # dinamicamente baseado no phone_health_score do tenant.
     # score >= 80: 100% do limite | 50-79: 70% | 20-49: 50% | <20: 10%

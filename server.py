@@ -483,6 +483,14 @@ try:
     print("[Server] superadmin_providers_endpoints registrado (superadmin)")
 except ImportError as e:
     print(f"[Server] superadmin_providers_endpoints nao disponivel: {e}")
+
+# Sprint 1.1 — Simulador do Franz (admin tenant)
+try:
+    import admin_sdr_simulator_endpoints
+    app.include_router(admin_sdr_simulator_endpoints.router)
+    print("[Server] admin_sdr_simulator_endpoints registrado (admin tenant)")
+except ImportError as e:
+    print(f"[Server] admin_sdr_simulator_endpoints nao disponivel: {e}")
 import blog_endpoints
 app.include_router(blog_endpoints.router)
 import blog_analytics_endpoints

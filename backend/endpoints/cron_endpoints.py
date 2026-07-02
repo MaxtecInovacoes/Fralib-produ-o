@@ -149,6 +149,10 @@ async def despachar_fila_franz(x_cron_secret: str = Header(None, alias='X-Cron-S
     from agents.sdr_langgraph import iniciar_contato, FranzInput, _escolher_variante
     from services.sdr_gateway import SdrMessageContext, evaluate_sdr_output, has_prior_outbound
     from backend.services.outbound_queue import enqueue_outbound
+    # === Sprint 1.2 — Bug #3: lock por lead para evitar que 2 ciclos
+    # paralelos do cron processem o mesmo lead simultaneamente.
+    # Mesmo padrão de ``responder_lead`` em whatsapp_listener.
+    from backend.agents.sdr_langgraph.lead_lock import _lead_lock_guard
 
     enviados = 0
     erros = 0
@@ -194,7 +198,19 @@ async def despachar_fila_franz(x_cron_secret: str = Header(None, alias='X-Cron-S
                 if not user_id:
                     print(f"[Cron Franz] ⚠️ lead {lead_id} sem user_id — ignorado (multi-tenant)")
                     continue
-                franz_output = iniciar_contato(franz_input, user_id=user_id)
+
+                # === Sprint 1.2 — Bug #3: lock por lead antes de gerar/enviar ===
+                # Se Redis offline, _lead_lock_guard lança RuntimeError (fail-closed).
+                # Pular este lead (não bloquear o batch inteiro).
+                try:
+                    with _lead_lock_guard(str(lead_id)):
+                        franz_output = iniciar_contato(franz_input, user_id=user_id)
+                except RuntimeError as _lock_err:
+                    print(f"[Cron Franz] 🔒 lock indisponível para lead {lead_id}: {_lock_err}")
+                    continue
+                except Exception as _lock_other_err:
+                    print(f"[Cron Franz] ⚠️ erro no lock para lead {lead_id}: {_lock_other_err}")
+                    continue
 
                 if not franz_output.reply or not franz_output.reply.strip():
                     continue

@@ -23,6 +23,7 @@ import os
 import sys
 import json
 import re
+from typing import Any
 
 from langgraph.graph import StateGraph, END
 
@@ -259,6 +260,17 @@ def node_load_context(state: SDRState) -> dict:
     """Carrega memória do lead, RAG, contexto inicial"""
     print(f"[SDR] Loading context for {state.get('telefone', '?')}")
 
+    # === Sprint 1.2 — Bug #2 fix: history injetada ANTES de montar LeadMemory ===
+    # Antes: o state["history"] (lista de turnos anteriores: [{"role": "user/assistant",
+    #        "content": "..."}]) era ignorado aqui — só aparecia mais tarde em nodes
+    #        downstream, depois de LeadMemory já estar montado. Resultado: no turno
+    #        3-4 o Franz esquecia o que o lead disse no turno 1.
+    # Agora: lemos a history ANTES, populamos o LeadMemory com last_message_received/
+    #        last_message_sent/turn_count e devolvemos ``history`` no resultado
+    #        para o resto do grafo consumir (back-compat: se history vazio,
+    #        caímos no fallback do JSON do carregar_memoria).
+    state_history = state.get("history") or []
+
     # Carregar memória
     try:
         from agents.memory import carregar_memoria
@@ -346,6 +358,37 @@ def node_load_context(state: SDRState) -> dict:
 
     print(f"[SDR] Agent selected: {selected_agent} ({handoff_reason})")
 
+    # === Sprint 1.2 — Bug #2 fix: hidratar LeadMemory com state["history"] ===
+    # Se o runtime passou history (caso comum — ver whatsapp_listener / simulator),
+    # usa como fonte de verdade para last_message_received / last_message_sent /
+    # turn_count. Isso garante que o LLM consegue referenciar o turno 1 quando
+    # o lead responde no turno 3-4.
+    if state_history:
+        try:
+            last_user_msg = ""
+            last_assistant_msg = ""
+            user_turns = 0
+            for h in state_history:
+                role = (h.get("role") or "").strip()
+                content = (h.get("content") or "").strip()
+                if not content:
+                    continue
+                if role == "user":
+                    last_user_msg = content
+                    user_turns += 1
+                elif role == "assistant":
+                    last_assistant_msg = content
+            if last_user_msg:
+                memory.last_message_received = last_user_msg[:1000]
+            if last_assistant_msg:
+                memory.last_message_sent = last_assistant_msg[:1000]
+            if user_turns and not memory.turn_count:
+                memory.turn_count = user_turns
+            from datetime import datetime as _dt
+            memory.last_lead_response_at = _dt.now().isoformat()
+        except Exception as _hist_err:
+            print(f"[SDR] history hydration falhou (nao-bloqueante): {_hist_err}")
+
     return {
         "memory": memory,
         "rag_context": rag_context,
@@ -357,6 +400,11 @@ def node_load_context(state: SDRState) -> dict:
         "previous_agent": agent_context.get("previous_agent", ""),
         "agent_context": agent_context,
         "agent_handoff_reason": handoff_reason,
+        # Sprint 1.2 — passa history adiante pro próximo node.
+        # Se state já tinha history, repassa a mesma; senão repassa [].
+        # Garante que o grafo inteiro consegue iterar state["history"] sem
+        # precisar reler do storage.
+        "history": state_history,
     }
 
 
@@ -551,12 +599,43 @@ def node_hook(state: SDRState) -> dict:
             rating=memory.rating,
         )
 
-        full_system = (
-            get_persona_text(state.get("persona", "consultivo")) + "\n\n" +
-            agent_system_overlay(state.get("agent_context", {})) + "\n\n" +
-            stage_prompt + "\n\n" +
-            state.get("rag_context", "")
-        )
+        # === Sprint 1.2 — Bug #1 fix: custom_knowledge injetado no system prompt ===
+        # Antes: usava só ``get_persona_text(persona)`` + overlay + stage + rag.
+        #        O bloco do tenant (custom_knowledge, personality, allowed/blocked
+        #        actions, handoff, etc.) era montado por ``build_sdr_system_prompt``
+        #        em services/sdr_settings.py mas nunca era chamado — ficava morto.
+        # Agora: se o tenant passou ``sdr_settings`` no state (via admin/settings),
+        #        passamos a base_prompt inteira (persona + overlay + stage + rag)
+        #        pelo ``build_sdr_system_prompt`` para injetar o bloco do tenant
+        #        (custom_knowledge + personality + handoff, capped em 3500 chars).
+        #        Se não houver settings, mantém o comportamento nativo (back-compat).
+        sdr_settings = state.get("sdr_settings") or {}
+        if sdr_settings:
+            try:
+                from backend.services.sdr_settings import build_sdr_system_prompt
+
+                base_for_tenant = (
+                    get_persona_text(state.get("persona", "consultivo")) + "\n\n" +
+                    agent_system_overlay(state.get("agent_context", {})) + "\n\n" +
+                    stage_prompt + "\n\n" +
+                    state.get("rag_context", "")
+                )
+                full_system = build_sdr_system_prompt(base_for_tenant, sdr_settings)
+            except Exception as _tenant_err:
+                print(f"[SDR] build_sdr_system_prompt falhou (nao-bloqueante): {_tenant_err}")
+                full_system = (
+                    get_persona_text(state.get("persona", "consultivo")) + "\n\n" +
+                    agent_system_overlay(state.get("agent_context", {})) + "\n\n" +
+                    stage_prompt + "\n\n" +
+                    state.get("rag_context", "")
+                )
+        else:
+            full_system = (
+                get_persona_text(state.get("persona", "consultivo")) + "\n\n" +
+                agent_system_overlay(state.get("agent_context", {})) + "\n\n" +
+                stage_prompt + "\n\n" +
+                state.get("rag_context", "")
+            )
 
         # === Sprint 3A: Tools dinâmicas SDR (opt-in via FRALIB_SDR_USE_TOOLS=1) ===
         # Pre-fetch das 3 read-only tools: playbook + similar conversations + lead quality.
@@ -1296,6 +1375,29 @@ def node_save_and_send(state: SDRState) -> dict:
     except Exception as _trace_end_err:
         print(f"[SDR] end_turn_trace falhou: {_trace_end_err}")
 
+    # === Sprint 1.5 — auditoria de turnos (sdr_turns) ===
+    # Grava cada turno processado em sdr_turns para auditoria
+    # (stage_before -> stage_after, intent, confidence, latency, custo).
+    # Falha transparente: NAO bloqueia o envio se o insert falhar.
+    if reply and state.get("should_send", False):
+        try:
+            record_sdr_turn(
+                lead_id=str(state.get("lead_id") or memory.lead_id or ""),
+                tenant_id=int(state.get("tenant_id") or memory.user_id or 0),
+                stage_before=str(state.get("stage_before") or ""),
+                stage_after=str(
+                    state.get("stage_after")
+                    or getattr(memory, "stage", "")
+                    or ""
+                ),
+                intent=str(state.get("detected_intent") or ""),
+                confidence=_safe_float(state.get("confidence"), default=None),
+                latency_ms=_safe_int(state.get("latency_ms")),
+                llm_cost_usd=_safe_float(state.get("llm_cost_usd"), default=None),
+            )
+        except Exception as _turn_err:
+            print(f"[SDR] record_sdr_turn falhou (no-bloqueante): {_turn_err}")
+
     # ════════════════════════════════════════════════════════════════
     # HUMANIZACAO (Fase 1 - SDD §1.4)
     # - Calcula delay humano variavel
@@ -1375,6 +1477,24 @@ def node_save_and_send(state: SDRState) -> dict:
         )
     except Exception as e:
         print(f"[SDR] Erro ao salvar memória: {e}")
+
+    # === Sprint 1.4 — hook record_outcome (terminal stage) ===
+    # Se o stage final for 'ganho' ou 'perdido', grava 1 linha em
+    # lead_outcomes. Falha transparente: nunca quebra o envio.
+    try:
+        final_stage = (
+            state.get("stage_after")
+            or getattr(memory, "stage", "")
+            or ""
+        )
+        if str(final_stage).strip().lower() in {"ganho", "perdido", "won", "lost"}:
+            _handle_terminal_stage(
+                memory=memory,
+                state=state,
+                stage_after=str(final_stage),
+            )
+    except Exception as _hook_err:
+        print(f"[SDR] _handle_terminal_stage no-op: {_hook_err}")
 
     return {}
 
@@ -1474,3 +1594,210 @@ def get_sdr_graph() -> SDRGraph:
     if _singleton is None:
         _singleton = SDRGraph()
     return _singleton
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# Sprint 1.5 — helpers de auditoria de turnos
+# ══════════════════════════════════════════════════════════════════════════
+
+def _safe_float(value: Any, default: float | None = 0.0) -> float | None:
+    """Converte para float seguro (None → default)."""
+    if value is None:
+        return default
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _safe_int(value: Any) -> int | None:
+    """Converte para int seguro (None → None)."""
+    if value is None:
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Sprint 1.4 — hook record_outcome (terminal stage)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def _record_lead_outcome(
+    lead_id: str | int,
+    tenant_id: int,
+    nicho: str | None,
+    horario_contato: str | None,
+    abordagem_usada: str | None,
+    site_template_usado: str | None,
+    kanban_stage_final: str,
+    dias_ate_fechamento: int | None = None,
+) -> int | None:
+    """Hook do Sprint 1.4 — chama ``record_outcome`` quando lead termina.
+
+    Falha transparente: nunca levanta exceção para o grafo.
+    """
+    try:
+        from backend.services.lead_outcomes_service import record_outcome
+        return record_outcome(
+            lead_id=lead_id,
+            tenant_id=tenant_id,
+            nicho=nicho,
+            horario_contato=horario_contato,
+            abordagem_usada=abordagem_usada,
+            site_template_usado=site_template_usado,
+            kanban_stage_final=kanban_stage_final,
+            dias_ate_fechamento=dias_ate_fechamento,
+        )
+    except Exception as _ro_err:
+        print(f"[SDR] _record_lead_outcome no-op: {_ro_err}")
+        return None
+
+
+def _handle_terminal_stage(
+    memory,
+    state: "SDRState | dict",
+    stage_after: str | None = None,
+) -> int | None:
+    """Sprint 1.4 — se stage_after é terminal (ganho/perdido), chama record_outcome.
+
+    Idempotência: usa o próprio lead_id + stage como ``idempotency_key``,
+    então ``record_outcome`` pode ser chamado 2x sem duplicar.
+    """
+    terminal = (stage_after or "").strip().lower()
+    if terminal not in {"ganho", "perdido", "won", "lost"}:
+        return None
+    kanban = "ganho" if terminal in {"ganho", "won"} else "perdido"
+    lead_id = getattr(memory, "lead_id", None) or state.get("lead_id") if hasattr(state, "get") else None
+    tenant_id = getattr(memory, "user_id", None) or (state.get("user_id") if hasattr(state, "get") else None)
+    nicho = getattr(memory, "segmento", None)
+    abordagem = getattr(memory, "persona", None)
+    template = getattr(memory, "variant", None) or state.get("variant") if hasattr(state, "get") else None
+    try:
+        from datetime import datetime as _dt
+        last_sent = getattr(memory, "last_message_sent", None)
+        horario = None
+        if last_sent:
+            try:
+                horario = _dt.now().strftime("%H:%M")
+            except Exception:
+                horario = None
+        return _record_lead_outcome(
+            lead_id=lead_id,
+            tenant_id=tenant_id,
+            nicho=nicho,
+            horario_contato=horario,
+            abordagem_usada=abordagem,
+            site_template_usado=template,
+            kanban_stage_final=kanban,
+            dias_ate_fechamento=None,
+        )
+    except Exception as _e:
+        print(f"[SDR] _handle_terminal_stage no-op: {_e}")
+        return None
+
+
+def record_outcome(  # noqa: F811 - alias para tests
+    lead_id,
+    tenant_id,
+    nicho=None,
+    horario_contato=None,
+    abordagem_usada=None,
+    site_template_usado=None,
+    kanban_stage_final=None,
+    dias_ate_fechamento=None,
+    **kwargs,
+):
+    """Alias publico usado por tests."""
+    return _record_lead_outcome(
+        lead_id=lead_id,
+        tenant_id=tenant_id,
+        nicho=nicho,
+        horario_contato=horario_contato,
+        abordagem_usada=abordagem_usada,
+        site_template_usado=site_template_usado,
+        kanban_stage_final=kanban_stage_final or "",
+        dias_ate_fechamento=dias_ate_fechamento,
+    )
+
+
+# Alias legacy usado por testes (mantido nome curto)
+_handle_terminal_stage_alias = _handle_terminal_stage
+
+
+def record_sdr_turn(
+    lead_id: str,
+    tenant_id: int,
+    stage_before: str = "",
+    stage_after: str = "",
+    intent: str = "",
+    confidence: float | None = None,
+    latency_ms: int | None = None,
+    llm_cost_usd: float | None = None,
+) -> int | None:
+    """Insere 1 linha em ``sdr_turns`` para auditoria de turnos do SDR.
+
+    Args:
+        lead_id: id do lead (string — alguns sistemas usam UUIDs).
+        tenant_id: id do tenant (int).
+        stage_before: stage anterior (string).
+        stage_after: stage novo (string).
+        intent: intent classificado (string).
+        confidence: score 0.00-1.00 (float).
+        latency_ms: latência do turno em ms (int).
+        llm_cost_usd: custo do LLM em USD (float).
+
+    Returns:
+        ID inserido ou None se a tabela nao existe / erro.
+
+    Comportamento fail-safe:
+        - Sem ``DATABASE_URL`` → no-op (testes).
+        - Sem engine no contexto → no-op silencioso.
+        - Tabela ausente → no-op silencioso (NAO quebra o agente).
+    """
+    database_url = os.getenv("DATABASE_URL", "")
+    if not database_url:
+        return None
+    if not lead_id or not tenant_id:
+        return None
+    try:
+        from sqlalchemy import create_engine, text
+        engine = create_engine(database_url, pool_pre_ping=False)
+        with engine.connect() as conn:
+            row = conn.execute(
+                text(
+                    """
+                    INSERT INTO sdr_turns (
+                        lead_id, tenant_id, stage_before, stage_after,
+                        intent, confidence, latency_ms, llm_cost_usd
+                    ) VALUES (
+                        :lid, :tid, :sb, :sa, :intent, :conf, :lat, :cost
+                    )
+                    ON CONFLICT DO NOTHING
+                    RETURNING id
+                    """
+                ),
+                {
+                    "lid": lead_id,
+                    "tid": tenant_id,
+                    "sb": (stage_before or "")[:40],
+                    "sa": (stage_after or "")[:40],
+                    "intent": (intent or "")[:40],
+                    "conf": confidence if confidence is not None else None,
+                    "lat": latency_ms,
+                    "cost": llm_cost_usd if llm_cost_usd is not None else None,
+                },
+            ).fetchone()
+            conn.commit()
+        if row:
+            try:
+                return int(row[0])
+            except Exception:
+                return None
+        return None
+    except Exception as exc:
+        # NAO quebra o agente se a tabela nao existir.
+        print(f"[SDR] record_sdr_turn no-op (tabela ausente?): {exc}")
+        return None
+

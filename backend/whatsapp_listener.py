@@ -52,6 +52,9 @@ from whatsapp.response_executor import (
     ExecutionContext,
     execute_response,
 )
+from backend.whatsapp.transparency import (  # Sprint 1.5 — Transparencia pro Lead
+    send_status_message_if_paused as _send_transparency_status,
+)
 
 load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
 
@@ -783,6 +786,21 @@ def _processar_mensagem(tenant_id: str, msg_data: dict, texto_override: str = No
             activated_at = _RATE_LIMITER.human_pause.get(lead_key, _time.time())
             remaining = _human_pause_seconds_for_key(lead_key) - (_time.time() - activated_at)
             logger.info(f"👤 {nome}: humano ativo, bot pausado ({remaining:.0f}s restantes)")
+            # Sprint 1.5: enfileira msg curta de status ANTES de silenciar.
+            try:
+                from backend.whatsapp.transparency import send_status_message_if_paused
+                transparency_settings = _get_sdr_settings(user_id) if user_id else {}
+                if transparency_settings.get("transparency_enabled", True):
+                    send_status_message_if_paused(
+                        tenant_id=user_id,
+                        lead_id=lead_id,
+                        state="paused",
+                        engine=engine,
+                        phone=telefone,
+                        nome=nome or "",
+                    )
+            except Exception as _tr_err:
+                logger.warning(f"[WPP-Listener] transparency falhou (no-bloqueante): {_tr_err}")
             return
 
         # Cooldown: não responder se já respondeu recentemente
@@ -792,6 +810,21 @@ def _processar_mensagem(tenant_id: str, msg_data: dict, texto_override: str = No
                 f"⏳ {nome}: cooldown ativo ({_cooldown_seconds_for_key(lead_key)}s) "
                 f"— aguardando {remaining:.1f}s antes de responder"
             )
+            # Sprint 1.5: enfileira msg curta de status ANTES do sleep.
+            try:
+                from backend.whatsapp.transparency import send_status_message_if_paused
+                transparency_settings = _get_sdr_settings(user_id) if user_id else {}
+                if transparency_settings.get("transparency_enabled", True):
+                    send_status_message_if_paused(
+                        tenant_id=user_id,
+                        lead_id=lead_id,
+                        state="cooldown",
+                        engine=engine,
+                        phone=telefone,
+                        nome=nome or "",
+                    )
+            except Exception as _tr_err:
+                logger.warning(f"[WPP-Listener] transparency falhou (no-bloqueante): {_tr_err}")
             if remaining > 0:
                 _time.sleep(min(remaining, _cooldown_seconds_for_key(lead_key)))
 
