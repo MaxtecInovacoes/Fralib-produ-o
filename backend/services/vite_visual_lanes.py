@@ -59,7 +59,8 @@ def _segment_family(segment: str, subnicho: str = "") -> str:
     """
     raw = _normalize_family_text(f"{segment} {subnicho}")
     checks: tuple[tuple[str, tuple[str, ...]], ...] = (
-        ("barbearia", ("barbearia", "barbear", "barber", "barbeiro", "barba", "corte masculino")),
+        ("barbearia", ("barbearia", "barbear", "barbeiro", "barba", "corte masculino")),
+        ("salao", ("salao", "cabeleireiro", "cabelo", "manicure", "pedicure", "escova", "mechas")),
         ("nutricionista", ("nutricionista", "nutricao", "nutricional", "nutri ")),
         ("estetica", ("estetica", "estetic", "spa", "facial", "pele", "harmoniz", "botox", "preenchimento")),
         ("academia", ("academia", "crossfit", "cross fit", "muscul", "fitness", "funcional", "personal", "pilates", "yoga")),

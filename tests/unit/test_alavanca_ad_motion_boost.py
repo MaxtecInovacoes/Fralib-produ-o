@@ -6,15 +6,88 @@ Validates:
   - Tier multiplier (ELITE/PREMIUM) escalona motion em todas lanes.
   - Defaults sao estaveis quando nao ha sinais (fallback).
   - resolve_visual_lane propaga prompt_priority e tier ate attitude.
+  - CONTRATO: academia-family lanes nao sao wellness.
 """
 from __future__ import annotations
 
 import pytest
 
 from backend.services.vite_visual_lanes import (
+    _LANES,
     _lane_attitude_with_boosts,
     resolve_visual_lane,
 )
+
+
+class TestLaneFamilyContract:
+    """CONTRATO: lanes de alta-intensidade nunca devem ser wellness.
+
+    Este teste protege contra regressao: se uma nova lane for criada em
+    academia/energia/eventos e adicionada a WELLNESS_LANES, esse teste
+    falha. Academias, crossfit, eventos, marketing -> motion >= visible.
+    """
+
+    HIGH_IMPACT_FAMILIES = {
+        "academia", "energia_solar", "imobiliaria", "oficina", "restaurante"
+    }
+
+    def test_academia_family_lanes_not_in_wellness_lanes(self) -> None:
+        """Academia-family lanes nao devem estar em WELLNESS_LANES.
+
+        Se uma lane de academia aparecer em WELLNESS_LANES, isso indica
+        que academias podem cair em motion=minimal - o caso "João Nico".
+        """
+        WELLNESS_LANES = (
+            "botanical-editorial",
+            "clinical-soft",
+            "coastal-light",
+            "clinic-ivory",
+            "rose-clay",
+            "health-trust",
+            "editorial-light",
+        )
+        for family, lanes in _LANES.items():
+            if family in self.HIGH_IMPACT_FAMILIES:
+                for lane in lanes:
+                    lane_id = lane.get("id", "")
+                    assert lane_id not in WELLNESS_LANES, (
+                        f"Lane '{lane_id}' da family '{family}' esta em WELLNESS_LANES. "
+                        "Isso pode fazer nichos de alto impacto cair em motion=minimal."
+                    )
+
+    def test_academia_family_lanes_motion_not_minimal(self) -> None:
+        """Academia-family lanes devem ter motion >= visible por padrao."""
+        for family, lanes in _LANES.items():
+            if family in self.HIGH_IMPACT_FAMILIES:
+                for lane in lanes:
+                    blocks = lane.get("blocks", {})
+                    # Nenhuma lane de alta-intensidade deve ser wellness com motion=minimal
+                    attitude = _lane_attitude_with_boosts(lane.get("id", ""))
+                    motion = attitude.get("motion_intensity", "unknown")
+                    assert motion != "minimal", (
+                        f"Lane '{lane.get('id')}' ({family}) tem motion=minimal. "
+                        "Lanes de alta-intensidade devem ter motion >= visible."
+                    )
+
+    def test_barbearia_family_lanes_not_wellness(self) -> None:
+        """Lanes de barbearia (bem-estar masculino) nao sao wellness-lane."""
+        WELLNESS_LANES = (
+            "botanical-editorial",
+            "clinical-soft",
+            "coastal-light",
+            "clinic-ivory",
+            "rose-clay",
+            "health-trust",
+            "editorial-light",
+        )
+        barber_families = {"barbearia", "barber"}
+        for family, lanes in _LANES.items():
+            if family in barber_families:
+                for lane in lanes:
+                    lane_id = lane.get("id", "")
+                    assert lane_id not in WELLNESS_LANES, (
+                        f"Lane barbearia '{lane_id}' esta em WELLNESS_LANES por engano."
+                    )
 
 
 class TestWellnessLaneBoosts:
