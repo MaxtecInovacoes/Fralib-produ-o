@@ -13,12 +13,14 @@ sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "backend"))
 
 from backend.services.vite_react_renderer import (
+    ViteReactRenderError,
     _compose_vite_user_prompt,
     _extract_export_const_json,
     _facts_local_keywords,
     _generate_cinematic_studio_files,
     _merge_copy_only_content,
     _sanitize_creative_plan,
+    _validate_creative_plan_response,
     validate_vite_project_files,
 )
 
@@ -53,6 +55,7 @@ def test_creative_plan_materializes_liquid_tokens():
             "typography_scale": "heroic",
             "motion_intensity": "cinematic",
             "motion_mix": ["mask_reveal", "stagger_cards"],
+            "section_order": ["hero", "about", "services", "gallery", "reviews", "faq", "location", "contact-cta"],
             "hero_variant": "fullbleed",
             "services_variant": "stacked_cards",
             "reviews_variant": "score_wall",
@@ -75,6 +78,47 @@ def test_creative_plan_materializes_liquid_tokens():
     assert block_plan["reviews_variant"] == "score_wall"
     assert block_plan["surface_style"] == "solid"
     assert "mask_reveal" in block_plan["motion_mix"]
+
+
+def test_creative_plan_policy_rejects_incomplete_llm_direction():
+    raw = {
+        "creative_plan": {
+            "hero_layout": "split",
+            "aesthetic_mode": "impact",
+        }
+    }
+    clean = _sanitize_creative_plan(raw)
+    try:
+        _validate_creative_plan_response({"creative_plan": clean})
+    except ViteReactRenderError as exc:
+        assert "creative_plan incompleto" in str(exc)
+    else:
+        raise AssertionError("creative_plan incompleto nao foi bloqueado")
+
+
+def test_creative_plan_policy_rejects_weak_premium_floor():
+    raw = {
+        "creative_plan": {
+            "visual_lane": "lane_a",
+            "hero_layout": "center",
+            "aesthetic_mode": "minimal",
+            "spacing_density": "spacious",
+            "typography_scale": "soft",
+            "motion_intensity": "minimal",
+            "services_variant": "stacked_cards",
+            "reviews_variant": "score_wall",
+            "surface_style": "soft_tint",
+            "motion_mix": ["subtle_fade", "stagger_cards"],
+            "section_order": ["hero", "about", "services", "gallery", "reviews", "faq"],
+        }
+    }
+    clean = _sanitize_creative_plan(raw)
+    try:
+        _validate_creative_plan_response({"creative_plan": clean})
+    except ViteReactRenderError as exc:
+        assert "piso premium" in str(exc) or "fraco bloqueado" in str(exc)
+    else:
+        raise AssertionError("creative_plan fraco nao foi bloqueado")
 
 
 def test_all_core_segments_resolve_distinct_liquid_signatures_and_intent_keywords():

@@ -569,6 +569,16 @@ canônicas (`academia`, `advogado`, `barbearia`, `clinica`, `dentista`,
 mapeados, todos com `hero`, `faq`, `contato` e `footer`. Teste canônico:
 `tests/test_vite_liquid_contract.py`.
 
+Desde 2026-07-02, `FRALIB_VITE_LLM_POLICY=creative_plan` também valida a
+resposta da LLM **antes** do Studio determinístico montar o site. A resposta
+precisa trazer, no mínimo, `visual_lane`, `hero_layout`, `aesthetic_mode`,
+`spacing_density`, `typography_scale`, `motion_intensity`, variantes de serviços
+e prova social, `surface_style`, `motion_mix` e `section_order` suficiente. Se
+vier incompleta, minimalista demais ou sem direção visual premium, o renderer
+falha e tenta o próximo modelo; se todos falharem, a pipeline falha fechado. O
+Studio não pode completar silenciosamente um `creative_plan` fraco e publicar
+como se a decisão criativa tivesse sido respeitada.
+
 **Arquivos mantidos por compatibilidade** (não usados no caminho canônico, mas
 mantidos para evitar imports quebrados em outros módulos):
 - `backend/services/pipeline_renderer_support.py` — nome herdado, mas o conteúdo

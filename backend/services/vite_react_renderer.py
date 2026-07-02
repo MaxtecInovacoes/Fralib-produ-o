@@ -983,6 +983,51 @@ def _sanitize_copy_only_content(content: dict[str, Any]) -> dict[str, Any]:
     return cleaned
 
 
+_CREATIVE_PLAN_REQUIRED_FIELDS = (
+    "visual_lane",
+    "hero_layout",
+    "aesthetic_mode",
+    "spacing_density",
+    "typography_scale",
+    "motion_intensity",
+    "services_variant",
+    "reviews_variant",
+    "surface_style",
+    "motion_mix",
+    "section_order",
+)
+
+
+def _validate_creative_plan_response(content: dict[str, Any]) -> None:
+    """Fail before the Studio can silently replace a weak LLM direction."""
+    plan = content.get("creative_plan") if isinstance(content, dict) else None
+    if not isinstance(plan, dict):
+        raise ViteReactRenderError("creative_plan ausente na resposta LLM")
+
+    missing = [key for key in _CREATIVE_PLAN_REQUIRED_FIELDS if not plan.get(key)]
+    if missing:
+        raise ViteReactRenderError(
+            "creative_plan incompleto na resposta LLM: " + ", ".join(missing)
+        )
+
+    sections = plan.get("section_order")
+    if not isinstance(sections, list) or len([item for item in sections if item]) < 6:
+        raise ViteReactRenderError("creative_plan sem section_order suficiente")
+
+    motion_mix = plan.get("motion_mix")
+    if not isinstance(motion_mix, list) or len([item for item in motion_mix if item]) < 2:
+        raise ViteReactRenderError("creative_plan sem motion_mix suficiente")
+
+    hero = str(plan.get("hero_layout") or "")
+    spacing = str(plan.get("spacing_density") or "")
+    motion = str(plan.get("motion_intensity") or "")
+    typography = str(plan.get("typography_scale") or "")
+    if motion == "minimal" or typography == "soft":
+        raise ViteReactRenderError("creative_plan abaixo do piso premium")
+    if hero == "center" and spacing == "spacious" and motion == "minimal" and typography == "soft":
+        raise ViteReactRenderError("creative_plan fraco bloqueado antes do Studio")
+
+
 def _parse_content_json(raw: str) -> dict[str, Any]:
     """Parse the compact JSON returned by copy_only mode."""
     text = str(raw or "").strip()
@@ -1188,6 +1233,8 @@ def render_vite_react_site(
                 content = _parse_content_json(raw)
                 if not content:
                     raise ViteReactRenderError("copy_only retornou JSON vazio ou invalido")
+                if llm_policy == "creative_plan":
+                    _validate_creative_plan_response(content)
                 attempts.append(
                     {
                         "model": model,

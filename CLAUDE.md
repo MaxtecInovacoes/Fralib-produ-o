@@ -96,6 +96,15 @@ FRALIB_AUTO_IMPROVE=1
 | Lead name injetado | ❌ | ✅ via `_business_context` |
 | Fallbacks genéricos | Sim | ❌ **Fail-fast total** |
 
+## Creative Plan Hard Gate
+
+`FRALIB_VITE_LLM_POLICY=creative_plan` não é sugestão solta. A resposta da LLM
+precisa trazer o plano criativo mínimo (`visual_lane`, `hero_layout`,
+`aesthetic_mode`, `spacing_density`, `typography_scale`, `motion_intensity`,
+variantes de serviços/prova social, `surface_style`, `motion_mix` e
+`section_order`). Plano incompleto, `motion_intensity=minimal` ou
+`typography_scale=soft` falha antes do Studio montar o site.
+
 ## Sistema de Variação Visual (Sprint 14.6+)
 
 > **⚠️ PROBLEMA REPORTADO**: Sites saindo iguais!

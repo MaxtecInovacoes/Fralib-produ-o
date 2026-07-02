@@ -18,6 +18,7 @@ from backend.agents.agente_variacao import (
     _get_subnicho_template,
 )
 from backend.agents.handoff_types import NichoBriefing, VariacaoEstrutural
+from backend.pipeline_exceptions import SubnichoNaoMapeadoError
 
 
 class TestDetectSubniche:
@@ -42,9 +43,9 @@ class TestDetectSubniche:
     def test_academia_crossfit_detected(self):
         assert detect_subniche("academia", ["crossfit", "box"]) == "academia_crossfit"
 
-    def test_default_for_unknown(self):
-        assert detect_subniche("pet_shop_legal") == "default"
-        assert detect_subniche("") == "default"
+    def test_unknown_returns_empty_instead_of_default_fallback(self):
+        assert detect_subniche("pet_shop_legal") == ""
+        assert detect_subniche("") == ""
 
     def test_attributes_used_as_fallback(self):
         assert detect_subniche("loja", atributos=["vende crossfit box"]) == "academia_crossfit"
@@ -167,10 +168,13 @@ class TestGetSubnichoTemplate:
         assert t["template_estrutura"] == "minimal"
         assert "procedimentos" in t["ordem_das_secoes"]
 
-    def test_returns_default_for_unknown(self):
-        t = _get_subnicho_template("subnicho_inexistente")
-        default = SUB_NICHO_TEMPLATES["default"]
-        assert t == default
+    def test_unknown_template_fails_fast_instead_of_default_fallback(self):
+        try:
+            _get_subnicho_template("subnicho_inexistente")
+        except SubnichoNaoMapeadoError as exc:
+            assert "nao esta mapeado" in str(exc)
+        else:
+            raise AssertionError("subnicho desconhecido caiu em default silencioso")
 
 
 if __name__ == "__main__":
