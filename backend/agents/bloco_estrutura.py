@@ -37,6 +37,7 @@ def _montar_prompt_bloco1(
     design_dict: dict,
     nicho_ref: str,
     variacao_ref: str,
+    polo_resolvido: str = "",
 ) -> str:
     """Monta prompt compacto para Bloco 1 — estrutura + layout."""
 
@@ -71,8 +72,22 @@ def _montar_prompt_bloco1(
         "- Movimento deve enriquecer o layout escolhido, nao trocar a identidade por template agressivo.\n"
     )
 
+    # Sprint 12.x: bloco de polo vem do nicho_registry (resolve sub-nicho override)
+    try:
+        from polo_prompts import build_polo_prompt_block
+        _polo_block = build_polo_prompt_block(
+            nicho=segmento,
+            subnicho="",
+            include_copy=False,
+            include_design_logic=True,
+        )
+    except Exception:
+        _polo_block = ""
+
     return f"""BUSINESS: {nome} | CITY: {cidade} | SEGMENT: {segmento}
 TIER: {caio_tier} (score={caio_score}) | RATING: {rating}/5 ({total_av} avaliacoes)
+
+{_polo_block}
 
 {_intel_ctx}
 {sub_nicho_ctx}

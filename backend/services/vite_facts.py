@@ -189,10 +189,22 @@ def _facts_json_ld(facts: dict[str, Any]) -> str:
     cidade = facts.get("city", "")
     telefone = facts.get("phone", "")
     endereco = facts.get("address", "")
+    segmento = (
+        business.get("segment")
+        or business.get("segmento")
+        or facts.get("segmento")
+        or facts.get("segment")
+        or ""
+    )
+    try:
+        from backend.config.nicho_registry import get_schema_type
+        schema_type = get_schema_type(segmento)
+    except Exception:
+        schema_type = "LocalBusiness"
 
     json_ld = {
         "@context": "https://schema.org",
-        "@type": "LocalBusiness",
+        "@type": schema_type,
         "name": business.get("name", ""),
         "description": business.get("description", ""),
         "address": {

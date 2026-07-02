@@ -194,9 +194,22 @@ def _facts_json_ld(facts: dict[str, Any]) -> str:
     business = _facts_business(facts)
     site_url = _facts_publication_url(facts)
     image = _facts_og_image(facts)
+    # Sprint 12.x: schema_type dinâmico por nicho (advogado→LegalService, etc.)
+    segmento = (
+        business.get("segment")
+        or business.get("segmento")
+        or facts.get("segmento")
+        or facts.get("segment")
+        or ""
+    )
+    try:
+        from backend.config.nicho_registry import get_schema_type
+        schema_type = get_schema_type(segmento)
+    except Exception:
+        schema_type = "LocalBusiness"
     data = {
         "@context": "https://schema.org",
-        "@type": "LocalBusiness",
+        "@type": schema_type,
         "name": business.get("name") or business.get("business_name") or "",
         "url": site_url,
         "image": image,
@@ -374,12 +387,24 @@ def vite_template_index_html(facts: dict[str, Any]) -> str:
     theme_color = _facts_theme_color(facts)
     json_ld = _facts_json_ld(facts)
     font_link = _google_fonts_link_for_facts(facts)
+
+    # Sprint 12.x: injetar data-pole no <html> para os tokens de polo chegarem ao CSS
+    polo = str(facts.get("pole") or "default").lower()
+    # Whitelist de polos com regras CSS em design-system-tokens.css
+    if polo not in {"soft", "bold", "corporate", "minimal"}:
+        polo = "default"
+    pole_attr = f' data-pole="{polo}"' if polo != "default" else ""
+
+    # Linkar design-system-tokens.css para os polos serem aplicados
+    pole_stylesheet = '<link rel="stylesheet" href="./design-system-tokens.css" />'
+
     return f"""<!doctype html>
-<html lang="pt-BR">
+<html lang="pt-BR"{pole_attr}>
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     {font_link}
+    {pole_stylesheet}
     <title>{_meta_escape(title)}</title>
     <meta name="description" content="{_meta_escape(description)}" />
     <meta name="keywords" content="{_meta_escape(keywords)}" />

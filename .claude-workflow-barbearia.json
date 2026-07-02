@@ -1,0 +1,186 @@
+{
+  "copy_enrichments": {
+    "barbearia-heritage-reserve": {
+      "services_kicker": "Corte clássico e acabamento",
+      "gallery_kicker": "Couro, aço e ritual",
+      "reviews_kicker": "Clientes que voltam",
+      "faq_kicker": "Antes de reservar",
+      "location_cta_title": "Garanta seu horário pelo WhatsApp e conheça a casa.",
+      "location_cta_body": "Reserva, endereço e chegada aparecem juntos para uma visita sem atrito.",
+      "contact_headline": "Quer viver um ritual de barbearia com leitura clássica e acabamento firme?"
+    },
+    "barbearia-studio-mono": {
+      "services_kicker": "Corte com identidade editorial",
+      "gallery_kicker": "Forma, sombra e recorte",
+      "reviews_kicker": "Voz de marca",
+      "faq_kicker": "Reserva em minutos",
+      "location_cta_title": "Agende agora e chegue direto ao estúdio.",
+      "location_cta_body": "Contato e rota aparecem limpos, sem excesso de texto ou etapas.",
+      "contact_headline": "Pronto para um corte com direção visual contemporânea e sem ruído?"
+    },
+    "barbearia-copper-smoke": {
+      "services_kicker": "Noite, cobre e barba",
+      "gallery_kicker": "Luz baixa e atmosfera",
+      "reviews_kicker": "Reputação local",
+      "faq_kicker": "Reserva para hoje",
+      "location_cta_title": "Abra o WhatsApp e feche o horário agora.",
+      "location_cta_body": "A página termina em convite direto, contato rápido e endereço visível.",
+      "contact_headline": "Bora confirmar seu corte com atmosfera noturna e acabamento firme?"
+    },
+    "barbearia-midnight-club": {
+      "services_kicker": "Assinatura e clube",
+      "gallery_kicker": "Atmosfera de clube privado",
+      "reviews_kicker": "Reputação de marca",
+      "faq_kicker": "O que o cliente quer saber",
+      "location_cta_title": "Reserve pelo canal oficial e chegue com identidade.",
+      "location_cta_body": "O fechamento leva ao contato direto, sem distrações e sem texto sobrando.",
+      "contact_headline": "Quer um corte com assinatura autoral e atmosfera de clube?"
+    }
+  },
+  "lanes": {
+    "barbearia": {
+      "item": [
+        {
+          "id": "barbearia-heritage-reserve",
+          "name": "Heritage Reserve",
+          "fallback_palette": {
+            "primary": "#c9a96a",
+            "secondary": "#3d2a18",
+            "bg_dark": "#0d0b0a",
+            "bg_light": "#f4ede3",
+            "text_dark": "#1b130f"
+          },
+          "blocks": {
+            "hero_variant": "split",
+            "services_variant": "split_editorial",
+            "reviews_variant": "editorial_case",
+            "faq_variant": "panel",
+            "location_variant": "split_local",
+            "surface_style": "solid"
+          },
+          "copy": {
+            "hero_badge": "Barbearia clássica",
+            "about_kicker": "Ritual",
+            "about_title": "Corte, barba e acabamento com leitura clássica em {city}.",
+            "about_body": "{name} valoriza detalhe, atendimento e experiência presencial para quem procura barbearia de verdade.",
+            "gallery_title": "Couro, aço, espelho e ritual.",
+            "gallery_intro": "A galeria mostra ambiente, serviço e detalhes do ritual clássico.",
+            "reviews_title": "Clientes que percebem detalhe e atendimento.",
+            "reviews_intro": "Avaliações reforçam consistência, acabamento e recorrência.",
+            "faq_title": "Perguntas antes de reservar o horário.",
+            "faq_intro": "Respostas curtas sobre agenda, serviços e localização.",
+            "location_title": "Visite a barbearia em {city}.",
+            "location_intro": "Reserva, endereço e contato aparecem juntos.",
+            "lifestyle_kicker": "Atmosfera",
+            "contact_kicker": "Reserva"
+          }
+        },
+        {
+          "id": "barbearia-studio-mono",
+          "name": "Studio Mono",
+          "fallback_palette": {
+            "primary": "#f1f1f1",
+            "secondary": "#555555",
+            "bg_dark": "#090909",
+            "bg_light": "#efefef",
+            "text_dark": "#151515"
+          },
+          "blocks": {
+            "hero_variant": "center",
+            "services_variant": "stacked_cards",
+            "reviews_variant": "quote_spotlight",
+            "faq_variant": "inline",
+            "location_variant": "feature_local",
+            "surface_style": "outline"
+          },
+          "copy": {
+            "hero_badge": "Corte com direção contemporânea",
+            "about_kicker": "Design",
+            "about_title": "Identidade sóbria, gráfica e precisa em {city}.",
+            "about_body": "{name} entra numa linha mais contemporânea, com menos ornamento e mais contraste limpo.",
+            "gallery_title": "Monocromia, recorte e presença.",
+            "gallery_intro": "As imagens privilegiam sombra, forma e acabamento.",
+            "reviews_title": "Confiança tratada com voz editorial.",
+            "reviews_intro": "Menos excesso, mais recorte e clareza.",
+            "faq_title": "Tudo o que importa antes de reservar.",
+            "faq_intro": "Perguntas curtas para acelerar a escolha.",
+            "location_title": "Agende e chegue sem complicação.",
+            "location_intro": "O WhatsApp fica direto para reserva.",
+            "lifestyle_kicker": "Estilo",
+            "contact_kicker": "Reserva"
+          }
+        },
+        {
+          "id": "barbearia-copper-smoke",
+          "name": "Copper Smoke",
+          "fallback_palette": {
+            "primary": "#b96d3c",
+            "secondary": "#4e281b",
+            "bg_dark": "#160f0d",
+            "bg_light": "#f6ece6",
+            "text_dark": "#231511"
+          },
+          "blocks": {
+            "hero_variant": "asymmetric",
+            "services_variant": "stats_then_cards",
+            "reviews_variant": "card_marquee",
+            "faq_variant": "panel",
+            "location_variant": "feature_local",
+            "surface_style": "outline"
+          },
+          "copy": {
+            "hero_badge": "Corte e barba com atmosfera noturna",
+            "about_kicker": "Presença",
+            "about_title": "Uma barbearia quente, escura e cinematográfica em {city}.",
+            "about_body": "{name} usa contraste de cobre e luz baixa para enfatizar ritual, noite e personalidade.",
+            "gallery_title": "Luz baixa, metal quente e acabamento forte.",
+            "gallery_intro": "As imagens mostram atmosfera e proximidade.",
+            "reviews_title": "Sinais locais em ritmo mais vivo.",
+            "reviews_intro": "Avaliações podem ganhar movimento sem perder clareza.",
+            "faq_title": "Perguntas para quem quer reservar hoje.",
+            "faq_intro": "Menos texto e mais ação.",
+            "location_title": "Localização e contato no mesmo pulso.",
+            "location_intro": "A página fecha com convite direto para reserva.",
+            "lifestyle_kicker": "Noite",
+            "contact_kicker": "Agende"
+          }
+        },
+        {
+          "id": "barbearia-midnight-club",
+          "name": "Midnight Club",
+          "fallback_palette": {
+            "primary": "#8b7cf7",
+            "secondary": "#1d153d",
+            "bg_dark": "#080712",
+            "bg_light": "#f2efff",
+            "text_dark": "#16112e"
+          },
+          "blocks": {
+            "hero_variant": "video",
+            "services_variant": "stacked_cards",
+            "reviews_variant": "score_wall",
+            "faq_variant": "inline",
+            "location_variant": "split_local",
+            "surface_style": "soft_tint"
+          },
+          "copy": {
+            "hero_badge": "Barbearia com assinatura autoral",
+            "about_kicker": "Assinatura",
+            "about_title": "Direção ousada para marcas que querem parecer únicas.",
+            "about_body": "{name} assume uma linha mais autoral, com luz fria, composição noturna e CTA de reserva como foco central.",
+            "gallery_title": "Uma estética de clube privado.",
+            "gallery_intro": "O site precisa parecer menos genérico e mais memorável.",
+            "reviews_title": "Reputação local com recorte de marca.",
+            "reviews_intro": "A confiança vem sem perder identidade visual.",
+            "faq_title": "O que o cliente quer saber antes do corte.",
+            "faq_intro": "Objetivo, curto e acionável.",
+            "location_title": "Chegue pelo contato oficial.",
+            "location_intro": "A navegação fecha em reserva direta.",
+            "lifestyle_kicker": "Assinatura",
+            "contact_kicker": "Horário"
+          }
+        }
+      ]
+    }
+  }
+}

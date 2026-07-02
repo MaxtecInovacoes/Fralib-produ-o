@@ -246,6 +246,7 @@ def _gerar_arquiteto_mestre_prd_impl(
         design_dict=_design_dict,
         nicho_ref=_nicho_ref,
         variacao_ref=_variacao_ref,
+        polo_resolvido=_design_dna.get("pole", ""),
     )
 
     # ── 10. Bloco 2: Copy ──
@@ -308,6 +309,7 @@ def _gerar_arquiteto_mestre_prd_impl(
         intel_ctx=_intel_ctx,
         craft_ctx=_craft_ctx,
         autocritica_ctx=_autocritica_ctx,
+        polo_resolvido=_design_dna.get("pole", ""),
     )
 
     # ── 11. Merge: estrutura + copy ──

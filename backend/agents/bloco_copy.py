@@ -70,6 +70,7 @@ def _montar_prompt_bloco2(
     intel_ctx: str,
     craft_ctx: str,
     autocritica_ctx: str,
+    polo_resolvido: str = "",
 ) -> str:
     """Monta prompt compacto para Bloco 2 — copy."""
     endereco_rule = (
@@ -77,11 +78,49 @@ def _montar_prompt_bloco2(
         if endereco
         else "ADDRESS NOT CAPTURED: do not invent street/neighborhood; mention only the city when needed and omit location section when there is no address."
     )
+    # Sprint 12.x: injeta bloco de polo (copy defaults: tone/voice/cta)
+    try:
+        from polo_prompts import build_polo_prompt_block
+        _polo_block = build_polo_prompt_block(
+            nicho=segmento,
+            subnicho="",
+            include_copy=True,
+            include_design_logic=False,
+        )
+    except Exception:
+        _polo_block = ""
+
+    # Etapa 4: injeta copy angle recomendado (StoryBrand, PAS, AIDA, etc)
+    # + polo voice (vocabulario proprio, palavras proibidas, gatilhos)
+    try:
+        from copywriting.copy_angles import get_recommended_angle
+        from copywriting.polo_voice import get_polo_voice
+        _angle = get_recommended_angle(segmento, subnicho="", polo=polo_resolvido or "CLASSIC")
+        _voice = get_polo_voice(polo_resolvido or "CLASSIC")
+        _angle_block = f"""
+
+COPY ANGLE (framework): {_angle.framework}
+- Hook: {_angle.hook_template}
+- Body: {_angle.body_template}
+- CTA: {_angle.cta_template}
+- Examples: {", ".join(_angle.public_examples[:2])}
+
+VOICE CHECK (palavras para USAR): {", ".join(_voice.vocabulary[:8])}
+VOICE CHECK (palavras para EVITAR): {", ".join(_voice.avoid_words[:5])}
+TRIGGERS: {", ".join(_voice.mental_triggers[:4])}
+"""
+    except Exception:
+        _angle_block = ""
+
     return f"""BUSINESS: {nome} | CITY: {cidade} | SEGMENT: {segmento}
 PHONE: {telefone} | ADDRESS: {endereco}
 RATING: {rating}/5 ({total_av} avaliacoes) | TIER: {caio_tier}
 MODE: {"DARK" if dark_mode else "LIGHT"}
+POLO: {polo_resolvido or "CLASSIC"}
 {endereco_rule}
+
+{_polo_block}
+{_angle_block}
 
 {jina_insights[:3000] if jina_insights else ""}
 

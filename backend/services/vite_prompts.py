@@ -499,10 +499,15 @@ def _build_lead_briefing_block(facts: dict[str, Any] | None = None) -> str:
         if primary_terms else "(sem keywords validadas)"
     )
 
-    # JSON-LD LocalBusiness (pronto para colar em <script type="application/ld+json">)
+    # JSON-LD dinâmico por nicho (advogado→LegalService, restaurante→Restaurant, etc.)
+    try:
+        from backend.config.nicho_registry import get_schema_type
+        schema_type = get_schema_type(segment)
+    except Exception:
+        schema_type = "LocalBusiness"
     json_ld = {
         "@context": "https://schema.org",
-        "@type": "LocalBusiness",
+        "@type": schema_type,
         "name": name,
         "telephone": phone,
         "address": {
@@ -511,8 +516,6 @@ def _build_lead_briefing_block(facts: dict[str, Any] | None = None) -> str:
             "addressLocality": city,
         },
     }
-    if segment:
-        json_ld["@type"] = "LocalBusiness"
     if rating:
         json_ld["aggregateRating"] = {
             "@type": "AggregateRating",
@@ -624,6 +627,10 @@ def _build_vite_react_system_prompt_with_facts(facts: dict[str, Any] | None = No
     return VITE_REACT_SYSTEM_PROMPT_HEAD + caroco + VITE_REACT_SYSTEM_PROMPT_TAIL
 
 # Modal configuration por nicho (Booking/CTA/Orcamento/Agendamento)
+# DEPRECATED (Sprint 12.x): esta constante existe apenas como fallback legacy.
+# Fonte unica de verdade: backend/config/nicho_registry.py::get_modal_config()
+# Este dict NAO e mais usado pelo codigo de producao (_build_nicho_modal_block
+# usa nicho_registry), mas mantemos para nao quebrar imports externos.
 NICHO_MODAL_CONFIG: dict[str, dict[str, str]] = {
     "barbearia": {
         "title": "Agendar Horario",
@@ -664,8 +671,18 @@ NICHO_MODAL_CONFIG: dict[str, dict[str, str]] = {
 }
 
 
+# Helper de compatibilidade: ainda retorna o dict legacy se algum codigo externo
+# precisar (leitura, nao escrita). NAO USE EM CODIGO NOVO.
+def _get_legacy_modal_config() -> dict[str, dict[str, str]]:
+    """DEPRECATED: use backend.config.nicho_registry.get_modal_config() em codigo novo."""
+    return NICHO_MODAL_CONFIG
+
+
 def _build_nicho_modal_block(facts: dict[str, Any] | None = None) -> str:
     """Sprint 12.11: injeta regra obrigatória de <Modal> por nicho (booking/CTA).
+
+    Sprint 12.x: migrado para nicho_registry (fonte única de verdade).
+    Aceita aliases e sub-nichos automaticamente.
 
     Args:
         facts: dict com 'business.segment' ou 'segmento' (opcional)
@@ -673,17 +690,55 @@ def _build_nicho_modal_block(facts: dict[str, Any] | None = None) -> str:
     Returns:
         Bloco de texto que força o LLM a gerar <Dialog> shadcn no projeto Vite/React
     """
-    nicho = "default"
+    # Sprint 12.x: usar nicho_registry em vez de NICHO_MODAL_CONFIG
+    try:
+        from backend.config.nicho_registry import get_modal_config, resolve_polo_for_lead
+    except ImportError:
+        # Fallback para NICHO_MODAL_CONFIG se registry indisponível
+        nicho = "default"
+        if facts:
+            seg = (facts.get("business") or {}).get("segment") or facts.get("segmento") or ""
+            seg_lower = str(seg).lower()
+            for key in NICHO_MODAL_CONFIG:
+                if key in seg_lower:
+                    nicho = key
+                    break
+        config = NICHO_MODAL_CONFIG[nicho]
+        return _render_nicho_modal_block(nicho, config)
+
+    # Detectar nicho e subnicho
+    segmento = ""
+    subnicho = ""
     if facts:
-        seg = (facts.get("business") or {}).get("segment") or facts.get("segmento") or ""
-        seg_lower = str(seg).lower()
-        for key in NICHO_MODAL_CONFIG:
-            if key in seg_lower:
-                nicho = key
-                break
+        business = facts.get("business") or {}
+        segmento = (
+            business.get("segment")
+            or facts.get("segmento")
+            or facts.get("segment")
+            or ""
+        )
+        subnicho = (
+            business.get("subniche")
+            or facts.get("subnicho")
+            or ""
+        )
 
-    config = NICHO_MODAL_CONFIG[nicho]
+    # Buscar config do nicho via registry (ModalConfig tem .title, .cta_button, etc)
+    modal = get_modal_config(segmento)
+    nicho_resolvido = resolve_polo_for_lead(segmento, subnicho)
 
+    # Converter ModalConfig para dict compatível com template
+    config = {
+        "title": modal.title,
+        "cta_button": modal.cta_button,
+        "fields": ", ".join(modal.fields),
+        "submit_action": modal.submit_action,
+    }
+    return _render_nicho_modal_block(segmento or "default", config)
+
+
+def _render_nicho_modal_block(nicho: str, config: dict) -> str:
+    """Renderiza o bloco de texto do modal com o template atual."""
     return f"""
 
 MODAL OBRIGATORIO POR NICHO (Sprint 12.11 — NAO PULE):
@@ -712,15 +767,21 @@ export function BookingModal() {{
     <Dialog open={{open}} onOpenChange={{setOpen}}>
       <DialogTrigger asChild>
         <Button size="lg" className="..." data-magnetic>
-          {config['cta_button']}
+          {{config['cta_button']}}
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[500px] bg-zinc-950 border-amber-500/30">
+      <DialogContent
+        className="sm:max-w-[500px] bg-zinc-950"
+        style={{{{ borderColor: 'var(--fralib-accent)', borderOpacity: 0.3 }}}}
+      >
         <DialogHeader>
-          <DialogTitle className="text-2xl font-black uppercase tracking-tight text-amber-50">
-            {config['title']}
+          <DialogTitle
+            className="text-2xl font-black uppercase tracking-tight"
+            style={{{{ color: 'var(--fralib-accent)' }}}}
+          >
+            {{config['title']}}
           </DialogTitle>
-          <DialogDescription className="text-amber-100/60">
+          <DialogDescription style={{{{ color: 'var(--fralib-accent)', opacity: 0.6 }}}}>
             Preencha os dados abaixo e entraremos em contato em ate 2h.
           </DialogDescription>
         </DialogHeader>
@@ -729,8 +790,16 @@ export function BookingModal() {{
           <Input type="tel" placeholder="Telefone (WhatsApp)" required />
           {{/* outros campos especificos do nicho */}}
           <Textarea placeholder="Observacoes (opcional)" />
-          <Button type="submit" size="lg" className="w-full bg-amber-500 hover:bg-amber-600 text-zinc-950">
-            {config['cta_button']}
+          <Button
+            type="submit"
+            size="lg"
+            className="w-full text-zinc-950"
+            style={{{{
+              backgroundColor: 'var(--fralib-accent)',
+              borderColor: 'var(--fralib-accent)',
+            }}}}
+          >
+            {{config['cta_button']}}
           </Button>
         </form>
       </DialogContent>
@@ -743,6 +812,7 @@ REGRA: O componente BookingModal DEVE ser:
 1. Criado em src/components/BookingModal.tsx
 2. Importado em src/pages/Index.tsx
 3. Renderizado no minimo 2x na pagina (CTA no hero + CTA no final)
+4. **Usar `var(--fralib-accent)` para o CTA primario, titulo e borda** (nao usar cores hardcoded como bg-amber-500, bg-blue-500, etc). A cor acompanha o polo do site.
 4. Aberto por botao com data-magnetic no hero
 
 VALIDACAO: o studio falha o build se nao houver BookingModal.tsx no projeto.

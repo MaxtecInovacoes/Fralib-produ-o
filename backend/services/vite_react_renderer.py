@@ -49,6 +49,8 @@ try:
         get_liquid_component_guide,
         POLO_TOKENS,
         get_hero_display_mode,
+        get_services_display_mode,
+        get_gallery_display_mode,
     )
     from backend.services.vite_liquid_prompts import (
         build_liquid_system_prompt,
@@ -6445,6 +6447,29 @@ def write_vite_project(workspace: Path, files: dict[str, str]) -> None:
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(content, encoding="utf-8")
 
+    # Sprint 12.x: copiar design-system-tokens.css para a raiz do workspace
+    # (necessário para os tokens --pole-* serem aplicados no bundle final)
+    _copy_design_system_tokens(workspace)
+
+
+def _copy_design_system_tokens(workspace: Path) -> None:
+    """Copia frontend/static/design-system-tokens.css para a raiz do workspace.
+
+    Faz fallback silencioso se o arquivo não existir (não bloqueia o build).
+    """
+    try:
+        # Localizar arquivo fonte
+        repo_root = Path(__file__).resolve().parents[2]
+        css_src = repo_root / "frontend" / "static" / "design-system-tokens.css"
+        if not css_src.exists():
+            return
+
+        css_dst = workspace / "design-system-tokens.css"
+        shutil.copy2(css_src, css_dst)
+    except Exception:
+        # Silencioso: não bloquear build se asset estiver indisponível
+        pass
+
 
 def build_vite_project(workspace: Path) -> None:
     """Install fixed dependencies and compile the Vite project to dist."""
@@ -7458,9 +7483,22 @@ def _facts_json_ld(facts: dict[str, Any]) -> str:
     business = _facts_business(facts)
     site_url = _facts_publication_url(facts)
     image = _facts_og_image(facts)
+    # Sprint 12.x: schema_type dinâmico por nicho (advogado→LegalService, etc.)
+    segmento = (
+        business.get("segment")
+        or business.get("segmento")
+        or facts.get("segmento")
+        or facts.get("segment")
+        or ""
+    )
+    try:
+        from backend.config.nicho_registry import get_schema_type
+        schema_type = get_schema_type(segmento)
+    except Exception:
+        schema_type = "LocalBusiness"
     data = {
         "@context": "https://schema.org",
-        "@type": "LocalBusiness",
+        "@type": schema_type,
         "name": business.get("name") or business.get("business_name") or "",
         "url": site_url,
         "image": image,

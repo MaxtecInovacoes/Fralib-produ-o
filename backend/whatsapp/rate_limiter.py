@@ -7,7 +7,9 @@ whatsapp_listener.py. Uses AntiAbuseGuards from whatsapp.guards internally.
 import threading
 import time as _time_mod
 from datetime import date
-from typing import Callable, Dict
+from typing import Callable, Dict, Optional
+
+from sqlalchemy.engine import Engine
 
 from whatsapp.guards import AntiAbuseGuards, SavedContactsRegistry
 
@@ -32,6 +34,7 @@ class RateLimiter:
     def __init__(
         self,
         *,
+        engine: Optional[Engine] = None,
         flood_threshold: int = DEFAULT_FLOOD_THRESHOLD,
         flood_window: float = DEFAULT_FLOOD_WINDOW,
         flood_silence: float = DEFAULT_FLOOD_SILENCE,
@@ -44,6 +47,7 @@ class RateLimiter:
         now_func: Callable[[], float] = _time_mod.time,
         today_func: Callable[[], date] = date.today,
     ):
+        self.engine = engine
         self.flood_threshold = flood_threshold
         self.flood_window = flood_window
         self.flood_silence = flood_silence
@@ -52,6 +56,7 @@ class RateLimiter:
         self.default_human_pause_seconds = default_human_pause_seconds
 
         self._guards = AntiAbuseGuards(
+            engine=engine,
             flood_threshold=flood_threshold,
             flood_window=flood_window,
             flood_silence=flood_silence,

@@ -21,6 +21,30 @@ except Exception:  # pragma: no cover - package import variant
     from agents.component_library import build_component_contracts
 
 
+def _schema_type_for(segmento: str | None, facts: dict[str, Any] | None = None) -> str:
+    """Resolve o schema.org @type a partir do segmento do lead.
+
+    Usa nicho_registry (fonte única de verdade). Fallback: LocalBusiness.
+    Aceita tanto `segmento` top-level quanto `business.segment` aninhado
+    (via param `facts`). Se `segmento` é o default placeholder
+    ("negócio local" / "negocio local"), prefere o segmento aninhado.
+    """
+    PLACEHOLDERS = {"", "negócio local", "negocio local", "negócio"}
+    candidato = (segmento or "").strip()
+    if candidato.lower() in PLACEHOLDERS and facts is not None:
+        business = facts.get("business") if isinstance(facts.get("business"), dict) else {}
+        candidato = (
+            business.get("segment")
+            or business.get("segmento")
+            or ""
+        )
+    try:
+        from backend.config.nicho_registry import get_schema_type
+        return get_schema_type(candidato or "")
+    except Exception:
+        return "LocalBusiness"
+
+
 def build_site_build_plan(
     facts: dict[str, Any],
     *,
@@ -115,7 +139,7 @@ def build_site_build_plan(
         "seo_plan": {
             "title_strategy": f"{name} em {city}".strip(),
             "local_terms": [item for item in [segment, city, address] if item],
-            "schema_type": "LocalBusiness",
+            "schema_type": _schema_type_for(segment, facts=facts),
         },
         "acceptance_criteria": visual_contract.get("acceptance_criteria") or {},
     }

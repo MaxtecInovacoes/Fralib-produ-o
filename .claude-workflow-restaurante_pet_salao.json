@@ -1,0 +1,282 @@
+{
+  "copy_enrichments": {
+    "restaurante-prato-certo": {
+      "services_kicker": "Menu e serviço",
+      "gallery_kicker": "Prato, ambiente e mesa",
+      "reviews_kicker": "Reputação à mesa",
+      "faq_kicker": "Antes de reservar a mesa",
+      "location_cta_title": "Veja a casa, o cardápio e chame no WhatsApp.",
+      "location_cta_body": "Endereço, menu e contato aparecem no mesmo bloco para decisão sem atrito.",
+      "contact_headline": "Pronto para conhecer a casa e garantir a próxima mesa?"
+    },
+    "restaurante-forno-livre": {
+      "services_kicker": "Forno, massa e receita",
+      "gallery_kicker": "Forno aberto e ingredientes",
+      "reviews_kicker": "Confiança de quem volta",
+      "faq_kicker": "Antes de pedir ou reservar",
+      "location_cta_title": "Peça pelo WhatsApp e veja a rota do forno.",
+      "location_cta_body": "O cardápio, o endereço e o contato fecham a página com sabor e clareza.",
+      "contact_headline": "Quer garantir a próxima fornada e levar o sabor para casa?"
+    },
+    "pet-shop-patudo": {
+      "services_kicker": "Cuidado, banho e tosa",
+      "gallery_kicker": "Cães, gatos e rotina",
+      "reviews_kicker": "Tutores da redondeza",
+      "faq_kicker": "Antes da primeira visita",
+      "location_cta_title": "Traga o pet e fale com a equipe pelo WhatsApp.",
+      "location_cta_body": "Serviço, endereço e agendamento aparecem juntos para cuidar sem perder tempo.",
+      "contact_headline": "Pronto para agendar banho, tosa ou cuidado com o seu pet?"
+    },
+    "pet-shop-pet-care-pro": {
+      "services_kicker": "Cuidado técnico e rotina",
+      "gallery_kicker": "Atendimento e bem-estar",
+      "reviews_kicker": "Confiança de quem cuida",
+      "faq_kicker": "Antes do agendamento",
+      "location_cta_title": "Agende o cuidado e veja a rota até {city}.",
+      "location_cta_body": "Contato, serviço e endereço fecham a jornada com leitura clara e direta.",
+      "contact_headline": "Quer garantir o cuidado do seu pet com estrutura e atenção de verdade?"
+    },
+    "salao-glow-studio": {
+      "services_kicker": "Cabelo, cor e brilho",
+      "gallery_kicker": "Antes e depois, ambiente",
+      "reviews_kicker": "Clientes que voltam",
+      "faq_kicker": "Antes de marcar o horário",
+      "location_cta_title": "Veja o salão e reserve pelo WhatsApp.",
+      "location_cta_body": "Serviço, endereço e agenda aparecem no mesmo bloco para fechar a escolha sem ruído.",
+      "contact_headline": "Pronto para marcar seu próximo visual com calma e atenção?"
+    },
+    "salao-mirror-room": {
+      "services_kicker": "Corte, cor e cuidado",
+      "gallery_kicker": "Espelho, luz e detalhe",
+      "reviews_kicker": "Reputação local",
+      "faq_kicker": "Antes de sentar na cadeira",
+      "location_cta_title": "Reserve seu horário e veja a rota até o salão.",
+      "location_cta_body": "O contato fecha a página com leitura elegante e decisão sem atrito.",
+      "contact_headline": "Quer garantir o próximo horário com leitura clara e atendimento cuidado?"
+    }
+  },
+  "lanes": {
+    "restaurante": {
+      "item": [
+        {
+          "id": "restaurante-prato-certo",
+          "name": "Prato Certo",
+          "fallback_palette": {
+            "primary": "#7a1a2b",
+            "secondary": "#c9a14a",
+            "bg_dark": "#2a1014",
+            "bg_light": "#f7efe2",
+            "text_dark": "#2a1014"
+          },
+          "blocks": {
+            "hero_variant": "center",
+            "services_variant": "split_editorial",
+            "reviews_variant": "quote_spotlight",
+            "faq_variant": "panel",
+            "location_variant": "split_local",
+            "surface_style": "soft_tint"
+          },
+          "copy": {
+            "hero_badge": "Casa de comida com identidade local",
+            "about_kicker": "Receita",
+            "about_title": "Prato bem feito, ambiente acolhedor e decisão sem complicação.",
+            "about_body": "{name} organiza menu, carta e atendimento para uma refeição bem resolvida em {city}.",
+            "gallery_title": "Prato, mesa e atmosfera de casa cheia.",
+            "gallery_intro": "As imagens reforçam comida, serviço e sensação de estar bem recebido.",
+            "reviews_title": "Avaliações que aproximam o cliente da casa.",
+            "reviews_intro": "Reputação, prato e cidade sustentam a escolha de visitar.",
+            "faq_title": "Perguntas antes de reservar a mesa.",
+            "faq_intro": "Respostas curtas sobre cardápio, reserva, delivery e horários.",
+            "location_title": "Visite a casa em {city} com acesso claro.",
+            "location_intro": "Endereço, cardápio e WhatsApp aparecem sem poluição visual.",
+            "lifestyle_kicker": "Mesa",
+            "contact_kicker": "Reserva"
+          }
+        },
+        {
+          "id": "restaurante-forno-livre",
+          "name": "Forno Livre",
+          "fallback_palette": {
+            "primary": "#4f6b2a",
+            "secondary": "#c9a14a",
+            "bg_dark": "#1a2010",
+            "bg_light": "#f4ecd6",
+            "text_dark": "#1a2010"
+          },
+          "blocks": {
+            "hero_variant": "fullbleed",
+            "services_variant": "stacked_cards",
+            "reviews_variant": "editorial_case",
+            "faq_variant": "inline",
+            "location_variant": "feature_local",
+            "surface_style": "solid"
+          },
+          "copy": {
+            "hero_badge": "Forno aberto, massa e sabor de verdade",
+            "about_kicker": "Forno",
+            "about_title": "Padaria e pizzaria com forno visível e leitura mais humana.",
+            "about_body": "{name} apresenta fornada, atendimento e cardápio para quem busca comida feita com calma em {city}.",
+            "gallery_title": "Massa, fermento e detalhe do forno.",
+            "gallery_intro": "A galeria aproxima o cliente do processo e do sabor.",
+            "reviews_title": "Clientes que voltam pelo sabor e pela confiança.",
+            "reviews_intro": "Depoimentos reforçam regularidade e cuidado com a receita.",
+            "faq_title": "Antes de pedir ou retirar no balcão.",
+            "faq_intro": "FAQ direto sobre entrega, reserva e horários de fornada.",
+            "location_title": "Encontre o forno em {city}.",
+            "location_intro": "Endereço, WhatsApp e cardápio fecham a página com calor e clareza.",
+            "lifestyle_kicker": "Receita",
+            "contact_kicker": "Pedido"
+          }
+        }
+      ]
+    }
+  },
+  "pet_shop": {
+    "item": [
+      {
+        "id": "pet-shop-patudo",
+        "name": "Patudo",
+        "fallback_palette": {
+          "primary": "#3f6b3a",
+          "secondary": "#c9a14a",
+          "bg_dark": "#1d2a18",
+          "bg_light": "#f3efe3",
+          "text_dark": "#1d2a18"
+        },
+        "blocks": {
+          "hero_variant": "split",
+          "services_variant": "stacked_cards",
+          "reviews_variant": "score_wall",
+          "faq_variant": "panel",
+          "location_variant": "feature_local",
+          "surface_style": "outline"
+        },
+        "copy": {
+          "hero_badge": "Pet shop com cuidado de verdade",
+          "about_kicker": "Cuidado",
+          "about_title": "Banho, tosa e atenção para o pet da família.",
+          "about_body": "{name} organiza atendimento, ambiente e contato para tutores que tratam o pet como parte da casa em {city}.",
+          "gallery_title": "Cães, gatos e rotina de cuidado.",
+          "gallery_intro": "As imagens mostram banho, tosa, brincadeira e ambiente tranquilo.",
+          "reviews_title": "Tutores da redondeza que confiam.",
+          "reviews_intro": "Avaliações entram como prova local de cuidado e regularidade.",
+          "faq_title": "Antes da primeira visita.",
+          "faq_intro": "Perguntas sobre agenda, vacinas, banho, tosa e transporte.",
+          "location_title": "Traga o pet em {city} com rota simples.",
+          "location_intro": "Endereço, WhatsApp e agendamento aparecem no mesmo bloco.",
+          "lifestyle_kicker": "Pet",
+          "contact_kicker": "Agendar"
+        }
+      },
+      {
+        "id": "pet-shop-pet-care-pro",
+        "name": "Pet Care Pro",
+        "fallback_palette": {
+          "primary": "#b35a3a",
+          "secondary": "#3f6b3a",
+          "bg_dark": "#2a1810",
+          "bg_light": "#f5ecdf",
+          "text_dark": "#2a1810"
+        },
+        "blocks": {
+          "hero_variant": "asymmetric",
+          "services_variant": "stats_then_cards",
+          "reviews_variant": "card_marquee",
+          "faq_variant": "inline",
+          "location_variant": "split_local",
+          "surface_style": "outline"
+        },
+        "copy": {
+          "hero_badge": "Cuidado profissional para o pet",
+          "about_kicker": "Rotina",
+          "about_title": "Estrutura, equipe técnica e leitura direta para o tutor.",
+          "about_body": "{name} combina banho, tosa, veterinária e produto em uma jornada mais organizada para {city}.",
+          "gallery_title": "Atendimento, técnica e bem-estar animal.",
+          "gallery_intro": "A composição destaca estrutura, cuidado e resultado visível.",
+          "reviews_title": "Confiança de quem cuida com método.",
+          "reviews_intro": "Avaliações sustentam a decisão de quem compara pet shops na região.",
+          "faq_title": "Antes de marcar o serviço.",
+          "faq_intro": "FAQ prático sobre agenda, preparo do pet e retirada.",
+          "location_title": "Atendimento em {city} com leitura técnica.",
+          "location_intro": "Contato, endereço e próximos passos fecham a jornada sem ruído.",
+          "lifestyle_kicker": "Bem-estar",
+          "contact_kicker": "Reserva"
+        }
+      }
+    ],
+    "salao": {
+      "item": [
+        {
+          "id": "salao-glow-studio",
+          "name": "Glow Studio",
+          "fallback_palette": {
+            "primary": "#c98a6a",
+            "secondary": "#b8924a",
+            "bg_dark": "#2a1814",
+            "bg_light": "#fbf2e8",
+            "text_dark": "#2a1814"
+          },
+          "blocks": {
+            "hero_variant": "center",
+            "services_variant": "split_editorial",
+            "reviews_variant": "quote_spotlight",
+            "faq_variant": "panel",
+            "location_variant": "split_local",
+            "surface_style": "soft_tint"
+          },
+          "copy": {
+            "hero_badge": "Salão com brilho e identidade",
+            "about_kicker": "Brilho",
+            "about_title": "Cabelo, cor e acabamento com leitura acolhedora.",
+            "about_body": "{name} organiza atendimento, ambiente e agendamento para uma experiência de salão mais leve em {city}.",
+            "gallery_title": "Antes e depois com luz e cor.",
+            "gallery_intro": "As imagens reforçam transformação, detalhe e sensação de cuidado.",
+            "reviews_title": "Clientes que voltam pelo resultado.",
+            "reviews_intro": "Avaliações sustentam a escolha de quem está trocando de salão.",
+            "faq_title": "Antes de marcar o horário.",
+            "faq_intro": "Perguntas sobre agenda, profissionais, serviços e preparo.",
+            "location_title": "Salão em {city} com acesso claro.",
+            "location_intro": "Endereço, WhatsApp e próximos passos aparecem sem atrito.",
+            "lifestyle_kicker": "Brilho",
+            "contact_kicker": "Agenda"
+          }
+        },
+        {
+          "id": "salao-mirror-room",
+          "name": "Mirror Room",
+          "fallback_palette": {
+            "primary": "#d6b88a",
+            "secondary": "#7a3a52",
+            "bg_dark": "#1c1410",
+            "bg_light": "#f7efdf",
+            "text_dark": "#1c1410"
+          },
+          "blocks": {
+            "hero_variant": "split",
+            "services_variant": "stacked_cards",
+            "reviews_variant": "score_wall",
+            "faq_variant": "inline",
+            "location_variant": "feature_local",
+            "surface_style": "outline"
+          },
+          "copy": {
+            "hero_badge": "Salão com espelho, luz e direção",
+            "about_kicker": "Atelier",
+            "about_title": "Corte, cor e tratamento com leitura mais editorial.",
+            "about_body": "{name} apresenta serviço, ambiente e agenda em uma composição mais elegante para {city}.",
+            "gallery_title": "Espelho, luz baixa e detalhe do atendimento.",
+            "gallery_intro": "As imagens valorizam técnica, proximidade e atmosfera do salão.",
+            "reviews_title": "Reputação local com leitura editorial.",
+            "reviews_intro": "Avaliações aparecem como prova de cuidado e regularidade.",
+            "faq_title": "Antes de sentar na cadeira.",
+            "faq_intro": "FAQ direto sobre agenda, profissionais e serviços.",
+            "location_title": "Reserve o horário em {city}.",
+            "location_intro": "Contato, endereço e reserva fecham a página com clareza.",
+            "lifestyle_kicker": "Atelier",
+            "contact_kicker": "Reserva"
+          }
+        }
+      ]
+    }
+  }
+}

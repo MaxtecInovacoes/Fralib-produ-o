@@ -74,6 +74,10 @@ DEFAULT_SDR_SETTINGS: dict[str, Any] = {
         "human_pause_seconds": 300,
     },
     "bot_ignore_saved_contacts": False,
+    # Trilha A — auto-throttle: quando True, daily_limit_per_lead é reduzido
+    # dinamicamente baseado no phone_health_score do tenant.
+    # score >= 80: 100% do limite | 50-79: 70% | 20-49: 50% | <20: 10%
+    "auto_throttle_enabled": True,
 }
 
 
@@ -406,6 +410,43 @@ def daily_limit_per_lead(settings: Mapping[str, Any]) -> int:
 
 def human_pause_seconds(settings: Mapping[str, Any]) -> int:
     return int(_as_dict(settings.get("limits")).get("human_pause_seconds", 300) or 300)
+
+
+# ── Auto-throttle (Trilha A) ─────────────────────────────────────────────
+# Reduz daily_limit_per_lead proporcional ao phone_health_score do tenant.
+# Mapeamento: >=80 → 100% | 50-79 → 70% | 20-49 → 50% | <20 → 10%
+def _auto_throttle_factor(score: int | None) -> float:
+    """Fator multiplicativo do daily_limit baseado no score (0-100)."""
+    if score is None:
+        return 1.0
+    if score >= 80:
+        return 1.0
+    if score >= 50:
+        return 0.7
+    if score >= 20:
+        return 0.5
+    return 0.1
+
+
+def effective_daily_limit(
+    settings: Mapping[str, Any],
+    phone_health_score: int | None,
+) -> int:
+    """Daily limit efetivo após auto-throttle (se habilitado).
+
+    Args:
+        settings: sdr_settings do tenant
+        phone_health_score: score atual de phone_health_score (0-100) ou None
+
+    Returns:
+        Limite diário de msgs por lead, já com throttle aplicado.
+    """
+    base = daily_limit_per_lead(settings)
+    auto_throttle = bool(settings.get("auto_throttle_enabled", True))
+    if not auto_throttle:
+        return base
+    factor = _auto_throttle_factor(phone_health_score)
+    return max(1, int(base * factor))
 
 
 def agent_name(settings: Mapping[str, Any]) -> str:

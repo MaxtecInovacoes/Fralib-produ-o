@@ -1,0 +1,279 @@
+{
+  "copy_enrichments": {
+    "item": {
+      "advogado-statute-noir": {
+        "services_kicker": "Atuação e estratégia",
+        "gallery_kicker": "Escritório e autoridade",
+        "reviews_kicker": "Clientes e resultados",
+        "faq_kicker": "Antes da consulta",
+        "location_cta_title": "Fale com a banca e siga com direção.",
+        "location_cta_body": "Endereço, WhatsApp e próximos passos aparecem juntos para reduzir atrito na primeira conversa.",
+        "contact_headline": "Pronto para tratar do seu caso com estrutura jurídica séria?"
+      }
+    },
+    "advogado-lex-meridian": {
+      "services_kicker": "Áreas de atuação",
+      "gallery_kicker": "Leitura e método",
+      "reviews_kicker": "Prova local",
+      "faq_kicker": "Perguntas iniciais",
+      "location_cta_title": "Consulte a banca e siga com clareza.",
+      "location_cta_body": "Contato, endereço e agenda aparecem com leitura sóbria e sem ruído.",
+      "contact_headline": "Quer conduzir seu caso com orientação técnica e atendimento próximo?"
+    },
+    "clinica-medical-trust": {
+      "services_kicker": "Atendimento clínico",
+      "gallery_kicker": "Ambiente e cuidado",
+      "reviews_kicker": "Pacientes e confiança",
+      "faq_kicker": "Antes da consulta",
+      "location_cta_title": "Agende com calma e chegue sem atrito.",
+      "location_cta_body": "Endereço, WhatsApp e próximos passos aparecem com leitura clara e humana.",
+      "contact_headline": "Pronto para cuidar da sua saúde com atendimento de verdade?"
+    },
+    "clinica-care-plus": {
+      "services_kicker": "Especialidades e cuidado",
+      "gallery_kicker": "Estrutura e recepção",
+      "reviews_kicker": "Reputação local",
+      "faq_kicker": "Perguntas frequentes",
+      "location_cta_title": "Marque sua consulta e veja a rota.",
+      "location_cta_body": "Contato, endereço e agenda aparecem juntos para você decidir sem perda de tempo.",
+      "contact_headline": "Quer cuidar da sua saúde com uma clínica que atende com atenção?"
+    },
+    "dentista-smile-care": {
+      "services_kicker": "Tratamentos e cuidado",
+      "gallery_kicker": "Consultório e acolhimento",
+      "reviews_kicker": "Pacientes e confiança",
+      "faq_kicker": "Antes do atendimento",
+      "location_cta_title": "Agende sua avaliação com leitura clara.",
+      "location_cta_body": "Consultório, WhatsApp e próximos passos aparecem com calma e legibilidade.",
+      "contact_headline": "Pronto para cuidar do seu sorriso com estrutura e atenção?"
+    },
+    "dentista-clinical-white": {
+      "services_kicker": "Odontologia e clareza",
+      "gallery_kicker": "Ambiente clínico",
+      "reviews_kicker": "Confiança local",
+      "faq_kicker": "Perguntas do primeiro atendimento",
+      "location_cta_title": "Fale com a clínica e siga sem atrito.",
+      "location_cta_body": "Endereço, agenda e contato aparecem num arranjo direto e muito mais legível.",
+      "contact_headline": "Quer cuidar da sua saúde bucal com atendimento técnico e humano?"
+    }
+  },
+  "lanes": {
+    "advogado": {
+      "item": {
+        "id": "advogado-statute-noir",
+        "name": "Statute Noir",
+        "fallback_palette": {
+          "primary": "#c9a24a",
+          "secondary": "#3a2410",
+          "bg_dark": "#0a0806"
+        }
+      }
+    },
+    "text_dark": [
+      "#1a120a",
+      "#0e1226",
+      "#0c2034",
+      "#0a1a30",
+      "#0a2030",
+      "#0a2a3a"
+    ],
+    "blocks": [
+      {
+        "hero_variant": "split",
+        "services_variant": "split_editorial",
+        "reviews_variant": "editorial_case",
+        "faq_variant": "panel",
+        "location_variant": "split_local",
+        "surface_style": "solid"
+      },
+      {
+        "hero_variant": "asymmetric",
+        "services_variant": "stacked_cards",
+        "reviews_variant": "quote_spotlight",
+        "faq_variant": "inline",
+        "location_variant": "feature_local",
+        "surface_style": "outline"
+      },
+      {
+        "hero_variant": "split",
+        "services_variant": "split_editorial",
+        "reviews_variant": "quote_spotlight",
+        "faq_variant": "panel",
+        "location_variant": "split_local",
+        "surface_style": "soft_tint"
+      },
+      {
+        "hero_variant": "center",
+        "services_variant": "stacked_cards",
+        "reviews_variant": "score_wall",
+        "faq_variant": "panel",
+        "location_variant": "feature_local",
+        "surface_style": "outline"
+      },
+      {
+        "hero_variant": "split",
+        "services_variant": "stacked_cards",
+        "reviews_variant": "score_wall",
+        "faq_variant": "panel",
+        "location_variant": "split_local",
+        "surface_style": "soft_tint"
+      },
+      {
+        "hero_variant": "asymmetric",
+        "services_variant": "stats_then_cards",
+        "reviews_variant": "card_marquee",
+        "faq_variant": "inline",
+        "location_variant": "feature_local",
+        "surface_style": "outline"
+      }
+    ],
+    "copy": [
+      {
+        "hero_badge": "Advocacia com autoridade",
+        "about_kicker": "Estratégia",
+        "about_title": "Atuação jurídica com leitura clássica, técnica e próxima do cliente.",
+        "about_body": "{name} conduz casos com método, sigilo e atendimento presencial em {city}.",
+        "gallery_title": "Escritório, processo e bastidores da advocacia.",
+        "gallery_intro": "As imagens reforçam autoridade, leitura sóbria e presença institucional.",
+        "reviews_title": "Clientes que confiam no acompanhamento.",
+        "reviews_intro": "Avaliações, cidade e contato sustentam a decisão sem ruído visual.",
+        "faq_title": "Antes de agendar a consulta.",
+        "faq_intro": "Perguntas objetivas sobre áreas de atuação, honorários e atendimento.",
+        "location_title": "Atendimento jurídico em {city} com acesso claro.",
+        "location_intro": "Endereço, WhatsApp e próximos passos aparecem sem atrito para a primeira conversa.",
+        "lifestyle_kicker": "Autoridade",
+        "contact_kicker": "Consulta"
+      },
+      {
+        "hero_badge": "Banca com método e leitura sóbria",
+        "about_kicker": "Método",
+        "about_title": "Atendimento jurídico com técnica, processo e presença.",
+        "about_body": "{name} organiza o caso com leitura estratégica, atendimento humano e estrutura em {city}.",
+        "gallery_title": "Direção visual sóbria para uma banca técnica.",
+        "gallery_intro": "A composição privilegia seriedade, contraste e clareza de informação.",
+        "reviews_title": "Reputação local tratada com recorte institucional.",
+        "reviews_intro": "Avaliações aparecem com tom sóbrio e sem poluição visual.",
+        "faq_title": "O que o cliente quer saber antes da consulta.",
+        "faq_intro": "Respostas diretas sobre agenda, honorários e áreas de atuação.",
+        "location_title": "Atendimento em {city} com rota clara.",
+        "location_intro": "Endereço, WhatsApp e agenda aparecem sem desvios para a primeira conversa.",
+        "lifestyle_kicker": "Processo",
+        "contact_kicker": "Agendar"
+      },
+      {
+        "hero_badge": "Clínica com cuidado e leitura clara",
+        "about_kicker": "Cuidado",
+        "about_title": "Atendimento clínico com acolhimento, técnica e presença local.",
+        "about_body": "{name} organiza consulta, exames e atendimento com calma e clareza em {city}.",
+        "gallery_title": "Consultório, recepção e bastidores do cuidado.",
+        "gallery_intro": "As imagens reforçam ambiente limpo, acolhimento e estrutura clínica.",
+        "reviews_title": "Pacientes que perceberam atenção e cuidado.",
+        "reviews_intro": "Avaliações aparecem com tom humano e leitura confiável.",
+        "faq_title": "Antes de marcar a primeira consulta.",
+        "faq_intro": "Perguntas sobre agenda, convênio, exames e atendimento.",
+        "location_title": "Atendimento clínico em {city} com acesso simples.",
+        "location_intro": "Endereço, WhatsApp e próximos passos aparecem com leitura clara e humana.",
+        "lifestyle_kicker": "Saúde",
+        "contact_kicker": "Agendar"
+      },
+      {
+        "hero_badge": "Clínica com presença e cuidado",
+        "about_kicker": "Confiança",
+        "about_title": "Saúde atendida com estrutura, leitura sóbria e presença.",
+        "about_body": "{name} combina especialidades, exames e recepção em uma jornada clara para o paciente em {city}.",
+        "gallery_title": "Estrutura, atendimento e sinais de confiança.",
+        "gallery_intro": "A sequência mostra consultório, equipe e ambiente com tom institucional e humano.",
+        "reviews_title": "Reputação que ajuda a marcar a primeira consulta.",
+        "reviews_intro": "Avaliações e cidade aparecem com leitura sóbria e sem ruído.",
+        "faq_title": "Perguntas para quem está comparando clínicas.",
+        "faq_intro": "Respostas curtas sobre agenda, especialidades e atendimento.",
+        "location_title": "Marque sua consulta em {city} com rota clara.",
+        "location_intro": "Endereço, WhatsApp e agenda aparecem juntos para decidir sem atrito.",
+        "lifestyle_kicker": "Atendimento",
+        "contact_kicker": "Consulta"
+      },
+      {
+        "hero_badge": "Odontologia com calma e clareza",
+        "about_kicker": "Cuidado",
+        "about_title": "Atendimento odontológico com acolhimento, técnica e leitura clara.",
+        "about_body": "{name} conduz consulta, tratamento e retorno com calma, leitura serena e presença local em {city}.",
+        "gallery_title": "Consultório, acolhimento e ambiente tranquilo.",
+        "gallery_intro": "As imagens reforçam cuidado, ambiente limpo e sensação de atendimento próximo.",
+        "reviews_title": "Pacientes que voltaram e indicam o consultório.",
+        "reviews_intro": "Avaliações aparecem com tom humano e leitura confiável.",
+        "faq_title": "Antes da primeira avaliação odontológica.",
+        "faq_intro": "Perguntas sobre agenda, procedimentos, convênio e atendimento.",
+        "location_title": "Atendimento odontológico em {city} com acesso simples.",
+        "location_intro": "Endereço, WhatsApp e agenda aparecem com calma e legibilidade.",
+        "lifestyle_kicker": "Bem-estar",
+        "contact_kicker": "Agendar"
+      },
+      {
+        "hero_badge": "Odontologia com leitura técnica e humana",
+        "about_kicker": "Clínica",
+        "about_title": "Saúde bucal com estrutura, técnica e leitura clara.",
+        "about_body": "{name} organiza consulta, diagnóstico e tratamento com presença técnica e atendimento próximo em {city}.",
+        "gallery_title": "Ambiente clínico com tom humano e institucional.",
+        "gallery_intro": "A sequência mostra consultório, equipe e estrutura com leitura técnica.",
+        "reviews_title": "Confiança que ajuda a marcar a primeira avaliação.",
+        "reviews_intro": "Avaliações aparecem com leitura sóbria e sem ruído visual.",
+        "faq_title": "Perguntas para quem está escolhendo dentista.",
+        "faq_intro": "Respostas diretas sobre agenda, procedimentos e atendimento.",
+        "location_title": "Marque sua consulta em {city} sem complicação.",
+        "location_intro": "Endereço, agenda e contato aparecem num arranjo direto e legível.",
+        "lifestyle_kicker": "Saúde",
+        "contact_kicker": "Consulta"
+      }
+    ],
+    "item": [
+      {
+        "id": "advogado-lex-meridian",
+        "name": "Lex Meridian",
+        "fallback_palette": {
+          "primary": "#1f2a4a",
+          "secondary": "#3a2a14",
+          "bg_dark": "#0d1024"
+        }
+      },
+      {
+        "id": "clinica-medical-trust",
+        "name": "Medical Trust",
+        "fallback_palette": {
+          "primary": "#3aa6c9",
+          "secondary": "#0e2a4a",
+          "bg_dark": "#f1f8fb"
+        }
+      },
+      {
+        "id": "clinica-care-plus",
+        "name": "Care Plus",
+        "fallback_palette": {
+          "primary": "#1e5fa8",
+          "secondary": "#0a2a4a",
+          "bg_dark": "#07203a"
+        }
+      },
+      {
+        "id": "dentista-clinical-white",
+        "name": "Clinical White",
+        "fallback_palette": {
+          "primary": "#1aa6c9",
+          "secondary": "#0a4a5a",
+          "bg_dark": "#ffffff"
+        }
+      }
+    ],
+    "dentista": {
+      "item": {
+        "id": "dentista-smile-care",
+        "name": "Smile Care",
+        "fallback_palette": {
+          "primary": "#5cb8d4",
+          "secondary": "#0e3a5a",
+          "bg_dark": "#f3fafc"
+        }
+      }
+    },
+    "$text": "#f4ecd9#eef0f7#ffffff#eaf2fb#ffffff#eef7fa"
+  }
+}

@@ -38,9 +38,18 @@ def get_design_context_prompt(
     anim = ctx["animation_profile"]
     _posture = ctx.get("posture", [])
     posture_fmt = "\n".join("  - " + p for p in _posture) if _posture else "  padrao"
+
+    # Sprint 12.x: injeta polo canônico (vem do nicho_registry)
+    try:
+        from polo_prompts import build_polo_short
+        _polo_short = build_polo_short(segmento, subnicho="")
+    except Exception:
+        _polo_short = f"POLO=CLASSIC (nicho={segmento or 'default'})"
+
     result = f"""
 === DESIGN SYSTEM DO NICHO — SIGA OBRIGATORIAMENTE ===
 SEGMENTO: {ctx['segmento'].upper()} | TIER: {ctx['tier']} | DIREÇÃO: {ctx['dir_nome']}
+{_polo_short}
 
 CSS TOKENS (6 universais — use EXATAMENTE estes valores no :root):
 {tokens_str}

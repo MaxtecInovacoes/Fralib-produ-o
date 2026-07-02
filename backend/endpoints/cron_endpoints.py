@@ -819,3 +819,59 @@ async def redis_reconnect(x_cron_secret: str = Header(None, alias='X-Cron-Secret
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
+
+@router.post('/compute-phone-health-score')
+async def compute_phone_health_score(x_cron_secret: str = Header(None, alias='X-Cron-Secret')):
+    """Recalcula phone_health_score para todos os tenants ativos.
+
+    Idempotente — UPSERT em phone_health_score.
+    Rodar 1x/hora via cron externo (X-Cron-Secret).
+    """
+    _autorizar(x_cron_secret)
+
+    from backend.services.phone_health_service import compute_all_tenants
+
+    try:
+        snapshots = compute_all_tenants(engine)
+    except Exception as e:
+        logger.exception("compute_phone_health_score falhou")
+        return {"status": "error", "message": str(e)}
+
+    by_status: dict[str, int] = {}
+    for snap in snapshots:
+        by_status[snap.status] = by_status.get(snap.status, 0) + 1
+
+    return {
+        "status": "ok",
+        "tenants_processed": len(snapshots),
+        "by_status": by_status,
+        "snapshot_at": datetime.utcnow().isoformat(),
+    }
+
+
+@router.post('/refresh-provider-health')
+async def refresh_provider_health(x_cron_secret: str = Header(None, alias='X-Cron-Secret')):
+    """Faz ping em cada provider conhecido e UPSERT em provider_health.
+
+    Idempotente — roda 1x a cada 5min via cron externo.
+    Cron sugerido: ``*/5 * * * * curl -X POST -H "X-Cron-Secret: $CRON_SECRET" \\
+        https://api.fralib.com/api/cron/refresh-provider-health``
+    """
+    _autorizar(x_cron_secret)
+
+    from backend.services.provider_health_service import refresh_all_providers
+
+    try:
+        summary = refresh_all_providers(engine)
+    except Exception as e:
+        logger.exception("refresh_provider_health falhou")
+        return {"status": "error", "message": str(e)}
+
+    return {
+        "status": "ok",
+        "providers_refreshed": summary["providers_refreshed"],
+        "errors": summary["errors"],
+        "by_status": summary["by_status"],
+        "snapshot_at": datetime.utcnow().isoformat(),
+    }
+

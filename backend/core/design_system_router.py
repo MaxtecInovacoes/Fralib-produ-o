@@ -128,9 +128,17 @@ def build_design_dna(
     }
     visual_variation = _build_variation(rng, archetype_id)
     pack_typography = reference_pack.get("typography") or {}
+    # Sprint 12.x: resolver polo canônico (vem do nicho_registry)
+    try:
+        from backend.config.nicho_registry import resolve_polo_for_lead
+        _polo = resolve_polo_for_lead(segmento, subnicho="")
+    except Exception:
+        _polo = "CLASSIC"
+
     return {
         "visual_seed": visual_seed,
         "archetype": archetype,
+        "pole": _polo,
         "dna_combo": dna_combo,
         "tokens": mixed_tokens,
         "palette_id": palette["id"],

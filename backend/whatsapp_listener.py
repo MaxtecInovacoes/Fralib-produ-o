@@ -16,6 +16,7 @@ import threading
 import hashlib
 import logging
 import time as _time
+import datetime as _dt
 from typing import Dict, List
 
 import websockets
@@ -24,6 +25,7 @@ from sqlalchemy import create_engine, text
 from backend.services.credits_manager import plano_tem_sdr
 from backend.services.sdr_settings import (
     daily_limit_per_lead,
+    effective_daily_limit,
     get_sdr_settings_runtime,
     human_pause_seconds,
     is_within_outbound_schedule,
@@ -114,7 +116,11 @@ def _cooldown_seconds_for_key(lead_key: str) -> float:
 def _daily_limit_for_key(lead_key: str) -> int:
     user_id = _lead_key_user_id(lead_key)
     settings = _get_sdr_settings(user_id)
-    return int(daily_limit_per_lead(settings) if settings else DEFAULT_DAILY_LIMIT)
+    if not settings:
+        return DEFAULT_DAILY_LIMIT
+    # Trilha A — auto-throttle: aplicar redução baseada em phone_health_score
+    phone_score = _get_phone_health_score(user_id)
+    return int(effective_daily_limit(settings, phone_score))
 
 
 def _human_pause_seconds_for_key(lead_key: str) -> float:
@@ -123,7 +129,47 @@ def _human_pause_seconds_for_key(lead_key: str) -> float:
     return float(human_pause_seconds(settings) if settings else DEFAULT_HUMAN_PAUSE_SECONDS)
 
 
+# Cache curto (60s) do phone_health_score por user_id, pra não martelar o DB
+# a cada check de cooldown/daily_limit.
+_PHONE_HEALTH_SCORE_CACHE: Dict[int, tuple] = {}
+_PHONE_HEALTH_SCORE_CACHE_TTL = 60.0
+
+
+def _get_phone_health_score(user_id: int | None) -> int | None:
+    """Retorna score 0-100 do phone_health_score, ou None se não há dados.
+
+    Cache 60s. Falha aberta (retorna None = sem throttle).
+    """
+    if not user_id:
+        return None
+    import time as _t
+    cached = _PHONE_HEALTH_SCORE_CACHE.get(user_id)
+    if cached and _t.time() < cached[1]:
+        return cached[0]
+
+    score: int | None = None
+    try:
+        with engine.connect() as conn:
+            row = conn.execute(text(
+                "SELECT score FROM phone_health_score WHERE user_id=:id"
+            ), {"id": user_id}).fetchone()
+            if row and row[0] is not None:
+                score = int(row[0])
+    except Exception as e:
+        logger.warning(f"[PhoneHealth] Falha ao ler score (user={user_id}): {e}")
+        score = None  # fail open = sem throttle
+
+    _PHONE_HEALTH_SCORE_CACHE[user_id] = (score, _t.time() + _PHONE_HEALTH_SCORE_CACHE_TTL)
+    return score
+
+
+def _invalidate_phone_health_score_cache(user_id: int) -> None:
+    """Invalida cache de score. Usado após cron compute atualizar."""
+    _PHONE_HEALTH_SCORE_CACHE.pop(user_id, None)
+
+
 _RATE_LIMITER = RateLimiter(
+    engine=engine,
     daily_limit_for_key=_daily_limit_for_key,
     cooldown_seconds_for_key=_cooldown_seconds_for_key,
     human_pause_seconds_for_key=_human_pause_seconds_for_key,
@@ -154,6 +200,47 @@ def _user_can_use_bot(user_id: int) -> bool:
 
     _BILLING_CACHE[user_id] = (can_use, _t.time() + _BILLING_CACHE_TTL)
     return can_use
+
+
+# ── Phone Health: pause_franz_until (Trilha A) ────────────────────────
+# Cache curto (30s) por user_id. Se pause_franz_until > NOW(), bloqueia envios
+# do Franz para o tenant. Freio de emergência acionado por superadmin ou
+# pelo próprio tenant via /api/admin/phone-health/pause.
+_PAUSE_FRANZ_CACHE: Dict[int, tuple] = {}  # user_id -> (paused: bool, expires_at: float)
+_PAUSE_FRANZ_CACHE_TTL = 30.0
+
+
+def _is_tenant_franz_paused(user_id: int) -> bool:
+    """Retorna True se o Franz deste tenant está pausado via phone_health_score.pause_franz_until.
+
+    Cache de 30s por user_id (mesmo padrão do _BILLING_CACHE). Falha
+    aberta: se DB estiver indisponível, permite envio (fail open) para
+    não bloquear o atendimento por causa de observabilidade.
+    """
+    import time as _t
+    cached = _PAUSE_FRANZ_CACHE.get(user_id)
+    if cached and _t.time() < cached[1]:
+        return cached[0]
+
+    paused = False
+    try:
+        with engine.connect() as conn:
+            row = conn.execute(text(
+                "SELECT pause_franz_until FROM phone_health_score WHERE user_id=:id"
+            ), {"id": user_id}).fetchone()
+            if row and row[0] is not None:
+                paused = row[0] > _dt.datetime.now(_dt.timezone.utc).replace(tzinfo=None)
+    except Exception as e:
+        logger.warning(f"[PhoneHealth] Falha ao checar pause_franz_until (user={user_id}): {e}")
+        paused = False  # fail open
+
+    _PAUSE_FRANZ_CACHE[user_id] = (paused, _t.time() + _PAUSE_FRANZ_CACHE_TTL)
+    return paused
+
+
+def _invalidate_pause_cache(user_id: int) -> None:
+    """Invalida cache de pause pra 1 tenant. Usado após setar pause via endpoint."""
+    _PAUSE_FRANZ_CACHE.pop(user_id, None)
 
 
 def _daily_reset_if_needed():
@@ -576,6 +663,13 @@ def _processar_mensagem(tenant_id: str, msg_data: dict, texto_override: str = No
         # ── GATE DE BILLING — trial expirado ou sem créditos = bot silenciado ──
         if not _user_can_use_bot(user_id):
             logger.warning(f"🚫 {nome}: tenant {user_id} sem plano ativo/trial expirado — bot silenciado")
+            return
+
+        # ── GATE PHONE HEALTH — pause_franz_until (Trilha A) ─────────────
+        # Freio de emergência: se o superadmin ou o próprio tenant pausou o
+        # Franz via /api/{admin,superadmin}/phone-health/pause, bloqueia o envio.
+        if _is_tenant_franz_paused(user_id):
+            logger.warning(f"📴 {nome}: Franz pausado para tenant {user_id} (phone_health.pause_franz_until) — bot silenciado")
             return
 
         # Salvar wpp_jid se diferente do telefone (LID de conta business)

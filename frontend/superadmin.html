@@ -111,6 +111,14 @@ h2.section-title{font-family:var(--brand);font-size:12px;color:var(--purple-300)
 .chart-card h4{font-size:12px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:12px;font-weight:500}
 canvas{max-width:100%}
 
+/* Semáforo de provedores (Sprint 0.1) */
+.provider-semaforo{display:inline-block;padding:3px 10px;border-radius:12px;font-family:var(--mono);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px}
+.provider-semaforo.healthy{background:rgba(34,197,94,.15);color:#86efac;border:1px solid rgba(34,197,94,.4)}
+.provider-semaforo.degraded{background:rgba(251,191,36,.15);color:#fcd34d;border:1px solid rgba(251,191,36,.4)}
+.provider-semaforo.down{background:rgba(239,68,68,.18);color:#fca5a5;border:1px solid rgba(239,68,68,.45)}
+.provider-semaforo.unknown{background:rgba(148,163,184,.12);color:#cbd5e1;border:1px solid rgba(148,163,184,.3)}
+.provider-semaforo.stale::after{content:" ⏱";opacity:0.7}
+
 /* sino de alertas */
 .bell{position:relative;display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border:1px solid var(--border);color:var(--purple-300);transition:.15s}
 .bell:hover{background:var(--purple-900);border-color:var(--border-hi)}
@@ -179,6 +187,8 @@ canvas{max-width:100%}
 
 <div class="tabs">
   <button class="tab active" data-tab="dashboard" onclick="switchTab('dashboard')">Dashboard</button>
+  <button class="tab" data-tab="phonehealth" onclick="switchTab('phonehealth')" style="color:var(--danger,#ef4444);">📱 Phone Health</button>
+  <button class="tab" data-tab="providers" onclick="switchTab('providers')" style="color:var(--green,#10b981);">🔌 Provedores</button>
   <button class="tab" data-tab="hermes" onclick="switchTab('hermes')">Hermes</button>
   <button class="tab" data-tab="metricas" onclick="switchTab('metricas')">Métricas</button>
   <button class="tab" data-tab="usuarios" onclick="switchTab('usuarios')">Usuários</button>
@@ -234,7 +244,63 @@ canvas{max-width:100%}
     <div id="dash-jobs" class="table-wrap"></div>
   </section>
 
-  <!-- ========== HERMES ========== -->
+  <!-- ========== PHONE HEALTH (Trilha A) ========== -->
+  <section class="panel" id="panel-phonehealth">
+    <h2 class="section-title">SAÚDE DOS NÚMEROS WHATSAPP</h2>
+    <div style="display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap">
+      <button class="btn btn-primary" onclick="loadSuperadminPhoneHealth()">Atualizar</button>
+      <span class="muted">Top 5 em risco no topo. Auto-refresh a cada 60s.</span>
+    </div>
+    <div id="superadminPhoneHealthByStatus" class="metrics-grid" style="margin-bottom:18px"></div>
+    <div style="overflow-x:auto;">
+      <table class="data-table" id="superadminPhoneHealthTable" style="width:100%;font-size:13px;">
+        <thead>
+          <tr>
+            <th style="text-align:left;">Tenant</th>
+            <th style="text-align:right;">Score</th>
+            <th>Status</th>
+            <th style="text-align:right;">Events 24h</th>
+            <th style="text-align:right;">DLQ 24h</th>
+            <th style="text-align:right;">Opt-outs 24h</th>
+            <th>Última restrição</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="superadminPhoneHealthBody">
+          <tr><td colspan="8" style="text-align:center;padding:24px;color:var(--fl-text-muted);">Carregando…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ========== PROVEDORES EXTERNOS (Sprint 0.1) ========== -->
+  <section class="panel" id="panel-providers">
+    <h2 class="section-title">SAÚDE DOS PROVEDORES EXTERNOS</h2>
+    <div style="display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap">
+      <button class="btn btn-primary" onclick="loadProvidersHealth()">Atualizar</button>
+      <span class="muted">Semáforo por provider. Atualizado pelo cron a cada 5min. Amarelo &gt; 15min = stale.</span>
+    </div>
+    <div id="providersByStatus" class="metrics-grid" style="margin-bottom:18px"></div>
+    <div style="overflow-x:auto;">
+      <table class="data-table" id="providersHealthTable" style="width:100%;font-size:13px;">
+        <thead>
+          <tr>
+            <th style="text-align:left;">Provider</th>
+            <th>Status</th>
+            <th style="text-align:right;">Latência p95</th>
+            <th style="text-align:right;">Sucesso 24h</th>
+            <th style="text-align:right;">Calls 24h</th>
+            <th style="text-align:right;">Errors 24h</th>
+            <th>Última checagem</th>
+            <th>Último erro</th>
+          </tr>
+        </thead>
+        <tbody id="providersHealthBody">
+          <tr><td colspan="8" style="text-align:center;padding:24px;color:var(--fl-text-muted);">Carregando…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
   <section class="panel" id="panel-hermes">
     <h2 class="section-title">HERMES WATCHDOG</h2>
     <div style="display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap">
@@ -992,6 +1058,7 @@ function switchTab(tab){
   document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.tab===tab));
   document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('active',p.id==='panel-'+tab));
   if(tab==='dashboard' && !document.getElementById('dash-kpis').dataset.loaded) loadDashboard();
+  if(tab==='phonehealth' && !document.getElementById('superadminPhoneHealthBody').dataset.loaded) loadSuperadminPhoneHealth();
   if(tab==='hermes' && !document.getElementById('hermes-summary').dataset.loaded) loadHermes();
   if(tab==='metricas' && !document.getElementById('metrics-area').dataset.loaded) loadMetrics();
   if(tab==='usuarios' && USERS.length===0) loadUsers();
@@ -1003,6 +1070,7 @@ function switchTab(tab){
   if(tab==='sdrstudio' && !document.getElementById('panel-sdrstudio').dataset.loaded) loadSdrStudio();
   if(tab==='contato-direto' && !document.getElementById('panel-contato-direto').dataset.loaded) loadContatoDireto();
   if(tab==='automacoes') { loadAutomacoes(); loadAutoSequenceLeads(); }
+  if(tab==='providers' && !document.getElementById('providersHealthBody').dataset.loaded) loadProvidersHealth();
 }
 
 // ===== toast =====
@@ -3592,6 +3660,245 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 setInterval(loadAutomacoes, 60000);
 
+/* ══ PHONE HEALTH — Trilha A (superadmin visão de frota) ════════════ */
+
+/** @type {Array<{user_id:number, email:string, score:number, status:string, events_24h:number, dlq_24h:number, optouts_24h:number, ultima_restricao_em:(string|null), pause_franz_until:(string|null)}>} */
+var _superadminPhoneHealthList = [];
+
+var SUPERADMIN_PHONE_HEALTH_REFRESH_MS = 60 * 1000; // 60s
+var _superadminPhoneHealthPoll = null;
+
+/**
+ * @param {string} status
+ * @returns {string}
+ */
+function _sphStatusColor(status) {
+  if (status === 'healthy') return '#10b981';
+  if (status === 'degraded') return '#f59e0b';
+  if (status === 'restricted') return '#ef4444';
+  if (status === 'banned') return '#b91c1c';
+  return '#94a3b8';
+}
+
+/**
+ * @param {string} status
+ * @returns {string}
+ */
+function _sphStatusLabel(status) {
+  if (status === 'healthy') return 'Saudável';
+  if (status === 'degraded') return 'Degradado';
+  if (status === 'restricted') return 'Restrito';
+  if (status === 'banned') return 'Banido';
+  return status || '—';
+}
+
+/**
+ * @param {(string|null)} isoDate
+ * @returns {string}
+ */
+function _sphFormatDate(isoDate) {
+  if (!isoDate) return '—';
+  try {
+    var d = new Date(isoDate);
+    if (Number.isNaN(d.getTime())) return '—';
+    return d.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+  } catch (_e) {
+    return '—';
+  }
+}
+
+/**
+ * Renderiza a tabela de tenants.
+ * @returns {void}
+ */
+function renderSuperadminPhoneHealth() {
+  var byStatusEl = document.getElementById('superadminPhoneHealthByStatus');
+  var bodyEl = document.getElementById('superadminPhoneHealthBody');
+  if (!bodyEl) return;
+
+  // Resumo por status
+  var byStatus = { healthy: 0, degraded: 0, restricted: 0, banned: 0 };
+  for (var i = 0; i < _superadminPhoneHealthList.length; i++) {
+    var t = _superadminPhoneHealthList[i];
+    if (byStatus[t.status] === undefined) byStatus[t.status] = 0;
+    byStatus[t.status] += 1;
+  }
+  if (byStatusEl) {
+    byStatusEl.innerHTML = [
+      { key: 'healthy', label: 'Saudáveis' },
+      { key: 'degraded', label: 'Degradados' },
+      { key: 'restricted', label: 'Restritos' },
+      { key: 'banned', label: 'Banidos' },
+    ].map(function (s) {
+      var color = _sphStatusColor(s.key);
+      return '<div class="metric-card" style="border-left:4px solid ' + color + ';">' +
+        '<div class="metric-label">' + s.label + '</div>' +
+        '<div class="metric-value" style="color:' + color + ';">' + (byStatus[s.key] || 0) + '</div>' +
+        '</div>';
+    }).join('');
+  }
+
+  // Tabela
+  if (_superadminPhoneHealthList.length === 0) {
+    bodyEl.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--fl-text-muted);">Nenhum tenant ativo.</td></tr>';
+    return;
+  }
+
+  bodyEl.innerHTML = _superadminPhoneHealthList.map(function (t) {
+    var color = _sphStatusColor(t.status);
+    return '<tr>' +
+      '<td style="text-align:left;"><strong>#' + t.user_id + '</strong> ' + (t.email || '—') + '</td>' +
+      '<td style="text-align:right;font-weight:700;font-size:16px;color:' + color + ';">' + t.score + '</td>' +
+      '<td><span style="display:inline-block;padding:2px 10px;border-radius:10px;background:' + color + ';color:#fff;font-size:11px;font-weight:700;">' + _sphStatusLabel(t.status) + '</span></td>' +
+      '<td style="text-align:right;">' + (t.events_24h || 0) + '</td>' +
+      '<td style="text-align:right;">' + (t.dlq_24h || 0) + '</td>' +
+      '<td style="text-align:right;">' + (t.optouts_24h || 0) + '</td>' +
+      '<td>' + _sphFormatDate(t.ultima_restricao_em) + '</td>' +
+      '<td><button class="btn btn-sm" onclick="sphPauseTenant(' + t.user_id + ',24)" style="background:transparent;color:#f59e0b;border:1px solid rgba(245,158,11,.4);padding:4px 10px;font-size:11px;border-radius:6px;cursor:pointer;">Pausar 24h</button></td>' +
+      '</tr>';
+  }).join('');
+}
+
+/**
+ * Carrega lista de tenants.
+ * @returns {Promise<void>}
+ */
+async function loadSuperadminPhoneHealth() {
+  try {
+    var resp = await authFetch('/api/superadmin/phone-health');
+    if (!resp.ok) {
+      var body = document.getElementById('superadminPhoneHealthBody');
+      if (body) body.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:24px;color:#ef4444;">Erro HTTP ' + resp.status + '</td></tr>';
+      return;
+    }
+    var data = await resp.json();
+    _superadminPhoneHealthList = Array.isArray(data.tenants) ? data.tenants : [];
+    renderSuperadminPhoneHealth();
+  } catch (err) {
+    var body = document.getElementById('superadminPhoneHealthBody');
+    if (body) body.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:24px;color:#ef4444;">Erro: ' + (err instanceof Error ? err.message : String(err)) + '</td></tr>';
+  }
+}
+
+/**
+ * Pausa Franz de um tenant (emergência).
+ * @param {number} userId
+ * @param {number} hours
+ * @returns {Promise<void>}
+ */
+async function sphPauseTenant(userId, hours) {
+  if (!confirm('Pausar Franz do tenant #' + userId + ' por ' + hours + 'h?')) return;
+  try {
+    var resp = await authFetch('/api/superadmin/phone-health/' + userId + '/pause?hours=' + hours, { method: 'POST' });
+    if (!resp.ok) {
+      alert('Erro HTTP ' + resp.status);
+      return;
+    }
+    await loadSuperadminPhoneHealth();
+  } catch (err) {
+    alert('Erro: ' + (err instanceof Error ? err.message : String(err)));
+  }
+}
+
+function startSuperadminPhoneHealthPolling() {
+  if (_superadminPhoneHealthPoll) return;
+  _superadminPhoneHealthPoll = setInterval(loadSuperadminPhoneHealth, SUPERADMIN_PHONE_HEALTH_REFRESH_MS);
+}
+
+// ============================================================
+// Sprint 0.1 — Painel de Provedores Externos
+// ============================================================
+
+/**
+ * Carrega saúde de provedores externos (semáforo por provider).
+ * Endpoint: GET /api/superadmin/dashboard/providers
+ * @returns {Promise<void>}
+ */
+async function loadProvidersHealth() {
+  try {
+    var resp = await authFetch('/api/superadmin/dashboard/providers');
+    if (!resp.ok) {
+      var body = document.getElementById('providersHealthBody');
+      if (body) body.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:24px;color:#ef4444;">Erro HTTP ' + resp.status + '</td></tr>';
+      return;
+    }
+    var data = await resp.json();
+    renderProvidersHealth(data);
+    var body = document.getElementById('providersHealthBody');
+    if (body) body.dataset.loaded = '1';
+  } catch (err) {
+    var body = document.getElementById('providersHealthBody');
+    if (body) body.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:24px;color:#ef4444;">Erro: ' + (err instanceof Error ? err.message : String(err)) + '</td></tr>';
+  }
+}
+
+/**
+ * Renderiza cards semáforo + tabela de providers.
+ * @param {Object} data - resposta de /api/superadmin/dashboard/providers
+ */
+function renderProvidersHealth(data) {
+  var byStatus = data.by_status || {};
+  var providers = Array.isArray(data.providers) ? data.providers : [];
+  var total = data.providers_total || providers.length;
+
+  // Cards semáforo
+  var cards = document.getElementById('providersByStatus');
+  if (cards) {
+    cards.innerHTML = [
+      cardSemaforo('healthy', byStatus.healthy || 0, 'Saudável'),
+      cardSemaforo('degraded', byStatus.degraded || 0, 'Degradado'),
+      cardSemaforo('down', byStatus.down || 0, 'Fora do ar'),
+      cardSemaforo('unknown', byStatus.unknown || 0, 'Desconhecido'),
+    ].join('');
+  }
+
+  // Tabela
+  var body = document.getElementById('providersHealthBody');
+  if (!body) return;
+  if (!providers.length) {
+    body.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--fl-text-muted);">Nenhum provider registrado. Rode <code>POST /api/cron/refresh-provider-health</code> para popular.</td></tr>';
+    return;
+  }
+  body.innerHTML = providers.map(function (p) {
+    var status = p.status || 'unknown';
+    var isStale = !!p.is_stale;
+    var semaforoCls = 'provider-semaforo ' + status + (isStale ? ' stale' : '');
+    var latency = p.latency_p95_ms != null ? p.latency_p95_ms + ' ms' : '—';
+    var success = p.success_rate_24h != null ? Number(p.success_rate_24h).toFixed(1) + '%' : '—';
+    var calls = p.calls_24h != null ? p.calls_24h : 0;
+    var errors = p.errors_24h != null ? p.errors_24h : 0;
+    var lastChecked = p.last_checked_at ? dt(p.last_checked_at) : '—';
+    var lastError = p.last_error ? escapeHtml(p.last_error) : '—';
+    var providerName = escapeHtml(p.provider || '?');
+    return '<tr>' +
+      '<td style="text-align:left;font-family:var(--mono);color:var(--purple-300)">' + providerName + '</td>' +
+      '<td><span class="' + semaforoCls + '">' + status + '</span></td>' +
+      '<td style="text-align:right">' + latency + '</td>' +
+      '<td style="text-align:right">' + success + '</td>' +
+      '<td style="text-align:right">' + calls + '</td>' +
+      '<td style="text-align:right">' + errors + '</td>' +
+      '<td style="font-size:11px">' + lastChecked + '</td>' +
+      '<td style="font-size:11px;max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + lastError + '">' + lastError + '</td>' +
+      '</tr>';
+  }).join('');
+}
+
+/**
+ * Card pequeno com semáforo + contador.
+ * @param {string} status - healthy|degraded|down|unknown
+ * @param {number} count
+ * @param {string} label
+ * @returns {string} HTML
+ */
+function cardSemaforo(status, count, label) {
+  return '<div class="chart-card" style="padding:14px">' +
+    '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">' +
+      '<span class="provider-semaforo ' + status + '">' + status + '</span>' +
+      '<span style="font-family:var(--fl-font-brand);font-size:22px;color:var(--text)">' + count + '</span>' +
+    '</div>' +
+    '<div style="font-size:11px;color:var(--fl-text-dim);text-transform:uppercase;letter-spacing:0.5px">' + label + '</div>' +
+  '</div>';
+}
 </script>
 
 </body>

@@ -1,0 +1,346 @@
+{
+  "enrichments": {
+    "academia-iron-pulse": {
+      "services_kicker": "Programas que não perdoam preguiça",
+      "gallery_kicker": "Treinos de quem sangra no tatame",
+      "reviews_kicker": "Histórias de quem largou a desculpa",
+      "faq_kicker": "Dúvidas de quem vai começar pesado",
+      "location_cta_title": "Sua próxima série começa em {city}",
+      "location_cta_body": "A Iron Pulse atende em {city} com horários que cabem na rotina de quem trabalha sério e treina mais sério ainda.",
+      "contact_headline": "Fale com o time de ferro"
+    }
+  },
+  "academia-neon-grid": {
+    "services_kicker": "Modalidades, horários e estrutura completa",
+    "gallery_kicker": "Cada espaço da casa, em movimento",
+    "reviews_kicker": "Quem entrou e não saiu mais",
+    "faq_kicker": "Perguntas antes de atravessar a porta",
+    "location_cta_title": "Estamos em {city}. Venha conhecer",
+    "location_cta_body": "Quadras, salas, equipamentos e gente que entende do assunto. Visite a Neon Grid em {city} e veja de perto.",
+    "contact_headline": "Agende sua visita guiada"
+  },
+  "academia-sunset-track": {
+    "services_kicker": "Treinos ao ar livre, pista e postura",
+    "gallery_kicker": "Atletismo, corrida e funcional sob luz natural",
+    "reviews_kicker": "Maratonistas, corredores e iniciantes que viraram rotina",
+    "faq_kicker": "Para quem nunca calçou um tênis de verdade",
+    "location_cta_title": "Pista aberta em {city} o ano inteiro",
+    "location_cta_body": "A Sunset Track opera com treinos em pista e parques de {city}, com turmas reduzidas e acompanhamento técnico.",
+    "contact_headline": "Quero começar a correr certo"
+  },
+  "academia-graphite-core": {
+    "services_kicker": "Musculação pesada, método e periodização",
+    "gallery_kicker": "Barras, anilhas e evolução por semana",
+    "reviews_kicker": "Fotos e medidas de quem não aceitou estagnar",
+    "faq_kicker": "Se você nunca mexeu com ferro, leia antes",
+    "location_cta_title": "Sede em {city}, musculação de verdade",
+    "location_cta_body": "A Graphite Core atende em {city} com plano de treino individual, avaliação física trimestral e horário estendido.",
+    "contact_headline": "Quero meu plano de treino"
+  },
+  "advogado-statute-noir": {
+    "services_kicker": "Atuação técnica em direito cível, trabalhista e família",
+    "gallery_kicker": "Sala, biblioteca e atendimento reservado",
+    "reviews_kicker": "Casos encerrados, clientes que voltaram para indicar",
+    "faq_kicker": "O que perguntam antes de assinar procuração",
+    "location_cta_title": "Escritório em {city}, sob sigilo profissional",
+    "location_cta_body": "O Statute Noir atende em {city} com hora marcada, análise documental prévia e contrato de honorários detalhado.",
+    "contact_headline": "Encaminhar meu caso agora"
+  },
+  "advogado-lex-meridian": {
+    "services_kicker": "Consultoria preventiva e contencioso estratégico",
+    "gallery_kicker": "Equipe, reuniões e peças processuais",
+    "reviews_kicker": "Empresas e pessoas físicas que resolveram sem litígio",
+    "faq_kicker": "Como funciona honorário, prazo e sigilo",
+    "location_cta_title": "Atendimento presencial em {city}",
+    "location_cta_body": "Lex Meridian recebe em {city} para reuniões de até 60 minutos, com gravação interna e cópia do contrato entregue na hora.",
+    "contact_headline": "Marcar consulta inicial"
+  },
+  "barbearia-heritage-reserve": {
+    "services_kicker": "Corte, barba e ritual de final de semana",
+    "gallery_kicker": "Cadeiras, navalhas e ambiente de barbearia clássica",
+    "reviews_kicker": "Clientes que voltaram pela segunda, terceira, décima vez",
+    "faq_kicker": "Reservas, pagamentos e o que levar na primeira visita",
+    "location_cta_title": "Reserva aberta em {city} aos sábados",
+    "location_cta_body": "A Heritage Reserve atende em {city} com agendamento prévio, café da casa e toalha quente no ritual.",
+    "contact_headline": "Quero reservar meu horário"
+  },
+  "barbearia-studio-mono": {
+    "services_kicker": "Cortes limpos, barba desenhada, visagismo básico",
+    "gallery_kicker": "Estúdio monocromático e tesoura na régua",
+    "reviews_kicker": "Perfis, fotos de antes e depois dos clientes",
+    "faq_kicker": "Tempo, preço e como pedir o corte certo",
+    "location_cta_title": "Estúdio em {city}, agenda curta",
+    "location_cta_body": "Studio Mono opera em {city} com até quatro clientes por turno, agenda semanal aberta toda segunda às 9h.",
+    "contact_headline": "Entrar na agenda da semana"
+  },
+  "barbearia-copper-smoke": {
+    "services_kicker": "Corte, pigmentação, barba longa e bigode",
+    "gallery_kicker": "Bancada de cobre, pós-barba e luz âmbar",
+    "reviews_kicker": "Quem veio para barba e voltou para o ambiente",
+    "faq_kicker": "Cuidados pós-serviço e frequência ideal",
+    "location_cta_title": "Sede em {city}, com whiskey de cortesia",
+    "location_cta_body": "A Copper Smoke recebe em {city} para sessões de 90 minutos, com agendamento por WhatsApp e pacote fidelidade após a quinta visita.",
+    "contact_headline": "Reservar minha cadeira"
+  },
+  "barbearia-midnight-club": {
+    "services_kicker": "Corte noturno, barba a frio e cuidado rápido",
+    "gallery_kicker": "Atendimento depois das 18h, ambiente escuro e direto",
+    "reviews_kicker": "Quem trabalha de dia e só tem tempo à noite",
+    "faq_kicker": "Horário estendido, últimas entradas e pagamento",
+    "location_cta_title": "Aberto até 23h em {city}",
+    "location_cta_body": "A Midnight Club atende em {city} de terça a sábado, com última entrada às 22h30 e serviço expresso de 30 minutos.",
+    "contact_headline": "Quero meu corte depois do trabalho"
+  },
+  "clinica-medical-trust": {
+    "services_kicker": "Consultas, exames e encaminhamentos em uma sede",
+    "gallery_kicker": "Recepção, consultórios e equipe médica",
+    "reviews_kicker": "Pacientes que marcaram retorno pelo aplicativo",
+    "faq_kicker": "Convênio, particular e o que precisa na primeira consulta",
+    "location_cta_title": "Atendimento em {city} com agendamento semanal",
+    "location_cta_body": "A Medical Trust opera em {city} com agenda aberta até 60 dias, recepção com acessibilidade e estacionamento coberto.",
+    "contact_headline": "Marcar minha consulta"
+  },
+  "clinica-care-plus": {
+    "services_kicker": "Especialidades clínicas, pediatria e check-up anual",
+    "gallery_kicker": "Salas, equipamentos e equipe multiprofissional",
+    "reviews_kicker": "Famílias que trouxeram os três filhos para cá",
+    "faq_kicker": "Primeira consulta, retorno e exames complementares",
+    "location_cta_title": "Clínica em {city} aberta de segunda a sábado",
+    "location_cta_body": "A Care Plus atende em {city} com horário contínuo, convênio com 18 operadoras e central de resultados pelo portal.",
+    "contact_headline": "Quero cuidar da minha família aqui"
+  },
+  "dentista-smile-care": {
+    "services_kicker": "Limpeza, clareamento, restauração e urgências",
+    "gallery_kicker": "Consultório, cadeira e raio-x digital",
+    "reviews_kicker": "Quem tinha pavor e voltou sorrindo no próximo mês",
+    "faq_kicker": "Dor, anestesia, parcelamento e convênio",
+    "location_cta_title": "Consultório em {city} com hora marcada",
+    "location_cta_body": "A Smile Care atende em {city} com agenda diária aberta, raio-x periapical incluso na avaliação e plano de tratamento por escrito.",
+    "contact_headline": "Quero minha avaliação agora"
+  },
+  "dentista-clinical-white": {
+    "services_kicker": "Implante, ortodontia, prótese e estética dental",
+    "gallery_kicker": "Centro cirúrgico, scanner intraoral e laboratório próprio",
+    "reviews_kicker": "Casos complexos finalizados em 9 a 14 meses",
+    "faq_kicker": "Como funciona implante do começo ao fim",
+    "location_cta_title": "Centro odontológico em {city}",
+    "location_cta_body": "Clinical White opera em {city} com centro cirúrgico próprio, laboratório de prótese interno e acompanhamento pós-cirúrgico por 12 meses.",
+    "contact_headline": "Agendar avaliação técnica"
+  },
+  "estetica-clinic-ivory": {
+    "services_kicker": "Limpeza de pele, drenagem e protocolo facial clássico",
+    "gallery_kicker": "Sala branca, maca e luz difusa",
+    "reviews_kicker": "Clientes que mantêm sessão mensal há três anos",
+    "faq_kicker": "Cuidados pré, pós e frequência de cada protocolo",
+    "location_cta_title": "Clínica em {city} com sala individual por atendimento",
+    "location_cta_body": "A Clinic Ivory atende em {city} com sala privativa, anamnese completa na primeira visita e produtos dermatológicos selecionados.",
+    "contact_headline": "Quero minha sessão inaugural"
+  },
+  "estetica-chrome-spa": {
+    "services_kicker": "Massagem modeladora, criolipólise e tratamento corporal",
+    "gallery_kicker": "Equipamentos cromados, sala com som ambiente",
+    "reviews_kicker": "Quem veio para relaxar e voltou para medir resultado",
+    "faq_kicker": "Sessões necessárias, contraindicação e manutenção",
+    "location_cta_title": "Spa em {city}, aberto até 21h",
+    "location_cta_body": "Chrome Spa opera em {city} com pacotes de 4, 8 e 12 sessões, agendamento noturno e avaliação corporal por bioimpedância.",
+    "contact_headline": "Reservar minha avaliação"
+  },
+  "estetica-rose-clay": {
+    "services_kicker": "Skincare, máscara e hidratação profunda",
+    "gallery_kicker": "Texturas em rosa e argila, vapor de ozônio",
+    "reviews_kicker": "Antes e depois de quem fez o pacote completo",
+    "faq_kicker": "Tipo de pele, alergia e frequência ideal",
+    "location_cta_title": "Atendimento em {city} com agendamento semanal",
+    "location_cta_body": "A Rose Clay atende em {city} com triagem de pele por escaneamento digital e protocolo ajustado a cada retorno.",
+    "contact_headline": "Quero descobrir meu protocolo"
+  },
+  "estetica-noir-gold": {
+    "services_kicker": "Harmonização facial, botox, preenchimento e bioestimulador",
+    "gallery_kicker": "Sala preta com detalhes dourados, before/after reais",
+    "reviews_kicker": "Quem fez sutil, natural e ninguém percebeu de cara",
+    "faq_kicker": "Procedimento, recuperação e janela para retoque",
+    "location_cta_title": "Consultório em {city} com médico responsável",
+    "location_cta_body": "A Noir Gold atua em {city} com responsável técnico médico, anamnese com fotos padronizadas e retoque incluído em 30 dias.",
+    "contact_headline": "Quero conversar com o especialista"
+  },
+  "nutricionista-botanical-editorial": {
+    "services_kicker": "Consulta clínica, plano alimentar e retorno quinzenal",
+    "gallery_kicker": "Plantas, alimentos crus e mesa posta em luz natural",
+    "reviews_kicker": "Quem reaprendeu a comer sem culpa e sem dieta radical",
+    "faq_kicker": "Como funciona a primeira consulta e o que levar",
+    "location_cta_title": "Consultório em {city}, também online",
+    "location_cta_body": "Botanical Editorial atende em {city} presencialmente e por videochamada, com plano enviado em até 48 horas após a consulta.",
+    "contact_headline": "Agendar primeira escuta"
+  },
+  "nutricionista-clinical-soft": {
+    "services_kicker": "Acompanhamento de comorbidades, emagrecimento e reeducação",
+    "gallery_kicker": "Balança, adipômetro e prontuário em papel crua",
+    "reviews_kicker": "Histórias de quem trocou remédio por prato montado",
+    "faq_kicker": "Exames necessários, convênio e parcelamento",
+    "location_cta_title": "Atendimento clínico em {city} e região",
+    "location_cta_body": "Clinical Soft opera em {city} com prontuário eletrônico, meta mensal combinada e retorno programado por 12 semanas.",
+    "contact_headline": "Quero começar com exame na mão"
+  },
+  "nutricionista-performance-fuel": {
+    "services_kicker": "Nutrição esportiva, hipertrofia e recomposição corporal",
+    "gallery_kicker": "Whey, creatina e cronograma calórico calculado",
+    "reviews_kicker": "Atletas amadores e competitivos que passaram de fase",
+    "faq_kicker": "Suplementos, periodização e avaliação de performance",
+    "location_cta_title": "Consultoria em {city} para quem treina sério",
+    "location_cta_body": "Performance Fuel atende em {city} atletas e praticantes avançados, com protocolo pré e pós-treino e meta de macro ajustada por mês.",
+    "contact_headline": "Quero montar meu plano de carga"
+  },
+  "nutricionista-coastal-light": {
+    "services_kicker": "Reeducação alimentar leve, família e introdução alimentar",
+    "gallery_kicker": "Cozinha clara, frutas e almoço em família",
+    "reviews_kicker": "Mães que ensinaram o filho a comer de tudo um pouco",
+    "faq_kicker": "Cardápio para crianças, gestantes e idosos",
+    "location_cta_title": "Atendimento em {city} com agenda flexível",
+    "location_cta_body": "Coastal Light atende em {city} gestantes, nutrizes e famílias inteiras, com consulta de 90 minutos e plano enviado por escrito no mesmo dia.",
+    "contact_headline": "Quero cuidar da minha família"
+  },
+  "restaurante-prato-certo": {
+    "services_kicker": "Almoço executivo, jantar e prato do dia sazonal",
+    "gallery_kicker": "Salão, cozinha aberta e pratos montados à vista",
+    "reviews_kicker": "Comerciantes da redondeza que almoçam aqui toda semana",
+    "faq_kicker": "Reserva, delivery e o que muda no cardápio da semana",
+    "location_cta_title": "Mesa aberta em {city} de segunda a sábado",
+    "location_cta_body": "Prato Certo funciona em {city} com almoço por quilo até 15h, jantar com carta de vinhos curta e reserva confirmada em até 2 horas.",
+    "contact_headline": "Reservar para o almoço"
+  },
+  "restaurante-forno-livre": {
+    "services_kicker": "Massa fresca, pizza de forno a lenha e antipasti",
+    "gallery_kicker": "Forno a lenha, massa aberta e mesa com guardanapo de pano",
+    "reviews_kicker": "Casais que vieram no primeiro encontro e voltaram no aniversário",
+    "faq_kicker": "Tempo de forno, sem glúten e carta de vinhos",
+    "location_cta_title": "Trattoria em {city} com forno aceso até 23h",
+    "location_cta_body": "Forno Livre opera em {city} com forno a lenha alimentado até 22h, massa fresca aberta na frente do cliente e carta com 12 vinhos.",
+    "contact_headline": "Quero minha mesa hoje"
+  },
+  "pet-shop-patudo": {
+    "services_kicker": "Banho, tosa, hidratação e SPA para cães e gatos",
+    "gallery_kicker": "Pet secando, tosa higiênica e pet usando bandana",
+    "reviews_kicker": "Tutores que postam o antes e depois do Shih Tzu da família",
+    "faq_kicker": "Vacina, vermifugação e frequência de tosa por raça",
+    "location_cta_title": "Pet shop em {city} com busca e entrega do pet",
+    "location_cta_body": "Patudo opera em {city} com van para buscar o pet em casa, tosa por raça e banho com shampoo hipoalergênico incluso.",
+    "contact_headline": "Agendar banho do meu pet"
+  },
+  "pet-shop-pet-care-pro": {
+    "services_kicker": "Veterinário, exames, vacinação e internação leve",
+    "gallery_kicker": "Consultório, raio-x e sala de recuperação animal",
+    "reviews_kicker": "Tutores que vieram em emergência e voltaram para o check-up",
+    "faq_kicker": "Atendimento 24h, internação e convênio pet",
+    "location_cta_title": "Centro veterinário em {city} aberto 24h",
+    "location_cta_body": "Pet Care Pro opera em {city} com plantão veterinário 24 horas, internação monitorada e laboratório próprio para exame de sangue.",
+    "contact_headline": "Levar meu pet agora"
+  },
+  "salao-glow-studio": {
+    "services_kicker": "Corte feminino, coloração, mechas e tratamento capilar",
+    "gallery_kicker": "Cadeira, espelho redondo e luz quente",
+    "reviews_kicker": "Quem trocou de salão e nunca mais saiu",
+    "faq_kicker": "Tempo de coloração, manutenção e produtos usados",
+    "location_cta_title": "Salão em {city} com agenda aberta de quarta a sábado",
+    "location_cta_body": "Glow Studio atende em {city} com horário estendido até 21h às sextas, coloração por mechas a mão livre e tratamento pós-química incluído.",
+    "contact_headline": "Reservar minha transformação"
+  },
+  "salao-mirror-room": {
+    "services_kicker": "Manicure, pedicure, design de sobrancelhas e maquiagem",
+    "gallery_kicker": "Mesa de manicure, espelhos grandes e luz natural",
+    "reviews_kicker": "Antes e depois de quem veio para a sobrancelha e levou a manicure",
+    "faq_kicker": "Esterilização, esmalte em gel e agendamento em dupla",
+    "location_cta_title": "Sala de beleza em {city} aberta todos os dias",
+    "location_cta_body": "Mirror Room funciona em {city} de domingo a domingo, com manicure em até 40 minutos, esterilização em autoclave e agendamento para duas pessoas no mesmo horário.",
+    "contact_headline": "Quero minha manicure agendada"
+  },
+  "oficina-torque-box": {
+    "services_kicker": "Troca de óleo, freios, suspensão e diagnóstico computadorizado",
+    "gallery_kicker": "Elevador, scanner OBD e bancada de ferramentas",
+    "reviews_kicker": "Motoristas que vieram com barulho e saíram com laudo",
+    "faq_kicker": "Marcas atendidas, peças e prazo por serviço",
+    "location_cta_title": "Oficina em {city} com orçamento em 24 horas",
+    "location_cta_body": "Torque Box opera em {city} com diagnóstico em até 1 hora, orçamento detalhado por item e peças com nota fiscal e garantia de 90 dias.",
+    "contact_headline": "Quero meu diagnóstico agora"
+  },
+  "oficina-garage-iron": {
+    "services_kicker": "Motor, câmbio, elétrica e retífica de motores",
+    "gallery_kicker": "Galpão, peças no chão e mecânico de macacão",
+    "reviews_kicker": "Frotistas e taxistas que trouxeram a frota toda",
+    "faq_kicker": "Garantia, prazo de retífica e formas de pagamento",
+    "location_cta_title": "Mecânica pesada em {city}, com retífica própria",
+    "location_cta_body": "Garage Iron atende em {city} com retífica interna, mecânicos certificados por montadora e garantia de 6 meses em motor e câmbio.",
+    "contact_headline": "Trazer meu carro para avaliar"
+  },
+  "energia-solar-sun-pure": {
+    "services_kicker": "Projeto, instalação e homologação de sistema fotovoltaico",
+    "gallery_kicker": "Painéis no telhado, inversor e medidor bidirecional",
+    "reviews_kicker": "Economia real na conta de luz, em números",
+    "faq_kicker": "Payback, financiamento e funcionamento em dia nublado",
+    "location_cta_title": "Instalação solar em {city} com homologação incluida",
+    "location_cta_body": "Sun Pure instala em {city} com visita técnica gratuita, payback médio de 4 anos em projeto residencial e homologação junto à concessionária.",
+    "contact_headline": "Pedir meu orçamento solar"
+  },
+  "energia-solar-tech-grid": {
+    "services_kicker": "Painel de monitoramento, manutenção e expansão do sistema",
+    "gallery_kicker": "App de geração, telemetria e painel no telhado industrial",
+    "reviews_kicker": "Empresas que reduziram 92% do custo com energia",
+    "faq_kicker": "Geração em tempo real, bateria e dimensionamento industrial",
+    "location_cta_title": "Operação em {city} com monitoramento 24/7",
+    "location_cta_body": "Tech Grid opera em {city} com monitoramento por aplicativo, manutenção preventiva trimestral e expansão modular para projetos acima de 50 kWp.",
+    "contact_headline": "Quero ver meu ROI em tempo real"
+  },
+  "imobiliaria-key-modern": {
+    "services_kicker": "Compra, venda e aluguel de apartamento e cobertura",
+    "gallery_kicker": "Prédio, fachada e hall de entrada decorado",
+    "reviews_kicker": "Compradores que fecharam em 30 dias da primeira visita",
+    "faq_kicker": "Financiamento, escritura e o que entra no condomínio",
+    "location_cta_title": "Carteira ativa em {city} e bairros próximos",
+    "location_cta_body": "Key Moderna mantém carteira ativa em {city} com 180 imóveis cadastrados, visita acompanhada por corretor e proposta registrada no mesmo dia.",
+    "contact_headline": "Quero visitar um imóvel"
+  },
+  "imobiliaria-loft-elegance": {
+    "services_kicker": "Imóveis de alto padrão, comercial e consultoria de investimento",
+    "gallery_kicker": "Loft decorado, sala comercial e vista da cobertura",
+    "reviews_kicker": "Investidores que compraram o segundo e o terceiro imóvel",
+    "faq_kicker": "Documentação, due diligence e viabilidade do investimento",
+    "location_cta_title": "Imóveis de alto padrão em {city}",
+    "location_cta_body": "Loft Elegance atende em {city} com portfólio acima de R$ 1 milhão, análise de viabilidade por metro quadrado e due diligence documental completa.",
+    "contact_headline": "Quero conhecer a carteira premium"
+  },
+  "default-conversion-bold": {
+    "services_kicker": "O que entregamos, sem enrolação",
+    "gallery_kicker": "Cada canto do nosso espaço de trabalho",
+    "reviews_kicker": "Clientes que voltaram e indicaram de cara",
+    "faq_kicker": "O básico que perguntam antes de fechar",
+    "location_cta_title": "Estamos em {city}, abertos para você",
+    "location_cta_body": "Atendimento presencial em {city} de segunda a sexta, com hora marcada e retorno no mesmo dia útil.",
+    "contact_headline": "Quero falar agora"
+  },
+  "default-cinematic-soft": {
+    "services_kicker": "Serviço prestado com calma e tempo para cada detalhe",
+    "gallery_kicker": "Imagens do nosso espaço, do nosso jeito de trabalhar",
+    "reviews_kicker": "O que dizem depois de passar por aqui",
+    "faq_kicker": "Perguntas frequentes de quem chega pela primeira vez",
+    "location_cta_title": "Estamos em {city}, esperando você",
+    "location_cta_body": "Estamos em {city}, em um espaço pensado para receber bem. Agende um horário e venha sem pressa.",
+    "contact_headline": "Quero conhecer o espaço"
+  },
+  "default-health-trust": {
+    "services_kicker": "Atendimento responsável, do primeiro contato ao pós",
+    "gallery_kicker": "Equipe, recepção e ambiente preparado para você",
+    "reviews_kicker": "Histórias de quem confiou e voltou para o retorno",
+    "faq_kicker": "Como funciona, o que levar, quanto custa",
+    "location_cta_title": "Sede em {city} com equipe pronta para receber",
+    "location_cta_body": "Atendemos em {city} com agendamento por WhatsApp, prontuário organizado e retorno garantido em até 30 dias.",
+    "contact_headline": "Quero agendar meu atendimento"
+  },
+  "default-local-craft": {
+    "services_kicker": "Serviço feito à mão, com técnica e material selecionado",
+    "gallery_kicker": "Bancada, ferramentas e produto finalizado",
+    "reviews_kicker": "Quem veio por indicação e trouxe mais gente",
+    "faq_kicker": "Prazo, garantia e o que está incluso no valor",
+    "location_cta_title": "Ateliê em {city}, aberto ao público",
+    "location_cta_body": "Ateliê em {city} funciona de terça a sábado, com atendimento por ordem de chegada ou agendamento prévio pelo WhatsApp.",
+    "contact_headline": "Quero ver de perto"
+  }
+}

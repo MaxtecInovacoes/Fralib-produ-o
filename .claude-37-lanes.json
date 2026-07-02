@@ -1,0 +1,335 @@
+{
+  "academia-neon-grid": {
+    "services_kicker": "Programas forjados sob luz neon",
+    "gallery_kicker": "Madrugadas que viraram progresso",
+    "reviews_kicker": "Alunos que trocaram o bar pelo suor",
+    "faq_kicker": "Tira-dúvidas de quem treina depois do expediente",
+    "location_cta_title": "Sua próxima sessão pulsa em {city}",
+    "location_cta_body": "A Neon Grid opera em {city} com turmas noturnas, ambientes climatizados e equipamento de musculação e funcional pensado pra quem chega depois do último metrô.",
+    "contact_headline": "Liga pro time da grade"
+  },
+  "academia-sunset-track": {
+    "services_kicker": "Treinos que cabem entre o trabalho e o pôr do sol",
+    "gallery_kicker": "Final de tarde que vira série pesada",
+    "reviews_kicker": "Histórias de quem encaixou o treino no dia cheio",
+    "faq_kicker": "Perguntas de quem quer começar ainda hoje",
+    "location_cta_title": "Seu último suspiro do dia vem em {city}",
+    "location_cta_body": "A Sunset Track atende em {city} no horário que o expediente libera: musculação, funcional e acompanhamento pra quem começou ontem e pra quem já carrega barra há anos.",
+    "contact_headline": "Fala com o time do entardecer"
+  },
+  "academia-graphite-core": {
+    "services_kicker": "Equipamento de precisão pra quem leva a sério",
+    "gallery_kicker": "Carga, barra e número — sem enrolação",
+    "reviews_kicker": "Relatos de quem troca estação por progresso",
+    "faq_kicker": "Tudo que o aluno técnico quer saber",
+    "location_cta_title": "Seu treino técnico começa em {city}",
+    "location_cta_body": "A Graphite Core fica em {city} com estrutura de musculação, área de força e orientação técnica baseada em carga, repetição e progresso medido.",
+    "contact_headline": "Chama o time da barra"
+  },
+  "advogado-statute-noir": {
+    "services_kicker": "Atuação firme em tribunal e sala de audiência",
+    "gallery_kicker": "Casos que exigiram argumento, não promessa",
+    "reviews_kicker": "Clientes que chegaram com dúvida e saíram com sentença",
+    "faq_kicker": "Questões sobre processo, prazo e estratégia",
+    "location_cta_title": "Atendimento jurídico presencial em {city}",
+    "location_cta_body": "O escritório Statute Noir atende em {city} com foco em causas cíveis, criminais e empresariais defendidas com peças técnicas e sustentação oral.",
+    "contact_headline": "Fale direto com a banca"
+  },
+  "advogado-lex-meridian": {
+    "services_kicker": "Método jurídico do diagnóstico à decisão",
+    "gallery_kicker": "Documentos que sustentaram cada tese",
+    "reviews_kicker": "Clientes atendidos em prazos críticos",
+    "faq_kicker": "Tira-dúvidas sobre andamento processual",
+    "location_cta_title": "Acompanhamento jurídico em {city}",
+    "location_cta_body": "A Lex Meridian opera em {city} com metodologia própria: análise de autos, parecer técnico e plano de ação processual pra cada cliente.",
+    "contact_headline": "Marque sua consulta técnica"
+  },
+  "barbearia-heritage-reserve": {
+    "services_kicker": "Corte, barba e ritual em couro e navalha",
+    "gallery_kicker": "Mosaicos do ofício, poltrona por poltrona",
+    "reviews_kicker": "Homens que voltaram a se olhar no espelho",
+    "faq_kicker": "Tudo que o barbeiro experiente já respondeu",
+    "location_cta_title": "Seu próximo ritual de cuidado em {city}",
+    "location_cta_body": "A Heritage Reserve recebe em {city} clientes que valorizam atendimento agendado, ambiente reservado e o ritmo antigo do barbeiro.",
+    "contact_headline": "Reserve sua poltrona"
+  },
+  "barbearia-studio-mono": {
+    "services_kicker": "Corte editorial, barba esculpida, olhar limpo",
+    "gallery_kicker": "Ensaios visuais que ditam referência",
+    "reviews_kicker": "Clientes saídos de capa sem precisar de convite",
+    "faq_kicker": "O que muda entre estúdio e barbearia comum",
+    "location_cta_title": "Studio de imagem masculina em {city}",
+    "location_cta_body": "A Studio Mono atende em {city} com agenda curta, atendimento individual e acabamento pensado pra quem trata corte como parte do estilo.",
+    "contact_headline": "Agende sua sessão"
+  },
+  "barbearia-copper-smoke": {
+    "services_kicker": "Calor de toalha, brilho de navalha, silêncio de charuto",
+    "gallery_kicker": "Noites que viraram ritual",
+    "reviews_kicker": "Homens que pediram outra hora só pra continuar",
+    "faq_kicker": "Como funciona o ritual noturno",
+    "location_cta_title": "Atendimento noturno reservado em {city}",
+    "location_cta_body": "A Copper Smoke opera em {city} em horário estendido, com poucos clientes por noite, bebida de cortesia e foco em quem quer sair de lá refeito.",
+    "contact_headline": "Garanta sua noite"
+  },
+  "barbearia-midnight-club": {
+    "services_kicker": "Atendimento fechado pra poucos nomes",
+    "gallery_kicker": "Mosaicos do salão privado",
+    "reviews_kicker": "Sócios que indicam sem precisar explicar",
+    "faq_kicker": "Como entrar na agenda do clube",
+    "location_cta_title": "Sócios recebem em {city}",
+    "location_cta_body": "A Midnight Club atende em {city} exclusivamente por indicação e assinatura, com bar, lounge e barbearia num único endereço reservado.",
+    "contact_headline": "Peça acesso ao clube"
+  },
+  "clinica-medical-trust": {
+    "services_kicker": "Equipe médica, exames e encaminhamento ágil",
+    "gallery_kicker": "Instalações que transmitem segurança clínica",
+    "reviews_kicker": "Pacientes atendidos sem fila e sem pressa",
+    "faq_kicker": "Convênios, exames e preparo de consulta",
+    "location_cta_title": "Atendimento clínico em {city}",
+    "location_cta_body": "A Medical Trust atende em {city} com profissionais habilitados, recepção organizada e estrutura pra consulta, exame e retorno no mesmo fluxo.",
+    "contact_headline": "Fale com a recepção"
+  },
+  "clinica-care-plus": {
+    "services_kicker": "Cuidado que começa antes do consultório",
+    "gallery_kicker": "Famílias e pacientes que viraram rotina",
+    "reviews_kicker": "Histórias de quem foi ouvido antes de examinado",
+    "faq_kicker": "Tira-dúvidas sobre primeira consulta",
+    "location_cta_title": "Cuidado clínico pra família toda em {city}",
+    "location_cta_body": "A Care Plus atende em {city} com equipe multidisciplinar, prontuário unificado e acompanhamento que respeita o ritmo de crianças, adultos e idosos.",
+    "contact_headline": "Agende pra quem você cuida"
+  },
+  "dentista-smile-care": {
+    "services_kicker": "Odontologia que devolve vontade de sorrir",
+    "gallery_kicker": "Antes e depois que mudaram a autoimagem",
+    "reviews_kicker": "Pacientes que voltaram a sorrir em foto",
+    "faq_kicker": "Dúvidas sobre clareamento, lente e implante",
+    "location_cta_title": "Seu novo sorriso começa em {city}",
+    "location_cta_body": "A Smile Care atende em {city} com clínica completa, equipe de dentistas e estrutura pra clareamento, lente, implante e ortodontia.",
+    "contact_headline": "Marque sua avaliação"
+  },
+  "dentista-clinical-white": {
+    "services_kicker": "Ambiente branco, técnica apurada, plano claro",
+    "gallery_kicker": "Procedimentos registrados passo a passo",
+    "reviews_kicker": "Pacientes que aprovaram o plano antes da cadeira",
+    "faq_kicker": "Materiais, anestesia e tempo de recuperação",
+    "location_cta_title": "Consultório odontológico em {city}",
+    "location_cta_body": "A Clinical White opera em {city} com consultórios claros, esterilização visível e plano odontológico explicado antes de qualquer procedimento.",
+    "contact_headline": "Venha pro consultório"
+  },
+  "energia-solar-sun-pure": {
+    "services_kicker": "Energia limpa monitorada em tempo real",
+    "gallery_kicker": "Telhados instalados em diferentes perfis",
+    "reviews_kicker": "Proprietários acompanhando geração pelo celular",
+    "faq_kicker": "Dúvidas sobre payback e homologação",
+    "location_cta_title": "Sua usina solar fica em {city}",
+    "location_cta_body": "A Sun Pure instala em {city} sistemas fotovoltaicos com monitoramento por aplicativo, homologação na concessionária e manutenção programada.",
+    "contact_headline": "Simule sua economia"
+  },
+  "energia-solar-tech-grid": {
+    "services_kicker": "Performance medida, ROI calculado, dado exposto",
+    "gallery_kicker": "Geração em kWh registrada mês a mês",
+    "reviews_kicker": "Faturas que chegaram zeradas por conta própria",
+    "faq_kicker": "Comparativo entre marcas e potências",
+    "location_cta_title": "Engenharia fotovoltaica em {city}",
+    "location_cta_body": "A Tech Grid projeta e instala em {city} sistemas solares com análise de consumo, simulação financeira por fase e laudo técnico pra cada telhado.",
+    "contact_headline": "Peça o estudo técnico"
+  },
+  "estetica-clinic-ivory": {
+    "services_kicker": "Procedimentos faciais e corporais de alta costura",
+    "gallery_kicker": "Atendimento em luz natural e marfim",
+    "reviews_kicker": "Clientes que voltaram a se olhar sem pressa",
+    "faq_kicker": "Cuidados antes e depois de cada protocolo",
+    "location_cta_title": "Sua próxima sessão estética em {city}",
+    "location_cta_body": "A Clinic Ivory atende em {city} com protocolos personalizados, ambiente em marfim e profissionais habilitados em estética facial e corporal.",
+    "contact_headline": "Reserve sua avaliação"
+  },
+  "estetica-chrome-spa": {
+    "services_kicker": "Tecnologia e cuidado manual no mesmo protocolo",
+    "gallery_kicker": "Aparelhos e mãos trabalhando lado a lado",
+    "reviews_kicker": "Clientes que sentiram diferença na primeira sessão",
+    "faq_kicker": "Tecnologias usadas e contraindicações",
+    "location_cta_title": "Spa tecnológico em {city}",
+    "location_cta_body": "A Chrome Spa opera em {city} unindo equipamentos de estética avançada e técnicas manuais, com avaliação prévia e plano de sessões registrado.",
+    "contact_headline": "Agende sua sessão"
+  },
+  "estetica-rose-clay": {
+    "services_kicker": "Cuidado facial com calor de terracota",
+    "gallery_kicker": "Retratos do ritual em rosa e argila",
+    "reviews_kicker": "Mulheres que reencontraram o próprio reflexo",
+    "faq_kicker": "Rotina de skincare entre as sessões",
+    "location_cta_title": "Ritual de beleza em {city}",
+    "location_cta_body": "A Rose Clay recebe em {city} clientes que buscam hidratação profunda, massagem modeladora e protocolos faciais em atmosfera feminina e calma.",
+    "contact_headline": "Marque seu horário"
+  },
+  "estetica-noir-gold": {
+    "services_kicker": "Tratamentos premium em ambiente preto e dourado",
+    "gallery_kicker": "Detalhes do lounge reservado",
+    "reviews_kicker": "Clientes atendidas com hora marcada e sem fila",
+    "faq_kicker": "Diferenciais do atendimento premium",
+    "location_cta_title": "Estética premium em {city}",
+    "location_cta_body": "A Noir Gold recebe em {city} poucas clientes por turno, com protocolo individual, produtos importados e lounge preparado pra esperar e sair refeita.",
+    "contact_headline": "Fale com a concierge"
+  },
+  "imobiliaria-key-modern": {
+    "services_kicker": "Portfólio de imóveis prontos pra morar",
+    "gallery_kicker": "Apartamentos por bairro e metragem",
+    "reviews_kicker": "Compradores atendidos do plantão à escritura",
+    "faq_kicker": "Dúvidas sobre financiamento e ITBI",
+    "location_cta_title": "Seu próximo imóvel fica em {city}",
+    "location_cta_body": "A Key Modern atua em {city} com catálogo atualizado de apartamentos e casas, visita agendada e acompanhamento de proposta até a escritura.",
+    "contact_headline": "Peça a curadoria"
+  },
+  "imobiliaria-loft-elegance": {
+    "services_kicker": "Loft, cobertura e alto-padrão sob medida",
+    "gallery_kicker": "Acabamentos que fecham a venda sozinhos",
+    "reviews_kicker": "Negócios fechados acima de sete dígitos",
+    "faq_kicker": "Como funciona a busca personalizada",
+    "location_cta_title": "Imóveis alto-padrão em {city}",
+    "location_cta_body": "A Loft Elegance intermedia em {city} imóveis de alto padrão com tour agendado, análise de documentação e discrição em toda a negociação.",
+    "contact_headline": "Fale com o corretor"
+  },
+  "nutricionista-botanical-editorial": {
+    "services_kicker": "Consultório verde, escuta longa, plano sob medida",
+    "gallery_kicker": "Pranchas, chás e prataria do consultório",
+    "reviews_kicker": "Pacientes que aderiram sem cortar o que amam",
+    "faq_kicker": "Dúvidas sobre consulta inicial e retorno",
+    "location_cta_title": "Atendimento nutricional em {city}",
+    "location_cta_body": "A Botanical Editorial atende em {city} com consulta ampla, plano alimentar escrito em detalhe e retorno programado pra cada etapa.",
+    "contact_headline": "Agende sua primeira escuta"
+  },
+  "nutricionista-clinical-soft": {
+    "services_kicker": "Acompanhamento clínico leve e contínuo",
+    "gallery_kicker": "Consultório claro entre sessões",
+    "reviews_kicker": "Pacientes que sustentaram o plano por meses",
+    "faq_kicker": "Exames pedidos e frequência de retorno",
+    "location_cta_title": "Consultório de nutrição em {city}",
+    "location_cta_body": "A Clinical Soft opera em {city} com protocolos pra emagrecimento, ganho de massa e reeducação alimentar, sempre com retorno programado.",
+    "contact_headline": "Marque sua consulta"
+  },
+  "nutricionista-coastal-light": {
+    "services_kicker": "Alimentação leve pra longevidade sem radicalismo",
+    "gallery_kicker": "Refeições que cabem na rotina",
+    "reviews_kicker": "Pacientes que trocaram dieta por estilo",
+    "faq_kicker": "Como funciona o plano de manutenção",
+    "location_cta_title": "Nutrição pra vida toda em {city}",
+    "location_cta_body": "A Coastal Light atende em {city} com plano alimentar baseado em comida de verdade, ajuste sazonal e suporte direto entre as consultas.",
+    "contact_headline": "Comece pelo cardápio"
+  },
+  "nutricionista-performance-fuel": {
+    "services_kicker": "Planejamento alimentar pra hora do jogo",
+    "gallery_kicker": "Atletas em fase de corte e carga",
+    "reviews_kicker": "Marcas pessoais com peso e composição no alvo",
+    "faq_kicker": "Suplementos, carboidrato e janela de treino",
+    "location_cta_title": "Nutrição esportiva em {city}",
+    "location_cta_body": "A Performance Fuel atende em {city} atletas amadores e profissionais com plano pra treino, competição e recuperação, ajustado semana a semana.",
+    "contact_headline": "Bora pro próximo PR"
+  },
+  "oficina-torque-box": {
+    "services_kicker": "Diagnóstico rápido e torque conferido",
+    "gallery_kicker": "Carros atendidos no chão da oficina",
+    "reviews_kicker": "Motoristas que saíram sem voltar no dia seguinte",
+    "faq_kicker": "Peças usadas, garantia e prazo",
+    "location_cta_title": "Diagnóstico automotivo em {city}",
+    "location_cta_body": "A Torque Box opera em {city} com scanner, alinhamento, geometria e serviço mecânico entregue no mesmo dia quando o escopo permite.",
+    "contact_headline": "Traga o carro pra bancada"
+  },
+  "oficina-garage-iron": {
+    "services_kicker": "Mecânica pesada, motor e transmissão",
+    "gallery_kicker": "Oficina aberta, sem esconder o que faz",
+    "reviews_kicker": "Frotistas e motoristas que indicam",
+    "faq_kicker": "Prazo de retífica e peças paralelas",
+    "location_cta_title": "Oficina de peso em {city}",
+    "location_cta_body": "A Garage Iron atende em {city} serviços de motor, câmbio, suspensão e elétrica com orçamento detalhado antes de tirar a chave do contato.",
+    "contact_headline": "Fala direto com o mestre"
+  },
+  "pet-shop-patudo": {
+    "services_kicker": "Banho, tosa e carinho olho no olho",
+    "gallery_kicker": "Cães e gatos prontos pro passeio",
+    "reviews_kicker": "Donos que recebem foto do antes e depois",
+    "faq_kicker": "Vacina, agendamento e retirada",
+    "location_cta_title": "Cuidado animal em {city}",
+    "location_cta_body": "O Patudo atende em {city} com banho, tosa, venda de ração e acessórios, sempre com fila organizada e devolução do bicho cheirando casa.",
+    "contact_headline": "Traga o bicho pra cuidar"
+  },
+  "pet-shop-pet-care-pro": {
+    "services_kicker": "Veterinária, exames e vacinação",
+    "gallery_kicker": "Consultórios e internação leve",
+    "reviews_kicker": "Tutores que entenderam o diagnóstico",
+    "faq_kicker": "Vacina, castração e retorno",
+    "location_cta_title": "Saúde animal em {city}",
+    "location_cta_body": "A Pet Care Pro atende em {city} com veterinários de prontidão, exames laboratoriais, vacinação e orientação nutricional por espécie.",
+    "contact_headline": "Agende a consulta do pet"
+  },
+  "restaurante-prato-certo": {
+    "services_kicker": "Comida caseira servida no mesmo prato de sempre",
+    "gallery_kicker": "Mesa do almoço, do jantar e do fim de semana",
+    "reviews_kicker": "Famílias que repetiram mais de uma vez na semana",
+    "faq_kicker": "Cardápio diário e opções pra levar",
+    "location_cta_title": "Mesa servida em {city}",
+    "location_cta_body": "O Prato Certo funciona em {city} com buffet por quilo no almoço, prato executivo no jantar e marmita pesada pra quem quer comer bem em casa.",
+    "contact_headline": "Reserve a mesa"
+  },
+  "restaurante-forno-livre": {
+    "services_kicker": "Massa fresca, forno aberto e madeira no chão",
+    "gallery_kicker": "Bordas, massas e tempos de forno",
+    "reviews_kicker": "Clientes que pediram outra rodada sem olhar o cardápio",
+    "faq_kicker": "Reserva, retirada e massa do dia",
+    "location_cta_title": "Pizza de forno a lenha em {city}",
+    "location_cta_body": "O Forno Livre roda em {city} com forno a lenha, massa fermentada natural e cardápio curto pra pizzaria — clássico, especial e doce.",
+    "contact_headline": "Garanta sua mesa"
+  },
+  "salao-glow-studio": {
+    "services_kicker": "Brilho, cor e luz próprias pra cada madeixa",
+    "gallery_kicker": "Antes e depois de mechas, cortes e luzes",
+    "reviews_kicker": "Clientes que voltaram a se filmar pra foto",
+    "faq_kicker": "Descoloração, cronograma e manutenção",
+    "location_cta_title": "Seu novo brilho começa em {city}",
+    "location_cta_body": "O Glow Studio atende em {city} com coloração, corte, cauterização e protocolos capilares pensados pra manter o fio saudável entre as visitas.",
+    "contact_headline": "Agende sua cor"
+  },
+  "salao-mirror-room": {
+    "services_kicker": "Espelho, técnica e olhar editorial",
+    "gallery_kicker": "Bastidores de editorial e teste de luz",
+    "reviews_kicker": "Clientes que saíram com corte de capa",
+    "faq_kicker": "Diferença entre corte técnico e corte comum",
+    "location_cta_title": "Salão editorial em {city}",
+    "location_cta_body": "A Mirror Room atende em {city} com hora marcada, diagnóstico de visagismo e acabamento registrado pra cada cliente que senta na cadeira.",
+    "contact_headline": "Marque sua sessão"
+  },
+  "default-cinematic-soft": {
+    "services_kicker": "Atendimento conduzido por narrativa",
+    "gallery_kicker": "Quadros do antes, durante e depois",
+    "reviews_kicker": "Clientes que contam como foi atendido",
+    "faq_kicker": "Tudo que o cliente costuma perguntar",
+    "location_cta_title": "Atendimento presencial em {city}",
+    "location_cta_body": "O atendimento presencial acontece em {city} com agenda marcada, escuta inicial e plano combinado antes da execução.",
+    "contact_headline": "Fale com o time"
+  },
+  "default-conversion-bold": {
+    "services_kicker": "Direto ao ponto, sem enrolação",
+    "gallery_kicker": "Resultados registrados em entrega",
+    "reviews_kicker": "Quem fechou e voltou pra fechar de novo",
+    "faq_kicker": "Resposta curta pra dúvida curta",
+    "location_cta_title": "Resposta rápida em {city}",
+    "location_cta_body": "Atendimento objetivo em {city} com orçamento em até 24 horas, escopo fechado por escrito e prazo cumprido no combinado.",
+    "contact_headline": "Manda a dúvida"
+  },
+  "default-health-trust": {
+    "services_kicker": "Atendimento certificado e documentado",
+    "gallery_kicker": "Instalações, equipe e procedimentos",
+    "reviews_kicker": "Pacientes e clientes que recomendaram",
+    "faq_kicker": "Dúvidas mais frequentes resolvidas",
+    "location_cta_title": "Atendimento presencial em {city}",
+    "location_cta_body": "A estrutura funciona em {city} com equipe registrada, ambiente limpo e procedimento seguido de acordo com protocolo da categoria.",
+    "contact_headline": "Fale com a recepção"
+  },
+  "default-local-craft": {
+    "services_kicker": "Ofício feito à mão, no bairro",
+    "gallery_kicker": "Detalhes do trabalho local",
+    "reviews_kicker": "vizinhos que voltaram e indicaram",
+    "faq_kicker": "Prazo, orçamento e retirada",
+    "location_cta_title": "Atendimento local em {city}",
+    "location_cta_body": "O trabalho é feito em {city} sob encomenda, com prazo combinado, material escolhido junto e entrega registrada peça a peça.",
+    "contact_headline": "Venha conhecer o ateliê"
+  }
+}

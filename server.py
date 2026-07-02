@@ -461,6 +461,28 @@ except ImportError as e:
     print(f"[Server] admin_lead_supply_endpoints nao disponivel: {e}")
 import cron_endpoints
 app.include_router(cron_endpoints.router)
+
+# Trilha A — Phone Health (observabilidade do número WhatsApp por tenant)
+try:
+    import phone_health_endpoints
+    app.include_router(phone_health_endpoints.router)
+    print("[Server] phone_health_endpoints registrado (superadmin)")
+except ImportError as e:
+    print(f"[Server] phone_health_endpoints nao disponivel: {e}")
+try:
+    import admin_phone_health_endpoints
+    app.include_router(admin_phone_health_endpoints.router)
+    print("[Server] admin_phone_health_endpoints registrado (admin tenant)")
+except ImportError as e:
+    print(f"[Server] admin_phone_health_endpoints nao disponivel: {e}")
+
+# Sprint 0.1 — Painel de Provedores Externos
+try:
+    import superadmin_providers_endpoints
+    app.include_router(superadmin_providers_endpoints.router)
+    print("[Server] superadmin_providers_endpoints registrado (superadmin)")
+except ImportError as e:
+    print(f"[Server] superadmin_providers_endpoints nao disponivel: {e}")
 import blog_endpoints
 app.include_router(blog_endpoints.router)
 import blog_analytics_endpoints

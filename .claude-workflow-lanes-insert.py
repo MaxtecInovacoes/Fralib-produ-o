@@ -1,0 +1,95 @@
+
+    "restaurante": [
+        {
+            "id": "restaurante-prato-certo",
+            "name": "Prato Certo",
+            "fallback_palette": {"primary": "#7a1a2b", "secondary": "#c9a14a", "bg_dark": "#2a1014", "bg_light": "#f7efe2", "text_dark": "#2a1014"},
+            "blocks": {"hero_variant": "center", "services_variant": "split_editorial", "reviews_variant": "quote_spotlight", "faq_variant": "panel", "location_variant": "split_local", "surface_style": "soft_tint"},
+            "copy": {"hero_badge": "Casa de comida com identidade local" , "about_kicker": "Receita" , "about_title": "Prato bem feito, ambiente acolhedor e decisão sem complicação." , "about_body": "{name} organiza menu, carta e atendimento para uma refeição bem resolvida em {city}." , "gallery_title": "Prato, mesa e atmosfera de casa cheia." , "gallery_intro": "As imagens reforçam comida, serviço e sensação de estar bem recebido." , "reviews_title": "Avaliações que aproximam o cliente da casa." , "reviews_intro": "Reputação, prato e cidade sustentam a escolha de visitar." , "faq_title": "Perguntas antes de reservar a mesa." , "faq_intro": "Respostas curtas sobre cardápio, reserva, delivery e horários." , "location_title": "Visite a casa em {city} com acesso claro." , "location_intro": "Endereço, cardápio e WhatsApp aparecem sem poluição visual." , "lifestyle_kicker": "Mesa" , "contact_kicker": "Reserva" },
+        },
+        {
+            "id": "restaurante-forno-livre",
+            "name": "Forno Livre",
+            "fallback_palette": {"primary": "#4f6b2a", "secondary": "#c9a14a", "bg_dark": "#1a2010", "bg_light": "#f4ecd6", "text_dark": "#1a2010"},
+            "blocks": {"hero_variant": "fullbleed", "services_variant": "stacked_cards", "reviews_variant": "editorial_case", "faq_variant": "inline", "location_variant": "feature_local", "surface_style": "solid"},
+            "copy": {"hero_badge": "Forno aberto, massa e sabor de verdade" , "about_kicker": "Forno" , "about_title": "Padaria e pizzaria com forno visível e leitura mais humana." , "about_body": "{name} apresenta fornada, atendimento e cardápio para quem busca comida feita com calma em {city}." , "gallery_title": "Massa, fermento e detalhe do forno." , "gallery_intro": "A galeria aproxima o cliente do processo e do sabor." , "reviews_title": "Clientes que voltam pelo sabor e pela confiança." , "reviews_intro": "Depoimentos reforçam regularidade e cuidado com a receita." , "faq_title": "Antes de pedir ou retirar no balcão." , "faq_intro": "FAQ direto sobre entrega, reserva e horários de fornada." , "location_title": "Encontre o forno em {city}." , "location_intro": "Endereço, WhatsApp e cardápio fecham a página com calor e clareza." , "lifestyle_kicker": "Receita" , "contact_kicker": "Pedido" },
+        },
+    ],
+    "oficina": [
+        {
+            "id": "oficina-torque-box",
+            "name": "Torque Box",
+            "fallback_palette": {"primary": "#e10600", "secondary": "#1a1a1a", "bg_dark": "#0a0a0a", "bg_light": "#f5f5f5", "text_dark": "#111111"},
+            "blocks": {"hero_variant": "split", "services_variant": "stats_then_cards", "reviews_variant": "score_wall", "faq_variant": "panel", "location_variant": "feature_local", "surface_style": "outline"},
+            "copy": {"hero_badge": "Oficina mecânica de verdade" , "about_kicker": "Mecânica" , "about_title": "Diagnóstico, mão de obra e peça certa para rodar em {city}." , "about_body": "{name} organiza revisão, reparo e atendimento com leitura direta, orçamento claro e serviço executado." , "gallery_title": "Oficina em ação, ferramenta na mão e carro resolvido." , "gallery_intro": "Cada imagem mostra bancada, elevador, peça e o ritmo de uma oficina que entrega." , "reviews_title": "Clientes que voltaram e indicaram." , "reviews_intro": "Avaliações locais reforçam confiança antes de deixar o carro na oficina." , "faq_title": "Perguntas antes de levar o carro." , "faq_intro": "Respostas curtas sobre orçamento, prazo, peça e garantia." , "location_title": "Traga o carro na oficina em {city}." , "location_intro": "Endereço, WhatsApp e rota aparecem juntos para facilitar a chegada." , "lifestyle_kicker": "Torque" , "contact_kicker": "Diagnóstico" },
+        },
+        {
+            "id": "oficina-garage-iron",
+            "name": "Garage Iron",
+            "fallback_palette": {"primary": "#f5c518", "secondary": "#2b2b2b", "bg_dark": "#121212", "bg_light": "#efece4", "text_dark": "#1a1a1a"},
+            "blocks": {"hero_variant": "fullbleed", "services_variant": "stacked_cards", "reviews_variant": "card_marquee", "faq_variant": "inline", "location_variant": "feature_local", "surface_style": "solid"},
+            "copy": {"hero_badge": "Oficina com estrutura industrial" , "about_kicker": "Estrutura" , "about_title": "Bancada, elevador e equipe para serviço pesado em {city}." , "about_body": "{name} mostra oficina, equipe e atendimento com linguagem direta, sem prometer o que não cumpre." , "gallery_title": "Aço, elevador, motor e ferramental pesado." , "gallery_intro": "A galeria reforça a sensação de oficina séria, com espaço e equipamento para qualquer serviço." , "reviews_title": "Reputação construída em serviço bem feito." , "reviews_intro": "Depoimentos e nota local ajudam a decidir com menos risco." , "faq_title": "O que perguntar antes de deixar o carro." , "faq_intro": "FAQ direto sobre diagnóstico, prazo, pagamento e garantia." , "location_title": "Encontre a oficina em {city}." , "location_intro": "Mapa, contato e WhatsApp fecham a página com chamada clara." , "lifestyle_kicker": "Garagem" , "contact_kicker": "Orçamento" },
+        },
+    ],
+    "energia_solar": [
+        {
+            "id": "energia-solar-sun-pure",
+            "name": "Sun Pure",
+            "fallback_palette": {"primary": "#7cb342", "secondary": "#1565c0", "bg_dark": "#f4f9ec", "bg_light": "#ffffff", "text_dark": "#1a2e1a"},
+            "blocks": {"hero_variant": "center", "services_variant": "split_editorial", "reviews_variant": "quote_spotlight", "faq_variant": "panel", "location_variant": "split_local", "surface_style": "soft_tint"},
+            "copy": {"hero_badge": "Energia solar para residências e empresas" , "about_kicker": "Economia" , "about_title": "Energia limpa, conta menor e retorno previsível em {city}." , "about_body": "{name} dimensiona o sistema solar, cuida da instalação e acompanha a geração com leitura clara para o cliente." , "gallery_title": "Telhado, painel e luz natural como matéria-prima." , "gallery_intro": "Imagens de projetos instalados reforçam a sensação de economia e cuidado técnico." , "reviews_title": "Clientes que viram a conta cair." , "reviews_intro": "Avaliações e cases locais sustentam a decisão de investir em solar." , "faq_title": "Perguntas antes de instalar energia solar." , "faq_intro": "Respostas curtas sobre payback, financiamento, homologação e garantia." , "location_title": "Atendimento solar em {city}." , "location_intro": "Simulação, contato e endereço aparecem no mesmo bloco para ação imediata." , "lifestyle_kicker": "Sol" , "contact_kicker": "Simular" },
+        },
+        {
+            "id": "energia-solar-tech-grid",
+            "name": "Tech Grid",
+            "fallback_palette": {"primary": "#1565c0", "secondary": "#f5c518", "bg_dark": "#0a1729", "bg_light": "#eef4fb", "text_dark": "#0a1729"},
+            "blocks": {"hero_variant": "asymmetric", "services_variant": "stats_then_cards", "reviews_variant": "editorial_case", "faq_variant": "inline", "location_variant": "feature_local", "surface_style": "outline"},
+            "copy": {"hero_badge": "Energia solar com leitura técnica" , "about_kicker": "Tecnologia" , "about_title": "Projeto, instalação e monitoramento para gerar mais em {city}." , "about_body": "{name} entra com engenharia, dimensionamento preciso e monitoramento de geração para quem quer resultado mensurável." , "gallery_title": "Painéis, inversores e dados de geração em destaque." , "gallery_intro": "A galeria privilegia projeto, tecnologia instalada e prova de performance." , "reviews_title": "Cases e números de quem economiza todo mês." , "reviews_intro": "Resultados e depoimentos reforçam credibilidade técnica da empresa." , "faq_title": "Dúvidas técnicas antes de fechar projeto." , "faq_intro": "FAQ objetivo sobre kWh, payback, homologação e vida útil do sistema." , "location_title": "Projeto solar em {city} com equipe técnica." , "location_intro": "O contato fecha com simulação, WhatsApp técnico e rota para visita." , "lifestyle_kicker": "Grid" , "contact_kicker": "Projeto" },
+        },
+    ],
+    "imobiliaria": [
+        {
+            "id": "imobiliaria-key-modern",
+            "name": "Key Modern",
+            "fallback_palette": {"primary": "#c9a14a", "secondary": "#5a3a1a", "bg_dark": "#f7f1e3", "bg_light": "#ffffff", "text_dark": "#2a1f10"},
+            "blocks": {"hero_variant": "split", "services_variant": "split_editorial", "reviews_variant": "editorial_case", "faq_variant": "panel", "location_variant": "split_local", "surface_style": "soft_tint"},
+            "copy": {"hero_badge": "Imóveis selecionados com curadoria" , "about_kicker": "Curadoria" , "about_title": "Apartamentos e casas bem localizados para morar ou investir em {city}." , "about_body": "{name} apresenta imóveis com visita organizada, negociação transparente e acompanhamento até a entrega das chaves." , "gallery_title": "Ambientes, fachada e detalhe de acabamento." , "gallery_intro": "As imagens reforçam planta, iluminação e o cuidado com cada imóvel da carteira." , "reviews_title": "Compradores e locatários que fecharam bem." , "reviews_intro": "Cases de clientes sustentam a confiança antes de agendar visita." , "faq_title": "Perguntas antes de agendar visita." , "faq_intro": "Respostas sobre documentação, financiamento, visita e proposta." , "location_title": "Imóveis em {city} com atendimento próximo." , "location_intro": "Endereço, WhatsApp e agenda de visitas aparecem no mesmo bloco." , "lifestyle_kicker": "Chave" , "contact_kicker": "Visita" },
+        },
+        {
+            "id": "imobiliaria-loft-elegance",
+            "name": "Loft Elegance",
+            "fallback_palette": {"primary": "#b8893a", "secondary": "#3d2817", "bg_dark": "#1d140a", "bg_light": "#f0e6d2", "text_dark": "#1d140a"},
+            "blocks": {"hero_variant": "fullbleed", "services_variant": "stats_then_cards", "reviews_variant": "quote_spotlight", "faq_variant": "inline", "location_variant": "feature_local", "surface_style": "solid"},
+            "copy": {"hero_badge": "Imóveis premium e atendimento reservado" , "about_kicker": "Excelência" , "about_title": "Imóveis de alto padrão com curadoria e discrição em {city}." , "about_body": "{name} atende clientes que buscam exclusividade, com portfólio selecionado, visita privada e negociação sob medida." , "gallery_title": "Arquitetura, luz e acabamento de alto padrão." , "gallery_intro": "As imagens valorizam planta, metragem, design e o silêncio de um imóvel bem escolhido." , "reviews_title": "Clientes que fecharam negócios exclusivos." , "reviews_intro": "Reputação construída em discrição, presença e resultado de longo prazo." , "faq_title": "Perguntas antes de uma visita privada." , "faq_intro": "FAQ sobre agenda reservada, documentação, proposta e sigilo." , "location_title": "Imóveis premium em {city}." , "location_intro": "Atendimento fecha com contato direto, agenda reservada e rota sob medida." , "lifestyle_kicker": "Loft" , "contact_kicker": "Reservar" },
+        },
+    ],
+    "barbearia": [
+        {
+            "id": "barbearia-heritage-reserve",
+            "name": "Heritage Reserve",
+            "fallback_palette": {"primary": "#c9a96a", "secondary": "#3d2a18", "bg_dark": "#0d0b0a", "bg_light": "#f4ede3", "text_dark": "#1b130f"},
+            "blocks": {"hero_variant": "split", "services_variant": "split_editorial", "reviews_variant": "editorial_case", "faq_variant": "panel", "location_variant": "split_local", "surface_style": "solid"},
+            "copy": {"hero_badge": "Barbearia clássica" , "about_kicker": "Ritual" , "about_title": "Corte, barba e acabamento com leitura clássica em {city}." , "about_body": "{name} valoriza detalhe, atendimento e experiência presencial para quem procura barbearia de verdade." , "gallery_title": "Couro, aço, espelho e ritual." , "gallery_intro": "A galeria mostra ambiente, serviço e detalhes do ritual clássico." , "reviews_title": "Clientes que percebem detalhe e atendimento." , "reviews_intro": "Avaliações reforçam consistência, acabamento e recorrência." , "faq_title": "Perguntas antes de reservar o horário." , "faq_intro": "Respostas curtas sobre agenda, serviços e localização." , "location_title": "Visite a barbearia em {city}." , "location_intro": "Reserva, endereço e contato aparecem juntos." , "lifestyle_kicker": "Atmosfera" , "contact_kicker": "Reserva" },
+        },
+        {
+            "id": "barbearia-studio-mono",
+            "name": "Studio Mono",
+            "fallback_palette": {"primary": "#f1f1f1", "secondary": "#555555", "bg_dark": "#090909", "bg_light": "#efefef", "text_dark": "#151515"},
+            "blocks": {"hero_variant": "center", "services_variant": "stacked_cards", "reviews_variant": "quote_spotlight", "faq_variant": "inline", "location_variant": "feature_local", "surface_style": "outline"},
+            "copy": {"hero_badge": "Corte com direção contemporânea" , "about_kicker": "Design" , "about_title": "Identidade sóbria, gráfica e precisa em {city}." , "about_body": "{name} entra numa linha mais contemporânea, com menos ornamento e mais contraste limpo." , "gallery_title": "Monocromia, recorte e presença." , "gallery_intro": "As imagens privilegiam sombra, forma e acabamento." , "reviews_title": "Confiança tratada com voz editorial." , "reviews_intro": "Menos excesso, mais recorte e clareza." , "faq_title": "Tudo o que importa antes de reservar." , "faq_intro": "Perguntas curtas para acelerar a escolha." , "location_title": "Agende e chegue sem complicação." , "location_intro": "O WhatsApp fica direto para reserva." , "lifestyle_kicker": "Estilo" , "contact_kicker": "Reserva" },
+        },
+        {
+            "id": "barbearia-copper-smoke",
+            "name": "Copper Smoke",
+            "fallback_palette": {"primary": "#b96d3c", "secondary": "#4e281b", "bg_dark": "#160f0d", "bg_light": "#f6ece6", "text_dark": "#231511"},
+            "blocks": {"hero_variant": "asymmetric", "services_variant": "stats_then_cards", "reviews_variant": "card_marquee", "faq_variant": "panel", "location_variant": "feature_local", "surface_style": "outline"},
+            "copy": {"hero_badge": "Corte e barba com atmosfera noturna" , "about_kicker": "Presença" , "about_title": "Uma barbearia quente, escura e cinematográfica em {city}." , "about_body": "{name} usa contraste de cobre e luz baixa para enfatizar ritual, noite e personalidade." , "gallery_title": "Luz baixa, metal quente e acabamento forte." , "gallery_intro": "As imagens mostram atmosfera e proximidade." , "reviews_title": "Sinais locais em ritmo mais vivo." , "reviews_intro": "Avaliações podem ganhar movimento sem perder clareza." , "faq_title": "Perguntas para quem quer reservar hoje." , "faq_intro": "Menos texto e mais ação." , "location_title": "Localização e contato no mesmo pulso." , "location_intro": "A página fecha com convite direto para reserva." , "lifestyle_kicker": "Noite" , "contact_kicker": "Agende" },
+        },
+        {
+            "id": "barbearia-midnight-club",
+            "name": "Midnight Club",
+            "fallback_palette": {"primary": "#8b7cf7", "secondary": "#1d153d", "bg_dark": "#080712", "bg_light": "#f2efff", "text_dark": "#16112e"},
+            "blocks": {"hero_variant": "video", "services_variant": "stacked_cards", "reviews_variant": "score_wall", "faq_variant": "inline", "location_variant": "split_local", "surface_style": "soft_tint"},
+            "copy": {"hero_badge": "Barbearia com assinatura autoral" , "about_kicker": "Assinatura" , "about_title": "Direção ousada para marcas que querem parecer únicas." , "about_body": "{name} assume uma linha mais autoral, com luz fria, composição noturna e CTA de reserva como foco central." , "gallery_title": "Uma estética de clube privado." , "gallery_intro": "O site precisa parecer menos genérico e mais memorável." , "reviews_title": "Reputação local com recorte de marca." , "reviews_intro": "A confiança vem sem perder identidade visual." , "faq_title": "O que o cliente quer saber antes do corte." , "faq_intro": "Objetivo, curto e acionável." , "location_title": "Chegue pelo contato oficial." , "location_intro": "A navegação fecha em reserva direta." , "lifestyle_kicker": "Assinatura" , "contact_kicker": "Horário" },
+        },
+    ],

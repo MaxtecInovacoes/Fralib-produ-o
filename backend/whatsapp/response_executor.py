@@ -5,7 +5,7 @@ import time as _time
 
 from sqlalchemy import text
 
-from whatsapp.sender import send_presence_composing, send_text_parts
+from whatsapp.sender import send_presence_composing, send_text_parts, send_text_parts_with_health
 from whatsapp.sdr_reply_service import normalize_followup_date
 from backend.services.sdr_gateway import SdrMessageContext, evaluate_sdr_output, has_prior_outbound
 
@@ -115,18 +115,27 @@ def send_response(ctx: ExecutionContext):
 
     # 4. Send in parts. Resposta a inbound nunca entra na fila de prospeccao:
     # lead respondeu, entao o atendimento precisa continuar imediatamente.
-    send_ok, last_error = send_text_parts(
+    # Usa send_text_parts_with_health para detectar erros do whatsmeow
+    # (440/429/restricted/banned) e alimentar phone_health_events (Trilha A).
+    send_ok, last_error, severity = send_text_parts_with_health(
         ctx.http_client,
         ctx.meowhats_http,
         ctx.meowhats_key,
         ctx.tenant_id,
         ctx.jid,
         ctx.resposta_partes,
+        engine=ctx.engine,
+        user_id=ctx.user_id,
         before_send=lambda idx, parte: _time.sleep(min(2.5 + len(parte) / 90, 5.0)) if idx > 0 else None,
     )
 
     if not send_ok:
-        logger.warning(f"Falha ao enviar resposta: {last_error}")
+        if severity is not None:
+            logger.warning(
+                f"Falha ao enviar resposta (severity={severity}): {last_error}"
+            )
+        else:
+            logger.warning(f"Falha ao enviar resposta: {last_error}")
         return False
 
     # 5. Persist output

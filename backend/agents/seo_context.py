@@ -1,4 +1,13 @@
-"""seo_context.py - SEO Framework por nicho"""
+"""seo_context.py - SEO Framework por nicho
+
+DEPRECATED (Sprint 12.x): SEO_NICHOS existe apenas como fallback legacy.
+Fonte unica de verdade: backend/config/nicho_registry.py::NichoConfig
+que ja expoe seo_keywords e modal_config por nicho.
+
+Este modulo mantem compatibilidade com imports externos, mas o codigo
+de producao (get_seo_context abaixo) ja consulta o registry primeiro
+e cai no SEO_NICHOS apenas se o nicho nao existir la.
+"""
 
 ALIASES = {
     "restaurantes": "restaurante", "barbearias": "barbearia",
@@ -17,26 +26,43 @@ SEO_NICHOS = {
     "academia": {"schema": "SportsActivityLocation", "h1": "Academia em {cidade} - {nome}", "kw": "academia em {cidade}, musculacao {cidade}", "kw_long": "academia perto de mim {cidade}, planos academia {cidade}", "intent": "transacional", "faq": ["Qual a mensalidade?", "Tem aula experimental?", "Qual o horario?"]},
     "pet_shop": {"schema": "AnimalShelter", "h1": "Pet Shop em {cidade} - {nome}", "kw": "pet shop {cidade}, banho e tosa {cidade}", "kw_long": "pet shop perto de mim {cidade}", "intent": "transacional", "faq": ["Faz banho e tosa?", "Tem veterinario?", "Qual o preco?"]},
     "advocacia": {"schema": "LegalService", "h1": "Advogado em {cidade} - {nome}", "kw": "advogado {cidade}, escritorio advocacia {cidade}", "kw_long": "advogado trabalhista {cidade}", "intent": "comercial", "faq": ["Quanto custa a consulta?", "Atende online?", "Como funcionam os honorarios?"]},
-    "odontologia": {"schema": "Dentist", "h1": "Dentista em {cidade} - {nome}", "kw": "dentista {cidade}, implante {cidade}", "kw_long": "dentista perto de mim {cidade}, clareamento dental {cidade}", "intent": "transacional", "faq": ["Aceita convenio?", "Faz clareamento?", "Como agendar?"]},
-    "estetica": {"schema": "BeautySalon", "h1": "Estetica em {cidade} - {nome}", "kw": "estetica {cidade}, limpeza de pele {cidade}", "kw_long": "estetica facial {cidade}, depilacao laser {cidade}", "intent": "transacional", "faq": ["Quais tratamentos?", "Quanto custa?", "Precisa agendar?"]},
-    "pizzaria": {"schema": "FoodEstablishment", "h1": "Pizzaria em {cidade} - {nome}", "kw": "pizzaria {cidade}, pizza delivery {cidade}", "kw_long": "melhor pizzaria {cidade}", "intent": "transacional", "faq": ["Faz delivery?", "Qual o horario?", "Qual a area de entrega?"]},
-    "farmacia": {"schema": "Pharmacy", "h1": "Farmacia em {cidade} - {nome}", "kw": "farmacia {cidade}, manipulacao {cidade}", "kw_long": "farmacia 24h {cidade}", "intent": "transacional", "faq": ["Faz manipulacao?", "Tem plantao 24h?", "Faz delivery?"]},
-    "imobiliaria": {"schema": "RealEstateAgent", "h1": "Imobiliaria em {cidade} - {nome}", "kw": "imobiliaria {cidade}, apartamento a venda {cidade}", "kw_long": "comprar apartamento {cidade}", "intent": "comercial", "faq": ["Tem imoveis disponiveis?", "Como funciona o financiamento?", "Qual regiao atende?"]},
-    "contabilidade": {"schema": "AccountingService", "h1": "Contabilidade em {cidade} - {nome}", "kw": "contabilidade {cidade}, contador {cidade}", "kw_long": "contador MEI {cidade}, declaracao IR {cidade}", "intent": "comercial", "faq": ["Quanto custa abrir empresa?", "Atende MEI?", "Faz IR?"]},
-    "escola": {"schema": "School", "h1": "Escola em {cidade} - {nome}", "kw": "escola {cidade}, colegio {cidade}", "kw_long": "escola particular {cidade}", "intent": "comercial", "faq": ["Como fazer matricula?", "Qual a mensalidade?", "Tem transporte?"]},
+    "odontologia": {"schema": "Dentist", "h1": "Dentista em {cidade} - {nome}", "kw": "dentista em {cidade}, implante {cidade}", "kw_long": "dentista perto de mim {cidade}, clareamento dental {cidade}", "intent": "transacional", "faq": ["Aceita convenio?", "Faz clareamento?", "Como agendar?"]},
+    "estetica": {"schema": "BeautySalon", "h1": "Estetica em {cidade} - {nome}", "kw": "estetica em {cidade}, limpeza de pele {cidade}", "kw_long": "estetica facial {cidade}, depilacao laser {cidade}", "intent": "transacional", "faq": ["Quais tratamentos?", "Quanto custa?", "Precisa agendar?"]},
+    "pizzaria": {"schema": "FoodEstablishment", "h1": "Pizzaria em {cidade} - {nome}", "kw": "pizzaria em {cidade}, pizza delivery {cidade}", "kw_long": "melhor pizzaria {cidade}", "intent": "transacional", "faq": ["Faz delivery?", "Qual o horario?", "Qual a area de entrega?"]},
+    "farmacia": {"schema": "Pharmacy", "h1": "Farmacia em {cidade} - {nome}", "kw": "farmacia em {cidade}, manipulacao {cidade}", "kw_long": "farmacia 24h {cidade}", "intent": "transacional", "faq": ["Faz manipulacao?", "Tem plantao 24h?", "Faz delivery?"]},
+    "imobiliaria": {"schema": "RealEstateAgent", "h1": "Imobiliaria em {cidade} - {nome}", "kw": "imobiliaria em {cidade}, apartamento a venda {cidade}", "kw_long": "comprar apartamento {cidade}", "intent": "comercial", "faq": ["Tem imoveis disponiveis?", "Como funciona o financiamento?", "Qual regiao atende?"]},
+    "contabilidade": {"schema": "AccountingService", "h1": "Contabilidade em {cidade} - {nome}", "kw": "contabilidade em {cidade}, contador {cidade}", "kw_long": "contador MEI {cidade}, declaracao IR {cidade}", "intent": "comercial", "faq": ["Quanto custa abrir empresa?", "Atende MEI?", "Faz IR?"]},
+    "escola": {"schema": "School", "h1": "Escola em {cidade} - {nome}", "kw": "escola em {cidade}, colegio {cidade}", "kw_long": "escola particular {cidade}", "intent": "comercial", "faq": ["Como fazer matricula?", "Qual a mensalidade?", "Tem transporte?"]},
     "salao_beleza": {"schema": "HairSalon", "h1": "Salao de Beleza em {cidade} - {nome}", "kw": "salao de beleza {cidade}, cabeleireiro {cidade}", "kw_long": "salao perto de mim {cidade}, progressiva {cidade}", "intent": "transacional", "faq": ["Precisa agendar?", "Faz progressiva?", "Qual o preco?"]},
-    "auto_pecas": {"schema": "AutoRepair", "h1": "Auto Pecas em {cidade} - {nome}", "kw": "auto pecas {cidade}, mecanica {cidade}", "kw_long": "auto pecas perto de mim {cidade}", "intent": "transacional", "faq": ["Quais marcas atende?", "Faz orcamento?", "Tem garantia?"]}
+    "auto_pecas": {"schema": "AutoRepair", "h1": "Auto Pecas em {cidade} - {nome}", "kw": "auto pecas em {cidade}, mecanica {cidade}", "kw_long": "auto pecas perto de mim {cidade}", "intent": "transacional", "faq": ["Quais marcas atende?", "Faz orcamento?", "Tem garantia?"]}
 }
 
 
 def get_seo_context(segmento: str, cidade: str, nome: str) -> str:
     seg = segmento.lower().replace(" ", "_").replace("-", "_")
     seg = ALIASES.get(seg, seg)
-    seo = SEO_NICHOS.get(seg, {
-        "schema": "LocalBusiness", "h1": "{nome} em {cidade}",
-        "kw": "{segmento} em {cidade}", "kw_long": "melhor {segmento} {cidade}",
-        "intent": "transacional", "faq": ["Como entrar em contato?", "Qual o horario?", "Onde fica?"]
-    })
+    # Sprint 12.x: consultar nicho_registry primeiro (fonte unica)
+    seo = None
+    try:
+        from backend.config.nicho_registry import get_nicho_config, get_schema_type
+        cfg = get_nicho_config(seg)
+        seo = {
+            "schema": get_schema_type(seg),
+            "h1": f"{{nome}} em {{cidade}}",
+            "kw": ", ".join(cfg.seo_keywords[:3]),
+            "kw_long": ", ".join(cfg.seo_keywords),
+            "intent": "transacional",
+            "faq": list(cfg.faq),
+        }
+    except Exception:
+        pass
+    # Fallback para SEO_NICHOS legacy
+    if seo is None:
+        seo = SEO_NICHOS.get(seg, {
+            "schema": "LocalBusiness", "h1": "{nome} em {cidade}",
+            "kw": "{segmento} em {cidade}", "kw_long": "melhor {segmento} {cidade}",
+            "intent": "transacional", "faq": ["Como entrar em contato?", "Qual o horario?", "Onde fica?"]
+        })
     h1 = seo["h1"].format(cidade=cidade, nome=nome, segmento=seg)
     kw = seo["kw"].format(cidade=cidade, segmento=seg)
     kw_long = seo["kw_long"].format(cidade=cidade, segmento=seg)

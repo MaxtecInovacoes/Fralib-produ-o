@@ -465,6 +465,196 @@ def infer_aesthetic_pole(
     }
 
 
+# ═══════════════════════════════════════════════════════════════════════════
+# SERVICES DISPLAY MODES - Modos de display da secao de Servicos por polo
+# ═══════════════════════════════════════════════════════════════════════════
+
+SERVICES_DISPLAY_MODES: dict[str, dict[str, dict[str, Any]]] = {
+    "soft": {
+        "stacked_cards": {
+            "name": "Stacked Editorial Cards",
+            "description": "Cards arredondados em coluna unica, foco em respiro e tipografia",
+            "container": "flex flex-col gap-12 max-w-3xl mx-auto",
+            "card_class": "rounded-[40px] p-10 bg-[--surface] shadow-[0_8px_32px_rgba(139,92,246,0.10)]",
+            "icon_class": "w-16 h-16 rounded-full bg-[--primary]/10 text-[--primary] flex items-center justify-center",
+            "title_class": "text-2xl font-serif mt-6",
+            "body_class": "text-base text-[--muted] mt-3 leading-relaxed",
+            "image_treatment": "warm",
+            "density": "editorial",
+        },
+        "alternating_split": {
+            "name": "Alternating Split",
+            "description": "Imagem alterna com texto, esquerda/direita, ritmo calmo",
+            "container": "flex flex-col gap-20",
+            "row_class": "grid md:grid-cols-2 gap-12 items-center",
+            "row_reverse": True,
+            "card_class": "rounded-[40px]",
+            "image_treatment": "warm",
+            "density": "editorial",
+        },
+    },
+    "bold": {
+        "mosaic": {
+            "name": "Mosaic Aggressive",
+            "description": "Grid quebrado, mosaico de tamanhos diferentes, sobreposicoes",
+            "container": "grid grid-cols-12 gap-2 auto-rows-[180px]",
+            "card_class": "rounded-none border-2 border-[--primary] shadow-[6px_6px_0px_var(--primary)] bg-[--surface]",
+            "card_sizes": ["col-span-7 row-span-2", "col-span-5", "col-span-4", "col-span-8", "col-span-6"],
+            "title_class": "uppercase italic text-3xl tracking-tight",
+            "body_class": "text-sm uppercase tracking-wider",
+            "image_treatment": "grayscale",
+            "density": "mosaic",
+        },
+        "split_tension": {
+            "name": "Split Tension Cards",
+            "description": "Cards em duas metades com tensao visual, sem arredondar",
+            "container": "grid md:grid-cols-2 gap-0 border-y-2 border-[--primary]",
+            "card_class": "p-8 border-r-2 border-[--primary] last:border-r-0",
+            "title_class": "uppercase italic text-4xl",
+            "body_class": "uppercase text-sm tracking-widest mt-4",
+            "image_treatment": "grayscale",
+            "density": "mosaic",
+        },
+    },
+    "corporate": {
+        "three_column": {
+            "name": "Three Column Grid",
+            "description": "Grid 3 colunas, cards limpos, profissional e legivel",
+            "container": "grid md:grid-cols-3 gap-6",
+            "card_class": "rounded-md p-6 bg-[--surface] border border-[--border]",
+            "title_class": "text-xl font-semibold",
+            "body_class": "text-sm text-[--muted] mt-3",
+            "image_treatment": "clean",
+            "density": "balanced",
+        },
+        "list_with_icon": {
+            "name": "List With Icon",
+            "description": "Lista vertical com icone lateral, foco em autoridade",
+            "container": "flex flex-col divide-y divide-[--border] max-w-3xl mx-auto",
+            "card_class": "py-6 flex items-start gap-4",
+            "title_class": "text-lg font-medium",
+            "body_class": "text-sm text-[--muted] mt-1",
+            "image_treatment": "clean",
+            "density": "tight",
+        },
+    },
+    "minimal": {
+        "bento_grid": {
+            "name": "Bento Grid",
+            "description": "Grid Bento com celulas de tamanhos diferentes, glass-card",
+            "container": "grid grid-cols-12 gap-3 auto-rows-[minmax(140px,auto)]",
+            "card_class": "rounded-xl glass-card p-6",
+            "card_sizes": ["col-span-7 row-span-2", "col-span-5", "col-span-4", "col-span-4", "col-span-4"],
+            "title_class": "text-xl lowercase font-medium",
+            "body_class": "text-sm text-[--muted] mt-2",
+            "image_treatment": "glass",
+            "density": "tight",
+        },
+        "feature_list": {
+            "name": "Feature List",
+            "description": "Lista minimalista com icone geometrico",
+            "container": "grid md:grid-cols-2 gap-x-12 gap-y-8",
+            "card_class": "border-t border-white/10 pt-6",
+            "title_class": "text-lg lowercase",
+            "body_class": "text-sm text-[--muted] mt-2",
+            "image_treatment": "glass",
+            "density": "balanced",
+        },
+    },
+}
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# GALLERY DISPLAY MODES - Modos de display da Galeria por polo
+# ═══════════════════════════════════════════════════════════════════════════
+
+GALLERY_DISPLAY_MODES: dict[str, dict[str, dict[str, Any]]] = {
+    "soft": {
+        "masonry": {
+            "name": "Masonry Soft",
+            "description": "Masonry classico com padding generoso e imagens arredondadas",
+            "container": "columns-1 md:columns-2 lg:columns-3 gap-6",
+            "card_class": "rounded-[32px] mb-6 break-inside-avoid",
+            "image_class": "rounded-[32px] w-full",
+            "image_treatment": "warm",
+            "density": "editorial",
+        },
+        "carousel_soft": {
+            "name": "Carousel Soft",
+            "description": "Carousel horizontal com cards grandes e respiro",
+            "container": "flex gap-6 overflow-x-auto snap-x snap-mandatory pb-4",
+            "card_class": "rounded-[32px] min-w-[320px] snap-center",
+            "image_class": "rounded-[32px] aspect-[4/5]",
+            "image_treatment": "warm",
+            "density": "balanced",
+        },
+    },
+    "bold": {
+        "mosaic_chaos": {
+            "name": "Mosaic Chaos",
+            "description": "Grid com sobreposicoes agressivas, sem gap, imagens gritando",
+            "container": "grid grid-cols-12 gap-1",
+            "card_class": "rounded-none",
+            "card_sizes": ["col-span-8 row-span-2", "col-span-4", "col-span-5", "col-span-7", "col-span-6", "col-span-6"],
+            "image_class": "rounded-none grayscale contrast-125 w-full h-full object-cover",
+            "image_treatment": "grayscale",
+            "density": "mosaic",
+        },
+        "strip": {
+            "name": "Horizontal Strip",
+            "description": "Strip horizontal unica, ritmo rapido",
+            "container": "flex gap-1 overflow-x-auto",
+            "card_class": "rounded-none min-w-[260px] flex-shrink-0",
+            "image_class": "rounded-none aspect-square w-full object-cover",
+            "image_treatment": "grayscale",
+            "density": "tight",
+        },
+    },
+    "corporate": {
+        "grid_clean": {
+            "name": "Grid Clean",
+            "description": "Grid 3 colunas, leve gap, imagens objetivas",
+            "container": "grid md:grid-cols-3 gap-4",
+            "card_class": "rounded-md overflow-hidden",
+            "image_class": "rounded-md aspect-square w-full object-cover",
+            "image_treatment": "clean",
+            "density": "balanced",
+        },
+        "lightbox_grid": {
+            "name": "Lightbox Grid",
+            "description": "Grid com lightbox no clique, foco em portfolio profissional",
+            "container": "grid md:grid-cols-4 gap-3",
+            "card_class": "rounded-sm overflow-hidden cursor-zoom-in",
+            "image_class": "rounded-sm aspect-square w-full object-cover",
+            "image_treatment": "clean",
+            "density": "tight",
+        },
+    },
+    "minimal": {
+        "bento_gallery": {
+            "name": "Bento Gallery",
+            "description": "Bento grid com proporcoes variadas, glass-card",
+            "container": "grid grid-cols-12 gap-2 auto-rows-[minmax(120px,auto)]",
+            "card_class": "rounded-xl glass-card overflow-hidden",
+            "card_sizes": ["col-span-8 row-span-2", "col-span-4", "col-span-4", "col-span-4", "col-span-4", "col-span-7", "col-span-5"],
+            "image_class": "rounded-xl w-full h-full object-cover",
+            "image_treatment": "glass",
+            "density": "tight",
+        },
+        "mosaic_tech": {
+            "name": "Mosaic Tech",
+            "description": "Mosaico moderno com proporcoes douradas",
+            "container": "grid grid-cols-4 gap-2 auto-rows-[180px]",
+            "card_class": "rounded-lg overflow-hidden",
+            "card_sizes": ["col-span-2 row-span-2", "col-span-2", "col-span-2", "col-span-1", "col-span-1", "col-span-2"],
+            "image_class": "rounded-lg w-full h-full object-cover",
+            "image_treatment": "glass",
+            "density": "balanced",
+        },
+    },
+}
+
+
 def get_hero_display_mode(pole: str, mode: str | None = None) -> dict[str, Any]:
     """
     Retorna a configuração do display mode do Hero.
@@ -506,6 +696,73 @@ def get_component_variant(component: str, pole: str) -> str:
     return variants.get(pole, variants.get("corporate", ""))
 
 
+def get_services_display_mode(pole: str, mode: str | None = None) -> dict[str, Any]:
+    """
+    Retorna a configuracao do display mode da secao de Servicos.
+
+    Args:
+        pole: Polo estetico (soft | bold | corporate | minimal)
+        mode: Modo especifico (opcional, usa default do polo se None)
+
+    Returns:
+        Dict com container/card/title/body classes + image_treatment/density
+    """
+    pole = (pole or "").lower().strip()
+    modes = SERVICES_DISPLAY_MODES.get(pole, SERVICES_DISPLAY_MODES["corporate"])
+
+    if mode and mode in modes:
+        return modes[mode]
+
+    # Default por polo
+    if pole == "soft":
+        default = "stacked_cards"
+    elif pole == "bold":
+        default = "mosaic"
+    elif pole == "minimal":
+        default = "bento_grid"
+    else:
+        default = "three_column"
+
+    if default in modes:
+        return modes[default]
+
+    # Fallback seguro: primeiro modo disponivel
+    return list(modes.values())[0]
+
+
+def get_gallery_display_mode(pole: str, mode: str | None = None) -> dict[str, Any]:
+    """
+    Retorna a configuracao do display mode da Galeria.
+
+    Args:
+        pole: Polo estetico (soft | bold | corporate | minimal)
+        mode: Modo especifico (opcional, usa default do polo se None)
+
+    Returns:
+        Dict com container/card/image classes + image_treatment/density
+    """
+    pole = (pole or "").lower().strip()
+    modes = GALLERY_DISPLAY_MODES.get(pole, GALLERY_DISPLAY_MODES["corporate"])
+
+    if mode and mode in modes:
+        return modes[mode]
+
+    # Default por polo
+    if pole == "soft":
+        default = "masonry"
+    elif pole == "bold":
+        default = "mosaic_chaos"
+    elif pole == "minimal":
+        default = "bento_gallery"
+    else:
+        default = "grid_clean"
+
+    if default in modes:
+        return modes[default]
+
+    return list(modes.values())[0]
+
+
 # ═══════════════════════════════════════════════════════════════════════════
 # LLM PROMPT GUIDE
 # ═══════════════════════════════════════════════════════════════════════════
@@ -524,6 +781,8 @@ def get_liquid_component_guide(pole: str, hero_mode: str | None = None) -> str:
     """
     tokens = POLO_TOKENS.get(pole, POLO_TOKENS["corporate"])
     hero_config = get_hero_display_mode(pole, hero_mode)
+    services_config = get_services_display_mode(pole)
+    gallery_config = get_gallery_display_mode(pole)
 
     tokens_lines = "\n".join(
         f"  --{key}: {value}" if not isinstance(value, bool) else f"  --{key}: {str(value).lower()}"
@@ -549,6 +808,23 @@ HERO LAYOUT EXAMPLE:
   <button className="{hero_config.get('cta_style', '')}">{{cta}}</button>
 </section>
 ```
+
+SERVICES DISPLAY MODE: {services_config.get('name', 'Default')}
+{services_config.get('description', '')}
+- container: `{services_config.get('container', '')}`
+- card_class: `{services_config.get('card_class', '')}`
+- title_class: `{services_config.get('title_class', '')}`
+- body_class: `{services_config.get('body_class', '')}`
+- image_treatment: {services_config.get('image_treatment', '')}
+- density: {services_config.get('density', '')}
+
+GALLERY DISPLAY MODE: {gallery_config.get('name', 'Default')}
+{gallery_config.get('description', '')}
+- container: `{gallery_config.get('container', '')}`
+- card_class: `{gallery_config.get('card_class', '')}`
+- image_class: `{gallery_config.get('image_class', '')}`
+- image_treatment: {gallery_config.get('image_treatment', '')}
+- density: {gallery_config.get('density', '')}
 
 COMPONENT CLASSES:
 - Button: {get_component_variant('Button', pole)}
@@ -604,10 +880,14 @@ AESTHETIC_PERSONALITIES = POLO_TOKENS
 __all__ = [
     "POLO_TOKENS",
     "HERO_DISPLAY_MODES",
+    "SERVICES_DISPLAY_MODES",
+    "GALLERY_DISPLAY_MODES",
     "COMPONENT_VARIANTS",
     "POLE_TRIGGERS",
     "infer_aesthetic_pole",
     "get_hero_display_mode",
+    "get_services_display_mode",
+    "get_gallery_display_mode",
     "get_component_variant",
     "get_liquid_component_guide",
     "get_css_variables_for_pole",

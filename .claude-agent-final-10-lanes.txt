@@ -1,0 +1,468 @@
+Agora, aqui está o output estruturado com as 10 lanes completas. Cada uma respeita o shape observado em `_LANES` (campos `id`, `name`, `fallback_palette`, `blocks`, `copy`), usa placeholders `{name}` e `{city}` onde o template os consome, e respeita os variants válidos confirmados no renderer (`hero_variant ∈ {split, center, video, asymmetric, fullbleed}`, `services_variant ∈ {stacked_cards, split_editorial, stats_then_cards}`, `reviews_variant ∈ {score_wall, card_marquee, quote_spotlight, editorial_case}`, `faq_variant ∈ {panel, inline}`, `location_variant ∈ {feature_local, split_local}`, `surface_style ∈ {outline, solid, soft_tint}`).
+
+A paleta de cada lane respeita o polo declarado:
+- ADVOGADO/CLINICA/DENTISTA → polo CLASSIC (dourado/marrom-navy / azul marinho-branco / azul claro-cyan-branco)
+- PET_SHOP/SALAO → polo SOFT (verde-mostarda-terracota / rosa-dourado-champagne)
+
+E cada lane tem identidade visual distinta (paleta + combinação de variants + surface).
+
+---
+
+```python
+{
+  "lanes": {
+    "advogado": [
+      {
+        "id": "advogado-statute-noir",
+        "name": "Statute Noir",
+        "fallback_palette": {
+          "primary": "#c9a14a",
+          "secondary": "#1a120b",
+          "bg_dark": "#0b0805",
+          "bg_light": "#f5efe3",
+          "text_dark": "#15100a"
+        },
+        "blocks": {
+          "hero_variant": "fullbleed",
+          "services_variant": "split_editorial",
+          "reviews_variant": "editorial_case",
+          "faq_variant": "panel",
+          "location_variant": "split_local",
+          "surface_style": "solid"
+        },
+        "copy": {
+          "hero_badge": "Advocacia com autoridade clássica",
+          "about_kicker": "Tribunal",
+          "about_title": "Leitura sóbria, argumento forte e presença que sustenta a causa.",
+          "about_body": "{name} organiza a defesa e o atendimento jurídico com discrição, método e linguagem firme para clientes em {city}.",
+          "gallery_title": "Biblioteca, tribunal e detalhe da escrita jurídica.",
+          "gallery_intro": "A galeria reforça tradição, livro, código e ambiente reservado do escritório.",
+          "reviews_title": "Casos conduzidos com responsabilidade e prova local.",
+          "reviews_intro": "Depoimentos aparecem como histórico de atendimento, sem expor clientes.",
+          "faq_title": "Antes de contratar a banca.",
+          "faq_intro": "Respostas claras sobre honorários, prazos, documentos e estratégia inicial.",
+          "location_title": "Atendimento jurídico em {city} com sigilo.",
+          "location_intro": "Endereço, rota e contato entram com discrição e clareza editorial.",
+          "lifestyle_kicker": "Tradição",
+          "contact_kicker": "Consulta"
+        }
+      },
+      {
+        "id": "advogado-lex-meridian",
+        "name": "Lex Meridian",
+        "fallback_palette": {
+          "primary": "#d6b86a",
+          "secondary": "#0f1d3a",
+          "bg_dark": "#0a1326",
+          "bg_light": "#f4f1e7",
+          "text_dark": "#0d172e"
+        },
+        "blocks": {
+          "hero_variant": "asymmetric",
+          "services_variant": "stacked_cards",
+          "reviews_variant": "quote_spotlight",
+          "faq_variant": "inline",
+          "location_variant": "feature_local",
+          "surface_style": "outline"
+        },
+        "copy": {
+          "hero_badge": "Advocacia técnica e estratégica",
+          "about_kicker": "Estratégia",
+          "about_title": "Atuação jurídica com método, leitura precisa e postura firme.",
+          "about_body": "{name} conduz causas com análise técnica, petição bem escrita e atendimento direto para quem procura representação em {city}.",
+          "gallery_title": "Documento, jurisprudência e ambiente do escritório.",
+          "gallery_intro": "A composição une rigor, biblioteca, código civil e presença editorial.",
+          "reviews_title": "Confiança construída em caso a caso.",
+          "reviews_intro": "A reputação aparece como sinal de técnica e acompanhamento.",
+          "faq_title": "O cliente quer saber antes de assinar procuração.",
+          "faq_intro": "FAQ enxuto sobre honorários, contrato, prazos e primeiras medidas.",
+          "location_title": "Escritório de advocacia em {city}.",
+          "location_intro": "O contato fica objetivo para consulta inicial sem ruído.",
+          "lifestyle_kicker": "Método",
+          "contact_kicker": "Procuração"
+        }
+      }
+    ],
+    "clinica": [
+      {
+        "id": "clinica-medical-trust",
+        "name": "Medical Trust",
+        "fallback_palette": {
+          "primary": "#1f3a68",
+          "secondary": "#ffffff",
+          "bg_dark": "#0a182d",
+          "bg_light": "#eef4fb",
+          "text_dark": "#0b1c33"
+        },
+        "blocks": {
+          "hero_variant": "split",
+          "services_variant": "stacked_cards",
+          "reviews_variant": "score_wall",
+          "faq_variant": "panel",
+          "location_variant": "split_local",
+          "surface_style": "outline"
+        },
+        "copy": {
+          "hero_badge": "Clínica com atendimento médico responsável",
+          "about_kicker": "Diagnóstico",
+          "about_title": "Consulta, exame e acompanhamento com leitura clínica clara.",
+          "about_body": "{name} organiza agenda médica, especialidades e exames para pacientes que procuram atendimento estruturado em {city}.",
+          "gallery_title": "Consultório, recepção e ambiente assistencial.",
+          "gallery_intro": "A galeria mostra espaço limpo, equipe, sala de exame e circulação do paciente.",
+          "reviews_title": "Reputação construída em cada consulta.",
+          "reviews_intro": "Avaliações entram como sinal de confiança clínica e bom atendimento.",
+          "faq_title": "Perguntas antes de marcar a consulta.",
+          "faq_intro": "Respostas sobre convênio, particular, exames e documentação.",
+          "location_title": "Atendimento médico em {city} com rota clara.",
+          "location_intro": "Endereço, telefone e WhatsApp aparecem sem ruído visual.",
+          "lifestyle_kicker": "Cuidado clínico",
+          "contact_kicker": "Agendar consulta"
+        }
+      },
+      {
+        "id": "clinica-care-plus",
+        "name": "Care Plus",
+        "fallback_palette": {
+          "primary": "#2c5697",
+          "secondary": "#dfe9f5",
+          "bg_dark": "#f3f7fc",
+          "bg_light": "#ffffff",
+          "text_dark": "#102a4d"
+        },
+        "blocks": {
+          "hero_variant": "center",
+          "services_variant": "split_editorial",
+          "reviews_variant": "card_marquee",
+          "faq_variant": "inline",
+          "location_variant": "feature_local",
+          "surface_style": "soft_tint"
+        },
+        "copy": {
+          "hero_badge": "Cuidado médico completo para a família",
+          "about_kicker": "Acompanhamento",
+          "about_title": "Clínica geral, especialidades e exames em um só lugar.",
+          "about_body": "{name} integra consulta, retorno e exames preventivos para famílias e pacientes que querem continuidade de cuidado em {city}.",
+          "gallery_title": "Atendimento humanizado, equipe e estrutura.",
+          "gallery_intro": "A página destaca recepção, consultório, equipe multidisciplinar e sala de espera.",
+          "reviews_title": "Pacientes que voltam e indicam a clínica.",
+          "reviews_intro": "As avaliações reforçam acolhimento, agilidade e qualidade do atendimento.",
+          "faq_title": "Dúvidas frequentes do primeiro atendimento.",
+          "faq_intro": "Convênio, documentação, agendamento e retorno em respostas curtas.",
+          "location_title": "Clínica próxima em {city} com fácil acesso.",
+          "location_intro": "Endereço e WhatsApp médico ficam lado a lado para decisão rápida.",
+          "lifestyle_kicker": "Família",
+          "contact_kicker": "Marcar"
+        }
+      }
+    ],
+    "dentista": [
+      {
+        "id": "dentista-smile-care",
+        "name": "Smile Care",
+        "fallback_palette": {
+          "primary": "#5ec8e3",
+          "secondary": "#0f3b66",
+          "bg_dark": "#062235",
+          "bg_light": "#eefaff",
+          "text_dark": "#0a2841"
+        },
+        "blocks": {
+          "hero_variant": "video",
+          "services_variant": "stats_then_cards",
+          "reviews_variant": "card_marquee",
+          "faq_variant": "inline",
+          "location_variant": "feature_local",
+          "surface_style": "outline"
+        },
+        "copy": {
+          "hero_badge": "Odontologia com clareza e acolhimento",
+          "about_kicker": "Sorriso",
+          "about_title": "Limpeza, clareamento e tratamento odontológico com leitura leve.",
+          "about_body": "{name} combina consulta, avaliação e plano odontológico para pacientes que querem um sorriso saudável em {city}.",
+          "gallery_title": "Consultório, cadeira e detalhe do atendimento.",
+          "gallery_intro": "A galeria mostra ambiente claro, equipamento moderno e equipe cuidadosa.",
+          "reviews_title": "Pacientes que voltam para a próxima consulta.",
+          "reviews_intro": "Avaliações reforçam atendimento sem dor, agilidade e resultado visível.",
+          "faq_title": "Antes de marcar no dentista.",
+          "faq_intro": "Respostas rápidas sobre convênio odontológico, particular e primeira avaliação.",
+          "location_title": "Consultório odontológico em {city}.",
+          "location_intro": "Endereço e contato direto para agendamento da avaliação.",
+          "lifestyle_kicker": "Sorriso",
+          "contact_kicker": "Avaliação"
+        }
+      },
+      {
+        "id": "dentista-clinical-white",
+        "name": "Clinical White",
+        "fallback_palette": {
+          "primary": "#3fb6cf",
+          "secondary": "#dff5fb",
+          "bg_dark": "#ffffff",
+          "bg_light": "#f6fcfd",
+          "text_dark": "#103a4c"
+        },
+        "blocks": {
+          "hero_variant": "split",
+          "services_variant": "split_editorial",
+          "reviews_variant": "editorial_case",
+          "faq_variant": "panel",
+          "location_variant": "split_local",
+          "surface_style": "solid"
+        },
+        "copy": {
+          "hero_badge": "Clínica odontológica clean e técnica",
+          "about_kicker": "Procedimento",
+          "about_title": "Implante, ortodontia e estética dental em ambiente clínico claro.",
+          "about_body": "{name} apresenta especialidades odontológicas, plano de tratamento e retorno programado para pacientes em {city}.",
+          "gallery_title": "Equipamento, sala clínica e resultado do tratamento.",
+          "gallery_intro": "A página destaca antes e depois, consultório e tecnologia utilizada.",
+          "reviews_title": "Casos resolvidos com técnica e cuidado.",
+          "reviews_intro": "Reputação local sustenta a escolha sem ruído de marketing.",
+          "faq_title": "Perguntas sobre tratamento e orçamento.",
+          "faq_intro": "Respostas claras sobre implantes, aparelho, clareamento e formas de pagamento.",
+          "location_title": "Atendimento odontológico em {city}.",
+          "location_intro": "O contato para orçamento e primeira consulta fica objetivo.",
+          "lifestyle_kicker": "Estética dental",
+          "contact_kicker": "Orçamento"
+        }
+      }
+    ],
+    "pet_shop": [
+      {
+        "id": "pet-shop-patudo",
+        "name": "Patudo",
+        "fallback_palette": {
+          "primary": "#3f7a4a",
+          "secondary": "#c89b3c",
+          "bg_dark": "#1a2a1f",
+          "bg_light": "#f7f1e1",
+          "text_dark": "#1c2a1d"
+        },
+        "blocks": {
+          "hero_variant": "center",
+          "services_variant": "stacked_cards",
+          "reviews_variant": "quote_spotlight",
+          "faq_variant": "panel",
+          "location_variant": "split_local",
+          "surface_style": "soft_tint"
+        },
+        "copy": {
+          "hero_badge": "Pet shop com carinho e rotina",
+          "about_kicker": "Cuidado animal",
+          "about_title": "Banho, tosa e produtos pensados para o dia a dia do pet.",
+          "about_body": "{name} cuida de cães e gatos com ambiente tranquilo, equipe paciente e atendimento próximo para tutores de {city}.",
+          "gallery_title": "Banho, tosa e olhar carinhoso do pet.",
+          "gallery_intro": "A galeria mostra antes e depois, pets atendidos e ambiente do pet shop.",
+          "reviews_title": "Tutores que voltam toda semana.",
+          "reviews_intro": "Avaliações reforçam cuidado, paciência e carinho da equipe.",
+          "faq_title": "Antes de levar o pet para tosa.",
+          "faq_intro": "Respostas sobre agendamento, vacinas, porte do animal e produtos.",
+          "location_title": "Pet shop em {city} com fácil chegada.",
+          "location_intro": "Endereço e WhatsApp aparecem lado a lado para marcar o banho.",
+          "lifestyle_kicker": "Carinho",
+          "contact_kicker": "Agendar banho"
+        }
+      },
+      {
+        "id": "pet-shop-pet-care-pro",
+        "name": "Pet Care Pro",
+        "fallback_palette": {
+          "primary": "#b95a3a",
+          "secondary": "#5a8c4a",
+          "bg_dark": "#2a1612",
+          "bg_light": "#fbf0e3",
+          "text_dark": "#2a1814"
+        },
+        "blocks": {
+          "hero_variant": "asymmetric",
+          "services_variant": "split_editorial",
+          "reviews_variant": "editorial_case",
+          "faq_variant": "inline",
+          "location_variant": "feature_local",
+          "surface_style": "outline"
+        },
+        "copy": {
+          "hero_badge": "Pet shop completo e profissional",
+          "about_kicker": "Atendimento completo",
+          "about_title": "Banho, tosa, veterinária e ração em um só lugar.",
+          "about_body": "{name} oferece serviço completo para pets com agendamento, equipe treinada e cuidado veterinário de rotina em {city}.",
+          "gallery_title": "Loja, consultório e rotina dos pets atendidos.",
+          "gallery_intro": "A composição mostra prateleira, equipe, pet sentado e ambiente limpo do pet shop.",
+          "reviews_title": "Confiança construída com cada tutor.",
+          "reviews_intro": "Avaliações aparecem como prova de cuidado recorrente e atendimento sério.",
+          "faq_title": "Dúvidas antes da primeira visita.",
+          "faq_intro": "FAQ sobre agendamento, pacotes, vacinas e delivery de ração.",
+          "location_title": "Pet shop profissional em {city}.",
+          "location_intro": "Endereço, contato e WhatsApp prontos para a primeira visita.",
+          "lifestyle_kicker": "Cuidado pro",
+          "contact_kicker": "Reservar"
+        }
+      }
+    ],
+    "salao": [
+      {
+        "id": "salao-glow-studio",
+        "name": "Glow Studio",
+        "fallback_palette": {
+          "primary": "#d8a3b5",
+          "secondary": "#c9a14a",
+          "bg_dark": "#2a1620",
+          "bg_light": "#fdf1ee",
+          "text_dark": "#2a1620"
+        },
+        "blocks": {
+          "hero_variant": "split",
+          "services_variant": "stacked_cards",
+          "reviews_variant": "card_marquee",
+          "faq_variant": "panel",
+          "location_variant": "split_local",
+          "surface_style": "soft_tint"
+        },
+        "copy": {
+          "hero_badge": "Salão de beleza com brilho próprio",
+          "about_kicker": "Brilho",
+          "about_title": "Coloração, corte e finalização com leitura feminina e calorosa.",
+          "about_body": "{name} atende clientes que buscam cor, corte e tratamento capilar com ambiente acolhedor em {city}.",
+          "gallery_title": "Cabelo, espelho e detalhe do salão.",
+          "gallery_intro": "A galeria mostra antes e depois, escova, mechas e o clima do salão.",
+          "reviews_title": "Clientes que indicam o salão para amigas.",
+          "reviews_intro": "Avaliações reforçam resultado, atendimento e ambiente bonito.",
+          "faq_title": "Antes de marcar no salão.",
+          "faq_intro": "Respostas sobre coloração, tempo de atendimento, preço e agendamento.",
+          "location_title": "Salão de beleza em {city} com fácil acesso.",
+          "location_intro": "Endereço e WhatsApp prontos para fechar o próximo horário.",
+          "lifestyle_kicker": "Brilho",
+          "contact_kicker": "Reservar horário"
+        }
+      },
+      {
+        "id": "salao-mirror-room",
+        "name": "Mirror Room",
+        "fallback_palette": {
+          "primary": "#e7c87a",
+          "secondary": "#b86b86",
+          "bg_dark": "#f7ecd6",
+          "bg_light": "#ffffff",
+          "text_dark": "#3a2418"
+        },
+        "blocks": {
+          "hero_variant": "asymmetric",
+          "services_variant": "split_editorial",
+          "reviews_variant": "quote_spotlight",
+          "faq_variant": "inline",
+          "location_variant": "feature_local",
+          "surface_style": "outline"
+        },
+        "copy": {
+          "hero_badge": "Salão com atmosfera de espelho e champagne",
+          "about_kicker": "Ritual",
+          "about_title": "Corte, escova e estética com experiência mais editorial.",
+          "about_body": "{name} propõe um ritual de beleza com espelhos, luz quente e equipe que entende o estilo da cliente em {city}.",
+          "gallery_title": "Espelho, luz quente e detalhe do ritual.",
+          "gallery_intro": "A composição mostra bancada, produto, cadeira e resultado do atendimento.",
+          "reviews_title": "Experiência que vira indicação.",
+          "reviews_intro": "Avaliações reforçam o clima, o atendimento e a durabilidade do resultado.",
+          "faq_title": "Antes de reservar o ritual.",
+          "faq_intro": "FAQ curto sobre agendamento, combos, manicure e pacotes.",
+          "location_title": "Salão em {city} com atmosfera reservada.",
+          "location_intro": "Endereço, contato e WhatsApp para marcar o próximo ritual.",
+          "lifestyle_kicker": "Ritual",
+          "contact_kicker": "Reservar"
+        }
+      }
+    ]
+  },
+  "copy_enrichments": {
+    "advogado-statute-noir": {
+      "services_kicker": "Áreas de atuação",
+      "gallery_kicker": "Biblioteca jurídica",
+      "reviews_kicker": "Casos conduzidos",
+      "faq_kicker": "Dúvidas jurídicas",
+      "location_cta_title": "Consulta inicial sigilosa em {city}",
+      "location_cta_body": "Entre em contato pelo WhatsApp para análise inicial da causa, sem compromisso.",
+      "contact_headline": "Fale com a banca em {city}"
+    },
+    "advogado-lex-meridian": {
+      "services_kicker": "Serviços jurídicos",
+      "gallery_kicker": "Escritório e método",
+      "reviews_kicker": "Clientes atendidos",
+      "faq_kicker": "Antes da procuração",
+      "location_cta_title": "Atendimento jurídico em {city}",
+      "location_cta_body": "Agende uma reunião para entender o caso, os honorários e a estratégia inicial.",
+      "contact_headline": "Análise inicial do caso em {city}"
+    },
+    "clinica-medical-trust": {
+      "services_kicker": "Especialidades médicas",
+      "gallery_kicker": "Estrutura da clínica",
+      "reviews_kicker": "Pacientes atendidos",
+      "faq_kicker": "Convênio e consulta",
+      "location_cta_title": "Agendar consulta em {city}",
+      "location_cta_body": "Fale com a recepção para marcar consulta, exame ou retorno pelo WhatsApp.",
+      "contact_headline": "Marque sua consulta em {city}"
+    },
+    "clinica-care-plus": {
+      "services_kicker": "Atendimento familiar",
+      "gallery_kicker": "Clínica e equipe",
+      "reviews_kicker": "Famílias acompanhadas",
+      "faq_kicker": "Primeiro atendimento",
+      "location_cta_title": "Cuidado médico para família em {city}",
+      "location_cta_body": "Agende consulta, exame de rotina ou retorno com a equipe multidisciplinar.",
+      "contact_headline": "Atendimento médico próximo em {city}"
+    },
+    "dentista-smile-care": {
+      "services_kicker": "Tratamentos odontológicos",
+      "gallery_kicker": "Consultório e equipe",
+      "reviews_kicker": "Pacientes sorrindo",
+      "faq_kicker": "Antes da consulta",
+      "location_cta_title": "Marcar avaliação odontológica em {city}",
+      "location_cta_body": "Agende a primeira avaliação odontológica pelo WhatsApp, com convênio ou particular.",
+      "contact_headline": "Cuide do seu sorriso em {city}"
+    },
+    "dentista-clinical-white": {
+      "services_kicker": "Especialidades odontológicas",
+      "gallery_kicker": "Consultório clean",
+      "reviews_kicker": "Casos concluídos",
+      "faq_kicker": "Plano e orçamento",
+      "location_cta_title": "Orçamento odontológico em {city}",
+      "location_cta_body": "Solicite avaliação e orçamento para implante, aparelho ou clareamento dental.",
+      "contact_headline": "Tratamento dental em {city}"
+    },
+    "pet-shop-patudo": {
+      "services_kicker": "Banho, tosa e carinho",
+      "gallery_kicker": "Pet atendido",
+      "reviews_kicker": "Tutores que voltam",
+      "faq_kicker": "Antes da tosa",
+      "location_cta_title": "Agendar banho do pet em {city}",
+      "location_cta_body": "Marque banho, tosa ou avaliação pelo WhatsApp do pet shop.",
+      "contact_headline": "Cuidando do seu pet em {city}"
+    },
+    "pet-shop-pet-care-pro": {
+      "services_kicker": "Cuidado completo",
+      "gallery_kicker": "Loja e equipe",
+      "reviews_kicker": "Tutores atendidos",
+      "faq_kicker": "Primeira visita",
+      "location_cta_title": "Reservar atendimento pet em {city}",
+      "location_cta_body": "Agende banho, tosa, consulta veterinária ou compre ração pelo WhatsApp.",
+      "contact_headline": "Pet shop profissional em {city}"
+    },
+    "salao-glow-studio": {
+      "services_kicker": "Cabelo e cor",
+      "gallery_kicker": "Antes e depois",
+      "reviews_kicker": "Clientes que indicam",
+      "faq_kicker": "Antes do salão",
+      "location_cta_title": "Reservar horário no salão em {city}",
+      "location_cta_body": "Marque corte, coloração ou escova progressiva pelo WhatsApp do salão.",
+      "contact_headline": "Seu próximo visual em {city}"
+    },
+    "salao-mirror-room": {
+      "services_kicker": "Ritual de beleza",
+      "gallery_kicker": "Espelho e luz",
+      "reviews_kicker": "Clientes do ritual",
+      "faq_kicker": "Antes do ritual",
+      "location_cta_title": "Reservar ritual de beleza em {city}",
+      "location_cta_body": "Agende corte, escova ou combo de beleza pelo WhatsApp do salão.",
+      "contact_headline": "Ritual de beleza em {city}"
+    }
+  }
+}
+```
