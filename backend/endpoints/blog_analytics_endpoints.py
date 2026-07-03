@@ -18,9 +18,20 @@ from backend.core.auth import get_current_user
 
 router = APIRouter(prefix="/api/superadmin", tags=['blog-analytics'])
 
-# Paths do blog
-FRONTEND_DIR = Path(__file__).parent.parent.parent / "frontend"
-BLOG_DIR = FRONTEND_DIR / "blog"
+# Paths do blog: usa /var/www/fralib/blog/ que eh gravavel em producao
+# /root/fralib/frontend/blog/ e o source de verdade mas a build copia pra /var/www
+WEBROOT_BLOG = Path("/var/www/fralib/blog")
+FRONTEND_BLOG = Path(__file__).parent.parent.parent / "frontend" / "blog"
+# Tenta WEBROOT primeiro (gravavel), fallback para source local
+try:
+    WEBROOT_BLOG.mkdir(parents=True, exist_ok=True)
+    test_file = WEBROOT_BLOG / ".write_test"
+    test_file.write_text("ok")
+    test_file.unlink()
+    BLOG_DIR = WEBROOT_BLOG
+except (OSError, PermissionError):
+    BLOG_DIR = FRONTEND_BLOG
+
 POSTS_DIR = BLOG_DIR / "posts"
 
 
