@@ -12,6 +12,8 @@ import json
 from typing import Dict, Any, Optional
 from datetime import datetime
 
+from agents._atomic_write import atomic_write_json
+
 MEMORY_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "memory")
 
 
@@ -45,10 +47,9 @@ def salvar_memoria(session_id: str, dados: Dict[str, Any], user_id: int = None) 
     dados["_updated_at"] = datetime.now().isoformat()
     dados["_user_id"] = uid
 
-    with open(memory_file, "w", encoding="utf-8") as f:
-        json.dump(dados, f, indent=2, ensure_ascii=False)
-
-    print(f"[Memory] Salvo: u{uid}/{session_id}")
+    # Sprint 1.0: escrita atomica (write->fsync->rename + lock por arquivo).
+    # Se crash entre open() e write(), arquivo original permanece intacto.
+    atomic_write_json(memory_file, dados)
 
 
 def carregar_memoria(session_id: str, user_id: int = None) -> Optional[Dict[str, Any]]:

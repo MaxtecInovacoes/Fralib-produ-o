@@ -398,7 +398,9 @@ def _debounce_incoming(tenant_id: str, msg_data: dict, executor, loop):
 
     # Flood check
     if _check_flood(lead_key):
-        logger.info(f"🚫 {telefone}: flood ativo, msg ignorada")
+        # Sprint 1.0: mascarar telefone (LGPD) — PII nao vai em logs
+        from utils.pii_masker import mask_phone
+        logger.info(f"🚫 {mask_phone(telefone)}: flood ativo, msg ignorada")
         return
 
     with _DEBOUNCE_LOCK:
@@ -585,12 +587,16 @@ def _processar_mensagem(tenant_id: str, msg_data: dict, texto_override: str = No
                 "[mídia]"
             )
 
-        print(f"[WPP-Listener] Mensagem de {telefone} ({push_name}): {texto[:60]}", flush=True)
+        # Sprint 1.0: mascarar telefone e mensagem em log (LGPD)
+        from utils.pii_masker import mask_phone, sanitize_message
+        _masked = mask_phone(telefone)
+        _safe_text = sanitize_message(texto, max_len=60)
+        print(f"[WPP-Listener] Mensagem de {_masked} ({push_name}): {_safe_text}", flush=True)
 
         # Buscar lead no banco (escopo ao user_id do tenant)
         lead = _buscar_lead_por_tel(telefone, user_id)
         if not lead:
-            print(f"[WPP-Listener] Lead não encontrado para {telefone} — ignorando", flush=True)
+            print(f"[WPP-Listener] Lead não encontrado para {_masked} — ignorando", flush=True)
             return
 
         lead_id, nome, segmento, cidade, sdr_stage_atual, status, tel_raw = lead
