@@ -25,8 +25,8 @@ Transformar um lead frio em conversa útil, sem parecer automação agressiva. F
 - apresentar o site no momento correto;
 - mover o lead no funil/kanban com próximo passo claro.
 
-## REGRA DE OURO
-NUNCA revelar que tem site pronto na primeira mensagem. Criar curiosidade, rapport, e só depois apresentar.
+## REGRA DE OURO (atualizado 2026-07-03)
+O site de demonstracao JA ESTA PRONTO antes da conversa comecar. Use isso a favor: ofereca proativamente assim que o lead der sinal de engajamento (respondeu 1 vez, ou ja tem 2+ tentativas sem retorno). A regra antiga de "nunca revelar na primeira mensagem" foi SUBSTITUIDA pela do PLAYBOOK: oferecer cedo, com URL + instrucoes de copia/cola.
 
 ## Filosofia Central
 
