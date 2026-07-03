@@ -503,11 +503,13 @@ def rank_for_fralib(trends: List[Dict]) -> List[Dict]:
 
 
 def fetch_all_trends() -> List[Dict]:
-    """Combina 3 fontes + pool de keywords PT como FALLBACK.
+    """Combina 3 fontes externas (Google Trends BR + Reddit + Hacker News).
 
-    O pool de keywords PT em FALLBACK_TOPICS_PT garante que mesmo se todas as
-    3 fontes externas falharem (Reddit bloqueia, Google Trends fora do ar,
-    Hacker News so tem EN), ainda temos topicos para gerar 2 posts/dia.
+    ZERO FALLBACK: se as 3 fontes nao retornam topicos em PT suficientes,
+    retorna lista vazia e o ciclo NAO gera posts (melhor qualidade > quantidade).
+
+    O cron ira rodar de novo em 9h ou 18h Brasilia quando as fontes
+    estiverem disponiveis novamente.
     """
     print("  Buscando trends em 3 fontes externas...")
     all_trends = []
@@ -521,11 +523,8 @@ def fetch_all_trends() -> List[Dict]:
     unique = deduplicate_trends(all_trends)
     print(f"  Total unicos externos: {len(unique)}")
 
-    # FALLBACK: se fontes externas renderam < 2 topicos, usa pool PT hardcoded
-    if len(unique) < 2:
-        print(f"  [FALLBACK] Usando pool de keywords PT pre-definidas")
-        fallback = _pick_fallback_topics(needed=2 - len(unique))
-        unique.extend(fallback)
+    if not unique:
+        print(f"  [ZERO FALLBACK] Nenhum topico em PT disponivel - ciclo nao gera posts hoje")
 
     ranked = rank_for_fralib(unique)
     print(f"  {len(ranked)} trends rankeados (final)")
@@ -533,88 +532,15 @@ def fetch_all_trends() -> List[Dict]:
 
 
 # ============================================================================
-# FALLBACK POOL - TOPICOS EM PT (sempre disponiveis)
+# ZERO FALLBACK: codigo de fallback removido intencionalmente
 # ============================================================================
-# Pool de keywords long-tail em PT cobrindo os nichos do FraLib.
-# Usado quando fontes externas (Google Trends/Reddit/HN) nao retornam
-# topicos em PT suficientes. Organizado por categoria.
-
-FALLBACK_TOPICS_PT = [
-    # IA & Automacao
-    ("Automacao comercial com IA em 2026: guia pratico para PMEs", "ia"),
-    ("Como agentes de IA vao substituir funcionarios repetitivos em 2026", "ia"),
-    ("IA generativa para vender mais: 7 casos reais no Brasil", "ia"),
-    ("SDR de IA: o vendedor que trabalha 24 horas sem reclamar", "ia"),
-    ("Micro SaaS com IA: como criar um negocio recorrente do zero", "ia"),
-    ("Prompts avancados para ChatGPT, Claude e Gemini em vendas", "ia"),
-    ("Como criar agentes autonomos de IA sem programar", "ia"),
-    ("Vende mais com IA: 5 fluxos prontos para copiar", "ia"),
-    # Vendas & WhatsApp
-    ("WhatsApp Business API 2026: como vender sem ser banido", "vendas"),
-    ("Prospeccao B2B pelo WhatsApp: o metodo que converte 30%", "vendas"),
-    ("Como cobrar R$ 1500 por site em 2026: tabela atualizada", "vendas"),
-    ("Funil de vendas automatizado: do lead ao fechamento em 7 dias", "vendas"),
-    ("Quanto cobrar por gestao de WhatsApp em 2026", "vendas"),
-    ("Cold outreach via WhatsApp: script que funciona em 2026", "vendas"),
-    ("Follow-up automatico: 5 mensagens que vendem sozinhas", "vendas"),
-    # Marketing & Prospeccao
-    ("Google Maps como maquina de leads para negocios locais", "marketing"),
-    ("Como prospectar clientes no Google Maps sem gastar com anuncios", "marketing"),
-    ("SEO local em 2026: domine o Google do seu bairro", "marketing"),
-    ("Marketing digital para freelancers: o que mudou em 2026", "marketing"),
-    ("Como criar uma landing page que converte 15% ou mais", "marketing"),
-    ("Copywriting para WhatsApp: 10 formulas que vendem", "marketing"),
-    # Sites & Tecnologia
-    ("Gerador de sites com IA: comparativo 2026 das melhores ferramentas", "tech"),
-    ("Site que vende: 7 erros que freelancers cometem em 2026", "tech"),
-    ("Sites one-page vs multi-page: o que funciona melhor em 2026", "tech"),
-    ("Performance web em 2026: Core Web Vitals e ranking Google", "tech"),
-    # Negocios & Renda
-    ("Renda recorrente automatica: como ganhar enquanto dorme", "negocios"),
-    ("Como escalar um negocio local sem contratar mais gente", "negocios"),
-    ("Negocios locais sem site: onde estao os clientes em 2026", "negocios"),
-    ("Empreendedorismo solo com IA: o novo modelo de negocio", "negocios"),
-    # Freelancer
-    ("Freelancer em 2026: como cobrar 3x mais sem trabalhar 3x mais", "freelancer"),
-    ("Transicao de CLT para freelancer com IA: passo a passo", "freelancer"),
-    ("Marketing para freelancers: como conseguir clientes todo mes", "freelancer"),
-    ("Portfolio que vende: como montar sem experiencia previa", "freelancer"),
-    ("MEI vs PJ em 2026: qual escolher para ganhar mais", "freelancer"),
-]
-
-
-def _pick_fallback_topics(needed: int) -> List[Dict]:
-    """Pega topicos do pool PT, evitando os ultimos ja gerados."""
-    import os
-    state_file = BLOG_DIR / ".fallback_state"
-    used_slugs = []
-    if state_file.exists():
-        used_slugs = state_file.read_text().strip().split("\n")
-        used_slugs = [s for s in used_slugs if s]
-
-    available = [t for t in FALLBACK_TOPICS_PT if slugify(t[0]) not in used_slugs]
-    if not available:
-        # Reset state se ja usou todos
-        used_slugs = []
-        available = list(FALLBACK_TOPICS_PT)
-
-    # Rotacao: pega os primeiros N
-    picked = available[:needed] if len(available) >= needed else available
-
-    # Persiste state
-    new_used = used_slugs + [slugify(t[0]) for t in picked]
-    state_file.write_text("\n".join(new_used))
-
-    return [
-        {
-            "topic": t[0],
-            "category": t[1],
-            "keywords": t[0].lower().split()[:5],
-            "intent": "evergreen",
-            "source": "fallback_pool_pt",
-        }
-        for t in picked
-    ]
+# Se as 3 fontes externas (Google Trends/Reddit/HN) nao retornarem topicos
+# em PT suficientes, NAO publicamos posts com conteudo generico.
+# O ciclo apenas registra a falta e sai. Proximo ciclo (9h/18h Brasilia)
+# tenta novamente quando as fontes voltarem a funcionar.
+#
+# FALLBACK_TOPICS_PT e _pick_fallback_topics foram REMOVIDOS neste commit.
+# Cada post eh gerado exclusivamente via Claude Sonnet 4 via kpalabz.
 
 
 def classify_topic(topic: str) -> str:
@@ -748,9 +674,11 @@ def generate_post_html(topic: str, category: str, keywords: List[str], slug: str
     # Tenta usar OpenRouter se disponível
     body = call_llm_for_content(topic, category, keywords)
 
-    # Fallback se LLM não disponível
+    # ZERO FALLBACK: se LLM falhou em todas as tentativas, ABORTA este post.
+    # Nenhum post generico eh publicado - ou sai com LLM real ou nao sai.
     if not body:
-        body = generate_fallback_content(topic, category, keywords)
+        print(f"  [ABORT] Post '{topic}' abortado - LLM falhou apos 3 tentativas", file=sys.stderr)
+        return None
 
     # GARANTE que tem pelo menos 2 links /planos e 2 menções FraLib no corpo
     body = ensure_fralib_ctas(body, min_links=2)
@@ -840,18 +768,18 @@ a:hover{{text-decoration:underline}}
 def call_llm_for_content(topic: str, category: str, keywords: List[str]) -> Optional[str]:
     """Gera conteúdo via LLM (Claude Sonnet via kpalabz).
 
+    Faz 3 tentativas com backoff. Retorna None apenas se TODAS falharem.
     Returns HTML do corpo do post (sem doctype, sem h1).
     """
-    try:
-        import requests
-        api_key = os.environ.get("ANTHROPIC_API_KEY")
-        base_url = os.environ.get("ANTHROPIC_BASE_URL", "https://api.kpalabz.com/v1")
+    import requests
+    api_key = os.environ.get("ANTHROPIC_API_KEY")
+    base_url = os.environ.get("ANTHROPIC_BASE_URL", "https://api.kpalabz.com/v1")
 
-        if not api_key:
-            print(f"  [LLM] ANTHROPIC_API_KEY nao configurado", file=sys.stderr)
-            return None
+    if not api_key:
+        print(f"  [LLM] ERRO FATAL: ANTHROPIC_API_KEY nao configurado no ambiente", file=sys.stderr)
+        return None
 
-        prompt = f"""Voce eh Franz Douglas, copywriter senior brasileiro. Escreva um post de blog sobre: {topic}
+    prompt = f"""Voce eh Franz Douglas, copywriter senior brasileiro. Escreva um post de blog sobre: {topic}
 
 CATEGORIA: {category}
 KEYWORDS OBRIGATORIAS: {', '.join(keywords)}
@@ -891,22 +819,33 @@ Retorne APENAS o HTML do corpo: <p>...</p><h2>...</h2><p>...</p>...
 NAO inclua doctype, head, body, style, h1, title, meta.
 Apenas tags semanticas: p, h2, h3, ul, ol, li, blockquote, a, strong, em."""
 
-        resp = requests.post(
-            f"{base_url}/chat/completions",
-            headers={
-                "Authorization": f"Bearer {api_key}",
-                "Content-Type": "application/json",
-            },
-            json={
-                "model": "claude-sonnet-4-20250514",
-                "messages": [{"role": "user", "content": prompt}],
-                "max_tokens": 8000,
-                "temperature": 0.7,
-            },
-            timeout=120,
-        )
+    # Retry com backoff: 3 tentativas antes de desistir
+    max_retries = 3
+    for attempt in range(1, max_retries + 1):
+        try:
+            resp = requests.post(
+                f"{base_url}/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": "claude-sonnet-4-20250514",
+                    "messages": [{"role": "user", "content": prompt}],
+                    "max_tokens": 8000,
+                    "temperature": 0.7,
+                },
+                timeout=180,
+            )
 
-        if resp.ok:
+            if not resp.ok:
+                print(f"  [LLM] tentativa {attempt}/{max_retries}: HTTP {resp.status_code} - {resp.text[:200]}", file=sys.stderr)
+                if attempt < max_retries:
+                    import time
+                    time.sleep(5 * attempt)
+                    continue
+                return None
+
             content = resp.json()["choices"][0]["message"]["content"]
             # Strip markdown code fences if present
             content = content.strip()
@@ -916,47 +855,41 @@ Apenas tags semanticas: p, h2, h3, ul, ol, li, blockquote, a, strong, em."""
                 content = content[3:]
             if content.endswith("```"):
                 content = content[:-3]
-            return content.strip()
-    except Exception as e:
-        print(f"LLM error: {e}", file=sys.stderr)
+            content = content.strip()
+
+            # Validar: precisa ter conteudo real (nao vazio, > 500 chars)
+            if len(content) < 500:
+                print(f"  [LLM] tentativa {attempt}: resposta muito curta ({len(content)} chars)", file=sys.stderr)
+                if attempt < max_retries:
+                    import time
+                    time.sleep(5 * attempt)
+                    continue
+                return None
+
+            # Sucesso
+            print(f"  [LLM] tentativa {attempt}: sucesso ({len(content)} chars)", file=sys.stderr)
+            return content
+
+        except (requests.RequestException, Exception) as e:
+            print(f"  [LLM] tentativa {attempt}/{max_retries}: {type(e).__name__}: {str(e)[:200]}", file=sys.stderr)
+            if attempt < max_retries:
+                import time
+                time.sleep(5 * attempt)
+                continue
+            return None
+
     return None
 
 
 def generate_fallback_content(topic: str, category: str, keywords: List[str]) -> str:
-    """Conteúdo fallback caso LLM não disponível."""
+    """DEPRECATED: zero fallback. Se LLM falhar, post eh abortado.
 
-    cat = CATEGORIES.get(category, CATEGORIES["marketing"])
-
-    return f"""
-<h2>O que é {topic}?</h2>
-<p>{topic} está em alta no Brasil. Cada vez mais empresas e freelancers estão usando essa estratégia para crescer mais rápido, sem aumentar equipe.</p>
-
-<p>A ideia central é simples: automatizar o trabalho repetitivo e focar no que realmente importa — fechar vendas e entregar resultado pro cliente.</p>
-
-<h2>Por que isso importa agora?</h2>
-<p>Em 2026, o mercado brasileiro de marketing digital e vendas online não para de crescer. Quem fica parado perde espaço pra quem usa tecnologia a favor.</p>
-
-<p>Segundo dados do setor, empresas que adotam automação crescem <strong>3x mais rápido</strong> do que as que operam 100% manual. E o melhor: sem precisar contratar mais gente.</p>
-
-<h2>Como aplicar no seu negócio</h2>
-<p>Existem 3 caminhos pra começar com {topic.lower()}:</p>
-<p><strong>1. Fazer sozinho:</strong> Pesquisar, testar, errar. Funciona, mas leva meses até você ter resultado consistente.</p>
-<p><strong>2. Contratar agência:</strong> Caro (R$ 2.000-5.000/mês) e você fica dependendo de terceiro.</p>
-<p><strong>3. Usar plataforma automatizada:</strong> Como o <strong>FraLib</strong>, que faz tudo sozinho: acha cliente, faz site e vende no WhatsApp. Você só recebe o dinheiro.</p>
-
-<h2>O caso do FraLib</h2>
-<p>O <strong>FraLib</strong> é uma plataforma brasileira que automatiza 3 etapas críticas do seu negócio:</p>
-<p>→ <strong>Acha o cliente:</strong> Varre Google Maps e encontra negócios sem site na sua região.<br>
-→ <strong>Faz o site:</strong> Cria site profissional automaticão, pronto pra vender.<br>
-→ <strong>Vende no WPP:</strong> Envia no WhatsApp com follow-up automático até o cliente falar "quero".</p>
-
-<p>Você não faz NADA. Configura 1x por mês. Todo dia sai cliente novo no seu WPP querendo comprar site.</p>
-
-<h2>Conclusão</h2>
-<p>{topic} não é mais tendência — é necessidade. Quem não se adapta agora vai perder espaço nos próximos 12 meses.</p>
-
-<p>A boa notícia: você não precisa aprender a fazer tudo sozinho. Plataformas como o FraLib existem exatamente pra isso — automatizar o trabalho pesado e te deixar com o lucro.</p>
-"""
+    Mantida apenas para compatibilidade. NAO eh mais chamada em producao.
+    """
+    raise RuntimeError(
+        "generate_fallback_content foi removido. Sistema opera em modo zero-fallback: "
+        "se LLM falhar, o post eh abortado. Nenhum conteudo generico eh publicado."
+    )
 
 
 # ============================================================================
