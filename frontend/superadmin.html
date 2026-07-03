@@ -203,6 +203,7 @@ canvas{max-width:100%}
   <button class="tab" data-tab="conversas" onclick="switchTab('conversas')" style="color:var(--gold)">💬 Conversas</button>
   <button class="tab" data-tab="automacoes" onclick="switchTab('automacoes')" style="color:var(--gold)">&#128172; Automações</button>
   <button class="tab" data-tab="silent-tenants" onclick="switchTab('silent-tenants')" style="color:var(--danger,#ef4444);">🔕 Silenciosos</button>
+  <button class="tab" data-tab="blog" onclick="switchTab('blog')" style="color:var(--purple-300);">📰 Blog</button>
 </div>
 
 <div class="main">
@@ -872,6 +873,114 @@ canvas{max-width:100%}
     </div>
   </section>
 
+  <!-- ========== BLOG AUTOMÁTICO ========== -->
+  <section class="panel" id="panel-blog">
+    <h2 class="section-title">📰 BLOG AUTOMÁTICO — MONITORAMENTO & CONTROLE</h2>
+
+    <!-- Toolbar de ações -->
+    <div class="table-toolbar" style="border:1px solid var(--border);background:var(--card);margin-bottom:16px;display:flex;gap:8px;align-items:center;padding:10px 14px;flex-wrap:wrap">
+      <span class="muted" style="font-size:12px">Cron: 2 posts/dia às 9h e 18h Brasília · Auto-publicação ativada</span>
+      <div style="flex:1"></div>
+      <span id="blog-pause-status" class="pill pill-active">● ATIVO</span>
+      <button class="btn btn-primary" onclick="triggerBlogGenerate()">⚡ Gerar Posts Agora</button>
+      <button class="btn" id="blog-toggle-btn" onclick="toggleBlogPause()">⏸ Pausar</button>
+      <button class="btn" onclick="loadBlogPanel()">↻ Atualizar</button>
+    </div>
+
+    <!-- 1. Saúde do Cron -->
+    <h4 style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin:14px 0 8px">Saúde do Cron</h4>
+    <div id="blog-health-cards" class="metrics-grid"></div>
+
+    <!-- 2. Posts Recentes -->
+    <h4 style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin:18px 0 8px">Posts Recentes (últimos 30)</h4>
+    <div class="table-wrap" style="overflow-x:auto">
+      <table class="data-table" style="width:100%;font-size:12px">
+        <thead>
+          <tr>
+            <th style="text-align:left">Título</th>
+            <th style="text-align:left">Slug</th>
+            <th>Categoria</th>
+            <th style="text-align:right">Palavras</th>
+            <th style="text-align:right">Links /planos</th>
+            <th>Franz</th>
+            <th>Score</th>
+            <th style="text-align:left">Data</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="blog-posts-body">
+          <tr><td colspan="9" style="text-align:center;padding:24px;color:var(--fl-text-muted);">Carregando…</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 3. Qualidade -->
+    <h4 style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin:18px 0 8px">Qualidade dos Posts</h4>
+    <div class="chart-grid">
+      <div class="chart-card">
+        <h4>Score Médio</h4>
+        <div id="blog-quality-summary" class="metrics-grid" style="grid-template-columns:repeat(2,1fr);margin:0"></div>
+      </div>
+      <div class="chart-card">
+        <h4>Top Issues Detectados</h4>
+        <div id="blog-quality-issues" class="muted" style="font-size:12px;line-height:1.8">carregando…</div>
+      </div>
+    </div>
+
+    <!-- 4. LLM & Fontes -->
+    <h4 style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin:18px 0 8px">LLM & Fontes de Trends</h4>
+    <div class="chart-grid">
+      <div class="chart-card">
+        <h4>Posts por Fonte</h4>
+        <div id="blog-llm-sources" class="muted">carregando…</div>
+      </div>
+      <div class="chart-card">
+        <h4>Custo & Latência (histórico)</h4>
+        <div id="blog-llm-cost" class="muted">carregando…</div>
+      </div>
+    </div>
+
+    <!-- 5. Jornada do Lead -->
+    <h4 style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin:18px 0 8px">Jornada do Lead (blog → signup)</h4>
+    <div class="table-wrap" style="overflow-x:auto">
+      <table class="data-table" style="width:100%;font-size:12px">
+        <thead>
+          <tr>
+            <th style="text-align:left">Post</th>
+            <th style="text-align:right">Views</th>
+            <th style="text-align:right">Sessões</th>
+            <th style="text-align:right">Leads</th>
+            <th style="text-align:right">Conversões</th>
+            <th style="text-align:right">Lead Rate</th>
+          </tr>
+        </thead>
+        <tbody id="blog-attribution-body">
+          <tr><td colspan="6" style="text-align:center;padding:24px;color:var(--fl-text-muted);">Carregando…</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 6. Google Search Console -->
+    <h4 style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin:18px 0 8px">Google Search Console</h4>
+    <div id="blog-gsc-cards" class="metrics-grid"></div>
+    <div class="table-wrap" style="overflow-x:auto;margin-top:10px">
+      <table class="data-table" style="width:100%;font-size:12px">
+        <thead>
+          <tr>
+            <th style="text-align:left">Página</th>
+            <th style="text-align:right">Cliques</th>
+            <th style="text-align:right">Impressões</th>
+            <th style="text-align:right">CTR</th>
+            <th style="text-align:right">Posição</th>
+          </tr>
+        </thead>
+        <tbody id="blog-gsc-body">
+          <tr><td colspan="5" style="text-align:center;padding:24px;color:var(--fl-text-muted);">Carregando…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
   <!-- ========== TENANTS SILENCIOSOS (Sprint 3.3) ========== -->
   <section class="panel" id="panel-silent-tenants">
     <h2 class="section-title">🔕 TENANTS SILENCIOSOS</h2>
@@ -1154,6 +1263,7 @@ function switchTab(tab){
   if(tab==='contato-direto' && !document.getElementById('panel-contato-direto').dataset.loaded) loadContatoDireto();
   if(tab==='automacoes') { loadAutomacoes(); loadAutoSequenceLeads(); }
   if(tab==='providers' && !document.getElementById('providersHealthBody').dataset.loaded) loadProvidersHealth();
+  if(tab==='blog' && !document.getElementById('panel-blog').dataset.loaded) loadBlogPanel();
 }
 
 // ===== toast =====
@@ -4140,6 +4250,280 @@ function cardSemaforo(status, count, label) {
     '</div>' +
     '<div style="font-size:11px;color:var(--fl-text-dim);text-transform:uppercase;letter-spacing:0.5px">' + label + '</div>' +
   '</div>';
+}
+
+// ============================================================================
+// BLOG AUTOMÁTICO — Painel de monitoramento
+// ============================================================================
+
+async function loadBlogPanel() {
+  const panel = document.getElementById('panel-blog');
+  if (panel) panel.dataset.loaded = '1';
+  await loadBlogPauseStatus();
+  await Promise.all([
+    loadBlogHealth(),
+    loadBlogPosts(),
+    loadBlogQuality(),
+    loadBlogLlmStats(),
+    loadBlogAttribution(),
+    loadBlogRankings(),
+  ]);
+}
+
+async function loadBlogHealth() {
+  const container = document.getElementById('blog-health-cards');
+  if (!container) return;
+  try {
+    const r = await authFetch('/api/superadmin/blog-analytics');
+    const d = await r.json();
+    const h = (d.health) || {};
+    const status = h.status === 'healthy' ? 'healthy' : (h.status === 'degraded' ? 'degraded' : (h.status === 'inactive' ? 'down' : 'unknown'));
+    container.innerHTML = [
+      cardSemaforo(status, h.posts_today || 0, 'Posts Hoje'),
+      cardSemaforo((h.posts_this_week || 0) > 0 ? 'healthy' : 'down', h.posts_this_week || 0, 'Posts Esta Semana'),
+      cardSemaforo((h.posts_this_month || 0) > 0 ? 'healthy' : 'unknown', h.posts_this_month || 0, 'Posts Este Mês'),
+      cardSemaforo((d.stats && d.stats.total_posts) > 0 ? 'healthy' : 'down', (d.stats && d.stats.total_posts) || 0, 'Total no Blog'),
+    ].join('');
+  } catch (e) {
+    container.innerHTML = '<div style="padding:14px;color:#ef4444">Erro: '+escapeHtml(e.message||String(e))+'</div>';
+  }
+}
+
+async function loadBlogPosts() {
+  const body = document.getElementById('blog-posts-body');
+  if (!body) return;
+  try {
+    const r = await authFetch('/api/superadmin/blog-analytics');
+    const d = await r.json();
+    const recent = (d.stats && d.stats.recent_posts) || [];
+    if (!recent.length) {
+      body.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:24px;color:var(--fl-text-muted);">Sem posts ainda</td></tr>';
+      return;
+    }
+    body.innerHTML = recent.slice(0, 30).map(function(p) {
+      const cat = p.category || 'unknown';
+      const catLabel = cat.charAt(0).toUpperCase() + cat.slice(1);
+      return '<tr>' +
+        '<td style="text-align:left"><a href="/blog/'+escapeHtml(p.slug)+'.html" target="_blank" style="color:var(--purple-300);text-decoration:none">'+escapeHtml(p.title || p.slug)+'</a></td>' +
+        '<td style="font-family:var(--mono);font-size:11px;color:var(--muted)">'+escapeHtml(p.slug)+'</td>' +
+        '<td><span class="pill pill-admin">'+escapeHtml(catLabel)+'</span></td>' +
+        '<td style="text-align:right;font-family:var(--mono)" data-word-count="'+escapeHtml(p.slug)+'">—</td>' +
+        '<td style="text-align:right;font-family:var(--mono)" data-plan-links="'+escapeHtml(p.slug)+'">—</td>' +
+        '<td data-has-franz="'+escapeHtml(p.slug)+'">—</td>' +
+        '<td data-score="'+escapeHtml(p.slug)+'">—</td>' +
+        '<td style="font-size:11px;color:var(--muted)">'+escapeHtml((p.date||'').slice(0,10))+'</td>' +
+        '<td><a class="btn" href="/blog/posts/'+escapeHtml(p.slug)+'.html" target="_blank" style="padding:4px 8px;font-size:11px;text-decoration:none">Abrir</a></td>' +
+        '</tr>';
+    }).join('');
+  } catch (e) {
+    body.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:24px;color:#ef4444">'+escapeHtml(e.message||String(e))+'</td></tr>';
+  }
+}
+
+async function loadBlogQuality() {
+  try {
+    const r = await authFetch('/api/superadmin/blog-quality');
+    const d = await r.json();
+    (d.posts || []).forEach(function(p) {
+      const wCell = document.querySelector('[data-word-count="'+CSS.escape(p.slug)+'"]');
+      const lCell = document.querySelector('[data-plan-links="'+CSS.escape(p.slug)+'"]');
+      const fCell = document.querySelector('[data-has-franz="'+CSS.escape(p.slug)+'"]');
+      const sCell = document.querySelector('[data-score="'+CSS.escape(p.slug)+'"]');
+      if (wCell) wCell.textContent = p.word_count;
+      if (lCell) lCell.textContent = p.plan_links;
+      if (fCell) fCell.innerHTML = p.has_franz ? '<span class="pill pill-active">sim</span>' : '<span class="pill pill-blocked">não</span>';
+      if (sCell) {
+        let cls = 'pill-active';
+        if (p.score < 60) cls = 'pill-blocked';
+        else if (p.score < 80) cls = 'pill-cooldown';
+        sCell.innerHTML = '<span class="pill '+cls+'">'+p.score+'</span>';
+      }
+    });
+    const sum = document.getElementById('blog-quality-summary');
+    if (sum) {
+      const avgCls = (d.avg_score||0) >= 80 ? 'healthy' : ((d.avg_score||0) >= 60 ? 'degraded' : 'down');
+      sum.innerHTML = cardSemaforo(avgCls, d.avg_score||0, 'Score Médio') +
+        cardSemaforo((d.checked||0) > 0 ? 'healthy' : 'unknown', d.checked||0, 'Posts Analisados');
+    }
+    const issues = document.getElementById('blog-quality-issues');
+    if (issues) {
+      const issueCount = {};
+      (d.posts || []).forEach(function(p) {
+        p.issues.forEach(function(iss) {
+          const key = iss.split(' (')[0];
+          issueCount[key] = (issueCount[key] || 0) + 1;
+        });
+      });
+      const entries = Object.entries(issueCount).sort(function(a,b){return b[1]-a[1]}).slice(0, 8);
+      if (entries.length === 0) {
+        issues.innerHTML = '<div style="color:var(--success,#10b981)">✓ Nenhum issue detectado - todos os posts OK!</div>';
+      } else {
+        issues.innerHTML = entries.map(function(e) {
+          return '<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border)">' +
+            '<span>'+escapeHtml(e[0])+'</span><strong style="color:#FFB800">'+e[1]+'</strong></div>';
+        }).join('');
+      }
+    }
+  } catch (e) {
+    const el = document.getElementById('blog-quality-issues');
+    if (el) el.innerHTML = '<div class="muted">Erro: '+escapeHtml(e.message||String(e))+'</div>';
+  }
+}
+
+async function loadBlogLlmStats() {
+  try {
+    const r = await authFetch('/api/superadmin/blog-llm-stats');
+    const d = await r.json();
+    const src = document.getElementById('blog-llm-sources');
+    if (src) {
+      const entries = Object.entries(d.by_source || {});
+      if (entries.length === 0) {
+        src.innerHTML = '<div class="muted">'+escapeHtml(d.note || 'Sem dados ainda')+'</div>';
+      } else {
+        src.innerHTML = entries.map(function(e) {
+          return '<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border)">' +
+            '<span style="font-family:var(--mono);color:var(--purple-300)">'+escapeHtml(e[0])+'</span>' +
+            '<span>'+e[1].posts+' posts · '+(e[1].success_rate||100)+'% OK</span></div>';
+        }).join('');
+      }
+    }
+    const cost = document.getElementById('blog-llm-cost');
+    if (cost) {
+      const t = d.totals || {};
+      const avgSec = Math.round((t.avg_latency_ms || 0) / 1000);
+      const runs = d.total_runs || 0;
+      const tokensIn = (d.tokens && d.tokens.in) || 0;
+      const tokensOut = (d.tokens && d.tokens.out) || 0;
+      cost.innerHTML =
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">' +
+          '<div><span class="muted" style="font-size:11px">Execuções cron</span><br><strong style="font-size:18px">'+runs+'</strong></div>' +
+          '<div><span class="muted" style="font-size:11px">Sucessos / Falhas</span><br><strong style="font-size:14px"><span style="color:var(--success,#10b981)">'+ (t.success||0) +'</span> / <span style="color:var(--danger,#ef4444)">'+ (t.fail||0) +'</span></strong></div>' +
+          '<div><span class="muted" style="font-size:11px">Latência média</span><br><strong style="font-size:14px">'+avgSec+'s</strong></div>' +
+          '<div><span class="muted" style="font-size:11px">Tokens in/out</span><br><strong style="font-size:12px">'+tokensIn.toLocaleString('pt-BR')+' / '+tokensOut.toLocaleString('pt-BR')+'</strong></div>' +
+          '<div style="grid-column:span 2"><span class="muted" style="font-size:11px">Custo estimado (Sonnet 4)</span><br><strong style="font-size:20px;color:#FFB800">$ '+ (d.cost_estimate_usd||0).toFixed(4) +'</strong></div>' +
+        '</div>';
+    }
+  } catch (e) {
+    const el = document.getElementById('blog-llm-cost');
+    if (el) el.innerHTML = '<div class="muted">Erro: '+escapeHtml(e.message||String(e))+'</div>';
+  }
+}
+
+async function loadBlogAttribution() {
+  const body = document.getElementById('blog-attribution-body');
+  if (!body) return;
+  try {
+    const r = await authFetch('/api/superadmin/blog-attribution');
+    const d = await r.json();
+    const rows = (d.by_post || []).slice(0, 20);
+    if (!rows.length) {
+      body.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--fl-text-muted);">Sem dados de atribuição</td></tr>';
+      return;
+    }
+    body.innerHTML = rows.map(function(p) {
+      return '<tr>' +
+        '<td style="text-align:left"><a href="/blog/'+escapeHtml(p.slug)+'.html" target="_blank" style="color:var(--purple-300);text-decoration:none;font-family:var(--mono);font-size:11px">'+escapeHtml(p.slug)+'</a></td>' +
+        '<td style="text-align:right;font-family:var(--mono)">'+fmt(p.views)+'</td>' +
+        '<td style="text-align:right;font-family:var(--mono)">'+fmt(p.sessions)+'</td>' +
+        '<td style="text-align:right;font-family:var(--mono)">'+fmt(p.leads)+'</td>' +
+        '<td style="text-align:right;font-family:var(--mono);color:var(--success,#10b981)">'+fmt(p.conversions)+'</td>' +
+        '<td style="text-align:right;font-family:var(--mono);color:var(--cyan)">'+p.lead_rate+'%</td>' +
+        '</tr>';
+    }).join('');
+  } catch (e) {
+    body.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:24px;color:#ef4444">'+escapeHtml(e.message||String(e))+'</td></tr>';
+  }
+}
+
+async function loadBlogRankings() {
+  try {
+    const r = await authFetch('/api/superadmin/blog-rankings');
+    const d = await r.json();
+    let status = d.source === 'google_search_console' ? 'healthy' : (d.source === 'fallback' ? 'degraded' : 'unknown');
+    const cards = document.getElementById('blog-gsc-cards');
+    if (cards) {
+      cards.innerHTML = [
+        cardSemaforo(status, d.total_indexed || 0, 'Páginas Indexadas'),
+        cardSemaforo(status, fmt(d.impressions_30d||0), 'Impressões 30d'),
+        cardSemaforo(status, fmt(d.clicks_30d||0), 'Cliques 30d'),
+        cardSemaforo(status, d.avg_position || '—', 'Posição Média'),
+      ].join('');
+    }
+    const body = document.getElementById('blog-gsc-body');
+    if (body) {
+      const pages = d.top_pages || [];
+      if (pages.length === 0) {
+        body.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--fl-text-muted);">'+escapeHtml(d.note || 'Sem dados')+'</td></tr>';
+      } else {
+        body.innerHTML = pages.map(function(p) {
+          return '<tr>' +
+            '<td style="font-family:var(--mono);font-size:11px;color:var(--purple-300)">' + escapeHtml((p.page||'').replace(/^https?:\/\/[^\/]+/i, '')) + '</td>' +
+            '<td style="text-align:right">' + fmt(p.clicks) + '</td>' +
+            '<td style="text-align:right">' + fmt(p.impressions) + '</td>' +
+            '<td style="text-align:right">' + (p.ctr||0) + '%</td>' +
+            '<td style="text-align:right">' + (p.position||0) + '</td>' +
+            '</tr>';
+        }).join('');
+      }
+    }
+  } catch (e) {
+    const body = document.getElementById('blog-gsc-body');
+    if (body) body.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:24px;color:#ef4444">'+escapeHtml(e.message||String(e))+'</td></tr>';
+  }
+}
+
+async function loadBlogPauseStatus() {
+  try {
+    const r = await authFetch('/api/superadmin/blog-pause-status');
+    const d = await r.json();
+    const badge = document.getElementById('blog-pause-status');
+    const btn = document.getElementById('blog-toggle-btn');
+    if (!badge || !btn) return;
+    if (d.paused) {
+      badge.className = 'pill pill-blocked';
+      badge.textContent = '⏸ PAUSADO';
+      btn.textContent = '▶ Retomar';
+      btn.className = 'btn btn-success';
+    } else {
+      badge.className = 'pill pill-active';
+      badge.textContent = '● ATIVO';
+      btn.textContent = '⏸ Pausar';
+      btn.className = 'btn';
+    }
+  } catch (e) { /* ignore */ }
+}
+
+async function triggerBlogGenerate() {
+  if (!confirm('Gerar posts agora? O cron vai rodar manualmente em ~30-90s.')) return;
+  toast('Iniciando geração manual...', 'success');
+  try {
+    const r = await authFetch('/api/superadmin/blog-generate', {method:'POST'});
+    const d = await r.json();
+    if (d.returncode === 0) {
+      toast('Posts gerados! Atualizando painel...', 'success');
+      setTimeout(loadBlogPanel, 3000);
+    } else {
+      toast('Concluido: '+(d.stderr||d.stdout||'?').slice(0,200), 'error');
+      setTimeout(loadBlogPanel, 3000);
+    }
+  } catch (e) {
+    toast('Erro: '+(e.message||e), 'error');
+  }
+}
+
+async function toggleBlogPause() {
+  const badge = document.getElementById('blog-pause-status');
+  const isPaused = badge && badge.textContent.indexOf('PAUSADO') >= 0;
+  const action = isPaused ? 'retomar' : 'pausar';
+  if (!confirm((action.charAt(0).toUpperCase()+action.slice(1)) + ' geração automática?')) return;
+  const endpoint = isPaused ? '/api/superadmin/blog-resume' : '/api/superadmin/blog-pause';
+  try {
+    await authFetch(endpoint, {method:'POST'});
+    await loadBlogPauseStatus();
+    toast('Geração ' + (isPaused ? 'retomada' : 'pausada'), 'success');
+  } catch (e) {
+    toast('Erro: '+(e.message||e), 'error');
+  }
 }
 </script>
 

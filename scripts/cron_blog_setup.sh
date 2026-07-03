@@ -4,13 +4,13 @@
 #
 # Para configurar o cron do usuario:
 #   TZ=America/Sao_Paulo
-#   0 9 * * * /usr/bin/bash /opt/fralib/scripts/cron_blog_setup.sh
-#   0 18 * * * /usr/bin/bash /opt/fralib/scripts/cron_blog_setup.sh
+#   0 9 * * * /usr/bin/bash /root/fralib/scripts/cron_blog_setup.sh
+#   0 18 * * * /usr/bin/bash /root/fralib/scripts/cron_blog_setup.sh
 #
-# Adicionar com: crontab -e (depois de mover o script para /opt/fralib/scripts/)
+# Adicionar com: crontab -e
 
-# Navega para o diretorio do fralib
-cd /opt/fralib || cd /home/$(whoami)/fralib || cd /root/fralib || exit 1
+# Navega para o diretorio do fralib (tenta varios paths comuns)
+cd /root/fralib || cd /opt/fralib || cd /home/$(whoami)/fralib || exit 1
 
 # Ativa venv se existir
 if [ -f ".venv/bin/activate" ]; then
@@ -19,14 +19,19 @@ fi
 
 # Carrega variaveis de ambiente (.env tem ANTHROPIC_API_KEY, MERCADOPAGO_*, etc)
 if [ -f ".env" ]; then
-    set -a
+    set -a  # exporta automaticamente todas as variaveis
     source .env
     set +a
 fi
 
 # Log do job
 LOG_FILE="/var/log/fralib/blog_cron.log"
-mkdir -p $(dirname $LOG_FILE)
+LOG_DIR=$(dirname $LOG_FILE)
+if [ ! -d "$LOG_DIR" ]; then
+    LOG_FILE="/root/fralib/logs/blog_cron.log"
+    LOG_DIR=$(dirname $LOG_FILE)
+    mkdir -p "$LOG_DIR"
+fi
 
 echo "=== Blog cron started at $(date) ===" >> $LOG_FILE
 

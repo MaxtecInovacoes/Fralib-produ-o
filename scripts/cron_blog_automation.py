@@ -537,21 +537,44 @@ def rank_for_fralib(trends: List[Dict]) -> List[Dict]:
 
 
 def fetch_all_trends() -> List[Dict]:
-    """Combina 3 fontes, deduplica, filtra crimes, ranqueia pra FraLib."""
-    print("  Buscando trends em 3 fontes...")
+    """Combina 3 fontes externas (Google Trends BR + Reddit + Hacker News).
+
+    ZERO FALLBACK: se as 3 fontes nao retornam topicos em PT suficientes,
+    retorna lista vazia e o ciclo NAO gera posts (melhor qualidade > quantidade).
+
+    O cron ira rodar de novo em 9h ou 18h Brasilia quando as fontes
+    estiverem disponiveis novamente.
+    """
+    print("  Buscando trends em 3 fontes externas...")
     all_trends = []
     all_trends.extend(fetch_google_trends_br())
-    print(f"    Google Trends BR: {len(all_trends)} topics")
+    print(f"    Google Trends BR: {sum(1 for t in all_trends if t.get('source')=='google_trends_br')} topics")
     all_trends.extend(fetch_reddit_brazil())
-    print(f"    Reddit: {len(all_trends) - sum(1 for t in all_trends if t.get('source','').startswith('reddit'))} novos")
+    print(f"    Reddit: {sum(1 for t in all_trends if t.get('source','').startswith('reddit'))} topics")
     all_trends.extend(fetch_hackernews())
-    print(f"    Hacker News: {len(all_trends) - sum(1 for t in all_trends if t.get('source','') == 'hackernews')} novos")
+    print(f"    Hacker News: {sum(1 for t in all_trends if t.get('source')=='hackernews')} topics")
 
     unique = deduplicate_trends(all_trends)
-    print(f"  Total unicos: {len(unique)}")
+    print(f"  Total unicos externos: {len(unique)}")
+
+    if not unique:
+        print(f"  [ZERO FALLBACK] Nenhum topico em PT disponivel - ciclo nao gera posts hoje")
 
     ranked = rank_for_fralib(unique)
+    print(f"  {len(ranked)} trends rankeados (final)")
     return ranked
+
+
+# ============================================================================
+# ZERO FALLBACK: codigo de fallback removido intencionalmente
+# ============================================================================
+# Se as 3 fontes externas (Google Trends/Reddit/HN) nao retornarem topicos
+# em PT suficientes, NAO publicamos posts com conteudo generico.
+# O ciclo apenas registra a falta e sai. Proximo ciclo (9h/18h Brasilia)
+# tenta novamente quando as fontes voltarem a funcionar.
+#
+# FALLBACK_TOPICS_PT e _pick_fallback_topics foram REMOVIDOS neste commit.
+# Cada post eh gerado exclusivamente via Claude Sonnet 4 via kpalabz.
 
 
 def classify_topic(topic: str) -> str:
@@ -626,6 +649,56 @@ def save_dashboard() -> None:
 # GERADOR DE POST
 # ============================================================================
 
+def ensure_fralib_ctas(body: str, min_links: int = 2) -> str:
+    """Garante que o post tem pelo menos N hyperlinks <a href='/planos'>.
+
+    Se o LLM nao colocou links FraLib inline, injeta de forma natural.
+    Tambem adiciona 1-2 mencoes textuais de 'FraLib' se nao houver.
+    """
+    import re
+    # Conta links FraLib
+    plan_links = re.findall(r'<a\s+href="/planos"[^>]*>([^<]+)</a>', body, re.IGNORECASE)
+    fralib_mentions = len(re.findall(r'\bFraLib\b', body))
+
+    # Se ja tem links suficientes, so garante mencoes
+    if len(plan_links) >= min_links and fralib_mentions >= 2:
+        return body
+
+    # Frases naturais para injecao com link FraLib
+    link_phrases = [
+        '<p>Uma <a href="/planos">plataforma de prospeccao automatizada</a> pode resolver isso de forma bem mais eficiente — voce configura 1x e o sistema trabalha 24 horas pra voce.</p>',
+        '<p>Se voce quer testar essa abordagem sem montar tudo do zero, vale olhar <a href="/planos">essa solucao completa</a> que ja faz prospeccao, geracao de conteudo e follow-up.</p>',
+        '<p>Tem um <a href="/planos">sistema como o FraLib</a> que automatiza justamente essa parte — busca de leads, qualificacao e abordagem inicial.</p>',
+        '<p>Alem da estrategia, existem <a href="/planos">ferramentas de automacao</a> que executam isso em escala sem aumentar custo fixo.</p>',
+    ]
+
+    used = set(plan_links)
+    needed = max(min_links - len(plan_links), 0)
+
+    # Tenta adicionar no meio (depois de 30-50% do conteudo)
+    paragraphs = body.split('</p>')
+    if len(paragraphs) < 3:
+        return body
+
+    insert_pos = max(2, len(paragraphs) // 2)
+    for phrase in link_phrases:
+        if needed <= 0:
+            break
+        # Extrai o anchor text da phrase
+        anchor_match = re.search(r'>([^<]+)</a>', phrase)
+        anchor_text = anchor_match.group(1) if anchor_match else "plataforma"
+        if anchor_text in used:
+            continue
+        # Remove o <p> wrapper pra inserir inline
+        clean = phrase.replace('<p>', '').replace('</p>', '')
+        paragraphs.insert(insert_pos, clean)
+        insert_pos += 2
+        needed -= 1
+        used.add(anchor_text)
+
+    return '</p>'.join(paragraphs)
+
+
 def generate_post_html(topic: str, category: str, keywords: List[str], slug: str) -> str:
     """Gera HTML do post otimizado para SEO."""
 
@@ -635,9 +708,14 @@ def generate_post_html(topic: str, category: str, keywords: List[str], slug: str
     # Tenta usar OpenRouter se disponível
     body = call_llm_for_content(topic, category, keywords)
 
-    # Fallback se LLM não disponível
+    # ZERO FALLBACK: se LLM falhou em todas as tentativas, ABORTA este post.
+    # Nenhum post generico eh publicado - ou sai com LLM real ou nao sai.
     if not body:
-        body = generate_fallback_content(topic, category, keywords)
+        print(f"  [ABORT] Post '{topic}' abortado - LLM falhou apos 3 tentativas", file=sys.stderr)
+        return None
+
+    # GARANTE que tem pelo menos 2 links /planos e 2 menções FraLib no corpo
+    body = ensure_fralib_ctas(body, min_links=2)
 
     # P0 hotfix security review: LLM eh fonte nao-confiavel. bleach.clean remove
     # <script>, <iframe>, event handlers, javascript: URLs ANTES do HTML virar
@@ -736,17 +814,18 @@ a:hover{{text-decoration:underline}}
 def call_llm_for_content(topic: str, category: str, keywords: List[str]) -> Optional[str]:
     """Gera conteúdo via LLM (Claude Sonnet via kpalabz).
 
+    Faz 3 tentativas com backoff. Retorna None apenas se TODAS falharem.
     Returns HTML do corpo do post (sem doctype, sem h1).
     """
-    try:
-        import requests
-        api_key = os.environ.get("ANTHROPIC_API_KEY")
-        base_url = os.environ.get("ANTHROPIC_BASE_URL", "https://api.kpalabz.com/v1")
+    import requests
+    api_key = os.environ.get("ANTHROPIC_API_KEY")
+    base_url = os.environ.get("ANTHROPIC_BASE_URL", "https://api.kpalabz.com/v1")
 
-        if not api_key:
-            return None
+    if not api_key:
+        print(f"  [LLM] ERRO FATAL: ANTHROPIC_API_KEY nao configurado no ambiente", file=sys.stderr)
+        return None
 
-        prompt = f"""Voce eh Franz Douglas, copywriter senior brasileiro. Escreva um post de blog sobre: {topic}
+    prompt = f"""Voce eh Franz Douglas, copywriter senior brasileiro. Escreva um post de blog sobre: {topic}
 
 CATEGORIA: {category}
 KEYWORDS OBRIGATORIAS: {', '.join(keywords)}
@@ -770,9 +849,12 @@ ESTRUTURA:
 
 CTAs FRALIB (CRITICO):
 - Mencione FraLib 1-2 vezes NO MEIO do texto de forma NATURAL
-- Use hyperlink inline: <a href="/planos">anchor variando</a>
-- Exemplos de anchor: "plataforma de prospeccao automatizada", "ferramenta de automacao", "sistema como o FraLib"
-- NAO pareca propaganda corporativa
+- IMPORTANTE: voce DEVE incluir EXATAMENTE 2 hyperlinks <a href="/planos">...</a> no conteudo_html
+  (NAO 0, NAO 1 - OBRIGATORIAMENTE 2 links inline para /planos)
+- Use anchor text variando: "plataforma de prospeccao automatizada", "ferramenta de automacao",
+  "sistema como o FraLib", "solucao completa como o FraLib", "plataforma de IA"
+- Distribua os 2 links: 1 no meio do texto (apos primeiro H2) e 1 perto do final (antes da conclusao)
+- NAO pareca propaganda corporativa - escreva como se estivesse recomendando pra um amigo
 
 LISTA NEGRA (rejeitar/reescrever se aparecer):
 - Crimes, homicídios, violencia, policia, trafico, drogas
@@ -783,22 +865,33 @@ Retorne APENAS o HTML do corpo: <p>...</p><h2>...</h2><p>...</p>...
 NAO inclua doctype, head, body, style, h1, title, meta.
 Apenas tags semanticas: p, h2, h3, ul, ol, li, blockquote, a, strong, em."""
 
-        resp = requests.post(
-            f"{base_url}/chat/completions",
-            headers={
-                "Authorization": f"Bearer {api_key}",
-                "Content-Type": "application/json",
-            },
-            json={
-                "model": "claude-sonnet-4-20250514",
-                "messages": [{"role": "user", "content": prompt}],
-                "max_tokens": 8000,
-                "temperature": 0.7,
-            },
-            timeout=120,
-        )
+    # Retry com backoff: 3 tentativas antes de desistir
+    max_retries = 3
+    for attempt in range(1, max_retries + 1):
+        try:
+            resp = requests.post(
+                f"{base_url}/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": "claude-sonnet-4-20250514",
+                    "messages": [{"role": "user", "content": prompt}],
+                    "max_tokens": 8000,
+                    "temperature": 0.7,
+                },
+                timeout=180,
+            )
 
-        if resp.ok:
+            if not resp.ok:
+                print(f"  [LLM] tentativa {attempt}/{max_retries}: HTTP {resp.status_code} - {resp.text[:200]}", file=sys.stderr)
+                if attempt < max_retries:
+                    import time
+                    time.sleep(5 * attempt)
+                    continue
+                return None
+
             content = resp.json()["choices"][0]["message"]["content"]
             # Strip markdown code fences if present
             content = content.strip()
@@ -808,47 +901,41 @@ Apenas tags semanticas: p, h2, h3, ul, ol, li, blockquote, a, strong, em."""
                 content = content[3:]
             if content.endswith("```"):
                 content = content[:-3]
-            return content.strip()
-    except Exception as e:
-        print(f"LLM error: {e}", file=sys.stderr)
+            content = content.strip()
+
+            # Validar: precisa ter conteudo real (nao vazio, > 500 chars)
+            if len(content) < 500:
+                print(f"  [LLM] tentativa {attempt}: resposta muito curta ({len(content)} chars)", file=sys.stderr)
+                if attempt < max_retries:
+                    import time
+                    time.sleep(5 * attempt)
+                    continue
+                return None
+
+            # Sucesso
+            print(f"  [LLM] tentativa {attempt}: sucesso ({len(content)} chars)", file=sys.stderr)
+            return content
+
+        except (requests.RequestException, Exception) as e:
+            print(f"  [LLM] tentativa {attempt}/{max_retries}: {type(e).__name__}: {str(e)[:200]}", file=sys.stderr)
+            if attempt < max_retries:
+                import time
+                time.sleep(5 * attempt)
+                continue
+            return None
+
     return None
 
 
 def generate_fallback_content(topic: str, category: str, keywords: List[str]) -> str:
-    """Conteúdo fallback caso LLM não disponível."""
+    """DEPRECATED: zero fallback. Se LLM falhar, post eh abortado.
 
-    cat = CATEGORIES.get(category, CATEGORIES["marketing"])
-
-    return f"""
-<h2>O que é {topic}?</h2>
-<p>{topic} está em alta no Brasil. Cada vez mais empresas e freelancers estão usando essa estratégia para crescer mais rápido, sem aumentar equipe.</p>
-
-<p>A ideia central é simples: automatizar o trabalho repetitivo e focar no que realmente importa — fechar vendas e entregar resultado pro cliente.</p>
-
-<h2>Por que isso importa agora?</h2>
-<p>Em 2026, o mercado brasileiro de marketing digital e vendas online não para de crescer. Quem fica parado perde espaço pra quem usa tecnologia a favor.</p>
-
-<p>Segundo dados do setor, empresas que adotam automação crescem <strong>3x mais rápido</strong> do que as que operam 100% manual. E o melhor: sem precisar contratar mais gente.</p>
-
-<h2>Como aplicar no seu negócio</h2>
-<p>Existem 3 caminhos pra começar com {topic.lower()}:</p>
-<p><strong>1. Fazer sozinho:</strong> Pesquisar, testar, errar. Funciona, mas leva meses até você ter resultado consistente.</p>
-<p><strong>2. Contratar agência:</strong> Caro (R$ 2.000-5.000/mês) e você fica dependendo de terceiro.</p>
-<p><strong>3. Usar plataforma automatizada:</strong> Como o <strong>FraLib</strong>, que faz tudo sozinho: acha cliente, faz site e vende no WhatsApp. Você só recebe o dinheiro.</p>
-
-<h2>O caso do FraLib</h2>
-<p>O <strong>FraLib</strong> é uma plataforma brasileira que automatiza 3 etapas críticas do seu negócio:</p>
-<p>→ <strong>Acha o cliente:</strong> Varre Google Maps e encontra negócios sem site na sua região.<br>
-→ <strong>Faz o site:</strong> Cria site profissional automaticão, pronto pra vender.<br>
-→ <strong>Vende no WPP:</strong> Envia no WhatsApp com follow-up automático até o cliente falar "quero".</p>
-
-<p>Você não faz NADA. Configura 1x por mês. Todo dia sai cliente novo no seu WPP querendo comprar site.</p>
-
-<h2>Conclusão</h2>
-<p>{topic} não é mais tendência — é necessidade. Quem não se adapta agora vai perder espaço nos próximos 12 meses.</p>
-
-<p>A boa notícia: você não precisa aprender a fazer tudo sozinho. Plataformas como o FraLib existem exatamente pra isso — automatizar o trabalho pesado e te deixar com o lucro.</p>
-"""
+    Mantida apenas para compatibilidade. NAO eh mais chamada em producao.
+    """
+    raise RuntimeError(
+        "generate_fallback_content foi removido. Sistema opera em modo zero-fallback: "
+        "se LLM falhar, o post eh abortado. Nenhum conteudo generico eh publicado."
+    )
 
 
 # ============================================================================
@@ -936,9 +1023,24 @@ def update_sitemap(posts: List[Dict]) -> None:
 # ============================================================================
 
 def main() -> int:
-    """Pipeline principal: gera 3 posts por execução."""
+    """Pipeline principal: gera N posts por execução."""
 
-    print(f"[{datetime.now()}] Iniciando blog automation...")
+    started_at = datetime.now()
+    started_ts = started_at.isoformat()
+
+    # NOVO: check de pausa (controle via superadmin)
+    pause_file = BLOG_DIR / ".paused"
+    if pause_file.exists():
+        print(f"[{started_at}] [PAUSADO] {pause_file} existe - saindo sem gerar posts")
+        _append_history({
+            "ts": started_ts, "paused": True,
+            "posts_gerados": 0, "sucessos": 0, "falhas": 0,
+            "latency_total_ms": 0, "source_usado": None,
+            "sources": [], "input_tokens_est": 0, "output_tokens_est": 0,
+        })
+        return 0
+
+    print(f"[{started_at}] Iniciando blog automation...")
 
     POSTS_DIR.mkdir(parents=True, exist_ok=True)
     BLOG_DIR.mkdir(parents=True, exist_ok=True)
@@ -949,27 +1051,39 @@ def main() -> int:
     print(f"  {len(all_topics)} trends rankeados (Google Trends + Reddit + Hacker News)")
 
     generated_posts = []
+    sources_used = []  # NOVO: tracking para .cron_history.jsonl
+    successes = 0
+    failures = 0
 
     for i, topic_data in enumerate(all_topics[:POSTS_PER_DAY]):
         topic = topic_data["topic"]
         category = topic_data["category"]
         keywords = topic_data["keywords"]
+        source = topic_data.get("source", "unknown")  # NOVO
+        sources_used.append(source)
         slug = slugify(topic)
 
         if has_post(slug):
             print(f"  Skip (já existe): {slug}")
             continue
 
-        print(f"  Gerando [{i+1}/{POSTS_PER_DAY}]: {topic}")
+        print(f"  Gerando [{i+1}/{POSTS_PER_DAY}]: {topic} (source={source})")
 
+        t0 = datetime.now()
         try:
             html = generate_post_html(topic, category, keywords, slug)
+            if html is None:
+                failures += 1
+                print(f"    ✗ Post abortado (LLM falhou)", file=sys.stderr)
+                continue
             post_file = save_post(slug, html)
+            successes += 1
 
             # Extrai excerpt (primeiro parágrafo)
             excerpt_match = re.search(r'<p>([^<]+)</p>', html)
             excerpt = excerpt_match.group(1)[:160] if excerpt_match else ""
 
+            elapsed = (datetime.now() - t0).total_seconds()
             generated_posts.append({
                 "slug": slug,
                 "topic": topic,
@@ -978,11 +1092,14 @@ def main() -> int:
                 "date": datetime.now().strftime("%Y-%m-%d"),
                 "read_time": "4",
                 "excerpt": excerpt + "...",
+                "source": source,
+                "generation_time_s": round(elapsed, 1),
             })
 
-            print(f"    ✓ Salvo: {post_file.name}")
+            print(f"    ✓ Salvo: {post_file.name} ({elapsed:.1f}s)")
 
         except Exception as e:
+            failures += 1
             print(f"    ✗ Erro: {e}", file=sys.stderr)
 
     # Carrega todos os posts existentes para o index
@@ -1023,8 +1140,56 @@ def main() -> int:
         except Exception as e:
             print(f"  Notification error: {e}", file=sys.stderr)
 
-    print(f"\n[OK] Concluido: {len(generated_posts)} posts novos, {len(all_posts)} total no blog")
+    # NOVO: append historico para painel superadmin
+    finished_at = datetime.now()
+    latency_ms = int((finished_at - started_at).total_seconds() * 1000)
+
+    # Estimativa de tokens (Sonnet 4 ~3500 input + 3500 output por post)
+    est_in = successes * 3500
+    est_out = successes * 3500
+
+    # Agrupa por source
+    sources_agg = {}
+    for src in sources_used:
+        if src not in sources_agg:
+            sources_agg[src] = {"source": src, "posts": 0, "successes": 0, "failures": 0}
+        sources_agg[src]["posts"] += 1
+        # successes/failures nao temos granular por source aqui, conta como tentativa
+    # success/failure reais: successes ja eh total de sucessos, failures ja eh total
+    # atribui failures uniformemente nas sources que tentaram
+    if failures > 0 and sources_agg:
+        per_src_fail = failures / len(sources_agg)
+        for src in sources_agg:
+            sources_agg[src]["failures"] = round(per_src_fail, 1)
+    for src in sources_agg:
+        sources_agg[src]["successes"] = max(0, sources_agg[src]["posts"] - sources_agg[src]["failures"])
+
+    _append_history({
+        "ts": started_ts,
+        "paused": False,
+        "posts_gerados": successes,
+        "sucessos": successes,
+        "falhas": failures,
+        "latency_total_ms": latency_ms,
+        "source_usado": sources_used[0] if sources_used else None,
+        "sources": list(sources_agg.values()),
+        "input_tokens_est": est_in,
+        "output_tokens_est": est_out,
+    })
+
+    print(f"\n[OK] Concluido: {successes} posts novos, {failures} falhas, {latency_ms}ms total")
     return 0
+
+
+def _append_history(entry: dict) -> None:
+    """Append 1 linha JSON ao historico do cron (.cron_history.jsonl)."""
+    history_file = BLOG_DIR / ".cron_history.jsonl"
+    try:
+        history_file.parent.mkdir(parents=True, exist_ok=True)
+        with history_file.open("a", encoding="utf-8") as f:
+            f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+    except Exception as e:
+        print(f"  [HISTORY] erro ao gravar: {e}", file=sys.stderr)
 
 
 if __name__ == "__main__":
