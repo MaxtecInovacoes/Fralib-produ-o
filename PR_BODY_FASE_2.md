@@ -36,6 +36,7 @@ Entrega das **Sprints 0.1-1.5** do plano de auditoria (`docs/AUDITORIA_FASE_0_1.
 | **P2** Redis `incr` + `expire` não-atômicos | qualidade | pipeline |
 | **P2** `_check_postgres` não tem teste real | qualidade | adicionado |
 | **P2 UX** Simulador Franz dispara 429 em dev | UX | bucket dedicado `simulador.*` 600/min + `RATE_LIMIT_DEV_OPEN=1` para loopback |
+| **P2 UX** Simulador Franz dispara 403 CSRF | UX | `sdr-simulator.js` trocou `fetch()` por `CSRFHelper.fetch()` (helper já existia em `csrf-helper.js`, só não estava sendo usado) |
 
 ### UI — SDR consolidado na aba Agentes (commit `01d24965` + `a9d4aec4`)
 - `_view-perfil.html`: removido bloco SDR duplicado (170+ linhas). Substituído por pointer-card 🤖 AGENTES → Motor FraLib.
