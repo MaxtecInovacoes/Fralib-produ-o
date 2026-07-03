@@ -167,10 +167,14 @@
 
   /**
    * Submete o que está digitado no textarea.
+   *
+   * Melhoria UX: atualiza o badge #sdrSimulatorSync (pronto → simulando → ✓/✗)
+   * e mapeia erros HTTP comuns para mensagens úteis em PT-BR.
    */
   function onSubmit() {
     var msgEl = $('sdrSimulatorMessage');
     var btn = $('sdrSimulatorSubmit');
+    var sync = $('sdrSimulatorSync');
     var historyEl = $('sdrSimulatorHistory');
     var msg = (msgEl && msgEl.value || '').trim();
     if (!msg) {
@@ -179,6 +183,7 @@
     }
     btn.disabled = true;
     btn.textContent = 'Simulando…';
+    setSync(sync, 'simulando…', 'warn');
     renderResult(null, null);
 
     var history = parseHistoryFromTextarea();
@@ -186,16 +191,78 @@
     callSimulateAPI({ message: msg, history: history })
       .then(function (result) {
         renderResult(result, null);
+        setSync(sync, '✓ ok', 'ok');
         return callHistoryAPI(HISTORY_LIMIT);
       })
       .then(function (items) { renderHistory(items); })
       .catch(function (err) {
-        renderResult(null, err && err.message ? err.message : String(err));
+        var friendly = friendlyError(err);
+        renderResult(null, friendly);
+        setSync(sync, '✗ erro', 'err');
       })
       .then(function () {
         btn.disabled = false;
         btn.textContent = 'Testar mensagem';
       });
+  }
+
+  /**
+   * Atualiza o badge de sync com cor por estado.
+   * @param {HTMLElement|null} el
+   * @param {string} text
+   * @param {'ok'|'warn'|'err'|'idle'} state
+   */
+  function setSync(el, text, state) {
+    if (!el) return;
+    el.textContent = text;
+    var color = '#9ca3af'; // idle (cinza)
+    if (state === 'ok') color = '#10b981';
+    else if (state === 'warn') color = '#f59e0b';
+    else if (state === 'err') color = '#ef4444';
+    el.style.color = color;
+  }
+
+  /**
+   * Mapeia erro técnico (HTTP status + body) para mensagem amigável em PT-BR.
+   *
+   * Antes: o user via "Erro: HTTP 403 — {"detail":"CSRF token invalido"}"
+   * sem saber o que fazer. Agora vê dica acionável.
+   *
+   * @param {Error & {httpStatus?: number}} err
+   * @returns {string}
+   */
+  function friendlyError(err) {
+    var msg = err && err.message ? err.message : String(err);
+    // Extrai status HTTP se vier no formato "HTTP NNN — ..."
+    var m = msg.match(/HTTP\s+(\d{3})/);
+    var status = err && err.httpStatus ? err.httpStatus : (m ? parseInt(m[1], 10) : null);
+    var body = msg.replace(/^HTTP\s+\d{3}\s*[—-]\s*/, '').trim();
+    switch (status) {
+      case 401:
+        return '🔒 Sessão expirada. Faça login novamente.';
+      case 403:
+        if (/csrf/i.test(body)) {
+          return '🛡️ Token CSRF inválido. Recarregue a página (Ctrl+Shift+R) e tente de novo.';
+        }
+        if (/forbid/i.test(body) || /permission/i.test(body)) {
+          return '🚫 Sem permissão pra usar o simulador. Fale com o admin.';
+        }
+        return '🚫 Acesso negado (403). Recarregue a página (Ctrl+Shift+R).';
+      case 404:
+        return '🔍 Endpoint não encontrado (404). O backend pode estar desatualizado.';
+      case 422:
+        return '⚠️ Mensagem inválida (max 4000 chars, não pode ser vazia).';
+      case 429:
+        var retry = body.match(/"retry_after":\s*(\d+)/);
+        var wait = retry ? retry[1] : 'alguns';
+        return '⏱️ Muitas requisições. Aguarde ' + wait + 's antes de tentar de novo.';
+      case 500:
+      case 502:
+      case 503:
+        return '💥 Erro interno do simulador. Veja o console (F12) e tente novamente em alguns segundos.';
+      default:
+        return msg;
+    }
   }
 
   /**
@@ -243,16 +310,31 @@
 
   /**
    * Carrega histórico e faz bind dos handlers.
+   *
+   * Hooks: contador de chars em tempo real no textarea + badge sync inicial.
    */
   function load_simulator() {
     var btn = $('sdrSimulatorSubmit');
     if (btn) btn.addEventListener('click', onSubmit);
     var ta = $('sdrSimulatorMessage');
+    var counter = $('sdrSimulatorCounter');
     if (ta) {
       ta.addEventListener('keydown', function (e) {
         if (e.ctrlKey && e.key === 'Enter') { e.preventDefault(); onSubmit(); }
       });
+      // Contador N/4000 em tempo real
+      var updateCounter = function () {
+        if (!counter) return;
+        var n = ta.value.length;
+        counter.textContent = n + '/4000';
+        counter.style.color = n > 3800 ? '#ef4444' : (n > 3000 ? '#f59e0b' : '#9ca3af');
+      };
+      ta.addEventListener('input', updateCounter);
+      updateCounter();
     }
+    // Badge sync começa em "pronto"
+    var sync = $('sdrSimulatorSync');
+    setSync(sync, 'pronto', 'idle');
     callHistoryAPI(HISTORY_LIMIT).then(renderHistory).catch(function () {});
   }
 
