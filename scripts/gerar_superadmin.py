@@ -290,13 +290,13 @@ tr:hover td{{background:var(--fl-bg-hover)}}
     </div>
     <pre style="background:rgba(0,0,0,0.3);padding:16px;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--fl-text-muted);overflow-x:auto"># /etc/crontab ou crontab -e
 # Blog automatizado FraLib
-0 8 * * * /bin/bash /opt/fralib/scripts/pipeline_completo.sh >> /var/log/fralib/pipeline.log 2>&1
+0 8 * * * /bin/bash /root/fralib/scripts/pipeline_completo.sh >> /var/log/fralib/pipeline.log 2>&1
 
 # Para verificar:
 tail -f /var/log/fralib/pipeline.log
 
 # Para testar manualmente:
-bash /opt/fralib/scripts/pipeline_completo.sh</pre>
+bash /root/fralib/scripts/pipeline_completo.sh</pre>
   </div>
 </div>
 

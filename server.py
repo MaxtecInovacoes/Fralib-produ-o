@@ -297,14 +297,17 @@ async def lifespan(app):
         print(f"[Server] Aviso: migration ad_spend falhou: {e}")
 
     # Iniciar listener WhatsApp (recebe respostas dos leads e chama Bryan)
-    try:
-        import sys, os
-        sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'backend'))
-        from whatsapp_listener import start_background_listener
-        start_background_listener()
-        print("[Server] WhatsApp listener iniciado")
-    except Exception as e:
-        print(f"[Server] Aviso: WhatsApp listener nao iniciado: {e}")
+    # DESABILITADO 2026-07-03: o fralib-wpp-listener.service ja roda como servico
+    # systemd separado. Iniciar 2x causa mensagens processadas em duplicidade.
+    # Manter comentado por 30 dias - se precisar reativar, basta descomentar.
+    # try:
+    #     import sys, os
+    #     sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'backend'))
+    #     from whatsapp_listener import start_background_listener
+    #     start_background_listener()
+    #     print("[Server] WhatsApp listener iniciado")
+    # except Exception as e:
+    #     print(f"[Server] Aviso: WhatsApp listener nao iniciado: {e}")
 
     yield
 
