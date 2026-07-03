@@ -347,36 +347,63 @@ def fetch_google_trends_br() -> List[Dict]:
     trends = []
     try:
         import requests
-        # RSS oficial do Google Trends
-        resp = requests.get(
+        # RSS oficial do Google Trends (BR)
+        urls = [
             "https://trends.google.com.br/trends/trendingsearches/daily/rss?geo=BR",
-            timeout=15,
-            headers={"User-Agent": "Mozilla/5.0 (FraLib Bot)"},
-        )
-        if resp.ok:
-            import re
-            items = re.findall(r"<title>([^<]+)</title>", resp.text)
-            for i, title in enumerate(items[:10]):
-                trends.append({
-                    "topic": title,
-                    "category": classify_topic(title),
-                    "keywords": title.lower().split(),
-                    "intent": "trending",
-                    "source": "google_trends_br",
-                })
+            "https://trends.google.com.br/trends/trendingsearches/realtime/rss?geo=BR",
+        ]
+        for url in urls:
+            try:
+                resp = requests.get(
+                    url,
+                    timeout=15,
+                    headers={"User-Agent": "Mozilla/5.0 (FraLib Bot)"},
+                )
+                if resp.ok:
+                    import re
+                    items = re.findall(r"<title>([^<]+)</title>", resp.text)
+                    for title in items[:10]:
+                        # Google Trends BR pode misturar EN quando nao tem topico BR quente
+                        # Filtrar apenas topicos com palavras PT ou nomes proprios comuns
+                        if _is_pt_topic(title):
+                            trends.append({
+                                "topic": title,
+                                "category": classify_topic(title),
+                                "keywords": title.lower().split(),
+                                "intent": "trending",
+                                "source": "google_trends_br",
+                            })
+            except Exception:
+                continue
     except Exception as e:
         print(f"  Google Trends error: {e}", file=sys.stderr)
     return trends
 
 
+def _is_pt_topic(title: str) -> bool:
+    """Detecta se topico eh em portugues (heuristica simples)."""
+    t = title.lower()
+    # Marcadores comuns PT
+    pt_markers = ["ão", "ões", "ção", "ções", "á", "é", "í", "ó", "ú",
+                  " de ", " da ", " do ", " com ", " para ", " brasil",
+                  " brasileiro", " brasileira", " são ", " não ", " que "]
+    # Marcadores comuns EN (excluir)
+    en_markers = [" the ", " and ", " of ", " for ", " with ", " from ",
+                  "is ", "are ", " an ", " a ", " ban ", " emergency"]
+    pt_score = sum(1 for m in pt_markers if m in t)
+    en_score = sum(1 for m in en_markers if m in t)
+    return pt_score >= 1 and en_score == 0
+
+
 def fetch_reddit_brazil() -> List[Dict]:
     """Top posts do dia de subreddits BR com foco em negocio/tech/marketing."""
     trends = []
-    subreddits = ["brasil", "brdev", "empreendedorismo", "investimentos", "marketingdigital"]
+    subreddits = ["brasil", "brdev", "empreendedorismo", "investimentos", "marketingdigital", "desabafos"]
     try:
         import requests
         for sub in subreddits:
             try:
+                # .json endpoint do Reddit - pega top do dia
                 url = f"https://www.reddit.com/r/{sub}/top.json?t=day&limit=3"
                 resp = requests.get(
                     url,
@@ -388,6 +415,7 @@ def fetch_reddit_brazil() -> List[Dict]:
                     for post in data.get("data", {}).get("children", []):
                         p = post.get("data", {})
                         title = p.get("title", "").strip()
+                        # Reddit em PT ou aceita qualquer titulo de sub BR
                         if title and 20 < len(title) < 120:
                             trends.append({
                                 "topic": title,
@@ -397,14 +425,14 @@ def fetch_reddit_brazil() -> List[Dict]:
                                 "source": f"reddit_{sub}",
                             })
             except Exception:
-                continue  # Ignora sub individual com erro
+                continue
     except Exception as e:
         print(f"  Reddit error: {e}", file=sys.stderr)
     return trends
 
 
 def fetch_hackernews() -> List[Dict]:
-    """Top stories do Hacker News (foco tech/startup/IA)."""
+    """Top stories do Hacker News APENAS em PT ou com keywords BR (filtro rigoroso)."""
     trends = []
     try:
         import requests
@@ -414,7 +442,7 @@ def fetch_hackernews() -> List[Dict]:
             headers={"User-Agent": "FraLib Blog Bot 1.0"},
         )
         if resp.ok:
-            story_ids = resp.json()[:8]  # top 8
+            story_ids = resp.json()[:15]  # top 15 (mais pq filtramos muito)
             for sid in story_ids:
                 try:
                     s = requests.get(
@@ -422,14 +450,18 @@ def fetch_hackernews() -> List[Dict]:
                         timeout=5,
                     ).json()
                     title = (s.get("title") or "").strip()
+                    # FILTRO RIGOROSO: so aceita se for PT
                     if title and 20 < len(title) < 120 and not s.get("dead"):
-                        trends.append({
-                            "topic": title,
-                            "category": classify_topic(title),
-                            "keywords": title.lower().split()[:5],
-                            "intent": "trending",
-                            "source": "hackernews",
-                        })
+                        if _is_pt_topic(title):
+                            trends.append({
+                                "topic": title,
+                                "category": classify_topic(title),
+                                "keywords": title.lower().split()[:5],
+                                "intent": "trending",
+                                "source": "hackernews",
+                            })
+                            if len(trends) >= 5:  # limite baixo pq HN raramente tem PT
+                                break
                 except Exception:
                     continue
     except Exception as e:
@@ -894,6 +926,7 @@ def main() -> int:
 
             generated_posts.append({
                 "slug": slug,
+                "topic": topic,
                 "title": topic,
                 "category": category,
                 "date": datetime.now().strftime("%Y-%m-%d"),
@@ -937,9 +970,12 @@ def main() -> int:
     update_sitemap(generated_posts)
     save_dashboard()
 
-    # Notificação webhook
+    # Notificação webhook (best-effort, nao quebra o flow)
     for post in generated_posts:
-        notify_new_post(post["slug"], post["topic"], post["category"])
+        try:
+            notify_new_post(post["slug"], post.get("topic", post.get("title", "")), post.get("category", "marketing"))
+        except Exception as e:
+            print(f"  Notification error: {e}", file=sys.stderr)
 
     print(f"\n[OK] Concluido: {len(generated_posts)} posts novos, {len(all_posts)} total no blog")
     return 0

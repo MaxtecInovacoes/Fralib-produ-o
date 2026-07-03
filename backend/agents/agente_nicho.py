@@ -113,9 +113,12 @@ except ImportError:
 
 try:
     from agente_variacao import detect_subniche
-except Exception:
-    def detect_subniche(segmento, servicos=None, atributos=None):  # type: ignore
-        return "default"
+except Exception as _import_err:
+    # D2 plano 2026-07-02: SEM fallback silencioso. Propaga erro.
+    raise ImportError(
+        f"agente_nicho: falha ao importar detect_subniche de agente_variacao: {_import_err}. "
+        "Verifique se o modulo esta no path e se nao tem erros de sintaxe."
+    ) from _import_err
 
 SYSTEM_PROMPT = """You are the Local Niche Intelligence Agent.
 
