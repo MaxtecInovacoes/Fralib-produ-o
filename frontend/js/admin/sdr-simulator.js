@@ -17,9 +17,55 @@
   var $ = function (id) { return document.getElementById(id); };
 
   /**
+   * Lê o cookie ``fralib_csrf`` direto do document.cookie.
+   * @returns {string}
+   */
+  function readCsrfCookie() {
+    var match = (document.cookie || '').match(/(?:^|;\s*)fralib_csrf=([^;]+)/);
+    return match ? decodeURIComponent(match[1]) : '';
+  }
+
+  /**
+   * Wrapper de fetch com defesa em profundidade contra CSRF.
+   *
+   * Estratégia em camadas (cada uma isolada, sem dependência da anterior):
+   *   1. Se window.CSRFHelper.fetch existir → usa (caminho preferencial)
+   *   2. Senão → fetch nativo + injeta X-CSRF-Token lendo do cookie
+   *
+   * Isso garante que funciona mesmo se:
+   *   - csrf-helper.js não foi carregado (404 / ordem errada)
+   *   - Browser está com cache antigo do CSRFHelper
+   *   - Outro módulo substituiu window.CSRFHelper
+   *
+   * @param {string} url
+   * @param {object} options
+   * @returns {Promise<Response>}
+   */
+  function csrfFetch(url, options) {
+    options = options || {};
+    var method = (options.method || 'GET').toUpperCase();
+    options.credentials = 'include';  // sempre envia cookies
+
+    if (window.CSRFHelper && typeof window.CSRFHelper.fetch === 'function') {
+      // Caminho 1: usa o helper se existir
+      return window.CSRFHelper.fetch(url, options);
+    }
+
+    // Caminho 2: fetch nativo + injeta X-CSRF-Token manualmente
+    options.headers = options.headers || {};
+    if (['POST', 'PUT', 'DELETE', 'PATCH'].indexOf(method) !== -1) {
+      var csrf = readCsrfCookie();
+      if (csrf && !options.headers['X-CSRF-Token']) {
+        options.headers['X-CSRF-Token'] = csrf;
+      }
+    }
+    return fetch(url, options);
+  }
+
+  /**
    * Faz POST para /api/admin/simulate com token Bearer.
    *
-   * Usa ``CSRFHelper.fetch`` (carregado em admin.html) para injetar
+   * Usa ``csrfFetch`` (wrapper local com fallback) para injetar
    * automaticamente o header ``X-CSRF-Token`` quando o método é unsafe.
    * Sem isso, _verify_cookie_csrf() no backend retorna 403 CSRF token invalido
    * porque o login deixa o cookie ``fralib_csrf`` no browser mas o fetch
@@ -30,7 +76,7 @@
    */
   function callSimulateAPI(payload) {
     var token = window.AUTH_TOKEN || localStorage.getItem('auth_token') || '';
-    return CSRFHelper.fetch('/api/admin/simulate', {
+    return csrfFetch('/api/admin/simulate', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -50,7 +96,7 @@
   /**
    * Faz GET em /api/admin/simulations?limit=N.
    *
-   * GET é safe e não exige CSRF, mas mantemos CSRFHelper.fetch para
+   * GET é safe e não exige CSRF, mas mantemos csrfFetch para
    * consistência (credentials:include + future-proof).
    *
    * @param {number} limit
@@ -58,7 +104,7 @@
    */
   function callHistoryAPI(limit) {
     var token = window.AUTH_TOKEN || localStorage.getItem('auth_token') || '';
-    return CSRFHelper.fetch('/api/admin/simulations?limit=' + (limit || HISTORY_LIMIT), {
+    return csrfFetch('/api/admin/simulations?limit=' + (limit || HISTORY_LIMIT), {
       method: 'GET',
       headers: {
         'Authorization': token ? 'Bearer ' + token : ''
