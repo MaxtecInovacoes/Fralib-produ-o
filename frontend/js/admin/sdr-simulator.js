@@ -18,14 +18,20 @@
 
   /**
    * Faz POST para /api/admin/simulate com token Bearer.
+   *
+   * Usa ``CSRFHelper.fetch`` (carregado em admin.html) para injetar
+   * automaticamente o header ``X-CSRF-Token`` quando o método é unsafe.
+   * Sem isso, _verify_cookie_csrf() no backend retorna 403 CSRF token invalido
+   * porque o login deixa o cookie ``fralib_csrf`` no browser mas o fetch
+   * cru não envia o header de match.
+   *
    * @param {Object} payload - { tenant_id?, message, history? }
    * @returns {Promise<Object>}
    */
   function callSimulateAPI(payload) {
     var token = window.AUTH_TOKEN || localStorage.getItem('auth_token') || '';
-    return fetch('/api/admin/simulate', {
+    return CSRFHelper.fetch('/api/admin/simulate', {
       method: 'POST',
-      credentials: 'include',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': token ? 'Bearer ' + token : ''
@@ -43,14 +49,17 @@
 
   /**
    * Faz GET em /api/admin/simulations?limit=N.
+   *
+   * GET é safe e não exige CSRF, mas mantemos CSRFHelper.fetch para
+   * consistência (credentials:include + future-proof).
+   *
    * @param {number} limit
    * @returns {Promise<Array>}
    */
   function callHistoryAPI(limit) {
     var token = window.AUTH_TOKEN || localStorage.getItem('auth_token') || '';
-    return fetch('/api/admin/simulations?limit=' + (limit || HISTORY_LIMIT), {
+    return CSRFHelper.fetch('/api/admin/simulations?limit=' + (limit || HISTORY_LIMIT), {
       method: 'GET',
-      credentials: 'include',
       headers: {
         'Authorization': token ? 'Bearer ' + token : ''
       }
