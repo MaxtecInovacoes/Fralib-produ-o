@@ -157,10 +157,22 @@ def buscar_inteligencia_jina(
         except (FileNotFoundError, json.JSONDecodeError, UnicodeDecodeError):
             pass
 
-    # Buscar inteligência real via Jina
+    # Buscar inteligência real via Jina (com fallback Playwright local)
     resultado = _buscar_real(nicho, cidade, nome_negocio, concorrentes_urls)
 
-    # Fail-fast: se resultado inválido, lançar erro
+    # Fallback: se Jina falhou (saldo/erro/limite), tenta Playwright local
+    if not resultado or not resultado.get("palavras_poder"):
+        print(f"[Jina Intel] Jina falhou, tentando fallback Playwright local (zero custo)...")
+        try:
+            from jina_playwright_fallback import buscar_inteligencia_local
+            resultado_fallback = buscar_inteligencia_local(nicho, cidade, nome_negocio)
+            if resultado_fallback and resultado_fallback.get("palavras_poder"):
+                print(f"[Jina Intel] Fallback Playwright SUCESSO ({len(resultado_fallback.get('palavras_poder', []))} palavras-poder)")
+                resultado = resultado_fallback
+        except Exception as fb_exc:
+            print(f"[Jina Intel] Fallback Playwright falhou: {fb_exc}")
+
+    # Fail-fast: se ambos falharem, lançar erro
     if not resultado or not resultado.get("palavras_poder"):
         raise JinaIntelligenceError(
             f"Jina nao retornou inteligencia valida para '{nicho_original}' em '{cidade}'.",
@@ -169,7 +181,7 @@ def buscar_inteligencia_jina(
                 "nicho_normalizado": nicho,
                 "cidade": cidade,
                 "nome_negocio": nome_negocio,
-                "acao": "Verifique API key JINA_API_KEY e connectivity",
+                "acao": "Recarregue JINA_API_KEY ou verifique Playwright fallback",
             },
         )
 
