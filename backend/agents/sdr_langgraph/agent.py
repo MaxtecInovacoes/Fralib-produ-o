@@ -56,6 +56,9 @@ from .prompts import (
     build_user_prompt,
     should_use_lobo,
     get_persona_text,
+    get_franz_persona,
+    get_franz_stage_prompt,
+    get_franz_rag,
 )
 from .multi_agent import (
     agent_system_overlay,
@@ -408,6 +411,13 @@ def node_load_context(state: SDRState) -> dict:
     agent_context = build_agent_context(memory, selected_agent, handoff_reason)
     record_agent_handoff(memory, selected_agent, handoff_reason)
     rag_context = load_rag(selected_agent)
+    # === Sprint 12.9+: concatenar FRANZ_RAG.md se flag ativa ===
+    try:
+        franz_md_rag = get_franz_rag()
+        if franz_md_rag:
+            rag_context = f"{franz_md_rag}\n\n{rag_context}"
+    except Exception as _rag_err:
+        print(f"[SDR] get_franz_rag falhou (nao-bloqueante): {_rag_err}")
     rag_context = f"{rag_context}\n\n{learning_overlay(memory.user_id, selected_agent)}"
 
     print(f"[SDR] Agent selected: {selected_agent} ({handoff_reason})")
@@ -656,12 +666,18 @@ def node_hook(state: SDRState) -> dict:
     try:
         from agents.llm_direct import call_claude
 
-        stage_prompt = build_stage_prompt(
-            stage="hook",
-            variant=variant,
-            segmento=memory.segmento,
-            rating=memory.rating,
-        )
+        # === Sprint 12.9+: usar loader MD se FRALIB_SDR_PROMPTS_FROM_MD=1 ===
+        stage_name = state.get("stage", "hook")
+        md_stage = get_franz_stage_prompt(stage_name)
+        if md_stage:
+            stage_prompt = md_stage
+        else:
+            stage_prompt = build_stage_prompt(
+                stage="hook",
+                variant=variant,
+                segmento=memory.segmento,
+                rating=memory.rating,
+            )
 
         user_prompt = build_user_prompt(
             stage="hook",
@@ -687,8 +703,11 @@ def node_hook(state: SDRState) -> dict:
             try:
                 from backend.services.sdr_settings import build_sdr_system_prompt
 
+                # === Sprint 12.9+: usar loaders MD se FRALIB_SDR_PROMPTS_FROM_MD=1 ===
+                # get_franz_persona() carrega FRANZ_PERSONA.md (fallback constante)
+                persona_texto = get_franz_persona()
                 base_for_tenant = (
-                    get_persona_text(state.get("persona", "consultivo")) + "\n\n" +
+                    persona_texto + "\n\n" +
                     agent_system_overlay(state.get("agent_context", {})) + "\n\n" +
                     stage_prompt + "\n\n" +
                     state.get("rag_context", "")
@@ -697,7 +716,7 @@ def node_hook(state: SDRState) -> dict:
             except Exception as _tenant_err:
                 print(f"[SDR] build_sdr_system_prompt falhou (nao-bloqueante): {_tenant_err}")
                 full_system = (
-                    get_persona_text(state.get("persona", "consultivo")) + "\n\n" +
+                    get_franz_persona() + "\n\n" +
                     agent_system_overlay(state.get("agent_context", {})) + "\n\n" +
                     stage_prompt + "\n\n" +
                     state.get("rag_context", "")
@@ -1022,21 +1041,26 @@ def make_stage_node(stage_name: str):
         try:
             from agents.llm_direct import call_claude
 
-            # Persona texto
-            persona_text = get_persona_text(persona)
+            # === Sprint 12.9+: usar loaders MD se FRALIB_SDR_PROMPTS_FROM_MD=1 ===
+            persona_text = get_franz_persona()
 
             # Stage prompt para a persona (passa variant e variant_example)
-            stage_prompt = build_stage_prompt(
-                stage=stage_name,
-                variant=state.get("variant", "A"),
-                segmento=memory.segmento,
-                rating=memory.rating,
-                site_url=memory.site_url,
-                top_concorrentes=memory.top_concorrentes,
-                persona=persona,
-                cidade=memory.cidade,
-                nome=memory.nome,
-            )
+            # Tenta MD primeiro (FRANZ_PLAYBOOK.md), fallback para constante
+            md_stage = get_franz_stage_prompt(stage_name)
+            if md_stage:
+                stage_prompt = md_stage
+            else:
+                stage_prompt = build_stage_prompt(
+                    stage=stage_name,
+                    variant=state.get("variant", "A"),
+                    segmento=memory.segmento,
+                    rating=memory.rating,
+                    site_url=memory.site_url,
+                    top_concorrentes=memory.top_concorrentes,
+                    persona=persona,
+                    cidade=memory.cidade,
+                    nome=memory.nome,
+                )
 
             # History
             history = state.get("history", [])
