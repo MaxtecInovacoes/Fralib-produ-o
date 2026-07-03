@@ -420,30 +420,39 @@ def dequeue_and_send(
             result["waiting_sec"] = 600
             return result
         if success:
-            with engine.connect() as c:
-                c.execute(text("""
-                    UPDATE outbound_queue SET status = 'sent', sent_at = NOW()
-                    WHERE id = :id
-                """), {"id": msg_id})
-                c.execute(text("""
-                    UPDATE leads
-                    SET sdr_stage = CASE
-                        WHEN COALESCE(sdr_stage, '') IN ('', 'pendente_wpp', 'pending_sdr_send', 'manual_test_no_wpp') THEN 'hook'
-                        ELSE sdr_stage
-                    END,
-                    atualizado_em = NOW()::text
-                    WHERE id = :lead_id AND user_id = :tenant_id
-                """), {"lead_id": lead_id, "tenant_id": tenant_id})
-                c.execute(text("""
-                    INSERT INTO interacoes
-                        (lead_id, lead_nome, nicho, cidade, direcao, mensagem, criado_em, user_id, tipo)
-                    SELECT id, nome, segmento, cidade, 'saida', :message,
-                           to_char(NOW() AT TIME ZONE 'America/Sao_Paulo', 'YYYY-MM-DD"T"HH24:MI:SS.US'),
-                           user_id, 'whatsapp'
-                    FROM leads
-                    WHERE id = :lead_id AND user_id = :tenant_id
-                """), {"message": message, "lead_id": lead_id, "tenant_id": tenant_id})
-                c.commit()
+            # Sprint 1.2: 3 statements (outbound UPDATE + leads UPDATE + interacoes
+            # INSERT) em transacao atomica. Se 2o ou 3o falhar, ROLLBACK total —
+            # evita inconsistencia (outbound=send mas leads sem update).
+            try:
+                with engine.begin() as c:
+                    c.execute(text("""
+                        UPDATE outbound_queue SET status = 'sent', sent_at = NOW()
+                        WHERE id = :id
+                    """), {"id": msg_id})
+                    c.execute(text("""
+                        UPDATE leads
+                        SET sdr_stage = CASE
+                            WHEN COALESCE(sdr_stage, '') IN ('', 'pendente_wpp', 'pending_sdr_send', 'manual_test_no_wpp') THEN 'hook'
+                            ELSE sdr_stage
+                        END,
+                        atualizado_em = NOW()::text
+                        WHERE id = :lead_id AND user_id = :tenant_id
+                    """), {"lead_id": lead_id, "tenant_id": tenant_id})
+                    c.execute(text("""
+                        INSERT INTO interacoes
+                            (lead_id, lead_nome, nicho, cidade, direcao, mensagem, criado_em, user_id, tipo)
+                        SELECT id, nome, segmento, cidade, 'saida', :message,
+                               to_char(NOW() AT TIME ZONE 'America/Sao_Paulo', 'YYYY-MM-DD"T"HH24:MI:SS.US'),
+                               user_id, 'whatsapp'
+                        FROM leads
+                        WHERE id = :lead_id AND user_id = :tenant_id
+                    """), {"message": message, "lead_id": lead_id, "tenant_id": tenant_id})
+            except Exception as _tx_err:
+                logger.error(
+                    f"[outbound] transacao atomica falhou (msg_id={msg_id}, "
+                    f"lead_id={lead_id}): {_tx_err} — ROLLBACK aplicado"
+                )
+                raise
             try:
                 from sqlalchemy.orm import sessionmaker
                 from services.credits_manager import consumir_credito_trial_entregue
