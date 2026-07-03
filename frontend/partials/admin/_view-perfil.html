@@ -166,177 +166,23 @@
       </div>
     </div>
 
-    <div class="config-section" style="max-width:100%;margin-top:18px;">
-      <div class="config-group">
-        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:12px;">
-          <div>
-            <div class="config-group-title">CONTROLE DO SDR</div>
-            <p style="color:var(--fl-text-muted);font-size:12px;line-height:1.5;margin:0;">Use o motor nativo ou personalize nome, horario, abordagem, limites e base de conhecimento deste tenant.</p>
-          </div>
-          <span id="sdrPlanStatus" style="font-size:11px;color:var(--fl-text-muted);border:1px solid var(--fl-border);padding:5px 9px;border-radius:6px;">verificando plano</span>
+    <div class="config-section" style="max-width:100%;margin-top:18px;border-color:rgba(192,132,252,.32);background:linear-gradient(135deg,rgba(192,132,252,.08),rgba(56,189,248,.05));">
+      <div class="config-group" style="margin-bottom:0;">
+        <div class="config-group-title" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+          <span style="display:flex;align-items:center;gap:8px;"><span style="font-size:20px;">&#129302;</span> AGENTES &amp; SDR</span>
+          <span style="font-size:11px;color:var(--fl-text-muted);border:1px solid var(--fl-border);padding:3px 8px;border-radius:6px;">configurar no Motor FraLib</span>
         </div>
-
-        <div class="config-row">
-          <div class="config-field">
-            <label class="config-label" for="sdrAgentName">Nome publico do SDR</label>
-            <input class="config-input" id="sdrAgentName" type="text" maxlength="40" placeholder="Franz">
-          </div>
-          <div class="config-field">
-            <label class="config-label" for="sdrBaseMode">Base de comportamento</label>
-            <select class="config-select" id="sdrBaseMode">
-              <option value="native">Nativo FraLib</option>
-              <option value="custom">Nativo + regras do tenant</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="config-row">
-          <div class="config-field">
-            <label class="config-label" for="sdrOutboundMode">Abordagem ativa</label>
-            <select class="config-select" id="sdrOutboundMode">
-              <option value="system">Padrao do sistema</option>
-              <option value="custom">Horario especifico</option>
-              <option value="always">24h</option>
-            </select>
-          </div>
-          <div class="config-field">
-            <label class="config-label" for="sdrResponseMode">Resposta a mensagens recebidas</label>
-            <select class="config-select" id="sdrResponseMode">
-              <option value="always">Responder 24h</option>
-              <option value="same_as_outbound">Responder somente no horario de abordagem</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="config-row">
-          <div class="config-field">
-            <label class="config-label" for="sdrHoraInicio">Inicio das abordagens</label>
-            <input class="config-input" id="sdrHoraInicio" type="number" min="0" max="23" step="1" placeholder="8">
-          </div>
-          <div class="config-field">
-            <label class="config-label" for="sdrHoraFim">Fim das abordagens</label>
-            <input class="config-input" id="sdrHoraFim" type="number" min="1" max="24" step="1" placeholder="21">
-          </div>
-        </div>
-
-        <div class="config-field">
-          <label class="config-label">Dias sem abordagem ativa</label>
-          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(82px,1fr));gap:8px;">
-            <label style="font-size:12px;color:var(--fl-text-muted);border:1px solid var(--fl-border);padding:8px;border-radius:6px;"><input class="sdr-day" type="checkbox" value="0"> Seg</label>
-            <label style="font-size:12px;color:var(--fl-text-muted);border:1px solid var(--fl-border);padding:8px;border-radius:6px;"><input class="sdr-day" type="checkbox" value="1"> Ter</label>
-            <label style="font-size:12px;color:var(--fl-text-muted);border:1px solid var(--fl-border);padding:8px;border-radius:6px;"><input class="sdr-day" type="checkbox" value="2"> Qua</label>
-            <label style="font-size:12px;color:var(--fl-text-muted);border:1px solid var(--fl-border);padding:8px;border-radius:6px;"><input class="sdr-day" type="checkbox" value="3"> Qui</label>
-            <label style="font-size:12px;color:var(--fl-text-muted);border:1px solid var(--fl-border);padding:8px;border-radius:6px;"><input class="sdr-day" type="checkbox" value="4"> Sex</label>
-            <label style="font-size:12px;color:var(--fl-text-muted);border:1px solid var(--fl-border);padding:8px;border-radius:6px;"><input class="sdr-day" type="checkbox" value="5"> Sab</label>
-            <label style="font-size:12px;color:var(--fl-text-muted);border:1px solid var(--fl-border);padding:8px;border-radius:6px;"><input class="sdr-day" type="checkbox" value="6"> Dom</label>
-          </div>
-        </div>
-
-        <div class="config-row">
-          <div class="config-field">
-            <label class="config-label" for="sdrObjective">Objetivo do SDR</label>
-            <select class="config-select" id="sdrObjective">
-              <option value="sell_until_close">Vender ate o fechamento</option>
-              <option value="qualify_only">Qualificar e chamar humano</option>
-              <option value="handoff_only">Acionar humano cedo</option>
-            </select>
-          </div>
-          <div class="config-field">
-            <label class="config-label" for="sdrKnowledgeMode">Base de conhecimento</label>
-            <select class="config-select" id="sdrKnowledgeMode">
-              <option value="native">Usar RAG nativo</option>
-              <option value="native_plus_custom">RAG nativo + base propria</option>
-              <option value="custom">Priorizar base propria</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="config-field">
-          <label class="config-label" for="sdrPersonality">Personalidade e estilo de abordagem</label>
-          <textarea class="config-input" id="sdrPersonality" rows="3" maxlength="900" placeholder="Ex: consultivo, direto, sem girias, nunca pressionar, pedir permissao antes de mostrar o site."></textarea>
-        </div>
-
-        <div class="config-row">
-          <div class="config-field">
-            <label class="config-label" for="sdrAllowedActions">O que pode fazer</label>
-            <textarea class="config-input" id="sdrAllowedActions" rows="4" placeholder="Uma regra por linha"></textarea>
-          </div>
-          <div class="config-field">
-            <label class="config-label" for="sdrBlockedActions">O que nao pode fazer</label>
-            <textarea class="config-input" id="sdrBlockedActions" rows="4" placeholder="Uma regra por linha"></textarea>
-          </div>
-        </div>
-
-        <div class="config-row">
-          <div class="config-field">
-            <label class="config-label" for="sdrHandoffTriggers">Quando chamar humano</label>
-            <textarea class="config-input" id="sdrHandoffTriggers" rows="4" placeholder="Uma situacao por linha"></textarea>
-          </div>
-          <div class="config-field">
-            <label class="config-label" for="sdrHandoffNote">Instrucao de handoff</label>
-            <textarea class="config-input" id="sdrHandoffNote" rows="4" maxlength="700" placeholder="Ex: se pedir contrato, pagamento, desconto fora da regra ou quiser falar com uma pessoa."></textarea>
-          </div>
-        </div>
-
-        <div class="config-field">
-          <label class="config-label" for="sdrCustomKnowledge">Documentacao propria do SDR</label>
-          <textarea class="config-input" id="sdrCustomKnowledge" rows="6" maxlength="8000" placeholder="FAQ, ofertas, objeções, limites comerciais, forma de falar, quem chamar, diferenciais e politicas."></textarea>
-          <div style="font-size:11px;color:var(--fl-text-muted);margin-top:5px;">Limite atual: 8000 caracteres. Regras nativas de seguranca e opt-out sempre prevalecem.</div>
-        </div>
-
-        <div class="config-row">
-          <div class="config-field">
-            <label class="config-label" for="sdrCooldownSeconds">Cooldown por lead (segundos)</label>
-            <input class="config-input" id="sdrCooldownSeconds" type="number" min="15" max="900" step="15" placeholder="30">
-          </div>
-          <div class="config-field">
-            <label class="config-label" for="sdrDailyLimit">Limite diario por lead</label>
-            <input class="config-input" id="sdrDailyLimit" type="number" min="3" max="200" step="1" placeholder="50">
-          </div>
-          <div class="config-field">
-            <label class="config-label" for="sdrHumanPauseSeconds">Pausa apos humano (segundos)</label>
-            <input class="config-input" id="sdrHumanPauseSeconds" type="number" min="60" max="86400" step="60" placeholder="300">
-          </div>
-        </div>
-
-        <label style="display:flex;align-items:center;gap:10px;color:var(--fl-text-muted);font-size:12px;margin:12px 0;">
-          <input id="sdrIgnoreSavedContacts" type="checkbox">
-          Nao responder contatos salvos na agenda do WhatsApp conectado
-        </label>
-
-        <!-- Phone Health widget -->
-        <div id="sdrPhoneHealthWidget" style="margin-top:16px;padding:12px 14px;background:rgba(56,189,248,.06);border:1px solid rgba(56,189,248,.18);border-radius:8px;">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;gap:12px;">
-            <strong style="font-size:13px;color:var(--fl-text);">📱 Saúde do número</strong>
-            <span id="sdrPhoneHealthSync" style="font-size:10px;color:var(--fl-text-muted);font-family:var(--fl-font-mono);">—</span>
-          </div>
-          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;">
-            <div>
-              <div style="font-size:10px;color:var(--fl-text-muted);text-transform:uppercase;letter-spacing:.04em;">Score</div>
-              <div id="sdrPhoneHealthScore" style="font-size:22px;font-weight:800;color:var(--success,#10b981);">—</div>
-            </div>
-            <div>
-              <div style="font-size:10px;color:var(--fl-text-muted);text-transform:uppercase;letter-spacing:.04em;">Status</div>
-              <div id="sdrPhoneHealthStatus" style="font-size:13px;font-weight:700;">—</div>
-            </div>
-            <div>
-              <div style="font-size:10px;color:var(--fl-text-muted);text-transform:uppercase;letter-spacing:.04em;">Limite efetivo</div>
-              <div id="sdrPhoneHealthEffectiveLimit" style="font-size:13px;font-weight:700;">—</div>
-            </div>
-          </div>
-          <label style="display:flex;align-items:center;gap:10px;margin-top:12px;font-size:12px;color:var(--fl-text);">
-            <input id="sdrAutoThrottleEnabled" type="checkbox">
-            Auto-throttle (reduzir limite diario proporcional ao score)
-          </label>
-        </div>
-
-        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-          <button class="btn-config-save" id="btn-sdr-save" style="padding:10px 16px;">SALVAR CONTROLE DO SDR</button>
-          <span id="sdrConfigStatus" style="font-size:12px;color:var(--fl-text-muted);"></span>
+        <p style="color:var(--fl-text-muted);font-size:13px;line-height:1.55;margin:10px 0 14px;">
+          Toda a inteligencia que conversa com seus leads (Franz), o simulador pra treinar conversas antes de subir pra producao,
+          os limites anti-ban, a base de conhecimento e os KPIs de aprendizado estao reunidos na aba
+          <strong style="color:var(--fl-purple-300);">Motor FraLib &rarr; Agentes</strong> desta mesma pagina.
+        </p>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;">
+          <button class="btn-config-save" style="padding:10px 16px;" onclick="document.querySelector('[data-view=\"config\"]').click(); window.scrollTo({top:0,behavior:'smooth'});">ABRIR MOTOR FRALIB &raquo;</button>
+          <span style="font-size:12px;color:var(--fl-text-muted);align-self:center;">Leva 1 clique &mdash; volta aqui no menu lateral depois.</span>
         </div>
       </div>
     </div>
 
-  </section>
 
 </main>

@@ -234,32 +234,33 @@ async def run_detector_now(
         logger.exception("run_detector_now falhou")
         raise HTTPException(status_code=500, detail=f"detector error: {exc}") from exc
 
-    # Bonus: grava audit_events se a tabela existir (Sprint 2.2).
+    # Bug #16 fix: usa record_event (Sprint 2.2) ao invés de SQL manual com schema errado
     try:
         actor_id = (user or {}).get("user_id") or (user or {}).get("id")
-        db.execute(
-            text(
-                """
-                INSERT INTO audit_events
-                    (event_type, actor_id, payload, criado_em)
-                VALUES
-                    ('cron.detect_silent_tenants', :actor,
-                     CAST(:payload AS jsonb), NOW())
-                """
+        actor_email = (user or {}).get("email") if isinstance(user, dict) else None
+        from backend.audit.models import AuditEvent
+        from backend.audit.recorder import record_event
+
+        record_event(
+            engine,
+            AuditEvent(
+                tenant_id=None,
+                actor_id=actor_id,
+                actor_email=actor_email,
+                actor_role="superadmin",
+                action="cron.detect_silent_tenants",
+                entity_type="detector",
+                entity_id=None,
+                diff={"trigger": "manual", "detected": len(results)},
+                ip=None,
+                user_agent=None,
+                metadata={"results_sample": results[:5] if results else []},
             ),
-            {
-                "actor": actor_id,
-                "payload": (
-                    '{"count":' + str(len(results)) + ', "trigger":"manual"}'
-                ),
-            },
         )
-        db.commit()
     except Exception:
-        # Se tabela nao existir, ignora silenciosamente (logger ja em DEBUG).
-        db.rollback()
+        # Fail-safe: se audit_event falhar, loga mas não derruba o response
         logger.debug(
-            "audit_events nao disponivel - run_detector manual nao auditado",
+            "run_detector manual: audit_event nao persistido (engine/tabela indisponivel)",
         )
 
     return {

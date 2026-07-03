@@ -72,10 +72,13 @@ def _make_mock_engine(
             return result
 
         # Criteria 5: trial_active_no_use_14d — match first (most specific: 14 days)
-        if "14 days" in sql:
+        # SQL novo: SELECT id, criado_em, ultimo_acesso FROM users WHERE ... '14 days'
+        # AND status_plano = 'trial'. Match unico por combinacao: 14 days + status_plano
+        if "14 days" in sql and "status_plano" in sql:
             rows = trial_no_use_rows or []
             result.fetchall.return_value = [
-                (r["tenant_id"], r.get("criado_em")) for r in rows
+                (r["tenant_id"], r.get("criado_em"), r.get("ultimo_acesso"))
+                for r in rows
             ]
             return result
 

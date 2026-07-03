@@ -166,7 +166,7 @@ class TestRecordEvent:
         """Test successful event recording."""
         mock_engine = MagicMock()
         mock_connection = MagicMock()
-        mock_engine.connect.return_value.__enter__.return_value = mock_connection
+        mock_engine.begin.return_value.__enter__.return_value = mock_connection
 
         event = AuditEvent(
             tenant_id=1,
@@ -185,7 +185,7 @@ class TestRecordEvent:
         record_event(mock_engine, event)
 
         # Verify connection was used
-        mock_engine.connect.assert_called_once()
+        mock_engine.begin.assert_called_once()
 
         # Verify INSERT was executed
         expected_diff_json = json.dumps({"name": "old", "name_new": "new"})
@@ -222,10 +222,7 @@ class TestRecordEvent:
         assert params.get("user_agent") == "Mozilla/5.0"
         assert params.get("metadata") == expected_metadata_json
 
-        # Verify commit
-        mock_connection.commit.assert_called_once()
-
-        # No warning should be logged
+        # No warning should be logged (commit é gerenciado por engine.begin() context)
         mock_logger.warning.assert_not_called()
 
     @patch('backend.audit.recorder.logger')
@@ -233,7 +230,7 @@ class TestRecordEvent:
         """Test recording event when database fails."""
         mock_engine = MagicMock()
         mock_connection = MagicMock()
-        mock_engine.connect.return_value.__enter__.return_value = mock_connection
+        mock_engine.begin.return_value.__enter__.return_value = mock_connection
         mock_connection.execute.side_effect = Exception("Database connection failed")
 
         event = AuditEvent(
@@ -256,15 +253,14 @@ class TestRecordEvent:
         # Warning should be logged
         mock_logger.warning.assert_called_once()
 
-        # Commit should not be called
-        mock_connection.commit.assert_not_called()
+        # No commit explícito (engine.begin() context manager gerencia)
 
     @patch('backend.audit.recorder.logger')
     def test_record_event_complex_diff_json(self, mock_logger):
         """Test recording event with complex JSON diff."""
         mock_engine = MagicMock()
         mock_connection = MagicMock()
-        mock_engine.connect.return_value.__enter__.return_value = mock_connection
+        mock_engine.begin.return_value.__enter__.return_value = mock_connection
 
         complex_diff = {
             "user": {"name": "John", "email": "john@example.com"},
@@ -412,7 +408,7 @@ class TestRecordLogin:
         """Test successful login recording."""
         mock_engine = MagicMock()
         mock_connection = MagicMock()
-        mock_engine.connect.return_value.__enter__.return_value = mock_connection
+        mock_engine.begin.return_value.__enter__.return_value = mock_connection
 
         record_login(
             mock_engine,
@@ -435,15 +431,14 @@ class TestRecordLogin:
         assert params.get("ip") == "192.168.1.1"
         assert params.get("user_agent") == "Mozilla/5.0"
 
-        # Verify commit
-        mock_connection.commit.assert_called_once()
+        # No commit explícito (engine.begin() context manager)
 
     @patch('backend.audit.recorder.logger')
     def test_record_logout(self, mock_logger):
         """Test logout recording."""
         mock_engine = MagicMock()
         mock_connection = MagicMock()
-        mock_engine.connect.return_value.__enter__.return_value = mock_connection
+        mock_engine.begin.return_value.__enter__.return_value = mock_connection
 
         record_login(
             mock_engine,
@@ -469,7 +464,7 @@ class TestRecordTenantChange:
         """Test tenant change recording."""
         mock_engine = MagicMock()
         mock_connection = MagicMock()
-        mock_engine.connect.return_value.__enter__.return_value = mock_connection
+        mock_engine.begin.return_value.__enter__.return_value = mock_connection
 
         before = {"theme": "light", "notifications": True}
         after = {"theme": "dark", "notifications": False}
@@ -508,7 +503,7 @@ class TestRecordLeadChange:
         """Test lead creation recording."""
         mock_engine = MagicMock()
         mock_connection = MagicMock()
-        mock_engine.connect.return_value.__enter__.return_value = mock_connection
+        mock_engine.begin.return_value.__enter__.return_value = mock_connection
 
         diff = {"status": "new", "source": "manual"}
 
@@ -541,7 +536,7 @@ class TestRecordLeadChange:
         """Test lead deletion recording."""
         mock_engine = MagicMock()
         mock_connection = MagicMock()
-        mock_engine.connect.return_value.__enter__.return_value = mock_connection
+        mock_engine.begin.return_value.__enter__.return_value = mock_connection
 
         record_lead_change(
             mock_engine,
@@ -609,3 +604,154 @@ class TestAuditEndpoint:
         response = TestClient(app).get("/api/superadmin/audit")
 
         assert response.status_code == 403
+
+    def test_audit_endpoint_rejects_empty_email_user(self, monkeypatch):
+        """Bug #6: email vazio/None nao pode bypassar is_superadmin."""
+        from backend.core.auth import get_current_user
+        from backend.endpoints import audit_endpoints as mod
+
+        monkeypatch.setattr(mod, "query_events", MagicMock())
+
+        app = FastAPI()
+        app.include_router(mod.router)
+        # User com email vazio (bug antigo: is_superadmin("") => falsy mas confuso)
+        app.dependency_overrides[get_current_user] = lambda: {
+            "user_id": 99,
+            "email": "",
+            "role": "user",
+        }
+        response = TestClient(app).get("/api/superadmin/audit")
+        assert response.status_code == 403
+
+    def test_audit_endpoint_validates_since_iso(self, monkeypatch):
+        """Bug #5: since/until invalido retorna 422 em vez de 500."""
+        from backend.core.auth import get_current_user
+        from backend.endpoints import audit_endpoints as mod
+
+        monkeypatch.setattr(mod, "query_events", MagicMock())
+
+        app = FastAPI()
+        app.include_router(mod.router)
+        app.dependency_overrides[get_current_user] = lambda: {
+            "user_id": 1,
+            "email": "su@x.com",
+            "role": "superadmin",
+        }
+        # since malformado
+        response = TestClient(app).get(
+            "/api/superadmin/audit?since=2026-13-99T99:99:99"
+        )
+        assert response.status_code == 422
+        assert "since" in response.json()["detail"].lower() or "invalido" in response.json()["detail"].lower()
+
+    def test_audit_endpoint_validates_until_iso(self, monkeypatch):
+        from backend.core.auth import get_current_user
+        from backend.endpoints import audit_endpoints as mod
+
+        monkeypatch.setattr(mod, "query_events", MagicMock())
+
+        app = FastAPI()
+        app.include_router(mod.router)
+        app.dependency_overrides[get_current_user] = lambda: {
+            "user_id": 1,
+            "email": "su@x.com",
+            "role": "superadmin",
+        }
+        response = TestClient(app).get(
+            "/api/superadmin/audit?until=not-a-date"
+        )
+        assert response.status_code == 422
+
+    def test_audit_endpoint_accepts_valid_iso(self, monkeypatch):
+        """Datas ISO validas sao aceitas e passadas pro query_events."""
+        from backend.core.auth import get_current_user
+        from backend.endpoints import audit_endpoints as mod
+
+        captured = {}
+        def fake_query(engine, **kwargs):
+            captured.update(kwargs)
+            return []
+        monkeypatch.setattr(mod, "query_events", fake_query)
+
+        app = FastAPI()
+        app.include_router(mod.router)
+        app.dependency_overrides[get_current_user] = lambda: {
+            "user_id": 1,
+            "email": "su@x.com",
+            "role": "superadmin",
+        }
+        response = TestClient(app).get(
+            "/api/superadmin/audit?since=2026-01-01T00:00:00&until=2026-12-31T23:59:59"
+        )
+        assert response.status_code == 200
+        assert captured.get("since") == "2026-01-01T00:00:00"
+        assert captured.get("until") == "2026-12-31T23:59:59"
+
+
+@pytest.mark.unit
+class TestAuditDecorator:
+    """Bug #3 fix: @audit_log permite escolher entity_id_from."""
+
+    def _run_endpoint(self, entity_id_from="id", user=None):
+        """Helper: aplica decorator, chama endpoint, captura evento."""
+        from backend.audit.decorators import audit_log
+        from fastapi import Request
+        from unittest.mock import MagicMock, patch
+        from backend.audit.models import AuditEvent
+
+        captured = {}
+
+        def fake_record(engine, event):
+            captured["event"] = event
+
+        @audit_log("test.action", "test_entity", entity_id_from=entity_id_from)
+        async def fake_endpoint(request, current_user=None):
+            return {"ok": True}
+
+        fake_request = MagicMock(spec=Request)
+        fake_request.client = MagicMock()
+        fake_request.client.host = "1.1.1.1"
+        fake_request.headers = {"user-agent": "Test/1.0"}
+        fake_request.app.state.engine = MagicMock()
+
+        import asyncio
+        with patch("backend.audit.decorators.record_event", side_effect=fake_record):
+            asyncio.run(fake_endpoint(request=fake_request, current_user=user))
+        return captured.get("event")
+
+    def test_decorator_entity_id_from_tenant_id(self):
+        """entity_id_from='tenant_id' → entity_id = tenant_id (nao user_id)."""
+        event = self._run_endpoint(
+            entity_id_from="tenant_id",
+            user={
+                "user_id": 7,
+                "tenant_id": 42,
+                "email": "u@x.com",
+                "role": "admin",
+            },
+        )
+        assert event is not None, "record_event nao foi chamado"
+        assert event.entity_id == 42, f"esperado 42, recebeu {event.entity_id}"
+        assert event.tenant_id == 42
+        assert event.actor_id == 7
+        assert event.action == "test.action"
+        assert event.entity_type == "test_entity"
+
+    def test_decorator_default_entity_id_from_id(self):
+        """Default entity_id_from='id' → entity_id = user.id (legacy compat)."""
+        event = self._run_endpoint(
+            entity_id_from="id",
+            user={
+                "user_id": 7,
+                "id": 7,
+                "tenant_id": 42,
+                "email": "u@x.com",
+                "role": "admin",
+            },
+        )
+        assert event is not None
+        # entity_id_from='id' → entity_id = 7 (user.id)
+        # tenant_id continua sendo 42 (separado)
+        assert event.entity_id == 7
+        assert event.tenant_id == 42
+

@@ -17,6 +17,20 @@ from backend.core.config import is_superadmin
 router = APIRouter(prefix="/api/superadmin", tags=["audit"])
 
 
+def _parse_iso_ts(value: Optional[str], field_name: str) -> Optional[datetime]:
+    """Valida e parseia ISO timestamp. Retorna 422 se inválido."""
+    if value is None or value == "":
+        return None
+    try:
+        # Aceita tanto "2026-01-01T00:00:00" quanto "2026-01-01 00:00:00"
+        return datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except (ValueError, AttributeError) as exc:
+        raise HTTPException(
+            status_code=422,
+            detail=f"{field_name} invalido (esperado ISO 8601, ex: '2026-01-01T00:00:00'): {exc}",
+        )
+
+
 @router.get("/audit")
 async def list_audit_events(
     request: Request,
@@ -35,8 +49,14 @@ async def list_audit_events(
         email = str(current_user.get("email") or "")
     else:
         email = str(getattr(current_user, "email", "") or "")
-    if not is_superadmin(email):
+    # Bug #6 fix: rejeita email vazio/None explicitamente (era bypass)
+    if not email or not is_superadmin(email):
         raise HTTPException(status_code=403, detail="Acesso restrito a superadmin")
+    # Bug #5 fix: valida ISO timestamps antes de mandar pro SQL
+    since_dt = _parse_iso_ts(since, "since")
+    until_dt = _parse_iso_ts(until, "until")
+    since_iso = since_dt.isoformat() if since_dt else None
+    until_iso = until_dt.isoformat() if until_dt else None
     try:
         rows = query_events(
             engine,
@@ -44,8 +64,8 @@ async def list_audit_events(
             actor_id=actor_id,
             action=action,
             entity_type=entity_type,
-            since=since,
-            until=until,
+            since=since_iso,
+            until=until_iso,
             limit=limit,
         )
     except Exception as e:

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from typing import Optional, Dict, Any
@@ -22,6 +22,7 @@ from backend.services.sdr_settings import (
     save_sdr_settings,
 )
 from backend.utils.password_utils import BCRYPT_MAX_BYTES, hash_password, verify_password
+from backend.audit.decorators import audit_log
 
 router = APIRouter(prefix="/api/users", tags=["users"])
 

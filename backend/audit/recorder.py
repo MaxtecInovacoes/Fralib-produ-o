@@ -12,7 +12,12 @@ logger = logging.getLogger("fralib.audit.recorder")
 
 
 def record_event(engine, event: AuditEvent) -> None:
-    """Insert one audit event. Fail-safe: never raises (logs warning on DB error)."""
+    """Insert one audit event. Fail-safe: never raises (logs warning on DB error).
+
+    Uses ``engine.begin()`` so the INSERT is wrapped in an explicit
+    transaction that auto-commits on success and auto-rollbacks on error,
+    preventing zombie transactions on transient failures.
+    """
     try:
         diff_json = json.dumps(event.diff or {})
         metadata_json = json.dumps(event.metadata or {})
@@ -27,7 +32,7 @@ def record_event(engine, event: AuditEvent) -> None:
             )
             """
         )
-        with engine.connect() as conn:
+        with engine.begin() as conn:
             conn.execute(
                 sql,
                 {
@@ -44,7 +49,6 @@ def record_event(engine, event: AuditEvent) -> None:
                     "metadata": metadata_json,
                 },
             )
-            conn.commit()
     except Exception as e:  # pragma: no cover - fail-safe
         logger.warning(f"Audit DB error (action={event.action}): {e}")
 

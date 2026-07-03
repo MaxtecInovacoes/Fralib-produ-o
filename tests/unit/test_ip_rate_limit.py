@@ -39,29 +39,49 @@ from middleware.rate_limit import (  # noqa: E402
 # ─────────────────────────────────────────────────────────────────────────────
 
 
+
+def _make_redis_mock():
+    """Cria mock Redis que suporta .pipeline() (Sprint 3.1 race hardening).
+
+    O `IPRateLimiter` usa `pipe = redis.pipeline(); pipe.incr(); pipe.expire();
+    pipe.execute()` para atomicidade. O mock precisa simular isso.
+    """
+    redis = MagicMock()
+    # Pipeline mock: pipe.incr(key) + pipe.expire(key, ttl) + pipe.execute() -> [count]
+    pipe = MagicMock()
+    pipe.execute.return_value = [1]  # valor default; tests sobrescrevem via side_effect
+    redis.pipeline.return_value = pipe
+    return redis
+
+
+def _set_redis_count(redis, value):
+    """Configura o mock para retornar `value` como count do INCR."""
+    redis.pipeline.return_value.execute.return_value = [value]
+    return redis
+
+
 @pytest.mark.unit
 class TestRedisPath:
     """Sliding window via Redis: INCR + EXPIRE."""
 
     def test_redis_path_allows_under_limit(self):
-        redis = MagicMock()
-        # INCR retorna 1 (primeiro hit, dentro do limite)
-        redis.incr.return_value = 1
-        redis.expire.return_value = True
+        redis = _make_redis_mock()
+        redis.pipeline.return_value.execute.return_value = [1]  # 1o hit, < limite (10)
 
         limiter = IPRateLimiter(engine=MagicMock(), redis_client=redis)
         allowed, retry_after = limiter.check("1.2.3.4", "auth.login")
 
         assert allowed is True
         assert retry_after == 0
-        redis.incr.assert_called_once()
-        redis.expire.assert_called_once()
+        # Pipeline foi usado (atomicidade)
+        redis.pipeline.return_value.incr.assert_called_once()
+        redis.pipeline.return_value.expire.assert_called_once()
 
     def test_redis_path_blocks_over_limit(self):
-        redis = MagicMock()
-        # 11º hit — acima do limite de 10 para auth.login
-        redis.incr.return_value = 11
-        redis.ttl.return_value = 42  # segundos restantes na chave
+        redis = _make_redis_mock()
+        # 11o hit — acima do limite de 10 para auth.login
+        redis.pipeline.return_value.execute.return_value = [11]
+        redis.ttl.return_value = 42
 
         limiter = IPRateLimiter(engine=MagicMock(), redis_client=redis)
         allowed, retry_after = limiter.check("1.2.3.4", "auth.login")
@@ -72,8 +92,8 @@ class TestRedisPath:
 
     def test_redis_path_uses_bucket_limit(self):
         """Cada bucket tem seu próprio (max_requests, window_sec)."""
-        redis = MagicMock()
-        redis.incr.return_value = 6  # > 5 do bucket cron.*
+        redis = _make_redis_mock()
+        redis.pipeline.return_value.execute.return_value = [6]  # > 5 do bucket cron.*
         redis.ttl.return_value = 30
 
         limiter = IPRateLimiter(engine=MagicMock(), redis_client=redis)
@@ -170,6 +190,72 @@ class TestPostgresFallback:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# 3b. Client IP extraction — X-Forwarded-For spoof protection
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class _FakeRequest:
+    """Mock minimalista de FastAPI Request pra testar _client_ip."""
+
+    def __init__(self, host: str = "1.1.1.1", xff: str | None = None) -> None:
+        self.headers: dict[str, str] = {}
+        if xff:
+            self.headers["x-forwarded-for"] = xff
+        self.client = MagicMock()
+        self.client.host = host
+
+
+@pytest.mark.unit
+class TestClientIpExtraction:
+    """P0 security: rate limit NAO pode ser bypassed por XFF spoof."""
+
+    def test_no_trusted_proxies_ignores_xff(self) -> None:
+        """Sem trusted_proxies configurado, XFF é IGNORADO (fail-safe)."""
+        from middleware.rate_limit import _client_ip
+
+        req = _FakeRequest(host="1.1.1.1", xff="9.9.9.9")
+        # Sem trusted_proxies → usa o IP real do socket, NAO o XFF.
+        assert _client_ip(req) == "1.1.1.1"
+
+    def test_no_trusted_proxies_no_xff_uses_socket(self) -> None:
+        from middleware.rate_limit import _client_ip
+        req = _FakeRequest(host="1.1.1.1", xff=None)
+        assert _client_ip(req) == "1.1.1.1"
+
+    def test_trusted_proxy_chain_validates_last_hop(self) -> None:
+        """Com trusted_proxies, XFF só vale se o último hop é trusted."""
+        from middleware.rate_limit import _client_ip
+
+        # Trusted proxy chain: client → trusted → trusted → trusted
+        req = _FakeRequest(
+            host="10.0.0.1",  # trusted (no socket)
+            xff="9.9.9.9, 10.0.0.2, 10.0.0.3",
+        )
+        trusted = {"10.0.0.1", "10.0.0.2", "10.0.0.3"}
+        # Último XFF hop é 10.0.0.3 → trusted. Primeiro = 9.9.9.9 → real client.
+        assert _client_ip(req, trusted_proxies=trusted) == "9.9.9.9"
+
+    def test_trusted_proxy_untrusted_last_hop_ignored(self) -> None:
+        """Se último hop do XFF não é trusted, ignora XFF (anti-spoof)."""
+        from middleware.rate_limit import _client_ip
+
+        req = _FakeRequest(
+            host="10.0.0.1",
+            xff="9.9.9.9, 10.0.0.2, evil.attacker.com",  # attacker forjou
+        )
+        trusted = {"10.0.0.1", "10.0.0.2"}  # NÃO inclui attacker.com
+        # Último XFF = evil.attacker.com → NÃO é trusted → ignora XFF → usa socket.
+        assert _client_ip(req, trusted_proxies=trusted) == "10.0.0.1"
+
+    def test_trusted_proxy_cidr(self) -> None:
+        """CIDR notation funciona pra ranges privados."""
+        from middleware.rate_limit import _client_ip, _ip_in_trusted
+        assert _ip_in_trusted("10.0.0.5", {"10.0.0.0/8"}) is True
+        assert _ip_in_trusted("192.168.1.1", {"192.168.0.0/16"}) is True
+        assert _ip_in_trusted("8.8.8.8", {"10.0.0.0/8"}) is False
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # 4. Fail-open — Postgres E Redis falhando
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -215,6 +301,21 @@ class TestFailOpen:
 
 @pytest.mark.unit
 @pytest.mark.asyncio
+
+
+def _make_redis_mock_with_counts(counts):
+    """Cria mock Redis onde cada pipeline.execute() retorna o proximo count."""
+    redis = _make_redis_mock()
+    it = iter(counts)
+    def next_count():
+        try:
+            return [next(it)]
+        except StopIteration:
+            return [1]
+    redis.pipeline.return_value.execute.side_effect = next_count
+    return redis
+
+
 class TestMiddlewareIntegration:
     """Testa o middleware completo: 200 / 401 / 429 com Retry-After."""
 
@@ -246,10 +347,8 @@ class TestMiddlewareIntegration:
         return AsyncClient(transport=transport, base_url="http://test")
 
     async def test_allows_first_5_logins_in_a_minute(self):
-        redis = MagicMock()
-        # Simula 5 hits, todos abaixo do limite (1..5)
-        redis.incr.side_effect = list(range(1, 6))
-        redis.expire.return_value = True
+        # 5 hits, todos abaixo do limite (1..5)
+        redis = _make_redis_mock_with_counts(list(range(1, 6)))
         engine = MagicMock()
 
         async with await self._make_client(redis, engine) as client:
@@ -260,26 +359,20 @@ class TestMiddlewareIntegration:
             assert all(s == 401 for s in statuses), statuses
 
     async def test_blocks_11th_login_returns_429(self):
-        redis = MagicMock()
-        # Simula sequência de hits: 1,2,...,10 (allow), 11 (block)
-        redis.incr.side_effect = list(range(1, 12))
-        redis.expire.return_value = True
+        # Sequência: 1..10 (allow), 11 (block)
+        redis = _make_redis_mock_with_counts(list(range(1, 12)))
         redis.ttl.return_value = 25
         engine = MagicMock()
 
         async with await self._make_client(redis, engine) as client:
-            # 10 primeiros → 401
             for _ in range(10):
                 resp = await client.post("/api/auth/login")
                 assert resp.status_code == 401
-            # 11º → 429
             resp = await client.post("/api/auth/login")
             assert resp.status_code == 429
 
     async def test_retry_after_header_present_on_429(self):
-        redis = MagicMock()
-        redis.incr.side_effect = list(range(1, 12))
-        redis.expire.return_value = True
+        redis = _make_redis_mock_with_counts(list(range(1, 12)))
         redis.ttl.return_value = 17
         engine = MagicMock()
 
@@ -292,10 +385,8 @@ class TestMiddlewareIntegration:
             assert resp.headers["Retry-After"] == "17"
 
     async def test_cron_endpoint_5_per_minute_limit(self):
-        redis = MagicMock()
-        # cron.* tem limite 5 — hits 1..5 (allow), 6 (block)
-        redis.incr.side_effect = list(range(1, 7))
-        redis.expire.return_value = True
+        # cron.* limite 5 — hits 1..5 (allow), 6 (block)
+        redis = _make_redis_mock_with_counts(list(range(1, 7)))
         redis.ttl.return_value = 30
         engine = MagicMock()
 
@@ -307,14 +398,13 @@ class TestMiddlewareIntegration:
             assert resp.status_code == 429
 
     async def test_health_endpoint_not_rate_limited(self):
-        """Whitelist: /api/health (GET) não passa pelo Redis."""
-        redis = MagicMock()
-        redis.incr.return_value = 1
+        """Whitelist: /api/health (GET) nao passa pelo Redis."""
+        redis = _make_redis_mock()
         engine = MagicMock()
 
         async with await self._make_client(redis, engine) as client:
             for _ in range(20):
                 resp = await client.get("/api/health")
                 assert resp.status_code == 200
-            # Redis.incr NUNCA deve ser chamado para health
-            redis.incr.assert_not_called()
+            # Pipeline NUNCA deve ser chamado para health (whitelist)
+            redis.pipeline.assert_not_called()

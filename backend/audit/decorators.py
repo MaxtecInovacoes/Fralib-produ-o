@@ -22,7 +22,7 @@ def _resolve_ip(request: Optional[Request]) -> Optional[str]:
     return request.client.host
 
 
-def audit_log(action: str, entity_type: str) -> Callable:
+def audit_log(action: str, entity_type: str, *, entity_id_from: str = "id") -> Callable:
     """Decorator: registra AuditEvent apos execucao bem-sucedida do endpoint.
 
     Usage:
@@ -31,7 +31,17 @@ def audit_log(action: str, entity_type: str) -> Callable:
         async def create_foo(request: Request, current_user: User = Depends(...)):
             ...
 
+        # Para entidades que NAO sao o user (ex: tenant_settings, lead):
+        @audit_log("lead.delete", "lead", entity_id_from="lead_id")
+
     O decorator NAO quebra a request se a auditoria falhar (record_event e fail-safe).
+
+    Args:
+        action: nome da acao auditada (ex: "tenant.update_settings").
+        entity_type: tipo de entidade (ex: "tenant_settings", "lead").
+        entity_id_from: chave no user-dict (ou atributo do user-object) usada
+            como ``entity_id``. Default ``"id"`` (user_id). Use ``"tenant_id"``
+            para acoes que atuam no tenant como um todo.
     """
 
     def decorator(func: Callable) -> Callable:
@@ -51,13 +61,15 @@ def audit_log(action: str, entity_type: str) -> Callable:
                     actor_email = user.get("email")
                     actor_role = user.get("role") or "user"
                     tenant_id = user.get("tenant_id") or user.get("user_id") or user.get("id")
-                    entity_id = user.get("id") or user.get("user_id")
+                    entity_id = user.get(entity_id_from) or user.get("id") or user.get("user_id")
                 else:
                     actor_id = getattr(user, "id", None) if user is not None else None
                     actor_email = getattr(user, "email", None) if user is not None else None
                     actor_role = getattr(user, "role", None) if user is not None else "user"
                     tenant_id = getattr(user, "tenant_id", None) if user is not None else None
-                    entity_id = getattr(user, "id", None) if user is not None else None
+                    entity_id = getattr(user, entity_id_from, None) if user is not None else None
+                    if entity_id is None:
+                        entity_id = getattr(user, "id", None) if user is not None else None
                 ip = _resolve_ip(request)
                 user_agent = (
                     request.headers.get("user-agent") if request is not None else None

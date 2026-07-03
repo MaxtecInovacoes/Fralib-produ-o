@@ -96,12 +96,15 @@ _SQL_SUBSCRIPTION_EXPIRING_7D = """
 """
 
 _SQL_TRIAL_NO_USE_14D = """
-    SELECT id, criado_em
+    SELECT id, criado_em, ultimo_acesso
     FROM users
     WHERE status = 'active'
       AND role != 'superadmin'
       AND status_plano = 'trial'
-      AND ultimo_acesso IS NULL
+      AND (
+        ultimo_acesso IS NULL
+        OR ultimo_acesso < NOW() - INTERVAL '14 days'
+      )
       AND criado_em < NOW() - INTERVAL '14 days'
 """
 
@@ -222,7 +225,7 @@ def detect_subscription_expiring_7d(engine: Engine) -> list[dict[str, Any]]:
 
 
 def detect_trial_active_no_use_14d(engine: Engine) -> list[dict[str, Any]]:
-    """Critério 5: trial > 14d sem login."""
+    """Critério 5: trial > 14d sem uso (nunca logou OU logou uma vez e parou)."""
     with engine.connect() as conn:
         rows = conn.execute(text(_SQL_TRIAL_NO_USE_14D)).fetchall()
     return [
@@ -232,6 +235,7 @@ def detect_trial_active_no_use_14d(engine: Engine) -> list[dict[str, Any]]:
             "severity": _WARNING,
             "detail": {
                 "criado_em": str(r[1]) if r[1] else None,
+                "ultimo_acesso": str(r[2]) if r[2] else None,
             },
         }
         for r in rows
