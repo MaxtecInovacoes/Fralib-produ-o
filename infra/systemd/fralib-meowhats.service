@@ -1,0 +1,36 @@
+[Unit]
+Description=FraLib WhatsApp Bridge (Go + whatsmeow)
+Documentation=https://github.com/fralib/whatsmeow_
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=fralib
+Group=fralib
+WorkingDirectory=/opt/whatsmeow_
+EnvironmentFile=/etc/fralib/fralib.env
+ExecStart=/usr/local/bin/meowhats
+Restart=on-failure
+RestartSec=5s
+StartLimitBurst=5
+StartLimitIntervalSec=60s
+
+# Limites de recursos
+MemoryMax=512M
+CPUQuota=100%
+
+# Hardening basico
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+ReadWritePaths=/opt/whatsmeow_ /var/log/fralib
+
+# Logs
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=fralib-meowhats
+
+[Install]
+WantedBy=multi-user.target

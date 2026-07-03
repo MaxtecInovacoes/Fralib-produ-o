@@ -7,6 +7,11 @@ Implementa:
 - Tabela outbound_queue com status, scheduled_at, sent_at
 - Rate limit global (janela 10min, max 2 msgs)
 - Cleanup de msgs enviadas (manter 7 dias)
+
+ATENCAO (2026-07-03): A tabela outbound_rate_limit (criada nesta migration)
+nao tem nenhuma referencia em codigo Python - ela eh DEPRECATED.
+Rate limiting ativo usa rate_limit_counters (criado em 2026_07_phone_health.sql).
+Manter outbound_rate_limit por seguranca; NAO usar em codigo novo.
 """
 from typing import Sequence, Union
 from alembic import op

@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # Pipeline completo: BLOG + IMAGENS + SEO + PUBLICAÇÃO
 # Roda todo dia às 8h (horário de Brasília)
-# Cron: 0 8 * * * /bin/bash /opt/fralib/scripts/pipeline_completo.sh
+# Cron: 0 8 * * * /bin/bash /root/fralib/scripts/pipeline_completo.sh
 
 set -e
 
-FRALIB_DIR="/opt/fralib"
+FRALIB_DIR="/root/fralib"
 SCRIPTS_DIR="$FRALIB_DIR/scripts"
 LOG_FILE="/var/log/fralib/pipeline.log"
 mkdir -p $(dirname "$LOG_FILE")

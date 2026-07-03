@@ -41,3 +41,15 @@ backup.zip
 
 # Repos cloned acidentalmente
 claude-cookbooks/
+
+# Bryan knowledge runtime data (gerado por jobs noturnos, nao versionar)
+backend/agents/bryan_knowledge/
+
+# Pasta de backup/legacy - seguranca de 30 dias antes de apagar de vez (2026-07-03)
+_legacy_2026_07/
+
+# Sites compactados (criados por deploys - regeneraveis do banco)
+sites/*.tar.gz
+
+# Y/ folder residual de instalacao PM2 antiga
+/Y/

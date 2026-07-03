@@ -240,7 +240,7 @@ gtag('event', 'site_generated', {'vertical': 'restaurant'});</div>
     <li>Gerar chave JSON</li>
     <li>Adicionar ao <code>.env</code>:
       <div class="code">GA4_PROPERTY_ID=123456789
-GOOGLE_SERVICE_ACCOUNT_JSON_PATH=/opt/fralib/keys/ga4.json</div>
+GOOGLE_SERVICE_ACCOUNT_JSON_PATH=/root/fralib/keys/ga4.json</div>
     </li>
   </ol>
 </div>

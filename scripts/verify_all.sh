@@ -38,7 +38,7 @@ if [ -z "${PYTHON_BIN:-}" ]; then
 fi
 
 VERIFY_STRICT="${FRALIB_VERIFY_STRICT:-0}"
-if [ "${CI:-}" = "true" ] || [ -d "/opt/fralib" ]; then
+if [ "${CI:-}" = "true" ] || [ -d "/root/fralib" ]; then
     VERIFY_STRICT=1
 fi
 

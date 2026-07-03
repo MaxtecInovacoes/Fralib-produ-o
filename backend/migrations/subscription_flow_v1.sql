@@ -3,6 +3,15 @@
 -- Novos campos: users.access, users.trial_*, users.current_plan_id
 -- Novas tabelas: plans, orders, subscriptions, webhook_events
 -- ============================================================
+--
+-- ============================================================
+-- ATENCAO: TABELAS DEPRECATED (2026-07-03)
+-- ============================================================
+-- As tabelas subscriptions e webhook_events foram criadas mas nunca
+-- sao lidas/escritas em codigo Python (ver AUDITORIA_FINAL_CONSOLIDADA.md).
+-- Status: DEPRECATED - manter por seguranca mas NAO usar em codigo novo.
+-- Para remover: dropar em sprint futura com backup (pg_dump) antes.
+-- ============================================================
 
 -- ============================================================
 -- 1. NOVOS CAMPOS NA TABELA USERS

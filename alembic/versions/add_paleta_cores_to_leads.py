@@ -1,9 +1,12 @@
 """Add paleta_cores to leads table for SDR visual consistency.
 
 Revision ID: add_paleta_cores_to_leads
-Revises:
+Revises: 003_add_leads_plano_created_at
 Create Date: 2026-06-26
 
+ATENCAO (2026-07-03): Esta migration tinha down_revision=None (raiz
+fantasma), religada para 003_add_leads_plano_created_at (outra migration
+que altera a tabela leads). Resolve bug do grafo Alembic quebrado.
 """
 from alembic import op
 import sqlalchemy as sa
@@ -11,7 +14,7 @@ import sqlalchemy as sa
 
 # revision identifiers
 revision = 'add_paleta_cores_to_leads'
-down_revision = None  # Adjust based on your actual migration history
+down_revision = '003_add_leads_plano_created_at'
 branch_labels = None
 depends_on = None
 
