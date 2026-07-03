@@ -63,7 +63,10 @@ TMP_CLEANUP_CRITICAL_WATERMARK = float(os.environ.get("WORKER_TMP_CLEANUP_CRITIC
 WORKER_JOB_TYPES = [
     item.strip()
     for item in os.environ.get(
-        "WORKER_JOB_TYPES", "pipeline_lead,pipeline_multiplos,franz_outreach,lead_supply_hunter,lead_supply_caio,lead_production_tick"
+        # Default SEM franz_outreach: franz tem worker dedicado (fralib-franz.service).
+        # Se precisar pegar Franz neste worker manualmente, defina
+        # WORKER_JOB_TYPES no env incluindo 'franz_outreach'.
+        "WORKER_JOB_TYPES", "pipeline_lead,pipeline_multiplos,lead_supply_hunter,lead_supply_caio,lead_production_tick"
     ).split(",")
     if item.strip()
 ]
