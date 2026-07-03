@@ -420,6 +420,22 @@ async def upload_foto(
     if len(contents) > 10 * 1024 * 1024:
         raise HTTPException(status_code=400, detail="Arquivo muito grande (max 10MB)")
 
+    # P0 hotfix security review: whitelist rigorosa de extensoes e content_type.
+    # Sem isso, atacante envia .html/.svg/.js disfarçado de imagem; cai no
+    # except Exception; extensao vem crua do filename; nginx serve estatico
+    # no mesmo dominio dos cookies -> stored XSS com session hijack.
+    _ALLOWED_IMG_EXT = {"jpg", "jpeg", "png", "webp"}
+    _ALLOWED_CONTENT_TYPES = {"image/jpeg", "image/png", "image/webp"}
+
+    ext_raw = ""
+    if foto.filename and "." in foto.filename:
+        ext_raw = foto.filename.rsplit(".", 1)[-1].lower()
+    ext = ext_raw if ext_raw in _ALLOWED_IMG_EXT else "jpg"
+
+    # Validar content_type se uploadfile fornece
+    if getattr(foto, "content_type", None) and foto.content_type not in _ALLOWED_CONTENT_TYPES:
+        raise HTTPException(status_code=415, detail=f"Tipo {foto.content_type} nao permitido. Use jpg/png/webp.")
+
     try:
         from PIL import Image
         import io
@@ -435,14 +451,20 @@ async def upload_foto(
         with open(filepath, "wb") as f:
             f.write(output.getvalue())
     except ImportError:
-        with open(filepath, "wb") as f:
+        # PIL indisponivel: gravar como data binaria com extensao controlada
+        # NUNCA aceitar filename cru do user.
+        safe_filepath = filepath.replace(".webp", ".jpg")
+        with open(safe_filepath, "wb") as f:
             f.write(contents)
+        filepath = safe_filepath
+        filename = filename.replace(".webp", ".jpg")
     except Exception:
-        ext = foto.filename.split(".")[-1].lower() if foto.filename else "jpg"
-        filepath = filepath.replace(".webp", "." + ext)
-        filename = filename.replace(".webp", "." + ext)
-        with open(filepath, "wb") as f:
+        # Imagem invalida/corrompida: gravar como jpg generico (nao confiar no filename).
+        safe_filepath = filepath.replace(".webp", ".jpg")
+        with open(safe_filepath, "wb") as f:
             f.write(contents)
+        filepath = safe_filepath
+        filename = filename.replace(".webp", ".jpg")
 
     foto_url = "/sites/" + slug + "/assets/" + filename
     return {

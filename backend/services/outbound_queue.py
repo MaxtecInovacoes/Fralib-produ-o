@@ -76,23 +76,31 @@ def enqueue_outbound(
     # O worker aplica rate limit tambem
     scheduled_at = datetime.now() + timedelta(seconds=delay_sec)
 
-    # Gerar hash unico para idempotencia
-    # Usamos tenant_id + lead_id + message_hash para identificar duplicatas
-    msg_hash = hashlib.md5(f"{tenant_id}:{lead_id}:{message}".encode()).hexdigest()[:16]
+    # Gerar hash unico para idempotencia usando normalizador (Sprint 1.4).
+    # Sem normalize_for_hash, 'Oi!' e 'Oi' viram duplicatas distintas.
+    msg_hash = None
+    try:
+        from utils.idempotency import hash_idempotency_key
+        msg_hash = hash_idempotency_key(f"{tenant_id}:{lead_id}:{message}")
+    except Exception:
+        # Fallback seguro se idempotency helper nao disponivel.
+        msg_hash = hashlib.md5(f"{tenant_id}:{lead_id}:{message}".encode()).hexdigest()[:16]
 
     with engine.connect() as c:
-        # IDEMPOTENCIA: Verificar se a mesma msg ja existe na fila (pending/sending)
+        # IDEMPOTENCIA: Verificar se a mesma msg ja existe na fila (pending/sending).
+        # Usa IDENTITY hash + message literal: hash eh rapido, message match evita
+        # colisoes entre mensagens diferentes com mesmo hash curto.
         existing = c.execute(text("""
             SELECT id, status FROM outbound_queue
             WHERE tenant_id = :tid
               AND lead_id = :lid
-              AND message = :msg
+              AND msg_hash = :mh
               AND status IN ('pending', 'sending')
             LIMIT 1
         """), {
             "tid": tenant_id,
             "lid": lead_id,
-            "msg": message,
+            "mh": msg_hash,
         }).fetchone()
 
         if existing:
@@ -106,13 +114,13 @@ def enqueue_outbound(
             SELECT id FROM outbound_queue
             WHERE tenant_id = :tid
               AND lead_id = :lid
-              AND message = :msg
+              AND msg_hash = :mh
               AND status = 'sent'
             LIMIT 1
         """), {
             "tid": tenant_id,
             "lid": lead_id,
-            "msg": message,
+            "mh": msg_hash,
         }).fetchone()
 
         if already_sent:
@@ -122,8 +130,8 @@ def enqueue_outbound(
         # Inserir nova mensagem
         result = c.execute(text("""
             INSERT INTO outbound_queue
-                (tenant_id, lead_id, phone, message, source, priority, scheduled_at)
-            VALUES (:tid, :lid, :phone, :msg, :src, :prio, :sched)
+                (tenant_id, lead_id, phone, message, source, priority, scheduled_at, msg_hash)
+            VALUES (:tid, :lid, :phone, :msg, :src, :prio, :sched, :mh)
             RETURNING id
         """), {
             "tid": tenant_id,
@@ -133,6 +141,7 @@ def enqueue_outbound(
             "src": source,
             "prio": priority,
             "sched": scheduled_at,
+            "mh": msg_hash,
         })
         msg_id = result.fetchone()[0]
         c.commit()
@@ -275,12 +284,24 @@ def set_cooldown(lead_key: str) -> None:
         from backend.agents.sdr_langgraph.lead_lock import get_redis_client
         r = get_redis_client()
         if r is None:
-            logger.warning(f"[outbound] Redis offline — set_cooldown skip para {lead_key}")
+            # P0 hotfix security review: lead_key = f"{tenant}:{telefone}".
+            # Telefone eh PII sob LGPD - mascara antes do log.
+            try:
+                from utils.pii_masker import mask_phone as _mp
+                _phone = _mp(lead_key.split(":", 1)[1] if ":" in lead_key else "")
+            except Exception:
+                _phone = "****"
+            logger.warning(f"[outbound] Redis offline — set_cooldown skip para tenant:{_phone}")
             return
         # Cooldown de 60s padrão por tenant (mesmo TTL do response_executor).
         r.setex(f"fralib:lead_cooldown:{lead_key}", 60, "1")
     except Exception as e:
-        logger.warning(f"[outbound] set_cooldown falhou para {lead_key}: {e}")
+        try:
+            from utils.pii_masker import mask_phone as _mp
+            _phone = _mp(lead_key.split(":", 1)[1] if ":" in lead_key else "")
+        except Exception:
+            _phone = "****"
+        logger.warning(f"[outbound] set_cooldown falhou para tenant:{_phone}: {e}")
 
 
 def increment_daily_count(tenant_id: int, lead_id: str) -> None:
