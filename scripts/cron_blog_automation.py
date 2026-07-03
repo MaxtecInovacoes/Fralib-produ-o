@@ -28,7 +28,49 @@ INDEX_FILE = BLOG_DIR / "index.html"
 SITEMAP_FILE = BLOG_DIR.parent / "sitemap.xml"
 
 SITE_URL = "https://seunegociofralib.site"
-POSTS_PER_DAY = 3
+POSTS_PER_DAY = 2  # 2 posts/dia, mais longos (SEO profundo)
+
+# ============================================================================
+# FILTROS DE SEGURANCA - BLOQUEIO DE TOPICOS PROIBIDOS
+# ============================================================================
+# Topicos sobre crimes, violencia, policia sao BLOQUEADOS antes de gerar post.
+# Outros temas (politica, financas, saude, etc) sao permitidos mas
+# o LLM eh instruido a manter tom de negocio.
+
+BLOCKED_KEYWORDS = [
+    # Crimes
+    "crime", "crimes", "homicidio", "homicidios", "assassinato", "assassinatos",
+    "roubo", "roubos", "furto", "furtos", "latrocinio", "sequestro", "sequestros",
+    # Violencia
+    "violencia", "estupro", "estupros", "agressao", "agressoes", "espancamento",
+    "tortura", "assassin",
+    # Trafico / drogas
+    "trafico", "trafico de drogas", "droga", "drogas", "narcotrafico",
+    "cocaina", "crack", "maconha", "entorpecente",
+    # Policia / prisao
+    "policia", "pm militar", "preso", "presos", "presidio", "cadeia",
+    "delegacia", "delegado", "bope", "choque", "rocam",
+    # Terrorismo / armas
+    "terrorismo", "atentado", "bomba", "explosivo", "arma de fogo",
+    "massacre",
+    # Politica partidaria (sensivel)
+    "eleicao 2026", "campanha eleitoral", "partido politico",
+    "bolsonaro", "lula", "pt partido", "pl partido",
+    # Saude grave (nao somos fonte medica)
+    "cancer metastase", "suicidio",
+]
+
+# Politica liberal: apenas bloqueio TOTAL se o topico FOR sobre crimes.
+# Politica, financas, saude leve = permitido mas gera ângulo de negocio.
+
+def is_topic_safe(text: str) -> bool:
+    """Retorna True se o topico NAO eh sobre crime/violencia/politica proibida."""
+    if not text:
+        return False
+    t = text.lower()
+    # Bloqueia apenas se o topico FOR predominantemente sobre assunto proibido
+    blocked_hits = sum(1 for kw in BLOCKED_KEYWORDS if kw in t)
+    return blocked_hits == 0
 
 # Categorias de negócio válidas
 CATEGORIES = {
@@ -320,10 +362,130 @@ def fetch_google_trends_br() -> List[Dict]:
                     "category": classify_topic(title),
                     "keywords": title.lower().split(),
                     "intent": "trending",
+                    "source": "google_trends_br",
                 })
     except Exception as e:
         print(f"  Google Trends error: {e}", file=sys.stderr)
     return trends
+
+
+def fetch_reddit_brazil() -> List[Dict]:
+    """Top posts do dia de subreddits BR com foco em negocio/tech/marketing."""
+    trends = []
+    subreddits = ["brasil", "brdev", "empreendedorismo", "investimentos", "marketingdigital"]
+    try:
+        import requests
+        for sub in subreddits:
+            try:
+                url = f"https://www.reddit.com/r/{sub}/top.json?t=day&limit=3"
+                resp = requests.get(
+                    url,
+                    timeout=10,
+                    headers={"User-Agent": "FraLib Blog Bot 1.0"},
+                )
+                if resp.ok:
+                    data = resp.json()
+                    for post in data.get("data", {}).get("children", []):
+                        p = post.get("data", {})
+                        title = p.get("title", "").strip()
+                        if title and 20 < len(title) < 120:
+                            trends.append({
+                                "topic": title,
+                                "category": classify_topic(title),
+                                "keywords": title.lower().split()[:5],
+                                "intent": "trending",
+                                "source": f"reddit_{sub}",
+                            })
+            except Exception:
+                continue  # Ignora sub individual com erro
+    except Exception as e:
+        print(f"  Reddit error: {e}", file=sys.stderr)
+    return trends
+
+
+def fetch_hackernews() -> List[Dict]:
+    """Top stories do Hacker News (foco tech/startup/IA)."""
+    trends = []
+    try:
+        import requests
+        resp = requests.get(
+            "https://hacker-news.firebaseio.com/v0/topstories.json",
+            timeout=10,
+            headers={"User-Agent": "FraLib Blog Bot 1.0"},
+        )
+        if resp.ok:
+            story_ids = resp.json()[:8]  # top 8
+            for sid in story_ids:
+                try:
+                    s = requests.get(
+                        f"https://hacker-news.firebaseio.com/v0/item/{sid}.json",
+                        timeout=5,
+                    ).json()
+                    title = (s.get("title") or "").strip()
+                    if title and 20 < len(title) < 120 and not s.get("dead"):
+                        trends.append({
+                            "topic": title,
+                            "category": classify_topic(title),
+                            "keywords": title.lower().split()[:5],
+                            "intent": "trending",
+                            "source": "hackernews",
+                        })
+                except Exception:
+                    continue
+    except Exception as e:
+        print(f"  Hacker News error: {e}", file=sys.stderr)
+    return trends
+
+
+def deduplicate_trends(trends: List[Dict]) -> List[Dict]:
+    """Remove duplicatas por topic (case-insensitive)."""
+    seen = set()
+    unique = []
+    for t in trends:
+        key = t["topic"].lower().strip()
+        if key not in seen and is_topic_safe(key):
+            seen.add(key)
+            unique.append(t)
+    return unique
+
+
+def rank_for_fralib(trends: List[Dict]) -> List[Dict]:
+    """Ranqueia trends por relevância pra FraLib (matches em KEYWORDS_BASE + nichos)."""
+    fralib_keywords = {
+        "marketing", "vender", "venda", "vendas", "site", "sites", "ia",
+        "automacao", "cliente", "clientes", "whatsapp", "leads", "prospeccao",
+        "freelancer", "negocio", "negocios", "empreendedor", "empreendedorismo",
+        "renda", "digital", "tecnologia", "tech", "startup", "micro",
+        "seo", "google", "agente", "agentes", "ia generativa", "renda extra",
+        "renda recorrente", "automacao comercial", "loja", "lojas",
+    }
+    for t in trends:
+        text = (t["topic"] + " " + " ".join(t.get("keywords", []))).lower()
+        # Score = quantas palavras de fralib aparecem
+        score = sum(1 for kw in fralib_keywords if kw in text)
+        t["score"] = score
+    # Sort por score desc, depois por source priority (google_trends > reddit > hn)
+    source_prio = {"google_trends_br": 3, "reddit_brasil": 2, "reddit_brdev": 2, "hackernews": 1}
+    trends.sort(key=lambda t: (t.get("score", 0), source_prio.get(t.get("source", ""), 0)), reverse=True)
+    return trends
+
+
+def fetch_all_trends() -> List[Dict]:
+    """Combina 3 fontes, deduplica, filtra crimes, ranqueia pra FraLib."""
+    print("  Buscando trends em 3 fontes...")
+    all_trends = []
+    all_trends.extend(fetch_google_trends_br())
+    print(f"    Google Trends BR: {len(all_trends)} topics")
+    all_trends.extend(fetch_reddit_brazil())
+    print(f"    Reddit: {len(all_trends) - sum(1 for t in all_trends if t.get('source','').startswith('reddit'))} novos")
+    all_trends.extend(fetch_hackernews())
+    print(f"    Hacker News: {len(all_trends) - sum(1 for t in all_trends if t.get('source','') == 'hackernews')} novos")
+
+    unique = deduplicate_trends(all_trends)
+    print(f"  Total unicos: {len(unique)}")
+
+    ranked = rank_for_fralib(unique)
+    return ranked
 
 
 def classify_topic(topic: str) -> str:
@@ -432,7 +594,14 @@ def generate_post_html(topic: str, category: str, keywords: List[str], slug: str
   "@type": "Article",
   "headline": "{topic}",
   "datePublished": "{now}",
-  "author": {{"@type": "Organization", "name": "FraLib OS"}},
+  "dateModified": "{now}",
+  "author": {{
+    "@type": "Person",
+    "name": "Franz Douglas",
+    "alternateName": "Franz",
+    "url": "https://seunegociofralib.site/about/",
+    "worksFor": {{"@type": "Organization", "name": "FraLib OS"}}
+  }},
   "publisher": {{"@type": "Organization", "name": "FraLib OS", "logo": {{"@type": "ImageObject", "url": "{SITE_URL}/images/Logo%20FraLib.png"}}}},
   "mainEntityOfPage": "{SITE_URL}/blog/posts/{slug}.html"
 }}
@@ -465,19 +634,19 @@ a:hover{{text-decoration:underline}}
 <h1>{topic}</h1>
 
 <div class="meta">
-  Por <strong>FraLib OS</strong> · {now} · {len(keywords)} min de leitura
+  Por <strong>Franz Douglas</strong> · {now} · {len(keywords)} min de leitura
 </div>
 
 {body}
 
 <div class="cta-box">
-  <h3>QUER APLICAR ISSO NO SEU NEGÓCIO?</h3>
-  <p style="margin-bottom:16px">O <strong>FraLib</strong> faz exatamente isso: acha cliente, faz site, vende no WPP. Você só fica com o lucro.</p>
-  <a href="/login?signup=1&utm_source=blog&utm_medium=organic&utm_campaign=post_{slug}" class="cta-button">TESTA 7 DIAS GRÁTIS</a>
+  <h3>QUER APLICAR ISSO NO SEU NEGOCIO?</h3>
+  <p style="margin-bottom:16px">O <strong>FraLib</strong> faz exatamente isso: acha cliente, faz site, vende no WPP. Voce so fica com o lucro.</p>
+  <a href="/login?signup=1&utm_source=blog&utm_medium=organic&utm_campaign=post_{slug}" class="cta-button">TESTA 7 DIAS GRATIS</a>
 </div>
 
 <p style="margin-top:48px;padding-top:24px;border-top:1px solid rgba(147,51,234,0.12);color:#8888a0;font-size:13px">
-  <em>Post gerado automaticamente pelo FraLib. Conteúdo educativo baseado em tendências do mercado.</em>
+  <em>Franz Douglas escreve sobre tecnologia, marketing e negocios no blog do FraLib OS. Quer conversar? <a href="https://wa.me/" style="color:#00FFB3">Fala no WhatsApp</a>.</em>
 </p>
 
 </body>
@@ -487,7 +656,10 @@ a:hover{{text-decoration:underline}}
 
 
 def call_llm_for_content(topic: str, category: str, keywords: List[str]) -> Optional[str]:
-    """Tenta gerar conteúdo via LLM (kpalabz)."""
+    """Gera conteúdo via LLM (Claude Sonnet via kpalabz).
+
+    Returns HTML do corpo do post (sem doctype, sem h1).
+    """
     try:
         import requests
         api_key = os.environ.get("ANTHROPIC_API_KEY")
@@ -496,19 +668,42 @@ def call_llm_for_content(topic: str, category: str, keywords: List[str]) -> Opti
         if not api_key:
             return None
 
-        prompt = f"""Escreva um post de blog em português brasileiro sobre: {topic}
+        prompt = f"""Voce eh Franz Douglas, copywriter senior brasileiro. Escreva um post de blog sobre: {topic}
 
-Estrutura:
-- Introdução (1 parágrafo)
-- 3-4 seções com h2 explicando o tema
-- Conclusão com CTA para o FraLib
+CATEGORIA: {category}
+KEYWORDS OBRIGATORIAS: {', '.join(keywords)}
 
-Tom: Conversa, direto, sem palavras Facebook rejeita.
-Tamanho: 500-700 palavras.
-Use as keywords: {', '.join(keywords)}
-Mencione o FraLib na conclusão.
+REGRAS:
+- Tom direto, levemente informal, inteligente
+- Frases curtas, varianca de ritmo
+- Sem emoji, sem clichê motivacional
+- NAO comece paragrafo com "No mundo atual", "Hoje em dia", "Voce sabia que"
+- NAO use "revolution", "game-changer", "next-level"
+- Exemplos concretos, casos reais, numeros quando possivel
 
-Retorne APENAS o HTML com h2 e p, sem doctype."""
+TAMANHO: 1500-2500 palavras no HTML de saida. NAO escreva menos que isso.
+
+ESTRUTURA:
+- 2 paragrafos de intro (max 200 palavras)
+- 4-6 secoes H2 (cada uma com 250-400 palavras)
+- H3 dentro dos H2s quando fizer sentido
+- Listas (ul/ol) quando fizer sentido
+- Conclusion com CTA sutil pro FraLib
+
+CTAs FRALIB (CRITICO):
+- Mencione FraLib 1-2 vezes NO MEIO do texto de forma NATURAL
+- Use hyperlink inline: <a href="/planos">anchor variando</a>
+- Exemplos de anchor: "plataforma de prospeccao automatizada", "ferramenta de automacao", "sistema como o FraLib"
+- NAO pareca propaganda corporativa
+
+LISTA NEGRA (rejeitar/reescrever se aparecer):
+- Crimes, homicídios, violencia, policia, trafico, drogas
+- Politica partidaria, eleicoes, candidatos
+
+FORMATO DE SAIDA:
+Retorne APENAS o HTML do corpo: <p>...</p><h2>...</h2><p>...</p>...
+NAO inclua doctype, head, body, style, h1, title, meta.
+Apenas tags semanticas: p, h2, h3, ul, ol, li, blockquote, a, strong, em."""
 
         resp = requests.post(
             f"{base_url}/chat/completions",
@@ -517,15 +712,25 @@ Retorne APENAS o HTML com h2 e p, sem doctype."""
                 "Content-Type": "application/json",
             },
             json={
-                "model": "claude-haiku-4-5",
+                "model": "claude-sonnet-4-20250514",
                 "messages": [{"role": "user", "content": prompt}],
-                "max_tokens": 2500,
+                "max_tokens": 8000,
+                "temperature": 0.7,
             },
-            timeout=60,
+            timeout=120,
         )
 
         if resp.ok:
-            return resp.json()["choices"][0]["message"]["content"]
+            content = resp.json()["choices"][0]["message"]["content"]
+            # Strip markdown code fences if present
+            content = content.strip()
+            if content.startswith("```html"):
+                content = content[7:]
+            if content.startswith("```"):
+                content = content[3:]
+            if content.endswith("```"):
+                content = content[:-3]
+            return content.strip()
     except Exception as e:
         print(f"LLM error: {e}", file=sys.stderr)
     return None
@@ -660,10 +865,10 @@ def main() -> int:
     POSTS_DIR.mkdir(parents=True, exist_ok=True)
     BLOG_DIR.mkdir(parents=True, exist_ok=True)
 
-    # Combina curados + Google Trends real
-    google_trends = fetch_google_trends_br()
-    all_topics = list(TRENDING_TOPICS) + google_trends
-    print(f"  {len(all_topics)} tendências ({len(TRENDING_TOPICS)} curados + {len(google_trends)} Google Trends)")
+    # Combina 3 fontes: Google Trends BR + Reddit + Hacker News
+    # Filtrado por BLOCKED_KEYWORDS (seguranca) + ranqueado por relevancia FraLib
+    all_topics = fetch_all_trends()
+    print(f"  {len(all_topics)} trends rankeados (Google Trends + Reddit + Hacker News)")
 
     generated_posts = []
 
