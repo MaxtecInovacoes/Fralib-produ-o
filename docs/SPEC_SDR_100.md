@@ -8,7 +8,9 @@ Além dos P0/P1, há 11 P2 de confiabilidade e observabilidade (silent failures,
 
 O objetivo: fechar todos os gaps antes de production-ready, com 100% testes GREEN e runbook completo.
 
-**STATUS FINAL (2026-07-03)**: 6 sprints entregues, 194/194 testes GREEN nos 6 sprints SPEC + 4 Fase 2 + simulador. Runbook documentado. 7 commits pushed (VPS + GitHub).
+**STATUS FINAL (2026-07-03)**: 6 sprints + Sprint 1.7 entregues. 128/128 testes GREEN nos 6 sprints SPEC + Sprint 1.7. Runbook documentado. 7 commits pushed (VPS + GitHub).
+
+**Sprint 1.7 (2026-07-03)**: REMOVE templates genericos. `_llm_with_retries_and_breaker` faz 3 retries com backoff 5/15/30s + circuit breaker que abre apos 3 falhas do mesmo stage em <5min. Helpers em `circuit_breaker.py`. `fallback_templates.py` foi DELETADO. Nodes (greeting/hook/stages/is_decisor/schedule) usam helper - NAO chamam call_claude direto. Quando tudo falha: marca `needs_human_followup=True`, NAO envia mensagem, alerta via safe_log_silent_failure.
 
 ## Princípios
 

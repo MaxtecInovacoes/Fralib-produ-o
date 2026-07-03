@@ -87,8 +87,51 @@ def _normalize_memory_payload(raw: dict | None) -> dict:
 
 
 class SDRFallbackError(Exception):
-    """Exceção quando LLM falha - NAO usa fallback pre-definido."""
+    """Exceção quando LLM falha apos retries. NAO usa template pre-definido.
+
+    Sprint 1.7: caller captura, marca memory.needs_human_followup=True,
+    NAO envia mensagem. Humano precisa intervir.
+    """
     pass
+
+
+def _llm_with_retries_and_breaker(stage: str, fn):
+    """Chama fn() (que faz call_claude) com:
+    - circuit breaker guard antes
+    - retry 3x com backoff 5/15/30s + jitter
+    - em sucesso: fecha circuito do stage
+    - em falha: registra, levanta SDRFallbackError
+
+    NAO retorna texto generico. Se tudo falhar, propaga erro pra caller.
+    """
+    from services.retry_helper import retry_with_backoff
+    from .circuit_breaker import get_breaker
+
+    breaker = get_breaker()
+    breaker.guard(stage)  # CircuitOpenError se aberto
+
+    @retry_with_backoff(max_retries=3, base_delay=5.0, max_delay=30.0)
+    def _attempt():
+        # Cada tentativa registra falha aqui pra circuit abrir após 3 tentativas
+        try:
+            reply = fn()
+            if not reply or not reply.strip():
+                raise SDRFallbackError(f"LLM {stage} returned empty reply")
+            return reply
+        except Exception as exc:
+            breaker.record_failure(stage)
+            raise
+
+    try:
+        reply = _attempt()
+        breaker.record_success(stage)
+        return reply
+    except Exception as exc:
+        # Garante 1 falha registrada mesmo se escape ocorreu
+        if isinstance(exc, SDRFallbackError):
+            raise
+        breaker.record_failure(stage)
+        raise SDRFallbackError(f"LLM {stage} failed after retries: {exc}") from exc
 
 
 def _next_stage(current: str, suggested: str, fallback: str) -> str:
@@ -535,7 +578,7 @@ def node_greeting(state: SDRState) -> dict:
             "Exemplo BOM: 'Oi Jéssica! Tudo ótimo por aqui. Você é nutricionista em Curitiba mesmo?'\n"
             "Exemplo RUIM: 'Retomando o que te mandei: hoje a prioridade de vocês é captar mais clientes para nutricionista.'\n"
         )
-        llm_reply = call_claude(
+        llm_reply = _llm_with_retries_and_breaker("greeting", lambda: call_claude(
             system=system,
             user=contexto[:500],
             model="sonnet",  # Sonnet (Haiku falha no proxy kpalabz)
@@ -544,10 +587,29 @@ def node_greeting(state: SDRState) -> dict:
             agent_name="sdr_greeting_node",
             respect_agent_config=False,
             enable_context=False,
-        ).strip()
-        if not llm_reply:
-            raise SDRFallbackError("LLM greeting returned empty reply")
+        ).strip())
         reply = llm_reply
+    except SDRFallbackError:
+        # Sprint 1.7: marca pra humano, NAO envia nada
+        memory.needs_human_followup = True
+        memory.last_failure_stage = "greeting"
+        try:
+            from utils.safe_log import safe_log_silent_failure as _slf
+            _slf(
+                Exception("greeting SDRFallbackError"),
+                op="sdr_greeting", lead_id=str(getattr(memory, "lead_id", "?")),
+                stage="greeting",
+                extra={"reason": "LLM failed after retries"},
+            )
+        except Exception:
+            pass
+        return {
+            "outgoing_message": "",
+            "should_send": False,
+            "memory": memory,
+            "next_stage": memory.stage,
+            "needs_human_followup": True,
+        }
     except Exception as _g_err:
         # NAO USA FALLBACK - lancar erro para retry
         raise SDRFallbackError(f"LLM greeting failed: {_g_err}") from _g_err
@@ -748,28 +810,50 @@ def node_hook(state: SDRState) -> dict:
         except Exception as _mem_err:
             print(f"[SDR] memory hook inject falhou (nao-bloqueante): {_mem_err}")
 
-        response_text = call_claude(
-            system=full_system,
-            user=user_prompt,
-            model="sonnet",  # ← SONNET (não Haiku)
-            max_tokens=400,
-            temperature=0.3,
-            agent_name=state.get("selected_agent") or "franz",
-            enable_context=False,
-        )
+        try:
+            response_text = _llm_with_retries_and_breaker("hook", lambda: call_claude(
+                system=full_system,
+                user=user_prompt,
+                model="sonnet",  # ← SONNET (não Haiku)
+                max_tokens=400,
+                temperature=0.3,
+                agent_name=state.get("selected_agent") or "franz",
+                enable_context=False,
+            ))
 
-        # Parse JSON
-        import re
-        json_match = re.search(r'\{[\s\S]*\}', response_text)
-        if json_match:
-            data = json.loads(json_match.group())
-            reply = data.get("reply", "")
-            next_stage = data.get("next_stage", "qualify")
-            update_facts = data.get("update_facts", {})
-        else:
-            reply = response_text.strip()
-            next_stage = "qualify"
-            update_facts = {}
+            # Parse JSON
+            import re
+            json_match = re.search(r'\{[\s\S]*\}', response_text)
+            if json_match:
+                data = json.loads(json_match.group())
+                reply = data.get("reply", "")
+                next_stage = data.get("next_stage", "qualify")
+                update_facts = data.get("update_facts", {})
+            else:
+                reply = response_text.strip()
+                next_stage = "qualify"
+                update_facts = {}
+        except SDRFallbackError:
+            # Sprint 1.7: NUNCA usa template fixo. Marca pra humano.
+            memory.needs_human_followup = True
+            memory.last_failure_stage = "hook"
+            try:
+                from utils.safe_log import safe_log_silent_failure as _slf
+                _slf(
+                    Exception("hook SDRFallbackError"),
+                    op="sdr_hook", lead_id=str(getattr(memory, "lead_id", "?")),
+                    stage="hook",
+                    extra={"reason": "LLM failed after retries"},
+                )
+            except Exception:
+                pass
+            return {
+                "outgoing_message": "",
+                "should_send": False,
+                "memory": memory,
+                "next_stage": memory.stage,
+                "needs_human_followup": True,
+            }
     except Exception as e:
         print(f"[SDR] hook LLM falhou: {e}")
         # NAO USA FALLBACK - lancar erro para retry
@@ -865,11 +949,43 @@ def node_hook(state: SDRState) -> dict:
         print(f"[SDR] hook: orchestrator loop-break detected; state={orch.state_before.value}->{orch.state_after.value}")
     # Atualiza reply se orchestrator detectou loop mas reply é generico demais
     if orch.force_break_loop and len(reply.strip()) < 30:
-        # resposta muito curta provavelmente repetindo hook; amplia com pergunta direta
-        if memory.segmento and "academia" in memory.segmento.lower():
-            reply = f"{greeting}! Olha, sem enrolação: você é o responsável pela academia ou tem alguém que decide junto?"
-        else:
-            reply = f"{greeting}! Sem enrolação: posso falar com quem decide sobre o site de vocês, ou é você mesmo?"
+        # Sprint 1.7: regenera via LLM (lead-specific). NAO usa template hardcoded.
+        try:
+            from agents.llm_direct import call_claude
+            contexto = (
+                "Lead travado em loop, precisa pergunta direta sobre decisor. "
+                f"Segmento: {memory.segmento or 'nao informado'}. "
+                f"Cidade: {memory.cidade or 'nao informada'}."
+            )
+            system = (
+                "Voce e o Franz. Gere 1 frase perguntando diretamente se o lead e decisor. "
+                "Tom natural WhatsApp, sem template fixo."
+            )
+            reply = _llm_with_retries_and_breaker("hook_loopbreak", lambda: call_claude(
+                system=system,
+                user=contexto,
+                model="sonnet",
+                max_tokens=120,
+                temperature=0.3,
+                agent_name="sdr_hook_loopbreak",
+                enable_context=False,
+            )).strip()
+        except SDRFallbackError:
+            # Sem LLM: silenciar (NAO mandar template). Marcar pra humano.
+            memory.needs_human_followup = True
+            memory.last_failure_stage = "hook_loopbreak"
+            try:
+                from utils.safe_log import safe_log_silent_failure as _slf
+                _slf(
+                    Exception("loopbreak SDRFallbackError"),
+                    op="sdr_hook_loopbreak",
+                    lead_id=str(getattr(memory, "lead_id", "?")),
+                    stage="hook",
+                    extra={"reason": "loop-break regeneration failed"},
+                )
+            except Exception:
+                pass
+            reply = ""
 
     memory.last_message_sent = reply
     if isinstance(update_facts, dict):
@@ -945,7 +1061,7 @@ def make_stage_node(stage_name: str):
                 state.get("rag_context", "")
             )
 
-            response_text = call_claude(
+            response_text = _llm_with_retries_and_breaker(stage_name, lambda: call_claude(
                 system=full_system,
                 user=user_prompt,
                 model="sonnet",
@@ -953,7 +1069,7 @@ def make_stage_node(stage_name: str):
                 temperature=0.3,
                 agent_name=state.get("selected_agent") or "franz",
                 enable_context=False,
-            )
+            ))
 
             import re
             json_match = re.search(r'\{[\s\S]*\}', response_text)
@@ -966,6 +1082,28 @@ def make_stage_node(stage_name: str):
                 reply = response_text.strip()[:300]
                 next_stage = stage_name
                 update_facts = {}
+        except SDRFallbackError:
+            # Sprint 1.7: marca pra humano, NAO envia nada
+            memory.needs_human_followup = True
+            memory.last_failure_stage = stage_name
+            try:
+                from utils.safe_log import safe_log_silent_failure as _slf
+                _slf(
+                    Exception(f"{stage_name} SDRFallbackError"),
+                    op=f"sdr_stage_{stage_name}",
+                    lead_id=str(getattr(memory, "lead_id", "?")),
+                    stage=stage_name,
+                    extra={"reason": "LLM failed after retries"},
+                )
+            except Exception:
+                pass
+            return {
+                "outgoing_message": "",
+                "should_send": False,
+                "memory": memory,
+                "next_stage": memory.stage,
+                "needs_human_followup": True,
+            }
         except Exception as e:
             print(f"[SDR] {stage_name} LLM falhou: {e}")
             # NAO USA FALLBACK - lancar erro para retry
@@ -1164,7 +1302,7 @@ def node_is_decisor(state: SDRState) -> dict:
             "Gere resposta curta (max 2 linhas) perguntando sobre o negocio.\n"
             "REGRAS: max 2 frases, 1 pergunta, tom consultivo."
         )
-        reply = call_claude(
+        reply = _llm_with_retries_and_breaker("is_decisor", lambda: call_claude(
             system=system,
             user=contexto,
             model="sonnet",
@@ -1172,9 +1310,28 @@ def node_is_decisor(state: SDRState) -> dict:
             temperature=0.3,
             agent_name="sdr_is_decisor",
             enable_context=False,
-        ).strip()
-        if not reply:
-            raise SDRFallbackError("LLM returned empty reply")
+        )).strip()
+    except SDRFallbackError:
+        memory.needs_human_followup = True
+        memory.last_failure_stage = "is_decisor"
+        try:
+            from utils.safe_log import safe_log_silent_failure as _slf
+            _slf(
+                Exception("is_decisor SDRFallbackError"),
+                op="sdr_is_decisor",
+                lead_id=str(getattr(memory, "lead_id", "?")),
+                stage="is_decisor",
+                extra={"reason": "LLM failed after retries"},
+            )
+        except Exception:
+            pass
+        return {
+            "outgoing_message": "",
+            "should_send": False,
+            "memory": memory,
+            "next_stage": memory.stage,
+            "needs_human_followup": True,
+        }
     except Exception as e:
         raise SDRFallbackError(f"Failed to generate decisor response: {e}") from e
 
@@ -1217,7 +1374,52 @@ def node_schedule(state: SDRState) -> dict:
     else:
         label = "amanhã"
 
-    reply = f"Combinado. Te chamo {label}{time_label} então."
+    # Sprint 1.7: gerar reply via LLM (lead-specific). SEM template hardcoded.
+    try:
+        from agents.llm_direct import call_claude
+        contexto = (
+            f"Lead quer agendar. Mensagem dele: '{incoming}'. "
+            f"Sugerir label: {label}{time_label}. "
+            f"Responde confirmando com tom natural do Franz."
+        )
+        if memory.nome:
+            contexto += f" Lead: {memory.nome}."
+        if memory.segmento:
+            contexto += f" Segmento: {memory.segmento}."
+        system = (
+            "Voce e o Franz. Confirme o agendamento em 1 frase usando o label sugerido. "
+            "Tom: natural, WhatsApp, sem parecer template."
+        )
+        reply = _llm_with_retries_and_breaker("schedule", lambda: call_claude(
+            system=system,
+            user=contexto,
+            model="sonnet",
+            max_tokens=80,
+            temperature=0.3,
+            agent_name="sdr_schedule",
+            enable_context=False,
+        )).strip()
+    except SDRFallbackError:
+        memory.needs_human_followup = True
+        memory.last_failure_stage = "schedule"
+        try:
+            from utils.safe_log import safe_log_silent_failure as _slf
+            _slf(
+                Exception("schedule SDRFallbackError"),
+                op="sdr_schedule",
+                lead_id=str(getattr(memory, "lead_id", "?")),
+                stage="schedule",
+                extra={"reason": "LLM failed after retries"},
+            )
+        except Exception:
+            pass
+        return {
+            "outgoing_message": "",
+            "should_send": False,
+            "memory": memory,
+            "next_stage": memory.stage,
+            "needs_human_followup": True,
+        }
 
     memory.stage = "scheduled"
     memory.followup_date = target_date
