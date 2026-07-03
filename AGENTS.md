@@ -1133,3 +1133,39 @@ automático do Vite/React.
 ---
 
 **Conta de linhas**: este arquivo tem ~700 linhas (vs 570 anteriores) — adição da seção 22 (Sprint 11-12 Vite/React).
+
+
+---
+
+## 23. Auditoria 2026-07-03 — Duas Verdades resolvidas
+
+Auditoria completa identificou **5 "duas verdades" (DV)** — lugares onde duas versões do mesmo código rodavam em paralelo. 3 críticas foram resolvidas.
+
+### 23.1 Resumo das DVs
+
+| DV | Descrição | Status | Onde tá o fix |
+|---|---|---|---|
+| **DV1** | Fase 8 (Arquiteto) tinha versão extraída em `services/pipeline_fases/` que NUNCA foi integrada. Código novo ficava só no inline. | ✅ **Resolvido** | `aac5c3f` — módulo extraído removido |
+| DV2 | Lead Provider parecia ter 2 sistemas (lead_supply_engine vs lead_providers). | OK (não era 2 verdades) | Camadas intencionais |
+| **DV3** | Franz validava quality no worker mas NÃO no cron. Cron mandava msg pra leads com quality incident. | ✅ **Resolvido** | `24cec2c4` — `_sdr_quality_hold_reason` movido pra `backend/services/sdr_helpers.py` |
+| **DV4** | `WORKER_JOB_TYPES` default tinha `franz_outreach`, disputando com `fralib-franz.service` dedicado. | ✅ **Resolvido** | `9470712` — removido do default |
+| DV5 | Guard de Franz parecia duplicado. | OK (mesmo guard, só faltava validação) | Resolvido junto com DV3 |
+
+### 23.2 Single Sources of Truth
+
+Documento canônico de onde mora cada coisa: [`docs/SINGLE_SOURCES_OF_TRUTH.md`](docs/SINGLE_SOURCES_OF_TRUTH.md).
+
+**Regra de ouro:** Antes de criar/mover código em `backend/services/`, `backend/agents/`, `backend/endpoints/`, `backend/jobs/`, **LER esse doc** e seguir. Hook anti-duas-verdades alerta automaticamente.
+
+### 23.3 Limpeza aplicada
+
+- 806MB liberados localmente (claude-cookbooks, .git.backup, ComfyUI_fresh, worktrees wf_*, dashboard backups, landing antigas, scripts `_*.py`)
+- Disco VPS: 80% → 79% (syslog.1 truncado, 465MB)
+- Pasta `services/pipeline_fases/` removida (DV1)
+- Pasta `agents/langgraph_backup/` removida (zero refs)
+- `llm_direct.py.backup` removido
+
+### 23.4 Hooks anti-regressão
+
+- `~/.claude/hooks/anti-propaganda.js` — bloqueia diagnósticos baseados só em docs
+- `~/.claude/hooks/anti-duas-verdades.js` — alerta antes de criar/editar em diretórios sensíveis
