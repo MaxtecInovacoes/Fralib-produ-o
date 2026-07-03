@@ -9,17 +9,22 @@ Buckets:
     auth.login                  → 10 req / 60s
     cron.*                      →  5 req / 60s
     public.*                    → 30 req / 60s
-    default                     → 60 req / 60s
+    simulador.*                 → 600 req / 60s  (uso interno dev/demos, alto)
+    default                     → 120 req / 60s
 
 Whitelist (não passa pelo limiter):
     GET /api/health
     GET /, /docs, /openapi.json
     /static/*, *.html, *.js, *.css
+
+Loopback (127.0.0.1, ::1) com env ``RATE_LIMIT_DEV_OPEN=1`` ignora rate limit
+inteiro (UX em dev: o simulador Franz pode bater 1000x por minuto sem 429).
 """
 
 from __future__ import annotations
 
 import logging
+import os
 import time
 from dataclasses import dataclass
 from typing import Optional
@@ -37,7 +42,8 @@ DEFAULT_LIMITS: dict[str, tuple[int, int]] = {
     "auth.login": (10, 60),
     "cron.*": (5, 60),
     "public.*": (30, 60),
-    "default": (60, 60),
+    "simulador.*": (600, 60),
+    "default": (120, 60),
 }
 
 _WHITELIST_PATHS: frozenset[str] = frozenset(
@@ -213,7 +219,28 @@ def endpoint_bucket_for_request(request: Request) -> str:
     if path.startswith("/api/public/"):
         return "public.*"
 
+    # Simulador Franz (interno dev/demos) — bucket dedicado com limite alto
+    if path.startswith("/api/simulador"):
+        return "simulador.franz"
+
     return "default"
+
+
+# ── Loopback dev-open ───────────────────────────────────────────────────────
+
+_LOOPBACK_IPS: frozenset[str] = frozenset({"127.0.0.1", "::1", "localhost"})
+
+
+def _is_loopback(ip: str) -> bool:
+    return ip in _LOOPBACK_IPS
+
+
+def _dev_open_enabled() -> bool:
+    """Quando ``RATE_LIMIT_DEV_OPEN=1``, requests de loopback (127.0.0.1) ignoram
+    rate limit. Útil em dev pra testar o simulador sem disparar 429. Em prod,
+    NÃO setar (default é 0).
+    """
+    return os.getenv("RATE_LIMIT_DEV_OPEN", "0").strip() in ("1", "true", "yes", "on")
 
 
 # ── Middleware factory ──────────────────────────────────────────────────────
@@ -260,6 +287,12 @@ def ip_rate_limit_middleware(
 
         # Extrai IP do cliente (X-Forwarded-For só confia com trusted proxy)
         ip = _client_ip(request, trusted_proxies=proxies)
+
+        # Dev-open: em dev com RATE_LIMIT_DEV_OPEN=1, loopback ignora rate limit.
+        # Útil pra rodar o simulador Franz sem disparar 429 a cada teste.
+        if _is_loopback(ip) and _dev_open_enabled():
+            return await call_next(request)
+
         allowed, retry_after = limiter.check(ip, bucket)
 
         if not allowed:

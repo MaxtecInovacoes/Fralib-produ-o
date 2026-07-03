@@ -124,6 +124,19 @@ class TestEndpointBucketExtraction:
         req.url.path = "/api/cron/refresh-provider-health"
         assert endpoint_bucket_for_request(req) == "cron.refresh-provider-health"
 
+    def test_simulador_endpoint(self):
+        """Bug fix: /api/simulador/* → bucket dedicado com 600/min."""
+        req = MagicMock()
+        req.method = "POST"
+        req.url.path = "/api/simulador/franz/test"
+        assert endpoint_bucket_for_request(req) == "simulador.franz"
+
+    def test_simulador_endpoint_nested(self):
+        req = MagicMock()
+        req.method = "POST"
+        req.url.path = "/api/simulador"
+        assert endpoint_bucket_for_request(req) == "simulador.franz"
+
     def test_whitelist_health_endpoint(self):
         req = MagicMock()
         req.method = "GET"
@@ -395,6 +408,80 @@ class TestMiddlewareIntegration:
                 resp = await client.post("/api/cron/refresh-provider-health")
                 assert resp.status_code == 403
             resp = await client.post("/api/cron/refresh-provider-health")
+            assert resp.status_code == 429
+
+    async def test_simulador_endpoint_600_per_minute(self):
+        """Bug fix: simulador tem bucket dedicado com 600 req/min.
+
+        Antes caía no default (60/min) e disparava 429 após alguns testes.
+        Agora: 600 reqs passam tranquilo, 601 bloqueia.
+        """
+        # 600 hits = exatamente o limite; +1 = block
+        redis = _make_redis_mock_with_counts(list(range(1, 601)))
+        redis.ttl.return_value = 30
+        engine = MagicMock()
+
+        app = FastAPI()
+        app.middleware("http")(ip_rate_limit_middleware(engine, redis_client=redis))
+
+        @app.post("/api/simulador/franz/test")
+        async def sim():
+            from fastapi.responses import JSONResponse
+            return JSONResponse(status_code=200, content={"ok": True})
+
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            for _ in range(10):
+                resp = await client.post("/api/simulador/franz/test")
+                assert resp.status_code == 200
+
+    async def test_loopback_dev_open_skips_rate_limit(self, monkeypatch):
+        """Com RATE_LIMIT_DEV_OPEN=1, loopback (127.0.0.1) ignora rate limit."""
+        monkeypatch.setenv("RATE_LIMIT_DEV_OPEN", "1")
+        redis = _make_redis_mock()
+        engine = MagicMock()
+
+        app = FastAPI()
+        app.middleware("http")(ip_rate_limit_middleware(engine, redis_client=redis))
+
+        @app.post("/api/auth/login")
+        async def login():
+            from fastapi.responses import JSONResponse
+            return JSONResponse(status_code=401, content={"detail": "invalid"})
+
+        transport = ASGITransport(app=app)
+        async with AsyncClient(
+            transport=transport, base_url="http://test"
+        ) as client:
+            # 100 requests no login (limite seria 10) — todas passam
+            for _ in range(100):
+                resp = await client.post("/api/auth/login")
+                assert resp.status_code == 401
+            # Redis NUNCA foi tocado (loopback = skip)
+            redis.pipeline.assert_not_called()
+
+    async def test_loopback_no_dev_open_still_rate_limited(self, monkeypatch):
+        """Sem RATE_LIMIT_DEV_OPEN, loopback SEGUE sendo rate-limited (fail-safe)."""
+        monkeypatch.delenv("RATE_LIMIT_DEV_OPEN", raising=False)
+        redis = _make_redis_mock_with_counts(list(range(1, 12)))
+        engine = MagicMock()
+
+        app = FastAPI()
+        app.middleware("http")(ip_rate_limit_middleware(engine, redis_client=redis))
+
+        @app.post("/api/auth/login")
+        async def login():
+            from fastapi.responses import JSONResponse
+            return JSONResponse(status_code=401, content={"detail": "invalid"})
+
+        transport = ASGITransport(app=app)
+        async with AsyncClient(
+            transport=transport, base_url="http://test"
+        ) as client:
+            for _ in range(10):
+                await client.post("/api/auth/login")
+            resp = await client.post("/api/auth/login")
+            # Mesmo em loopback, sem dev-open = limit aplica
             assert resp.status_code == 429
 
     async def test_health_endpoint_not_rate_limited(self):
