@@ -98,3 +98,4 @@ O plano MVP/tasks para resolver os pontos restantes está em `docs/PRD_MVP_ESTAB
 ## Onde olhar primeiro
 
 Dúvida sobre a pipeline? Abrir [`AGENTS.md`](AGENTS.md) e usar Ctrl+F.
+# teste deploy fix 1783090683
