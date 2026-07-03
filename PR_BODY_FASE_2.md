@@ -36,6 +36,12 @@ Entrega das **Sprints 0.1-1.5** do plano de auditoria (`docs/AUDITORIA_FASE_0_1.
 | **P2** Redis `incr` + `expire` não-atômicos | qualidade | pipeline |
 | **P2** `_check_postgres` não tem teste real | qualidade | adicionado |
 | **P2 UX** Simulador Franz dispara 429 em dev | UX | bucket dedicado `simulador.*` 600/min + `RATE_LIMIT_DEV_OPEN=1` para loopback |
+| **🔴 UX** Simulador dispara 403 CSRF | UX | `sdr-simulator.js` agora usa `CSRFHelper.fetch` que injeta `X-CSRF-Token` |
+| **🔴 UX** Browser servia `csrf-helper.js` cacheado pré-fix | UX | bump `?v=` em `admin.html:25` pra `20260702-sprint11` |
+| **🔴 UX** Card simulador escondido, sem link no sidebar | UX | novo link âncora "🧪 Simulador" com `scrollIntoView` |
+| **🟡 UX** Textarea sem `maxlength` | UX | `maxlength=4000` + contador `N/4000` em tempo real |
+| **🟡 UX** Erros HTTP crus ("HTTP 403 — {...}") | UX | `friendlyError()` mapeia 401/403/422/429/5xx pra PT-BR com dica |
+| **🟡 UX** Badge `sdrSimulatorSync` mentia "pronto" | UX | estados idle/warn/ok/err com cor por estado |
 | **P2 UX** Simulador Franz dispara 403 CSRF | UX | `sdr-simulator.js` trocou `fetch()` por `CSRFHelper.fetch()` (helper já existia em `csrf-helper.js`, só não estava sendo usado) |
 
 ### UI — SDR consolidado na aba Agentes (commit `01d24965` + `a9d4aec4`)
