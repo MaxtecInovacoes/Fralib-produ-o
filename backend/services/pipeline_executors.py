@@ -120,21 +120,26 @@ async def executar_fase2_caio(
     return state.qualificacao_caio
 
 
-# ─── FASE 3: JINA ──────────────────────────────────────────────────────────
+# ─── FASE 3: INTEL (Playwright local) ──────────────────────────────────────
+# Nota: Mantido nome 'executar_fase3_jina' pra nao quebrar callers,
+# mas a fonte foi trocada de Jina API para Playwright local (zero custo).
 
 async def executar_fase3_jina(
     state,
     config: dict,
-    buscar_inteligencia_jina: Callable = None,
+    buscar_inteligencia_jina: Callable = None,  # agora recebe Playwright
     formatar_inteligencia: Callable = None,
-    pesquisar_referencias_jina: Callable = None,
+    pesquisar_referencias_jina: Callable = None,  # legacy, nao usado
     pode_usar_cache: Callable = None,
     get_dados_agente: Callable = None,
     salvar_checkpoint: Callable = None,
     validar_output: Callable = None,
     log_fn: Callable = None,
 ) -> str:
-    """Executa Fase 3: Jina AI Intelligence."""
+    """Executa Fase 3: Market Intelligence (Playwright local).
+
+    Recebe 'buscar_inteligencia_jina' que agora eh Playwright.
+    """
 
     _use_cache = pode_usar_cache(config) if pode_usar_cache else True
 

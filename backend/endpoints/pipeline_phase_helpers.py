@@ -18,12 +18,12 @@ except Exception:  # pragma: no cover - import fallback keeps tests patchable.
     pesquisar_keywords_nicho = None
 
 try:
-    from utils.jina_intelligence import (
-        buscar_inteligencia_jina,
+    from utils.playwright_intel import (
+        buscar_inteligencia_mercado,
         formatar_inteligencia_para_arquiteto,
     )
 except Exception:  # pragma: no cover - import fallback keeps tests patchable.
-    buscar_inteligencia_jina = None
+    buscar_inteligencia_mercado = None
     formatar_inteligencia_para_arquiteto = None
 
 
@@ -73,27 +73,31 @@ def ensure_keyword_research(state, logger, warning_fn=None) -> None:
 
 
 def ensure_jina_insights(state, log_fn, fallback_researcher, warning_fn) -> None:
-    """Populate Jina intelligence or fail closed."""
+    """Populate market intelligence (Playwright local) or fail closed.
+
+    Nota: Mantido nome da funcao como 'jina_insights' pra nao quebrar callers,
+    mas a fonte foi trocada pra Playwright local (zero custo).
+    """
     try:
-        if buscar_inteligencia_jina is None or formatar_inteligencia_para_arquiteto is None:
-            raise RuntimeError("jina_intelligence indisponivel")
-        jina_intel = buscar_inteligencia_jina(
+        if buscar_inteligencia_mercado is None or formatar_inteligencia_para_arquiteto is None:
+            raise RuntimeError("playwright_intel indisponivel")
+        intel = buscar_inteligencia_mercado(
             nicho=state.lead_obj.lead.segmento,
             cidade=state.lead_obj.lead.cidade,
             nome_negocio=state.lead_nome,
             concorrentes_urls=getattr(state, "_concorrentes_urls", None),
             tenant_id=getattr(state, "tenant_id", None),
         )
-        state.jina_intel_dict = jina_intel
-        state.jina_insights = formatar_inteligencia_para_arquiteto(jina_intel)
+        state.jina_intel_dict = intel
+        state.jina_insights = formatar_inteligencia_para_arquiteto(intel)
         log_fn(
-            f"  Jina Intel: {len(state.jina_insights)} chars, {len(jina_intel.get('palavras_poder', []))} sinais",
+            f"  Intel: {len(state.jina_insights)} chars, {len(intel.get('palavras_poder', []))} sinais",
             "success",
         )
     except Exception as exc:
         state.jina_intel_dict = {}
         state.jina_insights = ""
-        warning_fn(f"[Pipeline] Jina Intel erro: {exc}")
+        warning_fn(f"[Pipeline] Intel erro: {exc}")
         raise
 
 

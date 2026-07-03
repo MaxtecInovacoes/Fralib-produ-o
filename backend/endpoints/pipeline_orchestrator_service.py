@@ -101,9 +101,6 @@ from backend.agents.caio import LeadInput as CaioInput
 
 # Logs do pipeline chegam ao terminal via adicionar_log() chamado explicitamente
 from backend.agents.caio import qualificar_lead
-from backend.agents.jina_research import (
-    pesquisar_referencias_jina,
-)
 from backend.agents.pexels_video import buscar_videos_pexels
 from backend.agents.pipeline_checkpoint import (
     gerar_pipeline_id,
@@ -1068,48 +1065,31 @@ async def executar_pipeline_completo(
                     "cached": True,
                 }
             try:
-                from utils.jina_intelligence import (
-                    buscar_inteligencia_jina,
+                from utils.playwright_intel import (
+                    buscar_inteligencia_mercado,
                     formatar_inteligencia_para_arquiteto,
                 )
-                _jina_intel = await asyncio.to_thread(
-                    buscar_inteligencia_jina,
+                _intel = await asyncio.to_thread(
+                    buscar_inteligencia_mercado,
                     nicho=state.segmento,
                     cidade=state.cidade,
                     nome_negocio=state.lead_nome if hasattr(state, "lead_nome") else "",
                     concorrentes_urls=getattr(state, "_concorrentes_urls", None),
                 )
-                _insights = formatar_inteligencia_para_arquiteto(_jina_intel)
-                logger.info(f"[Pipeline] Jina AI: OK ({len(_insights)} chars)")
+                _insights = formatar_inteligencia_para_arquiteto(_intel)
+                logger.info(f"[Pipeline] Playwright Intel: OK ({len(_insights)} chars)")
                 return {
                     "insights": _insights,
-                    "intel": _jina_intel,
+                    "intel": _intel,
                     "cached": False,
                 }
             except Exception as e:
-                # Fallback: tentar Jina antiga
-                try:
-                    _insights = await asyncio.to_thread(
-                        pesquisar_referencias_jina,
-                        state.segmento,
-                        cidade=state.cidade,
-                    )
-                    logger.info(f"[Pipeline] Jina fallback v1: OK ({len(_insights)} chars)")
-                    return {
-                        "insights": _insights,
-                        "intel": {},
-                        "cached": False,
-                        "fallback": True,
-                    }
-                except Exception as fallback_err:
-                    logger.warning(
-                        f"[Pipeline] Jina Intel erro - v2 falhou: {e}, "
-                        f"fallback v1 também falhou: {fallback_err}"
-                    )
-                    return {
-                        "insights": "",
-                        "intel": {},
-                        "cached": False,
+                # FAIL-CLOSED: Playwright eh a fonte canonica. Sem fallback.
+                logger.warning(f"[Pipeline] Playwright Intel erro: {e}")
+                return {
+                    "insights": "",
+                    "intel": {},
+                    "cached": False,
                         "error": str(e),
                     }
 
