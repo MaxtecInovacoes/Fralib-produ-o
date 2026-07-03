@@ -1,0 +1,15 @@
+[Unit]
+Description=FraLib Phone Health Score (hourly)
+Documentation=https://github.com/...
+After=network-online.target
+Wants=network-online.target
+
+[Timer]
+# Roda a cada hora, 7 minutos depois do minuto (evita :00/:30 spike)
+OnCalendar=*:00/60
+# Catchup se a maquina ficou off
+Persistent=true
+Unit=fralib-phone-health.service
+
+[Install]
+WantedBy=timers.target

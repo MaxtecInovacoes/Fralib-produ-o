@@ -420,11 +420,15 @@
    * @returns {void}
    */
   function testarNoSimulador() {
-    var card = $('sdrSimulatorCard');
-    if (card && typeof card.scrollIntoView === 'function') {
-      card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // Card agora vive na view 'agents' (aba separada). Navega primeiro.
+    if (typeof mostrarView === 'function') {
+      mostrarView('agents');
     }
     setTimeout(function () {
+      var card = $('sdrSimulatorCard');
+      if (card && typeof card.scrollIntoView === 'function') {
+        card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
       var msg = $('sdrSimulatorMessage');
       if (msg) {
         // valor exemplo para evitar simulação em branco
