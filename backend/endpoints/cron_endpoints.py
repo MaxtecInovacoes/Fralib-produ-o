@@ -149,6 +149,7 @@ async def despachar_fila_franz(x_cron_secret: str = Header(None, alias='X-Cron-S
     from services.sdr_gateway import SdrMessageContext, evaluate_sdr_output, has_prior_outbound
     from backend.services.outbound_queue import enqueue_outbound
     from backend.whatsapp_listener import is_tenant_connected
+    from backend.services.sdr_helpers import _sdr_quality_hold_reason
     # === Sprint 1.2 — Bug #3: lock por lead para evitar que 2 ciclos
     # paralelos do cron processem o mesmo lead simultaneamente.
     # Mesmo padrão de ``responder_lead`` em whatsapp_listener.
@@ -187,6 +188,17 @@ async def despachar_fila_franz(x_cron_secret: str = Header(None, alias='X-Cron-S
             ) = row
             try:
                 if not plano_tem_sdr(user_plano, user_status, user_trial_expires_at):
+                    continue
+                # === DV3 fix: bloquear leads com quality incident antes de gastar tokens
+                # do Franz. Worker.py ja fazia essa checagem (linha 647); o cron NAO
+                # validava, permitindo mensagens em leads quarantineados.
+                try:
+                    _hold_reason = _sdr_quality_hold_reason(conn, str(lead_id), user_id)
+                    if _hold_reason:
+                        print(f"[Cron Franz] lead {lead_id} bloqueado por quality incident: {_hold_reason}")
+                        continue
+                except Exception as _qh_err:
+                    print(f"[Cron Franz] erro ao checar quality hold: {_qh_err}")
                     continue
                 franz_input = FranzInput(
                     nome=nome or "", cidade=cidade or "", segmento=segmento or "",

@@ -168,50 +168,9 @@ def _notificar_feedback_job(job: dict, status: str, fase: str, mensagem: str) ->
         log.warning(f"feedback SSE do job {job.get('id')} falhou: {exc}")
 
 
-def _sdr_quality_hold_reason(db, lead_id: str | None, tenant_id: int | None) -> str | None:
-    """Return a reason when a lead was quarantined after a publication incident."""
-
-    if not lead_id or not tenant_id:
-        return None
-    try:
-        from sqlalchemy import text as _txt
-
-        row = db.execute(
-            _txt(
-                """
-                SELECT
-                    COALESCE(to_jsonb(l)->>'sdr_stage', '') AS lead_stage,
-                    COALESCE(to_jsonb(l)->>'status', '') AS lead_status,
-                    COALESCE(to_jsonb(l)->>'erro_pipeline', '') AS erro_pipeline,
-                    COALESCE(to_jsonb(l)->>'pipeline_alerta', '') AS pipeline_alerta,
-                    COALESCE(li.status, '') AS inventory_status,
-                    COALESCE(li.erro, '') AS inventory_error
-                FROM leads l
-                LEFT JOIN lead_inventory li
-                  ON li.lead_id = l.id
-                 AND li.tenant_id = l.user_id
-                WHERE l.id = :lead_id
-                  AND l.user_id = :tenant_id
-                LIMIT 1
-                """
-            ),
-            {"lead_id": lead_id, "tenant_id": tenant_id},
-        ).fetchone()
-    except Exception as exc:
-        log.warning(f"Franz: qualidade nao verificada lead={lead_id}: {exc}")
-        return None
-    if not row:
-        return None
-
-    values = [str(value or "").lower() for value in row]
-    if any(value.startswith("blocked_quality") for value in values):
-        return "lead bloqueado por incidente de qualidade"
-    if any(value == "quality_hold" for value in values):
-        return "lead/inventario em quality_hold"
-    joined = " ".join(values)
-    if "quality incident" in joined or "wrong-niche" in joined or "generic" in joined:
-        return "alerta de qualidade bloqueia SDR"
-    return None
+# Implementacao canonica em backend.services.sdr_helpers — reexportado aqui
+# para manter compatibilidade com callers que ja faziam ``from worker import ...``.
+from backend.services.sdr_helpers import _sdr_quality_hold_reason  # noqa: E402,F401
 
 
 def _shutdown(signum, frame):
