@@ -407,6 +407,33 @@ def executar_fase10_deploy(
     if log_fn:
         log_fn(f"  Deploy: {state.site_url}", "success")
 
+    # ── AUDIT MOBILE (G5) — best-effort, fail-open ─────────────────────
+    # Roda em background thread pra não bloquear pipeline principal.
+    # Se overflow mobile, marca needs_regen=True no site_mobile_audit.
+    try:
+        import threading as _th
+        def _run_mobile_audit():
+            try:
+                from backend.services.mobile_audit_service import (
+                    audit_site_mobile, persist_audit_result,
+                )
+                from backend.core.config import get_database_engine
+                result = audit_site_mobile(
+                    site_url=state.site_url,
+                    lead_id=getattr(state, "lead_id", None),
+                    tenant_id=tenant_id,
+                )
+                try:
+                    engine = get_database_engine()
+                    persist_audit_result(engine, result)
+                except Exception as persist_err:
+                    logger.warning(f"[MobileAudit] persist falhou (best-effort): {persist_err}")
+            except Exception as audit_err:
+                logger.warning(f"[MobileAudit] background falhou (best-effort): {audit_err}")
+        _th.Thread(target=_run_mobile_audit, daemon=True).start()
+    except Exception as e:
+        logger.warning(f"[MobileAudit] nao foi possivel iniciar: {e}")
+
     return state.site_url
 
 

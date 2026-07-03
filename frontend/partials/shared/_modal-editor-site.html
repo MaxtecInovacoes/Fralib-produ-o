@@ -161,6 +161,44 @@
           <button class="editor-pill" onclick="editorApplyQuickStyle('button-primary')">Botão primário</button>
           <button class="editor-pill" onclick="editorApplyQuickStyle('card-polish')">Card premium</button>
         </div>
+
+        <!-- G1: Painel de Tema (CSS variables globais) -->
+        <div class="editor-divider" style="margin:14px 0;border-top:1px solid #252538;"></div>
+        <div class="editor-field">
+          <label style="font-size:12px;color:#fff;font-weight:800;">🎨 Tema Global</label>
+          <div class="editor-hint" style="margin:4px 0 10px;">Muda as cores/fontes do site inteiro de uma vez. Sem re-build.</div>
+          <div id="editorThemePanel" style="display:flex;flex-direction:column;gap:10px;">
+            <div class="editor-theme-row" style="display:grid;grid-template-columns:90px 1fr;align-items:center;gap:8px;">
+              <label style="font-size:11px;color:#8b8ba3;">Primária</label>
+              <input type="color" id="editorThemePrimary" value="#10b981" />
+            </div>
+            <div class="editor-theme-row" style="display:grid;grid-template-columns:90px 1fr;align-items:center;gap:8px;">
+              <label style="font-size:11px;color:#8b8ba3;">Secundária</label>
+              <input type="color" id="editorThemeSecondary" value="#9333ea" />
+            </div>
+            <div class="editor-theme-row" style="display:grid;grid-template-columns:90px 1fr;align-items:center;gap:8px;">
+              <label style="font-size:11px;color:#8b8ba3;">Acento</label>
+              <input type="color" id="editorThemeAccent" value="#f59e0b" />
+            </div>
+            <div class="editor-theme-row" style="display:grid;grid-template-columns:90px 1fr;align-items:center;gap:8px;">
+              <label style="font-size:11px;color:#8b8ba3;">Fundo</label>
+              <input type="color" id="editorThemeBg" value="#0a0a0f" />
+            </div>
+            <div class="editor-theme-row" style="display:grid;grid-template-columns:90px 1fr;align-items:center;gap:8px;">
+              <label style="font-size:11px;color:#8b8ba3;">Texto</label>
+              <input type="color" id="editorThemeText" value="#fafafa" />
+            </div>
+            <div class="editor-theme-row" style="display:grid;grid-template-columns:90px 1fr;align-items:center;gap:8px;">
+              <label style="font-size:11px;color:#8b8ba3;">Borda (radius)</label>
+              <input type="text" id="editorThemeRadius" value="8px" placeholder="8px" maxlength="20" />
+            </div>
+            <div style="display:flex;gap:8px;margin-top:6px;">
+              <button class="editor-pill" style="background:#10b981;color:#03130d;font-weight:700;flex:1;" onclick="editorLoadTheme()">Carregar tema atual</button>
+              <button class="editor-pill" style="background:#9333ea;color:#fff;font-weight:700;flex:1;" onclick="editorSaveTheme()">Aplicar tema</button>
+            </div>
+            <div id="editorThemeStatus" style="font-size:11px;color:#8b8ba3;margin-top:4px;"></div>
+          </div>
+        </div>
       </section>
 
       <section class="editor-tab-panel" id="editorTabMedia">

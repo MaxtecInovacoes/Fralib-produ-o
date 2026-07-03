@@ -112,14 +112,80 @@
     if(!doc || !list) return;
     var sections = Array.prototype.slice.call(doc.querySelectorAll('header,main>section,section,footer'))
       .filter(function(el, index, arr){ return arr.indexOf(el) === index; });
-    list.innerHTML = sections.length ? sections.map(function(el, index){
+    if (!sections.length) {
+      list.innerHTML = '<div class="editor-empty">Nenhuma seção detectada.</div>';
+      return;
+    }
+    list.innerHTML = sections.map(function(el, index){
       var id = el.dataset.fralibEditorId || '';
       var title = sectionTitle(el, index);
-      return '<div class="editor-row">' +
-        '<span class="editor-row-main"><span class="editor-row-title">' + escapeText(title) + '</span><span class="editor-row-sub">' + escapeText((el.tagName || '').toLowerCase()) + '</span></span>' +
-        '<button onclick="editorSelectById(\'' + escapeText(id) + '\')">Selecionar</button>' +
+      var isFirst = (index === 0);
+      var isLast = (index === sections.length - 1);
+      // Escape single quotes for inline onclick
+      var safeId = escapeText(id).replace(/'/g, "\\'");
+      return '<div class="editor-row" style="display:flex;align-items:center;gap:8px;padding:8px 10px;">' +
+        '<div style="flex:1;min-width:0;">' +
+          '<div class="editor-row-title" style="font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escapeText(title) + '</div>' +
+          '<div class="editor-row-sub" style="font-size:10px;color:#8b8ba3;">' + escapeText((el.tagName || '').toLowerCase()) + '</div>' +
+        '</div>' +
+        '<div style="display:flex;gap:4px;flex-shrink:0;">' +
+          '<button onclick="editorMoveSection(\'' + safeId + '\',\'up\')" ' + (isFirst ? 'disabled' : '') + ' title="Mover pra cima" style="background:#252538;color:#fff;border:none;border-radius:4px;padding:4px 8px;cursor:pointer;font-size:11px;' + (isFirst ? 'opacity:0.3;cursor:not-allowed;' : '') + '">↑</button>' +
+          '<button onclick="editorMoveSection(\'' + safeId + '\',\'down\')" ' + (isLast ? 'disabled' : '') + ' title="Mover pra baixo" style="background:#252538;color:#fff;border:none;border-radius:4px;padding:4px 8px;cursor:pointer;font-size:11px;' + (isLast ? 'opacity:0.3;cursor:not-allowed;' : '') + '">↓</button>' +
+          '<button onclick="editorDuplicateSection(\'' + safeId + '\')" title="Duplicar" style="background:#0ea5e9;color:#fff;border:none;border-radius:4px;padding:4px 8px;cursor:pointer;font-size:11px;">⎘</button>' +
+          '<button onclick="editorDeleteSection(\'' + safeId + '\')" title="Remover" style="background:#ef4444;color:#fff;border:none;border-radius:4px;padding:4px 8px;cursor:pointer;font-size:11px;">✕</button>' +
+        '</div>' +
       '</div>';
-    }).join('') : '<div class="editor-empty">Nenhuma seção detectada.</div>';
+    }).join('');
+  }
+
+  function editorMoveSection(id, direction){
+    if(!id) return;
+    var doc = getIframeDoc();
+    if(!doc) return;
+    var el = doc.querySelector('[data-fralib-editor-id="' + id + '"]');
+    if(!el){ status('Seção não encontrada.', true); return; }
+    if(direction === 'up'){
+      if(!el.previousElementSibling){ status('Já é a primeira seção.', true); return; }
+      el.parentNode.insertBefore(el, el.previousElementSibling);
+    } else {
+      if(!el.nextElementSibling){ status('Já é a última seção.', true); return; }
+      el.parentNode.insertBefore(el.nextElementSibling, el);
+    }
+    global.assignEditorIds(doc);
+    setDirty(true);
+    global.pushHistory();
+    global.renderSections();
+    status('Seção movida.', false);
+  }
+
+  function editorDuplicateSection(id){
+    if(!id) return;
+    var doc = getIframeDoc();
+    if(!doc) return;
+    var el = doc.querySelector('[data-fralib-editor-id="' + id + '"]');
+    if(!el){ status('Seção não encontrada.', true); return; }
+    var clone = el.cloneNode(true);
+    global.scrubEditorAttrs(clone);
+    el.parentNode.insertBefore(clone, el.nextSibling);
+    global.assignEditorIds(doc);
+    setDirty(true);
+    global.pushHistory();
+    global.renderSections();
+    status('Seção duplicada.', false);
+  }
+
+  function editorDeleteSection(id){
+    if(!id) return;
+    var doc = getIframeDoc();
+    if(!doc) return;
+    var el = doc.querySelector('[data-fralib-editor-id="' + id + '"]');
+    if(!el){ status('Seção não encontrada.', true); return; }
+    if(!confirm('Remover esta seção? Não dá pra desfazer (só Ctrl+Z).')) return;
+    el.parentNode.removeChild(el);
+    setDirty(true);
+    global.pushHistory();
+    global.renderSections();
+    status('Seção removida.', false);
   }
 
   function sectionTitle(el, index){
@@ -248,6 +314,9 @@
   global.editorMoveSelected = editorMoveSelected;
   global.editorDeleteSelected = editorDeleteSelected;
   global.editorAddSection = editorAddSection;
+  global.editorMoveSection = editorMoveSection;
+  global.editorDuplicateSection = editorDuplicateSection;
+  global.editorDeleteSection = editorDeleteSection;
   global.sectionTemplate = sectionTemplate;
 
 })(window);

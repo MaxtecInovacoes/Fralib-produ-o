@@ -90,6 +90,7 @@ import provider_alerts_endpoints
 import agent_config_endpoints
 import falhas_endpoints
 import site_editor_endpoints
+import site_theme_endpoints
 import tracking_endpoints
 import lead_supply_endpoints
 import health_endpoints
@@ -483,6 +484,7 @@ app.include_router(agent_config_endpoints.router)
 app.include_router(falhas_endpoints.router)
 app.include_router(pipeline_tempo_endpoints.router)
 app.include_router(site_editor_endpoints.router)
+app.include_router(site_theme_endpoints.router)
 app.include_router(tracking_endpoints.router)
 import clarity_api_endpoints
 app.include_router(clarity_api_endpoints.router)
