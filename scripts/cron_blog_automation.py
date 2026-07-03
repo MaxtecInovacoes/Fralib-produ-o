@@ -503,21 +503,118 @@ def rank_for_fralib(trends: List[Dict]) -> List[Dict]:
 
 
 def fetch_all_trends() -> List[Dict]:
-    """Combina 3 fontes, deduplica, filtra crimes, ranqueia pra FraLib."""
-    print("  Buscando trends em 3 fontes...")
+    """Combina 3 fontes + pool de keywords PT como FALLBACK.
+
+    O pool de keywords PT em FALLBACK_TOPICS_PT garante que mesmo se todas as
+    3 fontes externas falharem (Reddit bloqueia, Google Trends fora do ar,
+    Hacker News so tem EN), ainda temos topicos para gerar 2 posts/dia.
+    """
+    print("  Buscando trends em 3 fontes externas...")
     all_trends = []
     all_trends.extend(fetch_google_trends_br())
-    print(f"    Google Trends BR: {len(all_trends)} topics")
+    print(f"    Google Trends BR: {sum(1 for t in all_trends if t.get('source')=='google_trends_br')} topics")
     all_trends.extend(fetch_reddit_brazil())
-    print(f"    Reddit: {len(all_trends) - sum(1 for t in all_trends if t.get('source','').startswith('reddit'))} novos")
+    print(f"    Reddit: {sum(1 for t in all_trends if t.get('source','').startswith('reddit'))} topics")
     all_trends.extend(fetch_hackernews())
-    print(f"    Hacker News: {len(all_trends) - sum(1 for t in all_trends if t.get('source','') == 'hackernews')} novos")
+    print(f"    Hacker News: {sum(1 for t in all_trends if t.get('source')=='hackernews')} topics")
 
     unique = deduplicate_trends(all_trends)
-    print(f"  Total unicos: {len(unique)}")
+    print(f"  Total unicos externos: {len(unique)}")
+
+    # FALLBACK: se fontes externas renderam < 2 topicos, usa pool PT hardcoded
+    if len(unique) < 2:
+        print(f"  [FALLBACK] Usando pool de keywords PT pre-definidas")
+        fallback = _pick_fallback_topics(needed=2 - len(unique))
+        unique.extend(fallback)
 
     ranked = rank_for_fralib(unique)
+    print(f"  {len(ranked)} trends rankeados (final)")
     return ranked
+
+
+# ============================================================================
+# FALLBACK POOL - TOPICOS EM PT (sempre disponiveis)
+# ============================================================================
+# Pool de keywords long-tail em PT cobrindo os nichos do FraLib.
+# Usado quando fontes externas (Google Trends/Reddit/HN) nao retornam
+# topicos em PT suficientes. Organizado por categoria.
+
+FALLBACK_TOPICS_PT = [
+    # IA & Automacao
+    ("Automacao comercial com IA em 2026: guia pratico para PMEs", "ia"),
+    ("Como agentes de IA vao substituir funcionarios repetitivos em 2026", "ia"),
+    ("IA generativa para vender mais: 7 casos reais no Brasil", "ia"),
+    ("SDR de IA: o vendedor que trabalha 24 horas sem reclamar", "ia"),
+    ("Micro SaaS com IA: como criar um negocio recorrente do zero", "ia"),
+    ("Prompts avancados para ChatGPT, Claude e Gemini em vendas", "ia"),
+    ("Como criar agentes autonomos de IA sem programar", "ia"),
+    ("Vende mais com IA: 5 fluxos prontos para copiar", "ia"),
+    # Vendas & WhatsApp
+    ("WhatsApp Business API 2026: como vender sem ser banido", "vendas"),
+    ("Prospeccao B2B pelo WhatsApp: o metodo que converte 30%", "vendas"),
+    ("Como cobrar R$ 1500 por site em 2026: tabela atualizada", "vendas"),
+    ("Funil de vendas automatizado: do lead ao fechamento em 7 dias", "vendas"),
+    ("Quanto cobrar por gestao de WhatsApp em 2026", "vendas"),
+    ("Cold outreach via WhatsApp: script que funciona em 2026", "vendas"),
+    ("Follow-up automatico: 5 mensagens que vendem sozinhas", "vendas"),
+    # Marketing & Prospeccao
+    ("Google Maps como maquina de leads para negocios locais", "marketing"),
+    ("Como prospectar clientes no Google Maps sem gastar com anuncios", "marketing"),
+    ("SEO local em 2026: domine o Google do seu bairro", "marketing"),
+    ("Marketing digital para freelancers: o que mudou em 2026", "marketing"),
+    ("Como criar uma landing page que converte 15% ou mais", "marketing"),
+    ("Copywriting para WhatsApp: 10 formulas que vendem", "marketing"),
+    # Sites & Tecnologia
+    ("Gerador de sites com IA: comparativo 2026 das melhores ferramentas", "tech"),
+    ("Site que vende: 7 erros que freelancers cometem em 2026", "tech"),
+    ("Sites one-page vs multi-page: o que funciona melhor em 2026", "tech"),
+    ("Performance web em 2026: Core Web Vitals e ranking Google", "tech"),
+    # Negocios & Renda
+    ("Renda recorrente automatica: como ganhar enquanto dorme", "negocios"),
+    ("Como escalar um negocio local sem contratar mais gente", "negocios"),
+    ("Negocios locais sem site: onde estao os clientes em 2026", "negocios"),
+    ("Empreendedorismo solo com IA: o novo modelo de negocio", "negocios"),
+    # Freelancer
+    ("Freelancer em 2026: como cobrar 3x mais sem trabalhar 3x mais", "freelancer"),
+    ("Transicao de CLT para freelancer com IA: passo a passo", "freelancer"),
+    ("Marketing para freelancers: como conseguir clientes todo mes", "freelancer"),
+    ("Portfolio que vende: como montar sem experiencia previa", "freelancer"),
+    ("MEI vs PJ em 2026: qual escolher para ganhar mais", "freelancer"),
+]
+
+
+def _pick_fallback_topics(needed: int) -> List[Dict]:
+    """Pega topicos do pool PT, evitando os ultimos ja gerados."""
+    import os
+    state_file = BLOG_DIR / ".fallback_state"
+    used_slugs = []
+    if state_file.exists():
+        used_slugs = state_file.read_text().strip().split("\n")
+        used_slugs = [s for s in used_slugs if s]
+
+    available = [t for t in FALLBACK_TOPICS_PT if slugify(t[0]) not in used_slugs]
+    if not available:
+        # Reset state se ja usou todos
+        used_slugs = []
+        available = list(FALLBACK_TOPICS_PT)
+
+    # Rotacao: pega os primeiros N
+    picked = available[:needed] if len(available) >= needed else available
+
+    # Persiste state
+    new_used = used_slugs + [slugify(t[0]) for t in picked]
+    state_file.write_text("\n".join(new_used))
+
+    return [
+        {
+            "topic": t[0],
+            "category": t[1],
+            "keywords": t[0].lower().split()[:5],
+            "intent": "evergreen",
+            "source": "fallback_pool_pt",
+        }
+        for t in picked
+    ]
 
 
 def classify_topic(topic: str) -> str:
@@ -592,6 +689,56 @@ def save_dashboard() -> None:
 # GERADOR DE POST
 # ============================================================================
 
+def ensure_fralib_ctas(body: str, min_links: int = 2) -> str:
+    """Garante que o post tem pelo menos N hyperlinks <a href='/planos'>.
+
+    Se o LLM nao colocou links FraLib inline, injeta de forma natural.
+    Tambem adiciona 1-2 mencoes textuais de 'FraLib' se nao houver.
+    """
+    import re
+    # Conta links FraLib
+    plan_links = re.findall(r'<a\s+href="/planos"[^>]*>([^<]+)</a>', body, re.IGNORECASE)
+    fralib_mentions = len(re.findall(r'\bFraLib\b', body))
+
+    # Se ja tem links suficientes, so garante mencoes
+    if len(plan_links) >= min_links and fralib_mentions >= 2:
+        return body
+
+    # Frases naturais para injecao com link FraLib
+    link_phrases = [
+        '<p>Uma <a href="/planos">plataforma de prospeccao automatizada</a> pode resolver isso de forma bem mais eficiente — voce configura 1x e o sistema trabalha 24 horas pra voce.</p>',
+        '<p>Se voce quer testar essa abordagem sem montar tudo do zero, vale olhar <a href="/planos">essa solucao completa</a> que ja faz prospeccao, geracao de conteudo e follow-up.</p>',
+        '<p>Tem um <a href="/planos">sistema como o FraLib</a> que automatiza justamente essa parte — busca de leads, qualificacao e abordagem inicial.</p>',
+        '<p>Alem da estrategia, existem <a href="/planos">ferramentas de automacao</a> que executam isso em escala sem aumentar custo fixo.</p>',
+    ]
+
+    used = set(plan_links)
+    needed = max(min_links - len(plan_links), 0)
+
+    # Tenta adicionar no meio (depois de 30-50% do conteudo)
+    paragraphs = body.split('</p>')
+    if len(paragraphs) < 3:
+        return body
+
+    insert_pos = max(2, len(paragraphs) // 2)
+    for phrase in link_phrases:
+        if needed <= 0:
+            break
+        # Extrai o anchor text da phrase
+        anchor_match = re.search(r'>([^<]+)</a>', phrase)
+        anchor_text = anchor_match.group(1) if anchor_match else "plataforma"
+        if anchor_text in used:
+            continue
+        # Remove o <p> wrapper pra inserir inline
+        clean = phrase.replace('<p>', '').replace('</p>', '')
+        paragraphs.insert(insert_pos, clean)
+        insert_pos += 2
+        needed -= 1
+        used.add(anchor_text)
+
+    return '</p>'.join(paragraphs)
+
+
 def generate_post_html(topic: str, category: str, keywords: List[str], slug: str) -> str:
     """Gera HTML do post otimizado para SEO."""
 
@@ -604,6 +751,9 @@ def generate_post_html(topic: str, category: str, keywords: List[str], slug: str
     # Fallback se LLM não disponível
     if not body:
         body = generate_fallback_content(topic, category, keywords)
+
+    # GARANTE que tem pelo menos 2 links /planos e 2 menções FraLib no corpo
+    body = ensure_fralib_ctas(body, min_links=2)
 
     html = f"""<!DOCTYPE html>
 <html lang="pt-BR">
@@ -698,6 +848,7 @@ def call_llm_for_content(topic: str, category: str, keywords: List[str]) -> Opti
         base_url = os.environ.get("ANTHROPIC_BASE_URL", "https://api.kpalabz.com/v1")
 
         if not api_key:
+            print(f"  [LLM] ANTHROPIC_API_KEY nao configurado", file=sys.stderr)
             return None
 
         prompt = f"""Voce eh Franz Douglas, copywriter senior brasileiro. Escreva um post de blog sobre: {topic}
@@ -724,9 +875,12 @@ ESTRUTURA:
 
 CTAs FRALIB (CRITICO):
 - Mencione FraLib 1-2 vezes NO MEIO do texto de forma NATURAL
-- Use hyperlink inline: <a href="/planos">anchor variando</a>
-- Exemplos de anchor: "plataforma de prospeccao automatizada", "ferramenta de automacao", "sistema como o FraLib"
-- NAO pareca propaganda corporativa
+- IMPORTANTE: voce DEVE incluir EXATAMENTE 2 hyperlinks <a href="/planos">...</a> no conteudo_html
+  (NAO 0, NAO 1 - OBRIGATORIAMENTE 2 links inline para /planos)
+- Use anchor text variando: "plataforma de prospeccao automatizada", "ferramenta de automacao",
+  "sistema como o FraLib", "solucao completa como o FraLib", "plataforma de IA"
+- Distribua os 2 links: 1 no meio do texto (apos primeiro H2) e 1 perto do final (antes da conclusao)
+- NAO pareca propaganda corporativa - escreva como se estivesse recomendando pra um amigo
 
 LISTA NEGRA (rejeitar/reescrever se aparecer):
 - Crimes, homicídios, violencia, policia, trafico, drogas
