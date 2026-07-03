@@ -60,6 +60,21 @@ def test_lead_supply_sync_recovers_caio_backlog():
     assert "status IN ('failed_permanent','failed_retriable')" in caio_block
 
 
+def test_pipeline_failure_retry_all_hydrates_inventory_payload():
+    source = _read("backend/endpoints/falhas_endpoints.py")
+    helper_block = source[
+        source.index("def _hydrate_pipeline_retry_payload") :
+        source.index("@router.get")
+    ]
+    retry_all_block = source[source.index("async def retry_all_falhas") :]
+
+    assert 'payload["_inventory_id"]' in helper_block
+    assert 'payload["_lead_id_existente"]' in helper_block
+    assert "FROM lead_inventory" in helper_block
+    assert "lead_supply_config" in helper_block
+    assert "_hydrate_pipeline_retry_payload(db, tenant_id, payload, lead_id)" in retry_all_block
+
+
 def test_sdr_save_and_send_preserves_generated_outgoing_message():
     source = _read("backend/agents/sdr_langgraph/agent.py")
     block = source[

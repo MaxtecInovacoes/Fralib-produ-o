@@ -10,7 +10,7 @@ POST /api/falhas/{id}/visto  - marca como visto (ao abrir a lista)
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from sqlalchemy import text
-import os, sys
+import os, sys, json
 import uuid
 
 _BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -23,6 +23,86 @@ from rate_limiter import limiter
 import job_queue
 
 router = APIRouter(prefix="/api/falhas", tags=["falhas"])
+
+
+def _json_list(value) -> list:
+    if isinstance(value, list):
+        return value
+    if isinstance(value, tuple):
+        return list(value)
+    if isinstance(value, str) and value.strip():
+        try:
+            parsed = json.loads(value)
+            return parsed if isinstance(parsed, list) else []
+        except Exception:
+            return []
+    return []
+
+
+def _hydrate_pipeline_retry_payload(
+    db: Session,
+    tenant_id: int,
+    payload: dict,
+    lead_id: str | None,
+) -> dict:
+    """Reconstrói o contrato mínimo para retry canônico de pipeline_lead."""
+    payload = dict(payload or {})
+    inventory_id = payload.get("_inventory_id") or payload.get("inventory_id")
+    if inventory_id:
+        payload["_inventory_id"] = str(inventory_id)
+    if lead_id and not payload.get("_lead_id_existente"):
+        payload["_lead_id_existente"] = str(lead_id)
+    payload.setdefault("quantidade", 1)
+    payload.setdefault("_forcar_renovacao", True)
+    payload.setdefault("_cold_run", True)
+    payload.setdefault("_prompt_agent_flow", True)
+
+    if inventory_id and (not payload.get("segmento") or not payload.get("cidade")):
+        inv_row = db.execute(
+            text(
+                """
+                SELECT segmento, cidade, score_caio, lead_id
+                FROM lead_inventory
+                WHERE id=:id AND tenant_id=:uid
+                """
+            ),
+            {"id": str(inventory_id), "uid": tenant_id},
+        ).fetchone()
+        if inv_row:
+            if not payload.get("segmento"):
+                payload["segmento"] = inv_row[0] or ""
+            if not payload.get("cidade"):
+                payload["cidade"] = inv_row[1] or ""
+            payload.setdefault("score_minimo", int(inv_row[2] or 0) if inv_row[2] is not None else 0)
+            if not payload.get("_lead_id_existente") and inv_row[3]:
+                payload["_lead_id_existente"] = str(inv_row[3])
+
+    if (not payload.get("segmento") or not payload.get("cidade")) and lead_id:
+        lead_row = db.execute(
+            text("SELECT segmento, cidade FROM leads WHERE id=:id AND user_id=:uid"),
+            {"id": lead_id, "uid": tenant_id},
+        ).fetchone()
+        if lead_row:
+            if not payload.get("segmento"):
+                payload["segmento"] = lead_row[0] or ""
+            if not payload.get("cidade"):
+                payload["cidade"] = lead_row[1] or ""
+
+    if not payload.get("segmento") or not payload.get("cidade") or not payload.get("score_minimo"):
+        cfg_row = db.execute(
+            text("SELECT segmentos, cidades, score_minimo FROM lead_supply_config WHERE tenant_id=:uid"),
+            {"uid": tenant_id},
+        ).fetchone()
+        if cfg_row:
+            segmentos = _json_list(cfg_row[0])
+            cidades = _json_list(cfg_row[1])
+            if not payload.get("segmento"):
+                payload["segmento"] = (segmentos[0] if segmentos else "") or ""
+            if not payload.get("cidade"):
+                payload["cidade"] = (cidades[0] if cidades else "") or ""
+            payload.setdefault("score_minimo", int(cfg_row[2] or 45))
+
+    return payload
 
 
 @router.get("")
@@ -167,31 +247,7 @@ async def retry_falha(
         run_id = uuid.uuid4().hex[:12]
         payload = {**payload, "_run_id": run_id}
 
-    # FIX: garantir que payload tem segmento/cidade. Se nao tiver (caso comum
-    # quando o job original veio do lead_supply que so passou force/True),
-    # buscar do lead ou do lead_supply_config.
-    if not payload.get("segmento") or not payload.get("cidade"):
-        # Tentar do lead
-        if lead_id:
-            lead_row = db.execute(
-                text("SELECT segmento, cidade FROM leads WHERE id=:id AND user_id=:uid"),
-                {"id": lead_id, "uid": tenant_id},
-            ).fetchone()
-            if lead_row:
-                payload.setdefault("segmento", lead_row[0] or "")
-                payload.setdefault("cidade", lead_row[1] or "")
-        # Fallback: lead_supply_config
-        if not payload.get("segmento") or not payload.get("cidade"):
-            cfg_row = db.execute(
-                text("SELECT segmentos, cidades FROM lead_supply_config WHERE tenant_id=:uid"),
-                {"uid": tenant_id},
-            ).fetchone()
-            if cfg_row:
-                import json as _json_f
-                _seg = cfg_row[0] if isinstance(cfg_row[0], list) else (_json_f.loads(cfg_row[0]) if cfg_row[0] else [])
-                _cid = cfg_row[1] if isinstance(cfg_row[1], list) else (_json_f.loads(cfg_row[1]) if cfg_row[1] else [])
-                payload.setdefault("segmento", (_seg[0] if _seg else "") or "")
-                payload.setdefault("cidade", (_cid[0] if _cid else "") or "")
+    payload = _hydrate_pipeline_retry_payload(db, tenant_id, payload, lead_id)
 
     # Idempotency_key garante que retries duplos (usuario clica 2x) virem 1 job
     idem = f"retry-falha-{falha_id}"
@@ -268,6 +324,7 @@ async def retry_all_falhas(
             if not run_id:
                 run_id = uuid.uuid4().hex[:12]
                 payload = {**payload, "_run_id": run_id}
+            payload = _hydrate_pipeline_retry_payload(db, tenant_id, payload, lead_id)
 
             idem = f"retry-falha-{falha_id}"
             job_id = job_queue.enqueue(
@@ -312,4 +369,3 @@ async def retry_all_falhas(
         "ja_enfileiradas": ja_enfileiradas,
         "erros": erros,
     }
-
