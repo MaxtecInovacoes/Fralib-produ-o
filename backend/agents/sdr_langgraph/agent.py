@@ -1371,7 +1371,13 @@ def node_save_and_send(state: SDRState) -> dict:
                 print(f"[SDR] Reply rejeitada: {reply[:100]}")
                 return {}  # nao envia
         except Exception as _judge_err:
-            print(f"[SDR] quality_judge falhou (nao-bloqueante): {_judge_err}")
+            # Sprint 1.3: silent failure → logger.warning estruturado
+            from utils.safe_log import safe_log_silent_failure
+            safe_log_silent_failure(
+                _judge_err,
+                op="quality_judge",
+                lead_id=state.lead_id if hasattr(state, "lead_id") else None,
+            )
 
     # Persiste o trace do turno SDR (todos os nodes ja instrumentaram spans)
     try:
