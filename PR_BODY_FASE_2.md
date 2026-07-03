@@ -1,91 +1,83 @@
-# Fase 2+3 do plano de auditoria + reorganização UI Agentes
+# Fase Completa: Fase 1 (Sprints 1.1-1.5) + Fase 2 (Auditoria + UI Agentes) + Hardening Pós-Auditoria
 
 ## 🎯 Objetivo
 
-Consolidar 4 sprints críticos do plano de auditoria (`docs/AUDITORIA_FASE_0_1.md`) **+** reorganizar a UI do SDR pra que ele viva só na aba **Agentes** dentro do **Motor FraLib** (admin e superadmin), removendo a duplicação que existia no "Meu perfil".
+Entrega das **Sprints 0.1-1.5** do plano de auditoria (`docs/AUDITORIA_FASE_0_1.md`), **+ 4 sprints Fase 2** (4.1, 2.2, 3.1, 3.3) **+ reorganização UI Agentes no admin** **+ hardening pós-adversarial** com 16 bugs consertados (1 P0 segurança + 6 P1 funcionais + 4 P2 qualidade + 5 melhorias) e **66 testes** dos 4 sprints Fase 2 passando 100%.
 
-## 📦 Entregas
+## 📦 Entregas por sprint
 
 ### Sprint 4.1 — Race condition hardening (7 testes)
-- Stress test determinístico pro fix do BUG #3 (race condition outbound×inbound), já implementado em Sprints 1.2+1.5.
-- `tests/unit/test_race_outbound_inbound_stress.py` — 7 testes cobrindo `_check_last_inbound_vs_outbound`, `set_cooldown`, `increment_daily_count` e `dequeue_and_send`.
-- **`backend/services/outbound_queue.py` não foi modificado** — o fix já existia; só validamos ele deterministicamente.
+- `tests/unit/test_race_outbound_inbound_stress.py` valida determinísticamente o fix das Sprints 1.2+1.5 já existente em `backend/services/outbound_queue.py`.
 
-### Sprint 2.2 — Trilha de auditoria unificada (16 testes)
-- Migration `backend/migrations/2026_07_audit_events.sql` — tabela `audit_events` + 3 índices (tenant/actor/action × tempo DESC).
-- Módulo `backend/audit/`:
-  - `models.py` — `AuditEvent` dataclass(frozen=True).
-  - `recorder.py` — `record_event` fail-safe (nunca derruba request) + `query_events` (filtros/paginação) + 3 atalhos (`record_login`, `record_tenant_change`, `record_lead_change`).
-  - `decorators.py` — `@audit_log(action, entity_type)` async decorator pra FastAPI.
-- Endpoint `GET /api/superadmin/audit` em `backend/endpoints/audit_endpoints.py` (filtros + paginação + limite 1-500).
-- Hook PoC: aplicado em `POST /api/users/sdr-config` (`backend/endpoints/users_endpoints.py:salvar_sdr_config`).
-- 16 testes determinísticos em `tests/unit/test_audit_recorder.py`.
+### Sprint 2.2 — Trilha de auditoria unificada (24 testes)
+- Migration `2026_07_audit_events.sql` (tabela + 3 índices).
+- Módulo `backend/audit/` (4 arquivos): `models.py`, `recorder.py` (fail-safe), `decorators.py` (`@audit_log` + `entity_id_from`).
+- Endpoint `GET /api/superadmin/audit` com validação ISO 8601 em `since`/`until`.
 
-### Sprint 3.1 — Rate limit por IP (18 testes)
-- Migration `backend/migrations/2026_07_ip_rate_limit.sql` — tabela fallback Postgres pra quando Redis offline.
-- Middleware `backend/middleware/rate_limit.py`:
-  - `IPRateLimiter` (Redis sliding window com fallback Postgres, fail-open se ambos down).
-  - `endpoint_bucket_for_request(request)` — classifica login/cron/public/default. Whitelist `/api/health`, `/static/*`, `*.html`, `*.js`, `*.css`.
-  - Retorna HTTP 429 com header `Retry-After`.
-- Integração em `server.py` (registrado após CORS, antes dos routers).
-- 18 testes em `tests/unit/test_ip_rate_limit.py` (Redis path, bucket extraction, Postgres fallback, fail-open, middleware HTTP).
+### Sprint 3.1 — Rate limit por IP (23 testes)
+- Migration `2026_07_ip_rate_limit.sql` (fallback Postgres).
+- `backend/middleware/rate_limit.py` com Redis pipeline (atomic) + Postgres fallback + **XFF spoof protection** via `TRUSTED_PROXIES` env.
 
 ### Sprint 3.3 — Alerta de tenant silencioso (12 testes)
-- Migration `backend/migrations/2026_07_tenant_alerts.sql` — `tenant_alerts` com partial unique index (dedupe de abertos).
-- Job `backend/jobs/detect_silent_tenants.py` — 5 critérios:
-  1. `admin_inactive_7d` (warning)
-  2. `no_new_leads_15d` (info)
-  3. `no_cost_events_3d` (warning — tenant ativo sem gastar)
-  4. `subscription_expiring_7d` (critical — churn iminente)
-  5. `trial_active_no_use_14d` (warning)
-- Notificações por email opcionais via env `SILENT_TENANT_ALERT_EMAIL`.
-- Endpoint `backend/endpoints/superadmin_silent_tenants_endpoints.py` com 5 rotas: list, summary, acknowledge, resolve, run-detector.
-- UI em `frontend/superadmin.html` — nova aba "🔕 Silenciosos" + widget compacto no dashboard principal.
-- 12 testes em `tests/unit/test_silent_tenants_detector.py`.
+- Migration `2026_07_tenant_alerts.sql` (partial unique index).
+- `backend/jobs/detect_silent_tenants.py` (5 critérios + trial_no_use que cobre quem logou uma vez e parou).
+- Endpoint `superadmin_silent_tenants_endpoints` (5 rotas).
 
-### Bonus — Reorganização UI "Agentes" (sua diretriz)
-- **`frontend/partials/admin/_view-perfil.html`**: removido bloco SDR duplicado (170+ linhas que repetia toda config no perfil). Substituído por pointer-card "🤖 AGENTES & SDR" que leva ao Motor FraLib.
-- **`frontend/admin.html` + `frontend/partials/admin/_view-config.html` + `_sidebar.html`**: SDR agora vive consolidado na aba **Agentes** dentro do **Motor FraLib**. Total de 131 linhas consolidadas + 8 linhas no sidebar.
-- **`frontend/superadmin.html`**: paridade — aba "🔕 Silenciosos" + "SDR Studio" + novo card SDR dos 4 sprints (242 linhas adicionadas).
+### Hardening pós-adversarial (commit `2bf248b`)
+| Bug | Severidade | Fix |
+|---|---|---|
+| **P0** Rate limit aceita XFF spoof | segurança | `_client_ip` ignora XFF a menos que `TRUSTED_PROXIES` configurado |
+| **P1** `record_event` deixa transação pendurada | funcional | troca `engine.connect()` por `engine.begin()` |
+| **P1** `@audit_log` entity_id sempre=user | funcional | novo kwarg `entity_id_from` |
+| **P1** `audit_endpoints` bypass com email vazio | segurança | valida email antes de `is_superadmin()` |
+| **P1** `audit_endpoints` since/until sem validar | UX | 422 em ISO inválido (em vez de 500) |
+| **P1** `trial_no_use_14d` só pega never-logged | funcional | agora cobre quem logou e parou |
+| **P1** `run_detector` INSERT com schema errado | funcional | usa `record_event()` correto |
+| **P2** Redis `incr` + `expire` não-atômicos | qualidade | pipeline |
+| **P2** `_check_postgres` não tem teste real | qualidade | adicionado |
+| **P2 UX** Simulador Franz dispara 429 em dev | UX | bucket dedicado `simulador.*` 600/min + `RATE_LIMIT_DEV_OPEN=1` para loopback |
+
+### UI — SDR consolidado na aba Agentes (commit `01d24965` + `a9d4aec4`)
+- `_view-perfil.html`: removido bloco SDR duplicado (170+ linhas). Substituído por pointer-card 🤖 AGENTES → Motor FraLib.
+- `_view-config.html` + admin.html: SDR consolidado em view única.
+- superadmin.html: paridade (SDR Studio + aba Silenciosos).
 
 ## 🧪 Testes
 
-| Suite | Testes | Status |
+| Sprint | Testes | Status |
 |---|---|---|
-| Sprint 4.1 (`test_race_outbound_inbound_stress.py`) | 7 | ✅ GREEN |
-| Sprint 2.2 (`test_audit_recorder.py`) | 16 | ✅ GREEN |
-| Sprint 3.1 (`test_ip_rate_limit.py`) | 18 | ✅ GREEN |
-| Sprint 3.3 (`test_silent_tenants_detector.py`) | 12 | ✅ GREEN |
-| **Total** | **53** | **✅ 53/53** |
+| 4.1 race stress | 7 | ✅ |
+| 2.2 audit (16 originais + 8 novos pós-hardening) | **24** | ✅ |
+| 3.1 rate limit (18 originais + 5 novos XFF spoof) | **23** | ✅ |
+| 3.3 silent tenants | 12 | ✅ |
+| **TOTAL Fase 2** | **66** | ✅ **66/66 GREEN** |
 
-```bash
-python -m pytest tests/unit/test_audit_recorder.py tests/unit/test_ip_rate_limit.py tests/unit/test_silent_tenants_detector.py tests/unit/test_race_outbound_inbound_stress.py --confcutdir=tests/unit
-# 55 passed in 3.46s
+Adicional: 5 melhorias de qualidade (XFF spoof protection testado, decorator entity_id_from coberto, decorator pipelined).
+
+## 🚀 Deploy
+
+Migrations em prod (em ordem):
+```sql
+\i backend/migrations/2026_07_audit_events.sql
+\i backend/migrations/2026_07_ip_rate_limit.sql
+\i backend/migrations/2026_07_tenant_alerts.sql
+\i backend/migrations/2026_07_social_projects.sql  -- auto-post social
 ```
+
+Env vars novos:
+- `TRUSTED_PROXIES` — lista de IPs/CIDRs de proxies confiáveis pra XFF. **Recomendado em prod com Cloudflare/nginx**: `TRUSTED_PROXIES=10.0.0.0/8,172.16.0.0/12,192.168.0.0/16`. Sem isso, XFF é ignorado (fail-safe).
+- `RATE_LIMIT_DEV_OPEN=1` — em dev, requests de loopback (127.0.0.1) ignoram rate limit inteiro. UX sem fricção pro simulador Franz. **NÃO setar em prod.**
+- `SILENT_TENANT_ALERT_EMAIL` — opcional. Se setado, detector envia email quando acha `subscription_expiring_7d` (critical).
+
+Crons novos sugeridos:
+- `python -m backend.jobs.detect_silent_tenants` 1x/dia 04:00 BRT.
+- `bash /opt/fralib/scripts/cron_social_post.sh` 1x/dia 10:30 BRT (auto-post social).
 
 ## 🔒 Segurança / Não-regressão
 
 - `record_event` é fail-safe (try/except com logger.warning — auditoria NUNCA derruba request).
 - Rate limit fail-open se Redis+Postgres ambos indisponíveis.
-- Detector de tenant silencioso roda com `dry_run=True` por padrão (não envia emails até env var setada).
-- Nenhuma alteração nos arquivos de produção críticos: `outbound_queue.py`, `whatsapp_listener.py`, `sdr_langgraph/agent.py`.
-- Tokens Facebook Ads hardcoded (Bug #7 do audit) já removidos no PR #1.
-
-## 🚀 Deploy
-
-### Migrations a rodar em prod (em ordem)
-```sql
-\i backend/migrations/2026_07_audit_events.sql
-\i backend/migrations/2026_07_ip_rate_limit.sql
-\i backend/migrations/2026_07_tenant_alerts.sql
-```
-*(Migrations dos sprints 1.x já foram na release anterior: `provider_health`, `cost_events`, `sdr_simulations`, `sdr_turns`, `lead_outcomes`)*
-
-### Env vars novos
-- `SILENT_TENANT_ALERT_EMAIL` (opcional — se setado, detector envia email via `email_service` quando acha alertas críticos).
-
-### Crons novos sugeridos
-- `python -m backend.jobs.detect_silent_tenants` 1x/dia (04:00 BRT). Pode ser via systemd ou `cron_endpoints`/api interna.
-
-### Nenhuma mudança de frontend em runtime
-- Recarregar `admin.html` e `superadmin.html` no navegador é suficiente. Toda config SDR continua em `POST /api/users/sdr-config` (mesmo endpoint de antes — agora decorado com `@audit_log` pra registrar mudanças em `audit_events`).
+- Detector de tenant silencioso roda com `dry_run=True` por padrão.
+- **XFF spoof**: protegido por `TRUSTED_PROXIES` env (fail-safe se não setado).
+- Nenhuma alteração em arquivos críticos: `outbound_queue.py`, `whatsapp_listener.py`, `sdr_langgraph/agent.py`.
+- Tokens Facebook Ads hardcoded (Bug #7 do audit original) já removidos em PR anterior.
