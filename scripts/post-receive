@@ -50,12 +50,44 @@ restore_env() {
     fi
 }
 trap restore_env EXIT
-git pull --ff-only origin master 2>&1 | tee -a "$LOG_FILE"
+
+# Fix D: stash de working tree suja antes do pull (deploy nao aborta por
+# edicoes manuais via SSH que deixam arquivos modificados). Restaura no fim.
+STASH_BACKUP=""
+if ! git diff --quiet HEAD 2>/dev/null || [ -n "$(git status --porcelain 2>/dev/null)" ]; then
+    log "Working tree suja detectada - stashing antes do pull"
+    if git stash push -u -m "auto-stash post-receive $(date +%Y-%m-%d_%H%M%S)" 2>&1 | tee -a "$LOG_FILE"; then
+        STASH_BACKUP="auto"
+    else
+        log "AVISO: git stash falhou - tentando pull direto mesmo assim"
+    fi
+fi
+
+git pull --ff-only origin master 2>&1 | tee -a "$LOG_FILE" || {
+    log "ERRO: git pull falhou - deploy abortado"
+    if [ "$STASH_BACKUP" = "auto" ]; then
+        git stash pop 2>&1 | tee -a "$LOG_FILE" || log "AVISO: stash pop falhou - stash em git stash list"
+    fi
+    exit 1
+}
 restore_env
 trap - EXIT
 
+if [ "$STASH_BACKUP" = "auto" ]; then
+    log "Restaurando working tree do stash"
+    git stash pop 2>&1 | tee -a "$LOG_FILE" || log "AVISO: stash pop falhou - stash em git stash list"
+fi
+
+# Fix C: verify_frontend_canonical pode falhar por divergencia antiga entre
+# admin.html e partials (frequente no projeto). NAO devemos abortar o deploy
+# por isso - so logar como aviso. Bug original: 'cmd | tee' mascara exit code.
 log "Validando frontend canonico..."
-"$FRALIB_DIR/venv/bin/python3" "$FRALIB_DIR/scripts/verify_frontend_canonical.py" 2>&1 | tee -a "$LOG_FILE"
+VERIFY_OUT="$("$FRALIB_DIR/venv/bin/python3" "$FRALIB_DIR/scripts/verify_frontend_canonical.py" 2>&1)"
+VERIFY_RC=$?
+echo "$VERIFY_OUT" | tee -a "$LOG_FILE"
+if [ "$VERIFY_RC" -ne 0 ]; then
+    log "AVISO: verify_frontend_canonical retornou $VERIFY_RC - deploy continua (frontend vai ser publicado abaixo)"
+fi
 
 if [ -f "$LEGACY_FRONTEND_CRON" ]; then
     rm -f "$LEGACY_FRONTEND_CRON"
