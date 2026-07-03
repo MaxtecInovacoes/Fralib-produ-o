@@ -13,9 +13,14 @@ def normalize_list(value: Any) -> list[str]:
     if value is None:
         return []
     if isinstance(value, str):
-        raw = re.split(r"[,;\n]+", value)
+        raw = re.split(r"[,;\n]+|\s+\+\s+", value)
     elif isinstance(value, (list, tuple, set)):
-        raw = list(value)
+        raw = []
+        for item in value:
+            if isinstance(item, str):
+                raw.extend(re.split(r"[,;\n]+|\s+\+\s+", item))
+            else:
+                raw.append(item)
     else:
         raw = [value]
     cleaned: list[str] = []

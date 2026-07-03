@@ -48,10 +48,21 @@ def test_dedupe_prefers_stable_contact_markers():
 
 
 def test_normalize_list_accepts_commas_newlines_and_dedupes():
-    assert normalize_list("academia, restaurante\nAcademia; nutricionista") == [
+    assert normalize_list("academia, restaurante\nAcademia; nutricionista + barbearia") == [
         "academia",
         "restaurante",
         "nutricionista",
+        "barbearia",
+    ]
+
+
+def test_normalize_list_splits_compound_city_string_from_admin():
+    assert normalize_list(["Campinas + Curitiba + Florianópolis + Belo Horizonte + Goiânia"]) == [
+        "Campinas",
+        "Curitiba",
+        "Florianópolis",
+        "Belo Horizonte",
+        "Goiânia",
     ]
 
 
