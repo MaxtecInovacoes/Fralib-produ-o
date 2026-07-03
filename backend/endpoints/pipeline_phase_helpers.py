@@ -77,17 +77,42 @@ def ensure_jina_insights(state, log_fn, fallback_researcher, warning_fn) -> None
 
     Nota: Mantido nome da funcao como 'jina_insights' pra nao quebrar callers,
     mas a fonte foi trocada pra Playwright local (zero custo).
+
+    IMPORTANTE: buscar_inteligencia_mercado usa Playwright sync API,
+    que NAO pode rodar dentro de asyncio loop. Por isso o caller (async)
+    deve passar `fallback_researcher` como uma funcao WRAPPED em
+    asyncio.to_thread, OU o caller deve nos passar uma versao async.
+
+    Aqui detectamos: se ha asyncio loop rodando, usamos run_in_executor
+    pra mover a chamada sync pra thread separada. Senao, chama direto.
     """
     try:
         if buscar_inteligencia_mercado is None or formatar_inteligencia_para_arquiteto is None:
             raise RuntimeError("playwright_intel indisponivel")
-        intel = buscar_inteligencia_mercado(
-            nicho=state.lead_obj.lead.segmento,
-            cidade=state.lead_obj.lead.cidade,
-            nome_negocio=state.lead_nome,
-            concorrentes_urls=getattr(state, "_concorrentes_urls", None),
-            tenant_id=getattr(state, "tenant_id", None),
-        )
+        import asyncio
+        try:
+            asyncio.get_running_loop()
+            # Estamos em contexto async - roda Playwright sync em thread
+            import concurrent.futures
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as _ex:
+                future = _ex.submit(
+                    buscar_inteligencia_mercado,
+                    nicho=state.lead_obj.lead.segmento,
+                    cidade=state.lead_obj.lead.cidade,
+                    nome_negocio=state.lead_nome,
+                    concorrentes_urls=getattr(state, "_concorrentes_urls", None),
+                    tenant_id=getattr(state, "tenant_id", None),
+                )
+                intel = future.result(timeout=60)
+        except RuntimeError:
+            # Nao estamos em loop async - chama direto (sync context)
+            intel = buscar_inteligencia_mercado(
+                nicho=state.lead_obj.lead.segmento,
+                cidade=state.lead_obj.lead.cidade,
+                nome_negocio=state.lead_nome,
+                concorrentes_urls=getattr(state, "_concorrentes_urls", None),
+                tenant_id=getattr(state, "tenant_id", None),
+            )
         state.jina_intel_dict = intel
         state.jina_insights = formatar_inteligencia_para_arquiteto(intel)
         log_fn(
