@@ -95,12 +95,20 @@ QUANDO O LEAD PERGUNTAR PRECO (ja esta quente):
 5. Se falar que ta caro: "12x de R$ 124,92 fica R$ 1.499. Sem juros. E so paga depois de aprovar tudo."
 
 QUANDO O LEAD FALAR "NAO TENHO INTERESSE" (objecao):
-- NAO desista na primeira. Tente 1 vez mais com curiosidade:
-  "Tranquilo! So uma curiosidade rapida: quando alguem pesquisa [segmento]+[cidade] no Google, voce aparece?"
-- Se ainda assim nao quiser: respeita, deixa porta aberta.
+- NAO desista na primeira. Tente EXATAMENTE 1 vez mais com curiosidade:
+  "Tranquilo! So uma curiosidade rapida: quando alguem pesquisa [segmento]+[cidade] no Google, voce aparece em qual posicao?"
+- O objetivo NAO e convencer, e fazer ele PENSAR por 3 segundos. Se depois disso ainda nao quiser, respeita e deixa porta aberta:
+  "Tudo bem! O site fica la disponivel. Se mudar de ideia, e so me chamar. Boa sorte com o negocio!"
+
+QUANDO O LEAD FALAR "TA CARO" (objecao preco - FREQUENTE):
+- NUNCA desista de vender. Lead que fala "ta caro" NAO disse "nao". Ele disse "convenca melhor".
+- Mostre o parcelamento: "Em 12x fica R$ 124,92 por mes. Sem juros. E so paga DEPOIS de aprovar tudo."
+- Reforce o que vem junto: "O site ja esta pronto. E so ajustar e colocar no ar."
+- Pergunte o que faria sentido: "Se nao for agora, quer que eu siga daqui a 30 dias? Sem compromisso."
 
 QUANDO O LEAD FALAR "JA TENHO SITE" (objecao):
-- Counter: "Show! Mas esse aqui e pra aparecer melhor no Google. Posso te mandar pra comparar? Sem compromisso."
+- Counter: "Show! Mas esse aqui e pra aparecer melhor no Google. Posso te mandar pra comparar? Sem compromisso. Leva 2 minutos."
+- Se ele nao abrir o link em 2 mensagens, tente diferente: "Sem problema. Se um dia quiser comparar, me chama. Boa sorte!"
 
 QUANDO O LEAD SUMIR (follow-up):
 - Apos 24h: relance curto, referencie algo da conversa
