@@ -17,6 +17,7 @@ import sys
 from datetime import datetime
 from pathlib import Path
 from typing import List, Dict, Optional
+from html import escape as _he  # P0 hotfix: XSS em interpolacoes HTML do blog
 
 # ============================================================================
 # CONFIGURAÇÃO
@@ -605,26 +606,33 @@ def generate_post_html(topic: str, category: str, keywords: List[str], slug: str
     if not body:
         body = generate_fallback_content(topic, category, keywords)
 
+    # P0 hotfix: html.escape em TODAS as interpolacoes que vem de fonte externa
+    # (topic/keywords/slug/cat.name). Google Trends, Reddit, Hacker News sao
+    # fontes nao-confiaveis e podem injetar XSS.
+    _t = _he(str(topic))
+    _kw = _he(', '.join(keywords))
+    _slug = _he(slug)
+    _cat = _he(cat['name'])
     html = f"""<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>{topic} — Blog FraLib</title>
-<meta name="description" content="Tudo sobre {topic}. Como usar para vender mais com o FraLib.">
-<meta name="keywords" content="{', '.join(keywords)}">
-<link rel="canonical" href="{SITE_URL}/blog/posts/{slug}.html">
-<meta property="og:title" content="{topic}">
-<meta property="og:description" content="Descubra como usar {topic} para vender mais.">
+<title>{_t} — Blog FraLib</title>
+<meta name="description" content="Tudo sobre {_t}. Como usar para vender mais com o FraLib.">
+<meta name="keywords" content="{_kw}">
+<link rel="canonical" href="{SITE_URL}/blog/posts/{_slug}.html">
+<meta property="og:title" content="{_t}">
+<meta property="og:description" content="Descubra como usar {_t} para vender mais.">
 <meta property="og:type" content="article">
 <meta property="article:published_time" content="{now}">
-<meta property="article:section" content="{cat['name']}">
-<meta property="article:tag" content="{', '.join(keywords[:3])}">
+<meta property="article:section" content="{_cat}">
+<meta property="article:tag" content="{_he(', '.join(keywords[:3]))}">
 <script type="application/ld+json">
 {{
   "@context": "https://schema.org",
   "@type": "Article",
-  "headline": "{topic}",
+  "headline": "{_t}",
   "datePublished": "{now}",
   "dateModified": "{now}",
   "author": {{
@@ -635,7 +643,7 @@ def generate_post_html(topic: str, category: str, keywords: List[str], slug: str
     "worksFor": {{"@type": "Organization", "name": "FraLib OS"}}
   }},
   "publisher": {{"@type": "Organization", "name": "FraLib OS", "logo": {{"@type": "ImageObject", "url": "{SITE_URL}/images/Logo%20FraLib.png"}}}},
-  "mainEntityOfPage": "{SITE_URL}/blog/posts/{slug}.html"
+  "mainEntityOfPage": "{SITE_URL}/blog/posts/{_slug}.html"
 }}
 </script>
 <link rel="stylesheet" href="/design-system.css">
@@ -657,13 +665,13 @@ a:hover{{text-decoration:underline}}
 </head>
 <body>
 <div class="breadcrumb">
-  <a href="/">Home</a> / <a href="/blog/">Blog</a> / <span>{topic}</span>
+  <a href="/">Home</a> / <a href="/blog/">Blog</a> / <span>{_t}</span>
 </div>
 
-<span class="tag">{cat['name']}</span>
+<span class="tag">{_cat}</span>
 <span class="tag">{now}</span>
 
-<h1>{topic}</h1>
+<h1>{_t}</h1>
 
 <div class="meta">
   Por <strong>Franz Douglas</strong> · {now} · {len(keywords)} min de leitura
@@ -674,7 +682,7 @@ a:hover{{text-decoration:underline}}
 <div class="cta-box">
   <h3>QUER APLICAR ISSO NO SEU NEGOCIO?</h3>
   <p style="margin-bottom:16px">O <strong>FraLib</strong> faz exatamente isso: acha cliente, faz site, vende no WPP. Voce so fica com o lucro.</p>
-  <a href="/login?signup=1&utm_source=blog&utm_medium=organic&utm_campaign=post_{slug}" class="cta-button">TESTA 7 DIAS GRATIS</a>
+  <a href="/login?signup=1&utm_source=blog&utm_medium=organic&utm_campaign=post_{_slug}" class="cta-button">TESTA 7 DIAS GRATIS</a>
 </div>
 
 <p style="margin-top:48px;padding-top:24px;border-top:1px solid rgba(147,51,234,0.12);color:#8888a0;font-size:13px">

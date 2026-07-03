@@ -16,6 +16,8 @@ import time
 from datetime import datetime, timedelta
 from typing import Any, Optional
 
+from utils.pii_masker import mask_phone  # P0 hotfix: LGPD
+
 logger = logging.getLogger("outbound_queue")
 
 # ════════════════════════════════════════════════════════════════════
@@ -334,11 +336,11 @@ def dequeue_and_send(
 
     result = {"sent": 0, "skipped": 0, "failed": 0, "waiting_sec": 0, "msgs": []}
 
-    with engine.connect() as c:
-        # Pega a msg mais antiga que esteja pronta
-        # USA FOR UPDATE SKIP LOCKED para evitar race condition:
-        # - Se outra instância pegou a mesma msg, essa pula
-        # - Garante que cada msg é processada por exatamente 1 worker
+    with engine.begin() as c:
+        # P0 hotfix: claim atomico em engine.begin() para FOR UPDATE SKIP LOCKED
+        # funcionar entre multiplos workers. A transacao segura o lock da linha
+        # ate o commit da UPDATE que muda status='pending'->'sending'. Sem isso,
+        # 2 workers pegavam a mesma msg e enviavam duplicado.
         rows = c.execute(text("""
             SELECT id, tenant_id, lead_id, phone, message, source, attempts
             FROM outbound_queue
@@ -349,10 +351,19 @@ def dequeue_and_send(
             FOR UPDATE SKIP LOCKED
         """)).fetchall()
 
-    if not rows:
-        return result
+        if not rows:
+            return result
 
-    msg_id, tenant_id, lead_id, phone, message, source, attempts = rows[0]
+        msg_id, tenant_id, lead_id, phone, message, source, attempts = rows[0]
+
+        # Update pra 'sending' na MESMA transacao do lock.
+        # Se o envio subsequente falhar (apos o with), faz rollback e msg volta pra pending.
+        c.execute(text("""
+            UPDATE outbound_queue SET status = 'sending', attempts = attempts + 1
+            WHERE id = :id AND status = 'pending'
+        """), {"id": msg_id})
+    # ^--- commit implicito no fim do with engine.begin()
+    # Lock liberado aqui, mas como status ja mudou pra 'sending', outros workers pulam esta msg.
 
     # === Sprint 1.2 — Bug #3: checa se lead respondeu desde o último outbound ===
     if _check_last_inbound_vs_outbound(engine, lead_id, tenant_id):
@@ -392,13 +403,7 @@ def dequeue_and_send(
             f"[outbound] set_cooldown_fn falhou (nao-bloqueante): {_cooldown_err}"
         )
 
-    # Marca como 'sending' atomicamente
-    with engine.connect() as c:
-        c.execute(text("""
-            UPDATE outbound_queue SET status = 'sending', attempts = attempts + 1
-            WHERE id = :id AND status = 'pending'
-        """), {"id": msg_id})
-        c.commit()
+    # NOTA: status ja foi setado pra 'sending' na transacao de claim acima (P0 hotfix).
 
     # Envia
     try:
@@ -482,7 +487,7 @@ def dequeue_and_send(
 
             result["sent"] = 1
             result["msgs"].append({"id": msg_id, "phone": phone, "source": source})
-            logger.info(f"[outbound] msg {msg_id} ENVIADA para {phone}")
+            logger.info(f"[outbound] msg {msg_id} ENVIADA para {mask_phone(phone)}")
         else:
             failure_reason = "sender returned False"
             # Retry com backoff exponencial: 1min, 2min, 4min, 8min, 16min (max)
