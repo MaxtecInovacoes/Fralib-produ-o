@@ -420,19 +420,44 @@ def _debounce_incoming(tenant_id: str, msg_data: dict, executor, loop):
             }
 
         # Criar novo timer
+        # Sprint 1.1: NAO faz .pop() direto. Marca "em_processamento" e remove
+        # APENAS no sucesso de _processar_mensagem_batch. Isso impede loop
+        # infinito se o processamento falhar (retry na proxima msg).
         def _fire():
             with _DEBOUNCE_LOCK:
-                entry = _DEBOUNCE_BUFFER.pop(lead_key, None)
+                entry = _DEBOUNCE_BUFFER.get(lead_key)
+                if not entry:
+                    return
+                # Marca como em processamento (idempotency flag)
+                if entry.get("em_processamento"):
+                    logger.warning(
+                        f"[WPP-Listener] debounce timer fired but ja em processamento "
+                        f"para {lead_key} — skip (evita loop)"
+                    )
+                    return
+                entry["em_processamento"] = True
             if entry:
-                loop.run_in_executor(executor, _processar_mensagem_batch, entry["tenant_id"], entry["msg_data"], entry["msgs"])
+                loop.run_in_executor(
+                    executor,
+                    _processar_mensagem_batch,
+                    entry["tenant_id"],
+                    entry["msg_data"],
+                    entry["msgs"],
+                    lead_key,  # novo: passa lead_key pra cleanup
+                )
 
         timer = threading.Timer(DEBOUNCE_SECONDS, _fire)
         _DEBOUNCE_BUFFER[lead_key]["timer"] = timer
         timer.start()
 
 
-def _processar_mensagem_batch(tenant_id: str, msg_data: dict, msgs: List[str]):
-    """Processa batch de mensagens acumuladas pelo debounce."""
+def _processar_mensagem_batch(tenant_id: str, msg_data: dict, msgs: List[str], lead_key: str = None):
+    """Processa batch de mensagens acumuladas pelo debounce.
+
+    Sprint 1.1: recebe lead_key pra cleanup do buffer.
+    Remove do buffer APENAS no sucesso — se falhar, mantem para retry
+    na proxima mensagem do mesmo lead (evita loop infinito).
+    """
     print(f"[WPP-Listener] 📦 Batch disparado: {len(msgs)} msgs", flush=True)
     # Juntar msgs em uma só (se múltiplas)
     if len(msgs) > 1:
@@ -441,12 +466,28 @@ def _processar_mensagem_batch(tenant_id: str, msg_data: dict, msgs: List[str]):
         texto_final = msgs[0]
 
     # Injetar texto consolidado no msg_data pra _processar_mensagem usar
+    success = False
     try:
         _processar_mensagem(tenant_id, msg_data, texto_override=texto_final)
+        success = True
     except Exception as e:
         print(f"[WPP-Listener] ❌ Erro em _processar_mensagem: {e}", flush=True)
         import traceback
         traceback.print_exc()
+    finally:
+        # Sprint 1.1: cleanup do buffer SÓ no sucesso
+        if lead_key and success:
+            with _DEBOUNCE_LOCK:
+                entry = _DEBOUNCE_BUFFER.get(lead_key)
+                if entry and entry.get("em_processamento"):
+                    # Remove a entry (timer ja disparou)
+                    _DEBOUNCE_BUFFER.pop(lead_key, None)
+        elif lead_key and not success:
+            # Falha: reset em_processamento pra proxima tentativa
+            with _DEBOUNCE_LOCK:
+                entry = _DEBOUNCE_BUFFER.get(lead_key)
+                if entry:
+                    entry["em_processamento"] = False
 
 from whatsapp.connection_tracker import (
     _on_qr_timeout,
