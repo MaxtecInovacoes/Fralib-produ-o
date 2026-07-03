@@ -18,9 +18,20 @@ from backend.core.auth import get_current_user
 
 router = APIRouter(prefix="/api/superadmin", tags=['blog-analytics'])
 
-# Paths do blog
-FRONTEND_DIR = Path(__file__).parent.parent.parent / "frontend"
-BLOG_DIR = FRONTEND_DIR / "blog"
+# Paths do blog: usa /var/www/fralib/blog/ que eh gravavel em producao
+# /root/fralib/frontend/blog/ e o source de verdade mas a build copia pra /var/www
+WEBROOT_BLOG = Path("/var/www/fralib/blog")
+FRONTEND_BLOG = Path(__file__).parent.parent.parent / "frontend" / "blog"
+# Tenta WEBROOT primeiro (gravavel), fallback para source local
+try:
+    WEBROOT_BLOG.mkdir(parents=True, exist_ok=True)
+    test_file = WEBROOT_BLOG / ".write_test"
+    test_file.write_text("ok")
+    test_file.unlink()
+    BLOG_DIR = WEBROOT_BLOG
+except (OSError, PermissionError):
+    BLOG_DIR = FRONTEND_BLOG
+
 POSTS_DIR = BLOG_DIR / "posts"
 
 
@@ -237,6 +248,34 @@ async def get_blog_analytics(user: dict = Depends(get_current_user)):
 # NOVOS ENDPOINTS — Painel Blog no Superadmin
 # ============================================================================
 
+@router.post("/blog-generate")
+async def superadmin_blog_generate(
+    count: int = 3,
+    user: dict = Depends(get_current_user),
+):
+    """Dispara geracao manual de posts a partir do painel superadmin (Bearer auth)."""
+    _require_superadmin(user)
+
+    import subprocess
+    import sys
+    script_path = Path(__file__).parent.parent.parent / "scripts" / "cron_blog_automation.py"
+    try:
+        result = subprocess.run(
+            [sys.executable, str(script_path)],
+            capture_output=True,
+            text=True,
+            timeout=180,
+        )
+        return {
+            "ok": True,
+            "stdout": result.stdout[-2000:],  # tail
+            "stderr": result.stderr[-1000:],
+            "returncode": result.returncode,
+        }
+    except Exception as e:
+        raise HTTPException(500, f"Erro ao executar script: {str(e)}")
+
+
 # Subset de BLOCKED_KEYWORDS usado no scoring
 _QUALITY_BLOCKED = [
     "crime", "crimes", "homicidio", "assassinato", "roubo", "furto",
@@ -253,7 +292,7 @@ def _require_superadmin(user: dict) -> None:
 
 @router.get("/blog-quality")
 async def get_blog_quality(user: dict = Depends(get_current_user)):
-    """Calcula score 0-100 para cada um dos ultimos 30 posts.
+    """Calcula score 0-100 por post (palavras, links /planos, Franz, blacklist).
 
     Verifica: word_count, links /planos, Franz Douglas no schema.org,
     ausencia de footer AI, presenca de BLOCKED_KEYWORDS.

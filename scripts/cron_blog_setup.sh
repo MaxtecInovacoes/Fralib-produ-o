@@ -35,7 +35,15 @@ fi
 
 echo "=== Blog cron started at $(date) ===" >> $LOG_FILE
 
+# Executa o script Python com o venv do FraLib (que tem bleach, lxml, etc)
+VENV_PY="/root/fralib/venv/bin/python3"
+if [ -f "$VENV_PY" ]; then
+    PYTHON_BIN="$VENV_PY"
+else
+    PYTHON_BIN="python3"
+fi
+
 # Executa o script Python que gera 2 posts/dia (POSTS_PER_DAY=2)
-python3 scripts/cron_blog_automation.py >> $LOG_FILE 2>&1
+$PYTHON_BIN scripts/cron_blog_automation.py >> $LOG_FILE 2>&1
 
 echo "=== Blog cron finished at $(date) ===" >> $LOG_FILE

@@ -56,7 +56,18 @@ def _sanitize_blog_body(body: str) -> str:
 # CONFIGURAÇÃO
 # ============================================================================
 
-BLOG_DIR = Path(__file__).parent.parent / "frontend" / "blog"
+_SOURCE_BLOG_DIR = Path(__file__).parent.parent / "frontend" / "blog"
+WEBROOT_BLOG_DIR = Path("/var/www/fralib/blog")
+# Tenta WEBROOT primeiro (gravavel em prod), fallback para source local
+try:
+    WEBROOT_BLOG_DIR.mkdir(parents=True, exist_ok=True)
+    _test_file = WEBROOT_BLOG_DIR / ".write_test"
+    _test_file.write_text("ok")
+    _test_file.unlink()
+    BLOG_DIR = WEBROOT_BLOG_DIR
+except (OSError, PermissionError):
+    BLOG_DIR = _SOURCE_BLOG_DIR
+
 POSTS_DIR = BLOG_DIR / "posts"
 INDEX_FILE = BLOG_DIR / "index.html"
 SITEMAP_FILE = BLOG_DIR.parent / "sitemap.xml"
