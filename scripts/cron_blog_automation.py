@@ -18,6 +18,39 @@ from datetime import datetime
 from pathlib import Path
 from typing import List, Dict, Optional
 from html import escape as _he  # P0 hotfix: XSS em interpolacoes HTML do blog
+import bleach  # P0 hotfix security review: sanitizar body do LLM antes de servir
+
+# Tags permitidas no body do post (whitelist). Tags de script/iframe/object/
+# embed/style/form/input/meta/link sao BLOQUEADAS - mesmo que o LLM
+# tente injetar via prompt injection, bleach limpa antes de salvar o HTML.
+_BLOG_ALLOWED_TAGS = frozenset({
+    "p", "br", "h2", "h3", "h4", "ul", "ol", "li",
+    "blockquote", "a", "strong", "em", "code", "pre",
+})
+_BLOG_ALLOWED_ATTRS = {"a": ["href", "title"]}
+
+
+def _sanitize_blog_body(body: str) -> str:
+    """P0 hotfix security review: sanitiza HTML retornado pelo LLM.
+
+    LLM eh fonte nao-confiavel: pode ser jailbroken ou prompt-injected.
+    bleach.clean() remove qualquer tag fora da whitelist (<script>, <iframe>,
+    event handlers, javascript: URLs, etc) antes do HTML virar arquivo estatico
+    servido no mesmo dominio dos cookies de sessao.
+
+    Sem isso: stored XSS com session hijack potencial em todo blog post.
+    """
+    if not body:
+        return body or ""
+    cleaned = bleach.clean(
+        body,
+        tags=_BLOG_ALLOWED_TAGS,
+        attributes=_BLOG_ALLOWED_ATTRS,
+        protocols=frozenset({"http", "https", "mailto"}),  # bloqueia javascript:, data:, etc
+        strip=True,
+        strip_comments=True,
+    )
+    return cleaned
 
 # ============================================================================
 # CONFIGURAÇÃO
@@ -606,6 +639,11 @@ def generate_post_html(topic: str, category: str, keywords: List[str], slug: str
     if not body:
         body = generate_fallback_content(topic, category, keywords)
 
+    # P0 hotfix security review: LLM eh fonte nao-confiavel. bleach.clean remove
+    # <script>, <iframe>, event handlers, javascript: URLs ANTES do HTML virar
+    # arquivo estatico no mesmo dominio dos cookies de sessao.
+    body = _sanitize_blog_body(body)
+
     # P0 hotfix: html.escape em TODAS as interpolacoes que vem de fonte externa
     # (topic/keywords/slug/cat.name). Google Trends, Reddit, Hacker News sao
     # fontes nao-confiaveis e podem injetar XSS.
@@ -821,11 +859,11 @@ def update_index_file(posts: List[Dict]) -> None:
     """Atualiza index.html do blog com lista de posts."""
 
     posts_html = "\n".join([
-        f'''        <a href="/blog/posts/{p['slug']}.html" class="post-card">
-          <div class="post-card-tag" style="background:{CATEGORIES.get(p['category'], CATEGORIES['marketing'])['color']}22;color:{CATEGORIES.get(p['category'], CATEGORIES['marketing'])['color']}">{CATEGORIES.get(p['category'], CATEGORIES['marketing'])['name']}</div>
-          <h3>{p['title']}</h3>
-          <p>{p['excerpt']}</p>
-          <div class="post-card-meta">{p['date']} · {p['read_time']} min</div>
+        f'''        <a href="/blog/posts/{_he(p['slug'])}.html" class="post-card">
+          <div class="post-card-tag" style="background:{_he(CATEGORIES.get(p['category'], CATEGORIES['marketing'])['color'])}22;color:{_he(CATEGORIES.get(p['category'], CATEGORIES['marketing'])['color'])}">{_he(CATEGORIES.get(p['category'], CATEGORIES['marketing'])['name'])}</div>
+          <h3>{_he(p['title'])}</h3>
+          <p>{_he(p['excerpt'])}</p>
+          <div class="post-card-meta">{_he(p['date'])} · {_he(p['read_time'])} min</div>
         </a>'''
         for p in posts[:30]  # últimos 30 posts
     ])

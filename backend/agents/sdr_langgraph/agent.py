@@ -307,7 +307,12 @@ def _reply_already_has_offer(reply: str) -> bool:
 @sdr_traced("node_load_context")
 def node_load_context(state: SDRState) -> dict:
     """Carrega memória do lead, RAG, contexto inicial"""
-    print(f"[SDR] Loading context for {state.get('telefone', '?')}")
+    try:
+        from utils.pii_masker import mask_phone as _mp
+        _tel = _mp(state.get("telefone", "?"))
+    except Exception:
+        _tel = "****"
+    print(f"[SDR] Loading context for {_tel}")
 
     # === Sprint 1.2 — Bug #2 fix: history injetada ANTES de montar LeadMemory ===
     # Antes: o state["history"] (lista de turnos anteriores: [{"role": "user/assistant",
