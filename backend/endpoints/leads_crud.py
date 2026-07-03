@@ -119,6 +119,23 @@ async def get_sites(
         return {"sites": [], "total": 0}
 
 
+
+def _sanitize_lead_text(valor: str, max_len: int = 5000) -> str:
+    """P0 hotfix: sanitize texto livre do lead (observacoes).
+
+    Remove NUL bytes que quebram exports; strip control chars perigosos;
+    cap em max_len pra evitar DoS via payload gigante.
+    NAO escapa HTML - saida eh gravada no banco, escape acontece no consumer.
+    """
+    if not isinstance(valor, str):
+        return ""
+    _forbidden = {chr(0), chr(11), chr(12), chr(26), chr(27)}
+    cleaned = "".join(ch for ch in valor if ch not in _forbidden)
+    return cleaned[:max_len]
+
+
+
+
 @router.patch("/{lead_id}")
 async def atualizar_lead(
     lead_id: str,
@@ -141,7 +158,11 @@ async def atualizar_lead(
         ]
         for k in campos_permitidos:
             if k in request_data:
-                campos[k] = request_data[k]
+                valor = request_data[k]
+                # P0 hotfix: sanitize 'observacoes' (campo livre).
+                if k == "observacoes" and isinstance(valor, str):
+                    valor = _sanitize_lead_text(valor, max_len=5000)
+                campos[k] = valor
         # Alias: whatsapp → telefone_whatsapp
         if "whatsapp" in request_data:
             campos["telefone_whatsapp"] = request_data["whatsapp"]
