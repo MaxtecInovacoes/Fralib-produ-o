@@ -81,10 +81,11 @@ fi
 # Fix C: verify_frontend_canonical pode falhar por divergencia antiga entre
 # admin.html e partials (frequente no projeto). NAO devemos abortar o deploy
 # por isso - so logar como aviso. Bug original: 'cmd | tee' mascara exit code.
+# set -e mata o script se o python retornar !=0. Solucao: usar '|| VERIFY_RC=$?'
+# em pipeline com tee pra pegar o exit code real.
 log "Validando frontend canonico..."
-VERIFY_OUT="$("$FRALIB_DIR/venv/bin/python3" "$FRALIB_DIR/scripts/verify_frontend_canonical.py" 2>&1)"
-VERIFY_RC=$?
-echo "$VERIFY_OUT" | tee -a "$LOG_FILE"
+VERIFY_RC=0
+"$FRALIB_DIR/venv/bin/python3" "$FRALIB_DIR/scripts/verify_frontend_canonical.py" 2>&1 | tee -a "$LOG_FILE" || VERIFY_RC=$?
 if [ "$VERIFY_RC" -ne 0 ]; then
     log "AVISO: verify_frontend_canonical retornou $VERIFY_RC - deploy continua (frontend vai ser publicado abaixo)"
 fi
