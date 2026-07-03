@@ -1,6 +1,8 @@
 # FraLib — Índice de Entrada
 
-> **Fonte única de verdade**: [`AGENTS.md`](AGENTS.md).
+> **LEIA PRIMEIRO**: [`docs/SINGLE_SOURCES_OF_TRUTH.md`](docs/SINGLE_SOURCES_OF_TRUTH.md) lista ONDE está cada coisa canônica. Antes de criar/copiar/duplicar, consulte esse doc — é o anti-veneno contra "duas verdades".
+>
+> **Fonte única de verdade detalhada**: [`AGENTS.md`](AGENTS.md).
 > Toda a arquitetura, pipeline, contratos, atalhos, caches, testes e plano de ação estão lá.
 > Se `CLAUDE.md` e `AGENTS.md` divergirem, **`AGENTS.md` vence**.
 >
