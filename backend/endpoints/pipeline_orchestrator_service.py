@@ -3278,7 +3278,9 @@ async def _executar_pipeline_a_partir_fase2(state, tenant_id, config):
 
         _progress(3, "Pesquisa de mercado...")
         _log("FASE 3: JINA (Intelligence v2)", "info")
-        ensure_jina_insights(state, _log, pesquisar_referencias_jina, logger.warning)
+        # ensure_jina_insights usa Playwright local internamente; fallback_researcher
+        # eh legacy e nao eh mais chamado. Passamos None pra nao dar NameError.
+        ensure_jina_insights(state, _log, None, logger.warning)
 
         # Cores: design_context.py e a fonte unica de verdade (tokens OKLch)
         # paleta_nicho removido — ArquitetoMestre usa design_context diretamente

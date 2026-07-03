@@ -6,7 +6,8 @@ Wants=network-online.target
 
 [Timer]
 # Roda a cada hora, 7 minutos depois do minuto (evita :00/:30 spike)
-OnCalendar=*:00/60
+# 'hourly' = :00:00; o service eh rapido (~5s) entao nao conflita
+OnCalendar=hourly
 # Catchup se a maquina ficou off
 Persistent=true
 Unit=fralib-phone-health.service
