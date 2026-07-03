@@ -32,12 +32,24 @@ class QualityIssue:
 
 
 @dataclass
+class QualityCorrection:
+    """Correcao cirurgica para o builder re-renderizar so o trecho com defeito."""
+
+    axis: str
+    severity: str
+    problema: str
+    sugestao: str
+    html_snippet: str = ""
+
+
+@dataclass
 class QualityVerdict:
     overall_score: float
     axis_scores: dict[str, float]
     issues: list[QualityIssue] = field(default_factory=list)
     decision: str = "deploy"
     feedback: str = ""
+    corrections: list[QualityCorrection] = field(default_factory=list)
     total_issues: int = 0
     critical_count: int = 0
 
@@ -54,22 +66,19 @@ def run_quality_guardian(
     issues: list[QualityIssue] = []
     gate_problems = _tech_heuristics(html)
 
-    tech_critical = 0
     for problem in gate_problems:
         severity = "critical" if "critical" in str(problem).lower() else "major"
-        if severity == "critical":
-            tech_critical += 1
         issues.append(QualityIssue(AXIS_TECHNICAL, severity, str(problem)))
 
     visual_score = _score_visual(html, issues)
     content_score = _score_content(html, issues)
-    conversion_score = _score_conversion(html, issues)
+    conversion_score = _score_conversion(html)
     originality_score = _score_originality(
         html, has_template_fallback=has_template_fallback,
         design_context_failed=design_context_failed,
         palette_overridden=palette_overridden, issues=issues,
     )
-    tech_score = _score_tech(gate_problems, html, issues)
+    tech_score = _score_tech(gate_problems, html)
 
     axis_scores = {
         AXIS_VISUAL: visual_score, AXIS_CONTENT: content_score,
@@ -96,17 +105,21 @@ def run_quality_guardian(
 
     if overall < SCORE_DEPLOY_BLOCKED or critical_count >= 3:
         decision = "block"
+        corrections = _build_structured_corrections(issues, html)
         feedback = _build_retry_feedback(issues, axis_scores)
     elif overall < SCORE_DEPLOY_OK:
         decision = "deploy_with_warning"
         feedback = ""
+        corrections = []
     else:
         decision = "deploy"
         feedback = ""
+        corrections = []
 
     return QualityVerdict(
         overall_score=overall, axis_scores=axis_scores,
         issues=issues, decision=decision, feedback=feedback,
+        corrections=corrections,
         total_issues=len(issues), critical_count=critical_count,
     )
 
@@ -157,7 +170,7 @@ def _score_content(html: str, issues: list[QualityIssue]) -> float:
     return max(0.0, min(10.0, score))
 
 
-def _score_conversion(html: str, issues: list[QualityIssue]) -> float:
+def _score_conversion(html: str) -> float:
     score = 5.0
     if "wa.me/" in html or "whatsapp" in html.lower() or "wpp" in html.lower():
         score += 2.5
@@ -170,7 +183,7 @@ def _score_conversion(html: str, issues: list[QualityIssue]) -> float:
     return max(0.0, min(10.0, score))
 
 
-def _score_tech(gate_problems: list[Any], html: str, issues: list[QualityIssue]) -> float:
+def _score_tech(gate_problems: list[Any], html: str) -> float:
     if not html:
         return 0.0
     score = 10.0 - min(len(gate_problems), 10)
@@ -204,3 +217,76 @@ def _build_retry_feedback(issues: list[QualityIssue], axis_scores: dict[str, flo
     weakest_axis = min(axis_scores, key=axis_scores.get)
     parts.append(f"Eixo mais fraco: {weakest_axis} (score {axis_scores[weakest_axis]:.1f}).")
     return " ".join(parts)
+
+
+_SUGESTOES = {
+    "HTML vazio": "renderize o body inteiro com conteudo real",
+    "Lorem ipsum detectado": "substitua Lorem ipsum por copy real do segmento/nicho",
+    "Placeholders {{}} nao substituidos": "substitua cada {{var}} pelo valor real do lead",
+    "Tag <html> nao fechada": "feche a tag <html> antes do fim do documento",
+    "Tag <body> nao fechada": "feche a tag </body> antes de </html>",
+    "console.log detectado em producao": "remova todos os console.log do HTML",
+    "design_context falhou": "use tokens OKLch do briefing em vez de cores genericas",
+    "Site gerado com is_fallback=True": "refaca usando dados reais do briefing, sem fallback",
+    "Briefing original com dados incompletos": "preencha os campos faltantes (nome, cidade, segmento, whatsapp)",
+    "Template de subnicho foi fallback": "use o template especifico do subnicho detectado",
+    "HTML muito pequeno": "gere secoes completas (hero, features, testimonials, FAQ, footer)",
+}
+
+
+def _snippet(html: str, needle: str, ctx: int = 60) -> str:
+    """Pega um trecho do HTML em torno da primeira ocorrencia de needle."""
+    if not html or not needle:
+        return ""
+    idx = html.lower().find(needle.lower())
+    if idx < 0:
+        return ""
+    start = max(0, idx - ctx)
+    end = min(len(html), idx + len(needle) + ctx)
+    return html[start:end].replace("\n", " ")
+
+
+def _build_structured_corrections(
+    issues: list[QualityIssue], html: str,
+) -> list[QualityCorrection]:
+    """Transforma issues em correcoes cirurgicas para o builder re-renderizar."""
+    out: list[QualityCorrection] = []
+    for issue in issues:
+        if issue.severity not in ("critical", "major"):
+            continue
+        problema = issue.description
+        sugestao = _SUGESTOES.get(problema, "ajuste o trecho afetado")
+        needle = ""
+        if "{{" in problema:
+            needle = "{{"
+        elif "Lorem" in problema:
+            needle = "lorem"
+        elif "console.log" in problema:
+            needle = "console.log"
+        elif "<html" in problema:
+            needle = "<html"
+        elif "<body" in problema:
+            needle = "<body"
+        out.append(QualityCorrection(
+            axis=issue.axis,
+            severity=issue.severity,
+            problema=problema,
+            sugestao=sugestao,
+            html_snippet=_snippet(html, needle) if needle else "",
+        ))
+    return out
+
+
+def render_correction_prompt(corrections: list[QualityCorrection]) -> str:
+    """Monta um prompt em linguagem natural, como se fosse um humano pedindo ajuste."""
+    if not corrections:
+        return ""
+    lines = ["O site anterior saiu com problemas. Corrija SO o que esta errado, mantendo o resto igual:", ""]
+    for i, c in enumerate(corrections, 1):
+        lines.append(f"{i}. [{c.axis}/{c.severity}] {c.problema}")
+        lines.append(f"   O que fazer: {c.sugestao}")
+        if c.html_snippet:
+            lines.append(f"   Trecho atual: ...{c.html_snippet}...")
+        lines.append("")
+    lines.append("Devolva o HTML inteiro ja corrigido. NAO mexa no que ja estava certo.")
+    return "\n".join(lines)

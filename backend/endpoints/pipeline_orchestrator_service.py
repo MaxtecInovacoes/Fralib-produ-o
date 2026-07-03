@@ -2091,6 +2091,76 @@ async def executar_pipeline_completo(
                 _persist_failed_renderer_html(state, exc, _renderer_agent)
                 raise
 
+            # FASE G: Quality Guardian → retry com feedback
+            # Quando o QG bloqueia (decision=block), o orchestrator volta pro
+            # builder passando as correcoes cirurgicas em linguagem natural.
+            # Limite: 3 correcoes antes de desistir com erro claro.
+            try:
+                from agents.quality_guardian import (
+                    run_quality_guardian, render_correction_prompt,
+                )
+            except Exception:
+                try:
+                    from quality_guardian import (
+                        run_quality_guardian, render_correction_prompt,
+                    )
+                except Exception:
+                    run_quality_guardian = None
+                    render_correction_prompt = None
+
+            if run_quality_guardian is not None:
+                _max_qg_corrections = 3
+                _qg_history: list[dict] = []
+                for _qg_attempt in range(1, _max_qg_corrections + 1):
+                    _qg_verdict = run_quality_guardian(
+                        state.html_final,
+                        is_fallback=bool(getattr(state, "is_fallback", False)),
+                        has_template_fallback=bool(getattr(state, "has_template_fallback", False)),
+                        dados_incompletos=bool(getattr(state, "dados_incompletos", False)),
+                        design_context_failed=bool(getattr(state, "design_context_failed", False)),
+                        palette_overridden=bool(getattr(state, "palette_overridden", False)),
+                    )
+                    _qg_history.append({
+                        "attempt": _qg_attempt,
+                        "score": _qg_verdict.overall_score,
+                        "decision": _qg_verdict.decision,
+                        "critical": _qg_verdict.critical_count,
+                    })
+                    _log(
+                        f"  Quality Guardian #{_qg_attempt}: score={_qg_verdict.overall_score:.1f}/10 "
+                        f"decision={_qg_verdict.decision} criticos={_qg_verdict.critical_count}",
+                        "success" if _qg_verdict.decision == "deploy" else "warning",
+                    )
+                    if _qg_verdict.decision != "block":
+                        state.qg_verdict = _qg_verdict
+                        state.qg_history = _qg_history
+                        break
+
+                    if _qg_attempt >= _max_qg_corrections:
+                        state.qg_verdict = _qg_verdict
+                        state.qg_history = _qg_history
+                        raise Exception(
+                            f"Quality Guardian bloqueou apos {_qg_attempt} correcoes. "
+                            f"Score final {_qg_verdict.overall_score:.1f}/10. "
+                            f"Feedback: {_qg_verdict.feedback}"
+                        )
+
+                    _log(
+                        f"  Quality Guardian bloqueou; pedindo correcao #{_qg_attempt} ao builder",
+                        "warning",
+                    )
+                    _qg_prompt = (
+                        render_correction_prompt(_qg_verdict.corrections)
+                        if render_correction_prompt else _qg_verdict.feedback
+                    )
+                    state.html_final = _gerar_html_renderer(
+                        _validation_errors=_qg_prompt,
+                        _previous_html=state.html_final,
+                    )
+                    state.html_final = sanitize_builder_html_for_publication(
+                        state.html_final, state.prd_arquiteto
+                    )
+
             # ── Validador LLM (Sonnet Haiku fallback) — score 0-10 + aprovado bool ──
             # v1.1-baseline-2026-06-23: reintroduzido no orchestrator para fechar
             # feedback loop Nicho↔Validador (Sprint 0).

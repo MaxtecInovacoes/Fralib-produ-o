@@ -977,9 +977,24 @@ def update_sitemap(posts: List[Dict]) -> None:
 # ============================================================================
 
 def main() -> int:
-    """Pipeline principal: gera 3 posts por execução."""
+    """Pipeline principal: gera N posts por execução."""
 
-    print(f"[{datetime.now()}] Iniciando blog automation...")
+    started_at = datetime.now()
+    started_ts = started_at.isoformat()
+
+    # NOVO: check de pausa (controle via superadmin)
+    pause_file = BLOG_DIR / ".paused"
+    if pause_file.exists():
+        print(f"[{started_at}] [PAUSADO] {pause_file} existe - saindo sem gerar posts")
+        _append_history({
+            "ts": started_ts, "paused": True,
+            "posts_gerados": 0, "sucessos": 0, "falhas": 0,
+            "latency_total_ms": 0, "source_usado": None,
+            "sources": [], "input_tokens_est": 0, "output_tokens_est": 0,
+        })
+        return 0
+
+    print(f"[{started_at}] Iniciando blog automation...")
 
     POSTS_DIR.mkdir(parents=True, exist_ok=True)
     BLOG_DIR.mkdir(parents=True, exist_ok=True)
@@ -990,27 +1005,39 @@ def main() -> int:
     print(f"  {len(all_topics)} trends rankeados (Google Trends + Reddit + Hacker News)")
 
     generated_posts = []
+    sources_used = []  # NOVO: tracking para .cron_history.jsonl
+    successes = 0
+    failures = 0
 
     for i, topic_data in enumerate(all_topics[:POSTS_PER_DAY]):
         topic = topic_data["topic"]
         category = topic_data["category"]
         keywords = topic_data["keywords"]
+        source = topic_data.get("source", "unknown")  # NOVO
+        sources_used.append(source)
         slug = slugify(topic)
 
         if has_post(slug):
             print(f"  Skip (já existe): {slug}")
             continue
 
-        print(f"  Gerando [{i+1}/{POSTS_PER_DAY}]: {topic}")
+        print(f"  Gerando [{i+1}/{POSTS_PER_DAY}]: {topic} (source={source})")
 
+        t0 = datetime.now()
         try:
             html = generate_post_html(topic, category, keywords, slug)
+            if html is None:
+                failures += 1
+                print(f"    ✗ Post abortado (LLM falhou)", file=sys.stderr)
+                continue
             post_file = save_post(slug, html)
+            successes += 1
 
             # Extrai excerpt (primeiro parágrafo)
             excerpt_match = re.search(r'<p>([^<]+)</p>', html)
             excerpt = excerpt_match.group(1)[:160] if excerpt_match else ""
 
+            elapsed = (datetime.now() - t0).total_seconds()
             generated_posts.append({
                 "slug": slug,
                 "topic": topic,
@@ -1019,11 +1046,14 @@ def main() -> int:
                 "date": datetime.now().strftime("%Y-%m-%d"),
                 "read_time": "4",
                 "excerpt": excerpt + "...",
+                "source": source,
+                "generation_time_s": round(elapsed, 1),
             })
 
-            print(f"    ✓ Salvo: {post_file.name}")
+            print(f"    ✓ Salvo: {post_file.name} ({elapsed:.1f}s)")
 
         except Exception as e:
+            failures += 1
             print(f"    ✗ Erro: {e}", file=sys.stderr)
 
     # Carrega todos os posts existentes para o index
@@ -1064,8 +1094,56 @@ def main() -> int:
         except Exception as e:
             print(f"  Notification error: {e}", file=sys.stderr)
 
-    print(f"\n[OK] Concluido: {len(generated_posts)} posts novos, {len(all_posts)} total no blog")
+    # NOVO: append historico para painel superadmin
+    finished_at = datetime.now()
+    latency_ms = int((finished_at - started_at).total_seconds() * 1000)
+
+    # Estimativa de tokens (Sonnet 4 ~3500 input + 3500 output por post)
+    est_in = successes * 3500
+    est_out = successes * 3500
+
+    # Agrupa por source
+    sources_agg = {}
+    for src in sources_used:
+        if src not in sources_agg:
+            sources_agg[src] = {"source": src, "posts": 0, "successes": 0, "failures": 0}
+        sources_agg[src]["posts"] += 1
+        # successes/failures nao temos granular por source aqui, conta como tentativa
+    # success/failure reais: successes ja eh total de sucessos, failures ja eh total
+    # atribui failures uniformemente nas sources que tentaram
+    if failures > 0 and sources_agg:
+        per_src_fail = failures / len(sources_agg)
+        for src in sources_agg:
+            sources_agg[src]["failures"] = round(per_src_fail, 1)
+    for src in sources_agg:
+        sources_agg[src]["successes"] = max(0, sources_agg[src]["posts"] - sources_agg[src]["failures"])
+
+    _append_history({
+        "ts": started_ts,
+        "paused": False,
+        "posts_gerados": successes,
+        "sucessos": successes,
+        "falhas": failures,
+        "latency_total_ms": latency_ms,
+        "source_usado": sources_used[0] if sources_used else None,
+        "sources": list(sources_agg.values()),
+        "input_tokens_est": est_in,
+        "output_tokens_est": est_out,
+    })
+
+    print(f"\n[OK] Concluido: {successes} posts novos, {failures} falhas, {latency_ms}ms total")
     return 0
+
+
+def _append_history(entry: dict) -> None:
+    """Append 1 linha JSON ao historico do cron (.cron_history.jsonl)."""
+    history_file = BLOG_DIR / ".cron_history.jsonl"
+    try:
+        history_file.parent.mkdir(parents=True, exist_ok=True)
+        with history_file.open("a", encoding="utf-8") as f:
+            f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+    except Exception as e:
+        print(f"  [HISTORY] erro ao gravar: {e}", file=sys.stderr)
 
 
 if __name__ == "__main__":
