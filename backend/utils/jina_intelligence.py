@@ -157,22 +157,13 @@ def buscar_inteligencia_jina(
         except (FileNotFoundError, json.JSONDecodeError, UnicodeDecodeError):
             pass
 
-    # Buscar inteligência real via Jina (com fallback Playwright local)
+    # Buscar inteligência real via Jina (FAIL-CLOSED: se falhar, erro claro)
     resultado = _buscar_real(nicho, cidade, nome_negocio, concorrentes_urls)
 
-    # Fallback: se Jina falhou (saldo/erro/limite), tenta Playwright local
-    if not resultado or not resultado.get("palavras_poder"):
-        print(f"[Jina Intel] Jina falhou, tentando fallback Playwright local (zero custo)...")
-        try:
-            from jina_playwright_fallback import buscar_inteligencia_local
-            resultado_fallback = buscar_inteligencia_local(nicho, cidade, nome_negocio)
-            if resultado_fallback and resultado_fallback.get("palavras_poder"):
-                print(f"[Jina Intel] Fallback Playwright SUCESSO ({len(resultado_fallback.get('palavras_poder', []))} palavras-poder)")
-                resultado = resultado_fallback
-        except Exception as fb_exc:
-            print(f"[Jina Intel] Fallback Playwright falhou: {fb_exc}")
-
-    # Fail-fast: se ambos falharem, lançar erro
+    # Fail-fast: sem fallback. Se Jina falhar, pipeline trava com erro claro.
+    # Isso é INTENCIONAL - o sistema deve falhar fechado pra você saber que precisa
+    # recarregar JINA_API_KEY ou arrumar a integração, NÃO cair em fallback
+    # silencioso que esconde o problema.
     if not resultado or not resultado.get("palavras_poder"):
         raise JinaIntelligenceError(
             f"Jina nao retornou inteligencia valida para '{nicho_original}' em '{cidade}'.",
@@ -181,7 +172,7 @@ def buscar_inteligencia_jina(
                 "nicho_normalizado": nicho,
                 "cidade": cidade,
                 "nome_negocio": nome_negocio,
-                "acao": "Recarregue JINA_API_KEY ou verifique Playwright fallback",
+                "acao": "Recarregue JINA_API_KEY ou arrume a integração Jina (NAO usamos fallback)",
             },
         )
 
