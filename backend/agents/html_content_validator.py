@@ -345,12 +345,9 @@ def _is_fitness_segment(prd) -> bool:
 
 
 def _visible_text(html: str) -> str:
-    """Extract visible text from HTML (strips tags, scripts, styles)."""
-    clean = re.sub(r"(?is)<script\b.*?</script>", " ", html or "")
-    clean = re.sub(r"(?is)<style\b.*?</style>", " ", clean)
-    clean = re.sub(r"(?is)<!--.*?-->", " ", clean)
-    clean = re.sub(r"(?is)<[^>]+>", " ", clean)
-    return _html.unescape(re.sub(r"\s+", " ", clean)).strip()
+    """Compat shim — fonte canônica em backend.agents._html_utils (T3 DRY)."""
+    from backend.agents._html_utils import visible_text as _vt
+    return _vt(html)
 
 
 def _normalize(value: str) -> str:
