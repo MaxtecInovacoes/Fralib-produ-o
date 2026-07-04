@@ -55,10 +55,11 @@ from backend.services.pipeline_state import (
 _BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, _BASE)
 
-from backend.core.db_imports import Session, text  # noqa: F401  — B3 DRY
 from backend.core.database import (
     SessionLocal,
+    Session,
     engine,
+    text,
     update_pipeline_state,
 )
 from backend.endpoints.pipeline_execution_core import execute_pipeline_tail
@@ -1064,22 +1065,25 @@ async def executar_pipeline_completo(
                 }
             try:
                 from utils.playwright_intel import (
-                    buscar_inteligencia_mercado,
                     formatar_inteligencia_para_arquiteto,
                 )
-                # asyncio.to_thread nao isola Playwright Sync API do asyncio loop.
-                # ThreadPoolExecutor + run_in_executor é o modo correto
-                # (mesmo padrão que ensure_jina_insights em pipeline_phase_helpers.py).
-                loop = asyncio.get_running_loop()
-                with ThreadPoolExecutor(max_workers=1) as _ex:
-                    _intel = await loop.run_in_executor(
-                        _ex,
-                        lambda: buscar_inteligencia_mercado(
-                            nicho=state.segmento,
-                            cidade=state.cidade,
-                            nome_negocio=state.lead_nome if hasattr(state, "lead_nome") else "",
-                            concorrentes_urls=getattr(state, "_concorrentes_urls", None),
-                        ),
+                from utils.playwright_intel_safe import buscar_inteligencia_mercado_safe
+                # FASE H5: Playwright Sync API nao roda nem em ThreadPoolExecutor
+                # quando ha asyncio loop no parent thread. Usa subprocess Python
+                # isolado via utils.playwright_intel_safe para garantir
+                # zero interferencia de event loop.
+                _safe_result = await asyncio.to_thread(
+                    buscar_inteligencia_mercado_safe,
+                    nicho=state.segmento,
+                    cidade=state.cidade,
+                    nome_negocio=state.lead_nome if hasattr(state, "lead_nome") else "",
+                    concorrentes_urls=getattr(state, "_concorrentes_urls", None),
+                )
+                if _safe_result.get("ok"):
+                    _intel = _safe_result["intel"]
+                else:
+                    raise RuntimeError(
+                        _safe_result.get("error", "subprocess Playwright falhou")
                     )
                 _insights = formatar_inteligencia_para_arquiteto(_intel)
                 logger.info(f"[Pipeline] Playwright Intel: OK ({len(_insights)} chars)")

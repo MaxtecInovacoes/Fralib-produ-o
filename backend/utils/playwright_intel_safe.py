@@ -21,8 +21,15 @@ from typing import Any
 
 _RUNNER_TEMPLATE = '''"""Auto-generated runner for Playwright Intel (safe-mode subprocess)."""
 import json
+import os
 import sys
 import traceback
+
+# Garante que backend.* seja importavel no subprocess
+_THIS_DIR = os.path.dirname(os.path.abspath(__file__))
+_BACKEND_PARENT = os.path.dirname(_THIS_DIR)
+if _BACKEND_PARENT not in sys.path:
+    sys.path.insert(0, _BACKEND_PARENT)
 
 try:
     import backend.utils.playwright_intel as _pi  # noqa
