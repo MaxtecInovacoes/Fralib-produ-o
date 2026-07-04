@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
+
 try:
     from agents.agente_nicho import gerar_briefing
 except Exception:  # pragma: no cover - import fallback keeps tests patchable.
