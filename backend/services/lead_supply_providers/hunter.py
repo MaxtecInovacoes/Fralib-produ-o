@@ -10,7 +10,7 @@ from __future__ import annotations
 import os
 from typing import Any
 
-from sqlalchemy.orm import Session
+from backend.core.db_imports import Session  # noqa: F401  — B3 DRY
 
 
 # Numero maximo de loops internos Hunter->Hunter ate atingir o alvo.

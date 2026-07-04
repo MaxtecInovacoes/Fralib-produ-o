@@ -36,9 +36,7 @@ import requests
 from cryptography.fernet import Fernet
 from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks
 from pydantic import BaseModel
-from sqlalchemy import text
-from sqlalchemy.orm import Session
-
+from backend.core.db_imports import Session, text  # noqa: F401  — B3 DRY
 from backend.core.database import get_db
 from backend.core.auth import get_current_user
 

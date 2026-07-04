@@ -14,8 +14,7 @@ import binascii
 import sys
 import logging
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
-from sqlalchemy import text
+from backend.core.db_imports import Session, text  # noqa: F401  — B3 DRY
 from pydantic import BaseModel
 
 _BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

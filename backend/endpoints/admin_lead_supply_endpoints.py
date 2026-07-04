@@ -12,9 +12,7 @@ from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Response
-from sqlalchemy import text
-from sqlalchemy.orm import Session
-
+from backend.core.db_imports import Session, text  # noqa: F401  — B3 DRY
 from backend.core.auth import get_current_user, require_admin
 from backend.core.database import get_db
 

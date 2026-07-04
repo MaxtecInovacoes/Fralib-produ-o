@@ -15,8 +15,7 @@ import httpx
 import logging
 from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
-from sqlalchemy import text
+from backend.core.db_imports import Session, text  # noqa: F401  — B3 DRY
 from typing import Optional
 from pydantic import BaseModel
 

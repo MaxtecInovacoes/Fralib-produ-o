@@ -9,8 +9,7 @@ GET /api/pipeline/tempo?tenant_id=
     - ultimo_job: {id, tipo, status, lead_nome, fase_atual, duracao_s, started_at}
 """
 from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
-from sqlalchemy import text
+from backend.core.db_imports import Session, text  # noqa: F401  — B3 DRY
 
 import os, sys
 _BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

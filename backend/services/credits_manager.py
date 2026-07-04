@@ -13,8 +13,7 @@ Credito pago consome quando deploy funciona; trial consome so apos site pronto +
 Reset lazy mensal: nao depende de cron, verifica mes no momento da checagem.
 """
 from datetime import datetime, timezone, timedelta, date as date_type
-from sqlalchemy.orm import Session
-from sqlalchemy import text
+from backend.core.db_imports import Session, text  # noqa: F401  — B3 DRY
 from typing import Optional
 
 from backend.domain.plans import (

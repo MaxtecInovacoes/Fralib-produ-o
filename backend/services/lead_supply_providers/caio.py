@@ -5,10 +5,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from sqlalchemy import text
-from sqlalchemy.orm import Session
-
-
+from backend.core.db_imports import Session, text  # noqa: F401  — B3 DRY
 def run_caio_job(db: Session, payload: dict[str, Any], tenant_id: int) -> dict[str, Any]:
     """Run the Caio qualification job on a lead."""
     from backend.services.lead_supply_storage import (

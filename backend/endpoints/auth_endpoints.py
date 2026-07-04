@@ -7,8 +7,7 @@ import base64, hashlib, hmac, jwt, os, secrets, struct, time
 import bcrypt
 from backend.utils.password_utils import verify_password, hash_password, BCRYPT_MAX_BYTES
 from backend.core.database import get_db
-from sqlalchemy.orm import Session
-from sqlalchemy import text
+from backend.core.db_imports import Session, text  # noqa: F401  — B3 DRY
 from backend.core.auth import get_current_user, revoke_token
 from rate_limiter import limiter
 from backend.core.jwt_config import get_jwt_secret, ALGORITHM

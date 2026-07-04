@@ -55,9 +55,7 @@ from backend.services.pipeline_state import (
 _BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, _BASE)
 
-from sqlalchemy import text
-from sqlalchemy.orm import Session
-
+from backend.core.db_imports import Session, text  # noqa: F401  — B3 DRY
 from backend.core.database import (
     SessionLocal,
     engine,

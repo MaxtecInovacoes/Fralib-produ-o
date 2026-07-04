@@ -6,9 +6,7 @@ import json
 import uuid
 from typing import Any, TYPE_CHECKING
 
-from sqlalchemy import text
-from sqlalchemy.orm import Session
-
+from backend.core.db_imports import Session, text  # noqa: F401  — B3 DRY
 if TYPE_CHECKING:
     pass
 

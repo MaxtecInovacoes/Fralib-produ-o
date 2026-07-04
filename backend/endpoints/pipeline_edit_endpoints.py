@@ -6,8 +6,7 @@ sys.path.insert(0, _BASE)
 import re as _re
 import logging
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
-from sqlalchemy import text
+from backend.core.db_imports import Session, text  # noqa: F401  — B3 DRY
 from pydantic import BaseModel as _BaseModel
 from backend.core.database import get_db
 from backend.core.auth import get_current_user

@@ -10,8 +10,7 @@ import hashlib
 import os
 import httpx
 from datetime import datetime, timedelta
-from sqlalchemy import text
-from sqlalchemy.orm import Session
+from backend.core.db_imports import Session, text  # noqa: F401  — B3 DRY
 from backend.core.database import get_db
 
 logger = logging.getLogger(__name__)

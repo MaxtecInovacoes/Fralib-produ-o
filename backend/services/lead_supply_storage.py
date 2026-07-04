@@ -5,10 +5,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from sqlalchemy import text
-from sqlalchemy.orm import Session
-
-
+from backend.core.db_imports import Session, text  # noqa: F401  — B3 DRY
 from backend.services.lead_supply_filters import default_targets, normalize_list
 
 

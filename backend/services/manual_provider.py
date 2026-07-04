@@ -9,10 +9,7 @@ import re
 import uuid
 from typing import Any
 
-from sqlalchemy import text
-from sqlalchemy.orm import Session
-
-
+from backend.core.db_imports import Session, text  # noqa: F401  — B3 DRY
 class ManualProvider:
     """Lead provider for manual lead entry and CSV uploads.
 

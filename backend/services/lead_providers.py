@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 from typing import Any, TYPE_CHECKING
 
-from sqlalchemy.orm import Session
+from backend.core.db_imports import Session  # noqa: F401  — B3 DRY
 
 from backend.services.hunter_provider import HunterProvider
 from backend.services.maps_provider import MapsProvider

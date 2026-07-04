@@ -1,8 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 import httpx
 import asyncio
-from sqlalchemy.orm import Session
-from sqlalchemy import text
+from backend.core.db_imports import Session, text  # noqa: F401  — B3 DRY
 from backend.core.auth import get_current_user
 from backend.core.database import get_db
 from backend.services.credits_manager import plano_tem_sdr

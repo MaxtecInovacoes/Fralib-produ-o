@@ -8,8 +8,7 @@ POST /api/falhas/{id}/visto  - marca como visto (ao abrir a lista)
 """
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from sqlalchemy.orm import Session
-from sqlalchemy import text
+from backend.core.db_imports import Session, text  # noqa: F401  — B3 DRY
 import os, sys, json
 import uuid
 

@@ -11,8 +11,7 @@ import logging
 from dataclasses import dataclass
 from enum import Enum
 
-from sqlalchemy import text
-from sqlalchemy.orm import Session
+from backend.core.db_imports import Session, text  # noqa: F401  — B3 DRY
 from backend.core.database import get_db
 from backend.services.sdr_settings import fetch_sdr_settings
 from backend.whatsapp.sender import send_text_parts

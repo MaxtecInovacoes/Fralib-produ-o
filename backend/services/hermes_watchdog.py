@@ -14,10 +14,7 @@ from typing import Any
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-from sqlalchemy import text
-from sqlalchemy.orm import Session
-
-
+from backend.core.db_imports import Session, text  # noqa: F401  — B3 DRY
 SAFE_ACTIONS: dict[str, list[str]] = {
     "smoke_dry_run": ["python", "pipeline.py", "smoke", "--dry-run"],
     "recover_runtime": ["python", "pipeline.py", "recover-runtime"],

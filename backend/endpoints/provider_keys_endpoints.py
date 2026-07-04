@@ -8,8 +8,7 @@ import time
 import json
 import requests
 from fastapi import APIRouter, Depends, HTTPException, Request
-from sqlalchemy.orm import Session
-from sqlalchemy import text
+from backend.core.db_imports import Session, text  # noqa: F401  — B3 DRY
 
 from backend.core.database import get_db
 from backend.utils.secrets_crypto import encriptar, decriptar, mascarar_key

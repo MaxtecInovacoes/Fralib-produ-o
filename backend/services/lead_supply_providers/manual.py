@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from sqlalchemy.orm import Session
+from backend.core.db_imports import Session  # noqa: F401  — B3 DRY
 
 
 def run_manual_job(db: Session, payload: dict[str, Any], tenant_id: int) -> dict[str, Any]:

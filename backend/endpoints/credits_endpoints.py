@@ -9,8 +9,7 @@ import uuid
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from pydantic import BaseModel, Field
-from sqlalchemy import text
-from sqlalchemy.orm import Session
+from backend.core.db_imports import Session, text  # noqa: F401  — B3 DRY
 import requests
 
 from backend.core.auth import get_current_user

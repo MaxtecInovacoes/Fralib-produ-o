@@ -25,10 +25,7 @@ import secrets
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any
 
-from sqlalchemy import text
-from sqlalchemy.orm import Session
-
-
+from backend.core.db_imports import Session, text  # noqa: F401  — B3 DRY
 # Backoff exponencial em segundos: tentativa 1 -> 30s, 2 -> 2min, 3 -> 8min
 _BACKOFF = [30, 120, 480]
 # Franz/SDR: mais tentativas com backoff mais longo (WhatsApp instável)

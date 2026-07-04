@@ -22,9 +22,7 @@ import time
 from datetime import datetime, timezone, timedelta
 from typing import Optional
 
-from sqlalchemy import text
-from sqlalchemy.orm import Session
-
+from backend.core.db_imports import Session, text  # noqa: F401  — B3 DRY
 logger = logging.getLogger("fralib.lead_supply_watchdog")
 
 # ---- Config ----
