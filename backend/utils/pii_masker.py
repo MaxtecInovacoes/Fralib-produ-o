@@ -73,3 +73,22 @@ def sanitize_message(text: Optional[str], max_len: int = 80) -> str:
     if len(s) > max_len:
         s = s[:max_len] + f"... ({len(text)} chars)"
     return s
+
+
+def mask_key(api_key: Optional[str]) -> str:
+    """Mascara API key mantendo prefixo e sufixo (4 chars cada).
+
+    Returns "" when key is missing or shorter than 10 chars.
+    Moved from scripts/repair_provider_key.py:253 to centralized PII helpers.
+    """
+    value = str(api_key or "")
+    if len(value) < 10:
+        return ""
+    return value[:4] + "..." + value[-4:]
+
+
+__all__ = ["mask_phone", "mask_email", "sanitize_message", "mask_key"]
+
+
+# Backward-compat alias for callers that did `from pii_masker import _mask_key`
+_mask_key = mask_key

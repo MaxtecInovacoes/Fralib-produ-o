@@ -251,10 +251,9 @@ def mark_key_alerts_read(engine) -> None:
 
 
 def mask_key(api_key: str) -> str:
-    value = str(api_key or "")
-    if len(value) < 10:
-        return ""
-    return value[:4] + "..." + value[-4:]
+    """Compat shim — fonte em backend.utils.pii_masker.mask_key (M8 DRY)."""
+    from backend.utils.pii_masker import mask_key as _mk  # noqa: E402  — M8 DRY shim
+    return _mk(api_key)
 
 
 def _engine():
