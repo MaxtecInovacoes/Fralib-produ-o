@@ -1069,13 +1069,20 @@ async def executar_pipeline_completo(
                     buscar_inteligencia_mercado,
                     formatar_inteligencia_para_arquiteto,
                 )
-                _intel = await asyncio.to_thread(
-                    buscar_inteligencia_mercado,
-                    nicho=state.segmento,
-                    cidade=state.cidade,
-                    nome_negocio=state.lead_nome if hasattr(state, "lead_nome") else "",
-                    concorrentes_urls=getattr(state, "_concorrentes_urls", None),
-                )
+                # asyncio.to_thread nao isola Playwright Sync API do asyncio loop.
+                # ThreadPoolExecutor + run_in_executor é o modo correto
+                # (mesmo padrão que ensure_jina_insights em pipeline_phase_helpers.py).
+                loop = asyncio.get_running_loop()
+                with ThreadPoolExecutor(max_workers=1) as _ex:
+                    _intel = await loop.run_in_executor(
+                        _ex,
+                        lambda: buscar_inteligencia_mercado(
+                            nicho=state.segmento,
+                            cidade=state.cidade,
+                            nome_negocio=state.lead_nome if hasattr(state, "lead_nome") else "",
+                            concorrentes_urls=getattr(state, "_concorrentes_urls", None),
+                        ),
+                    )
                 _insights = formatar_inteligencia_para_arquiteto(_intel)
                 logger.info(f"[Pipeline] Playwright Intel: OK ({len(_insights)} chars)")
                 return {
@@ -3391,7 +3398,7 @@ async def _executar_pipeline_a_partir_fase2(state, tenant_id, config):
         with engine.connect() as conn:
             conn.execute(
                 text(
-                    "UPDATE leads SET erro_pipeline=:err, atualizado_em=:ts WHERE id=:id AND user_id=:uid"
+                    "UPDATE leads SET status='erro', erro_pipeline=:err, atualizado_em=:ts WHERE id=:id AND user_id=:uid AND status NOT IN ('concluido','descartado')"
                 ),
                 {
                     "err": str(e)[:500],
