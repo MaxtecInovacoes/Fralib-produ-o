@@ -156,11 +156,6 @@ def _get_field(obj: Any, *names: str, default=None) -> Any:
 
 
 def _normalize(value: str) -> str:
-    """Normalize text for comparison (ASCII, lowercase, spaces)."""
-    import unicodedata
-
-    text = str(value or "")
-    text = unicodedata.normalize("NFKD", text)
-    text = text.encode("ascii", "ignore").decode("ascii")
-    text = re.sub(r"[^a-zA-Z0-9]+", " ", text).lower()
-    return re.sub(r"\s+", " ", text).strip()
+    """Compat shim — fonte canônica em backend.agents._text_utils (T4 DRY)."""
+    from backend.agents._text_utils import normalize_compare as _nc
+    return _nc(value)
