@@ -7640,7 +7640,8 @@ def _meta_escape(value: Any) -> str:
 
 
 def _facts_business(facts: dict[str, Any]) -> dict[str, Any]:
-    return facts.get("business") if isinstance(facts.get("business"), dict) else {}
+    from backend.services._vite_facts_local import business as _b  # — M1 DRY shim
+    return _b(facts)
 
 
 def _inject_pole_tokens(facts: dict[str, Any]) -> dict[str, Any]:
@@ -7731,15 +7732,8 @@ def _get_pole_css_tokens(pole: str) -> str:
 
 
 def _facts_publication_url(facts: dict[str, Any]) -> str:
-    for container_name in ("publication", "seo", "business"):
-        container = facts.get(container_name)
-        if not isinstance(container, dict):
-            continue
-        for key in ("canonical_url", "site_url", "canonical", "url_site"):
-            url = str(container.get(key) or "").strip()
-            if url.startswith(("http://", "https://")):
-                return url
-    return ""
+    from backend.services._vite_facts_local import publication_url as _p  # — M1 DRY shim
+    return _p(facts)
 
 
 def _facts_theme_color(facts: dict[str, Any]) -> str:
@@ -7952,66 +7946,13 @@ def _facts_meta_description(facts: dict[str, Any]) -> str:
 
 
 def _facts_og_image(facts: dict[str, Any]) -> str:
-    for container_name in ("publication", "seo", "business", "media"):
-        container = facts.get(container_name)
-        if not isinstance(container, dict):
-            continue
-        image = str(container.get("og_image") or "").strip()
-        if image.startswith(("http://", "https://")):
-            return image
-    for source in (facts.get("photos"), _facts_business(facts).get("photos")):
-        if isinstance(source, list):
-            for item in source:
-                image = str(item or "").strip()
-                if image.startswith(("http://", "https://")):
-                    return image
-    return ""
+    from backend.services._vite_facts_local import og_image as _og  # — M1 DRY shim
+    return _og(facts)
 
 
 def _facts_json_ld(facts: dict[str, Any]) -> str:
-    business = _facts_business(facts)
-    site_url = _facts_publication_url(facts)
-    image = _facts_og_image(facts)
-    # Sprint 12.x: schema_type dinâmico por nicho (advogado→LegalService, etc.)
-    segmento = (
-        business.get("segment")
-        or business.get("segmento")
-        or facts.get("segmento")
-        or facts.get("segment")
-        or ""
-    )
-    try:
-        from backend.config.nicho_registry import get_schema_type
-        schema_type = get_schema_type(segmento)
-    except Exception:
-        schema_type = "LocalBusiness"
-    data = {
-        "@context": "https://schema.org",
-        "@type": schema_type,
-        "name": business.get("name") or business.get("business_name") or "",
-        "url": site_url,
-        "image": image,
-        "telephone": business.get("phone") or business.get("whatsapp") or "",
-        "address": {
-            "@type": "PostalAddress",
-            "streetAddress": business.get("address") or business.get("endereco") or "",
-            "addressLocality": business.get("city") or business.get("cidade") or facts.get("cidade") or "",
-            "addressCountry": "BR",
-        },
-        "aggregateRating": {
-            "@type": "AggregateRating",
-            "ratingValue": business.get("rating") or "",
-            "reviewCount": business.get("total_avaliacoes") or business.get("reviews_count") or "",
-        },
-    }
-    cleaned = {key: value for key, value in data.items() if value not in ("", None, {}, [])}
-    if isinstance(cleaned.get("aggregateRating"), dict):
-        agg = {key: value for key, value in cleaned["aggregateRating"].items() if value not in ("", None)}
-        if len(agg) <= 1:
-            cleaned.pop("aggregateRating", None)
-        else:
-            cleaned["aggregateRating"] = agg
-    return json.dumps(cleaned, ensure_ascii=False)
+    from backend.services._vite_facts_local import json_ld as _jl  # — M1 DRY shim
+    return _jl(facts)
 
 
 def _default_index_html(facts: dict[str, Any]) -> str:
