@@ -136,70 +136,35 @@ async def email_resumo_diario(x_cron_secret: str = Header(None, alias='X-Cron-Se
     return {'status': 'ok', 'enviados': enviados, 'pulados': pulados, 'erros': erros}
 
 
-@router.post('/despachar-fila-franz')
-async def despachar_fila_franz(x_cron_secret: str = Header(None, alias='X-Cron-Secret')):
-    """
-    Despacha leads com sdr_stage='pendente_wpp' (site pronto, fora do horário).
-    Chamado a cada 30min pelo PM2/cron. Respeita horário de atendimento (8h-21h Brasília).
-    """
-    _autorizar(x_cron_secret)
-
-    import sys
-    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'agents'))
+async def _processar_lead_batch(rows: tuple, engine) -> tuple[int, int, list]:
+    """Executa o trabalho pesado de cada lead em thread pool (não bloqueia event loop)."""
     from agents.sdr_langgraph import iniciar_contato, FranzInput, _escolher_variante
     from services.sdr_gateway import SdrMessageContext, evaluate_sdr_output, has_prior_outbound
     from backend.services.outbound_queue import enqueue_outbound
-    from backend.whatsapp_listener import is_tenant_connected
     from backend.services.sdr_helpers import _sdr_quality_hold_reason
-    # === Sprint 1.2 — Bug #3: lock por lead para evitar que 2 ciclos
-    # paralelos do cron processem o mesmo lead simultaneamente.
-    # Mesmo padrão de ``responder_lead`` em whatsapp_listener.
     from backend.agents.sdr_langgraph.lead_lock import _lead_lock_guard
 
     enviados = 0
     erros = 0
+    logs: list[str] = []
 
     with engine.connect() as conn:
-        # Buscar leads pendentes (site pronto mas não abordados)
-        # USA FOR UPDATE SKIP LOCKED para evitar que múltiplas instâncias do cron
-        # processem o mesmo lead simultaneamente
-        rows = conn.execute(text("""
-            SELECT l.id, l.nome, l.telefone, l.whatsapp, l.segmento, l.cidade,
-                   l.site_url, l.rating, l.user_id, l.paleta_cores,
-                   u.plano, u.status, u.trial_expires_at
-            FROM leads l
-            JOIN users u ON u.id = l.user_id
-            WHERE l.sdr_stage = 'pendente_wpp'
-              AND l.status = 'concluido'
-              AND l.site_url IS NOT NULL
-              AND lower(COALESCE(u.plano, '')) IN ('trial','pro','beta','agency','ilimitado','admin')
-              AND lower(COALESCE(u.status, '')) NOT IN ('bloqueado','suspenso','cancelado','inadimplente')
-            ORDER BY l.processado_em ASC
-            LIMIT :batch_limit
-            FOR UPDATE SKIP LOCKED
-        """), {"batch_limit": FRANZ_CRON_BATCH_LIMIT}).fetchall()
-
-        if not rows:
-            return {'status': 'ok', 'mensagem': 'Nenhum lead na fila', 'enviados': 0}
-
-        for row in rows:
+        for idx, row in enumerate(rows):
             (
                 lead_id, nome, telefone, whatsapp, segmento, cidade, site_url, rating,
                 user_id, paleta_cores, user_plano, user_status, user_trial_expires_at,
             ) = row
             try:
                 if not plano_tem_sdr(user_plano, user_status, user_trial_expires_at):
+                    logs.append(f"[Cron Franz] {nome}: plano nao tem SDR — ignorado")
                     continue
-                # === DV3 fix: bloquear leads com quality incident antes de gastar tokens
-                # do Franz. Worker.py ja fazia essa checagem (linha 647); o cron NAO
-                # validava, permitindo mensagens em leads quarantineados.
                 try:
                     _hold_reason = _sdr_quality_hold_reason(conn, str(lead_id), user_id)
                     if _hold_reason:
-                        print(f"[Cron Franz] lead {lead_id} bloqueado por quality incident: {_hold_reason}")
+                        logs.append(f"[Cron Franz] {nome}: bloqueado por quality incident")
                         continue
                 except Exception as _qh_err:
-                    print(f"[Cron Franz] erro ao checar quality hold: {_qh_err}")
+                    logs.append(f"[Cron Franz] {nome}: erro quality hold: {_qh_err}")
                     continue
                 franz_input = FranzInput(
                     nome=nome or "", cidade=cidade or "", segmento=segmento or "",
@@ -209,23 +174,22 @@ async def despachar_fila_franz(x_cron_secret: str = Header(None, alias='X-Cron-S
                     paleta_cores=paleta_cores or {},
                 )
                 if not user_id:
-                    print(f"[Cron Franz] ⚠️ lead {lead_id} sem user_id — ignorado (multi-tenant)")
+                    logs.append(f"[Cron Franz] {nome}: sem user_id — ignorado")
                     continue
 
-                # === Sprint 1.2 — Bug #3: lock por lead antes de gerar/enviar ===
-                # Se Redis offline, _lead_lock_guard lança RuntimeError (fail-closed).
-                # Pular este lead (não bloquear o batch inteiro).
+                # Bloqueio por lead (Redis). Falha = pula este lead.
                 try:
                     with _lead_lock_guard(str(lead_id)):
                         franz_output = iniciar_contato(franz_input, user_id=user_id)
                 except RuntimeError as _lock_err:
-                    print(f"[Cron Franz] 🔒 lock indisponível para lead {lead_id}: {_lock_err}")
+                    logs.append(f"[Cron Franz] {nome}: lock indisponivel: {_lock_err}")
                     continue
                 except Exception as _lock_other_err:
-                    print(f"[Cron Franz] ⚠️ erro no lock para lead {lead_id}: {_lock_other_err}")
+                    logs.append(f"[Cron Franz] {nome}: erro lock: {_lock_other_err}")
                     continue
 
                 if not franz_output.reply or not franz_output.reply.strip():
+                    logs.append(f"[Cron Franz] {nome}: resposta vazia")
                     continue
 
                 prior_outbound = has_prior_outbound(conn, lead_id, user_id)
@@ -249,14 +213,13 @@ async def despachar_fila_franz(x_cron_secret: str = Header(None, alias='X-Cron-S
                 )
                 if not guard.allowed:
                     erros += 1
-                    print(f"[Cron Franz] 🛑 Guard bloqueou {nome}: {guard.code} - {guard.reason}")
+                    logs.append(f"[Cron Franz] {nome}: guard bloqueou — {guard.code}")
                     continue
 
-                # Primeiro contato nunca envia direto: entra na fila FIFO por tenant.
                 tel = _normalizar_phone(whatsapp or telefone or "")
                 if not tel:
                     erros += 1
-                    print(f"[Cron Franz] ⚠️ Lead {nome}: telefone ausente — pulando")
+                    logs.append(f"[Cron Franz] {nome}: telefone ausente")
                     continue
 
                 msg_id = enqueue_outbound(
@@ -268,26 +231,85 @@ async def despachar_fila_franz(x_cron_secret: str = Header(None, alias='X-Cron-S
                     source="franz",
                     priority=10,
                 )
-                # Se msg_id eh None, a mensagem ja foi enviada anteriormente - pular
                 if msg_id is None:
                     erros += 1
-                    print(f"[Cron Franz] ⚠️ Lead {nome}: mensagem ja enviada anteriormente — pulando")
+                    logs.append(f"[Cron Franz] {nome}: mensagem ja enviada")
                     continue
+
                 conn.execute(text(
                     "UPDATE leads SET sdr_stage='pending_sdr_send', ab_variant=:var, atualizado_em=NOW()::text WHERE id=:id AND user_id=:uid"
                 ), {"id": lead_id, "var": _escolher_variante(lead_id), "uid": user_id})
                 conn.commit()
                 enviados += 1
-                print(f"[Cron Franz] ✅ Enfileirado para {nome} ({tel[-4:]})")
+                logs.append(f"[Cron Franz] {nome} ({tel[-4:]}): enfileirado")
 
-                # Jitter humanizado entre envios (so apos sucesso, so se sobrou lead)
-                if enviados < len(rows):
+                # Jitter entre leads — async sleep (nao bloqueia event loop)
+                if idx < len(rows) - 1:
                     delay = random.uniform(FRANZ_CRON_JITTER_MIN_S, FRANZ_CRON_JITTER_MAX_S)
-                    print(f"[Cron Franz] ⏳ aguardando {delay:.1f}s antes do proximo envio")
-                    time.sleep(delay)
+                    logs.append(f"[Cron Franz] aguardando {delay:.1f}s antes do proximo")
+                    await asyncio.sleep(delay)
             except Exception as e:
                 erros += 1
-                print(f"[Cron Franz] ❌ Erro {nome}: {e}")
+                logs.append(f"[Cron Franz] {nome}: erro {e}")
+
+    return enviados, erros, logs
+
+
+@router.post('/despachar-fila-franz')
+async def despachar_fila_franz(x_cron_secret: str = Header(None, alias='X-Cron-Secret')):
+    """
+    Despacha leads com sdr_stage='pendente_wpp' (site pronto, fora do horario).
+
+    Roda em background thread para não bloquear o worker uvicorn.
+    Cadência: 2 leads por ciclo com jitter 3-7min entre eles (~2 msg/10min).
+    """
+    _autorizar(x_cron_secret)
+
+    import sys
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'agents'))
+
+    with engine.connect() as conn:
+        rows = conn.execute(text("""
+            SELECT l.id, l.nome, l.telefone, l.whatsapp, l.segmento, l.cidade,
+                   l.site_url, l.rating, l.user_id, l.paleta_cores,
+                   u.plano, u.status, u.trial_expires_at
+            FROM leads l
+            JOIN users u ON u.id = l.user_id
+            WHERE l.sdr_stage = 'pendente_wpp'
+              AND l.status = 'concluido'
+              AND l.site_url IS NOT NULL
+              AND lower(COALESCE(u.plano, '')) IN ('trial','pro','beta','agency','ilimitado','admin')
+              AND lower(COALESCE(u.status, '')) NOT IN ('bloqueado','suspenso','cancelado','inadimplente')
+            ORDER BY l.processado_em ASC
+            LIMIT :batch_limit
+            FOR UPDATE SKIP LOCKED
+        """), {"batch_limit": FRANZ_CRON_BATCH_LIMIT}).fetchall()
+
+        if not rows:
+            return {'status': 'ok', 'mensagem': 'Nenhum lead na fila', 'enviados': 0}
+
+    # Processa em thread pool (LLM + DB heavy-lifting não bloqueia event loop)
+    thread_loop = asyncio.get_event_loop()
+    enviados, erros, logs = await asyncio.to_thread(
+        thread_loop.run_in_executor,
+        None,
+        lambda: _processar_lead_batch_coroutine(rows),
+    )
+
+    for log_line in logs:
+        print(log_line)
+
+    return {'status': 'ok', 'enviados': enviados, 'erros': erros, 'total_fila': len(rows)}
+
+
+def _processar_lead_batch_coroutine(rows: tuple):
+    """Wrapper síncrono que permite asyncio.sleep dentro de thread pool."""
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        return loop.run_until_complete(_processar_lead_batch(rows, engine))
+    finally:
+        loop.close()
 
     return {'status': 'ok', 'enviados': enviados, 'erros': erros, 'total_fila': len(rows)}
 
