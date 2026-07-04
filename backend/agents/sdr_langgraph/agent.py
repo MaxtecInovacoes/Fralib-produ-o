@@ -888,7 +888,7 @@ def node_hook(state: SDRState) -> dict:
                 system=full_system,
                 user=user_prompt,
                 model="sonnet",  # ← SONNET (não Haiku)
-                max_tokens=400,
+                max_tokens=800,
                 temperature=0.3,
                 agent_name=state.get("selected_agent") or "franz",
                 enable_context=False,
@@ -1133,7 +1133,7 @@ def make_stage_node(stage_name: str):
                 system=full_system,
                 user=user_prompt,
                 model="sonnet",
-                max_tokens=500,
+                max_tokens=800,
                 temperature=0.3,
                 agent_name=state.get("selected_agent") or "franz",
                 enable_context=False,
