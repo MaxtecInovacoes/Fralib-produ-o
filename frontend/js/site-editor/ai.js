@@ -7,11 +7,7 @@
   var status = global.status;
   var setDirty = global.setDirty;
 
-  function getIframeDoc(){
-    var ifr = $('editorIframe');
-    try{ return ifr.contentDocument || ifr.contentWindow.document; }
-    catch(e){ return null; }
-  }
+  function getIframeDoc(){ return global.getIframeDoc(); }
 
   function serializeSelectedForPrompt(el){
     if(!el) return '';

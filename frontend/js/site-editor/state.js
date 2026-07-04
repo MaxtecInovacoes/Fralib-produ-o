@@ -110,11 +110,7 @@
     setDirty(false);
   }
 
-  function getIframeDoc(){
-    var ifr = $('editorIframe');
-    try{ return ifr.contentDocument || ifr.contentWindow.document; }
-    catch(e){ return null; }
-  }
+  function getIframeDoc(){ return global.getIframeDoc(); }
 
   document.addEventListener('DOMContentLoaded', function(){
     var ifr = $('editorIframe');
@@ -169,7 +165,7 @@
   /* ── Exports ── */
   global.abrirEditorWYSIWYG = abrir;
   global.editorFechar = fechar;
-  global.getIframeDoc = getIframeDoc;
+  /* getIframeDoc agora vem de _shared.js (T5 DRY) */
   global.ligarEdicao = ligarEdicao;
   global.injectEditorStyles = injectEditorStyles;
   global.assignEditorIds = assignEditorIds;
