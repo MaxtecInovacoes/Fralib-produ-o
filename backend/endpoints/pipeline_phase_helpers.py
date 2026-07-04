@@ -89,23 +89,29 @@ def ensure_jina_insights(state, log_fn, fallback_researcher, warning_fn) -> None
     try:
         if buscar_inteligencia_mercado is None or formatar_inteligencia_para_arquiteto is None:
             raise RuntimeError("playwright_intel indisponivel")
-        import asyncio
+        # FASE H5: Playwright Sync API nao roda nem em ThreadPoolExecutor
+        # quando ha asyncio loop no parent thread. Usa subprocess Python
+        # isolado via helpers.playwright_intel_safe para garantir
+        # zero interferencia de event loop.
         try:
             asyncio.get_running_loop()
-            # Estamos em contexto async - roda Playwright sync em thread
-            import concurrent.futures
-            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as _ex:
-                future = _ex.submit(
-                    buscar_inteligencia_mercado,
-                    nicho=state.lead_obj.lead.segmento,
-                    cidade=state.lead_obj.lead.cidade,
-                    nome_negocio=state.lead_nome,
-                    concorrentes_urls=getattr(state, "_concorrentes_urls", None),
-                    tenant_id=getattr(state, "tenant_id", None),
+            # Estamos em contexto async: subprocess eh a unica forma confiavel
+            from utils.playwright_intel_safe import buscar_inteligencia_mercado_safe
+            _safe_result = buscar_inteligencia_mercado_safe(
+                nicho=state.lead_obj.lead.segmento,
+                cidade=state.lead_obj.lead.cidade,
+                nome_negocio=state.lead_nome,
+                concorrentes_urls=getattr(state, "_concorrentes_urls", None),
+                tenant_id=getattr(state, "tenant_id", None),
+            )
+            if _safe_result.get("ok"):
+                intel = _safe_result["intel"]
+            else:
+                raise RuntimeError(
+                    _safe_result.get("error", "subprocess Playwright falhou")
                 )
-                intel = future.result(timeout=60)
         except RuntimeError:
-            # Nao estamos em loop async - chama direto (sync context)
+            # Nao estamos em loop async (sync context) - chama direto
             intel = buscar_inteligencia_mercado(
                 nicho=state.lead_obj.lead.segmento,
                 cidade=state.lead_obj.lead.cidade,
