@@ -21,11 +21,8 @@ except ImportError:
 
 
 def _env_int(name: str, default: int, min_value: int, max_value: int) -> int:
-    try:
-        value = int(os.getenv(name, str(default)))
-    except (TypeError, ValueError):
-        value = default
-    return max(min_value, min(value, max_value))
+    from backend.utils.env_int import env_int  # — M3 DRY shim
+    return env_int(name, default, min_value, max_value)
 
 # ===== MAPA DE SINÔNIMOS POR NICHO =====
 # Termos que o Google Maps usa vs o que o usuário busca

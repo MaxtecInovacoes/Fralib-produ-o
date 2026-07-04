@@ -24,10 +24,8 @@ PROXY_BUILDER_MODEL = os.getenv("FRALIB_PROXY_BUILDER_MODEL", "sonnet")
 
 def _env_int(name: str, default: int) -> int:
     """Get integer config from environment."""
-    try:
-        return int(os.getenv(name, str(default)))
-    except ValueError:
-        return default
+    from backend.utils.env_int import env_int  # — M3 DRY shim
+    return env_int(name, default)
 
 
 def _single_model_mode_enabled() -> bool:

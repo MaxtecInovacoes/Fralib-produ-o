@@ -170,10 +170,8 @@ VITE_REACT_FILE_BATCHES = [
 
 def _env_int(name: str, default: int) -> int:
     """Parse integer from environment variable, return default if missing/invalid."""
-    try:
-        return int(os.getenv(name, str(default)))
-    except (ValueError, TypeError):
-        return default
+    from backend.utils.env_int import env_int  # — M3 DRY shim
+    return env_int(name, default)
 
 
 def _model_repair_attempts() -> int:

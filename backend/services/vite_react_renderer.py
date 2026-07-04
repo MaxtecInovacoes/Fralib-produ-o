@@ -6814,10 +6814,8 @@ def _studio_min_components() -> int:
 
 
 def _env_int(name: str, default: int) -> int:
-    try:
-        return max(0, int(os.getenv(name, str(default))))
-    except (TypeError, ValueError):
-        return default
+    from backend.utils.env_int import env_int  # — M3 DRY shim
+    return env_int(name, default, min_value=0)
 
 
 def write_vite_project(workspace: Path, files: dict[str, str]) -> None:
