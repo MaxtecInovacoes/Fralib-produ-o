@@ -1,6 +1,6 @@
 """Shared text utilities for the FraLib agent layer.
 
-Canônico para T4 e B2 do plano DRY (codex/dry-refactor).
+Canônico para T4, B2 e M2 do plano DRY (codex/dry-refactor).
 """
 from __future__ import annotations
 
@@ -28,11 +28,30 @@ def normalize_compare(value: object) -> str:
 
 
 # ── B2: strip_control_chars ───────────────────────────────────────────────────
-# Strip ASCII control chars that break JSON parsing (0x00-0x08, 0x0B, 0x0C, 0x0E-0x1F).
-# Excludes tab (0x09), newline (0x0A) and carriage return (0x0D) — those are legit.
 _CONTROL_CHARS_RE = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f]")
 
 
 def strip_control_chars(text: str) -> str:
     """Replace ASCII control characters that break JSON with a single space."""
     return _CONTROL_CHARS_RE.sub(" ", text or "")
+
+
+# ── M2: strip_code_fence ─────────────────────────────────────────────────────
+# Strips markdown ``` fences from LLM output. Case-insensitive (covers ```JSON,
+# ```Json, etc). Trailing whitespace at fence ends handled gracefully.
+_FENCE_OPEN_RE = re.compile(r"^```[a-zA-Z0-9_-]*\s*", re.IGNORECASE)
+_FENCE_CLOSE_RE = re.compile(r"\s*```$")
+
+
+def strip_code_fence(text: str) -> str:
+    """Remove leading and trailing markdown fences from a code block.
+
+    Returns the text between the fences. If no fence is detected, returns
+    the stripped input unchanged.
+    """
+    text = (text or "").strip()
+    if not text.startswith("```"):
+        return text
+    text = _FENCE_OPEN_RE.sub("", text)
+    text = _FENCE_CLOSE_RE.sub("", text)
+    return text.strip()

@@ -368,11 +368,8 @@ def call_llm_structured(
 # ══════════════════════════════════════════════════════════════════
 def _strip_markdown_fences(text: str) -> str:
     """Remove ```json ... ``` fences."""
-    text = text.strip()
-    if text.startswith("```"):
-        text = _re.sub(r"^```\w*\n?", "", text)
-        text = _re.sub(r"\n?```$", "", text)
-    return text.strip()
+    from backend.agents._text_utils import strip_code_fence  # — M2 DRY
+    return strip_code_fence(text)
 
 
 def call_llm_json(

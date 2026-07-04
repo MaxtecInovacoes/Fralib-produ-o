@@ -1030,11 +1030,10 @@ def _validate_creative_plan_response(content: dict[str, Any]) -> None:
 
 def _parse_content_json(raw: str) -> dict[str, Any]:
     """Parse the compact JSON returned by copy_only mode."""
-    text = str(raw or "").strip()
+    from backend.agents._text_utils import strip_code_fence  # — M2 DRY
+    text = strip_code_fence(raw)
     if not text:
         return {}
-    text = re.sub(r"^```(?:json)?\s*", "", text, flags=re.IGNORECASE).strip()
-    text = re.sub(r"\s*```$", "", text).strip()
     try:
         parsed = json.loads(text)
     except json.JSONDecodeError:
@@ -1828,10 +1827,9 @@ def _probe_failure_blocks_generation(raw: str) -> bool:
 
 
 def _clean_json_block(raw: str) -> str:
-    text = str(raw or "").strip()
-    if text.startswith("```"):
-        text = re.sub(r"^```(?:json)?\s*", "", text)
-        text = re.sub(r"\s*```$", "", text)
+    """Strip fence + extract JSON object span between braces."""
+    from backend.agents._text_utils import strip_code_fence  # — M2 DRY
+    text = strip_code_fence(raw)
     start = text.find("{")
     end = text.rfind("}")
     if start >= 0 and end > start:
