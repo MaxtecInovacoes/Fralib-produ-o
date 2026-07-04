@@ -1848,23 +1848,15 @@ def get_sdr_graph() -> SDRGraph:
 # ══════════════════════════════════════════════════════════════════════════
 
 def _safe_float(value: Any, default: float | None = 0.0) -> float | None:
-    """Converte para float seguro (None → default)."""
-    if value is None:
-        return default
-    try:
-        return float(value)
-    except (TypeError, ValueError):
-        return default
+    """Compat shim — fonte em backend.utils.safe_cast.safe_cast_float (M10 DRY)."""
+    from backend.utils.safe_cast import safe_cast_float as _scf  # noqa: E402  — M10 DRY shim
+    return _scf(value, default=default)
 
 
 def _safe_int(value: Any) -> int | None:
-    """Converte para int seguro (None → None)."""
-    if value is None:
-        return None
-    try:
-        return int(value)
-    except (TypeError, ValueError):
-        return None
+    """Compat shim — fonte em backend.utils.safe_cast.safe_cast_int (M10 DRY)."""
+    from backend.utils.safe_cast import safe_cast_int as _sci  # noqa: E402  — M10 DRY shim
+    return _sci(value)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

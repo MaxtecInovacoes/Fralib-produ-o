@@ -84,22 +84,14 @@ class FacebookAdsService:
             return response.json()
 
     def _safe_int(self, value):
-        """Converte valor para int de forma segura"""
-        try:
-            if isinstance(value, list):
-                return sum(int(x) for x in value if x)
-            return int(value or 0)
-        except:
-            return 0
+        """Compat shim — fonte em backend.utils.safe_cast.safe_int (M10 DRY)."""
+        from backend.utils.safe_cast import safe_int as _si  # noqa: E402  — M10 DRY shim
+        return _si(value)
 
     def _safe_float(self, value):
-        """Converte valor para float de forma segura"""
-        try:
-            if isinstance(value, list):
-                return sum(float(x) for x in value if x)
-            return float(value or 0)
-        except:
-            return 0.0
+        """Compat shim — fonte em backend.utils.safe_cast.safe_float (M10 DRY)."""
+        from backend.utils.safe_cast import safe_float as _sf  # noqa: E402  — M10 DRY shim
+        return _sf(value)
 
     # ============================================
     # STATUS DA CONTA
