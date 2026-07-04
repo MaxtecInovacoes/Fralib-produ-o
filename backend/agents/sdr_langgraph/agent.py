@@ -89,6 +89,55 @@ def _normalize_memory_payload(raw: dict | None) -> dict:
     return data
 
 
+def _parse_llm_sdr_response(response_text: str, default_stage: str) -> tuple[str, str, dict]:
+    """Parser unificado para respostas do Franz.
+
+    Lida com 3 cenarios:
+    1. JSON dentro de fence markdown ```json {...} ``` - extrai e parseia
+    2. JSON puro `{...}` - extrai e parseia
+    3. Texto cru sem JSON - devolve texto truncado a 300 chars (NUNCA vaza JSON cru)
+
+    Returns:
+        (reply, next_stage, update_facts) — reply nunca contem markdown fence
+    """
+    import re as _re
+    import json as _json
+
+    if not response_text:
+        return "", default_stage, {}
+
+    text = response_text.strip()
+
+    # Remove fence markdown ```json ... ``` ou ``` ... ```
+    fence_match = _re.search(r"```(?:json)?\s*(\{[\s\S]*?\})\s*```", text, _re.IGNORECASE)
+    candidate = fence_match.group(1) if fence_match else None
+
+    # Se nao tem fence, tenta pegar o primeiro { ... } balanceado
+    if not candidate:
+        candidate = _re.search(r"\{[\s\S]*\}", text)
+
+    if candidate:
+        try:
+            data = _json.loads(candidate.group() if hasattr(candidate, "group") else candidate)
+            if isinstance(data, dict):
+                reply = data.get("reply", "")
+                if reply and isinstance(reply, str):
+                    # Valida que o reply NAO eh JSON cru (defesa em profundidade)
+                    if reply.lstrip().startswith("{") and reply.rstrip().endswith("}"):
+                        return "", default_stage, {}
+                    return reply.strip()[:600], data.get("next_stage", default_stage) or default_stage, data.get("update_facts", {}) or {}
+        except (_json.JSONDecodeError, ValueError):
+            pass
+
+    # Fallback: se o texto cru começa com fence markdown, descarta
+    # (defesa contra LLM que respondeu com fence malformado)
+    if text.startswith("```"):
+        return "", default_stage, {}
+
+    # Fallback: texto cru (SEMPRE truncado para evitar vazamento)
+    return text[:300], default_stage, {}
+
+
 class SDRFallbackError(Exception):
     """Exceção quando LLM falha apos retries. NAO usa template pre-definido.
 
@@ -846,17 +895,7 @@ def node_hook(state: SDRState) -> dict:
             ))
 
             # Parse JSON
-            import re
-            json_match = re.search(r'\{[\s\S]*\}', response_text)
-            if json_match:
-                data = json.loads(json_match.group())
-                reply = data.get("reply", "")
-                next_stage = data.get("next_stage", "qualify")
-                update_facts = data.get("update_facts", {})
-            else:
-                reply = response_text.strip()
-                next_stage = "qualify"
-                update_facts = {}
+            reply, next_stage, update_facts = _parse_llm_sdr_response(response_text, "qualify")
         except SDRFallbackError:
             # Sprint 1.7: NUNCA usa template fixo. Marca pra humano.
             memory.needs_human_followup = True
@@ -1100,17 +1139,7 @@ def make_stage_node(stage_name: str):
                 enable_context=False,
             ))
 
-            import re
-            json_match = re.search(r'\{[\s\S]*\}', response_text)
-            if json_match:
-                data = json.loads(json_match.group())
-                reply = data.get("reply", "")
-                next_stage = data.get("next_stage", stage_name)
-                update_facts = data.get("update_facts", {})
-            else:
-                reply = response_text.strip()[:300]
-                next_stage = stage_name
-                update_facts = {}
+            reply, next_stage, update_facts = _parse_llm_sdr_response(response_text, stage_name)
         except SDRFallbackError:
             # Sprint 1.7: marca pra humano, NAO envia nada
             memory.needs_human_followup = True
