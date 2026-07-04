@@ -136,14 +136,7 @@ def remove_placeholder_markers(html: str) -> str:
     return cleaned
 
 
-# ─── Email Handling ──────────────────────────────────────────────────────────
-
-
-_EMAIL_RE = re.compile(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}")
-
-
-def extract_emails(text: str) -> list[str]:
-    return _EMAIL_RE.findall(text or "")
+from backend.utils.emails import extract_emails  # noqa: E402  — M9 DRY re-export
 
 
 def remove_unknown_emails(html: str, prd) -> str:
