@@ -177,10 +177,9 @@ SEGMENT_ARCHETYPE: dict[str, str] = {
 
 
 def normalize_segment(segmento: str) -> str:
-    text = unicodedata.normalize("NFKD", (segmento or "").lower().strip())
-    text = text.encode("ascii", "ignore").decode("ascii")
-    text = re.sub(r"[^a-z0-9]+", "_", text)
-    return text.strip("_")
+    """Normalize segment to ASCII-key format (used for archetype lookup)."""
+    from backend.utils.slug import slugify  # — M4 DRY
+    return slugify(segmento, sep="_", collapse_sep=False)
 
 
 def select_archetype(segmento: str, nome: str = "", dados_lead: dict | None = None) -> dict[str, Any]:

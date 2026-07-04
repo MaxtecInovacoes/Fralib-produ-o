@@ -114,5 +114,6 @@ def _detect_subniche(base: str, text: str) -> str:
 
 
 def _slug(value: Any) -> str:
-    text = unicodedata.normalize("NFKD", str(value or "")).encode("ascii", "ignore").decode()
-    return re.sub(r"_+", "_", re.sub(r"[^a-z0-9]+", "_", text.lower())).strip("_")
+    """Normalize value to a niche resolver key (underscore-joined)."""
+    from backend.utils.slug import slugify  # — M4 DRY
+    return slugify(value, sep="_", collapse_sep=True)

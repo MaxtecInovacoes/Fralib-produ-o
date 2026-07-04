@@ -63,9 +63,9 @@ def get_first(obj: Any, *names: str, default: Any = None) -> Any:
 
 
 def phase6_slug_token(value: Any) -> str:
-    text = unicodedata.normalize("NFKD", str(value or ""))
-    text = "".join(ch for ch in text if not unicodedata.combining(ch))
-    return re.sub(r"_+", "_", re.sub(r"[^a-z0-9]+", "_", text.lower())).strip("_")
+    """Normalize a value to a phase-6 token (underscore-joined)."""
+    from backend.utils.slug import slugify  # — M4 DRY
+    return slugify(value, sep="_", collapse_sep=True)
 
 
 def phase6_video_asset(facts: Any) -> dict[str, str]:
