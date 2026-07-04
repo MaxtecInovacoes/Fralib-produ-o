@@ -1,9 +1,12 @@
 """Async-safe wrapper for Playwright Intel search.
 
 Playwright Sync API nao pode ser rodada em thread com asyncio loop compartilhado
-(mesmo com ThreadPoolExecutor). Solução: executar buscar_inteligencia_mercado
+(mesmo com ThreadPoolExecutor). Solucao: executar buscar_inteligencia_mercado
 em subprocess Python ISOLADO via script file (sem -c), eliminando qualquer
 interferencia de event loop.
+
+O subprocess imprime logs em stdout ANTES do JSON final. Para extrair o JSON
+de forma confiavel, usamos marcador [JSON_BEGIN]/[JSON_END].
 """
 
 from __future__ import annotations
@@ -27,6 +30,9 @@ except Exception:
     sys.path.insert(0, ".")
     import backend.utils.playwright_intel as _pi  # noqa
 
+_BEGIN = "[JSON_BEGIN]"
+_END = "[JSON_END]"
+
 if __name__ == "__main__":
     payload = json.loads(sys.stdin.read())
     try:
@@ -38,14 +44,27 @@ if __name__ == "__main__":
             payload.get("tenant_id"),
         )
         insights = _pi.formatar_inteligencia_para_arquiteto(intel)
-        sys.stdout.write(json.dumps({"ok": True, "intel": intel, "insights": insights}))
+        # Logs do helper vao pro stdout via print, antes do marcador
+        sys.stdout.write(_BEGIN + json.dumps({"ok": True, "intel": intel, "insights": insights}) + _END)
     except Exception as exc:
-        sys.stdout.write(json.dumps({
+        sys.stdout.write(_BEGIN + json.dumps({
             "ok": False,
             "error": str(exc)[:500],
-            "tb": traceback.format_exc()[:500],
-        }))
+        }) + _END)
 '''
+
+
+def _extract_json(stdout: str) -> dict[str, Any] | None:
+    """Extrai JSON delimitado por [JSON_BEGIN]/[JSON_END]."""
+    start = stdout.rfind("[JSON_BEGIN]")
+    end = stdout.rfind("[JSON_END]")
+    if start < 0 or end < 0 or end <= start:
+        return None
+    body = stdout[start + len("[JSON_BEGIN]"):end]
+    try:
+        return json.loads(body)
+    except Exception:
+        return None
 
 
 def buscar_inteligencia_mercado_safe(
@@ -57,12 +76,7 @@ def buscar_inteligencia_mercado_safe(
     tenant_id: int | None = None,
     timeout_seconds: int = 75,
 ) -> dict[str, Any]:
-    """Chama buscar_inteligencia_mercado num subprocess Python isolado.
-
-    Escreve o runner em arquivo .py (evita problemas de parsing do -c).
-    Retorna dict com chaves: insights, intel, error.
-    NUNCA levanta exception — sempre retorna dict.
-    """
+    """Chama buscar_inteligencia_mercado num subprocess Python isolado."""
     payload = {
         "nicho": nicho,
         "cidade": cidade,
@@ -93,22 +107,22 @@ def buscar_inteligencia_mercado_safe(
                     os.unlink(runner_path)
             except Exception:
                 pass
-        if proc.returncode != 0:
+        if proc.returncode != 0 and not proc.stdout:
             return {
                 "ok": False,
                 "intel": {},
                 "insights": "",
-                "error": (proc.stderr or "")[-300:] or "subprocess falhou",
+                "error": (proc.stderr or "")[-300:] or "subprocess falhou (rc != 0)",
             }
-        out = (proc.stdout or "").strip()
-        if not out:
+        out = proc.stdout or ""
+        result = _extract_json(out)
+        if result is None:
             return {
                 "ok": False,
                 "intel": {},
                 "insights": "",
-                "error": "subprocess sem stdout",
+                "error": "subprocess nao retornou JSON delimitado (rc=%d)" % proc.returncode,
             }
-        result = json.loads(out)
         if not result.get("ok"):
             return {
                 "ok": False,
