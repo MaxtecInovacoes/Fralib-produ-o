@@ -147,6 +147,15 @@ def iniciar_contato(lead: BryanInput, user_id: int = None) -> BryanOutput:
 
     # Invocar o grafo
     graph = get_sdr_graph()
+
+    # Carregar sdr_settings do tenant para injetar no state (ativa FRANZ_PERSONA.md)
+    try:
+        from backend.services.sdr_settings import get_sdr_settings_runtime
+        from backend.core.database import engine as _db_engine
+        sdr_settings = get_sdr_settings_runtime(user_id, _db_engine) or {}
+    except Exception:
+        sdr_settings = {}
+
     initial_state = {
         "user_id": user_id,
         "lead_id": lead.telefone,
@@ -159,6 +168,7 @@ def iniciar_contato(lead: BryanInput, user_id: int = None) -> BryanOutput:
         "rating": lead.rating or 0,
         "site_url": lead.site_url or "",
         "paleta_cores": getattr(lead, "paleta_cores", {}) or {},
+        "sdr_settings": sdr_settings,
     }
 
     try:
@@ -336,6 +346,15 @@ def _responder_lead_locked(
 
     # Invocar o grafo
     graph = get_sdr_graph()
+
+    # Carregar sdr_settings do tenant para injetar no state (ativa FRANZ_PERSONA.md)
+    try:
+        from backend.services.sdr_settings import get_sdr_settings_runtime
+        from backend.core.database import engine as _db_engine
+        sdr_settings = get_sdr_settings_runtime(user_id, _db_engine) or {}
+    except Exception:
+        sdr_settings = {}
+
     initial_state = {
         "user_id": user_id,
         "lead_id": lead_id or telefone,
@@ -349,6 +368,7 @@ def _responder_lead_locked(
         "site_url": site_url or lead_data.get("site_url", ""),
         "history": merged_history,
         "sdr_stage": sdr_stage or "",
+        "sdr_settings": sdr_settings,
     }
 
     try:
