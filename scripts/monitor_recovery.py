@@ -20,8 +20,9 @@ from datetime import datetime, timedelta
 sys.path.insert(0, '/root/fralib')
 
 # Carregar .env
-from dotenv import load_dotenv
-load_dotenv('/root/fralib/.env')
+sys.path.insert(0, str(__import__("pathlib").Path(__file__).resolve().parents[1] / "scripts"))
+from _env import load_env  # noqa: E402  — B4 DRY
+load_env()
 
 MEOWHATS_URL = os.getenv('MEOWHATS_URL', 'http://localhost:3001')
 MEOWHATS_KEY_RAW = os.getenv('MEOWHATS_KEY', '')

@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 import json
 import os
+import sys
 import psycopg2
 from pathlib import Path
-from dotenv import load_dotenv
 
-load_dotenv(Path('/root/fralib/.env'))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
+from _env import load_env  # noqa: E402  — B4 DRY
+load_env()
 
 conn = psycopg2.connect(os.environ['DATABASE_URL'])
 cur = conn.cursor()

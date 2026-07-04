@@ -1,5 +1,6 @@
-from dotenv import load_dotenv
-load_dotenv('/root/fralib/.env')
+sys.path.insert(0, str(__import__("pathlib").Path(__file__).resolve().parents[1] / "scripts"))
+from _env import load_env  # noqa: E402  — B4 DRY
+load_env()
 from backend.core.database import engine
 from sqlalchemy import text
 import jwt
