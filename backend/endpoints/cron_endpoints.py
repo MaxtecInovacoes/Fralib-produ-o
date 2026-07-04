@@ -22,14 +22,15 @@ CRON_SECRET = os.getenv('CRON_SECRET', '')
 
 # Jitter humanizado entre envios do cron Franz (segundos).
 # Faixa [min, max) com distribuicao uniforme — gera cadencia irregular
-# (ex: 18s, 47s, 22s, 91s) em vez de rajada constante.
-FRANZ_CRON_JITTER_MIN_S = 18
-FRANZ_CRON_JITTER_MAX_S = 75
+# (ex: 4min, 7min, 3min) em vez de rajada constante.
+# Meta: ~2 envios a cada 10 min, espalhados com intervalo de 3 a 7 min entre cada.
+FRANZ_CRON_JITTER_MIN_S = 180   # 3 min
+FRANZ_CRON_JITTER_MAX_S = 420   # 7 min
 
-# Teto de leads despachados por ciclo de cron. Reduzido de 10 para 5
-# para alinhar com a cadencia humanizada — 5 envios * ~46s medio =
-# ~4 min de processamento/ciclo, sobra do ciclo de 30 min.
-FRANZ_CRON_BATCH_LIMIT = 5
+# Teto de leads despachados por ciclo de cron.
+# 2 envios por ciclo * jitter de 3-7min = ~2 msg a cada 10 min com intervalos variados.
+# Cron ainda roda a cada 2 min (para processar filas menores), mas só despacha 2 leads.
+FRANZ_CRON_BATCH_LIMIT = 2
 
 
 def _normalizar_phone(phone: str) -> str:
