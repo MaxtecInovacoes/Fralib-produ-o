@@ -29,13 +29,10 @@ from sqlalchemy import create_engine, text
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "backend"))
 sys.path.insert(0, str(ROOT / "backend" / "core"))
+sys.path.insert(0, str(ROOT / "scripts"))
 
 
-def _rows(conn, sql: str, params: dict[str, Any] | None = None) -> list[dict[str, Any]]:
-    try:
-        return [dict(r._mapping) for r in conn.execute(text(sql), params or {}).fetchall()]
-    except Exception as exc:
-        return [{"error": str(exc).splitlines()[0]}]
+from _db_rows import rows as _rows  # noqa: E402  — canônico T1 (DRY)
 
 
 def audit_mirrors(conn) -> dict[str, Any]:
