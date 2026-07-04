@@ -469,8 +469,8 @@ def slugify(text: str, max_len: int = 50) -> str:
     Returns:
         Slug gerado
     """
-    normalized = unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode("ascii")
-    return re.sub(r"[^a-z0-9]+", "-", normalized.lower()).strip("-")[:max_len]
+    from backend.utils.slug import slugify as _slugify  # — M5 DRY
+    return _slugify(text, sep="-", max_len=max_len)
 
 
 def save_fallback_lead(

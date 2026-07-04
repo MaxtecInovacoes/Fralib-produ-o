@@ -78,8 +78,8 @@ def _slug(value: str) -> str:
     """Convert a string to a URL-safe slug."""
     import unicodedata
 
-    norm = unicodedata.normalize("NFKD", value or "").encode("ascii", "ignore").decode("ascii")
-    return re.sub(r"[^a-z0-9]+", "-", norm.lower()).strip("-")
+    from backend.utils.slug import slugify as _slugify  # — M5 DRY
+    return _slugify(value, sep="-")
 
 
 __all__ = [

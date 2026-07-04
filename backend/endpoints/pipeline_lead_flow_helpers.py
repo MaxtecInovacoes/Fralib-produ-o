@@ -13,8 +13,8 @@ from backend.utils.agente1_hunter_v2 import LeadQualificado
 
 
 def _slugify_name(name: str) -> str:
-    normalized = unicodedata.normalize("NFKD", name or "").encode("ascii", "ignore").decode("ascii")
-    return re.sub(r"[^a-z0-9]+", "-", normalized.lower()).strip("-")[:50]
+    from backend.utils.slug import slugify as _slugify  # — M5 DRY
+    return _slugify(name, sep="-", max_len=50)
 
 
 def build_lead_raw_data(lead, *, default_segmento: str = "", include_maps_embed: bool = True) -> dict:
