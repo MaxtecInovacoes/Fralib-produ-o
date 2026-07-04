@@ -24,7 +24,7 @@ from backend.config import FRALIB_ROOT as _FR_ROOT
 load_dotenv(str(_FR_ROOT / ".env"))
 
 API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
-BASE_URL = os.getenv("ANTHROPIC_BASE_URL", "https://api.kpalabz.com/v1")
+BASE_URL = os.getenv("ANTHROPIC_BASE_URL", "https://ia.namehost.com.br/v1")
 DB_URL = os.getenv("DATABASE_URL", "postgresql://postgres@localhost:5433/fralib_db")
 
 

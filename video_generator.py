@@ -21,7 +21,7 @@ if not KPLABS_API_KEY:
 class VideoGenerator:
     def __init__(self) -> None:
         # Configurações — chave via env var (nunca mais hardcoded)
-        self.kplabs_api: str = "https://api.kpalabz.com"
+        self.kplabs_api: str = "https://ia.namehost.com.br"
         self.kplabs_key: str = KPLABS_API_KEY
         self.comfyui_url: str = "http://localhost:8188"
 

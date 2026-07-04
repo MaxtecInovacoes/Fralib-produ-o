@@ -28,17 +28,14 @@ import json
 import time
 
 API_KEY = os.getenv("ANTHROPIC_API_KEY")
-BASE_URL = os.getenv("ANTHROPIC_BASE_URL", "https://api.kpalabz.com/v1")
+BASE_URL = os.getenv("ANTHROPIC_BASE_URL", "https://ia.namehost.com.br/v1")
 
 # Lista de modelos para testar (kpalabz proxy)
 MODELS = [
     "claude-sonnet-4-6",
     "claude-opus-4-8",
     "claude-haiku-4-5",
-    "claude-sonnet-4-5",
     "claude-opus-4-7",
-    "claude-3-5-sonnet-20241022",
-    "claude-3-5-haiku-20241022",
 ]
 
 
