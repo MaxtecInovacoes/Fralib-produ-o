@@ -91,14 +91,8 @@ class MapsProvider:
     # ---- internal helpers ----
 
     def _normalize_candidate(self, candidate: Any, segmento: str, cidade: str) -> dict[str, Any]:
-        if hasattr(candidate, "model_dump"):
-            raw = candidate.model_dump()
-        elif hasattr(candidate, "dict"):
-            raw = candidate.dict()
-        elif isinstance(candidate, dict):
-            raw = dict(candidate)
-        else:
-            raw = dict(getattr(candidate, "__dict__", {}) or {})
+        from backend.utils.pydantic_compat import to_dict  # — B5 DRY
+        return to_dict(candidate)
 
         lead = raw.get("lead", raw)
         lead["segmento"] = lead.get("segmento") or segmento
@@ -186,13 +180,8 @@ class MapsProvider:
         return str(existing[0]) if existing else inv_id, False
 
     def _lead_to_dict(self, lead: Any) -> dict[str, Any]:
-        if isinstance(lead, dict):
-            return dict(lead)
-        if hasattr(lead, "model_dump"):
-            return lead.model_dump()
-        if hasattr(lead, "dict"):
-            return lead.dict()
-        return dict(getattr(lead, "__dict__", {}) or {})
+        from backend.utils.pydantic_compat import to_dict  # — B5 DRY
+        return to_dict(lead)
 
     def _dedupe_key(self, lead: dict[str, Any]) -> str:
         import hashlib

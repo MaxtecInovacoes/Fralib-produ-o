@@ -266,13 +266,8 @@ def status(db: Session, tenant_id: int, limit: int = 30) -> dict[str, Any]:
 
 def _lead_to_dict(lead: Any) -> dict[str, Any]:
     """Convert a lead object to a dictionary."""
-    if isinstance(lead, dict):
-        return dict(lead)
-    if hasattr(lead, "model_dump"):
-        return lead.model_dump()
-    if hasattr(lead, "dict"):
-        return lead.dict()
-    return dict(getattr(lead, "__dict__", {}) or {})
+    from backend.utils.pydantic_compat import to_dict  # — B5 DRY
+    return to_dict(lead)
 
 
 def _store_candidate(db: Session, tenant_id: int, candidate: Any, segmento: str, cidade: str) -> tuple[str, bool]:

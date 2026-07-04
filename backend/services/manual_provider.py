@@ -252,11 +252,8 @@ class ManualProvider:
         """Convert any lead representation into a plain dict."""
         if isinstance(lead, dict):
             return {k: v for k, v in lead.items() if k is not None}
-        if hasattr(lead, "model_dump"):
-            return lead.model_dump()
-        if hasattr(lead, "dict"):
-            return lead.dict()
-        return dict(getattr(lead, "__dict__", {}) or {})
+        from backend.utils.pydantic_compat import to_dict  # — B5 DRY
+        return to_dict(lead)
 
     def _dedupe_key(self, lead: dict[str, Any]) -> str:
         import hashlib
