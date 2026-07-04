@@ -57,7 +57,16 @@ PROIBIDO:
 def main():
     db = SessionLocal()
     try:
-        for tid in [2, 31]:
+        # Busca TODOS os tenants com sdr_settings_v1
+        rows = db.execute(text("""
+            SELECT user_id FROM user_configs
+            WHERE config_key = 'sdr_settings_v1'
+            ORDER BY user_id
+        """)).fetchall()
+        tids = [r[0] for r in rows]
+        print(f"Tenants encontrados: {tids}")
+
+        for tid in tids:
             row = db.execute(text("""
                 SELECT config_value FROM user_configs
                 WHERE user_id = :uid AND config_key = 'sdr_settings_v1'
