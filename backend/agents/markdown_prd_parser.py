@@ -6,6 +6,8 @@ import re
 import json
 from typing import Dict, Any, Optional
 
+from backend.agents._text_utils import strip_control_chars  # noqa: E402,F401  — B2 DRY
+
 
 VALID_SECTIONS = ('hero', 'sobre', 'servicos', 'depoimentos', 'faq', 'localizacao', 'contato', 'footer')
 
@@ -157,7 +159,7 @@ def parse_bloco1_with_fallback(text: str) -> Optional[Dict[str, Any]]:
     # Se comeca com {, tenta JSON primeiro
     if cleaned.startswith('{'):
         try:
-            cleaned_json = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f]', ' ', cleaned)
+            cleaned_json = strip_control_chars(cleaned)
             cleaned_json = cleaned_json.replace(' ', ' ').replace(' ', ' ')
             data = json.loads(cleaned_json)
             return data
@@ -176,7 +178,7 @@ def parse_bloco1_with_fallback(text: str) -> Optional[Dict[str, Any]]:
         no_blocks = re.sub(r'```\s*', '', no_blocks)
         json_match = re.search(r'\{.*\}', no_blocks, re.DOTALL)
         if json_match:
-            cleaned_json = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f]', ' ', json_match.group())
+            cleaned_json = strip_control_chars(json_match.group())
             data = json.loads(cleaned_json)
             return data
     except Exception:
@@ -195,7 +197,7 @@ def parse_bloco2_with_fallback(text: str) -> Optional[Dict[str, Any]]:
 
     if cleaned.startswith('{'):
         try:
-            cleaned_json = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f]', ' ', cleaned)
+            cleaned_json = strip_control_chars(cleaned)
             cleaned_json = cleaned_json.replace(' ', ' ').replace(' ', ' ')
             data = json.loads(cleaned_json)
             return data
@@ -211,7 +213,7 @@ def parse_bloco2_with_fallback(text: str) -> Optional[Dict[str, Any]]:
         no_blocks = re.sub(r'```\s*', '', no_blocks)
         json_match = re.search(r'\{.*\}', no_blocks, re.DOTALL)
         if json_match:
-            cleaned_json = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f]', ' ', json_match.group())
+            cleaned_json = strip_control_chars(json_match.group())
             data = json.loads(cleaned_json)
             return data
     except Exception:

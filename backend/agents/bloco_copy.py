@@ -12,6 +12,7 @@ import sys, os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from backend.pipeline_exceptions import CopyGenerationError
+from backend.agents._text_utils import strip_control_chars  # noqa: E402,F401  — B2 DRY
 from llm_direct import call_claude
 from markdown_prd_parser import parse_bloco2_with_fallback
 from prompts_arquiteto import SYSTEM_COPY_SENIOR
@@ -300,7 +301,7 @@ def executar_bloco_copy(
             },
         ) from e
 
-    resp = _re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f]", " ", resp)
+    resp = strip_control_chars(resp)
     dados = parse_bloco2_with_fallback(resp)
 
     if dados and dados.get("sections"):
@@ -344,7 +345,7 @@ def executar_bloco_copy(
                 "acao": "Corrigir LLM/conectividade; nao usar modelo alternativo automatico",
             },
         ) from e
-    resp2 = _re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f]", " ", resp2)
+    resp2 = strip_control_chars(resp2)
     dados2 = parse_bloco2_with_fallback(resp2)
     if dados2 and dados2.get("sections"):
         print(f"[BlocoCopy] Retry OK: {len(dados2['sections'])} secoes")

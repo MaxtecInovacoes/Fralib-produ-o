@@ -7,6 +7,8 @@ import json
 import urllib.request
 import urllib.parse
 
+from backend.agents._text_utils import strip_control_chars  # noqa: E402,F401  — B2 DRY
+
 SYSTEM_DESIGN_DIRECTOR = """You are the Creative PRD Director at FraLib.
 
 YOUR ROLE: Define content architecture, conversion intent, factual priority,
@@ -176,7 +178,7 @@ TIPO: single-page, mobile-first, 6-8 secoes
 def clean_json(text: str) -> str:
     text = text.replace("```json", "").replace("```", "").strip()
     text = text.replace("\u2028", " ").replace("\u2029", " ")
-    text = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f]", " ", text)
+    text = strip_control_chars(text)
     candidates = []
     i = 0
     while i < len(text):
