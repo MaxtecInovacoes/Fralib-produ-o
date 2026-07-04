@@ -22,13 +22,43 @@ def run_production_tick(db: Session, payload: dict[str, Any], tenant_id: int) ->
         _ensure_lead_row,
         _reserve_next,
         enqueue_hunter,
+        enqueue_production_tick,
     )
-    from backend.services.credits_manager import validar_permissao_pipeline
+    from backend.services.credits_manager import (
+        validar_permissao_pipeline,
+        _hoje_brt,
+    )
 
     cfg = get_or_create_config(db, tenant_id)
     if not cfg["ativo"] or cfg["producao_pausada"]:
         _event(db, tenant_id, "producao", "info", "Produção pausada pelo usuário")
         return {"ok": True, "paused": True}
+
+    # FASE H3: Gate de meta diaria (sites por dia)
+    # Reseta sites_hoje se virou o dia; pausa se ja atingiu meta.
+    _hoje = _hoje_brt().isoformat()
+    _user_row = db.execute(
+        text("SELECT sites_hoje, sites_hoje_date, plano FROM users WHERE id=:uid"),
+        {"uid": tenant_id},
+    ).fetchone()
+    if _user_row is not None:
+        _sites_hoje_db = int(_user_row[0] or 0)
+        _sites_hoje_date = _user_row[1] or ""
+        if _sites_hoje_date != _hoje:
+            _sites_hoje_db = 0
+            db.execute(
+                text("UPDATE users SET sites_hoje=0, sites_hoje_date=:h WHERE id=:uid"),
+                {"h": _hoje, "uid": tenant_id},
+            )
+            db.commit()
+        _meta_diaria = int(cfg.get("meta_diaria") or 0)
+        if _meta_diaria > 0 and _sites_hoje_db >= _meta_diaria:
+            _event(db, tenant_id, "producao", "info",
+                   f"Meta diaria atingida ({_sites_hoje_db}/{_meta_diaria}). Aguardando reset em {_hoje}.")
+            # Reagenda para o proximo dia (24h)
+            enqueue_production_tick(db, tenant_id, delay_seconds=86400, reason="daily_cap")
+            return {"ok": True, "blocked": "daily_cap", "sites_hoje": _sites_hoje_db, "meta": _meta_diaria}
+
     running = db.execute(
         text(
             """
@@ -143,6 +173,21 @@ def run_production_tick(db: Session, payload: dict[str, Any], tenant_id: int) ->
         ),
         {"lead_id": lead_id, "id": item["id"], "uid": tenant_id},
     )
+    # FASE H3: incrementa sites_hoje para a meta diaria
+    db.execute(
+        text(
+            """
+            UPDATE users
+            SET sites_hoje=COALESCE(sites_hoje,0)+1,
+                sites_hoje_date=:hoje,
+                ultimo_deploy_at=NOW()
+            WHERE id=:uid
+            """
+        ),
+        {"hoje": _hoje, "uid": tenant_id},
+    )
     db.commit()
-    _event(db, tenant_id, "producao", "success", f"Pipeline enfileirada para {item['nome']} (job #{job_id})")
+    _event(db, tenant_id, "producao", "success",
+           f"Pipeline enfileirada para {item['nome']} (job #{job_id}) - "
+           f"sites_hoje={_sites_hoje_db + 1}/{int(cfg.get('meta_diaria') or 999)}")
     return {"ok": True, "job_id": job_id, "lead_id": lead_id, "inventory_id": item["id"]}
