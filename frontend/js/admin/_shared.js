@@ -2,6 +2,13 @@
  *
  * Canônico para M6 do plano DRY (codex/dry-refactor).
  * Substitui 2 cópias inline do filtro de período (hoje/semana/mes) em crm-uti.js.
+ *
+ * STATUS: helper criado mas NÃO migrado (M12 re-audit).
+ * O módulo crm-uti.js é INLINE em frontend/partials/admin/_scripts.html
+ * (5726 linhas), e nenhum HTML admin inclui <script src="_shared.js">.
+ * Adicionar a tag exigiria validar ordem de carregamento do bundle admin
+ * em produção — risco > ganho. Migrar apenas quando o build admin for
+ * refatorado para módulos separados.
  */
 (function(global){
   'use strict';
