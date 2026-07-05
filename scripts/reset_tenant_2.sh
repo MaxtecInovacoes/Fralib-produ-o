@@ -116,23 +116,39 @@ for i in 1 2 3 4 5 6 7 8 9 10; do
 done
 
 # ============================================================================
-# 4. Trigger 1 ciclo de cron pra comecar reprocessamento
+# 4. Trigger reprocessamento dos leads resetados
 # ============================================================================
-log "STEP 4: disparando 1 ciclo de despachar-fila-franz..."
+log "STEP 4: disparando cron de reprocessamento tenant 2..."
 
 SECRET="${CRON_SECRET:-}"
 if [ -z "$SECRET" ]; then
-    log "  WARN: CRON_SECRET vazio - pulando trigger do cron"
+    log "  WARN: CRON_SECRET vazio - pulando trigger"
 else
+    # 4a. Cron que processa leads via pipeline (site + SDR)
     HTTP_CODE=$(curl -sS --max-time 30 -o /tmp/reset_resp.json -w "%{http_code}" \
+        -X POST "http://localhost:8000/api/cron/reprocessar-reset-tenant2" \
+        -H "X-Cron-Secret: $SECRET" 2>/dev/null) || HTTP_CODE="000"
+    if [ "$HTTP_CODE" = "202" ] || [ "$HTTP_CODE" = "200" ]; then
+        RESP=$(head -c 200 /tmp/reset_resp.json 2>/dev/null || echo "")
+        log "  reprocessar-reset-tenant2: code=$HTTP_CODE resp=$RESP"
+    else
+        log "  reprocessar-reset-tenant2: WARN code=$HTTP_CODE body=$(head -c 200 /tmp/reset_resp.json 2>/dev/null)"
+    fi
+fi
+
+# 4b. Tambem dispara o cron padrao de SDR (processa leads ja com site)
+log "STEP 4b: disparando cron despachar-fila-franz..."
+
+if [ -z "$SECRET" ]; then
+    log "  WARN: CRON_SECRET vazio - pulando trigger"
+else
+    HTTP_CODE=$(curl -sS --max-time 30 -o /tmp/reset_resp2.json -w "%{http_code}" \
         -X POST "http://localhost:8000/api/cron/despachar-fila-franz" \
         -H "X-Cron-Secret: $SECRET" 2>/dev/null) || HTTP_CODE="000"
-
     if [ "$HTTP_CODE" = "202" ] || [ "$HTTP_CODE" = "200" ]; then
-        RESP=$(head -c 300 /tmp/reset_resp.json 2>/dev/null || echo "")
-        log "  OK code=$HTTP_CODE resp=$RESP"
+        log "  despachar-fila-franz: OK code=$HTTP_CODE"
     else
-        log "  WARN code=$HTTP_CODE body=$(head -c 300 /tmp/reset_resp.json 2>/dev/null)"
+        log "  despachar-fila-franz: WARN code=$HTTP_CODE"
     fi
 fi
 

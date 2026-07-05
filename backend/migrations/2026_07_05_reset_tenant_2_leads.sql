@@ -28,11 +28,14 @@ BEGIN;
 UPDATE leads
 SET
     -- LIMPAR tudo do pipeline/site/SDR
-    site_url = NULL,
-    url_site = NULL,
+    site_url = '/RESET-PENDING/',
+    url_site = '/RESET-PENDING/',
     html_gerado = NULL,
-    sdr_stage = 'pendente_wpp',
-    status = 'pendente',
+    -- sdr_stage='reset_pipeline' = flag para cron reprocessar-reset-tenant2
+    -- (cron despachar-fila-franz ignora via site_url='/RESET-PENDING/')
+    sdr_stage = 'reset_pipeline',
+    -- status='concluido' para o cron SDR reconhecer (placeholder detectado internamente)
+    status = 'concluido',
     processado = FALSE,
     tentativas = 0,
     ciclo = 0,

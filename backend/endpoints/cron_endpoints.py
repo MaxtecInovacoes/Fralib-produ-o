@@ -176,6 +176,8 @@ async def _despachar_batch() -> None:
             WHERE l.sdr_stage = 'pendente_wpp'
               AND l.status = 'concluido'
               AND l.site_url IS NOT NULL
+              AND l.site_url NOT LIKE '/RESET-%'
+              AND l.site_url != '/RESET-PENDING/'
               AND lower(COALESCE(u.plano, '')) IN ('trial','pro','beta','agency','ilimitado','admin')
               AND lower(COALESCE(u.status, '')) NOT IN ('bloqueado','suspenso','cancelado','inadimplente')
             ORDER BY l.processado_em ASC
@@ -207,15 +209,28 @@ async def _despachar_batch() -> None:
             except Exception as _qh_err:
                 print(f"[Cron Franz] {nome}: quality hold erro: {_qh_err}")
 
+            # Detecta placeholder de site pendente de reprocessamento
+            site_url_str = site_url or ""
+            _is_real_site = (
+                bool(site_url_str)
+                and site_url_str != "/RESET-PENDING/"
+                and not site_url_str.startswith("/RESET-")
+            )
+
             franz_input = FranzInput(
                 nome=nome or "", cidade=cidade or "", segmento=segmento or "",
                 telefone=telefone or "", whatsapp=whatsapp or "",
-                rating=rating or 0.0, site_url=site_url or "",
+                rating=rating or 0.0, site_url=site_url_str,
                 score_caio=80, tier="STANDARD",
                 paleta_cores=paleta_cores or {},
             )
             if not user_id:
                 print(f"[Cron Franz] {nome}: sem user_id")
+                continue
+
+            # Se site ainda nao foi gerado (placeholder), pular WhatsApp mas nao marcar como processado
+            if not _is_real_site:
+                print(f"[Cron Franz] {nome}: site pendente de geracao — pulando WhatsApp (sdr_stage inalterado)")
                 continue
 
             # Lock + LLM (pode levar 20-60s)
@@ -245,13 +260,13 @@ async def _despachar_batch() -> None:
                         stage="pendente_wpp",
                         next_stage=franz_output.next_stage or "",
                         message=franz_output.reply,
-                        site_url=site_url or "",
+                        site_url=site_url_str,
                         prior_outbound=prior_outbound,
                         direction="outbound",
                         plan_allows_sdr=True,
                         whatsapp_connected=True,
                         within_schedule=True,
-                        site_ready=bool(site_url),
+                        site_ready=_is_real_site,
                     )
                 )
                 if not guard.allowed:
@@ -930,6 +945,103 @@ async def refresh_provider_health(x_cron_secret: str = Header(None, alias='X-Cro
         "by_status": summary["by_status"],
         "snapshot_at": datetime.utcnow().isoformat(),
     }
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# REPROCESSAMENTO TENANT 2 — leads com placeholder /RESET-PENDING/
+# ═══════════════════════════════════════════════════════════════════════════
+# sdr_stage='reset_pipeline' + site_url='/RESET-PENDING/' = lead resetado
+# aguardando reprocessamento pelo pipeline completo (site + SDR)
+RESET_BATCH = 5
+
+
+@router.post('/reprocessar-reset-tenant2')
+async def reprocessar_reset_tenant2(x_cron_secret: str = Header(None, alias='X-Cron-Secret')):
+    """
+    Cron: processa leads do tenant 2 que estao com placeholder /RESET-PENDING/.
+
+    Para cada lead:
+    1. Atualiza sdr_stage de 'reset_pipeline' para 'processando'
+    2. Chama executar_pipeline_lead_existente (pula hunter, vai direto pro site)
+    3. Quando pipeline termina, site_url real e sdr_stage='pendente_wpp'
+       -> cron despachar-fila-franz pega naturalmente
+
+    Cadencia: a cada 5-10min, ate 5 leads por ciclo.
+    Retorna 202 imediatamente — trabalho em thread separada.
+    """
+    _autorizar(x_cron_secret)
+
+    def _thread_reprocess():
+        import uuid as _uuid
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'agents'))
+
+        _loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(_loop)
+        try:
+            with engine.connect() as conn:
+                rows = conn.execute(text("""
+                    SELECT id, nome, segmento, cidade, user_id
+                    FROM leads
+                    WHERE user_id = 2
+                      AND sdr_stage = 'reset_pipeline'
+                      AND site_url = '/RESET-PENDING/'
+                      AND status = 'concluido'
+                    ORDER BY atualizado_em ASC
+                    LIMIT :lim
+                    FOR UPDATE SKIP LOCKED
+                """), {"lim": RESET_BATCH}).fetchall()
+
+            if not rows:
+                print("[Reset-T2] nenhum lead na fila")
+                return
+
+            from backend.endpoints.pipeline_orchestrator_service import (
+                executar_pipeline_lead_existente,
+            )
+
+            processed = 0
+            for (lead_id, nome, segmento, cidade, tenant_id) in rows:
+                try:
+                    with engine.connect() as c:
+                        c.execute(text("""
+                            UPDATE leads
+                            SET sdr_stage = 'processando', atualizado_em = NOW()
+                            WHERE id = :id AND user_id = :uid
+                        """), {"id": lead_id, "uid": tenant_id})
+                        c.commit()
+                    print(f"[Reset-T2] pipeline para lead {lead_id} ({nome})")
+                    _run_id = _uuid.uuid4().hex[:12]
+                    result = _loop.run_until_complete(
+                        executar_pipeline_lead_existente(
+                            lead_id=str(lead_id),
+                            tenant_id=int(tenant_id),
+                            forcar_renovacao=True,
+                            run_id=_run_id,
+                            job_id=None,
+                            skip_franz_outreach=False,
+                        )
+                    )
+                    print(f"[Reset-T2] lead {lead_id} OK: {result.get('sucesso', '?')}")
+                    processed += 1
+                except Exception as _pipe_err:
+                    print(f"[Reset-T2] lead {lead_id} ERRO: {_pipe_err}")
+                    try:
+                        with engine.connect() as c:
+                            c.execute(text("""
+                                UPDATE leads
+                                SET sdr_stage = 'reset_pipeline', atualizado_em = NOW()
+                                WHERE id = :id AND user_id = :uid
+                            """), {"id": lead_id, "uid": tenant_id})
+                            c.commit()
+                    except Exception:
+                        pass
+            print(f"[Reset-T2] ciclo completo: {processed}/{len(rows)} processados")
+        finally:
+            _loop.close()
+
+    t = threading.Thread(target=_thread_reprocess, daemon=True)
+    t.start()
+    return {'status': 'accepted', 'mensagem': 'Reprocessamento em background thread'}
 
 
 # Sprint 0.3 Custos
