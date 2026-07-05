@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException, Request
+from sqlalchemy import text
+from sqlalchemy.orm import Session
+
 from backend.core.auth import get_current_user
 from backend.core.database import get_db
 from backend.services.lead_supply_engine import lead_supply_engine as supply
@@ -146,7 +148,8 @@ async def discard_inventory_lead(
     db: Session = Depends(get_db),
     usuario: dict = Depends(get_current_user),
 ):
-    from backend.core.db_imports import Session, text  # noqa: F401  — B3 DRY
+    from sqlalchemy import text
+
     tenant_id = _tenant_id(usuario)
     supply.ensure_schema(db)
     result = db.execute(
