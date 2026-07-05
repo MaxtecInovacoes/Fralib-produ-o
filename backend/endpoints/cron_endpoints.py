@@ -4,11 +4,13 @@ Endpoints disparados por cron externo (crontab/PM2).
 Autenticacao por header X-Cron-Secret == CRON_SECRET do .env.
 Nunca expor sem secret - estes endpoints podem mandar emails em massa.
 """
+import asyncio
 import os
 import random
+import threading
 import time
 from datetime import datetime, timedelta
-from fastapi import APIRouter, Header, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Header, HTTPException
 from sqlalchemy import text
 
 from backend.core.database import engine
@@ -21,15 +23,13 @@ router = APIRouter(prefix='/api/cron', tags=['cron'])
 CRON_SECRET = os.getenv('CRON_SECRET', '')
 
 # Jitter humanizado entre envios do cron Franz (segundos).
-# Faixa [min, max) com distribuicao uniforme — gera cadencia irregular
-# (ex: 4min, 7min, 3min) em vez de rajada constante.
 # Meta: ~2 envios a cada 10 min, espalhados com intervalo de 3 a 7 min entre cada.
 FRANZ_CRON_JITTER_MIN_S = 180   # 3 min
 FRANZ_CRON_JITTER_MAX_S = 420   # 7 min
 
 # Teto de leads despachados por ciclo de cron.
 # 2 envios por ciclo * jitter de 3-7min = ~2 msg a cada 10 min com intervalos variados.
-# Cron ainda roda a cada 2 min (para processar filas menores), mas só despacha 2 leads.
+# Cron ainda roda a cada 10 min (ajustado do */2 original), mas sรณ despacha 2 leads.
 FRANZ_CRON_BATCH_LIMIT = 2
 
 
@@ -136,33 +136,37 @@ async def email_resumo_diario(x_cron_secret: str = Header(None, alias='X-Cron-Se
     return {'status': 'ok', 'enviados': enviados, 'pulados': pulados, 'erros': erros}
 
 
-@router.post('/despachar-fila-franz')
-async def despachar_fila_franz(x_cron_secret: str = Header(None, alias='X-Cron-Secret')):
-    """
-    Despacha leads com sdr_stage='pendente_wpp' (site pronto, fora do horário).
-    Chamado a cada 30min pelo PM2/cron. Respeita horário de atendimento (8h-21h Brasília).
-    """
-    _autorizar(x_cron_secret)
+# ═══════════════════════════════════════════════════════════════════════════
+# DESPACHAR FILA FRANZ — Background thread (nao bloqueia worker uvicorn)
+# ═══════════════════════════════════════════════════════════════════════════
 
+def _thread_despachar() -> None:
+    """Thread worker: processa leads sem bloquear o event loop do uvicorn."""
+    _loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(_loop)
+    try:
+        _loop.run_until_complete(_despachar_batch())
+    except Exception as exc:
+        print(f"[Cron Franz] thread fatal: {exc}")
+    finally:
+        _loop.close()
+
+
+async def _despachar_batch() -> None:
+    """Core async: itera leads, chama Franz (thread-safe), jitter entre envios."""
     import sys
     sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'agents'))
     from agents.sdr_langgraph import iniciar_contato, FranzInput, _escolher_variante
     from services.sdr_gateway import SdrMessageContext, evaluate_sdr_output, has_prior_outbound
     from backend.services.outbound_queue import enqueue_outbound
-    from backend.whatsapp_listener import is_tenant_connected
     from backend.services.sdr_helpers import _sdr_quality_hold_reason
-    # === Sprint 1.2 — Bug #3: lock por lead para evitar que 2 ciclos
-    # paralelos do cron processem o mesmo lead simultaneamente.
-    # Mesmo padrão de ``responder_lead`` em whatsapp_listener.
     from backend.agents.sdr_langgraph.lead_lock import _lead_lock_guard
 
     enviados = 0
     erros = 0
 
+    # Busca leads (usa pool de conexoes, nao mantem conexao aberta)
     with engine.connect() as conn:
-        # Buscar leads pendentes (site pronto mas não abordados)
-        # USA FOR UPDATE SKIP LOCKED para evitar que múltiplas instâncias do cron
-        # processem o mesmo lead simultaneamente
         rows = conn.execute(text("""
             SELECT l.id, l.nome, l.telefone, l.whatsapp, l.segmento, l.cidade,
                    l.site_url, l.rating, l.user_id, l.paleta_cores,
@@ -179,55 +183,58 @@ async def despachar_fila_franz(x_cron_secret: str = Header(None, alias='X-Cron-S
             FOR UPDATE SKIP LOCKED
         """), {"batch_limit": FRANZ_CRON_BATCH_LIMIT}).fetchall()
 
-        if not rows:
-            return {'status': 'ok', 'mensagem': 'Nenhum lead na fila', 'enviados': 0}
+    if not rows:
+        print("[Cron Franz] Nenhum lead na fila")
+        return
 
-        for row in rows:
-            (
-                lead_id, nome, telefone, whatsapp, segmento, cidade, site_url, rating,
-                user_id, paleta_cores, user_plano, user_status, user_trial_expires_at,
-            ) = row
+    for idx, row in enumerate(rows):
+        (
+            lead_id, nome, telefone, whatsapp, segmento, cidade, site_url, rating,
+            user_id, paleta_cores, user_plano, user_status, user_trial_expires_at,
+        ) = row
+        try:
+            if not plano_tem_sdr(user_plano, user_status, user_trial_expires_at):
+                print(f"[Cron Franz] {nome}: plano sem SDR")
+                continue
+
+            # Quality hold check — conexao propria
             try:
-                if not plano_tem_sdr(user_plano, user_status, user_trial_expires_at):
-                    continue
-                # === DV3 fix: bloquear leads com quality incident antes de gastar tokens
-                # do Franz. Worker.py ja fazia essa checagem (linha 647); o cron NAO
-                # validava, permitindo mensagens em leads quarantineados.
-                try:
+                with engine.connect() as conn:
                     _hold_reason = _sdr_quality_hold_reason(conn, str(lead_id), user_id)
                     if _hold_reason:
-                        print(f"[Cron Franz] lead {lead_id} bloqueado por quality incident: {_hold_reason}")
+                        print(f"[Cron Franz] {nome}: quality hold — {_hold_reason}")
                         continue
-                except Exception as _qh_err:
-                    print(f"[Cron Franz] erro ao checar quality hold: {_qh_err}")
-                    continue
-                franz_input = FranzInput(
-                    nome=nome or "", cidade=cidade or "", segmento=segmento or "",
-                    telefone=telefone or "", whatsapp=whatsapp or "",
-                    rating=rating or 0.0, site_url=site_url or "",
-                    score_caio=80, tier="STANDARD",
-                    paleta_cores=paleta_cores or {},
-                )
-                if not user_id:
-                    print(f"[Cron Franz] ⚠️ lead {lead_id} sem user_id — ignorado (multi-tenant)")
-                    continue
+            except Exception as _qh_err:
+                print(f"[Cron Franz] {nome}: quality hold erro: {_qh_err}")
 
-                # === Sprint 1.2 — Bug #3: lock por lead antes de gerar/enviar ===
-                # Se Redis offline, _lead_lock_guard lança RuntimeError (fail-closed).
-                # Pular este lead (não bloquear o batch inteiro).
-                try:
-                    with _lead_lock_guard(str(lead_id)):
-                        franz_output = iniciar_contato(franz_input, user_id=user_id)
-                except RuntimeError as _lock_err:
-                    print(f"[Cron Franz] 🔒 lock indisponível para lead {lead_id}: {_lock_err}")
-                    continue
-                except Exception as _lock_other_err:
-                    print(f"[Cron Franz] ⚠️ erro no lock para lead {lead_id}: {_lock_other_err}")
-                    continue
+            franz_input = FranzInput(
+                nome=nome or "", cidade=cidade or "", segmento=segmento or "",
+                telefone=telefone or "", whatsapp=whatsapp or "",
+                rating=rating or 0.0, site_url=site_url or "",
+                score_caio=80, tier="STANDARD",
+                paleta_cores=paleta_cores or {},
+            )
+            if not user_id:
+                print(f"[Cron Franz] {nome}: sem user_id")
+                continue
 
-                if not franz_output.reply or not franz_output.reply.strip():
-                    continue
+            # Lock + LLM (pode levar 20-60s)
+            try:
+                with _lead_lock_guard(str(lead_id)):
+                    franz_output = iniciar_contato(franz_input, user_id=user_id)
+            except RuntimeError as _lock_err:
+                print(f"[Cron Franz] {nome}: lock indisponivel: {_lock_err}")
+                continue
+            except Exception as _lock_err:
+                print(f"[Cron Franz] {nome}: lock erro: {_lock_err}")
+                continue
 
+            if not franz_output.reply or not franz_output.reply.strip():
+                print(f"[Cron Franz] {nome}: resposta vazia")
+                continue
+
+            # Guard check — conexao propria
+            with engine.connect() as conn:
                 prior_outbound = has_prior_outbound(conn, lead_id, user_id)
                 guard = evaluate_sdr_output(
                     SdrMessageContext(
@@ -249,14 +256,13 @@ async def despachar_fila_franz(x_cron_secret: str = Header(None, alias='X-Cron-S
                 )
                 if not guard.allowed:
                     erros += 1
-                    print(f"[Cron Franz] 🛑 Guard bloqueou {nome}: {guard.code} - {guard.reason}")
+                    print(f"[Cron Franz] {nome}: guard bloqueou — {guard.code}")
                     continue
 
-                # Primeiro contato nunca envia direto: entra na fila FIFO por tenant.
                 tel = _normalizar_phone(whatsapp or telefone or "")
                 if not tel:
                     erros += 1
-                    print(f"[Cron Franz] ⚠️ Lead {nome}: telefone ausente — pulando")
+                    print(f"[Cron Franz] {nome}: telefone ausente")
                     continue
 
                 msg_id = enqueue_outbound(
@@ -268,29 +274,49 @@ async def despachar_fila_franz(x_cron_secret: str = Header(None, alias='X-Cron-S
                     source="franz",
                     priority=10,
                 )
-                # Se msg_id eh None, a mensagem ja foi enviada anteriormente - pular
                 if msg_id is None:
                     erros += 1
-                    print(f"[Cron Franz] ⚠️ Lead {nome}: mensagem ja enviada anteriormente — pulando")
+                    print(f"[Cron Franz] {nome}: ja enviado")
                     continue
+
                 conn.execute(text(
                     "UPDATE leads SET sdr_stage='pending_sdr_send', ab_variant=:var, atualizado_em=NOW()::text WHERE id=:id AND user_id=:uid"
                 ), {"id": lead_id, "var": _escolher_variante(lead_id), "uid": user_id})
                 conn.commit()
                 enviados += 1
-                print(f"[Cron Franz] ✅ Enfileirado para {nome} ({tel[-4:]})")
+                print(f"[Cron Franz] {nome} ({tel[-4:]}): enfileirado")
 
-                # Jitter humanizado entre envios (so apos sucesso, so se sobrou lead)
-                if enviados < len(rows):
-                    delay = random.uniform(FRANZ_CRON_JITTER_MIN_S, FRANZ_CRON_JITTER_MAX_S)
-                    print(f"[Cron Franz] ⏳ aguardando {delay:.1f}s antes do proximo envio")
-                    time.sleep(delay)
-            except Exception as e:
-                erros += 1
-                print(f"[Cron Franz] ❌ Erro {nome}: {e}")
+            # Jitter entre leads — async, nao bloqueia event loop
+            if idx < len(rows) - 1:
+                delay = random.uniform(FRANZ_CRON_JITTER_MIN_S, FRANZ_CRON_JITTER_MAX_S)
+                print(f"[Cron Franz] aguardando {delay:.1f}s antes do proximo")
+                await asyncio.sleep(delay)
+        except Exception as e:
+            erros += 1
+            print(f"[Cron Franz] {nome}: erro: {e}")
 
-    return {'status': 'ok', 'enviados': enviados, 'erros': erros, 'total_fila': len(rows)}
+    print(f"[Cron Franz] ciclo completo: {enviados} enviados, {erros} erros")
 
+
+@router.post('/despachar-fila-franz')
+async def despachar_fila_franz(x_cron_secret: str = Header(None, alias='X-Cron-Secret')):
+    """
+    Despacha leads com sdr_stage='pendente_wpp' (site pronto, fora do horario).
+
+    Retorna 202 imediatamente — trabalho executado em thread separada.
+    Cadencia: 2 leads por ciclo com jitter 3-7min entre eles (~2 msg/10min).
+    """
+    _autorizar(x_cron_secret)
+
+    t = threading.Thread(target=_thread_despachar, daemon=True)
+    t.start()
+
+    return {'status': 'accepted', 'mensagem': 'Processamento em background thread'}
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# FOLLOW-UP FRANZ
+# ═══════════════════════════════════════════════════════════════════════════
 
 @router.post('/followup-franz')
 async def followup_franz(x_cron_secret: str = Header(None, alias='X-Cron-Secret')):
@@ -298,9 +324,9 @@ async def followup_franz(x_cron_secret: str = Header(None, alias='X-Cron-Secret'
     Envia follow-up para leads sem resposta.
 
     INTERVALOS CONFIGURADOS (em horas):
-    - 24h sem resposta após intro → follow-up 1
-    - 72h sem resposta após FU1 → follow-up 2
-    - 24h sem resposta após FU2 → marca como lost
+    - 24h sem resposta apos intro -> follow-up 1
+    - 72h sem resposta apos FU1 -> follow-up 2
+    - 24h sem resposta apos FU2 -> marca como lost
 
     Chamado a cada 1h pelo PM2/cron, mas só envia se passou o intervalo.
     """
@@ -322,8 +348,8 @@ async def followup_franz(x_cron_secret: str = Header(None, alias='X-Cron-Secret'
 
     with engine.connect() as conn:
         # ============================================================
-        # FOLLOW-UP 1: leads com 24h+ sem resposta após intro
-        # USA FOR UPDATE SKIP LOCKED para evitar duplicação entre instâncias do cron
+        # FOLLOW-UP 1: leads com 24h+ sem resposta apos intro
+        # USA FOR UPDATE SKIP LOCKED para evitar duplicacao entre instancias do cron
         # ============================================================
         rows_fu1 = conn.execute(text("""
             SELECT l.id, l.nome, l.telefone, l.whatsapp, l.segmento, l.cidade,
@@ -352,7 +378,7 @@ async def followup_franz(x_cron_secret: str = Header(None, alias='X-Cron-Secret'
         """), {"limite_24h": (datetime.utcnow() - timedelta(hours=24)).isoformat()}).fetchall()
 
         # ============================================================
-        # FOLLOW-UP 2: leads com 72h+ sem resposta após FU1
+        # FOLLOW-UP 2: leads com 72h+ sem resposta apos FU1
         # USA FOR UPDATE SKIP LOCKED
         # ============================================================
         rows_fu2 = conn.execute(text("""
@@ -371,7 +397,7 @@ async def followup_franz(x_cron_secret: str = Header(None, alias='X-Cron-Secret'
         """), {"limite_72h": (datetime.utcnow() - timedelta(hours=72)).isoformat()}).fetchall()
 
         # ============================================================
-        # LOST: leads com 24h+ sem resposta após FU2
+        # LOST: leads com 24h+ sem resposta apos FU2
         # USA FOR UPDATE SKIP LOCKED
         # ============================================================
         rows_lost = conn.execute(text("""
@@ -389,7 +415,7 @@ async def followup_franz(x_cron_secret: str = Header(None, alias='X-Cron-Secret'
             FOR UPDATE SKIP LOCKED
         """), {"limite_24h_lost": (datetime.utcnow() - timedelta(hours=24)).isoformat()}).fetchall()
 
-        # Combinar FU1 e FU2 (lost é tratado separado)
+        # Combinar FU1 e FU2 (lost e tratado separado)
         rows = list(rows_fu1) + list(rows_fu2)
 
         # Also fetch scheduled leads whose followup_date has arrived
@@ -414,19 +440,19 @@ async def followup_franz(x_cron_secret: str = Header(None, alias='X-Cron-Secret'
             return {'status': 'ok', 'mensagem': 'Nenhum lead para follow-up', 'enviados': 0}
 
         # ============================================================
-        # LOST: marcar leads sem resposta após 24h do FU2
+        # LOST: marcar leads sem resposta apos 24h do FU2
         # ============================================================
         for row in rows_lost:
             lead_id, nome, telefone, whatsapp, segmento, cidade, site_url, sdr_stage, user_id, atualizado_em = row
             if not user_id:
-                print(f"[Cron FU] ⚠️ lead {lead_id} sem user_id — pulando lost")
+                print(f"[Cron FU] : lead {lead_id} sem user_id — pulando lost")
                 continue
             conn.execute(text(
                 "UPDATE leads SET sdr_stage='lost', atualizado_em=NOW()::text WHERE id=:id AND user_id=:uid"
             ), {"id": lead_id, "uid": user_id})
             conn.commit()
             perdidos += 1
-            print(f"[Cron FU] 💀 {nome} marcado como lost (sem resposta)")
+            print(f"[Cron FU] {nome} marcado como lost (sem resposta)")
 
         for row in rows:
             lead_id, nome, telefone, whatsapp, segmento, cidade, site_url, sdr_stage, user_id, atualizado_em = row
@@ -446,33 +472,33 @@ async def followup_franz(x_cron_secret: str = Header(None, alias='X-Cron-Secret'
                 elif sdr_stage == 'followup_72h':
                     # Marcar como perdido (escopo ao tenant)
                     if not user_id:
-                        print(f"[Cron FU] ⚠️ lead {lead_id} sem user_id — pulando lost")
+                        print(f"[Cron FU] : lead {lead_id} sem user_id — pulando lost")
                         continue
                     conn.execute(text(
                         "UPDATE leads SET sdr_stage='lost', atualizado_em=NOW()::text WHERE id=:id AND user_id=:uid"
                     ), {"id": lead_id, "uid": user_id})
                     conn.commit()
                     perdidos += 1
-                    print(f"[Cron FU] 💀 {nome} marcado como lost (sem resposta)")
+                    print(f"[Cron FU] {nome} marcado como lost (sem resposta)")
                     continue
                 else:
                     continue
 
                 if not user_id:
-                    print(f"[Cron FU] ⚠️ lead {lead_id} sem user_id — pulando")
+                    print(f"[Cron FU] : lead {lead_id} sem user_id — pulando")
                     continue
                 tel = _normalizar_phone(whatsapp or telefone or "")
                 wpp_tenant = f"fralib_user_{user_id}"
                 if not tel:
                     erros += 1
-                    print(f"[Cron FU] ⚠️ lead {lead_id}: telefone ausente — pulando")
+                    print(f"[Cron FU] : lead {lead_id}: telefone ausente — pulando")
                     continue
 
                 if not _dentro_do_horario(user_id):
-                    print(f"[Cron FU] ⏰ lead {lead_id}: fora do horario do tenant {user_id} — aguardando janela")
+                    print(f"[Cron FU] : lead {lead_id}: fora do horario do tenant {user_id} — aguardando janela")
                     continue
                 if not is_tenant_connected(wpp_tenant):
-                    print(f"[Cron Franz] ⏸ Follow-up lead {lead_id}: tenant {wpp_tenant} sem WhatsApp conectado — pulando")
+                    print(f"[Cron Franz] : Follow-up lead {lead_id}: tenant {wpp_tenant} sem WhatsApp conectado — pulando")
                     continue
 
                 fu_output = followup_automatico(telefone or whatsapp or "", tipo, user_id=user_id)
@@ -501,13 +527,13 @@ async def followup_franz(x_cron_secret: str = Header(None, alias='X-Cron-Secret'
                 )
                 if not guard.allowed:
                     erros += 1
-                    print(f"[Cron FU] 🛑 Guard bloqueou {nome}: {guard.code} - {guard.reason}")
+                    print(f"[Cron FU] : Guard bloqueou {nome}: {guard.code} - {guard.reason}")
                     continue
 
                 ok, err = _send_sdr_direct(user_id, tel, fu_output.reply)
                 if not ok:
                     erros += 1
-                    print(f"[Cron FU] ❌ Falha envio direto {nome}: {err}")
+                    print(f"[Cron FU] : Falha envio direto {nome}: {err}")
                     continue
                 _salvar_interacao(lead_id, fu_output.reply, "saida", user_id)
                 conn.execute(text(
@@ -515,30 +541,30 @@ async def followup_franz(x_cron_secret: str = Header(None, alias='X-Cron-Secret'
                 ), {"id": lead_id, "stage": novo_stage, "uid": user_id})
                 conn.commit()
                 enviados += 1
-                print(f"[Cron FU] ✅ Enviado direto '{tipo}' para {nome}")
+                print(f"[Cron FU] : Enviado direto '{tipo}' para {nome}")
             except Exception as e:
                 erros += 1
-                print(f"[Cron FU] ❌ Erro {nome}: {e}")
+                print(f"[Cron FU] : Erro {nome}: {e}")
 
         # Processar leads agendados (scheduled) cuja data chegou
         for row in scheduled_rows:
             lead_id, nome, telefone, whatsapp, segmento, cidade, site_url, sdr_stage, user_id, atualizado_em = row
             try:
                 if not user_id:
-                    print(f"[Cron FU] ⚠️ lead {lead_id} sem user_id — pulando scheduled")
+                    print(f"[Cron FU] : lead {lead_id} sem user_id — pulando scheduled")
                     continue
                 tel = _normalizar_phone(whatsapp or telefone or "")
                 wpp_tenant = f"fralib_user_{user_id}"
                 if not tel:
                     erros += 1
-                    print(f"[Cron FU] ⚠️ scheduled lead {lead_id}: telefone ausente — pulando")
+                    print(f"[Cron FU] : scheduled lead {lead_id}: telefone ausente — pulando")
                     continue
 
                 if not _dentro_do_horario(user_id):
-                    print(f"[Cron FU] ⏰ Agendado lead {lead_id}: fora do horario do tenant {user_id} — aguardando janela")
+                    print(f"[Cron FU] : Agendado lead {lead_id}: fora do horario do tenant {user_id} — aguardando janela")
                     continue
                 if not is_tenant_connected(wpp_tenant):
-                    print(f"[Cron FU] ⏸ Agendado lead {lead_id}: tenant {wpp_tenant} sem WhatsApp conectado — pulando")
+                    print(f"[Cron FU] : Agendado lead {lead_id}: tenant {wpp_tenant} sem WhatsApp conectado — pulando")
                     continue
 
                 fu_output = followup_automatico(telefone or whatsapp or "", "scheduled", user_id=user_id)
@@ -567,13 +593,13 @@ async def followup_franz(x_cron_secret: str = Header(None, alias='X-Cron-Secret'
                 )
                 if not guard.allowed:
                     erros += 1
-                    print(f"[Cron FU] 🛑 Guard bloqueou scheduled {nome}: {guard.code} - {guard.reason}")
+                    print(f"[Cron FU] : Guard bloqueou scheduled {nome}: {guard.code} - {guard.reason}")
                     continue
 
                 ok, err = _send_sdr_direct(user_id, tel, fu_output.reply)
                 if not ok:
                     erros += 1
-                    print(f"[Cron FU] ❌ Falha envio direto scheduled {nome}: {err}")
+                    print(f"[Cron FU] : Falha envio direto scheduled {nome}: {err}")
                     continue
                 _salvar_interacao(lead_id, fu_output.reply, "saida", user_id)
                 # Volta pro stage anterior ao scheduled (discovery ou qualify)
@@ -582,10 +608,10 @@ async def followup_franz(x_cron_secret: str = Header(None, alias='X-Cron-Secret'
                 ), {"id": lead_id, "uid": user_id})
                 conn.commit()
                 enviados += 1
-                print(f"[Cron FU] 📅 Enviado direto retomado: {nome}")
+                print(f"[Cron FU] : Enviado direto retomado: {nome}")
             except Exception as e:
                 erros += 1
-                print(f"[Cron FU] ❌ Erro scheduled {nome}: {e}")
+                print(f"[Cron FU] : Erro scheduled {nome}: {e}")
 
     return {'status': 'ok', 'enviados': enviados, 'perdidos': perdidos, 'erros': erros, 'total': len(rows) + len(scheduled_rows)}
 
@@ -719,9 +745,9 @@ async def processar_fila_outbound(
 
 @router.get('/queue-stats')
 async def queue_stats(x_cron_secret: str = Header(None, alias='X-Cron-Secret')):
-    """Retorna estatísticas da fila outbound para monitoramento.
+    """Retorna estatisticas da fila outbound para monitoramento.
 
-    Inclui contadores, alertas e métricas de backlog.
+    Inclui contadores, alertas e metricas de backlog.
     Use para Grafana/Prometheus ou dashboards de ops.
     """
     _autorizar(x_cron_secret)
@@ -730,11 +756,11 @@ async def queue_stats(x_cron_secret: str = Header(None, alias='X-Cron-Secret')):
         from backend.services.outbound_queue import get_queue_stats
         stats = get_queue_stats(engine)
 
-        # Log de alerta se necessário
+        # Log de alerta se necessario
         if stats.get("backlog_alert"):
-            print(f"[Queue Stats] ⚠️ ALERTA: backlog crescente ({stats['total_pending']} pending)")
+            print(f"[Queue Stats] : ALERTA: backlog crescente ({stats['total_pending']} pending)")
         if stats.get("dlq_alert"):
-            print(f"[Queue Stats] 🔴 ALERTA: DLQ com {stats['total_dlq']} mensagens")
+            print(f"[Queue Stats] : ALERTA: DLQ com {stats['total_dlq']} mensagens")
 
         return {
             "status": "ok",
@@ -785,7 +811,7 @@ async def health_check(x_cron_secret: str = Header(None, alias='X-Cron-Secret'))
         )
         redis_status = get_redis_status()
         if not redis_status.get("available"):
-            # Tenta recovery automático
+            # Tenta recovery automatico
             recovered = force_redis_reconnect()
             redis_status = get_redis_status()
             redis_status["auto_recovery_attempted"] = True
@@ -819,18 +845,18 @@ async def health_check(x_cron_secret: str = Header(None, alias='X-Cron-Secret'))
     )
     result["status"] = "healthy" if all_healthy else "degraded"
 
-    # Log se não está saudável
+    # Log se nao esta saudavel
     if not all_healthy:
-        print(f"[Health] ⚠️ Sistema em modo DEGRADADO: {result}")
+        print(f"[Health] : Sistema em modo DEGRADADO: {result}")
 
     return result
 
 
 @router.post('/redis-reconnect')
 async def redis_reconnect(x_cron_secret: str = Header(None, alias='X-Cron-Secret')):
-    """Força tentativa de reconexão ao Redis.
+    """Forca tentativa de reconexao ao Redis.
 
-    Útil para recovery manual via cron quando auto-recovery falha.
+    Util para recovery manual via cron quando auto-recovery falha.
     """
     _autorizar(x_cron_secret)
 
@@ -864,7 +890,7 @@ async def compute_phone_health_score(x_cron_secret: str = Header(None, alias='X-
     try:
         snapshots = compute_all_tenants(engine)
     except Exception as e:
-        logger.exception("compute_phone_health_score falhou")
+        print(f"compute_phone_health_score falhou: {e}")
         return {"status": "error", "message": str(e)}
 
     by_status: dict[str, int] = {}
@@ -894,7 +920,7 @@ async def refresh_provider_health(x_cron_secret: str = Header(None, alias='X-Cro
     try:
         summary = refresh_all_providers(engine)
     except Exception as e:
-        logger.exception("refresh_provider_health falhou")
+        print(f"refresh_provider_health falhou: {e}")
         return {"status": "error", "message": str(e)}
 
     return {
@@ -906,17 +932,16 @@ async def refresh_provider_health(x_cron_secret: str = Header(None, alias='X-Cro
     }
 
 
-# ── Sprint 0.3 — Custos ─────────────────────────────────────────────────
-
+# Sprint 0.3 Custos
 
 @router.post('/refresh-facebook-ads-spend')
 async def refresh_facebook_ads_spend(
     days: int = 1,
     x_cron_secret: str = Header(None, alias='X-Cron-Secret'),
 ) -> dict:
-    """Busca spend FB Ads do(s) último(s) N dia(s) e grava cost_events.
+    """Busca spend FB Ads do(s) ultimo(s) N dia(s) e grava cost_events.
 
-    Lê credenciais de env (FB_ACCESS_TOKEN, FB_AD_ACCOUNT_ID). Sem credenciais,
+    Le credenciais de env (FB_ACCESS_TOKEN, FB_AD_ACCOUNT_ID). Sem credenciais,
     retorna 200 com status='skipped' e mensagem clara.
 
     Cron sugerido: ``0 1 * * * curl -X POST -H "X-Cron-Secret: $CRON_SECRET" \\
@@ -938,9 +963,9 @@ async def refresh_facebook_ads_spend(
             FacebookAdsService,
         )
         from backend.agents.cost_tracker import record_cost_event
-    except Exception as e:
-        logger.exception("imports falharam em refresh_facebook_ads_spend")
-        return {"status": "error", "reason": f"imports: {e!s}"}
+    except Exception as exc:
+        print(f"imports falharam em refresh_facebook_ads_spend: {exc}")
+        return {"status": "error", "reason": f"imports: {exc!s}"}
 
     persisted = 0
     skipped = 0
@@ -953,12 +978,11 @@ async def refresh_facebook_ads_spend(
     except FacebookAdsConfigError as fc:
         return {"status": "skipped", "reason": str(fc)}
     except Exception as exc:
-        logger.exception("get_overall_insights falhou")
+        print(f"get_overall_insights falhou: {exc}")
         return {"status": "error", "reason": f"fb_api: {exc!s}"}
 
     total_spend_cents = int(insights.get("total_spend", 0) or 0)
     spend_brl = total_spend_cents / 100.0
-    # FB Ads cobra em BRL (currency BRL por default)
     spend_usd = 0.0
     days_period = int(insights.get("period_days", days) or days)
 
@@ -972,9 +996,7 @@ async def refresh_facebook_ads_spend(
             status="success",
             metadata={
                 "days": days_period,
-                "total_impressions": int(
-                    insights.get("total_impressions", 0) or 0
-                ),
+                "total_impressions": int(insights.get("total_impressions", 0) or 0),
                 "total_clicks": int(insights.get("total_clicks", 0) or 0),
                 "total_leads": int(insights.get("total_leads", 0) or 0),
                 "campaigns_count": len(insights.get("campaigns", []) or []),
@@ -1002,7 +1024,7 @@ async def refresh_facebook_ads_spend(
 async def refresh_usd_brl_rate(
     x_cron_secret: str = Header(None, alias='X-Cron-Secret'),
 ) -> dict:
-    """Atualiza cotação USD/BRL via API pública e grava 1 cost_event.
+    """Atualiza cotacao USD/BRL via API publica e grava 1 cost_event.
 
     Cron sugerido: ``0 8 * * * curl -X POST -H "X-Cron-Secret: $CRON_SECRET" \\
         https://api.fralib.com/api/cron/refresh-usd-brl-rate``
@@ -1011,12 +1033,12 @@ async def refresh_usd_brl_rate(
     try:
         from backend.services.currency_service import refresh_usd_brl_rate as _fn
     except Exception as exc:
-        logger.exception("imports falharam em refresh_usd_brl_rate")
+        print(f"imports falharam em refresh_usd_brl_rate: {exc}")
         return {"status": "error", "reason": f"imports: {exc!s}"}
 
     try:
         result = _fn(engine)
         return {"status": "ok", **result}
     except Exception as exc:
-        logger.exception("refresh_usd_brl_rate falhou")
+        print(f"refresh_usd_brl_rate falhou: {exc}")
         return {"status": "error", "reason": str(exc)}
