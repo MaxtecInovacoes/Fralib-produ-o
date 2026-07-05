@@ -2,6 +2,9 @@ from fastapi import APIRouter, Depends
 from backend.core.auth import get_current_user
 import os, requests
 from datetime import datetime
+
+from backend.utils.time import now_iso_utc  # noqa: E402  — M14 DRY
+
 from backend.core.database import engine
 from sqlalchemy import text
 
@@ -47,7 +50,7 @@ def _fetch_limits():
                 reset_secs = 60
         reset_min = max(1, reset_secs // 60)
         result_429 = {
-            'timestamp': datetime.now(timezone.utc).isoformat(),
+            'timestamp': now_iso_utc(),
             'reset_at': reset_at,
             'input':    {'limit': int(h.get('Anthropic-Ratelimit-Input-Tokens-Limit', 200000)), 'remaining': 0, 'used_pct': 100},
             'output':   {'limit': int(h.get('Anthropic-Ratelimit-Output-Tokens-Limit', 128000)), 'remaining': 0, 'used_pct': 100},
@@ -89,7 +92,7 @@ def _fetch_limits():
         alert = {'level': 'ok',      'msg': 'Limite saudavel.'}
 
     result = {
-        'timestamp': datetime.now(timezone.utc).isoformat(),
+        'timestamp': now_iso_utc(),
         'reset_at': reset_at,
         'input':    {'limit': input_limit,  'remaining': input_remaining,  'used_pct': inp_pct},
         'output':   {'limit': output_limit, 'remaining': output_remaining, 'used_pct': out_pct},

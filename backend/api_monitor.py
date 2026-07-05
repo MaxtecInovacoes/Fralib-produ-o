@@ -6,6 +6,8 @@ Salva historico no banco e exibe dashboard
 """
 
 import os, sys, requests, psycopg2, re, json, logging
+
+from backend.utils.time import now_iso_utc  # noqa: E402  — M14 DRY
 from datetime import datetime, timezone
 from dotenv import load_dotenv
 
@@ -52,7 +54,7 @@ def check_limits():
     resp = requests.post(url, headers=headers, json=payload, timeout=15)
     h = resp.headers
     return {
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": now_iso_utc(),
         "status": resp.status_code,
         "input_limit": int(h.get("Anthropic-Ratelimit-Input-Tokens-Limit", 0)),
         "input_remaining": int(h.get("Anthropic-Ratelimit-Input-Tokens-Remaining", 0)),

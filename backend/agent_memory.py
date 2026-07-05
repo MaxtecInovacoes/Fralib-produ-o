@@ -14,6 +14,8 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 
+from backend.utils.time import now_iso_utc  # noqa: E402  — M14 DRY
+
 logger = logging.getLogger("agent_memory")
 
 MEMORY_DIR = Path(__file__).parent / "memory"
@@ -33,8 +35,8 @@ class MemoryEntry:
     vezes_usado: int = 0
     vezes_sucesso: int = 0
     vezes_falha: int = 0
-    criado_em: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
-    atualizado_em: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    criado_em: str = field(default_factory=now_iso_utc)
+    atualizado_em: str = field(default_factory=now_iso_utc)
     fonte: str = ""
 
     @property
@@ -135,7 +137,7 @@ class CoreMemory:
             existing = next((e for e in self.entries if e.conteudo == entry.conteudo), None)
             if existing:
                 existing.confianca = max(existing.confianca, entry.confianca)
-                existing.atualizado_em = datetime.now(timezone.utc).isoformat()
+                existing.atualizado_em = now_iso_utc()
                 self._salvar()
                 return
 

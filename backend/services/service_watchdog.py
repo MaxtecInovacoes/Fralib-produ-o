@@ -18,6 +18,8 @@ import logging
 import os
 import subprocess
 import time
+
+from backend.utils.time import now_iso_utc  # noqa: E402  — M14 DRY
 from datetime import datetime, timezone
 
 logger = logging.getLogger("uvicorn.service_watchdog")
@@ -129,7 +131,7 @@ def run_watchdog_cycle() -> dict:
         "already_ok": already_ok,
         "reenabled": reenabled,
         "restarted": restarted,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": now_iso_utc(),
     }
 
 
