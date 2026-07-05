@@ -40,7 +40,7 @@ PROOF_STYLES = ["score_wall", "quote_spotlight", "card_marquee", "editorial_case
 SURFACE_STYLES = ["glass", "solid", "outline", "soft_tint"]
 
 # Visual lane tokens (resolved later per niche/subniche)
-VISUAL_LANES = ["lane_a", "lane_b", "lane_c", "lane_d", "lane_e", "lane_f", "lane_g", "lane_h"]
+VISUAL_LANES = ["lane_a", "lane_b", "lane_c", "lane_d", "lane_e", "lane_f", "lane_g", "lane_h", "lane_i", "lane_j", "lane_k", "lane_l", "lane_m", "lane_n", "lane_o", "lane_p"]
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -190,8 +190,12 @@ def _seeded_choice(options: list[str], seed: int, offset: int = 0) -> str:
     # Combine seed and offset using a simple hash-like operation
     combined = seed + offset
 
-    # Use modulo to get index
-    index = combined % len(options)
+    # Use hash bem distribuido: XOR do seed com shifts e multiplicacao.
+    # O multiplicative hash sozinho colapsa seeds diferentes em mesmo modulo
+    # quando len(options) e potencia de 2. Mistura com XOR espalha melhor.
+    h = (seed * 2654435761) ^ (seed >> 33)
+    h = (h * 0xFF51AFD7ED558CCD) & 0xFFFFFFFFFFFFFFFF
+    index = h % len(options)
 
     return options[index]
 
