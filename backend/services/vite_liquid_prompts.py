@@ -32,7 +32,7 @@ TEMPERATURE_CONFIG: dict[str, dict[str, Any]] = {
     "agente_variacao": {
         "temperature": 0.7,
         "reasoning": "Alta criatividade para misturar variantes de forma inesperada",
-        "description": "Para agente de variação - usado quando gerando创意 options",
+        "description": "Para agente de variacao - usado quando gerando opcoes criativas",
     },
     "agente_variacao_max": {
         "temperature": 0.8,
