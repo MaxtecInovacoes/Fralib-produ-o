@@ -1041,9 +1041,6 @@ async def reprocessar_reset_tenant2(x_cron_secret: str = Header(None, alias='X-C
                     pass
         print(f"[Reset-T2] ciclo completo: {enqueued}/{len(rows)} jobs enfileirados")
 
-        finally:
-            _loop.close()
-
     t = threading.Thread(target=_thread_reprocess, daemon=True)
     t.start()
     return {'status': 'accepted', 'mensagem': 'Reprocessamento em background thread'}
