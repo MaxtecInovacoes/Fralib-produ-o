@@ -974,69 +974,73 @@ async def reprocessar_reset_tenant2(x_cron_secret: str = Header(None, alias='X-C
 
     def _thread_reprocess():
         import uuid as _uuid
-        sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'agents'))
+        from backend.core.database import SessionLocal
+        from backend.core.job_queue import enqueue
 
-        _loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(_loop)
-        try:
-            with engine.connect() as conn:
-                rows = conn.execute(text("""
-                    SELECT id, nome, segmento, cidade, user_id
-                    FROM leads
-                    WHERE user_id = 2
-                      AND sdr_stage = 'reset_pipeline'
-                      AND site_url = '/RESET-PENDING/'
-                      AND status = 'concluido'
-                    ORDER BY atualizado_em ASC
-                    LIMIT :lim
-                    FOR UPDATE SKIP LOCKED
-                """), {"lim": RESET_BATCH}).fetchall()
+        with SessionLocal() as _db:
+            rows = _db.execute(text("""
+                SELECT id, nome, segmento, cidade, user_id
+                FROM leads
+                WHERE user_id = 2
+                  AND sdr_stage = 'reset_pipeline'
+                  AND site_url = '/RESET-PENDING/'
+                  AND status = 'concluido'
+                ORDER BY atualizado_em ASC
+                LIMIT :lim
+                FOR UPDATE SKIP LOCKED
+            """), {"lim": RESET_BATCH}).fetchall()
 
-            if not rows:
-                print("[Reset-T2] nenhum lead na fila")
-                return
+        if not rows:
+            print("[Reset-T2] nenhum lead na fila")
+            return
 
-            from backend.endpoints.pipeline_orchestrator_service import (
-                executar_pipeline_lead_existente,
-            )
+        enqueued = 0
+        for (lead_id, nome, segmento, cidade, tenant_id) in rows:
+            try:
+                # Marcar como processando
+                with engine.connect() as _c:
+                    _c.execute(text("""
+                        UPDATE leads
+                        SET sdr_stage = 'processando', atualizado_em = NOW()
+                        WHERE id = :id AND user_id = :uid
+                    """), {"id": lead_id, "uid": tenant_id})
+                    _c.commit()
 
-            processed = 0
-            for (lead_id, nome, segmento, cidade, tenant_id) in rows:
+                # Enfileirar job — worker vai pegar e processar com loop propio
+                _run_id = _uuid.uuid4().hex[:12]
+                _idem = f"reset-t2-{lead_id}-{_run_id}"
+                _payload = {
+                    "_lead_id_existente": str(lead_id),
+                    "_run_id": _run_id,
+                    "_from_reset": True,
+                }
+                with SessionLocal() as _db:
+                    _job_id = enqueue(
+                        _db,
+                        tipo="pipeline_lead",
+                        payload=_payload,
+                        tenant_id=int(tenant_id),
+                        max_attempts=2,
+                        idempotency_key=_idem,
+                        priority=1,
+                        run_id=_run_id,
+                    )
+                print(f"[Reset-T2] enqueued job {_job_id} para lead {lead_id} ({nome})")
+                enqueued += 1
+            except Exception as _e:
+                print(f"[Reset-T2] lead {lead_id} ERRO enqueue: {_e}")
                 try:
-                    with engine.connect() as c:
-                        c.execute(text("""
+                    with engine.connect() as _c:
+                        _c.execute(text("""
                             UPDATE leads
-                            SET sdr_stage = 'processando', atualizado_em = NOW()
+                            SET sdr_stage = 'reset_pipeline', atualizado_em = NOW()
                             WHERE id = :id AND user_id = :uid
                         """), {"id": lead_id, "uid": tenant_id})
-                        c.commit()
-                    print(f"[Reset-T2] pipeline para lead {lead_id} ({nome})")
-                    _run_id = _uuid.uuid4().hex[:12]
-                    result = _loop.run_until_complete(
-                        executar_pipeline_lead_existente(
-                            lead_id=str(lead_id),
-                            tenant_id=int(tenant_id),
-                            forcar_renovacao=True,
-                            run_id=_run_id,
-                            job_id=None,
-                            skip_franz_outreach=False,
-                        )
-                    )
-                    print(f"[Reset-T2] lead {lead_id} OK: {result.get('sucesso', '?')}")
-                    processed += 1
-                except Exception as _pipe_err:
-                    print(f"[Reset-T2] lead {lead_id} ERRO: {_pipe_err}")
-                    try:
-                        with engine.connect() as c:
-                            c.execute(text("""
-                                UPDATE leads
-                                SET sdr_stage = 'reset_pipeline', atualizado_em = NOW()
-                                WHERE id = :id AND user_id = :uid
-                            """), {"id": lead_id, "uid": tenant_id})
-                            c.commit()
-                    except Exception:
-                        pass
-            print(f"[Reset-T2] ciclo completo: {processed}/{len(rows)} processados")
+                        _c.commit()
+                except Exception:
+                    pass
+        print(f"[Reset-T2] ciclo completo: {enqueued}/{len(rows)} jobs enfileirados")
+
         finally:
             _loop.close()
 
