@@ -9,6 +9,8 @@ from __future__ import annotations
 import re
 import unicodedata
 
+from backend.agents._text_utils import whitespace_normalize  # noqa: E402  — M13 DRY
+
 
 SEGMENT_HINTS_BY_NAME = {
     "crosstraining": "crossfit",
@@ -31,7 +33,7 @@ def normalize_identity_text(value: str) -> str:
     text = unicodedata.normalize("NFKD", str(value or ""))
     text = text.encode("ascii", "ignore").decode("ascii")
     text = re.sub(r"[^a-zA-Z0-9]+", " ", text).lower()
-    return re.sub(r"\s+", " ", text).strip()
+    return whitespace_normalize(text)
 
 
 def inferir_segmento_por_nome(nome: str, segmento_atual: str = "") -> str:

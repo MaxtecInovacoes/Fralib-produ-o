@@ -55,3 +55,28 @@ def strip_code_fence(text: str) -> str:
     text = _FENCE_OPEN_RE.sub("", text)
     text = _FENCE_CLOSE_RE.sub("", text)
     return text.strip()
+
+
+# ── M13: whitespace_normalize ─────────────────────────────────────────────────
+def whitespace_normalize(text: str, *, lower: bool = False, strip: bool = True) -> str:
+    """Collapse runs of whitespace to a single space, optionally strip + lowercase.
+
+    Replaces 27+ inline ``re.sub(r"\\s+", " ", text).strip()`` patterns across
+    backend/agents, backend/services, backend/utils. Uses the pre-compiled
+    ``_WHITESPACE_RE`` for performance.
+
+    Args:
+        text: Input string (None-safe, coerced to "").
+        lower: If True, also lowercases the result.
+        strip: If True (default), strips leading/trailing whitespace after
+            collapsing.
+
+    Returns:
+        Whitespace-normalized string.
+    """
+    text = _WHITESPACE_RE.sub(" ", text or "")
+    if strip:
+        text = text.strip()
+    if lower:
+        text = text.lower()
+    return text

@@ -13,6 +13,8 @@ import hashlib
 import random
 import re
 from dataclasses import dataclass
+
+from backend.agents._text_utils import whitespace_normalize  # noqa: E402  — M13 DRY
 from typing import Any, Dict, Optional
 
 
@@ -159,7 +161,7 @@ def _words(text: str) -> set[str]:
 
 def _trigrams(text: str) -> set[str]:
     text = re.sub(r"[^a-z0-9\s]", " ", text)
-    text = re.sub(r"\s+", " ", text).strip()
+    text = whitespace_normalize(text)
     words = text.split()
     if not words:
         return set()

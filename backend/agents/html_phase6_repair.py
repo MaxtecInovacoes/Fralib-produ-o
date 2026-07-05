@@ -11,6 +11,8 @@ from __future__ import annotations
 import html as _html
 import re
 
+from backend.agents._text_utils import whitespace_normalize  # noqa: E402  — M13 DRY
+
 from backend.domain.phase6_contract import (
     phase6_business_segment as _shared_phase6_business_segment,
     phase6_business_subniche as _shared_phase6_business_subniche,
@@ -367,7 +369,7 @@ def _get(obj, *names, default=None):
 def _normalize(value) -> str:
     text = str(value or "")
     text = re.sub(r"[^a-zA-Z0-9]+", " ", text).lower()
-    return re.sub(r"\s+", " ", text).strip()
+    return whitespace_normalize(text)
 
 
 def _publication_business_from_prd(prd) -> dict[str, str]:
