@@ -53,10 +53,15 @@ def contains_internal_instruction(text: str) -> bool:
 
 
 def extract_emails(value) -> list[str]:
-    """Extract email addresses from text."""
-    if isinstance(value, (list, tuple, set)):
-        value = " ".join(str(v) for v in value)
-    return re.findall(r"[\w.\-+]+@[\w.\-]+\.[a-zA-Z]{2,}", str(value or ""))
+    """Extract email addresses from text.
+
+    Compat shim — fonte em backend.utils.emails.extract_emails (M9 DRY).
+    Regex antiga `[\w.\-+]+` quebrava emails com `%` (ex: `user%tag@host.io`
+    virava `tag@host.io`). Canônica usa `[a-zA-Z0-9._%+-]+` que captura o
+    local part completo, alinhado com RFC 5321.
+    """
+    from backend.utils.emails import extract_emails as _extract  # noqa: E402  — M9 DRY shim
+    return _extract(value)
 
 
 def validate_emails(public_text: str, allowed_emails: set, found_emails: set) -> list[str]:

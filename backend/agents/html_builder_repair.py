@@ -17,6 +17,8 @@ import json
 import re
 import unicodedata
 
+from backend.agents._text_utils import whitespace_normalize  # noqa: E402  — M13 DRY
+
 from backend.agents.html_media_validator import (
     media_urls_from_html,
     minimum_required_media,
@@ -361,7 +363,7 @@ def _normalize(value) -> str:
     text = unicodedata.normalize("NFKD", text)
     text = text.encode("ascii", "ignore").decode("ascii")
     text = re.sub(r"[^a-zA-Z0-9]+", " ", text).lower()
-    return re.sub(r"\s+", " ", text).strip()
+    return whitespace_normalize(text)
 
 
 def _visible_text(html: str) -> str:

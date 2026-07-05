@@ -22,6 +22,8 @@ import time
 from datetime import datetime, timezone, timedelta
 from typing import Optional
 
+from backend.utils.time import now_iso_utc  # noqa: E402  — M14 DRY
+
 from backend.core.db_imports import Session, text  # noqa: F401  — B3 DRY
 logger = logging.getLogger("fralib.lead_supply_watchdog")
 
@@ -349,7 +351,7 @@ def diagnose_all_tenants(db: Session) -> dict:
         "totals": totals,
         "events_24h": events_24h,
         "tenants": tenants,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": now_iso_utc(),
     }
 
 
@@ -578,7 +580,7 @@ def run_once(with_recovery: bool = False) -> int:
     Returns:
         0 se tudo ok, 1 se houve alertas
     """
-    print(f"[LeadSupplyWatchdog] Running health check at {datetime.now(timezone.utc).isoformat()}")
+    print(f"[LeadSupplyWatchdog] Running health check at {now_iso_utc()}")
 
     if with_recovery:
         results = run_with_recovery()

@@ -14,6 +14,8 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 from datetime import datetime, timezone
+
+from backend.utils.time import now_iso_utc  # noqa: E402  — M14 DRY
 from typing import Optional
 
 from .intent_classifier import IntentResult
@@ -144,6 +146,6 @@ def update_lead_memory_after_turn(
     memory.turn_count = (memory.turn_count or 0) + 1
     memory.last_intent = orchestrator_decision.intent.value
     memory.last_intent_confidence = orchestrator_decision.intent_confidence
-    memory.last_lead_response_at = datetime.now(timezone.utc).isoformat()
+    memory.last_lead_response_at = now_iso_utc()
     # Atualiza last_message_received pra usar nas proximas composicoes
     # (mas o agent.py cuida disso via update_history; aqui so metadados de estado)

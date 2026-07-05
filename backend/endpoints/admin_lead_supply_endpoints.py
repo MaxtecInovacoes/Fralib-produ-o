@@ -9,6 +9,8 @@ import asyncio
 import json
 import logging
 from datetime import datetime, timezone
+
+from backend.utils.time import now_iso_utc  # noqa: E402  — M14 DRY
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Response
@@ -93,7 +95,7 @@ async def get_lead_supply_health(
         "activity_24h": diagnostico.get("events_24h", {}),
         "totals": diagnostico.get("totals", {}),
         "tenants": diagnostico.get("tenants", []),
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": now_iso_utc(),
     }
 
 
@@ -236,7 +238,7 @@ async def run_diagnose(
     return {
         "alerts": [a.to_dict() for a in alerts],
         "alert_count": len(alerts),
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": now_iso_utc(),
     }
 
 

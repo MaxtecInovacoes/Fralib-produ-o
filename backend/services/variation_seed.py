@@ -461,7 +461,7 @@ def test_determinism() -> dict[str, Any]:
             "segment": "barbearia",
             "city": "Sao Paulo",
         },
-        "seed": "固定种子123",  # Explicit fixed seed
+        "seed": "fixed-seed-123",  # Explicit fixed seed
     }
 
     variation_1a = get_variation(barbearia_facts_1)

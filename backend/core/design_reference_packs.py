@@ -10,9 +10,21 @@ from __future__ import annotations
 import hashlib
 import json
 import random
+import re
 from copy import deepcopy
 from pathlib import Path
 from typing import Any
+
+# Bloqueia caracteres CJK (chinês/japonês/coreano) de vazarem pros prompts
+# do LLM e, em última instância, pro HTML do site gerado.
+_CJK_PATTERN = re.compile(r"[一-鿿㐀-䶿豈-﫿぀-ヿ゠-ヿ]")
+
+
+def _strip_cjk(value: Any) -> Any:
+    """Remove caracteres CJK de strings. Não recursivo para preservar estrutura."""
+    if not isinstance(value, str):
+        return value
+    return _CJK_PATTERN.sub("", value).strip()
 
 try:
     from agents.design_context import DIRECOES_VISUAIS
@@ -216,7 +228,7 @@ def _reference_summary(slug: str, role: str, index: dict[str, dict[str, Any]]) -
         "role": role,
         "category": idx.get("category") or "",
         "name": data.get("nome") or idx.get("slug") or slug,
-        "vibe": data.get("vibe") or idx.get("atmosphere") or "",
+        "vibe": _strip_cjk(data.get("vibe") or idx.get("atmosphere") or ""),
         "font_heading": data.get("font_heading") or idx.get("font_primary") or "",
         "font_body": data.get("font_body") or "",
         "tokens": deepcopy(data.get("tokens") or {}),

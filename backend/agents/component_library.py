@@ -13,6 +13,8 @@ import html
 import re
 from typing import Any
 
+from backend.agents._text_utils import whitespace_normalize  # noqa: E402  — M13 DRY
+
 
 HERO_COMPONENT_BY_ARCHETYPE = {
     "BOLD_ENERGY": ["HeroBoldCampaign01", "HeroBoldPoster02", "HeroBoldSplit03"],
@@ -238,7 +240,7 @@ def _palette_id(facts: dict[str, Any]) -> str:
 
 
 def _segment_label(segment: str) -> str:
-    return re.sub(r"\s+", " ", str(segment or "negócio local")).strip()
+    return whitespace_normalize(str(segment or "negócio local"))
 
 
 def _whatsapp_link(phone: str) -> str:

@@ -648,7 +648,26 @@ def _clean_copy_value(value: Any, *, limit: int = 220) -> str:
     text = re.sub(r"\s+", " ", text).strip()
     if re.search(r"[\u3400-\u9fff\u3040-\u30ff\uac00-\ud7af]", text):
         return ""
-    if re.search(r"\b(cuenta|entrenamiento|sudor|alcanzar|rutina de entrenamiento)\b", text, flags=re.IGNORECASE):
+    # Bloqueia vazamento de outros idiomas (ES/IT/FR/DE) \u2014 site alvo \u00e9 PT-BR.
+    # Se 2+ desses marcadores aparecerem, o copy veio em outro idioma: descarta.
+    _foreign_markers = (
+        r"\b(cuenta|entrenamiento|sudor|alcanzar|rutina de entrenamiento)\b",  # ES
+        r"\b(nutrizione|servizi|prevenzione|benessere|salute|consulto)\b",     # IT
+        r"\b(aujourd'hui|merci|d\u00e9j\u00e0|vous \u00eates|renseignement|prise de rendez-vous)\b",  # FR
+        r"\b(heutzutage|terminvereinbarung|behandlung|untersuchung)\b",        # DE
+        r"\b(appointment today|call us today|get in touch|book now)\b",       # EN
+    )
+    foreign_hits = sum(
+        1 for p in _foreign_markers
+        if re.search(p, text, flags=re.IGNORECASE)
+    )
+    if foreign_hits >= 2:
+        return ""
+    # Bloqueia tamb\u00e9m copy que mistura IT/ES em headline curta (titulos de servico)
+    if len(text) <= 60 and any(
+        re.search(p, text, flags=re.IGNORECASE)
+        for p in _foreign_markers
+    ):
         return ""
     return text[:limit].strip()
 
@@ -3910,6 +3929,7 @@ def _cinematic_copy(facts: dict[str, Any]) -> dict[str, Any]:
     rating = str(business.get("rating") or "")
     reviews = str(business.get("total_avaliacoes") or business.get("reviews_count") or "")
     address = str(business.get("address") or business.get("endereco") or "")
+    horarios = str(business.get("horarios") or business.get("hours") or facts.get("horarios") or "")
     maps_href, maps_embed_src = _build_google_maps_targets(
         name=name,
         city=city,
@@ -4273,6 +4293,7 @@ def _cinematic_copy(facts: dict[str, Any]) -> dict[str, Any]:
         "rating": rating,
         "reviews": reviews,
         "address": address,
+        "horarios": horarios,
         "mapsHref": maps_href,
         "mapsEmbedSrc": maps_embed_src,
         "hero_badge": _fmt(lane_copy.get("hero_badge", ""), f"{segment} em {city}"),
@@ -4818,6 +4839,7 @@ def _generate_cinematic_studio_files(facts: dict[str, Any]) -> dict[str, str]:
     copy = _cinematic_copy(_enriched_facts)
     images, videos = _cinematic_media_urls(facts)
     whatsapp = f"https://wa.me/55{copy['phone_digits']}" if copy["phone_digits"] else "#contato"
+    tel = f"tel:+55{copy['phone_digits']}" if copy["phone_digits"] else "#contato"
 
     # Sprint 14.6: variation counter rotation injeta hero_classes
     # diferente baseado em facts["variation"] (gerado por agente_variacao).
@@ -4980,6 +5002,7 @@ export default function App() {
 export const mediaImages = {json.dumps(images, ensure_ascii=False)} as const;
 export const mediaVideos = {json.dumps(videos, ensure_ascii=False)} as const;
 export const whatsappHref = {json.dumps(whatsapp, ensure_ascii=False)} as const;
+export const telHref = {json.dumps(tel, ensure_ascii=False)} as const;
 export const variation = {json.dumps(_variation_payload, ensure_ascii=False)} as const;
 export const blockPlan = {json.dumps(_block_plan, ensure_ascii=False)} as const;
 export const navLinks = {json.dumps(_nav_links, ensure_ascii=False)} as const;
@@ -5904,7 +5927,7 @@ export default LifestyleSection;
 """,
         "src/components/ContactCTA.tsx": """import { MessageCircle, Phone } from 'lucide-react';
 import { motion } from 'motion/react';
-import { blockPlan, siteCopy, whatsappHref } from './siteData';
+import { blockPlan, siteCopy, telHref, whatsappHref } from './siteData';
 export function ContactCTA({ onOpen }: { onOpen?: () => void }) {
   const ctaStyle = String((blockPlan as any)?.cta_style || 'solid_panel');
   const poster = ctaStyle === 'poster_band';
@@ -5913,7 +5936,7 @@ export function ContactCTA({ onOpen }: { onOpen?: () => void }) {
   const sectionClass = minimal ? 'px-5 py-14 md:px-8' : poster ? 'px-5 py-24 md:px-8 md:py-32' : 'px-5 py-20 md:px-8';
   const gridClass = split ? 'mx-auto grid max-w-7xl gap-4 lg:grid-cols-2 lg:items-stretch' : 'mx-auto grid max-w-7xl gap-8 lg:grid-cols-[1.1fr_.9fr] lg:items-center';
   const cardClass = minimal ? 'border-t border-white/20 pt-6' : 'rounded-[18px] p-6 shadow-[0_22px_70px_rgba(0,0,0,.22)]';
-  return <section id="contato" style={{ background: poster ? 'var(--bg)' : 'var(--accent-dark)', color: 'white' }} className={sectionClass}><div className={gridClass}><motion.div initial={{ opacity: 0, y: 22 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.3 }}><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent-soft)' }}>{siteCopy.contact_kicker}</p><h2 className="mt-3 max-w-4xl text-[clamp(2rem,5vw,4.8rem)] font-semibold leading-[1] tracking-[-0.03em]">{siteCopy.contact_headline}</h2><p className="mt-5 max-w-2xl text-base leading-8 text-white/75">{siteCopy.contact_sub}</p></motion.div><div style={{ background: minimal ? 'transparent' : 'var(--bg-light)', color: 'var(--text-dark)' }} className={cardClass}><p className="text-sm leading-7" style={{ color: 'var(--text-dark)' }}>{siteCopy.contact_card_label}</p><p className="mt-2 text-2xl font-semibold">{siteCopy.phone || 'WhatsApp'}</p><div className="mt-6 flex flex-col gap-3 sm:flex-row"><a href={whatsappHref} rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 rounded-full px-5 py-3 text-sm font-semibold" style={{ background: 'var(--accent)', color: 'var(--accent-contrast)' }}><MessageCircle className="h-4 w-4" />{siteCopy.contact_primary_label}</a><button type="button" onClick={onOpen} className="inline-flex items-center justify-center gap-2 rounded-full border border-black/10 px-5 py-3 text-sm font-semibold" style={{ color: 'var(--text-dark)' }}><Phone className="h-4 w-4" />{siteCopy.contact_secondary_label}</button></div></div></div></section>;
+  return <section id="contato" style={{ background: poster ? 'var(--bg)' : 'var(--accent-dark)', color: 'white' }} className={sectionClass}><div className={gridClass}><motion.div initial={{ opacity: 0, y: 22 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.3 }}><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent-soft)' }}>{siteCopy.contact_kicker}</p><h2 className="mt-3 max-w-4xl text-[clamp(2rem,5vw,4.8rem)] font-semibold leading-[1] tracking-[-0.03em]">{siteCopy.contact_headline}</h2><p className="mt-5 max-w-2xl text-base leading-8 text-white/75">{siteCopy.contact_sub}</p></motion.div><div style={{ background: minimal ? 'transparent' : 'var(--bg-light)', color: 'var(--text-dark)' }} className={cardClass}><p className="text-sm leading-7" style={{ color: 'var(--text-dark)' }}>{siteCopy.contact_card_label}</p><p className="mt-2 text-2xl font-semibold">{siteCopy.phone || 'WhatsApp'}</p><div className="mt-6 flex flex-col gap-3 sm:flex-row"><a href={whatsappHref} rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 rounded-full px-5 py-3 text-sm font-semibold" style={{ background: 'var(--accent)', color: 'var(--accent-contrast)' }}><MessageCircle className="h-4 w-4" />{siteCopy.contact_primary_label}</a><a href={telHref} className="inline-flex items-center justify-center gap-2 rounded-full border border-black/10 px-5 py-3 text-sm font-semibold" style={{ color: 'var(--text-dark)' }}><Phone className="h-4 w-4" />{siteCopy.contact_secondary_label}</a></div></div></div></section>;
 }
 export default ContactCTA;
 """,
@@ -5926,9 +5949,9 @@ export function BookingModal({ open, onClose }: { open: boolean; onClose: () => 
 export default BookingModal;
 """,
         "src/components/Footer.tsx": """import { MapPin, MessageCircle, ShieldCheck } from 'lucide-react';
-import { siteCopy, whatsappHref } from './siteData';
+import { siteCopy, telHref, whatsappHref } from './siteData';
 export function Footer() {
-  return <footer style={{ background: 'linear-gradient(180deg, var(--bg), color-mix(in srgb, var(--bg) 88%, var(--accent) 12%))', color: 'var(--text)' }} className="px-5 py-12 md:px-8"><div className="mx-auto grid max-w-7xl gap-8 md:grid-cols-[1.1fr_.8fr_.8fr]"><div><strong className="block text-2xl font-semibold" style={{ color: 'var(--text)' }}>{siteCopy.name}</strong><p className="mt-3 max-w-md text-sm leading-7" style={{ color: 'var(--text-muted)' }}>{siteCopy.footer_tagline}</p></div><div><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>{siteCopy.footer_contact_label}</p><a href={whatsappHref} rel="noopener noreferrer" className="mt-4 flex items-center gap-2 text-sm font-semibold" style={{ color: 'var(--text)' }}><MessageCircle className="h-4 w-4" style={{ color: 'var(--accent)' }} /> WhatsApp oficial</a><p className="mt-3 text-sm" style={{ color: 'var(--text-muted)' }}>{siteCopy.phone}</p></div><div><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>{siteCopy.footer_location_label}</p><p className="mt-4 flex items-start gap-2 text-sm leading-6" style={{ color: 'var(--text-muted)' }}><MapPin className="mt-0.5 h-4 w-4 shrink-0" style={{ color: 'var(--accent)' }} /> {siteCopy.address || siteCopy.city}</p><p className="mt-4 flex items-start gap-2 text-sm leading-6" style={{ color: 'color-mix(in srgb, var(--text-muted) 82%, var(--accent) 18%)' }}><ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" style={{ color: 'var(--accent)' }} /> {siteCopy.footer_privacy_note}</p></div></div><div className="mx-auto mt-10 flex max-w-7xl flex-col gap-2 border-t pt-5 text-xs md:flex-row md:items-center md:justify-between" style={{ borderColor: 'color-mix(in srgb, var(--accent) 18%, transparent)', color: 'color-mix(in srgb, var(--text-muted) 88%, var(--accent) 12%)' }}><span>{siteCopy.city}</span><span>© 2026 {siteCopy.name}. Todos os direitos reservados.</span></div></footer>;
+  return <footer style={{ background: 'linear-gradient(180deg, var(--bg), color-mix(in srgb, var(--bg) 88%, var(--accent) 12%))', color: 'var(--text)' }} className="px-5 py-12 md:px-8"><div className="mx-auto grid max-w-7xl gap-8 md:grid-cols-[1.1fr_.8fr_.8fr]"><div><strong className="block text-2xl font-semibold" style={{ color: 'var(--text)' }}>{siteCopy.name}</strong><p className="mt-3 max-w-md text-sm leading-7" style={{ color: 'var(--text-muted)' }}>{siteCopy.footer_tagline}</p></div><div><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>{siteCopy.footer_contact_label}</p><a href={whatsappHref} rel="noopener noreferrer" className="mt-4 flex items-center gap-2 text-sm font-semibold" style={{ color: 'var(--text)' }}><MessageCircle className="h-4 w-4" style={{ color: 'var(--accent)' }} /> WhatsApp oficial</a><p className="mt-3 text-sm"><a href={telHref} className="font-semibold underline-offset-2 hover:underline" style={{ color: 'var(--text)' }}>{siteCopy.phone}</a></p></div><div><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>{siteCopy.footer_location_label}</p><p className="mt-4 flex items-start gap-2 text-sm leading-6" style={{ color: 'var(--text-muted)' }}><MapPin className="mt-0.5 h-4 w-4 shrink-0" style={{ color: 'var(--accent)' }} /> {siteCopy.address || siteCopy.city}</p>{(siteCopy as any).horarios ? <p className="mt-3 flex items-start gap-2 text-xs leading-6" style={{ color: 'var(--text-muted)' }}><span className="mt-0.5 inline-block h-4 w-4 shrink-0 text-center font-bold" style={{ color: 'var(--accent)' }}>⏱</span> {(siteCopy as any).horarios}</p> : null}<p className="mt-4 flex items-start gap-2 text-sm leading-6" style={{ color: 'color-mix(in srgb, var(--text-muted) 82%, var(--accent) 18%)' }}><ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" style={{ color: 'var(--accent)' }} /> {siteCopy.footer_privacy_note}</p></div></div><div className="mx-auto mt-10 flex max-w-7xl flex-col gap-2 border-t pt-5 text-xs md:flex-row md:items-center md:justify-between" style={{ borderColor: 'color-mix(in srgb, var(--accent) 18%, transparent)', color: 'color-mix(in srgb, var(--text-muted) 88%, var(--accent) 12%)' }}><span>{siteCopy.city}</span><span>© 2026 {siteCopy.name}. Todos os direitos reservados.</span></div></footer>;
 }
 export default Footer;
 """,
