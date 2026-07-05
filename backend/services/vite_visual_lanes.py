@@ -7,7 +7,7 @@ from typing import Any
 from .vite_liquid_components import infer_aesthetic_pole
 
 
-_LANE_KEYS = ["lane_a", "lane_b", "lane_c", "lane_d", "lane_e", "lane_f", "lane_g", "lane_h"]
+_LANE_KEYS = ["lane_a", "lane_b", "lane_c", "lane_d", "lane_e", "lane_f", "lane_g", "lane_h", "lane_i", "lane_j", "lane_k", "lane_l", "lane_m", "lane_n", "lane_o", "lane_p"]
 
 
 # Aliases para nomes divergentes: lanes existentes com nomes "curtos"
@@ -1019,6 +1019,7 @@ def resolve_visual_lane(
     description: str = "",
     prompt_priority: str | None = None,
     tier: str | None = None,
+    counter: int = 0,
 ) -> dict[str, Any]:
     family = _segment_family(segment, subnicho)
     lanes = list(_LANES.get(family) or _LANES["default"])
@@ -1027,10 +1028,14 @@ def resolve_visual_lane(
         remixes = _LANE_REMIXES.get("default")
     lanes.extend(remixes or [])
     try:
-        index = _LANE_KEYS.index(str(visual_lane or "").strip())
+        base_index = _LANE_KEYS.index(str(visual_lane or "").strip())
     except ValueError:
-        index = 0
-    lane = dict(lanes[index % len(lanes)])
+        base_index = 0
+    # Counter-shift: garante variedade entre leads sequenciais.
+    # counter=0 -> lanes[base_index], counter=1 -> lanes[base_index+1], etc.
+    counter_offset = int(counter) if counter else 0
+    lane_index = (base_index + counter_offset) % len(lanes)
+    lane = dict(lanes[lane_index])
     lane_blocks = dict(lane.get("blocks") or {})
     variant_defaults = _lane_variant_defaults(str(lane.get("id") or ""))
     # Quick Win (feedback 2026-07-02): boosts de prompt_priority e tier
