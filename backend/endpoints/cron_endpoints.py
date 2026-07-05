@@ -7,6 +7,7 @@ Nunca expor sem secret - estes endpoints podem mandar emails em massa.
 import asyncio
 import os
 import random
+import sys
 import threading
 import time
 from datetime import datetime, timedelta
