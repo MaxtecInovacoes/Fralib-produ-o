@@ -132,33 +132,47 @@ def deterministic_media_bundle(
     segmento: Any,
     raw_photos: Any,
     raw_og_image: Any = "",
+    nome: str = "",
 ) -> tuple[list[str], str]:
     """Build a deterministic media bundle from photos provided by lead.
 
-    Fail-fast: se não houver fotos fornecidas, lança erro.
-    Não usa mais fallbacks de fotos.
+    Se o lead não tiver fotos, busca automaticamente do Unsplash (cache 7d).
+    Isso garante que o site SEMPRE tenha imagens — mesmo leads resetados
+    do Caio que não forneceram fotos inicialmente. A seleção por Unsplash
+    é determinística por lead (seed = nome), então cada lead recebe um
+    conjunto único de fotos diferentes de todos os outros leads.
 
     Args:
-        segmento: The business segment (informational only).
+        segmento: The business segment.
         raw_photos: List of photo URLs or dicts with url/src keys. REQUIRED.
         raw_og_image: Optional OG image URL.
+        nome: Business name (used as seed for Unsplash fallback).
 
     Returns:
         Tuple of (photos list, og_image URL).
 
     Raises:
-        ImageNotAvailableError: Se raw_photos estiver vazio ou inválido.
+        ImageNotAvailableError: Se nem raw_photos nem Unsplash retornarem fotos.
     """
     photos = extract_media_urls(raw_photos)
 
     if not photos:
-        raise ImageNotAvailableError(
-            "deterministic_media_bundle: Nenhuma foto fornecida para o lead.",
-            context={
-                "segmento": str(segmento),
-                "acao": "Forneca fotos reais do cliente ou use unsplash_fetcher.buscar_fotos()",
-            },
-        )
+        # Fallback: buscar do Unsplash — determinístico por lead (seed = nome).
+        # Cada lead recebe um conjunto único; site fica com imagens de qualidade.
+        try:
+            from backend.agents.unsplash_fetcher import buscar_fotos_unsplash
+            photos = buscar_fotos_unsplash(str(segmento or ""), quantidade=8, nome=nome or "")
+        except ImageNotAvailableError:
+            raise
+        except Exception:
+            raise ImageNotAvailableError(
+                "deterministic_media_bundle: Nenhuma foto fornecida e Unsplash falhou.",
+                context={
+                    "segmento": str(segmento),
+                    "nome": nome,
+                    "acao": "Forneca fotos reais do cliente ou use unsplash_fetcher.buscar_fotos()",
+                },
+            )
 
     og_image = normalize_editorial_image_url(raw_og_image, og=True)
     if not og_image or not editorial_image_reachable(og_image):

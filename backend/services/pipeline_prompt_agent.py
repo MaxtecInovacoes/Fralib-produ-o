@@ -176,6 +176,7 @@ def build_prompt_agent_prd(state: Any, tenant_id: int | str = "") -> SimpleNames
         segmento,
         media.get("photos") or raw.get("fotos") or [],
         media.get("og_image") or raw.get("og_image") or "",
+        nome=nome,
     )
     # Sprint 16: extrair variation seed de variacao_estrutural para passar ao builder
     _var_estrutural = object_to_dict(getattr(state, "variacao_estrutural", None)) or {}

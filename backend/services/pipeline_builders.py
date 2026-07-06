@@ -113,6 +113,7 @@ def build_skill_fast_prd(state: Any) -> SimpleNamespace:
         segmento,
         raw.get("fotos") or raw.get("photos") or [],
         raw.get("og_image") or "",
+        nome=nome,
     )
     keywords = getattr(state, "keyword_research", "") or ""
     seo_keywords = build_local_keyword_terms(
@@ -677,6 +678,7 @@ def ensure_prd_contracts(prd: Any, state: Any) -> None:
         segment,
         getattr(prd, "photos", None) or raw_data.get("fotos", []),
         getattr(prd, "og_image", None) or raw_data.get("og_image", ""),
+        nome=getattr(prd, "business_name", None) or getattr(prd, "nome", None) or getattr(state, "lead_nome", ""),
     )
     setattr(prd, "photos", normalized_photos)
     setattr(prd, "og_image", og_image)
