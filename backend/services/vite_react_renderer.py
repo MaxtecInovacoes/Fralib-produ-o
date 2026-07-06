@@ -1034,15 +1034,14 @@ def _validate_creative_plan_response(content: dict[str, Any]) -> None:
         raise ViteReactRenderError("creative_plan sem section_order suficiente")
 
     motion_mix = plan.get("motion_mix")
-    if not isinstance(motion_mix, list) or len([item for item in motion_mix if item]) < 2:
+    if not isinstance(motion_mix, list) or len([item for item in motion_mix if item]) < 1:
         raise ViteReactRenderError("creative_plan sem motion_mix suficiente")
 
     hero = str(plan.get("hero_layout") or "")
     spacing = str(plan.get("spacing_density") or "")
     motion = str(plan.get("motion_intensity") or "")
     typography = str(plan.get("typography_scale") or "")
-    if motion == "minimal" or typography == "soft":
-        raise ViteReactRenderError("creative_plan abaixo do piso premium")
+    # Allow minimal/soft individually — only block genuinely weak combos
     if hero == "center" and spacing == "spacious" and motion == "minimal" and typography == "soft":
         raise ViteReactRenderError("creative_plan fraco bloqueado antes do Studio")
 
