@@ -49,6 +49,40 @@ logging.basicConfig(
 )
 log = logging.getLogger("fralib.worker")
 
+
+def _proximo_slot_valido(tenant_id: int | None) -> int:
+    """Segundos ate o proximo slot SDR valido (proxima 08:00). Minimo 60s."""
+    try:
+        from datetime import datetime, timezone, timedelta
+        from backend.agents.sdr_langgraph.tools import is_within_schedule
+
+        if tenant_id and is_within_schedule(tenant_id):
+            return 60  # ja esta no slot, retry em 1 min
+
+        # Buscar config do tenant
+        hora_inicio, hora_fim, dias_bloqueados = 8, 21, [6]
+        try:
+            from backend.agents.sdr_langgraph.compat import _get_horario_config
+            config = _get_horario_config(tenant_id) if tenant_id else None
+            if config:
+                if config.get("modo") == "livre":
+                    return 60
+                hora_inicio = config.get("hora_inicio", 8)
+                hora_fim = config.get("hora_fim", 21)
+                dias_bloqueados = config.get("dias_bloqueados", [6])
+        except Exception:
+            pass
+
+        agora = datetime.now(timezone(timedelta(hours=-3)))
+        dia = agora + timedelta(days=1)
+        while dia.weekday() in dias_bloqueados:
+            dia += timedelta(days=1)
+        proximo = dia.replace(hour=hora_inicio, minute=0, second=0, microsecond=0)
+        delay = (proximo - agora).total_seconds()
+        return max(60, int(delay))
+    except Exception:
+        return 3600  # fallback 1h
+
 POLL_SECONDS = int(os.environ.get("WORKER_POLL_SECONDS", "3"))
 HEARTBEAT_SECS = int(os.environ.get("WORKER_HEARTBEAT_SECS", "30"))
 REAP_SECS = int(os.environ.get("WORKER_REAP_SECS", "60"))
@@ -878,13 +912,18 @@ async def _process_one(job: dict) -> None:
             )
 
             if is_schedule_wait or is_watchdog_wait or is_whatsapp_wait:
-                delay = 1800 if (is_schedule_wait or is_watchdog_wait) else 300
-                reason = "SDR aguardando janela/watchdog" if (is_schedule_wait or is_watchdog_wait) else "WhatsApp desconectado"
-                log.warning(f"[{trace_id}] job {job_id} {reason} — adiando sem consumir tentativa por {delay}s")
+                if is_schedule_wait or is_watchdog_wait:
+                    delay = _proximo_slot_valido(job.get("tenant_id"))
+                    reason = "SDR aguardando janela/watchdog"
+                else:
+                    delay = 300
+                    reason = "WhatsApp desconectado"
+                reason_full = f"{reason} — retry em {delay}s"
+                log.warning(f"[{trace_id}] job {job_id} {reason_full}")
                 status = job_queue.defer_without_attempt(
                     db,
                     job_id,
-                    reason=f"{reason} — retry em {delay}s",
+                    reason=reason_full,
                     fase=fase,
                     delay_seconds=delay,
                 )
