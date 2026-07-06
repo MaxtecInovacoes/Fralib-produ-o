@@ -272,10 +272,7 @@ def call_claude(
         model_id = current_map.get(model, current_map["opus"])
 
     if _db_config and _db_provider != "anthropic":
-        try:
-            from services.llm_router import call_llm
-        except Exception:
-            from llm_router import call_llm
+        from backend.services.llm_router import call_llm
 
         routed_user = user
         if rag_block:

@@ -294,7 +294,7 @@ MOBILE-FIRST RESPONSIVENESS (MANDATORY):
 
 def _build_motion_pack_block() -> str:
     """Sprint 11.5: lista COMPLETA de hooks Awwwards — alinhada com
-    motion_runtime.js (openui_contracts.MOTION_CONTRACT) e vite_modules.
+    motion_runtime.js e vite_modules.
 
     Hooks implementados em runtime (ver motion_runtime.js):
     data-reveal, data-parallax, data-marquee, data-magnetic, data-3d-tilt,

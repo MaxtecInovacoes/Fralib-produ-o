@@ -47,9 +47,6 @@ def _apply_canonical_vite_react_runtime_defaults() -> None:
     current_policy = os.getenv("FRALIB_VITE_LLM_POLICY", "").strip().lower().replace("-", "_")
     if current_policy in {"", "copy", "content", "json", "copy_only"}:
         os.environ["FRALIB_VITE_LLM_POLICY"] = "creative_plan"
-    os.environ.setdefault("FRALIB_VITE_CINEMATIC_STUDIO", "1")
-    os.environ.setdefault("FRALIB_VITE_DISABLE_STUDIO_FALLBACK", "1")
-    os.environ.setdefault("FRALIB_ALLOW_OPENUI_FALLBACK", "0")
     os.environ.setdefault("FRALIB_BUILDER_FORCE_ENV_ANTHROPIC", "1")
     current_base = (os.getenv("ANTHROPIC_BASE_URL") or "").strip()
     if (not current_base) or ("api.aibee.cloud" in current_base):
@@ -321,107 +318,51 @@ def render_site_with_builder(
     output_dir = Path(manifest["sandbox"]["output_dir"]).resolve()
     publication_engine = engine
 
-    if engine == "openui":
-        # OpenUI: HTML estatico, 1 chamada LLM, sem Vite/node_modules.
-        # Mais rapido, sem truncamento de output, gera landing page completa.
-        #
-        # FRALIB_USE_TEMPLATES=1: usa template estatico + variation 4-eixos
-        # (rota deterministica, SEM LLM). Se o template falhar, o job falha
-        # fechado para nao publicar outro gerador silenciosamente.
-        use_templates = (
-            os.getenv("FRALIB_USE_TEMPLATES", "0").strip().lower() in {"1", "true", "yes", "on"}
-        )
+    # Sprint 14.3: Vite/React é o ÚNICO motor canônico. OpenUI removido (Sprint 12.9).
+    # Qualquer engine != vite_react é falha imediata, sem fallback silencioso.
+    if engine != "vite_react":
+        raise RuntimeError(f"engine de Builder nao suportado: {engine!r}. Use 'vite_react'.")
 
-        if use_templates:
-            try:
-                from services.openui_renderer import render_with_template
+    try:
+        from backend.services.vite_react_renderer import render_vite_react_site
+    except Exception:
+        from services.vite_react_renderer import render_vite_react_site  # type: ignore
 
-                logger.info(
-                    "[builder_worker] FRALIB_USE_TEMPLATES=1 ativo - rota templates"
-                )
-                render_result = render_with_template(
-                    manifest["prompt"],
-                    facts=manifest.get("prompt_agent", {}).get("context", {}),
-                    repair_context=repair_context,
-                )
-            except Exception as template_exc:
-                raise RuntimeError(f"template route falhou sem fallback: {template_exc}") from template_exc
-        else:
-            from services.openui_renderer import render_openui_site
-
-            render_result = render_openui_site(
-            manifest["prompt"],
-            facts=manifest.get("prompt_agent", {}).get("context", {}),
-            repair_context=repair_context,
-            primary_model=os.getenv("FRALIB_OPENUI_PRIMARY_MODEL", PROXY_BUILDER_MODEL),
-            fallback_model=os.getenv("FRALIB_OPENUI_FALLBACK_MODEL", PROXY_OPUS_FALLBACK_MODEL),
-            max_tokens=int(os.getenv("FRALIB_OPENUI_MAX_TOKENS", "8000")),
-            temperature=float(os.getenv("FRALIB_OPENUI_TEMPERATURE", "0.35")),
-        )
-        index_target = output_dir / "index.html"
-        output_dir.mkdir(parents=True, exist_ok=True)
-        index_target.write_text(render_result.html, encoding="utf-8")
-        _write_builder_render_meta(
-            output_dir,
-            engine=engine,
-            model=render_result.model,
-            attempts=render_result.attempts,
-            elapsed_ms=render_result.elapsed_ms,
-            html_chars=len(render_result.html),
-            visual_direction=(
-                manifest.get("prompt_agent", {})
-                .get("context", {})
-                .get("visual_direction", {})
-            ),
-            source_files=[],
-        )
-        model = render_result.model
-        attempts = render_result.attempts
-    elif engine == "vite_react":
-        try:
-            from backend.services.vite_react_renderer import render_vite_react_site
-        except Exception:
-            from services.vite_react_renderer import render_vite_react_site  # type: ignore
-
-        fallback_model = _builder_proxy_fallback_model()
-        # Sprint 14.3: Vite/React é o caminho CANÔNICO. NUNCA cai para OpenUI.
-        # Qualquer erro do render_vite_react_site sobe como exceção — o job falha.
-        render_result = render_vite_react_site(
-            manifest["prompt"],
-            workspace_dir=workspace_dir,
-            facts=manifest.get("prompt_agent", {}).get("context", {}),
-            repair_context=repair_context,
-            primary_model=os.getenv("FRALIB_OPENUI_PRIMARY_MODEL", PROXY_BUILDER_MODEL),
-            fallback_model=fallback_model,
-            max_tokens=int(os.getenv("FRALIB_VITE_REACT_MAX_TOKENS", "64000")),
-            temperature=float(os.getenv("FRALIB_OPENUI_TEMPERATURE", "0.55")),
-        )
-        _write_builder_render_meta(
-            output_dir,
-            engine=engine,
-            model=render_result.model,
-            attempts=render_result.attempts,
-            elapsed_ms=render_result.elapsed_ms,
-            html_chars=len(render_result.html),
-            visual_direction=(
-                manifest.get("prompt_agent", {})
-                .get("context", {})
-                .get("visual_direction", {})
-            ),
-            source_files=sorted(getattr(render_result, "source_files", []) or []),
-        )
-        model = render_result.model
-        attempts = render_result.attempts
-    else:
-        raise RuntimeError(f"engine de Builder nao suportado: {engine!r}")
+    fallback_model = _builder_proxy_fallback_model()
+    render_result = render_vite_react_site(
+        manifest["prompt"],
+        workspace_dir=workspace_dir,
+        facts=manifest.get("prompt_agent", {}).get("context", {}),
+        repair_context=repair_context,
+        primary_model=os.getenv("FRALIB_OPENUI_PRIMARY_MODEL", PROXY_BUILDER_MODEL),
+        fallback_model=fallback_model,
+        max_tokens=int(os.getenv("FRALIB_VITE_REACT_MAX_TOKENS", "64000")),
+        temperature=float(os.getenv("FRALIB_OPENUI_TEMPERATURE", "0.55")),
+    )
+    _write_builder_render_meta(
+        output_dir,
+        engine=engine,
+        model=render_result.model,
+        attempts=render_result.attempts,
+        elapsed_ms=render_result.elapsed_ms,
+        html_chars=len(render_result.html),
+        visual_direction=(
+            manifest.get("prompt_agent", {})
+            .get("context", {})
+            .get("visual_direction", {})
+        ),
+        source_files=sorted(getattr(render_result, "source_files", []) or []),
+    )
+    model = render_result.model
+    attempts = render_result.attempts
 
     index_target = output_dir / "index.html"
     if not index_target.exists():
         output_dir.mkdir(parents=True, exist_ok=True)
         index_target.write_text(render_result.html, encoding="utf-8")
 
-    # Fail-fast: apenas vite_react e vite sao motores canonicos
-    if engine not in ("vite_react", "vite", "openui"):
+    # Fail-fast: vite_react é o único motor canônico
+    if engine not in ("vite_react", "vite"):
         raise ValueError(f"Motor de publicacao desconhecido: {engine}. Use 'vite_react' ou 'vite'.")
     publication_engine = engine
     index_path = _find_builder_index(output_dir)
@@ -842,16 +783,15 @@ def _prompt_digest(tenant_scope: str, job_scope: str, prompt: str) -> str:
 def _builder_engine(value: str | None = None) -> str:
     """Select the Builder engine.
 
-    Sprint 12.10: Vite/React is the default (caroco system prompt).
-    OpenUI is a separate explicit engine when requested, not a fallback from
-    Vite/React failures.
+    Sprint 14.3: Vite/React é o ÚNICO motor. OpenUI removido (Sprint 12.9).
+    Qualquer outro valor lança ValueError — fail-fast, sem fallback silencioso.
     """
     engine = str(value or os.getenv("FRALIB_BUILDER_ENGINE", "vite_react")).strip().lower().replace("-", "_")
-    if engine in {"vite", "react", "vite_react", "vite-react"}:
+    if engine in {"vite", "react", "vite_react"}:
         return "vite_react"
-    if engine in {"openui", "html", "static_html"}:
-        return "openui"
-    raise ValueError(f"engine de Builder invalido: {value!r}")
+    raise ValueError(
+        f"engine de Builder invalido: {value!r}. Apenas 'vite_react' é suportado."
+    )
 
 
 def _write_builder_render_meta(
