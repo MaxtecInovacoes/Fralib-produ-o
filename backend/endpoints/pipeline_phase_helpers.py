@@ -130,8 +130,12 @@ def ensure_jina_insights(state, log_fn, fallback_researcher, warning_fn) -> None
     except Exception as exc:
         state.jina_intel_dict = {}
         state.jina_insights = ""
-        warning_fn(f"[Pipeline] Intel erro: {exc}")
-        raise
+        # FAIL-OPEN: Playwright Intel (Google) pode falhar temporariamente
+        # (bloqueio, rate-limit, sem internet). Em vez de travar o job em
+        # failed_permanent, continuamos com inteligencia vazia — o ArquitetoMestre
+        # e Builder ainda geram um site funcional usando apenas os dados do lead.
+        # O Site Builder ainda pode gerar um site de qualidade aceitavel.
+        warning_fn(f"[Pipeline] Intel erro (fallback graceful): {exc}")
 
 
 def curate_lead_assets(state, logger) -> None:
