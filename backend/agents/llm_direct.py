@@ -24,18 +24,17 @@ Lógica extraída para:
 from __future__ import annotations
 
 import json
-import re as _re
-import time as _time
-from pathlib import Path
-from typing import Callable
-
-import anthropic
 
 # ─────────────────────────────────────────────────────────────────
 # PATH SETUP
 # ─────────────────────────────────────────────────────────────────
 import os
 import sys as _sys
+import time as _time
+from collections.abc import Callable
+from pathlib import Path
+
+import anthropic
 
 _services_dir = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "services")
@@ -50,41 +49,38 @@ if _agents_dir not in _sys.path:
 # IMPORTS FROM MODULES
 # ─────────────────────────────────────────────────────────────────
 from backend.agents import llm_config
+from backend.agents.llm_client import (
+    _alert_llm_provider_failure,
+    _call_litellm_openai_chat,
+    _create_client,
+    _extract_text_from_tool_use,
+    _is_litellm_openai_chat_base,
+)
 from backend.agents.llm_config import (
     AGENT_MODEL_MAP,
     AIBEE_MODEL_MAP,
-    LITELLM_MODEL_MAP,
-    BUILDER_RENDERER_AGENT,
-    PROXY_PROVIDER,
-    LITELLM_API_KEY,
     ANTHROPIC_API_KEY,
+    BUILDER_RENDERER_AGENT,
+    LITELLM_API_KEY,
+    LITELLM_MODEL_MAP,
+    PROXY_PROVIDER,
     RateLimitError,
-    fallbacks_disabled,
     _load_agent_configs,
+    fallbacks_disabled,
 )
-
 from backend.agents.llm_context import (
     _enforce_call_spacing,
-    _tenant_rate_check,
-    _tenant_rate_alert,
-    get_current_user_id,
     _get_byok_key,
     _resolve_anthropic,
+    _tenant_rate_alert,
+    _tenant_rate_check,
+    get_current_user_id,
 )
-
-from backend.agents.llm_client import (
-    _create_client,
-    _is_litellm_openai_chat_base,
-    _call_litellm_openai_chat,
-    _alert_llm_provider_failure,
-    _extract_text_from_tool_use,
-)
-
 from backend.agents.llm_tracking import (
-    _salvar_uso_llm,
     _registrar_llm_budget,
+    _salvar_uso_llm,
 )
-
+from backend.agents.llm_router import call_llm
 
 # ─────────────────────────────────────────────────────────────────
 # PUBLIC API — call_claude + cascata fallback
@@ -92,9 +88,9 @@ from backend.agents.llm_tracking import (
 # Cascata de 3 modelos: opus -> sonnet -> haiku
 # Se Modelo A falhar → tenta B → tenta C (fail-fast se todos falharem)
 FALLBACK_MODELS = [
-    "claude-opus-4-8",     # principal, mais capaz
+    "claude-opus-4-8",  # principal, mais capaz
     "claude-sonnet-4-6",  # backup 1
-    "claude-haiku-4-5",    # backup 2
+    "claude-haiku-4-5",  # backup 2
 ]
 
 
@@ -125,7 +121,9 @@ def _call_claude_with_fallback(
     requested_model = model_prefixes.get(model.lower(), model)
 
     # Cascata: modelo solicitado primeiro, depois os outros 2
-    models_to_try = [requested_model] + [m for m in FALLBACK_MODELS if m != requested_model]
+    models_to_try = [requested_model] + [
+        m for m in FALLBACK_MODELS if m != requested_model
+    ]
 
     last_error = None
     for idx, model_id in enumerate(models_to_try, 1):
@@ -146,13 +144,14 @@ def _call_claude_with_fallback(
             last_error = e
             print(f"[LLM Cascade] {model_id} falhou: {str(e)[:100]}")
             if idx < len(models_to_try):
-                print(f"[LLM Cascade] Tentando próximo modelo...")
+                print("[LLM Cascade] Tentando próximo modelo...")
                 continue
             # Último modelo falhou
             break
 
     # Todos os 3 modelos falharam → fail-fast
     from backend.pipeline_exceptions import LLMError
+
     raise LLMError(
         f"LLM: Todos os 3 modelos falharam. Ultimo erro: {last_error}",
         context={
@@ -201,7 +200,7 @@ def call_claude(
                         )
 
                 if _has_skills:
-                    from skill_loader import get_skills_agente, carregar_skills
+                    from skill_loader import carregar_skills, get_skills_agente
 
                     skills = get_skills_agente(_an)
                     if skills:
@@ -217,7 +216,7 @@ def call_claude(
     # ── Memory injection (PRD #11) ──
     if agent_name and enable_context:
         try:
-            from agent_memory import get_memory, gerar_prompt_com_memoria
+            from agent_memory import gerar_prompt_com_memoria, get_memory
 
             _mem_core, _mem_warm, _mem_nicho = get_memory()
             if _mem_core and _mem_warm and _mem_nicho:
@@ -240,7 +239,9 @@ def call_claude(
             temperature = _db_config["temperature"]
         if _db_config.get("max_tokens") is not None:
             if (agent_name or "").lower() == BUILDER_RENDERER_AGENT:
-                max_tokens = max(int(max_tokens or 0), int(_db_config["max_tokens"] or 0))
+                max_tokens = max(
+                    int(max_tokens or 0), int(_db_config["max_tokens"] or 0)
+                )
             else:
                 max_tokens = _db_config["max_tokens"]
         print(
@@ -262,7 +263,12 @@ def call_claude(
             except Exception:
                 pass
 
-        if not _routed and agent_name and respect_agent_config and not fallbacks_disabled():
+        if (
+            not _routed
+            and agent_name
+            and respect_agent_config
+            and not fallbacks_disabled()
+        ):
             _auto = AGENT_MODEL_MAP.get(agent_name.lower())
             if _auto:
                 model = _auto
@@ -272,8 +278,6 @@ def call_claude(
         model_id = current_map.get(model, current_map["opus"])
 
     if _db_config and _db_provider != "anthropic":
-        from backend.services.llm_router import call_llm
-
         routed_user = user
         if rag_block:
             routed_user = f"{rag_block}\n\n{user}"
@@ -403,8 +407,9 @@ def call_claude(
             if request_user_id:
                 _plano = "starter"
                 try:
-                    from backend.core.database import engine as _budget_engine
                     from sqlalchemy import text as _budget_text
+
+                    from backend.core.database import engine as _budget_engine
 
                     with _budget_engine.connect() as _bconn:
                         _prow = _bconn.execute(
@@ -723,7 +728,9 @@ def call_claude_structured(
         _auto = AGENT_MODEL_MAP.get(agent_name.lower())
         if _auto:
             model = _auto
-            print(f"[LLM Structured Router] {agent_name} -> {model} (hardcoded fallback)")
+            print(
+                f"[LLM Structured Router] {agent_name} -> {model} (hardcoded fallback)"
+            )
     model_id = model_map.get(model, model_map["opus"])
 
     _api_key, _base, _key_id = _resolve_anthropic(agent_name)
@@ -848,6 +855,7 @@ def call_claude_structured(
 def _strip_markdown_fences(text: str) -> str:
     """Remove ```json ... ``` fences."""
     from backend.agents._text_utils import strip_code_fence  # — M2 DRY
+
     return strip_code_fence(text)
 
 

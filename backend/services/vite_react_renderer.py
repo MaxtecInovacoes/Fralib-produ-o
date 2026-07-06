@@ -38,6 +38,8 @@ from urllib.parse import quote_plus
 
 import httpx
 
+from backend.agents.llm_router import call_llm
+
 # Sprint 11.8 fix: logger was missing - caused 'name logger is not defined'
 # on later model-cascade attempts.
 logger = logging.getLogger(__name__)
@@ -45,19 +47,20 @@ logger = logging.getLogger(__name__)
 # Import from modularized components
 try:
     from backend.services.vite_liquid_components import (
-        infer_aesthetic_pole,
-        get_liquid_component_guide,
         POLO_TOKENS,
-        get_hero_display_mode,
-        get_services_display_mode,
         get_gallery_display_mode,
+        get_hero_display_mode,
+        get_liquid_component_guide,
+        get_services_display_mode,
+        infer_aesthetic_pole,
     )
     from backend.services.vite_liquid_prompts import (
-        build_liquid_system_prompt,
-        build_hero_prompt,
-        get_temperature_for_agent,
         POLE_SYSTEM_PROMPTS,
+        build_hero_prompt,
+        build_liquid_system_prompt,
+        get_temperature_for_agent,
     )
+
     LIQUID_COMPONENTS_AVAILABLE = True
 except ImportError:
     LIQUID_COMPONENTS_AVAILABLE = False
@@ -65,55 +68,57 @@ except ImportError:
 
 try:
     from backend.services.vite_config import (
-        VITE_REACT_FILE_BATCHES,
+        BLOCKED_SOURCE_PATTERNS,
         FIXED_PACKAGE_JSON,
         REQUIRED_PROJECT_FILES,
-        BLOCKED_SOURCE_PATTERNS,
         SEGMENT_RULES,
-        _env_int,
-        _model_repair_attempts,
-        _single_model_mode_enabled,
-        _preview_fast_enabled,
+        VITE_REACT_FILE_BATCHES,
         _batch_first_enabled,
         _batch_first_project_attempts,
-        _batch_spacing_seconds,
-        _batch_max_tokens,
-        _batch_token_budget,
         _batch_format_repair_budget,
-        _studio_min_source_chars,
+        _batch_max_tokens,
+        _batch_spacing_seconds,
+        _batch_token_budget,
+        _env_int,
+        _model_repair_attempts,
+        _preview_fast_enabled,
+        _single_model_mode_enabled,
         _studio_min_classnames,
-        _studio_min_images,
         _studio_min_components,
+        _studio_min_images,
+        _studio_min_source_chars,
         _transient_proxy_retry_delay_seconds,
     )
 except ImportError:
     from services.vite_config import (  # type: ignore
-        VITE_REACT_FILE_BATCHES,
+        BLOCKED_SOURCE_PATTERNS,
         FIXED_PACKAGE_JSON,
         REQUIRED_PROJECT_FILES,
-        BLOCKED_SOURCE_PATTERNS,
         SEGMENT_RULES,
-        _env_int,
-        _model_repair_attempts,
-        _single_model_mode_enabled,
-        _preview_fast_enabled,
+        VITE_REACT_FILE_BATCHES,
         _batch_first_enabled,
         _batch_first_project_attempts,
-        _batch_spacing_seconds,
-        _batch_max_tokens,
-        _batch_token_budget,
         _batch_format_repair_budget,
-        _studio_min_source_chars,
+        _batch_max_tokens,
+        _batch_spacing_seconds,
+        _batch_token_budget,
+        _env_int,
+        _model_repair_attempts,
+        _preview_fast_enabled,
+        _single_model_mode_enabled,
         _studio_min_classnames,
-        _studio_min_images,
         _studio_min_components,
+        _studio_min_images,
+        _studio_min_source_chars,
         _transient_proxy_retry_delay_seconds,
     )
 
 try:
     from backend.services.vite_block_registry import resolve_cinematic_block_plan
 except ImportError:
-    from services.vite_block_registry import resolve_cinematic_block_plan  # type: ignore
+    from services.vite_block_registry import (
+        resolve_cinematic_block_plan,  # type: ignore
+    )
 
 try:
     from backend.services.vite_theme_guard import resolve_cinematic_theme
@@ -127,145 +132,145 @@ except ImportError:
 
 try:
     from backend.services.vite_prompts import (
-        VITE_REACT_SYSTEM_PROMPT,
         VITE_REACT_BATCH_SYSTEM_PROMPT,
+        VITE_REACT_SYSTEM_PROMPT,
         _build_vite_react_system_prompt_with_facts,  # Sprint 12.13: caroço rico com briefing real
-        _compose_vite_user_prompt,
         _compose_vite_file_batch_prompt,
-        _summarize_builder_facts,
-        _segment_contamination_guard,
-        _safe_project_path,
+        _compose_vite_user_prompt,
         _meta_escape,
+        _safe_project_path,
+        _segment_contamination_guard,
+        _summarize_builder_facts,
     )
 except ImportError:
     from services.vite_prompts import (  # type: ignore
-        VITE_REACT_SYSTEM_PROMPT,
         _build_vite_react_system_prompt_with_facts,  # Sprint 12.13: caroço rico com briefing real
-        _compose_vite_user_prompt,
         _compose_vite_file_batch_prompt,
-        _summarize_builder_facts,
-        _segment_contamination_guard,
-        _safe_project_path,
+        _compose_vite_user_prompt,
         _meta_escape,
+        _safe_project_path,
+        _segment_contamination_guard,
+        _summarize_builder_facts,
     )
 
 try:
     from backend.services.vite_facts import (
-        _segment_key_for_business,
-        _segment_key_from_facts,
-        _validate_segment_specificity,
         _facts_business,
-        _facts_publication_url,
-        _facts_theme_color,
+        _facts_json_ld,
         _facts_local_keywords,
         _facts_meta_description,
         _facts_og_image,
-        _facts_json_ld,
+        _facts_publication_url,
+        _facts_theme_color,
+        _segment_key_for_business,
+        _segment_key_from_facts,
+        _validate_segment_specificity,
         _visual_business_payload,
         _visual_media_urls,
     )
 except ImportError:
     from services.vite_facts import (  # type: ignore
-        _segment_key_for_business,
-        _segment_key_from_facts,
-        _validate_segment_specificity,
         _facts_business,
-        _facts_publication_url,
-        _facts_theme_color,
+        _facts_json_ld,
         _facts_local_keywords,
         _facts_meta_description,
         _facts_og_image,
-        _facts_json_ld,
+        _facts_publication_url,
+        _facts_theme_color,
+        _segment_key_for_business,
+        _segment_key_from_facts,
+        _validate_segment_specificity,
         _visual_business_payload,
         _visual_media_urls,
     )
 
 try:
     from backend.services.vite_file_extractor import (
-        extract_vite_project_files,
-        _extract_tagged_file_blocks,
-        _extract_single_requested_file,
         _clean_json_block,
-        _normalize_text,
-        _normalize_model_alias,
+        _extract_single_requested_file,
+        _extract_tagged_file_blocks,
         _normalize_component_export_contract,
-        _normalize_page_export_contract,
         _normalize_generated_imports_and_hooks,
+        _normalize_model_alias,
+        _normalize_page_export_contract,
+        _normalize_text,
+        extract_vite_project_files,
     )
 except ImportError:
     from services.vite_file_extractor import (  # type: ignore
-        extract_vite_project_files,
-        _extract_tagged_file_blocks,
-        _extract_single_requested_file,
         _clean_json_block,
-        _normalize_text,
-        _normalize_model_alias,
+        _extract_single_requested_file,
+        _extract_tagged_file_blocks,
         _normalize_component_export_contract,
-        _normalize_page_export_contract,
         _normalize_generated_imports_and_hooks,
+        _normalize_model_alias,
+        _normalize_page_export_contract,
+        _normalize_text,
+        extract_vite_project_files,
     )
 
 try:
     from backend.services.vite_validator import (
-        validate_vite_project_files,
-        validate_vite_dist,
-        _validate_studio_project,
         _validate_hero_first_viewport,
         _validate_mobile_navbar,
+        _validate_studio_project,
+        validate_vite_dist,
+        validate_vite_project_files,
     )
 except ImportError:
     from services.vite_validator import (  # type: ignore
-        validate_vite_project_files,
-        validate_vite_dist,
-        _validate_studio_project,
         _validate_hero_first_viewport,
         _validate_mobile_navbar,
+        _validate_studio_project,
+        validate_vite_dist,
+        validate_vite_project_files,
     )
 
 try:
     from backend.services.vite_templates import (
-        vite_template_index_html,
-        vite_template_vite_config,
-        vite_template_tsconfig,
-        vite_template_main_tsx,
-        vite_template_main_tsx_with_factual_contract,
-        vite_template_app_tsx,
-        vite_template_types_ts,
-        vite_template_index_css,
-        vite_template_jsx_fallback_types,
-        vite_template_utils_ts,
-        vite_template_avatar_ui,
-        vite_template_separator_ui,
-        vite_template_accordion_ui,
-        vite_template_lgpd_banner,
-        vite_template_factual_motion_contract,
         _visual_business_payload,
         _visual_media_urls,
+        vite_template_accordion_ui,
+        vite_template_app_tsx,
+        vite_template_avatar_ui,
+        vite_template_factual_motion_contract,
+        vite_template_index_css,
+        vite_template_index_html,
+        vite_template_jsx_fallback_types,
+        vite_template_lgpd_banner,
+        vite_template_main_tsx,
+        vite_template_main_tsx_with_factual_contract,
+        vite_template_separator_ui,
+        vite_template_tsconfig,
+        vite_template_types_ts,
+        vite_template_utils_ts,
+        vite_template_vite_config,
     )
 except ImportError:
     from services.vite_templates import (  # type: ignore
-        vite_template_index_html,
-        vite_template_vite_config,
-        vite_template_tsconfig,
-        vite_template_main_tsx,
-        vite_template_main_tsx_with_factual_contract,
-        vite_template_app_tsx,
-        vite_template_types_ts,
-        vite_template_index_css,
-        vite_template_jsx_fallback_types,
-        vite_template_utils_ts,
-        vite_template_avatar_ui,
-        vite_template_separator_ui,
-        vite_template_accordion_ui,
-        vite_template_lgpd_banner,
-        vite_template_factual_motion_contract,
         _visual_business_payload,
         _visual_media_urls,
+        vite_template_accordion_ui,
+        vite_template_app_tsx,
+        vite_template_avatar_ui,
+        vite_template_factual_motion_contract,
+        vite_template_index_css,
+        vite_template_index_html,
+        vite_template_jsx_fallback_types,
+        vite_template_lgpd_banner,
+        vite_template_main_tsx,
+        vite_template_main_tsx_with_factual_contract,
+        vite_template_separator_ui,
+        vite_template_tsconfig,
+        vite_template_types_ts,
+        vite_template_utils_ts,
+        vite_template_vite_config,
     )
 
 # Sprint 12.18: inject backend parent dir so `from backend.services.x` imports resolve
 import os as _os
 import sys as _sys
+
 _BACKEND_PARENT = _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))
 if _BACKEND_PARENT not in _sys.path:
     _sys.path.insert(0, _BACKEND_PARENT)
@@ -295,14 +300,14 @@ except Exception:
 # Sprint 16: Variation seed system for deterministic site variations
 try:
     from backend.services.variation_seed import (
-        get_variation,
         apply_variation_to_facts,
+        get_variation,
     )
 except Exception:
     try:
         from services.variation_seed import (  # type: ignore
-            get_variation,
             apply_variation_to_facts,
+            get_variation,
         )
     except Exception:
         # Variation seed module not available - will use legacy seed logic
@@ -340,19 +345,48 @@ VITE_REACT_FILE_BATCHES_LEGACY = [
     ("footer", ["src/components/Footer.tsx"]),
 ]
 
+
 def _detect_components_from_page(page_source: str) -> list[tuple[str, list[str]]]:
     """Parse Index.tsx imports to build dynamic component batches."""
-    matches = [m.split("/")[-1].replace(chr(34),"").replace(chr(39),"").replace(";","").strip() for m in page_source.splitlines() if "/components/" in m and "from" in m]
+    matches = [
+        m.split("/")[-1]
+        .replace(chr(34), "")
+        .replace(chr(39), "")
+        .replace(";", "")
+        .strip()
+        for m in page_source.splitlines()
+        if "/components/" in m and "from" in m
+    ]
     # matches now contains component filenames like "HeroSection" or "HeroSection.tsx"
     batches = []
     for match in matches:
         name = match.replace(".tsx", "").replace(".ts", "")
         slug = re.sub(r"(?<=[a-z0-9])([A-Z])", lambda m: "-" + m.group(1), name).lower()
-        batches.append((slug, [f"src/components/{match}" if "." in match else f"src/components/{match}.tsx"]))
-    return batches if batches else [(n, p) for n, p in VITE_REACT_FILE_BATCHES_LEGACY if n not in ("app", "main", "types", "css", "page")]
+        batches.append(
+            (
+                slug,
+                [
+                    f"src/components/{match}"
+                    if "." in match
+                    else f"src/components/{match}.tsx"
+                ],
+            )
+        )
+    return (
+        batches
+        if batches
+        else [
+            (n, p)
+            for n, p in VITE_REACT_FILE_BATCHES_LEGACY
+            if n not in ("app", "main", "types", "css", "page")
+        ]
+    )
+
 
 # Dynamic batch list (computed at runtime after page batch)
-VITE_REACT_FILE_BATCHES = VITE_REACT_FILE_BATCHES_LEGACY  # initial reference for legacy code paths
+VITE_REACT_FILE_BATCHES = (
+    VITE_REACT_FILE_BATCHES_LEGACY  # initial reference for legacy code paths
+)
 
 
 BLOCKED_SOURCE_PATTERNS = {
@@ -381,97 +415,345 @@ STUDIO_COMPONENT_GROUPS = {
 
 SEGMENT_RULES = {
     "academia": {
-        "aliases": ("academia", "fitness", "gym", "crossfit", "musculacao", "musculação"),
+        "aliases": (
+            "academia",
+            "fitness",
+            "gym",
+            "crossfit",
+            "musculacao",
+            "musculação",
+        ),
         "required": (
-            "academia", "fitness", "treino", "musculacao", "musculação",
-            "aluno", "alunos", "funcional", "modalidade", "matricula", "matrícula",
+            "academia",
+            "fitness",
+            "treino",
+            "musculacao",
+            "musculação",
+            "aluno",
+            "alunos",
+            "funcional",
+            "modalidade",
+            "matricula",
+            "matrícula",
         ),
         "forbidden": (
-            "barbearia", "barber", "barbeiro", "barba", "navalha",
-            "corte masculino", "ritual de cuidado", "grooming",
+            "barbearia",
+            "barber",
+            "barbeiro",
+            "barba",
+            "navalha",
+            "corte masculino",
+            "ritual de cuidado",
+            "grooming",
         ),
         "min_required": 2,
     },
     "nutricionista": {
         "aliases": ("nutricionista", "nutricao", "nutrição", "nutricional"),
         "required": (
-            "nutricionista", "nutricao", "nutrição", "alimentar", "consulta",
-            "paciente", "pacientes", "plano alimentar", "saude", "saúde",
+            "nutricionista",
+            "nutricao",
+            "nutrição",
+            "alimentar",
+            "consulta",
+            "paciente",
+            "pacientes",
+            "plano alimentar",
+            "saude",
+            "saúde",
         ),
         "forbidden": (
-            "barbearia", "barber", "barbeiro", "barba", "navalha",
-            "corte masculino", "ritual de cuidado", "grooming",
-            "musculacao", "musculação", "matricula", "matrícula",
+            "barbearia",
+            "barber",
+            "barbeiro",
+            "barba",
+            "navalha",
+            "corte masculino",
+            "ritual de cuidado",
+            "grooming",
+            "musculacao",
+            "musculação",
+            "matricula",
+            "matrícula",
         ),
         "min_required": 2,
     },
     "barbearia": {
         "aliases": ("barbearia", "barber", "barbeiro"),
         "required": ("barbearia", "barbeiro", "barba", "corte", "navalha", "barber"),
-        "forbidden": ("plano alimentar", "consulta nutricional", "musculacao", "musculação"),
+        "forbidden": (
+            "plano alimentar",
+            "consulta nutricional",
+            "musculacao",
+            "musculação",
+        ),
         "min_required": 2,
     },
     "advogado": {
         "aliases": ("advogado", "advocacia", "juridico", "jurídico", "direito"),
-        "required": ("advogado", "advocacia", "juridico", "jurídico", "direito", "consulta", "cliente"),
-        "forbidden": ("barbearia", "academia", "musculacao", "plano alimentar", "pizza", "pet shop"),
+        "required": (
+            "advogado",
+            "advocacia",
+            "juridico",
+            "jurídico",
+            "direito",
+            "consulta",
+            "cliente",
+        ),
+        "forbidden": (
+            "barbearia",
+            "academia",
+            "musculacao",
+            "plano alimentar",
+            "pizza",
+            "pet shop",
+        ),
         "min_required": 2,
     },
     "clinica": {
         "aliases": ("clinica", "clínica", "medica", "médica", "medico", "médico"),
-        "required": ("clinica", "clínica", "consulta", "atendimento", "paciente", "exame", "saude", "saúde"),
-        "forbidden": ("barbearia", "musculacao", "corte masculino", "pizza", "hamburguer", "imovel"),
+        "required": (
+            "clinica",
+            "clínica",
+            "consulta",
+            "atendimento",
+            "paciente",
+            "exame",
+            "saude",
+            "saúde",
+        ),
+        "forbidden": (
+            "barbearia",
+            "musculacao",
+            "corte masculino",
+            "pizza",
+            "hamburguer",
+            "imovel",
+        ),
         "min_required": 2,
     },
     "dentista": {
-        "aliases": ("dentista", "odontologia", "odontologico", "odontológico", "odonto"),
-        "required": ("dentista", "odontologia", "odontologico", "odontológico", "consulta", "avaliacao", "avaliação"),
-        "forbidden": ("barbearia", "musculacao", "plano alimentar", "pizza", "imovel", "energia solar"),
+        "aliases": (
+            "dentista",
+            "odontologia",
+            "odontologico",
+            "odontológico",
+            "odonto",
+        ),
+        "required": (
+            "dentista",
+            "odontologia",
+            "odontologico",
+            "odontológico",
+            "consulta",
+            "avaliacao",
+            "avaliação",
+        ),
+        "forbidden": (
+            "barbearia",
+            "musculacao",
+            "plano alimentar",
+            "pizza",
+            "imovel",
+            "energia solar",
+        ),
         "min_required": 2,
     },
     "estetica": {
         "aliases": ("estetica", "estética", "spa", "beleza", "facial", "pele"),
-        "required": ("estetica", "estética", "tratamento", "pele", "beleza", "avaliacao", "avaliação"),
-        "forbidden": ("barbearia", "musculacao", "plano alimentar", "pizza", "imovel", "advocacia"),
+        "required": (
+            "estetica",
+            "estética",
+            "tratamento",
+            "pele",
+            "beleza",
+            "avaliacao",
+            "avaliação",
+        ),
+        "forbidden": (
+            "barbearia",
+            "musculacao",
+            "plano alimentar",
+            "pizza",
+            "imovel",
+            "advocacia",
+        ),
         "min_required": 2,
     },
     "energia_solar": {
-        "aliases": ("energia_solar", "energia solar", "solar", "fotovoltaica", "painel solar"),
-        "required": ("energia", "solar", "fotovoltaica", "projeto", "instalacao", "instalação", "economia"),
-        "forbidden": ("barbearia", "musculacao", "plano alimentar", "consulta juridica", "pizza", "pet shop"),
+        "aliases": (
+            "energia_solar",
+            "energia solar",
+            "solar",
+            "fotovoltaica",
+            "painel solar",
+        ),
+        "required": (
+            "energia",
+            "solar",
+            "fotovoltaica",
+            "projeto",
+            "instalacao",
+            "instalação",
+            "economia",
+        ),
+        "forbidden": (
+            "barbearia",
+            "musculacao",
+            "plano alimentar",
+            "consulta juridica",
+            "pizza",
+            "pet shop",
+        ),
         "min_required": 2,
     },
     "imobiliaria": {
-        "aliases": ("imobiliaria", "imobiliária", "imovel", "imóvel", "imoveis", "imóveis"),
-        "required": ("imobiliaria", "imobiliária", "imovel", "imóvel", "imoveis", "imóveis", "visita", "bairro"),
-        "forbidden": ("barbearia", "musculacao", "plano alimentar", "painel solar", "pizza", "dentista"),
+        "aliases": (
+            "imobiliaria",
+            "imobiliária",
+            "imovel",
+            "imóvel",
+            "imoveis",
+            "imóveis",
+        ),
+        "required": (
+            "imobiliaria",
+            "imobiliária",
+            "imovel",
+            "imóvel",
+            "imoveis",
+            "imóveis",
+            "visita",
+            "bairro",
+        ),
+        "forbidden": (
+            "barbearia",
+            "musculacao",
+            "plano alimentar",
+            "painel solar",
+            "pizza",
+            "dentista",
+        ),
         "min_required": 2,
     },
     "oficina": {
-        "aliases": ("oficina", "mecanica", "mecânica", "automotivo", "auto pecas", "autopeças"),
-        "required": ("oficina", "mecanica", "mecânica", "carro", "automotivo", "orcamento", "orçamento"),
-        "forbidden": ("barbearia", "plano alimentar", "consulta nutricional", "imovel", "pizza", "dentista"),
+        "aliases": (
+            "oficina",
+            "mecanica",
+            "mecânica",
+            "automotivo",
+            "auto pecas",
+            "autopeças",
+        ),
+        "required": (
+            "oficina",
+            "mecanica",
+            "mecânica",
+            "carro",
+            "automotivo",
+            "orcamento",
+            "orçamento",
+        ),
+        "forbidden": (
+            "barbearia",
+            "plano alimentar",
+            "consulta nutricional",
+            "imovel",
+            "pizza",
+            "dentista",
+        ),
         "min_required": 2,
     },
     "pet_shop": {
-        "aliases": ("pet_shop", "pet shop", "petshop", "veterinario", "veterinário", "banho", "tosa"),
-        "required": ("pet", "banho", "tosa", "veterinario", "veterinário", "tutor", "animal"),
-        "forbidden": ("barbearia", "musculacao", "plano alimentar", "imovel", "painel solar", "advocacia"),
+        "aliases": (
+            "pet_shop",
+            "pet shop",
+            "petshop",
+            "veterinario",
+            "veterinário",
+            "banho",
+            "tosa",
+        ),
+        "required": (
+            "pet",
+            "banho",
+            "tosa",
+            "veterinario",
+            "veterinário",
+            "tutor",
+            "animal",
+        ),
+        "forbidden": (
+            "barbearia",
+            "musculacao",
+            "plano alimentar",
+            "imovel",
+            "painel solar",
+            "advocacia",
+        ),
         "min_required": 2,
     },
     "restaurante": {
-        "aliases": ("restaurante", "pizzaria", "hamburgueria", "cafeteria", "padaria", "delivery", "cardapio", "cardápio"),
-        "required": ("restaurante", "cardapio", "cardápio", "pedido", "delivery", "reserva", "mesa", "sabor"),
-        "forbidden": ("barbearia", "musculacao", "plano alimentar", "painel solar", "advocacia", "dentista"),
+        "aliases": (
+            "restaurante",
+            "pizzaria",
+            "hamburgueria",
+            "cafeteria",
+            "padaria",
+            "delivery",
+            "cardapio",
+            "cardápio",
+        ),
+        "required": (
+            "restaurante",
+            "cardapio",
+            "cardápio",
+            "pedido",
+            "delivery",
+            "reserva",
+            "mesa",
+            "sabor",
+        ),
+        "forbidden": (
+            "barbearia",
+            "musculacao",
+            "plano alimentar",
+            "painel solar",
+            "advocacia",
+            "dentista",
+        ),
         "min_required": 2,
     },
     "salao": {
-        "aliases": ("salao", "salão", "salao de beleza", "salão de beleza", "cabeleireiro", "cabelo"),
-        "required": ("salao", "salão", "beleza", "cabelo", "escova", "mechas", "agenda"),
-        "forbidden": ("barbearia", "musculacao", "plano alimentar", "imovel", "painel solar", "advocacia"),
+        "aliases": (
+            "salao",
+            "salão",
+            "salao de beleza",
+            "salão de beleza",
+            "cabeleireiro",
+            "cabelo",
+        ),
+        "required": (
+            "salao",
+            "salão",
+            "beleza",
+            "cabelo",
+            "escova",
+            "mechas",
+            "agenda",
+        ),
+        "forbidden": (
+            "barbearia",
+            "musculacao",
+            "plano alimentar",
+            "imovel",
+            "painel solar",
+            "advocacia",
+        ),
         "min_required": 2,
     },
 }
+
 
 @dataclass(frozen=True)
 class ViteReactRenderResult:
@@ -529,15 +811,14 @@ def _get_copy_only_system_prompt(policy: str = "copy_only") -> str:
     )
     if policy == "creative_plan":
         return (
-            base
-            + " Voce tambem atua como uma equipe premium: estrategista de marca, "
-              "diretor criativo, diretor de fotografia, UX, CRO e SEO local. "
-              "Nunca comece por nicho -> template. Raciocine por negocio -> marca "
-              "-> cliente -> emocao -> historia -> linguagem visual -> conversao. "
-              "Traduza 'cinematografico' em decisoes objetivas: luz, ritmo, "
-              "profundidade, composicao, motion e materiais. Escolha somente "
-              "variantes permitidas de blocos, superficies e motion. Nao crie "
-              "novos nomes fora do schema."
+            base + " Voce tambem atua como uma equipe premium: estrategista de marca, "
+            "diretor criativo, diretor de fotografia, UX, CRO e SEO local. "
+            "Nunca comece por nicho -> template. Raciocine por negocio -> marca "
+            "-> cliente -> emocao -> historia -> linguagem visual -> conversao. "
+            "Traduza 'cinematografico' em decisoes objetivas: luz, ritmo, "
+            "profundidade, composicao, motion e materiais. Escolha somente "
+            "variantes permitidas de blocos, superficies e motion. Nao crie "
+            "novos nomes fora do schema."
         )
     return base
 
@@ -652,21 +933,19 @@ def _clean_copy_value(value: Any, *, limit: int = 220) -> str:
     # Se 2+ desses marcadores aparecerem, o copy veio em outro idioma: descarta.
     _foreign_markers = (
         r"\b(cuenta|entrenamiento|sudor|alcanzar|rutina de entrenamiento)\b",  # ES
-        r"\b(nutrizione|servizi|prevenzione|benessere|salute|consulto)\b",     # IT
+        r"\b(nutrizione|servizi|prevenzione|benessere|salute|consulto)\b",  # IT
         r"\b(aujourd'hui|merci|d\u00e9j\u00e0|vous \u00eates|renseignement|prise de rendez-vous)\b",  # FR
-        r"\b(heutzutage|terminvereinbarung|behandlung|untersuchung)\b",        # DE
-        r"\b(appointment today|call us today|get in touch|book now)\b",       # EN
+        r"\b(heutzutage|terminvereinbarung|behandlung|untersuchung)\b",  # DE
+        r"\b(appointment today|call us today|get in touch|book now)\b",  # EN
     )
     foreign_hits = sum(
-        1 for p in _foreign_markers
-        if re.search(p, text, flags=re.IGNORECASE)
+        1 for p in _foreign_markers if re.search(p, text, flags=re.IGNORECASE)
     )
     if foreign_hits >= 2:
         return ""
     # Bloqueia tamb\u00e9m copy que mistura IT/ES em headline curta (titulos de servico)
     if len(text) <= 60 and any(
-        re.search(p, text, flags=re.IGNORECASE)
-        for p in _foreign_markers
+        re.search(p, text, flags=re.IGNORECASE) for p in _foreign_markers
     ):
         return ""
     return text[:limit].strip()
@@ -716,7 +995,11 @@ def _clean_choice_list(values: Any, allowed: set[str], *, limit: int = 8) -> lis
 
 def _sanitize_creative_plan(content: dict[str, Any]) -> dict[str, Any]:
     """Validate creative direction while keeping the existing Studio path."""
-    source = content.get("creative_plan") if isinstance(content.get("creative_plan"), dict) else content
+    source = (
+        content.get("creative_plan")
+        if isinstance(content.get("creative_plan"), dict)
+        else content
+    )
     if not isinstance(source, dict):
         return {}
 
@@ -725,8 +1008,17 @@ def _sanitize_creative_plan(content: dict[str, Any]) -> dict[str, Any]:
         source["hero_layout"] = source.get("hero_variant")
 
     section_allowed = {
-        "hero", "about", "services", "gallery", "reviews", "faq",
-        "location", "lifestyle", "contact-cta", "pricing", "stats-bar",
+        "hero",
+        "about",
+        "services",
+        "gallery",
+        "reviews",
+        "faq",
+        "location",
+        "lifestyle",
+        "contact-cta",
+        "pricing",
+        "stats-bar",
     }
     section_aliases = {
         "sobre": "about",
@@ -744,7 +1036,11 @@ def _sanitize_creative_plan(content: dict[str, Any]) -> dict[str, Any]:
         "numeros": "stats-bar",
     }
     sections: list[str] = []
-    raw_sections = source.get("section_order") if isinstance(source.get("section_order"), list) else []
+    raw_sections = (
+        source.get("section_order")
+        if isinstance(source.get("section_order"), list)
+        else []
+    )
     for item in raw_sections:
         key = str(item or "").strip().lower().replace("_", "-")
         key = section_aliases.get(key, key)
@@ -759,15 +1055,62 @@ def _sanitize_creative_plan(content: dict[str, Any]) -> dict[str, Any]:
         if source.get(text_key):
             cleaned[text_key] = _clean_copy_value(source.get(text_key), limit=limit)
     for key, allowed in {
-        "brand_archetype": {"ruler", "rebel", "explorer", "creator", "sage", "caregiver", "hero", "magician"},
-        "emotional_outcome": {"trust", "status", "belonging", "exclusivity", "transformation", "security", "aspiration"},
-        "anti_identity": {"cheap", "generic", "corporate", "startup", "fintech", "amateur", "mass_market"},
+        "brand_archetype": {
+            "ruler",
+            "rebel",
+            "explorer",
+            "creator",
+            "sage",
+            "caregiver",
+            "hero",
+            "magician",
+        },
+        "emotional_outcome": {
+            "trust",
+            "status",
+            "belonging",
+            "exclusivity",
+            "transformation",
+            "security",
+            "aspiration",
+        },
+        "anti_identity": {
+            "cheap",
+            "generic",
+            "corporate",
+            "startup",
+            "fintech",
+            "amateur",
+            "mass_market",
+        },
         "story_arc": {"attention_problem_authority_proof_transformation_action"},
-        "cinematic_direction": {"editorial", "documentary", "luxury", "contrast_heavy", "natural_light", "energetic"},
-        "conversion_strategy": {"quick_whatsapp", "appointment_ritual", "proof_first", "local_trust", "premium_consultation"},
+        "cinematic_direction": {
+            "editorial",
+            "documentary",
+            "luxury",
+            "contrast_heavy",
+            "natural_light",
+            "energetic",
+        },
+        "conversion_strategy": {
+            "quick_whatsapp",
+            "appointment_ritual",
+            "proof_first",
+            "local_trust",
+            "premium_consultation",
+        },
         "hero_layout": {"split", "center", "asymmetric", "fullbleed", "video"},
         "hero_text_side": {"left", "right", "center"},
-        "aesthetic_mode": {"wellness", "impact", "editorial", "premium", "technical", "dynamic", "minimal", "balanced"},
+        "aesthetic_mode": {
+            "wellness",
+            "impact",
+            "editorial",
+            "premium",
+            "technical",
+            "dynamic",
+            "minimal",
+            "balanced",
+        },
         "spacing_density": {"compressed", "normal", "spacious"},
         "radius_mode": {"sharp", "balanced", "soft", "pill"},
         "container_strategy": {"contained", "wide", "edge_to_edge", "overlap"},
@@ -780,25 +1123,57 @@ def _sanitize_creative_plan(content: dict[str, Any]) -> dict[str, Any]:
         "about_variant": {"manifesto_split", "proof_sidebar", "feature_grid"},
         "surface_style": {"solid", "outline", "soft_tint"},
         "color_strategy": {"restrained", "committed", "full_palette", "drenched"},
-        "typography_mood": {"clean_sans", "condensed_sport", "luxury_display", "editorial_serif", "technical_grotesk"},
+        "typography_mood": {
+            "clean_sans",
+            "condensed_sport",
+            "luxury_display",
+            "editorial_serif",
+            "technical_grotesk",
+        },
         "gallery_density": {"mosaic", "cinematic_strip", "editorial_grid"},
         "cta_style": {"poster_band", "solid_panel", "split_card", "minimal_inline"},
         "prompt_priority": {"visual_drama", "local_seo", "conversion", "trust"},
-        "anti_repetition_rule": {"avoid_same_lane", "avoid_glass", "avoid_same_hero", "avoid_same_order"},
+        "anti_repetition_rule": {
+            "avoid_same_lane",
+            "avoid_glass",
+            "avoid_same_hero",
+            "avoid_same_order",
+        },
         "services_variant": {"stacked_cards", "split_editorial", "stats_then_cards"},
-        "reviews_variant": {"score_wall", "quote_spotlight", "card_marquee", "editorial_case"},
-        "proof_style": {"score_wall", "quote_spotlight", "card_marquee", "editorial_case"},
+        "reviews_variant": {
+            "score_wall",
+            "quote_spotlight",
+            "card_marquee",
+            "editorial_case",
+        },
+        "proof_style": {
+            "score_wall",
+            "quote_spotlight",
+            "card_marquee",
+            "editorial_case",
+        },
         "faq_variant": {"panel", "inline"},
         "location_variant": {"split_local", "feature_local"},
         "motion_style": {"sharp", "smooth", "minimal"},
-        "visual_lane": {"lane_a", "lane_b", "lane_c", "lane_d", "lane_e", "lane_f", "lane_g", "lane_h"},
+        "visual_lane": {
+            "lane_a",
+            "lane_b",
+            "lane_c",
+            "lane_d",
+            "lane_e",
+            "lane_f",
+            "lane_g",
+            "lane_h",
+        },
     }.items():
         value = _one_of(source.get(key), allowed)
         if value:
             cleaned[key] = value
     if sections:
         cleaned["section_order"] = sections
-    surface_mix = _clean_choice_list(source.get("surface_mix"), {"solid", "outline", "soft_tint"}, limit=4)
+    surface_mix = _clean_choice_list(
+        source.get("surface_mix"), {"solid", "outline", "soft_tint"}, limit=4
+    )
     if surface_mix:
         cleaned["surface_mix"] = surface_mix
     raw_surface_map = source.get("section_surface_map")
@@ -808,19 +1183,33 @@ def _sanitize_creative_plan(content: dict[str, Any]) -> dict[str, Any]:
             section_key = str(raw_key or "").strip().lower().replace("_", "-")
             section_key = section_aliases.get(section_key, section_key)
             surface_value = _one_of(raw_value, {"solid", "outline", "soft_tint"})
-            if section_key in section_allowed and section_key != "hero" and surface_value:
+            if (
+                section_key in section_allowed
+                and section_key != "hero"
+                and surface_value
+            ):
                 surface_map[section_key] = surface_value
         if len(set(surface_map.values())) >= 2:
             cleaned["section_surface_map"] = surface_map
     motion_mix = _clean_choice_list(
         source.get("motion_mix"),
-        {"mask_reveal", "parallax_video", "stagger_cards", "hover_depth", "line_draw", "marquee", "subtle_fade"},
+        {
+            "mask_reveal",
+            "parallax_video",
+            "stagger_cards",
+            "hover_depth",
+            "line_draw",
+            "marquee",
+            "subtle_fade",
+        },
         limit=5,
     )
     if motion_mix:
         cleaned["motion_mix"] = motion_mix
     if cleaned.get("hero_layout") == "video":
-        cleaned.setdefault("motion_mix", ["parallax_video", "mask_reveal", "stagger_cards"])
+        cleaned.setdefault(
+            "motion_mix", ["parallax_video", "mask_reveal", "stagger_cards"]
+        )
         cleaned.setdefault("hero_text_side", "left")
     if cleaned.get("anti_identity") in {"generic", "startup", "fintech"}:
         cleaned.setdefault("anti_repetition_rule", "avoid_same_hero")
@@ -855,14 +1244,46 @@ def _looks_like_pt_br_copy(content: dict[str, Any]) -> bool:
     if len(words) < 12:
         return True
     english_markers = {
-        "the", "and", "for", "your", "with", "schedule", "learn", "about",
-        "nutrition", "performance", "training", "results", "services",
-        "consultation", "personalized", "athletic", "food", "recovery",
+        "the",
+        "and",
+        "for",
+        "your",
+        "with",
+        "schedule",
+        "learn",
+        "about",
+        "nutrition",
+        "performance",
+        "training",
+        "results",
+        "services",
+        "consultation",
+        "personalized",
+        "athletic",
+        "food",
+        "recovery",
     }
     portuguese_markers = {
-        "de", "da", "do", "em", "para", "com", "seu", "sua", "consulta",
-        "agendar", "nutrição", "nutricao", "alimentar", "atendimento",
-        "plano", "resultados", "são", "voce", "você", "whatsapp",
+        "de",
+        "da",
+        "do",
+        "em",
+        "para",
+        "com",
+        "seu",
+        "sua",
+        "consulta",
+        "agendar",
+        "nutrição",
+        "nutricao",
+        "alimentar",
+        "atendimento",
+        "plano",
+        "resultados",
+        "são",
+        "voce",
+        "você",
+        "whatsapp",
     }
     english_hits = sum(1 for word in words if word in english_markers)
     portuguese_hits = sum(1 for word in words if word in portuguese_markers)
@@ -923,7 +1344,9 @@ def _sanitize_copy_only_content(content: dict[str, Any]) -> dict[str, Any]:
         if content.get(key):
             cleaned[key] = _clean_copy_value(content.get(key), limit=240)
 
-    lifestyle = content.get("lifestyle") if isinstance(content.get("lifestyle"), dict) else {}
+    lifestyle = (
+        content.get("lifestyle") if isinstance(content.get("lifestyle"), dict) else {}
+    )
     if lifestyle:
         cleaned["lifestyle"] = {
             key: _clean_copy_value(lifestyle.get(key), limit=220)
@@ -931,7 +1354,9 @@ def _sanitize_copy_only_content(content: dict[str, Any]) -> dict[str, Any]:
             if lifestyle.get(key)
         }
 
-    services = content.get("services") if isinstance(content.get("services"), list) else []
+    services = (
+        content.get("services") if isinstance(content.get("services"), list) else []
+    )
     clean_services: list[dict[str, str]] = []
     for item in services[:3]:
         if isinstance(item, dict):
@@ -945,8 +1370,14 @@ def _sanitize_copy_only_content(content: dict[str, Any]) -> dict[str, Any]:
     if clean_services:
         cleaned["services"] = clean_services
 
-    differentials = content.get("differentials") if isinstance(content.get("differentials"), list) else []
-    clean_differentials = [_clean_copy_value(item, limit=110) for item in differentials[:3]]
+    differentials = (
+        content.get("differentials")
+        if isinstance(content.get("differentials"), list)
+        else []
+    )
+    clean_differentials = [
+        _clean_copy_value(item, limit=110) for item in differentials[:3]
+    ]
     clean_differentials = [item for item in clean_differentials if item]
     if clean_differentials:
         cleaned["differentials"] = clean_differentials
@@ -1034,7 +1465,10 @@ def _validate_creative_plan_response(content: dict[str, Any]) -> None:
         raise ViteReactRenderError("creative_plan sem section_order suficiente")
 
     motion_mix = plan.get("motion_mix")
-    if not isinstance(motion_mix, list) or len([item for item in motion_mix if item]) < 1:
+    if (
+        not isinstance(motion_mix, list)
+        or len([item for item in motion_mix if item]) < 1
+    ):
         raise ViteReactRenderError("creative_plan sem motion_mix suficiente")
 
     hero = str(plan.get("hero_layout") or "")
@@ -1042,13 +1476,19 @@ def _validate_creative_plan_response(content: dict[str, Any]) -> None:
     motion = str(plan.get("motion_intensity") or "")
     typography = str(plan.get("typography_scale") or "")
     # Allow minimal/soft individually — only block genuinely weak combos
-    if hero == "center" and spacing == "spacious" and motion == "minimal" and typography == "soft":
+    if (
+        hero == "center"
+        and spacing == "spacious"
+        and motion == "minimal"
+        and typography == "soft"
+    ):
         raise ViteReactRenderError("creative_plan fraco bloqueado antes do Studio")
 
 
 def _parse_content_json(raw: str) -> dict[str, Any]:
     """Parse the compact JSON returned by copy_only mode."""
     from backend.agents._text_utils import strip_code_fence  # — M2 DRY
+
     text = strip_code_fence(raw)
     if not text:
         return {}
@@ -1069,16 +1509,24 @@ def _parse_content_json(raw: str) -> dict[str, Any]:
     return _sanitize_copy_only_content(parsed)
 
 
-def _merge_copy_only_content(facts: dict[str, Any], content: dict[str, Any]) -> dict[str, Any]:
+def _merge_copy_only_content(
+    facts: dict[str, Any], content: dict[str, Any]
+) -> dict[str, Any]:
     try:
         merged = json.loads(json.dumps(facts or {}, ensure_ascii=False, default=str))
     except Exception:
         merged = dict(facts or {})
     if content:
         merged["_llm_content"] = content
-    creative_plan = content.get("creative_plan") if isinstance(content.get("creative_plan"), dict) else {}
+    creative_plan = (
+        content.get("creative_plan")
+        if isinstance(content.get("creative_plan"), dict)
+        else {}
+    )
     if creative_plan:
-        variation = merged.get("variation") if isinstance(merged.get("variation"), dict) else {}
+        variation = (
+            merged.get("variation") if isinstance(merged.get("variation"), dict) else {}
+        )
         variation = dict(variation)
         for key in (
             "hero_layout",
@@ -1236,7 +1684,11 @@ def render_vite_react_site(
             copy_models.append(copy_models[-1])
         copy_models = copy_models[: _copy_only_attempts()]
         last_error = None
-        studio_model = "studio-creative-plan" if llm_policy == "creative_plan" else "studio-copy-only"
+        studio_model = (
+            "studio-creative-plan"
+            if llm_policy == "creative_plan"
+            else "studio-copy-only"
+        )
         for model_idx, model in enumerate(copy_models, start=1):
             attempt_started = time.time()
             try:
@@ -1249,7 +1701,9 @@ def render_vite_react_site(
                 )
                 content = _parse_content_json(raw)
                 if not content:
-                    raise ViteReactRenderError("copy_only retornou JSON vazio ou invalido")
+                    raise ViteReactRenderError(
+                        "copy_only retornou JSON vazio ou invalido"
+                    )
                 if llm_policy == "creative_plan":
                     _validate_creative_plan_response(content)
                 attempts.append(
@@ -1297,7 +1751,14 @@ def render_vite_react_site(
                         "policy": llm_policy,
                     }
                 )
-                if any(marker in last_error.lower() for marker in ("401 unauthorized", "invalid api key", "permission_error")):
+                if any(
+                    marker in last_error.lower()
+                    for marker in (
+                        "401 unauthorized",
+                        "invalid api key",
+                        "permission_error",
+                    )
+                ):
                     break
         raise ViteReactRenderError(
             "Vite React renderer falhou no modo "
@@ -1369,7 +1830,14 @@ def render_vite_react_site(
             )
             # Erro permanente (403/401 plan vencido, auth invalida): nao tenta proximo
             lowered = last_error.lower()
-            if any(marker in lowered for marker in ("401 unauthorized", "invalid api key", "permission_error")):
+            if any(
+                marker in lowered
+                for marker in (
+                    "401 unauthorized",
+                    "invalid api key",
+                    "permission_error",
+                )
+            ):
                 break
             # Caso contrario, tenta proximo modelo da cascata
 
@@ -1380,6 +1848,7 @@ def render_vite_react_site(
         f"({len(model_candidates)} tentados: {', '.join(model_candidates)}). "
         "Ultimo erro: " + (last_error or "(sem erro capturado)")
     )
+
 
 def _select_vite_react_models(primary_model: str, fallback_model: str) -> list[str]:
     selected: list[str] = []
@@ -1392,7 +1861,9 @@ def _select_vite_react_models(primary_model: str, fallback_model: str) -> list[s
     return selected
 
 
-def _select_vite_react_models_for_run(primary_model: str, fallback_model: str) -> list[str]:
+def _select_vite_react_models_for_run(
+    primary_model: str, fallback_model: str
+) -> list[str]:
     if _single_model_mode_enabled():
         return _select_vite_react_models(primary_model or PROXY_BUILDER_MODEL, "")
     # Cascade explicito via env (sempre que setado, sobrescreve primary/fallback)
@@ -1424,7 +1895,9 @@ def _model_candidates(*values: str) -> list[str]:
 def _safe_probe_preview(raw: str, limit: int = 240) -> str:
     preview = str(raw or "")[:limit]
     preview = re.sub(r"(?i)(bearer\s+)[a-z0-9._\-]+", r"\1***", preview)
-    preview = re.sub(r"(?i)(api[_-]?key['\"]?\s*[:=]\s*['\"]?)[^'\"\s,}]+", r"\1***", preview)
+    preview = re.sub(
+        r"(?i)(api[_-]?key['\"]?\s*[:=]\s*['\"]?)[^'\"\s,}]+", r"\1***", preview
+    )
     return preview
 
 
@@ -1472,7 +1945,9 @@ def _proxy_base_url() -> str:
         or "https://llm.seunegociofralib.site"
     ).rstrip("/")
     if "api.aibee.cloud" in base.lower():
-        return os.getenv("FRALIB_ANTHROPIC_CANONICAL_BASE_URL", "https://api.kpalabz.com/v1").rstrip("/")
+        return os.getenv(
+            "FRALIB_ANTHROPIC_CANONICAL_BASE_URL", "https://api.kpalabz.com/v1"
+        ).rstrip("/")
     return base
 
 
@@ -1510,7 +1985,10 @@ def _proxy_credentials() -> tuple[str, str, int | None, Any | None]:
             if picked and picked[0]:
                 picked_base = (picked[1] or _proxy_base_url()).rstrip("/")
                 if "api.aibee.cloud" in picked_base.lower():
-                    picked_base = os.getenv("FRALIB_ANTHROPIC_CANONICAL_BASE_URL", "https://api.kpalabz.com/v1").rstrip("/")
+                    picked_base = os.getenv(
+                        "FRALIB_ANTHROPIC_CANONICAL_BASE_URL",
+                        "https://api.kpalabz.com/v1",
+                    ).rstrip("/")
                 return picked[0], picked_base, picked[2], ia_manager
         except Exception as exc:
             print(f"[ViteReact] provider key lookup falhou: {exc}")
@@ -1526,7 +2004,9 @@ def _mark_proxy_key_success(manager: Any | None, key_id: int | None) -> None:
         print(f"[ViteReact] mark_success falhou key_id={key_id}: {exc}")
 
 
-def _mark_proxy_key_failure(manager: Any | None, key_id: int | None, error: Exception) -> None:
+def _mark_proxy_key_failure(
+    manager: Any | None, key_id: int | None, error: Exception
+) -> None:
     if not manager:
         return
     response = getattr(error, "response", None)
@@ -1545,7 +2025,11 @@ def _mark_proxy_key_failure(manager: Any | None, key_id: int | None, error: Exce
 
 
 def _is_litellm_openai_chat_base(base_url: str | None = None) -> bool:
-    if os.getenv("FRALIB_LITELLM_OPENAI_CHAT", "1").strip().lower() in {"0", "false", "no"}:
+    if os.getenv("FRALIB_LITELLM_OPENAI_CHAT", "1").strip().lower() in {
+        "0",
+        "false",
+        "no",
+    }:
         return False
     base = (base_url or _proxy_base_url()).lower()
     return any(
@@ -1645,20 +2129,30 @@ def _call_proxy_openai_chat(
     if _json_response_format_enabled():
         payload["response_format"] = {"type": "json_object"}
     try:
-        with httpx.Client(timeout=httpx.Timeout(connect=10.0, read=420.0, write=60.0, pool=10.0)) as client:
+        with httpx.Client(
+            timeout=httpx.Timeout(connect=10.0, read=420.0, write=60.0, pool=10.0)
+        ) as client:
             response = client.post(
                 _chat_completions_url(base_url),
-                headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+                headers={
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json",
+                },
                 json=payload,
             )
             try:
                 response.raise_for_status()
             except Exception:
-                if "response_format" in json.dumps(payload) and _response_format_retriable(response):
+                if "response_format" in json.dumps(
+                    payload
+                ) and _response_format_retriable(response):
                     payload.pop("response_format", None)
                     response = client.post(
                         _chat_completions_url(base_url),
-                        headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+                        headers={
+                            "Authorization": f"Bearer {api_key}",
+                            "Content-Type": "application/json",
+                        },
                         json=payload,
                     )
                     response.raise_for_status()
@@ -1674,9 +2168,12 @@ def _call_proxy_openai_chat(
     usage = data.get("usage") or {}
     usage_out = {
         "input_tokens": usage.get("prompt_tokens", usage.get("input_tokens", 0)) or 0,
-        "output_tokens": usage.get("completion_tokens", usage.get("output_tokens", 0)) or 0,
+        "output_tokens": usage.get("completion_tokens", usage.get("output_tokens", 0))
+        or 0,
     }
-    _record_builder_llm_usage(model_id, usage_out, latency_ms=int((time.time() - started) * 1000))
+    _record_builder_llm_usage(
+        model_id, usage_out, latency_ms=int((time.time() - started) * 1000)
+    )
     return text_out, usage_out
 
 
@@ -1723,7 +2220,9 @@ def _proxy_http_error(response: httpx.Response) -> ViteReactRenderError:
     return ViteReactRenderError(detail)
 
 
-def _record_builder_llm_usage(model_id: str, usage: dict[str, Any], *, latency_ms: int | None = None) -> None:
+def _record_builder_llm_usage(
+    model_id: str, usage: dict[str, Any], *, latency_ms: int | None = None
+) -> None:
     input_tokens = int(usage.get("input_tokens") or 0)
     output_tokens = int(usage.get("output_tokens") or 0)
     if input_tokens <= 0 and output_tokens <= 0:
@@ -1804,14 +2303,6 @@ def _probe_vite_react_model(model: str) -> tuple[bool, str]:
                 max_tokens=800,
             )
         else:
-            try:
-                from services.llm_router import call_llm
-            except Exception:
-                try:
-                    from backend.services.llm_router import call_llm
-                except Exception:
-                    from llm_router import call_llm
-
             raw, _usage = call_llm(
                 "anthropic",
                 model_id,
@@ -1847,6 +2338,7 @@ def _probe_failure_blocks_generation(raw: str) -> bool:
 def _clean_json_block(raw: str) -> str:
     """Strip fence + extract JSON object span between braces."""
     from backend.agents._text_utils import strip_code_fence  # — M2 DRY
+
     text = strip_code_fence(raw)
     start = text.find("{")
     end = text.rfind("}")
@@ -1898,7 +2390,10 @@ def _generate_vite_project_files_in_batches(
                 )
             except Exception as exc:
                 last_exc = exc
-                if _is_transient_proxy_error(exc) and attempt < _batch_generation_attempts():
+                if (
+                    _is_transient_proxy_error(exc)
+                    and attempt < _batch_generation_attempts()
+                ):
                     time.sleep(_transient_proxy_retry_delay_seconds(attempt))
                     continue
                 raise
@@ -1944,7 +2439,9 @@ def _generate_vite_project_files_in_batches(
                     },
                 )
         else:
-            raise ViteReactRenderError(f"geracao em lotes falhou em {batch_name}: {last_exc}")
+            raise ViteReactRenderError(
+                f"geracao em lotes falhou em {batch_name}: {last_exc}"
+            )
         if batch_index < total_batches:
             delay = _batch_spacing_seconds()
             if delay > 0:
@@ -1959,8 +2456,8 @@ def _generate_vite_project_files_in_batches(
     if pending_components:
         # Generate components in sub-batches of 3
         for i in range(0, len(pending_components), 3):
-            chunk = pending_components[i:i+3]
-            batch_name = f"components-{i//3 + 1}"
+            chunk = pending_components[i : i + 3]
+            batch_name = f"components-{i // 3 + 1}"
             batch_prompt = _compose_vite_file_batch_prompt(
                 builder_prompt,
                 facts=facts,
@@ -1978,7 +2475,10 @@ def _generate_vite_project_files_in_batches(
                         temperature=temperature if attempt == 1 else 0.1,
                     )
                 except Exception as exc:
-                    if _is_transient_proxy_error(exc) and attempt < _batch_generation_attempts():
+                    if (
+                        _is_transient_proxy_error(exc)
+                        and attempt < _batch_generation_attempts()
+                    ):
                         time.sleep(_transient_proxy_retry_delay_seconds(attempt))
                         continue
                     raise
@@ -2082,12 +2582,14 @@ def _route_model_for_batch(batch_name: str, default_model: str) -> str:
     """
     try:
         from backend.services.vite_renderer_models import batch_model_for_batch
+
         routed = batch_model_for_batch(batch_name)
     except Exception:
         return default_model
 
     # Mapear alias -> modelo real usando normalize_model_alias
     from backend.services.vite_renderer_models import normalize_model_alias
+
     target_alias = routed  # haiku, sonnet, opus
 
     # Se default_model ja e um alias, retornar o roteado
@@ -2104,7 +2606,9 @@ def _batch_format_repair_budget() -> int:
     return max(600, min(_env_int("FRALIB_VITE_FORMAT_REPAIR_MAX_TOKENS", 1400), 2200))
 
 
-def _repair_batch_output_format(raw: str, *, model: str, paths: list[str], batch_name: str) -> str:
+def _repair_batch_output_format(
+    raw: str, *, model: str, paths: list[str], batch_name: str
+) -> str:
     text = str(raw or "").strip()
     if not text:
         return ""
@@ -2214,7 +2718,12 @@ def _extract_files_via_regex(text: str) -> dict[str, str]:
         value = text[vstart + 1 : p]
         # Heuristic: keys look like file paths (contain / or .) and
         # values contain code (often >5 chars)
-        if ("/" in key_candidate or key_candidate.endswith(tuple(".tsx .ts .jsx .js .html .css .json .md .yaml .yml".split()))) and len(value) >= 1:
+        if (
+            "/" in key_candidate
+            or key_candidate.endswith(
+                tuple(".tsx .ts .jsx .js .html .css .json .md .yaml .yml".split())
+            )
+        ) and len(value) >= 1:
             out.setdefault(key_candidate, value)
         i = p + 1
     return out
@@ -2270,9 +2779,7 @@ def _tolerant_json_loads(text: str) -> dict:
                 return obj
         except Exception:
             continue
-    raise ViteReactRenderError(
-        f"JSON de arquivos irrecuperavel (len={len(text)})"
-    )
+    raise ViteReactRenderError(f"JSON de arquivos irrecuperavel (len={len(text)})")
 
 
 def extract_vite_project_files(raw: str) -> dict[str, str]:
@@ -2302,10 +2809,17 @@ def extract_vite_project_files(raw: str) -> dict[str, str]:
                 files = wrapper.get("files")
                 break
     if isinstance(files, list):
-        files = {str(item.get("path") or ""): item.get("content") for item in files if isinstance(item, dict)}
+        files = {
+            str(item.get("path") or ""): item.get("content")
+            for item in files
+            if isinstance(item, dict)
+        }
     if not isinstance(files, dict) or not files:
         raise ViteReactRenderError("JSON sem objeto files")
-    return {str(path).replace("\\", "/"): str(content or "") for path, content in files.items()}
+    return {
+        str(path).replace("\\", "/"): str(content or "")
+        for path, content in files.items()
+    }
 
 
 def _extract_tagged_file_blocks(raw: str) -> dict[str, str]:
@@ -2326,7 +2840,9 @@ def _extract_tagged_file_blocks(raw: str) -> dict[str, str]:
         files[str(path).replace("\\", "/")] = content.strip("\r\n")
     if files:
         return files
-    partial = re.search(r"<file\s+path=[\"']([^\"']+)[\"']\s*>([\s\S]+)$", text, flags=re.IGNORECASE)
+    partial = re.search(
+        r"<file\s+path=[\"']([^\"']+)[\"']\s*>([\s\S]+)$", text, flags=re.IGNORECASE
+    )
     if partial:
         path = str(partial.group(1) or "").replace("\\", "/")
         content = str(partial.group(2) or "")
@@ -2395,16 +2911,26 @@ def _sanitize_logger_in_source(source: str) -> str:
     insert_idx = 0
     for i, line in enumerate(lines):
         stripped = line.strip()
-        if stripped.startswith("import ") or stripped.startswith("//") or stripped.startswith("/*") or stripped.startswith("*") or not stripped:
+        if (
+            stripped.startswith("import ")
+            or stripped.startswith("//")
+            or stripped.startswith("/*")
+            or stripped.startswith("*")
+            or not stripped
+        ):
             insert_idx = i + 1
         else:
             break
-    lines.insert(insert_idx, "// Sprint 11.6: logger shim (LLM generated code references it)")
+    lines.insert(
+        insert_idx, "// Sprint 11.6: logger shim (LLM generated code references it)"
+    )
     lines.insert(insert_idx + 1, "const logger = console;")
     return "\n".join(lines)
 
 
-def prepare_vite_project_files(files: dict[str, str], *, facts: dict[str, Any]) -> dict[str, str]:
+def prepare_vite_project_files(
+    files: dict[str, str], *, facts: dict[str, Any]
+) -> dict[str, str]:
     """Normalize generated files and inject deterministic Vite scaffolding."""
     # Sprint 11.6: sanitize logger antes de qualquer outra transformacao
     # Sprint 16: Preserve CSS files (don't filter them out like .tsx/.ts)
@@ -2414,15 +2940,25 @@ def prepare_vite_project_files(files: dict[str, str], *, facts: dict[str, Any]) 
             sanitized[path] = _sanitize_logger_in_source(content)
         elif path.endswith(".css"):
             sanitized[path] = content  # CSS passes through unchanged
-    prepared = {_safe_project_path(path): content for path, content in sanitized.items()}
-    prepared["package.json"] = json.dumps(FIXED_PACKAGE_JSON, ensure_ascii=False, indent=2)
+    prepared = {
+        _safe_project_path(path): content for path, content in sanitized.items()
+    }
+    prepared["package.json"] = json.dumps(
+        FIXED_PACKAGE_JSON, ensure_ascii=False, indent=2
+    )
     prepared["vite.config.ts"] = vite_template_vite_config()
     prepared["tsconfig.json"] = vite_template_tsconfig()
 
     # Sprint 16: Inject archetype palette into facts for index.html theme-color
     facts_with_archetype = dict(facts)
     business = facts.get("business") if isinstance(facts.get("business"), dict) else {}
-    segment = str(business.get("segment") or business.get("segmento") or facts.get("segmento") or facts.get("segment") or "servicos").lower()
+    segment = str(
+        business.get("segment")
+        or business.get("segmento")
+        or facts.get("segmento")
+        or facts.get("segment")
+        or "servicos"
+    ).lower()
     archetype = _get_archetype_for_segment(segment)
     palette = _get_archetype_palette(archetype)
     facts_with_archetype["_archetype_palette"] = palette
@@ -2453,7 +2989,9 @@ def prepare_vite_project_files(files: dict[str, str], *, facts: dict[str, Any]) 
     return dict(sorted(prepared.items()))
 
 
-def _interpolate_studio_placeholders(prepared: dict[str, str], facts: dict[str, Any]) -> None:
+def _interpolate_studio_placeholders(
+    prepared: dict[str, str], facts: dict[str, Any]
+) -> None:
     """Sprint 12.19: defensive fix.
 
     The studio fallback generates f-strings that reference segment-aware vars
@@ -2475,80 +3013,230 @@ def _interpolate_studio_placeholders(prepared: dict[str, str], facts: dict[str, 
         llm_content = facts["_llm_content"]
 
     business = facts.get("business") if isinstance(facts.get("business"), dict) else {}
-    raw_segment = str(business.get("segment") or business.get("segmento") or facts.get("segmento") or "")
+    raw_segment = str(
+        business.get("segment")
+        or business.get("segmento")
+        or facts.get("segmento")
+        or ""
+    )
     segment = raw_segment.lower()
-    city = str(business.get("city") or business.get("cidade") or facts.get("cidade") or "Curitiba")
+    city = str(
+        business.get("city")
+        or business.get("cidade")
+        or facts.get("cidade")
+        or "Curitiba"
+    )
     name = str(business.get("name") or business.get("business_name") or "Negócio local")
     phone = str(business.get("whatsapp") or business.get("phone") or "41999999999")
     rating = str(business.get("rating") or "4.8")
 
     # Mirror the legacy segment copy chain used by the cinematic studio.
     if "barbearia" in segment or "barbeiro" in segment:
-        cta_primary, cta_secondary, alt_img = "Agendar horario", "Ver servicos", "Barbeiro em barbearia"
-        lifestyle_title, lifestyle_desc = "Tradicao em cada corte", "Um espaco dedicado ao cuidado masculino, com atendimento personalizado e toalhas quentes."
-    elif "academia" in segment or "fitness" in segment or "crossfit" in segment or "musculacao" in segment:
-        cta_primary, cta_secondary, alt_img = "Comecar treino", "Ver estrutura", "Alunos em treino fitness"
-        lifestyle_title, lifestyle_desc = "Energia e constancia", "Um espaco para criar rotina, encontrar orientacao e manter frequencia sem complicar."
-    elif "restaurante" in segment or "bar " in segment or "pizzaria" in segment or "hamburgueria" in segment or "lanchonete" in segment or "cafeteria" in segment:
+        cta_primary, cta_secondary, alt_img = (
+            "Agendar horario",
+            "Ver servicos",
+            "Barbeiro em barbearia",
+        )
+        lifestyle_title, lifestyle_desc = (
+            "Tradicao em cada corte",
+            "Um espaco dedicado ao cuidado masculino, com atendimento personalizado e toalhas quentes.",
+        )
+    elif (
+        "academia" in segment
+        or "fitness" in segment
+        or "crossfit" in segment
+        or "musculacao" in segment
+    ):
+        cta_primary, cta_secondary, alt_img = (
+            "Comecar treino",
+            "Ver estrutura",
+            "Alunos em treino fitness",
+        )
+        lifestyle_title, lifestyle_desc = (
+            "Energia e constancia",
+            "Um espaco para criar rotina, encontrar orientacao e manter frequencia sem complicar.",
+        )
+    elif (
+        "restaurante" in segment
+        or "bar " in segment
+        or "pizzaria" in segment
+        or "hamburgueria" in segment
+        or "lanchonete" in segment
+        or "cafeteria" in segment
+    ):
         cta_primary, cta_secondary, alt_img = "Fazer reserva", "Ver menu", "Restaurante"
-        lifestyle_title, lifestyle_desc = "Experiencia gastronomica", "Cada prato preparado com cuidado para proporcionar uma experiencia unica."
+        lifestyle_title, lifestyle_desc = (
+            "Experiencia gastronomica",
+            "Cada prato preparado com cuidado para proporcionar uma experiencia unica.",
+        )
     elif "clinica" in segment or "estetica" in segment or "dermatologia" in segment:
-        cta_primary, cta_secondary, alt_img = "Agendar consulta", "Conhecer servicos", "Clinica"
-        lifestyle_title, lifestyle_desc = "Cuidado e acolhimento", "Ambiente preparado para recebe-lo com conforto e seguranca em cada atendimento."
+        cta_primary, cta_secondary, alt_img = (
+            "Agendar consulta",
+            "Conhecer servicos",
+            "Clinica",
+        )
+        lifestyle_title, lifestyle_desc = (
+            "Cuidado e acolhimento",
+            "Ambiente preparado para recebe-lo com conforto e seguranca em cada atendimento.",
+        )
     elif "imobiliaria" in segment or "imoveis" in segment:
         cta_primary, cta_secondary, alt_img = "Ver imoveis", "Falar corretor", "Imovel"
-        lifestyle_title, lifestyle_desc = "Seu proximo imovel", "Encontre o imovel ideal com quem entende do mercado local."
+        lifestyle_title, lifestyle_desc = (
+            "Seu proximo imovel",
+            "Encontre o imovel ideal com quem entende do mercado local.",
+        )
     elif "nutricionista" in segment or "nutricao" in segment:
-        cta_primary, cta_secondary, alt_img = "Agendar consulta", "Ver planos", "Nutricionista"
-        lifestyle_title, lifestyle_desc = "Nutricao de verdade", "Transforme sua alimentacao com acompanhamento profissional cientifico."
+        cta_primary, cta_secondary, alt_img = (
+            "Agendar consulta",
+            "Ver planos",
+            "Nutricionista",
+        )
+        lifestyle_title, lifestyle_desc = (
+            "Nutricao de verdade",
+            "Transforme sua alimentacao com acompanhamento profissional cientifico.",
+        )
     elif "advocacia" in segment or "advogado" in segment:
-        cta_primary, cta_secondary, alt_img = "Falar com advogado", "Ver areas", "Escritorio de advocacia"
-        lifestyle_title, lifestyle_desc = "Direito com seriedade", "Atendimento juridico transparente e dedicado a sua causa."
+        cta_primary, cta_secondary, alt_img = (
+            "Falar com advogado",
+            "Ver areas",
+            "Escritorio de advocacia",
+        )
+        lifestyle_title, lifestyle_desc = (
+            "Direito com seriedade",
+            "Atendimento juridico transparente e dedicado a sua causa.",
+        )
     elif "odonto" in segment or "dentista" in segment:
-        cta_primary, cta_secondary, alt_img = "Agendar consulta", "Ver tratamentos", "Consultorio odontologico"
-        lifestyle_title, lifestyle_desc = "Seu sorriso perfeito", "Tecnologia de ponta e carinho em cada tratamento para seu sorriso."
+        cta_primary, cta_secondary, alt_img = (
+            "Agendar consulta",
+            "Ver tratamentos",
+            "Consultorio odontologico",
+        )
+        lifestyle_title, lifestyle_desc = (
+            "Seu sorriso perfeito",
+            "Tecnologia de ponta e carinho em cada tratamento para seu sorriso.",
+        )
     elif "ecommerce" in segment or "loja" in segment or "roupas" in segment:
         cta_primary, cta_secondary, alt_img = "Ver produtos", "Ver ofertas", "Produtos"
-        lifestyle_title, lifestyle_desc = "Qualidade garantida", "Produtos selecionados com cuidado para atender suas necessidades."
+        lifestyle_title, lifestyle_desc = (
+            "Qualidade garantida",
+            "Produtos selecionados com cuidado para atender suas necessidades.",
+        )
     elif "petshop" in segment or "pet " in segment:
-        cta_primary, cta_secondary, alt_img = "Agendar servico", "Ver produtos", "Pet shop"
-        lifestyle_title, lifestyle_desc = "Amor pelos animais", "Cuidamos do seu pet como se fosse nosso. Amor e dedicacao em cada servico."
+        cta_primary, cta_secondary, alt_img = (
+            "Agendar servico",
+            "Ver produtos",
+            "Pet shop",
+        )
+        lifestyle_title, lifestyle_desc = (
+            "Amor pelos animais",
+            "Cuidamos do seu pet como se fosse nosso. Amor e dedicacao em cada servico.",
+        )
     elif "hotel" in segment or "pousada" in segment or "hostel" in segment:
         cta_primary, cta_secondary, alt_img = "Reservar", "Ver quartos", "Hotel"
-        lifestyle_title, lifestyle_desc = "Sua casa longe de casa", "Conforto e acolhimento para tornar sua estadia inesquecivel."
+        lifestyle_title, lifestyle_desc = (
+            "Sua casa longe de casa",
+            "Conforto e acolhimento para tornar sua estadia inesquecivel.",
+        )
     elif "salao_beleza" in segment or "beleza" in segment:
-        cta_primary, cta_secondary, alt_img = "Agendar horario", "Ver servicos", "Salao de beleza"
-        lifestyle_title, lifestyle_desc = "Beleza e bem-estar", "Transformamos seu visual com tecnicas modernas e produtos de qualidade."
+        cta_primary, cta_secondary, alt_img = (
+            "Agendar horario",
+            "Ver servicos",
+            "Salao de beleza",
+        )
+        lifestyle_title, lifestyle_desc = (
+            "Beleza e bem-estar",
+            "Transformamos seu visual com tecnicas modernas e produtos de qualidade.",
+        )
     elif "fisioterapia" in segment or "fisio" in segment:
-        cta_primary, cta_secondary, alt_img = "Agendar sessao", "Ver tratamentos", "Fisioterapia"
-        lifestyle_title, lifestyle_desc = "Movimento com saude", "Recupere sua qualidade de vida com tratamento fisioterapêutico humanizado."
+        cta_primary, cta_secondary, alt_img = (
+            "Agendar sessao",
+            "Ver tratamentos",
+            "Fisioterapia",
+        )
+        lifestyle_title, lifestyle_desc = (
+            "Movimento com saude",
+            "Recupere sua qualidade de vida com tratamento fisioterapêutico humanizado.",
+        )
     elif "escola" in segment or "cursinho" in segment or "idiomas" in segment:
         cta_primary, cta_secondary, alt_img = "Matricular", "Ver cursos", "Escola"
-        lifestyle_title, lifestyle_desc = "Educacao que transforma", "Formando cidadaos preparados para o futuro com excelencia e valores."
+        lifestyle_title, lifestyle_desc = (
+            "Educacao que transforma",
+            "Formando cidadaos preparados para o futuro com excelencia e valores.",
+        )
     elif "autoescola" in segment:
-        cta_primary, cta_secondary, alt_img = "Matricular", "Ver categorias", "Autoescola"
-        lifestyle_title, lifestyle_desc = "Sua habilitacao na mao", "Metodologia comprovada para voce passar no DETRAN de primeira."
+        cta_primary, cta_secondary, alt_img = (
+            "Matricular",
+            "Ver categorias",
+            "Autoescola",
+        )
+        lifestyle_title, lifestyle_desc = (
+            "Sua habilitacao na mao",
+            "Metodologia comprovada para voce passar no DETRAN de primeira.",
+        )
     elif "oficina" in segment or "mecanica" in segment or "eletrica" in segment:
-        cta_primary, cta_secondary, alt_img = "Agendar servico", "Ver servicos", "Oficina mecanica"
-        lifestyle_title, lifestyle_desc = "Seu carro em boas maos", "Servico de qualidade com transparencia e compromisso com seu veiculo."
+        cta_primary, cta_secondary, alt_img = (
+            "Agendar servico",
+            "Ver servicos",
+            "Oficina mecanica",
+        )
+        lifestyle_title, lifestyle_desc = (
+            "Seu carro em boas maos",
+            "Servico de qualidade com transparencia e compromisso com seu veiculo.",
+        )
     elif "farmacia" in segment or "manipulacao" in segment:
-        cta_primary, cta_secondary, alt_img = "Ver produtos", "Ver promocoes", "Farmacia"
-        lifestyle_title, lifestyle_desc = "Saude e bem-estar", "Farmacêuticos capacitados para orientar sobre medicamentos e cuidados."
+        cta_primary, cta_secondary, alt_img = (
+            "Ver produtos",
+            "Ver promocoes",
+            "Farmacia",
+        )
+        lifestyle_title, lifestyle_desc = (
+            "Saude e bem-estar",
+            "Farmacêuticos capacitados para orientar sobre medicamentos e cuidados.",
+        )
     elif "psicologo" in segment or "psicologia" in segment:
-        cta_primary, cta_secondary, alt_img = "Agendar sessao", "Ver abordagens", "Consultorio de psicologia"
-        lifestyle_title, lifestyle_desc = "Cuidado emocional", "Um espaco seguro para falar sobre seus sentimentos e desenvolver seu potencial."
-    elif "fotografo" in segment or "fotografia" in segment or "design" in segment or "grafico" in segment:
-        cta_primary, cta_secondary, alt_img = "Ver portfolio", "Fazer orcamento", "Fotografia"
-        lifestyle_title, lifestyle_desc = "Momentos eternizados", "Capturamos momentos e emocoes com sensibilidade e tecnica."
+        cta_primary, cta_secondary, alt_img = (
+            "Agendar sessao",
+            "Ver abordagens",
+            "Consultorio de psicologia",
+        )
+        lifestyle_title, lifestyle_desc = (
+            "Cuidado emocional",
+            "Um espaco seguro para falar sobre seus sentimentos e desenvolver seu potencial.",
+        )
+    elif (
+        "fotografo" in segment
+        or "fotografia" in segment
+        or "design" in segment
+        or "grafico" in segment
+    ):
+        cta_primary, cta_secondary, alt_img = (
+            "Ver portfolio",
+            "Fazer orcamento",
+            "Fotografia",
+        )
+        lifestyle_title, lifestyle_desc = (
+            "Momentos eternizados",
+            "Capturamos momentos e emocoes com sensibilidade e tecnica.",
+        )
     else:
         cta_primary, cta_secondary, alt_img = "Saiba mais", "Ver servicos", name
-        lifestyle_title, lifestyle_desc = "Experiencia unica", f"Atendimento dedicado para garantir sua satisfacao em {city}."
-
+        lifestyle_title, lifestyle_desc = (
+            "Experiencia unica",
+            f"Atendimento dedicado para garantir sua satisfacao em {city}.",
+        )
 
     # Sprint 14: apply LLM copy_only overrides before building var_map.
     if llm_content:
-        hero = llm_content.get("hero", {}) if isinstance(llm_content.get("hero"), dict) else {}
-        life = llm_content.get("lifestyle") if isinstance(llm_content.get("lifestyle"), dict) else {}
+        hero = (
+            llm_content.get("hero", {})
+            if isinstance(llm_content.get("hero"), dict)
+            else {}
+        )
+        life = (
+            llm_content.get("lifestyle")
+            if isinstance(llm_content.get("lifestyle"), dict)
+            else {}
+        )
         if hero.get("cta_primary"):
             cta_primary = str(hero["cta_primary"])
         if hero.get("cta_secondary"):
@@ -2616,11 +3304,13 @@ def _normalize_component_export_contract(files: dict[str, str]) -> None:
         content = str(files.get(path) or "")
         if not content:
             continue
-        if f"export default {export_name}" in content or re.search(r"export\s+default\s+function\b", content):
-            continue
-        if re.search(rf"export\s+function\s+{re.escape(export_name)}\b", content) or re.search(
-            rf"export\s+const\s+{re.escape(export_name)}\b", content
+        if f"export default {export_name}" in content or re.search(
+            r"export\s+default\s+function\b", content
         ):
+            continue
+        if re.search(
+            rf"export\s+function\s+{re.escape(export_name)}\b", content
+        ) or re.search(rf"export\s+const\s+{re.escape(export_name)}\b", content):
             files[path] = content.rstrip() + f"\n\nexport default {export_name};\n"
     _normalize_page_export_contract(files)
 
@@ -2631,10 +3321,16 @@ def _normalize_page_export_contract(files: dict[str, str]) -> None:
     if not content:
         return
     has_named = bool(re.search(r"export\s+(?:function|const)\s+Index\b", content))
-    has_default = bool(re.search(r"export\s+default\s+(?:function\s+Index\b|Index\b)", content))
+    has_default = bool(
+        re.search(r"export\s+default\s+(?:function\s+Index\b|Index\b)", content)
+    )
     # Count occurrences of `export { Index }` so we never double-append.
     already_re_exported = bool(re.search(r"export\s*\{\s*Index\s*\}", content))
-    if has_default and not has_named and re.search(r"default\s+function\s+Index\b", content):
+    if (
+        has_default
+        and not has_named
+        and re.search(r"default\s+function\s+Index\b", content)
+    ):
         if not already_re_exported:
             files[path] = content.rstrip() + "\n\nexport { Index };\n"
     elif has_named and not has_default:
@@ -2674,8 +3370,15 @@ def _normalize_generated_imports_and_hooks(files: dict[str, str]) -> None:
         updated = re.sub(r"\bReact\.FC\s*<", "FC<", updated)
         updated = re.sub(r"\bReact\.FC\b", "FC", updated)
         updated = re.sub(r"\bReact\.ReactNode\b", "ReactNode", updated)
-        updated = re.sub(r"\bReact\.(MouseEvent|ChangeEvent|FormEvent|FocusEvent|KeyboardEvent)\b", r"\1", updated)
-        if path.endswith(".tsx") and re.search(r"\b(?:FC|ReactNode|MouseEvent|ChangeEvent|FormEvent|FocusEvent|KeyboardEvent)\b", updated):
+        updated = re.sub(
+            r"\bReact\.(MouseEvent|ChangeEvent|FormEvent|FocusEvent|KeyboardEvent)\b",
+            r"\1",
+            updated,
+        )
+        if path.endswith(".tsx") and re.search(
+            r"\b(?:FC|ReactNode|MouseEvent|ChangeEvent|FormEvent|FocusEvent|KeyboardEvent)\b",
+            updated,
+        ):
             if "from 'react'" in updated and "import type {" not in updated:
                 updated = re.sub(
                     r"import\s*\{([^}]*)\}\s*from\s*['\"]react['\"]\s*;?",
@@ -2735,7 +3438,7 @@ def _stabilize_app_contract(files: dict[str, str]) -> None:
         not content
         or not stripped.startswith(("import", "export", "//", "/*", "/*", '"', "'"))
         or stripped.startswith("data:")
-        or "\"\n\"" in content
+        or '"\n"' in content
         or re.search(r'\\"\s*\\n', content) is not None
     )
     if looks_broken:
@@ -2745,7 +3448,9 @@ def _stabilize_app_contract(files: dict[str, str]) -> None:
     files[path] = updated
 
 
-def _ensure_lgpd_banner_contract(files: dict[str, str], facts: dict[str, Any] | None = None) -> None:
+def _ensure_lgpd_banner_contract(
+    files: dict[str, str], facts: dict[str, Any] | None = None
+) -> None:
     files["src/components/LgpdBanner.tsx"] = vite_template_lgpd_banner(facts or {})
     path = "src/App.tsx"
     content = str(files.get(path) or vite_template_app_tsx())
@@ -2758,7 +3463,11 @@ def _ensure_lgpd_banner_contract(files: dict[str, str], facts: dict[str, Any] | 
     match = re.search(r"(?is)return\s*\((.*?)\);", updated)
     if match and "<Index" in match.group(1):
         inner = match.group(1)
-        replacement = "return (\n    <>\n" + inner.strip() + "\n      <LgpdBanner />\n    </>\n  );"
+        replacement = (
+            "return (\n    <>\n"
+            + inner.strip()
+            + "\n      <LgpdBanner />\n    </>\n  );"
+        )
         updated = updated[: match.start()] + replacement + updated[match.end() :]
     elif "return <Index" in updated:
         updated = re.sub(
@@ -2776,11 +3485,15 @@ def _rewrite_editorial_images(files: dict[str, str], facts: dict[str, Any]) -> N
     approved: list[str] = []
     for source in (media.get("photos"), business.get("photos"), facts.get("photos")):
         if isinstance(source, list):
-            approved.extend(str(item or "").strip() for item in source if str(item or "").strip())
+            approved.extend(
+                str(item or "").strip() for item in source if str(item or "").strip()
+            )
     approved = list(dict.fromkeys(approved))
     if not approved:
         return
-    pattern = re.compile(r"https://images\.(?:unsplash|pexels)\.com/[^\s\"')>]+", re.IGNORECASE)
+    pattern = re.compile(
+        r"https://images\.(?:unsplash|pexels)\.com/[^\s\"')>]+", re.IGNORECASE
+    )
     index = 0
     for path, content in list(files.items()):
         if not path.endswith((".tsx", ".ts", ".css", ".html")):
@@ -2799,7 +3512,9 @@ def _rewrite_editorial_images(files: dict[str, str], facts: dict[str, Any]) -> N
         files[path] = pattern.sub(replace_url, text)
 
 
-def _ensure_editorial_media_contract(files: dict[str, str], facts: dict[str, Any]) -> None:
+def _ensure_editorial_media_contract(
+    files: dict[str, str], facts: dict[str, Any]
+) -> None:
     """Guarantee that approved lead media reaches the Vite source before QA."""
     source_text = "\n".join(
         str(content or "")
@@ -2807,7 +3522,9 @@ def _ensure_editorial_media_contract(files: dict[str, str], facts: dict[str, Any
         if path.startswith("src/") and path.endswith((".tsx", ".ts", ".jsx", ".js"))
     )
     image_count = len(re.findall(r"<img\b", source_text, re.IGNORECASE))
-    editorial_refs = len(re.findall(r"images\.unsplash\.com", source_text, re.IGNORECASE))
+    editorial_refs = len(
+        re.findall(r"images\.unsplash\.com", source_text, re.IGNORECASE)
+    )
     if max(image_count, editorial_refs) >= _studio_min_images():
         return
 
@@ -2832,9 +3549,13 @@ def _ensure_index_uses_editorial_media(files: dict[str, str]) -> None:
             count=1,
         )
     if "GallerySection" not in updated:
-        updated = "import { GallerySection } from '../components/GallerySection';\n" + updated
+        updated = (
+            "import { GallerySection } from '../components/GallerySection';\n" + updated
+        )
         if "</main>" in updated:
-            updated = updated.replace("</main>", "      <GallerySection />\n    </main>", 1)
+            updated = updated.replace(
+                "</main>", "      <GallerySection />\n    </main>", 1
+            )
         elif "<HeroSection" in updated:
             updated = re.sub(
                 r"(<HeroSection\b[^>]*/>)",
@@ -2845,35 +3566,52 @@ def _ensure_index_uses_editorial_media(files: dict[str, str]) -> None:
     files[path] = updated
 
 
-def _ensure_factual_motion_contract(files: dict[str, str], facts: dict[str, Any]) -> None:
+def _ensure_factual_motion_contract(
+    files: dict[str, str], facts: dict[str, Any]
+) -> None:
     # Sprint 12.15: defensive — try multiple paths for name
     business = _facts_business(facts)
     _safe = facts or {}
     name = str(
-        business.get("name")
-        or _safe.get("name")
-        or _safe.get("business_name")
-        or ""
+        business.get("name") or _safe.get("name") or _safe.get("business_name") or ""
     ).strip()
     if not name:
         return
-    phone = str(business.get("whatsapp") or business.get("phone") or _safe.get("phone") or "").strip()
-    rating = str(business.get("rating") or _safe.get("rating") or "").strip().replace(",", ".")
-    city = str(business.get("city") or facts.get("cidade") or _safe.get("cidade") or "").strip()
-    segment = str(business.get("segment") or business.get("segmento") or facts.get("segmento") or _safe.get("segmento") or "").strip()
-    files["src/components/FactualMotionContract.tsx"] = vite_template_factual_motion_contract(
-        name=name,
-        phone=phone,
-        rating=rating,
-        city=city,
-        segment=segment,
+    phone = str(
+        business.get("whatsapp") or business.get("phone") or _safe.get("phone") or ""
+    ).strip()
+    rating = (
+        str(business.get("rating") or _safe.get("rating") or "")
+        .strip()
+        .replace(",", ".")
+    )
+    city = str(
+        business.get("city") or facts.get("cidade") or _safe.get("cidade") or ""
+    ).strip()
+    segment = str(
+        business.get("segment")
+        or business.get("segmento")
+        or facts.get("segmento")
+        or _safe.get("segmento")
+        or ""
+    ).strip()
+    files["src/components/FactualMotionContract.tsx"] = (
+        vite_template_factual_motion_contract(
+            name=name,
+            phone=phone,
+            rating=rating,
+            city=city,
+            segment=segment,
+        )
     )
     files["src/main.tsx"] = vite_template_main_tsx_with_factual_contract(
         files.get("src/main.tsx", vite_template_main_tsx())
     )
 
 
-def _factual_motion_contract_tsx(*, name: str, phone: str, rating: str, city: str, segment: str) -> str:
+def _factual_motion_contract_tsx(
+    *, name: str, phone: str, rating: str, city: str, segment: str
+) -> str:
     name_js = json.dumps(name, ensure_ascii=False)
     phone_js = json.dumps(phone, ensure_ascii=False)
     rating_js = json.dumps(rating, ensure_ascii=False)
@@ -2927,7 +3665,10 @@ def _needs_contact_closure_reset(content: str) -> bool:
     required = ("whatsapp", "agendar", "section", "motion")
     missing_required = any(token not in low for token in required)
     generic_green_block = "bg-green-700" in low or "text-center text-white" in low
-    no_local_context = not any(token in low for token in ("mapa", "rota", "endereco", "endereço", "campina", "cidade"))
+    no_local_context = not any(
+        token in low
+        for token in ("mapa", "rota", "endereco", "endereço", "campina", "cidade")
+    )
     return missing_required or generic_green_block or no_local_context
 
 
@@ -2935,8 +3676,7 @@ def _needs_footer_closure_reset(content: str) -> bool:
     low = (content or "").lower()
     too_minimal = len(re.findall(r"<a\b", content or "", re.I)) < 3
     weak_contract = not all(
-        token in low
-        for token in ("footer", "whatsapp", "privacidade")
+        token in low for token in ("footer", "whatsapp", "privacidade")
     )
     generic_centered = "text-center" in low and "grid" not in low
     light_footer = "bg-white" in low or "border-zinc-200" in low
@@ -2945,7 +3685,10 @@ def _needs_footer_closure_reset(content: str) -> bool:
 
 def _enforce_hero_visual_contract(files: dict[str, str]) -> None:
     for path, content in list(files.items()):
-        if not (path.lower().endswith("herosection.tsx") or "hero" in PurePosixPath(path).stem.lower()):
+        if not (
+            path.lower().endswith("herosection.tsx")
+            or "hero" in PurePosixPath(path).stem.lower()
+        ):
             continue
         updated = str(content or "")
         updated = updated.replace("h-screen", "min-h-[calc(100svh-5rem)]")
@@ -2953,18 +3696,26 @@ def _enforce_hero_visual_contract(files: dict[str, str]) -> None:
         updated = updated.replace("min-h-screen", "min-h-[92svh]")
         updated = updated.replace("justify-center", "justify-between")
         updated = updated.replace("text-center", "text-left")
-        updated = re.sub(r"text-\[clamp\(2\.4rem,8vw,5\.2rem\)\]", "text-[clamp(2.35rem,7vw,4.7rem)]", updated)
+        updated = re.sub(
+            r"text-\[clamp\(2\.4rem,8vw,5\.2rem\)\]",
+            "text-[clamp(2.35rem,7vw,4.7rem)]",
+            updated,
+        )
         if "<h1" in updated and "clamp" not in updated and "break-words" not in updated:
             safe_type = "text-[clamp(2.35rem,7vw,4.7rem)] break-words leading-[0.95]"
             if re.search(r"<h1\b[^>]*className=[\"']", updated):
                 updated = re.sub(
                     r"(<h1\b[^>]*className=[\"'])([^\"']*)([\"'])",
-                    lambda match: f"{match.group(1)}{match.group(2)} {safe_type}{match.group(3)}",
+                    lambda match: (
+                        f"{match.group(1)}{match.group(2)} {safe_type}{match.group(3)}"
+                    ),
                     updated,
                     count=1,
                 )
             else:
-                updated = re.sub(r"<h1\b", f'<h1 className="{safe_type}"', updated, count=1)
+                updated = re.sub(
+                    r"<h1\b", f'<h1 className="{safe_type}"', updated, count=1
+                )
         if "<img" in updated:
             updated = re.sub(r"<img\b[^>]*>", _ensure_hero_img_eager, updated, count=1)
         files[path] = updated
@@ -2988,43 +3739,102 @@ def _ensure_hero_img_eager(match: re.Match[str]) -> str:
 # Archetype definitions: each archetype maps to specific segment keywords
 _ARCHETYPE_SEGMENTS = {
     "BOLD_ENERGY": (
-        "academia", "fitness", "crossfit", "musculacao", "musculação",
-        "suplementos", "eventos esportivos", "crossfit", "funcional",
+        "academia",
+        "fitness",
+        "crossfit",
+        "musculacao",
+        "musculação",
+        "suplementos",
+        "eventos esportivos",
+        "crossfit",
+        "funcional",
     ),
     "WARM_LOCAL": (
-        "barbearia", "barbeiro", "barber", "salao", "salão", "beleza",
-        "petshop", "pet shop", "manicure", "estetica", "estética",
-        "cabelo", "SPA", "spa",
+        "barbearia",
+        "barbeiro",
+        "barber",
+        "salao",
+        "salão",
+        "beleza",
+        "petshop",
+        "pet shop",
+        "manicure",
+        "estetica",
+        "estética",
+        "cabelo",
+        "SPA",
+        "spa",
     ),
     "ZEN_PURE": (
-        "clinica", "clínica", "nutricao", "nutrição", "nutricionista",
-        "yoga", "pilates", "fisioterapia", "fisio", "psicologia", "psicologo",
-        "medicina", "terapia", " wellness",
+        "clinica",
+        "clínica",
+        "nutricao",
+        "nutrição",
+        "nutricionista",
+        "yoga",
+        "pilates",
+        "fisioterapia",
+        "fisio",
+        "psicologia",
+        "psicologo",
+        "medicina",
+        "terapia",
+        " wellness",
     ),
     "LUXURY_ELITE": (
-        "restaurante", "bar ", "pizzaria", "hamburgueria", "gastronomia",
-        "moda", "joalheria", "eventos", "hotel", "pousada", "hostel",
-        "buffet", "chef",
+        "restaurante",
+        "bar ",
+        "pizzaria",
+        "hamburgueria",
+        "gastronomia",
+        "moda",
+        "joalheria",
+        "eventos",
+        "hotel",
+        "pousada",
+        "hostel",
+        "buffet",
+        "chef",
     ),
     "MODERN_TECH": (
-        "energia solar", "solar", "infraestrutura", "elétrica", "eletrica",
-        "tecnologia", "telecom", "dev", "software", "data center",
-        "automacao", "automação", "robotica", "robótica",
+        "energia solar",
+        "solar",
+        "infraestrutura",
+        "elétrica",
+        "eletrica",
+        "tecnologia",
+        "telecom",
+        "dev",
+        "software",
+        "data center",
+        "automacao",
+        "automação",
+        "robotica",
+        "robótica",
     ),
     "PROFESSIONAL_TRUST": (
-        "imobiliaria", "imóveis", "imoveis", "advocacia", "advogado",
-        "contabilidade", "engenharia", "arquitetura", "consultoria",
-        "B2B", "escritório", "escritorio",
+        "imobiliaria",
+        "imóveis",
+        "imoveis",
+        "advocacia",
+        "advogado",
+        "contabilidade",
+        "engenharia",
+        "arquitetura",
+        "consultoria",
+        "B2B",
+        "escritório",
+        "escritorio",
     ),
 }
 
 # Archetype color palettes
 _ARCHETYPE_PALETTES = {
     "BOLD_ENERGY": {
-        "primary": "#ef4444",       # Vibrant red - energy, intensity
+        "primary": "#ef4444",  # Vibrant red - energy, intensity
         "primary_contrast": "#ffffff",
-        "secondary": "#f97316",     # Orange - warmth, action
-        "accent": "#fbbf24",        # Amber - highlight
+        "secondary": "#f97316",  # Orange - warmth, action
+        "accent": "#fbbf24",  # Amber - highlight
         "bg_dark": "#0f0f0f",
         "bg_light": "#1a1a1a",
         "text_dark": "#ffffff",
@@ -3034,10 +3844,10 @@ _ARCHETYPE_PALETTES = {
         "gradient_end": "rgba(249,115,22,0.05)",
     },
     "WARM_LOCAL": {
-        "primary": "#d97706",       # Amber/warm brown - local, welcoming
+        "primary": "#d97706",  # Amber/warm brown - local, welcoming
         "primary_contrast": "#ffffff",
-        "secondary": "#b45309",     # Dark amber
-        "accent": "#f59e0b",        # Yellow accent
+        "secondary": "#b45309",  # Dark amber
+        "accent": "#f59e0b",  # Yellow accent
         "bg_dark": "#1c1917",
         "bg_light": "#292524",
         "text_dark": "#fef3c7",
@@ -3047,10 +3857,10 @@ _ARCHETYPE_PALETTES = {
         "gradient_end": "rgba(180,83,9,0.04)",
     },
     "ZEN_PURE": {
-        "primary": "#10b981",       # Emerald green - health, balance
+        "primary": "#10b981",  # Emerald green - health, balance
         "primary_contrast": "#ffffff",
-        "secondary": "#059669",     # Darker emerald
-        "accent": "#34d399",        # Light emerald
+        "secondary": "#059669",  # Darker emerald
+        "accent": "#34d399",  # Light emerald
         "bg_dark": "#0c0f0d",
         "bg_light": "#111413",
         "text_dark": "#ecfdf5",
@@ -3060,10 +3870,10 @@ _ARCHETYPE_PALETTES = {
         "gradient_end": "rgba(5,150,105,0.04)",
     },
     "LUXURY_ELITE": {
-        "primary": "#a855f7",       # Purple - luxury, sophistication
+        "primary": "#a855f7",  # Purple - luxury, sophistication
         "primary_contrast": "#ffffff",
-        "secondary": "#7c3aed",      # Darker purple
-        "accent": "#c084fc",        # Light purple
+        "secondary": "#7c3aed",  # Darker purple
+        "accent": "#c084fc",  # Light purple
         "bg_dark": "#0c0a14",
         "bg_light": "#131020",
         "text_dark": "#faf5ff",
@@ -3073,10 +3883,10 @@ _ARCHETYPE_PALETTES = {
         "gradient_end": "rgba(124,58,237,0.05)",
     },
     "MODERN_TECH": {
-        "primary": "#3b82f6",       # Blue - technology, trust
+        "primary": "#3b82f6",  # Blue - technology, trust
         "primary_contrast": "#ffffff",
-        "secondary": "#2563eb",      # Darker blue
-        "accent": "#60a5fa",        # Light blue
+        "secondary": "#2563eb",  # Darker blue
+        "accent": "#60a5fa",  # Light blue
         "bg_dark": "#0a0f1a",
         "bg_light": "#0f172a",
         "text_dark": "#eff6ff",
@@ -3086,10 +3896,10 @@ _ARCHETYPE_PALETTES = {
         "gradient_end": "rgba(37,99,235,0.05)",
     },
     "PROFESSIONAL_TRUST": {
-        "primary": "#0891b2",       # Cyan/teal - professional, trustworthy
+        "primary": "#0891b2",  # Cyan/teal - professional, trustworthy
         "primary_contrast": "#ffffff",
-        "secondary": "#0e7490",     # Darker cyan
-        "accent": "#22d3ee",        # Light cyan
+        "secondary": "#0e7490",  # Darker cyan
+        "accent": "#22d3ee",  # Light cyan
         "bg_dark": "#0c1114",
         "bg_light": "#111a1f",
         "text_dark": "#ecfeff",
@@ -3154,32 +3964,76 @@ _ARCHETYPE_TYPOGRAPHY = {
 
 # Hero layout variation system
 HERO_LAYOUTS = (
-    "split",       # Current: left copy + right image (lg:grid-cols-[1.05fr_.95fr])
-    "center",      # Centered copy + image below
-    "asymmetric",   # Large image + small copy card
-    "fullbleed",   # Full-screen image + overlay copy
-    "video",       # Video background
+    "split",  # Current: left copy + right image (lg:grid-cols-[1.05fr_.95fr])
+    "center",  # Centered copy + image below
+    "asymmetric",  # Large image + small copy card
+    "fullbleed",  # Full-screen image + overlay copy
+    "video",  # Video background
 )
 
 # Section orders per archetype (default fallback sequence)
 SECTION_ORDERS = {
     "BOLD_ENERGY": [
-        "navbar", "hero", "lifestyle", "services", "gallery", "reviews", "contact-cta", "footer",
+        "navbar",
+        "hero",
+        "lifestyle",
+        "services",
+        "gallery",
+        "reviews",
+        "contact-cta",
+        "footer",
     ],
     "WARM_LOCAL": [
-        "navbar", "hero", "about", "services", "gallery", "lifestyle", "contact-cta", "footer",
+        "navbar",
+        "hero",
+        "about",
+        "services",
+        "gallery",
+        "lifestyle",
+        "contact-cta",
+        "footer",
     ],
     "ZEN_PURE": [
-        "navbar", "hero", "about", "gallery", "services", "lifestyle", "contact-cta", "footer",
+        "navbar",
+        "hero",
+        "about",
+        "gallery",
+        "services",
+        "lifestyle",
+        "contact-cta",
+        "footer",
     ],
     "LUXURY_ELITE": [
-        "navbar", "hero", "gallery", "about", "services", "lifestyle", "reviews", "contact-cta", "footer",
+        "navbar",
+        "hero",
+        "gallery",
+        "about",
+        "services",
+        "lifestyle",
+        "reviews",
+        "contact-cta",
+        "footer",
     ],
     "MODERN_TECH": [
-        "navbar", "hero", "services", "about", "gallery", "lifestyle", "contact-cta", "footer",
+        "navbar",
+        "hero",
+        "services",
+        "about",
+        "gallery",
+        "lifestyle",
+        "contact-cta",
+        "footer",
     ],
     "PROFESSIONAL_TRUST": [
-        "navbar", "hero", "about", "services", "gallery", "reviews", "lifestyle", "contact-cta", "footer",
+        "navbar",
+        "hero",
+        "about",
+        "services",
+        "gallery",
+        "reviews",
+        "lifestyle",
+        "contact-cta",
+        "footer",
     ],
 }
 
@@ -3200,11 +4054,11 @@ def _pick_hero_layout(archetype: str, seed: int | None = None) -> str:
     # Build a deterministic index from archetype + seed
     # Each archetype gets a preferred layout but can vary with seed
     archetype_weights = {
-        "BOLD_ENERGY": [0, 1, 2, 3, 4],      # split, center, asymmetric, fullbleed, video
-        "WARM_LOCAL": [0, 2, 1, 3, 4],       # prefers split, asymmetric
-        "ZEN_PURE": [1, 0, 2, 4, 3],         # prefers center, split
-        "LUXURY_ELITE": [3, 4, 0, 2, 1],     # prefers fullbleed, video
-        "MODERN_TECH": [0, 1, 4, 2, 3],      # prefers split, center
+        "BOLD_ENERGY": [0, 1, 2, 3, 4],  # split, center, asymmetric, fullbleed, video
+        "WARM_LOCAL": [0, 2, 1, 3, 4],  # prefers split, asymmetric
+        "ZEN_PURE": [1, 0, 2, 4, 3],  # prefers center, split
+        "LUXURY_ELITE": [3, 4, 0, 2, 1],  # prefers fullbleed, video
+        "MODERN_TECH": [0, 1, 4, 2, 3],  # prefers split, center
         "PROFESSIONAL_TRUST": [0, 2, 1, 3, 4],  # prefers split, asymmetric
     }
 
@@ -3247,9 +4101,9 @@ def _generate_hero_section_variation(
     Returns:
         TSX component body string
     """
-    primary_hex = palette['primary']
-    primary_contrast_hex = palette['primary_contrast']
-    primary_light = palette['accent']
+    primary_hex = palette["primary"]
+    primary_contrast_hex = palette["primary_contrast"]
+    primary_light = palette["accent"]
 
     if layout == "split":
         # Current layout: left copy + right image
@@ -3257,8 +4111,8 @@ def _generate_hero_section_variation(
     gsap.fromTo('[data-hero-copy]', {{ y: 24, opacity: 0 }}, {{ y: 0, opacity: 1, duration: 0.7 }});
   }}, []);
   return (
-    <section id="top" className="relative isolate overflow-hidden px-6 pb-24 pt-36 text-white" style={{{{backgroundColor:"{palette['bg_dark']}"}}}}>
-      <div className="absolute inset-0 -z-10" style={{{{background: `radial-gradient(circle_at_20%_20%,{palette['gradient_start']},transparent_32%),linear-gradient(135deg,{palette['bg_dark']},{palette['bg_light']})`}}}} />
+    <section id="top" className="relative isolate overflow-hidden px-6 pb-24 pt-36 text-white" style={{{{backgroundColor:"{palette["bg_dark"]}"}}}}>
+      <div className="absolute inset-0 -z-10" style={{{{background: `radial-gradient(circle_at_20%_20%,{palette["gradient_start"]},transparent_32%),linear-gradient(135deg,{palette["bg_dark"]},{palette["bg_light"]})`}}}} />
       <div className="mx-auto grid max-w-6xl items-center gap-10 lg:grid-cols-[1.05fr_.95fr]">
         <motion.div data-hero-copy initial={{{{ opacity: 0 }}}} animate={{{{ opacity: 1 }}}} className="space-y-7">
           <p className="inline-flex rounded-full border px-4 py-2 text-xs font-bold uppercase tracking-[0.24em]" style={{{{borderColor:"{primary_hex}4d",backgroundColor:"{primary_hex}1a",color:"{primary_light}"}}}}>{segment} em {city}</p>
@@ -3283,8 +4137,8 @@ def _generate_hero_section_variation(
     gsap.fromTo('[data-hero-img]', {{ y: 32, opacity: 0 }}, {{ y: 0, opacity: 1, duration: 0.9, delay: 0.2 }});
   }}, []);
   return (
-    <section id="top" className="relative isolate overflow-hidden px-6 pb-24 pt-36 text-white" style={{{{backgroundColor:"{palette['bg_dark']}"}}}}>
-      <div className="absolute inset-0 -z-10" style={{{{background: `radial-gradient(ellipse_at_top,{palette['gradient_start']},transparent_60%),linear-gradient(to_bottom,{palette['bg_dark']},{palette['bg_light']})`}}}} />
+    <section id="top" className="relative isolate overflow-hidden px-6 pb-24 pt-36 text-white" style={{{{backgroundColor:"{palette["bg_dark"]}"}}}}>
+      <div className="absolute inset-0 -z-10" style={{{{background: `radial-gradient(ellipse_at_top,{palette["gradient_start"]},transparent_60%),linear-gradient(to_bottom,{palette["bg_dark"]},{palette["bg_light"]})`}}}} />
       <div className="mx-auto max-w-4xl text-center">
         <motion.div data-hero-copy initial={{{{ opacity: 0 }}}} animate={{{{ opacity: 1 }}}} className="space-y-7">
           <p className="inline-flex rounded-full border px-4 py-2 text-xs font-bold uppercase tracking-[0.24em]" style={{{{borderColor:"{primary_hex}4d",backgroundColor:"{primary_hex}1a",color:"{primary_light}"}}}}>{segment} em {city}</p>
@@ -3310,13 +4164,13 @@ def _generate_hero_section_variation(
     gsap.fromTo('[data-hero-copy]', {{ x: 40, opacity: 0 }}, {{ x: 0, opacity: 1, duration: 0.7, delay: 0.15 }});
   }}, []);
   return (
-    <section id="top" className="relative isolate overflow-hidden px-6 pb-24 pt-36 text-white" style={{{{backgroundColor:"{palette['bg_dark']}"}}}}>
-      <div className="absolute inset-0 -z-10" style={{{{background: `radial-gradient(circle_at_80%_50%,{palette['gradient_start']},transparent_40%),linear-gradient(135deg,{palette['bg_dark']},{palette['bg_light']})`}}}} />
+    <section id="top" className="relative isolate overflow-hidden px-6 pb-24 pt-36 text-white" style={{{{backgroundColor:"{palette["bg_dark"]}"}}}}>
+      <div className="absolute inset-0 -z-10" style={{{{background: `radial-gradient(circle_at_80%_50%,{palette["gradient_start"]},transparent_40%),linear-gradient(135deg,{palette["bg_dark"]},{palette["bg_light"]})`}}}} />
       <div className="mx-auto grid max-w-6xl items-center gap-12 lg:grid-cols-[1.4fr_1fr]">
         <motion.div data-hero-img initial={{{{ opacity: 0 }}}} animate={{{{ opacity: 1 }}}}>
           <img className="aspect-[3/4] w-full rounded-[2rem] object-cover shadow-2xl ring-1 ring-white/10" src="{hero_img}" alt="{{alt_img}}" loading="eager" decoding="async" />
         </motion.div>
-        <motion.div data-hero-copy initial={{{{ opacity: 0 }}}} animate={{{{ opacity: 1 }}}} className="space-y-6 rounded-[2rem] border border-white/10 bg-black/70 p-8 shadow-[0_24px_80px_rgba(0,0,0,0.28)]" style={{{{borderColor:"{palette['border']}"}}}}>
+        <motion.div data-hero-copy initial={{{{ opacity: 0 }}}} animate={{{{ opacity: 1 }}}} className="space-y-6 rounded-[2rem] border border-white/10 bg-black/70 p-8 shadow-[0_24px_80px_rgba(0,0,0,0.28)]" style={{{{borderColor:"{palette["border"]}"}}}}>
           <p className="inline-flex rounded-full border px-4 py-2 text-xs font-bold uppercase tracking-[0.24em]" style={{{{borderColor:"{primary_hex}4d",backgroundColor:"{primary_hex}1a",color:"{primary_light}"}}}}>{segment} em {city}</p>
           <h2 className="text-4xl font-black leading-[1] tracking-[-.04em]">{name}</h2>
           <p className="text-zinc-300">{hero_desc}.</p>
@@ -3339,7 +4193,7 @@ def _generate_hero_section_variation(
     <section id="top" className="relative min-h-screen overflow-hidden px-6 pb-24 pt-36 text-white">
       <div className="absolute inset-0 -z-10">
         <img className="h-full w-full object-cover" src="{hero_img}" alt="{{alt_img}}" loading="eager" decoding="async" />
-        <div className="absolute inset-0" style={{{{background: `linear-gradient(to right, {palette['bg_dark']}ee 0%, {palette['bg_dark']}99 40%, transparent 100%), linear-gradient(to top, {palette['bg_dark']} 0%, transparent 30%)`}}}} />
+        <div className="absolute inset-0" style={{{{background: `linear-gradient(to right, {palette["bg_dark"]}ee 0%, {palette["bg_dark"]}99 40%, transparent 100%), linear-gradient(to top, {palette["bg_dark"]} 0%, transparent 30%)`}}}} />
       </div>
       <div className="mx-auto grid max-w-6xl items-center gap-10 pt-24 lg:grid-cols-[1.2fr_1fr]">
         <motion.div data-hero-copy initial={{{{ opacity: 0 }}}} animate={{{{ opacity: 1 }}}} className="space-y-7">
@@ -3364,8 +4218,8 @@ def _generate_hero_section_variation(
   return (
     <section id="top" className="relative min-h-screen overflow-hidden px-6 pb-24 pt-36 text-white">
       <div className="absolute inset-0 -z-10">
-        <div className="h-full w-full" style={{{{background: `linear-gradient(135deg, {palette['bg_dark']}, {palette['bg_light']})`}}}} />
-        <div className="absolute inset-0" style={{{{background: `radial-gradient(circle_at_center, {palette['gradient_start']}, transparent_50%)`}}}} />
+        <div className="h-full w-full" style={{{{background: `linear-gradient(135deg, {palette["bg_dark"]}, {palette["bg_light"]})`}}}} />
+        <div className="absolute inset-0" style={{{{background: `radial-gradient(circle_at_center, {palette["gradient_start"]}, transparent_50%)`}}}} />
         <img className="h-full w-full object-cover opacity-40" src="{hero_img}" alt="" loading="eager" decoding="async" />
       </div>
       <div className="mx-auto max-w-5xl text-center">
@@ -3385,12 +4239,25 @@ def _generate_hero_section_variation(
 
     # Fallback to split layout
     return _generate_hero_section_variation(
-        "split", name, segment, city, hero_desc, hero_img,
-        cta_primary, cta_secondary, alt_img, phone, dense_cards, palette, imports
+        "split",
+        name,
+        segment,
+        city,
+        hero_desc,
+        hero_img,
+        cta_primary,
+        cta_secondary,
+        alt_img,
+        phone,
+        dense_cards,
+        palette,
+        imports,
     )
 
 
-def _get_section_order_for_archetype(archetype: str, seed: int | None = None) -> list[str]:
+def _get_section_order_for_archetype(
+    archetype: str, seed: int | None = None
+) -> list[str]:
     """Get the section order for an archetype with optional seed variation.
 
     Args:
@@ -3400,7 +4267,9 @@ def _get_section_order_for_archetype(archetype: str, seed: int | None = None) ->
     Returns:
         List of section identifiers in render order
     """
-    base_order = list(SECTION_ORDERS.get(archetype, SECTION_ORDERS["PROFESSIONAL_TRUST"]))
+    base_order = list(
+        SECTION_ORDERS.get(archetype, SECTION_ORDERS["PROFESSIONAL_TRUST"])
+    )
     fixed_first = [section for section in ("navbar", "hero") if section in base_order]
     fixed_last = [section for section in ("footer",) if section in base_order]
     middle = [
@@ -3446,18 +4315,24 @@ def _normalize_cinematic_section_order(order: list[str] | None) -> list[str]:
     }
     normalized: list[str] = []
     for item in order or []:
-        key = aliases.get(str(item or "").strip().lower(), str(item or "").strip().lower())
+        key = aliases.get(
+            str(item or "").strip().lower(), str(item or "").strip().lower()
+        )
         if key in allowed and key not in normalized:
             normalized.append(key)
     return normalized
 
 
-def _resolve_cinematic_section_order(archetype: str, seed: int | None, variation: dict[str, Any]) -> list[str]:
+def _resolve_cinematic_section_order(
+    archetype: str, seed: int | None, variation: dict[str, Any]
+) -> list[str]:
     preferred = _normalize_cinematic_section_order(
         variation.get("section_order") if isinstance(variation, dict) else []
     )
     if not preferred:
-        preferred = _normalize_cinematic_section_order(_get_section_order_for_archetype(archetype, seed))
+        preferred = _normalize_cinematic_section_order(
+            _get_section_order_for_archetype(archetype, seed)
+        )
 
     if "navbar" not in preferred:
         preferred.insert(0, "navbar")
@@ -3479,6 +4354,7 @@ def _resolve_cinematic_section_order(archetype: str, seed: int | None, variation
     if not _stats_variant or not _pricing_variant:
         try:
             from backend.services.vite_visual_lanes import resolve_visual_lane
+
             _lane = resolve_visual_lane(
                 segment=str(archetype or "").lower(),
                 subnicho=str((variation or {}).get("subnicho") or ""),
@@ -3487,35 +4363,55 @@ def _resolve_cinematic_section_order(archetype: str, seed: int | None, variation
             )
             _lane_blocks = _lane.get("blocks") or {}
             if not _stats_variant:
-                _stats_variant = str(_lane_blocks.get("stats_variant") or "inline_hero_stats")
+                _stats_variant = str(
+                    _lane_blocks.get("stats_variant") or "inline_hero_stats"
+                )
             if not _pricing_variant:
-                _pricing_variant = str(_lane_blocks.get("pricing_variant") or "plan_grid")
+                _pricing_variant = str(
+                    _lane_blocks.get("pricing_variant") or "plan_grid"
+                )
         except Exception:
             _stats_variant = _stats_variant or "inline_hero_stats"
             _pricing_variant = _pricing_variant or "plan_grid"
-    _order_style = str((variation or {}).get("section_order_style") or "credibility_first")
+    _order_style = str(
+        (variation or {}).get("section_order_style") or "credibility_first"
+    )
 
     if _stats_variant != "inline_hero_stats" and "stats-bar" not in preferred:
         preferred.insert(2, "stats-bar")
 
-    if (_pricing_variant != "plan_grid" or _order_style == "conversion_first") and "pricing" not in preferred:
+    if (
+        _pricing_variant != "plan_grid" or _order_style == "conversion_first"
+    ) and "pricing" not in preferred:
         if _order_style == "conversion_first":
             insert_at = preferred.index("about") if "about" in preferred else 3
             preferred.insert(insert_at, "pricing")
         else:
-            insert_at = preferred.index("location") if "location" in preferred else len(preferred)
+            insert_at = (
+                preferred.index("location")
+                if "location" in preferred
+                else len(preferred)
+            )
             preferred.insert(insert_at, "pricing")
 
     body_required = ["about", "reviews", "faq", "location"]
     for section in body_required:
         if section not in preferred:
-            insert_at = preferred.index("contact-cta") if "contact-cta" in preferred else len(preferred)
+            insert_at = (
+                preferred.index("contact-cta")
+                if "contact-cta" in preferred
+                else len(preferred)
+            )
             preferred.insert(insert_at, section)
 
     if "contact-cta" not in preferred:
-        insert_at = preferred.index("footer") if "footer" in preferred else len(preferred)
+        insert_at = (
+            preferred.index("footer") if "footer" in preferred else len(preferred)
+        )
         preferred.insert(insert_at, "contact-cta")
-    elif "footer" in preferred and preferred.index("contact-cta") > preferred.index("footer"):
+    elif "footer" in preferred and preferred.index("contact-cta") > preferred.index(
+        "footer"
+    ):
         preferred.remove("contact-cta")
         preferred.insert(preferred.index("footer"), "contact-cta")
 
@@ -3598,7 +4494,9 @@ def _get_archetype_typography(archetype: str) -> dict[str, str]:
         - heading_tracking: Letter spacing for headings
         - accent_weight: Weight for accent/emphasis text
     """
-    return _ARCHETYPE_TYPOGRAPHY.get(archetype, _ARCHETYPE_TYPOGRAPHY["PROFESSIONAL_TRUST"])
+    return _ARCHETYPE_TYPOGRAPHY.get(
+        archetype, _ARCHETYPE_TYPOGRAPHY["PROFESSIONAL_TRUST"]
+    )
 
 
 def _get_archetype_fonts(archetype: str) -> str:
@@ -3689,8 +4587,16 @@ def _get_archetype_copy(archetype: str) -> dict[str, Any]:
                 "Profissional capacitado com abordagem humanizada.",
                 "Infraestrutura moderna para seu conforto e recuperacao.",
             ],
-            "cta_primary": ["Agendar consulta", "Marcar avaliacao", "Conhecer tratamento"],
-            "cta_secondary": ["Ver servicos", "Conhecer abordagem", "Falar com profissional"],
+            "cta_primary": [
+                "Agendar consulta",
+                "Marcar avaliacao",
+                "Conhecer tratamento",
+            ],
+            "cta_secondary": [
+                "Ver servicos",
+                "Conhecer abordagem",
+                "Falar com profissional",
+            ],
             "testimonial_template": "Pacientes satisfeitos: {rating} em {city}. Cuidado real.",
             "services_heading": "Tratamentos e servicos",
             "gallery_heading": "Nosso espaco",
@@ -3739,8 +4645,16 @@ def _get_archetype_copy(archetype: str) -> dict[str, Any]:
                 "Monitoramento remoto 24h. Resposta rapida para qualquer evento.",
                 "Painel de controle intuitivo com metricas em tempo real.",
             ],
-            "cta_primary": ["Solicitar orcamento", "Ver solucao", "Agendar visita tecnica"],
-            "cta_secondary": ["Ver projetos", "Conhecer tecnologia", "Falar com especialista"],
+            "cta_primary": [
+                "Solicitar orcamento",
+                "Ver solucao",
+                "Agendar visita tecnica",
+            ],
+            "cta_secondary": [
+                "Ver projetos",
+                "Conhecer tecnologia",
+                "Falar com especialista",
+            ],
             "testimonial_template": " uptime de {rating}% em {city}. Confiabilidade comprovada.",
             "services_heading": "Solucoes tecnologicas",
             "gallery_heading": "Projetos realizados",
@@ -3764,7 +4678,11 @@ def _get_archetype_copy(archetype: str) -> dict[str, Any]:
                 "Estrategia juridica sob medida com acompanhamento completo.",
                 "Escritorio com infrastructure moderna para seu conforto.",
             ],
-            "cta_primary": ["Agendar consulta", "Falar com advogado", "Ver areas de atucao"],
+            "cta_primary": [
+                "Agendar consulta",
+                "Falar com advogado",
+                "Ver areas de atucao",
+            ],
             "cta_secondary": ["Ver areas", "Conhecer equipe", "Solicitar orcamento"],
             "testimonial_template": "Cases bem-sucedidos em {city}. {rating} de satisfacao.",
             "services_heading": "Areas de atucao",
@@ -3844,7 +4762,7 @@ def _generate_index_tsx_with_section_order(
         ordered_sections.insert(insert_at, "<BookingModal />")
     sections_str = "".join(ordered_sections)
 
-    bg_dark = palette['bg_dark']
+    bg_dark = palette["bg_dark"]
 
     return f"""import {{ Navbar }} from '../components/Navbar';
 import {{ HeroSection }} from '../components/HeroSection';
@@ -3883,7 +4801,9 @@ def _cinematic_media_urls(facts: dict[str, Any]) -> tuple[list[str], list[str]]:
             videos.append(source.strip())
     videos = [url for url in videos if url.startswith(("http://", "https://"))]
     if not videos:
-        videos = ["https://videos.pexels.com/video-files/6554881/6554881-uhd_2560_1440_25fps.mp4"]
+        videos = [
+            "https://videos.pexels.com/video-files/6554881/6554881-uhd_2560_1440_25fps.mp4"
+        ]
     return images[:6], videos[:2]
 
 
@@ -3896,7 +4816,9 @@ def _build_google_maps_targets(
 ) -> tuple[str, str]:
     """Return a live Google Maps link and an embeddable map URL."""
     href = str(maps_url or "").strip()
-    query = " ".join(part for part in (address, name, city) if str(part or "").strip()).strip()
+    query = " ".join(
+        part for part in (address, name, city) if str(part or "").strip()
+    ).strip()
     if not query and href:
         query = href
     if not query:
@@ -3909,9 +4831,15 @@ def _build_google_maps_targets(
 
 def _cinematic_copy(facts: dict[str, Any]) -> dict[str, Any]:
     business = facts.get("business") if isinstance(facts.get("business"), dict) else {}
-    llm_content = facts.get("_llm_content") if isinstance(facts.get("_llm_content"), dict) else {}
+    llm_content = (
+        facts.get("_llm_content") if isinstance(facts.get("_llm_content"), dict) else {}
+    )
     hero = llm_content.get("hero") if isinstance(llm_content.get("hero"), dict) else {}
-    lifestyle = llm_content.get("lifestyle") if isinstance(llm_content.get("lifestyle"), dict) else {}
+    lifestyle = (
+        llm_content.get("lifestyle")
+        if isinstance(llm_content.get("lifestyle"), dict)
+        else {}
+    )
     name = str(
         business.get("name")
         or business.get("business_name")
@@ -3921,14 +4849,37 @@ def _cinematic_copy(facts: dict[str, Any]) -> dict[str, Any]:
         or facts.get("nome")
         or "Negócio local"
     )
-    city = str(business.get("city") or business.get("cidade") or facts.get("cidade") or "sua cidade")
-    segment = str(business.get("segment") or business.get("segmento") or facts.get("segmento") or "atendimento local")
-    subnicho = str(business.get("subnicho") or facts.get("subnicho") or facts.get("subniche") or "").strip().lower()
+    city = str(
+        business.get("city")
+        or business.get("cidade")
+        or facts.get("cidade")
+        or "sua cidade"
+    )
+    segment = str(
+        business.get("segment")
+        or business.get("segmento")
+        or facts.get("segmento")
+        or "atendimento local"
+    )
+    subnicho = (
+        str(
+            business.get("subnicho")
+            or facts.get("subnicho")
+            or facts.get("subniche")
+            or ""
+        )
+        .strip()
+        .lower()
+    )
     phone = str(business.get("whatsapp") or business.get("phone") or "")
     rating = str(business.get("rating") or "")
-    reviews = str(business.get("total_avaliacoes") or business.get("reviews_count") or "")
+    reviews = str(
+        business.get("total_avaliacoes") or business.get("reviews_count") or ""
+    )
     address = str(business.get("address") or business.get("endereco") or "")
-    horarios = str(business.get("horarios") or business.get("hours") or facts.get("horarios") or "")
+    horarios = str(
+        business.get("horarios") or business.get("hours") or facts.get("horarios") or ""
+    )
     maps_href, maps_embed_src = _build_google_maps_targets(
         name=name,
         city=city,
@@ -3937,10 +4888,29 @@ def _cinematic_copy(facts: dict[str, Any]) -> dict[str, Any]:
     )
     segment_context = _normalize_text(" ".join([name, segment, subnicho]))
     is_nutri = "nutri" in segment_context
-    is_barber = any(token in segment_context for token in ("barbearia", "barbeiro", "barber"))
-    is_academia = any(token in segment_context for token in ("academia", "crossfit", "musculacao", "funcional", "personal"))
-    is_estetica = any(token in segment_context for token in ("estetica", "spa", "beleza", "facial", "pele", "harmoniz", "massagem", "laser"))
-    variation = facts.get("variation") if isinstance(facts.get("variation"), dict) else {}
+    is_barber = any(
+        token in segment_context for token in ("barbearia", "barbeiro", "barber")
+    )
+    is_academia = any(
+        token in segment_context
+        for token in ("academia", "crossfit", "musculacao", "funcional", "personal")
+    )
+    is_estetica = any(
+        token in segment_context
+        for token in (
+            "estetica",
+            "spa",
+            "beleza",
+            "facial",
+            "pele",
+            "harmoniz",
+            "massagem",
+            "laser",
+        )
+    )
+    variation = (
+        facts.get("variation") if isinstance(facts.get("variation"), dict) else {}
+    )
     lane = resolve_visual_lane(
         segment=segment,
         subnicho=subnicho,
@@ -3957,7 +4927,12 @@ def _cinematic_copy(facts: dict[str, Any]) -> dict[str, Any]:
     except Exception:
         _copy_seed = 0
     try:
-        _copy_counter = int(variation.get("counter") or business.get("__counter") or facts.get("__counter") or 0)
+        _copy_counter = int(
+            variation.get("counter")
+            or business.get("__counter")
+            or facts.get("__counter")
+            or 0
+        )
     except Exception:
         _copy_counter = 0
     _var_seed = abs((_copy_seed ^ ((_copy_counter + 1) * 0x9E3779B9)) or _copy_counter)
@@ -3970,122 +4945,197 @@ def _cinematic_copy(facts: dict[str, Any]) -> dict[str, Any]:
     # Defaults por SUBNICHO (não só segmento) — mais personalizado
     if is_barber:
         defaults = {
-            "headline": _rotaciona([
-                f"Barbearia {name} em {city}: corte que combina com seu estilo",
-                f"Corte, barba e ritual em {city} com a {name}",
-                f"{name}: barbearia em {city} para quem valoriza detalhe",
-            ]),
-            "subheadline": _rotaciona([
-                "Atendimento agendado, ambiente preparado e contato direto pelo WhatsApp.",
-                "Corte masculino, barba e acabamento com barbeiros certificados.",
-                f"Na {name} cada corte tem ritual: começa no agendamento e termina no acabamento.",
-            ]),
-            "cta_primary": _rotaciona(["Agendar corte", "Marcar horario", "Reservar corte"]),
+            "headline": _rotaciona(
+                [
+                    f"Barbearia {name} em {city}: corte que combina com seu estilo",
+                    f"Corte, barba e ritual em {city} com a {name}",
+                    f"{name}: barbearia em {city} para quem valoriza detalhe",
+                ]
+            ),
+            "subheadline": _rotaciona(
+                [
+                    "Atendimento agendado, ambiente preparado e contato direto pelo WhatsApp.",
+                    "Corte masculino, barba e acabamento com barbeiros certificados.",
+                    f"Na {name} cada corte tem ritual: começa no agendamento e termina no acabamento.",
+                ]
+            ),
+            "cta_primary": _rotaciona(
+                ["Agendar corte", "Marcar horario", "Reservar corte"]
+            ),
             "cta_secondary": "Ver serviços",
             "services_title": "O que está incluso no ritual da barbearia",
             "services_subheadline": f"Corte, barba e acabamento em {city}, com serviços apresentados de forma direta para agendar sem complicação.",
             "lifestyle_title": "Corte, barba e ambiente no mesmo lugar",
             "lifestyle_description": f"A {name} reúne atendimento, endereço e WhatsApp para facilitar a reserva do próximo horário.",
             "services": [
-                {"title": "Corte masculino", "description": "Corte alinhado ao estilo do cliente, com avaliação antes e finalização por barbeiro certificado."},
-                {"title": "Barba e acabamento", "description": "Ritual de barba com toalha quente, contorno definido e produto finalizado."},
-                {"title": "Atendimento agendado", "description": f"Confirmação rápida pelo WhatsApp da {name} para {city} e região."},
+                {
+                    "title": "Corte masculino",
+                    "description": "Corte alinhado ao estilo do cliente, com avaliação antes e finalização por barbeiro certificado.",
+                },
+                {
+                    "title": "Barba e acabamento",
+                    "description": "Ritual de barba com toalha quente, contorno definido e produto finalizado.",
+                },
+                {
+                    "title": "Atendimento agendado",
+                    "description": f"Confirmação rápida pelo WhatsApp da {name} para {city} e região.",
+                },
             ],
         }
     elif is_nutri:
         defaults = {
-            "headline": _rotaciona([
-                f"{name}: nutrição esportiva em {city} que entende sua rotina",
-                f"Plano alimentar em {city} com a {name} para quem treina de verdade",
-                f"{name}: nutrição clínica e esportiva em {city} com acompanhamento real",
-            ]),
-            "subheadline": _rotaciona([
-                "Plano alimentar personalizado para rotina, treino e objetivo de cada paciente.",
-                "Atendimento com foco em performance, recuperação e decisões práticas antes da consulta.",
-                f"A {name} acompanha de perto cada paciente em {city} com plano escrito e revisão periódica.",
-            ]),
-            "cta_primary": _rotaciona(["Agendar consulta", "Marcar avaliacao", "Falar com a nutri"]),
+            "headline": _rotaciona(
+                [
+                    f"{name}: nutrição esportiva em {city} que entende sua rotina",
+                    f"Plano alimentar em {city} com a {name} para quem treina de verdade",
+                    f"{name}: nutrição clínica e esportiva em {city} com acompanhamento real",
+                ]
+            ),
+            "subheadline": _rotaciona(
+                [
+                    "Plano alimentar personalizado para rotina, treino e objetivo de cada paciente.",
+                    "Atendimento com foco em performance, recuperação e decisões práticas antes da consulta.",
+                    f"A {name} acompanha de perto cada paciente em {city} com plano escrito e revisão periódica.",
+                ]
+            ),
+            "cta_primary": _rotaciona(
+                ["Agendar consulta", "Marcar avaliacao", "Falar com a nutri"]
+            ),
             "cta_secondary": "Conhecer abordagem",
             "services_title": "Consulta, estratégia e acompanhamento",
             "services_subheadline": f"Consulta, planejamento alimentar e retorno com foco na rotina do paciente em {city}.",
             "lifestyle_title": "Alimentação que respeita sua rotina em " + city,
             "lifestyle_description": f"A {name} atende em {city} com consulta presencial e online, focada em resultado sustentável.",
             "services": [
-                {"title": "Plano alimentar", "description": "Estrutura personalizada para rotina, treino e objetivo individual."},
-                {"title": "Acompanhamento", "description": f"Consultas de retorno para ajustes finos no plano da {name}."},
-                {"title": "Atendimento presencial e online", "description": f"Pacientes em {city} e online com mesma qualidade de plano e acompanhamento."},
+                {
+                    "title": "Plano alimentar",
+                    "description": "Estrutura personalizada para rotina, treino e objetivo individual.",
+                },
+                {
+                    "title": "Acompanhamento",
+                    "description": f"Consultas de retorno para ajustes finos no plano da {name}.",
+                },
+                {
+                    "title": "Atendimento presencial e online",
+                    "description": f"Pacientes em {city} e online com mesma qualidade de plano e acompanhamento.",
+                },
             ],
         }
     elif is_academia:
         defaults = {
-            "headline": _rotaciona([
-                f"Treino de verdade em {city} com a {name}",
-                f"{name}: musculação, crossfit e funcional em {city}",
-                f"{name} em {city} para quem quer resultado com estrutura",
-            ]),
-            "subheadline": _rotaciona([
-                f"Estrutura completa, horários flexíveis e plano de treino na {name}.",
-                f"A {name} atende {city} e região com musculação, crossfit e acompanhamento.",
-                f"Academia com equipamentos modernos, profissionais e ambiente preparado em {city}.",
-            ]),
-            "cta_primary": _rotaciona(["Comecar treino", "Marcar aula experimental", "Conhecer estrutura"]),
+            "headline": _rotaciona(
+                [
+                    f"Treino de verdade em {city} com a {name}",
+                    f"{name}: musculação, crossfit e funcional em {city}",
+                    f"{name} em {city} para quem quer resultado com estrutura",
+                ]
+            ),
+            "subheadline": _rotaciona(
+                [
+                    f"Estrutura completa, horários flexíveis e plano de treino na {name}.",
+                    f"A {name} atende {city} e região com musculação, crossfit e acompanhamento.",
+                    f"Academia com equipamentos modernos, profissionais e ambiente preparado em {city}.",
+                ]
+            ),
+            "cta_primary": _rotaciona(
+                ["Comecar treino", "Marcar aula experimental", "Conhecer estrutura"]
+            ),
             "cta_secondary": "Ver planos",
             "services_title": "Modalidades e estrutura da academia",
             "services_subheadline": f"Treino, modalidades e rotina organizados para quem está em {city} e quer decidir com clareza.",
             "lifestyle_title": "Treinar com regularidade e estrutura em " + city,
             "lifestyle_description": f"A {name} em {city} oferece musculação, crossfit e funcional com profissionais cadastrados.",
             "services": [
-                {"title": "Musculação", "description": "Equipamentos completos para hipertrofia, força e condicionamento."},
-                {"title": "Crossfit / Funcional", "description": f"Aulas coletivas com coach e programação variada na {name}."},
-                {"title": "Acompanhamento", "description": f"Profissionais avaliam e ajustam o treino para cada aluno da {name}."},
+                {
+                    "title": "Musculação",
+                    "description": "Equipamentos completos para hipertrofia, força e condicionamento.",
+                },
+                {
+                    "title": "Crossfit / Funcional",
+                    "description": f"Aulas coletivas com coach e programação variada na {name}.",
+                },
+                {
+                    "title": "Acompanhamento",
+                    "description": f"Profissionais avaliam e ajustam o treino para cada aluno da {name}.",
+                },
             ],
         }
     elif is_estetica:
         defaults = {
-            "headline": _rotaciona([
-                f"Tratamentos estéticos em {city} com a {name}",
-                f"{name}: cuidado com a pele, corpo e autoestima em {city}",
-                f"Estética em {city} com avaliação e agendamento pela {name}",
-            ]),
-            "subheadline": _rotaciona([
-                "Tratamentos faciais, corporais e cuidados de beleza com agendamento pelo WhatsApp.",
-                f"A {name} atende {city} com foco em avaliação, conforto e cuidado estético.",
-                "Ambiente preparado para cuidar da pele, orientar o procedimento e facilitar o agendamento.",
-            ]),
-            "cta_primary": _rotaciona(["Agendar avaliação", "Marcar horário", "Falar com a clínica"]),
+            "headline": _rotaciona(
+                [
+                    f"Tratamentos estéticos em {city} com a {name}",
+                    f"{name}: cuidado com a pele, corpo e autoestima em {city}",
+                    f"Estética em {city} com avaliação e agendamento pela {name}",
+                ]
+            ),
+            "subheadline": _rotaciona(
+                [
+                    "Tratamentos faciais, corporais e cuidados de beleza com agendamento pelo WhatsApp.",
+                    f"A {name} atende {city} com foco em avaliação, conforto e cuidado estético.",
+                    "Ambiente preparado para cuidar da pele, orientar o procedimento e facilitar o agendamento.",
+                ]
+            ),
+            "cta_primary": _rotaciona(
+                ["Agendar avaliação", "Marcar horário", "Falar com a clínica"]
+            ),
             "cta_secondary": "Conhecer tratamentos",
             "services_title": "Tratamentos para pele, corpo e bem-estar",
             "services_subheadline": f"Facial, corporal e cuidados de beleza da {name} aparecem com clareza para quem está em {city}.",
             "lifestyle_title": "Cuidado estético com conforto e atenção aos detalhes",
             "lifestyle_description": f"A {name} em {city} apresenta ambiente, endereço e WhatsApp para facilitar a primeira avaliação.",
             "services": [
-                {"title": "Tratamentos faciais", "description": "Protocolos para limpeza, hidratação e cuidado da pele antes do próximo agendamento."},
-                {"title": "Estética corporal", "description": "Procedimentos corporais apresentados com orientação clara e contato fácil pelo WhatsApp."},
-                {"title": "Avaliação estética", "description": f"Conversa inicial com a {name} para entender objetivo, rotina e melhor procedimento."},
+                {
+                    "title": "Tratamentos faciais",
+                    "description": "Protocolos para limpeza, hidratação e cuidado da pele antes do próximo agendamento.",
+                },
+                {
+                    "title": "Estética corporal",
+                    "description": "Procedimentos corporais apresentados com orientação clara e contato fácil pelo WhatsApp.",
+                },
+                {
+                    "title": "Avaliação estética",
+                    "description": f"Conversa inicial com a {name} para entender objetivo, rotina e melhor procedimento.",
+                },
             ],
         }
     else:
         defaults = {
-            "headline": _rotaciona([
-                f"{name} em {city}: atendimento claro para {segment}",
-                f"{name} — {segment} em {city} com WhatsApp fácil",
-                f"{segment} em {city} pela {name}",
-            ]),
-            "subheadline": _rotaciona([
-                f"Serviços, endereço e WhatsApp da {name} aparecem de forma clara.",
-                f"Atendimento em {city} pela {name} com avaliações e imagens do negócio.",
-                f"A {name} atende {city} com informações úteis e contato visível.",
-            ]),
-            "cta_primary": _rotaciona(["Falar no WhatsApp", "Solicitar contato", "Marcar atendimento"]),
+            "headline": _rotaciona(
+                [
+                    f"{name} em {city}: atendimento claro para {segment}",
+                    f"{name} — {segment} em {city} com WhatsApp fácil",
+                    f"{segment} em {city} pela {name}",
+                ]
+            ),
+            "subheadline": _rotaciona(
+                [
+                    f"Serviços, endereço e WhatsApp da {name} aparecem de forma clara.",
+                    f"Atendimento em {city} pela {name} com avaliações e imagens do negócio.",
+                    f"A {name} atende {city} com informações úteis e contato visível.",
+                ]
+            ),
+            "cta_primary": _rotaciona(
+                ["Falar no WhatsApp", "Solicitar contato", "Marcar atendimento"]
+            ),
             "cta_secondary": "Ver abordagem",
             "services_title": "O que está incluso no atendimento",
             "services_subheadline": f"Serviços, localização e WhatsApp da {name} ficam claros para quem está em {city}.",
             "lifestyle_title": f"Atendimento local em {city} pela {name}",
             "lifestyle_description": f"{name} apresenta ambiente, atendimento e WhatsApp com leitura simples.",
             "services": [
-                {"title": "Atendimento", "description": f"Serviços e forma de contato da {name} em {city}."},
-                {"title": "Avaliações locais", "description": "Imagens do negócio e avaliações reais sustentam a decisão de contato."},
-                {"title": "Contato rápido", "description": f"WhatsApp direto para falar com {name}."},
+                {
+                    "title": "Atendimento",
+                    "description": f"Serviços e forma de contato da {name} em {city}.",
+                },
+                {
+                    "title": "Avaliações locais",
+                    "description": "Imagens do negócio e avaliações reais sustentam a decisão de contato.",
+                },
+                {
+                    "title": "Contato rápido",
+                    "description": f"WhatsApp direto para falar com {name}.",
+                },
             ],
         }
     services = defaults["services"]
@@ -4093,10 +5143,17 @@ def _cinematic_copy(facts: dict[str, Any]) -> dict[str, Any]:
         clean_services = []
         for item in llm_content["services"][:3]:
             if isinstance(item, dict) and item.get("title"):
-                clean_services.append({
-                    "title": str(item.get("title")),
-                    "description": str(item.get("description") or defaults["services"][min(len(clean_services), 2)]["description"]),
-                })
+                clean_services.append(
+                    {
+                        "title": str(item.get("title")),
+                        "description": str(
+                            item.get("description")
+                            or defaults["services"][min(len(clean_services), 2)][
+                                "description"
+                            ]
+                        ),
+                    }
+                )
         if clean_services:
             services = clean_services
 
@@ -4230,16 +5287,32 @@ def _cinematic_copy(facts: dict[str, Any]) -> dict[str, Any]:
             text,
             flags=re.IGNORECASE,
         )
-        text = re.sub(r"\bcom informações confirmadas\b", "com clareza no atendimento", text, flags=re.IGNORECASE)
-        text = re.sub(r"\bdados confirmados\b", "informações úteis", text, flags=re.IGNORECASE)
-        text = re.sub(r"\binformações confirmadas\b", "informações úteis", text, flags=re.IGNORECASE)
+        text = re.sub(
+            r"\bcom informações confirmadas\b",
+            "com clareza no atendimento",
+            text,
+            flags=re.IGNORECASE,
+        )
+        text = re.sub(
+            r"\bdados confirmados\b", "informações úteis", text, flags=re.IGNORECASE
+        )
+        text = re.sub(
+            r"\binformações confirmadas\b",
+            "informações úteis",
+            text,
+            flags=re.IGNORECASE,
+        )
         text = re.sub(
             r"\borganizadas? para contato direto\b",
             "com caminho claro para falar pelo WhatsApp",
             text,
             flags=re.IGNORECASE,
         )
-        text = re.sub(r"\b[Aa]\s+([A-ZÁÉÍÓÚÂÊÔÃÕÇ][\wÁÉÍÓÚÂÊÔÃÕÇáéíóúâêôãõç ]{1,80})\s+aparece\b", r"\1 mostra", text)
+        text = re.sub(
+            r"\b[Aa]\s+([A-ZÁÉÍÓÚÂÊÔÃÕÇ][\wÁÉÍÓÚÂÊÔÃÕÇáéíóúâêôãõç ]{1,80})\s+aparece\b",
+            r"\1 mostra",
+            text,
+        )
         text = re.sub(r"\baparece\b", "mostra", text, flags=re.IGNORECASE)
         text = re.sub(r"\bentra\b", "aparece", text, flags=re.IGNORECASE)
         text = re.sub(r"\bganha\b", "recebe", text, flags=re.IGNORECASE)
@@ -4304,32 +5377,76 @@ def _cinematic_copy(facts: dict[str, Any]) -> dict[str, Any]:
         "services_kicker": _fmt(lane_copy.get("services_kicker", ""), "Serviços"),
         "services_subheadline": _copy_slot(
             "services_subheadline",
-            defaults.get("services_subheadline") or f"Serviços, localização e WhatsApp da {name} ficam claros para quem está em {city}.",
+            defaults.get("services_subheadline")
+            or f"Serviços, localização e WhatsApp da {name} ficam claros para quem está em {city}.",
         ),
         "about_kicker": _fmt(lane_copy.get("about_kicker", ""), "Direção"),
-        "about_title": _copy_slot("about_title", f"{name} em {city} com informações claras para decidir."),
-        "about_body": _copy_slot("about_body", f"{name} reúne endereço, contato e próximos passos para quem está em {city}."),
+        "about_title": _copy_slot(
+            "about_title", f"{name} em {city} com informações claras para decidir."
+        ),
+        "about_body": _copy_slot(
+            "about_body",
+            f"{name} reúne endereço, contato e próximos passos para quem está em {city}.",
+        ),
         "gallery_kicker": _fmt(lane_copy.get("gallery_kicker", ""), "Ambiente"),
-        "gallery_title": _copy_slot("gallery_title", f"Ambiente, rotina e detalhes da {name}."),
-        "gallery_intro": _copy_slot("gallery_intro", f"As imagens ajudam a entender o espaço, o atendimento e o contexto de {city}."),
+        "gallery_title": _copy_slot(
+            "gallery_title", f"Ambiente, rotina e detalhes da {name}."
+        ),
+        "gallery_intro": _copy_slot(
+            "gallery_intro",
+            f"As imagens ajudam a entender o espaço, o atendimento e o contexto de {city}.",
+        ),
         "reviews_kicker": _fmt(lane_copy.get("reviews_kicker", ""), "Reputação"),
-        "reviews_title": _copy_slot("reviews_title", f"Avaliações que ajudam a escolher {name}."),
-        "reviews_intro": _copy_slot("reviews_intro", f"Avaliações, cidade e contato ajudam a decidir com mais segurança em {city}."),
-        "proof_quote": _copy_slot("proof_quote", f"{name} reúne atendimento, avaliações e contato para facilitar a decisão."),
+        "reviews_title": _copy_slot(
+            "reviews_title", f"Avaliações que ajudam a escolher {name}."
+        ),
+        "reviews_intro": _copy_slot(
+            "reviews_intro",
+            f"Avaliações, cidade e contato ajudam a decidir com mais segurança em {city}.",
+        ),
+        "proof_quote": _copy_slot(
+            "proof_quote",
+            f"{name} reúne atendimento, avaliações e contato para facilitar a decisão.",
+        ),
         "faq_kicker": _fmt(lane_copy.get("faq_kicker", ""), "Perguntas"),
         "faq_title": _copy_slot("faq_title", "Perguntas antes de chamar no WhatsApp."),
-        "faq_intro": _copy_slot("faq_intro", f"Respostas rápidas para quem está avaliando {name} em {city}."),
+        "faq_intro": _copy_slot(
+            "faq_intro", f"Respostas rápidas para quem está avaliando {name} em {city}."
+        ),
         "location_kicker": _fmt(lane_copy.get("location_kicker", ""), "Presença local"),
         "location_title": _copy_slot("location_title", f"Atendimento em {city}."),
-        "location_intro": _copy_slot("location_intro", f"Endereço e WhatsApp aparecem juntos para facilitar contato em {city}."),
+        "location_intro": _copy_slot(
+            "location_intro",
+            f"Endereço e WhatsApp aparecem juntos para facilitar contato em {city}.",
+        ),
         "location_cta_kicker": _fmt(lane_copy.get("location_cta_kicker", ""), "Acesso"),
-        "location_cta_title": _copy_slot("location_cta_title", f"Fale com {name} pelo WhatsApp."),
-        "location_cta_body": _copy_slot("location_cta_body", "Contato e endereço ficam juntos para facilitar a decisão."),
-        "location_cta_primary": str(llm_content.get("location_cta_primary") or _fmt(lane_copy.get("location_cta_primary", ""), "Falar no WhatsApp")),
-        "location_cta_secondary": str(llm_content.get("location_cta_secondary") or _fmt(lane_copy.get("location_cta_secondary", ""), "Ver contato")),
+        "location_cta_title": _copy_slot(
+            "location_cta_title", f"Fale com {name} pelo WhatsApp."
+        ),
+        "location_cta_body": _copy_slot(
+            "location_cta_body",
+            "Contato e endereço ficam juntos para facilitar a decisão.",
+        ),
+        "location_cta_primary": str(
+            llm_content.get("location_cta_primary")
+            or _fmt(lane_copy.get("location_cta_primary", ""), "Falar no WhatsApp")
+        ),
+        "location_cta_secondary": str(
+            llm_content.get("location_cta_secondary")
+            or _fmt(lane_copy.get("location_cta_secondary", ""), "Ver contato")
+        ),
         "lifestyle_kicker": _fmt(lane_copy.get("lifestyle_kicker", ""), "Experiência"),
-        "lifestyle_title": str(lifestyle.get("title") or _fmt(lane_copy.get("lifestyle_title", ""), defaults["lifestyle_title"])),
-        "lifestyle_description": str(lifestyle.get("description") or _fmt(lane_copy.get("lifestyle_description", ""), defaults["lifestyle_description"])),
+        "lifestyle_title": str(
+            lifestyle.get("title")
+            or _fmt(lane_copy.get("lifestyle_title", ""), defaults["lifestyle_title"])
+        ),
+        "lifestyle_description": str(
+            lifestyle.get("description")
+            or _fmt(
+                lane_copy.get("lifestyle_description", ""),
+                defaults["lifestyle_description"],
+            )
+        ),
         "gallery_alt": str(llm_content.get("gallery_alt") or f"{segment} em {city}"),
         "footer_tagline": str(
             llm_content.get("footer_tagline")
@@ -4338,24 +5455,63 @@ def _cinematic_copy(facts: dict[str, Any]) -> dict[str, Any]:
         "modal_title": str(llm_content.get("modal_title") or f"Fale com {name}"),
         "modal_cta": str(llm_content.get("modal_cta") or "Enviar mensagem"),
         "modal_kicker": _fmt(lane_copy.get("modal_kicker", ""), "Contato"),
-        "about_card_1_title": _fmt(lane_copy.get("about_card_1_title", ""), "Presença local"),
-        "about_card_1_text": _copy_slot("about_card_1_text", f"{name} reúne cidade, contato e informações úteis para quem está em {city}."),
-        "about_card_2_title": _fmt(lane_copy.get("about_card_2_title", ""), "Serviço principal"),
-        "about_card_2_text": _copy_slot("about_card_2_text", "As principais frentes de atendimento ficam organizadas para leitura rápida e decisão sem complicação."),
-        "about_card_3_title": _fmt(lane_copy.get("about_card_3_title", ""), "Marca em contexto"),
-        "about_card_3_text": _copy_slot("about_card_3_text", f"Ambiente, imagens e atendimento sustentam o estilo de {name} com clareza."),
+        "about_card_1_title": _fmt(
+            lane_copy.get("about_card_1_title", ""), "Presença local"
+        ),
+        "about_card_1_text": _copy_slot(
+            "about_card_1_text",
+            f"{name} reúne cidade, contato e informações úteis para quem está em {city}.",
+        ),
+        "about_card_2_title": _fmt(
+            lane_copy.get("about_card_2_title", ""), "Serviço principal"
+        ),
+        "about_card_2_text": _copy_slot(
+            "about_card_2_text",
+            "As principais frentes de atendimento ficam organizadas para leitura rápida e decisão sem complicação.",
+        ),
+        "about_card_3_title": _fmt(
+            lane_copy.get("about_card_3_title", ""), "Marca em contexto"
+        ),
+        "about_card_3_text": _copy_slot(
+            "about_card_3_text",
+            f"Ambiente, imagens e atendimento sustentam o estilo de {name} com clareza.",
+        ),
         "about_city_label": _fmt(lane_copy.get("about_city_label", ""), "Cidade"),
-        "about_aside_body": _copy_slot("about_aside_body", "Contato e informações úteis para quem está decidindo agora."),
-        "services_city_body": _fmt(lane_copy.get("services_city_body", ""), "Estrutura organizada para leitura rápida e decisão mais clara."),
+        "about_aside_body": _copy_slot(
+            "about_aside_body",
+            "Contato e informações úteis para quem está decidindo agora.",
+        ),
+        "services_city_body": _fmt(
+            lane_copy.get("services_city_body", ""),
+            "Estrutura organizada para leitura rápida e decisão mais clara.",
+        ),
         "contact_kicker": _fmt(lane_copy.get("contact_kicker", ""), "Contato"),
-        "contact_headline": _copy_slot("contact_headline", "Quer falar com a equipe agora?"),
-        "contact_sub": _copy_slot("contact_sub", "Envie uma mensagem para tirar dúvidas e combinar o melhor horário."),
-        "contact_card_label": _fmt(lane_copy.get("contact_card_label", ""), "Contato oficial"),
-        "contact_primary_label": _fmt(lane_copy.get("contact_primary_label", ""), "Falar no WhatsApp"),
-        "contact_secondary_label": _fmt(lane_copy.get("contact_secondary_label", ""), "Abrir contato"),
-        "footer_contact_label": _fmt(lane_copy.get("footer_contact_label", ""), "Contato"),
-        "footer_location_label": _fmt(lane_copy.get("footer_location_label", ""), "Local"),
-        "footer_privacy_note": _fmt(lane_copy.get("footer_privacy_note", ""), "Privacidade preservada no atendimento."),
+        "contact_headline": _copy_slot(
+            "contact_headline", "Quer falar com a equipe agora?"
+        ),
+        "contact_sub": _copy_slot(
+            "contact_sub",
+            "Envie uma mensagem para tirar dúvidas e combinar o melhor horário.",
+        ),
+        "contact_card_label": _fmt(
+            lane_copy.get("contact_card_label", ""), "Contato oficial"
+        ),
+        "contact_primary_label": _fmt(
+            lane_copy.get("contact_primary_label", ""), "Falar no WhatsApp"
+        ),
+        "contact_secondary_label": _fmt(
+            lane_copy.get("contact_secondary_label", ""), "Abrir contato"
+        ),
+        "footer_contact_label": _fmt(
+            lane_copy.get("footer_contact_label", ""), "Contato"
+        ),
+        "footer_location_label": _fmt(
+            lane_copy.get("footer_location_label", ""), "Local"
+        ),
+        "footer_privacy_note": _fmt(
+            lane_copy.get("footer_privacy_note", ""),
+            "Privacidade preservada no atendimento.",
+        ),
         "services": services,
     }
     for key, value in list(data.items()):
@@ -4377,7 +5533,9 @@ def _cinematic_copy(facts: dict[str, Any]) -> dict[str, Any]:
 def _with_cinematic_variation_defaults(facts: dict[str, Any]) -> dict[str, Any]:
     """Fill missing visual knobs before theme and block resolution."""
     enriched = dict(facts or {})
-    variation = dict(enriched.get("variation") if isinstance(enriched.get("variation"), dict) else {})
+    variation = dict(
+        enriched.get("variation") if isinstance(enriched.get("variation"), dict) else {}
+    )
     if get_variation is not None:
         try:
             seeded = get_variation(
@@ -4386,7 +5544,15 @@ def _with_cinematic_variation_defaults(facts: dict[str, Any]) -> dict[str, Any]:
             ).to_dict()
         except Exception:
             seeded = {}
-        for key in ("seed", "counter", "visual_lane", "motion_style", "copy_voice", "color_emphasis", "section_order_style"):
+        for key in (
+            "seed",
+            "counter",
+            "visual_lane",
+            "motion_style",
+            "copy_voice",
+            "color_emphasis",
+            "section_order_style",
+        ):
             if key in seeded:
                 variation.setdefault(key, seeded[key])
     combo = _cinematic_diversity_combo(variation)
@@ -4400,7 +5566,9 @@ def _with_cinematic_variation_defaults(facts: dict[str, Any]) -> dict[str, Any]:
     return enriched
 
 
-def _enforce_premium_visual_floor(variation: dict[str, Any], facts: dict[str, Any] | None = None) -> dict[str, Any]:
+def _enforce_premium_visual_floor(
+    variation: dict[str, Any], facts: dict[str, Any] | None = None
+) -> dict[str, Any]:
     """Prevent the Studio from publishing a visually flat creative plan.
 
     The creative LLM can still choose a calm/wellness direction, but production
@@ -4410,8 +5578,20 @@ def _enforce_premium_visual_floor(variation: dict[str, Any], facts: dict[str, An
     v = dict(variation or {})
     facts = facts or {}
     business = facts.get("business") if isinstance(facts.get("business"), dict) else {}
-    segment = str(business.get("segment") or business.get("segmento") or facts.get("segment") or facts.get("segmento") or "")
-    subnicho = str(business.get("subniche") or business.get("subnicho") or facts.get("subniche") or facts.get("subnicho") or "")
+    segment = str(
+        business.get("segment")
+        or business.get("segmento")
+        or facts.get("segment")
+        or facts.get("segmento")
+        or ""
+    )
+    subnicho = str(
+        business.get("subniche")
+        or business.get("subnicho")
+        or facts.get("subniche")
+        or facts.get("subnicho")
+        or ""
+    )
     try:
         lane = resolve_visual_lane(
             segment=segment,
@@ -4456,8 +5636,12 @@ def _enforce_premium_visual_floor(variation: dict[str, Any], facts: dict[str, An
     )
 
     if weak_wellness or weak_combo:
-        v["motion_intensity"] = "composed" if motion in {"", "minimal"} else v.get("motion_intensity")
-        v["typography_scale"] = "strong" if typography in {"", "soft"} else v.get("typography_scale")
+        v["motion_intensity"] = (
+            "composed" if motion in {"", "minimal"} else v.get("motion_intensity")
+        )
+        v["typography_scale"] = (
+            "strong" if typography in {"", "soft"} else v.get("typography_scale")
+        )
         if spacing in {"", "spacious"} and hero_layout in {"", "center"}:
             v["spacing_density"] = "normal"
         if hero_layout in {"", "center"}:
@@ -4474,7 +5658,10 @@ def _enforce_premium_visual_floor(variation: dict[str, Any], facts: dict[str, An
             v["container_strategy"] = "wide"
         if str(v.get("surface_depth") or "").strip().lower() in {"", "elevated"}:
             v["surface_depth"] = "bordered"
-        if str(v.get("overlap_mode") or "").strip().lower() in {"", "none"} and priority in {"visual_drama", "trust", "conversion", ""}:
+        if str(v.get("overlap_mode") or "").strip().lower() in {
+            "",
+            "none",
+        } and priority in {"visual_drama", "trust", "conversion", ""}:
             v["overlap_mode"] = "subtle"
         if str(v.get("heading_style") or "").strip().lower() in {"", "clean"}:
             v["heading_style"] = "display" if aesthetic != "wellness" else "editorial"
@@ -4483,7 +5670,10 @@ def _enforce_premium_visual_floor(variation: dict[str, Any], facts: dict[str, An
     motion_mix = [str(item) for item in motion_mix if str(item).strip()]
     if not motion_mix or set(motion_mix).issubset({"subtle_fade"}):
         motion_mix = ["mask_reveal", "stagger_cards"]
-    if v.get("hero_layout") in {"video", "fullbleed"} and "parallax_video" not in motion_mix:
+    if (
+        v.get("hero_layout") in {"video", "fullbleed"}
+        and "parallax_video" not in motion_mix
+    ):
         motion_mix.insert(0, "parallax_video")
     if len(motion_mix) < 2:
         motion_mix.append("line_draw")
@@ -4497,7 +5687,11 @@ def _enforce_premium_visual_floor(variation: dict[str, Any], facts: dict[str, An
         surface_mix = ["solid", "outline"]
     v["surface_mix"] = surface_mix[:4]
 
-    section_map = v.get("section_surface_map") if isinstance(v.get("section_surface_map"), dict) else {}
+    section_map = (
+        v.get("section_surface_map")
+        if isinstance(v.get("section_surface_map"), dict)
+        else {}
+    )
     if not section_map or len(set(str(value) for value in section_map.values())) < 2:
         v["section_surface_map"] = {
             "about": "solid",
@@ -4537,7 +5731,16 @@ def _cinematic_diversity_combo(variation: dict[str, Any]) -> dict[str, Any]:
             "typography_mood": "condensed_sport",
             "color_strategy": "committed",
             "motion_mix": ["stagger_cards", "line_draw"],
-            "section_order": ["hero", "about", "services", "gallery", "reviews", "faq", "location", "contact-cta"],
+            "section_order": [
+                "hero",
+                "about",
+                "services",
+                "gallery",
+                "reviews",
+                "faq",
+                "location",
+                "contact-cta",
+            ],
         },
         {
             "hero_layout": "video",
@@ -4553,7 +5756,16 @@ def _cinematic_diversity_combo(variation: dict[str, Any]) -> dict[str, Any]:
             "typography_mood": "technical_grotesk",
             "color_strategy": "drenched",
             "motion_mix": ["parallax_video", "mask_reveal", "marquee"],
-            "section_order": ["hero", "gallery", "about", "services", "reviews", "faq", "location", "contact-cta"],
+            "section_order": [
+                "hero",
+                "gallery",
+                "about",
+                "services",
+                "reviews",
+                "faq",
+                "location",
+                "contact-cta",
+            ],
         },
         {
             "hero_layout": "center",
@@ -4569,7 +5781,16 @@ def _cinematic_diversity_combo(variation: dict[str, Any]) -> dict[str, Any]:
             "typography_mood": "clean_sans",
             "color_strategy": "restrained",
             "motion_mix": ["subtle_fade", "stagger_cards"],
-            "section_order": ["hero", "about", "reviews", "services", "gallery", "faq", "location", "contact-cta"],
+            "section_order": [
+                "hero",
+                "about",
+                "reviews",
+                "services",
+                "gallery",
+                "faq",
+                "location",
+                "contact-cta",
+            ],
         },
         {
             "hero_layout": "asymmetric",
@@ -4585,7 +5806,16 @@ def _cinematic_diversity_combo(variation: dict[str, Any]) -> dict[str, Any]:
             "typography_mood": "technical_grotesk",
             "color_strategy": "full_palette",
             "motion_mix": ["hover_depth", "line_draw"],
-            "section_order": ["hero", "about", "services", "gallery", "reviews", "location", "faq", "contact-cta"],
+            "section_order": [
+                "hero",
+                "about",
+                "services",
+                "gallery",
+                "reviews",
+                "location",
+                "faq",
+                "contact-cta",
+            ],
         },
         {
             "hero_layout": "fullbleed",
@@ -4601,7 +5831,16 @@ def _cinematic_diversity_combo(variation: dict[str, Any]) -> dict[str, Any]:
             "typography_mood": "condensed_sport",
             "color_strategy": "drenched",
             "motion_mix": ["mask_reveal", "parallax_video", "stagger_cards"],
-            "section_order": ["hero", "services", "gallery", "reviews", "about", "faq", "location", "contact-cta"],
+            "section_order": [
+                "hero",
+                "services",
+                "gallery",
+                "reviews",
+                "about",
+                "faq",
+                "location",
+                "contact-cta",
+            ],
         },
         {
             "hero_layout": "split",
@@ -4617,7 +5856,16 @@ def _cinematic_diversity_combo(variation: dict[str, Any]) -> dict[str, Any]:
             "typography_mood": "luxury_display",
             "color_strategy": "committed",
             "motion_mix": ["subtle_fade", "line_draw"],
-            "section_order": ["hero", "about", "gallery", "services", "reviews", "location", "faq", "contact-cta"],
+            "section_order": [
+                "hero",
+                "about",
+                "gallery",
+                "services",
+                "reviews",
+                "location",
+                "faq",
+                "contact-cta",
+            ],
         },
         {
             "hero_layout": "asymmetric",
@@ -4633,7 +5881,16 @@ def _cinematic_diversity_combo(variation: dict[str, Any]) -> dict[str, Any]:
             "typography_mood": "clean_sans",
             "color_strategy": "full_palette",
             "motion_mix": ["hover_depth", "stagger_cards"],
-            "section_order": ["hero", "reviews", "about", "services", "gallery", "faq", "location", "contact-cta"],
+            "section_order": [
+                "hero",
+                "reviews",
+                "about",
+                "services",
+                "gallery",
+                "faq",
+                "location",
+                "contact-cta",
+            ],
         },
         {
             "hero_layout": "video",
@@ -4649,7 +5906,16 @@ def _cinematic_diversity_combo(variation: dict[str, Any]) -> dict[str, Any]:
             "typography_mood": "editorial_serif",
             "color_strategy": "committed",
             "motion_mix": ["parallax_video", "mask_reveal"],
-            "section_order": ["hero", "gallery", "services", "about", "reviews", "faq", "location", "contact-cta"],
+            "section_order": [
+                "hero",
+                "gallery",
+                "services",
+                "about",
+                "reviews",
+                "faq",
+                "location",
+                "contact-cta",
+            ],
         },
     ]
     combo = dict(combos[lane_index % len(combos)])
@@ -4662,7 +5928,16 @@ def _cinematic_diversity_combo(variation: dict[str, Any]) -> dict[str, Any]:
     except Exception:
         counter_value = 0
     sub_index = (seed_value // max(1, len(combos)) + counter_value * 11) % 12
-    hero_layouts = ["split", "video", "center", "asymmetric", "fullbleed", "split", "video", "asymmetric"]
+    hero_layouts = [
+        "split",
+        "video",
+        "center",
+        "asymmetric",
+        "fullbleed",
+        "split",
+        "video",
+        "asymmetric",
+    ]
     gallery_densities = ["balanced_grid", "mosaic", "editorial_grid", "cinematic_strip"]
     cta_styles = ["solid_panel", "poster_band", "split_card", "minimal_inline"]
     surface_styles = ["solid", "outline", "solid", "outline", "solid"]
@@ -4678,20 +5953,35 @@ def _cinematic_diversity_combo(variation: dict[str, Any]) -> dict[str, Any]:
         # A lane is only the broad art direction. The seed adds a second layer of
         # layout/material/motion variation so production does not collapse into
         # the same few compositions for an entire niche.
-        combo["hero_layout"] = hero_layouts[(lane_index + sub_index) % len(hero_layouts)]
-        combo["hero_text_side"] = ["left", "right", "center", "left"][(lane_index + sub_index) % 4]
-        if combo["hero_layout"] in {"video", "fullbleed", "center"} and sub_index % 3 == 0:
+        combo["hero_layout"] = hero_layouts[
+            (lane_index + sub_index) % len(hero_layouts)
+        ]
+        combo["hero_text_side"] = ["left", "right", "center", "left"][
+            (lane_index + sub_index) % 4
+        ]
+        if (
+            combo["hero_layout"] in {"video", "fullbleed", "center"}
+            and sub_index % 3 == 0
+        ):
             combo["hero_text_side"] = "center"
-        combo["gallery_density"] = gallery_densities[(lane_index + sub_index) % len(gallery_densities)]
+        combo["gallery_density"] = gallery_densities[
+            (lane_index + sub_index) % len(gallery_densities)
+        ]
         combo["cta_style"] = cta_styles[(lane_index + sub_index) % len(cta_styles)]
-        combo["surface_style"] = surface_styles[(lane_index + sub_index) % len(surface_styles)]
+        combo["surface_style"] = surface_styles[
+            (lane_index + sub_index) % len(surface_styles)
+        ]
         combo["motion_mix"] = motion_sets[(lane_index + sub_index) % len(motion_sets)]
     if combo.get("surface_style") == "soft_tint":
         combo["surface_style"] = "solid"
     combo["section_surface_map"] = {
         "about": combo["surface_style"],
-        "services": "solid" if combo["services_variant"] == "stats_then_cards" else combo["surface_style"],
-        "reviews": "outline" if combo["reviews_variant"] == "card_marquee" else combo["surface_style"],
+        "services": "solid"
+        if combo["services_variant"] == "stats_then_cards"
+        else combo["surface_style"],
+        "reviews": "outline"
+        if combo["reviews_variant"] == "card_marquee"
+        else combo["surface_style"],
         "faq": "solid" if combo["faq_variant"] == "panel" else "outline",
         "location": "solid",
         "contact-cta": "solid",
@@ -4702,7 +5992,13 @@ def _cinematic_diversity_combo(variation: dict[str, Any]) -> dict[str, Any]:
 def _generate_cinematic_studio_files(facts: dict[str, Any]) -> dict[str, str]:
     facts = _with_cinematic_variation_defaults(facts)
     _biz = facts.get("business") if isinstance(facts.get("business"), dict) else {}
-    segment = str(_biz.get("segment") or _biz.get("segmento") or facts.get("segmento") or facts.get("segment") or "servicos").lower()
+    segment = str(
+        _biz.get("segment")
+        or _biz.get("segmento")
+        or facts.get("segmento")
+        or facts.get("segment")
+        or "servicos"
+    ).lower()
     archetype = _get_archetype_for_segment(segment)
     fallback_palette = _get_archetype_palette(archetype)
     typography = _get_archetype_typography(archetype)
@@ -4717,21 +6013,31 @@ def _generate_cinematic_studio_files(facts: dict[str, Any]) -> dict[str, str]:
     archetype = str(theme["archetype"] or archetype)
     palette = dict(theme["palette"])
 
-    c_bg = palette['bg_dark']
-    c_accent = palette['primary']
-    c_accent_light = palette['accent_soft']
-    c_accent_dark = palette['accent_dark']
-    c_text = palette['text_light']
-    c_text_muted = palette['text_muted']
+    c_bg = palette["bg_dark"]
+    c_accent = palette["primary"]
+    c_accent_light = palette["accent_soft"]
+    c_accent_dark = palette["accent_dark"]
+    c_text = palette["text_light"]
+    c_text_muted = palette["text_muted"]
 
     # Sprint 14.12: variacao por subnicho + counter rotation para evitar
     # que sites do mesmo subnicho (ex: 4 nutricionistas) saiam identicos.
     _biz = facts.get("business") if isinstance(facts.get("business"), dict) else {}
     _subnicho_norm = (
-        str(_biz.get("subnicho") or _biz.get("subniche") or facts.get("subnicho") or facts.get("subniche") or "default")
-        .strip().lower() or "default"
+        str(
+            _biz.get("subnicho")
+            or _biz.get("subniche")
+            or facts.get("subnicho")
+            or facts.get("subniche")
+            or "default"
+        )
+        .strip()
+        .lower()
+        or "default"
     )
-    _variation_for_seed = facts.get("variation") if isinstance(facts.get("variation"), dict) else {}
+    _variation_for_seed = (
+        facts.get("variation") if isinstance(facts.get("variation"), dict) else {}
+    )
     try:
         _seed_base_for_html = int(_variation_for_seed.get("seed") or 0)
     except Exception:
@@ -4745,7 +6051,10 @@ def _generate_cinematic_studio_files(facts: dict[str, Any]) -> dict[str, str]:
         )
     except Exception:
         _counter_for_html = 0
-    _seed_for_html = abs((_seed_base_for_html ^ ((_counter_for_html + 1) * 0x9E3779B9)) or _counter_for_html)
+    _seed_for_html = abs(
+        (_seed_base_for_html ^ ((_counter_for_html + 1) * 0x9E3779B9))
+        or _counter_for_html
+    )
 
     # Hero class variants (10 opcoes rotacionadas por counter)
     # Mais variabilidade para forcar Tailwind a gerar CSS diferente por lead
@@ -4779,28 +6088,131 @@ def _generate_cinematic_studio_files(facts: dict[str, Any]) -> dict[str, str]:
 
     # Font family variants (heading e body separados).
     _FONT_POOL = {
-        "default": (["Manrope, sans-serif"] * 4 + ["Inter, sans-serif"], ["Inter, sans-serif"] * 4 + ["Manrope, sans-serif"]),
-        "nutricionista_esportiva": (["'Bebas Neue', sans-serif", "'Anton', sans-serif", "'Oswald', sans-serif", "'Roboto Condensed', sans-serif", "'Bebas Neue', sans-serif"], ["Inter, sans-serif", "Manrope, sans-serif", "Roboto, sans-serif", "DM Sans, sans-serif", "system-ui, sans-serif"]),
-        "nutricionista_clinica": (["'Source Serif 4', serif", "'Lora', serif", "'Crimson Pro', serif", "'Merriweather', serif", "'Lora', serif"], ["'Nunito', sans-serif", "Inter, sans-serif", "system-ui, sans-serif", "Manrope, sans-serif", "Inter, sans-serif"]),
-        "barbearia_premium": (["'Playfair Display', serif", "'Bebas Neue', sans-serif", "'Anton', sans-serif", "'Oswald', sans-serif", "'Libre Baskerville', serif"], ["Inter, sans-serif", "Manrope, sans-serif", "system-ui, sans-serif", "DM Sans, sans-serif", "Inter, sans-serif"]),
-        "academia_crossfit": (["'Bebas Neue', sans-serif", "'Anton', sans-serif", "'Oswald', sans-serif", "'Roboto Condensed', sans-serif", "'Bebas Neue', sans-serif"], ["Inter, sans-serif", "Manrope, sans-serif", "Roboto, sans-serif", "system-ui, sans-serif", "DM Sans, sans-serif"]),
-        "academia_musculacao": (["'Anton', sans-serif", "'Bebas Neue', sans-serif", "'Oswald', sans-serif", "'Bebas Neue', sans-serif", "'Anton', sans-serif"], ["Inter, sans-serif", "Manrope, sans-serif", "system-ui, sans-serif", "Roboto, sans-serif", "Inter, sans-serif"]),
-        "restaurante_familiar": (["'Playfair Display', serif", "'Lora', serif", "'Merriweather', serif", "'Crimson Pro', serif", "'Playfair Display', serif"], ["Inter, sans-serif", "system-ui, sans-serif", "Manrope, sans-serif", "Inter, sans-serif", "DM Sans, sans-serif"]),
+        "default": (
+            ["Manrope, sans-serif"] * 4 + ["Inter, sans-serif"],
+            ["Inter, sans-serif"] * 4 + ["Manrope, sans-serif"],
+        ),
+        "nutricionista_esportiva": (
+            [
+                "'Bebas Neue', sans-serif",
+                "'Anton', sans-serif",
+                "'Oswald', sans-serif",
+                "'Roboto Condensed', sans-serif",
+                "'Bebas Neue', sans-serif",
+            ],
+            [
+                "Inter, sans-serif",
+                "Manrope, sans-serif",
+                "Roboto, sans-serif",
+                "DM Sans, sans-serif",
+                "system-ui, sans-serif",
+            ],
+        ),
+        "nutricionista_clinica": (
+            [
+                "'Source Serif 4', serif",
+                "'Lora', serif",
+                "'Crimson Pro', serif",
+                "'Merriweather', serif",
+                "'Lora', serif",
+            ],
+            [
+                "'Nunito', sans-serif",
+                "Inter, sans-serif",
+                "system-ui, sans-serif",
+                "Manrope, sans-serif",
+                "Inter, sans-serif",
+            ],
+        ),
+        "barbearia_premium": (
+            [
+                "'Playfair Display', serif",
+                "'Bebas Neue', sans-serif",
+                "'Anton', sans-serif",
+                "'Oswald', sans-serif",
+                "'Libre Baskerville', serif",
+            ],
+            [
+                "Inter, sans-serif",
+                "Manrope, sans-serif",
+                "system-ui, sans-serif",
+                "DM Sans, sans-serif",
+                "Inter, sans-serif",
+            ],
+        ),
+        "academia_crossfit": (
+            [
+                "'Bebas Neue', sans-serif",
+                "'Anton', sans-serif",
+                "'Oswald', sans-serif",
+                "'Roboto Condensed', sans-serif",
+                "'Bebas Neue', sans-serif",
+            ],
+            [
+                "Inter, sans-serif",
+                "Manrope, sans-serif",
+                "Roboto, sans-serif",
+                "system-ui, sans-serif",
+                "DM Sans, sans-serif",
+            ],
+        ),
+        "academia_musculacao": (
+            [
+                "'Anton', sans-serif",
+                "'Bebas Neue', sans-serif",
+                "'Oswald', sans-serif",
+                "'Bebas Neue', sans-serif",
+                "'Anton', sans-serif",
+            ],
+            [
+                "Inter, sans-serif",
+                "Manrope, sans-serif",
+                "system-ui, sans-serif",
+                "Roboto, sans-serif",
+                "Inter, sans-serif",
+            ],
+        ),
+        "restaurante_familiar": (
+            [
+                "'Playfair Display', serif",
+                "'Lora', serif",
+                "'Merriweather', serif",
+                "'Crimson Pro', serif",
+                "'Playfair Display', serif",
+            ],
+            [
+                "Inter, sans-serif",
+                "system-ui, sans-serif",
+                "Manrope, sans-serif",
+                "Inter, sans-serif",
+                "DM Sans, sans-serif",
+            ],
+        ),
     }
-    _heading_font_pool, _body_font_pool = _FONT_POOL.get(_subnicho_norm, _FONT_POOL["default"])
+    _heading_font_pool, _body_font_pool = _FONT_POOL.get(
+        _subnicho_norm, _FONT_POOL["default"]
+    )
     _heading_font = _heading_font_pool[_seed_for_html % len(_heading_font_pool)]
     _body_font = _body_font_pool[_seed_for_html % len(_body_font_pool)]
     _font_family = _body_font
     _typography_mood = ""
-    _variation_for_type = facts.get("variation") if isinstance(facts.get("variation"), dict) else {}
+    _variation_for_type = (
+        facts.get("variation") if isinstance(facts.get("variation"), dict) else {}
+    )
     if isinstance(_variation_for_type, dict):
         _typography_mood = str(_variation_for_type.get("typography_mood") or "")
     _TYPOGRAPHY_MOOD_FONT = {
-        "clean_sans": ("Manrope, system-ui, sans-serif", "Manrope, system-ui, sans-serif"),
+        "clean_sans": (
+            "Manrope, system-ui, sans-serif",
+            "Manrope, system-ui, sans-serif",
+        ),
         "condensed_sport": ("'Bebas Neue', 'Oswald', sans-serif", "Inter, sans-serif"),
         "luxury_display": ("'Libre Baskerville', Georgia, serif", "Inter, sans-serif"),
         "editorial_serif": ("'Source Serif 4', Georgia, serif", "Inter, sans-serif"),
-        "technical_grotesk": ("'Arial Narrow', 'Roboto Condensed', sans-serif", "Inter, sans-serif"),
+        "technical_grotesk": (
+            "'Arial Narrow', 'Roboto Condensed', sans-serif",
+            "Inter, sans-serif",
+        ),
     }
     if _typography_mood in _TYPOGRAPHY_MOOD_FONT:
         _heading_font, _body_font = _TYPOGRAPHY_MOOD_FONT[_typography_mood]
@@ -4809,7 +6221,11 @@ def _generate_cinematic_studio_files(facts: dict[str, Any]) -> dict[str, str]:
     # Services icon variants (3 services, 5 icon options)
     _SERVICE_ICONS = ["ClipboardCheck", "Sparkles", "MapPinned", "Heart", "Trophy"]
     _services_icon_set = [
-        [_SERVICE_ICONS[_seed_for_html % 5], _SERVICE_ICONS[(_seed_for_html + 1) % 5], _SERVICE_ICONS[(_seed_for_html + 2) % 5]],
+        [
+            _SERVICE_ICONS[_seed_for_html % 5],
+            _SERVICE_ICONS[(_seed_for_html + 1) % 5],
+            _SERVICE_ICONS[(_seed_for_html + 2) % 5],
+        ],
     ][0]
 
     # CTA button style variants (5)
@@ -4825,27 +6241,43 @@ def _generate_cinematic_studio_files(facts: dict[str, Any]) -> dict[str, str]:
     # Sprint 14.6: injeta __counter nos facts para _cinematic_copy usar
     # rotacao de headlines/CTAs. Counter vem do variation log (counter rotation).
     _enriched_facts = dict(facts or {})
-    if "business" not in _enriched_facts or not isinstance(_enriched_facts.get("business"), dict):
+    if "business" not in _enriched_facts or not isinstance(
+        _enriched_facts.get("business"), dict
+    ):
         _enriched_facts["business"] = {}
     else:
         _enriched_facts["business"] = dict(_enriched_facts["business"])
-    _var_payload = _variation_payload if "_variation_payload" in dir() else (
-        _enriched_facts.get("variation") if isinstance(_enriched_facts.get("variation"), dict) else None
+    _var_payload = (
+        _variation_payload
+        if "_variation_payload" in dir()
+        else (
+            _enriched_facts.get("variation")
+            if isinstance(_enriched_facts.get("variation"), dict)
+            else None
+        )
     )
     if isinstance(_var_payload, dict):
         _enriched_facts["business"]["__counter"] = int(_var_payload.get("counter") or 0)
 
     copy = _cinematic_copy(_enriched_facts)
     images, videos = _cinematic_media_urls(facts)
-    whatsapp = f"https://wa.me/55{copy['phone_digits']}" if copy["phone_digits"] else "#contato"
+    whatsapp = (
+        f"https://wa.me/55{copy['phone_digits']}"
+        if copy["phone_digits"]
+        else "#contato"
+    )
     tel = f"tel:+55{copy['phone_digits']}" if copy["phone_digits"] else "#contato"
 
     # Sprint 14.6: variation counter rotation injeta hero_classes
     # diferente baseado em facts["variation"] (gerado por agente_variacao).
-    _variation_payload = dict(facts.get("variation") if isinstance(facts.get("variation"), dict) else {})
+    _variation_payload = dict(
+        facts.get("variation") if isinstance(facts.get("variation"), dict) else {}
+    )
     _hero_classes_override = str(_variation_payload.get("hero_classes") or "").strip()
     _variation_payload["hero_classes"] = _hero_classes_override or _hero_class
-    _section_order = _resolve_cinematic_section_order(archetype, _seed_for_html, _variation_payload)
+    _section_order = _resolve_cinematic_section_order(
+        archetype, _seed_for_html, _variation_payload
+    )
     _section_import_map = {
         "navbar": "import { Navbar } from '../components/Navbar';",
         "hero": "import { HeroSection } from '../components/HeroSection';",
@@ -4877,10 +6309,14 @@ def _generate_cinematic_studio_files(facts: dict[str, Any]) -> dict[str, str]:
         "stats-bar": "      <StatsBar />",
     }
     _index_imports = "\n".join(
-        _section_import_map[section] for section in _section_order if section in _section_import_map
+        _section_import_map[section]
+        for section in _section_order
+        if section in _section_import_map
     )
     _index_sections = "\n".join(
-        _section_markup_map[section] for section in _section_order if section in _section_markup_map
+        _section_markup_map[section]
+        for section in _section_order
+        if section in _section_markup_map
     )
     _block_plan = resolve_cinematic_block_plan(
         section_order=_section_order,
@@ -4954,8 +6390,16 @@ def _generate_cinematic_studio_files(facts: dict[str, Any]) -> dict[str, str]:
         "editorial": "-0.015em",
         "kinetic": "-0.035em",
     }.get(_heading_style, "-0.02em")
-    _heading_transform = "uppercase" if _heading_style in {"condensed", "kinetic"} or _aesthetic_mode == "impact" else "none"
-    _heading_skew = "skewX(-4deg)" if _aesthetic_mode == "impact" and _heading_style in {"condensed", "kinetic"} else "none"
+    _heading_transform = (
+        "uppercase"
+        if _heading_style in {"condensed", "kinetic"} or _aesthetic_mode == "impact"
+        else "none"
+    )
+    _heading_skew = (
+        "skewX(-4deg)"
+        if _aesthetic_mode == "impact" and _heading_style in {"condensed", "kinetic"}
+        else "none"
+    )
     _surface_shadow = {
         "flat": "none",
         "bordered": "inset 0 0 0 1px color-mix(in srgb, var(--accent) 18%, transparent)",
@@ -5168,12 +6612,12 @@ export default HeroSection;
   --accent: {c_accent};
   --accent-soft: {c_accent_light};
   --accent-dark: {c_accent_dark};
-  --accent-contrast: {palette.get('accent_contrast', '#09130f')};
+  --accent-contrast: {palette.get("accent_contrast", "#09130f")};
   --text: {c_text};
   --text-muted: {c_text_muted};
-  --bg-light: {palette.get('bg_light', '#f4f0e6')};
-  --text-dark: {palette.get('text_dark', '#09130f')};
-  --panel-text: {palette.get('panel_text', palette.get('text_dark', '#09130f'))};
+  --bg-light: {palette.get("bg_light", "#f4f0e6")};
+  --text-dark: {palette.get("text_dark", "#09130f")};
+  --panel-text: {palette.get("panel_text", palette.get("text_dark", "#09130f"))};
   --font-family: {_font_family};
   --font-family-body: {_body_font};
   --font-family-heading: {_heading_font};
@@ -5479,70 +6923,231 @@ main[data-attitude="premium"] section:not(#hero):not(#stats) {{
     }
     # Sprint 14.13: .replace() removido - o template agora usa {VAR} que sao
     # placeholders Python (sem $) e nao causam bug de f-string.
-    source_files.update(_generate_cinematic_secondary_components(facts, palette=palette))
+    source_files.update(
+        _generate_cinematic_secondary_components(facts, palette=palette)
+    )
     for path, content in list(source_files.items()):
         if path.endswith((".tsx", ".jsx")):
-            source_files[path] = content.replace("initial={{ opacity: 0", "initial={{ opacity: 1")
+            source_files[path] = content.replace(
+                "initial={{ opacity: 0", "initial={{ opacity: 1"
+            )
     return prepare_vite_project_files(source_files, facts=facts)
 
 
-def _cinematic_pricing_plans_for_segment(segment: str, copy: dict[str, Any]) -> list[dict[str, Any]]:
+def _cinematic_pricing_plans_for_segment(
+    segment: str, copy: dict[str, Any]
+) -> list[dict[str, Any]]:
     city = str(copy.get("city") or "").strip()
     city_suffix = f" em {city}" if city else ""
     seg = (segment or "").lower()
-    if any(token in seg for token in ("academia", "fitness", "crossfit", "musculacao", "musculação")):
+    if any(
+        token in seg
+        for token in ("academia", "fitness", "crossfit", "musculacao", "musculação")
+    ):
         return [
-            {"name": "Aula experimental", "perks": ["Acesso a uma sessão", "Avaliação inicial", "Plano de treino"], "highlight": False, "note": "Sem compromisso"},
-            {"name": "Plano mensal", "perks": ["Acesso completo", "Acompanhamento semanal", "Reavaliação mensal", f"Rotina flexível{city_suffix}"], "highlight": True, "note": "Mais escolhido"},
-            {"name": "Plano trimestral", "perks": ["Acesso completo", "Avaliação mensal", "Suporte prioritário", "Condição progressiva"], "highlight": False, "note": "Melhor custo"},
+            {
+                "name": "Aula experimental",
+                "perks": [
+                    "Acesso a uma sessão",
+                    "Avaliação inicial",
+                    "Plano de treino",
+                ],
+                "highlight": False,
+                "note": "Sem compromisso",
+            },
+            {
+                "name": "Plano mensal",
+                "perks": [
+                    "Acesso completo",
+                    "Acompanhamento semanal",
+                    "Reavaliação mensal",
+                    f"Rotina flexível{city_suffix}",
+                ],
+                "highlight": True,
+                "note": "Mais escolhido",
+            },
+            {
+                "name": "Plano trimestral",
+                "perks": [
+                    "Acesso completo",
+                    "Avaliação mensal",
+                    "Suporte prioritário",
+                    "Condição progressiva",
+                ],
+                "highlight": False,
+                "note": "Melhor custo",
+            },
         ]
     if "nutri" in seg:
         return [
-            {"name": "Consulta inicial", "perks": ["Avaliação completa", "Plano alimentar", "Material de apoio"], "highlight": False, "note": "Sem compromisso"},
-            {"name": "Acompanhamento", "perks": ["Consultas de retorno", "Ajustes no plano", "Suporte por mensagem", f"Atendimento{city_suffix}"], "highlight": True, "note": "Mais escolhido"},
-            {"name": "Plano premium", "perks": ["Consultas recorrentes", "Bioimpedância quando disponível", "Suporte prioritário", "Acesso a conteúdo"], "highlight": False, "note": "Completo"},
+            {
+                "name": "Consulta inicial",
+                "perks": ["Avaliação completa", "Plano alimentar", "Material de apoio"],
+                "highlight": False,
+                "note": "Sem compromisso",
+            },
+            {
+                "name": "Acompanhamento",
+                "perks": [
+                    "Consultas de retorno",
+                    "Ajustes no plano",
+                    "Suporte por mensagem",
+                    f"Atendimento{city_suffix}",
+                ],
+                "highlight": True,
+                "note": "Mais escolhido",
+            },
+            {
+                "name": "Plano premium",
+                "perks": [
+                    "Consultas recorrentes",
+                    "Bioimpedância quando disponível",
+                    "Suporte prioritário",
+                    "Acesso a conteúdo",
+                ],
+                "highlight": False,
+                "note": "Completo",
+            },
         ]
     if any(token in seg for token in ("barbearia", "barbeiro", "barber")):
         return [
-            {"name": "Corte clássico", "perks": ["Corte masculino", "Finalização", "Agendamento direto"], "highlight": False, "note": "Essencial"},
-            {"name": "Corte e barba", "perks": ["Corte completo", "Barba alinhada", "Acabamento", f"Reserva rápida{city_suffix}"], "highlight": True, "note": "Mais pedido"},
-            {"name": "Ritual premium", "perks": ["Atendimento completo", "Toalha quente", "Produto finalizador", "Horário reservado"], "highlight": False, "note": "Experiência"},
+            {
+                "name": "Corte clássico",
+                "perks": ["Corte masculino", "Finalização", "Agendamento direto"],
+                "highlight": False,
+                "note": "Essencial",
+            },
+            {
+                "name": "Corte e barba",
+                "perks": [
+                    "Corte completo",
+                    "Barba alinhada",
+                    "Acabamento",
+                    f"Reserva rápida{city_suffix}",
+                ],
+                "highlight": True,
+                "note": "Mais pedido",
+            },
+            {
+                "name": "Ritual premium",
+                "perks": [
+                    "Atendimento completo",
+                    "Toalha quente",
+                    "Produto finalizador",
+                    "Horário reservado",
+                ],
+                "highlight": False,
+                "note": "Experiência",
+            },
         ]
     if any(token in seg for token in ("estetic", "estética", "beleza", "spa")):
         return [
-            {"name": "Avaliação", "perks": ["Diagnóstico inicial", "Orientação do procedimento", f"Atendimento{city_suffix}"], "highlight": False, "note": "Primeiro passo"},
-            {"name": "Pacote essencial", "perks": ["Sessão completa", "Produtos profissionais", "Acompanhamento"], "highlight": True, "note": "Mais escolhido"},
-            {"name": "Pacote premium", "perks": ["Múltiplas sessões", "Produtos premium", "Suporte dedicado", "Acompanhamento estendido"], "highlight": False, "note": "Completo"},
+            {
+                "name": "Avaliação",
+                "perks": [
+                    "Diagnóstico inicial",
+                    "Orientação do procedimento",
+                    f"Atendimento{city_suffix}",
+                ],
+                "highlight": False,
+                "note": "Primeiro passo",
+            },
+            {
+                "name": "Pacote essencial",
+                "perks": [
+                    "Sessão completa",
+                    "Produtos profissionais",
+                    "Acompanhamento",
+                ],
+                "highlight": True,
+                "note": "Mais escolhido",
+            },
+            {
+                "name": "Pacote premium",
+                "perks": [
+                    "Múltiplas sessões",
+                    "Produtos premium",
+                    "Suporte dedicado",
+                    "Acompanhamento estendido",
+                ],
+                "highlight": False,
+                "note": "Completo",
+            },
         ]
     return [
-        {"name": "Primeira sessão", "perks": ["Acolhimento inicial", "Diagnóstico", "Orientação"], "highlight": False, "note": "Sem compromisso"},
-        {"name": "Plano recorrente", "perks": ["Atendimento regular", f"Agenda{city_suffix}", "Acompanhamento"], "highlight": True, "note": "Mais escolhido"},
-        {"name": "Plano estendido", "perks": ["Sessões extras", "Suporte dedicado", "Prioridade na agenda"], "highlight": False, "note": "Completo"},
+        {
+            "name": "Primeira sessão",
+            "perks": ["Acolhimento inicial", "Diagnóstico", "Orientação"],
+            "highlight": False,
+            "note": "Sem compromisso",
+        },
+        {
+            "name": "Plano recorrente",
+            "perks": ["Atendimento regular", f"Agenda{city_suffix}", "Acompanhamento"],
+            "highlight": True,
+            "note": "Mais escolhido",
+        },
+        {
+            "name": "Plano estendido",
+            "perks": ["Sessões extras", "Suporte dedicado", "Prioridade na agenda"],
+            "highlight": False,
+            "note": "Completo",
+        },
     ]
 
 
-def _generate_cinematic_secondary_components(facts: dict[str, Any], palette: dict[str, str] | None = None) -> dict[str, str]:
+def _generate_cinematic_secondary_components(
+    facts: dict[str, Any], palette: dict[str, str] | None = None
+) -> dict[str, str]:
     copy = _cinematic_copy(facts)
     _biz = facts.get("business") if isinstance(facts.get("business"), dict) else {}
-    segment = str(_biz.get("segment") or _biz.get("segmento") or facts.get("segmento") or facts.get("segment") or "servicos").lower()
+    segment = str(
+        _biz.get("segment")
+        or _biz.get("segmento")
+        or facts.get("segmento")
+        or facts.get("segment")
+        or "servicos"
+    ).lower()
     if palette is None:
         archetype = _get_archetype_for_segment(segment)
         palette = _get_archetype_palette(archetype)
-    c_bg_light = palette.get('bg_light', '#f4f0e6')
-    c_text_dark = palette.get('text_dark', '#09130f')
-    variation = facts.get("variation") if isinstance(facts.get("variation"), dict) else {}
+    c_bg_light = palette.get("bg_light", "#f4f0e6")
+    c_text_dark = palette.get("text_dark", "#09130f")
+    variation = (
+        facts.get("variation") if isinstance(facts.get("variation"), dict) else {}
+    )
     block_plan = resolve_cinematic_block_plan(
-        section_order=["about", "services", "gallery", "reviews", "faq", "location", "contact-cta"],
+        section_order=[
+            "about",
+            "services",
+            "gallery",
+            "reviews",
+            "faq",
+            "location",
+            "contact-cta",
+        ],
         variation=variation,
         archetype=_get_archetype_for_segment(segment),
         segment=segment,
     )
-    proof_style = str(block_plan.get("reviews_variant") or variation.get("proof_style") or "score_wall")
-    surface_style = str(block_plan.get("surface_style") or variation.get("surface_style") or "solid")
-    section_surface_map = variation.get("section_surface_map") if isinstance(variation.get("section_surface_map"), dict) else {}
+    proof_style = str(
+        block_plan.get("reviews_variant")
+        or variation.get("proof_style")
+        or "score_wall"
+    )
+    surface_style = str(
+        block_plan.get("surface_style") or variation.get("surface_style") or "solid"
+    )
+    section_surface_map = (
+        variation.get("section_surface_map")
+        if isinstance(variation.get("section_surface_map"), dict)
+        else {}
+    )
     pricing_plans = _cinematic_pricing_plans_for_segment(segment, copy)
     about_surface = str(section_surface_map.get("about") or surface_style)
-    gallery_density = str(block_plan.get("gallery_density") or variation.get("gallery_density") or "")
+    gallery_density = str(
+        block_plan.get("gallery_density") or variation.get("gallery_density") or ""
+    )
     cta_style = str(block_plan.get("cta_style") or variation.get("cta_style") or "")
     card_shell_map = {
         "glass": "border border-black/5 bg-white shadow-[0_14px_34px_rgba(0,0,0,0.10)]",
@@ -5552,16 +7157,23 @@ def _generate_cinematic_secondary_components(facts: dict[str, Any], palette: dic
     }
     card_shell = card_shell_map.get(about_surface, card_shell_map["outline"])
     light_surface = about_surface in {"solid", "soft_tint", "glass"}
-    card_title_class = "text-[var(--text-dark)]" if light_surface else "text-[var(--text)]"
+    card_title_class = (
+        "text-[var(--text-dark)]" if light_surface else "text-[var(--text)]"
+    )
     card_text_class = "text-zinc-600" if light_surface else "text-[var(--text-muted)]"
     gallery_grid_class = "grid auto-rows-[16rem] gap-4 md:grid-cols-4"
     if gallery_density == "cinematic_strip":
-        gallery_grid_class = "grid auto-rows-[18rem] gap-4 md:grid-cols-[1.5fr_0.85fr_0.85fr]"
+        gallery_grid_class = (
+            "grid auto-rows-[18rem] gap-4 md:grid-cols-[1.5fr_0.85fr_0.85fr]"
+        )
     elif gallery_density == "editorial_grid" or proof_style == "editorial_case":
-        gallery_grid_class = "grid auto-rows-[14rem] gap-4 md:grid-cols-[1.2fr_0.8fr_0.8fr]"
+        gallery_grid_class = (
+            "grid auto-rows-[14rem] gap-4 md:grid-cols-[1.2fr_0.8fr_0.8fr]"
+        )
     elif gallery_density == "mosaic" or proof_style == "card_marquee":
         gallery_grid_class = "grid auto-rows-[15rem] gap-4 md:grid-cols-3"
-    about_section = """
+    about_section = (
+        """
 import { ArrowUpRight, Award, MapPin, Sparkles } from 'lucide-react';
 import { motion } from 'motion/react';
 import { blockPlan, siteCopy, variation } from './siteData';
@@ -5588,7 +7200,14 @@ export function AboutSection() {
   return <section id="sobre" style={{ background: 'var(--bg)', color: 'var(--text)' }} className="px-5 py-20 md:px-8 md:py-28"><div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[0.88fr_1.12fr] lg:items-end"><motion.div initial={{ opacity: 0, y: 22 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.28 }}><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>{siteCopy.about_kicker}</p><h2 className="mt-3 max-w-3xl text-[clamp(2rem,5vw,4.5rem)] font-semibold leading-[0.98] tracking-[-0.03em]">{siteCopy.about_title}</h2><p className="mt-6 max-w-2xl text-base leading-8 text-[var(--text-muted)]">{siteCopy.about_body}</p></motion.div><div className={`grid gap-4 ${servicesVariant === 'split_editorial' ? 'md:grid-cols-2 xl:grid-cols-3' : 'md:grid-cols-3'}`}>{pillars.map((pillar, index) => { const Icon = pillar.icon; return <motion.article key={pillar.title} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.24 }} transition={{ delay: index * 0.05 }} className="min-h-[15rem] rounded-[18px] p-6 __CARD_SHELL__"><Icon className="h-5 w-5" style={{ color: 'var(--accent)' }} /><h3 className="mt-8 text-xl font-semibold tracking-tight __CARD_TITLE_CLASS__">{pillar.title}</h3><p className="mt-4 text-sm leading-7 __CARD_TEXT_CLASS__">{pillar.text}</p></motion.article>; })}</div><motion.aside initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.24 }} className={'rounded-[22px] border border-[color-mix(in_srgb,var(--accent)_20%,transparent)] p-6 ' + leadClass}><div className="flex items-center justify-between gap-4"><div><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>{siteCopy.about_city_label}</p><p className="mt-3 text-2xl font-semibold">__ABOUT_CITY__</p></div><ArrowUpRight className="h-5 w-5" style={{ color: 'var(--accent)' }} /></div><p className="mt-4 text-sm leading-7 opacity-80">{siteCopy.about_aside_body}</p></motion.aside></div></section>;
 }
 export default AboutSection;
-""".replace("__PROOF_STYLE__", proof_style.replace("_", " ")).replace("__SURFACE_STYLE__", surface_style.replace("_", " ")).replace("__CARD_SHELL__", card_shell).replace("__CARD_TITLE_CLASS__", card_title_class).replace("__CARD_TEXT_CLASS__", card_text_class).replace("__ABOUT_NAME__", copy["name"]).replace("__ABOUT_CITY__", copy["city"])
+""".replace("__PROOF_STYLE__", proof_style.replace("_", " "))
+        .replace("__SURFACE_STYLE__", surface_style.replace("_", " "))
+        .replace("__CARD_SHELL__", card_shell)
+        .replace("__CARD_TITLE_CLASS__", card_title_class)
+        .replace("__CARD_TEXT_CLASS__", card_text_class)
+        .replace("__ABOUT_NAME__", copy["name"])
+        .replace("__ABOUT_CITY__", copy["city"])
+    )
     gallery_section = """
 import { motion } from 'motion/react';
 import { mediaImages, siteCopy } from './siteData';
@@ -5971,7 +7590,9 @@ export default Footer;
 def extract_requested_vite_project_paths(prompt: str) -> set[str]:
     """Return explicit Vite source/config paths requested by the business brief."""
     requested: set[str] = set()
-    for match in re.findall(r"`([^`]+\.(?:tsx|ts|css|json|html))`", prompt or "", re.IGNORECASE):
+    for match in re.findall(
+        r"`([^`]+\.(?:tsx|ts|css|json|html))`", prompt or "", re.IGNORECASE
+    ):
         candidate = str(match or "").strip().replace("\\", "/")
         if "*" in candidate or candidate.startswith("dist/"):
             continue
@@ -6000,17 +7621,24 @@ def validate_vite_project_files(
     # Fail-fast: se arquivo opcional falta, erro. Sem studio-fallback.
     missing = sorted(REQUIRED_PROJECT_FILES.difference(files))
     if missing:
-        raise ViteReactRenderError("projeto Vite sem arquivos obrigatorios: " + ", ".join(missing))
+        raise ViteReactRenderError(
+            "projeto Vite sem arquivos obrigatorios: " + ", ".join(missing)
+        )
     requested_missing = sorted(set(requested_paths or set()).difference(files))
     if requested_missing:
         raise ViteReactRenderError(
-            "projeto Vite nao entregou arquivos pedidos no prompt: " + ", ".join(requested_missing)
+            "projeto Vite nao entregou arquivos pedidos no prompt: "
+            + ", ".join(requested_missing)
         )
     component_files = [
-        path for path in files if path.startswith("src/components/") and path.endswith(".tsx")
+        path
+        for path in files
+        if path.startswith("src/components/") and path.endswith(".tsx")
     ]
     if len(component_files) < 5:
-        raise ViteReactRenderError("projeto Vite pouco componentizado: minimo 5 componentes em src/components")
+        raise ViteReactRenderError(
+            "projeto Vite pouco componentizado: minimo 5 componentes em src/components"
+        )
     for path, content in files.items():
         if "\x00" in content:
             raise ViteReactRenderError(f"arquivo contem byte nulo: {path}")
@@ -6018,7 +7646,9 @@ def validate_vite_project_files(
             continue
         for label, pattern in BLOCKED_SOURCE_PATTERNS.items():
             if re.search(pattern, content, re.IGNORECASE):
-                raise ViteReactRenderError(f"codigo React contem padrao proibido ({label}) em {path}")
+                raise ViteReactRenderError(
+                    f"codigo React contem padrao proibido ({label}) em {path}"
+                )
     source_text = "\n".join(
         content for path, content in files.items() if path.startswith("src/")
     )
@@ -6030,10 +7660,14 @@ def validate_vite_project_files(
         raise ViteReactRenderError(f"nome confirmado ausente no projeto React: {name}")
     phone = _digits(str(business.get("whatsapp") or business.get("phone") or ""))
     if phone and phone not in _digits(source_text):
-        raise ViteReactRenderError("telefone/WhatsApp confirmado ausente no projeto React")
+        raise ViteReactRenderError(
+            "telefone/WhatsApp confirmado ausente no projeto React"
+        )
     rating = str(business.get("rating") or "").strip().replace(",", ".")
     if rating and rating not in source_text.replace(",", "."):
-        raise ViteReactRenderError(f"rating confirmado ausente no projeto React: {rating}")
+        raise ViteReactRenderError(
+            f"rating confirmado ausente no projeto React: {rating}"
+        )
     _validate_segment_specificity(source_text, business)
     if studio_mode:
         _validate_hero_first_viewport(files)
@@ -6051,23 +7685,34 @@ def _validate_no_studio_template_leaks(source_text: str) -> None:
         "_cta_btn_class",
         "_hero_class_number",
     ]
-    hits = [identifier for identifier in leaked_identifiers if identifier in source_text]
+    hits = [
+        identifier for identifier in leaked_identifiers if identifier in source_text
+    ]
     if hits:
         raise ViteReactRenderError(
-            "projeto Vite contem placeholders internos vazando para React: " + ", ".join(hits)
+            "projeto Vite contem placeholders internos vazando para React: "
+            + ", ".join(hits)
         )
     duplicate_class = re.search(
         r"<[A-Za-z][^>\n]*\bclassName\s*=[^>\n]*\bclassName\s*=",
         source_text,
     )
     if duplicate_class:
-        raise ViteReactRenderError("projeto Vite contem className duplicado no mesmo elemento")
+        raise ViteReactRenderError(
+            "projeto Vite contem className duplicado no mesmo elemento"
+        )
 
 
 def _validate_no_low_contrast_card_patterns(files: dict[str, str]) -> None:
     low_contrast_patterns = [
-        ("section_text_dark_with_white_cards", r"color:\s*'var\(--text-dark\)'.{0,1400}(?<![\w/-])bg-white(?![\w/-])"),
-        ("white_card_with_accent_dark_body", r"(?<![\w/-])bg-white(?![\w/-]).{0,900}color:\s*'var\(--accent-dark\)'"),
+        (
+            "section_text_dark_with_white_cards",
+            r"color:\s*'var\(--text-dark\)'.{0,1400}(?<![\w/-])bg-white(?![\w/-])",
+        ),
+        (
+            "white_card_with_accent_dark_body",
+            r"(?<![\w/-])bg-white(?![\w/-]).{0,900}color:\s*'var\(--accent-dark\)'",
+        ),
     ]
     for path, content in files.items():
         if not path.startswith("src/components/") or not path.endswith(".tsx"):
@@ -6131,13 +7776,22 @@ def _facts_have_location_signal(facts: dict[str, Any]) -> bool:
     for container in (business, facts, content):
         if not isinstance(container, dict):
             continue
-        for key in ("address", "endereco", "maps_url", "mapsHref", "mapsEmbedSrc", "google_maps_embed"):
+        for key in (
+            "address",
+            "endereco",
+            "maps_url",
+            "mapsHref",
+            "mapsEmbedSrc",
+            "google_maps_embed",
+        ):
             if str(container.get(key) or "").strip():
                 return True
     return False
 
 
-def _validate_required_runtime_map(files: dict[str, str], facts: dict[str, Any]) -> None:
+def _validate_required_runtime_map(
+    files: dict[str, str], facts: dict[str, Any]
+) -> None:
     if not _facts_have_location_signal(facts):
         return
     site_data = files.get("src/components/siteData.ts", "")
@@ -6147,18 +7801,26 @@ def _validate_required_runtime_map(files: dict[str, str], facts: dict[str, Any])
     if isinstance(site_copy, dict):
         maps_embed = str(site_copy.get("mapsEmbedSrc") or "")
     if not maps_embed or "output=embed" not in maps_embed:
-        raise ViteReactRenderError("lead com endereco/mapa, mas siteData nao carrega mapsEmbedSrc real")
+        raise ViteReactRenderError(
+            "lead com endereco/mapa, mas siteData nao carrega mapsEmbedSrc real"
+        )
     if "<iframe" not in location or "mapsEmbedSrc" not in location:
-        raise ViteReactRenderError("lead com endereco/mapa, mas LocationSection nao renderiza iframe real")
+        raise ViteReactRenderError(
+            "lead com endereco/mapa, mas LocationSection nao renderiza iframe real"
+        )
 
 
-def _validate_creative_plan_materialization(files: dict[str, str], facts: dict[str, Any]) -> None:
+def _validate_creative_plan_materialization(
+    files: dict[str, str], facts: dict[str, Any]
+) -> None:
     site_data = files.get("src/components/siteData.ts", "")
     index = files.get("src/pages/Index.tsx", "")
     block_plan = _extract_export_const_json(site_data, "blockPlan")
     variation = _extract_export_const_json(site_data, "variation")
     if not isinstance(block_plan, dict):
-        raise ViteReactRenderError("Studio Vite sem blockPlan materializado em siteData.ts")
+        raise ViteReactRenderError(
+            "Studio Vite sem blockPlan materializado em siteData.ts"
+        )
 
     required = (
         "visual_lane",
@@ -6173,27 +7835,49 @@ def _validate_creative_plan_materialization(files: dict[str, str], facts: dict[s
     )
     missing = [key for key in required if not block_plan.get(key)]
     if missing:
-        raise ViteReactRenderError("blockPlan incompleto para publicacao premium: " + ", ".join(missing))
+        raise ViteReactRenderError(
+            "blockPlan incompleto para publicacao premium: " + ", ".join(missing)
+        )
 
     motion_mix = block_plan.get("motion_mix")
-    if not isinstance(motion_mix, list) or len([item for item in motion_mix if item]) < 1:
+    if (
+        not isinstance(motion_mix, list)
+        or len([item for item in motion_mix if item]) < 1
+    ):
         raise ViteReactRenderError("blockPlan sem motion_mix visivel suficiente")
     surface_map = block_plan.get("section_surface_map")
-    if not isinstance(surface_map, dict) or len(set(str(value) for value in surface_map.values())) < 2:
-        raise ViteReactRenderError("blockPlan sem variacao real de superficies por secao")
+    if (
+        not isinstance(surface_map, dict)
+        or len(set(str(value) for value in surface_map.values())) < 2
+    ):
+        raise ViteReactRenderError(
+            "blockPlan sem variacao real de superficies por secao"
+        )
 
     hero = str(block_plan.get("hero_variant") or "")
     spacing = str(block_plan.get("spacing_density") or "")
     motion = str(block_plan.get("motion_intensity") or "")
     typography = str(block_plan.get("typography_scale") or "")
-    if hero == "center" and spacing == "spacious" and motion == "minimal" and typography == "soft":
-        raise ViteReactRenderError("creative_plan fraco bloqueado: hero=center + spacious + minimal + soft")
+    if (
+        hero == "center"
+        and spacing == "spacious"
+        and motion == "minimal"
+        and typography == "soft"
+    ):
+        raise ViteReactRenderError(
+            "creative_plan fraco bloqueado: hero=center + spacious + minimal + soft"
+        )
     if "data-motion={" not in index and 'data-motion="' not in index:
         raise ViteReactRenderError("Index.tsx nao materializa data-motion do blockPlan")
-    if isinstance(variation, dict) and variation.get("anti_repetition_rule") == "avoid_glass":
+    if (
+        isinstance(variation, dict)
+        and variation.get("anti_repetition_rule") == "avoid_glass"
+    ):
         source = "\n".join(files.values()).lower()
         if "backdrop-blur" in source:
-            raise ViteReactRenderError("avoid_glass ativo, mas projeto ainda usa backdrop-blur")
+            raise ViteReactRenderError(
+                "avoid_glass ativo, mas projeto ainda usa backdrop-blur"
+            )
 
 
 def _segment_key_for_business(business: dict[str, Any]) -> str | None:
@@ -6209,7 +7893,14 @@ def _segment_key_for_business(business: dict[str, Any]) -> str | None:
     segment_full = _normalize_text(
         " ".join(
             str(business.get(key) or "")
-            for key in ("segment", "segmento", "category", "categoria", "subniche", "niche")
+            for key in (
+                "segment",
+                "segmento",
+                "category",
+                "categoria",
+                "subniche",
+                "niche",
+            )
         )
     )
     primary_tokens = set(segment_primary.split())
@@ -6225,7 +7916,10 @@ def _segment_key_for_business(business: dict[str, Any]) -> str | None:
             return key
     # 3) Match substring apenas para aliases multi-palavra
     for key, rule in SEGMENT_RULES.items():
-        if any(" " in _normalize_text(alias) and _normalize_text(alias) in segment_full for alias in rule["aliases"]):
+        if any(
+            " " in _normalize_text(alias) and _normalize_text(alias) in segment_full
+            for alias in rule["aliases"]
+        ):
             return key
     return None
 
@@ -6237,12 +7931,16 @@ def _validate_segment_specificity(source_text: str, business: dict[str, Any]) ->
         return
     rule = SEGMENT_RULES[segment_key]
     forbidden_terms = _forbidden_terms_for_business(segment_key, business)
-    forbidden_hits = [term for term in forbidden_terms if _contains_normalized_term(normalized, term)]
+    forbidden_hits = [
+        term for term in forbidden_terms if _contains_normalized_term(normalized, term)
+    ]
     if forbidden_hits:
         raise ViteReactRenderError(
             f"projeto Vite contaminado para segmento {segment_key}: {', '.join(forbidden_hits[:4])}"
         )
-    required_hits = [term for term in rule["required"] if _normalize_text(term) in normalized]
+    required_hits = [
+        term for term in rule["required"] if _normalize_text(term) in normalized
+    ]
     min_required = int(rule.get("min_required") or 1)
     if len(set(required_hits)) < min_required:
         raise ViteReactRenderError(
@@ -6264,7 +7962,9 @@ def _contains_normalized_term(normalized_text: str, term: str) -> bool:
     return bool(re.search(pattern, normalized_text))
 
 
-def _forbidden_terms_for_business(segment_key: str, business: dict[str, Any]) -> tuple[str, ...]:
+def _forbidden_terms_for_business(
+    segment_key: str, business: dict[str, Any]
+) -> tuple[str, ...]:
     rule = SEGMENT_RULES[segment_key]
     forbidden = tuple(str(term) for term in rule["forbidden"])
     if segment_key != "nutricionista" or not _is_sports_nutrition_business(business):
@@ -6292,14 +7992,22 @@ def _is_sports_nutrition_business(business: dict[str, Any]) -> bool:
     )
     return "nutric" in context and any(
         token in context
-        for token in ("esportiv", "atleta", "performance", "hipertrofia", "suplementacao")
+        for token in (
+            "esportiv",
+            "atleta",
+            "performance",
+            "hipertrofia",
+            "suplementacao",
+        )
     )
 
 
 def _validate_studio_project(
     files: dict[str, str], source_text: str, component_files: list[str]
 ) -> None:
-    source_chars = sum(len(content) for path, content in files.items() if path.startswith("src/"))
+    source_chars = sum(
+        len(content) for path, content in files.items() if path.startswith("src/")
+    )
     if source_chars < _studio_min_source_chars():
         raise ViteReactRenderError(
             f"projeto Vite visualmente magro: {source_chars} chars em src; minimo {_studio_min_source_chars()}"
@@ -6311,7 +8019,10 @@ def _validate_studio_project(
 
     index_css = files.get("src/index.css", "")
     vite_config = files.get("vite.config.ts", "")
-    if "@import \"tailwindcss\"" not in index_css and "@import 'tailwindcss'" not in index_css:
+    if (
+        '@import "tailwindcss"' not in index_css
+        and "@import 'tailwindcss'" not in index_css
+    ):
         raise ViteReactRenderError("projeto Vite sem Tailwind v4 em src/index.css")
     if "@tailwindcss/vite" not in vite_config:
         raise ViteReactRenderError("projeto Vite sem plugin @tailwindcss/vite")
@@ -6320,9 +8031,13 @@ def _validate_studio_project(
     if "gsap" not in source_text.lower():
         raise ViteReactRenderError("projeto Vite sem GSAP (scroll animations)")
     if not re.search(r"\buseState\s*\(", source_text):
-        raise ViteReactRenderError("projeto Vite sem estado React para menu/modal/galeria")
+        raise ViteReactRenderError(
+            "projeto Vite sem estado React para menu/modal/galeria"
+        )
     if not re.search(r"\buseEffect\s*\(", source_text):
-        raise ViteReactRenderError("projeto Vite sem useEffect para navbar/scroll/responsividade")
+        raise ViteReactRenderError(
+            "projeto Vite sem useEffect para navbar/scroll/responsividade"
+        )
 
     class_count = len(re.findall(r"\bclassName\s*=", source_text))
     if class_count < _studio_min_classnames():
@@ -6330,7 +8045,9 @@ def _validate_studio_project(
             f"projeto Vite sem densidade Tailwind: {class_count} className; minimo {_studio_min_classnames()}"
         )
     image_count = len(re.findall(r"<img\b", source_text, re.IGNORECASE))
-    editorial_refs = len(re.findall(r"images\.unsplash\.com", source_text, re.IGNORECASE))
+    editorial_refs = len(
+        re.findall(r"images\.unsplash\.com", source_text, re.IGNORECASE)
+    )
     if max(image_count, editorial_refs) < _studio_min_images():
         raise ViteReactRenderError(
             f"projeto Vite sem galeria/imagens reais: {max(image_count, editorial_refs)} refs; minimo {_studio_min_images()}"
@@ -6348,14 +8065,17 @@ def _validate_studio_project(
             continue
         if label == "lifestyle" and group_hits.get("gallery"):
             continue
-        raise ViteReactRenderError(f"projeto Vite sem componente studio obrigatorio: {label}")
+        raise ViteReactRenderError(
+            f"projeto Vite sem componente studio obrigatorio: {label}"
+        )
 
 
 def _validate_hero_first_viewport(files: dict[str, str]) -> None:
     hero_sources = "\n".join(
         content
         for path, content in files.items()
-        if path.lower().endswith("herosection.tsx") or "hero" in PurePosixPath(path).stem.lower()
+        if path.lower().endswith("herosection.tsx")
+        or "hero" in PurePosixPath(path).stem.lower()
     )
     hero = hero_sources.lower()
     if not hero:
@@ -6366,8 +8086,14 @@ def _validate_hero_first_viewport(files: dict[str, str]) -> None:
         and "justify-center" in hero
         and "text-center" in hero
     )
-    mobile_safe_type = any(token in hero for token in ("clamp", "text-[clamp", "leading-[", "break-words"))
-    if centered_fullscreen and re.search(r"text-(?:5xl|6xl|7xl|8xl|9xl)", hero) and not mobile_safe_type:
+    mobile_safe_type = any(
+        token in hero for token in ("clamp", "text-[clamp", "leading-[", "break-words")
+    )
+    if (
+        centered_fullscreen
+        and re.search(r"text-(?:5xl|6xl|7xl|8xl|9xl)", hero)
+        and not mobile_safe_type
+    ):
         raise ViteReactRenderError(
             "hero Vite com headline gigante sem clamp/break mobile; risco de texto cortado"
         )
@@ -6376,16 +8102,25 @@ def _validate_hero_first_viewport(files: dict[str, str]) -> None:
             "hero Vite fullscreen centrado reprova QA visual; use composicao assimetrica com CTA/prova visiveis"
         )
     if re.search(r"bg-(?:zinc|neutral|slate|black)-950/([7-9]\\d|100)", hero):
-        raise ViteReactRenderError("hero Vite com overlay escuro demais; contraste/visibilidade acima da dobra reprovados")
-    if "<img" in hero and "loading=\"eager\"" not in hero and "loading='eager'" not in hero:
-        raise ViteReactRenderError("hero Vite com imagem sem loading eager; QA visual pode capturar placeholder")
+        raise ViteReactRenderError(
+            "hero Vite com overlay escuro demais; contraste/visibilidade acima da dobra reprovados"
+        )
+    if (
+        "<img" in hero
+        and 'loading="eager"' not in hero
+        and "loading='eager'" not in hero
+    ):
+        raise ViteReactRenderError(
+            "hero Vite com imagem sem loading eager; QA visual pode capturar placeholder"
+        )
 
 
 def _validate_mobile_navbar(files: dict[str, str]) -> None:
     nav_sources = "\n".join(
         content
         for path, content in files.items()
-        if path.lower().endswith("navbar.tsx") or "nav" in PurePosixPath(path).stem.lower()
+        if path.lower().endswith("navbar.tsx")
+        or "nav" in PurePosixPath(path).stem.lower()
     ).lower()
     if not nav_sources:
         return
@@ -6393,9 +8128,19 @@ def _validate_mobile_navbar(files: dict[str, str]) -> None:
         token in nav_sources for token in ("matr", "começar", "comecar", "agendar")
     )
     has_responsive_cta = any(
-        token in nav_sources for token in ("hidden sm:", "hidden md:", "max-sm:hidden", "sm:inline", "sm:flex")
+        token in nav_sources
+        for token in (
+            "hidden sm:",
+            "hidden md:",
+            "max-sm:hidden",
+            "sm:inline",
+            "sm:flex",
+        )
     )
-    has_shrink_brand = any(token in nav_sources for token in ("min-w-0", "truncate", "shrink", "text-sm", "max-sm:"))
+    has_shrink_brand = any(
+        token in nav_sources
+        for token in ("min-w-0", "truncate", "shrink", "text-sm", "max-sm:")
+    )
     if has_mobile_cta and not (has_responsive_cta or has_shrink_brand):
         raise ViteReactRenderError(
             "navbar Vite pode cortar CTA no mobile; esconda/compacte CTA ou permita shrink/truncate"
@@ -6420,6 +8165,7 @@ def _studio_min_components() -> int:
 
 def _env_int(name: str, default: int) -> int:
     from backend.utils.env_int import env_int  # — M3 DRY shim
+
     return env_int(name, default, min_value=0)
 
 
@@ -6479,7 +8225,14 @@ def build_vite_project(workspace: Path) -> None:
         should_install = False
     if should_install:
         _run(
-            [npm_cmd, "install", "--include=dev", "--ignore-scripts", "--no-audit", "--no-fund"],
+            [
+                npm_cmd,
+                "install",
+                "--include=dev",
+                "--ignore-scripts",
+                "--no-audit",
+                "--no-fund",
+            ],
             cwd=workspace,
             timeout=timeout,
             label="npm install",
@@ -6487,14 +8240,22 @@ def build_vite_project(workspace: Path) -> None:
     _ensure_vite_react_plugin_installed(workspace, npm_cmd=npm_cmd, timeout=timeout)
     if not preview_fast:
         _run(
-            [node_cmd, str(workspace / "node_modules" / "typescript" / "bin" / "tsc"), "--noEmit"],
+            [
+                node_cmd,
+                str(workspace / "node_modules" / "typescript" / "bin" / "tsc"),
+                "--noEmit",
+            ],
             cwd=workspace,
             timeout=timeout,
             label="tsc --noEmit",
         )
     try:
         _run(
-            [node_cmd, str(workspace / "node_modules" / "vite" / "bin" / "vite.js"), "build"],
+            [
+                node_cmd,
+                str(workspace / "node_modules" / "vite" / "bin" / "vite.js"),
+                "build",
+            ],
             cwd=workspace,
             timeout=timeout,
             label="vite build",
@@ -6504,7 +8265,11 @@ def build_vite_project(workspace: Path) -> None:
         # already written a valid dist. Keep the dist and let validate_vite_dist
         # be the final contract instead of discarding a successful build.
         output = str(exc)
-        if "vite build falhou:" in output and "built" in output and (workspace / "dist" / "index.html").exists():
+        if (
+            "vite build falhou:" in output
+            and "built" in output
+            and (workspace / "dist" / "index.html").exists()
+        ):
             pass
         elif "ERR_MODULE_NOT_FOUND" in output and "plugin-react" in output:
             # npm install falhou parcialmente - @vitejs/plugin-react nao foi instalado.
@@ -6513,14 +8278,27 @@ def build_vite_project(workspace: Path) -> None:
 
             _shutil.rmtree(node_modules, ignore_errors=True)
             _run(
-                [npm_cmd, "install", "--include=dev", "--ignore-scripts", "--no-audit", "--no-fund"],
+                [
+                    npm_cmd,
+                    "install",
+                    "--include=dev",
+                    "--ignore-scripts",
+                    "--no-audit",
+                    "--no-fund",
+                ],
                 cwd=workspace,
                 timeout=timeout,
                 label="npm install (retry)",
             )
-            _ensure_vite_react_plugin_installed(workspace, npm_cmd=npm_cmd, timeout=timeout)
+            _ensure_vite_react_plugin_installed(
+                workspace, npm_cmd=npm_cmd, timeout=timeout
+            )
             _run(
-                [node_cmd, str(workspace / "node_modules" / "vite" / "bin" / "vite.js"), "build"],
+                [
+                    node_cmd,
+                    str(workspace / "node_modules" / "vite" / "bin" / "vite.js"),
+                    "build",
+                ],
                 cwd=workspace,
                 timeout=timeout,
                 label="vite build (retry)",
@@ -6530,13 +8308,23 @@ def build_vite_project(workspace: Path) -> None:
     rewrite_vite_dist_asset_paths(workspace / "dist")
 
 
-def _ensure_vite_react_plugin_installed(workspace: Path, *, npm_cmd: str, timeout: int) -> None:
+def _ensure_vite_react_plugin_installed(
+    workspace: Path, *, npm_cmd: str, timeout: int
+) -> None:
     """Guarantee vite.config.ts can import @vitejs/plugin-react before build."""
     plugin_react = workspace / "node_modules" / "@vitejs" / "plugin-react"
     if plugin_react.exists():
         return
     _run(
-        [npm_cmd, "install", "--include=dev", "--ignore-scripts", "--no-audit", "--no-fund", "@vitejs/plugin-react@^4.3.3"],
+        [
+            npm_cmd,
+            "install",
+            "--include=dev",
+            "--ignore-scripts",
+            "--no-audit",
+            "--no-fund",
+            "@vitejs/plugin-react@^4.3.3",
+        ],
         cwd=workspace,
         timeout=timeout,
         label="npm install @vitejs/plugin-react",
@@ -6621,14 +8409,6 @@ def _call_vite_react_llm(
             max_tokens=effective_max_tokens,
         )
     else:
-        try:
-            from services.llm_router import call_llm
-        except Exception:
-            try:
-                from backend.services.llm_router import call_llm
-            except Exception:
-                from llm_router import call_llm
-
         text_out, _usage = call_llm(
             "anthropic",
             model_id,
@@ -6655,7 +8435,11 @@ def _call_copy_only_llm(
         "opus": PROXY_BUILDER_MODEL,
     }.get(model, model)
     effective_max_tokens = _cap_max_tokens_for_model(model_id, max_tokens)
-    inferred_policy = "creative_plan" if policy == "copy_only" and '"creative_plan"' in user_prompt else policy
+    inferred_policy = (
+        "creative_plan"
+        if policy == "copy_only" and '"creative_plan"' in user_prompt
+        else policy
+    )
     system_prompt = _get_copy_only_system_prompt(inferred_policy)
     if _is_litellm_openai_chat_base():
         text_out, _usage = _call_proxy_openai_chat(
@@ -6666,14 +8450,6 @@ def _call_copy_only_llm(
             max_tokens=effective_max_tokens,
         )
     else:
-        try:
-            from services.llm_router import call_llm
-        except Exception:
-            try:
-                from backend.services.llm_router import call_llm
-            except Exception:
-                from llm_router import call_llm
-
         text_out, _usage = call_llm(
             "anthropic",
             model_id,
@@ -6720,7 +8496,10 @@ map behavior, footer behavior and section rhythm.
     design_reference_ref = ""
     try:
         from backend.agents.design_system_selector import select_design_system
-        from backend.core.design_reference_packs import format_design_reference_pack_prompt
+        from backend.core.design_reference_packs import (
+            format_design_reference_pack_prompt,
+        )
+
         segmento = facts.get("segment", "") or ""
         nome_negocio = (facts.get("business") or {}).get("name", "") or ""
         tier = facts.get("tier", facts.get("caio_tier", "STANDARD")) or "STANDARD"
@@ -6730,7 +8509,7 @@ map behavior, footer behavior and section rhythm.
             ds_slug = ds_result.get("slug", "unknown")
             design_system_ref = f"""
 === DESIGN SYSTEM: {ds_slug.upper()} ===
-CATEGORY: {ds_result.get('category', 'General')}
+CATEGORY: {ds_result.get("category", "General")}
 {ds_content}
 === END DESIGN SYSTEM ===
 
@@ -6749,7 +8528,7 @@ principles. The chosen design system MUST affect the visible output.
 
 Apply this brand's visual DNA: typography, colors, motion, spacing.
 """
-    except Exception as e:
+    except Exception:
         # Se falhar, continua sem design system (não quebra o pipeline)
         design_system_ref = ""
         design_reference_ref = ""
@@ -6758,6 +8537,7 @@ Apply this brand's visual DNA: typography, colors, motion, spacing.
     skill_pack_ref = ""
     try:
         from backend.agents.site_skill_pack import SITE_SKILL_PACK
+
         if SITE_SKILL_PACK:
             skill_pack_ref = f"""
 === AWWWRADS-GRADE CRAFT RULES ===
@@ -6779,9 +8559,9 @@ CRITICAL: Follow these craft rules for every generated site.
         if template_hero or template_estrutura:
             variacao_ref = f"""
 === STRUCTURAL VARIATION ===
-Hero Type: {template_hero or 'renderer-decides'}
-Structure: {template_estrutura or 'default'}
-Section Order: {', '.join(ordem_secoes) if ordem_secoes else 'default'}
+Hero Type: {template_hero or "renderer-decides"}
+Structure: {template_estrutura or "default"}
+Section Order: {", ".join(ordem_secoes) if ordem_secoes else "default"}
 === END VARIATION ===
 
 IMPORTANT: Use the specified hero type and section order. If 'renderer-decides',
@@ -6857,7 +8637,11 @@ PROMPT AGENT REQUEST:
 """
     if repair_context:
         errors = repair_context.get("validation_errors") or ""
-        previous = str(repair_context.get("previous_output") or repair_context.get("previous_html") or "")[:5000]
+        previous = str(
+            repair_context.get("previous_output")
+            or repair_context.get("previous_html")
+            or ""
+        )[:5000]
         prompt += f"""
 
 The previous Vite/React generation failed validation or build. Regenerate the
@@ -6909,7 +8693,9 @@ def _compose_vite_file_batch_prompt(
         "src/components/Footer.tsx": "Footer",
     }
     exports = "\n".join(
-        f"- {path}: export function {component_names[path]}(...)" for path in paths if path in component_names
+        f"- {path}: export function {component_names[path]}(...)"
+        for path in paths
+        if path in component_names
     )
     excerpt_limit = 1800 if batch_name in {"page", "hero"} else 700
     char_budget = {
@@ -6944,7 +8730,10 @@ def _compose_vite_file_batch_prompt(
         "booking-modal": "- BookingModal: keep only title, short body, two buttons and close control; no long lists.",
         "location": "- LocationSection: concise address/contact plus one real Google Maps iframe when maps/address is present; never duplicate maps.",
         "footer": "- Footer: compact integrated closure only; avoid visual duplication with the CTA block and keep year 2026.",
-    }.get(batch_name, "- Keep this batch compact and focused on its own component contract.\n- CRITICAL: Use export function ComponentName (named export). NOT export default.\n- CRITICAL: Use relative imports only (../components/X). NO @/ or ~/ aliases.")
+    }.get(
+        batch_name,
+        "- Keep this batch compact and focused on its own component contract.\n- CRITICAL: Use export function ComponentName (named export). NOT export default.\n- CRITICAL: Use relative imports only (../components/X). NO @/ or ~/ aliases.",
+    )
     prompt = f"""Generate one Vite React project batch for FraLib Builder.
 
 Return only file tags, no markdown fence, no commentary, no JSON wrapper:
@@ -7032,8 +8821,14 @@ def _summarize_builder_facts(facts: dict[str, Any]) -> str:
     Tudo do briefing REAL - nada inventado.
     """
     business = facts.get("business") if isinstance(facts.get("business"), dict) else {}
-    visual = facts.get("visual_dna") if isinstance(facts.get("visual_dna"), dict) else {}
-    plan = facts.get("site_build_plan") if isinstance(facts.get("site_build_plan"), dict) else {}
+    visual = (
+        facts.get("visual_dna") if isinstance(facts.get("visual_dna"), dict) else {}
+    )
+    plan = (
+        facts.get("site_build_plan")
+        if isinstance(facts.get("site_build_plan"), dict)
+        else {}
+    )
     seo = facts.get("seo") if isinstance(facts.get("seo"), dict) else {}
     content = facts.get("content") if isinstance(facts.get("content"), dict) else {}
     media = facts.get("media") if isinstance(facts.get("media"), dict) else {}
@@ -7054,10 +8849,7 @@ def _summarize_builder_facts(facts: dict[str, Any]) -> str:
         services = [s.strip() for s in services.split(",") if s.strip()]
 
     hours = (
-        business.get("hours")
-        or business.get("horarios")
-        or facts.get("horarios")
-        or ""
+        business.get("hours") or business.get("horarios") or facts.get("horarios") or ""
     )
     differentials = (
         business.get("differentials")
@@ -7079,12 +8871,7 @@ def _summarize_builder_facts(facts: dict[str, Any]) -> str:
     )
 
     # Sprint 12.12: fotos REAIS aprovadas (Unsplash/Pexels ou do briefing)
-    photos = (
-        media.get("photos")
-        or business.get("photos")
-        or facts.get("photos")
-        or []
-    )
+    photos = media.get("photos") or business.get("photos") or facts.get("photos") or []
     if isinstance(photos, str):
         photos = [p.strip() for p in photos.split(",") if p.strip()]
     approved_photos = [str(p).strip() for p in photos[:8] if str(p or "").strip()]
@@ -7119,11 +8906,15 @@ def _summarize_builder_facts(facts: dict[str, Any]) -> str:
 
     # Sprint 12.12: secao de briefing real (NAO inventar)
     if services:
-        parts.append(f"Services (use EXATAMENTE estes, nao inventar): {json.dumps(services[:8], ensure_ascii=False)}")
+        parts.append(
+            f"Services (use EXATAMENTE estes, nao inventar): {json.dumps(services[:8], ensure_ascii=False)}"
+        )
     if hours:
         parts.append(f"Hours (usar literalmente): {hours}")
     if differentials:
-        parts.append(f"Differentials (usar como prova): {json.dumps(differentials[:6], ensure_ascii=False)}")
+        parts.append(
+            f"Differentials (usar como prova): {json.dumps(differentials[:6], ensure_ascii=False)}"
+        )
     if target_audience:
         parts.append(f"Target audience (copy deve falar com): {target_audience}")
 
@@ -7135,7 +8926,9 @@ def _summarize_builder_facts(facts: dict[str, Any]) -> str:
 
     # Sprint 12.12: keywords SEO distribuicao natural
     if primary_terms:
-        parts.append(f"SEO primary terms (distribuir com naturalidade, NAO keyword stuffing): {', '.join(str(k) for k in primary_terms[:8] if k)}")
+        parts.append(
+            f"SEO primary terms (distribuir com naturalidade, NAO keyword stuffing): {', '.join(str(k) for k in primary_terms[:8] if k)}"
+        )
 
     if sections:
         parts.append("Sections:")
@@ -7152,7 +8945,10 @@ def _segment_key_from_facts(facts: dict[str, Any]) -> str:
         facts.get("segmento"),
         facts.get("segment"),
     )
-    raw = next((str(item).strip().lower() for item in candidates if str(item or "").strip()), "")
+    raw = next(
+        (str(item).strip().lower() for item in candidates if str(item or "").strip()),
+        "",
+    )
     normalized = (
         raw.replace("á", "a")
         .replace("à", "a")
@@ -7242,6 +9038,7 @@ def _meta_escape(value: Any) -> str:
 
 def _facts_business(facts: dict[str, Any]) -> dict[str, Any]:
     from backend.services._vite_facts_local import business as _b  # — M1 DRY shim
+
     return _b(facts)
 
 
@@ -7314,7 +9111,7 @@ def _get_pole_css_tokens(pole: str) -> str:
         "   Gerado automaticamente pelo FraLib Blocos Líquidos",
         "   ═══════════════════════════════════════════════════════════════════════════ */",
         "",
-        f"[data-pole=\"{pole}\"] {{",
+        f'[data-pole="{pole}"] {{',
     ]
 
     # Converter tokens para CSS
@@ -7333,7 +9130,10 @@ def _get_pole_css_tokens(pole: str) -> str:
 
 
 def _facts_publication_url(facts: dict[str, Any]) -> str:
-    from backend.services._vite_facts_local import publication_url as _p  # — M1 DRY shim
+    from backend.services._vite_facts_local import (
+        publication_url as _p,  # — M1 DRY shim
+    )
+
     return _p(facts)
 
 
@@ -7396,7 +9196,12 @@ def _facts_local_keywords(facts: dict[str, Any]) -> list[str]:
     """
     business = _facts_business(facts)
     seo = facts.get("seo") if isinstance(facts.get("seo"), dict) else {}
-    candidates = seo.get("primary_terms") or facts.get("seo_keywords") or business.get("seo_keywords") or []
+    candidates = (
+        seo.get("primary_terms")
+        or facts.get("seo_keywords")
+        or business.get("seo_keywords")
+        or []
+    )
     if not isinstance(candidates, list):
         candidates = re.split(r"[,;\n]", str(candidates or ""))
     keywords: list[str] = []
@@ -7414,12 +9219,18 @@ def _facts_local_keywords(facts: dict[str, Any]) -> list[str]:
         _add(item)
 
     # cidade sempre presente (SEO local)
-    city = str(business.get("city") or business.get("cidade") or facts.get("cidade") or "").strip()
+    city = str(
+        business.get("city") or business.get("cidade") or facts.get("cidade") or ""
+    ).strip()
     segment_raw = str(business.get("segmento") or business.get("segment") or "").strip()
-    subniche_raw = str(business.get("subnicho") or business.get("subniche") or "").strip()
+    subniche_raw = str(
+        business.get("subnicho") or business.get("subniche") or ""
+    ).strip()
     segment = _seo_label(segment_raw)
     subniche = _seo_label(subniche_raw) if subniche_raw else ""
-    segment_context = _normalize_text(f"{segment_raw} {subniche_raw} {segment} {subniche}").replace("_", " ")
+    segment_context = _normalize_text(
+        f"{segment_raw} {subniche_raw} {segment} {subniche}"
+    ).replace("_", " ")
     _add(city)
     _add(business.get("state") or business.get("estado") or facts.get("estado") or "")
 
@@ -7434,7 +9245,9 @@ def _facts_local_keywords(facts: dict[str, Any]) -> list[str]:
         _add(f"agendar {segment} em {city}")
         _add(f"{segment} WhatsApp {city}")
         _add(f"preço {segment} {city}")
-    if city and any(token in segment_context for token in ("barbearia", "barber", "barbeiro")):
+    if city and any(
+        token in segment_context for token in ("barbearia", "barber", "barbeiro")
+    ):
         _add(f"barbearia em {city}")
         _add(f"corte masculino {city}")
         _add(f"barba e cabelo {city}")
@@ -7446,59 +9259,88 @@ def _facts_local_keywords(facts: dict[str, Any]) -> list[str]:
         _add(f"consulta nutricional {city}")
         _add(f"consulta nutricionista {city}")
         _add(f"nutricionista perto de mim {city}")
-    if city and any(token in segment_context for token in ("academia", "crossfit", "musculacao", "funcional", "personal")):
+    if city and any(
+        token in segment_context
+        for token in ("academia", "crossfit", "musculacao", "funcional", "personal")
+    ):
         _add(f"academia em {city}")
         _add(f"musculação {city}")
         _add(f"aula experimental academia {city}")
         _add(f"plano de academia {city}")
         _add(f"academia com aula experimental {city}")
         _add(f"personal trainer {city}")
-    if city and any(token in segment_context for token in ("estetic", "spa", "beleza", "facial", "pele", "laser")):
+    if city and any(
+        token in segment_context
+        for token in ("estetic", "spa", "beleza", "facial", "pele", "laser")
+    ):
         _add(f"clínica estética em {city}")
         _add(f"agendar estética {city}")
         _add(f"limpeza de pele {city}")
         _add(f"estética perto de mim {city}")
-    if city and any(token in segment_context for token in ("advogado", "advocacia", "juridico", "direito")):
+    if city and any(
+        token in segment_context
+        for token in ("advogado", "advocacia", "juridico", "direito")
+    ):
         _add(f"advogado em {city}")
         _add(f"consulta advogado {city}")
         _add(f"advogado trabalhista {city}")
         _add(f"honorários advogado {city}")
-    if city and any(token in segment_context for token in ("clinica", "medica", "medico", "consulta")):
+    if city and any(
+        token in segment_context
+        for token in ("clinica", "medica", "medico", "consulta")
+    ):
         _add(f"clínica médica em {city}")
         _add(f"consulta particular {city}")
         _add(f"marcar consulta {city}")
         _add(f"clínica perto de mim {city}")
-    if city and any(token in segment_context for token in ("dentista", "odontologia", "odonto")):
+    if city and any(
+        token in segment_context for token in ("dentista", "odontologia", "odonto")
+    ):
         _add(f"dentista em {city}")
         _add(f"avaliação odontológica {city}")
         _add(f"clareamento dental {city}")
         _add(f"dentista perto de mim {city}")
-    if city and any(token in segment_context for token in ("energia solar", "solar", "fotovoltaica")):
+    if city and any(
+        token in segment_context for token in ("energia solar", "solar", "fotovoltaica")
+    ):
         _add(f"energia solar em {city}")
         _add(f"orçamento energia solar {city}")
         _add(f"simulação energia solar {city}")
         _add(f"placas solares {city}")
-    if city and any(token in segment_context for token in ("imobiliaria", "imovel", "imoveis")):
+    if city and any(
+        token in segment_context for token in ("imobiliaria", "imovel", "imoveis")
+    ):
         _add(f"imobiliária em {city}")
         _add(f"apartamento para alugar {city}")
         _add(f"comprar imóvel {city}")
         _add(f"agendar visita imóvel {city}")
-    if city and any(token in segment_context for token in ("oficina", "mecanica", "automotivo")):
+    if city and any(
+        token in segment_context for token in ("oficina", "mecanica", "automotivo")
+    ):
         _add(f"oficina mecânica em {city}")
         _add(f"orçamento revisão {city}")
         _add(f"troca de óleo {city}")
         _add(f"mecânico perto de mim {city}")
-    if city and any(token in segment_context for token in ("pet shop", "petshop", "veterinario", "banho", "tosa")):
+    if city and any(
+        token in segment_context
+        for token in ("pet shop", "petshop", "veterinario", "banho", "tosa")
+    ):
         _add(f"pet shop em {city}")
         _add(f"banho e tosa {city}")
         _add(f"veterinário {city}")
         _add(f"pet shop perto de mim {city}")
-    if city and any(token in segment_context for token in ("restaurante", "pizzaria", "hamburgueria", "cafeteria", "padaria")):
+    if city and any(
+        token in segment_context
+        for token in ("restaurante", "pizzaria", "hamburgueria", "cafeteria", "padaria")
+    ):
         _add(f"restaurante em {city}")
         _add(f"delivery {city}")
         _add(f"cardápio {city}")
         _add(f"reservar mesa {city}")
-    if city and any(token in segment_context for token in ("salao", "salão", "cabeleireiro", "cabelo", "manicure")):
+    if city and any(
+        token in segment_context
+        for token in ("salao", "salão", "cabeleireiro", "cabelo", "manicure")
+    ):
         _add(f"salão de beleza em {city}")
         _add(f"agendar salão {city}")
         _add(f"escova preço {city}")
@@ -7511,7 +9353,12 @@ def _facts_local_keywords(facts: dict[str, Any]) -> list[str]:
             _add(d)
 
     # bairro/cidade do endereco
-    address = business.get("address") or business.get("endereco") or facts.get("endereco") or ""
+    address = (
+        business.get("address")
+        or business.get("endereco")
+        or facts.get("endereco")
+        or ""
+    )
     if isinstance(address, str) and address:
         parts = re.split(r"[,\-]", address)
         for p in parts[-2:]:
@@ -7525,8 +9372,15 @@ def _facts_local_keywords(facts: dict[str, Any]) -> list[str]:
 def _facts_meta_description(facts: dict[str, Any]) -> str:
     business = _facts_business(facts)
     name = str(business.get("name") or business.get("business_name") or "").strip()
-    city = str(business.get("city") or business.get("cidade") or facts.get("cidade") or "").strip()
-    segment = _seo_label(business.get("segment") or business.get("segmento") or facts.get("segmento") or "negócio local")
+    city = str(
+        business.get("city") or business.get("cidade") or facts.get("cidade") or ""
+    ).strip()
+    segment = _seo_label(
+        business.get("segment")
+        or business.get("segmento")
+        or facts.get("segmento")
+        or "negócio local"
+    )
     subniche = _seo_label(business.get("subniche") or facts.get("subniche") or "")
     phone = str(business.get("whatsapp") or business.get("phone") or "").strip()
     rating = str(business.get("rating") or "").strip()
@@ -7548,11 +9402,13 @@ def _facts_meta_description(facts: dict[str, Any]) -> str:
 
 def _facts_og_image(facts: dict[str, Any]) -> str:
     from backend.services._vite_facts_local import og_image as _og  # — M1 DRY shim
+
     return _og(facts)
 
 
 def _facts_json_ld(facts: dict[str, Any]) -> str:
     from backend.services._vite_facts_local import json_ld as _jl  # — M1 DRY shim
+
     return _jl(facts)
 
 
@@ -7861,14 +9717,25 @@ export default Navbar;
 
 def _visual_business_payload(facts: dict[str, Any]) -> dict[str, str]:
     business = facts.get("business") if isinstance(facts.get("business"), dict) else {}
-    name = str(business.get("name") or business.get("business_name") or "Negocio local").strip()
-    segment = str(business.get("segment") or business.get("segmento") or facts.get("segmento") or "Atendimento local").strip()
+    name = str(
+        business.get("name") or business.get("business_name") or "Negocio local"
+    ).strip()
+    segment = str(
+        business.get("segment")
+        or business.get("segmento")
+        or facts.get("segmento")
+        or "Atendimento local"
+    ).strip()
     subniche = str(business.get("subniche") or facts.get("subniche") or segment).strip()
-    city = str(business.get("city") or business.get("cidade") or facts.get("cidade") or "").strip()
+    city = str(
+        business.get("city") or business.get("cidade") or facts.get("cidade") or ""
+    ).strip()
     address = str(business.get("address") or business.get("endereco") or "").strip()
     phone = str(business.get("phone") or business.get("whatsapp") or "").strip()
     rating = str(business.get("rating") or "5.0").strip().replace(",", ".")
-    count = str(business.get("total_avaliacoes") or business.get("reviews_count") or "").strip()
+    count = str(
+        business.get("total_avaliacoes") or business.get("reviews_count") or ""
+    ).strip()
     maps = str(business.get("maps_url") or business.get("map_url") or "").strip()
     return {
         "name": name,
@@ -7895,7 +9762,9 @@ def _visual_media_urls(facts: dict[str, Any]) -> list[str]:
     urls: list[str] = []
     for source in (media.get("photos"), business.get("photos"), facts.get("photos")):
         if isinstance(source, list):
-            urls.extend(str(item or "").strip() for item in source if str(item or "").strip())
+            urls.extend(
+                str(item or "").strip() for item in source if str(item or "").strip()
+            )
     if not urls:
         raise ImageNotAvailableError(
             "_visual_media_urls: Sem imagens no facts.",
@@ -7913,7 +9782,10 @@ def _default_hero_section_tsx(facts: dict[str, Any]) -> str:
     image = json.dumps(images[0], ensure_ascii=False)
     data_js = json.dumps(data, ensure_ascii=False)
     phone_digits = re.sub(r"\D+", "", data["phone"])
-    whatsapp = json.dumps(f"https://wa.me/55{phone_digits}" if phone_digits else "#contato", ensure_ascii=False)
+    whatsapp = json.dumps(
+        f"https://wa.me/55{phone_digits}" if phone_digits else "#contato",
+        ensure_ascii=False,
+    )
     return f"""import {{ useEffect }} from 'react';
 import {{ ArrowRight, MapPin, MessageCircle, Star }} from 'lucide-react';
 import {{ gsap }} from 'gsap';
@@ -8138,18 +10010,29 @@ def _default_reviews_section_tsx(facts: dict[str, Any]) -> str:
         if not isinstance(item, dict):
             continue
         text = str(item.get("texto") or item.get("text") or "").strip()
-        author = str(item.get("autor") or item.get("author") or "Avaliação local").strip()
+        author = str(
+            item.get("autor") or item.get("author") or "Avaliação local"
+        ).strip()
         if text:
             cards.append({"quote": text[:180], "author": author[:48]})
     if not cards:
         cards = [
-            {"quote": "Atendimento elogiado pela clareza no acompanhamento e pela experiência personalizada.", "author": "Prova local"},
-            {"quote": "Quem chega pelo WhatsApp encontra um processo mais direto, humano e orientado ao objetivo.", "author": "Contato real"},
+            {
+                "quote": "Atendimento elogiado pela clareza no acompanhamento e pela experiência personalizada.",
+                "author": "Prova local",
+            },
+            {
+                "quote": "Quem chega pelo WhatsApp encontra um processo mais direto, humano e orientado ao objetivo.",
+                "author": "Contato real",
+            },
         ]
     title = json.dumps("Avaliações que sustentam a decisão", ensure_ascii=False)
     cards_js = json.dumps(cards, ensure_ascii=False)
     rating_js = json.dumps(str(business.get("rating") or ""), ensure_ascii=False)
-    count_js = json.dumps(str(business.get("total_avaliacoes") or business.get("reviews_count") or ""), ensure_ascii=False)
+    count_js = json.dumps(
+        str(business.get("total_avaliacoes") or business.get("reviews_count") or ""),
+        ensure_ascii=False,
+    )
     return f"""import {{ useEffect, useState }} from 'react';
 import {{ ChevronLeft, ChevronRight }} from 'lucide-react';
 import {{ AnimatePresence, motion }} from 'motion/react';
@@ -8293,13 +10176,27 @@ export default LgpdBanner;
 
 def _default_location_section_tsx(facts: dict[str, Any]) -> str:
     business = facts.get("business") if isinstance(facts.get("business"), dict) else {}
-    address = json.dumps(str(business.get("address") or business.get("endereco") or "").strip(), ensure_ascii=False)
-    city = json.dumps(str(business.get("city") or business.get("cidade") or facts.get("cidade") or "").strip(), ensure_ascii=False)
+    address = json.dumps(
+        str(business.get("address") or business.get("endereco") or "").strip(),
+        ensure_ascii=False,
+    )
+    city = json.dumps(
+        str(
+            business.get("city") or business.get("cidade") or facts.get("cidade") or ""
+        ).strip(),
+        ensure_ascii=False,
+    )
     phone = str(business.get("phone") or business.get("whatsapp") or "").strip()
     phone_label = json.dumps(phone or "Contato", ensure_ascii=False)
     phone_digits = re.sub(r"\D+", "", phone or "")
-    phone_href = json.dumps(f"https://wa.me/55{phone_digits}" if phone_digits else "#contato", ensure_ascii=False)
-    maps = json.dumps(str(business.get("maps_url") or business.get("map_url") or "").strip(), ensure_ascii=False)
+    phone_href = json.dumps(
+        f"https://wa.me/55{phone_digits}" if phone_digits else "#contato",
+        ensure_ascii=False,
+    )
+    maps = json.dumps(
+        str(business.get("maps_url") or business.get("map_url") or "").strip(),
+        ensure_ascii=False,
+    )
     return f"""import {{ MapPin, MessageCircle, Phone }} from 'lucide-react';
 import {{ motion }} from 'motion/react';
 
@@ -8377,14 +10274,30 @@ export default LocationSection;
 
 def _default_contact_cta_tsx(facts: dict[str, Any]) -> str:
     business = facts.get("business") if isinstance(facts.get("business"), dict) else {}
-    name = json.dumps(str(business.get("name") or "Equipe local").strip(), ensure_ascii=False)
-    city = json.dumps(str(business.get("city") or business.get("cidade") or facts.get("cidade") or "").strip(), ensure_ascii=False)
+    name = json.dumps(
+        str(business.get("name") or "Equipe local").strip(), ensure_ascii=False
+    )
+    city = json.dumps(
+        str(
+            business.get("city") or business.get("cidade") or facts.get("cidade") or ""
+        ).strip(),
+        ensure_ascii=False,
+    )
     phone = str(business.get("phone") or business.get("whatsapp") or "").strip()
     phone_label = json.dumps(phone or "WhatsApp", ensure_ascii=False)
     phone_digits = re.sub(r"\D+", "", phone or "")
-    whatsapp_href = json.dumps(f"https://wa.me/55{phone_digits}" if phone_digits else "#contato", ensure_ascii=False)
-    maps_href = json.dumps(str(business.get("maps_url") or business.get("map_url") or "").strip(), ensure_ascii=False)
-    address = json.dumps(str(business.get("address") or business.get("endereco") or "").strip(), ensure_ascii=False)
+    whatsapp_href = json.dumps(
+        f"https://wa.me/55{phone_digits}" if phone_digits else "#contato",
+        ensure_ascii=False,
+    )
+    maps_href = json.dumps(
+        str(business.get("maps_url") or business.get("map_url") or "").strip(),
+        ensure_ascii=False,
+    )
+    address = json.dumps(
+        str(business.get("address") or business.get("endereco") or "").strip(),
+        ensure_ascii=False,
+    )
     return f"""import {{ ArrowRight, MapPin, MessageCircle, Phone }} from 'lucide-react';
 import {{ motion }} from 'motion/react';
 
@@ -8481,15 +10394,31 @@ export default ContactCTA;
 
 def _default_footer_tsx(facts: dict[str, Any]) -> str:
     business = facts.get("business") if isinstance(facts.get("business"), dict) else {}
-    name = json.dumps(str(business.get("name") or "Negócio local").strip(), ensure_ascii=False)
-    city = json.dumps(str(business.get("city") or business.get("cidade") or facts.get("cidade") or "").strip(), ensure_ascii=False)
-    address = json.dumps(str(business.get("address") or business.get("endereco") or "").strip(), ensure_ascii=False)
+    name = json.dumps(
+        str(business.get("name") or "Negócio local").strip(), ensure_ascii=False
+    )
+    city = json.dumps(
+        str(
+            business.get("city") or business.get("cidade") or facts.get("cidade") or ""
+        ).strip(),
+        ensure_ascii=False,
+    )
+    address = json.dumps(
+        str(business.get("address") or business.get("endereco") or "").strip(),
+        ensure_ascii=False,
+    )
     phone = str(business.get("phone") or business.get("whatsapp") or "").strip()
     phone_label = json.dumps(phone or "Contato oficial", ensure_ascii=False)
     phone_href = json.dumps(f"tel:{phone}" if phone else "#contato", ensure_ascii=False)
     phone_digits = re.sub(r"\D+", "", phone or "")
-    whatsapp_href = json.dumps(f"https://wa.me/55{phone_digits}" if phone_digits else "#contato", ensure_ascii=False)
-    maps_href = json.dumps(str(business.get("maps_url") or business.get("map_url") or "").strip(), ensure_ascii=False)
+    whatsapp_href = json.dumps(
+        f"https://wa.me/55{phone_digits}" if phone_digits else "#contato",
+        ensure_ascii=False,
+    )
+    maps_href = json.dumps(
+        str(business.get("maps_url") or business.get("map_url") or "").strip(),
+        ensure_ascii=False,
+    )
     return f"""import {{ ExternalLink, MapPin, MessageCircle, Phone, ShieldCheck }} from 'lucide-react';
 
 const business = {{
@@ -8604,7 +10533,9 @@ def _default_index_css() -> str:
 
 def _ensure_index_css_contract(content: str) -> str:
     css = str(content or "").strip()
-    css = re.sub(r"@import\s+[\"']tailwindcss/(?:base|components|utilities)[\"'];?\s*", "", css)
+    css = re.sub(
+        r"@import\s+[\"']tailwindcss/(?:base|components|utilities)[\"'];?\s*", "", css
+    )
     css = re.sub(r"@tailwind\s+(?:base|components|utilities);?\s*", "", css)
     # Tailwind v4 rejects:
     #   1. "Invalid declaration: `\n`"  - when LLM emits stray "\\\n" tokens

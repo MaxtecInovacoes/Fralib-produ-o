@@ -20,9 +20,22 @@ Uso:
 """
 
 import os
-import time as _time
 import threading as _threading
+import time as _time
 from typing import Literal
+
+__all__ = [
+    "ProviderType",
+    "LLMRouterError",
+    "AllProvidersFailedError",
+    "CircuitBreaker",
+    "LLMRouter",
+    "get_circuit_breaker",
+    "get_model_map",
+    "resolve_model_id",
+    "get_router",
+    "call_llm",
+]
 
 # ══════════════════════════════════════════════════════════════════
 # RATE LIMITING - Global sliding window
@@ -89,6 +102,7 @@ def _tenant_rate_alert(user_id: str, wait_seconds: int, calls_count: int):
     )
     try:
         import ia_manager as _ia
+
         _ia.raise_alert(
             "rate_limit",
             None,
@@ -157,7 +171,7 @@ def get_circuit_breaker() -> CircuitBreaker:
 # ══════════════════════════════════════════════════════════════════
 # MODEL MAPS
 # ══════════════════════════════════════════════════════════════════
-LITELLM_API_KEY = os.getenv('LITELLM_API_KEY')
+LITELLM_API_KEY = os.getenv("LITELLM_API_KEY")
 
 LITELLM_MODEL_MAP = {
     "opus": os.getenv("PROXY_BUILDER_MODEL", "claude-3-opus-20240229"),
@@ -198,12 +212,10 @@ ProviderType = Literal["anthropic", "openai", "google", "groq", "openrouter", "l
 
 class LLMRouterError(Exception):
     """Exceção base para erros do router."""
-    pass
 
 
 class AllProvidersFailedError(LLMRouterError):
     """Todas as tentativas de providers falharam."""
-    pass
 
 
 # ══════════════════════════════════════════════════════════════════
@@ -225,9 +237,11 @@ class LLMRouter:
         if self._services_router is None:
             try:
                 from services.llm_router import call_llm as _call_llm
+
                 self._services_router = _call_llm
             except ImportError:
                 from backend.services.llm_router import call_llm as _call_llm
+
                 self._services_router = _call_llm
         return self._services_router
 
@@ -242,7 +256,7 @@ class LLMRouter:
         fallback_providers: list[ProviderType] = None,
         user_id: str = None,
         agent_name: str = None,
-        **kwargs
+        **kwargs,
     ) -> tuple[str, dict]:
         """Chama LLM com provider especificado e fallback automático.
 
@@ -276,7 +290,9 @@ class LLMRouter:
 
         # Remove duplicatas mantendo ordem
         seen = set()
-        providers_to_try = [p for p in providers_to_try if not (p in seen or seen.add(p))]
+        providers_to_try = [
+            p for p in providers_to_try if not (p in seen or seen.add(p))
+        ]
 
         last_error = None
 
@@ -284,7 +300,9 @@ class LLMRouter:
             # Check circuit breaker
             if _circuit_breaker.is_open(try_provider):
                 remaining = _circuit_breaker.get_cooldown_remaining(try_provider)
-                print(f"[Router] Circuit breaker aberto para {try_provider}, aguardando {remaining}s")
+                print(
+                    f"[Router] Circuit breaker aberto para {try_provider}, aguardando {remaining}s"
+                )
                 continue
 
             try:
@@ -295,7 +313,7 @@ class LLMRouter:
                     user,
                     temperature,
                     max_tokens,
-                    **kwargs
+                    **kwargs,
                 )
                 _circuit_breaker.record_success(try_provider)
                 return result
@@ -325,7 +343,7 @@ class LLMRouter:
         user: str,
         temperature: float,
         max_tokens: int,
-        **kwargs
+        **kwargs,
     ) -> tuple[str, dict]:
         """Executa chamada no provider especificado via services router."""
         return self.services_router(
@@ -340,6 +358,7 @@ class LLMRouter:
 
 # Instância singleton
 _router_instance = None
+
 
 def get_router() -> LLMRouter:
     """Retorna instância singleton do router."""
@@ -361,7 +380,7 @@ def call_llm(
     max_tokens: int = 4000,
     fallback_providers: list[ProviderType] = None,
     user_id: str = None,
-    **kwargs
+    **kwargs,
 ) -> tuple[str, dict]:
     """Função de conveniência para chamada LLM via router.
 
@@ -388,5 +407,5 @@ def call_llm(
         max_tokens=max_tokens,
         fallback_providers=fallback_providers,
         user_id=user_id,
-        **kwargs
+        **kwargs,
     )
