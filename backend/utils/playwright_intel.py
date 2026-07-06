@@ -209,7 +209,8 @@ CONTEUDO:
 
     try:
         response = call_claude(
-            messages=[{"role": "user", "content": prompt}],
+            system="",
+            user=prompt,
             model=model,
             max_tokens=800,
             temperature=0.3,
