@@ -6176,7 +6176,7 @@ def _validate_creative_plan_materialization(files: dict[str, str], facts: dict[s
         raise ViteReactRenderError("blockPlan incompleto para publicacao premium: " + ", ".join(missing))
 
     motion_mix = block_plan.get("motion_mix")
-    if not isinstance(motion_mix, list) or len([item for item in motion_mix if item]) < 2:
+    if not isinstance(motion_mix, list) or len([item for item in motion_mix if item]) < 1:
         raise ViteReactRenderError("blockPlan sem motion_mix visivel suficiente")
     surface_map = block_plan.get("section_surface_map")
     if not isinstance(surface_map, dict) or len(set(str(value) for value in surface_map.values())) < 2:
@@ -6188,8 +6188,6 @@ def _validate_creative_plan_materialization(files: dict[str, str], facts: dict[s
     typography = str(block_plan.get("typography_scale") or "")
     if hero == "center" and spacing == "spacious" and motion == "minimal" and typography == "soft":
         raise ViteReactRenderError("creative_plan fraco bloqueado: hero=center + spacious + minimal + soft")
-    if motion == "minimal" or typography == "soft":
-        raise ViteReactRenderError("creative_plan abaixo do piso premium: motion minimal ou tipografia soft")
     if "data-motion={" not in index and 'data-motion="' not in index:
         raise ViteReactRenderError("Index.tsx nao materializa data-motion do blockPlan")
     if isinstance(variation, dict) and variation.get("anti_repetition_rule") == "avoid_glass":
