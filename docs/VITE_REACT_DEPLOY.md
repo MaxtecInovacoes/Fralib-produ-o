@@ -1,195 +1,88 @@
-# Vite/React Deploy Guide (Sprint 12.9+)
+# Vite/React Deploy Guide
 
-> **Sprint 12.9 mudou o engine padrão de OpenUI para Vite/React.**
-> Este doc explica a arquitetura nova, como debugar e como usar OpenUI apenas
-> por seleção explícita.
+> Documento canônico do motor oficial de geração da FraLib.
+> O único caminho de publicação de sites é `vite_react`.
 
-## O que mudou
+## O que é o motor canônico
 
-| Antes (até Sprint 12.8) | Depois (Sprint 12.9+) |
+- `backend/services/vite_react_renderer.py` é o renderer oficial.
+- O builder gera um projeto React/Vite completo.
+- A LLM participa apenas dentro do contrato `FRALIB_VITE_LLM_POLICY`.
+- A publicação falha fechado se o artefato final não estiver marcado como `vite_react`.
+
+## Fluxo oficial
+
+1. `backend/services/builder_worker.py` recebe o PRD.
+2. `render_vite_react_site()` monta o contrato do lead.
+3. `FRALIB_VITE_LLM_POLICY` define o nível de participação da LLM.
+4. O Studio React determinístico materializa hero, seções, mídia, SEO e LGPD.
+5. O Quality Gate valida o HTML e o contrato factual.
+6. O deploy publica em `/var/www/fralib/sites/<tenant>/<slug>/`.
+
+## Políticas do renderer
+
+| Policy | Comportamento |
 |---|---|
-| Engine: `openui` (HTML estático) | Engine: `vite_react` (componentes TSX) |
-| Fallback genérico se LLM falha | Vite/React falha fechado se a geração não passar |
-| 1 arquivo HTML | Vite projeto completo (10+ TSX) |
-| Tailwind CDN inline | Tailwind v4 com build |
-| shadcn/ui ❌ | shadcn/ui ✅ |
-| GSAP/Lenis ❌ | GSAP/Lenis ✅ |
-| Cross-contamination: tudo passa | **Studio React segment-aware com 26 segmentos** |
-
-## Arquivos novos / modificados
-
-| Arquivo | Mudança |
-|---|---|
-| `backend/services/vite_react_renderer.py` | **Engine principal** (era secundário) |
-| `backend/services/vite_prompts.py` | Caroço rico com 7 contratos |
-| `backend/services/vite_templates.py` | 10+ templates TSX (shadcn, modal, etc) |
-| `backend/services/builder_worker.py` | `_builder_engine()` retorna `vite_react` por padrão |
-| `scripts/builder_worker_job.py` | `agent=vite_react` por padrão |
-| `tests/test_anti_regressao_v114.py` | **13 testes** validando caroço, mídia, guard e copy-only |
-| `tests/_v1143_summary.json` | Smoke v15h validado Playwright |
-
-## Como funciona o pipeline
-
-```
-1. builder_worker.py recebe PRD
-2. build_builder_job_manifest() cria manifest
-3. render_site_with_builder(prd) é chamado
-4. engine = "vite_react" (default)
-5. render_vite_react_site() aplica `FRALIB_VITE_LLM_POLICY`
-6. `creative_plan` (default atual): LLM retorna JSON de copy + direção criativa
-7. `none`: zero LLM; Studio/FraLib gera TSX só com fatos/segmento
-8. `copy_only`: LLM retorna JSON curto de copy; Studio/FraLib gera TSX
-9. `full_code`: LLM tenta gerar projeto Vite completo (experimento)
-10. Build Vite real (npm run build)
-11. Publica /var/www/fralib/sites/2/<slug>/dist/
-```
-
-## Política de uso do LLM
-
-| Policy | O que faz | Uso recomendado |
-|---|---|---|
-| `creative_plan` | Chama LLM para copy + direção criativa em JSON validado. O código React vem do Studio/FraLib. | **Default atual** |
-| `copy_only` | Chama LLM com prompt pequeno e schema JSON de slots (`hero`, `services`, `faq`, CTAs). O código React vem do Studio/FraLib. | Baixo custo |
-| `none` | Não chama LLM. Usa fatos confirmados + defaults segment-aware. | Testes, custo zero, contingência |
-| `full_code` | LLM cascade gera arquivos TSX completos. | Experimento controlado |
+| `creative_plan` | LLM retorna direção criativa curta em JSON; o Studio monta o React determinístico. |
+| `copy_only` | LLM retorna apenas copy e slots de conteúdo. |
+| `none` | Nenhuma chamada de LLM; tudo vem de fatos confirmados e regras canônicas. |
+| `full_code` | LLM codifica mais, mas continua submetida ao mesmo Quality Gate. |
 
 ```bash
-FRALIB_VITE_LLM_POLICY=creative_plan  # default atual da pipeline oficial
-FRALIB_VITE_LLM_POLICY=copy_only  # baixo custo
-FRALIB_VITE_LLM_POLICY=none       # zero chamada LLM
-FRALIB_VITE_LLM_POLICY=full_code  # LLM codando TSX inteiro, experimental
+FRALIB_VITE_LLM_POLICY=creative_plan
+FRALIB_VITE_LLM_POLICY=copy_only
+FRALIB_VITE_LLM_POLICY=none
+FRALIB_VITE_LLM_POLICY=full_code
 ```
 
-## Studio React determinístico (26 segmentos)
+## Contratos aplicados no build
 
-Em `copy_only`, `creative_plan` e `none`, o `_generate_studio_fallback_files()`
-produz um projeto Vite/React completo baseado no `business.segmento` do lead.
-O nome da função é legado; não significa fallback automático de publicação.
+- SEO por nicho e intenção local.
+- Design System com variação de geometria, tipografia e superfícies.
+- Motion Contract com GSAP / ScrollTrigger / Lenis quando o tema pede.
+- A11y Contract com skip link, contraste e prefers-reduced-motion.
+- LGPD personalizado por segmento.
+- Deploy Rules com links `wa.me:` / `tel:` e sem iframes indevidos.
 
-**Mapa segment-aware** (26 nichos cobertos):
+## Como debugar
 
-```python
-# backend/services/vite_react_renderer.py linha ~1918
-if "barbearia" in segment: ...
-elif "academia" in segment: ...
-elif "restaurante" in segment: ...
-# ... até 26 segmentos
+### Tela preta
+
+```bash
+ls /tmp/fralib_builder/tenant-2/job-X/dist/
 ```
 
-**Bug CRÍTICO corrigido no Sprint 12.19**: template strings do Studio
-usavam `"""` ao invés de `f"""`, fazendo `{var}` virar literal.
-Fix via post-process `_interpolate_studio_placeholders()`.
+### Bundle não contém o lead
 
-**Bug corrigido no Sprint 12.20**: `BookingModal.tsx` do Studio usava
-texto hardcoded "Matricula, treino..." e quebrava leads `nutricionista` no guard
-anti-contaminação. O modal agora usa CTA segment-aware e texto neutro.
+```bash
+grep -R "Nome do Lead" /var/www/fralib/sites/2/X/assets/index-*.js
+```
 
-**Bug corrigido no Sprint 12.20**: leads com fotos reais em `media.photos`
-podiam falhar como `0 refs` porque `_rewrite_editorial_images()` só substituía
-URLs já existentes no código gerado. `prepare_vite_project_files()` agora chama
-`_ensure_editorial_media_contract()` para materializar Hero/Galeria com fotos
-aprovadas antes do gate.
+### LLM indisponível
 
-**Bug corrigido no Sprint 12.20**: o guard de `nutricionista` bloqueava
-`musculação` mesmo quando o lead era de nutrição esportiva. Agora
-`musculação/musculacao` é permitido só nesse contexto; `matrícula` continua
-bloqueado para evitar linguagem de academia.
+```bash
+# Corrigir a chave ou o provedor. O job deve falhar claramente.
+```
 
-**Mudança Sprint 14**: `FRALIB_VITE_LLM_POLICY=copy_only` virou o caminho
-padrão do Vite. A chamada LLM usa um prompt curto e retorna apenas JSON de
-conteúdo. O renderer sanitiza esse JSON, injeta em `_llm_content` e o Studio
-gera o projeto React determinístico. `ServicesSection`, `HeroSection`, mídia,
-LGPD e contratos não dependem mais do LLM escrever TSX corretamente.
+### Lead não aparece no site
 
-## Guard de publicação canônica
+Verifique o manifest do builder e o contrato factual do PRD.
 
-Em produção, o deploy falha fechado quando o artefato final não está marcado
-como `vite_react`.
+## Guard de publicação
+
+Em produção:
 
 ```bash
 FRALIB_ENV=prod
 FRALIB_STRICT_CANONICAL_PUBLISH=1
 ```
 
-Nesse modo:
-- `vite_react` publica.
-- `openui` só publica se `FRALIB_BUILDER_ENGINE=openui` for escolhido
-  explicitamente e a política de produção permitir.
-- `openui_fallback` automático fica bloqueado.
+Se o artefato não estiver marcado como `vite_react`, o deploy falha.
 
-## Como debugar
-
-### Site mostra tela preta
+## Smoke e validação
 
 ```bash
-# 1. Verificar se o build Vite rodou
-ls /tmp/fralib_builder/tenant-2/job-X/dist/
-# Esperado: index.html, assets/
-
-# 2. Verificar se o JS bundle tem o nome do lead
-ssh root@100.101.18.1 "grep 'Fio' /var/www/fralib/sites/2/X/assets/index-*.js"
-# Esperado: 1+ matches
-
-# 3. Verificar erros no console
-# Usar Playwright:
-python scripts/_investigate_v15d_v2.py
-# Se "ReferenceError" → bug no template literal (fix já deployado)
+pytest tests/test_regression_patches.py
+python3 scripts/test_regression.py --tenant-id 2 --lead-id test-tenant2-academia-20260622193321
 ```
 
-### LLM retorna 401/429
-
-```bash
-# Verificar API keys
-grep ANTHROPIC .env
-# Sem fallback automático: corrigir chave/modelo ou deixar o job falhar claro.
-```
-
-### Lead name não aparece
-
-```bash
-# Verificar manifest:
-python3 -c "
-import json
-m = json.load(open('/root/fralib/logs/builder_manifests/tenant-2__job-X.json'))
-biz = m['prompt_agent']['context']['business']
-print(biz.get('name'), biz.get('segmento'))
-"
-# Esperado: Barbearia Fio Nobre Pinhais barbearia
-```
-
-## Usar OpenUI explicitamente (se necessário)
-
-```bash
-# Local
-echo "FRALIB_BUILDER_ENGINE=openui" >> .env
-git add .env && git commit -m "fix: revert to openui engine"
-git push origin master
-
-# VPS
-ssh root@100.101.18.1 "systemctl restart fralib-worker 'fralib-worker@*.service'"
-```
-
-## Métricas esperadas
-
-| Métrica | Vite/React (Sprint 12.19) | OpenUI legado |
-|---|---|---|
-| Tempo de build | JSON LLM curto + build, ou `none` sem LLM | 10s |
-| Tamanho do bundle | 150KB JS + 50KB CSS | 30KB HTML |
-| First Paint | 1.2s | 0.5s |
-| Tailwind | build real | CDN |
-| Componentes React | 10+ | 1 (HTML) |
-| GSAP/Lenis | sim | não |
-| shadcn/ui | sim | não |
-| LLM escreve TSX? | Só com `FRALIB_VITE_LLM_POLICY=full_code` | sim |
-| Tela preta possível? | NÃO (post-process + TSX determinístico) | n/a |
-
-## Tags v1.14.x
-
-Todas as tags estão em `2026-06-25`:
-- `v1.14.0-baseline` / `v1.14.0-lockpoint`
-- `v1.14.1-baseline` / `v1.14.1-lockpoint`
-- `v1.14.2-baseline` / `v1.14.2-lockpoint`
-- `v1.14.3-baseline` / `v1.14.3-lockpoint`
-- `v1.14.4-baseline` / `v1.14.4-lockpoint` ← **ATUAL**
-
-Rollback para qualquer tag: `git checkout v1.14.0-baseline && systemctl restart fralib-worker`.

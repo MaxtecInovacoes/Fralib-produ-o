@@ -4,6 +4,7 @@
 Pega lead pendente codex-test-barbearia-fio-nobre-pinhais-20260612 e roda
 pipeline completa: 11 fases do orchestrator -> deploy path FraLib.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -18,6 +19,7 @@ from pathlib import Path
 # Carrega .env ANTES de tudo
 try:
     from dotenv import load_dotenv
+
     load_dotenv("/root/fralib/.env")
 except ImportError:
     pass
@@ -28,11 +30,9 @@ sys.path.insert(0, str(REPO))
 os.environ["FRALIB_BUILDER_ENGINE"] = "vite_react"
 os.environ["FRALIB_SINGLE_MODEL_ONLY"] = "0"
 os.environ["FRALIB_VITE_NAMEHOST_MODELS"] = "claude-sonnet-4-6,claude-haiku-4-5"
-os.environ["FRALIB_OPENUI_PRIMARY_MODEL"] = "claude-sonnet-4-6"
 os.environ["FRALIB_PROXY_BUILDER_MODEL"] = "claude-sonnet-4-6"
 os.environ["ANTHROPIC_BASE_URL"] = "https://api.kpalabz.com/v1"
 os.environ["FRALIB_TRACING_ENABLED"] = "1"
-os.environ["FRALIB_USE_SDK_LOOP"] = "1"
 
 
 def banner(msg: str) -> None:
@@ -59,7 +59,9 @@ def deploy_to_fralib(tenant_id: int, slug: str, dist_dir: Path) -> Path:
     return target
 
 
-async def run_full_pipeline(tenant_id: int, lead_id: str, nome: str, cidade: str, segmento: str) -> dict:
+async def run_full_pipeline(
+    tenant_id: int, lead_id: str, nome: str, cidade: str, segmento: str
+) -> dict:
     """Roda executar_pipeline_completo() em subprocess isolado (evita import side-effects)."""
     banner(f"FASE 1-11: PIPELINE COMPLETA DO ORCHESTRATOR (lead_id={lead_id})")
 
@@ -109,7 +111,7 @@ asyncio.run(main())
             step(f"Pipeline completa em {elapsed:.1f}s (orchestrator OK)")
             return {"ok": True, "elapsed": elapsed, "stdout_tail": proc.stdout[-500:]}
         else:
-            step(f"Orchestrator retornou {proc.returncode}; tentando fallback builder-job")
+            step(f"Orchestrator retornou {proc.returncode}; abortando execucao")
             if proc.stderr:
                 for line in proc.stderr.splitlines()[-10:]:
                     step(f"  err: {line}")
@@ -126,7 +128,15 @@ asyncio.run(main())
 
 def slug_from_name(name: str) -> str:
     """Gera slug do lead name: 'Barbearia Fio Nobre Pinhais' -> 'barbearia-fio-nobre-pinhais'"""
-    return name.lower().replace(" ", "-").replace("ã", "a").replace("õ", "o").replace("ç", "c").replace("é", "e").replace("í", "i")
+    return (
+        name.lower()
+        .replace(" ", "-")
+        .replace("ã", "a")
+        .replace("õ", "o")
+        .replace("ç", "c")
+        .replace("é", "e")
+        .replace("í", "i")
+    )
 
 
 async def main_async() -> int:
@@ -142,7 +152,9 @@ async def main_async() -> int:
         # LEAD REAL DO CODEX - Barbearia Fio Nobre Pinhais
         lead_id = "codex-test-barbearia-fio-nobre-pinhais-20260612"
         row = conn.execute(
-            text("SELECT id, nome, telefone, cidade, segmento, status FROM leads WHERE id=:id AND user_id=2"),
+            text(
+                "SELECT id, nome, telefone, cidade, segmento, status FROM leads WHERE id=:id AND user_id=2"
+            ),
             {"id": lead_id},
         ).fetchone()
 
@@ -167,17 +179,33 @@ async def main_async() -> int:
         "segment": segmento,
         "phone": "4100000000",
         "endereco": f"Centro, {cidade.title()} - PR",
-        "services": ["Corte masculino", "Barba", "Sobrancelha", "Pigmentacao", "Platinado"],
+        "services": [
+            "Corte masculino",
+            "Barba",
+            "Sobrancelha",
+            "Pigmentacao",
+            "Platinado",
+        ],
         "horarios": "Seg-Sex 9h-20h | Sab 9h-18h",
         "description": f"{nome} - barbearia premium em {cidade.title()} com ambiente moderno",
-        "differentials": ["Atendimento premium", "Barbeiros certificados", "Produtos importados"],
+        "differentials": [
+            "Atendimento premium",
+            "Barbeiros certificados",
+            "Produtos importados",
+        ],
         "target_audience": "Homens 25-55 anos premium",
         "instagram": "@barbeariafionobre",
     }
     with engine.begin() as conn:
         conn.execute(
-            text("UPDATE leads SET _leaddata=:dados, briefing_json=:brief WHERE id=:id"),
-            {"dados": _json.dumps(briefing), "brief": _json.dumps(briefing), "id": lead_id},
+            text(
+                "UPDATE leads SET _leaddata=:dados, briefing_json=:brief WHERE id=:id"
+            ),
+            {
+                "dados": _json.dumps(briefing),
+                "brief": _json.dumps(briefing),
+                "id": lead_id,
+            },
         )
     step("Briefing salvo no Postgres")
 
@@ -189,11 +217,23 @@ async def main_async() -> int:
     prd_path.write_text(_json.dumps(briefing, ensure_ascii=False), encoding="utf-8")
 
     build_job_id = f"build-{slug}-{int(time.time())}"
-    cmd = [sys.executable, str(REPO / "pipeline.py"), "builder-job",
-           "--prd-json", str(prd_path), "--tenant-id", "2",
-           "--job-id", build_job_id, "--target", "landing-page",
-           "--model", "claude-sonnet-4-6", "--execute"]
-    step(f"Executando: pipeline.py builder-job")
+    cmd = [
+        sys.executable,
+        str(REPO / "pipeline.py"),
+        "builder-job",
+        "--prd-json",
+        str(prd_path),
+        "--tenant-id",
+        "2",
+        "--job-id",
+        build_job_id,
+        "--target",
+        "landing-page",
+        "--model",
+        "claude-sonnet-4-6",
+        "--execute",
+    ]
+    step("Executando: pipeline.py builder-job")
     result = subprocess.run(cmd, cwd=str(REPO), env=os.environ.copy(), timeout=540)
     if result.returncode != 0:
         step(f"WARN: builder-job retornou {result.returncode} (orchestrator ja fez)")
@@ -201,13 +241,17 @@ async def main_async() -> int:
     step("Etapa 5: Localizar dist/ gerado")
     dist_dir = Path(f"/tmp/fralib_builder/tenant-2/{build_job_id}/dist")
     if not dist_dir.exists() or not list(dist_dir.iterdir()):
-        candidates = sorted(Path("/tmp/fralib_builder/tenant-2/").glob("*/dist"), key=lambda p: p.stat().st_mtime, reverse=True)
+        candidates = sorted(
+            Path("/tmp/fralib_builder/tenant-2/").glob("*/dist"),
+            key=lambda p: p.stat().st_mtime,
+            reverse=True,
+        )
         if candidates:
             dist_dir = candidates[0]
             step(f"Usando dist alternativo: {dist_dir}")
 
     if not dist_dir.exists():
-        step(f"ERRO FATAL: nenhum dist encontrado")
+        step("ERRO FATAL: nenhum dist encontrado")
         return 1
 
     step(f"dist/ = {dist_dir} ({len(list(dist_dir.iterdir()))} arquivos)")
@@ -218,35 +262,52 @@ async def main_async() -> int:
 
     step("Etapa 7: Validar HTTP no link FraLib")
     url = f"https://seunegociofralib.site/sites/2/{slug}/"
-    result = subprocess.run(["curl", "-skI", url], capture_output=True, text=True, timeout=30)
+    result = subprocess.run(
+        ["curl", "-skI", url], capture_output=True, text=True, timeout=30
+    )
     print(result.stdout)
 
-    if " 200" in result.stdout or "HTTP/2 200" in result.stdout or "HTTP/1.1 200" in result.stdout:
+    if (
+        " 200" in result.stdout
+        or "HTTP/2 200" in result.stdout
+        or "HTTP/1.1 200" in result.stdout
+    ):
         step(f"SUCESSO: {url}")
         banner("DEPLOY OFICIAL CONCLUIDO - LEAD REAL TENANT 2")
         print(f"  LEAD ID: {lead_id}")
         print(f"  NOME: {nome} ({segmento}/{cidade})")
         print(f"  URL: {url}")
-        print(f"  PIPELINE ORCHESTRATOR: {'OK' if pipeline_result.get('ok') else 'FALLBACK'}")
-        print(f"  ENGINE: Vite/React + shadcn/ui + Tailwind")
+        print(
+            f"  PIPELINE ORCHESTRATOR: {'OK' if pipeline_result.get('ok') else 'FALLBACK'}"
+        )
+        print("  ENGINE: Vite/React + shadcn/ui + Tailwind")
 
         manifest = REPO / ".tmp" / f"sprint125-{slug}.json"
         manifest.parent.mkdir(parents=True, exist_ok=True)
-        manifest.write_text(_json.dumps({
-            "sprint": "12.5",
-            "lead_id_real": lead_id,
-            "nome": nome,
-            "cidade": cidade,
-            "segmento": segmento,
-            "slug": slug,
-            "tenant_id": 2,
-            "engine": "vite_react",
-            "deploy_path": str(target),
-            "deploy_url": url,
-            "status": "success",
-            "pipeline_result": pipeline_result,
-            "files_deployed": sorted([p.name for p in target.rglob("*") if p.is_file()]),
-        }, indent=2, default=str), encoding="utf-8")
+        manifest.write_text(
+            _json.dumps(
+                {
+                    "sprint": "12.5",
+                    "lead_id_real": lead_id,
+                    "nome": nome,
+                    "cidade": cidade,
+                    "segmento": segmento,
+                    "slug": slug,
+                    "tenant_id": 2,
+                    "engine": "vite_react",
+                    "deploy_path": str(target),
+                    "deploy_url": url,
+                    "status": "success",
+                    "pipeline_result": pipeline_result,
+                    "files_deployed": sorted(
+                        [p.name for p in target.rglob("*") if p.is_file()]
+                    ),
+                },
+                indent=2,
+                default=str,
+            ),
+            encoding="utf-8",
+        )
         return 0
 
     print("  ERRO: site nao respondeu 200 OK")
