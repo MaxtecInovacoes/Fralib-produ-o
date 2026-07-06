@@ -39,6 +39,7 @@ from urllib.parse import quote_plus
 import httpx
 
 from backend.agents.llm_router import call_llm
+from backend.utils.language_guard import LanguageGuard
 
 # Sprint 11.8 fix: logger was missing - caused 'name logger is not defined'
 # on later model-cascade attempts.
@@ -927,26 +928,10 @@ def _clean_copy_value(value: Any, *, limit: int = 220) -> str:
     text = re.sub(r"\bfinally\s+", "", text, flags=re.IGNORECASE)
     text = re.sub(r"\bfinally\b", "", text, flags=re.IGNORECASE)
     text = re.sub(r"\s+", " ", text).strip()
-    if re.search(r"[\u3400-\u9fff\u3040-\u30ff\uac00-\ud7af]", text):
+    text = LanguageGuard.sanitize_output(text)
+    if not text:
         return ""
-    # Bloqueia vazamento de outros idiomas (ES/IT/FR/DE) \u2014 site alvo \u00e9 PT-BR.
-    # Se 2+ desses marcadores aparecerem, o copy veio em outro idioma: descarta.
-    _foreign_markers = (
-        r"\b(cuenta|entrenamiento|sudor|alcanzar|rutina de entrenamiento)\b",  # ES
-        r"\b(nutrizione|servizi|prevenzione|benessere|salute|consulto)\b",  # IT
-        r"\b(aujourd'hui|merci|d\u00e9j\u00e0|vous \u00eates|renseignement|prise de rendez-vous)\b",  # FR
-        r"\b(heutzutage|terminvereinbarung|behandlung|untersuchung)\b",  # DE
-        r"\b(appointment today|call us today|get in touch|book now)\b",  # EN
-    )
-    foreign_hits = sum(
-        1 for p in _foreign_markers if re.search(p, text, flags=re.IGNORECASE)
-    )
-    if foreign_hits >= 2:
-        return ""
-    # Bloqueia tamb\u00e9m copy que mistura IT/ES em headline curta (titulos de servico)
-    if len(text) <= 60 and any(
-        re.search(p, text, flags=re.IGNORECASE) for p in _foreign_markers
-    ):
+    if not LanguageGuard.is_clean_portuguese(text):
         return ""
     return text[:limit].strip()
 

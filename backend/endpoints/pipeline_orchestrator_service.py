@@ -56,8 +56,8 @@ _BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, _BASE)
 
 from backend.core.database import (
-    SessionLocal,
     Session,
+    SessionLocal,
     engine,
     text,
     update_pipeline_state,
@@ -125,8 +125,10 @@ from backend.services.pipeline_flow_config import (
     is_prompt_agent_flow as _is_prompt_agent_flow,
 )
 from backend.services.pipeline_flow_config import (
-    skip_html_quality_gate as _skip_html_quality_gate,
     skip_deterministic_gate as _skip_deterministic_gate,
+)
+from backend.services.pipeline_flow_config import (
+    skip_html_quality_gate as _skip_html_quality_gate,
 )
 from backend.services.pipeline_phase_tracking import (
     pipeline_phase_key as _pipeline_phase_key_impl,
@@ -209,7 +211,6 @@ def _tenant_sdr_allowed(db: Session, tenant_id: int) -> bool:
     return _tenant_sdr_allowed_impl(db, tenant_id)
 
 
-
 @dataclass
 class FraLibState:
     segmento: str = ""
@@ -237,7 +238,9 @@ class FraLibState:
     site_url: str = ""
     paleta_cores: dict = field(default_factory=dict)  # Sprint 14.x: cores para SDR
     refs_visuais: str = ""  # Sprint 14.x: referências visuais do usuário
-    font_preferencia: str = ""  # Sprint 14.x: preferência de fonte (sans-serif, serif, display, monospace)
+    font_preferencia: str = (
+        ""  # Sprint 14.x: preferência de fonte (sans-serif, serif, display, monospace)
+    )
     keyword_research: str = ""
     direcao_criativa: Any = None  # Output do Design Director (tokens OKLch)
 
@@ -257,9 +260,7 @@ def _atualizar_pipeline_id_para_lead(
     state: FraLibState, tenant_id: int, queue_id: int = None
 ) -> None:
     """Delega para pipeline_state para manter compatibilidade."""
-    atualizar_pipeline_id_para_lead(
-        state, tenant_id, queue_id, log_legacy_queue_id
-    )
+    atualizar_pipeline_id_para_lead(state, tenant_id, queue_id, log_legacy_queue_id)
 
 
 async def executar_pipeline_completo(
@@ -274,7 +275,9 @@ async def executar_pipeline_completo(
         job_id=config.get("_job_id"),
     )
 
-    _log = lambda msg, tipo="info", **kwargs: adicionar_log(msg, tipo, user_id=tenant_id)
+    _log = lambda msg, tipo="info", **kwargs: adicionar_log(
+        msg, tipo, user_id=tenant_id
+    )
 
     def _progress(fase_num, label):
         _phase_key = _pipeline_phase_key(fase_num, label)
@@ -316,7 +319,9 @@ async def executar_pipeline_completo(
     ):
         """Wrapper para SpanManager.finalizar_span_com_db."""
         if _span_manager:
-            _span_manager.finalizar_span_com_db(status, erro, duracao_ms, input_t, output_t, cache_r, cache_c, custo)
+            _span_manager.finalizar_span_com_db(
+                status, erro, duracao_ms, input_t, output_t, cache_r, cache_c, custo
+            )
 
     def _validar_output(output, min_chars=50, must_contain=None):
         """Delega para pipeline_phases para manter compatibilidade."""
@@ -378,6 +383,7 @@ async def executar_pipeline_completo(
 
     # Inicializar SpanManager para trace com DB
     from backend.endpoints.pipeline_trace_helpers import SpanManager
+
     _span_manager = SpanManager(
         trace=_trace,
         salvar_span=salvar_span,
@@ -403,6 +409,7 @@ async def executar_pipeline_completo(
 
     # ─── HEARTBEAT DAEMON: atualiza span + job periodicamente ───
     from backend.endpoints.pipeline_heartbeat import HeartbeatManager
+
     _heartbeat_manager = HeartbeatManager(
         run_id=state.run_id,
         tenant_id=tenant_id,
@@ -456,7 +463,7 @@ async def executar_pipeline_completo(
             import json as _json_reproc
 
             from agents.caio import CaioOutput
-            from utils.agente1_hunter_v2 import LeadQualificado, LeadRaw
+            from utils.agente1_hunter_v2 import LeadRaw
             from utils.safe_lead_qualificado import safe_qualificar
 
             with engine.connect() as _conn_reproc:
@@ -510,9 +517,15 @@ async def executar_pipeline_completo(
             )
             state.lead_raw_data["reviews"] = _reviews_r
             state.lead_raw_data["logo_url"] = _dados_r.get("logo_url")
-            state.lead_raw_data["briefing"] = _ld.get("observacoes", "")  # Sprint 14.x: briefing do lead
-            state.refs_visuais = _ld.get("refs_visuais", "")  # Sprint 14.x: referências visuais
-            state.font_preferencia = _ld.get("font_preferencia", "")  # Sprint 14.x: preferência de fonte
+            state.lead_raw_data["briefing"] = _ld.get(
+                "observacoes", ""
+            )  # Sprint 14.x: briefing do lead
+            state.refs_visuais = _ld.get(
+                "refs_visuais", ""
+            )  # Sprint 14.x: referências visuais
+            state.font_preferencia = _ld.get(
+                "font_preferencia", ""
+            )  # Sprint 14.x: preferência de fonte
             _aplicar_segmento_inferido(state, _log)
             _atualizar_pipeline_id_para_lead(state, tenant_id, queue_id)
             # Caio: pular — usar qualificação anterior
@@ -535,7 +548,9 @@ async def executar_pipeline_completo(
                     quantidade=8,
                     nome=state.lead_nome,
                     cidade=_ld["cidade"],
-                    archetype=_visual_archetype_id(state.segmento, state.lead_nome, _dados_r),
+                    archetype=_visual_archetype_id(
+                        state.segmento, state.lead_nome, _dados_r
+                    ),
                 )
                 state.lead_raw_data["fotos"] = _fotos_u
                 state.lead_raw_data["logo_url"] = None
@@ -607,7 +622,9 @@ async def executar_pipeline_completo(
 
         def _run_kw():
             try:
-                _kw_result[0] = pesquisar_keywords_nicho(state.segmento, state.cidade, tenant_id=tenant_id)
+                _kw_result[0] = pesquisar_keywords_nicho(
+                    state.segmento, state.cidade, tenant_id=tenant_id
+                )
                 _log("  Keywords: OK", "success")
             except Exception as _e:
                 logger.warning(f"[Pipeline] Keyword research erro: {_e}")
@@ -1040,10 +1057,12 @@ async def executar_pipeline_completo(
                 website=state.lead_obj.lead.website,
                 reprocessamento=True,
             )
+
             def _run_caio():
                 r = qualificar_lead(caio_input)
                 logger.info(f"[Pipeline] Caio: {r.qualificacao}")
                 return r
+
             loop = asyncio.get_event_loop()
             with ThreadPoolExecutor(max_workers=1) as ex:
                 return await loop.run_in_executor(ex, _run_caio)
@@ -1061,6 +1080,7 @@ async def executar_pipeline_completo(
                     formatar_inteligencia_para_arquiteto,
                 )
                 from utils.playwright_intel_safe import buscar_inteligencia_mercado_safe
+
                 # FASE H5: Playwright Sync API nao roda nem em ThreadPoolExecutor
                 # quando ha asyncio loop no parent thread. Usa subprocess Python
                 # isolado via utils.playwright_intel_safe para garantir
@@ -1092,8 +1112,8 @@ async def executar_pipeline_completo(
                     "insights": "",
                     "intel": {},
                     "cached": False,
-                        "error": str(e),
-                    }
+                    "error": str(e),
+                }
 
         # Executar Caio + Jina em PARALELO
         _log("FASE 2+3: CAIO + JINA (paralelo)", "info")
@@ -1133,8 +1153,9 @@ async def executar_pipeline_completo(
 
         if _ledger:
             _ledger.registrar_fim_fase(
-                2, FaseStatus.CONCLUIDA,
-                resultado=f"caio={state.qualificacao_caio.qualificacao} jina={len(state.jina_insights)}chars"
+                2,
+                FaseStatus.CONCLUIDA,
+                resultado=f"caio={state.qualificacao_caio.qualificacao} jina={len(state.jina_insights)}chars",
             )
         if (
             state.qualificacao_caio
@@ -1275,7 +1296,8 @@ async def executar_pipeline_completo(
                 _detalhes = [
                     f"{m['nome']} — {m['motivo']}" for m in _motivos_rejeicao[:8]
                 ]
-                _emitir_erro_pipeline(_log,
+                _emitir_erro_pipeline(
+                    _log,
                     tenant_id,
                     "NO_LEADS",
                     message=f"Todos os negócios encontrados para {state.segmento} em {state.cidade} foram descartados.",
@@ -1391,7 +1413,9 @@ async def executar_pipeline_completo(
             else:
                 # Chamar Design Director com dados do lead qualificado
                 state.direcao_criativa = gerar_direcao_criativa(
-                    nicho=state.segmento or state.lead_obj.lead.segmento or "negocio local",
+                    nicho=state.segmento
+                    or state.lead_obj.lead.segmento
+                    or "negocio local",
                     cidade=state.cidade or state.lead_obj.lead.cidade or "",
                     nome_negocio=state.lead_nome,
                     rating=float(state.lead_obj.lead.rating or 0),
@@ -1409,7 +1433,9 @@ async def executar_pipeline_completo(
                     "design_director",
                     {"direcao_criativa": state.direcao_criativa},
                 )
-            _dd_dir = state.direcao_criativa.get("direcao_visual", {}).get("estilo", "N/A")
+            _dd_dir = state.direcao_criativa.get("direcao_visual", {}).get(
+                "estilo", "N/A"
+            )
             _dd_tokens = state.direcao_criativa.get("design_tokens", {})
             _dd_source = _dd_tokens.get("source", "N/A") if _dd_tokens else "sem tokens"
             _log(
@@ -1420,7 +1446,9 @@ async def executar_pipeline_completo(
                 f"[Pipeline] Design Director: dir={_dd_dir}, tokens_source={_dd_source}"
             )
         except Exception as _dd_err:
-            logger.warning(f"[Pipeline] Design Director erro (continuando sem): {_dd_err}")
+            logger.warning(
+                f"[Pipeline] Design Director erro (continuando sem): {_dd_err}"
+            )
             state.direcao_criativa = None
 
         # PRD #7: Agent Router — modelo dinâmico por complexidade
@@ -1487,16 +1515,27 @@ async def executar_pipeline_completo(
         except Exception as _intel_err:
             print(f"[Pipeline] Módulo inteligência erro (não-fatal): {_intel_err}")
             state.inteligencia = {}
-        _progress(6, "Preparando prompt..." if _is_prompt_agent_flow(config) else "Analisando nicho...")
+        _progress(
+            6,
+            "Preparando prompt..."
+            if _is_prompt_agent_flow(config)
+            else "Analisando nicho...",
+        )
         _prompt_agent_flow = _is_prompt_agent_flow(config)
         _builder_fast_path = _is_builder_fast_path(config) or _prompt_agent_flow
         if _prompt_agent_flow:
-            print("[Pipeline] Prompt Agent flow ativo: Hunter -> Caio -> Jina -> Prompt -> Builder -> Deploy")
+            print(
+                "[Pipeline] Prompt Agent flow ativo: Hunter -> Caio -> Jina -> Prompt -> Builder -> Deploy"
+            )
         elif _builder_fast_path:
-            print("[Pipeline] Builder fast-path ativo: pulando agentes de briefing/PRD LLM")
+            print(
+                "[Pipeline] Builder fast-path ativo: pulando agentes de briefing/PRD LLM"
+            )
 
         # ─── FASE 6: AGENTE DE NICHO ─────────────────────────────────
-        _progress(6, "Preparando prompt..." if _prompt_agent_flow else "Analisando nicho...")
+        _progress(
+            6, "Preparando prompt..." if _prompt_agent_flow else "Analisando nicho..."
+        )
         _log(
             "FASE 6: AGENTE DE PROMPT (NICHO PULADO)"
             if _prompt_agent_flow
@@ -1549,9 +1588,8 @@ async def executar_pipeline_completo(
                 _log("  Nicho briefing: ♻️ retomado do checkpoint", "success")
             except Exception:
                 _nicho_cached = None
-        if (
-            not _builder_fast_path
-            and (not _nicho_cached or not _nicho_cached.get("briefing_json"))
+        if not _builder_fast_path and (
+            not _nicho_cached or not _nicho_cached.get("briefing_json")
         ):
             from agents.agente_nicho import gerar_briefing
 
@@ -1583,7 +1621,9 @@ async def executar_pipeline_completo(
         # ─── FASE 7: AGENTE DE VARIAÇÃO ESTRUTURAL ───────────────────
         _progress(
             7,
-            "Mantendo Builder livre..." if _prompt_agent_flow else "Definindo variação estrutural...",
+            "Mantendo Builder livre..."
+            if _prompt_agent_flow
+            else "Definindo variação estrutural...",
         )
         _log(
             "FASE 7: AGENTE DE PROMPT (VARIAÇÃO PULADA)"
@@ -1639,9 +1679,8 @@ async def executar_pipeline_completo(
                 _log("  Variação: ♻️ retomado do checkpoint", "success")
             except Exception:
                 _var_cached = None
-        if (
-            not _builder_fast_path
-            and (not _var_cached or not _var_cached.get("variacao_json"))
+        if not _builder_fast_path and (
+            not _var_cached or not _var_cached.get("variacao_json")
         ):
             from agents.agente_variacao import gerar_variacao
 
@@ -1680,7 +1719,9 @@ async def executar_pipeline_completo(
         # ─── FASE 8: ARQUITETO MESTRE ─────────────────────────────────
         _progress(
             8,
-            "Montando prompt completo..." if _prompt_agent_flow else "Arquitetando site...",
+            "Montando prompt completo..."
+            if _prompt_agent_flow
+            else "Arquitetando site...",
         )
         _log(
             "FASE 8: AGENTE DE PROMPT"
@@ -1729,9 +1770,8 @@ async def executar_pipeline_completo(
             except Exception as _prd_err:
                 _log(f"  ⚠️ Checkpoint PRD inválido, regenerando: {_prd_err}", "warning")
                 _arq_cached = None
-        if (
-            not _builder_fast_path
-            and (not _arq_cached or not _arq_cached.get("prd_json"))
+        if not _builder_fast_path and (
+            not _arq_cached or not _arq_cached.get("prd_json")
         ):
             _seed = int(hashlib.md5(state.lead_nome.encode()).hexdigest()[:8], 16)
             random.seed(_seed)
@@ -1921,11 +1961,16 @@ async def executar_pipeline_completo(
                 or not state.prd_arquiteto.segmento
             ):
                 state.prd_arquiteto.segmento = state.segmento
-            if hasattr(state.prd_arquiteto, "photos") and not state.prd_arquiteto.photos:
+            if (
+                hasattr(state.prd_arquiteto, "photos")
+                and not state.prd_arquiteto.photos
+            ):
                 state.prd_arquiteto.photos = state.lead_raw_data.get("fotos") or []
             _log(f"  Gerador: {_renderer_agent}", "info")
 
-            def _gerar_html_renderer(_validation_errors: str = "", _previous_html: str = ""):
+            def _gerar_html_renderer(
+                _validation_errors: str = "", _previous_html: str = ""
+            ):
                 _repair_context = None
                 _repair_hash = ""
                 if _validation_errors or _previous_html:
@@ -1934,7 +1979,9 @@ async def executar_pipeline_completo(
                         "previous_html": _previous_html,
                     }
                     _repair_hash = hashlib.sha1(
-                        f"{_validation_errors}\n{_previous_html[:2000]}".encode("utf-8", errors="ignore")
+                        f"{_validation_errors}\n{_previous_html[:2000]}".encode(
+                            "utf-8", errors="ignore"
+                        )
                     ).hexdigest()[:10]
                 _job_id = _builder_job_id_for_state(state, config, _repair_hash)
                 _result = render_site_with_builder(
@@ -1951,10 +1998,13 @@ async def executar_pipeline_completo(
                 # para o proximo lead do mesmo subnicho pegar variation diferente.
                 try:
                     from backend.services.site_generation_counter import (
-                        log_generation,
                         hash_color_palette,
+                        log_generation,
                     )
-                    _variation_log = getattr(state.prd_arquiteto, "variation", None) or {}
+
+                    _variation_log = (
+                        getattr(state.prd_arquiteto, "variation", None) or {}
+                    )
                     if isinstance(_variation_log, dict) and _variation_log:
                         log_generation(
                             tenant_id=tenant_id,
@@ -1966,14 +2016,24 @@ async def executar_pipeline_completo(
                                 or ""
                             ),
                             segmento=state.segmento or "",
-                            layout_variant=str(_variation_log.get("layout_variant") or "")[:20],
-                            motion_variant=str(_variation_log.get("motion_variant") or "")[:20],
-                            copy_variant=str(_variation_log.get("copy_variant") or "")[:20],
+                            layout_variant=str(
+                                _variation_log.get("layout_variant") or ""
+                            )[:20],
+                            motion_variant=str(
+                                _variation_log.get("motion_variant") or ""
+                            )[:20],
+                            copy_variant=str(_variation_log.get("copy_variant") or "")[
+                                :20
+                            ],
                             color_palette_hash=hash_color_palette(
                                 getattr(state.prd_arquiteto, "color_palette", None)
                             ),
-                            hero_classes=str(_variation_log.get("hero_classes") or "")[:2000],
-                            section_order=list(_variation_log.get("section_order") or []),
+                            hero_classes=str(_variation_log.get("hero_classes") or "")[
+                                :2000
+                            ],
+                            section_order=list(
+                                _variation_log.get("section_order") or []
+                            ),
                         )
                 except Exception as _log_err:
                     logger.debug(f"[Sprint 14.6] log_generation falhou: {_log_err}")
@@ -1990,9 +2050,11 @@ async def executar_pipeline_completo(
             if not state.html_final or len(state.html_final) < 500:
                 raise Exception(f"{_renderer_agent} retornou HTML vazio")
             try:
-                open(os.path.join(_trace_dir, f"{_renderer_agent}_sections.html"), "w", encoding="utf-8").write(
-                    state.html_final
-                )
+                open(
+                    os.path.join(_trace_dir, f"{_renderer_agent}_sections.html"),
+                    "w",
+                    encoding="utf-8",
+                ).write(state.html_final)
             except Exception as e:
                 # FIX CRÍTICO: escrita de debug em disco pode falhar
                 # (permissao, disco cheio, diretorio invalido)
@@ -2010,16 +2072,16 @@ async def executar_pipeline_completo(
             try:
                 from agents.html_quality_gate import (
                     HtmlQualityGateError,
+                    normalize_generated_html_for_publication,
                     sanitize_builder_html_for_publication,
                     validate_generated_html,
-                    normalize_generated_html_for_publication,
                 )
             except Exception:
                 from html_quality_gate import (
                     HtmlQualityGateError,
+                    normalize_generated_html_for_publication,
                     sanitize_builder_html_for_publication,
                     validate_generated_html,
-                    normalize_generated_html_for_publication,
                 )
 
             _max_repair_attempts = 3
@@ -2051,7 +2113,9 @@ async def executar_pipeline_completo(
                             state.html_final, state.prd_arquiteto
                         )
                         validate_generated_html(state.html_final, state.prd_arquiteto)
-                        _log(f"  {_renderer_label}: patch resolveu problemas!", "success")
+                        _log(
+                            f"  {_renderer_label}: patch resolveu problemas!", "success"
+                        )
                         break
                     except HtmlQualityGateError:
                         # Patch não funcionou, mas não perdemos o HTML original
@@ -2077,18 +2141,30 @@ async def executar_pipeline_completo(
             # Quando o QG bloqueia (decision=block), o orchestrator volta pro
             # builder passando as correcoes cirurgicas em linguagem natural.
             # Limite: 3 correcoes antes de desistir com erro claro.
+            _quality_guardian_bypass = os.getenv(
+                "FRALIB_QUALITY_GUARDIAN_BYPASS", ""
+            ).strip().lower() in {"1", "true", "yes", "on"}
             try:
-                from agents.quality_guardian import (
-                    run_quality_guardian, render_correction_prompt,
+                from backend.agents.quality_guardian import (
+                    render_correction_prompt,
+                    run_quality_guardian,
                 )
-            except Exception:
-                try:
-                    from quality_guardian import (
-                        run_quality_guardian, render_correction_prompt,
+            except Exception as _qg_import_err:
+                if _quality_guardian_bypass:
+                    logger.warning(
+                        "Quality Guardian indisponivel, mas bypass administrativo ativo; validacao ignorada.",
+                        exc_info=True,
                     )
-                except Exception:
                     run_quality_guardian = None
                     render_correction_prompt = None
+                else:
+                    logger.critical(
+                        "Falha ao carregar Quality Guardian; bloqueando finalizacao do job.",
+                        exc_info=True,
+                    )
+                    raise RuntimeError(
+                        "Quality Guardian indisponivel e bypass administrativo ausente"
+                    ) from _qg_import_err
 
             if run_quality_guardian is not None:
                 _max_qg_corrections = 3
@@ -2097,17 +2173,27 @@ async def executar_pipeline_completo(
                     _qg_verdict = run_quality_guardian(
                         state.html_final,
                         is_fallback=bool(getattr(state, "is_fallback", False)),
-                        has_template_fallback=bool(getattr(state, "has_template_fallback", False)),
-                        dados_incompletos=bool(getattr(state, "dados_incompletos", False)),
-                        design_context_failed=bool(getattr(state, "design_context_failed", False)),
-                        palette_overridden=bool(getattr(state, "palette_overridden", False)),
+                        has_template_fallback=bool(
+                            getattr(state, "has_template_fallback", False)
+                        ),
+                        dados_incompletos=bool(
+                            getattr(state, "dados_incompletos", False)
+                        ),
+                        design_context_failed=bool(
+                            getattr(state, "design_context_failed", False)
+                        ),
+                        palette_overridden=bool(
+                            getattr(state, "palette_overridden", False)
+                        ),
                     )
-                    _qg_history.append({
-                        "attempt": _qg_attempt,
-                        "score": _qg_verdict.overall_score,
-                        "decision": _qg_verdict.decision,
-                        "critical": _qg_verdict.critical_count,
-                    })
+                    _qg_history.append(
+                        {
+                            "attempt": _qg_attempt,
+                            "score": _qg_verdict.overall_score,
+                            "decision": _qg_verdict.decision,
+                            "critical": _qg_verdict.critical_count,
+                        }
+                    )
                     _log(
                         f"  Quality Guardian #{_qg_attempt}: score={_qg_verdict.overall_score:.1f}/10 "
                         f"decision={_qg_verdict.decision} criticos={_qg_verdict.critical_count}",
@@ -2133,7 +2219,8 @@ async def executar_pipeline_completo(
                     )
                     _qg_prompt = (
                         render_correction_prompt(_qg_verdict.corrections)
-                        if render_correction_prompt else _qg_verdict.feedback
+                        if render_correction_prompt
+                        else _qg_verdict.feedback
                     )
                     state.html_final = _gerar_html_renderer(
                         _validation_errors=_qg_prompt,
@@ -2150,6 +2237,7 @@ async def executar_pipeline_completo(
             if not _skip_html_quality_gate(config):
                 try:
                     from agents.validador import validar
+
                     _prd_text = (
                         state.prd_arquiteto.model_dump_json()
                         if hasattr(state.prd_arquiteto, "model_dump_json")
@@ -2168,15 +2256,22 @@ async def executar_pipeline_completo(
                     )
                     state.validador_result = _validador_result
                 except Exception as _val_err:
-                    _log(f"  Validador LLM falhou (gate determinístico segue): {_val_err}", "warning")
+                    _log(
+                        f"  Validador LLM falhou (gate determinístico segue): {_val_err}",
+                        "warning",
+                    )
             else:
-                _log(f"  {_renderer_label}: validador LLM ignorado (FRALIB_SKIP_HTML_QUALITY_GATE=1)", "warning")
+                _log(
+                    f"  {_renderer_label}: validador LLM ignorado (FRALIB_SKIP_HTML_QUALITY_GATE=1)",
+                    "warning",
+                )
 
             # v1.1-baseline-2026-06-23: feedback loop Nicho↔Validador (Sprint 1).
             # Persiste lesson do briefing com score como multiplicador de confianca.
             if _validador_result is not None and getattr(state, "nicho_briefing", None):
                 try:
                     from agents.memory_hook_site import persist_lesson_with_score
+
                     _briefing = state.nicho_briefing
                     _subnicho = (
                         getattr(_briefing, "subnicho", "")
@@ -2195,7 +2290,9 @@ async def executar_pipeline_completo(
                         validador_score=_validador_result.score,
                     )
                 except Exception as _persist_err:
-                    logger.warning(f"[Pipeline] persist_lesson_with_score falhou: {_persist_err}")
+                    logger.warning(
+                        f"[Pipeline] persist_lesson_with_score falhou: {_persist_err}"
+                    )
             _log(f"  HTML: {len(state.html_final):,} chars", "success")
             logger.info(f"[Pipeline] {_renderer_label}: OK")
             # Validar HTML antes de salvar checkpoint (não salvar truncado)
@@ -2220,7 +2317,11 @@ async def executar_pipeline_completo(
             )
             with open(
                 os.path.join(
-                    _BASE, "..", "logs", "pipeline_trace", f"{_renderer_agent}_html.html"
+                    _BASE,
+                    "..",
+                    "logs",
+                    "pipeline_trace",
+                    f"{_renderer_agent}_html.html",
                 ),
                 "w",
                 encoding="utf-8",
@@ -2240,7 +2341,9 @@ async def executar_pipeline_completo(
             _finalizar_span_com_db("success")
         _span = _iniciar_span_com_db("deploy", agente="deploy") if _trace else None
         # PRD #8: salvar PRD no cache semantico apos renderer final
-        if state.prd_arquiteto and not getattr(state.prd_arquiteto, "_cache_hit", False):
+        if state.prd_arquiteto and not getattr(
+            state.prd_arquiteto, "_cache_hit", False
+        ):
             try:
                 from design_context import get_design_context
                 from prd_cache import salvar_prd_cache
@@ -2277,9 +2380,13 @@ async def executar_pipeline_completo(
         web_dir = f"/var/www/fralib/sites/{tenant_id}/{state.lead_slug}"
         os.makedirs(web_dir, exist_ok=True)
         try:
-            from backend.services.builder_worker import assert_canonical_builder_publication_allowed
+            from backend.services.builder_worker import (
+                assert_canonical_builder_publication_allowed,
+            )
         except Exception:
-            from services.builder_worker import assert_canonical_builder_publication_allowed  # type: ignore
+            from services.builder_worker import (
+                assert_canonical_builder_publication_allowed,  # type: ignore
+            )
         assert_canonical_builder_publication_allowed(
             state.builder_output_dir or web_dir,
             html=state.html_final,
@@ -2291,9 +2398,12 @@ async def executar_pipeline_completo(
         # ── Gerar sitemap.xml + robots.txt ──
         try:
             from backend.agents.html_quality_gate import _gerar_sitemap_robots
+
             _gerar_sitemap_robots(
-                state.html_final, state.prd_arquiteto,
-                web_dir, f"https://seunegociofralib.site/sites/{tenant_id}/{state.lead_slug}/"
+                state.html_final,
+                state.prd_arquiteto,
+                web_dir,
+                f"https://seunegociofralib.site/sites/{tenant_id}/{state.lead_slug}/",
             )
         except Exception as _sitemap_err:
             print(f"[Pipeline] Erro sitemap/robots (nao-fatal): {_sitemap_err}")
@@ -2380,7 +2490,9 @@ async def executar_pipeline_completo(
                 "_parent_job_id": config.get("_job_id"),
             }
             if config.get("_bryan_test_number"):
-                _franz_payload["_bryan_test_number"] = str(config.get("_bryan_test_number"))
+                _franz_payload["_bryan_test_number"] = str(
+                    config.get("_bryan_test_number")
+                )
             import job_queue as _jq_franz
 
             _db_franz = SessionLocal()
@@ -2420,7 +2532,9 @@ async def executar_pipeline_completo(
                     "id": state.lead_id,
                     "stage": _sdr_stage_final,
                     "uid": state.tenant_id,
-                    "cores": json.dumps(state.paleta_cores) if state.paleta_cores else None,
+                    "cores": json.dumps(state.paleta_cores)
+                    if state.paleta_cores
+                    else None,
                 },
             )
             conn.commit()
@@ -2475,8 +2589,12 @@ async def executar_pipeline_completo(
                     _memory_warm,
                     nicho=state.segmento,
                     archetype=_visual_dna.get("archetype", ""),
-                    renderer=_renderer_agent if "_renderer_agent" in locals() else "builder_renderer",
-                    tier=state.qualificacao_caio.tier if state.qualificacao_caio else "",
+                    renderer=_renderer_agent
+                    if "_renderer_agent" in locals()
+                    else "builder_renderer",
+                    tier=state.qualificacao_caio.tier
+                    if state.qualificacao_caio
+                    else "",
                     site_url=state.site_url,
                 )
                 if _learned_count:
@@ -2543,7 +2661,9 @@ async def executar_pipeline_completo(
         try:
             with SessionLocal() as _db_cred:
                 if trial_credit_waits_for_sdr_delivery(_db_cred, tenant_id):
-                    print(f"[Pipeline] Trial aguardando envio SDR antes de consumir credito (tenant={tenant_id})")
+                    print(
+                        f"[Pipeline] Trial aguardando envio SDR antes de consumir credito (tenant={tenant_id})"
+                    )
                     _log("  Credito trial aguardando envio Franz confirmado", "info")
                 else:
                     consumir_credito_diario(_db_cred, tenant_id, state.lead_nome)
@@ -2668,7 +2788,8 @@ async def executar_pipeline_completo(
         _fase_erro = None
         if isinstance(e, RateLimitError):
             _reset_min = max(1, e.reset_seconds // 60)
-            _emitir_erro_pipeline(_log,
+            _emitir_erro_pipeline(
+                _log,
                 tenant_id,
                 "RATE_LIMIT",
                 message=f"Servidor de IA ocupado. Retomando em ~{_reset_min}min.",
@@ -2685,7 +2806,8 @@ async def executar_pipeline_completo(
             or "no leads" in str(e).lower()
             or "nenhum lead" in str(e).lower()
         ):
-            _emitir_erro_pipeline(_log,
+            _emitir_erro_pipeline(
+                _log,
                 tenant_id,
                 "NO_LEADS",
                 message=str(e),
@@ -2700,7 +2822,8 @@ async def executar_pipeline_completo(
             or "filesystem" in str(e).lower()
         ):
             _fase_erro = "deploy"
-            _emitir_erro_pipeline(_log,
+            _emitir_erro_pipeline(
+                _log,
                 tenant_id,
                 "DEPLOY_FAIL",
                 message="Site gerado mas erro ao publicar no servidor.",
@@ -2712,7 +2835,8 @@ async def executar_pipeline_completo(
             or "playwright" in str(e).lower()
             or "google maps" in str(e).lower()
         ):
-            _emitir_erro_pipeline(_log,
+            _emitir_erro_pipeline(
+                _log,
                 tenant_id,
                 "SCRAPER_FAIL",
                 message="Não conseguimos buscar negócios no Google Maps.",
@@ -2720,7 +2844,8 @@ async def executar_pipeline_completo(
             )
             _log(f"❌ Scraper falhou: {e!s}", "error")
         else:
-            _emitir_erro_pipeline(_log,
+            _emitir_erro_pipeline(
+                _log,
                 tenant_id,
                 "LLM_FAIL",
                 message="Erro na geração do site.",
@@ -2738,7 +2863,8 @@ async def executar_pipeline_completo(
                 record_pipeline_error(
                     _memory_warm,
                     nicho=getattr(state, "segmento", "") or "",
-                    fase=_fase_erro or (str(_fase_counter[0]) if "_fase_counter" in locals() else ""),
+                    fase=_fase_erro
+                    or (str(_fase_counter[0]) if "_fase_counter" in locals() else ""),
                     erro=str(e)[:180],
                 )
             except Exception as _learn_err:
@@ -2763,8 +2889,11 @@ async def executar_pipeline_completo(
                 pass
             # Marcar lead_inventory com error_retry para não perder o lead
             try:
-                from backend.services.lead_supply_inventory import handle_pipeline_job_finished
                 from backend.core.database import SessionLocal
+                from backend.services.lead_supply_inventory import (
+                    handle_pipeline_job_finished,
+                )
+
                 _inv_payload = {"_inventory_id": getattr(state, "_inventory_id", None)}
                 _inv_job = {"payload": _inv_payload, "tenant_id": tenant_id}
                 with SessionLocal() as _inv_db:
@@ -2835,7 +2964,9 @@ async def executar_pipeline_completo(
 async def executar_pipeline_multiplos(
     config: dict, tenant_id: int, queue_id: int = None
 ):
-    _log = lambda msg, tipo="info", **kwargs: adicionar_log(msg, tipo, user_id=tenant_id)
+    _log = lambda msg, tipo="info", **kwargs: adicionar_log(
+        msg, tipo, user_id=tenant_id
+    )
     quantidade_alvo = int(config.get("quantidade", 1))
     concluidos = 0
     tentativas = 0
@@ -2845,12 +2976,14 @@ async def executar_pipeline_multiplos(
 
     def _fechar_queue(status: str, erro: str = None):
         return None
+
     def _liberar_pipeline_state():
         try:
             with SessionLocal() as _db_final:
                 update_pipeline_state(_db_final, tenant_id, pausado=False)
         except Exception:
             pass
+
     _log(
         "Pipeline: buscando "
         + str(quantidade_alvo)
@@ -2867,8 +3000,14 @@ async def executar_pipeline_multiplos(
                 _perm_loop = validar_permissao_pipeline(_db_perm_loop, tenant_id)
             if not _perm_loop.get("allowed"):
                 _reason = _perm_loop.get("reason") or "blocked"
-                _message = _perm_loop.get("message") or "Plano/cooldown bloqueou o próximo lead."
-                _log("Pipeline pausado pelo controle de plano: " + str(_message), "warning")
+                _message = (
+                    _perm_loop.get("message")
+                    or "Plano/cooldown bloqueou o próximo lead."
+                )
+                _log(
+                    "Pipeline pausado pelo controle de plano: " + str(_message),
+                    "warning",
+                )
                 if concluidos > 0:
                     break
                 _fechar_queue("erro", str(_message)[:1000])
@@ -2996,7 +3135,9 @@ async def executar_pipeline_lead_existente(
     skip_franz_outreach: bool = False,
 ):
     """Pipeline de site para lead já existente no banco — pula o hunter."""
-    _log = lambda msg, tipo="info", **kwargs: adicionar_log(msg, tipo, user_id=tenant_id)
+    _log = lambda msg, tipo="info", **kwargs: adicionar_log(
+        msg, tipo, user_id=tenant_id
+    )
 
     # Verificar permissão (créditos + cooldown) antes de executar
     with SessionLocal() as _db_check:
@@ -3012,7 +3153,7 @@ async def executar_pipeline_lead_existente(
     _log("Iniciando reprocessamento...", "info")
     import json as _json
 
-    from utils.agente1_hunter_v2 import LeadQualificado, LeadRaw
+    from utils.agente1_hunter_v2 import LeadRaw
     from utils.safe_lead_qualificado import safe_qualificar
 
     # Carregar lead do banco — valida ownership pelo tenant_id
@@ -3050,9 +3191,7 @@ async def executar_pipeline_lead_existente(
             {"id": lead_id, "phone": _phone_norm},
         ).fetchall()
         if _dup:
-            _other = ", ".join(
-                f"user={r[1]} status={r[3]}" for r in _dup[:3]
-            )
+            _other = ", ".join(f"user={r[1]} status={r[3]}" for r in _dup[:3])
             _log(
                 f"BLOCKED: mesmo telefone ja tem lead ativo em outro tenant ({_other}). "
                 "Reutilize o existente.",
@@ -3121,7 +3260,9 @@ async def executar_pipeline_lead_existente(
         run_id=run_id or uuid.uuid4().hex[:12],
         tenant_id=tenant_id,
     )
-    state = build_reprocess_seed_state(state, lead_dict, dados, lead_raw, segmento, cidade, nome)
+    state = build_reprocess_seed_state(
+        state, lead_dict, dados, lead_raw, segmento, cidade, nome
+    )
 
     config = build_existing_lead_pipeline_config(
         segmento=segmento,
@@ -3212,8 +3353,9 @@ async def _executar_pipeline_a_partir_fase2(state, tenant_id, config):
     import hashlib
     import random
 
-
-    _log = lambda msg, tipo="info", **kwargs: adicionar_log(msg, tipo, user_id=tenant_id)
+    _log = lambda msg, tipo="info", **kwargs: adicionar_log(
+        msg, tipo, user_id=tenant_id
+    )
 
     def _progress(fase_num, label):
         import json as _json_prog
@@ -3293,7 +3435,9 @@ async def _executar_pipeline_a_partir_fase2(state, tenant_id, config):
         _prompt_agent_flow = _is_prompt_agent_flow(config)
         _progress(
             6,
-            "Preparando prompt..." if _prompt_agent_flow else "Montando direção visual...",
+            "Preparando prompt..."
+            if _prompt_agent_flow
+            else "Montando direção visual...",
         )
         _log(
             "FASE 6: AGENTE DE PROMPT"

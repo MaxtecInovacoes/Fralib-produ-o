@@ -19,14 +19,15 @@ Lógica extraída para:
 """
 
 from __future__ import annotations
+
 import os
-import sys
-import json
 import re
+import sys
 from typing import Any
 
 try:
-    from langgraph.graph import StateGraph, END
+    from langgraph.graph import END, StateGraph
+
     _LANGGRAPH_IMPORT_ERROR: Exception | None = None
 except Exception as _exc:
     StateGraph = None  # type: ignore[assignment]
@@ -39,27 +40,7 @@ BACKEND_DIR = os.path.dirname(AGENTS_DIR)
 sys.path.insert(0, BACKEND_DIR)
 sys.path.insert(0, AGENTS_DIR)
 
-from .state import SDRState, LeadMemory
-from .tools import (
-    load_rag,
-    detect_intent_with_llm,
-    check_segment_contamination,
-    is_valid_length,
-    has_one_question,
-    is_within_schedule,
-    get_greeting,
-    choose_variant,
-)
-from .turn_tracing import sdr_traced, start_turn_trace, end_turn_trace, get_active_trace
-from .prompts import (
-    build_stage_prompt,
-    build_user_prompt,
-    should_use_lobo,
-    get_persona_text,
-    get_franz_persona,
-    get_franz_stage_prompt,
-    get_franz_rag,
-)
+from .learning import evaluate_bot_turn, learning_overlay
 from .multi_agent import (
     agent_system_overlay,
     build_agent_context,
@@ -67,12 +48,39 @@ from .multi_agent import (
     record_agent_handoff,
     save_agent_note,
 )
-from .learning import evaluate_bot_turn, learning_overlay
-
+from .prompts import (
+    build_stage_prompt,
+    build_user_prompt,
+    get_franz_persona,
+    get_franz_rag,
+    get_franz_stage_prompt,
+    get_persona_text,
+    should_use_lobo,
+)
+from .state import LeadMemory, SDRState
+from .franz_tools import (
+    check_segment_contamination,
+    choose_variant,
+    detect_intent_with_llm,
+    get_greeting,
+    has_one_question,
+    is_valid_length,
+    is_within_schedule,
+    load_rag,
+)
+from .turn_tracing import sdr_traced
+from backend.utils.language_guard import LanguageGuard
 
 STAGE_PROGRESSION = [
-    "hook", "qualify", "pain", "amplify", "tease",
-    "proof", "reveal", "feedback", "close"
+    "hook",
+    "qualify",
+    "pain",
+    "amplify",
+    "tease",
+    "proof",
+    "reveal",
+    "feedback",
+    "close",
 ]
 
 
@@ -89,7 +97,9 @@ def _normalize_memory_payload(raw: dict | None) -> dict:
     return data
 
 
-def _parse_llm_sdr_response(response_text: str, default_stage: str) -> tuple[str, str, dict]:
+def _parse_llm_sdr_response(
+    response_text: str, default_stage: str
+) -> tuple[str, str, dict]:
     """Parser unificado para respostas do Franz.
 
     Lida com 3 cenarios:
@@ -100,8 +110,8 @@ def _parse_llm_sdr_response(response_text: str, default_stage: str) -> tuple[str
     Returns:
         (reply, next_stage, update_facts) — reply nunca contem markdown fence
     """
-    import re as _re
     import json as _json
+    import re as _re
 
     if not response_text:
         return "", default_stage, {}
@@ -109,7 +119,9 @@ def _parse_llm_sdr_response(response_text: str, default_stage: str) -> tuple[str
     text = response_text.strip()
 
     # Remove fence markdown ```json ... ``` ou ``` ... ```
-    fence_match = _re.search(r"```(?:json)?\s*(\{[\s\S]*?\})\s*```", text, _re.IGNORECASE)
+    fence_match = _re.search(
+        r"```(?:json)?\s*(\{[\s\S]*?\})\s*```", text, _re.IGNORECASE
+    )
     candidate = fence_match.group(1) if fence_match else None
 
     # Se nao tem fence, tenta pegar o primeiro { ... } balanceado
@@ -118,14 +130,20 @@ def _parse_llm_sdr_response(response_text: str, default_stage: str) -> tuple[str
 
     if candidate:
         try:
-            data = _json.loads(candidate.group() if hasattr(candidate, "group") else candidate)
+            data = _json.loads(
+                candidate.group() if hasattr(candidate, "group") else candidate
+            )
             if isinstance(data, dict):
                 reply = data.get("reply", "")
                 if reply and isinstance(reply, str):
                     # Valida que o reply NAO eh JSON cru (defesa em profundidade)
                     if reply.lstrip().startswith("{") and reply.rstrip().endswith("}"):
                         return "", default_stage, {}
-                    return reply.strip()[:600], data.get("next_stage", default_stage) or default_stage, data.get("update_facts", {}) or {}
+                    return (
+                        reply.strip()[:600],
+                        data.get("next_stage", default_stage) or default_stage,
+                        data.get("update_facts", {}) or {},
+                    )
         except (_json.JSONDecodeError, ValueError):
             pass
 
@@ -144,7 +162,6 @@ class SDRFallbackError(Exception):
     Sprint 1.7: caller captura, marca memory.needs_human_followup=True,
     NAO envia mensagem. Humano precisa intervir.
     """
-    pass
 
 
 def _llm_with_retries_and_breaker(stage: str, fn):
@@ -157,6 +174,7 @@ def _llm_with_retries_and_breaker(stage: str, fn):
     NAO retorna texto generico. Se tudo falhar, propaga erro pra caller.
     """
     from services.retry_helper import retry_with_backoff
+
     from .circuit_breaker import get_breaker
 
     breaker = get_breaker()
@@ -170,7 +188,7 @@ def _llm_with_retries_and_breaker(stage: str, fn):
             if not reply or not reply.strip():
                 raise SDRFallbackError(f"LLM {stage} returned empty reply")
             return reply
-        except Exception as exc:
+        except Exception:
             breaker.record_failure(stage)
             raise
 
@@ -204,7 +222,7 @@ def _orchestrator_decide(
     memory,
     incoming_message: str,
     llm_suggested_stage: str,
-) -> "OrchestratorDecision":
+) -> OrchestratorDecision:
     """Wrapper do Orchestrator. Substitui o _next_stage antigo na logica de decisao.
 
     Mantem compatibilidade: retorna OrchestratorDecision com state + stage.
@@ -212,6 +230,7 @@ def _orchestrator_decide(
     """
     try:
         from .orchestrator import orchestrate, update_lead_memory_after_turn
+
         decision = orchestrate(
             incoming_message=incoming_message or "",
             current_state_str=memory.conversation_state or "idle",
@@ -229,6 +248,7 @@ def _orchestrator_decide(
 # NODE 1: load_context (entrada - carrega tudo que precisa)
 # ════════════════════════════════════════════════════════════════════
 
+
 def _simplify_language(reply: str) -> str:
     """Reescreve a reply com tom didatico, como se fosse pra crianca de 10 anos.
 
@@ -244,6 +264,7 @@ def _simplify_language(reply: str) -> str:
         return reply
 
     import re
+
     result = reply
 
     # Gírias e palavras em inglês - aplica em TODAS as mensagens
@@ -349,7 +370,8 @@ def _reply_already_has_offer(reply: str) -> bool:
         "site_url" in reply_lower,
         "demonstra" in reply_lower,
         "fralib.com" in reply_lower or "seunegociofralib" in reply_lower,
-        "link" in reply_lower and ("site" in reply_lower or "prév" in reply_lower or "prévio" in reply_lower),
+        "link" in reply_lower
+        and ("site" in reply_lower or "prév" in reply_lower or "prévio" in reply_lower),
         "leva 2 min" in reply_lower,
         "sem custo" in reply_lower,
     ]
@@ -361,6 +383,7 @@ def node_load_context(state: SDRState) -> dict:
     """Carrega memória do lead, RAG, contexto inicial"""
     try:
         from utils.pii_masker import mask_phone as _mp
+
         _tel = _mp(state.get("telefone", "?"))
     except Exception:
         _tel = "****"
@@ -380,6 +403,7 @@ def node_load_context(state: SDRState) -> dict:
     # Carregar memória
     try:
         from agents.memory import carregar_memoria
+
         session_id = f"franz_lead_{state.get('telefone', '')}"
         memoria_raw = carregar_memoria(session_id, user_id=state.get("user_id"))
         if memoria_raw:
@@ -391,9 +415,11 @@ def node_load_context(state: SDRState) -> dict:
                     user_id=state.get("user_id", 0),
                     telefone=state.get("telefone", ""),
                     **{
-                        k: v for k, v in memoria_payload.items()
-                        if k in LeadMemory.model_fields and k not in ("lead_id", "user_id", "telefone")
-                    }
+                        k: v
+                        for k, v in memoria_payload.items()
+                        if k in LeadMemory.model_fields
+                        and k not in ("lead_id", "user_id", "telefone")
+                    },
                 )
             except Exception:
                 memory = LeadMemory(
@@ -427,7 +453,10 @@ def node_load_context(state: SDRState) -> dict:
     memory.telefone = state.get("telefone", memory.telefone)
     state_stage = (state.get("sdr_stage") or "").strip()
     if state_stage and state_stage not in {
-        "pendente_wpp", "pending_sdr_send", "blocked_plan", "sdr_enqueue_failed"
+        "pendente_wpp",
+        "pending_sdr_send",
+        "blocked_plan",
+        "sdr_enqueue_failed",
     }:
         memory.stage = state_stage
 
@@ -442,10 +471,14 @@ def node_load_context(state: SDRState) -> dict:
     memory_ref = memory  # usar referência
     persona = state.get("persona")
     if not persona or persona == "auto":
-        persona = "lobo" if should_use_lobo(
-            intent,
-            memory_ref.rejection_count if memory_ref else 0,
-        ) else "consultivo"
+        persona = (
+            "lobo"
+            if should_use_lobo(
+                intent,
+                memory_ref.rejection_count if memory_ref else 0,
+            )
+            else "consultivo"
+        )
 
     print(f"[SDR] Intent detected: {intent}")
     print(f"[SDR] Memory stage: {memory.stage}")
@@ -498,6 +531,7 @@ def node_load_context(state: SDRState) -> dict:
             if user_turns and not memory.turn_count:
                 memory.turn_count = user_turns
             from datetime import datetime as _dt
+
             memory.last_lead_response_at = _dt.now().isoformat()
         except Exception as _hist_err:
             print(f"[SDR] history hydration falhou (nao-bloqueante): {_hist_err}")
@@ -507,7 +541,8 @@ def node_load_context(state: SDRState) -> dict:
         "rag_context": rag_context,
         "detected_intent": intent,
         "current_stage": memory.stage,
-        "variant": memory.variant or choose_variant(memory.lead_id, memory.segmento, memory.user_id),
+        "variant": memory.variant
+        or choose_variant(memory.lead_id, memory.segmento, memory.user_id),
         "persona": persona,
         "selected_agent": selected_agent,
         "previous_agent": agent_context.get("previous_agent", ""),
@@ -525,6 +560,7 @@ def node_load_context(state: SDRState) -> dict:
 # NODE 2: check_schedule (verifica horário)
 # ════════════════════════════════════════════════════════════════════
 
+
 @sdr_traced("node_check_schedule")
 def node_check_schedule(state: SDRState) -> dict:
     """Verifica se está no horário de atendimento"""
@@ -541,6 +577,7 @@ def node_check_schedule(state: SDRState) -> dict:
 # ════════════════════════════════════════════════════════════════════
 # NODE 3: route_intent (decide qual node executar)
 # ════════════════════════════════════════════════════════════════════
+
 
 def route_by_intent(state: SDRState) -> str:
     """Decide qual node executar baseado no intent"""
@@ -590,6 +627,7 @@ def node_greeting(state: SDRState) -> dict:
     _turn_trace = None
     try:
         from .turn_tracing import SDRTurnTrace
+
         _turn_trace = SDRTurnTrace(
             lead_id=str(state.get("lead_id") or state.get("telefone") or "unknown"),
             lead_nome=memory.nome or "",
@@ -615,6 +653,7 @@ def node_greeting(state: SDRState) -> dict:
     incoming_msg = state.get("incoming_message", "")
     try:
         from agents.llm_direct import call_claude
+
         contexto = f"Lead respondeu: '{incoming_msg}'"
         if memory.segmento:
             contexto += f" | Segmento: {memory.segmento}"
@@ -642,16 +681,19 @@ def node_greeting(state: SDRState) -> dict:
             "Exemplo BOM: 'Oi Jéssica! Tudo ótimo por aqui. Você é nutricionista em Curitiba mesmo?'\n"
             "Exemplo RUIM: 'Retomando o que te mandei: hoje a prioridade de vocês é captar mais clientes para nutricionista.'\n"
         )
-        llm_reply = _llm_with_retries_and_breaker("greeting", lambda: call_claude(
-            system=system,
-            user=contexto[:500],
-            model="sonnet",  # Sonnet (Haiku falha no proxy kpalabz)
-            max_tokens=120,  # 2-3 frases curtas, NAO tagarelando
-            temperature=0.3,  # baixa variacao, evita chines/outros idiomas
-            agent_name="sdr_greeting_node",
-            respect_agent_config=False,
-            enable_context=False,
-        ).strip())
+        llm_reply = _llm_with_retries_and_breaker(
+            "greeting",
+            lambda: call_claude(
+                system=system,
+                user=contexto[:500],
+                model="sonnet",  # Sonnet (Haiku falha no proxy kpalabz)
+                max_tokens=120,  # 2-3 frases curtas, NAO tagarelando
+                temperature=0.3,  # baixa variacao, evita chines/outros idiomas
+                agent_name="sdr_greeting_node",
+                respect_agent_config=False,
+                enable_context=False,
+            ).strip(),
+        )
         reply = llm_reply
     except SDRFallbackError:
         # Sprint 1.7: marca pra humano, NAO envia nada
@@ -659,9 +701,11 @@ def node_greeting(state: SDRState) -> dict:
         memory.last_failure_stage = "greeting"
         try:
             from utils.safe_log import safe_log_silent_failure as _slf
+
             _slf(
                 Exception("greeting SDRFallbackError"),
-                op="sdr_greeting", lead_id=str(getattr(memory, "lead_id", "?")),
+                op="sdr_greeting",
+                lead_id=str(getattr(memory, "lead_id", "?")),
                 stage="greeting",
                 extra={"reason": "LLM failed after retries"},
             )
@@ -680,7 +724,11 @@ def node_greeting(state: SDRState) -> dict:
 
     memory.last_message_received = state.get("incoming_message", "")
     memory.last_message_sent = reply
-    save_agent_note(memory, state.get("selected_agent") or "atendimento", "Lead cumprimentou/abriu conversa; Franz gerou resposta contextual via LLM.")
+    save_agent_note(
+        memory,
+        state.get("selected_agent") or "atendimento",
+        "Lead cumprimentou/abriu conversa; Franz gerou resposta contextual via LLM.",
+    )
 
     return {
         "outgoing_message": reply,
@@ -693,6 +741,7 @@ def node_greeting(state: SDRState) -> dict:
 # ════════════════════════════════════════════════════════════════════
 # NODE 4: node_hook (primeira abordagem)
 # ════════════════════════════════════════════════════════════════════
+
 
 @sdr_traced("node_hook")
 def node_hook(state: SDRState) -> dict:
@@ -756,26 +805,37 @@ def node_hook(state: SDRState) -> dict:
                 # get_franz_persona() carrega FRANZ_PERSONA.md (fallback constante)
                 persona_texto = get_franz_persona()
                 base_for_tenant = (
-                    persona_texto + "\n\n" +
-                    agent_system_overlay(state.get("agent_context", {})) + "\n\n" +
-                    stage_prompt + "\n\n" +
-                    state.get("rag_context", "")
+                    persona_texto
+                    + "\n\n"
+                    + agent_system_overlay(state.get("agent_context", {}))
+                    + "\n\n"
+                    + stage_prompt
+                    + "\n\n"
+                    + state.get("rag_context", "")
                 )
                 full_system = build_sdr_system_prompt(base_for_tenant, sdr_settings)
             except Exception as _tenant_err:
-                print(f"[SDR] build_sdr_system_prompt falhou (nao-bloqueante): {_tenant_err}")
+                print(
+                    f"[SDR] build_sdr_system_prompt falhou (nao-bloqueante): {_tenant_err}"
+                )
                 full_system = (
-                    get_franz_persona() + "\n\n" +
-                    agent_system_overlay(state.get("agent_context", {})) + "\n\n" +
-                    stage_prompt + "\n\n" +
-                    state.get("rag_context", "")
+                    get_franz_persona()
+                    + "\n\n"
+                    + agent_system_overlay(state.get("agent_context", {}))
+                    + "\n\n"
+                    + stage_prompt
+                    + "\n\n"
+                    + state.get("rag_context", "")
                 )
         else:
             full_system = (
-                get_persona_text(state.get("persona", "consultivo")) + "\n\n" +
-                agent_system_overlay(state.get("agent_context", {})) + "\n\n" +
-                stage_prompt + "\n\n" +
-                state.get("rag_context", "")
+                get_persona_text(state.get("persona", "consultivo"))
+                + "\n\n"
+                + agent_system_overlay(state.get("agent_context", {}))
+                + "\n\n"
+                + stage_prompt
+                + "\n\n"
+                + state.get("rag_context", "")
             )
 
         # === Sprint 3A: Tools dinâmicas SDR (opt-in via FRALIB_SDR_USE_TOOLS=1) ===
@@ -784,12 +844,13 @@ def node_hook(state: SDRState) -> dict:
         if os.getenv("FRALIB_SDR_USE_TOOLS", "0") == "1":
             try:
                 from .tools_sdr import (
+                    check_lead_quality,
+                    format_lead_quality_for_prompt,
+                    format_similar_conversations_for_prompt,
                     get_nicho_playbook,
                     retrieve_similar_conversations,
-                    check_lead_quality,
-                    format_similar_conversations_for_prompt,
-                    format_lead_quality_for_prompt,
                 )
+
                 playbook = get_nicho_playbook(memory.segmento or "default")
                 playbook_text = (
                     f"NICHO: {memory.segmento or 'default'}\n"
@@ -806,10 +867,10 @@ def node_hook(state: SDRState) -> dict:
                 if os.getenv("FRALIB_SDR_USE_RAG", "0") == "1":
                     try:
                         from .retrieval_semantico import (
-                            search_similar_conversations,
                             format_search_results_for_prompt,
-                            current_backend,
+                            search_similar_conversations,
                         )
+
                         rag_results = search_similar_conversations(
                             user_id=memory.user_id,
                             nicho=memory.segmento or "default",
@@ -825,22 +886,30 @@ def node_hook(state: SDRState) -> dict:
                                 user_id=memory.user_id,
                                 top_k=3,
                             )
-                            similar_text = format_similar_conversations_for_prompt(similar_convs)
+                            similar_text = format_similar_conversations_for_prompt(
+                                similar_convs
+                            )
                     except Exception as _rag_err:
-                        print(f"[SDR] retrieval_semantico falhou, usando tail: {_rag_err}")
+                        print(
+                            f"[SDR] retrieval_semantico falhou, usando tail: {_rag_err}"
+                        )
                         similar_convs = retrieve_similar_conversations(
                             memory.segmento or "default",
                             user_id=memory.user_id,
                             top_k=3,
                         )
-                        similar_text = format_similar_conversations_for_prompt(similar_convs)
+                        similar_text = format_similar_conversations_for_prompt(
+                            similar_convs
+                        )
                 else:
                     similar_convs = retrieve_similar_conversations(
                         memory.segmento or "default",
                         user_id=memory.user_id,
                         top_k=3,
                     )
-                    similar_text = format_similar_conversations_for_prompt(similar_convs)
+                    similar_text = format_similar_conversations_for_prompt(
+                        similar_convs
+                    )
                 lead_q = check_lead_quality(
                     user_id=memory.user_id,
                     telefone=memory.telefone or "",
@@ -854,9 +923,10 @@ def node_hook(state: SDRState) -> dict:
                 if os.getenv("FRALIB_SDR_USE_TELEMETRIA", "0") == "1":
                     try:
                         from .telemetria_variacao import (
-                            rank_variacoes_by_conversion,
                             format_variacao_stats_for_prompt,
+                            rank_variacoes_by_conversion,
                         )
+
                         ranking = rank_variacoes_by_conversion(
                             user_id=memory.user_id,
                             nicho=memory.segmento or "default",
@@ -864,14 +934,20 @@ def node_hook(state: SDRState) -> dict:
                         )
                         telemetria_text = format_variacao_stats_for_prompt(ranking)
                     except Exception as _tel_err:
-                        print(f"[SDR] telemetria_variacao falhou (nao-bloqueante): {_tel_err}")
+                        print(
+                            f"[SDR] telemetria_variacao falhou (nao-bloqueante): {_tel_err}"
+                        )
                 tools_extra = "\n\n".join(
-                    x for x in [playbook_text, similar_text, lead_text, telemetria_text] if x
+                    x
+                    for x in [playbook_text, similar_text, lead_text, telemetria_text]
+                    if x
                 )
                 if tools_extra:
                     full_system = full_system + "\n\n" + tools_extra
             except Exception as _tools_err:
-                print(f"[SDR] tools_sdr pre-fetch falhou (nao-bloqueante): {_tools_err}")
+                print(
+                    f"[SDR] tools_sdr pre-fetch falhou (nao-bloqueante): {_tools_err}"
+                )
 
         # === Memory 3-tier (Feature #1 do roadmap 10/10) ===
         # Injeta top-10 core + top-3 warm via thread-local setada antes do LLM call.
@@ -879,32 +955,40 @@ def node_hook(state: SDRState) -> dict:
         # atraves de gerar_prompt_com_memoria.
         try:
             from .memory_hook import inject_memory_for_franz
+
             inject_memory_for_franz(memory, memory.segmento or "default")
         except Exception as _mem_err:
             print(f"[SDR] memory hook inject falhou (nao-bloqueante): {_mem_err}")
 
         try:
-            response_text = _llm_with_retries_and_breaker("hook", lambda: call_claude(
-                system=full_system,
-                user=user_prompt,
-                model="sonnet",  # ← SONNET (não Haiku)
-                max_tokens=800,
-                temperature=0.3,
-                agent_name=state.get("selected_agent") or "franz",
-                enable_context=False,
-            ))
+            response_text = _llm_with_retries_and_breaker(
+                "hook",
+                lambda: call_claude(
+                    system=full_system,
+                    user=user_prompt,
+                    model="sonnet",  # ← SONNET (não Haiku)
+                    max_tokens=800,
+                    temperature=0.3,
+                    agent_name=state.get("selected_agent") or "franz",
+                    enable_context=False,
+                ),
+            )
 
             # Parse JSON
-            reply, next_stage, update_facts = _parse_llm_sdr_response(response_text, "qualify")
+            reply, next_stage, update_facts = _parse_llm_sdr_response(
+                response_text, "qualify"
+            )
         except SDRFallbackError:
             # Sprint 1.7: NUNCA usa template fixo. Marca pra humano.
             memory.needs_human_followup = True
             memory.last_failure_stage = "hook"
             try:
                 from utils.safe_log import safe_log_silent_failure as _slf
+
                 _slf(
                     Exception("hook SDRFallbackError"),
-                    op="sdr_hook", lead_id=str(getattr(memory, "lead_id", "?")),
+                    op="sdr_hook",
+                    lead_id=str(getattr(memory, "lead_id", "?")),
                     stage="hook",
                     extra={"reason": "LLM failed after retries"},
                 )
@@ -928,11 +1012,11 @@ def node_hook(state: SDRState) -> dict:
     if os.getenv("FRALIB_SDR_USE_TOOLS", "0") == "1":
         try:
             from .tools_sdr import save_sdr_lesson
+
             stage = memory.stage
             intent = (memory.last_intent or "").lower()
             should_save = (
-                stage in ("won", "lost", "opt_out")
-                or intent == "objection_price"
+                stage in ("won", "lost", "opt_out") or intent == "objection_price"
             )
             if should_save:
                 converteu = stage == "won"
@@ -953,6 +1037,7 @@ def node_hook(state: SDRState) -> dict:
                 if os.getenv("FRALIB_SDR_USE_RAG", "0") == "1" and memory.lead_id:
                     try:
                         from .retrieval_semantico import index_conversation
+
                         snippet = (
                             f"lead: {state.get('incoming_message', '')[:200]}\n"
                             f"bot: {reply[:200]}"
@@ -970,11 +1055,17 @@ def node_hook(state: SDRState) -> dict:
                             },
                         )
                     except Exception as _idx_err:
-                        print(f"[SDR] index_conversation falhou (nao-bloqueante): {_idx_err}")
+                        print(
+                            f"[SDR] index_conversation falhou (nao-bloqueante): {_idx_err}"
+                        )
                 # === Sprint 3C: telemetria variacao (rastreia qual template converteu) ===
-                if os.getenv("FRALIB_SDR_USE_TELEMETRIA", "0") == "1" and memory.lead_id:
+                if (
+                    os.getenv("FRALIB_SDR_USE_TELEMETRIA", "0") == "1"
+                    and memory.lead_id
+                ):
                     try:
                         from .telemetria_variacao import record_variacao_outcome
+
                         # template_id derivado de persona + segmento (heuristica simples)
                         template_id = f"v_{(memory.persona or 'consultivo').replace(' ', '_')}_{(memory.segmento or 'default').replace(' ', '_')}"
                         record_variacao_outcome(
@@ -991,7 +1082,9 @@ def node_hook(state: SDRState) -> dict:
                             },
                         )
                     except Exception as _tel_err:
-                        print(f"[SDR] record_variacao_outcome falhou (nao-bloqueante): {_tel_err}")
+                        print(
+                            f"[SDR] record_variacao_outcome falhou (nao-bloqueante): {_tel_err}"
+                        )
         except Exception as _save_err:
             print(f"[SDR] save_sdr_lesson falhou (nao-bloqueante): {_save_err}")
 
@@ -1009,12 +1102,15 @@ def node_hook(state: SDRState) -> dict:
         llm_suggested_stage=next_stage,
     )
     if orch.in_loop or orch.force_break_loop:
-        print(f"[SDR] hook: orchestrator loop-break detected; state={orch.state_before.value}->{orch.state_after.value}")
+        print(
+            f"[SDR] hook: orchestrator loop-break detected; state={orch.state_before.value}->{orch.state_after.value}"
+        )
     # Atualiza reply se orchestrator detectou loop mas reply é generico demais
     if orch.force_break_loop and len(reply.strip()) < 30:
         # Sprint 1.7: regenera via LLM (lead-specific). NAO usa template hardcoded.
         try:
             from agents.llm_direct import call_claude
+
             contexto = (
                 "Lead travado em loop, precisa pergunta direta sobre decisor. "
                 f"Segmento: {memory.segmento or 'nao informado'}. "
@@ -1024,21 +1120,25 @@ def node_hook(state: SDRState) -> dict:
                 "Voce e o Franz. Gere 1 frase perguntando diretamente se o lead e decisor. "
                 "Tom natural WhatsApp, sem template fixo."
             )
-            reply = _llm_with_retries_and_breaker("hook_loopbreak", lambda: call_claude(
-                system=system,
-                user=contexto,
-                model="sonnet",
-                max_tokens=120,
-                temperature=0.3,
-                agent_name="sdr_hook_loopbreak",
-                enable_context=False,
-            )).strip()
+            reply = _llm_with_retries_and_breaker(
+                "hook_loopbreak",
+                lambda: call_claude(
+                    system=system,
+                    user=contexto,
+                    model="sonnet",
+                    max_tokens=120,
+                    temperature=0.3,
+                    agent_name="sdr_hook_loopbreak",
+                    enable_context=False,
+                ),
+            ).strip()
         except SDRFallbackError:
             # Sem LLM: silenciar (NAO mandar template). Marcar pra humano.
             memory.needs_human_followup = True
             memory.last_failure_stage = "hook_loopbreak"
             try:
                 from utils.safe_log import safe_log_silent_failure as _slf
+
                 _slf(
                     Exception("loopbreak SDRFallbackError"),
                     op="sdr_hook_loopbreak",
@@ -1052,7 +1152,11 @@ def node_hook(state: SDRState) -> dict:
 
     memory.last_message_sent = reply
     if isinstance(update_facts, dict):
-        save_agent_note(memory, state.get("selected_agent") or "abordagem", update_facts.get("agent_note"))
+        save_agent_note(
+            memory,
+            state.get("selected_agent") or "abordagem",
+            update_facts.get("agent_note"),
+        )
     memory.attempts += 1
 
     return {
@@ -1066,8 +1170,10 @@ def node_hook(state: SDRState) -> dict:
 # NODE 5: node_qualify, node_pain, node_amplify, node_tease, etc
 # ════════════════════════════════════════════════════════════════════
 
+
 def make_stage_node(stage_name: str):
     """Factory para criar um node de stage genérico"""
+
     def node(state: SDRState) -> dict:
         memory = state.get("memory")
         if not memory:
@@ -1123,29 +1229,38 @@ def make_stage_node(stage_name: str):
 
             # System completo: persona + stage prompt + rag
             full_system = (
-                persona_text + "\n\n" +
-                agent_system_overlay(state.get("agent_context", {})) + "\n\n" +
-                stage_prompt + "\n\n" +
-                state.get("rag_context", "")
+                persona_text
+                + "\n\n"
+                + agent_system_overlay(state.get("agent_context", {}))
+                + "\n\n"
+                + stage_prompt
+                + "\n\n"
+                + state.get("rag_context", "")
             )
 
-            response_text = _llm_with_retries_and_breaker(stage_name, lambda: call_claude(
-                system=full_system,
-                user=user_prompt,
-                model="sonnet",
-                max_tokens=800,
-                temperature=0.3,
-                agent_name=state.get("selected_agent") or "franz",
-                enable_context=False,
-            ))
+            response_text = _llm_with_retries_and_breaker(
+                stage_name,
+                lambda: call_claude(
+                    system=full_system,
+                    user=user_prompt,
+                    model="sonnet",
+                    max_tokens=800,
+                    temperature=0.3,
+                    agent_name=state.get("selected_agent") or "franz",
+                    enable_context=False,
+                ),
+            )
 
-            reply, next_stage, update_facts = _parse_llm_sdr_response(response_text, stage_name)
+            reply, next_stage, update_facts = _parse_llm_sdr_response(
+                response_text, stage_name
+            )
         except SDRFallbackError:
             # Sprint 1.7: marca pra humano, NAO envia nada
             memory.needs_human_followup = True
             memory.last_failure_stage = stage_name
             try:
                 from utils.safe_log import safe_log_silent_failure as _slf
+
                 _slf(
                     Exception(f"{stage_name} SDRFallbackError"),
                     op=f"sdr_stage_{stage_name}",
@@ -1177,7 +1292,7 @@ def make_stage_node(stage_name: str):
                 # Manter só até a primeira pergunta
                 idx = reply.find("?")
                 if idx > 0:
-                    reply = reply[:idx+1]
+                    reply = reply[: idx + 1]
 
         # Contaminação
         contaminado = check_segment_contamination(reply, memory.segmento)
@@ -1191,7 +1306,11 @@ def make_stage_node(stage_name: str):
             for k, v in update_facts.items():
                 if hasattr(memory, k) and v:
                     setattr(memory, k, v)
-            save_agent_note(memory, state.get("selected_agent") or stage_name, update_facts.get("agent_note"))
+            save_agent_note(
+                memory,
+                state.get("selected_agent") or stage_name,
+                update_facts.get("agent_note"),
+            )
 
         # Avançar stage apenas quando o modelo sugerir transição válida.
         # Inbound deve responder ao que foi perguntado, sem empurrar script.
@@ -1231,7 +1350,9 @@ def make_stage_node(stage_name: str):
                 )
         except Exception as learning_err:
             print(f"[SDR] learning evaluator failed: {learning_err}")
-        if not (getattr(memory, "agent_notes", {}) or {}).get(state.get("selected_agent") or stage_name):
+        if not (getattr(memory, "agent_notes", {}) or {}).get(
+            state.get("selected_agent") or stage_name
+        ):
             save_agent_note(
                 memory,
                 state.get("selected_agent") or stage_name,
@@ -1253,6 +1374,7 @@ def make_stage_node(stage_name: str):
 # NODES ESPECIAIS: opt_out, gatekeeper, schedule, is_decisor
 # ════════════════════════════════════════════════════════════════════
 
+
 @sdr_traced("node_opt_out")
 def node_opt_out(state: SDRState) -> dict:
     """Lead pediu pra parar.
@@ -1272,6 +1394,7 @@ def node_opt_out(state: SDRState) -> dict:
     Bug fix: Carolina Ragugnetti 2026-06-25.
     """
     import re
+
     memory = state.get("memory")
     if not memory:
         return {}
@@ -1281,9 +1404,18 @@ def node_opt_out(state: SDRState) -> dict:
     # STEP 2: ja perguntou antes, lead respondeu agora
     if memory.opt_out_pending:
         # Detectar confirmação positiva
-        confirmou = bool(re.search(r"\b(sim|yes|quero|parar|stop|pode|para|cancela|tira)\b", incoming))
+        confirmou = bool(
+            re.search(
+                r"\b(sim|yes|quero|parar|stop|pode|para|cancela|tira)\b", incoming
+            )
+        )
         # Detectar negação (lead quer continuar)
-        cancelou = bool(re.search(r"\b(nao|não|no|continua|seguir|continuar|fica|nao\s+para|não\s+para)\b", incoming))
+        cancelou = bool(
+            re.search(
+                r"\b(nao|não|no|continua|seguir|continuar|fica|nao\s+para|não\s+para)\b",
+                incoming,
+            )
+        )
 
         if confirmou and not cancelou:
             memory.confirm_opt_out_from_pending()
@@ -1297,7 +1429,9 @@ def node_opt_out(state: SDRState) -> dict:
             }
         elif cancelou:
             memory.cancel_opt_out_pending()
-            save_agent_note(memory, "supervisor", "Lead cancelou opt-out pendente; volta pro funil.")
+            save_agent_note(
+                memory, "supervisor", "Lead cancelou opt-out pendente; volta pro funil."
+            )
             # Pergunta aberta - deixa LLM responder com contexto
             return {
                 "outgoing_message": "",  # vazio = deixa o LLM gerar resposta natural
@@ -1349,6 +1483,7 @@ def node_is_decisor(state: SDRState) -> dict:
     # Gerar resposta via LLM - NAO usa template fixo
     try:
         from agents.llm_direct import call_claude
+
         contexto = f"Lead confirmou ser decisor. Respondeu: '{incoming}'"
         if memory.nome:
             contexto += f" | Negocio: {memory.nome}"
@@ -1360,20 +1495,24 @@ def node_is_decisor(state: SDRState) -> dict:
             "Gere resposta curta (max 2 linhas) perguntando sobre o negocio.\n"
             "REGRAS: max 2 frases, 1 pergunta, tom consultivo."
         )
-        reply = _llm_with_retries_and_breaker("is_decisor", lambda: call_claude(
-            system=system,
-            user=contexto,
-            model="sonnet",
-            max_tokens=100,
-            temperature=0.3,
-            agent_name="sdr_is_decisor",
-            enable_context=False,
-        )).strip()
+        reply = _llm_with_retries_and_breaker(
+            "is_decisor",
+            lambda: call_claude(
+                system=system,
+                user=contexto,
+                model="sonnet",
+                max_tokens=100,
+                temperature=0.3,
+                agent_name="sdr_is_decisor",
+                enable_context=False,
+            ),
+        ).strip()
     except SDRFallbackError:
         memory.needs_human_followup = True
         memory.last_failure_stage = "is_decisor"
         try:
             from utils.safe_log import safe_log_silent_failure as _slf
+
             _slf(
                 Exception("is_decisor SDRFallbackError"),
                 op="sdr_is_decisor",
@@ -1395,7 +1534,11 @@ def node_is_decisor(state: SDRState) -> dict:
 
     memory.last_message_sent = reply
     memory.update_stage("qualify")
-    save_agent_note(memory, state.get("selected_agent") or "qualificacao", "Lead confirmou ser decisor; pode qualificar dor e canal de captacao.")
+    save_agent_note(
+        memory,
+        state.get("selected_agent") or "qualificacao",
+        "Lead confirmou ser decisor; pode qualificar dor e canal de captacao.",
+    )
 
     return {
         "outgoing_message": reply,
@@ -1414,10 +1557,12 @@ def node_schedule(state: SDRState) -> dict:
 
     incoming = state.get("incoming_message", "")
     from datetime import datetime, timedelta
+
     target_date = (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
 
     # Tentar extrair dia/hora
     import re
+
     time_match = re.search(r"\b(\d{1,2})\s*[h:](\d{0,2})", incoming)
     time_label = ""
     if time_match:
@@ -1435,6 +1580,7 @@ def node_schedule(state: SDRState) -> dict:
     # Sprint 1.7: gerar reply via LLM (lead-specific). SEM template hardcoded.
     try:
         from agents.llm_direct import call_claude
+
         contexto = (
             f"Lead quer agendar. Mensagem dele: '{incoming}'. "
             f"Sugerir label: {label}{time_label}. "
@@ -1448,20 +1594,24 @@ def node_schedule(state: SDRState) -> dict:
             "Voce e o Franz. Confirme o agendamento em 1 frase usando o label sugerido. "
             "Tom: natural, WhatsApp, sem parecer template."
         )
-        reply = _llm_with_retries_and_breaker("schedule", lambda: call_claude(
-            system=system,
-            user=contexto,
-            model="sonnet",
-            max_tokens=80,
-            temperature=0.3,
-            agent_name="sdr_schedule",
-            enable_context=False,
-        )).strip()
+        reply = _llm_with_retries_and_breaker(
+            "schedule",
+            lambda: call_claude(
+                system=system,
+                user=contexto,
+                model="sonnet",
+                max_tokens=80,
+                temperature=0.3,
+                agent_name="sdr_schedule",
+                enable_context=False,
+            ),
+        ).strip()
     except SDRFallbackError:
         memory.needs_human_followup = True
         memory.last_failure_stage = "schedule"
         try:
             from utils.safe_log import safe_log_silent_failure as _slf
+
             _slf(
                 Exception("schedule SDRFallbackError"),
                 op="sdr_schedule",
@@ -1483,7 +1633,11 @@ def node_schedule(state: SDRState) -> dict:
     memory.followup_date = target_date
     memory.last_message_received = incoming
     memory.last_message_sent = reply
-    save_agent_note(memory, state.get("selected_agent") or "followup", f"Retomar {label}{time_label}; respeitar agendamento.")
+    save_agent_note(
+        memory,
+        state.get("selected_agent") or "followup",
+        f"Retomar {label}{time_label}; respeitar agendamento.",
+    )
 
     return {
         "outgoing_message": reply,
@@ -1497,6 +1651,7 @@ def node_schedule(state: SDRState) -> dict:
 # NODES DE GATEKEEPER (5 níveis)
 # ════════════════════════════════════════════════════════════════════
 
+
 @sdr_traced("node_gatekeeper")
 def node_gatekeeper(state: SDRState) -> dict:
     """Navega gatekeeper com 5 níveis de insistência"""
@@ -1507,10 +1662,17 @@ def node_gatekeeper(state: SDRState) -> dict:
     incoming = state.get("incoming_message", "")
     text = (incoming or "").lower()
 
-    is_absent = bool(re.search(r"(n[aã]o|nao).{0,18}(est[aá]|t[aá]|se encontra|veio)|fora|saiu|ausente", text))
+    is_absent = bool(
+        re.search(
+            r"(n[aã]o|nao).{0,18}(est[aá]|t[aá]|se encontra|veio)|fora|saiu|ausente",
+            text,
+        )
+    )
 
     level = min(memory.gatekeeper_level + 1, 5)
-    subject = "alunos novos" if "academia" in memory.segmento.lower() else "clientes novos"
+    subject = (
+        "alunos novos" if "academia" in memory.segmento.lower() else "clientes novos"
+    )
 
     if level == 1 and not is_absent:
         reply = f"Tranquilo. Consegue me passar pra ele? É coisa de 2 min sobre como a {memory.nome} capta {subject}."
@@ -1519,14 +1681,20 @@ def node_gatekeeper(state: SDRState) -> dict:
     elif level == 3:
         reply = f"Entendi. Posso te mandar uma ideia curta pra você mostrar pra ele sobre captar {subject}?"
     elif level == 4:
-        reply = "Beleza. Ele tem um WhatsApp direto que eu possa chamar sem te atrapalhar?"
+        reply = (
+            "Beleza. Ele tem um WhatsApp direto que eu possa chamar sem te atrapalhar?"
+        )
     else:
         reply = "Combinado. Qual dia e horário você acha melhor eu tentar de novo?"
 
     memory.gatekeeper_level = level
     memory.is_decisor = False
     memory.last_message_sent = reply
-    save_agent_note(memory, state.get("selected_agent") or "qualificacao", f"Gatekeeper nivel {level}; decisor ainda nao confirmado.")
+    save_agent_note(
+        memory,
+        state.get("selected_agent") or "qualificacao",
+        f"Gatekeeper nivel {level}; decisor ainda nao confirmado.",
+    )
     memory.attempts += 1
 
     return {
@@ -1540,6 +1708,7 @@ def node_gatekeeper(state: SDRState) -> dict:
 # ════════════════════════════════════════════════════════════════════
 # NODE FINAL: save_and_send
 # ════════════════════════════════════════════════════════════════════
+
 
 @sdr_traced("node_save_and_send")
 def node_save_and_send(state: SDRState) -> dict:
@@ -1561,7 +1730,12 @@ def node_save_and_send(state: SDRState) -> dict:
     )
     if reply:
         try:
-            from .site_offer import should_offer_site, offer_proactive, increment_offer_count
+            from .site_offer import (
+                increment_offer_count,
+                offer_proactive,
+                should_offer_site,
+            )
+
             incoming = state.get("incoming_message", "") or ""
             detected_intent = state.get("detected_intent", "") or ""
             turn_count = getattr(memory, "turn_count", 0) or 0
@@ -1584,6 +1758,13 @@ def node_save_and_send(state: SDRState) -> dict:
         except Exception as _sl_err:
             print(f"[SDR] simplify_language falhou: {_sl_err}")
 
+    if reply:
+        reply = LanguageGuard.sanitize_output(reply)
+        if not reply:
+            reply = "Entendi. Pode me explicar um pouco mais?"
+        elif not LanguageGuard.is_clean_portuguese(reply):
+            raise ValueError("Resposta do SDR rejeitada pelo LanguageGuard")
+
     # === LLM-as-judge quality gate (Feature 2 do roadmap 10/10) ===
     # Avalia a resposta antes de enviar. Bloqueia se score < 3.
     # PULA para intents óbvios: greeting, acknowledgment, opt_out
@@ -1591,7 +1772,11 @@ def node_save_and_send(state: SDRState) -> dict:
         try:
             # Detectar intent para pular judge em casos obvios
             detected_intent = state.get("detected_intent", "") or ""
-            skip_judge = detected_intent.lower() in ("greeting", "acknowledgment", "opt_out")
+            skip_judge = detected_intent.lower() in (
+                "greeting",
+                "acknowledgment",
+                "opt_out",
+            )
             if skip_judge:
                 # Para intents óbvios, usa score alto automático
                 quality_score = 5
@@ -1599,6 +1784,7 @@ def node_save_and_send(state: SDRState) -> dict:
                 quality_should_send = True
             else:
                 from .quality_judge import evaluate_reply
+
                 incoming = state.get("incoming_message", "")
                 stage = state.get("current_stage") or memory.stage or "hook"
                 segmento = memory.segmento or ""
@@ -1615,24 +1801,40 @@ def node_save_and_send(state: SDRState) -> dict:
                 quality_should_send = quality.should_send
 
             # Persistir score na LeadMemory
-            if not hasattr(memory, "last_quality_score") or memory.last_quality_score is None:
+            if (
+                not hasattr(memory, "last_quality_score")
+                or memory.last_quality_score is None
+            ):
                 memory.last_quality_score = 0
             memory.last_quality_score = quality_score
             memory.last_quality_issues = quality_issues
             # Logar
             from .turn_tracing import get_active_trace
+
             trace = get_active_trace(str(state.get("lead_id") or memory.telefone or ""))
             if trace:
-                span = trace.start_span("quality_judge", modelo="skip" if skip_judge else "haiku", score=quality_score)
-                trace.end_span(span, status="completed", score=quality_score, should_send=quality_should_send)
+                span = trace.start_span(
+                    "quality_judge",
+                    modelo="skip" if skip_judge else "haiku",
+                    score=quality_score,
+                )
+                trace.end_span(
+                    span,
+                    status="completed",
+                    score=quality_score,
+                    should_send=quality_should_send,
+                )
             # Bloquear envio se score < 3
             if not quality_should_send:
-                print(f"[SDR] JUDGE BLOQUEOU ENVIO: score={quality_score}, issues={quality_issues}")
+                print(
+                    f"[SDR] JUDGE BLOQUEOU ENVIO: score={quality_score}, issues={quality_issues}"
+                )
                 print(f"[SDR] Reply rejeitada: {reply[:100]}")
                 return {}  # nao envia
         except Exception as _judge_err:
             # Sprint 1.3: silent failure → logger.warning estruturado
             from utils.safe_log import safe_log_silent_failure
+
             safe_log_silent_failure(
                 _judge_err,
                 op="quality_judge",
@@ -1642,6 +1844,7 @@ def node_save_and_send(state: SDRState) -> dict:
     # Persiste o trace do turno SDR (todos os nodes ja instrumentaram spans)
     try:
         from .turn_tracing import end_turn_trace
+
         lead_id = str(state.get("lead_id") or memory.telefone or "unknown")
         end_turn_trace(lead_id)
     except Exception as _trace_end_err:
@@ -1658,9 +1861,7 @@ def node_save_and_send(state: SDRState) -> dict:
                 tenant_id=int(state.get("tenant_id") or memory.user_id or 0),
                 stage_before=str(state.get("stage_before") or ""),
                 stage_after=str(
-                    state.get("stage_after")
-                    or getattr(memory, "stage", "")
-                    or ""
+                    state.get("stage_after") or getattr(memory, "stage", "") or ""
                 ),
                 intent=str(state.get("detected_intent") or ""),
                 confidence=_safe_float(state.get("confidence"), default=None),
@@ -1691,7 +1892,6 @@ def node_save_and_send(state: SDRState) -> dict:
                 msg_hash,
                 pick_wall_street_close,
             )
-            from agents.sdr_langgraph.state import LeadMemory as _LM
 
             # 1. Detecta msg parece-robo
             if is_robot_like(reply):
@@ -1703,12 +1903,20 @@ def node_save_and_send(state: SDRState) -> dict:
             if detect_msg_duplicate(reply, previous_msgs):
                 # Substitui por variacao
                 reply = reply + " Me conta, faz sentido?"
-                print(f"[SDR-HUMANIZE] Msg duplicada detectada, variacao adicionada")
+                print("[SDR-HUMANIZE] Msg duplicada detectada, variacao adicionada")
 
             # 3. Wall Street close automatico (se hesitou e ainda nao usou)
             stage = memory.stage
-            has_hesitated = memory.rejection_count > 0 or "vou pensar" in reply.lower() or "agora nao" in reply.lower()
-            if has_hesitated and not memory.wall_street_close_used and stage in ("close", "feedback", "reveal"):
+            has_hesitated = (
+                memory.rejection_count > 0
+                or "vou pensar" in reply.lower()
+                or "agora nao" in reply.lower()
+            )
+            if (
+                has_hesitated
+                and not memory.wall_street_close_used
+                and stage in ("close", "feedback", "reveal")
+            ):
                 wall_street = pick_wall_street_close(memory.segmento)
                 reply = reply + "\n\n" + wall_street
                 memory.wall_street_close_used = True
@@ -1718,7 +1926,9 @@ def node_save_and_send(state: SDRState) -> dict:
             is_first = memory.msgs_sent_count == 0
             is_quente = memory.lead_temperature == "quente"
             delay = calc_humanize_delay(
-                last_response_time_min=memory.humanization_profile.get("avg_response_time_min"),
+                last_response_time_min=memory.humanization_profile.get(
+                    "avg_response_time_min"
+                ),
                 is_objetou=is_objetou,
                 is_first_msg=is_first,
                 is_quente=is_quente,
@@ -1741,6 +1951,7 @@ def node_save_and_send(state: SDRState) -> dict:
     # Salvar memória
     try:
         from agents.memory import salvar_memoria
+
         session_id = f"franz_lead_{memory.telefone}"
         salvar_memoria(
             session_id,
@@ -1754,11 +1965,7 @@ def node_save_and_send(state: SDRState) -> dict:
     # Se o stage final for 'ganho' ou 'perdido', grava 1 linha em
     # lead_outcomes. Falha transparente: nunca quebra o envio.
     try:
-        final_stage = (
-            state.get("stage_after")
-            or getattr(memory, "stage", "")
-            or ""
-        )
+        final_stage = state.get("stage_after") or getattr(memory, "stage", "") or ""
         if str(final_stage).strip().lower() in {"ganho", "perdido", "won", "lost"}:
             _handle_terminal_stage(
                 memory=memory,
@@ -1774,6 +1981,7 @@ def node_save_and_send(state: SDRState) -> dict:
 # ════════════════════════════════════════════════════════════════════
 # CONSTRUÇÃO DO GRAFO
 # ════════════════════════════════════════════════════════════════════
+
 
 def build_sdr_graph() -> Any:
     """Constrói o grafo SDR"""
@@ -1798,9 +2006,17 @@ def build_sdr_graph() -> Any:
 
     # Nodes de stage
     for stage_name in [
-        "hook", "qualify", "pain", "amplify", "tease",
-        "proof", "reveal", "feedback", "close",
-        "followup_24h", "followup_72h"
+        "hook",
+        "qualify",
+        "pain",
+        "amplify",
+        "tease",
+        "proof",
+        "reveal",
+        "feedback",
+        "close",
+        "followup_24h",
+        "followup_72h",
     ]:
         workflow.add_node(f"node_{stage_name}", make_stage_node(stage_name))
 
@@ -1830,15 +2046,27 @@ def build_sdr_graph() -> Any:
             "node_close": "node_close",
             "node_followup_24h": "node_followup_24h",
             "node_followup_72h": "node_followup_72h",
-        }
+        },
     )
 
     # Todos os nodes de stage vão para save_and_send
     for stage_name in [
-        "hook", "qualify", "pain", "amplify", "tease",
-        "proof", "reveal", "feedback", "close",
-        "followup_24h", "followup_72h", "opt_out",
-        "gatekeeper", "schedule", "is_decisor", "greeting"
+        "hook",
+        "qualify",
+        "pain",
+        "amplify",
+        "tease",
+        "proof",
+        "reveal",
+        "feedback",
+        "close",
+        "followup_24h",
+        "followup_72h",
+        "opt_out",
+        "gatekeeper",
+        "schedule",
+        "is_decisor",
+        "greeting",
     ]:
         workflow.add_edge(f"node_{stage_name}", "save_and_send")
 
@@ -1850,6 +2078,7 @@ def build_sdr_graph() -> Any:
 # ════════════════════════════════════════════════════════════════════
 # SDR GRAPH CLASS - Entry point
 # ════════════════════════════════════════════════════════════════════
+
 
 class SDRGraph:
     """Wrapper do grafo para fácil invocação"""
@@ -1876,6 +2105,7 @@ def get_sdr_graph() -> SDRGraph:
 # Sprint 1.5 — helpers de auditoria de turnos
 # ══════════════════════════════════════════════════════════════════════════
 
+
 def _safe_float(value: Any, default: float | None = 0.0) -> float | None:
     """Converte para float seguro (None → default)."""
     if value is None:
@@ -1900,6 +2130,7 @@ def _safe_int(value: Any) -> int | None:
 # Sprint 1.4 — hook record_outcome (terminal stage)
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
 def _record_lead_outcome(
     lead_id: str | int,
     tenant_id: int,
@@ -1916,6 +2147,7 @@ def _record_lead_outcome(
     """
     try:
         from backend.services.lead_outcomes_service import record_outcome
+
         return record_outcome(
             lead_id=lead_id,
             tenant_id=tenant_id,
@@ -1933,7 +2165,7 @@ def _record_lead_outcome(
 
 def _handle_terminal_stage(
     memory,
-    state: "SDRState | dict",
+    state: SDRState | dict,
     stage_after: str | None = None,
 ) -> int | None:
     """Sprint 1.4 — se stage_after é terminal (ganho/perdido), chama record_outcome.
@@ -1945,13 +2177,24 @@ def _handle_terminal_stage(
     if terminal not in {"ganho", "perdido", "won", "lost"}:
         return None
     kanban = "ganho" if terminal in {"ganho", "won"} else "perdido"
-    lead_id = getattr(memory, "lead_id", None) or state.get("lead_id") if hasattr(state, "get") else None
-    tenant_id = getattr(memory, "user_id", None) or (state.get("user_id") if hasattr(state, "get") else None)
+    lead_id = (
+        getattr(memory, "lead_id", None) or state.get("lead_id")
+        if hasattr(state, "get")
+        else None
+    )
+    tenant_id = getattr(memory, "user_id", None) or (
+        state.get("user_id") if hasattr(state, "get") else None
+    )
     nicho = getattr(memory, "segmento", None)
     abordagem = getattr(memory, "persona", None)
-    template = getattr(memory, "variant", None) or state.get("variant") if hasattr(state, "get") else None
+    template = (
+        getattr(memory, "variant", None) or state.get("variant")
+        if hasattr(state, "get")
+        else None
+    )
     try:
         from datetime import datetime as _dt
+
         last_sent = getattr(memory, "last_message_sent", None)
         horario = None
         if last_sent:
@@ -1974,7 +2217,7 @@ def _handle_terminal_stage(
         return None
 
 
-def record_outcome(  # noqa: F811 - alias para tests
+def record_outcome(
     lead_id,
     tenant_id,
     nicho=None,
@@ -2039,6 +2282,7 @@ def record_sdr_turn(
         return None
     try:
         from sqlalchemy import create_engine, text
+
         engine = create_engine(database_url, pool_pre_ping=False)
         with engine.connect() as conn:
             row = conn.execute(
