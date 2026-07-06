@@ -47,6 +47,7 @@
 
   /* Tipografia */
   --pole-heading-font: 'Inter', system-ui, sans-serif;
+  --pole-body-font: 'Inter', system-ui, sans-serif;
   --pole-heading-case: capitalize;
   --pole-heading-style: normal;
   --pole-heading-letter-spacing: -0.01em;
@@ -97,6 +98,7 @@
 
   /* Tipografia - Serifada e elegante */
   --pole-heading-font: 'Playfair Display', Georgia, serif;
+  --pole-body-font: 'Inter', system-ui, sans-serif;
   --pole-heading-case: capitalize;
   --pole-heading-style: normal;
   --pole-heading-letter-spacing: 0.03em;
@@ -140,6 +142,7 @@
 
   /* Tipografia - Impacto máximo */
   --pole-heading-font: 'Anton', Impact, sans-serif;
+  --pole-body-font: 'Inter', system-ui, sans-serif;
   --pole-heading-case: uppercase;
   --pole-heading-style: italic;
   --pole-heading-letter-spacing: -0.02em;
@@ -185,6 +188,7 @@
 
   /* Tipografia - Limpa e profissional */
   --pole-heading-font: 'Inter', system-ui, sans-serif;
+  --pole-body-font: 'Inter', system-ui, sans-serif;
   --pole-heading-case: capitalize;
   --pole-heading-style: normal;
   --pole-heading-letter-spacing: -0.01em;
@@ -228,6 +232,7 @@
 
   /* Tipografia - Mono/Geométrica */
   --pole-heading-font: 'Space Grotesk', system-ui, sans-serif;
+  --pole-body-font: 'Inter', system-ui, sans-serif;
   --pole-heading-case: lowercase;
   --pole-heading-style: normal;
   --pole-heading-letter-spacing: -0.02em;
@@ -484,3 +489,20 @@
 [data-debug-pole="true"] * {
   outline: 1px dashed rgba(255, 0, 0, 0.3);
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   CLASSES UTILITÁRIAS (determinísticas via CSS Vars)
+
+   .font-heading -> font-family da var --pole-heading-font
+   .font-body    -> font-family da var --pole-body-font
+
+   O vite_react_renderer injeta essas duas CSS vars no :root do src/index.css
+   com base no subnicho do lead (resolve_fonts em nicho_registry.py).
+   Resultado: cada site recebe fontes coerentes com seu subnicho, sem o
+   LLM precisar declarar font-family inline.
+   ═══════════════════════════════════════════════════════════════════════════ */
+.font-heading { font-family: var(--pole-heading-font); }
+.font-body    { font-family: var(--pole-body-font); }
+
+body { font-family: var(--pole-body-font); }
+h1, h2, h3 { font-family: var(--pole-heading-font); }

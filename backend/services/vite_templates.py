@@ -10,14 +10,15 @@ import json
 import re
 from typing import Any
 
-
 # ---------------------------------------------------------------------------
 # Helpers internos
 # ---------------------------------------------------------------------------
 
+
 def _safe_project_path(path: str) -> str:
     """Valida e normaliza um caminho de arquivo do projeto."""
     from pathlib import PurePosixPath
+
     clean = str(path or "").strip().replace("\\", "/").lstrip("/")
     pure = PurePosixPath(clean)
     if not clean or pure.is_absolute() or ".." in pure.parts:
@@ -44,11 +45,15 @@ def _safe_project_path(path: str) -> str:
 
 def _facts_business(facts: dict[str, Any]) -> dict[str, Any]:
     from backend.services._vite_facts_local import business as _b  # — M1 DRY shim
+
     return _b(facts)
 
 
 def _facts_publication_url(facts: dict[str, Any]) -> str:
-    from backend.services._vite_facts_local import publication_url as _p  # — M1 DRY shim
+    from backend.services._vite_facts_local import (
+        publication_url as _p,  # — M1 DRY shim
+    )
+
     return _p(facts)
 
 
@@ -67,7 +72,11 @@ def _facts_theme_color(facts: dict[str, Any]) -> str:
                 return color
 
     # Sprint 16: Use archetype palette from facts if available
-    archetype_data = facts.get("_archetype_palette") if isinstance(facts.get("_archetype_palette"), dict) else {}
+    archetype_data = (
+        facts.get("_archetype_palette")
+        if isinstance(facts.get("_archetype_palette"), dict)
+        else {}
+    )
     if archetype_data.get("primary"):
         return archetype_data["primary"]
 
@@ -77,7 +86,12 @@ def _facts_theme_color(facts: dict[str, Any]) -> str:
 def _facts_local_keywords(facts: dict[str, Any]) -> list[str]:
     business = _facts_business(facts)
     seo = facts.get("seo") if isinstance(facts.get("seo"), dict) else {}
-    candidates = seo.get("primary_terms") or facts.get("seo_keywords") or business.get("seo_keywords") or []
+    candidates = (
+        seo.get("primary_terms")
+        or facts.get("seo_keywords")
+        or business.get("seo_keywords")
+        or []
+    )
     if not isinstance(candidates, list):
         candidates = re.split(r"[,;\n]", str(candidates or ""))
     keywords: list[str] = []
@@ -94,10 +108,25 @@ def _facts_local_keywords(facts: dict[str, Any]) -> list[str]:
     for item in candidates:
         _add(item)
 
-    city = str(business.get("city") or business.get("cidade") or facts.get("cidade") or "").strip()
-    state = str(business.get("state") or business.get("estado") or facts.get("estado") or "").strip()
-    segment = str(business.get("segmento") or business.get("segment") or facts.get("segmento") or "").strip()
-    subniche = str(business.get("subnicho") or business.get("subniche") or facts.get("subnicho") or facts.get("subniche") or "").strip()
+    city = str(
+        business.get("city") or business.get("cidade") or facts.get("cidade") or ""
+    ).strip()
+    state = str(
+        business.get("state") or business.get("estado") or facts.get("estado") or ""
+    ).strip()
+    segment = str(
+        business.get("segmento")
+        or business.get("segment")
+        or facts.get("segmento")
+        or ""
+    ).strip()
+    subniche = str(
+        business.get("subnicho")
+        or business.get("subniche")
+        or facts.get("subnicho")
+        or facts.get("subniche")
+        or ""
+    ).strip()
     context = f"{segment} {subniche}".lower()
     _add(city)
     _add(state)
@@ -123,19 +152,37 @@ def _facts_local_keywords(facts: dict[str, Any]) -> list[str]:
         _add(f"consulta nutricional {city}")
         _add(f"consulta nutricionista {city}")
         _add(f"nutricionista perto de mim {city}")
-    if city and any(token in context for token in ("academia", "crossfit", "muscul", "fitness", "funcional", "personal")):
+    if city and any(
+        token in context
+        for token in (
+            "academia",
+            "crossfit",
+            "muscul",
+            "fitness",
+            "funcional",
+            "personal",
+        )
+    ):
         _add(f"academia em {city}")
         _add(f"musculação {city}")
         _add(f"aula experimental academia {city}")
         _add(f"plano de academia {city}")
         _add(f"academia com aula experimental {city}")
         _add(f"personal trainer {city}")
-    if city and any(token in context for token in ("estetic", "spa", "beleza", "facial", "pele", "laser")):
+    if city and any(
+        token in context
+        for token in ("estetic", "spa", "beleza", "facial", "pele", "laser")
+    ):
         _add(f"clínica estética em {city}")
         _add(f"agendar estética {city}")
         _add(f"limpeza de pele {city}")
         _add(f"estética perto de mim {city}")
-    address = str(business.get("address") or business.get("endereco") or facts.get("endereco") or "")
+    address = str(
+        business.get("address")
+        or business.get("endereco")
+        or facts.get("endereco")
+        or ""
+    )
     for part in re.split(r"[,\-]", address)[-2:]:
         _add(part)
         if city and segment:
@@ -146,8 +193,15 @@ def _facts_local_keywords(facts: dict[str, Any]) -> list[str]:
 def _facts_meta_description(facts: dict[str, Any]) -> str:
     business = _facts_business(facts)
     name = str(business.get("name") or business.get("business_name") or "").strip()
-    city = str(business.get("city") or business.get("cidade") or facts.get("cidade") or "").strip()
-    segment = str(business.get("segment") or business.get("segmento") or facts.get("segmento") or "negócio local").strip()
+    city = str(
+        business.get("city") or business.get("cidade") or facts.get("cidade") or ""
+    ).strip()
+    segment = str(
+        business.get("segment")
+        or business.get("segmento")
+        or facts.get("segmento")
+        or "negócio local"
+    ).strip()
     subniche = str(business.get("subniche") or facts.get("subniche") or "").strip()
     phone = str(business.get("whatsapp") or business.get("phone") or "").strip()
     rating = str(business.get("rating") or "").strip()
@@ -169,11 +223,13 @@ def _facts_meta_description(facts: dict[str, Any]) -> str:
 
 def _facts_og_image(facts: dict[str, Any]) -> str:
     from backend.services._vite_facts_local import og_image as _og  # — M1 DRY shim
+
     return _og(facts)
 
 
 def _facts_json_ld(facts: dict[str, Any]) -> str:
     from backend.services._vite_facts_local import json_ld as _jl  # — M1 DRY shim
+
     return _jl(facts)
 
 
@@ -189,6 +245,7 @@ def _meta_escape(value: Any) -> str:
 
 def _normalize_text(value: str) -> str:
     import unicodedata
+
     text = unicodedata.normalize("NFKD", str(value or ""))
     text = "".join(ch for ch in text if not unicodedata.combining(ch))
     return re.sub(r"\s+", " ", text).lower().strip()
@@ -198,13 +255,23 @@ def _normalize_text(value: str) -> str:
 # Helpers de dados visuais
 # ---------------------------------------------------------------------------
 
+
 def _visual_business_payload(facts: dict[str, Any]) -> dict[str, str]:
     """Extrai dados do negocio para uso nos templates de componentes."""
     business = _facts_business(facts)
-    name = str(business.get("name") or business.get("business_name") or "Negocio local").strip()
-    segment = str(business.get("segment") or business.get("segmento") or facts.get("segmento") or "Atendimento local").strip()
+    name = str(
+        business.get("name") or business.get("business_name") or "Negocio local"
+    ).strip()
+    segment = str(
+        business.get("segment")
+        or business.get("segmento")
+        or facts.get("segmento")
+        or "Atendimento local"
+    ).strip()
     subniche = str(business.get("subniche") or facts.get("subniche") or segment).strip()
-    city = str(business.get("city") or business.get("cidade") or facts.get("cidade") or "").strip()
+    city = str(
+        business.get("city") or business.get("cidade") or facts.get("cidade") or ""
+    ).strip()
     address = str(business.get("address") or business.get("endereco") or "").strip()
     phone = str(business.get("phone") or business.get("whatsapp") or "").strip()
     rating_raw = business.get("rating")
@@ -217,7 +284,9 @@ def _visual_business_payload(facts: dict[str, Any]) -> dict[str, str]:
     else:
         rating = str(rating_raw).strip().replace(",", ".")
         rating_is_fallback = False
-    count = str(business.get("total_avaliacoes") or business.get("reviews_count") or "").strip()
+    count = str(
+        business.get("total_avaliacoes") or business.get("reviews_count") or ""
+    ).strip()
     maps = str(business.get("maps_url") or business.get("map_url") or "").strip()
     return {
         "name": name,
@@ -243,12 +312,18 @@ def _visual_media_urls(facts: dict[str, Any]) -> list[str]:
     urls: list[str] = []
     for source in (media.get("photos"), business.get("photos"), facts.get("photos")):
         if isinstance(source, list):
-            urls.extend(str(item or "").strip() for item in source if str(item or "").strip())
+            urls.extend(
+                str(item or "").strip() for item in source if str(item or "").strip()
+            )
     if not urls:
         from backend.pipeline_exceptions import ImageNotAvailableError
+
         raise ImageNotAvailableError(
             "_visual_media_urls: Sem imagens no facts.",
-            context={"segmento": business.get("segment", ""), "acao": "Forneca fotos no lead"},
+            context={
+                "segmento": business.get("segment", ""),
+                "acao": "Forneca fotos no lead",
+            },
         )
     return list(dict.fromkeys(urls))[:5]
 
@@ -277,39 +352,51 @@ _GOOGLE_FONT_FAMILIES = {
 
 
 def _google_fonts_link_for_facts(facts: dict[str, Any]) -> str:
-    """Build a <link> tag with preconnect + Google Fonts CSS for the chosen
-    heading/body fonts (Mudança 4)."""
-    pool: dict[str, list[str]] = {
-        "default": ["Inter", "Manrope"],
-        "nutricionista_esportiva": ["Bebas Neue", "Anton", "Oswald", "Roboto Condensed", "Inter"],
-        "nutricionista_clinica": ["Source Serif 4", "Lora", "Crimson Pro", "Merriweather", "Nunito", "Inter"],
-        "barbearia_premium": ["Playfair Display", "Bebas Neue", "Anton", "Oswald", "Libre Baskerville", "Inter"],
-        "academia_crossfit": ["Bebas Neue", "Anton", "Oswald", "Roboto Condensed", "Inter"],
-        "academia_musculacao": ["Anton", "Bebas Neue", "Oswald", "Inter", "Manrope"],
-        "restaurante_familiar": ["Playfair Display", "Lora", "Merriweather", "Crimson Pro", "Inter"],
-    }
+    """Build a `<link>` tag with preconnect + Google Fonts CSS for the chosen
+    heading/body fonts.
+
+    A escolha de fontes vem do nicho_registry via resolve_fonts() — fonte
+    unica de verdade (ver backend/config/nicho_registry.py). Esta funcao
+    apenas converte o par escolhido em URLs CSS2.
+    """
+    from backend.config.nicho_registry import resolve_fonts as _resolve_fonts
+
     biz = facts.get("business") if isinstance(facts.get("business"), dict) else {}
-    subnicho = str(
-        biz.get("subnicho")
-        or biz.get("subniche")
-        or facts.get("subnicho")
-        or facts.get("subniche")
-        or "default"
-    ).strip().lower() or "default"
-    families_pool = pool.get(subnicho) or pool["default"]
-    variation = facts.get("variation") if isinstance(facts.get("variation"), dict) else {}
-    try:
-        seed = int(variation.get("seed") or 0) or 1
-    except (TypeError, ValueError):
-        seed = 1
-    try:
-        counter = int(variation.get("counter") or 0) or 1
-    except (TypeError, ValueError):
-        counter = 1
-    seed_abs = abs((seed ^ ((counter + 1) * 0x9E3779B9)) or counter)
-    heading_family = families_pool[seed_abs % len(families_pool)]
+    subnicho = (
+        str(
+            biz.get("subnicho")
+            or biz.get("subniche")
+            or facts.get("subnicho")
+            or facts.get("subniche")
+            or ""
+        )
+        .strip()
+        .lower()
+    )
+    segmento = str(
+        biz.get("segment")
+        or biz.get("segmento")
+        or facts.get("segmento")
+        or facts.get("segment")
+        or ""
+    ).strip().lower()
+
+    # lead_id estavel para determinismo: prefira business.id; caia em
+    # (subnicho + counter + seed) para diferenciacao entre leads do
+    # mesmo subnicho.
+    variation = (
+        facts.get("variation") if isinstance(facts.get("variation"), dict) else {}
+    )
+    counter = variation.get("counter") or 1
+    seed = variation.get("seed") or 1
+    lead_id = biz.get("id") or facts.get("lead_id") or f"{subnicho}:{counter}:{seed}"
+
+    heading_family, body_family = _resolve_fonts(
+        nicho=segmento, subnicho=subnicho or "default", lead_id=lead_id
+    )
+
     families: list[str] = []
-    for fam in (heading_family, "Inter"):
+    for fam in (heading_family, body_family):
         if not fam:
             continue
         css2_name = _GOOGLE_FONT_FAMILIES.get(fam)
@@ -317,9 +404,11 @@ def _google_fonts_link_for_facts(facts: dict[str, Any]) -> str:
             families.append(css2_name)
     if not families:
         return ""
-    href = "https://fonts.googleapis.com/css2?" + "&".join(
-        f"family={name}" for name in families
-    ) + "&display=swap"
+    href = (
+        "https://fonts.googleapis.com/css2?"
+        + "&".join(f"family={name}" for name in families)
+        + "&display=swap"
+    )
     return (
         '<link rel="preconnect" href="https://fonts.googleapis.com" />\n'
         '    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />\n'
@@ -482,6 +571,7 @@ declare global {
 # Templates de arquivos TypeScript/React core
 # ---------------------------------------------------------------------------
 
+
 def vite_template_main_tsx() -> str:
     """Template do src/main.tsx base."""
     return """import React from 'react';
@@ -584,6 +674,7 @@ def vite_template_index_css() -> str:
 # ---------------------------------------------------------------------------
 # Templates de componentes React
 # ---------------------------------------------------------------------------
+
 
 def vite_template_card_ui() -> str:
     """Template do componente Card UI basico."""
@@ -742,6 +833,7 @@ def vite_template_lgpd_banner(facts: dict[str, Any] | None = None) -> str:
     if facts:
         try:
             from backend.agents.lgpd_personalized import build_personalized_lgpd
+
             return build_personalized_lgpd(facts)
         except Exception:
             pass  # Fallback to generic template below
@@ -853,7 +945,6 @@ export default FactualMotionContract;
 
 from typing import Final
 
-
 SHADCN_COMPONENTS: Final[dict[str, dict[str, Any]]] = {
     "Button": {
         "import": "import { Button } from '@/components/ui/button'",
@@ -866,9 +957,16 @@ SHADCN_COMPONENTS: Final[dict[str, dict[str, Any]]] = {
         "imports": [
             "import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card'"
         ],
-        "parts": ["Card", "CardHeader", "CardTitle", "CardDescription", "CardContent", "CardFooter"],
+        "parts": [
+            "Card",
+            "CardHeader",
+            "CardTitle",
+            "CardDescription",
+            "CardContent",
+            "CardFooter",
+        ],
         "use_case": "Conteúdo em cards (serviços, planos, depoimentos, produtos)",
-        "example": '<Card><CardHeader><CardTitle>Plano Premium</CardTitle></CardHeader><CardContent>R$ 199/mês</CardContent></Card>',
+        "example": "<Card><CardHeader><CardTitle>Plano Premium</CardTitle></CardHeader><CardContent>R$ 199/mês</CardContent></Card>",
     },
     "Input": {
         "import": "import { Input } from '@/components/ui/input'",
@@ -887,9 +985,17 @@ SHADCN_COMPONENTS: Final[dict[str, dict[str, Any]]] = {
         "imports": [
             "import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog'"
         ],
-        "parts": ["Dialog", "DialogContent", "DialogHeader", "DialogTitle", "DialogDescription", "DialogTrigger", "DialogClose"],
+        "parts": [
+            "Dialog",
+            "DialogContent",
+            "DialogHeader",
+            "DialogTitle",
+            "DialogDescription",
+            "DialogTrigger",
+            "DialogClose",
+        ],
         "use_case": "Modais de contato/agendamento, lightbox de galeria, confirmacoes",
-        "example": '<Dialog><DialogTrigger asChild><Button>Agendar</Button></DialogTrigger><DialogContent><DialogTitle>Agendar horario</DialogTitle></DialogContent></Dialog>',
+        "example": "<Dialog><DialogTrigger asChild><Button>Agendar</Button></DialogTrigger><DialogContent><DialogTitle>Agendar horario</DialogTitle></DialogContent></Dialog>",
     },
     # Sprint 11.5: Tabs (FAQ, detalhes de servicos)
     "Tabs": {

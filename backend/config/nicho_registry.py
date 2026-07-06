@@ -37,16 +37,16 @@ Regras:
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any
-
 
 # ═══════════════════════════════════════════════════════════════════════════
 # TYPES
 # ═══════════════════════════════════════════════════════════════════════════
 
+
 @dataclass(frozen=True)
 class ModalConfig:
     """Configuração do BookingModal por nicho."""
+
     title: str
     cta_button: str
     fields: tuple[str, ...]
@@ -56,6 +56,7 @@ class ModalConfig:
 @dataclass(frozen=True)
 class HeroHeadlines:
     """Templates de headline do hero por polo."""
+
     SOFT: str = ""
     BOLD: str = ""
     CLASSIC: str = ""
@@ -65,6 +66,7 @@ class HeroHeadlines:
 @dataclass(frozen=True)
 class CopyDefaults:
     """Defaults de tom de voz por nicho."""
+
     tone: str  # ex: "acolhedor", "agressivo", "sério"
     voice: str  # ex: "2a pessoa singular", "2a pessoa plural"
     cta_primary: str  # ex: "Falar no WhatsApp"
@@ -89,6 +91,7 @@ class DesignLogic:
         image_treatment: 'clean' | 'grayscale' | 'grain' | 'warm' | 'glass'
         gallery_density: 'tight' | 'balanced' | 'editorial' | 'mosaic'
     """
+
     radius_multiplier: float = 1.0
     spacing_multiplier: float = 1.0
     allow_overlap: bool = False
@@ -99,8 +102,35 @@ class DesignLogic:
 
 
 @dataclass(frozen=True)
+class FontSlot:
+    """Uma opcao de par (heading, body) com peso para rotacao.
+
+    O sistema rotaciona entre slots com base em hash deterministico
+    do lead_id, evitando que n leads do mesmo subnicho fiquem identicos.
+    """
+
+    heading: str
+    body: str
+    weight: int = 1
+
+
+@dataclass(frozen=True)
+class FontPair:
+    """Lista ponderada de FontSlots para um subnicho.
+
+    `heading_default`/`body_default` sao usados como fallback caso
+    `variants` esteja vazio ou o calculo do bucket falhe.
+    """
+
+    heading_default: str
+    body_default: str
+    variants: tuple[FontSlot, ...] = ()
+
+
+@dataclass(frozen=True)
 class NichoConfig:
     """Configuração completa de um nicho."""
+
     schema_type: str
     polo_sugerido: str  # SOFT | BOLD | CLASSIC | TECH
     lanes: tuple[str, ...]
@@ -110,11 +140,17 @@ class NichoConfig:
     copy_defaults: CopyDefaults
     design_logic: DesignLogic = field(default_factory=DesignLogic)
     seo_keywords: tuple[str, ...] = field(default_factory=tuple)
+    font_pair: FontPair = field(
+        default_factory=lambda: FontPair(
+            heading_default="Inter", body_default="Inter"
+        )
+    )
 
 
 # ═══════════════════════════════════════════════════════════════════════════
 # HELPER
 # ═══════════════════════════════════════════════════════════════════════════
+
 
 def _modal(
     title: str,
@@ -167,13 +203,29 @@ def _design(
     )
 
 
+def _fp(heading: str, body: str, weight: int = 1) -> FontSlot:
+    """Construtor auxiliar de FontSlot."""
+    return FontSlot(heading=heading, body=body, weight=weight)
+
+
+def _font_pair(
+    heading: str,
+    body: str,
+    variants: tuple[FontSlot, ...] = (),
+) -> FontPair:
+    """Construtor auxiliar de FontPair."""
+    return FontPair(
+        heading_default=heading, body_default=body, variants=variants
+    )
+
+
 # ═══════════════════════════════════════════════════════════════════════════
 # DESIGN LOGIC PRESETS (por polo)
 # ═══════════════════════════════════════════════════════════════════════════
 
 _DESIGN_SOFT = _design(
-    radius=2.0,        # bem redondo
-    spacing=1.8,       # muito respiro
+    radius=2.0,  # bem redondo
+    spacing=1.8,  # muito respiro
     overlap=False,
     skew=False,
     text_stroke=False,
@@ -182,8 +234,8 @@ _DESIGN_SOFT = _design(
 )
 
 _DESIGN_BOLD = _design(
-    radius=0.0,        # retinho
-    spacing=0.7,       # apertado
+    radius=0.0,  # retinho
+    spacing=0.7,  # apertado
     overlap=True,
     skew=True,
     text_stroke=True,
@@ -192,7 +244,7 @@ _DESIGN_BOLD = _design(
 )
 
 _DESIGN_CLASSIC = _design(
-    radius=0.5,        # meio termo
+    radius=0.5,  # meio termo
     spacing=1.0,
     overlap=False,
     skew=False,
@@ -204,7 +256,7 @@ _DESIGN_CLASSIC = _design(
 _DESIGN_TECH = _design(
     radius=1.0,
     spacing=1.0,
-    overlap=True,      # leve overlap
+    overlap=True,  # leve overlap
     skew=False,
     text_stroke=False,
     image_treatment="glass",
@@ -217,21 +269,28 @@ _DESIGN_TECH = _design(
 # ═══════════════════════════════════════════════════════════════════════════
 
 NICHO_CONFIG: dict[str, NichoConfig] = {
-
     # ──────────────────────────────────────────────────────────────────
     # 1. ACADEMIA / FITNESS — BOLD (default)
     # ──────────────────────────────────────────────────────────────────
     "academia": NichoConfig(
         schema_type="HealthClub",
         polo_sugerido="BOLD",
-        lanes=("academia-iron-pulse", "academia-neon-grid",
-               "academia-sunset-track", "academia-graphite-core"),
+        lanes=(
+            "academia-iron-pulse",
+            "academia-neon-grid",
+            "academia-sunset-track",
+            "academia-graphite-core",
+        ),
         modal_config=_modal(
             title="Matricule-se Agora",
             cta="Falar com Consultor",
-            fields=("Nome", "Email", "Telefone",
-                    "Modalidade (Musculacao/Crossfit/Spinning/Yoga)",
-                    "Horario Preferido"),
+            fields=(
+                "Nome",
+                "Email",
+                "Telefone",
+                "Modalidade (Musculacao/Crossfit/Spinning/Yoga)",
+                "Horario Preferido",
+            ),
             submit="Enviar formulario + redirecionar para WhatsApp",
         ),
         faq=(
@@ -254,11 +313,14 @@ NICHO_CONFIG: dict[str, NichoConfig] = {
         ),
         design_logic=_DESIGN_BOLD,
         seo_keywords=(
-            "academia", "academia perto de mim", "musculacao",
-            "crossfit", "personal trainer", "academia em {cidade}",
+            "academia",
+            "academia perto de mim",
+            "musculacao",
+            "crossfit",
+            "personal trainer",
+            "academia em {cidade}",
         ),
     ),
-
     # ──────────────────────────────────────────────────────────────────
     # 2. ADVOGADO / ADVOCACIA — CLASSIC
     # ──────────────────────────────────────────────────────────────────
@@ -269,9 +331,13 @@ NICHO_CONFIG: dict[str, NichoConfig] = {
         modal_config=_modal(
             title="Agendar Consulta Juridica",
             cta="Falar com Advogado",
-            fields=("Nome", "Telefone", "Email",
-                    "Area de Atuacao (Trabalhista/Civil/Familiar/Previdenciario/Criminal)",
-                    "Descricao Resumida do Caso"),
+            fields=(
+                "Nome",
+                "Telefone",
+                "Email",
+                "Area de Atuacao (Trabalhista/Civil/Familiar/Previdenciario/Criminal)",
+                "Descricao Resumida do Caso",
+            ),
             submit="Enviar para WhatsApp com contexto juridico",
         ),
         faq=(
@@ -294,25 +360,35 @@ NICHO_CONFIG: dict[str, NichoConfig] = {
         ),
         design_logic=_DESIGN_CLASSIC,
         seo_keywords=(
-            "advogado", "advogado em {cidade}", "escritorio de advocacia",
-            "advogado trabalhista", "consulta juridica",
+            "advogado",
+            "advogado em {cidade}",
+            "escritorio de advocacia",
+            "advogado trabalhista",
+            "consulta juridica",
         ),
     ),
-
     # ──────────────────────────────────────────────────────────────────
     # 3. BARBEARIA — SOFT
     # ──────────────────────────────────────────────────────────────────
     "barbearia": NichoConfig(
         schema_type="BarberShop",
         polo_sugerido="SOFT",
-        lanes=("barbearia-heritage-reserve", "barbearia-studio-mono",
-               "barbearia-copper-smoke", "barbearia-midnight-club"),
+        lanes=(
+            "barbearia-heritage-reserve",
+            "barbearia-studio-mono",
+            "barbearia-copper-smoke",
+            "barbearia-midnight-club",
+        ),
         modal_config=_modal(
             title="Agendar Horario",
             cta="Agendar pelo WhatsApp",
-            fields=("Nome", "Telefone",
-                    "Servico (Corte/Barba/Sobrancelha)",
-                    "Data", "Horario"),
+            fields=(
+                "Nome",
+                "Telefone",
+                "Servico (Corte/Barba/Sobrancelha)",
+                "Data",
+                "Horario",
+            ),
             submit="Enviar para WhatsApp com mensagem pre-formatada",
         ),
         faq=(
@@ -335,11 +411,13 @@ NICHO_CONFIG: dict[str, NichoConfig] = {
         ),
         design_logic=_DESIGN_SOFT,
         seo_keywords=(
-            "barbearia", "barbearia em {cidade}",
-            "corte masculino", "barba", "barbearia perto de mim",
+            "barbearia",
+            "barbearia em {cidade}",
+            "corte masculino",
+            "barba",
+            "barbearia perto de mim",
         ),
     ),
-
     # ──────────────────────────────────────────────────────────────────
     # 4. CLINICA MEDICA — CLASSIC
     # ──────────────────────────────────────────────────────────────────
@@ -350,9 +428,13 @@ NICHO_CONFIG: dict[str, NichoConfig] = {
         modal_config=_modal(
             title="Agendar Consulta",
             cta="Marcar Consulta",
-            fields=("Nome Completo", "Telefone", "Especialidade",
-                    "Convenio (Particular/Unimed/Amil)",
-                    "Periodo Preferido"),
+            fields=(
+                "Nome Completo",
+                "Telefone",
+                "Especialidade",
+                "Convenio (Particular/Unimed/Amil)",
+                "Periodo Preferido",
+            ),
             submit="Confirmar consulta por WhatsApp",
         ),
         faq=(
@@ -375,11 +457,13 @@ NICHO_CONFIG: dict[str, NichoConfig] = {
         ),
         design_logic=_DESIGN_CLASSIC,
         seo_keywords=(
-            "clinica", "clinica medica", "consulta medica",
-            "medico em {cidade}", "convenio medico",
+            "clinica",
+            "clinica medica",
+            "consulta medica",
+            "medico em {cidade}",
+            "convenio medico",
         ),
     ),
-
     # ──────────────────────────────────────────────────────────────────
     # 5. DENTISTA — CLASSIC
     # ──────────────────────────────────────────────────────────────────
@@ -390,9 +474,13 @@ NICHO_CONFIG: dict[str, NichoConfig] = {
         modal_config=_modal(
             title="Agendar Consulta Odontologica",
             cta="Marcar Avaliacao",
-            fields=("Nome", "Telefone",
-                    "Tratamento (Limpeza/Implante/Ortodontia/Estetica)",
-                    "Convenio", "Periodo Preferido"),
+            fields=(
+                "Nome",
+                "Telefone",
+                "Tratamento (Limpeza/Implante/Ortodontia/Estetica)",
+                "Convenio",
+                "Periodo Preferido",
+            ),
             submit="Confirmar consulta por WhatsApp",
         ),
         faq=(
@@ -415,26 +503,35 @@ NICHO_CONFIG: dict[str, NichoConfig] = {
         ),
         design_logic=_DESIGN_CLASSIC,
         seo_keywords=(
-            "dentista", "dentista em {cidade}", "clinica odontologica",
-            "implante dentario", "clareamento dental",
+            "dentista",
+            "dentista em {cidade}",
+            "clinica odontologica",
+            "implante dentario",
+            "clareamento dental",
         ),
     ),
-
     # ──────────────────────────────────────────────────────────────────
     # 6. ESTETICA — SOFT
     # ──────────────────────────────────────────────────────────────────
     "estetica": NichoConfig(
         schema_type="BeautySalon",
         polo_sugerido="SOFT",
-        lanes=("estetica-clinic-ivory", "estetica-chrome-spa",
-               "estetica-rose-clay", "estetica-noir-gold"),
+        lanes=(
+            "estetica-clinic-ivory",
+            "estetica-chrome-spa",
+            "estetica-rose-clay",
+            "estetica-noir-gold",
+        ),
         modal_config=_modal(
             title="Agendar Avaliacao Estetica",
             cta="Agendar pelo WhatsApp",
-            fields=("Nome", "Telefone",
-                    "Procedimento (Limpeza de Pele/Botox/Preenchimento/Harmonizacao)",
-                    "Area do Corpo",
-                    "Horario Preferido"),
+            fields=(
+                "Nome",
+                "Telefone",
+                "Procedimento (Limpeza de Pele/Botox/Preenchimento/Harmonizacao)",
+                "Area do Corpo",
+                "Horario Preferido",
+            ),
             submit="Enviar para WhatsApp com procedimento escolhido",
         ),
         faq=(
@@ -465,25 +562,36 @@ NICHO_CONFIG: dict[str, NichoConfig] = {
             gallery_density="editorial",
         ),
         seo_keywords=(
-            "estetica", "clinica de estetica", "harmonizacao facial",
-            "botox", "preenchimento", "estetica em {cidade}",
+            "estetica",
+            "clinica de estetica",
+            "harmonizacao facial",
+            "botox",
+            "preenchimento",
+            "estetica em {cidade}",
         ),
     ),
-
     # ──────────────────────────────────────────────────────────────────
     # 7. NUTRICIONISTA — SOFT (default) / BOLD (atleta) / SOFT (infantil)
     # ──────────────────────────────────────────────────────────────────
     "nutricionista": NichoConfig(
         schema_type="MedicalBusiness",
         polo_sugerido="SOFT",
-        lanes=("nutricionista-botanical-editorial", "nutricionista-clinical-soft",
-               "nutricionista-performance-fuel", "nutricionista-coastal-light"),
+        lanes=(
+            "nutricionista-botanical-editorial",
+            "nutricionista-clinical-soft",
+            "nutricionista-performance-fuel",
+            "nutricionista-coastal-light",
+        ),
         modal_config=_modal(
             title="Agendar Consulta Nutricional",
             cta="Agendar Consulta",
-            fields=("Nome", "Telefone", "Email",
-                    "Objetivo (Emagrecer/Ganho de Massa/Reeducacao)",
-                    "Modalidade (Presencial/Online)"),
+            fields=(
+                "Nome",
+                "Telefone",
+                "Email",
+                "Objetivo (Emagrecer/Ganho de Massa/Reeducacao)",
+                "Modalidade (Presencial/Online)",
+            ),
             submit="Enviar para WhatsApp com objetivo",
         ),
         faq=(
@@ -506,11 +614,12 @@ NICHO_CONFIG: dict[str, NichoConfig] = {
         ),
         design_logic=_DESIGN_SOFT,
         seo_keywords=(
-            "nutricionista", "nutricionista em {cidade}",
-            "dieta personalizada", "emagrecimento saudavel",
+            "nutricionista",
+            "nutricionista em {cidade}",
+            "dieta personalizada",
+            "emagrecimento saudavel",
         ),
     ),
-
     # ──────────────────────────────────────────────────────────────────
     # 8. RESTAURANTE — SOFT
     # ──────────────────────────────────────────────────────────────────
@@ -521,8 +630,14 @@ NICHO_CONFIG: dict[str, NichoConfig] = {
         modal_config=_modal(
             title="Reservar Mesa",
             cta="Reservar Mesa",
-            fields=("Nome", "Telefone", "Data", "Horario",
-                    "Numero de Pessoas", "Observacoes"),
+            fields=(
+                "Nome",
+                "Telefone",
+                "Data",
+                "Horario",
+                "Numero de Pessoas",
+                "Observacoes",
+            ),
             submit="Confirmar reserva via WhatsApp",
         ),
         faq=(
@@ -545,11 +660,13 @@ NICHO_CONFIG: dict[str, NichoConfig] = {
         ),
         design_logic=_DESIGN_SOFT,
         seo_keywords=(
-            "restaurante", "restaurante em {cidade}",
-            "almoco", "jantar", "gastronomia",
+            "restaurante",
+            "restaurante em {cidade}",
+            "almoco",
+            "jantar",
+            "gastronomia",
         ),
     ),
-
     # ──────────────────────────────────────────────────────────────────
     # 9. PET SHOP — SOFT
     # ──────────────────────────────────────────────────────────────────
@@ -560,10 +677,14 @@ NICHO_CONFIG: dict[str, NichoConfig] = {
         modal_config=_modal(
             title="Agendar Atendimento",
             cta="Agendar pelo WhatsApp",
-            fields=("Nome do Tutor", "Telefone",
-                    "Nome do Pet", "Especie (Caixa/Gato/Outro)",
-                    "Porte (Pequeno/Medio/Grande)",
-                    "Servico (Banho/Tosa/Vacinacao/Consulta)"),
+            fields=(
+                "Nome do Tutor",
+                "Telefone",
+                "Nome do Pet",
+                "Especie (Caixa/Gato/Outro)",
+                "Porte (Pequeno/Medio/Grande)",
+                "Servico (Banho/Tosa/Vacinacao/Consulta)",
+            ),
             submit="Enviar para WhatsApp com dados do pet",
         ),
         faq=(
@@ -586,11 +707,13 @@ NICHO_CONFIG: dict[str, NichoConfig] = {
         ),
         design_logic=_DESIGN_SOFT,
         seo_keywords=(
-            "pet shop", "banho e tosa", "veterinaria",
-            "pet shop em {cidade}", "vacinacao pet",
+            "pet shop",
+            "banho e tosa",
+            "veterinaria",
+            "pet shop em {cidade}",
+            "vacinacao pet",
         ),
     ),
-
     # ──────────────────────────────────────────────────────────────────
     # 10. SALAO DE BELEZA — SOFT
     # ──────────────────────────────────────────────────────────────────
@@ -601,9 +724,13 @@ NICHO_CONFIG: dict[str, NichoConfig] = {
         modal_config=_modal(
             title="Agendar Horario",
             cta="Reservar pelo WhatsApp",
-            fields=("Nome", "Telefone",
-                    "Servico (Corte/Coloracao/Escova/Manicure)",
-                    "Data", "Horario"),
+            fields=(
+                "Nome",
+                "Telefone",
+                "Servico (Corte/Coloracao/Escova/Manicure)",
+                "Data",
+                "Horario",
+            ),
             submit="Enviar para WhatsApp com servico",
         ),
         faq=(
@@ -626,11 +753,13 @@ NICHO_CONFIG: dict[str, NichoConfig] = {
         ),
         design_logic=_DESIGN_SOFT,
         seo_keywords=(
-            "salao de beleza", "cabeleireiro",
-            "salao em {cidade}", "manicure", "coloracao",
+            "salao de beleza",
+            "cabeleireiro",
+            "salao em {cidade}",
+            "manicure",
+            "coloracao",
         ),
     ),
-
     # ──────────────────────────────────────────────────────────────────
     # 11. OFICINA MECANICA — BOLD
     # ──────────────────────────────────────────────────────────────────
@@ -641,10 +770,13 @@ NICHO_CONFIG: dict[str, NichoConfig] = {
         modal_config=_modal(
             title="Solicitar Orcamento",
             cta="Pedir Orcamento",
-            fields=("Nome", "Telefone",
-                    "Modelo do Veiculo",
-                    "Servico (Troca de Oleo/Alinhamento/Freios/Motor)",
-                    "Descricao do Problema"),
+            fields=(
+                "Nome",
+                "Telefone",
+                "Modelo do Veiculo",
+                "Servico (Troca de Oleo/Alinhamento/Freios/Motor)",
+                "Descricao do Problema",
+            ),
             submit="Enviar para WhatsApp com modelo do carro",
         ),
         faq=(
@@ -667,11 +799,13 @@ NICHO_CONFIG: dict[str, NichoConfig] = {
         ),
         design_logic=_DESIGN_BOLD,
         seo_keywords=(
-            "oficina mecanica", "mecanico",
-            "oficina em {cidade}", "troca de oleo", "alinhamento",
+            "oficina mecanica",
+            "mecanico",
+            "oficina em {cidade}",
+            "troca de oleo",
+            "alinhamento",
         ),
     ),
-
     # ──────────────────────────────────────────────────────────────────
     # 12. ENERGIA SOLAR — TECH
     # ──────────────────────────────────────────────────────────────────
@@ -682,10 +816,14 @@ NICHO_CONFIG: dict[str, NichoConfig] = {
         modal_config=_modal(
             title="Solicitar Orcamento Solar",
             cta="Pedir Orcamento",
-            fields=("Nome", "Telefone", "Email",
-                    "Consumo Medio Mensal (kWh)",
-                    "Tipo de Imovel (Residencial/Comercial/Rural)",
-                    "Cidade/Estado"),
+            fields=(
+                "Nome",
+                "Telefone",
+                "Email",
+                "Consumo Medio Mensal (kWh)",
+                "Tipo de Imovel (Residencial/Comercial/Rural)",
+                "Cidade/Estado",
+            ),
             submit="Enviar para WhatsApp com dados de consumo",
         ),
         faq=(
@@ -708,12 +846,14 @@ NICHO_CONFIG: dict[str, NichoConfig] = {
         ),
         design_logic=_DESIGN_TECH,
         seo_keywords=(
-            "energia solar", "placa solar",
-            "energia solar em {cidade}", "painel solar",
-            "instalacao solar", "economia de energia",
+            "energia solar",
+            "placa solar",
+            "energia solar em {cidade}",
+            "painel solar",
+            "instalacao solar",
+            "economia de energia",
         ),
     ),
-
     # ──────────────────────────────────────────────────────────────────
     # 13. IMOBILIARIA — CLASSIC
     # ──────────────────────────────────────────────────────────────────
@@ -724,10 +864,14 @@ NICHO_CONFIG: dict[str, NichoConfig] = {
         modal_config=_modal(
             title="Tenho Interesse",
             cta="Quero Visitar",
-            fields=("Nome", "Email", "Telefone",
-                    "Tipo do Imovel (Apartamento/Casa/Sala/Terreno)",
-                    "Faixa de Valor",
-                    "Periodo para Mudar"),
+            fields=(
+                "Nome",
+                "Email",
+                "Telefone",
+                "Tipo do Imovel (Apartamento/Casa/Sala/Terreno)",
+                "Faixa de Valor",
+                "Periodo para Mudar",
+            ),
             submit="Enviar para WhatsApp com imovel de interesse",
         ),
         faq=(
@@ -750,19 +894,25 @@ NICHO_CONFIG: dict[str, NichoConfig] = {
         ),
         design_logic=_DESIGN_CLASSIC,
         seo_keywords=(
-            "imobiliaria", "imovel a venda",
-            "imobiliaria em {cidade}", "aluguel", "compra de imovel",
+            "imobiliaria",
+            "imovel a venda",
+            "imobiliaria em {cidade}",
+            "aluguel",
+            "compra de imovel",
         ),
     ),
-
     # ──────────────────────────────────────────────────────────────────
     # DEFAULT (fallback) — CLASSIC
     # ──────────────────────────────────────────────────────────────────
     "default": NichoConfig(
         schema_type="LocalBusiness",
         polo_sugerido="CLASSIC",
-        lanes=("default-conversion-bold", "default-cinematic-soft",
-               "default-health-trust", "default-local-craft"),
+        lanes=(
+            "default-conversion-bold",
+            "default-cinematic-soft",
+            "default-health-trust",
+            "default-local-craft",
+        ),
         modal_config=_modal(
             title="Fale Conosco",
             cta="Enviar Mensagem",
@@ -859,49 +1009,191 @@ SUB_NICHO_POLO_OVERRIDES: dict[str, dict[str, str]] = {
 }
 
 
-def resolve_polo_for_lead(
-    nicho: str | None,
-    subnicho: str | None = None,
-    inferido: str | None = None,
-) -> str:
-    """
-    Resolve o polo final considerando nicho + subnicho + inferência prévia.
+# ═══════════════════════════════════════════════════════════════════════════
+# FONTE UNICA: NICHO_FONT_PAIRS
+# ═══════════════════════════════════════════════════════════════════════════
+# Subnicho -> FontPair. Cada subnicho tem 5 FontSlots ponderados para
+# rotacao deterministica por lead_id (anti-duplicacao entre n sites do
+# mesmo nicho). A fonte "default" cobre qualquer chave nao mapeada.
 
-    Hierarquia (maior prioridade primeiro):
-      1. SUB_NICHO_POLO_OVERRIDES[nicho][subnicho]  (override específico)
-      2. NICHO_CONFIG[nicho].polo_sugerido           (default do nicho)
-      3. inferido                                    (do LLM)
-      4. "CLASSIC"                                   (fallback absoluto)
-
-    Args:
-        nicho: Nome do nicho canônico.
-        subnicho: Subnicho opcional (ex: "atleta", "infantil", "yoga").
-        inferido: Polo já inferido pelo agente_variacao (opcional).
-
-    Returns:
-        Polo canônico: SOFT | BOLD | CLASSIC | TECH.
-    """
-    if not nicho:
-        return inferido or "CLASSIC"
-
-    # 1) Override por subnicho (mais forte)
-    if subnicho:
-        overrides = SUB_NICHO_POLO_OVERRIDES.get(nicho.lower().strip(), {})
-        polo_override = overrides.get(subnicho.lower().strip())
-        if polo_override:
-            return polo_override
-
-    # 2) Polo do nicho canônico
-    cfg = get_nicho_config(nicho)
-    if cfg.polo_sugerido:
-        return cfg.polo_sugerido
-
-    # 3) Polo inferido pelo agente
-    if inferido:
-        return inferido.upper()
-
-    # 4) Fallback absoluto
-    return "CLASSIC"
+NICHO_FONT_PAIRS: dict[str, FontPair] = {
+    "default": _font_pair(
+        heading="Inter",
+        body="Inter",
+        variants=(
+            _fp("Manrope", "Inter", weight=4),
+            _fp("Inter", "Inter"),
+            _fp("DM Sans", "Inter"),
+            _fp("Manrope", "DM Sans"),
+            _fp("Inter", "Manrope"),
+        ),
+    ),
+    "nutricionista_esportiva": _font_pair(
+        heading="Bebas Neue",
+        body="Inter",
+        variants=(
+            _fp("Bebas Neue", "Inter"),
+            _fp("Anton", "Inter"),
+            _fp("Oswald", "Inter"),
+            _fp("Roboto Condensed", "Roboto"),
+            _fp("Anton", "Roboto"),
+        ),
+    ),
+    "nutricionista_clinica": _font_pair(
+        heading="Source Serif 4",
+        body="Nunito",
+        variants=(
+            _fp("Source Serif 4", "Nunito"),
+            _fp("Lora", "Nunito"),
+            _fp("Crimson Pro", "Lora"),
+            _fp("Merriweather", "Source Sans 3"),
+            _fp("Source Serif 4", "Source Sans 3"),
+        ),
+    ),
+    "barbearia_premium": _font_pair(
+        heading="Playfair Display",
+        body="Inter",
+        variants=(
+            _fp("Playfair Display", "Inter"),
+            _fp("Bebas Neue", "Inter"),
+            _fp("Anton", "Inter"),
+            _fp("Oswald", "Manrope"),
+            _fp("Libre Baskerville", "Inter"),
+        ),
+    ),
+    "academia_crossfit": _font_pair(
+        heading="Bebas Neue",
+        body="Inter",
+        variants=(
+            _fp("Bebas Neue", "Inter"),
+            _fp("Anton", "Inter"),
+            _fp("Oswald", "Inter"),
+            _fp("Roboto Condensed", "Manrope"),
+            _fp("Anton", "Roboto"),
+        ),
+    ),
+    "academia_musculacao": _font_pair(
+        heading="Anton",
+        body="Inter",
+        variants=(
+            _fp("Anton", "Inter"),
+            _fp("Bebas Neue", "Manrope"),
+            _fp("Oswald", "Inter"),
+            _fp("Anton", "Roboto"),
+            _fp("Bebas Neue", "Inter"),
+        ),
+    ),
+    "restaurante_familiar": _font_pair(
+        heading="Playfair Display",
+        body="Inter",
+        variants=(
+            _fp("Playfair Display", "Inter"),
+            _fp("Lora", "Manrope"),
+            _fp("Merriweather", "Source Sans 3"),
+            _fp("Crimson Pro", "Lora"),
+            _fp("Playfair Display", "DM Sans"),
+        ),
+    ),
+    "arquiteto_residencial": _font_pair(
+        heading="Playfair Display",
+        body="Inter",
+        variants=(
+            _fp("Playfair Display", "Inter"),
+            _fp("Lora", "Inter"),
+            _fp("Cormorant Garamond", "Inter"),
+            _fp("Playfair Display", "Manrope"),
+            _fp("Lora", "Source Sans 3"),
+        ),
+    ),
+    "arquiteto_comercial": _font_pair(
+        heading="Space Grotesk",
+        body="Inter",
+        variants=(
+            _fp("Space Grotesk", "Inter"),
+            _fp("Archivo", "Inter"),
+            _fp("IBM Plex Sans", "Inter"),
+            _fp("Space Grotesk", "Manrope"),
+            _fp("Archivo", "DM Sans"),
+        ),
+    ),
+    "construtora_residencial": _font_pair(
+        heading="Anton",
+        body="Inter",
+        variants=(
+            _fp("Anton", "Inter"),
+            _fp("Bebas Neue", "Inter"),
+            _fp("Oswald", "Manrope"),
+            _fp("Anton", "Roboto"),
+            _fp("Bebas Neue", "DM Sans"),
+        ),
+    ),
+    "construtora_comercial": _font_pair(
+        heading="IBM Plex Sans",
+        body="Inter",
+        variants=(
+            _fp("IBM Plex Sans", "Inter"),
+            _fp("Space Grotesk", "Inter"),
+            _fp("Archivo", "Manrope"),
+            _fp("IBM Plex Sans", "Source Sans 3"),
+            _fp("Space Grotesk", "DM Sans"),
+        ),
+    ),
+    "clinica_estetica": _font_pair(
+        heading="Playfair Display",
+        body="Nunito",
+        variants=(
+            _fp("Playfair Display", "Nunito"),
+            _fp("Lora", "Inter"),
+            _fp("Cormorant Garamond", "Nunito"),
+            _fp("Playfair Display", "Manrope"),
+            _fp("Lora", "Source Sans 3"),
+        ),
+    ),
+    "clinica_odontologica": _font_pair(
+        heading="Inter",
+        body="Inter",
+        variants=(
+            _fp("Inter", "Inter"),
+            _fp("Manrope", "Inter"),
+            _fp("DM Sans", "Inter"),
+            _fp("Inter", "Manrope"),
+            _fp("Manrope", "Source Sans 3"),
+        ),
+    ),
+    "escritorio_contabil": _font_pair(
+        heading="Libre Baskerville",
+        body="Inter",
+        variants=(
+            _fp("Libre Baskerville", "Inter"),
+            _fp("IBM Plex Serif", "Inter"),
+            _fp("Source Serif 4", "Manrope"),
+            _fp("Libre Baskerville", "Source Sans 3"),
+            _fp("IBM Plex Serif", "DM Sans"),
+        ),
+    ),
+    "imobiliaria_residencial": _font_pair(
+        heading="Space Grotesk",
+        body="Manrope",
+        variants=(
+            _fp("Space Grotesk", "Manrope"),
+            _fp("Archivo", "Inter"),
+            _fp("IBM Plex Sans", "Manrope"),
+            _fp("Space Grotesk", "Inter"),
+            _fp("Archivo", "Manrope"),
+        ),
+    ),
+    "advocacia_trabalhista": _font_pair(
+        heading="Playfair Display",
+        body="Inter",
+        variants=(
+            _fp("Playfair Display", "Inter"),
+            _fp("Libre Baskerville", "Inter"),
+            _fp("Source Serif 4", "Manrope"),
+            _fp("Playfair Display", "Source Sans 3"),
+            _fp("Libre Baskerville", "DM Sans"),
+        ),
+    ),
+}
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -920,7 +1212,6 @@ ALIASES: dict[str, str] = {
     "gym": "academia",
     "funcional": "academia",
     "personal_trainer": "academia",
-
     # advogado
     "advogado": "advogado",
     "advocacia": "advogado",
@@ -929,13 +1220,11 @@ ALIASES: dict[str, str] = {
     "escritorio_de_advocacia": "advogado",
     "juridico": "advogado",
     "advogada": "advogado",
-
     # barbearia
     "barbearia": "barbearia",
     "barber": "barbearia",
     "barbeiro": "barbearia",
     "barbearias": "barbearia",
-
     # clinica
     "clinica": "clinica",
     "clínica": "clinica",
@@ -943,13 +1232,11 @@ ALIASES: dict[str, str] = {
     "medico": "clinica",
     "medica": "clinica",
     "consultorio": "clinica",
-
     # dentista
     "dentista": "dentista",
     "odontologia": "dentista",
     "odontologo": "dentista",
     "clinica_odontologica": "dentista",
-
     # estetica
     "estetica": "estetica",
     "estética": "estetica",
@@ -958,13 +1245,11 @@ ALIASES: dict[str, str] = {
     "harmonização": "estetica",
     "botox": "estetica",
     "preenchimento": "estetica",
-
     # nutricionista
     "nutricionista": "nutricionista",
     "nutricao": "nutricionista",
     "nutrição": "nutricionista",
     "nutri": "nutricionista",
-
     # restaurante
     "restaurante": "restaurante",
     "restaurantes": "restaurante",
@@ -973,7 +1258,6 @@ ALIASES: dict[str, str] = {
     "hamburgueria": "restaurante",
     "lanchonete": "restaurante",
     "padaria": "restaurante",
-
     # pet shop
     "pet_shop": "pet_shop",
     "petshop": "pet_shop",
@@ -981,7 +1265,6 @@ ALIASES: dict[str, str] = {
     "veterinaria": "pet_shop",
     "veterinário": "pet_shop",
     "caes_e_gatos": "pet_shop",
-
     # salao
     "salao": "salao",
     "salão": "salao",
@@ -989,7 +1272,6 @@ ALIASES: dict[str, str] = {
     "cabeleireiro": "salao",
     "cabelereira": "salao",
     "manicure": "salao",
-
     # oficina
     "oficina": "oficina",
     "oficina_mecanica": "oficina",
@@ -997,13 +1279,11 @@ ALIASES: dict[str, str] = {
     "mecânica": "oficina",
     "auto_pecas": "oficina",
     "autopeças": "oficina",
-
     # energia solar
     "energia_solar": "energia_solar",
     "solar": "energia_solar",
     "placa_solar": "energia_solar",
     "fotovoltaico": "energia_solar",
-
     # imobiliaria
     "imobiliaria": "imobiliaria",
     "imobiliária": "imobiliaria",
@@ -1079,27 +1359,84 @@ def listar_nichos() -> tuple[str, ...]:
     return tuple(k for k in NICHO_CONFIG.keys() if k != "default")
 
 
+def resolve_fonts(
+    nicho: str | None,
+    subnicho: str | None = None,
+    *,
+    lead_id: str | int | None = None,
+) -> tuple[str, str]:
+    """Resolve o par (heading_family, body_family) deterministico por lead.
+
+    Hierarquia de busca:
+      1. NICHO_FONT_PAIRS[subnicho]  (preferido)
+      2. NICHO_FONT_PAIRS[nicho]     (fallback de nicho)
+      3. NICHO_FONT_PAIRS['default'] (fallback absoluto)
+
+    Para o slot escolhido dentro do par, usa hash MD5 do lead_id para
+    distribuir de forma ponderada entre as variancias. Mantem variacao
+    entre n sites do mesmo subnicho sem cair em duplicacao exata.
+
+    Args:
+        nicho: Nicho canonico (ex: 'academia') ou texto livre.
+        subnicho: Subnicho canonico (ex: 'academia_crossfit').
+        lead_id: Identificador estavel do lead (UUID, slug, etc).
+            Se None ou vazio, retorna o par default sem rotacao.
+
+    Returns:
+        Tupla (heading_family, body_family) com strings prontas para CSS.
+    """
+    key = (subnicho or nicho or "default").lower().strip() or "default"
+    fp = NICHO_FONT_PAIRS.get(key)
+    if fp is None and nicho:
+        fp = NICHO_FONT_PAIRS.get(nicho.lower().strip())
+    if fp is None:
+        fp = NICHO_FONT_PAIRS["default"]
+
+    if not fp.variants or not lead_id:
+        return fp.heading_default, fp.body_default
+
+    total = sum(s.weight for s in fp.variants)
+    if total <= 0:
+        return fp.heading_default, fp.body_default
+
+    # hash deterministico (PYTHONHASHSEED nao pode baguncar a distribuicao)
+    import hashlib as _hl
+
+    digest = _hl.md5(str(lead_id).encode("utf-8")).hexdigest()
+    bucket = int(digest, 16) % total
+    acc = 0
+    for slot in fp.variants:
+        acc += slot.weight
+        if bucket < acc:
+            return slot.heading, slot.body
+    return fp.heading_default, fp.body_default
+
+
 # ═══════════════════════════════════════════════════════════════════════════
 # EXPORTS
 # ═══════════════════════════════════════════════════════════════════════════
 
 __all__ = [
-    "ModalConfig",
-    "HeroHeadlines",
+    "ALIASES",
+    "NICHO_CONFIG",
+    "NICHO_FONT_PAIRS",
+    "SUB_NICHO_POLO_OVERRIDES",
     "CopyDefaults",
     "DesignLogic",
+    "FontPair",
+    "FontSlot",
+    "HeroHeadlines",
+    "ModalConfig",
     "NichoConfig",
-    "NICHO_CONFIG",
-    "ALIASES",
-    "SUB_NICHO_POLO_OVERRIDES",
-    "get_nicho_config",
-    "get_modal_config",
-    "get_schema_type",
+    "get_cta_primary",
+    "get_design_logic",
     "get_faq",
     "get_hero_headline",
-    "get_cta_primary",
+    "get_modal_config",
+    "get_nicho_config",
     "get_polo_sugerido",
-    "get_design_logic",
-    "resolve_polo_for_lead",
+    "get_schema_type",
     "listar_nichos",
+    "resolve_fonts",
+    "resolve_polo_for_lead",
 ]

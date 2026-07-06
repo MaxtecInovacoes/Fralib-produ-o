@@ -2957,6 +2957,13 @@ def prepare_vite_project_files(
     prepared["src/index.css"] = _ensure_index_css_contract(
         prepared.get("src/index.css", vite_template_index_css())
     )
+    # Patch H3 - injeta CSS vars deterministicas para heading/body no :root
+    _hf, _bf = _resolve_lead_fonts_for_facts(facts)
+    if _hf and _bf:
+        prepared["src/index.css"] = _ensure_font_vars_in_css(
+            prepared["src/index.css"], heading=_hf, body=_bf,
+            lead_id=facts.get("lead_id") or facts.get("id"),
+        )
     _normalize_generated_imports_and_hooks(prepared)
     _stabilize_app_contract(prepared)
     _drop_malformed_data_url_in_jsx(prepared)
@@ -6008,14 +6015,28 @@ def _generate_cinematic_studio_files(facts: dict[str, Any]) -> dict[str, str]:
     # Sprint 14.12: variacao por subnicho + counter rotation para evitar
     # que sites do mesmo subnicho (ex: 4 nutricionistas) saiam identicos.
     _biz = facts.get("business") if isinstance(facts.get("business"), dict) else {}
-    _subnicho_norm = (
-        str(
+    # Tenant 2 patch (Roll 5 / 2026-07-06): o objeto `facts` recebido aqui pode
+    # ser um SimpleNamespace (prd_arquiteto do build_prompt_agent_prd) que tem
+    # os atributos .subnicho / .subniche mas NAO tem .get("business"). Antes
+    # deste patch o _subnicho_norm caia no "default" porque o `facts.get(...)`
+    # retornava None em todos os casos. Agora tentamos 3 fontes em ordem:
+    # 1) atributos do objeto (SimpleNamespace)
+    # 2) chave do dict business
+    # 3) chaves raiz do dict (facts)
+    if hasattr(facts, "subnicho"):
+        _subnicho_from_facts = getattr(facts, "subnicho", "") or ""
+    elif hasattr(facts, "subniche"):
+        _subnicho_from_facts = getattr(facts, "subniche", "") or ""
+    else:
+        _subnicho_from_facts = (
             _biz.get("subnicho")
             or _biz.get("subniche")
             or facts.get("subnicho")
             or facts.get("subniche")
-            or "default"
+            or ""
         )
+    _subnicho_norm = (
+        str(_subnicho_from_facts)
         .strip()
         .lower()
         or "default"
@@ -6072,114 +6093,25 @@ def _generate_cinematic_studio_files(facts: dict[str, Any]) -> dict[str, str]:
     _h1_size = _H1_SIZE_POOL[_seed_for_html % len(_H1_SIZE_POOL)]
 
     # Font family variants (heading e body separados).
-    _FONT_POOL = {
-        "default": (
-            ["Manrope, sans-serif"] * 4 + ["Inter, sans-serif"],
-            ["Inter, sans-serif"] * 4 + ["Manrope, sans-serif"],
-        ),
-        "nutricionista_esportiva": (
-            [
-                "'Bebas Neue', sans-serif",
-                "'Anton', sans-serif",
-                "'Oswald', sans-serif",
-                "'Roboto Condensed', sans-serif",
-                "'Bebas Neue', sans-serif",
-            ],
-            [
-                "Inter, sans-serif",
-                "Manrope, sans-serif",
-                "Roboto, sans-serif",
-                "DM Sans, sans-serif",
-                "system-ui, sans-serif",
-            ],
-        ),
-        "nutricionista_clinica": (
-            [
-                "'Source Serif 4', serif",
-                "'Lora', serif",
-                "'Crimson Pro', serif",
-                "'Merriweather', serif",
-                "'Lora', serif",
-            ],
-            [
-                "'Nunito', sans-serif",
-                "Inter, sans-serif",
-                "system-ui, sans-serif",
-                "Manrope, sans-serif",
-                "Inter, sans-serif",
-            ],
-        ),
-        "barbearia_premium": (
-            [
-                "'Playfair Display', serif",
-                "'Bebas Neue', sans-serif",
-                "'Anton', sans-serif",
-                "'Oswald', sans-serif",
-                "'Libre Baskerville', serif",
-            ],
-            [
-                "Inter, sans-serif",
-                "Manrope, sans-serif",
-                "system-ui, sans-serif",
-                "DM Sans, sans-serif",
-                "Inter, sans-serif",
-            ],
-        ),
-        "academia_crossfit": (
-            [
-                "'Bebas Neue', sans-serif",
-                "'Anton', sans-serif",
-                "'Oswald', sans-serif",
-                "'Roboto Condensed', sans-serif",
-                "'Bebas Neue', sans-serif",
-            ],
-            [
-                "Inter, sans-serif",
-                "Manrope, sans-serif",
-                "Roboto, sans-serif",
-                "system-ui, sans-serif",
-                "DM Sans, sans-serif",
-            ],
-        ),
-        "academia_musculacao": (
-            [
-                "'Anton', sans-serif",
-                "'Bebas Neue', sans-serif",
-                "'Oswald', sans-serif",
-                "'Bebas Neue', sans-serif",
-                "'Anton', sans-serif",
-            ],
-            [
-                "Inter, sans-serif",
-                "Manrope, sans-serif",
-                "system-ui, sans-serif",
-                "Roboto, sans-serif",
-                "Inter, sans-serif",
-            ],
-        ),
-        "restaurante_familiar": (
-            [
-                "'Playfair Display', serif",
-                "'Lora', serif",
-                "'Merriweather', serif",
-                "'Crimson Pro', serif",
-                "'Playfair Display', serif",
-            ],
-            [
-                "Inter, sans-serif",
-                "system-ui, sans-serif",
-                "Manrope, sans-serif",
-                "Inter, sans-serif",
-                "DM Sans, sans-serif",
-            ],
-        ),
-    }
-    _heading_font_pool, _body_font_pool = _FONT_POOL.get(
-        _subnicho_norm, _FONT_POOL["default"]
+    # Font family resolved by nicho_registry (fonte unica de verdade).
+    # A determinismo vem de MD5(lead_id) % soma_pesos, conforme resolve_fonts().
+    from backend.config.nicho_registry import resolve_fonts as _resolve_fonts_studio
+
+    _studio_lead_id = str(
+        _biz.get("id")
+        or facts.get("lead_id")
+        or facts.get("id")
+        or _subnicho_norm
     )
-    _heading_font = _heading_font_pool[_seed_for_html % len(_heading_font_pool)]
-    _body_font = _body_font_pool[_seed_for_html % len(_body_font_pool)]
-    _font_family = _body_font
+    _heading_font, _body_font_raw = _resolve_fonts_studio(
+        nicho=segment,
+        subnicho=_subnicho_norm,
+        lead_id=_studio_lead_id,
+    )
+    _heading_font = f"'{_heading_font}', system-ui, sans-serif"
+    _body_font = f"'{_body_font_raw}', system-ui, sans-serif"
+    _font_family = _body_font_raw  # mantem compat com --font-family CSS
+
     _typography_mood = ""
     _variation_for_type = (
         facts.get("variation") if isinstance(facts.get("variation"), dict) else {}
@@ -8501,7 +8433,98 @@ CATEGORY: {ds_result.get("category", "General")}
 IMPORTANT: Apply this design system's color palette, typography, and visual
 principles. The chosen design system MUST affect the visible output.
 """
-        # Injetar Design Reference Pack completo (OpenDesign systems)
+    except Exception:
+        # Se falhar, continua sem design system (não quebra o pipeline)
+        design_system_ref = ""
+        design_reference_ref = ""
+
+    # ============================================================
+    # PATCH G — Design System Spec (font pairing + polo geometry)
+    # Tenant 2 / Roll 6 / 2026-07-06: injeta Design System Spec deterministico
+    # no prompt do LLM para que ele use fontes/geometria corretos por subnicho.
+    # FORA do try acima para nao quebrar o except.
+    # ============================================================
+    import json as _json_spec
+    from pathlib import Path as _Path_spec
+
+    _polo_matrix = {}
+    _polo_matrix_path = _Path_spec("/root/fralib/backend/services/_polo_matrix.json")
+    if _polo_matrix_path.exists():
+        try:
+            with open(_polo_matrix_path, "r", encoding="utf-8") as _pf:
+                _polo_matrix = _json_spec.load(_pf)
+        except Exception:
+            _polo_matrix = {}
+
+    # Extrair subnicho_norm (mesma logica do Patch F)
+    _biz_spec = facts.get("business") if isinstance(facts.get("business"), dict) else {}
+    if hasattr(facts, "subnicho"):
+        _subn_from_facts = getattr(facts, "subnicho", "") or ""
+    elif hasattr(facts, "subniche"):
+        _subn_from_facts = getattr(facts, "subniche", "") or ""
+    else:
+        _subn_from_facts = (
+            _biz_spec.get("subnicho")
+            or _biz_spec.get("subniche")
+            or facts.get("subnicho")
+            or facts.get("subniche")
+            or ""
+        )
+    _subnicho_norm_spec = str(_subn_from_facts).strip().lower() or "default"
+
+    # Font pool: resolvido deterministicamente pelo nicho_registry
+    # (fonte unica de verdade - ver backend/config/nicho_registry.py).
+    from backend.config.nicho_registry import resolve_fonts as _resolve_fonts
+
+    _lead_id_hint = (
+        facts.get("lead_id")
+        or facts.get("id")
+        or (facts.get("business") or {}).get("id")
+        or ""
+    )
+    _heading_font, _body_font = _resolve_fonts(
+        nicho=(facts.get("segment") or (facts.get("business") or {}).get("segment") or ""),
+        subnicho=_subnicho_norm_spec,
+        lead_id=_lead_id_hint or _subnicho_norm_spec,
+    )
+
+
+    _polo_entry = _polo_matrix.get(_subnicho_norm_spec) or _polo_matrix.get("default") or {}
+    _polo = _polo_entry.get("polo", "CLASSIC")
+    _geometry = _polo_entry.get("geometry", "asymmetric")
+    _spacing_mult = _polo_entry.get("spacing_mult", 1.2)
+    _layout_instruction = _polo_entry.get("layout_instruction", "")
+    _hero_size = _polo_entry.get("hero_size", "medium")
+
+    _design_system_spec_ref = f"""
+=== DESIGN SYSTEM SPEC (CRITICAL — subnicho: {_subnicho_norm_spec}) ===
+POLO: {_polo}
+GEOMETRY: {_geometry}
+SPACING_MULTIPLIER: {_spacing_mult}
+HERO_SIZE: {_hero_size}
+
+FONT PAIRING (deterministic by lead via nicho_registry.resolve_fonts):
+- HEADING FAMILY (chosen for this lead): {_heading_font}
+- BODY FAMILY (chosen for this lead):    {_body_font}
+- These names are also exposed as CSS vars --pole-heading-font and
+  --pole-body-font, injected into :root by the renderer (Patch H3).
+- Use the CSS classes "font-heading" (h1/h2/h3) and "font-body" (p/span/li)
+  in TSX/className; the system will resolve to the correct font via
+  font-family: var(--pole-heading-font) / var(--pole-body-font).
+- DO NOT add Google Fonts <link> tags; the system already injected the
+  right one in index.html. DO NOT write font-family inline in TSX.
+
+LAYOUT INSTRUCTION: {_layout_instruction}
+
+REGRA DURA: Para este subnicho ({_subnicho_norm_spec}), o CSS ja tem as
+fontes corretas aplicadas via vars. Ignore qualquer orientacao antiga
+sobre Manrope/Inter para este subnicho e use sempre as classes
+"font-heading"/"font-body".
+=== END DESIGN SYSTEM SPEC ===
+"""
+
+    # Injetar Design Reference Pack completo (OpenDesign systems)
+    try:
         ref_pack = facts.get("design_reference_pack") or {}
         if ref_pack and isinstance(ref_pack, dict):
             ref_prompt = format_design_reference_pack_prompt(ref_pack)
@@ -8513,6 +8536,9 @@ principles. The chosen design system MUST affect the visible output.
 
 Apply this brand's visual DNA: typography, colors, motion, spacing.
 """
+    except Exception:
+        # Se falhar, continua sem design reference (não quebra o pipeline)
+        pass
     except Exception:
         # Se falhar, continua sem design system (não quebra o pipeline)
         design_system_ref = ""
@@ -8556,7 +8582,7 @@ choose the best hero type for this business type.
     prompt = f"""Use this FraLib Prompt Agent request as the complete business brief.
 
 Return one JSON object with a `files` mapping for a complete Vite React
-TypeScript project. The compiled artifact must be `dist/index.html`.{skill_pack_ref}{design_contract_ref}{design_reference_ref}{design_system_ref}{variacao_ref}
+TypeScript project. The compiled artifact must be `dist/index.html`.{skill_pack_ref}{design_contract_ref}{design_reference_ref}{design_system_ref}{_design_system_spec_ref}{variacao_ref}
 
 Studio-grade visual contract:
 - Use Tailwind v4 through `@tailwindcss/vite`, `@import "tailwindcss";`,
@@ -10555,6 +10581,105 @@ def _ensure_index_css_contract(content: str) -> str:
 }
 """
     return css + ("\n" if not css.endswith("\n") else "")
+
+
+
+def _ensure_font_vars_in_css(
+    css: str, *, heading: str, body: str, lead_id: str | int | None = None
+) -> str:
+    """Patch H3 - injeta :root { --pole-heading-font; --pole-body-font }
+    no css, derivado do subnicho do lead via resolve_fonts().
+
+    Idempotente: se ja existir declaracao de --pole-heading-font, apenas
+    substitui os valores existentes em vez de duplicar.
+
+    Insercao logo apos o bloco @import inicial do CSS, antes de qualquer
+    @layer/@utilities (ordem exigida pelo Tailwind v4).
+    """
+    from backend.config.nicho_registry import resolve_fonts
+
+    _h, _b = resolve_fonts(
+        nicho=None, subnicho="default", lead_id=lead_id or _digits(heading)
+    ) if not heading or not body else (heading, body)
+
+    heading_decl = f"--pole-heading-font: '{_h}', system-ui, sans-serif;"
+    body_decl = f"--pole-body-font: '{_b}', system-ui, sans-serif;"
+    # Se ja existe AMBOS, so substitui; se nenhum existe, injeta novo bloco.
+    # Se so UM existe (estado parcial), substitui o que existe e injeta o outro.
+    pattern_h = re.compile(
+        r"(--pole-heading-font:\s*)([^;]+)(;)", re.MULTILINE
+    )
+    pattern_b = re.compile(
+        r"(--pole-body-font:\s*)([^;]+)(;)", re.MULTILINE
+    )
+    has_h = bool(pattern_h.search(css))
+    has_b = bool(pattern_b.search(css))
+    if has_h:
+        css = pattern_h.sub(rf"\g<1>'{_h}', system-ui, sans-serif\g<3>", css)
+    if has_b:
+        css = pattern_b.sub(rf"\g<1>'{_b}', system-ui, sans-serif\g<3>", css)
+    if has_h and has_b:
+        return css
+    # Injeta apenas a(s) declaracao(oes) que faltam no bloco :root
+    missing = []
+    if not has_h:
+        missing.append(heading_decl)
+    if not has_b:
+        missing.append(body_decl)
+    root_open = re.search(r":root\s*\{", css)
+    if root_open:
+        idx = root_open.end()
+        css = css[:idx] + "\n  " + "\n  ".join(missing) + css[idx:]
+        return css
+    # Senao: criar novo bloco :root logo apos @imports.
+    # Estrategia: separar imports (topo) do resto, inserir inject entre eles.
+    sep = "\n  "
+    body_lines = sep.join(d.rstrip() for d in missing)
+    inject = "\n:root {\n  " + body_lines + "\n}\n"
+    lines = css.splitlines(keepends=True)
+    last_import_idx = -1
+    for i, line in enumerate(lines):
+        if line.strip().startswith("@import"):
+            last_import_idx = i
+    insert_at = last_import_idx + 1 if last_import_idx >= 0 else 0
+    return "".join(lines[:insert_at]) + inject + "".join(lines[insert_at:])
+
+
+def _resolve_lead_fonts_for_facts(facts: dict[str, Any]) -> tuple[str, str]:
+    """Resolve (heading_family, body_family) para um facts via nicho_registry."""
+    from backend.config.nicho_registry import resolve_fonts as _rf
+
+    biz = facts.get("business") if isinstance(facts.get("business"), dict) else {}
+    subnicho = (
+        str(
+            biz.get("subnicho")
+            or biz.get("subniche")
+            or facts.get("subnicho")
+            or facts.get("subniche")
+            or "default"
+        )
+        .strip()
+        .lower()
+    )
+    segmento = (
+        str(
+            biz.get("segment")
+            or biz.get("segmento")
+            or facts.get("segmento")
+            or facts.get("segment")
+            or "servicos"
+        )
+        .strip()
+        .lower()
+    )
+    lead_id = (
+        biz.get("id")
+        or facts.get("lead_id")
+        or facts.get("id")
+        or f"{subnicho}:{facts.get('__counter', '')}"
+    )
+    return _rf(nicho=segmento, subnicho=subnicho, lead_id=lead_id)
+
 
 
 def _digits(value: str) -> str:

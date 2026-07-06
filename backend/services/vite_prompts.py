@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from typing import Any
 
-
 # ═══════════════════════════════════════════════════════════════════
 # POLE TOKENS BLOCK - Blocos Líquidos
 # ═══════════════════════════════════════════════════════════════════
+
 
 def _build_pole_tokens_block(facts: dict[str, Any] | None = None) -> str:
     """Sprint 12.x: injeta tokens de polo estético para Blocos Líquidos.
@@ -122,6 +122,7 @@ def _get_pole_rules(pole: str) -> str:
 # SHADCN/UI - Sprint 11
 # ═══════════════════════════════════════════════════════════════════
 
+
 def _build_shadcn_block() -> str:
     """Bloco shadcn/ui injetado no system prompt para o LLM preferir componentes prontos.
 
@@ -206,6 +207,7 @@ def _build_few_shot_prompt() -> str:
     # Lazy load few-shot examples. Falha silenciosa se modulo nao existir.
     try:
         from backend.agents.few_shot_examples import build_few_shot_block
+
         return build_few_shot_block()
     except Exception:
         return ""
@@ -220,6 +222,7 @@ def _build_premium_contract_block() -> str:
     """
     try:
         from backend.agents.prompt_agent_context import _premium_delivery_contract
+
         # contexto minimo: secao vazia + business vazio; LLM ja recebeu facts
         # no user prompt, entao este bloco so ativa as REGRAS, nao duplica dados.
         context = {
@@ -460,23 +463,28 @@ def _build_lead_briefing_block(facts: dict[str, Any] | None = None) -> str:
     reviews = business.get("reviews_count") or business.get("total_avaliacoes") or ""
 
     services = (
-        business.get("services") or business.get("servicos")
-        or facts.get("services") or []
+        business.get("services")
+        or business.get("servicos")
+        or facts.get("services")
+        or []
     )
     if isinstance(services, str):
         services = [s.strip() for s in services.split(",") if s.strip()]
 
-    hours = business.get("hours") or business.get("horarios") or facts.get("horarios") or ""
+    hours = (
+        business.get("hours") or business.get("horarios") or facts.get("horarios") or ""
+    )
 
     primary_terms = (
-        seo.get("primary_terms") or facts.get("seo_keywords") or facts.get("keywords") or []
+        seo.get("primary_terms")
+        or facts.get("seo_keywords")
+        or facts.get("keywords")
+        or []
     )
     if isinstance(primary_terms, str):
         primary_terms = [k.strip() for k in primary_terms.split(",") if k.strip()]
 
-    photos = (
-        media.get("photos") or business.get("photos") or facts.get("photos") or []
-    )
+    photos = media.get("photos") or business.get("photos") or facts.get("photos") or []
     if isinstance(photos, str):
         photos = [p.strip() for p in photos.split(",") if p.strip()]
 
@@ -486,22 +494,26 @@ def _build_lead_briefing_block(facts: dict[str, Any] | None = None) -> str:
 
     services_block = (
         "\n".join(f"  - {s}" for s in services[:8])
-        if services else "  (servicos nao confirmados — NAO inventar cards de servicos)"
+        if services
+        else "  (servicos nao confirmados — NAO inventar cards de servicos)"
     )
 
     photos_block = (
         "\n".join(f"  - {p}" for p in photos[:6] if p)
-        if photos else "  (sem fotos aprovadas — usar editorial stock com disclaimer)"
+        if photos
+        else "  (sem fotos aprovadas — usar editorial stock com disclaimer)"
     )
 
     primary_terms_block = (
         ", ".join(str(k) for k in primary_terms[:8] if k)
-        if primary_terms else "(sem keywords validadas)"
+        if primary_terms
+        else "(sem keywords validadas)"
     )
 
     # JSON-LD dinâmico por nicho (advogado→LegalService, restaurante→Restaurant, etc.)
     try:
         from backend.config.nicho_registry import get_schema_type
+
         schema_type = get_schema_type(segment)
     except Exception:
         schema_type = "LocalBusiness"
@@ -524,6 +536,7 @@ def _build_lead_briefing_block(facts: dict[str, Any] | None = None) -> str:
         }
 
     import json as _json
+
     json_ld_str = _json.dumps(json_ld, ensure_ascii=False, indent=2)
 
     # Sprint 14.x: Extrair cores do briefing do usuário
@@ -535,18 +548,20 @@ def _build_lead_briefing_block(facts: dict[str, Any] | None = None) -> str:
         if not _paleta:
             _nicho = facts.get("nicho_briefing")
             if isinstance(_nicho, dict):
-                _paleta = _nicho.get("paleta_cores") or _nicho.get("color_palette") or {}
+                _paleta = (
+                    _nicho.get("paleta_cores") or _nicho.get("color_palette") or {}
+                )
             elif hasattr(_nicho, "paleta_cores"):
                 _paleta = getattr(_nicho, "paleta_cores", {}) or {}
 
     if _paleta and _paleta.get("primary"):
         colors_block = f"""
 CORES SOLICITADAS PELO USUÁRIO (OBRIGATÓRIO USAR ESTAS CORES):
-- Primary: {_paleta.get('primary', '')}
-- Secondary: {_paleta.get('secondary', '')}
-- Accent: {_paleta.get('accent', '')}
-- Background: {_paleta.get('background', '')}
-- Text: {_paleta.get('text', '')}
+- Primary: {_paleta.get("primary", "")}
+- Secondary: {_paleta.get("secondary", "")}
+- Accent: {_paleta.get("accent", "")}
+- Background: {_paleta.get("background", "")}
+- Text: {_paleta.get("text", "")}
 ESSAS CORES FORAM SOLICITADAS PELO USUÁRIO NO FORMULÁRIO — RESPEITE-AS.
 """
     else:
@@ -558,11 +573,11 @@ LEAD BRIEFING — DADOS REAIS CONFIRMADOS (Sprint 12.12 — NAO INVENTAR):
 Use APENAS os dados abaixo. Se um campo estiver vazio, NAO crie ficticios.
 
 Business: {name}
-Segmento: {segment or '(nao informado)'}
-Cidade: {city or '(nao informada)'}
-Telefone/WhatsApp: {phone or '(nao informado)'}
-Endereco: {address or '(nao informado)'}
-Rating: {rating or '(nao informado)'} | Reviews: {reviews or '(nao informado)'}
+Segmento: {segment or "(nao informado)"}
+Cidade: {city or "(nao informada)"}
+Telefone/WhatsApp: {phone or "(nao informado)"}
+Endereco: {address or "(nao informado)"}
+Rating: {rating or "(nao informado)"} | Reviews: {reviews or "(nao informado)"}
 
 {colors_block}
 
@@ -570,7 +585,7 @@ SERVICOS CONFIRMADOS (use EXATAMENTE estes, NAO inventar):
 {services_block}
 
 HORARIOS:
-{hours or '(nao informado — NAO inventar horarios)'}
+{hours or "(nao informado — NAO inventar horarios)"}
 
 KEYWORDS SEO PRIORITARIAS (distribuir com naturalidade):
 {primary_terms_block}
@@ -621,10 +636,13 @@ def _build_caroço_block(facts: dict[str, Any] | None = None) -> str:
     )
 
 
-def _build_vite_react_system_prompt_with_facts(facts: dict[str, Any] | None = None) -> str:
+def _build_vite_react_system_prompt_with_facts(
+    facts: dict[str, Any] | None = None,
+) -> str:
     """Sprint 12.12: prompt FINAL com briefing real injetado."""
     caroco = _build_caroço_block(facts)
     return VITE_REACT_SYSTEM_PROMPT_HEAD + caroco + VITE_REACT_SYSTEM_PROMPT_TAIL
+
 
 # Modal configuration por nicho (Booking/CTA/Orcamento/Agendamento)
 # DEPRECATED (Sprint 12.x): esta constante existe apenas como fallback legacy.
@@ -692,12 +710,19 @@ def _build_nicho_modal_block(facts: dict[str, Any] | None = None) -> str:
     """
     # Sprint 12.x: usar nicho_registry em vez de NICHO_MODAL_CONFIG
     try:
-        from backend.config.nicho_registry import get_modal_config, resolve_polo_for_lead
+        from backend.config.nicho_registry import (
+            get_modal_config,
+            resolve_polo_for_lead,
+        )
     except ImportError:
         # Fallback para NICHO_MODAL_CONFIG se registry indisponível
         nicho = "default"
         if facts:
-            seg = (facts.get("business") or {}).get("segment") or facts.get("segmento") or ""
+            seg = (
+                (facts.get("business") or {}).get("segment")
+                or facts.get("segmento")
+                or ""
+            )
             seg_lower = str(seg).lower()
             for key in NICHO_MODAL_CONFIG:
                 if key in seg_lower:
@@ -717,11 +742,7 @@ def _build_nicho_modal_block(facts: dict[str, Any] | None = None) -> str:
             or facts.get("segment")
             or ""
         )
-        subnicho = (
-            business.get("subniche")
-            or facts.get("subnicho")
-            or ""
-        )
+        subnicho = business.get("subniche") or facts.get("subnicho") or ""
 
     # Buscar config do nicho via registry (ModalConfig tem .title, .cta_button, etc)
     modal = get_modal_config(segmento)
@@ -746,10 +767,10 @@ Todo projeto Vite/React DEVE incluir um componente de conversao no path
 'BookingModal' ou 'ContactModal' usando o shadcn <Dialog>.
 
 Configuracao para nicho '{nicho}':
-- Title do modal: {config['title']}
-- Botao CTA primario: {config['cta_button']}
-- Campos do formulario: {config['fields']}
-- Acao ao submit: {config['submit_action']}
+- Title do modal: {config["title"]}
+- Botao CTA primario: {config["cta_button"]}
+- Campos do formulario: {config["fields"]}
+- Acao ao submit: {config["submit_action"]}
 
 CODIGO OBRIGATORIO (use este padrao):
 
@@ -1000,7 +1021,11 @@ Rules:
   Do NOT reuse the same generic section pattern for every site.
 """
 
-VITE_REACT_SYSTEM_PROMPT = VITE_REACT_SYSTEM_PROMPT_HEAD + VITE_REACT_SYSTEM_PROMPT_FOOT + VITE_REACT_SYSTEM_PROMPT_TAIL
+VITE_REACT_SYSTEM_PROMPT = (
+    VITE_REACT_SYSTEM_PROMPT_HEAD
+    + VITE_REACT_SYSTEM_PROMPT_FOOT
+    + VITE_REACT_SYSTEM_PROMPT_TAIL
+)
 
 
 VITE_REACT_BATCH_SYSTEM_PROMPT = """You are generating file batch "{batch_name}" for a Vite React landing page.
@@ -1026,6 +1051,7 @@ Rules:
 # USER PROMPT COMPOSERS
 # ═══════════════════════════════════════════════════════════════════
 
+
 def _compose_vite_user_prompt(
     facts: dict[str, Any],
     segment: str,
@@ -1048,7 +1074,7 @@ def _compose_vite_user_prompt(
     # Build prompt
     prompt = f"""Generate a premium Vite React landing page for:
 
-Business: {business.get('name', 'Business Name')}
+Business: {business.get("name", "Business Name")}
 Niche: {niche}
 City: {city}
 Phone: {phone}
@@ -1064,9 +1090,100 @@ Requirements:
 
 Generate complete TypeScript React components with proper types."""
 
+    # ============================================================
+    # PATCH G2 — Design System Spec (Roll 6 / 2026-07-06)
+    # Tenant 2: injeta Design System Spec deterministico no prompt
+    # com fontes por subnicho, polo, geometry, spacing. Este e o caminho
+    # USADO para gerar o builder_prompt que vai para o LLM (creative_plan).
+    # ============================================================
+    try:
+        import json as _json_spec_g
+        from pathlib import Path as _Path_spec_g
+
+        _polo_matrix_g = {}
+        _polo_matrix_path_g = _Path_spec_g("/root/fralib/backend/services/_polo_matrix.json")
+        if _polo_matrix_path_g.exists():
+            try:
+                with open(_polo_matrix_path_g, "r", encoding="utf-8") as _pf_g:
+                    _polo_matrix_g = _json_spec_g.load(_pf_g)
+            except Exception:
+                _polo_matrix_g = {}
+
+        # Extrair subnicho_norm (mesma logica do Patch F)
+        _biz_spec_g = facts.get("business") if isinstance(facts.get("business"), dict) else {}
+        if hasattr(facts, "subnicho"):
+            _subn_from_facts_g = getattr(facts, "subnicho", "") or ""
+        elif hasattr(facts, "subniche"):
+            _subn_from_facts_g = getattr(facts, "subniche", "") or ""
+        else:
+            _subn_from_facts_g = (
+                _biz_spec_g.get("subnicho")
+                or _biz_spec_g.get("subniche")
+                or facts.get("subnicho")
+                or facts.get("subniche")
+                or ""
+            )
+        _subnicho_norm_g = str(_subn_from_facts_g).strip().lower() or "default"
+
+        # Fontes resolvidas pelo nicho_registry (fonte unica de verdade).
+        from backend.config.nicho_registry import resolve_fonts as _resolve_fonts_g
+
+        _g_lead_id = (
+            facts.get("lead_id")
+            or facts.get("id")
+            or _biz_spec_g.get("id")
+            or _subnicho_norm_g
+        )
+        _g_segmento = (
+            _biz_spec_g.get("segment")
+            or _biz_spec_g.get("segmento")
+            or facts.get("segmento")
+            or facts.get("segment")
+            or ""
+        )
+        _heading_font_g, _body_font_g = _resolve_fonts_g(
+            nicho=_g_segmento,
+            subnicho=_subnicho_norm_g,
+            lead_id=_g_lead_id,
+        )
+        _polo_entry_g = _polo_matrix_g.get(_subnicho_norm_g) or _polo_matrix_g.get("default") or {}
+        _polo_g = _polo_entry_g.get("polo", "CLASSIC")
+        _geometry_g = _polo_entry_g.get("geometry", "asymmetric")
+        _spacing_mult_g = _polo_entry_g.get("spacing_mult", 1.2)
+        _layout_instruction_g = _polo_entry_g.get("layout_instruction", "")
+        _hero_size_g = _polo_entry_g.get("hero_size", "medium")
+
+        prompt += f"""
+
+=== DESIGN SYSTEM SPEC (CRITICAL — subnicho: {_subnicho_norm_g}) ===
+POLO: {_polo_g}
+GEOMETRY: {_geometry_g}
+SPACING_MULTIPLIER: {_spacing_mult_g}
+HERO_SIZE: {_hero_size_g}
+
+FONT PAIRING (deterministic via nicho_registry.resolve_fonts):
+- HEADING FAMILY: {_heading_font_g}
+- BODY FAMILY:    {_body_font_g}
+- Exposto em CSS vars --pole-heading-font / --pole-body-font no :root.
+- Use as classes "font-heading" (h1/h2/h3) e "font-body" (p/span/li).
+- NAO adicione <link> Google Fonts manual (sistema ja injeta).
+
+LAYOUT INSTRUCTION: {_layout_instruction_g}
+
+REGRA DURA: Para este subnicho ({_subnicho_norm_g}), use as CSS vars
+ja aplicadas. Ignore qualquer orientacao antiga sobre Manrope/Inter
+e prefira as classes utilitarias acima.
+=== END DESIGN SYSTEM SPEC ==="""
+    except Exception:
+        # Se Patch G2 falhar, segue sem spec (nao quebra o pipeline)
+        pass
+
     # Injeta Design System Awwwards-grade (#25 Plano Mestre SDR)
     try:
-        from backend.agents.design_system_injector import inject_design_system_into_prompt
+        from backend.agents.design_system_injector import (
+            inject_design_system_into_prompt,
+        )
+
         prompt = inject_design_system_into_prompt(prompt, facts)
     except Exception:
         pass
@@ -1087,12 +1204,12 @@ def _compose_vite_file_batch_prompt(
 
     prompt = f"""Generate the following files for a Vite React landing page:
 
-Business: {business.get('name', 'Business Name')}
+Business: {business.get("name", "Business Name")}
 Segment: {segment}
 City: {city}
 
 Files to generate:
-{chr(10).join(f'- {f}' for f in batch_files)}
+{chr(10).join(f"- {f}" for f in batch_files)}
 
 {facts_summary}
 

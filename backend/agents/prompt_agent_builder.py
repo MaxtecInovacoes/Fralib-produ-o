@@ -42,10 +42,14 @@ except Exception:  # pragma: no cover - local import variant
         from niche_resolver import resolve_niche_context
 
 
-def build_prompt_agent_payload(source: Any, *, target: str = "landing-page") -> dict[str, Any]:
+def build_prompt_agent_payload(
+    source: Any, *, target: str = "landing-page"
+) -> dict[str, Any]:
     """Build the isolated prompt payload consumed by the Builder Worker."""
     facts = _as_dict(source)
-    if facts.get("contract") == "fralib-prompt-agent-v1" and facts.get("builder_prompt"):
+    if facts.get("contract") == "fralib-prompt-agent-v1" and facts.get(
+        "builder_prompt"
+    ):
         return facts
 
     normalized_target = _normalize_target(target)
@@ -72,8 +76,102 @@ def build_prompt_agent_payload(source: Any, *, target: str = "landing-page") -> 
         str(prompt_context["business"].get("segment") or ""),
         {**lead, **facts, **prompt_context["business"]},
     )
-    prompt_context["allowed_numeric_claims"] = _allowed_numeric_claims(prompt_context["business"])
+    prompt_context["allowed_numeric_claims"] = _allowed_numeric_claims(
+        prompt_context["business"]
+    )
     prompt_context["visual_direction"] = _visual_direction_contract(prompt_context)
+
+    # ============================================================
+    # PATCH G3 — Design System Spec (Roll 6 / 2026-07-06)
+    # Tenant 2: injeta Design System Spec deterministico no prompt_context
+    # para que render_builder_prompt() inclua FONT PAIRING + POLO + GEOMETRY
+    # baseados no subnicho do lead. Este e o caminho USADO para creative_plan.
+    # ============================================================
+    try:
+        import json as _json_spec_g3
+        from pathlib import Path as _Path_spec_g3
+
+        _polo_matrix_g3 = {}
+        _polo_matrix_path_g3 = _Path_spec_g3("/root/fralib/backend/services/_polo_matrix.json")
+        if _polo_matrix_path_g3.exists():
+            try:
+                with open(_polo_matrix_path_g3, "r", encoding="utf-8") as _pf_g3:
+                    _polo_matrix_g3 = _json_spec_g3.load(_pf_g3)
+            except Exception:
+                _polo_matrix_g3 = {}
+
+        # Extrair subnicho_norm (mesma logica do Patch F)
+        _biz_spec_g3 = (
+            prompt_context.get("business")
+            if isinstance(prompt_context.get("business"), dict)
+            else {}
+        )
+        # Tentar extrair subnicho de varios lugares
+        _subn_from_facts_g3 = (
+            _biz_spec_g3.get("subnicho")
+            or _biz_spec_g3.get("subniche")
+            or facts.get("subnicho")
+            or facts.get("subniche")
+            or ""
+        )
+        # Fallback: inferir via _infer_subniche (helper ja existente)
+        if not _subn_from_facts_g3:
+            try:
+                _subn_from_facts_g3 = _infer_subniche(
+                    segment=_biz_spec_g3.get("segment", ""),
+                    services=_dict(facts.get("services")) or [],
+                    atributos=_dict(facts.get("atributos")) or [],
+                )
+            except Exception:
+                pass
+        _subnicho_norm_g3 = str(_subn_from_facts_g3).strip().lower() or "default"
+
+        # Fontes resolvidas pelo nicho_registry (fonte unica de verdade).
+        from backend.config.nicho_registry import resolve_fonts as _resolve_fonts_g3
+
+        _g3_lead_id = (
+            facts.get("lead_id")
+            or facts.get("id")
+            or (_biz_spec_g3.get("id") if isinstance(_biz_spec_g3, dict) else None)
+            or _subnicho_norm_g3
+        )
+        _g3_segmento = (
+            (_biz_spec_g3.get("segment") if isinstance(_biz_spec_g3, dict) else None)
+            or facts.get("segmento")
+            or facts.get("segment")
+            or ""
+        )
+        _heading_font_g3, _body_font_g3 = _resolve_fonts_g3(
+            nicho=_g3_segmento or "",
+            subnicho=_subnicho_norm_g3,
+            lead_id=_g3_lead_id,
+        )
+        _polo_entry_g3 = _polo_matrix_g3.get(_subnicho_norm_g3) or _polo_matrix_g3.get("default") or {}
+        _polo_g3 = _polo_entry_g3.get("polo", "CLASSIC")
+        _geometry_g3 = _polo_entry_g3.get("geometry", "asymmetric")
+        _spacing_mult_g3 = _polo_entry_g3.get("spacing_mult", 1.2)
+        _layout_instruction_g3 = _polo_entry_g3.get("layout_instruction", "")
+        _hero_size_g3 = _polo_entry_g3.get("hero_size", "medium")
+
+        prompt_context["design_system_spec"] = {
+            "subnicho": _subnicho_norm_g3,
+            "polo": _polo_g3,
+            "geometry": _geometry_g3,
+            "spacing_mult": _spacing_mult_g3,
+            "hero_size": _hero_size_g3,
+            "heading_font": _heading_font_g3,
+            "body_font": _body_font_g3,
+            "layout_instruction": _layout_instruction_g3,
+            "proibicao": (
+                f"Ignore as fontes Manrope/Inter do briefing original. "
+                f"Para o subnicho '{_subnicho_norm_g3}', use EXCLUSIVAMENTE "
+                f"HEADING={_heading_font_g3} e BODY={_body_font_g3}."
+            ),
+        }
+    except Exception:
+        # Se Patch G3 falhar, segue sem spec (nao quebra o pipeline)
+        pass
+
     builder_prompt = render_builder_prompt(prompt_context)
     return {
         "version": 1,
@@ -138,6 +236,25 @@ Premium visual and publishing contract
 
 Mandatory visual direction contract
 {_fmt_visual_direction(context.get("visual_direction") or {})}
+
+=== DESIGN SYSTEM SPEC (CRITICAL — subnicho: {context.get("design_system_spec", {}).get("subnicho", "default")}) ===
+POLO: {context.get("design_system_spec", {}).get("polo", "CLASSIC")}
+GEOMETRY: {context.get("design_system_spec", {}).get("geometry", "asymmetric")}
+SPACING_MULTIPLIER: {context.get("design_system_spec", {}).get("spacing_mult", 1.2)}
+HERO_SIZE: {context.get("design_system_spec", {}).get("hero_size", "medium")}
+
+FONT PAIRING (deterministic via nicho_registry.resolve_fonts):
+- HEADING FAMILY: {context.get("design_system_spec", {}).get("heading_font", "Inter")}
+- BODY FAMILY:    {context.get("design_system_spec", {}).get("body_font", "Inter")}
+- Exposto em CSS vars --pole-heading-font / --pole-body-font.
+- Use as classes "font-heading" (h1/h2/h3) e "font-body" (p/span/li).
+- NAO adicione <link> Google Fonts manual (sistema ja injeta).
+
+LAYOUT INSTRUCTION: {context.get("design_system_spec", {}).get("layout_instruction", "")}
+
+REGRA DURA: Use as CSS vars aplicadas. Ignore orientacoes antigas
+sobre Manrope/Inter e prefira as classes utilitarias acima.
+=== END DESIGN SYSTEM SPEC ===
 
 Output runtime: deliver a single self-contained HTML document
 that uses Tailwind utility classes inline. No build step, no
