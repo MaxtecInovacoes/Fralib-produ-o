@@ -17,43 +17,56 @@ Configuracao por env:
     WORKER_HEARTBEAT_SECS  intervalo de heartbeat durante job (default 30s)
     WORKER_REAP_SECS       a cada N segundos roda reap_dead_workers (default 60s)
 """
+
 import asyncio
 import importlib
 import json
 import logging
 import os
 import signal
-import sys
-import time
 import socket
+import sys
 import threading
-from typing import Optional
+import time
 from pathlib import Path
 
 # Carrega .env ANTES de importar database (que valida DATABASE_URL no import).
 from dotenv import load_dotenv
+
 _ROOT_DIR = Path(__file__).resolve().parent
 load_dotenv(dotenv_path=_ROOT_DIR / ".env", override=False)
 load_dotenv(dotenv_path=_ROOT_DIR / "backend" / ".env", override=False)
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-for _rel in ("backend", "backend/core", "backend/agents", "backend/endpoints", "backend/services"):
+for _rel in (
+    "backend",
+    "backend/core",
+    "backend/agents",
+    "backend/endpoints",
+    "backend/services",
+):
     sys.path.insert(0, os.path.join(BASE_DIR, _rel))
 
-from database import SessionLocal, inicializar_database
 import job_queue
+from database import SessionLocal, inicializar_database
 
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s [worker] %(levelname)s %(message)s',
+    format="%(asctime)s [worker] %(levelname)s %(message)s",
 )
 log = logging.getLogger("fralib.worker")
 
 
 def _proximo_slot_valido(tenant_id: int | None) -> int:
-    """Segundos ate o proximo slot SDR valido (proxima 08:00). Minimo 60s."""
+    """Segundos ate o proximo slot SDR valido (proxima hora_inicio).
+
+    Regra canonical (Sprint fix): se hoje NAO e' dia bloqueado e ainda NAO chegou
+    em hora_inicio, abrir HOJE (nao amanha). Evita delay de 25h em jobs que
+    falham entre meia-noite e hora_inicio. Minimo 60s.
+    """
     try:
-        from datetime import datetime, timezone, timedelta
+        from datetime import datetime, timedelta, timezone
+
         from backend.agents.sdr_langgraph.tools import is_within_schedule
 
         if tenant_id and is_within_schedule(tenant_id):
@@ -63,6 +76,7 @@ def _proximo_slot_valido(tenant_id: int | None) -> int:
         hora_inicio, hora_fim, dias_bloqueados = 8, 21, [6]
         try:
             from backend.agents.sdr_langgraph.compat import _get_horario_config
+
             config = _get_horario_config(tenant_id) if tenant_id else None
             if config:
                 if config.get("modo") == "livre":
@@ -74,14 +88,29 @@ def _proximo_slot_valido(tenant_id: int | None) -> int:
             pass
 
         agora = datetime.now(timezone(timedelta(hours=-3)))
-        dia = agora + timedelta(days=1)
-        while dia.weekday() in dias_bloqueados:
-            dia += timedelta(days=1)
-        proximo = dia.replace(hour=hora_inicio, minute=0, second=0, microsecond=0)
+
+        # === Regra canonical ===
+        # Caso 1: hoje NAO e' dia bloqueado e hora atual < hora_inicio
+        #   => abrir HOJE em hora_inicio (era o bug: antes sempre +1 dia)
+        # Caso 2: hoje NAO e' dia bloqueado e hora atual >= hora_fim
+        #   => abrir AMANHA (pula dias bloqueados)
+        # Caso 3: hoje E' dia bloqueado
+        #   => abrir no proximo dia NAO bloqueado em hora_inicio
+        if agora.weekday() not in dias_bloqueados and agora.hour < hora_inicio:
+            candidato = agora
+        else:
+            candidato = agora + timedelta(days=1)
+            while candidato.weekday() in dias_bloqueados:
+                candidato += timedelta(days=1)
+
+        proximo = candidato.replace(
+            hour=hora_inicio, minute=0, second=0, microsecond=0
+        )
         delay = (proximo - agora).total_seconds()
         return max(60, int(delay))
     except Exception:
         return 3600  # fallback 1h
+
 
 POLL_SECONDS = int(os.environ.get("WORKER_POLL_SECONDS", "3"))
 HEARTBEAT_SECS = int(os.environ.get("WORKER_HEARTBEAT_SECS", "30"))
@@ -90,17 +119,26 @@ JOB_MAX_SECS = int(os.environ.get("WORKER_JOB_MAX_SECS", "1800"))
 LEAD_SUPPLY_SYNC_SECS = int(os.environ.get("LEAD_SUPPLY_SYNC_SECS", "300"))
 FRANZ_RECONCILE_SECS = int(os.environ.get("FRALIB_FRANZ_RECONCILE_SECS", "300"))
 FRANZ_RECONCILE_LIMIT = int(os.environ.get("FRALIB_FRANZ_RECONCILE_LIMIT", "25"))
-FRANZ_OUTREACH_SPACING_SECS = int(os.environ.get("FRALIB_FRANZ_OUTREACH_SPACING_SECS", "600"))
-OUTBOUND_QUEUE_PROCESS_SECS = int(os.environ.get("FRALIB_OUTBOUND_QUEUE_PROCESS_SECS", "30"))
-TMP_CLEANUP_HIGH_WATERMARK = float(os.environ.get("WORKER_TMP_CLEANUP_HIGH_WATERMARK", "0.50"))
-TMP_CLEANUP_CRITICAL_WATERMARK = float(os.environ.get("WORKER_TMP_CLEANUP_CRITICAL_WATERMARK", "0.80"))
+FRANZ_OUTREACH_SPACING_SECS = int(
+    os.environ.get("FRALIB_FRANZ_OUTREACH_SPACING_SECS", "600")
+)
+OUTBOUND_QUEUE_PROCESS_SECS = int(
+    os.environ.get("FRALIB_OUTBOUND_QUEUE_PROCESS_SECS", "30")
+)
+TMP_CLEANUP_HIGH_WATERMARK = float(
+    os.environ.get("WORKER_TMP_CLEANUP_HIGH_WATERMARK", "0.50")
+)
+TMP_CLEANUP_CRITICAL_WATERMARK = float(
+    os.environ.get("WORKER_TMP_CLEANUP_CRITICAL_WATERMARK", "0.80")
+)
 WORKER_JOB_TYPES = [
     item.strip()
     for item in os.environ.get(
         # Default SEM franz_outreach: franz tem worker dedicado (fralib-franz.service).
         # Se precisar pegar Franz neste worker manualmente, defina
         # WORKER_JOB_TYPES no env incluindo 'franz_outreach'.
-        "WORKER_JOB_TYPES", "pipeline_lead,pipeline_multiplos,lead_supply_hunter,lead_supply_caio,lead_production_tick"
+        "WORKER_JOB_TYPES",
+        "pipeline_lead,pipeline_multiplos,lead_supply_hunter,lead_supply_caio,lead_production_tick",
     ).split(",")
     if item.strip()
 ]
@@ -204,7 +242,7 @@ def _notificar_feedback_job(job: dict, status: str, fase: str, mensagem: str) ->
 
 # Implementacao canonica em backend.services.sdr_helpers — reexportado aqui
 # para manter compatibilidade com callers que ja faziam ``from worker import ...``.
-from backend.services.sdr_helpers import _sdr_quality_hold_reason  # noqa: E402,F401
+from backend.services.sdr_helpers import _sdr_quality_hold_reason  # noqa: E402
 
 
 def _shutdown(signum, frame):
@@ -225,7 +263,9 @@ def _cleanup_old_workspaces(*, max_age_hours: int = 24) -> int:
     import shutil as _shutil
     import time as _time
 
-    workspace_root = os.environ.get("FRALIB_BUILDER_SANDBOX_ROOT", "/tmp/fralib_builder")
+    workspace_root = os.environ.get(
+        "FRALIB_BUILDER_SANDBOX_ROOT", "/tmp/fralib_builder"
+    )
     if not os.path.isdir(workspace_root):
         return 0
 
@@ -247,19 +287,28 @@ def _cleanup_old_workspaces(*, max_age_hours: int = 24) -> int:
                     node_modules = os.path.join(job_path, "node_modules")
                     plugin_react = os.path.join(node_modules, "@vitejs", "plugin-react")
                     old = (now - mtime) > max_age_seconds
-                    incomplete = os.path.isdir(node_modules) and not os.path.isdir(plugin_react)
+                    incomplete = os.path.isdir(node_modules) and not os.path.isdir(
+                        plugin_react
+                    )
                     if old or incomplete:
                         _shutil.rmtree(job_path, ignore_errors=True)
                         removed += 1
                         if incomplete:
-                            log.warning("workspace cleanup: node_modules incompleto em %s", job_path)
+                            log.warning(
+                                "workspace cleanup: node_modules incompleto em %s",
+                                job_path,
+                            )
                 except Exception:
                     pass
         except Exception:
             pass
 
     if removed > 0:
-        log.info("workspace cleanup: removeu %s diretorios (max_age=%sh)", removed, max_age_hours)
+        log.info(
+            "workspace cleanup: removeu %s diretorios (max_age=%sh)",
+            removed,
+            max_age_hours,
+        )
     return removed
 
 
@@ -286,8 +335,8 @@ def _sync_all_lead_supply(db) -> dict:
     }.intersection(WORKER_JOB_TYPES):
         return {"checked": 0, "synced": 0, "skipped": "lead_supply_jobs_disabled"}
 
-    from sqlalchemy import text as _txt
     from services import lead_supply_engine
+    from sqlalchemy import text as _txt
 
     rows = db.execute(
         _txt(
@@ -368,7 +417,19 @@ def _reconcile_missing_franz_jobs(db) -> dict:
 
     enqueued = 0
     for row in rows:
-        lead_id, tenant_id, nome, cidade, segmento, whatsapp, telefone, rating, score, tier, site_url = row
+        (
+            lead_id,
+            tenant_id,
+            nome,
+            cidade,
+            segmento,
+            whatsapp,
+            telefone,
+            rating,
+            score,
+            tier,
+            site_url,
+        ) = row
         payload = {
             "nome": nome or "",
             "cidade": cidade or "",
@@ -442,9 +503,9 @@ def _normalize_outbound_jid(target: str) -> str:
 def _process_outbound_queue_cycle() -> dict:
     """Processa 1 mensagem automatica respeitando fila por tenant."""
 
-    from services.outbound_queue import process_queue_once
-    from sdr_langgraph import _dentro_do_horario
     import requests
+    from sdr_langgraph import _dentro_do_horario
+    from services.outbound_queue import process_queue_once
 
     meowhats_url = os.getenv("MEOWHATS_URL", "http://localhost:3001").rstrip("/")
     meowhats_key = os.getenv("MEOWHATS_KEY", "").strip()
@@ -494,7 +555,7 @@ def _process_outbound_queue_cycle() -> dict:
         db.close()
 
 
-async def _executar_job(job: dict) -> tuple[bool, Optional[str], Optional[str]]:
+async def _executar_job(job: dict) -> tuple[bool, str | None, str | None]:
     """
     Executa o job de acordo com seu tipo. Retorna (sucesso, fase_em_erro, mensagem_erro).
     Fase_em_erro ajuda a montar mensagem amigavel.
@@ -506,7 +567,10 @@ async def _executar_job(job: dict) -> tuple[bool, Optional[str], Optional[str]]:
 
     if tipo == "pipeline_lead":
         # Import tardio: evita carregar todo o pipeline em workers idle.
-        from pipeline_orchestrator_service import executar_pipeline_completo, executar_pipeline_lead_existente
+        from pipeline_orchestrator_service import (
+            executar_pipeline_completo,
+            executar_pipeline_lead_existente,
+        )
 
         try:
             if payload.get("_lead_id_existente"):
@@ -522,7 +586,9 @@ async def _executar_job(job: dict) -> tuple[bool, Optional[str], Optional[str]]:
                 )
             else:
                 resultado = await executar_pipeline_completo(
-                    payload, tenant_id, queue_id=payload.get("queue_id"),
+                    payload,
+                    tenant_id,
+                    queue_id=payload.get("queue_id"),
                     resume_from_phase=job.get("last_phase") or 0,
                 )
             if resultado and resultado.get("sucesso"):
@@ -539,7 +605,9 @@ async def _executar_job(job: dict) -> tuple[bool, Optional[str], Optional[str]]:
 
         try:
             resultado = await executar_pipeline_multiplos(
-                payload, tenant_id, queue_id=payload.get("queue_id"),
+                payload,
+                tenant_id,
+                queue_id=payload.get("queue_id"),
             )
             if resultado and resultado.get("sucesso"):
                 return True, None, None
@@ -562,7 +630,11 @@ async def _executar_job(job: dict) -> tuple[bool, Optional[str], Optional[str]]:
                 db_supply.close()
             if result.get("ok"):
                 return True, None, None
-            return False, "lead_supply_hunter", result.get("error") or "Hunter nao abasteceu inventario"
+            return (
+                False,
+                "lead_supply_hunter",
+                result.get("error") or "Hunter nao abasteceu inventario",
+            )
         except Exception as e:
             return False, "lead_supply_hunter", str(e)
 
@@ -577,7 +649,11 @@ async def _executar_job(job: dict) -> tuple[bool, Optional[str], Optional[str]]:
                 db_supply.close()
             if result.get("ok"):
                 return True, None, None
-            return False, "lead_supply_caio", result.get("error") or "Caio nao qualificou lead"
+            return (
+                False,
+                "lead_supply_caio",
+                result.get("error") or "Caio nao qualificou lead",
+            )
         except Exception as e:
             return False, "lead_supply_caio", str(e)
 
@@ -594,28 +670,37 @@ async def _executar_job(job: dict) -> tuple[bool, Optional[str], Optional[str]]:
                 db_supply.close()
             if result.get("ok"):
                 return True, None, None
-            return False, "lead_production_tick", result.get("error") or "Tick de producao falhou"
+            return (
+                False,
+                "lead_production_tick",
+                result.get("error") or "Tick de producao falhou",
+            )
         except Exception as e:
             return False, "lead_production_tick", str(e)
 
     if tipo in SDR_OUTREACH_JOB_TYPES:
         # Job separado: gera mensagem + envia WhatsApp
         try:
-            from sdr_langgraph import iniciar_contato, FranzInput, _dentro_do_horario
-            from whatsapp_listener import is_tenant_connected, _salvar_interacao
-            import httpx, re as _re, os as _os
-            from sqlalchemy import text as _txt
-            from services.credits_manager import plano_tem_sdr, consumir_credito_trial_entregue
+            import os as _os
+            import re as _re
+
+            from sdr_langgraph import FranzInput, iniciar_contato
+            from services.credits_manager import (
+                plano_tem_sdr,
+            )
             from services.sdr_gateway import (
                 SdrMessageContext,
                 evaluate_sdr_output,
                 has_prior_outbound,
             )
+            from sqlalchemy import text as _txt
 
             _db_plan = SessionLocal()
             try:
                 _plan_row = _db_plan.execute(
-                    _txt("SELECT plano, status, trial_expires_at FROM users WHERE id=:id"),
+                    _txt(
+                        "SELECT plano, status, trial_expires_at FROM users WHERE id=:id"
+                    ),
                     {"id": tenant_id},
                 ).fetchone()
                 _plano = ((_plan_row[0] if _plan_row else "") or "").lower()
@@ -630,7 +715,9 @@ async def _executar_job(job: dict) -> tuple[bool, Optional[str], Optional[str]]:
                             {"id": payload.get("lead_id"), "uid": tenant_id},
                         )
                         _db_plan.commit()
-                    log.info(f"Franz: pulado por plano/status tenant={tenant_id} plano={_plano} status={_status}")
+                    log.info(
+                        f"Franz: pulado por plano/status tenant={tenant_id} plano={_plano} status={_status}"
+                    )
                     return True, None, None
             finally:
                 _db_plan.close()
@@ -676,10 +763,16 @@ async def _executar_job(job: dict) -> tuple[bool, Optional[str], Optional[str]]:
             )
             franz_output = iniciar_contato(franz_input, user_id=tenant_id)
 
-            if not franz_output or not franz_output.reply or not franz_output.reply.strip():
+            if (
+                not franz_output
+                or not franz_output.reply
+                or not franz_output.reply.strip()
+            ):
                 intent = (getattr(franz_output, "intent", "") or "").lower()
                 next_stage = (getattr(franz_output, "next_stage", "") or "").lower()
-                proximo_passo = (getattr(franz_output, "proximo_passo", "") or "").lower()
+                proximo_passo = (
+                    getattr(franz_output, "proximo_passo", "") or ""
+                ).lower()
                 guard = (getattr(franz_output, "guard", "") or "").lower()
                 diagnostico = f"{intent} {next_stage} {proximo_passo} {guard}"
 
@@ -738,7 +831,9 @@ async def _executar_job(job: dict) -> tuple[bool, Optional[str], Optional[str]]:
                     or "horário" in diagnostico
                     or "aguardando" in diagnostico
                 ):
-                    log.info(f"Franz: reply vazio por agenda — lead {payload.get('nome')}")
+                    log.info(
+                        f"Franz: reply vazio por agenda — lead {payload.get('nome')}"
+                    )
                     return False, "franz_schedule", "Fora do horario do SDR"
 
                 if (
@@ -747,7 +842,9 @@ async def _executar_job(job: dict) -> tuple[bool, Optional[str], Optional[str]]:
                     or "ja contatado" in diagnostico
                     or "já contatado" in diagnostico
                 ):
-                    log.info(f"Franz: reply vazio por lead duplicado — lead {payload.get('nome')}")
+                    log.info(
+                        f"Franz: reply vazio por lead duplicado — lead {payload.get('nome')}"
+                    )
                     return True, None, None
 
                 log.warning(
@@ -788,24 +885,34 @@ async def _executar_job(job: dict) -> tuple[bool, Optional[str], Optional[str]]:
                     f"code={_guard.code} reason={_guard.reason}"
                 )
                 if _guard.action == "defer":
-                    fase = "franz_schedule" if _guard.code == "outside_schedule" else "franz"
+                    fase = (
+                        "franz_schedule"
+                        if _guard.code == "outside_schedule"
+                        else "franz"
+                    )
                     return False, fase, _guard.reason
                 return False, "franz_guard", _guard.reason
 
             tel = (payload.get("whatsapp") or payload.get("telefone") or "").strip()
-            tel = _re.sub(r'\D', '', tel)
-            if not tel.startswith('55'):
-                tel = '55' + tel
+            tel = _re.sub(r"\D", "", tel)
+            if not tel.startswith("55"):
+                tel = "55" + tel
 
-            test_number = str(payload.get("_bryan_test_number") or _os.getenv("BRYAN_TEST_NUMBER", "")).strip()
+            test_number = str(
+                payload.get("_bryan_test_number") or _os.getenv("BRYAN_TEST_NUMBER", "")
+            ).strip()
             if test_number:
-                test_number = _re.sub(r'\D', '', test_number)
-                if not test_number.startswith('55'):
-                    test_number = '55' + test_number
+                test_number = _re.sub(r"\D", "", test_number)
+                if not test_number.startswith("55"):
+                    test_number = "55" + test_number
                 tel = test_number
 
             if not payload.get("lead_id"):
-                return False, "franz", "lead_id ausente para enfileirar primeiro contato"
+                return (
+                    False,
+                    "franz",
+                    "lead_id ausente para enfileirar primeiro contato",
+                )
 
             _db_queue = SessionLocal()
             try:
@@ -854,7 +961,9 @@ async def _process_one(job: dict) -> None:
     trace_id = (job.get("payload") or {}).get("trace_id") or f"job-{job_id}"
     _current_job_id = job_id
     _set_llm_job_context(job)
-    log.info(f"[{trace_id}] job {job_id} ({job['tipo']}) tenant={job['tenant_id']} attempt={job['attempts']}/{job['max_attempts']}")
+    log.info(
+        f"[{trace_id}] job {job_id} ({job['tipo']}) tenant={job['tenant_id']} attempt={job['attempts']}/{job['max_attempts']}"
+    )
 
     stop_event = threading.Event()
     hb_thread = threading.Thread(
@@ -867,9 +976,15 @@ async def _process_one(job: dict) -> None:
 
     try:
         try:
-            sucesso, fase, mensagem = await asyncio.wait_for(_executar_job(job), timeout=JOB_MAX_SECS)
-        except asyncio.TimeoutError:
-            sucesso, fase, mensagem = False, "worker_timeout", f"job excedeu timeout de {JOB_MAX_SECS}s"
+            sucesso, fase, mensagem = await asyncio.wait_for(
+                _executar_job(job), timeout=JOB_MAX_SECS
+            )
+        except TimeoutError:
+            sucesso, fase, mensagem = (
+                False,
+                "worker_timeout",
+                f"job excedeu timeout de {JOB_MAX_SECS}s",
+            )
         except Exception as exc:
             sucesso, fase, mensagem = False, "worker_exception", str(exc)
     finally:
@@ -884,20 +999,35 @@ async def _process_one(job: dict) -> None:
             job_queue.mark_success(db, job_id)
             try:
                 from services import lead_supply_engine
+
                 lead_supply_engine.handle_pipeline_job_finished(
                     db, job, success=True, job_status="completed"
                 )
             except Exception as _supply_done_err:
-                log.warning(f"lead_supply finalizacao sucesso falhou: {_supply_done_err}")
+                log.warning(
+                    f"lead_supply finalizacao sucesso falhou: {_supply_done_err}"
+                )
             log.info(f"[{trace_id}] job {job_id} concluido")
         else:
             fase = job_queue.normalizar_fase_falha(fase, mensagem or "")
             # Degradação graceful: se foi rate limit ou budget, re-enfileira com delay inteligente
             _msg_lower = (mensagem or "").lower()
-            is_rate_limit = "rate limit" in _msg_lower or "limite de uso" in _msg_lower or "429" in _msg_lower
-            is_budget = "budget" in _msg_lower or "limite diário" in _msg_lower or "tokens esgotado" in _msg_lower
-            is_schedule_wait = "fora do horario" in _msg_lower or "fora do horário" in _msg_lower
-            is_watchdog_wait = "aguardando watchdog" in _msg_lower or "watchdog do sdr" in _msg_lower
+            is_rate_limit = (
+                "rate limit" in _msg_lower
+                or "limite de uso" in _msg_lower
+                or "429" in _msg_lower
+            )
+            is_budget = (
+                "budget" in _msg_lower
+                or "limite diário" in _msg_lower
+                or "tokens esgotado" in _msg_lower
+            )
+            is_schedule_wait = (
+                "fora do horario" in _msg_lower or "fora do horário" in _msg_lower
+            )
+            is_watchdog_wait = (
+                "aguardando watchdog" in _msg_lower or "watchdog do sdr" in _msg_lower
+            )
             is_whatsapp_wait = (
                 "whatsapp não conectado" in _msg_lower
                 or "whatsapp nao conectado" in _msg_lower
@@ -930,15 +1060,18 @@ async def _process_one(job: dict) -> None:
             elif is_rate_limit:
                 # Extrair cooldown real do erro (ex: "cooldown 60s" ou "resetado em: 35min")
                 import re as _re_worker
-                _cd_match = _re_worker.search(r'(\d+)\s*(?:min|m)', mensagem or '')
-                _cd_sec_match = _re_worker.search(r'(\d+)\s*s', mensagem or '')
+
+                _cd_match = _re_worker.search(r"(\d+)\s*(?:min|m)", mensagem or "")
+                _cd_sec_match = _re_worker.search(r"(\d+)\s*s", mensagem or "")
                 if _cd_match:
                     delay = int(_cd_match.group(1)) * 60 + 60  # minutos + margem
                 elif _cd_sec_match and int(_cd_sec_match.group(1)) > 30:
                     delay = int(_cd_sec_match.group(1)) + 30
                 else:
                     delay = min(120 * job["attempts"], 600)  # max 10min
-                log.warning(f"[{trace_id}] job {job_id} rate-limited — adiando sem consumir tentativa por {delay}s")
+                log.warning(
+                    f"[{trace_id}] job {job_id} rate-limited — adiando sem consumir tentativa por {delay}s"
+                )
                 status = job_queue.defer_without_attempt(
                     db,
                     job_id,
@@ -949,26 +1082,39 @@ async def _process_one(job: dict) -> None:
             elif is_budget:
                 # Budget esgotado — delay longo (1h), não ficar tentando
                 delay = 3600
-                log.warning(f"[{trace_id}] job {job_id} budget esgotado — retry em {delay}s")
+                log.warning(
+                    f"[{trace_id}] job {job_id} budget esgotado — retry em {delay}s"
+                )
                 status = job_queue.mark_failure(
-                    db, job_id, error=f"Budget esgotado — retry em 1h", fase=fase,
-                    retriable=True, delay_seconds=delay,
+                    db,
+                    job_id,
+                    error="Budget esgotado — retry em 1h",
+                    fase=fase,
+                    retriable=True,
+                    delay_seconds=delay,
                     lead_nome=(job["payload"] or {}).get("nome"),
                 )
             elif is_no_leads:
                 status = job_queue.mark_failure(
-                    db, job_id, error=mensagem or "sem leads disponiveis", fase=fase,
+                    db,
+                    job_id,
+                    error=mensagem or "sem leads disponiveis",
+                    fase=fase,
                     retriable=False,
                     lead_nome=(job["payload"] or {}).get("nome"),
                 )
             else:
                 status = job_queue.mark_failure(
-                    db, job_id, error=mensagem or "erro desconhecido", fase=fase,
+                    db,
+                    job_id,
+                    error=mensagem or "erro desconhecido",
+                    fase=fase,
                     retriable=True,
                     lead_nome=(job["payload"] or {}).get("nome"),
                 )
             try:
                 from services import lead_supply_engine
+
                 lead_supply_engine.handle_pipeline_job_finished(
                     db,
                     job,
@@ -979,7 +1125,9 @@ async def _process_one(job: dict) -> None:
                 )
             except Exception as _supply_fail_err:
                 log.warning(f"lead_supply finalizacao erro falhou: {_supply_fail_err}")
-            log.warning(f"[{trace_id}] job {job_id} -> {status} (fase={fase}): {mensagem}")
+            log.warning(
+                f"[{trace_id}] job {job_id} -> {status} (fase={fase}): {mensagem}"
+            )
             _notificar_feedback_job(job, status, fase, mensagem or "erro desconhecido")
     except Exception as e:
         log.error(f"erro ao marcar resultado do job {job_id}: {e}")
@@ -988,7 +1136,9 @@ async def _process_one(job: dict) -> None:
 
 
 async def _main_loop():
-    log.info(f"worker iniciado id={WORKER_ID} poll={POLL_SECONDS}s tipos={WORKER_JOB_TYPES}")
+    log.info(
+        f"worker iniciado id={WORKER_ID} poll={POLL_SECONDS}s tipos={WORKER_JOB_TYPES}"
+    )
     last_reap = 0.0
     last_ckpt_reap = 0.0
     last_poll_log = 0.0
@@ -1015,6 +1165,7 @@ async def _main_loop():
         if now - last_reap >= REAP_SECS:
             try:
                 import shutil as _shutil
+
                 result = _shutil.disk_usage("/tmp")
                 if result.total > 0:
                     pct = result.used / result.total
@@ -1045,6 +1196,7 @@ async def _main_loop():
                     finalized = job_queue.finalize_exhausted_jobs(db)
                     try:
                         from services import lead_supply_engine
+
                         inventory_reap = lead_supply_engine.reap_stale_inventory_locks(
                             db,
                             apply=True,
@@ -1055,7 +1207,9 @@ async def _main_loop():
                     if n:
                         log.warning(f"reaper ressuscitou {n} jobs travados")
                     if spans_reaped:
-                        log.warning(f"reaper finalizou {spans_reaped} spans sem finalizacao")
+                        log.warning(
+                            f"reaper finalizou {spans_reaped} spans sem finalizacao"
+                        )
                     if finalized:
                         log.warning(f"reaper finalizou {finalized} jobs sem tentativas")
                     if inventory_reap.get("actions"):
@@ -1070,7 +1224,10 @@ async def _main_loop():
             last_reap = now
 
         # Sincroniza abastecimento/producao para todos os tenants ativos.
-        if LEAD_SUPPLY_SYNC_SECS > 0 and now - last_supply_sync >= LEAD_SUPPLY_SYNC_SECS:
+        if (
+            LEAD_SUPPLY_SYNC_SECS > 0
+            and now - last_supply_sync >= LEAD_SUPPLY_SYNC_SECS
+        ):
             try:
                 db = SessionLocal()
                 try:
@@ -1089,7 +1246,10 @@ async def _main_loop():
             last_supply_sync = now
 
         # Garante que site pronto sem contato tenha job do Franz.
-        if FRANZ_RECONCILE_SECS > 0 and now - last_franz_reconcile >= FRANZ_RECONCILE_SECS:
+        if (
+            FRANZ_RECONCILE_SECS > 0
+            and now - last_franz_reconcile >= FRANZ_RECONCILE_SECS
+        ):
             try:
                 db = SessionLocal()
                 try:
@@ -1112,7 +1272,11 @@ async def _main_loop():
         ):
             try:
                 queue_result = _process_outbound_queue_cycle()
-                if queue_result.get("sent") or queue_result.get("failed") or queue_result.get("waiting_sec"):
+                if (
+                    queue_result.get("sent")
+                    or queue_result.get("failed")
+                    or queue_result.get("waiting_sec")
+                ):
                     log.info("outbound_queue cycle: %s", queue_result)
             except Exception as e:
                 log.warning(f"outbound_queue cycle falhou: {e}")
@@ -1122,6 +1286,7 @@ async def _main_loop():
         if now - last_ckpt_reap >= 3600:
             try:
                 from agents.pipeline_checkpoint import limpar_checkpoints_expirados
+
                 limpar_checkpoints_expirados(max_age_hours=24)
             except Exception as e:
                 log.warning(f"checkpoint reaper falhou: {e}")
@@ -1152,6 +1317,7 @@ async def _main_loop():
 
 
 if __name__ == "__main__":
+
     def _health_gate() -> None:
         # Fail-fast: se DB cair, worker não deve consumir fila.
         db = SessionLocal()

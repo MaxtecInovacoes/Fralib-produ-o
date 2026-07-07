@@ -4,9 +4,10 @@ Permite que o resto do sistema continue usando responder_lead(), iniciar_contato
 """
 
 from __future__ import annotations
+
 import os
 import sys
-from typing import Dict, Optional
+
 from pydantic import BaseModel
 
 AGENTS_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -14,36 +15,37 @@ BACKEND_DIR = os.path.dirname(AGENTS_DIR)
 sys.path.insert(0, BACKEND_DIR)
 sys.path.insert(0, AGENTS_DIR)
 
-from .agent import get_sdr_graph, SDRFallbackError
-from .lead_lock import _lead_lock_guard  # Fix bug 3x duplicate replies
-
 # Importar ESTADO_TO_STAGE do source of truth (DRY)
-from backend.whatsapp.connection_tracker import ESTADO_TO_STAGE
 
+from .agent import SDRFallbackError, get_sdr_graph
+from .lead_lock_graceful import lead_lock_guard  # Sprint fix: fail-open on Redis offline
 
 # ════════════════════════════════════════════════════════════════════
 # OUTPUT SCHEMAS (compat com bryan.py)
 # ════════════════════════════════════════════════════════════════════
 
+
 class BryanInput(BaseModel):
     """Compat com BryanInput original"""
+
     nome: str
     cidade: str
     segmento: str
     telefone: str
-    whatsapp: Optional[str] = None
-    rating: Optional[float] = 0
-    site_url: Optional[str] = None
-    score_caio: Optional[int] = 0
-    concorrentes: Optional[dict] = None
+    whatsapp: str | None = None
+    rating: float | None = 0
+    site_url: str | None = None
+    score_caio: int | None = 0
+    concorrentes: dict | None = None
     # Sprint 14.x: paleta_cores para identidade visual no WhatsApp SDR
-    paleta_cores: Optional[Dict[str, str]] = {}
-    tier: Optional[str] = "STANDARD"
-    proof: Optional[str] = None
+    paleta_cores: dict[str, str] | None = {}
+    tier: str | None = "STANDARD"
+    proof: str | None = None
 
 
 class BryanOutput(BaseModel):
     """Compat com BryanOutput original"""
+
     reply: str
     intent: str = "other"
     next_stage: str = "hook"
@@ -52,8 +54,8 @@ class BryanOutput(BaseModel):
     enviado: bool = False
     should_handoff: bool = False
     price_tier: int = 0
-    guard: Optional[str] = None
-    update_facts: Optional[dict] = None
+    guard: str | None = None
+    update_facts: dict | None = None
     active_agent: str = ""
     previous_agent: str = ""
     handoff_reason: str = ""
@@ -69,9 +71,18 @@ def _lead_payload_from_memory(memoria: dict | None) -> dict:
     nested = data.get("lead") if isinstance(data.get("lead"), dict) else {}
     lead = dict(nested)
     for key in (
-        "nome", "cidade", "segmento", "telefone", "whatsapp", "rating",
-        "site_url", "score_caio", "concorrentes", "tier", "proof",
-        "paleta_cores"
+        "nome",
+        "cidade",
+        "segmento",
+        "telefone",
+        "whatsapp",
+        "rating",
+        "site_url",
+        "score_caio",
+        "concorrentes",
+        "tier",
+        "proof",
+        "paleta_cores",
     ):
         if data.get(key) not in (None, ""):
             lead[key] = data.get(key)
@@ -81,6 +92,7 @@ def _lead_payload_from_memory(memoria: dict | None) -> dict:
 # ════════════════════════════════════════════════════════════════════
 # ENTRY POINTS
 # ════════════════════════════════════════════════════════════════════
+
 
 def iniciar_contato(lead: BryanInput, user_id: int = None) -> BryanOutput:
     """
@@ -94,6 +106,7 @@ def iniciar_contato(lead: BryanInput, user_id: int = None) -> BryanOutput:
     session_id = f"franz_lead_{lead.telefone}"
     try:
         from agents.memory import carregar_memoria, salvar_memoria
+
         memoria = carregar_memoria(session_id, user_id=user_id) or {}
 
         # Atualizar dados do lead
@@ -112,15 +125,17 @@ def iniciar_contato(lead: BryanInput, user_id: int = None) -> BryanOutput:
             # Sprint 14.x: paleta_cores para identidade visual no SDR
             "paleta_cores": getattr(lead, "paleta_cores", {}) or {},
         }
-        memoria.update({
-            **lead_payload,
-            "lead": {
+        memoria.update(
+            {
                 **lead_payload,
-            },
-            "user_id": user_id,
-            "telefone": lead.telefone,
-            "lead_id": lead.telefone,
-        })
+                "lead": {
+                    **lead_payload,
+                },
+                "user_id": user_id,
+                "telefone": lead.telefone,
+                "lead_id": lead.telefone,
+            }
+        )
         salvar_memoria(session_id, memoria, user_id=user_id)
     except Exception as e:
         print(f"[SDR Compat] Erro ao salvar dados do lead: {e}")
@@ -128,9 +143,12 @@ def iniciar_contato(lead: BryanInput, user_id: int = None) -> BryanOutput:
     # WATCHDOG: previne vícios do bryan antigo
     try:
         from agents.memory import carregar_memoria as _carregar
+
         mem = _carregar(session_id, user_id=user_id) or {}
         sdr_stage_atual = mem.get("estado", "pendente_wpp")
-        pode_enviar, motivo = _verificar_watchdog_outbound(lead.telefone, user_id, sdr_stage_atual)
+        pode_enviar, motivo = _verificar_watchdog_outbound(
+            lead.telefone, user_id, sdr_stage_atual
+        )
         if not pode_enviar:
             print(f"[SDR Compat] 🛑 Watchdog bloqueou intro: {motivo}")
             return BryanOutput(
@@ -150,8 +168,9 @@ def iniciar_contato(lead: BryanInput, user_id: int = None) -> BryanOutput:
 
     # Carregar sdr_settings do tenant para injetar no state (ativa FRANZ_PERSONA.md)
     try:
-        from backend.services.sdr_settings import get_sdr_settings_runtime
         from backend.core.database import engine as _db_engine
+        from backend.services.sdr_settings import get_sdr_settings_runtime
+
         sdr_settings = get_sdr_settings_runtime(user_id, _db_engine) or {}
     except Exception:
         sdr_settings = {}
@@ -221,6 +240,7 @@ def _verificar_watchdog_outbound(
     """
     try:
         from .watchdog import can_send_next_outbound
+
         pode_enviar, motivo = can_send_next_outbound(
             telefone,
             user_id,
@@ -250,17 +270,41 @@ def responder_lead(
     Responde mensagem do lead (substitui bryan.responder_lead).
     Mantém assinatura compatível.
 
-    IMPORTANTE: Wrapped em _lead_lock_guard para prevenir race condition
+    IMPORTANTE: Wrapped em lead_lock_guard (graceful) para prevenir race condition
     onde 2 threads/processos processam a mesma msg simultaneamente.
-    FAIL-CLOSED: Se Redis offline, retorna erro em vez de processar.
+    FAIL-OPEN: Se Redis offline, processa sem lock mas com dedup local ativo.
     """
     if not user_id:
         raise ValueError("user_id obrigatorio em responder_lead (multi-tenant)")
 
-    # Lock global por lead_id - garante que só 1 execução por vez
+    # Lock global por lead_id - garante que só 1 execução por vez.
+    # lead_lock_guard (graceful) nunca raise: se Redis offline, yield None e seguimos
+    # com dedup local via _is_duplicate_message_id.
     lock_key = lead_id or telefone or ""
     try:
-        with _lead_lock_guard(lock_key):
+        with lead_lock_guard(lock_key) as lock:
+            # Dedup local SEMPRE ativo (defesa em profundidade, mesmo com Redis OK).
+            # Bloqueia reentrada do mesmo texto dentro da janela TTL (60s).
+            if mensagem_recebida:
+                try:
+                    from .lead_lock import _is_duplicate_message_id as _dedup
+
+                    if _dedup(mensagem_recebida):
+                        print(
+                            f"[SDR Compat] msg duplicada detectada para {lock_key} — pulando"
+                        )
+                        return BryanOutput(
+                            reply="",
+                            intent="duplicate",
+                            next_stage="hook",
+                            estrategia="noop",
+                            proximo_passo="Mensagem duplicada — ja processada",
+                            enviado=False,
+                            guard="msg_duplicate",
+                        )
+                except Exception as _dedup_err:
+                    print(f"[SDR Compat] dedup local falhou (nao-bloqueante): {_dedup_err}")
+
             return _responder_lead_locked(
                 telefone=telefone,
                 mensagem_recebida=mensagem_recebida,
@@ -274,17 +318,18 @@ def responder_lead(
                 sdr_stage=sdr_stage,
                 user_id=user_id,
             )
-    except RuntimeError as e:
-        # Redis offline = fail-closed
-        print(f"[SDR] Lock falhou (Redis offline): {e}")
+    except Exception as _lock_err:
+        # lead_lock_guard (graceful) NAO raise — se chegou aqui, foi outro erro.
+        # Log e retorna sem quebrar o fluxo (fail-safe).
+        print(f"[SDR] lock contexto erro inesperado: {_lock_err}")
         return BryanOutput(
             reply="",
             intent="system_error",
             next_stage="hook",
             estrategia="retry",
-            proximo_passo="Redis offline - mensagem será reprocessada na proxima tentativa",
+            proximo_passo=f"Lock erro: {str(_lock_err)[:50]}",
             enviado=False,
-            guard="redis_offline",
+            guard="lock_error",
         )
 
 
@@ -307,6 +352,7 @@ def _responder_lead_locked(
     session_id = f"franz_lead_{telefone}"
     try:
         from agents.memory import carregar_memoria
+
         memoria = carregar_memoria(session_id, user_id=user_id) or {}
         lead_data = _lead_payload_from_memory(memoria)
     except Exception:
@@ -349,8 +395,9 @@ def _responder_lead_locked(
 
     # Carregar sdr_settings do tenant para injetar no state (ativa FRANZ_PERSONA.md)
     try:
-        from backend.services.sdr_settings import get_sdr_settings_runtime
         from backend.core.database import engine as _db_engine
+        from backend.services.sdr_settings import get_sdr_settings_runtime
+
         sdr_settings = get_sdr_settings_runtime(user_id, _db_engine) or {}
     except Exception:
         sdr_settings = {}
@@ -405,6 +452,32 @@ def _responder_lead_locked(
             handoff_reason=result.get("agent_handoff_reason", ""),
         )
 
+    # LanguageGuard: sanitiza reply antes de devolver para whatsapp_listener.
+    # O grafo ja sanitiza em node_save_and_send quando invoked direto, mas
+    # _responder_lead_locked pode ser chamado via iniciar_contato() / followup_automatico()
+    # e a sanitizacao deve ocorrer aqui como ponto de saida canonico.
+    try:
+        from backend.utils.language_guard import LanguageGuard
+
+        _clean_reply = LanguageGuard.sanitize_output(reply)
+        if not _clean_reply:
+            return BryanOutput(
+                reply="",
+                intent=result.get("detected_intent", "other"),
+                next_stage=(memory.stage if memory else "hook"),
+                estrategia="noop",
+                proximo_passo="LanguageGuard rejeitou resposta",
+                enviado=False,
+                guard="language_guard_rejected",
+                active_agent=getattr(memory, "active_agent", "") if memory else "",
+                previous_agent=getattr(memory, "previous_agent", "") if memory else "",
+                handoff_reason=result.get("agent_handoff_reason", ""),
+            )
+        reply = _clean_reply
+    except Exception as _lg_err:
+        # Falha de import do guard NAO bloqueia o fluxo — log e segue.
+        print(f"[SDR Compat] LanguageGuard indisponivel (seguiu sem sanitizar): {_lg_err}")
+
     return BryanOutput(
         reply=reply,
         intent=result.get("detected_intent", "other"),
@@ -437,6 +510,7 @@ def followup_automatico(
     # Forçar a stage na memória
     try:
         from agents.memory import carregar_memoria, salvar_memoria
+
         session_id = f"franz_lead_{telefone}"
         memoria = carregar_memoria(session_id, user_id=user_id) or {}
         memoria["stage"] = followup_stage
@@ -446,7 +520,9 @@ def followup_automatico(
 
     # WATCHDOG: previne spam de follow-up
     try:
-        pode_enviar, motivo = _verificar_watchdog_outbound(telefone, user_id, followup_stage)
+        pode_enviar, motivo = _verificar_watchdog_outbound(
+            telefone, user_id, followup_stage
+        )
         if not pode_enviar:
             print(f"[SDR Compat] 🛑 Watchdog bloqueou follow-up {tipo}: {motivo}")
             return BryanOutput(
@@ -521,6 +597,7 @@ def gerar_followup(lead: dict, tipo: str = "24h", user_id: int = None) -> str:
 
     try:
         from agents.llm_direct import call_claude
+
         reply = call_claude(
             system=system,
             user=contexto,
@@ -543,21 +620,27 @@ def gerar_followup(lead: dict, tipo: str = "24h", user_id: int = None) -> str:
 # FUNCTIONS AUXILIARES (compat com whatsapp_listener)
 # ════════════════════════════════════════════════════════════════════
 
+
 def _dentro_do_horario(user_id: int = None) -> bool:
     """Compat com bryan._dentro_do_horario"""
     from .tools import is_within_schedule
+
     return is_within_schedule(user_id)
 
 
 def _agent_name_for_user(user_id: int = None) -> str:
     """Compat com bryan._agent_name_for_user"""
     from .tools import get_agent_name
+
     return get_agent_name(user_id)
 
 
-def _escolher_variante(lead_id: str, segmento: str = "", tier: str = "", user_id: int = None) -> str:
+def _escolher_variante(
+    lead_id: str, segmento: str = "", tier: str = "", user_id: int = None
+) -> str:
     """Compat com bryan._escolher_variante"""
     from .tools import choose_variant
+
     return choose_variant(lead_id, segmento, user_id)
 
 
@@ -566,9 +649,22 @@ def _escolher_variante(lead_id: str, segmento: str = "", tier: str = "", user_id
 # ════════════════════════════════════════════════════════════════════
 
 ESTADOS_SDR = [
-    "hook", "qualify", "pain", "amplify", "tease",
-    "proof", "reveal", "feedback", "close", "urgency",
-    "handoff", "won", "lost", "scheduled", "followup_24h", "followup_72h",
+    "hook",
+    "qualify",
+    "pain",
+    "amplify",
+    "tease",
+    "proof",
+    "reveal",
+    "feedback",
+    "close",
+    "urgency",
+    "handoff",
+    "won",
+    "lost",
+    "scheduled",
+    "followup_24h",
+    "followup_72h",
 ]
 
 # NOTE: ESTADO_TO_STAGE agora é importado de backend.whatsapp.connection_tracker
@@ -586,6 +682,7 @@ _HORARIO_CACHE_TTL = 300  # 5 minutos
 def _cleanup_horario_cache():
     """Remove entradas expiradas do cache de horario."""
     import time
+
     expired = [k for k, v in _HORARIO_CACHE.items() if time.time() >= v[1]]
     for k in expired:
         del _HORARIO_CACHE[k]
@@ -595,6 +692,7 @@ def _cleanup_horario_cache():
 def _get_horario_config(user_id: int) -> dict:
     """Compat com bryan._get_horario_config"""
     import time
+
     _cache_key = f"sdr_horario_{user_id}"
     cached = _HORARIO_CACHE.get(_cache_key)
     if cached and time.time() < cached[1]:
@@ -603,8 +701,9 @@ def _get_horario_config(user_id: int) -> dict:
     if len(_HORARIO_CACHE) > 100:
         _cleanup_horario_cache()
     try:
-        from . import _get_sdr_settings_for_user as _local_settings
         from services.sdr_settings import outbound_schedule_from_settings
+
+        from . import _get_sdr_settings_for_user as _local_settings
 
         settings = _local_settings(user_id)
         config = outbound_schedule_from_settings(settings) if settings else None
@@ -621,6 +720,7 @@ def _get_sdr_settings_for_user(user_id: int | None) -> dict:
     try:
         from database import engine
         from services.sdr_settings import get_sdr_settings_runtime
+
         return get_sdr_settings_runtime(user_id, engine)
     except Exception:
         return {}
