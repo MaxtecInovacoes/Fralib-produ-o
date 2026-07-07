@@ -348,7 +348,25 @@ _GOOGLE_FONT_FAMILIES = {
     "Merriweather": "Merriweather:wght@400;700",
     "Crimson Pro": "Crimson+Pro:wght@500;700",
     "Nunito": "Nunito:wght@400;600;700",
+    "Cormorant Garamond": "Cormorant+Garamond:wght@500;600;700",
+    "Space Grotesk": "Space+Grotesk:wght@500;600;700",
+    "Archivo": "Archivo:wght@500;600;700",
+    "IBM Plex Sans": "IBM+Plex+Sans:wght@400;500;600",
+    "IBM Plex Serif": "IBM+Plex+Serif:wght@400;500;700",
+    "Source Sans 3": "Source+Sans+3:wght@400;500;600",
+    "Pacifico": "Pacifico",
+    "Cairo": "Cairo:wght@500;700",
+    "Poppins": "Poppins:wght@500;600;700",
+    "Lato": "Lato:wght@400;700",
+    "Montserrat": "Montserrat:wght@500;700",
+    "Open Sans": "Open+Sans:wght@400;600;700",
+    "Raleway": "Raleway:wght@500;600;700",
+    "Work Sans": "Work+Sans:wght@500;600;700",
+    "Karla": "Karla:wght@500;600;700",
+    "Rubik": "Rubik:wght@500;600;700",
 }
+
+# ROLL 9.4: missing fonts added to _GOOGLE_FONT_FAMILIES registry
 
 
 def _google_fonts_link_for_facts(facts: dict[str, Any]) -> str:

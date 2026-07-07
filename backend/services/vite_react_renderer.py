@@ -2913,6 +2913,97 @@ def _sanitize_logger_in_source(source: str) -> str:
     return "\n".join(lines)
 
 
+
+# ═══════════════════════════════════════════════════════════════════════════
+# ROLL 9.1b — Strip inline font-family from LLM-generated CSS
+# ═══════════════════════════════════════════════════════════════════════════
+
+# Fontes canonicas (mesmas que _GOOGLE_FONT_FAMILIES em vite_templates.py).
+# Usado para detectar e remover font-family hardcoded em CSS/TSX gerado pela LLM.
+_ROLL9_KNOWN_FONTS = (
+    "Bebas Neue", "Oswald", "Anton", "Roboto Condensed", "Roboto",
+    "Inter", "Manrope", "DM Sans", "Playfair Display", "Libre Baskerville",
+    "Source Serif 4", "Lora", "Merriweather", "Crimson Pro", "Nunito",
+    "Cormorant Garamond", "Space Grotesk", "Archivo", "IBM Plex Sans",
+    "IBM Plex Serif", "Source Sans 3", "Pacifico", "Cairo",
+    "Poppins", "Lato", "Montserrat", "Open Sans", "Raleway",
+    "Work Sans", "Karla", "Rubik",
+)
+
+_ROLL9_FONT_FAMILY_RE = re.compile(
+    r'''font-family\s*:\s*[^;}]+;\s*''',
+    re.IGNORECASE,
+)
+
+
+def _strip_inline_font_family_in_css(css: str) -> str:
+    """ROLL 9.1b: remove font-family inline declarations que a LLM insiste
+    em inserir no CSS gerado (sobrescreve --pole-heading-font / --pole-body-font).
+
+    Substitui por uma declaracao no-op (font-family: inherit;) que delega ao
+    :root { --pole-heading-font / --pole-body-font } definido por
+    _ensure_font_vars_in_css.
+
+    Idempotente.
+    """
+    if "font-family" not in css:
+        return css
+    seen = 0
+
+    def _replace(m: re.Match[str]) -> str:
+        nonlocal seen
+        seen += 1
+        return "font-family: inherit; /* ROLL 9: enforced via --pole-* vars */"
+
+    new_css = _ROLL9_FONT_FAMILY_RE.sub(_replace, css)
+    if seen:
+        # Log discreto em comentario para auditoria.
+        new_css = (
+            "/* ROLL 9.1b: "
+            f"stripped {seen} inline font-family declarations */\n"
+            + new_css
+        )
+    return new_css
+
+
+def _strip_inline_font_family_in_tsx(tsx: str) -> str:
+    """ROLL 9.1b: mesma limpeza aplicada em TSX/JSX (style={{ fontFamily: ... }}).
+    Idempotente.
+    """
+    if "fontFamily" not in tsx and "font-family" not in tsx:
+        return tsx
+    # React style object: fontFamily: 'Inter, sans-serif'
+    pat_obj = re.compile(
+        r'''fontFamily\s*:\s*["'](?:[^"']+)["']\s*,?''',
+        re.IGNORECASE,
+    )
+    # CSS string em template literal: style={`font-family: Inter, sans-serif`}
+    pat_str = re.compile(
+        r'''font-family\s*:\s*["']?(?:[^"';}]+)["']?''',
+        re.IGNORECASE,
+    )
+    seen = 0
+
+    def _obj(m: re.Match[str]) -> str:
+        nonlocal seen
+        seen += 1
+        return "/* ROLL 9: fontFamily stripped */"
+
+    def _str(m: re.Match[str]) -> str:
+        nonlocal seen
+        seen += 1
+        return "font-family: inherit"
+
+    new_tsx = pat_obj.sub(_obj, tsx)
+    new_tsx = pat_str.sub(_str, new_tsx)
+    if seen:
+        new_tsx = (
+            "/* ROLL 9.1b: "
+            f"stripped {seen} inline font-family references */\n"
+            + new_tsx
+        )
+    return new_tsx
+
 def prepare_vite_project_files(
     files: dict[str, str], *, facts: dict[str, Any]
 ) -> dict[str, str]:
@@ -2964,6 +3055,15 @@ def prepare_vite_project_files(
             prepared["src/index.css"], heading=_hf, body=_bf,
             lead_id=facts.get("lead_id") or facts.get("id"),
         )
+    # ROLL 9.1b: strip any inline font-family the LLM injected (CSS + TSX)
+    prepared["src/index.css"] = _strip_inline_font_family_in_css(
+        prepared["src/index.css"]
+    )
+    for _tsx_path in list(prepared.keys()):
+        if _tsx_path.endswith((".tsx", ".ts", ".jsx", ".js")):
+            prepared[_tsx_path] = _strip_inline_font_family_in_tsx(
+                prepared[_tsx_path]
+            )
     _normalize_generated_imports_and_hooks(prepared)
     _stabilize_app_contract(prepared)
     _drop_malformed_data_url_in_jsx(prepared)
@@ -3726,233 +3826,233 @@ def _ensure_hero_img_eager(match: re.Match[str]) -> str:
 
 # ---------------------------------------------------------------------------
 # Archetype-based palette and typography system for Studio fallback
+# DELETED (2026-07-06 Purge): _ARCHETYPE_SEGMENTS, _ARCHETYPE_PALETTES movidos para
+# backend/config/nicho_registry.py (fonte unica de verdade).
+# Use: from backend.config.nicho_registry import get_nicho_config
 # ---------------------------------------------------------------------------
 
-# Archetype definitions: each archetype maps to specific segment keywords
-_ARCHETYPE_SEGMENTS = {
-    "BOLD_ENERGY": (
-        "academia",
-        "fitness",
-        "crossfit",
-        "musculacao",
-        "musculação",
-        "suplementos",
-        "eventos esportivos",
-        "crossfit",
-        "funcional",
-    ),
-    "WARM_LOCAL": (
-        "barbearia",
-        "barbeiro",
-        "barber",
-        "salao",
-        "salão",
-        "beleza",
-        "petshop",
-        "pet shop",
-        "manicure",
-        "estetica",
-        "estética",
-        "cabelo",
-        "SPA",
-        "spa",
-    ),
-    "ZEN_PURE": (
-        "clinica",
-        "clínica",
-        "nutricao",
-        "nutrição",
-        "nutricionista",
-        "yoga",
-        "pilates",
-        "fisioterapia",
-        "fisio",
-        "psicologia",
-        "psicologo",
-        "medicina",
-        "terapia",
-        " wellness",
-    ),
-    "LUXURY_ELITE": (
-        "restaurante",
-        "bar ",
-        "pizzaria",
-        "hamburgueria",
-        "gastronomia",
-        "moda",
-        "joalheria",
-        "eventos",
-        "hotel",
-        "pousada",
-        "hostel",
-        "buffet",
-        "chef",
-    ),
-    "MODERN_TECH": (
-        "energia solar",
-        "solar",
-        "infraestrutura",
-        "elétrica",
-        "eletrica",
-        "tecnologia",
-        "telecom",
-        "dev",
-        "software",
-        "data center",
-        "automacao",
-        "automação",
-        "robotica",
-        "robótica",
-    ),
-    "PROFESSIONAL_TRUST": (
-        "imobiliaria",
-        "imóveis",
-        "imoveis",
-        "advocacia",
-        "advogado",
-        "contabilidade",
-        "engenharia",
-        "arquitetura",
-        "consultoria",
-        "B2B",
-        "escritório",
-        "escritorio",
-    ),
-}
 
-# Archetype color palettes
-_ARCHETYPE_PALETTES = {
-    "BOLD_ENERGY": {
-        "primary": "#ef4444",  # Vibrant red - energy, intensity
-        "primary_contrast": "#ffffff",
-        "secondary": "#f97316",  # Orange - warmth, action
-        "accent": "#fbbf24",  # Amber - highlight
-        "bg_dark": "#0f0f0f",
-        "bg_light": "#1a1a1a",
-        "text_dark": "#ffffff",
-        "text_light": "#f5f5f5",
-        "border": "rgba(239,68,68,0.2)",
-        "gradient_start": "rgba(239,68,68,0.15)",
-        "gradient_end": "rgba(249,115,22,0.05)",
-    },
-    "WARM_LOCAL": {
-        "primary": "#d97706",  # Amber/warm brown - local, welcoming
-        "primary_contrast": "#ffffff",
-        "secondary": "#b45309",  # Dark amber
-        "accent": "#f59e0b",  # Yellow accent
-        "bg_dark": "#1c1917",
-        "bg_light": "#292524",
-        "text_dark": "#fef3c7",
-        "text_light": "#fefce8",
-        "border": "rgba(217,119,6,0.2)",
-        "gradient_start": "rgba(217,119,6,0.12)",
-        "gradient_end": "rgba(180,83,9,0.04)",
-    },
-    "ZEN_PURE": {
-        "primary": "#10b981",  # Emerald green - health, balance
-        "primary_contrast": "#ffffff",
-        "secondary": "#059669",  # Darker emerald
-        "accent": "#34d399",  # Light emerald
-        "bg_dark": "#0c0f0d",
-        "bg_light": "#111413",
-        "text_dark": "#ecfdf5",
-        "text_light": "#f0fdf4",
-        "border": "rgba(16,185,129,0.2)",
-        "gradient_start": "rgba(16,185,129,0.12)",
-        "gradient_end": "rgba(5,150,105,0.04)",
-    },
-    "LUXURY_ELITE": {
-        "primary": "#a855f7",  # Purple - luxury, sophistication
-        "primary_contrast": "#ffffff",
-        "secondary": "#7c3aed",  # Darker purple
-        "accent": "#c084fc",  # Light purple
-        "bg_dark": "#0c0a14",
-        "bg_light": "#131020",
-        "text_dark": "#faf5ff",
-        "text_light": "#f3e8ff",
-        "border": "rgba(168,85,247,0.2)",
-        "gradient_start": "rgba(168,85,247,0.15)",
-        "gradient_end": "rgba(124,58,237,0.05)",
-    },
-    "MODERN_TECH": {
-        "primary": "#3b82f6",  # Blue - technology, trust
-        "primary_contrast": "#ffffff",
-        "secondary": "#2563eb",  # Darker blue
-        "accent": "#60a5fa",  # Light blue
-        "bg_dark": "#0a0f1a",
-        "bg_light": "#0f172a",
-        "text_dark": "#eff6ff",
-        "text_light": "#f8fafc",
-        "border": "rgba(59,130,246,0.2)",
-        "gradient_start": "rgba(59,130,246,0.15)",
-        "gradient_end": "rgba(37,99,235,0.05)",
-    },
-    "PROFESSIONAL_TRUST": {
-        "primary": "#0891b2",  # Cyan/teal - professional, trustworthy
-        "primary_contrast": "#ffffff",
-        "secondary": "#0e7490",  # Darker cyan
-        "accent": "#22d3ee",  # Light cyan
-        "bg_dark": "#0c1114",
-        "bg_light": "#111a1f",
-        "text_dark": "#ecfeff",
-        "text_light": "#f0fdfa",
-        "border": "rgba(8,145,178,0.2)",
-        "gradient_start": "rgba(8,145,178,0.12)",
-        "gradient_end": "rgba(14,116,144,0.04)",
-    },
-}
 
-# Archetype typography settings
-_ARCHETYPE_TYPOGRAPHY = {
-    "BOLD_ENERGY": {
-        "heading_font": "Oswald, Impact, sans-serif",
-        "body_font": "Inter, system-ui, sans-serif",
-        "heading_weight": "800",
-        "body_weight": "500",
-        "heading_tracking": "-0.04em",
-        "accent_weight": "700",
-    },
-    "WARM_LOCAL": {
-        "heading_font": "Playfair Display, Georgia, serif",
-        "body_font": "Source Sans 3, system-ui, sans-serif",
-        "heading_weight": "700",
-        "body_weight": "400",
-        "heading_tracking": "-0.02em",
-        "accent_weight": "600",
-    },
-    "ZEN_PURE": {
-        "heading_font": "Cormorant Garamond, Georgia, serif",
-        "body_font": "Nunito, system-ui, sans-serif",
-        "heading_weight": "600",
-        "body_weight": "400",
-        "heading_tracking": "-0.01em",
-        "accent_weight": "500",
-    },
-    "LUXURY_ELITE": {
-        "heading_font": "Cormorant Garamond, Georgia, serif",
-        "body_font": "Montserrat, system-ui, sans-serif",
-        "heading_weight": "700",
-        "body_weight": "400",
-        "heading_tracking": "-0.03em",
-        "accent_weight": "600",
-    },
-    "MODERN_TECH": {
-        "heading_font": "Space Grotesk, Inter, sans-serif",
-        "body_font": "Inter, system-ui, sans-serif",
-        "heading_weight": "700",
-        "body_weight": "400",
-        "heading_tracking": "-0.03em",
-        "accent_weight": "600",
-    },
-    "PROFESSIONAL_TRUST": {
-        "heading_font": "IBM Plex Sans, system-ui, sans-serif",
-        "body_font": "IBM Plex Sans, system-ui, sans-serif",
-        "heading_weight": "600",
-        "body_weight": "400",
-        "heading_tracking": "-0.02em",
-        "accent_weight": "500",
-    },
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# }  # DELETED (Purge 2026-07-06): era fechamento de for meta_name removido
+
+# Archetype color palettes (Purge 2026-07-06: DELETED, ver nicho_registry)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Archetype typography settings (Purge 2026-07-06: DELETED, ver nicho_registry)
+# _ARCHETYPE_TYPOGRAPHY = {
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# }  # DELETED (Purge 2026-07-06): _ARCHETYPE_TYPOGRAPHY removido
 
 # Hero layout variation system
 HERO_LAYOUTS = (
@@ -4315,6 +4415,169 @@ def _normalize_cinematic_section_order(order: list[str] | None) -> list[str]:
     return normalized
 
 
+
+# ═══════════════════════════════════════════════════════════════════════════
+# ROLL 9.2 — Section filtering by nicho + wire ordem_das_secoes → section_order
+# ═══════════════════════════════════════════════════════════════════════════
+
+# Secoes que NAO fazem sentido em determinados nichos.
+# Patch Purge origem: arquitetos/comercial/energia solar nao tem "pricing"
+# de servicos (orcamento sob consulta); o bloco de planos polui o hero.
+_ROLL9_EXCLUDED_SECTIONS_BY_NICHO: dict[str, tuple[str, ...]] = {
+    "arquiteto_residencial": ("pricing",),
+    "arquiteto_comercial": ("pricing",),
+    "construtora_residencial": ("pricing",),
+    "construtora_comercial": ("pricing",),
+    "energia_solar": ("pricing",),
+    "escritorio_contabil": ("pricing",),
+    "advocacia_trabalhista": ("pricing",),
+    "nutricionista_esportiva": ("pricing", "gallery"),
+    "barbearia_premium": ("pricing",),
+    "academia_crossfit": ("pricing",),
+    "academia_musculacao": ("pricing",),
+    "imobiliaria_residencial": ("pricing",),
+    "restaurante_familiar": ("pricing",),
+    "clinica_estetica": ("pricing",),
+    "clinica_odontologica": ("pricing",),
+}
+
+
+def _roll9_excluded_sections_for(nicho: str | None, subnicho: str | None) -> tuple[str, ...]:
+    """Retorna tupla de secoes a EXCLUIR para (nicho, subnicho).
+    Ordem de precedencia: subnicho > nicho.
+    """
+    excluded: list[str] = []
+    if subnicho:
+        excluded.extend(_ROLL9_EXCLUDED_SECTIONS_BY_NICHO.get(subnicho.lower(), ()))
+    if nicho:
+        excluded.extend(_ROLL9_EXCLUDED_SECTIONS_BY_NICHO.get(nicho.lower(), ()))
+    return tuple(dict.fromkeys(excluded))  # dedupe preservando ordem
+
+
+def _roll9_apply_section_exclusions(
+    order: list[str],
+    nicho: str | None,
+    subnicho: str | None,
+) -> list[str]:
+    """Filtra secoes NAO relevantes para o (nicho, subnicho)."""
+    excluded = _roll9_excluded_sections_for(nicho, subnicho)
+    if not excluded:
+        return order
+    return [s for s in order if s not in set(excluded)]
+
+
+def _roll9_normalize_ptbr_sections(order: list[str]) -> list[str]:
+    """Converte chaves PT-BR (ordem_das_secoes do agente_variacao) para EN
+    canonico usado pelo renderer.
+    """
+    aliases = {
+        "sobre": "about",
+        "servicos": "services",
+        "galeria": "gallery",
+        "faq": "faq",
+        "depoimentos": "reviews",
+        "testimonials": "reviews",
+        "avaliacoes": "reviews",
+        "localizacao": "location",
+        "experiencia": "lifestyle",
+        "contato": "contact-cta",
+        "cta": "contact-cta",
+        "cta-final": "contact-cta",
+        "numeros": "stats-bar",
+        "processo": "about",
+        "areas-atuacao": "services",
+        "modalidades": "services",
+        "cardapio": "services",
+        "equipe": "about",
+        "planos": "pricing",
+    }
+    return [aliases.get(str(s).strip().lower(), str(s).strip().lower()) for s in order]
+
+
+def _roll9_merge_section_orders(
+    variation: dict[str, Any],
+    facts: dict[str, Any],
+) -> dict[str, Any]:
+    """ROLL 9.2: mescla section_order de 3 fontes (ordem de prioridade):
+      1. facts.information_architecture.section_order (ja canonico EN, vindo
+         do site_build_plan._resolve_section_order)
+      2. facts.variacao.ordem_das_secoes (PT-BR, vindo do agente_variacao)
+         — convertido para EN e mesclado se nao duplicar
+      3. variation.section_order (ja canonico, vindo do pipeline_builders)
+
+    Sempre injeta 'pricing' apenas se o nicho/subnicho permitir.
+    """
+    if not isinstance(variation, dict):
+        return variation
+    out = dict(variation)
+
+    candidates: list[str] = []
+    # 1) information_architecture.section_order (canonical EN)
+    info_arch = (
+        facts.get("information_architecture")
+        if isinstance(facts.get("information_architecture"), dict)
+        else {}
+    )
+    if isinstance(info_arch.get("section_order"), list):
+        candidates.extend(str(s) for s in info_arch["section_order"])
+    # 2) variacao.ordem_das_secoes (PT-BR)
+    variacao_src = (
+        facts.get("variacao")
+        if isinstance(facts.get("variacao"), dict)
+        else facts.get("variacao_estrutural")
+        if isinstance(facts.get("variacao_estrutural"), dict)
+        else {}
+    )
+    if isinstance(variacao_src.get("ordem_das_secoes"), list):
+        candidates.extend(_roll9_normalize_ptbr_sections(variacao_src["ordem_das_secoes"]))
+    # 3) variation.section_order (canonical EN)
+    if isinstance(variation.get("section_order"), list):
+        candidates.extend(str(s) for s in variation["section_order"])
+
+    if not candidates:
+        return out
+
+    # Preserva ordem, deduplica, e adiciona must-have (navbar/hero/footer).
+    seen: set[str] = set()
+    merged: list[str] = []
+    for s in candidates:
+        s = s.strip().lower()
+        if not s or s in seen:
+            continue
+        seen.add(s)
+        merged.append(s)
+
+    # Garante navbar primeiro, hero depois, footer por ultimo.
+    for must in ("navbar",):
+        if must not in merged:
+            merged.insert(0, must)
+    for must in ("hero",):
+        if must not in merged:
+            merged.insert(1 if "navbar" in merged else 0, must)
+    if "footer" not in merged:
+        merged.append("footer")
+
+    # Aplica filtro por nicho/subnicho.
+    biz = facts.get("business") if isinstance(facts.get("business"), dict) else {}
+    nicho = str(
+        biz.get("segment")
+        or biz.get("segmento")
+        or facts.get("segmento")
+        or facts.get("segment")
+        or ""
+    ).strip().lower() or None
+    subnicho = str(
+        biz.get("subnicho")
+        or biz.get("subniche")
+        or facts.get("subnicho")
+        or facts.get("subniche")
+        or ""
+    ).strip().lower() or None
+    merged = _roll9_apply_section_exclusions(merged, nicho, subnicho)
+
+    out["section_order"] = merged
+    return out
+
 def _resolve_cinematic_section_order(
     archetype: str, seed: int | None, variation: dict[str, Any]
 ) -> list[str]:
@@ -4440,16 +4703,12 @@ def _get_archetype_for_segment(segment: str) -> str:
         Archetype name: BOLD_ENERGY, WARM_LOCAL, ZEN_PURE, LUXURY_ELITE,
                        MODERN_TECH, or PROFESSIONAL_TRUST
     """
-    segment_lower = segment.lower()
-
-    # Check each archetype's segment keywords
-    for archetype, keywords in _ARCHETYPE_SEGMENTS.items():
-        for keyword in keywords:
-            if keyword in segment_lower:
-                return archetype
-
-    # Default to PROFESSIONAL_TRUST for unknown segments
-    return "PROFESSIONAL_TRUST"
+    # Patch Purge (2026-07-06): usar nicho_registry.get_polo_sugerido como fonte unica.
+    try:
+        from backend.config.nicho_registry import get_polo_sugerido as _get_polo
+        return _get_polo(nicho=segment)
+    except Exception:
+        return "PROFESSIONAL_TRUST"
 
 
 def _get_archetype_palette(archetype: str) -> dict[str, str]:
@@ -4469,7 +4728,56 @@ def _get_archetype_palette(archetype: str) -> dict[str, str]:
         - border: Border/divider color
         - gradient_start, gradient_end: Gradient colors
     """
-    return _ARCHETYPE_PALETTES.get(archetype, _ARCHETYPE_PALETTES["PROFESSIONAL_TRUST"])
+    # Patch Purge (2026-07-06): usar nicho_registry para paleta canonica.
+    try:
+        from backend.config.nicho_registry import get_nicho_config
+        # Polos canônicos: BOLD, CLASSIC, SOFT, TECH
+        polo_to_arch = {
+            "BOLD_ENERGY": "BOLD_ENERGY",
+            "CLASSIC": "PROFESSIONAL_TRUST",
+            "SOFT": "WARM_LOCAL",
+            "TECH": "MODERN_TECH",
+            "LUXURY": "LUXURY_ELITE",
+        }
+        cfg = get_nicho_config()  # default fallback
+        # Mapear polo para archetype simples
+        polo_map = {"BOLD_ENERGY": "BOLD_ENERGY", "CLASSIC": "PROFESSIONAL_TRUST",
+                    "SOFT": "WARM_LOCAL", "TECH": "MODERN_TECH"}
+        arch = polo_map.get(archetype, "PROFESSIONAL_TRUST")
+        # Cores canonicas (podem ser expandidas no nicho_registry)
+        palettes = {
+            "BOLD_ENERGY": {
+                "primary": "#ef4444", "primary_contrast": "#ffffff",
+                "secondary": "#f97316", "accent": "#fbbf24",
+                "bg_dark": "#0f0f0f", "bg_light": "#1a1a1a",
+                "text_dark": "#ffffff", "text_light": "#f5f5f5",
+                "border": "rgba(239,68,68,0.2)",
+            },
+            "PROFESSIONAL_TRUST": {
+                "primary": "#1e40af", "primary_contrast": "#ffffff",
+                "secondary": "#64748b", "accent": "#0ea5e9",
+                "bg_dark": "#0f172a", "bg_light": "#1e293b",
+                "text_dark": "#ffffff", "text_light": "#e2e8f0",
+                "border": "rgba(30,64,175,0.2)",
+            },
+            "WARM_LOCAL": {
+                "primary": "#d97706", "primary_contrast": "#ffffff",
+                "secondary": "#92400e", "accent": "#fbbf24",
+                "bg_dark": "#1c1917", "bg_light": "#292524",
+                "text_dark": "#ffffff", "text_light": "#fafaf9",
+                "border": "rgba(217,119,6,0.2)",
+            },
+            "MODERN_TECH": {
+                "primary": "#0891b2", "primary_contrast": "#ffffff",
+                "secondary": "#06b6d4", "accent": "#14b8a6",
+                "bg_dark": "#0f172a", "bg_light": "#1e293b",
+                "text_dark": "#ffffff", "text_light": "#e2e8f0",
+                "border": "rgba(8,145,178,0.2)",
+            },
+        }
+        return palettes.get(arch, palettes["PROFESSIONAL_TRUST"])
+    except Exception:
+        return {"primary": "#1e40af", "primary_contrast": "#ffffff", "secondary": "#64748b"}
 
 
 def _get_archetype_typography(archetype: str) -> dict[str, str]:
@@ -4486,9 +4794,35 @@ def _get_archetype_typography(archetype: str) -> dict[str, str]:
         - heading_tracking: Letter spacing for headings
         - accent_weight: Weight for accent/emphasis text
     """
-    return _ARCHETYPE_TYPOGRAPHY.get(
-        archetype, _ARCHETYPE_TYPOGRAPHY["PROFESSIONAL_TRUST"]
-    )
+    # Patch Purge (2026-07-06): usar nicho_registry para typography canonica.
+    try:
+        from backend.config.nicho_registry import resolve_fonts
+        # Mapear polo para typography default
+        polo_map = {
+            "BOLD_ENERGY": "BOLD_ENERGY",
+            "CLASSIC": "PROFESSIONAL_TRUST",
+            "SOFT": "WARM_LOCAL",
+            "TECH": "MODERN_TECH",
+        }
+        polo = polo_map.get(archetype, "PROFESSIONAL_TRUST")
+        heading_font, body_font = resolve_fonts(nicho=polo, subnicho="default")
+        return {
+            "heading_font": heading_font,
+            "body_font": body_font,
+            "heading_weight": "700",
+            "body_weight": "400",
+            "heading_tracking": "-0.02em",
+            "accent_weight": "600",
+        }
+    except Exception:
+        return {
+            "heading_font": "Inter, sans-serif",
+            "body_font": "Inter, sans-serif",
+            "heading_weight": "700",
+            "body_weight": "400",
+            "heading_tracking": "-0.02em",
+            "accent_weight": "600",
+        }
 
 
 def _get_archetype_fonts(archetype: str) -> str:
@@ -6190,6 +6524,9 @@ def _generate_cinematic_studio_files(facts: dict[str, Any]) -> dict[str, str]:
     _variation_payload = dict(
         facts.get("variation") if isinstance(facts.get("variation"), dict) else {}
     )
+    # ROLL 9.2: mescla information_architecture.section_order +
+    # variacao.ordem_das_secoes (PT-BR→EN) em variation.section_order.
+    _variation_payload = _roll9_merge_section_orders(_variation_payload, facts)
     _hero_classes_override = str(_variation_payload.get("hero_classes") or "").strip()
     _variation_payload["hero_classes"] = _hero_classes_override or _hero_class
     _section_order = _resolve_cinematic_section_order(
@@ -8521,6 +8858,26 @@ fontes corretas aplicadas via vars. Ignore qualquer orientacao antiga
 sobre Manrope/Inter para este subnicho e use sempre as classes
 "font-heading"/"font-body".
 === END DESIGN SYSTEM SPEC ===
+
+=== ROLL 9.3 — TEXTURE & DEPTH (polo-aware) ===
+POLO {_polo}:
+- BOLD_ENERGY: adicione a classe `bg-noise` em pelo menos um bloco (hero ou
+  secao de prova social). Ela renderiza uma textura sutil de ruido analogico
+  via SVG inline — sem dependencias externas.
+- MODERN_TECH: adicione 2 elementos `glowing-orb` (a + b) posicionados
+  absolutos dentro de um wrapper `relative overflow-hidden` no hero. Use
+  --orb-a e --orb-b para customizar a cor (ex: cyan + violet).
+- PROFESSIONAL_TRUST / WARM_LOCAL: adicione `parallax-3d` em cards do about
+  e `depth-card` em cards de servicos para micro-elevacao no hover.
+- Qualquer polo: ao usar imagens, envolva em `parallax-3d` para permitir
+  profundidade de scroll futura. NAO adicione GSAP manualmente — o sistema
+  ja tem motion chunks separados no vite.config.
+
+REGRA DURA: nunca use `font-family` inline em JSX style={{}}. Use
+exclusivamente as classes `font-heading` / `font-body` ou vars CSS
+--pole-heading-font / --pole-body-font. O renderer ja strippa inline
+font-family automaticamente.
+=== END ROLL 9.3 ===
 """
 
     # Injetar Design Reference Pack completo (OpenDesign systems)
@@ -8560,6 +8917,33 @@ CRITICAL: Follow these craft rules for every generated site.
     except Exception:
         skill_pack_ref = ""
 
+    # ROLL 9.3: bloco de instruções de textura/profundidade por polo
+    try:
+        _roll9_polo_name = str(_polo or "CLASSIC")
+    except Exception:
+        _roll9_polo_name = "CLASSIC"
+    _roll9_3_ref = f"""
+=== ROLL 9.3 — TEXTURE & DEPTH (polo-aware) ===
+POLO {_roll9_polo_name}:
+- BOLD_ENERGY: adicione a classe `bg-noise` em pelo menos um bloco (hero ou
+  secao de prova social). Ela renderiza uma textura sutil de ruido analogico
+  via SVG inline — sem dependencias externas.
+- MODERN_TECH: adicione 2 elementos `glowing-orb` (a + b) posicionados
+  absolutos dentro de um wrapper `relative overflow-hidden` no hero. Use
+  --orb-a e --orb-b para customizar a cor (ex: cyan + violet).
+- PROFESSIONAL_TRUST / WARM_LOCAL: adicione `parallax-3d` em cards do about
+  e `depth-card` em cards de servicos para micro-elevacao no hover.
+- Qualquer polo: ao usar imagens, envolva em `parallax-3d` para permitir
+  profundidade de scroll futura. NAO adicione GSAP manualmente — o sistema
+  ja tem motion chunks separados no vite.config.
+
+REGRA DURA: nunca use `font-family` inline em JSX style={{}}. Use
+exclusivamente as classes `font-heading` / `font-body` ou vars CSS
+--pole-heading-font / --pole-body-font. O renderer ja strippa inline
+font-family automaticamente.
+=== END ROLL 9.3 ===
+"""
+
     # Injetar variação estrutural do Agente Variação
     variacao_ref = ""
     variacao = facts.get("variacao") or facts.get("variacao_estrutural") or {}
@@ -8582,7 +8966,7 @@ choose the best hero type for this business type.
     prompt = f"""Use this FraLib Prompt Agent request as the complete business brief.
 
 Return one JSON object with a `files` mapping for a complete Vite React
-TypeScript project. The compiled artifact must be `dist/index.html`.{skill_pack_ref}{design_contract_ref}{design_reference_ref}{design_system_ref}{_design_system_spec_ref}{variacao_ref}
+TypeScript project. The compiled artifact must be `dist/index.html`.{skill_pack_ref}{design_contract_ref}{design_reference_ref}{design_system_ref}{_design_system_spec_ref}{_roll9_3_ref}{variacao_ref}
 
 Studio-grade visual contract:
 - Use Tailwind v4 through `@tailwindcss/vite`, `@import "tailwindcss";`,
@@ -10507,9 +10891,101 @@ export default Footer;
 """
 
 
+
+# ═══════════════════════════════════════════════════════════════════════════
+# ROLL 9.3 — Texture & depth utilities (bg-noise, glowing-orb, 3D scroll)
+# ═══════════════════════════════════════════════════════════════════════════
+
+ROLL9_TEXTURE_CSS = """/* ROLL 9.3 — texture & depth utilities (CSS-only, no bundle bloat) */
+
+/* Noise sutil de fundo para polo BOLD (academia/oficina/energia) */
+@keyframes fralib-noise-shift {
+  0%, 100% { transform: translate(0, 0); }
+  10% { transform: translate(-2%, -1%); }
+  30% { transform: translate(1%, -2%); }
+  50% { transform: translate(-1%, 1%); }
+  70% { transform: translate(2%, 1%); }
+  90% { transform: translate(-2%, 2%); }
+}
+.bg-noise {
+  position: relative;
+  isolation: isolate;
+}
+.bg-noise::before {
+  content: "";
+  position: absolute;
+  inset: -10%;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.06;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1   0 0 0 0 1   0 0 0 0 1   0 0 0 0.55 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  background-size: 160px 160px;
+  animation: fralib-noise-shift 7s steps(6) infinite;
+  mix-blend-mode: overlay;
+}
+
+/* Orbs suaves de gradiente para polo TECH (energia_solar, imobiliaria) */
+@keyframes fralib-orb-drift-a {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(8%, -6%, 0) scale(1.12); }
+}
+@keyframes fralib-orb-drift-b {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(-10%, 4%, 0) scale(0.92); }
+}
+.glowing-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(64px);
+  pointer-events: none;
+  will-change: transform;
+  z-index: 0;
+}
+.glowing-orb--a {
+  width: 36vmax;
+  height: 36vmax;
+  background: radial-gradient(circle, var(--orb-a, rgba(56, 189, 248, 0.45)), transparent 65%);
+  animation: fralib-orb-drift-a 14s ease-in-out infinite;
+}
+.glowing-orb--b {
+  width: 28vmax;
+  height: 28vmax;
+  background: radial-gradient(circle, var(--orb-b, rgba(168, 85, 247, 0.35)), transparent 70%);
+  animation: fralib-orb-drift-b 18s ease-in-out infinite;
+}
+
+/* 3D parallax helper (CSS-only, scroll-driven em browsers modernos) */
+.parallax-3d {
+  transform-style: preserve-3d;
+  perspective: 1200px;
+  will-change: transform;
+}
+
+/* Section "depth" wrapper para aplicacao em scroll */
+.depth-card {
+  transform: translate3d(0, 0, 0);
+  transition: transform 600ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.depth-card:hover {
+  transform: translate3d(0, -4px, 8px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bg-noise::before, .glowing-orb { animation: none !important; }
+  .depth-card { transition: none !important; }
+}
+"""
+
+
+def _ensure_roll9_texture_utilities(css: str) -> str:
+    """Idempotente: injeta o bloco de utilidades 9.3 apenas uma vez."""
+    if "ROLL 9.3 — texture & depth utilities" in css:
+        return css
+    return css.rstrip() + "\n\n" + ROLL9_TEXTURE_CSS
+
 def _default_index_css() -> str:
     return """@import "tailwindcss";
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Inter:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?display=swap'); /* ROLL 9: hardcoded fonts stripped */
 
 @layer base {
   * { box-sizing: border-box; }
@@ -10518,7 +10994,7 @@ def _default_index_css() -> str:
     margin: 0;
     min-width: 320px;
     min-height: 100vh;
-    font-family: Inter, system-ui, sans-serif;
+    font-family: var(--pole-body-font, system-ui, sans-serif);
     color: #f7f3ec;
     background: #050505;
     text-rendering: geometricPrecision;
@@ -10540,6 +11016,8 @@ def _default_index_css() -> str:
   }
 }
 """
+    css = _ensure_roll9_texture_utilities(css)
+    return css
 
 
 def _ensure_index_css_contract(content: str) -> str:
