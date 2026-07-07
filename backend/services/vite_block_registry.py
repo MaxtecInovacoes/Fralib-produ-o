@@ -50,7 +50,9 @@ def resolve_cinematic_block_plan(
     surface_style = str(variation.get("surface_style") or "solid")
     anti_repetition_rule = str(variation.get("anti_repetition_rule") or "")
     hero_layout = str(variation.get("hero_layout") or "")
-    section_order_style = str(variation.get("section_order_style") or "credibility_first")
+    section_order_style = str(
+        variation.get("section_order_style") or "credibility_first"
+    )
     visual_lane = str(variation.get("visual_lane") or "")
     lane = resolve_visual_lane(
         segment=segment,
@@ -60,39 +62,125 @@ def resolve_cinematic_block_plan(
     )
     lane_blocks = lane.get("blocks") if isinstance(lane.get("blocks"), dict) else {}
     lane_copy = lane.get("copy") if isinstance(lane.get("copy"), dict) else {}
-    pricing_variant = str(variation.get("pricing_variant") or lane_blocks.get("pricing_variant") or "plan_grid")
-    stats_variant = str(variation.get("stats_variant") or lane_blocks.get("stats_variant") or "inline_hero_stats")
-    aesthetic_mode = str(variation.get("aesthetic_mode") or lane_blocks.get("aesthetic_mode") or "balanced")
-    spacing_density = str(variation.get("spacing_density") or lane_blocks.get("spacing_density") or "normal")
-    radius_mode = str(variation.get("radius_mode") or lane_blocks.get("radius_mode") or "balanced")
-    container_strategy = str(variation.get("container_strategy") or lane_blocks.get("container_strategy") or "contained")
-    typography_scale = str(variation.get("typography_scale") or lane_blocks.get("typography_scale") or "strong")
-    heading_style = str(variation.get("heading_style") or lane_blocks.get("heading_style") or "clean")
-    surface_depth = str(variation.get("surface_depth") or lane_blocks.get("surface_depth") or "elevated")
-    overlap_mode = str(variation.get("overlap_mode") or lane_blocks.get("overlap_mode") or "none")
-    motion_intensity = str(variation.get("motion_intensity") or lane_blocks.get("motion_intensity") or "composed")
-    image_treatment = str(variation.get("image_treatment") or lane_blocks.get("image_treatment") or "clean")
+    pricing_variant = str(
+        variation.get("pricing_variant")
+        or lane_blocks.get("pricing_variant")
+        or "plan_grid"
+    )
+    stats_variant = str(
+        variation.get("stats_variant")
+        or lane_blocks.get("stats_variant")
+        or "inline_hero_stats"
+    )
+    aesthetic_mode = str(
+        variation.get("aesthetic_mode")
+        or lane_blocks.get("aesthetic_mode")
+        or "balanced"
+    )
+    spacing_density = str(
+        variation.get("spacing_density")
+        or lane_blocks.get("spacing_density")
+        or "normal"
+    )
+    radius_mode = str(
+        variation.get("radius_mode") or lane_blocks.get("radius_mode") or "balanced"
+    )
+    container_strategy = str(
+        variation.get("container_strategy")
+        or lane_blocks.get("container_strategy")
+        or "contained"
+    )
+    typography_scale = str(
+        variation.get("typography_scale")
+        or lane_blocks.get("typography_scale")
+        or "strong"
+    )
+    heading_style = str(
+        variation.get("heading_style") or lane_blocks.get("heading_style") or "clean"
+    )
+    surface_depth = str(
+        variation.get("surface_depth") or lane_blocks.get("surface_depth") or "elevated"
+    )
+    overlap_mode = str(
+        variation.get("overlap_mode") or lane_blocks.get("overlap_mode") or "none"
+    )
+    motion_intensity = str(
+        variation.get("motion_intensity")
+        or lane_blocks.get("motion_intensity")
+        or "composed"
+    )
+    image_treatment = str(
+        variation.get("image_treatment")
+        or lane_blocks.get("image_treatment")
+        or "clean"
+    )
+    layout_mode = str(
+        variation.get("layout_mode") or lane_blocks.get("layout_mode") or ""
+    ).strip().lower()
+    if layout_mode not in {"symmetric", "asymmetric", "organic"}:
+        if (
+            aesthetic_mode in {"impact", "technical", "dynamic"}
+            or hero_layout in {"asymmetric", "video", "fullbleed"}
+            or container_strategy in {"edge_to_edge", "overlap"}
+            or overlap_mode not in {"", "none"}
+        ):
+            layout_mode = "asymmetric"
+        elif (
+            aesthetic_mode in {"wellness", "premium"}
+            or radius_mode in {"soft", "pill"}
+            or spacing_density == "spacious"
+        ):
+            layout_mode = "organic"
+        else:
+            layout_mode = "symmetric"
 
     has_explicit_services = bool(variation.get("services_variant"))
-    services_variant = str(variation.get("services_variant") or lane_blocks.get("services_variant") or "split_editorial")
+    services_variant = str(
+        variation.get("services_variant")
+        or lane_blocks.get("services_variant")
+        or "split_editorial"
+    )
     if not has_explicit_services and surface_style in {"solid", "soft_tint"}:
         services_variant = "stacked_cards"
     if not has_explicit_services and proof_style == "card_marquee":
         services_variant = "stats_then_cards"
 
-    faq_variant = str(variation.get("faq_variant") or lane_blocks.get("faq_variant") or "panel")
+    faq_variant = str(
+        variation.get("faq_variant") or lane_blocks.get("faq_variant") or "panel"
+    )
     if section_order_style in {"conversion_first", "gallery_first"}:
         faq_variant = "inline"
 
     has_explicit_location = bool(variation.get("location_variant"))
-    location_variant = str(variation.get("location_variant") or lane_blocks.get("location_variant") or "split_local")
-    if not has_explicit_location and ("academia" in segment.lower() or hero_layout in {"fullbleed", "video"}):
+    location_variant = str(
+        variation.get("location_variant")
+        or lane_blocks.get("location_variant")
+        or "split_local"
+    )
+    if not has_explicit_location and (
+        "academia" in segment.lower() or hero_layout in {"fullbleed", "video"}
+    ):
         location_variant = "feature_local"
 
-    motion_mix = variation.get("motion_mix") if isinstance(variation.get("motion_mix"), list) else []
-    hero_variant = str(variation.get("hero_variant") or hero_layout or lane_blocks.get("hero_variant") or "split")
-    reviews_variant = str(variation.get("reviews_variant") or lane_blocks.get("reviews_variant") or proof_style)
-    about_variant = str(variation.get("about_variant") or lane_blocks.get("about_variant") or "")
+    motion_mix = (
+        variation.get("motion_mix")
+        if isinstance(variation.get("motion_mix"), list)
+        else []
+    )
+    hero_variant = str(
+        variation.get("hero_variant")
+        or hero_layout
+        or lane_blocks.get("hero_variant")
+        or "split"
+    )
+    reviews_variant = str(
+        variation.get("reviews_variant")
+        or lane_blocks.get("reviews_variant")
+        or proof_style
+    )
+    about_variant = str(
+        variation.get("about_variant") or lane_blocks.get("about_variant") or ""
+    )
     if not about_variant:
         if hero_variant in {"video", "fullbleed", "center"}:
             about_variant = "manifesto_split"
@@ -102,7 +190,11 @@ def resolve_cinematic_block_plan(
             about_variant = "manifesto_split"
         else:
             about_variant = "feature_grid"
-    surface_style = str(variation.get("surface_style") or lane_blocks.get("surface_style") or surface_style)
+    surface_style = str(
+        variation.get("surface_style")
+        or lane_blocks.get("surface_style")
+        or surface_style
+    )
     if anti_repetition_rule == "avoid_glass" and surface_style == "glass":
         surface_style = "solid" if services_variant == "split_editorial" else "outline"
 
@@ -128,7 +220,11 @@ def resolve_cinematic_block_plan(
         else:
             cta_style = "solid_panel"
 
-    surface_mix = variation.get("surface_mix") if isinstance(variation.get("surface_mix"), list) else []
+    surface_mix = (
+        variation.get("surface_mix")
+        if isinstance(variation.get("surface_mix"), list)
+        else []
+    )
     if anti_repetition_rule == "avoid_glass":
         surface_mix = [item for item in surface_mix if item != "glass"]
     if not surface_mix and surface_style == "glass":
@@ -166,6 +262,7 @@ def resolve_cinematic_block_plan(
         "overlap_mode": overlap_mode,
         "motion_intensity": motion_intensity,
         "image_treatment": image_treatment,
+        "layout_mode": layout_mode,
         "surface_style": surface_style,
         "surface_mix": surface_mix,
         "section_surface_map": section_surface_map,

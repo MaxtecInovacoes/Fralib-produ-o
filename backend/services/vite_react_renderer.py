@@ -840,6 +840,7 @@ def _get_copy_only_user_prompt(facts: dict[str, Any], policy: str = "copy_only")
     "cinematic_direction": "editorial | documentary | luxury | contrast_heavy | natural_light | energetic",
     "conversion_strategy": "quick_whatsapp | appointment_ritual | proof_first | local_trust | premium_consultation",
     "hero_layout": "split | center | asymmetric | fullbleed | video",
+    "layout_mode": "symmetric | asymmetric | organic",
     "hero_text_side": "left | right | center",
     "aesthetic_mode": "wellness | impact | editorial | premium | technical | dynamic | minimal | balanced",
     "spacing_density": "compressed | normal | spacious",
@@ -923,6 +924,7 @@ GUARDA DE NICHO:
 
 def _clean_copy_value(value: Any, *, limit: int = 220) -> str:
     text = re.sub(r"\s+", " ", str(value or "")).strip()
+    text = _normalize_vite_output_text(text)
     text = text.replace("{", "").replace("}", "").replace("<", "").replace(">", "")
     text = re.sub(r"\bpara\s+finally\s+", "para ", text, flags=re.IGNORECASE)
     text = re.sub(r"\bfinally\s+", "", text, flags=re.IGNORECASE)
@@ -1085,6 +1087,7 @@ def _sanitize_creative_plan(content: dict[str, Any]) -> dict[str, Any]:
             "premium_consultation",
         },
         "hero_layout": {"split", "center", "asymmetric", "fullbleed", "video"},
+        "layout_mode": {"symmetric", "asymmetric", "organic"},
         "hero_text_side": {"left", "right", "center"},
         "aesthetic_mode": {
             "wellness",
@@ -1421,6 +1424,7 @@ def _sanitize_copy_only_content(content: dict[str, Any]) -> dict[str, Any]:
 _CREATIVE_PLAN_REQUIRED_FIELDS = (
     "visual_lane",
     "hero_layout",
+    "layout_mode",
     "aesthetic_mode",
     "spacing_density",
     "typography_scale",
@@ -1515,6 +1519,7 @@ def _merge_copy_only_content(
         variation = dict(variation)
         for key in (
             "hero_layout",
+            "layout_mode",
             "hero_text_side",
             "aesthetic_mode",
             "spacing_density",
@@ -3004,6 +3009,56 @@ def _strip_inline_font_family_in_tsx(tsx: str) -> str:
         )
     return new_tsx
 
+
+_UNICODE_ESCAPE_RE = re.compile(r"\\u([0-9a-fA-F]{4})")
+
+
+def _repair_common_pt_br_unicode_leaks(text: str) -> str:
+    """Keep generated public text in readable UTF-8 PT-BR.
+
+    `\\u003f` is the escaped question mark that appears after an earlier
+    lossy encode step. We cannot recover every word, but the common city/name
+    leaks below should never be published as broken escape text.
+    """
+    text = text.replace("\\?", "?")
+    repairs = {
+        "Florian?polis": "Florianópolis",
+        "S?o Paulo": "São Paulo",
+        "S?o Jos?": "São José",
+        "S?o Jose": "São José",
+        "Jo?o": "João",
+        "Goi?nia": "Goiânia",
+        "Bras?lia": "Brasília",
+        "Vit?ria": "Vitória",
+        "Ribeir?o": "Ribeirão",
+        "Balne?rio": "Balneário",
+        "Uberl?ndia": "Uberlândia",
+        "Londrina?": "Londrina",
+    }
+    for source, target in repairs.items():
+        text = text.replace(source, target)
+    return text
+
+
+def _decode_non_ascii_unicode_escapes(text: str) -> str:
+    def _replace(match: re.Match[str]) -> str:
+        codepoint = int(match.group(1), 16)
+        if codepoint >= 0x80 or codepoint == 0x003F:
+            try:
+                return chr(codepoint)
+            except ValueError:
+                return match.group(0)
+        return match.group(0)
+
+    return _UNICODE_ESCAPE_RE.sub(_replace, text)
+
+
+def _normalize_vite_output_text(content: Any) -> str:
+    text = unicodedata.normalize("NFC", str(content or ""))
+    text = _decode_non_ascii_unicode_escapes(text)
+    return _repair_common_pt_br_unicode_leaks(text)
+
+
 def prepare_vite_project_files(
     files: dict[str, str], *, facts: dict[str, Any]
 ) -> dict[str, str]:
@@ -3059,11 +3114,18 @@ def prepare_vite_project_files(
     prepared["src/index.css"] = _strip_inline_font_family_in_css(
         prepared["src/index.css"]
     )
+    # ROLL 9.3: injeta utilities .bg-noise, .glowing-orb, .parallax-3d, .depth-card
+    # (idempotente — verificado por marker comment "ROLL 9.3 — texture & depth utilities")
+    prepared["src/index.css"] = _ensure_roll9_texture_utilities(
+        prepared["src/index.css"]
+    )
     for _tsx_path in list(prepared.keys()):
         if _tsx_path.endswith((".tsx", ".ts", ".jsx", ".js")):
             prepared[_tsx_path] = _strip_inline_font_family_in_tsx(
                 prepared[_tsx_path]
             )
+    for _path in list(prepared.keys()):
+        prepared[_path] = _normalize_vite_output_text(prepared[_path])
     _normalize_generated_imports_and_hooks(prepared)
     _stabilize_app_contract(prepared)
     _drop_malformed_data_url_in_jsx(prepared)
@@ -3078,6 +3140,8 @@ def prepare_vite_project_files(
     # that was missing the `f` prefix on the template). The vars are looked up
     # from the segment-aware dict + facts at the time the file is written.
     _interpolate_studio_placeholders(prepared, facts)
+    for _path in list(prepared.keys()):
+        prepared[_path] = _normalize_vite_output_text(prepared[_path])
     return dict(sorted(prepared.items()))
 
 
@@ -5166,7 +5230,7 @@ def _cinematic_copy(facts: dict[str, Any]) -> dict[str, Any]:
         if isinstance(llm_content.get("lifestyle"), dict)
         else {}
     )
-    name = str(
+    name = _normalize_vite_output_text(
         business.get("name")
         or business.get("business_name")
         or business.get("nome")
@@ -5175,20 +5239,20 @@ def _cinematic_copy(facts: dict[str, Any]) -> dict[str, Any]:
         or facts.get("nome")
         or "Negócio local"
     )
-    city = str(
+    city = _normalize_vite_output_text(
         business.get("city")
         or business.get("cidade")
         or facts.get("cidade")
         or "sua cidade"
     )
-    segment = str(
+    segment = _normalize_vite_output_text(
         business.get("segment")
         or business.get("segmento")
         or facts.get("segmento")
         or "atendimento local"
     )
     subnicho = (
-        str(
+        _normalize_vite_output_text(
             business.get("subnicho")
             or facts.get("subnicho")
             or facts.get("subniche")
@@ -5197,20 +5261,27 @@ def _cinematic_copy(facts: dict[str, Any]) -> dict[str, Any]:
         .strip()
         .lower()
     )
-    phone = str(business.get("whatsapp") or business.get("phone") or "")
-    rating = str(business.get("rating") or "")
-    reviews = str(
+    phone = _normalize_vite_output_text(
+        business.get("whatsapp") or business.get("phone") or ""
+    )
+    rating = _normalize_vite_output_text(business.get("rating") or "")
+    reviews = _normalize_vite_output_text(
         business.get("total_avaliacoes") or business.get("reviews_count") or ""
     )
-    address = str(business.get("address") or business.get("endereco") or "")
-    horarios = str(
+    address = _normalize_vite_output_text(
+        business.get("address") or business.get("endereco") or ""
+    )
+    horarios = _normalize_vite_output_text(
         business.get("horarios") or business.get("hours") or facts.get("horarios") or ""
+    )
+    maps_url = _normalize_vite_output_text(
+        business.get("maps_url") or business.get("map_url") or ""
     )
     maps_href, maps_embed_src = _build_google_maps_targets(
         name=name,
         city=city,
         address=address,
-        maps_url=str(business.get("maps_url") or business.get("map_url") or ""),
+        maps_url=maps_url,
     )
     segment_context = _normalize_text(" ".join([name, segment, subnicho]))
     is_nutri = "nutri" in segment_context
@@ -6675,6 +6746,19 @@ def _generate_cinematic_studio_files(facts: dict[str, Any]) -> dict[str, str]:
             "technical": "minimal",
             "dynamic": "minimal",
         }.get(_aesthetic_mode, "corporate")
+    if str(_block_plan.get("layout_mode") or "").strip().lower() not in {
+        "symmetric",
+        "asymmetric",
+        "organic",
+    }:
+        _block_plan["layout_mode"] = (
+            "asymmetric"
+            if _pole in {"bold", "minimal"} or _aesthetic_mode in {"impact", "technical"}
+            else "organic"
+            if _pole == "soft"
+            else "symmetric"
+        )
+    _block_plan["layout_pole"] = _pole
     _pole_css = _get_pole_css_tokens(_pole)
 
     source_files: dict[str, str] = {
@@ -6785,6 +6869,12 @@ export function HeroSection({ onOpen }: { onOpen?: () => void }) {
   const motionStyle = String((blockPlan as any)?.motion_style || (variation as any)?.motion_style || 'smooth');
   const motionMix = Array.isArray((blockPlan as any)?.motion_mix) ? (blockPlan as any).motion_mix : [];
   const motionClass = motionMix.map((item: string) => `motion-${item}`).join(' ');
+  const layoutMode = String((blockPlan as any)?.layout_mode || 'symmetric');
+  const layoutPole = String((blockPlan as any)?.layout_pole || '');
+  const isAsymmetricLayout = layoutMode === 'asymmetric';
+  const isOrganicLayout = layoutMode === 'organic';
+  const isTechLayout = layoutPole === 'minimal' || String((blockPlan as any)?.aesthetic_mode || '') === 'technical';
+  const textureClass = layoutPole === 'bold' || isAsymmetricLayout ? 'bg-noise' : '';
   // Video follows the final block plan, not only the raw variation payload.
   const _showVideo = heroVariant === 'video' || heroVariant === 'fullbleed';
 useEffect(() => {
@@ -6794,25 +6884,36 @@ useEffect(() => {
       if (_showVideo) {
         gsap.to('[data-hero-video]', { yPercent: motionStyle === 'minimal' ? 4 : 10, scale: motionStyle === 'sharp' ? 1.12 : 1.08, ease: 'none', scrollTrigger: { trigger: root, start: 'top top', end: 'bottom top', scrub: true } });
       }
+      root.querySelectorAll('.parallax-3d').forEach((el) => {
+        gsap.to(el, { y: motionStyle === 'sharp' ? -42 : -26, rotateX: isAsymmetricLayout ? 4 : 1.5, z: isAsymmetricLayout ? 60 : 24, ease: 'none', scrollTrigger: { trigger: el, start: 'top bottom', end: 'bottom top', scrub: true } });
+      });
       gsap.fromTo('[data-hero-reveal]', { y: motionStyle === 'sharp' ? 18 : 26, opacity: 0 }, { y: 0, opacity: 1, duration: motionStyle === 'minimal' ? 0.55 : 0.9, stagger: motionStyle === 'sharp' ? 0.045 : 0.08, ease: motionStyle === 'sharp' ? 'power4.out' : 'power3.out' });
     }, root);
     return () => ctx.revert();
   }, []);
-  const hasMediaPanel = heroVariant === 'asymmetric' || heroVariant === 'center';
-  const shellClass = heroVariant === 'video' || heroVariant === 'fullbleed'
+  const hasMediaPanel = isAsymmetricLayout || heroVariant === 'asymmetric' || heroVariant === 'center';
+  const shellClass = isAsymmetricLayout
+    ? 'relative left-1/2 grid w-screen max-w-none -translate-x-1/2 gap-0 px-5 lg:grid-cols-12 lg:items-end lg:px-10'
+    : isOrganicLayout
+    ? 'mx-auto flex max-w-6xl flex-col items-center gap-12 rounded-[3rem] px-2 text-center'
+    : heroVariant === 'video' || heroVariant === 'fullbleed'
     ? 'mx-auto flex min-h-[58svh] max-w-6xl flex-col items-center justify-end gap-8 text-center'
     : heroVariant === 'center'
     ? 'mx-auto flex max-w-6xl flex-col items-center gap-10 text-center'
     : heroVariant === 'asymmetric'
       ? 'mx-auto grid max-w-7xl gap-8 lg:grid-cols-[0.82fr_1.05fr_0.68fr] lg:items-center'
       : 'mx-auto grid max-w-7xl gap-10 lg:grid-cols-[1.05fr_.95fr] lg:items-end';
-  const copyClass = heroVariant === 'video' || heroVariant === 'fullbleed' ? 'mx-auto max-w-5xl' : heroVariant === 'center' ? 'mx-auto max-w-4xl' : heroVariant === 'asymmetric' ? (heroTextSide === 'left' ? 'order-1 max-w-4xl' : 'order-2 max-w-4xl') : 'max-w-4xl';
+  const copyClass = isAsymmetricLayout ? 'z-10 max-w-5xl py-12 lg:col-span-7 lg:py-20' : heroVariant === 'video' || heroVariant === 'fullbleed' ? 'mx-auto max-w-5xl' : heroVariant === 'center' ? 'mx-auto max-w-4xl' : heroVariant === 'asymmetric' ? (heroTextSide === 'left' ? 'order-1 max-w-4xl' : 'order-2 max-w-4xl') : 'max-w-4xl';
   const mediaPanelClass = heroVariant === 'center'
-    ? 'relative order-2 aspect-[16/8] w-full max-w-5xl overflow-hidden rounded-[26px] border border-white/10 shadow-[0_30px_90px_rgba(0,0,0,.38)]'
+    ? (isOrganicLayout ? 'parallax-3d relative order-2 aspect-[16/8] w-full max-w-5xl overflow-hidden rounded-[3rem] border border-white/10 shadow-[0_30px_90px_rgba(0,0,0,.22)]' : 'parallax-3d relative order-2 aspect-[16/8] w-full max-w-5xl overflow-hidden rounded-[26px] border border-white/10 shadow-[0_30px_90px_rgba(0,0,0,.38)]')
+    : isAsymmetricLayout
+      ? 'parallax-3d relative -mt-16 min-h-[38rem] w-screen max-w-none overflow-hidden rounded-none border-y border-white/10 shadow-[0_30px_90px_rgba(0,0,0,.45)] lg:col-span-5 lg:ml-[-4vw]'
     : heroTextSide === 'left'
-      ? 'relative order-2 min-h-[34rem] overflow-hidden rounded-[26px] border border-white/10 shadow-[0_30px_90px_rgba(0,0,0,.38)]'
-      : 'relative order-1 min-h-[34rem] overflow-hidden rounded-[26px] border border-white/10 shadow-[0_30px_90px_rgba(0,0,0,.38)]';
-  const statsClass = heroVariant === 'video' || heroVariant === 'fullbleed'
+      ? 'parallax-3d relative order-2 min-h-[34rem] overflow-hidden rounded-[26px] border border-white/10 shadow-[0_30px_90px_rgba(0,0,0,.38)]'
+      : 'parallax-3d relative order-1 min-h-[34rem] overflow-hidden rounded-[26px] border border-white/10 shadow-[0_30px_90px_rgba(0,0,0,.38)]';
+  const statsClass = isAsymmetricLayout
+    ? 'z-10 grid gap-3 py-8 sm:grid-cols-3 lg:col-span-12 lg:grid-cols-3'
+    : heroVariant === 'video' || heroVariant === 'fullbleed'
     ? 'grid w-full gap-3 sm:grid-cols-3'
     : heroVariant === 'center'
     ? 'grid gap-3 sm:grid-cols-3'
@@ -6823,9 +6924,15 @@ useEffect(() => {
   const statCardClass = surfaceStyle === 'solid'
     ? 'rounded-[14px] bg-[var(--accent)] p-4 text-[var(--accent-contrast)]'
     : 'rounded-[14px] border border-[color-mix(in_srgb,var(--accent)_34%,white_10%)] bg-black/72 p-4 shadow-[0_18px_55px_rgba(0,0,0,.32)]';
+  const headlineClass = isAsymmetricLayout
+    ? 'mt-7 max-w-6xl text-[clamp(3rem,10vw,8.5rem)] font-black uppercase italic leading-[0.78] tracking-[-0.055em] text-white skew-y-[-3deg]'
+    : isOrganicLayout
+    ? 'mt-7 max-w-5xl text-[clamp(2.75rem,7vw,6.25rem)] font-semibold leading-[0.95] tracking-[-0.025em] text-white'
+    : 'mt-7 max-w-5xl text-[clamp(2.65rem,7.7vw,5.9rem)] font-semibold leading-[0.93] tracking-[-0.035em] text-white';
   return (
-    <section ref={rootRef} id="hero" className={'hero-v14 ' + heroClasses + ' ' + motionClass}>
+    <section ref={rootRef} id="hero" className={'hero-v14 ' + heroClasses + ' ' + motionClass + ' ' + textureClass}>
       <div className="absolute inset-0 -z-20" style={{ background: 'var(--bg)' }} />
+      {isTechLayout ? <><div className="glowing-orb glowing-orb--a left-[-8vmax] top-[10%]" /><div className="glowing-orb glowing-orb--b bottom-[8%] right-[-6vmax]" /></> : null}
       {_showVideo && mediaVideos[0] ? (
         <video data-hero-video className="absolute inset-0 -z-10 h-full w-full object-cover opacity-52 saturate-[.9]" src={mediaVideos[0]} poster={mediaImages[0]} autoPlay muted loop playsInline preload="metadata" />
       ) : (
@@ -6835,7 +6942,7 @@ useEffect(() => {
       <div className={shellClass}>
         <div className={copyClass}>
           <motion.div data-hero-reveal data-motion-line className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em]" style={{ borderColor: 'color-mix(in srgb, var(--accent) 25%, transparent)', background: 'color-mix(in srgb, var(--accent) 10%, transparent)', color: 'var(--accent-soft)' }}><Play className="h-3.5 w-3.5" />{siteCopy.hero_badge || `${siteCopy.segment} em ${siteCopy.city}`}</motion.div>
-          <h1 data-hero-reveal data-motion-mask className="mt-7 max-w-5xl text-[clamp(2.65rem,7.7vw,5.9rem)] font-semibold leading-[0.93] tracking-[-0.035em] text-white">{siteCopy.headline}</h1>
+          <h1 data-hero-reveal data-motion-mask className={headlineClass}>{siteCopy.headline}</h1>
           <p data-hero-reveal className="mt-6 max-w-2xl text-base leading-8 text-zinc-200 md:text-lg">{siteCopy.subheadline}</p>
           <div data-hero-reveal className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
             <a href={whatsappHref} rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 rounded-full px-6 py-3.5 text-sm font-semibold transition duration-300 hover:-translate-y-0.5" style={{ background: 'var(--accent)', color: 'var(--accent-contrast)' }}><MessageCircle className="h-4 w-4" />{siteCopy.cta_primary}</a>
@@ -7463,10 +7570,33 @@ export default AboutSection;
         .replace("__ABOUT_CITY__", copy["city"])
     )
     gallery_section = """
+import { useEffect, useRef } from 'react';
 import { motion } from 'motion/react';
-import { mediaImages, siteCopy } from './siteData';
+import { gsap } from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { blockPlan, mediaImages, siteCopy } from './siteData';
+gsap.registerPlugin(ScrollTrigger);
 export function GallerySection() {
-  return <section id="galeria" style={{ background: 'var(--bg)', color: 'var(--text)' }} className="px-5 py-20 md:px-8 md:py-28"><div className="mx-auto max-w-7xl"><div className="mb-10 flex flex-col gap-4 md:flex-row md:items-end md:justify-between"><div><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>{siteCopy.gallery_kicker}</p><h2 className="mt-3 max-w-3xl text-[clamp(2rem,4.8vw,4.4rem)] font-semibold leading-[1] tracking-[-0.025em]">{siteCopy.gallery_title}</h2></div><p className="max-w-md text-sm leading-7 text-[var(--text-muted)]">{siteCopy.gallery_intro}</p></div><div className="__GALLERY_GRID_CLASS__">{mediaImages.slice(0, 5).map((src, index) => <motion.figure key={src} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.25 }} transition={{ delay: index * 0.04 }} className={`group relative overflow-hidden rounded-[18px] bg-black ${index === 0 ? 'md:col-span-2 md:row-span-2' : ''}`}><img src={src} alt={`${siteCopy.gallery_alt} ${index + 1}`} className="h-full w-full object-cover opacity-90 transition duration-700 group-hover:scale-105 group-hover:opacity-100" loading={index === 0 ? 'eager' : 'lazy'} decoding="async" /><figcaption className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-5 text-sm font-semibold text-white">{index === 0 ? siteCopy.name : siteCopy.city}</figcaption></motion.figure>)}</div></div></section>;
+  const rootRef = useRef<HTMLElement | null>(null);
+  const layoutMode = String((blockPlan as any)?.layout_mode || 'symmetric');
+  const layoutPole = String((blockPlan as any)?.layout_pole || '');
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const ctx = gsap.context(() => {
+      root.querySelectorAll('.parallax-3d').forEach((el, index) => {
+        gsap.to(el, { y: layoutMode === 'asymmetric' ? -48 : -22, rotateZ: layoutMode === 'asymmetric' ? (index % 2 ? 1.5 : -1.5) : 0, scale: layoutMode === 'organic' ? 1.03 : 1.01, ease: 'none', scrollTrigger: { trigger: el, start: 'top bottom', end: 'bottom top', scrub: true } });
+      });
+    }, root);
+    return () => ctx.revert();
+  }, [layoutMode]);
+  if (layoutMode === 'asymmetric') {
+    return <section ref={rootRef} id="galeria" style={{ background: 'var(--bg)', color: 'var(--text)' }} className={`relative overflow-hidden px-0 py-16 md:py-24 ${layoutPole === 'bold' ? 'bg-noise' : ''}`}><div className="relative left-1/2 w-screen max-w-none -translate-x-1/2 px-5 lg:px-10"><div className="mb-12 grid grid-cols-12 gap-4"><div className="col-span-12 lg:col-span-7"><p className="text-xs font-black uppercase tracking-[0.22em]" style={{ color: 'var(--accent)' }}>{siteCopy.gallery_kicker}</p><h2 className="mt-3 text-[clamp(2.8rem,7.5vw,7rem)] font-black uppercase italic leading-[0.8] tracking-[-0.055em] skew-y-[-3deg]">{siteCopy.gallery_title}</h2></div><p className="col-span-12 max-w-xl self-end text-sm font-semibold uppercase leading-7 tracking-[0.04em] text-[var(--text-muted)] lg:col-span-5">{siteCopy.gallery_intro}</p></div><div className="grid auto-rows-[14rem] grid-cols-12 gap-2 md:auto-rows-[18rem]">{mediaImages.slice(0, 5).map((src, index) => { const shape = index === 0 ? 'col-span-12 row-span-2 md:col-span-7 md:-mt-12' : index === 1 ? 'col-span-6 md:col-span-5 md:mt-10' : index === 2 ? 'col-span-6 md:col-span-4' : 'col-span-12 md:col-span-4'; return <motion.figure key={src} className={`parallax-3d group relative overflow-hidden rounded-none bg-black ${shape}`}><img src={src} alt={`${siteCopy.gallery_alt} ${index + 1}`} className="h-full w-full object-cover grayscale contrast-125 transition duration-700 group-hover:scale-105 group-hover:grayscale-0" loading={index === 0 ? 'eager' : 'lazy'} decoding="async" /><figcaption className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/88 to-transparent p-5 text-xs font-black uppercase tracking-[0.18em] text-white">{index === 0 ? siteCopy.name : siteCopy.city}</figcaption></motion.figure>; })}</div></div></section>;
+  }
+  if (layoutMode === 'organic') {
+    return <section ref={rootRef} id="galeria" style={{ background: 'var(--bg-light)' }} className="px-5 py-28 text-[var(--text-dark)] md:px-8 md:py-40"><div className="mx-auto max-w-6xl"><div className="mx-auto mb-14 max-w-3xl text-center"><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>{siteCopy.gallery_kicker}</p><h2 className="mt-3 text-[clamp(2.3rem,5.8vw,5.4rem)] font-semibold leading-[0.96] tracking-[-0.025em]">{siteCopy.gallery_title}</h2><p className="mx-auto mt-5 max-w-2xl text-base leading-8 text-zinc-600">{siteCopy.gallery_intro}</p></div><div className="grid gap-6 md:grid-cols-6">{mediaImages.slice(0, 5).map((src, index) => <motion.figure key={src} className={`parallax-3d group relative overflow-hidden bg-[color-mix(in_srgb,var(--bg-light)_84%,white_16%)] shadow-[0_24px_80px_rgba(0,0,0,0.12)] ${index === 0 ? 'rounded-[4rem] md:col-span-4 md:row-span-2' : index === 1 ? 'rounded-full md:col-span-2' : 'rounded-[3rem] md:col-span-2'}`}><img src={src} alt={`${siteCopy.gallery_alt} ${index + 1}`} className={`h-full min-h-64 w-full object-cover transition duration-700 group-hover:scale-105 ${index === 1 ? 'aspect-square' : ''}`} loading={index === 0 ? 'eager' : 'lazy'} decoding="async" /><figcaption className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-5 text-sm font-semibold text-white">{index === 0 ? siteCopy.name : siteCopy.city}</figcaption></motion.figure>)}</div></div></section>;
+  }
+  return <section ref={rootRef} id="galeria" style={{ background: 'var(--bg)', color: 'var(--text)' }} className="px-5 py-20 md:px-8 md:py-28"><div className="mx-auto max-w-7xl"><div className="mb-10 flex flex-col gap-4 md:flex-row md:items-end md:justify-between"><div><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>{siteCopy.gallery_kicker}</p><h2 className="mt-3 max-w-3xl text-[clamp(2rem,4.8vw,4.4rem)] font-semibold leading-[1] tracking-[-0.025em]">{siteCopy.gallery_title}</h2></div><p className="max-w-md text-sm leading-7 text-[var(--text-muted)]">{siteCopy.gallery_intro}</p></div><div className="__GALLERY_GRID_CLASS__">{mediaImages.slice(0, 5).map((src, index) => <motion.figure key={src} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.25 }} transition={{ delay: index * 0.04 }} className={`parallax-3d group relative overflow-hidden rounded-[18px] bg-black ${index === 0 ? 'md:col-span-2 md:row-span-2' : ''}`}><img src={src} alt={`${siteCopy.gallery_alt} ${index + 1}`} className="h-full w-full object-cover opacity-90 transition duration-700 group-hover:scale-105 group-hover:opacity-100" loading={index === 0 ? 'eager' : 'lazy'} decoding="async" /><figcaption className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-5 text-sm font-semibold text-white">{index === 0 ? siteCopy.name : siteCopy.city}</figcaption></motion.figure>)}</div></div></section>;
 }
 export default GallerySection;
 """.replace("__GALLERY_GRID_CLASS__", gallery_grid_class)
@@ -7523,14 +7653,40 @@ export default FaqSection;
         "src/components/ui/separator.tsx": vite_template_separator_ui(),
         "src/components/ui/accordion.tsx": vite_template_accordion_ui(),
         "src/components/AboutSection.tsx": about_section,
-        "src/components/ServicesSection.tsx": """import { BarChart3, ClipboardCheck, MapPinned, Sparkles } from 'lucide-react';
+        "src/components/ServicesSection.tsx": """import { useEffect, useRef } from 'react';
+import { BarChart3, ClipboardCheck, MapPinned, Sparkles } from 'lucide-react';
 import { motion } from 'motion/react';
+import { gsap } from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { blockPlan, siteCopy } from './siteData';
 const icons = [ClipboardCheck, Sparkles, MapPinned];
+gsap.registerPlugin(ScrollTrigger);
 export function ServicesSection() {
+  const rootRef = useRef<HTMLElement | null>(null);
   const variant = String((blockPlan as any)?.services_variant || 'stacked_cards');
+  const layoutMode = String((blockPlan as any)?.layout_mode || 'symmetric');
+  const layoutPole = String((blockPlan as any)?.layout_pole || '');
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const ctx = gsap.context(() => {
+      root.querySelectorAll('.depth-card').forEach((el, index) => {
+        gsap.fromTo(el, { y: 30, opacity: 0, rotateX: layoutMode === 'asymmetric' ? -5 : 0 }, { y: 0, opacity: 1, rotateX: 0, duration: 0.72, delay: index * 0.05, ease: 'power3.out', scrollTrigger: { trigger: el, start: 'top 86%' } });
+      });
+      root.querySelectorAll('.parallax-3d').forEach((el) => {
+        gsap.to(el, { y: layoutMode === 'asymmetric' ? -36 : -18, z: layoutMode === 'asymmetric' ? 42 : 18, ease: 'none', scrollTrigger: { trigger: el, start: 'top bottom', end: 'bottom top', scrub: true } });
+      });
+    }, root);
+    return () => ctx.revert();
+  }, [layoutMode]);
+  if (layoutMode === 'asymmetric') {
+    return <section ref={rootRef} id="servicos" style={{ background: 'var(--bg)', color: 'var(--text)' }} className={`relative overflow-hidden px-0 py-14 md:py-20 ${layoutPole === 'bold' ? 'bg-noise' : ''}`}><div className="relative left-1/2 w-screen max-w-none -translate-x-1/2 px-5 lg:px-10"><div className="grid grid-cols-12 gap-0 border-y border-[color-mix(in_srgb,var(--accent)_38%,transparent)]"><div className="col-span-12 py-10 lg:col-span-5 lg:pr-10"><p className="text-xs font-black uppercase tracking-[0.22em]" style={{ color: 'var(--accent)' }}>{siteCopy.services_kicker}</p><h2 className="mt-3 text-[clamp(2.8rem,8vw,6.8rem)] font-black uppercase italic leading-[0.78] tracking-[-0.055em] skew-y-[-3deg]">{siteCopy.services_title}</h2><p className="mt-8 max-w-xl text-sm leading-7 text-[var(--text-muted)] md:text-base">{siteCopy.services_subheadline}</p></div><div className="col-span-12 grid grid-cols-12 gap-2 py-8 lg:col-span-7">{siteCopy.services.map((service, index) => { const Icon = icons[index] || ClipboardCheck; const shape = index === 0 ? 'col-span-12 lg:col-span-7 lg:-mt-16' : index === 1 ? 'col-span-12 lg:col-span-5 lg:mt-8' : 'col-span-12 lg:col-span-6'; return <motion.article key={service.title} className={`depth-card parallax-3d min-h-[18rem] rounded-none border-2 border-[color-mix(in_srgb,var(--accent)_70%,transparent)] bg-[color-mix(in_srgb,var(--bg)_88%,var(--accent)_10%)] p-6 shadow-[8px_8px_0_color-mix(in_srgb,var(--accent)_68%,transparent)] ${shape}`}><div className="flex items-center justify-between gap-4"><Icon className="h-6 w-6" style={{ color: 'var(--accent)' }} /><span className="text-xs font-black uppercase tracking-[0.24em] text-[var(--text-muted)]">0{index + 1}</span></div><h3 className="mt-10 text-[clamp(1.7rem,3vw,3rem)] font-black uppercase italic leading-none">{service.title}</h3><p className="mt-5 text-sm font-semibold uppercase leading-7 tracking-[0.04em] text-[var(--text-muted)]">{service.description}</p></motion.article>; })}</div></div></div></section>;
+  }
+  if (layoutMode === 'organic') {
+    return <section ref={rootRef} id="servicos" style={{ background: 'var(--bg-light)' }} className="px-5 py-28 md:px-8 md:py-40"><div className="mx-auto max-w-6xl"><div className="mx-auto max-w-3xl text-center"><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>{siteCopy.services_kicker}</p><h2 className="mt-4 text-[clamp(2.4rem,5.8vw,5.6rem)] font-semibold leading-[0.95] tracking-[-0.025em] text-[var(--text-dark)]">{siteCopy.services_title}</h2><p className="mx-auto mt-6 max-w-2xl text-base leading-8 text-zinc-600">{siteCopy.services_subheadline}</p></div><div className="mt-16 grid gap-7 md:grid-cols-3">{siteCopy.services.map((service, index) => { const Icon = icons[index] || ClipboardCheck; return <motion.article key={service.title} className={`depth-card min-h-[18rem] bg-white p-8 shadow-[0_22px_70px_rgba(0,0,0,0.10)] ${index === 1 ? 'rounded-[999px] md:translate-y-10' : 'rounded-[3rem]'}`}><div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--accent)_14%,white)]"><Icon className="h-6 w-6" style={{ color: 'var(--accent)' }} /></div><h3 className="mt-8 text-center text-2xl font-semibold tracking-tight text-zinc-950">{service.title}</h3><p className="mx-auto mt-4 max-w-[16rem] text-center text-sm leading-7 text-zinc-600">{service.description}</p></motion.article>; })}</div></div></section>;
+  }
   if (variant === 'stats_then_cards') {
-    return <section id="servicos" style={{ background: 'var(--bg-light)' }} className="px-5 py-20 md:px-8 md:py-28"><div className="mx-auto max-w-7xl"><div className="grid gap-6 lg:grid-cols-[0.72fr_1.28fr] lg:items-start"><div className="rounded-[22px] border border-black/5 bg-white p-7 shadow-[0_18px_60px_rgba(0,0,0,0.08)]"><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>{siteCopy.services_kicker}</p><h2 className="mt-3 text-[clamp(2rem,4.8vw,4.2rem)] font-semibold leading-[1] tracking-[-0.025em] text-zinc-950">{siteCopy.services_title}</h2><p className="mt-5 text-sm leading-7 text-zinc-600">{siteCopy.services_subheadline}</p><div className="mt-8 grid gap-3"><div className="rounded-[16px] bg-zinc-950 px-4 py-4 text-white"><div className="flex items-center gap-3"><BarChart3 className="h-5 w-5" style={{ color: 'var(--accent)' }} /><strong>{siteCopy.rating || '5.0'}</strong></div><p className="mt-2 text-xs uppercase tracking-[0.18em] text-zinc-400">avaliação</p></div><div className="rounded-[16px] border border-zinc-200 px-4 py-4"><strong className="text-zinc-950">{siteCopy.city}</strong><p className="mt-2 text-sm text-zinc-600">{siteCopy.services_city_body}</p></div></div></div><div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{siteCopy.services.map((service, index) => { const Icon = icons[index] || ClipboardCheck; return <motion.article key={service.title} initial={{ opacity: 0, y: 22 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.28 }} transition={{ delay: index * 0.06 }} className="min-h-[16rem] rounded-[18px] border border-black/5 bg-white p-6 shadow-[0_18px_60px_rgba(0,0,0,0.08)]"><Icon className="h-6 w-6" style={{ color: 'var(--accent)' }} /><h3 className="mt-8 text-2xl font-semibold tracking-tight text-zinc-950">{service.title}</h3><p className="mt-4 text-sm leading-7 text-zinc-600">{service.description}</p></motion.article>; })}</div></div></div></section>;
+    return <section ref={rootRef} id="servicos" style={{ background: 'var(--bg-light)' }} className="px-5 py-20 md:px-8 md:py-28"><div className="mx-auto max-w-7xl"><div className="grid gap-6 lg:grid-cols-[0.72fr_1.28fr] lg:items-start"><div className="rounded-[22px] border border-black/5 bg-white p-7 shadow-[0_18px_60px_rgba(0,0,0,0.08)]"><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>{siteCopy.services_kicker}</p><h2 className="mt-3 text-[clamp(2rem,4.8vw,4.2rem)] font-semibold leading-[1] tracking-[-0.025em] text-zinc-950">{siteCopy.services_title}</h2><p className="mt-5 text-sm leading-7 text-zinc-600">{siteCopy.services_subheadline}</p><div className="mt-8 grid gap-3"><div className="rounded-[16px] bg-zinc-950 px-4 py-4 text-white"><div className="flex items-center gap-3"><BarChart3 className="h-5 w-5" style={{ color: 'var(--accent)' }} /><strong>{siteCopy.rating || '5.0'}</strong></div><p className="mt-2 text-xs uppercase tracking-[0.18em] text-zinc-400">avaliação</p></div><div className="rounded-[16px] border border-zinc-200 px-4 py-4"><strong className="text-zinc-950">{siteCopy.city}</strong><p className="mt-2 text-sm text-zinc-600">{siteCopy.services_city_body}</p></div></div></div><div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{siteCopy.services.map((service, index) => { const Icon = icons[index] || ClipboardCheck; return <motion.article key={service.title} initial={{ opacity: 0, y: 22 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.28 }} transition={{ delay: index * 0.06 }} className="depth-card min-h-[16rem] rounded-[18px] border border-black/5 bg-white p-6 shadow-[0_18px_60px_rgba(0,0,0,0.08)]"><Icon className="h-6 w-6" style={{ color: 'var(--accent)' }} /><h3 className="mt-8 text-2xl font-semibold tracking-tight text-zinc-950">{service.title}</h3><p className="mt-4 text-sm leading-7 text-zinc-600">{service.description}</p></motion.article>; })}</div></div></div></section>;
   }
   if (variant === 'split_editorial') {
     return <section id="servicos" style={{ background: 'var(--bg-light)' }} className="px-5 py-20 md:px-8 md:py-28"><div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[0.85fr_1.15fr]"><div><p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--accent)' }}>{siteCopy.services_kicker}</p><h2 className="mt-3 text-[clamp(2rem,4.8vw,4.4rem)] font-semibold leading-[1] tracking-[-0.025em] text-zinc-950">{siteCopy.services_title}</h2><p className="mt-5 max-w-xl text-base leading-8 text-zinc-600">{siteCopy.services_subheadline}</p></div><div className="grid gap-4">{siteCopy.services.map((service, index) => { const Icon = icons[index] || ClipboardCheck; return <motion.article key={service.title} initial={{ opacity: 0, x: 24 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true, amount: 0.28 }} transition={{ delay: index * 0.05 }} className="grid gap-4 rounded-[18px] border border-black/5 bg-white p-6 shadow-[0_18px_60px_rgba(0,0,0,0.08)] md:grid-cols-[auto_1fr] md:items-start"><Icon className="mt-1 h-6 w-6" style={{ color: 'var(--accent)' }} /><div><h3 className="text-2xl font-semibold tracking-tight text-zinc-950">{service.title}</h3><p className="mt-3 text-sm leading-7 text-zinc-600">{service.description}</p></div></motion.article>; })}</div></div></section>;
@@ -8084,6 +8240,7 @@ def _validate_creative_plan_materialization(
         "motion_intensity",
         "motion_mix",
         "hero_variant",
+        "layout_mode",
         "surface_style",
         "section_surface_map",
     )
@@ -8123,12 +8280,23 @@ def _validate_creative_plan_materialization(
         )
     if "data-motion={" not in index and 'data-motion="' not in index:
         raise ViteReactRenderError("Index.tsx nao materializa data-motion do blockPlan")
+    source = "\n".join(files.values())
+    layout_mode = str(block_plan.get("layout_mode") or "")
+    if layout_mode in {"asymmetric", "organic"} and not any(
+        token in source for token in ("parallax-3d", "depth-card", "bg-noise")
+    ):
+        raise ViteReactRenderError(
+            f"layout_mode={layout_mode} sem classes liquidas materializadas"
+        )
+    if layout_mode == "asymmetric" and "grid-cols-12" not in source:
+        raise ViteReactRenderError(
+            "layout_mode=asymmetric sem grid-cols-12 materializado"
+        )
     if (
         isinstance(variation, dict)
         and variation.get("anti_repetition_rule") == "avoid_glass"
     ):
-        source = "\n".join(files.values()).lower()
-        if "backdrop-blur" in source:
+        if "backdrop-blur" in source.lower():
             raise ViteReactRenderError(
                 "avoid_glass ativo, mas projeto ainda usa backdrop-blur"
             )
@@ -8440,7 +8608,7 @@ def write_vite_project(workspace: Path, files: dict[str, str]) -> None:
         if workspace not in target.parents and target != workspace:
             raise ViteReactRenderError(f"arquivo escapou do workspace: {path}")
         target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text(content, encoding="utf-8")
+        target.write_text(_normalize_vite_output_text(content), encoding="utf-8")
 
     # Sprint 12.x: copiar design-system-tokens.css para a raiz do workspace
     # (necessário para os tokens --pole-* serem aplicados no bundle final)
@@ -8602,8 +8770,85 @@ def rewrite_vite_dist_asset_paths(dist_dir: Path) -> None:
         .replace("href='/assets/", "href='assets/")
         .replace("url(/assets/", "url(assets/")
     )
+    # ROLL 9.6: forcar canonical fonts no link Google Fonts do dist/index.html.
+    try:
+        from backend.config.nicho_registry import resolve_fonts as _rf_dist
+        from backend.services.vite_templates import _GOOGLE_FONT_FAMILIES
+
+        import re as _re
+        seg_m = _re.search(r'data-pole="([^"]+)"', rewritten)
+        polo = (seg_m.group(1) if seg_m else "default").lower()
+        _POLO_TO_FONT = {
+            "minimal": "arquiteto_residencial",
+            "bold": "academia_musculacao",
+            "soft": "barbearia_premium",
+            "tech": "energia_solar",
+        }
+        subnicho = _POLO_TO_FONT.get(polo, "default")
+        heading_family, body_family = _rf_dist(
+            nicho="default", subnicho=subnicho, lead_id=subnicho
+        )
+        families: list[str] = []
+        for fam in (heading_family, body_family):
+            css2_name = _GOOGLE_FONT_FAMILIES.get(fam)
+            if css2_name and css2_name not in families:
+                families.append(css2_name)
+        if families:
+            href = (
+                "https://fonts.googleapis.com/css2?"
+                + "&".join(f"family={n}" for n in families)
+                + "&display=swap"
+            )
+            new_link = (
+                '<link rel="preconnect" href="https://fonts.googleapis.com" />\n'
+                '    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />\n'
+                f'    <link href="{href}" rel="stylesheet" />'
+            )
+            rewritten = _re.sub(
+                r'<link[^>]*href="https://fonts\.googleapis\.com/css2\?[^"]+"[^>]*/?>',
+                new_link,
+                rewritten,
+            )
+    except Exception:
+        pass
+    # ROLL 9.7: tambem reescrever CSS para que TODAS as declaracoes
+    # --pole-heading-font sejam normalizadas para o par canonico
+    # (substituicao por sweep — todos os lugares viram o mesmo valor).
+    try:
+        import re as _re_css
+        from pathlib import Path as _Path
+
+        css_dir = dist_dir / "assets"
+        css_files = list(css_dir.glob("*.css")) if css_dir.exists() else []
+        for css_file in css_files:
+            css_text = css_file.read_text(encoding="utf-8")
+            new_css = _re_css.sub(
+                r"--pole-heading-font\s*:\s*[^;}]+;",
+                f'--pole-heading-font: "{heading_family}", system-ui, sans-serif;',
+                css_text,
+            )
+            new_css = _re_css.sub(
+                r"--pole-body-font\s*:\s*[^;}]+;",
+                f'--pole-body-font: "{body_family}", system-ui, sans-serif;',
+                new_css,
+            )
+            if new_css != css_text:
+                css_file.write_text(new_css, encoding="utf-8")
+    except Exception:
+        pass
+    rewritten = _normalize_vite_output_text(rewritten)
     if rewritten != html:
         index.write_text(rewritten, encoding="utf-8")
+    for asset in (dist_dir / "assets").glob("*") if (dist_dir / "assets").exists() else []:
+        if asset.suffix.lower() not in {".js", ".css", ".html"}:
+            continue
+        try:
+            asset_text = asset.read_text(encoding="utf-8")
+        except UnicodeDecodeError:
+            continue
+        normalized_asset = _normalize_vite_output_text(asset_text)
+        if normalized_asset != asset_text:
+            asset.write_text(normalized_asset, encoding="utf-8")
 
 
 def _npm_bin() -> str:
@@ -9855,6 +10100,9 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   base: './',
   plugins: [react(), tailwindcss()],
+  esbuild: {
+    charset: 'utf8',
+  },
   build: {
     target: 'es2020',
     sourcemap: false,
@@ -10898,7 +11146,7 @@ export default Footer;
 
 ROLL9_TEXTURE_CSS = """/* ROLL 9.3 — texture & depth utilities (CSS-only, no bundle bloat) */
 
-/* Noise sutil de fundo para polo BOLD (academia/oficina/energia) */
+/* Noise sutil de fundo para o polo visual BOLD */
 @keyframes fralib-noise-shift {
   0%, 100% { transform: translate(0, 0); }
   10% { transform: translate(-2%, -1%); }
@@ -11150,6 +11398,42 @@ def _resolve_lead_fonts_for_facts(facts: dict[str, Any]) -> tuple[str, str]:
         .strip()
         .lower()
     )
+    # ROLL 9.5: quando subnicho == "default", inferir do segmento + polo
+    # para evitar cair no slot Inter+Inter do default (que nao diferencia nichos).
+    # Mapeamento: (segmento_singular, polo) -> chave canonica em NICHO_FONT_PAIRS.
+    _SEG_POLO_TO_FONT_KEY: dict[tuple[str, str], str] = {
+        ("arquiteto", "classic"): "arquiteto_residencial",
+        ("arquiteto", "tech"): "arquiteto_comercial",
+        ("construtora", "classic"): "construtora_residencial",
+        ("construtora", "bold"): "construtora_residencial",
+        ("academia", "bold"): "academia_musculacao",
+        ("academia", "soft"): "academia_crossfit",
+        ("barbearia", "soft"): "barbearia_premium",
+        ("clinica", "classic"): "clinica_odontologica",
+        ("clinica", "soft"): "clinica_estetica",
+        ("estetica", "soft"): "clinica_estetica",
+        ("nutricionista", "soft"): "nutricionista_clinica",
+        ("nutricionista", "bold"): "nutricionista_esportiva",
+        ("restaurante", "soft"): "restaurante_familiar",
+        ("imobiliaria", "classic"): "imobiliaria_residencial",
+        ("advogado", "classic"): "advocacia_trabalhista",
+        ("escritorio", "classic"): "escritorio_contabil",
+        ("energia_solar", "tech"): "default",  # sem chave canonica; usa polo
+    }
+    if subnicho == "default":
+        try:
+            from backend.config.nicho_registry import NICHO_FONT_PAIRS
+
+            segmento_singular = segmento.rstrip("s")
+            # Tenta primeiro pela chave canonica do NICHO_CONFIG (polo_sugerido).
+            from backend.config.nicho_registry import get_nicho_config
+
+            polo = get_nicho_config(nicho=segmento).polo_sugerido.lower()
+            key = _SEG_POLO_TO_FONT_KEY.get((segmento_singular, polo))
+            if key and key in NICHO_FONT_PAIRS:
+                subnicho = key
+        except Exception:
+            pass
     lead_id = (
         biz.get("id")
         or facts.get("lead_id")

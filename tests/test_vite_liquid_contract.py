@@ -51,11 +51,21 @@ def test_creative_plan_materializes_liquid_tokens():
         "creative_plan": {
             "visual_lane": "lane_c",
             "aesthetic_mode": "impact",
+            "layout_mode": "asymmetric",
             "spacing_density": "compressed",
             "typography_scale": "heroic",
             "motion_intensity": "cinematic",
             "motion_mix": ["mask_reveal", "stagger_cards"],
-            "section_order": ["hero", "about", "services", "gallery", "reviews", "faq", "location", "contact-cta"],
+            "section_order": [
+                "hero",
+                "about",
+                "services",
+                "gallery",
+                "reviews",
+                "faq",
+                "location",
+                "contact-cta",
+            ],
             "hero_variant": "fullbleed",
             "services_variant": "stacked_cards",
             "reviews_variant": "score_wall",
@@ -67,7 +77,9 @@ def test_creative_plan_materializes_liquid_tokens():
     merged = _merge_copy_only_content(_facts("academia"), {"creative_plan": clean})
     files = _generate_cinematic_studio_files(merged)
     validate_vite_project_files(files, merged)
-    block_plan = _extract_export_const_json(files["src/components/siteData.ts"], "blockPlan")
+    block_plan = _extract_export_const_json(
+        files["src/components/siteData.ts"], "blockPlan"
+    )
 
     assert block_plan["aesthetic_mode"] == "impact"
     assert block_plan["spacing_density"] == "compressed"
@@ -84,6 +96,7 @@ def test_creative_plan_policy_rejects_incomplete_llm_direction():
     raw = {
         "creative_plan": {
             "hero_layout": "split",
+            "layout_mode": "asymmetric",
             "aesthetic_mode": "impact",
         }
     }
@@ -101,6 +114,7 @@ def test_creative_plan_policy_rejects_weak_premium_floor():
         "creative_plan": {
             "visual_lane": "lane_a",
             "hero_layout": "center",
+            "layout_mode": "organic",
             "aesthetic_mode": "minimal",
             "spacing_density": "spacious",
             "typography_scale": "soft",
@@ -142,7 +156,9 @@ def test_all_core_segments_resolve_distinct_liquid_signatures_and_intent_keyword
         facts = _facts(segment, seed)
         files = _generate_cinematic_studio_files(facts)
         validate_vite_project_files(files, facts)
-        block_plan = _extract_export_const_json(files["src/components/siteData.ts"], "blockPlan")
+        block_plan = _extract_export_const_json(
+            files["src/components/siteData.ts"], "blockPlan"
+        )
         signature = (
             block_plan.get("visual_lane"),
             block_plan.get("hero_variant"),
@@ -154,7 +170,9 @@ def test_all_core_segments_resolve_distinct_liquid_signatures_and_intent_keyword
             block_plan.get("surface_style"),
             block_plan.get("motion_intensity"),
         )
-        assert signature not in seen, f"duplicate visual signature for {segment}: {signature}"
+        assert signature not in seen, (
+            f"duplicate visual signature for {segment}: {signature}"
+        )
         seen.add(signature)
 
         keywords = _facts_local_keywords(facts)
@@ -169,7 +187,9 @@ def test_all_core_segments_resolve_distinct_liquid_signatures_and_intent_keyword
 def test_root_design_contract_is_injected_into_vite_prompt():
     prompt = _compose_vite_user_prompt(
         "Builder prompt",
-        facts={"business": {"name": "Teste", "segment": "academia", "city": "Curitiba"}},
+        facts={
+            "business": {"name": "Teste", "segment": "academia", "city": "Curitiba"}
+        },
     )
     assert "ROOT DESIGN CONTRACT" in prompt
     assert "FraLib Visual System" in prompt

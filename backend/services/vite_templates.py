@@ -399,6 +399,40 @@ def _google_fonts_link_for_facts(facts: dict[str, Any]) -> str:
         or ""
     ).strip().lower()
 
+    # ROLL 9.5: mesma inferencia de subnicho via (segmento, polo) que
+    # _resolve_lead_fonts_for_facts usa, para manter consistencia entre
+    # Google Fonts link e CSS vars.
+    if not subnicho or subnicho == "default":
+        try:
+            from backend.config.nicho_registry import (
+                NICHO_FONT_PAIRS,
+                get_nicho_config,
+            )
+
+            polo = get_nicho_config(nicho=segmento).polo_sugerido.lower()
+            seg_sing = segmento.rstrip("s")
+            _SEG_POLO_TO_FONT_KEY = {
+                ("arquiteto", "classic"): "arquiteto_residencial",
+                ("arquiteto", "tech"): "arquiteto_comercial",
+                ("construtora", "classic"): "construtora_residencial",
+                ("academia", "bold"): "academia_musculacao",
+                ("academia", "soft"): "academia_crossfit",
+                ("barbearia", "soft"): "barbearia_premium",
+                ("clinica", "classic"): "clinica_odontologica",
+                ("clinica", "soft"): "clinica_estetica",
+                ("estetica", "soft"): "clinica_estetica",
+                ("nutricionista", "soft"): "nutricionista_clinica",
+                ("nutricionista", "bold"): "nutricionista_esportiva",
+                ("restaurante", "soft"): "restaurante_familiar",
+                ("imobiliaria", "classic"): "imobiliaria_residencial",
+                ("advogado", "classic"): "advocacia_trabalhista",
+            }
+            key = _SEG_POLO_TO_FONT_KEY.get((seg_sing, polo))
+            if key and key in NICHO_FONT_PAIRS:
+                subnicho = key
+        except Exception:
+            pass
+
     # lead_id estavel para determinismo: prefira business.id; caia em
     # (subnicho + counter + seed) para diferenciacao entre leads do
     # mesmo subnicho.
@@ -498,6 +532,9 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   base: './',
   plugins: [react(), tailwindcss()],
+  esbuild: {
+    charset: 'utf8',
+  },
   build: {
     target: 'es2020',
     sourcemap: false,
@@ -654,9 +691,15 @@ export type EditorialImage = {
 
 
 def vite_template_index_css() -> str:
-    """Template do src/index.css base com Tailwind v4."""
+    """Template do src/index.css base com Tailwind v4.
+
+    ROLL 9.1a (2026-07-06): removeu hardcoded Cormorant+Inter import.
+    O Google Fonts link dinamico vem de _google_fonts_link_for_facts()
+    (injetado no index.html via preconnect+css2). As fontes heading/body
+    sao controladas via CSS vars --pole-heading-font / --pole-body-font
+    definidas por _ensure_font_vars_in_css() em vite_react_renderer.py.
+    """
     return """@import "tailwindcss";
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Inter:wght@400;500;600;700;800&display=swap');
 
 @layer base {
   * { box-sizing: border-box; }
@@ -665,7 +708,7 @@ def vite_template_index_css() -> str:
     margin: 0;
     min-width: 320px;
     min-height: 100vh;
-    font-family: Inter, system-ui, sans-serif;
+    font-family: var(--pole-body-font, system-ui, sans-serif);
     color: #f7f3ea;
     background: #050505;
     text-rendering: geometricPrecision;
