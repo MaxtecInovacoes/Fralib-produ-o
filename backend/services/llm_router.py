@@ -31,9 +31,8 @@ def _get_key_for_provider(provider: str):
         result = ia_manager.pick_key(provider)
         if result:
             key, base, key_id = result[0], result[1], result[2]
-            # Garantir base_url padrão se não veio do DB
-            if not base:
-                base = _BASE_URLS.get(provider, '')
+            # Sempre usar base_url canônico; DB pode ter URL inválida
+            base = _BASE_URLS.get(provider, base)
             return key, base, key_id
     except Exception as e:
         print(f"[llm_router] ia_manager falhou para {provider}: {e}")

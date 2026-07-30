@@ -93,8 +93,29 @@ def claim_next(db: Session, worker_id: str, tipos: Optional[list] = None) -> Opt
     row = db.execute(text(f"""
         WITH claimed AS (
             SELECT id FROM jobs
-            WHERE status = 'pending' AND COALESCE(next_retry_at, 'epoch'::timestamp) <= NOW() {filtro_tipo}
-            ORDER BY priority ASC, next_retry_at ASC
+            WHERE status = 'pending'
+              AND attempts < max_attempts
+              AND COALESCE(next_retry_at, 'epoch'::timestamp) <= NOW() {filtro_tipo}
+              {filtro_global}
+              {filtro_tenant_lock}
+            ORDER BY
+                CASE
+                    WHEN tipo IN ('pipeline_lead', 'pipeline_multiplos', 'pipeline_main') THEN 0
+                    WHEN tipo = 'lead_production_tick' THEN 1
+                    WHEN tipo = 'lead_supply_caio' THEN 2
+                    WHEN tipo = 'lead_supply_hunter' THEN 3
+                    WHEN tipo IN ('franz_outreach', 'bryan_outreach') THEN 4
+                    ELSE 5
+                END,
+                priority ASC,
+                COALESCE((
+                    SELECT MAX(COALESCE(done.concluido_em, done.iniciado_em, done.criado_em))
+                    FROM jobs done
+                    WHERE done.tenant_id = jobs.tenant_id
+                      AND done.status IN ('completed', 'failed_permanent')
+                ), TIMESTAMP 'epoch') ASC,
+                next_retry_at ASC,
+                id ASC
             FOR UPDATE SKIP LOCKED
             LIMIT 1
         )

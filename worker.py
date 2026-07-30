@@ -281,7 +281,6 @@ async def _main_loop():
     log.info(f"worker iniciado id={WORKER_ID} poll={POLL_SECONDS}s")
     last_reap = 0.0
     last_ckpt_reap = 0.0
-
     while _running:
         # Reap periodico de workers mortos
         now = time.time()
