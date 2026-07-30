@@ -93,7 +93,7 @@ def claim_next(db: Session, worker_id: str, tipos: Optional[list] = None) -> Opt
     row = db.execute(text(f"""
         WITH claimed AS (
             SELECT id FROM jobs
-            WHERE status = 'pending' AND next_retry_at <= NOW() {filtro_tipo}
+            WHERE status = 'pending' AND COALESCE(next_retry_at, 'epoch'::timestamp) <= NOW() {filtro_tipo}
             ORDER BY priority ASC, next_retry_at ASC
             FOR UPDATE SKIP LOCKED
             LIMIT 1
