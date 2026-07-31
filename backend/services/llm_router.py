@@ -89,6 +89,66 @@ def _call_anthropic(model_id, system, user, temperature, max_tokens):
         'messages': [{'role': 'user', 'content': user}],
     }
 
+    _CASCADE_ORDER = [
+        'claude-opus-5', 'claude-opus-4-8', 'claude-opus-4-7',
+        'claude-sonnet-5', 'claude-sonnet-4-6', 'claude-sonnet-4-5',
+        'claude-haiku-5', 'claude-haiku-4-5',
+    ]
+    _cascade_idx = 0
+    _cascade_model = model_id
+    last_exc = None
+
+    while _cascade_idx < len(_CASCADE_ORDER):
+        _cascade_model = _CASCADE_ORDER[_cascade_idx]
+        try:
+            text_out, usage = _try_anthropic_call(
+                _cascade_model, system, user, temperature, max_tokens,
+                api_key, base_url,
+            )
+            if _cascade_idx > 0:
+                print(f'[llm_router] Cascade: {model_id} → {_cascade_model} (ok)')
+            return text_out, usage
+        except requests.exceptions.HTTPError as e:
+            last_exc = e
+            status = e.response.status_code if e.response else 0
+            body = ''
+            try:
+                body = e.response.text[:200] if e.response else ''
+            except Exception:
+                pass
+            if status in (529, 503, 502, 429):
+                _cascade_idx += 1
+                wait = min(5 * _cascade_idx, 15)
+                print(f'[llm_router] {status} Cascade: tentando {_cascade_model} → próxima (idx {_cascade_idx})')
+                _time.sleep(wait)
+                continue
+            if status in (401, 403):
+                raise Exception(f"Auth error {status}: {body}") from None
+            raise
+        except Exception as e:
+            last_exc = e
+            _cascade_idx += 1
+            _time.sleep(2)
+            continue
+
+    raise Exception(f"Todos os modelos da cascata falharam. Último erro: {last_exc}") from last_exc
+
+
+def _try_anthropic_call(model_id, system, user, temperature, max_tokens, api_key, base_url):
+    """Single Anthropic call. Raises on non-2xx."""
+    url = f"{base_url}/v1/messages"
+    headers = {
+        'x-api-key': api_key,
+        'anthropic-version': '2023-06-01',
+        'Content-Type': 'application/json',
+    }
+    payload = {
+        'model': model_id,
+        'max_tokens': max_tokens,
+        'temperature': temperature,
+        'system': system,
+        'messages': [{'role': 'user', 'content': user}],
+    }
     r = requests.post(url, headers=headers, json=payload, timeout=300)
     r.raise_for_status()
     data = r.json()

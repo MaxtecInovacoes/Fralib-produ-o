@@ -261,6 +261,38 @@ MODEL_MAP = {
     'haiku': 'claude-haiku-4-5',
 }
 
+# Cascade: ordem de fallback quando modelo primário retorna 529/503/502.
+# Lido de env vars; fallback hardcoded se env não definida.
+_CASCADE_ENV = {
+    'light': os.getenv('FRALIB_PROXY_LIGHT_MODEL', 'claude-haiku-4-5'),
+    'default': os.getenv('FRALIB_PROXY_DEFAULT_MODEL', 'claude-sonnet-4-6'),
+    'builder': os.getenv('FRALIB_PROXY_BUILDER_MODEL', 'claude-opus-4-8'),
+}
+
+# Modelos de alta resistência para cascade (mais caros = mais quota).
+_TOPK_MODELS = ['claude-opus-5', 'claude-opus-4-8', 'claude-opus-4-7']
+
+# ── helpers cascade ──
+def _cascade_chain(primary_model_id: str, tier: str = 'default') -> list:
+    """Retorna lista [primary, fallback1, fallback2, ...] sem duplicatas."""
+    pool = set()
+    pool.add(primary_model_id)
+    pool.update(_TOPK_MODELS)
+    pool.add(_CASCADE_ENV.get('light', 'claude-haiku-4-5'))
+    pool.add(_CASCADE_ENV.get('default', 'claude-sonnet-4-6'))
+    pool.add(_CASCADE_ENV.get('builder', 'claude-opus-4-8'))
+    # Remove primary do começo, coloca no começo
+    chain = [primary_model_id]
+    for m in _TOPK_MODELS:
+        if m not in chain and m != primary_model_id:
+            chain.append(m)
+    # Adiciona modelos do env que ainda não estão
+    for key in ('builder', 'default', 'light'):
+        m = _CASCADE_ENV.get(key)
+        if m and m not in chain:
+            chain.append(m)
+    return chain
+
 
 def call_claude(system, user, model='opus', max_tokens=4000, temperature=0.7, agent_name=None, base_url=None):
     """Chama Claude API via SDK com RAG, Skills, Memory, Agent Router, BYOK, e key rotation."""
@@ -434,17 +466,20 @@ def call_claude(system, user, model='opus', max_tokens=4000, temperature=0.7, ag
         except Exception:
             pass  # Não bloquear se bucket falhar
 
-    # ── SDK retry loop ──
+    # ── SDK retry loop com model cascade ──
     MAX_ATTEMPTS = 5
     response = None
-    print(f"[LLM] model={model_id} cache={'on' if cache_ativo else 'off'} agent={agent_name or '-'}")
+    _cascade = _cascade_chain(model_id)
+    _current_model = model_id
+    _cascade_idx = 0
+    print(f"[LLM] model={model_id} cascade={_cascade} cache={'on' if cache_ativo else 'off'} agent={agent_name or '-'}")
 
     for _attempt in range(1, MAX_ATTEMPTS + 1):
         _enforce_call_spacing()
         client = _create_client(_api_key, _base)
         try:
             response = client.messages.create(
-                model=model_id,
+                model=_current_model,
                 max_tokens=max_tokens,
                 temperature=temperature,
                 system=system_payload,
@@ -463,13 +498,13 @@ def call_claude(system, user, model='opus', max_tokens=4000, temperature=0.7, ag
             else:
                 print(f"[LLM] stop={response.stop_reason} in={input_tokens} out={output_tokens}")
 
-            _salvar_uso_llm(model_id, input_tokens, output_tokens, agent_name)
+            _salvar_uso_llm(_current_model, input_tokens, output_tokens, agent_name)
 
             try:
                 from token_tracker import get_tracker
                 _tracker = get_tracker()
                 if _tracker:
-                    _tracker.registrar(agente=agent_name or "unknown", model=model_id, usage={
+                    _tracker.registrar(agente=agent_name or "unknown", model=_current_model, usage={
                         'input_tokens': input_tokens, 'output_tokens': output_tokens,
                         'cache_read_input_tokens': cache_read, 'cache_creation_input_tokens': cache_created,
                     })
@@ -520,12 +555,15 @@ def call_claude(system, user, model='opus', max_tokens=4000, temperature=0.7, ag
             if e.status_code in (529, 503, 502):
                 if _ia and _key_id:
                     _ia.mark_failure(_key_id, f'{e.status_code} overloaded', 30)
-                if base_url is None:
-                    new_key = _resolve_anthropic()
-                    if new_key and new_key[2] != _key_id:
-                        _api_key, _base, _key_id = new_key
-                wait = min(20 * _attempt, 60)
-                print(f'[LLM] {e.status_code} Overloaded - aguardando {wait}s (tentativa {_attempt}/{MAX_ATTEMPTS})')
+                # Cascade: troca modelo ao invés de dormir
+                if _cascade_idx + 1 < len(_cascade):
+                    _cascade_idx += 1
+                    _current_model = _cascade[_cascade_idx]
+                    wait = min(5 * _cascade_idx, 15)
+                    print(f'[LLM] {e.status_code} Cascade: {model_id} → {_current_model} (pos {_cascade_idx}/{len(_cascade)-1})')
+                else:
+                    wait = min(20 * _attempt, 60)
+                    print(f'[LLM] {e.status_code} Cascade esgotada, aguardando {wait}s (tentativa {_attempt}/{MAX_ATTEMPTS})')
                 _time.sleep(wait)
             elif e.status_code == 400:
                 print(f'[LLM] 400 Bad Request (tentativa {_attempt}/{MAX_ATTEMPTS})')
