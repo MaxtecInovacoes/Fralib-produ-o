@@ -217,6 +217,17 @@ REGRAS ABSOLUTAS:
 7. DIRECAO DE ARTE DO NICHO: Leia os INSIGHTS DE MERCADO (Jina AI) fornecidos no prompt. Extraia a VIBE VISUAL dominante do segmento (cores que convertem, estilo tipografico, tom emocional). Voce DEVE escolher animation_theme e color_palette baseados nessa vibe — garantindo que cada site seja unico para o segmento.
 8. INSTRUCAO CRIATIVA: Com base nos insights da Jina, no briefing do Theo e nos dados do cliente, escreva instrucao unica para o Liam: vibe do site, como aplicar cores (gradientes, glassmorphism, glow), espacamento e personalidade visual. Cada instrucao deve ser radicalmente diferente entre nichos distintos. OBRIGATORIO: termine a instrucao_criativa_para_dev com a linha exata "CSS VARS CONFIRMADAS: --color-primary:X --color-background:Y --color-accent:Z --color-text:W" usando os valores reais da color_palette que voce gerou. Isso garante que o Liam use exatamente as cores certas sem ambiguidade.
 
+DIRETRIZES VISUAIS CINEMATOGRÁFICAS (OBRIGATORIAS):
+- Hero: headline MINIMO 8 palavras, tipografia bold extrema (font-size 3.5-5rem em desktop), imagem full-bleed com overlay gradiente
+- Ritmo visual: secao clara → secao com cor de accent sutil → secao escura (invertida) → secao clara. NUNCA 3 secoes seguidas com mesmo fundo.
+- Cards: hover translateY(-6px) + shadow-xl, border-radius generoso (rounded-2xl), border sutil
+- CTAs: botoes grandes (py-4 px-8), rounded-full, bg-accent com text-white, pulse animation
+- Espacamento: secoes generosas (py-20 md:py-32), cards com p-8, gap entre elementos 24px+
+- Tipografia: H1 3.5-5rem, H2 max 2.5rem, subtitulo text-lg md:text-xl, contraste forte entre titulos e corpo
+- Animacao: energetic para fitness/barbearia, elegant para saude/luxo, vibrante para comida
+- Anti-patterns: NUNCA gerar sites "template" (hero→features→pricing→faq→cta). Varie estruturas drasticamente por nicho.
+- Dados reais sempre: reviews reais, fotos reais, endereco real, telefone real. NUNCA inventar.
+
 FATOR DE VARIANCIA DINAMICA — OBRIGATORIO:
 Voce e um Diretor de Arte. Para nao gerar sites repetitivos, voce DEVE escolher uma estrutura visual especifica para cada secao usando o campo "layout_type". NUNCA use a mesma combinacao de estruturas duas vezes para clientes diferentes.
 
