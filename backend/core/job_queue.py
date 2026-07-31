@@ -85,6 +85,8 @@ def claim_next(db: Session, worker_id: str, tipos: Optional[list] = None) -> Opt
     sem precisar de lock global.
     """
     filtro_tipo = ""
+    filtro_global = ""
+    filtro_tenant_lock = ""
     params: Dict[str, Any] = {"worker_id": worker_id}
     if tipos:
         filtro_tipo = "AND tipo = ANY(:tipos)"
