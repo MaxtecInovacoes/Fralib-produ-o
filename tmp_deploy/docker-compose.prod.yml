@@ -78,24 +78,27 @@ services:
     restart: unless-stopped
     command: ["python", "server.py"]
 
-  worker-pipeline:
+  # ===================================================================
+  # Worker unificado (substitui worker-pipeline + worker-cron + worker-franz)
+  #
+  # Todos os 3 workers originais rodavam o MESMO worker.py com JOB_TIPOS
+  # hardcoded identicos. A variavel WORKER_JOB_TYPES no compose era
+  # decorativa — nunca lida pelo codigo.
+  #
+  # Agora ha 1 container que processa TODOS os tipos de job.
+  # Para escalar: docker-compose up -d --scale worker=N
+  # ===================================================================
+  worker:
     build: .
     env_file:
       - .env
     environment:
-      DATABASE_URL: postgresql://fralib_user:fralib_dev_password@postgres:5432/fralib_db
-      REDIS_URL: redis://redis:6379/0
-      FRALIB_SITES_DIR: /var/www/fralib/sites
-      FRALIB_SITES_ROOT: /var/www/fralib/sites
-      FRALIB_BUILDER_SANDBOX_ROOT: /tmp/fralib_builder
-      FRALIB_BUILDER_MANIFEST_DIR: /app/logs/builder_manifests
-      MEOWHATS_URL: http://host.docker.internal:3002
-      FRALIB_SKIP_HTML_QUALITY_GATE: "0"
-      WORKER_POLL_SECONDS: "3"
+      <<: *common-env
+      WORKER_POLL_INTERVAL: "2"
       WORKER_HEARTBEAT_SECS: "30"
       WORKER_REAP_SECS: "60"
+      WORKER_JOB_TYPES: pipeline_lead,pipeline_multiplos,lead_production_tick,lead_supply_caio,lead_supply_hunter,franz_outreach
       FRALIB_BUILDER_AUTO_APPROVE: "1"
-      WORKER_JOB_TYPES: pipeline_lead,pipeline_multiplos
       FRALIB_BUILDER_ENGINE: openui
       MAX_PIPELINES_GLOBAL: "4"
       OPENUI_SERVICE_URL: http://host.docker.internal:3333
@@ -122,96 +125,11 @@ services:
     restart: unless-stopped
     command: ["python", "worker.py"]
 
-  worker-cron:
-    build: .
-    env_file:
-      - .env
-    environment:
-      DATABASE_URL: postgresql://fralib_user:fralib_dev_password@postgres:5432/fralib_db
-      REDIS_URL: redis://redis:6379/0
-      FRALIB_SITES_DIR: /var/www/fralib/sites
-      FRALIB_SITES_ROOT: /var/www/fralib/sites
-      FRALIB_BUILDER_SANDBOX_ROOT: /tmp/fralib_builder
-      FRALIB_BUILDER_MANIFEST_DIR: /app/logs/builder_manifests
-      MEOWHATS_URL: http://host.docker.internal:3002
-      FRALIB_SKIP_HTML_QUALITY_GATE: "0"
-      WORKER_POLL_SECONDS: "2"
-      WORKER_HEARTBEAT_SECS: "30"
-      WORKER_REAP_SECS: "60"
-      FRALIB_BUILDER_AUTO_APPROVE: "0"
-      WORKER_JOB_TYPES: lead_supply_hunter,lead_supply_caio,lead_production_tick
-      MAX_PIPELINES_GLOBAL: "0"
-    volumes:
-      - fralib-sites:/var/www/fralib/sites
-      - fralib-logs:/app/logs
-      - fralib-builder:/tmp/fralib_builder
-      - /opt/fralib/data:/app/data
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD-SHELL", "grep -q 'worker.py' /proc/1/cmdline || exit 1"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
-    restart: unless-stopped
-    command: ["python", "worker.py"]
+  # worker-cron: REMOVIDO — consolidado em "worker" acima
+  # worker-franz: REMOVIDO — consolidado em "worker" acima
 
-  worker-franz:
-    build: .
-    env_file:
-      - .env
-    environment:
-      DATABASE_URL: postgresql://fralib_user:fralib_dev_password@postgres:5432/fralib_db
-      REDIS_URL: redis://redis:6379/0
-      FRALIB_SITES_DIR: /var/www/fralib/sites
-      FRALIB_SITES_ROOT: /var/www/fralib/sites
-      FRALIB_BUILDER_SANDBOX_ROOT: /tmp/fralib_builder
-      FRALIB_BUILDER_MANIFEST_DIR: /app/logs/builder_manifests
-      MEOWHATS_URL: http://host.docker.internal:3002
-      FRALIB_SKIP_HTML_QUALITY_GATE: "0"
-      WORKER_POLL_SECONDS: "5"
-      WORKER_HEARTBEAT_SECS: "30"
-      WORKER_REAP_SECS: "60"
-      WORKER_JOB_TYPES: franz_outreach,bryan_outreach
-      MAX_PIPELINES_GLOBAL: "0"
-    volumes:
-      - fralib-sites:/var/www/fralib/sites
-      - fralib-logs:/app/logs
-      - fralib-builder:/tmp/fralib_builder
-      - /opt/fralib/data:/app/data
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD-SHELL", "grep -q 'worker.py' /proc/1/cmdline || exit 1"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
-    restart: unless-stopped
-    command: ["python", "worker.py"]
-
-  open-seo:
-    image: ghcr.io/every-app/open-seo:latest
-    container_name: open-seo
-    ports:
-      - "3002:3001"
-    env_file:
-      - .env
-    environment:
-      AUTH_MODE: local_noauth
-      DATAFORSEO_API_KEY: ${DATAFORSEO_API_KEY}
-    restart: unless-stopped
+  # open-seo: REMOVIDO — container morto (exit 137 OOM), zero referencias
+  # no codigo, porta 3002 ja atendida pelo whatsmeow (PID 4094730)
 
 volumes:
   fralib_fralib-postgres:
