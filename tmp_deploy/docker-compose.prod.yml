@@ -7,11 +7,8 @@ x-common-env: &common-env
   FRALIB_SITES_ROOT: /var/www/fralib/sites
   FRALIB_BUILDER_SANDBOX_ROOT: /tmp/fralib_builder
   FRALIB_BUILDER_MANIFEST_DIR: /app/logs/builder_manifests
-  MEOWHATS_URL: http://host.docker.internal:3001
+  MEOWHATS_URL: http://host.docker.internal:3002
   FRALIB_SKIP_HTML_QUALITY_GATE: "0"
-  WORKER_POLL_SECONDS: "3"
-  WORKER_HEARTBEAT_SECS: "30"
-  WORKER_REAP_SECS: "60"
 
 services:
 
@@ -24,7 +21,7 @@ services:
     ports:
       - "127.0.0.1:15434:5432"
     volumes:
-      - fralib-postgres:/var/lib/postgresql/data
+      - fralib_fralib-postgres:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U fralib_user -d fralib_db"]
       interval: 10s
@@ -56,7 +53,7 @@ services:
       FRALIB_SITES_ROOT: /var/www/fralib/sites
       FRALIB_BUILDER_SANDBOX_ROOT: /tmp/fralib_builder
       FRALIB_BUILDER_MANIFEST_DIR: /app/logs/builder_manifests
-      MEOWHATS_URL: http://host.docker.internal:3001
+      MEOWHATS_URL: http://host.docker.internal:3002
       FRALIB_SKIP_HTML_QUALITY_GATE: "0"
     ports:
       - "8001:8000"
@@ -92,7 +89,7 @@ services:
       FRALIB_SITES_ROOT: /var/www/fralib/sites
       FRALIB_BUILDER_SANDBOX_ROOT: /tmp/fralib_builder
       FRALIB_BUILDER_MANIFEST_DIR: /app/logs/builder_manifests
-      MEOWHATS_URL: http://host.docker.internal:3001
+      MEOWHATS_URL: http://host.docker.internal:3002
       FRALIB_SKIP_HTML_QUALITY_GATE: "0"
       WORKER_POLL_SECONDS: "3"
       WORKER_HEARTBEAT_SECS: "30"
@@ -102,10 +99,13 @@ services:
       FRALIB_BUILDER_ENGINE: openui
       MAX_PIPELINES_GLOBAL: "4"
       OPENUI_SERVICE_URL: http://host.docker.internal:3333
+      FRALIB_TRACING: "1"
     volumes:
+      - /opt/fralib/backend:/app/backend
       - fralib-sites:/var/www/fralib/sites
       - fralib-logs:/app/logs
       - fralib-builder:/tmp/fralib_builder
+      - /opt/fralib/data:/app/data
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
@@ -113,10 +113,14 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "grep -q 'worker.py' /proc/1/cmdline || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     restart: unless-stopped
     command: ["python", "worker.py"]
-    deploy:
-      replicas: 3
 
   worker-cron:
     build: .
@@ -129,7 +133,7 @@ services:
       FRALIB_SITES_ROOT: /var/www/fralib/sites
       FRALIB_BUILDER_SANDBOX_ROOT: /tmp/fralib_builder
       FRALIB_BUILDER_MANIFEST_DIR: /app/logs/builder_manifests
-      MEOWHATS_URL: http://host.docker.internal:3001
+      MEOWHATS_URL: http://host.docker.internal:3002
       FRALIB_SKIP_HTML_QUALITY_GATE: "0"
       WORKER_POLL_SECONDS: "2"
       WORKER_HEARTBEAT_SECS: "30"
@@ -141,6 +145,7 @@ services:
       - fralib-sites:/var/www/fralib/sites
       - fralib-logs:/app/logs
       - fralib-builder:/tmp/fralib_builder
+      - /opt/fralib/data:/app/data
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
@@ -148,10 +153,14 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "grep -q 'worker.py' /proc/1/cmdline || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     restart: unless-stopped
     command: ["python", "worker.py"]
-    deploy:
-      replicas: 2
 
   worker-franz:
     build: .
@@ -164,7 +173,7 @@ services:
       FRALIB_SITES_ROOT: /var/www/fralib/sites
       FRALIB_BUILDER_SANDBOX_ROOT: /tmp/fralib_builder
       FRALIB_BUILDER_MANIFEST_DIR: /app/logs/builder_manifests
-      MEOWHATS_URL: http://host.docker.internal:3001
+      MEOWHATS_URL: http://host.docker.internal:3002
       FRALIB_SKIP_HTML_QUALITY_GATE: "0"
       WORKER_POLL_SECONDS: "5"
       WORKER_HEARTBEAT_SECS: "30"
@@ -175,6 +184,7 @@ services:
       - fralib-sites:/var/www/fralib/sites
       - fralib-logs:/app/logs
       - fralib-builder:/tmp/fralib_builder
+      - /opt/fralib/data:/app/data
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
@@ -182,13 +192,31 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "grep -q 'worker.py' /proc/1/cmdline || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     restart: unless-stopped
     command: ["python", "worker.py"]
-    deploy:
-      replicas: 1
+
+  open-seo:
+    image: ghcr.io/every-app/open-seo:latest
+    container_name: open-seo
+    ports:
+      - "3002:3001"
+    env_file:
+      - .env
+    environment:
+      AUTH_MODE: local_noauth
+      DATAFORSEO_API_KEY: ${DATAFORSEO_API_KEY}
+    restart: unless-stopped
 
 volumes:
-  fralib-postgres:
+  fralib_fralib-postgres:
+    external: true
+    name: fralib_fralib-postgres
   fralib-redis:
   fralib-sites:
   fralib-logs:

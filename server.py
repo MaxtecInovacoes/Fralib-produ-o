@@ -250,10 +250,12 @@ app.mount("/js", StaticFiles(directory="/root/fralib/frontend/js"), name="js")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
+        "http://104.243.41.166:8001",
         "http://187.77.37.72:8000",
         "http://localhost:8000",
         "https://seunegociofralib.site",
-        "https://www.seunegociofralib.site"
+        "https://www.seunegociofralib.site",
+        "https://app.seunegociofralib.site"
     ],
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
