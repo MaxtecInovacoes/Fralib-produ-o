@@ -11,7 +11,7 @@
 
 FraLib e um SaaS de geracao de landing pages via pipeline de agentes IA.
 O pipeline recebe um briefing e produz HTML completo, animado e responsivo.
-Modulo paralelo de SDR via WhatsApp (Franz + meowhats).
+Modulo paralelo de SDR via WhatsApp (Franz agent loop + meowhats).
 
 ## Pipeline de Agentes (ordem de execucao)
 
@@ -89,7 +89,7 @@ NODE_ENV=production
 
 ## Deploy
 
-- Push: `git push origin master` → post-receive hook na VPS
+- Push: `git push github master` → post-receive hook na VPS
 - Nao rebuildar containers sem necessidade — volumes persistem mudancas em /opt/fralib/backend/
 - OpenUI: restart `fralib-openui` (systemd) apos mudancas em openui-service/
 - Backend: rebuild `fralib-app` + `fralib-worker-1` apos mudancas em backend/
@@ -107,17 +107,21 @@ NODE_ENV=production
 backend/agents/arquiteto_mestre.py      PRD designer + copywriter
 backend/agents/builder/agent.py         Builder HTML (chunked OpenUI)  ← existe na VPS
 backend/agents/caio.py                   Qualificacao
-backend/agents/bryan.py                  Finalizador / SDR
+backend/agents/bryan.py                  Finalizador / SDR (legacy — fallback)
 backend/agents/theo.py                   Estrategista
 backend/agents/liz.py                    Revisora codigo
 backend/agents/designer_prd.py           PRD designer (legado)
 backend/agents/design_context.py         Tokens OKLch por nicho
 backend/agents/animation_injector.py     Injetor animacoes
 backend/agents/open_design_selector.py   Selecao design system
+backend/agents/franz/
+  ├── __init__.py                       Franz agent package
+  ├── franz_tools.py                    Tool definitions + execute_tool() dispatcher
+  └── franz_agent_loop.py               Managed agent loop (MCP-like tool calling)
 backend/endpoints/pipeline_endpoints.py  Rotas pipeline
 backend/endpoints/leads_endpoints.py     CRUD leads
 backend/endpoints/cron_endpoints.py      Cron Bryan
-backend/whatsapp_listener.py             WebSocket meowhats
+backend/whatsapp_listener.py             WebSocket meowhats + Franz agent loop
 ```
 
 **Legado local (nao deployado, manter referencia):**
@@ -130,6 +134,36 @@ backend/agents/_arquivo/design_guidelines.py   ARQUIVADO
 ```
 
 **IMPORTANTE:** `backend/agents/builder/` NAO existe no disco local ainda — existe apenas na VPS (/opt/fralib/backend/agents/builder/). Para editar o Builder, fazer via VPS ou pull do repo.
+
+## Franz Agent Loop (Phase 3.2)
+
+Franz usa MCP-like tool calling para interagir com sistemas externos durante conversas WhatsApp.
+
+**Arquitetura:**
+```
+mensagem → run_agent_loop() → Claude (tools=FRANZ_TOOLS)
+                                          ├─ tool_use → execute_tool() → tool_result → Claude
+                                          └─ text → retorna reply para WhatsApp
+Max 10 iteracoes. Tool results capped em 4000 chars.
+```
+
+**Tools disponiveis (10):**
+| Tool | Funcao |
+|------|--------|
+| `buscar_lead` | Dados completos do lead |
+| `consultar_historico` | Todas as interacoes anteriores |
+| `consultar_site` | URL do site gerado |
+| `marcar_status_lead` | Atualiza status (hot_lead, negociacao, etc) |
+| `registrar_interacao` | Registra interacao no banco |
+| `enviar_whatsapp` | Envia mensagem WhatsApp (cautela) |
+| `agendar_followup` | Agenda follow-up automatico |
+| `marcar_deferido` | Marca lead para contato futuro |
+| `buscar_leads_similares` | Leads do mesmo segmento |
+| `verificar_status_wpp` | Verifica conexao WhatsApp |
+
+**Wiring:** `whatsapp_listener.py` integra Franz agent loop com fallback para `agents.bryan` legacy. Variavel `FRANZ_AGENT_LOOP=1` ativa/desativa.
+
+**Commit:** b2de8eb6
 
 ## Alertas
 

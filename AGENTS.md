@@ -13,7 +13,7 @@ pipeline ele roda.
 [4] BUILDER     HTML via OpenUI chunked (agents/builder/agent.py — existe só na VPS)
 [5] QA v2       Vision QA score 7.9/10 PASSED (agents/builder/quality_gate_v2/)
 [6] DEPLOY      Site salvo em /var/www/fralib/sites/
-[7] FRANZ       Lead marcado para outreach WhatsApp (agents/bryan.py)
+[7] FRANZ       Lead marcado para outreach WhatsApp (agents/franz/ — agent loop MCP-like com tools)
 ```
 
 ## Agentes do Pipeline (ordem de execução)
@@ -26,7 +26,7 @@ pipeline ele roda.
 | 4 | Builder (OpenUI) | `agents/builder/agent.py` | claude-sonnet-4-6 | 64000 (4×18000) | Gera HTML chunked via OpenUI (Node.js :3333) |
 | 5 | QA v2 | `agents/builder/quality_gate_v2/` | gpt-4o-mini / 9router | — | Vision QA — pontua design, repair loop se < 7.5 |
 | 6 | Deploy | (sem LLM) | — | — | Salva HTML em /var/www/fralib/sites/ + metadata.json |
-| 7 | Franz | `agents/bryan.py` | haiku | 4000 | SDR WhatsApp — outreach, follow-up, agendamento |
+| 7 | Franz | `agents/franz/` (agent loop) + `agents/bryan.py` (legacy) | sonnet | 4000 | SDR WhatsApp — outreach, follow-up, agendamento (MCP-like tools) |
 
 ## Agentes de Suporte
 
@@ -63,6 +63,8 @@ pipeline ele roda.
 | Unsplash Fetcher | `agents/unsplash_fetcher.py` | Busca imagens no Unsplash |
 | Markdown PRD Parser | `agents/markdown_prd_parser.py` | Parseia PRDs em Markdown |
 | LLM Direct | `agents/llm_direct.py` | Chamada direta a LLM (bypass router) |
+| Franz Tools | `agents/franz/franz_tools.py` | 10 tool definitions + execute_tool() dispatcher |
+| Franz Agent Loop | `agents/franz/franz_agent_loop.py` | Managed agent loop — tool calling iterativo (max 10 turns) |
 
 ## Agentes Legado (não executam no pipeline, mantidos para referência)
 
@@ -112,7 +114,7 @@ pipeline ele roda.
 | Config centralizada | `backend/config.py` |
 | Agente Builder | `backend/agents/builder/agent.py` (VPS only) |
 | QA Vision v2 | `backend/agents/builder/quality_gate_v2/` |
-| Franz (SDR) | `backend/agents/bryan.py` |
+| Franz (SDR) | `backend/agents/franz/` — agent loop + franz_tools.py | `backend/agents/bryan.py` (legacy fallback) |
 | Hunter | `backend/utils/agente1_hunter_v2.py` |
 | Meowhats listener | `backend/whatsapp_listener.py` |
 | Migrations | `alembic/` |
@@ -225,7 +227,7 @@ Agentes são roteados por papel no pipeline (hardcoded no manager):
 | Arquiteto Mestre | Geração de PRD | opus |
 | Builder (OpenUI) | Geração de HTML chunked | claude-sonnet-4-6 |
 | Caio | Qualificação do lead | haiku |
-| Franz | SDR WhatsApp outreach | haiku |
+| Franz | SDR WhatsApp outreach | sonnet |
 | QA v2 | Vision QA (gpt-4o-mini) | gpt-4o-mini / 9router |
 
 > **Nota:** A tabela antiga de roteamento por complexidade (SIMPLES/MÉDIO/COMPLEXO) referia-se aos agentes Theo, Liam, Liz — todos **legado**. O pipeline atual usa modelo fixo por agente conforme tabela acima.
