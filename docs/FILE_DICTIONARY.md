@@ -237,3 +237,4 @@
 | `BUGS_E_ACERTOS.md` | Log de bugs e acertos | NAO |
 | `PIPELINE_FIX_PLAN.md` | Plano de fix do pipeline | NAO |
 | `PLAYBOOK_PIPELINE_VALIDADA.md` | Playbook validado do pipeline | NAO |
+| `DATA_FLOW.md` | Fluxo de dados do pipeline — 8 estágios, error matrix, cost tracking, FSM | NAO |
