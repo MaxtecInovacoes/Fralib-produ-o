@@ -48,22 +48,44 @@
 
 | # | Arquivo | Agente | Função | Modelo | Pode Criar |
 |---|---------|--------|--------|--------|------------|
-| 1 | `theo.py` | Theo | Estrategista — briefing inicial, PRD textual | sonnet/haiku → opus | NAO |
-| 2 | `designer_prd.py` | Designer PRD | Arquiteto visual — seções, paleta, animações | opus/sonnet | NAO |
-| 3 | `arquiteto_mestre.py` | Arquiteto Mestre | Funde Theo + Designer em PRD unificado | opus | NAO |
+| 1 | `agente1_hunter_v2.py` (em `utils/`) | Hunter | Valida/coleta lead_data via Google Maps + Playwright | scraping (sem LLM) | NAO |
+| 2 | `caio.py` | Caio | Qualificador — tier MORNO/STANDARD/PREMIUM, score 0-100 | haiku | NAO |
+| 3 | `arquiteto_mestre.py` | Arquiteto Mestre | Gera PRD completo (seções, paleta OKLch, animações) | opus | NAO |
 | 4 | `builder/agent.py` | Builder | Gera HTML chunked via OpenUI (4×18000=64000 tokens) | sonnet-4-6 | NAO |
-| 5 | `liz.py` | Liz | Revisora de código — valida HTML gerado | haiku/sonnet | NAO |
-| 6 | `caio.py` | Caio | Qualificador — tier MORNO/STANDARD/PREMIUM, score 0-100 | haiku | NAO |
+| 5 | `builder/quality_gate_v2/` | QA v2 | Vision QA — pontua design, repair loop se < 7.5 | gpt-4o-mini / 9router | NAO |
+| 6 | `manager/agent.py` (step_deploy) | Deploy | Salva HTML em /var/www/fralib/sites/ + metadata.json | — (sem LLM) | NAO |
 | 7 | `bryan.py` | Franz | SDR WhatsApp — outreach, follow-up, agendamento | haiku | NAO |
 
-### Agentes de Suporte (pode criar: NAO)
+> **Nota:** Hunter está em `utils/agente1_hunter_v2.py`, não em `agents/`. Os passos Hunter → Caio → Arquiteto → Builder → QA v2 → Deploy → Franz são os 6 estados da FSM em `manager/agent.py` (linhas 87, 124, 191, 291, 497, 609).
+
+### Agentes Legado (não executam no pipeline)
+
+| Arquivo | Agente | O que fazia | Substituído por |
+|---------|--------|-------------|-----------------|
+| `theo.py` | Theo | Estrategista — briefing inicial, PRD textual | Arquiteto Mestre |
+| `designer_prd.py` | Designer PRD | Arquiteto visual — seções, paleta, animações | Arquiteto Mestre |
+| `liam.py` | Liam | Gerador HTML antigo (~1373 linhas) | Builder OpenUI chunked |
+| `liz.py` | Liz | Revisora de código — valida HTML gerado | QA v2 |
+| `liam_tools.py` | Liam Tools | Tools auxiliares do Liam | — |
+| `liam_lats.py` | Liam LATS | Language Agent Tree Search (experimental) | — |
+| `liam_moa.py` | Liam MOA | Mixture of Agents (experimental) | — |
+| `liam_models.py` | Liam Models | Definição de modelos do Liam | LLM Router |
+| `bryan_agent_loop.py` | Bryan Agent Loop | Loop de agentes do Bryan | Franz (via cron) |
+| `liam_agent_loop.py` | Liam Agent Loop | Loop de agentes do Liam (legado) | — |
+| `theo_agent_loop.py` | Theo Agent Loop | Loop de agentes do Theo | — |
+| `arquiteto_agent_loop.py` | Arquiteto Agent Loop | Loop de agentes do Arquiteto | Pipeline FSM |
+| `liz_rubricas.py` | Liz Rubricas | Rubricas de avaliação da Liz | QA v2 |
+| `keyword_research.py` | Keyword Research | Pesquisa de palavras-chave SEO | — |
+| `liam_seo.py` | Liam SEO | SEO engine legado | SEO Context |
+| `agent_rag.py` | Agent RAG | Retrieval-augmented generation | — |
+
+### Agentes de Suporte (ativos no pipeline)
 
 | Arquivo | Função | Pode Criar |
 |---------|--------|------------|
-| `manager/agent.py` | PipelineState dataclass + FSM. Estados: init→hunting→qualifying→designing→building→validating→publishing→outreach→done/failed. Flag USE_QA_V2. | NAO |
+| `manager/agent.py` | PipelineState dataclass + FSM. Estados: hunting→qualifying→designing→building→validating→publishing→outreach→done/failed. | NAO |
 | `brain.py` | Orquestração central — coordena agentes. | NAO |
 | `memory.py` | Memória episódica + semântica do Franz. | NAO |
-| `agent_rag.py` | Retrieval-augmented generation — contexto de conhecimento. | NAO |
 | `animation_injector.py` | Injetor de animações CSS/JS no HTML final. | NAO |
 | `animation_profile.py` | Perfis de animação por nicho (durações, easings). | NAO |
 | `color_extractor.py` | Extrai paleta de cores de referências visuais. | NAO |
@@ -71,28 +93,20 @@
 | `design_context.py` | Tokens OKLch por nicho (cores primárias, secundárias, tipografia). | NAO |
 | `design_guidelines.py` | Guidelines de design system (spacing, grid, breakpoints). | NAO |
 | `open_design_selector.py` | Seleciona design system para o Builder. | NAO |
-| `keyword_research.py` | Pesquisa de palavras-chave SEO para o PRD. | NAO |
 | `seo_context.py` | Contexto SEO (meta tags, schema markup, geo). | NAO |
-| `liam_seo.py` | SEO engine legado do Liam. | NAO |
 | `liam_constitutional.py` | Constitutional AI — guardrails e princípios do Liam. | NAO |
-| `liam_lats.py` | Language Agent Tree Search (experimental). | NAO |
-| `liam_moa.py` | Mixture of Agents (experimental). | NAO |
-| `liam_models.py` | Definição de modelos do Liam (legado). | NAO |
-| `liam_tools.py` | Tools auxiliares do Liam (legado). | NAO |
-| `liam_agent_loop.py` | Loop de agentes do Liam (legado). | NAO |
-| `theo_tools.py` | Tools auxiliares do Theo. | NAO |
-| `theo_agent_loop.py` | Loop de agentes do Theo. | NAO |
-| `arquiteto_tools.py` | Tools auxiliares do Arquiteto. | NAO |
-| `arquiteto_agent_loop.py` | Loop de agentes do Arquiteto. | NAO |
-| `bryan_tools.py` | Tools auxiliares do Bryan (agendamento, parse). | NAO |
-| `bryan_agent_loop.py` | Loop de agentes do Bryan (SDR conversations). | NAO |
-| `liz_rubricas.py` | Rubricas de avaliação da Liz (critérios de qualidade). | NAO |
 | `craft_rules.py` | Regras de craft para geração de conteúdo. | NAO |
+| `validation_enforcer.py` | Enforcement de validações. | NAO |
+| `validation_layer.py` | Camada de validação genérica. | NAO |
+| `cinematic_post_processor.py` | Pós-processamento cinematográfico. | NAO |
 | `skill_loader.py` | Carrega skills dinâmicas dos agentes. | NAO |
 | `token_tracker.py` | Rastreia consumo de tokens por agente + custo USD. | NAO |
-| `pipeline_checkpoint.py` | Checkpoints para retomada de pipeline após crash. `limpar_checkpoints_expirados()` remove > 24h. | NAO |
+| `pipeline_checkpoint.py` | Checkpoints para retomada de pipeline após crash. | NAO |
 | `unsplash_fetcher.py` | Busca imagens no Unsplash API por nicho/termo. | NAO |
 | `markdown_prd_parser.py` | Parseia PRDs em Markdown para estrutura interna. | NAO |
+| `llm_direct.py` | Chamada direta a LLM (bypass router). | NAO |
+| `bryan_tools.py` | Tools auxiliares do Franz (agendamento, parse). | NAO |
+| `theo_tools.py` | Tools auxiliares do Theo (legado). | NAO |
 
 ### Agentes Arquivados (`_arquivo/`) — não usados, mantidos para referência (pode criar: NAO)
 

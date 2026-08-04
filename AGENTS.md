@@ -7,33 +7,26 @@ pipeline ele roda.
 ## Pipeline de Geração (ordem de execução)
 
 ```
-[1] BANCO       Carrega lead direto do Postgres (manager/agent.py)
-[2] HUNTER      Valida/coleta lead_data (utils/agente1_hunter_v2.py)
-[3] CAIO        Qualifica lead — tier MORNO/STANDARD/PREMIUM, score 0-100 (agents/caio.py)
-[4] ARQUITETO   PRD com seções, paleta OKLch, animações (agents/arquiteto_mestre.py)
-[5] BUILDER     HTML via OpenUI chunked (agents/builder/agent.py — existe só na VPS)
-[6] QA v2       Vision QA score 7.9/10 PASSED (agents/builder/quality_gate_v2/)
-[7] DEPLOY      Site salvo em /var/www/fralib/sites/
-[8] FRANZ       Lead marcado para outreach WhatsApp (agents/bryan.py)
+[1] HUNTER      Valida/coleta lead_data (utils/agente1_hunter_v2.py)
+[2] CAIO        Qualifica lead — tier MORNO/STANDARD/PREMIUM, score 0-100 (agents/caio.py)
+[3] ARQUITETO   PRD com seções, paleta OKLch, animações (agents/arquiteto_mestre.py)
+[4] BUILDER     HTML via OpenUI chunked (agents/builder/agent.py — existe só na VPS)
+[5] QA v2       Vision QA score 7.9/10 PASSED (agents/builder/quality_gate_v2/)
+[6] DEPLOY      Site salvo em /var/www/fralib/sites/
+[7] FRANZ       Lead marcado para outreach WhatsApp (agents/bryan.py)
 ```
 
-## Agentes do Pipeline
+## Agentes do Pipeline (ordem de execução)
 
 | # | Agente | Arquivo | Modelo | max_tokens | Função |
 |---|--------|---------|--------|------------|--------|
-| 1 | Theo | `agents/theo.py` | sonnet (simples) / opus (complexo) | 6000 | Estrategista — briefing inicial, PRD textual |
-| 2 | Designer PRD | `agents/designer_prd.py` | opus (complexo) / sonnet | 8000 | Arquiteto visual — define seções, paleta, animações |
-| 3 | Arquiteto Mestre | `agents/arquiteto_mestre.py` | opus (todos níveis) | 8000 | Funde Theo + Designer em PRD unificado |
-| 4 | Builder (OpenUI) | `agents/builder/agent.py` | claude-sonnet-4-6 | 64000 (4×18000) | Gera HTML chunked via OpenUI (Node.js port 3333) |
-| 5 | Liz | `agents/liz.py` | haiku (simples) / sonnet (complexo) | 4000–8000 | Revisora de código — valida HTML gerado |
-| 6 | Caio | `agents/caio.py` | haiku | 2000 | Qualificador — classifica lead por tier/score |
+| 1 | Hunter | `utils/agente1_hunter_v2.py` | Playwright scraping | — | Valida/coleta lead_data via Google Maps |
+| 2 | Caio | `agents/caio.py` | haiku | 2000 | Qualificador — classifica lead por tier/score |
+| 3 | Arquiteto Mestre | `agents/arquiteto_mestre.py` | opus | 8000 | Gera PRD completo (seções, paleta OKLch, animações) |
+| 4 | Builder (OpenUI) | `agents/builder/agent.py` | claude-sonnet-4-6 | 64000 (4×18000) | Gera HTML chunked via OpenUI (Node.js :3333) |
+| 5 | QA v2 | `agents/builder/quality_gate_v2/` | gpt-4o-mini / 9router | — | Vision QA — pontua design, repair loop se < 7.5 |
+| 6 | Deploy | (sem LLM) | — | — | Salva HTML em /var/www/fralib/sites/ + metadata.json |
 | 7 | Franz | `agents/bryan.py` | haiku | 4000 | SDR WhatsApp — outreach, follow-up, agendamento |
-| — | Theo Tools | `agents/theo_tools.py` | — | — | Tools auxiliares do Theo |
-| — | Bryan Tools | `agents/bryan_tools.py` | — | — | Tools auxiliares do Bryan (agendamento, etc.) |
-| — | Arquiteto Tools | `agents/arquiteto_tools.py` | — | — | Tools auxiliares do Arquiteto |
-| — | Agent RAG | `agents/agent_rag.py` | — | — | Retrieval-augmented generation context |
-| — | Keyword Research | `agents/keyword_research.py` | — | — | Pesquisa de palavras-chave SEO |
-| — | Liam | `agents/liam.py` | — | — | Gerador HTML legado — SUBSTITUÍDO pelo Builder OpenUI |
 
 ## Agentes de Suporte
 
@@ -70,6 +63,24 @@ pipeline ele roda.
 | Unsplash Fetcher | `agents/unsplash_fetcher.py` | Busca imagens no Unsplash |
 | Markdown PRD Parser | `agents/markdown_prd_parser.py` | Parseia PRDs em Markdown |
 | LLM Direct | `agents/llm_direct.py` | Chamada direta a LLM (bypass router) |
+
+## Agentes Legado (não executam no pipeline, mantidos para referência)
+
+| Agente | Arquivo | O que fazia | Substituído por |
+|--------|---------|-------------|-----------------|
+| Theo | `agents/theo.py` | Estrategista — briefing inicial, PRD textual | Arquiteto Mestre (funde Theo + Designer) |
+| Designer PRD | `agents/designer_prd.py` | Arquiteto visual — seções, paleta, animações | Arquiteto Mestre (funde Theo + Designer) |
+| Liam | `agents/liam.py` | Gerador HTML antigo (~1373 linhas) | Builder OpenUI chunked |
+| Liz | `agents/liz.py` | Revisora de código — valida HTML gerado | QA v2 (Vision LLM + repair loop) |
+| Liam Tools | `agents/liam_tools.py` | Tools auxiliares do Liam | — |
+| Liam LATS | `agents/liam_lats.py` | Language Agent Tree Search (experimental) | — |
+| Liam MOA | `agents/liam_moa.py` | Mixture of Agents (experimental) | — |
+| Liam Models | `agents/liam_models.py` | Definição de modelos do Liam | LLM Router |
+| Bryan Agent Loop | `agents/bryan_agent_loop.py` | Loop de agentes do Bryan | Franz (via cron dispatcher) |
+| Liam Agent Loop | `agents/liam_agent_loop.py` | Loop de agentes do Liam (legado) | — |
+| Theo Agent Loop | `agents/theo_agent_loop.py` | Loop de agentes do Theo | — |
+| Arquiteto Agent Loop | `agents/arquiteto_agent_loop.py` | Loop de agentes do Arquiteto | Pipeline FSM em manager/agent.py |
+| Liz Rubricas | `agents/liz_rubricas.py` | Rubricas de avaliação da Liz | QA v2 |
 
 ---
 
@@ -207,16 +218,17 @@ isort backend/
 
 **Arquivo:** `backend/agent_router.py`
 
-Agentes são roteados dinamicamente por complexidade do lead:
+Agentes são roteados por papel no pipeline (hardcoded no manager):
 
-| Complexidade | Score | Liam | Arquiteto | Theo | Liz | Bryan |
-|-------------|-------|------|-----------|------|-----|-------|
-| SIMPLES | 0–2 | sonnet | haiku | haiku | haiku | haiku |
-| MÉDIO | 3–6 | opus | sonnet | haiku | haiku | haiku |
-| COMPLEXO | 7+ | opus | sonnet | sonnet | haiku | haiku |
+| Agente | Função no Pipeline | Modelo |
+|--------|-------------------|--------|
+| Arquiteto Mestre | Geração de PRD | opus |
+| Builder (OpenUI) | Geração de HTML chunked | claude-sonnet-4-6 |
+| Caio | Qualificação do lead | haiku |
+| Franz | SDR WhatsApp outreach | haiku |
+| QA v2 | Vision QA (gpt-4o-mini) | gpt-4o-mini / 9router |
 
-Nichos premium (restaurante, hotel, clínica, arquitetura, imobiliária, advocacia, odontologia) somam +3 no score.
-Tier PREMIUM soma +3, STANDARD soma +1.
+> **Nota:** A tabela antiga de roteamento por complexidade (SIMPLES/MÉDIO/COMPLEXO) referia-se aos agentes Theo, Liam, Liz — todos **legado**. O pipeline atual usa modelo fixo por agente conforme tabela acima.
 
 ## Router LLM Multi-Provider
 
