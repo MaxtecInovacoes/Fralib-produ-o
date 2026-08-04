@@ -71,6 +71,124 @@ pipeline ele roda.
 | Markdown PRD Parser | `agents/markdown_prd_parser.py` | Parseia PRDs em Markdown |
 | LLM Direct | `agents/llm_direct.py` | Chamada direta a LLM (bypass router) |
 
+---
+
+## Regra de Ouro da Modificação de Arquivos
+
+> **NUNCA criar arquivo que já existe.**
+
+1. **Listar antes de criar** — antes de criar qualquer arquivo, execute `ls`/`Glob` na pasta alvo para confirmar que não existe equivalente.
+2. **Proibir duplicatas** — não criar segunda interface, segundo helper, segundo service para o mesmo domínio.
+3. **Alterar existente** — se arquivo similar existe, edite-o. Não crie paralelo.
+4. **Arquivos novos precisam de pergunta** — se não houver match claro, pergunte antes de criar.
+5. **Exceções**: testes, configs, lockfiles podem ser criados sem bloqueio.
+
+---
+
+## Mapa do Projeto
+
+| O que procuro | Onde está |
+|---------------|-----------|
+| Entrypoint da API | `server.py` (raiz) |
+| Entrypoint do worker | `worker.py` (raiz) |
+| Pipeline FSM | `backend/agents/manager/agent.py` |
+| Job queue | `backend/core/job_queue.py` |
+| LLM router | `backend/services/llm_router.py` |
+| API keys / round-robin | `backend/services/ia_manager.py` |
+| Créditos / planos | `backend/services/credits_manager.py` |
+| Multi-tenant schemas | `backend/core/database.py` → `criar_schema_tenant()` |
+| Env vars | `.env` (raiz — NÃO commitado) |
+| Config centralizada | `backend/config.py` |
+| Agente Builder | `backend/agents/builder/agent.py` (VPS only) |
+| QA Vision v2 | `backend/agents/builder/quality_gate_v2/` |
+| Franz (SDR) | `backend/agents/bryan.py` |
+| Hunter | `backend/utils/agente1_hunter_v2.py` |
+| Meowhats listener | `backend/whatsapp_listener.py` |
+| Migrations | `alembic/` |
+| Frontend build | `frontend/build.py` + `frontend/build_admin.py` |
+| Deploy config | `docker-compose.prod.yml` + `docs/ARQUITETURA_DEPLOY.md` |
+| OpenUI service | `/root/fralib/openui-service/` (VPS) |
+| Nginx config | `/etc/nginx/sites-enabled/` (VPS) |
+
+---
+
+## Validação Obrigatória
+
+Após qualquer mudança no código, execute **pelo menos** os testes unitários:
+
+```bash
+pytest tests/unit/ -v
+```
+
+Para mudanças em endpoints ou pipeline:
+```bash
+pytest tests/ -v --tb=short
+```
+
+Para verificar coverage (meta: 80%+):
+```bash
+pytest --cov=backend --cov-report=term-missing
+```
+
+Antes de commit:
+```bash
+# 1. Testes passam
+pytest tests/ -q
+
+# 2. Lint
+ruff check backend/
+
+# 3. Format
+black backend/
+isort backend/
+```
+
+---
+
+## Naming Conventions
+
+### Python
+
+| Tipo | Convenção | Exemplo |
+|------|-----------|---------|
+| Módulos/arquivos | `snake_case.py` | `pipeline_endpoints.py` |
+| Classes | `PascalCase` | `PipelineState`, `LeadInput` |
+| Funções/métodos | `snake_case()` | `step_builder()`, `qualificar()` |
+| Variáveis | `snake_case` | `lead_data`, `quality_score` |
+| Constantes | `UPPER_SNAKE_CASE` | `MAX_ATTEMPTS`, `STATE_DONE` |
+| Privado | `_leading_underscore` | `_log_step_error()`, `_db` |
+| Type aliases | `snake_case` | `LeadInput` |
+| Dataclasses | `PascalCase` | `@dataclass class PipelineState` |
+
+### Frontend (JS vanilla)
+
+| Tipo | Convenção | Exemplo |
+|------|-----------|---------|
+| Arquivos JS | `kebab-case.js` | `auth-helper.js` |
+| Variáveis/funções | `camelCase` | `sendMessage()`, `leadData` |
+| Constantes | `UPPER_SNAKE_CASE` | `API_BASE_URL` |
+| CSS classes | `kebab-case` | `.kpi-card`, `.btn-primary` |
+| HTML files | `kebab-case.html` | `admin.html` |
+
+### Banco de Dados
+
+| Tipo | Convenção | Exemplo |
+|------|-----------|---------|
+| Tabelas | `snake_case` | `leads`, `pipeline_error_log` |
+| Colunas | `snake_case` | `lead_id`, `criado_em` |
+| Schemas (tenant) | `tenant_{id}` | `tenant_1`, `tenant_2` |
+| Sequences | `snake_case` | `jobs_id_seq` |
+| Indexes | `ix_{table}_{col}` | `ix_leads_user_id` |
+
+### Variáveis de Ambiente
+
+| Tipo | Convenção | Exemplo |
+|------|-----------|---------|
+| Geral | `UPPER_SNAKE_CASE` | `DATABASE_URL`, `JWT_SECRET_KEY` |
+| Feature flags | `UPPER_SNAKE_CASE` | `FRALIB_SKIP_HTML_QUALITY_GATE` |
+
+---
+
 ## Agentes Arquivados (não usados, mantidos para referência)
 
 | Agente | Arquivo | Motivo arquivamento |
