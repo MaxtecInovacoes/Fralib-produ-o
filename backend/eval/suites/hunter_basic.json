@@ -1,0 +1,23 @@
+[
+  {
+    "name": "hunter_valida_lead_sp",
+    "agent": "hunter",
+    "input": {"cidade": "São Paulo", "nicho": "restaurantes", "quantidade": 5},
+    "expected": {"status": "ok", "leads_found": ">0"},
+    "tolerance": {"max_latency_ms": 30000}
+  },
+  {
+    "name": "hunter_valida_lead_rj",
+    "agent": "hunter",
+    "input": {"cidade": "Rio de Janeiro", "nicho": "academias", "quantidade": 3},
+    "expected": {"status": "ok", "leads_found": ">0"},
+    "tolerance": {"max_latency_ms": 30000}
+  },
+  {
+    "name": "hunter_sem_resultado_nicho_invalido",
+    "agent": "hunter",
+    "input": {"cidade": "São Paulo", "nicho": "zzz_nicho_inexistente_xxx", "quantidade": 5},
+    "expected": {"status": "no_results"},
+    "tolerance": {"max_latency_ms": 15000}
+  }
+]

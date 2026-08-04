@@ -1,0 +1,41 @@
+[
+  {
+    "name": "caio_qualifica_standard",
+    "agent": "caio",
+    "input": {
+      "nome": "João Silva",
+      "empresa": "Restaurante do João",
+      "faturamento": 500000,
+      "funcionarios": 15,
+      "cidade": "São Paulo"
+    },
+    "expected": {"tier": "STANDARD", "score": ">0"},
+    "tolerance": {"max_latency_ms": 20000}
+  },
+  {
+    "name": "caio_qualifica_premium",
+    "agent": "caio",
+    "input": {
+      "nome": "Maria Oliveira",
+      "empresa": "Grupo Oliveira Holdings",
+      "faturamento": 5000000,
+      "funcionarios": 120,
+      "cidade": "São Paulo"
+    },
+    "expected": {"tier": "PREMIUM", "score": ">50"},
+    "tolerance": {"max_latency_ms": 20000}
+  },
+  {
+    "name": "caio_qualifica_morno",
+    "agent": "caio",
+    "input": {
+      "nome": "Pedro Costa",
+      "empresa": "MEI Pedrinho",
+      "faturamento": 30000,
+      "funcionarios": 1,
+      "cidade": "Interior - SP"
+    },
+    "expected": {"tier": "MORNO", "score": "<50"},
+    "tolerance": {"max_latency_ms": 20000}
+  }
+]

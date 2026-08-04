@@ -1,0 +1,39 @@
+[
+  {
+    "name": "franz_greeting_hot_lead",
+    "agent": "franz",
+    "input": {
+      "lead_name": "Carlos",
+      "lead_tier": "PREMIUM",
+      "context": "primeiro_contato",
+      "segmento": "tecnologia"
+    },
+    "expected": {"greeting": "~", "tier_acknowledged": true, "has_cta": true},
+    "tolerance": {"max_latency_ms": 10000}
+  },
+  {
+    "name": "franz_greeting_standard",
+    "agent": "franz",
+    "input": {
+      "lead_name": "Ana",
+      "lead_tier": "STANDARD",
+      "context": "primeiro_contato",
+      "segmento": "servicos"
+    },
+    "expected": {"greeting": "~", "tier_acknowledged": false, "has_cta": true},
+    "tolerance": {"max_latency_ms": 10000}
+  },
+  {
+    "name": "franz_greeting_retry",
+    "agent": "franz",
+    "input": {
+      "lead_name": "Roberto",
+      "lead_tier": "MORNO",
+      "context": "followup",
+      "segmento": "varejo",
+      "previous_interaction": "nao_respondeu"
+    },
+    "expected": {"greeting": "~", "has_cta": false, "deferred": true},
+    "tolerance": {"max_latency_ms": 10000}
+  }
+]
