@@ -115,7 +115,7 @@ def claim_next(db: Session, worker_id: str, tipos: Optional[list] = None) -> Opt
                     FROM jobs done
                     WHERE done.tenant_id = jobs.tenant_id
                       AND done.status IN ('completed', 'failed_permanent')
-                ), TIMESTAMP 'epoch') ASC,
+                ), 'epoch'::timestamp) ASC,
                 next_retry_at ASC,
                 id ASC
             FOR UPDATE SKIP LOCKED
