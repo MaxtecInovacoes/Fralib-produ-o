@@ -85,7 +85,7 @@ def claim_next(db: Session, worker_id: str, tipos: Optional[list] = None) -> Opt
     filtro_tenant_lock = ""
     params: Dict[str, Any] = {"worker_id": worker_id}
     if tipos:
-        filtro_tipo = "AND tipo = ANY(:tipos)"
+        filtro_tipo = "AND tipo = ANY(CAST(:tipos AS text[]))"
         params["tipos"] = tipos
 
     row = db.execute(text(f"""
@@ -93,7 +93,8 @@ def claim_next(db: Session, worker_id: str, tipos: Optional[list] = None) -> Opt
             SELECT id FROM jobs
             WHERE status = 'pending'
               AND attempts < max_attempts
-              AND COALESCE(next_retry_at, 'epoch'::timestamp) <= NOW() {filtro_tipo}
+              AND COALESCE(next_retry_at, 'epoch'::timestamp) <= NOW()
+              {filtro_tipo}
               {filtro_global}
               {filtro_tenant_lock}
             ORDER BY
