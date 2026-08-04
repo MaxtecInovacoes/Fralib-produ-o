@@ -819,6 +819,32 @@ REGRAS:
     dados.setdefault("schema_org_types", ["LocalBusiness"])
     dados["dark_mode"] = dark_mode
 
+    # ═══ DESIGN TOKENS — Single Source of Truth para o Builder (Step 2) ═══
+    # Resolve archetype from dir_key using DIRECAO_TO_ARCHETYPE mapping
+    _dir_key = _design_dict.get("dir_key", "")
+    _archetype_map = {
+        "industrial": "industrial-bold", "bold": "industrial-bold", "neobold": "industrial-bold",
+        "neon-industrial": "industrial-bold", "tech-bold": "industrial-bold", "construct": "industrial-bold",
+        "editorial": "editorial-asymmetric", "minimal": "apple-minimalist", "minimal-clean": "apple-minimalist",
+        "apple": "apple-minimalist", "futurist": "dark-futurist", "dark-futurist": "dark-futurist",
+        "cyber": "dark-futurist", "organic": "organic-warm", "warm": "organic-warm", "earth": "organic-warm",
+        "corporate": "corporate-trust", "trust": "corporate-trust", "luxury": "corporate-trust",
+        "brutal": "brutal-bold", "brutalism": "brutal-bold", "raw": "brutal-bold",
+        "elegant": "luxury-sophisticated", "haute": "luxury-sophisticated",
+        "friendly": "friendly-playful", "playful": "friendly-playful", "fun": "friendly-playful",
+        "energetic": "energetic-vibrant", "vibrant": "energetic-vibrant", "pop": "energetic-vibrant",
+        "neomorphic": "neomorphic-soft", "soft": "neomorphic-soft", "clay": "neomorphic-soft",
+        "glass": "glassmorphism", "glassmorphism": "glassmorphism", "frosted": "glassmorphism",
+        "clean": "apple-minimalist", "tech": "dark-futurist", "modern": "corporate-trust",
+    }
+    _archetype = _archetype_map.get(_dir_key, "editorial-asymmetric")
+    dados["design_tokens"] = {
+        "dir_key": _dir_key,
+        "archetype": _archetype,
+        "tokens": _tokens,
+        "hero_style": dados["color_palette"].get("hero_style"),
+    }
+
     # Se dados nao tem sections, fazer segunda chamada focada em Markdown estruturado
     if not dados.get('sections') or not isinstance(dados.get('sections'), list) or len(dados.get('sections', [])) == 0:
         print(f"[ArquitetoMestre] Markdown sem sections — segunda chamada focada")
