@@ -32,7 +32,11 @@ except Exception as _e:
 from database import inicializar_database
 inicializar_database()
 
-# Rate Limiting (instancia compartilhada — definida em core/rate_limiter.py)
+# Structured JSON logging (ELK/Datadog ingestion)
+from backend.core.logging_setup import setup_json_logging
+setup_json_logging()
+
+# Rate Limiting
 from rate_limiter import limiter
 
 # Importar routers

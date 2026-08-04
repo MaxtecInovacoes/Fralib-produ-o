@@ -193,6 +193,8 @@ def run_one() -> bool:
 
 def main() -> None:
     inicializar_database()
+    from backend.core.logging_setup import setup_json_logging
+    setup_json_logging()
     logger.info("Worker started (PID %s)", os.getpid())
     poll_interval = int(os.getenv("WORKER_POLL_INTERVAL", "5"))
     while _running:

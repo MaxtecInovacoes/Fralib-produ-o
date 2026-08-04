@@ -166,6 +166,30 @@ def step_caio(state: PipelineState) -> PipelineState:
     except Exception:
         pass
 
+    # RAG: indexar lead após qualificação (best-effort)
+    try:
+        from backend.core.rag import index_lead
+        lead_text = (
+            f"{state.lead_data.get('nome', '')} — "
+            f"{state.segmento or state.lead_data.get('segmento', '')} em "
+            f"{state.cidade or state.lead_data.get('cidade', '')}. "
+            f"Tier: {state.caio_output['tier']}, Score: {state.caio_output['score']}. "
+            f"Motivo: {state.caio_output['motivo']}"
+        )
+        index_lead(
+            lead_id=state.lead_id,
+            tenant_id=state.tenant_id,
+            text=lead_text,
+            metadata={
+                "tier": state.caio_output["tier"],
+                "score": state.caio_output["score"],
+                "segmento": state.segmento,
+                "cidade": state.cidade,
+            },
+        )
+    except Exception:
+        pass
+
     return _transition(state, STATE_DESIGNING)
 
 
@@ -760,5 +784,23 @@ def run_pipeline(state: PipelineState) -> PipelineState:
                 )
         except Exception as exc:
             logger.warning("[credits_manager] deducao no run_pipeline falhou run_id=%s: %s", state.run_id, exc)
+        # 2.2 RAG: indexar falha se pipeline falhou (best-effort)
+        if state.current_state == STATE_FAILED and state.error:
+            try:
+                from backend.core.rag import index_failure
+                error_step = state.error_step or "unknown"
+                index_failure(
+                    lead_id=state.lead_id,
+                    tenant_id=state.tenant_id,
+                    text=f"[{error_step}] {state.error}",
+                    step_name=error_step,
+                    metadata={
+                        "step": error_step,
+                        "estado_final": "failed",
+                        "run_id": state.run_id,
+                    },
+                )
+            except Exception:
+                pass
         # 3. Clear context
         clear_run_context(token)

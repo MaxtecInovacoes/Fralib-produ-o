@@ -260,6 +260,21 @@ def mark_failure(
         "payload": json.dumps(payload) if isinstance(payload, dict) else (payload or "{}"),
     })
     db.commit()
+
+    # Alert: job failed permanently (best-effort)
+    try:
+        from backend.core.alerting import alert
+        alert(
+            categoria="pipeline",
+            severity="error",
+            titulo=f"Job #{job_id} falhou permanentemente",
+            mensagem=f"{_tipo_job or 'job'}: {fase or 'unknown'} — {error[:200]}",
+            lead_id=lead_id,
+            tenant_id=tenant_id,
+        )
+    except Exception:
+        pass
+
     return "failed_permanent"
 
 
@@ -283,7 +298,20 @@ def reap_dead_workers(db: Session, dead_after_minutes: int = 5) -> int:
     """), {"mins": dead_after_minutes})
     ids = result.fetchall()
     db.commit()
-    return len(ids)
+    count = len(ids)
+    if count > 0:
+        try:
+            from backend.core.alerting import alert
+            alert(
+                categoria="worker",
+                severity="warning",
+                titulo=f"{count} job(s) ressuscitados (worker morreu)",
+                mensagem=f"Workers mortos detectados — {count} jobs em 'running' "
+                          f"revertidos para 'pending' após heartbeat > {dead_after_minutes}min",
+            )
+        except Exception:
+            pass
+    return count
 
 
 def generate_worker_id() -> str:

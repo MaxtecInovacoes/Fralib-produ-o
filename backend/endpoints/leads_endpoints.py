@@ -339,11 +339,17 @@ async def _gerar_site_manual(lead_id: str, req: LeadManualRequest, user_id):
     from database import engine
     from sqlalchemy import text as _text
     try:
-        from agents.liam import gerar_html_componentizado, montar_template_python
+        # agents.liam removido (legado — substituído por Builder OpenUI)
+        def _gerar_html_componentizado(*args, **kwargs):
+            raise ImportError("agents.liam foi removido. Use o Builder (OpenUI) para geração de HTML.")
+        def _montar_template_python(*args, **kwargs):
+            raise ImportError("agents.liam foi removido. Use o Builder (OpenUI) para geração de HTML.")
+        gerar_html_componentizado = _gerar_html_componentizado
+        montar_template_python = _montar_template_python
         from agents.arquiteto_mestre import gerar_arquiteto_mestre_prd
-        _use_agent = os.getenv("ARQUITETO_AGENT_LOOP", "0") == "1"
-        if _use_agent:
-            from agents.arquiteto_agent_loop import gerar_arquiteto_mestre_prd_agent
+        # agents.arquiteto_agent_loop removido (legado — substituído pelo pipeline FSM)
+        def _gerar_arquiteto_mestre_prd_agent(*args, **kwargs):
+            raise ImportError("agents.arquiteto_agent_loop foi removido. Use gerar_arquiteto_mestre_prd() diretamente.")
         
         # Montar dados mínimos para o Arquiteto Mestre
         dados_hunter = {

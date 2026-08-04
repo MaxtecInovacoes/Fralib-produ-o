@@ -50,21 +50,53 @@ _sse_handler.setFormatter(_logging.Formatter("%(message)s"))
 from agents.caio import qualificar_lead, LeadInput as CaioInput
 # from agents.alex import processar_imagens, AlexInput  # DESATIVADO
 from agents.unsplash_fetcher import buscar_fotos_unsplash
-from agents.theo import gerar_briefing_estrategico, TheoInput, pesquisar_referencias_jina, decidir_modo_visual
-# Theo Managed Agent (feature flag: THEO_AGENT_LOOP=1)
+
+# === LEGACY STUBS — agentes removidos ===
+# Os arquivos foram deletados. Estas funções existem apenas para não quebrar imports existentes.
+# Use: Arquiteto Mestre (arquiteto_mestre.py) + Builder (OpenUI) + QA v2
+
+def _stub_theo(*args, **kwargs):
+    raise ImportError("agents.theo foi removido. Use o pipeline FSM (manager/agent.py) -> Arquiteto Mestre.")
+
+def _stub_liam(*args, **kwargs):
+    raise ImportError("agents.liam foi removido. Use o Builder (OpenUI) para geração de HTML.")
+
+def _stub_liz(*args, **kwargs):
+    raise ImportError("agents.liz foi removido. Use QA v2 (quality_gate_v2) para validação de HTML.")
+
+# Stub classes
+class _StubTheoInput:
+    pass
+
+class _StubLiamOutput:
+    pass
+
+# Assignments (mantidos para não quebrar imports)
+gerar_briefing_estrategico = _stub_theo
+TheoInput = _StubTheoInput
+pesquisar_referencias_jina = _stub_theo
+decidir_modo_visual = _stub_theo
+gerar_html_componentizado = _stub_liam
+montar_template_python = _stub_liam
+critique_theater_pass = _stub_liam
+auditar = _stub_liz
+liz_editar_secao = _stub_liz
+liz_listar_secoes = _stub_liz
+auditar_secao_estruturado = _stub_liz
+LiamOutput = _StubLiamOutput
+
+# theo_agent_loop e arquiteto_agent_loop: condicionais com flag
 _THEO_AGENT = os.getenv("THEO_AGENT_LOOP", "0") == "1"
 if _THEO_AGENT:
-    from agents.theo_agent_loop import gerar_briefing_estrategico_agent as _gerar_briefing_agent
-from agents.pipeline_checkpoint import salvar_checkpoint, limpar_checkpoint, gerar_pipeline_id, agente_concluido, get_dados_agente, resumo_checkpoint
-from agents.liam import gerar_html_componentizado, montar_template_python, critique_theater_pass
-from agents.arquiteto_mestre import gerar_arquiteto_mestre_prd
-# Managed Agent (feature flag: ARQUITETO_AGENT_LOOP=1)
+    def _gerar_briefing_agent(*args, **kwargs):
+        raise ImportError("agents.theo_agent_loop foi removido. Use gerar_briefing_estrategico() diretamente.")
+
 _ARQUITETO_AGENT = os.getenv("ARQUITETO_AGENT_LOOP", "0") == "1"
-if _ARQUITETO_AGENT:
-    from agents.arquiteto_agent_loop import gerar_arquiteto_mestre_prd_agent as _gerar_prd_agent
-from agents.liz import auditar, editar_secao as liz_editar_secao, listar_secoes as liz_listar_secoes, auditar_secao_estruturado
-from agents.bryan import iniciar_contato, BryanInput
-from agents.liam_models import LiamOutput
+def _gerar_prd_agent(*args, **kwargs):
+    raise ImportError("agents.arquiteto_agent_loop foi removido. Use gerar_arquiteto_mestre_prd() diretamente.")
+
+from agents.pipeline_checkpoint import salvar_checkpoint, limpar_checkpoint, gerar_pipeline_id, agente_concluido, get_dados_agente, resumo_checkpoint
+from agents.arquiteto_mestre import gerar_arquiteto_mestre_prd
 from services.credits_manager import verificar_pode_executar, consume_tokens, validar_permissao_pipeline, consumir_credito_diario
 from pipeline_queue_manager import pipeline_queue  # DEPRECATED: mantido apenas para /fila endpoint
 from retry_helper import tentar
