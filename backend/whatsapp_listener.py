@@ -526,6 +526,42 @@ def _atualizar_stage(lead_id: str, sdr_stage: str, user_id: int):
         conn.commit()
 
 
+def _get_historico_recente(lead_id: str, limit: int = 8) -> str:
+    """Retorna últimas N interações como texto resumido para o agent loop."""
+    try:
+        with engine.connect() as conn:
+            rows = conn.execute(text("""
+                SELECT mensagem, direcao, criado_em
+                FROM interacoes
+                WHERE lead_id = :lid
+                ORDER BY criado_em DESC
+                LIMIT :lim
+            """), {"lid": lead_id, "lim": limit}).fetchall()
+        if not rows:
+            return ""
+        linhas = []
+        for msg, direcao, ts in reversed(rows):
+            prefixo = "Lead" if direcao == "recebida" else "Franz"
+            linhas.append(f"[{ts[:16]}] {prefixo}: {msg[:120]}")
+        return "\n".join(linhas)
+    except Exception as exc:
+        logger.warning(f"[Franz] Erro ao buscar historico: {exc}")
+        return ""
+
+
+def _get_site_url(lead_id: str) -> str:
+    """Retorna site_url do lead se disponível."""
+    try:
+        with engine.connect() as conn:
+            row = conn.execute(text("""
+                SELECT site_url FROM leads WHERE id = :id
+            """), {"id": lead_id}).fetchone()
+        return row[0] if row and row[0] else ""
+    except Exception as exc:
+        logger.warning(f"[Franz] Erro ao buscar site_url: {exc}")
+        return ""
+
+
 # Número do closer humano (recebe handoff)
 CLOSER_HUMANO = os.getenv("CLOSER_NUMERO", "5541992049684")
 
@@ -679,38 +715,45 @@ def _processar_mensagem(tenant_id: str, msg_data: dict, texto_override: str = No
             logger.warning(f"🚫 {nome}: limite diário ({DAILY_LIMIT} msgs) atingido — Bryan silenciado")
             return
 
-        # Chamar Bryan para gerar resposta
-        import sys
-        sys.path.insert(0, os.path.dirname(__file__))
-        sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'agents'))
-
-        # Flag: usar Bryan Managed Agent (agent loop com tools) ou legacy (single-shot)
-        USE_AGENT_LOOP = os.getenv("BRYAN_AGENT_LOOP", "1") == "1"
+        # ── FRANZ AGENT LOOP (MCP-like com tools) ──────────────────────
+        USE_AGENT_LOOP = os.getenv("FRANZ_AGENT_LOOP", "1") == "1"
+        bryan_output = None  # objeto normalizado (funciona p/ ambos Franz e legacy)
 
         if USE_AGENT_LOOP:
-            from agents.bryan_agent_loop import bryan_agent_loop, BryanAgentOutput as _BAO
-            agent_result = bryan_agent_loop(
-                lead_data={"id": lead_id, "nome": nome, "segmento": segmento, "cidade": cidade, "telefone": telefone},
-                mensagem=texto,
-                historico_resumo="",
-                sdr_stage=sdr_stage_atual,
-                user_id=user_id,
-            )
-            print(f"[Bryan Agent] ✅ Resultado: stage={agent_result.novo_stage}, tools={agent_result.tools_used}, iter={agent_result.iterations}", flush=True)
+            try:
+                from backend.agents.franz.franz_agent_loop import run_agent_loop
+                agent_result = run_agent_loop(
+                    lead_id=lead_id,
+                    tenant_id=user_id,
+                    mensagem_recebida=texto,
+                    nome_lead=nome,
+                    segmento=segmento,
+                    sdr_stage=sdr_stage_atual,
+                    telefone=tel_raw,
+                    historico_recente=_get_historico_recente(lead_id),
+                    site_url=_get_site_url(lead_id),
+                )
+                # Normalizar p/ formato bryan_output esperado pelo codigo abaixo
+                class _AgentOutput:
+                    def __init__(self, reply, next_stage, update_facts, tools_used):
+                        self.reply = reply
+                        self.intent = "agent_loop"
+                        self.next_stage = next_stage
+                        self.proximo_passo = next_stage  # alias p/ compatibilidade
+                        self.update_facts = update_facts or {}
+                        self.tools_used = tools_used or []
+                        self.should_handoff = False
+                bryan_output = _AgentOutput(
+                    reply=agent_result.get("reply", ""),
+                    next_stage=agent_result.get("next_stage", sdr_stage_atual or "hook"),
+                    update_facts=agent_result.get("update_facts", {}),
+                    tools_used=agent_result.get("tools_used", []),
+                )
+                logger.info(f"Franz tools usadas por {nome}: {bryan_output.tools_used}")
+            except Exception as exc:
+                logger.error(f"Franz agent loop falhou, fallback legacy: {exc}")
 
-            resposta = agent_result.resposta
-            proximo_passo = ""
-
-            # Mapear output do agent loop pro formato esperado
-            class _FakeBryanOutput:
-                reply = agent_result.resposta
-                next_stage = agent_result.novo_stage or sdr_stage_atual
-                should_handoff = agent_result.should_handoff
-                intent = ""
-                proximo_passo = ""
-                update_facts = {"followup_date": agent_result.followup_date} if agent_result.followup_date else {}
-            bryan_output = _FakeBryanOutput()
-        else:
+        if bryan_output is None:
             from agents.bryan import responder_lead
             bryan_output = responder_lead(
                 telefone=tel_raw,
@@ -718,8 +761,10 @@ def _processar_mensagem(tenant_id: str, msg_data: dict, texto_override: str = No
                 nome_negocio=nome or push_name,
                 user_id=user_id,
             )
-            resposta = bryan_output.reply
-            proximo_passo = bryan_output.proximo_passo or ""
+
+        resposta = bryan_output.reply
+        proximo_passo = bryan_output.proximo_passo or ""
+        agent_facts = {}
 
         # Se reply vazio (opt_out, fila, etc) — não enviar
         if not resposta or not resposta.strip():
@@ -746,7 +791,7 @@ def _processar_mensagem(tenant_id: str, msg_data: dict, texto_override: str = No
                 logger.warning(f"Lead {nome}: sanitização falhou — retry via LLM pra extrair texto")
                 try:
                     from agents.llm_direct import call_claude
-                    _raw_json = agent_result.resposta if 'agent_result' in dir() else bryan_output.reply
+                    _raw_json = bryan_output.reply
                     _fix_resp = call_claude(
                         system="Voce recebe um JSON malformado de um chatbot. Extraia APENAS o texto da mensagem que seria enviada ao cliente. Retorne SOMENTE o texto puro, sem JSON, sem aspas, sem formatacao.",
                         user=f"Extraia a mensagem do cliente deste JSON:\n{_raw_json[:1000]}",
