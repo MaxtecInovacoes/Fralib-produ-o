@@ -102,6 +102,39 @@ TELEFONES_FAKE = [
     '11999999999',
     '11111111111',
     '99999999999',
+    '12345678900',
+    '554100000000',
+    '5541998765432',
+]
+
+# Padrões de endereço FAKE — nunca permitem passar
+ENDERECO_FAKE_PATTERNS = [
+    r'\bexemplo\b', r'\bnao informado\b', r'\bnão informado\b',
+    r'\bs/n\b', r'\bsem numero\b', r'\bs/numero\b',
+    r'\bav\.?\s+principal\b', r'\brua principal\b',
+    r'\bcentro\b.*\bs/n\b', r'\b123\b.*\b456\b',
+    r'\bavenida\s+teste\b', r'\brua\s+teste\b',
+    r'\bendereco\s+falso\b', r'\bendereço\s+falso\b',
+    r'\bcasa\s+\d+\b', r'\blote\s+\d+\b',
+]
+
+# Padrões de URL FAKE — domínios que não são reais
+URL_FAKE_PATTERNS = [
+    'example.com', 'example.org', 'example.net',
+    'test.com', 'test.org', 'localhost',
+    'placeholder.com', 'placeholder.org',
+    '127.0.0.1', '0.0.0.0',
+    'your-site.com', 'yoursite.com',
+    'seusite.com', 'seudominio.com',
+    'www.example', 'http://test',
+]
+
+# Nomes genéricos que indicam dado fake
+NOME_FAKE_PATTERNS = [
+    r'\bnegócio\s+local\b', r'\bempresa\s+xyz\b', r'\btest\s+-\s+academia\b',
+    r'\bacademia\s+test\b', r'\bloja\s+teste\b', r'\bteste\s+\w+\b',
+    r'\bexemplo\b.*\bacademia\b', r'\bexemplo\b.*\bbarbearia\b',
+    r'\bexemplo\b.*\brestaurante\b', r'\bfictic\w+\b',
 ]
 
 DDDS_PERMITIDOS = [
@@ -170,18 +203,86 @@ def validar_telefone_real(telefone: str) -> bool:
 
     return True
 
-def validar_dados_minimos(lead: LeadRaw) -> tuple[bool, List[str]]:
-    """
-    Valida se lead tem dados mínimos para gerar site
+def _contem_padroes_fakes(texto: str, patterns: list) -> bool:
+    """Verifica se texto contém algum padrão de dado fake."""
+    if not texto:
+        return False
+    t = texto.lower()
+    return any(re.search(p, t) for p in patterns)
 
+
+def validar_dados_nao_sao_fakes(lead: LeadRaw) -> tuple[bool, List[str]]:
+    """Valida que NENHUM campo do lead contém dados falsos/placeholder.
     Returns:
-        (dados_suficientes: bool, erros: List[str])
+        (ok: bool, erros: List[str])
     """
     erros = []
+
+    # Nome
+    if _contem_padroes_fakes(lead.nome, NOME_FAKE_PATTERNS):
+        erros.append(f"Nome genérico/fake: '{lead.nome}'")
+
+    # Telefone já validado por validar_telefone_real, mas checar padrões extras
+    if lead.telefone:
+        digits = re.sub(r'\D', '', lead.telefone)
+        if digits in ['12345678', '1234567890', '00000000', '11111111']:
+            erros.append(f"Telefone com dígitos repetidos: '{lead.telefone}'")
+
+    # Endereço
+    if lead.endereco and _contem_padroes_fakes(lead.endereco, ENDERECO_FAKE_PATTERNS):
+        erros.append(f"Endereço fake/placeholder: '{lead.endereco[:60]}'")
+
+    # Website
+    if lead.website and _contem_padroes_fakes(lead.website, URL_FAKE_PATTERNS):
+        erros.append(f"URL fake: '{lead.website}'")
+
+    # Fotos — verificar se são placeholder
+    for foto in (lead.fotos or []):
+        if any(p in foto.lower() for p in ['placeholder', 'example.com', 'test.com', 'via.placeholder']):
+            erros.append("Fotos são placeholder (não reais)")
+            break
+
+    # Logo URL
+    if lead.logo_url and _contem_padroes_fakes(lead.logo_url, URL_FAKE_PATTERNS):
+        erros.append(f"Logo URL fake: '{lead.logo_url}'")
+
+    return (len(erros) == 0, erros)
+
+
+def validar_dados_minimos(lead: LeadRaw) -> tuple[bool, List[str]]:
+    """
+    Valida se lead tem dados mínimos para gerar site.
+    Inclui validação de dados fake/placeholder.
+    """
+    erros = []
+
+    # Nome
+    if not lead.nome or len(lead.nome.strip()) < 3:
+        erros.append("Nome ausente ou muito curto")
+    else:
+        _nome_ok, _nome_erros = validar_dados_nao_sao_fakes(LeadRaw(
+            nome=lead.nome, telefone="", endereco="", fotos=[], website="", logo_url=""
+        ))
+        if not _nome_ok:
+            erros.extend(_nome_erros)
 
     # Telefone
     if not lead.telefone or not validar_telefone_real(lead.telefone):
         erros.append("Telefone ausente ou inválido")
+
+    # Endereço
+    if not lead.endereco or len(lead.endereco) < 15:
+        erros.append("Endereço ausente ou muito curto")
+    else:
+        _end_ok, _end_erros = validar_dados_nao_sao_fakes(LeadRaw(
+            nome="", telefone="", endereco=lead.endereco, fotos=[], website="", logo_url=""
+        ))
+        if not _end_ok:
+            erros.extend(_end_erros)
+
+    # Endereço
+    if not lead.endereco or len(lead.endereco) < 15:
+        erros.append("Endereço ausente ou muito curto")
 
     # Reviews
     if not lead.reviews or len(lead.reviews) == 0:
@@ -192,12 +293,73 @@ def validar_dados_minimos(lead: LeadRaw) -> tuple[bool, List[str]]:
     # Fotos
     if not lead.fotos or len(lead.fotos) == 0:
         erros.append("Sem fotos")
-    elif 'placeholder.com' in lead.fotos[0]:
-        erros.append("Fotos são PLACEHOLDER (MOCK)")
+    else:
+        _fotos_ok, _fotos_erros = validar_dados_nao_sao_fakes(LeadRaw(
+            nome="", telefone="", endereco="", fotos=lead.fotos or [], website="", logo_url=""
+        ))
+        if not _fotos_ok:
+            erros.extend(_fotos_erros)
+
+    # Dados fake globais (nome + telefone + endereco + fotos)
+    _all_ok, _all_erros = validar_dados_nao_sao_fakes(lead)
+    if not _all_ok:
+        erros.extend(_all_erros)
+
+    # Se 2 ou mais problemas críticos, dados insuficientes
+    dados_suficientes = len(erros) < 2
+
+    return dados_suficientes, erros
+
+
+def validar_dados_minimos(lead: LeadRaw) -> tuple[bool, List[str]]:
+    """
+    Valida se lead tem dados mínimos para gerar site
+
+    Returns:
+        (dados_suficientes: bool, erros: List[str])
+    """
+    erros = []
+
+    # Nome
+    if not lead.nome or len(lead.nome.strip()) < 3:
+        erros.append("Nome ausente ou muito curto")
+    elif _contem_padroes_fakes(lead.nome, NOME_FAKE_PATTERNS):
+        erros.append(f"Nome genérico/fake: '{lead.nome}'")
+
+    # Telefone
+    if not lead.telefone or not validar_telefone_real(lead.telefone):
+        erros.append("Telefone ausente ou inválido")
+    elif re.sub(r'\D', '', lead.telefone) in ['12345678', '1234567890', '00000000', '11111111']:
+        erros.append("Telefone com dígitos repetidos")
 
     # Endereço
-    if not lead.endereco or len(lead.endereco) < 20:
-        erros.append("Endereço incompleto")
+    if not lead.endereco or len(lead.endereco) < 15:
+        erros.append("Endereço ausente ou muito curto")
+    elif _contem_padroes_fakes(lead.endereco, ENDERECO_FAKE_PATTERNS):
+        erros.append(f"Endereço fake/placeholder: '{lead.endereco[:60]}'")
+
+    # Website
+    if lead.website and _contem_padroes_fakes(lead.website, URL_FAKE_PATTERNS):
+        erros.append(f"URL fake: '{lead.website}'")
+
+    # Reviews
+    if not lead.reviews or len(lead.reviews) == 0:
+        erros.append("Sem reviews")
+    elif lead.reviews[0].get('texto') == 'Ótimo!':
+        erros.append("Reviews genéricos (MOCK)")
+
+    # Fotos
+    if not lead.fotos or len(lead.fotos) == 0:
+        erros.append("Sem fotos")
+    else:
+        for foto in lead.fotos:
+            if any(p in foto.lower() for p in ['placeholder', 'example.com', 'test.com', 'via.placeholder']):
+                erros.append("Fotos são placeholder (não reais)")
+                break
+
+    # Logo URL
+    if lead.logo_url and _contem_padroes_fakes(lead.logo_url, URL_FAKE_PATTERNS):
+        erros.append(f"Logo URL fake: '{lead.logo_url}'")
 
     # Se 2 ou mais problemas críticos, dados insuficientes
     dados_suficientes = len(erros) < 2

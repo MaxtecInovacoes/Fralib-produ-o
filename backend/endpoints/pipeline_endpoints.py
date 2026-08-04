@@ -569,6 +569,16 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
             print(f"[Hunter] {_salvos_hunter} leads salvos como pendente no banco")
 
         state.lead_obj = leads[0]
+
+        # ✅ GUARD: rejeitar leads com dados insuficientes/fakes (não gastar tokens com Caio/Theo/Builder)
+        if not getattr(state.lead_obj, 'dados_suficientes', True) or state.lead_obj.tier == "DADOS_INSUFICIENTES":
+            _motivos = getattr(state.lead_obj, 'razoes', ['Dados insuficientes detectados pelo Hunter'])
+            _erro_detalhes = [f"{state.lead_nome}: {m}" for m in _motivos[:5]]
+            emitir_erro_pipeline(tenant_id, "SCRAPER_FAIL",
+                message=f"Dados insuficientes para '{state.lead_nome}'. O negócio não foi encontrado com informações completas no Google Maps.",
+                detalhes=_erro_detalhes)
+            raise Exception(f"[Hunter] Lead '{state.lead_nome}' descartado — dados insuficientes: {'; '.join(_motivos[:3])}. Pulando.")
+
         state.lead_nome = state.lead_obj.lead.nome
         # Refinar segmento pelo nome do lead (ex: "restaurante" → "churrascaria")
         _nome_lower = state.lead_nome.lower()

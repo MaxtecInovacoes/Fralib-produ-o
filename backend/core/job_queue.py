@@ -29,10 +29,6 @@ from sqlalchemy.orm import Session
 
 # Backoff exponencial em segundos: tentativa 1 -> 30s, 2 -> 2min, 3 -> 8min
 _BACKOFF = [30, 120, 480]
-# Bryan: mais tentativas com backoff mais longo (WhatsApp instável)
-_BACKOFF_BRYAN = [60, 120, 240, 480, 960]
-
-
 def enqueue(
     db: Session,
     tipo: str,
@@ -106,7 +102,7 @@ def claim_next(db: Session, worker_id: str, tipos: Optional[list] = None) -> Opt
                     WHEN tipo = 'lead_production_tick' THEN 1
                     WHEN tipo = 'lead_supply_caio' THEN 2
                     WHEN tipo = 'lead_supply_hunter' THEN 3
-                    WHEN tipo IN ('franz_outreach', 'bryan_outreach') THEN 4
+                    WHEN tipo IN ('franz_outreach') THEN 4
                     ELSE 5
                 END,
                 priority ASC,
@@ -220,7 +216,7 @@ def mark_failure(
     if not _tipo_job:
         _tipo_row = db.execute(text("SELECT tipo FROM jobs WHERE id = :id"), {"id": job_id}).fetchone()
         _tipo_job = _tipo_row[0] if _tipo_row else None
-    _backoff_table = _BACKOFF_BRYAN if _tipo_job == "bryan_outreach" else _BACKOFF
+    _backoff_table = _BACKOFF
 
     pode_tentar_mais = retriable and attempts < max_attempts
     if pode_tentar_mais:
@@ -307,7 +303,6 @@ _MENSAGENS = {
     "liz": "A auditoria de qualidade não passou. Estamos investigando.",
     "deploy": "Falhou ao publicar o site no servidor. Pode ser um problema temporário de disco.",
     "healthcheck": "O site foi gerado mas ficou com problema (faltou texto, link de WhatsApp ou dados essenciais). Clique em 'Tentar de novo' que vamos refazer.",
-    "bryan": "O site foi gerado, mas não conseguimos enviar a mensagem pelo WhatsApp. Verifique se o WhatsApp está conectado.",
 }
 
 
