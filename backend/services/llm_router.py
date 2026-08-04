@@ -120,7 +120,7 @@ def _call_anthropic(model_id, system, user, temperature, max_tokens):
                 _cascade_idx += 1
                 wait = min(5 * _cascade_idx, 15)
                 print(f'[llm_router] {status} Cascade: tentando {_cascade_model} → próxima (idx {_cascade_idx})')
-                _time.sleep(wait)
+                time.sleep(wait)
                 continue
             if status in (401, 403):
                 raise Exception(f"Auth error {status}: {body}") from None
@@ -128,7 +128,7 @@ def _call_anthropic(model_id, system, user, temperature, max_tokens):
         except Exception as e:
             last_exc = e
             _cascade_idx += 1
-            _time.sleep(2)
+            time.sleep(2)
             continue
 
     raise Exception(f"Todos os modelos da cascata falharam. Último erro: {last_exc}") from last_exc

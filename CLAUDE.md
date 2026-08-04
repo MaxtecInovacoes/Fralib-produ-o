@@ -57,12 +57,12 @@ Dominio:  https://app.seunegociofralib.site
 | Container | Funcao | Porta | Status |
 |-----------|--------|-------|--------|
 | fralib-app-1 | API FastAPI | 8001→8000 | healthy |
-| fralib-worker-pipeline-1 | Consome fila pipeline_lead | - | running |
-| fralib-worker-cron-1 | lead_supply_hunter, lead_production_tick | - | healthy |
-| fralib-worker-franz-1 | SDR WhatsApp | - | healthy |
+| fralib-worker-1 | Worker unificado (pipeline + supply + Franz) | - | running |
 | fralib-postgres-1 | PostgreSQL | 15434→5432 | healthy |
 | fralib-redis-1 | Cache | 16379→6379 | healthy |
 | fralib-openui | Node.js HTML generation (systemd) | 3333 | active |
+
+**Worker unificado:** `WORKER_JOB_TYPES=pipeline_lead,pipeline_multiplos,pipeline_main,lead_production_tick,lead_supply_caio,lead_supply_hunter,franz_outreach` (env var no docker-compose.prod.yml). 3 workers antigos consolidados em 1 (commit f47bd586).
 
 ### Variaveis de ambiente
 **/opt/fralib/.env:**
@@ -92,14 +92,13 @@ NODE_ENV=production
 - Push: `git push origin master` → post-receive hook na VPS
 - Nao rebuildar containers sem necessidade — volumes persistem mudancas em /opt/fralib/backend/
 - OpenUI: restart `fralib-openui` (systemd) apos mudancas em openui-service/
-- Backend: rebuild `fralib-app` + `worker-pipeline` apos mudancas em backend/
+- Backend: rebuild `fralib-app` + `fralib-worker-1` apos mudancas em backend/
 
 ## Logs
 
-- Worker pipeline: `docker logs -f fralib-worker-pipeline-1`
+- Worker unificado: `docker logs -f fralib-worker-1`
 - OpenUI: `journalctl -u fralib-openui -f`
 - App: `docker logs -f fralib-app-1`
-- Franz: `docker logs -f fralib-worker-franz-1`
 
 ## Arquivos Principais
 
