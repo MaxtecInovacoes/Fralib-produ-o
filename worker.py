@@ -30,21 +30,20 @@ signal.signal(signal.SIGINT, _shutdown)
 signal.signal(signal.SIGTERM, _shutdown)
 
 
-JOB_TIPOS = _load_job_tipos()
-
-
 def _load_job_tipos() -> tuple:
     """Lê WORKER_JOB_TYPES do env (comma-separated). Fallback para hardcoded."""
     env_val = os.environ.get("WORKER_JOB_TYPES", "").strip()
     if env_val:
         return tuple(t.strip() for t in env_val.split(",") if t.strip())
-    # Fallback: job types padrão (todos os tipos exceto outreach)
     return (
         "pipeline_lead",
         "lead_production_tick",
         "lead_supply_caio",
         "lead_supply_hunter",
     )
+
+
+JOB_TIPOS = _load_job_tipos()
 
 
 def _run_pipeline_job(db, job) -> bool:
