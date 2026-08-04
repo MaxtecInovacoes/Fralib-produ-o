@@ -118,10 +118,10 @@ async def queue_metrics(dias: int = Query(default=7, ge=1, le=30), usuario: dict
             "tentativas_media": float(row[4]) if row[4] else None,
         }
 
-    bryan = {}
+    franz = {}
     if bryan_row:
         total_b = bryan_row[0] or 1
-        bryan = {
+        franz = {
             "total": bryan_row[0] or 0,
             "sucesso": bryan_row[1] or 0,
             "falhas": bryan_row[2] or 0,
@@ -129,4 +129,4 @@ async def queue_metrics(dias: int = Query(default=7, ge=1, le=30), usuario: dict
             "tentativas_media": float(bryan_row[3]) if bryan_row[3] else None,
         }
 
-    return {"pipeline": pipeline, "bryan": bryan}
+    return {"pipeline": pipeline, "franz": franz}

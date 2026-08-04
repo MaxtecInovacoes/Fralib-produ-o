@@ -1,0 +1,13 @@
+{
+  "name": "fralib-openui-native",
+  "version": "1.0.0",
+  "description": "FraLib OpenUI Native - Minimal HTML generation via LLM",
+  "type": "module",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

@@ -54,7 +54,7 @@ class Ledger:
         {"fase": 7, "nome": "liam", "desc": "Gerar HTML", "obrigatoria": True},
         {"fase": 8, "nome": "liz", "desc": "Auditar qualidade", "obrigatoria": True},
         {"fase": 9, "nome": "deploy", "desc": "Publicar site", "obrigatoria": True},
-        {"fase": 10, "nome": "bryan", "desc": "Enviar WhatsApp", "obrigatoria": False},
+        {"fase": 10, "nome": "franz", "desc": "Enviar WhatsApp", "obrigatoria": False},
     ])
 
     progress: list = field(default_factory=list)

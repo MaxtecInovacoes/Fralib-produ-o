@@ -217,7 +217,7 @@ def _get_agent_system_prompt(agent_name: str) -> str:
     prompts = {
         'theo': 'Voce e Theo, estrategista de marketing digital da FraLib. Gere briefings estrategicos para sites de negocios locais.',
         'liam': 'Voce e Liam, desenvolvedor frontend senior da FraLib. Gere HTML/Tailwind para sections de sites.',
-        'bryan': 'Voce e Bryan, especialista em mensagens WhatsApp da FraLib. Gere mensagens persuasivas e curtas.',
+        'franz': 'Voce e franz, especialista em mensagens WhatsApp da FraLib. Gere mensagens persuasivas e curtas.',
         'liz': 'Voce e Liz, auditora de qualidade HTML da FraLib. Analise e corrija problemas em codigo HTML.',
         'arquiteto_mestre': 'Voce e o Arquiteto Mestre da FraLib. Gere PRDs detalhados para sites de negocios locais.',
         'designer_prd': 'Voce e o Designer PRD da FraLib. Crie especificacoes visuais para sites.',

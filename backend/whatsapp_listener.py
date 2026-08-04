@@ -1,7 +1,7 @@
 """
 whatsapp_listener.py — Listener WebSocket do meowhats
 Fica conectado ao meowhats e processa mensagens recebidas dos leads.
-Quando um lead responde, chama Bryan e atualiza sdr_stage no banco.
+Quando um lead responde, chama franz e atualiza sdr_stage no banco.
 """
 import asyncio
 import json
@@ -389,7 +389,7 @@ def is_tenant_connected(tenant_id: str, *, fallback_http: bool = True) -> bool:
         logger.debug(f"is_tenant_connected fallback HTTP falhou ({tenant_id}): {e}")
     return False
 
-# Mapeamento estado Bryan -> sdr_stage kanban
+# Mapeamento estado Franz -> sdr_stage kanban
 ESTADO_TO_STAGE = {
     # Stages novos (Franz prompt v2)
     "intro":       "intro",
@@ -526,42 +526,6 @@ def _atualizar_stage(lead_id: str, sdr_stage: str, user_id: int):
         conn.commit()
 
 
-def _get_historico_recente(lead_id: str, limit: int = 8) -> str:
-    """Retorna últimas N interações como texto resumido para o agent loop."""
-    try:
-        with engine.connect() as conn:
-            rows = conn.execute(text("""
-                SELECT mensagem, direcao, criado_em
-                FROM interacoes
-                WHERE lead_id = :lid
-                ORDER BY criado_em DESC
-                LIMIT :lim
-            """), {"lid": lead_id, "lim": limit}).fetchall()
-        if not rows:
-            return ""
-        linhas = []
-        for msg, direcao, ts in reversed(rows):
-            prefixo = "Lead" if direcao == "recebida" else "Franz"
-            linhas.append(f"[{ts[:16]}] {prefixo}: {msg[:120]}")
-        return "\n".join(linhas)
-    except Exception as exc:
-        logger.warning(f"[Franz] Erro ao buscar historico: {exc}")
-        return ""
-
-
-def _get_site_url(lead_id: str) -> str:
-    """Retorna site_url do lead se disponível."""
-    try:
-        with engine.connect() as conn:
-            row = conn.execute(text("""
-                SELECT site_url FROM leads WHERE id = :id
-            """), {"id": lead_id}).fetchone()
-        return row[0] if row and row[0] else ""
-    except Exception as exc:
-        logger.warning(f"[Franz] Erro ao buscar site_url: {exc}")
-        return ""
-
-
 # Número do closer humano (recebe handoff)
 CLOSER_HUMANO = os.getenv("CLOSER_NUMERO", "5541992049684")
 
@@ -570,7 +534,7 @@ def _notificar_handoff_humano(http_client, tenant_id: str, lead_id: str, nome: s
     """
     Notifica o closer humano que um lead está pronto pra fechar.
     Envia resumo do lead + últimas mensagens pro número do closer.
-    Bryan para de responder (stage=handoff).
+    franz para de responder (stage=handoff).
     """
     if not is_tenant_connected(tenant_id):
         logger.warning(
@@ -602,7 +566,7 @@ def _notificar_handoff_humano(http_client, tenant_id: str, lead_id: str, nome: s
             f"💬 Link direto: wa.me/{telefone}\n\n"
             f"_Últimas mensagens:_\n{historico}\n\n"
             f"⚡ Responda direto pro lead neste número.\n"
-            f"Bryan já parou de responder."
+            f"Franz já parou de responder."
         )
 
         # Enviar pro closer humano
@@ -685,17 +649,17 @@ def _processar_mensagem(tenant_id: str, msg_data: dict, texto_override: str = No
         # Salvar mensagem recebida sempre (histórico)
         _salvar_interacao(lead_id, texto, "entrada", user_id)
 
-        # Só responder se o site já foi deployado (status=concluido) e Bryan já iniciou contato
+        # Só responder se o site já foi deployado (status=concluido) e franz já iniciou contato
         if status != "concluido":
             print(f"[WPP-Listener] Lead {nome}: status={status} — aguardando deploy antes de responder", flush=True)
             return
         if not sdr_stage_atual:
-            print(f"[WPP-Listener] Lead {nome}: sdr_stage vazio — Bryan ainda não iniciou contato", flush=True)
+            print(f"[WPP-Listener] Lead {nome}: sdr_stage vazio — Franz ainda não iniciou contato", flush=True)
             return
 
-        # Se stage é qualificados/ganhos/perdidos → Bryan NÃO responde mais (humano assumiu)
+        # Se stage é qualificados/ganhos/perdidos → franz NÃO responde mais (humano assumiu)
         if sdr_stage_atual in ('qualificados', 'ganhos', 'perdidos', 'handoff', 'won', 'lost'):
-            logger.info(f"Lead {nome}: stage={sdr_stage_atual} — humano assumiu, Bryan parado")
+            logger.info(f"Lead {nome}: stage={sdr_stage_atual} — humano assumiu, Franz parado")
             return
 
         # ── ANTI-BAN CHECKS ──────────────────────────────────────────
@@ -712,64 +676,55 @@ def _processar_mensagem(tenant_id: str, msg_data: dict, texto_override: str = No
 
         # Limite diário
         if _check_daily_limit(lead_key):
-            logger.warning(f"🚫 {nome}: limite diário ({DAILY_LIMIT} msgs) atingido — Bryan silenciado")
+            logger.warning(f"🚫 {nome}: limite diário ({DAILY_LIMIT} msgs) atingido — Franz silenciado")
             return
 
-        # ── FRANZ AGENT LOOP (MCP-like com tools) ──────────────────────
+        # Chamar Franz para gerar resposta
+        import sys
+        sys.path.insert(0, os.path.dirname(__file__))
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'agents'))
+
+        # Flag: usar Franz Managed Agent (agent loop com tools) ou legacy (single-shot)
         USE_AGENT_LOOP = os.getenv("FRANZ_AGENT_LOOP", "1") == "1"
-        bryan_output = None  # objeto normalizado (funciona p/ ambos Franz e legacy)
 
         if USE_AGENT_LOOP:
-            try:
-                from backend.agents.franz.franz_agent_loop import run_agent_loop
-                agent_result = run_agent_loop(
-                    lead_id=lead_id,
-                    tenant_id=user_id,
-                    mensagem_recebida=texto,
-                    nome_lead=nome,
-                    segmento=segmento,
-                    sdr_stage=sdr_stage_atual,
-                    telefone=tel_raw,
-                    historico_recente=_get_historico_recente(lead_id),
-                    site_url=_get_site_url(lead_id),
-                )
-                # Normalizar p/ formato bryan_output esperado pelo codigo abaixo
-                class _AgentOutput:
-                    def __init__(self, reply, next_stage, update_facts, tools_used):
-                        self.reply = reply
-                        self.intent = "agent_loop"
-                        self.next_stage = next_stage
-                        self.proximo_passo = next_stage  # alias p/ compatibilidade
-                        self.update_facts = update_facts or {}
-                        self.tools_used = tools_used or []
-                        self.should_handoff = False
-                bryan_output = _AgentOutput(
-                    reply=agent_result.get("reply", ""),
-                    next_stage=agent_result.get("next_stage", sdr_stage_atual or "hook"),
-                    update_facts=agent_result.get("update_facts", {}),
-                    tools_used=agent_result.get("tools_used", []),
-                )
-                logger.info(f"Franz tools usadas por {nome}: {bryan_output.tools_used}")
-            except Exception as exc:
-                logger.error(f"Franz agent loop falhou, fallback legacy: {exc}")
+            from agents.franz.franz_agent_loop import franz_agent_loop, FranzAgentOutput as _BAO
+            agent_result = franz_agent_loop(
+                lead_data={"id": lead_id, "nome": nome, "segmento": segmento, "cidade": cidade, "telefone": telefone},
+                mensagem=texto,
+                historico_resumo="",
+                sdr_stage=sdr_stage_atual,
+                user_id=user_id,
+            )
+            print(f"[franz Agent] ✅ Resultado: stage={agent_result.novo_stage}, tools={agent_result.tools_used}, iter={agent_result.iterations}", flush=True)
 
-        if bryan_output is None:
-            from agents.bryan import responder_lead
-            bryan_output = responder_lead(
+            resposta = agent_result.resposta
+            proximo_passo = ""
+
+            # Mapear output do agent loop pro formato esperado
+            class _FakeFranzOutput:
+                reply = agent_result.resposta
+                next_stage = agent_result.novo_stage or sdr_stage_atual
+                should_handoff = agent_result.should_handoff
+                intent = ""
+                proximo_passo = ""
+                update_facts = {"followup_date": agent_result.followup_date} if agent_result.followup_date else {}
+            franz_output = _FakeFranzOutput()
+        else:
+            from agents.franz import responder_lead
+            franz_output = responder_lead(
                 telefone=tel_raw,
                 mensagem_recebida=texto,
                 nome_negocio=nome or push_name,
                 user_id=user_id,
             )
-
-        resposta = bryan_output.reply
-        proximo_passo = bryan_output.proximo_passo or ""
-        agent_facts = {}
+            resposta = franz_output.reply
+            proximo_passo = franz_output.proximo_passo or ""
 
         # Se reply vazio (opt_out, fila, etc) — não enviar
         if not resposta or not resposta.strip():
-            logger.info(f"Lead {nome}: Bryan retornou reply vazio (intent={bryan_output.intent}) — não envia")
-            if bryan_output.next_stage == "lost":
+            logger.info(f"Lead {nome}: franz retornou reply vazio (intent={franz_output.intent}) — não envia")
+            if franz_output.next_stage == "lost":
                 _atualizar_stage(lead_id, "perdidos", user_id)
             return
 
@@ -791,7 +746,7 @@ def _processar_mensagem(tenant_id: str, msg_data: dict, texto_override: str = No
                 logger.warning(f"Lead {nome}: sanitização falhou — retry via LLM pra extrair texto")
                 try:
                     from agents.llm_direct import call_claude
-                    _raw_json = bryan_output.reply
+                    _raw_json = agent_result.resposta if 'agent_result' in dir() else franz_output.reply
                     _fix_resp = call_claude(
                         system="Voce recebe um JSON malformado de um chatbot. Extraia APENAS o texto da mensagem que seria enviada ao cliente. Retorne SOMENTE o texto puro, sem JSON, sem aspas, sem formatacao.",
                         user=f"Extraia a mensagem do cliente deste JSON:\n{_raw_json[:1000]}",
@@ -812,18 +767,18 @@ def _processar_mensagem(tenant_id: str, msg_data: dict, texto_override: str = No
                     resposta = "Opa, tudo bem? Me dá um minuto que já te respondo! 👍"
                     logger.error(f"Lead {nome}: retry LLM exception: {_retry_err} — usando resposta genérica")
 
-        # Salvar resposta do Bryan
+        # Salvar resposta do Franz
         _salvar_interacao(lead_id, resposta, "saida", user_id)
 
-        # Converter estado Bryan → stage kanban via mapeamento
-        _raw_stage = bryan_output.next_stage or sdr_stage_atual or "hook"
+        # Converter estado Franz → stage kanban via mapeamento
+        _raw_stage = franz_output.next_stage or sdr_stage_atual or "hook"
         novo_stage = ESTADO_TO_STAGE.get(_raw_stage, _raw_stage)
 
         _atualizar_stage(lead_id, novo_stage, user_id)
 
-        # Se Bryan agendou follow-up, salvar a data
+        # Se franz agendou follow-up, salvar a data
         if _raw_stage == "scheduled":
-            facts = bryan_output.update_facts or {}
+            facts = franz_output.update_facts or {}
             followup_date = facts.get("followup_date", "")
             if followup_date:
                 # Fallback: se LLM retornou data no passado, corrigir para amanhã
@@ -856,7 +811,7 @@ def _processar_mensagem(tenant_id: str, msg_data: dict, texto_override: str = No
             current = _get_tenant_status(tenant_id) or "unknown"
             logger.warning(
                 f"Lead {nome}: envio BLOQUEADO — tenant {tenant_id} esta em status '{current}'. "
-                f"Resposta de Bryan ja salva no historico; sera reenviada quando reconectar."
+                f"Resposta de Franz ja salva no historico; sera reenviada quando reconectar."
             )
             return
 
@@ -893,8 +848,8 @@ def _processar_mensagem(tenant_id: str, msg_data: dict, texto_override: str = No
                 else:
                     logger.warning(f"Falha ao enviar resposta: {r.text[:80]}")
 
-                # 4. Se handoff → notificar humano e parar Bryan
-                if bryan_output.should_handoff or _raw_stage == 'handoff':
+                # 4. Se handoff → notificar humano e parar Franz
+                if franz_output.should_handoff or _raw_stage == 'handoff':
                     _notificar_handoff_humano(c, tenant_id, lead_id, nome, telefone, jid, meowhats_http, user_id)
 
         except Exception as e:

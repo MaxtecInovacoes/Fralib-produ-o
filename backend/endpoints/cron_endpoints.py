@@ -92,7 +92,7 @@ async def email_resumo_diario(x_cron_secret: str = Header(None, alias='X-Cron-Se
     return {'status': 'ok', 'enviados': enviados, 'pulados': pulados, 'erros': erros}
 
 
-@router.post('/despachar-fila-bryan')
+@router.post('/despachar-fila-franz')
 async def despachar_fila_bryan(x_cron_secret: str = Header(None, alias='X-Cron-Secret')):
     """
     Despacha leads com sdr_stage='pendente_wpp' (site pronto, fora do horário).
@@ -102,7 +102,7 @@ async def despachar_fila_bryan(x_cron_secret: str = Header(None, alias='X-Cron-S
 
     import sys
     sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'agents'))
-    from agents.bryan import iniciar_contato, BryanInput, _dentro_do_horario, _escolher_variante
+    from agents.franz import iniciar_contato, BryanInput, _dentro_do_horario, _escolher_variante
 
     if not _dentro_do_horario():
         return {'status': 'fora_horario', 'mensagem': 'Fora do horário de atendimento (8h-21h Brasília)', 'enviados': 0}
@@ -140,7 +140,7 @@ async def despachar_fila_bryan(x_cron_secret: str = Header(None, alias='X-Cron-S
                     score_caio=80, tier="STANDARD"
                 )
                 if not user_id:
-                    print(f"[Cron Bryan] ⚠️ lead {lead_id} sem user_id — ignorado (multi-tenant)")
+                    print(f"[Cron franz] ⚠️ lead {lead_id} sem user_id — ignorado (multi-tenant)")
                     continue
                 bryan_output = iniciar_contato(bryan_input, user_id=user_id)
 
@@ -156,7 +156,7 @@ async def despachar_fila_bryan(x_cron_secret: str = Header(None, alias='X-Cron-S
                 wpp_tenant = f"fralib_user_{user_id}"
 
                 if not is_tenant_connected(wpp_tenant):
-                    print(f"[Cron Bryan] ⏸ Lead {nome}: tenant {wpp_tenant} sem WhatsApp conectado — pulando")
+                    print(f"[Cron franz] ⏸ Lead {nome}: tenant {wpp_tenant} sem WhatsApp conectado — pulando")
                     continue
 
                 with httpx.Client(timeout=10) as c:
@@ -171,18 +171,18 @@ async def despachar_fila_bryan(x_cron_secret: str = Header(None, alias='X-Cron-S
                         ), {"id": lead_id, "var": _escolher_variante(lead_id), "uid": user_id})
                         conn.commit()
                         enviados += 1
-                        print(f"[Cron Bryan] ✅ Enviado para {nome} ({tel[-4:]})")
+                        print(f"[Cron franz] ✅ Enviado para {nome} ({tel[-4:]})")
                     else:
                         erros += 1
-                        print(f"[Cron Bryan] ❌ Falha envio {nome}: {r.text[:80]}")
+                        print(f"[Cron franz] ❌ Falha envio {nome}: {r.text[:80]}")
             except Exception as e:
                 erros += 1
-                print(f"[Cron Bryan] ❌ Erro {nome}: {e}")
+                print(f"[Cron franz] ❌ Erro {nome}: {e}")
 
     return {'status': 'ok', 'enviados': enviados, 'erros': erros, 'total_fila': len(rows)}
 
 
-@router.post('/followup-bryan')
+@router.post('/followup-franz')
 async def followup_bryan(x_cron_secret: str = Header(None, alias='X-Cron-Secret')):
     """
     Envia follow-up para leads sem resposta.
@@ -195,7 +195,7 @@ async def followup_bryan(x_cron_secret: str = Header(None, alias='X-Cron-Secret'
 
     import sys
     sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'agents'))
-    from agents.bryan import followup_automatico, _dentro_do_horario
+    from agents.franz import followup_automatico, _dentro_do_horario
 
     if not _dentro_do_horario():
         return {'status': 'fora_horario', 'mensagem': 'Fora do horário', 'enviados': 0}
@@ -277,12 +277,12 @@ async def followup_bryan(x_cron_secret: str = Header(None, alias='X-Cron-Secret'
                     tel = '55' + tel
                 jid = f"{tel}@s.whatsapp.net"
                 if not user_id:
-                    print(f"[Cron Bryan] ⚠️ lead {lead_id} sem user_id — ignorado (multi-tenant)")
+                    print(f"[Cron franz] ⚠️ lead {lead_id} sem user_id — ignorado (multi-tenant)")
                     continue
                 wpp_tenant = f"fralib_user_{user_id}"
 
                 if not is_tenant_connected(wpp_tenant):
-                    print(f"[Cron Bryan] ⏸ Follow-up lead {lead_id}: tenant {wpp_tenant} sem WhatsApp conectado — pulando")
+                    print(f"[Cron franz] ⏸ Follow-up lead {lead_id}: tenant {wpp_tenant} sem WhatsApp conectado — pulando")
                     continue
 
                 with httpx.Client(timeout=10) as c:
@@ -322,7 +322,7 @@ async def followup_bryan(x_cron_secret: str = Header(None, alias='X-Cron-Secret'
                     tel = '55' + tel
                 jid = f"{tel}@s.whatsapp.net"
                 if not user_id:
-                    print(f"[Cron Bryan] ⚠️ lead {lead_id} sem user_id — ignorado (multi-tenant)")
+                    print(f"[Cron franz] ⚠️ lead {lead_id} sem user_id — ignorado (multi-tenant)")
                     continue
                 wpp_tenant = f"fralib_user_{user_id}"
 

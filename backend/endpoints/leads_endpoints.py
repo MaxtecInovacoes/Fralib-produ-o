@@ -339,17 +339,11 @@ async def _gerar_site_manual(lead_id: str, req: LeadManualRequest, user_id):
     from database import engine
     from sqlalchemy import text as _text
     try:
-        # agents.liam removido (legado — substituído por Builder OpenUI)
-        def _gerar_html_componentizado(*args, **kwargs):
-            raise ImportError("agents.liam foi removido. Use o Builder (OpenUI) para geração de HTML.")
-        def _montar_template_python(*args, **kwargs):
-            raise ImportError("agents.liam foi removido. Use o Builder (OpenUI) para geração de HTML.")
-        gerar_html_componentizado = _gerar_html_componentizado
-        montar_template_python = _montar_template_python
+        from agents.liam import gerar_html_componentizado, montar_template_python
         from agents.arquiteto_mestre import gerar_arquiteto_mestre_prd
-        # agents.arquiteto_agent_loop removido (legado — substituído pelo pipeline FSM)
-        def _gerar_arquiteto_mestre_prd_agent(*args, **kwargs):
-            raise ImportError("agents.arquiteto_agent_loop foi removido. Use gerar_arquiteto_mestre_prd() diretamente.")
+        _use_agent = os.getenv("ARQUITETO_AGENT_LOOP", "0") == "1"
+        if _use_agent:
+            from agents.arquiteto_agent_loop import gerar_arquiteto_mestre_prd_agent
         
         # Montar dados mínimos para o Arquiteto Mestre
         dados_hunter = {
@@ -739,7 +733,7 @@ async def registrar_feedback(
 ):
     """
     Registra feedback de conversão/perda de um lead.
-    Salva na tabela sdr_learning para o Bryan aprender com o histórico.
+    Salva na tabela sdr_learning para o franz aprender com o histórico.
     Se resultado='convertido', atualiza lead.status='convertido'.
     """
     if req.resultado not in ('convertido', 'perdido'):
@@ -760,7 +754,7 @@ async def registrar_feedback(
         tier = lead_dict.get('tier') or 'STANDARD'
         telefone = lead_dict.get('telefone') or ''
 
-        # Buscar última mensagem enviada pelo Bryan (direcao='saida')
+        # Buscar última mensagem enviada pelo franz (direcao='saida')
         # Defesa em profundidade: JOIN com leads valida ownership por user_id
         ultima_msg = db.execute(text("""
             SELECT i.mensagem FROM interacoes i
@@ -817,7 +811,7 @@ async def registrar_feedback(
 
 @router.post('/{lead_id}/enviar-mensagem')
 async def enviar_mensagem_lead(lead_id: str, db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
-    """Envia mensagem Bryan para lead com site pronto (sdr_stage=pendente_wpp)."""
+    """Envia mensagem franz para lead com site pronto (sdr_stage=pendente_wpp)."""
     import os, httpx, re as _re
     tenant_id = usuario.get("user_id") or usuario.get("sub")
 
@@ -853,8 +847,8 @@ async def enviar_mensagem_lead(lead_id: str, db: Session = Depends(get_db), usua
     except Exception:
         raise HTTPException(500, "Erro ao verificar status do WhatsApp")
 
-    # Gerar mensagem com Bryan
-    from agents.bryan import iniciar_contato, BryanInput
+    # Gerar mensagem com franz
+    from agents.franz import iniciar_contato, BryanInput
     bryan_input = BryanInput(
         nome=nome, cidade=cidade or "", segmento=segmento or "",
         telefone=telefone or "", whatsapp=whatsapp or "",
@@ -882,7 +876,7 @@ async def enviar_mensagem_lead(lead_id: str, db: Session = Depends(get_db), usua
         if r_send.status_code != 200:
             raise HTTPException(500, f"Falha no envio: {r_send.text[:100]}")
 
-    # Se Bryan bloqueou (fora do horário), não enviar
+    # Se franz bloqueou (fora do horário), não enviar
     if not bryan_output.reply or not bryan_output.reply.strip():
         return {"ok": False, "mensagem": f"Fora do horário de atendimento — lead permanece na fila"}
 
