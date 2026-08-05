@@ -128,7 +128,7 @@
 |---------|-----------|------------|
 | `quality_gate_v2/` | Vision QA v2 — pontua design com LLM vision (gpt-4o-mini primary / 9router fallback). Repair loop regenera se score < 7.5. | NAO |
 
-> **Nota**: `builder/agent.py` existe apenas na VPS (`/opt/fralib/backend/agents/builder/agent.py`). Não está no disco local.
+> **Nota**: `builder/agent.py` existe localmente e na VPS.
 
 ## backend/endpoints/ — Rotas FastAPI (21 routers) (pode criar: SIM)
 

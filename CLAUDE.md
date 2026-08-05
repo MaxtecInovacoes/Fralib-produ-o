@@ -133,7 +133,7 @@ backend/agents/_arquivo/animation_injector.py  ARQUIVADO (versao antiga)
 backend/agents/_arquivo/design_guidelines.py   ARQUIVADO
 ```
 
-**IMPORTANTE:** `backend/agents/builder/` NAO existe no disco local ainda — existe apenas na VPS (/opt/fralib/backend/agents/builder/). Para editar o Builder, fazer via VPS ou pull do repo.
+**IMPORTANTE:** `backend/agents/builder/` existe localmente e na VPS. Para editar o Builder, editar localmente e fazer git push.
 
 ## Franz Agent Loop (Phase 3.2)
 
