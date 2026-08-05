@@ -332,7 +332,7 @@ def inicializar_database():
             )
         """))
 
-        # Criar tabela sdr_learning (aprendizado do franz SDR)
+        # Criar tabela sdr_learning (aprendizado do SDR Franz)
         conn.execute(text("""
             CREATE TABLE IF NOT EXISTS sdr_learning (
                 id SERIAL PRIMARY KEY,

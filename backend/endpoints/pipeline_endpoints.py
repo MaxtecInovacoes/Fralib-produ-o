@@ -63,6 +63,7 @@ _ARQUITETO_AGENT = os.getenv("ARQUITETO_AGENT_LOOP", "0") == "1"
 if _ARQUITETO_AGENT:
     from agents.arquiteto_agent_loop import gerar_arquiteto_mestre_prd_agent as _gerar_prd_agent
 from agents.liz import auditar, editar_secao as liz_editar_secao, listar_secoes as liz_listar_secoes, auditar_secao_estruturado
+from agents.franz import iniciar_contato, FranzInput
 from agents.liam_models import LiamOutput
 from services.credits_manager import verificar_pode_executar, consume_tokens, validar_permissao_pipeline, consumir_credito_diario
 from pipeline_queue_manager import pipeline_queue  # DEPRECATED: mantido apenas para /fila endpoint
@@ -156,7 +157,7 @@ def emitir_erro_pipeline(tenant_id, error_code, message="", detalhes=None, **kwa
         "DEPLOY_FAIL": {"severity": "error", "title": "Erro ao publicar o site"},
         "SCRAPER_FAIL": {"severity": "error", "title": "Erro ao buscar negócios"},
         "TIMEOUT": {"severity": "wait", "title": "Geração demorou mais que o esperado"},
-        "FRANZ_FAIL": {"severity": "warning", "title": "Site publicado, envio falhou"},
+        "SDR_FAIL": {"severity": "warning", "title": "Site publicado, envio falhou"},
         "HEALTH_FAIL": {"severity": "error", "title": "Site gerado com problemas"},
     }
     tpl = _TEMPLATES.get(error_code, {"severity": "error", "title": "Erro no pipeline"})
@@ -1383,20 +1384,57 @@ IMPORTANTE: Corrija EXATAMENTE os problemas acima. Não altere o que já estava 
         _log(f"  Deploy: {state.site_url}", "success")
         logger.info(f"[Pipeline] Deploy: {state.site_url}")
 
-        # FASE 9.5: HEALTH CHECK (PR14) - bloqueia Franz se site quebrado
+        # FASE 9.5: HEALTH CHECK (PR14) - bloqueia se site quebrado
         _log("FASE 9.5: HEALTH CHECK", "info")
         from services.site_health_check import validar_site
         validar_site(state.site_url)
         _log("  Health check: OK", "success")
         logger.info(f"[Pipeline] HealthCheck OK: {state.site_url}")
 
-        _log("FASE 10: FRANZ (SDR Outreach)", "info")
+        _progress(10, "Enviando contato...")
+        _log("FASE 10: FRANZ", "info")
         if _ledger:
             _ledger.registrar_fim_fase(9, FaseStatus.CONCLUIDA, resultado=state.site_url)
-            _ledger.registrar_inicio_fase(10, "franz", modelo="sonnet")
+            _ledger.registrar_inicio_fase(10, "franz", modelo="haiku")
         if _span: _span.finalizar("success")
-        _span = _trace.iniciar_span("franz", agente="franz", modelo="sonnet") if _trace else None
-        _sdr_stage_final = 'hook' 
+        _span = _trace.iniciar_span("franz", agente="franz", modelo="haiku") if _trace else None
+        # Franz como job separado — não bloqueia pipeline principal
+        _sdr_stage_final = 'pendente_wpp'
+        try:
+            _franz_payload = {
+                "nome": state.lead_nome,
+                "cidade": state.lead_obj.lead.cidade,
+                "segmento": state.segmento,
+                "telefone": state.lead_obj.lead.telefone or "",
+                "whatsapp": state.lead_obj.lead.whatsapp or "",
+                "rating": state.lead_obj.lead.rating or 0.0,
+                "site_url": state.site_url,
+                "score_caio": state.qualificacao_caio.score if state.qualificacao_caio else 0,
+                "tier": state.qualificacao_caio.tier if state.qualificacao_caio else "STANDARD",
+                "proof": getattr(state.qualificacao_caio, 'motivo', None) if state.qualificacao_caio else None,
+                "lead_id": state.lead_id,
+                "tenant_id": state.tenant_id,
+            }
+            import job_queue as _jq_franz
+            _db_franz = SessionLocal()
+            try:
+                _jq_franz.enqueue(
+                    _db_franz,
+                    tipo="franz_outreach",
+                    payload=_franz_payload,
+                    tenant_id=state.tenant_id,
+                    max_attempts=5,
+                    idempotency_key=f"franz-{state.lead_id}",
+                )
+                _db_franz.close()
+                _log("  Franz: enfileirado como job separado", "info")
+                _sdr_stage_final = 'hook'
+            except Exception:
+                _db_franz.close()
+                raise
+        except Exception as e:
+            logger.warning(f"[Pipeline] Franz enqueue erro (não bloqueia): {e}")
+            _log(f"  Franz: falha ao enfileirar ({e}). Site gerado OK.", "warning")
         with engine.connect() as conn:
             conn.execute(text("""
                 UPDATE leads SET site_url=:url, url_site=:url, processado=true,
@@ -2427,8 +2465,25 @@ async def _executar_pipeline_a_partir_fase2(state, tenant_id, config):
             })
             conn.commit()
 
-        _log("FASE 10: FRANZ (SDR Outreach)", "info")
-        _sdr_stage_final = 'hook'
+        # Franz
+        _log("FASE 10: FRANZ", "info")
+        try:
+            franz_input = FranzInput(
+                nome=state.lead_nome, cidade=state.lead_obj.lead.cidade,
+                segmento=state.lead_obj.lead.segmento,
+                telefone=state.lead_obj.lead.telefone or "",
+                whatsapp=state.lead_obj.lead.whatsapp or "",
+                rating=state.lead_obj.lead.rating or 0.0,
+                site_url=state.site_url,
+                score_caio=state.qualificacao_caio.score if state.qualificacao_caio else 0,
+                tier=state.qualificacao_caio.tier if state.qualificacao_caio else "STANDARD",
+                proof=getattr(state.qualificacao_caio, 'motivo', None) if state.qualificacao_caio else None,
+                concorrentes=getattr(state, 'concorrentes', None),
+            )
+            franz_result = iniciar_contato(franz_input, user_id=state.tenant_id)
+            logger.info(f"[Pipeline] Franz: OK | msg={str(franz_result)[:60]}")
+        except Exception as e:
+            logger.warning(f"[Pipeline] Franz erro: {e}")
 
         _log(f"Pipeline concluído: {state.site_url}", "success")
         logger.info(f"[Pipeline] Reprocessar concluído: {state.site_url}")
@@ -2603,11 +2658,11 @@ async def get_stats(db: Session = Depends(get_db), usuario: dict = Depends(get_c
             "cidade_top": cidade_top.cidade if cidade_top else "—",
             "cidade_top_total": cidade_top.total if cidade_top else 0,
             "ticket_medio": float(ticket_medio),
-            "total_msgs_franz": total_msgs,
+            "total_msgs_sdr": total_msgs,
         }
     except Exception as e:
         print(f"[Stats] Erro: {e}")
         return {
             "taxa_resposta": 0, "nicho_top": "—", "nicho_top_conv": 0,
-            "cidade_top": "—", "cidade_top_total": 0, "ticket_medio": 0, "total_msgs_franz": 0
+            "cidade_top": "—", "cidade_top_total": 0, "ticket_medio": 0, "total_msgs_sdr": 0
         }

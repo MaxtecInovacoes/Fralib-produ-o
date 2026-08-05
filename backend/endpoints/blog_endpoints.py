@@ -47,9 +47,7 @@ TRENDING_TOPICS = [
 INTERNAL_LINKS = {
     "vender sites": "/blog/como-vender-sites-para-negocios-locais.html",
     "quanto cobrar": "/blog/quanto-cobrar-por-site-de-restaurante.html",
-    "SDR": "/docs/sdr-franz.html",
-    "WhatsApp": "/blog/whatsapp-vendas-automatizar-sem-banir.html",
-    "pipeline": "/docs/pipeline.html",
+    "funnel": "/docs/funnel.html",
     "planos": "/planos.html",
     "como funciona": "/docs/como-funciona.html",
     "negocios locais": "/blog/nicho-sites-negocios-locais-2026.html",
@@ -265,7 +263,7 @@ Keyword principal SEO: "{keyword}"
 Keywords secundarias para incluir naturalmente: {', '.join(KEYWORDS_BASE[:5])}
 
 Contexto: O FraLib OS e uma plataforma que automatiza a venda de sites para negocios locais.
-Ela prospecta negocios sem site no Google Maps, cria sites com 7 agentes de IA, e envia pelo WhatsApp com um SDR automatico (franz).
+Ela prospecta negocios sem site no Google Maps, cria sites com agentes de IA, e envia pelo WhatsApp com um SDR automatico (Franz).
 Planos: Trial (gratis, 1 site), Starter (R$97/mes), Pro (R$197/mes), Ilimitado (R$497/mes).
 
 O artigo deve conectar o tema trending ({topic}) com o universo de vender sites/automacao/IA.

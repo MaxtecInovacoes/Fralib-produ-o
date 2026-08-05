@@ -140,12 +140,9 @@ _env_paths = [
     str(_pathlib.Path(__file__).parent.parent / '.env'),
 ]
 for _env_path in _env_paths:
-    try:
-        if _pathlib.Path(_env_path).exists():
-            load_dotenv(_env_path, override=True)
-            break
-    except PermissionError:
-        continue
+    if _pathlib.Path(_env_path).exists():
+        load_dotenv(_env_path, override=True)
+        break
 else:
     load_dotenv()
 
@@ -249,7 +246,6 @@ def _create_client(api_key: str, base_url: str) -> anthropic.Anthropic:
 # CALL CLAUDE — SDK-based with manual retry for key rotation
 # ══════════════════════════════════════════════════════════════════
 _AGENT_MODEL_MAP = {
-    'franz': 'haiku',
     'liz': 'haiku',
     'theo': 'sonnet',
     'alex': 'sonnet',

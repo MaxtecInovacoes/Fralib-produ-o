@@ -11,12 +11,12 @@ import sys
 import os
 
 # Adicionar TODAS as pastas do backend ao path
-sys.path.insert(0, '/opt/fralib/backend')
-sys.path.insert(0, '/opt/fralib/backend/core')
-sys.path.insert(0, '/opt/fralib/backend/endpoints')
-sys.path.insert(0, '/opt/fralib/backend/services')
-sys.path.insert(0, '/opt/fralib/backend/agents')
-sys.path.insert(0, '/opt/fralib/backend/utils')
+sys.path.insert(0, '/root/fralib/backend')
+sys.path.insert(0, '/root/fralib/backend/core')
+sys.path.insert(0, '/root/fralib/backend/endpoints')
+sys.path.insert(0, '/root/fralib/backend/services')
+sys.path.insert(0, '/root/fralib/backend/agents')
+sys.path.insert(0, '/root/fralib/backend/utils')
 
 # Aplicar migrations Alembic — fonte de verdade do schema
 from alembic.config import Config as _AlembicConfig
@@ -29,7 +29,7 @@ except Exception as _e:
     print(f"[Startup] Alembic falhou ({_e}) — continuando com inicializar_database como fallback")
 
 # Safety net: cria qualquer tabela que ainda nao esteja na Alembic
-from backend.core.database import inicializar_database
+from database import inicializar_database
 inicializar_database()
 
 # Rate Limiting (instancia compartilhada — definida em core/rate_limiter.py)
@@ -63,7 +63,7 @@ from contextlib import asynccontextmanager
 async def lifespan(app):
     try:
         from sqlalchemy import text
-        from backend.core.database import engine
+        from database import engine
         with engine.connect() as conn:
             conn.execute(text("UPDATE public.pipeline_state SET rodando=false, pausado=false"))
             conn.commit()
@@ -74,7 +74,7 @@ async def lifespan(app):
     # 3.2 — Marcar jobs em_andamento como interrompido (PM2 reiniciou durante execucao)
     try:
         from sqlalchemy import text
-        from backend.core.database import engine
+        from database import engine
         with engine.connect() as conn:
             result = conn.execute(text("""
                 UPDATE pipeline_queue
@@ -96,7 +96,7 @@ async def lifespan(app):
     # PR15: tracking de visitas + colunas ROI na tabela leads
     try:
         from sqlalchemy import text
-        from backend.core.database import engine
+        from database import engine
         with engine.connect() as conn:
             conn.execute(text("""
                 CREATE TABLE IF NOT EXISTS site_visitas (
@@ -242,9 +242,9 @@ async def _attach_user_id_for_rate_limit(request, call_next):
         pass
     return await call_next(request)
 
-app.mount("/static", StaticFiles(directory="/opt/fralib/frontend/static"), name="static")
-app.mount("/css", StaticFiles(directory="/opt/fralib/frontend/css"), name="css")
-app.mount("/js", StaticFiles(directory="/opt/fralib/frontend/js"), name="js")
+app.mount("/static", StaticFiles(directory="/root/fralib/frontend/static"), name="static")
+app.mount("/css", StaticFiles(directory="/root/fralib/frontend/css"), name="css")
+app.mount("/js", StaticFiles(directory="/root/fralib/frontend/js"), name="js")
 
 # CORS — metodos e headers explicitos em vez de wildcard
 app.add_middleware(

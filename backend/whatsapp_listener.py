@@ -1,7 +1,7 @@
 """
 whatsapp_listener.py — Listener WebSocket do meowhats
 Fica conectado ao meowhats e processa mensagens recebidas dos leads.
-Quando um lead responde, chama franz e atualiza sdr_stage no banco.
+Quando um lead responde, chama Franz e atualiza sdr_stage no banco.
 """
 import asyncio
 import json
@@ -534,7 +534,7 @@ def _notificar_handoff_humano(http_client, tenant_id: str, lead_id: str, nome: s
     """
     Notifica o closer humano que um lead está pronto pra fechar.
     Envia resumo do lead + últimas mensagens pro número do closer.
-    franz para de responder (stage=handoff).
+    Franz para de responder (stage=handoff).
     """
     if not is_tenant_connected(tenant_id):
         logger.warning(
@@ -649,7 +649,7 @@ def _processar_mensagem(tenant_id: str, msg_data: dict, texto_override: str = No
         # Salvar mensagem recebida sempre (histórico)
         _salvar_interacao(lead_id, texto, "entrada", user_id)
 
-        # Só responder se o site já foi deployado (status=concluido) e franz já iniciou contato
+        # Só responder se o site já foi deployado (status=concluido) e Franz já iniciou contato
         if status != "concluido":
             print(f"[WPP-Listener] Lead {nome}: status={status} — aguardando deploy antes de responder", flush=True)
             return
@@ -657,7 +657,7 @@ def _processar_mensagem(tenant_id: str, msg_data: dict, texto_override: str = No
             print(f"[WPP-Listener] Lead {nome}: sdr_stage vazio — Franz ainda não iniciou contato", flush=True)
             return
 
-        # Se stage é qualificados/ganhos/perdidos → franz NÃO responde mais (humano assumiu)
+        # Se stage é qualificados/ganhos/perdidos → Franz NÃO responde mais (humano assumiu)
         if sdr_stage_atual in ('qualificados', 'ganhos', 'perdidos', 'handoff', 'won', 'lost'):
             logger.info(f"Lead {nome}: stage={sdr_stage_atual} — humano assumiu, Franz parado")
             return
@@ -688,7 +688,7 @@ def _processar_mensagem(tenant_id: str, msg_data: dict, texto_override: str = No
         USE_AGENT_LOOP = os.getenv("FRANZ_AGENT_LOOP", "1") == "1"
 
         if USE_AGENT_LOOP:
-            from agents.franz.franz_agent_loop import franz_agent_loop, FranzAgentOutput as _BAO
+            from agents.franz.franz_agent_loop import franz_agent_loop, FranzAgentOutput as _FAO
             agent_result = franz_agent_loop(
                 lead_data={"id": lead_id, "nome": nome, "segmento": segmento, "cidade": cidade, "telefone": telefone},
                 mensagem=texto,
@@ -696,7 +696,7 @@ def _processar_mensagem(tenant_id: str, msg_data: dict, texto_override: str = No
                 sdr_stage=sdr_stage_atual,
                 user_id=user_id,
             )
-            print(f"[franz Agent] ✅ Resultado: stage={agent_result.novo_stage}, tools={agent_result.tools_used}, iter={agent_result.iterations}", flush=True)
+            print(f"[Franz Agent] ✅ Resultado: stage={agent_result.novo_stage}, tools={agent_result.tools_used}, iter={agent_result.iterations}", flush=True)
 
             resposta = agent_result.resposta
             proximo_passo = ""
@@ -711,8 +711,8 @@ def _processar_mensagem(tenant_id: str, msg_data: dict, texto_override: str = No
                 update_facts = {"followup_date": agent_result.followup_date} if agent_result.followup_date else {}
             franz_output = _FakeFranzOutput()
         else:
-            from agents.franz import responder_lead
-            franz_output = responder_lead(
+            from agents.franz import iniciar_contato
+            franz_output = iniciar_contato(
                 telefone=tel_raw,
                 mensagem_recebida=texto,
                 nome_negocio=nome or push_name,
@@ -723,7 +723,7 @@ def _processar_mensagem(tenant_id: str, msg_data: dict, texto_override: str = No
 
         # Se reply vazio (opt_out, fila, etc) — não enviar
         if not resposta or not resposta.strip():
-            logger.info(f"Lead {nome}: franz retornou reply vazio (intent={franz_output.intent}) — não envia")
+            logger.info(f"Lead {nome}: Franz retornou reply vazio (intent={franz_output.intent}) — não envia")
             if franz_output.next_stage == "lost":
                 _atualizar_stage(lead_id, "perdidos", user_id)
             return
@@ -776,7 +776,7 @@ def _processar_mensagem(tenant_id: str, msg_data: dict, texto_override: str = No
 
         _atualizar_stage(lead_id, novo_stage, user_id)
 
-        # Se franz agendou follow-up, salvar a data
+        # Se Franz agendou follow-up, salvar a data
         if _raw_stage == "scheduled":
             facts = franz_output.update_facts or {}
             followup_date = facts.get("followup_date", "")

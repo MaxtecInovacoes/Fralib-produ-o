@@ -312,8 +312,4 @@ async def salvar_sdr_horario(
     ), {"cfg": json.dumps(config), "id": user["id"]})
     db.commit()
 
-    # Invalidar cache do franz
-    from agents.franz import _HORARIO_CACHE
-    _HORARIO_CACHE.pop(f"sdr_horario_{user['id']}", None)
-
     return {"status": "ok", "config": config}

@@ -15,7 +15,6 @@ ROUTING_TABLE = {
     "arquiteto": {"complexo": "sonnet", "medio": "sonnet", "simples": "haiku"},
     "theo": {"complexo": "sonnet", "medio": "haiku", "simples": "haiku"},
     "liz": {"complexo": "haiku", "medio": "haiku", "simples": "haiku"},
-    "franz": {"complexo": "haiku", "medio": "haiku", "simples": "haiku"},
     "liam_critica": {"complexo": "haiku", "medio": "haiku", "simples": "haiku"},
     "liam_revisao": {"complexo": "opus", "medio": "sonnet", "simples": "sonnet"},
 }
@@ -71,7 +70,7 @@ class AgentRouter:
             return LIAM_MAX_TOKENS.get(self.complexidade, 6000)
         elif agente == "arquiteto":
             return ARQUITETO_MAX_TOKENS.get(self.complexidade, 4000)
-        elif agente in ("liz", "franz", "liam_critica"):
+        elif agente in ("liz", "liam_critica"):
             return 2000
         elif agente == "theo":
             return 3000
@@ -83,7 +82,6 @@ class AgentRouter:
             "arquiteto": 0.5,
             "theo": 0.6,
             "liz": 0.3,
-            "franz": 0.7,
             "liam_critica": 0.2,
             "liam_revisao": 0.3,
         }

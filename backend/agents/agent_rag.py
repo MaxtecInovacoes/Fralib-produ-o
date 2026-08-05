@@ -88,7 +88,7 @@ def get_agent_temperature(agente: str) -> float:
     """Temperatura ideal por agente"""
     temperatures = {
         'caio': 0.3, 'alex': 0.5, 'designer': 0.7,
-        'theo': 0.8, 'liam': 0.9, 'liz': 0.2, 'franz': 0.4
+        'theo': 0.8, 'liam': 0.9, 'liz': 0.2
     }
     return temperatures.get(agente, 0.7)
 
