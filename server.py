@@ -39,7 +39,7 @@ except Exception as _e:
     print(f"[Startup] Alembic falhou ({_e}) — continuando com inicializar_database como fallback")
 
 # Safety net: cria qualquer tabela que ainda nao esteja na Alembic
-from database import inicializar_database
+from core.database import inicializar_database
 inicializar_database()
 
 # Rate Limiting (instancia compartilhada — definida em core/rate_limiter.py)
