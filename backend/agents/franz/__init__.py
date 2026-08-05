@@ -1,8 +1,6 @@
-# Franz SDR Agent (substitui Bryan legacy)
+# Franz SDR Agent
 from dataclasses import dataclass, field
 from typing import List, Optional, Dict, Any
-import os
-import json
 
 
 @dataclass
@@ -33,9 +31,9 @@ class FranzOutput:
 
 
 def iniciar_contato(payload: FranzInput, user_id: int = None) -> FranzOutput:
-    """Stub - Franz SDR outreach."""
+    """Stub - Franz SDR outreach. Implementação completa em franz_tools.py."""
     return FranzOutput(
-        reply=f"Ola {payload.nome}! Vi que voce tem um negocio em {payload.cidade}. Posso te ajudar?",
+        reply=f"Olá {payload.nome}! Vi que você tem um negócio em {payload.cidade}. Posso te ajudar com um site profissional?",
         intent="greeting",
         next_stage="hook",
     )
@@ -47,11 +45,6 @@ def _dentro_do_horario() -> bool:
 
 def _escolher_variante(segmento: str) -> str:
     return "default"
-
-
-# Backward compatibility aliases for bryan->franz migration
-BryanInput = FranzInput
-BryanOutput = FranzOutput
 
 
 def responder_lead(payload, user_id=None):

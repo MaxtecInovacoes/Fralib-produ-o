@@ -85,7 +85,7 @@ O FraLib está em construção ativa. Cada beta tester ajuda a moldar
 o produto. E tudo que vier, está INCLUÍDO no seu plano de R$97/mês:
 
 🎙️ **SDR com Áudio e Ligação** (em breve)
-O Bryan vai poder mandar áudio personalizado e até ligar pro lead.
+O Franz vai poder mandar áudio personalizado e até ligar pro lead.
 Imagine o impacto: o cliente recebe o site + um áudio explicando.
 
 🎬 **Vídeo Animado de Apresentação** (em breve)

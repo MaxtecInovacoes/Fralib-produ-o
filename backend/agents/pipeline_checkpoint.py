@@ -13,7 +13,7 @@ import re
 import os
 from datetime import datetime
 
-CHECKPOINT_DIR = "/root/fralib/checkpoints"
+CHECKPOINT_DIR = "/app/checkpoints"
 os.makedirs(CHECKPOINT_DIR, exist_ok=True)
 
 _VALID_PIPELINE_ID = re.compile(r"^[a-z0-9][a-z0-9\-]*$")

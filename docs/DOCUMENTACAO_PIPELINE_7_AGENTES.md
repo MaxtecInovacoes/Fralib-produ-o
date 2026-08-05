@@ -31,7 +31,7 @@ FASE 7: Liam (HTML) → gera site seção por seção em paralelo
          └─ dark_mode dinâmico + footer 4 colunas com contraste garantido
 FASE 8: Deploy → salva em /var/www/fralib/sites/{slug}/
 FASE 9: Liz (QA) → auditoria técnica + semântica
-FASE 10: Bryan (SDR) → mensagem WhatsApp personalizada
+FASE 10: Franz (SDR) → mensagem WhatsApp personalizada
 
 LOOP: executar_pipeline_multiplos() repete FASES 1-10 até atingir quantidade pedida
 ```
@@ -58,7 +58,7 @@ LOOP: executar_pipeline_multiplos() repete FASES 1-10 até atingir quantidade pe
 ├── designer_prd.py      ← ⚠️ Modelos Pydantic apenas (DesignerPRD, SectionSpec, etc.) — não chamar diretamente
 ├── liam.py              ← Desenvolvimento HTML seção por seção
 ├── liz.py               ← Auditoria de qualidade
-└── bryan.py             ← SDR/Contato WhatsApp
+└── Franz.py             ← SDR/Contato WhatsApp
 ```
 
 ### **Utilitários:**
@@ -175,11 +175,11 @@ reviews: List[dict], horarios, atributos, servicos, faixa_preco
 
 ---
 
-### **FASE 9: BRYAN (SDR)**
-- **Arquivo:** `/root/fralib/backend/agents/bryan.py`
-- **Função:** `iniciar_contato(lead: BryanInput) -> BryanOutput`
-- **Input:** `BryanInput(nome, cidade, segmento, telefone, whatsapp, rating, site_url, score, tier)`
-- **Saída:** `BryanOutput(mensagem, estrategia, proximo_passo, enviado)`
+### **FASE 9: Franz (SDR)**
+- **Arquivo:** `/root/fralib/backend/agents/Franz.py`
+- **Função:** `iniciar_contato(lead: FranzInput) -> FranzOutput`
+- **Input:** `FranzInput(nome, cidade, segmento, telefone, whatsapp, rating, site_url, score, tier)`
+- **Saída:** `FranzOutput(mensagem, estrategia, proximo_passo, enviado)`
 - **Estratégias:** SOFT_SELL, HARD_SELL, CONSULTIVO (baseado no tier)
 - **State machine SDR:** intro → proof → link → value → price → close
 - **Status:** ✅ Funcionando — testado ao vivo
@@ -333,8 +333,8 @@ GET /api/logs/stream
   🔄 Liz auditando qualidade...
   ✅ Auditoria concluída
 
-📞 FASE 10/10: BRYAN - Preparando contato
-  🔄 Bryan preparando contato...
+📞 FASE 10/10: Franz - Preparando contato
+  🔄 Franz preparando contato...
   ✅ Contato preparado
 
 🎉 PIPELINE CONCLUÍDO - 7 AGENTES!
@@ -343,7 +343,7 @@ GET /api/logs/stream
   • Leads encontrados: 1
   • Lead processado: Restaurante Iberico
   • Site online: https://seunegociofralib.site/sites/restaurante-iberico/
-  • Agentes: Hunter → Caio → Alex → Theo → Designer → Liam → Liz → Bryan
+  • Agentes: Hunter → Caio → Alex → Theo → Designer → Liam → Liz → Franz
 ```
 
 ---
@@ -387,7 +387,7 @@ GET /api/logs/stream
 - **Impacto:** Liam falha quando briefing não é passado
 - **Status:** ✅ Corrigido no código atual (sempre passa briefing)
 
-### **6. Bryan não executa**
+### **6. Franz não executa**
 - **Motivo:** Pipeline trava antes (erros anteriores)
 - **Status:** Aguardando correção dos erros anteriores
 
@@ -407,7 +407,7 @@ GET /api/logs/stream
 | Liam | ✅ Ativo | dark_mode dinâmico + footer 4 colunas refatorado |
 | Deploy | ✅ Ativo | Sem alterações |
 | Liz | ✅ Ativo | Sem alterações |
-| Bryan | ✅ Ativo | Sem alterações |
+| Franz | ✅ Ativo | Sem alterações |
 
 ---
 
@@ -419,7 +419,7 @@ GET /api/logs/stream
 | Validação Pydantic Designer PRD | ✅ Corrigido | Todos os campos têm `field_validator` com fallback + `model_validator` fill_missing_fields |
 | `logo_url` faltando no LeadRaw | ✅ Corrigido | Campo `logo_url: Optional[str] = None` existe na linha 41 do `agente1_hunter_v2.py` |
 | Skills não encontradas (ui-ux-pro-max) | ✅ Irrelevante | Pipeline usa `arquiteto_mestre.py` — não depende mais de skills externas |
-| Bryan não executava | ✅ Corrigido | Pipeline completo funciona, Bryan executa normalmente |
+| Franz não executava | ✅ Corrigido | Pipeline completo funciona, Franz executa normalmente |
 | Campo `briefing` obrigatório no Liam | ✅ Corrigido | `gerar_html_componentizado(prd)` recebe DesignerPRD completo |
 
 ---
@@ -447,7 +447,7 @@ GET /api/logs/stream
 
 4. **Liz com HTML mínimo retorna score baixo** — normal, ela avalia HTML real de produção.
 
-5. **Bryan detecta leads já contatados** — avisa no log mas continua executando.
+5. **Franz detecta leads já contatados** — avisa no log mas continua executando.
 
 6. **ColorHarmonizer** ajusta paleta automaticamente para WCAG AA — a cor final pode ser diferente da entrada.
 
@@ -550,18 +550,18 @@ GET /api/logs/stream
 - ✅ `designer_prd.py` substituído por `arquiteto_mestre.py` como gerador de PRD
 - ✅ Retry automático 502/503/529 em `llm_direct.py`
 - ✅ Validação Pydantic blindada com fallbacks em todos os campos
-- ✅ Bryan testado e funcionando
+- ✅ Franz testado e funcionando
 - ✅ Liam gera HTML em paralelo por seção (ThreadPoolExecutor)
 - ✅ ColorHarmonizer garante WCAG AA automaticamente
 
 ### **Versão 1.0 - 29/04/2026**
 - Pipeline expandido de 5 para 7 agentes
-- Adicionados: Theo, Designer PRD, Liz, Bryan
-- Bugs conhecidos: 502, Pydantic, logo_url, Bryan não executava
+- Adicionados: Theo, Designer PRD, Liz, Franz
+- Bugs conhecidos: 502, Pydantic, logo_url, Franz não executava
 
 ### **Versão 0.x (5 agentes)**
 - Hunter → Banco → Caio → Alex → Liam → Deploy
-- Sem Theo, ArquitetoMestre, Liz, Bryan
+- Sem Theo, ArquitetoMestre, Liz, Franz
 
 ---
 
@@ -570,7 +570,7 @@ GET /api/logs/stream
 ### **Pendente:**
 1. Testar pipeline completo end-to-end com lead real (não simulado)
 2. Monitorar Liz — score baixo em HTML real pode indicar ajuste necessário no prompt
-3. Verificar se Bryan envia WhatsApp automaticamente ou só prepara a mensagem
+3. Verificar se Franz envia WhatsApp automaticamente ou só prepara a mensagem
 4. Adicionar testes automatizados para regressão
 
 ---

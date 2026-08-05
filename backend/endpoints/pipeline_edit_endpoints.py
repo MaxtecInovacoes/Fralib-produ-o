@@ -15,19 +15,6 @@ router = APIRouter(prefix="/api/pipeline", tags=["pipeline"])
 logger = logging.getLogger("uvicorn")
 
 
-# === LEGACY STUBS — agentes removidos ===
-
-class _LizRemovida(Exception):
-    pass
-
-def _liz_stub(*args, **kwargs):
-    raise _LizRemovida("agents.liz foi removido. Use QA v2 (quality_gate_v2) para validacao de HTML.")
-
-# Substituem imports de agents.liz
-editar_secao = _liz_stub
-listar_secoes = _liz_stub
-
-
 class EditarSecaoRequest(_BaseModel):
     lead_id: str
     secao: str
@@ -40,6 +27,7 @@ async def editar_secao_endpoint(
     db: Session = Depends(get_db),
     usuario: dict = Depends(get_current_user)
 ):
+    from agents.liz import editar_secao, listar_secoes
     tenant_id = usuario.get("tenant_id", usuario["id"])
     result = db.execute(
         text("SELECT site_url, nome FROM leads WHERE id = :lead_id AND user_id = :uid"),
@@ -78,7 +66,7 @@ async def listar_secoes_endpoint(
     db: Session = Depends(get_db),
     usuario: dict = Depends(get_current_user)
 ):
-    # agents.liz removido (legado). listar_secoes e editar_secao sao stubs que levantam _LizRemovida.
+    from agents.liz import listar_secoes
     tenant_id = usuario.get("tenant_id", usuario["id"])
     result = db.execute(
         text("SELECT site_url, nome FROM leads WHERE id = :lead_id AND user_id = :uid"),

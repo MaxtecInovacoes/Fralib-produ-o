@@ -804,7 +804,7 @@ body{
       </div>
       <!-- Usuário -->
       <div class="header-user">
-        <span>Agente Bryan</span>
+        <span>Agente Franz</span>
         <div class="header-avatar">B</div>
       </div>
     </div>
@@ -853,7 +853,7 @@ body{
 
   <!-- Empty State (oculto por padrão) -->
   <div class="empty-state" id="emptyState">
-    <p class="empty-text">AGUARDANDO SDR BRYAN<br>CAPTAR OS PRIMEIROS LEADS...</p>
+    <p class="empty-text">AGUARDANDO SDR Franz<br>CAPTAR OS PRIMEIROS LEADS...</p>
   </div>
 
   <!-- ========== VIEW: VISÃO GERAL ========== -->
@@ -1260,8 +1260,8 @@ body{
     <!-- CONFIG HORÁRIO SDR -->
     <div class="config-section" style="margin-bottom:24px;">
       <div class="config-group" style="margin-bottom:0;">
-        <div class="config-group-title">⏰ HORÁRIO DO SDR (BRYAN)</div>
-        <p style="font-size:12px;color:var(--fl-text-muted);margin:4px 0 16px;">Define quando o Bryan pode enviar mensagens para os leads.</p>
+        <div class="config-group-title">⏰ HORÁRIO DO SDR (Franz)</div>
+        <p style="font-size:12px;color:var(--fl-text-muted);margin:4px 0 16px;">Define quando o Franz pode enviar mensagens para os leads.</p>
         <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;">
           <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
             <input type="radio" name="sdr-modo" value="personalizado" id="sdr-modo-custom" style="accent-color:var(--fl-purple);">
@@ -1356,7 +1356,7 @@ body{
         });
         var d = await r.json();
         if(d.status === 'ok'){
-          document.getElementById('sdr-horario-status').innerHTML = '<span style="color:#10b981;">✓ Salvo! Bryan vai respeitar este horário.</span>';
+          document.getElementById('sdr-horario-status').innerHTML = '<span style="color:#10b981;">✓ Salvo! Franz vai respeitar este horário.</span>';
         } else {
           document.getElementById('sdr-horario-status').innerHTML = '<span style="color:#ef4444;">✗ '+(d.detail||'Erro')+'</span>';
         }
@@ -1893,7 +1893,7 @@ const WORK_DLG={
     Dev:['Gerando HTML...','Otimizando CSS','Injetando SEO','Renderizando site','Liam processando...'],
     Designer:['Extraindo cores...','Analisando estilo','Paleta definida!','Tipografia OK','Design aplicado'],
     QA:['Validando site...','Score calculado','Checando mobile','Aprovado! Score 95','Rejeitado, refazendo'],
-    Marketing:['Enviando WhatsApp...','Lead contatado!','Mensagem entregue','Bryan em acao','Copy personalizado'],
+    Marketing:['Enviando WhatsApp...','Lead contatado!','Mensagem entregue','Franz em acao','Copy personalizado'],
     Hunter:['Buscando leads...','Google Maps aberto','Capturando dados','Lead encontrado!','Scraping em curso'],
     Analista:['Qualificando lead...','Score calculado','Tier A detectado!','Analisando perfil','Caio avaliando'],
     Fotos:['Buscando fotos...','Imagens capturadas','Logo encontrado!','Alex processando','Galeria montada'],
@@ -2055,7 +2055,7 @@ const WORK_DESKS=[
     {x:70, y:50,  owner:'Liam'},
     {x:190,y:50,  owner:'Theo'},
     {x:70, y:180, owner:'Liz'},
-    {x:190,y:180, owner:'Bryan'},
+    {x:190,y:180, owner:'Franz'},
     {x:310,y:50,  owner:'Alex'},
     {x:310,y:180, owner:'Hunter'},
     {x:430,y:50,  owner:'Caio'},
@@ -2065,7 +2065,7 @@ const AGENT_DEFS=[
     {name:'Liam',   role:'Dev',       color:'#3730a3',female:false,homeX:97, homeY:83, allowedRooms:['main']},
     {name:'Theo',   role:'Designer',  color:'#7e22ce',female:false,homeX:217,homeY:83, allowedRooms:['main']},
     {name:'Liz',    role:'QA',        color:'#92400e',female:true, homeX:97, homeY:213,allowedRooms:['main']},
-    {name:'Bryan',  role:'Marketing', color:'#7c2d12',female:false,homeX:217,homeY:213,allowedRooms:['main']},
+    {name:'Franz',  role:'Marketing', color:'#7c2d12',female:false,homeX:217,homeY:213,allowedRooms:['main']},
     {name:'Alex',   role:'Fotos',     color:'#b45309',female:false,homeX:337,homeY:83, allowedRooms:['main']},
     {name:'Hunter', role:'Hunter',    color:'#065f46',female:false,homeX:337,homeY:213,allowedRooms:['main']},
     {name:'Caio',   role:'Analista',  color:'#7c3aed',female:false,homeX:457,homeY:83, allowedRooms:['main']},
@@ -2359,7 +2359,7 @@ const AGENT_SSE_MAP = {
     'PIPELINE_STATUS':'Liam',
     'SUCCESS': 'Liz',
     'ERROR':   'Liz',
-    'WARNING': 'Bryan',
+    'WARNING': 'Franz',
     'INFO':    'Theo',
 };
 
@@ -2622,7 +2622,7 @@ window.initPixelOffice = function(){
     </div>
     <div class="modal-body" style="display:flex;flex-direction:column;gap:14px;">
 
-      <!-- Tab: Conversa Bryan -->
+      <!-- Tab: Conversa Franz -->
       <div class="tab-content active" id="tab-chat">
         <div class="chat-area" id="chatArea" style="min-height:280px;max-height:340px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding:12px;">
           <div style="text-align:center;color:var(--fl-text-muted);font-size:12px;padding:20px 0">Carregando conversa...</div>
@@ -2686,12 +2686,12 @@ window.initPixelOffice = function(){
           <div style="display:flex;gap:8px;">
             <button
               onclick="registrarFeedbackLead('convertido')"
-              title="Marcar lead como convertido e registrar aprendizado para o Bryan"
+              title="Marcar lead como convertido e registrar aprendizado para o Franz"
               style="flex:1;background:rgba(16,185,129,0.15);border:1px solid #10b981;color:#10b981;padding:9px 12px;border-radius:6px;cursor:pointer;font-family:var(--fl-font-brand);letter-spacing:1px;font-size:12px;"
             >✅ CONVERTIDO</button>
             <button
               onclick="registrarFeedbackLead('perdido')"
-              title="Marcar lead como perdido e registrar aprendizado para o Bryan"
+              title="Marcar lead como perdido e registrar aprendizado para o Franz"
               style="flex:1;background:rgba(239,68,68,0.12);border:1px solid #ef4444;color:#ef4444;padding:9px 12px;border-radius:6px;cursor:pointer;font-family:var(--fl-font-brand);letter-spacing:1px;font-size:12px;"
             >❌ PERDIDO</button>
           </div>
@@ -3283,7 +3283,7 @@ async function carregarStatsConfig() {
     set('stat-cidade-top', data.cidade_top || '—');
     set('stat-cidade-top-total', data.cidade_top_total || 0);
     set('stat-ticket-medio', 'R$ ' + (data.ticket_medio || 0).toLocaleString('pt-BR', {minimumFractionDigits:0}));
-    set('stat-msgs-bryan', (data.total_msgs_bryan || 0).toLocaleString('pt-BR'));
+    set('stat-msgs-Franz', (data.total_msgs_franz || 0).toLocaleString('pt-BR'));
   } catch(e) { console.warn('Stats:', e.message); }
 }
 
@@ -3721,8 +3721,8 @@ function openModalReal(lead) {
   document.getElementById('modalOverlay').classList.add('open');
   switchTab('chat');
 
-  // Carregar conversa Bryan
-  carregarConversaBryan(lead.id);
+  // Carregar conversa Franz
+  carregarConversaFranz(lead.id);
 }
 
 function abrirStudio() {
@@ -4455,8 +4455,8 @@ function updateCounts() {
 
 /* ── Modal ── */
 
-// Carregar conversa Bryan
-async function carregarConversaBryan(leadId) {
+// Carregar conversa Franz
+async function carregarConversaFranz(leadId) {
   var chatArea = document.getElementById('chatArea');
   if (!chatArea) return;
   chatArea.innerHTML = '<div style="text-align:center;color:var(--fl-text-muted);font-size:12px;padding:20px 0">Carregando...</div>';
@@ -4518,7 +4518,7 @@ async function reprocessarLead() {
   }
 }
 
-// 3.1 — Registrar feedback de conversão/perda para o Bryan aprender
+// 3.1 — Registrar feedback de conversão/perda para o Franz aprender
 async function registrarFeedbackLead(resultado) {
   if (!leadAtualModal) return;
   var label = resultado === 'convertido' ? 'CONVERTIDO' : 'PERDIDO';
@@ -4539,8 +4539,8 @@ async function registrarFeedbackLead(resultado) {
         statusEl.style.borderLeft = resultado === 'convertido' ? '3px solid #10b981' : '3px solid #ef4444';
         statusEl.style.color = resultado === 'convertido' ? '#10b981' : '#ef4444';
         statusEl.textContent = resultado === 'convertido'
-          ? '✅ Lead marcado como CONVERTIDO! Bryan vai aprender com esta abordagem.'
-          : '❌ Lead marcado como PERDIDO. Bryan vai evitar esta abordagem no segmento.';
+          ? '✅ Lead marcado como CONVERTIDO! Franz vai aprender com esta abordagem.'
+          : '❌ Lead marcado como PERDIDO. Franz vai evitar esta abordagem no segmento.';
       }
       Toast.success('Feedback "' + label + '" registrado com sucesso!');
       setTimeout(function(){ carregarKanban(); carregarKPIs(); }, 800);
@@ -6762,8 +6762,8 @@ async function atualizarUtiBadge() {
       posicao: 'right'
     },
     {
-      titulo: 'SDR Automático Bryan',
-      texto: 'O Bryan SDR entra em contato automaticamente pelo WhatsApp com cada lead qualificado. Configure na aba Perfil.',
+      titulo: 'SDR Automático Franz',
+      texto: 'O Franz SDR entra em contato automaticamente pelo WhatsApp com cada lead qualificado. Configure na aba Perfil.',
       alvo: '[data-view="perfil"]',
       posicao: 'right'
     }

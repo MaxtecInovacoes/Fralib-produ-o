@@ -127,7 +127,7 @@ def step_caio(state: PipelineState) -> PipelineState:
         return state
 
     try:
-        from backend.agents.caio.agent import LeadInput, qualificar
+        from backend.agents.caio import LeadInput, CaioOutput, qualificar_lead
         lead_data = state.lead_data
         lead = LeadInput(
             nome=lead_data.get("nome", ""),
@@ -140,7 +140,7 @@ def step_caio(state: PipelineState) -> PipelineState:
             reviews_count=int(lead_data.get("reviews_count") or lead_data.get("total_avaliacoes") or 0),
             fotos=lead_data.get("fotos") or [],
         )
-        out = qualificar(lead)
+        out = qualificar_lead(lead)
         state.caio_output = {
             "tier": out.tier, "score": out.score,
             "motivo": out.motivo, "qualificado": out.qualificado,
@@ -162,30 +162,6 @@ def step_caio(state: PipelineState) -> PipelineState:
             event_type="lead_qualified",
             hypothesis=f"Lead qualificado como {state.caio_output['tier']} (score {state.caio_output['score']})",
             payload={"tier": state.caio_output["tier"], "score": state.caio_output["score"]},
-        )
-    except Exception:
-        pass
-
-    # RAG: indexar lead após qualificação (best-effort)
-    try:
-        from backend.core.rag import index_lead
-        lead_text = (
-            f"{state.lead_data.get('nome', '')} — "
-            f"{state.segmento or state.lead_data.get('segmento', '')} em "
-            f"{state.cidade or state.lead_data.get('cidade', '')}. "
-            f"Tier: {state.caio_output['tier']}, Score: {state.caio_output['score']}. "
-            f"Motivo: {state.caio_output['motivo']}"
-        )
-        index_lead(
-            lead_id=state.lead_id,
-            tenant_id=state.tenant_id,
-            text=lead_text,
-            metadata={
-                "tier": state.caio_output["tier"],
-                "score": state.caio_output["score"],
-                "segmento": state.segmento,
-                "cidade": state.cidade,
-            },
         )
     except Exception:
         pass
@@ -217,7 +193,7 @@ def step_arquiteto(state: PipelineState) -> PipelineState:
     if state.current_state != STATE_DESIGNING:
         return state
 
-    from backend.agents.arquiteto.agent import gerar_prd, DesignerPRD, DesignerSection
+    from backend.agents.arquiteto_mestre import gerar_arquiteto_mestre_prd, DesignerPRD, ColorPalette, AnimationSpec, SectionSpec
 
     # Extrai market_intelligence do lead_data se disponível (vem do Hunter)
     market_intelligence = state.lead_data.get("market_intelligence")
@@ -229,10 +205,28 @@ def step_arquiteto(state: PipelineState) -> PipelineState:
     last_exc: Exception | None = None
     prd = None
 
+    # Build keyword research string
+    kw_research = ""
+    if state.cidade and state.segmento:
+        try:
+            from backend.agents.keyword_research import pesquisar_keywords_nicho
+            kw_research = pesquisar_keywords_nicho(state.segmento, state.cidade)
+        except Exception:
+            kw_research = ""
+
     for attempt in range(1, max_attempts + 1):
         try:
-            prd = gerar_prd(state.lead_data, usar_llm=True,
-                            market_intelligence=market_intelligence)
+            prd = gerar_arquiteto_mestre_prd(
+                dados_hunter=state.lead_data,
+                cidade=state.cidade,
+                segmento=state.segmento,
+                jina_insights="",
+                caio_tier=state.caio_output.get("tier", ""),
+                caio_score=state.caio_output.get("score", 0),
+                caio_motivo=state.caio_output.get("motivo", ""),
+                keyword_research=kw_research,
+                dark_mode=False,
+            )
             state.attempts["arquiteto"] = attempt
             if attempt > 1:
                 state.history.append(
@@ -275,21 +269,52 @@ def step_arquiteto(state: PipelineState) -> PipelineState:
         state.error = f"Arquiteto: {last_exc}"
         return _transition(state, STATE_FAILED)
 
+    # Map DesignerPRD to design_output using ACTUAL schema fields
+    sections_list = []
+    for s in prd.sections:
+        section_dict = {"name": s.name, "title": s.title}
+        # SectionSpec may have 'content' or 'body' field
+        if hasattr(s, "content"):
+            section_dict["content"] = s.content
+        if hasattr(s, "body"):
+            section_dict["body"] = s.body
+        sections_list.append(section_dict)
+
+    color_palette_dict = {}
+    if hasattr(prd, "color_palette") and prd.color_palette:
+        cp = prd.color_palette
+        if hasattr(cp, "model_dump"):
+            color_palette_dict = cp.model_dump()
+        elif hasattr(cp, "dict"):
+            color_palette_dict = cp.dict()
+        else:
+            color_palette_dict = {k: v for k, v in vars(cp).items() if not k.startswith("_")}
+
+    animations_list = []
+    if hasattr(prd, "animations") and prd.animations:
+        for anim in prd.animations:
+            if hasattr(anim, "model_dump"):
+                animations_list.append(anim.model_dump())
+            elif hasattr(anim, "dict"):
+                animations_list.append(anim.dict())
+            else:
+                animations_list.append({k: v for k, v in vars(anim).items() if not k.startswith("_")})
+
     state.design_output = {
         "business_name": prd.business_name,
-        "hero": prd.hero,
-        "sections": [{"name": s.name, "title": s.title,
-                      "content": s.content} for s in prd.sections],
-        "ctas": prd.ctas,
-        "faqs": prd.faqs,
-        "paleta": prd.paleta,
-        # Fase 1: tokens autoritativos via theme_mapper.
-        # Esses campos sao injetados no payload do Builder -> OpenUI service.
-        "design_tokens": prd.design_tokens,
-        "layout_dna": prd.layout_dna,
-        # Fase 2: design_system auto-emitido (google_fonts, tailwind.config,
-        # forbidden_radius/copy) para o Builder aplicar de forma autoritativa.
-        "design_system": prd.design_system,
+        "sections": sections_list,
+        "color_palette": color_palette_dict,
+        "typography": getattr(prd, "typography", {}),
+        "animations": animations_list,
+        "reviews_count": getattr(prd, "reviews_count", 0),
+        "reviews_rating": getattr(prd, "reviews_rating", 0.0),
+        "reviews_list": getattr(prd, "reviews_list", []),
+        "address": getattr(prd, "address", ""),
+        "phone": getattr(prd, "phone", ""),
+        "hours": getattr(prd, "hours", None),
+        "photos": getattr(prd, "photos", []),
+        # paleta_cores from Caio (fallback if arquiteto doesn't set color_palette)
+        "paleta_cores": state.design_output.get("paleta_cores", state.caio_output.get("paleta_cores", {})),
     }
 
     # Knowledge Journal: NarrativeLocked + IdentityApproved
@@ -300,11 +325,15 @@ def step_arquiteto(state: PipelineState) -> PipelineState:
             hypothesis="PRD gerado com promessa, narrativa e estrutura definidas",
             payload={"business_name": prd.business_name, "sections_count": len(prd.sections)},
         )
+        # Archetype may come from color_palette name or be absent
+        archetype_name = ""
+        if hasattr(prd, "color_palette") and prd.color_palette:
+            archetype_name = getattr(prd.color_palette, "name", "") or getattr(prd.color_palette, "archetype", "") or ""
         journal_record(
             project_id=state.lead_id,
             event_type="identity_approved",
-            hypothesis=f"Arquétipo {prd.design_tokens.get('archetype')} com tokens autoritativos",
-            payload={"archetype": prd.design_tokens.get("archetype"), "tokens": prd.design_tokens},
+            hypothesis=f"PRD aprovado com {len(prd.sections)} secoes",
+            payload={"sections_count": len(prd.sections), "business_name": prd.business_name},
         )
     except Exception:
         pass
@@ -319,23 +348,39 @@ def step_builder(state: PipelineState) -> PipelineState:
 
     try:
         from backend.agents.builder.agent import render_site
-        from backend.agents.arquiteto.agent import DesignerPRD, DesignerSection
+        from backend.agents.designer_prd import DesignerPRD, SectionSpec, ColorPalette, AnimationSpec
+
+        # Reconstruct DesignerPRD from state.design_output using ACTUAL schema
+        color_palette_data = state.design_output.get("color_palette", {}) or state.design_output.get("paleta_cores", {})
+        if not color_palette_data:
+            color_palette_data = {"primary": "#1a1a2e", "secondary": "#e94560", "accent": "#f5a623", "background": "#ffffff", "text": "#333333"}
+
+        sections = []
+        for s_data in state.design_output.get("sections", []):
+            sections.append(SectionSpec(
+                name=s_data.get("name", ""),
+                title=s_data.get("title", ""),
+                content=s_data.get("content", s_data.get("body", "")),
+            ))
+
+        animations = []
+        for a_data in state.design_output.get("animations", []):
+            animations.append(AnimationSpec(**a_data) if a_data else None)
+        animations = [a for a in animations if a is not None]
 
         prd = DesignerPRD(
             business_name=state.design_output["business_name"],
-            cidade=state.cidade,
-            segmento=state.segmento,
-            hero=state.design_output["hero"],
-            sections=[DesignerSection(**s) for s in state.design_output["sections"]],
-            ctas=state.design_output["ctas"],
-            faqs=state.design_output["faqs"],
-            paleta=state.design_output["paleta"],
-            # Fase 1/2: tokens autoritativos do Arquiteto. Sem repassar aqui,
-            # o OpenUI cai nos defaults editorial-asymmetric + Inter (archetype
-            # perdido). design_system carrega archetype/google_fonts_url/briefing.
-            design_tokens=state.design_output.get("design_tokens", {}),
-            layout_dna=state.design_output.get("layout_dna", {}),
-            design_system=state.design_output.get("design_system", {}),
+            sections=sections,
+            color_palette=ColorPalette(**(color_palette_data or {})),
+            typography=state.design_output.get("typography", {}),
+            animations=animations,
+            reviews_count=state.design_output.get("reviews_count", 0),
+            reviews_rating=state.design_output.get("reviews_rating", 0.0),
+            reviews_list=state.design_output.get("reviews_list", []),
+            address=state.design_output.get("address", ""),
+            phone=state.design_output.get("phone", state.lead_data.get("telefone", "")),
+            hours=state.design_output.get("hours"),
+            photos=state.design_output.get("photos", []),
         )
         # Fase 3 SEO/GEO - AGENTE 19 TRUST SIGNALS: propagar rating do lead
         # para o JSON-LD LocalBusiness.aggregateRating do inject.py.
@@ -397,21 +442,39 @@ def step_quality_gate(state: PipelineState) -> PipelineState:
         if USE_QA_V2:
             # Quality Gate v2: Vision-based
             from backend.agents.builder.quality_gate_v2 import run_quality_gate_v2
-            from backend.agents.arquiteto.agent import DesignerPRD, DesignerSection
+            from backend.agents.designer_prd import DesignerPRD, SectionSpec, ColorPalette, AnimationSpec
 
-            # Reconstruct PRD from state.design_output
+            # Reconstruct DesignerPRD from state.design_output using ACTUAL schema
+            _cp_data = state.design_output.get("color_palette", {}) or state.design_output.get("paleta_cores", {})
+            if not _cp_data:
+                _cp_data = {"primary": "#1a1a2e", "secondary": "#e94560", "accent": "#f5a623"}
+
+            _sections = []
+            for _s in state.design_output.get("sections", []):
+                _sections.append(SectionSpec(
+                    name=_s.get("name", ""),
+                    title=_s.get("title", ""),
+                    content=_s.get("content", _s.get("body", "")),
+                ))
+
+            _anims = []
+            for _a in state.design_output.get("animations", []):
+                _anims.append(AnimationSpec(**_a) if _a else None)
+            _anims = [a for a in _anims if a is not None]
+
             prd = DesignerPRD(
                 business_name=state.design_output["business_name"],
-                cidade=state.cidade,
-                segmento=state.segmento,
-                hero=state.design_output["hero"],
-                sections=[DesignerSection(**s) for s in state.design_output["sections"]],
-                ctas=state.design_output["ctas"],
-                faqs=state.design_output["faqs"],
-                paleta=state.design_output["paleta"],
-                design_tokens=state.design_output.get("design_tokens", {}),
-                layout_dna=state.design_output.get("layout_dna", {}),
-                design_system=state.design_output.get("design_system", {}),
+                sections=_sections,
+                color_palette=ColorPalette(**(_cp_data or {})),
+                typography=state.design_output.get("typography", {}),
+                animations=_anims,
+                reviews_count=state.design_output.get("reviews_count", 0),
+                reviews_rating=state.design_output.get("reviews_rating", 0.0),
+                reviews_list=state.design_output.get("reviews_list", []),
+                address=state.design_output.get("address", ""),
+                phone=state.design_output.get("phone", ""),
+                hours=state.design_output.get("hours"),
+                photos=state.design_output.get("photos", []),
             )
 
             # Run async QA v2
@@ -784,23 +847,5 @@ def run_pipeline(state: PipelineState) -> PipelineState:
                 )
         except Exception as exc:
             logger.warning("[credits_manager] deducao no run_pipeline falhou run_id=%s: %s", state.run_id, exc)
-        # 2.2 RAG: indexar falha se pipeline falhou (best-effort)
-        if state.current_state == STATE_FAILED and state.error:
-            try:
-                from backend.core.rag import index_failure
-                error_step = state.error_step or "unknown"
-                index_failure(
-                    lead_id=state.lead_id,
-                    tenant_id=state.tenant_id,
-                    text=f"[{error_step}] {state.error}",
-                    step_name=error_step,
-                    metadata={
-                        "step": error_step,
-                        "estado_final": "failed",
-                        "run_id": state.run_id,
-                    },
-                )
-            except Exception:
-                pass
         # 3. Clear context
         clear_run_context(token)

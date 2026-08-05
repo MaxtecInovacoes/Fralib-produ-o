@@ -1005,7 +1005,7 @@ Antes de publicar o site, confirmar:
 
 ---
 
-## BRYAN — Mensagem WhatsApp
+## Franz — Mensagem WhatsApp
 
 **Estratégia:** SOFT_SELL
 **Estado:** intro

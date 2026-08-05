@@ -107,7 +107,7 @@ NODE_ENV=production
 backend/agents/arquiteto_mestre.py      PRD designer + copywriter
 backend/agents/builder/agent.py         Builder HTML (chunked OpenUI)  ← existe na VPS
 backend/agents/caio.py                   Qualificacao
-backend/agents/bryan.py                  Finalizador / SDR (legacy — fallback)
+backend/agents/franz.py                  Finalizador / SDR (legacy — fallback)
 backend/agents/theo.py                   Estrategista
 backend/agents/liz.py                    Revisora codigo
 backend/agents/designer_prd.py           PRD designer (legado)
@@ -120,7 +120,7 @@ backend/agents/franz/
   └── franz_agent_loop.py               Managed agent loop (MCP-like tool calling)
 backend/endpoints/pipeline_endpoints.py  Rotas pipeline
 backend/endpoints/leads_endpoints.py     CRUD leads
-backend/endpoints/cron_endpoints.py      Cron Bryan
+backend/endpoints/cron_endpoints.py      Cron Franz
 backend/whatsapp_listener.py             WebSocket meowhats + Franz agent loop
 ```
 
@@ -161,14 +161,14 @@ Max 10 iteracoes. Tool results capped em 4000 chars.
 | `buscar_leads_similares` | Leads do mesmo segmento |
 | `verificar_status_wpp` | Verifica conexao WhatsApp |
 
-**Wiring:** `whatsapp_listener.py` integra Franz agent loop com fallback para `agents.bryan` legacy. Variavel `FRANZ_AGENT_LOOP=1` ativa/desativa.
+**Wiring:** `whatsapp_listener.py` integra Franz agent loop com fallback para `agents.franz` legacy. Variavel `FRANZ_AGENT_LOOP=1` ativa/desativa.
 
 **Commit:** b2de8eb6
 
 ## Alertas
 
 - pipeline_endpoints.py tem 1664 linhas — quebrar em modulos
-- bryan.py tem 1362 linhas — proximo do limite
+- franz.py tem 1362 linhas — proximo do limite
 - websocket.go:166 (meowhats): filtro tenantId sem autorizacao — registrar como divida
 
 ## WhatsApp LID Protocol (whatsmeow)

@@ -18,7 +18,7 @@
    - Bloco 2: copy por seção com reviews reais (6000 tokens)
 8. Liam — gera HTML por seção em paralelo (8 seções, modelo opus)
 9. Liz — audita HTML (score mínimo 70)
-10. Bryan — gera mensagem WhatsApp
+10. Franz — gera mensagem WhatsApp
 
 ## Agentes principais
 | Arquivo | Função |
@@ -26,7 +26,7 @@
 | arquiteto_mestre.py | PRD em 2 blocos, tokens OKLch, direção visual |
 | liam.py | HTML por seção paralela, Tailwind, CSS vars |
 | liz.py | Auditoria HTML (técnica + semântica) |
-| bryan.py | Mensagem WhatsApp personalizada |
+| Franz.py | Mensagem WhatsApp personalizada |
 | caio.py | Qualificação do lead |
 | theo.py | Briefing estratégico |
 | craft_rules.py | Anti-slop, tipografia, cor, animação, UX laws |

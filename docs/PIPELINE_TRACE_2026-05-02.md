@@ -317,9 +317,9 @@
 
 ---
 
-## 9. BRYAN (SDR — Contato Comercial)
-**Contexto:** lead ja havia sido contatado antes (memoria: bryan_lead_(41) 99751-5712)
-**O que recebeu (BryanInput):**
+## 9. Franz (SDR — Contato Comercial)
+**Contexto:** lead ja havia sido contatado antes (memoria: franz_lead_(41) 99751-5712)
+**O que recebeu (franzInput):**
 
     nome:       Exclusiva Fitness - Academia Feminina
     cidade:     Campina Grande do Sul
@@ -331,12 +331,12 @@
     score_caio: 52
     tier:       STANDARD
 
-**RAG carregado:** 3437 chars (1 chunk, 1 arquivo: bryan.md)
+**RAG carregado:** 3437 chars (1 chunk, 1 arquivo: Franz.md)
 **Temperature:** 0.4 (criativo/persuasivo)
 **LLM:** input=2516 tokens, output=89 tokens, stop_reason=end_turn
 **Resposta recebida:** 342 chars
 
-**Resultado (BryanOutput):**
+**Resultado (franzOutput):**
 
     estrategia:     SOFT_SELL
     mensagem.tipo:  follow-up (lead ja contatado)
@@ -344,7 +344,7 @@
                     [truncado nos logs apos 80 chars]
     enviado:        False
 
-**Memoria atualizada:** bryan_lead_(41) 99751-5712
+**Memoria atualizada:** franz_lead_(41) 99751-5712
 
 ---
 
@@ -421,8 +421,8 @@
       https://seunegociofralib.site/sites/exclusiva-fitness-academia-feminina/
              |
              v
-    [9. BRYAN]
-      BryanInput: nome+cidade+site_url+score_caio(52)+tier(STANDARD)
+    [9. Franz]
+      franzInput: nome+cidade+site_url+score_caio(52)+tier(STANDARD)
       RAG:3437 | temp:0.4 | SOFT_SELL
       saida: mensagem WhatsApp (lead ja contatado antes)
       enviado: False
@@ -437,6 +437,6 @@
 | Designer PRD | 451         | 5121          |
 | Liam (x8)    | 212033      | 35693         |
 | Liz          | 17317       | 936           |
-| Bryan        | 2516        | 89            |
+| Franz        | 2516        | 89            |
 | Theo         | ~4000 (est) | ~4000 (est)   |
 | TOTAL        | ~238647     | ~46071        |

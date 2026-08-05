@@ -13,7 +13,7 @@ Usuario (briefing)
     -> [Liz] HTML revisado e corrigido
     -> [Alex] pagina integrada
     -> [Caio] pagina otimizada
-    -> [Bryan] entrega final ao usuario
+    -> [Franz] entrega final ao usuario
 
 ## O que cada agente faz, carrega e passa adiante
 
@@ -51,9 +51,9 @@ Usuario (briefing)
 - Recebe: pagina integrada do Alex
 - Carrega: RAG 1.894 chars
 - Faz: otimiza performance e codigo (max_tokens=2000)
-- Passa: pagina otimizada para o Bryan
+- Passa: pagina otimizada para o Franz
 
-### Bryan (bryan.py — 424 linhas)
+### Franz (Franz.py — 424 linhas)
 - Recebe: pagina otimizada do Caio
 - Carrega: RAG 3.437 chars
 - Faz: finaliza e entrega (max_tokens=4000 x2)
@@ -96,7 +96,7 @@ Usuario (briefing)
 ## Comandos de diagnostico rapido
 
 cd /root/fralib/backend/agents
-python3 -c "import liam, theo, liz, alex, caio, bryan, designer_prd, agent_rag, skill_loader, color_enforcer, animation_injector; print('TODOS OK')"
+python3 -c "import liam, theo, liz, alex, caio, Franz, designer_prd, agent_rag, skill_loader, color_enforcer, animation_injector; print('TODOS OK')"
 
 pm2 status fralib
 pm2 logs fralib --lines 30

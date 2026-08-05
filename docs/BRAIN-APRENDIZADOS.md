@@ -14,7 +14,7 @@
 - Funções corretas: gerar_briefing_estrategico + gerar_prd (não "arquiteto")
 - ~8k tokens por lead
 
-### Bryan (SDR WhatsApp)
+### Franz (SDR WhatsApp)
 - BUG CONHECIDO: estado sempre salvo como "intro" — nunca avança na state machine
 - max_tokens=4000 excessivo para mensagem WhatsApp de 500 chars
 - Fix: criar proximo_estado() e salvar estado correto após cada execução
@@ -36,13 +36,13 @@
 - Theo: 1-2min
 - Arquiteto: 2-3min
 - Liam: 3-5min (maior gargalo)
-- Bryan: 30s
+- Franz: 30s
 
 ### Custo por lead: ~90-100k tokens
 - Liam: 60-80k (dominante)
 - Arquiteto: 15k
 - Theo: 8k
-- Bryan: 3k
+- Franz: 3k
 
 ### Reprocessar
 - Implementado: executar_pipeline_lead_existente + _executar_pipeline_a_partir_fase2

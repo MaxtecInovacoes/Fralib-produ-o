@@ -26,7 +26,7 @@ pipeline ele roda.
 | 4 | Builder (OpenUI) | `agents/builder/agent.py` | claude-sonnet-4-6 | 64000 (4×18000) | Gera HTML chunked via OpenUI (Node.js :3333) |
 | 5 | QA v2 | `agents/builder/quality_gate_v2/` | gpt-4o-mini / 9router | — | Vision QA — pontua design, repair loop se < 7.5 |
 | 6 | Deploy | (sem LLM) | — | — | Salva HTML em /var/www/fralib/sites/ + metadata.json |
-| 7 | Franz | `agents/franz/` (agent loop) + `agents/bryan.py` (legacy) | sonnet | 4000 | SDR WhatsApp — outreach, follow-up, agendamento (MCP-like tools) |
+| 7 | Franz | `agents/franz/` (agent loop) + `agents/franz.py` | sonnet | 4000 | SDR WhatsApp — outreach, follow-up, agendamento (MCP-like tools) |
 
 ## Agentes de Suporte
 
@@ -45,9 +45,10 @@ pipeline ele roda.
 | Liam LATS | `agents/liam_lats.py` | Language Agent Tree Search (experimental) |
 | Liam MOA | `agents/liam_moa.py` | Mixture of Agents (experimental) |
 | Liam Models | `agents/liam_models.py` | Definição de modelos do Liam (legado) |
-| Bryan Agent Loop | `agents/bryan_agent_loop.py` | Loop de agentes do Bryan |
+| Franz Agent Loop | `agents/franz_agent_loop.py` | Loop de agentes do Franz |
 | Liam Agent Loop | `agents/liam_agent_loop.py` | Loop de agentes do Liam (legado) |
 | Theo Agent Loop | `agents/theo_agent_loop.py` | Loop de agentes do Theo |
+| Franz Agent Loop | `agents/franz_agent_loop.py` | Loop de agentes do Franz |
 | Arquiteto Agent Loop | `agents/arquiteto_agent_loop.py` | Loop de agentes do Arquiteto |
 | Liz Rubricas | `agents/liz_rubricas.py` | Rubricas de avaliação da Liz |
 | Craft Rules | `agents/craft_rules.py` | Regras de craft para geração de conteúdo |
@@ -63,8 +64,6 @@ pipeline ele roda.
 | Unsplash Fetcher | `agents/unsplash_fetcher.py` | Busca imagens no Unsplash |
 | Markdown PRD Parser | `agents/markdown_prd_parser.py` | Parseia PRDs em Markdown |
 | LLM Direct | `agents/llm_direct.py` | Chamada direta a LLM (bypass router) |
-| Franz Tools | `agents/franz/franz_tools.py` | 10 tool definitions + execute_tool() dispatcher |
-| Franz Agent Loop | `agents/franz/franz_agent_loop.py` | Managed agent loop — tool calling iterativo (max 10 turns) |
 
 ## Agentes Legado (não executam no pipeline, mantidos para referência)
 
@@ -78,7 +77,7 @@ pipeline ele roda.
 | Liam LATS | `agents/liam_lats.py` | Language Agent Tree Search (experimental) | — |
 | Liam MOA | `agents/liam_moa.py` | Mixture of Agents (experimental) | — |
 | Liam Models | `agents/liam_models.py` | Definição de modelos do Liam | LLM Router |
-| Bryan Agent Loop | `agents/bryan_agent_loop.py` | Loop de agentes do Bryan | Franz (via cron dispatcher) |
+| Franz Agent Loop | `agents/franz_agent_loop.py` | Loop de agentes do Franz | Franz (via cron dispatcher) |
 | Liam Agent Loop | `agents/liam_agent_loop.py` | Loop de agentes do Liam (legado) | — |
 | Theo Agent Loop | `agents/theo_agent_loop.py` | Loop de agentes do Theo | — |
 | Arquiteto Agent Loop | `agents/arquiteto_agent_loop.py` | Loop de agentes do Arquiteto | Pipeline FSM em manager/agent.py |
@@ -114,7 +113,7 @@ pipeline ele roda.
 | Config centralizada | `backend/config.py` |
 | Agente Builder | `backend/agents/builder/agent.py` (VPS only) |
 | QA Vision v2 | `backend/agents/builder/quality_gate_v2/` |
-| Franz (SDR) | `backend/agents/franz/` — agent loop + franz_tools.py | `backend/agents/bryan.py` (legacy fallback) |
+| Franz (SDR) | `backend/agents/franz/ — agent loop + franz_tools.py` |
 | Hunter | `backend/utils/agente1_hunter_v2.py` |
 | Meowhats listener | `backend/whatsapp_listener.py` |
 | Migrations | `alembic/` |
@@ -287,7 +286,7 @@ Suporta OpenAI, Google, Groq via `ia_manager.pick_key()`.
 | Falhas | `endpoints/falhas_endpoints.py` | Log de falhas de pipeline |
 | Site Editor | `endpoints/site_editor_endpoints.py` | Editor visual de sites |
 | Tracking | `endpoints/tracking_endpoints.py` | Tracking de visitas |
-| Cron | `endpoints/cron_endpoints.py` | Cron endpoints (Bryan outreach) |
+| Cron | `endpoints/cron_endpoints.py` | Cron endpoints (Franz outreach) |
 | Blog | `endpoints/blog_endpoints.py` | Gerenciamento de blog |
 | OBS | `endpoints/obs_endpoints.py` | Observabilidade |
 | Queue | `endpoints/queue_endpoints.py` | Status da fila de jobs |

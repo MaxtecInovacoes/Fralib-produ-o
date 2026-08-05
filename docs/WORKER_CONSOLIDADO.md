@@ -12,7 +12,7 @@
 | `fralib-worker-franz-1` | SDR WhatsApp outreach | healthy |
 | `open-seo` | SEO (morto) | — |
 
-Problemas: 3 processos Python repetindo setup, 3 healthchecks, 3 containers pra gerenciar, código `bryan_outreach` legado espalhado.
+Problemas: 3 processos Python repetindo setup, 3 healthchecks, 3 containers pra gerenciar, código `franz_outreach` legado espalhado.
 
 ## Depois (1 worker)
 
@@ -95,8 +95,8 @@ worker:
 
 ## Código removido
 
-- `bryan_outreach` — tipo de job, handler, backoff table, mensagens amigáveis
-- `_BACKOFF_BRYAN` — tabela de retry específica do bryan
+- `franz_outreach` — tipo de job, handler, backoff table, mensagens amigáveis
+- `_BACKOFF_franz` — tabela de retry específica do Franz
 - `tmp_deploy/` — diretório de deploy legado (Dockerfile agora na raiz)
 
 ## Pipeline de deploy

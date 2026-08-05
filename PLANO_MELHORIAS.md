@@ -1,7 +1,7 @@
 # PLANO DE MELHORIAS FRALIB OS
 
 > Gerado em: 2026-05-08
-> Base de código analisada: server.py, sse_endpoints.py, pipeline_endpoints.py, bryan.py, liam.py, liz.py, caio.py, theo.py, _scripts.html, _view-uti.html, _modals.html
+> Base de código analisada: server.py, sse_endpoints.py, pipeline_endpoints.py, Franz.py, liam.py, liz.py, caio.py, theo.py, _scripts.html, _view-uti.html, _modals.html
 
 ---
 
@@ -35,10 +35,10 @@ Substituir a deque em memória por PostgreSQL LISTEN/NOTIFY:
 
 ---
 
-### ITEM 1.2 — Bryan SDR: estado sempre "intro", histórico e max_tokens
+### ITEM 1.2 — Franz SDR: estado sempre "intro", histórico e max_tokens
 
 **Problema:**
-Em `bryan.py` linha 254, após cada execução bem-sucedida, o estado é sempre salvo como `"estado": "intro"` — nunca avança na state machine `ESTADOS_SDR` (linhas 68-77). Isso significa que todo contato subsequente com o mesmo lead repete a mensagem de introdução em vez de avançar para `proof`, `link`, `value`, etc.
+Em `Franz.py` linha 254, após cada execução bem-sucedida, o estado é sempre salvo como `"estado": "intro"` — nunca avança na state machine `ESTADOS_SDR` (linhas 68-77). Isso significa que todo contato subsequente com o mesmo lead repete a mensagem de introdução em vez de avançar para `proof`, `link`, `value`, etc.
 
 Além disso, na linha 228, `max_tokens=4000` é excessivo para uma mensagem de WhatsApp de máximo 500 caracteres (definido em `MensagemWhatsApp` linha 55). O LLM gasta tokens desnecessários.
 
@@ -47,12 +47,12 @@ A memória é carregada corretamente (linha 180-187) mas o `ultimo_estado` nunca
 **Solução:**
 1. Criar função `proximo_estado(estado_atual: str) -> str` que avança na lista `ESTADOS_SDR`
 2. No `salvar_memoria()` (linha 250-257), salvar `"estado": proximo_estado(ultimo_estado)` em vez de hardcoded `"intro"`
-3. Adicionar ao `BRYAN_INSTRUCTIONS` uma seção `## ESTADO ATUAL` que instrui o LLM a gerar mensagem adequada para o estado recebido
+3. Adicionar ao `franz_INSTRUCTIONS` uma seção `## ESTADO ATUAL` que instrui o LLM a gerar mensagem adequada para o estado recebido
 4. Reduzir `max_tokens=4000` para `max_tokens=600` na linha 228
 5. No prompt (linha 196+), incluir histórico das últimas mensagens da memória para contexto
 
 **Arquivos:**
-- `/root/fralib/backend/agents/bryan.py` — linhas 228, 250-257, 196-213
+- `/root/fralib/backend/agents/Franz.py` — linhas 228, 250-257, 196-213
 
 **Teste:**
 1. Executar pipeline completo para um lead
@@ -60,7 +60,7 @@ A memória é carregada corretamente (linha 180-187) mas o `ultimo_estado` nunca
 3. Confirmar que `max_tokens=600` não trunca a mensagem (500 chars + JSON overhead)
 4. Medir redução de custo de tokens via logs do `call_claude()`
 
-**Risco:** médio — mudança no comportamento do SDR; testar com `BRYAN_TEST_NUMBER` configurado antes de produção
+**Risco:** médio — mudança no comportamento do SDR; testar com `franz_TEST_NUMBER` configurado antes de produção
 
 ---
 
@@ -490,10 +490,10 @@ Implementar em JS puro (sem biblioteca externa) com overlay escuro e tooltip pos
 
 ## SPRINT 3 — Inteligência e Qualidade
 
-### ITEM 3.1 — Brain/feedback: salvar o que funcionou e Bryan consultar sdr_learning
+### ITEM 3.1 — Brain/feedback: salvar o que funcionou e Franz consultar sdr_learning
 
 **Problema:**
-Quando um lead converte (status muda para `vendido` via botão "FECHAR VENDA" no modal), nenhuma informação sobre o que funcionou é salva para aprendizado futuro. O Bryan sempre gera mensagens do zero sem considerar padrões de sucesso anteriores. O módulo `brain.py` já tem uma função `feedback_cliente` importada em `bryan.py` linha 13, mas não é chamada em nenhum lugar do fluxo de conversão.
+Quando um lead converte (status muda para `vendido` via botão "FECHAR VENDA" no modal), nenhuma informação sobre o que funcionou é salva para aprendizado futuro. O Franz sempre gera mensagens do zero sem considerar padrões de sucesso anteriores. O módulo `brain.py` já tem uma função `feedback_cliente` importada em `Franz.py` linha 13, mas não é chamada em nenhum lugar do fluxo de conversão.
 
 **Solução:**
 1. Criar tabela `sdr_learning` no banco:
@@ -511,18 +511,18 @@ Quando um lead converte (status muda para `vendido` via botão "FECHAR VENDA" no
    ```
 2. No endpoint `POST /api/leads/{id}/fechar-venda` (ou onde o status muda para `vendido`), chamar `salvar_aprendizado(lead, mensagem_usada, converteu=True)`
 3. Quando um lead é descartado/perdido, chamar `salvar_aprendizado(lead, mensagem_usada, converteu=False)`
-4. Em `bryan.py`, antes de montar o prompt (linha 196), consultar `sdr_learning` para o mesmo `segmento` e `tier` e incluir os 3 melhores exemplos no contexto
+4. Em `Franz.py`, antes de montar o prompt (linha 196), consultar `sdr_learning` para o mesmo `segmento` e `tier` e incluir os 3 melhores exemplos no contexto
 5. Implementar `brain.py` com funções `salvar_aprendizado()` e `buscar_exemplos_sucesso(segmento, tier, limit=3)`
 
 **Arquivos:**
 - `/root/fralib/backend/agents/brain.py` — implementar funções de aprendizado
-- `/root/fralib/backend/agents/bryan.py` — linha 196, adicionar consulta ao sdr_learning
+- `/root/fralib/backend/agents/Franz.py` — linha 196, adicionar consulta ao sdr_learning
 - `/root/fralib/backend/endpoints/leads_endpoints.py` — chamar salvar_aprendizado no fechar-venda
 - `/root/fralib/backend/database.py` — criar tabela sdr_learning no `inicializar_database()`
 
 **Teste:**
 1. Fechar venda de um lead — verificar que registro aparece em `sdr_learning` com `converteu=True`
-2. Executar Bryan para lead do mesmo segmento — verificar que o prompt inclui exemplos de sucesso
+2. Executar Franz para lead do mesmo segmento — verificar que o prompt inclui exemplos de sucesso
 3. Verificar que mensagens geradas para segmentos com histórico são diferentes das sem histórico
 
 **Risco:** médio — requer nova tabela e mudança no fluxo de conversão; testar que não quebra o pipeline existente
@@ -601,7 +601,7 @@ O sistema é multi-tenant (cada usuário tem seu `user_id` nos leads), mas não 
 
 | Item | Impacto | Esforço | Prioridade |
 |------|---------|---------|------------|
-| 1.2 Bryan estado/tokens | Alto | Baixo | URGENTE |
+| 1.2 Franz estado/tokens | Alto | Baixo | URGENTE |
 | 1.7 Caio timeout 3s | Alto | Baixo | URGENTE |
 | 1.5 Liam fix_white_text | Alto | Baixo | URGENTE |
 | 1.3 Liz OpenStreetMap | Médio | Baixo | ALTA |

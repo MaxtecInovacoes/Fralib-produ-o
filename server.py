@@ -192,7 +192,7 @@ async def lifespan(app):
     except Exception as e:
         print(f"[Server] Aviso: migration sdr_horario_config falhou: {e}")
 
-    # Iniciar listener WhatsApp (recebe respostas dos leads e chama Bryan)
+    # Iniciar listener WhatsApp (recebe respostas dos leads e chama Franz)
     try:
         import sys, os
         sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'backend'))

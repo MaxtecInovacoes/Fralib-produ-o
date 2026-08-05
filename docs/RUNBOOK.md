@@ -184,7 +184,7 @@ docker exec fralib-redis-1 redis-cli INFO stats | grep evicted_keys
 ### Sintoma
 - Mensagens nao saem, leads sem follow-up
 - `docker logs fralib-worker-1` mostra erros de meowhats
-- Franz agent loop falhou (fallback para bryan legacy)
+- Franz agent loop falhou (fallback para Franz legacy)
 
 ### Diagnóstico
 ```bash
@@ -204,7 +204,7 @@ docker logs fralib-app-1 | grep -i "Franz agent loop"
 - Verificar logs: `docker logs meowhats-1` se container separado
 - Verificar se `FRANZ_AGENT_LOOP=1` no .env (ativado por padrão)
 - Ver memory: [[handoff-franz-bugs-contexto-transacao.md]] — problemas CoT, transação, LID
-- Tool failures: `pipeline_failures` com `fase='franz'` ou `fase='bryan'`
+- Tool failures: `pipeline_failures` com `fase='franz'` ou `fase='Franz'`
 
 ---
 

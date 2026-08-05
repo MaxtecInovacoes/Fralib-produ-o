@@ -8,19 +8,19 @@
 - Pagamento/Onboarding: PENDENTE (decisão Stripe vs Mercado Pago)
 
 ## Pipeline de Agentes
-Ordem: Hunter → Caio+Alex (paralelo) → Jina → Theo → Arquiteto → Liam → Liz → Deploy → Bryan
+Ordem: Hunter → Caio+Alex (paralelo) → Jina → Theo → Arquiteto → Liam → Liz → Deploy → Franz
 
 Todos os 7 fixes aplicados e funcionando. Reprocessar implementado.
 
-Pendente testar: Liam + Liz + Deploy + Bryan no reprocessar.
+Pendente testar: Liam + Liz + Deploy + Franz no reprocessar.
 
 ## Pendências Abertas
-1. Testar pipeline reprocessar completo (Liam/Liz/Deploy/Bryan)
+1. Testar pipeline reprocessar completo (Liam/Liz/Deploy/Franz)
 2. Refatorar alex.py (1028 linhas, acima do limite 800)
 3. Criar design-tokens.css (Sprint 2.7)
 4. Fluxo de pagamento (Stripe vs Mercado Pago — decidir)
 5. Alinhamento landing page / planos
-6. Bryan SDR: estado sempre "intro" — nunca avança na state machine
+6. Franz SDR: estado sempre "intro" — nunca avança na state machine
 7. SSE logs: trocar deque por PostgreSQL LISTEN/NOTIFY
 
 ## Melhorias de Performance Identificadas

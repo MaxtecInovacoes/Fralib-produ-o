@@ -7,7 +7,7 @@
 ## Visao Geral
 
 FraLib OS e um SaaS de geracao automatica de sites para negocios locais.
-Pipeline: Hunter -> Caio -> Alex -> Theo -> Designer PRD -> Liam -> Liz -> Bryan
+Pipeline: Hunter -> Caio -> Alex -> Theo -> Designer PRD -> Liam -> Liz -> Franz
 Backend: FastAPI + PostgreSQL | Frontend: dashboard.html monolitico (3356 linhas)
 
 **Prioridade de execucao:**

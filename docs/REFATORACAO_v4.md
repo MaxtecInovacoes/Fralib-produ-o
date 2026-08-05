@@ -8,10 +8,10 @@
      8|## VISÃO GERAL DO PIPELINE
      9|
     10|O pipeline FraLib gera sites para negócios locais de forma 100% automática.
-    11|Fluxo: Hunter → Caio → Unsplash + paleta_nicho → Theo → ArquitetoMestre → Liam → Deploy → Liz → Bryan
+    11|Fluxo: Hunter → Caio → Unsplash + paleta_nicho → Theo → ArquitetoMestre → Liam → Deploy → Liz → Franz
     12|
     13|Agentes que NÃO foram alterados nesta refatoração:
-    14|  Hunter, Caio, Unsplash, paleta_nicho, Theo, Deploy, Bryan
+    14|  Hunter, Caio, Unsplash, paleta_nicho, Theo, Deploy, Franz
     15|
     16|Agentes alterados: ArquitetoMestre, Liam
     17|Arquivos novos/refatorados: design_context.py, craft_rules.py (seo_context.py inalterado)
@@ -345,7 +345,7 @@ Deploy → publica em /var/www/fralib/sites/{slug}/index.html
   ↓
 Liz → audita em 5 dimensões → aprova ou pede regeneração
   ↓
-Bryan → notifica o lead
+Franz → notifica o lead
 
 ---
 

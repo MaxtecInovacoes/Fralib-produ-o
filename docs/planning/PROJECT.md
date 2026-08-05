@@ -4,7 +4,7 @@
 
 FraLib OS é um pipeline 100% automatizado que, dado um segmento e cidade, busca leads no Google Maps, qualifica-os, gera um site institucional animado e profissional personalizado por nicho, publica online e envia o link via WhatsApp — sem nenhuma intervenção humana do início ao fim.
 
-O sistema já existe e funciona end-to-end. Este projeto foca em elevar a qualidade visual (animações por nicho inspiradas no Open Design), corrigir o Bryan SDR (state machine travada), integrar pagamento via Stripe e fechar o ciclo completo lead → site → venda.
+O sistema já existe e funciona end-to-end. Este projeto foca em elevar a qualidade visual (animações por nicho inspiradas no Open Design), corrigir o Franz SDR (state machine travada), integrar pagamento via Stripe e fechar o ciclo completo lead → site → venda.
 
 ## Core Value
 
@@ -14,7 +14,7 @@ O lead recebe um site profissional animado, publicado e personalizado para o seu
 
 ### Validated
 
-- ✓ Pipeline Hunter → Caio → Theo → Arquiteto → Liam → Deploy → Liz → Bryan funcionando end-to-end
+- ✓ Pipeline Hunter → Caio → Theo → Arquiteto → Liam → Deploy → Liz → Franz funcionando end-to-end
 - ✓ Liam gera HTML por seções em paralelo (~35k chars)
 - ✓ Deploy automático em seunegociofralib.site/sites/{slug}/
 - ✓ WhatsApp via MeoWhats integrado
@@ -29,10 +29,10 @@ O lead recebe um site profissional animado, publicado e personalizado para o seu
 - [ ] Hero section animada: gradiente dinâmico + typewriter no H1 + CTA com pulse
 - [ ] Micro-interações em botões, formulários e CTAs
 - [ ] Scroll animations com Intersection Observer (CSS/JS puro, sem deps externas)
-- [ ] Bryan SDR: corrigir state machine (intro → proof → link → value → price → close)
+- [ ] Franz SDR: corrigir state machine (intro → proof → link → value → price → close)
 - [ ] Stripe: integração de pagamento (checkout, webhook, ativação de plano)
 - [ ] Landing page alinhada com planos de preço e Stripe
-- [ ] Reprocessar pipeline completo (Liam/Liz/Deploy/Bryan no reprocessar)
+- [ ] Reprocessar pipeline completo (Liam/Liz/Deploy/Franz no reprocessar)
 - [ ] Refatorar alex.py (1.028 linhas → módulos ≤300 linhas)
 - [ ] SSE logs: trocar deque por PostgreSQL LISTEN/NOTIFY
 
@@ -64,7 +64,7 @@ O lead recebe um site profissional animado, publicado e personalizado para o seu
 4. Arquiteto Mestre — gera DesignerPRD (funde Theo+Caio+paleta nicho, WCAG AA)
 5. Liam — gera HTML final seção por seção em paralelo
 6. Liz — QA do HTML (HTML, SEO, responsividade, acessibilidade)
-7. Bryan — SDR WhatsApp (mensagem personalizada por tier)
+7. Franz — SDR WhatsApp (mensagem personalizada por tier)
 8. Alex — desativado (substituído por Unsplash+paleta)
 
 **Referências de qualidade visual:**
@@ -74,7 +74,7 @@ O lead recebe um site profissional animado, publicado e personalizado para o seu
 
 ## Constraints
 
-- **Automação total**: Zero intervenção humana do Hunter ao Bryan. Qualquer feature que exija ação manual é out of scope.
+- **Automação total**: Zero intervenção humana do Hunter ao Franz. Qualquer feature que exija ação manual é out of scope.
 - **CSS/JS puro**: Animações sem dependências externas (sem GSAP, sem Framer Motion) — o HTML precisa ser self-contained para deploy estático.
 - **Limite de linhas**: Arquivos Python ≤ 300 linhas. Arquivos maiores devem ser divididos em módulos.
 - **VPS**: Toda execução roda na VPS 187.77.37.72. Mudanças locais precisam ser deployadas via SCP + pm2 restart.

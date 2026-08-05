@@ -95,7 +95,7 @@ async def queue_metrics(dias: int = Query(default=7, ge=1, le=30), usuario: dict
               AND tipo IN ('pipeline_lead', 'pipeline_multiplos')
         """), {"dias": dias}).fetchone()
 
-        bryan_row = conn.execute(text("""
+        franz_row = conn.execute(text("""
             SELECT
                 COUNT(*) as total,
                 COUNT(*) FILTER (WHERE status = 'completed') as sucesso,
@@ -103,7 +103,7 @@ async def queue_metrics(dias: int = Query(default=7, ge=1, le=30), usuario: dict
                 ROUND(AVG(attempts)::numeric, 1) FILTER (WHERE status = 'completed') as tentativas_media
             FROM jobs
             WHERE created_at > NOW() - make_interval(days => :dias)
-              AND tipo = 'bryan_outreach'
+              AND tipo = 'franz_outreach'
         """), {"dias": dias}).fetchone()
 
     pipeline = {}
@@ -119,14 +119,14 @@ async def queue_metrics(dias: int = Query(default=7, ge=1, le=30), usuario: dict
         }
 
     franz = {}
-    if bryan_row:
-        total_b = bryan_row[0] or 1
+    if franz_row:
+        total_f = franz_row[0] or 1
         franz = {
-            "total": bryan_row[0] or 0,
-            "sucesso": bryan_row[1] or 0,
-            "falhas": bryan_row[2] or 0,
-            "taxa_sucesso": round((bryan_row[1] or 0) / total_b, 2),
-            "tentativas_media": float(bryan_row[3]) if bryan_row[3] else None,
+            "total": franz_row[0] or 0,
+            "sucesso": franz_row[1] or 0,
+            "falhas": franz_row[2] or 0,
+            "taxa_sucesso": round((franz_row[1] or 0) / total_f, 2),
+            "tentativas_media": float(franz_row[3]) if franz_row[3] else None,
         }
 
     return {"pipeline": pipeline, "franz": franz}

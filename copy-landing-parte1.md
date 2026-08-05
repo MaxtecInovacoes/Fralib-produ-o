@@ -76,9 +76,9 @@ E SE O CLIENTE JÁ RECEBESSE O SITE PRONTO — SEM TER PEDIDO?
 Imagina o dono de uma barbearia abrindo o WhatsApp e lendo:
 
 ┌─────────────────────────────────────────────┐
-│ 🤖 Bryan (SDR FraLib)                       │
+│ 🤖 Franz (SDR FraLib)                       │
 │                                             │
-│ "Olá! Sou o Bryan. Vi que a Barbearia      │
+│ "Olá! Sou o Franz. Vi que a Barbearia      │
 │ Morais ainda não tem um site profissional.  │
 │                                             │
 │ Criei um de presente pra vocês darem uma    │
@@ -134,7 +134,7 @@ indexação rápida, schema.org para aparecer nas buscas das IAs.
 Não é template genérico. É site sob medida pro negócio.
 
 ### Passo 3: VENDE
-**SDR Bryan aborda pelo WhatsApp**
+**SDR Franz aborda pelo WhatsApp**
 Mensagem personalizada, tom natural, sem parecer robô.
 Não é disparo em massa — é UMA mensagem, para UM lead qualificado,
 com o site DELE já pronto. O lead só precisa dizer "quero".

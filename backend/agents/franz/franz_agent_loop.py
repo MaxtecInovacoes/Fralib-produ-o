@@ -5,7 +5,7 @@ from .franz_tools import FranzAgentOutput
 def franz_agent_loop(lead_id: int, tenant_id: int, message: str, history: List[Dict]) -> FranzAgentOutput:
     """Franz agent loop stub."""
     return FranzAgentOutput(
-        reply="OlÃ¡! Estou pronto para conversar.",
+        reply="Olá! Estou pronto para conversar.",
         intent="greeting",
         novo_stage="hook",
         tools_used=[],

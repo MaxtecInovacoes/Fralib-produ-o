@@ -16,7 +16,7 @@ See: .planning/PROJECT.md (updated 2026-05-09)
 | Phase | Name | Status |
 |-------|------|--------|
 | 1 | Animações por Nicho no Liam | 🔵 Ready to plan |
-| 2 | Bryan SDR: State Machine Completa | ⬜ Pending |
+| 2 | Franz SDR: State Machine Completa | ⬜ Pending |
 | 3 | Stripe: Pagamento Integrado | ⬜ Pending |
 | 4 | Pipeline: Correções e Performance | ⬜ Pending |
 | 5 | Landing Page com Planos e Stripe | ⬜ Pending |
@@ -25,7 +25,7 @@ See: .planning/PROJECT.md (updated 2026-05-09)
 
 - Pipeline end-to-end funcionando na VPS 187.77.37.72
 - Liam gera ~35k chars de HTML por lead
-- Bryan SDR travado no estado "intro" — não avança
+- Franz SDR travado no estado "intro" — não avança
 - Pagamento não implementado ainda
 - Open Design usado como referência de padrões visuais (não integrado)
 - Skills disponíveis: ui-animation, motion-designer, ui-ux-pro-max, high-end-visual-design

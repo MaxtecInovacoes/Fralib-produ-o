@@ -23,11 +23,11 @@
 
 ---
 
-## Phase 2 — Bryan SDR: State Machine Completa
+## Phase 2 — Franz SDR: State Machine Completa
 
-**Goal:** Bryan avança corretamente pelos estados da conversa até fechar a venda, com timeout automático e log no banco.
+**Goal:** Franz avança corretamente pelos estados da conversa até fechar a venda, com timeout automático e log no banco.
 
-**Requirements:** BRYAN-01 a BRYAN-05
+**Requirements:** Franz-01 a Franz-05
 
 **Plans:**
 1. Mapear e corrigir a state machine atual (por que fica travada em "intro")
@@ -36,13 +36,13 @@
 4. Log de transições no PostgreSQL
 5. Testes de fluxo completo (intro → close)
 
-**Done when:** Bryan conduz uma conversa completa do intro ao fechamento sem intervenção humana.
+**Done when:** Franz conduz uma conversa completa do intro ao fechamento sem intervenção humana.
 
 ---
 
 ## Phase 3 — Stripe: Pagamento Integrado
 
-**Goal:** Pipeline gera link de pagamento Stripe automaticamente. Bryan envia o link no estado "price". Webhook ativa o plano após pagamento.
+**Goal:** Pipeline gera link de pagamento Stripe automaticamente. Franz envia o link no estado "price". Webhook ativa o plano após pagamento.
 
 **Requirements:** STRIPE-01 a STRIPE-05
 
@@ -50,7 +50,7 @@
 1. Definir planos BASIC/STANDARD/PREMIUM com preços em BRL
 2. Integrar Stripe SDK no pipeline (criar checkout session)
 3. Webhook Stripe → ativar plano no banco
-4. Bryan envia link Stripe no estado "price"
+4. Franz envia link Stripe no estado "price"
 5. Testes de fluxo completo (checkout → webhook → ativação)
 
 **Done when:** Lead recebe link de pagamento via WhatsApp, paga, e o plano é ativado automaticamente.
@@ -64,7 +64,7 @@
 **Requirements:** PIPE-01 a PIPE-05
 
 **Plans:**
-1. Corrigir reprocessar completo (Liam/Liz/Deploy/Bryan)
+1. Corrigir reprocessar completo (Liam/Liz/Deploy/Franz)
 2. Migrar SSE logs de deque para PostgreSQL LISTEN/NOTIFY
 3. Refatorar alex.py em módulos ≤ 300 linhas
 4. Migrar Arquiteto Mestre de Opus para Sonnet

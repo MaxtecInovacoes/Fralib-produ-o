@@ -316,7 +316,7 @@ async function carregarStatsConfig() {
     set('stat-cidade-top', data.cidade_top || '—');
     set('stat-cidade-top-total', data.cidade_top_total || 0);
     set('stat-ticket-medio', 'R$ ' + (data.ticket_medio || 0).toLocaleString('pt-BR', {minimumFractionDigits:0}));
-    set('stat-msgs-bryan', (data.total_msgs_bryan || 0).toLocaleString('pt-BR'));
+    set('stat-msgs-Franz', (data.total_msgs_franz || 0).toLocaleString('pt-BR'));
   } catch(e) { console.warn('Stats:', e.message); }
 }
 
@@ -684,8 +684,8 @@ function openModalReal(lead) {
   document.getElementById('modalOverlay').classList.add('open');
   switchTab('chat');
 
-  // Carregar conversa Bryan
-  carregarConversaBryan(lead.id);
+  // Carregar conversa Franz
+  carregarConversaFranz(lead.id);
 }
 
 function abrirSiteModal() {
@@ -1393,8 +1393,8 @@ function updateCounts() {
 
 /* ── Modal ── */
 
-// Carregar conversa Bryan
-async function carregarConversaBryan(leadId) {
+// Carregar conversa Franz
+async function carregarConversaFranz(leadId) {
   var chatArea = document.getElementById('chatArea');
   if (!chatArea) return;
   chatArea.innerHTML = '<div style="text-align:center;color:var(--fl-text-muted);font-size:12px;padding:20px 0">Carregando...</div>';
@@ -1456,7 +1456,7 @@ async function reprocessarLead() {
   }
 }
 
-// 3.1 — Registrar feedback de conversão/perda para o Bryan aprender
+// 3.1 — Registrar feedback de conversão/perda para o Franz aprender
 async function registrarFeedbackLead(resultado) {
   if (!leadAtualModal) return;
   var label = resultado === 'convertido' ? 'CONVERTIDO' : 'PERDIDO';
@@ -1477,8 +1477,8 @@ async function registrarFeedbackLead(resultado) {
         statusEl.style.borderLeft = resultado === 'convertido' ? '3px solid #10b981' : '3px solid #ef4444';
         statusEl.style.color = resultado === 'convertido' ? '#10b981' : '#ef4444';
         statusEl.textContent = resultado === 'convertido'
-          ? '✅ Lead marcado como CONVERTIDO! Bryan vai aprender com esta abordagem.'
-          : '❌ Lead marcado como PERDIDO. Bryan vai evitar esta abordagem no segmento.';
+          ? '✅ Lead marcado como CONVERTIDO! Franz vai aprender com esta abordagem.'
+          : '❌ Lead marcado como PERDIDO. Franz vai evitar esta abordagem no segmento.';
       }
       Toast.success('Feedback "' + label + '" registrado com sucesso!');
       setTimeout(function(){ carregarKanban(); carregarKPIs(); }, 800);
@@ -3584,8 +3584,8 @@ async function atualizarUtiBadge() {
       posicao: 'right'
     },
     {
-      titulo: 'SDR Automático Bryan',
-      texto: 'O Bryan SDR entra em contato automaticamente pelo WhatsApp com cada lead qualificado. Configure na aba Perfil.',
+      titulo: 'SDR Automático Franz',
+      texto: 'O Franz SDR entra em contato automaticamente pelo WhatsApp com cada lead qualificado. Configure na aba Perfil.',
       alvo: '[data-view="perfil"]',
       posicao: 'right'
     }

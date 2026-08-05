@@ -114,7 +114,7 @@ Este documento descreve cada stage do pipeline de geração de landing pages, co
 | **Função** | `step_franz()` em `manager/agent.py` (linha 609) |
 | **Modelo** | Nenhum (marker — Franz roda via cron separado) |
 | **Input** | Lead com `status='concluido'` e `sdr_stage='pendente_wpp'` |
-| **Processamento** | Marca lead como pronto para outreach. Franz (Bryan) processa via cron dispatcher (`WORKER_JOB_TYPES` inclui `franz_outreach`) |
+| **Processamento** | Marca lead como pronto para outreach. Franz (Franz) processa via cron dispatcher (`WORKER_JOB_TYPES` inclui `franz_outreach`) |
 | **Output** | Lead entra na fila SDR — Franz envia primeira mensagem WhatsApp via meowhats API |
 | **Retry** | Franz tem seu próprio retry logic (defer loop com proximo slot válido 08:00-21h) |
 

@@ -54,7 +54,7 @@
 | 4 | `builder/agent.py` | Builder | Gera HTML chunked via OpenUI (4×18000=64000 tokens) | sonnet-4-6 | NAO |
 | 5 | `builder/quality_gate_v2/` | QA v2 | Vision QA — pontua design, repair loop se < 7.5 | gpt-4o-mini / 9router | NAO |
 | 6 | `manager/agent.py` (step_deploy) | Deploy | Salva HTML em /var/www/fralib/sites/ + metadata.json | — (sem LLM) | NAO |
-| 7 | `bryan.py` | Franz | SDR WhatsApp — outreach, follow-up, agendamento | haiku | NAO |
+| 7 | `Franz.py` | Franz | SDR WhatsApp — outreach, follow-up, agendamento | haiku | NAO |
 
 > **Nota:** Hunter está em `utils/agente1_hunter_v2.py`, não em `agents/`. Os passos Hunter → Caio → Arquiteto → Builder → QA v2 → Deploy → Franz são os 6 estados da FSM em `manager/agent.py` (linhas 87, 124, 191, 291, 497, 609).
 
@@ -70,7 +70,7 @@
 | `liam_lats.py` | Liam LATS | Language Agent Tree Search (experimental) | — |
 | `liam_moa.py` | Liam MOA | Mixture of Agents (experimental) | — |
 | `liam_models.py` | Liam Models | Definição de modelos do Liam | LLM Router |
-| `bryan_agent_loop.py` | Bryan Agent Loop | Loop de agentes do Bryan | Franz (via cron) |
+| `franz_agent_loop.py` | Franz Agent Loop | Loop de agentes do Franz | Franz (via cron) |
 | `liam_agent_loop.py` | Liam Agent Loop | Loop de agentes do Liam (legado) | — |
 | `theo_agent_loop.py` | Theo Agent Loop | Loop de agentes do Theo | — |
 | `arquiteto_agent_loop.py` | Arquiteto Agent Loop | Loop de agentes do Arquiteto | Pipeline FSM |
@@ -105,7 +105,7 @@
 | `unsplash_fetcher.py` | Busca imagens no Unsplash API por nicho/termo. | NAO |
 | `markdown_prd_parser.py` | Parseia PRDs em Markdown para estrutura interna. | NAO |
 | `llm_direct.py` | Chamada direta a LLM (bypass router). | NAO |
-| `bryan_tools.py` | Tools auxiliares do Franz (agendamento, parse). | NAO |
+| `franz_tools.py` | Tools auxiliares do Franz (agendamento, parse). | NAO |
 | `theo_tools.py` | Tools auxiliares do Theo (legado). | NAO |
 
 ### Agentes Arquivados (`_arquivo/`) — não usados, mantidos para referência (pode criar: NAO)
@@ -153,7 +153,7 @@
 | `falhas_endpoints.py` | Log e visualização de falhas de pipeline | NAO |
 | `site_editor_endpoints.py` | API do editor visual de sites | NAO |
 | `tracking_endpoints.py` | Tracking de visitas (site_visitas) | NAO |
-| `cron_endpoints.py` | Cron endpoints (Bryan outreach scheduling) | NAO |
+| `cron_endpoints.py` | Cron endpoints (Franz outreach scheduling) | NAO |
 | `blog_endpoints.py` | Gerenciamento de conteúdo do blog | NAO |
 | `obs_endpoints.py` | Observabilidade — health, métricas, status | NAO |
 | `queue_endpoints.py` | Status da fila de jobs, throughput | NAO |

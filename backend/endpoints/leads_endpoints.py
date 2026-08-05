@@ -848,14 +848,14 @@ async def enviar_mensagem_lead(lead_id: str, db: Session = Depends(get_db), usua
         raise HTTPException(500, "Erro ao verificar status do WhatsApp")
 
     # Gerar mensagem com franz
-    from agents.franz import iniciar_contato, BryanInput
-    bryan_input = BryanInput(
+    from agents.franz import iniciar_contato, FranzInput
+    franz_input = FranzInput(
         nome=nome, cidade=cidade or "", segmento=segmento or "",
         telefone=telefone or "", whatsapp=whatsapp or "",
         rating=rating or 0.0, site_url=site_url,
         score_caio=80, tier="STANDARD"
     )
-    bryan_output = iniciar_contato(bryan_input, user_id=tenant_id)
+    franz_output = iniciar_contato(franz_input, user_id=tenant_id)
 
     # Enviar via meowhats
     tel = (whatsapp or telefone or "").strip()
@@ -871,19 +871,19 @@ async def enviar_mensagem_lead(lead_id: str, db: Session = Depends(get_db), usua
         r_send = await c.post(
             f"{meowhats_url}/api/sessions/{wpp_tenant}/send",
             headers={"X-API-Key": meowhats_key},
-            json={"jid": jid, "type": "text", "text": bryan_output.reply}
+            json={"jid": jid, "type": "text", "text": franz_output.reply}
         )
         if r_send.status_code != 200:
             raise HTTPException(500, f"Falha no envio: {r_send.text[:100]}")
 
     # Se franz bloqueou (fora do horário), não enviar
-    if not bryan_output.reply or not bryan_output.reply.strip():
+    if not franz_output.reply or not franz_output.reply.strip():
         return {"ok": False, "mensagem": f"Fora do horário de atendimento — lead permanece na fila"}
 
     # Atualizar sdr_stage
     db.execute(text(
         "UPDATE leads SET sdr_stage=:stage, atualizado_em=NOW()::text WHERE id=:id AND user_id=:uid"
-    ), {"id": lead_id, "stage": bryan_output.next_stage or "hook", "uid": tenant_id})
+    ), {"id": lead_id, "stage": franz_output.next_stage or "hook", "uid": tenant_id})
     db.commit()
 
     adicionar_log(f"📱 Mensagem enviada para {nome} ({tel})", "success", tenant_id)

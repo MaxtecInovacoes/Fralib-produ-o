@@ -193,7 +193,7 @@ async def test_user_a_pode_dar_feedback_no_proprio_lead(
 async def test_user_b_nao_pode_enviar_mensagem_no_lead_do_a(
     db_session, http, two_users, lead_de_a
 ):
-    """User B tenta acionar Bryan no lead do A -> deve 404.
+    """User B tenta acionar Franz no lead do A -> deve 404.
        Mesmo que falhe por outra razao (WPP desconectado), sdr_stage NAO
        pode ser alterado."""
     _, user_b = two_users

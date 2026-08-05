@@ -127,7 +127,7 @@ com IA do Brasil. Seu feedback molda o produto.
 O que você ganha no Beta Pro (R$97/mês):
 ✓ Prospecção ilimitada via Google Maps
 ✓ Geração ilimitada de sites com IA
-✓ SDR Bryan com mensagens personalizadas
+✓ SDR Franz com mensagens personalizadas
 ✓ CRM completo com pipeline visual
 ✓ Deploy automático dos sites
 ✓ Suporte prioritário direto com o fundador
@@ -169,7 +169,7 @@ profissional (o mesmo padrão usado por empresas como Stripe e Linear),
 arquitetura multi-tenant segura, e agentes de IA que aprendem a cada interação."
 
 **"Agentes que se auto-aprendem"**
-→ "Cada conversa que o Bryan tem, cada site que a IA cria, cada lead que
+→ "Cada conversa que o Franz tem, cada site que a IA cria, cada lead que
 responde — tudo alimenta o sistema. Quanto mais você usa, melhor ele fica.
 Os agentes aprendem o que funciona no seu nicho e se adaptam."
 

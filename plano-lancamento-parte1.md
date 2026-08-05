@@ -298,7 +298,7 @@ NENHUM concorrente oferece o pipeline completo:
 4. **"SDR de IA: Como Automatizar Vendas pelo WhatsApp"**
    - Keyword: SDR IA WhatsApp
    - Tipo: educacional
-   - CTA: "conheça o Bryan"
+   - CTA: "conheça o Franz"
 
 5. **"Renda Extra com Sites: Guia Completo para Iniciantes"**
    - Keyword: renda extra vendendo sites

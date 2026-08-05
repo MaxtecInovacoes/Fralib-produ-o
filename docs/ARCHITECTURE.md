@@ -311,6 +311,6 @@ docker exec -it fralib-postgres-1 psql -U fralib_user -d fralib_db
 
 - Builder (`agents/builder/agent.py`) existe só na VPS — não no disco local
 - `pipeline_endpoints.py` tem 1664 linhas — aguardando refatoração
-- `bryan.py` tem 1362 linhas — próximo do limite
+- `Franz.py` tem 1362 linhas — próximo do limite
 - 3 workers consolidados em 1 (commit f47bd586)
 - OpenUI é o único gerador HTML (Liam removido)
