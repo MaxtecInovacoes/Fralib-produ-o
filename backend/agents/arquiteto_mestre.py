@@ -373,7 +373,6 @@ def gerar_arquiteto_mestre_prd(
     # PRD #8: Semantic Cache — reutilizar PRD se nicho+tier+direction já existe
     try:
         from prd_cache import buscar_prd_cache, adaptar_prd_template
-        from design_context import get_design_context
         _dc = get_design_context(segmento, dados_hunter.get("nome", ""))
         _direction = _dc.get("direction", "default") if _dc else "default"
         _cache_entry = buscar_prd_cache(segmento, caio_tier, _direction)

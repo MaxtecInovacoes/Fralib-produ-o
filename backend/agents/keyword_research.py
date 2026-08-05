@@ -47,12 +47,14 @@ QUERIES_CONCORRENCIA = {
 
 
 def _get_db_conn():
-    """Conexão PostgreSQL via DATABASE_URL do .env"""
+    """Conexão PostgreSQL via DATABASE_URL do ambiente"""
     import psycopg2
-    env = open('/root/fralib/.env').read()
-    m = re.search(r'DATABASE_URL=postgresql://([^:]+):([^@]+)@([^:]+):(\d+)/(\S+)', env)
+    db_url = os.getenv("DATABASE_URL")
+    if not db_url:
+        raise ValueError("DATABASE_URL não encontrada no ambiente")
+    m = re.search(r'postgresql://([^:]+):([^@]+)@([^:]+):(\d+)/(\S+)', db_url)
     if not m:
-        raise ValueError("DATABASE_URL não encontrada")
+        raise ValueError("DATABASE_URL com formato inválido")
     user, pwd, host, port, db = m.groups()
     return psycopg2.connect(host=host, port=int(port), dbname=db, user=user, password=pwd)
 
