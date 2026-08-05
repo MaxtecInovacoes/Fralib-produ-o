@@ -62,6 +62,7 @@ services:
       - fralib-logs:/app/logs
       - fralib-builder:/tmp/fralib_builder
       - /opt/fralib/data:/app/data
+      - /opt/fralib/backend:/app/backend
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
