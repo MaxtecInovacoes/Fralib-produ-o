@@ -132,7 +132,7 @@ class Trace:
 
 def salvar_trace(trace: Trace):
     try:
-        from database import engine
+        from backend.core.database import engine
         from sqlalchemy import text
         with engine.connect() as conn:
             conn.execute(text("""
