@@ -135,14 +135,18 @@ def _tenant_rate_alert(user_id, wait_seconds, calls_count):
 # ══════════════════════════════════════════════════════════════════
 import pathlib as _pathlib
 _env_paths = [
+    '/app/.env',
     '/root/fralib/.env',
     str(_pathlib.Path(__file__).parent.parent.parent / '.env'),
     str(_pathlib.Path(__file__).parent.parent / '.env'),
 ]
 for _env_path in _env_paths:
-    if _pathlib.Path(_env_path).exists():
-        load_dotenv(_env_path, override=True)
-        break
+    try:
+        if _pathlib.Path(_env_path).exists():
+            load_dotenv(_env_path, override=True)
+            break
+    except (PermissionError, OSError):
+        continue
 else:
     load_dotenv()
 
