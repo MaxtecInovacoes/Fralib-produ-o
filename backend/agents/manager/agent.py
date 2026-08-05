@@ -760,26 +760,8 @@ def run_pipeline(state: PipelineState) -> PipelineState:
     O Quality Gate tem contador de attempts interno (max 3), entao nao ha
     risco de loop infinito.
 
-    Custo: define RunContext (run_id, job_id, tenant_id, lead_id) no início,
-    faz aggregate_pipeline_usage(run_id) no fim (sucesso ou falha).
+    Custo: tracking via token_tracker existente.
     """
-    # 1. Set RunContext for cost tracking
-    from backend.agents.llm.context import set_run_context, RunContext, clear_run_context, update_run_context
-
-    ctx = RunContext(
-        run_id=state.run_id,
-        job_id=state.job_id if hasattr(state, 'job_id') and state.job_id else None,
-        tenant_id=state.tenant_id,
-        lead_id=state.lead_id,
-        phase="initializing",
-        agent="manager",
-        metadata={
-            "lead_nome": (state.lead_data or {}).get("nome", ""),
-            "nicho": state.segmento or (state.lead_data or {}).get("segmento", ""),
-        },
-    )
-    token = set_run_context(ctx)
-
     try:
         max_passes = 10  # safety contra loop inesperado
         passes = 0
@@ -811,10 +793,6 @@ def run_pipeline(state: PipelineState) -> PipelineState:
                         STATE_DONE: "manager",
                         STATE_FAILED: "manager",
                     }
-                    _ = update_run_context(
-                        phase=phase_map.get(new_state, new_state),
-                        agent=agent_map.get(new_state, "manager"),
-                    )
                     prev_state = new_state
                 if state.current_state in (STATE_DONE, STATE_FAILED):
                     break
@@ -825,27 +803,17 @@ def run_pipeline(state: PipelineState) -> PipelineState:
             state = _transition(state, STATE_FAILED)
         return state
     finally:
-        # 2. Aggregate cost at end (sempre, mesmo se falhou)
-        try:
-            from backend.agents.cost_tracker import aggregate_pipeline_usage
-            aggregate_pipeline_usage(state.run_id)
-        except Exception as exc:
-            logger.warning("[cost_tracker] aggregate no run_pipeline falhou: %s", exc)
         # 2.1 Deduzir créditos por custo real do pipeline (fail-safe)
         try:
             from backend.services.credits_manager import deduzir_creditos_por_pipeline
-            from backend.agents.llm.context import current_tenant_id
-            tid = current_tenant_id()
-            if tid and state.run_id:
+            if state.tenant_id and state.run_id:
                 result = deduzir_creditos_por_pipeline(
-                    tenant_id=tid,
+                    tenant_id=state.tenant_id,
                     run_id=state.run_id,
                 )
                 logger.info(
                     "[credits_manager] pipeline run_id=%s tenant_id=%d deduzidos=%d custo_usd=%.4f ok=%s",
-                    state.run_id, tid, result.get("deduzidos", 0), result.get("custo_usd", 0.0), result.get("ok"),
+                    state.run_id, state.tenant_id, result.get("deduzidos", 0), result.get("custo_usd", 0.0), result.get("ok"),
                 )
         except Exception as exc:
             logger.warning("[credits_manager] deducao no run_pipeline falhou run_id=%s: %s", state.run_id, exc)
-        # 3. Clear context
-        clear_run_context(token)
