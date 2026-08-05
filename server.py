@@ -10,12 +10,14 @@ from slowapi.errors import RateLimitExceeded
 import sys
 import os
 
-# Detectar ambiente Docker vs local
-# Docker: WORKDIR=/app, arquivos em /app/backend
-# Local: arquivos em /root/fralib/backend
+# Detectar ambiente: Docker (/app) vs systemd VPS (/opt/fralib) vs local (/root/fralib)
+# Prioridade: /app > /opt/fralib > /root/fralib
 if os.path.exists('/app/backend'):
     _BACKEND_ROOT = '/app/backend'
     _FRONTEND_ROOT = '/app'
+elif os.path.exists('/opt/fralib/backend'):
+    _BACKEND_ROOT = '/opt/fralib/backend'
+    _FRONTEND_ROOT = '/opt/fralib'
 else:
     _BACKEND_ROOT = '/root/fralib/backend'
     _FRONTEND_ROOT = '/root/fralib'
@@ -31,7 +33,8 @@ sys.path.insert(0, os.path.join(_BACKEND_ROOT, 'utils'))
 # Aplicar migrations Alembic — fonte de verdade do schema
 from alembic.config import Config as _AlembicConfig
 from alembic import command as _alembic_command
-_ALEMBIC_INI = os.path.join(os.path.dirname(os.path.abspath(__file__)), "alembic.ini")
+# alembic.ini está em _FRONTEND_ROOT (raiz do projeto)
+_ALEMBIC_INI = os.path.join(_FRONTEND_ROOT, "alembic.ini")
 try:
     _alembic_command.upgrade(_AlembicConfig(_ALEMBIC_INI), "head")
     print("[Startup] Alembic migrations aplicadas")
