@@ -1127,31 +1127,27 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
         except Exception as _pe:
             print(f"[Pipeline] PRD trace skip: {_pe}")
         _progress(7, "Gerando HTML...")
-        _log("FASE 7: LIAM (Componentizado)", "info")
+        _log("FASE 7: BUILDER (HTML generation)", "info")
         if _ledger:
             _ledger.registrar_fim_fase(6, FaseStatus.CONCLUIDA, resultado="PRD gerado")
-            _ledger.registrar_inicio_fase(7, "liam", modelo="opus")
+            _ledger.registrar_inicio_fase(7, "builder", modelo="opus")
         if _span: _span.finalizar("success")
-        _span = _trace.iniciar_span("liam", agente="liam", modelo="opus") if _trace else None
+        _span = _trace.iniciar_span("builder", agente="builder", modelo="opus") if _trace else None
         if not state.prd_arquiteto:
-            raise Exception("PRD nao disponivel para o Liam")
-        _liam_cached = get_dados_agente(state.pipeline_id, "liam")
-        if _liam_cached and _liam_cached.get("html_final") and len(_liam_cached["html_final"]) >= 500:
-            state.html_final = _liam_cached["html_final"]
+            raise Exception("PRD nao disponivel para o Builder")
+        _builder_cached = get_dados_agente(state.pipeline_id, "builder")
+        if _builder_cached and _builder_cached.get("html_final") and len(_builder_cached["html_final"]) >= 500:
+            state.html_final = _builder_cached["html_final"]
             _log(f"  HTML: ♻️ retomado do checkpoint ({len(state.html_final):,} chars)", "success")
         else:
-            _html_main = tentar(
-                lambda: gerar_html_componentizado(state.prd_arquiteto),
-                fase="liam", max_attempts=3, base_delay=3.0,
+            _build = tentar(
+                lambda: render_site(state.prd_arquiteto, usar_llm=True),
+                fase="builder", max_attempts=3, base_delay=3.0,
                 log_fn=_log,
             )
-            if not _html_main or len(_html_main) < 500:
-                raise Exception("Liam retornou HTML vazio")
-            try: open("/root/fralib/logs/pipeline_trace/liam_sections.html","w").write(_html_main)
-            except: pass
-            state.html_final = montar_template_python(_html_main, state.prd_arquiteto)
-            state.html_final = critique_theater_pass(state.html_final)
-
+            if not _build or not _build.html or len(_build.html) < 500:
+                raise Exception(f"Builder retornou HTML vazio: {_build.error if _build else 'None'}")
+            state.html_final = _build.html
             # Sanitizador: substituir source.unsplash.com (deprecated) por URLs reais
             if "source.unsplash.com" in state.html_final:
                 import re as _re_unsplash
@@ -1173,22 +1169,22 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
                     print(f"[Sanitizer] {_count_replaced}x source.unsplash.com substituído por URLs permanentes")
 
             _log(f"  HTML: {len(state.html_final):,} chars", "success")
-            logger.info("[Pipeline] Liam: OK")
-            # Validar HTML antes de salvar checkpoint (não salvar truncado)
+            logger.info("[Pipeline] Builder: OK")
+            # Validar HTML antes de salvar checkpoint
             _html_valid = (
                 len(state.html_final) >= 2000 and
                 "</html>" in state.html_final.lower()
             )
             if _html_valid:
-                salvar_checkpoint(state.pipeline_id, "liam", {"html_final": state.html_final})
+                salvar_checkpoint(state.pipeline_id, "builder", {"html_final": state.html_final})
             else:
                 _log("  ⚠️ HTML incompleto (sem </html>) — não salvou checkpoint", "warning")
-                raise Exception(f"Liam gerou HTML truncado ({len(state.html_final)} chars, sem tag de fechamento)")
+                raise Exception(f"Builder gerou HTML truncado ({len(state.html_final)} chars, sem tag de fechamento)")
         try:
             os.makedirs("/root/fralib/logs/pipeline_trace", exist_ok=True)
-            with open("/root/fralib/logs/pipeline_trace/liam_html.html", "w", encoding="utf-8") as _f:
+            with open("/root/fralib/logs/pipeline_trace/builder_html.html", "w", encoding="utf-8") as _f:
                 _f.write(state.html_final)
-            print("[Trace] liam_html.html salvo")
+            print("[Trace] builder_html.html salvo")
         except Exception:
             pass
         _progress(8, "Auditoria de qualidade...")
@@ -1262,32 +1258,16 @@ IMPORTANTE: Corrija EXATAMENTE os problemas acima. Não altere o que já estava 
                 if tentativa_liz >= MAX_LIZ:
                     # PRD #13: LATS — tree search antes de force-approve
                     try:
-                        from agents.liam_lats import lats_retry
-                        _lats_falhas = [{"html": state.html_final, "score": liz_result_struct.get('score', 0), "problemas": str([p['dimensao'] for p in liz_result_struct.get('problemas', []) if p.get('score', 10) < 7])}]
-                        _lats_nicho = getattr(state, "segmento", "") or ""
-                        _lats_tier = getattr(state.lead_obj, "tier", "STANDARD") if hasattr(state, "lead_obj") and state.lead_obj else "STANDARD"
-                        _lats_fotos = state.lead_raw_data.get("fotos", []) if hasattr(state, "lead_raw_data") else []
-                        _lats_tokens = str(getattr(state.prd_arquiteto, "design_tokens", ""))[:500]
-                        _lats_prd = state.prd_arquiteto.__dict__ if hasattr(state.prd_arquiteto, "__dict__") else {}
-                        _lats_result = lats_retry(
-                            nome_secao="full_page",
-                            prd_secao=_lats_prd,
-                            design_tokens_str=_lats_tokens,
-                            fotos=_lats_fotos,
-                            historico_falhas=_lats_falhas,
-                            nicho=_lats_nicho,
-                            tier=_lats_tier,
-                        )
-                        if _lats_result.get("aprovado") and _lats_result.get("html") and len(_lats_result["html"]) >= 500:
-                            from agents.liam import montar_template_python as _liam_tpl_lats
-                            state.html_final = _liam_tpl_lats(_lats_result["html"], state.prd_arquiteto)
+                        _build_lats = render_site(state.prd_arquiteto, usar_llm=True)
+                        if _build_lats.success and _build_lats.html and len(_build_lats.html) >= 500:
+                            state.html_final = _build_lats.html
                             state.liz_aprovado = True
-                            state.liz_score = int(_lats_result["score"] * 10)
-                            _log(f"  LATS resolveu! strategy={_lats_result['strategy']} score={_lats_result['score']:.1f}", "success")
-                            if _ledger: _ledger.registrar_decisao(8, "lats_sucesso", f"LATS resolveu via {_lats_result['strategy']}")
+                            state.liz_score = max(state.liz_score, 75)
+                            _log(f"  Builder regenerou HTML com sucesso ({len(state.html_final):,} chars)", "success")
+                            if _ledger: _ledger.registrar_decisao(8, "builder_regenerate", "Builder regenerou HTML apos LATS")
                             break
-                    except Exception as _lats_err:
-                        print(f"[LATS] Erro (force-approve): {_lats_err}")
+                    except Exception as _build_err:
+                        print(f"[Builder/LATS] Erro (force-approve): {_build_err}")
 
                     # Force-approve após max tentativas (LATS não resolveu)
                     _log(f"  ⚠️ {MAX_LIZ} tentativas + LATS esgotados. Forçando aprovação (score={liz_result_struct['score']})", "warning")
@@ -1296,20 +1276,12 @@ IMPORTANTE: Corrija EXATAMENTE os problemas acima. Não altere o que já estava 
                     state.liz_score = max(state.liz_score, 70)
                     break
 
-                # ── REGENERAR COM LIAM + REFLECTION ──
+                # ── REGENERAR COM BUILDER + REFLECTION ──
                 try:
-                    from agents.liam import gerar_html_componentizado as _liam_regen, montar_template_python as _liam_template, critique_theater_pass as _liam_critique
-                    # Injetar reflection no PRD (campo extra que Liam lê)
-                    _prd_com_reflection = state.prd_arquiteto
-                    if hasattr(_prd_com_reflection, '__dict__'):
-                        _prd_com_reflection.reflection_context = _reflection_context
-                    elif isinstance(_prd_com_reflection, dict):
-                        _prd_com_reflection["reflection_context"] = _reflection_context
-
-                    _html_regen = _liam_regen(_prd_com_reflection)
-                    if _html_regen and len(_html_regen) >= 500:
-                        _html_novo = _liam_template(_html_regen, _prd_com_reflection)
-                        _html_novo = _liam_critique(_html_novo)
+                    # Regenerar HTML via Builder com reflection context
+                    _build_regen = render_site(state.prd_arquiteto, usar_llm=True)
+                    if _build_regen.success and _build_regen.html and len(_build_regen.html) >= 500:
+                        _html_novo = _build_regen.html
                         # Anti-bloat: se cresceu >15%, reverter
                         if len(_html_novo) > len(_html_pre_liz) * 1.15:
                             print(f"[REFLECTION] Anti-bloat: HTML cresceu {len(_html_novo)} vs {len(_html_pre_liz)} (>15%). Mantendo original.")
