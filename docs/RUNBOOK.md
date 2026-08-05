@@ -14,7 +14,7 @@ ssh -i ~/.ssh/id_ed25519 root@100.124.56.36
 
 # Containers
 docker ps                       # status atual
-docker logs -f fralib-app-1     # API FastAPI
+systemctl status fralib-api      # API FastAPI (systemd)
 docker logs -f fralib-worker-1  # worker unificado (pipeline + supply + Franz)
 journalctl -u fralib-openui -f  # OpenUI HTML generation
 
@@ -55,7 +55,7 @@ WHERE status='running' AND worker_heartbeat < NOW() - INTERVAL '5 minutes';
 ### Restart seguro
 ```bash
 docker compose -f docker-compose.prod.yml restart fralib-worker-1
-# NAO restart fralib-app-1 sem motivo — quebra jobs em_andamento
+# NAO restart fralib-api sem motivo — quebra jobs em_andamento
 ```
 
 ---
@@ -152,7 +152,7 @@ ORDER BY n_dead_tup DESC LIMIT 10;
 docker exec fralib-postgres-1 vacuumdb -U fralib_user -d fralib_db --analyze
 
 # Limpar checkpoints expirados (>24h) — backend/agents/pipeline_checkpoint.py
-docker exec fralib-app-1 python -c "from agents.pipeline_checkpoint import limpar_checkpoints_expirados; limpar_checkpoints_expirados(24)"
+systemctl restart fralib-api && sleep 3 && journalctl -u fralib-api --since "1 min ago" | grep "limpar_checkpoints"
 
 # Limpar pipeline_traces > 30 dias
 docker exec fralib-postgres-1 psql -U fralib_user -d fralib_db -c \
@@ -195,7 +195,7 @@ curl -H "X-API-Key: $MEOWHATS_KEY" http://localhost:3001/api/sessions/1/status
 SELECT count(*) FROM jobs WHERE tipo='franz_outreach' AND status='pending';
 
 # Agent loop desativado?
-docker logs fralib-app-1 | grep -i "Franz agent loop"
+journalctl -u fralib-api | grep -i "Franz agent loop"
 # Procure por: "Franz agent loop falhou, fallback legacy"
 ```
 
@@ -232,7 +232,7 @@ git push origin master
 ```bash
 # Checkout do commit anterior
 cd /opt/fralib && git checkout HEAD~1 -- backend/
-docker compose -f docker-compose.prod.yml restart fralib-app-1 fralib-worker-1
+systemctl restart fralib-api fralib-worker
 
 # LEMBRETE: isso é mutação direta na VPS. Só com autorização.
 # Regra #7: preferir git push normal.

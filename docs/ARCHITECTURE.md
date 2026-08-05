@@ -283,7 +283,7 @@ editar local → git add → git commit → git push origin master
 
 ```bash
 # Logs
-docker logs -f fralib-app-1
+journalctl -u fralib-api -f
 docker logs -f fralib-worker-pipeline-1
 journalctl -u fralib-openui -f
 

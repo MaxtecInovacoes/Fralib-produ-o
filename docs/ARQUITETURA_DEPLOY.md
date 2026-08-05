@@ -27,8 +27,8 @@
 │  │  /opt/fralib/docker-compose.prod.yml                     │   │
 │  │                                                          │   │
 │  │  ┌────────────────┐  ┌────────────────┐  ┌───────────┐ │   │
-│  │  │ fralib-app-1   │  │   worker-1    │  │ postgres-1│ │   │
-│  │  │ FastAPI :8000  │  │ unificado      │  │ :15434    │ │   │
+│  │  │ fralib-api     │  │   worker-1    │  │ postgres-1│ │   │
+│  │  │ (systemd)      │  │ unificado      │  │ :15434    │ │   │
 │  │  │ 8001→8000      │  │ (pipeline+     │  │           │ │   │
 │  │  │                │  │  supply+Franz) │  │           │ │   │
 │  │  └────────────────┘  └────────────────┘  └───────────┘ │   │
@@ -150,7 +150,7 @@ server {
     server_name app.seunegociofralib.site;
 
     location / {
-        proxy_pass http://127.0.0.1:8001;  # fralib-app-1 mapeado para :8001
+        proxy_pass http://127.0.0.1:8000;  # fralib-api (systemd uvicorn)
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -183,12 +183,12 @@ server {
 | `/var/lib/docker/volumes/fralib_fralib-postgres/_data/` | Dados do Postgres |
 | `/var/lib/docker/volumes/fralib_fralib-logs/_data/` | Logs da app |
 
-### Dentro do container fralib-app-1
+### Dentro do serviço fralib-api (systemd)
 
 | Caminho | Conteúdo |
 |---------|----------|
-| `/app/server.py` | API FastAPI (vem de `COPY . /app`) |
-| `/app/backend/` | Código backend (vem do volume `/opt/fralib/backend`) |
+| `/opt/fralib/server.py` | API FastAPI (executada por uvicorn via systemd) |
+| `/opt/fralib/backend/` | Código backend |
 | `/app/.env` | Não existe (env vars vêm do docker-compose) |
 | `/app/test_chain.py` | Script E2E (copiado manualmente) |
 | `/var/www/fralib/sites/` | Sites deployados (volume `fralib-sites`) |
@@ -270,7 +270,7 @@ docker logs -f fralib-worker-pipeline-1
 journalctl -u fralib-openui -f
 
 # API
-docker logs -f fralib-app-1
+journalctl -u fralib-api -f  # API FastAPI (systemd)
 
 # Postgres (queries lentas)
 docker logs -f fralib-postgres-1

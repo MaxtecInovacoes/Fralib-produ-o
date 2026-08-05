@@ -86,7 +86,7 @@ worker:
 
 | Container | Função |
 |-----------|--------|
-| `fralib-app-1` | API FastAPI |
+| `fralib-api` (systemd) | API FastAPI |
 | `fralib-postgres-1` | PostgreSQL |
 | `fralib-redis-1` | Redis |
 | `fralib-worker-1` | Worker unificado |

@@ -56,7 +56,7 @@ Dominio:  https://app.seunegociofralib.site
 ### Containers Docker
 | Container | Funcao | Porta | Status |
 |-----------|--------|-------|--------|
-| fralib-app-1 | API FastAPI | 8001→8000 | healthy |
+| fralib-api (systemd) | API FastAPI | 8000 | active |
 | fralib-worker-1 | Worker unificado (pipeline + supply + Franz) | - | running |
 | fralib-postgres-1 | PostgreSQL | 15434→5432 | healthy |
 | fralib-redis-1 | Cache | 16379→6379 | healthy |
@@ -98,7 +98,7 @@ NODE_ENV=production
 
 - Worker unificado: `docker logs -f fralib-worker-1`
 - OpenUI: `journalctl -u fralib-openui -f`
-- App: `docker logs -f fralib-app-1`
+- App (API): `systemctl status fralib-api`
 
 ## Arquivos Principais
 

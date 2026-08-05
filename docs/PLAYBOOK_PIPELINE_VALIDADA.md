@@ -52,7 +52,7 @@ Domínio:  https://app.seunegociofralib.site
 
 | Container | Função | Porta | Status |
 |-----------|--------|-------|--------|
-| `fralib-app-1` | API FastAPI | 8001→8000 | healthy |
+| `fralib-api` (systemd) | API FastAPI | 8000 | active |
 | `fralib-worker-pipeline-1` | Consome fila pipeline_lead | - | running |
 | `fralib-worker-cron-1` | lead_supply_hunter, lead_production_tick | - | healthy |
 | `fralib-worker-franz-1` | SDR WhatsApp | - | healthy |
@@ -106,13 +106,10 @@ docker exec fralib-postgres-1 pg_isready -U fralib_user -d fralib_db
 
 ### 2. Teste E2E Isolado (qualquer lead do tenant 2)
 
-O script `test_chain.py` está em `/opt/fralib/test_chain.py` e também em `/app/test_chain.py` dentro do container `fralib-app-1`.
+O script `test_chain.py` está em `/opt/fralib/test_chain.py`.
 
 ```bash
-# Executar de dentro do container (recomendado — tem todas as deps)
-docker exec fralib-app-1 python /app/test_chain.py
-
-# OU executar direto (requer venv ativo)
+# Executar direto (requer venv ativo)
 cd /opt/fralib && .venv/bin/python test_chain.py
 ```
 
@@ -194,13 +191,13 @@ DeployFlow retorna **HTTP 529** ("model overloaded") quando recebe payloads gran
 ### Deploy
 - Push: `git push origin master` → post-receive hook na VPS
 - Não rebuildar containers sem necessidade — volumes persistem mudanças em `/opt/fralib/backend/`
-- Para mudanças em `agent.py` ou outros arquivos do `backend/`: rebuild só `fralib-app` + `worker-pipeline`
+- Para mudanças em `agent.py` ou outros arquivos do `backend/`: restart `fralib-api` (systemd) + `fralib-worker`
 - Para mudanças em `openui-service/`: restart `fralib-openui` (systemd)
 
 ### Logs
-- Worker pipeline: `docker logs -f fralib-worker-pipeline-1`
+- Worker unificado: `docker logs -f fralib-worker-1`
 - OpenUI: `journalctl -u fralib-openui -f`
-- App: `docker logs -f fralib-app-1`
+- API: `journalctl -u fralib-api -f`
 
 ---
 
@@ -263,7 +260,7 @@ curl -s http://localhost:3333/health
 # Esperado: {"status":"ok","service":"fralib-openui-chunked"}
 
 # 3. Test E2E
-docker exec fralib-app-1 python /app/test_chain.py 2>&1 | grep -E "OK|FAIL|DONE"
+cd /opt/fralib && .venv/bin/python test_chain.py 2>&1 | grep -E "OK|FAIL|DONE"
 # Esperado: 8 linhas "OK", 0 "FAIL", 1 "DONE"
 
 # 4. Site acessível

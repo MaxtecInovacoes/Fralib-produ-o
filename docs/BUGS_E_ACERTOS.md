@@ -178,14 +178,16 @@ f"{_public_url}/sites/{tenant_id}/"
 **Decisão:** Eu (cérebro) assumi o papel de mecânico via SSH + scripts Python
 **Resultado:** Avanço mesmo sem Claude Code disponível
 
-### D2. Container fralib-app-1 sem mount de /opt/fralib/backend
+### D2. API rodando via systemd, não mais como container Docker
 
-**Contexto:** Mudanças em `/opt/fralib/backend/` no host NÃO refletiam no container (código vinha de `COPY . /app` no Dockerfile)
-**Decisão:** Rebuildar imagem Docker após cada mudança em `agent.py` ou `services/`
+**Contexto:** Container `fralib-app-1` tinha problema de mount de `/opt/fralib/backend` (código vinha de `COPY . /app` no Dockerfile). Mudanças no host não refletiam no container.
+**Decisão:** Migrar API para systemd (`fralib-api.service`) executando `/opt/fralib/server.py` diretamente com uvicorn. Elimina problema de mount e rebuild de imagem.
 **Comando:**
 ```bash
-cd /opt/fralib && docker compose -f docker-compose.prod.yml build app && docker compose -f docker-compose.prod.yml up -d app
+systemctl status fralib-api    # verificar status
+journalctl -u fralib-api -f    # logs
 ```
+**Lição:** Quando o código vive no host e não precisa de isolamento de container, systemd é mais simples que Docker para a API.
 
 ### D3. Claude Code editou arquivos sem verificar coluna existente
 
