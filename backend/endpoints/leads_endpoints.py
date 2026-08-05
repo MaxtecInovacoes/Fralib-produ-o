@@ -339,7 +339,7 @@ async def _gerar_site_manual(lead_id: str, req: LeadManualRequest, user_id):
     from database import engine
     from sqlalchemy import text as _text
     try:
-        from agents.liam import gerar_html_componentizado, montar_template_python
+        from agents.builder.agent import render_site
         from agents.arquiteto_mestre import gerar_arquiteto_mestre_prd
         _use_agent = os.getenv("ARQUITETO_AGENT_LOOP", "0") == "1"
         if _use_agent:
@@ -383,8 +383,8 @@ async def _gerar_site_manual(lead_id: str, req: LeadManualRequest, user_id):
             caio_motivo="Lead manual",
             briefing_theo=req.briefing or ""
         )
-        html_main = gerar_html_componentizado(prd)
-        html_final = montar_template_python(html_main, prd)
+        _build = render_site(prd, usar_llm=True)
+        html_final = _build.html if _build and _build.html else ""
         if html_final:
             import re as _re_slug
             # Sanitizar: so a-z, 0-9 e hifen. Evita command/path injection no web_dir.

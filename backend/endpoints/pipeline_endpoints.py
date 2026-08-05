@@ -2371,13 +2371,12 @@ async def _executar_pipeline_a_partir_fase2(state, tenant_id, config):
             keyword_research=state.keyword_research,
         )
 
-        # Liam
-        _log("FASE 7: LIAM", "info")
+        # Builder
+        _log("FASE 7: BUILDER", "info")
         from agents.builder.agent import render_site, BuildResult
-        _html_main = gerar_html_componentizado(state.prd_arquiteto)
-        state.html_final = montar_template_python(_html_main, state.prd_arquiteto)
-        state.html_final = critique_theater_pass(state.html_final)
-        logger.info(f"[Pipeline] Liam: OK | {len(state.html_final):,} chars")
+        _build = render_site(state.prd_arquiteto, usar_llm=True)
+        state.html_final = _build.html if _build and _build.html else ""
+        logger.info(f"[Pipeline] Builder: OK | {len(state.html_final):,} chars")
 
         # Liz
         _log("FASE 8: LIZ", "info")
