@@ -42,43 +42,9 @@ services:
       retries: 10
     restart: unless-stopped
 
-  app:
-    build: .
-    env_file:
-      - .env
-    environment:
-      DATABASE_URL: postgresql://fralib_user:fralib_dev_password@postgres:5432/fralib_db
-      REDIS_URL: redis://redis:6379/0
-      FRALIB_SITES_DIR: /var/www/fralib/sites
-      FRALIB_SITES_ROOT: /var/www/fralib/sites
-      FRALIB_BUILDER_SANDBOX_ROOT: /tmp/fralib_builder
-      FRALIB_BUILDER_MANIFEST_DIR: /app/logs/builder_manifests
-      MEOWHATS_URL: http://host.docker.internal:3002
-      FRALIB_SKIP_HTML_QUALITY_GATE: "0"
-    ports:
-      - "8001:8000"
-    volumes:
-      - fralib-sites:/var/www/fralib/sites
-      - fralib-logs:/app/logs
-      - fralib-builder:/tmp/fralib_builder
-      - /opt/fralib/data:/app/data
-      - /opt/fralib/backend:/app/backend
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8000/health >/dev/null || exit 1"]
-      interval: 30s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
-    restart: unless-stopped
-    command: ["python", "server.py"]
-
+  # ===================================================================
+  # API removida do Docker — executada via systemd (fralib-api.service)
+  # em /opt/fralib/server.py com uvicorn containerless
   # ===================================================================
   # Worker unificado (substitui worker-pipeline + worker-cron + worker-franz)
   #
