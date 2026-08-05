@@ -56,7 +56,7 @@ _THEO_AGENT = os.getenv("THEO_AGENT_LOOP", "0") == "1"
 if _THEO_AGENT:
     from agents.theo_agent_loop import gerar_briefing_estrategico_agent as _gerar_briefing_agent
 from agents.pipeline_checkpoint import salvar_checkpoint, limpar_checkpoint, gerar_pipeline_id, agente_concluido, get_dados_agente, resumo_checkpoint
-from agents.liam import gerar_html_componentizado, montar_template_python, critique_theater_pass
+from agents.builder.agent import render_site, BuildResult
 from agents.arquiteto_mestre import gerar_arquiteto_mestre_prd
 # Managed Agent (feature flag: ARQUITETO_AGENT_LOOP=1)
 _ARQUITETO_AGENT = os.getenv("ARQUITETO_AGENT_LOOP", "0") == "1"
@@ -64,7 +64,7 @@ if _ARQUITETO_AGENT:
     from agents.arquiteto_agent_loop import gerar_arquiteto_mestre_prd_agent as _gerar_prd_agent
 from agents.liz import auditar, editar_secao as liz_editar_secao, listar_secoes as liz_listar_secoes, auditar_secao_estruturado
 from agents.franz import iniciar_contato, FranzInput
-from agents.liam_models import LiamOutput
+# LiamOutput removido - usar BuildResult do builder
 from services.credits_manager import verificar_pode_executar, consume_tokens, validar_permissao_pipeline, consumir_credito_diario
 from pipeline_queue_manager import pipeline_queue  # DEPRECATED: mantido apenas para /fila endpoint
 from retry_helper import tentar
@@ -2401,7 +2401,7 @@ async def _executar_pipeline_a_partir_fase2(state, tenant_id, config):
 
         # Liam
         _log("FASE 7: LIAM", "info")
-        from agents.liam import gerar_html_componentizado, montar_template_python, critique_theater_pass
+        from agents.builder.agent import render_site, BuildResult
         _html_main = gerar_html_componentizado(state.prd_arquiteto)
         state.html_final = montar_template_python(_html_main, state.prd_arquiteto)
         state.html_final = critique_theater_pass(state.html_final)

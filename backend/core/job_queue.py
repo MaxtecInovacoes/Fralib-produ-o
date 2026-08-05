@@ -98,8 +98,10 @@ def claim_next(
     filtro_tipo = ""
     params: Dict[str, Any] = {"worker_id": worker_id}
     if tipos:
-        filtro_tipo = "AND tipo = ANY(:tipos)"
-        params["tipos"] = tipos
+        _tipo_placeholders = ", ".join(f":t{i}" for i in range(len(tipos)))
+        filtro_tipo = f"AND tipo IN ({_tipo_placeholders})"
+        for i, t in enumerate(tipos):
+            params[f"t{i}"] = t
     filtro_global = ""
     if _MAX_PIPELINES_GLOBAL > 0:
         filtro_global = """

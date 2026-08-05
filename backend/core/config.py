@@ -22,10 +22,7 @@ def _get_superadmin_emails() -> Set[str]:
     """Retorna emails de superadmin do .env (suporta múltiplos separados por vírgula)."""
     raw = os.getenv("SUPERADMIN_EMAIL", "").strip()
     if not raw:
-        raise ValueError(
-            "SUPERADMIN_EMAIL não configurado no .env. "
-            "Adicione pelo menos um email de superadmin."
-        )
+        return set()  # No superadmin configured — safe default
     return set(email.strip() for email in raw.split(",") if email.strip())
 
 SUPERADMIN_EMAILS = _get_superadmin_emails()
