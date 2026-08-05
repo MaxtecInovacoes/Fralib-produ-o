@@ -7,7 +7,7 @@ import os
 import time
 import re
 import json
-sys.path.insert(0, "/root/fralib/backend/agents")
+sys.path.insert(0, "/app/backend/agents")
 
 # Managed Agent: validação + auto-correção por seção (sempre ativo)
 _LIAM_AGENT_LOOP = True

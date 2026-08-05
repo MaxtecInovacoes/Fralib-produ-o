@@ -1,5 +1,5 @@
 import sys
-sys.path.insert(0, "/root/fralib/backend/agents")
+sys.path.insert(0, "/app/backend/agents")
 """
 Designer PRD - Agente que gera PRD detalhado para sites (HTTP direto)
 """

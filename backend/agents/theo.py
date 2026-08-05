@@ -1,5 +1,5 @@
 import sys
-sys.path.insert(0, "/root/fralib/backend/agents")
+sys.path.insert(0, "/app/backend/agents")
 """
 Theo - Estrategista / PRD + Jina AI Research
 """

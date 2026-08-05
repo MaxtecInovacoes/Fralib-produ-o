@@ -1,5 +1,5 @@
 import sys
-sys.path.insert(0, "/root/fralib/backend/agents")
+sys.path.insert(0, "/app/backend/agents")
 """
 Caio - Qualificador de Leads (Python puro, zero LLM)
 Regras determinísticas de if/else.

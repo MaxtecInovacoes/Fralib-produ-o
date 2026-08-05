@@ -9,7 +9,7 @@ import json
 import re
 import urllib.request
 import urllib.parse
-sys.path.insert(0, "/root/fralib/backend/agents")
+sys.path.insert(0, "/app/backend/agents")
 
 from llm_direct import call_claude
 from designer_prd import DesignerPRD, ColorPalette, AnimationSpec, SectionSpec
