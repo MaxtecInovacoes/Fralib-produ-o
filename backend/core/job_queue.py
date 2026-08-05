@@ -39,6 +39,7 @@ def enqueue(
     checkpoint_id: Optional[str] = None,
     delay_seconds: int = 0,
     priority: int = 2,
+    run_id: Optional[str] = None,
 ) -> Optional[int]:
     """
     Enfileira um job. Retorna o job_id, ou None se ja existia um com a mesma
@@ -50,9 +51,9 @@ def enqueue(
     try:
         row = db.execute(text("""
             INSERT INTO jobs (tipo, payload, tenant_id, max_attempts,
-                              idempotency_key, checkpoint_id, next_retry_at, priority)
+                              idempotency_key, checkpoint_id, next_retry_at, priority, run_id)
             VALUES (:tipo, CAST(:payload AS jsonb), :tenant_id, :max_attempts,
-                    :idem, :ckpt, :next_retry_at, :priority)
+                    :idem, :ckpt, :next_retry_at, :priority, :run_id)
             ON CONFLICT (idempotency_key) DO NOTHING
             RETURNING id
         """), {
@@ -64,6 +65,7 @@ def enqueue(
             "ckpt": checkpoint_id,
             "next_retry_at": next_retry_at,
             "priority": priority,
+            "run_id": run_id,
         }).fetchone()
         db.commit()
         return row[0] if row else None
