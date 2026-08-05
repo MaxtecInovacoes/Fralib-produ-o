@@ -7,15 +7,15 @@ retry; o resto sobe direto e o operador trata.
 
 Uso decorador (em funcoes novas):
 
-    @com_retry(fase="liam", max_attempts=3, base_delay=2)
-    def gerar_html_componentizado(prd):
+    @com_retry(fase="builder_renderer", max_attempts=3, base_delay=2)
+    def gerar_html_builder_renderer(prd):
         ...
 
 Uso imperativo (em chamadas existentes, menos invasivo):
 
     state.html_final = tentar(
-        lambda: gerar_html_componentizado(state.prd_arquiteto),
-        fase="liam", max_attempts=3, base_delay=2,
+        lambda: gerar_html_builder_renderer(state.prd_arquiteto),
+        fase="builder_renderer", max_attempts=3, base_delay=2,
     )
 
 Backoff: base_delay * 2^(attempt-1) com jitter de +/-20%. Ex base_delay=2:
@@ -150,8 +150,8 @@ def com_retry(fase: str, max_attempts: int = 3, base_delay: float = 2.0, max_del
     """
     Decorator. Suporta funcoes sync e async automaticamente.
 
-        @com_retry(fase="liam", max_attempts=3)
-        def gerar_html_componentizado(prd):
+        @com_retry(fase="builder_renderer", max_attempts=3)
+        def gerar_html_builder_renderer(prd):
             ...
     """
     def deco(fn):

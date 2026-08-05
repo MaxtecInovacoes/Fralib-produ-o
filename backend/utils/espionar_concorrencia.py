@@ -361,38 +361,120 @@ def mapear_atributos_para_servicos(atributos: list, nicho: str = "") -> list:
     return servicos[:8]  # Max 8 serviços
 
 
-def gerar_seo_context(nicho: str, cidade: str, nome: str, paa: list = None,
-                      rating: float = 0, total_reviews: int = 0) -> dict:
-    """
-    Gera contexto SEO local pra alimentar o Arquiteto.
-    Keywords, meta desc sugerida, H1 sugerido.
-    """
-    keyword_primaria = f"{nicho} {cidade}".lower()
-    keywords_long = [
-        f"{nicho} {cidade} perto de mim",
-        f"melhor {nicho} {cidade}",
-        f"{nicho} {cidade} aberto agora",
-        f"{nicho} {cidade} delivery",
-    ]
+def _extrair_keywords_reais(keyword_research_text: str) -> list:
+    """Extrai keywords reais do texto de pesquisa de keywords (Jina + Google Suggest)."""
+    if not keyword_research_text:
+        return []
 
+    keywords = []
+    lines = keyword_research_text.split('\n')
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+
+        # Pular títulos, seções e instruções
+        if line.startswith('===') or line.startswith('INSTR') or line.isupper() or line.endswith(':'):
+            continue
+        # Pular linhas de seção (palavras-chave específicas)
+        titulos_secao = ['BUSCAS REAIS', 'INTEN', 'CONCORR', 'Atualizado', 'Pesquisando', 'Cache']
+        if any(line.startswith(t) for t in titulos_secao):
+            continue
+
+        # Stripar bullet "  - " ou "  -" no início
+        if line.startswith('  - '):
+            kw = line[4:].strip()
+        elif line.startswith('  -'):
+            kw = line[3:].strip()
+        elif line.startswith('- '):
+            kw = line[2:].strip()
+        else:
+            kw = None
+
+        if kw:
+            # Validar: 3-100 chars, 2+ palavras, sem caracteres especiais demais
+            if 3 <= len(kw) <= 100 and len(kw.split()) >= 2:
+                if not any(c in kw for c in ['#', '`', '?', '!', '|', '—', '>>']):
+                    keywords.append(kw)
+
+    return list(dict.fromkeys(keywords))  # dedup
+
+
+def _extrair_keywords_jina(jina_insights: str) -> list:
+    """Extrai keywords e insights do jina_insights."""
+    if not jina_insights:
+        return []
+
+    keywords = []
+    # Tentar extrair do bloco de keywords se existir
+    lines = jina_insights.split('\n')
+    for line in lines:
+        line = line.strip()
+        if len(line) > 5 and len(line) < 80:
+            words = line.split()
+            if 2 <= len(words) <= 6:
+                # Filtrar linhas que parecem keywords (não são perguntas, não começam com maiúscula isolada)
+                if not line.endswith('?') and not line.startswith('#'):
+                    keywords.append(line)
+    return list(dict.fromkeys(keywords))[:5]  # Máximo 5 do Jina
+
+
+def gerar_seo_context(nicho: str, cidade: str, nome: str, paa: list = None,
+                      rating: float = 0, total_reviews: int = 0,
+                      keyword_research: str = "", jina_insights: str = "") -> dict:
+    """
+    Gera contexto SEO local usando dados REAIS de pesquisa (Jina + Google Suggest).
+    Se keyword_research vier vazio, pesquisa agora via pesquisar_keywords_nicho().
+    """
+    # Se não tiver keyword_research, pesquisar agora
+    if not keyword_research:
+        try:
+            import sys, os
+            sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'agents'))
+            from keyword_research import pesquisar_keywords_nicho
+            keyword_research = pesquisar_keywords_nicho(nicho, cidade)
+        except Exception as e:
+            print(f"[SEO] Erro ao pesquisar keywords: {e}")
+            keyword_research = ""
+
+    # Extrair keywords reais do texto de pesquisa
+    keywords_reais = _extrair_keywords_reais(keyword_research)
+
+    # Se tiver jina_insights, extrair mais keywords
+    if jina_insights:
+        keywords_jina = _extrair_keywords_jina(jina_insights)
+        for kw in keywords_jina:
+            if kw not in keywords_reais:
+                keywords_reais.append(kw)
+
+    # Usar keyword primária real ou fallback
+    keyword_primaria = keywords_reais[0] if keywords_reais else f"{nicho} {cidade}".lower()
+
+    # Gerar H1 baseado no nome real
     h1_sugerido = f"{nome} — {nicho.title()} em {cidade}"
     if len(h1_sugerido) > 60:
         h1_sugerido = f"{nome} | {nicho.title()} {cidade}"
 
+    # Meta description com dados reais
     meta_desc = f"{nome}: {nicho} em {cidade}."
     if rating:
         meta_desc += f" Nota {rating}/5"
         if total_reviews:
             meta_desc += f" ({total_reviews} avaliações)"
-    meta_desc += ". Confira horários e cardápio."
+    meta_desc += ". Confira horários e contato."
     if len(meta_desc) > 155:
         meta_desc = meta_desc[:152] + "..."
 
     return {
         "keyword_primaria": keyword_primaria,
-        "keywords_longtail": keywords_long,
+        "keywords_longtail": keywords_reais[:8] if keywords_reais else [
+            f"{nicho} {cidade} perto de mim",
+            f"melhor {nicho} {cidade}",
+            f"{nicho} {cidade} aberto agora",
+        ],
         "people_also_ask": paa or [],
         "h1_sugerido": h1_sugerido,
         "meta_desc_sugerida": meta_desc,
         "title_sugerido": f"{nome} — {nicho.title()} em {cidade}"[:60],
+        "keyword_research_raw": keyword_research,
     }

@@ -1,4 +1,4 @@
-"""craft_rules.py — Regras universais de qualidade (Open Design craft/ adaptado)
+"""craft_rules.py — Regras universais de qualidade visual adaptadas
 Anti-slop + tipografia + cor + animação com disciplina.
 """
 

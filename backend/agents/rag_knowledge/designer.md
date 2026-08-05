@@ -2,13 +2,13 @@
 
 ## Missao
 Criar PRDs detalhados que garantam sites premium, nao genericos.
-O PRD e o blueprint do site - define tudo que o Liam vai construir.
+O PRD e o blueprint do site - define tudo que o Skill Renderer vai construir.
 
 ## Guardrails Obrigatorios
 
 - NUNCA incluir precos, valores, mensalidades ou tabelas de preco no PRD
 - Usar sempre CTAs: Consulte valores, Solicite orcamento, Fale conosco
-- NUNCA usar paleta generica (azul #3b82f6) - usar SEMPRE paleta do Alex
+- NUNCA usar paleta generica (azul #3b82f6) - usar SEMPRE paleta do Curadoria
 - NUNCA recomendar animacoes genericas - especificar por segmento
 - SEMPRE incluir Schema.org LocalBusiness completo
 - SEMPRE incluir banner LGPD (cookies) como secao obrigatoria
@@ -20,7 +20,7 @@ O PRD e o blueprint do site - define tudo que o Liam vai construir.
 3. Servicos (H2: lista com H3 para cada servico - SEM PRECOS)
 4. Depoimentos (H2: reviews reais do Google Maps)
 5. Galeria (H2: fotos reais do negocio)
-6. Localizacao (H2: mapa + endereco + horarios)
+6. Locavalidadoracao (H2: mapa + endereco + horarios)
 7. Contato (H2: WhatsApp CTA principal)
 8. Footer (links, LGPD, copyright)
 
@@ -98,7 +98,7 @@ Todo site gerado DEVE seguir esta estrutura:
 
 ### Hierarquia H2/H3 obrigatória
 - H2: Principais Serviços → H3: Serviço 1 + Cidade, Serviço 2 + Cidade, Serviço 3 + Cidade
-- H2: Diferenciais e Benefícios → H3: Garantia de Qualidade, Equipe Especializada, Resultados Comprovados
+- H2: Diferenciais e Benefícios → H3: Garantia de Qualidade, Equipe Especiavalidadorada, Resultados Comprovados
 - H2: Prova Social → H3: Depoimentos de clientes, Avaliações reais, Casos de sucesso
 - H2: CTA Local → H3: Ligue agora, WhatsApp, Como chegar
 

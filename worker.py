@@ -59,7 +59,11 @@ def _run_pipeline_job(db, job) -> bool:
     # busca os dados do lead no banco para que step_hunter não falhe com
     # "Hunter sem lead" quando o job é reprocessado sem payload completo.
     if not payload.get("lead_data"):
-        _existing_id = payload.get("_lead_id_existente") or str(job.get("run_id") or "")
+        _existing_id = (
+            payload.get("_lead_id_existente")
+            or payload.get("lead_id")
+            or str(job.get("run_id") or "")
+        )
         if _existing_id:
             lead_row = db.execute(
                 text(
@@ -121,7 +125,7 @@ def _run_pipeline_job(db, job) -> bool:
     final = run_pipeline(state, trace=trace)
     trace.span_atual().finalizar("ok" if final.current_state == "done" else "error")
     trace.duracao_total_ms = int((time.monotonic() - t0) * 1000)
-    trace.status = "completed" if final.current_state == "done" else "failed"
+    trace.status = "success" if final.current_state == "done" else "failed"
     trace.complexidade = final.current_state
     # Push token tracker data into trace spans for aggregation
     _llm_count = 0
@@ -140,7 +144,7 @@ def _run_pipeline_job(db, job) -> bool:
         span.cache_hit_tokens = usage["cache_read"]
         span.custo_usd = round(custo, 6)
         _llm_count += 1
-        span.finalizar("ok")
+        span.finalizar("success")
     trace._agregar_metricas()
     trace.total_chamadas_llm = _llm_count
     # Log tracking summary

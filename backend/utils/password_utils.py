@@ -7,6 +7,14 @@ import bcrypt
 
 # Configuração de segurança: 12 rounds (recomendado OWASP)
 BCRYPT_ROUNDS = 12
+BCRYPT_MAX_BYTES = 72
+
+
+def _validar_tamanho_bcrypt(plain_password: str) -> bytes:
+    password_bytes = plain_password.encode('utf-8')
+    if len(password_bytes) > BCRYPT_MAX_BYTES:
+        raise ValueError("Senha excede o limite seguro de 72 bytes do bcrypt")
+    return password_bytes
 
 
 def hash_password(plain_password: str) -> str:
@@ -19,8 +27,9 @@ def hash_password(plain_password: str) -> str:
     Returns:
         Hash da senha (string)
     """
+    password_bytes = _validar_tamanho_bcrypt(plain_password)
     salt = bcrypt.gensalt(rounds=BCRYPT_ROUNDS)
-    hashed = bcrypt.hashpw(plain_password.encode('utf-8'), salt)
+    hashed = bcrypt.hashpw(password_bytes, salt)
     return hashed.decode('utf-8')
 
 
@@ -35,7 +44,8 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     Returns:
         True se a senha está correta, False caso contrário
     """
-    return bcrypt.checkpw(
-        plain_password.encode('utf-8'),
-        hashed_password.encode('utf-8')
-    )
+    try:
+        password_bytes = _validar_tamanho_bcrypt(plain_password)
+    except ValueError:
+        return False
+    return bcrypt.checkpw(password_bytes, hashed_password.encode('utf-8'))

@@ -8,30 +8,44 @@ dois usuarios do mesmo nicho/cidade sobrescrevam o checkpoint um do outro.
 Cada fase que consome tokens (LLM calls) salva seu output completo.
 Se o pipeline quebrar, retoma da ultima fase concluida sem gastar tokens de novo.
 """
+
 import json
 import re
 import os
+import unicodedata
 from datetime import datetime
+from backend.config import CHECKPOINT_DIR as _CFG_CKPT_DIR, DATABASE_URL as _CFG_DB_URL
+from backend.agents.pipeline_identity import inferir_segmento_por_nome
 
-CHECKPOINT_DIR = "/app/checkpoints"
-os.makedirs(CHECKPOINT_DIR, exist_ok=True)
+os.makedirs(_CFG_CKPT_DIR, exist_ok=True)
+
+DISABLE_CHECKPOINT_TEMP = False
 
 _VALID_PIPELINE_ID = re.compile(r"^[a-z0-9][a-z0-9\-]*$")
 
-_DB_URL = os.environ.get('DATABASE_URL', 'postgresql://postgres:fralib2024@localhost:5433/fralib_db')
+CHECKPOINT_DIR = _CFG_CKPT_DIR
+_DB_URL = os.environ.get("DATABASE_URL", _CFG_DB_URL)
 
 
 def _backup_to_db(pipeline_id: str, checkpoint: dict):
     """Backup assíncrono do checkpoint no Postgres (best-effort)."""
     try:
         import psycopg2
+
         conn = psycopg2.connect(_DB_URL)
         with conn.cursor() as cur:
-            cur.execute("""
+            cur.execute(
+                """
                 INSERT INTO pipeline_checkpoints (pipeline_id, data, atualizado_em)
                 VALUES (%s, %s, NOW())
                 ON CONFLICT (pipeline_id) DO UPDATE SET data = %s, atualizado_em = NOW()
-            """, (pipeline_id, json.dumps(checkpoint, default=str), json.dumps(checkpoint, default=str)))
+            """,
+                (
+                    pipeline_id,
+                    json.dumps(checkpoint, default=str),
+                    json.dumps(checkpoint, default=str),
+                ),
+            )
         conn.commit()
         conn.close()
     except Exception as e:
@@ -42,9 +56,13 @@ def _load_from_db(pipeline_id: str) -> dict:
     """Carrega checkpoint do Postgres (fallback quando disco não tem)."""
     try:
         import psycopg2
+
         conn = psycopg2.connect(_DB_URL)
         with conn.cursor() as cur:
-            cur.execute("SELECT data FROM pipeline_checkpoints WHERE pipeline_id = %s", (pipeline_id,))
+            cur.execute(
+                "SELECT data FROM pipeline_checkpoints WHERE pipeline_id = %s",
+                (pipeline_id,),
+            )
             row = cur.fetchone()
         conn.close()
         if row:
@@ -72,18 +90,20 @@ def salvar_checkpoint(pipeline_id: str, agente: str, dados: dict):
     checkpoint = carregar_checkpoint(pipeline_id) or {
         "pipeline_id": pipeline_id,
         "criado_em": datetime.now().isoformat(),
-        "agentes": {}
+        "agentes": {},
     }
     checkpoint["agentes"][agente] = {
         "status": "ok",
         "timestamp": datetime.now().isoformat(),
-        "dados": dados
+        "dados": dados,
     }
     checkpoint["ultimo_agente"] = agente
     checkpoint["atualizado_em"] = datetime.now().isoformat()
     with open(path, "w", encoding="utf-8") as f:
         json.dump(checkpoint, f, ensure_ascii=False, default=str)
-    print(f"[Checkpoint] ✅ Salvo: {agente} ({len(json.dumps(dados, default=str))//1024}KB) -> {path}")
+    print(
+        f"[Checkpoint] ✅ Salvo: {agente} ({len(json.dumps(dados, default=str)) // 1024}KB) -> {path}"
+    )
     # Backup no Postgres (não bloqueia se falhar)
     _backup_to_db(pipeline_id, checkpoint)
 
@@ -121,6 +141,11 @@ def agente_concluido(pipeline_id: str, agente: str) -> bool:
 
 def get_dados_agente(pipeline_id: str, agente: str) -> dict:
     """Recupera dados salvos de um agente"""
+    if DISABLE_CHECKPOINT_TEMP:
+        print(
+            f"[Checkpoint] BYPASS | Checkpoint desativado para testes. Forçando execução de {agente}."
+        )
+        return None
     checkpoint = carregar_checkpoint(pipeline_id)
     if not checkpoint:
         return None
@@ -139,9 +164,13 @@ def limpar_checkpoint(pipeline_id: str):
     # Limpar do Postgres também
     try:
         import psycopg2
+
         conn = psycopg2.connect(_DB_URL)
         with conn.cursor() as cur:
-            cur.execute("DELETE FROM pipeline_checkpoints WHERE pipeline_id = %s", (pipeline_id,))
+            cur.execute(
+                "DELETE FROM pipeline_checkpoints WHERE pipeline_id = %s",
+                (pipeline_id,),
+            )
         conn.commit()
         conn.close()
     except Exception:
@@ -151,6 +180,7 @@ def limpar_checkpoint(pipeline_id: str):
 def limpar_checkpoints_expirados(max_age_hours: int = 24):
     """Remove checkpoints mais velhos que max_age_hours (disco + DB). Chamar periodicamente."""
     import time as _t
+
     removidos = 0
     try:
         for f in os.listdir(CHECKPOINT_DIR):
@@ -166,42 +196,54 @@ def limpar_checkpoints_expirados(max_age_hours: int = 24):
     # Limpar DB também
     try:
         import psycopg2
+
         conn = psycopg2.connect(_DB_URL)
         with conn.cursor() as cur:
-            cur.execute("DELETE FROM pipeline_checkpoints WHERE atualizado_em < NOW() - INTERVAL '%s hours'", (max_age_hours,))
+            cur.execute(
+                "DELETE FROM pipeline_checkpoints WHERE atualizado_em < NOW() - INTERVAL '%s hours'",
+                (max_age_hours,),
+            )
             db_removed = cur.rowcount
         conn.commit()
         conn.close()
         removidos += db_removed
     except Exception:
         pass
-    # Limpar checkpoints do Liam também
-    liam_dir = os.path.join(CHECKPOINT_DIR, "liam")
-    if os.path.isdir(liam_dir):
-        try:
-            for f in os.listdir(liam_dir):
-                path = os.path.join(liam_dir, f)
-                age = _t.time() - os.path.getmtime(path)
-                if age > max_age_hours * 3600:
-                    os.remove(path)
-                    removidos += 1
-        except Exception:
-            pass
     if removidos:
         print(f"[Checkpoint] 🗑️ Reaper: {removidos} checkpoints expirados removidos")
 
 
-def gerar_pipeline_id(user_id: int, nome: str, segmento: str) -> str:
+def _slugify_identity(*parts: str, max_len: int = 64) -> str:
+    raw = "-".join(str(part or "") for part in parts if str(part or "").strip())
+    text = unicodedata.normalize("NFKD", raw)
+    text = text.encode("ascii", "ignore").decode("ascii")
+    slug = re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")[:max_len]
+    return slug or "pipeline"
+
+
+def gerar_pipeline_id(
+    user_id: int,
+    nome: str,
+    segmento: str,
+    cidade: str = "",
+    lead_id: str = "",
+) -> str:
     """
     Gera ID unico para o pipeline baseado no lead, escopado ao user_id.
     Multi-tenant: prefixo 'u{user_id}-' garante que dois usuarios distintos
     nunca compartilhem o mesmo pipeline_id (e portanto nem o mesmo checkpoint).
+
+    A identidade precisa ser por lead, nao por busca. Ex: "academia em Campina
+    Grande do Sul" pode retornar Alfa Crosstraining e Aquaflex; eles nao podem
+    compartilhar checkpoint nem projeto de renderizacao.
     """
     if not user_id:
         raise ValueError("user_id obrigatorio para gerar_pipeline_id (multi-tenant)")
-    slug = re.sub(r"[^a-z0-9]+", "-", (nome + "-" + segmento).lower()).strip("-")[:40]
-    if not slug:
-        slug = "pipeline"
+    lead_marker = str(lead_id or "").strip()
+    if lead_marker:
+        lead_marker = lead_marker.replace("-", "")[:10]
+    segmento_identidade = inferir_segmento_por_nome(nome, segmento)
+    slug = _slugify_identity(nome, segmento_identidade, cidade, lead_marker)
     return f"u{int(user_id)}-{slug}"
 
 

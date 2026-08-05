@@ -1,22 +1,31 @@
 """
 Agente 1 - Lead Hunter V2 (COM SCRAPING REAL)
 Captura leads REAIS do Google Maps.
-Primary: gosom/google-maps-scraper (REST API, open-source)
-Fallback: Playwright (google_local_scraper.py)
+Ordem: leads prontos/cache -> GoSom best-effort -> Playwright.
 """
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field
 from typing import Optional, List, Dict, Any
-from utils.google_local_scraper import GoogleLocalScraper as GoogleMapsScraper
-from utils.google_maps_gosom import buscar_gosom, buscar_negocio_gosom
+from backend.utils.google_local_scraper import GoogleLocalScraper as GoogleMapsScraper
+from backend.utils.google_maps_gosom import buscar_gosom, buscar_negocio_gosom
 import asyncio
+import os
 import re
+import time
 
 # salvar_memoria: stub local (na VPS usa o módulo real)
 try:
     from memory import salvar_memoria
 except ImportError:
     def salvar_memoria(key, data): pass
+
+
+def _env_int(name: str, default: int, min_value: int, max_value: int) -> int:
+    try:
+        value = int(os.getenv(name, str(default)))
+    except (TypeError, ValueError):
+        value = default
+    return max(min_value, min(value, max_value))
 
 # ===== MAPA DE SINÔNIMOS POR NICHO =====
 # Termos que o Google Maps usa vs o que o usuário busca
@@ -84,14 +93,15 @@ class LeadRaw(BaseModel):
     place_id: Optional[str] = None
 
 class LeadQualificado(BaseModel):
-    """Lead qualificado com score e tier"""
+    """Envelope legado de candidato. Somente Caio decide score e tier comercial."""
     lead: LeadRaw
     score: int = Field(..., ge=0, le=100)
-    tier: str  # PREMIUM, STANDARD, LOW, DADOS_INSUFICIENTES, REJEITAR
+    tier: str  # CAPTURADO ou DADOS_INSUFICIENTES; Caio define o tier comercial
     razoes: List[str] = []
     sinais: List[str] = []
     presenca_digital: str  # SITE, SOCIAL_ONLY, ZERO_PRESENCA
     dados_suficientes: bool = True  # ✅ NOVO: flag de validação
+    caio_resultado: Optional[Dict[str, Any]] = None
 
 # ===== CONSTANTES =====
 
@@ -102,39 +112,6 @@ TELEFONES_FAKE = [
     '11999999999',
     '11111111111',
     '99999999999',
-    '12345678900',
-    '554100000000',
-    '5541998765432',
-]
-
-# Padrões de endereço FAKE — nunca permitem passar
-ENDERECO_FAKE_PATTERNS = [
-    r'\bexemplo\b', r'\bnao informado\b', r'\bnão informado\b',
-    r'\bs/n\b', r'\bsem numero\b', r'\bs/numero\b',
-    r'\bav\.?\s+principal\b', r'\brua principal\b',
-    r'\bcentro\b.*\bs/n\b', r'\b123\b.*\b456\b',
-    r'\bavenida\s+teste\b', r'\brua\s+teste\b',
-    r'\bendereco\s+falso\b', r'\bendereço\s+falso\b',
-    r'\bcasa\s+\d+\b', r'\blote\s+\d+\b',
-]
-
-# Padrões de URL FAKE — domínios que não são reais
-URL_FAKE_PATTERNS = [
-    'example.com', 'example.org', 'example.net',
-    'test.com', 'test.org', 'localhost',
-    'placeholder.com', 'placeholder.org',
-    '127.0.0.1', '0.0.0.0',
-    'your-site.com', 'yoursite.com',
-    'seusite.com', 'seudominio.com',
-    'www.example', 'http://test',
-]
-
-# Nomes genéricos que indicam dado fake
-NOME_FAKE_PATTERNS = [
-    r'\bnegócio\s+local\b', r'\bempresa\s+xyz\b', r'\btest\s+-\s+academia\b',
-    r'\bacademia\s+test\b', r'\bloja\s+teste\b', r'\bteste\s+\w+\b',
-    r'\bexemplo\b.*\bacademia\b', r'\bexemplo\b.*\bbarbearia\b',
-    r'\bexemplo\b.*\brestaurante\b', r'\bfictic\w+\b',
 ]
 
 DDDS_PERMITIDOS = [
@@ -203,114 +180,6 @@ def validar_telefone_real(telefone: str) -> bool:
 
     return True
 
-def _contem_padroes_fakes(texto: str, patterns: list) -> bool:
-    """Verifica se texto contém algum padrão de dado fake."""
-    if not texto:
-        return False
-    t = texto.lower()
-    return any(re.search(p, t) for p in patterns)
-
-
-def validar_dados_nao_sao_fakes(lead: LeadRaw) -> tuple[bool, List[str]]:
-    """Valida que NENHUM campo do lead contém dados falsos/placeholder.
-    Returns:
-        (ok: bool, erros: List[str])
-    """
-    erros = []
-
-    # Nome
-    if _contem_padroes_fakes(lead.nome, NOME_FAKE_PATTERNS):
-        erros.append(f"Nome genérico/fake: '{lead.nome}'")
-
-    # Telefone já validado por validar_telefone_real, mas checar padrões extras
-    if lead.telefone:
-        digits = re.sub(r'\D', '', lead.telefone)
-        if digits in ['12345678', '1234567890', '00000000', '11111111']:
-            erros.append(f"Telefone com dígitos repetidos: '{lead.telefone}'")
-
-    # Endereço
-    if lead.endereco and _contem_padroes_fakes(lead.endereco, ENDERECO_FAKE_PATTERNS):
-        erros.append(f"Endereço fake/placeholder: '{lead.endereco[:60]}'")
-
-    # Website
-    if lead.website and _contem_padroes_fakes(lead.website, URL_FAKE_PATTERNS):
-        erros.append(f"URL fake: '{lead.website}'")
-
-    # Fotos — verificar se são placeholder
-    for foto in (lead.fotos or []):
-        if any(p in foto.lower() for p in ['placeholder', 'example.com', 'test.com', 'via.placeholder']):
-            erros.append("Fotos são placeholder (não reais)")
-            break
-
-    # Logo URL
-    if lead.logo_url and _contem_padroes_fakes(lead.logo_url, URL_FAKE_PATTERNS):
-        erros.append(f"Logo URL fake: '{lead.logo_url}'")
-
-    return (len(erros) == 0, erros)
-
-
-def validar_dados_minimos(lead: LeadRaw) -> tuple[bool, List[str]]:
-    """
-    Valida se lead tem dados mínimos para gerar site.
-    Inclui validação de dados fake/placeholder.
-    """
-    erros = []
-
-    # Nome
-    if not lead.nome or len(lead.nome.strip()) < 3:
-        erros.append("Nome ausente ou muito curto")
-    else:
-        _nome_ok, _nome_erros = validar_dados_nao_sao_fakes(LeadRaw(
-            nome=lead.nome, telefone="", endereco="", fotos=[], website="", logo_url=""
-        ))
-        if not _nome_ok:
-            erros.extend(_nome_erros)
-
-    # Telefone
-    if not lead.telefone or not validar_telefone_real(lead.telefone):
-        erros.append("Telefone ausente ou inválido")
-
-    # Endereço
-    if not lead.endereco or len(lead.endereco) < 15:
-        erros.append("Endereço ausente ou muito curto")
-    else:
-        _end_ok, _end_erros = validar_dados_nao_sao_fakes(LeadRaw(
-            nome="", telefone="", endereco=lead.endereco, fotos=[], website="", logo_url=""
-        ))
-        if not _end_ok:
-            erros.extend(_end_erros)
-
-    # Endereço
-    if not lead.endereco or len(lead.endereco) < 15:
-        erros.append("Endereço ausente ou muito curto")
-
-    # Reviews
-    if not lead.reviews or len(lead.reviews) == 0:
-        erros.append("Sem reviews")
-    elif lead.reviews[0].get('texto') == 'Ótimo!':
-        erros.append("Reviews genéricos (MOCK)")
-
-    # Fotos
-    if not lead.fotos or len(lead.fotos) == 0:
-        erros.append("Sem fotos")
-    else:
-        _fotos_ok, _fotos_erros = validar_dados_nao_sao_fakes(LeadRaw(
-            nome="", telefone="", endereco="", fotos=lead.fotos or [], website="", logo_url=""
-        ))
-        if not _fotos_ok:
-            erros.extend(_fotos_erros)
-
-    # Dados fake globais (nome + telefone + endereco + fotos)
-    _all_ok, _all_erros = validar_dados_nao_sao_fakes(lead)
-    if not _all_ok:
-        erros.extend(_all_erros)
-
-    # Se 2 ou mais problemas críticos, dados insuficientes
-    dados_suficientes = len(erros) < 2
-
-    return dados_suficientes, erros
-
-
 def validar_dados_minimos(lead: LeadRaw) -> tuple[bool, List[str]]:
     """
     Valida se lead tem dados mínimos para gerar site
@@ -320,27 +189,9 @@ def validar_dados_minimos(lead: LeadRaw) -> tuple[bool, List[str]]:
     """
     erros = []
 
-    # Nome
-    if not lead.nome or len(lead.nome.strip()) < 3:
-        erros.append("Nome ausente ou muito curto")
-    elif _contem_padroes_fakes(lead.nome, NOME_FAKE_PATTERNS):
-        erros.append(f"Nome genérico/fake: '{lead.nome}'")
-
     # Telefone
     if not lead.telefone or not validar_telefone_real(lead.telefone):
         erros.append("Telefone ausente ou inválido")
-    elif re.sub(r'\D', '', lead.telefone) in ['12345678', '1234567890', '00000000', '11111111']:
-        erros.append("Telefone com dígitos repetidos")
-
-    # Endereço
-    if not lead.endereco or len(lead.endereco) < 15:
-        erros.append("Endereço ausente ou muito curto")
-    elif _contem_padroes_fakes(lead.endereco, ENDERECO_FAKE_PATTERNS):
-        erros.append(f"Endereço fake/placeholder: '{lead.endereco[:60]}'")
-
-    # Website
-    if lead.website and _contem_padroes_fakes(lead.website, URL_FAKE_PATTERNS):
-        erros.append(f"URL fake: '{lead.website}'")
 
     # Reviews
     if not lead.reviews or len(lead.reviews) == 0:
@@ -348,18 +199,15 @@ def validar_dados_minimos(lead: LeadRaw) -> tuple[bool, List[str]]:
     elif lead.reviews[0].get('texto') == 'Ótimo!':
         erros.append("Reviews genéricos (MOCK)")
 
-    # Fotos
-    if not lead.fotos or len(lead.fotos) == 0:
-        erros.append("Sem fotos")
-    else:
-        for foto in lead.fotos:
-            if any(p in foto.lower() for p in ['placeholder', 'example.com', 'test.com', 'via.placeholder']):
-                erros.append("Fotos são placeholder (não reais)")
-                break
+    # Fotos do Google Maps sao enriquecimento, nao criterio de validade.
+    # O scraper de Maps nao coleta fotos por padrao; a etapa multimidia usa
+    # midia editorial externa quando necessario.
+    if lead.fotos and 'placeholder.com' in lead.fotos[0]:
+        erros.append("Fotos são PLACEHOLDER (MOCK)")
 
-    # Logo URL
-    if lead.logo_url and _contem_padroes_fakes(lead.logo_url, URL_FAKE_PATTERNS):
-        erros.append(f"Logo URL fake: '{lead.logo_url}'")
+    # Endereço
+    if not lead.endereco or len(lead.endereco) < 20:
+        erros.append("Endereço incompleto")
 
     # Se 2 ou mais problemas críticos, dados insuficientes
     dados_suficientes = len(erros) < 2
@@ -367,85 +215,13 @@ def validar_dados_minimos(lead: LeadRaw) -> tuple[bool, List[str]]:
     return dados_suficientes, erros
 
 def calcular_score(lead: LeadRaw, cidade: str) -> Dict[str, Any]:
-    """Calcula score de qualificação do lead"""
-    score = 0
-    razoes = []
-    sinais = []
-
-    # Rating (0-20 pontos)
-    if lead.rating >= 4.5:
-        score += 20
-        sinais.append("Rating excelente")
-    elif lead.rating >= 4.0:
-        score += 15
-        sinais.append("Rating bom")
-    elif lead.rating >= 3.5:
-        score += 10
-
-    # Reviews (0-20 pontos)
-    if lead.total_avaliacoes >= 50:
-        score += 20
-        sinais.append("Muitas avaliações")
-    elif lead.total_avaliacoes >= 20:
-        score += 15
-        sinais.append("Boas avaliações")
-    elif lead.total_avaliacoes >= 10:
-        score += 10
-
-    # Telefone (0-15 pontos)
-    if validar_telefone_real(lead.telefone):
-        score += 15
-        sinais.append("Telefone válido")
-
-    # Fotos (0-10 pontos)
-    if lead.fotos and len(lead.fotos) >= 5:
-        score += 10
-        sinais.append("Muitas fotos")
-    elif lead.fotos and len(lead.fotos) >= 3:
-        score += 7
-
-    # Website (0-10 pontos)
-    if lead.website:
-        score += 10
-        sinais.append("Tem website")
-        presenca_digital = "SITE"
-    else:
-        presenca_digital = "ZERO_PRESENCA"
-
-    # Endereço completo (0-10 pontos)
-    if lead.endereco and len(lead.endereco) > 30:
-        score += 10
-        sinais.append("Endereço completo")
-
-    # Horários (0-5 pontos)
-    if lead.horarios and len(lead.horarios) > 0:
-        score += 5
-
-    # Reviews com texto (0-10 pontos)
-    if lead.reviews and len(lead.reviews) >= 3:
-        score += 10
-        sinais.append("Reviews detalhados")
-
-    # Determinar tier
-    if score >= 80:
-        tier = "PREMIUM"
-        razoes.append("Score alto, lead qualificado")
-    elif score >= 60:
-        tier = "STANDARD"
-        razoes.append("Score médio, lead aceitável")
-    elif score >= 40:
-        tier = "LOW"
-        razoes.append("Score baixo, lead marginal")
-    else:
-        tier = "REJEITAR"
-        razoes.append("Score muito baixo")
-
+    """Compatibilidade: Hunter captura; Caio e a unica autoridade comercial."""
     return {
-        'score': score,
-        'tier': tier,
-        'razoes': razoes,
-        'sinais': sinais,
-        'presenca_digital': presenca_digital
+        'score': 0,
+        'tier': "CAPTURADO",
+        'razoes': ["Candidato capturado; qualificacao comercial pendente no Caio"],
+        'sinais': [],
+        'presenca_digital': "SITE" if lead.website else "ZERO_PRESENCA",
     }
 
 # ===== FUNÇÃO PRINCIPAL =====
@@ -471,21 +247,21 @@ async def buscar_lead_google_maps(
 
     # FALLBACK: Playwright
     if not dados:
-        print(f"[Hunter V2] Gosom falhou — tentando Playwright...")
+        print("[Hunter V2] Gosom falhou — tentando Playwright...")
         async with GoogleMapsScraper(headless=True) as scraper:
             dados = await scraper.buscar_negocio(nome, cidade)
 
     if not dados:
-        print(f"[Hunter V2] Negócio não encontrado no Google Maps")
+        print("[Hunter V2] Negócio não encontrado no Google Maps")
         return None
 
     # Converter para LeadRaw
-    _segmento_raw = dados.get('categoria') or segmento or 'Negócio Local'
+    _segmento_raw = dados.get('categoria') or 'Negócio Local'
     lead = LeadRaw(
         nome=dados['nome'],
         cidade=cidade,
         segmento=_segmento_raw,
-        categoria=dados.get('categoria') or segmento,
+        categoria=dados.get('categoria') or _segmento_raw,
         telefone=dados.get('telefone'),
         whatsapp=dados.get('telefone'),  # Assumir que telefone é WhatsApp
         rating=dados.get('rating', 0),
@@ -508,7 +284,7 @@ async def buscar_lead_google_maps(
     dados_suficientes, erros = validar_dados_minimos(lead)
 
     if not dados_suficientes:
-        print(f"[Hunter V2] ⚠️ DADOS INSUFICIENTES:")
+        print("[Hunter V2] ⚠️ DADOS INSUFICIENTES:")
         for erro in erros:
             print(f"   - {erro}")
 
@@ -541,7 +317,7 @@ async def buscar_lead_google_maps(
     print(f"   Score: {resultado['score']}/100")
     print(f"   Tier: {resultado['tier']}")
     print(f"   Sinais: {', '.join(resultado['sinais'][:3])}")
-    print(f"   Dados suficientes: ✅")
+    print("   Dados suficientes: ✅")
 
     # Memória do hunter so e usada em testes locais (singular).
     # Em producao, buscar_leads_google_maps (plural) e chamado e nao precisa de memoria por lead.
@@ -554,8 +330,12 @@ async def buscar_lead_google_maps(
 # CACHE GLOBAL DE LEADS — evita Playwright se já buscou antes
 # ═══════════════════════════════════════════════════════════════
 
-def _buscar_cache_leads(segmento: str, cidade: str, existentes: set, limite: int) -> List['LeadQualificado']:
-    """Busca leads no cache global (tabela leads_cache). Retorna lista de LeadQualificado ou []."""
+def _buscar_cache_leads(segmento: str, cidade: str, existentes: set, limite: int, user_id: int = 0) -> List['LeadQualificado']:
+    """Busca leads no cache ISOLADO POR USER_ID. Retorna lista de LeadQualificado ou [].
+
+    Dedup por (user_id, lower(nome), lower(cidade), lower(endereco))
+    - evita "Campina Grande, PB" vs "Campina Grande do Sul, PR" colidirem como mesmo lead
+    """
     try:
         from database import engine
         from sqlalchemy import text as _text
@@ -565,11 +345,12 @@ def _buscar_cache_leads(segmento: str, cidade: str, existentes: set, limite: int
                        website, endereco, maps_url, fotos, servicos, horarios, logo_url,
                        atributos, faixa_preco, reviews_json
                 FROM leads_cache
-                WHERE lower(segmento) = lower(:seg) AND lower(cidade) = lower(:cid)
+                WHERE user_id = :uid
+                  AND lower(segmento) = lower(:seg) AND lower(cidade) = lower(:cid)
                   AND criado_em > NOW() - INTERVAL '7 days'
-                ORDER BY rating DESC NULLS LAST
+                ORDER BY rating DESC NULLS LAST, total_avaliacoes DESC NULLS LAST
                 LIMIT :lim
-            """), {"seg": segmento, "cid": cidade, "lim": limite + len(existentes) + 5}).fetchall()
+            """), {"seg": segmento, "cid": cidade, "lim": limite + len(existentes) + 5, "uid": user_id}).fetchall()
 
         if not rows:
             return []
@@ -580,17 +361,17 @@ def _buscar_cache_leads(segmento: str, cidade: str, existentes: set, limite: int
             nome = r[0] or ''
             if nome.lower().strip() in existentes:
                 continue
+            if not _cache_lead_matches_segment(nome, segmento):
+                print(f"[Hunter Cache] SKIP nicho errado: {nome} (buscado={segmento})")
+                continue
             if len(leads) >= limite:
                 break
-            # Pular leads sem reviews no cache (Caio vai rejeitar)
             _cached_reviews = []
             if r[15]:
                 try:
                     _cached_reviews = _json_cache.loads(r[15])
-                except:
+                except _json_cache.JSONDecodeError:
                     _cached_reviews = []
-            if not _cached_reviews:
-                continue
             try:
                 lead = LeadRaw(
                     nome=nome, cidade=r[1] or cidade, segmento=r[2] or segmento,
@@ -606,6 +387,8 @@ def _buscar_cache_leads(segmento: str, cidade: str, existentes: set, limite: int
                 )
                 resultado = calcular_score(lead, cidade)
                 dados_suficientes, _ = validar_dados_minimos(lead)
+                if not dados_suficientes:
+                    continue
                 leads.append(LeadQualificado(
                     lead=lead, score=resultado['score'], tier=resultado['tier'],
                     razoes=resultado['razoes'], sinais=resultado['sinais'],
@@ -620,8 +403,133 @@ def _buscar_cache_leads(segmento: str, cidade: str, existentes: set, limite: int
         return []
 
 
-def _salvar_cache_leads(leads: List['LeadQualificado'], segmento: str, cidade: str):
-    """Salva leads no cache global pra reutilização entre tenants."""
+def _cache_lead_matches_segment(nome: str, segmento: str) -> bool:
+    """Avoid reusing stale cache entries that were saved under the wrong query."""
+    try:
+        from agents.caio import _verificar_relevancia_segmento
+    except Exception:
+        try:
+            from caio import _verificar_relevancia_segmento
+        except Exception:
+            return True
+    return bool(_verificar_relevancia_segmento(nome or "", segmento or ""))
+
+
+def _lead_from_db_row(row, segmento_default: str, cidade_default: str) -> Optional['LeadQualificado']:
+    """Normaliza linha de leads/leads_cache para LeadQualificado."""
+    import json as _json_cache
+
+    try:
+        dados = {}
+        if row.get("dados_completos"):
+            raw = row.get("dados_completos")
+            dados = raw if isinstance(raw, dict) else _json_cache.loads(raw)
+        reviews = dados.get("reviews") or dados.get("depoimentos") or []
+        lead = LeadRaw(
+            nome=row.get("nome") or "",
+            cidade=row.get("cidade") or cidade_default,
+            segmento=row.get("segmento") or segmento_default,
+            telefone=row.get("telefone") or "",
+            whatsapp=row.get("whatsapp") or row.get("telefone") or "",
+            rating=row.get("rating") or 0,
+            total_avaliacoes=dados.get("total_avaliacoes") or row.get("total_avaliacoes") or len(reviews),
+            website=dados.get("website") or row.get("website") or "",
+            endereco=dados.get("endereco") or row.get("endereco") or "",
+            maps_url=dados.get("maps_url") or row.get("maps_url") or "",
+            fotos=dados.get("fotos") or [],
+            servicos=dados.get("servicos") or [],
+            horarios=dados.get("horarios") or [],
+            atributos=dados.get("atributos") or [],
+            reviews=reviews,
+            google_maps_embed=dados.get("google_maps_embed") or "",
+            place_id=dados.get("place_id") or "",
+        )
+        resultado = calcular_score(lead, cidade_default)
+        dados_suficientes, _ = validar_dados_minimos(lead)
+        return LeadQualificado(
+            lead=lead,
+            score=resultado["score"],
+            tier=resultado["tier"],
+            razoes=resultado["razoes"],
+            sinais=resultado["sinais"],
+            presenca_digital=resultado["presenca_digital"],
+            dados_suficientes=dados_suficientes,
+        )
+    except Exception:
+        return None
+
+
+def _buscar_leads_prontos_usuario(user_id: Optional[int], segmento: str, cidade: str, limite: int) -> List['LeadQualificado']:
+    """Reaproveita leads capturados/pendentes antes de abrir scraping novo."""
+    if not user_id:
+        return []
+    try:
+        from database import engine
+        from sqlalchemy import text as _text
+
+        with engine.connect() as conn:
+            rows = conn.execute(_text("""
+                SELECT id, nome, cidade, segmento, telefone, whatsapp, rating, score,
+                       tier, status, dados_completos
+                FROM leads
+                WHERE user_id = :uid
+                  AND lower(cidade) = lower(:cid)
+                  AND COALESCE(processado, false) = false
+                  AND lower(COALESCE(status, '')) IN ('capturado', 'pendente', 'erro')
+                ORDER BY COALESCE(score, 0) DESC, criado_em ASC
+                LIMIT :lim
+            """), {"uid": user_id, "cid": cidade, "seg": segmento, "lim": limite + 5}).mappings().fetchall()
+        leads = []
+        for row in rows:
+            row_data = dict(row)
+            nome = row_data.get("nome") or ""
+            row_segmento = row_data.get("segmento") or ""
+            if row_segmento and segmento.lower().strip() not in row_segmento.lower().strip():
+                if not _cache_lead_matches_segment(nome, segmento):
+                    continue
+            lq = _lead_from_db_row(dict(row), segmento, cidade)
+            if lq:
+                leads.append(lq)
+            if len(leads) >= limite:
+                break
+        return leads
+    except Exception as e:
+        print(f"[Hunter Pool] Erro ao buscar leads prontos: {e}")
+        return []
+
+
+def _merge_leads(*listas: List['LeadQualificado'], limite: int) -> List['LeadQualificado']:
+    """Une candidatos por nome+cidade sem antecipar a decisao comercial do Caio."""
+    por_chave = {}
+    for lista in listas:
+        for item in lista or []:
+            nome = (item.lead.nome or "").lower().strip()
+            cidade = (item.lead.cidade or "").lower().strip()
+            if not nome:
+                continue
+            chave = (nome, cidade)
+            atual = por_chave.get(chave)
+            if not atual or _prioridade_captura(item) > _prioridade_captura(atual):
+                por_chave[chave] = item
+    merged = list(por_chave.values())
+    merged.sort(key=_prioridade_captura, reverse=True)
+    return merged[:limite]
+
+
+def _prioridade_captura(item: 'LeadQualificado') -> tuple:
+    """Ordena dados mais completos primeiro; nao aprova nem rejeita oportunidades."""
+    lead = item.lead
+    return (
+        bool(item.dados_suficientes),
+        bool(lead.telefone or lead.whatsapp),
+        bool(lead.endereco),
+        int(lead.total_avaliacoes or 0),
+        float(lead.rating or 0),
+    )
+
+
+def _salvar_cache_leads(leads: List['LeadQualificado'], segmento: str, cidade: str, user_id: int = 0):
+    """Salva leads no cache ISOLADO POR USER_ID para evitar envenenamento entre tenants."""
     try:
         from database import engine
         from sqlalchemy import text as _text
@@ -630,16 +538,18 @@ def _salvar_cache_leads(leads: List['LeadQualificado'], segmento: str, cidade: s
             for lq in leads:
                 l = lq.lead
                 conn.execute(_text("""
-                    INSERT INTO leads_cache (nome, cidade, segmento, telefone, rating, total_avaliacoes,
+                    INSERT INTO leads_cache (user_id, nome, cidade, estado, segmento, telefone, rating, total_avaliacoes,
                         website, endereco, maps_url, fotos, servicos, horarios, logo_url,
                         atributos, faixa_preco, reviews_json, criado_em)
-                    VALUES (:nome, :cidade, :seg, :tel, :rating, :aval, :web, :end, :maps,
+                    VALUES (:uid, :nome, :cidade, :estado, :seg, :tel, :rating, :aval, :web, :end, :maps,
                         :fotos, :servicos, :horarios, :logo, :atrib, :faixa, :reviews, NOW())
-                    ON CONFLICT (lower(nome), lower(cidade)) DO UPDATE SET
+                    ON CONFLICT (user_id, lower(nome), lower(cidade)) DO UPDATE SET
                         rating = EXCLUDED.rating, telefone = COALESCE(EXCLUDED.telefone, leads_cache.telefone),
                         atualizado_em = NOW()
                 """), {
-                    "nome": l.nome, "cidade": l.cidade, "seg": segmento,
+                    "uid": user_id,
+                    "nome": l.nome, "cidade": l.cidade, "estado": (getattr(l, 'estado', None) or ''),
+                    "seg": segmento,
                     "tel": l.telefone, "rating": l.rating, "aval": l.total_avaliacoes,
                     "web": l.website, "end": l.endereco, "maps": l.maps_url,
                     "fotos": _json_cache.dumps(l.fotos or []),
@@ -656,6 +566,93 @@ def _salvar_cache_leads(leads: List['LeadQualificado'], segmento: str, cidade: s
         print(f"[Hunter Cache] Erro ao salvar cache: {e}")
 
 
+def _filtrar_aprovados_caio(
+    candidatos: List['LeadQualificado'],
+    segmento: str,
+    score_minimo: int,
+    aprovados_necessarios: int,
+) -> List['LeadQualificado']:
+    """Executa a unica qualificacao comercial, candidato a candidato."""
+    from agents.caio import CaioOutput, LeadInput as CaioInput, qualificar_lead
+
+    aprovados = []
+    for candidato in candidatos:
+        lead = candidato.lead
+        resultado = (
+            CaioOutput(**candidato.caio_resultado)
+            if candidato.caio_resultado
+            else qualificar_lead(
+                CaioInput(
+                    nome=lead.nome,
+                    cidade=lead.cidade,
+                    segmento=segmento,
+                    telefone=lead.telefone or "",
+                    whatsapp=lead.whatsapp or "",
+                    rating=lead.rating or 0.0,
+                    reviews_count=lead.total_avaliacoes or len(lead.reviews or []),
+                    fotos=lead.fotos or [],
+                    website=lead.website or "",
+                    logo_url=lead.logo_url or "",
+                )
+            )
+        )
+        if not resultado.qualificado or resultado.tier == "REJEITADO":
+            print(f"[Hunter V2] DESCARTADO {lead.nome} | Caio: {resultado.motivo}")
+            continue
+        if int(resultado.score or 0) < int(score_minimo or 45):
+            print(
+                f"[Hunter V2] DESCARTADO {lead.nome} | "
+                f"Caio score {resultado.score} abaixo do minimo {score_minimo}"
+            )
+            continue
+        candidato.score = resultado.score
+        candidato.tier = resultado.tier or "STANDARD"
+        candidato.razoes = [resultado.motivo]
+        candidato.caio_resultado = resultado.model_dump()
+        aprovados.append(candidato)
+        print(
+            f"[Hunter V2] ENCAMINHADO {lead.nome} | "
+            f"Caio: {resultado.qualificacao} score={resultado.score}"
+        )
+        if len(aprovados) >= max(1, int(aprovados_necessarios or 1)):
+            break
+    return aprovados
+
+
+def _aceitar_lote_caio(
+    cards: List[Dict[str, Any]],
+    segmento: str,
+    cidade: str,
+    score_minimo: int,
+) -> bool:
+    """Marca o primeiro card aprovado para o scraper encerrar detalhes cedo."""
+    from agents.caio import LeadInput as CaioInput, qualificar_lead
+
+    for card in cards:
+        resultado = qualificar_lead(
+            CaioInput(
+                nome=(card.get("nome") or "").strip(),
+                cidade=(card.get("cidade") or cidade).strip(),
+                segmento=segmento,
+                telefone=card.get("telefone") or "",
+                whatsapp=card.get("telefone") or "",
+                rating=card.get("rating") or 0.0,
+                reviews_count=card.get("reviews") or len(card.get("depoimentos") or []),
+                fotos=card.get("fotos") or [],
+                website=card.get("website") or "",
+                logo_url=card.get("logo") or "",
+            )
+        )
+        if (
+            resultado.qualificado
+            and resultado.tier != "REJEITADO"
+            and int(resultado.score or 0) >= int(score_minimo or 45)
+        ):
+            card["_caio_resultado"] = resultado.model_dump()
+            return True
+    return False
+
+
 async def buscar_leads_google_maps(
     cidade: str,
     segmento: str,
@@ -663,6 +660,9 @@ async def buscar_leads_google_maps(
     score_type: str = 'STANDARD',
     leads_existentes: set = None,
     force_fresh: bool = False,
+    user_id: Optional[int] = None,
+    score_minimo: int = 45,
+    aprovados_necessarios: int = 1,
 ) -> List[LeadQualificado]:
     """
     Busca leads no Google Maps com estrategia LAZY:
@@ -671,31 +671,88 @@ async def buscar_leads_google_maps(
     3. Para quando atingir limite de aprovados
     """
     _existentes = leads_existentes or set()
-    print(f"[Hunter V2] Buscando {limite} leads LAZY: {segmento} em {cidade} ({len(_existentes)} ja existentes)...")
+    _target = max(1, int(aprovados_necessarios or 1))
+    _single_lead_limit = _env_int("FRALIB_HUNTER_SINGLE_LEAD_CANDIDATES", 8, 3, 15)
+    _candidate_limit_base = max(limite, 10 if limite <= 3 else limite + 5)
+    if _target == 1:
+        _candidate_limit_base = min(_candidate_limit_base, _single_lead_limit)
+    _candidate_limit = min(30, _candidate_limit_base)
+    _capture_timeout = _env_int("FRALIB_HUNTER_CAPTURE_TIMEOUT_SECS", 150, 30, 180)
+    _deadline = time.monotonic() + _capture_timeout
 
-    # ── CACHE GLOBAL: verificar se já temos leads cacheados pra este segmento+cidade ──
+    def _remaining_secs() -> float:
+        return max(0.0, _deadline - time.monotonic())
+
+    print(
+        f"[Hunter V2] Buscando {limite} lead(s) LAZY + buffer {_candidate_limit}: "
+        f"{segmento} em {cidade} ({len(_existentes)} ja existentes)..."
+    )
+
+    _min_buffer = min(_candidate_limit, max(limite + 3, 5))
+    leads_prontos = [] if force_fresh else _buscar_leads_prontos_usuario(user_id, segmento, cidade, _candidate_limit)
+    if leads_prontos:
+        print(f"[Hunter V2] Pool pronto: {len(leads_prontos)} lead(s) capturados/pendentes")
+
+    # ── CACHE ISOLADO POR USER_ID: verificar leads cacheados deste tenant ──
     if force_fresh:
-        print(f"[Hunter V2] FORCE FRESH: ignorando cache, buscando direto no Maps")
+        print("[Hunter V2] FORCE FRESH: ignorando cache, buscando direto no Maps")
         cached_leads = []
     else:
-        cached_leads = _buscar_cache_leads(segmento, cidade, _existentes, limite)
-    if cached_leads and len(cached_leads) >= limite:
-        print(f"[Hunter V2] ✅ CACHE HIT: {len(cached_leads)} leads do cache (sem scraping)")
-        return cached_leads[:limite]
+        cached_leads = _buscar_cache_leads(segmento, cidade, _existentes, _candidate_limit, user_id)
+    pool_inicial = _merge_leads(leads_prontos, cached_leads, limite=_candidate_limit)
+    if pool_inicial and len(pool_inicial) >= _min_buffer:
+        print(
+            f"[Hunter V2] ✅ POOL HIT: {len(pool_inicial)} candidatos prontos/cache "
+            f"(sem scraping)"
+        )
+        _aprovados_pool = _filtrar_aprovados_caio(
+            pool_inicial, segmento, score_minimo, aprovados_necessarios
+        )
+        if _aprovados_pool:
+            return _aprovados_pool
+        print("[Hunter V2] Pool/cache sem aprovado Caio; buscando complemento")
+    if pool_inicial:
+        print(f"[Hunter V2] Pool parcial: {len(pool_inicial)}/{_min_buffer}; buscando complemento")
 
     # ── PRIMARY: gosom/google-maps-scraper (REST API, open-source) ──
     cards_raw = None
-    _busca_limite = max(20, limite * 4)
+    _maps_search_limit = _env_int("FRALIB_HUNTER_MAPS_SEARCH_LIMIT", 24, 10, 60)
+    _busca_limite = max(10, min(_maps_search_limit, _candidate_limit * 3))
 
-    gosom_results = await buscar_gosom(segmento, cidade, limite=_busca_limite)
+    try:
+        _gosom_timeout = max(3.0, min(30.0, _remaining_secs() - 5))
+        gosom_results = await asyncio.wait_for(
+            buscar_gosom(segmento, cidade, limite=_busca_limite),
+            timeout=_gosom_timeout,
+        )
+    except asyncio.TimeoutError:
+        gosom_results = []
+        print("[Hunter V2] Gosom excedeu budget; usando Playwright")
     if gosom_results and len(gosom_results) > 0:
         cards_raw = gosom_results
         print(f"[Hunter V2] ✅ GOSOM: {len(cards_raw)} leads capturados")
     else:
         # ── FALLBACK: Playwright (google_local_scraper.py) ──
-        print(f"[Hunter V2] Gosom indisponível — usando Playwright...")
+        _remaining = _remaining_secs()
+        if _remaining <= 15:
+            print("[Hunter V2] Budget de captura esgotado antes do Playwright")
+            return _filtrar_aprovados_caio(
+                pool_inicial, segmento, score_minimo, aprovados_necessarios
+            )
+        print("[Hunter V2] Gosom indisponível — usando Playwright...")
         scraper = GoogleMapsScraper(headless=True)
-        cards_raw = await scraper.buscar(segmento, cidade, limite=_busca_limite, leads_existentes=_existentes)
+        cards_raw = await scraper.buscar(
+            segmento,
+            cidade,
+            limite=_busca_limite,
+            leads_existentes=_existentes,
+            candidate_acceptor=lambda cards: _aceitar_lote_caio(
+                cards, segmento, cidade, score_minimo
+            ),
+            max_duration_secs=max(10.0, _remaining - 5.0),
+        )
+
+    cards_raw = cards_raw or []
 
     print(f"[Hunter V2] {len(cards_raw)} leads com detalhes capturados")
 
@@ -794,11 +851,13 @@ async def buscar_leads_google_maps(
                 razoes=resultado['razoes'],
                 sinais=resultado['sinais'],
                 presenca_digital=resultado['presenca_digital'],
-                dados_suficientes=dados_suficientes
+                dados_suficientes=dados_suficientes,
+                caio_resultado=dados.get("_caio_resultado"),
             )
 
             leads_encontrados.append(lead_qualificado)
-            print(f"[Hunter V2] APROVADO {lead.nome} | Score: {resultado['score']} | Tier: {resultado['tier']}")
+            _obs = f" | observacoes: {', '.join(erros)}" if erros else ""
+            print(f"[Hunter V2] CAPTURADO {lead.nome}{_obs}")
 
         except Exception as e:
             print(f"[Hunter V2] ERRO ao processar {dados.get('nome', '?')}: {e}")
@@ -806,14 +865,18 @@ async def buscar_leads_google_maps(
 
     print(f"[Hunter V2] Total: {len(leads_encontrados)} leads coletados")
 
-    # Ordenar por score (maior primeiro)
-    leads_encontrados.sort(key=lambda lq: lq.score, reverse=True)
+    # Deduplicar e ordenar por completude observavel. Caio decide score e tier.
+    leads_encontrados = _merge_leads(pool_inicial, leads_encontrados, limite=_candidate_limit)
 
-    # Salvar no cache global pra próximos tenants
-    if leads_encontrados:
-        _salvar_cache_leads(leads_encontrados, segmento, cidade)
-
-    return leads_encontrados[:limite]
+    aprovados = _filtrar_aprovados_caio(
+        leads_encontrados[:_candidate_limit],
+        segmento,
+        score_minimo,
+        aprovados_necessarios,
+    )
+    if aprovados:
+        _salvar_cache_leads(aprovados, segmento, cidade, user_id)
+    return aprovados
 
 # ===== TESTE =====
 
@@ -823,7 +886,7 @@ if __name__ == "__main__":
         lead = await buscar_lead_google_maps("Barbearia Seu Zé", "Curitiba")
 
         if lead:
-            print(f"\n[Teste] ✅ Lead capturado!")
+            print("\n[Teste] ✅ Lead capturado!")
             print(f"   Nome: {lead.lead.nome}")
             print(f"   Score: {lead.score}/100")
             print(f"   Tier: {lead.tier}")

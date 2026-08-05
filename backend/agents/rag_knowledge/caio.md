@@ -25,7 +25,7 @@
 - WhatsApp ativo mas sem site
 
 ### MORNO (Média Conversão)
-- Negócios com site desatualizado (>2 anos)
+- Negócios com site desatuavalidadorado (>2 anos)
 - Site em plataforma gratuita com design ruim
 - Presença digital inconsistente
 

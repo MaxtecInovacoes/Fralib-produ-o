@@ -1,0 +1,18 @@
+{
+  "hook_variants": {
+    "A": {
+      "template": "Oi {nome}! Vi que vocês são de {segmento} aqui em {cidade}. Montei um site pra vocês como demonstração do nosso trabalho. Dá uma olhada: {url}",
+      "sent": 0,
+      "replied": 0,
+      "converted": 0
+    },
+    "B": {
+      "template": "E aí {nome}! Tudo bem? Sou da FraLib e fiz um site gratuito pra vocês testarem. Sem compromisso nenhum. Vocês viram?",
+      "sent": 0,
+      "replied": 0,
+      "converted": 0
+    }
+  },
+  "last_updated": "2026-05-15",
+  "notes": "A/B testing será atualizado automaticamente conforme leads respondem/convertem"
+}

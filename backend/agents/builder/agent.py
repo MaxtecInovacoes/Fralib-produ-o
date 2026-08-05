@@ -9,8 +9,8 @@ import json
 import time
 import requests
 
-OPENUI_URL = os.environ.get("OPENUI_URL", "http://localhost:3333")
-GENERATE_ENDPOINT = f"{OPENUI_URL}/generate-chunked"
+OPENUI_URL = os.environ.get("OPENUI_URL") or os.environ.get("OPENUI_SERVICE_URL", "http://localhost:3333")
+GENERATE_ENDPOINT = f"{OPENUI_URL}/generate"
 HEALTH_ENDPOINT = f"{OPENUI_URL}/health"
 
 
@@ -42,7 +42,7 @@ def _prd_to_spec(prd) -> dict:
     for s in prd.sections:
         sections.append({
             "name": s.name,
-            "title": s.title,
+            "title": getattr(s, "title", s.name),
             "content": getattr(s, "content", getattr(s, "body", "")),
         })
 
@@ -127,8 +127,11 @@ def render_site(prd, usar_llm: bool = True) -> BuildResult:
                 return BuildResult(html="", model=model, success=False,
                                    error=f"HTML too short: {len(html)} chars")
 
-            elif resp.status_code == 529:
-                last_error = f"OpenUI 529 (overloaded) attempt {attempt + 1}"
+            elif resp.status_code == 529 or (
+                resp.status_code == 500
+                and any(marker in resp.text.lower() for marker in ("529", "overloaded", "sobrecarregado"))
+            ):
+                last_error = f"OpenUI overloaded attempt {attempt + 1}: HTTP {resp.status_code}"
                 if attempt < max_retries - 1:
                     time.sleep(retry_delays[attempt])
                     continue

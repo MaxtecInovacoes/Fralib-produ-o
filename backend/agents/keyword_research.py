@@ -5,58 +5,70 @@ Cache PostgreSQL 30 dias. Roda em paralelo com o Hunter na FASE 1.
 Objetivo: descobrir o que as pessoas estão buscando que CONVERTE DINHEIRO
 no nicho — não design, não UI, mas intenção de compra real.
 """
-import os, re, time, hashlib, requests
+
+import os, re, requests
 from datetime import datetime, timedelta
+from urllib.parse import urlparse
+
+from dotenv import load_dotenv
+
+_AGENTS_DIR = os.path.dirname(os.path.abspath(__file__))
+_BACKEND_DIR = os.path.dirname(_AGENTS_DIR)
+_ROOT_DIR = os.path.dirname(_BACKEND_DIR)
+load_dotenv(os.path.join(_ROOT_DIR, ".env"))
+load_dotenv(os.path.join(_BACKEND_DIR, ".env"))
 
 # Queries focadas em intenção transacional/comercial por nicho
 # "o que as pessoas buscam quando querem PAGAR por esse serviço"
 QUERIES_TRANSACIONAIS = {
-    "academia":       "academia {cidade} preço mensalidade matrícula perto",
-    "crossfit":       "crossfit {cidade} aula experimental preço matrícula",
-    "barbearia":      "barbearia {cidade} corte masculino agendamento preço",
-    "salao":          "salão de beleza {cidade} progressiva coloração agendamento",
-    "clinica":        "clínica médica {cidade} consulta particular agendamento preço",
-    "odontologia":    "dentista {cidade} implante clareamento consulta preço",
-    "estetica":       "clínica estética {cidade} tratamento preço agendamento",
-    "nutricionista":  "nutricionista {cidade} consulta preço plano alimentar",
-    "psicologia":     "psicólogo {cidade} consulta particular preço agendamento",
-    "advocacia":      "advogado {cidade} consulta honorários trabalhista",
-    "contabilidade":  "contador {cidade} MEI abertura empresa preço",
-    "imobiliaria":    "imobiliária {cidade} apartamento comprar alugar",
-    "restaurante":    "restaurante {cidade} delivery reserva cardápio",
-    "pizzaria":       "pizzaria {cidade} delivery pedido promoção",
-    "padaria":        "padaria {cidade} encomenda bolo pão artesanal",
-    "pet":            "pet shop {cidade} banho tosa veterinário preço",
-    "farmacia":       "farmácia {cidade} manipulação delivery plantão",
-    "escola":         "escola {cidade} matrícula mensalidade ensino",
-    "auto_pecas":     "mecânica {cidade} orçamento revisão preço",
-    "arquitetura":    "arquiteto {cidade} projeto residencial preço",
-    "fotografia":     "fotógrafo {cidade} ensaio casamento preço",
+    "academia": "academia {cidade} preço mensalidade matrícula perto",
+    "crossfit": "crossfit {cidade} aula experimental preço matrícula",
+    "barbearia": "barbearia {cidade} corte masculino agendamento preço",
+    "salao": "salão de beleza {cidade} progressiva coloração agendamento",
+    "clinica": "clínica médica {cidade} consulta particular agendamento preço",
+    "odontologia": "dentista {cidade} implante clareamento consulta preço",
+    "estetica": "clínica estética {cidade} tratamento preço agendamento",
+    "nutricionista": "nutricionista {cidade} consulta preço plano alimentar",
+    "psicologia": "psicólogo {cidade} consulta particular preço agendamento",
+    "advocacia": "advogado {cidade} consulta honorários trabalhista",
+    "contabilidade": "contador {cidade} MEI abertura empresa preço",
+    "imobiliaria": "imobiliária {cidade} apartamento comprar alugar",
+    "restaurante": "restaurante {cidade} delivery reserva cardápio",
+    "pizzaria": "pizzaria {cidade} delivery pedido promoção",
+    "padaria": "padaria {cidade} encomenda bolo pão artesanal",
+    "pet": "pet shop {cidade} banho tosa veterinário preço",
+    "farmacia": "farmácia {cidade} manipulação delivery plantão",
+    "escola": "escola {cidade} matrícula mensalidade ensino",
+    "auto_pecas": "mecânica {cidade} orçamento revisão preço",
+    "arquitetura": "arquiteto {cidade} projeto residencial preço",
+    "fotografia": "fotógrafo {cidade} ensaio casamento preço",
 }
 
 # Queries de concorrência — quem está rankeando e o que oferecem
 QUERIES_CONCORRENCIA = {
-    "academia":       "melhor academia {cidade} avaliações",
-    "barbearia":      "melhor barbearia {cidade} avaliações",
-    "nutricionista":  "melhor nutricionista {cidade} avaliações resultado",
-    "odontologia":    "melhor dentista {cidade} avaliações implante",
-    "estetica":       "melhor clínica estética {cidade} resultado antes depois",
-    "restaurante":    "melhor restaurante {cidade} avaliações",
-    "advocacia":      "melhor advogado {cidade} trabalhista resultado",
+    "academia": "melhor academia {cidade} avaliações",
+    "barbearia": "melhor barbearia {cidade} avaliações",
+    "nutricionista": "melhor nutricionista {cidade} avaliações resultado",
+    "odontologia": "melhor dentista {cidade} avaliações implante",
+    "estetica": "melhor clínica estética {cidade} resultado antes depois",
+    "restaurante": "melhor restaurante {cidade} avaliações",
+    "advocacia": "melhor advogado {cidade} trabalhista resultado",
 }
 
 
 def _get_db_conn():
-    """Conexão PostgreSQL via DATABASE_URL do ambiente"""
+    """Conexão PostgreSQL via DATABASE_URL do ambiente/.env."""
     import psycopg2
-    db_url = os.getenv("DATABASE_URL")
-    if not db_url:
-        raise ValueError("DATABASE_URL não encontrada no ambiente")
-    m = re.search(r'postgresql://([^:]+):([^@]+)@([^:]+):(\d+)/(\S+)', db_url)
-    if not m:
-        raise ValueError("DATABASE_URL com formato inválido")
-    user, pwd, host, port, db = m.groups()
-    return psycopg2.connect(host=host, port=int(port), dbname=db, user=user, password=pwd)
+
+    database_url = os.getenv("DATABASE_URL", "").strip()
+    if not database_url:
+        raise ValueError("DATABASE_URL não encontrada")
+
+    parsed = urlparse(database_url)
+    if parsed.scheme not in ("postgresql", "postgres"):
+        raise ValueError(f"DATABASE_URL inválida: scheme={parsed.scheme}")
+
+    return psycopg2.connect(database_url)
 
 
 def _garantir_tabela():
@@ -87,7 +99,7 @@ def _cache_get(segmento: str, cidade: str) -> str | None:
         cur = conn.cursor()
         cur.execute(
             "SELECT dados, atualizado_em FROM keyword_cache WHERE segmento=%s AND cidade=%s",
-            (segmento.lower(), cidade.lower())
+            (segmento.lower(), cidade.lower()),
         )
         row = cur.fetchone()
         conn.close()
@@ -95,7 +107,9 @@ def _cache_get(segmento: str, cidade: str) -> str | None:
             return None
         dados, atualizado_em = row
         if datetime.now() - atualizado_em < timedelta(days=30):
-            print(f"[KW] Cache HIT: {segmento} em {cidade} (atualizado {atualizado_em.strftime('%d/%m/%Y')})")
+            print(
+                f"[KW] Cache HIT: {segmento} em {cidade} (atualizado {atualizado_em.strftime('%d/%m/%Y')})"
+            )
             return dados
         print(f"[KW] Cache EXPIRADO: {segmento} em {cidade} — renovando")
         return None
@@ -109,12 +123,15 @@ def _cache_set(segmento: str, cidade: str, dados: str):
     try:
         conn = _get_db_conn()
         cur = conn.cursor()
-        cur.execute("""
+        cur.execute(
+            """
             INSERT INTO keyword_cache (segmento, cidade, dados, atualizado_em)
             VALUES (%s, %s, %s, NOW())
             ON CONFLICT (segmento, cidade) DO UPDATE
                 SET dados = EXCLUDED.dados, atualizado_em = NOW()
-        """, (segmento.lower(), cidade.lower(), dados))
+        """,
+            (segmento.lower(), cidade.lower(), dados),
+        )
         conn.commit()
         conn.close()
         print(f"[KW] Cache salvo: {segmento} em {cidade}")
@@ -125,7 +142,10 @@ def _cache_set(segmento: str, cidade: str, dados: str):
 def _jina_buscar(query: str, timeout: int = 15) -> str:
     """Busca via Jina AI Reader — retorna texto markdown do resultado."""
     try:
-        url = "https://r.jina.ai/https://www.google.com/search?q=" + requests.utils.quote(query)
+        url = (
+            "https://r.jina.ai/https://www.google.com/search?q="
+            + requests.utils.quote(query)
+        )
         headers = {"X-Return-Format": "markdown", "X-Timeout": str(timeout)}
         jina_key = os.getenv("JINA_API_KEY", "")
         if jina_key:
@@ -153,7 +173,7 @@ def _extrair_keywords_do_texto(texto: str, segmento: str, cidade: str) -> list:
         linha_lower = linha.lower()
         if cid_lower in linha_lower or seg_lower in linha_lower:
             # Limpar markdown
-            linha = re.sub(r'[\*\#\[\]\(\)\`]', '', linha).strip()
+            linha = re.sub(r"[\*\#\[\]\(\)\`]", "", linha).strip()
             if linha and linha not in keywords:
                 keywords.append(linha)
                 if len(keywords) >= 15:
@@ -200,19 +220,23 @@ def pesquisar_keywords_nicho(segmento: str, cidade: str) -> str:
 
     # Extrair keywords
     kw_transacionais = _extrair_keywords_do_texto(texto_transacional, segmento, cidade)
-    kw_concorrencia = _extrair_keywords_do_texto(texto_concorrencia, segmento, cidade) if texto_concorrencia else []
+    kw_concorrencia = (
+        _extrair_keywords_do_texto(texto_concorrencia, segmento, cidade)
+        if texto_concorrencia
+        else []
+    )
 
     # Google Suggest para volume real
     suggest_terms = []
     try:
         suggest_url = (
             "https://suggestqueries.google.com/complete/search"
-            "?client=firefox&hl=pt-BR&q="
-            + requests.utils.quote(f"{segmento} {cidade}")
+            "?client=firefox&hl=pt-BR&q=" + requests.utils.quote(f"{segmento} {cidade}")
         )
         resp = requests.get(suggest_url, timeout=5)
         if resp.status_code == 200:
             import json
+
             data = json.loads(resp.text)
             suggest_terms = data[1][:8] if len(data) > 1 else []
     except Exception:
@@ -241,8 +265,12 @@ def pesquisar_keywords_nicho(segmento: str, cidade: str) -> str:
             linhas.append(f"  - {kw}")
         linhas.append("")
 
-    linhas.append("INSTRUÇÃO: Use estas keywords naturalmente no H1, subtítulos, CTAs e meta description.")
-    linhas.append("Priorize as de intenção transacional — são as que convertem em clientes pagantes.")
+    linhas.append(
+        "INSTRUÇÃO: Use estas keywords naturalmente no H1, subtítulos, CTAs e meta description."
+    )
+    linhas.append(
+        "Priorize as de intenção transacional — são as que convertem em clientes pagantes."
+    )
 
     resultado = "\n".join(linhas)
 

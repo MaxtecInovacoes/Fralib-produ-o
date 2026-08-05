@@ -1,12 +1,27 @@
-"""design_context.py — Sistema de Design por Nicho (Open Design adaptado)
+"""design_context.py — Sistema de Design por Nicho
 6 tokens CSS universais em OKLch + direção visual + perfil de animação por nicho.
+
+⚠️  ORQUESTRADOR - NÃO É MONOLITO
+=================================
+Este arquivo é um ORQUESTRADOR que coordena módulos modulares.
+Dados e lógica extraídos para:
+- design_tokens.py: 150+ direções visuais OKLch, profiles
+- sub_nicho.py: Detecção de sub-nichos
+- hero_styles.py: Estilos de hero (gradientes, layouts)
+- design_prompts.py: Geração de prompts LLM
+
+Este arquivo contém APENAS a função principal get_design_context()
+que orquestra os módulos acima.
+
+@architecture Orquestrador (coordena módulos de dados)
 """
+
 import os as _os
 import json as _json
 from typing import Dict
 
 # ─── OPEN DESIGN TOKENS (pré-computados do DESIGN.md) ─────────────────────────
-_OD_TOKENS_PATH = _os.path.join(_os.path.dirname(__file__), "open_design_tokens.json")
+_OD_TOKENS_PATH = _os.path.join(_os.path.dirname(__file__), "design_system_tokens.json")
 _OD_TOKENS: Dict[str, dict] = {}
 if _os.path.exists(_OD_TOKENS_PATH):
     with open(_OD_TOKENS_PATH, "r") as _f:
@@ -147,7 +162,6 @@ DIRECOES_VISUAIS = {
     "spotify": {"nome": "Spotify", "tokens": {"--bg": "oklch(7% 0.0 0)", "--surface": "oklch(9% 0.0 0)", "--fg": "oklch(100% 0.0 0)", "--muted": "oklch(70% 0.0 0)", "--border": "oklch(30% 0.0 0)", "--accent": "oklch(66% 0.145 141)"}, "font_heading": "CircularSp", "font_body": "CircularSp", "vibe": "music streaming, vibrant green on dark, album-art-driven", "animation": "energetico"},
     "starbucks": {"nome": "Starbucks", "tokens": {"--bg": "oklch(94% 0.005 43)", "--surface": "oklch(100% 0.0 0)", "--fg": "oklch(29% 0.077 160)", "--muted": "oklch(92% 0.003 30)", "--border": "oklch(25% 0.02 250)", "--accent": "oklch(35% 0.092 158)"}, "font_heading": "SoDoSans", "font_body": "SoDoSans", "vibe": "coffee retail, four-tier green, warm cream, full-pill", "animation": "vibrante"},
     "storytelling": {"nome": "Storytelling", "tokens": {"--bg": "oklch(100% 0.0 0)", "--surface": "oklch(100% 0.0 0)", "--fg": "oklch(9% 0.017 221)", "--muted": "oklch(60% 0.01 0)", "--border": "oklch(25% 0.02 250)", "--accent": "oklch(48% 0.147 217)"}, "font_heading": "Abril Fatface", "font_body": "Inter", "vibe": "narrative-driven, emotionally resonant, visuals+copy", "animation": "vibrante"},
-    "stripe": {"nome": "Stripe", "tokens": {"--bg": "oklch(100% 0.0 0)", "--surface": "oklch(100% 0.0 0)", "--fg": "oklch(9% 0.034 211)", "--muted": "oklch(45% 0.032 217)", "--border": "oklch(25% 0.02 250)", "--accent": "oklch(30% 0.153 248)"}, "font_heading": "sohne-var", "font_body": "sohne-var", "vibe": "payment infra, purple gradients, weight-300 elegance", "animation": "elegante"},
     "supabase": {"nome": "Supabase", "tokens": {"--bg": "oklch(9% 0.0 0)", "--surface": "oklch(6% 0.0 0)", "--fg": "oklch(98% 0.0 0)", "--muted": "oklch(54% 0.0 0)", "--border": "oklch(18% 0.0 0)", "--accent": "oklch(67% 0.114 153)"}, "font_heading": "Circular", "font_body": "Circular", "vibe": "open-source Firebase, dark emerald, code-first, HSL layers", "animation": "elegante"},
     "superhuman": {"nome": "Superhuman", "tokens": {"--bg": "oklch(100% 0.0 0)", "--surface": "oklch(100% 0.0 0)", "--fg": "oklch(16% 0.002 30)", "--muted": "oklch(85% 0.007 27)", "--border": "oklch(85% 0.007 27)", "--accent": "oklch(75% 0.053 258)"}, "font_heading": "Super Sans VF", "font_body": "Super Sans VF", "vibe": "fast email, premium dark hero, lavender purple glow", "animation": "elegante"},
     "tesla": {"nome": "Tesla", "tokens": {"--bg": "oklch(100% 0.0 0)", "--surface": "oklch(100% 0.0 0)", "--fg": "oklch(10% 0.007 220)", "--muted": "oklch(37% 0.005 220)", "--border": "oklch(93% 0.0 0)", "--accent": "oklch(41% 0.128 224)"}, "font_heading": "Universal Sans Display", "font_body": "Universal Sans Text", "vibe": "electric automotive, radical subtraction, full-viewport photo", "animation": "elegante"},
@@ -163,7 +177,8 @@ DIRECOES_VISUAIS = {
     "vintage": {"nome": "Vintage", "tokens": {"--bg": "oklch(75% 0.0 0)", "--surface": "oklch(75% 0.0 0)", "--fg": "oklch(0% 0.0 0)", "--muted": "oklch(60% 0.01 0)", "--border": "oklch(60% 0.0 0)", "--accent": "oklch(40% 0.1 180)"}, "font_heading": "Silkscreen", "font_body": "Inter", "vibe": "1950s-1990s nostalgia, skeuomorphic, grainy, pixel-style", "animation": "vibrante"},
     "vodafone": {"nome": "Vodafone", "tokens": {"--bg": "oklch(100% 0.0 0)", "--surface": "oklch(100% 0.0 0)", "--fg": "oklch(16% 0.005 210)", "--muted": "oklch(49% 0.0 0)", "--border": "oklch(25% 0.02 250)", "--accent": "oklch(19% 0.18 0)"}, "font_heading": "Vodafone Display", "font_body": "Vodafone Display", "vibe": "telecom global, monumental uppercase, Red chapter bands", "animation": "energetico"},
     "voltagent": {"nome": "Voltagent", "tokens": {"--bg": "oklch(2% 0.002 240)", "--surface": "oklch(6% 0.0 0)", "--fg": "oklch(95% 0.0 0)", "--muted": "oklch(58% 0.015 212)", "--border": "oklch(23% 0.003 15)", "--accent": "oklch(65% 0.17 160)"}, "font_heading": "system-ui", "font_body": "Inter", "vibe": "AI agent framework, void-black, emerald accent, terminal", "animation": "elegante"},
-    "warm_editorial": {"nome": "Warm Editorial", "tokens": {"--bg": "oklch(97% 0.006 38)", "--surface": "oklch(100% 0.0 0)", "--fg": "oklch(10% 0.004 36)", "--muted": "oklch(51% 0.013 26)", "--border": "oklch(25% 0.02 250)", "--accent": "oklch(40% 0.114 14)"}, "font_heading": "GT Sectra", "font_body": "Sohne", "vibe": "serif-led magazine, terracotta on warm off-white, editorial", "animation": "elegante"},
+    "editorial_warm": {"nome": "Warm Editorial", "tokens": {"--bg": "oklch(97% 0.006 38)", "--surface": "oklch(100% 0.0 0)", "--fg": "oklch(10% 0.004 36)", "--muted": "oklch(51% 0.013 26)", "--border": "oklch(25% 0.02 250)", "--accent": "oklch(40% 0.114 14)"}, "font_heading": "GT Sectra", "font_body": "Sohne", "vibe": "serif-led magazine, terracotta on warm off-white, editorial", "animation": "elegante"},
+    "warm_editorial_v2": {"nome": "Warm Editorial v2", "tokens": {"--bg": "oklch(97% 0.006 38)", "--surface": "oklch(100% 0.0 0)", "--fg": "oklch(10% 0.004 36)", "--muted": "oklch(51% 0.013 26)", "--border": "oklch(25% 0.02 250)", "--accent": "oklch(40% 0.114 14)"}, "font_heading": "GT Sectra", "font_body": "Sohne", "vibe": "serif-led magazine, terracotta on warm off-white, editorial", "animation": "elegante"},
     "warp": {"nome": "Warp", "tokens": {"--bg": "oklch(10% 0.001 60)", "--surface": "oklch(21% 0.001 60)", "--fg": "oklch(98% 0.003 45)", "--muted": "oklch(52% 0.002 30)", "--border": "oklch(27% 0.0 0)", "--accent": "oklch(100% 0.0 0)"}, "font_heading": "Matter", "font_body": "Matter", "vibe": "modern terminal, warm dark campfire, monochromatic, nature", "animation": "elegante"},
     "webex": {"nome": "Webex", "tokens": {"--bg": "oklch(100% 0.0 0)", "--surface": "oklch(100% 0.0 0)", "--fg": "oklch(0% 0.0 0)", "--muted": "oklch(60% 0.01 0)", "--border": "oklch(25% 0.02 250)", "--accent": "oklch(39% 0.149 210)"}, "font_heading": "Momentum", "font_body": "Momentum", "vibe": "collaboration, blue action system, multi-user spectrum", "animation": "elegante"},
     "webflow": {"nome": "Webflow", "tokens": {"--bg": "oklch(100% 0.0 0)", "--surface": "oklch(100% 0.0 0)", "--fg": "oklch(3% 0.0 0)", "--muted": "oklch(35% 0.0 0)", "--border": "oklch(85% 0.0 0)", "--accent": "oklch(39% 0.176 216)"}, "font_heading": "WF Visual Sans Variable", "font_body": "WF Visual Sans Variable", "vibe": "visual web builder, blue-accented, polished marketing", "animation": "vibrante"},
@@ -198,40 +213,40 @@ ANIMATION_PROFILES = {
     "elegante": {
         "instant":    "50ms",
         "feedback":   "150ms",
-        "enter":      "600ms",
-        "transition": "800ms",
+        "enter":      "300ms",
+        "transition": "500ms",
         "easing_enter":  "cubic-bezier(0.0, 0.0, 0.2, 1)",
         "easing_exit":   "cubic-bezier(0.4, 0.0, 1, 1)",
         "easing_std":    "cubic-bezier(0.4, 0.0, 0.2, 1)",
         "hero_type":  "fade-up",
         "card_type":  "fade-up",
-        "stagger":    "100ms",
+        "stagger":    "80ms",
         "note": "fade-up lento, blur-in, sem bounce — clínica, advocacia, estética",
     },
     "vibrante": {
         "instant":    "50ms",
         "feedback":   "100ms",
-        "enter":      "400ms",
-        "transition": "600ms",
+        "enter":      "250ms",
+        "transition": "400ms",
         "easing_enter":  "cubic-bezier(0.0, 0.0, 0.2, 1)",
         "easing_exit":   "cubic-bezier(0.4, 0.0, 1, 1)",
         "easing_std":    "cubic-bezier(0.4, 0.0, 0.2, 1)",
         "hero_type":  "slide-up",
         "card_type":  "slide-left",
-        "stagger":    "80ms",
+        "stagger":    "60ms",
         "note": "slide lateral, stagger agressivo — restaurante, pizzaria, lanchonete",
     },
     "energetico": {
         "instant":    "30ms",
         "feedback":   "80ms",
-        "enter":      "350ms",
-        "transition": "500ms",
+        "enter":      "200ms",
+        "transition": "300ms",
         "easing_enter":  "cubic-bezier(0.34, 1.56, 0.64, 1)",
         "easing_exit":   "cubic-bezier(0.4, 0.0, 1, 1)",
         "easing_std":    "cubic-bezier(0.34, 1.56, 0.64, 1)",
         "hero_type":  "scale-in",
         "card_type":  "scale-in",
-        "stagger":    "60ms",
+        "stagger":    "40ms",
         "note": "scale-in, bounce leve — academia, barbearia, crossfit",
     },
 }
@@ -367,7 +382,7 @@ _DIR_TO_CRAFT = {
     "ant": "minimal", "application": "minimal", "cal": "minimal", "clean": "minimal",
     "corporate": "minimal", "dashboard": "minimal", "enterprise": "minimal",
     "material": "minimal", "modern": "minimal", "professional": "minimal",
-    "sleek": "minimal", "stripe": "minimal", "notion": "minimal", "linear": "minimal",
+    "sleek": "minimal", "notion": "minimal", "linear": "minimal",
     "vercel": "minimal", "supabase": "minimal", "shadcn": "minimal", "simple": "minimal",
     "github": "minimal", "airtable": "minimal", "figma": "minimal", "raycast": "minimal",
     "resend": "minimal", "mintlify": "minimal", "sanity": "minimal", "posthog": "minimal",
@@ -432,7 +447,7 @@ NICHOS: Dict[str, Dict] = {
     "churrascaria": {"dir": "rustico", "dir_variantes": ["rustico", "cafe"],      "components": "foto hero de carne/brasa, cardápio resumido, horários, localização embed, CTA reserva WhatsApp, avaliações reais", "tom": "robusto, acolhedor, gaúcho, sabor de brasa", "seo": "H1 com cidade e tipo de carne, schema Restaurant, FAQ sobre rodízio e reservas", "anti": "fotos de comida gourmet/fine dining, paleta fria, layout minimalista"},
     "clinica":      {"dir": "clean", "dir_variantes": ["clean", "minimal", "friendly"], "components": "especialidades, equipe com CRM, CTA agendamento WhatsApp, convênios, localização", "tom": "profissional, empático, claro", "seo": "H1 com especialidade e cidade, schema MedicalBusiness, FAQ sobre consultas", "anti": "jargão médico, fotos de stock de médicos, promessas de cura"},
     "nutricionista": {"dir": "friendly", "dir_variantes": ["friendly", "warm_editorial", "clean"], "components": "especialidades, CTA agendamento WhatsApp, depoimentos, FAQ sobre consultas, localização", "tom": "acolhedor, empático, motivador — fala de saúde sem ser clínico", "seo": "H1 com especialidade e cidade, schema MedicalBusiness, FAQ sobre nutrição", "anti": "jargão médico, fotos de stock, promessas de emagrecimento rápido"},
-    "academia":     {"dir": "bold", "dir_variantes": ["bold", "nike", "energetic"],      "components": "modalidades, planos e preços, CTA matrícula WhatsApp, fotos do espaço real, horários de aulas", "tom": "energético, motivador, direto", "seo": "H1 com modalidade e cidade, schema SportsActivityLocation, FAQ sobre planos", "anti": "atletas de stock, promessas em X dias, layout corporativo"},
+    "academia":     {"dir": "bold", "dir_variantes": ["bold", "nike", "brutalism", "dramatic", "theverge"],      "components": "modalidades, planos e preços, CTA matrícula WhatsApp, fotos do espaço real, horários de aulas", "tom": "energético, motivador, direto", "seo": "H1 com modalidade e cidade, schema SportsActivityLocation, FAQ sobre planos", "anti": "atletas de stock, promessas em X dias, layout corporativo"},
     "pet_shop":     {"dir": "friendly", "dir_variantes": ["friendly", "duolingo", "lingo"],      "components": "serviços (banho, tosa, vet), galeria de pets, CTA WhatsApp, produtos, horários", "tom": "carinhoso, confiável — fala com o dono", "seo": "H1 com serviço e cidade, schema AnimalShelter, FAQ sobre serviços", "anti": "fotos de stock de animais, tom infantilizado"},
     "advocacia":    {"dir": "warm_editorial", "dir_variantes": ["warm_editorial", "editorial", "professional"],      "components": "áreas de atuação, perfil com OAB, CTA consulta WhatsApp, casos de sucesso, localização", "tom": "sério, competente, acessível — sem juridiquês", "seo": "H1 com área do direito e cidade, schema LegalService, FAQ sobre honorários", "anti": "promessas de ganhar causas, jargão no hero, stock de martelo"},
     "odontologia":  {"dir": "clean", "dir_variantes": ["clean", "minimal", "friendly"], "components": "tratamentos, antes/depois, CTA WhatsApp, convênios, equipe com CRO, localização", "tom": "profissional, acolhedor — reduz ansiedade", "seo": "H1 com tratamento e cidade, schema Dentist, FAQ sobre dor e procedimentos", "anti": "sorrisos perfeitos de stock, jargão técnico, promessas imediatas"},
@@ -457,7 +472,8 @@ ALIASES = {
     "imoveis": "imobiliaria", "contabil": "contabilidade",
     "escolas": "escola", "salao": "salao_beleza",
     "auto_peca": "auto_pecas", "mecanica": "auto_pecas",
-    "crossfit": "academia",
+    "crossfit": "academia", "personal": "academia", "personal_trainer": "academia",
+    "musculacao": "academia", "funcional": "academia",
     "psicologia": "clinica", "lanchonete": "restaurante",
     "padaria": "restaurante",
     "churrascaria": "churrascaria", "churrascarias": "churrascaria",
@@ -465,10 +481,10 @@ ALIASES = {
 }
 
 
-def get_design_context(segmento: str, nome_negocio: str = "", tier: str = "STANDARD", dark_mode: bool = False, od_slug: str = "") -> dict:
+def get_design_context(segmento: str, nome_negocio: str = "", tier: str = "STANDARD", dark_mode: bool = False, od_slug: str = "", dados_lead: dict = None) -> dict:
     """Retorna dict com tokens, tipografia e perfil de animação para o nicho.
 
-    Se od_slug fornecido, usa tokens pré-computados do Open Design (DESIGN.md).
+    Se od_slug fornecido, usa tokens pré-computados do DESIGN.md extraido.
     Fallback: DIRECOES_VISUAIS hardcoded.
     """
     seg = segmento.lower().replace(" ", "_").replace("-", "_")
@@ -481,7 +497,6 @@ def get_design_context(segmento: str, nome_negocio: str = "", tier: str = "STAND
         "anti": "fotos de stock genéricas, contadores inventados",
     })
     tier_upper = tier.upper()
-    opcoes = TIER_DIRECAO.get(tier_upper, ["clean"])
     import hashlib as _hlib
     _variantes = nicho.get("dir_variantes", [nicho["dir"]])
     import random as _rnd
@@ -493,9 +508,18 @@ def get_design_context(segmento: str, nome_negocio: str = "", tier: str = "STAND
         dir_key = _rnd.choice(_variantes)
     if dir_key not in DIRECOES_VISUAIS:
         dir_key = nicho["dir"]
+
+    _sub_nicho_data = None
+    if dados_lead:
+        _sub_nicho_data = detectar_sub_nicho(seg, dados_lead)
+        if _sub_nicho_data and _sub_nicho_data.get("vibe_override"):
+            dir_key = _sub_nicho_data["vibe_override"]
+
+    if dir_key not in DIRECOES_VISUAIS:
+        dir_key = nicho["dir"]
     d = DIRECOES_VISUAIS[dir_key]
 
-    # Tokens: prioridade Open Design (DESIGN.md real) > DIRECOES_VISUAIS hardcoded
+    # Tokens: prioridade DESIGN.md real extraido > DIRECOES_VISUAIS hardcoded
     _od_effective_slug = od_slug or dir_key
     if _od_effective_slug in _OD_TOKENS:
         tokens = dict(_OD_TOKENS[_od_effective_slug])
@@ -579,6 +603,8 @@ def get_design_context(segmento: str, nome_negocio: str = "", tier: str = "STAND
         "pet_shop": 150, "petshop": 150, "dog_walker": 140,
     }
     _fallback_hue = _SEGMENT_HUE.get(seg, 270)
+    if _sub_nicho_data and _sub_nicho_data.get("sub_nicho") == "natacao":
+        _fallback_hue = 200  # Tom de piscina refrescante (azul/ciano)
 
     _bg_l = _get_lightness(tokens.get("--bg", ""))
     _fg_l = _get_lightness(tokens.get("--fg", ""))
@@ -726,6 +752,13 @@ SUB_NICHOS = {
             "publico": "praticantes de artes marciais",
             "cta": "Agendar aula experimental",
             "vibe_override": "brutalism",
+        },
+        "natacao": {
+            "keywords": ["natacao", "natação", "piscina", "hidro", "aquatica", "aquática", "hidroginastica", "hidroginástica", "touca", "oculos", "óculos", "raia", "mergulh", "flex", "aqua", "swimming", "swim"],
+            "tom": "aquatico, energetico, confiavel, focado em progresso na piscina",
+            "publico": "crianças, adultos e idosos buscando saúde, lazer ou condicionamento na água",
+            "cta": "Agendar aula experimental",
+            "vibe_override": "energetic",
         },
     },
     "restaurante": {

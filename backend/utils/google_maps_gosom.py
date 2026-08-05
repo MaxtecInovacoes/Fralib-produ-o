@@ -17,22 +17,89 @@ import csv
 import json
 import time
 import os
+import re
+from datetime import datetime, timezone
 from typing import List, Dict, Optional
-from io import StringIO
 
 GOSOM_BASE_URL = "http://localhost:8085"
 GOSOM_DATA_FOLDER = "/root/gmapsdata"
-GOSOM_TIMEOUT = 180  # 3 min max por job
-GOSOM_POLL_INTERVAL = 5  # poll a cada 5s
+GOSOM_ENABLED = os.getenv("GOSOM_ENABLED", "0").lower() in {"1", "true", "yes", "on"}
+GOSOM_TIMEOUT = int(os.getenv("GOSOM_TIMEOUT", "45"))
+GOSOM_POLL_INTERVAL = int(os.getenv("GOSOM_POLL_INTERVAL", "3"))
+GOSOM_STALE_WORKING_SECS = int(os.getenv("GOSOM_STALE_WORKING_SECS", "120"))
+GOSOM_MAX_PENDING = int(os.getenv("GOSOM_MAX_PENDING", "3"))
+GOSOM_CIRCUIT_OPEN_SECS = int(os.getenv("GOSOM_CIRCUIT_OPEN_SECS", "900"))
+
+_CIRCUIT_OPEN_UNTIL = 0.0
+
+
+def _abrir_circuito(motivo: str) -> None:
+    global _CIRCUIT_OPEN_UNTIL
+    _CIRCUIT_OPEN_UNTIL = time.time() + GOSOM_CIRCUIT_OPEN_SECS
+    print(f"[Gosom] Circuito aberto por {GOSOM_CIRCUIT_OPEN_SECS}s: {motivo}")
+
+
+def _parse_job_date(value: str) -> Optional[datetime]:
+    if not value:
+        return None
+    try:
+        normalized = value.replace("Z", "+00:00")
+        # Go/RFC3339Nano pode vir com 9 digitos; datetime aceita microssegundos.
+        match = re.match(r"^(.+\.)(\d{6})\d+([+-]\d\d:\d\d)$", normalized)
+        if match:
+            normalized = "".join(match.groups())
+        return datetime.fromisoformat(normalized)
+    except Exception:
+        return None
+
+
+def _job_age_seconds(job: Dict) -> Optional[float]:
+    dt = _parse_job_date(job.get("Date") or job.get("date") or "")
+    if not dt:
+        return None
+    if not dt.tzinfo:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return (datetime.now(timezone.utc) - dt).total_seconds()
 
 
 async def _gosom_disponivel() -> bool:
     """Verifica se o daemon gosom está rodando."""
+    if not GOSOM_ENABLED:
+        print("[Gosom] Desativado por contrato (GOSOM_ENABLED!=1)")
+        return False
+    if time.time() < _CIRCUIT_OPEN_UNTIL:
+        print("[Gosom] Circuito aberto — fallback imediato")
+        return False
     try:
         async with httpx.AsyncClient(timeout=5) as client:
             r = await client.get(f"{GOSOM_BASE_URL}/api/v1/jobs")
-            return r.status_code == 200
-    except Exception:
+            if r.status_code != 200:
+                return False
+            try:
+                jobs = r.json()
+            except Exception:
+                return True
+            if not isinstance(jobs, list):
+                return True
+            pending = 0
+            stale_working = []
+            for job in jobs:
+                status = (job.get("Status") or job.get("status") or "").lower()
+                if status == "pending":
+                    pending += 1
+                elif status in {"working", "running"}:
+                    age = _job_age_seconds(job)
+                    if age is not None and age > GOSOM_STALE_WORKING_SECS:
+                        stale_working.append(job.get("ID") or job.get("id") or "?")
+            if stale_working:
+                _abrir_circuito(f"job working stale: {', '.join(stale_working[:3])}")
+                return False
+            if pending > GOSOM_MAX_PENDING:
+                _abrir_circuito(f"fila interna alta: {pending} pending")
+                return False
+            return True
+    except Exception as e:
+        print(f"[Gosom] Health falhou: {e}")
         return False
 
 
@@ -58,6 +125,7 @@ async def buscar_gosom(
         "lang": lang,
         "depth": 1,
         "max_time": GOSOM_TIMEOUT,
+        "fast_mode": True,
     }
 
     try:
@@ -89,15 +157,17 @@ async def buscar_gosom(
                     data = r.json()
                     status = data.get("Status", "")
                     if status == "ok":
-                        print(f"[Gosom] Job concluído!")
+                        print("[Gosom] Job concluído!")
                         break
                     elif status in ("failed", "error"):
-                        print(f"[Gosom] Job falhou")
+                        print("[Gosom] Job falhou")
+                        _abrir_circuito("job falhou")
                         return None
                 except Exception:
                     continue
             else:
                 print(f"[Gosom] Timeout ({GOSOM_TIMEOUT}s)")
+                _abrir_circuito("timeout aguardando job")
                 return None
 
         # Read CSV results
@@ -112,6 +182,7 @@ async def buscar_gosom(
 
     except Exception as e:
         print(f"[Gosom] Erro: {e} — fallback para Playwright")
+        _abrir_circuito(str(e))
         return None
 
 

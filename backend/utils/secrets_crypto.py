@@ -1,8 +1,8 @@
 """
-Cripto simetrica para segredos por tenant (ex: Anthropic API key BYOK do plano Pro).
+Criptografia simétrica para segredos por tenant (ex: Anthropic API key BYOK do plano Pro).
 
-A FERNET_KEY vem do .env. Se nao existir, geramos uma e logamos um alerta -
-mas em prod ela DEVE ser fixa, senao as keys salvas viram lixo no proximo restart.
+A FERNET_KEY é OBRIGATÓRIA em produção. Nunca use fallback derivado do JWT_SECRET_KEY
+em produção - isso compromete a segurança de todas as chaves criptografadas.
 """
 import os
 from cryptography.fernet import Fernet, InvalidToken
@@ -15,16 +15,20 @@ def _get_fernet() -> Fernet:
     global _fernet_singleton
     if _fernet_singleton is not None:
         return _fernet_singleton
+
     key = os.getenv('FERNET_KEY', '').strip()
     if not key:
-        # Em dev sem FERNET_KEY: gera uma volatil. Falha cedo em prod via flag.
-        if os.getenv('FRALIB_ENV', 'dev') == 'prod':
+        env = os.getenv('FRALIB_ENV', 'dev')
+        if env == 'prod':
+            # PRODUÇÃO: FERNET_KEY é obrigatório
             raise RuntimeError(
-                'FERNET_KEY ausente no .env. '
+                'FERNET_KEY ausente no .env (PRODUÇÃO). '
                 'Gere uma com: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"'
             )
+        # DEV: Usa chave volátil (avisa no log)
         key = Fernet.generate_key().decode()
-        print('[secrets_crypto] AVISO: FERNET_KEY ausente, usando chave volatil (apenas dev).')
+        print('[secrets_crypto] AVISO: FERNET_KEY ausente em DEV, usando chave volátil.')
+
     _fernet_singleton = Fernet(key.encode() if isinstance(key, str) else key)
     return _fernet_singleton
 

@@ -289,3 +289,30 @@ def _registrar_transacao(db: Session, user_id: int, tipo: str,
         db.commit()
     except Exception as e:
         print(f"[Credits] Erro ao registrar transacao: {e}")
+
+
+def deduzir_creditos_por_pipeline(db: Session, tenant_id: int, run_id: str) -> dict:
+    """Desconta crédito do pipeline com base no custo real do trace."""
+    # Buscar custo real do trace
+    trace_row = db.execute(text(
+        "SELECT custo_total_usd FROM pipeline_traces WHERE run_id = :rid ORDER BY created_at DESC LIMIT 1"
+    ), {"rid": run_id}).fetchone()
+
+    custo_usd = float(trace_row[0]) if trace_row and trace_row[0] else CUSTO_POR_CICLO_USD
+
+    # Consumir crédito diário
+    ok = consumir_credito_diario(db, tenant_id, lead_nome=f"run_id={run_id}")
+
+    # Registrar transação com custo real
+    _registrar_transacao(
+        db, tenant_id, "pipeline",
+        tokens_consumidos=1,
+        custo_usd=custo_usd,
+        descricao=f"Pipeline concluido: run_id={run_id}"
+    )
+
+    return {
+        "ok": ok,
+        "deduzidos": 1 if ok else 0,
+        "custo_usd": custo_usd,
+    }

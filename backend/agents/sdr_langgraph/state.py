@@ -76,13 +76,6 @@ class LeadMemory(BaseModel):
     gatekeeper_level: int = 0
     is_decisor: Optional[bool] = None
 
-    # Estado de conversa (FSM nova - baseado em Intent + State, nao stage linear)
-    conversation_state: str = "idle"  # ConversationState enum como string
-    turn_count: int = 0               # quantas mensagens o lead mandou ate agora
-    last_lead_response_at: Optional[str] = None  # timestamp ISO da ultima msg do lead
-    last_intent: str = ""             # intent classificado da ultima msg
-    last_intent_confidence: float = 0.0
-
     # Variante A/B
     variant: str = "A"  # A, B, C, D
 

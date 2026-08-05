@@ -7,13 +7,20 @@ pipeline ele roda.
 ## Pipeline de Geração (ordem de execução)
 
 ```
-[1] HUNTER      Valida/coleta lead_data (utils/agente1_hunter_v2.py)
-[2] CAIO        Qualifica lead — tier MORNO/STANDARD/PREMIUM, score 0-100 (agents/caio.py)
-[3] ARQUITETO   PRD com seções, paleta OKLch, animações (agents/arquiteto_mestre.py)
-[4] BUILDER     HTML via OpenUI chunked (agents/builder/agent.py — existe só na VPS)
-[5] QA v2       Vision QA score 7.9/10 PASSED (agents/builder/quality_gate_v2/)
-[6] DEPLOY      Site salvo em /var/www/fralib/sites/
-[7] FRANZ       Lead marcado para outreach WhatsApp (agents/franz/ — agent loop MCP-like com tools)
+FASE 1  HUNTER           → Hunter captura leads (utils/agente1_hunter_v2.py)
+FASE 2  CURADORIA/CAIO   → Qualifica lead — tier MORNO/STANDARD/PREMIUM (agents/caio.py)
+FASE 3  JINA             → Pesquisa de mercado Jina AI (agents/jina_research.py)
+FASE 4  INTELIGENCIA     → Análise de concorrência
+FASE 5  FOTOS            → Download de fotos (agents/unsplash_fetcher.py)
+FASE 6  NICHO            → Análise de nicho (agents/agente_nicho.py)
+FASE 7  VARIACAO         → Variação estrutural (agents/agente_variacao.py)
+FASE 8  ARQUITETO        → Gera DesignerPRD (agents/arquiteto_mestre.py)
+FASE 9  BUILDER          → HTML via OpenUI (services/openui_renderer.py)
+FASE 10 DEPLOY           → Site salvo em /var/www/fralib/sites/
+FASE 11 FRANZ            → SDR outreach WhatsApp (agents/sdr_langgraph/)
+
+Fonte: commit a9030deb (22 jun 2026) — pipeline funcional
+Orquestrador: backend/services/pipeline_executors.py
 ```
 
 ## Agentes do Pipeline (ordem de execução)
@@ -322,3 +329,59 @@ Suporta OpenAI, Google, Groq via `ia_manager.pick_key()`.
 | `frontend/js/toast.js` | Toast notifications |
 | `frontend/js/twofa-setup.js` | Setup 2FA |
 | `frontend/js/pixel-office.js` | Pixel tracking |
+
+## ⚠️ REGRAS ABSOLUTAS — NÃO REGREDIR
+
+**Último restore funcional:** commit `a9030deb` (22 junho 2026 ~18:22)
+**Documento:** `docs/RESTORE_JUNHO22_REFERENCE.md`
+
+### Arquivos QUE NÃO PODEM ser removidos ou reescritos:
+
+1. **`backend/services/pipeline_executors.py`** — Orquestrador das 11 fases. Se precisar mudar, edite este arquivo. NÃO substitua por steps simplificados.
+2. **`backend/services/pipeline_phases.py`** — Define FASE_1_HUNTER → FASE_11_FRANZ + FraLibState (15+ campos). NÃO simplifique FraLibState.
+3. **`backend/services/openui_renderer.py`** — Motor OpenUI que gera HTML completo. NÃO substitua por prompt genérico.
+4. **`backend/services/openui_contracts.py`** — Contratos SEO/LGPD/motion injetados no prompt do OpenUI.
+5. **`backend/agents/jina_research.py`** — Pesquisa de mercado Jina AI (Fase 3). NÃO remova.
+6. **`backend/agents/arquiteto_mestre.py`** — Gera DesignerPRD via LLM (Fase 8).
+7. **`backend/agents/caio.py`** — Qualifica lead (score, tier, paleta) (Fase 2).
+
+### Regras de modificação:
+
+1. **NUNCA remover arquivos da pipeline** sem antes verificar se são usados por `pipeline_executors.py`
+2. **NUNCA simplificar FraLibState** — cada campo tem propósito (html_sections, html_final, jina_insights, briefing_theo, prd_arquiteto, etc)
+3. **NUNCA substituir pipeline_executors.py** por steps simplificados — a orquestração das 11 fases é essencial
+4. **ANTES de remover qualquer arquivo**, executar: `grep -r "arquivo_removido" backend/`
+5. **SEMPRE documentar** mudanças na pipeline em `docs/RESTORE_JUNHO22_REFERENCE.md`
+6. **SEMPRE testar** pipeline com lead real após mudanças: `POST /api/pipeline/executar?tenant_id=2&lead_id={id}`
+
+### Como verificar integridade da pipeline:
+
+```bash
+# 1. Verificar que arquivos críticos existem
+ls backend/services/pipeline_executors.py
+ls backend/services/pipeline_phases.py
+ls backend/services/openui_renderer.py
+ls backend/agents/jina_research.py
+
+# 2. Verificar que imports funcionam
+python3 -c "from backend.services.pipeline_executors import executar_fase1_hunter"
+python3 -c "from backend.services.pipeline_phases import TOTAL_FASES"
+python3 -c "from backend.services.openui_renderer import OpenUIRenderer"
+python3 -c "from backend.agents.jina_research import clean_json_response"
+
+# 3. Testar pipeline com lead real
+curl -N -H "Authorization: Bearer {token}" \
+  "http://localhost:8000/api/pipeline/executar?tenant_id=2&lead_id={lead_id}"
+```
+
+### Rollback rápido:
+
+Se a pipeline quebrar, restaurar commit de referência:
+```bash
+cd /root/repos/fralib
+git show a9030deb:backend/services/pipeline_executors.py > /tmp/restore/pipeline_executors.py
+git show a9030deb:backend/services/pipeline_phases.py > /tmp/restore/pipeline_phases.py
+git show a9030deb:backend/services/openui_renderer.py > /tmp/restore/openui_renderer.py
+git show a9030deb:backend/agents/jina_research.py > /tmp/restore/jina_research.py
+```
+

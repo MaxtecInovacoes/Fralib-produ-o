@@ -6,7 +6,7 @@ Data: 2026-04-27
 """
 import functools
 import inspect
-from typing import Callable, Any
+from typing import Callable
 
 class ResourceNotUsedError(Exception):
     """Erro quando recurso obrigatório não é usado"""
@@ -78,9 +78,9 @@ def require_guidelines(agent_name: str):
                 frame = frame.f_back
 
             if not guidelines_used:
-                print(f"[Validation] ⚠️ {agent_name}: Guidelines podem não estar ativas")
+                print(f"[Validation] WARN {agent_name}: Guidelines podem nao estar ativas")
             else:
-                print(f"[Validation] ✅ {agent_name}: Guidelines verificadas e ativas")
+                print(f"[Validation] OK {agent_name}: Guidelines verificadas e ativas")
 
             return result
         return wrapper
@@ -92,24 +92,24 @@ def validate_imports():
     Valida que módulos críticos estão disponíveis
     """
     try:
-        from agent_rag import format_rag_prompt, get_agent_temperature
-        print("[Validation] ✅ agent_rag disponível")
-    except ImportError as e:
-        print(f"[Validation] ⚠️ agent_rag não encontrado: {e}")
+        import agent_rag  # noqa: F401
+        print("[Validation] OK agent_rag disponivel")
+    except ImportError as exc:
+        print(f"[Validation] WARN agent_rag nao encontrado: {exc}")
 
     try:
         from skill_loader import carregar_skills, get_skills_agente
-        print("[Validation] ✅ skill_loader disponível")
+        print("[Validation] OK skill_loader disponivel")
     except ImportError as e:
-        print(f"[Validation] ⚠️ skill_loader não encontrado: {e}")
+        print(f"[Validation] WARN skill_loader nao encontrado: {e}")
 
     try:
         from design_guidelines import ANIMATION_PRINCIPLES, ANIMATION_CSS
-        print("[Validation] ✅ design_guidelines disponível")
+        print("[Validation] OK design_guidelines disponivel")
     except ImportError as e:
-        print(f"[Validation] ⚠️ design_guidelines não encontrado: {e}")
+        print(f"[Validation] WARN design_guidelines nao encontrado: {e}")
 
 # Executar validação ao importar
 validate_imports()
 
-print("[Validation] 🎯 Sistema de Validação Obrigatória carregado")
+print("[Validation] DONE Sistema de Validacao Obrigatoria carregado")

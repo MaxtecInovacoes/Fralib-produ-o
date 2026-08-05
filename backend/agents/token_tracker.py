@@ -4,38 +4,25 @@ PRD #4: Visibilidade de custo por site gerado
 """
 
 import time
-import json
 from typing import Optional
 
-# ══════════════════════════════════════════════════════════════
-# PREÇOS POR MILHÃO DE TOKENS (Anthropic, maio 2025)
-# ══════════════════════════════════════════════════════════════
-PRECOS_POR_MILHAO = {
-    "claude-opus-4-7": {"input": 15.0, "output": 75.0, "cache_write": 18.75, "cache_read": 1.50},
-    "claude-sonnet-4-6": {"input": 3.0, "output": 15.0, "cache_write": 3.75, "cache_read": 0.30},
-    "claude-haiku-4-5": {"input": 0.80, "output": 4.0, "cache_write": 1.0, "cache_read": 0.08},
-}
+from backend.domain.llm_pricing import estimate_llm_cost_usd
 
 
 def _calcular_custo(model: str, usage: dict) -> float:
     """Calcula custo em USD de uma chamada."""
-    precos = PRECOS_POR_MILHAO.get(model, PRECOS_POR_MILHAO["claude-sonnet-4-6"])
-    custo = (
-        (usage.get("input_tokens", 0) / 1_000_000) * precos["input"] +
-        (usage.get("output_tokens", 0) / 1_000_000) * precos["output"] +
-        (usage.get("cache_creation", 0) / 1_000_000) * precos["cache_write"] +
-        (usage.get("cache_read", 0) / 1_000_000) * precos["cache_read"]
-    )
-    return custo
+    return estimate_llm_cost_usd(model, usage)
 
 
 class TokenTracker:
     """Acumula usage de todas as chamadas LLM de um pipeline run."""
 
-    def __init__(self, run_id: str, lead_nome: str, nicho: str):
+    def __init__(self, run_id: str, lead_nome: str, nicho: str, tenant_id=None, job_id=None):
         self.run_id = run_id
         self.lead_nome = lead_nome
         self.nicho = nicho
+        self.tenant_id = tenant_id
+        self.job_id = job_id
         self.inicio = time.time()
         self.chamadas = []
 
@@ -78,6 +65,8 @@ class TokenTracker:
 
         return {
             "run_id": self.run_id,
+            "tenant_id": self.tenant_id,
+            "job_id": self.job_id,
             "lead": self.lead_nome,
             "nicho": self.nicho,
             "duracao_s": round(time.time() - self.inicio, 1),
@@ -94,6 +83,7 @@ class TokenTracker:
 
 def log_tracking(resumo: dict):
     """Imprime resumo formatado no stdout (capturado pelo SSE)."""
+    resumo = _with_ledger_totals(resumo)
     print("═" * 55)
     print(f"[TRACKING] Run {resumo['run_id']} | Lead: {resumo['lead']} | Nicho: {resumo['nicho']}")
     print(f"[TRACKING] Duração: {resumo['duracao_s']}s | Chamadas LLM: {resumo['total_chamadas']}")
@@ -111,35 +101,65 @@ def log_tracking(resumo: dict):
     if resumo['agente_mais_caro']:
         print(f"[TRACKING] Agente mais caro: {resumo['agente_mais_caro']}")
     print("═" * 55)
-
-
 def salvar_tracking(resumo: dict):
-    """Salva resumo no PostgreSQL. Silencioso se falhar."""
+    """Salva resumo de tracking. Agora e no-op — a escrita canonica e em llm_budget_ledger.
+    Historico: escrevia em pipeline_token_usage ate 2026-06. Essa tabela agora
+    e legado; o ledger canonico e llm_budget_ledger (populado por call_claude).
+    A funcao permanece aqui como API compat para nao quebrar chamadas existentes.
+    """
+    # Canonical LLM cost/tokens agora vao para llm_budget_ledger via llm_direct.py
+    # e para jobs.llm_tokens_used/jobs.llm_cost_estimate via job_queue.mark_success()
+    pass
+def _with_ledger_totals(resumo: dict) -> dict:
+    """Prefer the canonical LLM ledger when it has rows for this run/job."""
+    run_id = resumo.get("run_id")
+    job_id = resumo.get("job_id")
+    if not run_id and not job_id:
+        return resumo
     try:
         from core.database import engine
         from sqlalchemy import text
+        clauses = []
+        params = {}
+        if run_id:
+            clauses.append("run_id = :run_id")
+            params["run_id"] = run_id
+        if job_id:
+            clauses.append("job_id = :job_id")
+            params["job_id"] = job_id
         with engine.connect() as conn:
-            conn.execute(text("""
-                INSERT INTO pipeline_token_usage
-                (run_id, lead_nome, nicho, duracao_s, total_input_tokens, total_output_tokens,
-                 cache_hit_ratio, custo_total_usd, por_agente, created_at)
-                VALUES (:run_id, :lead_nome, :nicho, :duracao_s, :total_input, :total_output,
-                        :cache_hit, :custo, :por_agente, NOW())
-                ON CONFLICT (run_id) DO NOTHING
-            """), {
-                "run_id": resumo["run_id"],
-                "lead_nome": resumo["lead"],
-                "nicho": resumo["nicho"],
-                "duracao_s": resumo["duracao_s"],
-                "total_input": resumo["total_input_tokens"],
-                "total_output": resumo["total_output_tokens"],
-                "cache_hit": resumo["cache_hit_ratio"],
-                "custo": resumo["custo_total_usd"],
-                "por_agente": json.dumps(resumo["por_agente"]),
-            })
-            conn.commit()
-    except Exception as e:
-        print(f"[TRACKING] Erro ao salvar no DB: {e}")
+            row = conn.execute(
+                text(
+                    f"""
+                    SELECT
+                        COUNT(*) AS total_calls,
+                        COALESCE(SUM(input_tokens), 0) AS input_tokens,
+                        COALESCE(SUM(output_tokens), 0) AS output_tokens,
+                        COALESCE(SUM(cache_read_tokens), 0) AS cache_read_tokens,
+                        COALESCE(SUM(cost_usd), 0) AS cost_usd
+                    FROM llm_budget_ledger
+                    WHERE {' OR '.join(clauses)}
+                    """
+                ),
+                params,
+            ).mappings().first()
+        if not row or int(row.get("total_calls") or 0) <= 0:
+            return resumo
+        merged = dict(resumo)
+        merged["total_chamadas"] = max(int(merged.get("total_chamadas") or 0), int(row["total_calls"] or 0))
+        merged["total_input_tokens"] = int(row["input_tokens"] or 0)
+        merged["total_output_tokens"] = int(row["output_tokens"] or 0)
+        merged["total_cache_hit_tokens"] = int(row["cache_read_tokens"] or 0)
+        merged["cache_hit_ratio"] = round(
+            merged["total_cache_hit_tokens"] / max(merged["total_input_tokens"], 1) * 100,
+            1,
+        )
+        merged["custo_total_usd"] = round(float(row["cost_usd"] or 0), 4)
+        merged["ledger_source"] = "llm_budget_ledger"
+        return merged
+    except Exception as exc:
+        print(f"[TRACKING] Aviso: falha ao agregar ledger canonico: {exc}")
+        return resumo
 
 
 # ══════════════════════════════════════════════════════════════

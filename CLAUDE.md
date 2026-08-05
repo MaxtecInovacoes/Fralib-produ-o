@@ -15,52 +15,45 @@ Modulo paralelo de SDR via WhatsApp (Franz agent loop + meowhats).
 
 ## Pipeline de Agentes (ordem de execucao)
 
-Fonte autoritativa: PLAYBOOK_PIPELINE_VALIDADA.md na VPS (/opt/fralib/docs/)
+Fonte: commit a9030deb (22 junho 2026) - pipeline funcional
+Documento: docs/RESTORE_JUNHO22_REFERENCE.md
 
-### Cadeia completa (8 estagios)
+### Cadeia completa (11 fases)
 ```
-[1] BANCO       Carrega lead direto do Postgres
-[2] HUNTER      Valida lead_data
-[3] CAIO        Qualificacao (tier=MORNO/STANDARD/PREMIUM, score 0-100)
-[4] ARQUITETO   PRD com secoes, paleta OKLch, animacoes (~35s via LLM)
-[5] BUILDER     HTML via OpenUI chunked (4 chunks LLM, ~200s)
-[6] QA v2       Vision QA score 7.9/10 PASSED (~111s)
-[7] DEPLOY      Site salvo em /var/www/fralib/sites/...
-[8] FRANZ       Lead marcado para outreach WhatsApp
+FASE 1  HUNTER           -> Hunter captura leads
+FASE 2  CURADORIA/CAIO   -> Qualifica lead (tier, score, paleta)
+FASE 3  JINA             -> Pesquisa mercado Jina AI
+FASE 4  INTELIGENCIA     -> Analise concorrencia
+FASE 5  FOTOS            -> Download fotos
+FASE 6  NICHO            -> Analise nicho
+FASE 7  VARIACAO         -> Variacao estrutural
+FASE 8  ARQUITETO        -> Gera DesignerPRD (secoes, paleta, animacoes)
+FASE 9  BUILDER          -> HTML via OpenUI (services/openui_renderer.py)
+FASE 10 DEPLOY           -> Site em /var/www/fralib/sites/
+FASE 11 FRANZ            -> SDR outreach WhatsApp
 ```
 
 ### Agentes
-| # | Agente | Funcao | max_tokens |
-|---|--------|--------|------------|
-| 1 | Theo | Estrategista / PRD | 6000 (PRD), 4000 (briefing) |
-| 2 | Designer PRD | Arquiteto visual | 8000 |
-| 3 | Arquiteto Mestre | Funde Theo + Designer em PRD unico | 8000 |
-| 4 | Builder (OpenUI) | Gerador HTML chunked | 64000 total (4x 18000) |
-| 5 | Liz | Revisora de codigo | 4000 / 8000 |
-| 6 | Caio | Otimizador | 2000 |
-| 7 | Franz | Finalizador / SDR WhatsApp | 4000 |
+| Fase | Agente | Funcao |
+|------|--------|--------|
+| 1 | Hunter | Captura leads Google Maps |
+| 2 | Caio | Qualifica lead (tier, score, paleta) |
+| 3 | Jina | Pesquisa mercado Jina AI |
+| 4 | Inteligencia | Analise concorrencia |
+| 5 | Fotos | Download fotos Unsplash/Pexels |
+| 6 | Nicho | Analise nicho segmento |
+| 7 | Variacao | Variacao estrutural site |
+| 8 | Arquiteto Mestre | Gera DesignerPRD via LLM |
+| 9 | Builder (OpenUI) | Gera HTML completo com contratos SEO/LGPD/motion |
+| 10 | Deploy | Publica site |
+| 11 | Franz | SDR outreach WhatsApp (FSM + Orchestrator) |
 
-Nota: Alex (Integrador) arquivado em backend/agents/_arquivo/.
-Liam (gerador HTML antigo) removido — substituido por Builder OpenUI chunked.
+**Orquestrador:** backend/services/pipeline_executors.py (11 fases)
+**Estado:** backend/services/pipeline_phases.py (FraLibState 15+ campos)
+**Motor HTML:** backend/services/openui_renderer.py (OpenUI com contratos)
 
-## Infraestrutura (VPS Nova)
+Nota: Theo, Designer PRD, Liam, Liz sao agentes LEGADO. Arquiteto Mestre funde Theo + Designer.
 
-### Acesso
-```
-SSH:      ssh -i ~/.ssh/id_ed25519 root@100.124.56.36 (via Tailscale)
-Projeto:  /opt/fralib/
-OpenUI:   /root/fralib/openui-service/ (servico systemd)
-Dominio:  https://app.seunegociofralib.site
-```
-
-### Containers Docker
-| Container | Funcao | Porta | Status |
-|-----------|--------|-------|--------|
-| fralib-api (systemd) | API FastAPI | 8000 | active |
-| fralib-worker-1 | Worker unificado (pipeline + supply + Franz) | - | running |
-| fralib-postgres-1 | PostgreSQL | 15434→5432 | healthy |
-| fralib-redis-1 | Cache | 16379→6379 | healthy |
-| fralib-openui | Node.js HTML generation (systemd) | 3333 | active |
 
 **Worker unificado:** `WORKER_JOB_TYPES=pipeline_lead,pipeline_multiplos,pipeline_main,lead_production_tick,lead_supply_caio,lead_supply_hunter,franz_outreach` (env var no docker-compose.prod.yml). 3 workers antigos consolidados em 1 (commit f47bd586).
 

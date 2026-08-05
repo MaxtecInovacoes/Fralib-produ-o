@@ -1,4 +1,4 @@
-﻿# SEO Local — Mapa Obrigatório
+# SEO Local — Mapa Obrigatório
 
 Todo site gerado DEVE seguir esta estrutura de SEO local.
 
@@ -15,7 +15,7 @@ Ex: Encontre a melhor academia feminina em Campina Grande do Sul com equipamento
 
 **Hierarquia H2/H3:**
 - H2: Principais Serviços → H3: Serviço 1 + Localidade, Serviço 2 + Localidade, Serviço 3 + Localidade
-- H2: Diferenciais e Benefícios → H3: Garantia de Qualidade, Equipe Especializada, Projetos Comprovados
+- H2: Diferenciais e Benefícios → H3: Garantia de Qualidade, Equipe Especiavalidadorada, Projetos Comprovados
 - H2: Prova Social → H3: Depoimentos de clientes, Avaliações reais, Casos de sucesso
 - H2: CTA Local → H3: Ligue agora, WhatsApp, Como chegar
 

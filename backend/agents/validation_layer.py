@@ -4,7 +4,7 @@ Baseado em Vercel v0 + Lovable.dev
 """
 
 import re
-from typing import Dict, List, Tuple
+from typing import List, Tuple
 
 # Cores genericas proibidas
 CORES_PROIBIDAS = [
@@ -49,7 +49,7 @@ def validar_prd(prd_json: dict) -> Tuple[bool, List[str]]:
 
 def validar_html(html: str, prd_json: dict) -> Tuple[bool, List[str]]:
     """
-    Valida HTML do Liam
+    Valida HTML gerado pelo renderer
     Retorna (valido, lista_erros)
     """
     erros = []

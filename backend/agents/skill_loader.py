@@ -2,10 +2,13 @@
 def get_essential_skills(agente: str) -> list[str]:
     """Retorna apenas skills essenciais para evitar timeout"""
     essential = {
-        'caio': [],  # Caio não precisa de skills
-        'theo': ['design-system'],  # Apenas design system
-        'liam': [],  # Liam usa regras condensadas no SYSTEM prompt (não carregar skills pesadas)
-        'liz': []  # Liz não precisa de skills
+        'caio': [],
+        'agente_nicho': [],
+        'agente_variacao': [],
+        'arquiteto_mestre': ['design-with-taste'],
+        'builder_renderer': ['site_skill_pack'],
+        'validador': [],
+        'bryan': [],
     }
     return essential.get(agente, [])
 
@@ -17,9 +20,47 @@ Data: 2026-04-27
 """
 import os
 from pathlib import Path
-from typing import List, Dict, Optional
+from typing import List
 
-SKILLS_DIR = Path("/root/ui-ux-pro-max-skill/.claude/skills")
+
+def _skill_roots() -> list[Path]:
+    """Candidate skill roots for VPS, local Codex, and legacy Claude installs."""
+    roots: list[Path] = []
+    for raw in (os.getenv("FRALIB_SKILLS_DIRS") or "").split(os.pathsep):
+        if raw.strip():
+            roots.append(Path(raw.strip()))
+    agents_dir = Path(__file__).resolve().parent
+    repo_root = agents_dir.parents[1] if len(agents_dir.parents) > 1 else Path.cwd()
+    home = Path.home()
+    roots.extend(
+        [
+            agents_dir / "skill_packs",
+            repo_root / ".agents" / "skills",
+            Path("/root/ui-ux-pro-max-skill/.claude/skills"),
+            Path("/root/.agents/skills"),
+            Path("/root/.codex/skills"),
+            Path("/root/.claude/skills"),
+            home / ".agents" / "skills",
+            home / ".codex" / "skills",
+            home / ".claude" / "skills",
+        ]
+    )
+    seen: set[str] = set()
+    unique: list[Path] = []
+    for root in roots:
+        key = str(root).lower()
+        if key not in seen:
+            seen.add(key)
+            unique.append(root)
+    return unique
+
+
+def _resolve_skill_path(skill_name: str) -> Path | None:
+    for root in _skill_roots():
+        path = root / skill_name / "SKILL.md"
+        if path.exists():
+            return path
+    return None
 
 def ler_skill(skill_name: str) -> str:
     """
@@ -31,19 +72,11 @@ def ler_skill(skill_name: str) -> str:
     Returns:
         Conteúdo do SKILL.md ou string vazia
     """
-    skill_path = SKILLS_DIR / skill_name / "SKILL.md"
-
-    if not skill_path.exists():
-        print(f"[Skills] ⚠️ Skill {skill_name} não encontrada em {skill_path}")
-
-        # ✅ NOVO: Tentar path alternativo
-        alt_path = Path.home() / ".claude" / "skills" / skill_name / "SKILL.md"
-        if alt_path.exists():
-            print(f"[Skills] ✅ Skill {skill_name} encontrada em path alternativo: {alt_path}")
-            skill_path = alt_path
-        else:
-            print(f"[Skills] ❌ Skill {skill_name} não encontrada em nenhum path")
-            return ""
+    skill_path = _resolve_skill_path(skill_name)
+    if not skill_path:
+        checked = ", ".join(str(root) for root in _skill_roots())
+        print(f"[Skills] ERRO Skill {skill_name} nao encontrada. Roots: {checked}")
+        return ""
 
     try:
         with open(skill_path, 'r', encoding='utf-8') as f:
@@ -58,14 +91,15 @@ def ler_skill(skill_name: str) -> str:
                 with open(bloco_path, 'r', encoding='utf-8') as fb:
                     content += "\n\n" + fb.read()
             except Exception as eb:
-                print(f"[Skills] ⚠️ Erro ao ler bloco {bloco_path}: {eb}")
+                print(f"[Skills] WARN Erro ao ler bloco {bloco_path}: {eb}")
 
-        content = content[:25000]  # Limite aumentado para leitura completa
-        print(f"[Skills] ✅ Skill {skill_name} carregada ({len(content)} chars, {len(blocos)} blocos extras)")
+        max_chars = int(os.getenv("FRALIB_SKILL_MAX_CHARS", "8000"))
+        content = content[:max_chars]
+        print(f"[Skills] OK Skill {skill_name} carregada ({len(content)} chars, {len(blocos)} blocos extras)")
         return content
 
     except Exception as e:
-        print(f"[Skills] ❌ Erro ao ler skill {skill_name}: {e}")
+        print(f"[Skills] ERRO ao ler skill {skill_name}: {e}")
         return ""
 
 
@@ -81,46 +115,52 @@ def carregar_skills(skills: List[str]) -> str:
     """
     guidelines_completo = ""
     skills_carregadas = []
+    max_total_chars = int(os.getenv("FRALIB_SKILLS_TOTAL_MAX_CHARS", "12000"))
 
     for skill in skills:
         guidelines = ler_skill(skill)
         if guidelines:
-            guidelines_completo += f"\n\n{'='*60}\n# SKILL: {skill}\n{'='*60}\n\n{guidelines}\n"
+            bloco = f"\n\n{'='*60}\n# SKILL: {skill}\n{'='*60}\n\n{guidelines}\n"
+            restante = max_total_chars - len(guidelines_completo)
+            if restante <= 0:
+                print(f"[Skills] WARN Limite total atingido; pulando {skill}")
+                continue
+            guidelines_completo += bloco[:restante]
             skills_carregadas.append(skill)
 
     if skills_carregadas:
-        print(f"[Skills] 🎯 {len(skills_carregadas)} skills ativadas: {', '.join(skills_carregadas)}")
+        print(f"[Skills] {len(skills_carregadas)} skills ativadas: {', '.join(skills_carregadas)}")
     else:
-        print(f"[Skills] ⚠️ Nenhuma skill carregada")
+        print("[Skills] WARN Nenhuma skill carregada")
 
     return guidelines_completo
 
 
 # Configuração: Skills por agente
 SKILLS_POR_AGENTE = {
-    "theo": [
-        "brand",           # Branding e identidade visual
-        "design"           # Princípios de design
+    "agente_nicho": [],
+    "agente_variacao": [],
+    "arquiteto_mestre": [
+        "design-with-taste",
     ],
     "designer": [
-        "ui-ux-pro-max",   # UI/UX profissional
-        "design",          # Princípios de design
-        "design-system",   # Sistema de design
-        "ui-styling"       # Estilização de UI
+        "impeccable",
+        "design-with-taste",
+        "emil-design-eng",
+        "design-motion-principles",
     ],
-    "liam": [
-        "ui-ux-pro-max",   # UI/UX profissional
-        "design",          # Orquestrador de design unificado
-        "design-taste-frontend",  # ANTI-EMOJI, min-h-[100dvh], bias correction
-        "design-system",   # Token architecture + motion principles
-        "ui-styling"       # Awwwards-tier, high-end visual design
-    ],
-    "liz": [
-        "design-system"    # Validação de design system
+    "builder_renderer": ["site_skill_pack"],
+    "caio": [],
+    "bryan": [],
+    "validador": [
+        # Gate atual e deterministico; validador LLM fica standby.
     ]
 }
 
 
 def get_skills_agente(agente: str, essential_only: bool = True) -> List[str]:
     """Retorna lista de skills para um agente"""
+    agente = (agente or "").lower()
+    if agente == "builder_renderer" and os.getenv("FRALIB_BUILDER_FULL_SKILLS", "0") != "0":
+        return get_essential_skills("builder_renderer")
     return SKILLS_POR_AGENTE.get(agente, [])
