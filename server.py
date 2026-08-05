@@ -10,13 +10,23 @@ from slowapi.errors import RateLimitExceeded
 import sys
 import os
 
+# Detectar ambiente Docker vs local
+# Docker: WORKDIR=/app, arquivos em /app/backend
+# Local: arquivos em /root/fralib/backend
+if os.path.exists('/app/backend'):
+    _BACKEND_ROOT = '/app/backend'
+    _FRONTEND_ROOT = '/app'
+else:
+    _BACKEND_ROOT = '/root/fralib/backend'
+    _FRONTEND_ROOT = '/root/fralib'
+
 # Adicionar TODAS as pastas do backend ao path
-sys.path.insert(0, '/root/fralib/backend')
-sys.path.insert(0, '/root/fralib/backend/core')
-sys.path.insert(0, '/root/fralib/backend/endpoints')
-sys.path.insert(0, '/root/fralib/backend/services')
-sys.path.insert(0, '/root/fralib/backend/agents')
-sys.path.insert(0, '/root/fralib/backend/utils')
+sys.path.insert(0, _BACKEND_ROOT)
+sys.path.insert(0, os.path.join(_BACKEND_ROOT, 'core'))
+sys.path.insert(0, os.path.join(_BACKEND_ROOT, 'endpoints'))
+sys.path.insert(0, os.path.join(_BACKEND_ROOT, 'services'))
+sys.path.insert(0, os.path.join(_BACKEND_ROOT, 'agents'))
+sys.path.insert(0, os.path.join(_BACKEND_ROOT, 'utils'))
 
 # Aplicar migrations Alembic — fonte de verdade do schema
 from alembic.config import Config as _AlembicConfig
@@ -242,9 +252,9 @@ async def _attach_user_id_for_rate_limit(request, call_next):
         pass
     return await call_next(request)
 
-app.mount("/static", StaticFiles(directory="/root/fralib/frontend/static"), name="static")
-app.mount("/css", StaticFiles(directory="/root/fralib/frontend/css"), name="css")
-app.mount("/js", StaticFiles(directory="/root/fralib/frontend/js"), name="js")
+app.mount("/static", StaticFiles(directory=os.path.join(_FRONTEND_ROOT, "frontend/static")), name="static")
+app.mount("/css", StaticFiles(directory=os.path.join(_FRONTEND_ROOT, "frontend/css")), name="css")
+app.mount("/js", StaticFiles(directory=os.path.join(_FRONTEND_ROOT, "frontend/js")), name="js")
 
 # CORS — metodos e headers explicitos em vez de wildcard
 app.add_middleware(
