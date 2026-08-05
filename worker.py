@@ -51,6 +51,8 @@ def _run_pipeline_job(db, job) -> bool:
     from backend.core import job_queue
     from backend.agents.manager.agent import run_pipeline, PipelineState
     from backend.services import lead_supply_engine
+    from backend.observability import Trace, salvar_trace
+    from backend.agents.token_tracker import TokenTracker, set_tracker, log_tracking, salvar_tracking, _calcular_custo
 
     payload = job["payload"] or {}
     # Hydration: se payload tem _lead_id_existente mas lead_data vazio,
@@ -100,7 +102,49 @@ def _run_pipeline_job(db, job) -> bool:
         cidade=payload.get("cidade", ""),
         lead_data=payload.get("lead_data", {}),
     )
-    final = run_pipeline(state)
+    # ── Observability: criar trace para este job ──
+    trace = Trace(
+        run_id=state.run_id,
+        lead_nome=(state.lead_data.get("nome") or state.lead_id)[:100],
+        nicho=state.segmento or "",
+    )
+    trace.iniciar_span("pipeline_total", "worker", "")
+    t0 = time.monotonic()
+    # Token tracker: registra automaticamente todas as chamadas LLM
+    _token_tracker = TokenTracker(
+        run_id=state.run_id,
+        lead_nome=trace.lead_nome,
+        nicho=trace.nicho,
+    )
+    set_tracker(_token_tracker)
+    # ── Fim observability ──
+    final = run_pipeline(state, trace=trace)
+    trace.span_atual().finalizar("ok" if final.current_state == "done" else "error")
+    trace.duracao_total_ms = int((time.monotonic() - t0) * 1000)
+    trace.status = "completed" if final.current_state == "done" else "failed"
+    trace.complexidade = final.current_state
+    # Push token tracker data into trace spans for aggregation
+    _llm_count = 0
+    for call in _token_tracker.chamadas:
+        model = call.get("model", "unknown")
+        usage = {
+            "input_tokens": call.get("input_tokens", 0),
+            "output_tokens": call.get("output_tokens", 0),
+            "cache_creation": call.get("cache_creation", 0),
+            "cache_read": call.get("cache_read", 0),
+        }
+        custo = _calcular_custo(model, usage)
+        span = trace.iniciar_span(f"llm_{call['agente']}", call["agente"], model)
+        span.input_tokens = usage["input_tokens"]
+        span.output_tokens = usage["output_tokens"]
+        span.cache_hit_tokens = usage["cache_read"]
+        span.custo_usd = round(custo, 6)
+        _llm_count += 1
+        span.finalizar("ok")
+    trace._agregar_metricas()
+    trace.total_chamadas_llm = _llm_count
+    # Log tracking summary
+    log_tracking(_token_tracker.resumo())
     success = final.current_state == "done"
     if success:
         job_queue.mark_success(db, job["id"])
@@ -136,6 +180,12 @@ def _run_pipeline_job(db, job) -> bool:
         fase=final.current_state,
         mensagem=final.error or None,
     )
+    # ── Observability: salvar trace ──
+    try:
+        salvar_trace(trace)
+    except Exception as trace_e:
+        logger.warning("[OBS] Falha ao salvar trace: %s", trace_e)
+    # ── Fim observability ──
     logger.info("Job %s (pipeline_lead): %s", job["id"], "done" if success else job_status)
     return True
 

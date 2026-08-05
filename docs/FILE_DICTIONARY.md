@@ -100,7 +100,8 @@
 | `validation_layer.py` | Camada de validação genérica. | NAO |
 | `cinematic_post_processor.py` | Pós-processamento cinematográfico. | NAO |
 | `skill_loader.py` | Carrega skills dinâmicas dos agentes. | NAO |
-| `token_tracker.py` | Rastreia consumo de tokens por agente + custo USD. | NAO |
+| `observability.py` | Traces/spans pipeline (tempo, tokens, custo). Dashboard via `/api/observability/dashboard`. | NAO |
+| `token_tracker.py` | Rastreia consumo de tokens por agente + custo USD. Usado pelo worker via thread-local. | NAO |
 | `pipeline_checkpoint.py` | Checkpoints para retomada de pipeline após crash. | NAO |
 | `unsplash_fetcher.py` | Busca imagens no Unsplash API por nicho/termo. | NAO |
 | `markdown_prd_parser.py` | Parseia PRDs em Markdown para estrutura interna. | NAO |

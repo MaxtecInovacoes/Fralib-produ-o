@@ -749,7 +749,7 @@ def _log_step_error(state: PipelineState, step_name: str, exc: Exception) -> Non
         logger.warning("Pipeline error DB persist failed: %s", db_err)
 
 
-def run_pipeline(state: PipelineState) -> PipelineState:
+def run_pipeline(state: PipelineState, trace: object = None) -> PipelineState:
     """Executa toda a pipeline com suporte a retry.
 
     O loop externo (while) permite que o Quality Gate retorne ao Builder
@@ -761,15 +761,28 @@ def run_pipeline(state: PipelineState) -> PipelineState:
     risco de loop infinito.
 
     Custo: tracking via token_tracker existente.
+
+    trace: opcional — instância de observability.Trace para spans de fase.
     """
     try:
         max_passes = 10  # safety contra loop inesperado
         passes = 0
+        _t = trace
         while state.current_state not in (STATE_DONE, STATE_FAILED) and passes < max_passes:
             passes += 1
             prev_state = state.current_state
             for step in PIPELINE_STEPS:
+                # Observability: iniciar span para este step
+                if _t is not None:
+                    step_name = step.__name__.replace("step_", "")
+                    span = _t.iniciar_span(f"step_{step_name}", step_name, "")
                 state = step(state)
+                # Observability: finalizar span
+                if _t is not None:
+                    _span = _t.span_atual()
+                    if _span and _span.nome == f"step_{step_name}":
+                        s = "ok" if state.current_state not in (STATE_FAILED,) else "error"
+                        _span.finalizar(s)
                 # Atualiza phase/agent conforme transição do pipeline
                 new_state = state.current_state
                 if new_state != prev_state:

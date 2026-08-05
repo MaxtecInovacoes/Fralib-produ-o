@@ -22,7 +22,7 @@ pipeline ele roda.
 |---|--------|---------|--------|------------|--------|
 | 1 | Hunter | `utils/agente1_hunter_v2.py` | Playwright scraping | — | Valida/coleta lead_data via Google Maps |
 | 2 | Caio | `agents/caio.py` | haiku | 2000 | Qualificador — classifica lead por tier/score |
-| 3 | Arquiteto Mestre | `agents/arquiteto_mestre.py` | opus | 8000 | Gera PRD completo (seções, paleta OKLch, animações) |
+| 3 | Arquiteto Mestre | `agents/arquiteto_mestre.py` | sonnet | 8000 | Gera PRD completo (seções, paleta OKLch, animações) |
 | 4 | Builder (OpenUI) | `agents/builder/agent.py` | claude-sonnet-4-6 | 64000 (4×18000) | Gera HTML chunked via OpenUI (Node.js :3333) |
 | 5 | QA v2 | `agents/builder/quality_gate_v2/` | gpt-4o-mini / 9router | — | Vision QA — pontua design, repair loop se < 7.5 |
 | 6 | Deploy | (sem LLM) | — | — | Salva HTML em /var/www/fralib/sites/ + metadata.json |
@@ -59,7 +59,8 @@ pipeline ele roda.
 | Cinematic Post Processor | `agents/cinematic_post_processor.py` | Pós-processamento cinematográfico |
 | SEO Context | `agents/seo_context.py` | Contexto SEO para geração |
 | Skill Loader | `agents/skill_loader.py` | Carrega skills dinâmicas dos agentes |
-| Token Tracker | `agents/token_tracker.py` | Rastreia consumo de tokens por agente |
+| Token Tracker | `agents/token_tracker.py` | Rastreia consumo de tokens por agente + custo USD (thread-local) |
+| Observability | `observability.py` | Traces/spans por run — dashboard em `/api/observability/dashboard` |
 | Pipeline Checkpoint | `agents/pipeline_checkpoint.py` | Checkpoints para retomada de pipeline |
 | Unsplash Fetcher | `agents/unsplash_fetcher.py` | Busca imagens no Unsplash |
 | Markdown PRD Parser | `agents/markdown_prd_parser.py` | Parseia PRDs em Markdown |
@@ -70,7 +71,7 @@ pipeline ele roda.
 | Agente | Arquivo | O que fazia | Substituído por |
 |--------|---------|-------------|-----------------|
 | Theo | `agents/theo.py` | Estrategista — briefing inicial, PRD textual | Arquiteto Mestre (funde Theo + Designer) |
-| Designer PRD | `agents/designer_prd.py` | Arquiteto visual — seções, paleta, animações | Arquiteto Mestre (funde Theo + Designer) |
+| Designer PRD | `agents/designer_prd.py` | Arquiteto visual — seções, paleta, animações | Arquiteto Mestre (funde Theo + Designer). **Classe usada como contrato de schema (DesignerPRD, ColorPalette, SectionSpec, AnimationSpec)** |
 | Liam | `agents/liam.py` | Gerador HTML antigo (~1373 linhas) | Builder OpenUI chunked |
 | Liz | `agents/liz.py` | Revisora de código — valida HTML gerado | QA v2 (Vision LLM + repair loop) |
 | Liam Tools | `agents/liam_tools.py` | Tools auxiliares do Liam | — |

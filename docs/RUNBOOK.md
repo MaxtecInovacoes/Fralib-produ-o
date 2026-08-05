@@ -260,7 +260,29 @@ ORDER BY n DESC;
 ```
 
 ### Tabela `pipeline_traces`
-Trace completo de cada run (spans JSON, custo, tokens). Usar para debugging de regressão.
+Trace completo de cada run do pipeline.
+
+**Colunas principais:** `trace_id`, `run_id`, `status` (completed/failed), `duracao_total_ms`, `complexidade` (fase final), `total_input_tokens`, `total_output_tokens`, `total_cache_hit`, `custo_total_usd`, `total_chamadas_llm`, `spans_json`.
+
+**Spans JSON** contém array com spans: `step_hunter`, `step_caio`, `step_arquiteto`, `step_builder`, `step_quality_gate`, `step_deploy`, `step_franz` + spans LLM individuais (`llm_{agente}`).
+
+**Instrumentation:** `worker.py` → cria `Trace` + `TokenTracker` → set_tracker() → pipeline executa → llm_direct.py auto-registra chamadas → token data vira spans → `_agregar_metricas()` soma tokens/custo no trace-level → `salvar_trace()` persiste.
+
+**Custo:** Calculado via `_calcular_custo()` em `token_tracker.py` usando PRECOS_POR_MILHAO.
+
+**Consultas úteis:**
+```sql
+-- Custo médio por lead (último mês)
+SELECT lead_nome, COUNT(*) runs, AVG(custo_total_usd) avg_cost, SUM(total_chamadas_llm) llm_calls
+FROM pipeline_traces WHERE status = 'completed' AND criado_em > NOW() - INTERVAL '30 days'
+GROUP BY 1 ORDER BY avg_cost DESC;
+
+-- Token mais caro (agent bottleneck)
+SELECT jsonb_each(spans_json->0) ... -- ver spans_json por run
+
+-- Filtrar por tier/complexidade
+SELECT complexidade, COUNT(*), AVG(custo_total_usd) FROM pipeline_traces WHERE status = 'completed' GROUP BY 1;
+```
 
 ### Tabela `api_usage_snapshots`
 Snapshot diário de rate-limits Anthropic. Alertar quando `remaining < 10%`.

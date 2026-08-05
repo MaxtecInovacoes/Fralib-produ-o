@@ -147,7 +147,11 @@ def salvar_trace(trace: Trace):
                     spans_json = EXCLUDED.spans_json,
                     status = EXCLUDED.status,
                     duracao_total_ms = EXCLUDED.duracao_total_ms,
-                    custo_total_usd = EXCLUDED.custo_total_usd
+                    total_input_tokens = EXCLUDED.total_input_tokens,
+                    total_output_tokens = EXCLUDED.total_output_tokens,
+                    total_cache_hit = EXCLUDED.total_cache_hit,
+                    custo_total_usd = EXCLUDED.custo_total_usd,
+                    total_chamadas_llm = EXCLUDED.total_chamadas_llm
             """), {
                 "trace_id": trace.trace_id,
                 "run_id": trace.run_id,

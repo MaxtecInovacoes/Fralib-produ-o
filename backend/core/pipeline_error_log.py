@@ -31,9 +31,9 @@ def log_step_error(
         with SessionLocal() as db:
             db.execute(text("""
                 INSERT INTO pipeline_error_log
-                    (lead_id, tenant_id, step_name, exception_type, message,
-                     traceback_text, categoria, payload)
-                VALUES (:lid, :tid, :sn, :et, :msg, :tb, :cat, CAST(:pay AS jsonb))
+                    (lead_id, tenant_id, step, exception_type, message,
+                     traceback, fase_origem)
+                VALUES (:lid, :tid, :sn, :et, :msg, :tb, :cat)
             """), {
                 "lid": str(lead_id),
                 "tid": int(tenant_id),
@@ -42,7 +42,6 @@ def log_step_error(
                 "msg": msg,
                 "tb": tb_text[:8000],
                 "cat": cat,
-                "pay": "{}",
             })
             db.commit()
     except Exception:
