@@ -1,3 +1,9 @@
+⚠️ INSTRUÇÕES CRÍTICAS PARA IA:
+- Servidor oficial Backend: server.py (FastAPI, porta 8000)
+- Servidor oficial OpenUI: server.js (Node.js, porta 3333 em /root/fralib/openui-service/)
+- NÃO crie novos arquivos chamados server_v2, server_new, etc. Edite sempre os arquivos oficiais.
+- NUNCA envie scripts genéricos via SSH sem antes usar 'view_file' ou 'sed' com o intervalo de linhas exato.
+
 # Agentes FraLib — Mapa de Responsabilidades
 
 Cada agente é um módulo Python. Esta tabela é a fonte de verdade para
