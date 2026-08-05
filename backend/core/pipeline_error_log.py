@@ -44,9 +44,9 @@ def log_step_error(
                 "cat": cat,
             })
             db.commit()
-    except Exception:
-        # Best-effort: nao propagamos erro de logging
-        pass
+    except Exception as log_err:
+        # Logging best-effort: nao propagamos, mas nunca silenciamos
+        print(f"[pipeline_error_log][WARN] Falha ao registrar erro: {log_err}")
 
 
 def _categorizar(exc_type: str, step_name: str) -> str:

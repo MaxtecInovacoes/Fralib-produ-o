@@ -441,6 +441,32 @@ def inicializar_database():
             ON stripe_events (stripe_customer_id, criado_em DESC)
         """))
 
+        # Observabilidade: pipeline_traces armazena trace/spans por run.
+        # Inserido por backend/observability.py via ON CONFLICT DO UPDATE.
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS pipeline_traces (
+                trace_id VARCHAR(100) PRIMARY KEY,
+                run_id VARCHAR(120),
+                lead_nome TEXT,
+                nicho VARCHAR(100),
+                tier VARCHAR(20),
+                complexidade VARCHAR(50),
+                duracao_total_ms INTEGER DEFAULT 0,
+                status VARCHAR(30),
+                total_input_tokens INTEGER DEFAULT 0,
+                total_output_tokens INTEGER DEFAULT 0,
+                total_cache_hit INTEGER DEFAULT 0,
+                custo_total_usd NUMERIC(10,4) DEFAULT 0,
+                total_chamadas_llm INTEGER DEFAULT 0,
+                spans_json JSONB,
+                created_at TIMESTAMP DEFAULT NOW()
+            )
+        """))
+        conn.execute(text("""
+            CREATE INDEX IF NOT EXISTS idx_traces_created
+            ON pipeline_traces (created_at DESC)
+        """))
+
         conn.commit()
 
     print("[Database] ✅ Banco inicializado")
