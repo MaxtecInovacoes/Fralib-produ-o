@@ -61,6 +61,7 @@ pipeline ele roda.
 | Skill Loader | `agents/skill_loader.py` | Carrega skills dinâmicas dos agentes |
 | Token Tracker | `agents/token_tracker.py` | Rastreia consumo de tokens por agente + custo USD (thread-local) |
 | Observability | `observability.py` | Traces/spans por run — dashboard em `/api/observability/dashboard` |
+| Pipeline Error Log | `backend/core/pipeline_error_log.py` | Log estruturado de erro por step da pipeline |
 | Pipeline Checkpoint | `agents/pipeline_checkpoint.py` | Checkpoints para retomada de pipeline |
 | Unsplash Fetcher | `agents/unsplash_fetcher.py` | Busca imagens no Unsplash |
 | Markdown PRD Parser | `agents/markdown_prd_parser.py` | Parseia PRDs em Markdown |

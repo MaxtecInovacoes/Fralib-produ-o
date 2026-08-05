@@ -313,3 +313,48 @@ Snapshot diário de rate-limits Anthropic. Alertar quando `remaining < 10%`.
   - `docs/ARQUITETURA_DEPLOY.md` — deploy e infra
   - `docs/FILE_DICTIONARY.md` — mapa de arquivos
   - `docs/DATA_FLOW.md` — fluxo de dados
+
+## 8. Validar observabilidade (E2E)
+
+### Pré-requisitos
+- Feature flag `FRALIB_TRACING=1` no `docker-compose.prod.yml` (já ativo)
+- Tabela `pipeline_traces` criada no banco (ver schema em `backend/observability.py`)
+- Worker rodando: `docker ps | grep worker`
+
+### Passo 1 — Trigger pipeline
+```bash
+# Via API (substituir token/lead_id)
+curl -X POST https://app.seunegociofralib.site/api/pipeline/start \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{"lead_id": <id>}'
+```
+
+### Passo 2 — Verificar trace no banco
+```sql
+SELECT trace_id, lead_nome, status, duracao_total_ms,
+       total_input_tokens, total_output_tokens, custo_total_usd,
+       total_chamadas_llm, jsonb_array_length(spans_json) as spans_count
+FROM pipeline_traces
+ORDER BY created_at DESC LIMIT 5;
+```
+
+### Passo 3 — Verificar dashboard
+```bash
+curl -s https://app.seunegociofralib.site/api/observability/dashboard | jq
+# Esperado: total_runs > 0
+```
+
+### Passo 4 — Verificar spans por agente
+```bash
+curl -s https://app.seunegociofralib.site/api/observability/por-agente | jq
+# Esperado: linhas para hunter, caio, arquiteto, builder, etc.
+```
+
+### Troubleshooting
+| Sintoma | Causa | Fix |
+|---------|-------|-----|
+| `total_runs = 0` | Worker sem FRALIB_TRACING=1 | Verificar env var no compose |
+| `total_runs = 0` | Nenhum job rodou desde deploy | Trigger manual |
+| Trace sem spans | `salvar_trace()` falhou | Verificar logs do worker |
+| Tabela não existe | Migration ausente | Criar manualmente ou rodar alembic |

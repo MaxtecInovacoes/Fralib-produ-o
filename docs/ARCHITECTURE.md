@@ -299,11 +299,73 @@ docker exec -it fralib-postgres-1 psql -U fralib_user -d fralib_db
 
 ## 9. Observabilidade
 
+### 9.1 Infraestrutura
+
 - **Logs**: container logs (docker) + journalctl (openui)
 - **Métricas**: `api_usage_endpoints` — tracking de chamadas LLM
 - **Pipeline errors**: tabela `pipeline_error_log` — erro estruturado por step
 - **Provider alerts**: tabela `provider_alerts` — saúde dos providers
-- **Tracing**: flag `FRALIB_TRACING=1` — log detalhado de cada step
+- **Tracing**: flag `FRALIB_TRACING=1` — traces/spans por run
+
+### 9.2 Trace/Span Model
+
+Arquivo: `observability.py`
+
+```
+Trace (1 por pipeline run)
+  ├── trace_id: str (UUID curto)
+  ├── run_id: str (referência ao job)
+  ├── lead_nome, nicho, tier, complexidade
+  ├── spans: List[Span]
+  │   ├── span_id, nome, agente, modelo
+  │   ├── inicio, fim, duracao_ms, status
+  │   ├── input_tokens, output_tokens, cache_hit_tokens
+  │   ├── custo_usd, erro, eventos[]
+  │   └── ...
+  └── Agregados: total_input_tokens, total_output_tokens,
+                 total_cache_hit, custo_total_usd, total_chamadas_llm
+```
+
+### 9.3 Instrumentação (código)
+
+**Worker (`worker.py`):**
+- Cria `Trace` por job consumido da fila
+- Inicia span `pipeline_total` no início de cada run
+- Wira dados do `TokenTracker` (tokens, custo) nos spans do trace
+- Chama `salvar_trace(trace)` no final de cada run (try/except best-effort)
+
+**Manager FSM (`backend/agents/manager/agent.py`):**
+- Acessa trace via variável global `_t`
+- Cada step da FSM cria um span via `_t.iniciar_span(f"step_{step_name}", ...)`
+- FSM steps: `step_load`, `step_hunter`, `step_caio`, `step_design`, `step_build`, `step_validate`, `step_deploy`, `step_franz`
+
+**Salvamento (`observability.salvar_trace()`):**
+- INSERT INTO `pipeline_traces` com ON CONFLICT DO UPDATE
+- Tabela: 16 colunas (trace_id, run_id, lead_nome, nicho, tier, complexidade,
+  duracao_total_ms, status, total_input_tokens, total_output_tokens,
+  total_cache_hit, custo_total_usd, total_chamadas_llm, spans_json, created_at)
+
+### 9.4 Error Logging
+
+Arquivo: `backend/core/pipeline_error_log.py`
+
+- `log_step_error(lead_id, tenant_id, step_name, exc, categoria=None)`
+- INSERT INTO `pipeline_error_log` (lead_id, tenant_id, step, exception_type,
+  message, traceback, fase_origem)
+- Categorização automática: TIMEOUT, LLM_ERROR, DB_ERROR, HTML_ERROR
+
+### 9.5 Dashboard
+
+Arquivo: `backend/endpoints/obs_endpoints.py`
+
+| Endpoint | Função |
+|----------|--------|
+| `GET /api/observability/dashboard` | KPIs agregados |
+| `GET /api/observability/por-agente` | Métricas por agente |
+| `GET /api/observability/gargalos` | Steps mais lentos |
+| `GET /api/observability/alertas` | Alertas de anomalia |
+| `GET /api/observability/traces` | Lista de traces recentes |
+| `GET /api/observability/trace/{trace_id}` | Detalhe de um trace |
 
 ---
 
