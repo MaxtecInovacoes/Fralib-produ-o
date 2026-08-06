@@ -188,8 +188,8 @@ def render_site(prd, usar_llm: bool = True) -> BuildResult:
     spec = _prd_to_spec(prd)
 
     # Call OpenUI chunked generation
-    max_retries = 3
-    retry_delays = [30, 60, 120]  # seconds — OpenUI handles 529 with its own retry
+    max_retries = 5
+    retry_delays = [60, 120, 180, 300]  # seconds — espaçado para DeployFlow 529 recovery
 
     last_error = ""
     for attempt in range(max_retries):
