@@ -1,4 +1,5 @@
 import os
+from threading import RLock
 
 from slowapi import Limiter
 from slowapi.util import get_remote_address
@@ -45,7 +46,31 @@ if _uri:
     )
 
 
+def _create_limiter() -> Limiter:
+    """Cria Limiter com fallback gracioso.
+
+    Se o storage_uri estiver configurado mas a biblioteca ``limits`` nao
+    conseguir inicializar o backend (ex.: versao do redis-py < 3.0),
+    cai para armazenamento em memoria sem crashar a aplicacao.
+    """
+    try:
+        return Limiter(**_limiter_kwargs)
+    except Exception as exc:
+        # Falha esperada quando o storage_uri aponta para Redis com versao
+        # incompativel ou quando a lib ``limits`` nao consegue importar o
+        # driver. Cai para modo memoria — funcional, so nao escala entre
+        # replicas/containers.
+        import warnings
+
+        warnings.warn(
+            f"[rate_limiter] Redis indisponivel ({exc}); "
+            "usando armazenamento em memoria (sem compartilhamento entre processos)."
+        )
+        return Limiter(key_func=_user_or_ip, default_limits=_LIMITS, headers_enabled=False)
+
+
 # Instancia unica compartilhada por server.py e todos os endpoints.
 # Quando REDIS_URL existe, os limites deixam de ser por-processo e passam a
-# funcionar entre replicas/containers. Sem Redis, o comportamento antigo fica.
-limiter = Limiter(**_limiter_kwargs)
+# funcionar entre replicas/containers. Sem Redis ou com Redis indisponivel,
+# o comportamento cai para memoria sem crashar a aplicacao.
+limiter = _create_limiter()
