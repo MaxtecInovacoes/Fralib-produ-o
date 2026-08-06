@@ -7,17 +7,16 @@ import jwt
 import json
 import os
 from datetime import datetime, timedelta
+from core.config import is_superadmin
 
 router = APIRouter(prefix='/api/superadmin', tags=['superadmin'])
 
 SECRET_KEY = os.getenv("JWT_SECRET_KEY", "")
 ALGORITHM = "HS256"
 
-# Acesso restrito APENAS a dezigpi@gmail.com
-SUPERADMIN_EMAIL = "dezigpi@gmail.com"
 
 def require_superadmin(user: dict = Depends(get_current_user)):
-    if user.get("email") != SUPERADMIN_EMAIL:
+    if not is_superadmin(user.get("email", "")):
         raise HTTPException(status_code=403, detail="Acesso negado: Super Admin apenas")
     return user
 
@@ -202,7 +201,7 @@ async def toggle_user(user_id: int, request: Request, db: Session = Depends(get_
         if not row:
             raise HTTPException(status_code=404, detail="Usuario nao encontrado")
 
-        if row[1] == SUPERADMIN_EMAIL:
+        if is_superadmin(row[1]):
             raise HTTPException(status_code=403, detail="Nao pode desativar o superadmin")
 
         new_status = "bloqueado" if row[0] != "bloqueado" else "ativo"

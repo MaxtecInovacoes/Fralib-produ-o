@@ -13,18 +13,17 @@ from sqlalchemy import text
 
 from database import get_db
 from auth import get_current_user
+from core.config import is_superadmin
 from utils.secrets_crypto import encriptar, decriptar, mascarar_key
 
 
 router = APIRouter(prefix='/api/provider-keys', tags=['provider-keys'])
 
-SUPERADMIN_EMAIL = 'dezigpi@gmail.com'
-
 ALLOWED_PROVIDERS = {'anthropic', 'openai', 'google', 'groq', 'custom'}
 
 
 def require_superadmin(user: dict = Depends(get_current_user)):
-    if user.get('email') != SUPERADMIN_EMAIL:
+    if not is_superadmin(user.get('email', '')):
         raise HTTPException(status_code=403, detail='Acesso negado: Super Admin apenas')
     return user
 

@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import text
 from auth import get_current_user
 from rate_limiter import limiter
+from core.config import SUPERADMIN_EMAILS
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 security = HTTPBearer()
@@ -132,8 +133,6 @@ async def login(request: Request, data: LoginRequest, db: Session = Depends(get_
         )
     token = create_access_token({"sub": str(user[0]), "email": user[1]})
     return TokenResponse(access_token=token)
-
-SUPERADMIN_EMAILS = {"dezigpi@gmail.com"}
 
 @router.post("/register")
 @limiter.limit("5/minute")

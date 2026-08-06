@@ -11,15 +11,14 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from auth import get_current_user
+from core.config import is_superadmin
 
 
 router = APIRouter(prefix='/api/provider-alerts', tags=['provider-alerts'])
 
-SUPERADMIN_EMAIL = 'dezigpi@gmail.com'
-
 
 def require_superadmin(user: dict = Depends(get_current_user)):
-    if user.get('email') != SUPERADMIN_EMAIL:
+    if not is_superadmin(user.get('email', '')):
         raise HTTPException(status_code=403, detail='Acesso negado: Super Admin apenas')
     return user
 
