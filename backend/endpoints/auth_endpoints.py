@@ -117,7 +117,7 @@ def create_access_token(data: dict):
 @limiter.limit("10/minute")
 async def login(request: Request, data: LoginRequest, db: Session = Depends(get_db)):
     user = db.execute(text(
-        "SELECT id, email, password_hash, status, email_confirmado FROM users WHERE email = :email"
+        "SELECT id, email, password_hash, status, email_confirmado FROM users WHERE LOWER(email) = LOWER(:email)"
     ), {"email": data.email}).fetchone()
     if not user or not verify_password(data.password, user[2]):
         raise HTTPException(status_code=401, detail="Email ou senha invalidos")
