@@ -6,9 +6,9 @@ Uso: python3 /root/fralib/frontend/build_admin.py
 
 import os
 
-PARTIALS_DIR = '/root/fralib/frontend/partials/admin/'
+PARTIALS_DIR = '/opt/fralib/frontend/partials/admin/'
 OUTPUT_PROD  = '/var/www/fralib/admin.html'
-OUTPUT_LOCAL = '/root/fralib/frontend/admin.html'
+OUTPUT_LOCAL = '/opt/fralib/frontend/admin.html'
 
 PARTIALS_ORDER = [
     '_head.html',
