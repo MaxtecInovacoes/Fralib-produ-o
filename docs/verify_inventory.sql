@@ -1,0 +1,1 @@
+select status, count(*) from lead_inventory group by status order by status;

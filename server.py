@@ -362,6 +362,22 @@ app.include_router(obs_endpoints.router)
 import queue_endpoints
 app.include_router(queue_endpoints.router)
 
+# Restored endpoints
+import abtest_endpoints
+app.include_router(abtest_endpoints.router)
+import admin_pipeline_control_endpoints
+app.include_router(admin_pipeline_control_endpoints.router)
+import agentes_endpoints
+app.include_router(agentes_endpoints.router)
+import lead_supply_endpoints
+app.include_router(lead_supply_endpoints.router)
+from credits import checkout, status, webhook_cakto
+app.include_router(checkout.router)
+app.include_router(status.router)
+app.include_router(webhook_cakto.router)
+import franz_insights_endpoints
+app.include_router(franz_insights_endpoints.router)
+
 # Rate limit do login agora vem via @limiter.limit em auth_endpoints.py (slowapi).
 # CSP+security headers vem via security_headers middleware acima (linha ~125).
 

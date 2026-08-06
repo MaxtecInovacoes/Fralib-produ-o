@@ -321,3 +321,11 @@ async def twofa_disable(db: Session = Depends(get_db), usuario: dict = Depends(g
     db.execute(text("UPDATE users SET totp_enabled=false, totp_secret=NULL WHERE id=:id"), {"id": usuario["id"]})
     db.commit()
     return {"status": "ok", "mensagem": "2FA desativado"}
+
+
+# Alias para compatibilidade com frontend
+@router.post("/resend-confirmation")
+@limiter.limit("3/minute")
+async def resend_confirmation_alias(request: Request, data: LoginRequest, db: Session = Depends(get_db)):
+    """Alias de /reenviar-confirmacao — frontend usa /resend-confirmation."""
+    return await reenviar_confirmacao(request, data, db)

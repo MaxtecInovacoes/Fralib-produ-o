@@ -1,0 +1,1 @@
+select id, status, score_caio, tier, erro, attempts, locked_until, reservado_em from lead_inventory order by criado_em desc;

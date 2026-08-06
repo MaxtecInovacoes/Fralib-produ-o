@@ -1,0 +1,1 @@
+select id, tipo, status, left(last_error, 100) as erro, criado_em, concluido_em from jobs where status = 'failed_permanent' order by concluido_em desc limit 10;

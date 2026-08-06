@@ -1,0 +1,1 @@
+select tipo, status, count(*) as qtd from jobs group by tipo, status order by tipo, status;

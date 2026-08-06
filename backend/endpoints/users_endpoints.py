@@ -313,3 +313,45 @@ async def salvar_sdr_horario(
     db.commit()
 
     return {"status": "ok", "config": config}
+
+
+# ═══ CONFIG SDR COMPLETA (wrapper para compatibilidade frontend) ══════
+
+@router.get('/sdr-config')
+async def get_sdr_config(db: Session = Depends(get_db), user: dict = Depends(get_current_user)):
+    """Alias para sdr-horario — frontend chama /sdr-config."""
+    return await get_sdr_horario(db, user)
+
+
+class PasswordChangeRequest(BaseModel):
+    senha_atual: str
+    nova_senha: str
+
+
+@router.post('/password')
+async def change_password(
+    body: PasswordChangeRequest,
+    db: Session = Depends(get_db),
+    user: dict = Depends(get_current_user),
+):
+    """Altera senha do usuário. Frontend chama POST /password."""
+    from passlib.context import CryptContext
+    _pwd = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+    row = db.execute(
+        text("SELECT senha FROM users WHERE id=:id"), {"id": user["id"]}
+    ).fetchone()
+    if not row:
+        raise HTTPException(404, "Usuário não encontrado")
+
+    if not _pwd.verify(body.senha_atual, row[0] or ""):
+        raise HTTPException(400, "Senha atual incorreta")
+
+    if len(body.nova_senha) < 6:
+        raise HTTPException(400, "Nova senha deve ter ao menos 6 caracteres")
+
+    hashed = _pwd.hash(body.nova_senha)
+    db.execute(text("UPDATE users SET senha=:s WHERE id=:id"),
+               {"s": hashed, "id": user["id"]})
+    db.commit()
+    return {"status": "ok", "mensagem": "Senha alterada com sucesso"}

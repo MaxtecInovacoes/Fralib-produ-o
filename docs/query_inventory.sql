@@ -1,0 +1,1 @@
+select id, status, score, cidade, segmento, criado_em from lead_inventory order by criado_em desc limit 10;

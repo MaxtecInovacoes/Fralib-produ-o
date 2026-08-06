@@ -888,3 +888,189 @@ async def enviar_mensagem_lead(lead_id: str, db: Session = Depends(get_db), usua
 
     adicionar_log(f"📱 Mensagem enviada para {nome} ({tel})", "success", tenant_id)
     return {"ok": True, "mensagem": f"Mensagem enviada para {nome}"}
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# LEADS ESCALADOS (intervenção humana)
+# ═══════════════════════════════════════════════════════════════════════
+
+
+@router.get("/escalados")
+async def listar_leads_escalados(
+    db: Session = Depends(get_db),
+    usuario: dict = Depends(get_current_user),
+):
+    """Lista leads escalados para intervenção humana.
+
+    Retorna: [{id, nome, telefone, followup_reason, last_failure_stage, atualizado_em}]
+    Colunas needs_human_followup/followup_reason/last_failure_stage podem não existir
+    no schema atual — retorna vazio sem crash.
+    """
+    try:
+        tenant_id = usuario.get("tenant_id", usuario["id"])
+
+        try:
+            rows = db.execute(
+                text(
+                    "SELECT id, nome, telefone, observacoes, sdr_stage, atualizado_em "
+                    "FROM leads "
+                    "WHERE user_id=:uid "
+                    "  AND observacoes IS NOT NULL AND observacoes != '' "
+                    "  AND sdr_stage IN ('pendente_pipeline','erro_pipeline','failed') "
+                    "ORDER BY atualizado_em ASC"
+                ),
+                {"uid": tenant_id},
+            ).fetchall()
+
+            return {
+                "ok": True,
+                "escalados": [
+                    {
+                        "id": r[0],
+                        "nome": r[1] or "",
+                        "telefone": r[2] or "",
+                        "followup_reason": r[3],
+                        "last_failure_stage": r[4],
+                        "atualizado_em": r[5],
+                    }
+                    for r in rows
+                ],
+                "total": len(rows),
+            }
+        except Exception:
+            return {"ok": True, "escalados": [], "total": 0}
+    except Exception as e:
+        logger.warning("[Leads] Erro listar escalados: %s", e)
+        raise HTTPException(status_code=500, detail="Erro ao listar leads escalados")
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# LEADS TRAVADOS (UTI / PIPELINE TRAVADO)
+# ═══════════════════════════════════════════════════════════════════════
+
+
+@router.get("/travados")
+async def listar_leads_travados(
+    db: Session = Depends(get_db),
+    usuario: dict = Depends(get_current_user),
+):
+    """Lista leads com pipeline travado (pendente_pipeline + erro_pipeline).
+    Alimenta a aba UTI > PIPELINE TRAVADO do admin.
+    """
+    try:
+        tenant_id = int(usuario.get("id") or usuario.get("tenant_id") or 0)
+    except (ValueError, TypeError):
+        raise HTTPException(status_code=400, detail="Usuário inválido")
+
+    rows = db.execute(
+        text("""
+            SELECT id, nome, cidade, segmento, observacoes,
+                   processado, tentativas, criado_em, atualizado_em
+            FROM leads
+            WHERE user_id = :tid
+              AND sdr_stage = 'pendente_pipeline'
+              AND observacoes IS NOT NULL
+              AND observacoes != ''
+            ORDER BY atualizado_em DESC
+            LIMIT 200
+        """),
+        {"tid": tenant_id},
+    ).fetchall()
+    return {
+        "total": len(rows),
+        "leads": [
+            {
+                "id": r[0],
+                "nome": r[1],
+                "cidade": r[2],
+                "segmento": r[3],
+                "erro": r[4],
+                "tentativas": r[6],
+                "criado_em": r[7].isoformat() if r[7] else None,
+                "atualizado_em": r[8].isoformat() if r[8] else None,
+            }
+            for r in rows
+        ],
+    }
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# ARCHIVE ALL
+# ═══════════════════════════════════════════════════════════════════════
+
+
+@router.post("/archive-all")
+async def archive_all_leads(
+    body: dict = None,
+    db: Session = Depends(get_db),
+    usuario: dict = Depends(get_current_user),
+):
+    """Arquiva (remove) múltiplos leads de uma vez.
+    Body: {ids: string[]}
+    """
+    try:
+        tenant_id = usuario.get("tenant_id", usuario["id"])
+        ids = ((body or {}).get("ids") or [])
+        if not ids:
+            return {"ok": True, "deleted": 0}
+
+        placeholders = ",".join(f":id{i}" for i in range(len(ids)))
+        params = {f"id{i}": iid for i, iid in enumerate(ids)}
+        params["tid"] = tenant_id
+
+        db.execute(
+            text(f"DELETE FROM leads WHERE id IN ({placeholders}) AND user_id = :tid"),
+            params,
+        )
+        db.commit()
+        return {"ok": True, "deleted": len(ids)}
+    except Exception as e:
+        db.rollback()
+        logger.warning("[Leads] Erro archive-all: %s", e)
+        raise HTTPException(status_code=500, detail="Erro ao arquivar leads")
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# CONVERSAS ATIVAS
+# ═══════════════════════════════════════════════════════════════════════
+
+
+@router.get("/conversas-ativas")
+async def listar_conversas_ativas(
+    db: Session = Depends(get_db),
+    usuario: dict = Depends(get_current_user),
+):
+    """Lista leads com conversas WhatsApp ativas (SDR em andamento)."""
+    tenant_id = usuario.get("tenant_id", usuario["id"])
+
+    rows = db.execute(
+        text("""
+            SELECT id, nome, telefone, sdr_stage, observacoes,
+                   atualizado_em, created_at
+            FROM leads
+            WHERE user_id = :tid
+              AND sdr_stage IN (
+                  'hook','qualificacao','apresentacao','negociacao','fechamento',
+                  'pendente_wpp','enviado_wpp','hook_enviado'
+              )
+            ORDER BY atualizado_em DESC
+            LIMIT 200
+        """),
+        {"tid": tenant_id},
+    ).fetchall()
+
+    return {
+        "conversas": [
+            {
+                "id": r[0],
+                "nome": r[1] or "",
+                "telefone": r[2] or "",
+                "sdr_stage": r[3],
+                "mensagem": r[4],
+                "atualizado_em": r[5].isoformat() if r[5] else None,
+                "criado_em": r[6].isoformat() if r[6] else None,
+            }
+            for r in rows
+        ],
+        "total": len(rows),
+    }

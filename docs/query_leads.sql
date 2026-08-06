@@ -1,0 +1,1 @@
+select id, nome, cidade, segmento, criado_em from leads order by criado_em desc limit 10;

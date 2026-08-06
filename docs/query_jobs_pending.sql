@@ -1,0 +1,1 @@
+select id, tipo, status, left(last_error, 120) as erro, criado_em, concluido_em from jobs where status in ('pending','running') order by criado_em desc limit 10;
