@@ -61,6 +61,19 @@ Hunter → Caio → Jina → Unsplash → Arquiteto → Builder(proxy) → Deplo
 - Usado por: Arquiteto Mestre (gera), Builder (consome)
 - **NOTA:** Arquiteto Mestre NÃO preenche todos os campos do DesignerPRD — apenas os básicos
 
+### Observability (SISTEMA ATIVO)
+- `backend/observability.py` — módulo principal de traces/spans
+- Usado em: `manager/agent.py`, `pipeline_endpoints.py`, `rag_retriever.py`
+- Endpoints: `endpoints/obs_endpoints.py` — dashboard em `/api/observability/dashboard`
+- Funções: `Trace()`, `salvar_trace()`, `formatar_trace_log()`
+- **Status:** ATIVO mas pouco visível — não está documentado na pipeline principal
+
+### Crédito/Planos (SISTEMA ATIVO)
+- `backend/services/credits_manager.py` — gerencia créditos
+- Funções: `verificar_pode_executar`, `consume_tokens`, `validar_permissao_pipeline`, `consumir_credito_diario`
+- Usado em: `pipeline_endpoints.py:68`
+- **Status:** ATIVO — deduz créditos por pipeline executada
+
 ---
 
 # Histórico: Pipeline Jun 22 (commit a9030deb)
