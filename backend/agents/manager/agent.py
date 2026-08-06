@@ -205,7 +205,8 @@ def step_arquiteto(state: PipelineState) -> PipelineState:
     if state.current_state != STATE_DESIGNING:
         return state
 
-    from backend.agents.arquiteto_mestre import gerar_arquiteto_mestre_prd, DesignerPRD, ColorPalette, AnimationSpec, SectionSpec
+    from backend.agents.arquiteto_mestre import gerar_arquiteto_mestre_prd
+    from backend.agents.designer_prd import DesignerPRD, ColorPalette, AnimationSpec, SectionSpec
 
     # Extrai market_intelligence do lead_data se disponível (vem do Hunter)
     market_intelligence = state.lead_data.get("market_intelligence")

@@ -5,12 +5,12 @@ import time
 import json
 
 # Setup
-sys.path.insert(0, "/opt/fralib")
-os.chdir("/opt/fralib")
+sys.path.insert(0, "/app")
+os.chdir("/app")
 
 # Load .env
 from dotenv import load_dotenv
-load_dotenv("/opt/fralib/.env", override=True)
+load_dotenv("/app/.env", override=False)
 
 import logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -32,6 +32,11 @@ TENANT_ID = 2
 from sqlalchemy import create_engine, text
 
 db_url = os.environ["DATABASE_URL"]
+# Inside Docker container: override hostname from localhost to postgres service
+if "localhost" in db_url:
+    db_url = db_url.replace("localhost", "postgres")
+    # Also fix port from 15434 (host-side) to 5432 (container-side)
+    db_url = db_url.replace(":15434", ":5432")
 engine = create_engine(db_url)
 
 with engine.connect() as conn:
