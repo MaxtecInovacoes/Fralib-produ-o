@@ -19,3 +19,5 @@ pytest-cov==7.1.0
 httpx==0.28.1
 beautifulsoup4>=4.12
 playwright>=1.49.0
+sentry-sdk[fastapi]==2.14.0
+loguru==0.7.3

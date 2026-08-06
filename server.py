@@ -1,5 +1,19 @@
 from dotenv import load_dotenv
 load_dotenv()
+
+# ============================================================
+# VALIDAÇÃO DE ENV + OBSERVABILIDADE (Sentry + Correlation ID)
+# ============================================================
+from backend.core.env_validator import check_and_fail
+from backend.core.observability_setup import (
+    logger as obs_logger,
+    correlation_id_var,
+    set_correlation_id,
+    get_correlation_id,
+    deep_health_check,
+)
+check_and_fail()
+
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -275,6 +289,17 @@ app.add_middleware(
     allow_headers=["Authorization", "Content-Type", "X-Requested-With", "Accept"],
 )
 
+# Correlation ID middleware — rastreamento ponta a ponta
+@app.middleware("http")
+async def correlation_id_middleware(request, call_next):
+    import uuid
+    # Usar header existente ou gerar novo
+    cid = request.headers.get("x-correlation-id") or str(uuid.uuid4())[:12]
+    set_correlation_id(cid)
+    response = await call_next(request)
+    response.headers["x-correlation-id"] = cid
+    return response
+
 # Security headers (CSP + clickjacking + MIME sniffing + referrer)
 # CSP permissivo o suficiente para o dashboard atual (Chart.js, socket.io, inline styles
 # gerados pelo Liam) mas bloqueia <script> injetado por XSS de campos do banco.
@@ -346,6 +371,31 @@ app.include_router(queue_endpoints.router)
 @limiter.exempt
 async def health():
     return {"status": "ok", "version": "2.0.0"}
+
+
+@app.get("/api/health/deep")
+@limiter.exempt
+async def health_deep(request: Request, db = None):
+    """Health check profundo: database, redis, memória."""
+    from backend.core.observability_setup import deep_health_check
+    try:
+        from database import get_db
+        db_gen = get_db()
+        db = next(db_gen)
+    except Exception as e:
+        return JSONResponse(
+            status_code=503,
+            content={"status": "error", "detail": f"Falha ao conectar ao banco: {e}"},
+        )
+    try:
+        result, status_code = deep_health_check(db)
+        return JSONResponse(status_code=status_code, content=result)
+    except Exception as e:
+        return JSONResponse(
+            status_code=503,
+            content={"status": "error", "detail": str(e)},
+        )
+
 
 # Filtro para mascarar JWT token nos logs de acesso do uvicorn
 import logging
