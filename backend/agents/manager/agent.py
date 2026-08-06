@@ -105,16 +105,15 @@ def step_hunter(state: PipelineState) -> PipelineState:
 
         pass
 
-    # Jina Research: desativado (modulo nao existe ainda)
-    # TODO: restaurar quando jina_research.py for recuperado
-    # try:
-    #     _segmento = state.lead_data.get(segmento, ) or state.segmento
-    #     _cidade = state.lead_data.get(cidade, ) or state.cidade
-    #     if _segmento and _cidade:
-    #         from backend.agents.jina_research import pesquisar_mercado_jina
-    #         state.market_intelligence = pesquisar_mercado_jina(_segmento, _cidade)
-    # except Exception:
-    #     pass
+    # Jina Research: pesquisa mercado (paralelo com Hunter na Fase 1)
+    try:
+        _segmento = state.segmento or state.lead_data.get("segmento", "")
+        _cidade = state.cidade or state.lead_data.get("cidade", "")
+        if _segmento and _cidade:
+            from backend.agents.jina_research import pesquisar_referencias_jina
+            state.lead_data["jina_insights"] = pesquisar_referencias_jina(_segmento, _cidade)
+    except Exception:
+        pass
 
     # Knowledge Journal: MarketOpportunityDiscovered
     # Se o lead_data já tem market_intelligence (veio do Hunter real), registra
