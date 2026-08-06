@@ -340,6 +340,11 @@ def step_arquiteto(state: PipelineState) -> PipelineState:
         "dark_mode": getattr(prd, "dark_mode", False),
         # paleta_cores from Caio (fallback if arquiteto doesn't set color_palette)
         "paleta_cores": previous_design_output.get("paleta_cores", state.caio_output.get("paleta_cores", {})),
+        "cidade": getattr(prd, "cidade", ""),
+        "segmento": getattr(prd, "segmento", ""),
+        "videos": getattr(prd, "videos", []) or [],
+        "geo": getattr(prd, "geo", None),
+        "design_system_slug": getattr(prd, "design_system_slug", None),
     }
 
     # Knowledge Journal: NarrativeLocked + IdentityApproved
@@ -406,11 +411,22 @@ def step_builder(state: PipelineState) -> PipelineState:
             phone=state.design_output.get("phone", state.lead_data.get("telefone", "")),
             hours=state.design_output.get("hours"),
             photos=state.design_output.get("photos", []),
+            videos=state.design_output.get("videos", []),
             google_maps_embed=state.design_output.get("google_maps_embed", ""),
             components_21dev=state.design_output.get("components_21dev", ["whatsapp-sticky-cta"]),
             competitor_analysis=state.design_output.get("competitor_analysis", ""),
             anti_patterns=state.design_output.get("anti_patterns", ["precos visiveis"]),
             schema_org_types=state.design_output.get("schema_org_types", ["LocalBusiness"]),
+            cidade=state.design_output.get("cidade", state.lead_data.get("cidade", "") if state.lead_data else ""),
+            segmento=state.design_output.get("segmento", state.lead_data.get("segmento", "") if state.lead_data else ""),
+            geo=state.design_output.get("geo", None),
+            design_system_slug=state.design_output.get("design_system_slug", None),
+            dark_mode=state.design_output.get("dark_mode", False),
+            faq_questions=state.design_output.get("faq_questions", []),
+            value_props=state.design_output.get("value_props", []),
+            layout_type=state.design_output.get("layout_type", ""),
+            instrucao_criativa_para_dev=state.design_output.get("instrucao_criativa_para_dev", ""),
+            seo_keywords=state.design_output.get("seo_keywords", []),
         )
         # Fase 3 SEO/GEO - AGENTE 19 TRUST SIGNALS: propagar rating do lead
         # para o JSON-LD LocalBusiness.aggregateRating do inject.py.
