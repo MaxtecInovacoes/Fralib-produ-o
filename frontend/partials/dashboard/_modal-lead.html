@@ -1,0 +1,65 @@
+<!-- ===== MODAL DO LEAD ===== -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modalLeadName">LEAD</h3>
+      <button class="modal-close" onclick="closeModal()" aria-label="Fechar modal">&times;</button>
+    </div>
+    <div class="modal-tabs">
+      <div class="modal-tab active" data-tab="chat" onclick="switchTab('chat')">CHAT SDR</div>
+      <div class="modal-tab" data-tab="site" onclick="switchTab('site')">DADOS E SITE</div>
+    </div>
+    <div class="modal-body">
+
+      <!-- Tab: Chat SDR -->
+      <div class="tab-content active" id="tab-chat">
+        <div class="chat-area" id="chatArea">
+          <div class="chat-msg sent">
+            Olá! Sou o Franz, assistente digital da FraLib. Vi que você tem um negócio na região. Posso criar um site profissional grátis para você avaliar?
+            <div class="time">--:--</div>
+          </div>
+        </div>
+        <div class="chat-input-row">
+          <input type="text" placeholder="Digite uma mensagem..." id="chatInput">
+          <button class="chat-send-btn" onclick="sendMsg()">&#9654;</button>
+        </div>
+      </div>
+
+      <!-- Tab: Dados e Site -->
+      <div class="tab-content" id="tab-site">
+        <div class="briefing-grid">
+          <div class="briefing-item">
+            <div class="briefing-label">Nicho</div>
+            <div class="briefing-value" id="modalNicho">—</div>
+          </div>
+          <div class="briefing-item">
+            <div class="briefing-label">Cidade</div>
+            <div class="briefing-value" id="modalCidade">—</div>
+          </div>
+          <div class="briefing-item">
+            <div class="briefing-label">Telefone WhatsApp</div>
+            <div class="briefing-value" id="modalTelefone" style="font-family:var(--fl-font-mono);font-size:13px">—</div>
+          </div>
+          <div class="briefing-item">
+            <div class="briefing-label">Score de Qualificação</div>
+            <div class="briefing-value" id="modalScore">—</div>
+          </div>
+          <div class="briefing-item" style="grid-column:1/-1">
+            <div class="briefing-label">URL do Site</div>
+            <div class="briefing-value" id="modalUrl" style="font-size:12px;word-break:break-all;font-family:var(--fl-font-mono)">—</div>
+          </div>
+        </div>
+        <div class="action-buttons">
+          <button class="btn-action btn-action-gold" onclick="abrirSiteModal()">&#127760; ABRIR SITE</button>
+          <button class="btn-action btn-action-purple" onclick="abrirWhatsApp()">&#128241; WHATSAPP</button>
+          <button class="btn-action btn-action-cyan" onclick="abrirEditorWYSIWYG(leadAtualModal && leadAtualModal.id)">&#9999;&#65039; EDITAR SITE</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     SCRIPTS
+     ============================================================ -->

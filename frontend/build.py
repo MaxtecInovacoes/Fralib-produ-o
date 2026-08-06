@@ -29,6 +29,20 @@ def build(name, partials_order):
 
     print(f'OK {name}.html gerado ({len(chunks)} blocos)')
 
+DASHBOARD_ORDER = [
+    '_head.html',
+    '_sidebar.html',
+    '_header.html',
+    '_kpi-cards.html',
+    '_view-overview.html',
+    '_view-crm.html',
+    '_view-uti.html',
+    '_view-config.html',
+    '_view-perfil.html',
+    '_modal-lead.html',
+    '_scripts.html',
+]
+
 LANDING_ORDER = [
     '_head.html',
     '_nav.html',
@@ -62,6 +76,7 @@ ADMIN_ORDER = [
 ]
 
 if __name__ == '__main__':
+    build('dashboard', DASHBOARD_ORDER)
     build('landing', LANDING_ORDER)
     # admin.html editado diretamente — NAO rebuildar via partials
     # build('admin', ADMIN_ORDER)
@@ -69,7 +84,7 @@ if __name__ == '__main__':
 
     import shutil, os
     deploy_dir = '/var/www/fralib'
-    for fname in ['landing.html']:
+    for fname in ['dashboard.html', 'landing.html']:
         src = os.path.join(os.path.dirname(os.path.abspath(__file__)), fname)
         if os.path.exists(src):
             shutil.copy2(src, os.path.join(deploy_dir, fname))
