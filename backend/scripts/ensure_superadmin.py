@@ -24,6 +24,9 @@ def ensure_superadmin(database_url: str, email: str, password: str) -> bool:
     engine = create_engine(database_url)
 
     with engine.connect() as conn:
+        # Garantir que pgcrypto está instalado
+        conn.execute(text("CREATE EXTENSION IF NOT EXISTS pgcrypto"))
+        conn.commit()
         # Verificar se usuário já existe
         result = conn.execute(
             text("SELECT id, email, status, email_confirmado, role FROM users WHERE LOWER(email) = LOWER(:email)"),
