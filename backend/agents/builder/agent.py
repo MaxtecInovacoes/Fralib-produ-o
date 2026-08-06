@@ -188,8 +188,8 @@ def render_site(prd, usar_llm: bool = True) -> BuildResult:
     spec = _prd_to_spec(prd)
 
     # Call OpenUI chunked generation
-    max_retries = 5
-    retry_delays = [60, 120, 180, 300]  # seconds — espaçado para DeployFlow 529 recovery
+    max_retries = 7
+    retry_delays = [60, 120, 180, 300, 300, 600]  # seconds — espaçado para DeployFlow recovery
 
     last_error = ""
     for attempt in range(max_retries):
@@ -210,9 +210,9 @@ def render_site(prd, usar_llm: bool = True) -> BuildResult:
                 return BuildResult(html="", model=model, success=False,
                                    error=f"HTML too short: {len(html)} chars")
 
-            elif resp.status_code == 529 or (
+            elif resp.status_code in (529, 503) or (
                 resp.status_code == 500
-                and any(marker in resp.text.lower() for marker in ("529", "overloaded", "sobrecarregado"))
+                and any(marker in resp.text.lower() for marker in ("529", "overloaded", "sobrecarregado", "503", "provider_error", "sem janela", "temporariamente"))
             ):
                 last_error = f"OpenUI overloaded attempt {attempt + 1}: HTTP {resp.status_code}"
                 if attempt < max_retries - 1:
