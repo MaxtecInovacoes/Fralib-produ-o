@@ -367,6 +367,10 @@ class _TokenMaskFilter(logging.Filter):
 _uvicorn_access = logging.getLogger("uvicorn.access")
 _uvicorn_access.addFilter(_TokenMaskFilter())
 
+# Servir arquivos estáticos do frontend na raiz
+if os.path.exists("frontend"):
+    app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
