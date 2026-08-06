@@ -9,7 +9,149 @@
 - NUNCA edite código direto na VPS via SSH/sed/cat/heredoc
 - NUNCA envie scripts genéricos via SSH sem antes usar 'view_file' ou 'sed' com intervalo exato.
 
-# Agentes FraLib — Mapa de Responsabilidades
+# Estado Atual do Sistema (2026-08-05)
+
+## Pipeline REAL em Execução
+
+```
+Hunter → Caio → Jina → Unsplash → Arquiteto → Builder(proxy) → Deploy → Franz
+```
+
+**Orquestrador:** `backend/agents/manager/agent.py` (FSM, 7 steps)
+**Builder atual:** `backend/agents/builder/agent.py` — proxy HTTP para OpenUI service (:3333)
+**Orquestrador antigo:** `backend/services/pipeline_executors.py` — NÃO EXISTE MAIS
+
+### Agentes ATIVOS no Pipeline
+
+| Fase | Agente | Arquivo | Modelo | max_tokens | Função |
+|------|--------|---------|--------|------------|--------|
+| 1 | Hunter | `utils/agente1_hunter_v2.py` | Playwright | — | Captura leads via Google Maps |
+| 2 | Caio | `agents/caio.py` | haiku | 2000 | Qualifica lead (tier/score) |
+| 3 | Jina | `agents/jina_research.py` | sonnet | 1000 | Pesquisa de mercado + concorrência |
+| 4 | Unsplash | `agents/unsplash_fetcher.py` | — | — | Download de fotos do nicho |
+| 5 | Arquiteto | `agents/arquiteto_mestre.py` | sonnet | 8000 | Gera PRD (DesignerPRD schema) |
+| 6 | Builder | `agents/builder/agent.py` | claude-sonnet-4-6 | 64000 | Gera HTML via OpenUI chunked |
+| 7 | QA v2 | `agents/builder/quality_gate_v2/` | gpt-4o-mini | — | Vision QA + repair loop |
+| 8 | Deploy | (inline no manager) | — | — | Salva HTML em /var/www/fralib/sites/ |
+| 9 | Franz | `agents/franz/` | sonnet | 4000 | SDR WhatsApp outreach |
+
+### Agentes EXISTEM MAS NÃO SÃO CHAMADOS no pipeline principal
+
+- `agente_nicho.py` — análise de nicho (191 linhas)
+- `agente_variacao.py` — variação estrutural (130 linhas)
+- `backend/services/openui_renderer.py` — engine HTML in-process (853 linhas) — substituída por proxy HTTP
+- `backend/services/builder_worker.py` — motion runtime (717 linhas) — não usado
+- `backend/services/openui_contracts.py` — 12 animation systems (264 linhas) — não usado
+- `backend/services/pipeline_builders.py` — orquestrador (677 linhas) — não usado
+
+### Arquivos REMOVIDOS do código
+- `agents/liam.py` — gerador HTML antigo (substituído por Builder)
+- `agents/liam_models.py` — definição de modelos
+- `agents/liam_seo.py` — SEO
+- `agents/liam_tools.py` — tools auxiliares
+- `agents/liam_lats.py` — Language Agent Tree Search
+- `agents/liam_moa.py` — Mixture of Agents
+- `agents/liam_constitutional.py` — Constitutional AI guardrails
+- `agents/liam_agent_loop.py` — loop do Liam
+- `backend/services/pipeline_executors.py` — orquestrador antigo (566 linhas)
+
+### Schema Canônico: DesignerPRD
+- `agents/designer_prd.py` (893 linhas) — **CONTRATO DE SCHEMA**
+- Campos: `sections`, `color_palette`, `typography`, `animations`, `visual_dna`, `layout_blueprint`, `site_build_plan`, `visual_contract`
+- Usado por: Arquiteto Mestre (gera), Builder (consome)
+- **NOTA:** Arquiteto Mestre NÃO preenche todos os campos do DesignerPRD — apenas os básicos
+
+---
+
+# Histórico: Pipeline Jun 22 (commit a9030deb)
+
+## Pipeline de Geração (ordem de execução)
+
+```
+FASE 1  HUNTER           → Hunter captura leads (utils/agente1_hunter_v2.py)
+FASE 2  CURADORIA/CAIO   → Qualifica lead — tier MORNO/STANDARD/PREMIUM (agents/caio.py)
+FASE 3  JINA             → Pesquisa de mercado Jina AI (agents/jina_research.py)
+FASE 4  INTELIGENCIA     → Análise de concorrência
+FASE 5  FOTOS            → Download de fotos (agents/unsplash_fetcher.py)
+FASE 6  NICHO            → Análise de nicho (agents/agente_nicho.py)
+FASE 7  VARIACAO         → Variação estrutural (agents/agente_variacao.py)
+FASE 8  ARQUITETO        → Gera DesignerPRD (agents/arquiteto_mestre.py)
+FASE 9  BUILDER          → HTML via OpenUI (services/openui_renderer.py)
+FASE 10 DEPLOY           → Site salvo em /var/www/fralib/sites/
+FASE 11 FRANZ            → SDR outreach WhatsApp (agents/sdr_langgraph/)
+
+Fonte: commit a9030deb (22 jun 2026) — pipeline funcional
+Orquestrador: backend/services/pipeline_executors.py
+```
+
+## Agentes do Pipeline (ordem de execução)
+
+| # | Agente | Arquivo | Modelo | max_tokens | Função |
+|---|--------|---------|--------|------------|--------|
+| 1 | Hunter | `utils/agente1_hunter_v2.py` | Playwright scraping | — | Valida/coleta lead_data via Google Maps |
+| 2 | Caio | `agents/caio.py` | haiku | 2000 | Qualificador — classifica lead por tier/score |
+| 3 | Arquiteto Mestre | `agents/arquiteto_mestre.py` | sonnet | 8000 | Gera PRD completo (seções, paleta OKLch, animações) |
+| 4 | Builder (OpenUI) | `agents/builder/agent.py` | claude-sonnet-4-6 | 64000 (4×18000) | Gera HTML chunked via OpenUI (Node.js :3333) |
+| 5 | QA v2 | `agents/builder/quality_gate_v2/` | gpt-4o-mini / 9router | — | Vision QA — pontua design, repair loop se < 7.5 |
+| 6 | Deploy | (sem LLM) | — | — | Salva HTML em /var/www/fralib/sites/ + metadata.json |
+| 7 | Franz | `agents/franz/` (agent loop) + `agents/franz.py` | sonnet | 4000 | SDR WhatsApp — outreach, follow-up, agendamento (MCP-like tools) |
+
+## Agentes de Suporte
+
+| Agente | Arquivo | Função |
+|--------|---------|--------|
+| Memory | `agents/memory.py` | Memória episódica + semântica do Franz |
+| Brain | `agents/brain.py` | Orquestração central de agentes |
+| Animation Injector | `agents/animation_injector.py` | Injetor de animações CSS/JS no HTML |
+| Animation Profile | `agents/animation_profile.py` | Perfis de animação por nicho |
+| Design Context | `agents/design_context.py` | Tokens OKLch por nicho (cores, tipografia) |
+| Design Guidelines | `agents/design_guidelines.py` | Guidelines de design system |
+| Open Design Selector | `agents/open_design_selector.py` | Seleção de design system para o Builder |
+| Liam SEO | `agents/liam_seo.py` | SEO — meta tags, schema, geo-tags |
+| Liam Tools | `agents/liam_tools.py` | Tools auxiliares do Liam (legado) |
+| Liam Constitutional | `agents/liam_constitutional.py` | Constitutional AI — guardrails do Liam |
+| Liam LATS | `agents/liam_lats.py` | Language Agent Tree Search (experimental) |
+| Liam MOA | `agents/liam_moa.py` | Mixture of Agents (experimental) |
+| Liam Models | `agents/liam_models.py` | Definição de modelos do Liam (legado) |
+| Franz Agent Loop | `agents/franz_agent_loop.py` | Loop de agentes do Franz |
+| Liam Agent Loop | `agents/liam_agent_loop.py` | Loop de agentes do Liam (legado) |
+| Theo Agent Loop | `agents/theo_agent_loop.py` | Loop de agentes do Theo |
+| Franz Agent Loop | `agents/franz_agent_loop.py` | Loop de agentes do Franz |
+| Arquiteto Agent Loop | `agents/arquiteto_agent_loop.py` | Loop de agentes do Arquiteto |
+| Liz Rubricas | `agents/liz_rubricas.py` | Rubricas de avaliação da Liz |
+| Craft Rules | `agents/craft_rules.py` | Regras de craft para geração de conteúdo |
+| Validation Enforcer | `agents/validation_enforcer.py` | Enforcement de validações |
+| Validation Layer | `agents/validation_layer.py` | Camada de validação genérica |
+| Color Extractor | `agents/color_extractor.py` | Extrai paleta de cores de referências |
+| Color Enforcer | `agents/color_enforcer.py` | Garante consistência de cores no output |
+| Cinematic Post Processor | `agents/cinematic_post_processor.py` | Pós-processamento cinematográfico |
+| SEO Context | `agents/seo_context.py` | Contexto SEO para geração |
+| Skill Loader | `agents/skill_loader.py` | Carrega skills dinâmicas dos agentes |
+| Token Tracker | `agents/token_tracker.py` | Rastreia consumo de tokens por agente + custo USD (thread-local) |
+| Observability | `observability.py` | Traces/spans por run — dashboard em `/api/observability/dashboard` |
+| Pipeline Error Log | `backend/core/pipeline_error_log.py` | Log estruturado de erro por step da pipeline |
+| Pipeline Checkpoint | `agents/pipeline_checkpoint.py` | Checkpoints para retomada de pipeline |
+| Unsplash Fetcher | `agents/unsplash_fetcher.py` | Busca imagens no Unsplash |
+| Markdown PRD Parser | `agents/markdown_prd_parser.py` | Parseia PRDs em Markdown |
+| LLM Direct | `agents/llm_direct.py` | Chamada direta a LLM (bypass router) |
+
+## Agentes Legado (não executam no pipeline, mantidos para referência)
+
+| Agente | Arquivo | O que fazia | Substituído por |
+|--------|---------|-------------|-----------------|
+| Theo | `agents/theo.py` | Estrategista — briefing inicial, PRD textual | Arquiteto Mestre (funde Theo + Designer) |
+| Designer PRD | `agents/designer_prd.py` | Arquiteto visual — seções, paleta, animações | Arquiteto Mestre (funde Theo + Designer). **Classe usada como contrato de schema (DesignerPRD, ColorPalette, SectionSpec, AnimationSpec)** |
+| Liam | `agents/liam.py` | Gerador HTML antigo (~1373 linhas) | Builder OpenUI chunked |
+| Liz | `agents/liz.py` | Revisora de código — valida HTML gerado | QA v2 (Vision LLM + repair loop) |
+| Liam Tools | `agents/liam_tools.py` | Tools auxiliares do Liam | — |
+| Liam LATS | `agents/liam_lats.py` | Language Agent Tree Search (experimental) | — |
+| Liam MOA | `agents/liam_moa.py` | Mixture of Agents (experimental) | — |
+| Liam Models | `agents/liam_models.py` | Definição de modelos do Liam | LLM Router |
+| Franz Agent Loop | `agents/franz_agent_loop.py` | Loop de agentes do Franz | Franz (via cron dispatcher) |
+| Liam Agent Loop | `agents/liam_agent_loop.py` | Loop de agentes do Liam (legado) | — |
+| Theo Agent Loop | `agents/theo_agent_loop.py` | Loop de agentes do Theo | — |
+| Arquiteto Agent Loop | `agents/arquiteto_agent_loop.py` | Loop de agentes do Arquiteto | Pipeline FSM em manager/agent.py |
+| Liz Rubricas | `agents/liz_rubricas.py` | Rubricas de avaliação da Liz | QA v2 |
 
 Cada agente é um módulo Python. Esta tabela é a fonte de verdade para
 entender o que cada arquivo faz, qual modelo LLM usa e em que fase do
