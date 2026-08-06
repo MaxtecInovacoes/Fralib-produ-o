@@ -144,32 +144,6 @@ body{
 .pipeline-status.paused{border-color:var(--warning);color:var(--warning)}
 .pipeline-status.idle{border-color:var(--fl-text-dim);color:var(--fl-text-dim)}
 
-/* Cooldown Timer */
-.cooldown-timer{display:none;align-items:center;gap:8px;padding:8px 14px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.3);border-radius:8px;font-family:var(--fl-font-mono);font-size:12px;color:var(--warning)}
-.cooldown-timer.active{display:flex}
-.cooldown-timer .timer-value{font-weight:700;font-size:14px;min-width:50px}
-.cooldown-timer .timer-label{color:var(--fl-text-muted);font-size:11px}
-
-/* Pipeline Progress Bar */
-.pipeline-progress{display:none;padding:12px 16px;background:var(--fl-bg-card);border:1px solid var(--fl-border);border-radius:8px;margin-bottom:16px}
-.pipeline-progress.active{display:block}
-.pipeline-progress .progress-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
-.pipeline-progress .progress-title{font-size:12px;font-weight:600;color:var(--fl-text)}
-.pipeline-progress .progress-time{font-size:11px;color:var(--fl-text-muted);font-family:var(--fl-font-mono)}
-.pipeline-progress .progress-bar{height:6px;background:var(--fl-bg-hover);border-radius:3px;overflow:hidden}
-.pipeline-progress .progress-fill{height:100%;background:linear-gradient(90deg,var(--fl-purple),var(--cyan));border-radius:3px;transition:width 0.5s var(--fl-ease)}
-.pipeline-progress .progress-steps{display:flex;justify-content:space-between;margin-top:8px}
-.pipeline-progress .step{font-size:9px;color:var(--fl-text-dim);font-family:var(--fl-font-mono);transition:color 0.3s}
-.pipeline-progress .step.done{color:var(--success)}
-.pipeline-progress .step.current{color:var(--cyan);font-weight:700}
-
-/* Upsell Card */
-.upsell-card{display:none;padding:12px 16px;background:rgba(147,51,234,0.06);border:1px solid rgba(147,51,234,0.2);border-radius:8px;margin-bottom:16px;text-align:center}
-.upsell-card.active{display:block}
-.upsell-card p{font-size:12px;color:var(--fl-text-muted);margin-bottom:8px}
-.upsell-card a{font-size:11px;color:var(--fl-purple-300);text-decoration:none;font-weight:600;font-family:var(--fl-font-mono)}
-.upsell-card a:hover{color:var(--fl-purple-400);text-decoration:underline}
-
 /* ============================================================
    KPI CARDS — 6 cards em 2 linhas de 3
    ============================================================ */
@@ -710,11 +684,6 @@ body{
       <!-- Controles do Pipeline -->
       <div class="pipeline-controls">
         <span class="pipeline-status idle" id="pipelineStatus">&#9679; IDLE</span>
-        <div class="cooldown-timer" id="cooldownTimer">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-          <span class="timer-value" id="cooldownValue">00:00</span>
-          <span class="timer-label" id="cooldownLabel">para próximo</span>
-        </div>
         <button class="btn-pipeline btn-pipeline-start" id="btnIniciar" id="btnIniciar">&#9654; INICIAR</button>
         <button class="btn-pipeline btn-pipeline-pause" id="btnPausar" onclick="pausarPipeline()" style="display:none">&#9646;&#9646; PAUSAR</button>
         <button class="btn-pipeline btn-pipeline-start" id="btnRetomar" onclick="retomarPipeline()" style="display:none">&#9654; RETOMAR</button>
@@ -727,30 +696,6 @@ body{
     </div>
   </div>
 
-
-  <!-- Pipeline Progress Bar -->
-  <div class="pipeline-progress" id="pipelineProgress">
-    <div class="progress-header">
-      <span class="progress-title" id="progressTitle">Pipeline rodando...</span>
-      <span class="progress-time" id="progressTime">0:00</span>
-    </div>
-    <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
-    <div class="progress-steps">
-      <span class="step" data-step="hunter">Hunter</span>
-      <span class="step" data-step="caio">Caio</span>
-      <span class="step" data-step="theo">Theo</span>
-      <span class="step" data-step="arquiteto">Arquiteto</span>
-      <span class="step" data-step="liam">Liam</span>
-      <span class="step" data-step="liz">Liz</span>
-      <span class="step" data-step="deploy">Deploy</span>
-    </div>
-  </div>
-
-  <!-- Upsell Card (cooldown) -->
-  <div class="upsell-card" id="upsellCard">
-    <p id="upsellText">Esperando cooldown? Upgrade para rodar mais rápido.</p>
-    <a href="/planos.html">VER PLANOS &rarr;</a>
-  </div>
 
   <!-- KPI Cards — 6 métricas -->
   <div class="kpi-grid" id="kpi-section" style="display: none;">
@@ -1466,66 +1411,21 @@ async function _executarIniciar(nicho, cidade, qtd) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ segmento: nicho, cidade: cidade, quantidade: qtd || 50 })
     });
-    if (resp && resp.status === 429) {
-      var d429 = await resp.json().catch(function(){return {};});
-      var det = d429.detail || {};
-      if (det.cooldown_restante_seg) {
-        var restante = det.cooldown_restante_seg;
-        var plano = det.plano || 'starter';
-        var filaCount = det.leads_na_fila || 0;
-        var upsell = det.upsell || '';
-        var html = '<div id="cooldownOverlay" style="position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);">'
-          + '<div style="background:rgba(10,7,20,0.95);border:1px solid rgba(147,51,234,0.3);border-radius:16px;padding:36px;max-width:400px;width:90%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.5),inset 0 1px 0 rgba(255,255,255,0.04);">'
-          + '<div style="width:56px;height:56px;margin:0 auto 16px;background:rgba(147,51,234,0.1);border-radius:50%;display:flex;align-items:center;justify-content:center;border:1px solid rgba(147,51,234,0.2);"><span style="font-size:1.5rem;">⏱️</span></div>'
-          + '<h2 style="font-family:\'Press Start 2P\',monospace;font-size:11px;color:#f5c518;margin-bottom:12px;letter-spacing:1px;">COOLDOWN ATIVO</h2>'
-          + '<p style="color:#a0a0b8;font-size:0.9rem;margin-bottom:4px;">Plano <b style="color:#c084fc;">' + plano + '</b></p>'
-          + '<p style="color:#6b6b80;font-size:0.8rem;margin-bottom:16px;">Aguarde entre pipelines</p>'
-          + '<div id="cooldownTimer" style="font-family:\'JetBrains Mono\',monospace;font-size:2.2rem;font-weight:700;color:#f5c518;margin:20px 0;text-shadow:0 0 12px rgba(245,197,24,0.3);"></div>'
-          + (filaCount > 0 ? '<p style="color:#8888a0;font-size:0.8rem;margin-bottom:8px;font-family:\'JetBrains Mono\',monospace;">' + filaCount + ' lead(s) na fila — auto-processamento</p>' : '')
-          + (upsell ? '<p style="color:#a855f7;font-size:0.8rem;margin-top:12px;padding:8px 12px;background:rgba(147,51,234,0.08);border-radius:8px;border:1px solid rgba(147,51,234,0.15);">' + upsell + '</p>' : '')
-          + '<div style="display:flex;gap:12px;justify-content:center;margin-top:24px;">'
-          + (upsell ? '<a href="/planos" style="font-family:\'Press Start 2P\',monospace;font-size:9px;background:#FACC15;color:#000;padding:12px 20px;text-decoration:none;box-shadow:inset -3px -3px 0 #A16207,inset 3px 3px 0 #FDE68A,0 4px 0 #713F12;letter-spacing:1px;">UPGRADE</a>' : '')
-          + '<button onclick="document.getElementById(\'cooldownOverlay\').remove()" style="font-family:\'Press Start 2P\',monospace;font-size:9px;background:transparent;border:1px solid rgba(147,51,234,0.3);color:#a0a0b8;padding:12px 20px;cursor:pointer;letter-spacing:1px;">FECHAR</button>'
-          + '</div></div></div>';
-        document.body.insertAdjacentHTML('beforeend', html);
-        var segsRestantes = restante;
-        function atualizarTimer() {
-          var m = Math.floor(segsRestantes / 60);
-          var s = segsRestantes % 60;
-          var el = document.getElementById('cooldownTimer');
-          if (el) el.textContent = m + ':' + (s < 10 ? '0' : '') + s;
-          if (segsRestantes <= 0) {
-            var ov = document.getElementById('cooldownOverlay');
-            if (ov) ov.remove();
-            if (typeof showToast === 'function') showToast('✅ Cooldown encerrado! Pode rodar o pipeline.', 'success', 5000);
-            return;
-          }
-          segsRestantes--;
-          setTimeout(atualizarTimer, 1000);
-        }
-        atualizarTimer();
+    if (!resp.ok) {
+      var errData = await resp.json().catch(function(){ return {}; });
+      if (resp.status === 428) {
+        mostrarErrosPipeline('WhatsApp não conectado', 'Conecte seu WhatsApp em Configurações antes de iniciar.', 'Após conectar, tente novamente.');
+      } else if (resp.status === 402) {
+        mostrarErrosPipeline('Limite atingido', (errData.detail || {}).erro || 'Créditos esgotados.', 'Aguarde o reset ou faça upgrade.');
       } else {
-        var msg429 = typeof det === 'string' ? det : (det.mensagem || 'Aguarde antes de rodar outro pipeline.');
-        if (typeof showToast === 'function') showToast('⏱️ ' + msg429, 'warning', 8000);
-        else alert('⏱️ ' + msg429);
+        mostrarErrosPipeline('Erro', errData.detail || 'Pipeline não iniciou.', 'Recarregue e tente novamente.');
       }
       return;
     }
-    if (resp && resp.status === 402) {
-      var d402 = await resp.json().catch(function(){return {};});
-      var motivo = (d402.detail && d402.detail.motivo) || d402.detail || 'Sem créditos disponíveis.';
-      alert('⚡ ' + motivo + '\n\nFaça upgrade em /planos');
-      return;
-    }
-    if (resp && !resp.ok) {
-      var errData = await resp.json().catch(function(){return {};});
-      var errMsg = errData.detail || 'Erro ao iniciar pipeline.';
-      if (typeof errMsg === 'object') errMsg = errMsg.mensagem || JSON.stringify(errMsg);
-      alert('❌ ' + errMsg);
-      return;
-    }
     setTimeout(carregarKPIs, 800);
-  } catch(e) { alert('Erro ao iniciar pipeline: ' + e.message); }
+  } catch(e) {
+    mostrarErrosPipeline('Erro de conexão', 'Não foi possível conectar ao servidor.', 'Verifique sua internet e recarregue.');
+  }
 }
 
 async function pausarPipeline() {
@@ -1541,99 +1441,16 @@ async function retomarPipeline() {
     setTimeout(carregarKPIs, 500);
 
 /* ══ TOAST NOTIFICATIONS ════════════════════════════════════════ */
-// ══ MODAL DE PLANOS + CHECKOUT STRIPE ════════════════════════════
-function mostrarModalPlanos() {
-  var existing = document.getElementById('modal-planos-overlay');
-  if (existing) existing.remove();
-
-  var overlay = document.createElement('div');
-  overlay.id = 'modal-planos-overlay';
-  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
-  overlay.innerHTML = `
-    <div style="background:#1a1a2e;border:1px solid #2d2d44;border-radius:16px;padding:32px;max-width:700px;width:100%;max-height:90vh;overflow-y:auto;">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;">
-        <h2 style="font-size:18px;color:#fff;margin:0;">Escolha seu plano</h2>
-        <button onclick="document.getElementById('modal-planos-overlay').remove()" style="background:none;border:none;color:#888;font-size:24px;cursor:pointer;">&times;</button>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-        <div style="background:#0f0f1a;border:1px solid #2d2d44;border-radius:12px;padding:24px;">
-          <div style="font-size:11px;color:#7c3aed;font-weight:700;letter-spacing:1px;margin-bottom:8px;">STARTER</div>
-          <div style="font-size:28px;font-weight:700;color:#fff;">R$97<span style="font-size:14px;color:#888;">/mês</span></div>
-          <p style="font-size:12px;color:#888;margin:12px 0;">7 dias grátis. Cancele quando quiser.</p>
-          <ul style="list-style:none;padding:0;margin:16px 0;font-size:13px;color:#ccc;">
-            <li style="margin-bottom:8px;">✓ 200 interações SDR/mês</li>
-            <li style="margin-bottom:8px;">✓ IA treinada em conversão</li>
-            <li style="margin-bottom:8px;">✓ Kanban CRM completo</li>
-            <li style="margin-bottom:8px;">✓ Deploy de sites</li>
-            <li style="margin-bottom:8px;">✓ Suporte por email</li>
-          </ul>
-          <button onclick="iniciarCheckout('starter')" style="width:100%;padding:12px;background:#7c3aed;color:#fff;border:none;border-radius:8px;font-weight:700;font-size:14px;cursor:pointer;">ASSINAR STARTER</button>
-        </div>
-        <div style="background:#0f0f1a;border:2px solid #fbbf24;border-radius:12px;padding:24px;position:relative;">
-          <div style="position:absolute;top:-10px;right:16px;background:#fbbf24;color:#000;font-size:9px;font-weight:700;padding:3px 8px;border-radius:4px;">POPULAR</div>
-          <div style="font-size:11px;color:#fbbf24;font-weight:700;letter-spacing:1px;margin-bottom:8px;">PRO (BYOK)</div>
-          <div style="font-size:28px;font-weight:700;color:#fff;">R$297<span style="font-size:14px;color:#888;">/mês</span></div>
-          <p style="font-size:12px;color:#888;margin:12px 0;">Uso ilimitado com sua própria API key.</p>
-          <ul style="list-style:none;padding:0;margin:16px 0;font-size:13px;color:#ccc;">
-            <li style="margin-bottom:8px;">✓ Tokens ilimitados (BYOK)</li>
-            <li style="margin-bottom:8px;">✓ Multicanal avançado</li>
-            <li style="margin-bottom:8px;">✓ SDR com retries automáticos</li>
-            <li style="margin-bottom:8px;">✓ Agente personalizado</li>
-            <li style="margin-bottom:8px;">✓ Publicação ilimitada</li>
-            <li style="margin-bottom:8px;">✓ Suporte VIP prioritário</li>
-          </ul>
-          <button onclick="iniciarCheckout('pro')" style="width:100%;padding:12px;background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#000;border:none;border-radius:8px;font-weight:700;font-size:14px;cursor:pointer;">ASSINAR PRO</button>
-        </div>
-      </div>
-      <p style="text-align:center;font-size:11px;color:#666;margin-top:16px;">Garantia de 7 dias. Cancele a qualquer momento pelo portal.</p>
-    </div>
-  `;
-  document.body.appendChild(overlay);
-  overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
-}
-
-async function iniciarCheckout(plano) {
-  try {
-    var r = await AuthHelper.authFetch('/api/credits/criar-checkout', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({plano: plano})
-    });
-    var d = await r.json();
-    if (d.checkout_url) {
-      window.location.href = d.checkout_url;
-    } else {
-      mostrarToast(d.detail || 'Erro ao criar checkout', 4000);
-    }
-  } catch(e) {
-    mostrarToast('Erro: ' + (e.message||e), 4000);
-  }
-}
-
-// Interceptar 402 globalmente — mostrar modal de planos
-(function() {
-  var _origFetch = AuthHelper.authFetch;
-  AuthHelper.authFetch = async function() {
-    var resp = await _origFetch.apply(this, arguments);
-    if (resp.status === 402) {
-      var d = await resp.clone().json().catch(function(){return {};});
-      mostrarToast(d.detail || 'Seu plano expirou. Assine para continuar.', 5000);
-      setTimeout(mostrarModalPlanos, 500);
-    }
-    return resp;
-  };
-})();
-
 function mostrarToast(mensagem, duracao) {
   duracao = duracao || 3000;
-  
+
   // Criar elemento de toast
   var toast = document.createElement('div');
   toast.style.cssText = 'position:fixed;bottom:24px;right:24px;background:#1f2937;color:white;padding:16px 24px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.3);z-index:10000;font-size:14px;max-width:400px;animation:slideIn 0.3s ease';
   toast.textContent = mensagem;
-  
+
   document.body.appendChild(toast);
-  
+
   // Remover após duração
   setTimeout(function() {
     toast.style.animation = 'slideOut 0.3s ease';
@@ -1641,6 +1458,26 @@ function mostrarToast(mensagem, duracao) {
       document.body.removeChild(toast);
     }, 300);
   }, duracao);
+}
+
+function mostrarErrosPipeline(titulo, mensagem, acao) {
+  var old = document.getElementById('modal-erro-pipeline');
+  if (old) old.remove();
+  var modal = document.createElement('div');
+  modal.id = 'modal-erro-pipeline';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:99999;display:flex;align-items:center;justify-content:center;';
+  modal.innerHTML = ''
+    + '<div style="background:#1a1a2e;border:1px solid #ef4444;border-radius:12px;padding:32px;max-width:420px;width:90%;text-align:center;">'
+    + '  <div style="font-size:48px;margin-bottom:16px;">⚠️</div>'
+    + '  <h3 style="color:#ef4444;margin:0 0 12px;font-size:18px;">' + titulo + '</h3>'
+    + '  <p style="color:#ccc;margin:0 0 20px;font-size:14px;line-height:1.5;">' + mensagem + '</p>'
+    + '  <p style="color:#888;margin:0 0 20px;font-size:12px;">' + (acao || 'Se o problema persistir, entre em contato com o suporte.') + '</p>'
+    + '  <button onclick="document.getElementById(\'modal-erro-pipeline\').remove()" '
+    + '    style="background:#ef4444;color:white;border:none;padding:12px 32px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;">'
+    + '    Entendi'
+    + '  </button>'
+    + '</div>';
+  document.body.appendChild(modal);
 }
   } catch(e) { console.warn('Retomar:', e.message); }
 }
@@ -2252,24 +2089,87 @@ async function _verificarFilaEIniciar(nicho, cidade, qtd, scoreMin, btn) {
 }
 
 async function _executarIniciarPipeline(nicho, cidade, qtd, scoreMin, btn) {
+  if (btn) { btn.textContent = '⏳ Verificando...'; btn.disabled = true; }
+
   try {
-    await authFetch('/api/pipeline/iniciar', {
+    var resp = await authFetch('/api/pipeline/iniciar', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ segmento: nicho, cidade: cidade, quantidade: qtd, score_minimo: scoreMin })
     });
-    if (btn) { btn.textContent = '✓ PIPELINE INICIADO!'; }
+
+    if (!resp.ok) {
+      var errData = await resp.json().catch(function(){ return {}; });
+      if (btn) { btn.textContent = '▶ INICIAR PIPELINE'; btn.disabled = false; }
+
+      if (resp.status === 428) {
+        mostrarErrosPipeline(
+          'WhatsApp não conectado',
+          'Você precisa conectar seu WhatsApp antes de iniciar o pipeline. Vá em Configurações > WhatsApp e escaneie o QR code.',
+          'Após conectar, tente iniciar novamente.'
+        );
+      } else if (resp.status === 402) {
+        var det = errData.detail || {};
+        mostrarErrosPipeline(
+          'Limite de créditos atingido',
+          det.erro || 'Você atingiu o limite de sites do seu plano hoje.',
+          det.reset_em ? 'Seus créditos renovam em: ' + det.reset_em : 'Faça upgrade para gerar mais sites.'
+        );
+      } else if (resp.status === 503) {
+        mostrarErrosPipeline(
+          'Pipeline indisponível',
+          'O sistema de filas está temporariamente fora. Isso geralmente resolve em alguns segundos.',
+          'Recarregue a página e tente novamente.'
+        );
+      } else if (resp.status === 429) {
+        mostrarErrosPipeline(
+          'Cooldown ativo',
+          'Aguarde o intervalo entre pipelines do seu plano.',
+          'Tente novamente em alguns minutos ou faça upgrade.'
+        );
+      } else {
+        mostrarErrosPipeline(
+          'Erro inesperado',
+          (errData.detail || errData.message || 'Algo deu errado ao iniciar o pipeline.'),
+          'Recarregue a página e tente novamente.'
+        );
+      }
+      return;
+    }
+
+    // SUCESSO — redirecionar pro Motor FraLib
+    var data = await resp.json().catch(function(){ return {}; });
+    if (btn) { btn.textContent = '✓ INICIADO!'; }
+    mostrarToast('▶ Pipeline iniciado! Redirecionando...');
+
     setTimeout(function(){
       if (btn) { btn.textContent = '▶ INICIAR PIPELINE'; btn.disabled = false; }
-      mostrarView('crm');
-      document.querySelectorAll('.sidebar-link').forEach(function(l){ l.classList.remove('active'); });
-      var crmLink = document.querySelector('[data-view="crm"]');
-      if (crmLink) crmLink.classList.add('active');
+      var motorView = document.getElementById('view-motor') || document.getElementById('view-pipeline');
+      if (motorView) {
+        mostrarView('motor');
+        var motorLink = document.querySelector('[data-view="motor"]') || document.querySelector('[data-view="pipeline"]');
+        if (motorLink) {
+          document.querySelectorAll('.sidebar-link').forEach(function(l){ l.classList.remove('active'); });
+          motorLink.classList.add('active');
+        }
+      } else {
+        mostrarView('crm');
+        var crmLink = document.querySelector('[data-view="crm"]');
+        if (crmLink) {
+          document.querySelectorAll('.sidebar-link').forEach(function(l){ l.classList.remove('active'); });
+          crmLink.classList.add('active');
+        }
+      }
       setTimeout(carregarKanban, 1500);
-    }, 2000);
+    }, 1500);
+
   } catch(e) {
     if (btn) { btn.textContent = '▶ INICIAR PIPELINE'; btn.disabled = false; }
-    alert('Erro ao iniciar pipeline: ' + e.message);
+    mostrarErrosPipeline(
+      'Erro de conexão',
+      'Não foi possível conectar ao servidor.',
+      'Verifique sua internet, recarregue a página e tente novamente.'
+    );
   }
 }
 
@@ -2845,19 +2745,17 @@ async function verificarOnboarding() {
     // --- BLOCO 2: WhatsApp não conectado (aviso, não bloqueia) ---
     var avisoWpp = document.getElementById('onboarding-aviso-wpp');
     if (!status.wpp_ok) {
-      if (localStorage.getItem('fralib_dismiss_wpp_aviso')) { /* user dismissed */ }
-      else if (!avisoWpp) {
+      if (!avisoWpp) {
         avisoWpp = document.createElement('div');
         avisoWpp.id = 'onboarding-aviso-wpp';
         avisoWpp.style.cssText = 'position:fixed;bottom:20px;right:20px;background:#1c1c2e;border:1px solid #f59e0b;color:#f59e0b;padding:14px 18px;border-radius:12px;font-size:13px;z-index:9998;max-width:340px;box-shadow:0 4px 20px rgba(0,0,0,.4);';
-        avisoWpp.innerHTML = '<strong>📱 WhatsApp não conectado</strong><br><span style="color:#ccc;font-size:12px">Conecte seu WhatsApp para ativar o SDR automático.</span><br><div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap;align-items:center"><button onclick="mostrarView(&quot;perfil&quot;);document.getElementById(&quot;onboarding-aviso-wpp&quot;).remove();_wppAvisoStopPoll()" style="background:#f59e0b;color:#000;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600">Conectar agora →</button><button id="aviso-wpp-recheck" onclick="_wppAvisoRecheck(this)" style="background:transparent;color:#f59e0b;border:1px solid #f59e0b;padding:5px 12px;border-radius:6px;cursor:pointer;font-size:11px">Já conectei</button><button onclick="this.closest(&quot;#onboarding-aviso-wpp&quot;).remove();_wppAvisoStopPoll()" style="background:transparent;color:#888;border:none;cursor:pointer;font-size:12px">Depois</button></div><label style="display:flex;align-items:center;gap:6px;margin-top:10px;cursor:pointer;font-size:11px;color:#666"><input type="checkbox" onchange="if(this.checked)localStorage.setItem(&quot;fralib_dismiss_wpp_aviso&quot;,&quot;1&quot;)"> Não mostrar novamente</label><div id="aviso-wpp-feedback" style="margin-top:6px;font-size:11px;color:#94a3b8;min-height:14px"></div>';
+        avisoWpp.innerHTML = '<strong>📱 WhatsApp não conectado</strong><br><span style="color:#ccc;font-size:12px">Conecte seu WhatsApp para ativar o SDR automático.</span><br><div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap;align-items:center"><button onclick="mostrarView(&quot;perfil&quot;);document.getElementById(&quot;onboarding-aviso-wpp&quot;).remove();_wppAvisoStopPoll()" style="background:#f59e0b;color:#000;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600">Conectar agora →</button><button id="aviso-wpp-recheck" onclick="_wppAvisoRecheck(this)" style="background:transparent;color:#f59e0b;border:1px solid #f59e0b;padding:5px 12px;border-radius:6px;cursor:pointer;font-size:11px">Já conectei</button><button onclick="this.closest(&quot;#onboarding-aviso-wpp&quot;).remove();_wppAvisoStopPoll()" style="background:transparent;color:#888;border:none;cursor:pointer;font-size:12px">Depois</button></div><div id="aviso-wpp-feedback" style="margin-top:6px;font-size:11px;color:#94a3b8;min-height:14px"></div>';
         document.body.appendChild(avisoWpp);
         _wppAvisoStartPoll();
       }
     } else {
       if (avisoWpp) avisoWpp.remove();
       _wppAvisoStopPoll();
-      localStorage.removeItem('fralib_dismiss_wpp_aviso');
     }
   } catch (e) {
     console.error('[Onboarding] Erro:', e);
@@ -3045,7 +2943,6 @@ function limparTerminal() {
 if (typeof socket !== 'undefined') {
   socket.on('pipeline:start', function() {
     adicionarLogMagico('🔮 Pipeline iniciado! Preparando a magia...');
-    iniciarProgressBar();
   });
 
   socket.on('pipeline:lead', function(data) {
@@ -3058,227 +2955,12 @@ if (typeof socket !== 'undefined') {
 
   socket.on('pipeline:complete', function() {
     adicionarLogMagico('✅ Ciclo completo! A magia aconteceu!');
-    pararProgressBar();
-    mostrarToastConclusao();
-    iniciarCooldownTimer();
   });
 
   socket.on('pipeline:error', function() {
     adicionarLogMagico('⚠️ Ops! O feitiço falhou...');
-    pararProgressBar();
   });
 }
-
-/* ══ COOLDOWN TIMER ═══════════════════════════════════════════════ */
-var _cooldownInterval = null;
-var _cooldownRestante = 0;
-
-function iniciarCooldownTimer(segs) {
-  if (!segs) {
-    authFetch('/api/pipeline/status').then(function(r){return r.json()}).then(function(s){
-      if (s.cooldown && s.cooldown.cooldown_restante > 0) {
-        _startCooldown(s.cooldown.cooldown_restante, s.cooldown.plano, s.cooldown.leads_na_fila);
-      }
-    });
-    return;
-  }
-  _startCooldown(segs);
-}
-
-function _startCooldown(segs, plano, filaCount) {
-  _cooldownRestante = segs;
-  var timerEl = document.getElementById('cooldownTimer');
-  var valueEl = document.getElementById('cooldownValue');
-  var labelEl = document.getElementById('cooldownLabel');
-  var upsellEl = document.getElementById('upsellCard');
-  var upsellText = document.getElementById('upsellText');
-
-  if (timerEl) timerEl.classList.add('active');
-  if (upsellEl && plano && (plano === 'starter' || plano === 'pro')) {
-    upsellEl.classList.add('active');
-    var upgrade = plano === 'starter' ? 'Pro (30min)' : 'Ilimitado (sem espera)';
-    if (upsellText) upsellText.textContent = 'Esperando ' + Math.ceil(segs/60) + 'min? Upgrade para ' + upgrade + ' e rode mais rapido.';
-  }
-  if (filaCount > 0 && labelEl) {
-    labelEl.textContent = filaCount + ' lead(s) na fila - auto-run';
-  }
-
-  if (_cooldownInterval) clearInterval(_cooldownInterval);
-  _cooldownInterval = setInterval(function(){
-    _cooldownRestante--;
-    if (_cooldownRestante <= 0) {
-      clearInterval(_cooldownInterval);
-      _cooldownInterval = null;
-      if (timerEl) timerEl.classList.remove('active');
-      if (upsellEl) upsellEl.classList.remove('active');
-      if (typeof showToast === 'function') showToast('Cooldown liberado! Pronto para rodar.', 'success');
-      return;
-    }
-    var m = Math.floor(_cooldownRestante / 60);
-    var s = _cooldownRestante % 60;
-    if (valueEl) valueEl.textContent = (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
-  }, 1000);
-
-  var m = Math.floor(_cooldownRestante / 60);
-  var s = _cooldownRestante % 60;
-  if (valueEl) valueEl.textContent = (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
-}
-
-/* ══ COOLDOWN STATUS POLLING (usa novo endpoint) ═════════════════ */
-var _cooldownPollInterval = null;
-
-function iniciarCooldownPolling() {
-  _pollCooldownStatus();
-  if (_cooldownPollInterval) clearInterval(_cooldownPollInterval);
-  _cooldownPollInterval = setInterval(_pollCooldownStatus, 10000);
-}
-
-function _pollCooldownStatus() {
-  authFetch('/api/pipeline/cooldown-status').then(function(r){return r.json()}).then(function(data){
-    var timerEl = document.getElementById('cooldownTimer');
-    var valueEl = document.getElementById('cooldownValue');
-    var labelEl = document.getElementById('cooldownLabel');
-    var upsellEl = document.getElementById('upsellCard');
-    var upsellText = document.getElementById('upsellText');
-    var statusEl = document.getElementById('pipelineStatus');
-
-    // Cooldown ativo
-    if (data.cooldown && data.cooldown.ativo) {
-      _cooldownRestante = data.cooldown.restante_seg;
-      if (timerEl) timerEl.classList.add('active');
-      if (statusEl) { statusEl.className = 'pipeline-status paused'; statusEl.innerHTML = '&#9679; COOLDOWN'; }
-
-      // Restart local countdown
-      if (!_cooldownInterval) {
-        _cooldownInterval = setInterval(function(){
-          _cooldownRestante--;
-          if (_cooldownRestante <= 0) {
-            clearInterval(_cooldownInterval); _cooldownInterval = null;
-            if (timerEl) timerEl.classList.remove('active');
-            if (upsellEl) upsellEl.classList.remove('active');
-            if (statusEl) { statusEl.className = 'pipeline-status idle'; statusEl.innerHTML = '&#9679; PRONTO'; }
-            if (typeof showToast === 'function') showToast('Cooldown liberado!', 'success');
-            return;
-          }
-          var m = Math.floor(_cooldownRestante / 60), s = _cooldownRestante % 60;
-          if (valueEl) valueEl.textContent = (m<10?'0':'') + m + ':' + (s<10?'0':'') + s;
-        }, 1000);
-      }
-
-      // Upsell
-      if (data.upsell && data.upsell.mostrar && upsellEl) {
-        upsellEl.classList.add('active');
-        if (upsellText) upsellText.textContent = data.upsell.mensagem_curta;
-        var upsellLink = upsellEl.querySelector('a');
-        if (upsellLink) upsellLink.href = data.upsell.url;
-      }
-
-      // Fila info
-      if (data.fila && data.fila.leads_aguardando > 0 && labelEl) {
-        labelEl.textContent = data.fila.leads_aguardando + ' lead(s) na fila - auto-run';
-      }
-    } else {
-      // Sem cooldown
-      if (timerEl) timerEl.classList.remove('active');
-      if (upsellEl) upsellEl.classList.remove('active');
-      if (_cooldownInterval) { clearInterval(_cooldownInterval); _cooldownInterval = null; }
-      if (statusEl && !statusEl.classList.contains('running')) {
-        statusEl.className = 'pipeline-status idle'; statusEl.innerHTML = '&#9679; PRONTO';
-      }
-    }
-
-    // Bloqueio (trial esgotado)
-    if (data.bloqueio) {
-      if (statusEl) { statusEl.className = 'pipeline-status paused'; statusEl.innerHTML = '&#9679; BLOQUEADO'; }
-      if (upsellEl) { upsellEl.classList.add('active'); }
-      if (upsellText) upsellText.textContent = data.bloqueio.mensagem;
-    }
-
-    // Atualizar KPIs de uso se existirem
-    var kpiHoje = document.getElementById('kpiSitesHoje');
-    var kpiSemana = document.getElementById('kpiSitesSemana');
-    var kpiTotal = document.getElementById('kpiSitesTotal');
-    if (kpiHoje && data.uso) kpiHoje.textContent = data.uso.sites_hoje || 0;
-    if (kpiSemana && data.uso) kpiSemana.textContent = data.uso.sites_semana || 0;
-    if (kpiTotal && data.uso) kpiTotal.textContent = data.uso.sites_total || 0;
-  }).catch(function(){});
-}
-
-// Iniciar polling ao carregar
-document.addEventListener('DOMContentLoaded', function(){ setTimeout(iniciarCooldownPolling, 2000); });
-
-/* ══ PIPELINE PROGRESS BAR ════════════════════════════════════════ */
-var _progressInterval = null;
-var _progressStart = null;
-var _PIPELINE_STEPS = ['hunter','caio','theo','arquiteto','liam','liz','deploy'];
-
-function iniciarProgressBar() {
-  var el = document.getElementById('pipelineProgress');
-  if (el) el.classList.add('active');
-  _progressStart = Date.now();
-  var fill = document.getElementById('progressFill');
-  if (fill) fill.style.width = '5%';
-  _marcarStep(0);
-
-  if (_progressInterval) clearInterval(_progressInterval);
-  _progressInterval = setInterval(function(){
-    var elapsed = Math.floor((Date.now() - _progressStart) / 1000);
-    var m = Math.floor(elapsed / 60);
-    var s = elapsed % 60;
-    var timeEl = document.getElementById('progressTime');
-    if (timeEl) timeEl.textContent = m + ':' + (s < 10 ? '0' : '') + s;
-    var pct = Math.min(95, 5 + (elapsed / 240) * 90);
-    if (fill) fill.style.width = pct + '%';
-    var stepIdx = Math.min(6, Math.floor(elapsed / 35));
-    _marcarStep(stepIdx);
-  }, 1000);
-}
-
-function pararProgressBar() {
-  var el = document.getElementById('pipelineProgress');
-  var fill = document.getElementById('progressFill');
-  if (fill) fill.style.width = '100%';
-  _marcarStep(7);
-  if (_progressInterval) clearInterval(_progressInterval);
-  _progressInterval = null;
-  setTimeout(function(){ if (el) el.classList.remove('active'); }, 3000);
-}
-
-function _marcarStep(idx) {
-  var steps = document.querySelectorAll('.pipeline-progress .step');
-  steps.forEach(function(s, i){
-    s.classList.remove('done','current');
-    if (i < idx) s.classList.add('done');
-    else if (i === idx) s.classList.add('current');
-  });
-}
-
-/* ══ TOAST CONCLUSÃO ══════════════════════════════════════════════ */
-function mostrarToastConclusao() {
-  if (typeof showToast === 'function') {
-    showToast('Pipeline concluido! Site gerado com sucesso.', 'success');
-  }
-  if ('Notification' in window && Notification.permission === 'granted') {
-    new Notification('FraLib OS', { body: 'Pipeline concluido! Site pronto.', icon: '/images/Logo FraLib.png' });
-  }
-}
-
-/* ══ CARREGAR COOLDOWN NO INIT ════════════════════════════════════ */
-(function(){
-  setTimeout(function(){
-    authFetch('/api/pipeline/status').then(function(r){return r.json()}).then(function(s){
-      if (s.cooldown && s.cooldown.bloqueado && s.cooldown.cooldown_restante > 0) {
-        _startCooldown(s.cooldown.cooldown_restante, s.cooldown.plano, s.cooldown.leads_na_fila);
-      }
-      if (s.rodando && !s.pausado) {
-        iniciarProgressBar();
-      }
-    }).catch(function(){});
-  }, 1500);
-  if ('Notification' in window && Notification.permission === 'default') {
-    Notification.requestPermission();
-  }
-})();
     await TwoFactorAuth.disable(password);
     alert('2FA desativado com sucesso!');
 async function checkTwoFactorStatus() {  try {    const res = await authFetch("/api/auth/2fa/status");    if (!res.ok) return;    const data = await res.json();    const badge = document.getElementById("2fa-status-badge");    if (badge) {      badge.textContent = data.enabled ? "Ativo" : "Inativo";      badge.className = data.enabled ? "badge badge-success" : "badge badge-secondary";    }  } catch (err) {    console.warn("[2FA] Erro ao verificar status:", err.message);  }}
@@ -3399,23 +3081,10 @@ document.addEventListener('DOMContentLoaded', function() {
   // Botões de Upsell
   var btnUpgradePro = document.getElementById('btn-upgrade-pro');
   if (btnUpgradePro) {
-    btnUpgradePro.addEventListener('click', async function(e) {
+    btnUpgradePro.addEventListener('click', function(e) {
       e.preventDefault();
-      try {
-        var r = await AuthHelper.authFetch('/api/credits/status');
-        var d = await r.json();
-        if (d.plano_pago) {
-          // Já pago → abrir portal Stripe pra gerenciar
-          var p = await AuthHelper.authFetch('/api/credits/portal', {method:'POST'});
-          var pd = await p.json();
-          if (pd.portal_url) window.location.href = pd.portal_url;
-          else mostrarToast('Erro ao abrir portal', 'error');
-        } else {
-          // Não pago → abrir modal de planos
-          mostrarModalPlanos();
-        }
-      } catch(err) {
-        mostrarToast('Erro: ' + (err.message||err), 'error');
+      if (window.mostrarToast) {
+        window.mostrarToast('🚀 Em breve: Upgrade para PRO!');
       }
     });
   }
