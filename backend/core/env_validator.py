@@ -74,7 +74,7 @@ def print_env_summary() -> None:
     print(f"  PID: {os.getpid()}")
     print(f"{'='*60}")
 
-    for var_name, default, description in OPTIONAL_ENV_VARS.items():
+    for var_name, (default, description) in OPTIONAL_ENV_VARS.items():
         value = os.getenv(var_name, default)
         # Mascarar valores sensíveis
         display = value if not any(s in var_name.upper() for s in ["SECRET", "KEY", "PASSWORD", "DSN"]) else "***"
