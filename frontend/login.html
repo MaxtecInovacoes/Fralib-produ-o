@@ -495,7 +495,7 @@ tabSignup.addEventListener('click',function(){setModo('signup')});
 var token=localStorage.getItem('fralib_token');
 if(token){
   if(planoPendente&&PLANOS_VALIDOS[planoPendente])iniciarCheckout(token,planoPendente);
-  else window.location.href='/dashboard';
+  else window.location.href='/admin.html';
 }
 
 async function iniciarCheckout(jwt,plano){
@@ -503,8 +503,8 @@ async function iniciarCheckout(jwt,plano){
     var r=await fetch('/api/credits/criar-checkout',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+jwt},body:JSON.stringify({plano:plano})});
     var d=await r.json();
     if(r.ok&&d.checkout_url){localStorage.removeItem('fralib_pending_plano');window.location.href=d.checkout_url}
-    else{errorDiv.textContent='Falha checkout: '+(d.detail||'tente em /dashboard');errorDiv.classList.add('show');setTimeout(function(){window.location.href='/dashboard'},3000)}
-  }catch(e){window.location.href='/dashboard'}
+    else{errorDiv.textContent='Falha checkout: '+(d.detail||'tente em /admin.html');errorDiv.classList.add('show');setTimeout(function(){window.location.href='/admin.html'},3000)}
+  }catch(e){window.location.href='/admin.html'}
 }
 
 // ── Signup ─────────────────────────────────────────────────────
@@ -550,7 +550,7 @@ loginForm.addEventListener('submit',async function(e){
       localStorage.setItem('fralib_token',d.access_token);
       var pp=localStorage.getItem('fralib_pending_plano')||'';
       if(pp&&PLANOS_VALIDOS[pp]){btnLogin.textContent='CHECKOUT...';iniciarCheckout(d.access_token,pp)}
-      else window.location.href='/dashboard';
+      else window.location.href='/admin.html';
     }else if(r.status===403&&r.headers.get('X-Require-Email-Confirmation')==='1'){
       errorDiv.innerHTML='<div>'+(d.detail||'Email não confirmado.')+'</div><button type="button" id="btnReenviar" style="margin-top:10px;background:#FACC15;color:#000;border:0;padding:10px 18px;font-family:var(--fl-font-brand);font-size:8px;letter-spacing:1px;cursor:pointer;box-shadow:inset -3px -3px 0 #A16207,inset 3px 3px 0 #FDE68A,0 4px 0 #713F12">REENVIAR EMAIL</button>';
       errorDiv.classList.add('show');
