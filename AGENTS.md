@@ -61,6 +61,18 @@ Hunter → Caio → Jina → Unsplash → Arquiteto → Builder(proxy) → Deplo
 - Usado por: Arquiteto Mestre (gera), Builder (consome)
 - **NOTA:** Arquiteto Mestre NÃO preenche todos os campos do DesignerPRD — apenas os básicos
 
+### Infraestrutura de Deploy
+- **API:** roda via systemd (`fralib-api.service`), containerless, porta 8001
+- **OpenUI:** roda via systemd (`fralib-openui.service`), porta 3333
+- **Worker:** roda via Docker Compose (`docker-compose.prod.yml`), container `fralib-worker-1`
+- **Postgres/Redis:** via Docker Compose
+- **Frontend build:**
+  - `frontend/build.py` — gera `dashboard.html` e `landing.html`
+  - `frontend/build_admin.py` — concatena partials em `admin.html` (6554 linhas)
+  - Output: `/var/www/fralib/` (nginx serve)
+- **StaticFiles server.py:** mount raiz `/` com `StaticFiles(directory="frontend", html=True)` (linha 372)
+- **Paths VPS:** base é `/opt/fralib/` (não `/root/fralib/`)
+
 ### Observability (SISTEMA ATIVO)
 - `backend/observability.py` — módulo principal de traces/spans
 - Usado em: `manager/agent.py`, `pipeline_endpoints.py`, `rag_retriever.py`
