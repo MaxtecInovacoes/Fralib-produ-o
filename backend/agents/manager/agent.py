@@ -427,6 +427,12 @@ def step_builder(state: PipelineState) -> PipelineState:
             layout_type=state.design_output.get("layout_type", ""),
             instrucao_criativa_para_dev=state.design_output.get("instrucao_criativa_para_dev", ""),
             seo_keywords=state.design_output.get("seo_keywords", []),
+            visual_dna=state.design_output.get("visual_dna", {}),
+            layout_blueprint=state.design_output.get("layout_blueprint", []),
+            design_reference_pack=state.design_output.get("design_reference_pack", {}),
+            site_build_plan=state.design_output.get("site_build_plan", {}),
+            requirements_contract=state.design_output.get("requirements_contract", {}),
+            visual_contract=state.design_output.get("visual_contract", {}),
         )
         # Fase 3 SEO/GEO - AGENTE 19 TRUST SIGNALS: propagar rating do lead
         # para o JSON-LD LocalBusiness.aggregateRating do inject.py.

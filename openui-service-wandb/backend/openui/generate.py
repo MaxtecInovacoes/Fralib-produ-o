@@ -199,6 +199,37 @@ Return ONLY a single complete HTML file. No markdown, no code fences, no explana
 - Make it visually impressive — this is the final deliverable
 """)
 
+    # ── CONTRATOS DO ARQUITETO (injetados em força máxima) ──
+    visual_contract = prd.get("visual_contract") or {}
+    if visual_contract:
+        segments.append("\n## VISUAL CONTRACT — From Arquiteto (obrigatório)")
+        segments.append(json.dumps(visual_contract, ensure_ascii=False, indent=2)[:3000])
+
+    requirements_contract = prd.get("requirements_contract") or {}
+    if requirements_contract:
+        segments.append("\n## REQUIREMENTS CONTRACT — From Arquiteto (obrigatório)")
+        segments.append(json.dumps(requirements_contract, ensure_ascii=False, indent=2)[:3000])
+
+    site_build_plan = prd.get("site_build_plan") or {}
+    if site_build_plan:
+        segments.append("\n## SITE BUILD PLAN — From Arquiteto (obrigatório)")
+        segments.append(json.dumps(site_build_plan, ensure_ascii=False, indent=2)[:3000])
+
+    visual_dna = prd.get("visual_dna") or {}
+    if visual_dna:
+        segments.append("\n## VISUAL DNA — From Arquiteto")
+        segments.append(json.dumps(visual_dna, ensure_ascii=False, indent=2)[:2000])
+
+    layout_blueprint = prd.get("layout_blueprint") or []
+    if layout_blueprint:
+        segments.append("\n## LAYOUT BLUEPRINT — From Arquiteto")
+        segments.append(json.dumps(layout_blueprint, ensure_ascii=False, indent=2)[:2000])
+
+    design_reference_pack = prd.get("design_reference_pack") or {}
+    if design_reference_pack:
+        segments.append("\n## DESIGN REFERENCE PACK — From Arquiteto")
+        segments.append(json.dumps(design_reference_pack, ensure_ascii=False, indent=2)[:2000])
+
     return "\n".join(segments)
 
 
