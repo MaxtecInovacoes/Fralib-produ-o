@@ -279,6 +279,15 @@ def _registrar_transacao(db: Session, user_id: int, tipo: str,
                           descricao: str = "") -> None:
     """Registra transacao no historico."""
     try:
+        # Guarda: tabela token_transactions pode nao existir ainda
+        db.execute(text("SELECT to_regclass('public.token_transactions')"))
+        has_table = db.fetchone()[0] is not None
+    except Exception:
+        db.rollback()
+        has_table = False
+    if not has_table:
+        return
+    try:
         db.execute(text("""
             INSERT INTO token_transactions (user_id, tipo, tokens_consumidos, custo_usd, descricao)
             VALUES (:uid, :tipo, :tokens, :custo, :desc)
@@ -288,6 +297,7 @@ def _registrar_transacao(db: Session, user_id: int, tipo: str,
         })
         db.commit()
     except Exception as e:
+        db.rollback()
         print(f"[Credits] Erro ao registrar transacao: {e}")
 
 

@@ -755,6 +755,7 @@ def step_deploy(state: PipelineState) -> PipelineState:
                         UPDATE leads SET
                             status = 'concluido',
                             site_url = :url,
+                            url_site = :url,
                             atualizado_em = NOW()
                         WHERE id = :lid AND user_id = :tid
                           AND (status IS NULL OR status NOT IN ('qualificado', 'convertido', 'descartado'))

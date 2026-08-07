@@ -18,9 +18,9 @@ async def get_sites(db: Session = Depends(get_db), usuario: dict = Depends(get_c
     try:
         tenant_id_s = usuario.get("tenant_id", usuario["id"])
         result = db.execute(text("""
-            SELECT id, nome, cidade, segmento, url_site, valor_venda, status, criado_em, score
-            FROM leads 
-            WHERE url_site IS NOT NULL AND url_site != ''
+            SELECT id, nome, cidade, segmento, url_site, site_url, valor_venda, status, criado_em, score
+            FROM leads
+            WHERE (url_site IS NOT NULL AND url_site != '' OR site_url IS NOT NULL AND site_url != '')
             AND user_id = :uid
             ORDER BY criado_em DESC
         """), {"uid": tenant_id_s}).fetchall()
@@ -817,12 +817,12 @@ async def enviar_mensagem_lead(lead_id: str, db: Session = Depends(get_db), usua
 
     # Buscar lead
     row = db.execute(text(
-        "SELECT nome, telefone, whatsapp, segmento, cidade, site_url, rating, sdr_stage FROM leads WHERE id=:id AND user_id=:uid"
+        "SELECT nome, telefone, whatsapp, segmento, cidade, site_url, rating FROM leads WHERE id=:id AND user_id=:uid"
     ), {"id": lead_id, "uid": tenant_id}).fetchone()
     if not row:
         raise HTTPException(404, "Lead não encontrado")
 
-    nome, telefone, whatsapp, segmento, cidade, site_url, rating, sdr_stage = row
+    nome, telefone, whatsapp, segmento, cidade, site_url, rating = row
 
     if not site_url:
         raise HTTPException(400, "Lead não tem site gerado. Rode o pipeline primeiro.")
