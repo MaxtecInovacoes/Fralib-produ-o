@@ -24,17 +24,23 @@ from slowapi.errors import RateLimitExceeded
 import sys
 import os
 
-# Detectar ambiente: Docker (/app) vs systemd VPS (/opt/fralib) vs local (/root/fralib)
-# Prioridade: /app > /opt/fralib > /root/fralib
-if os.path.exists('/app/backend'):
+# Detectar ambiente: Docker (/app) vs systemd VPS (/root/fralib) vs legacy (/opt/fralib)
+# /opt/fralib/backend e um diretorio LEGACY incompleto — nao tem core/database.py
+# Prioridade: /app > /root/fralib > /opt/fralib (so se tiver database.py)
+if os.path.exists('/app/backend') and os.path.exists('/app/backend/core/database.py'):
     _BACKEND_ROOT = '/app/backend'
     _FRONTEND_ROOT = '/app'
-elif os.path.exists('/opt/fralib/backend'):
+elif os.path.exists('/root/fralib/backend') and os.path.exists('/root/fralib/backend/core/database.py'):
+    _BACKEND_ROOT = '/root/fralib/backend'
+    _FRONTEND_ROOT = '/root/fralib'
+elif os.path.exists('/opt/fralib/backend') and os.path.exists('/opt/fralib/backend/core/database.py'):
     _BACKEND_ROOT = '/opt/fralib/backend'
     _FRONTEND_ROOT = '/opt/fralib'
 else:
-    _BACKEND_ROOT = '/root/fralib/backend'
-    _FRONTEND_ROOT = '/root/fralib'
+    raise RuntimeError(
+        "Nenhum backend encontrado com core/database.py. "
+        "Verifique /app/backend, /root/fralib/backend ou /opt/fralib/backend"
+    )
 
 # Adicionar TODAS as pastas do backend ao path
 sys.path.insert(0, _BACKEND_ROOT)
