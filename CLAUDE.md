@@ -28,7 +28,7 @@ FASE 5  FOTOS            -> Download fotos
 FASE 6  NICHO            -> Analise nicho
 FASE 7  VARIACAO         -> Variacao estrutural
 FASE 8  ARQUITETO        -> Gera DesignerPRD (secoes, paleta, animacoes)
-FASE 9  BUILDER          -> HTML via OpenUI (services/openui_renderer.py)
+FASE 9  BUILDER          -> HTML via OpenUI (wandb/openui, porta 7878)
 FASE 10 DEPLOY           -> Site em /var/www/fralib/sites/
 FASE 11 FRANZ            -> SDR outreach WhatsApp
 ```
@@ -50,7 +50,7 @@ FASE 11 FRANZ            -> SDR outreach WhatsApp
 
 **Orquestrador:** backend/services/pipeline_executors.py (11 fases)
 **Estado:** backend/services/pipeline_phases.py (FraLibState 15+ campos)
-**Motor HTML:** backend/services/openui_renderer.py (OpenUI com contratos)
+**Motor HTML:** wandb/openui (Python backend, porta 7878, LiteLLM proxy)
 
 Nota: Theo, Designer PRD, Liam, Liz sao agentes LEGADO. Arquiteto Mestre funde Theo + Designer.
 
@@ -70,14 +70,14 @@ FRALIB_PUBLIC_URL=https://app.seunegociofralib.site
 FRALIB_SKIP_HTML_QUALITY_GATE=0
 ```
 
-**/root/fralib/openui-service/.env:**
+**/opt/fralib/openui-wandb/backend/.env:**
 ```
 ANTHROPIC_API_KEY=dh-live-5MI2EvgUoAuoLAnP4jn0
 ANTHROPIC_BASE_URL=https://deployflow.com.br/api/public/v1
-MODEL=claude-sonnet-4-6
-MAX_TOKENS=64000
-PORT=3333
-NODE_ENV=production
+OPENAI_COMPATIBLE_ENDPOINT=https://deployflow.com.br/api/public/v1
+OPENAI_COMPATIBLE_API_KEY=dh-live-5MI2EvgUoAuoLAnP4jn0
+PORT=7878
+HOST=0.0.0.0
 ```
 
 ## Deploy

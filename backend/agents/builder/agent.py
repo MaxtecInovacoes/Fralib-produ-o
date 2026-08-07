@@ -1,7 +1,7 @@
 """
 Builder Agent — OpenUI HTTP Client.
 
-Receives a DesignerPRD and calls the OpenUI service (port 3333)
+Receives a DesignerPRD and calls the OpenUI service (port 7878 - wandb/openui)
 to generate the complete HTML site via chunked LLM generation.
 """
 import os
@@ -9,7 +9,7 @@ import json
 import time
 import requests
 
-OPENUI_URL = os.environ.get("OPENUI_URL") or os.environ.get("OPENUI_SERVICE_URL", "http://localhost:3333")
+OPENUI_URL = os.environ.get("OPENUI_URL") or os.environ.get("OPENUI_SERVICE_URL", "http://localhost:7878")
 GENERATE_ENDPOINT = f"{OPENUI_URL}/generate"
 HEALTH_ENDPOINT = f"{OPENUI_URL}/health"
 
