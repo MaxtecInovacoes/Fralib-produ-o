@@ -83,7 +83,7 @@ async def atualizar_lead(lead_id: str, request_data: dict, db: Session = Depends
         sets = ", ".join([f"{k}=:{k}" for k in campos.keys()])
         campos['lead_id'] = lead_id
         campos['uid'] = tenant_id
-        db.execute(text(f"UPDATE leads SET {sets}, atualizado_em=NOW()::text WHERE id=:lead_id AND user_id=:uid"), campos)
+        db.execute(text(f"UPDATE leads SET {sets}, atualizado_em=NOW() WHERE id=:lead_id AND user_id=:uid"), campos)
         db.commit()
         return {"ok": True}
     except Exception as e:
@@ -97,7 +97,7 @@ async def reprocessar_lead(lead_id: str, db: Session = Depends(get_db), usuario:
         lead = db.execute(text("SELECT * FROM leads WHERE id=:id AND user_id=:uid"), {"id": lead_id, "uid": tenant_id}).fetchone()
         if not lead:
             raise HTTPException(status_code=404, detail="Lead nao encontrado")
-        db.execute(text("UPDATE leads SET status='pendente', atualizado_em=NOW()::text WHERE id=:id AND user_id=:uid"), {"id": lead_id, "uid": tenant_id})
+        db.execute(text("UPDATE leads SET status='pendente', atualizado_em=NOW() WHERE id=:id AND user_id=:uid"), {"id": lead_id, "uid": tenant_id})
         db.commit()
         return {"ok": True, "mensagem": "Lead marcado para reprocessamento"}
     except HTTPException:
@@ -591,7 +591,7 @@ async def descartar_lead(lead_id: str, db: Session = Depends(get_db), usuario: d
         if not lead:
             raise HTTPException(status_code=404, detail="Lead não encontrado")
         db.execute(text("""
-            UPDATE leads SET status='descartado', atualizado_em=NOW()::text
+            UPDATE leads SET status='descartado', atualizado_em=NOW()
             WHERE id=:id AND user_id=:uid
         """), {"id": lead_id, "uid": tenant_id})
         db.commit()
@@ -770,7 +770,7 @@ async def registrar_feedback(
             INSERT INTO sdr_learning
                 (lead_id, nicho, segmento, tier, mensagem_usada, resultado, observacao, user_id, criado_em)
             VALUES
-                (:lead_id, :nicho, :segmento, :tier, :mensagem_usada, :resultado, :observacao, :user_id, NOW()::text)
+                (:lead_id, :nicho, :segmento, :tier, :mensagem_usada, :resultado, :observacao, :user_id, NOW())
         """), {
             "lead_id": lead_id,
             "nicho": segmento,
@@ -785,7 +785,7 @@ async def registrar_feedback(
         # Se convertido, atualizar status do lead
         if req.resultado == 'convertido':
             db.execute(text(
-                "UPDATE leads SET status='convertido', atualizado_em=NOW()::text WHERE id=:id AND user_id=:uid"
+                "UPDATE leads SET status='convertido', atualizado_em=NOW() WHERE id=:id AND user_id=:uid"
             ), {"id": lead_id, "uid": tenant_id})
 
         db.commit()
@@ -882,7 +882,7 @@ async def enviar_mensagem_lead(lead_id: str, db: Session = Depends(get_db), usua
 
     # Atualizar sdr_stage
     db.execute(text(
-        "UPDATE leads SET sdr_stage=:stage, atualizado_em=NOW()::text WHERE id=:id AND user_id=:uid"
+        "UPDATE leads SET sdr_stage=:stage, atualizado_em=NOW() WHERE id=:id AND user_id=:uid"
     ), {"id": lead_id, "stage": franz_output.next_stage or "hook", "uid": tenant_id})
     db.commit()
 
