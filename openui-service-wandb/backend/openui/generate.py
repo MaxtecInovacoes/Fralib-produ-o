@@ -9,6 +9,11 @@ import os
 import logging
 from typing import Any
 
+try:
+    from loguru import logger as _openui_logger
+except ImportError:
+    _openui_logger = None
+
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse
 from openai import AsyncOpenAI
@@ -230,7 +235,13 @@ Return ONLY a single complete HTML file. No markdown, no code fences, no explana
         segments.append("\n## DESIGN REFERENCE PACK — From Arquiteto")
         segments.append(json.dumps(design_reference_pack, ensure_ascii=False, indent=2)[:2000])
 
-    return "\n".join(segments)
+    prompt_final = "\n".join(segments)
+    if _openui_logger:
+        _openui_logger.info(
+            "PRD_OPENUI: prompt_inicio=[{preview}]",
+            preview=prompt_final[:2000],
+        )
+    return prompt_final
 
 
 def _build_user_message(prd: dict) -> str:

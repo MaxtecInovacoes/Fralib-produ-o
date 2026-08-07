@@ -9,6 +9,11 @@ import json
 import time
 import requests
 
+try:
+    from loguru import logger as _builder_logger
+except ImportError:
+    _builder_logger = None
+
 OPENUI_URL = os.environ.get("OPENUI_URL") or os.environ.get("OPENUI_SERVICE_URL", "http://localhost:7878")
 GENERATE_ENDPOINT = f"{OPENUI_URL}/generate"
 HEALTH_ENDPOINT = f"{OPENUI_URL}/v1/models"
@@ -157,6 +162,12 @@ def _prd_to_spec(prd) -> dict:
         "layout_blueprint": getattr(prd, "layout_blueprint", []) or [],
         "design_reference_pack": getattr(prd, "design_reference_pack", {}) or {},
     }
+    # Instrumentação: logar chaves do spec enviado ao OpenUI
+    if _builder_logger:
+        _builder_logger.info(
+            "PRD_BUILDER: spec_keys=[{}]",
+            ", ".join(sorted(spec.keys())),
+        )
     return spec
 
 

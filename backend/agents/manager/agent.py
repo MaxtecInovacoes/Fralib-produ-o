@@ -434,6 +434,19 @@ def step_builder(state: PipelineState) -> PipelineState:
             requirements_contract=state.design_output.get("requirements_contract", {}),
             visual_contract=state.design_output.get("visual_contract", {}),
         )
+        # Instrumentação: verificar se os 3 contratos do Arquiteto chegaram ao Builder
+        try:
+            from loguru import logger as _mgr_logger
+            _mgr_logger.info(
+                "PRD_MANAGER: site_build_plan_keys={sbp_keys} "
+                "requirements_contract_keys={rc_keys} "
+                "visual_contract_keys={vc_keys}",
+                sbp_keys=list(prd.site_build_plan.keys()) if prd.site_build_plan else [],
+                rc_keys=list(prd.requirements_contract.keys()) if prd.requirements_contract else [],
+                vc_keys=list(prd.visual_contract.keys()) if prd.visual_contract else [],
+            )
+        except Exception:
+            pass
         # Fase 3 SEO/GEO - AGENTE 19 TRUST SIGNALS: propagar rating do lead
         # para o JSON-LD LocalBusiness.aggregateRating do inject.py.
         lead_rating = state.lead_data.get("rating") if state.lead_data else None
