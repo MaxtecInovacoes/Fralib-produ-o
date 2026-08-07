@@ -306,7 +306,6 @@ def fase4():
         check("Tabela 'jobs' existe", bool(jobs_table))
 
         if jobs_table:
-        if jobs_table:
             # Check job statuses
             cur.execute("""
                 SELECT status, COUNT(*) FROM jobs GROUP BY status
