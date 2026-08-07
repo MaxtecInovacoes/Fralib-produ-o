@@ -1,233 +1,210 @@
-// FraLib OpenUI Native - KPA Lab/DeployFlow + NVIDIA Fallback
-// Cascata: DeployFlow (x-api-key) -> NVIDIA (OpenAI-compatible)
+import express from 'express';
+import cors from 'cors';
+import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-import http from 'http';
+dotenv.config();
 
-const PORT = parseInt(process.env.PORT || '7878', 10);
-const HOST = process.env.HOST || '0.0.0.0';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-// KPA Lab / DeployFlow (PRIMARY)
-const ANTHROPIC_BASE_URL = process.env.ANTHROPIC_BASE_URL || 'https://deployflow.com.br/api/public/v1';
-const MODEL = process.env.MODEL || 'claude-sonnet-4-6';
-const MAX_TOKENS = parseInt(process.env.MAX_TOKENS || '64000', 10);
-const API_KEY = process.env.ANTHROPIC_API_KEY;
+const app = express();
+const PORT = 3000;
 
-// NVIDIA NIM (FALLBACK)
-const NVIDIA_BASE_URL = process.env.NVIDIA_BASE_URL || 'https://integrate.api.nvidia.com/v1';
-const NVIDIA_API_KEY = process.env.NVIDIA_API_KEY;
+app.use(cors());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// NVIDIA Models cascade (free models) - TODOS SERÃO TENTADOS
-const NVIDIA_MODELS = [
-  'meta/llama-3.3-70b-instruct',
-  'meta/llama-3.1-70b-instruct',
-  'mistralai/mistral-large-2-instruct',
-  'meta/llama-3.1-8b-instruct',
-  '01-ai/yi-large',
-  'deepseek-ai/deepseek-v4-pro',
-  'nvidia/nemotron-3-ultra-550b-a55b',
-];
-
-function buildSystemPrompt(prd) {
-  const archetype = prd?.design_tokens?.archetype || 'editorial-asymmetric';
-  const layoutFam = prd?.layout_dna?.layout_family || 'asymmetric-magazine';
-  const tokens = prd?.design_tokens || {};
-  const palette = tokens.palette || {};
-  const typo = tokens.typography || {};
-
-  return `Voce faz parte do orquestrador SEO/GEO 2026 do FraLib.
-Gere HTML completo a partir do DesignerPRD.
-
-REGRAS OBRIGATORIAS:
-- CTAs, provas, secoes obrigatorios
-- Copy: numeros OU nomes proprios (nao generico)
-- CTA: imperativo direto ('Agendar aula gratis')
-- Max 2 paragrafos por secao
-- Mobile-first (375px, 768px, 1440px)
-- Lazy loading imagens
-- JSON-LD LocalBusiness
-- Open Graph + Twitter Cards
-- Sem emojis como icone de UI
-- Sem 'Bem-vindo' em lugar nenhum
-
-DRAMA VISUAL (OBRIGATORIO):
-- MONUMENTAL TYPE: h1 clamp(3rem, 13vw, 15rem), peso 800-900
-- OVERLAP E ASSIMETRIA: margin-top negativo, colunas 70/30
-- NEGATIVE SPACE: py-32/py-48 intencional
-- SIGNATURE ELEMENT: linha decorativa / gradiente radial / tipografia vazada / forma geometrica
-- PROFUNDIDADE: sombras com OFFSET direcional
-
-ARCHETYPE: ${archetype}
-LAYOUT: ${layoutFam}
-PALETA: ${JSON.stringify(palette)}
-TIPOGRAFIA: ${JSON.stringify(typo)}
-
-Responda APENAS com HTML completo: <!DOCTYPE html> ate </html>.
-NAO use markdown, fences, comentarios.`;
-}
-
-function buildUserPrompt(prd) {
-  const sectionsTexto = (prd.sections || [])
-    .map(s => `- ${s.name}: ${s.title} | ${(s.content || '').slice(0, 100)}`)
-    .join('\n');
-  return `Negocio: ${prd.business_name || ''}
-Cidade: ${prd.cidade || ''}
-Segmento: ${prd.segmento || ''}
-
-Hero: ${JSON.stringify(prd.hero || {})}
-Sections: ${sectionsTexto}
-CTAs: ${JSON.stringify(prd.ctas || [])}
-FAQs: ${JSON.stringify(prd.faqs || [])}
-Paleta: ${JSON.stringify(prd.paleta || {})}
-SEO keywords: ${JSON.stringify(prd.seo_keywords || [])}
-
-Gere o HTML completo.`;
-}
-
-function extractHTML(text) {
-  text = text.trim();
-  for (const prefix of ['```html', '```HTML', '```']) {
-    if (text.startsWith(prefix)) {
-      text = text.slice(prefix.length).trimStart();
-    }
+// Cache control middleware for static frontend assets
+app.use((req, res, next) => {
+  const p = req.path;
+  if (p.startsWith('/js/') || p.startsWith('/css/') || p.startsWith('/images/') || p.startsWith('/static/')) {
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+  } else if (p.endsWith('.html') || p === '/admin' || p === '/dashboard') {
+    res.setHeader('Cache-Control', 'public, max-age=60, stale-while-revalidate=60');
   }
-  if (text.endsWith('```')) {
-    text = text.slice(0, -3).trimEnd();
-  }
-  let match = text.match(/<!DOCTYPE html>[\s\S]*?<\/html>/i);
-  if (match) return match[0];
-  match = text.match(/<html[\s\S]*?<\/html>/i);
-  if (match) return match[0];
-  return text;
-}
+  next();
+});
 
-async function callKPA(systemPrompt, userPrompt) {
-  const payload = {
-    model: MODEL,
-    max_tokens: MAX_TOKENS,
-    messages: [
-      { role: 'system', content: systemPrompt },
-      { role: 'user', content: userPrompt },
+// Health check endpoints
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', version: '2.0.0', service: 'FraLib OS' });
+});
+
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', version: '2.0.0', service: 'FraLib OS' });
+});
+
+// System info endpoint
+app.get('/api/info', (req, res) => {
+  res.json({
+    name: 'FraLib OS',
+    version: '2.0.0',
+    agents: [
+      'hunter', 'caio', 'arquiteto', 'builder',
+      'quality_gate', 'deploy', 'franz', 'manager'
     ],
-    stream: false,
-  };
-
-  return new Promise((resolve, reject) => {
-    const url = new URL(ANTHROPIC_BASE_URL + '/messages');
-    const options = {
-      hostname: url.hostname,
-      port: url.port || 443,
-      path: url.pathname,
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': API_KEY,
-        'anthropic-version': '2023-06-01',
-      },
-    };
-
-    const req = http.request(options, (res) => {
-      let data = '';
-      res.on('data', (chunk) => data += chunk);
-      res.on('end', () => {
-        if (res.statusCode === 200) {
-          try {
-            const parsed = JSON.parse(data);
-            const html = extractHTML(parsed.content?.[0]?.text || '');
-            resolve({ html, model: 'kpa-' + MODEL, usage: parsed.usage });
-          } catch (e) {
-            reject(new Error('KPA parse error: ' + e.message));
-          }
-        } else {
-          reject(new Error(`KPA HTTP ${res.statusCode}: ${data}`));
-        }
-      });
-    });
-
-    req.on('error', reject);
-    req.write(JSON.stringify(payload));
-    req.end();
+    status: 'online'
   });
-}
+});
 
-async function callNVIDIA(systemPrompt, userPrompt) {
-  // TENTA TODOS OS MODELOS NVIDIA EM CASCATA
-  for (let i = 0; i < NVIDIA_MODELS.length; i++) {
-    const model = NVIDIA_MODELS[i];
-    console.log(`[NVIDIA] Trying model ${i+1}/${NVIDIA_MODELS.length}: ${model}`);
-    
-    const payload = {
-      model,
-      max_tokens: MAX_TOKENS,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt },
-      ],
-      stream: false,
-      temperature: 0.3,
-    };
+// CSRF Token route
+app.get('/api/csrf-token', (req, res) => {
+  res.json({ csrf_token: 'fralib-csrf-token-mock-2026' });
+});
 
-    try {
-      const result = await new Promise((resolve, reject) => {
-        const url = new URL(NVIDIA_BASE_URL + '/chat/completions');
-        const options = {
-          hostname: url.hostname,
-          port: url.port || 443,
-          path: url.pathname,
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${NVIDIA_API_KEY}`,
-          },
-        };
-
-        const req = http.request(options, (res) => {
-          let data = '';
-          res.on('data', (chunk) => data += chunk);
-          res.on('end', () => {
-            if (res.statusCode === 200) {
-              try {
-                const parsed = JSON.parse(data);
-                const content = parsed.choices?.[0]?.message?.content || '';
-                const html = extractHTML(content);
-                resolve({ html, model: 'nvidia-' + model, usage: parsed.usage });
-              } catch (e) {
-                reject(new Error('NVIDIA parse error: ' + e.message));
-              }
-            } else {
-              reject(new Error(`NVIDIA HTTP ${res.statusCode}: ${data}`));
-            }
-          });
-        });
-
-        req.on('error', reject);
-        req.setTimeout(180000, () => reject(new Error('NVIDIA timeout')));
-        req.write(JSON.stringify(payload));
-        req.end();
-      });
-      
-      if (result.html && result.html.length > 500) {
-        console.log(`[NVIDIA] ✅ Success with model: ${model}`);
-        return result;
-      }
-      throw new Error('Empty HTML from NVIDIA');
-    } catch (e) {
-      console.log(`[NVIDIA] ❌ Model ${model} failed: ${e.message}`);
-      continue;
+// Auth Routes
+app.post('/api/auth/login', (req, res) => {
+  const { email, password } = req.body || {};
+  res.json({
+    access_token: 'fralib-mock-jwt-token-superadmin',
+    token_type: 'bearer',
+    user: {
+      id: 1,
+      email: email || 'admin@fralib.site',
+      nome: 'Admin FraLib',
+      role: 'superadmin',
+      credits: 1000
     }
-  }
-  throw new Error('All NVIDIA models failed');
-}
+  });
+});
 
-async function generateHTML(prd) {
-  const systemPrompt = buildSystemPrompt(prd);
-  const userPrompt = buildUserPrompt(prd);
+app.post('/api/auth/register', (req, res) => {
+  const { email, nome } = req.body || {};
+  res.json({
+    access_token: 'fralib-mock-jwt-token-newuser',
+    token_type: 'bearer',
+    user: {
+      id: Math.floor(Math.random() * 1000) + 2,
+      email: email || 'usuario@fralib.site',
+      nome: nome || 'Usuário FraLib',
+      role: 'user',
+      credits: 100
+    }
+  });
+});
 
-  // 1. Try KPA first (3 attempts with backoff for 529/rate limit)
-  for (let attempt = 1; attempt <= 3; attempt++) {
-    try {
-      console.log(`[KPA] Attempt ${attempt}/3`);
-      return await callKPA(systemPrompt, userPrompt);
-    } catch (e) {
-      const msg = e.message;
-      const isRateLimit = msg.includes('529') || msg.includes('overloaded') || 
-                          msg.includes('sobrecarregado') || msg.includes('
+app.get('/api/auth/me', (req, res) => {
+  res.json({
+    id: 1,
+    email: 'admin@fralib.site',
+    nome: 'Admin FraLib',
+    role: 'superadmin',
+    credits: 1000
+  });
+});
+
+app.post('/api/auth/logout', (req, res) => {
+  res.json({ ok: true, message: 'Sessão encerrada com sucesso' });
+});
+
+// Dashboard & Analytics endpoints
+app.get(['/api/dashboard/summary', '/api/dashboard/stats', '/api/dashboard'], (req, res) => {
+  res.json({
+    ok: true,
+    stats: {
+      total_leads: 142,
+      active_pipelines: 18,
+      sites_generated: 96,
+      conversions: 38,
+      revenue: 57000.00,
+      conversion_rate: 26.7
+    },
+    metrics: {
+      daily_leads: [12, 15, 18, 14, 22, 25, 36],
+      conversions_by_day: [2, 4, 3, 5, 8, 7, 9]
+    },
+    recent_leads: [
+      { id: 201, nome: 'OdontoSmile Clínica', cidade: 'São Paulo - SP', status: 'prospectado', site_url: '/sites/odontosmile' },
+      { id: 202, nome: 'Barbearia Vanguarda', cidade: 'Rio de Janeiro - RJ', status: 'site_gerado', site_url: '/sites/barbearia-vanguarda' },
+      { id: 203, nome: 'Restaurante Bella Italia', cidade: 'Curitiba - PR', status: 'fechado', site_url: '/sites/bella-italia' }
+    ]
+  });
+});
+
+app.get(['/api/leads', '/api/leads/list'], (req, res) => {
+  res.json({
+    ok: true,
+    total: 3,
+    leads: [
+      { id: 201, nome: 'OdontoSmile Clínica', telefone: '+5511988887777', cidade: 'São Paulo', status: 'prospectado', data: '2026-08-07' },
+      { id: 202, nome: 'Barbearia Vanguarda', telefone: '+5521977776666', cidade: 'Rio de Janeiro', status: 'site_gerado', data: '2026-08-07' },
+      { id: 203, nome: 'Restaurante Bella Italia', telefone: '+5541966665555', cidade: 'Curitiba', status: 'fechado', data: '2026-08-06' }
+    ]
+  });
+});
+
+app.get(['/api/agentes', '/api/agentes/status'], (req, res) => {
+  res.json({
+    ok: true,
+    agents: [
+      { name: 'Hunter', role: 'Prospecção Google Maps', status: 'ativo', total_processed: 350 },
+      { name: 'Caio', role: 'Enriquecimento & Qualificação', status: 'ativo', total_processed: 310 },
+      { name: 'Arquiteto', role: 'Estruturação & UX/UI', status: 'ativo', total_processed: 280 },
+      { name: 'Builder', role: 'Geração do Site', status: 'ativo', total_processed: 250 },
+      { name: 'Franz', role: 'Atendimento & Fechamento WhatsApp', status: 'ativo', total_processed: 190 }
+    ]
+  });
+});
+
+app.get(['/api/whatsapp/status', '/api/whatsapp'], (req, res) => {
+  res.json({
+    ok: true,
+    connected: true,
+    phone: '+5511999998888',
+    status: 'online',
+    disparos_hoje: 45
+  });
+});
+
+// Generic catch-all for any unhandled /api/* route to prevent 404 errors
+app.use('/api', (req, res) => {
+  res.json({
+    ok: true,
+    path: req.path,
+    message: 'FraLib API Mock Response',
+    data: []
+  });
+});
+
+// HTML Route Mappings (Clean URLs without .html extension)
+app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, 'frontend/admin.html')));
+app.get('/dashboard', (req, res) => res.sendFile(path.join(__dirname, 'frontend/dashboard.html')));
+app.get('/login', (req, res) => res.sendFile(path.join(__dirname, 'frontend/login.html')));
+app.get('/onboarding', (req, res) => res.sendFile(path.join(__dirname, 'frontend/onboarding.html')));
+app.get('/planos', (req, res) => res.sendFile(path.join(__dirname, 'frontend/planos.html')));
+app.get('/oferta', (req, res) => res.sendFile(path.join(__dirname, 'frontend/oferta.html')));
+app.get('/studio', (req, res) => res.sendFile(path.join(__dirname, 'frontend/studio.html')));
+app.get('/superadmin', (req, res) => res.sendFile(path.join(__dirname, 'frontend/superadmin.html')));
+app.get('/docs', (req, res) => res.sendFile(path.join(__dirname, 'frontend/docs/index.html')));
+app.get('/blog', (req, res) => res.sendFile(path.join(__dirname, 'frontend/blog/index.html')));
+
+// Static asset compatibility aliases
+app.get('/design-system.css', (req, res) => res.sendFile(path.join(__dirname, 'frontend/static/design-system-tokens.css')));
+app.get('/js/chart.min.js', (req, res) => res.sendFile(path.join(__dirname, 'frontend/static/js/chart.min.js')));
+app.get('/js/socket.io.min.js', (req, res) => res.sendFile(path.join(__dirname, 'frontend/static/js/socket.io.min.js')));
+app.get(['/assets/logo-fralib.png', '/images/logo.png'], (req, res) => {
+  res.setHeader('Content-Type', 'image/svg+xml');
+  res.send(`<svg xmlns="http://www.w3.org/2000/svg" width="140" height="36" viewBox="0 0 140 36">
+    <rect width="100%" height="100%" rx="6" fill="#12121a"/>
+    <text x="10" y="23" font-family="system-ui, sans-serif" font-weight="bold" font-size="16" fill="#c084fc">FraLib OS</text>
+  </svg>`);
+});
+
+// Static file serving from frontend directory and subdirectories
+app.use('/static', express.static(path.join(__dirname, 'frontend/static')));
+app.use(express.static(path.join(__dirname, 'frontend')));
+
+// Serve landing page for root or SPA fallback
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'frontend/landing.html'));
+});
+
+app.use((req, res) => {
+  res.sendFile(path.join(__dirname, 'frontend/landing.html'));
+});
+
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`FraLib OS server running on http://0.0.0.0:${PORT}`);
+});

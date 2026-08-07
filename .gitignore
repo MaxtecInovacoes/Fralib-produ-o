@@ -1,6 +1,7 @@
 sites/
 uploads/
 node_modules/
+.agents/
 *.log
 *.pyc
 __pycache__/
@@ -9,5 +10,65 @@ __pycache__/
 *.bak.*
 .env
 .env.*
-fralib.db
+!.env.example
+*.db
 checkpoints/
+logs/
+scripts/*evogym*.py
+backend/agents/unsplash_cache/
+backend/memory/
+backend/docs/
+C:*
+nul
+*.tmp
+.coverage*
+coverage.xml
+htmlcov/
+.pytest_cache/
+pytest-cache-files-*/
+docs/BRAIN-APRENDIZADOS.md
+*.tar.gz
+*.tgz
+*.bak*
+*.backup*
+.gstack/
+qa-site-*.png
+.claude/worktrees/
+backup.zip
+*.zip
+.venv/
+
+# Runtime artifacts produced on VPS during deploy/smoke checks
+backups/.testwrite
+backups/*.dump
+pw_result*.json
+pw_payload*.json
+
+# Repos cloned acidentalmente
+claude-cookbooks/
+
+# Bryan knowledge runtime data (gerado por jobs noturnos, nao versionar)
+backend/agents/bryan_knowledge/
+
+# Pasta de backup/legacy - seguranca de 30 dias antes de apagar de vez (2026-07-03)
+_legacy_2026_07/
+
+# Sites compactados (criados por deploys - regeneraveis do banco)
+sites/*.tar.gz
+
+# Y/ folder residual de instalacao PM2 antiga
+/Y/
+
+# Sprint 17 cleanup (2026-07-14) - arquivos locais, nao versionar
+.playwright-mcp/
+outputs/
+*.png
+test_dedupe.py
+test_dedupe_trace.py
+test_render.py
+sacristia_v*.png
+sacristia_final.png
+*.vps
+
+# Config VPS (nao versionar)
+ecosystem.config.js

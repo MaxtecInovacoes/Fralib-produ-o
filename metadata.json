@@ -1,0 +1,8 @@
+{
+  "name": "FraLib OS",
+  "description": "Sistema de geração de sites via agentes inteligentes e vendas automáticas no WhatsApp",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
