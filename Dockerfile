@@ -3,6 +3,7 @@ FROM node:22-bookworm-slim
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
+    PYTHONPATH=/app/backend:/app \
     PATH="/opt/venv/bin:${PATH}"
 
 WORKDIR /app
