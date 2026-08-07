@@ -27,7 +27,7 @@ router = APIRouter()
 # Default model for site generation
 DEFAULT_GENERATION_MODEL = os.getenv(
     "FRA_GENERATION_MODEL",
-    "openai/claude-sonnet-4-6",
+    "claude-sonnet-5",
 )
 MAX_TOKENS = int(os.getenv("FRA_GENERATION_MAX_TOKENS", "16000"))
 TEMPERATURE = float(os.getenv("FRA_GENERATION_TEMPERATURE", "0.7"))
