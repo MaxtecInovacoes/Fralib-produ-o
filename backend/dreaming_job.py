@@ -14,16 +14,17 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 sys.path.insert(0, str(Path(__file__).parent / "agents"))
 
-COLD_DIR = Path("/root/fralib/backend/memory/cold")
-DREAM_LOG_DIR = Path("/root/fralib/backend/memory/dream_logs")
+__COLD_DIR = Path(os.environ.get("FRALIB_BASE_DIR", str(Path(__file__).resolve().parent))) / "memory" / "cold"
+__DREAM_LOG_DIR = Path(os.environ.get("FRALIB_BASE_DIR", str(Path(__file__).resolve().parent))) / "memory" / "dream_logs"
+_WARM_DIR = Path(os.environ.get("FRALIB_BASE_DIR", str(Path(__file__).resolve().parent))) / "memory" / "warm"
 
 
 def coletar_runs_recentes(horas: int = 24) -> list:
     runs = []
-    if not COLD_DIR.exists():
+    if not _COLD_DIR.exists():
         return runs
     cutoff = datetime.now() - timedelta(hours=horas)
-    for path in COLD_DIR.glob("*.json"):
+    for path in _COLD_DIR.glob("*.json"):
         try:
             if datetime.fromtimestamp(path.stat().st_mtime) > cutoff:
                 with open(path, 'r', encoding='utf-8') as f:
@@ -149,7 +150,7 @@ def consolidar_memorias(resultados: dict):
 
 
 def _podar_memorias_fracas():
-    warm_dir = Path("/root/fralib/backend/memory/warm")
+    warm_dir = _WARM_DIR
     if not warm_dir.exists():
         return
     podadas = 0
@@ -203,7 +204,7 @@ O que poderia ter sido feito diferente?"""
 
 
 def gerar_relatorio(resultados: dict, hipoteses: list) -> str:
-    DREAM_LOG_DIR.mkdir(parents=True, exist_ok=True)
+    _DREAM_LOG_DIR.mkdir(parents=True, exist_ok=True)
     data = datetime.now().strftime("%Y-%m-%d")
     metricas = resultados["metricas"]
 
@@ -227,7 +228,7 @@ def gerar_relatorio(resultados: dict, hipoteses: list) -> str:
 {chr(10).join(f'- Fase {h.get("fase", "?")}: {h.get("hipotese", "?")} (conf: {h.get("confianca", 0):.0%})' for h in hipoteses) or '- Nenhuma'}
 """
 
-    path = DREAM_LOG_DIR / f"dream_{data}.md"
+    path = _DREAM_LOG_DIR / f"dream_{data}.md"
     with open(path, 'w', encoding='utf-8') as f:
         f.write(relatorio)
     print(f"[DREAM] Relatório salvo: {path}")
@@ -260,10 +261,10 @@ def executar_dreaming_job():
 
 # Cleanup: remover dream logs > 30 dias
 def _cleanup_dream_logs():
-    if not DREAM_LOG_DIR.exists():
+    if not _DREAM_LOG_DIR.exists():
         return
     cutoff = datetime.now() - timedelta(days=30)
-    for f in DREAM_LOG_DIR.glob("*.md"):
+    for f in _DREAM_LOG_DIR.glob("*.md"):
         if datetime.fromtimestamp(f.stat().st_mtime) < cutoff:
             f.unlink()
 

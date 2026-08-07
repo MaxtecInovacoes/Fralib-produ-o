@@ -9,7 +9,7 @@ class FranzAgentOutput:
     novo_stage: str
     tools_used: List[str]
     iterations: int
-    resposta: str = 
+    resposta: str = ""
     should_handoff: bool = False
 
 # Tool definitions (stub)

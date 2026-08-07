@@ -8,7 +8,8 @@ import hashlib
 import json
 from typing import Optional
 
-DS_DIR = "/root/open-design/design-systems"
+_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+DS_DIR = os.environ.get("OPEN_DESIGN_DS_DIR", os.path.join(_SCRIPT_DIR, "..", "open-design", "design-systems"))
 INDEX_PATH = os.path.join(os.path.dirname(__file__), "open_design_index.json")
 
 # ─── MAPEAMENTO SEGMENTO → SLUGS RELEVANTES ─────────────────────────────────

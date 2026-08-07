@@ -3,9 +3,10 @@ import os
 import sys
 from pathlib import Path
 
-sys.path.insert(0, "/root/fralib/backend")
+_BASE_DIR = os.environ.get("FRALIB_BASE_DIR", "/root/fralib")
+sys.path.insert(0, f"{_BASE_DIR}/backend")
 from dotenv import load_dotenv
-load_dotenv("/root/fralib/.env")
+load_dotenv(f"{_BASE_DIR}/.env")
 
 from sqlalchemy import create_engine, text
 
@@ -18,7 +19,7 @@ with engine.connect() as c:
     c.commit()
 
 # Limpar memória
-memory_dir = Path("/root/fralib/memory/u2")
+memory_dir = Path(_BASE_DIR) / "memory" / "u2"
 if memory_dir.exists():
     for f in memory_dir.glob("franz_lead_*.json"):
         f.unlink()

@@ -79,7 +79,7 @@ def pesquisar_referencias_jina(segmento: str, cidade: str = '') -> str:
     Cache de 48h por segmento+cidade para evitar rate limit 429.
     """
     import os, time, hashlib
-    _cache_dir = "/root/fralib/backend/agents/jina_cache"
+    _cache_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "jina_cache")
     os.makedirs(_cache_dir, exist_ok=True)
     _cache_key = hashlib.md5((segmento.lower() + cidade.lower()).encode()).hexdigest()[:12]
     _cache_file = os.path.join(_cache_dir, f"jina_{_cache_key}.txt")

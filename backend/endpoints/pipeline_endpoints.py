@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor
 
 sys.path.append('/root/fralib/backend')
+_BASE_DIR = os.environ.get("FRALIB_BASE_DIR", "/root/fralib")
 
 from sqlalchemy.orm import Session
 from sqlalchemy import text
@@ -362,7 +363,7 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
         logger.info(f"[Pipeline] Retomando de checkpoint: {_ckpt_resumo}")
     # Limpar traces residuais de execucoes anteriores
     import os as _os
-    _trace_dir = "/root/fralib/logs/pipeline_trace"
+    _trace_dir = f"{_BASE_DIR}/logs/pipeline_trace"
     _os.makedirs(_trace_dir, exist_ok=True)
     for _tf in ["liz_resultado.json", "designer_prd.json", "theo_briefing.md", "liam_html.html"]:
         _tp = f"{_trace_dir}/{_tf}"
@@ -449,7 +450,7 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
             if config.get("_forcar_renovacao"):
                 import hashlib as _hl_r
                 _cache_key_r = _hl_r.md5((state.segmento.lower() + _ld["cidade"].lower()).encode()).hexdigest()[:12]
-                _jina_file_r = f"/root/fralib/backend/agents/jina_cache/jina_{_cache_key_r}.txt"
+                _jina_file_r = f"{_BASE_DIR}/backend/agents/jina_cache/jina_{_cache_key_r}.txt"
                 if _os.path.exists(_jina_file_r):
                     _os.remove(_jina_file_r)
                     _log("  Cache Jina invalidado", "info")
@@ -788,7 +789,7 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
                 r = qualificar_lead(caio_input)
                 logger.info(f"[Pipeline] Caio: {r.qualificacao}")
                 return r
-            loop = asyncio.get_event_loop()
+            loop = asyncio.get_running_loop()
             with ThreadPoolExecutor(max_workers=1) as ex:
                 state.qualificacao_caio = await loop.run_in_executor(ex, _run_caio)
             state.alex_result = None
@@ -818,7 +819,7 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
                     fotos=_proximo.lead.fotos or [], website=_proximo.lead.website,
                     reprocessamento=True
                 )
-                state.qualificacao_caio = await asyncio.get_event_loop().run_in_executor(None, _qualificar_caio2, _caio_input2)
+                state.qualificacao_caio = await asyncio.get_running_loop().run_in_executor(None, _qualificar_caio2, _caio_input2)
                 if state.qualificacao_caio and state.qualificacao_caio.qualificado and state.qualificacao_caio.tier != "REJEITADO":
                     _encontrou_aprovado = True
                     _log(f"  Lead aprovado: {state.lead_nome} ({state.qualificacao_caio.tier})", "success")
@@ -1120,7 +1121,7 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
         # Salvar PRD no trace para auditoria
         try:
             import json as _json
-            _trace_dir = "/root/fralib/logs/pipeline_trace"
+            _trace_dir = f"{_BASE_DIR}/logs/pipeline_trace"
             _os.makedirs(_trace_dir, exist_ok=True)
             with open(f"{_trace_dir}/designer_prd.json", "w", encoding="utf-8") as _pf:
                 _json.dump(state.prd_arquiteto.model_dump() if hasattr(state.prd_arquiteto, "model_dump") else state.prd_arquiteto.__dict__, _pf, ensure_ascii=False, indent=2, default=str)
@@ -1181,8 +1182,8 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
                 _log("  ⚠️ HTML incompleto (sem </html>) — não salvou checkpoint", "warning")
                 raise Exception(f"Builder gerou HTML truncado ({len(state.html_final)} chars, sem tag de fechamento)")
         try:
-            os.makedirs("/root/fralib/logs/pipeline_trace", exist_ok=True)
-            with open("/root/fralib/logs/pipeline_trace/builder_html.html", "w", encoding="utf-8") as _f:
+            os.makedirs(f"{_BASE_DIR}/logs/pipeline_trace", exist_ok=True)
+            with open(f"{_BASE_DIR}/logs/pipeline_trace/builder_html.html", "w", encoding="utf-8") as _f:
                 _f.write(state.html_final)
             print("[Trace] builder_html.html salvo")
         except Exception:
@@ -2238,7 +2239,7 @@ async def executar_pipeline_lead_existente(lead_id: str, tenant_id: int, forcar_
     try:
         from agents.unsplash_fetcher import buscar_fotos_unsplash as _buscar_unsplash
         import asyncio as _asyncio
-        _loop = _asyncio.get_event_loop()
+        _loop = asyncio.get_running_loop()
         _fotos_unsplash = await _loop.run_in_executor(
             None, lambda: _buscar_unsplash(segmento, quantidade=8, nome=nome, cidade=cidade)
         )
@@ -2254,7 +2255,7 @@ async def executar_pipeline_lead_existente(lead_id: str, tenant_id: int, forcar_
     if forcar_renovacao:
         import hashlib, os as _os
         _cache_key = hashlib.md5((segmento.lower() + cidade.lower()).encode()).hexdigest()[:12]
-        _jina_file = f"/root/fralib/backend/agents/jina_cache/jina_{_cache_key}.txt"
+        _jina_file = f"{_BASE_DIR}/backend/agents/jina_cache/jina_{_cache_key}.txt"
         if _os.path.exists(_jina_file):
             _os.remove(_jina_file)
             _log("  Cache Jina invalidado", "info")

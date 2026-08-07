@@ -867,7 +867,7 @@ async def _conectar_e_ouvir():
 
     print(f"[WPP-Listener] Conectando ao meowhats WebSocket: {ws_url}", flush=True)
 
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
     from concurrent.futures import ThreadPoolExecutor
     _executor = ThreadPoolExecutor(max_workers=4, thread_name_prefix="wpp-msg")
 

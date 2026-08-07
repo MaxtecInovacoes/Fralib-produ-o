@@ -10,7 +10,7 @@ from typing import Any, Callable
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 
-logger = logging.getLogger("uvicron")
+logger = logging.getLogger("uvicorn")
 
 
 # ─── RETRY HELPER ───────────────────────────────────────────────────────────
@@ -103,9 +103,7 @@ async def executar_fase2_caio(
         reprocessamento=True,
     )
 
-    loop = asyncio.get_event_loop()
-    with ThreadPoolExecutor(max_workers=1) as ex:
-        state.qualificacao_caio = await loop.run_in_executor(ex, qualificar_lead_func, caio_input)
+    state.qualificacao_caio = await asyncio.to_thread(qualificar_lead_func, caio_input)
 
     # Verificar score mínimo
     if (

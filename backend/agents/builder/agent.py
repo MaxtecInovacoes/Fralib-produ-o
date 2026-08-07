@@ -161,8 +161,6 @@ def _prd_to_spec(prd) -> dict:
         "schema_org_types": getattr(prd, "schema_org_types", []),
         "layout_type": getattr(prd, "layout_type", ""),
         "instrucao_criativa_para_dev": getattr(prd, "instrucao_criativa_para_dev", ""),
-        "seo_keywords": getattr(prd, "seo_keywords", []) or [],
-        # CONTRATOS DO ARQUITETO — agora passados ao OpenUI
         "site_build_plan": getattr(prd, "site_build_plan", {}) or {},
         "requirements_contract": getattr(prd, "requirements_contract", {}) or {},
         "visual_contract": getattr(prd, "visual_contract", {}) or {},

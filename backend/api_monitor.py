@@ -8,7 +8,8 @@ import os, sys, requests, psycopg2, re, json
 from datetime import datetime, timezone
 from dotenv import load_dotenv
 
-load_dotenv('/root/fralib/.env')
+_env_path = os.environ.get("FRALIB_ENV_PATH", os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".env"))
+load_dotenv(_env_path)
 
 API_KEY = os.getenv('ANTHROPIC_API_KEY', '')
 BASE_URL = 'https://api.aibee.cloud'

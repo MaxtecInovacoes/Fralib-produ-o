@@ -14,10 +14,11 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-MEMORY_DIR = Path("/root/fralib/backend/memory")
-CORE_FILE = MEMORY_DIR / "core.json"
-WARM_DIR = MEMORY_DIR / "warm"
-COLD_DIR = MEMORY_DIR / "cold"
+_MEMORY_BASE = Path(os.environ.get("FRALIB_BASE_DIR", str(Path(__file__).resolve().parent))) / "memory"
+MEMORY_DIR = _MEMORY_BASE
+CORE_FILE = _MEMORY_BASE / "core.json"
+WARM_DIR = _MEMORY_BASE / "warm"
+COLD_DIR = _MEMORY_BASE / "cold"
 
 
 @dataclass

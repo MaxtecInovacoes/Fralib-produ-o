@@ -10,7 +10,8 @@ import os
 from pathlib import Path
 from datetime import datetime
 
-CACHE_DIR = Path("/root/fralib/backend/cache/prd_templates")
+_CACHE_BASE = Path(os.environ.get("FRALIB_BASE_DIR", str(Path(__file__).resolve().parent)))
+CACHE_DIR = _CACHE_BASE / "cache" / "prd_templates"
 MAX_TEMPLATES = 100
 
 

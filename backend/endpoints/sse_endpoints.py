@@ -160,7 +160,7 @@ async def stream_logs(token: str = Query(..., description="JWT token para autent
         try:
             while not _shutting_down:
                 if use_pg and pg_conn:
-                    loop = asyncio.get_event_loop()
+                    loop = asyncio.get_running_loop()
                     try:
                         notif = await loop.run_in_executor(
                             None, _wait_notify, pg_conn, 0.5
