@@ -182,6 +182,49 @@ def _verificar_relevancia_segmento(nome, segmento_pedido):
     return False
 
 
+
+def verificar_whatsapp_ativo(telefone="", whatsapp="") -> tuple:
+    """
+    Verifica se o numero REALMENTE tem WhatsApp ativo via HTTP check em wa.me.
+    Funciona com fixo OU celular (WhatsApp Business).
+    Usa urllib (sem dependencias externas).
+    Retorna: (ativo: bool, motivo: str)
+    """
+    numero = whatsapp or telefone or ""
+    if not numero:
+        return False, "Sem numero"
+
+    digits = "".join(c for c in str(numero) if c.isdigit())
+
+    # Remove DDI +55 se presente
+    if digits.startswith("55") and len(digits) > 2:
+        digits = digits[2:]
+
+    # Aceita 10 digitos (fixo: DDD+8) ou 11 digitos (celular: DDD+9+8)
+    if len(digits) not in (10, 11):
+        return False, "Numero com %d digitos (precisa 10 ou 11)" % len(digits)
+
+    ddd = digits[:2]
+    if not (21 <= int(ddd) <= 99):
+        return False, "DDD %s invalido" % ddd
+
+    # HTTP check: tenta acessar wa.me
+    try:
+        import urllib.request
+        url = "https://wa.me/55" + digits
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        resp = urllib.request.urlopen(req, timeout=8)
+        html = resp.read().decode("utf-8", errors="ignore")
+
+        if "Phone number shared via url is invalid" in html:
+            return False, "Numero sem WhatsApp"
+        # Se nao tem a mensagem de erro, assumimos que tem WhatsApp
+        return True, "WhatsApp confirmado"
+    except Exception as e:
+        # Se der erro de rede, assume valido (nao bloqueia lead por timeout)
+        return True, "Confirmacao indisponivel (assumindo valido)"
+
+
 def verificar_se_e_rede(nome: str, website: str = "") -> bool:
     nome_lower = nome.lower()
     website_lower = website.lower() if website else ""
@@ -370,7 +413,13 @@ def qualificar_lead(lead: LeadInput) -> CaioOutput:
     _dados_faltando = []
     if not lead.telefone and not lead.whatsapp:
         _dados_faltando.append("telefone/whatsapp")
-        # Qualquer numero serve (fixo, celular, WhatsApp)
+    else:
+        # Validar se numero tem WhatsApp ativo (fixo ou celular)
+        wp_ativo, wp_motivo = verificar_whatsapp_ativo(
+            lead.telefone or "", lead.whatsapp or ""
+        )
+        if not wp_ativo:
+            _dados_faltando.append("numero sem WhatsApp: " + wp_motivo)
 
     # Reviews não são bloqueantes — site pode ser gerado sem depoimentos
     if _dados_faltando:
