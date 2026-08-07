@@ -286,6 +286,7 @@ def _registrar_transacao(db: Session, user_id: int, tipo: str,
         db.rollback()
         has_table = False
     if not has_table:
+        db.rollback()  # Ensure transaction is clean before returning
         return
     try:
         db.execute(text("""
