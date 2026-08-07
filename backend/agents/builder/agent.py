@@ -16,7 +16,7 @@ except ImportError:
 
 OPENUI_URL = os.environ.get("OPENUI_URL") or os.environ.get("OPENUI_SERVICE_URL", "http://localhost:7878")
 GENERATE_ENDPOINT = f"{OPENUI_URL}/generate"
-HEALTH_ENDPOINT = f"{OPENUI_URL}/v1/models"
+OPENUI_CHECK_URL = f"{OPENUI_URL}/generate"
 
 
 class BuildResult:
@@ -29,11 +29,19 @@ class BuildResult:
 
 
 def _wait_for_openui(max_wait: int = 30) -> bool:
-    """Wait for OpenUI service to be ready."""
+    """Wait for OpenUI service to be ready.
+
+    OpenUI wandb doesn't have a health endpoint that returns 200.
+    Instead, we try a POST to /generate - if it returns any non-5xx response,
+    the service is available (422 means endpoint exists, just missing body).
+    """
     for _ in range(max_wait):
         try:
-            r = requests.get(HEALTH_ENDPOINT, timeout=2)
-            if r.status_code == 200:
+            # POST with empty body - 422 means "service is up, but missing input"
+            # 200 would mean health check passed
+            # Any non-5xx means service is reachable
+            r = requests.post(OPENUI_CHECK_URL, json={"prompt": "test"}, timeout=2)
+            if r.status_code < 500:
                 return True
         except Exception:
             pass
