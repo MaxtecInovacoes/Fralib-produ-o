@@ -100,21 +100,21 @@ ORDER BY criado_em DESC LIMIT 20;
 ## 3. OpenUI offline (HTML não gera)
 
 ### Sintoma
-- Logs: `Connection refused on :3333` ou `OpenUI unavailable`
+- Logs: `Connection refused on :7878` ou `OpenUI unavailable`
 - Fila trava em `fase=builder`
 
 ### Diagnóstico
 ```bash
 systemctl status fralib-openui
 journalctl -u fralib-openui -n 50 --no-pager
-curl -s http://localhost:3333/health || echo OFFLINE
+curl -s http://localhost:7878/health || echo OFFLINE
 ```
 
 ### Restart
 ```bash
 systemctl restart fralib-openui
 sleep 3
-curl -s http://localhost:3333/health
+curl -s http://localhost:7878/health
 ```
 
 ### Se persiste

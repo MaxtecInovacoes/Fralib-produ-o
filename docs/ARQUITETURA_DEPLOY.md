@@ -15,7 +15,7 @@
 │  ┌─────────────────────────┐    ┌─────────────────────────┐     │
 │  │  NGINX (host)           │    │  systemd services       │     │
 │  │  app.seunegociofralib. │◀──▶│  fralib-openui.service  │     │
-│  │  :80/:443 → app:8000   │    │  (Node.js :3333)        │     │
+│  │  :80/:443 → app:8000   │    │  (Node.js :7878)        │     │
 │  │                        │    │                         │     │
 │  │  /sites/<tenant>/...   │    │  /root/fralib/          │     │
 │  │  → volumes/fralib-...  │    │  openui-service/        │     │
@@ -85,7 +85,7 @@ Containers se comunicam via DNS interno do Docker Compose:
 - `postgres:5432` → banco
 - `redis:6379` → cache
 - `app:8000` → API
-- `host.docker.internal:3333` → OpenUI (no host, via systemd)
+- `host.docker.internal:7878` → OpenUI (no host, via systemd)
 
 ---
 
@@ -243,7 +243,7 @@ systemctl restart fralib-openui
 
 ```bash
 # OpenUI
-curl -s http://localhost:3333/health
+curl -s http://localhost:7878/health
 
 # API
 curl -s http://localhost:8001/health

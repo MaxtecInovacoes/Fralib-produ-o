@@ -1,6 +1,6 @@
 ⚠️ INSTRUÇÕES CRÍTICAS PARA IA:
 - Servidor oficial Backend: server.py (FastAPI, porta 8000)
-- Servidor oficial OpenUI: server.js (Node.js, porta 3333 em /root/fralib/openui-service/)
+- Servidor oficial OpenUI: ghcr.io/wandb/openui (Docker, porta 7878)
 - Endpoints Pipeline: backend/endpoints/pipeline_endpoints.py
 - Manager: backend/agents/manager/agent.py
 - NÃO crie novos arquivos chamados server_v2, server_new, etc. Edite sempre os arquivos oficiais.
@@ -18,7 +18,7 @@ Hunter → Caio → Jina → Unsplash → Arquiteto → Builder(proxy) → Deplo
 ```
 
 **Orquestrador:** `backend/agents/manager/agent.py` (FSM, 7 steps)
-**Builder atual:** `backend/agents/builder/agent.py` — proxy HTTP para OpenUI service (:3333)
+**Builder atual:** `backend/agents/builder/agent.py` — proxy HTTP para OpenUI service (:7878)
 **Orquestrador antigo:** `backend/services/pipeline_executors.py` — NÃO EXISTE MAIS
 
 ### Agentes ATIVOS no Pipeline
@@ -63,7 +63,7 @@ Hunter → Caio → Jina → Unsplash → Arquiteto → Builder(proxy) → Deplo
 
 ### Infraestrutura de Deploy
 - **API:** roda via systemd (`fralib-api.service`), containerless, porta 8001
-- **OpenUI:** roda via systemd (`fralib-openui.service`), porta 3333
+- **OpenUI:** roda via systemd (`fralib-openui.service`), porta 7878
 - **Worker:** roda via Docker Compose (`docker-compose.prod.yml`), container `fralib-worker-1`
 - **Postgres/Redis:** via Docker Compose
 - **Frontend build:**
@@ -116,7 +116,7 @@ Orquestrador: backend/services/pipeline_executors.py
 | 1 | Hunter | `utils/agente1_hunter_v2.py` | Playwright scraping | — | Valida/coleta lead_data via Google Maps |
 | 2 | Caio | `agents/caio.py` | haiku | 2000 | Qualificador — classifica lead por tier/score |
 | 3 | Arquiteto Mestre | `agents/arquiteto_mestre.py` | sonnet | 8000 | Gera PRD completo (seções, paleta OKLch, animações) |
-| 4 | Builder (OpenUI) | `agents/builder/agent.py` | claude-sonnet-4-6 | 64000 (4×18000) | Gera HTML chunked via OpenUI (Node.js :3333) |
+| 4 | Builder (OpenUI) | `agents/builder/agent.py` | claude-sonnet-4-6 | 64000 (4×18000) | Gera HTML chunked via OpenUI (Node.js :7878) |
 | 5 | QA v2 | `agents/builder/quality_gate_v2/` | gpt-4o-mini / 9router | — | Vision QA — pontua design, repair loop se < 7.5 |
 | 6 | Deploy | (sem LLM) | — | — | Salva HTML em /var/www/fralib/sites/ + metadata.json |
 | 7 | Franz | `agents/franz/` (agent loop) + `agents/franz.py` | sonnet | 4000 | SDR WhatsApp — outreach, follow-up, agendamento (MCP-like tools) |
@@ -208,7 +208,7 @@ Orquestrador: backend/services/pipeline_executors.py
 | 1 | Hunter | `utils/agente1_hunter_v2.py` | Playwright scraping | — | Valida/coleta lead_data via Google Maps |
 | 2 | Caio | `agents/caio.py` | haiku | 2000 | Qualificador — classifica lead por tier/score |
 | 3 | Arquiteto Mestre | `agents/arquiteto_mestre.py` | sonnet | 8000 | Gera PRD completo (seções, paleta OKLch, animações) |
-| 4 | Builder (OpenUI) | `agents/builder/agent.py` | claude-sonnet-4-6 | 64000 (4×18000) | Gera HTML chunked via OpenUI (Node.js :3333) |
+| 4 | Builder (OpenUI) | `agents/builder/agent.py` | claude-sonnet-4-6 | 64000 (4×18000) | Gera HTML chunked via OpenUI (Node.js :7878) |
 | 5 | QA v2 | `agents/builder/quality_gate_v2/` | gpt-4o-mini / 9router | — | Vision QA — pontua design, repair loop se < 7.5 |
 | 6 | Deploy | (sem LLM) | — | — | Salva HTML em /var/www/fralib/sites/ + metadata.json |
 | 7 | Franz | `agents/franz/` (agent loop) + `agents/franz.py` | sonnet | 4000 | SDR WhatsApp — outreach, follow-up, agendamento (MCP-like tools) |

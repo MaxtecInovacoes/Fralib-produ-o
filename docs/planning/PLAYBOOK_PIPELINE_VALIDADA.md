@@ -58,7 +58,7 @@ Domínio:  https://app.seunegociofralib.site
 | `fralib-worker-franz-1` | SDR WhatsApp | - | healthy |
 | `fralib-postgres-1` | PostgreSQL | 15434→5432 | healthy |
 | `fralib-redis-1` | Cache | 16379→6379 | healthy |
-| `fralib-openui` | Node.js HTML generation (systemd) | 3333 | active |
+| `fralib-openui` | Node.js HTML generation (systemd) | 7878 | active |
 
 ### Variáveis de ambiente críticas
 
@@ -80,7 +80,7 @@ ANTHROPIC_API_KEY=dh-live-5MI2EvgUoAuoLAnP4jn0  # MESMA chave
 ANTHROPIC_BASE_URL=https://deployflow.com.br/api/public/v1
 MODEL=claude-sonnet-4-6
 MAX_TOKENS=64000
-PORT=3333
+PORT=7878
 NODE_ENV=production
 ```
 
@@ -100,7 +100,7 @@ docker ps --format '{{.Names}} {{.Status}}' | grep fralib
 systemctl is-active fralib-openui
 
 # Health checks
-curl -s http://localhost:3333/health
+curl -s http://localhost:7878/health
 docker exec fralib-postgres-1 pg_isready -U fralib_user -d fralib_db
 ```
 
@@ -153,7 +153,7 @@ HTML salvo em: /var/www/fralib/sites/2/nova-imperio-gym-236f7cb9/index.html
         ┌─────────────────────────────┼─────────────────────────────┐
         ▼                             ▼                             ▼
    ┌─────────┐                  ┌──────────┐                  ┌──────────┐
-   │ OpenUI  │ ◀──HTTP 3333────│ Builder  │                  │ Postgres │
+   │ OpenUI  │ ◀──HTTP 7878────│ Builder  │                  │ Postgres │
    │ chunked │                  │ agent.py │                  │ :15434   │
    └─────────┘                  └──────────┘                  └──────────┘
 ```
@@ -256,7 +256,7 @@ docker ps | grep fralib
 # Esperado: app-1, worker-pipeline-1, worker-cron-1, worker-franz-1, postgres-1, redis-1, open-seo
 
 # 2. OpenUI
-curl -s http://localhost:3333/health
+curl -s http://localhost:7878/health
 # Esperado: {"status":"ok","service":"fralib-openui-chunked"}
 
 # 3. Test E2E

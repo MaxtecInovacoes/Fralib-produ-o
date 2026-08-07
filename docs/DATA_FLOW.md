@@ -67,7 +67,7 @@ Este documento descreve cada stage do pipeline de geração de landing pages, co
 | Item | Valor |
 |------|-------|
 | **Função** | `step_builder()` em `manager/agent.py` (linha 291) |
-| **Modelo** | Claude Sonnet 4.6 (via OpenUI Node.js :3333) |
+| **Modelo** | Claude Sonnet 4.6 (via OpenUI Node.js :7878) |
 | **Input** | `state.design_output` (PRD completo do Arquiteto) |
 | **Processamento** | Chunked em 4×18000 tokens (total 64000). OpenUI gera HTML incrementalmente. Manager injeta `_lead_rating`, `_lead_reviews_count`, `_lead_telefone` no payload. |
 | **Output** | `state.build_output["html"]` — HTML completo |

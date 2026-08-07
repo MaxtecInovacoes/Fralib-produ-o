@@ -67,7 +67,7 @@ O `SELECT ... SKIP LOCKED` garante que jobs não sejam processados duas vezes.
 |-----|-----------|---------|
 | `WORKER_JOB_TYPES` | Tipos habilitados (comma-separated) | `pipeline_lead,lead_production_tick,lead_supply_caio,lead_supply_hunter` |
 | `MAX_PIPELINES_GLOBAL` | Max pipelines simultâneos | `4` |
-| `OPENUI_SERVICE_URL` | URL do serviço OpenUI | `http://host.docker.internal:3333` |
+| `OPENUI_SERVICE_URL` | URL do serviço OpenUI | `http://host.docker.internal:7878` |
 
 ## docker-compose.prod.yml
 
@@ -78,7 +78,7 @@ worker:
     <<: *common-env
     WORKER_JOB_TYPES: pipeline_lead,pipeline_multiplos,lead_production_tick,lead_supply_caio,lead_supply_hunter,franz_outreach
     MAX_PIPELINES_GLOBAL: "4"
-    OPENUI_SERVICE_URL: http://host.docker.internal:3333
+    OPENUI_SERVICE_URL: http://host.docker.internal:7878
   command: ["python", "worker.py"]
 ```
 

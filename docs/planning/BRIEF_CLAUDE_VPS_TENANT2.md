@@ -7,10 +7,10 @@ Você é o mecânico. O cérebro (Hermes) já diagnosticou os 3 bugs exatos que 
 
 ### Bug 1: OPENUI_SERVICE_URL no .env aponta para hostname inexistente
 - **Arquivo:** `/opt/fralib/.env`
-- **Valor atual:** `OPENUI_SERVICE_URL=http://openui:3333`
+- **Valor atual:** `OPENUI_SERVICE_URL=http://openui:7878`
 - **Problema:** O hostname `openui` não resolve dentro dos containers Docker. Jobs 151 e 146 falharam com `Failed to resolve 'openui'`.
-- **Docker-compose.prod.yml** sobrescreve com `http://host.docker.internal:3333` (que funciona — HTTP 200 confirmado de dentro do container).
-- **Fix:** No arquivo `/opt/fralib/.env`, alterar a linha `OPENUI_SERVICE_URL=http://openui:3333` para `OPENUI_SERVICE_URL=http://host.docker.internal:3333`.
+- **Docker-compose.prod.yml** sobrescreve com `http://host.docker.internal:7878` (que funciona — HTTP 200 confirmado de dentro do container).
+- **Fix:** No arquivo `/opt/fralib/.env`, alterar a linha `OPENUI_SERVICE_URL=http://openui:7878` para `OPENUI_SERVICE_URL=http://host.docker.internal:7878`.
 - **Isso garante que mesmo se o .env for lido sem o override do compose, o valor será correto.**
 
 ### Bug 2: lead_supply_engine não hidrata lead_data ao enfileirar pipeline_lead

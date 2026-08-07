@@ -36,7 +36,7 @@ Visão geral do sistema, stack, containers Docker, fluxo de dados e padrões arq
 │                                                           │
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐     │
 │  │  postgres   │  │    redis    │  │   openui    │     │
-│  │  :15434     │  │  :16379     │  │  :3333      │     │
+│  │  :15434     │  │  :16379     │  │  :7878      │     │
 │  │  Alpine 16  │  │  Alpine 7   │  │  Node 22    │     │
 │  └──────┬──────┘  └──────┬──────┘  └─────────────┘     │
 │         │                │                                │
@@ -79,7 +79,7 @@ Visão geral do sistema, stack, containers Docker, fluxo de dados e padrões arq
 | redis | 16379 | Host 127.0.0.1 |
 | app | 8001 | Público (via Nginx) |
 | worker | — | Interno |
-| openui | 3333 | Host 127.0.0.1 |
+| openui | 7878 | Host 127.0.0.1 |
 
 ---
 

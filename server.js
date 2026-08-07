@@ -3,7 +3,7 @@
 
 import http from 'http';
 
-const PORT = parseInt(process.env.PORT || '3333', 10);
+const PORT = parseInt(process.env.PORT || '7878', 10);
 const HOST = process.env.HOST || '0.0.0.0';
 
 // KPA Lab / DeployFlow (PRIMARY)

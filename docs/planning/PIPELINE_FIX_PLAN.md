@@ -44,7 +44,7 @@ Caio (backend/agents/caio/agent.py) — qualificação determinística
 Arquiteto (backend/agents/arquiteto/agent.py) — LLM gera DesignerPRD
   ↓ PRD com design_tokens, layout_dna, design_system
 Builder (backend/agents/builder/agent.py)
-  ↓ POST http://localhost:3333/generate → OpenUI service (Node.js)
+  ↓ POST http://localhost:7878/generate → OpenUI service (Node.js)
   ↓ HTML + injeções deterministicas (LGPD, favicon, JSON-LD, motion)
 Quality Gate v2 (quality_gate_v2/evaluator.py)
   ↓ Playwright screenshots → Vision LLM (DeployFlow) → score 0-10
@@ -60,7 +60,7 @@ Franz (backend/agents/franz/agent.py)
 ### Entry points:
 - `server.py` — FastAPI :8000 (15 routers essenciais em `_ESSENTIAL_ROUTERS`)
 - `worker.py` — daemon que consome fila Postgres (4 tipos de job)
-- `openui-service/src/server.js` — Node.js :3333 (geração HTML via LLM)
+- `openui-service/src/server.js` — Node.js :7878 (geração HTML via LLM)
 
 ### Orquestração:
 - `manager/agent.py` — FSM pura (7 estados), `run_pipeline(state)` percorre steps
@@ -222,7 +222,7 @@ ls -la sites/1/
 ```
 
 **⚠ Pré-requisitos para E2E:**
-1. OpenUI service rodando: `cd openui-service && npm start` (porta 3333)
+1. OpenUI service rodando: `cd openui-service && npm start` (porta 7878)
 2. Postgres rodando (DATABASE_URL configurada)
 3. LLM API keys válidas (DeployFlow ou NVIDIA)
 4. Playwright + Chromium instalados (para QA v2)
@@ -324,7 +324,7 @@ print('Franz agent carregado OK')
 - Services: `fralib-api`, `fralib-worker`, `fralib-openui`, `fralib-proxy`, `meowhats`
 - Deploy: `git push origin master` → post-receive hook
 - Postgres: porta 5433
-- OpenUI: porta 3333
+- OpenUI: porta 7878
 
 ---
 
