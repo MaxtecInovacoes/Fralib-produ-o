@@ -294,7 +294,7 @@ tailwind.config = {{ darkMode: 'class' }}
     html = re.sub(r'<!DOCTYPE[^>]*>', '', html, flags=re.IGNORECASE)
     html = re.sub(r'<html[^>]*>', '', html, flags=re.IGNORECASE)
     html = re.sub(r'</html>', '', html, flags=re.IGNORECASE)
-    html = re.sub(r'<head[^>]*>.*?</head>', '', html, flags=re.IGNORECECASE | re.DOTALL)
+    html = re.sub(r'<head[^>]*>.*?</head>', '', html, flags=re.IGNORECASE | re.DOTALL)
     html = re.sub(r'<body[^>]*>', '', html, flags=re.IGNORECASE)
     html = re.sub(r'</body>', '', html, flags=re.IGNORECASE)
 
