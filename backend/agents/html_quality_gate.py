@@ -363,8 +363,8 @@ def _contract_problems(prd) -> list[str]:
         None,
     )
     problems: list[str] = []
-    if len(sections) < 4:
-        problems.append("PRD tem menos de 4 secoes estruturadas")
+    if len(sections) < 3:
+        problems.append("PRD tem menos de 3 secoes estruturadas")
     if any(not name for name in names):
         problems.append("PRD contem secao sem nome/id")
     if len(contentful) < 3:

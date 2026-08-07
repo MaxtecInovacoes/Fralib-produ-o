@@ -106,3 +106,35 @@ __all__ = [
 # Backward compatibility alias (used by lead_supply_endpoints)
 lead_supply_engine = sys.modules[__name__]
 
+
+def log_pipeline_error(
+    db,
+    lead_id: str,
+    tenant_id: int,
+    step: str = None,
+    exception_type: str = None,
+    message: str = "",
+    traceback_str: str = None,
+) -> None:
+    """Persiste erro de pipeline no banco (best-effort, falha nao quebra pipeline).
+
+    Usado pelo worker (worker.py) que ja possui uma sessao SQLAlchemy aberta.
+    """
+    try:
+        from sqlalchemy import text
+        lid = str(lead_id)
+        tid = int(tenant_id)
+        sn = step or "UNKNOWN"
+        et = exception_type or "UNKNOWN"
+        msg = (message or "")[:2000]
+        tb = (traceback_str or "")[:8000]
+
+        db.execute(text("""
+            INSERT INTO pipeline_error_log
+                (lead_id, tenant_id, step, exception_type, message, traceback)
+            VALUES (:lid, :tid, :sn, :et, :msg, :tb)
+        """), {"lid": lid, "tid": tid, "sn": sn, "et": et, "msg": msg, "tb": tb})
+        db.commit()
+    except Exception as log_err:
+        print(f"[lead_supply_engine][WARN] Falha ao registrar pipeline_error: {log_err}")
+
