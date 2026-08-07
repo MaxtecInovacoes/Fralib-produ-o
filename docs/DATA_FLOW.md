@@ -67,11 +67,11 @@ Este documento descreve cada stage do pipeline de geração de landing pages, co
 | Item | Valor |
 |------|-------|
 | **Função** | `step_builder()` em `manager/agent.py` (linha 291) |
-| **Modelo** | Claude Sonnet 4.6 (via OpenUI Node.js :7878) |
+| **Modelo** | Claude Sonnet 4.6 (via OpenUI wandb/openui Python :7878) |
 | **Input** | `state.design_output` (PRD completo do Arquiteto) |
-| **Processamento** | Chunked em 4×18000 tokens (total 64000). OpenUI gera HTML incrementalmente. Manager injeta `_lead_rating`, `_lead_reviews_count`, `_lead_telefone` no payload. |
+| **Processamento** | Single-shot (64000 max_tokens). Manager injeta `_lead_rating`, `_lead_reviews_count`, `_lead_telefone` no payload. OpenUI chama LiteLLM proxy → DeployFlow → Claude → retorna HTML. |
 | **Output** | `state.build_output["html"]` — HTML completo |
-| **Pós-processamento** | `cinematic_post_processor.py` aplica parallax, reveals, grain |
+| **Pós-processamento** | Nenhum pós-processamento necessário |
 | **Retry** | Erros no Builder disparam retry via loop externo de `run_pipeline` — se quality gate falhar, retorna ao Builder |
 | **Custos** | ~200s de geração, maior custo do pipeline |
 

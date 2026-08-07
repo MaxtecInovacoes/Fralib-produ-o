@@ -98,7 +98,7 @@ HOST=0.0.0.0
 **Pipeline ativa (VPS /opt/fralib/):**
 ```
 backend/agents/arquiteto_mestre.py      PRD designer + copywriter
-backend/agents/builder/agent.py         Builder HTML (chunked OpenUI)  ← existe na VPS
+backend/agents/builder/agent.py         Builder HTML (single-shot OpenUI)  ← existe na VPS
 backend/agents/caio.py                   Qualificacao
 backend/agents/franz.py                  Finalizador / SDR (legacy — fallback)
 backend/agents/theo.py                   Estrategista

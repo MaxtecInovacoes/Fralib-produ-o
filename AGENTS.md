@@ -30,7 +30,7 @@ Hunter → Caio → Jina → Unsplash → Arquiteto → Builder(proxy) → Deplo
 | 3 | Jina | `agents/jina_research.py` | sonnet | 1000 | Pesquisa de mercado + concorrência |
 | 4 | Unsplash | `agents/unsplash_fetcher.py` | — | — | Download de fotos do nicho |
 | 5 | Arquiteto | `agents/arquiteto_mestre.py` | sonnet | 8000 | Gera PRD (DesignerPRD schema) |
-| 6 | Builder | `agents/builder/agent.py` | claude-sonnet-4-6 | 64000 | Gera HTML via OpenUI chunked |
+| 6 | Builder | `agents/builder/agent.py` | claude-sonnet-4-6 | 64000 | Gera HTML via OpenUI (wandb/openui Python :7878) |
 | 7 | QA v2 | `agents/builder/quality_gate_v2/` | gpt-4o-mini | — | Vision QA + repair loop |
 | 8 | Deploy | (inline no manager) | — | — | Salva HTML em /var/www/fralib/sites/ |
 | 9 | Franz | `agents/franz/` | sonnet | 4000 | SDR WhatsApp outreach |
@@ -116,7 +116,7 @@ Orquestrador: backend/services/pipeline_executors.py
 | 1 | Hunter | `utils/agente1_hunter_v2.py` | Playwright scraping | — | Valida/coleta lead_data via Google Maps |
 | 2 | Caio | `agents/caio.py` | haiku | 2000 | Qualificador — classifica lead por tier/score |
 | 3 | Arquiteto Mestre | `agents/arquiteto_mestre.py` | sonnet | 8000 | Gera PRD completo (seções, paleta OKLch, animações) |
-| 4 | Builder (OpenUI) | `agents/builder/agent.py` | claude-sonnet-4-6 | 64000 (4×18000) | Gera HTML chunked via OpenUI (Node.js :7878) |
+| 4 | Builder (OpenUI) | `agents/builder/agent.py` | claude-sonnet-4-6 | 64000 | Gera HTML via OpenUI (wandb/openui Python :7878 → LiteLLM → DeployFlow → Claude) |
 | 5 | QA v2 | `agents/builder/quality_gate_v2/` | gpt-4o-mini / 9router | — | Vision QA — pontua design, repair loop se < 7.5 |
 | 6 | Deploy | (sem LLM) | — | — | Salva HTML em /var/www/fralib/sites/ + metadata.json |
 | 7 | Franz | `agents/franz/` (agent loop) + `agents/franz.py` | sonnet | 4000 | SDR WhatsApp — outreach, follow-up, agendamento (MCP-like tools) |
@@ -166,7 +166,7 @@ Orquestrador: backend/services/pipeline_executors.py
 |--------|---------|-------------|-----------------|
 | Theo | `agents/theo.py` | Estrategista — briefing inicial, PRD textual | Arquiteto Mestre (funde Theo + Designer) |
 | Designer PRD | `agents/designer_prd.py` | Arquiteto visual — seções, paleta, animações | Arquiteto Mestre (funde Theo + Designer). **Classe usada como contrato de schema (DesignerPRD, ColorPalette, SectionSpec, AnimationSpec)** |
-| Liam | `agents/liam.py` | Gerador HTML antigo (~1373 linhas) | Builder OpenUI chunked |
+| Liam | `agents/liam.py` | Gerador HTML antigo (~1373 linhas) | Builder OpenUI single-shot |
 | Liz | `agents/liz.py` | Revisora de código — valida HTML gerado | QA v2 (Vision LLM + repair loop) |
 | Liam Tools | `agents/liam_tools.py` | Tools auxiliares do Liam | — |
 | Liam LATS | `agents/liam_lats.py` | Language Agent Tree Search (experimental) | — |
@@ -208,7 +208,7 @@ Orquestrador: backend/services/pipeline_executors.py
 | 1 | Hunter | `utils/agente1_hunter_v2.py` | Playwright scraping | — | Valida/coleta lead_data via Google Maps |
 | 2 | Caio | `agents/caio.py` | haiku | 2000 | Qualificador — classifica lead por tier/score |
 | 3 | Arquiteto Mestre | `agents/arquiteto_mestre.py` | sonnet | 8000 | Gera PRD completo (seções, paleta OKLch, animações) |
-| 4 | Builder (OpenUI) | `agents/builder/agent.py` | claude-sonnet-4-6 | 64000 (4×18000) | Gera HTML chunked via OpenUI (Node.js :7878) |
+| 4 | Builder (OpenUI) | `agents/builder/agent.py` | claude-sonnet-4-6 | 64000 | Gera HTML via OpenUI (wandb/openui Python :7878 → LiteLLM → DeployFlow → Claude) |
 | 5 | QA v2 | `agents/builder/quality_gate_v2/` | gpt-4o-mini / 9router | — | Vision QA — pontua design, repair loop se < 7.5 |
 | 6 | Deploy | (sem LLM) | — | — | Salva HTML em /var/www/fralib/sites/ + metadata.json |
 | 7 | Franz | `agents/franz/` (agent loop) + `agents/franz.py` | sonnet | 4000 | SDR WhatsApp — outreach, follow-up, agendamento (MCP-like tools) |
@@ -258,7 +258,7 @@ Orquestrador: backend/services/pipeline_executors.py
 |--------|---------|-------------|-----------------|
 | Theo | `agents/theo.py` | Estrategista — briefing inicial, PRD textual | Arquiteto Mestre (funde Theo + Designer) |
 | Designer PRD | `agents/designer_prd.py` | Arquiteto visual — seções, paleta, animações | Arquiteto Mestre (funde Theo + Designer). **Classe usada como contrato de schema (DesignerPRD, ColorPalette, SectionSpec, AnimationSpec)** |
-| Liam | `agents/liam.py` | Gerador HTML antigo (~1373 linhas) | Builder OpenUI chunked |
+| Liam | `agents/liam.py` | Gerador HTML antigo (~1373 linhas) | Builder OpenUI single-shot |
 | Liz | `agents/liz.py` | Revisora de código — valida HTML gerado | QA v2 (Vision LLM + repair loop) |
 | Liam Tools | `agents/liam_tools.py` | Tools auxiliares do Liam | — |
 | Liam LATS | `agents/liam_lats.py` | Language Agent Tree Search (experimental) | — |
@@ -411,7 +411,7 @@ Agentes são roteados por papel no pipeline (hardcoded no manager):
 | Agente | Função no Pipeline | Modelo |
 |--------|-------------------|--------|
 | Arquiteto Mestre | Geração de PRD | opus |
-| Builder (OpenUI) | Geração de HTML chunked | claude-sonnet-4-6 |
+| Builder (OpenUI) | Geração de HTML single-shot via LiteLLM | claude-sonnet-4-6 |
 | Caio | Qualificação do lead | haiku |
 | Franz | SDR WhatsApp outreach | sonnet |
 | QA v2 | Vision QA (gpt-4o-mini) | gpt-4o-mini / 9router |

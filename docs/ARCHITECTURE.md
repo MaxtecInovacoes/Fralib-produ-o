@@ -13,7 +13,7 @@ Visão geral do sistema, stack, containers Docker, fluxo de dados e padrões arq
 | Banco | PostgreSQL 16 | Alpine |
 | Cache | Redis 7 | Alpine |
 | Worker | Python (mesmo código do app) | — |
-| Geração HTML | OpenUI (Node.js 22) | Systemd host |
+| Geração HTML | OpenUI (wandb/openui Python + LiteLLM) | Systemd host |
 | Deploy | Docker Compose + Nginx | — |
 
 ### Bibliotecas Python Principais
@@ -37,7 +37,7 @@ Visão geral do sistema, stack, containers Docker, fluxo de dados e padrões arq
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐     │
 │  │  postgres   │  │    redis    │  │   openui    │     │
 │  │  :15434     │  │  :16379     │  │  :7878      │     │
-│  │  Alpine 16  │  │  Alpine 7   │  │  Node 22    │     │
+│  │  Alpine 16  │  │  Alpine 7   │  │  Python     │     │
 │  └──────┬──────┘  └──────┬──────┘  └─────────────┘     │
 │         │                │                                │
 │  ┌──────┴────────────────┴──────────┐                    │
@@ -89,7 +89,7 @@ Visão geral do sistema, stack, containers Docker, fluxo de dados e padrões arq
 C:\fralib/
 ├── server.py                    # Entrypoint — FastAPI app + lifespan
 ├── worker.py                    # Entrypoint — Worker daemon
-├── Dockerfile                   # Build: Node 22 + Python venv
+├── Dockerfile                   # Build: Python venv + Playwright
 ├── docker-compose.prod.yml      # Orquestração 4 containers
 ├── alembic.ini                  # Config Alembic
 ├── alembic/                     # Migrations versionadas
@@ -135,7 +135,7 @@ Cliente → frontend → API (pipeline_endpoints) → Fila Postgres
                         │               │               │               │              │
                    [1] BANCO      [2] HUNTER      [3] CAIO    [4] ARQUITETO  [5] BUILDER
                    carrega lead   scraping        qualifica    PRD + design   OpenUI HTML
-                   do Postgres    Google Maps     tier/score   paleta OKLch    chunked 4x
+                   do Postgres    Google Maps     tier/score   paleta OKLch    single-shot
                         │               │               │               │              │
                         └───────────────┴───────────────┴───────────────┴──────────────┘
                                                         │
@@ -277,7 +277,7 @@ editar local → git add → git commit → git push origin master
 | `backend/**/*.py` | app + worker |
 | `frontend/**` | app |
 | `Dockerfile` | app + worker |
-| `openui-service/` | restart systemd `fralib-openui` |
+| `openui-service-wandb/` | restart systemd `fralib-openui` |
 
 ### Comandos úteis na VPS
 
@@ -371,7 +371,7 @@ Arquivo: `backend/endpoints/obs_endpoints.py`
 
 ## 10. Limitações Conhecidas
 
-- Builder (`agents/builder/agent.py`) existe só na VPS — não no disco local
+- Builder (`agents/builder/agent.py`) — gera HTML via OpenUI (wandb/openui Python + LiteLLM)
 - `pipeline_endpoints.py` tem 1664 linhas — aguardando refatoração
 - `Franz.py` tem 1362 linhas — próximo do limite
 - 3 workers consolidados em 1 (commit f47bd586)

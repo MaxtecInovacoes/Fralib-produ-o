@@ -51,7 +51,7 @@
 | 1 | `agente1_hunter_v2.py` (em `utils/`) | Hunter | Valida/coleta lead_data via Google Maps + Playwright | scraping (sem LLM) | NAO |
 | 2 | `caio.py` | Caio | Qualificador — tier MORNO/STANDARD/PREMIUM, score 0-100 | haiku | NAO |
 | 3 | `arquiteto_mestre.py` | Arquiteto Mestre | Gera PRD completo (seções, paleta OKLch, animações) | opus | NAO |
-| 4 | `builder/agent.py` | Builder | Gera HTML chunked via OpenUI (4×18000=64000 tokens) | sonnet-4-6 | NAO |
+| 4 | `builder/agent.py` | Builder | Gera HTML single-shot via OpenUI + LiteLLM (max_tokens=64000) | sonnet-4-6 | NAO |
 | 5 | `builder/quality_gate_v2/` | QA v2 | Vision QA — pontua design, repair loop se < 7.5 | gpt-4o-mini / 9router | NAO |
 | 6 | `manager/agent.py` (step_deploy) | Deploy | Salva HTML em /var/www/fralib/sites/ + metadata.json | — (sem LLM) | NAO |
 | 7 | `Franz.py` | Franz | SDR WhatsApp — outreach, follow-up, agendamento | haiku | NAO |
@@ -64,7 +64,7 @@
 |---------|--------|-------------|-----------------|
 | `theo.py` | Theo | Estrategista — briefing inicial, PRD textual | Arquiteto Mestre |
 | `designer_prd.py` | Designer PRD | Arquiteto visual — seções, paleta, animações | Arquiteto Mestre |
-| `liam.py` | Liam | Gerador HTML antigo (~1373 linhas) | Builder OpenUI chunked |
+| `liam.py` | Liam | Gerador HTML antigo (~1373 linhas) | Builder OpenUI single-shot |
 | `liz.py` | Liz | Revisora de código — valida HTML gerado | QA v2 |
 | `liam_tools.py` | Liam Tools | Tools auxiliares do Liam | — |
 | `liam_lats.py` | Liam LATS | Language Agent Tree Search (experimental) | — |

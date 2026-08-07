@@ -15,10 +15,10 @@
 │  ┌─────────────────────────┐    ┌─────────────────────────┐     │
 │  │  NGINX (host)           │    │  systemd services       │     │
 │  │  app.seunegociofralib. │◀──▶│  fralib-openui.service  │     │
-│  │  :80/:443 → app:8000   │    │  (Node.js :7878)        │     │
+│  │  :80/:443 → app:8000   │    │  (Python :7878)          │     │
 │  │                        │    │                         │     │
 │  │  /sites/<tenant>/...   │    │  /root/fralib/          │     │
-│  │  → volumes/fralib-...  │    │  openui-service/        │     │
+│  │  → volumes/fralib-...  │    │  openui-service-wandb/   │     │
 │  └─────────────────────────┘    └─────────────────────────┘     │
 │              │                                │                 │
 │              ▼                                ▼                 │
@@ -97,18 +97,18 @@ Containers se comunicam via DNS interno do Docker Compose:
 
 ```ini
 [Unit]
-Description=FraLib OpenUI Service - Node.js HTML generation
+Description=FraLib OpenUI Service - Python HTML generation (wandb/openui + LiteLLM)
 After=network.target
 
 [Service]
 Type=simple
 User=root
-WorkingDirectory=/root/fralib/openui-service
-ExecStart=/root/.nvm/versions/node/v20.20.2/bin/node src/server.js
+WorkingDirectory=/root/fralib/openui-service-wandb
+ExecStart=/root/.local/bin/uv run backend/openui/main.py
 Restart=always
 RestartSec=5
 Environment=NODE_ENV=production
-EnvironmentFile=/root/fralib/openui-service/.env
+EnvironmentFile=/root/fralib/openui-service-wandb/backend/.env
 
 StandardOutput=journal
 StandardError=journal
@@ -177,8 +177,8 @@ server {
 | `/opt/fralib/backend/` | Código Python (montado em `/app/backend` nos workers) |
 | `/opt/fralib/.env` | Variáveis de ambiente (chaves, URLs) |
 | `/opt/fralib/docker-compose.prod.yml` | Orquestração Docker |
-| `/root/fralib/openui-service/` | OpenUI Node.js (servido por systemd) |
-| `/root/fralib/openui-service/.env` | Env vars do OpenUI |
+| `/root/fralib/openui-service-wandb/` | OpenUI Python (wandb/openui + LiteLLM, servido por systemd) |
+| `/root/fralib/openui-service-wandb/backend/.env` | Env vars do OpenUI |
 | `/var/lib/docker/volumes/fralib_fralib-sites/_data/` | Sites gerados (acessíveis via /sites/) |
 | `/var/lib/docker/volumes/fralib_fralib-postgres/_data/` | Dados do Postgres |
 | `/var/lib/docker/volumes/fralib_fralib-logs/_data/` | Logs da app |
@@ -225,7 +225,7 @@ ssh -i ~/.ssh/id_ed25519 root@100.124.56.36
 
 # Editar .env
 vi /opt/fralib/.env
-vi /root/fralib/openui-service/.env
+vi /root/fralib/openui-service-wandb/backend/.env
 
 # Rebuild containers para pegar novas vars
 cd /opt/fralib && docker compose -f docker-compose.prod.yml build app worker-pipeline worker-cron worker-franz
@@ -243,7 +243,7 @@ systemctl restart fralib-openui
 
 ```bash
 # OpenUI
-curl -s http://localhost:7878/health
+curl -s http://localhost:7878/v1/models
 
 # API
 curl -s http://localhost:8001/health
@@ -312,7 +312,7 @@ tar -czf /tmp/fralib_backup_$(date +%Y%m%d_%H%M%S).tar.gz \
   backend/ docker-compose.prod.yml .env worker.py server.py
 
 # Backup do OpenUI
-tar -czf /tmp/openui_backup_$(date +%Y%m%d_%H%M%S).tar.gz /root/fralib/openui-service/
+tar -czf /tmp/openui_backup_$(date +%Y%m%d_%H%M%S).tar.gz /root/fralib/openui-service-wandb/
 
 # Backup do banco
 docker exec fralib-postgres-1 pg_dump -U fralib_user -d fralib_db | \
@@ -379,7 +379,7 @@ gunzip -c /tmp/fralib_db_*.sql.gz | \
 | Sintoma | Causa Provável | Solução |
 |---------|----------------|---------|
 | Container app-1 reiniciando | Porta 8000 ocupada | `lsof -i :8000` dentro do container, matar processo |
-| OpenUI retorna 529 | DeployFlow sobrecarregado | Esperar 15min (retry automático no chunked) |
+| OpenUI retorna 529 | DeployFlow sobrecarregado | Esperar 15min (retry automático no single-shot) |
 | Builder timeout | LLM muito lento | Aumentar timeout em `agent.py` |
 | Site não acessível | nginx não reiniciado | `systemctl reload nginx` |
 | Leads não viram sites | `worker-pipeline` down | `docker compose up -d worker-pipeline` |

@@ -62,17 +62,17 @@
 ### E1. ANTHROPIC_API_KEY truncada no OpenUI
 
 **Sintoma:** OpenUI aceitava conexões mas nunca respondia (HTTP 000)
-**Causa raiz:** `.env` em `/root/fralib/openui-service/` tinha chave com só 15 chars (`dh-live`) em vez de 47 chars completos
+**Causa raiz:** `.env` em `/root/fralib/openui-service-wandb/` tinha chave com só 15 chars (`dh-live`) em vez de 47 chars completos
 **Diagnóstico:** `curl -X POST deployflow.com.br ... -H "x-api-key: $KEY"` retornou `{"error":{"code":"invalid_api_key"}}` (HTTP 401)
 **Fix:**
 ```python
-# Fix: extrair chave completa do /opt/fralib/.env e copiar para /root/fralib/openui-service/.env
+# Fix: extrair chave completa do /opt/fralib/.env e copiar para /root/fralib/openui-service-wandb/.env
 with open("/opt/fralib/.env") as f:
     correct_key = ...  # parse ANTHROPIC_API_KEY=
-with open("/root/fralib/openui-service/.env", "a") as f:
+with open("/root/fralib/openui-service-wandb/.env", "a") as f:
     f.write(f"\nANTHROPIC_API_KEY={correct_key}\n")
 ```
-**Arquivo:** `/root/fralib/openui-service/.env`
+**Arquivo:** `/root/fralib/openui-service-wandb/.env`
 
 ### E2. Falta ANTHROPIC_BASE_URL e MODEL no OpenUI
 
@@ -85,7 +85,7 @@ with open("/root/fralib/openui-service/.env", "a") as f:
 # MODEL=claude-sonnet-4-6
 # MAX_TOKENS=64000
 ```
-**Arquivo:** `/root/fralib/openui-service/.env`
+**Arquivo:** `/root/fralib/openui-service-wandb/.env`
 
 ### E3. Builder timeout 120s muito curto
 

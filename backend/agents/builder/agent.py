@@ -2,7 +2,7 @@
 Builder Agent — OpenUI HTTP Client.
 
 Receives a DesignerPRD and calls the OpenUI service (port 7878 - wandb/openui)
-to generate the complete HTML site via chunked LLM generation.
+to generate the complete HTML site via single-shot LLM generation.
 """
 import os
 import json
@@ -168,7 +168,7 @@ def _archetype_briefing(archetype: str) -> str:
 
 def render_site(prd, usar_llm: bool = True) -> BuildResult:
     """
-    Generate HTML site from DesignerPRD via OpenUI chunked generation.
+    Generate HTML site from DesignerPRD via OpenUI single-shot generation.
 
     Args:
         prd: DesignerPRD object with all design specifications.
@@ -187,7 +187,7 @@ def render_site(prd, usar_llm: bool = True) -> BuildResult:
     # Convert PRD to spec
     spec = _prd_to_spec(prd)
 
-    # Call OpenUI chunked generation
+    # Call OpenUI single-shot generation
     max_retries = 7
     retry_delays = [60, 120, 180, 300, 300, 600]  # seconds — espaçado para DeployFlow recovery
 

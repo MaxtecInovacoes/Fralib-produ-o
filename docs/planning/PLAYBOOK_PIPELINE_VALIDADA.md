@@ -44,7 +44,7 @@ Este documento permite a **qualquer IA** reproduzir a pipeline de testes isolada
 ```
 SSH:      ssh -i ~/.ssh/id_ed25519 root@100.124.56.36  (via Tailscale)
 Projeto:  /opt/fralib/
-OpenUI:   /root/fralib/openui-service/ (serviço systemd)
+OpenUI:   /root/fralib/openui-service-wandb/ (serviço systemd)
 Domínio:  https://app.seunegociofralib.site
 ```
 
@@ -58,7 +58,7 @@ Domínio:  https://app.seunegociofralib.site
 | `fralib-worker-franz-1` | SDR WhatsApp | - | healthy |
 | `fralib-postgres-1` | PostgreSQL | 15434→5432 | healthy |
 | `fralib-redis-1` | Cache | 16379→6379 | healthy |
-| `fralib-openui` | Node.js HTML generation (systemd) | 7878 | active |
+| `fralib-openui` | Python HTML generation via LiteLLM (systemd) | 7878 | active |
 
 ### Variáveis de ambiente críticas
 
@@ -74,7 +74,7 @@ FRALIB_PUBLIC_URL=https://app.seunegociofralib.site
 FRALIB_SKIP_HTML_QUALITY_GATE=0
 ```
 
-**`/root/fralib/openui-service/.env`:**
+**`/root/fralib/openui-service-wandb/backend/.env`:**
 ```bash
 ANTHROPIC_API_KEY=dh-live-5MI2EvgUoAuoLAnP4jn0  # MESMA chave
 ANTHROPIC_BASE_URL=https://deployflow.com.br/api/public/v1
@@ -100,7 +100,7 @@ docker ps --format '{{.Names}} {{.Status}}' | grep fralib
 systemctl is-active fralib-openui
 
 # Health checks
-curl -s http://localhost:7878/health
+curl -s http://localhost:7878/v1/models
 docker exec fralib-postgres-1 pg_isready -U fralib_user -d fralib_db
 ```
 
@@ -154,28 +154,28 @@ HTML salvo em: /var/www/fralib/sites/2/nova-imperio-gym-236f7cb9/index.html
         ▼                             ▼                             ▼
    ┌─────────┐                  ┌──────────┐                  ┌──────────┐
    │ OpenUI  │ ◀──HTTP 7878────│ Builder  │                  │ Postgres │
-   │ chunked │                  │ agent.py │                  │ :15434   │
+   │ Python  │                  │ agent.py │                  │ :15434   │
    └─────────┘                  └──────────┘                  └──────────┘
 ```
 
-### Server.js chunked (4 chamadas LLM)
+### wandb/openui Python + LiteLLM (single-shot)
 
-**Arquivo:** `/root/fralib/openui-service/src/server.js`
+**Arquivo:** `/root/fralib/openui-service-wandb/backend/openui/generate.py`
 
 Endpoints:
-- `POST /generate` — single-shot (legado)
-- `POST /generate-chunked` — **4 chunks com retry** (usado em produção)
-- `GET /health` — health check
+- `POST /generate` — single-shot (usa LiteLLM proxy → DeployFlow → Claude)
+- `GET /v1/models` — health check (list models do LiteLLM)
 
 Lógica:
-1. Divide `prd.sections` em 4 partes
-2. Para cada chunk: chama LLM com `max_tokens = (64000/4) + 2000 = 18000`
-3. Se chunk retorna 529, espera 30s e tenta de novo (até 3x)
-4. Concatena as 4 partes do HTML, remove tags duplicadas, injeta tokens determinísticos
+1. Builder injeta `_lead_rating`, `_lead_reviews_count`, `_lead_telefone` no PRD antes de enviar
+2. OpenUI recebe PRD completo → chama LiteLLM com `max_tokens=64000`, `model=claude-sonnet-4-6`
+3. LiteLLM proxy roteia para DeployFlow (`https://deployflow.com.br/api/public/v1`)
+4. Retorna HTML completo em uma única chamada (sem chunking)
+5. Builder injeta contratos determinísticos: LGPD, favicon, JSON-LD, motion.js
 
-### Por que chunking foi necessário
+### Por que single-shot substituiu chunking
 
-DeployFlow retorna **HTTP 529** ("model overloaded") quando recebe payloads grandes (>5000 tokens de output). Dividindo em 4 chamadas de ~16K tokens cada, evitamos a sobrecarga e o retry automático cobre as instabilidades pontuais.
+wandb/openui com LiteLLM proxy lida diretamente com a sobrecarga do modelo. O proxy gerencia rate limiting e retry internamente. Uma única chamada de até 64K tokens é mais simples, mais rápida e evita a complexidade de concatenar HTML fragmentado. Se DeployFlow retornar 529, o retry é tratado no nível do Builder (`step_builder` no manager), não no OpenUI.
 
 ---
 
@@ -192,7 +192,7 @@ DeployFlow retorna **HTTP 529** ("model overloaded") quando recebe payloads gran
 - Push: `git push origin master` → post-receive hook na VPS
 - Não rebuildar containers sem necessidade — volumes persistem mudanças em `/opt/fralib/backend/`
 - Para mudanças em `agent.py` ou outros arquivos do `backend/`: restart `fralib-api` (systemd) + `fralib-worker`
-- Para mudanças em `openui-service/`: restart `fralib-openui` (systemd)
+- Para mudanças em `openui-service-wandb/`: restart `fralib-openui` (systemd)
 
 ### Logs
 - Worker unificado: `docker logs -f fralib-worker-1`
@@ -225,7 +225,7 @@ DeployFlow retorna **HTTP 529** ("model overloaded") quando recebe payloads gran
 │   │   ├── hunter/agent.py           # Mineração de leads
 │   │   ├── caio/agent.py             # Qualificação determinística
 │   │   ├── arquiteto/agent.py        # DesignerPRD via LLM (FIX: retry 529)
-│   │   ├── builder/agent.py          # HTML gen (FIX: timeout=600, /generate-chunked)
+│   │   ├── builder/agent.py          # HTML gen (single-shot, max_tokens=64000)
 │   │   ├── builder/quality_gate_v2/  # Vision QA (FIX: removido executable_path)
 │   │   └── franz/agent.py            # SDR WhatsApp
 │   └── services/
@@ -236,12 +236,15 @@ DeployFlow retorna **HTTP 529** ("model overloaded") quando recebe payloads gran
 ├── docker-compose.prod.yml           # Orquestração Docker
 └── .env                              # Variáveis de ambiente
 
-/root/fralib/openui-service/
-├── src/
-│   ├── server.js                     # ← REESCRITO: chunked + retry
-│   ├── server_single.js              # Backup do single-shot original
-│   └── generate.js                   # Exportou buildSystemPrompt, buildUserPrompt, extractHTML, etc.
-└── .env                              # Chave + BASE_URL + MODEL + MAX_TOKENS
+/root/fralib/openui-service-wandb/
+├── backend/
+│   ├── openui/
+│   │   ├── main.py               # FastAPI app (LiteLLM proxy + /generate)
+│   │   ├── generate.py           # POST /generate → LiteLLM → DeployFlow
+│   │   ├── __init__.py
+│   │   └── pyproject.toml        # Dependencies (fastapi, uvicorn, litellm)
+│   └── .env                      # FRA_GENERATION_MODEL, FRA_GENERATION_MAX_TOKENS
+└── Dockerfile                    # Build da imagem OpenUI Python
 ```
 
 ---
@@ -256,8 +259,8 @@ docker ps | grep fralib
 # Esperado: app-1, worker-pipeline-1, worker-cron-1, worker-franz-1, postgres-1, redis-1, open-seo
 
 # 2. OpenUI
-curl -s http://localhost:7878/health
-# Esperado: {"status":"ok","service":"fralib-openui-chunked"}
+curl -s http://localhost:7878/v1/models
+# Esperado: lista de modelos do LiteLLM (ex: claude-sonnet-4-6)
 
 # 3. Test E2E
 cd /opt/fralib && .venv/bin/python test_chain.py 2>&1 | grep -E "OK|FAIL|DONE"

@@ -77,7 +77,7 @@ ORDER BY criado_em DESC LIMIT 20;
 | `caio` | Caio | `backend/agents/caio.py` |
 | `theo` | Theo | `backend/agents/theo.py` |
 | `arquiteto` | Designer/Arquiteto | `backend/agents/arquiteto_mestre.py` |
-| `liam` / `builder` | Builder | `backend/agents/builder/agent.py` (VPS only) |
+| `liam` / `builder` | Builder | `backend/agents/builder/agent.py` |
 | `liz` | Liz | `backend/agents/liz.py` |
 | `deploy` | Deploy | `backend/endpoints/pipeline_endpoints.py` |
 
@@ -87,7 +87,7 @@ ORDER BY criado_em DESC LIMIT 20;
 - **Ação:** automática via `job_queue.mark_failure()` com backoff 30s/2min/8min
 - **Manual:** se esgotar retries (max_attempts=3), o job vai para `failed_permanent` e vira linha em `pipeline_failures`. Cliente vê mensagem amigável e botão "Tentar de novo"
 
-### Erro de HTML (Builder chunked)
+### Erro de HTML (Builder LiteLLM)
 - Sintoma: `last_error: 'JSON decode'`, `'Builder html vazio'`, `'tag não fechada'`
 - **Ação:** `repair_loop` regenera (Vision QA v2). Se passar, deploy segue. Se falhar 3x, failed_permanent.
 
@@ -107,20 +107,20 @@ ORDER BY criado_em DESC LIMIT 20;
 ```bash
 systemctl status fralib-openui
 journalctl -u fralib-openui -n 50 --no-pager
-curl -s http://localhost:7878/health || echo OFFLINE
+curl -s http://localhost:7878/v1/models || echo OFFLINE
 ```
 
 ### Restart
 ```bash
 systemctl restart fralib-openui
 sleep 3
-curl -s http://localhost:7878/health
+curl -s http://localhost:7878/v1/models
 ```
 
 ### Se persiste
-1. Verificar env em `/root/fralib/openui-service/.env` (especialmente `ANTHROPIC_API_KEY` e `ANTHROPIC_BASE_URL`)
+1. Verificar env em `/root/fralib/openui-service-wandb/.env` (especialmente `ANTHROPIC_API_KEY` e `ANTHROPIC_BASE_URL`)
 2. Verificar log: `journalctl -u fralib-openui -f` durante 30s
-3. Se `MODULE_NOT_FOUND`: `cd /root/fralib/openui-service && npm install`
+3. Se `MODULE_NOT_FOUND`: `systemctl restart fralib-openui`
 
 ---
 
