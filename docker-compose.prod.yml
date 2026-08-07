@@ -70,6 +70,7 @@ services:
       MAX_PIPELINES_GLOBAL: "4"
       OPENUI_SERVICE_URL: http://host.docker.internal:7878
       FRALIB_TRACING: "1"
+      PYTHONPATH: /app/backend:/app
     volumes:
       - /opt/fralib/backend:/app/backend
       - fralib-sites:/var/www/fralib/sites
