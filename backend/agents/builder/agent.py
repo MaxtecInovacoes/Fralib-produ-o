@@ -11,7 +11,7 @@ import requests
 
 OPENUI_URL = os.environ.get("OPENUI_URL") or os.environ.get("OPENUI_SERVICE_URL", "http://localhost:7878")
 GENERATE_ENDPOINT = f"{OPENUI_URL}/generate"
-HEALTH_ENDPOINT = f"{OPENUI_URL}/health"
+HEALTH_ENDPOINT = f"{OPENUI_URL}/v1/models"
 
 
 class BuildResult:

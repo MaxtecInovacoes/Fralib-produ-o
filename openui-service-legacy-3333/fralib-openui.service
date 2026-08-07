@@ -1,0 +1,21 @@
+[Unit]
+Description=FraLib OpenUI Service — Node.js HTML generation
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/fralib/openui-service
+ExecStart=/usr/bin/node src/server.js
+Restart=always
+RestartSec=5
+Environment=NODE_ENV=production
+# .env carregado via env_file abaixo
+EnvironmentFile=/root/fralib/openui-service/.env
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=openui-service
+
+[Install]
+WantedBy=multi-user.target
