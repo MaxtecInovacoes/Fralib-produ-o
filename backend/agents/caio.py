@@ -283,10 +283,13 @@ def _calcular_score(lead: LeadInput) -> tuple:
         score += 20
         motivos.append("sem site (oportunidade)")
     else:
-        site_valido, _ = validar_site(lead.website)
+        site_valido, motivo_site = validar_site(lead.website)
         if not site_valido:
-            score += 15
-            motivos.append("site invalido/rede social (oportunidade)")
+            score += 20
+            motivos.append("site problemático: {} (oportunidade de upgrade)".format(motivo_site))
+        else:
+            score += 5
+            motivos.append("site ok — oportunidade de upgrade (nao converte)")
 
     n_fotos = len(lead.fotos) if lead.fotos else 0
     if n_fotos >= 5:
@@ -362,58 +365,13 @@ def qualificar_lead(lead: LeadInput) -> CaioOutput:
 
     if lead.website and lead.website.strip():
         site_valido, motivo_site = validar_site(lead.website)
-        if site_valido:
-            print("[Caio] REJEITADO: {} - {}".format(lead.nome, motivo_site))
-            return CaioOutput(
-                qualificacao="REJEITADO",
-                score=0,
-                tier="REJEITADO",
-                motivo="Lead ja possui site proprio valido",
-                qualificado=False,
-                nome=lead.nome,
-                cidade=lead.cidade,
-                segmento=lead.segmento,
-                telefone=lead.telefone,
-                whatsapp=lead.whatsapp or "",
-                rating=lead.rating,
-                reviews_count=lead.reviews_count,
-                fotos=lead.fotos or [],
-                website=lead.website or "",
-                logo_url=lead.logo_url or "",
-                concorrentes=[],
-                paleta_cores={
-                    "primaria": "#374151",
-                    "secundaria": "#f9fafb",
-                    "acento": "#6366f1",
-                },
-            )
-
+                # Nao rejeita mais por ter site - site valido = oportunidade de upgrade
     # GATE: dados mínimos obrigatórios — sem dados reais, não passa
     _dados_faltando = []
     if not lead.telefone and not lead.whatsapp:
         _dados_faltando.append("telefone/whatsapp")
-    else:
-        # Verificar se telefone é celular (WhatsApp) — fixo não serve pra venda
-        _tel_check = (
-            (lead.whatsapp or lead.telefone or "")
-            .replace(" ", "")
-            .replace("-", "")
-            .replace("(", "")
-            .replace(")", "")
-            .replace("+55", "")
-        )
-        # Celular BR: DDD(2) + 9 + 8 dígitos = 11 dígitos, começa com 9 após DDD
-        _digits_only = "".join(c for c in _tel_check if c.isdigit())
-        _is_celular = False
-        if len(_digits_only) >= 10:
-            # Com DDD: posição 2 deve ser 9 (ex: 41999990000)
-            if len(_digits_only) >= 11 and _digits_only[2] == "9":
-                _is_celular = True
-            # Sem DDD: começa com 9 (ex: 999990000)
-            elif len(_digits_only) == 9 and _digits_only[0] == "9":
-                _is_celular = True
-        if not _is_celular:
-            _dados_faltando.append("celular/whatsapp (telefone fixo nao serve)")
+        # Qualquer numero serve (fixo, celular, WhatsApp)
+
     # Reviews não são bloqueantes — site pode ser gerado sem depoimentos
     if _dados_faltando:
         _motivo_dados = "Dados insuficientes: falta " + ", ".join(_dados_faltando)
