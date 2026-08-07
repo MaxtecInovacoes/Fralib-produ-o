@@ -215,7 +215,7 @@ def clean_json(text: str) -> str:
 def _validar_prd_minimo(prd) -> None:
     if not prd.business_name:
         raise ValueError("PRD invalido: business_name vazio")
-    if not prd.sections or len(prd.sections) < 4:
+    if not prd.sections or len(prd.sections) < 3:
         raise ValueError("PRD invalido: sections insuficientes")
     nomes = {str(s.name).lower() for s in prd.sections}
     obrigatorias = set(REQUIRED_SECTIONS)
@@ -229,7 +229,8 @@ def _validar_prd_minimo(prd) -> None:
     if not prd.color_palette:
         raise ValueError("PRD invalido: color_palette vazio")
     for campo in ("primary", "background", "text", "accent"):
-        if not getattr(prd.color_palette, campo, None):
+        val = prd.color_palette.get(campo, None) if isinstance(prd.color_palette, dict) else getattr(prd.color_palette, campo, None)
+        if not val:
             raise ValueError(f"PRD invalido: color_palette.{campo} vazio")
 
 

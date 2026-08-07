@@ -109,7 +109,7 @@ def gerar_arquiteto_mestre_prd(
             from prd_cache import buscar_prd_cache, adaptar_prd_template
 
             _cache_entry = buscar_prd_cache(
-                segmento, caio_tier, _direction, _sub_nicho_nome
+                segmento, caio_tier, _direction
             )
             if _cache_entry:
                 _prd_adaptado = adaptar_prd_template(

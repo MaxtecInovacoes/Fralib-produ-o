@@ -163,7 +163,7 @@ def call_claude(
         _db_provider = (_db_config.get("provider") or "anthropic").lower()
         model_id = _db_config["model_id"]
         if _db_config.get("temperature") is not None:
-            temperature = _db_config["temperature"]
+            temperature = float(_db_config["temperature"])
         if _db_config.get("max_tokens") is not None:
             if (agent_name or "").lower() == BUILDER_RENDERER_AGENT:
                 max_tokens = max(int(max_tokens or 0), int(_db_config["max_tokens"] or 0))
@@ -861,9 +861,9 @@ def call_claude_stream(
     if _db_config:
         model_id = _db_config["model_id"]
         if _db_config.get("temperature") is not None:
-            temperature = _db_config["temperature"]
+            temperature = float(_db_config["temperature"])
         if _db_config.get("max_tokens") is not None:
-            max_tokens = _db_config["max_tokens"]
+            max_tokens = int(_db_config["max_tokens"])
     else:
         model_id = current_map.get(model, current_map["opus"])
 
