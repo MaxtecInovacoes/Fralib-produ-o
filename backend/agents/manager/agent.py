@@ -796,6 +796,7 @@ PIPELINE_STEPS = [
     step_caio,
     step_arquiteto,
     step_builder,
+    step_quality_gate,
     step_deploy,
     step_franz,
 ]
@@ -906,14 +907,22 @@ def run_pipeline(state: PipelineState, trace: object = None) -> PipelineState:
         # 2.1 Deduzir créditos por custo real do pipeline (fail-safe)
         try:
             from backend.services.credits_manager import deduzir_creditos_por_pipeline
+            from backend.core.database import SessionLocal
             if state.tenant_id and state.run_id:
-                result = deduzir_creditos_por_pipeline(
-                    tenant_id=state.tenant_id,
-                    run_id=state.run_id,
-                )
-                logger.info(
-                    "[credits_manager] pipeline run_id=%s tenant_id=%d deduzidos=%d custo_usd=%.4f ok=%s",
-                    state.run_id, state.tenant_id, result.get("deduzidos", 0), result.get("custo_usd", 0.0), result.get("ok"),
-                )
+                _db = SessionLocal()
+                try:
+                    result = deduzir_creditos_por_pipeline(
+                        db=_db,
+                        tenant_id=state.tenant_id,
+                        run_id=state.run_id,
+                    )
+                    logger.info(
+                        "[credits_manager] pipeline run_id=%s tenant_id=%d deduzidos=%d custo_usd=%.4f ok=%s",
+                        state.run_id, state.tenant_id, result.get("deduzidos", 0), result.get("custo_usd", 0.0), result.get("ok"),
+                    )
+                finally:
+                    _db.close()
+            else:
+                result = None
         except Exception as exc:
             logger.warning("[credits_manager] deducao no run_pipeline falhou run_id=%s: %s", state.run_id, exc)

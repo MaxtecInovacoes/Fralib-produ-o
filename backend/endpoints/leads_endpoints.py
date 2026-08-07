@@ -425,7 +425,7 @@ async def get_mensagens_novas(db: Session = Depends(get_db), usuario: dict = Dep
             FROM interacoes i
             JOIN leads l ON l.id = i.lead_id
             WHERE i.direcao = 'entrada'
-            AND i.criado_em > (NOW() - INTERVAL '24 hours')::text
+            AND i.criado_em > (NOW() - INTERVAL '24 hours')
             AND l.user_id = :uid
             GROUP BY i.lead_nome
         """), {"uid": tenant_id}).fetchall()
