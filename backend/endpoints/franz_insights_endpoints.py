@@ -26,7 +26,6 @@ class InsightCreate(BaseModel):
     axis: str = "general"
     confidence: float = 0.5
     tenant_id: Optional[int] = None
-    source: str = "agent_loop"
 
 
 class InsightPromote(BaseModel):
@@ -55,7 +54,7 @@ def _row_to_insight(r) -> dict:
         "tenant_id": r.tenant_id,
         "created_at": r.created_at.isoformat() if r.created_at else None,
         "promoted_at": r.promoted_at.isoformat() if r.promoted_at else None,
-        "source": r.source,
+        "evidence": r.evidence_json or {},
     }
 
 
@@ -73,7 +72,7 @@ async def list_insights(
     try:
         sql = """
             SELECT id, hypothesis, axis, confidence, validation_status,
-                   tenant_id, created_at, promoted_at, source
+                   tenant_id, created_at, promoted_at, evidence_json
             FROM franz_insights
             WHERE tenant_id = :tid
         """
@@ -100,7 +99,7 @@ async def get_insight(
     tid = _tenant_filter(usuario)
     row = db.execute(text("""
         SELECT id, hypothesis, axis, confidence, validation_status,
-               tenant_id, created_at, promoted_at, source
+               tenant_id, created_at, promoted_at, evidence_json
         FROM franz_insights
         WHERE id = :iid AND tenant_id = :tid
     """), {"iid": insight_id, "tid": tid}).fetchone()
@@ -120,15 +119,14 @@ async def create_insight(
     try:
         row = db.execute(text("""
             INSERT INTO franz_insights
-                (hypothesis, axis, confidence, validation_status, tenant_id, source, created_at)
-            VALUES (:hyp, :ax, :conf, 'hypothesis', :tid, :src, :now)
+                (hypothesis, axis, confidence, validation_status, tenant_id, created_at)
+            VALUES (:hyp, :ax, :conf, 'hypothesis', :tid, :now)
             RETURNING id
         """), {
             "hyp": body.hypothesis[:500],
             "ax": body.axis[:50],
             "conf": max(0.0, min(1.0, float(body.confidence or 0.5))),
             "tid": tid,
-            "src": body.source[:50],
             "now": _now(),
         }).fetchone()
         db.commit()
