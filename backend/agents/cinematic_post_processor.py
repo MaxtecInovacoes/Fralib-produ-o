@@ -335,10 +335,16 @@ def _fix_section_backgrounds(html: str) -> str:
 
 def _fix_hero_typography(html: str) -> str:
     """Garante que o hero tem tipografia cinematográfica."""
-    # Garantir que h1 no hero tem clamp()
+    # Garante que h1 no hero tem font-bold (skip se ja tem clamp() ou font-bold)
+    def _add_font_bold(m):
+        full = m.group(0)
+        if 'clamp(' in full or 'font-bold' in full:
+            return full
+        return m.group(1) + ' font-bold' + m.group(2)
+
     html = re.sub(
-        r'(<h1[^>]*class="[^"]*)(?<!clamp\([^)]+\))([^"]*"[^>]*>)',
-        lambda m: m.group(1) + ' font-bold' + m.group(2) if 'font-bold' not in m.group(1) else m.group(0),
+        r'(<h1[^>]*class="[^"]*)([^"]*"[^>]*>)',
+        _add_font_bold,
         html
     )
     return html

@@ -1,0 +1,20 @@
+--- a/backend/core/job_queue.py
++++ b/backend/core/job_queue.py
+@@ -250,6 +250,12 @@ def mark_failure(
+
+     Retorna o status final ('pending', 'failed_retriable' ou 'failed_permanent').
+     """
++    # Guard: ensure valid transaction or create fresh session
++    _db = db
++    try:
++        _db.execute(text("SELECT 1")).fetchone()
++    except Exception:
++        _db.rollback()
++        from sqlalchemy.orm import sessionmaker
++        from database import engine
++        _Session = sessionmaker(bind=engine)
++        _db = _Session()
++    # Use _db for all operations in this function
+     job = db.execute(
+         text("""
+         SELECT attempts, max_attempts, tenant_id, checkpoint_id, payload
