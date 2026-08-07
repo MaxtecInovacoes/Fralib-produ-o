@@ -223,26 +223,50 @@ def _run_supply_job(db, job) -> bool:
 
 def run_one() -> bool:
     """Processa 1 job. Retorna True se processou, False se fila vazia."""
-    try:
-        from backend.core import job_queue
-        from backend.core.database import SessionLocal
-        from backend.core.job_queue import generate_worker_id
+    from backend.core import job_queue
+    from backend.core.database import SessionLocal
+    from backend.core.job_queue import generate_worker_id
+    from sqlalchemy.orm import sessionmaker
+    from database import engine
 
-        db = SessionLocal()
-        worker_id = generate_worker_id()
+    worker_id = generate_worker_id()
+    _Session = sessionmaker(bind=engine)
+    db = _Session()
+    try:
         try:
             job = job_queue.claim_next(db, worker_id=worker_id, tipos=JOB_TIPOS)
             if not job:
+                db.close()
                 return False
             logger.info("Job claimed: %s (tipo=%s) worker=%s", job["id"], job["tipo"], worker_id)
             if job["tipo"] == "pipeline_lead":
-                return _run_pipeline_job(db, job)
-            return _run_supply_job(db, job)
-        finally:
+                result = _run_pipeline_job(db, job)
+            else:
+                result = _run_supply_job(db, job)
             db.close()
-    except Exception as e:
-        logger.exception("Erro processando job: %s", e)
-        return False
+            return result
+        except Exception as inner:
+            # Ensure transaction is clean before marking failure
+            try:
+                db.rollback()
+            except Exception:
+                pass
+            # Create fresh session for mark_failure
+            db_new = _Session()
+            try:
+                job_queue.mark_failure(db_new, job["id"], error=str(inner)[:1000], fase=job.get("tipo"))
+                db_new.close()
+            except Exception:
+                try:
+                    db_new.close()
+                except Exception:
+                    pass
+            raise
+    finally:
+        try:
+            db.close()
+        except Exception:
+            pass
 
 
 def main() -> None:
