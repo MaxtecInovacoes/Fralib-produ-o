@@ -15,15 +15,18 @@ from unittest.mock import patch
 
 # Definir modo de teste ANTES de importar o app
 os.environ["TESTING"] = "true"
-os.environ["DATABASE_URL"] = "postgresql://postgres:fralib2024@localhost:5433/fralib_test"
+os.environ["DATABASE_URL"] = os.getenv("TEST_DATABASE_URL", "postgresql://postgres:fralib2024@localhost:5433/fralib_test")
 os.environ["JWT_SECRET_KEY"] = "test-secret-key-for-unit-tests"
+os.environ["FRALIB_SITES_DIR"] = os.path.join(os.path.dirname(__file__), "tmp_sites")
 
-# Adicionar backend ao path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'backend'))
+# Adicionar backend ao path (CORRETO: C:\fralib\backend)
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'backend'))
 
-# Importar app FastAPI
-from server import app
-
+# Importar app FastAPI (pode falhar se banco não estiver disponível — unit tests não precisam)
+try:
+    from server import app
+except Exception:
+    app = None
 
 # ===== FIXTURES DE BANCO DE DADOS =====
 

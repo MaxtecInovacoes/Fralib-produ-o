@@ -148,7 +148,7 @@ def _prd_to_spec(prd) -> dict:
         "reviews_list": getattr(prd, "reviews_list", []),
         "address": getattr(prd, "address", ""),
         "phone": getattr(prd, "phone", ""),
-        "hours": getattr(prd, "hours", None),
+        "hours": getattr(prd, "hours", None) or {},
         "photos": getattr(prd, "photos", []),
         "videos": getattr(prd, "videos", []),
         "value_props": getattr(prd, "value_props", []) or [],
