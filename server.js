@@ -196,6 +196,20 @@ app.get(['/assets/logo-fralib.png', '/images/logo.png'], (req, res) => {
 app.use('/static', express.static(path.join(__dirname, 'frontend/static')));
 app.use(express.static(path.join(__dirname, 'frontend')));
 
+// Handle missing static JS/CSS assets gracefully to prevent SyntaxError: Unexpected token '<'
+app.use((req, res, next) => {
+  const url = req.path;
+  if (url.endsWith('.js') || url.startsWith('/js/')) {
+    res.setHeader('Content-Type', 'application/javascript');
+    return res.status(404).send('/* Asset not found: ' + url + ' */');
+  }
+  if (url.endsWith('.css') || url.startsWith('/css/')) {
+    res.setHeader('Content-Type', 'text/css');
+    return res.status(404).send('/* Asset not found: ' + url + ' */');
+  }
+  next();
+});
+
 // Serve landing page for root or SPA fallback
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'frontend/landing.html'));

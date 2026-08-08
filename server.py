@@ -1,6 +1,3 @@
-from dotenv import load_dotenv
-load_dotenv()
-
 # ============================================================
 # VALIDAÇÃO DE ENV + OBSERVABILIDADE (Sentry + Correlation ID)
 # ============================================================
@@ -17,7 +14,7 @@ check_and_fail()
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
@@ -68,29 +65,10 @@ inicializar_database()
 # Rate Limiting (instancia compartilhada — definida em core/rate_limiter.py)
 from rate_limiter import limiter
 
-# Importar routers
-import auth_endpoints
-import dashboard_endpoints
-import pipeline_endpoints
-import pipeline_edit_endpoints
-import sse_endpoints
-import credits_endpoints
-import users_endpoints
-import leads_endpoints
-import beta_endpoints
-import whatsapp_endpoints
-import llm_endpoints
-import api_usage_endpoints
-import superadmin_endpoints
-import provider_keys_endpoints
-import provider_alerts_endpoints
-import agent_config_endpoints
-import falhas_endpoints
-import site_editor_endpoints
-import tracking_endpoints
-
-
 from contextlib import asynccontextmanager
+
+# Router registration
+from core.router_setup import register_routers
 
 @asynccontextmanager
 async def lifespan(app):
@@ -340,49 +318,8 @@ async def csrf_token():
     return {"csrf_token": secrets.token_hex(32)}
 
 # Routers
-app.include_router(auth_endpoints.router)
-app.include_router(dashboard_endpoints.router)
-app.include_router(pipeline_endpoints.router)
-app.include_router(pipeline_edit_endpoints.router)
-app.include_router(sse_endpoints.router)
-app.include_router(credits_endpoints.router)
-app.include_router(users_endpoints.router)
-app.include_router(leads_endpoints.router)
-app.include_router(beta_endpoints.router)
-app.include_router(whatsapp_endpoints.router)
-app.include_router(llm_endpoints.router)
-app.include_router(api_usage_endpoints.router)
-app.include_router(superadmin_endpoints.router)
-app.include_router(provider_keys_endpoints.router)
-app.include_router(provider_alerts_endpoints.router)
-app.include_router(agent_config_endpoints.router)
-app.include_router(falhas_endpoints.router)
-app.include_router(site_editor_endpoints.router)
-app.include_router(tracking_endpoints.router)
-import cron_endpoints
-app.include_router(cron_endpoints.router)
-import blog_endpoints
-app.include_router(blog_endpoints.router)
-import obs_endpoints
-app.include_router(obs_endpoints.router)
-import queue_endpoints
-app.include_router(queue_endpoints.router)
+register_routers(app)
 
-# Restored endpoints
-import abtest_endpoints
-app.include_router(abtest_endpoints.router)
-import admin_pipeline_control_endpoints
-app.include_router(admin_pipeline_control_endpoints.router)
-import agentes_endpoints
-app.include_router(agentes_endpoints.router)
-import lead_supply_endpoints
-app.include_router(lead_supply_endpoints.router)
-from credits import checkout, status, webhook_cakto
-app.include_router(checkout.router)
-app.include_router(status.router)
-app.include_router(webhook_cakto.router)
-import franz_insights_endpoints
-app.include_router(franz_insights_endpoints.router)
 
 # Rate limit do login agora vem via @limiter.limit em auth_endpoints.py (slowapi).
 # CSP+security headers vem via security_headers middleware acima (linha ~125).
@@ -438,6 +375,12 @@ class _TokenMaskFilter(logging.Filter):
 
 _uvicorn_access = logging.getLogger("uvicorn.access")
 _uvicorn_access.addFilter(_TokenMaskFilter())
+
+# Redirecionar legacy /dashboard e /dashboard.html para /admin.html
+@app.get("/dashboard")
+@app.get("/dashboard.html")
+async def redirect_legacy_dashboard():
+    return RedirectResponse(url="/admin.html", status_code=301)
 
 # Servir arquivos estáticos do frontend na raiz
 if os.path.exists("frontend"):

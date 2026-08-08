@@ -67,7 +67,7 @@ Hunter → Caio → Jina → Unsplash → Arquiteto → Builder(proxy) → Deplo
 - **Worker:** roda via Docker Compose (`docker-compose.prod.yml`), container `fralib-worker-1`
 - **Postgres/Redis:** via Docker Compose
 - **Frontend build:**
-  - `frontend/build.py` — gera `dashboard.html` e `landing.html`
+  - `frontend/build.py` — gera `landing.html` (e copia para deploy)
   - `frontend/build_admin.py` — concatena partials em `admin.html` (6554 linhas)
   - Output: `/var/www/fralib/` (nginx serve)
 - **StaticFiles server.py:** mount raiz `/` com `StaticFiles(directory="frontend", html=True)` (linha 372)
@@ -493,8 +493,8 @@ Suporta OpenAI, Google, Groq via `ia_manager.pick_key()`.
 
 | Arquivo | Função |
 |---------|--------|
-| `frontend/admin.html` | Painel admin (partials server-side) |
-| `frontend/dashboard.html` | Dashboard do usuário |
+| `frontend/admin.html` | Painel central do usuário/admin (partials server-side) |
+| `frontend/dashboard.html` | Descontinuado — redireciona 301 para /admin.html |
 | `frontend/login.html` | Login |
 | `frontend/landing.html` | Landing page pública |
 | `frontend/blog/index.html` | Blog |
