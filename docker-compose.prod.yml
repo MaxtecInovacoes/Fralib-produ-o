@@ -68,7 +68,7 @@ services:
       FRALIB_BUILDER_AUTO_APPROVE: "1"
       FRALIB_BUILDER_ENGINE: openui
       MAX_PIPELINES_GLOBAL: "4"
-      OPENUI_SERVICE_URL: http://host.docker.internal:4000
+      OPENUI_SERVICE_URL: http://host.docker.internal:7878
       FRALIB_TRACING: "1"
       PYTHONPATH: /app/backend:/app
     volumes:

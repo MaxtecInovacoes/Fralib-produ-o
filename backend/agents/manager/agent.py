@@ -729,7 +729,7 @@ def step_deploy(state: PipelineState) -> PipelineState:
 
         # URL relativa + absoluta
         rel_path = site_dir.relative_to(sites_root)
-        state.deploy_url = f"https://seunegociofralib.site/sites/{rel_path}/"
+        state.deploy_url = f"https://app.seunegociofralib.site/sites/{rel_path}/"
         state.deploy_path = str(site_dir.absolute())
         state.history.append(f"Deploy: salvo em {index_path} ({len(html)} bytes)")
 
