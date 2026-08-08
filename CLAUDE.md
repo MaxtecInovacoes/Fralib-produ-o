@@ -7,7 +7,7 @@ Tudo que não está aqui ou em `backend/agents/<nome>/agent.py` é **LEGADO**.
 - **Pipeline**: Hunter → Caio → Arquiteto → Builder → Quality Gate → Deploy → Franz
 - **Orquestrador**: `backend/agents/manager/agent.py` (FSM pura, não LangGraph)
 - **Entry points**: `server.py` (FastAPI :8000) e `worker.py` (daemon fila)
-- **Deploy**: `git push origin master` → `scripts/post-receive`
+- **Deploy**: `git push origin master` → hook `/root/repos/fralib.git/hooks/post-receive` → rsync `/root/fralib/` → `/opt/fralib/` → Docker Compose restart worker + PM2 reload
 - **Smoke**: `python pipeline.py smoke --dry-run`
 - **Tests**: `pytest tests/agents/`
 

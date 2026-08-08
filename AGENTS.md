@@ -5,7 +5,7 @@
 - Manager: backend/agents/manager/agent.py
 - NÃO crie novos arquivos chamados server_v2, server_new, etc. Edite sempre os arquivos oficiais.
 - PROIBIDO criar: tmp_*.py, fix_*.py, _debug_*.py, _test_*.py, server_v2*, server_chunked*
-- Edição: 100% LOCAL em C:\fralib → git commit → git push → VPS faz git pull + rebuild
+- Edição: 100% LOCAL em C:\fralib → git commit → git push origin master → hook `/root/repos/fralib.git/hooks/post-receive` → rsync `/root/fralib/` → `/opt/fralib/` → Docker Compose restart + PM2 reload
 - NUNCA edite código direto na VPS via SSH/sed/cat/heredoc
 - NUNCA envie scripts genéricos via SSH sem antes usar 'view_file' ou 'sed' com intervalo exato.
 

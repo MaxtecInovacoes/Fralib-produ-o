@@ -38,7 +38,9 @@ worker.py                ← Daemon que consome fila Postgres (skip locked)
 - **Banco**: PostgreSQL (com filas via `SELECT FOR UPDATE SKIP LOCKED`)
 - **LLM**: Claude (Sonnet primário, Opus em cascata), LiteLLM proxy
 - **Frontend**: HTML5, JS Vanilla, CSS Tokens, Chart.js
-- **Runtime VPS**: systemd (fralib-api, fralib-openui, worker)
+- **Runtime VPS**: Docker Compose (worker, Postgres, Redis) + systemd (fralib-api porta 8001, OpenUI porta 7878) + PM2
+- **Deploy**: `git push origin master` → hook `/root/repos/fralib.git/hooks/post-receive` → rsync → Docker restart + PM2 reload
+- **Bind mount**: `/opt/fralib/` (host) → `/app/` (container worker)
 - **Observabilidade**: Observability Traces / Spans + Pipeline Error Log
 
 ## Setup local
