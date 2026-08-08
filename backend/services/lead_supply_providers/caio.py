@@ -49,7 +49,7 @@ def run_caio_job(db: Session, payload: dict[str, Any], tenant_id: int) -> dict[s
     )
     db.commit()
 
-    from agents.caio import LeadInput as CaioInput, qualificar_lead
+    from backend.agents.caio import LeadInput as CaioInput, qualificar_lead
 
     dados = item.get("dados") if isinstance(item.get("dados"), dict) else json.loads(item.get("dados") or "{}")
     try:
