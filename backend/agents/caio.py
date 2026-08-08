@@ -205,7 +205,7 @@ def verificar_whatsapp_ativo(telefone="", whatsapp="") -> tuple:
         return False, "Numero com %d digitos (precisa 10 ou 11)" % len(digits)
 
     ddd = digits[:2]
-    if not (21 <= int(ddd) <= 99):
+    if not (11 <= int(ddd) <= 99):
         return False, "DDD %s invalido" % ddd
 
     # HTTP check: tenta acessar wa.me

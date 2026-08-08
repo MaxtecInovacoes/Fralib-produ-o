@@ -58,6 +58,7 @@ def _run_pipeline_job(db, job) -> bool:
     # Hydration: se payload tem _lead_id_existente mas lead_data vazio,
     # busca os dados do lead no banco para que step_hunter não falhe com
     # "Hunter sem lead" quando o job é reprocessado sem payload completo.
+    # Se não tem lead no BD, tenta buscar via Hunter (Google Maps).
     if not payload.get("lead_data"):
         _existing_id = (
             payload.get("_lead_id_existente")
@@ -92,6 +93,65 @@ def _run_pipeline_job(db, job) -> bool:
                     "market_intelligence": _dados.get("market_intelligence"),
                     "descricao": _dados.get("descricao", ""),
                 }
+        # Se não tem lead no BD mas tem segmento+cidade, busca via Hunter
+        if not payload.get("lead_data") and payload.get("segmento") and payload.get("cidade"):
+            from backend.services.lead_supply_storage import get_or_create_config
+            from backend.services.lead_supply_providers.hunter import create_facade
+            cfg = get_or_create_config(db, tenant_id)
+            try:
+                facade = create_facade(db, tenant_id, cfg)
+                seg = payload["segmento"]
+                cid = payload["cidade"]
+                logger.info("Hunter fallback: buscando lead %s/%s (tenant %s)", seg, cid, tenant_id)
+                candidates = asyncio.run(facade.search(
+                    segmentos=[seg],
+                    cidades=[cid],
+                    force=payload.get("force", False),
+                    force_fresh=bool(payload.get("force_fresh", False)),
+                    batch_limit=1,
+                    score_minimo=int(cfg.get("score_minimo", 0)),
+                    existing_names=[],
+                ))
+                if candidates:
+                    stored = facade.store_candidates(candidates, seg, cid)
+                    if stored:
+                        inv_id, inserted = stored[0]
+                        from backend.services.lead_supply_inventory import _ensure_lead_row, _lead_to_dict
+                        _ensure_lead_row(db, inv_id)
+                        lead_row = db.execute(
+                            text("SELECT nome, cidade, telefone, segmento, rating, dados_completos FROM leads WHERE id = :id LIMIT 1"),
+                            {"id": str(inv_id)},
+                        ).fetchone()
+                        if lead_row:
+                            payload = dict(payload)
+                            _dados = lead_row[5] if lead_row[5] else {}
+                            if isinstance(_dados, str):
+                                _dados = __import__("json").loads(_dados) if _dados else {}
+                            payload["lead_data"] = {
+                                "nome": lead_row[0],
+                                "cidade": lead_row[1],
+                                "telefone": lead_row[2],
+                                "segmento": lead_row[3],
+                                "rating": float(lead_row[4]) if lead_row[4] is not None else None,
+                                "reviews_count": int(_dados.get("reviews_count") or len(_dados.get("reviews", []))),
+                                "fotos": _dados.get("fotos", []),
+                                "website": _dados.get("website", ""),
+                                "whatsapp": _dados.get("whatsapp") or lead_row[2],
+                                "endereco": _dados.get("endereco", ""),
+                                "market_intelligence": _dados.get("market_intelligence"),
+                                "descricao": _dados.get("descricao", ""),
+                            }
+                            payload["lead_id"] = str(inv_id)
+                            logger.info("Hunter fallback: lead encontrado (%s)", lead_row[0])
+                        else:
+                            logger.warning("Hunter fallback: store ok mas lead row vazio para %s", inv_id)
+                    else:
+                        logger.warning("Hunter fallback: nenhum lead armazenado (duplicado?)")
+                else:
+                    logger.warning("Hunter fallback: zero leads encontrados para %s/%s", seg, cid)
+            except Exception as _hunter_exc:
+                logger.warning("Hunter fallback falhou: %s", _hunter_exc)
+                # Não bloqueia — pipeline pode ter lead_data via outro caminho
     state = PipelineState(
         tenant_id=job["tenant_id"],
         run_id=str(job.get("run_id") or payload.get("_run_id") or job["id"]),
