@@ -54,6 +54,12 @@ def _run_pipeline_job(db, job) -> bool:
     from backend.services import lead_supply_engine
     from backend.observability import Trace, salvar_trace
     from backend.agents.token_tracker import TokenTracker, set_tracker, log_tracking, salvar_tracking, _calcular_custo
+    from sqlalchemy.orm import sessionmaker
+    from backend.core.database import engine
+
+    # Create fresh session for pipeline to avoid transaction abort issues
+    _Session = sessionmaker(bind=engine)
+    db_pipeline = _Session()
 
     payload = job["payload"] or {}
     # Hydration: se payload tem _lead_id_existente mas lead_data vazio,
@@ -66,7 +72,7 @@ def _run_pipeline_job(db, job) -> bool:
             or str(job.get("run_id") or "")
         )
         if _existing_id:
-            lead_row = db.execute(
+            lead_row = db_pipeline.execute(
                 text(
                     "SELECT nome, cidade, telefone, segmento, rating, dados_completos "
                     "FROM leads WHERE id = :id LIMIT 1"
@@ -94,14 +100,6 @@ def _run_pipeline_job(db, job) -> bool:
                     "descricao": _dados.get("descricao", ""),
                 }
 
-    # Handle transaction abort - create fresh session for the pipeline
-    from sqlalchemy.orm import sessionmaker
-    from backend.core.database import engine
-    _Session = sessionmaker(bind=engine)
-    db_pipeline = _Session()
-    try:
-        # Use db_pipeline for all pipeline operations
-        db = db_pipeline
     state = PipelineState(
         tenant_id=job["tenant_id"],
         run_id=str(job.get("run_id") or payload.get("_run_id") or job["id"]),
@@ -215,13 +213,12 @@ def _run_pipeline_job(db, job) -> bool:
         logger.warning("[OBS] Falha ao salvar trace: %s", trace_e)
     # ── Fim observability ──
     logger.info("Job %s (pipeline_lead): %s", job["id"], "done" if success else job_status)
+    # Ensure pipeline session is closed
+    try:
+        db_pipeline.close()
+    except Exception:
+        pass
     return True
-    finally:
-        # Ensure pipeline session is closed
-        try:
-            db_pipeline.close()
-        except Exception:
-            pass
 
 
 def _run_supply_job(db, job) -> bool:
