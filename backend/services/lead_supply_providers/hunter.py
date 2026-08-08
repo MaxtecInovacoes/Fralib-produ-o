@@ -41,7 +41,7 @@ async def run_hunter_job(db: Session, payload: dict[str, Any], tenant_id: int) -
     captured = 0
     _event(db, tenant_id, "hunter", "info", f"Hunter buscando até {batch_limit} lead(s) para abastecer estoque")
 
-    from lead_providers import create_facade
+    from backend.services.lead_providers import create_facade
 
     facade = create_facade(db, tenant_id, cfg)
     provider_name = facade.provider_name
