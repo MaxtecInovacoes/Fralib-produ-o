@@ -48,6 +48,7 @@ JOB_TIPOS = _load_job_tipos()
 
 def _run_pipeline_job(db, job) -> bool:
     """pipeline_lead: roda o Manager e fecha o loop de inventário."""
+    from sqlalchemy.exc import InternalError
     from backend.core import job_queue
     from backend.agents.manager.agent import run_pipeline, PipelineState
     from backend.services import lead_supply_engine
@@ -92,6 +93,15 @@ def _run_pipeline_job(db, job) -> bool:
                     "market_intelligence": _dados.get("market_intelligence"),
                     "descricao": _dados.get("descricao", ""),
                 }
+
+    # Handle transaction abort - create fresh session for the pipeline
+    from sqlalchemy.orm import sessionmaker
+    from backend.core.database import engine
+    _Session = sessionmaker(bind=engine)
+    db_pipeline = _Session()
+    try:
+        # Use db_pipeline for all pipeline operations
+        db = db_pipeline
     state = PipelineState(
         tenant_id=job["tenant_id"],
         run_id=str(job.get("run_id") or payload.get("_run_id") or job["id"]),
@@ -174,7 +184,21 @@ def _run_pipeline_job(db, job) -> bool:
             )
         except Exception as log_e:
             logger.warning("Failed to persist pipeline_error_log: %s", log_e)
-        job_status = job_queue.mark_failure(db, job["id"], error=final.error or "pipeline falhou")
+        # Handle transaction abort with fresh session
+        try:
+            job_status = job_queue.mark_failure(db, job["id"], error=final.error or "pipeline falhou")
+        except InternalError:
+            # Transaction aborted - use fresh session
+            logger.warning("Transaction aborted in _run_pipeline_job, using fresh session for mark_failure")
+            db_fresh = _Session()
+            try:
+                job_status = job_queue.mark_failure(db_fresh, job["id"], error=final.error or "pipeline falhou")
+                db_fresh.close()
+            except Exception:
+                try:
+                    db_fresh.close()
+                except Exception:
+                    pass
     # Loop-closer: atualiza lead_inventory e re-arma o próximo tick.
     lead_supply_engine.handle_pipeline_job_finished(
         db,
@@ -192,6 +216,12 @@ def _run_pipeline_job(db, job) -> bool:
     # ── Fim observability ──
     logger.info("Job %s (pipeline_lead): %s", job["id"], "done" if success else job_status)
     return True
+    finally:
+        # Ensure pipeline session is closed
+        try:
+            db_pipeline.close()
+        except Exception:
+            pass
 
 
 def _run_supply_job(db, job) -> bool:
