@@ -20,7 +20,7 @@
 Validar nomes de colunas contra whitelist antes de usar em queries dinâmicas
 
 **Arquivos afetados:**
-- `/root/fralib/backend/core/database.py` (linhas 145, 151)
+- `/opt/fralib/backend/core/database.py` (linhas 145, 151)
 
 **Critérios de Aceitação:**
 - [ ] Criar whitelist de colunas permitidas
@@ -43,7 +43,7 @@ Validar nomes de colunas contra whitelist antes de usar em queries dinâmicas
 Substituir innerHTML por textContent nas primeiras 3 ocorrências de XSS
 
 **Arquivos afetados:**
-- `/root/fralib/frontend/dashboard.html` (linhas 1296, 1624, 1661)
+- `/opt/fralib/frontend/dashboard.html` (linhas 1296, 1624, 1661)
 
 **Critérios de Aceitação:**
 - [ ] Linha 1296: Usar textContent em vez de innerHTML
@@ -66,7 +66,7 @@ Substituir innerHTML por textContent nas primeiras 3 ocorrências de XSS
 Substituir innerHTML por textContent nas próximas 3 ocorrências de XSS
 
 **Arquivos afetados:**
-- `/root/fralib/frontend/dashboard.html` (linhas 1699, 1730, 1739)
+- `/opt/fralib/frontend/dashboard.html` (linhas 1699, 1730, 1739)
 
 **Critérios de Aceitação:**
 - [ ] Linha 1699: Usar textContent em vez de innerHTML
@@ -89,7 +89,7 @@ Substituir innerHTML por textContent nas próximas 3 ocorrências de XSS
 Substituir innerHTML por textContent nas últimas 3 ocorrências de XSS
 
 **Arquivos afetados:**
-- `/root/fralib/frontend/dashboard.html` (linhas 1810, 1832, 2307)
+- `/opt/fralib/frontend/dashboard.html` (linhas 1810, 1832, 2307)
 
 **Critérios de Aceitação:**
 - [ ] Linha 1810: Usar textContent em vez de innerHTML
@@ -114,10 +114,10 @@ Substituir innerHTML por textContent nas últimas 3 ocorrências de XSS
 Instalar slowapi e adicionar rate limiting em endpoints críticos
 
 **Arquivos afetados:**
-- `/root/fralib/backend/requirements.txt`
-- `/root/fralib/backend/endpoints/auth_endpoints.py`
-- `/root/fralib/backend/endpoints/credits_endpoints.py`
-- `/root/fralib/server.py`
+- `/opt/fralib/backend/requirements.txt`
+- `/opt/fralib/backend/endpoints/auth_endpoints.py`
+- `/opt/fralib/backend/endpoints/credits_endpoints.py`
+- `/opt/fralib/server.py`
 
 **Critérios de Aceitação:**
 - [ ] Instalar slowapi: `pip install slowapi`
@@ -141,9 +141,9 @@ Instalar slowapi e adicionar rate limiting em endpoints críticos
 Adicionar tokens CSRF em todos endpoints POST/PUT/DELETE
 
 **Arquivos afetados:**
-- `/root/fralib/backend/requirements.txt`
-- `/root/fralib/server.py`
-- `/root/fralib/frontend/js/csrf-helper.js` (já existe, validar)
+- `/opt/fralib/backend/requirements.txt`
+- `/opt/fralib/server.py`
+- `/opt/fralib/frontend/js/csrf-helper.js` (já existe, validar)
 
 **Critérios de Aceitação:**
 - [ ] Instalar fastapi-csrf-protect: `pip install fastapi-csrf-protect`
@@ -166,7 +166,7 @@ Adicionar tokens CSRF em todos endpoints POST/PUT/DELETE
 Remover email dos logs, logar apenas user_id
 
 **Arquivos afetados:**
-- `/root/fralib/backend/endpoints/pipeline_endpoints.py` (linha 52)
+- `/opt/fralib/backend/endpoints/pipeline_endpoints.py` (linha 52)
 
 **Critérios de Aceitação:**
 - [ ] Substituir `usuario["email"]` por `usuario["id"]`
@@ -188,8 +188,8 @@ Remover email dos logs, logar apenas user_id
 Mover estado do pipeline de variável global para banco de dados
 
 **Arquivos afetados:**
-- `/root/fralib/backend/endpoints/pipeline_endpoints.py` (linhas 14-18)
-- `/root/fralib/backend/core/database.py` (adicionar tabela pipeline_state)
+- `/opt/fralib/backend/endpoints/pipeline_endpoints.py` (linhas 14-18)
+- `/opt/fralib/backend/core/database.py` (adicionar tabela pipeline_state)
 
 **Critérios de Aceitação:**
 - [ ] Criar tabela `pipeline_state` (tenant_id, rodando, pausado, config, updated_at)
@@ -238,7 +238,7 @@ Instalar Nginx e configurar redirect HTTP→HTTPS
 Adicionar CSP headers para prevenir XSS externo
 
 **Arquivos afetados:**
-- `/root/fralib/server.py`
+- `/opt/fralib/server.py`
 
 **Critérios de Aceitação:**
 - [ ] Adicionar middleware CSP
@@ -260,9 +260,9 @@ Adicionar CSP headers para prevenir XSS externo
 Configurar Alembic para versionamento de schema
 
 **Arquivos afetados:**
-- `/root/fralib/alembic.ini` (novo)
-- `/root/fralib/alembic/` (pasta nova)
-- `/root/fralib/backend/requirements.txt`
+- `/opt/fralib/alembic.ini` (novo)
+- `/opt/fralib/alembic/` (pasta nova)
+- `/opt/fralib/backend/requirements.txt`
 
 **Critérios de Aceitação:**
 - [ ] Instalar Alembic: `pip install alembic`
@@ -286,7 +286,7 @@ Configurar Alembic para versionamento de schema
 Adicionar salt rounds explícito no bcrypt
 
 **Arquivos afetados:**
-- `/root/fralib/backend/endpoints/auth_endpoints.py` (linha 28)
+- `/opt/fralib/backend/endpoints/auth_endpoints.py` (linha 28)
 
 **Critérios de Aceitação:**
 - [ ] Adicionar `bcrypt.gensalt(rounds=12)` ao criar senha
@@ -312,11 +312,11 @@ Adicionar salt rounds explícito no bcrypt
 Instalar pytest, criar estrutura de pastas, configurar fixtures
 
 **Arquivos afetados:**
-- `/root/fralib/backend/requirements.txt`
-- `/root/fralib/tests/conftest.py` (novo)
-- `/root/fralib/tests/unit/` (pasta nova)
-- `/root/fralib/tests/integration/` (pasta nova)
-- `/root/fralib/tests/e2e/` (pasta nova)
+- `/opt/fralib/backend/requirements.txt`
+- `/opt/fralib/tests/conftest.py` (novo)
+- `/opt/fralib/tests/unit/` (pasta nova)
+- `/opt/fralib/tests/integration/` (pasta nova)
+- `/opt/fralib/tests/e2e/` (pasta nova)
 
 **Critérios de Aceitação:**
 - [ ] Instalar: `pip install pytest pytest-asyncio httpx`
@@ -338,7 +338,7 @@ Instalar pytest, criar estrutura de pastas, configurar fixtures
 Escrever testes unitários para auth.py e auth_endpoints.py
 
 **Arquivos afetados:**
-- `/root/fralib/tests/unit/test_auth.py` (novo)
+- `/opt/fralib/tests/unit/test_auth.py` (novo)
 
 **Critérios de Aceitação:**
 - [ ] Testar create_access_token (token válido)
@@ -361,7 +361,7 @@ Escrever testes unitários para auth.py e auth_endpoints.py
 Escrever testes unitários para database.py
 
 **Arquivos afetados:**
-- `/root/fralib/tests/unit/test_database.py` (novo)
+- `/opt/fralib/tests/unit/test_database.py` (novo)
 
 **Critérios de Aceitação:**
 - [ ] Testar criar_schema_tenant (schema criado)
@@ -383,7 +383,7 @@ Escrever testes unitários para database.py
 Escrever testes unitários para utils críticos (brain, memory, validation_enforcer)
 
 **Arquivos afetados:**
-- `/root/fralib/tests/unit/test_utils.py` (novo)
+- `/opt/fralib/tests/unit/test_utils.py` (novo)
 
 **Critérios de Aceitação:**
 - [ ] Testar brain.py (funções principais)
@@ -407,7 +407,7 @@ Escrever testes unitários para utils críticos (brain, memory, validation_enfor
 Testar endpoints de autenticação end-to-end
 
 **Arquivos afetados:**
-- `/root/fralib/tests/integration/test_api_auth.py` (novo)
+- `/opt/fralib/tests/integration/test_api_auth.py` (novo)
 
 **Critérios de Aceitação:**
 - [ ] Testar POST /api/auth/login (sucesso)
@@ -429,7 +429,7 @@ Testar endpoints de autenticação end-to-end
 Testar endpoints do pipeline end-to-end
 
 **Arquivos afetados:**
-- `/root/fralib/tests/integration/test_api_pipeline.py` (novo)
+- `/opt/fralib/tests/integration/test_api_pipeline.py` (novo)
 
 **Critérios de Aceitação:**
 - [ ] Testar POST /api/pipeline/iniciar (sucesso)
@@ -452,8 +452,8 @@ Testar endpoints do pipeline end-to-end
 Testar fluxo completo de login no navegador
 
 **Arquivos afetados:**
-- `/root/fralib/tests/e2e/test_login_flow.py` (novo)
-- `/root/fralib/backend/requirements.txt` (adicionar playwright)
+- `/opt/fralib/tests/e2e/test_login_flow.py` (novo)
+- `/opt/fralib/backend/requirements.txt` (adicionar playwright)
 
 **Critérios de Aceitação:**
 - [ ] Instalar Playwright: `pip install playwright && playwright install`
@@ -476,7 +476,7 @@ Testar fluxo completo de login no navegador
 Testar fluxo completo do pipeline no navegador
 
 **Arquivos afetados:**
-- `/root/fralib/tests/e2e/test_pipeline_flow.py` (novo)
+- `/opt/fralib/tests/e2e/test_pipeline_flow.py` (novo)
 
 **Critérios de Aceitação:**
 - [ ] Testar login
@@ -503,10 +503,10 @@ Testar fluxo completo do pipeline no navegador
 Criar Web Components reutilizáveis (sidebar, header, stats-card)
 
 **Arquivos afetados:**
-- `/root/fralib/frontend/components/sidebar.js` (novo)
-- `/root/fralib/frontend/components/header.js` (novo)
-- `/root/fralib/frontend/components/stats-card.js` (novo)
-- `/root/fralib/frontend/components/pipeline-controls.js` (novo)
+- `/opt/fralib/frontend/components/sidebar.js` (novo)
+- `/opt/fralib/frontend/components/header.js` (novo)
+- `/opt/fralib/frontend/components/stats-card.js` (novo)
+- `/opt/fralib/frontend/components/pipeline-controls.js` (novo)
 
 **Critérios de Aceitação:**
 - [ ] Criar `<fl-sidebar>` component
@@ -530,10 +530,10 @@ Criar Web Components reutilizáveis (sidebar, header, stats-card)
 Reduzir admin.html de 3.343 para < 500 linhas usando componentes
 
 **Arquivos afetados:**
-- `/root/fralib/frontend/admin.html`
-- `/root/fralib/frontend/modules/admin.js` (novo)
-- `/root/fralib/frontend/modules/pipeline.js` (novo)
-- `/root/fralib/frontend/modules/credits.js` (novo)
+- `/opt/fralib/frontend/admin.html`
+- `/opt/fralib/frontend/modules/admin.js` (novo)
+- `/opt/fralib/frontend/modules/pipeline.js` (novo)
+- `/opt/fralib/frontend/modules/credits.js` (novo)
 
 **Critérios de Aceitação:**
 - [ ] Substituir HTML inline por Web Components
@@ -558,9 +558,9 @@ Reduzir admin.html de 3.343 para < 500 linhas usando componentes
 Reduzir dashboard.html de 3.200 para < 500 linhas usando componentes
 
 **Arquivos afetados:**
-- `/root/fralib/frontend/dashboard.html`
-- `/root/fralib/frontend/modules/dashboard.js` (novo)
-- `/root/fralib/frontend/modules/sse-client.js` (novo)
+- `/opt/fralib/frontend/dashboard.html`
+- `/opt/fralib/frontend/modules/dashboard.js` (novo)
+- `/opt/fralib/frontend/modules/sse-client.js` (novo)
 
 **Critérios de Aceitação:**
 - [ ] Substituir HTML inline por Web Components
@@ -585,9 +585,9 @@ Reduzir dashboard.html de 3.200 para < 500 linhas usando componentes
 Separar CSS em arquivos modulares (design-system, components, layouts)
 
 **Arquivos afetados:**
-- `/root/fralib/frontend/css/design-system.css` (novo)
-- `/root/fralib/frontend/css/components.css` (novo)
-- `/root/fralib/frontend/css/layouts.css` (novo)
+- `/opt/fralib/frontend/css/design-system.css` (novo)
+- `/opt/fralib/frontend/css/components.css` (novo)
+- `/opt/fralib/frontend/css/layouts.css` (novo)
 
 **Critérios de Aceitação:**
 - [ ] Extrair variáveis CSS para design-system.css

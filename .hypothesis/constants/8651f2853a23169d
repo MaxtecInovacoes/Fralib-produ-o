@@ -1,0 +1,4 @@
+# file: C:\fralib\backend\endpoints\credits\webhook_cakto.py
+# hypothesis_version: 6.156.6
+
+[400, '/api/credits', '/webhook/cakto', ':', 'CAKTO_WEBHOOK_SECRET', 'Webhook invalido', 'affiliate', 'aid', 'aname', 'cakto_chargeback', 'cakto_refund', 'chargeback', 'cmax', 'commission_value', 'commissions', 'credits-webhook', 'customer', 'customer_email', 'cvalue', 'data', 'duplicate', 'e', 'email', 'ev', 'event', 'evento', 'external_reference', 'fralib', 'id', 'name', 'oid', 'ok', 'order_id', 'payload', 'payment', 'pix', 'pix_gerado', 'plano', 'purchase_approved', 'purchase_refused', 'recarga', 'refId', 'refund', 'starter', 'status', 'sub', 'subscription', 'subscription_created', 'subscription_id', 'subscription_renewed', 'uid', 'user_id', 'user_not_found', 'utf-8', 'x-cakto-hash', '{}']

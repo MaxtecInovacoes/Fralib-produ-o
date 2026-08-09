@@ -1,0 +1,4 @@
+# file: C:\fralib\backend\whatsapp\lead_identity.py
+# hypothesis_version: 6.156.6
+
+['55', '9', '@', '\\D', '^fralib_user_(\\d+)$', 'jid', 'lid', 'postgres://', 'postgresql://', 'uid', 'variantes']

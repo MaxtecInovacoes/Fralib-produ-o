@@ -1,0 +1,5 @@
+[
+  "test_cakto_webhook_idempotency.py::TestReconciliationAuthFail::test_aborts_when_cakto_not_authenticated",
+  "test_cakto_webhook_idempotency.py::TestReconciliationSkipsExisting::test_skips_already_processed_orders",
+  "test_cakto_webhook_idempotency.py::TestWebhookIdempotency::test_duplicate_returns_status_duplicate"
+]

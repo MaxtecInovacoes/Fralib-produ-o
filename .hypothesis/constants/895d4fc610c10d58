@@ -1,0 +1,4 @@
+# file: C:\fralib\backend\endpoints\agentes_endpoints.py
+# hypothesis_version: 6.156.6
+
+[0.05, 0.2, 400, 404, 500, 502, '/api/agentes', '/sales-axes', '/sales-axes/toggle', '/train', '/training', '/training/{rule_id}', 'Entendido.', 'Mensagem vazia', 'Regra não encontrada', 'agentes', 'ax', 'axes', 'axis', 'created_at', 'default_weight', 'en', 'enabled', 'id', 'label', 'ok', 'payload not a dict', 'reply', 'rid', 'rule', 'rule_text', 'rules', 'sales_axis', 'scope', 'tenant_id', 'tid', 'uid', 'weight', '{', '}', '…']

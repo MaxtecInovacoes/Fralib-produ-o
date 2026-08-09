@@ -1,0 +1,4 @@
+# file: C:\fralib\backend\agents\builder\agent.py
+# hypothesis_version: 6.156.6
+
+[120, 500, 'OPENUI_SERVICE_URL', 'answer', 'attempts', 'business_name', 'cidade', 'content', 'ctas', 'design_system', 'design_tokens', 'designerPRD', 'faqs', 'google_fonts_url', 'hero', 'html', 'input_tokens', 'layout_dna', 'model', 'motion_directives', 'name', 'openui', 'output_tokens', 'paleta', 'question', 'repair_context', 'sections', 'segmento', 'seo_keywords', 'success', 'title', 'usage', 'usar_llm']

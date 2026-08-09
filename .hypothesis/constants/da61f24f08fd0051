@@ -1,0 +1,4 @@
+# file: C:\fralib\backend\agents\llm\direct.py
+# hypothesis_version: 6.156.6
+
+[0.7, 90.0, 300.0, 200, 400, 500, 4000, '/v1/?$', 'AGENT_MODEL_MAP', 'ANTHROPIC_API_KEY', 'ANTHROPIC_BASE_URL', 'Authorization', 'Content-Type', 'FRALIB_DEBUG_CACHE', 'FRALIB_DEFAULT_MODEL', 'LLM_API_KEY', 'LLM_BASE_URL', 'LLM_MODEL', 'LLM_PROVIDER', '\\{.*\\}', 'agent', 'anthropic', 'application/json', 'choices', 'claude-sonnet-4-6', 'completion_tokens', 'content', 'fralib.llm.direct', 'input_tokens', 'max_tokens', 'message', 'messages', 'model', 'openai', 'output_tokens', 'prompt_tokens', 'provider', 'role', 'system', 'system_len', 'temperature', 'text', 'text_preview', 'type', 'usage', 'user', 'user_len', 'x-api-key']

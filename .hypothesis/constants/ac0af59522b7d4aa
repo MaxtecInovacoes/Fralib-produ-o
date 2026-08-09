@@ -1,0 +1,4 @@
+# file: C:\fralib\backend\whatsapp\rate_limiter.py
+# hypothesis_version: 6.156.6
+
+[2.0, 4.0, 30.0, 60.0, 300.0]

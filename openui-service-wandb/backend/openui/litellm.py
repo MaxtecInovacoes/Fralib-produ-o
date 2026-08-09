@@ -7,24 +7,6 @@ from .logs import logger
 
 def generate_config():
     models = []
-    if "GEMINI_API_KEY" in os.environ:
-        models.extend(
-            [
-                {
-                    "model_name": "gemini-1.5-flash",
-                    "litellm_params": {
-                        "model": "gemini/gemini-1.5-flash-latest",
-                    },
-                },
-                {
-                    "model_name": "gemini-1.5-pro",
-                    "litellm_params": {
-                        "model": "gemini/gemini-1.5-pro-latest",
-                    },
-                },
-            ]
-        )
-
     if "ANTHROPIC_API_KEY" in os.environ:
         models.extend(
             [

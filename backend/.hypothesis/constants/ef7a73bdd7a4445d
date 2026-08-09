@@ -1,0 +1,4 @@
+# file: C:\fralib\backend\core\config.py
+# hypothesis_version: 6.156.6
+
+[',', '/tmp/ds-fallback', '/tmp/fralib_builder', '2000000', '55', '60', 'DATABASE_URL', 'FRALIB_DOMAIN', 'FRALIB_DS_DIR', 'FRALIB_ENV', 'FRALIB_SITES_DIR', 'FRALIB_SITES_ROOT', 'FRALIB_SITE_DOMAIN', 'INFO', 'LOG_FILE', 'LOG_LEVEL', 'REDIS_URL', 'SUPERADMIN_EMAIL', 'WA_PHONE_PREFIX', 'api.claude.ai', 'api.deepseek.com', 'api.groq.com', 'api.kpalabz.com', 'api.moonshot.cn', 'api.openai.com', 'checkpoints', 'dev', 'logs/fralib.log', 'openai.azure.com', 'openrouter.ai', 'prod']

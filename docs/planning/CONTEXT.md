@@ -70,8 +70,8 @@ GET  /api/pipeline/status — status atual
 GET  /api/logs/stream — SSE logs em tempo real
 
 ## Caches
-- Jina: /root/fralib/backend/agents/jina_cache/jina_{hash}.txt
-- Unsplash: /root/fralib/backend/agents/unsplash_cache/
+- Jina: /opt/fralib/backend/agents/jina_cache/jina_{hash}.txt
+- Unsplash: /opt/fralib/backend/agents/unsplash_cache/
 - Keywords: tabela keyword_cache no PostgreSQL (30 dias)
 
 ## Problemas conhecidos resolvidos

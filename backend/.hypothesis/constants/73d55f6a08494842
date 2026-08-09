@@ -1,0 +1,4 @@
+# file: C:\fralib\backend\whatsapp\connection_tracker.py
+# hypothesis_version: 6.156.6
+
+[200, '..', '.env', 'MEOWHATS_KEY', 'MEOWHATS_URL', 'X-API-Key', 'amplify', 'authenticated', 'close', 'connected', 'education', 'feedback', 'followup1', 'followup2', 'followup_24h', 'followup_72h', 'ganhos', 'handoff', 'hook', 'intro', 'link', 'lost', 'negociacao', 'negotiate', 'negotiation', 'offer', 'open', 'opt_out', 'pain', 'perdidos', 'price', 'proof', 'qualificado', 'qualificados', 'qualify', 'rapport', 'reveal', 'scheduled', 'status', 'tease', 'urgency', 'value', 'whatsapp_listener', 'won']

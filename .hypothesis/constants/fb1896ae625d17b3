@@ -1,0 +1,4 @@
+# file: C:\fralib\backend\endpoints\health_endpoints.py
+# hypothesis_version: 6.156.6
+
+[1.5, 5.0, 200, 300, 500, 503, 1000, 86400, '/', '/api', '/csrf-token', '/health', '/health/live', '/health/ready', '2.0.0', 'ANTHROPIC_API_KEY', 'ANTHROPIC_BASE_URL', 'Authorization', 'Conectado', 'Configurada', 'DATABASE_URL', 'FERNET_KEY', 'FRALIB_ENV', 'GROQ_API_KEY', 'JWT_SECRET_KEY', 'MEOWHATS_KEY', 'MEOWHATS_URL', 'OPENAI_API_KEY', 'REDIS_URL', 'SELECT 1', 'Todas configuradas', 'X-API-Key', 'alive', 'anthropic', 'branch', 'code', 'commit', 'csrf_token', 'database', 'db', 'degraded', 'dev', 'env_vars', 'error', 'failed_24h', 'fernet_key', 'fralib_csrf', 'groq', 'health', 'healthy', 'latency_ms', 'lax', 'litellm', 'llm_providers', 'meowhats', 'message', 'ok', 'openai', 'pending', 'prod', 'ready', 'redis', 'running', 'skipped', 'stale_running', 'status', 'unhealthy', 'unknown', 'version', 'warning', 'worker_queue']

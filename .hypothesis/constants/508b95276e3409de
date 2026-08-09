@@ -1,0 +1,4 @@
+# file: C:\fralib\backend\utils\google_local_scraper.py
+# hypothesis_version: 6.156.6
+
+[0.8, 160, 900, 1000, 1400, 15000, 90000, ',', ', ', '--no-sandbox', '.', '/', '/maps/place/', '; ', 'America/Sao_Paulo', '\\d', 'address', 'addressLocality', 'addressRegion', 'aggregateRating', 'ariaLabel', 'atributos', 'author', 'autor', 'categoria', 'cidade', 'closes', 'coleta falhou: %s', 'data', 'datePublished', 'dayOfWeek', 'description', 'div[role="article"]', 'domcontentloaded', 'endereco', 'faixa_preco', 'geo', 'height', 'horarios', 'href', 'http', 'http://schema.org/', 'https://', 'latitude', 'longitude', 'maps.google', 'maps_url', 'name', 'nome', 'opens', 'place %d falhou: %s', 'place_id', 'places: %d', 'priceRange', 'pt-BR', 'rating', 'ratingValue', 'review', 'reviewCount', 'reviewRating', 'reviews', 'segmento', 'streetAddress', 'telefone', 'telephone', 'text', 'texto', 'total_avaliacoes', 'url', 'website', 'whatsapp', 'width']

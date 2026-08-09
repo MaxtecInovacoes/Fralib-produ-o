@@ -1,0 +1,4 @@
+# file: C:\fralib\backend\agents\llm\cache.py
+# hypothesis_version: 6.156.6
+
+[86400, '86400', 'FRALIB_CACHE_TTL', 'REDIS_URL', 'llm:*', 'total_keys', 'ttl_secs', 'utf-8']

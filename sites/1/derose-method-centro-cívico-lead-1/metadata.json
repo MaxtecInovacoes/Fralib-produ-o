@@ -1,0 +1,25 @@
+{
+  "tenant_id": 1,
+  "lead_id": "lead-1",
+  "slug": "derose-method-centro-cívico",
+  "lead_name": "DeRose Method Centro Cívico",
+  "cidade": "Curitiba",
+  "segmento": "academia",
+  "quality_score": 86,
+  "deployed_at": "2026-07-14T21:00:58.448604",
+  "size_bytes": 3706,
+  "variacao": {
+    "sub_nicho": "default",
+    "template": "corporate",
+    "hero_type": "hero-split",
+    "sections": [
+      "hero",
+      "sobre",
+      "servicos",
+      "depoimentos",
+      "faq",
+      "contato",
+      "footer"
+    ]
+  }
+}

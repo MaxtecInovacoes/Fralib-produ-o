@@ -1,0 +1,4 @@
+# file: C:\fralib\backend\agents\sdr_langgraph\__init__.py
+# hypothesis_version: 6.156.6
+
+['Aguardar resposta', 'CLOSER_HUMANO', 'Confirmar decisão', 'Enviar proposta', 'Iniciar onboarding', 'Lead opt-out', 'MEOWHATS_KEY', 'MEOWHATS_URL', 'Tratar objeção', 'abertura', 'apresentacao', 'cidade', 'close', 'db_session', 'default', 'fechamento', 'followup', 'greeting', 'hook', 'idle', 'lost', 'meeting', 'needs_human', 'nome', 'objecoes', 'objection', 'offer', 'opt_out', 'other', 'pos_venda', 'qualificacao', 'qualify', 'qualifying', 'sdr-langgraph-shim', 'segmento', 'site_url', 'state', 'tenant_id', 'text', 'tier', 'variante']

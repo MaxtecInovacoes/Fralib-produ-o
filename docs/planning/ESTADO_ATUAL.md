@@ -37,4 +37,4 @@ Pendente testar: Liam + Liz + Deploy + Franz no reprocessar.
 
 ## Como Retomar
 Diga "lê o estado atual" no início de qualquer sessão fralib.
-Arquivo: /root/fralib/docs/ESTADO_ATUAL.md
+Arquivo: /opt/fralib/docs/ESTADO_ATUAL.md

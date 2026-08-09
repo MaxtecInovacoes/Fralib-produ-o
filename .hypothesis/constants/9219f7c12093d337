@@ -1,0 +1,4 @@
+# file: C:\fralib\backend\services\design_feedback_engine.py
+# hypothesis_version: 6.156.6
+
+[0.0, 5.0, 10.0, 100, 500, 'approved', 'arch', 'avg_score', 'count', 'design_feedback', 'fb', 'lead', 'lim', 'min_score', 'notes', 'pal', 'score', 'seg']

@@ -1,0 +1,4 @@
+# file: C:\fralib\backend\endpoints\agentes_endpoints.py
+# hypothesis_version: 6.156.6
+
+[0.2, 400, 404, 500, 502, '/api/agentes', '/train', '/training', '/training/{rule_id}', 'Entendido.', 'Mensagem vazia', 'Regra não encontrada', 'agentes', 'created_at', 'id', 'ok', 'payload not a dict', 'reply', 'rid', 'rule', 'rule_text', 'rules', 'scope', 'tenant_id', 'uid', '{', '}', '…']

@@ -1,0 +1,4 @@
+# file: C:\fralib\backend\whatsapp\sender.py
+# hypothesis_version: 6.156.6
+
+[200, 403, 429, 440, 500, 503, 'X-API-Key', 'account.{0,5}banned', 'banned', 'body_excerpt', 'code="131047"', 'code="131056"', 'code="429"', 'code="440"', 'composing', 'critical', 'detail', 'error', 'event_type', 'forbidden', 'jid', 'ok', 'part_index', 'quality.{0,5}rating', 'rate_limited', 'restricted', 'service_unavailable', 'severity', 'spam.{0,5}detected', 'status_code', 'temporarily banned', 'text', 'type', 'user_id', 'warn']

@@ -3,6 +3,8 @@
   "description": "Sistema de geração de sites via agentes inteligentes e vendas automáticas no WhatsApp",
   "requestFramePermissions": [],
   "majorCapabilities": [
-    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+    "MAJOR_CAPABILITY_LLM_ROUTER_ANTHROPIC_DEPLOYFLOW",
+    "MAJOR_CAPABILITY_AGENT_PIPELINE_11_FASES",
+    "MAJOR_CAPABILITY_GOOGLE_MAPS_SCRAPING_GOSOM"
   ]
 }

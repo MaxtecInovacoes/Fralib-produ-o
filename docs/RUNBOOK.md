@@ -118,7 +118,7 @@ curl -s http://localhost:7878/v1/models
 ```
 
 ### Se persiste
-1. Verificar env em `/root/fralib/openui-service-wandb/.env` (especialmente `ANTHROPIC_API_KEY` e `ANTHROPIC_BASE_URL`)
+1. Verificar env em `/opt/fralib/openui-wandb/backend/.env` (especialmente `ANTHROPIC_API_KEY` e `ANTHROPIC_BASE_URL`)
 2. Verificar log: `journalctl -u fralib-openui -f` durante 30s
 3. Se `MODULE_NOT_FOUND`: `systemctl restart fralib-openui`
 

@@ -1,0 +1,4 @@
+# file: C:\fralib\backend\core\proxy_models.py
+# hypothesis_version: 6.156.6
+
+[', ', 'Opus 4-6', 'Opus 4-7', 'anthropic', 'claude-3-5-sonnet', 'claude-haiku-4-5', 'claude-opus-4-6', 'claude-opus-4-7', 'claude-opus-4-8', 'claude-sonnet-4-6', 'deepseek-v4-flash', 'fast', 'gemini-2.5-flash', 'gemini-3.5-flash', 'gpt-5.4-mini', 'heavy', 'id', 'label', 'light', 'medium', 'tier']

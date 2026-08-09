@@ -9,7 +9,7 @@
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                          VPS NOVA                                │
-│                    100.124.56.36 (Tailscale)                     │
+│                    104.243.41.166 (Tailscale)                     │
 │                  app.seunegociofralib.site                       │
 │                                                                  │
 │  ┌─────────────────────────┐    ┌─────────────────────────┐     │
@@ -17,8 +17,8 @@
 │  │  app.seunegociofralib. │◀──▶│  fralib-openui.service  │     │
 │  │  :80/:443 → app:8000   │    │  (Python :7878)          │     │
 │  │                        │    │                         │     │
-│  │  /sites/<tenant>/...   │    │  /root/fralib/          │     │
-│  │  → volumes/fralib-...  │    │  openui-service-wandb/   │     │
+│  │  /sites/<tenant>/...   │    │  /opt/fralib/          │     │
+│  │  → volumes/fralib-...  │    │  openui-wandb/   │     │
 │  └─────────────────────────┘    └─────────────────────────┘     │
 │              │                                │                 │
 │              ▼                                ▼                 │
@@ -103,12 +103,12 @@ After=network.target
 [Service]
 Type=simple
 User=root
-WorkingDirectory=/root/fralib/openui-service-wandb
+WorkingDirectory=/opt/fralib/openui-wandb
 ExecStart=/root/.local/bin/uv run backend/openui/main.py
 Restart=always
 RestartSec=5
 Environment=NODE_ENV=production
-EnvironmentFile=/root/fralib/openui-service-wandb/backend/.env
+EnvironmentFile=/opt/fralib/openui-wandb/backend/.env
 
 StandardOutput=journal
 StandardError=journal
@@ -177,8 +177,8 @@ server {
 | `/opt/fralib/backend/` | Código Python (montado em `/app/backend` nos workers) |
 | `/opt/fralib/.env` | Variáveis de ambiente (chaves, URLs) |
 | `/opt/fralib/docker-compose.prod.yml` | Orquestração Docker |
-| `/root/fralib/openui-service-wandb/` | OpenUI Python (wandb/openui + LiteLLM, servido por systemd) |
-| `/root/fralib/openui-service-wandb/backend/.env` | Env vars do OpenUI |
+| `/opt/fralib/openui-wandb/` | OpenUI Python (wandb/openui + LiteLLM, servido por systemd) |
+| `/opt/fralib/openui-wandb/backend/.env` | Env vars do OpenUI |
 | `/var/lib/docker/volumes/fralib_fralib-sites/_data/` | Sites gerados (acessíveis via /sites/) |
 | `/var/lib/docker/volumes/fralib_fralib-postgres/_data/` | Dados do Postgres |
 | `/var/lib/docker/volumes/fralib_fralib-logs/_data/` | Logs da app |
@@ -210,7 +210,7 @@ SKIP_V11_PROTECTION=1 git commit -m "fix: timeout 600s"
 git push origin master
 
 # 3. VPS: pull + rebuild + restart
-ssh -i ~/.ssh/id_ed25519 root@100.124.56.36
+ssh -i ~/.ssh/id_ed25519 root@104.243.41.166
 cd /opt/fralib
 git pull
 docker compose -f docker-compose.prod.yml build app worker-pipeline worker-cron worker-franz
@@ -221,11 +221,11 @@ systemctl restart fralib-openui
 ### Mudança em env vars
 
 ```bash
-ssh -i ~/.ssh/id_ed25519 root@100.124.56.36
+ssh -i ~/.ssh/id_ed25519 root@104.243.41.166
 
 # Editar .env
 vi /opt/fralib/.env
-vi /root/fralib/openui-service-wandb/backend/.env
+vi /opt/fralib/openui-wandb/backend/.env
 
 # Rebuild containers para pegar novas vars
 cd /opt/fralib && docker compose -f docker-compose.prod.yml build app worker-pipeline worker-cron worker-franz
@@ -303,7 +303,7 @@ ORDER BY user_id, status
 ### Backup do projeto
 
 ```bash
-ssh -i ~/.ssh/id_ed25519 root@100.124.56.36
+ssh -i ~/.ssh/id_ed25519 root@104.243.41.166
 cd /opt/fralib
 tar -czf /tmp/fralib_backup_$(date +%Y%m%d_%H%M%S).tar.gz \
   --exclude='__pycache__' \
@@ -312,7 +312,7 @@ tar -czf /tmp/fralib_backup_$(date +%Y%m%d_%H%M%S).tar.gz \
   backend/ docker-compose.prod.yml .env worker.py server.py
 
 # Backup do OpenUI
-tar -czf /tmp/openui_backup_$(date +%Y%m%d_%H%M%S).tar.gz /root/fralib/openui-service-wandb/
+tar -czf /tmp/openui_backup_$(date +%Y%m%d_%H%M%S).tar.gz /opt/fralib/openui-wandb/
 
 # Backup do banco
 docker exec fralib-postgres-1 pg_dump -U fralib_user -d fralib_db | \
@@ -354,7 +354,7 @@ gunzip -c /tmp/fralib_db_*.sql.gz | \
 
 ### Tailscale (acesso SSH)
 
-- **IP VPS:** 100.124.56.36
+- **IP VPS:** 104.243.41.166
 - **SSH público:** bloqueado (firewall Hostinger)
 - **SSH key:** `~/.ssh/id_ed25519` (pública em `/root/.ssh/authorized_keys`)
 

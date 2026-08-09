@@ -1,0 +1,4 @@
+# file: C:\fralib\backend\core\jwt_config.py
+# hypothesis_version: 6.156.6
+
+['HS256', 'JWT_SECRET_KEY', 'utf-8']

@@ -1,0 +1,4 @@
+# file: C:\fralib\backend\services\sdr_settings.py
+# hypothesis_version: 6.156.6
+
+['enabled', 'max_per_lead_per_day', 'saved', 'stub', 'system_prompt']

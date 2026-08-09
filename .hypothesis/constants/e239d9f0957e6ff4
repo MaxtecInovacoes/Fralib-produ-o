@@ -1,0 +1,4 @@
+# file: C:\fralib\backend\core\confidence.py
+# hypothesis_version: 6.156.6
+
+[0.1, 0.7, 1.0, 8.5, '_', 'archetype', 'confidence', 'delta', 'id', 'inc', 'k', 'kind', 'layout_family', 'max', 'minc', 'pattern_id', 'project_id', 'quality_confirmed', 'runs', 's', 'spec', 'trusted', 'unknown', 'vision_score']

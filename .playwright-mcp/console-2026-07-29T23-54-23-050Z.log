@@ -1,0 +1,11 @@
+[     635ms] [WARNING] An iframe which has both allow-scripts and allow-same-origin for its sandbox attribute can escape its sandboxing. @ about:blank:0
+[     650ms] [LOG] [PixelOffice] iniciando animacao @ https://seunegociofralib.site/admin.html:2263
+[     953ms] [ERROR] Failed to load resource: the server responded with a status of 403 () @ https://seunegociofralib.site/api/auth/me:0
+[     957ms] [ERROR] [Auth] Status: 403  @ https://seunegociofralib.site/admin.html:3142
+[     957ms] [WARNING] [Auth] Sessao invalida, redirecionando para login @ https://seunegociofralib.site/admin.html:3145
+[     965ms] [VERBOSE] [DOM] Password field is not contained in a form: (More info: https://goo.gl/9p2vKq) %o @ https://seunegociofralib.site/admin.html:0
+[     968ms] [VERBOSE] [DOM] Password field is not contained in a form: (More info: https://goo.gl/9p2vKq) %o @ https://seunegociofralib.site/admin.html:0
+[     968ms] [VERBOSE] [DOM] Password field is not contained in a form: (More info: https://goo.gl/9p2vKq) %o @ https://seunegociofralib.site/admin.html:0
+[     981ms] [ERROR] Failed to load resource: the server responded with a status of 403 () @ https://seunegociofralib.site/api/auth/me:0
+[   43622ms] [ERROR] Failed to load resource: the server responded with a status of 401 () @ https://seunegociofralib.site/api/auth/login:0
+[  274430ms] [ERROR] Failed to load resource: the server responded with a status of 401 () @ https://seunegociofralib.site/api/auth/login:0

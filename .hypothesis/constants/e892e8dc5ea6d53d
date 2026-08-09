@@ -1,0 +1,4 @@
+# file: C:\fralib\backend\agents\builder\quality_gate_v2\__init__.py
+# hypothesis_version: 6.156.6
+
+[0.0, 7.5, 8.5, 900, 1440, 'accessibility', 'archetype', 'changed', 'components', 'critical', 'description', 'design_system', 'design_tokens', 'desktop', 'entities', 'hero', 'icp', 'journey', 'keywords', 'kind', 'layout_dna', 'layout_family', 'mobile', 'motion', 'motion_directives', 'name', 'narrative', 'narrative_refined', 'paleta', 'palette', 'performance', 'positioning', 'project_id', 'promise', 'rationale', 'schema', 'schema_org', 'sections', 'seo_keywords', 'severity', 'signature', 'signature_element', 'spec', 'typography', 'value', 'visual_directive']

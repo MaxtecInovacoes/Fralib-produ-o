@@ -1,0 +1,4 @@
+# file: C:\fralib\backend\whatsapp\guards.py
+# hypothesis_version: 6.156.6
+
+[0.0, 100, '@s.whatsapp.net', 'activated_at', 'banned', 'cooldown', 'critical', 'daily', 'date', 'degraded', 'error', 'flood', 'healthy', 'human_pause', 'info', 'jid', 'payload', 'restricted', 'set_at', 'silenced_until', 'timestamps', 'value', 'warn']

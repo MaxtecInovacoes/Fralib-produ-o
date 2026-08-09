@@ -1,0 +1,4 @@
+# file: C:\fralib\backend\services\tracing.py
+# hypothesis_version: 6.156.6
+
+[0.0, 1.0, 86400, '%Y-%m-%d', '0', '1', 'FRALIB_TRACING', 'a', 'agent', 'avg_latency_ms', 'cost_usd', 'data', 'days', 'enabled', 'errors', 'event_type', 'input_tokens', 'latency_ms', 'output_tokens', 'r', 'start_unix', 'success', 'success_rate', 'total_cost_usd', 'total_input_tokens', 'total_latency_ms', 'total_output_tokens', 'total_traces', 'traces', 'utf-8']

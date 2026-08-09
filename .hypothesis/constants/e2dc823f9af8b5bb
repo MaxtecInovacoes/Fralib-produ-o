@@ -1,0 +1,4 @@
+# file: C:\fralib\backend\endpoints\credits\status.py
+# hypothesis_version: 6.156.6
+
+[404, '!', '#f59e0b', '/api/credits', '/check', '/planos', '/status', 'CAKTO_PAYMENT_LINK', 'admin', 'agency', 'alert', 'beta', 'can_proceed', 'color', 'creditos', 'creditos_max', 'credits-status', 'erro', 'icon', 'id', 'ilimitado', 'is_unlimited', 'message', 'payment_link', 'plano', 'plano_pago', 'proximo mes', 'reset_em', 'role', 'superadmin', 'tokens_restantes', 'trial', 'trial_expires_at']

@@ -1,0 +1,4 @@
+[     351ms] [ERROR] Failed to load resource: the server responded with a status of 500 () @ https://app.seunegociofralib.site/images/Mestre%20Fralib%20-%20Mago%20da%20IA.png:0
+[     352ms] [ERROR] Failed to load resource: the server responded with a status of 500 () @ https://app.seunegociofralib.site/images/Logo%20FraLib.png:0
+[     500ms] [ERROR] Failed to load resource: the server responded with a status of 500 () @ https://app.seunegociofralib.site/images/Mestre%20Fralib%20-%20Mago%20da%20IA.png:0
+[  175067ms] [ERROR] Failed to load resource: the server responded with a status of 401 () @ https://app.seunegociofralib.site/api/auth/login:0

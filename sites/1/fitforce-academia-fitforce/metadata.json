@@ -1,0 +1,24 @@
+{
+  "tenant_id": 1,
+  "lead_id": "fitforce-cgs-001",
+  "slug": "fitforce-academia",
+  "lead_name": "FitForce Academia",
+  "cidade": "Campina Grande do Sul",
+  "segmento": "academia",
+  "deployed_at": "2026-07-23T09:16:44.341197",
+  "size_bytes": 37048,
+  "quality_score": 0,
+  "variacao": {
+    "template": "industrial-bold",
+    "hero_type": "hero-split",
+    "sections": [
+      "hero",
+      "dor",
+      "metodo",
+      "prova-social",
+      "faq",
+      "contato",
+      "footer"
+    ]
+  }
+}

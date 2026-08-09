@@ -63,11 +63,11 @@ Usuario (briefing)
 
 ### agent_rag.py
 - Carrega contexto RAG especifico por agente
-- Busca em /root/fralib/backend/rag/[agente]/
+- Busca em /opt/fralib/backend/rag/[agente]/
 
 ### skill_loader.py
 - Carrega skills por agente via get_skills_agente(nome)
-- Skills ficam em /root/fralib/backend/skills/
+- Skills ficam em /opt/fralib/backend/skills/
 
 ### color_enforcer.py
 - Garante consistencia de cores no HTML gerado
@@ -95,7 +95,7 @@ Usuario (briefing)
 
 ## Comandos de diagnostico rapido
 
-cd /root/fralib/backend/agents
+cd /opt/fralib/backend/agents
 python3 -c "import liam, theo, liz, alex, caio, Franz, designer_prd, agent_rag, skill_loader, color_enforcer, animation_injector; print('TODOS OK')"
 
 pm2 status fralib

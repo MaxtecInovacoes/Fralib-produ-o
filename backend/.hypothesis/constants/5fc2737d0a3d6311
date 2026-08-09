@@ -1,0 +1,4 @@
+# file: C:\fralib\backend\whatsapp\persistence.py
+# hypothesis_version: 6.156.6
+
+[600, ':', 'cooldown', 'daily', 'expires_at', 'flood', 'human_pause', 'kind', 'lead_key', 'payload', 'user_id', 'value']

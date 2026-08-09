@@ -1,0 +1,555 @@
+"""Arquiteto agent — gera DesignerPRD (briefing final do site) via LLM.
+
+Recebe dados do lead, retorna:
+- DesignerPRD com business_name, hero, sections[], ctas[], schema_org,
+  faq[], motion_directives, paleta final.
+"""
+
+import json
+import re
+import sys
+from dataclasses import dataclass, field
+
+
+@dataclass
+class DesignerSection:
+    name: str
+    title: str = ""
+    content: str = ""
+    cta_text: str = ""
+    cta_url: str = ""
+
+
+@dataclass
+class DesignerPRD:
+    business_name: str
+    cidade: str
+    segmento: str
+    hero: dict = field(default_factory=dict)
+    sections: list[DesignerSection] = field(default_factory=list)
+    ctas: list[dict] = field(default_factory=list)
+    faqs: list[dict] = field(default_factory=list)
+    schema_org: dict = field(default_factory=dict)
+    schema_faq: dict = field(default_factory=dict)
+    paleta: dict = field(default_factory=dict)
+    seo_keywords: list[str] = field(default_factory=list)
+    motion_directives: list[str] = field(default_factory=list)
+    # Design tokens (Fase 1 — gerado por theme_mapper deterministico).
+    # Injetado no prompt do LLM + no tailwind.config do OpenUI service.
+    # Presente em TODOS os PRDs novos; nunca None.
+    design_tokens: dict = field(default_factory=dict)
+    # Layout DNA (Fase 1 — derivado dos design tokens).
+    # Permite ao Builder escolher layout_family, hero_style e pattern sem
+    # deixar o LLM inventar esses parametros.
+    layout_dna: dict = field(default_factory=dict)
+
+    # Fase 2: design_system derivado dos tokens (Fase 2 anti-clichê).
+    # NUNCA eh inventado pelo LLM — vem do theme_mapper.
+    design_system: dict = field(default_factory=dict)
+
+
+SYSTEM_PROMPT = """# IDENTIDADE
+Voce eh um Engenheiro de Design System e Diretor de Arte Senior. Sua missao: traduzir inteligencia de mercado (pesquisa externa) e tokens de design (theme_mapper) em um DesignerPRD tecnico de ALTA FIDELIDADE. Voce NAO escreve so copy - voce dita a estrutura DOM e a logica visual que o Builder deve seguir.
+
+# REGRAS DE OUTPUT (INVIOLAVEIS)
+- Responda APENAS com JSON puro, sem markdown, sem fences, sem tags.
+- Use SOMENTE as cores HEX dos tokens palette. PROIBIDO blue-500/gray-50/slate-900/red-500.
+- Use SOMENTE as fontes do token typography. PROIBIDO Inter solto se nao estiver em typography.body.
+- Use o radius.default do token. PROIBIDO rounded-md fixo.
+- Cada section deve carregar visual_directive com 1-2 frases sobre layout/efeito esperado.
+
+# ACESSIBILIDADE (AUDITADO POR VISAO COMPUTACIONAL — OBRIGATORIO)
+- VOCE E AUDITADO por um sistema de visao computacional (Quality Gate v2). Contraste AA
+  (>= 4.5:1 para texto) eh OBRIGATORIO. PROIBIDO texto claro sobre fundo claro ou texto
+  escuro sobre fundo escuro.
+- Se colocar texto sobre imagem/foto (hero, banner), EXIJA overlay escuro
+  (camada rgba(0,0,0,0.5) ou gradiente) ou backdrop-blur + caixa semi-transparente.
+  Nunca texto cru direto sobre foto.
+- Toda <img> DEVE ter alt descritivo (contexto da seção, nao "imagem1"). Sem alt = falha no gate.
+- Texto sobre cor solida: use a paleta (--ink sobre --paper, --fg sobre --bg). Nao invente combinacao.
+
+# DIRETRIZ DE IMPACTO (INJECAO DE DRAMA — OBRIGATORIO)
+- O FraLib nao gera sites genericos; gera POSTERS INTERATIVOS DE LUXO. O site
+  PRECISA de um momento de impacto memoravel, nao so copy correto.
+- SIGNATURE ELEMENT OBRIGATORIO: inclua SEMPRE um elemento de assinatura no PRD
+  (via visual_directive de uma section ou campo dedicado): um marquee/letreiro,
+  uma borda decorativa grossa, uma forma geometrica abstrata em absolute, ou uma
+  tipografia de contorno vazado gigante atras do hero. Eh o que o Vision LLM
+  pontua como "fator UAU".
+- MONUMENTAL TYPE: o hero.titulo DEVE ser curto e dominar a viewport (clamp
+  gigante, peso 800-900). Titulo longo quebra a estetica.
+- ASSIMETRIA E OVERLAP: proiba colunas 50/50 iguais; prefira 70/30 ou bento.
+  Elementos podem vazar entre secoes (profundidade, nao empilhamento plano).
+- NEGATIVE SPACE: espacos vazios intencionais criam foco. O vazio eh composicao.
+- VARIEDADE DE CARDS (QUEBRA DE MONOTONIA — OBRIGATORIO): PROIBIDO usar o
+  mesmo design de grid para Servicos e Depoimentos. Se uma secao usar cards
+  solidos, a outra DEVE usar glassmorphism (fundo translucido + blur) ou apenas
+  tipografia com borda inferior. Nunca repita o mesmo estilo de card em secoes
+  adjacentes — o site deve parecer "projeto sob medida", nao "template".
+- TRUST BADGES NO FOOTER (AUTORIDADE REAL — OBRIGATORIO): o footer NAO pode ser
+  generico. Crie OBRIGATORIAMENTE uma linha de "Trust Badges" (selos) especificos
+  do nicho, com icones da Lucide (SVG inline, borda fina 1px, sem preenchimento):
+  * Academia: CREF / Qualidade Garantida / 10 anos
+  * Clinica estetica: ANVISA / Biosseguranca / CRM
+  * Restaurante: Vigilancia Sanitaria / 4.9 estrelas / Local
+  * Imobiliaria: CRECI / Venda certificada
+  Use 3-4 selos, cada um com icone Lucide (ex: shield-check, award, badge-check,
+  certificate) + label curto. Renderize como SVG inline (sem CDN/build) para o
+  Quality Gate nao penalizar dependencia externa.
+
+# DIRETRIZES ANTI-CLICHE
+1. PROIBIDO usar palavras preguicosas: transforme, descubra, solucoes, seamless, elevate, reimagine, unlock the power, transcenda, revolucione sua. Escreva copy de venda direta focado em conversao local (SEO/GEO).
+2. PROIBIDO prescrever Tailwind utility classes no copy (ex: bg-blue-500, rounded-md). O Builder gera o CSS - seu trabalho eh dizer O QUE renderizar, nao COMO em classes Tailwind.
+3. PROIBIDO usar "Bem-vindo" no h1. PROIBIDO emojis como icone de UI.
+4. Hero: 1 h1 curto (ate 7 palavras) + subheadline (max 18 palavras). CTA primario visivel above the fold.
+5. Cada section deve ter copy REAL, nao placeholder (Lorem ipsum, Fale conosco, Sobre nos generico).
+
+# PROTOCOLO AWWWARDS — CONTEÚDO (INVIOLÁVEL, SOBRESCREVE ACIMA)
+- PROIBIDO headlines poéticas ou vagas no Hero ("Transforme sua vida", "Descubra").
+- O hero.h1 DEVE seguir: "[Serviço] em {{business_city}} | [Diferencial Único]".
+  Exemplo: hero.h1 = "Pilates em Curitiba | Resultado Rápido em 4 Semanas"
+- hero.subheadline DEVE conter a Promessa de Valor (o que o cliente ganha).
+- NARRATIVA OBRIGATÓRIA em 6 seções fixas nesta ordem:
+  1. PROPOSTA DE VALOR (Hero com CTA primário — label "Quero meu diagnóstico")
+  2. A DOR DO CLIENTE (identificação com o problema — label "Isso é comigo")
+  3. O MÉTODO ÚNICO (diferenciais, como funciona — label "Quero esse método")
+  4. PROVA SOCIAL (garantia, resultados, trust badges — label "Falar com especialista")
+  5. FAQ (perguntas reais de clientes — label "Tirei dúvidas, quero agendar")
+  6. CTA CONTEXTUAL (último CTA com urgência — label "Vaga limitada, garantir a minha")
+- CADA SEÇÃO DEVE TER UM CTA DIFERENTE. Os labels acima são exemplos; adapte ao segmento.
+- PROIBIDO "Saiba mais" ou "Clique aqui" como texto de CTA.
+- Gere 6 CTAs no array ctas[], um para cada seção, com labels diferentes entre si.
+- O CTA muda conforme o estágio da jornada (diagnóstico → método → especialista → urgência).
+
+# EEAT & GEO ENGINE (AUTORIDADE LOCAL — OBRIGATÓRIO)
+- A seção FAQ DEVE conter perguntas baseadas em buscas REAIS:
+  * "Quanto custa?" / "Aceita convênio?" / "Tem estacionamento?"
+  * "Quanto tempo dura?" / "Precisa de indicação médica?" (adapte ao segmento)
+- Crie OBRIGATORIAMENTE no conteúdo da seção de Prova Social uma frase de "Entidades Locais":
+  "Atendemos toda {{business_city}} — do [bairro1] ao [bairro3], perto da [referencia_local]"
+  Para Curitiba: cite Batel, Mercês, Bigorrilho e "Avenida Sete de Setembro"
+  Adapte bairros e referência para a cidade do lead (NUNCA use genérico)
+- Inclua no JSON-LD areaServed expandido com múltiplos bairros da cidade do lead.
+
+# ESTRUTURA DO DESIGNERPRD (JSON)
+{
+  "business_name": "Nome do negocio",
+  "hero": {"h1": "...", "subheadline": "...", "cta_primary": {"label": "...", "url": "https://wa.me/55..."}, "image_style": "..."},
+  "sections": [
+    {"name": "dor", "title": "...", "content": "...", "visual_directive": "1-2 frases"},
+    {"name": "metodo", "title": "...", "content": "...", "visual_directive": "..."}
+  ],
+  "ctas": [{"label": "Quero meu diagnóstico", "url": "..."}, {"label": "Falar com especialista", "url": "..."}],
+  "faqs": [{"question": "Quanto custa?", "answer": "..."}],
+  "paleta": {"primary": "#HEX", "accent": "#HEX", "ink": "#HEX", "paper": "#HEX", "surface": "#HEX"},
+  "seo_keywords": [...],
+  "motion_directives": ["reveal on scroll", "hover lift"]
+}
+
+# REGRAS TECNICAS
+1. Pagina unica. Sem framework JS. CSS escrito a mao (NUNCA Tailwind CDN script src).
+2. Tipografia via Google Fonts (o Builder injeta a URL canonica; voce NAO precisa adicionar link rel).
+3. Animacoes com Intersection Observer. Respeite prefers-reduced-motion.
+4. Mobile-first. 375px, 768px, 1440px.
+5. Lazy loading em todas imagens.
+6. Zero JavaScript framework. Vanilla apenas.
+
+# PROCESSO
+1. Receba os tokens (archetype, palette, typography, radius, layout_family, content_flow, hero_style, pattern_svg, icons, archetype_briefing).
+2. Pense no design (NAO escreva na resposta).
+3. Escreva o JSON.
+4. NAO use json fences, NAO use tool_code, NAO invoque ferramentas.
+
+# PROIBICOES ABSOLUTAS
+- Nao use classes Tailwind utility (.container, .row, .col-*, .bg-blue-N, .rounded-md). Escreva layout em CSS Grid/Flex.
+- Nao centralize tudo vertical/horizontal sem razao.
+- Nao use box-shadow em botoes. Use border 1px solido + hover background swap.
+- Nao use border-radius > 2px em retangulos de imagem.
+- NAO escreva "Bem-vindo" em lugar nenhum.
+- NAO use emojis como icone de UI.
+"""
+
+
+
+def _build_user_prompt(lead: dict, market_intelligence: dict | None = None) -> str:
+    """User prompt com dados do lead + inteligencia de mercado (opcional).
+
+    Se market_intelligence vier None (teste ou caminho legado), gera
+    brief minimo.
+    """
+    base = f"""BRIEF DO LEAD
+
+- Nome: {lead.get('nome', '')}
+- Cidade: {lead.get('cidade', '')}
+- Segmento: {lead.get('segmento', '')}
+- Telefone: {lead.get('telefone', '')}
+- Endereco: {lead.get('endereco', '')}
+- Rating: {lead.get('rating', 0)}
+- Reviews: {lead.get('total_avaliacoes', 0)}
+"""
+    if market_intelligence:
+        icp = market_intelligence.get("icp") or {}
+        geo = market_intelligence.get("geo") or {}
+        jornada = market_intelligence.get("jornada_cliente") or []
+        entidades = market_intelligence.get("entidades_principais") or []
+        clusters = market_intelligence.get("clusters_conteudo") or []
+        lacunas = market_intelligence.get("lacunas_mercado") or []
+        autoridade = market_intelligence.get("autoridade_sinais") or []
+        citacoes = market_intelligence.get("citacoes_ia") or []
+        keywords = market_intelligence.get("keywords_gap") or []
+
+        mi_section = (
+            "\nINTELIGENCIA DE MERCADO (AGENTES 01-07, 11, 17):\n"
+            f"- top_concorrentes: {market_intelligence.get('top_concorrentes', [])}\n"
+            f"- tom_de_voz: {market_intelligence.get('tom', '')}\n"
+            f"- estrutura_recomendada: {market_intelligence.get('estrutura', [])}\n"
+            f"- schema_recomendado: {market_intelligence.get('schema', [])}\n"
+            f"- keywords_gap (AGENTE 02): {keywords}\n"
+            "\nICP (AGENTE 04):\n"
+            f"  Idade {icp.get('idade', '') if isinstance(icp, dict) else ''} | Sexo {icp.get('sexo', '') if isinstance(icp, dict) else ''} | Profissao {icp.get('profissao', '') if isinstance(icp, dict) else ''}\n"
+            f"  Renda {icp.get('renda', '') if isinstance(icp, dict) else ''} | Escolaridade {icp.get('escolaridade', '') if isinstance(icp, dict) else ''}\n"
+            f"  Estilo {icp.get('estilo_compra', '') if isinstance(icp, dict) else ''} | Decisao {icp.get('tempo_decisao', '') if isinstance(icp, dict) else ''}\n"
+            f"  Medos {icp.get('medos', []) if isinstance(icp, dict) else []}\n"
+            f"  Sonhos {icp.get('sonhos', []) if isinstance(icp, dict) else []}\n"
+            "\nGEO (AGENTE 03):\n"
+            f"  Estado: {(geo.get('estado') if isinstance(geo, dict) else '') or ''} | Regiao: {(geo.get('regiao') if isinstance(geo, dict) else '') or ''}\n"
+            f"  Bairros alvo: {(geo.get('bairros_relevantes') if isinstance(geo, dict) else []) or []}\n"
+            f"  Raio atendimento: {(geo.get('raio_atendimento_km') if isinstance(geo, dict) else 0) or 0} km\n"
+            f"  Areas cobertas: {(geo.get('areas_atendidas') if isinstance(geo, dict) else []) or []}\n"
+            "\nJornada do cliente (AGENTE 05):\n"
+            f"  {' -> '.join(jornada) if jornada else 'gerar jornada canonica Descobrir->Indicar'}\n"
+            "\nEntidades principais (AGENTE 08 Entity SEO):\n"
+            + ('\n'.join('- ' + e for e in entidades) if entidades else '- (gerar 3-5 entidades do nicho)')
+            + "\n\nClusters de conteudo (AGENTE 11):\n"
+            + ('\n'.join('- ' + c for c in clusters) if clusters else '- (gerar 3-5 pilares)')
+            + "\n\nLacunas de mercado (AGENTE 07):\n"
+            + ('\n'.join('- ' + l for l in lacunas) if lacunas else '- (gerar 2-3)')
+            + "\n\nSinais de autoridade EEAT (AGENTE 09):\n"
+            + ('\n'.join('- ' + a for a in autoridade) if autoridade else '- (aniversario, reviews, certificacoes)')
+            + "\n\nCitacoes alvo para AI Search (AGENTE 17):\n"
+            + ('\n'.join('- ' + c for c in citacoes) if citacoes else '- (frases que ChatGPT/Perplexity citariao)')
+            + "\n\nINSIGHTS ESTRATEGICOS (oportunidades acionaveis):\n"
+            + ('\n'.join('- ' + s for s in market_intelligence.get('strategic_insights', [])) if market_intelligence.get('strategic_insights') else '- (nenhum insight disponivel)')
+            + "\n\nUse TUDO acima para diferenciar o copy + estrutura do lead dos concorrentes. NAO invente publico/dados numericos. Quando faltar, escreva string vazia. Aja sobre os INSIGHTS ESTRATEGICOS para posicionar o lead onde o mercado nao esta."
+        )
+        base += mi_section
+    base += """
+
+TAREFAS OBRIGATORIAS:
+1. Detectar sub-nicho e escolher template (apple/brutalist/glass/neu/editorial)
+2. Definir paleta de cores (primary/accent/dark em hex) — DEVE BATER COM OS TOKENS AUTORITATIVOS
+3. Gerar 5-8 secoes (range, NAO fixo) conforme layout_family escolhido
+4. Cada secao: visual_directive obrigatorio + copy real, nao placeholder
+5. CSS escrito a mao (NUNCA Tailwind CDN)
+6. Google Fonts conforme link rel injetado
+7. Intersection Observer pra animacoes
+8. Lazy loading em todas imagens
+9. Mobile-first
+10. Retornar JSON valido com: business_name, hero, sections, ctas, faqs, paleta, seo_keywords, motion_directives
+
+Gere o JSON DesignerPRD."""
+    return base
+
+
+def _extract_json(text: str) -> dict:
+    text = text.strip()
+    # Remove blocos <tool_code>...</tool_code> que o proxy "agente" injeta.
+    cleaned = re.sub(r"<tool_code>.*?</tool_code>", "", text, flags=re.DOTALL).strip()
+    if not cleaned:
+        raise ValueError(f"Arquiteto: Claude devolveu texto vazio apos strip (input len={len(text)})")
+    # Tenta parse direto. Se falhar, sai com a excecao original (fail-closed).
+    try:
+        return json.loads(cleaned)
+    except json.JSONDecodeError:
+        pass
+    # Procura o PRIMEIRO bloco JSON balanceado (nao greedy ate o fim).
+    decoder = json.JSONDecoder()
+    for match in re.finditer(r"\{", cleaned):
+        try:
+            obj, _ = decoder.raw_decode(cleaned[match.start():])
+            if isinstance(obj, dict) and obj:
+                return obj
+        except json.JSONDecodeError:
+            continue
+    # Nenhum JSON valido encontrado. Fail-closed: quem chama trata com raise.
+    raise ValueError(
+        f"Arquiteto: resposta do Claude nao contem JSON valido "
+        f"(cleaned_preview={cleaned[:200]!r})"
+    )
+
+
+def _section_from_dict(d: dict) -> DesignerSection:
+    return DesignerSection(
+        name=d.get("name", ""),
+        title=d.get("title", ""),
+        content=d.get("content", ""),
+        cta_text=d.get("cta_text", ""),
+        cta_url=d.get("cta_url", ""),
+    )
+
+
+def gerar_prd(lead: dict, usar_llm: bool = True, market_intelligence: dict | None = None) -> DesignerPRD:
+    """Gera DesignerPRD via LLM. Falhas sobem para o Manager.
+
+    Args:
+        lead: dados do lead (nome, cidade, telefone, segmento, rating...)
+        usar_llm: precisa ser True (canonico fail-closed)
+        market_intelligence: dados de pesquisa de mercado (estrutura, tom, schema, concorrentes)
+                             injetado no prompt como contexto adicional
+
+    Fluxo:
+      1. Deriva design_tokens via theme_mapper (deterministico, sem LLM).
+      2. Pede pro LLM gerar conteudo (copy, hero, sections) usando os tokens
+         como briefing injetado no system prompt + inteligencia de mercado.
+      3. Monta DesignerPRD com design_tokens + layout_dna anexados.
+    """
+    if not usar_llm:
+        raise ValueError("usar_llm=False nao eh suportado no Arquiteto canonico.")
+
+    from backend.agents.llm.direct import call_claude
+    from backend.services.theme_mapper import (
+        derive_design_tokens,
+        tokens_to_dict,
+        archetype_briefing,
+    )
+
+    # Fase 3.3 — Design Feedback: consulta lessons do mesmo segmento
+    try:
+        from backend.services.design_feedback_engine import best_lesson_for
+        from backend.core.database import SessionLocal
+
+        _dl_db = SessionLocal()
+        try:
+            _lessons = best_lesson_for(_dl_db, lead.get("segmento", ""), min_score=6.0, limit=2)
+        finally:
+            _dl_db.close()
+    except Exception:
+        _lessons = []
+
+    # 1. Tokens deterministicos — sao AUTORITATIVOS, o LLM nao escolhe paleta/tipografia.
+    tokens = derive_design_tokens(
+        segmento=lead.get("segmento", ""),
+        cidade=lead.get("cidade", ""),
+        nome=lead.get("nome", ""),
+        rating=lead.get("rating"),
+        lead_data=lead,
+    )
+    tokens_dict = tokens_to_dict(tokens)
+    briefing = archetype_briefing(tokens.archetype)
+
+    # Fase 2 — anti-clichê helpers injetados no system prompt.
+    from backend.services.theme_mapper import (
+        google_fonts_url as _gf_url,
+        tailwind_config_inline as _tw_inline,
+        forbidden_radius_for as _forbidden_radius,
+        lazy_copy_words as _lazy_words,
+    )
+    fonts_url = _gf_url(tokens)
+    forbidden_radius = _forbidden_radius(tokens.archetype)
+    lazy_words = _lazy_words()
+
+    system_with_briefing = (
+        SYSTEM_PROMPT
+        + "\n\n# DESIGN BRIEFING INJETADO (AUTORITATIVO — NAO ESCOLHA OUTROS VALORES)\n"
+        + briefing
+        + "\n\n# DESIGN TOKENS (use exatamente estes)\n"
+        + f"archetype: {tokens.archetype}\n"
+        + f"palette: {tokens_dict['palette']}\n"
+        + f"typography: {tokens_dict['typography']}\n"
+        + f"radius: {tokens_dict['radius']}\n"
+        + f"layout_family: {tokens.layout_family}\n"
+        + f"content_flow: {tokens.content_flow}\n"
+        + f"hero_style: {tokens.hero_style}\n"
+        + f"pattern_svg: {tokens.pattern_svg}\n"
+        + f"icons: {tokens.icons}\n"
+        + "\n# REGRAS INVIOLAVEIS (sobre DESIGN)\n"
+        + "- As cores da paleta sao DEFINITIVAS (primary/accent/ink/paper/surface). "
+        + "NAO use blue-500, slate-9xx, red-500 ou outros defaults Tailwind.\n"
+        + "- A tipografia eh DEFINITIVA (display/body/mono). "
+        + "Use Google Fonts link rel para cada uma.\n"
+        + "- O border-radius respeita radius.default acima. "
+        + "NAO use rounded-md/lg default sem justificativa.\n"
+        + "- O layout_family define a topologia. NAO force 6 secoes fixas; "
+        + "escolha 5-8 secoes que contem a historia do lead no flow "
+        + tokens.content_flow
+        + ".\n"
+        + "- O motion_language acima define o FEELING do movimento. Respeite.\n"
+        + "- Cada section DEVE carregar visual_directive (1-2 frases).\n"
+        + "\n# GOOGLE FONTS AUTORIZADO (use SOMENTE estas)\n"
+        + f"url: {fonts_url}\n"
+        + "- proibido usar Google Font fora dessa lista\n"
+        + "\n# RADIUS PROIBIDO para este archetype\n"
+        + (", ".join(forbidden_radius) if forbidden_radius else "(nenhum)") + "\n"
+        + "\n# COPY ANTI-PREGUICOSA (frases proibidas no copy)\n"
+        + ", ".join(lazy_words) + "\n"
+        + "\n# DESIGN SYSTEM EMIT (Fase 2 - usado pelo Builder)\n"
+        + "- visual_directive por section eh OBRIGATORIO\n"
+        + "- paleta deve ser 5-cores (primary/accent/ink/paper/surface)\n"
+        + "- typography: cite a font-family EXATA nos h1/headings\n"
+        + (
+            "\n# POLO BOLD (archetype de impacto — conteudo curto)\n"
+            "- O hero.titulo DEVE ter no MAXIMO 3 palavras. Titulo longo quebra "
+            "a estetica cinematografica do layout .hero-headline.\n"
+            if tokens.archetype in ("industrial-bold", "dark-futurist")
+            else ""
+        )
+        + "\n"
+    )
+
+    # Fase 4 - VERDADE OU SILENCIO (ANTI-ALUCINACAO).
+    # Quando o lead tem poucos dados (risk > 0.6), proibimos o LLM de
+    # inventar fatos. Em vez disso, o site foca em branding + CTA WPP.
+    if tokens.max_hallucination_risk > 0.6:
+        system_with_briefing += (
+            "\n# VERDADE OU SILENCIO (ANTI-ALUCINACAO ABSOLUTA)\n"
+            "\nPROIBIDO inventar nomes, CRM/CRP, depoimentos ou precos. "
+            "Se o nome do profissional nao vier no lead_data, use termos "
+            "institucionais (Nossa Equipe, Nossa Especialista)\n"
+            "\nTELEFONE: Se for 41999999999 (placeholder), NAO exibir. "
+            "Apenas Fale Conosco ou Agendar via WhatsApp\n"
+            "\nEXCECOES: Placeholder Unsplash/SVG sem pessoas brasileiras;\n"
+            "termos genericos do setor permitidos se ja no lead_data\n"
+            "\nPROIBIDO: nome com sobrenome, CRM numerico, depoimentos\n"
+            "com nome/idade, horarios literais, preco R$, modalidades\n"
+            "(videochamada/24h). Substituir por Nosso Compromisso.\n"
+            "Sempre cidade do lead_data, sem regiao inventada\n"
+            # MORTE DOS CLONES (2026-07-18): lead pobre NAO vira mais um
+            # apple-minimalist generico. Mantem o archetype sorteado e
+            # compensa a falta de texto com ESTETICA DE IMPACTO.
+            "\n# MODO DESIGN CINEMATOGRAFICO (lead pobre em dados)\n"
+            "Este lead tem POUCOS dados. NAO mude o archetype. NAO encha "
+            "com texto generico. MENOS COPY EXIGE MAIS DESIGN. Compense a "
+            "falta de texto com AGRESSIVIDADE VISUAL:\n"
+            "- Hero com headline de IMPACTO em 15vw (font-size: 15vw / "
+            "clamp gigante), poucas palavras, peso 800-900.\n"
+            "- Fotos FULL-BLEED (100vw/100vh, Unsplash tematico do segmento) "
+            "com overlay escuro e texto sobreposto.\n"
+            "- Espacos negativos AGRESSIVOS (py-32/py-48). O vazio e parte "
+            "do design.\n"
+            "- Mantenha a identidade do archetype (BOLD continua BOLD, "
+            "LUXURY continua LUXURY). Nada de cair em minimalismo seguro.\n"
+            "- 3-4 sections MAXIMO, cada uma com um unico foco visual forte.\n"
+            "- OBRIGATORIO: uma section 'metodologia' com 3 cards de impacto "
+            "visuais (Forca, Constancia, Resultado) — titulo + 1 frase cada. "
+            "Copy agressiva de posicionamento, ZERO dados inventados. "
+            "Isso da massa e peso visual ao site mesmo sem dados do lead.\n"
+        )
+    else:
+        system_with_briefing += (
+            "\n# VERDADE OU SILENCIO (leve)\n"
+            "Lead tem dados. PROIBIDO inventar nomes, horarios, precos.\n"
+        )
+
+    # Fase 5 - ENTITY-PLACEHOLDER INJECTION (padrao Stitch/v0).
+    # O LLM escreve TAGS {{business_name}} etc; o Builder resolve fora.
+    from backend.services.theme_mapper import (
+        ENTITY_TAGS,
+        layout_constraints as _layout_constraints,
+        LAYOUT_CONSTRAINT_BRIEFINGS,
+        value_prop_briefing as _value_prop,
+    )
+    tags_list = ", ".join(ENTITY_TAGS.keys())
+    system_with_briefing += (
+        "\n# ENTITY-PLACEHOLDER INJECTION (OBRIGATORIO)\n"
+        "NAO escreva nome/telefone/cidade/endereco/email LITERAIS no HTML. "
+        "Use SEMPRE estas tags de entidade (o Builder resolve o valor real "
+        "fora do LLM):\n"
+        f"{tags_list}\n"
+        "Exemplos: <h1>{{business_name}}</h1>, "
+        "<a href='https://wa.me/{{business_whatsapp}}'>Agendar</a>, "
+        "<span>Atendemos em {{business_city}}</span>.\n"
+        "Se o dado for nulo, o Builder troca a tag por CTA generico. "
+        "Voce so escreve a tag, nunca o valor.\n"
+    )
+
+    # Fase 5 - GRACEFUL DEGRADATION (LAYOUT_CONSTRAINT).
+    constraints = _layout_constraints(lead)
+    if constraints:
+        briefs = [
+            f"- {c}: {LAYOUT_CONSTRAINT_BRIEFINGS.get(c, '')}"
+            for c in constraints
+        ]
+        system_with_briefing += (
+            "\n# LAYOUT_CONSTRAINTS (dados ausentes — NAO preencher com ficcao)\n"
+            + "\n".join(briefs)
+            + "\n"
+        )
+
+    # Fase 5 - VALUE PROP OVER FACT (copy agressiva quando dados escassos).
+    if tokens.max_hallucination_risk > 0.6:
+        system_with_briefing += (
+            "\n# " + _value_prop(lead.get("segmento", "")) + "\n"
+        )
+
+    # Fase 3.3 — Design Lessons: paletas/aprovacoes anteriores do segmento
+    if _lessons:
+        lessons_text = "\n".join(
+            f"- archetype={l.archetype} palette={l.palette} score={l.score} feedback={l.feedback}"
+            for l in _lessons
+        )
+        system_with_briefing += (
+            "\n# DESIGN LESSONS (aprovacoes anteriores para este segmento)\n"
+            "Lead de mesmo segmento aprovou estes designs. "
+            "Considere a paleta como referencia, mas adapte ao lead atual:\n"
+            + lessons_text
+            + "\n"
+        )
+
+    response_text, _usage = call_claude(
+        system=system_with_briefing,
+        user=_build_user_prompt(lead, market_intelligence=market_intelligence),
+        max_tokens=16000,
+        agent_name="arquiteto",
+        lead_id=lead.get("id"),
+    )
+    data = _extract_json(response_text)
+    if not data:
+        raise ValueError("Arquiteto retornou JSON vazio ou invalido.")
+
+    required = ["business_name", "hero", "sections", "ctas", "faqs", "paleta"]
+    missing = [field for field in required if not data.get(field)]
+    if missing:
+        raise ValueError(f"DesignerPRD incompleto: {', '.join(missing)}")
+
+    segmento = lead.get("segmento", "")
+    sections = [_section_from_dict(s) for s in data.get("sections", [])]
+    if not sections:
+        raise ValueError("DesignerPRD sem sections materializaveis.")
+
+    # 2. Layout DNA derivado dos tokens (vai pro Builder + tailwind.config).
+    layout_dna = {
+        "hero_style": tokens.hero_style,
+        "layout_family": tokens.layout_family,
+        "content_flow": tokens.content_flow,
+        "section_count_range": list(tokens.section_count_range),
+        "visual_noise": tokens.pattern_svg,
+    }
+
+    return DesignerPRD(
+        business_name=data.get("business_name", lead.get("nome", "")),
+        cidade=lead.get("cidade", ""),
+        segmento=segmento,
+        hero=data.get("hero", {}),
+        sections=sections,
+        ctas=data.get("ctas", []),
+        faqs=data.get("faqs", []),
+        paleta=data.get("paleta", {}),
+        seo_keywords=data.get("seo_keywords", []),
+        motion_directives=data.get("motion_directives", []),
+        design_tokens=tokens_dict,
+        layout_dna=layout_dna,
+        design_system={
+            "archetype": tokens.archetype,
+            "archetype_briefing": briefing,
+            "google_fonts_url": fonts_url,
+            "tailwind_config_inline": _tw_inline(tokens),
+            "forbidden_radius_classes": forbidden_radius,
+            "forbidden_copy_phrases": lazy_words,
+            "hero_style": tokens.hero_style,
+            "layout_family": tokens.layout_family,
+            "content_flow": tokens.content_flow,
+            "motion_language": dict(tokens.motion_language),
+            "icons": tokens.icons,
+            "pattern_svg": tokens.pattern_svg,
+        },
+    )

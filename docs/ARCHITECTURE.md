@@ -277,7 +277,7 @@ editar local → git add → git commit → git push origin master
 | `backend/**/*.py` | app + worker |
 | `frontend/**` | app |
 | `Dockerfile` | app + worker |
-| `openui-service-wandb/` | restart systemd `fralib-openui` |
+| `openui-wandb/` | restart systemd `fralib-openui` |
 
 ### Comandos úteis na VPS
 

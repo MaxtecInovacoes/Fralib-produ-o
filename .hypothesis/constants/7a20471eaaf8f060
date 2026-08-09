@@ -1,0 +1,4 @@
+# file: C:\fralib\backend\agents\builder\quality_gate_v2\evaluator.py
+# hypothesis_version: 6.156.6
+
+[0.0, 0.2, 7.5, 60.0, 100, 500, 2000, '...', '2023-06-01', 'ANTHROPIC_API_KEY', 'ANTHROPIC_BASE_URL', 'Authorization', 'Content-Type', 'anthropic-version', 'application/json', 'base64', 'claude-sonnet-4-6', 'content', 'data', 'image', 'image/png', 'issues', 'max_tokens', 'media', 'media_type', 'messages', 'model', 'passed', 'role', 'scores', 'source', 'strengths', 'system', 'temperature', 'text', 'type', 'usage', 'user', '{', '}']
