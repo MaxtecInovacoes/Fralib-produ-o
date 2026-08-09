@@ -210,6 +210,8 @@ def step_arquiteto(state: PipelineState) -> PipelineState:
 
     # Extrai market_intelligence do lead_data se disponível (vem do Hunter)
     market_intelligence = state.lead_data.get("market_intelligence")
+    # Extrai jina_insights do lead_data se disponível (vem do Hunter)
+    jina_insights_value = state.lead_data.get("jina_insights", "")
 
     max_attempts = 3
     backoff_seconds = [5, 15, 45]  # exponential-ish: 5s, 15s, 45s
@@ -233,12 +235,13 @@ def step_arquiteto(state: PipelineState) -> PipelineState:
                 dados_hunter=state.lead_data,
                 cidade=state.cidade,
                 segmento=state.segmento,
-                jina_insights="",
+                jina_insights=jina_insights_value,
                 caio_tier=state.caio_output.get("tier", ""),
                 caio_score=state.caio_output.get("score", 0),
                 caio_motivo=state.caio_output.get("motivo", ""),
                 keyword_research=kw_research,
                 dark_mode=False,
+                inteligencia=market_intelligence,
             )
             state.attempts["arquiteto"] = attempt
             if attempt > 1:

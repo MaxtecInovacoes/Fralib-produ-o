@@ -22,18 +22,17 @@ import sys
 import os
 
 # Detectar ambiente: Docker (/app) vs systemd VPS (/root/fralib) vs legacy (/opt/fralib)
-# /opt/fralib/backend e um diretorio LEGACY incompleto — nao tem core/database.py
-# Prioridade: /app > /root/fralib > /opt/fralib (so se tiver database.py)
-if os.path.exists('/app/backend') and os.path.exists('/app/backend/core/database.py'):
-    _BACKEND_ROOT = '/app/backend'
-    _FRONTEND_ROOT = '/app'
-elif os.path.exists('/root/fralib/backend') and os.path.exists('/root/fralib/backend/core/database.py'):
-    _BACKEND_ROOT = '/root/fralib/backend'
-    _FRONTEND_ROOT = '/root/fralib'
-elif os.path.exists('/opt/fralib/backend') and os.path.exists('/opt/fralib/backend/core/database.py'):
-    _BACKEND_ROOT = '/opt/fralib/backend'
-    _FRONTEND_ROOT = '/opt/fralib'
-else:
+# Também suporta desenvolvimento local (Windows/Mac) com CWD-based detection
+_BACKEND_ROOT = None
+_FRONTEND_ROOT = None
+for candidate in ['/app', '/root/fralib', '/opt/fralib', os.getcwd(), os.path.dirname(os.path.abspath(__file__))]:
+    backend_dir = os.path.join(candidate, 'backend')
+    if os.path.exists(backend_dir) and os.path.exists(os.path.join(backend_dir, 'core', 'database.py')):
+        _BACKEND_ROOT = backend_dir
+        _FRONTEND_ROOT = candidate
+        break
+
+if not _BACKEND_ROOT:
     raise RuntimeError(
         "Nenhum backend encontrado com core/database.py. "
         "Verifique /app/backend, /root/fralib/backend ou /opt/fralib/backend"

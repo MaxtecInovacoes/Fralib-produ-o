@@ -377,7 +377,7 @@ class DesignerPRD(BaseModel):
     phone: str
     hours: Optional[Dict[str, str]] = None
     photos: List[str] = Field(default_factory=list)
-    videos: List[Dict[str, Any]] = []
+    videos: List[Dict[str, Any]] = Field(default_factory=list)
 
     @field_validator("photos", mode="before")
     @classmethod
