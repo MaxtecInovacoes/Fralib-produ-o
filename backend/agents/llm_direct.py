@@ -239,10 +239,7 @@ def call_claude(
             latency_ms=latency_ms,
         )
         try:
-            try:
-                from agents.token_tracker import get_tracker
-            except Exception:
-                from token_tracker import get_tracker
+            from backend.agents.token_tracker import get_tracker
 
             _tracker = get_tracker()
             if _tracker:
@@ -418,10 +415,7 @@ def call_claude(
             latency_ms=latency_ms,
         )
         try:
-            try:
-                from agents.token_tracker import get_tracker
-            except Exception:
-                from token_tracker import get_tracker
+            from backend.agents.token_tracker import get_tracker
 
             _tracker = get_tracker()
             if _tracker:
@@ -488,10 +482,7 @@ def call_claude(
             )
 
             try:
-                try:
-                    from agents.token_tracker import get_tracker
-                except Exception:
-                    from token_tracker import get_tracker
+                from backend.agents.token_tracker import get_tracker
 
                 _tracker = get_tracker()
                 if _tracker:
