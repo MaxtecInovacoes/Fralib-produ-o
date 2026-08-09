@@ -100,7 +100,7 @@ def _run_pipeline_job(db, job) -> bool:
         # Se não tem lead no BD mas tem segmento+cidade, busca via Hunter
         if not payload.get("lead_data") and payload.get("segmento") and payload.get("cidade"):
             from backend.services.lead_supply_storage import get_or_create_config
-            from backend.services.lead_supply_providers.hunter import create_facade
+            from backend.services.lead_providers import create_facade
             cfg = get_or_create_config(db, tenant_id)
             try:
                 facade = create_facade(db, tenant_id, cfg)
