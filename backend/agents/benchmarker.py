@@ -107,7 +107,7 @@ NICHO_PATTERNS: dict[str, dict[str, Any]] = {
         "cores_tipicas": ["#d32f2f", "#ffffff", "#212121", "#ffeb3b"],
         "secoes_obrigatorias": ["cardapio", "galeria", "horarios", "localizacao"],
         "diferenciacao_sugerida": "Encomendas de festas e eventos com formulario de orcamento",
-        "elementos_extras": ["cardapio sazonal", "chef", "resenhas google"],
+        "elementos_extras": ["cardapio sazonal", "chef", "avaliacoes"],
     },
     "pizzaria": {
         "estrutura_comum": "pizzas-hero + cardapio + delivery + promocoes",

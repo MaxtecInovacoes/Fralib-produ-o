@@ -20,16 +20,6 @@ PROXY_MODEL_OPTIONS = [
         "tier": "light",
     },
     {
-        "id": "gemini-3.5-flash",
-        "label": "Legacy Gemini Flash alias via LiteLLM",
-        "tier": "light",
-    },
-    {
-        "id": "gemini-2.5-flash",
-        "label": "Legacy Gemini Flash alias via LiteLLM",
-        "tier": "light",
-    },
-    {
         "id": "fast",
         "label": "Fast proxy alias via llm.seunegociofralib.site",
         "tier": "light",

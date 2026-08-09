@@ -123,7 +123,6 @@ def _default_base_url(provider: str) -> str:
     return {
         'anthropic': os.getenv('ANTHROPIC_BASE_URL', 'https://api.aibee.cloud'),
         'openai':    'https://api.openai.com/v1',
-        'google':    'https://generativelanguage.googleapis.com/v1beta',
         'custom':    '',
     }.get(provider, '')
 

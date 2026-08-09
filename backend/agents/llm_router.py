@@ -193,7 +193,7 @@ def resolve_model_id(alias: str) -> str:
 # ══════════════════════════════════════════════════════════════════
 # TIPOS E EXCEÇÕES
 # ══════════════════════════════════════════════════════════════════
-ProviderType = Literal["anthropic", "openai", "google", "groq", "openrouter", "litellm"]
+ProviderType = Literal["anthropic", "openai", "groq", "", "litellm"]
 
 
 class LLMRouterError(Exception):
@@ -233,13 +233,13 @@ class LLMRouter:
 
     def call(
         self,
-        provider: ProviderType,
+ProviderType = Literal["anthropic", "openai", "groq", "", "litellm"]
         model_id: str,
         system: str,
         user: str,
         temperature: float = 0.7,
         max_tokens: int = 4000,
-        fallback_providers: list[ProviderType] = None,
+ProviderType = Literal["anthropic", "openai", "groq", "", "litellm"]
         user_id: str = None,
         agent_name: str = None,
         **kwargs
@@ -353,20 +353,20 @@ def get_router() -> LLMRouter:
 # FUNÇÃO DE CONVENIÊNCIA
 # ══════════════════════════════════════════════════════════════════
 def call_llm(
-    provider: ProviderType,
+ProviderType = Literal["anthropic", "openai", "groq", "", "litellm"]
     model_id: str,
     system: str,
     user: str,
     temperature: float = 0.7,
     max_tokens: int = 4000,
-    fallback_providers: list[ProviderType] = None,
+ProviderType = Literal["anthropic", "openai", "groq", "", "litellm"]
     user_id: str = None,
     **kwargs
 ) -> tuple[str, dict]:
     """Função de conveniência para chamada LLM via router.
 
     Args:
-        provider: Provider primário (anthropic, openai, google, litellm, groq, openrouter)
+        provider: Provider primário (anthropic, openai, litellm, groq, openrouter)
         model_id: ID do modelo
         system: Prompt de sistema
         user: Mensagem do usuário

@@ -20,7 +20,6 @@ _MODEL_PRICING: dict[str, tuple[float, float]] = {
     "fast":                       (0.00,  0.00),
     "gpt-5.4-mini":               (0.00,  0.00),
     "deepseek-v4-flash":          (0.00,  0.00),
-    "gemini-2.5-flash":           (0.00,  0.00),
     # OpenAI
     "gpt-4o":                     (2.50,  10.00),
     "gpt-4o-mini":                (0.15,  0.60),

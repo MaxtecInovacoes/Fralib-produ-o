@@ -25,7 +25,7 @@ import os
 # Também suporta desenvolvimento local (Windows/Mac) com CWD-based detection
 _BACKEND_ROOT = None
 _FRONTEND_ROOT = None
-for candidate in ['/app', '/root/fralib', '/opt/fralib', os.getcwd(), os.path.dirname(os.path.abspath(__file__))]:
+for candidate in ['/app', '/opt/fralib', '/root/fralib', os.getcwd(), os.path.dirname(os.path.abspath(__file__))]:
     backend_dir = os.path.join(candidate, 'backend')
     if os.path.exists(backend_dir) and os.path.exists(os.path.join(backend_dir, 'core', 'database.py')):
         _BACKEND_ROOT = backend_dir

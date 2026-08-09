@@ -19,7 +19,7 @@ A pipeline FraLib (Hunter → Caio → Arquiteto → Builder → Quality Gate v2
 | #5 UnicodeEncodeError Windows | ❓ VERIFICAR | `scripts/generate_test_sites.py:284` precisa de `sys.stdout.reconfigure` |
 | #6 DATABASE_URL hardcoded | ✅ CORRIGIDO | `generate_test_sites.py:34` usa `os.environ.get("DATABASE_URL")` |
 | #7 DB_URL hardcoded check_locks | ✅ CORRIGIDO | `check_locks.py:17` usa `os.environ.get("DATABASE_URL")` |
-| #8 DeployFlow rate limit | ❌ DEPENDÊNCIA EXTERNA | Precisa de NVIDIA_API_KEYS ativas + GOOGLE_API_KEY no Hunter |
+| #8 DeployFlow rate limit | ❌ DEPENDÊNCIA EXTERNA | Precisa de NVIDIA_API_KEYS ativas |
 | #9 101 jobs travados | ✅ CORRIGIDO | Causa raiz (bugs 1+2) eliminada |
 | #10 23+ leads_cache sem converter | ❌ PENDENTE | Caio rejeita 100% por falta de celular — ver Fase 4 |
 | #11 14k+ production_ticks sem pipeline_lead | ❌ PENDENTE | Mesma causa acima |
@@ -160,13 +160,12 @@ print(f'tier={out.tier} score={out.score} qualificado={out.qualificado}')
 ```bash
 cd C:/fralib
 # Verificar chaves críticas estão preenchidas
-grep -E "^(NVIDIA_API_KEYS|DEPLOYFLOW_API_KEY|GOOGLE_API_KEY|ANTHROPIC_API_KEY|LLM_API_KEY)=" .env | sed 's/=.*/=<set>/'
+grep -E "^(NVIDIA_API_KEYS|DEPLOYFLOW_API_KEY|ANTHROPIC_API_KEY|LLM_API_KEY)=" .env | sed 's/=.*/=<set>/'
 ```
 
 **Ação se chaves vazias:**
 - `NVIDIA_API_KEYS` — configurar pelo menos 1 chave NVIDIA (gratuita, 1000 req/mês) como fallback do LLM
 - `DEPLOYFLOW_API_KEY` — se rate limited, aguardar reset (~47h) ou usar NVIDIA como primary
-- `GOOGLE_API_KEY` — necessária para PlacesAPI do Hunter (mineração de leads com telefone)
 
 **Teste de conectividade LLM:**
 ```bash
@@ -333,7 +332,7 @@ print('Franz agent carregado OK')
 - [ ] FASE 1: `sys.stdout.reconfigure` em `generate_test_sites.py`
 - [ ] FASE 2: `playwright install chromium` no Dockerfile
 - [ ] FASE 3: Caio relaxa qualificação para leads sem celular
-- [ ] FASE 4: `.env` tem NVIDIA_API_KEYS + DEPLOYFLOW_API_KEY + GOOGLE_API_KEY preenchidas
+- [ ] FASE 4: `.env` tem NVIDIA_API_KEYS + DEPLOYFLOW_API_KEY preenchidas
 - [ ] FASE 5: Pipeline E2E com lead mock → state=done + site deployado
 - [ ] FASE 6: `pytest tests/agents/` — todos passam
 - [ ] FASE 7: Lead concluído aparece com `sdr_stage='pendente_wpp'` no banco

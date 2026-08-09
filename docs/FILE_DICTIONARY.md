@@ -34,7 +34,7 @@
 | Arquivo | Descrição | Pode Criar |
 |---------|-----------|
 | `__init__.py` | Package marker | NAO |
-| `llm_router.py` | Multi-provider LLM router. Cascade Anthropic: opus-5 → opus-4-8 → opus-4-7 → sonnet-5 → sonnet-4-6 → sonnet-4-5 → haiku-5 → haiku-4-5. Suporta OpenAI, Google, Groq. Usa `ia_manager.pick_key()`. | NAO |
+| `llm_router.py` | Multi-provider LLM router. Cascade Anthropic: opus-5 → opus-4-8 → opus-4-7 → sonnet-5 → sonnet-4-6 → sonnet-4-5 → haiku-5 → haiku-4-5. Suporta OpenAI, Groq. Usa `ia_manager.pick_key()`. | NAO |
 | `ia_manager.py` | Round-robin de API keys do banco (`provider_keys` table). Circuit-breaker com cooldown. DAILY_TOKEN_BUDGET=2M, GLOBAL_MAX_CALLS_PER_MIN=30. LRU atômico via DB. | NAO |
 | `credits_manager.py` | Sistema de planos (trial/starter/pro/ilimitado/beta). Duplo cadeado: créditos diários + cooldown. Reset lazy por data BRT. CUSTO_POR_CICLO_USD=0.34. | NAO |
 | `token_bucket.py` | Rate limiting por token bucket algorithm. | NAO |

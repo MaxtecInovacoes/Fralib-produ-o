@@ -21,7 +21,6 @@ def normalize_model_alias(model: str) -> str:
         "claude-haiku-4-20250514",
         "claude-haiku-4-5-20251001",
         "claude-haiku-4-5-thinking",
-        "gemini-2.5-flash",
         "fast",
         "gpt-5.4-mini",
     }:

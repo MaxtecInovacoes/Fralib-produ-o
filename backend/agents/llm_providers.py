@@ -15,7 +15,7 @@ Usage:
         "anthropic",
         "claude-3-opus",
         system, user,
-        fallback=["openai", "google"]
+        fallback=["openai"]
     )
 
     # Chamada estruturada (JSON via tool_use)
@@ -49,12 +49,6 @@ from backend.agents.llm_openai import (
     OpenAIRateLimitError,
     _is_litellm_openai_chat_base,
 )
-from backend.agents.llm_google import (
-    GoogleProvider,
-    GoogleProviderError,
-    GoogleRateLimitError,
-    get_google_provider,
-)
 from backend.agents.llm_router import (
     LLMRouterError,
     AllProvidersFailedError,
@@ -68,14 +62,11 @@ __all__ = [
     # Providers
     "AnthropicProvider",
     "OpenAIProvider",
-    "GoogleProvider",
     # Exceptions
     "AnthropicProviderError",
     "OpenAIProviderError",
-    "GoogleProviderError",
     "AnthropicRateLimitError",
     "OpenAIRateLimitError",
-    "GoogleRateLimitError",
     "LLMRouterError",
     "AllProvidersFailedError",
     # Functions
@@ -101,8 +92,6 @@ MODEL_ALIASES = {
     "opus": "claude-3-opus-20240229",
     "sonnet": "claude-3-sonnet-20240229",
     "haiku": "claude-3-haiku-20240307",
-    "gemini-pro": "gemini-1.5-pro",
-    "gemini-flash": "gemini-1.5-flash",
 }
 
 
@@ -125,7 +114,7 @@ def call_llm(
     """Chamada LLM unificada com seleção automática de provider.
 
     Args:
-        provider: Provider primário (anthropic, openai, litellm, google)
+        provider: Provider primário (anthropic, openai, litellm)
         model: ID do modelo ou alias (opus, sonnet, haiku, etc)
         system: Prompt de sistema
         user: Mensagem do usuário
@@ -161,11 +150,6 @@ def call_llm(
         return _call_openai(
             model_id, system, user, temperature, max_tokens,
             agent_name=agent_name, user_id=user_id, **kwargs
-        )
-
-    elif provider in ("google", "gemini"):
-        return _call_google(
-            model_id, system, user, temperature, max_tokens, **kwargs
         )
 
     else:
@@ -289,25 +273,6 @@ def _call_openai(
     )
 
 
-def _call_google(
-    model: str,
-    system: str,
-    user: str,
-    temperature: float,
-    max_tokens: int,
-    **kwargs
-) -> tuple[str, dict]:
-    """Chamada Google Gemini."""
-    provider = get_google_provider()
-
-    return provider.call_with_retry(
-        model=model,
-        system=system,
-        user=user,
-        temperature=temperature,
-        max_tokens=max_tokens,
-        max_attempts=3,
-    )
 
 
 # ══════════════════════════════════════════════════════════════════

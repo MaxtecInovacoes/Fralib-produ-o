@@ -1,7 +1,7 @@
 """
 llm_router — Router universal multi-provider.
 
-Suporta: Anthropic, OpenAI, Google Gemini, Groq.
+Suporta: Anthropic, OpenAI, Groq.
 Cada provider tem seu adaptador. O call_claude existente continua funcionando
 (chama este router internamente quando provider != anthropic).
 
@@ -17,7 +17,6 @@ import requests
 _BASE_URLS = {
     'anthropic': os.getenv('ANTHROPIC_BASE_URL', 'https://api.aibee.cloud'),
     'openai': 'https://api.openai.com/v1',
-    'google': 'https://generativelanguage.googleapis.com/v1beta',
     'groq': 'https://api.groq.com/openai/v1',
 }
 
@@ -41,7 +40,6 @@ def _get_key_for_provider(provider: str):
     env_map = {
         'anthropic': 'ANTHROPIC_API_KEY',
         'openai': 'OPENAI_API_KEY',
-        'google': 'GOOGLE_API_KEY',
         'groq': 'GROQ_API_KEY',
     }
     key = os.getenv(env_map.get(provider, ''), '')
@@ -60,8 +58,6 @@ def call_llm(provider: str, model_id: str, system: str, user: str,
         return _call_anthropic(model_id, system, user, temperature, max_tokens)
     elif provider == 'openai':
         return _call_openai(model_id, system, user, temperature, max_tokens)
-    elif provider == 'google':
-        return _call_google(model_id, system, user, temperature, max_tokens)
     elif provider == 'groq':
         return _call_groq(model_id, system, user, temperature, max_tokens)
     else:
@@ -196,40 +192,6 @@ def _call_openai(model_id, system, user, temperature, max_tokens, provider='open
     return text_out, {
         'input_tokens': usage.get('prompt_tokens', 0),
         'output_tokens': usage.get('completion_tokens', 0),
-    }
-
-
-def _call_google(model_id, system, user, temperature, max_tokens):
-    """Adaptador Google Gemini (generateContent)."""
-    api_key, _, key_id = _get_key_for_provider('google')
-    if not api_key:
-        raise Exception("Nenhuma API key Google disponível")
-
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_id}:generateContent?key={api_key}"
-    headers = {'Content-Type': 'application/json'}
-    payload = {
-        'contents': [{'parts': [{'text': user}]}],
-        'systemInstruction': {'parts': [{'text': system}]},
-        'generationConfig': {
-            'temperature': temperature,
-            'maxOutputTokens': max_tokens,
-        },
-    }
-
-    r = requests.post(url, headers=headers, json=payload, timeout=300)
-    r.raise_for_status()
-    data = r.json()
-
-    text_out = ''
-    try:
-        text_out = data['candidates'][0]['content']['parts'][0]['text']
-    except (KeyError, IndexError):
-        pass
-
-    usage_meta = data.get('usageMetadata', {})
-    return text_out, {
-        'input_tokens': usage_meta.get('promptTokenCount', 0),
-        'output_tokens': usage_meta.get('candidatesTokenCount', 0),
     }
 
 

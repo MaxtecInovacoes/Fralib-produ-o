@@ -32,7 +32,7 @@ def upgrade():
             atualizado_em   TIMESTAMP NOT NULL DEFAULT NOW(),
             criado_por      BIGINT REFERENCES users(id) ON DELETE SET NULL,
             CONSTRAINT provider_keys_provider_chk
-                CHECK (provider IN ('anthropic','openai','google','custom'))
+                CHECK (provider IN ('anthropic','openai','groq','custom'))
         )
     """)
     op.execute("""

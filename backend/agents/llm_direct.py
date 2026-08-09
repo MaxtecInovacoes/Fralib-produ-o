@@ -11,11 +11,10 @@ Lógica extraída para:
 - llm_context.py: Contexto e rate limiting
 - llm_client.py: Cliente HTTP
 - llm_tracking.py: Tracking de uso
-- llm_providers.py: Provedores (Anthropic, OpenAI, Google)
+- llm_providers.py: Provedores (Anthropic, OpenAI)
 - llm_router.py: Roteamento
 - llm_anthropic.py: Implementação Anthropic
 - llm_openai.py: Implementação OpenAI
-- llm_google.py: Implementação Google
 - llm_agent_config.py: Config de agentes
 
 @architecture Orquestrador (coordena módulos de LLM)

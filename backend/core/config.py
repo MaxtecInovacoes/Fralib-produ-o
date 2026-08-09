@@ -63,8 +63,6 @@ ALLOWED_LLM_BASE_URLS = {
     # OpenAI
     "api.openai.com",
     "openai.azure.com",
-    # Google
-    "generativelanguage.googleapis.com",
     # Groq
     "api.groq.com",
     # OpenRouter

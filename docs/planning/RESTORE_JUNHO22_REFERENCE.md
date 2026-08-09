@@ -185,7 +185,6 @@ resultado = executar_pipeline_completa(state)
 # LLM Providers
 ANTHROPIC_BASE_URL=https://api.kpalabz.com/v1
 ANTHROPIC_API_KEY=sk-...
-GOOGLE_API_KEY=...
 
 # Banco
 DATABASE_URL=postgresql://fralib_user:password@localhost:15434/fralib_db

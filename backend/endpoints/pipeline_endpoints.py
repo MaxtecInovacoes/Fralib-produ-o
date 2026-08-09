@@ -1894,8 +1894,9 @@ async def iniciar_pipeline(
             VALUES (:uid, 'running', :plano)
         """), {"uid": tenant_id, "plano": _plano_exec})
         db.commit()
-    except Exception:
-        pass
+    except Exception as e:
+        db.rollback()
+        print(f"[Pipeline] Aviso: nao foi possivel registrar em pipeline_executions: {e}")
 
     # Verificar se WhatsApp está conectado (não bloqueia, apenas seta flag)
     _wpp_conectado = is_tenant_connected(f"fralib_user_{tenant_id}")

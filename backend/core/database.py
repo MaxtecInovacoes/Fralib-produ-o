@@ -493,7 +493,6 @@ def inicializar_database():
                        provider <> :provider
                        OR model_id LIKE '%/%'
                        OR model_id NOT IN (""" + _allowed_proxy_model_sql + """)
-                       OR model_id = 'gemini-2.5-flash'
                        OR fallback_provider IS NOT NULL
                        OR fallback_model_id IS NOT NULL
                    )
@@ -537,7 +536,7 @@ def inicializar_database():
                        provider <> :provider
                        OR model_id LIKE '%/%'
                        OR model_id NOT IN (""" + _allowed_proxy_model_sql + """)
-                       OR model_id IN ('deepseek-v4-flash', 'gemini-3.5-flash', 'gemini-2.5-flash')
+                       OR model_id IN ('deepseek-v4-flash')
                        OR fallback_provider IS NOT NULL
                        OR fallback_model_id IS NOT NULL
                    )
@@ -748,7 +747,7 @@ def inicializar_database():
             text("""
             ALTER TABLE IF EXISTS provider_keys
             ADD CONSTRAINT provider_keys_provider_chk
-            CHECK (provider IN ('anthropic', 'openai', 'google', 'groq', 'openrouter', 'deepseek', 'moonshot', 'qwen', 'custom'))
+            CHECK (provider IN ('anthropic', 'openai', 'groq', 'openrouter', 'deepseek', 'moonshot', 'qwen', 'custom'))
         """)
         )
 
@@ -795,8 +794,7 @@ def inicializar_database():
                 ('anthropic', 'claude-opus-4-8', 30, 30000, 1, 0.00, 90),
                 ('anthropic', 'fast', 90, 50000, 1, 35.00, 30),
                 ('anthropic', 'gpt-5.4-mini', 90, 50000, 1, 35.00, 30),
-                ('anthropic', 'deepseek-v4-flash', 45, 40000, 1, 75.00, 60),
-                ('anthropic', 'gemini-2.5-flash', 90, 50000, 1, 35.00, 30)
+                ('anthropic', 'deepseek-v4-flash', 45, 40000, 1, 75.00, 60)
             ON CONFLICT (provider, model) DO NOTHING
         """)
         )

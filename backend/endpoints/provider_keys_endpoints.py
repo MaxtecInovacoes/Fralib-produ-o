@@ -19,7 +19,7 @@ from utils.secrets_crypto import encriptar, decriptar, mascarar_key
 
 router = APIRouter(prefix='/api/provider-keys', tags=['provider-keys'])
 
-ALLOWED_PROVIDERS = {'anthropic', 'openai', 'google', 'groq', 'custom'}
+ALLOWED_PROVIDERS = {'anthropic', 'openai', 'groq', 'custom'}
 
 
 def require_superadmin(user: dict = Depends(get_current_user)):
@@ -266,13 +266,6 @@ def _test_provider(provider: str, apikey: str, base_url: str | None) -> dict:
                 'Authorization': f'Bearer {apikey}',
                 'Content-Type': 'application/json',
             })
-        elif provider == 'google':
-            base = (base_url or 'https://generativelanguage.googleapis.com/v1beta').rstrip('/')
-            url = f'{base}/models/gemini-2.0-flash:generateContent?key={apikey}'
-            r = requests.post(url, timeout=10, json={
-                'contents': [{'parts': [{'text': 'hi'}]}],
-                'generationConfig': {'maxOutputTokens': 1},
-            }, headers={'Content-Type': 'application/json'})
         elif provider == 'custom':
             if not base_url:
                 return {'ok': False, 'error': 'base_url obrigatorio para custom'}

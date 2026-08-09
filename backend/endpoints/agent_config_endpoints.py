@@ -28,11 +28,6 @@ AVAILABLE_MODELS = {
         {'id': 'gpt-4o-mini', 'label': 'GPT-4o Mini', 'tier': 'light'},
         {'id': 'gpt-4-turbo', 'label': 'GPT-4 Turbo', 'tier': 'heavy'},
     ],
-    'google': [
-        {'id': 'gemini-2.5-flash', 'label': 'Gemini 2.5 Flash', 'tier': 'medium'},
-        {'id': 'gemini-2.5-pro', 'label': 'Gemini 2.5 Pro', 'tier': 'heavy'},
-        {'id': 'gemini-2.0-flash', 'label': 'Gemini 2.0 Flash', 'tier': 'light'},
-    ],
     'groq': [
         {'id': 'llama-3.3-70b-versatile', 'label': 'Llama 3.3 70B', 'tier': 'heavy'},
         {'id': 'llama-3.1-8b-instant', 'label': 'Llama 3.1 8B', 'tier': 'light'},
@@ -437,7 +432,7 @@ NÃO inclua <!DOCTYPE>, <html>, <head>, <body> — apenas o conteúdo interno.""
                 "Voce e um gerador de HTML. Retorne APENAS codigo HTML puro usando Tailwind CSS. NUNCA escreva texto explicativo, introducoes ou comentarios fora do HTML. Comece diretamente com a primeira tag HTML.",
                 liam_prompt, 0.4, 12000)
             lat = int((time.time() - t0) * 1000)
-            # Limpar texto antes do HTML (Gemini às vezes adiciona introdução)
+            # Limpar texto antes do HTML (alguns modelos adicionam introdução)
             import re as _re_html
             _html_start = _re_html.search(r'<(?:nav|section|div|header)', liam_resp)
             if _html_start and _html_start.start() > 0:
