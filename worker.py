@@ -37,17 +37,21 @@ def _load_job_tipos() -> tuple:
         return tuple(t.strip() for t in env_val.split(",") if t.strip())
     return (
         "pipeline_lead",
+        "pipeline_multiplos",
+        "pipeline_main",
         "lead_production_tick",
         "lead_supply_caio",
         "lead_supply_hunter",
     )
 
 
+_PIPELINE_TIPOS = ("pipeline_lead", "pipeline_multiplos", "pipeline_main")
+
 JOB_TIPOS = _load_job_tipos()
 
 
 def _run_pipeline_job(db, job) -> bool:
-    """pipeline_lead: roda o Manager e fecha o loop de inventário."""
+    """pipeline_lead / pipeline_multiplos / pipeline_main: roda o Manager e fecha o loop de inventário."""
     from backend.core import job_queue
     from backend.agents.manager.agent import run_pipeline, PipelineState
     from backend.services import lead_supply_engine
@@ -295,7 +299,7 @@ def run_one() -> bool:
             if not job:
                 return False
             logger.info("Job claimed: %s (tipo=%s) worker=%s", job["id"], job["tipo"], worker_id)
-            if job["tipo"] == "pipeline_lead":
+            if job["tipo"] in _PIPELINE_TIPOS:
                 return _run_pipeline_job(db, job)
             return _run_supply_job(db, job)
         finally:
