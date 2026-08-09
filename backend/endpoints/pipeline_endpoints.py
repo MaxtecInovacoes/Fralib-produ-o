@@ -1437,6 +1437,20 @@ IMPORTANTE: Corrija EXATAMENTE os problemas acima. Não altere o que já estava 
             _trace.lead_nome = state.lead_nome
             _trace.tier = state.qualificacao_caio.tier if state.qualificacao_caio else ""
             _trace.complexidade = _complexidade if '_complexidade' in dir() else ""
+            # Bridge: TokenTracker → Trace spans antes de _agregar_metricas()
+            if _trace and _token_tracker:
+                try:
+                    _trk_resumo = _token_tracker.resumo()
+                    _por_agente = _trk_resumo.get("por_agente", {})
+                    for _span in _trace.spans:
+                        _ag_data = _por_agente.get(_span.agente)
+                        if _ag_data:
+                            _span.input_tokens = _ag_data.get("input", 0)
+                            _span.output_tokens = _ag_data.get("output", 0)
+                            _span.cache_hit_tokens = _ag_data.get("cache_hit", 0)
+                            _span.custo_usd = _ag_data.get("custo", 0.0)
+                except Exception:
+                    pass
             _trace.finalizar("success")
             print(formatar_trace_log(_trace))
             salvar_trace(_trace)
