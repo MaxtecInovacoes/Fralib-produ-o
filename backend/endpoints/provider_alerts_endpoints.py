@@ -39,8 +39,10 @@ def _audit(db, actor, action, target_id=None, metadata=None, request=None):
         db.commit()
     except Exception as e:
         print(f'[audit] falha {action}: {e}')
-        try: db.rollback()
-        except Exception: pass
+        try:
+            db.rollback()
+        except Exception as rollback_err:
+            print(f'[audit] rollback falhou: {rollback_err}')
 
 
 @router.get('')

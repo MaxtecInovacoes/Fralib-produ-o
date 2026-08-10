@@ -167,8 +167,8 @@ def _tool_get_keyword_research(tool_input: dict, context: dict = None) -> str:
         with urllib.request.urlopen(req, timeout=5) as resp:
             data = json.loads(resp.read().decode("utf-8"))
             suggest_terms = [s for s in (data[1] if len(data) > 1 else []) if isinstance(s, str)][:10]
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"[arquiteto_tools] Google suggest falhou: {e}")
 
     # Keyword research pré-computado (passado via context)
     kw_precomputed = (context or {}).get("keyword_research", "")

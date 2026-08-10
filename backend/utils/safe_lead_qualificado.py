@@ -27,11 +27,14 @@ def safe_qualificar(
 
     Args:
         lead_raw: LeadRaw, dict, str ou None (tenta converter)
-        lead_dict: dict alternativo se lead_raw for string (fallback)
+        lead_dict: dict alternativo se lead_raw for string
         log_fn: funcao de log opcional
 
     Returns:
-        LeadQualificado sempre valido (nunca quebra)
+        LeadQualificado valido.
+
+    Raises:
+        RuntimeError: se lead_raw for invalido E lead_dict for vazio — sem fallback.
     """
     _log = log_fn or (lambda msg, level="info": None)
 
@@ -45,22 +48,9 @@ def safe_qualificar(
     elif isinstance(lead_raw, str) or lead_raw is None:
         _log(f"[safe_qualificar] lead_raw={type(lead_raw).__name__}, usando lead_dict", "warning")
         if not lead_dict:
-            # Em vez de raise, criar LeadQualificado minimo para nao quebrar pipeline
-            _log("[safe_qualificar] lead_dict vazio - criando LeadQualificado minimo", "warning")
-            lead_raw = LeadRaw(
-                nome="desconhecido",
-                cidade="",
-                segmento="",
-                telefone="",
-            )
-            return LeadQualificado(
-                lead=lead_raw,
-                score=0,
-                tier="UNKNOWN",
-                razoes=["dados_insuficientes"],
-                sinais=[],
-                presenca_digital="ZERO_PRESENCA",
-                dados_suficientes=False,
+            raise RuntimeError(
+                f"[safe_qualificar] lead_raw={type(lead_raw).__name__} e lead_dict vazio — "
+                f"sem dados suficientes para qualificar lead, sem fallback"
             )
         lead_raw = _dict_to_leadraw(lead_dict)
     else:

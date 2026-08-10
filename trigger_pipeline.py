@@ -16,6 +16,61 @@ from backend.observability import Trace, salvar_trace
 from backend.agents.manager.agent import run_pipeline, PipelineState
 from backend.agents.llm_tracking import set_tracking_context
 
+# ── MONKEY-PATCH: instrumentar _registrar_llm_budget para ver erro real ──
+import backend.agents.llm_tracking as _lt_mod
+_orig_budget = _lt_mod._registrar_llm_budget
+def _patched_budget(modelo, input_tokens, output_tokens, cache_read=0, cache_created=0, agente=None, provider="anthropic", latency_ms=None):
+    print(f"[BUDGET-DEBUG] >> CALLED modelo={modelo} in={input_tokens} out={output_tokens} agente={agente} provider={provider}", flush=True)
+    try:
+        _orig_budget(modelo, input_tokens, output_tokens, cache_read, cache_created, agente, provider, latency_ms)
+        print("[BUDGET-DEBUG] >> SUCCESS (no exception)", flush=True)
+    except Exception as e:
+        print(f"[BUDGET-DEBUG] >> EXCEPTION: {type(e).__name__}: {e}", flush=True)
+        import traceback; traceback.print_exc()
+        raise
+_lt_mod._registrar_llm_budget = _patched_budget
+# ───────────────────────────────────────────────────────────────────────────
+
+# ── MONKEY-PATCH: instrumentar _salvar_uso_llm ──
+_orig_salvar = _lt_mod._salvar_uso_llm
+def _patched_salvar(modelo, input_tokens, output_tokens, agente=None):
+    print(f"[BUDGET-DEBUG] >> _salvar_uso_llm: modelo={modelo} agente={agente}", flush=True)
+    try:
+        _orig_salvar(modelo, input_tokens, output_tokens, agente)
+        print("[BUDGET-DEBUG] >> _salvar_uso_llm SUCCESS", flush=True)
+    except Exception as e:
+        print(f"[BUDGET-DEBUG] >> _salvar_uso_llm EXCEPTION: {type(e).__name__}: {e}", flush=True)
+        import traceback; traceback.print_exc()
+        raise
+_lt_mod._salvar_uso_llm = _patched_salvar
+
+# ── MONKEY-PATCH: instrumentar sqlalchemy para ver SQL + rows ──
+try:
+    from sqlalchemy.engine.base import Connection
+    _orig_conn_execute = Connection.execute
+    def _patched_conn_execute(self, clause, params=None):
+        sql = str(clause)
+        if "llm_budget_ledger" in sql or "llm_usage" in sql:
+            print(f"[SQL-DEBUG] >> {sql[:80].strip()}... params={params}", flush=True)
+        try:
+            result = _orig_conn_execute(self, clause, params)
+            if "llm_budget_ledger" in sql:
+                try:
+                    print(f"[SQL-DEBUG] >> rowcount={result.rowcount}", flush=True)
+                except Exception:
+                    print(f"[SQL-DEBUG] >> result type={type(result)}", flush=True)
+            return result
+        except Exception as e:
+            if "llm_budget_ledger" in sql or "llm_usage" in sql:
+                print(f"[SQL-DEBUG] >> EXCEPTION: {type(e).__name__}: {e}", flush=True)
+                import traceback; traceback.print_exc()
+            raise
+    Connection.execute = _patched_conn_execute
+    print("[SQL-DEBUG] Connection.execute patched OK", flush=True)
+except Exception as e:
+    print(f"[SQL-DEBUG] Patch FAILED: {e}", flush=True)
+# ───────────────────────────────────────────────────────────────────────────
+
 print("=== TRIGGER PIPELINE REAL (via run_pipeline) ===\n")
 inicializar_database()
 
@@ -99,6 +154,35 @@ try:
 
     salvar_trace(trace)
     log_tracking(_token_tracker.resumo())
+
+    # ── VERIFICAR IMEDIATAMENTE após tracking ──
+    print("\n[VERIFY] Verificando tabelas de tracking APÓS pipeline...")
+    with engine.connect() as conn:
+        r = conn.execute(text("SELECT COUNT(*) FROM llm_usage WHERE run_id = :r"), {"r": run_id})
+        print(f"  llm_usage rows: {r.scalar()}")
+        r = conn.execute(text("SELECT COUNT(*) FROM llm_budget_ledger WHERE run_id = :r"), {"r": run_id})
+        print(f"  llm_budget_ledger rows: {r.scalar()}")
+        if r.scalar() == 0:
+            r2 = conn.execute(text("SELECT DISTINCT run_id, COUNT(*) FROM llm_budget_ledger GROUP BY run_id ORDER BY run_id DESC LIMIT 10"))
+            rows2 = r2.fetchall()
+            if rows2:
+                print(f"  Outros run_ids existentes:")
+                for row in rows2:
+                    print(f"    run_id={row[0]} count={row[1]}")
+            else:
+                print("  llm_budget_ledger TOTALMENTE VAZIO")
+            # Test INSERT manual
+            try:
+                conn.execute(text("""
+                    INSERT INTO llm_budget_ledger (tenant_id, run_id, phase, agent, provider, model, input_tokens, output_tokens, cost_usd, status)
+                    VALUES (:t, :r, :p, :a, :pr, :m, :i, :o, :c, :s)
+                """), {"t": 2, "r": run_id + "-v", "p": "v", "a": "v", "pr": "t", "m": "t", "i": 1, "o": 1, "c": 0.0001, "s": "success"})
+                conn.commit()
+                r3 = conn.execute(text("SELECT COUNT(*) FROM llm_budget_ledger WHERE run_id = :r"), {"r": run_id + "-v"})
+                print(f"  INSERT manual verify: {r3.scalar()} rows (esperado: 1)")
+            except Exception as e:
+                print(f"  INSERT manual FAILED: {e}")
+    # ─────────────────────────────────────────────────
 
     print(f"\n[RESULT] Estado final: {final.current_state}")
     print(f"[RESULT] Erro: {final.error or 'none'}")

@@ -9,7 +9,7 @@ import sys, os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from llm_direct import call_claude
-from markdown_prd_parser import parse_bloco2_with_fallback
+from markdown_prd_parser import parse_bloco2_markdown
 from prompts_arquiteto import SYSTEM_COPY_SENIOR
 
 
@@ -193,112 +193,6 @@ H1: 8+ words with benefit + city. Good example: "Treino funcional e nutricao int
 MARKDOWN ONLY. No JSON. No code blocks."""
 
 
-def _texto_curto(value) -> str:
-    return str(value or "").strip()
-
-
-def _primeira_linha_review(review: dict) -> str:
-    texto = _texto_curto(review.get("text") or review.get("texto"))
-    autor = _texto_curto(review.get("author") or review.get("autor")) or "Cliente"
-    if not texto:
-        return ""
-    texto = " ".join(texto.split())
-    if len(texto) > 180:
-        texto = texto[:177].rstrip() + "..."
-    return f'"{texto}" - {autor}'
-
-
-def _copy_deterministica_fallback(
-    nome: str,
-    cidade: str,
-    segmento: str,
-    telefone: str,
-    endereco: str,
-    rating: float,
-    total_av: int,
-    secoes_nomes: list,
-    reviews_raw: list,
-) -> dict:
-    """Gera copy factual minima quando LLM fica indisponivel.
-
-    Mantem o pipeline vivo sem inventar servicos, endereco, metricas ou claims.
-    """
-    nome = _texto_curto(nome)
-    cidade = _texto_curto(cidade)
-    segmento = _texto_curto(segmento).lower() or "negocio local"
-    telefone = _texto_curto(telefone)
-    endereco = _texto_curto(endereco)
-    reviews_raw = reviews_raw or []
-    total_label = f"{total_av} avaliacoes" if total_av else "avaliacoes no perfil"
-    rating_label = f"Nota {rating}/5" if rating else "Perfil local verificado"
-    contato_body = telefone or "Entre em contato para confirmar atendimento."
-
-    copy_por_secao = {
-        "hero": {
-            "h1": f"{segmento.capitalize()} em {cidade} para treinar com mais clareza",
-            "subtitulo": f"Conheca a {nome} com informacoes reais do perfil local, contato direto e detalhes para decidir sua proxima visita.",
-            "cta": "Chamar no WhatsApp" if telefone else "Falar com a equipe",
-            "eyebrow": f"{segmento.capitalize()} em {cidade}",
-        },
-        "sobre": {
-            "h2": f"Sobre a {nome}",
-            "body": f"A {nome} atende em {cidade}. {rating_label} com {total_label}. Consulte a equipe para confirmar atividades, planos e disponibilidade.",
-            "cta": "Ver informacoes",
-        },
-        "servicos": {
-            "omitir": True,
-            "h2": "Confirme o atendimento pelo contato",
-            "body": "A lista de atividades nao foi confirmada por fonte estruturada nesta coleta. Fale com a equipe antes de visitar.",
-            "items": "",
-            "cta": "Falar com a equipe",
-        },
-        "depoimentos": {
-            "omitir": not bool(reviews_raw),
-            "h2": "O que aparece nas avaliacoes",
-            "body": "\n".join(
-                line for line in (_primeira_linha_review(r) for r in reviews_raw[:3]) if line
-            )
-            or "Depoimentos indisponiveis nesta coleta.",
-        },
-        "faq": {
-            "h2": "Perguntas frequentes",
-            "body": f"Como falar com a {nome}? Use o telefone informado no site.\nOnde fica? {endereco or cidade}.\nQuais atividades oferece? Confirme diretamente com a equipe.",
-        },
-        "localizacao": {
-            "omitir": not bool(endereco),
-            "h2": "Localizacao",
-            "body": endereco or cidade,
-            "cta": "Ver rota",
-        },
-        "contato": {
-            "h2": f"Contato da {nome}",
-            "body": contato_body,
-            "cta": "Enviar mensagem",
-        },
-    }
-
-    sections = []
-    nomes = secoes_nomes or list(copy_por_secao.keys())
-    for secao in nomes:
-        nome_secao = _texto_curto(secao).lower()
-        copy = copy_por_secao.get(
-            nome_secao,
-            {
-                "h2": nome_secao.capitalize() or "Informacoes",
-                "body": f"Informacoes da {nome} em {cidade}.",
-                "cta": "Falar com a equipe",
-            },
-        )
-        sections.append(
-            {
-                "name": nome_secao,
-                "copy": {k: v for k, v in copy.items() if k != "omitir"},
-                "omitir": bool(copy.get("omitir", False)),
-            }
-        )
-    return {"sections": sections, "_fallback": "deterministic_copy"}
-
-
 def _callar_bloco_parcial(
     shared_context: str,
     grupo_secoes: list,
@@ -326,34 +220,18 @@ def _callar_bloco_parcial(
         f"MARKDOWN ONLY. No JSON. No code blocks."
     )
 
-    # Tentativa 1: sonnet
-    try:
-        resp = call_claude(
-            system=SYSTEM_COPY_SENIOR,
-            user=prompt,
-            model="sonnet",
-            max_tokens=1200,
-            temperature=0.4,
-            agent_name="arquiteto_mestre",
-        )
-    except Exception as e:
-        print(f"[BlocoCopy] Grupo [{labels}] sonnet falhou, haiku: {e}")
-        try:
-            resp = call_claude(
-                system=SYSTEM_COPY_SENIOR,
-                user=prompt,
-                model="haiku",
-                max_tokens=1000,
-                temperature=0.3,
-                agent_name="arquiteto_mestre",
-                respect_agent_config=False,
-            )
-        except Exception as e2:
-            print(f"[BlocoCopy] Grupo [{labels}] haiku tambem falhou: {e2}")
-            return None
+    # Tentativa única — sem fallback
+    resp = call_claude(
+        system=SYSTEM_COPY_SENIOR,
+        user=prompt,
+        model="sonnet",
+        max_tokens=1200,
+        temperature=0.4,
+        agent_name="arquiteto_mestre",
+    )
 
     resp = _re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f]", " ", resp)
-    dados = parse_bloco2_with_fallback(resp)
+    dados = parse_bloco2_markdown(resp)
 
     if dados and dados.get("sections"):
         grupo_set = set(s.lower() for s in grupo_secoes)
@@ -362,13 +240,6 @@ def _callar_bloco_parcial(
             return filtered
 
     return None
-
-
-def _secoes_faltando(todas: list, todas_nomes: list) -> list:
-    """Retorna secoes deterministicas para secoes que nao foram preenchidas."""
-    nomes_existentes = {s["name"] for s in todas}
-    faltando = [n for n in todas_nomes if n.lower() not in nomes_existentes]
-    return faltando
 
 
 def executar_bloco_copy(
@@ -397,8 +268,7 @@ def executar_bloco_copy(
     Cada chamada gera copy para 1-2 secoes, mantendo o prompt pequeno
     o suficiente para o proxy nao retornar 529 (Service Overloaded).
 
-    Fallback: se um grupo falha, apenas suas secoes sao afetadas.
-    Se todos os grupos falharem, retorna fallback deterministico completo.
+    Qualquer falha LLM propagua como excecao — sem fallback.
     """
     from prompts_arquiteto import selecionar_top_reviews
 
@@ -424,9 +294,8 @@ def executar_bloco_copy(
         if relevantes:
             grupos_ativos.append(relevantes)
 
-    # 4 chamadas sequenciais
+    # 4 chamadas sequenciais — sem fallback
     todas_secoes: list = []
-    falhas = 0
 
     for grupo in grupos_ativos:
         labels = ", ".join(grupo)
@@ -435,31 +304,8 @@ def executar_bloco_copy(
         if resultado:
             todas_secoes.extend(resultado)
         else:
-            falhas += 1
-            print(f"[BlocoCopy] Grupo [{labels}]: falhou — sera preenchido deterministicamente")
+            raise RuntimeError(
+                f"[BlocoCopy] Grupo [{labels}] falhou — LLM indisponivel, sem fallback"
+            )
 
-    # Todos falharam → fallback completo
-    if falhas == len(grupos_ativos) or not todas_secoes:
-        print("[BlocoCopy] Todos grupos falharam — fallback deterministico completo")
-        return _copy_deterministica_fallback(
-            nome=nome, cidade=cidade, segmento=segmento,
-            telefone=telefone, endereco=endereco, rating=rating,
-            total_av=total_av, secoes_nomes=secoes_nomes,
-            reviews_raw=reviews_raw,
-        )
-
-    # Preencher secoes que nao foram geradas
-    faltando = _secoes_faltando(todas_secoes, secoes_nomes)
-    if faltando:
-        fb = _copy_deterministica_fallback(
-            nome=nome, cidade=cidade, segmento=segmento,
-            telefone=telefone, endereco=endereco, rating=rating,
-            total_av=total_av, secoes_nomes=faltando,
-            reviews_raw=reviews_raw,
-        )
-        for sec in fb.get("sections", []):
-            if sec["name"] not in {s["name"] for s in todas_secoes}:
-                todas_secoes.append(sec)
-
-    print(f"[BlocoCopy] OK: {len(todas_secoes)} secoes ({falhas} grupos falharam)")
     return {"sections": todas_secoes}

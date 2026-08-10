@@ -125,7 +125,6 @@ async def executar_fase3_jina(
     config: dict,
     buscar_inteligencia_jina: Callable = None,
     formatar_inteligencia: Callable = None,
-    pesquisar_referencias_jina: Callable = None,
     pode_usar_cache: Callable = None,
     get_dados_agente: Callable = None,
     salvar_checkpoint: Callable = None,
@@ -172,21 +171,9 @@ async def executar_fase3_jina(
                             state.pipeline_id, "jina",
                             {"insights": state.jina_insights, "intel": _jina_intel}
                         )
-            except Exception as e:
-                logger.warning(f"[Pipeline] Jina Intel erro: {e}")
-                # Fallback para Jina antigo
-                if pesquisar_referencias_jina:
-                    try:
-                        state.jina_insights = pesquisar_referencias_jina(
-                            state.segmento, cidade=state.cidade
-                        )
-                        if log_fn:
-                            log_fn(f"  Jina (fallback v1): {len(state.jina_insights)} chars", "warning")
-                    except Exception as e_jina_fallback:
-                        # IMPORTANTE: Jina v1 fallback falhou silenciosamente
-                        # SEO do site pode estar incompleto
-                        logger.warning(f"[Pipeline] Jina fallback v1 falhou: {e_jina_fallback}")
-                        state.jina_insights = ""
+            raise RuntimeError(
+                f"[Pipeline] Jina Intel falhou: {e} — sem dados de pesquisa, sem fallback"
+            )
         else:
             state.jina_insights = ""
 
