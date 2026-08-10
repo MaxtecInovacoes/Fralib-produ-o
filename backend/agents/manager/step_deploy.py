@@ -98,7 +98,7 @@ def step_deploy(state: PipelineState) -> PipelineState:
                             url_site = :url,
                             atualizado_em = NOW()
                         WHERE id = :lid AND user_id = :tid
-                          AND (status IS NULL OR status NOT IN ('qualificado', 'convertido', 'descartado'))
+                          AND (status IS NULL OR status NOT IN ('descartado'))
                     """),
                     {"url": state.deploy_url, "lid": state.lead_id, "tid": state.tenant_id},
                 )
