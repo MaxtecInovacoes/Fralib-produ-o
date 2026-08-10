@@ -90,6 +90,8 @@ def step_deploy(state: PipelineState) -> PipelineState:
             from sqlalchemy import text as _sql
             _db = SessionLocal()
             try:
+                # Garantir sessao limpa — step anterior pode ter deixado transacao falha
+                _db.rollback()
                 _db.execute(
                     _sql("""
                         UPDATE leads SET
