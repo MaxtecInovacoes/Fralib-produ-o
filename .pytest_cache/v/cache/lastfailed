@@ -33,5 +33,9 @@
   "tests/unit/test_database.py::test_get_db_returns_session": true,
   "tests/unit/test_database.py::test_pipeline_state_config_json_serialization": true,
   "tests/agents/test_manager.py::test_pipeline_completa_passando": true,
-  "tests/unit/test_hunter_parsing.py": true
+  "tests/unit/test_hunter_parsing.py": true,
+  "tests/test_crm.py": true,
+  "tests/test_pipeline_real.py": true,
+  "tests/unit/test_auth_core.py": true,
+  "tests/unit/test_auth_endpoints.py": true
 }

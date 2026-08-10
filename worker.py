@@ -59,6 +59,7 @@ def _run_pipeline_job(db, job) -> bool:
     from backend.agents.token_tracker import TokenTracker, set_tracker, log_tracking, salvar_tracking, _calcular_custo
 
     payload = job["payload"] or {}
+    tenant_id = job.get("tenant_id")
     # Hydration: se payload tem _lead_id_existente mas lead_data vazio,
     # busca os dados do lead no banco para que step_hunter não falhe com
     # "Hunter sem lead" quando o job é reprocessado sem payload completo.
