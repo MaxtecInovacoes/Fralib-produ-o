@@ -1,4 +1,6 @@
 """Step: Quality Gate — Fase 5: Validação de qualidade do HTML (Vision v2 ou regex v1)."""
+import asyncio
+import concurrent.futures
 import logging
 import os
 import json
@@ -9,6 +11,20 @@ from backend.agents.manager.states import (
 from backend.core.knowledge_journal import record as journal_record
 
 logger = logging.getLogger("manager.pipeline")
+
+
+def _run_sync(coro):
+    """Run a coroutine safely — works both inside and outside an event loop."""
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = None
+    if loop and loop.is_running():
+        import concurrent.futures
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+            return pool.submit(asyncio.run, coro).result()
+    else:
+        return asyncio.run(coro)
 
 
 def step_quality_gate(state: PipelineState) -> PipelineState:
@@ -74,7 +90,7 @@ def step_quality_gate(state: PipelineState) -> PipelineState:
 
             # Run async QA v2
             import asyncio
-            qa_result = asyncio.run(run_quality_gate_v2(
+            qa_result = _run_sync(run_quality_gate_v2(
                 prd=prd,
                 html=state.build_output["html"],
                 segmento=state.segmento,
