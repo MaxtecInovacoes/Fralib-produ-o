@@ -11,9 +11,10 @@ sys.path.insert(0, os.path.join(_BACKEND_ROOT, 'utils'))
 
 from backend.core.database import inicializar_database, engine
 from sqlalchemy import text
-from backend.agents.token_tracker import TokenTracker, set_tracker, log_tracking, salvar_tracking
+from backend.agents.token_tracker import TokenTracker, set_tracker, log_tracking, salvar_tracking, _calcular_custo
 from backend.observability import Trace, salvar_trace
 from backend.agents.manager.agent import run_pipeline, PipelineState
+from backend.agents.llm_tracking import set_tracking_context
 
 print("=== TRIGGER PIPELINE REAL (via run_pipeline) ===\n")
 inicializar_database()
@@ -51,6 +52,7 @@ _token_tracker = TokenTracker(
     nicho=segmento,
 )
 set_tracker(_token_tracker)
+set_tracking_context(tenant_id=tenant_id, run_id=run_id, job_id="smoke-test")
 
 # Trace
 trace = Trace(run_id=run_id, lead_nome=lead_data.get("nome", "unknown")[:100], nicho=segmento)
@@ -86,10 +88,11 @@ try:
             "cache_creation": call.get("cache_creation", 0),
             "cache_read": call.get("cache_read", 0),
         }
-        span = trace.iniciar_span(f"llm_{call['agente']}", call["agente"], model)
+        span = trace.iniciar_span(f"llm_{call['agente']}", call['agente'], model)
         span.input_tokens = usage["input_tokens"]
         span.output_tokens = usage["output_tokens"]
         span.cache_hit_tokens = usage["cache_read"]
+        span.custo_usd = _calcular_custo(model, usage)
         span.finalizar("success")
     trace._agregar_metricas()
     trace.total_chamadas_llm = len(_token_tracker.chamadas)
