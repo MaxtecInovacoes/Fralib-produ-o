@@ -127,7 +127,7 @@ def _registrar_uso_completo(
         provider=provider,
         latency_ms=latency_ms,
         cache_read=cache_read,
-        cache_creation=cache_creation,
+        cache_created=cache_creation,
     )
 
     # Destino 2: TokenTracker -> pipeline_traces
