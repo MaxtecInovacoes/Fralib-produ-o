@@ -85,6 +85,71 @@ from backend.agents.llm_tracking import (
 )
 
 
+# ══════════════════════════════════════════════════════════════════
+# ⚠️  REGRA DE OURO — TRACKING OBRIGATÓRIO
+# ══════════════════════════════════════════════════════════════════
+# Toda chamada LLM DEVE registrar tracking. Use _registrar_uso_completo()
+# como única fonte de verdade. Nunca faça uma chamada LLM sem registrar.
+#
+# Por que existe este helper:
+#   - call_claude_structured: esqueceu o tracker (2026-08-09)
+#   - call_claude_stream: esqueceu o tracker
+#   - call_claude_cached: esqueceu o tracker
+#   - Builder: bypassava tracking via HTTP OpenUI
+#
+# Destinos garantidos:
+#   1. llm_budget_ledger (_salvar_uso_llm + _registrar_llm_budget)
+#   2. pipeline_traces (via TokenTracker.registrar)
+# ══════════════════════════════════════════════════════════════════
+
+def _registrar_uso_completo(
+    model_id: str,
+    input_tokens: int,
+    output_tokens: int,
+    agent_name: str = None,
+    provider: str = "anthropic",
+    latency_ms: int = 0,
+    cache_read: int = 0,
+    cache_creation: int = 0,
+):
+    """Registra uso LLM em todos os destinos de tracking.
+
+    Single point of truth — toda chamada LLM deve chamar esta funcao.
+    Garante que nenhum rastro de LLM suma do pipeline_traces.
+    """
+    # Destino 1: llm_budget_ledger (canonical)
+    _salvar_uso_llm(model_id, input_tokens, output_tokens, agent_name)
+    _registrar_llm_budget(
+        model_id,
+        input_tokens,
+        output_tokens,
+        agente=agent_name,
+        provider=provider,
+        latency_ms=latency_ms,
+        cache_read=cache_read,
+        cache_creation=cache_creation,
+    )
+
+    # Destino 2: TokenTracker -> pipeline_traces
+    try:
+        from backend.agents.token_tracker import get_tracker
+
+        _tracker = get_tracker()
+        if _tracker:
+            _tracker.registrar(
+                agente=agent_name or "unknown",
+                model=model_id,
+                usage={
+                    "input_tokens": input_tokens,
+                    "output_tokens": output_tokens,
+                    "cache_read_input_tokens": cache_read,
+                    "cache_creation_input_tokens": cache_creation,
+                },
+            )
+    except Exception:
+        pass
+
+
 # ─────────────────────────────────────────────────────────────────
 # PUBLIC API — call_claude
 # ─────────────────────────────────────────────────────────────────
@@ -229,30 +294,14 @@ def call_claude(
         print(
             f"[LLM] provider={_db_provider} model={model_id} in={input_tokens} out={output_tokens} agent={agent_name or '-'}"
         )
-        _salvar_uso_llm(model_id, input_tokens, output_tokens, agent_name)
-        _registrar_llm_budget(
-            model_id,
-            input_tokens,
-            output_tokens,
-            agente=agent_name,
+        _registrar_uso_completo(
+            model_id=model_id,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            agent_name=agent_name,
             provider=_db_provider,
             latency_ms=latency_ms,
         )
-        try:
-            from backend.agents.token_tracker import get_tracker
-
-            _tracker = get_tracker()
-            if _tracker:
-                _tracker.registrar(
-                    agente=agent_name or "unknown",
-                    model=model_id,
-                    usage={
-                        "input_tokens": input_tokens,
-                        "output_tokens": output_tokens,
-                    },
-                )
-        except Exception:
-            pass
         return routed_text
 
     # ── Resolve key/base_url ──
@@ -405,30 +454,14 @@ def call_claude(
         print(
             f"[LLM ChatProxy] model={model_id} in={input_tokens} out={output_tokens} agent={agent_name or '-'}"
         )
-        _salvar_uso_llm(model_id, input_tokens, output_tokens, agent_name)
-        _registrar_llm_budget(
-            model_id,
-            input_tokens,
-            output_tokens,
-            agente=agent_name,
+        _registrar_uso_completo(
+            model_id=model_id,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            agent_name=agent_name,
             provider=PROXY_PROVIDER,
             latency_ms=latency_ms,
         )
-        try:
-            from backend.agents.token_tracker import get_tracker
-
-            _tracker = get_tracker()
-            if _tracker:
-                _tracker.registrar(
-                    agente=agent_name or "unknown",
-                    model=model_id,
-                    usage={
-                        "input_tokens": input_tokens,
-                        "output_tokens": output_tokens,
-                    },
-                )
-        except Exception:
-            pass
         if _ia and isinstance(_key_id, int):
             _ia.mark_success(_key_id)
         return chat_text
@@ -470,34 +503,16 @@ def call_claude(
                     f"[LLM] stop={response.stop_reason} in={input_tokens} out={output_tokens}"
                 )
 
-            _salvar_uso_llm(model_id, input_tokens, output_tokens, agent_name)
-            _registrar_llm_budget(
-                model_id,
-                input_tokens,
-                output_tokens,
-                cache_read=cache_read,
-                cache_created=cache_created,
-                agente=agent_name,
+            _registrar_uso_completo(
+                model_id=model_id,
+                input_tokens=input_tokens,
+                output_tokens=output_tokens,
+                agent_name=agent_name,
+                provider="anthropic",
                 latency_ms=latency_ms,
+                cache_read=cache_read,
+                cache_creation=cache_created,
             )
-
-            try:
-                from backend.agents.token_tracker import get_tracker
-
-                _tracker = get_tracker()
-                if _tracker:
-                    _tracker.registrar(
-                        agente=agent_name or "unknown",
-                        model=model_id,
-                        usage={
-                            "input_tokens": input_tokens,
-                            "output_tokens": output_tokens,
-                            "cache_read_input_tokens": cache_read,
-                            "cache_creation_input_tokens": cache_created,
-                        },
-                    )
-            except Exception:
-                pass
 
             if _ia and _key_id:
                 _ia.mark_success(_key_id)
@@ -698,8 +713,15 @@ def call_claude_structured(
                     f"[LLM Structured] stop={response.stop_reason} in={input_tokens} out={output_tokens}"
                 )
 
-            _salvar_uso_llm(
-                model_id, input_tokens, output_tokens, f"structured_{tool_name}"
+            _registrar_uso_completo(
+                model_id=model_id,
+                input_tokens=input_tokens,
+                output_tokens=output_tokens,
+                agent_name=f"structured_{tool_name}",
+                provider="anthropic",
+                latency_ms=0,
+                cache_read=cache_read,
+                cache_creation=cache_created,
             )
 
             if _ia and _key_id:
@@ -901,7 +923,15 @@ def call_claude_stream(
         print(
             f"[LLM Stream] stop={response.stop_reason} in={input_tokens} out={output_tokens}"
         )
-    _salvar_uso_llm(model_id, input_tokens, output_tokens, agent_name)
+    _registrar_uso_completo(
+        model_id=model_id,
+        input_tokens=input_tokens,
+        output_tokens=output_tokens,
+        agent_name=agent_name,
+        provider="anthropic",
+        cache_read=cache_read,
+        cache_creation=cache_created,
+    )
 
     if _key_id:
         try:
@@ -971,7 +1001,15 @@ def call_claude_cached(
     print(
         f"[LLM Cached] in={input_tokens} out={output_tokens} cache_read={cache_read} cache_created={cache_created}"
     )
-    _salvar_uso_llm(model_id, input_tokens, output_tokens, agent_name)
+    _registrar_uso_completo(
+        model_id=model_id,
+        input_tokens=input_tokens,
+        output_tokens=output_tokens,
+        agent_name=agent_name,
+        provider="anthropic",
+        cache_read=cache_read,
+        cache_creation=cache_created,
+    )
 
     for block in response.content:
         if block.type == "text":

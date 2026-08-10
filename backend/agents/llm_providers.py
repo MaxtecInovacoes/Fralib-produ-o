@@ -235,13 +235,14 @@ def _call_anthropic_via_litellm(
 
     # Log usage
     try:
-        from llm_direct import _salvar_uso_llm, _registrar_llm_budget
+        from llm_direct import _registrar_uso_completo
         input_tokens = usage.get("input_tokens", 0)
         output_tokens = usage.get("output_tokens", 0)
-        _salvar_uso_llm(model_id, input_tokens, output_tokens, agent_name)
-        _registrar_llm_budget(
-            model_id, input_tokens, output_tokens,
-            agente=agent_name,
+        _registrar_uso_completo(
+            model_id=model_id,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            agent_name=agent_name,
             provider="litellm",
         )
     except Exception:
@@ -459,8 +460,8 @@ def call_llm_stream(
 
     # Log usage
     try:
-        from llm_direct import _salvar_uso_llm
-        _salvar_uso_llm(
+        from llm_direct import _registrar_uso_completo
+        _registrar_uso_completo(
             model_id,
             usage.get("input_tokens", 0),
             usage.get("output_tokens", 0),
@@ -540,8 +541,8 @@ def call_llm_cached(
     # Log usage
     usage = response.usage
     try:
-        from llm_direct import _salvar_uso_llm
-        _salvar_uso_llm(
+        from llm_direct import _registrar_uso_completo
+        _registrar_uso_completo(
             model_id,
             usage.input_tokens,
             usage.output_tokens,

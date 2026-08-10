@@ -230,6 +230,18 @@ def render_site(prd, usar_llm: bool = True) -> BuildResult:
                 html = data.get("html", "")
                 model = data.get("model", "")
                 if html and len(html) > 1000:
+                    # Registrar tracking do Builder (OpenUI nao retorna usage, estimar)
+                    try:
+                        from backend.agents.llm_direct import _registrar_uso_completo
+                        _registrar_uso_completo(
+                            model_id=model or "openui-unknown",
+                            input_tokens=0,
+                            output_tokens=len(html) // 4,
+                            agent_name="builder",
+                            provider="openui",
+                        )
+                    except Exception:
+                        pass
                     return BuildResult(html=html, model=model, success=True)
                 return BuildResult(html="", model=model, success=False,
                                    error=f"HTML too short: {len(html)} chars")
