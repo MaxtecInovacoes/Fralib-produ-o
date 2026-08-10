@@ -99,6 +99,13 @@ def _registrar_llm_budget(
         run_id = _get_run_context(tracker)
         job_id = _get_job_context(tracker)
 
+        # job_id column is INTEGER — coerce or NULL
+        if job_id is not None:
+            try:
+                job_id = int(job_id)
+            except (ValueError, TypeError):
+                job_id = None
+
         with engine.connect() as conn:
             conn.execute(
                 text("""

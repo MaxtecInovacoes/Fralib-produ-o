@@ -19,24 +19,24 @@ from backend.agents.llm_tracking import set_tracking_context
 print("=== TRIGGER PIPELINE REAL (via run_pipeline) ===\n")
 inicializar_database()
 
-# Config do teste — usando lead REAL que passa no Caio, sem pipeline rodada
+# Config do teste — usando lead REAL qualificado pelo Caio, SEM pipeline completa
 segmento = "academia"
-cidade = "Campina Grande do Sul"
+cidade = "Campina Grande Do Sul"
 tenant_id = 2
-run_id = f"smoke-{os.getpid()}"
-lead_id = "ca313405-1ecb-4ffd-a38a-6333d25f0d07"  # Academia Iron Gym — capturado, sem pipeline
+run_id = "smoke-%s" % os.getpid()
+lead_id = "38ffd3fb-c9a0-498c-9abc-c8a4e8f24853"  # Arena Gym Fitness — qualificado, sem pipeline
 
 # Lead data — dados REAIS do lead
 lead_data = {
-    "nome": "Academia Iron Gym",
+    "nome": "Arena Gym Fitness",
     "cidade": cidade,
-    "telefone": "5541999946923",
+    "telefone": "41985134105",
     "segmento": segmento,
     "rating": 0.0,
     "reviews_count": 0,
     "fotos": [],
     "website": "",
-    "whatsapp": "5541999946923",
+    "whatsapp": "41985134105",
     "endereco": "",
     "market_intelligence": None,
     "descricao": "",
@@ -52,7 +52,7 @@ _token_tracker = TokenTracker(
     nicho=segmento,
 )
 set_tracker(_token_tracker)
-set_tracking_context(tenant_id=tenant_id, run_id=run_id, job_id="smoke-test")
+set_tracking_context(user_id=tenant_id, run_id=run_id, job_id="smoke-test")
 
 # Trace
 trace = Trace(run_id=run_id, lead_nome=lead_data.get("nome", "unknown")[:100], nicho=segmento)
