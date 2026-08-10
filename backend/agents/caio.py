@@ -137,9 +137,25 @@ _SEGMENTO_KEYWORDS = {
         "fitness",
         "muscula",
         "treino",
+        "treinam",
         "crossfit",
         "pilates",
         "personal",
+        "funcional",
+        "hiit",
+        "bootcamp",
+        "jiu jitsu",
+        "muay thai",
+        "spinning",
+        "zumba",
+        "danca",
+        "arena fit",
+        "ct ",
+        "ctf",
+        "body fit",
+        "power fit",
+        "centro de treinam",
+        "martial",
     ],
     "barbearia": ["barbe", "barber", "cabelo", "corte", "navalha"],
     "salao": ["salao", "salon", "cabele", "beleza", "estetica", "unhas", "manicure"],
@@ -165,20 +181,76 @@ _SEGMENTO_KEYWORDS = {
     "auto": ["auto", "mecanica", "carro", "veiculo", "oficina", "funilaria"],
 }
 
+# ── Hierarquia: subnichos → categoria pai ───────────────────────────
+# Se um lead chama "CT" ou "Centro de Treinamento", é academia.
+# Se chama "Escritório de Advocacia", é advocacia.
+_SEGMENTO_HIERARCHY: dict[str, str] = {
+    # Academia e subnichos
+    "centro de treinamento": "academia",
+    "ct ": "academia",
+    "crossfit box": "academia",
+    "personal trainer": "academia",
+    "bootcamp": "academia",
+    "funcional": "academia",
+    "jiu jitsu": "academia",
+    "muay thai": "academia",
+    "spinning": "academia",
+    "zumba": "academia",
+    # Restaurante e subnichos
+    "pizzaria": "restaurante",
+    "hamburgueria": "restaurante",
+    "sushi": "restaurante",
+    "churrascaria": "restaurante",
+    "cafeteria": "restaurante",
+    # Saude e subnichos
+    "fisioterapia": "clinica",
+    "odontologia": "dentista",
+    # Pet e subnichos
+    "veterinaria": "pet",
+    "pet shop": "pet",
+    "petshop": "pet",
+    # Auto e subnichos
+    "funilaria": "auto",
+    "mecanica": "auto",
+}
+
 
 def _verificar_relevancia_segmento(nome, segmento_pedido):
+    """Verifica se o lead e relevante para o segmento pedido.
+
+    Estrategia em 3 camadas:
+    1. Match exato por keyword no nome (caso classico)
+    2. Match via hierarquia: se o nome contem um subnicho (ex: "Centro de Treinamento")
+       que mapeia para a categoria pedida (ex: "academia"), aprov
+    3. Se nao houver keywords para o segmento, aprova por omissao (nao rejeita sem dados)
+    """
     seg = segmento_pedido.lower().strip()
     nome_lower = nome.lower()
+
+    # Camada 1: match exato de keyword
     keywords = None
     for key, kws in _SEGMENTO_KEYWORDS.items():
         if key in seg:
             keywords = kws
             break
+    if keywords:
+        for kw in keywords:
+            if kw in nome_lower:
+                return True
+
+    # Camada 2: match via hierarquia (subnicho → categoria)
+    for subnicho, categoria in _SEGMENTO_HIERARCHY.items():
+        if subnicho in nome_lower and categoria in seg:
+            return True
+        # tambem inverte: se o subnicho bate com o segmento pedido,
+        # e a categoria do subnicho e a mesma, aprova
+        if subnicho in seg and categoria in seg:
+            return True
+
+    # Camada 3: sem keywords para este segmento → nao bloqueia
     if not keywords:
         return True
-    for kw in keywords:
-        if kw in nome_lower:
-            return True
+
     return False
 
 
