@@ -27,6 +27,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 from arquiteto_tools import ARQUITETO_TOOLS, execute_tool
 from design_context import get_design_context, get_hero_style
 from designer_prd import DesignerPRD
+from llm_direct import call_claude, _registrar_uso_completo
 
 # ══════════════════════════════════════════════════════════════════
 # CONFIG
@@ -139,8 +140,167 @@ RESTRIÇÃO: O destino é HTML/Tailwind ESTÁTICO. PROIBIDO React, Vue, JSX, npm
 
 
 # ══════════════════════════════════════════════════════════════════
-# AGENT LOOP
+# GRUPOS DE CAMPOS PRD (4 chamadas LLM parciais)
 # ══════════════════════════════════════════════════════════════════
+
+_GRUPOS_CAMPOS_PRD = [
+    ["business_name", "segmento", "cidade", "color_palette", "typography", "dark_mode", "layout_type"],
+    ["sections", "animations", "instrucao_criativa_para_dev", "anti_patterns", "schema_org_types"],
+    ["seo_keywords", "faq_questions", "value_props", "competitor_analysis"],
+    ["photos", "reviews_list", "reviews_rating", "reviews_count", "phone", "address",
+     "hours", "google_maps_embed", "components_21dev", "geo"],
+]
+
+
+# ══════════════════════════════════════════════════════════════════
+# CHUNKED LLM CALLS
+# ══════════════════════════════════════════════════════════════════
+
+def _build_shared_context(
+    nome: str,
+    cidade: str,
+    segmento: str,
+    telefone: str,
+    endereco: str,
+    rating: float,
+    total_av: int,
+    caio_tier: str,
+    dark_mode: bool,
+    jina_insights: str,
+    instrucao_criativa: str,
+    reviews_fmt: str,
+    reviews_intel_ctx: str,
+    seo_ctx: str,
+    faq_seo_fmt: str,
+    keyword_research: str,
+    craft_ctx: str,
+    autocritica_ctx: str,
+    tool_results: dict,
+) -> str:
+    """Monta o contexto compartilhado (mesmo para todas as 4 chamadas parciais)."""
+    endereco_rule = (
+        "ADDRESS CAPTURED: use the complete address exactly as provided."
+        if endereco
+        else "ADDRESS NOT CAPTURED: do not invent street/neighborhood; mention only the city when needed."
+    )
+
+    tool_results_fmt = "\n".join(
+        f"## {name}\n{result[:800] if result else '(empty)'}"
+        for name, result in tool_results.items()
+    )
+
+    return f"""BUSINESS: {nome} | CITY: {cidade} | SEGMENT: {segmento}
+PHONE: {telefone} | ADDRESS: {endereco}
+RATING: {rating}/5 ({total_av} avaliacoes) | TIER: {caio_tier}
+MODE: {"DARK" if dark_mode else "LIGHT"}
+{endereco_rule}
+
+JINA INSIGHTS:
+{jina_insights[:3000] if jina_insights else "(nenhum)"}
+
+CREATIVE DIRECTION: {instrucao_criativa[:500]}
+{reviews_intel_ctx}
+
+SEO CONTEXT:
+{seo_ctx}
+{faq_seo_fmt}
+
+KEYWORD RESEARCH:
+{keyword_research}
+
+REAL REVIEWS:
+{reviews_fmt}
+
+{tool_results_fmt}
+
+CRAFT RULES:
+{craft_ctx}
+
+AUTOCRITICA CONTEXT:
+{autocritica_ctx}
+
+Real phone: {telefone}
+Specific copy for {nome}, never generic."""
+
+
+def _callar_bloco_arquiteto(
+    shared_context: str,
+    campos_grupo: list,
+) -> dict | None:
+    """Faz uma chamada LLM para um subconjunto de campos do PRD.
+
+    Returns dict com os campos preenchidos ou None se falhar.
+    Qualquer falha propaga RuntimeError — sem fallback.
+    """
+    campos_str = ", ".join(campos_grupo)
+    campos_set = set(campos_grupo)
+
+    prompt = (
+        f"{shared_context}\n\n"
+        f"Generate ONLY these PRD fields: {campos_str}\n\n"
+        f"Return JSON with EXACTLY these keys: {campos_str}\n"
+        f"Omit keys you cannot fill — do NOT invent data.\n"
+        f"Rules: colors from design system tokens, keywords from research, "
+        f"copy specific to the business, no generic phrases."
+    )
+
+    system_prompt = (
+        f"{ARQUITETO_AGENT_SYSTEM}\n\n"
+        f"TASK: Generate only these fields: {campos_str}\n"
+        f"Return JSON with only those keys."
+    )
+
+    resp = call_claude(
+        system=system_prompt,
+        user=prompt,
+        model="sonnet",
+        max_tokens=4096,
+        temperature=0.3,
+        agent_name="arquiteto_mestre",
+    )
+
+    # Mudança 3: Tracking do Arquiteto em pipeline_traces + llm_budget_ledger
+    try:
+        _registrar_uso_completo(
+            model_id="sonnet",
+            input_tokens=len(system_prompt) // 4 + len(prompt) // 4,
+            output_tokens=len(resp) // 4,
+            agent_name="arquiteto_mestre_bloco",
+            provider="anthropic",
+        )
+    except Exception:
+        pass
+
+    resp = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f]", " ", resp)
+
+    prd_partial = {}
+    try:
+        code_block = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', resp, re.DOTALL)
+        if code_block:
+            json_str = code_block.group(1)
+        else:
+            json_str = _extract_largest_json(resp)
+        if json_str:
+            prd_partial = json.loads(json_str)
+    except (json.JSONDecodeError, AttributeError) as e:
+        print(f"[ArquitetoAgent] JSON parse error grupo [{campos_str}]: {e}", flush=True)
+        raise RuntimeError(f"Falha ao parsear JSON do grupo [{campos_str}]: {e}")
+
+    # Filtrar apenas campos do grupo
+    filtered = {k: v for k, v in prd_partial.items() if k in campos_set}
+    if not filtered:
+        raise RuntimeError(f"LLM retornou JSON vazio para grupo [{campos_str}]")
+
+    return filtered
+
+
+def _merge_prd_partials(partials: list[dict]) -> dict:
+    """Merge de 4 dicts parciais em um PRD completo."""
+    merged = {}
+    for partial in partials:
+        merged.update(partial)
+    return merged
+
 
 @dataclass
 class ArquitetoAgentOutput:
@@ -161,8 +321,8 @@ def _resolve_anthropic():
         if result:
             api_key, base_url, key_id = result
             return api_key, base_url, key_id
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"[arquiteto_agent_loop] pick_key falhou: {e}")
     api_key = os.getenv("ANTHROPIC_API_KEY", "")
     return api_key, "https://api.anthropic.com", None
 
@@ -178,121 +338,109 @@ def arquiteto_agent_loop(
     keyword_research: str = "",
 ) -> ArquitetoAgentOutput:
     """
-    Loop agentic do Arquiteto Mestre.
+    Gera DesignerPRD via 4 chamadas LLM parciais (chunking).
 
-    O Claude busca ativamente cada recurso via tools, gera o PRD,
-    e verifica completude antes de entregar.
+    Substitui o tool-use loop por chamadas diretas a _callar_bloco_arquiteto(),
+    uma por grupo de campos. Cada chamada recebe contexto compartilhado completo.
+    Resultado: mais rápido, sem 529s, tracking completo.
     """
-    api_key, base_url, key_id = _resolve_anthropic()
-    if not api_key:
-        return ArquitetoAgentOutput(error="API key não encontrada")
+    # ── Extrair campos de dados_hunter ─────────────────────────────
+    nome = dados_hunter.get("nome", "") or dados_hunter.get("business_name", "")
+    telefone = dados_hunter.get("telefone", "") or dados_hunter.get("phone", "")
+    endereco = dados_hunter.get("endereco", "") or dados_hunter.get("address", "")
+    rating = dados_hunter.get("rating", 0.0) or dados_hunter.get("reviews_rating", 0.0)
+    total_av = dados_hunter.get("total_av", 0) or dados_hunter.get("reviews_count", 0)
 
-    url = f"{base_url}/v1/messages"
-    headers = {
-        "x-api-key": api_key,
-        "anthropic-version": "2023-06-01",
-        "Content-Type": "application/json",
-        "anthropic-beta": "prompt-caching-2024-07-31",
-    }
+    # ── Formatar reviews ────────────────────────────────────────────
+    reviews_raw = dados_hunter.get("reviews_list", []) or []
+    if reviews_raw:
+        reviews_fmt = "\n".join(
+            f"- {r.get('text', r.get('review', ''))[:200]} "
+            f"(★{r.get('rating', r.get('stars', ''))})"
+            for r in reviews_raw[:10]
+        )
+        reviews_intel_ctx = f"\nREVIEWS INTEL: {len(reviews_raw)} reviews capturados, rating médio {rating}/5."
+    else:
+        reviews_fmt = "(sem reviews)"
+        reviews_intel_ctx = "(sem reviews)"
 
-    # Contexto inicial — dados brutos do negócio
-    nome = dados_hunter.get("nome", "")
-    reviews = dados_hunter.get("reviews") or []
-    fotos = dados_hunter.get("fotos") or []
+    # ── SEO + FAQ context ───────────────────────────────────────────
+    faq_list = dados_hunter.get("faq_questions", []) or []
+    faq_seo_fmt = "\n".join(f"Q: {q.get('pergunta', q.get('question', ''))}\nA: {q.get('resposta', q.get('answer', ''))}" for q in faq_list[:5]) if faq_list else "(sem FAQ)"
+    seo_ctx = f"Segmento: {segmento} | Cidade: {cidade} | Keywords: {keyword_research[:500] if keyword_research else '(nenhuma)'}"
 
-    user_prompt = f"""## Dados do Negócio (Hunter)
-- Nome: {nome}
-- Segmento: {segmento}
-- Cidade: {cidade}
-- Tier: {caio_tier} (score={caio_score})
-- Rating: {dados_hunter.get('rating', 0)}/5 ({dados_hunter.get('total_avaliacoes', 0)} avaliações)
-- Telefone: {dados_hunter.get('telefone', '')}
-- Endereço: {dados_hunter.get('endereco', '')}
-- Fotos disponíveis: {len(fotos)}
-- Reviews disponíveis: {len(reviews)}
-- Serviços: {', '.join((dados_hunter.get('servicos') or [])[:8])}
-- Horários: {json.dumps(dados_hunter.get('horarios') or {}, ensure_ascii=False)[:200]}
-- Dark mode: {dark_mode}
+    # ── Craft rules + autocritica ───────────────────────────────────
+    try:
+        from craft_rules import get_craft_rules, get_autocritica
+        craft_ctx = get_craft_rules()
+        autocritica_ctx = get_autocritica()
+    except Exception:
+        craft_ctx = ""
+        autocritica_ctx = ""
 
-## Reviews Reais
-{chr(10).join([f'- "{r.get("texto", r.get("text", ""))}" — {r.get("autor", r.get("author", "Cliente"))}' for r in reviews[:8]]) if reviews else "NENHUM REVIEW — seção depoimentos deve ser omitida."}
+    # ── Instrução criativa ──────────────────────────────────────────
+    instrucao_criativa = (
+        dados_hunter.get("instrucao_criativa_para_dev", "")
+        or dados_hunter.get("instrucao_criativa", "")
+        or ""
+    )
 
-## Jina Insights Disponíveis
-{"SIM — chame get_jina_insights para extrair dados estruturados." if jina_insights else "NÃO DISPONÍVEL."}
+    # ── Tool results (vazio aqui — tools são chamadas pelo managed agent antigo,
+    #       mas mantemos o slot para compatibilidade) ────────────────
+    tool_results = dados_hunter.get("tool_results", {}) or {}
 
----
-Siga seu processo OBRIGATÓRIO: chame as tools na ordem, colete todos os dados, gere o PRD, e verifique com verify_prd antes de finalizar."""
+    # ── Montar contexto compartilhado ──────────────────────────────
+    shared = _build_shared_context(
+        nome=nome,
+        cidade=cidade,
+        segmento=segmento,
+        telefone=telefone,
+        endereco=endereco,
+        rating=rating,
+        total_av=total_av,
+        caio_tier=caio_tier,
+        dark_mode=dark_mode,
+        jina_insights=jina_insights,
+        instrucao_criativa=instrucao_criativa,
+        reviews_fmt=reviews_fmt,
+        reviews_intel_ctx=reviews_intel_ctx,
+        seo_ctx=seo_ctx,
+        faq_seo_fmt=faq_seo_fmt,
+        keyword_research=keyword_research,
+        craft_ctx=craft_ctx,
+        autocritica_ctx=autocritica_ctx,
+        tool_results=tool_results,
+    )
+    print(f"[ArquitetoAgent] Chunked PRD para {nome} ({segmento}, {cidade}) — 4 blocos")
 
-    messages = [{"role": "user", "content": user_prompt}]
-    tools_used = []
+    # Executar 4 chamadas parciais (uma por grupo de campos)
+    partials = []
+    for grupo_idx, grupo_fields in enumerate(_GRUPOS_CAMPOS_PRD):
+        grupo_nome = f"grupo_{grupo_idx + 1}"
+        print(f"[ArquitetoAgent] Gerando {grupo_nome}: {', '.join(grupo_fields)}")
+        partial = _callar_bloco_arquiteto(
+            shared,
+            grupo_fields,
+        )
+        if partial:
+            partials.append(partial)
+        else:
+            print(f"[ArquitetoAgent] AVISO: {grupo_nome} retornou vazio")
 
-    # Context passado para as tools
-    context = {
-        "keyword_research": keyword_research,
-        "jina_insights": jina_insights,
-        "dados_hunter": dados_hunter,
-        "dark_mode": dark_mode,
-    }
+    if not partials:
+        return ArquitetoAgentOutput(error="Todos os blocos falharam")
 
-    print(f"[ArquitetoAgent] Iniciando loop para {nome} ({segmento}, {cidade})")
+    # Merge dos 4 parciais em um DesignerPRD completo
+    merged = _merge_prd_partials(partials)
+    total_sections = len(merged.get("sections", []))
+    print(f"[ArquitetoAgent] PRD merge OK — {total_sections} seções, {len(partials)} blocos")
 
-    for iteration in range(MAX_ITERATIONS):
-        payload = {
-            "model": MODEL,
-            "max_tokens": MAX_TOKENS,
-            "temperature": 0.3,
-            "system": [{"type": "text", "text": ARQUITETO_AGENT_SYSTEM, "cache_control": {"type": "ephemeral"}}],
-            "tools": ARQUITETO_TOOLS,
-            "messages": messages,
-        }
-
-        try:
-            response = requests.post(url, headers=headers, json=payload, timeout=180)
-            if response.status_code != 200:
-                print(f"[ArquitetoAgent] API error {response.status_code}: {response.text[:200]}", flush=True)
-                break
-            data = response.json()
-        except Exception as e:
-            print(f"[ArquitetoAgent] Request error: {e}", flush=True)
-            break
-
-        stop_reason = data.get("stop_reason", "")
-        content_blocks = data.get("content", [])
-
-        messages.append({"role": "assistant", "content": content_blocks})
-
-        # end_turn → extrair PRD final
-        if stop_reason == "end_turn":
-            print(f"[ArquitetoAgent] end_turn na iteração {iteration + 1}, {len(tools_used)} tools usadas")
-            return _parse_prd_response(content_blocks, tools_used, iteration + 1, dados_hunter, cidade, segmento, dark_mode)
-
-        # tool_use → executar tools
-        if stop_reason == "tool_use":
-            tool_results = []
-            for block in content_blocks:
-                if block.get("type") == "tool_use":
-                    tool_name = block["name"]
-                    tool_input = block["input"]
-                    tool_id = block["id"]
-
-                    print(f"[ArquitetoAgent] Tool: {tool_name}", flush=True)
-                    tools_used.append(tool_name)
-
-                    result = execute_tool(tool_name, tool_input, context)
-                    tool_results.append({
-                        "type": "tool_result",
-                        "tool_use_id": tool_id,
-                        "content": result,
-                    })
-
-            messages.append({"role": "user", "content": tool_results})
-            continue
-
-        print(f"[ArquitetoAgent] Stop reason inesperado: {stop_reason}", flush=True)
-        break
-
-    print(f"[ArquitetoAgent] Fallback após {MAX_ITERATIONS} iterações", flush=True)
-    return ArquitetoAgentOutput(tools_used=tools_used, iterations=MAX_ITERATIONS, error="Loop excedeu iterações")
+    return ArquitetoAgentOutput(
+        prd_data=merged,
+        tools_used=[f"chunk_bloco_{i + 1}" for i in range(len(partials))],
+        iterations=len(partials),
+        verified=len(partials) == 4,
+    )
 
 
 # ══════════════════════════════════════════════════════════════════
