@@ -44,6 +44,98 @@ def _formatar_reviews(top_3: list, reviews_insights: dict) -> tuple:
     return reviews_fmt, intel_ctx
 
 
+_SPECS_SECAO = {
+    "hero": """## hero
+h1: titulo com cidade (8+ palavras, headline de VENDA, nao o nome do negocio)
+subtitulo: subtitulo persuasivo
+cta: texto do botao
+eyebrow: tag acima do h1""",
+    "sobre": """## sobre
+h2: titulo
+body: texto curto e especifico
+cta: texto do botao""",
+    "servicos": """## servicos
+h2: titulo
+body: texto curto e especifico
+items: servicos reais confirmados, separados por ; (vazio se nao houver)
+cta: texto do botao""",
+    "depoimentos": """## depoimentos
+omitir: {omitir_val}
+h2: titulo
+body: texto com reviews reais""",
+    "faq": """## faq
+h2: titulo
+body: perguntas e respostas curtas""",
+    "localizacao": """## localizacao
+h2: titulo
+body: endereco real; se endereco estiver vazio, omitir:true
+cta: texto do botao""",
+    "contato": """## contato
+h2: titulo
+body: telefone real
+cta: texto do botao""",
+}
+
+_GRUPOS_SECOES = [
+    ["hero", "sobre"],
+    ["servicos", "depoimentos"],
+    ["faq", "localizacao"],
+    ["contato"],
+]
+
+
+def _montar_contexto_shared(
+    nome, cidade, segmento, telefone, endereco, rating, total_av,
+    caio_tier, dark_mode, jina_insights, instrucao_criativa,
+    reviews_fmt, reviews_intel_ctx, seo_ctx, faq_seo_fmt,
+    keyword_research, reviews_has, craft_ctx, autocritica_ctx,
+):
+    """Monta o contexto compartilhado (mesmo para todas as chamadas parciais)."""
+    endereco_rule = (
+        "ADDRESS CAPTURED: use the complete address exactly as provided."
+        if endereco
+        else "ADDRESS NOT CAPTURED: do not invent street/neighborhood; mention only the city when needed and omit location section when there is no address."
+    )
+    return f"""BUSINESS: {nome} | CITY: {cidade} | SEGMENT: {segmento}
+PHONE: {telefone} | ADDRESS: {endereco}
+RATING: {rating}/5 ({total_av} avaliacoes) | TIER: {caio_tier}
+MODE: {"DARK" if dark_mode else "LIGHT"}
+{endereco_rule}
+
+{jina_insights[:3000] if jina_insights else ""}
+
+CREATIVE DIRECTION: {instrucao_criativa[:500]}
+{reviews_intel_ctx}
+
+COPY RULES:
+- All customer-facing copy MUST be in Brazilian Portuguese (pt-BR).
+- NEVER use: "atendimento personalizado", "qualidade e compromisso", "resultados reais", "pronto para comecar", "os melhores profissionais"
+- NEVER use emoji.
+- NEVER use "premium", "melhor", "top", "lider", "referencia", "moderna", "elite", "VIP" as public claims.
+- Vary CTAs: Hero=urgency, Servicos=curiosity, Depoimentos=desire, Contato=scarcity.
+- Geo-specific copy: if address exists, use street/neighborhood; if not, use only city.
+- SOBRE: do not paste a review inside the text. Use only confirmed facts.
+- SERVICOS: only confirmed Maps services. Reviews are NOT a service source.
+- Never infer modality from words in reviews, keywords, or niche expectations.
+- Numbers/metrics: use only rating and review count; do not invent average hours, modalities, students, years, or results.
+- FAQ: use People Also Ask as questions when available.
+
+REAL REVIEWS:
+{reviews_fmt}
+
+{seo_ctx}
+{faq_seo_fmt}
+{keyword_research}
+
+CRAFT RULES:
+{craft_ctx}
+
+{autocritica_ctx}
+
+Real phone: {telefone}
+Specific copy for {nome}, never generic."""
+
+
 def _montar_prompt_bloco2(
     nome: str,
     cidade: str,
@@ -67,94 +159,37 @@ def _montar_prompt_bloco2(
     craft_ctx: str,
     autocritica_ctx: str,
 ) -> str:
-    """Monta prompt compacto para Bloco 2 — copy."""
-    endereco_rule = (
-        "ADDRESS CAPTURED: use the complete address exactly as provided."
-        if endereco
-        else "ADDRESS NOT CAPTURED: do not invent street/neighborhood; mention only the city when needed and omit location section when there is no address."
+    """Monta prompt para Bloco 2 — copy (todas secoes, legado single-call).
+
+    DEPRECATED: Use _montar_contexto_shared + chamadas parciais instead.
+    Mantido para compatibilidade.
+    """
+    shared = _montar_contexto_shared(
+        nome, cidade, segmento, telefone, endereco, rating, total_av,
+        caio_tier, dark_mode, jina_insights, instrucao_criativa,
+        reviews_fmt, reviews_intel_ctx, seo_ctx, faq_seo_fmt,
+        keyword_research, reviews_has, craft_ctx, autocritica_ctx,
     )
-    return f"""BUSINESS: {nome} | CITY: {cidade} | SEGMENT: {segmento}
-PHONE: {telefone} | ADDRESS: {endereco}
-RATING: {rating}/5 ({total_av} avaliacoes) | TIER: {caio_tier}
-MODE: {"DARK" if dark_mode else "LIGHT"}
-{endereco_rule}
-
-{jina_insights[:3000] if jina_insights else ""}
-
-CREATIVE DIRECTION: {instrucao_criativa[:500]}
-{intel_ctx}
-{reviews_intel_ctx}
-
-COPY RULES:
-- All customer-facing copy MUST be in Brazilian Portuguese (pt-BR).
-- NEVER use: "atendimento personalizado", "qualidade e compromisso", "resultados reais", "pronto para comecar", "os melhores profissionais"
-- NEVER use emoji. If a visual icon is needed, the renderer may decide via SVG; copy never contains emoji.
-- NEVER use "premium", "melhor", "top", "lider", "referencia", "moderna", "elite", "VIP" as public claims.
-- Vary CTAs: Hero=urgency, Servicos=curiosity, Depoimentos=desire, Contato=scarcity.
-- Geo-specific copy: if address exists, use street/neighborhood; if not, use only city and do not fake exact location.
-- SOBRE: do not paste a review inside the text. Use only confirmed facts and a neutral synthesis; literal reviews stay only in depoimentos.
-- SERVICOS: only confirmed Maps services. Reviews are NOT a service source. If there are no confirmed services, keep items empty and recommend omitting the section; consultation must stay in contato/sobre, never in a standalone banner.
-- Never infer modality from words in reviews, keywords, or niche expectations. Example: a review mentioning dance, muay thai, or equipment does not confirm a service.
-- Numbers/metrics: use only rating and review count; do not invent average hours, modalities, students, years, or results.
-- If information is weak, prefer omitting the section or creating a compact contact block instead of filler.
-- FAQ: use People Also Ask as questions when available.
-
-REAL REVIEWS:
-{reviews_fmt}
-
-{seo_ctx}
-{faq_seo_fmt}
-{keyword_research}
+    secoes_set = set(s.lower() for s in secoes_nomes)
+    blocks = []
+    for grupo in _GRUPOS_SECOES:
+        for sec in grupo:
+            if sec in secoes_set:
+                spec = _SPECS_SECAO[sec]
+                if sec == "depoimentos":
+                    spec = spec.format(omitir_val="false" if reviews_has else "true")
+                blocks.append(spec)
+    sections_block = "\n\n".join(blocks)
+    return f"""{shared}
 
 SECTIONS: {", ".join(secoes_nomes)}
 {"REVIEWS REAIS DISPONIVEIS — use-os." if reviews_has else "REVIEWS INDISPONIVEIS — depoimentos deve ter omitir:true"}
 
 Return MARKDOWN with EXACTLY this format:
 
-## hero
-h1: titulo com cidade (8+ palavras, headline de VENDA, nao o nome do negocio)
-subtitulo: subtitulo persuasivo
-cta: texto do botao
-eyebrow: tag acima do h1
-
-## sobre
-h2: titulo
-body: texto curto e especifico
-cta: texto do botao
-
-## servicos
-h2: titulo
-body: texto curto e especifico
-items: servicos reais confirmados, separados por ; (vazio se nao houver)
-cta: texto do botao
-
-## depoimentos
-omitir: {"false" if reviews_has else "true"}
-h2: titulo
-body: texto com reviews reais
-
-## faq
-h2: titulo
-body: perguntas e respostas curtas
-
-## localizacao
-h2: titulo
-body: endereco real; se endereco estiver vazio, omitir:true
-cta: texto do botao
-
-## contato
-h2: titulo
-body: telefone real
-cta: texto do botao
-
-CRAFT RULES:
-{craft_ctx}
-
-{autocritica_ctx}
+{sections_block}
 
 H1: 8+ words with benefit + city. Good example: "Treino funcional e nutricao integrada em Campina Grande do Sul". Bad example: "Nutrasport" (that is a name, NOT a headline).
-Real phone: {telefone}
-Specific copy for {nome}, never generic.
 MARKDOWN ONLY. No JSON. No code blocks."""
 
 
@@ -264,6 +299,78 @@ def _copy_deterministica_fallback(
     return {"sections": sections, "_fallback": "deterministic_copy"}
 
 
+def _callar_bloco_parcial(
+    shared_context: str,
+    grupo_secoes: list,
+    reviews_has: bool,
+) -> list | None:
+    """Faz uma chamada LLM para um subconjunto de secoes.
+
+    Returns lista de {name, copy, omitir} ou None se todas as tentativas falharem.
+    """
+    # Montar spec das secoes do grupo
+    blocks = []
+    for sec in grupo_secoes:
+        spec = _SPECS_SECAO[sec]
+        if sec == "depoimentos":
+            spec = spec.format(omitir_val="false" if reviews_has else "true")
+        blocks.append(spec)
+    sections_block = "\n\n".join(blocks)
+    labels = ", ".join(grupo_secoes)
+
+    prompt = (
+        f"{shared_context}\n\n"
+        f"Generate copy ONLY for: {labels}\n\n"
+        f"Return MARKDOWN with EXACTLY this format:\n\n"
+        f"{sections_block}\n\n"
+        f"MARKDOWN ONLY. No JSON. No code blocks."
+    )
+
+    # Tentativa 1: sonnet
+    try:
+        resp = call_claude(
+            system=SYSTEM_COPY_SENIOR,
+            user=prompt,
+            model="sonnet",
+            max_tokens=1200,
+            temperature=0.4,
+            agent_name="arquiteto_mestre",
+        )
+    except Exception as e:
+        print(f"[BlocoCopy] Grupo [{labels}] sonnet falhou, haiku: {e}")
+        try:
+            resp = call_claude(
+                system=SYSTEM_COPY_SENIOR,
+                user=prompt,
+                model="haiku",
+                max_tokens=1000,
+                temperature=0.3,
+                agent_name="arquiteto_mestre",
+                respect_agent_config=False,
+            )
+        except Exception as e2:
+            print(f"[BlocoCopy] Grupo [{labels}] haiku tambem falhou: {e2}")
+            return None
+
+    resp = _re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f]", " ", resp)
+    dados = parse_bloco2_with_fallback(resp)
+
+    if dados and dados.get("sections"):
+        grupo_set = set(s.lower() for s in grupo_secoes)
+        filtered = [s for s in dados["sections"] if s.get("name", "").lower() in grupo_set]
+        if filtered:
+            return filtered
+
+    return None
+
+
+def _secoes_faltando(todas: list, todas_nomes: list) -> list:
+    """Retorna secoes deterministicas para secoes que nao foram preenchidas."""
+    nomes_existentes = {s["name"] for s in todas}
+    faltando = [n for n in todas_nomes if n.lower() not in nomes_existentes]
+    return faltando
+
+
 def executar_bloco_copy(
     nome: str,
     cidade: str,
@@ -285,10 +392,13 @@ def executar_bloco_copy(
     craft_ctx: str,
     autocritica_ctx: str,
 ) -> dict:
-    """Executa Bloco 2 (copy) e retorna dict com sections + copy.
+    """Executa Bloco 2 (copy) com 4 chamadas LLM parciais.
 
-    Returns:
-        dict com "sections" (lista de {name, copy, omitir})
+    Cada chamada gera copy para 1-2 secoes, mantendo o prompt pequeno
+    o suficiente para o proxy nao retornar 529 (Service Overloaded).
+
+    Fallback: se um grupo falha, apenas suas secoes sao afetadas.
+    Se todos os grupos falharem, retorna fallback deterministico completo.
     """
     from prompts_arquiteto import selecionar_top_reviews
 
@@ -298,141 +408,58 @@ def executar_bloco_copy(
     )
     reviews_has = bool(reviews_raw)
 
-    prompt = _montar_prompt_bloco2(
-        nome,
-        cidade,
-        segmento,
-        telefone,
-        endereco,
-        rating,
-        total_av,
-        caio_tier,
-        dark_mode,
-        jina_insights,
-        instrucao_criativa,
-        reviews_fmt,
-        reviews_intel_ctx,
-        seo_ctx,
-        faq_seo_fmt,
-        keyword_research,
-        secoes_nomes,
-        reviews_has,
-        intel_ctx,
-        craft_ctx,
-        autocritica_ctx,
+    # Contexto compartilhado (montado uma vez)
+    shared = _montar_contexto_shared(
+        nome, cidade, segmento, telefone, endereco, rating, total_av,
+        caio_tier, dark_mode, jina_insights, instrucao_criativa,
+        reviews_fmt, reviews_intel_ctx, seo_ctx, faq_seo_fmt,
+        keyword_research, reviews_has, craft_ctx, autocritica_ctx,
     )
 
-    print(f"[BlocoCopy] Chamando LLM (copy) para {len(secoes_nomes)} secoes...")
+    # Filtrar grupos para incluir apenas secoes solicitadas
+    secoes_set = set(s.lower() for s in secoes_nomes)
+    grupos_ativos = []
+    for grupo in _GRUPOS_SECOES:
+        relevantes = [s for s in grupo if s in secoes_set]
+        if relevantes:
+            grupos_ativos.append(relevantes)
 
-    # Tentativa 1: sonnet
-    try:
-        resp = call_claude(
-            system=SYSTEM_COPY_SENIOR,
-            user=prompt,
-            model="sonnet",
-            max_tokens=3000,
-            temperature=0.4,
-            agent_name="arquiteto_mestre",
+    # 4 chamadas sequenciais
+    todas_secoes: list = []
+    falhas = 0
+
+    for grupo in grupos_ativos:
+        labels = ", ".join(grupo)
+        print(f"[BlocoCopy] LLM grupo: [{labels}]")
+        resultado = _callar_bloco_parcial(shared, grupo, reviews_has)
+        if resultado:
+            todas_secoes.extend(resultado)
+        else:
+            falhas += 1
+            print(f"[BlocoCopy] Grupo [{labels}]: falhou — sera preenchido deterministicamente")
+
+    # Todos falharam → fallback completo
+    if falhas == len(grupos_ativos) or not todas_secoes:
+        print("[BlocoCopy] Todos grupos falharam — fallback deterministico completo")
+        return _copy_deterministica_fallback(
+            nome=nome, cidade=cidade, segmento=segmento,
+            telefone=telefone, endereco=endereco, rating=rating,
+            total_av=total_av, secoes_nomes=secoes_nomes,
+            reviews_raw=reviews_raw,
         )
-    except Exception as e:
-        print(f"[BlocoCopy] Sonnet falhou, tentando haiku: {e}")
-        try:
-            resp = call_claude(
-                system=SYSTEM_COPY_SENIOR,
-                user=prompt,
-                model="haiku",
-                max_tokens=1800,
-                temperature=0.3,
-                agent_name="arquiteto_mestre",
-                respect_agent_config=False,
-            )
-        except Exception as e2:
-            print(f"[BlocoCopy] Haiku tambem falhou — fallback deterministico: {e2}")
-            return _copy_deterministica_fallback(
-                nome=nome,
-                cidade=cidade,
-                segmento=segmento,
-                telefone=telefone,
-                endereco=endereco,
-                rating=rating,
-                total_av=total_av,
-                secoes_nomes=secoes_nomes,
-                reviews_raw=reviews_raw,
-            )
 
-    resp = _re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f]", " ", resp)
-    dados = parse_bloco2_with_fallback(resp)
-
-    if dados and dados.get("sections"):
-        sections = dados.get("sections", [])
-        print(f"[BlocoCopy] OK: {len(sections)} secoes com copy")
-        return {"sections": sections}
-
-    print("[BlocoCopy] Parse falhou — tentando retry com prompt simplificado")
-    # Retry: prompt mais simples ainda
-    prompt_retry = (
-        f"Gere MARKDOWN ESTRUTURADO para o site de: {nome} em {cidade} ({segmento}).\n"
-        f"Telefone: {telefone} | Rating: {rating}/5 | Tier: {caio_tier}\n"
-        f"Secoes: {', '.join(secoes_nomes)}\n"
-        f"{'IMPORTANTE: use reviews reais' if reviews_has else 'depoimentos omitir:true'}\n\n"
-        f"## hero\nh1: ...\nsubtitulo: ...\ncta: ...\neyebrow: ...\n\n"
-        f"## sobre\nh2: ...\nbody: ...\ncta: ...\n\n"
-        f"## servicos\nh2: ...\nbody: ...\nitems: ...\ncta: ...\n\n"
-        f"## depoimentos\nomitir: {'false' if reviews_has else 'true'}\nh2: ...\nbody: ...\n\n"
-        f"## faq\nh2: ...\nbody: ...\n\n"
-        f"## localizacao\nh2: ...\nbody: ...\ncta: ...\n\n"
-        f"## contato\nh2: ...\nbody: ...\ncta: ...\n"
-        f"MARKDOWN APENAS, sem JSON, sem explicacao."
-    )
-    try:
-        resp2 = call_claude(
-            system=SYSTEM_COPY_SENIOR,
-            user=prompt_retry,
-            model="sonnet",
-            max_tokens=1800,
-            temperature=0.2,
-            agent_name="arquiteto_mestre",
+    # Preencher secoes que nao foram geradas
+    faltando = _secoes_faltando(todas_secoes, secoes_nomes)
+    if faltando:
+        fb = _copy_deterministica_fallback(
+            nome=nome, cidade=cidade, segmento=segmento,
+            telefone=telefone, endereco=endereco, rating=rating,
+            total_av=total_av, secoes_nomes=faltando,
+            reviews_raw=reviews_raw,
         )
-    except Exception as e:
-        print(f"[BlocoCopy] Retry sonnet falhou, haiku fallback: {e}")
-        try:
-            resp2 = call_claude(
-                system=SYSTEM_COPY_SENIOR,
-                user=prompt_retry,
-                model="haiku",
-                max_tokens=1800,
-                temperature=0.2,
-                agent_name="arquiteto_mestre",
-                respect_agent_config=False,
-            )
-        except Exception as e2:
-            print(f"[BlocoCopy] Retry haiku falhou — fallback deterministico: {e2}")
-            return _copy_deterministica_fallback(
-                nome=nome,
-                cidade=cidade,
-                segmento=segmento,
-                telefone=telefone,
-                endereco=endereco,
-                rating=rating,
-                total_av=total_av,
-                secoes_nomes=secoes_nomes,
-                reviews_raw=reviews_raw,
-            )
-    resp2 = _re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f]", " ", resp2)
-    dados2 = parse_bloco2_with_fallback(resp2)
-    if dados2 and dados2.get("sections"):
-        print(f"[BlocoCopy] Retry OK: {len(dados2['sections'])} secoes")
-        return dados2
+        for sec in fb.get("sections", []):
+            if sec["name"] not in {s["name"] for s in todas_secoes}:
+                todas_secoes.append(sec)
 
-    print("[BlocoCopy] Retry tambem falhou — fallback deterministico")
-    return _copy_deterministica_fallback(
-        nome=nome,
-        cidade=cidade,
-        segmento=segmento,
-        telefone=telefone,
-        endereco=endereco,
-        rating=rating,
-        total_av=total_av,
-        secoes_nomes=secoes_nomes,
-        reviews_raw=reviews_raw,
-    )
+    print(f"[BlocoCopy] OK: {len(todas_secoes)} secoes ({falhas} grupos falharam)")
+    return {"sections": todas_secoes}
