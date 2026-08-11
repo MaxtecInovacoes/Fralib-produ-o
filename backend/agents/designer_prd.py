@@ -190,17 +190,19 @@ class ColorPalette(BaseModel):
 class DesignerPRD(BaseModel):
     model_config = ConfigDict(extra="ignore", populate_by_name=True)
 
-    sections: List[SectionSpec]
+    sections: List[SectionSpec] = Field(default_factory=list)
 
     @field_validator("sections", mode="before")
     @classmethod
     def normalize_sections(cls, v):
         if isinstance(v, dict):
-            # Claude retornou {"hero": {...}, "sobre": {...}} em vez de lista
             result = []
             for key, val in v.items():
                 if isinstance(val, dict):
                     val.setdefault("name", val.get("id", key).capitalize())
+                    # Se tem layout_type mas não tem name, usa layout_type como name
+                    if not val.get("name") and val.get("layout_type"):
+                        val["name"] = str(val["layout_type"]).replace("_", " ").capitalize()
                     val.setdefault("required", True)
                     val.setdefault("components", ["cta"])
                     val.setdefault("data_source", "Claude")
@@ -235,18 +237,21 @@ class DesignerPRD(BaseModel):
                     "data_source": "Fallback",
                 }
             ]
-        # Normalizar schema_org em cada item da lista
+        # Normalizar schema_org e garantir name em cada item da lista
         for item in v:
-            if isinstance(item, dict) and "schema_org" in item:
-                so = item["schema_org"]
-                if isinstance(so, dict):
-                    item["schema_org"] = so.get("type", so.get("name", str(so)))
-                elif isinstance(so, list):
-                    item["schema_org"] = so[0] if so else None
+            if isinstance(item, dict):
+                if not item.get("name") and item.get("layout_type"):
+                    item["name"] = str(item["layout_type"]).replace("_", " ").capitalize()
+                if "schema_org" in item:
+                    so = item["schema_org"]
+                    if isinstance(so, dict):
+                        item["schema_org"] = so.get("type", so.get("name", str(so)))
+                    elif isinstance(so, list):
+                        item["schema_org"] = so[0] if so else None
         return v
 
-    color_palette: ColorPalette
-    typography: Dict[str, Any]
+    color_palette: ColorPalette = Field(default_factory=ColorPalette)
+    typography: Dict[str, Any] = Field(default_factory=dict)
     design_system_slug: Optional[str] = None
     visual_dna: Dict[str, Any] = Field(default_factory=dict)
     layout_blueprint: List[Dict[str, Any]] = Field(default_factory=list)
@@ -293,7 +298,7 @@ class DesignerPRD(BaseModel):
 
         return normalized
 
-    animations: List[AnimationSpec]
+    animations: List[AnimationSpec] = Field(default_factory=list)
 
     @field_validator("animations", mode="before")
     @classmethod
@@ -369,7 +374,7 @@ class DesignerPRD(BaseModel):
             ]
         return result
 
-    business_name: str
+    business_name: str = ""
 
     @field_validator("business_name", mode="before")
     @classmethod
@@ -378,7 +383,7 @@ class DesignerPRD(BaseModel):
             return "Negócio Local"
         return str(v).strip()
 
-    reviews_count: int = Field(ge=0)
+    reviews_count: int = Field(default=0, ge=0)
 
     @field_validator("reviews_count", mode="before")
     @classmethod
@@ -390,7 +395,7 @@ class DesignerPRD(BaseModel):
         except (TypeError, ValueError):
             return 0
 
-    reviews_rating: float = Field(ge=0, le=5)
+    reviews_rating: float = Field(default=0.0, ge=0, le=5)
 
     @field_validator("reviews_rating", mode="before")
     @classmethod
@@ -402,7 +407,7 @@ class DesignerPRD(BaseModel):
         except (TypeError, ValueError):
             return 0.0
 
-    reviews_list: List[Dict[str, Any]]
+    reviews_list: List[Dict[str, Any]] = Field(default_factory=list)
 
     @field_validator("reviews_list", mode="before")
     @classmethod
@@ -411,7 +416,7 @@ class DesignerPRD(BaseModel):
             return []
         return [r for r in v if isinstance(r, dict) and r]
 
-    address: str
+    address: str = ""
 
     @field_validator("address", mode="before")
     @classmethod
@@ -420,7 +425,7 @@ class DesignerPRD(BaseModel):
             return ""
         return str(v).strip()
 
-    phone: str
+    phone: str = ""
 
     @field_validator("phone", mode="before")
     @classmethod
@@ -449,7 +454,7 @@ class DesignerPRD(BaseModel):
         return [x for x in result if x]
 
     logo_url: Optional[str] = None
-    google_maps_embed: str
+    google_maps_embed: str = ""
 
     @field_validator("google_maps_embed", mode="before")
     @classmethod
@@ -458,7 +463,7 @@ class DesignerPRD(BaseModel):
             return ""
         return str(v).strip()
 
-    components_21dev: List[str]
+    components_21dev: List[str] = Field(default_factory=list)
 
     @field_validator("components_21dev", mode="before")
     @classmethod
@@ -630,7 +635,19 @@ class DesignerPRD(BaseModel):
                 result.append(str(item))
         return result
 
-    geo: Optional[Dict[str, float]] = None
+    geo: Optional[Dict[str, Any]] = None
+
+    @field_validator("geo", mode="before")
+    @classmethod
+    def normalize_geo(cls, v):
+        if v is None:
+            return None
+        if isinstance(v, dict):
+            return v
+        if isinstance(v, str):
+            return {"location": v}
+        return None
+
     dark_mode: bool = False
 
     @model_validator(mode="after")
