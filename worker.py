@@ -60,6 +60,15 @@ def _run_pipeline_job(db, job) -> bool:
 
     payload = job["payload"] or {}
     tenant_id = job.get("tenant_id")
+
+    # Normalização: se o payload veio com lead_ids (array), extrai o primeiro
+    # e promove a lead_id (singular) para que todo o resto do código funcione.
+    if not payload.get("lead_id") and payload.get("lead_ids"):
+        _raw = payload["lead_ids"]
+        if isinstance(_raw, list) and _raw:
+            payload = dict(payload)
+            payload["lead_id"] = str(_raw[0])
+
     # Hydration: se payload tem _lead_id_existente mas lead_data vazio,
     # busca os dados do lead no banco para que step_hunter não falhe com
     # "Hunter sem lead" quando o job é reprocessado sem payload completo.
@@ -68,37 +77,42 @@ def _run_pipeline_job(db, job) -> bool:
         _existing_id = (
             payload.get("_lead_id_existente")
             or payload.get("lead_id")
-            or str(job.get("run_id") or "")
         )
-        if _existing_id:
-            lead_row = db.execute(
-                text(
-                    "SELECT nome, cidade, telefone, segmento, rating, dados_completos "
-                    "FROM leads WHERE id = :id LIMIT 1"
-                ),
-                {"id": str(_existing_id)},
-            ).fetchone()
-            if lead_row:
-                payload = dict(payload)
-                import json as _json
-                _dados = lead_row[5] if lead_row[5] else {}
-                if isinstance(_dados, str):
-                    _dados = _json.loads(_dados) if _dados else {}
-                payload["lead_data"] = {
-                    "nome": lead_row[0],
-                    "cidade": lead_row[1],
-                    "telefone": lead_row[2],
-                    "segmento": lead_row[3],
-                    "rating": float(lead_row[4]) if lead_row[4] is not None else None,
-                    "reviews_count": int(_dados.get("reviews_count") or _dados.get("total_avaliacoes") or len(_dados.get("reviews", []))),
-                    "fotos": _dados.get("fotos", []),
-                    "website": _dados.get("website", ""),
-                    "whatsapp": _dados.get("whatsapp") or lead_row[2],
-                    "endereco": _dados.get("endereco", ""),
-                    "market_intelligence": _dados.get("market_intelligence"),
-                    "descricao": _dados.get("descricao", ""),
-                }
-        # Se não tem lead no BD mas tem segmento+cidade, busca via Hunter
+        if not _existing_id:
+            logger.error(
+                "Job %s: sem lead_id nem lead_ids no payload — não é possível processar. "
+                "Payload keys: %s",
+                job["id"], list(payload.keys()),
+            )
+            return False
+        lead_row = db.execute(
+            text(
+                "SELECT nome, cidade, telefone, segmento, rating, dados_completos "
+                "FROM leads WHERE id = :id LIMIT 1"
+            ),
+            {"id": str(_existing_id)},
+        ).fetchone()
+        if lead_row:
+            payload = dict(payload)
+            import json as _json
+            _dados = lead_row[5] if lead_row[5] else {}
+            if isinstance(_dados, str):
+                _dados = _json.loads(_dados) if _dados else {}
+            payload["lead_data"] = {
+                "nome": lead_row[0],
+                "cidade": lead_row[1],
+                "telefone": lead_row[2],
+                "segmento": lead_row[3],
+                "rating": float(lead_row[4]) if lead_row[4] is not None else None,
+                "reviews_count": int(_dados.get("reviews_count") or _dados.get("total_avaliacoes") or len(_dados.get("reviews", []))),
+                "fotos": _dados.get("fotos", []),
+                "website": _dados.get("website", ""),
+                "whatsapp": _dados.get("whatsapp") or lead_row[2],
+                "endereco": _dados.get("endereco", ""),
+                "market_intelligence": _dados.get("market_intelligence"),
+                "descricao": _dados.get("descricao", ""),
+            }
+    # Se não tem lead no BD mas tem segmento+cidade, busca via Hunter
         if not payload.get("lead_data") and payload.get("segmento") and payload.get("cidade"):
             from backend.services.lead_supply_storage import get_or_create_config
             from backend.services.lead_providers import create_facade
