@@ -239,9 +239,10 @@ def _callar_bloco_arquiteto(
         f"{shared_context}\n\n"
         f"Generate ONLY these PRD fields: {campos_str}\n\n"
         f"Return JSON with EXACTLY these keys: {campos_str}\n"
-        f"Omit keys you cannot fill — do NOT invent data.\n"
         f"Rules: colors from design system tokens, keywords from research, "
         f"copy specific to the business, no generic phrases."
+        f"\n\nIMPORTANT: Return ALL keys. Use empty list [] or empty string '' "
+        f"if you cannot fill a field. Never omit a key."
     )
 
     system_prompt = (
@@ -259,7 +260,6 @@ def _callar_bloco_arquiteto(
         agent_name="arquiteto_mestre",
     )
 
-    # Mudança 3: Tracking do Arquiteto em pipeline_traces + llm_budget_ledger
     try:
         _registrar_uso_completo(
             model_id="sonnet",
@@ -288,10 +288,15 @@ def _callar_bloco_arquiteto(
 
     # Filtrar apenas campos do grupo
     filtered = {k: v for k, v in prd_partial.items() if k in campos_set}
-    if not filtered:
-        raise RuntimeError(f"LLM retornou JSON vazio para grupo [{campos_str}]")
+    if filtered:
+        return filtered
+    if prd_partial:
+        # LLM retornou JSON mas com chaves diferentes — aceitar como best-effort
+        print(f"[ArquitetoAgent] AVISO grupo [{campos_str}]: chaves não batem, "
+              f"usando retorno cru: {list(prd_partial.keys())}", flush=True)
+        return prd_partial
 
-    return filtered
+    raise RuntimeError(f"LLM retornou JSON vazio para grupo [{campos_str}]")
 
 
 def _merge_prd_partials(partials: list[dict]) -> dict:
