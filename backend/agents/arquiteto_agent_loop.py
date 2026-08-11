@@ -240,8 +240,11 @@ def _callar_bloco_arquiteto(
         f"Generate ONLY these PRD fields: {campos_str}\n\n"
         f"Return JSON with EXACTLY these keys: {campos_str}\n"
         f"Rules: colors from design system tokens, keywords from research, "
-        f"copy specific to the business, no generic phrases."
-        f"\n\nIMPORTANT: Return ALL keys. Use empty list [] or empty string '' "
+        f"copy specific to the business, no generic phrases.\n"
+        f"Sections rule: every section MUST include 'name' (string). "
+        f"Use 'id' as 'name' if needed. "
+        f"Never return a section object without 'name'.\n\n"
+        f"IMPORTANT: Return ALL keys. Use empty list [] or empty string '' "
         f"if you cannot fill a field. Never omit a key."
     )
 

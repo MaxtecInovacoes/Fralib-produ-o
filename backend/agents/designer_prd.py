@@ -237,11 +237,13 @@ class DesignerPRD(BaseModel):
                     "data_source": "Fallback",
                 }
             ]
-        # Normalizar schema_org e garantir name em cada item da lista
+        # Normalizar name (id -> name), schema_org e garantir defaults em cada item da lista
         for item in v:
             if isinstance(item, dict):
-                if not item.get("name") and item.get("layout_type"):
-                    item["name"] = str(item["layout_type"]).replace("_", " ").capitalize()
+                if not item.get("name"):
+                    item["name"] = str(
+                        item.get("id", item.get("layout_type", "Section"))
+                    ).replace("_", " ").capitalize()
                 if "schema_org" in item:
                     so = item["schema_org"]
                     if isinstance(so, dict):
