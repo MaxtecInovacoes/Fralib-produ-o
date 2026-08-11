@@ -73,7 +73,7 @@ services:
       PYTHONPATH: /app/backend:/app
     volumes:
       - /opt/fralib/backend:/app/backend
-      - fralib-sites:/var/www/fralib/sites
+      - /var/www/fralib/sites:/var/www/fralib/sites
       - fralib-logs:/app/logs
       - fralib-builder:/tmp/fralib_builder
       - /opt/fralib/data:/app/data
@@ -104,6 +104,5 @@ volumes:
     external: true
     name: fralib_fralib-postgres
   fralib-redis:
-  fralib-sites:
   fralib-logs:
   fralib-builder:
