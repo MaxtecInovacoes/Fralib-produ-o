@@ -7,7 +7,7 @@ DesignerPRD - modelo/gerador legado de PRD.
 O pipeline ativo usa Arquiteto Mestre + Skill Renderer.
 """
 import re
-from pydantic import BaseModel, ConfigDict, Field, model_validator, field_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 from typing import List, Dict, Any, Optional, Union
 from llm_direct import call_claude_structured
 from agent_rag import format_rag_prompt, get_agent_temperature
@@ -76,12 +76,13 @@ class AnimationSpec(BaseModel):
 class SectionSpec(BaseModel):
     model_config = ConfigDict(extra="allow", populate_by_name=True)
 
-    name: str = ""
+    name: Optional[str] = None
+    id: Optional[str] = None
     required: bool = True
     layout_type: Optional[str] = None
-    components: List[str] = Field(default_factory=list)
-    copy_data: Dict[str, Any] = Field(default_factory=dict, alias="copy")
-    items: List[Any] = Field(default_factory=list)
+    components: Optional[List[Union[str, Dict[str, Any]]]] = None
+    copy_data: Optional[Dict[str, Any]] = Field(default=None, alias="copy")
+    items: Optional[List[Any]] = None
     cta: Optional[str] = None
     h1: Optional[str] = None
     h2: Optional[str] = None
@@ -92,65 +93,46 @@ class SectionSpec(BaseModel):
     omitir: bool = False
     data_source: str = "Hunter V2"
     schema_org: Optional[str] = None
+    media_src: Optional[str] = None
 
-    @field_validator("schema_org", mode="before")
-    @classmethod
-    def normalize_schema_org_field(cls, v):
-        if v is None:
-            return None
-        if isinstance(v, str):
-            return v
-        if isinstance(v, list):
-            return v[0] if v else None
-        if isinstance(v, dict):
-            return v.get("type", v.get("name", str(v)))
-        return str(v)
+    @model_validator(mode="after")
+    def normalize_section(self) -> "SectionSpec":
+        # Normaliza name: usa 'id' se name não vier
+        if not self.name and self.id:
+            self.name = str(self.id)
+        if not self.name:
+            self.name = "hero"
 
-    @field_validator("components", mode="before")
-    @classmethod
-    def normalize_components(cls, v):
-        if not isinstance(v, list):
-            return []
-        return [str(c) if not isinstance(c, str) else c for c in v]
+        # Normaliza components: aceita str, dict, ou lista mista
+        if self.components is None:
+            self.components = ["hero-cta"]
+        else:
+            cleaned = []
+            for c in self.components:
+                if isinstance(c, str):
+                    cleaned.append(c)
+                elif isinstance(c, dict):
+                    cleaned.append(str(c.get("name", c.get("id", c.get("type", "component")))))
+                else:
+                    cleaned.append(str(c))
+            self.components = cleaned
 
-    @field_validator("copy_data", mode="before")
-    @classmethod
-    def normalize_copy(cls, v):
-        return v if isinstance(v, dict) else {}
+        # Normaliza copy_data
+        if self.copy_data is None:
+            self.copy_data = {}
 
-    @field_validator("items", mode="before")
-    @classmethod
-    def normalize_items(cls, v):
-        if isinstance(v, list):
-            return v
-        if isinstance(v, str):
-            return [item.strip() for item in v.split(";") if item.strip()]
-        return []
+        # Normaliza items
+        if self.items is None:
+            self.items = []
 
-    @field_validator("required", mode="before")
-    @classmethod
-    def normalize_required(cls, v):
-        if isinstance(v, bool):
-            return v
-        if isinstance(v, str):
-            return v.lower() not in ("false", "0", "no")
-        return True
+        # Normaliza schema_org
+        if self.schema_org is not None and not isinstance(self.schema_org, str):
+            if isinstance(self.schema_org, list):
+                self.schema_org = self.schema_org[0] if self.schema_org else None
+            elif isinstance(self.schema_org, dict):
+                self.schema_org = self.schema_org.get("type", self.schema_org.get("name"))
 
-    @field_validator("omitir", mode="before")
-    @classmethod
-    def normalize_omitir(cls, v):
-        if isinstance(v, bool):
-            return v
-        if isinstance(v, str):
-            return v.lower() in ("true", "1", "yes", "sim")
-        return False
-
-    @field_validator("data_source", mode="before")
-    @classmethod
-    def normalize_data_source(cls, v):
-        if not v or not isinstance(v, str):
-            return "Hunter V2"
-        return str(v)
+        return self
 
 
 class ColorPalette(BaseModel):
@@ -166,25 +148,31 @@ class ColorPalette(BaseModel):
     hero_style: dict = {}
     reasoning: str = "Paleta padrao"
 
-    @field_validator(
-        "primary", "secondary", "accent", "background", "text", mode="before"
-    )
-    @classmethod
-    def normalize_color(cls, v):
-        if not v or not isinstance(v, str):
-            return "#374151"
-        if isinstance(v, dict):
-            return str(v.get("hex", v.get("value", v.get("color", "#374151"))))
-        return str(v)
+    @model_validator(mode="after")
+    def normalize_colors(self) -> "ColorPalette":
+        color_fields = [
+            ("primary", "#374151"),
+            ("secondary", "#f9fafb"),
+            ("accent", "#e85d04"),
+            ("background", "#ffffff"),
+            ("text", "#1f2937"),
+            ("surface", "#f9fafb"),
+            ("muted", "#6b7280"),
+            ("border", "#e5e7eb"),
+        ]
+        for field_name, default in color_fields:
+            val = getattr(self, field_name)
+            if not val or not isinstance(val, str):
+                setattr(self, field_name, default)
+            elif isinstance(val, dict):
+                setattr(self, field_name, str(val.get("hex", val.get("value", val.get("color", default)))))
 
-    @field_validator("reasoning", mode="before")
-    @classmethod
-    def normalize_reasoning(cls, v):
-        if not v:
-            return "Paleta baseada no segmento"
-        if isinstance(v, dict):
-            return str(v)
-        return str(v)
+        if not self.reasoning or not isinstance(self.reasoning, str):
+            self.reasoning = "Paleta baseada no segmento"
+        elif isinstance(self.reasoning, dict):
+            self.reasoning = str(self.reasoning)
+
+        return self
 
 
 class DesignerPRD(BaseModel):
