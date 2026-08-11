@@ -1,0 +1,38 @@
+version: '3.8'
+
+# ============================================================
+# FraLib — Ambiente de Desenvolvimento Local
+# ============================================================
+# Uso: docker compose -f docker-compose.dev.yml up -d
+#       docker compose -f docker-compose.dev.yml exec backend python scripts/init_local_db.py
+# ============================================================
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: fralib-dev-postgres
+    ports:
+      - "127.0.0.1:5434:5432"
+    environment:
+      POSTGRES_USER: fralib_user
+      POSTGRES_PASSWORD: fralib_dev_password
+      POSTGRES_DB: fralib_db
+    volumes:
+      - ./local_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fralib_user -d fralib_db"]
+      interval: 2s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+    restart: unless-stopped
+    networks:
+      - fralib-dev
+
+volumes:
+  local_db_data:
+    driver: local
+
+networks:
+  fralib-dev:
+    name: fralib-dev-network

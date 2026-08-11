@@ -1,0 +1,106 @@
+version: "3.9"
+
+# ============================================================
+# FraLib — Ambiente de Teste Isolado (Caminho B)
+# ============================================================
+# Isolado do docker-compose.prod.yml:
+#   - Container worker: fralib-worker-test (NAO interfere no prod)
+#   - Volume PostgreSQL: fralib-test-postgres (NAO compartilha dados)
+#   - Portas: PostgreSQL 15434 (mesma porta do prod, mas container separado)
+#
+# Uso:
+#   docker compose -f docker-compose.test.yml up -d
+#   docker compose -f docker-compose.test.yml logs -f fralib-worker-test
+#   docker compose -f docker-compose.test.yml down
+# ============================================================
+
+services:
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: fralib-test-postgres
+    environment:
+      POSTGRES_DB: fralib_db
+      POSTGRES_USER: fralib_user
+      POSTGRES_PASSWORD: fralib_dev_password
+    ports:
+      - "127.0.0.1:15434:5432"
+    volumes:
+      - fralib-test-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fralib_user -d fralib_db"]
+      interval: 2s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+    restart: unless-stopped
+
+  worker:
+    build: .
+    container_name: fralib-worker-test
+    env_file:
+      - .env.test
+    environment:
+      DATABASE_URL: postgresql://fralib_user:fralib_dev_password@postgres:5432/fralib_db
+      REDIS_URL: redis://redis:6379/0
+      FRALIB_SITES_DIR: /var/www/fralib/sites
+      FRALIB_SITES_ROOT: /var/www/fralib/sites
+      FRALIB_BUILDER_SANDBOX_ROOT: /tmp/fralib_builder
+      FRALIB_BUILDER_MANIFEST_DIR: /app/logs/builder_manifests
+      MEOWHATS_URL: http://host.docker.internal:3002
+      FRALIB_SKIP_HTML_QUALITY_GATE: "0"
+      WORKER_POLL_INTERVAL: "2"
+      WORKER_HEARTBEAT_SECS: "30"
+      WORKER_REAP_SECS: "60"
+      WORKER_JOB_TYPES: pipeline_lead,pipeline_multiplos,lead_production_tick,lead_supply_caio,lead_supply_hunter,franz_outreach
+      FRALIB_BUILDER_AUTO_APPROVE: "1"
+      FRALIB_BUILDER_ENGINE: openui
+      MAX_PIPELINES_GLOBAL: "1"
+      OPENUI_SERVICE_URL: http://host.docker.internal:7878
+      FRALIB_TRACING: "1"
+      PYTHONPATH: /app/backend:/app
+    volumes:
+      - /opt/fralib/backend:/app/backend
+      - /var/www/fralib/sites:/var/www/fralib/sites
+      - fralib-test-logs:/app/logs
+      - fralib-test-builder:/tmp/fralib_builder
+      - /opt/fralib/data:/app/data
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "grep -q 'worker.py' /proc/1/cmdline || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+    command: ["python", "worker.py"]
+
+  redis:
+    image: redis:7-alpine
+    container_name: fralib-test-redis
+    ports:
+      - "127.0.0.1:16379:6379"
+    volumes:
+      - fralib-test-redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+volumes:
+  fralib-test-postgres:
+    driver: local
+  fralib-test-redis:
+    driver: local
+  fralib-test-logs:
+    driver: local
+  fralib-test-builder:
+    driver: local

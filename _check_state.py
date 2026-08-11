@@ -1,40 +1,19 @@
-"""Check pipeline state on VPS - simple diagnostic."""
-from backend.core.database import engine
-from sqlalchemy import text
+from sqlalchemy import create_engine, text
 
-# Schema of pipeline_executions
-print("=== pipeline_executions schema ===")
-r = engine.connect().execute(text("""
-    SELECT column_name FROM information_schema.columns
-    WHERE table_name = 'pipeline_executions' ORDER BY ordinal_position
-"""))
-cols = [row[0] for row in r.fetchall()]
-print(f"  Columns: {cols}")
+engine = create_engine("postgresql://fralib_user:fralib_dev_password@postgres:5432/fralib_db")
+with engine.connect() as conn:
+    cols = conn.execute(text("SELECT column_name FROM information_schema.columns WHERE table_name = 'jobs' AND table_schema = 'public' ORDER BY ordinal_position")).fetchall()
+    print("Jobs columns:", [c[0] for c in cols])
 
-# Recent jobs
-print("\n=== Recent pipeline jobs ===")
-r = engine.connect().execute(text("""
-    SELECT id, tipo, status, created_at, next_retry_at
-    FROM jobs WHERE tipo LIKE 'pipeline_%' ORDER BY id DESC LIMIT 10
-"""))
-for row in r.fetchall():
-    print(f"  id={row[0]} tipo={row[1]} status={row[2]} created={row[3]}")
-
-# Check sites dir via filesystem
-print("\n=== SITES DIRS ===")
-import os
-for p in ["/opt/fralib/data/sites", "/app/data/sites", "/opt/fralib/sites"]:
-    if os.path.exists(p):
-        items = os.listdir(p)
-        print(f"  {p}: {len(items)} items")
-        for item in items[:10]:
-            full = os.path.join(p, item)
-            if os.path.isdir(full):
-                sub = os.listdir(full)
-                print(f"    {item}/ ({len(sub)})")
-                for s in sub[:5]:
-                    print(f"      {s}")
-            else:
-                print(f"    {item}")
+    col_names = [c[0] for c in cols]
+    r = conn.execute(text("SELECT * FROM jobs WHERE id = 418")).fetchone()
+    if r:
+        print("Job:", dict(zip(col_names, r)))
     else:
-        print(f"  {p}: NOT FOUND")
+        print("Job 418 not found")
+
+    r = conn.execute(text("SELECT id, status, url_site, site_url, atualizado_em FROM leads WHERE id = :lid"),
+                     {"lid": "38ffd3fb-c9a0-498c-9abc-c8a4e8f24853"}).fetchone()
+    print("Lead:", r)
+
+engine.dispose()
