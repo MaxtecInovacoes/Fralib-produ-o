@@ -140,6 +140,19 @@ CREATE TABLE IF NOT EXISTS pipeline_failures (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS pipeline_error_log (
+    id SERIAL PRIMARY KEY,
+    lead_id VARCHAR(255) NOT NULL,
+    tenant_id INTEGER,
+    step VARCHAR(100),
+    exception_type VARCHAR(100),
+    message TEXT,
+    traceback TEXT,
+    fase_origem VARCHAR(100),
+    categoria VARCHAR(50),
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
 CREATE TABLE IF NOT EXISTS pipeline_traces (
     id SERIAL PRIMARY KEY,
     run_id VARCHAR(255) NOT NULL,
