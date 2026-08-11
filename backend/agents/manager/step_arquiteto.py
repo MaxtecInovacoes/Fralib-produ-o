@@ -17,10 +17,10 @@ def step_arquiteto(state: PipelineState) -> PipelineState:
     if state.current_state != STATE_DESIGNING:
         return state
 
-    caio = state.caio_output or {}
-    tier = caio.get("tier", "STANDARD")
-    score = caio.get("score", 0)
-    dark_mode = caio.get("dark_mode", False)
+    caio = state.caio_output
+    tier = caio.tier if caio else "STANDARD"
+    score = caio.score if caio else 0
+    dark_mode = getattr(caio, "dark_mode", False) if caio else False
 
     max_attempts = 3
     for attempt in range(max_attempts):

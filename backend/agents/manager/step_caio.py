@@ -15,14 +15,14 @@ def step_caio(state: PipelineState) -> PipelineState:
         return state
 
     try:
-        from backend.agents.caio.agent import qualificar_lead
+        from backend.agents.caio import qualificar_lead
         caio_output = qualificar_lead(
-            lead_data=state.lead_data,
+            lead=state.lead_data,
             segmento=state.segmento,
             cidade=state.cidade,
         )
         state.caio_output = caio_output
-        state.history.append(f"Caio: score={caio_output.get('score', 0)}, tier={caio_output.get('tier', '?')}")
+        state.history.append(f"Caio: score={caio_output.score}, tier={caio_output.tier}")
     except Exception as e:
         _log_step_error(state, "Caio", e)
         state.error = f"Caio: {e}"

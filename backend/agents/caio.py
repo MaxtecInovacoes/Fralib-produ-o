@@ -351,6 +351,13 @@ def _coerce_lead_input(lead) -> LeadInput:
         fotos = data.get("fotos")
         if isinstance(fotos, int):
             data["fotos"] = [f"foto-{i}" for i in range(fotos)]
+        # Coerce None → default for scalar fields
+        if data.get("rating") is None:
+            data["rating"] = 0.0
+        if data.get("reviews_count") is None:
+            data["reviews_count"] = 0
+        if data.get("fotos") is None:
+            data["fotos"] = []
         data.setdefault("nome", "Lead Teste")
         data.setdefault("cidade", "Cidade")
         data.setdefault("segmento", "academia")
@@ -417,8 +424,15 @@ def _calcular_score(lead: LeadInput) -> tuple:
     return min(score, 100), motivos
 
 
-def qualificar_lead(lead: LeadInput) -> CaioOutput:
-    """Qualifica lead via regras Python puras. Zero LLM."""
+def qualificar_lead(lead=None, **kwargs) -> CaioOutput:
+    """Qualifica lead via regras Python puras. Zero LLM.
+
+    Aceita LeadInput direto, dict, ou keyword args (lead_data, segmento, cidade, etc).
+    """
+    if lead is None and kwargs:
+        lead = kwargs
+    if isinstance(lead, dict):
+        lead = _coerce_lead_input(lead)
 
     if not lead.reprocessamento and not _verificar_relevancia_segmento(
         lead.nome, lead.segmento
