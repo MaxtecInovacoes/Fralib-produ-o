@@ -36,10 +36,10 @@ def clean_json_response(text: str) -> str:
 
 
 class AnimationSpec(BaseModel):
-    name: str
-    type: str
-    target: str
-    trigger: str
+    name: str = "fade-in"
+    type: str = "fade-in"
+    target: str = "section"
+    trigger: str = "scroll"
     duration: Optional[str] = "0.6s"
     easing: Optional[str] = "ease-out"
 
@@ -76,7 +76,7 @@ class AnimationSpec(BaseModel):
 class SectionSpec(BaseModel):
     model_config = ConfigDict(extra="allow", populate_by_name=True)
 
-    name: str
+    name: str = ""
     required: bool = True
     layout_type: Optional[str] = None
     components: List[str] = Field(default_factory=list)
@@ -522,7 +522,7 @@ class DesignerPRD(BaseModel):
             return str(v.get("summary", str(v)))
         return str(v)
 
-    anti_patterns: List[str]
+    anti_patterns: List[str] = Field(default_factory=list)
 
     @field_validator("anti_patterns", mode="before")
     @classmethod
@@ -546,7 +546,7 @@ class DesignerPRD(BaseModel):
                 result.append(str(item))
         return result
 
-    schema_org_types: List[str]
+    schema_org_types: List[str] = Field(default_factory=list)
 
     @field_validator("schema_org_types", mode="before")
     @classmethod
