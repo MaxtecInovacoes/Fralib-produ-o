@@ -39,7 +39,7 @@ class PipelineState:
     quality_score: int = 0
     deploy_url: str = ""
     deploy_path: str = ""
-    current_state: str = STATE_INIT
+    current_state: str = STATE_HUNTING
     history: list[str] = field(default_factory=list)
     error: str = ""
     error_step: str = ""
