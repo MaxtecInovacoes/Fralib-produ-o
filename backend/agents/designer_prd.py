@@ -8,7 +8,7 @@ O pipeline ativo usa Arquiteto Mestre + Skill Renderer.
 """
 import re
 from pydantic import BaseModel, ConfigDict, Field, model_validator, field_validator
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Union
 from llm_direct import call_claude_structured
 from agent_rag import format_rag_prompt, get_agent_temperature
 from validation_enforcer import (
@@ -188,540 +188,144 @@ class ColorPalette(BaseModel):
 
 
 class DesignerPRD(BaseModel):
-    model_config = ConfigDict(extra="ignore", populate_by_name=True)
+    model_config = ConfigDict(extra="allow", populate_by_name=True)
 
     sections: List[SectionSpec] = Field(default_factory=list)
-
-    @field_validator("sections", mode="before")
-    @classmethod
-    def normalize_sections(cls, v):
-        if isinstance(v, dict):
-            result = []
-            for key, val in v.items():
-                if isinstance(val, dict):
-                    val.setdefault("name", val.get("id", key).capitalize())
-                    # Se tem layout_type mas não tem name, usa layout_type como name
-                    if not val.get("name") and val.get("layout_type"):
-                        val["name"] = str(val["layout_type"]).replace("_", " ").capitalize()
-                    val.setdefault("required", True)
-                    val.setdefault("components", ["cta"])
-                    val.setdefault("data_source", "Claude")
-                    result.append(val)
-                elif isinstance(val, str):
-                    result.append(
-                        {
-                            "name": key.capitalize(),
-                            "required": True,
-                            "components": ["cta"],
-                            "data_source": val,
-                        }
-                    )
-            return (
-                result
-                if result
-                else [
-                    {
-                        "name": "Hero",
-                        "required": True,
-                        "components": ["hero-cta"],
-                        "data_source": "Fallback",
-                    }
-                ]
-            )
-        if not isinstance(v, list):
-            return [
-                {
-                    "name": "Hero",
-                    "required": True,
-                    "components": ["hero-cta"],
-                    "data_source": "Fallback",
-                }
-            ]
-        # Normalizar name (id -> name), schema_org e garantir defaults em cada item da lista
-        for item in v:
-            if isinstance(item, dict):
-                if not item.get("name"):
-                    item["name"] = str(
-                        item.get("id", item.get("layout_type", "Section"))
-                    ).replace("_", " ").capitalize()
-                if "schema_org" in item:
-                    so = item["schema_org"]
-                    if isinstance(so, dict):
-                        item["schema_org"] = so.get("type", so.get("name", str(so)))
-                    elif isinstance(so, list):
-                        item["schema_org"] = so[0] if so else None
-        return v
-
     color_palette: ColorPalette = Field(default_factory=ColorPalette)
-    typography: Dict[str, Any] = Field(default_factory=dict)
+    typography: Optional[Dict[str, Any]] = None
     design_system_slug: Optional[str] = None
     visual_dna: Dict[str, Any] = Field(default_factory=dict)
     layout_blueprint: List[Dict[str, Any]] = Field(default_factory=list)
     design_reference_pack: Dict[str, Any] = Field(default_factory=dict)
     dna_combo: Dict[str, Any] = Field(default_factory=dict)
-    visual_seed: str = ""
+    visual_seed: Optional[str] = None
     visual_direction: Dict[str, Any] = Field(default_factory=dict)
     minimum_required_media: Optional[int] = None
-    requirements_contract: Dict[str, Any] = Field(default_factory=dict)
     visual_contract: Dict[str, Any] = Field(default_factory=dict)
     site_build_plan: Dict[str, Any] = Field(default_factory=dict)
 
-    @field_validator("typography", mode="before")
-    @classmethod
-    def normalize_typography(cls, v):
-        """
-        Normaliza estruturas de tipografia aninhadas para formato simples.
-
-        Aceita:
-        - Formato simples: {"heading": "Inter", "body": "Roboto"}
-        - Formato aninhado: {"heading": {"family": "Inter", "weight": "700"}}
-
-        Retorna sempre formato simples: {"heading": "Inter", "body": "Roboto"}
-        """
-        if not isinstance(v, dict):
-            return {"heading": "Inter", "body": "Inter", "accent": "Inter"}
-
-        normalized = {}
-        for key, value in v.items():
-            if isinstance(value, dict):
-                # Extrair 'family' de estrutura aninhada
-                normalized[key] = value.get("family", value.get("name", "Inter"))
-            elif isinstance(value, str):
-                # Já está no formato simples
-                normalized[key] = value
-            else:
-                # Fallback
-                normalized[key] = "Inter"
-
-        # Garantir campos obrigatórios
-        for required_key in ["heading", "body", "accent"]:
-            if required_key not in normalized:
-                normalized[required_key] = "Inter"
-
-        return normalized
-
     animations: List[AnimationSpec] = Field(default_factory=list)
 
-    @field_validator("animations", mode="before")
-    @classmethod
-    def normalize_animations(cls, v):
-        """Normaliza animacoes em qualquer formato para List[AnimationSpec]."""
-        if not isinstance(v, list):
-            return [
-                {
-                    "name": "fade-in",
-                    "type": "fade-in",
-                    "target": "section",
-                    "trigger": "scroll",
-                }
-            ]
-        result = []
-        for item in v:
-            if isinstance(item, dict):
-                result.append(
-                    {
-                        "name": str(
-                            item.get(
-                                "name", item.get("id", item.get("animation", "fade-in"))
-                            )
-                        ),
-                        "type": str(
-                            item.get(
-                                "type",
-                                item.get(
-                                    "animation_type",
-                                    item.get("effect", item.get("kind", "fade-in")),
-                                ),
-                            )
-                        ),
-                        "target": str(
-                            item.get(
-                                "target",
-                                item.get(
-                                    "element",
-                                    item.get(
-                                        "selector", item.get("applies_to", "section")
-                                    ),
-                                ),
-                            )
-                        ),
-                        "trigger": str(
-                            item.get(
-                                "trigger", item.get("event", item.get("on", "scroll"))
-                            )
-                        ),
-                        "duration": str(
-                            item.get("duration", item.get("timing", "0.6s"))
-                        ),
-                        "easing": str(item.get("easing", item.get("ease", "ease-out"))),
-                    }
-                )
-            elif isinstance(item, str):
-                result.append(
-                    {
-                        "name": item,
-                        "type": "fade-in",
-                        "target": "section",
-                        "trigger": "scroll",
-                    }
-                )
-        if not result:
-            result = [
-                {
-                    "name": "fade-in",
-                    "type": "fade-in",
-                    "target": "section",
-                    "trigger": "scroll",
-                }
-            ]
-        return result
-
-    business_name: str = ""
-
-    @field_validator("business_name", mode="before")
-    @classmethod
-    def normalize_business_name(cls, v):
-        if not v or not str(v).strip():
-            return "Negócio Local"
-        return str(v).strip()
-
-    reviews_count: int = Field(default=0, ge=0)
-
-    @field_validator("reviews_count", mode="before")
-    @classmethod
-    def normalize_reviews_count(cls, v):
-        if v is None:
-            return 0
-        try:
-            return int(v)
-        except (TypeError, ValueError):
-            return 0
-
-    reviews_rating: float = Field(default=0.0, ge=0, le=5)
-
-    @field_validator("reviews_rating", mode="before")
-    @classmethod
-    def normalize_reviews_rating(cls, v):
-        if v is None:
-            return 0.0
-        try:
-            return float(v)
-        except (TypeError, ValueError):
-            return 0.0
-
-    reviews_list: List[Dict[str, Any]] = Field(default_factory=list)
-
-    @field_validator("reviews_list", mode="before")
-    @classmethod
-    def normalize_reviews_list(cls, v):
-        if not isinstance(v, list):
-            return []
-        return [r for r in v if isinstance(r, dict) and r]
-
-    address: str = ""
-
-    @field_validator("address", mode="before")
-    @classmethod
-    def normalize_address(cls, v):
-        if not v or not str(v).strip():
-            return ""
-        return str(v).strip()
-
-    phone: str = ""
-
-    @field_validator("phone", mode="before")
-    @classmethod
-    def normalize_phone(cls, v):
-        if not v or not str(v).strip():
-            return ""
-        return str(v).strip()
-
+    business_name: Optional[str] = None
+    reviews_count: Optional[int] = None
+    reviews_rating: Optional[float] = None
+    reviews_list: Optional[List[Dict[str, Any]]] = None
+    address: Optional[str] = None
+    phone: Optional[str] = None
     hours: Optional[Dict[str, str]] = None
-    photos: List[str] = Field(default_factory=list)
+    photos: Optional[List[str]] = None
     videos: List[Dict[str, Any]] = Field(default_factory=list)
-
-    @field_validator("photos", mode="before")
-    @classmethod
-    def normalize_photos(cls, v):
-        if not isinstance(v, list):
-            return []
-        result = []
-        for item in v:
-            if isinstance(item, str):
-                result.append(item)
-            elif isinstance(item, dict):
-                result.append(str(item.get("url", item.get("src", ""))))
-            else:
-                result.append(str(item))
-        return [x for x in result if x]
-
     logo_url: Optional[str] = None
-    google_maps_embed: str = ""
-
-    @field_validator("google_maps_embed", mode="before")
-    @classmethod
-    def normalize_google_maps_embed(cls, v):
-        if not v or not str(v).strip():
-            return ""
-        return str(v).strip()
-
-    components_21dev: List[str] = Field(default_factory=list)
-
-    @field_validator("components_21dev", mode="before")
-    @classmethod
-    def normalize_components_21dev(cls, v):
-        if not isinstance(v, list):
-            return ["hero-cta"]
-        result = []
-        for item in v:
-            if isinstance(item, str):
-                result.append(item)
-            elif isinstance(item, dict):
-                result.append(
-                    str(
-                        item.get(
-                            "id", item.get("name", item.get("component", str(item)))
-                        )
-                    )
-                )
-            else:
-                result.append(str(item))
-        return result if result else ["hero-cta"]
-
-    cidade: str = ""
-    segmento: str = ""
-    instrucao_criativa_para_dev: str = (
-        "Crie um layout moderno e responsivo com Tailwind."
-    )
-    jina_insights: str = ""
-    # Dados reais do Hunter — passados intactos para o gerador HTML
-    servicos: list = []
-    atributos: list = []
-    horarios: dict = {}
-    faixa_preco: str = ""
-
-    @field_validator("jina_insights", mode="before")
-    @classmethod
-    def normalize_jina_insights(cls, v):
-        if not v:
-            return ""
-        if isinstance(v, str):
-            return v
-        if isinstance(v, dict):
-            return v.get("summary", v.get("insights", v.get("content", str(v))))
-        return str(v)
-
-    competitor_analysis: str = ""
-
-    @field_validator("competitor_analysis", mode="before")
-    @classmethod
-    def normalize_competitor_analysis(cls, v):
-        if not v:
-            return ""
-        if isinstance(v, str):
-            return v
-        if isinstance(v, dict):
-            return str(v.get("summary", str(v)))
-        return str(v)
-
-    anti_patterns: List[str] = Field(default_factory=list)
-
-    @field_validator("anti_patterns", mode="before")
-    @classmethod
-    def normalize_anti_patterns(cls, v):
-        if not isinstance(v, list):
-            return []
-        result = []
-        for item in v:
-            if isinstance(item, str):
-                result.append(item)
-            elif isinstance(item, dict):
-                result.append(
-                    str(
-                        item.get(
-                            "pattern",
-                            item.get("name", item.get("description", str(item))),
-                        )
-                    )
-                )
-            else:
-                result.append(str(item))
-        return result
-
-    schema_org_types: List[str] = Field(default_factory=list)
-
-    @field_validator("schema_org_types", mode="before")
-    @classmethod
-    def normalize_schema_org(cls, v):
-        if not isinstance(v, list):
-            return ["LocalBusiness"]
-        result = []
-        for item in v:
-            if isinstance(item, str):
-                result.append(item)
-            elif isinstance(item, dict):
-                result.append(str(item.get("type", item.get("name", "LocalBusiness"))))
-            else:
-                result.append(str(item))
-        return result if result else ["LocalBusiness"]
-
-    seo_keywords: Optional[List[str]] = Field(default_factory=list)
-
-    @field_validator("seo_keywords", mode="before")
-    @classmethod
-    def normalize_seo_keywords(cls, v):
-        if not isinstance(v, list):
-            return []
-        result = []
-        for item in v:
-            if isinstance(item, str):
-                result.append(item)
-            elif isinstance(item, dict):
-                result.append(
-                    str(
-                        item.get(
-                            "keyword",
-                            item.get("term", item.get("text", str(item))),
-                        )
-                    )
-                )
-            else:
-                result.append(str(item))
-        return result
-
-    faq_questions: Optional[List[str]] = Field(default_factory=list)
-
-    @field_validator("faq_questions", mode="before")
-    @classmethod
-    def normalize_faq_questions(cls, v):
-        if not isinstance(v, list):
-            return []
-        result = []
-        for item in v:
-            if isinstance(item, str):
-                result.append(item)
-            elif isinstance(item, dict):
-                result.append(
-                    str(
-                        item.get(
-                            "question",
-                            item.get("text", item.get("q", str(item))),
-                        )
-                    )
-                )
-            else:
-                result.append(str(item))
-        return result
-
-    value_props: Optional[List[str]] = Field(default_factory=list)
-
-    @field_validator("value_props", mode="before")
-    @classmethod
-    def normalize_value_props(cls, v):
-        if not isinstance(v, list):
-            return []
-        result = []
-        for item in v:
-            if isinstance(item, str):
-                result.append(item)
-            elif isinstance(item, dict):
-                result.append(
-                    str(
-                        item.get(
-                            "prop",
-                            item.get("text", item.get("value", str(item))),
-                        )
-                    )
-                )
-            else:
-                result.append(str(item))
-        return result
-
+    google_maps_embed: Optional[str] = None
+    components_21dev: Optional[List[str]] = None
+    cidade: Optional[str] = None
+    segmento: Optional[str] = None
+    instrucao_criativa_para_dev: Optional[str] = None
+    jina_insights: Optional[str] = None
+    servicos: Optional[list] = None
+    atributos: Optional[list] = None
+    horarios: Optional[dict] = None
+    faixa_preco: Optional[str] = None
+    competitor_analysis: Optional[str] = None
+    anti_patterns: Optional[List[str]] = None
+    schema_org_types: Optional[List[str]] = None
+    seo_keywords: Optional[List[Union[str, Dict[str, Any]]]] = None
+    faq_questions: Optional[List[Union[str, Dict[str, Any]]]] = None
+    value_props: Optional[List[Union[str, Dict[str, Any]]]] = None
     geo: Optional[Dict[str, Any]] = None
-
-    @field_validator("geo", mode="before")
-    @classmethod
-    def normalize_geo(cls, v):
-        if v is None:
-            return None
-        if isinstance(v, dict):
-            return v
-        if isinstance(v, str):
-            return {"location": v}
-        return None
-
-    dark_mode: bool = False
+    dark_mode: Optional[bool] = None
 
     @model_validator(mode="after")
     def fill_missing_fields(self) -> "DesignerPRD":
-        """Preenche campos obrigatórios faltantes com fallback"""
-        # Fallback para sections
+        """Normaliza dados sujos vindo da IA — aceita qualquer entrada."""
+        # Sections: garantir que cada uma tem nome
+        for i, sec in enumerate(self.sections):
+            if not sec.name or not str(sec.name).strip():
+                self.sections[i] = SectionSpec(
+                    name=f"Secao {i+1}",
+                    required=sec.required,
+                    components=sec.components or [],
+                    data_source=sec.data_source or "Hunter V2",
+                    schema_org=sec.schema_org,
+                )
+
+        # Garantir arrays mínimos
         if not self.sections:
             self.sections = [
                 SectionSpec(
-                    name="Hero",
-                    required=True,
-                    components=["hero-cta"],
-                    data_source="Hunter V2",
+                    name="Hero", required=True, components=["hero-cta"], data_source="Hunter V2",
                 ),
                 SectionSpec(
-                    name="Sobre",
-                    required=True,
-                    components=["about-text", "about-image"],
-                    data_source="Hunter V2",
+                    name="Sobre", required=True, components=["about-text", "about-image"], data_source="Hunter V2",
                 ),
                 SectionSpec(
-                    name="Servicos",
-                    required=True,
-                    components=["services-grid"],
-                    data_source="Hunter V2",
+                    name="Servicos", required=True, components=["services-grid"], data_source="Hunter V2",
                 ),
                 SectionSpec(
-                    name="Depoimentos",
-                    required=False,
-                    components=["reviews-list"],
-                    data_source="Hunter V2",
+                    name="Depoimentos", required=False, components=["reviews-list"], data_source="Hunter V2",
                 ),
                 SectionSpec(
-                    name="Planos",
-                    required=True,
-                    components=["pricing-cards"],
-                    data_source="Hunter V2",
+                    name="Planos", required=True, components=["pricing-cards"], data_source="Hunter V2",
                 ),
                 SectionSpec(
-                    name="Localizacao",
-                    required=True,
-                    components=["map-embed", "address-info"],
-                    data_source="Hunter V2",
+                    name="Localizacao", required=True, components=["map-embed", "address-info"], data_source="Hunter V2",
                 ),
                 SectionSpec(
-                    name="Contato",
-                    required=True,
-                    components=["contact-form", "whatsapp-cta"],
-                    data_source="Hunter V2",
+                    name="Contato", required=True, components=["contact-form", "whatsapp-cta"], data_source="Hunter V2",
                 ),
             ]
 
-        # Fallback para animations
         if not self.animations:
             self.animations = [
                 AnimationSpec(
-                    name="hero-fade",
-                    type="fade-in",
-                    target="hero",
-                    trigger="load",
-                    duration="0.6s",
-                    easing="ease-out",
+                    name="hero-fade", type="fade-in", target="hero", trigger="load",
+                    duration="0.6s", easing="ease-out",
                 )
             ]
 
-        # Fallback para components_21dev
         if not self.components_21dev:
             self.components_21dev = ["hero-cta"]
-
-        # Fallback para schema_org_types
         if not self.schema_org_types:
             self.schema_org_types = ["LocalBusiness"]
+
+        # Geo default
+        if self.geo is None:
+            self.geo = {"lat": 0.0, "lng": 0.0}
+        elif isinstance(self.geo, dict):
+            self.geo.setdefault("lat", self.geo.get("latitude", self.geo.get("lat", 0.0)))
+            self.geo.setdefault("lng", self.geo.get("longitude", self.geo.get("lng", 0.0)))
+
+        # Dark mode default
+        if self.dark_mode is None:
+            self.dark_mode = False
+
+        # Normalize list fields: se veio dict em vez de str, extrair valor textual
+        if self.faq_questions:
+            cleaned = []
+            for item in self.faq_questions:
+                if isinstance(item, str):
+                    cleaned.append(item)
+                elif isinstance(item, dict):
+                    cleaned.append(str(item.get("question", item.get("text", str(item)))))
+            self.faq_questions = cleaned
+
+        if self.value_props:
+            cleaned = []
+            for item in self.value_props:
+                if isinstance(item, str):
+                    cleaned.append(item)
+                elif isinstance(item, dict):
+                    cleaned.append(str(item.get("title", item.get("prop", item.get("text", str(item))))))
+            self.value_props = cleaned
+
+        if self.seo_keywords:
+            cleaned = []
+            for item in self.seo_keywords:
+                if isinstance(item, str):
+                    cleaned.append(item)
+                elif isinstance(item, dict):
+                    cleaned.append(str(item.get("keyword", item.get("term", item.get("text", str(item))))))
+            self.seo_keywords = cleaned
 
         return self
 
