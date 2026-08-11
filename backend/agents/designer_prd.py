@@ -370,11 +370,65 @@ class DesignerPRD(BaseModel):
         return result
 
     business_name: str
+
+    @field_validator("business_name", mode="before")
+    @classmethod
+    def normalize_business_name(cls, v):
+        if not v or not str(v).strip():
+            return "Negócio Local"
+        return str(v).strip()
+
     reviews_count: int = Field(ge=0)
+
+    @field_validator("reviews_count", mode="before")
+    @classmethod
+    def normalize_reviews_count(cls, v):
+        if v is None:
+            return 0
+        try:
+            return int(v)
+        except (TypeError, ValueError):
+            return 0
+
     reviews_rating: float = Field(ge=0, le=5)
+
+    @field_validator("reviews_rating", mode="before")
+    @classmethod
+    def normalize_reviews_rating(cls, v):
+        if v is None:
+            return 0.0
+        try:
+            return float(v)
+        except (TypeError, ValueError):
+            return 0.0
+
     reviews_list: List[Dict[str, Any]]
+
+    @field_validator("reviews_list", mode="before")
+    @classmethod
+    def normalize_reviews_list(cls, v):
+        if not isinstance(v, list):
+            return []
+        return [r for r in v if isinstance(r, dict) and r]
+
     address: str
+
+    @field_validator("address", mode="before")
+    @classmethod
+    def normalize_address(cls, v):
+        if not v or not str(v).strip():
+            return ""
+        return str(v).strip()
+
     phone: str
+
+    @field_validator("phone", mode="before")
+    @classmethod
+    def normalize_phone(cls, v):
+        if not v or not str(v).strip():
+            return ""
+        return str(v).strip()
+
     hours: Optional[Dict[str, str]] = None
     photos: List[str] = Field(default_factory=list)
     videos: List[Dict[str, Any]] = Field(default_factory=list)
@@ -396,6 +450,14 @@ class DesignerPRD(BaseModel):
 
     logo_url: Optional[str] = None
     google_maps_embed: str
+
+    @field_validator("google_maps_embed", mode="before")
+    @classmethod
+    def normalize_google_maps_embed(cls, v):
+        if not v or not str(v).strip():
+            return ""
+        return str(v).strip()
+
     components_21dev: List[str]
 
     @field_validator("components_21dev", mode="before")
@@ -497,8 +559,77 @@ class DesignerPRD(BaseModel):
         return result if result else ["LocalBusiness"]
 
     seo_keywords: Optional[List[str]] = Field(default_factory=list)
+
+    @field_validator("seo_keywords", mode="before")
+    @classmethod
+    def normalize_seo_keywords(cls, v):
+        if not isinstance(v, list):
+            return []
+        result = []
+        for item in v:
+            if isinstance(item, str):
+                result.append(item)
+            elif isinstance(item, dict):
+                result.append(
+                    str(
+                        item.get(
+                            "keyword",
+                            item.get("term", item.get("text", str(item))),
+                        )
+                    )
+                )
+            else:
+                result.append(str(item))
+        return result
+
     faq_questions: Optional[List[str]] = Field(default_factory=list)
+
+    @field_validator("faq_questions", mode="before")
+    @classmethod
+    def normalize_faq_questions(cls, v):
+        if not isinstance(v, list):
+            return []
+        result = []
+        for item in v:
+            if isinstance(item, str):
+                result.append(item)
+            elif isinstance(item, dict):
+                result.append(
+                    str(
+                        item.get(
+                            "question",
+                            item.get("text", item.get("q", str(item))),
+                        )
+                    )
+                )
+            else:
+                result.append(str(item))
+        return result
+
     value_props: Optional[List[str]] = Field(default_factory=list)
+
+    @field_validator("value_props", mode="before")
+    @classmethod
+    def normalize_value_props(cls, v):
+        if not isinstance(v, list):
+            return []
+        result = []
+        for item in v:
+            if isinstance(item, str):
+                result.append(item)
+            elif isinstance(item, dict):
+                result.append(
+                    str(
+                        item.get(
+                            "prop",
+                            item.get("text", item.get("value", str(item))),
+                        )
+                    )
+                )
+            else:
+                result.append(str(item))
+        return result
+
     geo: Optional[Dict[str, float]] = None
     dark_mode: bool = False
 
