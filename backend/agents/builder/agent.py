@@ -217,6 +217,18 @@ def _concat_html(partials: list) -> str:
     if not partials:
         return ""
 
+    def _strip_document_scaffold(fragment: str) -> str:
+        fragment = re.sub(r"<!DOCTYPE[^>]*>\s*", "", fragment, flags=re.IGNORECASE)
+        fragment = re.sub(r"<head[^>]*>.*?</head>", "", fragment, flags=re.DOTALL | re.IGNORECASE)
+        fragment = re.sub(r"<title[^>]*>.*?</title>", "", fragment, flags=re.DOTALL | re.IGNORECASE)
+        fragment = re.sub(r"<meta\b[^>]*>", "", fragment, flags=re.IGNORECASE)
+        fragment = re.sub(r"<link\b[^>]*>", "", fragment, flags=re.IGNORECASE)
+        fragment = re.sub(r"</?head[^>]*>", "", fragment, flags=re.IGNORECASE)
+        fragment = re.sub(r"</?title[^>]*>", "", fragment, flags=re.IGNORECASE)
+        fragment = re.sub(r"</?html[^>]*>", "", fragment, flags=re.IGNORECASE)
+        fragment = re.sub(r"</?body[^>]*>", "", fragment, flags=re.IGNORECASE)
+        return fragment.strip()
+
     def _extract_head(html: str) -> str:
         match = re.search(r"<head[^>]*>(.*?)</head>", html, flags=re.DOTALL | re.IGNORECASE)
         if match:
@@ -233,12 +245,7 @@ def _concat_html(partials: list) -> str:
             fragment = match.group(1)
         else:
             fragment = html
-        fragment = re.sub(r"<!DOCTYPE[^>]*>\s*", "", fragment, flags=re.IGNORECASE)
-        fragment = re.sub(r"<head[^>]*>.*?</head>", "", fragment, flags=re.DOTALL | re.IGNORECASE)
-        fragment = re.sub(r"</?title[^>]*>", "", fragment, flags=re.IGNORECASE)
-        fragment = re.sub(r"</?html[^>]*>", "", fragment, flags=re.IGNORECASE)
-        fragment = re.sub(r"</?body[^>]*>", "", fragment, flags=re.IGNORECASE)
-        return fragment.strip()
+        return _strip_document_scaffold(fragment)
 
     head = _extract_head(partials[0])
     body = "\n".join(_extract_body(partial) for partial in partials if partial).strip()

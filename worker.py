@@ -50,6 +50,35 @@ _PIPELINE_TIPOS = ("pipeline_lead", "pipeline_multiplos", "pipeline_main")
 JOB_TIPOS = _load_job_tipos()
 
 
+def _save_pipeline_resume_checkpoint(final_state) -> None:
+    """Persiste PRD/HTML finais para retomada sem repetir fases caras."""
+    if not getattr(final_state, "tenant_id", None) or not getattr(final_state, "lead_id", None):
+        return
+    try:
+        from backend.agents.pipeline_checkpoint import gerar_pipeline_id, salvar_checkpoint
+
+        lead_data = getattr(final_state, "lead_data", {}) or {}
+        pipeline_id = gerar_pipeline_id(
+            final_state.tenant_id,
+            lead_data.get("nome", ""),
+            getattr(final_state, "segmento", ""),
+            getattr(final_state, "cidade", ""),
+            final_state.lead_id,
+        )
+        design_output = getattr(final_state, "design_output", None)
+        if design_output and design_output.get("business_name"):
+            salvar_checkpoint(pipeline_id, "arquiteto", {"prd_json": design_output})
+        build_output = getattr(final_state, "build_output", None)
+        if build_output and build_output.get("html"):
+            salvar_checkpoint(pipeline_id, "builder", build_output)
+    except Exception as exc:
+        logger.warning(
+            "[Checkpoint] persistencia final falhou lead_id=%s: %s",
+            getattr(final_state, "lead_id", ""),
+            exc,
+        )
+
+
 def _run_pipeline_job(db, job) -> bool:
     """pipeline_lead / pipeline_multiplos / pipeline_main: roda o Manager e fecha o loop de inventário."""
     from backend.core import job_queue
@@ -202,6 +231,7 @@ def _run_pipeline_job(db, job) -> bool:
     set_tracker(_token_tracker)
     # ── Fim observability ──
     final = run_pipeline(state, trace=trace)
+    _save_pipeline_resume_checkpoint(final)
     trace.span_atual().finalizar("ok" if final.current_state == "done" else "error")
     trace.duracao_total_ms = int((time.monotonic() - t0) * 1000)
     trace.status = "success" if final.current_state == "done" else "failed"
