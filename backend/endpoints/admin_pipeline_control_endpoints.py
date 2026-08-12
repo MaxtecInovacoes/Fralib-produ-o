@@ -509,6 +509,34 @@ async def api_worker_restart(
         raise HTTPException(status_code=504, detail="Timeout ao reiniciar worker")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Falha: {e}")
+
+@router.post("/restart-api")
+async def api_restart_api(
+    usuario: dict = Depends(get_current_user),
+) -> dict[str, Any]:
+    """Reinicia o servico systemd fralib-api (porta 8001).
+    Usado apos deploy para recarregar codigo atualizado.
+    """
+    require_admin(usuario)
+
+    try:
+        result = subprocess.run(
+            ["systemctl", "restart", "fralib-api.service"],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        ok = result.returncode == 0
+        return {
+            "ok": ok,
+            "message": result.stdout.strip() or result.stderr.strip() or "Restart solicitado",
+            "returncode": result.returncode,
+        }
+    except subprocess.TimeoutExpired:
+        raise HTTPException(status_code=504, detail="Timeout ao reiniciar fralib-api")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Falha: {e}")
+
 @router.post("/start")
 async def api_start_pipeline(
     body: StartPipelineBody,
