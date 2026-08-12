@@ -55,6 +55,28 @@ PIPELINE_STEPS = [
 logger = __import__("logging").getLogger("manager.pipeline")
 
 
+def _save_resume_checkpoint(state: PipelineState) -> None:
+    """Persiste PRD/HTML disponiveis para retomada em retries futuros."""
+    if not state.tenant_id or not state.lead_id:
+        return
+    try:
+        from backend.agents.pipeline_checkpoint import gerar_pipeline_id, salvar_checkpoint
+
+        pipeline_id = gerar_pipeline_id(
+            state.tenant_id,
+            state.lead_data.get("nome", "") if state.lead_data else "",
+            state.segmento,
+            state.cidade,
+            state.lead_id,
+        )
+        if state.design_output and state.design_output.get("business_name"):
+            salvar_checkpoint(pipeline_id, "arquiteto", {"prd_json": state.design_output})
+        if state.build_output and state.build_output.get("html"):
+            salvar_checkpoint(pipeline_id, "builder", state.build_output)
+    except Exception as exc:
+        logger.warning("[Checkpoint] persistencia final falhou lead_id=%s: %s", state.lead_id, exc)
+
+
 def _hydrate_from_checkpoint(state: PipelineState) -> PipelineState:
     """Retoma pipeline por checkpoint quando PRD/HTML já existem para o lead."""
     if not state.tenant_id or not state.lead_id:
@@ -157,6 +179,7 @@ def run_pipeline(state: PipelineState, trace: object = None) -> PipelineState:
             state = _transition(state, STATE_FAILED)
         return state
     finally:
+        _save_resume_checkpoint(state)
         # 2.1 Deduzir creditos por custo real do pipeline (fail-safe)
         try:
             from backend.services.credits_manager import deduzir_creditos_por_pipeline
