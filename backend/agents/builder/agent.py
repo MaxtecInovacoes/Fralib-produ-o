@@ -212,27 +212,34 @@ def _split_spec_blocks(spec: dict) -> list:
 
 
 def _concat_html(partials: list) -> str:
-    """Concatenate partial HTMLs into one document. Keep <head> from first partial only."""
+    """Concatenate partial HTML documents/fragments into one valid document."""
     import re
     if not partials:
         return ""
-    full = partials[0]
-    for partial in partials[1:]:
-        stripped = re.sub(r'<head[^>]*>.*?</head>', '', partial, flags=re.DOTALL | re.IGNORECASE)
-        stripped = re.sub(r'^<!DOCTYPE[^>]*>\s*', '', stripped, flags=re.IGNORECASE)
-        stripped = re.sub(r'^<html[^>]*>', '', stripped, flags=re.IGNORECASE)
-        stripped = re.sub(r'</html>\s*$', '', stripped, flags=re.IGNORECASE | re.DOTALL)
-        stripped = re.sub(r'<style[^>]*>.*?</style>', '', stripped, flags=re.DOTALL | re.IGNORECASE)
-        stripped = re.sub(r'<script[^>]*>.*?</script>', '', stripped, flags=re.DOTALL | re.IGNORECASE)
-        if '</body>' in full.lower():
-            idx = full.lower().rfind('</body>')
-            full = full[:idx] + stripped + full[idx:]
-        elif '<body' in full.lower():
-            idx = full.lower().rfind('<body')
-            full = full[:idx] + stripped + full[idx:]
-        else:
-            full = full + stripped
-    return full
+
+    def _extract_head(html: str) -> str:
+        match = re.search(r"<head[^>]*>(.*?)</head>", html, flags=re.DOTALL | re.IGNORECASE)
+        if match:
+            return match.group(1).strip()
+        return (
+            '<meta charset="UTF-8">\n'
+            '<meta name="viewport" content="width=device-width, initial-scale=1.0">\n'
+            "<title>FraLib Site</title>"
+        )
+
+    def _extract_body(html: str) -> str:
+        match = re.search(r"<body[^>]*>(.*?)</body>", html, flags=re.DOTALL | re.IGNORECASE)
+        if match:
+            return match.group(1).strip()
+        fragment = re.sub(r"<!DOCTYPE[^>]*>\s*", "", html, flags=re.IGNORECASE)
+        fragment = re.sub(r"<head[^>]*>.*?</head>", "", fragment, flags=re.DOTALL | re.IGNORECASE)
+        fragment = re.sub(r"</?html[^>]*>", "", fragment, flags=re.IGNORECASE)
+        fragment = re.sub(r"</?body[^>]*>", "", fragment, flags=re.IGNORECASE)
+        return fragment.strip()
+
+    head = _extract_head(partials[0])
+    body = "\n".join(_extract_body(partial) for partial in partials if partial).strip()
+    return f"<!DOCTYPE html>\n<html lang=\"pt-BR\">\n<head>\n{head}\n</head>\n<body>\n{body}\n</body>\n</html>\n"
 
 
 def _render_block(block_spec: dict, design_tokens: dict) -> tuple[str, str]:
