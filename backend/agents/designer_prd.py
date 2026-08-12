@@ -7,7 +7,7 @@ DesignerPRD - modelo/gerador legado de PRD.
 O pipeline ativo usa Arquiteto Mestre + Skill Renderer.
 """
 import re
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from typing import List, Dict, Any, Optional, Union
 from llm_direct import call_claude_structured
 from agent_rag import format_rag_prompt, get_agent_temperature
@@ -222,6 +222,32 @@ class DesignerPRD(BaseModel):
     value_props: Optional[List[Union[str, Dict[str, Any]]]] = None
     geo: Optional[Dict[str, Any]] = None
     dark_mode: Optional[bool] = None
+
+    @field_validator("geo", mode="before")
+    @classmethod
+    def _normalize_geo(cls, v):
+        """Normaliza qualquer entrada geo antes do type check do Pydantic.
+
+        O LLM pode retornar geo como string, lista, int, etc.
+        Convertemos tudo em dict {"lat": float, "lng": float}.
+        """
+        if v is None or isinstance(v, dict):
+            return v
+        if isinstance(v, str):
+            try:
+                import ast
+                parsed = ast.literal_eval(v)
+                if isinstance(parsed, dict):
+                    return parsed
+            except Exception:
+                pass
+            return None
+        if isinstance(v, (list, tuple)) and len(v) >= 2:
+            try:
+                return {"lat": float(v[0]), "lng": float(v[1])}
+            except (TypeError, ValueError):
+                return None
+        return None
 
     @model_validator(mode="after")
     def fill_missing_fields(self) -> "DesignerPRD":
