@@ -37,7 +37,7 @@ import os
 import subprocess
 from typing import Any, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from pydantic import BaseModel
 from backend.core.db_imports import Session, text  # noqa: F401  — B3 DRY
 from backend.core.auth import get_current_user
@@ -416,12 +416,14 @@ class ClearQueueBody(BaseModel):
 
 
 class StartPipelineBody(BaseModel):
+    lead_id: str = ""
     lead_data: dict
     tenant_id: int = 0
     segmento: str = ""
     cidade: str = ""
     run_id: str = ""
     job_id: int = 0
+    force_reprocess: bool = False
 
 
 class PausePipelineBody(BaseModel):
@@ -513,14 +515,15 @@ async def api_start_pipeline(
     db: Session = Depends(get_db),
     usuario: dict = Depends(get_current_user),
 ) -> dict[str, Any]:
-    """Inicia pipeline manualmente via admin, permitindo controle sobre lead_data inicial."""
+    """Inicia pipeline manualmente via admin, rodando em background para não bloquear a HTTP response."""
     require_admin(usuario)
     from backend.agents.manager.agent import PipelineState, run_pipeline
 
-    # Atualiza estado atual da pipeline — recarrega diretamente, não cria novo trabalho
+    # Usar lead_id do body diretamente — nao do lead_data
+    lead_id = body.lead_id or body.lead_data.get("id", "") or "unknown"
     state = PipelineState(
         tenant_id=body.tenant_id,
-        lead_id=str(body.lead_data.get("id", "")),
+        lead_id=str(lead_id),
         job_id=body.job_id,
         segmento=body.segmento,
         cidade=body.cidade,
@@ -528,15 +531,31 @@ async def api_start_pipeline(
         estado_manual="running",
         paused_by=None,
     )
-    state = run_pipeline(state)
+
+    background_tasks = BackgroundTasks()
+    background_tasks.add_task(run_pipeline_background, state)
 
     return {
         "ok": True,
         "run_id": state.run_id,
         "lead_id": state.lead_id,
-        "status": state.current_state,
-        "historico": state.history[-5:],
+        "status": "queued",
+        "message": "Pipeline enfileirado — rodando em background.",
+        "historico": state.history[-3:],
     }
+
+
+def run_pipeline_background(state: PipelineState) -> None:
+    """Wrapper para executar pipeline em background task (fora do contexto HTTP)."""
+    try:
+        run_pipeline(state)
+    except Exception as e:
+        import logging
+        logging.getLogger("manager.pipeline").error(
+            "Pipeline background task crashed (run_id=%s, lead_id=%s): %s",
+            state.run_id, state.lead_id, e,
+        )
+
 @router.post("/pause")
 async def api_pause_pipeline(
     body: PausePipelineBody,
