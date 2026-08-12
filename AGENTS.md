@@ -5,7 +5,9 @@
 - Manager: backend/agents/manager/agent.py
 - NÃO crie novos arquivos chamados server_v2, server_new, etc. Edite sempre os arquivos oficiais.
 - PROIBIDO criar: tmp_*.py, fix_*.py, _debug_*.py, _test_*.py, server_v2*, server_chunked*
-- Edição: 100% LOCAL em C:\fralib → git commit → git push origin master → hook `/root/repos/fralib.git/hooks/post-receive` → rsync `/root/fralib/` → `/opt/fralib/` → Docker Compose restart + PM2 reload
+- Edição: 100% LOCAL em C:\fralib → git commit → git push origin master → hook `/root/repos/fralib.git/hooks/post-receive` → rsync → Docker Compose restart worker + systemctl restart fralib-api.service + systemctl restart fralib-openui.service
+- Após deploy, SEMPRE verificar que TODOS os serviços reiniciaram (worker Docker + API systemd + OpenUI systemd). Código atualizado no disco não carrega automaticamente em processos rodando.
+- Para restart da API via HTTP: POST `/api/admin/pipeline/restart-api` com JWT superadmin (commit e4daaeb1)
 - NUNCA edite código direto na VPS via SSH/sed/cat/heredoc
 - NUNCA envie scripts genéricos via SSH sem antes usar 'view_file' ou 'sed' com intervalo exato.
 
