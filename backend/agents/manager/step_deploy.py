@@ -2,6 +2,7 @@
 import logging
 import os
 import json
+import re
 from pathlib import Path
 from datetime import datetime
 from backend.agents.manager.states import (
@@ -11,6 +12,26 @@ from backend.agents.manager.states import (
 from backend.core.knowledge_journal import record as journal_record
 
 logger = logging.getLogger("manager.pipeline")
+
+
+def _sanitize_html_document_structure(html: str) -> str:
+    body_start = re.search(r"<body[^>]*>", html, re.IGNORECASE)
+    body_ends = list(re.finditer(r"</body>", html, re.IGNORECASE))
+    if not body_start or not body_ends:
+        return html
+
+    body_end = body_ends[-1]
+    body_content = html[body_start.end():body_end.start()]
+    body_content = re.sub(r"<!DOCTYPE[^>]*>", "", body_content, flags=re.IGNORECASE)
+    body_content = re.sub(r"</?html[^>]*>", "", body_content, flags=re.IGNORECASE)
+    body_content = re.sub(r"<head[^>]*>.*?</head>", "", body_content, flags=re.IGNORECASE | re.DOTALL)
+    body_content = re.sub(r"<title[^>]*>.*?</title>", "", body_content, flags=re.IGNORECASE | re.DOTALL)
+    body_content = re.sub(r"<meta\b[^>]*>", "", body_content, flags=re.IGNORECASE)
+    body_content = re.sub(r"<link\b[^>]*>", "", body_content, flags=re.IGNORECASE)
+    body_content = re.sub(r"</?head[^>]*>", "", body_content, flags=re.IGNORECASE)
+    body_content = re.sub(r"</?body[^>]*>", "", body_content, flags=re.IGNORECASE)
+
+    return html[:body_start.end()] + "\n" + body_content.strip() + "\n" + html[body_end.start():]
 
 
 def step_deploy(state: PipelineState) -> PipelineState:
@@ -49,6 +70,7 @@ def step_deploy(state: PipelineState) -> PipelineState:
         except Exception as e:
             print(f"[Deploy] Aviso: pos-processamento cinematico falhou: {e}")
 
+        html = _sanitize_html_document_structure(html)
         index_path.write_text(html, encoding="utf-8")
 
         # Metadata
