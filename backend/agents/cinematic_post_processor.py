@@ -308,31 +308,25 @@ tailwind.config = {{ darkMode: 'class' }}
 
 def _fix_section_backgrounds(html: str) -> str:
     """Garante alternância de fundo entre seções para ritmo visual cinematográfico."""
-    sections = re.findall(r'(<section[^>]*>.*?</section>)', html, re.DOTALL | re.IGNORECASE)
-    if not sections:
+    if not re.search(r'<section[^>]*>.*?</section>', html, re.DOTALL | re.IGNORECASE):
         return html
 
-    result = []
     bg_cycle = ["var(--bg)", "var(--surface)", "var(--bg)", "var(--bg)", "var(--surface)", "var(--bg)"]
+    section_index = 0
 
-    for i, section in enumerate(sections):
-        bg = bg_cycle[i % len(bg_cycle)]
-        # Inject or replace background
+    def replace_section(match):
+        nonlocal section_index
+        section = match.group(0)
+        bg = bg_cycle[section_index % len(bg_cycle)]
+        section_index += 1
         section = re.sub(
             r'style="([^"]*)"',
             lambda m: f'style="background-color:{bg}; {m.group(1).replace("background-color:", "").replace(f"background:{bg};", "")}"' if 'background-color' not in m.group(1) and 'background:' not in m.group(1) else m.group(0),
             section, count=1
         )
-        result.append(section)
+        return section
 
-    # Reconstruct HTML
-    parts = html.split('<section')
-    if len(parts) > 1:
-        rebuilt = parts[0]
-        for i, section in enumerate(result):
-            rebuilt += '<section' + section.split('<section', 1)[1] if '<section' in section else section
-        return rebuilt
-    return html
+    return re.sub(r'<section[^>]*>.*?</section>', replace_section, html, flags=re.DOTALL | re.IGNORECASE)
 
 
 def _fix_hero_typography(html: str) -> str:
@@ -427,6 +421,29 @@ def _add_scroll_progress_id(html: str) -> str:
     return html
 
 
+def _strip_document_tags_from_body(html: str) -> str:
+    """Remove tags de documento que o Builder/OpenUI possa ter deixado dentro do body."""
+    body_start = re.search(r'<body[^>]*>', html, re.IGNORECASE)
+    body_ends = list(re.finditer(r'</body>', html, re.IGNORECASE))
+    if not body_start or not body_ends:
+        return html
+
+    body_end = body_ends[-1]
+    body_content = html[body_start.end():body_end.start()]
+    body_content = re.sub(r'<!DOCTYPE[^>]*>', '', body_content, flags=re.IGNORECASE)
+    body_content = re.sub(r'</?html[^>]*>', '', body_content, flags=re.IGNORECASE)
+    body_content = re.sub(r'<head[^>]*>.*?</head>', '', body_content, flags=re.IGNORECASE | re.DOTALL)
+    body_content = re.sub(r'<title[^>]*>.*?</title>', '', body_content, flags=re.IGNORECASE | re.DOTALL)
+    body_content = re.sub(r'<meta\b[^>]*>', '', body_content, flags=re.IGNORECASE)
+    body_content = re.sub(r'<link\b[^>]*>', '', body_content, flags=re.IGNORECASE)
+    body_content = re.sub(r'</?head[^>]*>', '', body_content, flags=re.IGNORECASE)
+    body_content = re.sub(r'</?body[^>]*>', '', body_content, flags=re.IGNORECASE)
+    body_content = re.sub(r'<meta\b[^>]*>', '', body_content, flags=re.IGNORECASE)
+    body_content = re.sub(r'<link\b[^>]*>', '', body_content, flags=re.IGNORECASE)
+
+    return html[:body_start.end()] + "\n" + body_content.strip() + "\n" + html[body_end.start():]
+
+
 def process(html: str, design_tokens: dict = None, segmento: str = "", nome: str = "") -> str:
     """Pipeline de pós-processamento cinematográfico."""
 
@@ -453,5 +470,8 @@ def process(html: str, design_tokens: dict = None, segmento: str = "", nome: str
 
     # 7. Add scroll progress
     html = _add_scroll_progress_id(html)
+
+    # 8. Final structural guard
+    html = _strip_document_tags_from_body(html)
 
     return html
