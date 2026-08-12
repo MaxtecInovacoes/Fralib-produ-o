@@ -214,9 +214,17 @@ class DesignerPRD(BaseModel):
     atributos: Optional[list] = None
     horarios: Optional[dict] = None
     faixa_preco: Optional[str] = None
-    competitor_analysis: Optional[str] = None
+    competitor_analysis: Optional[Union[str, list]] = None
     anti_patterns: Optional[List[str]] = None
     schema_org_types: Optional[List[str]] = None
+
+    @field_validator("competitor_analysis", mode="before")
+    @classmethod
+    def _normalize_competitor_analysis(cls, v):
+        if isinstance(v, list):
+            import json
+            return json.dumps(v, ensure_ascii=False)
+        return v
     seo_keywords: Optional[List[Union[str, Dict[str, Any]]]] = None
     faq_questions: Optional[List[Union[str, Dict[str, Any]]]] = None
     value_props: Optional[List[Union[str, Dict[str, Any]]]] = None
@@ -576,7 +584,7 @@ Retorne PRD estruturado em JSON.
             "logo_url": {"type": "string"},
             "google_maps_embed": {"type": "string"},
             "components_21dev": {"type": "array", "items": {"type": "string"}},
-            "competitor_analysis": {"type": "string"},
+            "competitor_analysis": {"type": "array", "items": {"type": "object"}},
             "anti_patterns": {"type": "array", "items": {"type": "string"}},
             "schema_org_types": {"type": "array", "items": {"type": "string"}},
         },
