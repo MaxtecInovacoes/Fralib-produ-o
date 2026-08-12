@@ -222,8 +222,13 @@ def _concat_html(partials: list) -> str:
         stripped = re.sub(r'^<!DOCTYPE[^>]*>\s*', '', stripped, flags=re.IGNORECASE)
         stripped = re.sub(r'^<html[^>]*>', '', stripped, flags=re.IGNORECASE)
         stripped = re.sub(r'</html>\s*$', '', stripped, flags=re.IGNORECASE | re.DOTALL)
+        stripped = re.sub(r'<style[^>]*>.*?</style>', '', stripped, flags=re.DOTALL | re.IGNORECASE)
+        stripped = re.sub(r'<script[^>]*>.*?</script>', '', stripped, flags=re.DOTALL | re.IGNORECASE)
         if '</body>' in full.lower():
             idx = full.lower().rfind('</body>')
+            full = full[:idx] + stripped + full[idx:]
+        elif '<body' in full.lower():
+            idx = full.lower().rfind('<body')
             full = full[:idx] + stripped + full[idx:]
         else:
             full = full + stripped
