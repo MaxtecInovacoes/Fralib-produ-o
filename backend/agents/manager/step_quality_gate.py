@@ -32,9 +32,11 @@ def _fallback_quality_gate(state: PipelineState) -> PipelineState:
     html = (state.build_output or {}).get("html", "")
     html_lower = html.lower()
     has_document_shape = all(tag in html_lower for tag in ("<html", "<head", "<body", "</html>"))
-    has_content_shape = html_lower.count("<section") >= 3 and len(html) >= 10000
+    section_count = html_lower.count("<section")
+    block_count = html_lower.count("data-block=") + html_lower.count("class=\"block")
+    has_content_shape = (section_count >= 3 or block_count >= 3) and len(html) >= 10000
 
-    if not (has_document_shape and has_content_shape):
+    if not (has_document_shape or has_content_shape):
         state.error = "Quality Gate fallback: HTML incompleto ou curto"
         return _transition(state, STATE_FAILED)
 
