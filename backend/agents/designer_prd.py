@@ -214,14 +214,14 @@ class DesignerPRD(BaseModel):
     atributos: Optional[list] = None
     horarios: Optional[dict] = None
     faixa_preco: Optional[str] = None
-    competitor_analysis: Optional[Union[str, list]] = None
+    competitor_analysis: Optional[Union[str, list, dict]] = None
     anti_patterns: Optional[List[str]] = None
     schema_org_types: Optional[List[str]] = None
 
     @field_validator("competitor_analysis", mode="before")
     @classmethod
     def _normalize_competitor_analysis(cls, v):
-        if isinstance(v, list):
+        if isinstance(v, (list, dict)):
             import json
             return json.dumps(v, ensure_ascii=False)
         return v
