@@ -63,7 +63,7 @@ def _build_font_url(heading: str, body: str) -> str:
 def _inject_wrapper(html: str, font_url: str) -> str:
     """Envolve HTML com DOCTYPE + head completo + scripts cinematográficos."""
     wrapper_head = f"""<!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" class="no-js">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -143,6 +143,16 @@ tailwind.config = {{ darkMode: 'class' }}
     transition-delay: calc(var(--i, 0) * 80ms);
   }}
 
+  /* ── Fallback: se o JS nao rodar, o conteudo nao pode ficar invisivel ── */
+  html.no-js .reveal,
+  html.no-js .reveal-left,
+  html.no-js .reveal-right,
+  html.no-js .scale-in,
+  html.no-js .stagger-item {{
+    opacity: 1 !important;
+    transform: none !important;
+  }}
+
   /* ── Parallax suave ── */
   [data-parallax] {{
     will-change: transform;
@@ -201,6 +211,7 @@ tailwind.config = {{ darkMode: 'class' }}
 <script>
 (function() {
   'use strict';
+  document.documentElement.classList.remove('no-js');
 
   // ── Scroll Progress ──
   const progressBar = document.getElementById('scroll-progress');
@@ -274,17 +285,17 @@ tailwind.config = {{ darkMode: 'class' }}
   }
 
   // ── Hover premium para cards ──
-  document.querySelectorAll('.card').forEach(card => {{
+  document.querySelectorAll('.card').forEach(card => {
     card.style.transition = 'transform 0.3s ease, box-shadow 0.3s ease';
-    card.addEventListener('mouseenter', () => {{
+    card.addEventListener('mouseenter', () => {
       card.style.transform = 'translateY(-4px)';
       card.style.boxShadow = '0 12px 40px rgba(0,0,0,0.1)';
-    }});
-    card.addEventListener('mouseleave', () => {{
+    });
+    card.addEventListener('mouseleave', () => {
       card.style.transform = '';
       card.style.boxShadow = '';
-    }});
-  }});
+    });
+  });
 })();
 </script>
 </body>
