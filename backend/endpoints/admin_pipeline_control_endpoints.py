@@ -719,6 +719,6 @@ def _humanize_age(seconds: float) -> str:
 
 
 def _now_iso() -> str:
-    """Compat shim — fonte em backend.utils.time.now_iso_utc (M14 DRY)."""
-    from backend.utils.time import now_iso_utc as _nis  # noqa: E402  — M14 DRY shim
-    return _nis()
+    """ISO 8601 UTC timestamp — compat shim for M14 DRY."""
+    from datetime import datetime, timezone
+    return datetime.now(timezone.utc).isoformat()
