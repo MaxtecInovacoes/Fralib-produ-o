@@ -106,6 +106,15 @@ class SectionSpec(BaseModel):
             return {"items": value}
         return {"body": str(value)}
 
+    @field_validator("cta", mode="before")
+    @classmethod
+    def normalize_cta_input(cls, value):
+        if value is None or isinstance(value, str):
+            return value
+        if isinstance(value, dict):
+            return str(value.get("label") or value.get("text") or value.get("title") or "")
+        return str(value)
+
     @model_validator(mode="after")
     def normalize_section(self) -> "SectionSpec":
         # Normaliza name: usa 'id' se name não vier
@@ -228,6 +237,17 @@ class DesignerPRD(BaseModel):
     competitor_analysis: Optional[Union[str, list, dict]] = None
     anti_patterns: Optional[List[str]] = None
     schema_org_types: Optional[List[str]] = None
+
+    @field_validator("animations", mode="before")
+    @classmethod
+    def _normalize_animations(cls, value):
+        if value is None:
+            return []
+        if isinstance(value, (str, dict, AnimationSpec)):
+            return [AnimationSpec.from_any(value)]
+        if isinstance(value, list):
+            return [AnimationSpec.from_any(item) for item in value]
+        return []
 
     @field_validator("competitor_analysis", mode="before")
     @classmethod
