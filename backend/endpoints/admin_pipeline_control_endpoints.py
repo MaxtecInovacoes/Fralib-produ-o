@@ -512,6 +512,7 @@ async def api_worker_restart(
 @router.post("/start")
 async def api_start_pipeline(
     body: StartPipelineBody,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     usuario: dict = Depends(get_current_user),
 ) -> dict[str, Any]:
@@ -532,15 +533,14 @@ async def api_start_pipeline(
         paused_by=None,
     )
 
-    background_tasks = BackgroundTasks()
     background_tasks.add_task(run_pipeline_background, state)
 
     return {
         "ok": True,
         "run_id": state.run_id,
         "lead_id": state.lead_id,
-        "status": "queued",
-        "message": "Pipeline enfileirado — rodando em background.",
+        "status": "initiated",
+        "message": "Pipeline iniciado — executando em background.",
         "historico": state.history[-3:],
     }
 
