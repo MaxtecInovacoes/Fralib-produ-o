@@ -257,6 +257,20 @@ def _split_spec_blocks(spec: dict) -> list:
     return blocos
 
 
+def _extract_response_html(payload: dict) -> str:
+    """Normalize common OpenUI response formats to a single HTML string."""
+    if not isinstance(payload, dict):
+        return ""
+    html = (payload.get("html") or "").strip()
+    if html:
+        return html
+    for key in ("body_html", "body", "content", "markup"):
+        value = (payload.get(key) or "").strip()
+        if value:
+            return value
+    return ""
+
+
 def _concat_html(partials: list) -> str:
     """Concatenate partial HTML documents/fragments into one valid document."""
     if not partials:
@@ -355,6 +369,58 @@ def _render_block(block_spec: dict, design_tokens: dict) -> tuple[str, str]:
     return "", ""
 
 
+def _render_full_site(spec: dict) -> tuple[str, str, str]:
+    """Official flow: send the complete PRD once to OpenUI on :7878."""
+    max_retries = 6
+    retry_delays = [20, 30, 45, 60, 90, 120]
+    request_spec = dict(spec)
+    request_spec["_render_hint"] = "full_document"
+
+    last_error = ""
+    for attempt in range(max_retries):
+        try:
+            resp = requests.post(
+                GENERATE_ENDPOINT,
+                json={"designerPRD": request_spec},
+                headers={"Content-Type": "application/json"},
+                timeout=600,
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                html = _extract_response_html(data)
+                model = data.get("model", "")
+                valid_html, reason = _looks_like_valid_body_fragment(html)
+                if valid_html:
+                    print(f"[builder] Single-shot OpenUI OK ({len(html)} chars)")
+                    return html, model, ""
+                last_error = f"HTML invalido: {reason} ({len(html)} chars)"
+                if attempt < max_retries - 1:
+                    time.sleep(retry_delays[attempt])
+                    continue
+            elif resp.status_code in (529, 503) or (
+                resp.status_code == 500
+                and any(marker in resp.text.lower() for marker in ("529", "overloaded", "sobrecarregado", "503", "provider_error"))
+            ):
+                last_error = f"OpenUI overloaded attempt {attempt + 1}: HTTP {resp.status_code}"
+                if attempt < max_retries - 1:
+                    time.sleep(retry_delays[attempt])
+                    continue
+            else:
+                last_error = f"OpenUI HTTP {resp.status_code}: {resp.text[:200]}"
+                return "", "", last_error
+        except requests.exceptions.Timeout:
+            last_error = f"OpenUI timeout (600s) attempt {attempt + 1}"
+            if attempt < max_retries - 1:
+                time.sleep(retry_delays[attempt])
+                continue
+            return "", "", last_error
+        except Exception as e:
+            last_error = f"OpenUI error: {str(e)}"
+            return "", "", last_error
+
+    return "", "", last_error
+
+
 def render_site(prd, usar_llm: bool = True) -> BuildResult:
     """
     Generate HTML site from DesignerPRD via OpenUI block-by-block generation.
@@ -380,39 +446,25 @@ def render_site(prd, usar_llm: bool = True) -> BuildResult:
     # Convert PRD to spec
     spec = _prd_to_spec(prd)
 
-    # Split into 4 partial blocks and render each separately
-    blocos = _split_spec_blocks(spec)
-    if not blocos:
-        return BuildResult(html="", model="", success=False, error="No sections to render")
+    final_html, final_model, error = _render_full_site(spec)
+    if not final_html:
+        return BuildResult(
+            html="",
+            model=final_model,
+            success=False,
+            error=error or "Falha ao gerar HTML single-shot no OpenUI",
+        )
 
-    partials = []
-    models_used = []
-
-    for bloco in blocos:
-        labels = bloco.get("_bloco_labels", [])
-        label_str = ", ".join(labels)
-        html, model = _render_block(bloco, spec)
-        if not html:
-            return BuildResult(html="", model="", success=False,
-                               error=f"Falha ao gerar bloco [{label_str}]")
-        partials.append(html)
-        if model:
-            models_used.append(model)
-        # Registrar tracking por bloco (OpenUI nao retorna usage, estimar)
-        try:
-            from backend.agents.llm_direct import _registrar_uso_completo
-            _registrar_uso_completo(
-                model_id=model or "openui-unknown",
-                input_tokens=0,
-                output_tokens=len(html) // 4,
-                agent_name=f"builder_bloco_{label_str.replace(', ', '_')}",
-                provider="openui",
-            )
-        except Exception as e:
-            print(f"[builder] tracking falhou bloco [{label_str}]: {e}")
-
-    # Concatenate partial HTMLs into final document
-    final_html = _concat_html(partials)
-    final_model = models_used[0] if models_used else ""
+    try:
+        from backend.agents.llm_direct import _registrar_uso_completo
+        _registrar_uso_completo(
+            model_id=final_model or "openui-unknown",
+            input_tokens=0,
+            output_tokens=len(final_html) // 4,
+            agent_name="builder_openui_single_shot",
+            provider="openui",
+        )
+    except Exception as e:
+        print(f"[builder] tracking falhou single-shot: {e}")
 
     return BuildResult(html=final_html, model=final_model, success=True)
