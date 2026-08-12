@@ -55,6 +55,39 @@ PIPELINE_STEPS = [
 logger = __import__("logging").getLogger("manager.pipeline")
 
 
+def _hydrate_from_checkpoint(state: PipelineState) -> PipelineState:
+    """Retoma pipeline por checkpoint quando PRD/HTML já existem para o lead."""
+    if not state.tenant_id or not state.lead_id:
+        return state
+
+    try:
+        from backend.agents.pipeline_checkpoint import gerar_pipeline_id, get_dados_agente, resumo_checkpoint
+
+        pipeline_id = gerar_pipeline_id(
+            state.tenant_id,
+            state.lead_data.get("nome", "") if state.lead_data else "",
+            state.segmento,
+            state.cidade,
+            state.lead_id,
+        )
+        builder_cached = get_dados_agente(pipeline_id, "builder")
+        if builder_cached and builder_cached.get("html"):
+            state.build_output = builder_cached
+            state.history.append(f"Checkpoint: retomando em Quality Gate ({resumo_checkpoint(pipeline_id)})")
+            return _transition(state, STATE_VALIDATING)
+
+        arquiteto_cached = get_dados_agente(pipeline_id, "arquiteto")
+        prd_json = (arquiteto_cached or {}).get("prd_json")
+        if prd_json and prd_json.get("business_name"):
+            state.design_output = prd_json
+            state.history.append(f"Checkpoint: PRD reutilizado; retomando em Builder ({resumo_checkpoint(pipeline_id)})")
+            return _transition(state, STATE_BUILDING)
+    except Exception as exc:
+        logger.warning("[Checkpoint] retomada falhou lead_id=%s: %s", state.lead_id, exc)
+
+    return state
+
+
 def run_pipeline(state: PipelineState, trace: object = None) -> PipelineState:
     """Executa toda a pipeline com suporte a retry.
 
@@ -72,6 +105,7 @@ def run_pipeline(state: PipelineState, trace: object = None) -> PipelineState:
     """
     try:
         import traceback
+        state = _hydrate_from_checkpoint(state)
         max_passes = 10  # safety contra loop inesperado
         passes = 0
         _t = trace

@@ -111,6 +111,20 @@ def step_builder(state: PipelineState) -> PipelineState:
         if not getattr(result, "success", False):
             raise RuntimeError(getattr(result, "error", "Builder falhou sem erro detalhado"))
         state.build_output = {"html": result.html, "model": result.model}
+
+        try:
+            from backend.agents.pipeline_checkpoint import gerar_pipeline_id, salvar_checkpoint
+
+            pipeline_id = gerar_pipeline_id(
+                state.tenant_id,
+                state.lead_data.get("nome", "") if state.lead_data else "",
+                state.segmento,
+                state.cidade,
+                state.lead_id,
+            )
+            salvar_checkpoint(pipeline_id, "builder", state.build_output)
+        except Exception as exc:
+            logger.warning("[Builder] checkpoint HTML falhou (lead=%s): %s", state.lead_id, exc)
     except Exception as e:
         _log_step_error(state, "Builder", e)
         state.error = f"Builder: {e}"

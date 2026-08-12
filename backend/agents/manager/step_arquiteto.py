@@ -55,6 +55,20 @@ def step_arquiteto(state: PipelineState) -> PipelineState:
                 state.history.append(f"Arquiteto: PRD OK ({len(state.design_output.get('sections', []))} seções)")
 
                 try:
+                    from backend.agents.pipeline_checkpoint import gerar_pipeline_id, salvar_checkpoint
+
+                    pipeline_id = gerar_pipeline_id(
+                        state.tenant_id,
+                        state.lead_data.get("nome", "") if state.lead_data else "",
+                        state.segmento,
+                        state.cidade,
+                        state.lead_id,
+                    )
+                    salvar_checkpoint(pipeline_id, "arquiteto", {"prd_json": state.design_output})
+                except Exception as exc:
+                    logger.warning("[Arquiteto] checkpoint PRD falhou (lead=%s): %s", state.lead_id, exc)
+
+                try:
                     journal_record(
                         project_id=state.lead_id,
                         event_type="narrative_locked",

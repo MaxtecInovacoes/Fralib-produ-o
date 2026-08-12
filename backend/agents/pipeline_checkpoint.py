@@ -35,17 +35,37 @@ def _backup_to_db(pipeline_id: str, checkpoint: dict):
         conn = psycopg2.connect(_DB_URL)
         with conn.cursor() as cur:
             cur.execute(
-                """
-                INSERT INTO pipeline_checkpoints (pipeline_id, data, atualizado_em)
-                VALUES (%s, %s, NOW())
-                ON CONFLICT (pipeline_id) DO UPDATE SET data = %s, atualizado_em = NOW()
-            """,
-                (
-                    pipeline_id,
-                    json.dumps(checkpoint, default=str),
-                    json.dumps(checkpoint, default=str),
-                ),
+                "SELECT column_name FROM information_schema.columns WHERE table_name = 'pipeline_checkpoints'"
             )
+            columns = {row[0] for row in cur.fetchall()}
+            data_json = json.dumps(checkpoint, default=str)
+            if {"pipeline_id", "data"}.issubset(columns):
+                cur.execute(
+                    """
+                    INSERT INTO pipeline_checkpoints (pipeline_id, data, atualizado_em)
+                    VALUES (%s, %s, NOW())
+                    ON CONFLICT (pipeline_id) DO UPDATE SET data = %s, atualizado_em = NOW()
+                    """,
+                    (pipeline_id, data_json, data_json),
+                )
+            elif {"run_id", "state_data"}.issubset(columns):
+                cur.execute(
+                    """
+                    INSERT INTO pipeline_checkpoints (run_id, last_completed_state, state_data, attempts, atualizado_em)
+                    VALUES (%s, %s, %s, %s, NOW())
+                    ON CONFLICT (run_id) DO UPDATE SET
+                        last_completed_state = EXCLUDED.last_completed_state,
+                        state_data = EXCLUDED.state_data,
+                        attempts = EXCLUDED.attempts,
+                        atualizado_em = NOW()
+                    """,
+                    (
+                        pipeline_id,
+                        checkpoint.get("ultimo_agente"),
+                        data_json,
+                        json.dumps({}, default=str),
+                    ),
+                )
         conn.commit()
         conn.close()
     except Exception as e:
@@ -60,9 +80,23 @@ def _load_from_db(pipeline_id: str) -> dict:
         conn = psycopg2.connect(_DB_URL)
         with conn.cursor() as cur:
             cur.execute(
-                "SELECT data FROM pipeline_checkpoints WHERE pipeline_id = %s",
-                (pipeline_id,),
+                "SELECT column_name FROM information_schema.columns WHERE table_name = 'pipeline_checkpoints'"
             )
+            columns = {row[0] for row in cur.fetchall()}
+            if {"pipeline_id", "data"}.issubset(columns):
+                cur.execute(
+                    "SELECT data FROM pipeline_checkpoints WHERE pipeline_id = %s",
+                    (pipeline_id,),
+                )
+            elif {"run_id", "state_data"}.issubset(columns):
+                cur.execute(
+                    "SELECT state_data FROM pipeline_checkpoints WHERE run_id = %s",
+                    (pipeline_id,),
+                )
+            else:
+                row = None
+                conn.close()
+                return None
             row = cur.fetchone()
         conn.close()
         if row:
