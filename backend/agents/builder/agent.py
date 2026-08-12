@@ -7,6 +7,7 @@ to generate the complete HTML site via single-shot LLM generation.
 import os
 import json
 import time
+import re
 import requests
 
 try:
@@ -32,6 +33,51 @@ class BuildResult:
         self.model = model
         self.success = success
         self.error = error
+
+
+_VISIBLE_TAG_RE = re.compile(
+    r"<(?:main|section|header|nav|article|aside|footer|div|h1|h2|h3|p|a|button|form|img|ul|ol|li)\b",
+    flags=re.IGNORECASE,
+)
+
+
+def _strip_non_content_blocks(html: str) -> str:
+    html = re.sub(r"(?is)<style\b[^>]*>.*?</style>", " ", html or "")
+    html = re.sub(r"(?is)<script\b[^>]*>.*?</script>", " ", html)
+    html = re.sub(r"(?is)<noscript\b[^>]*>.*?</noscript>", " ", html)
+    return html
+
+
+def _looks_like_valid_body_fragment(html: str) -> tuple[bool, str]:
+    """Reject style/script-heavy fragments before they poison the final page."""
+    if not html or len(html.strip()) < 200:
+        return False, "fragmento muito curto"
+
+    style_opens = len(re.findall(r"(?i)<style\b", html))
+    style_closes = len(re.findall(r"(?i)</style>", html))
+    if style_opens != style_closes:
+        return False, "tags <style> desbalanceadas"
+
+    script_opens = len(re.findall(r"(?i)<script\b", html))
+    script_closes = len(re.findall(r"(?i)</script>", html))
+    if script_opens != script_closes:
+        return False, "tags <script> desbalanceadas"
+
+    content_only = _strip_non_content_blocks(html)
+    visible_tags = len(_VISIBLE_TAG_RE.findall(content_only))
+    visible_text = re.sub(r"(?is)<[^>]+>", " ", content_only)
+    visible_text = re.sub(r"\s+", " ", visible_text).strip()
+
+    if visible_tags == 0:
+        return False, "sem tags estruturais visiveis"
+    if len(visible_text) < 80:
+        return False, "texto visivel insuficiente"
+
+    lower = content_only.lower()
+    if "<script" in lower or "<style" in lower:
+        return False, "bloco ainda contem style/script apos limpeza"
+
+    return True, ""
 
 
 def _wait_for_openui(max_wait: int = 30) -> bool:
@@ -213,7 +259,6 @@ def _split_spec_blocks(spec: dict) -> list:
 
 def _concat_html(partials: list) -> str:
     """Concatenate partial HTML documents/fragments into one valid document."""
-    import re
     if not partials:
         return ""
 
@@ -245,7 +290,10 @@ def _concat_html(partials: list) -> str:
             fragment = match.group(1)
         else:
             fragment = html
-        return _strip_document_scaffold(fragment)
+        fragment = _strip_document_scaffold(fragment)
+        fragment = re.sub(r"(?is)<style\b[^>]*>.*?</style>", "", fragment)
+        fragment = re.sub(r"(?is)<script\b[^>]*>.*?</script>", "", fragment)
+        return fragment.strip()
 
     head = _extract_head(partials[0])
     body = "\n".join(_extract_body(partial) for partial in partials if partial).strip()
@@ -274,10 +322,14 @@ def _render_block(block_spec: dict, design_tokens: dict) -> tuple[str, str]:
                 data = resp.json()
                 html = data.get("html", "")
                 model = data.get("model", "")
-                if html and len(html) > 200:
+                valid_html, reason = _looks_like_valid_body_fragment(html)
+                if valid_html:
                     print(f"[builder] Bloco [{label_str}] OK ({len(html)} chars)")
                     return html, model
-                last_error = f"HTML too short: {len(html)} chars"
+                last_error = f"HTML invalido: {reason} ({len(html)} chars)"
+                if attempt < max_retries - 1:
+                    time.sleep(retry_delays[attempt])
+                    continue
             elif resp.status_code in (529, 503) or (
                 resp.status_code == 500
                 and any(marker in resp.text.lower() for marker in ("529", "overloaded", "sobrecarregado", "503", "provider_error"))
