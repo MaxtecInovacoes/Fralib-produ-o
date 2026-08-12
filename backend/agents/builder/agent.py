@@ -67,17 +67,83 @@ def _looks_like_valid_body_fragment(html: str) -> tuple[bool, str]:
     visible_tags = len(_VISIBLE_TAG_RE.findall(content_only))
     visible_text = re.sub(r"(?is)<[^>]+>", " ", content_only)
     visible_text = re.sub(r"\s+", " ", visible_text).strip()
+    lower = content_only.lower()
+    main_count = lower.count("<main")
+    section_count = lower.count("<section")
+    h1_count = lower.count("<h1")
 
     if visible_tags == 0:
         return False, "sem tags estruturais visiveis"
     if len(visible_text) < 80:
         return False, "texto visivel insuficiente"
-
-    lower = content_only.lower()
+    if main_count == 0:
+        return False, "sem tag <main>"
+    if section_count < 3:
+        return False, f"poucas secoes ({section_count})"
+    if h1_count == 0:
+        return False, "sem tag <h1>"
     if "<script" in lower or "<style" in lower:
         return False, "bloco ainda contem style/script apos limpeza"
 
     return True, ""
+
+
+def _first_non_empty(*values):
+    for value in values:
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    return ""
+
+
+def _coerce_section_content(section) -> str:
+    if not section:
+        return ""
+    copy_data = getattr(section, "copy_data", None) or {}
+    if not isinstance(copy_data, dict):
+        copy_data = {}
+
+    pieces: list[str] = []
+    title = _first_non_empty(
+        getattr(section, "title", None),
+        getattr(section, "h1", None),
+        getattr(section, "h2", None),
+        getattr(section, "headline", None),
+        copy_data.get("h1"),
+        copy_data.get("h2"),
+        copy_data.get("headline"),
+        copy_data.get("title"),
+    )
+    if title:
+        pieces.append(title)
+
+    subtitle = _first_non_empty(
+        getattr(section, "subheadline", None),
+        copy_data.get("subtitle"),
+        copy_data.get("subheadline"),
+        copy_data.get("eyebrow"),
+    )
+    if subtitle:
+        pieces.append(subtitle)
+
+    body = _first_non_empty(
+        getattr(section, "content", None),
+        copy_data.get("body"),
+        copy_data.get("description"),
+        copy_data.get("text"),
+    )
+    if body:
+        pieces.append(body)
+
+    items = copy_data.get("items")
+    if isinstance(items, list) and items:
+        pieces.extend(str(item).strip() for item in items if str(item).strip())
+
+    for key in ("cta_primary", "cta_secondary", "cta", "cta_text"):
+        value = copy_data.get(key)
+        if isinstance(value, str) and value.strip():
+            pieces.append(value.strip())
+
+    return "\n".join(piece for piece in pieces if piece)
 
 
 def _wait_for_openui(max_wait: int = 30) -> bool:
@@ -105,11 +171,27 @@ def _prd_to_spec(prd) -> dict:
     """Convert DesignerPRD to JSON spec for OpenUI service."""
     sections = []
     for s in prd.sections:
-        sections.append({
-            "name": s.name,
-            "title": getattr(s, "title", s.name),
-            "content": getattr(s, "content", getattr(s, "body", "")),
-        })
+        section_payload = {
+            "name": getattr(s, "name", "") or getattr(s, "id", ""),
+            "title": _first_non_empty(
+                getattr(s, "title", None),
+                getattr(s, "h1", None),
+                getattr(s, "h2", None),
+                getattr(s, "headline", None),
+                (getattr(s, "copy_data", None) or {}).get("h1") if isinstance(getattr(s, "copy_data", None), dict) else None,
+                (getattr(s, "copy_data", None) or {}).get("h2") if isinstance(getattr(s, "copy_data", None), dict) else None,
+            ) or (getattr(s, "name", "") or "section"),
+            "content": _coerce_section_content(s),
+            "layout_type": getattr(s, "layout_type", None),
+            "components": getattr(s, "components", None) or [],
+            "copy_data": getattr(s, "copy_data", None) or {},
+            "items": getattr(s, "items", None) or [],
+            "cta": getattr(s, "cta", None),
+            "objective": getattr(s, "objective", None),
+            "media_role": getattr(s, "media_role", None),
+            "schema_org": getattr(s, "schema_org", None),
+        }
+        sections.append(section_payload)
 
     color_palette = {}
     if hasattr(prd, "color_palette") and prd.color_palette:
@@ -155,16 +237,37 @@ def _prd_to_spec(prd) -> dict:
     # Build hero from first section
     hero = {}
     if sections:
+        hero_section = sections[0]
+        hero_copy = hero_section.get("copy_data") if isinstance(hero_section.get("copy_data"), dict) else {}
         hero = {
-            "headline": prd.business_name,
-            "subheadline": getattr(prd, "value_props", [""])[0] if getattr(prd, "value_props", []) else "",
-            "cta_text": "Fale Conosco",
+            "headline": _first_non_empty(
+                hero_section.get("title"),
+                hero_copy.get("h1") if isinstance(hero_copy, dict) else "",
+                prd.business_name,
+            ),
+            "subheadline": _first_non_empty(
+                hero_copy.get("subtitle") if isinstance(hero_copy, dict) else "",
+                hero_copy.get("body") if isinstance(hero_copy, dict) else "",
+                getattr(prd, "value_props", [""])[0] if getattr(prd, "value_props", []) else "",
+            ),
+            "cta_text": _first_non_empty(
+                hero_copy.get("cta_primary") if isinstance(hero_copy, dict) else "",
+                hero_copy.get("cta") if isinstance(hero_copy, dict) else "",
+                "Fale Conosco",
+            ),
         }
 
     # Build ctas from value_props
     ctas = []
-    for vp in (getattr(prd, "value_props", []) or [])[:3]:
-        ctas.append({"text": vp[:60], "href": "#contato"})
+    for section in sections:
+        copy_data = section.get("copy_data") if isinstance(section.get("copy_data"), dict) else {}
+        for key in ("cta_primary", "cta_secondary"):
+            value = copy_data.get(key)
+            if isinstance(value, str) and value.strip():
+                ctas.append({"text": value.strip()[:60], "href": "#contato"})
+    if not ctas:
+        for vp in (getattr(prd, "value_props", []) or [])[:3]:
+            ctas.append({"text": str(vp)[:60], "href": "#contato"})
 
     # Build motion_directives from animations
     motion_directives = {

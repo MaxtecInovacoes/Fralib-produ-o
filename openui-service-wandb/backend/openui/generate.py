@@ -7,6 +7,7 @@ No auth required — this is a backend-to-backend API.
 import json
 import os
 import logging
+import re
 from typing import Any
 
 try:
@@ -35,6 +36,32 @@ TEMPERATURE = float(os.getenv("FRA_GENERATION_TEMPERATURE", "0.7"))
 
 class GenerateRequest(BaseModel):
     designerPRD: dict[str, Any] = Field(..., description="DesignerPRD spec from FraLib")
+
+
+def _first_non_empty(*values: Any) -> str:
+    for value in values:
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    return ""
+
+
+def _html_has_minimum_structure(html: str) -> tuple[bool, str]:
+    if not html or len(html.strip()) < 1000:
+        return False, "html curto"
+    lower = html.lower()
+    if "<html" not in lower or "<body" not in lower or "<main" not in lower:
+        return False, "documento sem html/body/main"
+    if lower.count("<section") < 3:
+        return False, "menos de 3 sections"
+    if "<h1" not in lower:
+        return False, "sem h1"
+    stripped = re.sub(r"(?is)<style\b[^>]*>.*?</style>", " ", html)
+    stripped = re.sub(r"(?is)<script\b[^>]*>.*?</script>", " ", stripped)
+    visible_text = re.sub(r"(?is)<[^>]+>", " ", stripped)
+    visible_text = re.sub(r"\s+", " ", visible_text).strip()
+    if len(visible_text) < 120:
+        return False, "texto visível insuficiente"
+    return True, ""
 
 
 def _build_system_prompt(prd: dict) -> str:
@@ -107,8 +134,17 @@ def _build_system_prompt(prd: dict) -> str:
         for i, s in enumerate(sections):
             name = s.get("name", f"section_{i}")
             title = s.get("title", name)
+            layout_type = s.get("layout_type", "")
+            components = s.get("components", [])
+            copy_data = s.get("copy_data", {})
             content = s.get("content", "")
             segments.append(f"\n### {title} ({name})")
+            if layout_type:
+                segments.append(f"Layout type: {layout_type}")
+            if components:
+                segments.append(f"Components: {json.dumps(components, ensure_ascii=False)}")
+            if copy_data:
+                segments.append(f"Copy data: {json.dumps(copy_data, ensure_ascii=False)}")
             if content:
                 segments.append(content[:2000])
 
@@ -202,6 +238,10 @@ Return ONLY a single complete HTML file. No markdown, no code fences, no explana
 - Use IntersectionObserver for scroll-reveal animations
 - Include proper meta tags for SEO
 - Make it visually impressive — this is the final deliverable
+- Mandatory structure: exactly one <main>, one visible <h1>, and at least 3 <section> blocks
+- The <body> must contain real visible content, not only <style> or <script>
+- Hero must show business name, local context, and primary CTA above the fold
+- Use the supplied section names, copy_data, contracts, and build plan as source of truth
 """)
 
     # ── CONTRATOS DO ARQUITETO (injetados em força máxima) ──
@@ -246,10 +286,16 @@ Return ONLY a single complete HTML file. No markdown, no code fences, no explana
 
 def _build_user_message(prd: dict) -> str:
     """Build the user message with the full PRD context."""
+    section_names = [s.get("name", "") for s in prd.get("sections", []) if isinstance(s, dict)]
+    business_name = prd.get("business_name", "")
+    cidade = prd.get("cidade", "")
     return (
         "Generate the complete landing page HTML based on the DesignerPRD "
         "specification. Follow the design system, sections, and creative "
-        "directive precisely. Output only the raw HTML file."
+        "directive precisely. Output only the raw HTML file. "
+        f"Business: {business_name}. City: {cidade}. "
+        f"Required sections: {', '.join(section_names)}. "
+        "Do not output CSS-only layouts, placeholder wrappers, or empty body content."
     )
 
 
@@ -299,10 +345,11 @@ async def generate_site(request: GenerateRequest):
             html = html[:-3]
         html = html.strip()
 
-        if not html or len(html) < 1000:
+        valid_html, reason = _html_has_minimum_structure(html)
+        if not valid_html:
             raise HTTPException(
                 status_code=502,
-                detail=f"Generated HTML too short ({len(html)} chars) — model may have failed",
+                detail=f"Generated HTML invalid ({reason}) ({len(html)} chars) — model may have failed",
             )
 
         logger.info(

@@ -25,11 +25,10 @@ def step_builder(state: PipelineState) -> PipelineState:
 
         sections = []
         for s_data in state.design_output.get("sections", []):
-            sections.append(SectionSpec(
-                name=s_data.get("name", ""),
-                title=s_data.get("title", ""),
-                content=s_data.get("content", s_data.get("body", "")),
-            ))
+            if isinstance(s_data, dict):
+                sections.append(SectionSpec(**s_data))
+            else:
+                sections.append(SectionSpec(name=str(getattr(s_data, "name", "") or "")))
 
         animations = []
         for a_data in state.design_output.get("animations", []):
