@@ -230,9 +230,12 @@ def _concat_html(partials: list) -> str:
     def _extract_body(html: str) -> str:
         match = re.search(r"<body[^>]*>(.*?)</body>", html, flags=re.DOTALL | re.IGNORECASE)
         if match:
-            return match.group(1).strip()
-        fragment = re.sub(r"<!DOCTYPE[^>]*>\s*", "", html, flags=re.IGNORECASE)
+            fragment = match.group(1)
+        else:
+            fragment = html
+        fragment = re.sub(r"<!DOCTYPE[^>]*>\s*", "", fragment, flags=re.IGNORECASE)
         fragment = re.sub(r"<head[^>]*>.*?</head>", "", fragment, flags=re.DOTALL | re.IGNORECASE)
+        fragment = re.sub(r"</?title[^>]*>", "", fragment, flags=re.IGNORECASE)
         fragment = re.sub(r"</?html[^>]*>", "", fragment, flags=re.IGNORECASE)
         fragment = re.sub(r"</?body[^>]*>", "", fragment, flags=re.IGNORECASE)
         return fragment.strip()
