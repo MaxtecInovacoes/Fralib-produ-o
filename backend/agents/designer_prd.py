@@ -95,6 +95,17 @@ class SectionSpec(BaseModel):
     schema_org: Optional[str] = None
     media_src: Optional[str] = None
 
+    @field_validator("copy_data", mode="before")
+    @classmethod
+    def normalize_copy_data_input(cls, value):
+        if value is None or isinstance(value, dict):
+            return value
+        if isinstance(value, str):
+            return {"body": value}
+        if isinstance(value, list):
+            return {"items": value}
+        return {"body": str(value)}
+
     @model_validator(mode="after")
     def normalize_section(self) -> "SectionSpec":
         # Normaliza name: usa 'id' se name não vier
