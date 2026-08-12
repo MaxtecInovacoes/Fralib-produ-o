@@ -8,7 +8,7 @@ from enum import Enum
 from typing import Optional
 from sqlalchemy import text as sa_text
 from sqlalchemy.exc import ProgrammingError
-from backend.core.jwt_config import get_jwt_secret, ALGORITHM
+from backend.core.jwt_config import get_jwt_secret, ALGORITHM, decode_jwt
 try:
     from backend.core.config import is_superadmin
 except Exception:
@@ -122,7 +122,7 @@ async def get_current_user(
         if _is_token_revoked(token):
             raise HTTPException(status_code=401, detail="Token revogado")
 
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = decode_jwt(token)
         user_id = payload.get("sub")
         email = payload.get("email")
 

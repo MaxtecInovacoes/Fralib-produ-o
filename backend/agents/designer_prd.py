@@ -220,7 +220,7 @@ class DesignerPRD(BaseModel):
     seo_keywords: Optional[List[Union[str, Dict[str, Any]]]] = None
     faq_questions: Optional[List[Union[str, Dict[str, Any]]]] = None
     value_props: Optional[List[Union[str, Dict[str, Any]]]] = None
-    geo: Optional[Dict[str, Any]] = None
+    geo: Optional[Union[Dict[str, Any], str]] = None
     dark_mode: Optional[bool] = None
 
     @field_validator("geo", mode="before")
@@ -228,25 +228,58 @@ class DesignerPRD(BaseModel):
     def _normalize_geo(cls, v):
         """Normaliza qualquer entrada geo antes do type check do Pydantic.
 
-        O LLM pode retornar geo como string, lista, int, etc.
-        Convertemos tudo em dict {"lat": float, "lng": float}.
+        O LLM pode retornar geo como:
+        - dict: {"lat": ..., "lng": ...} → usa direto
+        - str JSON: '{"lat": ..., "lng": ...}' → parseia
+        - str simples: "BR", "SP", "-23.55" → retorna como string (code/country/state)
+        - list/tuple: [lat, lng] → converte para dict
+        - numero: -23.55 → retorna como string
+        Qualquer coisa que nao der para normalizar → None (model_validator coloca default)
         """
-        if v is None or isinstance(v, dict):
+        if v is None:
             return v
+        # Dict já está no formato certo
+        if isinstance(v, dict):
+            # Normalizar chaves: lat/latitude, lng/longitude
+            lat = v.get("lat", v.get("latitude", v.get("latitude", 0.0)))
+            lng = v.get("lng", v.get("longitude", v.get("longitude", 0.0)))
+            return {"lat": lat, "lng": lng}
+        # String: pode ser JSON ou valor simples
         if isinstance(v, str):
+            v_stripped = v.strip()
+            if not v_stripped or v_stripped.lower() in ("none", "null", "null"):
+                return None
+            # Tentar parsear como JSON dict
             try:
                 import ast
-                parsed = ast.literal_eval(v)
+                parsed = ast.literal_eval(v_stripped)
                 if isinstance(parsed, dict):
-                    return parsed
+                    return {"lat": parsed.get("lat", parsed.get("latitude", 0.0)),
+                            "lng": parsed.get("lng", parsed.get("longitude", 0.0))}
             except Exception:
                 pass
-            return None
+            # Tentar parsear como JSON puro
+            try:
+                import json
+                parsed = json.loads(v_stripped)
+                if isinstance(parsed, dict):
+                    return {"lat": parsed.get("lat", parsed.get("latitude", 0.0)),
+                            "lng": parsed.get("lng", parsed.get("longitude", 0.0))}
+            except Exception:
+                pass
+            # String simples — código de país/estado/cidade. Retornar como-is.
+            # O model_validator vai lidar com isso (geo fica como string, nao como dict).
+            return v_stripped
+        # Lista/tupla: [lat, lng] ou [str_code]
         if isinstance(v, (list, tuple)) and len(v) >= 2:
             try:
                 return {"lat": float(v[0]), "lng": float(v[1])}
             except (TypeError, ValueError):
-                return None
+                pass
+        # Numero puro (int/float) — pode ser um código ou coordenada
+        if isinstance(v, (int, float)):
+            return str(v)
+        # Qualquer outro tipo: None
         return None
 
     @model_validator(mode="after")
@@ -306,8 +339,8 @@ class DesignerPRD(BaseModel):
         if self.geo is None:
             self.geo = {"lat": 0.0, "lng": 0.0}
         elif isinstance(self.geo, dict):
-            self.geo.setdefault("lat", self.geo.get("latitude", self.geo.get("lat", 0.0)))
-            self.geo.setdefault("lng", self.geo.get("longitude", self.geo.get("lng", 0.0)))
+            self.geo["lat"] = self.geo.get("lat", self.geo.get("latitude", 0.0))
+            self.geo["lng"] = self.geo.get("lng", self.geo.get("longitude", 0.0))
 
         # Dark mode default
         if self.dark_mode is None:
