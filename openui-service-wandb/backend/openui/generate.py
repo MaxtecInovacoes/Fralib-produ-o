@@ -30,8 +30,8 @@ DEFAULT_GENERATION_MODEL = os.getenv(
     "FRA_GENERATION_MODEL",
     "claude-sonnet-5",
 )
-MAX_TOKENS = int(os.getenv("FRA_GENERATION_MAX_TOKENS", "16000"))
-TEMPERATURE = float(os.getenv("FRA_GENERATION_TEMPERATURE", "0.7"))
+MAX_TOKENS = int(os.getenv("FRA_GENERATION_MAX_TOKENS", "64000"))
+TEMPERATURE = float(os.getenv("FRA_GENERATION_TEMPERATURE", "0.35"))
 
 
 class GenerateRequest(BaseModel):
@@ -242,6 +242,9 @@ Return ONLY a single complete HTML file. No markdown, no code fences, no explana
 - The <body> must contain real visible content, not only <style> or <script>
 - Hero must show business name, local context, and primary CTA above the fold
 - Use the supplied section names, copy_data, contracts, and build plan as source of truth
+- Prioritize completing the full body structure before adding visual polish
+- Keep CSS concise; do not spend most tokens on reset or boilerplate styles
+- If token budget is tight, prefer simpler CSS and complete all required sections
 """)
 
     # ── CONTRATOS DO ARQUITETO (injetados em força máxima) ──
