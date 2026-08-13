@@ -337,6 +337,7 @@ def step_deploy(state: PipelineState) -> PipelineState:
                             status = 'concluido',
                             site_url = :url,
                             url_site = :url,
+                            erro_pipeline = NULL,
                             atualizado_em = NOW()
                         WHERE id = :lid AND user_id = :tid
                           AND (status IS NULL OR status NOT IN ('descartado'))
