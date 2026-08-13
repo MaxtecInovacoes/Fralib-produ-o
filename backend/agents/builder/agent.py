@@ -543,6 +543,7 @@ def _render_block(block_spec: dict, design_tokens: dict) -> tuple[str, str]:
                 html = data.get("html", "")
                 model = data.get("model", "")
                 if render_hint == "section_fragment":
+                    html = _extract_body_only(html)
                     valid_html, reason = _looks_like_valid_section_fragment(html)
                 else:
                     valid_html, reason = _looks_like_valid_body_fragment(html)
