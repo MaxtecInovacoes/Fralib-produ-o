@@ -2099,8 +2099,8 @@ async def get_pipeline_timeline(db: Session = Depends(get_db), usuario: dict = D
             last_phase,
             left(coalesce(last_error, ''), 500) AS last_error,
             criado_em,
-            iniciado_em,
-            concluido_em,
+            started_at,
+            finished_at,
             worker_id,
             worker_heartbeat,
             payload
@@ -2119,8 +2119,8 @@ async def get_pipeline_timeline(db: Session = Depends(get_db), usuario: dict = D
         payload = row.get("payload") or {}
         if isinstance(payload, str):
             payload = {}
-        started = row.get("iniciado_em") or row.get("criado_em")
-        finished = row.get("concluido_em")
+        started = row.get("started_at") or row.get("criado_em")
+        finished = row.get("finished_at")
         end_time = finished or now
         elapsed = 0
         if started:
@@ -2139,8 +2139,8 @@ async def get_pipeline_timeline(db: Session = Depends(get_db), usuario: dict = D
             "last_phase": row.get("last_phase") or "aguardando_worker",
             "last_error": row.get("last_error") or "",
             "created_at": row["criado_em"].isoformat() if row.get("criado_em") else None,
-            "started_at": row["iniciado_em"].isoformat() if row.get("iniciado_em") else None,
-            "finished_at": row["concluido_em"].isoformat() if row.get("concluido_em") else None,
+            "started_at": row["started_at"].isoformat() if row.get("started_at") else None,
+            "finished_at": row["finished_at"].isoformat() if row.get("finished_at") else None,
             "elapsed_seconds": elapsed,
             "worker_id": row.get("worker_id") or "",
             "worker_heartbeat": row["worker_heartbeat"].isoformat() if row.get("worker_heartbeat") else None,
