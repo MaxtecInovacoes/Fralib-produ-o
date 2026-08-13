@@ -3870,8 +3870,8 @@ async function iniciarLeadSupply() {
   var saved = await salvarLeadSupplyConfig();
   if (!saved) return;
   _setLeadSupplyButtonBusy('btnLeadSupplyStart', true, 'LIGANDO...');
-  _leadSupplySetAction('info', 'Ligando esteira', 'Hunter e producao automatica foram ativados. Isso nao cria um site sozinho; a producao ainda precisa achar 1 lead aprovado elegivel.');
-  if (window.renderPipelineTopTimeline) window.renderPipelineTopTimeline('hunter', 'Ligando esteira. Encontrando leads aprovados para produzir.', Date.now());
+  _leadSupplySetAction('info', 'Ligando esteira', 'A producao vai pegar 1 lead ja aprovado pelo Caio. Hunter e Caio continuam abastecendo em paralelo, sem travar a geracao.');
+  if (window.renderPipelineTopTimeline) window.renderPipelineTopTimeline('builder_renderer', 'Ligando esteira. Procurando lead ja aprovado para gerar site.', Date.now());
   try {
     var resp = await authFetch('/api/lead-supply/start', { method: 'POST' });
     var data = await resp.json().catch(function(){ return {}; });
@@ -3891,8 +3891,8 @@ async function iniciarLeadSupply() {
       _refreshLeadSupplySoon();
       return;
     }
-    _leadSupplySetAction('success', 'Esteira ligada', 'Hunter e production tick foram enfileirados. Se houver lead aprovado elegivel, uma pipeline real nasce em seguida.', 7000);
-    if (typeof Toast !== 'undefined') Toast.success('Esteira ligada. Agora a fila pode abastecer e abrir pipeline.');
+    _leadSupplySetAction('success', 'Esteira ligada', 'Producao ativada. Se houver lead aprovado, ele entra na pipeline; se nao houver, a tela mostra o motivo sem disparar Hunter neste clique.', 7000);
+    if (typeof Toast !== 'undefined') Toast.success('Esteira ligada para consumir leads aprovados.');
     _refreshLeadSupplySoon();
   } catch (e) {
     _leadSupplySetAction('error', 'Erro ao ligar motores', e.message || 'Nao foi possivel iniciar o abastecimento.', 6000);
@@ -3976,8 +3976,8 @@ async function forcarLeadSupplyTick() {
       return;
     }
     if (data && data.waiting === 'no_approved_lead') {
-      _leadSupplySetAction('info', 'Sem lead aprovado', 'Nao havia lead aprovado disponivel. O Hunter foi chamado para abastecer a fila.', 7000);
-      if (window.renderPipelineTopTimeline) window.renderPipelineTopTimeline('hunter', 'Sem lead aprovado agora. Chamando Hunter para abastecer a fila.');
+      _leadSupplySetAction('info', 'Sem lead aprovado', 'Nao havia lead aprovado disponivel. A producao nao dispara Hunter; Hunter/Caio rodam em paralelo para alimentar o estoque.', 7000);
+      if (window.renderPipelineTopTimeline) window.renderPipelineTopTimeline('waiting', 'Sem lead aprovado agora. Aguardando estoque aprovado pelo Caio.');
       if (typeof Toast !== 'undefined') Toast.warning('Sem lead aprovado disponível agora.');
       _refreshLeadSupplySoon();
       return;

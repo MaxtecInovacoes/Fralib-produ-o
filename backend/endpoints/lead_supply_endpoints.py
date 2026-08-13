@@ -86,7 +86,6 @@ async def start_lead_supply(
     tenant_id = _tenant_id(usuario)
     _permission_or_error(db, tenant_id)
     cfg = supply.set_pause(db, tenant_id, hunter=False, production=False, active=True)
-    supply.enqueue_hunter(db, tenant_id, delay_seconds=1, force=True)
     immediate = supply.run_production_tick(db, {"reason": "start-inline"}, tenant_id)
     should_enqueue_tick = not (
         immediate.get("job_id")

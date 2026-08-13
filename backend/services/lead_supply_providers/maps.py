@@ -44,7 +44,6 @@ def run_production_tick(db: Session, payload: dict[str, Any], tenant_id: int) ->
     from backend.services.lead_supply_inventory import (
         _ensure_lead_row,
         _reserve_next,
-        enqueue_hunter,
     )
     from backend.services.credits_manager import validar_permissao_pipeline
 
@@ -81,8 +80,7 @@ def run_production_tick(db: Session, payload: dict[str, Any], tenant_id: int) ->
 
     item = _reserve_next(db, tenant_id)
     if not item:
-        _event(db, tenant_id, "producao", "info", "Sem lead aprovado disponível. Hunter vai abastecer a fila.")
-        enqueue_hunter(db, tenant_id, delay_seconds=1, force=True)
+        _event(db, tenant_id, "producao", "info", "Sem lead aprovado disponível para produção. Hunter/Caio continuam abastecendo em paralelo.")
         return {"ok": True, "waiting": "no_approved_lead"}
     lead_id = _ensure_lead_row(db, tenant_id, item)
     run_id = uuid.uuid4().hex[:12]
