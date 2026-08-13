@@ -582,6 +582,10 @@ def _render_block(block_spec: dict, design_tokens: dict) -> tuple[str, str]:
                     print(f"[builder] Bloco [{label_str}] OK ({len(html)} chars)")
                     return html, model
                 last_error = f"HTML invalido: {reason} ({len(html)} chars)"
+                print(
+                    f"[builder] Bloco [{label_str}] rejeitado "
+                    f"render_hint={render_hint} tentativa={attempt + 1}/{max_retries}: {last_error}"
+                )
                 if attempt < max_retries - 1:
                     time.sleep(retry_delays[attempt])
                     continue

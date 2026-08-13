@@ -45,6 +45,14 @@ def _first_non_empty(*values: Any) -> str:
     return ""
 
 
+def _compact_json(value: Any, limit: int = 600) -> str:
+    try:
+        text = json.dumps(value, ensure_ascii=False, separators=(",", ":"))
+    except Exception:
+        text = str(value)
+    return text[:limit]
+
+
 def _html_has_minimum_structure(html: str) -> tuple[bool, str]:
     if not html or len(html.strip()) < 1000:
         return False, "html curto"
@@ -64,6 +72,75 @@ def _html_has_minimum_structure(html: str) -> tuple[bool, str]:
     return True, ""
 
 
+def _fragment_has_minimum_structure(html: str) -> tuple[bool, str]:
+    if not html or len(html.strip()) < 200:
+        return False, "fragmento curto"
+    lower = html.lower()
+    section_count = lower.count("<section")
+    if section_count < 1:
+        return False, "sem section"
+    stripped = re.sub(r"(?is)<style\b[^>]*>.*?</style>", " ", html)
+    stripped = re.sub(r"(?is)<script\b[^>]*>.*?</script>", " ", stripped)
+    visible_text = re.sub(r"(?is)<[^>]+>", " ", stripped)
+    visible_text = re.sub(r"\s+", " ", visible_text).strip()
+    if len(visible_text) < 60:
+        return False, "texto visível insuficiente"
+    return True, ""
+
+
+def _validate_generated_html(html: str, prd: dict[str, Any]) -> tuple[bool, str]:
+    render_hint = str(prd.get("_render_hint") or "").strip().lower()
+    if render_hint == "section_fragment":
+        return _fragment_has_minimum_structure(html)
+    if render_hint == "shell_document":
+        if not html or len(html.strip()) < 400:
+            return False, "shell curto"
+        lower = html.lower()
+        if "<html" not in lower or "<body" not in lower or "<main" not in lower:
+            return False, "shell sem html/body/main"
+        return True, ""
+    return _html_has_minimum_structure(html)
+
+
+def _build_output_contract(prd: dict[str, Any]) -> str:
+    render_hint = str(prd.get("_render_hint") or "").strip().lower()
+    if render_hint == "shell_document":
+        return """
+## Output Contract — SHELL DOCUMENT
+Return ONLY one complete HTML document. No markdown, code fences, explanation, or text outside the document.
+- Required literal structure: <!DOCTYPE html><html><head>...</head><body><main id="app-shell"></main></body></html>
+- Include exactly one <html>, one <head>, one <body>, and one empty <main id="app-shell">
+- The <main> must be empty: section fragments will be inserted later
+- Keep <head> minimal: charset, viewport, title, fonts, and Tailwind CDN only
+- Do NOT render hero, sections, cards, footer, long CSS, or large scripts
+- Before answering, verify the response contains <html, <body, and <main id="app-shell">
+"""
+    if render_hint == "section_fragment":
+        return """
+## Output Contract — SECTION FRAGMENT
+Return ONLY the requested semantic <section> block. No markdown, code fences, explanation, or text outside the fragment.
+- The first non-whitespace characters must be <section
+- The last non-whitespace characters must close the section with </section>
+- Include visible heading, text, and CTA/content appropriate to the requested section
+- Use Tailwind utility classes directly in the markup
+- Do NOT output <!DOCTYPE>, <html>, <head>, <body>, <main>, Tailwind config, <style>, or <script>
+- Do NOT render sections that were not requested
+- Before answering, verify the response contains at least one opening <section and one closing </section>
+"""
+    return """
+## Output Contract — FULL DOCUMENT
+Return ONLY a single complete HTML file. No markdown, code fences, or explanation.
+- Single <html> document with exactly one <main> and one visible <h1>
+- At least 3 semantic <section> blocks with real visible content
+- Mobile-first responsive (375px to 1440px)
+- Use Tailwind CSS utility classes directly in the markup
+- Include Tailwind via CDN script in the <head>
+- Keep the head minimal and do NOT output a long <style> block
+- Hero must show business name, local context, and primary CTA above the fold
+- Prioritize completing the full body before visual polish
+"""
+
+
 def _build_system_prompt(prd: dict) -> str:
     """Build the system prompt from DesignerPRD spec."""
     segments: list[str] = []
@@ -76,7 +153,8 @@ def _build_system_prompt(prd: dict) -> str:
     segments.append(
         f"You are an expert frontend developer. Generate a complete, production-ready "
         f"landing page HTML for a {segmento} business called '{business}' "
-        f"located in {cidade}."
+        f"located in {cidade}. "
+        "Use a Tailwind-first approach so the response stays compact and the full body fits in the token budget."
     )
 
     # Design system
@@ -102,6 +180,8 @@ def _build_system_prompt(prd: dict) -> str:
     if paleta:
         segments.append("\n### Color Palette (CSS variables)")
         for key, val in paleta.items():
+            if key in {"tokens_oklch", "hero_style", "reasoning"}:
+                continue
             segments.append(f"  --{key}: {val};")
 
     # Typography
@@ -142,11 +222,11 @@ def _build_system_prompt(prd: dict) -> str:
             if layout_type:
                 segments.append(f"Layout type: {layout_type}")
             if components:
-                segments.append(f"Components: {json.dumps(components, ensure_ascii=False)}")
+                segments.append(f"Components: {_compact_json(components, 220)}")
             if copy_data:
-                segments.append(f"Copy data: {json.dumps(copy_data, ensure_ascii=False)}")
+                segments.append(f"Copy data: {_compact_json(copy_data, 500)}")
             if content:
-                segments.append(content[:2000])
+                segments.append(content[:700])
 
     # CTAs
     ctas = prd.get("ctas", [])
@@ -174,8 +254,8 @@ def _build_system_prompt(prd: dict) -> str:
     reviews = prd.get("reviews_list", [])
     if reviews:
         segments.append("\n## Reviews")
-        for r in reviews[:5]:
-            segments.append(f"- {r.get('author', '')}: {r.get('text', '')[:200]}")
+        for r in reviews[:3]:
+            segments.append(f"- {r.get('author', '')}: {r.get('text', '')[:120]}")
 
     # Schema.org
     schema_types = prd.get("schema_org_types", [])
@@ -197,7 +277,7 @@ def _build_system_prompt(prd: dict) -> str:
     # Competitor analysis
     comp = prd.get("competitor_analysis", "")
     if comp:
-        segments.append(f"\n## Competitor Analysis\n{comp[:500]}")
+        segments.append(f"\n## Competitor Analysis\n{comp[:180]}")
 
     # SEO keywords
     seo = prd.get("seo_keywords", [])
@@ -225,58 +305,38 @@ def _build_system_prompt(prd: dict) -> str:
     if videos:
         segments.append(f"\n## Videos: {len(videos)} videos available")
 
-    # Output contract
-    segments.append("""
-
-## Output Contract
-Return ONLY a single complete HTML file. No markdown, no code fences, no explanation.
-- Single <html> document with embedded <style> and <script>
-- Mobile-first responsive (375px to 1440px)
-- Use CSS custom properties for the color palette
-- Include semantic HTML5 elements
-- Inline ALL CSS and JS — no external dependencies except Google Fonts
-- Use IntersectionObserver for scroll-reveal animations
-- Include proper meta tags for SEO
-- Make it visually impressive — this is the final deliverable
-- Mandatory structure: exactly one <main>, one visible <h1>, and at least 3 <section> blocks
-- The <body> must contain real visible content, not only <style> or <script>
-- Hero must show business name, local context, and primary CTA above the fold
-- Use the supplied section names, copy_data, contracts, and build plan as source of truth
-- Prioritize completing the full body structure before adding visual polish
-- Keep CSS concise; do not spend most tokens on reset or boilerplate styles
-- If token budget is tight, prefer simpler CSS and complete all required sections
-""")
+    segments.append(_build_output_contract(prd))
 
     # ── CONTRATOS DO ARQUITETO (injetados em força máxima) ──
     visual_contract = prd.get("visual_contract") or {}
     if visual_contract:
         segments.append("\n## VISUAL CONTRACT — From Arquiteto (obrigatório)")
-        segments.append(json.dumps(visual_contract, ensure_ascii=False, indent=2)[:3000])
+        segments.append(_compact_json(visual_contract, 900))
 
     requirements_contract = prd.get("requirements_contract") or {}
     if requirements_contract:
         segments.append("\n## REQUIREMENTS CONTRACT — From Arquiteto (obrigatório)")
-        segments.append(json.dumps(requirements_contract, ensure_ascii=False, indent=2)[:3000])
+        segments.append(_compact_json(requirements_contract, 900))
 
     site_build_plan = prd.get("site_build_plan") or {}
     if site_build_plan:
         segments.append("\n## SITE BUILD PLAN — From Arquiteto (obrigatório)")
-        segments.append(json.dumps(site_build_plan, ensure_ascii=False, indent=2)[:3000])
+        segments.append(_compact_json(site_build_plan, 1000))
 
     visual_dna = prd.get("visual_dna") or {}
     if visual_dna:
         segments.append("\n## VISUAL DNA — From Arquiteto")
-        segments.append(json.dumps(visual_dna, ensure_ascii=False, indent=2)[:2000])
+        segments.append(_compact_json(visual_dna, 500))
 
     layout_blueprint = prd.get("layout_blueprint") or []
     if layout_blueprint:
         segments.append("\n## LAYOUT BLUEPRINT — From Arquiteto")
-        segments.append(json.dumps(layout_blueprint, ensure_ascii=False, indent=2)[:2000])
+        segments.append(_compact_json(layout_blueprint, 500))
 
     design_reference_pack = prd.get("design_reference_pack") or {}
     if design_reference_pack:
         segments.append("\n## DESIGN REFERENCE PACK — From Arquiteto")
-        segments.append(json.dumps(design_reference_pack, ensure_ascii=False, indent=2)[:2000])
+        segments.append(_compact_json(design_reference_pack, 500))
 
     prompt_final = "\n".join(segments)
     if _openui_logger:
@@ -287,18 +347,45 @@ Return ONLY a single complete HTML file. No markdown, no code fences, no explana
     return prompt_final
 
 
+def _build_mode_instructions(prd: dict) -> str:
+    render_hint = str(prd.get("_render_hint") or "").strip().lower()
+    if render_hint == "shell_document":
+        return (
+            "Render mode: shell_document. "
+            "Return a complete HTML document with a very short <head>, Tailwind CDN, one <body>, and exactly one empty <main id=\"app-shell\"></main>. "
+            "Do not render any hero, section, placeholder, footer, long CSS, or large script."
+        )
+    if render_hint == "section_fragment":
+        return (
+            "Render mode: section_fragment. "
+            "Return ONLY HTML fragments intended to live inside <main>. "
+            "Do not return <!DOCTYPE>, <html>, <head>, <body>, Tailwind config, or large scripts. "
+            "Render only the requested sections as semantic <section> blocks with Tailwind classes."
+        )
+    return (
+        "Render mode: full_document. "
+        "Return the full HTML document."
+    )
+
+
 def _build_user_message(prd: dict) -> str:
     """Build the user message with the full PRD context."""
     section_names = [s.get("name", "") for s in prd.get("sections", []) if isinstance(s, dict)]
     business_name = prd.get("business_name", "")
     cidade = prd.get("cidade", "")
     return (
+        _build_mode_instructions(prd) + " " +
         "Generate the complete landing page HTML based on the DesignerPRD "
         "specification. Follow the design system, sections, and creative "
         "directive precisely. Output only the raw HTML file. "
         f"Business: {business_name}. City: {cidade}. "
         f"Required sections: {', '.join(section_names)}. "
-        "Do not output CSS-only layouts, placeholder wrappers, or empty body content."
+        "Do not output CSS-only layouts, placeholder wrappers, or empty body content. "
+        "Use Tailwind utility classes directly on the elements. "
+        "Do not emit a long <style> block. "
+        "Write the full <body> structure first, including <main>, <section>, headings, text and CTAs. "
+        "Keep the <head> very short so the response finishes the complete body. "
+        "Prefer complete content over visual polish if you must trade off."
     )
 
 
@@ -348,7 +435,7 @@ async def generate_site(request: GenerateRequest):
             html = html[:-3]
         html = html.strip()
 
-        valid_html, reason = _html_has_minimum_structure(html)
+        valid_html, reason = _validate_generated_html(html, prd)
         if not valid_html:
             raise HTTPException(
                 status_code=502,
