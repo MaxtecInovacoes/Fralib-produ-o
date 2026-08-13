@@ -3,6 +3,7 @@ import logging
 import os
 import json
 import re
+import html as html_lib
 from pathlib import Path
 from datetime import datetime
 from backend.agents.manager.states import (
@@ -158,6 +159,51 @@ def _sanitize_deploy_html(html: str) -> str:
     return html
 
 
+def _ensure_final_document_contract(html: str, state: PipelineState, canonical_url: str) -> str:
+    """Última garantia documental, aplicada após todos os pós-processadores."""
+    cleaned = html or ""
+    name = html_lib.escape(str((state.lead_data or {}).get("nome") or "Negócio local"), quote=True)
+    city = html_lib.escape(str(state.cidade or ""), quote=True)
+    address = html_lib.escape(str((state.lead_data or {}).get("endereco") or ""), quote=True)
+    phone = html_lib.escape(str((state.lead_data or {}).get("telefone") or ""), quote=True)
+    photos = (state.design_output or {}).get("photos") or []
+    og_image = photos[0].get("url") if photos and isinstance(photos[0], dict) else (photos[0] if photos else "")
+    title = f"{name} em {city}".strip()
+    description = f"Conheça {name} em {city}: serviços, localização e contato oficial."
+
+    if re.search(r"(?is)<title>\s*</title>", cleaned):
+        cleaned = re.sub(r"(?is)<title>.*?</title>", f"<title>{title}</title>", cleaned, count=1)
+    elif "<title" not in cleaned.lower():
+        cleaned = re.sub(r"(?is)</head>", f"<title>{title}</title>\n</head>", cleaned, count=1)
+    if re.search(r'(?is)<meta\s+name=["\']description["\'][^>]*>', cleaned):
+        cleaned = re.sub(r'(?is)<meta\s+name=["\']description["\'][^>]*>', f'<meta name="description" content="{description}">', cleaned, count=1)
+
+    head = [
+        f'<link rel="canonical" href="{canonical_url}">',
+        '<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22><rect width=%2264%22 height=%2264%22 rx=%2214%22 fill=%22%23111827%22/><path d=%22M18 46V18h28v8H28v4h14v8H28v8z%22 fill=%22white%22/></svg>">',
+        f'<meta property="og:title" content="{title}">',
+        f'<meta property="og:description" content="{description}">',
+        f'<meta property="og:url" content="{canonical_url}">',
+        '<meta property="og:type" content="website">',
+    ]
+    if og_image:
+        head.append(f'<meta property="og:image" content="{html_lib.escape(str(og_image), quote=True)}">')
+    schema = {
+        "@context": "https://schema.org", "@type": "LocalBusiness", "name": name,
+        "url": canonical_url, "address": address or city, "telephone": phone,
+    }
+    head.append('<script type="application/ld+json">' + json.dumps({k: v for k, v in schema.items() if v}, ensure_ascii=False) + '</script>')
+    cleaned = re.sub(r"(?is)</head>", "\n".join(head) + "\n</head>", cleaned, count=1)
+
+    if "<img" not in cleaned.lower() and og_image:
+        image = (
+            f'<img src="{html_lib.escape(str(og_image), quote=True)}" '
+            f'alt="{name} em {city}" loading="eager" class="w-full h-auto object-cover">'
+        )
+        cleaned = re.sub(r"(?is)(<section\b[^>]*>)", r"\1" + image, cleaned, count=1)
+    return cleaned
+
+
 def step_deploy(state: PipelineState) -> PipelineState:
     """Fase 6: Deploy publica site."""
     if state.current_state != STATE_PUBLISHING:
@@ -195,6 +241,8 @@ def step_deploy(state: PipelineState) -> PipelineState:
             print(f"[Deploy] Aviso: pos-processamento cinematico falhou: {e}")
 
         html = _sanitize_deploy_html(html)
+        final_url = f"https://app.seunegociofralib.site/sites/{state.tenant_id}/{slug}-{state.lead_id[:8]}/"
+        html = _ensure_final_document_contract(html, state, final_url)
         index_path.write_text(html, encoding="utf-8")
 
         try:

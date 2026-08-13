@@ -195,12 +195,20 @@ def _build_system_prompt(prd: dict) -> str:
         section_payload = sections[0] if sections else {}
         palette = prd.get("paleta") or prd.get("color_palette") or {}
         typography = prd.get("typography") or {}
+        photos = prd.get("photos") or []
+        photo_urls = [
+            str(photo.get("url") if isinstance(photo, dict) else photo)
+            for photo in photos[:8]
+            if photo
+        ]
         return (
             "You generate one semantic HTML section fragment. Return raw HTML only. "
             f"Business: {business}. Segment: {segmento}. City: {cidade}. "
             f"Requested section JSON: {_compact_json(section_payload, 1800)}. "
             f"Palette JSON: {_compact_json(palette, 500)}. "
             f"Typography JSON: {_compact_json(typography, 300)}. "
+            f"Available editorial image URLs: {_compact_json(photo_urls, 1400)}. "
+            "Use at least one real <img> with an available URL in hero, about or media sections. "
             "Start the response with <section and finish with </section>. "
             "Include visible heading, useful copy, and CTA/content from the requested section. "
             "Use Tailwind utility classes directly. Do not output html, head, body, main, style, script, markdown, or explanation. "
