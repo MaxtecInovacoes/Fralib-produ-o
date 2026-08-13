@@ -317,6 +317,37 @@ tailwind.config = {{ darkMode: 'class' }}
     return wrapper_head + html + wrapper_foot
 
 
+def _inject_safe_wrapper(html: str) -> str:
+    """Ensure a valid document shell without changing visual decisions."""
+    if re.search(r"<!DOCTYPE\s+html", html, re.IGNORECASE) and re.search(r"<html\b", html, re.IGNORECASE):
+        return html
+
+    body_content = html
+    body_match = re.search(r"<body[^>]*>(.*?)</body>", html, re.IGNORECASE | re.DOTALL)
+    if body_match:
+        body_content = body_match.group(1)
+
+    head_content = ""
+    head_match = re.search(r"<head[^>]*>(.*?)</head>", html, re.IGNORECASE | re.DOTALL)
+    if head_match:
+        head_content = head_match.group(1).strip()
+
+    if "cdn.tailwindcss.com" not in head_content:
+        head_content += '\n<script src="https://cdn.tailwindcss.com"></script>'
+
+    return f"""<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+{head_content}
+</head>
+<body>
+{body_content.strip()}
+</body>
+</html>"""
+
+
 def _fix_section_backgrounds(html: str) -> str:
     """Garante alternância de fundo entre seções para ritmo visual cinematográfico."""
     if not re.search(r'<section[^>]*>.*?</section>', html, re.DOTALL | re.IGNORECASE):
@@ -455,8 +486,24 @@ def _strip_document_tags_from_body(html: str) -> str:
     return html[:body_start.end()] + "\n" + body_content.strip() + "\n" + html[body_end.start():]
 
 
-def process(html: str, design_tokens: dict = None, segmento: str = "", nome: str = "") -> str:
-    """Pipeline de pós-processamento cinematográfico."""
+def process(
+    html: str,
+    design_tokens: dict = None,
+    segmento: str = "",
+    nome: str = "",
+    *,
+    safe_only: bool = True,
+) -> str:
+    """Pipeline de pós-processamento.
+
+    By default this is a safe-only technical layer: it may normalize wrappers
+    and structure, but it must not change visual decisions such as colors,
+    typography, backgrounds, layout, spacing, radius, composition or images.
+    """
+    if safe_only:
+        html = _inject_safe_wrapper(html)
+        html = _strip_document_tags_from_body(html)
+        return html
 
     heading, body = _pick_fonts(design_tokens or {}, segmento, nome)
     font_url = _build_font_url(heading, body)

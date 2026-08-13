@@ -214,6 +214,7 @@ class DesignerPRD(BaseModel):
     niche_brief: Dict[str, Any] = Field(default_factory=dict)
     creative_direction: Dict[str, Any] = Field(default_factory=dict)
     variation_blueprint: Dict[str, Any] = Field(default_factory=dict)
+    media_plan: List[Dict[str, Any]] = Field(default_factory=list)
 
     animations: List[AnimationSpec] = Field(default_factory=list)
 

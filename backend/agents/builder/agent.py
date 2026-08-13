@@ -331,10 +331,17 @@ def _prd_to_spec(prd) -> dict:
         for vp in (getattr(prd, "value_props", []) or [])[:3]:
             ctas.append({"text": str(vp)[:60], "href": "#contato"})
 
-    # Build motion_directives from animations
+    creative_direction = getattr(prd, "creative_direction", {}) or {}
+    variation_blueprint = getattr(prd, "variation_blueprint", {}) or {}
+    media_plan = getattr(prd, "media_plan", []) or []
+
+    # Build motion_directives from creative direction and animations
+    motion_soft = (creative_direction.get("soft_constraints") or {}).get("motion", {}) if isinstance(creative_direction, dict) else {}
     motion_directives = {
-        "parallax": True,
-        "scroll_reveal": True,
+        "profile": motion_soft or {},
+        "animations": animations,
+        "parallax": bool(motion_soft.get("usa_parallax", True)) if isinstance(motion_soft, dict) else True,
+        "scroll_reveal": str((motion_soft or {}).get("efeito_principal", "")).lower() not in ("none", "sem motion"),
         "hover_effects": True,
     }
 
@@ -379,6 +386,7 @@ def _prd_to_spec(prd) -> dict:
         "phone": getattr(prd, "phone", ""),
         "hours": getattr(prd, "hours", None) or {},
         "photos": getattr(prd, "photos", []),
+        "media_plan": media_plan,
         "videos": getattr(prd, "videos", []),
         "value_props": getattr(prd, "value_props", []) or [],
         "geo": getattr(prd, "geo", None),
@@ -396,6 +404,37 @@ def _prd_to_spec(prd) -> dict:
         "visual_dna": getattr(prd, "visual_dna", {}) or {},
         "layout_blueprint": getattr(prd, "layout_blueprint", []) or [],
         "design_reference_pack": getattr(prd, "design_reference_pack", {}) or {},
+        "niche_brief": getattr(prd, "niche_brief", {}) or {},
+        "creative_direction": creative_direction,
+        "variation_blueprint": variation_blueprint,
+    }
+    spec["openui_payload"] = {
+        "business_context": {
+            "business_name": spec["business_name"],
+            "cidade": spec["cidade"],
+            "segmento": spec["segmento"],
+            "address": spec["address"],
+            "phone": spec["phone"],
+            "reviews_rating": spec["reviews_rating"],
+            "reviews_count": spec["reviews_count"],
+        },
+        "creative_direction": creative_direction,
+        "visual_dna": spec["visual_dna"],
+        "variation_blueprint": variation_blueprint,
+        "site_plan": spec["site_build_plan"],
+        "media_plan": media_plan,
+        "content": {
+            "sections": sections,
+            "faqs": spec["faqs"],
+            "seo_keywords": spec["seo_keywords"],
+            "reviews_list": spec["reviews_list"],
+            "value_props": spec["value_props"],
+        },
+        "technical_requirements": {
+            "html": "static Tailwind HTML",
+            "hard_constraints": (creative_direction or {}).get("hard_constraints", {}),
+            "anti_patterns": spec["anti_patterns"],
+        },
     }
     # Instrumentação: logar chaves do spec enviado ao OpenUI
     if _builder_logger:

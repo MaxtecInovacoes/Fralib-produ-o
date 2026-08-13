@@ -39,6 +39,8 @@ def build_site_build_plan(facts: dict[str, Any]) -> dict[str, Any]:
         if isinstance(facts.get("design_reference_pack"), dict)
         else visual_dna.get("design_reference_pack", {})
     )
+    variation = facts.get("variation_blueprint") if isinstance(facts.get("variation_blueprint"), dict) else {}
+    upstream_media_plan = facts.get("media_plan") if isinstance(facts.get("media_plan"), list) else []
     archetype = _archetype_id(visual_dna) or str(visual_contract.get("archetype") or "TRUST_ELITE").upper()
     tokens = (
         facts.get("color_palette")
@@ -51,7 +53,7 @@ def build_site_build_plan(facts: dict[str, Any]) -> dict[str, Any]:
         else visual_dna.get("typography", {})
     ) or {}
 
-    section_order = _section_order(bool(services), bool(reviews), bool(address))
+    section_order = _authoritative_section_order(variation, bool(services), bool(reviews), bool(address))
     primary_goal = requirements.get("primary_conversion_goal") or ("whatsapp" if phone else "map_or_contact")
     component_contracts = build_component_contracts({**facts, "visual_dna": visual_dna})
     return {
@@ -66,6 +68,7 @@ def build_site_build_plan(facts: dict[str, Any]) -> dict[str, Any]:
         },
         "information_architecture": {
             "section_order": section_order,
+            "section_order_source": "variation_blueprint" if variation.get("ordem_das_secoes") else "site_build_plan_fallback",
             "navigation_targets": [item for item in section_order if item not in {"trust_bar"}],
             "must_combine": ["location", "contact"],
             "must_not_duplicate": ["map", "location", "footer", "post_footer_gallery"],
@@ -81,6 +84,7 @@ def build_site_build_plan(facts: dict[str, Any]) -> dict[str, Any]:
             "media_ratio": "16:9",
         },
         "media_plan": {
+            "items": upstream_media_plan,
             "available_count": len(photos),
             "hero": "use one dominant 16:9/depth media surface when available; otherwise use CSS/SVG depth",
             "gallery": "use up to 3 editorial images inside one media-story section",
@@ -105,6 +109,18 @@ def build_site_build_plan(facts: dict[str, Any]) -> dict[str, Any]:
         },
         "acceptance_criteria": visual_contract.get("acceptance_criteria") or {},
     }
+
+
+def _authoritative_section_order(variation: dict[str, Any], has_services: bool, has_reviews: bool, has_address: bool) -> list[str]:
+    order = variation.get("ordem_das_secoes") if isinstance(variation, dict) else None
+    if isinstance(order, list) and order:
+        normalized = [str(item).strip().lower() for item in order if str(item).strip()]
+        if "hero" not in normalized:
+            normalized.insert(0, "hero")
+        if "footer" not in normalized:
+            normalized.append("footer")
+        return list(dict.fromkeys(normalized))
+    return _section_order(has_services, has_reviews, has_address)
 
 
 def _section_order(has_services: bool, has_reviews: bool, has_address: bool) -> list[str]:

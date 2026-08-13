@@ -66,6 +66,7 @@ def step_arquiteto(state: PipelineState) -> PipelineState:
                     state.design_output.setdefault("variation_blueprint", state.variation_blueprint)
                 state.designer_prd = state.design_output
                 state.visual_dna = state.design_output.get("visual_dna", {})
+                state.media_plan = state.design_output.get("media_plan", [])
                 state.history.append(f"Arquiteto: PRD OK ({len(state.design_output.get('sections', []))} seções)")
                 try:
                     from backend.agents.manager.states import _record_visual_custody
@@ -80,6 +81,7 @@ def step_arquiteto(state: PipelineState) -> PipelineState:
                         },
                         preserved_decisions={
                             "visual_dna": state.visual_dna,
+                            "media_plan": state.media_plan,
                             "section_order": (state.variation_blueprint or {}).get("ordem_das_secoes", []),
                             "typography": state.design_output.get("typography", {}),
                             "color_palette": state.design_output.get("color_palette", {}),

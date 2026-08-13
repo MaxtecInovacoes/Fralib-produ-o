@@ -236,7 +236,7 @@ def step_deploy(state: PipelineState) -> PipelineState:
         index_path = site_dir / "index.html"
         html = state.build_output.get("html", "")
 
-        # Pos-processamento cinematografico
+        # Pos-processamento tecnico seguro: nao altera decisões visuais do PRD/OpenUI.
         try:
             from backend.agents.cinematic_post_processor import process as cinematic_process
             design_tokens = {}
@@ -247,9 +247,10 @@ def step_deploy(state: PipelineState) -> PipelineState:
                 design_tokens=design_tokens,
                 segmento=state.segmento or "",
                 nome=state.lead_data.get("nome", "") if state.lead_data else "",
+                safe_only=True,
             )
         except Exception as e:
-            print(f"[Deploy] Aviso: pos-processamento cinematico falhou: {e}")
+            print(f"[Deploy] Aviso: pos-processamento tecnico falhou: {e}")
 
         html = _sanitize_deploy_html(html)
         final_url = f"https://app.seunegociofralib.site/sites/{state.tenant_id}/{slug}-{state.lead_id[:8]}/"

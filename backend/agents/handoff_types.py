@@ -92,6 +92,15 @@ class CreativeDirectionContract(HandoffBase):
     soft_constraints: dict = Field(default_factory=dict)
 
 
+class MediaPlanItem(BaseModel):
+    url: str = ""
+    role: str = ""
+    section: str = ""
+    required: bool = False
+    source: str = ""
+    alt: str = ""
+
+
 class VisualCustodyRecord(BaseModel):
     stage: str
     received_decisions: dict = Field(default_factory=dict)

@@ -93,6 +93,10 @@ def step_builder(state: PipelineState) -> PipelineState:
             site_build_plan=state.design_output.get("site_build_plan", {}),
             requirements_contract=state.design_output.get("requirements_contract", {}),
             visual_contract=state.design_output.get("visual_contract", {}),
+            niche_brief=state.design_output.get("niche_brief", state.niche_brief or {}),
+            creative_direction=state.design_output.get("creative_direction", state.creative_direction or {}),
+            variation_blueprint=state.design_output.get("variation_blueprint", state.variation_blueprint or {}),
+            media_plan=state.design_output.get("media_plan", state.media_plan or []),
         )
         # Instrumentação: verificar se os 3 contratos do Arquiteto chegaram ao Builder
         try:
@@ -139,6 +143,31 @@ def step_builder(state: PipelineState) -> PipelineState:
             raise RuntimeError(getattr(result, "error", "Builder falhou sem erro detalhado"))
         html = _enforce_pre_qa_contract(result.html, prd)
         state.build_output = {"html": html, "model": result.model}
+        try:
+            from backend.agents.builder.agent import _prd_to_spec
+            from backend.agents.manager.states import _record_visual_custody
+
+            state.openui_payload = _prd_to_spec(prd)
+            _record_visual_custody(
+                state,
+                "openui_payload",
+                received_decisions={
+                    "creative_direction": bool(state.openui_payload.get("creative_direction")),
+                    "variation_blueprint": bool(state.openui_payload.get("variation_blueprint")),
+                    "media_plan": len(state.openui_payload.get("media_plan") or []),
+                },
+                preserved_decisions={
+                    "section_order": (
+                        state.openui_payload.get("variation_blueprint", {}).get("ordem_das_secoes")
+                        or state.openui_payload.get("site_build_plan", {}).get("information_architecture", {}).get("section_order")
+                    ),
+                    "media_plan": state.openui_payload.get("media_plan", []),
+                    "typography": state.openui_payload.get("typography", {}),
+                    "palette": state.openui_payload.get("color_palette", {}),
+                },
+            )
+        except Exception as exc:
+            logger.warning("[Builder] openui payload custody falhou (lead=%s): %s", state.lead_id, exc)
 
         try:
             from backend.agents.pipeline_checkpoint import gerar_pipeline_id, salvar_checkpoint

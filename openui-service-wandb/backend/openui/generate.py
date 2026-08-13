@@ -53,6 +53,14 @@ def _compact_json(value: Any, limit: int = 600) -> str:
     return text[:limit]
 
 
+def _json_for_prompt(value: Any, limit: int = 4000) -> str:
+    try:
+        text = json.dumps(value, ensure_ascii=False, indent=2, default=str)
+    except Exception:
+        text = str(value)
+    return text[:limit]
+
+
 def _html_has_minimum_structure(html: str) -> tuple[bool, str]:
     if not html or len(html.strip()) < 1000:
         return False, "html curto"
@@ -226,6 +234,13 @@ def _build_system_prompt(prd: dict) -> str:
         "Obey the render mode and output contract exactly. "
         "Use a Tailwind-first approach so the response stays compact."
     )
+    protected_payload = prd.get("openui_payload") or {}
+    if protected_payload:
+        segments.append("\n## PROTECTED GLOBAL CREATIVE PAYLOAD")
+        segments.append(
+            "This payload contains hard creative decisions. Implement them; do not replace them with a generic template."
+        )
+        segments.append(_json_for_prompt(protected_payload, 12000))
 
     # Design system
     design_tokens = prd.get("design_tokens", {})
@@ -376,6 +391,11 @@ def _build_system_prompt(prd: dict) -> str:
             url = photo.get("url") if isinstance(photo, dict) else photo
             if url:
                 segments.append(f"Photo {index}: {url}")
+    media_plan = prd.get("media_plan") or []
+    if media_plan:
+        segments.append("\n## MEDIA PLAN — exact URLs, roles and required placement")
+        segments.append(_json_for_prompt(media_plan, 5000))
+        segments.append("Required media_plan items must appear in the HTML with the exact URL. Do not replace them with placeholders.")
     if videos:
         segments.append(f"\n## Videos: {len(videos)} videos available")
 
@@ -385,32 +405,32 @@ def _build_system_prompt(prd: dict) -> str:
     visual_contract = prd.get("visual_contract") or {}
     if visual_contract:
         segments.append("\n## VISUAL CONTRACT — From Arquiteto (obrigatório)")
-        segments.append(_compact_json(visual_contract, 900))
+        segments.append(_json_for_prompt(visual_contract, 3000))
 
     requirements_contract = prd.get("requirements_contract") or {}
     if requirements_contract:
         segments.append("\n## REQUIREMENTS CONTRACT — From Arquiteto (obrigatório)")
-        segments.append(_compact_json(requirements_contract, 900))
+        segments.append(_json_for_prompt(requirements_contract, 3000))
 
     site_build_plan = prd.get("site_build_plan") or {}
     if site_build_plan:
         segments.append("\n## SITE BUILD PLAN — From Arquiteto (obrigatório)")
-        segments.append(_compact_json(site_build_plan, 1000))
+        segments.append(_json_for_prompt(site_build_plan, 5000))
 
     visual_dna = prd.get("visual_dna") or {}
     if visual_dna:
         segments.append("\n## VISUAL DNA — From Arquiteto")
-        segments.append(_compact_json(visual_dna, 500))
+        segments.append(_json_for_prompt(visual_dna, 3000))
 
     layout_blueprint = prd.get("layout_blueprint") or []
     if layout_blueprint:
         segments.append("\n## LAYOUT BLUEPRINT — From Arquiteto")
-        segments.append(_compact_json(layout_blueprint, 500))
+        segments.append(_json_for_prompt(layout_blueprint, 3000))
 
     design_reference_pack = prd.get("design_reference_pack") or {}
     if design_reference_pack:
         segments.append("\n## DESIGN REFERENCE PACK — From Arquiteto")
-        segments.append(_compact_json(design_reference_pack, 500))
+        segments.append(_json_for_prompt(design_reference_pack, 3000))
 
     prompt_final = "\n".join(segments)
     if _openui_logger:

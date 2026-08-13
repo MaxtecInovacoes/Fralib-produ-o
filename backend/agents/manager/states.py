@@ -42,6 +42,8 @@ class PipelineState:
     variation_blueprint: Optional[dict] = None
     designer_prd: Optional[dict] = None
     visual_dna: Optional[dict] = None
+    media_plan: list[dict] = field(default_factory=list)
+    openui_payload: Optional[dict] = None
     visual_custody: list[dict] = field(default_factory=list)
     design_output: Optional[dict] = None
     build_output: Optional[dict] = None

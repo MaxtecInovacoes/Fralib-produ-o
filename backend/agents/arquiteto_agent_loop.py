@@ -827,6 +827,7 @@ def _apply_visual_contract_inputs(
                 for section in prd["sections"]
                 if isinstance(section, dict)
             ]
+    prd["media_plan"] = _build_media_plan(prd)
     try:
         prd["site_build_plan"] = build_site_build_plan(prd)
     except Exception as exc:
@@ -845,3 +846,50 @@ def _reorder_sections_by_blueprint(sections: list, order: list[str]) -> list:
         result.append(section)
     result.extend(section_map.values())
     return result
+
+
+def _build_media_plan(prd: dict) -> list[dict]:
+    photos = prd.get("photos") or prd.get("fotos") or []
+    section_order = (prd.get("variation_blueprint") or {}).get("ordem_das_secoes") or [
+        section.get("name") for section in prd.get("sections", []) if isinstance(section, dict)
+    ]
+    role_by_section = {
+        "hero": "hero",
+        "sobre": "environment",
+        "about": "environment",
+        "servicos": "service",
+        "services": "service",
+        "depoimentos": "proof",
+        "social-proof": "proof",
+        "prova": "proof",
+        "localizacao": "location",
+        "location": "location",
+        "contato": "conversion",
+        "contact": "conversion",
+    }
+    photo_urls: list[tuple[str, str]] = []
+    for item in photos:
+        if isinstance(item, dict):
+            url = item.get("url") or item.get("src") or item.get("regular")
+            source = item.get("source", "")
+        else:
+            url = str(item)
+            source = ""
+        if url:
+            photo_urls.append((url, source))
+
+    plan = []
+    for index, (url, source) in enumerate(photo_urls):
+        section = section_order[index] if index < len(section_order) else "media"
+        section = str(section or "media").lower()
+        plan.append(
+            {
+                "url": url,
+                "role": role_by_section.get(section, "editorial"),
+                "section": section,
+                "required": index == 0 or section == "hero",
+                "source": source,
+                "alt": f"{prd.get('business_name', 'Negócio local')} — imagem editorial para {section}",
+            }
+        )
+    return plan
