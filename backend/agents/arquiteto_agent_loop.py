@@ -725,6 +725,9 @@ def gerar_arquiteto_mestre_prd_agent(
     briefing_theo: str = "",
     dark_mode: bool = False,
     keyword_research: str = "",
+    niche_brief: dict | None = None,
+    creative_direction: dict | None = None,
+    variation_blueprint: dict | None = None,
 ) -> DesignerPRD:
     """
     Drop-in replacement para gerar_arquiteto_mestre_prd usando Managed Agent.
@@ -755,6 +758,8 @@ def gerar_arquiteto_mestre_prd_agent(
             briefing_theo=briefing_theo,
             dark_mode=dark_mode,
             keyword_research=keyword_research,
+            nicho_briefing=None,
+            variacao=None,
         )
 
     enriched = _enrich_prd(
@@ -764,9 +769,79 @@ def gerar_arquiteto_mestre_prd_agent(
         segmento=segmento,
         dark_mode=dark_mode,
     )
+    enriched = _apply_visual_contract_inputs(
+        enriched,
+        niche_brief=niche_brief or {},
+        creative_direction=creative_direction or {},
+        variation_blueprint=variation_blueprint or {},
+    )
     print(
         f"[ArquitetoAgent] Sucesso: {result.iterations} iterações, "
         f"{len(result.tools_used)} tools, verified={result.verified}, "
         f"sections={len(enriched.get('sections', []))}, photos={len(enriched.get('photos', []))}"
     )
     return DesignerPRD(**enriched)
+
+
+def _apply_visual_contract_inputs(
+    prd: dict,
+    *,
+    niche_brief: dict,
+    creative_direction: dict,
+    variation_blueprint: dict,
+) -> dict:
+    """Attach upstream visual contracts and rebuild dependent execution plans."""
+    prd = dict(prd or {})
+    if niche_brief:
+        prd["niche_brief"] = niche_brief
+    if creative_direction:
+        prd["creative_direction"] = creative_direction
+        hard = creative_direction.get("hard_constraints") or {}
+        typography = (hard.get("typography") or creative_direction.get("typography_strategy") or {})
+        palette = hard.get("palette") or (creative_direction.get("color_strategy") or {}).get("tokens_oklch")
+        if typography:
+            prd["typography"] = {
+                "heading": typography.get("heading") or (prd.get("typography") or {}).get("heading"),
+                "body": typography.get("body") or (prd.get("typography") or {}).get("body"),
+            }
+        if palette:
+            color_palette = dict(prd.get("color_palette") or {})
+            color_palette["tokens_oklch"] = palette
+            prd["color_palette"] = color_palette
+        anti_patterns = list(prd.get("anti_patterns") or [])
+        anti_patterns.extend(creative_direction.get("anti_patterns") or [])
+        prd["anti_patterns"] = list(dict.fromkeys(str(item) for item in anti_patterns if str(item).strip()))
+    if variation_blueprint:
+        prd["variation_blueprint"] = variation_blueprint
+        order = variation_blueprint.get("ordem_das_secoes") or []
+        if order:
+            prd["sections"] = _reorder_sections_by_blueprint(prd.get("sections") or [], order)
+            prd["layout_blueprint"] = [
+                {
+                    "section": section.get("name"),
+                    "variant": (variation_blueprint.get("layout_variants") or {}).get(section.get("name"))
+                    or section.get("layout_type")
+                    or variation_blueprint.get("template_estrutura", ""),
+                    "source": "variation_blueprint",
+                }
+                for section in prd["sections"]
+                if isinstance(section, dict)
+            ]
+    try:
+        prd["site_build_plan"] = build_site_build_plan(prd)
+    except Exception as exc:
+        print(f"[ArquitetoAgent] site_build_plan rebuild falhou: {exc}")
+    return prd
+
+
+def _reorder_sections_by_blueprint(sections: list, order: list[str]) -> list:
+    section_map = {str(section.get("name", "")).lower(): section for section in sections if isinstance(section, dict)}
+    normalized_order = [str(item).lower() for item in order if str(item).strip()]
+    result = []
+    for section_name in normalized_order:
+        section = section_map.pop(section_name, None)
+        if section is None:
+            section = {"name": section_name, "required": True, "data_source": "variation_blueprint"}
+        result.append(section)
+    result.extend(section_map.values())
+    return result

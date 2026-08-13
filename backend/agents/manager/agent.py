@@ -19,6 +19,9 @@ from backend.agents.manager.states import (
     STATE_INIT,
     STATE_HUNTING,
     STATE_QUALIFYING,
+    STATE_NICHE_BRIEFING,
+    STATE_DIRECTING,
+    STATE_VARIATING,
     STATE_DESIGNING,
     STATE_BUILDING,
     STATE_VALIDATING,
@@ -35,6 +38,9 @@ from backend.agents.manager.states import (
 # Import step functions
 from backend.agents.manager.step_hunter import step_hunter
 from backend.agents.manager.step_caio import step_caio
+from backend.agents.manager.step_nicho import step_nicho
+from backend.agents.manager.step_design_director import step_design_director
+from backend.agents.manager.step_variacao import step_variacao
 from backend.agents.manager.step_arquiteto import step_arquiteto
 from backend.agents.manager.step_builder import step_builder
 from backend.agents.manager.step_quality_gate import step_quality_gate
@@ -45,6 +51,9 @@ from backend.agents.manager.step_franz import step_franz
 PIPELINE_STEPS = [
     step_hunter,
     step_caio,
+    step_nicho,
+    step_design_director,
+    step_variacao,
     step_arquiteto,
     step_builder,
     step_quality_gate,
@@ -80,6 +89,9 @@ def _save_resume_checkpoint(state: PipelineState) -> None:
 def _hydrate_from_checkpoint(state: PipelineState) -> PipelineState:
     """Retoma pipeline por checkpoint quando PRD/HTML já existem para o lead."""
     if not state.tenant_id or not state.lead_id:
+        return state
+    if getattr(state, "forcar_renovacao", False):
+        state.history.append("Checkpoint: ignorado por renovacao forcada")
         return state
 
     try:
@@ -152,6 +164,9 @@ def run_pipeline(state: PipelineState, trace: object = None) -> PipelineState:
                     phase_map = {
                         STATE_HUNTING: "hunting",
                         STATE_QUALIFYING: "qualifying",
+                        STATE_NICHE_BRIEFING: "niche_briefing",
+                        STATE_DIRECTING: "directing",
+                        STATE_VARIATING: "variating",
                         STATE_DESIGNING: "designing",
                         STATE_BUILDING: "building",
                         STATE_VALIDATING: "validating",
@@ -162,6 +177,9 @@ def run_pipeline(state: PipelineState, trace: object = None) -> PipelineState:
                     agent_map = {
                         STATE_HUNTING: "hunter",
                         STATE_QUALIFYING: "caio",
+                        STATE_NICHE_BRIEFING: "agente_nicho",
+                        STATE_DIRECTING: "design_director",
+                        STATE_VARIATING: "agente_variacao",
                         STATE_DESIGNING: "arquiteto",
                         STATE_BUILDING: "builder",
                         STATE_VALIDATING: "qa_vision",

@@ -63,6 +63,42 @@ class VariacaoEstrutural(HandoffBase):
     angulo_de_comunicacao: str = ""
     regra_antirrepeticao: str = ""
     justificativa: str = ""
+    layout_variants: dict = Field(default_factory=dict)
+    rhythm: str = ""
+    signature_composition: str = ""
+    avoid: list[str] = Field(default_factory=list)
+
+
+class CreativeDirectionContract(HandoffBase):
+    brand_concept: str = ""
+    audience: str = ""
+    positioning: str = ""
+    commercial_thesis: str = ""
+    visual_concept: str = ""
+    visual_keywords: list[str] = Field(default_factory=list)
+    physical_scene: str = ""
+    color_strategy: dict = Field(default_factory=dict)
+    typography_strategy: dict = Field(default_factory=dict)
+    photography_strategy: dict = Field(default_factory=dict)
+    composition_strategy: str = ""
+    density_strategy: str = ""
+    rhythm_strategy: str = ""
+    hero_strategy: str = ""
+    cta_strategy: str = ""
+    signature_section: str = ""
+    anti_patterns: list[str] = Field(default_factory=list)
+    required_visual_differences: list[str] = Field(default_factory=list)
+    hard_constraints: dict = Field(default_factory=dict)
+    soft_constraints: dict = Field(default_factory=dict)
+
+
+class VisualCustodyRecord(BaseModel):
+    stage: str
+    received_decisions: dict = Field(default_factory=dict)
+    preserved_decisions: dict = Field(default_factory=dict)
+    changed_decisions: dict = Field(default_factory=dict)
+    lost_decisions: dict = Field(default_factory=dict)
+    notes: list[str] = Field(default_factory=list)
 
 
 class ValidacaoResultado(HandoffBase):

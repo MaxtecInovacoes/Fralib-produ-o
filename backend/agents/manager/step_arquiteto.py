@@ -29,7 +29,10 @@ def step_arquiteto(state: PipelineState) -> PipelineState:
 
             keyword_research = ""
             try:
-                from backend.services.keyword_research import pesquisar_keywords
+                try:
+                    from backend.services.keyword_research import pesquisar_keywords
+                except ModuleNotFoundError:
+                    from backend.agents.keyword_research import pesquisar_keywords_nicho as pesquisar_keywords
                 keyword_research = pesquisar_keywords(
                     segmento=state.segmento,
                     cidade=state.cidade,
@@ -48,11 +51,42 @@ def step_arquiteto(state: PipelineState) -> PipelineState:
                 caio_score=score,
                 dark_mode=dark_mode,
                 keyword_research=keyword_research,
+                niche_brief=state.niche_brief,
+                creative_direction=state.creative_direction,
+                variation_blueprint=state.variation_blueprint,
             )
 
             if prd and hasattr(prd, "business_name"):
                 state.design_output = _prd_to_dict(prd)
+                if state.niche_brief:
+                    state.design_output.setdefault("niche_brief", state.niche_brief)
+                if state.creative_direction:
+                    state.design_output.setdefault("creative_direction", state.creative_direction)
+                if state.variation_blueprint:
+                    state.design_output.setdefault("variation_blueprint", state.variation_blueprint)
+                state.designer_prd = state.design_output
+                state.visual_dna = state.design_output.get("visual_dna", {})
                 state.history.append(f"Arquiteto: PRD OK ({len(state.design_output.get('sections', []))} seções)")
+                try:
+                    from backend.agents.manager.states import _record_visual_custody
+
+                    _record_visual_custody(
+                        state,
+                        "designer_prd",
+                        received_decisions={
+                            "niche_brief": bool(state.niche_brief),
+                            "creative_direction": bool(state.creative_direction),
+                            "variation_blueprint": bool(state.variation_blueprint),
+                        },
+                        preserved_decisions={
+                            "visual_dna": state.visual_dna,
+                            "section_order": (state.variation_blueprint or {}).get("ordem_das_secoes", []),
+                            "typography": state.design_output.get("typography", {}),
+                            "color_palette": state.design_output.get("color_palette", {}),
+                        },
+                    )
+                except Exception as exc:
+                    logger.warning("[Arquiteto] visual custody falhou (lead=%s): %s", state.lead_id, exc)
 
                 try:
                     from backend.agents.pipeline_checkpoint import gerar_pipeline_id, salvar_checkpoint

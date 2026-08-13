@@ -2,7 +2,7 @@
 import logging
 import traceback
 from backend.agents.manager.states import (
-    PipelineState, STATE_QUALIFYING, STATE_DESIGNING, STATE_FAILED,
+    PipelineState, STATE_QUALIFYING, STATE_NICHE_BRIEFING, STATE_FAILED,
     _transition, _log_step_error,
 )
 
@@ -28,4 +28,4 @@ def step_caio(state: PipelineState) -> PipelineState:
         state.error = f"Caio: {e}"
         return _transition(state, STATE_FAILED)
 
-    return _transition(state, STATE_DESIGNING)
+    return _transition(state, STATE_NICHE_BRIEFING)

@@ -211,6 +211,9 @@ class DesignerPRD(BaseModel):
     minimum_required_media: Optional[int] = None
     visual_contract: Dict[str, Any] = Field(default_factory=dict)
     site_build_plan: Dict[str, Any] = Field(default_factory=dict)
+    niche_brief: Dict[str, Any] = Field(default_factory=dict)
+    creative_direction: Dict[str, Any] = Field(default_factory=dict)
+    variation_blueprint: Dict[str, Any] = Field(default_factory=dict)
 
     animations: List[AnimationSpec] = Field(default_factory=list)
 

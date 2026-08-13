@@ -14,6 +14,9 @@ USE_QA_V2 = True  # default; overridden by env in barrel agent.py
 STATE_INIT = "init"
 STATE_HUNTING = "hunting"
 STATE_QUALIFYING = "qualifying"
+STATE_NICHE_BRIEFING = "niche_briefing"
+STATE_DIRECTING = "directing"
+STATE_VARIATING = "variating"
 STATE_DESIGNING = "designing"
 STATE_BUILDING = "building"
 STATE_VALIDATING = "validating"
@@ -34,6 +37,12 @@ class PipelineState:
     cidade: str = ""
     lead_data: dict = field(default_factory=dict)
     caio_output: Optional[dict] = None
+    niche_brief: Optional[dict] = None
+    creative_direction: Optional[dict] = None
+    variation_blueprint: Optional[dict] = None
+    designer_prd: Optional[dict] = None
+    visual_dna: Optional[dict] = None
+    visual_custody: list[dict] = field(default_factory=list)
     design_output: Optional[dict] = None
     build_output: Optional[dict] = None
     quality_score: int = 0
@@ -54,6 +63,29 @@ def _transition(state: PipelineState, new_state: str) -> PipelineState:
     state.history.append(f"{state.current_state} → {new_state}")
     state.current_state = new_state
     return state
+
+
+def _record_visual_custody(
+    state: PipelineState,
+    stage: str,
+    *,
+    received_decisions: Optional[dict] = None,
+    preserved_decisions: Optional[dict] = None,
+    changed_decisions: Optional[dict] = None,
+    lost_decisions: Optional[dict] = None,
+    notes: Optional[list[str]] = None,
+) -> None:
+    """Append a visual custody record for auditability across the pipeline."""
+    state.visual_custody.append(
+        {
+            "stage": stage,
+            "received_decisions": received_decisions or {},
+            "preserved_decisions": preserved_decisions or {},
+            "changed_decisions": changed_decisions or {},
+            "lost_decisions": lost_decisions or {},
+            "notes": notes or [],
+        }
+    )
 
 
 def _validate_required_fields(data: dict, required: list[str]) -> tuple[bool, str]:
