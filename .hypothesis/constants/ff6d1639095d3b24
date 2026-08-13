@@ -1,4 +1,0 @@
-# file: C:\fralib\backend\whatsapp\message_preprocessor.py
-# hypothesis_version: 6.156.6
-
-[0.0, 0.1, 0.2, 0.3, 0.4, 0.6, 0.7, 0.9, 0.95, 1.0, 500, 10000, 86400, 'AUTO_AUSENTE', 'BOT_ASSISTANT', 'LEAD_REAL', 'ProcessResult', '[audio]', '[documento]', '[imagem]', '[midia]', '[mídia]', '[sticker]', '[video]', '[vídeo]', '\\{[^{}]*\\}', '```', '```json', 'ask_human', 'ausente_pattern', 'auto_ausente', 'bot_assistant', 'confianca', 'contextInfo', 'empty_text', 'encaminhada', 'forward_to_franz', 'forwarded', 'haiku', 'haiku_classifier', 'handoff', 'has_schedule', 'has_self_intro', 'has_team_speaking', 'has_welcome_emoji', 'isForwarded', 'is_short', 'lead_real', 'media_placeholder', 'midia_vazia', 'no_response', 'opt_out', 'opt_out_pattern', 'sdr_msg_classifier', 'threading', 'tipo', 'unknown', 'word_count']

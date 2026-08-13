@@ -1,4 +1,0 @@
-# file: C:\fralib\backend\agents\llm\direct.py
-# hypothesis_version: 6.156.6
-
-[0.7, 60.0, 200, 4000, '/', '/chat/completions', '/v1/?$', 'AGENT_MODEL_MAP', 'ANTHROPIC_API_KEY', 'ANTHROPIC_BASE_URL', 'Authorization', 'FRALIB_DEBUG_CACHE', 'FRALIB_DEFAULT_MODEL', 'NVIDIA_API_KEYS', '\\{.*\\}', 'agent', 'anthropic', 'base_url', 'choices', 'claude-sonnet-4-6', 'config.py', 'content', 'env_var', 'errors', 'fralib.llm.direct', 'input_tokens', 'known', 'last_error', 'max_tokens', 'message', 'messages', 'model', 'nvidia', 'output_tokens', 'role', 'system', 'system_len', 'temperature', 'text', 'text_preview', 'thinking', 'type', 'usage', 'user', 'user_len']

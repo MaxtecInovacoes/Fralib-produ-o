@@ -1,4 +1,0 @@
-# file: C:\fralib\backend\services\email_service.py
-# hypothesis_version: 6.156.6
-
-[200, 201, 300, 'Ainda está por aí? 🚀', 'BREVO_API_KEY', 'Content-Type', 'FraLib', 'Lead', 'Oportunidade FraLib', 'api-key', 'application/json', 'assunto', 'contato@fralib.site', 'corpo_html', 'email', 'enviado', 'error', 'htmlContent', 'mensagem', 'messageId', 'message_id', 'name', 'no_api_key', 'reason', 'sender', 'stub', 'subject', 'to']

@@ -1,4 +1,0 @@
-# file: C:\fralib\backend\core\auth.py
-# hypothesis_version: 6.156.6
-
-[401, 403, 86400, '/planos', '1', 'Acesso negado', 'CSRF token invalido', 'DELETE', 'Not authenticated', 'PATCH', 'POST', 'PUT', 'REDIS_URL', 'Token expirado', 'Token inválido', 'Token revogado', 'account_blocked', 'admin', 'bloqueado', 'cancelado', 'desativado', 'email', 'exp', 'fralib_csrf', 'fralib_session', 'hash', 'id', 'inadimplente', 'message', 'reason', 'role', 'status', 'sub', 'superadmin', 'suspenso', 'tenant_id', 'ttl', 'upgrade_url', 'user', 'uvicorn', 'verify_exp', 'x-csrf-token', 'x-xsrf-token']

@@ -1,4 +1,0 @@
-# file: C:\fralib\backend\agents\builder\quality_gate_v2\runner.py
-# hypothesis_version: 6.156.6
-
-[0.5, 375, 812, 900, 1440, '--no-sandbox', '.html', 'chrome', 'desktop', 'device_scale_factor', 'domcontentloaded', 'full_page', 'height', 'mobile', 'networkidle', 'png', 'utf-8', 'w', 'width']

@@ -1,4 +1,0 @@
-# file: C:\fralib\backend\whatsapp\sdr_reply_service.py
-# hypothesis_version: 6.156.6
-
-[0.0, 0.2, 0.7, 120, 150, 250, 1000, ' | ', '"', '"next_stage"', '"novo_stage"', '"reply"', '"resposta"', '%Y-%m-%d', 'America/Sao_Paulo', '\\"', '\\n', '\\{[\\s\\S]*', '```', '```\\w*', '```json', 'assistant', 'content', 'haiku', 'hook', 'invalid', 'ok', 'past', 'role', 'saida', 'sdr', 'user', '{']

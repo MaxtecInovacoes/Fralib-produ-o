@@ -1,4 +1,0 @@
-# file: C:\fralib\backend\whatsapp\transparency.py
-# hypothesis_version: 6.156.6
-
-[200, 'DATABASE_URL', 'build_status_message', 'cooldown', 'enqueue_outbound', 'handoff', 'paused', 'transparency', 'transparency_enabled', '…']

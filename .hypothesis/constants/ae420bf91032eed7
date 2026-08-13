@@ -1,4 +1,0 @@
-# file: C:\fralib\backend\core\auth_helpers.py
-# hypothesis_version: 6.156.6
-
-[401, '/', '127.0.0.1', 'APP_URL', 'Authorization', 'Bearer', 'Bearer ', 'CSRF token invalido', 'FRALIB_PUBLIC_URL', 'Token sem user_id', 'access', 'ativo', 'creditos', 'creditos_max', 'current_plan_id', 'email', 'https://fralib.com', 'id', 'localhost', 'plano', 'released', 'role', 'status', 'sub', 'tenant_id', 'trial', 'trial_ends_at', 'user']

@@ -1,4 +1,0 @@
-# file: C:\fralib\backend\endpoints\lead_supply_endpoints.py
-# hypothesis_version: 6.156.6
-
-[402, 404, 429, '/api/lead-supply', '/config', '/pause', '/production/tick', '/refill', '/retry-all', '/start', '/status', 'Lead não encontrado', 'allowed', 'ativo', 'config', 'cooldown', 'duplicate_job', 'hunter_pausado', 'id', 'immediate', 'job_id', 'lead-supply', 'manual', 'manual-inline', 'manual-retry', 'manual-retry-all', 'no_approved_lead', 'ok', 'permission', 'pipeline_running', 'producao_pausada', 'reason', 'reprocessed', 'start', 'start-inline', 'tenant_id', 'tick_job_id', 'uid', 'waiting']

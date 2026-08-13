@@ -1,4 +1,0 @@
-# file: C:\fralib\backend\endpoints\leads_crud_sdr.py
-# hypothesis_version: 6.156.6
-
-[200, 400, 403, 404, 409, 500, 503, '/api/leads', '/planos', '/{lead_id}/feedback', '55', 'Lead nao encontrado', 'STANDARD', 'X-API-Key', '[Leads SDR] Erro: %s', '\\D', 'connected', 'convertido', 'core', 'estado', 'hook', 'id', 'info', 'lead_id', 'leads', 'mensagem', 'mensagem_usada', 'message', 'nicho', 'observacao', 'ok', 'outbound', 'pendente_wpp', 'perdido', 'price_tier', 'reason', 'resultado', 'saida', 'sdr_plan_required', 'segmento', 'stage', 'status', 'success', 'tenant_id', 'tier', 'uid', 'upgrade_url', 'user_id', 'variant']

@@ -1,4 +1,0 @@
-# file: C:\fralib\backend\core\database.py
-# hypothesis_version: 6.156.6
-
-[0.2, 0.3, 0.35, 0.4, 0.55, 0.75, 1200, 1500, 2000, 3000, 3600, 4000, 6000, 16000, ', ', '-csearch_path=public', 'DATABASE_URL', 'UTF8', 'agent_name', 'agente_nicho', 'agente_variacao', 'arquiteto_mestre', 'builder_model', 'builder_renderer', 'client_encoding', 'config', 'config = :config', 'connect_args', 'curadoria', 'default_model', 'designer_prd', 'echo', 'fralib_schema_init', 'franz', 'iniciado_em', 'iniciado_em = NOW()', 'iniciado_em = NULL', 'light_model', 'lock_key', 'max_tokens', 'mins', 'model_id', 'options', 'pausado', 'pausado = :pausado', 'pool_pre_ping', 'postgresql://', 'provider', 'rodando', 'rodando = :rodando', 'temperature', 'tenant_id', 'updated_at', 'updated_at = NOW()', 'v', 'validador']

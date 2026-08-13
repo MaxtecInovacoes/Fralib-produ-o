@@ -1,4 +1,0 @@
-# file: C:\fralib\backend\core\knowledge_journal.py
-# hypothesis_version: 6.156.6
-
-['ArtifactGenerated', 'IdentityApproved', 'LeadQualified', 'NarrativeLocked', 'NarrativeRefined', 'ProjectPublished', 'PromiseValidated', 'QualityConcernRaised', 'QualityConfirmed', 'artifact_generated', 'criado_em', 'event_type', 'evt', 'hyp', 'hypothesis', 'identity_approved', 'lead_qualified', 'market_analyzed', 'narrative_locked', 'narrative_refined', 'now', 'pay', 'payload', 'pid', 'positioning_chosen', 'project_published', 'quality_confirmed', 'seq']

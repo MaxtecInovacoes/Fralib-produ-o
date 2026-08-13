@@ -1,4 +1,0 @@
-# file: C:\fralib\backend\endpoints\whatsapp_endpoints.py
-# hypothesis_version: 6.156.6
-
-[1.0, 200, 400, 403, 502, 503, '/api/whatsapp', '/bot-config', '/connect', '/disconnect', '/qr', '/status', '0', '1', 'X-API-Key', 'authenticated', 'connected', 'connecting', 'detail', 'disconnected', 'error', 'id', 'key', 'mensagem', 'ok', 'open', 'qr', 'qrCode', 'qr_code', 'requires_qr', 'sim', 'status', 'tenantId', 'trial', 'true', 'uid', 'unknown', 'updated', 'val', 'whatsapp']

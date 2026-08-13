@@ -1,4 +1,0 @@
-# file: C:\fralib\backend\services\credits_manager.py
-# hypothesis_version: 6.156.6
-
-[0.0, '100', 'active', 'admin', 'agency', 'allowed', 'ativo', 'beta', 'bloqueado', 'cancelado', 'creditos_restantes', 'custo_usd', 'deduzidos', 'erro', 'free', 'ilimitado', 'inadimplente', 'novo', 'ok', 'past_due', 'reason', 'role', 'run_id', 'saldo_anterior', 'saldo_atual', 'sem_assinatura_ativa', 'superadmin', 'suspenso', 'trial', 'trialing', 'uid']

@@ -1,4 +1,0 @@
-# file: C:\fralib\backend\endpoints\__init__.py
-# hypothesis_version: 6.156.6
-
-['health_router', 'lead_supply_router', 'leads_router', 'whatsapp_router']

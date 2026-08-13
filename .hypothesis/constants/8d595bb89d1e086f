@@ -1,4 +1,0 @@
-# file: C:\fralib\backend\agents\llm\config.py
-# hypothesis_version: 6.156.6
-
-[0.0, 60.0, ',', '..', '.env', '/', '1', '1.2', '40', 'ANTHROPIC_API_KEY', 'ANTHROPIC_BASE_URL', 'FRALIB_ENV', 'LITELLM_API_KEY', 'LITELLM_BASE_URL', 'LLM_CALL_SPACING', 'NVIDIA_API_KEYS', 'NVIDIA_BASE_URL', 'arquiteto', 'builder_renderer', 'claude-sonnet-4-6', 'fallback_model_id', 'fallback_provider', 'franz', 'haiku', 'max_tokens', 'model_id', 'on', 'opus', 'prod', 'provider', 'services', 'sonnet', 'temperature', 'top_p', 'true', 'validador', 'yes']

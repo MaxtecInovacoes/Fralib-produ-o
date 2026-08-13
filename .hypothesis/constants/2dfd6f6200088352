@@ -1,4 +1,0 @@
-# file: C:\fralib\backend\endpoints\leads_queries.py
-# hypothesis_version: 6.156.6
-
-[168, 404, '/api/leads', '/capturados', '/conversas-ativas', '/descartados', '/desqualificados', '/fila', '/fila-qualificados', '/incompletos', '/mensagens-novas', '/pendentes-whatsapp', '/processar-fila', '/{lead_id}/chat', '/{lead_id}/conversa', 'Lead nao encontrado', 'Nenhum lead na fila', 'Processando lead: ', 'agora', 'capturado', 'core', 'count', 'criado_em', 'criado_em_iso', 'dados_completos', 'deletados', 'direcao', 'horas_espera', 'icp_score', 'id', 'last_msg', 'last_msg_preview', 'last_ts', 'last_ts_iso', 'lead_id', 'lead_nome', 'leads', 'leads_com_resposta', 'lid', 'mensagem', 'mensagens', 'nome', 'ok', 'posicao', 'sdr_stage', 'st', 'tempo_espera', 'tenant_id', 'texto', 'total', 'ts', 'uid', 'user_id', '…']

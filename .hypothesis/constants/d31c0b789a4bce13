@@ -1,4 +1,0 @@
-# file: C:\fralib\backend\whatsapp\response_executor.py
-# hypothesis_version: 6.156.6
-
-[2.5, 5.0, 'concluido', 'connected', 'engine', 'fd', 'followup_date', 'franz_output', 'get_tenant_status_fn', 'handoff', 'http_client', 'humanized_delay_fn', 'id', 'increment_daily_fn', 'invalid', 'jid', 'lead_id', 'lead_key', 'lead_name', 'meowhats_http', 'meowhats_key', 'notify_handoff_fn', 'novo_stage', 'opt_out', 'past', 'perdidos', 'prior_outbound', 'raw_stage', 'reply', 'resposta', 'resposta_partes', 'saida', 'save_interaction_fn', 'scheduled', 'sdr_stage_atual', 'segmento', 'send_failed', 'set_cooldown_fn', 'status', 'telefone', 'tenant_id', 'uid', 'unknown', 'update_stage_fn', 'user_id', 'whatsapp_listener']

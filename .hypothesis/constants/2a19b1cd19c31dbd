@@ -1,4 +1,0 @@
-# file: C:\fralib\backend\endpoints\credits\__init__.py
-# hypothesis_version: 6.156.6
-
-['checkout_router', 'status_router', 'webhook_router']
