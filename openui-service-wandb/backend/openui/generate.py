@@ -182,12 +182,21 @@ def _build_system_prompt(prd: dict) -> str:
     business = prd.get("business_name", "")
     cidade = prd.get("cidade", "")
     segmento = prd.get("segmento", "")
+    render_hint = str(prd.get("_render_hint") or "").strip().lower()
+
+    if render_hint == "shell_document":
+        task_description = "Generate only the empty HTML shell for a landing page"
+    elif render_hint == "section_fragment":
+        task_description = "Generate only the requested semantic section fragment"
+    else:
+        task_description = "Generate a complete, production-ready landing page HTML"
 
     segments.append(
-        f"You are an expert frontend developer. Generate a complete, production-ready "
-        f"landing page HTML for a {segmento} business called '{business}' "
+        f"You are an expert frontend developer. {task_description} "
+        f"for a {segmento} business called '{business}' "
         f"located in {cidade}. "
-        "Use a Tailwind-first approach so the response stays compact and the full body fits in the token budget."
+        "Obey the render mode and output contract exactly. "
+        "Use a Tailwind-first approach so the response stays compact."
     )
 
     # Design system
@@ -406,19 +415,24 @@ def _build_user_message(prd: dict) -> str:
     section_names = [s.get("name", "") for s in prd.get("sections", []) if isinstance(s, dict)]
     business_name = prd.get("business_name", "")
     cidade = prd.get("cidade", "")
-    return (
-        _build_mode_instructions(prd) + " " +
-        "Generate the complete landing page HTML based on the DesignerPRD "
-        "specification. Follow the design system, sections, and creative "
-        "directive precisely. Output only the raw HTML file. "
-        f"Business: {business_name}. City: {cidade}. "
-        f"Required sections: {', '.join(section_names)}. "
-        "Do not output CSS-only layouts, placeholder wrappers, or empty body content. "
-        "Use Tailwind utility classes directly on the elements. "
-        "Do not emit a long <style> block. "
-        "Write the full <body> structure first, including <main>, <section>, headings, text and CTAs. "
-        "Keep the <head> very short so the response finishes the complete body. "
-        "Prefer complete content over visual polish if you must trade off."
+    render_hint = str(prd.get("_render_hint") or "").strip().lower()
+    context = f" Business: {business_name}. City: {cidade}."
+    if render_hint == "shell_document":
+        return _build_mode_instructions(prd) + context + (
+            " Output only the raw HTML shell. The main element must remain empty."
+        )
+    if render_hint == "section_fragment":
+        return _build_mode_instructions(prd) + context + (
+            f" Requested section: {', '.join(section_names)}. "
+            "Output only the raw semantic section fragment. "
+            "Start with <section and finish with </section>. "
+            "Include visible heading, useful text, and CTA/content. "
+            "Use Tailwind classes directly and do not include CSS or JavaScript."
+        )
+    return _build_mode_instructions(prd) + context + (
+        f" Required sections: {', '.join(section_names)}. "
+        "Output only the raw complete HTML document. "
+        "Write the full body structure first and prefer complete content over visual polish."
     )
 
 
