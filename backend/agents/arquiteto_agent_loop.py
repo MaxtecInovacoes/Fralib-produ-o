@@ -310,7 +310,45 @@ def _callar_bloco_arquiteto(
               f"usando retorno cru: {list(prd_partial.keys())}", flush=True)
         return prd_partial
 
-    raise RuntimeError(f"LLM retornou JSON vazio para grupo [{campos_str}]")
+    fallback = _fallback_group_fields(campos_grupo)
+    print(
+        f"[ArquitetoAgent] AVISO grupo [{campos_str}]: JSON vazio; "
+        "aplicando contrato deterministico",
+        flush=True,
+    )
+    return fallback
+
+
+def _fallback_group_fields(campos_grupo: list[str]) -> dict:
+    """Mantém o PRD válido quando um bloco parcial retorna texto sem JSON."""
+    defaults = {
+        "sections": [
+            {"name": "hero", "required": True},
+            {"name": "sobre", "required": True},
+            {"name": "servicos", "required": True},
+            {"name": "depoimentos", "required": True},
+            {"name": "faq", "required": True},
+            {"name": "localizacao", "required": True},
+            {"name": "contato", "required": True},
+            {"name": "footer", "required": True},
+        ],
+        "animations": [],
+        "instrucao_criativa_para_dev": "Usar pesquisa, mídia e DNA visual do lead sem repetir sites anteriores.",
+        "anti_patterns": [
+            "emoji em textos ou controles",
+            "metricas, depoimentos ou servicos inventados",
+            "layout generico repetido do mesmo nicho",
+        ],
+        "schema_org_types": ["LocalBusiness", "FAQPage"],
+        "faq_questions": [],
+        "seo_keywords": [],
+        "value_props": [],
+        "reviews_list": [],
+        "photos": [],
+        "videos": [],
+        "hours": {},
+    }
+    return {field: defaults.get(field, "") for field in campos_grupo}
 
 
 def _merge_prd_partials(partials: list[dict]) -> dict:
