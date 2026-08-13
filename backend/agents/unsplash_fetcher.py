@@ -13,7 +13,10 @@ import random
 import requests
 
 UNSPLASH_ACCESS_KEY = os.getenv("UNSPLASH_ACCESS_KEY", "")
-CACHE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "unsplash_cache")
+CACHE_DIR = os.getenv(
+    "FRALIB_UNSPLASH_CACHE_DIR",
+    os.path.join(os.getenv("FRALIB_CACHE_DIR", "/tmp/fralib_cache"), "unsplash"),
+)
 CACHE_TTL = 7 * 24 * 3600  # 7 dias por negócio
 
 # Queries base por nicho — termos em inglês convertem melhor no Unsplash

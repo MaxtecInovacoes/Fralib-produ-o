@@ -72,10 +72,9 @@ def buscar_inteligencia_jina(
     """
 
     # Cache
-    _cache_dir = os.path.join(
-        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-        "agents",
-        "jina_cache",
+    _cache_dir = os.getenv(
+        "FRALIB_JINA_CACHE_DIR",
+        os.path.join(os.getenv("FRALIB_CACHE_DIR", "/tmp/fralib_cache"), "jina"),
     )
     os.makedirs(_cache_dir, exist_ok=True)
     _cache_key = hashlib.md5(
