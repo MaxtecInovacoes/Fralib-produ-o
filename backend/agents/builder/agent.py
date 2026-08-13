@@ -507,7 +507,7 @@ def _extract_body_only(html: str) -> str:
     fragment = match.group(1) if match else (html or "")
     fragment = re.sub(r"(?is)<!DOCTYPE[^>]*>", "", fragment)
     fragment = re.sub(r"(?is)</?html[^>]*>", "", fragment)
-    fragment = re.sub(r"(?is)</?head[^>]*>.*?(?=(</body>|$))", "", fragment)
+    fragment = re.sub(r"(?is)</?head\b[^>]*>.*?(?=(</body>|$))", "", fragment)
     fragment = re.sub(r"(?is)</?body[^>]*>", "", fragment)
     return fragment.strip()
 
@@ -519,18 +519,18 @@ def _concat_html(partials: list) -> str:
 
     def _strip_document_scaffold(fragment: str) -> str:
         fragment = re.sub(r"<!DOCTYPE[^>]*>\s*", "", fragment, flags=re.IGNORECASE)
-        fragment = re.sub(r"<head[^>]*>.*?</head>", "", fragment, flags=re.DOTALL | re.IGNORECASE)
+        fragment = re.sub(r"<head\b[^>]*>.*?</head>", "", fragment, flags=re.DOTALL | re.IGNORECASE)
         fragment = re.sub(r"<title[^>]*>.*?</title>", "", fragment, flags=re.DOTALL | re.IGNORECASE)
         fragment = re.sub(r"<meta\b[^>]*>", "", fragment, flags=re.IGNORECASE)
         fragment = re.sub(r"<link\b[^>]*>", "", fragment, flags=re.IGNORECASE)
-        fragment = re.sub(r"</?head[^>]*>", "", fragment, flags=re.IGNORECASE)
+        fragment = re.sub(r"</?head\b[^>]*>", "", fragment, flags=re.IGNORECASE)
         fragment = re.sub(r"</?title[^>]*>", "", fragment, flags=re.IGNORECASE)
         fragment = re.sub(r"</?html[^>]*>", "", fragment, flags=re.IGNORECASE)
         fragment = re.sub(r"</?body[^>]*>", "", fragment, flags=re.IGNORECASE)
         return fragment.strip()
 
     def _extract_head(html: str) -> str:
-        match = re.search(r"<head[^>]*>(.*?)</head>", html, flags=re.DOTALL | re.IGNORECASE)
+        match = re.search(r"<head\b[^>]*>(.*?)</head>", html, flags=re.DOTALL | re.IGNORECASE)
         if match:
             return match.group(1).strip()
         return (
