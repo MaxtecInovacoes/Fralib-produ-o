@@ -5,10 +5,12 @@ Uso: python3 /root/fralib/frontend/build_admin.py
 """
 
 import os
+from pathlib import Path
 
-PARTIALS_DIR = '/opt/fralib/frontend/partials/admin/'
-OUTPUT_PROD  = '/var/www/fralib/admin.html'
-OUTPUT_LOCAL = '/opt/fralib/frontend/admin.html'
+ROOT = Path(__file__).resolve().parents[1]
+PARTIALS_DIR = ROOT / 'frontend' / 'partials' / 'admin'
+OUTPUT_LOCAL = ROOT / 'frontend' / 'admin.html'
+OUTPUT_PROD = Path('/var/www/fralib/admin.html')
 
 PARTIALS_ORDER = [
     '_head.html',
@@ -27,7 +29,7 @@ PARTIALS_ORDER = [
 def build():
     chunks = []
     for name in PARTIALS_ORDER:
-        path = os.path.join(PARTIALS_DIR, name)
+        path = PARTIALS_DIR / name
         with open(path, 'r', encoding='utf-8') as f:
             content = f.read()
         chunks.append(content)
@@ -36,8 +38,12 @@ def build():
     full = ''.join(chunks)
     total_lines = len(full.splitlines())
 
-    for dest in (OUTPUT_PROD, OUTPUT_LOCAL):
-        os.makedirs(os.path.dirname(dest), exist_ok=True)
+    destinations = [OUTPUT_LOCAL]
+    if os.name != 'nt':
+        destinations.append(OUTPUT_PROD)
+
+    for dest in destinations:
+        os.makedirs(dest.parent, exist_ok=True)
         with open(dest, 'w', encoding='utf-8') as f:
             f.write(full)
         print(f'Salvo em: {dest}')

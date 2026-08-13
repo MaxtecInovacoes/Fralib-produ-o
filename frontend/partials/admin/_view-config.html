@@ -53,6 +53,21 @@
 
     </div>
 
+    <!-- ESTEIRA DO PIPELINE -->
+    <div class="config-section" style="margin-bottom:24px;">
+      <div class="config-group" style="margin-bottom:0;">
+        <div class="config-group-title" style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+          <span>&#128337; ESTEIRA DO MOTOR FRALIB</span>
+          <span id="pipeline-timeline-updated" style="font-family:var(--fl-font-mono);font-size:10px;color:var(--fl-text-muted);font-weight:400;">aguardando...</span>
+        </div>
+        <p style="font-size:12px;color:var(--fl-text-muted);margin:4px 0 12px;">Acompanhe o job real do worker, fase atual, tempo na esteira e último erro estruturado.</p>
+        <div id="pipeline-timeline" style="display:grid;grid-template-columns:repeat(7,minmax(90px,1fr));gap:8px;margin-bottom:12px;">
+          <div style="grid-column:1/-1;color:var(--fl-text-muted);font-size:12px;text-align:center;padding:18px;border:1px dashed var(--fl-border);border-radius:10px;">Aguardando status do motor...</div>
+        </div>
+        <div id="pipeline-timeline-jobs" style="display:flex;flex-direction:column;gap:6px;"></div>
+      </div>
+    </div>
+
     <!-- PAINEL FILA DE LEADS -->
     <div class="config-section" id="painel-fila" style="margin-bottom:24px;display:none;">
       <div class="config-group" style="margin-bottom:0;">
@@ -1136,4 +1151,3 @@ window.initPixelOffice = function(){
     setTimeout(function(){ if(window.initPixelOffice){ window._pixelOfficeStarted=false; window.initPixelOffice(); } }, 100);
     </script>
 </section>
-

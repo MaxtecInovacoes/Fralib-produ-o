@@ -2085,6 +2085,95 @@ async def get_status(db: Session = Depends(get_db), usuario: dict = Depends(get_
     }
 
 
+@router.get('/timeline')
+async def get_pipeline_timeline(db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
+    """Esteira operacional do tenant baseada na fila canônica `jobs`."""
+    tenant_id = usuario.get("tenant_id", usuario["id"])
+    jobs = db.execute(text("""
+        SELECT
+            id,
+            tipo,
+            status,
+            attempts,
+            max_attempts,
+            last_phase,
+            left(coalesce(last_error, ''), 500) AS last_error,
+            criado_em,
+            started_at,
+            finished_at,
+            worker_id,
+            worker_heartbeat,
+            payload
+        FROM jobs
+        WHERE tenant_id = :tenant_id
+          AND tipo IN ('pipeline_lead', 'pipeline_multiplos', 'pipeline_main')
+        ORDER BY id DESC
+        LIMIT 8
+    """), {"tenant_id": tenant_id}).fetchall()
+
+    rows = []
+    now = datetime.now()
+    active_job_id = None
+    for job in jobs:
+        row = dict(job._mapping)
+        payload = row.get("payload") or {}
+        if isinstance(payload, str):
+            payload = {}
+        started = row.get("started_at") or row.get("criado_em")
+        finished = row.get("finished_at")
+        end_time = finished or now
+        elapsed = 0
+        if started:
+            try:
+                elapsed = max(0, int((end_time.replace(tzinfo=None) - started.replace(tzinfo=None)).total_seconds()))
+            except Exception:
+                elapsed = 0
+        if row.get("status") in ("pending", "running") and active_job_id is None:
+            active_job_id = row["id"]
+        rows.append({
+            "id": row["id"],
+            "tipo": row["tipo"],
+            "status": row["status"],
+            "attempts": row["attempts"],
+            "max_attempts": row["max_attempts"],
+            "last_phase": row.get("last_phase") or "aguardando_worker",
+            "last_error": row.get("last_error") or "",
+            "created_at": row["criado_em"].isoformat() if row.get("criado_em") else None,
+            "started_at": row["started_at"].isoformat() if row.get("started_at") else None,
+            "finished_at": row["finished_at"].isoformat() if row.get("finished_at") else None,
+            "elapsed_seconds": elapsed,
+            "worker_id": row.get("worker_id") or "",
+            "worker_heartbeat": row["worker_heartbeat"].isoformat() if row.get("worker_heartbeat") else None,
+            "lead_id": payload.get("lead_id") or payload.get("_lead_id_existente") or "",
+            "segmento": payload.get("segmento") or "",
+            "cidade": payload.get("cidade") or "",
+            "quantidade": payload.get("quantidade") or 1,
+        })
+
+    errors = db.execute(text("""
+        SELECT step, exception_type, left(coalesce(message, ''), 500) AS message, created_at
+        FROM pipeline_error_log
+        WHERE tenant_id = :tenant_id
+        ORDER BY created_at DESC
+        LIMIT 5
+    """), {"tenant_id": tenant_id}).fetchall()
+
+    return {
+        "ok": True,
+        "active_job_id": active_job_id,
+        "jobs": rows,
+        "errors": [
+            {
+                "step_name": r[0],
+                "error_type": r[1],
+                "error_message": r[2],
+                "created_at": r[3].isoformat() if r[3] else None,
+            }
+            for r in errors
+        ],
+    }
+
+
 @router.post('/parar')
 async def parar_pipeline(db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
     tenant_id = usuario.get("tenant_id", usuario["id"])

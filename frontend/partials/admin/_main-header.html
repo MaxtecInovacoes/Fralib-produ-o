@@ -10,7 +10,7 @@
       <!-- Controles do Pipeline -->
       <div class="pipeline-controls">
         <span class="pipeline-status idle" id="pipelineStatus">&#9679; IDLE</span>
-        <button class="btn-pipeline btn-pipeline-start" id="btnIniciar" id="btnIniciar">&#9654; INICIAR</button>
+        <button class="btn-pipeline btn-pipeline-start" id="btnIniciar">&#9654; INICIAR</button>
         <button class="btn-pipeline btn-pipeline-pause" id="btnPausar" onclick="pausarPipeline()" style="display:none">&#9646;&#9646; PAUSAR</button>
         <button class="btn-pipeline btn-pipeline-start" id="btnRetomar" onclick="retomarPipeline()" style="display:none">&#9654; RETOMAR</button>
       </div>
@@ -28,7 +28,7 @@
     <span style="width:8px;height:8px;border-radius:50%;background:#10b981;display:inline-block;animation:pulse 1s infinite;flex-shrink:0;"></span>
     <span style="color:#10b981;font-family:var(--fl-font-brand);font-size:11px;letter-spacing:1px;flex-shrink:0;">PIPELINE RODANDO</span>
     <span id="pipeline-banner-fase" style="color:#94a3b8;font-family:var(--fl-font-mono);font-size:11px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Aguardando...</span>
-    <button onclick="document.querySelector('[data-view=\'config\']').click()" style="background:transparent;border:1px solid #0183ff;color:#0183ff;padding:2px 10px;font-size:10px;cursor:pointer;font-family:var(--fl-font-brand);letter-spacing:1px;flex-shrink:0;">VER LOGS</button>
+    <button onclick="document.querySelector('[data-view=\'config\']').click()" style="background:transparent;border:1px solid #0183ff;color:#0183ff;padding:2px 10px;font-size:10px;cursor:pointer;font-family:var(--fl-font-brand);letter-spacing:1px;flex-shrink:0;">VER ESTEIRA</button>
   </div>
 
   <!-- KPI Cards — 6 métricas -->
@@ -75,4 +75,3 @@
   <div class="empty-state" id="emptyState">
     <p class="empty-text">AGUARDANDO SDR Franz<br>CAPTAR OS PRIMEIROS LEADS...</p>
   </div>
-
