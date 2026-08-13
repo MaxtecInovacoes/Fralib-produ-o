@@ -303,9 +303,9 @@ def _prd_to_spec(prd) -> dict:
         hero_copy = hero_section.get("copy_data") if isinstance(hero_section.get("copy_data"), dict) else {}
         hero = {
             "headline": _first_non_empty(
-                hero_section.get("title"),
-                hero_copy.get("h1") if isinstance(hero_copy, dict) else "",
                 prd.business_name,
+                hero_copy.get("h1") if isinstance(hero_copy, dict) else "",
+                hero_section.get("title"),
             ),
             "subheadline": _first_non_empty(
                 hero_copy.get("subtitle") if isinstance(hero_copy, dict) else "",
@@ -334,6 +334,10 @@ def _prd_to_spec(prd) -> dict:
     creative_direction = getattr(prd, "creative_direction", {}) or {}
     variation_blueprint = getattr(prd, "variation_blueprint", {}) or {}
     media_plan = getattr(prd, "media_plan", []) or []
+    photos = getattr(prd, "photos", None) or []
+    geo = getattr(prd, "geo", None)
+    if isinstance(geo, dict) and not any(geo.values()):
+        geo = None
 
     # Build motion_directives from creative direction and animations
     motion_soft = (creative_direction.get("soft_constraints") or {}).get("motion", {}) if isinstance(creative_direction, dict) else {}
@@ -385,11 +389,11 @@ def _prd_to_spec(prd) -> dict:
         "address": getattr(prd, "address", ""),
         "phone": getattr(prd, "phone", ""),
         "hours": getattr(prd, "hours", None) or {},
-        "photos": getattr(prd, "photos", []),
+        "photos": photos,
         "media_plan": media_plan,
         "videos": getattr(prd, "videos", []),
         "value_props": getattr(prd, "value_props", []) or [],
-        "geo": getattr(prd, "geo", None),
+        "geo": geo,
         "dark_mode": getattr(prd, "dark_mode", False),
         "google_maps_embed": getattr(prd, "google_maps_embed", ""),
         "components_21dev": getattr(prd, "components_21dev", []),
