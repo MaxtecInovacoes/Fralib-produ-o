@@ -605,9 +605,11 @@ def _enrich_prd(prd: dict, dados_hunter: dict, cidade: str, segmento: str, dark_
     prd.setdefault("phone", dados_hunter.get("telefone", ""))
     prd.setdefault("reviews_rating", float(dados_hunter.get("rating", 0)))
     prd.setdefault("reviews_count", int(dados_hunter.get("total_avaliacoes", 0)))
-    prd.setdefault("reviews_list", dados_hunter.get("reviews") or [])
+    if not prd.get("reviews_list"):
+        prd["reviews_list"] = dados_hunter.get("reviews") or dados_hunter.get("reviews_list") or []
     prd["_raw_reviews"] = dados_hunter.get("reviews") or []
-    prd.setdefault("photos", dados_hunter.get("fotos") or [])
+    if not prd.get("photos"):
+        prd["photos"] = dados_hunter.get("fotos") or dados_hunter.get("photos") or []
     prd.setdefault("logo_url", dados_hunter.get("logo_url"))
     prd.setdefault("hours", dados_hunter.get("horarios") or {})
     prd.setdefault("dark_mode", dark_mode)
@@ -755,5 +757,16 @@ def gerar_arquiteto_mestre_prd_agent(
             keyword_research=keyword_research,
         )
 
-    print(f"[ArquitetoAgent] Sucesso: {result.iterations} iterações, {len(result.tools_used)} tools, verified={result.verified}")
-    return DesignerPRD(**result.prd_data)
+    enriched = _enrich_prd(
+        result.prd_data,
+        dados_hunter=dados_hunter,
+        cidade=cidade,
+        segmento=segmento,
+        dark_mode=dark_mode,
+    )
+    print(
+        f"[ArquitetoAgent] Sucesso: {result.iterations} iterações, "
+        f"{len(result.tools_used)} tools, verified={result.verified}, "
+        f"sections={len(enriched.get('sections', []))}, photos={len(enriched.get('photos', []))}"
+    )
+    return DesignerPRD(**enriched)
