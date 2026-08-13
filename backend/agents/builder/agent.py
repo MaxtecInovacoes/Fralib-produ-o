@@ -504,7 +504,7 @@ def _inject_sections_into_shell(shell_html: str, section_fragments: list[str]) -
     if not shell_html:
         return ""
     shell_html = shell_html.strip()
-    body_content = "\n".join(_extract_body_only(fragment) for fragment in section_fragments if fragment).strip()
+    body_content = "\n".join(fragment.strip() for fragment in section_fragments if fragment and fragment.strip()).strip()
     if not body_content:
         return shell_html
     if "<main" in shell_html.lower():
