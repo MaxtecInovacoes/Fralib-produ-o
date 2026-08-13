@@ -45,6 +45,7 @@ class PipelineState:
     media_plan: list[dict] = field(default_factory=list)
     openui_payload: Optional[dict] = None
     visual_custody: list[dict] = field(default_factory=list)
+    visual_fingerprint: Optional[dict] = None
     design_output: Optional[dict] = None
     build_output: Optional[dict] = None
     quality_score: int = 0

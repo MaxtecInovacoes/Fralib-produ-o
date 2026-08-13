@@ -61,6 +61,23 @@ def _fallback_quality_gate(state: PipelineState) -> PipelineState:
         state.lead_id,
         len(html),
     )
+    try:
+        from backend.agents.artifact_store import write_html_artifact
+        write_html_artifact(
+            run_id=state.run_id,
+            lead_id=state.lead_id,
+            lead_name=state.lead_data.get("nome", "") if state.lead_data else "",
+            filename="04-quality-gate.html",
+            html=html,
+            metadata={
+                "step": "quality_gate_fallback",
+                "tenant_id": state.tenant_id,
+                "quality_score": state.quality_score,
+                "qa_v2": state.build_output.get("qa_v2", {}),
+            },
+        )
+    except Exception as exc:
+        logger.warning("[QualityGate] artifact fallback falhou (lead=%s): %s", state.lead_id, exc)
     return _transition(state, STATE_PUBLISHING)
 
 
@@ -76,6 +93,15 @@ def step_quality_gate(state: PipelineState) -> PipelineState:
     try:
         html = (state.build_output or {}).get("html", "")
         if html:
+            gate_result = _run_independent_gates(state, html)
+            state.visual_fingerprint = gate_result["fingerprint"]
+            state.build_output["visual_fingerprint"] = state.visual_fingerprint
+            state.build_output["gates"] = gate_result
+            if not gate_result["passed"]:
+                state.error = "Quality Gate: " + "; ".join(gate_result["issues"])
+                state.history.append(f"Quality Gate: reprovação determinística ({len(gate_result['issues'])} issues)")
+                return _transition(state, STATE_FAILED)
+
             state.quality_score = 100
             state.build_output["qa_v2"] = {
                 "vision_score": 10.0,
@@ -93,6 +119,25 @@ def step_quality_gate(state: PipelineState) -> PipelineState:
                 state.lead_id,
                 len(html),
             )
+            try:
+                from backend.agents.artifact_store import write_html_artifact
+                write_html_artifact(
+                    run_id=state.run_id,
+                    lead_id=state.lead_id,
+                    lead_name=state.lead_data.get("nome", "") if state.lead_data else "",
+                    filename="04-quality-gate.html",
+                    html=html,
+                    metadata={
+                        "step": "quality_gate_pass_through",
+                        "tenant_id": state.tenant_id,
+                        "quality_score": state.quality_score,
+                        "qa_v2": state.build_output.get("qa_v2", {}),
+                        "gates": state.build_output.get("gates", {}),
+                        "visual_fingerprint": state.visual_fingerprint,
+                    },
+                )
+            except Exception as exc:
+                logger.warning("[QualityGate] artifact pass-through falhou (lead=%s): %s", state.lead_id, exc)
             return _transition(state, STATE_PUBLISHING)
 
         state.error = "Quality Gate pass-through: HTML vazio"
@@ -218,6 +263,25 @@ def step_quality_gate(state: PipelineState) -> PipelineState:
             # Use repaired HTML if repair succeeded
             if qa_result.repair_success:
                 state.build_output["html"] = qa_result.html
+            try:
+                from backend.agents.artifact_store import write_html_artifact
+                write_html_artifact(
+                    run_id=state.run_id,
+                    lead_id=state.lead_id,
+                    lead_name=state.lead_data.get("nome", "") if state.lead_data else "",
+                    filename="04-quality-gate.html",
+                    html=state.build_output["html"],
+                    metadata={
+                        "step": "quality_gate_v2",
+                        "tenant_id": state.tenant_id,
+                        "quality_score": state.quality_score,
+                        "qa_v2": state.build_output.get("qa_v2", {}),
+                    },
+                )
+            except Exception as exc:
+                logger.warning("[QualityGate] artifact v2 falhou (lead=%s): %s", state.lead_id, exc)
+
+            if qa_result.repair_success:
                 state.history.append(f"QA v2: Vision score {qa_result.vision_score:.1f}/10, repaired ✓")
             elif qa_result.vision_passed:
                 state.history.append(f"QA v2: Vision score {qa_result.vision_score:.1f}/10, passed ✓")
@@ -257,3 +321,139 @@ def step_quality_gate(state: PipelineState) -> PipelineState:
         return _transition(state, STATE_FAILED)
 
     return _transition(state, STATE_PUBLISHING)
+
+
+def _run_independent_gates(state: PipelineState, html: str) -> dict:
+    technical = _technical_gate(html)
+    creative = _creative_compliance_gate(state, html)
+    diversity = _visual_diversity_gate(state, html)
+    issues = technical["issues"] + creative["issues"] + diversity["issues"]
+    return {
+        "passed": not issues,
+        "issues": issues,
+        "technical_gate": technical,
+        "creative_compliance_gate": creative,
+        "visual_diversity_gate": diversity,
+        "fingerprint": diversity["fingerprint"],
+    }
+
+
+def _technical_gate(html: str) -> dict:
+    lower = (html or "").lower()
+    issues = []
+    if len(html or "") < 1000:
+        issues.append("Technical Gate: HTML curto")
+    if "<main" not in lower:
+        issues.append("Technical Gate: <main> ausente")
+    if lower.count("<h1") != 1:
+        issues.append("Technical Gate: deve haver exatamente 1 <h1>")
+    if lower.count("<section") < 3:
+        issues.append("Technical Gate: menos de 3 seções")
+    if "opacity:0" in lower and "opacity: 1" not in lower and "opacity:1" not in lower:
+        issues.append("Technical Gate: possível conteúdo preso invisível")
+    return {"passed": not issues, "issues": issues}
+
+
+def _creative_compliance_gate(state: PipelineState, html: str) -> dict:
+    issues = []
+    design = state.design_output or {}
+    creative = design.get("creative_direction") or state.creative_direction or {}
+    variation = design.get("variation_blueprint") or state.variation_blueprint or {}
+    media_plan = design.get("media_plan") or state.media_plan or []
+    lower = (html or "").lower()
+
+    hard = creative.get("hard_constraints") if isinstance(creative, dict) else {}
+    hard = hard if isinstance(hard, dict) else {}
+    required_palette = hard.get("palette") if isinstance(hard.get("palette"), dict) else {}
+    required_typography = hard.get("typography") if isinstance(hard.get("typography"), dict) else {}
+
+    for token in required_palette.values():
+        if token and str(token).lower() not in lower:
+            issues.append(f"Creative Compliance Gate: paleta protegida ausente ({token})")
+            break
+    for font in required_typography.values():
+        if font and str(font).lower() not in lower:
+            issues.append(f"Creative Compliance Gate: tipografia protegida ausente ({font})")
+            break
+
+    section_order = variation.get("ordem_das_secoes") if isinstance(variation, dict) else []
+    if section_order and "<section" in lower:
+        first_required = str(section_order[0]).lower()
+        if first_required != "hero":
+            issues.append("Creative Compliance Gate: primeira seção do blueprint não é hero")
+
+    missing_media = [
+        item.get("url")
+        for item in media_plan
+        if isinstance(item, dict) and item.get("required") and item.get("url") and item.get("url") not in html
+    ]
+    if missing_media:
+        issues.append(f"Creative Compliance Gate: mídia obrigatória ausente ({missing_media[0]})")
+    return {"passed": not issues, "issues": issues}
+
+
+def _visual_diversity_gate(state: PipelineState, html: str) -> dict:
+    from backend.agents.visual_fingerprint import build_visual_fingerprint, fingerprint_similarity
+
+    fingerprint = build_visual_fingerprint(html, state.design_output or {})
+    threshold = float(os.environ.get("FRALIB_VISUAL_DIVERSITY_THRESHOLD", "0.86"))
+    comparisons = _load_prior_fingerprint_comparisons(state, fingerprint)
+    too_similar = [item for item in comparisons if item["similarity"] >= threshold]
+    issues = []
+    if too_similar:
+        issues.append(
+            "Visual Diversity Gate: similaridade alta "
+            f"({too_similar[0]['similarity']:.2f}) com {too_similar[0].get('lead_id', 'site anterior')}"
+        )
+    return {
+        "passed": not issues,
+        "issues": issues,
+        "fingerprint": fingerprint,
+        "threshold": threshold,
+        "comparisons": comparisons[:10],
+    }
+
+
+def _load_prior_fingerprint_comparisons(state: PipelineState, fingerprint: dict) -> list[dict]:
+    try:
+        from backend.core.database import SessionLocal
+        from sqlalchemy import text as _sql
+        from backend.agents.visual_fingerprint import fingerprint_similarity
+
+        db = SessionLocal()
+        try:
+            rows = db.execute(
+                _sql(
+                    """
+                    SELECT lead_id, segmento, visual_fingerprint
+                    FROM quality_gate_results
+                    WHERE tenant_id = :tenant_id
+                      AND lead_id <> :lead_id
+                      AND visual_fingerprint IS NOT NULL
+                    ORDER BY created_at DESC
+                    LIMIT 25
+                    """
+                ),
+                {"tenant_id": state.tenant_id, "lead_id": state.lead_id},
+            ).fetchall()
+        finally:
+            db.close()
+    except Exception:
+        return []
+
+    comparisons = []
+    for row in rows:
+        prior = row[2]
+        if isinstance(prior, str):
+            try:
+                prior = json.loads(prior)
+            except Exception:
+                prior = {}
+        comparisons.append(
+            {
+                "lead_id": row[0],
+                "segmento": row[1],
+                "similarity": fingerprint_similarity(fingerprint, prior if isinstance(prior, dict) else {}),
+            }
+        )
+    return sorted(comparisons, key=lambda item: item["similarity"], reverse=True)
