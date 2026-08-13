@@ -176,20 +176,40 @@ Return ONLY a single complete HTML file. No markdown, code fences, or explanatio
 
 def _build_system_prompt(prd: dict) -> str:
     """Build the system prompt from DesignerPRD spec."""
-    segments: list[str] = []
-
-    # Core identity
     business = prd.get("business_name", "")
     cidade = prd.get("cidade", "")
     segmento = prd.get("segmento", "")
     render_hint = str(prd.get("_render_hint") or "").strip().lower()
 
     if render_hint == "shell_document":
-        task_description = "Generate only the empty HTML shell for a landing page"
-    elif render_hint == "section_fragment":
-        task_description = "Generate only the requested semantic section fragment"
-    else:
-        task_description = "Generate a complete, production-ready landing page HTML"
+        return (
+            "You generate HTML shells. Return raw HTML only. "
+            f"Create the empty shell for {business}, a {segmento} business in {cidade}. "
+            "Required exact structure: <!DOCTYPE html><html lang=\"pt-BR\"><head>charset, viewport, title, Google Fonts and Tailwind CDN only</head>"
+            "<body><main id=\"app-shell\"></main></body></html>. "
+            "The main must be empty. Do not output sections, hero, footer, style blocks, scripts, markdown, or explanations."
+        )
+
+    if render_hint == "section_fragment":
+        sections = [section for section in prd.get("sections", []) if isinstance(section, dict)]
+        section_payload = sections[0] if sections else {}
+        palette = prd.get("paleta") or prd.get("color_palette") or {}
+        typography = prd.get("typography") or {}
+        return (
+            "You generate one semantic HTML section fragment. Return raw HTML only. "
+            f"Business: {business}. Segment: {segmento}. City: {cidade}. "
+            f"Requested section JSON: {_compact_json(section_payload, 1800)}. "
+            f"Palette JSON: {_compact_json(palette, 500)}. "
+            f"Typography JSON: {_compact_json(typography, 300)}. "
+            "Start the response with <section and finish with </section>. "
+            "Include visible heading, useful copy, and CTA/content from the requested section. "
+            "Use Tailwind utility classes directly. Do not output html, head, body, main, style, script, markdown, or explanation. "
+            "Generate only this requested section and nothing else."
+        )
+
+    segments: list[str] = []
+
+    task_description = "Generate a complete, production-ready landing page HTML"
 
     segments.append(
         f"You are an expert frontend developer. {task_description} "
