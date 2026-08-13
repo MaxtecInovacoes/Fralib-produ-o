@@ -46,6 +46,7 @@ class PipelineState:
     attempts: dict = field(default_factory=dict)
     estado_manual: str = ""
     paused_by: Optional[str] = None
+    forcar_renovacao: bool = False
 
 
 def _transition(state: PipelineState, new_state: str) -> PipelineState:

@@ -213,6 +213,7 @@ def _run_pipeline_job(db, job) -> bool:
         segmento=payload.get("segmento", ""),
         cidade=payload.get("cidade", ""),
         lead_data=payload.get("lead_data", {}),
+        forcar_renovacao=bool(payload.get("_forcar_renovacao", False)),
     )
     # ── Observability: criar trace para este job ──
     trace = Trace(
@@ -283,7 +284,38 @@ def _run_pipeline_job(db, job) -> bool:
             )
         except Exception as log_e:
             logger.warning("Failed to persist pipeline_error_log: %s", log_e)
-        job_status = job_queue.mark_failure(db, job["id"], error=final.error or "pipeline falhou")
+        job_status = job_queue.mark_failure(
+            db,
+            job["id"],
+            error=final.error or "pipeline falhou",
+            fase=final.error_step or final.current_state,
+            retriable=True,
+            lead_id=state.lead_id,
+            lead_nome=state.lead_data.get("nome", "") if state.lead_data else "",
+        )
+        if job_status != "pending" and state.lead_id and state.tenant_id:
+            try:
+                db.execute(
+                    text(
+                        """
+                        UPDATE leads
+                        SET status='erro_pipeline',
+                            erro_pipeline=:erro,
+                            atualizado_em=NOW()
+                        WHERE id=:id
+                          AND user_id=:uid
+                          AND status NOT IN ('concluido', 'descartado')
+                        """
+                    ),
+                    {
+                        "erro": (final.error or "pipeline falhou")[:500],
+                        "id": state.lead_id,
+                        "uid": state.tenant_id,
+                    },
+                )
+                db.commit()
+            except Exception as lead_err:
+                logger.warning("Falha ao marcar lead em erro_pipeline: %s", lead_err)
     # Loop-closer: atualiza lead_inventory e re-arma o próximo tick.
     lead_supply_engine.handle_pipeline_job_finished(
         db,
