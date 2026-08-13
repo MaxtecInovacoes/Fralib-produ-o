@@ -512,6 +512,13 @@
           <strong>Em portugues claro:</strong> o Motor FraLib encontra empresas, escolhe as melhores, gera um site e deixa tudo pronto para contato.
           Se algo estiver parado, esta tela mostra o motivo e o proximo passo.
         </div>
+        <div style="margin-top:12px;background:rgba(15,23,42,.72);border:1px solid var(--fl-border);border-radius:999px;height:14px;overflow:hidden;position:relative;">
+          <div id="pipelineTopProgressBar" style="height:100%;width:0%;background:linear-gradient(90deg,#9333ea,#38bdf8,#10b981);box-shadow:0 0 18px rgba(16,185,129,.35);transition:width .55s ease;"></div>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:7px;font-size:11px;color:var(--fl-text-muted);">
+          <span id="pipelineTopProgressLabel">0% da esteira</span>
+          <span>progresso aproximado</span>
+        </div>
         <div id="pipelineTopSteps" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(116px,1fr));gap:8px;margin-top:12px;"></div>
         <div id="pipelineTopLog" style="margin-top:12px;background:rgba(15,23,42,.58);border:1px solid var(--fl-border);border-radius:8px;padding:10px 12px;color:var(--fl-text-muted);font-size:12px;line-height:1.45;">
           Aguardando a esteira ser ligada.
@@ -3864,6 +3871,7 @@ async function iniciarLeadSupply() {
   if (!saved) return;
   _setLeadSupplyButtonBusy('btnLeadSupplyStart', true, 'LIGANDO...');
   _leadSupplySetAction('info', 'Ligando esteira', 'Hunter e producao automatica foram ativados. Isso nao cria um site sozinho; a producao ainda precisa achar 1 lead aprovado elegivel.');
+  if (window.renderPipelineTopTimeline) window.renderPipelineTopTimeline('hunter', 'Ligando esteira. Encontrando leads aprovados para produzir.', Date.now());
   try {
     var resp = await authFetch('/api/lead-supply/start', { method: 'POST' });
     var data = await resp.json().catch(function(){ return {}; });
@@ -3921,6 +3929,7 @@ async function _postLeadSupplyPause(payload) {
 
 async function forcarLeadSupplyRefill() {
   _setLeadSupplyButtonBusy('btnLeadSupplyRefill', true, 'BUSCANDO...');
+  if (window.renderPipelineTopTimeline) window.renderPipelineTopTimeline('hunter', 'Buscando leads agora. O Hunter esta procurando empresas.', Date.now());
   _leadSupplySetAction('info', 'Busca solicitada', 'O estoque nao muda na hora. Hunter precisa achar lead novo e Caio precisa aprovar.');
   try {
     var resp = await authFetch('/api/lead-supply/refill', { method: 'POST' });
@@ -3943,6 +3952,7 @@ async function forcarLeadSupplyRefill() {
 async function forcarLeadSupplyTick() {
   _setLeadSupplyButtonBusy('btnLeadSupplyTick', true, 'GERANDO...');
   _leadSupplySetAction('info', 'Criacao de pipeline solicitada', 'A producao tenta reservar 1 lead aprovado e abrir 1 pipeline real. Sem aprovados, nada nasce.');
+  if (window.renderPipelineTopTimeline) window.renderPipelineTopTimeline('builder_renderer', 'Criacao de pipeline solicitada. Reservando lead e preparando site.', Date.now());
   try {
     var resp = await authFetch('/api/lead-supply/production/tick', { method: 'POST' });
     var data = await resp.json().catch(function(){ return {}; });
@@ -3952,24 +3962,28 @@ async function forcarLeadSupplyTick() {
     }
     if (data && data.job_id) {
       _leadSupplySetAction('success', 'Pipeline criada', 'Lead reservado e pipeline real criada com job #' + data.job_id + '.', 7000);
+      if (window.renderPipelineTopTimeline) window.renderPipelineTopTimeline('builder_renderer', 'Pipeline criada com job #' + data.job_id + '. Criando site real.');
       if (typeof Toast !== 'undefined') Toast.success('Pipeline criada para o próximo lead aprovado.');
       _refreshLeadSupplySoon();
       return;
     }
     if (data && data.duplicate_job) {
       _leadSupplySetAction('warning', 'Lead ja estava em fila', 'Este lead ja tinha uma pipeline ativa ou acabava de ser reaproveitado. Nenhum job novo foi criado.', 7000);
+      if (window.renderPipelineTopTimeline) window.renderPipelineTopTimeline('builder_renderer', 'Ja existe pipeline ativa. Acompanhe a linha do tempo atual.');
       if (typeof Toast !== 'undefined') Toast.warning('Nenhum job novo foi criado para esse clique.');
       _refreshLeadSupplySoon();
       return;
     }
     if (data && data.waiting === 'no_approved_lead') {
       _leadSupplySetAction('info', 'Sem lead aprovado', 'Nao havia lead aprovado disponivel. O Hunter foi chamado para abastecer a fila.', 7000);
+      if (window.renderPipelineTopTimeline) window.renderPipelineTopTimeline('hunter', 'Sem lead aprovado agora. Chamando Hunter para abastecer a fila.');
       if (typeof Toast !== 'undefined') Toast.warning('Sem lead aprovado disponível agora.');
       _refreshLeadSupplySoon();
       return;
     }
     if (data && data.waiting === 'pipeline_running') {
       _leadSupplySetAction('warning', 'Pipeline ja em andamento', 'Ja existe uma pipeline ativa para este tenant. Aguarde a conclusao antes de abrir outra.', 7000);
+      if (window.renderPipelineTopTimeline) window.renderPipelineTopTimeline('builder_renderer', 'Pipeline ja em andamento. Aguarde terminar antes de abrir outra.');
       if (typeof Toast !== 'undefined') Toast.warning('Já existe pipeline ativa para este tenant.');
       _refreshLeadSupplySoon();
       return;
@@ -8497,8 +8511,14 @@ async function atualizarUtiBadge() {
   function renderPipelineTopTimeline(ativo, mensagem, inicio) {
     var stepsEl = document.getElementById('pipelineTopSteps');
     var logEl = document.getElementById('pipelineTopLog');
+    var progressBar = document.getElementById('pipelineTopProgressBar');
+    var progressLabel = document.getElementById('pipelineTopProgressLabel');
     if (!stepsEl) return;
     var activeIndex = indicePipelineTopo(ativo);
+    var progress = activeIndex >= 0 ? Math.round(((activeIndex + 1) / PIPELINE_TOP_STEPS.length) * 100) : 0;
+    if ((mensagem || '').toLowerCase().includes('conclu')) progress = 100;
+    if (progressBar) progressBar.style.width = progress + '%';
+    if (progressLabel) progressLabel.textContent = progress + '% da esteira';
     stepsEl.innerHTML = PIPELINE_TOP_STEPS.map(function(step, index) {
       var done = activeIndex >= 0 && index < activeIndex;
       var active = activeIndex === index;
@@ -8524,6 +8544,7 @@ async function atualizarUtiBadge() {
     atualizarRelogioPipelineTopo();
   }
   window.renderPipelineTopTimeline = renderPipelineTopTimeline;
+  renderPipelineTopTimeline(null, 'Aguardando a esteira ser ligada.');
 
   function atualizarTimelineComStatus(d) {
     d = d || {};
