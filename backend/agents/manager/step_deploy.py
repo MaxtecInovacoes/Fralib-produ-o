@@ -58,6 +58,19 @@ def _sanitize_html_document_structure(html: str) -> str:
 
 
 def _sanitize_corrupted_svg_paths(html: str) -> str:
+    unterminated_path_re = re.compile(
+        r"(?P<prefix><path\b[^>]*\bd\s*=\s*)(?P<q>['\"])(?P<value>[^<>]*?)(?=<(?:main|section|header|footer|article|aside|div)\b)",
+        re.IGNORECASE | re.DOTALL,
+    )
+
+    def _close_unterminated_path(match: re.Match) -> str:
+        return (
+            f'{match.group("prefix")}{match.group("q")}'
+            f'{match.group("value").strip()}{match.group("q")}></path>\n'
+        )
+
+    html = unterminated_path_re.sub(_close_unterminated_path, html)
+
     path_re = re.compile(
         r"(<path\b[^>]*\bd\s*=\s*)(?P<q>['\"])(?P<value>.*?)(?P=q)",
         re.IGNORECASE | re.DOTALL,
