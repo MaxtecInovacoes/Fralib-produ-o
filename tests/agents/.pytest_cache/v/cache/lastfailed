@@ -1,3 +1,0 @@
-{
-  "test_cakto_webhook_idempotency.py::TestWebhookIdempotency::test_duplicate_returns_status_duplicate": true
-}
