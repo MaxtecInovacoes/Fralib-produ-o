@@ -88,6 +88,39 @@ def _fragment_has_minimum_structure(html: str) -> tuple[bool, str]:
     return True, ""
 
 
+def _normalize_generated_html(html: str, prd: dict[str, Any]) -> str:
+    render_hint = str(prd.get("_render_hint") or "").strip().lower()
+    if render_hint != "section_fragment" or "<section" in html.lower():
+        return html
+
+    body_match = re.search(r"(?is)<body\b[^>]*>(.*?)</body>", html)
+    fragment = body_match.group(1).strip() if body_match else html.strip()
+    fragment = re.sub(r"(?is)<!doctype[^>]*>", "", fragment)
+    fragment = re.sub(r"(?is)</?(?:html|head|body|main)\b[^>]*>", "", fragment)
+    fragment = re.sub(r"(?is)<title\b[^>]*>.*?</title>", "", fragment)
+    fragment = re.sub(r"(?is)<meta\b[^>]*>", "", fragment)
+    fragment = re.sub(r"(?is)<link\b[^>]*>", "", fragment)
+    fragment = re.sub(r"(?is)<style\b[^>]*>.*?</style>", "", fragment)
+    fragment = re.sub(r"(?is)<script\b[^>]*>.*?</script>", "", fragment).strip()
+
+    visible_text = re.sub(r"(?is)<[^>]+>", " ", fragment)
+    visible_text = re.sub(r"\s+", " ", visible_text).strip()
+    if len(fragment) < 200 or len(visible_text) < 60:
+        return html
+
+    section_name = "section"
+    sections = prd.get("sections") or []
+    if sections and isinstance(sections[0], dict):
+        section_name = str(sections[0].get("name") or section_name).strip().lower()
+        section_name = re.sub(r"[^a-z0-9_-]+", "-", section_name).strip("-") or "section"
+    logger.warning(
+        "Normalized section_fragment without section wrapper (%d chars, section=%s)",
+        len(html),
+        section_name,
+    )
+    return f'<section id="{section_name}">\n{fragment}\n</section>'
+
+
 def _validate_generated_html(html: str, prd: dict[str, Any]) -> tuple[bool, str]:
     render_hint = str(prd.get("_render_hint") or "").strip().lower()
     if render_hint == "section_fragment":
@@ -434,6 +467,7 @@ async def generate_site(request: GenerateRequest):
         if html.endswith("```"):
             html = html[:-3]
         html = html.strip()
+        html = _normalize_generated_html(html, prd)
 
         valid_html, reason = _validate_generated_html(html, prd)
         if not valid_html:
