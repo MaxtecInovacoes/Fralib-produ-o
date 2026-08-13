@@ -994,93 +994,14 @@ async function _executarIniciarAdmin(nicho, cidade, qtd, scoreMin, btn) {
       return;
     }
     var data = await resp.json();
-    if (btn) { btn.textContent = data.job_id ? '✓ JOB #' + data.job_id : '✓ INICIADO!'; }
+    if (btn) { btn.textContent = '✓ INICIADO!'; }
     setTimeout(function(){ if (btn) { btn.textContent = '▶ INICIAR'; btn.disabled = false; } }, 3000);
     carregarKPIs();
-    carregarPipelineTimeline();
-    mostrarToast((data.mensagem || 'Pipeline iniciado') + (data.job_id ? ' — job #' + data.job_id : '') + '. Acompanhe a esteira no Motor FraLib.');
+    mostrarToast('▶ Pipeline iniciado! Acompanhe o progresso no terminal abaixo.');
   } catch(e) {
     if (btn) { btn.textContent = '▶ INICIAR'; btn.disabled = false; }
-    mostrarErrosPipelineAdmin('Erro de conexão', 'Não foi possível conectar ao servidor: ' + escapeHtml(e.message || ''), 'Verifique sua internet e recarregue.');
+    mostrarErrosPipelineAdmin('Erro de conexão', 'Não foi possível conectar ao servidor.', 'Verifique sua internet e recarregue.');
   }
-}
-
-function _fmtPipelineElapsed(seconds) {
-  seconds = parseInt(seconds || 0, 10);
-  var m = Math.floor(seconds / 60);
-  var s = seconds % 60;
-  if (m <= 0) return s + 's';
-  return m + 'm ' + String(s).padStart(2, '0') + 's';
-}
-
-function _pipelineStepStatus(jobPhase, jobStatus, step) {
-  var order = ['hunter', 'caio', 'nicho', 'design_director', 'variacao', 'arquiteto', 'builder', 'quality_gate', 'deploy', 'franz'];
-  var phase = String(jobPhase || '').toLowerCase();
-  var current = order.findIndex(function(name){ return phase.indexOf(name) >= 0; });
-  var idx = order.indexOf(step);
-  if (jobStatus === 'completed' || jobStatus === 'done' || jobStatus === 'success') return 'done';
-  if (jobStatus === 'failed' || jobStatus === 'failed_permanent') return idx <= Math.max(current, 0) ? 'error' : 'wait';
-  if (current < 0) return idx === 0 && jobStatus === 'running' ? 'run' : 'wait';
-  if (idx < current) return 'done';
-  if (idx === current) return 'run';
-  return 'wait';
-}
-
-function _renderPipelineTimeline(data) {
-  var timeline = document.getElementById('pipeline-timeline');
-  var jobsEl = document.getElementById('pipeline-timeline-jobs');
-  var updated = document.getElementById('pipeline-timeline-updated');
-  if (!timeline || !jobsEl) return;
-  var jobs = (data && data.jobs) || [];
-  var active = jobs.find(function(j){ return j.id === data.active_job_id; }) || jobs[0] || null;
-  var steps = [
-    ['hunter', 'Hunter'],
-    ['caio', 'Caio'],
-    ['nicho', 'Nicho'],
-    ['design_director', 'Direção'],
-    ['variacao', 'Variação'],
-    ['arquiteto', 'Arquiteto'],
-    ['builder', 'Builder'],
-    ['quality_gate', 'QA'],
-    ['deploy', 'Deploy'],
-    ['franz', 'Franz']
-  ];
-  if (updated) updated.textContent = 'atualizado ' + new Date().toLocaleTimeString('pt-BR');
-  if (!active) {
-    timeline.innerHTML = '<div style="grid-column:1/-1;color:var(--fl-text-muted);font-size:12px;text-align:center;padding:18px;border:1px dashed var(--fl-border);border-radius:10px;">Nenhum job de pipeline encontrado para este tenant.</div>';
-  } else {
-    timeline.style.gridTemplateColumns = 'repeat(' + steps.length + ',minmax(82px,1fr))';
-    timeline.innerHTML = steps.map(function(item) {
-      var status = _pipelineStepStatus(active.last_phase, active.status, item[0]);
-      var color = status === 'done' ? '#10b981' : (status === 'run' ? '#f59e0b' : (status === 'error' ? '#ef4444' : '#374151'));
-      var bg = status === 'done' ? 'rgba(16,185,129,.10)' : (status === 'run' ? 'rgba(245,158,11,.12)' : (status === 'error' ? 'rgba(239,68,68,.12)' : 'rgba(255,255,255,.03)'));
-      var dot = status === 'done' ? '✓' : (status === 'run' ? '●' : (status === 'error' ? '!' : '·'));
-      return '<div style="border:1px solid ' + color + ';background:' + bg + ';border-radius:10px;padding:10px 8px;text-align:center;min-height:58px;">' +
-        '<div style="color:' + color + ';font-weight:800;font-size:15px;line-height:1;">' + dot + '</div>' +
-        '<div style="color:var(--fl-text);font-size:11px;font-weight:700;margin-top:7px;">' + item[1] + '</div>' +
-      '</div>';
-    }).join('');
-  }
-  jobsEl.innerHTML = jobs.slice(0, 5).map(function(j) {
-    var color = j.status === 'completed' ? '#10b981' : (j.status === 'running' ? '#f59e0b' : (j.status.indexOf('fail') >= 0 ? '#ef4444' : '#60a5fa'));
-    var lead = j.lead_id ? 'lead ' + escapeHtml(j.lead_id).slice(0, 8) : escapeHtml([j.segmento, j.cidade].filter(Boolean).join(' · ') || j.tipo);
-    var erro = j.last_error ? '<div style="color:#ef4444;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escapeHtml(j.last_error) + '</div>' : '';
-    return '<div style="display:grid;grid-template-columns:80px 1fr 110px 90px;gap:10px;align-items:center;background:rgba(255,255,255,.03);border:1px solid var(--fl-border);border-left:3px solid ' + color + ';border-radius:8px;padding:8px 10px;font-family:var(--fl-font-mono);font-size:11px;">' +
-      '<strong style="color:' + color + '">#' + j.id + '</strong>' +
-      '<div style="min-width:0;color:var(--fl-text);">' + lead + '<div style="color:var(--fl-text-muted);margin-top:2px;">fase: ' + escapeHtml(j.last_phase || '—') + '</div>' + erro + '</div>' +
-      '<span style="color:var(--fl-text-muted);">tent. ' + j.attempts + '/' + j.max_attempts + '</span>' +
-      '<span style="color:var(--fl-text);text-align:right;">' + _fmtPipelineElapsed(j.elapsed_seconds) + '</span>' +
-    '</div>';
-  }).join('');
-}
-
-async function carregarPipelineTimeline() {
-  try {
-    var resp = await authFetch('/api/pipeline/timeline');
-    if (!resp.ok) return;
-    var data = await resp.json();
-    _renderPipelineTimeline(data);
-  } catch(e) {}
 }
 
 function _mostrarModalFila(leads, nicho, cidade, qtd, scoreMin, btn) {
@@ -1187,12 +1108,8 @@ async function processarFila() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ segmento: nicho, cidade: cidade, quantidade: qtd, score_minimo: scoreMin, processar_fila: true })
     });
-    var data = {};
-    try { data = await resp.json(); } catch(_) {}
-    if (!resp.ok) throw new Error((data.detail && data.detail.message) || data.detail || 'Pipeline não iniciou');
-    mostrarToast((data.mensagem || 'Pipeline iniciado para processar a fila!') + (data.job_id ? ' Job #' + data.job_id : ''));
+    mostrarToast('▶ Pipeline iniciado para processar a fila!');
     document.getElementById('painel-fila').style.display = 'none';
-    carregarPipelineTimeline();
     setTimeout(function(){ mostrarView('crm'); carregarKPIs(); carregarKanban(); }, 1500);
   } catch(e) {
     mostrarToast('Erro: ' + e.message);
@@ -1244,12 +1161,10 @@ document.addEventListener('DOMContentLoaded', function(){ verificarPrimeiroAcess
 
   carregarKPIs();
   carregarKanban();
-  carregarPipelineTimeline();
 
   // Polling a cada 60s
   setInterval(carregarKPIs, 60000);
   setInterval(carregarKanban, 60000);
-  setInterval(carregarPipelineTimeline, 5000);
   carregarMensagensNovas();
   setInterval(carregarMensagensNovas, 60000);
 });
@@ -3862,14 +3777,9 @@ async function atualizarUtiBadge() {
 
     // Verificar status do pipeline a cada 5s
     function checkPipelineStatus() {
-      authFetch('/api/pipeline/status').then(function(r){ return r.json(); }).then(function(d) {
+      authFetch('/api/pipeline/status').then(function(d) {
         if (d && d.rodando) {
           banner.style.display = 'flex';
-          if (bannerFase) {
-            bannerFase.textContent = d.config
-              ? 'Rodando: ' + (d.config.segmento || 'pipeline') + ' em ' + (d.config.cidade || '')
-              : 'Pipeline em execução';
-          }
         } else {
           banner.style.display = 'none';
         }
