@@ -25,18 +25,22 @@ OBJECTIVE:
 Select a website structure that is good for conversion and different from previous pages.
 
 WHAT YOU DEFINE:
+- narrative_framework: always "AIDA"
 - template_estrutura: "brutalist" | "editorial" | "organic" | "corporate" | "minimal"
 - template_hero: "hero-split" | "hero-center" | "hero-fullscreen" | "hero-diagonal" | "hero-video"
 - template_prova_social: "reviews-masonry" | "reviews-carousel" | "reviews-grid" | "reviews-spotlight" | "stats-horizontal" | "stats-cards"
 - template_cta: "cta-central" | "cta-banner" | "cta-floating" | "cta-bottom"
 - template_faq: "faq-accordion" | "faq-two-col" | "faq-minimal"
-- ordem_das_secoes: varied list (REQUIRED: hero, contato, footer + 2-5 optional)
+- ordem_das_secoes: varied list that preserves AIDA (REQUIRED: hero, interesse, desejo, acao, faq, lgpd, footer + optional)
+- required_sections: hard list with at least hero, interesse, desejo, acao, faq, lgpd, footer
 - angulo_de_comunicacao: unique persuasive angle for the lead
 - regra_antirrepeticao: what to avoid based on niche/region
 
-OPTIONAL (choose 2-5): sobre, servicos, depoimentos, faq, localizacao, numeros, galeria, planos, equipe, cta-final
+OPTIONAL (choose 2-5): sobre, servicos, depoimentos, localizacao, numeros, galeria, planos, equipe, seo-geo, prova-social
 
 RULES:
+- AIDA is not optional: hero=Atencao, interesse=problem/context, desejo=offer/proof, acao=CTA/contact.
+- FAQ, footer, LGPD, SEO/GEO/local context, Open Graph/favicons and real media must survive downstream.
 - Do not repeat default structure automatically
 - Vary hero, social proof, and section order when there is risk of clones
 - Keep coherence with niche and user behavior
@@ -53,7 +57,9 @@ OUTPUT FORMAT (pure JSON, no markdown):
   "template_prova_social": "reviews-carousel",
   "template_cta": "cta-central",
   "template_faq": "faq-accordion",
-  "ordem_das_secoes": ["hero", "sobre", "depoimentos", "faq", "contato", "footer"],
+  "narrative_framework": "AIDA",
+  "ordem_das_secoes": ["hero", "interesse", "servicos", "desejo", "depoimentos", "seo-geo", "faq", "acao", "lgpd", "footer"],
+  "required_sections": ["hero", "interesse", "desejo", "acao", "faq", "lgpd", "footer"],
   "angulo_de_comunicacao": "string",
   "regra_antirrepeticao": "string",
   "justificativa": "string"
@@ -109,10 +115,10 @@ Retorne APENAS o JSON — sem markdown, sem explicação extra."""
     _estrutura = _dados.get("template_estrutura", "corporate")
     _hero = _dados.get("template_hero", "hero-split")
     _ordem = _dados.get(
-        "ordem_das_secoes", ["hero", "sobre", "localizacao", "contato", "footer"]
+        "ordem_das_secoes", ["hero", "interesse", "sobre", "desejo", "faq", "acao", "lgpd", "footer"]
     )
 
-    return VariacaoEstrutural(
+    variacao = VariacaoEstrutural(
         task_id=task_id,
         source_agent="agente_variacao",
         target_agent="arquiteto_mestre",
@@ -128,3 +134,10 @@ Retorne APENAS o JSON — sem markdown, sem explicação extra."""
         regra_antirrepeticao=_dados.get("regra_antirrepeticao", ""),
         justificativa=_dados.get("justificativa", ""),
     )
+    setattr(variacao, "narrative_framework", _dados.get("narrative_framework", "AIDA"))
+    setattr(
+        variacao,
+        "required_sections",
+        _dados.get("required_sections", ["hero", "interesse", "desejo", "acao", "faq", "lgpd", "footer"]),
+    )
+    return variacao

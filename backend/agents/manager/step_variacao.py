@@ -64,13 +64,10 @@ def _normalize_blueprint(blueprint: dict, state: PipelineState) -> dict:
     if not isinstance(order, list):
         order = []
     order = [_normalize_section_name(item) for item in order if str(item).strip()]
-    if "hero" not in order:
-        order.insert(0, "hero")
-    if "footer" not in order:
-        order.append("footer")
-    if not any(item in order for item in ("contato", "contact", "location_contact", "localizacao")):
-        order.insert(max(len(order) - 1, 1), "contato")
+    order = _enforce_aida_order(order, state)
     blueprint["ordem_das_secoes"] = list(dict.fromkeys(order))
+    blueprint["narrative_framework"] = "AIDA"
+    blueprint["required_sections"] = ["hero", "interesse", "desejo", "acao", "faq", "lgpd", "footer"]
     blueprint.setdefault("layout_variants", {})
     blueprint.setdefault("rhythm", blueprint.get("template_estrutura", ""))
     blueprint.setdefault("signature_composition", blueprint.get("angulo_de_comunicacao", ""))
@@ -84,6 +81,30 @@ def _normalize_blueprint(blueprint: dict, state: PipelineState) -> dict:
     return blueprint
 
 
+def _enforce_aida_order(order: list[str], state: PipelineState) -> list[str]:
+    normalized = [_normalize_section_name(item) for item in order if str(item).strip()]
+    if "hero" in normalized:
+        normalized = ["hero"] + [item for item in normalized if item != "hero"]
+    else:
+        normalized.insert(0, "hero")
+
+    required_middle = ["interesse", "desejo"]
+    if (state.lead_data or {}).get("servicos") and "servicos" not in normalized:
+        required_middle.insert(1, "servicos")
+    if (state.lead_data or {}).get("reviews") and not any(item in normalized for item in ("depoimentos", "prova-social")):
+        required_middle.append("depoimentos")
+    if not any(item in normalized for item in ("seo-geo", "localizacao", "location_contact")):
+        required_middle.append("seo-geo")
+
+    tail = ["faq", "acao", "lgpd", "footer"]
+    body = [item for item in normalized if item not in {"hero", *required_middle, *tail, "contato", "contact", "cta-final"}]
+    result = ["hero"]
+    for item in required_middle + body + tail:
+        if item not in result:
+            result.append(item)
+    return result
+
+
 def _normalize_section_name(value: str) -> str:
     text = str(value or "").strip().lower().replace("_", "-")
     aliases = {
@@ -94,6 +115,23 @@ def _normalize_section_name(value: str) -> str:
         "contact": "contato",
         "cta": "contato",
         "cta-final": "contato",
+        "contato": "acao",
+        "contact": "acao",
+        "location_contact": "acao",
+        "atenção": "hero",
+        "atencao": "hero",
+        "attention": "hero",
+        "interest": "interesse",
+        "desejo": "desejo",
+        "desire": "desejo",
+        "ação": "acao",
+        "acao": "acao",
+        "action": "acao",
+        "social-proof": "depoimentos",
+        "prova_social": "depoimentos",
+        "prova-social": "depoimentos",
+        "geo": "seo-geo",
+        "seo_geo": "seo-geo",
         "method": "sobre",
         "services": "servicos",
     }

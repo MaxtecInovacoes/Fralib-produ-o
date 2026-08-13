@@ -54,12 +54,14 @@ class NichoBriefing(HandoffBase):
 
 
 class VariacaoEstrutural(HandoffBase):
+    narrative_framework: str = "AIDA"
     template_estrutura: str = ""
     template_hero: str = ""
     template_prova_social: str = ""
     template_cta: str = ""
     template_faq: str = ""
     ordem_das_secoes: list[str] = Field(default_factory=list)
+    required_sections: list[str] = Field(default_factory=list)
     angulo_de_comunicacao: str = ""
     regra_antirrepeticao: str = ""
     justificativa: str = ""

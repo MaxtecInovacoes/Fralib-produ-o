@@ -163,6 +163,8 @@ Return ONLY the requested semantic <section> block. No markdown, code fences, ex
 - The first non-whitespace characters must be <section
 - The last non-whitespace characters must close the section with </section>
 - Include visible heading, text, and CTA/content appropriate to the requested section
+- Preserve the requested AIDA role: hero=Attention, interesse=Interest, desejo=Desire, acao=Action
+- If requested section is faq, lgpd, seo-geo or footer, render that exact functional section; do not replace it with generic cards
 - Use Tailwind utility classes directly in the markup
 - Do NOT output <!DOCTYPE>, <html>, <head>, <body>, <main>, Tailwind config, <style>, or <script>
 - Do NOT render sections that were not requested
@@ -173,6 +175,7 @@ Return ONLY the requested semantic <section> block. No markdown, code fences, ex
 Return ONLY a single complete HTML file. No markdown, code fences, or explanation.
 - Single <html> document with exactly one <main> and one visible <h1>
 - At least 3 semantic <section> blocks with real visible content
+- Preserve AIDA structure when provided: hero, interesse, desejo, acao, plus faq, lgpd and footer
 - Mobile-first responsive (375px to 1440px)
 - Use Tailwind CSS utility classes directly in the markup
 - Include Tailwind via CDN script in the <head>
@@ -216,6 +219,8 @@ def _build_system_prompt(prd: dict) -> str:
             f"Palette JSON: {_compact_json(palette, 500)}. "
             f"Typography JSON: {_compact_json(typography, 300)}. "
             f"Available editorial image URLs: {_compact_json(photo_urls, 1400)}. "
+            "Preserve AIDA: hero captures Attention, interesse builds Interest, desejo creates Desire with offer/proof, acao drives Action. "
+            "FAQ, LGPD, SEO/GEO and footer are functional sections, not decorative filler. "
             "Use at least one real <img> with an available URL in hero, about or media sections. "
             "Start the response with <section and finish with </section>. "
             "Include visible heading, useful copy, and CTA/content from the requested section. "

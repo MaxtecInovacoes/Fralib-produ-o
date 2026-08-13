@@ -26,20 +26,26 @@ GENERATE_ENDPOINT = f"{OPENUI_URL}/generate"
 OPENUI_CHECK_URL = f"{OPENUI_URL}/generate"
 
 _BLOCOS_HTML = [
-    ["hero", "sobre"],
-    ["servicos", "depoimentos"],
-    ["faq", "localizacao"],
-    ["contato"],
+    ["hero"],
+    ["interesse", "sobre", "trust_bar"],
+    ["servicos", "desejo", "depoimentos", "prova-social"],
+    ["seo-geo", "localizacao", "faq"],
+    ["acao", "contato", "lgpd", "footer"],
 ]
 
 _SECTION_BLOCKS = [
     ["hero"],
+    ["interesse"],
     ["sobre"],
     ["servicos"],
+    ["desejo"],
     ["depoimentos"],
+    ["seo-geo"],
     ["faq"],
     ["localizacao"],
+    ["acao"],
     ["contato"],
+    ["lgpd"],
     ["footer"],
 ]
 
@@ -438,6 +444,11 @@ def _prd_to_spec(prd) -> dict:
             "html": "static Tailwind HTML",
             "hard_constraints": (creative_direction or {}).get("hard_constraints", {}),
             "anti_patterns": spec["anti_patterns"],
+            "narrative_framework": (variation_blueprint or {}).get("narrative_framework", "AIDA"),
+            "required_sections": (variation_blueprint or {}).get(
+                "required_sections",
+                ["hero", "interesse", "desejo", "acao", "faq", "lgpd", "footer"],
+            ),
         },
     }
     # Instrumentação: logar chaves do spec enviado ao OpenUI

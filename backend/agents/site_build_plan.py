@@ -69,6 +69,8 @@ def build_site_build_plan(facts: dict[str, Any]) -> dict[str, Any]:
         "information_architecture": {
             "section_order": section_order,
             "section_order_source": "variation_blueprint" if variation.get("ordem_das_secoes") else "site_build_plan_fallback",
+            "narrative_framework": variation.get("narrative_framework") or "AIDA",
+            "required_sections": variation.get("required_sections") or ["hero", "interesse", "desejo", "acao", "faq", "lgpd", "footer"],
             "navigation_targets": [item for item in section_order if item not in {"trust_bar"}],
             "must_combine": ["location", "contact"],
             "must_not_duplicate": ["map", "location", "footer", "post_footer_gallery"],
@@ -144,6 +146,11 @@ def _section_order(has_services: bool, has_reviews: bool, has_address: bool) -> 
 def _section_plan(order: list[str], *, has_services: bool, has_reviews: bool, has_address: bool) -> list[dict[str, Any]]:
     roles = {
         "hero": ("attention", ["headline", "subheadline", "primary_cta", "proof_chip", "motion_hook"]),
+        "interesse": ("interest", ["problem_context", "audience_specific_pain", "local_relevance", "why_now"]),
+        "desejo": ("desire", ["offer_value", "differentiators", "proof_or_services", "visual_media"]),
+        "acao": ("action", ["primary_cta", "phone_or_whatsapp", "location_or_next_step"]),
+        "seo-geo": ("local_seo", ["city", "segment", "neighborhood_or_address", "search_intent_terms"]),
+        "lgpd": ("privacy_trust", ["data_usage_note", "consent_banner_or_notice", "contact_policy"]),
         "trust_bar": ("confidence", ["rating_or_city", "review_count_or_contact", "local_context"]),
         "decision_content": ("education", ["criteria_by_niche", "truthful_local_context"]),
         "media_story": ("visual_depth", ["editorial_media", "16_9_frames", "media_disclaimer_if_needed"]),
