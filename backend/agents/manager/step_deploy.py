@@ -167,6 +167,17 @@ def _ensure_final_document_contract(html: str, state: PipelineState, canonical_u
     address = html_lib.escape(str((state.lead_data or {}).get("endereco") or ""), quote=True)
     phone = html_lib.escape(str((state.lead_data or {}).get("telefone") or ""), quote=True)
     photos = (state.design_output or {}).get("photos") or []
+    if not photos:
+        try:
+            from backend.agents.unsplash_fetcher import buscar_fotos_unsplash
+            photos = buscar_fotos_unsplash(
+                segmento=state.segmento,
+                quantidade=6,
+                nome=(state.lead_data or {}).get("nome", ""),
+                cidade=state.cidade,
+            )
+        except Exception as exc:
+            logger.warning("[Deploy] restauração de mídia falhou: %s", exc)
     og_image = photos[0].get("url") if photos and isinstance(photos[0], dict) else (photos[0] if photos else "")
     title = f"{name} em {city}".strip()
     description = f"Conheça {name} em {city}: serviços, localização e contato oficial."
