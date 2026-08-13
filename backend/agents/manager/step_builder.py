@@ -19,6 +19,19 @@ def step_builder(state: PipelineState) -> PipelineState:
         from backend.agents.builder.agent import render_site
         from backend.agents.designer_prd import DesignerPRD, SectionSpec, ColorPalette, AnimationSpec
 
+        if len((state.design_output or {}).get("photos") or []) < 3:
+            from backend.agents.unsplash_fetcher import buscar_fotos_unsplash
+            restored_photos = buscar_fotos_unsplash(
+                segmento=state.segmento,
+                quantidade=6,
+                nome=(state.lead_data or {}).get("nome", ""),
+                cidade=state.cidade,
+            )
+            state.design_output = dict(state.design_output or {})
+            state.design_output["photos"] = restored_photos
+            state.lead_data = dict(state.lead_data or {})
+            state.lead_data["fotos"] = restored_photos
+
         from backend.agents.arquiteto_agent_loop import _enrich_prd
         state.design_output = _enrich_prd(
             dict(state.design_output or {}),
