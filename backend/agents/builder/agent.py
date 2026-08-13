@@ -544,7 +544,8 @@ def _render_block(block_spec: dict, design_tokens: dict) -> tuple[str, str]:
                 model = data.get("model", "")
                 if render_hint == "section_fragment":
                     html = _extract_body_only(html)
-                    valid_html, reason = _looks_like_valid_section_fragment(html)
+                    valid_html = len(html.strip()) >= 200 and "<section" in html.lower()
+                    reason = "" if valid_html else "resposta 200 sem section utilizavel"
                 else:
                     valid_html, reason = _looks_like_valid_body_fragment(html)
                 if (
