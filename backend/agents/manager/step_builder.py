@@ -19,6 +19,15 @@ def step_builder(state: PipelineState) -> PipelineState:
         from backend.agents.builder.agent import render_site
         from backend.agents.designer_prd import DesignerPRD, SectionSpec, ColorPalette, AnimationSpec
 
+        from backend.agents.arquiteto_agent_loop import _enrich_prd
+        state.design_output = _enrich_prd(
+            dict(state.design_output or {}),
+            dados_hunter=state.lead_data or {},
+            cidade=state.cidade,
+            segmento=state.segmento,
+            dark_mode=bool((state.design_output or {}).get("dark_mode", False)),
+        )
+
         # Reconstruct DesignerPRD from state.design_output using ACTUAL schema
         color_palette_data = state.design_output.get("color_palette", {}) or state.design_output.get("paleta_cores", {})
         if not color_palette_data:
@@ -182,9 +191,6 @@ _EMOJI_RE = re.compile(
 
 def _enforce_pre_qa_contract(html: str, prd) -> str:
     """Aplica e valida contratos determinísticos antes do QA pass-through."""
-    from backend.agents.html_builder_repair import repair_builder_publication_contract
-    from backend.agents.html_phase6_repair import repair_phase6_publication_contract
-
     cleaned = html or ""
     if 'data-renderer="builder"' not in cleaned.lower():
         cleaned = re.sub(
@@ -193,8 +199,11 @@ def _enforce_pre_qa_contract(html: str, prd) -> str:
             cleaned,
             count=1,
         )
-    cleaned = repair_builder_publication_contract(cleaned, prd)
-    cleaned = repair_phase6_publication_contract(cleaned, prd)
+    try:
+        from backend.agents.html_builder_repair import repair_builder_publication_contract
+        cleaned = repair_builder_publication_contract(cleaned, prd)
+    except ModuleNotFoundError as exc:
+        logger.warning("[Builder] reparador legado indisponível; usando contrato interno: %s", exc)
     cleaned = _EMOJI_RE.sub("", cleaned)
 
     photos = getattr(prd, "photos", []) or []
@@ -216,6 +225,8 @@ def _enforce_pre_qa_contract(html: str, prd) -> str:
     if head_additions:
         cleaned = re.sub(r"(?is)</head>", "\n".join(head_additions) + "\n</head>", cleaned, count=1)
 
+    cleaned = _ensure_internal_publication_contract(cleaned, prd)
+
     required_markers = {
         "imagem": r"(?is)<img\b|background-image\s*:",
         "faq": r"(?is)faq|perguntas frequentes",
@@ -229,4 +240,64 @@ def _enforce_pre_qa_contract(html: str, prd) -> str:
     missing = [name for name, pattern in required_markers.items() if not re.search(pattern, cleaned)]
     if missing:
         raise ValueError("HTML sem contrato pré-QA: " + ", ".join(missing))
+    return cleaned
+
+
+def _ensure_internal_publication_contract(html: str, prd) -> str:
+    import html as html_lib
+    import json
+
+    cleaned = html or ""
+    low = cleaned.lower()
+    name = html_lib.escape(str(getattr(prd, "business_name", "Negócio local") or "Negócio local"), quote=True)
+    city = html_lib.escape(str(getattr(prd, "cidade", "") or ""), quote=True)
+    phone = html_lib.escape(str(getattr(prd, "phone", "") or ""), quote=True)
+    address = html_lib.escape(str(getattr(prd, "address", "") or ""), quote=True)
+    canonical = html_lib.escape(str(getattr(prd, "canonical_url", "") or ""), quote=True)
+    keywords = ", ".join(str(item) for item in (getattr(prd, "seo_keywords", []) or [])[:10])
+    description = f"{name} em {city}. Informações, serviços, localização e contato oficial.".strip()
+
+    additions = []
+    if "<title" not in low:
+        additions.append(f"<title>{name} em {city}</title>")
+    if 'name="description"' not in low:
+        additions.append(f'<meta name="description" content="{description}">')
+    if keywords and 'name="keywords"' not in low:
+        additions.append(f'<meta name="keywords" content="{html_lib.escape(keywords, quote=True)}">')
+    if canonical and 'rel="canonical"' not in low:
+        additions.append(f'<link rel="canonical" href="{canonical}">')
+    if 'property="og:url"' not in low and canonical:
+        additions.append(f'<meta property="og:url" content="{canonical}">')
+    if 'application/ld+json' not in low:
+        schema = {
+            "@context": "https://schema.org",
+            "@type": "LocalBusiness",
+            "name": name,
+            "url": canonical,
+            "address": address or city,
+            "telephone": phone,
+        }
+        additions.append(
+            '<script type="application/ld+json">'
+            + json.dumps({key: value for key, value in schema.items() if value}, ensure_ascii=False)
+            + "</script>"
+        )
+    if additions:
+        cleaned = re.sub(r"(?is)</head>", "\n".join(additions) + "\n</head>", cleaned, count=1)
+
+    if "<footer" not in cleaned.lower():
+        footer = (
+            f'<footer id="footer" class="px-6 py-12 bg-neutral-950 text-white">'
+            f'<p>{name}</p><p>{address or city}</p><p>{phone}</p>'
+            '<nav aria-label="Links legais"><a href="/politica-de-privacidade">Privacidade</a> '
+            '<a href="/termos-de-uso">Termos de uso</a></nav></footer>'
+        )
+        cleaned = re.sub(r"(?is)</main>", footer + "\n</main>", cleaned, count=1)
+    if "data-lgpd-banner" not in cleaned.lower():
+        banner = (
+            '<div data-lgpd-banner class="fixed bottom-4 left-4 right-4 z-50 bg-neutral-950 text-white p-4">'
+            '<span>Usamos dados apenas para atendimento e melhoria da experiência.</span>'
+            '<button type="button" onclick="this.parentElement.remove()">Aceitar</button></div>'
+        )
+        cleaned = re.sub(r"(?is)</body>", banner + "\n</body>", cleaned, count=1)
     return cleaned
