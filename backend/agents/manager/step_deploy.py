@@ -57,6 +57,22 @@ def _sanitize_html_document_structure(html: str) -> str:
     return html[:body_start.end()] + "\n" + body_content.strip() + "\n" + html[body_end.start():]
 
 
+def _sanitize_corrupted_svg_paths(html: str) -> str:
+    path_re = re.compile(
+        r"(<path\b[^>]*\bd\s*=\s*)(?P<q>['\"])(?P<value>.*?)(?P=q)",
+        re.IGNORECASE | re.DOTALL,
+    )
+
+    def _replace(match: re.Match) -> str:
+        value = match.group("value")
+        if "<" not in value and ">" not in value:
+            return match.group(0)
+        safe_value = value.split("<", 1)[0].strip()
+        return f'{match.group(1)}{match.group("q")}{safe_value}{match.group("q")}'
+
+    return path_re.sub(_replace, html)
+
+
 def _demote_secondary_tag(html: str, original_tag: str, replacement_tag: str) -> str:
     tag_re = re.compile(rf"<(/?){original_tag}\b([^>]*)>", re.IGNORECASE)
     open_seen = 0
@@ -122,6 +138,7 @@ def _normalize_single_main_and_h1(html: str) -> str:
 
 def _sanitize_deploy_html(html: str) -> str:
     html = _sanitize_html_document_structure(html)
+    html = _sanitize_corrupted_svg_paths(html)
     html = _normalize_single_main_and_h1(html)
     html = _guard_decorative_absolute_blocks(html)
     html = _inject_head_guard_css(html)
