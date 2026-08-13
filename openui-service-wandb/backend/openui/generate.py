@@ -456,6 +456,47 @@ def _build_user_message(prd: dict) -> str:
     )
 
 
+async def _repair_section_fragment(
+    client: AsyncOpenAI,
+    model: str,
+    html: str,
+    prd: dict[str, Any],
+) -> tuple[str, str]:
+    sections = [section for section in prd.get("sections", []) if isinstance(section, dict)]
+    section_payload = sections[0] if sections else {}
+    repair_messages = [
+        {
+            "role": "system",
+            "content": (
+                "You repair one HTML section fragment. Return raw HTML only. "
+                "Start with <section and finish with </section>. "
+                "Preserve useful visible content from the draft. Remove document wrappers, CSS, JavaScript, markdown, and explanations."
+            ),
+        },
+        {
+            "role": "user",
+            "content": (
+                f"Requested section JSON: {_compact_json(section_payload, 1200)}\n"
+                f"Invalid draft to repair:\n{html[:12000]}"
+            ),
+        },
+    ]
+    response = await client.chat.completions.create(
+        model=model,
+        messages=repair_messages,
+        max_tokens=min(MAX_TOKENS, 12000),
+        temperature=0.1,
+    )
+    repaired = (response.choices[0].message.content or "").strip()
+    if repaired.startswith("```html"):
+        repaired = repaired[7:]
+    if repaired.startswith("```"):
+        repaired = repaired[3:]
+    if repaired.endswith("```"):
+        repaired = repaired[:-3]
+    return repaired.strip(), response.model or model
+
+
 @router.post("/generate", tags=["openui/generate"])
 async def generate_site(request: GenerateRequest):
     """Generate HTML site from DesignerPRD spec via LiteLLM proxy."""
@@ -504,6 +545,16 @@ async def generate_site(request: GenerateRequest):
         html = _normalize_generated_html(html, prd)
 
         valid_html, reason = _validate_generated_html(html, prd)
+        render_hint = str(prd.get("_render_hint") or "").strip().lower()
+        if not valid_html and render_hint == "section_fragment":
+            logger.warning(
+                "Repairing invalid section_fragment (%s, %d chars)",
+                reason,
+                len(html),
+            )
+            html, model_used = await _repair_section_fragment(client, model, html, prd)
+            html = _normalize_generated_html(html, prd)
+            valid_html, reason = _validate_generated_html(html, prd)
         if not valid_html:
             raise HTTPException(
                 status_code=502,
