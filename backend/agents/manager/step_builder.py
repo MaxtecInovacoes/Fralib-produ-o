@@ -1,5 +1,6 @@
 """Step: Builder — Fase 4: Geração de HTML via OpenUI."""
 import logging
+import re
 from backend.agents.manager.states import (
     PipelineState, STATE_BUILDING, STATE_VALIDATING, STATE_FAILED,
     _transition, _log_step_error,
@@ -106,10 +107,16 @@ def step_builder(state: PipelineState) -> PipelineState:
         # troca {{business_name}}/etc pelos valores reais, fora do LLM).
         if state.lead_data:
             setattr(prd, "_lead_data", dict(state.lead_data))
+        setattr(prd, "_run_id", state.run_id)
+        setattr(prd, "_lead_id", state.lead_id)
+        slug = re.sub(r"[^a-z0-9]+", "-", state.lead_data.get("nome", "site").lower()).strip("-")[:50] or "site"
+        canonical_url = f"https://app.seunegociofralib.site/sites/{state.tenant_id}/{slug}-{state.lead_id[:8]}/"
+        setattr(prd, "canonical_url", canonical_url)
         result = render_site(prd, usar_llm=True)
         if not getattr(result, "success", False):
             raise RuntimeError(getattr(result, "error", "Builder falhou sem erro detalhado"))
-        state.build_output = {"html": result.html, "model": result.model}
+        html = _enforce_pre_qa_contract(result.html, prd)
+        state.build_output = {"html": html, "model": result.model}
 
         try:
             from backend.agents.pipeline_checkpoint import gerar_pipeline_id, salvar_checkpoint
@@ -124,6 +131,25 @@ def step_builder(state: PipelineState) -> PipelineState:
             salvar_checkpoint(pipeline_id, "builder", state.build_output)
         except Exception as exc:
             logger.warning("[Builder] checkpoint HTML falhou (lead=%s): %s", state.lead_id, exc)
+
+        try:
+            from backend.agents.artifact_store import write_html_artifact
+            write_html_artifact(
+                run_id=state.run_id,
+                lead_id=state.lead_id,
+                lead_name=state.lead_data.get("nome", "") if state.lead_data else "",
+                filename="03-builder-final.html",
+                html=html,
+                metadata={
+                    "step": "builder",
+                    "tenant_id": state.tenant_id,
+                    "model": result.model,
+                    "segmento": state.segmento,
+                    "cidade": state.cidade,
+                },
+            )
+        except Exception as exc:
+            logger.warning("[Builder] artifact HTML falhou (lead=%s): %s", state.lead_id, exc)
     except Exception as e:
         _log_step_error(state, "Builder", e)
         state.error = f"Builder: {e}"
@@ -142,3 +168,65 @@ def step_builder(state: PipelineState) -> PipelineState:
                        state.lead_id, exc)
 
     return _transition(state, STATE_VALIDATING)
+
+
+_EMOJI_RE = re.compile(
+    "["
+    "\U0001F1E6-\U0001F1FF"
+    "\U0001F300-\U0001FAFF"
+    "\u2600-\u27BF"
+    "]+",
+    flags=re.UNICODE,
+)
+
+
+def _enforce_pre_qa_contract(html: str, prd) -> str:
+    """Aplica e valida contratos determinísticos antes do QA pass-through."""
+    from backend.agents.html_builder_repair import repair_builder_publication_contract
+    from backend.agents.html_phase6_repair import repair_phase6_publication_contract
+
+    cleaned = html or ""
+    if 'data-renderer="builder"' not in cleaned.lower():
+        cleaned = re.sub(
+            r"(?is)<html\b([^>]*)>",
+            r'<html\1 data-renderer="builder">',
+            cleaned,
+            count=1,
+        )
+    cleaned = repair_builder_publication_contract(cleaned, prd)
+    cleaned = repair_phase6_publication_contract(cleaned, prd)
+    cleaned = _EMOJI_RE.sub("", cleaned)
+
+    photos = getattr(prd, "photos", []) or []
+    og_image = photos[0].get("url") if photos and isinstance(photos[0], dict) else (photos[0] if photos else "")
+    head_additions = []
+    low = cleaned.lower()
+    if 'rel="icon"' not in low and "rel='icon'" not in low:
+        head_additions.append(
+            '<link rel="icon" href="data:image/svg+xml,'
+            '<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22>'
+            '<rect width=%2264%22 height=%2264%22 rx=%2214%22 fill=%22%23111827%22/>'
+            '<path d=%22M18 46V18h28v8H28v4h14v8H28v8z%22 fill=%22white%22/>'
+            '</svg>">'
+        )
+    if og_image and 'property="og:image"' not in low:
+        head_additions.append(f'<meta property="og:image" content="{og_image}">')
+    if 'property="og:title"' not in low:
+        head_additions.append(f'<meta property="og:title" content="{getattr(prd, "business_name", "Negócio local")}">')
+    if head_additions:
+        cleaned = re.sub(r"(?is)</head>", "\n".join(head_additions) + "\n</head>", cleaned, count=1)
+
+    required_markers = {
+        "imagem": r"(?is)<img\b|background-image\s*:",
+        "faq": r"(?is)faq|perguntas frequentes",
+        "footer": r"(?is)<footer\b|section:footer",
+        "descricao": r"(?is)<meta\s+name=[\"']description[\"']",
+        "open_graph": r"(?is)<meta\s+property=[\"']og:",
+        "favicon": r"(?is)<link\s+rel=[\"']icon[\"']",
+        "json_ld": r"(?is)application/ld\+json",
+        "lgpd": r"(?is)data-lgpd-banner",
+    }
+    missing = [name for name, pattern in required_markers.items() if not re.search(pattern, cleaned)]
+    if missing:
+        raise ValueError("HTML sem contrato pré-QA: " + ", ".join(missing))
+    return cleaned

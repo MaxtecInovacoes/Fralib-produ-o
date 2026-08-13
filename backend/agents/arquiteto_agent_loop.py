@@ -28,6 +28,17 @@ from arquiteto_tools import ARQUITETO_TOOLS, execute_tool
 from design_context import get_design_context, get_hero_style
 from designer_prd import DesignerPRD
 from llm_direct import call_claude, _registrar_uso_completo
+from prompts_arquiteto import _garantir_secoes_obrigatorias, _garantir_layout_type
+try:
+    from backend.core.design_system_router import build_design_dna, choose_section_variant
+    from backend.agents.requirements_contract import build_requirements_contract
+    from backend.agents.visual_contract import build_visual_contract
+    from backend.agents.site_build_plan import build_site_build_plan
+except Exception:
+    from core.design_system_router import build_design_dna, choose_section_variant
+    from requirements_contract import build_requirements_contract
+    from visual_contract import build_visual_contract
+    from site_build_plan import build_site_build_plan
 
 # ══════════════════════════════════════════════════════════════════
 # CONFIG
@@ -566,6 +577,7 @@ def _enrich_prd(prd: dict, dados_hunter: dict, cidade: str, segmento: str, dark_
     prd.setdefault("components_21dev", ["whatsapp-sticky-cta"])
     prd.setdefault("anti_patterns", ["precos visiveis"])
     prd.setdefault("schema_org_types", ["LocalBusiness"])
+    prd["sections"] = _ensure_full_section_contract(prd.get("sections") or [], dados_hunter)
 
     # Geo
     lat = dados_hunter.get("lat") or dados_hunter.get("latitude")
@@ -595,7 +607,67 @@ def _enrich_prd(prd: dict, dados_hunter: dict, cidade: str, segmento: str, dark_
         }
         prd["typography"] = {"heading": design["font_heading"], "body": design["font_body"]}
 
+    lead_id = str(dados_hunter.get("id") or dados_hunter.get("place_id") or dados_hunter.get("nome") or "")
+    design_dna = build_design_dna(
+        segmento=segmento,
+        business_name=dados_hunter.get("nome", ""),
+        lead_id=lead_id,
+        tier=prd.get("tier", "STANDARD"),
+        base_design=design if "design" in locals() else {},
+        dados_lead=dados_hunter,
+    )
+    prd["visual_seed"] = design_dna["visual_seed"]
+    prd["visual_dna"] = design_dna
+    prd["design_reference_pack"] = design_dna.get("design_reference_pack") or {}
+    prd["typography"] = {
+        "heading": design_dna.get("font_heading") or (prd.get("typography") or {}).get("heading"),
+        "body": design_dna.get("font_body") or (prd.get("typography") or {}).get("body"),
+    }
+    for section in prd["sections"]:
+        name = str(section.get("name", "")).lower()
+        section["layout_type"] = choose_section_variant(
+            name, design_dna["visual_seed"], design_dna["archetype"]["archetype"]
+        )
+    prd["layout_blueprint"] = [
+        {"section": section["name"], "variant": section.get("layout_type", "")}
+        for section in prd["sections"]
+    ]
+    prd["requirements_contract"] = build_requirements_contract(prd)
+    prd["visual_contract"] = build_visual_contract(prd)
+    prd["site_build_plan"] = build_site_build_plan(prd)
+
+    _validate_enriched_prd(prd)
+
     return prd
+
+
+def _ensure_full_section_contract(sections: list, dados_hunter: dict) -> list:
+    normalized = _garantir_secoes_obrigatorias(sections)
+    existing = {str(section.get("name", "")).lower() for section in normalized}
+    required = ["hero", "sobre", "servicos", "depoimentos", "faq", "localizacao", "contato", "footer"]
+    defaults = {
+        "depoimentos": {"name": "depoimentos", "required": True, "data_source": "reviews reais ou sinais públicos"},
+        "faq": {"name": "faq", "required": True, "data_source": "pesquisa local e dados confirmados"},
+        "localizacao": {"name": "localizacao", "required": True, "data_source": "endereço e cidade confirmados"},
+        "footer": {"name": "footer", "required": True, "data_source": "NAP, navegação e links legais"},
+    }
+    for name in required:
+        if name not in existing:
+            normalized.append(defaults.get(name, {"name": name, "required": True}))
+    return _garantir_layout_type(normalized, str(dados_hunter.get("id") or dados_hunter.get("nome") or ""))
+
+
+def _validate_enriched_prd(prd: dict) -> None:
+    section_names = {str(section.get("name", "")).lower() for section in prd.get("sections", [])}
+    required = {"hero", "sobre", "servicos", "depoimentos", "faq", "localizacao", "contato", "footer"}
+    missing = sorted(required - section_names)
+    if missing:
+        raise ValueError("PRD sem seções obrigatórias: " + ", ".join(missing))
+    if len(prd.get("photos") or []) < 3:
+        raise ValueError("PRD sem o mínimo de 3 imagens editoriais")
+    for field in ("requirements_contract", "visual_contract", "site_build_plan"):
+        if not prd.get(field):
+            raise ValueError(f"PRD com contrato vazio: {field}")
 
 
 # ══════════════════════════════════════════════════════════════════

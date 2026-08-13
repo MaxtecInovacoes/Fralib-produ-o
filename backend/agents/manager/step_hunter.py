@@ -24,19 +24,47 @@ def step_hunter(state: PipelineState) -> PipelineState:
         state.error = f"Hunter: {msg}"
         return _transition(state, STATE_FAILED)
 
-    # Jina research (best-effort — não bloqueia pipeline se falhar)
+    lead.setdefault("id", state.lead_id)
+
+    # Pesquisa de mercado: Jina primária, Playwright fallback no módulo canônico.
     try:
-        from backend.services.jina_service import pesquisar_mercado
-        jina_result = pesquisar_mercado(
-            segmento=state.segmento,
+        from backend.utils.jina_intelligence import (
+            buscar_inteligencia_jina,
+            formatar_inteligencia_para_arquiteto,
+        )
+        market_intel = buscar_inteligencia_jina(
+            nicho=state.segmento,
             cidade=state.cidade,
             nome_negocio=lead.get("nome", ""),
         )
-        if jina_result:
-            state.lead_data.setdefault("jina_insights", jina_result)
-            logger.info("[Hunter] Jina research OK para %s (%s)", lead.get("nome"), state.cidade)
+        state.lead_data["jina_intelligence"] = market_intel
+        state.lead_data["jina_insights"] = formatar_inteligencia_para_arquiteto(market_intel)
+        logger.info(
+            "[Hunter] pesquisa OK provider=%s para %s (%s)",
+            market_intel.get("provider", "jina"), lead.get("nome"), state.cidade,
+        )
     except Exception as e:
-        logger.warning("[Hunter] Jina research falhou (não-bloqueante): %s", e)
+        _log_step_error(state, "PesquisaMercado", e)
+        state.error = f"Pesquisa de mercado: {e}"
+        return _transition(state, STATE_FAILED)
+
+    try:
+        from backend.agents.unsplash_fetcher import buscar_fotos_unsplash
+
+        real_photos = lead.get("fotos") or lead.get("photos") or []
+        editorial_photos = buscar_fotos_unsplash(
+            segmento=state.segmento,
+            quantidade=max(0, 6 - len(real_photos)),
+            nome=lead.get("nome", ""),
+            cidade=state.cidade,
+        )
+        lead["fotos"] = list(dict.fromkeys([*real_photos, *editorial_photos]))[:8]
+        if len(lead["fotos"]) < 3:
+            raise RuntimeError("menos de 3 imagens disponíveis após fontes real e Unsplash")
+    except Exception as e:
+        _log_step_error(state, "Midia", e)
+        state.error = f"Mídia: {e}"
+        return _transition(state, STATE_FAILED)
 
     # Knowledge Journal: market_analyzed
     try:

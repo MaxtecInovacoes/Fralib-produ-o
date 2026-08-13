@@ -40,6 +40,7 @@ _SECTION_BLOCKS = [
     ["faq"],
     ["localizacao"],
     ["contato"],
+    ["footer"],
 ]
 
 class BuildResult:

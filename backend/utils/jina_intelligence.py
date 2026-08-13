@@ -17,6 +17,7 @@ import json
 import hashlib
 import time
 import sys
+from urllib.parse import quote_plus
 
 sys.path.insert(
     0,
@@ -97,7 +98,8 @@ def buscar_inteligencia_jina(
         except (FileNotFoundError, json.JSONDecodeError, UnicodeDecodeError):
             pass
 
-    # Tentar buscar inteligência real via Jina
+    # Tentar buscar inteligência real via Jina; Playwright é o fallback oficial
+    # para quota, indisponibilidade ou conteúdo insuficiente.
     resultado = None
     try:
         resultado = _buscar_real(nicho, cidade, nome_negocio, concorrentes_urls)
@@ -105,9 +107,14 @@ def buscar_inteligencia_jina(
         print(f"[Jina Intel] Erro busca real: {e}")
 
     if not resultado:
+        resultado = _buscar_com_playwright(
+            nicho, cidade, nome_negocio, concorrentes_urls
+        )
+
+    if not resultado:
         raise RuntimeError(
-            f"[Jina Intel] Busca real falhou para nicho='{nicho}', cidade='{cidade}', "
-            f"negocio='{nome_negocio}' — sem dados de inteligencia, sem fallback"
+            f"Pesquisa de mercado falhou via Jina e Playwright para "
+            f"nicho='{nicho}', cidade='{cidade}', negocio='{nome_negocio}'"
         )
 
     # Salvar cache
@@ -161,6 +168,8 @@ def _buscar_real(
         try:
             print(f"[Jina Intel] Lendo: {url}")
             resp = requests.get(f"https://r.jina.ai/{url}", headers=headers, timeout=20)
+            if resp.status_code in {402, 403, 429} or resp.status_code >= 500:
+                raise RuntimeError(f"Jina indisponivel ou sem quota: HTTP {resp.status_code}")
             if resp.status_code == 200 and len(resp.text) > 200:
                 conteudo = resp.text[:5000]
                 analise = _analisar_conteudo_llm(conteudo, nicho, cidade, nome_negocio)
@@ -174,7 +183,70 @@ def _buscar_real(
     if not resultados:
         return None
 
-    return _consolidar_inteligencia(resultados, nicho, cidade, nome_negocio)
+    consolidated = _consolidar_inteligencia(resultados, nicho, cidade, nome_negocio)
+    consolidated["provider"] = "jina"
+    return consolidated
+
+
+def _buscar_com_playwright(
+    nicho: str, cidade: str, nome_negocio: str, concorrentes_urls: list | None = None
+) -> dict | None:
+    """Fallback síncrono que lê conteúdo renderizado sem consumir a API Jina."""
+    import asyncio
+
+    async def collect() -> list[dict]:
+        from playwright.async_api import async_playwright
+
+        urls = [u for u in (concorrentes_urls or []) if str(u).startswith("http")][:2]
+        async with async_playwright() as playwright:
+            browser = await playwright.chromium.launch(headless=True)
+            page = await browser.new_page(locale="pt-BR")
+            if not urls:
+                query = quote_plus(f"{nicho} {cidade} site oficial")
+                await page.goto(
+                    f"https://www.google.com/search?q={query}",
+                    wait_until="domcontentloaded",
+                    timeout=30000,
+                )
+                hrefs = await page.locator("a").evaluate_all(
+                    "els => els.map(a => a.href).filter(Boolean)"
+                )
+                excluded = ("google.", "facebook.", "instagram.", "youtube.")
+                urls = [u for u in hrefs if u.startswith("http") and not any(x in u for x in excluded)][:2]
+
+            analyses = []
+            for url in urls:
+                try:
+                    await page.goto(url, wait_until="domcontentloaded", timeout=30000)
+                    content = (await page.locator("body").inner_text())[:5000]
+                    if len(content.strip()) < 200:
+                        continue
+                    analysis = _analisar_conteudo_llm(content, nicho, cidade, nome_negocio)
+                    if analysis:
+                        analysis["url_fonte"] = url
+                        analyses.append(analysis)
+                except Exception as exc:
+                    print(f"[Jina Intel] Playwright falhou em {url}: {exc}")
+            await browser.close()
+            return analyses
+
+    try:
+        analyses = asyncio.run(collect())
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        try:
+            analyses = loop.run_until_complete(collect())
+        finally:
+            loop.close()
+    except Exception as exc:
+        print(f"[Jina Intel] Fallback Playwright falhou: {exc}")
+        return None
+
+    if not analyses:
+        return None
+    consolidated = _consolidar_inteligencia(analyses, nicho, cidade, nome_negocio)
+    consolidated["provider"] = "playwright"
+    return consolidated
 
 
 def _buscar_concorrentes_google(nicho: str, cidade: str) -> list:

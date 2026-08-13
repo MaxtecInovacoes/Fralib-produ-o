@@ -363,7 +363,11 @@ def _build_system_prompt(prd: dict) -> str:
     photos = prd.get("photos", [])
     videos = prd.get("videos", [])
     if photos:
-        segments.append(f"\n## Photos: {len(photos)} images available")
+        segments.append("\n## Photos — use these exact editorial URLs")
+        for index, photo in enumerate(photos[:8], 1):
+            url = photo.get("url") if isinstance(photo, dict) else photo
+            if url:
+                segments.append(f"Photo {index}: {url}")
     if videos:
         segments.append(f"\n## Videos: {len(videos)} videos available")
 
