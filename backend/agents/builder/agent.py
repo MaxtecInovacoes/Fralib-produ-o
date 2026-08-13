@@ -587,6 +587,12 @@ def _render_block(block_spec: dict, design_tokens: dict) -> tuple[str, str]:
     last_error = ""
     for attempt in range(max_retries):
         try:
+            if last_error:
+                block_spec["_repair_feedback"] = (
+                    f"Tentativa anterior inválida para [{label_str}]: {last_error}. "
+                    "Regere somente a seção solicitada, começando com <section e terminando com </section>, "
+                    "com heading e texto visível suficientes."
+                )
             resp = requests.post(
                 GENERATE_ENDPOINT,
                 json={"designerPRD": block_spec},

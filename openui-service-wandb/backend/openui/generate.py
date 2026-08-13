@@ -204,6 +204,7 @@ def _build_system_prompt(prd: dict) -> str:
     if render_hint == "section_fragment":
         sections = [section for section in prd.get("sections", []) if isinstance(section, dict)]
         section_payload = sections[0] if sections else {}
+        repair_feedback = str(prd.get("_repair_feedback") or "").strip()
         palette = prd.get("paleta") or prd.get("color_palette") or {}
         typography = prd.get("typography") or {}
         photos = prd.get("photos") or []
@@ -225,7 +226,8 @@ def _build_system_prompt(prd: dict) -> str:
             "Start the response with <section and finish with </section>. "
             "Include visible heading, useful copy, and CTA/content from the requested section. "
             "Use Tailwind utility classes directly. Do not output html, head, body, main, style, script, markdown, or explanation. "
-            "Generate only this requested section and nothing else."
+            "Generate only this requested section and nothing else. "
+            + (f"Previous validation error to fix: {repair_feedback}. " if repair_feedback else "")
         )
 
     segments: list[str] = []
@@ -507,7 +509,9 @@ async def _repair_section_fragment(
             "content": (
                 "You repair one HTML section fragment. Return raw HTML only. "
                 "Start with <section and finish with </section>. "
-                "Preserve useful visible content from the draft. Remove document wrappers, CSS, JavaScript, markdown, and explanations."
+                "If the draft is too short, empty, only text, or malformed, ignore it and regenerate the requested section from the JSON contract. "
+                "The final answer must contain useful visible content, at least one heading, and enough text for a real landing page section. "
+                "Remove document wrappers, CSS, JavaScript, markdown, and explanations."
             ),
         },
         {
