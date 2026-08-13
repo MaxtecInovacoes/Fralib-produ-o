@@ -1,66 +1,52 @@
-# FraLib — Índice de Entrada para IAs
+# FraLib — Entrada Rápida para Claude/Agentes
 
-Tudo que não está aqui ou em `backend/agents/<nome>/agent.py` é **LEGADO**.
+Fonte de verdade: `README.md` e `AGENTS.md`.
 
-## TL;DR
+Se você é uma IA abrindo esta pasta:
 
-- **Pipeline**: Hunter → Caio → Arquiteto → Builder → Quality Gate → Deploy → Franz
-- **Orquestrador**: `backend/agents/manager/agent.py` (FSM pura, não LangGraph)
-- **Entry points**: `server.py` (FastAPI :8000) e `worker.py` (daemon fila)
-- **Deploy**: `git push origin master` → hook `/root/repos/fralib.git/hooks/post-receive` → rsync `/root/fralib/` → `/opt/fralib/` → Docker Compose restart worker + PM2 reload
-- **Smoke**: `python pipeline.py smoke --dry-run`
-- **Tests**: `pytest tests/agents/`
+1. Leia `README.md`.
+2. Leia `AGENTS.md`.
+3. Não crie arquivos paralelos.
+4. Não use docs antigos em `docs/` como fonte de verdade se contradisserem `README.md`.
+5. Não edite a VPS direto; edite localmente, teste, commit, push.
 
----
+## Caminho Real
 
-## Estrutura (resumido)
-
-```
-backend/agents/ (10 agentes canônicos)
-backend/core/ (auth, db, job_queue, jwt)
-backend/endpoints/ (64 routes HTTP)
-backend/services/ (llm_router, service_manager)
-backend/whatsapp/ (listener whatsmeow)
-server.py, worker.py, alembic/, tests/agents/
-```
-
-Ver arquivo completo: `.claude/projects/.../memory/AUDITORIA_COMPLETA_FRALIB_2026-07-10.md` (removido de contexto).
-
-## Padrão de agente (template)
-
-Cada agente em `backend/agents/<nome>/` tem:
-
-```
-agent.py          ← lógica principal
-contracts.py      ← (opcional) Pydantic dataclasses
-prompts.py        ← (opcional) prompts do LLM
-tools.py          ← (opcional) helpers
-README.md         ← (opcional) docs do agente
+```text
+Admin/API
+→ jobs.pipeline_lead
+→ worker.py
+→ backend/agents/manager/agent.py
+→ Hunter
+→ Caio
+→ Nicho
+→ Design Director
+→ Variação
+→ Arquiteto
+→ Builder/OpenUI
+→ Safe Post
+→ Quality Gates
+→ Deploy
+→ Franz
 ```
 
-## Regras de ouro
+## Produção
 
-1. **NÃO criar arquivos novos** sem antes verificar se há agente/pasta apropriado
-2. **NÃO mexer em `agents/_shared/`** — só existe `agents/_text_utils.py` (compat)
-3. **NÃO usar LangGraph** — orquestrador é FSM pura
-4. **NÃO usar scrapers pagos** — só open-source
-5. **NÃO usar renderers alternativos** — Builder (OpenUI) é o único caminho
-6. **NÃO duplicar agentes** — se precisar estender, melhore `agent.py` existente
+- VPS: `104.243.41.166`
+- Domínio: `https://app.seunegociofralib.site`
+- API: `fralib-api.service`
+- Worker: Docker `fralib-worker-1`
+- OpenUI: `fralib-openui.service`, porta `7878`
+- Sites: `/var/www/fralib/sites/`
 
-## Onde está cada coisa
+## Legado
 
-| Preciso de... | Olhe em... |
-|---|---|
-| Caio (qualificar lead) | `backend/agents/caio/agent.py` |
-| Gerar site | `backend/agents/builder/agent.py` |
-| Validar HTML | `backend/agents/builder/quality_gate.py` |
-| Pesquisar mercado | `backend/agents/arquiteto/agent.py` (via lead_data) |
-| DesignerPRD | `backend/agents/arquiteto/agent.py` |
-| SDR WhatsApp | `backend/agents/franz/agent.py` |
-| Orquestrar tudo | `backend/agents/manager/agent.py` |
-| Mineração de leads | `backend/agents/hunter/agent.py` |
-| Schema DB | `alembic/versions/` |
-| Auth, DB, jobs | `backend/core/` |
-| WhatsApp listener | `backend/whatsapp/` |
-| API endpoints | `backend/endpoints/` |
-| Testes | `tests/agents/` |
+Arquivos em `backend/_arquivo/` são histórico. Não importe.
+
+## Último E2E Verde
+
+Lead `Legacy Centro de Treinamento`, tenant `2`, job `480`, URL:
+
+```text
+https://app.seunegociofralib.site/sites/2/legacy-centro-de-treinamento-b0b7a7c0/
+```
