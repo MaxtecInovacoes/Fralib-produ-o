@@ -2151,10 +2151,10 @@ async def get_pipeline_timeline(db: Session = Depends(get_db), usuario: dict = D
         })
 
     errors = db.execute(text("""
-        SELECT step, exception_type, left(coalesce(message, ''), 500) AS message, created_at
+        SELECT step, exception_type, left(coalesce(message, ''), 500) AS message, criado_em
         FROM pipeline_error_log
         WHERE tenant_id = :tenant_id
-        ORDER BY created_at DESC
+        ORDER BY criado_em DESC
         LIMIT 5
     """), {"tenant_id": tenant_id}).fetchall()
 
