@@ -562,6 +562,30 @@ def handle_pipeline_job_finished(
     )
     db.commit()
     _event(db, tenant_id, "producao", "error", "Pipeline falhou para um lead aprovado. Lead ficou em erro para revisão.")
+    lead_id = payload.get("_lead_id_existente") or payload.get("lead_id")
+    if lead_id:
+        try:
+            db.execute(
+                text(
+                    """
+                    UPDATE leads
+                    SET status='erro_pipeline',
+                        erro_pipeline=:erro,
+                        atualizado_em=NOW()
+                    WHERE id=:lead_id
+                      AND user_id=:uid
+                      AND status NOT IN ('concluido', 'descartado')
+                    """
+                ),
+                {
+                    "lead_id": lead_id,
+                    "uid": tenant_id,
+                    "erro": (mensagem or fase or "pipeline falhou")[:500],
+                },
+            )
+            db.commit()
+        except Exception:
+            db.rollback()
     enqueue_production_tick(db, tenant_id, delay_seconds=5, reason="pipeline-failure")
 
 

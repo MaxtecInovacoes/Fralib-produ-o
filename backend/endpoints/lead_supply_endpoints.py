@@ -104,6 +104,12 @@ async def start_lead_supply(
         "immediate": immediate,
         "job_id": immediate.get("job_id"),
         "tick_job_id": tick_job_id,
+        "inventory_id": immediate.get("inventory_id"),
+        "lead_nome": immediate.get("lead_nome"),
+        "message": immediate.get("message"),
+        "blocked": immediate.get("blocked"),
+        "paused": immediate.get("paused"),
+        "requeued_terminal_job": immediate.get("requeued_terminal_job"),
     }
 
 
@@ -142,6 +148,12 @@ async def tick_lead_production(
         "duplicate_job": immediate.get("duplicate_job"),
         "waiting": immediate.get("waiting"),
         "cooldown": immediate.get("cooldown"),
+        "inventory_id": immediate.get("inventory_id"),
+        "lead_nome": immediate.get("lead_nome"),
+        "message": immediate.get("message"),
+        "blocked": immediate.get("blocked"),
+        "paused": immediate.get("paused"),
+        "requeued_terminal_job": immediate.get("requeued_terminal_job"),
     }
 
 

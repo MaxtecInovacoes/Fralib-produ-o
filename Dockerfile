@@ -4,6 +4,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
     PYTHONPATH=/app/backend:/app \
+    PLAYWRIGHT_BROWSERS_PATH=/ms-playwright \
     PATH="/opt/venv/bin:${PATH}"
 
 WORKDIR /app
@@ -28,10 +29,12 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 COPY backend/requirements.txt /tmp/requirements.txt
-RUN pip install --upgrade pip setuptools wheel \
+RUN mkdir -p /ms-playwright \
+    && pip install --upgrade pip setuptools wheel \
     && pip install -r /tmp/requirements.txt \
     && pip install playwright \
-    && playwright install --with-deps chromium
+    && playwright install --with-deps chromium \
+    && chmod -R a+rX /ms-playwright
 
 COPY . /app
 

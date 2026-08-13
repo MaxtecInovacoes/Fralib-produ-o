@@ -3880,13 +3880,13 @@ async function iniciarLeadSupply() {
       return;
     }
     if (data && data.job_id) {
-      _leadSupplySetAction('success', 'Pipeline criada', 'A esteira ligou e a primeira pipeline real ja nasceu com job #' + data.job_id + '.', 7000);
+      _leadSupplySetAction('success', 'Pipeline criada', 'A esteira ligou e ' + (data.lead_nome || 'o proximo lead') + ' entrou na pipeline real com job #' + data.job_id + '.', 7000);
       if (typeof Toast !== 'undefined') Toast.success('Esteira ligada com pipeline imediata.');
       _refreshLeadSupplySoon();
       return;
     }
     if (data && data.immediate && data.immediate.duplicate_job) {
-      _leadSupplySetAction('warning', 'Esteira ligada sem job novo', 'Ja existia uma pipeline ativa ou o lead ja estava reservado. O motor ficou ligado para seguir do proximo ponto.', 7000);
+      _leadSupplySetAction('warning', 'Esteira ligada sem job novo', data.message || 'Ja existia uma pipeline ativa ou o lead ja estava reservado. O motor ficou ligado para seguir do proximo ponto.', 7000);
       if (typeof Toast !== 'undefined') Toast.warning('Esteira ligada, mas sem criar pipeline nova agora.');
       _refreshLeadSupplySoon();
       return;
@@ -3961,14 +3961,15 @@ async function forcarLeadSupplyTick() {
       return;
     }
     if (data && data.job_id) {
-      _leadSupplySetAction('success', 'Pipeline criada', 'Lead reservado e pipeline real criada com job #' + data.job_id + '.', 7000);
-      if (window.renderPipelineTopTimeline) window.renderPipelineTopTimeline('builder_renderer', 'Pipeline criada com job #' + data.job_id + '. Criando site real.');
+      var leadNome = data.lead_nome || 'proximo lead';
+      _leadSupplySetAction('success', 'Pipeline criada', leadNome + ' foi reservado e entrou na pipeline real com job #' + data.job_id + '.', 7000);
+      if (window.renderPipelineTopTimeline) window.renderPipelineTopTimeline('builder_renderer', 'Pipeline criada para ' + leadNome + ' com job #' + data.job_id + '. Criando site real.');
       if (typeof Toast !== 'undefined') Toast.success('Pipeline criada para o próximo lead aprovado.');
       _refreshLeadSupplySoon();
       return;
     }
     if (data && data.duplicate_job) {
-      _leadSupplySetAction('warning', 'Lead ja estava em fila', 'Este lead ja tinha uma pipeline ativa ou acabava de ser reaproveitado. Nenhum job novo foi criado.', 7000);
+      _leadSupplySetAction('warning', 'Lead ja estava em fila', data.message || 'Este lead ja tinha uma pipeline ativa ou acabava de ser reaproveitado. Nenhum job novo foi criado.', 7000);
       if (window.renderPipelineTopTimeline) window.renderPipelineTopTimeline('builder_renderer', 'Ja existe pipeline ativa. Acompanhe a linha do tempo atual.');
       if (typeof Toast !== 'undefined') Toast.warning('Nenhum job novo foi criado para esse clique.');
       _refreshLeadSupplySoon();

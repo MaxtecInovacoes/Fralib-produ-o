@@ -12,6 +12,29 @@ from sqlalchemy.orm import Session
 from backend.core import job_queue
 
 
+def _idempotency_key_for(item_id: str, run_id: str, *, retry_terminal: bool = False) -> str:
+    base = f"inventory-pipeline-{item_id}"
+    return f"{base}-{run_id}" if retry_terminal else base
+
+
+def _existing_inventory_job(db: Session, tenant_id: int, item_id: str) -> dict[str, Any] | None:
+    row = db.execute(
+        text(
+            """
+            SELECT id, status, last_phase, last_error, concluido_em, criado_em
+            FROM jobs
+            WHERE tenant_id=:uid
+              AND tipo IN ('pipeline_lead','pipeline_multiplos','pipeline_main')
+              AND idempotency_key LIKE :prefix
+            ORDER BY id DESC
+            LIMIT 1
+            """
+        ),
+        {"uid": tenant_id, "prefix": f"inventory-pipeline-{item_id}%"},
+    ).mappings().first()
+    return dict(row) if row else None
+
+
 def run_production_tick(db: Session, payload: dict[str, Any], tenant_id: int) -> dict[str, Any]:
     """Run the production tick to process approved leads."""
     from backend.services.lead_supply_storage import (
@@ -78,13 +101,15 @@ def run_production_tick(db: Session, payload: dict[str, Any], tenant_id: int) ->
     test_number = str(payload.get("_bryan_test_number") or os.getenv("BRYAN_TEST_NUMBER", "")).strip()
     if test_number:
         payload_job["_bryan_test_number"] = test_number
+    existing_job = _existing_inventory_job(db, tenant_id, str(item["id"]))
+    retry_terminal = bool(existing_job and existing_job.get("status") in {"completed", "failed_permanent"})
     job_id = job_queue.enqueue(
         db,
         tipo="pipeline_lead",
         payload=payload_job,
         tenant_id=tenant_id,
         max_attempts=3,
-        idempotency_key=f"inventory-pipeline-{item['id']}",
+        idempotency_key=_idempotency_key_for(str(item["id"]), run_id, retry_terminal=retry_terminal),
         priority=1,
         run_id=run_id,
     )
@@ -102,7 +127,14 @@ def run_production_tick(db: Session, payload: dict[str, Any], tenant_id: int) ->
             {"id": item["id"], "uid": tenant_id},
         )
         db.commit()
-        return {"ok": True, "duplicate_job": True}
+        return {
+            "ok": True,
+            "duplicate_job": True,
+            "inventory_id": item["id"],
+            "lead_nome": item.get("nome"),
+            "existing_job": existing_job,
+            "message": "Já existe pipeline ativa ou duplicada para este lead",
+        }
     db.execute(
         text(
             """
@@ -115,4 +147,12 @@ def run_production_tick(db: Session, payload: dict[str, Any], tenant_id: int) ->
     )
     db.commit()
     _event(db, tenant_id, "producao", "success", f"Pipeline enfileirada para {item['nome']} (job #{job_id})")
-    return {"ok": True, "job_id": job_id, "lead_id": lead_id, "inventory_id": item["id"]}
+    return {
+        "ok": True,
+        "job_id": job_id,
+        "lead_id": lead_id,
+        "inventory_id": item["id"],
+        "lead_nome": item.get("nome"),
+        "requeued_terminal_job": retry_terminal,
+        "previous_job": existing_job,
+    }
