@@ -502,11 +502,24 @@
 
 ﻿  <section class="view-section active" id="view-config">
 
-    <h2 class="section-title">&#9889; MOTOR FRALIB</h2>
-    <div class="admin-simple-help" style="margin:-6px 0 16px;">
-      <strong>Em portugues claro:</strong> o Motor FraLib encontra empresas, escolhe as melhores, gera um site e deixa tudo pronto para contato.
-      Se algo estiver parado, esta tela mostra o motivo e o proximo passo.
+    <div class="config-section" id="pipelineTopTimelinePanel" style="margin-bottom:18px;border-color:rgba(16,185,129,.36);box-shadow:0 0 0 1px rgba(16,185,129,.04),0 18px 50px rgba(16,185,129,.05);">
+      <div class="config-group" style="margin-bottom:0;">
+        <div class="config-group-title" style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+          <span>&#9201; ESTEIRA EM TEMPO REAL</span>
+          <span id="pipelineTopClock" style="font-family:var(--fl-font-brand);font-size:13px;color:#10b981;">00:00</span>
+        </div>
+        <div class="admin-simple-help" style="margin-top:10px;">
+          <strong>Em portugues claro:</strong> o Motor FraLib encontra empresas, escolhe as melhores, gera um site e deixa tudo pronto para contato.
+          Se algo estiver parado, esta tela mostra o motivo e o proximo passo.
+        </div>
+        <div id="pipelineTopSteps" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(116px,1fr));gap:8px;margin-top:12px;"></div>
+        <div id="pipelineTopLog" style="margin-top:12px;background:rgba(15,23,42,.58);border:1px solid var(--fl-border);border-radius:8px;padding:10px 12px;color:var(--fl-text-muted);font-size:12px;line-height:1.45;">
+          Aguardando a esteira ser ligada.
+        </div>
+      </div>
     </div>
+
+    <h2 class="section-title">&#9889; MOTOR FRALIB</h2>
 
     <div class="config-section" id="pipelinePermissionPanel" style="margin-bottom:20px;border-color:rgba(56,189,248,.32);">
       <div class="config-group" style="margin-bottom:0;">
@@ -4107,6 +4120,7 @@ function iniciarCronometroPipelineAdmin() {
   if (!_pipelineInicioAdmin) _pipelineInicioAdmin = Date.now();
   // EXPORTAR para a waveform consumir o MESMO cronometro (fonte da verdade)
   window.__pipelineSharedStart = _pipelineInicioAdmin;
+  if (window.renderPipelineTopTimeline) window.renderPipelineTopTimeline('hunter', 'Esteira ligada. Encontrando leads.', _pipelineInicioAdmin);
   atualizarCronometroPipelineAdmin();
   if (!_pipelineTimerAdmin) _pipelineTimerAdmin = setInterval(atualizarCronometroPipelineAdmin, 1000);
 }
@@ -4118,6 +4132,7 @@ function pararCronometroPipelineAdmin() {
   window.__pipelineSharedStart = 0;
   var el = document.getElementById('pipeline-banner-tempo');
   if (el) el.textContent = '00:00';
+  if (window.renderPipelineTopTimeline) window.renderPipelineTopTimeline(null, 'Aguardando a esteira ser ligada.');
   atualizarTempoInlinePipeline(0);
 }
 
@@ -8446,6 +8461,70 @@ async function atualizarUtiBadge() {
   // renderPipelineTimeline(ativo, status) vem do modulo /js/admin/pipeline-timeline.js
   // carregado no admin.html (com icones + mensagens rotativas + barra animada).
 
+  var PIPELINE_TOP_STEPS = [
+    { key:'hunter', label:'Encontrando leads' },
+    { key:'caio', label:'Qualificando' },
+    { key:'market_intelligence', label:'Consultando concorrentes' },
+    { key:'media', label:'Buscando palavras-chave' },
+    { key:'prompt_agent', label:'Copy e briefing' },
+    { key:'designer', label:'Criando direcao visual' },
+    { key:'builder_renderer', label:'Criando site' },
+    { key:'deploy', label:'Publicando deploy' },
+    { key:'franz', label:'Mensagem enviada' }
+  ];
+  var pipelineTopInicio = 0;
+  var pipelineTopTimer = null;
+  function formatarTempoPipelineTopo(ms) {
+    var total = Math.max(0, Math.floor(Number(ms || 0) / 1000));
+    var horas = Math.floor(total / 3600);
+    var minutos = Math.floor((total % 3600) / 60);
+    var segundos = total % 60;
+    var dois = function(n){ return String(n).padStart(2, '0'); };
+    return horas > 0 ? (dois(horas) + ':' + dois(minutos) + ':' + dois(segundos)) : (dois(minutos) + ':' + dois(segundos));
+  }
+  function atualizarRelogioPipelineTopo() {
+    var el = document.getElementById('pipelineTopClock');
+    if (!el) return;
+    var inicio = pipelineTopInicio || window.__pipelineSharedStart || 0;
+    el.textContent = inicio ? formatarTempoPipelineTopo(Date.now() - inicio) : '00:00';
+  }
+  function indicePipelineTopo(key) {
+    for (var i = 0; i < PIPELINE_TOP_STEPS.length; i++) {
+      if (PIPELINE_TOP_STEPS[i].key === key) return i;
+    }
+    return -1;
+  }
+  function renderPipelineTopTimeline(ativo, mensagem, inicio) {
+    var stepsEl = document.getElementById('pipelineTopSteps');
+    var logEl = document.getElementById('pipelineTopLog');
+    if (!stepsEl) return;
+    var activeIndex = indicePipelineTopo(ativo);
+    stepsEl.innerHTML = PIPELINE_TOP_STEPS.map(function(step, index) {
+      var done = activeIndex >= 0 && index < activeIndex;
+      var active = activeIndex === index;
+      var bg = active ? 'rgba(16,185,129,.16)' : (done ? 'rgba(56,189,248,.12)' : 'rgba(15,23,42,.55)');
+      var border = active ? 'rgba(16,185,129,.72)' : (done ? 'rgba(56,189,248,.38)' : 'var(--fl-border)');
+      var color = active ? '#10b981' : (done ? '#38bdf8' : 'var(--fl-text-muted)');
+      var marker = active ? '&#9654;' : (done ? '&#10003;' : '&#9675;');
+      return '<div style="background:' + bg + ';border:1px solid ' + border + ';border-radius:9px;padding:9px 10px;min-height:54px;">'
+        + '<div style="font-family:var(--fl-font-mono);font-size:10px;color:' + color + ';margin-bottom:6px;">' + marker + ' ETAPA ' + (index + 1) + '</div>'
+        + '<div style="font-size:12px;font-weight:800;color:var(--fl-text);line-height:1.25;">' + step.label + '</div>'
+        + '</div>';
+    }).join('');
+    if (logEl) {
+      logEl.textContent = mensagem || (ativo ? 'Esteira em andamento.' : 'Aguardando a esteira ser ligada.');
+    }
+    if (inicio && !pipelineTopInicio) {
+      var ts = Date.parse(inicio);
+      if (!Number.isNaN(ts)) pipelineTopInicio = ts;
+    }
+    if ((ativo || pipelineTopInicio || window.__pipelineSharedStart) && !pipelineTopTimer) {
+      pipelineTopTimer = setInterval(atualizarRelogioPipelineTopo, 1000);
+    }
+    atualizarRelogioPipelineTopo();
+  }
+  window.renderPipelineTopTimeline = renderPipelineTopTimeline;
+
   function atualizarTimelineComStatus(d) {
     d = d || {};
     var job = d.current_job || {};
@@ -8454,10 +8533,13 @@ async function atualizarUtiBadge() {
     var label = d.fase_label || job.phase_label || job.last_phase || (d.rodando ? 'Pipeline em andamento' : '');
     if (d.rodando || fase) {
       renderPipelineTimeline(fase, label);
+      renderPipelineTopTimeline(fase, label, job.started_at || job.created_at || d.started_at || d.iniciado_em);
       var bannerFase = document.getElementById('pipeline-banner-fase');
       if (bannerFase && label) bannerFase.textContent = label;
     } else {
       renderPipelineTimeline(null);
+      pipelineTopInicio = 0;
+      renderPipelineTopTimeline(null, 'Aguardando a esteira ser ligada.');
     }
   }
 
@@ -8498,13 +8580,16 @@ async function atualizarUtiBadge() {
         var progressLabel = data.label || data.mensagem || 'Pipeline em andamento';
         if (bannerFase) bannerFase.textContent = progressLabel;
         renderPipelineTimeline(progressKey, progressLabel);
+        renderPipelineTopTimeline(progressKey, progressLabel, data.started_at || data.created_at || data.iniciado_em);
         return;
       }
       if (msg && (msg.includes('FASE') || msg.includes('Pipeline') || msg.includes('Lead:') || msg.includes('Deploy') || msg.includes('concluído'))) {
         if (bannerFase) bannerFase.textContent = msg;
         renderPipelineTimeline(etapaTimelinePorMensagem(msg), msg);
+        renderPipelineTopTimeline(etapaTimelinePorMensagem(msg), msg);
         if (msg.includes('concluído') || msg.includes('concluido')) {
           renderPipelineTimeline('franz', 'ciclo concluido');
+          renderPipelineTopTimeline('franz', 'ciclo concluido');
           pararCronometroPipelineAdmin();
           setTimeout(function(){ banner.style.display = 'none'; }, 3000);
         }
