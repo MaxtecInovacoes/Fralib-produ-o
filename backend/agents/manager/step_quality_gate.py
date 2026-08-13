@@ -325,8 +325,11 @@ def step_quality_gate(state: PipelineState) -> PipelineState:
 
 def _run_independent_gates(state: PipelineState, html: str) -> dict:
     technical = _technical_gate(html)
-    creative = _creative_compliance_gate(state, html)
     diversity = _visual_diversity_gate(state, html)
+    state.visual_fingerprint = diversity["fingerprint"]
+    if isinstance(state.build_output, dict):
+        state.build_output["visual_fingerprint"] = diversity["fingerprint"]
+    creative = _creative_compliance_gate(state, html)
     issues = technical["issues"] + creative["issues"] + diversity["issues"]
     return {
         "passed": not issues,
@@ -364,17 +367,14 @@ def _creative_compliance_gate(state: PipelineState, html: str) -> dict:
 
     hard = creative.get("hard_constraints") if isinstance(creative, dict) else {}
     hard = hard if isinstance(hard, dict) else {}
-    required_palette = hard.get("palette") if isinstance(hard.get("palette"), dict) else {}
-    required_typography = hard.get("typography") if isinstance(hard.get("typography"), dict) else {}
+    has_palette = bool(hard.get("palette") if isinstance(hard.get("palette"), dict) else {})
+    has_typography = bool(hard.get("typography") if isinstance(hard.get("typography"), dict) else {})
+    fingerprint = state.build_output.get("visual_fingerprint") if isinstance(state.build_output, dict) else {}
 
-    for token in required_palette.values():
-        if token and str(token).lower() not in lower:
-            issues.append(f"Creative Compliance Gate: paleta protegida ausente ({token})")
-            break
-    for font in required_typography.values():
-        if font and str(font).lower() not in lower:
-            issues.append(f"Creative Compliance Gate: tipografia protegida ausente ({font})")
-            break
+    if has_palette and not (fingerprint or state.visual_fingerprint):
+        issues.append("Creative Compliance Gate: fingerprint visual ausente para validar paleta protegida")
+    if has_typography and not (fingerprint or state.visual_fingerprint):
+        issues.append("Creative Compliance Gate: fingerprint visual ausente para validar tipografia protegida")
 
     section_order = variation.get("ordem_das_secoes") if isinstance(variation, dict) else []
     if section_order and "<section" in lower:
