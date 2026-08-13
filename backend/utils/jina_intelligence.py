@@ -348,7 +348,43 @@ Retorne APENAS o JSON."""
     except Exception as e:
         print(f"[Jina Intel] Erro análise LLM: {e}")
 
-    return None
+    return _analisar_conteudo_deterministico(conteudo, nicho, cidade)
+
+
+def _analisar_conteudo_deterministico(conteudo: str, nicho: str, cidade: str) -> dict:
+    """Extrai sinais úteis sem nova chamada LLM quando o provider está sobrecarregado."""
+    text = re.sub(r"\s+", " ", conteudo or "").strip()
+    sentences = [
+        item.strip(" -•|\t")
+        for item in re.split(r"[\n\r.!?]+", conteudo or "")
+        if 25 <= len(item.strip()) <= 150
+    ]
+    headings = []
+    for line in (conteudo or "").splitlines():
+        clean = re.sub(r"[#*_>`]+", "", line).strip()
+        if 8 <= len(clean) <= 90 and clean not in headings:
+            headings.append(clean)
+    keywords = []
+    normalized = text.lower()
+    for term in (
+        nicho, cidade, "musculação", "treino", "aula", "plano", "estrutura",
+        "resultado", "saúde", "condicionamento", "personal", "avaliação",
+    ):
+        if term and term.lower() in normalized and term not in keywords:
+            keywords.append(term)
+    return {
+        "tom_de_voz": "direto e orientado a benefício",
+        "palavras_poder": keywords[:10],
+        "frases_genericas": [item for item in FRASES_GENERICAS_PADRAO if item in normalized],
+        "headlines": headings[:5] or sentences[:3],
+        "ctas": [item for item in sentences if any(token in item.lower() for token in ("comece", "conheça", "fale", "agende", "matrícula"))][:5],
+        "proposta_valor": sentences[0] if sentences else f"Atendimento de {nicho} em {cidade}",
+        "estilo_visual": "não inferido sem análise visual; usar curadoria FraLib",
+        "secoes_presentes": headings[:8],
+        "diferencial_comunicado": "validar com dados confirmados do lead",
+        "publico_alvo": f"pessoas buscando {nicho} em {cidade}",
+        "analysis_mode": "deterministic_fallback",
+    }
 
 
 def _consolidar_inteligencia(
