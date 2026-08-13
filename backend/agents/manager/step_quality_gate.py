@@ -93,6 +93,15 @@ def step_quality_gate(state: PipelineState) -> PipelineState:
     try:
         html = (state.build_output or {}).get("html", "")
         if html:
+            try:
+                from backend.agents.manager.step_deploy import _normalize_single_main_and_h1
+                normalized_html = _normalize_single_main_and_h1(html)
+                if normalized_html != html:
+                    html = normalized_html
+                    state.build_output["html"] = normalized_html
+                    state.history.append("Quality Gate: normalizou <main>/<h1> duplicados antes dos gates")
+            except Exception as exc:
+                logger.warning("[QualityGate] normalizacao main/h1 falhou lead_id=%s: %s", state.lead_id, exc)
             gate_result = _run_independent_gates(state, html)
             state.visual_fingerprint = gate_result["fingerprint"]
             state.build_output["visual_fingerprint"] = state.visual_fingerprint
