@@ -17,6 +17,7 @@ from design_context import (
     get_hero_style,
     detectar_sub_nicho,
 )
+from design_guidelines import TAILWIND_FIRST_RULES, ANIMATION_PRINCIPLES
 from craft_rules import get_craft_rules, get_autocritica
 from seo_context import get_seo_context, SEO_NICHOS, ALIASES
 from design_system_selector import select_design_system
@@ -154,6 +155,13 @@ def gerar_arquiteto_mestre_prd(
     )
     _design_ctx = get_design_context_prompt(
         segmento, dados_hunter.get("nome", ""), caio_tier, dark_mode, od_slug=_design_system_slug
+    )
+    _design_ctx = (
+        _design_ctx.rstrip()
+        + "\n\n=== DIRETRIZES DE IMPLEMENTAÇÃO VISUAL ===\n"
+        + TAILWIND_FIRST_RULES.strip()
+        + "\n\n=== PRINCÍPIOS DE ANIMAÇÃO ===\n"
+        + ANIMATION_PRINCIPLES.strip()
     )
     if _design_pack_ctx:
         _design_ctx = f"{_design_ctx}\n\n{_design_pack_ctx}"

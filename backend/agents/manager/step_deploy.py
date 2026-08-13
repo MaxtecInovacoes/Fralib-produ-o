@@ -13,6 +13,29 @@ from backend.core.knowledge_journal import record as journal_record
 
 logger = logging.getLogger("manager.pipeline")
 
+_DECORATIVE_CLASS_RE = re.compile(
+    r"(watermark|bg-text|background-text|floating-text|decorative|ornament|stamp|marca-d-agua)",
+    re.IGNORECASE,
+)
+
+_DEPLOY_VISUAL_GUARD_CSS = """
+<style data-fralib-deploy-guard>
+main [class*="watermark"],
+main [class*="bg-text"],
+main [class*="background-text"],
+main [class*="floating-text"],
+main [class*="decorative"],
+main [class*="ornament"] {
+  pointer-events: none;
+  max-width: 100%;
+}
+main .fralib-relative-guard {
+  position: relative !important;
+  overflow: hidden !important;
+}
+</style>
+"""
+
 
 def _sanitize_html_document_structure(html: str) -> str:
     body_start = re.search(r"<body[^>]*>", html, re.IGNORECASE)
@@ -32,6 +55,77 @@ def _sanitize_html_document_structure(html: str) -> str:
     body_content = re.sub(r"</?body[^>]*>", "", body_content, flags=re.IGNORECASE)
 
     return html[:body_start.end()] + "\n" + body_content.strip() + "\n" + html[body_end.start():]
+
+
+def _demote_secondary_tag(html: str, original_tag: str, replacement_tag: str) -> str:
+    tag_re = re.compile(rf"<(/?){original_tag}\b([^>]*)>", re.IGNORECASE)
+    open_seen = 0
+    close_budget = 0
+
+    def _replace(match: re.Match) -> str:
+        nonlocal open_seen, close_budget
+        is_closing = bool(match.group(1))
+        attrs = match.group(2) or ""
+        if not is_closing:
+            open_seen += 1
+            if open_seen == 1:
+                close_budget += 1
+                return match.group(0)
+            return f"<{replacement_tag}{attrs}>"
+        if close_budget > 0:
+            close_budget -= 1
+            return match.group(0)
+        return f"</{replacement_tag}>"
+
+    return tag_re.sub(_replace, html)
+
+
+def _inject_head_guard_css(html: str) -> str:
+    if "data-fralib-deploy-guard" in html:
+        return html
+    head_close = re.search(r"</head>", html, re.IGNORECASE)
+    if head_close:
+        return html[:head_close.start()] + _DEPLOY_VISUAL_GUARD_CSS + "\n" + html[head_close.start():]
+    body_open = re.search(r"<body[^>]*>", html, re.IGNORECASE)
+    if body_open:
+        return html[:body_open.end()] + "\n" + _DEPLOY_VISUAL_GUARD_CSS + "\n" + html[body_open.end():]
+    return _DEPLOY_VISUAL_GUARD_CSS + "\n" + html
+
+
+def _guard_decorative_absolute_blocks(html: str) -> str:
+    pattern = re.compile(
+        r"<(?P<tag>div|section|aside)\b(?P<attrs>[^>]*)class=(?P<q>['\"])(?P<classname>[^'\"]+)(?P=q)(?P<rest>[^>]*)>(?P<inner>.*?)</(?P=tag)>",
+        re.IGNORECASE | re.DOTALL,
+    )
+
+    def _replace(match: re.Match) -> str:
+        classes = match.group("classname")
+        attrs = (match.group("attrs") or "") + (match.group("rest") or "")
+        if not _DECORATIVE_CLASS_RE.search(classes):
+            return match.group(0)
+        style_match = re.search(r"style=(['\"])(.*?)\1", attrs, re.IGNORECASE | re.DOTALL)
+        style_text = style_match.group(2) if style_match else ""
+        if "position:absolute" not in re.sub(r"\s+", "", style_text).lower():
+            return match.group(0)
+        if "fralib-relative-guard" in classes:
+            return match.group(0)
+        return f'<div class="fralib-relative-guard">{match.group(0)}</div>'
+
+    return pattern.sub(_replace, html)
+
+
+def _normalize_single_main_and_h1(html: str) -> str:
+    html = _demote_secondary_tag(html, "main", "section")
+    html = _demote_secondary_tag(html, "h1", "h2")
+    return html
+
+
+def _sanitize_deploy_html(html: str) -> str:
+    html = _sanitize_html_document_structure(html)
+    html = _normalize_single_main_and_h1(html)
+    html = _guard_decorative_absolute_blocks(html)
+    html = _inject_head_guard_css(html)
+    return html
 
 
 def step_deploy(state: PipelineState) -> PipelineState:
@@ -70,8 +164,41 @@ def step_deploy(state: PipelineState) -> PipelineState:
         except Exception as e:
             print(f"[Deploy] Aviso: pos-processamento cinematico falhou: {e}")
 
-        html = _sanitize_html_document_structure(html)
+        html = _sanitize_deploy_html(html)
         index_path.write_text(html, encoding="utf-8")
+
+        try:
+            from backend.agents.artifact_store import write_html_artifact, write_json_artifact, artifact_dir
+            artifact_path = write_html_artifact(
+                run_id=state.run_id,
+                lead_id=state.lead_id,
+                lead_name=state.lead_data.get("nome", "") if state.lead_data else "",
+                filename="05-deploy-final.html",
+                html=html,
+                metadata={
+                    "step": "deploy",
+                    "tenant_id": state.tenant_id,
+                    "quality_score": state.quality_score,
+                    "deploy_url": f"https://app.seunegociofralib.site/sites/{state.tenant_id}/{slug}-{state.lead_id[:8]}/",
+                },
+            )
+            write_json_artifact(
+                run_id=state.run_id,
+                lead_id=state.lead_id,
+                lead_name=state.lead_data.get("nome", "") if state.lead_data else "",
+                filename="00-artifacts-index.json",
+                payload={
+                    "run_id": state.run_id,
+                    "lead_id": state.lead_id,
+                    "tenant_id": state.tenant_id,
+                    "lead_name": state.lead_data.get("nome") if state.lead_data else "",
+                    "artifact_dir": str(artifact_dir(state.run_id, state.lead_id, state.lead_data.get("nome", "") if state.lead_data else "")),
+                    "latest_deploy_artifact": artifact_path,
+                },
+                metadata={"step": "index"},
+            )
+        except Exception as exc:
+            logger.warning("[Deploy] artifacts falharam (lead=%s): %s", state.lead_id, exc)
 
         # Metadata
         meta_path = site_dir / "metadata.json"

@@ -9,11 +9,17 @@ import json
 import time
 import re
 import requests
+from backend.agents.design_guidelines import TAILWIND_FIRST_RULES, ANIMATION_PRINCIPLES
 
 try:
     from loguru import logger as _builder_logger
 except ImportError:
     _builder_logger = None
+
+try:
+    from backend.agents.artifact_store import write_html_artifact
+except Exception:
+    write_html_artifact = None
 
 OPENUI_URL = os.environ.get("OPENUI_URL") or os.environ.get("OPENUI_SERVICE_URL", "http://localhost:7878")
 GENERATE_ENDPOINT = f"{OPENUI_URL}/generate"
@@ -23,6 +29,16 @@ _BLOCOS_HTML = [
     ["hero", "sobre"],
     ["servicos", "depoimentos"],
     ["faq", "localizacao"],
+    ["contato"],
+]
+
+_SECTION_BLOCKS = [
+    ["hero"],
+    ["sobre"],
+    ["servicos"],
+    ["depoimentos"],
+    ["faq"],
+    ["localizacao"],
     ["contato"],
 ]
 
@@ -84,6 +100,51 @@ def _looks_like_valid_body_fragment(html: str) -> tuple[bool, str]:
         return False, "sem tag <h1>"
     if "<script" in lower or "<style" in lower:
         return False, "bloco ainda contem style/script apos limpeza"
+
+    return True, ""
+
+
+def _looks_like_valid_section_fragment(html: str) -> tuple[bool, str]:
+    """Aceita fragmentos de seção e também documentos completos com corpo útil."""
+    if not html or len(html.strip()) < 120:
+        return False, "fragmento de secao muito curto"
+
+    body_only = _extract_body_only(html)
+    if not body_only or len(body_only.strip()) < 120:
+        return False, "corpo do fragmento muito curto"
+
+    style_opens = len(re.findall(r"(?i)<style\b", body_only))
+    style_closes = len(re.findall(r"(?i)</style>", body_only))
+    if style_opens != style_closes:
+        return False, "tags <style> desbalanceadas"
+
+    script_opens = len(re.findall(r"(?i)<script\b", body_only))
+    script_closes = len(re.findall(r"(?i)</script>", body_only))
+    if script_opens != script_closes:
+        return False, "tags <script> desbalanceadas"
+
+    content_only = _strip_non_content_blocks(body_only)
+    visible_tags = len(_VISIBLE_TAG_RE.findall(content_only))
+    visible_text = re.sub(r"(?is)<[^>]+>", " ", content_only)
+    visible_text = re.sub(r"\s+", " ", visible_text).strip()
+    lower = content_only.lower()
+    section_count = lower.count("<section")
+    main_count = lower.count("<main")
+    header_count = lower.count("<header")
+    article_count = lower.count("<article")
+    div_count = lower.count("<div")
+    h1_count = lower.count("<h1")
+
+    if visible_tags == 0:
+        return False, "sem tags estruturais visiveis"
+    if len(visible_text) < 60:
+        return False, "texto visivel insuficiente"
+    if section_count == 0 and main_count == 0 and header_count == 0 and article_count == 0 and div_count == 0:
+        return False, "sem bloco estrutural renderizavel"
+    if h1_count == 0 and section_count == 0 and main_count == 0:
+        return False, "fragmento sem heading principal"
+    if "<script" in lower or "<style" in lower:
+        return False, "fragmento ainda contem style/script apos limpeza"
 
     return True, ""
 
@@ -279,6 +340,18 @@ def _prd_to_spec(prd) -> dict:
     # Build builder_directive
     builder_directive = f"Landing page para {prd.business_name} ({getattr(prd, 'segmento', '')}) em {getattr(prd, 'cidade', '')}. "
     builder_directive += getattr(prd, "instrucao_criativa_para_dev", "") or ""
+    builder_directive += (
+        "\n\nDIRETRIZES OBRIGATÓRIAS DE HTML/CSS:\n"
+        f"{TAILWIND_FIRST_RULES.strip()}\n\n"
+        "REGRAS DE ESTRUTURA:\n"
+        "- Retorne HTML completo e válido.\n"
+        "- Use apenas 1 <main> raiz no documento.\n"
+        "- Use apenas 1 <h1> principal no hero.\n"
+        "- Seções subsequentes devem usar <section> e headings <h2>/<h3>.\n"
+        "- Não crie overlays absolutos sem wrapper relativo.\n\n"
+        "REGRAS DE ANIMAÇÃO:\n"
+        f"{ANIMATION_PRINCIPLES.strip()}\n"
+    )
 
     spec = {
         "business_name": prd.business_name,
@@ -374,6 +447,16 @@ def _extract_response_html(payload: dict) -> str:
     return ""
 
 
+def _extract_body_only(html: str) -> str:
+    match = re.search(r"<body[^>]*>(.*?)</body>", html or "", flags=re.DOTALL | re.IGNORECASE)
+    fragment = match.group(1) if match else (html or "")
+    fragment = re.sub(r"(?is)<!DOCTYPE[^>]*>", "", fragment)
+    fragment = re.sub(r"(?is)</?html[^>]*>", "", fragment)
+    fragment = re.sub(r"(?is)</?head[^>]*>.*?(?=(</body>|$))", "", fragment)
+    fragment = re.sub(r"(?is)</?body[^>]*>", "", fragment)
+    return fragment.strip()
+
+
 def _concat_html(partials: list) -> str:
     """Concatenate partial HTML documents/fragments into one valid document."""
     if not partials:
@@ -417,6 +500,25 @@ def _concat_html(partials: list) -> str:
     return f"<!DOCTYPE html>\n<html lang=\"pt-BR\">\n<head>\n{head}\n</head>\n<body>\n{body}\n</body>\n</html>\n"
 
 
+def _inject_sections_into_shell(shell_html: str, section_fragments: list[str]) -> str:
+    if not shell_html:
+        return ""
+    shell_html = shell_html.strip()
+    body_content = "\n".join(_extract_body_only(fragment) for fragment in section_fragments if fragment).strip()
+    if not body_content:
+        return shell_html
+    if "<main" in shell_html.lower():
+        return re.sub(
+            r"(?is)(<main\b[^>]*>)(.*?)(</main>)",
+            lambda m: f"{m.group(1)}\n{body_content}\n{m.group(3)}",
+            shell_html,
+            count=1,
+        )
+    if "</body>" in shell_html.lower():
+        return re.sub(r"(?is)</body>", f"{body_content}\n</body>", shell_html, count=1)
+    return shell_html + "\n" + body_content
+
+
 def _render_block(block_spec: dict, design_tokens: dict) -> tuple[str, str]:
     """Render one block via OpenUI with 6 retries. Returns (html, model) tuple or ("", "") on failure."""
     max_retries = 6
@@ -424,7 +526,8 @@ def _render_block(block_spec: dict, design_tokens: dict) -> tuple[str, str]:
     labels = block_spec.get("_bloco_labels", [])
     label_str = ", ".join(labels)
     block_spec = dict(block_spec)
-    block_spec["_render_hint"] = "body_only"
+    render_hint = block_spec.get("_render_hint") or "body_only"
+    block_spec["_render_hint"] = render_hint
 
     last_error = ""
     for attempt in range(max_retries):
@@ -439,8 +542,43 @@ def _render_block(block_spec: dict, design_tokens: dict) -> tuple[str, str]:
                 data = resp.json()
                 html = data.get("html", "")
                 model = data.get("model", "")
-                valid_html, reason = _looks_like_valid_body_fragment(html)
+                if render_hint == "section_fragment":
+                    valid_html, reason = _looks_like_valid_section_fragment(html)
+                else:
+                    valid_html, reason = _looks_like_valid_body_fragment(html)
+                if (
+                    not valid_html
+                    and render_hint == "section_fragment"
+                    and len(html or "") >= 1200
+                ):
+                    fallback_body = _extract_body_only(html)
+                    fallback_lower = fallback_body.lower()
+                    if (
+                        len(fallback_body.strip()) >= 400
+                        and any(tag in fallback_lower for tag in ("<section", "<div", "<article", "<main"))
+                        and any(tag in fallback_lower for tag in ("<h1", "<h2", "<h3", "<p", "<a", "<button"))
+                    ):
+                        valid_html = True
+                        reason = ""
                 if valid_html:
+                    try:
+                        if write_html_artifact:
+                            labels_slug = "-".join(labels) if labels else render_hint
+                            write_html_artifact(
+                                run_id=str(block_spec.get("_run_id") or "no-run"),
+                                lead_id=str(block_spec.get("_lead_id") or "no-lead"),
+                                lead_name=str(block_spec.get("_lead_name") or ""),
+                                filename=f"02-openui-{render_hint}-{labels_slug}.html",
+                                html=html,
+                                metadata={
+                                    "step": "openui_block",
+                                    "render_hint": render_hint,
+                                    "labels": labels,
+                                    "model": model,
+                                },
+                            )
+                    except Exception as exc:
+                        print(f"[builder] artifact openui bloco falhou: {exc}")
                     print(f"[builder] Bloco [{label_str}] OK ({len(html)} chars)")
                     return html, model
                 last_error = f"HTML invalido: {reason} ({len(html)} chars)"
@@ -472,56 +610,84 @@ def _render_block(block_spec: dict, design_tokens: dict) -> tuple[str, str]:
     return "", ""
 
 
-def _render_full_site(spec: dict) -> tuple[str, str, str]:
-    """Official flow: send the complete PRD once to OpenUI on :7878."""
-    max_retries = 6
-    retry_delays = [20, 30, 45, 60, 90, 120]
+def _render_shell_document(spec: dict) -> tuple[str, str, str]:
     request_spec = dict(spec)
-    request_spec["_render_hint"] = "full_document"
-
-    last_error = ""
-    for attempt in range(max_retries):
+    request_spec["_render_hint"] = "shell_document"
+    try:
+        resp = requests.post(
+            GENERATE_ENDPOINT,
+            json={"designerPRD": request_spec},
+            headers={"Content-Type": "application/json"},
+            timeout=600,
+        )
+        if resp.status_code != 200:
+            return "", "", f"OpenUI HTTP {resp.status_code}: {resp.text[:200]}"
+        data = resp.json()
+        html = _extract_response_html(data)
+        if not html:
+            return "", "", "shell vazio"
+        lower = html.lower()
+        if "<html" not in lower or "<body" not in lower or "<main" not in lower:
+            return "", data.get("model", ""), "shell sem html/body/main"
         try:
-            resp = requests.post(
-                GENERATE_ENDPOINT,
-                json={"designerPRD": request_spec},
-                headers={"Content-Type": "application/json"},
-                timeout=600,
-            )
-            if resp.status_code == 200:
-                data = resp.json()
-                html = _extract_response_html(data)
-                model = data.get("model", "")
-                valid_html, reason = _looks_like_valid_body_fragment(html)
-                if valid_html:
-                    print(f"[builder] Single-shot OpenUI OK ({len(html)} chars)")
-                    return html, model, ""
-                last_error = f"HTML invalido: {reason} ({len(html)} chars)"
-                if attempt < max_retries - 1:
-                    time.sleep(retry_delays[attempt])
-                    continue
-            elif resp.status_code in (529, 503) or (
-                resp.status_code == 500
-                and any(marker in resp.text.lower() for marker in ("529", "overloaded", "sobrecarregado", "503", "provider_error"))
-            ):
-                last_error = f"OpenUI overloaded attempt {attempt + 1}: HTTP {resp.status_code}"
-                if attempt < max_retries - 1:
-                    time.sleep(retry_delays[attempt])
-                    continue
-            else:
-                last_error = f"OpenUI HTTP {resp.status_code}: {resp.text[:200]}"
-                return "", "", last_error
-        except requests.exceptions.Timeout:
-            last_error = f"OpenUI timeout (600s) attempt {attempt + 1}"
-            if attempt < max_retries - 1:
-                time.sleep(retry_delays[attempt])
-                continue
-            return "", "", last_error
-        except Exception as e:
-            last_error = f"OpenUI error: {str(e)}"
-            return "", "", last_error
+            if write_html_artifact:
+                write_html_artifact(
+                    run_id=str(spec.get("_run_id") or "no-run"),
+                    lead_id=str(spec.get("_lead_id") or "no-lead"),
+                    lead_name=str(spec.get("_lead_name") or ""),
+                    filename="02-openui-shell_document.html",
+                    html=html,
+                    metadata={
+                        "step": "openui_shell",
+                        "render_hint": "shell_document",
+                        "model": data.get("model", ""),
+                    },
+                )
+        except Exception as exc:
+            print(f"[builder] artifact openui shell falhou: {exc}")
+        return html, data.get("model", ""), ""
+    except Exception as exc:
+        return "", "", f"shell error: {exc}"
 
-    return "", "", last_error
+
+def _render_section_blocks(spec: dict) -> tuple[list[str], str, str]:
+    partials: list[str] = []
+    last_model = ""
+    for group in _SECTION_BLOCKS:
+        section_map = {str(s.get("name", "")).lower(): s for s in spec.get("sections", []) if isinstance(s, dict)}
+        selected = [section_map[name] for name in group if name in section_map]
+        if not selected:
+            continue
+        block_spec = dict(spec)
+        block_spec["sections"] = selected
+        block_spec["_bloco_labels"] = group
+        block_spec["_render_hint"] = "section_fragment"
+        html, model = _render_block(block_spec, spec.get("design_tokens", {}))
+        if not html:
+            return [], last_model, f"Falha ao gerar bloco [{', '.join(group)}]"
+        partials.append(html)
+        last_model = model or last_model
+    if not partials:
+        return [], last_model, "nenhum fragmento gerado"
+    return partials, last_model, ""
+
+
+def _render_full_site(spec: dict) -> tuple[str, str, str]:
+    """Controlled multi-call flow: shell first, then short section fragments."""
+    shell_html, shell_model, shell_error = _render_shell_document(spec)
+    if not shell_html:
+        return "", shell_model, shell_error or "falha no shell"
+
+    partials, last_model, partial_error = _render_section_blocks(spec)
+    if not partials:
+        return "", last_model or shell_model, partial_error or "falha nos fragmentos"
+
+    final_html = _inject_sections_into_shell(shell_html, partials)
+    valid_html, reason = _looks_like_valid_body_fragment(final_html)
+    if not valid_html:
+        return "", last_model or shell_model, f"HTML final invalido: {reason} ({len(final_html)} chars)"
+    print(f"[builder] Multi-call OpenUI OK ({len(final_html)} chars)")
+    return final_html, last_model or shell_model, ""
 
 
 def render_site(prd, usar_llm: bool = True) -> BuildResult:
@@ -548,6 +714,10 @@ def render_site(prd, usar_llm: bool = True) -> BuildResult:
 
     # Convert PRD to spec
     spec = _prd_to_spec(prd)
+    spec["_run_id"] = getattr(prd, "_run_id", "") or ""
+    spec["_lead_id"] = getattr(prd, "_lead_id", "") or ""
+    _lead_data = getattr(prd, "_lead_data", None) or {}
+    spec["_lead_name"] = _lead_data.get("nome", "") if isinstance(_lead_data, dict) else ""
 
     final_html, final_model, error = _render_full_site(spec)
     if not final_html:

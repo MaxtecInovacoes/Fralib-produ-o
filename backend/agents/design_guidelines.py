@@ -2,6 +2,16 @@
 Design Guidelines - Impeccable + Motion Principles
 """
 
+TAILWIND_FIRST_RULES = """
+TAILWIND-FIRST (obrigatório):
+- Use classes utilitárias do Tailwind diretamente nos elementos para layout, spacing, cor e tipografia.
+- Evite blocos longos de <style> no <head>; CSS customizado só para micro-ajustes ou animações essenciais.
+- Gere estrutura semântica limpa: 1 <main> raiz, 1 <h1> principal, seções claras com <section>.
+- Elementos decorativos com position:absolute devem ficar dentro de wrapper pai com position:relative e overflow:hidden.
+- Não use marcas d'água flutuantes soltas sobre o documento.
+- Priorize contraste alto, hierarquia tipográfica clara e responsividade nativa via classes utilitárias.
+"""
+
 ANIMATION_PRINCIPLES = """
 Timing: 100-150ms feedback, 200-300ms estado, 300-500ms layout, 500-800ms entrada
 Easing: cubic-bezier(0.25, 1, 0.5, 1) - suave
