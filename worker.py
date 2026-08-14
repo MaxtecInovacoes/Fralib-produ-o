@@ -69,6 +69,15 @@ def _needs_lead_hydration(payload: dict) -> bool:
     return any(not str(lead_data.get(field) or "").strip() for field in required)
 
 
+def _state_context_value(payload: dict, field: str) -> str:
+    normalized = dict(payload or {})
+    direct = str(normalized.get(field) or "").strip()
+    if direct:
+        return direct
+    lead_data = normalized.get("lead_data") or {}
+    return str(lead_data.get(field) or "").strip()
+
+
 def _save_pipeline_resume_checkpoint(final_state) -> None:
     """Persiste PRD/HTML finais para retomada sem repetir fases caras."""
     if not getattr(final_state, "tenant_id", None) or not getattr(final_state, "lead_id", None):
@@ -236,8 +245,8 @@ def _run_pipeline_job(db, job) -> bool:
             or job["id"]
         ),
         job_id=job["id"],
-        segmento=payload.get("segmento", ""),
-        cidade=payload.get("cidade", ""),
+        segmento=_state_context_value(payload, "segmento"),
+        cidade=_state_context_value(payload, "cidade"),
         lead_data=payload.get("lead_data", {}),
         forcar_renovacao=bool(payload.get("_forcar_renovacao", False)),
     )

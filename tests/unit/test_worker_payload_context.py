@@ -1,4 +1,4 @@
-from worker import _needs_lead_hydration, _promote_context_from_lead_data
+from worker import _needs_lead_hydration, _promote_context_from_lead_data, _state_context_value
 
 
 def test_promote_context_from_lead_data_fills_missing_segmento_and_cidade():
@@ -59,3 +59,26 @@ def test_needs_lead_hydration_false_when_required_fields_present():
     }
 
     assert _needs_lead_hydration(payload) is False
+
+
+def test_state_context_value_falls_back_to_lead_data():
+    payload = {
+        "lead_data": {
+            "cidade": "Campina Grande do Sul",
+            "segmento": "academia",
+        }
+    }
+
+    assert _state_context_value(payload, "cidade") == "Campina Grande do Sul"
+    assert _state_context_value(payload, "segmento") == "academia"
+
+
+def test_state_context_value_prefers_explicit_payload():
+    payload = {
+        "cidade": "Curitiba",
+        "lead_data": {
+            "cidade": "Campina Grande do Sul",
+        }
+    }
+
+    assert _state_context_value(payload, "cidade") == "Curitiba"
