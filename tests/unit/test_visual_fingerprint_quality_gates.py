@@ -143,6 +143,36 @@ def test_technical_gate_allows_low_nonzero_opacity():
     assert not any("invisível" in issue for issue in result["issues"])
 
 
+def test_technical_gate_allows_reveal_with_safe_visibility_release():
+    from backend.agents.manager import step_quality_gate as qg
+
+    html = """
+    <!doctype html>
+    <html>
+      <head>
+        <style>
+          .reveal { opacity: 0; transform: translateY(24px); }
+          .reveal.visible { opacity: 1; transform: translateY(0); }
+          html.no-js .reveal { opacity: 1 !important; transform: none !important; }
+        </style>
+      </head>
+      <body>
+        <main>
+          <section class="reveal"><h1>Treino real em Campina Grande do Sul</h1><p>Conteúdo visível por fallback, com contexto local, benefícios claros, proposta comercial válida e texto suficiente para passar pelo gate técnico.</p><div>Benefícios</div><div>Estrutura</div><div>Contato</div></section>
+          <section><h2>Bloco 2</h2><p>Texto suficiente com detalhes de serviços, localização, diferenciais, ritmo visual e proposta de valor para uma academia local orientada a resultado.</p><div>Card 1</div><div>Card 2</div></section>
+          <section><h2>Bloco 3</h2><p>Mais texto suficiente com perguntas frequentes, CTA, endereço real, contexto editorial, SEO local e elementos de fechamento institucional coerentes.</p><div>FAQ</div><div>CTA</div></section>
+        </main>
+        <script>document.querySelector('.reveal').classList.add('visible');</script>
+      </body>
+    </html>
+    """
+
+    result = qg._technical_gate(html)
+
+    assert result["passed"] is True
+    assert not any("invisível" in issue for issue in result["issues"])
+
+
 def test_section_completeness_gate_passes_with_required_contracts():
     from backend.agents.manager import step_quality_gate as qg
     from backend.agents.manager.states import PipelineState

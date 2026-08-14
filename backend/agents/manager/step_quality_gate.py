@@ -387,7 +387,7 @@ def _technical_gate(html: str) -> dict:
         issues.append("Technical Gate: deve haver exatamente 1 <h1>")
     if lower.count("<section") < 3:
         issues.append("Technical Gate: menos de 3 seções")
-    if _has_zero_opacity_lock(lower) and "opacity: 1" not in lower and "opacity:1" not in lower:
+    if _has_zero_opacity_lock(lower) and not _has_visibility_release(lower):
         issues.append("Technical Gate: possível conteúdo preso invisível")
     return {"passed": not issues, "issues": issues}
 
@@ -488,6 +488,28 @@ def _section_completeness_gate(state: PipelineState, html: str) -> dict:
 def _has_zero_opacity_lock(html_lower: str) -> bool:
     """Detect only exact zero opacity, not valid values like opacity:0.08."""
     return bool(re.search(r"opacity\s*:\s*0(?:\.0+)?(?:;|}|\"|')", html_lower or ""))
+
+
+def _has_visibility_release(html_lower: str) -> bool:
+    """Accept common reveal/fallback patterns that safely release opacity locks."""
+    markers = (
+        "opacity: 1",
+        "opacity:1",
+        ".reveal.visible",
+        ".reveal-left.visible",
+        ".reveal-right.visible",
+        ".scale-in.visible",
+        ".stagger-item.visible",
+        "html.no-js .reveal",
+        "html.no-js .reveal-left",
+        "html.no-js .reveal-right",
+        "html.no-js .scale-in",
+        "html.no-js .stagger-item",
+        "classlist.add('visible')",
+        'classlist.add("visible")',
+        "classlist.add(`visible`)",
+    )
+    return any(marker in (html_lower or "") for marker in markers)
 
 
 def _extract_section_html(html: str, section_name: str) -> str:
