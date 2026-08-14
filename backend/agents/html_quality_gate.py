@@ -258,7 +258,7 @@ def sanitize_builder_html_for_publication(
             cleaned = re.sub(r"(?is)</head>", f'<meta property="og:description" content="{_escape(og_desc)}">\n</head>', cleaned, count=1)
     # og:image
     if 'property="og:image"' not in low or 'content=""' in low:
-        og_image = _get_og_image_from_prd(prd) or "https://images.unsplash.com/photo-1497366216548-37526070297c?w=1200&h=630&fit=crop"
+        og_image = _get_og_image_from_prd(prd)
         cleaned = re.sub(
             r'(?is)(<meta\s+property=["\']og:image["\']\s+content=)""',
             f'\\1"{_escape(og_image)}"',
@@ -267,7 +267,7 @@ def sanitize_builder_html_for_publication(
         if 'property="og:image"' not in cleaned.lower():
             cleaned = re.sub(r"(?is)</head>", f'<meta property="og:image" content="{_escape(og_image)}">\n</head>', cleaned, count=1)
     else:
-        og_image = _get_og_image_from_prd(prd) or "https://images.unsplash.com/photo-1497366216548-37526070297c?w=1200&h=630&fit=crop"
+        og_image = _get_og_image_from_prd(prd)
     if canonical:
         if re.search(r'(?is)<link\s+rel=["\']canonical["\']\s+href=["\'][^"\']*["\']', cleaned):
             cleaned = re.sub(
@@ -304,6 +304,12 @@ def sanitize_builder_html_for_publication(
             )
         else:
             cleaned = re.sub(r"(?is)</head>", f'<meta name="twitter:image" content="{_escape(og_image)}">\n</head>', cleaned, count=1)
+    twitter_title = _publication_page_title(prd, business)
+    twitter_desc = _publication_page_description(prd, business)
+    if twitter_title and 'name="twitter:title"' not in cleaned.lower():
+        cleaned = re.sub(r"(?is)</head>", f'<meta name="twitter:title" content="{_escape(twitter_title)}">\n</head>', cleaned, count=1)
+    if twitter_desc and 'name="twitter:description"' not in cleaned.lower():
+        cleaned = re.sub(r"(?is)</head>", f'<meta name="twitter:description" content="{_escape(twitter_desc)}">\n</head>', cleaned, count=1)
     if keywords:
         if re.search(r'(?is)<meta\s+name=["\']keywords["\']\s+content=["\'][^"\']*["\']', cleaned):
             cleaned = re.sub(
@@ -317,6 +323,19 @@ def sanitize_builder_html_for_publication(
     # og:type
     if 'property="og:type"' not in low:
         cleaned = re.sub(r"(?is)</head>", '<meta property="og:type" content="website">\n</head>', cleaned, count=1)
+    if "fralib-layout-guard" not in cleaned.lower():
+        cleaned = re.sub(
+            r"(?is)</head>",
+            (
+                '<style id="fralib-layout-guard">'
+                '.grid,.flex{min-width:0}.grid > *,.flex > *{min-width:0}'
+                'h1,h2,h3,h4,p,li,a,button,span,strong,small{overflow-wrap:anywhere;word-break:break-word}'
+                'img,video,iframe{max-width:100%;height:auto}'
+                '</style>\n</head>'
+            ),
+            cleaned,
+            count=1,
+        )
 
     # Footer: ano automático
     current_year = str(datetime.datetime.now().year)

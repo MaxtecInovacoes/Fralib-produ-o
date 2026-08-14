@@ -463,12 +463,40 @@ def ensure_minimum_footer(html: str, prd) -> str:
     name = _get(prd, "business_name", "nome_negocio", default="Negocio local")
     phone = _get(prd, "phone", "telefone", default="")
     city = _get(prd, "city", "cidade", default="")
+    address = _get(prd, "address", "endereco", default="")
+    whatsapp = _get(prd, "whatsapp", "telefone_whatsapp", default=phone)
+    whatsapp_digits = re.sub(r"\D+", "", str(whatsapp or ""))
+    whatsapp_href = f"https://wa.me/{whatsapp_digits}" if whatsapp_digits else "#contato"
+    lgpd_anchor = "#lgpd" if "#lgpd" in low or 'id="lgpd"' in low or "section:lgpd" in low else "#contato"
     footer = (
         '\n<!-- SECTION:footer -->\n'
-        '<footer class="fralib-footer" data-reveal>'
-        f'<strong>{escape(name)}</strong>'
-        f'<span>{escape(city)}</span>'
-        f'<span>{escape(phone)}</span>'
+        '<footer class="fralib-footer" data-reveal '
+        'style="padding:32px 20px;border-top:1px solid var(--border,rgba(255,255,255,.12));'
+        'background:var(--bg,#0b0f19);color:var(--fg,#f3f4f6)">'
+        '<div style="max-width:1200px;margin:0 auto;display:grid;gap:20px;'
+        'grid-template-columns:repeat(auto-fit,minmax(220px,1fr));align-items:start">'
+        '<div>'
+        f'<strong style="display:block;font-size:1.1rem;margin-bottom:8px">{escape(name)}</strong>'
+        f'<p style="opacity:.86;line-height:1.6">{escape(city)}</p>'
+        f'<p style="opacity:.86;line-height:1.6">{escape(address)}</p>'
+        '</div>'
+        '<div>'
+        '<strong style="display:block;margin-bottom:8px">Contato</strong>'
+        f'<p style="opacity:.86;line-height:1.6">{escape(phone)}</p>'
+        f'<a href="{whatsapp_href}" '
+        'style="display:inline-flex;align-items:center;justify-content:center;margin-top:8px;'
+        'padding:10px 14px;border-radius:999px;background:var(--accent,#e85d4a);'
+        'color:var(--bg,#0b0f19);font-weight:700">Falar no WhatsApp</a>'
+        '</div>'
+        '<div>'
+        '<strong style="display:block;margin-bottom:8px">Privacidade</strong>'
+        '<p style="opacity:.86;line-height:1.6">Dados de contato usados apenas para atendimento, '
+        'segurança e continuidade da experiência.</p>'
+        f'<a href="{lgpd_anchor}" style="display:inline-flex;align-items:center;justify-content:center;'
+        'margin-top:8px;padding:10px 14px;border-radius:999px;border:1px solid var(--border,rgba(255,255,255,.14));'
+        'color:var(--fg,#f3f4f6);font-weight:700">Ver política e consentimento</a>'
+        '</div>'
+        '</div>'
         '</footer>\n'
         '<!-- /SECTION:footer -->\n'
     )
@@ -589,7 +617,30 @@ def get_og_image_from_prd(prd) -> str:
         if found and cur and isinstance(cur, str) and cur.startswith("http"):
             val = cur
             break
-    return val or ""
+    if val:
+        return val
+
+    for collection_name in ("media_plan", "photos", "images", "assets"):
+        items = _get(prd, collection_name, default=[]) or []
+        if not isinstance(items, list):
+            continue
+        for item in items:
+            if isinstance(item, str) and item.startswith("http"):
+                return item
+            if not isinstance(item, dict):
+                continue
+            url = item.get("url") or item.get("src")
+            role = _normalize(item.get("role") or "")
+            required = item.get("required")
+            if isinstance(url, str) and url.startswith("http") and (required or role in {"hero", "og", "cover", "background"}):
+                return url
+        for item in items:
+            if isinstance(item, dict):
+                url = item.get("url") or item.get("src")
+                if isinstance(url, str) and url.startswith("http"):
+                    return url
+
+    return image_fallback_for_segment(prd)
 
 
 # ─── Utility Functions ──────────────────────────────────────────────────────

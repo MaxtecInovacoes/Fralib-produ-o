@@ -78,8 +78,9 @@ def repair_builder_publication_contract(html: str, prd) -> str:
             r"(?is)<button\b([^>]*)>",
             (
                 '<button\\1 data-lgpd-accept '
-                'style="border:0;border-radius:999px;padding:8px 12px;background:#fff;color:#111827;'
-                'font-weight:700;cursor:pointer;white-space:nowrap">'
+                'style="border:0;border-radius:999px;padding:10px 14px;'
+                'background:var(--accent,#e85d4a);color:var(--bg,#0b0f19);'
+                'font-weight:700;cursor:pointer;white-space:nowrap;box-shadow:0 12px 30px rgba(0,0,0,.18)">'
             ),
             cleaned,
             count=1,
@@ -90,14 +91,14 @@ def repair_builder_publication_contract(html: str, prd) -> str:
             'style="position:fixed;left:16px;right:16px;bottom:16px;z-index:9999;'
             'max-width:calc(100vw - 32px);box-sizing:border-box;'
             'display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;'
-            'padding:12px 14px;border:1px solid rgba(255,255,255,.18);'
-            'border-radius:14px;background:rgba(15,23,42,.94);color:#fff;'
-            'box-shadow:0 16px 48px rgba(0,0,0,.28);font:500 13px/1.4 system-ui,sans-serif">'
+            'padding:14px 16px;border:1px solid var(--border,rgba(255,255,255,.18));'
+            'border-radius:16px;background:var(--surface,#111827);color:var(--fg,#fff);'
+            'box-shadow:0 16px 48px rgba(0,0,0,.28);font:500 13px/1.5 system-ui,sans-serif">'
             '<span style="min-width:0">Tratamos dados de contato apenas para atendimento, '
             'segurança e melhoria da experiência.</span>'
             '<button type="button" data-lgpd-accept '
-            'style="border:0;border-radius:999px;padding:8px 12px;background:#fff;color:#111827;'
-            'font-weight:700;cursor:pointer;white-space:nowrap">Aceitar</button>'
+            'style="border:0;border-radius:999px;padding:10px 14px;background:var(--accent,#e85d4a);'
+            'color:var(--bg,#0b0f19);font-weight:700;cursor:pointer;white-space:nowrap">Aceitar</button>'
             '</div>'
         )
         if re.search(r"(?is)</body>", cleaned):
@@ -344,7 +345,8 @@ def _add_data_lgpd_banner(match: re.Match) -> str:
             ' style="position:fixed;left:16px;right:16px;bottom:16px;z-index:9999;'
             'max-width:calc(100vw - 32px);box-sizing:border-box;'
             'display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;'
-            'padding:12px 14px;border-radius:14px;background:rgba(15,23,42,.94);color:#fff"'
+            'padding:14px 16px;border-radius:16px;border:1px solid var(--border,rgba(255,255,255,.18));'
+            'background:var(--surface,#111827);color:var(--fg,#fff)"'
         )
     if not attrs:
         return tag

@@ -96,3 +96,63 @@ def test_cinematic_post_processor_safe_only_preserves_visual_decisions():
     assert "Bebas Neue" in processed
     assert "https://images.example.com/gym.jpg" in processed
     assert "section:nth-child" not in processed
+
+
+def test_get_og_image_from_prd_prefers_real_media_plan_image():
+    from backend.agents.html_publication_helpers import get_og_image_from_prd
+
+    prd = {
+        "segmento": "academia",
+        "media_plan": [
+            {
+                "url": "https://images.example.com/hero-real.jpg",
+                "role": "hero",
+                "section": "hero",
+                "required": True,
+            },
+            {
+                "url": "https://images.example.com/gallery.jpg",
+                "role": "gallery",
+                "section": "sobre",
+                "required": False,
+            },
+        ]
+    }
+
+    assert get_og_image_from_prd(prd) == "https://images.example.com/hero-real.jpg"
+
+
+def test_ensure_minimum_footer_adds_contact_and_lgpd_actions():
+    from backend.agents.html_publication_helpers import ensure_minimum_footer
+
+    html = "<html><body><main><section id='hero'><h1>Treino real</h1></section></main></body></html>"
+    prd = {
+        "business_name": "Elite Performance Academia",
+        "phone": "(41) 98888-7777",
+        "city": "Campina Grande do Sul",
+        "address": "Rua Exemplo, 123",
+    }
+
+    processed = ensure_minimum_footer(html, prd)
+
+    assert "Falar no WhatsApp" in processed
+    assert "Ver política e consentimento" in processed
+    assert "Rua Exemplo, 123" in processed
+    assert "Campina Grande do Sul" in processed
+
+
+def test_repair_builder_publication_contract_uses_theme_aware_lgpd_banner(monkeypatch):
+    import backend.agents.html_builder_repair as builder_repair
+
+    html = '<html><head></head><body data-renderer="builder"><main><section id="hero"><h1>Treino real</h1></section></main></body></html>'
+    monkeypatch.setattr(
+        builder_repair,
+        "_ensure_builder_seo_schema_contract",
+        lambda cleaned, prd: cleaned,
+    )
+    processed = builder_repair.repair_builder_publication_contract(html, {"segmento": "academia"})
+
+    assert "data-lgpd-banner" in processed
+    assert "data-lgpd-accept" in processed
+    assert "var(--surface,#111827)" in processed
+    assert "var(--accent,#e85d4a)" in processed
