@@ -320,6 +320,13 @@ def buscar_fotos_unsplash(
                 ]
                 if filtered_pool:
                     pool = filtered_pool
+                else:
+                    pool = _fallback_urls(query, quantidade, nome, segmento)
+                    try:
+                        with open(cache_file, "w") as f:
+                            json.dump(pool, f)
+                    except Exception:
+                        pass
             except Exception:
                 pass
             selected = _select_unique(pool, nome or segmento, quantidade)

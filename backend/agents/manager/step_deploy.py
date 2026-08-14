@@ -218,6 +218,20 @@ def _sanitize_corrupted_svg_paths(html: str) -> str:
     return path_re.sub(_replace, html)
 
 
+def _close_broken_inline_wrappers_before_sections(html: str) -> str:
+    html = re.sub(
+        r'(?is)(<a\b[^>]*>\s*<svg\b[^>]*>\s*<path\b[^>]*></path>)\s*(?=<section\b)',
+        r'\1</svg></a>',
+        html,
+    )
+    html = re.sub(
+        r'(?is)(<button\b[^>]*>\s*<svg\b[^>]*>\s*<path\b[^>]*></path>)\s*(?=<section\b)',
+        r'\1</svg></button>',
+        html,
+    )
+    return html
+
+
 def _demote_secondary_tag(html: str, original_tag: str, replacement_tag: str) -> str:
     tag_re = re.compile(rf"<(/?){original_tag}\b([^>]*)>", re.IGNORECASE)
     open_seen = 0
@@ -332,6 +346,7 @@ def _normalize_single_main_and_h1(html: str) -> str:
 def _sanitize_deploy_html(html: str) -> str:
     html = _sanitize_html_document_structure(html)
     html = _sanitize_corrupted_svg_paths(html)
+    html = _close_broken_inline_wrappers_before_sections(html)
     html = _normalize_single_main_and_h1(html)
     html = _guard_decorative_absolute_blocks(html)
     html = _flatten_dense_circular_panels(html)

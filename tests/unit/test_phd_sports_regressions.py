@@ -305,3 +305,46 @@ def test_unsplash_fallback_for_academia_stays_on_niche():
     urls = _fallback_urls("gym fitness workout training", 3, "Academia Teste", "academia")
 
     assert all("photo-149736" not in url for url in urls)
+
+
+def test_unsplash_cache_hit_recovers_when_cached_pool_is_off_niche(monkeypatch, tmp_path):
+    import json
+    from backend.agents import unsplash_fetcher as module
+
+    monkeypatch.setattr(module, "CACHE_DIR", str(tmp_path))
+    monkeypatch.setattr(module, "CACHE_TTL", 999999)
+    monkeypatch.setattr(module, "UNSPLASH_ACCESS_KEY", "")
+    monkeypatch.setattr(
+        module,
+        "_build_query",
+        lambda segmento, cidade="", nome="", archetype="": "gym fitness workout training",
+    )
+
+    cache_key = module._cache_key("academia", "Start Academia", "Campina Grande do Sul", "gym fitness workout training")
+    cache_file = tmp_path / f"unsplash_{cache_key}.json"
+    cache_file.write_text(json.dumps([
+        "https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=1400&q=82",
+        "https://images.unsplash.com/photo-1497366811353-6870744d04b2?auto=format&fit=crop&w=1400&q=82",
+    ]), encoding="utf-8")
+
+    urls = module.buscar_fotos_unsplash("academia", quantidade=3, nome="Start Academia", cidade="Campina Grande do Sul")
+
+    assert urls
+    assert all("photo-149736" not in url for url in urls)
+
+
+def test_deploy_closes_broken_cta_before_next_section():
+    from backend.agents.manager.step_deploy import _sanitize_deploy_html
+
+    html = """
+    <!DOCTYPE html><html><head></head><body><main>
+    <a href="https://wa.me/5541998487678" class="cta">
+      <svg class="w-4 h-4"><path d="M1 1L2 2"></path>
+    <section id="acao"><h2>Comece sua transformação</h2></section>
+    </main></body></html>
+    """
+
+    cleaned = _sanitize_deploy_html(html)
+
+    assert "</svg></a><section" in cleaned.replace("\n", "")
+    assert cleaned.lower().count("<section") == 1
