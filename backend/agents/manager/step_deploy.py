@@ -8,7 +8,7 @@ from pathlib import Path
 from datetime import datetime
 from backend.agents.manager.states import (
     PipelineState, STATE_PUBLISHING, STATE_OUTREACH, STATE_FAILED,
-    _transition, _log_step_error,
+    _transition, _log_step_error, _record_agent_handoff,
 )
 from backend.core.knowledge_journal import record as journal_record
 
@@ -256,6 +256,31 @@ def step_deploy(state: PipelineState) -> PipelineState:
         final_url = f"https://app.seunegociofralib.site/sites/{state.tenant_id}/{slug}-{state.lead_id[:8]}/"
         html = _ensure_final_document_contract(html, state, final_url)
         index_path.write_text(html, encoding="utf-8")
+        _record_agent_handoff(
+            state,
+            "deploy",
+            received={
+                "html_length_before_deploy": len(state.build_output.get("html", "") if state.build_output else ""),
+                "quality_score": state.quality_score,
+                "visual_fingerprint": state.visual_fingerprint,
+            },
+            produced={
+                "deploy_url": final_url,
+                "index_path": str(index_path),
+                "html_length_final": len(html),
+                "html_counts_final": {
+                    "main": html.lower().count("<main"),
+                    "h1": html.lower().count("<h1"),
+                    "section": html.lower().count("<section"),
+                    "img": html.lower().count("<img"),
+                    "background_image": html.lower().count("background-image"),
+                },
+            },
+            changed={
+                "safe_post_processor": "safe_only",
+                "deploy_sanitizer": "document_structure/main_h1/decorative_guard/head_contract",
+            },
+        )
 
         try:
             from backend.agents.artifact_store import write_html_artifact, write_json_artifact, artifact_dir

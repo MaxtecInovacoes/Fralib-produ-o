@@ -6,7 +6,7 @@ import os
 import json
 from backend.agents.manager.states import (
     PipelineState, STATE_VALIDATING, STATE_PUBLISHING, STATE_BUILDING, STATE_FAILED,
-    _transition, _log_step_error,
+    _transition, _log_step_error, _record_agent_handoff,
 )
 from backend.core.knowledge_journal import record as journal_record
 
@@ -123,6 +123,29 @@ def step_quality_gate(state: PipelineState) -> PipelineState:
                 "model_used": "pass-through-temporary",
             }
             state.history.append("Quality Gate: pass-through temporario 10.0/10")
+            _record_agent_handoff(
+                state,
+                "quality_gate",
+                received={
+                    "html_length": len(html),
+                    "html_counts": {
+                        "main": html.lower().count("<main"),
+                        "h1": html.lower().count("<h1"),
+                        "section": html.lower().count("<section"),
+                        "img": html.lower().count("<img"),
+                    },
+                    "design_output_keys": sorted(list((state.design_output or {}).keys())),
+                },
+                produced={
+                    "quality_score": state.quality_score,
+                    "qa_v2": state.build_output.get("qa_v2", {}),
+                    "gates": state.build_output.get("gates", {}),
+                    "visual_fingerprint": state.visual_fingerprint,
+                },
+                preserved={
+                    "html_unchanged_by_pass_through": True,
+                },
+            )
             logger.warning(
                 "QA pass-through temporario aprovado lead_id=%s html_len=%s",
                 state.lead_id,

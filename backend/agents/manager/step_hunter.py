@@ -3,6 +3,7 @@ import logging
 from backend.agents.manager.states import (
     PipelineState, STATE_HUNTING, STATE_QUALIFYING, STATE_FAILED,
     _transition, _validate_required_fields, _log_step_error,
+    _record_agent_handoff,
 )
 from backend.core.knowledge_journal import record as journal_record
 
@@ -82,4 +83,24 @@ def step_hunter(state: PipelineState) -> PipelineState:
         logger.warning("[Hunter] journal market_analyzed falhou (lead=%s): %s", state.lead_id, exc)
 
     state.history.append(f"Hunter: lead validado — {lead.get('nome')} ({state.cidade})")
+    _record_agent_handoff(
+        state,
+        "hunter",
+        received={
+            "lead_id": state.lead_id,
+            "tenant_id": state.tenant_id,
+            "lead_fields": sorted(list((state.lead_data or {}).keys())),
+        },
+        produced={
+            "nome": lead.get("nome"),
+            "cidade": state.cidade,
+            "segmento": state.segmento,
+            "telefone": lead.get("telefone"),
+            "rating": lead.get("rating"),
+            "reviews_count": len(lead.get("reviews") or []),
+            "photos_count": len(lead.get("fotos") or []),
+            "jina_provider": (lead.get("jina_intelligence") or {}).get("provider"),
+        },
+        notes=["Hunter valida dados mínimos, adiciona Jina insights e garante mídia editorial."],
+    )
     return _transition(state, STATE_QUALIFYING)

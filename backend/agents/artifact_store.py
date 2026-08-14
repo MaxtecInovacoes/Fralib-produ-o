@@ -58,6 +58,44 @@ def write_json_artifact(
     return str(path)
 
 
+def write_handoff_artifact(
+    *,
+    run_id: str | int | None,
+    lead_id: str | None,
+    lead_name: str = "",
+    stage: str,
+    sequence: int | None = None,
+    received: Any = None,
+    produced: Any = None,
+    preserved: Any = None,
+    changed: Any = None,
+    lost: Any = None,
+    notes: list[str] | None = None,
+    metadata: dict[str, Any] | None = None,
+) -> str:
+    """Persist one agent-to-agent handoff envelope for auditability."""
+    safe_stage = _slug(stage)
+    prefix = f"{int(sequence):02d}-" if sequence is not None else ""
+    payload = {
+        "stage": stage,
+        "created_at": datetime.utcnow().isoformat() + "Z",
+        "received": received or {},
+        "produced": produced or {},
+        "preserved": preserved or {},
+        "changed": changed or {},
+        "lost": lost or {},
+        "notes": notes or [],
+    }
+    return write_json_artifact(
+        run_id=run_id,
+        lead_id=lead_id,
+        lead_name=lead_name,
+        filename=f"{prefix}{safe_stage}-handoff.json",
+        payload=payload,
+        metadata={"artifact_type": "agent_handoff", "stage": stage, **(metadata or {})},
+    )
+
+
 def write_html_artifact(
     *,
     run_id: str | int | None,

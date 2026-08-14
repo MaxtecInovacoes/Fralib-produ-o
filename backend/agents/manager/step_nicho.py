@@ -9,6 +9,7 @@ from backend.agents.manager.states import (
     _transition,
     _log_step_error,
     _record_visual_custody,
+    _record_agent_handoff,
 )
 
 logger = logging.getLogger("manager.pipeline")
@@ -43,6 +44,22 @@ def step_nicho(state: PipelineState) -> PipelineState:
                 "audience": state.niche_brief.get("publico_alvo", []),
                 "positioning": state.niche_brief.get("usp", []),
                 "tone": state.niche_brief.get("tom_de_voz", ""),
+                "keywords": state.niche_brief.get("keywords", []),
+            },
+        )
+        _record_agent_handoff(
+            state,
+            "niche_brief",
+            received={
+                "segmento": state.segmento,
+                "cidade": state.cidade,
+                "jina_insights_present": bool((state.lead_data or {}).get("jina_insights")),
+                "lead_name": (state.lead_data or {}).get("nome"),
+            },
+            produced=state.niche_brief,
+            preserved={
+                "nicho": state.niche_brief.get("nicho"),
+                "tom_de_voz": state.niche_brief.get("tom_de_voz"),
                 "keywords": state.niche_brief.get("keywords", []),
             },
         )

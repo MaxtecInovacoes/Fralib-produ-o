@@ -91,6 +91,39 @@ def _record_visual_custody(
     )
 
 
+def _record_agent_handoff(
+    state: PipelineState,
+    stage: str,
+    *,
+    received: Optional[dict] = None,
+    produced: Optional[dict] = None,
+    preserved: Optional[dict] = None,
+    changed: Optional[dict] = None,
+    lost: Optional[dict] = None,
+    notes: Optional[list[str]] = None,
+) -> None:
+    """Persist a readable handoff file showing what one agent passed forward."""
+    try:
+        from backend.agents.artifact_store import write_handoff_artifact
+
+        write_handoff_artifact(
+            run_id=state.run_id,
+            lead_id=state.lead_id,
+            lead_name=(state.lead_data or {}).get("nome", ""),
+            stage=stage,
+            sequence=_HANDOFF_SEQUENCE.get(stage, len(state.visual_custody) + 1),
+            received=received or {},
+            produced=produced or {},
+            preserved=preserved or {},
+            changed=changed or {},
+            lost=lost or {},
+            notes=notes or [],
+            metadata={"tenant_id": state.tenant_id, "job_id": state.job_id},
+        )
+    except Exception as exc:
+        logger.warning("Agent handoff artifact failed stage=%s lead_id=%s: %s", stage, state.lead_id, exc)
+
+
 def _validate_required_fields(data: dict, required: list[str]) -> tuple[bool, str]:
     """Validate that required fields exist in data dict."""
     missing = [f for f in required if not data.get(f)]
@@ -112,6 +145,20 @@ def _is_transient_llm_error(exc: Exception) -> bool:
 
 
 logger = __import__("logging").getLogger("manager.pipeline")
+
+
+_HANDOFF_SEQUENCE = {
+    "hunter": 1,
+    "caio": 2,
+    "niche_brief": 3,
+    "creative_direction": 4,
+    "variation_blueprint": 5,
+    "designer_prd": 6,
+    "builder_openui": 7,
+    "quality_gate": 8,
+    "deploy": 9,
+    "franz": 10,
+}
 
 
 def _log_step_error(state: PipelineState, step_name: str, exc: Exception) -> None:

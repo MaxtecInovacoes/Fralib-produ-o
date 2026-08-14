@@ -1,4 +1,5 @@
 from types import SimpleNamespace
+import json
 
 
 def test_pipeline_intent_steps_feed_arquiteto(monkeypatch):
@@ -134,3 +135,34 @@ def test_pipeline_steps_include_intent_chain_before_arquiteto():
     assert step_names.index("step_nicho") < step_names.index("step_design_director")
     assert step_names.index("step_design_director") < step_names.index("step_variacao")
     assert step_names.index("step_variacao") < step_names.index("step_arquiteto")
+
+
+def test_agent_handoff_artifact_records_received_and_produced(tmp_path, monkeypatch):
+    from backend.agents.manager.states import PipelineState, _record_agent_handoff
+
+    monkeypatch.setenv("FRALIB_ARTIFACTS_DIR", str(tmp_path))
+    state = PipelineState(
+        tenant_id=2,
+        run_id="run-handoff",
+        lead_id="lead-handoff",
+        job_id=123,
+        lead_data={"nome": "Academia Teste"},
+    )
+
+    _record_agent_handoff(
+        state,
+        "designer_prd",
+        received={"creative_direction": {"visual_concept": "bold"}},
+        produced={"sections": [{"name": "hero"}]},
+        preserved={"section_order": ["hero"]},
+        changed={"typography": {"from": "Inter", "to": "Manuka"}},
+        lost={"reviews": []},
+    )
+
+    files = list(tmp_path.rglob("*designer_prd-handoff.json"))
+    assert len(files) == 1
+    payload = json.loads(files[0].read_text(encoding="utf-8"))
+    assert payload["stage"] == "designer_prd"
+    assert payload["received"]["creative_direction"]["visual_concept"] == "bold"
+    assert payload["produced"]["sections"][0]["name"] == "hero"
+    assert payload["changed"]["typography"]["to"] == "Manuka"

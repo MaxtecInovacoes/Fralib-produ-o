@@ -3,7 +3,7 @@ import logging
 import re
 from backend.agents.manager.states import (
     PipelineState, STATE_BUILDING, STATE_VALIDATING, STATE_FAILED,
-    _transition, _log_step_error,
+    _transition, _log_step_error, _record_agent_handoff,
 )
 from backend.core.knowledge_journal import record as journal_record
 
@@ -168,6 +168,36 @@ def step_builder(state: PipelineState) -> PipelineState:
             )
         except Exception as exc:
             logger.warning("[Builder] openui payload custody falhou (lead=%s): %s", state.lead_id, exc)
+
+        _record_agent_handoff(
+            state,
+            "builder_openui",
+            received={
+                "designer_prd": state.design_output or {},
+                "openui_url": getattr(prd, "_openui_url", None),
+            },
+            produced={
+                "model": result.model,
+                "html_length": len(html),
+                "html_counts": {
+                    "main": html.lower().count("<main"),
+                    "h1": html.lower().count("<h1"),
+                    "section": html.lower().count("<section"),
+                    "img": html.lower().count("<img"),
+                    "background_image": html.lower().count("background-image"),
+                },
+                "html_preview": html[:2000],
+            },
+            preserved={
+                "media_plan": (state.openui_payload or {}).get("media_plan", []),
+                "section_order": (
+                    (state.openui_payload or {}).get("variation_blueprint", {}).get("ordem_das_secoes")
+                    or (state.openui_payload or {}).get("site_build_plan", {}).get("information_architecture", {}).get("section_order")
+                ),
+                "typography": (state.openui_payload or {}).get("typography", {}),
+                "palette": (state.openui_payload or {}).get("color_palette", {}),
+            },
+        )
 
         try:
             from backend.agents.pipeline_checkpoint import gerar_pipeline_id, salvar_checkpoint

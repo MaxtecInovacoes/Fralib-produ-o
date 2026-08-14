@@ -9,6 +9,7 @@ from backend.agents.manager.states import (
     _transition,
     _log_step_error,
     _record_visual_custody,
+    _record_agent_handoff,
 )
 
 logger = logging.getLogger("manager.pipeline")
@@ -48,6 +49,20 @@ def step_variacao(state: PipelineState) -> PipelineState:
                 "section_order": blueprint.get("ordem_das_secoes", []),
                 "layout_variants": blueprint.get("layout_variants", {}),
                 "avoid": blueprint.get("avoid", []),
+            },
+        )
+        _record_agent_handoff(
+            state,
+            "variation_blueprint",
+            received={
+                "niche_brief": state.niche_brief or {},
+                "creative_direction": state.creative_direction or {},
+            },
+            produced=state.variation_blueprint,
+            preserved={
+                "section_order": state.variation_blueprint.get("ordem_das_secoes", []),
+                "hero_type": state.variation_blueprint.get("template_hero", ""),
+                "avoid": state.variation_blueprint.get("avoid", []),
             },
         )
         _write_artifact(state, "04-variation-blueprint.json", state.variation_blueprint, "variation_blueprint")

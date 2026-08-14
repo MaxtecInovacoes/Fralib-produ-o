@@ -5,7 +5,7 @@ import time
 import json
 from backend.agents.manager.states import (
     PipelineState, STATE_DESIGNING, STATE_BUILDING, STATE_FAILED,
-    _transition, _is_transient_llm_error, _log_step_error,
+    _transition, _is_transient_llm_error, _log_step_error, _record_agent_handoff,
 )
 from backend.core.knowledge_journal import record as journal_record
 
@@ -89,6 +89,35 @@ def step_arquiteto(state: PipelineState) -> PipelineState:
                     )
                 except Exception as exc:
                     logger.warning("[Arquiteto] visual custody falhou (lead=%s): %s", state.lead_id, exc)
+
+                _record_agent_handoff(
+                    state,
+                    "designer_prd",
+                    received={
+                        "lead_data": state.lead_data or {},
+                        "caio": {
+                            "tier": tier,
+                            "score": score,
+                            "dark_mode": dark_mode,
+                        },
+                        "niche_brief": state.niche_brief or {},
+                        "creative_direction": state.creative_direction or {},
+                        "variation_blueprint": state.variation_blueprint or {},
+                    },
+                    produced=state.design_output,
+                    preserved={
+                        "section_order": (state.variation_blueprint or {}).get("ordem_das_secoes", []),
+                        "media_plan": state.media_plan,
+                        "typography": state.design_output.get("typography", {}),
+                        "color_palette": state.design_output.get("color_palette", {}),
+                        "reviews_count": state.design_output.get("reviews_count", 0),
+                        "phone": state.design_output.get("phone", ""),
+                    },
+                    changed={
+                        "typography_from_creative": (state.creative_direction or {}).get("typography_strategy", {}),
+                        "typography_in_prd": state.design_output.get("typography", {}),
+                    },
+                )
 
                 try:
                     from backend.agents.pipeline_checkpoint import gerar_pipeline_id, salvar_checkpoint

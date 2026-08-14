@@ -9,6 +9,7 @@ from backend.agents.manager.states import (
     _transition,
     _log_step_error,
     _record_visual_custody,
+    _record_agent_handoff,
 )
 
 logger = logging.getLogger("manager.pipeline")
@@ -48,6 +49,22 @@ def step_design_director(state: PipelineState) -> PipelineState:
                 "color_strategy": state.creative_direction.get("color_strategy", {}),
                 "typography_strategy": state.creative_direction.get("typography_strategy", {}),
                 "hero_strategy": state.creative_direction.get("hero_strategy", ""),
+            },
+        )
+        _record_agent_handoff(
+            state,
+            "creative_direction",
+            received={
+                "niche_brief": state.niche_brief or {},
+                "caio_tier": getattr(state.caio_output, "tier", None) if state.caio_output else None,
+                "caio_score": getattr(state.caio_output, "score", None) if state.caio_output else None,
+            },
+            produced=state.creative_direction,
+            preserved={
+                "visual_concept": state.creative_direction.get("visual_concept", ""),
+                "palette": state.creative_direction.get("hard_constraints", {}).get("palette", {}),
+                "typography": state.creative_direction.get("hard_constraints", {}).get("typography", {}),
+                "anti_patterns": state.creative_direction.get("anti_patterns", []),
             },
         )
         _write_artifact(state, "03-creative-direction.json", state.creative_direction, "creative_direction")
