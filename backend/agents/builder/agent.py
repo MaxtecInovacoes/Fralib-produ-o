@@ -576,8 +576,8 @@ def _inject_sections_into_shell(shell_html: str, section_fragments: list[str]) -
 
 
 def _google_fonts_href(typography: dict) -> str:
-    heading = str((typography or {}).get("heading") or "Inter").strip()
-    body = str((typography or {}).get("body") or "Inter").strip()
+    heading = _normalize_web_font_family(str((typography or {}).get("heading") or "Inter").strip(), "Inter")
+    body = _normalize_web_font_family(str((typography or {}).get("body") or "Inter").strip(), "Inter")
     families: list[str] = []
     for family in (heading, body):
         if not family or family.lower() in {"system-ui", "sans-serif", "serif", "monospace"}:
@@ -589,6 +589,23 @@ def _google_fonts_href(typography: dict) -> str:
     if not families:
         families.append("family=Inter:wght@400;500;600;700;800;900")
     return "https://fonts.googleapis.com/css2?" + "&".join(dict.fromkeys(families)) + "&display=swap"
+
+
+_FONT_FAMILY_ALIASES = {
+    "ubermove": "Archivo Black",
+    "ubermovetext": "Inter",
+    "uber move": "Archivo Black",
+    "uber move text": "Inter",
+    "nouvelr": "Oswald",
+}
+
+
+def _normalize_web_font_family(family: str, fallback: str) -> str:
+    raw = str(family or "").strip()
+    if not raw:
+        return fallback
+    normalized = re.sub(r"[^a-z0-9]+", "", raw.lower())
+    return _FONT_FAMILY_ALIASES.get(normalized, raw)
 
 
 def _ensure_shell_fonts(html: str, spec: dict) -> str:

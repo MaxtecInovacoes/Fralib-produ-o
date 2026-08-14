@@ -153,3 +153,36 @@ def test_builder_shell_imports_heading_and_body_fonts():
 
     assert "family=Archivo+Black" in cleaned
     assert "family=Inter:wght@400;500;600;700;800;900" in cleaned
+
+
+def test_builder_normalizes_proprietary_font_aliases_to_web_fonts():
+    from backend.agents.builder.agent import _google_fonts_href
+
+    href = _google_fonts_href({"heading": "UberMove", "body": "UberMoveText"})
+
+    assert "family=Archivo+Black" in href
+    assert "family=Inter:wght@400;500;600;700;800;900" in href
+
+
+def test_deploy_flattens_dense_circular_copy_panels():
+    from backend.agents.manager.step_deploy import _sanitize_deploy_html
+
+    html = """
+    <!DOCTYPE html><html><head></head><body>
+    <main>
+      <section>
+        <div class="rounded-full aspect-square bg-red-500 text-white p-6">
+          <h2>Pronto para transformar seu corpo e sua vida?</h2>
+          <p>Texto longo demais para ficar dentro de um círculo sem esmagar a leitura, com CTA e contato.</p>
+          <a href="https://wa.me/5541999999999">Falar agora</a>
+        </div>
+      </section>
+    </main>
+    </body></html>
+    """
+
+    sanitized = _sanitize_deploy_html(html)
+
+    assert "rounded-full" not in sanitized
+    assert "aspect-square" not in sanitized
+    assert 'width:min(100%,32rem)' in sanitized

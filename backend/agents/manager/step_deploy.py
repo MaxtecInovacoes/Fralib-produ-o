@@ -144,6 +144,54 @@ def _guard_decorative_absolute_blocks(html: str) -> str:
     return pattern.sub(_replace, html)
 
 
+def _flatten_dense_circular_panels(html: str) -> str:
+    pattern = re.compile(
+        r"<(?P<tag>div|section|aside)\b(?P<before>[^>]*)class=(?P<q>['\"])(?P<classname>[^'\"]+)(?P=q)(?P<after>[^>]*)>(?P<inner>.*?)</(?P=tag)>",
+        re.IGNORECASE | re.DOTALL,
+    )
+
+    def _replace(match: re.Match) -> str:
+        classes = match.group("classname")
+        normalized_classes = re.sub(r"\s+", " ", classes).strip()
+        if "rounded-full" not in normalized_classes and "aspect-square" not in normalized_classes:
+            return match.group(0)
+
+        inner = match.group("inner") or ""
+        text_only = re.sub(r"(?is)<[^>]+>", " ", inner)
+        text_only = re.sub(r"\s+", " ", text_only).strip()
+        has_dense_copy = len(text_only) > 80
+        has_interactive_group = bool(re.search(r"(?is)<(?:a|button)\b", inner))
+        if not has_dense_copy and not has_interactive_group:
+            return match.group(0)
+
+        before = match.group("before") or ""
+        after = match.group("after") or ""
+        attrs = before + after
+        updated_classes = normalized_classes.replace("rounded-full", "rounded-3xl")
+        updated_classes = re.sub(r"\baspect-square\b", "", updated_classes)
+        updated_classes = re.sub(r"\s+", " ", updated_classes).strip()
+
+        style_match = re.search(r"style=(['\"])(.*?)\1", attrs, re.IGNORECASE | re.DOTALL)
+        extra_style = "width:min(100%,32rem);height:auto;aspect-ratio:auto;border-radius:2rem;"
+        if style_match:
+            current_style = style_match.group(2)
+            new_style = current_style.rstrip(";") + ";" + extra_style
+            attrs = attrs.replace(style_match.group(0), f'style="{new_style}"', 1)
+        else:
+            attrs += f' style="{extra_style}"'
+
+        attrs = re.sub(
+            r'class=(["\']).*?\1',
+            f'class="{updated_classes}"',
+            attrs,
+            count=1,
+            flags=re.IGNORECASE | re.DOTALL,
+        )
+        return f'<{match.group("tag")}{attrs}>{inner}</{match.group("tag")}>'
+
+    return pattern.sub(_replace, html)
+
+
 def _normalize_single_main_and_h1(html: str) -> str:
     html = _demote_secondary_tag(html, "main", "section")
     html = _demote_secondary_tag(html, "h1", "h2")
@@ -155,6 +203,7 @@ def _sanitize_deploy_html(html: str) -> str:
     html = _sanitize_corrupted_svg_paths(html)
     html = _normalize_single_main_and_h1(html)
     html = _guard_decorative_absolute_blocks(html)
+    html = _flatten_dense_circular_panels(html)
     html = _inject_head_guard_css(html)
     return html
 

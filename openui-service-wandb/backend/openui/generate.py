@@ -61,6 +61,20 @@ def _json_for_prompt(value: Any, limit: int = 4000) -> str:
     return text[:limit]
 
 
+_FONT_FAMILY_ALIASES = {
+    "ubermove": "Archivo Black",
+    "ubermovetext": "Inter",
+    "ubermovecondensed": "Archivo Black",
+    "nouvelr": "Oswald",
+}
+
+
+def _normalize_web_font_family(value: Any, fallback: str = "Inter") -> str:
+    raw = _first_non_empty(value, fallback)
+    normalized = re.sub(r"[^a-z0-9]+", "", raw.lower())
+    return _FONT_FAMILY_ALIASES.get(normalized, raw)
+
+
 def _html_has_minimum_structure(html: str) -> tuple[bool, str]:
     if not html or len(html.strip()) < 1000:
         return False, "html curto"
@@ -197,8 +211,8 @@ def _build_system_prompt(prd: dict) -> str:
 
     if render_hint == "shell_document":
         typography = prd.get("typography") or {}
-        heading_font = _first_non_empty(typography.get("heading"), "Inter")
-        body_font = _first_non_empty(typography.get("body"), "Inter")
+        heading_font = _normalize_web_font_family(typography.get("heading"), "Inter")
+        body_font = _normalize_web_font_family(typography.get("body"), "Inter")
         return (
             "You generate HTML shells. Return raw HTML only. "
             f"Create the empty shell for {business}, a {segmento} business in {cidade}. "
@@ -223,7 +237,10 @@ def _build_system_prompt(prd: dict) -> str:
             if is_dark_surface
             else f"Surface contract: standard sections use background {bg_token} with readable text; featured/card sections use {surface_token}. "
         )
-        typography = prd.get("typography") or {}
+        typography = {
+            key: _normalize_web_font_family(val, "Inter")
+            for key, val in (prd.get("typography") or {}).items()
+        }
         photos = prd.get("photos") or []
         photo_urls = [
             str(photo.get("url") if isinstance(photo, dict) else photo)
@@ -251,6 +268,7 @@ def _build_system_prompt(prd: dict) -> str:
             "FAQ, LGPD, SEO/GEO and footer are functional sections, not decorative filler. "
             "Use at least one real <img> with an available URL in hero, about or media sections. "
             "Use max 3 columns on desktop for text cards. Every text/review/info card must use min-w-[280px] with w-full and responsive width; never make columns so narrow that prose breaks word-by-word. "
+            "Never place dense copy, long headlines, CTA groups, addresses, phone blocks or multi-line paragraphs inside circles, rounded-full panels, aspect-square badges or decorative pills. Circular elements may contain only tiny labels or short numeric stats. "
             "Start the response with <section and finish with </section>. "
             "Include visible heading, useful copy, and CTA/content from the requested section. "
             "Use Tailwind utility classes directly. Do not output html, head, body, main, style, script, markdown, or explanation. "
@@ -315,7 +333,10 @@ def _build_system_prompt(prd: dict) -> str:
             )
 
     # Typography
-    typography = prd.get("typography", {})
+    typography = {
+        key: _normalize_web_font_family(val, "Inter")
+        for key, val in (prd.get("typography", {}) or {}).items()
+    }
     if typography:
         segments.append("\n### Typography")
         for key, val in typography.items():
