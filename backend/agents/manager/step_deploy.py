@@ -229,7 +229,38 @@ def _close_broken_inline_wrappers_before_sections(html: str) -> str:
         r'\1</svg></button>',
         html,
     )
-    return html
+    section_re = re.compile(r"(?i)<section\b")
+    anchor_open_re = re.compile(r"(?i)<a\b")
+    anchor_close_re = re.compile(r"(?i)</a>")
+    button_open_re = re.compile(r"(?i)<button\b")
+    button_close_re = re.compile(r"(?i)</button>")
+    svg_open_re = re.compile(r"(?i)<svg\b")
+    svg_close_re = re.compile(r"(?i)</svg>")
+
+    fixed_parts: list[str] = []
+    cursor = 0
+    for match in section_re.finditer(html):
+        fixed_parts.append(html[cursor:match.start()])
+        assembled = "".join(fixed_parts)
+        needs_anchor_close = len(anchor_open_re.findall(assembled)) > len(anchor_close_re.findall(assembled))
+        needs_button_close = len(button_open_re.findall(assembled)) > len(button_close_re.findall(assembled))
+        needs_svg_close = len(svg_open_re.findall(assembled)) > len(svg_close_re.findall(assembled))
+
+        if needs_anchor_close or needs_button_close:
+            closures: list[str] = []
+            if needs_svg_close:
+                closures.append("</svg>")
+            if needs_anchor_close:
+                closures.append("</a>")
+            if needs_button_close:
+                closures.append("</button>")
+            fixed_parts.append("".join(closures))
+
+        fixed_parts.append(match.group(0))
+        cursor = match.end()
+
+    fixed_parts.append(html[cursor:])
+    return "".join(fixed_parts)
 
 
 def _demote_secondary_tag(html: str, original_tag: str, replacement_tag: str) -> str:

@@ -348,3 +348,23 @@ def test_deploy_closes_broken_cta_before_next_section():
 
     assert "</svg></a><section" in cleaned.replace("\n", "")
     assert cleaned.lower().count("<section") == 1
+
+
+def test_deploy_closes_truncated_svg_anchor_before_next_section():
+    import re
+
+    from backend.agents.manager.step_deploy import _sanitize_deploy_html
+
+    html = """
+    <!DOCTYPE html><html><head></head><body><main>
+    <a href="tel:+5541998487678" class="cta">
+      <svg class="w
+    <section id="acao"><div class="content"><h2>A academia que Campina Grande do Sul precisava</h2></div></section>
+    </main></body></html>
+    """
+
+    cleaned = _sanitize_deploy_html(html)
+    normalized = cleaned.replace("\n", "")
+
+    assert re.search(r'<svg class="w\s*</svg></a>\s*<section id="acao">', normalized)
+    assert normalized.count("<section") == 1
