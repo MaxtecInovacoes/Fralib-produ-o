@@ -745,6 +745,8 @@ def gerar_arquiteto_mestre_prd_agent(
     Drop-in replacement para gerar_arquiteto_mestre_prd usando Managed Agent.
     Retorna DesignerPRD validado — mesma interface do original.
     """
+    dark_mode = _should_force_dark_mode(segmento, dark_mode, creative_direction or {})
+
     result = arquiteto_agent_loop(
         dados_hunter=dados_hunter,
         cidade=cidade,
@@ -804,6 +806,11 @@ def _apply_visual_contract_inputs(
 ) -> dict:
     """Attach upstream visual contracts and rebuild dependent execution plans."""
     prd = dict(prd or {})
+    prd["dark_mode"] = _should_force_dark_mode(
+        str(prd.get("segmento") or ""),
+        bool(prd.get("dark_mode", False)),
+        creative_direction,
+    )
     if niche_brief:
         prd["niche_brief"] = niche_brief
     if creative_direction:
@@ -850,6 +857,21 @@ def _apply_visual_contract_inputs(
     except Exception as exc:
         print(f"[ArquitetoAgent] site_build_plan rebuild falhou: {exc}")
     return prd
+
+
+def _should_force_dark_mode(segmento: str, current_dark_mode: bool, creative_direction: dict | None = None) -> bool:
+    creative_direction = creative_direction if isinstance(creative_direction, dict) else {}
+    segment = str(segmento or "").lower()
+    concept = str(creative_direction.get("visual_concept", "") or "").lower()
+    hard_concept = str((creative_direction.get("hard_constraints") or {}).get("visual_concept", "") or "").lower()
+    dark_segments = ("academia", "fitness", "gym", "barbearia", "barber", "balada", "bar")
+    dark_concepts = ("bold", "dark", "industrial", "brutalist", "gymshark", "nike")
+    return (
+        bool(current_dark_mode)
+        or any(token in segment for token in dark_segments)
+        or any(token in concept for token in dark_concepts)
+        or any(token in hard_concept for token in dark_concepts)
+    )
 
 
 def _reorder_sections_by_blueprint(sections: list, order: list[str]) -> list:

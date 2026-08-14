@@ -12,6 +12,23 @@ from backend.core.knowledge_journal import record as journal_record
 logger = logging.getLogger("manager.pipeline")
 
 
+def _should_force_dark_mode(state: PipelineState, current_dark_mode: bool) -> bool:
+    segment = str(state.segmento or "").lower()
+    visual_concept = str((state.creative_direction or {}).get("visual_concept", "") or "").lower()
+    hard_concept = str(
+        ((state.creative_direction or {}).get("hard_constraints") or {}).get("visual_concept", "")
+        or ""
+    ).lower()
+    dark_segments = ("academia", "fitness", "gym", "barbearia", "barber", "balada", "bar")
+    dark_concepts = ("bold", "dark", "industrial", "brutalist", "gymshark", "nike")
+    return (
+        bool(current_dark_mode)
+        or any(token in segment for token in dark_segments)
+        or any(token in visual_concept for token in dark_concepts)
+        or any(token in hard_concept for token in dark_concepts)
+    )
+
+
 def step_arquiteto(state: PipelineState) -> PipelineState:
     """Fase 3: Arquiteto gera DesignerPRD via Managed Agent (tool-use loop)."""
     if state.current_state != STATE_DESIGNING:
@@ -20,7 +37,10 @@ def step_arquiteto(state: PipelineState) -> PipelineState:
     caio = state.caio_output
     tier = caio.tier if caio else "STANDARD"
     score = caio.score if caio else 0
-    dark_mode = getattr(caio, "dark_mode", False) if caio else False
+    dark_mode = _should_force_dark_mode(
+        state,
+        getattr(caio, "dark_mode", False) if caio else False,
+    )
 
     max_attempts = 3
     for attempt in range(max_attempts):

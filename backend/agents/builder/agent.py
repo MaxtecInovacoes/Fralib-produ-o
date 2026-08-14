@@ -9,6 +9,7 @@ import json
 import time
 import re
 import requests
+from urllib.parse import quote_plus
 from backend.agents.design_guidelines import TAILWIND_FIRST_RULES, ANIMATION_PRINCIPLES
 
 try:
@@ -574,6 +575,41 @@ def _inject_sections_into_shell(shell_html: str, section_fragments: list[str]) -
     return shell_html + "\n" + body_content
 
 
+def _google_fonts_href(typography: dict) -> str:
+    heading = str((typography or {}).get("heading") or "Inter").strip()
+    body = str((typography or {}).get("body") or "Inter").strip()
+    families: list[str] = []
+    for family in (heading, body):
+        if not family or family.lower() in {"system-ui", "sans-serif", "serif", "monospace"}:
+            continue
+        encoded = quote_plus(family)
+        if encoded.lower() == "inter":
+            encoded = "Inter:wght@400;500;600;700;800;900"
+        families.append(f"family={encoded}")
+    if not families:
+        families.append("family=Inter:wght@400;500;600;700;800;900")
+    return "https://fonts.googleapis.com/css2?" + "&".join(dict.fromkeys(families)) + "&display=swap"
+
+
+def _ensure_shell_fonts(html: str, spec: dict) -> str:
+    if not html:
+        return html
+    href = _google_fonts_href(spec.get("typography") or {})
+    font_links = (
+        '<link rel="preconnect" href="https://fonts.googleapis.com">\n'
+        '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>\n'
+        f'<link href="{href}" rel="stylesheet">'
+    )
+    cleaned = re.sub(
+        r'(?is)<link\b[^>]*href=["\']https://fonts\.googleapis\.com/css2\?[^"\']+["\'][^>]*>\s*',
+        "",
+        html,
+    )
+    if "fonts.googleapis.com/css2" in cleaned:
+        return cleaned
+    return re.sub(r"(?is)</head>", font_links + "\n</head>", cleaned, count=1)
+
+
 def _render_block(block_spec: dict, design_tokens: dict) -> tuple[str, str]:
     """Render one block via OpenUI with 6 retries. Returns (html, model) tuple or ("", "") on failure."""
     max_retries = 6
@@ -693,6 +729,7 @@ def _render_shell_document(spec: dict) -> tuple[str, str, str]:
         html = _extract_response_html(data)
         if not html:
             return "", "", "shell vazio"
+        html = _ensure_shell_fonts(html, spec)
         lower = html.lower()
         if "<html" not in lower or "<body" not in lower or "<main" not in lower:
             return "", data.get("model", ""), "shell sem html/body/main"

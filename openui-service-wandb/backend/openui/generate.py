@@ -196,9 +196,13 @@ def _build_system_prompt(prd: dict) -> str:
     render_hint = str(prd.get("_render_hint") or "").strip().lower()
 
     if render_hint == "shell_document":
+        typography = prd.get("typography") or {}
+        heading_font = _first_non_empty(typography.get("heading"), "Inter")
+        body_font = _first_non_empty(typography.get("body"), "Inter")
         return (
             "You generate HTML shells. Return raw HTML only. "
             f"Create the empty shell for {business}, a {segmento} business in {cidade}. "
+            f"Google Fonts must import both heading and body fonts when available: heading={heading_font}; body={body_font}. "
             "Required exact structure: <!DOCTYPE html><html lang=\"pt-BR\"><head>charset, viewport, title, Google Fonts and Tailwind CDN only</head>"
             "<body><main id=\"app-shell\"></main></body></html>. "
             "The main must be empty. Do not output sections, hero, footer, style blocks, scripts, markdown, or explanations."
@@ -209,6 +213,16 @@ def _build_system_prompt(prd: dict) -> str:
         section_payload = sections[0] if sections else {}
         repair_feedback = str(prd.get("_repair_feedback") or "").strip()
         palette = prd.get("paleta") or prd.get("color_palette") or {}
+        tokens = palette.get("tokens_oklch") if isinstance(palette, dict) else {}
+        bg_token = (tokens or {}).get("--bg") or palette.get("background") or "var(--bg)"
+        surface_token = (tokens or {}).get("--surface") or palette.get("surface") or "var(--surface)"
+        fg_token = (tokens or {}).get("--fg") or palette.get("text") or "var(--fg)"
+        is_dark_surface = bool(re.search(r"oklch\((?:[0-2]?\d|3[0-9])%", str(bg_token)))
+        surface_rule = (
+            f"Surface contract: global tokens are dark. Standard sections MUST use background {bg_token} and text {fg_token}; featured/card sections MUST use background {surface_token} and text {fg_token}. Do not use #ffffff, white, bg-white, text-black or light gray backgrounds anywhere in this fragment. "
+            if is_dark_surface
+            else f"Surface contract: standard sections use background {bg_token} with readable text; featured/card sections use {surface_token}. "
+        )
         typography = prd.get("typography") or {}
         photos = prd.get("photos") or []
         photo_urls = [
@@ -232,6 +246,7 @@ def _build_system_prompt(prd: dict) -> str:
             f"Available editorial image URLs: {_compact_json(photo_urls, 1400)}. "
             f"Confirmed phone/WhatsApp: {phone or 'not informed'}. Use this exact phone in contact and footer; never use placeholder phones such as (XX) 99999-9999 or (41) 99999-9999. "
             f"{review_rule}"
+            f"{surface_rule}"
             "Preserve AIDA: hero captures Attention, interesse builds Interest, desejo creates Desire with offer/proof, acao drives Action. "
             "FAQ, LGPD, SEO/GEO and footer are functional sections, not decorative filler. "
             "Use at least one real <img> with an available URL in hero, about or media sections. "
@@ -288,6 +303,16 @@ def _build_system_prompt(prd: dict) -> str:
             if key in {"tokens_oklch", "hero_style", "reasoning"}:
                 continue
             segments.append(f"  --{key}: {val};")
+        tokens = paleta.get("tokens_oklch") if isinstance(paleta, dict) else {}
+        bg_token = (tokens or {}).get("--bg") or paleta.get("background")
+        surface_token = (tokens or {}).get("--surface") or paleta.get("surface")
+        fg_token = (tokens or {}).get("--fg") or paleta.get("text")
+        if re.search(r"oklch\((?:[0-2]?\d|3[0-9])%", str(bg_token or "")):
+            segments.append(
+                "DARK SURFACE CONTRACT: every section must stay dark-first. "
+                f"Use background {bg_token} or {surface_token}; text must use {fg_token}. "
+                "Never use #ffffff, white, bg-white, text-black or isolated light sections."
+            )
 
     # Typography
     typography = prd.get("typography", {})

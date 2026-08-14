@@ -75,6 +75,7 @@ def step_variacao(state: PipelineState) -> PipelineState:
 
 
 def _normalize_blueprint(blueprint: dict, state: PipelineState) -> dict:
+    _enforce_dark_bold_variation(blueprint, state)
     order = blueprint.get("ordem_das_secoes") or []
     if not isinstance(order, list):
         order = []
@@ -94,6 +95,23 @@ def _normalize_blueprint(blueprint: dict, state: PipelineState) -> dict:
     avoid.extend((state.creative_direction or {}).get("anti_patterns", []))
     blueprint["avoid"] = list(dict.fromkeys(str(item) for item in avoid if str(item).strip()))
     return blueprint
+
+
+def _enforce_dark_bold_variation(blueprint: dict, state: PipelineState) -> None:
+    segment = str(state.segmento or "").lower()
+    creative = state.creative_direction or {}
+    concept = str(creative.get("visual_concept", "") or "").lower()
+    hard_concept = str((creative.get("hard_constraints") or {}).get("visual_concept", "") or "").lower()
+    is_dark_niche = any(token in segment for token in ("academia", "fitness", "gym", "barbearia", "barber", "balada", "bar"))
+    is_bold_direction = any(token in f"{concept} {hard_concept}" for token in ("bold", "dark", "industrial", "brutalist", "gymshark", "nike"))
+    if not (is_dark_niche or is_bold_direction):
+        return
+    if str(blueprint.get("template_estrutura", "")).lower() in {"corporate", "minimal", ""}:
+        blueprint["template_estrutura"] = "brutalist"
+    if str(blueprint.get("template_hero", "")).lower() in {"hero-split", "hero-center", ""}:
+        blueprint["template_hero"] = "hero-full-bleed"
+    blueprint["dark_mode_required"] = True
+    blueprint["surface_policy"] = "dark-only: all sections use var(--bg) or var(--surface) with var(--fg); never white backgrounds"
 
 
 def _enforce_aida_order(order: list[str], state: PipelineState) -> list[str]:

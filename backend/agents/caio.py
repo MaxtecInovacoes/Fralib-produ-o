@@ -66,6 +66,8 @@ REDES_CONHECIDAS = [
     "runner",
     "cia athletica",
     "companhia athletica",
+    "phd sports",
+    "ph.d sports",
     "pratique fitness",
     "just fit",
     "curves",
@@ -304,16 +306,6 @@ def verificar_se_e_rede(nome: str, website: str = "") -> bool:
     return False
 
 
-def _is_academia_local(lead: LeadInput) -> bool:
-    segmento = str(lead.segmento or "").lower()
-    nome = str(lead.nome or "").lower()
-    cidade = str(lead.cidade or "").lower()
-    if not any(token in segmento for token in ("academia", "gym", "fitness")):
-        return False
-    local_tokens = ("jardim", "centro", "bairro", "ct ", "centro de treinamento", "academia")
-    return bool(cidade or any(token in nome for token in local_tokens))
-
-
 def validar_site(website: str) -> tuple:
     if not website or not website.strip():
         return False, "Sem site"
@@ -474,7 +466,7 @@ def qualificar_lead(lead=None, **kwargs) -> CaioOutput:
             },
         )
 
-    if verificar_se_e_rede(lead.nome, lead.website or "") and not _is_academia_local(lead):
+    if verificar_se_e_rede(lead.nome, lead.website or ""):
         print("[Caio] REJEITADO: {} - rede/franquia".format(lead.nome))
         return CaioOutput(
             qualificacao="REJEITADO",

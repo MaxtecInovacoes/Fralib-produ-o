@@ -99,7 +99,7 @@ def test_openui_prompt_forbids_fake_reviews_phone_and_narrow_cards():
     assert "max 3 columns" in prompt
 
 
-def test_caio_does_not_reject_local_academia_phd_sports(monkeypatch):
+def test_caio_rejects_phd_sports_as_known_network(monkeypatch):
     from backend.agents.caio import qualificar_lead
 
     monkeypatch.setattr("backend.agents.caio.verificar_whatsapp_ativo", lambda *args, **kwargs: (True, "ok"))
@@ -117,5 +117,39 @@ def test_caio_does_not_reject_local_academia_phd_sports(monkeypatch):
         }
     )
 
-    assert result.qualificacao != "REJEITADO"
-    assert result.tier in {"BASIC", "STANDARD", "PREMIUM"}
+    assert result.qualificacao == "REJEITADO"
+    assert result.tier == "REJEITADO"
+    assert "Rede/franquia" in result.motivo
+
+
+def test_academia_and_bold_force_dark_mode():
+    from backend.agents.manager.step_arquiteto import _should_force_dark_mode
+    from backend.agents.manager.states import PipelineState
+
+    state = PipelineState(
+        tenant_id=2,
+        run_id="dark-test",
+        lead_id="lead-dark",
+        segmento="academia",
+        cidade="Campina Grande do Sul",
+        creative_direction={"visual_concept": "bold"},
+    )
+
+    assert _should_force_dark_mode(state, False) is True
+
+
+def test_builder_shell_imports_heading_and_body_fonts():
+    from backend.agents.builder.agent import _ensure_shell_fonts
+
+    html = (
+        "<!DOCTYPE html><html><head>"
+        "<link href=\"https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap\" rel=\"stylesheet\">"
+        "</head><body><main id=\"app-shell\"></main></body></html>"
+    )
+    cleaned = _ensure_shell_fonts(
+        html,
+        {"typography": {"heading": "Archivo Black", "body": "Inter"}},
+    )
+
+    assert "family=Archivo+Black" in cleaned
+    assert "family=Inter:wght@400;500;600;700;800;900" in cleaned
