@@ -23,11 +23,10 @@ import requests
 from dataclasses import dataclass, field
 from typing import Optional, List, Dict
 
-sys.path.insert(0, os.path.dirname(__file__))
-from arquiteto_tools import ARQUITETO_TOOLS, execute_tool
-from design_context import get_design_context, get_hero_style
-from designer_prd import DesignerPRD
-from llm_direct import call_claude, _registrar_uso_completo
+from backend.agents.arquiteto_tools import ARQUITETO_TOOLS, execute_tool
+from backend.agents.design_context import get_design_context, get_hero_style
+from backend.agents.designer_prd import DesignerPRD
+from backend.agents.llm_direct import call_claude, _registrar_uso_completo
 from prompts_arquiteto import _garantir_secoes_obrigatorias, _garantir_layout_type
 try:
     from backend.core.design_system_router import build_design_dna, choose_section_variant
@@ -371,9 +370,7 @@ class ArquitetoAgentOutput:
 def _resolve_anthropic():
     """Resolve API key e base URL."""
     try:
-        sys.path.insert(0, '/root/fralib/backend')
-        sys.path.insert(0, '/root/fralib/backend/services')
-        from ia_manager import pick_key
+        from backend.services.ia_manager import pick_key
         result = pick_key("anthropic")
         if result:
             api_key, base_url, key_id = result
@@ -831,8 +828,16 @@ def _apply_visual_contract_inputs(
         anti_patterns.extend(creative_direction.get("anti_patterns") or [])
         prd["anti_patterns"] = list(dict.fromkeys(str(item) for item in anti_patterns if str(item).strip()))
     if variation_blueprint:
-        prd["variation_blueprint"] = variation_blueprint
-        order = variation_blueprint.get("ordem_das_secoes") or []
+        sanitized_blueprint = dict(variation_blueprint)
+        order = sanitized_blueprint.get("ordem_das_secoes") or []
+        order = [item for item in order if str(item).strip().lower() != "lgpd"]
+        required = sanitized_blueprint.get("required_sections") or []
+        if isinstance(required, list):
+            sanitized_blueprint["required_sections"] = [
+                item for item in required if str(item).strip().lower() != "lgpd"
+            ]
+        sanitized_blueprint["ordem_das_secoes"] = order
+        prd["variation_blueprint"] = sanitized_blueprint
         if not prd.get("reviews_list"):
             order = [
                 item for item in order
@@ -843,9 +848,9 @@ def _apply_visual_contract_inputs(
             prd["layout_blueprint"] = [
                 {
                     "section": section.get("name"),
-                    "variant": (variation_blueprint.get("layout_variants") or {}).get(section.get("name"))
+                    "variant": (sanitized_blueprint.get("layout_variants") or {}).get(section.get("name"))
                     or section.get("layout_type")
-                    or variation_blueprint.get("template_estrutura", ""),
+                    or sanitized_blueprint.get("template_estrutura", ""),
                     "source": "variation_blueprint",
                 }
                 for section in prd["sections"]
@@ -875,8 +880,17 @@ def _should_force_dark_mode(segmento: str, current_dark_mode: bool, creative_dir
 
 
 def _reorder_sections_by_blueprint(sections: list, order: list[str]) -> list:
-    section_map = {str(section.get("name", "")).lower(): section for section in sections if isinstance(section, dict)}
-    normalized_order = [str(item).lower() for item in order if str(item).strip()]
+    filtered_sections = [
+        section
+        for section in sections
+        if isinstance(section, dict) and str(section.get("name", "")).strip().lower() != "lgpd"
+    ]
+    section_map = {str(section.get("name", "")).lower(): section for section in filtered_sections}
+    normalized_order = [
+        str(item).lower()
+        for item in order
+        if str(item).strip() and str(item).strip().lower() != "lgpd"
+    ]
     result = []
     for section_name in normalized_order:
         section = section_map.pop(section_name, None)

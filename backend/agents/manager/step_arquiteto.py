@@ -209,4 +209,19 @@ def _prd_to_dict(prd) -> dict:
             ]
         else:
             result[k] = v
+    sections = result.get("sections")
+    if isinstance(sections, list):
+        result["sections"] = [
+            section
+            for section in sections
+            if str((section or {}).get("name") if isinstance(section, dict) else getattr(section, "name", "")).strip().lower() != "lgpd"
+        ]
+    variation = result.get("variation_blueprint")
+    if isinstance(variation, dict):
+        order = variation.get("ordem_das_secoes")
+        if isinstance(order, list):
+            variation["ordem_das_secoes"] = [item for item in order if str(item).strip().lower() != "lgpd"]
+        required = variation.get("required_sections")
+        if isinstance(required, list):
+            variation["required_sections"] = [item for item in required if str(item).strip().lower() != "lgpd"]
     return result
