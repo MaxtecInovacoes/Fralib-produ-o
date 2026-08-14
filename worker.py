@@ -127,19 +127,21 @@ def _run_pipeline_job(db, job) -> bool:
             _dados = lead_row[5] if lead_row[5] else {}
             if isinstance(_dados, str):
                 _dados = _json.loads(_dados) if _dados else {}
+            real_phone = _dados.get("telefone") or _dados.get("whatsapp") or lead_row[2]
             payload["lead_data"] = {
                 "nome": lead_row[0],
                 "cidade": lead_row[1],
-                "telefone": lead_row[2],
+                "telefone": real_phone,
                 "segmento": lead_row[3],
                 "rating": float(lead_row[4]) if lead_row[4] is not None else None,
                 "reviews_count": int(_dados.get("reviews_count") or _dados.get("total_avaliacoes") or len(_dados.get("reviews", []))),
                 "fotos": _dados.get("fotos", []),
                 "website": _dados.get("website", ""),
-                "whatsapp": _dados.get("whatsapp") or lead_row[2],
+                "whatsapp": _dados.get("whatsapp") or real_phone,
                 "endereco": _dados.get("endereco", ""),
                 "market_intelligence": _dados.get("market_intelligence"),
                 "descricao": _dados.get("descricao", ""),
+                "reviews": _dados.get("reviews", []),
             }
     # Se não tem lead no BD mas tem segmento+cidade, busca via Hunter
         if not payload.get("lead_data") and payload.get("segmento") and payload.get("cidade"):
@@ -175,19 +177,21 @@ def _run_pipeline_job(db, job) -> bool:
                             _dados = lead_row[5] if lead_row[5] else {}
                             if isinstance(_dados, str):
                                 _dados = __import__("json").loads(_dados) if _dados else {}
+                            real_phone = _dados.get("telefone") or _dados.get("whatsapp") or lead_row[2]
                             payload["lead_data"] = {
                                 "nome": lead_row[0],
                                 "cidade": lead_row[1],
-                                "telefone": lead_row[2],
+                                "telefone": real_phone,
                                 "segmento": lead_row[3],
                                 "rating": float(lead_row[4]) if lead_row[4] is not None else None,
                                 "reviews_count": int(_dados.get("reviews_count") or len(_dados.get("reviews", []))),
                                 "fotos": _dados.get("fotos", []),
                                 "website": _dados.get("website", ""),
-                                "whatsapp": _dados.get("whatsapp") or lead_row[2],
+                                "whatsapp": _dados.get("whatsapp") or real_phone,
                                 "endereco": _dados.get("endereco", ""),
                                 "market_intelligence": _dados.get("market_intelligence"),
                                 "descricao": _dados.get("descricao", ""),
+                                "reviews": _dados.get("reviews", []),
                             }
                             payload["lead_id"] = str(inv_id)
                             logger.info("Hunter fallback: lead encontrado (%s)", lead_row[0])

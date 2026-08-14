@@ -156,12 +156,25 @@ def test_builder_shell_imports_heading_and_body_fonts():
 
 
 def test_builder_normalizes_proprietary_font_aliases_to_web_fonts():
-    from backend.agents.builder.agent import _google_fonts_href
+    from backend.agents.builder.agent import _ensure_shell_fonts, _google_fonts_href
 
     href = _google_fonts_href({"heading": "UberMove", "body": "UberMoveText"})
 
     assert "family=Archivo+Black" in href
     assert "family=Inter:wght@400;500;600;700;800;900" in href
+
+    html = (
+        "<!DOCTYPE html><html><head>"
+        "<link href=\"https://fonts.googleapis.com/css?family=UberMove:400&display=swap\" rel=\"stylesheet\">"
+        "</head><body><main id=\"app-shell\"></main></body></html>"
+    )
+    cleaned = _ensure_shell_fonts(
+        html,
+        {"typography": {"heading": "UberMove", "body": "UberMoveText"}},
+    )
+
+    assert "family=UberMove" not in cleaned
+    assert "family=Archivo+Black" in cleaned
 
 
 def test_deploy_flattens_dense_circular_copy_panels():
@@ -186,3 +199,39 @@ def test_deploy_flattens_dense_circular_copy_panels():
     assert "rounded-full" not in sanitized
     assert "aspect-square" not in sanitized
     assert 'width:min(100%,32rem)' in sanitized
+
+
+def test_deploy_replaces_placeholder_phone_with_real_phone():
+    from backend.agents.manager.states import PipelineState
+    from backend.agents.manager.step_deploy import _ensure_final_document_contract
+
+    state = PipelineState(
+        tenant_id=2,
+        lead_id="abc12345-def6-7890-abcd-ef1234567890",
+        cidade="Campina Grande do Sul",
+        lead_data={"nome": "Start Academia", "telefone": "(41) 99999-9999"},
+        design_output={"phone": "5541998487678", "photos": []},
+    )
+    html = """
+    <!DOCTYPE html><html><head><title></title></head><body><main>
+    <a href="https://wa.me/5541999999999">Falar</a>
+    <p>WhatsApp: (41) 99999-9999</p>
+    </main></body></html>
+    """
+
+    cleaned = _ensure_final_document_contract(
+        html,
+        state,
+        "https://app.seunegociofralib.site/sites/2/start-academia-abc12345/",
+    )
+
+    assert "(41) 99999-9999" not in cleaned
+    assert "5541998487678" in cleaned
+
+
+def test_unsplash_fallback_for_academia_stays_on_niche():
+    from backend.agents.unsplash_fetcher import _fallback_urls
+
+    urls = _fallback_urls("gym fitness workout training", 3, "Academia Teste", "academia")
+
+    assert all("photo-149736" not in url for url in urls)

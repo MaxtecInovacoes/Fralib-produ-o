@@ -160,6 +160,13 @@ QUERIES_VARIADAS = {
 }
 
 CURATED_FALLBACK_IMAGES = {
+    "academia": [
+        "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?auto=format&fit=crop&w=1400&q=82",
+        "https://images.unsplash.com/photo-1518611012118-696072aa579a?auto=format&fit=crop&w=1400&q=82",
+        "https://images.unsplash.com/photo-1571902943202-507ec2618e8f?auto=format&fit=crop&w=1400&q=82",
+        "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=1400&q=82",
+        "https://images.unsplash.com/photo-1540497077202-7c8a3999166f?auto=format&fit=crop&w=1400&q=82",
+    ],
     "otica": [
         "https://images.unsplash.com/photo-1511499767150-a48a237f0083?auto=format&fit=crop&w=1400&q=82",
         "https://images.unsplash.com/photo-1574258495973-f010dfbb5371?auto=format&fit=crop&w=1400&q=82",
@@ -304,6 +311,17 @@ def buscar_fotos_unsplash(
         try:
             with open(cache_file) as f:
                 pool = json.load(f)
+            try:
+                from backend.services.pipeline_media import is_segment_compatible_media_url
+
+                filtered_pool = [
+                    url for url in pool
+                    if is_segment_compatible_media_url(url, segmento)
+                ]
+                if filtered_pool:
+                    pool = filtered_pool
+            except Exception:
+                pass
             selected = _select_unique(pool, nome or segmento, quantidade)
             print(
                 f"[Unsplash] Cache HIT: {len(selected)}/{len(pool)} fotos para '{nome or segmento}'"

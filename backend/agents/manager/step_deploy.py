@@ -38,6 +38,11 @@ main .fralib-relative-guard {
 """
 
 
+def _is_placeholder_phone(value: str) -> bool:
+    digits = re.sub(r"\D+", "", str(value or ""))
+    return digits in {"4199999999", "5541999999999", "11999999999", "5511999999999"}
+
+
 def _sanitize_html_document_structure(html: str) -> str:
     body_start = re.search(r"<body[^>]*>", html, re.IGNORECASE)
     body_ends = list(re.finditer(r"</body>", html, re.IGNORECASE))
@@ -214,7 +219,15 @@ def _ensure_final_document_contract(html: str, state: PipelineState, canonical_u
     name = html_lib.escape(str((state.lead_data or {}).get("nome") or "Negócio local"), quote=True)
     city = html_lib.escape(str(state.cidade or ""), quote=True)
     address = html_lib.escape(str((state.lead_data or {}).get("endereco") or ""), quote=True)
-    phone = html_lib.escape(str((state.lead_data or {}).get("telefone") or ""), quote=True)
+    raw_phone = (
+        (state.design_output or {}).get("phone")
+        or (state.lead_data or {}).get("telefone")
+        or (state.lead_data or {}).get("whatsapp")
+        or ""
+    )
+    if _is_placeholder_phone(raw_phone):
+        raw_phone = ""
+    phone = html_lib.escape(str(raw_phone), quote=True)
     photos = (state.design_output or {}).get("photos") or []
     if not photos:
         try:
@@ -254,6 +267,16 @@ def _ensure_final_document_contract(html: str, state: PipelineState, canonical_u
     }
     head.append('<script type="application/ld+json">' + json.dumps({k: v for k, v in schema.items() if v}, ensure_ascii=False) + '</script>')
     cleaned = re.sub(r"(?is)</head>", "\n".join(head) + "\n</head>", cleaned, count=1)
+
+    if phone:
+        visible_phone = html_lib.unescape(phone)
+        digits = re.sub(r"\D+", "", visible_phone)
+        cleaned = re.sub(r"\(\d{2}\)\s*99999-9999", visible_phone, cleaned)
+        cleaned = re.sub(r"https://wa\.me/55\d{10,13}", f"https://wa.me/{digits}", cleaned)
+        cleaned = re.sub(r"href=\"tel:\+?55\d{10,13}\"", f'href="tel:+{digits}"', cleaned)
+    else:
+        cleaned = re.sub(r"(?i)\bwhatsapp:\s*\(\d{2}\)\s*99999-9999\b", "", cleaned)
+        cleaned = re.sub(r"https://wa\.me/55\d{10,13}", "#contato", cleaned)
 
     if "<img" not in cleaned.lower() and og_image:
         image = (

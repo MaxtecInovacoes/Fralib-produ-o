@@ -618,12 +618,10 @@ def _ensure_shell_fonts(html: str, spec: dict) -> str:
         f'<link href="{href}" rel="stylesheet">'
     )
     cleaned = re.sub(
-        r'(?is)<link\b[^>]*href=["\']https://fonts\.googleapis\.com/css2\?[^"\']+["\'][^>]*>\s*',
+        r'(?is)<link\b[^>]*href=["\']https://fonts\.googleapis\.com/[^"\']+["\'][^>]*>\s*',
         "",
         html,
     )
-    if "fonts.googleapis.com/css2" in cleaned:
-        return cleaned
     return re.sub(r"(?is)</head>", font_links + "\n</head>", cleaned, count=1)
 
 
