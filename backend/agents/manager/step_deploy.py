@@ -5,6 +5,7 @@ import json
 import re
 import html as html_lib
 from pathlib import Path
+from urllib.parse import quote_plus
 from datetime import datetime
 from backend.agents.manager.states import (
     PipelineState, STATE_PUBLISHING, STATE_OUTREACH, STATE_FAILED,
@@ -40,7 +41,132 @@ main .fralib-relative-guard {
 
 def _is_placeholder_phone(value: str) -> bool:
     digits = re.sub(r"\D+", "", str(value or ""))
-    return digits in {"4199999999", "5541999999999", "11999999999", "5511999999999"}
+    return digits in {"4199999999", "41999999999", "5541999999999", "11999999999", "5511999999999"}
+
+
+_FONT_FAMILY_ALIASES = {
+    "ubermove": "Archivo Black",
+    "ubermovetext": "Inter",
+    "uber move": "Archivo Black",
+    "uber move text": "Inter",
+    "nouvelr": "Oswald",
+}
+
+
+def _normalize_web_font_family(family: str, fallback: str) -> str:
+    raw = str(family or "").strip()
+    if not raw:
+        return fallback
+    normalized = re.sub(r"[^a-z0-9]+", "", raw.lower())
+    return _FONT_FAMILY_ALIASES.get(normalized, raw)
+
+
+def _google_fonts_href(typography: dict) -> str:
+    heading = _normalize_web_font_family(str((typography or {}).get("heading") or "Archivo Black").strip(), "Archivo Black")
+    body = _normalize_web_font_family(str((typography or {}).get("body") or "Inter").strip(), "Inter")
+    families: list[str] = []
+    for family in (heading, body):
+        if not family or family.lower() in {"system-ui", "sans-serif", "serif", "monospace"}:
+            continue
+        encoded = quote_plus(family)
+        if encoded.lower() == "inter":
+            encoded = "Inter:wght@400;500;600;700;800;900"
+        families.append(f"family={encoded}")
+    if not families:
+        families.append("family=Inter:wght@400;500;600;700;800;900")
+    return "https://fonts.googleapis.com/css2?" + "&".join(dict.fromkeys(families)) + "&display=swap"
+
+
+def _enforce_final_font_contract(html: str, state: PipelineState) -> str:
+    cleaned = html or ""
+    typography = (
+        (state.design_output or {}).get("typography")
+        or (state.designer_prd or {}).get("typography")
+        or {}
+    )
+    if str(state.segmento or "").strip().lower() == "academia":
+        typography = {
+            "heading": typography.get("heading") or "Archivo Black",
+            "body": typography.get("body") or "Inter",
+        }
+    href = _google_fonts_href(typography)
+    font_links = (
+        '<link rel="preconnect" href="https://fonts.googleapis.com">\n'
+        '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>\n'
+        f'<link href="{href}" rel="stylesheet">'
+    )
+    cleaned = re.sub(
+        r'(?is)<link\b[^>]*href=["\']https://fonts\.googleapis\.com/[^"\']+["\'][^>]*>\s*',
+        "",
+        cleaned,
+    )
+    cleaned = re.sub(
+        r'(?is)<link\b[^>]*href=["\']https://fonts\.gstatic\.com/[^"\']+["\'][^>]*>\s*',
+        "",
+        cleaned,
+    )
+    cleaned = re.sub(
+        r'(?is)<link\b[^>]*rel=["\']preconnect["\'][^>]*href=["\']https://fonts\.googleapis\.com["\'][^>]*>\s*',
+        "",
+        cleaned,
+    )
+    cleaned = re.sub(
+        r'(?is)<link\b[^>]*rel=["\']preconnect["\'][^>]*href=["\']https://fonts\.gstatic\.com["\'][^>]*>\s*',
+        "",
+        cleaned,
+    )
+    return re.sub(r"(?is)</head>", font_links + "\n</head>", cleaned, count=1)
+
+
+def _lookup_inventory_contact(lead_id: str) -> str:
+    if not lead_id:
+        return ""
+    try:
+        from backend.core.database import SessionLocal
+        from sqlalchemy import text as _sql
+
+        with SessionLocal() as db:
+            row = db.execute(
+                _sql(
+                    """
+                    SELECT
+                        coalesce(
+                            nullif(telefone, ''),
+                            nullif(whatsapp, ''),
+                            nullif(dados->>'telefone', ''),
+                            nullif(dados->>'whatsapp', '')
+                        ) AS phone
+                    FROM lead_inventory
+                    WHERE lead_id = :lead_id
+                    ORDER BY atualizado_em DESC NULLS LAST, criado_em DESC NULLS LAST, id DESC
+                    LIMIT 1
+                    """
+                ),
+                {"lead_id": lead_id},
+            ).fetchone()
+        if not row:
+            return ""
+        phone = row[0] if isinstance(row, (tuple, list)) else getattr(row, "phone", "")
+        return str(phone or "").strip()
+    except Exception as exc:
+        logger.warning("[Deploy] lookup de contato no inventory falhou (lead=%s): %s", lead_id, exc)
+        return ""
+
+
+def _resolve_real_phone(state: PipelineState) -> str:
+    raw_phone = (
+        (state.design_output or {}).get("phone")
+        or (state.lead_data or {}).get("telefone")
+        or (state.lead_data or {}).get("whatsapp")
+        or ""
+    )
+    if _is_placeholder_phone(raw_phone) or not str(raw_phone or "").strip():
+        inventory_phone = _lookup_inventory_contact(str(state.lead_id or ""))
+        if inventory_phone and not _is_placeholder_phone(inventory_phone):
+            raw_phone = inventory_phone
+    if _is_placeholder_phone(raw_phone):
+        return ""
+    return str(raw_phone or "").strip()
 
 
 def _sanitize_html_document_structure(html: str) -> str:
@@ -216,17 +342,11 @@ def _sanitize_deploy_html(html: str) -> str:
 def _ensure_final_document_contract(html: str, state: PipelineState, canonical_url: str) -> str:
     """Última garantia documental, aplicada após todos os pós-processadores."""
     cleaned = html or ""
+    cleaned = _enforce_final_font_contract(cleaned, state)
     name = html_lib.escape(str((state.lead_data or {}).get("nome") or "Negócio local"), quote=True)
     city = html_lib.escape(str(state.cidade or ""), quote=True)
     address = html_lib.escape(str((state.lead_data or {}).get("endereco") or ""), quote=True)
-    raw_phone = (
-        (state.design_output or {}).get("phone")
-        or (state.lead_data or {}).get("telefone")
-        or (state.lead_data or {}).get("whatsapp")
-        or ""
-    )
-    if _is_placeholder_phone(raw_phone):
-        raw_phone = ""
+    raw_phone = _resolve_real_phone(state)
     phone = html_lib.escape(str(raw_phone), quote=True)
     photos = (state.design_output or {}).get("photos") or []
     if not photos:
@@ -272,11 +392,16 @@ def _ensure_final_document_contract(html: str, state: PipelineState, canonical_u
         visible_phone = html_lib.unescape(phone)
         digits = re.sub(r"\D+", "", visible_phone)
         cleaned = re.sub(r"\(\d{2}\)\s*99999-9999", visible_phone, cleaned)
-        cleaned = re.sub(r"https://wa\.me/55\d{10,13}", f"https://wa.me/{digits}", cleaned)
-        cleaned = re.sub(r"href=\"tel:\+?55\d{10,13}\"", f'href="tel:+{digits}"', cleaned)
+        cleaned = re.sub(r"https://wa\.me/\d{10,15}", f"https://wa.me/{digits}", cleaned)
+        cleaned = re.sub(r'href="tel:[^"]+"', f'href="tel:+{digits}"', cleaned)
+        cleaned = re.sub(r'("telephone"\s*:\s*")\+?\d{10,15}(")', rf'\1+{digits}\2', cleaned)
+        cleaned = re.sub(r'("telephone"\s*:\s*")\(\d{2}\)\s*99999-9999(")', rf'\1{visible_phone}\2', cleaned)
     else:
+        cleaned = re.sub(r"\(\d{2}\)\s*99999-9999", "", cleaned)
         cleaned = re.sub(r"(?i)\bwhatsapp:\s*\(\d{2}\)\s*99999-9999\b", "", cleaned)
-        cleaned = re.sub(r"https://wa\.me/55\d{10,13}", "#contato", cleaned)
+        cleaned = re.sub(r"https://wa\.me/\d{10,15}", "#contato", cleaned)
+        cleaned = re.sub(r'href="tel:[^"]+"', 'href="#contato"', cleaned)
+        cleaned = re.sub(r'("telephone"\s*:\s*")[^"]*(")', r'\1\2', cleaned)
 
     if "<img" not in cleaned.lower() and og_image:
         image = (

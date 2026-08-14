@@ -229,6 +229,76 @@ def test_deploy_replaces_placeholder_phone_with_real_phone():
     assert "5541998487678" in cleaned
 
 
+def test_deploy_prefers_inventory_contact_when_runtime_state_has_placeholder(monkeypatch):
+    from backend.agents.manager.states import PipelineState
+    from backend.agents.manager.step_deploy import _ensure_final_document_contract
+
+    monkeypatch.setattr(
+        "backend.agents.manager.step_deploy._lookup_inventory_contact",
+        lambda lead_id: "5541998487678",
+    )
+
+    state = PipelineState(
+        tenant_id=2,
+        lead_id="6ee318c7-bdf9-454a-b206-b90a90e45ec0",
+        cidade="Campina Grande do Sul",
+        segmento="academia",
+        lead_data={"nome": "Start Academia", "telefone": "(41) 99999-9999"},
+        design_output={"phone": "(41) 99999-9999", "photos": []},
+    )
+    html = """
+    <!DOCTYPE html><html><head><title></title></head><body><main>
+    <a href="https://wa.me/5541999999999">Falar</a>
+    <a href="tel:+5541999999999">(41) 99999-9999</a>
+    <script type="application/ld+json">{"telephone":"(41) 99999-9999"}</script>
+    </main></body></html>
+    """
+
+    cleaned = _ensure_final_document_contract(
+        html,
+        state,
+        "https://app.seunegociofralib.site/sites/2/start-academia-abc12345/",
+    )
+
+    assert "(41) 99999-9999" not in cleaned
+    assert "https://wa.me/5541998487678" in cleaned
+    assert 'href="tel:+5541998487678"' in cleaned
+
+
+def test_deploy_rewrites_google_fonts_to_web_safe_aliases():
+    from backend.agents.manager.states import PipelineState
+    from backend.agents.manager.step_deploy import _ensure_final_document_contract
+
+    state = PipelineState(
+        tenant_id=2,
+        lead_id="font-test",
+        cidade="Campina Grande do Sul",
+        segmento="academia",
+        lead_data={"nome": "Start Academia"},
+        design_output={
+            "typography": {"heading": "UberMove", "body": "UberMoveText"},
+            "photos": [],
+        },
+    )
+    html = """
+    <!DOCTYPE html><html><head>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=UberMove&family=UberMoveText&display=swap" rel="stylesheet">
+    <title></title></head><body><main></main></body></html>
+    """
+
+    cleaned = _ensure_final_document_contract(
+        html,
+        state,
+        "https://app.seunegociofralib.site/sites/2/start-academia-font-test/",
+    )
+
+    assert "family=UberMove" not in cleaned
+    assert "family=Archivo+Black" in cleaned
+    assert "family=Inter:wght@400;500;600;700;800;900" in cleaned
+
+
 def test_unsplash_fallback_for_academia_stays_on_niche():
     from backend.agents.unsplash_fetcher import _fallback_urls
 
