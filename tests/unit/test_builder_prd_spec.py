@@ -138,6 +138,48 @@ class TestPrdToSpec:
             assert "name" in s, "Section missing 'name'"
             assert "title" in s, "Section missing 'title'"
             assert "content" in s, "Section missing 'content'"
+            assert "section_contract" in s, "Section missing 'section_contract'"
+            assert "order_index" in s, "Section missing 'order_index'"
+
+    def test_sections_receive_contract_media_and_constraints(self):
+        from backend.agents.designer_prd import SectionSpec
+
+        prd = _make_prd(
+            sections=[
+                SectionSpec(name="hero", title="Hero"),
+                SectionSpec(name="faq", title="FAQ"),
+                SectionSpec(name="footer", title="Footer"),
+            ],
+            variation_blueprint={
+                "ordem_das_secoes": ["hero", "faq", "footer"],
+            },
+            creative_direction={
+                "hard_constraints": {"hero_strategy": "hero-full-bleed"},
+                "soft_constraints": {"motion": {"efeito_principal": "reveal"}},
+            },
+            media_plan=[
+                {
+                    "url": "https://images.example.com/hero.jpg",
+                    "role": "hero-image",
+                    "section": "hero",
+                    "required": True,
+                }
+            ],
+            faq_questions=["Como funciona?", "Qual o horário?", "Onde fica?"],
+        )
+
+        spec = self._convert(prd)
+        sections = {str(section["name"]).lower(): section for section in spec["sections"]}
+
+        assert sections["hero"]["order_index"] == 1
+        assert sections["faq"]["order_index"] == 2
+        assert sections["footer"]["order_index"] == 3
+        assert sections["hero"]["required_media_count"] == 1
+        assert sections["hero"]["media_plan"][0]["url"] == "https://images.example.com/hero.jpg"
+        assert sections["hero"]["hard_constraints"]["hero_strategy"] == "hero-full-bleed"
+        assert sections["faq"]["soft_constraints"]["motion"]["efeito_principal"] == "reveal"
+        assert "h1" in sections["hero"]["section_contract"]["minimum_requirements"]["must_have"]
+        assert "at least 3 questions" in " ".join(sections["faq"]["section_contract"]["minimum_requirements"]["must_have"])
 
     def test_color_palette_is_plain_dict(self):
         """OpenUI iterates paleta.items() — must be a plain dict."""
@@ -258,7 +300,60 @@ class TestPrdToSpec:
         """builder_directive must contain business name and segment."""
         spec = self._convert(_make_prd())
         assert "TestBiz" in spec["builder_directive"]
-        assert "Marketing" in spec["builder_directive"]
+
+    def test_builder_spec_artifacts_supports_sectioned_layout(self, monkeypatch, tmp_path):
+        from backend.agents.builder.agent import _prd_to_spec, _write_builder_spec_artifacts
+        from backend.agents import artifact_store as artifact_module
+
+        monkeypatch.setenv("FRALIB_ARTIFACTS_DIR", str(tmp_path))
+        monkeypatch.setattr(artifact_module, "artifact_dir", artifact_module.artifact_dir)
+
+        prd = _make_prd(
+            cidade="Campina Grande do Sul",
+            segmento="academia",
+        )
+        setattr(prd, "_run_id", "run-123")
+        setattr(prd, "_lead_id", "lead-123")
+        setattr(prd, "_lead_data", {"nome": "TestBiz"})
+
+        spec = _prd_to_spec(prd)
+        spec["_run_id"] = "run-123"
+        spec["_lead_id"] = "lead-123"
+        spec["_lead_name"] = "TestBiz"
+
+        _write_builder_spec_artifacts(spec)
+
+        payload_file = tmp_path / "run-123" / "testbiz-lead-123" / "builder" / "openui_payload" / "00-openui-payload.json"
+        section_file = tmp_path / "run-123" / "testbiz-lead-123" / "builder" / "section_specs" / "01-hero.json"
+        assert payload_file.exists()
+        assert section_file.exists()
+        assert "academia" in spec["builder_directive"]
+        assert "Campina Grande do Sul" in spec["builder_directive"]
+
+    def test_openui_payload_carries_section_contracts(self):
+        from backend.agents.designer_prd import SectionSpec
+
+        spec = self._convert(_make_prd(
+            sections=[
+                SectionSpec(name="hero", title="Hero"),
+                SectionSpec(name="contato", title="Contato"),
+            ],
+            variation_blueprint={"ordem_das_secoes": ["hero", "contato"]},
+            media_plan=[
+                {
+                    "url": "https://images.example.com/gym.jpg",
+                    "role": "hero",
+                    "section": "hero",
+                    "required": True,
+                }
+            ],
+        ))
+
+        assert "section_contracts" in spec
+        assert spec["section_contracts"][0]["name"] == "hero"
+        assert spec["section_contracts"][0]["required_media_count"] == 1
+        assert spec["openui_payload"]["section_contracts"][0]["name"] == "hero"
+        assert spec["openui_payload"]["section_contracts"][0]["required_media_count"] == 1
 
     def test_competitor_analysis_passthrough(self):
         """competitor_analysis from DesignerPRD must pass through."""

@@ -219,7 +219,7 @@ def step_builder(state: PipelineState) -> PipelineState:
                 run_id=state.run_id,
                 lead_id=state.lead_id,
                 lead_name=state.lead_data.get("nome", "") if state.lead_data else "",
-                filename="03-builder-final.html",
+                filename="builder/final_html/03-builder-final.html",
                 html=html,
                 metadata={
                     "step": "builder",

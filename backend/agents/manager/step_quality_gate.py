@@ -358,16 +358,18 @@ def step_quality_gate(state: PipelineState) -> PipelineState:
 
 def _run_independent_gates(state: PipelineState, html: str) -> dict:
     technical = _technical_gate(html)
+    completeness = _section_completeness_gate(state, html)
     diversity = _visual_diversity_gate(state, html)
     state.visual_fingerprint = diversity["fingerprint"]
     if isinstance(state.build_output, dict):
         state.build_output["visual_fingerprint"] = diversity["fingerprint"]
     creative = _creative_compliance_gate(state, html)
-    issues = technical["issues"] + creative["issues"] + diversity["issues"]
+    issues = technical["issues"] + completeness["issues"] + creative["issues"] + diversity["issues"]
     return {
         "passed": not issues,
         "issues": issues,
         "technical_gate": technical,
+        "section_completeness_gate": completeness,
         "creative_compliance_gate": creative,
         "visual_diversity_gate": diversity,
         "fingerprint": diversity["fingerprint"],
@@ -390,9 +392,194 @@ def _technical_gate(html: str) -> dict:
     return {"passed": not issues, "issues": issues}
 
 
+def _section_completeness_gate(state: PipelineState, html: str) -> dict:
+    issues = []
+    design = state.design_output or {}
+    contracts = design.get("section_contracts") or []
+    if not isinstance(contracts, list) or not contracts:
+        return {"passed": True, "issues": issues}
+
+    lower = (html or "").lower()
+    normalized = re.sub(r"\s+", " ", lower)
+    for contract in contracts:
+        if not isinstance(contract, dict):
+            continue
+        section_name = str(contract.get("name") or "").strip().lower()
+        if not section_name:
+            continue
+        section_html = _extract_section_html(html, section_name)
+        if not section_html:
+            issues.append(f"Section Completeness Gate: seção '{section_name}' ausente no HTML")
+            continue
+        section_lower = section_html.lower()
+        visible_text = _visible_text(section_html)
+        min_req = contract.get("minimum_requirements") or {}
+        minimum_blocks = int(min_req.get("minimum_content_blocks") or 0)
+        if minimum_blocks:
+            block_count = _section_block_count(section_lower)
+            if block_count < minimum_blocks:
+                issues.append(
+                    f"Section Completeness Gate: seção '{section_name}' tem blocos insuficientes "
+                    f"({block_count}/{minimum_blocks})"
+                )
+
+        if section_name == "hero":
+            if "<h1" not in section_lower:
+                issues.append("Section Completeness Gate: hero sem <h1>")
+            if not _contains_cta(section_lower):
+                issues.append("Section Completeness Gate: hero sem CTA acionável")
+            if not _contains_local_context(section_lower, state):
+                issues.append("Section Completeness Gate: hero sem contexto local")
+        elif section_name == "faq":
+            faq_items = section_lower.count("<details") + section_lower.count("<summary") + section_lower.count("faq-item")
+            faq_headings = section_lower.count("<h3") + section_lower.count("<dt")
+            if max(faq_items, faq_headings) < 3:
+                issues.append("Section Completeness Gate: FAQ com menos de 3 perguntas/blocos")
+        elif section_name == "contato":
+            if not _contains_real_phone(section_lower, design):
+                issues.append("Section Completeness Gate: contato sem telefone real")
+            if not _contains_cta(section_lower):
+                issues.append("Section Completeness Gate: contato sem CTA acionável")
+        elif section_name == "footer":
+            if not _contains_real_phone(section_lower, design):
+                issues.append("Section Completeness Gate: footer sem telefone real")
+            if not _contains_local_context(section_lower, state):
+                issues.append("Section Completeness Gate: footer sem cidade/endereço real")
+        elif section_name == "depoimentos":
+            reviews = design.get("reviews_list") or []
+            if reviews:
+                author = str((reviews[0] or {}).get("author") or (reviews[0] or {}).get("autor") or "").strip().lower()
+                if author and author not in section_lower:
+                    issues.append("Section Completeness Gate: depoimentos não preservou review real")
+            else:
+                if "diferenciais" not in section_lower and "compromisso" not in section_lower:
+                    issues.append("Section Completeness Gate: depoimentos sem fallback factual")
+
+        must_not = " ".join(str(item).lower() for item in (min_req.get("must_not") or []))
+        if "fake contact data" in must_not and _contains_placeholder_phone(section_lower):
+            issues.append(f"Section Completeness Gate: seção '{section_name}' contém telefone placeholder")
+        if "invented testimonials" in must_not and _contains_invented_testimonials(section_lower):
+            issues.append(f"Section Completeness Gate: seção '{section_name}' aparenta depoimento inventado")
+
+        required_media_count = int(contract.get("required_media_count") or 0)
+        media_plan = contract.get("media_plan") or []
+        if required_media_count > 0:
+            matched = 0
+            for item in media_plan:
+                if not isinstance(item, dict) or not item.get("required"):
+                    continue
+                url = str(item.get("url") or "").strip()
+                if url and url.lower() in section_lower:
+                    matched += 1
+            if matched < required_media_count:
+                issues.append(
+                    f"Section Completeness Gate: seção '{section_name}' sem mídia obrigatória suficiente "
+                    f"({matched}/{required_media_count})"
+                )
+
+        min_visible_text = 80
+        if section_name in {"faq", "footer", "lgpd", "contato"}:
+            min_visible_text = 40
+        if len(visible_text) < min_visible_text:
+            issues.append(f"Section Completeness Gate: seção '{section_name}' com texto visível insuficiente")
+    return {"passed": not issues, "issues": issues}
+
+
 def _has_zero_opacity_lock(html_lower: str) -> bool:
     """Detect only exact zero opacity, not valid values like opacity:0.08."""
     return bool(re.search(r"opacity\s*:\s*0(?:\.0+)?(?:;|}|\"|')", html_lower or ""))
+
+
+def _extract_section_html(html: str, section_name: str) -> str:
+    if not html or not section_name:
+        return ""
+    patterns = [
+        rf'(?is)<section\b[^>]*\bid=["\']{re.escape(section_name)}["\'][^>]*>.*?</section>',
+        rf'(?is)<section\b[^>]*\bdata-section=["\']{re.escape(section_name)}["\'][^>]*>.*?</section>',
+        rf'(?is)<section\b[^>]*\bclass=["\'][^"\']*\b{re.escape(section_name)}\b[^"\']*["\'][^>]*>.*?</section>',
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, html)
+        if match:
+            return match.group(0)
+    if section_name == "hero":
+        match = re.search(r"(?is)<section\b[^>]*>.*?<h1\b.*?</section>", html)
+        if match:
+            return match.group(0)
+    return ""
+
+
+def _section_block_count(section_lower: str) -> int:
+    return (
+        section_lower.count("<div")
+        + section_lower.count("<article")
+        + section_lower.count("<li")
+        + section_lower.count("<details")
+        + section_lower.count("<figure")
+        + section_lower.count("<img")
+        + section_lower.count("<p")
+        + section_lower.count("<a")
+        + section_lower.count("<h2")
+        + section_lower.count("<h3")
+    )
+
+
+def _contains_cta(section_lower: str) -> bool:
+    return (
+        "<button" in section_lower
+        or "<a" in section_lower
+        or "whatsapp" in section_lower
+        or "agendar" in section_lower
+        or "fale" in section_lower
+        or "matric" in section_lower
+    )
+
+
+def _digits_only(value: str) -> str:
+    return re.sub(r"\D+", "", value or "")
+
+
+def _contains_real_phone(section_lower: str, design: dict) -> bool:
+    phone = str(design.get("phone") or "")
+    digits = _digits_only(phone)
+    if not digits:
+        return False
+    html_digits = _digits_only(section_lower)
+    if digits in html_digits:
+        return True
+    if len(digits) >= 10 and digits[-10:] in html_digits:
+        return True
+    if len(digits) >= 11 and digits[-11:] in html_digits:
+        return True
+    return False
+
+
+def _contains_placeholder_phone(section_lower: str) -> bool:
+    return bool(re.search(r"\(\s*(?:xx|11|41)\s*\)\s*99999-9999", section_lower, flags=re.IGNORECASE))
+
+
+def _contains_local_context(section_lower: str, state: PipelineState) -> bool:
+    city = str(state.cidade or "").strip().lower()
+    address = str((state.design_output or {}).get("address") or "").strip().lower()
+    if city and city in section_lower:
+        return True
+    address_digits = _digits_only(address)
+    if address and address in section_lower:
+        return True
+    return bool(address_digits and address_digits in _digits_only(section_lower))
+
+
+def _contains_invented_testimonials(section_lower: str) -> bool:
+    suspicious_names = ["marina costa", "rafael santos", "cliente satisfeito"]
+    return any(name in section_lower for name in suspicious_names)
+
+
+def _visible_text(html: str) -> str:
+    text = re.sub(r"(?is)<style\b[^>]*>.*?</style>", " ", html or "")
+    text = re.sub(r"(?is)<script\b[^>]*>.*?</script>", " ", text)
+    text = re.sub(r"(?is)<[^>]+>", " ", text)
+    text = re.sub(r"\s+", " ", text)
+    return text.strip()
 
 
 def _creative_compliance_gate(state: PipelineState, html: str) -> dict:

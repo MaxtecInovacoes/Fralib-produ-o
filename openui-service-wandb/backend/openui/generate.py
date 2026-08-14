@@ -61,6 +61,36 @@ def _json_for_prompt(value: Any, limit: int = 4000) -> str:
     return text[:limit]
 
 
+def _section_contract_for_prompt(prd: dict[str, Any], section_payload: dict[str, Any]) -> dict[str, Any]:
+    section_name = str(section_payload.get("name") or "").strip().lower()
+    inline_contract = section_payload.get("section_contract")
+    if isinstance(inline_contract, dict) and inline_contract:
+        return inline_contract
+    for contract in prd.get("section_contracts") or []:
+        if isinstance(contract, dict) and str(contract.get("name") or "").strip().lower() == section_name:
+            return contract
+    return {}
+
+
+def _section_contract_text(contract: dict[str, Any]) -> str:
+    if not isinstance(contract, dict) or not contract:
+        return ""
+    min_req = contract.get("minimum_requirements") or {}
+    payload = {
+        "name": contract.get("name"),
+        "order_index": contract.get("order_index"),
+        "aida_role": contract.get("aida_role"),
+        "required_media_count": contract.get("required_media_count"),
+        "minimum_requirements": {
+            "must_have": min_req.get("must_have") or [],
+            "must_not": min_req.get("must_not") or [],
+            "minimum_content_blocks": min_req.get("minimum_content_blocks"),
+        },
+        "media_plan": contract.get("media_plan") or [],
+    }
+    return _json_for_prompt(payload, 2500)
+
+
 _FONT_FAMILY_ALIASES = {
     "ubermove": "Archivo Black",
     "ubermovetext": "Inter",
@@ -225,6 +255,7 @@ def _build_system_prompt(prd: dict) -> str:
     if render_hint == "section_fragment":
         sections = [section for section in prd.get("sections", []) if isinstance(section, dict)]
         section_payload = sections[0] if sections else {}
+        section_contract = _section_contract_for_prompt(prd, section_payload)
         repair_feedback = str(prd.get("_repair_feedback") or "").strip()
         palette = prd.get("paleta") or prd.get("color_palette") or {}
         tokens = palette.get("tokens_oklch") if isinstance(palette, dict) else {}
@@ -258,12 +289,17 @@ def _build_system_prompt(prd: dict) -> str:
             "You generate one semantic HTML section fragment. Return raw HTML only. "
             f"Business: {business}. Segment: {segmento}. City: {cidade}. "
             f"Requested section JSON: {_compact_json(section_payload, 1800)}. "
+            f"Protected section contract JSON: {_section_contract_text(section_contract) or '{}'} . "
             f"Palette JSON: {_compact_json(palette, 500)}. "
             f"Typography JSON: {_compact_json(typography, 300)}. "
             f"Available editorial image URLs: {_compact_json(photo_urls, 1400)}. "
             f"Confirmed phone/WhatsApp: {phone or 'not informed'}. Use this exact phone in contact and footer; never use placeholder phones such as (XX) 99999-9999 or (41) 99999-9999. "
             f"{review_rule}"
             f"{surface_rule}"
+            "Treat the Protected section contract as authoritative. Respect its order_index, aida_role, required_media_count, media_plan, must_have, must_not, and minimum_content_blocks. "
+            "Do not omit any required element from must_have. Do not violate any item from must_not. "
+            "If required_media_count is greater than zero, use the exact required media URLs from the section contract/media_plan in this section. "
+            "If the requested section is footer or contato, repeat exact real contact data and never improvise placeholders. "
             "Preserve AIDA: hero captures Attention, interesse builds Interest, desejo creates Desire with offer/proof, acao drives Action. "
             "FAQ, LGPD, SEO/GEO and footer are functional sections, not decorative filler. "
             "Use at least one real <img> with an available URL in hero, about or media sections. "
@@ -522,11 +558,13 @@ def _build_mode_instructions(prd: dict) -> str:
             "Do not render any hero, section, placeholder, footer, long CSS, or large script."
         )
     if render_hint == "section_fragment":
+        section_contracts = prd.get("section_contracts") or []
         return (
             "Render mode: section_fragment. "
             "Return ONLY HTML fragments intended to live inside <main>. "
             "Do not return <!DOCTYPE>, <html>, <head>, <body>, Tailwind config, or large scripts. "
-            "Render only the requested sections as semantic <section> blocks with Tailwind classes."
+            "Render only the requested sections as semantic <section> blocks with Tailwind classes. "
+            f"Protected section contracts are in force: {_json_for_prompt(section_contracts, 2200)}"
         )
     return (
         "Render mode: full_document. "
@@ -546,8 +584,10 @@ def _build_user_message(prd: dict) -> str:
             " Output only the raw HTML shell. The main element must remain empty."
         )
     if render_hint == "section_fragment":
+        section_contracts = prd.get("section_contracts") or []
         return _build_mode_instructions(prd) + context + (
             f" Requested section: {', '.join(section_names)}. "
+            f" Protected section contracts: {_json_for_prompt(section_contracts, 1800)}. "
             "Output only the raw semantic section fragment. "
             "Start with <section and finish with </section>. "
             "Include visible heading, useful text, and CTA/content. "
@@ -568,6 +608,7 @@ async def _repair_section_fragment(
 ) -> tuple[str, str]:
     sections = [section for section in prd.get("sections", []) if isinstance(section, dict)]
     section_payload = sections[0] if sections else {}
+    section_contract = _section_contract_for_prompt(prd, section_payload)
     repair_messages = [
         {
             "role": "system",
@@ -575,6 +616,7 @@ async def _repair_section_fragment(
                 "You repair one HTML section fragment. Return raw HTML only. "
                 "Start with <section and finish with </section>. "
                 "If the draft is too short, empty, only text, or malformed, ignore it and regenerate the requested section from the JSON contract. "
+                "The protected section contract is authoritative: obey must_have, must_not, required_media_count, media_plan and minimum_content_blocks. "
                 "The final answer must contain useful visible content, at least one heading, and enough text for a real landing page section. "
                 "Remove document wrappers, CSS, JavaScript, markdown, and explanations."
             ),
@@ -583,6 +625,7 @@ async def _repair_section_fragment(
             "role": "user",
             "content": (
                 f"Requested section JSON: {_compact_json(section_payload, 1200)}\n"
+                f"Protected section contract JSON: {_section_contract_text(section_contract) or '{}'}\n"
                 f"Invalid draft to repair:\n{html[:12000]}"
             ),
         },

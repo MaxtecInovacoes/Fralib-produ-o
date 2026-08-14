@@ -141,3 +141,110 @@ def test_technical_gate_allows_low_nonzero_opacity():
 
     assert result["passed"] is True
     assert not any("invisível" in issue for issue in result["issues"])
+
+
+def test_section_completeness_gate_passes_with_required_contracts():
+    from backend.agents.manager import step_quality_gate as qg
+    from backend.agents.manager.states import PipelineState
+
+    html = """
+    <!doctype html>
+    <html><body><main>
+      <section id="hero">
+        <h1>Treino real em Campina Grande do Sul</h1>
+        <p>Academia local com proposta clara e contexto da cidade.</p>
+        <img src="https://img.example/hero.jpg">
+        <div>Benefícios</div><div>Provas</div><a href="#contato">Agende agora</a>
+      </section>
+      <section id="faq">
+        <h2>FAQ</h2>
+        <details><summary>Pergunta 1</summary><p>Resposta 1</p></details>
+        <details><summary>Pergunta 2</summary><p>Resposta 2</p></details>
+        <details><summary>Pergunta 3</summary><p>Resposta 3</p></details>
+      </section>
+      <section id="contato">
+        <h2>Contato</h2>
+        <p>Fale conosco em Campina Grande do Sul para conhecer planos, estrutura e aula experimental.</p>
+        <p>(41) 98514-3249</p>
+        <div>WhatsApp</div><a href="https://wa.me/5541985143249">Chamar</a>
+      </section>
+      <section id="footer">
+        <h2>Footer</h2>
+        <p>Campina Grande do Sul</p>
+        <p>(41) 98514-3249</p>
+        <div>Rua Teste, 123</div><div>Links legais</div><div>Marca</div>
+        <p>Academia local com atendimento real, rota clara de contato e fechamento institucional consistente.</p>
+      </section>
+    </main></body></html>
+    """
+
+    state = PipelineState(
+        tenant_id=2,
+        lead_id="lead-1",
+        run_id="run-1",
+        design_output={
+            "phone": "5541985143249",
+            "address": "Rua Teste, 123",
+            "section_contracts": [
+                {"name": "hero", "required_media_count": 1, "media_plan": [{"url": "https://img.example/hero.jpg", "required": True}], "minimum_requirements": {"minimum_content_blocks": 4}},
+                {"name": "faq", "required_media_count": 0, "media_plan": [], "minimum_requirements": {"minimum_content_blocks": 3}},
+                {"name": "contato", "required_media_count": 0, "media_plan": [], "minimum_requirements": {"minimum_content_blocks": 3}},
+                {"name": "footer", "required_media_count": 0, "media_plan": [], "minimum_requirements": {"minimum_content_blocks": 3}},
+            ],
+            "reviews_list": [],
+        },
+        cidade="Campina Grande do Sul",
+    )
+
+    result = qg._section_completeness_gate(state, html)
+
+    assert result["passed"] is True
+    assert result["issues"] == []
+
+
+def test_section_completeness_gate_rejects_missing_faq_and_placeholder_phone():
+    from backend.agents.manager import step_quality_gate as qg
+    from backend.agents.manager.states import PipelineState
+
+    html = """
+    <!doctype html>
+    <html><body><main>
+      <section id="hero">
+        <h1>Treino real</h1>
+        <p>Sem cidade.</p>
+        <div>Bloco</div><div>Bloco</div><a href="#contato">Fale</a>
+      </section>
+      <section id="faq">
+        <h2>FAQ</h2>
+        <details><summary>Pergunta 1</summary><p>Resposta 1</p></details>
+      </section>
+      <section id="contato">
+        <h2>Contato</h2>
+        <p>(41) 99999-9999</p>
+      </section>
+    </main></body></html>
+    """
+
+    state = PipelineState(
+        tenant_id=2,
+        lead_id="lead-2",
+        run_id="run-2",
+        design_output={
+            "phone": "5541985143249",
+            "address": "Rua Teste, 123",
+            "section_contracts": [
+                {"name": "hero", "required_media_count": 1, "media_plan": [{"url": "https://img.example/hero.jpg", "required": True}], "minimum_requirements": {"minimum_content_blocks": 4, "must_not": []}},
+                {"name": "faq", "required_media_count": 0, "media_plan": [], "minimum_requirements": {"minimum_content_blocks": 3, "must_not": []}},
+                {"name": "contato", "required_media_count": 0, "media_plan": [], "minimum_requirements": {"minimum_content_blocks": 3, "must_not": ["fake contact data"]}},
+                {"name": "footer", "required_media_count": 0, "media_plan": [], "minimum_requirements": {"minimum_content_blocks": 3, "must_not": ["fake contact data"]}},
+            ],
+            "reviews_list": [],
+        },
+        cidade="Campina Grande do Sul",
+    )
+
+    result = qg._section_completeness_gate(state, html)
+
+    assert result["passed"] is False
+    assert any("FAQ com menos de 3" in issue for issue in result["issues"])
+    assert any("telefone placeholder" in issue for issue in result["issues"])

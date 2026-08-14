@@ -88,7 +88,36 @@ def test_openui_prompt_forbids_fake_reviews_phone_and_narrow_cards():
             "cidade": "Campina Grande do Sul",
             "phone": "5541985143249",
             "reviews_list": [],
-            "sections": [{"name": "footer", "copy_data": {}}],
+            "sections": [{
+                "name": "footer",
+                "copy_data": {},
+                "section_contract": {
+                    "name": "footer",
+                    "order_index": 9,
+                    "aida_role": "supporting",
+                    "required_media_count": 0,
+                    "minimum_requirements": {
+                        "must_have": ["brand close", "exact contact data", "city or address"],
+                        "must_not": ["placeholder copy", "fake contact data"],
+                        "minimum_content_blocks": 3,
+                    },
+                    "media_plan": [],
+                },
+            }],
+            "section_contracts": [
+                {
+                    "name": "footer",
+                    "order_index": 9,
+                    "aida_role": "supporting",
+                    "required_media_count": 0,
+                    "minimum_requirements": {
+                        "must_have": ["brand close", "exact contact data", "city or address"],
+                        "must_not": ["placeholder copy", "fake contact data"],
+                        "minimum_content_blocks": 3,
+                    },
+                    "media_plan": [],
+                }
+            ],
         }
     )
 
@@ -97,6 +126,42 @@ def test_openui_prompt_forbids_fake_reviews_phone_and_narrow_cards():
     assert "Do NOT invent testimonials" in prompt
     assert "min-w-[280px]" in prompt
     assert "max 3 columns" in prompt
+    assert "Protected section contract JSON" in prompt
+    assert "Treat the Protected section contract as authoritative" in prompt
+    assert "must_have" in prompt
+    assert "must_not" in prompt
+
+
+def test_openui_user_message_carries_protected_section_contracts():
+    sys.path.insert(0, os.path.abspath("openui-service-wandb/backend"))
+    from openui import generate as module
+
+    message = module._build_user_message(
+        {
+            "_render_hint": "section_fragment",
+            "business_name": "Academia Teste",
+            "cidade": "Campina Grande do Sul",
+            "sections": [{"name": "hero"}],
+            "section_contracts": [
+                {
+                    "name": "hero",
+                    "order_index": 1,
+                    "aida_role": "attention",
+                    "required_media_count": 1,
+                    "minimum_requirements": {
+                        "must_have": ["h1", "supporting paragraph", "primary CTA", "local context"],
+                        "must_not": ["placeholder copy"],
+                        "minimum_content_blocks": 4,
+                    },
+                    "media_plan": [{"url": "https://images.example.com/hero.jpg", "required": True}],
+                }
+            ],
+        }
+    )
+
+    assert "Protected section contracts" in message
+    assert "order_index" in message
+    assert "required_media_count" in message
 
 
 def test_caio_rejects_phd_sports_as_known_network(monkeypatch):

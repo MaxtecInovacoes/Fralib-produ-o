@@ -50,6 +50,7 @@ def write_json_artifact(
     metadata: dict[str, Any] | None = None,
 ) -> str:
     path = artifact_dir(run_id, lead_id, lead_name) / filename
+    path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
         json.dumps(payload, ensure_ascii=False, indent=2, default=str),
         encoding="utf-8",
@@ -106,6 +107,7 @@ def write_html_artifact(
     metadata: dict[str, Any] | None = None,
 ) -> str:
     path = artifact_dir(run_id, lead_id, lead_name) / filename
+    path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(html or "", encoding="utf-8")
     _write_sidecar(path, metadata)
     return str(path)

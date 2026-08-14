@@ -18,9 +18,10 @@ except ImportError:
     _builder_logger = None
 
 try:
-    from backend.agents.artifact_store import write_html_artifact
+    from backend.agents.artifact_store import write_html_artifact, write_json_artifact
 except Exception:
     write_html_artifact = None
+    write_json_artifact = None
 
 OPENUI_URL = os.environ.get("OPENUI_URL") or os.environ.get("OPENUI_SERVICE_URL", "http://localhost:7878")
 GENERATE_ENDPOINT = f"{OPENUI_URL}/generate"
@@ -164,6 +165,156 @@ def _first_non_empty(*values):
     return ""
 
 
+def _artifact_slug(value: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "-", str(value or "").lower()).strip("-") or "section"
+
+
+def _normalize_media_plan_items(media_plan) -> list[dict]:
+    normalized = []
+    for item in media_plan or []:
+        if not isinstance(item, dict):
+            continue
+        normalized.append(item)
+    return normalized
+
+
+def _section_minimum_requirements(section_name: str, has_reviews: bool, has_faq: bool, has_media: bool) -> dict:
+    base = {
+        "must_have": ["semantic section wrapper", "visible heading", "clear CTA or next step"],
+        "must_not": ["placeholder copy", "fake contact data", "invented testimonials"],
+        "minimum_content_blocks": 2,
+    }
+    rules = {
+        "hero": {
+            "must_have": ["h1", "supporting paragraph", "primary CTA", "local context"],
+            "minimum_content_blocks": 4,
+        },
+        "sobre": {
+            "must_have": ["section heading", "business context", "trust signals"],
+            "minimum_content_blocks": 3,
+        },
+        "servicos": {
+            "must_have": ["service grouping", "practical benefit copy", "CTA"],
+            "minimum_content_blocks": 3,
+        },
+        "depoimentos": {
+            "must_have": ["section heading", "real reviews" if has_reviews else "factual commitments", "trust framing"],
+            "minimum_content_blocks": 3,
+        },
+        "seo-geo": {
+            "must_have": ["local keyword coverage", "city/neighborhood mentions", "service intent copy"],
+            "minimum_content_blocks": 3,
+        },
+        "faq": {
+            "must_have": ["section heading", "accordion or list", "at least 3 questions" if has_faq else "fallback local questions"],
+            "minimum_content_blocks": 3,
+        },
+        "localizacao": {
+            "must_have": ["address context", "city mention", "contact path"],
+            "minimum_content_blocks": 3,
+        },
+        "acao": {
+            "must_have": ["strong CTA", "urgency or motivation", "contact action"],
+            "minimum_content_blocks": 3,
+        },
+        "contato": {
+            "must_have": ["exact phone", "contact CTA", "service area or address"],
+            "minimum_content_blocks": 3,
+        },
+        "lgpd": {
+            "must_have": ["privacy/data notice", "consent clarity"],
+            "minimum_content_blocks": 2,
+        },
+        "footer": {
+            "must_have": ["brand close", "exact contact data", "city or address", "legal/support links"],
+            "minimum_content_blocks": 3,
+        },
+    }
+    merged = dict(base)
+    merged.update(rules.get(section_name, {}))
+    if has_media and section_name in {"hero", "sobre", "servicos", "localizacao"}:
+        merged["must_have"] = list(dict.fromkeys([*merged["must_have"], "real image usage when media is available"]))
+    return merged
+
+
+def _build_section_contracts(
+    sections: list[dict],
+    variation_blueprint: dict,
+    media_plan: list[dict],
+    reviews_list: list,
+    faqs: list,
+) -> list[dict]:
+    order = variation_blueprint.get("ordem_das_secoes") or []
+    order_map = {
+        str(name).strip().lower(): index + 1
+        for index, name in enumerate(order)
+        if str(name).strip()
+    }
+    normalized_media = _normalize_media_plan_items(media_plan)
+    contracts: list[dict] = []
+    for fallback_index, section in enumerate(sections, start=1):
+        name = str(section.get("name") or "").strip().lower() or f"section-{fallback_index}"
+        section_media = [
+            item for item in normalized_media
+            if str(item.get("section") or "").strip().lower() == name
+        ]
+        required_media = [item for item in section_media if item.get("required") is True]
+        contracts.append(
+            {
+                "name": name,
+                "order_index": order_map.get(name, fallback_index),
+                "aida_role": {
+                    "hero": "attention",
+                    "interesse": "interest",
+                    "desejo": "desire",
+                    "acao": "action",
+                }.get(name, "supporting"),
+                "media_plan": section_media,
+                "required_media_count": len(required_media),
+                "minimum_requirements": _section_minimum_requirements(
+                    name,
+                    has_reviews=bool(reviews_list),
+                    has_faq=bool(faqs),
+                    has_media=bool(section_media),
+                ),
+            }
+        )
+    return contracts
+
+
+def _write_builder_spec_artifacts(spec: dict) -> None:
+    if not write_json_artifact:
+        return
+    run_id = str(spec.get("_run_id") or "no-run")
+    lead_id = str(spec.get("_lead_id") or "no-lead")
+    lead_name = str(spec.get("_lead_name") or "")
+    write_json_artifact(
+        run_id=run_id,
+        lead_id=lead_id,
+        lead_name=lead_name,
+        filename="builder/openui_payload/00-openui-payload.json",
+        payload=spec,
+        metadata={"step": "builder", "artifact_type": "openui_payload"},
+    )
+    for index, section in enumerate(spec.get("sections", []), start=1):
+        if not isinstance(section, dict):
+            continue
+        name = _artifact_slug(section.get("name", f"section-{index}"))
+        write_json_artifact(
+            run_id=run_id,
+            lead_id=lead_id,
+            lead_name=lead_name,
+            filename=f"builder/section_specs/{index:02d}-{name}.json",
+            payload=section,
+            metadata={
+                "step": "builder",
+                "artifact_type": "section_spec",
+                "section_name": section.get("name", ""),
+                "section_index": index,
+            },
+        )
+
+
 def _coerce_section_content(section) -> str:
     if not section:
         return ""
@@ -238,6 +389,11 @@ def _wait_for_openui(max_wait: int = 30) -> bool:
 
 def _prd_to_spec(prd) -> dict:
     """Convert DesignerPRD to JSON spec for OpenUI service."""
+    creative_direction = getattr(prd, "creative_direction", {}) or {}
+    variation_blueprint = getattr(prd, "variation_blueprint", {}) or {}
+    media_plan = getattr(prd, "media_plan", []) or []
+    reviews_list = getattr(prd, "reviews_list", []) or []
+    faqs = getattr(prd, "faq_questions", []) or []
     sections = []
     for s in prd.sections:
         section_payload = {
@@ -261,6 +417,33 @@ def _prd_to_spec(prd) -> dict:
             "schema_org": getattr(s, "schema_org", None),
         }
         sections.append(section_payload)
+    section_contracts = _build_section_contracts(
+        sections,
+        variation_blueprint=variation_blueprint,
+        media_plan=media_plan,
+        reviews_list=reviews_list,
+        faqs=faqs,
+    )
+    contracts_by_name = {contract["name"]: contract for contract in section_contracts}
+    hard_constraints = (
+        creative_direction.get("hard_constraints", {})
+        if isinstance(creative_direction, dict)
+        else {}
+    )
+    soft_constraints = (
+        creative_direction.get("soft_constraints", {})
+        if isinstance(creative_direction, dict)
+        else {}
+    )
+    for section_payload in sections:
+        section_name = str(section_payload.get("name") or "").strip().lower()
+        section_contract = contracts_by_name.get(section_name, {})
+        section_payload["section_contract"] = section_contract
+        section_payload["order_index"] = section_contract.get("order_index")
+        section_payload["media_plan"] = section_contract.get("media_plan", [])
+        section_payload["required_media_count"] = section_contract.get("required_media_count", 0)
+        section_payload["hard_constraints"] = hard_constraints
+        section_payload["soft_constraints"] = soft_constraints
 
     color_palette = {}
     if hasattr(prd, "color_palette") and prd.color_palette:
@@ -338,9 +521,6 @@ def _prd_to_spec(prd) -> dict:
         for vp in (getattr(prd, "value_props", []) or [])[:3]:
             ctas.append({"text": str(vp)[:60], "href": "#contato"})
 
-    creative_direction = getattr(prd, "creative_direction", {}) or {}
-    variation_blueprint = getattr(prd, "variation_blueprint", {}) or {}
-    media_plan = getattr(prd, "media_plan", []) or []
     photos = getattr(prd, "photos", None) or []
     geo = getattr(prd, "geo", None)
     if isinstance(geo, dict) and not any(geo.values()):
@@ -379,7 +559,7 @@ def _prd_to_spec(prd) -> dict:
         "sections": sections,
         "hero": hero,
         "ctas": ctas,
-        "faqs": getattr(prd, "faq_questions", []) or [],
+        "faqs": faqs,
         "paleta": color_palette,
         "seo_keywords": getattr(prd, "seo_keywords", []) or [],
         "motion_directives": motion_directives,
@@ -392,7 +572,7 @@ def _prd_to_spec(prd) -> dict:
         "builder_directive": builder_directive,
         "reviews_count": getattr(prd, "reviews_count", 0),
         "reviews_rating": getattr(prd, "reviews_rating", 0.0),
-        "reviews_list": getattr(prd, "reviews_list", []),
+        "reviews_list": reviews_list,
         "address": getattr(prd, "address", ""),
         "phone": getattr(prd, "phone", ""),
         "hours": getattr(prd, "hours", None) or {},
@@ -418,6 +598,7 @@ def _prd_to_spec(prd) -> dict:
         "niche_brief": getattr(prd, "niche_brief", {}) or {},
         "creative_direction": creative_direction,
         "variation_blueprint": variation_blueprint,
+        "section_contracts": section_contracts,
     }
     spec["openui_payload"] = {
         "business_context": {
@@ -434,6 +615,7 @@ def _prd_to_spec(prd) -> dict:
         "variation_blueprint": variation_blueprint,
         "site_plan": spec["site_build_plan"],
         "media_plan": media_plan,
+        "section_contracts": section_contracts,
         "content": {
             "sections": sections,
             "faqs": spec["faqs"],
@@ -677,18 +859,22 @@ def _render_block(block_spec: dict, design_tokens: dict) -> tuple[str, str]:
                 if valid_html:
                     try:
                         if write_html_artifact:
-                            labels_slug = "-".join(labels) if labels else render_hint
+                            primary_label = _artifact_slug(labels[0] if labels else render_hint)
                             write_html_artifact(
                                 run_id=str(block_spec.get("_run_id") or "no-run"),
                                 lead_id=str(block_spec.get("_lead_id") or "no-lead"),
                                 lead_name=str(block_spec.get("_lead_name") or ""),
-                                filename=f"02-openui-{render_hint}-{labels_slug}.html",
+                                filename=(
+                                    f"builder/section_fragments/"
+                                    f"{(block_spec.get('_section_index') or 0):02d}-{primary_label}.html"
+                                ),
                                 html=html,
                                 metadata={
                                     "step": "openui_block",
                                     "render_hint": render_hint,
                                     "labels": labels,
                                     "model": model,
+                                    "section_index": block_spec.get("_section_index"),
                                 },
                             )
                     except Exception as exc:
@@ -754,7 +940,7 @@ def _render_shell_document(spec: dict) -> tuple[str, str, str]:
                     run_id=str(spec.get("_run_id") or "no-run"),
                     lead_id=str(spec.get("_lead_id") or "no-lead"),
                     lead_name=str(spec.get("_lead_name") or ""),
-                    filename="02-openui-shell_document.html",
+                    filename="builder/shell/00-shell-document.html",
                     html=html,
                     metadata={
                         "step": "openui_shell",
@@ -772,15 +958,18 @@ def _render_shell_document(spec: dict) -> tuple[str, str, str]:
 def _render_section_blocks(spec: dict) -> tuple[list[str], str, str]:
     partials: list[str] = []
     last_model = ""
+    section_index = 0
     for group in _SECTION_BLOCKS:
         section_map = {str(s.get("name", "")).lower(): s for s in spec.get("sections", []) if isinstance(s, dict)}
         selected = [section_map[name] for name in group if name in section_map]
         if not selected:
             continue
+        section_index += 1
         block_spec = dict(spec)
         block_spec["sections"] = selected
         block_spec["_bloco_labels"] = group
         block_spec["_render_hint"] = "section_fragment"
+        block_spec["_section_index"] = section_index
         html, model = _render_block(block_spec, spec.get("design_tokens", {}))
         if not html:
             return [], last_model, f"Falha ao gerar bloco [{', '.join(group)}]"
@@ -837,6 +1026,10 @@ def render_site(prd, usar_llm: bool = True) -> BuildResult:
     spec["_lead_id"] = getattr(prd, "_lead_id", "") or ""
     _lead_data = getattr(prd, "_lead_data", None) or {}
     spec["_lead_name"] = _lead_data.get("nome", "") if isinstance(_lead_data, dict) else ""
+    try:
+        _write_builder_spec_artifacts(spec)
+    except Exception as exc:
+        print(f"[builder] artifact spec falhou: {exc}")
 
     final_html, final_model, error = _render_full_site(spec)
     if not final_html:
@@ -848,6 +1041,19 @@ def render_site(prd, usar_llm: bool = True) -> BuildResult:
         )
 
     try:
+        if write_html_artifact:
+            write_html_artifact(
+                run_id=spec["_run_id"],
+                lead_id=spec["_lead_id"],
+                lead_name=spec["_lead_name"],
+                filename="builder/final_html/99-final-document.html",
+                html=final_html,
+                metadata={
+                    "step": "builder",
+                    "artifact_type": "final_document",
+                    "model": final_model,
+                },
+            )
         from backend.agents.llm_direct import _registrar_uso_completo
         _registrar_uso_completo(
             model_id=final_model or "openui-unknown",
