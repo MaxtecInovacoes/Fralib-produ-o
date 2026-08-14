@@ -653,7 +653,11 @@ def _archetype_briefing(archetype: str) -> str:
 
 def _split_spec_blocks(spec: dict) -> list:
     """Split spec into blocks of sections for partial HTML generation."""
-    sections = spec.get("sections", [])
+    sections = [
+        section
+        for section in (spec.get("sections", []) or [])
+        if str((section or {}).get("name") or "").strip().lower() != "lgpd"
+    ]
     section_map = {s["name"].lower(): s for s in sections}
     blocos = []
     for grupo in _BLOCOS_HTML:

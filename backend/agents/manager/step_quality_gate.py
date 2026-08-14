@@ -478,7 +478,7 @@ def _section_completeness_gate(state: PipelineState, html: str) -> dict:
                 )
 
         min_visible_text = 80
-        if section_name in {"faq", "footer", "lgpd", "contato"}:
+        if section_name in {"faq", "footer", "contato"}:
             min_visible_text = 40
         if len(visible_text) < min_visible_text:
             issues.append(f"Section Completeness Gate: seção '{section_name}' com texto visível insuficiente")

@@ -208,7 +208,7 @@ Return ONLY the requested semantic <section> block. No markdown, code fences, ex
 - The last non-whitespace characters must close the section with </section>
 - Include visible heading, text, and CTA/content appropriate to the requested section
 - Preserve the requested AIDA role: hero=Attention, interesse=Interest, desejo=Desire, acao=Action
-- If requested section is faq, lgpd, seo-geo or footer, render that exact functional section; do not replace it with generic cards
+- If requested section is faq, seo-geo or footer, render that exact functional section; do not replace it with generic cards
 - Use Tailwind utility classes directly in the markup
 - Do NOT output <!DOCTYPE>, <html>, <head>, <body>, <main>, Tailwind config, <style>, or <script>
 - Do NOT render sections that were not requested
@@ -219,7 +219,7 @@ Return ONLY the requested semantic <section> block. No markdown, code fences, ex
 Return ONLY a single complete HTML file. No markdown, code fences, or explanation.
 - Single <html> document with exactly one <main> and one visible <h1>
 - At least 3 semantic <section> blocks with real visible content
-- Preserve AIDA structure when provided: hero, interesse, desejo, acao, plus faq, lgpd and footer
+- Preserve AIDA structure when provided: hero, interesse, desejo, acao, plus faq and footer
 - Mobile-first responsive (375px to 1440px)
 - Use Tailwind CSS utility classes directly in the markup
 - Never create grids with more than 3 columns on desktop for text cards, reviews, FAQ, service cards or informational blocks
