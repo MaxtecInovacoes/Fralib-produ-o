@@ -50,6 +50,17 @@ _PIPELINE_TIPOS = ("pipeline_lead", "pipeline_multiplos", "pipeline_main")
 JOB_TIPOS = _load_job_tipos()
 
 
+def _promote_context_from_lead_data(payload: dict) -> dict:
+    """Garante que cidade/segmento canônicos existam no payload antes do PipelineState."""
+    normalized = dict(payload or {})
+    lead_data = normalized.get("lead_data") or {}
+    if not normalized.get("segmento") and lead_data.get("segmento"):
+        normalized["segmento"] = lead_data.get("segmento")
+    if not normalized.get("cidade") and lead_data.get("cidade"):
+        normalized["cidade"] = lead_data.get("cidade")
+    return normalized
+
+
 def _save_pipeline_resume_checkpoint(final_state) -> None:
     """Persiste PRD/HTML finais para retomada sem repetir fases caras."""
     if not getattr(final_state, "tenant_id", None) or not getattr(final_state, "lead_id", None):
@@ -204,6 +215,7 @@ def _run_pipeline_job(db, job) -> bool:
             except Exception as _hunter_exc:
                 logger.warning("Hunter fallback falhou: %s", _hunter_exc)
                 # Não bloqueia — pipeline pode ter lead_data via outro caminho
+    payload = _promote_context_from_lead_data(payload)
     state = PipelineState(
         tenant_id=job["tenant_id"],
         run_id=str(job.get("run_id") or payload.get("_run_id") or job["id"]),
