@@ -61,6 +61,14 @@ def _promote_context_from_lead_data(payload: dict) -> dict:
     return normalized
 
 
+def _needs_lead_hydration(payload: dict) -> bool:
+    lead_data = (payload or {}).get("lead_data") or {}
+    if not lead_data:
+        return True
+    required = ("nome", "cidade", "segmento")
+    return any(not str(lead_data.get(field) or "").strip() for field in required)
+
+
 def _save_pipeline_resume_checkpoint(final_state) -> None:
     """Persiste PRD/HTML finais para retomada sem repetir fases caras."""
     if not getattr(final_state, "tenant_id", None) or not getattr(final_state, "lead_id", None):
@@ -109,11 +117,11 @@ def _run_pipeline_job(db, job) -> bool:
             payload = dict(payload)
             payload["lead_id"] = str(_raw[0])
 
-    # Hydration: se payload tem _lead_id_existente mas lead_data vazio,
-    # busca os dados do lead no banco para que step_hunter não falhe com
-    # "Hunter sem lead" quando o job é reprocessado sem payload completo.
+    # Hydration: se payload tem _lead_id_existente mas lead_data ausente ou parcial,
+    # completa os dados a partir do banco para que o reprocessamento preserve
+    # nome/cidade/segmento canônicos.
     # Se não tem lead no BD, tenta buscar via Hunter (Google Maps).
-    if not payload.get("lead_data"):
+    if _needs_lead_hydration(payload):
         _existing_id = (
             payload.get("_lead_id_existente")
             or payload.get("lead_id")
@@ -139,7 +147,8 @@ def _run_pipeline_job(db, job) -> bool:
             if isinstance(_dados, str):
                 _dados = _json.loads(_dados) if _dados else {}
             real_phone = _dados.get("telefone") or _dados.get("whatsapp") or lead_row[2]
-            payload["lead_data"] = {
+            existing_lead_data = dict(payload.get("lead_data") or {})
+            hydrated = {
                 "nome": lead_row[0],
                 "cidade": lead_row[1],
                 "telefone": real_phone,
@@ -154,6 +163,7 @@ def _run_pipeline_job(db, job) -> bool:
                 "descricao": _dados.get("descricao", ""),
                 "reviews": _dados.get("reviews", []),
             }
+            payload["lead_data"] = {**hydrated, **{k: v for k, v in existing_lead_data.items() if v not in (None, "", [], {})}}
     # Se não tem lead no BD mas tem segmento+cidade, busca via Hunter
         if not payload.get("lead_data") and payload.get("segmento") and payload.get("cidade"):
             from backend.services.lead_supply_storage import get_or_create_config
