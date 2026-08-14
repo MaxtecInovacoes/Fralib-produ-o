@@ -130,3 +130,14 @@ def test_quality_gate_rejects_too_similar_prior_fingerprint(monkeypatch):
 
     assert state.current_state == STATE_FAILED
     assert "Visual Diversity Gate" in state.error
+
+
+def test_technical_gate_allows_low_nonzero_opacity():
+    from backend.agents.manager import step_quality_gate as qg
+
+    html = _html() + '<div style="background:var(--accent);opacity:0.08;"></div>'
+
+    result = qg._technical_gate(html)
+
+    assert result["passed"] is True
+    assert not any("invisível" in issue for issue in result["issues"])

@@ -4,6 +4,7 @@ import concurrent.futures
 import logging
 import os
 import json
+import re
 from backend.agents.manager.states import (
     PipelineState, STATE_VALIDATING, STATE_PUBLISHING, STATE_BUILDING, STATE_FAILED,
     _transition, _log_step_error, _record_agent_handoff,
@@ -384,9 +385,14 @@ def _technical_gate(html: str) -> dict:
         issues.append("Technical Gate: deve haver exatamente 1 <h1>")
     if lower.count("<section") < 3:
         issues.append("Technical Gate: menos de 3 seções")
-    if "opacity:0" in lower and "opacity: 1" not in lower and "opacity:1" not in lower:
+    if _has_zero_opacity_lock(lower) and "opacity: 1" not in lower and "opacity:1" not in lower:
         issues.append("Technical Gate: possível conteúdo preso invisível")
     return {"passed": not issues, "issues": issues}
+
+
+def _has_zero_opacity_lock(html_lower: str) -> bool:
+    """Detect only exact zero opacity, not valid values like opacity:0.08."""
+    return bool(re.search(r"opacity\s*:\s*0(?:\.0+)?(?:;|}|\"|')", html_lower or ""))
 
 
 def _creative_compliance_gate(state: PipelineState, html: str) -> dict:
