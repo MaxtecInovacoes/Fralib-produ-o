@@ -117,6 +117,11 @@ def _authoritative_section_order(variation: dict[str, Any], has_services: bool, 
     order = variation.get("ordem_das_secoes") if isinstance(variation, dict) else None
     if isinstance(order, list) and order:
         normalized = [str(item).strip().lower() for item in order if str(item).strip()]
+        if not has_reviews:
+            normalized = [
+                item for item in normalized
+                if item not in {"depoimentos", "social_proof", "social-proof", "prova-social"}
+            ]
         if "hero" not in normalized:
             normalized.insert(0, "hero")
         if "footer" not in normalized:

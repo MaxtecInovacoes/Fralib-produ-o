@@ -48,6 +48,19 @@ NICHE_MEDIA_LIBRARY: dict[str, dict[str, Any]] = {
     },
 }
 
+NICHE_FORBIDDEN_UNSPLASH_PHOTOS: dict[str, set[str]] = {
+    "academia": {
+        "photo-1497366754035",
+        "photo-1497366811353",
+        "photo-1486406146926",
+        "photo-1497366216548",
+        "photo-1497215728101",
+        "photo-1524758631624",
+        "photo-1556761175",
+        "photo-1551836022",
+    },
+}
+
 
 def is_supported_editorial_image_url(url: str) -> bool:
     """Check if a URL points to a supported editorial image host.
@@ -73,6 +86,16 @@ def is_supported_editorial_image_url(url: str) -> bool:
         "images.pexels.com",
         "images.ctfassets.net",
     }
+
+
+def is_segment_compatible_media_url(url: str, segmento: Any) -> bool:
+    """Reject known off-niche editorial URLs for strict segment media plans."""
+    from backend.services.pipeline_validators import normalize_segment
+
+    normalized_segment = normalize_segment(segmento)
+    forbidden = NICHE_FORBIDDEN_UNSPLASH_PHOTOS.get(normalized_segment, set())
+    raw = str(url or "")
+    return not any(photo_id in raw for photo_id in forbidden)
 
 
 def normalize_editorial_image_url(url: str, *, og: bool = False) -> str:
@@ -191,7 +214,11 @@ def deterministic_media_bundle(
         >>> len(photos) > 0
         True
     """
-    photos = extract_media_urls(raw_photos)
+    photos = [
+        url
+        for url in extract_media_urls(raw_photos)
+        if is_segment_compatible_media_url(url, segmento)
+    ]
     defaults = media_defaults_for_segment(segmento)
     default_photos = [
         normalized

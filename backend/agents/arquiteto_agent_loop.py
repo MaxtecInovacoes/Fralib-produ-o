@@ -684,13 +684,23 @@ def _enrich_prd(prd: dict, dados_hunter: dict, cidade: str, segmento: str, dark_
 def _ensure_full_section_contract(sections: list, dados_hunter: dict) -> list:
     normalized = _garantir_secoes_obrigatorias(sections)
     existing = {str(section.get("name", "")).lower() for section in normalized}
-    required = ["hero", "sobre", "servicos", "depoimentos", "faq", "localizacao", "contato", "footer"]
+    reviews_list = dados_hunter.get("reviews") or dados_hunter.get("reviews_list") or []
+    has_real_reviews = bool(reviews_list)
+    required = ["hero", "sobre", "servicos", "faq", "localizacao", "contato", "footer"]
+    if has_real_reviews:
+        required.insert(3, "depoimentos")
     defaults = {
         "depoimentos": {"name": "depoimentos", "required": True, "data_source": "reviews reais ou sinais públicos"},
         "faq": {"name": "faq", "required": True, "data_source": "pesquisa local e dados confirmados"},
         "localizacao": {"name": "localizacao", "required": True, "data_source": "endereço e cidade confirmados"},
         "footer": {"name": "footer", "required": True, "data_source": "NAP, navegação e links legais"},
     }
+    if not has_real_reviews:
+        normalized = [
+            section for section in normalized
+            if str(section.get("name", "")).lower() != "depoimentos"
+        ]
+        existing.discard("depoimentos")
     for name in required:
         if name not in existing:
             normalized.append(defaults.get(name, {"name": name, "required": True}))
@@ -699,7 +709,9 @@ def _ensure_full_section_contract(sections: list, dados_hunter: dict) -> list:
 
 def _validate_enriched_prd(prd: dict) -> None:
     section_names = {str(section.get("name", "")).lower() for section in prd.get("sections", [])}
-    required = {"hero", "sobre", "servicos", "depoimentos", "faq", "localizacao", "contato", "footer"}
+    required = {"hero", "sobre", "servicos", "faq", "localizacao", "contato", "footer"}
+    if prd.get("reviews_list"):
+        required.add("depoimentos")
     missing = sorted(required - section_names)
     if missing:
         raise ValueError("PRD sem seções obrigatórias: " + ", ".join(missing))
@@ -814,6 +826,11 @@ def _apply_visual_contract_inputs(
     if variation_blueprint:
         prd["variation_blueprint"] = variation_blueprint
         order = variation_blueprint.get("ordem_das_secoes") or []
+        if not prd.get("reviews_list"):
+            order = [
+                item for item in order
+                if str(item).strip().lower() not in {"depoimentos", "social_proof", "social-proof", "prova-social"}
+            ]
         if order:
             prd["sections"] = _reorder_sections_by_blueprint(prd.get("sections") or [], order)
             prd["layout_blueprint"] = [

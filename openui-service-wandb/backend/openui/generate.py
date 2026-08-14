@@ -178,6 +178,9 @@ Return ONLY a single complete HTML file. No markdown, code fences, or explanatio
 - Preserve AIDA structure when provided: hero, interesse, desejo, acao, plus faq, lgpd and footer
 - Mobile-first responsive (375px to 1440px)
 - Use Tailwind CSS utility classes directly in the markup
+- Never create grids with more than 3 columns on desktop for text cards, reviews, FAQ, service cards or informational blocks
+- Every text card, review card or informational card must include min-w-[280px] and responsive width such as w-full md:w-1/3 or a max-w container
+- Never create ultra-narrow columns or word-by-word vertical wrapping; use break-words only for URLs, never for normal prose
 - Include Tailwind via CDN script in the <head>
 - Keep the head minimal and do NOT output a long <style> block
 - Hero must show business name, local context, and primary CTA above the fold
@@ -213,6 +216,13 @@ def _build_system_prompt(prd: dict) -> str:
             for photo in photos[:8]
             if photo
         ]
+        phone = _first_non_empty(prd.get("phone"), prd.get("telefone"), prd.get("whatsapp"))
+        reviews = prd.get("reviews_list") or []
+        review_rule = (
+            "Real reviews are available; use only the exact author/text/rating values from reviews_list. "
+            if reviews
+            else "No real reviews are available. Do NOT invent testimonials, names, ratings or quotes. If the requested section is depoimentos, render a section titled 'Diferenciais e Compromisso com o Aluno' with factual business commitments instead. "
+        )
         return (
             "You generate one semantic HTML section fragment. Return raw HTML only. "
             f"Business: {business}. Segment: {segmento}. City: {cidade}. "
@@ -220,9 +230,12 @@ def _build_system_prompt(prd: dict) -> str:
             f"Palette JSON: {_compact_json(palette, 500)}. "
             f"Typography JSON: {_compact_json(typography, 300)}. "
             f"Available editorial image URLs: {_compact_json(photo_urls, 1400)}. "
+            f"Confirmed phone/WhatsApp: {phone or 'not informed'}. Use this exact phone in contact and footer; never use placeholder phones such as (XX) 99999-9999 or (41) 99999-9999. "
+            f"{review_rule}"
             "Preserve AIDA: hero captures Attention, interesse builds Interest, desejo creates Desire with offer/proof, acao drives Action. "
             "FAQ, LGPD, SEO/GEO and footer are functional sections, not decorative filler. "
             "Use at least one real <img> with an available URL in hero, about or media sections. "
+            "Use max 3 columns on desktop for text cards. Every text/review/info card must use min-w-[280px] with w-full and responsive width; never make columns so narrow that prose breaks word-by-word. "
             "Start the response with <section and finish with </section>. "
             "Include visible heading, useful copy, and CTA/content from the requested section. "
             "Use Tailwind utility classes directly. Do not output html, head, body, main, style, script, markdown, or explanation. "
@@ -347,7 +360,12 @@ def _build_system_prompt(prd: dict) -> str:
     if reviews:
         segments.append("\n## Reviews")
         for r in reviews[:3]:
-            segments.append(f"- {r.get('author', '')}: {r.get('text', '')[:120]}")
+            author = r.get("author") or r.get("autor") or ""
+            text = r.get("text") or r.get("texto") or r.get("comentario") or r.get("review") or ""
+            segments.append(f"- {author}: {str(text)[:120]}")
+    else:
+        segments.append("\n## Reviews")
+        segments.append("No real reviews were provided. Do NOT invent testimonials, customer names, ratings or quotes. Replace testimonial intent with factual proof/differentiators/commitment content.")
 
     # Schema.org
     schema_types = prd.get("schema_org_types", [])
@@ -386,6 +404,7 @@ def _build_system_prompt(prd: dict) -> str:
             segments.append(f"Address: {address}")
         if phone:
             segments.append(f"Phone: {phone}")
+            segments.append("Use this exact phone in every contact/footer occurrence. Never output placeholder phone numbers like (XX) 99999-9999, (11) 99999-9999 or (41) 99999-9999.")
         if hours:
             segments.append(f"Hours: {json.dumps(hours)}")
 

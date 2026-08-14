@@ -64,6 +64,26 @@ Then the JSON with this exact format:
 
 All user-facing copy MUST be in Brazilian Portuguese (pt-BR)."""
 
+
+def _extract_json_object(text: str) -> dict:
+    """Extract the largest JSON object from an LLM response with Markdown around it."""
+    import json as _json
+    import re as _re
+
+    cleaned = str(text or "").replace("```json", "```").strip()
+    fenced = _re.search(r"```(?:\s*)?(\{.*?\})(?:\s*)?```", cleaned, _re.DOTALL)
+    candidates = [fenced.group(1)] if fenced else []
+    candidates.extend(match.group(0) for match in _re.finditer(r"\{.*?\}", cleaned, _re.DOTALL))
+    candidates.extend(match.group(0) for match in _re.finditer(r"\{.*\}", cleaned, _re.DOTALL))
+    for candidate in sorted(set(candidates), key=len, reverse=True):
+        try:
+            parsed = _json.loads(candidate)
+        except _json.JSONDecodeError:
+            continue
+        if isinstance(parsed, dict):
+            return parsed
+    return {}
+
 def gerar_briefing(
     dados_lead: dict,
     segmento: str,
@@ -131,16 +151,7 @@ Gere o briefing seguindo o formato obrigatório: MARKDOWN primeiro, depois JSON.
 
     _elapsed = _time.time() - _start
 
-    # Extrair JSON da resposta
-    import json as _json, re as _re
-
-    _json_match = _re.search(r"\{[^{}]*\}[^}]*$", resposta, _re.DOTALL)
-    _dados = {}
-    if _json_match:
-        try:
-            _dados = _json.loads(_json_match.group(0))
-        except _json.JSONDecodeError:
-            pass
+    _dados = _extract_json_object(resposta)
 
     # Fallback se JSON não foi parseado
     if not _dados:
