@@ -7,18 +7,14 @@ SEO e open design sejam SEMPRE utilizados.
 """
 import json
 import os
-import sys
 import urllib.request
 import urllib.parse
 
-sys.path.insert(0, os.path.dirname(__file__))
-
-from design_context import get_design_context, get_hero_style
-from craft_rules import get_craft_rules, get_autocritica
-from seo_context import get_seo_context
-from open_design_selector import get_open_design_prompt
-from animation_profile import get_animation_profile
-
+from backend.agents.design_context import get_design_context, get_hero_style
+from backend.agents.craft_rules import get_craft_rules, get_autocritica
+from backend.agents.seo_context import get_seo_context
+from backend.agents.open_design_selector import get_open_design_prompt
+from backend.agents.animation_profile import get_animation_profile
 
 # ══════════════════════════════════════════════════════════════════
 # TOOL DEFINITIONS (schema para a API do Claude)
@@ -121,7 +117,6 @@ ARQUITETO_TOOLS = [
     },
 ]
 
-
 # ══════════════════════════════════════════════════════════════════
 # TOOL EXECUTION
 # ══════════════════════════════════════════════════════════════════
@@ -149,7 +144,6 @@ def execute_tool(tool_name: str, tool_input: dict, context: dict = None) -> str:
             return json.dumps({"error": f"Tool desconhecida: {tool_name}"})
     except Exception as e:
         return json.dumps({"error": str(e)})
-
 
 # ── get_keyword_research ──────────────────────────────────────────
 
@@ -186,7 +180,6 @@ def _tool_get_keyword_research(tool_input: dict, context: dict = None) -> str:
     }
     return json.dumps(result, ensure_ascii=False)
 
-
 # ── get_design_system ─────────────────────────────────────────────
 
 def _tool_get_design_system(tool_input: dict) -> str:
@@ -214,7 +207,6 @@ def _tool_get_design_system(tool_input: dict) -> str:
     }
     return json.dumps(result, ensure_ascii=False)
 
-
 # ── get_animation_profile ─────────────────────────────────────────
 
 def _tool_get_animation_profile(tool_input: dict) -> str:
@@ -222,7 +214,6 @@ def _tool_get_animation_profile(tool_input: dict) -> str:
     segmento = tool_input.get("segmento", "")
     profile = get_animation_profile(segmento)
     return json.dumps(profile, ensure_ascii=False)
-
 
 # ── get_seo_context ───────────────────────────────────────────────
 
@@ -233,7 +224,6 @@ def _tool_get_seo_context(tool_input: dict) -> str:
     nome = tool_input.get("nome_negocio", "")
     seo = get_seo_context(segmento, cidade, nome)
     return json.dumps({"seo_context": seo}, ensure_ascii=False)
-
 
 # ── get_open_design_reference ─────────────────────────────────────
 
@@ -247,7 +237,6 @@ def _tool_get_open_design_reference(tool_input: dict) -> str:
         return json.dumps({"open_design": ref[:2000], "loaded": True}, ensure_ascii=False)
     return json.dumps({"open_design": "", "loaded": False, "note": "Nenhum design system encontrado para este segmento"}, ensure_ascii=False)
 
-
 # ── get_craft_rules ───────────────────────────────────────────────
 
 def _tool_get_craft_rules() -> str:
@@ -255,7 +244,6 @@ def _tool_get_craft_rules() -> str:
     rules = get_craft_rules()
     autocritica = get_autocritica()
     return json.dumps({"craft_rules": rules[:1500], "autocritica": autocritica[:500]}, ensure_ascii=False)
-
 
 # ── get_jina_insights ─────────────────────────────────────────────
 
@@ -278,7 +266,6 @@ def _tool_get_jina_insights(tool_input: dict, context: dict = None) -> str:
         return json.dumps({"data": result, "error": str(e)}, ensure_ascii=False)
 
     return json.dumps({"data": result, "total_keywords": len(result["seo_keywords"]), "total_faq": len(result["faq_questions"])}, ensure_ascii=False)
-
 
 # ── verify_prd ────────────────────────────────────────────────────
 

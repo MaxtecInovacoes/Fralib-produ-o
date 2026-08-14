@@ -1,0 +1,12 @@
+{
+  "artifact": "02-openui-section_fragment-localizacao.html",
+  "created_at": "2026-08-14T01:00:31.714949Z",
+  "metadata": {
+    "step": "openui_block",
+    "render_hint": "section_fragment",
+    "labels": [
+      "localizacao"
+    ],
+    "model": "claude-sonnet-5"
+  }
+}

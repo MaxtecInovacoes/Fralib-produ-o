@@ -1,0 +1,12 @@
+{
+  "artifact": "02-openui-section_fragment-depoimentos.html",
+  "created_at": "2026-08-14T00:59:31.174047Z",
+  "metadata": {
+    "step": "openui_block",
+    "render_hint": "section_fragment",
+    "labels": [
+      "depoimentos"
+    ],
+    "model": "claude-sonnet-5"
+  }
+}

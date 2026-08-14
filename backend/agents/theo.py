@@ -1,5 +1,3 @@
-import sys
-sys.path.insert(0, "/app/backend/agents")
 """
 Theo - Estrategista / PRD + Jina AI Research
 """
@@ -9,10 +7,10 @@ import re
 import requests
 from pydantic import BaseModel, Field, model_validator
 from typing import List, Dict, Any, Optional
-from llm_direct import call_claude
-from agent_rag import format_rag_prompt, get_agent_temperature
-from skill_loader import get_skills_agente, carregar_skills
-from designer_prd import DesignerPRD, AnimationSpec, SectionSpec, ColorPalette
+from backend.agents.llm_direct import call_claude
+from backend.agents.agent_rag import format_rag_prompt, get_agent_temperature
+from backend.agents.skill_loader import get_skills_agente, carregar_skills
+from backend.agents.designer_prd import DesignerPRD, AnimationSpec, SectionSpec, ColorPalette
 
 def clean_json_response(text: str) -> str:
     """Remove markdown, control chars e extrai o MAIOR JSON valido do texto"""

@@ -1,7 +1,5 @@
-import sys
 import os
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 """
 Caio - Qualificador de Leads (Python puro, zero LLM)
 Regras determinísticas de if/else.
@@ -9,7 +7,6 @@ Regras determinísticas de if/else.
 import requests
 from typing import Optional, List, Dict
 from pydantic import BaseModel, Field
-
 
 class LeadInput(BaseModel):
     nome: str
@@ -24,7 +21,6 @@ class LeadInput(BaseModel):
     logo_url: Optional[str] = None
     social: Optional[str] = None
     reprocessamento: bool = False  # Pula verificacao de segmento
-
 
 class CaioOutput(BaseModel):
     qualificacao: str = Field(description="QUENTE/MORNO/FRIO/REJEITADO")
@@ -47,7 +43,6 @@ class CaioOutput(BaseModel):
     logo_url: str = ""
     concorrentes: List[Dict] = []
     paleta_cores: Dict[str, str] = {}
-
 
 REDES_CONHECIDAS = [
     "smart fit",
@@ -118,7 +113,6 @@ SITE_BUILDERS = [
     "jimdo.com",
     "strikingly.com",
 ]
-
 
 # Mapa de palavras-chave por segmento para filtro de relevancia
 _SEGMENTO_KEYWORDS = {
@@ -214,7 +208,6 @@ _SEGMENTO_HIERARCHY: dict[str, str] = {
     "mecanica": "auto",
 }
 
-
 def _verificar_relevancia_segmento(nome, segmento_pedido):
     """Verifica se o lead e relevante para o segmento pedido.
 
@@ -252,8 +245,6 @@ def _verificar_relevancia_segmento(nome, segmento_pedido):
         return True
 
     return False
-
-
 
 def verificar_whatsapp_ativo(telefone="", whatsapp="") -> tuple:
     """
@@ -296,7 +287,6 @@ def verificar_whatsapp_ativo(telefone="", whatsapp="") -> tuple:
         # Se der erro de rede, assume valido (nao bloqueia lead por timeout)
         return True, "Confirmacao indisponivel (assumindo valido)"
 
-
 def verificar_se_e_rede(nome: str, website: str = "") -> bool:
     nome_lower = nome.lower()
     website_lower = website.lower() if website else ""
@@ -304,7 +294,6 @@ def verificar_se_e_rede(nome: str, website: str = "") -> bool:
         if rede in nome_lower or rede in website_lower:
             return True
     return False
-
 
 def validar_site(website: str) -> tuple:
     if not website or not website.strip():
@@ -337,7 +326,6 @@ def validar_site(website: str) -> tuple:
     except Exception as e:
         return False, "Erro ao verificar site: {}".format(e)
 
-
 def _coerce_lead_input(lead) -> LeadInput:
     """Aceita LeadInput ou dict legado usado por scripts de smoke/teste."""
     if isinstance(lead, LeadInput):
@@ -364,7 +352,6 @@ def _coerce_lead_input(lead) -> LeadInput:
         data.setdefault("telefone", "")
         return LeadInput(**data)
     raise TypeError(f"lead deve ser LeadInput ou dict, recebeu {type(lead).__name__}")
-
 
 def _calcular_score(lead: LeadInput) -> tuple:
     lead = _coerce_lead_input(lead)
@@ -422,7 +409,6 @@ def _calcular_score(lead: LeadInput) -> tuple:
         motivos.append("{} fotos disponiveis".format(n_fotos))
 
     return min(score, 100), motivos
-
 
 def qualificar_lead(lead=None, **kwargs) -> CaioOutput:
     """Qualifica lead via regras Python puras. Zero LLM.
@@ -575,7 +561,6 @@ def qualificar_lead(lead=None, **kwargs) -> CaioOutput:
         concorrentes=[],
         paleta_cores=paleta,
     )
-
 
 if __name__ == "__main__":
     lead = LeadInput(

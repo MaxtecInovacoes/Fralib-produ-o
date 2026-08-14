@@ -5,6 +5,23 @@ Ambiente validado: VPS Comercial `104.243.41.166` / domínio `https://app.seuneg
 
 Este é o documento principal do projeto. Se outro `.md` contradizer este arquivo, este arquivo vence.
 
+## Handoff Atual
+
+Antes de assumir trabalho em pipeline/admin/OpenUI, leia:
+
+- `C:\fralib\docs\HANDOFF_PIPELINE_2026-08-14.md`
+
+Esse handoff registra:
+
+- o que já foi provado em produção;
+- o que já foi corrigido;
+- o que ainda falta;
+- quais arquivos são reais;
+- quais arquivos são legados;
+- como debugar;
+- como testar;
+- como publicar sem criar caminhos paralelos.
+
 ## Regra de Ouro para IAs e Desenvolvedores
 
 1. Não crie arquivos paralelos quando já existir módulo oficial.

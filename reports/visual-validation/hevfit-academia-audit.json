@@ -1,0 +1,159 @@
+{
+  "title": "Hevfit Academia — Campina Grande do Sul",
+  "counts": {
+    "main": 1,
+    "section": 10,
+    "h1": 1,
+    "img": 9
+  },
+  "body": {
+    "bg": "rgba(0, 0, 0, 0)",
+    "color": "rgb(0, 0, 0)",
+    "font": "ui-sans-serif, system-ui, sans-serif, \"Apple Color Emoji\", \"Segoe UI Emoji\", \"Segoe UI Symbol\", \"Noto Color Emoji\""
+  },
+  "h1": {
+    "text": "Transforme seu corpo,\ntransforme sua vida",
+    "font": "ui-sans-serif, system-ui, sans-serif, \"Apple Color Emoji\", \"Segoe UI Emoji\", \"Segoe UI Symbol\", \"Noto Color Emoji\"",
+    "color": "oklch(0.93 0.005 0)",
+    "size": "72px"
+  },
+  "firstSections": [
+    {
+      "i": 0,
+      "text": "\n  \n    \n    \n  \n\n  \n    \n      \n        Campina Grande do Sul — PR\n      \n\n      \n        Transforme seu corpo,\n        transforme sua vida",
+      "bg": "oklch(0.12 0.01 260)",
+      "color": "rgb(0, 0, 0)",
+      "h": 810,
+      "imgs": 1
+    },
+    {
+      "i": 1,
+      "text": "\n  \n  \n    \n      Por que escolher a Hevfit?\n      \n        Treine com propósito,viva com resultado\n      \n      \n        Na Hevfit Academia",
+      "bg": "oklch(0.12 0.01 260)",
+      "color": "oklch(0.93 0.005 0)",
+      "h": 646,
+      "imgs": 1
+    },
+    {
+      "i": 2,
+      "text": "\n  \n    \n      \n        Sobre a Hevfit Academia\n      \n      \n        Nascida em Campina Grande do Sul, a Hevfit Academia é mais do que uma ",
+      "bg": "oklch(0.12 0.01 260)",
+      "color": "oklch(0.93 0.005 0)",
+      "h": 900,
+      "imgs": 1
+    },
+    {
+      "i": 3,
+      "text": "\n  \n    Nossos Serviços\n    \n      Na Hevfit Academia, oferecemos uma estrutura completa para você alcançar seus objetivos, seja iniciante o",
+      "bg": "oklch(0.12 0.01 260)",
+      "color": "oklch(0.93 0.005 0)",
+      "h": 860,
+      "imgs": 1
+    },
+    {
+      "i": 4,
+      "text": "\n  \n  \n  \n\n  \n    \n    \n      \n        O que você vai conquistar\n      \n      \n        Sua transformação começa\n        agora\n      \n      \n",
+      "bg": "oklch(0.12 0.01 260)",
+      "color": "oklch(0.93 0.005 0)",
+      "h": 2345,
+      "imgs": 2
+    },
+    {
+      "i": 5,
+      "text": "\n  \n  \n    \n    \n      Hevfit Academia — Campina Grande do Sul\n      \n        Estamos no coração de\n        Campina Grande do Sul\n      \n   ",
+      "bg": "oklch(0.12 0.01 260)",
+      "color": "oklch(0.93 0.005 0)",
+      "h": 1924,
+      "imgs": 2
+    },
+    {
+      "i": 6,
+      "text": "\n  ",
+      "bg": "oklch(0.12 0.01 260)",
+      "color": "oklch(0.93 0.005 0)",
+      "h": 0,
+      "imgs": 0
+    },
+    {
+      "i": 7,
+      "text": "\n  \n    Fale com a Hevfit Academia\n    \n      Tem dúvidas, quer agendar uma visita ou saber mais sobre nossos planos? Entre em contato agora",
+      "bg": "oklch(0.12 0.01 260)",
+      "color": "oklch(0.93 0.005 0)",
+      "h": 568,
+      "imgs": 1
+    }
+  ],
+  "imgs": [
+    {
+      "src": "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=1200&q=80",
+      "alt": "Academia equipada com aparelhos modernos",
+      "w": 1200,
+      "h": 800,
+      "visible": true
+    },
+    {
+      "src": "https://images.unsplash.com/photo-1571902943202-507ec2618e8f?w=800&q=80",
+      "alt": "Treino na Hevfit Academia em Campina Grande do Sul",
+      "w": 800,
+      "h": 599,
+      "visible": true
+    },
+    {
+      "src": "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=800&q=80",
+      "alt": "Hevfit Academia — estrutura moderna em Campina Grande do Sul",
+      "w": 800,
+      "h": 533,
+      "visible": true
+    },
+    {
+      "src": "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=800&q=80",
+      "alt": "Pessoas treinando academia Hevfit",
+      "w": 800,
+      "h": 533,
+      "visible": true
+    },
+    {
+      "src": "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=800&q=80",
+      "alt": "Ambiente moderno da Hevfit Academia com equipamentos de musculação",
+      "w": 800,
+      "h": 533,
+      "visible": true
+    },
+    {
+      "src": "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=800&q=80",
+      "alt": "Estrutura da Hevfit Academia",
+      "w": 800,
+      "h": 533,
+      "visible": true
+    },
+    {
+      "src": "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=800&q=80",
+      "alt": "Ambiente interno da Hevfit Academia",
+      "w": 800,
+      "h": 533,
+      "visible": true
+    },
+    {
+      "src": "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=1600&q=80",
+      "alt": "",
+      "w": 1600,
+      "h": 1067,
+      "visible": true
+    },
+    {
+      "src": "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=800&q=80",
+      "alt": "Equipe de atendimento da Hevfit Academia",
+      "w": 800,
+      "h": 533,
+      "visible": true
+    }
+  ],
+  "text": "\n\n\n  \n    \n    \n  \n\n  \n    \n      \n        Campina Grande do Sul — PR\n      \n\n      \n        Transforme seu corpo,\n        transforme sua vida\n      \n\n      \n        Na Hevfit Academia você encontra estrutura completa, profissionais qualificados e um ambiente motivador para conquistar seus objetivos — seja qual for o seu ponto de partida.\n      \n\n      \n        \n          \n            \n          \n          Fale com a gente\n        \n\n        \n          Aula experimental gratuita\n        \n      \n\n      \n        Atendimento via WhatsApp — 55 41 99842-0819\n      \n    \n  \n\n\n  \n  \n    \n      Por que escolher a Hevfit?\n      \n        Treine com propósito,viva com resultado\n      \n      \n        Na Hevfit Academia, cada treino é pensado para o seu objetivo — seja ganhar força, perder peso ou melhorar o condicionamento. Com estrutura completa, profissionais qualificados e um ambiente que inspira, você encontra o combustível para ir mais longe.\n      \n      \n        \n          \n          Fale com a Hevfit\n        \n        \n          Conheça nossos diferenciais\n        \n      \n    \n    \n      \n        \n        \n        \n          Campina Grande do Sul\n          Estrutura completa para o seu melhor desempenho\n        \n      \n    \n  \n\n\n  \n    \n      \n        Sobre a Hevfit Academia\n      \n      \n        Nascida em Campina Grande do Sul, a Hevfit Academia é mais do que uma academia — é um movimento dedicado a transformar vidas através do movimento. Unimos estrutura de ponta, equipe qualificada e um ambiente acolhedor para que cada aluno alcance seus objetivos, seja qual for o ponto de partida.\n      \n      \n        \n          +5\n          Anos de experiência transformando vidas\n        \n        \n          100%\n          Dedicação ao seu resultado\n        \n        \n          Local\n          Campina Grande do Sul — PR\n        \n      \n      \n        Fale com a Hevfit\n        \n      \n    \n    \n      \n      \n    \n  \n\n\n  \n    Nossos Serviços\n    \n      Na Hevfit Academia, oferecemos um",
+  "hasEmoji": false,
+  "fakePhone": false,
+  "officeWords": false,
+  "consoleErrors": [
+    "warning: cdn.tailwindcss.com should not be used in production. To use Tailwind CSS in production, install it as a PostCSS plugin or use the Tailwind CLI: https://tailwindcss.com/docs/installation",
+    "error: Error: <path> attribute d: Unexpected end of attribute. Expected number, \"…18.297A11.815 11\"."
+  ]
+}

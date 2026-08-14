@@ -8,10 +8,7 @@ import jwt
 from datetime import datetime
 from collections import deque, defaultdict
 
-import sys
-sys.path.append("/root/fralib/backend")
-sys.path.append("/root/fralib/backend/core")
-from auth import get_current_user
+from backend.endpoints.auth_endpoints import get_current_user
 
 router = APIRouter(prefix="/api/logs", tags=["logs"])
 

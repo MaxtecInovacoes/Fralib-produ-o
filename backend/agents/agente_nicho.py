@@ -1,12 +1,8 @@
 """Agente de Inteligência de Nicho Local — analisa dados brutos do lead + concorrentes
 e devolve briefing estruturado para os próximos agentes."""
 
-import sys, os
-
-sys.path.insert(0, os.path.dirname(__file__))
-
-from handoff_types import NichoBriefing
-from llm_direct import call_claude
+from backend.agents.handoff_types import NichoBriefing
+from backend.agents.llm_direct import call_claude
 
 SYSTEM_PROMPT = """You are the Local Niche Intelligence Agent.
 
@@ -63,7 +59,6 @@ Then the JSON with this exact format:
 }
 
 All user-facing copy MUST be in Brazilian Portuguese (pt-BR)."""
-
 
 def _extract_json_object(text: str) -> dict:
     """Extract the largest JSON object from an LLM response with Markdown around it."""

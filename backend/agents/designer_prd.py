@@ -1,7 +1,5 @@
-import sys
 import os
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 """
 DesignerPRD - modelo/gerador legado de PRD.
 O pipeline ativo usa Arquiteto Mestre + Skill Renderer.
@@ -9,16 +7,15 @@ O pipeline ativo usa Arquiteto Mestre + Skill Renderer.
 import re
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from typing import List, Dict, Any, Optional, Union
-from llm_direct import call_claude_structured
-from agent_rag import format_rag_prompt, get_agent_temperature
-from validation_enforcer import (
+from backend.agents.llm_direct import call_claude_structured
+from backend.agents.agent_rag import format_rag_prompt, get_agent_temperature
+from backend.agents.validation_enforcer import (
     require_rag,
     require_guidelines,
 )  # ✅ Validação obrigatória
 
 # # from prompt_templates import formatar_prompt_designer
-from design_guidelines import ANIMATION_PRINCIPLES, ANIMATION_CSS
-
+from backend.agents.design_guidelines import ANIMATION_PRINCIPLES, ANIMATION_CSS
 
 def clean_json_response(text: str) -> str:
     """Remove markdown code blocks e extrai JSON válido (versão blindada)"""
@@ -31,9 +28,7 @@ def clean_json_response(text: str) -> str:
         return match.group(0)
     return text.strip()
 
-
 # ===== MODELOS PYDANTIC =====
-
 
 class AnimationSpec(BaseModel):
     name: str = "fade-in"
@@ -71,7 +66,6 @@ class AnimationSpec(BaseModel):
                 easing=str(data.get("easing", data.get("ease", "ease-out"))),
             )
         return cls(name="fade-in", type="fade-in", target="section", trigger="scroll")
-
 
 class SectionSpec(BaseModel):
     model_config = ConfigDict(extra="allow", populate_by_name=True)
@@ -154,7 +148,6 @@ class SectionSpec(BaseModel):
 
         return self
 
-
 class ColorPalette(BaseModel):
     primary: str = "#374151"
     secondary: str = "#f9fafb"
@@ -193,7 +186,6 @@ class ColorPalette(BaseModel):
             self.reasoning = str(self.reasoning)
 
         return self
-
 
 class DesignerPRD(BaseModel):
     model_config = ConfigDict(extra="allow", populate_by_name=True)
@@ -419,7 +411,6 @@ class DesignerPRD(BaseModel):
 
         return self
 
-
 # ===== INSTRUÇÕES DO AGENTE =====
 
 DESIGNER_INSTRUCTIONS = """You are the PRD Designer, specialist in creating detailed PRDs for websites.
@@ -462,9 +453,7 @@ OUTPUT FORMAT JSON:
 
 All user-facing copy MUST be in Brazilian Portuguese (pt-BR)."""
 
-
 # ===== FUNÇÃO PRINCIPAL =====
-
 
 @require_rag("Designer PRD")  # ✅ Validação obrigatória de RAG
 @require_guidelines("Designer PRD")  # ✅ Validação obrigatória de Guidelines

@@ -14,10 +14,8 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from pydantic import BaseModel, Field
-sys.path.append('/root/fralib/backend')
-sys.path.append('/root/fralib/backend/core')
-from database import get_db
-from rate_limiter import limiter
+from backend.core.database import get_db
+from backend.core.rate_limiter import limiter
 
 router = APIRouter(prefix='/api/track', tags=['tracking'])
 log = logging.getLogger('uvicorn')

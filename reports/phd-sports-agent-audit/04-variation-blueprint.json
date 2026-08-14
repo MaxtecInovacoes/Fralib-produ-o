@@ -1,0 +1,48 @@
+{
+  "task_id": "0c8532da8d97",
+  "source_agent": "agente_variacao",
+  "target_agent": "arquiteto_mestre",
+  "status": "ok",
+  "task_summary": "Variação definida: corporate/hero-split em 10.5s",
+  "narrative_framework": "AIDA",
+  "template_estrutura": "corporate",
+  "template_hero": "hero-split",
+  "template_prova_social": "stats-cards",
+  "template_cta": "cta-central",
+  "template_faq": "faq-accordion",
+  "ordem_das_secoes": [
+    "hero",
+    "interesse",
+    "desejo",
+    "numeros",
+    "servicos",
+    "depoimentos",
+    "seo-geo",
+    "faq",
+    "acao",
+    "lgpd",
+    "footer"
+  ],
+  "required_sections": [
+    "hero",
+    "interesse",
+    "desejo",
+    "acao",
+    "faq",
+    "lgpd",
+    "footer"
+  ],
+  "angulo_de_comunicacao": "A academia de Campina Grande do Sul que se adapta à sua rotina: horário estendido, aula experimental gratuita e estacionamento próprio — três diferenciais que nenhum concorrente local oferece.",
+  "regra_antirrepeticao": "Evitar layout genérico de academia com hero-centralizado + lista de benefícios + CTA padrão. Não repetir a estrutura comum do mercado local (headline genérica 'Academias' + busca de unidade). Destaque os três diferenciais exclusivos (horário estendido, aula experimental grátis, estacionamento) logo no hero, não apenas no meio da página.",
+  "justificativa": "O nicho de academia em Campina Grande do Sul apresenta alta repetição estrutural entre concorrentes, com tom direto e orientado a benefício. A estrutura corporate com hero-split permite destacar visualmente os três diferenciais exclusivos (horário estendido, aula experimental grátis, estacionamento) logo na primeira dobra, diferenciando-se do padrão de mercado. A seção de números (stats-cards) antes dos serviços cria prova social quantificável que gera confiança antes da apresentação da oferta. O FAQ em accordion reduz objeções comuns antes do CTA central, maximizando conversão. A inclusão de seo-geo antes da ação reforça a presença local em Campina Grande do Sul, capturando intenção de busca geolocalizada.",
+  "layout_variants": {},
+  "rhythm": "",
+  "signature_composition": "",
+  "avoid": [
+    "Evitar layout genérico de academia com hero-centralizado + lista de benefícios + CTA padrão. Não repetir a estrutura comum do mercado local (headline genérica 'Academias' + busca de unidade). Destaque os três diferenciais exclusivos (horário estendido, aula experimental grátis, estacionamento) logo no hero, não apenas no meio da página.",
+    "hero fullscreen genérico com academia ao fundo",
+    "cores azul/branco óbvias de academia",
+    "fotos genéricas de pessoas malhando de stock",
+    "layout de colunas simétrico padrão de site institucional"
+  ]
+}

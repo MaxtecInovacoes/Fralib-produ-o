@@ -1,10 +1,7 @@
-import os, sys, json, re, time, hashlib
-
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import os, json, re, time, hashlib
 
 import requests
 from urllib.parse import quote
-
 
 def clean_json_response(text: str) -> str:
     import re as _rcj
@@ -45,7 +42,6 @@ def clean_json_response(text: str) -> str:
             j += 1
         i = j + 1
     return max(candidates, key=len) if candidates else text
-
 
 def pesquisar_referencias_jina(segmento: str, cidade: str = "") -> str:
     _cache_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "jina_cache")

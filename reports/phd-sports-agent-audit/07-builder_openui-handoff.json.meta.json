@@ -1,0 +1,10 @@
+{
+  "artifact": "07-builder_openui-handoff.json",
+  "created_at": "2026-08-14T01:01:51.511762Z",
+  "metadata": {
+    "artifact_type": "agent_handoff",
+    "stage": "builder_openui",
+    "tenant_id": 2,
+    "job_id": 556
+  }
+}

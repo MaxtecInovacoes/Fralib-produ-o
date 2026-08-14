@@ -1,0 +1,79 @@
+{
+  "stage": "deploy",
+  "created_at": "2026-08-14T01:01:51.643403Z",
+  "received": {
+    "html_length_before_deploy": 79927,
+    "quality_score": 100,
+    "visual_fingerprint": {
+      "version": 1,
+      "hero": "hero-split",
+      "section_order": [
+        "min-h-[90vh]",
+        "interesse",
+        "sobre",
+        "bg-[var(--bg)]",
+        "desejo",
+        "depoimentos",
+        "seo-geo",
+        "faq",
+        "relative",
+        "acao",
+        "contato",
+        "lgpd",
+        "footer"
+      ],
+      "container": "wide",
+      "grids": 174,
+      "typography": {
+        "heading": "UberMove",
+        "body": "UberMoveText",
+        "html_font_sample": "UberMoveText', system-ui, sans-serif"
+      },
+      "palette": [
+        "oklch(12% 0.010 260)",
+        "oklch(17% 0.012 260)",
+        "oklch(93% 0.005 0)",
+        "oklch(65% 0.010 260)",
+        "oklch(28% 0.015 260)",
+        "oklch(55.0% 0.138 25)",
+        "#fff",
+        "#aca",
+        "oklch(12%_0.010_260)",
+        "oklch(93%_0.005_0)",
+        "oklch(55.0%_0.138_25)",
+        "oklch(65%_0.010_260)",
+        "oklch(17%_0.012_260)",
+        "oklch(28%_0.015_260)"
+      ],
+      "media_count": 10,
+      "density": "dense",
+      "cards": 277,
+      "borders": 165,
+      "radius": "pill",
+      "motion": [
+        "transition",
+        "animate-"
+      ],
+      "hash": "3ef583531ef04701"
+    }
+  },
+  "produced": {
+    "deploy_url": "https://app.seunegociofralib.site/sites/2/academia-ph-d-sports-jardim-paulista-13cf997d/",
+    "index_path": "/var/www/fralib/sites/2/academia-ph-d-sports-jardim-paulista-13cf997d/index.html",
+    "html_length_final": 81607,
+    "html_counts_final": {
+      "main": 1,
+      "h1": 1,
+      "section": 13,
+      "img": 10,
+      "background_image": 0
+    }
+  },
+  "preserved": {},
+  "changed": {
+    "safe_post_processor": "safe_only",
+    "deploy_sanitizer": "document_structure/main_h1/decorative_guard/head_contract"
+  },
+  "lost": {},
+  "notes": []
+}

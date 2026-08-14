@@ -1,0 +1,10 @@
+{
+  "artifact": "03-niche_brief-handoff.json",
+  "created_at": "2026-08-14T00:55:28.009115Z",
+  "metadata": {
+    "artifact_type": "agent_handoff",
+    "stage": "niche_brief",
+    "tenant_id": 2,
+    "job_id": 556
+  }
+}

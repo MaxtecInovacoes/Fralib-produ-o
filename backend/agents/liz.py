@@ -1,5 +1,3 @@
-import sys
-sys.path.insert(0, "/root/fralib/backend/agents")
 """
 from skill_loader import carregar_skills, get_skills_agente
 Agente Liz - QA/Auditora
@@ -9,11 +7,11 @@ import json
 import re
 from pydantic import BaseModel, Field
 from typing import Optional, List, Dict, Any
-from llm_direct import call_claude
-from memory import salvar_memoria
-from agent_rag import format_rag_prompt, get_agent_temperature, buscar_contexto_rag, mark_rag_used
+from backend.agents.llm_direct import call_claude
+from backend.agents.memory import salvar_memoria
+from backend.agents.agent_rag import format_rag_prompt, get_agent_temperature, buscar_contexto_rag, mark_rag_used
 # from design_system_validator import validar_html, calcular_score_tiers
-from validation_layer import validar_html, calcular_score_validacao
+from backend.agents.validation_layer import validar_html, calcular_score_validacao
 
 # ===== MODELOS PYDANTIC =====
 

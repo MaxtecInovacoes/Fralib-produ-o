@@ -1,0 +1,21 @@
+{
+  "counts": {
+    "main": 1,
+    "section": 12,
+    "h1": 1,
+    "img": 11
+  },
+  "h1": {
+    "text": "Treine com resultado de verdade: Start Academia referência em Campina Grande do Sul",
+    "font": "ui-sans-serif, system-ui, sans-serif, \"Apple Color Emoji\", \"Segoe UI Emoji\", \"Segoe UI Symbol\", \"Noto Color Emoji\"",
+    "color": "oklch(0.93 0.005 0)"
+  },
+  "roundedFullCount": 1,
+  "aspectSquareCount": 0,
+  "bodyFont": "ui-sans-serif, system-ui, sans-serif, \"Apple Color Emoji\", \"Segoe UI Emoji\", \"Segoe UI Symbol\", \"Noto Color Emoji\"",
+  "bodyBg": "rgba(0, 0, 0, 0)",
+  "bodyText": "\n\n\n  \n    \n      Treine com resultado de verdade: Start Academia referência em Campina Grande do Sul\n    \n    \n      Estrutura completa, planos flexíveis e ambiente pensado pra você alcançar seus objetivos.\n      Venha para a academia preferida de Campina Grande do Sul.\n    \n    \n      Fale com a Start Academia\n    \n    WhatsApp: (41) 99999-9999\n  \n  \n    \n  \n\n\n  \n    \n    \n      Transforme sua rotina e conquiste mais saúde em Campina Grande do Sul\n      \n        Cansado da mesmice? Na Start Academia, você encontra um ambiente moderno, equipamentos de ponta e equipe qualificada para impulsionar seu treino e seu bem-estar. Venha experimentar uma estrutura feita para motivar você a superar limites e viver melhor!\n      \n      \n        Quero conhecer a Start Academia\n      \n    \n  \n\n\n  \n    \n      Evolua seu condicionamento com um time comprometido\n      \n        Alcance seus objetivos físicos e melhore sua saúde em Campina Grande do Sul com a equipe dedicada da Start Academia. Oferecemos acompanhamento próximo, ambiente acolhedor e estrutura completa para você sair do ponto de partida e conquistar performance de verdade. Aqui, cada aluno é acompanhado de forma individualizada para evoluir de um jeito seguro e motivador.\n      \n      \n        Fale com a gente no WhatsApp\n      \n    \n    \n      \n    \n  \n\n\n  \n    Tudo que você espera de uma academia, em um só lugar\n    \n      Na Start Academia você encontra musculação, aulas coletivas, avaliação física personalizada e acompanhamento profissional para todos os níveis. Estrutura completa para seu treino render sempre mais.\n    \n    \n      \n        Musculação\n        Equipamentos modernos e ambiente climatizado para treinos de força, hipertrofia e condicionamento.\n      \n      \n        Aulas Coletivas\n        Funcional, HIIT, r",
+  "consoleErrors": [
+    "warning: cdn.tailwindcss.com should not be used in production. To use Tailwind CSS in production, install it as a PostCSS plugin or use the Tailwind CLI: https://tailwindcss.com/docs/installation"
+  ]
+}

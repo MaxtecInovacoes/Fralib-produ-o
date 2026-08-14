@@ -1,0 +1,24 @@
+{
+  "task_id": "0c8532da8d97",
+  "source_agent": "agente_nicho",
+  "target_agent": "agente_variacao",
+  "status": "ok",
+  "task_summary": "Briefing gerado para Academia Ph.D Sports Jardim Paulista (academia) em 20.6s",
+  "nicho": "academia",
+  "subnichos": [],
+  "cidade": "Campina Grande do Sul",
+  "publico_alvo": [],
+  "usp": [],
+  "diferenciais": [],
+  "objeções": [],
+  "keywords": [],
+  "tom_de_voz": "profissional",
+  "notas": "",
+  "confianca": "baixa",
+  "dados_ausentes": [
+    "JSON não foi extraído corretamente"
+  ],
+  "competidores": [],
+  "regras": [],
+  "nao_fazer": []
+}

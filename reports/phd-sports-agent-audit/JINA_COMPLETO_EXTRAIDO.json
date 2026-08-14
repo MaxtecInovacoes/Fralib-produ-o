@@ -1,0 +1,61 @@
+{
+  "jina_provider": "jina",
+  "jina_intelligence": {
+    "tom_de_voz": "direto e orientado a benefício",
+    "palavras_poder": [
+      "academia",
+      "musculação",
+      "treino",
+      "aula",
+      "plano",
+      "estrutura",
+      "resultado",
+      "saúde",
+      "condicionamento",
+      "personal"
+    ],
+    "frases_genericas": [
+      "atendimento personalizado",
+      "qualidade e compromisso",
+      "resultados reais",
+      "os melhores profissionais",
+      "pronto para começar",
+      "excelência em atendimento",
+      "sua satisfação é nossa prioridade",
+      "venha nos conhecer",
+      "entre em contato"
+    ],
+    "headlines_referencia": [
+      "Academias",
+      "Espaço do Cliente",
+      "Seja um franqueado",
+      "Buscar academia",
+      "Encontre a academia mais próxima!"
+    ],
+    "ctas_referencia": [
+      "Conheça nossos produtos e serviços adicionais para você"
+    ],
+    "estilo_visual": "não inferido sem análise visual; usar curadoria FraLib",
+    "proposta_valor_concorrentes": [
+      "Encontre a academia mais próxima"
+    ],
+    "secoes_comuns": [
+      "Academias",
+      "Espaço do Cliente",
+      "Seja um franqueado",
+      "Buscar academia",
+      "Encontre a academia mais próxima!",
+      "Escolher academia",
+      "Venha treinar na maior rede de academias da América Latina",
+      "Os melhores equipamentos e infraestrutura com mensalidades acessíveis."
+    ],
+    "diferencial_ausente": "Nenhum concorrente menciona: horário estendido, aula experimental grátis, estacionamento. Oportunidade.",
+    "publico_alvo": "pessoas buscando academia em Campina Grande do Sul",
+    "fontes_analisadas": [
+      "https://www.smartfit.com.br"
+    ],
+    "provider": "jina"
+  },
+  "jina_insights": "=== INTELIGÊNCIA DE MERCADO (Jina AI) ===\n\nTOM DE VOZ DO MERCADO: direto e orientado a benefício\n\nLINGUAGEM COMERCIAL OBSERVADA:\n  academia, musculação, treino, aula, plano, estrutura, resultado, saúde, condicionamento, personal\n\nHEADLINES DE REFERÊNCIA (inspiração, não copiar):\n  - Academias\n  - Espaço do Cliente\n  - Seja um franqueado\n  - Buscar academia\n  - Encontre a academia mais próxima!\n\nCTAs QUE CONVERTEM:\n  - Conheça nossos produtos e serviços adicionais para você\n\nESTILO VISUAL DO MERCADO: não inferido sem análise visual; usar curadoria FraLib\nPÚBLICO-ALVO: pessoas buscando academia em Campina Grande do Sul\nDIFERENCIAL DISPONÍVEL: Nenhum concorrente menciona: horário estendido, aula experimental grátis, estacionamento. Oportunidade.\n\nEsta inteligência é referência de mercado para o próximo agente.\n=== FIM INTELIGÊNCIA ===",
+  "market_intelligence": null
+}

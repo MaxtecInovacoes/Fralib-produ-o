@@ -1,12 +1,8 @@
 """Agente de Variação Estrutural — evita páginas gêmeas no mesmo nicho/região
 escolhendo a melhor combinação de estrutura, hero e ordem de seções."""
 
-import sys, os
-
-sys.path.insert(0, os.path.dirname(__file__))
-
-from handoff_types import NichoBriefing, VariacaoEstrutural
-from llm_direct import call_claude
+from backend.agents.handoff_types import NichoBriefing, VariacaoEstrutural
+from backend.agents.llm_direct import call_claude
 
 SYSTEM_PROMPT = """You are the Structural Variation Agent.
 

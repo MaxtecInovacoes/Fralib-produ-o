@@ -8,13 +8,9 @@ seja rico em dados reais, não genérico.
 import json
 import os
 import re
-import sys
 import requests
 import urllib.request
 import urllib.parse
-
-sys.path.insert(0, os.path.dirname(__file__))
-
 
 # ══════════════════════════════════════════════════════════════════
 # TOOL DEFINITIONS
@@ -91,7 +87,6 @@ THEO_TOOLS = [
     },
 ]
 
-
 # ══════════════════════════════════════════════════════════════════
 # TOOL EXECUTION
 # ══════════════════════════════════════════════════════════════════
@@ -115,7 +110,6 @@ def execute_tool(tool_name: str, tool_input: dict, context: dict = None) -> str:
     except Exception as e:
         return json.dumps({"error": str(e)})
 
-
 # ── scrape_lead_site ──────────────────────────────────────────────
 
 def _tool_scrape_lead_site(tool_input: dict) -> str:
@@ -137,7 +131,6 @@ def _tool_scrape_lead_site(tool_input: dict) -> str:
         return json.dumps({"content": "", "error": f"Status {resp.status_code}"})
     except Exception as e:
         return json.dumps({"content": "", "error": str(e)})
-
 
 # ── search_competitors ────────────────────────────────────────────
 
@@ -180,7 +173,6 @@ def _tool_search_competitors(tool_input: dict) -> str:
     except Exception as e:
         return json.dumps({"competitors": [], "error": str(e)})
 
-
 # ── analyze_competitor_site ───────────────────────────────────────
 
 def _tool_analyze_competitor_site(tool_input: dict) -> str:
@@ -202,7 +194,6 @@ def _tool_analyze_competitor_site(tool_input: dict) -> str:
         return json.dumps({"content": "", "error": f"Status {resp.status_code}", "url": url})
     except Exception as e:
         return json.dumps({"content": "", "error": str(e), "url": url})
-
 
 # ── get_google_reviews_summary ────────────────────────────────────
 
@@ -250,7 +241,6 @@ def _tool_get_google_reviews_summary(tool_input: dict, context: dict = None) -> 
         "insight": f"Clientes destacam: {', '.join(temas[:3])}" if temas else "Reviews genéricos sem tema dominante"
     }, ensure_ascii=False)
 
-
 # ── get_market_keywords ───────────────────────────────────────────
 
 def _tool_get_market_keywords(tool_input: dict) -> str:
@@ -289,7 +279,6 @@ def _tool_get_market_keywords(tool_input: dict) -> str:
         "local": local[:5],
         "total": len(set(all_terms)),
     }, ensure_ascii=False)
-
 
 # ── verify_briefing ───────────────────────────────────────────────
 

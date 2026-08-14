@@ -1,0 +1,41 @@
+{
+  "stage": "hunter",
+  "created_at": "2026-08-14T00:55:07.362538Z",
+  "received": {
+    "lead_id": "13cf997d-b800-427f-bfeb-7b4a654750b5",
+    "tenant_id": 2,
+    "lead_fields": [
+      "cidade",
+      "descricao",
+      "endereco",
+      "fotos",
+      "id",
+      "jina_insights",
+      "jina_intelligence",
+      "market_intelligence",
+      "nome",
+      "rating",
+      "reviews_count",
+      "segmento",
+      "telefone",
+      "website",
+      "whatsapp"
+    ]
+  },
+  "produced": {
+    "nome": "Academia Ph.D Sports Jardim Paulista",
+    "cidade": "Campina Grande do Sul",
+    "segmento": "academia",
+    "telefone": "5541985143249",
+    "rating": 4.8,
+    "reviews_count": 0,
+    "photos_count": 5,
+    "jina_provider": "jina"
+  },
+  "preserved": {},
+  "changed": {},
+  "lost": {},
+  "notes": [
+    "Hunter valida dados mínimos, adiciona Jina insights e garante mídia editorial."
+  ]
+}

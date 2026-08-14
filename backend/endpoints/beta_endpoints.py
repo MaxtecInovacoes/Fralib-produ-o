@@ -3,12 +3,9 @@ from sqlalchemy.orm import Session
 from sqlalchemy import text
 from pydantic import BaseModel
 from typing import Optional
-import sys
-sys.path.append('/root/fralib/backend')
-sys.path.append('/root/fralib/backend/core')
-from database import get_db
-from auth import get_current_user
-from rate_limiter import limiter
+from backend.core.database import get_db
+from backend.endpoints.auth_endpoints import get_current_user
+from backend.core.rate_limiter import limiter
 import uuid
 from datetime import datetime
 

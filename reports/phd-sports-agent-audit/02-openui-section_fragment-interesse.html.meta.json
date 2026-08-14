@@ -1,0 +1,12 @@
+{
+  "artifact": "02-openui-section_fragment-interesse.html",
+  "created_at": "2026-08-14T00:57:51.130038Z",
+  "metadata": {
+    "step": "openui_block",
+    "render_hint": "section_fragment",
+    "labels": [
+      "interesse"
+    ],
+    "model": "claude-sonnet-5"
+  }
+}

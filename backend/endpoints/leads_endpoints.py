@@ -2,13 +2,10 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from typing import Optional
-import sys
-sys.path.append('/root/fralib/backend')
-sys.path.append('/root/fralib/backend/core')
-from database import get_db
-from auth import get_current_user
-from sse_endpoints import adicionar_log
-from whatsapp_listener import is_tenant_connected
+from backend.core.database import get_db
+from backend.endpoints.auth_endpoints import get_current_user
+from backend.endpoints.sse_endpoints import adicionar_log
+from backend.whatsapp_listener import is_tenant_connected
 
 router = APIRouter(prefix='/api/leads', tags=['leads'])
 
@@ -119,7 +116,6 @@ async def editar_site(lead_id: str, req: EditarSiteRequest, db: Session = Depend
         raise HTTPException(403, 'Edicao de site disponivel apenas no plano Pro. Faca upgrade em /planos')
     from services.credits_manager import consume_tokens
     consume_tokens(db, int(usuario['id']), 1, 'Edicao de site')
-    sys.path.append('/root/fralib/backend/agents')
     from llm_direct import call_claude
     import re as _re2
 
@@ -333,9 +329,6 @@ async def criar_lead_manual(req: LeadManualRequest, background_tasks: Background
     return {"ok": True, "lead_id": lead_id, "mensagem": "Lead criado!" + (" Site sendo gerado..." if req.briefing else " Sem briefing — site não gerado.")}
 
 async def _gerar_site_manual(lead_id: str, req: LeadManualRequest, user_id):
-    import sys as _sys, os as _os
-    _sys.path.append('/root/fralib/backend/agents')
-    _sys.path.append('/root/fralib/backend/core')
     from database import engine
     from sqlalchemy import text as _text
     try:
@@ -391,7 +384,7 @@ async def _gerar_site_manual(lead_id: str, req: LeadManualRequest, user_id):
             _slug_raw = _re_slug.sub(r'[^a-z0-9]+', '-', (req.nome or '').lower()).strip('-')[:40]
             slug = (_slug_raw or 'lead') + '-manual'
             web_dir = f'/var/www/fralib/sites/{user_id}/{slug}'
-            _os.makedirs(web_dir, exist_ok=True)
+            os.makedirs(web_dir, exist_ok=True)
             with open(f'{web_dir}/index.html', 'w', encoding='utf-8') as f:
                 f.write(html_final)
             site_url = f'https://seunegociofralib.site/sites/{user_id}/{slug}/'

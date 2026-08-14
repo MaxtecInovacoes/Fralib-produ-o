@@ -4,14 +4,10 @@ Retorno: Markdown parseado via markdown_prd_parser.
 """
 
 import re as _re
-import sys, os
-
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-
-from llm_direct import call_claude
-from markdown_prd_parser import parse_bloco2_markdown
+import os
+from backend.agents.llm_direct import call_claude
+from backend.agents.markdown_prd_parser import parse_bloco2_markdown
 from prompts_arquiteto import SYSTEM_COPY_SENIOR
-
 
 def _formatar_reviews(top_3: list, reviews_insights: dict) -> tuple:
     """Retorna (reviews_fmt, reviews_intel_ctx)."""
@@ -42,7 +38,6 @@ def _formatar_reviews(top_3: list, reviews_insights: dict) -> tuple:
             f"=== FIM ===\n"
         )
     return reviews_fmt, intel_ctx
-
 
 _SPECS_SECAO = {
     "hero": """## hero
@@ -82,7 +77,6 @@ _GRUPOS_SECOES = [
     ["faq", "localizacao"],
     ["contato"],
 ]
-
 
 def _montar_contexto_shared(
     nome, cidade, segmento, telefone, endereco, rating, total_av,
@@ -134,7 +128,6 @@ CRAFT RULES:
 
 Real phone: {telefone}
 Specific copy for {nome}, never generic."""
-
 
 def _montar_prompt_bloco2(
     nome: str,
@@ -192,7 +185,6 @@ Return MARKDOWN with EXACTLY this format:
 H1: 8+ words with benefit + city. Good example: "Treino funcional e nutricao integrada em Campina Grande do Sul". Bad example: "Nutrasport" (that is a name, NOT a headline).
 MARKDOWN ONLY. No JSON. No code blocks."""
 
-
 def _callar_bloco_parcial(
     shared_context: str,
     grupo_secoes: list,
@@ -240,7 +232,6 @@ def _callar_bloco_parcial(
             return filtered
 
     return None
-
 
 def executar_bloco_copy(
     nome: str,

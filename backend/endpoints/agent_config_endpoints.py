@@ -139,7 +139,7 @@ async def run_playground(body: dict, db: Session = Depends(get_db), user=Depends
 
     start = time.time()
     try:
-        from services.llm_router import call_llm
+        from agents.llm_router import call_llm
         response_text, usage = call_llm(
             provider=provider,
             model_id=model_id,
@@ -354,7 +354,7 @@ async def run_pipeline_sandbox(body: dict, db: Session = Depends(get_db), user=D
         # FASE 3: Theo — briefing estratégico
         t0 = time.time()
         try:
-            from services.llm_router import call_llm
+            from agents.llm_router import call_llm
             theo_cfg = models_override.get('theo', {})
             theo_provider = theo_cfg.get('provider', 'anthropic')
             theo_model = theo_cfg.get('model_id', 'claude-sonnet-4-6')

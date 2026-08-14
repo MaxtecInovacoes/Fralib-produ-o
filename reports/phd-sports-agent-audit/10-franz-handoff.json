@@ -1,0 +1,19 @@
+{
+  "stage": "franz",
+  "created_at": "2026-08-14T01:01:51.655404Z",
+  "received": {
+    "deploy_url": "https://app.seunegociofralib.site/sites/2/academia-ph-d-sports-jardim-paulista-13cf997d/",
+    "lead_status": null
+  },
+  "produced": {
+    "outreach_mode": "cron_dispatcher",
+    "final_state": "done",
+    "site_url": "https://app.seunegociofralib.site/sites/2/academia-ph-d-sports-jardim-paulista-13cf997d/"
+  },
+  "preserved": {},
+  "changed": {},
+  "lost": {},
+  "notes": [
+    "Franz não envia WhatsApp aqui; deixa lead concluído para o dispatcher/cron SDR."
+  ]
+}

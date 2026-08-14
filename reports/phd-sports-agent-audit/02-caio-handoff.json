@@ -1,0 +1,22 @@
+{
+  "stage": "caio",
+  "created_at": "2026-08-14T00:55:07.363655Z",
+  "received": {
+    "nome": "Academia Ph.D Sports Jardim Paulista",
+    "segmento": "academia",
+    "cidade": "Campina Grande do Sul",
+    "rating": 4.8
+  },
+  "produced": {
+    "score": 0,
+    "tier": "REJEITADO",
+    "dark_mode": null,
+    "motivo": "Rede/franquia - nao atendemos"
+  },
+  "preserved": {},
+  "changed": {},
+  "lost": {},
+  "notes": [
+    "Caio qualifica se o lead pode seguir para briefing e define tier visual/comercial."
+  ]
+}

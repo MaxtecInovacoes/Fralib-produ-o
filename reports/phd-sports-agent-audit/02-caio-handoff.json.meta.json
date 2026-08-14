@@ -1,0 +1,10 @@
+{
+  "artifact": "02-caio-handoff.json",
+  "created_at": "2026-08-14T00:55:07.365165Z",
+  "metadata": {
+    "artifact_type": "agent_handoff",
+    "stage": "caio",
+    "tenant_id": 2,
+    "job_id": 556
+  }
+}

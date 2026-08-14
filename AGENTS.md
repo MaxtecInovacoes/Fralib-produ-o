@@ -4,6 +4,10 @@ Este arquivo é carregado automaticamente por agentes de código. Ele é operaci
 
 Leia também `README.md` antes de alterar qualquer coisa.
 
+Para assumir o estado operacional mais recente do projeto, leia também:
+
+- `docs/HANDOFF_PIPELINE_2026-08-14.md`
+
 ## Regras Invioláveis
 
 1. Não crie arquivo paralelo se já existe módulo oficial.

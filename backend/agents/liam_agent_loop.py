@@ -19,8 +19,7 @@ import re
 import sys
 import time
 
-sys.path.insert(0, os.path.dirname(__file__))
-from liam_tools import execute_tool
+from backend.agents.liam_tools import execute_tool
 
 
 # ══════════════════════════════════════════════════════════════════

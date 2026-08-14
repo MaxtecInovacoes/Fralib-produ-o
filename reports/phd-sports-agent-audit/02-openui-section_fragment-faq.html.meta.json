@@ -1,0 +1,12 @@
+{
+  "artifact": "02-openui-section_fragment-faq.html",
+  "created_at": "2026-08-14T01:00:09.016060Z",
+  "metadata": {
+    "step": "openui_block",
+    "render_hint": "section_fragment",
+    "labels": [
+      "faq"
+    ],
+    "model": "claude-sonnet-5"
+  }
+}

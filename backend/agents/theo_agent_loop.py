@@ -21,8 +21,7 @@ import requests
 from dataclasses import dataclass, field
 from typing import Optional, List
 
-sys.path.insert(0, os.path.dirname(__file__))
-from theo_tools import THEO_TOOLS, execute_tool
+from backend.agents.theo_tools import THEO_TOOLS, execute_tool
 
 
 # ══════════════════════════════════════════════════════════════════
@@ -139,9 +138,7 @@ class TheoAgentOutput:
 def _resolve_anthropic():
     """Resolve API key e base URL."""
     try:
-        sys.path.insert(0, '/root/fralib/backend')
-        sys.path.insert(0, '/root/fralib/backend/services')
-        from ia_manager import pick_key
+        from backend.services.ia_manager import pick_key
         result = pick_key("anthropic")
         if result:
             api_key, base_url, key_id = result

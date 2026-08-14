@@ -4,19 +4,15 @@ Retorno: Markdown parseado via markdown_prd_parser.
 """
 
 import re as _re
-import sys, os
-
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-
-from llm_direct import call_claude
-from markdown_prd_parser import parse_bloco1_markdown
+import os
+from backend.agents.llm_direct import call_claude
+from backend.agents.markdown_prd_parser import parse_bloco1_markdown
 from prompts_arquiteto import (
     SYSTEM_DESIGN_DIRECTOR,
     _buscar_google_suggest,
     _garantir_secoes_obrigatorias,
 )
-from visual_archetypes import archetype_prompt
-
+from backend.agents.visual_archetypes import archetype_prompt
 
 def _montar_prompt_bloco1(
     nome: str,
@@ -144,10 +140,8 @@ NICHO {segmento}:
 
 MARKDOWN ONLY. No JSON. No code blocks."""
 
-
 def _is_academia(segmento: str) -> bool:
     return (segmento or "").strip().lower() in {"academia", "fitness"}
-
 
 def _force_academia_direction(dados: dict, segmento: str) -> dict:
     """Keep facts safe without forcing a visual identity for academia."""
@@ -162,7 +156,6 @@ def _force_academia_direction(dados: dict, segmento: str) -> dict:
             "nao transformar atributos operacionais em servicos e adicionar motion sobre o layout escolhido."
         ).strip()
     return dados
-
 
 def executar_bloco_estrutura(
     nome: str,

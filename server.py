@@ -38,13 +38,12 @@ if not _BACKEND_ROOT:
         "Verifique /app/backend, /root/fralib/backend ou /opt/fralib/backend"
     )
 
-# Adicionar TODAS as pastas do backend ao path
-sys.path.insert(0, _BACKEND_ROOT)
-sys.path.insert(0, os.path.join(_BACKEND_ROOT, 'core'))
-sys.path.insert(0, os.path.join(_BACKEND_ROOT, 'endpoints'))
-sys.path.insert(0, os.path.join(_BACKEND_ROOT, 'services'))
-sys.path.insert(0, os.path.join(_BACKEND_ROOT, 'agents'))
-sys.path.insert(0, os.path.join(_BACKEND_ROOT, 'utils'))
+# sys.path: insere APENAS a raiz do projeto e o backend.
+# Qualquer import deve usar caminho absoluto (ex: from backend.core.database import X).
+# Os inserts de subdiretórios (/core, /endpoints, /agents etc.) foram removidos
+# para forçar imports absolutos — evita hacks de VPS como /root/fralib/backend.
+sys.path.insert(0, _FRONTEND_ROOT)          # ex: /root/fralib ou /app
+sys.path.insert(0, _BACKEND_ROOT)           # ex: /root/fralib/backend
 
 # Aplicar migrations Alembic — fonte de verdade do schema
 from alembic.config import Config as _AlembicConfig
@@ -58,11 +57,11 @@ except Exception as _e:
     print(f"[Startup] Alembic falhou ({_e}) — continuando com inicializar_database como fallback")
 
 # Safety net: cria qualquer tabela que ainda nao esteja na Alembic
-from core.database import inicializar_database
+from backend.core.database import inicializar_database
 inicializar_database()
 
 # Rate Limiting (instancia compartilhada — definida em core/rate_limiter.py)
-from rate_limiter import limiter
+from backend.core.rate_limiter import limiter
 
 from contextlib import asynccontextmanager
 

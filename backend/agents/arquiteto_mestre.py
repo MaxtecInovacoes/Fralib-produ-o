@@ -3,25 +3,20 @@ Recebe NichoBriefing + VariacaoEstrutural + dados do lead e retorna DesignerPRD.
 Delega blocos LLM para bloco_estrutura.py e bloco_copy.py.
 """
 
-import sys, os
-
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import os
 _CORE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "core"))
-if _CORE_DIR not in sys.path:
-    sys.path.insert(0, _CORE_DIR)
-
-from designer_prd import DesignerPRD
-from design_context import (
+from backend.agents.designer_prd import DesignerPRD
+from backend.agents.design_context import (
     get_design_context,
     get_design_context_prompt,
     get_hero_style,
     detectar_sub_nicho,
 )
-from design_guidelines import TAILWIND_FIRST_RULES, ANIMATION_PRINCIPLES
-from craft_rules import get_craft_rules, get_autocritica
-from seo_context import get_seo_context, SEO_NICHOS, ALIASES
+from backend.agents.design_guidelines import TAILWIND_FIRST_RULES, ANIMATION_PRINCIPLES
+from backend.agents.craft_rules import get_craft_rules, get_autocritica
+from backend.agents.seo_context import get_seo_context, SEO_NICHOS, ALIASES
 from design_system_selector import select_design_system
-from handoff_types import NichoBriefing, VariacaoEstrutural
+from backend.agents.handoff_types import NichoBriefing, VariacaoEstrutural
 try:
     from core.design_reference_packs import format_design_reference_pack_prompt
     from core.design_system_router import build_design_dna, choose_section_variant
@@ -37,7 +32,6 @@ from prompts_arquiteto import (
     selecionar_top_reviews,
     _garantir_secoes_obrigatorias,
 )
-
 
 def gerar_arquiteto_mestre_prd(
     dados_hunter: dict,

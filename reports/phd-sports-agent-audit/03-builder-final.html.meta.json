@@ -1,0 +1,11 @@
+{
+  "artifact": "03-builder-final.html",
+  "created_at": "2026-08-14T01:01:51.606342Z",
+  "metadata": {
+    "step": "builder",
+    "tenant_id": 2,
+    "model": "claude-sonnet-5",
+    "segmento": "academia",
+    "cidade": "Campina Grande do Sul"
+  }
+}

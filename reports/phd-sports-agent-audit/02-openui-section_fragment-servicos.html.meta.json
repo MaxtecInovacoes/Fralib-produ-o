@@ -1,0 +1,12 @@
+{
+  "artifact": "02-openui-section_fragment-servicos.html",
+  "created_at": "2026-08-14T00:58:46.568810Z",
+  "metadata": {
+    "step": "openui_block",
+    "render_hint": "section_fragment",
+    "labels": [
+      "servicos"
+    ],
+    "model": "claude-sonnet-5"
+  }
+}

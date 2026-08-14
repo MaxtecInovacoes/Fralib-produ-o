@@ -3,13 +3,9 @@ from pydantic import BaseModel
 from typing import List, Dict, Any
 from sqlalchemy.orm import Session
 from sqlalchemy import text
-import sys
 
-sys.path.append('/root/fralib/backend')
-sys.path.append('/root/fralib/backend/core')
-
-from database import get_db
-from auth import get_current_user
+from backend.core.database import get_db
+from backend.endpoints.auth_endpoints import get_current_user
 
 router = APIRouter(prefix='/api/dashboard', tags=['dashboard'])
 

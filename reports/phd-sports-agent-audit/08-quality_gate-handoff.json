@@ -1,0 +1,258 @@
+{
+  "stage": "quality_gate",
+  "created_at": "2026-08-14T01:01:51.620489Z",
+  "received": {
+    "html_length": 79927,
+    "html_counts": {
+      "main": 1,
+      "h1": 1,
+      "section": 13,
+      "img": 10
+    },
+    "design_output_keys": [
+      "_raw_reviews",
+      "address",
+      "animations",
+      "anti_patterns",
+      "atributos",
+      "business_name",
+      "cidade",
+      "color_palette",
+      "competitor_analysis",
+      "components_21dev",
+      "creative_direction",
+      "dark_mode",
+      "design_reference_pack",
+      "design_system_slug",
+      "dna_combo",
+      "faixa_preco",
+      "faq_questions",
+      "geo",
+      "google_maps_embed",
+      "horarios",
+      "hours",
+      "instrucao_criativa_para_dev",
+      "jina_insights",
+      "layout_blueprint",
+      "logo_url",
+      "media_plan",
+      "minimum_required_media",
+      "niche_brief",
+      "phone",
+      "photos",
+      "requirements_contract",
+      "reviews_count",
+      "reviews_list",
+      "reviews_rating",
+      "schema_org_types",
+      "sections",
+      "segmento",
+      "seo_keywords",
+      "servicos",
+      "site_build_plan",
+      "typography",
+      "value_props",
+      "variation_blueprint",
+      "videos",
+      "visual_contract",
+      "visual_direction",
+      "visual_dna",
+      "visual_seed"
+    ]
+  },
+  "produced": {
+    "quality_score": 100,
+    "qa_v2": {
+      "vision_score": 10.0,
+      "vision_passed": true,
+      "vision_issues": [],
+      "vision_strengths": [
+        "QA temporariamente em pass-through para inspeção visual"
+      ],
+      "repair_attempted": false,
+      "repair_success": false,
+      "repair_fixes": [],
+      "model_used": "pass-through-temporary"
+    },
+    "gates": {
+      "passed": true,
+      "issues": [],
+      "technical_gate": {
+        "passed": true,
+        "issues": []
+      },
+      "creative_compliance_gate": {
+        "passed": true,
+        "issues": []
+      },
+      "visual_diversity_gate": {
+        "passed": true,
+        "issues": [],
+        "fingerprint": {
+          "version": 1,
+          "hero": "hero-split",
+          "section_order": [
+            "min-h-[90vh]",
+            "interesse",
+            "sobre",
+            "bg-[var(--bg)]",
+            "desejo",
+            "depoimentos",
+            "seo-geo",
+            "faq",
+            "relative",
+            "acao",
+            "contato",
+            "lgpd",
+            "footer"
+          ],
+          "container": "wide",
+          "grids": 174,
+          "typography": {
+            "heading": "UberMove",
+            "body": "UberMoveText",
+            "html_font_sample": "UberMoveText', system-ui, sans-serif"
+          },
+          "palette": [
+            "oklch(12% 0.010 260)",
+            "oklch(17% 0.012 260)",
+            "oklch(93% 0.005 0)",
+            "oklch(65% 0.010 260)",
+            "oklch(28% 0.015 260)",
+            "oklch(55.0% 0.138 25)",
+            "#fff",
+            "#aca",
+            "oklch(12%_0.010_260)",
+            "oklch(93%_0.005_0)",
+            "oklch(55.0%_0.138_25)",
+            "oklch(65%_0.010_260)",
+            "oklch(17%_0.012_260)",
+            "oklch(28%_0.015_260)"
+          ],
+          "media_count": 10,
+          "density": "dense",
+          "cards": 277,
+          "borders": 165,
+          "radius": "pill",
+          "motion": [
+            "transition",
+            "animate-"
+          ],
+          "hash": "3ef583531ef04701"
+        },
+        "threshold": 0.86,
+        "comparisons": []
+      },
+      "fingerprint": {
+        "version": 1,
+        "hero": "hero-split",
+        "section_order": [
+          "min-h-[90vh]",
+          "interesse",
+          "sobre",
+          "bg-[var(--bg)]",
+          "desejo",
+          "depoimentos",
+          "seo-geo",
+          "faq",
+          "relative",
+          "acao",
+          "contato",
+          "lgpd",
+          "footer"
+        ],
+        "container": "wide",
+        "grids": 174,
+        "typography": {
+          "heading": "UberMove",
+          "body": "UberMoveText",
+          "html_font_sample": "UberMoveText', system-ui, sans-serif"
+        },
+        "palette": [
+          "oklch(12% 0.010 260)",
+          "oklch(17% 0.012 260)",
+          "oklch(93% 0.005 0)",
+          "oklch(65% 0.010 260)",
+          "oklch(28% 0.015 260)",
+          "oklch(55.0% 0.138 25)",
+          "#fff",
+          "#aca",
+          "oklch(12%_0.010_260)",
+          "oklch(93%_0.005_0)",
+          "oklch(55.0%_0.138_25)",
+          "oklch(65%_0.010_260)",
+          "oklch(17%_0.012_260)",
+          "oklch(28%_0.015_260)"
+        ],
+        "media_count": 10,
+        "density": "dense",
+        "cards": 277,
+        "borders": 165,
+        "radius": "pill",
+        "motion": [
+          "transition",
+          "animate-"
+        ],
+        "hash": "3ef583531ef04701"
+      }
+    },
+    "visual_fingerprint": {
+      "version": 1,
+      "hero": "hero-split",
+      "section_order": [
+        "min-h-[90vh]",
+        "interesse",
+        "sobre",
+        "bg-[var(--bg)]",
+        "desejo",
+        "depoimentos",
+        "seo-geo",
+        "faq",
+        "relative",
+        "acao",
+        "contato",
+        "lgpd",
+        "footer"
+      ],
+      "container": "wide",
+      "grids": 174,
+      "typography": {
+        "heading": "UberMove",
+        "body": "UberMoveText",
+        "html_font_sample": "UberMoveText', system-ui, sans-serif"
+      },
+      "palette": [
+        "oklch(12% 0.010 260)",
+        "oklch(17% 0.012 260)",
+        "oklch(93% 0.005 0)",
+        "oklch(65% 0.010 260)",
+        "oklch(28% 0.015 260)",
+        "oklch(55.0% 0.138 25)",
+        "#fff",
+        "#aca",
+        "oklch(12%_0.010_260)",
+        "oklch(93%_0.005_0)",
+        "oklch(55.0%_0.138_25)",
+        "oklch(65%_0.010_260)",
+        "oklch(17%_0.012_260)",
+        "oklch(28%_0.015_260)"
+      ],
+      "media_count": 10,
+      "density": "dense",
+      "cards": 277,
+      "borders": 165,
+      "radius": "pill",
+      "motion": [
+        "transition",
+        "animate-"
+      ],
+      "hash": "3ef583531ef04701"
+    }
+  },
+  "preserved": {
+    "html_unchanged_by_pass_through": true
+  },
+  "changed": {},
+  "lost": {},
+  "notes": []
+}

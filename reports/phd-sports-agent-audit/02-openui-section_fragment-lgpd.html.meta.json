@@ -1,0 +1,12 @@
+{
+  "artifact": "02-openui-section_fragment-lgpd.html",
+  "created_at": "2026-08-14T01:01:24.885813Z",
+  "metadata": {
+    "step": "openui_block",
+    "render_hint": "section_fragment",
+    "labels": [
+      "lgpd"
+    ],
+    "model": "claude-sonnet-5"
+  }
+}

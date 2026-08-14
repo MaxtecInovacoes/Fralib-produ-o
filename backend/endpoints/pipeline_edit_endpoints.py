@@ -1,15 +1,14 @@
 import os
-import sys
-sys.path.append("/root/fralib/backend")
 import re as _re
 import logging
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from pydantic import BaseModel as _BaseModel
-from database import get_db
-from auth import get_current_user
-from sse_endpoints import adicionar_log
+from backend.core.database import get_db
+from backend.endpoints.auth_endpoints import get_current_user
+from backend.endpoints.sse_endpoints import adicionar_log
+from backend.agents.liz import editar_secao, listar_secoes
 
 router = APIRouter(prefix="/api/pipeline", tags=["pipeline"])
 logger = logging.getLogger("uvicorn")

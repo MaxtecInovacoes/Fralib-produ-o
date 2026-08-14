@@ -1,12 +1,9 @@
 """Validador Final — revisa HTML antes do deploy: consistência, SEO,
 acessibilidade, aderência ao PRD. Saída JSON."""
 
-import sys, os
-
-sys.path.insert(0, os.path.dirname(__file__))
-
-from handoff_types import ValidacaoResultado
-from llm_direct import call_claude
+import os
+from backend.agents.handoff_types import ValidacaoResultado
+from backend.agents.llm_direct import call_claude
 
 SYSTEM_PROMPT = """You are the Final Validator.
 

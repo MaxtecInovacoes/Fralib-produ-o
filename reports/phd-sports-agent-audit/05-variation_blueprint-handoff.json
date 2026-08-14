@@ -1,0 +1,208 @@
+{
+  "stage": "variation_blueprint",
+  "created_at": "2026-08-14T00:55:38.504761Z",
+  "received": {
+    "niche_brief": {
+      "task_id": "0c8532da8d97",
+      "source_agent": "agente_nicho",
+      "target_agent": "agente_variacao",
+      "status": "ok",
+      "task_summary": "Briefing gerado para Academia Ph.D Sports Jardim Paulista (academia) em 20.6s",
+      "nicho": "academia",
+      "subnichos": [],
+      "cidade": "Campina Grande do Sul",
+      "publico_alvo": [],
+      "usp": [],
+      "diferenciais": [],
+      "objeções": [],
+      "keywords": [],
+      "tom_de_voz": "profissional",
+      "notas": "",
+      "confianca": "baixa",
+      "dados_ausentes": [
+        "JSON não foi extraído corretamente"
+      ],
+      "competidores": [],
+      "regras": [],
+      "nao_fazer": []
+    },
+    "creative_direction": {
+      "task_id": "0c8532da8d97",
+      "source_agent": "design_director",
+      "target_agent": "agente_variacao",
+      "status": "ok",
+      "task_summary": "Direção criativa para Academia Ph.D Sports Jardim Paulista",
+      "brand_concept": "Academia Ph.D Sports Jardim Paulista",
+      "audience": "",
+      "positioning": "",
+      "commercial_thesis": "Academia jovem e acessível de Campina Grande do Sul com proposta de recomeço — diferente das academias tradicionais da região que usam linguagem pesada e intimidante",
+      "visual_concept": "bold",
+      "visual_keywords": [
+        "bold",
+        "tipografia pesada, alto contraste, comanda atencao",
+        "academia"
+      ],
+      "physical_scene": "Academia Ph.D Sports Jardim Paulista em Campina Grande do Sul: academia com atmosfera bold.",
+      "color_strategy": {
+        "primary": "#0A0A0E",
+        "secondary": "#C8FF00",
+        "accent": "#E87A1A",
+        "tokens_oklch": {
+          "--bg": "oklch(12% 0.010 260)",
+          "--surface": "oklch(17% 0.012 260)",
+          "--fg": "oklch(93% 0.005 0)",
+          "--muted": "oklch(65% 0.010 260)",
+          "--border": "oklch(28% 0.015 260)",
+          "--accent": "oklch(55.0% 0.138 25)"
+        }
+      },
+      "typography_strategy": {
+        "heading": "Archivo Black",
+        "body": "Inter"
+      },
+      "photography_strategy": {
+        "policy": "usar URLs reais do media_plan com papeis por seção",
+        "hero": "imagem dominante coerente com a cena física"
+      },
+      "composition_strategy": "hero, sobre, servicos, depoimentos, faq, contato",
+      "density_strategy": "bold",
+      "rhythm_strategy": "fade-up",
+      "hero_strategy": "hero-center",
+      "cta_strategy": "WhatsApp",
+      "signature_section": "Academia jovem e acessível de Campina Grande do Sul com proposta de recomeço — diferente das academias tradicionais da região que usam linguagem pesada e intimidante",
+      "anti_patterns": [
+        "hero fullscreen genérico com academia ao fundo",
+        "cores azul/branco óbvias de academia",
+        "fotos genéricas de pessoas malhando de stock",
+        "layout de colunas simétrico padrão de site institucional"
+      ],
+      "required_visual_differences": [
+        "estilo Awwwards com tipografia massiva",
+        "Nike Training Club — energia visual",
+        "Gymshark — dark mode agressivo e contraste alto",
+        "Brutalismo digital com toque esportivo"
+      ],
+      "hard_constraints": {
+        "visual_concept": "bold",
+        "palette": {
+          "--bg": "oklch(12% 0.010 260)",
+          "--surface": "oklch(17% 0.012 260)",
+          "--fg": "oklch(93% 0.005 0)",
+          "--muted": "oklch(65% 0.010 260)",
+          "--border": "oklch(28% 0.015 260)",
+          "--accent": "oklch(55.0% 0.138 25)"
+        },
+        "typography": {
+          "heading": "Archivo Black",
+          "body": "Inter"
+        },
+        "hero_strategy": "",
+        "anti_patterns": [
+          "hero fullscreen genérico com academia ao fundo",
+          "cores azul/branco óbvias de academia",
+          "fotos genéricas de pessoas malhando de stock",
+          "layout de colunas simétrico padrão de site institucional"
+        ]
+      },
+      "soft_constraints": {
+        "motion": {
+          "intensidade": "bold",
+          "efeito_principal": "fade-up",
+          "scroll_speed": "fast",
+          "usa_video_hero": false,
+          "usa_parallax": false,
+          "usa_cursor_custom": false
+        },
+        "voice": {
+          "registro": "casual",
+          "personalidade": "jovem",
+          "frases_chave": [
+            "Comece sua transformação hoje",
+            "Seu corpo, sua mente, seu começo",
+            "Sem desculpas. Sem limites. Só resultado."
+          ]
+        },
+        "inspirations": [
+          "estilo Awwwards com tipografia massiva",
+          "Nike Training Club — energia visual",
+          "Gymshark — dark mode agressivo e contraste alto",
+          "Brutalismo digital com toque esportivo"
+        ]
+      }
+    }
+  },
+  "produced": {
+    "task_id": "0c8532da8d97",
+    "source_agent": "agente_variacao",
+    "target_agent": "arquiteto_mestre",
+    "status": "ok",
+    "task_summary": "Variação definida: corporate/hero-split em 10.5s",
+    "narrative_framework": "AIDA",
+    "template_estrutura": "corporate",
+    "template_hero": "hero-split",
+    "template_prova_social": "stats-cards",
+    "template_cta": "cta-central",
+    "template_faq": "faq-accordion",
+    "ordem_das_secoes": [
+      "hero",
+      "interesse",
+      "desejo",
+      "numeros",
+      "servicos",
+      "depoimentos",
+      "seo-geo",
+      "faq",
+      "acao",
+      "lgpd",
+      "footer"
+    ],
+    "required_sections": [
+      "hero",
+      "interesse",
+      "desejo",
+      "acao",
+      "faq",
+      "lgpd",
+      "footer"
+    ],
+    "angulo_de_comunicacao": "A academia de Campina Grande do Sul que se adapta à sua rotina: horário estendido, aula experimental gratuita e estacionamento próprio — três diferenciais que nenhum concorrente local oferece.",
+    "regra_antirrepeticao": "Evitar layout genérico de academia com hero-centralizado + lista de benefícios + CTA padrão. Não repetir a estrutura comum do mercado local (headline genérica 'Academias' + busca de unidade). Destaque os três diferenciais exclusivos (horário estendido, aula experimental grátis, estacionamento) logo no hero, não apenas no meio da página.",
+    "justificativa": "O nicho de academia em Campina Grande do Sul apresenta alta repetição estrutural entre concorrentes, com tom direto e orientado a benefício. A estrutura corporate com hero-split permite destacar visualmente os três diferenciais exclusivos (horário estendido, aula experimental grátis, estacionamento) logo na primeira dobra, diferenciando-se do padrão de mercado. A seção de números (stats-cards) antes dos serviços cria prova social quantificável que gera confiança antes da apresentação da oferta. O FAQ em accordion reduz objeções comuns antes do CTA central, maximizando conversão. A inclusão de seo-geo antes da ação reforça a presença local em Campina Grande do Sul, capturando intenção de busca geolocalizada.",
+    "layout_variants": {},
+    "rhythm": "",
+    "signature_composition": "",
+    "avoid": [
+      "Evitar layout genérico de academia com hero-centralizado + lista de benefícios + CTA padrão. Não repetir a estrutura comum do mercado local (headline genérica 'Academias' + busca de unidade). Destaque os três diferenciais exclusivos (horário estendido, aula experimental grátis, estacionamento) logo no hero, não apenas no meio da página.",
+      "hero fullscreen genérico com academia ao fundo",
+      "cores azul/branco óbvias de academia",
+      "fotos genéricas de pessoas malhando de stock",
+      "layout de colunas simétrico padrão de site institucional"
+    ]
+  },
+  "preserved": {
+    "section_order": [
+      "hero",
+      "interesse",
+      "desejo",
+      "numeros",
+      "servicos",
+      "depoimentos",
+      "seo-geo",
+      "faq",
+      "acao",
+      "lgpd",
+      "footer"
+    ],
+    "hero_type": "hero-split",
+    "avoid": [
+      "Evitar layout genérico de academia com hero-centralizado + lista de benefícios + CTA padrão. Não repetir a estrutura comum do mercado local (headline genérica 'Academias' + busca de unidade). Destaque os três diferenciais exclusivos (horário estendido, aula experimental grátis, estacionamento) logo no hero, não apenas no meio da página.",
+      "hero fullscreen genérico com academia ao fundo",
+      "cores azul/branco óbvias de academia",
+      "fotos genéricas de pessoas malhando de stock",
+      "layout de colunas simétrico padrão de site institucional"
+    ]
+  },
+  "changed": {},
+  "lost": {},
+  "notes": []
+}

@@ -9,13 +9,9 @@ POST /api/falhas/{id}/visto  - marca como visto (ao abrir a lista)
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from sqlalchemy import text
-import sys
-sys.path.append('/root/fralib/backend')
-sys.path.append('/root/fralib/backend/core')
-
-from database import get_db
-from auth import get_current_user
-from rate_limiter import limiter
+from backend.core.database import get_db
+from backend.endpoints.auth_endpoints import get_current_user
+from backend.core.rate_limiter import limiter
 import job_queue
 
 router = APIRouter(prefix='/api/falhas', tags=['falhas'])

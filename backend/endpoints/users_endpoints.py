@@ -6,13 +6,7 @@ from pydantic import BaseModel
 
 import sys
 import os
-
-# Adicionar caminhos para importar os módulos core
-sys.path.append('/root/fralib/backend')
-sys.path.append('/root/fralib/backend/core')
-
-from core.database import get_db
-from core.auth import get_current_user
+import httpx, asyncio, logging
 
 router = APIRouter(prefix='/api/users', tags=['users'])
 

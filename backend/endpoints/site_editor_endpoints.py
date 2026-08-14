@@ -8,17 +8,14 @@ sanitiza contra injecao de script externo, limita tamanho.
 import os
 import re
 import hashlib
-import sys
 import logging
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from pydantic import BaseModel
-sys.path.append('/root/fralib/backend')
-sys.path.append('/root/fralib/backend/core')
-from database import get_db
-from auth import get_current_user
-from sse_endpoints import adicionar_log
+from backend.core.database import get_db
+from backend.endpoints.auth_endpoints import get_current_user
+from backend.endpoints.sse_endpoints import adicionar_log
 
 router = APIRouter(prefix='/api/sites', tags=['site-editor'])
 logger = logging.getLogger('uvicorn')
@@ -166,8 +163,7 @@ async def editar_com_ia(lead_id: str, req: EditarIARequest, db: Session = Depend
         raise HTTPException(400, 'Instrução vazia')
 
     # Consumir 1 crédito
-    sys.path.insert(0, '/root/fralib/backend')
-    from services.credits_manager import consume_tokens
+    from backend.services.credits_manager import consume_tokens
     consume_tokens(db, int(usuario['id']), 1, 'Studio IA: ' + req.prompt[:40])
 
     # Resolver path do HTML
@@ -195,7 +191,6 @@ async def editar_com_ia(lead_id: str, req: EditarIARequest, db: Session = Depend
         body_limpo = body_limpo[:30000]
 
     # Chamar LLM
-    sys.path.insert(0, '/root/fralib/backend/agents')
     from llm_direct import call_claude
 
     system_prompt = (

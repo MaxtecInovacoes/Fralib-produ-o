@@ -1,20 +1,19 @@
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Request
 from typing import Optional, Dict, Any, List
 from dataclasses import dataclass, field
-import logging, sys, os, uuid, re, time, asyncio, hashlib, random, unicodedata
+import logging, os, uuid, re, time, asyncio, hashlib, random, unicodedata
 from datetime import datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor
 
-sys.path.append('/root/fralib/backend')
 _BASE_DIR = os.environ.get("FRALIB_BASE_DIR", "/root/fralib")
 
 from sqlalchemy.orm import Session
 from sqlalchemy import text
-from database import get_db, get_pipeline_state, update_pipeline_state, engine, SessionLocal
-from auth import get_current_user
-from utils.agente1_hunter_v2 import buscar_leads_google_maps
-from sse_endpoints import adicionar_log
-from whatsapp_listener import is_tenant_connected
+from backend.core.database import get_db, get_pipeline_state, update_pipeline_state, engine, SessionLocal
+from backend.endpoints.auth_endpoints import get_current_user
+from backend.utils.agente1_hunter_v2 import buscar_leads_google_maps
+from backend.endpoints.sse_endpoints import adicionar_log
+from backend.whatsapp_listener import is_tenant_connected
 
 import logging as _logging
 
@@ -48,27 +47,27 @@ _sse_handler.setFormatter(_logging.Formatter("%(message)s"))
 # Logs do pipeline chegam ao terminal via adicionar_log() chamado explicitamente
 
 
-from agents.caio import qualificar_lead, LeadInput as CaioInput
-# from agents.alex import processar_imagens, AlexInput  # DESATIVADO
-from agents.unsplash_fetcher import buscar_fotos_unsplash
-from agents.theo import gerar_briefing_estrategico, TheoInput, pesquisar_referencias_jina, decidir_modo_visual
+from backend.agents.caio import qualificar_lead, LeadInput as CaioInput
+# from backend.agents.alex import processar_imagens, AlexInput  # DESATIVADO
+from backend.agents.unsplash_fetcher import buscar_fotos_unsplash
+from backend.agents.theo import gerar_briefing_estrategico, TheoInput, pesquisar_referencias_jina, decidir_modo_visual
 # Theo Managed Agent (feature flag: THEO_AGENT_LOOP=1)
 _THEO_AGENT = os.getenv("THEO_AGENT_LOOP", "0") == "1"
 if _THEO_AGENT:
-    from agents.theo_agent_loop import gerar_briefing_estrategico_agent as _gerar_briefing_agent
-from agents.pipeline_checkpoint import salvar_checkpoint, limpar_checkpoint, gerar_pipeline_id, agente_concluido, get_dados_agente, resumo_checkpoint
-from agents.builder.agent import render_site, BuildResult
-from agents.arquiteto_mestre import gerar_arquiteto_mestre_prd
+    from backend.agents.theo_agent_loop import gerar_briefing_estrategico_agent as _gerar_briefing_agent
+from backend.agents.pipeline_checkpoint import salvar_checkpoint, limpar_checkpoint, gerar_pipeline_id, agente_concluido, get_dados_agente, resumo_checkpoint
+from backend.agents.builder.agent import render_site, BuildResult
+from backend.agents.arquiteto_mestre import gerar_arquiteto_mestre_prd
 # Managed Agent (feature flag: ARQUITETO_AGENT_LOOP=1)
 _ARQUITETO_AGENT = os.getenv("ARQUITETO_AGENT_LOOP", "0") == "1"
 if _ARQUITETO_AGENT:
-    from agents.arquiteto_agent_loop import gerar_arquiteto_mestre_prd_agent as _gerar_prd_agent
-from agents.liz import auditar, editar_secao as liz_editar_secao, listar_secoes as liz_listar_secoes, auditar_secao_estruturado
-from agents.franz import iniciar_contato, FranzInput
+    from backend.agents.arquiteto_agent_loop import gerar_arquiteto_mestre_prd_agent as _gerar_prd_agent
+from backend.agents.liz import auditar, editar_secao as liz_editar_secao, listar_secoes as liz_listar_secoes, auditar_secao_estruturado
+from backend.agents.franz import iniciar_contato, FranzInput
 # LiamOutput removido - usar BuildResult do builder
-from services.credits_manager import verificar_pode_executar, consume_tokens, validar_permissao_pipeline, consumir_credito_diario
-from pipeline_queue_manager import pipeline_queue  # DEPRECATED: mantido apenas para /fila endpoint
-from retry_helper import tentar
+from backend.services.credits_manager import verificar_pode_executar, consume_tokens, validar_permissao_pipeline, consumir_credito_diario
+from backend.pipeline_queue_manager import pipeline_queue  # DEPRECATED: mantido apenas para /fila endpoint
+from backend.core.retry_helper import tentar
 
 from collections import defaultdict as _defaultdict
 _pipeline_calls = _defaultdict(list)

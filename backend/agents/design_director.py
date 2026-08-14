@@ -21,14 +21,11 @@ import hashlib
 import json
 import logging
 import os
-import sys
 import time
 from pathlib import Path
 from typing import Any
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-
-from llm_direct import call_claude
+from backend.agents.llm_direct import call_claude
 from backend.agents.design_context import get_design_context
 
 logger = logging.getLogger(__name__)
@@ -40,12 +37,10 @@ logger = logging.getLogger(__name__)
 CACHE_DIR = Path("/tmp/fralib_design_cache")
 CACHE_TTL_SECONDS = 86400  # 24h
 
-
 def _cache_key(nicho: str, cidade: str, segment: str) -> str:
     """Generate cache key from nicho, cidade and segment."""
     raw = f"{nicho}_{cidade}_{segment}"
     return hashlib.md5(raw.encode()).hexdigest()
-
 
 def _cache_get(nicho: str, cidade: str, segment: str) -> dict[str, Any] | None:
     """Get cached design direction if valid (24h TTL)."""
@@ -62,7 +57,6 @@ def _cache_get(nicho: str, cidade: str, segment: str) -> dict[str, Any] | None:
                 logger.warning(f"[DesignDirector] Cache read failed: {e}")
     return None
 
-
 def _cache_set(nicho: str, cidade: str, segment: str, data: dict[str, Any]) -> None:
     """Save design direction to cache."""
     try:
@@ -73,7 +67,6 @@ def _cache_set(nicho: str, cidade: str, segment: str, data: dict[str, Any]) -> N
         logger.info(f"[DesignDirector] Cache SET: nicho={nicho}, cidade={cidade}")
     except Exception as e:
         logger.warning(f"[DesignDirector] Cache write failed: {e}")
-
 
 SYSTEM_PROMPT = """You are the Design Director at FraLib.
 
@@ -145,7 +138,6 @@ Nicho: academia
 - Motion: bold, scroll-snap em seções
 - Tom: energético, motivacional
 """
-
 
 def gerar_direcao_criativa(
     nicho: str,
@@ -288,7 +280,6 @@ Retorne APENAS o JSON com a direção criativa."""
         # Salvar fallback no cache também
         _cache_set(nicho, cidade, segment, fallback)
         return fallback
-
 
 def _fallback_direction(nicho: str, design_tokens: dict[str, Any] | None = None) -> dict[str, Any]:
     """Direção fallback se LLM falhar.
