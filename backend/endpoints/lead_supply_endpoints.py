@@ -139,7 +139,7 @@ async def tick_lead_production(
     tick_job_id = None
     if should_enqueue_tick:
         tick_job_id = supply.enqueue_production_tick(db, tenant_id, delay_seconds=1, reason="manual")
-    return {
+    body = {
         "ok": True,
         "immediate": immediate,
         "job_id": immediate.get("job_id"),
@@ -154,6 +154,52 @@ async def tick_lead_production(
         "paused": immediate.get("paused"),
         "requeued_terminal_job": immediate.get("requeued_terminal_job"),
     }
+    waiting = immediate.get("waiting")
+    if waiting == "no_approved_lead":
+        counts = db.execute(
+            text(
+                "SELECT status, COUNT(*) FROM lead_inventory "
+                "WHERE tenant_id=:uid GROUP BY status"
+            ),
+            {"uid": tenant_id},
+        ).fetchall()
+        c = {r[0]: int(r[1] or 0) for r in counts}
+        raw = c.get("raw", 0) + c.get("qualifying", 0)
+        err = c.get("error_retry", 0) + c.get("failed", 0)
+        res = c.get("reserved", 0) + c.get("in_production", 0)
+        reasons = []
+        if raw:
+            reasons.append(f"{raw} lead(s) aguardando qualificação do Caio")
+        if err:
+            reasons.append(f"{err} lead(s) bloqueado(s) em erro")
+        if res:
+            reasons.append(f"{res} lead(s) já em produção/reservado")
+        jobs_rows = db.execute(
+            text(
+                "SELECT tipo, status, COUNT(*) FROM jobs "
+                "WHERE tenant_id=:uid AND tipo IN ('lead_production_tick','pipeline_lead','pipeline_main','pipeline_multiplos') "
+                "AND status IN ('pending','running','failed_retriable') "
+                "GROUP BY tipo, status"
+            ),
+            {"uid": tenant_id},
+        ).fetchall()
+        if jobs_rows:
+            reasons.append("pipeline ativa no momento")
+        body["blocked_reason"] = (
+            reasons[0] if len(reasons) == 1
+            else ("; ".join(reasons) if reasons else "estoque aprovado zerado no momento")
+        )
+        body["counts"] = {
+            "raw": c.get("raw", 0),
+            "qualifying": c.get("qualifying", 0),
+            "error_retry": c.get("error_retry", 0),
+            "failed": c.get("failed", 0),
+            "reserved": c.get("reserved", 0),
+            "in_production": c.get("in_production", 0),
+            "approved": c.get("approved", 0),
+            "site_done": c.get("site_done", 0),
+        }
+    return body
 
 
 @router.post("/leads/{inventory_id}/discard")

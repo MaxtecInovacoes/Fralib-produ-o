@@ -3356,6 +3356,21 @@ function _leadSupplyHasJob(jobs, tipoPrefix) {
   }
   return false;
 }
+function _relativeTime(ts) {
+  if (!ts) return '';
+  var d = new Date(ts);
+  if (isNaN(d.getTime())) return '';
+  var diff = Math.floor((Date.now() - d.getTime()) / 1000);
+  if (diff < 0) diff = 0;
+  if (diff < 5) return 'agora';
+  if (diff < 60) return 'há ' + diff + 's';
+  var m = Math.floor(diff / 60);
+  if (m < 60) return 'há ' + m + 'min';
+  var h = Math.floor(m / 60);
+  if (h < 24) return 'há ' + h + 'h' + (m % 60 ? (m % 60) + 'min' : '');
+  var dd = Math.floor(h / 24);
+  return 'há ' + dd + 'd' + (h % 24 ? (h % 24) + 'h' : '');
+}
 
 function _leadSupplyProviderAlertText(alert) {
   if (!alert) return '';
@@ -3532,27 +3547,34 @@ function _renderLeadSupplyDiagnosis(cfg, counts, jobs, events) {
     text = 'Estes leads ja passaram pelo Caio e podem virar site. O contador so baixa quando a producao reserva um deles.';
     next = cfg.producao_pausada ? 'Retome a Producao para puxar o proximo aprovado.' : 'Clique em Gerar site do proximo ou aguarde o controle automatico.';
     actionHtml = cfg.producao_pausada ? '' : _leadSupplyActionButton('Criar pipeline do próximo', 'forcarLeadSupplyTick()', 'success');
+  } else if (errorRetry > 0) {
+    // approved = 0 and there are errors — explicit so tenant knows why nothing new is being produced
+    tone = 'error';
+    title = 'Sem aprovados e ' + errorRetry + ' lead(s) bloqueado(s)';
+    text = 'Nenhum lead aprovado esta disponivel no momento. A pipeline nao cria site novo ate o estoque aprovado subir ou os erros serem reprocessados.';
+    next = errorRetry > 0 ? 'Reprocessar os erros para liberar capacidade e destravar a producao.' : '';
+    actionHtml = _leadSupplyActionButton('Reprocessar ' + errorRetry + ' erros', 'retryLeadSupplyErrors()', 'error');
   } else if (raw > 0 || caioJob) {
     tone = 'info';
-    title = raw + ' lead(s) aguardando qualificacao';
-    text = rawOnly + ' bruto(s) e ' + qualifying + ' em Caio. Ainda nao entram em Aprovados ate passarem no score minimo.';
-    next = 'Aguarde Caio terminar. Se reprovar, o evento vai aparecer no registro.';
+    title = raw + ' lead(s) aguardando qualificacao · nenhum aprovado ainda';
+    text = rawOnly + ' bruto(s) e ' + qualifying + ' em Caio. A pipeline nao nasce enquanto Caio nao aprovar pelo menos um.';
+    next = 'Aguarde Caio terminar. Se reprovar, o evento aparece no registro.';
   } else if (hunterJob) {
     tone = 'info';
-    title = 'Busca em andamento';
-    text = 'Hunter foi enfileirado. O estoque nao sobe na hora: primeiro precisa encontrar lead novo, depois Caio aprovar.';
-    next = 'Aguarde alguns segundos. Se vier zero, a tentativa fica registrada abaixo.';
-  } else if (latestHunter && ((latestHunter.message || '').toLowerCase().indexOf('nao encontrou') >= 0 || (latestHunter.message || '').toLowerCase().indexOf('não encontrou') >= 0)) {
-    tone = 'warning';
-    title = 'Busca rodou, mas nao entrou lead novo';
-    text = 'Isso quer dizer que o Hunter funcionou, porem nao encontrou empresa nova para este nicho/cidade nesta rodada.';
-    next = 'Cidade ou nicho pode estar saturado. Experimente outro nicho ou cidade, ou reduza o score minimo.';
-    actionHtml = _leadSupplyActionButton('Rodar Hunter de novo', 'forcarLeadSupplyRefill()', 'warning');
+    title = 'Busca em andamento · sem aprovados ainda';
+    text = 'Hunter foi enfileirado. Ainda nao ha lead aprovado. A pipeline so nasce apos Hunter encontrar E Caio aprovar.';
+    next = 'Aguarde alguns segundos. O registro mostra a tentativa.';
   } else if (production > 0 || productionJob) {
     tone = 'info';
-    title = 'Producao em andamento';
-    text = 'Um lead aprovado foi reservado ou uma pipeline esta enfileirada. Ele nao aparece mais em Aprovados.';
-    next = 'Acompanhe Linha de Producao e aguarde o status concluido ou erro.';
+    title = 'Producao ocupada · aguardando conclusao';
+    text = 'Um lead esta em pipeline ou reservado. Enquanto isso, approved aparece como zero porque o unico aprovado esta sendo consumido.';
+    next = 'Acompanhe Linha de Producao. Quando o site for concluido, o aprovado aparece automaticamente se houver mais no estoque.';
+  } else if (latestHunter && ((latestHunter.message || '').toLowerCase().indexOf('nao encontrou') >= 0 || (latestHunter.message || '').toLowerCase().indexOf('não encontrou') >= 0)) {
+    tone = 'warning';
+    title = 'Busca rodou, mas nao entrou lead novo · sem aprovados';
+    text = 'Hunter funcionou, mas nao encontrou empresa nova para este nicho/cidade. O estoque aprovado continua zero.';
+    next = 'Cidade ou nicho pode estar saturado. Experimente outro nicho/cidade, ou reduza o score minimo.';
+    actionHtml = _leadSupplyActionButton('Rodar Hunter de novo', 'forcarLeadSupplyRefill()', 'warning');
   } else if (useful > 0) {
     tone = 'success';
     title = 'Estoque saudavel';
@@ -3561,7 +3583,7 @@ function _renderLeadSupplyDiagnosis(cfg, counts, jobs, events) {
   } else {
     tone = 'info';
     title = 'Aguardando primeira busca';
-    text = 'Nenhum lead no estoque ainda. O motor esta pronto, basta rodar a primeira busca.';
+    text = 'Nenhum lead no estoque ainda. O motor esta pronto, basta rodar a primeira busca para comecar o ciclo.';
     next = 'Clique em Ligar esteira para ativar Hunter + produção automática, ou em Buscar leads agora para rodar só a busca.';
     if (gap > 0) actionHtml = _leadSupplyActionButton('Buscar mais leads', 'forcarLeadSupplyRefill()', 'info');
   }
@@ -3801,10 +3823,12 @@ function renderLeadSupply(data) {
   if (eventsEl) {
     var events = _leadSupplyState.events || [];
     eventsEl.innerHTML = events.length ? events.map(function(ev) {
+      var rel = _relativeTime(ev.criado_em);
       var color = ev.level === 'error' ? '#ef4444' : (ev.level === 'warning' ? '#f59e0b' : (ev.level === 'success' ? '#10b981' : '#38bdf8'));
-      return '<div style="display:grid;grid-template-columns:70px 1fr;gap:8px;border:1px solid var(--fl-border);background:rgba(15,23,42,.38);border-radius:7px;padding:7px 9px;font-size:11px;">'
+      return '<div style="display:grid;grid-template-columns:80px 1fr 64px;gap:8px;border:1px solid var(--fl-border);background:rgba(15,23,42,.38);border-radius:7px;padding:7px 9px;font-size:11px;">'
         + '<span style="color:' + color + ';font-family:var(--fl-font-mono);">' + escapeHtml(ev.source || '-') + '</span>'
         + '<span style="color:var(--fl-text-muted);">' + escapeHtml(ev.message || '') + '</span>'
+        + '<span style="color:var(--fl-text-dim);font-family:var(--fl-font-mono);text-align:right;font-size:10px;" title="' + escapeHtml(ev.criado_em || '') + '">' + (rel ? escapeHtml(rel) : '') + '</span>'
         + '</div>';
     }).join('') : '<div style="color:var(--fl-text-dim);font-size:12px;">sem eventos recentes</div>';
   }
@@ -3976,9 +4000,10 @@ async function forcarLeadSupplyTick() {
       return;
     }
     if (data && data.waiting === 'no_approved_lead') {
-      _leadSupplySetAction('info', 'Sem lead aprovado', 'Nao havia lead aprovado disponivel. A producao nao dispara Hunter; Hunter/Caio rodam em paralelo para alimentar o estoque.', 7000);
-      if (window.renderPipelineTopTimeline) window.renderPipelineTopTimeline('waiting', 'Sem lead aprovado agora. Aguardando estoque aprovado pelo Caio.');
-      if (typeof Toast !== 'undefined') Toast.warning('Sem lead aprovado disponível agora.');
+      var blockedReason = data.blocked_reason || 'Nao havia lead aprovado disponivel.';
+      _leadSupplySetAction('info', 'Sem lead aprovado', blockedReason + ' A producao nao dispara Hunter; Hunter/Caio rodam em paralelo para alimentar o estoque.', 7000);
+      if (window.renderPipelineTopTimeline) window.renderPipelineTopTimeline('waiting', 'Sem aprovado: ' + blockedReason);
+      if (typeof Toast !== 'undefined') Toast.warning(blockedReason);
       _refreshLeadSupplySoon();
       return;
     }
