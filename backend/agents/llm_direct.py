@@ -262,10 +262,7 @@ def call_claude(
         model_id = current_map.get(model, current_map["opus"])
 
     if _db_config and _db_provider != "anthropic":
-        try:
-            from services.llm_router import call_llm
-        except Exception:
-            from llm_router import call_llm
+        from agents.llm_router import call_llm
 
         routed_user = user
         if rag_block:
@@ -584,7 +581,7 @@ def call_claude(
             _time.sleep(wait)
 
         except anthropic.APIStatusError as e:
-            if e.status_code in (529, 503, 502):
+            if e.status_code in (529, 522, 503, 502):
                 if _ia and _key_id:
                     _ia.mark_failure(_key_id, f"{e.status_code} overloaded", 30)
                 if base_url is None:
@@ -769,6 +766,14 @@ def call_claude_structured(
             _time.sleep(wait)
 
         except anthropic.APIStatusError as e:
+            if e.status_code in (529, 522, 503, 502):
+                if _attempt < 3:
+                    wait = min(15 * _attempt, 45)
+                    print(
+                        f"[LLM Structured] {e.status_code} provider transitório — aguardando {wait}s (tentativa {_attempt}/3)"
+                    )
+                    _time.sleep(wait)
+                    continue
             if e.status_code in (401, 403):
                 _alert_llm_provider_failure(
                     "anthropic",

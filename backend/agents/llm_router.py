@@ -1,44 +1,43 @@
 """
-LLM Router - Seleção de provider e lógica de fallback.
+LLM Router — Seleção de provider, rate limiting, circuit breaker e adaptadores diretos.
 
-Este módulo fornece rate limiting centralizado e circuit breaker,
-delegando as chamadas reais para o router de services ou providers individuais.
+Canônico desde 2026-08-14. Fusão de:
+- backend/agents/llm_router.py  (rate limiting, circuit breaker, router)
+- backend/services/llm_router.py (adaptadores Anthropic/OpenAI/Groq)
 
 Uso:
+    # Router com rate limiting
     from agents.llm_router import get_router, call_llm, CircuitBreaker
-
-    # Via router
     router = get_router()
     text, usage = router.call("anthropic", "claude-3-opus", system, user)
 
-    # Via função direta
-    from agents.llm_router import call_llm
-    text, usage = call_llm("openai", "gpt-4o", system, user)
-
-    # Com circuit breaker
-    cb = CircuitBreaker(failure_threshold=5, cooldown_seconds=60)
+    # Direto, sem rate limiting (para endpoints próprios)
+    from agents.llm_router import call_llm_direct
+    text, usage = call_llm_direct("openai", "gpt-4o", system, user)
 """
 
+from __future__ import annotations
+
+import json
 import os
 import time as _time
 import threading as _threading
 from typing import Literal
 
 # ══════════════════════════════════════════════════════════════════
-# RATE LIMITING - Global sliding window
+# RATE LIMITING — Global sliding window + tenant throttle
 # ══════════════════════════════════════════════════════════════════
 _TENANT_CALLS_LOCK = _threading.Lock()
 _TENANT_CALLS: dict = {}
 TENANT_MAX_CALLS_PER_MIN = int(os.environ.get("TENANT_MAX_CALLS_PER_MIN", "40"))
 TENANT_THROTTLE_WAIT = 10
 
-# Call spacing
 _LAST_CALL_TIME = 0.0
 _CALL_SPACING_LOCK = _threading.Lock()
 CALL_SPACING_SECONDS = float(os.environ.get("LLM_CALL_SPACING", "1.2"))
 
 
-def _enforce_call_spacing():
+def _enforce_call_spacing() -> None:
     """Garante espaçamento mínimo entre chamadas."""
     global _LAST_CALL_TIME
     with _CALL_SPACING_LOCK:
@@ -46,15 +45,11 @@ def _enforce_call_spacing():
         elapsed = now - _LAST_CALL_TIME
         if elapsed < CALL_SPACING_SECONDS:
             _time.sleep(CALL_SPACING_SECONDS - elapsed)
-        _LAST_CALL_TIME = _time.time()
+        _LAST_CALL_TIME = now
 
 
-def _tenant_rate_check(user_id) -> tuple:
-    """Verifica rate limit por tenant.
-
-    Returns:
-        tuple: (allowed: bool, wait_seconds: int, current_count: int)
-    """
+def _tenant_rate_check(user_id) -> tuple[bool, int, int]:
+    """Verifica rate limit por tenant (janela 60s)."""
     if not user_id:
         return (True, 0, 0)
     now = _time.time()
@@ -72,8 +67,8 @@ def _tenant_rate_check(user_id) -> tuple:
         return (True, 0, count + 1)
 
 
-def _tenant_rate_throttle(user_id: str):
-    """Aplica throttle se necessário."""
+def _tenant_rate_throttle(user_id: str) -> None:
+    """Bloqueia até respeitar rate limit."""
     if not user_id:
         return
     allowed, wait, count = _tenant_rate_check(user_id)
@@ -82,19 +77,18 @@ def _tenant_rate_throttle(user_id: str):
         _time.sleep(min(wait, TENANT_THROTTLE_WAIT))
 
 
-def _tenant_rate_alert(user_id: str, wait_seconds: int, calls_count: int):
-    """Reporta throttle ao ia_manager."""
+def _tenant_rate_alert(user_id: str, wait_seconds: int, calls_count: int) -> None:
+    """Reporta throttle (best-effort)."""
     print(
-        f"[RATE-LIMIT] Tenant {user_id} throttled: {calls_count} calls/min (max={TENANT_MAX_CALLS_PER_MIN}). Aguardando {wait_seconds}s"
+        f"[RATE-LIMIT] Tenant {user_id} throttled: {calls_count} calls/min "
+        f"(max={TENANT_MAX_CALLS_PER_MIN}). Aguardando {wait_seconds}s"
     )
     try:
-        import ia_manager as _ia
+        import ia_manager as _ia  # noqa: F401
         _ia.raise_alert(
-            "rate_limit",
-            None,
-            f"Tenant throttled: {calls_count} chamadas/min excede limite de {TENANT_MAX_CALLS_PER_MIN}. Pipeline aguardou {wait_seconds}s.",
-            lead_id=None,
-            user_id=user_id,
+            "rate_limit", None,
+            f"Tenant throttled: {calls_count} chamadas/min. Pipeline aguardou {wait_seconds}s.",
+            lead_id=None, user_id=user_id,
         )
     except Exception:
         pass
@@ -104,60 +98,49 @@ def _tenant_rate_alert(user_id: str, wait_seconds: int, calls_count: int):
 # CIRCUIT BREAKER
 # ══════════════════════════════════════════════════════════════════
 class CircuitBreaker:
-    """Circuit breaker para evitar chamadas quando providers estão falhando."""
+    """Circuit breaker por provider."""
 
-    def __init__(self, failure_threshold: int = 5, cooldown_seconds: int = 60):
+    def __init__(self, failure_threshold: int = 5, cooldown_seconds: int = 60) -> None:
         self.failure_threshold = failure_threshold
         self.cooldown_seconds = cooldown_seconds
-        self._failures = {}
+        self._failures: dict[str, int] = {}
         self._lock = _threading.Lock()
-        self._last_failure_time = {}
+        self._last_failure_time: dict[str, float] = {}
 
-    def record_failure(self, provider: str):
-        """Registra falha de um provider."""
+    def record_failure(self, provider: str) -> None:
         with self._lock:
             self._failures[provider] = self._failures.get(provider, 0) + 1
             self._last_failure_time[provider] = _time.time()
 
-    def record_success(self, provider: str):
-        """Registra sucesso - reseta contador."""
+    def record_success(self, provider: str) -> None:
         with self._lock:
             self._failures[provider] = 0
 
     def is_open(self, provider: str) -> bool:
-        """Verifica se circuit breaker está aberto para o provider."""
         with self._lock:
             failures = self._failures.get(provider, 0)
             if failures < self.failure_threshold:
                 return False
-
-            last_failure = self._last_failure_time.get(provider, 0)
-            elapsed = _time.time() - last_failure
-
-            return elapsed < self.cooldown_seconds
+            last = self._last_failure_time.get(provider, 0.0)
+            return (_time.time() - last) < self.cooldown_seconds
 
     def get_cooldown_remaining(self, provider: str) -> int:
-        """Retorna segundos restantes de cooldown."""
         with self._lock:
-            last_failure = self._last_failure_time.get(provider, 0)
-            elapsed = _time.time() - last_failure
-            remaining = self.cooldown_seconds - elapsed
-            return max(0, int(remaining))
+            last = self._last_failure_time.get(provider, 0.0)
+            return max(0, int(self.cooldown_seconds - (_time.time() - last)))
 
 
-# Instância global do circuit breaker
 _circuit_breaker = CircuitBreaker()
 
 
 def get_circuit_breaker() -> CircuitBreaker:
-    """Retorna instância global do circuit breaker."""
     return _circuit_breaker
 
 
 # ══════════════════════════════════════════════════════════════════
 # MODEL MAPS
 # ══════════════════════════════════════════════════════════════════
-LITELLM_API_KEY = os.getenv('LITELLM_API_KEY')
+LITELLM_API_KEY = os.getenv("LITELLM_API_KEY")
 
 LITELLM_MODEL_MAP = {
     "opus": os.getenv("PROXY_BUILDER_MODEL", "claude-3-opus-20240229"),
@@ -172,213 +155,292 @@ AIBEE_MODEL_MAP = {
 }
 
 
-def get_model_map() -> dict:
+def get_model_map() -> dict[str, str]:
     """Retorna model map baseado na configuração."""
     return LITELLM_MODEL_MAP if LITELLM_API_KEY else AIBEE_MODEL_MAP
 
 
 def resolve_model_id(alias: str) -> str:
-    """Resolve alias de modelo para ID real.
-
-    Args:
-        alias: Alias do modelo (opus, sonnet, haiku, etc)
-
-    Returns:
-        str: ID do modelo
-    """
-    model_map = get_model_map()
-    return model_map.get(alias, model_map["opus"])
+    """Resolve alias (opus/sonnet/haiku) para ID real."""
+    return get_model_map().get(alias, get_model_map()["opus"])
 
 
 # ══════════════════════════════════════════════════════════════════
 # TIPOS E EXCEÇÕES
 # ══════════════════════════════════════════════════════════════════
-ProviderType = Literal["anthropic", "openai", "groq", "", "litellm"]
+ProviderType = Literal["anthropic", "openai", "groq", "litellm", ""]
 
 
 class LLMRouterError(Exception):
     """Exceção base para erros do router."""
-    pass
 
 
 class AllProvidersFailedError(LLMRouterError):
-    """Todas as tentativas de providers falharam."""
-    pass
+    """Todos os providers tentados falharam."""
+
+
+# ══════════════════════════════════════════════════════════════════
+# ADAPTADORES (movidos de services/llm_router.py em 2026-08-14)
+# ══════════════════════════════════════════════════════════════════
+_BASE_URLS: dict[str, str] = {
+    "anthropic": os.getenv("ANTHROPIC_BASE_URL", "https://api.aibee.cloud"),
+    "openai": "https://api.openai.com/v1",
+    "groq": "https://api.groq.com/openai/v1",
+}
+
+
+def _get_key_for_provider(provider: str) -> tuple[str, str, str | None]:
+    """Busca key via ia_manager (round-robin), cai para .env."""
+    try:
+        import services.ia_manager as _ia  # noqa: F401
+        result = _ia.pick_key(provider)
+        if result:
+            key, base, key_id = result[0], result[1], result[2]
+            base = _BASE_URLS.get(provider, base)
+            return key, base, key_id
+    except Exception as e:
+        print(f"[llm_router] ia_manager falhou para {provider}: {e}")
+
+    env_map = {
+        "anthropic": "ANTHROPIC_API_KEY",
+        "openai": "OPENAI_API_KEY",
+        "groq": "GROQ_API_KEY",
+    }
+    key = os.getenv(env_map.get(provider, ""), "")
+    base = _BASE_URLS.get(provider, "")
+    return key, base, None
+
+
+def _call_anthropic(
+    model_id: str,
+    system: str,
+    user: str,
+    temperature: float,
+    max_tokens: int,
+    *,
+    api_key: str | None = None,
+    base_url: str | None = None,
+) -> tuple[str, dict]:
+    """Adaptador Anthropic (Messages API) com cascade de modelos."""
+    api_key = api_key or os.getenv("ANTHROPIC_API_KEY", "")
+    base_url = base_url or os.getenv("ANTHROPIC_BASE_URL", "https://api.aibee.cloud")
+    if not api_key:
+        raise Exception("Nenhuma API key Anthropic disponível")
+
+    import requests
+
+    _CASCADE_ORDER = [
+        "claude-opus-5", "claude-opus-4-8", "claude-opus-4-7",
+        "claude-sonnet-5", "claude-sonnet-4-6", "claude-sonnet-4-5",
+        "claude-haiku-5", "claude-haiku-4-5",
+    ]
+    _cascade_idx = 0
+    _cascade_model = model_id
+    last_exc: Exception | None = None
+
+    while _cascade_idx < len(_CASCADE_ORDER):
+        _cascade_model = _CASCADE_ORDER[_cascade_idx]
+        try:
+            return _try_anthropic_call(_cascade_model, system, user, temperature, max_tokens, api_key, base_url)
+        except Exception as e:
+            last_exc = e
+            status = getattr(getattr(e, "response", None), "status_code", 0)
+            if status in (529, 522, 503, 502, 429):
+                _cascade_idx += 1
+                wait = min(5 * _cascade_idx, 15)
+                print(f"[llm_router] {status} Cascade: tentando {_cascade_model} → próxima (idx {_cascade_idx})")
+                _time.sleep(wait)
+                continue
+            if status in (401, 403):
+                raise Exception(f"Auth error {status}") from None
+            _cascade_idx += 1
+            _time.sleep(2)
+            continue
+
+    raise Exception(f"Todos os modelos da cascata falharam. Último erro: {last_exc}") from last_exc
+
+
+def _try_anthropic_call(
+    model_id: str, system: str, user: str, temperature: float, max_tokens: int,
+    api_key: str, base_url: str,
+) -> tuple[str, dict]:
+    """Chamada única ao Messages API."""
+    import requests
+
+    url = f"{base_url}/v1/messages"
+    headers = {
+        "x-api-key": api_key,
+        "anthropic-version": "2023-06-01",
+        "Content-Type": "application/json",
+    }
+    payload = {
+        "model": model_id,
+        "max_tokens": max_tokens,
+        "temperature": temperature,
+        "system": system,
+        "messages": [{"role": "user", "content": user}],
+    }
+    r = requests.post(url, headers=headers, json=payload, timeout=300)
+    r.raise_for_status()
+    data = r.json()
+
+    text_out = ""
+    for block in data.get("content", []):
+        if block.get("type") == "text":
+            text_out = block["text"]
+            break
+
+    usage = data.get("usage", {})
+    return text_out, {
+        "input_tokens": usage.get("input_tokens", 0),
+        "output_tokens": usage.get("output_tokens", 0),
+    }
+
+
+def _call_openai(
+    model_id: str,
+    system: str,
+    user: str,
+    temperature: float,
+    max_tokens: int,
+    *,
+    provider: str = "openai",
+    api_key: str | None = None,
+    base_url: str | None = None,
+) -> tuple[str, dict]:
+    """Adaptador OpenAI-compatible (OpenAI, Groq, LiteLLM)."""
+    api_key, base_url, _ = _get_key_for_provider(provider)
+    if not api_key:
+        raise Exception(f"Nenhuma API key {provider} disponível")
+
+    import requests
+
+    url = f"{base_url}/chat/completions"
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
+    payload = {
+        "model": model_id,
+        "max_tokens": max_tokens,
+        "temperature": temperature,
+        "messages": [
+            {"role": "system", "content": system},
+            {"role": "user", "content": user},
+        ],
+    }
+    r = requests.post(url, headers=headers, json=payload, timeout=300)
+    r.raise_for_status()
+    data = r.json()
+
+    text_out = data.get("choices", [{}])[0].get("message", {}).get("content", "")
+    usage = data.get("usage", {})
+    return text_out, {
+        "input_tokens": usage.get("prompt_tokens", 0),
+        "output_tokens": usage.get("completion_tokens", 0),
+    }
+
+
+def _call_groq(model_id: str, system: str, user: str, temperature: float, max_tokens: int) -> tuple[str, dict]:
+    """Groq é OpenAI-compatible."""
+    return _call_openai(model_id, system, user, temperature, max_tokens, provider="groq")
 
 
 # ══════════════════════════════════════════════════════════════════
 # ROUTER COM FALLBACK
 # ══════════════════════════════════════════════════════════════════
 class LLMRouter:
-    """Router com rate limiting e circuit breaker.
+    """Router com rate limiting + circuit breaker + fallback."""
 
-    Delega chamadas para services.llm_router que tem adaptadores
-    para todos os providers suportados.
-    """
-
-    def __init__(self):
-        self._services_router = None
-
-    @property
-    def services_router(self):
-        """Lazy-load do router de services."""
-        if self._services_router is None:
-            try:
-                from services.llm_router import call_llm as _call_llm
-                self._services_router = _call_llm
-            except ImportError:
-                from backend.services.llm_router import call_llm as _call_llm
-                self._services_router = _call_llm
-        return self._services_router
+    def __init__(self) -> None:
+        self._last_error: Exception | None = None
 
     def call(
         self,
-ProviderType = Literal["anthropic", "openai", "groq", "", "litellm"]
+        provider: str,
         model_id: str,
         system: str,
         user: str,
         temperature: float = 0.7,
         max_tokens: int = 4000,
-ProviderType = Literal["anthropic", "openai", "groq", "", "litellm"]
-        user_id: str = None,
-        agent_name: str = None,
-        **kwargs
+        fallback_providers: list[str] | None = None,
+        user_id: str | None = None,
+        agent_name: str | None = None,
+        **kwargs,
     ) -> tuple[str, dict]:
-        """Chama LLM com provider especificado e fallback automático.
-
-        Args:
-            provider: Provider primário
-            model_id: ID do modelo
-            system: Prompt de sistema
-            user: Mensagem do usuário
-            temperature: Temperatura
-            max_tokens: Máximo de tokens
-            fallback_providers: Lista de providers para fallback
-            user_id: ID do tenant para rate limiting
-            agent_name: Nome do agente para logging
-
-        Returns:
-            tuple: (texto_resposta, usage_dict)
-        """
         _enforce_call_spacing()
 
-        # Rate limiting
         if user_id:
             allowed, wait, count = _tenant_rate_check(user_id)
             if not allowed:
                 _tenant_rate_alert(user_id, wait, count)
                 _time.sleep(min(wait, TENANT_THROTTLE_WAIT))
 
-        # Determina providers a tentar
         providers_to_try = [provider]
         if fallback_providers:
             providers_to_try.extend(fallback_providers)
-
-        # Remove duplicatas mantendo ordem
-        seen = set()
+        seen: set[str] = set()
         providers_to_try = [p for p in providers_to_try if not (p in seen or seen.add(p))]
 
-        last_error = None
-
+        last_error: Exception | None = None
         for try_provider in providers_to_try:
-            # Check circuit breaker
             if _circuit_breaker.is_open(try_provider):
                 remaining = _circuit_breaker.get_cooldown_remaining(try_provider)
                 print(f"[Router] Circuit breaker aberto para {try_provider}, aguardando {remaining}s")
                 continue
-
             try:
-                result = self._call_provider(
-                    try_provider,
-                    model_id,
-                    system,
-                    user,
-                    temperature,
-                    max_tokens,
-                    **kwargs
-                )
+                result = self._call_provider(try_provider, model_id, system, user, temperature, max_tokens, **kwargs)
                 _circuit_breaker.record_success(try_provider)
                 return result
-
             except Exception as e:
                 last_error = e
                 _circuit_breaker.record_failure(try_provider)
-                error_msg = str(e)
-
-                print(f"[Router] Provider {try_provider} falhou: {error_msg[:100]}")
-
-                # Trata rate limit
-                if "429" in error_msg or "rate limit" in error_msg.lower():
-                    print("[Router] Rate limit detectado, tentando próximo provider")
+                print(f"[Router] Provider {try_provider} falhou: {str(e)[:100]}")
+                error_text = str(e).lower()
+                if "429" in error_text or "rate limit" in error_text.lower():
+                    print("[Router] Rate limit, tentando próximo provider")
                     _time.sleep(5)
+                elif any(marker in error_text for marker in ("522", "provider_error", "overloaded", "temporariamente")):
+                    print("[Router] Falha transitória de provider, tentando próximo provider")
+                    _time.sleep(3)
                 continue
 
-        raise AllProvidersFailedError(
-            f"Todos os providers falharam. Último erro: {last_error}"
-        )
+        raise AllProvidersFailedError(f"Todos os providers falharam. Último erro: {last_error}") from last_error
 
-    def _call_provider(
-        self,
-        provider: str,
-        model_id: str,
-        system: str,
-        user: str,
-        temperature: float,
-        max_tokens: int,
-        **kwargs
-    ) -> tuple[str, dict]:
-        """Executa chamada no provider especificado via services router."""
-        return self.services_router(
-            provider=provider,
-            model_id=model_id,
-            system=system,
-            user=user,
-            temperature=temperature,
-            max_tokens=max_tokens,
-        )
+    def _call_provider(self, provider: str, model_id: str, system: str, user: str,
+                       temperature: float, max_tokens: int, **kwargs) -> tuple[str, dict]:
+        p = provider.lower()
+        if p == "anthropic":
+            return _call_anthropic(model_id, system, user, temperature, max_tokens)
+        if p in ("openai", "litellm", "groq"):
+            return _call_openai(model_id, system, user, temperature, max_tokens, provider=p)
+        return _call_openai(model_id, system, user, temperature, max_tokens, provider=p, **kwargs)
 
 
-# Instância singleton
-_router_instance = None
+_router_instance: LLMRouter | None = None
+
 
 def get_router() -> LLMRouter:
-    """Retorna instância singleton do router."""
+    """Singleton do router."""
     global _router_instance
     if _router_instance is None:
         _router_instance = LLMRouter()
     return _router_instance
 
 
-# ══════════════════════════════════════════════════════════════════
-# FUNÇÃO DE CONVENIÊNCIA
-# ══════════════════════════════════════════════════════════════════
 def call_llm(
-ProviderType = Literal["anthropic", "openai", "groq", "", "litellm"]
+    provider: str,
     model_id: str,
     system: str,
     user: str,
     temperature: float = 0.7,
     max_tokens: int = 4000,
-ProviderType = Literal["anthropic", "openai", "groq", "", "litellm"]
-    user_id: str = None,
-    **kwargs
+    fallback_providers: list[str] | None = None,
+    user_id: str | None = None,
+    agent_name: str | None = None,
+    **kwargs,
 ) -> tuple[str, dict]:
-    """Função de conveniência para chamada LLM via router.
-
-    Args:
-        provider: Provider primário (anthropic, openai, litellm, groq, openrouter)
-        model_id: ID do modelo
-        system: Prompt de sistema
-        user: Mensagem do usuário
-        temperature: Temperatura
-        max_tokens: Máximo de tokens
-        fallback_providers: Providers para fallback em caso de falha
-        user_id: ID do tenant para rate limiting
-
-    Returns:
-        tuple: (texto_resposta, usage_dict)
-        usage_dict: {"input_tokens": int, "output_tokens": int}
-    """
+    """Função de conveniência. Retorna (texto, usage_dict)."""
     return get_router().call(
         provider=provider,
         model_id=model_id,
@@ -388,5 +450,23 @@ ProviderType = Literal["anthropic", "openai", "groq", "", "litellm"]
         max_tokens=max_tokens,
         fallback_providers=fallback_providers,
         user_id=user_id,
-        **kwargs
+        agent_name=agent_name,
+        **kwargs,
     )
+
+
+def call_llm_direct(
+    provider: str,
+    model_id: str,
+    system: str,
+    user: str,
+    temperature: float = 0.7,
+    max_tokens: int = 4000,
+) -> tuple[str, dict]:
+    """Chamada LLM direta (sem rate limiting). Para endpoints próprios."""
+    p = provider.lower()
+    if p == "anthropic":
+        return _call_anthropic(model_id, system, user, temperature, max_tokens)
+    if p in ("openai", "litellm", "groq"):
+        return _call_openai(model_id, system, user, temperature, max_tokens, provider=p)
+    return _call_openai(model_id, system, user, temperature, max_tokens, provider=p)
