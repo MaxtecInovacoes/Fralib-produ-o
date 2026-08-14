@@ -137,6 +137,7 @@ def test_ensure_minimum_footer_adds_contact_and_lgpd_actions():
 
     assert "Falar no WhatsApp" in processed
     assert "Ver política e consentimento" in processed
+    assert 'href="#footer-privacy-notice"' in processed
     assert "Rua Exemplo, 123" in processed
     assert "Campina Grande do Sul" in processed
 
@@ -156,3 +157,4 @@ def test_repair_builder_publication_contract_uses_theme_aware_lgpd_banner(monkey
     assert "data-lgpd-accept" in processed
     assert "var(--surface,#111827)" in processed
     assert "var(--accent,#e85d4a)" in processed
+    assert "Aceitar" in processed

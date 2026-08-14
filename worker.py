@@ -6,6 +6,7 @@ Loop: claim_next() → run_pipeline() → mark done/failed.
 import asyncio
 import logging
 import os
+import re
 import signal
 import sys
 import time
@@ -76,6 +77,40 @@ def _state_context_value(payload: dict, field: str) -> str:
         return direct
     lead_data = normalized.get("lead_data") or {}
     return str(lead_data.get(field) or "").strip()
+
+
+def _infer_segment_from_name(nome: str) -> str:
+    value = (nome or "").strip().lower()
+    keywords = (
+        ("academia", "academia"),
+        ("gym", "academia"),
+        ("fitness", "academia"),
+        ("crossfit", "academia"),
+        ("barbearia", "barbearia"),
+        ("advocacia", "advocacia"),
+        ("advogado", "advocacia"),
+        ("nutri", "nutricionista"),
+        ("odont", "dentista"),
+        ("clínica", "clinica"),
+        ("clinica", "clinica"),
+    )
+    for token, segment in keywords:
+        if token in value:
+            return segment
+    return ""
+
+
+def _infer_city_from_address(address: str) -> str:
+    text = str(address or "").replace("—", "-")
+    patterns = [
+        r",\s*([A-ZÁÉÍÓÚÂÊÔÃÕÇ][A-Za-zÁÉÍÓÚÂÊÔÃÕÇáéíóúâêôãõç\s]+)\s*-\s*[A-Z]{2}\b",
+        r"\b([A-ZÁÉÍÓÚÂÊÔÃÕÇ][A-Za-zÁÉÍÓÚÂÊÔÃÕÇáéíóúâêôãõç\s]+)\s*-\s*[A-Z]{2}\b",
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, text)
+        if match:
+            return match.group(1).strip()
+    return ""
 
 
 def _save_pipeline_resume_checkpoint(final_state) -> None:
@@ -173,6 +208,10 @@ def _run_pipeline_job(db, job) -> bool:
                 "reviews": _dados.get("reviews", []),
             }
             payload["lead_data"] = {**hydrated, **{k: v for k, v in existing_lead_data.items() if v not in (None, "", [], {})}}
+            if not payload["lead_data"].get("segmento"):
+                payload["lead_data"]["segmento"] = _infer_segment_from_name(payload["lead_data"].get("nome", ""))
+            if not payload["lead_data"].get("cidade"):
+                payload["lead_data"]["cidade"] = _infer_city_from_address(payload["lead_data"].get("endereco", ""))
     # Se não tem lead no BD mas tem segmento+cidade, busca via Hunter
         if not payload.get("lead_data") and payload.get("segmento") and payload.get("cidade"):
             from backend.services.lead_supply_storage import get_or_create_config
@@ -223,6 +262,10 @@ def _run_pipeline_job(db, job) -> bool:
                                 "descricao": _dados.get("descricao", ""),
                                 "reviews": _dados.get("reviews", []),
                             }
+                            if not payload["lead_data"].get("segmento"):
+                                payload["lead_data"]["segmento"] = _infer_segment_from_name(payload["lead_data"].get("nome", ""))
+                            if not payload["lead_data"].get("cidade"):
+                                payload["lead_data"]["cidade"] = _infer_city_from_address(payload["lead_data"].get("endereco", ""))
                             payload["lead_id"] = str(inv_id)
                             logger.info("Hunter fallback: lead encontrado (%s)", lead_row[0])
                         else:

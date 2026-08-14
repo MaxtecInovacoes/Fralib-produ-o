@@ -83,7 +83,7 @@ def _normalize_blueprint(blueprint: dict, state: PipelineState) -> dict:
     order = _enforce_aida_order(order, state)
     blueprint["ordem_das_secoes"] = list(dict.fromkeys(order))
     blueprint["narrative_framework"] = "AIDA"
-    blueprint["required_sections"] = ["hero", "interesse", "desejo", "acao", "faq", "lgpd", "footer"]
+    blueprint["required_sections"] = ["hero", "interesse", "desejo", "acao", "faq", "footer"]
     blueprint.setdefault("layout_variants", {})
     blueprint.setdefault("rhythm", blueprint.get("template_estrutura", ""))
     blueprint.setdefault("signature_composition", blueprint.get("angulo_de_comunicacao", ""))
@@ -129,7 +129,7 @@ def _enforce_aida_order(order: list[str], state: PipelineState) -> list[str]:
     if not any(item in normalized for item in ("seo-geo", "localizacao", "location_contact")):
         required_middle.append("seo-geo")
 
-    tail = ["faq", "acao", "lgpd", "footer"]
+    tail = ["faq", "acao", "footer"]
     body = [item for item in normalized if item not in {"hero", *required_middle, *tail, "contato", "contact", "cta-final"}]
     result = ["hero"]
     for item in required_middle + body + tail:

@@ -360,16 +360,20 @@ def _ensure_internal_publication_contract(html: str, prd) -> str:
     if "<footer" not in cleaned.lower():
         footer = (
             f'<footer id="footer" class="px-6 py-12 bg-neutral-950 text-white">'
-            f'<p>{name}</p><p>{address or city}</p><p>{phone}</p>'
-            '<nav aria-label="Links legais"><a href="/politica-de-privacidade">Privacidade</a> '
-            '<a href="/termos-de-uso">Termos de uso</a></nav></footer>'
+            f'<div class="mx-auto max-w-6xl grid gap-6 md:grid-cols-3">'
+            f'<div><p class="text-lg font-semibold">{name}</p><p>{address or city}</p><p>{phone}</p></div>'
+            '<div><p class="font-semibold">Contato e suporte</p><p>Atendimento oficial pelos canais desta página.</p></div>'
+            '<div><p class="font-semibold">Privacidade</p><p id="footer-privacy-notice">Dados usados apenas para atendimento, retorno comercial e continuidade da experiência.</p></div>'
+            '</div></footer>'
         )
-        cleaned = re.sub(r"(?is)</main>", footer + "\n</main>", cleaned, count=1)
+        cleaned = re.sub(r"(?is)</body>", footer + "\n</body>", cleaned, count=1)
+        if "<footer" not in cleaned.lower():
+            cleaned += footer
     if "data-lgpd-banner" not in cleaned.lower():
         banner = (
-            '<div data-lgpd-banner class="fixed bottom-4 left-4 right-4 z-50 bg-neutral-950 text-white p-4">'
-            '<span>Usamos dados apenas para atendimento e melhoria da experiência.</span>'
-            '<button type="button" onclick="this.parentElement.remove()">Aceitar</button></div>'
+            '<div data-lgpd-banner class="fixed bottom-4 left-4 right-4 z-50 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/10 bg-neutral-950/95 px-4 py-3 text-white shadow-2xl backdrop-blur">'
+            '<span class="min-w-0 flex-1 text-sm leading-6">Usamos dados apenas para atendimento e melhoria da experiência.</span>'
+            '<button type="button" data-lgpd-accept class="shrink-0 rounded-full px-4 py-2 font-semibold" style="background:var(--accent,#e85d4a);color:var(--bg,#0b0f19)">Aceitar</button></div>'
         )
         cleaned = re.sub(r"(?is)</body>", banner + "\n</body>", cleaned, count=1)
     return cleaned

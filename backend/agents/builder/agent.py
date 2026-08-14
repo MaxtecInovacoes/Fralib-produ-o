@@ -32,7 +32,7 @@ _BLOCOS_HTML = [
     ["interesse", "sobre", "trust_bar"],
     ["servicos", "desejo", "depoimentos", "prova-social"],
     ["seo-geo", "localizacao", "faq"],
-    ["acao", "contato", "lgpd", "footer"],
+    ["acao", "contato", "footer"],
 ]
 
 _SECTION_BLOCKS = [
@@ -47,7 +47,6 @@ _SECTION_BLOCKS = [
     ["localizacao"],
     ["acao"],
     ["contato"],
-    ["lgpd"],
     ["footer"],
 ]
 
@@ -220,10 +219,6 @@ def _section_minimum_requirements(section_name: str, has_reviews: bool, has_faq:
         "contato": {
             "must_have": ["exact phone", "contact CTA", "service area or address"],
             "minimum_content_blocks": 3,
-        },
-        "lgpd": {
-            "must_have": ["privacy/data notice", "consent clarity"],
-            "minimum_content_blocks": 2,
         },
         "footer": {
             "must_have": ["brand close", "exact contact data", "city or address", "legal/support links"],
@@ -630,7 +625,7 @@ def _prd_to_spec(prd) -> dict:
             "narrative_framework": (variation_blueprint or {}).get("narrative_framework", "AIDA"),
             "required_sections": (variation_blueprint or {}).get(
                 "required_sections",
-                ["hero", "interesse", "desejo", "acao", "faq", "lgpd", "footer"],
+                ["hero", "interesse", "desejo", "acao", "faq", "footer"],
             ),
         },
     }

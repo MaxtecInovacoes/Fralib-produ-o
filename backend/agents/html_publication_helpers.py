@@ -467,7 +467,6 @@ def ensure_minimum_footer(html: str, prd) -> str:
     whatsapp = _get(prd, "whatsapp", "telefone_whatsapp", default=phone)
     whatsapp_digits = re.sub(r"\D+", "", str(whatsapp or ""))
     whatsapp_href = f"https://wa.me/{whatsapp_digits}" if whatsapp_digits else "#contato"
-    lgpd_anchor = "#lgpd" if "#lgpd" in low or 'id="lgpd"' in low or "section:lgpd" in low else "#contato"
     footer = (
         '\n<!-- SECTION:footer -->\n'
         '<footer class="fralib-footer" data-reveal '
@@ -492,9 +491,12 @@ def ensure_minimum_footer(html: str, prd) -> str:
         '<strong style="display:block;margin-bottom:8px">Privacidade</strong>'
         '<p style="opacity:.86;line-height:1.6">Dados de contato usados apenas para atendimento, '
         'segurança e continuidade da experiência.</p>'
-        f'<a href="{lgpd_anchor}" style="display:inline-flex;align-items:center;justify-content:center;'
+        '<a href="#footer-privacy-notice" style="display:inline-flex;align-items:center;justify-content:center;'
         'margin-top:8px;padding:10px 14px;border-radius:999px;border:1px solid var(--border,rgba(255,255,255,.14));'
         'color:var(--fg,#f3f4f6);font-weight:700">Ver política e consentimento</a>'
+        '<p id="footer-privacy-notice" style="margin-top:10px;opacity:.78;line-height:1.6">'
+        'Ao continuar, você consente com o uso dos seus dados apenas para atendimento e retorno comercial.'
+        '</p>'
         '</div>'
         '</div>'
         '</footer>\n'
