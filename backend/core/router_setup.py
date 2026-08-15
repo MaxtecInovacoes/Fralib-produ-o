@@ -14,7 +14,8 @@ import os
 # on sys.path when the app is launched via `uvicorn server:app`.
 _REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 _BACKEND_DIR = os.path.join(_REPO_ROOT, "backend")
-for _p in (_BACKEND_DIR, _REPO_ROOT):
+_ENDPOINTS_DIR = os.path.join(_BACKEND_DIR, "endpoints")
+for _p in (_BACKEND_DIR, _ENDPOINTS_DIR, _REPO_ROOT):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
