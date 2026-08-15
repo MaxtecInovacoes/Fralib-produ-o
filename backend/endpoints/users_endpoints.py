@@ -4,6 +4,7 @@ from sqlalchemy import text
 from typing import Optional, Dict, Any
 from pydantic import BaseModel
 from database import get_db
+from auth import get_current_user
 
 import os
 import httpx, asyncio, logging
