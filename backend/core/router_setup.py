@@ -5,7 +5,19 @@ This module replaces the ~30 individual import + app.include_router()
 pairs that used to live in server.py, reducing boilerplate and keeping
 routing in one place.
 """
-from fastapi import APIRouter
+import sys
+import os
+
+# Ensure legacy absolute-import endpoints resolve both locally and on VPS.
+# Some endpoint modules (auth_endpoints, etc.) use bare imports like
+# `from database import get_db` that require `.../backend` and the repo root
+# on sys.path when the app is launched via `uvicorn server:app`.
+_REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+_BACKEND_DIR = os.path.join(_REPO_ROOT, "backend")
+for _p in (_BACKEND_DIR, _REPO_ROOT):
+    if _p not in sys.path:
+        sys.path.insert(0, _p)
+
 
 
 def register_routers(app) -> None:
