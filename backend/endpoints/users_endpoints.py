@@ -3,8 +3,8 @@ from sqlalchemy.orm import Session
 from sqlalchemy import text
 from typing import Optional, Dict, Any
 from pydantic import BaseModel
+from database import get_db
 
-import sys
 import os
 import httpx, asyncio, logging
 
@@ -20,7 +20,6 @@ async def _check_whatsapp_connected(user_id: int) -> bool:
     listando todas as sessoes. Timeout maior (8s) + 1 retry para evitar
     falso 'desconectado' quando o meowhats demora a responder.
     """
-    import httpx, asyncio, logging
     _log = logging.getLogger(__name__)
 
     meowhats_url = os.getenv("MEOWHATS_URL", "http://localhost:3001")
@@ -247,7 +246,6 @@ async def remover_anthropic_key(db: Session = Depends(get_db), user: dict = Depe
                {'id': user['id']})
     db.commit()
     try:
-        from agents.llm_direct import invalidar_byok_cache
         invalidar_byok_cache(user['id'])
     except Exception:
         pass
@@ -270,7 +268,6 @@ async def get_sdr_horario(db: Session = Depends(get_db), user: dict = Depends(ge
         "SELECT sdr_horario_config FROM users WHERE id=:id"
     ), {"id": user["id"]}).fetchone()
     if row and row[0]:
-        import json
         config = json.loads(row[0]) if isinstance(row[0], str) else row[0]
         return config
     # Default
