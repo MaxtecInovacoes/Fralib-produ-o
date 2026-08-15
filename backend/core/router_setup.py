@@ -6,16 +6,21 @@ pairs that used to live in server.py, reducing boilerplate and keeping
 routing in one place.
 """
 import sys
-import os
+from pathlib import Path
 
-# Ensure legacy absolute-import endpoints resolve both locally and on VPS.
-# Some endpoint modules (auth_endpoints, etc.) use bare imports like
-# `from database import get_db` that require `.../backend` and the repo root
-# on sys.path when the app is launched via `uvicorn server:app`.
-_REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-_BACKEND_DIR = os.path.join(_REPO_ROOT, "backend")
-_ENDPOINTS_DIR = os.path.join(_BACKEND_DIR, "endpoints")
-for _p in (_BACKEND_DIR, _ENDPOINTS_DIR, _REPO_ROOT):
+# Raiz do projeto (/opt/fralib ou C:\fralib)
+_ROOT = Path(__file__).resolve()
+if "backend" in str(_ROOT):
+    _ROOT = _ROOT.parent.parent
+else:
+    _ROOT = _ROOT.parent
+
+ROOT_DIR = str(_ROOT)
+BACKEND_DIR = str(_ROOT / "backend")
+ENDPOINTS_DIR = str(_ROOT / "backend" / "endpoints")
+CORE_DIR = str(_ROOT / "backend" / "core")
+
+for _p in [ROOT_DIR, BACKEND_DIR, ENDPOINTS_DIR, CORE_DIR]:
     if _p not in sys.path:
         sys.path.insert(0, _p)
 

@@ -18,37 +18,34 @@ from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 import sys
-import os
+from pathlib import Path
 
-# Detectar ambiente: Docker (/app) vs systemd VPS (/root/fralib) vs legacy (/opt/fralib)
-# Também suporta desenvolvimento local (Windows/Mac) com CWD-based detection
-_BACKEND_ROOT = None
-_FRONTEND_ROOT = None
-for candidate in ['/app', '/opt/fralib', '/root/fralib', os.getcwd(), os.path.dirname(os.path.abspath(__file__))]:
-    backend_dir = os.path.join(candidate, 'backend')
-    if os.path.exists(backend_dir) and os.path.exists(os.path.join(backend_dir, 'core', 'database.py')):
-        _BACKEND_ROOT = backend_dir
-        _FRONTEND_ROOT = candidate
-        break
+# Raiz do projeto — detecta Docker (/app), systemd VPS (/root/fralib) e dev local
+_this = Path(__file__).resolve()
+ROOT_DIR = str(_this.parent)
+BACKEND_DIR = str(_this.parent / "backend")
+CORE_DIR = str(_this.parent / "backend" / "core")
+ENDPOINTS_DIR = str(_this.parent / "backend" / "endpoints")
 
-if not _BACKEND_ROOT:
-    raise RuntimeError(
-        "Nenhum backend encontrado com core/database.py. "
-        "Verifique /app/backend, /root/fralib/backend ou /opt/fralib/backend"
-    )
+# Fallback: se não achou backend ao lado do server.py, tenta candidatos comuns
+if not (Path(BACKEND_DIR) / "core" / "database.py").exists():
+    for candidate in ['/app', '/opt/fralib', '/root/fralib']:
+        if (Path(candidate) / 'backend' / 'core' / 'database.py').exists():
+            ROOT_DIR = candidate
+            BACKEND_DIR = str(Path(candidate) / 'backend')
+            CORE_DIR = str(Path(candidate) / 'backend' / 'core')
+            ENDPOINTS_DIR = str(Path(candidate) / 'backend' / 'endpoints')
+            break
 
-# sys.path: insere APENAS a raiz do projeto e o backend.
-# Qualquer import deve usar caminho absoluto (ex: from backend.core.database import X).
-# Os inserts de subdiretórios (/core, /endpoints, /agents etc.) foram removidos
-# para forçar imports absolutos — evita hacks de VPS como /root/fralib/backend.
-sys.path.insert(0, _FRONTEND_ROOT)          # ex: /root/fralib ou /app
-sys.path.insert(0, _BACKEND_ROOT)           # ex: /root/fralib/backend
+for _p in [ROOT_DIR, BACKEND_DIR, ENDPOINTS_DIR, CORE_DIR]:
+    if _p not in sys.path:
+        sys.path.insert(0, _p)
 
 # Aplicar migrations Alembic — fonte de verdade do schema
 from alembic.config import Config as _AlembicConfig
 from alembic import command as _alembic_command
-# alembic.ini está em _FRONTEND_ROOT (raiz do projeto)
-_ALEMBIC_INI = os.path.join(_FRONTEND_ROOT, "alembic.ini")
+# alembic.ini está em ROOT_DIR (raiz do projeto)
+_ALEMBIC_INI = os.path.join(ROOT_DIR, "alembic.ini")
 try:
     _alembic_command.upgrade(_AlembicConfig(_ALEMBIC_INI), "head")
     print("[Startup] Alembic migrations aplicadas")
@@ -246,9 +243,9 @@ async def _attach_user_id_for_rate_limit(request, call_next):
         pass
     return await call_next(request)
 
-app.mount("/static", StaticFiles(directory=os.path.join(_FRONTEND_ROOT, "frontend/static")), name="static")
-app.mount("/css", StaticFiles(directory=os.path.join(_FRONTEND_ROOT, "frontend/css")), name="css")
-app.mount("/js", StaticFiles(directory=os.path.join(_FRONTEND_ROOT, "frontend/js")), name="js")
+app.mount("/static", StaticFiles(directory=os.path.join(ROOT_DIR, "frontend/static")), name="static")
+app.mount("/css", StaticFiles(directory=os.path.join(ROOT_DIR, "frontend/css")), name="css")
+app.mount("/js", StaticFiles(directory=os.path.join(ROOT_DIR, "frontend/js")), name="js")
 
 # CORS — metodos e headers explicitos em vez de wildcard
 app.add_middleware(
