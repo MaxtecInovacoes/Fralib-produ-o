@@ -16,7 +16,6 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 import sys
 import os
@@ -66,7 +65,7 @@ from backend.core.rate_limiter import limiter
 from contextlib import asynccontextmanager
 
 # Router registration
-from core.router_setup import register_routers
+from backend.core.router_setup import register_routers
 
 @asynccontextmanager
 async def lifespan(app):
@@ -82,8 +81,6 @@ async def lifespan(app):
 
     # 3.2 — Marcar jobs em_andamento como interrompido (PM2 reiniciou durante execucao)
     try:
-        from sqlalchemy import text
-        from database import engine
         with engine.connect() as conn:
             result = conn.execute(text("""
                 UPDATE pipeline_queue
@@ -104,8 +101,6 @@ async def lifespan(app):
 
     # PR15: tracking de visitas + colunas ROI na tabela leads
     try:
-        from sqlalchemy import text
-        from database import engine
         with engine.connect() as conn:
             conn.execute(text("""
                 CREATE TABLE IF NOT EXISTS site_visitas (
