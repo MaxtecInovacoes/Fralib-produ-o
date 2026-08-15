@@ -27,14 +27,6 @@ OPENUI_URL = os.environ.get("OPENUI_URL") or os.environ.get("OPENUI_SERVICE_URL"
 GENERATE_ENDPOINT = f"{OPENUI_URL}/generate"
 OPENUI_CHECK_URL = f"{OPENUI_URL}/generate"
 
-_BLOCOS_HTML = [
-    ["hero"],
-    ["interesse", "sobre", "trust_bar"],
-    ["servicos", "desejo", "depoimentos", "prova-social"],
-    ["seo-geo", "localizacao", "faq"],
-    ["acao", "contato", "footer"],
-]
-
 _SECTION_BLOCKS = [
     ["hero"],
     ["interesse"],
@@ -131,6 +123,9 @@ def _looks_like_valid_section_fragment(html: str) -> tuple[bool, str]:
     if script_opens != script_closes:
         return False, "tags <script> desbalanceadas"
 
+    if _has_unbalanced_tags(body_only):
+        return False, "tags <div> desbalanceadas no fragmento"
+
     content_only = _strip_non_content_blocks(body_only)
     visible_tags = len(_VISIBLE_TAG_RE.findall(content_only))
     visible_text = re.sub(r"(?is)<[^>]+>", " ", content_only)
@@ -155,6 +150,49 @@ def _looks_like_valid_section_fragment(html: str) -> tuple[bool, str]:
         return False, "fragmento ainda contem style/script apos limpeza"
 
     return True, ""
+
+
+def _has_unbalanced_tags(html: str) -> bool:
+    """Detecta tags HTML abertas e não fechadas em um fragmento."""
+    if not html:
+        return False
+    body = re.sub(r"(?is)<style[^>]*>.*?</style>", " ", html)
+    body = re.sub(r"(?is)<script[^>]*>.*?</script>", " ", html)
+    block_tags = re.findall(r"<(/?)(section|div|span|p|ul|ol|li|header|footer|nav|article|aside|form|table|tr|td|figure|blockquote)", body, flags=re.IGNORECASE)
+    depth = 0
+    for slash, tag in block_tags:
+        if not slash:
+            depth += 1
+        else:
+            depth -= 1
+        if depth < 0:
+            return True
+    return depth != 0
+
+
+def _sanitize_fragment(html: str) -> str:
+    """Fecha tags desbalanceadas no final do fragmento para evitar vazamento de grid."""
+    if not html or not _has_unbalanced_tags(html):
+        return html
+    stack = []
+    close_map = {}
+    for tag in ("section", "div", "span", "p", "ul", "ol", "li", "header", "footer", "nav", "article", "aside", "form", "table", "tr", "td", "figure", "blockquote"):
+        close_map[tag] = tag
+    open_re = re.compile(r"<(?P<tag>[a-z]+)[^>]*>", flags=re.IGNORECASE)
+    close_re = re.compile(r"</(?P<tag>[a-z]+)\s*>", flags=re.IGNORECASE)
+    void_re = re.compile(r"<(?:br|hr|img|input|meta|link)[^>]*>", flags=re.IGNORECASE)
+    pos = 0
+    for m in open_re.finditer(html):
+        tag = m.group("tag").lower()
+        if tag in ("br", "hr", "img", "input", "meta", "link"):
+            continue
+        before = html[pos:m.start()]
+        if close_re.search(before) or void_re.search(before):
+            continue
+        stack.append(tag)
+        pos = m.end()
+    closing = "".join(f"</{close_map[t]}>" for t in reversed(stack))
+    return html + closing
 
 
 def _first_non_empty(*values):
@@ -651,25 +689,6 @@ def _archetype_briefing(archetype: str) -> str:
     return briefings.get(archetype, briefings["editorial-asymmetric"])
 
 
-def _split_spec_blocks(spec: dict) -> list:
-    """Split spec into blocks of sections for partial HTML generation."""
-    sections = [
-        section
-        for section in (spec.get("sections", []) or [])
-        if str((section or {}).get("name") or "").strip().lower() != "lgpd"
-    ]
-    section_map = {s["name"].lower(): s for s in sections}
-    blocos = []
-    for grupo in _BLOCOS_HTML:
-        relevantes = [section_map[s] for s in grupo if s in section_map]
-        if relevantes:
-            block_spec = dict(spec)
-            block_spec["sections"] = relevantes
-            block_spec["_bloco_labels"] = grupo
-            blocos.append(block_spec)
-    return blocos
-
-
 def _extract_response_html(payload: dict) -> str:
     """Normalize common OpenUI response formats to a single HTML string."""
     if not isinstance(payload, dict):
@@ -741,7 +760,24 @@ def _inject_sections_into_shell(shell_html: str, section_fragments: list[str]) -
     if not shell_html:
         return ""
     shell_html = shell_html.strip()
-    body_content = "\n".join(fragment.strip() for fragment in section_fragments if fragment and fragment.strip()).strip()
+    wrapped = []
+    for fragment in section_fragments:
+        frag = fragment.strip()
+        if not frag:
+            continue
+        frag = _sanitize_fragment(frag)
+        # Extrai o nome da seção do primeiro <section id="..."> ou <section ...>
+        m = re.search(r'<section\b[^>]*\bid=["\']([^"\']+)["\']', frag, flags=re.IGNORECASE)
+        sec_id = m.group(1) if m else ""
+        # Comentários de boundary para debugging de layout + wrapper com quebra de fluxo
+        wrapped.append(
+            f'<!-- SECTION START: {sec_id} -->\n'
+            f'<section id="{sec_id}" class="w-full relative overflow-hidden clear-both block">\n'
+            f'{frag}\n'
+            f'</section>\n'
+            f'<!-- SECTION END: {sec_id} -->'
+        )
+    body_content = "\n".join(wrapped).strip()
     if not body_content:
         return shell_html
     if "<main" in shell_html.lower():
@@ -993,6 +1029,8 @@ def _render_full_site(spec: dict) -> tuple[str, str, str]:
     valid_html, reason = _looks_like_valid_body_fragment(final_html)
     if not valid_html:
         return "", last_model or shell_model, f"HTML final invalido: {reason} ({len(final_html)} chars)"
+    if _has_unbalanced_tags(final_html):
+        return "", last_model or shell_model, "HTML final com tags <div> desbalanceadas"
     print(f"[builder] Multi-call OpenUI OK ({len(final_html)} chars)")
     return final_html, last_model or shell_model, ""
 

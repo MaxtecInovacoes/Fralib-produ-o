@@ -140,6 +140,18 @@ def _fragment_has_minimum_structure(html: str) -> tuple[bool, str]:
     return True, ""
 
 
+_BLOCKED_PHONE_RE = re.compile(
+    r"\(\d{2}\)\s*\d{4,5}[-\s]\d{4}",
+    re.IGNORECASE,
+)
+
+
+def _sanitize_phone(html: str, real_phone: str) -> str:
+    if not real_phone or not real_phone.strip():
+        return re.sub(_BLOCKED_PHONE_RE, "", html)
+    return re.sub(_BLOCKED_PHONE_RE, real_phone.strip(), html)
+
+
 def _normalize_generated_html(html: str, prd: dict[str, Any]) -> str:
     render_hint = str(prd.get("_render_hint") or "").strip().lower()
     if render_hint != "section_fragment" or "<section" in html.lower():
@@ -154,6 +166,12 @@ def _normalize_generated_html(html: str, prd: dict[str, Any]) -> str:
     fragment = re.sub(r"(?is)<link\b[^>]*>", "", fragment)
     fragment = re.sub(r"(?is)<style\b[^>]*>.*?</style>", "", fragment)
     fragment = re.sub(r"(?is)<script\b[^>]*>.*?</script>", "", fragment).strip()
+
+    real_phone = str(
+        _first_non_empty(prd.get("phone"), prd.get("telefone"), prd.get("whatsapp")) or ""
+    ).strip()
+    if real_phone:
+        fragment = _sanitize_phone(fragment, real_phone)
 
     visible_text = re.sub(r"(?is)<[^>]+>", " ", fragment)
     visible_text = re.sub(r"\s+", " ", visible_text).strip()
@@ -206,13 +224,17 @@ Return ONLY one complete HTML document. No markdown, code fences, explanation, o
 Return ONLY the requested semantic <section> block. No markdown, code fences, explanation, or text outside the fragment.
 - The first non-whitespace characters must be <section
 - The last non-whitespace characters must close the section with </section>
+- The fragment MUST be a SELF-CONTAINED full-width container: wrap all content in a single outer block with class="w-full relative overflow-hidden clear-both block" so no content can leak into the parent grid.
+- Every text card, review card, info card, testimonial card or list item must use min-w-[280px] and responsive width such as w-full md:w-1/3 or a max-w container; never allow prose to break word-by-word. Use break-words only for URLs; use break-normal for normal body copy.
+- Every tag you open MUST be closed inside this fragment. Never leave an unclosed <div>, <section>, <span>, <p>, <ul>, <ol>, or any other tag. Count opens and closes before returning.
+- REGRA EM PORTUGUÊS (obrigatória): este fragmento será injetado dentro de uma coluna de grid do pai. Use classe w-full em todo container direto. Não deixe tags abertas — o browser fecha no lugar errado e quebra o layout. Feche toda tag que abrir.
 - Include visible heading, text, and CTA/content appropriate to the requested section
 - Preserve the requested AIDA role: hero=Attention, interesse=Interest, desejo=Desire, acao=Action
 - If requested section is faq, seo-geo or footer, render that exact functional section; do not replace it with generic cards
 - Use Tailwind utility classes directly in the markup
 - Do NOT output <!DOCTYPE>, <html>, <head>, <body>, <main>, Tailwind config, <style>, or <script>
 - Do NOT render sections that were not requested
-- Before answering, verify the response contains at least one opening <section and one closing </section>
+- Before answering, verify the response contains at least one opening <section and one closing </section>, and that the number of opening and closing tags is equal.
 """
     return """
 ## Output Contract — FULL DOCUMENT
@@ -223,6 +245,8 @@ Return ONLY a single complete HTML file. No markdown, code fences, or explanatio
 - Mobile-first responsive (375px to 1440px)
 - Use Tailwind CSS utility classes directly in the markup
 - Never create grids with more than 3 columns on desktop for text cards, reviews, FAQ, service cards or informational blocks
+- Every text card, review card, info card or service card must use min-w-[280px] and responsive width; never allow word-by-word vertical wrapping. Use break-words only for URLs; use break-normal for normal prose.
+- Never hallucinate contact data: use only the real phone/address from the PRD. If no real phone is provided, omit it entirely — never fabricate (XX) 99999-9999 or any invented number.
 - Every text card, review card or informational card must include min-w-[280px] and responsive width such as w-full md:w-1/3 or a max-w container
 - Never create ultra-narrow columns or word-by-word vertical wrapping; use break-words only for URLs, never for normal prose
 - Include Tailwind via CDN script in the <head>
@@ -293,7 +317,7 @@ def _build_system_prompt(prd: dict) -> str:
             f"Palette JSON: {_compact_json(palette, 500)}. "
             f"Typography JSON: {_compact_json(typography, 300)}. "
             f"Available editorial image URLs: {_compact_json(photo_urls, 1400)}. "
-            f"Confirmed phone/WhatsApp: {phone or 'not informed'}. Use this exact phone in contact and footer; never use placeholder phones such as (XX) 99999-9999 or (41) 99999-9999. "
+            "Confirmed phone/WhatsApp: {phone or 'not informed'}. CRITICAL RULE: USE THIS EXACT PHONE IN EVERY CONTACT/FOOTER OCCURRENCE. NEVER INVENT A PHONE NUMBER. If the provided phone is empty or 'not informed', DO NOT render any phone number at all. Hard FORBIDDEN examples you must NOT emit: (41) 98888-7777, (41) 99999-9999, (XX) 99999-9999, (11) 99999-9999, or any other (XX) XXXXX-XXXX you imagine. If the PRD has no real phone, omit the phone line entirely. "
             f"{review_rule}"
             f"{surface_rule}"
             "Treat the Protected section contract as authoritative. Respect its order_index, aida_role, required_media_count, media_plan, must_have, must_not, and minimum_content_blocks. "
