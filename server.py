@@ -18,6 +18,7 @@ from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 import sys
+import os
 from pathlib import Path
 
 # Raiz do projeto — detecta Docker (/app), systemd VPS (/root/fralib) e dev local
