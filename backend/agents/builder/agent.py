@@ -724,11 +724,13 @@ def _extract_response_html(payload: dict) -> str:
 
 
 def _extract_body_only(html: str) -> str:
+    """Return only the contents of <body>...</body>, stripping document scaffolding."""
     match = re.search(r"<body[^>]*>(.*?)</body>", html or "", flags=re.DOTALL | re.IGNORECASE)
     fragment = match.group(1) if match else (html or "")
-    fragment = re.sub(r"(?is)<!DOCTYPE[^>]*>", "", fragment)
+    fragment = re.sub(r"(?is)<!DOCTYPE[^>]*>\s*", "", fragment)
     fragment = re.sub(r"(?is)</?html[^>]*>", "", fragment)
-    fragment = re.sub(r"(?is)</?head\b[^>]*>.*?(?=(</body>|$))", "", fragment)
+    # Remove only the <head>...</head> block itself (not subsequent body content)
+    fragment = re.sub(r"(?is)<head\b[^>]*>.*?</head>", "", fragment, flags=re.DOTALL)
     fragment = re.sub(r"(?is)</?body[^>]*>", "", fragment)
     return fragment.strip()
 
@@ -744,16 +746,24 @@ def _inject_deterministic_assets(html: str, design_tokens: dict) -> str:
     if not html or "<html" not in html.lower():
         return html
 
+    # Flatten palette from design_tokens (supports nested palette/color_palette or flat keys)
+    flat = dict(design_tokens or {})
+    for nested_key in ("palette", "color_palette"):
+        nested = flat.get(nested_key)
+        if isinstance(nested, dict):
+            for k, v in nested.items():
+                flat.setdefault(k, v)
+
     def _first(*candidates):
         for c in candidates:
-            v = design_tokens.get(c)
+            v = flat.get(c)
             if v:
                 return str(v)
         return ""
 
     primary   = _first("primary", "--primary", "accent", "--accent") or "#2563eb"
     secondary = _first("secondary", "--secondary") or "#4b5563"
-    accent    = _first("accent", "--accent", "primary", "--primary") or "#2563eb"
+    accent    = _first("accent", "--accent", "primary", "--primary") or primary
     bg        = _first("background", "bg", "--bg") or "#ffffff"
     surface   = _first("surface", "--surface") or "#f9fafb"
     text      = _first("text", "fg", "--fg") or "#111827"
@@ -762,7 +772,7 @@ def _inject_deterministic_assets(html: str, design_tokens: dict) -> str:
 
     brand_style = (
         '<style id="brand-design-tokens">'
-        f":root {{--brand-primary:{primary};--brand-secondary:{secondary};"
+        f":root{{--brand-primary:{primary};--brand-secondary:{secondary};"
         f"--brand-accent:{accent};--brand-bg:{bg};--brand-surface:{surface};"
         f"--brand-text:{text};--brand-border:{border};--brand-muted:{muted};}}"
         "</style>"
@@ -779,50 +789,8 @@ def _inject_deterministic_assets(html: str, design_tokens: dict) -> str:
     return html
 
 
-def _concat_html(partials: list) -> str:
-    """Concatenate partial HTML documents/fragments into one valid document."""
-    if not partials:
-        return ""
-
-    def _strip_document_scaffold(fragment: str) -> str:
-        fragment = re.sub(r"<!DOCTYPE[^>]*>\s*", "", fragment, flags=re.IGNORECASE)
-        fragment = re.sub(r"<head\b[^>]*>.*?</head>", "", fragment, flags=re.DOTALL | re.IGNORECASE)
-        fragment = re.sub(r"<title[^>]*>.*?</title>", "", fragment, flags=re.DOTALL | re.IGNORECASE)
-        fragment = re.sub(r"<meta\b[^>]*>", "", fragment, flags=re.IGNORECASE)
-        fragment = re.sub(r"<link\b[^>]*>", "", fragment, flags=re.IGNORECASE)
-        fragment = re.sub(r"</?head\b[^>]*>", "", fragment, flags=re.IGNORECASE)
-        fragment = re.sub(r"</?title[^>]*>", "", fragment, flags=re.IGNORECASE)
-        fragment = re.sub(r"</?html[^>]*>", "", fragment, flags=re.IGNORECASE)
-        fragment = re.sub(r"</?body[^>]*>", "", fragment, flags=re.IGNORECASE)
-        return fragment.strip()
-
-    def _extract_head(html: str) -> str:
-        match = re.search(r"<head\b[^>]*>(.*?)</head>", html, flags=re.DOTALL | re.IGNORECASE)
-        if match:
-            return match.group(1).strip()
-        return (
-            '<meta charset="UTF-8">\n'
-            '<meta name="viewport" content="width=device-width, initial-scale=1.0">\n'
-            "<title>FraLib Site</title>"
-        )
-
-    def _extract_body(html: str) -> str:
-        match = re.search(r"<body[^>]*>(.*?)</body>", html, flags=re.DOTALL | re.IGNORECASE)
-        if match:
-            fragment = match.group(1)
-        else:
-            fragment = html
-        fragment = _strip_document_scaffold(fragment)
-        fragment = re.sub(r"(?is)<style\b[^>]*>.*?</style>", "", fragment)
-        fragment = re.sub(r"(?is)<script\b[^>]*>.*?</script>", "", fragment)
-        return fragment.strip()
-
-    head = _extract_head(partials[0])
-    body = "\n".join(_extract_body(partial) for partial in partials if partial).strip()
-    return f"<!DOCTYPE html>\n<html lang=\"pt-BR\">\n<head>\n{head}\n</head>\n<body>\n{body}\n</body>\n</html>\n"
-
-
 def _inject_sections_into_shell(shell_html: str, section_fragments: list[str]) -> str:
+
     if not shell_html:
         return ""
     shell_html = shell_html.strip()
@@ -832,10 +800,13 @@ def _inject_sections_into_shell(shell_html: str, section_fragments: list[str]) -
         if not frag:
             continue
         frag = _sanitize_fragment(frag)
+        # Se o fragmento ja inicia com <section>, usa ele direto (evita <section><section>)
+        if re.match(r"(?is)<section\b", frag):
+            wrapped.append(frag)
+            continue
         # Extrai o nome da seção do primeiro <section id="..."> ou <section ...>
         m = re.search(r'<section\b[^>]*\bid=["\']([^"\']+)["\']', frag, flags=re.IGNORECASE)
         sec_id = m.group(1) if m else ""
-        # Comentários de boundary para debugging de layout + wrapper com quebra de fluxo
         wrapped.append(
             f'<!-- SECTION START: {sec_id} -->\n'
             f'<section id="{sec_id}" class="w-full relative overflow-hidden clear-both block">\n'
@@ -909,9 +880,9 @@ def _ensure_shell_fonts(html: str, spec: dict) -> str:
 
 
 def _render_block(block_spec: dict, design_tokens: dict) -> tuple[str, str]:
-    """Render one block via OpenUI with 6 retries. Returns (html, model) tuple or ("", "") on failure."""
-    max_retries = 6
-    retry_delays = [60, 120, 180, 300, 300, 600]
+    """Render one block via OpenUI with up to 3 retries. Returns (html, model) tuple or ("", "") on failure."""
+    max_retries = 3
+    retry_delays = [5, 15, 30]
     labels = block_spec.get("_bloco_labels", [])
     label_str = ", ".join(labels)
     block_spec = dict(block_spec)
@@ -931,7 +902,7 @@ def _render_block(block_spec: dict, design_tokens: dict) -> tuple[str, str]:
                 GENERATE_ENDPOINT,
                 json={"designerPRD": block_spec},
                 headers={"Content-Type": "application/json"},
-                timeout=600,
+                timeout=120,
             )
             if resp.status_code == 200:
                 data = resp.json()
@@ -1002,7 +973,7 @@ def _render_block(block_spec: dict, design_tokens: dict) -> tuple[str, str]:
                 last_error = f"OpenUI HTTP {resp.status_code}: {resp.text[:200]}"
                 return "", ""
         except requests.exceptions.Timeout:
-            last_error = f"OpenUI timeout (600s) attempt {attempt + 1}"
+            last_error = f"OpenUI HTTP {resp.status_code} attempt {attempt + 1}"
             if attempt < max_retries - 1:
                 time.sleep(retry_delays[attempt])
                 continue
@@ -1023,7 +994,7 @@ def _render_shell_document(spec: dict) -> tuple[str, str, str]:
             GENERATE_ENDPOINT,
             json={"designerPRD": request_spec},
             headers={"Content-Type": "application/json"},
-            timeout=600,
+            timeout=120,
         )
         if resp.status_code != 200:
             return "", "", f"OpenUI HTTP {resp.status_code}: {resp.text[:200]}"
@@ -1057,25 +1028,55 @@ def _render_shell_document(spec: dict) -> tuple[str, str, str]:
 
 
 def _render_section_blocks(spec: dict) -> tuple[list[str], str, str]:
+    """Render each section from spec['sections'] individually via OpenUI.
+
+    Falls back to _SECTION_BLOCKS grouping only when spec['sections'] is empty
+    (preserves legacy behavior for old callers that don't populate sections).
+    """
     partials: list[str] = []
     last_model = ""
     section_index = 0
-    for group in _SECTION_BLOCKS:
-        section_map = {str(s.get("name", "")).lower(): s for s in spec.get("sections", []) if isinstance(s, dict)}
-        selected = [section_map[name] for name in group if name in section_map]
-        if not selected:
+
+    # Prefer sections defined in the spec (dynamic PRD-driven)
+    sections = spec.get("sections") or []
+    if not sections:
+        # Legacy fallback: group by _SECTION_BLOCKS
+        section_map = {str(s.get("name", "")).lower(): s for s in []}
+        for group in _SECTION_BLOCKS:
+            selected = [section_map[name] for name in group if name in section_map]
+            if not selected:
+                continue
+            section_index += 1
+            block_spec = dict(spec)
+            block_spec["sections"] = selected
+            block_spec["_bloco_labels"] = group
+            block_spec["_render_hint"] = "section_fragment"
+            block_spec["_section_index"] = section_index
+            html, model = _render_block(block_spec, spec.get("design_tokens", {}))
+            if not html:
+                return [], last_model, f"Falha ao gerar bloco [{', '.join(group)}]"
+            partials.append(html)
+            last_model = model or last_model
+        if not partials:
+            return [], last_model, "nenhum fragmento gerado"
+        return partials, last_model, ""
+
+    # Dynamic: one OpenUI call per section
+    for s in sections:
+        if not isinstance(s, dict):
             continue
         section_index += 1
         block_spec = dict(spec)
-        block_spec["sections"] = selected
-        block_spec["_bloco_labels"] = group
+        block_spec["sections"] = [s]
+        block_spec["_bloco_labels"] = [s.get("name", f"section-{section_index}")]
         block_spec["_render_hint"] = "section_fragment"
         block_spec["_section_index"] = section_index
         html, model = _render_block(block_spec, spec.get("design_tokens", {}))
         if not html:
-            return [], last_model, f"Falha ao gerar bloco [{', '.join(group)}]"
+            return [], last_model, f"Falha ao gerar secao [{s.get('name', '?')}]"
         partials.append(html)
         last_model = model or last_model
+
     if not partials:
         return [], last_model, "nenhum fragmento gerado"
     return partials, last_model, ""
