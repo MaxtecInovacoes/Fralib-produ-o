@@ -193,11 +193,11 @@ DIRECOES_VISUAIS = {
 
 # Dark mode: sobrepõe --bg, --surface, --fg, --muted, --border
 DARK_OVERLAY = {
-    "--bg":      "oklch(12% 0.010 260)",
-    "--surface": "oklch(17% 0.012 260)",
+    "--bg":      "oklch(12% 0.010 0)",
+    "--surface": "oklch(17% 0.012 0)",
     "--fg":      "oklch(93% 0.005 0)",
-    "--muted":   "oklch(65% 0.010 260)",
-    "--border":  "oklch(28% 0.015 260)",
+    "--muted":   "oklch(65% 0.010 0)",
+    "--border":  "oklch(28% 0.015 0)",
 }
 
 # ─── MAPEAMENTO TIER → DIREÇÃO ─────────────────────────────────────────────────
@@ -474,6 +474,7 @@ ALIASES = {
     "auto_peca": "auto_pecas", "mecanica": "auto_pecas",
     "crossfit": "academia", "personal": "academia", "personal_trainer": "academia",
     "musculacao": "academia", "funcional": "academia",
+    "fitness": "academia", "gym": "academia", "sala_de_fitness": "academia", "salao_de_fitness": "academia",
     "psicologia": "clinica", "lanchonete": "restaurante",
     "padaria": "restaurante",
     "churrascaria": "churrascaria", "churrascarias": "churrascaria",

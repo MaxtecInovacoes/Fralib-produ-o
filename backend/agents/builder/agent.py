@@ -5,7 +5,6 @@ Receives a DesignerPRD and calls the OpenUI service (port 7878 - wandb/openui)
 to generate the complete HTML site via single-shot LLM generation.
 """
 import os
-import json
 import time
 import re
 import requests
@@ -567,6 +566,15 @@ def _prd_to_spec(prd) -> dict:
         "parallax": bool(motion_soft.get("usa_parallax", True)) if isinstance(motion_soft, dict) else True,
         "scroll_reveal": str((motion_soft or {}).get("efeito_principal", "")).lower() not in ("none", "sem motion"),
         "hover_effects": True,
+        "aos": {
+            "enabled": True,
+            "attributes": {
+                "data-aos": "fade-up",
+            },
+            "stagger_delays": [100, 200, 300],
+        },
+        "hover_classes": "hover:scale-[1.02] hover:border-primary transition-all duration-300",
+        "scroll_smooth": True,
     }
 
     # Build builder_directive
@@ -582,7 +590,19 @@ def _prd_to_spec(prd) -> dict:
         "- Seções subsequentes devem usar <section> e headings <h2>/<h3>.\n"
         "- Não crie overlays absolutos sem wrapper relativo.\n\n"
         "REGRAS DE ANIMAÇÃO:\n"
-        f"{ANIMATION_PRINCIPLES.strip()}\n"
+        f"{ANIMATION_PRINCIPLES.strip()}\n\n"
+        "LAYOUT ANTI-COLISÃO:\n"
+        "- Todo grid de modalidades/diferenciais: class=\"w-full overflow-hidden grid grid-cols-1 md:grid-cols-3 gap-6\".\n"
+        "- Cards: sem width/height fixo em px; usar w-full + max-w + aspect-ratio.\n"
+        "- Nenhum position:absolute vaza do container; se usar, envolva em wrapper position:relative overflow-hidden.\n"
+        "- Texto não cruza borda — padding mínimo 1rem em todas as direções.\n"
+        "- Modalidades/diferenciais: bento-grid ou cards com foto de fundo + badge; nunca cards idênticos lado a lado.\n"
+        "- FAQ: acordeão com transição suave (details/summary animado), não lista plana.\n\n"
+        "MOTION:\n"
+        "- AOS: cada bloco animável recebe data-aos=\"fade-up\" e data-aos-delay incremental (100ms/200ms/300ms).\n"
+        "- Smooth scroll em links internos (#planos, #modalidades, #contato): scroll-behavior:smooth no html.\n"
+        "- Hover em cards: classes \"hover:scale-[1.02] hover:border-primary transition-all duration-300\".\n"
+        "- CTA buttons: hover:brightness-1.1 hover:shadow-lg com transição 200ms.\n"
     )
 
     spec = {
