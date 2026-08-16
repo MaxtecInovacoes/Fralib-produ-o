@@ -93,11 +93,13 @@ def gerar_arquiteto_mestre_prd(
         _design_dna.get("design_reference_pack") or {}
     )
 
-    # ── 4. PRD Cache ──
-    _disable_cache = os.environ.get("DISABLE_PRD_CACHE", "False").lower() in (
-        "true",
-        "1",
-        "yes",
+    # ── 4. PRD Cache (desativado por padrão para forçar design_context live)
+    #    Reativar apenas via DISABLE_PRD_CACHE=False.
+    _disable_cache = os.environ.get("DISABLE_PRD_CACHE", "True").lower() not in (
+        "false",
+        "0",
+        "no",
+        "",
     )
     if not _disable_cache:
         try:

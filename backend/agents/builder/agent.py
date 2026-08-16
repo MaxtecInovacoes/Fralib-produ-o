@@ -733,6 +733,52 @@ def _extract_body_only(html: str) -> str:
     return fragment.strip()
 
 
+def _inject_deterministic_assets(html: str, design_tokens: dict) -> str:
+    """Inject deterministic brand CSS tokens + AOS motion assets into <head> and before </body>.
+
+    Guarantees every final HTML has:
+      - <style id="brand-design-tokens"> with :root CSS vars derived from design_tokens
+      - AOS CSS <link> in <head>
+      - AOS JS <script> + auto-init before </body>
+    """
+    if not html or "<html" not in html.lower():
+        return html
+
+    def _first(*candidates):
+        for c in candidates:
+            v = design_tokens.get(c)
+            if v:
+                return str(v)
+        return ""
+
+    primary   = _first("primary", "--primary", "accent", "--accent") or "#2563eb"
+    secondary = _first("secondary", "--secondary") or "#4b5563"
+    accent    = _first("accent", "--accent", "primary", "--primary") or "#2563eb"
+    bg        = _first("background", "bg", "--bg") or "#ffffff"
+    surface   = _first("surface", "--surface") or "#f9fafb"
+    text      = _first("text", "fg", "--fg") or "#111827"
+    border    = _first("border", "--border") or "#e5e7eb"
+    muted     = _first("muted", "--muted") or "#6b7280"
+
+    brand_style = (
+        '<style id="brand-design-tokens">'
+        f":root {{--brand-primary:{primary};--brand-secondary:{secondary};"
+        f"--brand-accent:{accent};--brand-bg:{bg};--brand-surface:{surface};"
+        f"--brand-text:{text};--brand-border:{border};--brand-muted:{muted};}}"
+        "</style>"
+    )
+    aos_head = '<link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />'
+    aos_body = (
+        '<script src="https://unpkg.com/aos@next/dist/aos.js"></script>'
+        '<script>document.addEventListener("DOMContentLoaded",function(){'
+        "if(window.AOS){AOS.init({duration:700,once:true,offset:40});}"
+        "});</script>"
+    )
+    html = re.sub(r"(?is)(</head>)", f"{brand_style}\n{aos_head}\n\\1", html, count=1)
+    html = re.sub(r"(?is)(</body>)", f"{aos_body}\n\\1", html, count=1)
+    return html
+
+
 def _concat_html(partials: list) -> str:
     """Concatenate partial HTML documents/fragments into one valid document."""
     if not partials:
@@ -1051,6 +1097,7 @@ def _render_full_site(spec: dict) -> tuple[str, str, str]:
         return "", last_model or shell_model, f"HTML final invalido: {reason} ({len(final_html)} chars)"
     if _has_unbalanced_tags(final_html):
         return "", last_model or shell_model, "HTML final com tags <div> desbalanceadas"
+    final_html = _inject_deterministic_assets(final_html, spec.get("design_tokens", {}))
     print(f"[builder] Multi-call OpenUI OK ({len(final_html)} chars)")
     return final_html, last_model or shell_model, ""
 
