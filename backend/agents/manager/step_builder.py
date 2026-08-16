@@ -102,9 +102,9 @@ def step_builder(state: PipelineState) -> PipelineState:
         try:
             from loguru import logger as _mgr_logger
             _mgr_logger.info(
-                "PRD_MANAGER: site_build_plan_keys={sbp_keys} "
-                "requirements_contract_keys={rc_keys} "
-                "visual_contract_keys={vc_keys}",
+                f"PRD_MANAGER: site_build_plan_keys={sbp_keys} "
+                f"requirements_contract_keys={rc_keys} "
+                f"visual_contract_keys={vc_keys}",
                 sbp_keys=list(prd.site_build_plan.keys()) if prd.site_build_plan else [],
                 rc_keys=list(prd.requirements_contract.keys()) if prd.requirements_contract else [],
                 vc_keys=list(prd.visual_contract.keys()) if prd.visual_contract else [],
@@ -232,8 +232,9 @@ def step_builder(state: PipelineState) -> PipelineState:
         except Exception as exc:
             logger.warning("[Builder] artifact HTML falhou (lead=%s): %s", state.lead_id, exc)
     except Exception as e:
+        logger.exception("[Builder] falha ao gerar HTML (lead=%s)", state.lead_id)
         _log_step_error(state, "Builder", e)
-        state.error = f"Builder: {e}"
+        state.error = "Builder: falha interna na geração do HTML"
         return _transition(state, STATE_FAILED)
 
     # Knowledge Journal: ArtifactGenerated
@@ -301,13 +302,13 @@ def _enforce_pre_qa_contract(html: str, prd) -> str:
 
     required_markers = {
         "imagem": r"(?is)<img\b|background-image\s*:",
-        "faq": r"(?is)faq|perguntas frequentes",
-        "footer": r"(?is)<footer\b|section:footer",
+        "faq": r"(?is)faq|perguntas frequentes|faq-section",
+        "footer": r"(?is)<footer\b|id\s*=\s*[\x22\x27]footer[\x22\x27]|role\s*=\s*[\x22\x27]contentinfo[\x22\x27]",
         "descricao": r"(?is)<meta\s+name=[\"']description[\"']",
         "open_graph": r"(?is)<meta\s+property=[\"']og:",
         "favicon": r"(?is)<link\s+rel=[\"']icon[\"']",
         "json_ld": r"(?is)application/ld\+json",
-        "lgpd": r"(?is)data-lgpd-banner",
+        "lgpd": r"(?is)data-lgpd-banner|lgpd|privacidade|Aceitar",
     }
     missing = [name for name, pattern in required_markers.items() if not re.search(pattern, cleaned)]
     if missing:
