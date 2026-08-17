@@ -126,17 +126,14 @@ async def whatsapp_qr(usuario: dict = Depends(get_current_user)):
         return {"status": "error", "detail": str(e)}
 
 @router.post("/disconnect")
-async def whatsapp_disconnect(usuario: dict = Depends(get_current_user)):
+def whatsapp_disconnect(usuario: dict = Depends(get_current_user)):
     tenant_id = _tenant(usuario["id"])
     try:
-        # 1. Desconectar no meowhats
-        async with httpx.AsyncClient(timeout=10) as c:
-            await c.post(f"{MEOWHATS_URL}/api/sessions/{tenant_id}/disconnect", headers=_headers())
+        with httpx.Client(timeout=10) as c:
+            c.post(f"{MEOWHATS_URL}/api/sessions/{tenant_id}/disconnect", headers=_headers())
 
-        # 2. Limpar sessão do banco (delete device)
         _limpar_sessao_db(tenant_id)
 
-        # 3. Reiniciar meowhats
         subprocess.run(["pm2", "restart", "meowhats"], capture_output=True, timeout=10)
 
         return {"status": "disconnected"}

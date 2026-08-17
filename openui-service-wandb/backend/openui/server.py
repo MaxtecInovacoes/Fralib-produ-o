@@ -1,5 +1,5 @@
 import asyncio
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, contextmanager
 from fastapi.responses import (
     StreamingResponse,
     JSONResponse,
@@ -20,7 +20,6 @@ from datetime import datetime, timedelta
 import html
 import uuid
 import uvicorn
-import contextlib
 import requests
 import threading
 import time
@@ -332,25 +331,28 @@ async def callback(request: Request, error: str = "", error_description: str = "
         with github_sso:
             id_token = await github_sso.verify_and_process(request)
         # TODO: should probably key off email / update info
-        user = User.get_or_none(User.username == id_token.display_name)
-        if user is None:
-            user_id = uuid.uuid4()
-            user = User.create(
-                id=user_id.bytes,
-                username=id_token.display_name,
-                email=id_token.email,
-                created_at=datetime.now(),
-            )
-            user.id = user_id
-        elif not user.email:
-            user.email = id_token.email
-            user.save()
+        def _callback_peewee_block(token):
+            user = User.get_or_none(User.username == token.display_name)
+            if user is None:
+                new_id = uuid.uuid4()
+                user = User.create(
+                    id=new_id.bytes,
+                    username=token.display_name,
+                    email=token.email,
+                    created_at=datetime.now(),
+                )
+                user.id = new_id
+            elif not user.email:
+                user.email = token.email
+                user.save()
+            return user.id, user.username, user.email
+        user_id, username, user_email = await asyncio.to_thread(_callback_peewee_block, id_token)
         request.session["session_id"] = session_store.generate_session_id()
-        request.session["user_id"] = str(user.id)
+        request.session["user_id"] = str(user_id)
         session_store.write(
             request.session["session_id"],
-            str(user.id),
-            SessionData(username=user.username, token_count=0),
+            str(user_id),
+            SessionData(username=username, token_count=0),
         )
         return RedirectResponse(url="/ai/new")
     except Exception as e:
@@ -375,7 +377,7 @@ async def get_share(id: str):
 
 
 @router.post("/v1/vote", status_code=status.HTTP_201_CREATED, tags="openui/vote")
-async def vote(request: Request, payload: VoteRequest):
+def vote(request: Request, payload: VoteRequest):
     component = Component.create(
         id=uuid.uuid4().bytes,
         user_id=uuid.UUID(request.session["user_id"]).bytes,
@@ -453,7 +455,7 @@ async def models():
     "/v1/session",
     tags=["openui/session"],
 )
-async def get_session(
+def get_session(
     request: Request,
 ):
     session_id = request.session.get("session_id")
