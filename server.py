@@ -204,6 +204,19 @@ async def lifespan(app):
     except Exception as e:
         print(f"[Server] Aviso: WhatsApp listener nao iniciado: {e}")
 
+    # Reap jobs zumbis (running sem heartbeat) no boot — destrava esteira
+    try:
+        from backend.core.database import SessionLocal
+        from backend.core.job_queue import reap_zombies_on_boot
+        with SessionLocal() as _db:
+            _reaped = reap_zombies_on_boot(_db, max_age_seconds=60)
+        if _reaped:
+            print(f"[Server] Zombie reaper: {_reaped} job(s) reaproveitado(s) no boot")
+        else:
+            print("[Server] Zombie reaper: nenhum zumbi no boot")
+    except Exception as e:
+        print(f"[Server] Aviso: zombie reaper falhou: {e}")
+
     yield
 
     # Shutdown: fechar conexões SSE e pg_notify
