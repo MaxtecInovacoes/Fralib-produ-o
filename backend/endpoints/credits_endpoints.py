@@ -1,12 +1,14 @@
 from fastapi import APIRouter, Request, HTTPException, Depends, Header
 from pydantic import BaseModel
-import os, stripe
+import os, stripe, logging
 from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 
 from auth import get_current_user
 from database import get_db
+
+logger = logging.getLogger(__name__)
 
 stripe.api_key = os.getenv('STRIPE_SECRET_KEY')
 STRIPE_WEBHOOK_SECRET = os.getenv('STRIPE_WEBHOOK_SECRET', '')
@@ -127,8 +129,10 @@ def _resolver_user_id(conn, meta_user_id, customer_email, stripe_customer_id):
     if len(candidatos) == 1:
         return candidatos.pop()
     # Conflito: priorizar stripe_customer_id > email; metadata sozinho NAO eh aceito.
-    print(f'[Stripe] CONFLITO _resolver_user_id: candidatos={candidatos} '
-          f'meta={meta_user_id} email={customer_email} cid={stripe_customer_id}')
+    logger.warning(
+        '[Stripe] CONFLITO _resolver_user_id candidatos={} meta={} email={} cid={}',
+        candidatos, meta_user_id, customer_email, stripe_customer_id,
+    )
     if uid_via_cid is not None:
         return uid_via_cid
     if uid_via_email is not None:
@@ -191,7 +195,7 @@ async def stripe_webhook(
         return {'status': 'ok', 'tipo': tipo, 'user_id': resolved_user_id}
     except Exception as exc:
         err_msg = f'{type(exc).__name__}: {str(exc)[:500]}'
-        print(f'[Stripe webhook] FALHA em {tipo} ({event_id}): {err_msg}')
+        logger.error('[Stripe webhook] FALHA tipo={} event_id={} err={}', tipo, event_id, err_msg)
         with engine.connect() as conn:
             conn.execute(text('''
                 UPDATE stripe_events SET erro=:err WHERE event_id=:e
@@ -213,7 +217,7 @@ def _processar_evento_stripe(event, tipo, obj, stripe_customer_id):
         with engine.connect() as conn:
             user_id = _resolver_user_id(conn, meta.get('user_id'), customer_email, stripe_customer_id)
             if not user_id:
-                print(f'[Stripe] usuario nao encontrado: email={customer_email} cid={stripe_customer_id}')
+                logger.warning('[Stripe] usuario nao encontrado email={} cid={}', customer_email, stripe_customer_id)
                 return None
             if plano == 'tokens':
                 bonus = PLANOS['tokens']['creditos_max']
@@ -223,7 +227,7 @@ def _processar_evento_stripe(event, tipo, obj, stripe_customer_id):
                     WHERE id=:uid
                 '''), {'bonus': bonus, 'cid': stripe_customer_id, 'uid': user_id})
                 conn.commit()
-                print(f'[Stripe] tokens OK: user {user_id} -> +{bonus} creditos')
+                logger.info('[Stripe] tokens OK user={} bonus={}', user_id, bonus)
             else:
                 creditos_max = PLANOS.get(plano, {}).get('creditos_max', 5)
                 plan_expires_at = (datetime.utcnow() + timedelta(days=30)).isoformat()
@@ -239,7 +243,7 @@ def _processar_evento_stripe(event, tipo, obj, stripe_customer_id):
                     'cmax': creditos_max, 'exp': plan_expires_at, 'uid': user_id
                 })
                 conn.commit()
-                print(f'[Stripe] checkout OK: user {user_id} -> plano {plano}, creditos {creditos_max}')
+                logger.info('[Stripe] checkout OK user={} plano={} creditos={}', user_id, plano, creditos_max)
             return user_id
 
     elif tipo == 'customer.subscription.updated':
@@ -255,7 +259,7 @@ def _processar_evento_stripe(event, tipo, obj, stripe_customer_id):
                 'SELECT id FROM users WHERE stripe_customer_id=:c'
             ), {'c': stripe_customer_id}).fetchone()
             if not row:
-                print(f'[Stripe] subscription.updated sem user para {stripe_customer_id}')
+                logger.warning('[Stripe] subscription.updated sem user para cid={}', stripe_customer_id)
                 return None
             user_id = int(row[0])
             if novo_plano and status in ('active', 'trialing'):
@@ -266,13 +270,13 @@ def _processar_evento_stripe(event, tipo, obj, stripe_customer_id):
                     WHERE id=:uid
                 '''), {'plano': novo_plano, 'cmax': creditos_max, 'uid': user_id})
                 conn.commit()
-                print(f'[Stripe] subscription.updated: user {user_id} -> plano {novo_plano}')
+                logger.info('[Stripe] subscription.updated user={} plano={}', user_id, novo_plano)
             elif status == 'past_due':
                 conn.execute(text('''
                     UPDATE users SET status='inadimplente' WHERE id=:uid
                 '''), {'uid': user_id})
                 conn.commit()
-                print(f'[Stripe] subscription past_due: user {user_id}')
+                logger.warning('[Stripe] subscription past_due user={}', user_id)
             return user_id
 
     elif tipo == 'invoice.payment_failed':
@@ -291,7 +295,7 @@ def _processar_evento_stripe(event, tipo, obj, stripe_customer_id):
                 UPDATE users SET status='inadimplente' WHERE id=:uid
             '''), {'uid': user_id})
             conn.commit()
-            print(f'[Stripe] payment_failed: user {user_id} marcado inadimplente')
+            logger.warning('[Stripe] payment_failed user={} marcado inadimplente', user_id)
             return user_id
 
     elif tipo == 'customer.subscription.deleted':
@@ -308,7 +312,7 @@ def _processar_evento_stripe(event, tipo, obj, stripe_customer_id):
                 WHERE stripe_customer_id=:cid
             '''), {'cid': stripe_customer_id})
             conn.commit()
-            print(f'[Stripe] subscription cancelada: customer {stripe_customer_id}')
+            logger.info('[Stripe] subscription cancelada cid={}', stripe_customer_id)
             return user_id
 
     else:

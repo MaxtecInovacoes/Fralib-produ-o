@@ -1,12 +1,14 @@
 from fastapi import APIRouter, Depends, HTTPException
 import httpx
-import asyncio
 import time
+import logging
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from auth import get_current_user
 from database import get_db
 import os
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/whatsapp", tags=["whatsapp"])
 
@@ -43,7 +45,7 @@ def _limpar_sessao_db(tenant_id: str):
                 conn.execute(text("DELETE FROM tenant_device WHERE tenant_id=:tid"), {"tid": tenant_id})
                 conn.commit()
     except Exception as e:
-        print(f"[WPP] Erro ao limpar sessão DB: {e}")
+        logger.warning("[WPP] Erro ao limpar sessão DB err={}", e)
 
 @router.get("/status")
 async def whatsapp_status(usuario: dict = Depends(get_current_user)):

@@ -155,9 +155,9 @@ def _has_unbalanced_tags(html: str) -> bool:
     """Detecta tags HTML abertas e não fechadas em um fragmento."""
     if not html:
         return False
-    body = re.sub(r"(?is)<style[^>]*>.*?</style>", " ", html)
-    body = re.sub(r"(?is)<script[^>]*>.*?</script>", " ", html)
-    block_tags = re.findall(r"<(/?)(section|div|span|p|ul|ol|li|header|footer|nav|article|aside|form|table|tr|td|figure|blockquote)", body, flags=re.IGNORECASE)
+    stripped = re.sub(r"(?is)<style\b[^>]*>.*?</style>", " ", html)
+    stripped = re.sub(r"(?is)<script\b[^>]*>.*?</script>", " ", stripped)
+    block_tags = re.findall(r"<(/?)(section|div|span|p|ul|ol|li|header|footer|nav|article|aside|form|table|tr|td|figure|blockquote)\b", stripped, flags=re.IGNORECASE)
     depth = 0
     for slash, tag in block_tags:
         if not slash:
@@ -414,7 +414,8 @@ def _wait_for_openui(max_wait: int = 30) -> bool:
             if r.status_code < 500:
                 return True
         except Exception as e:
-            print(f"[builder] OpenUI check tentativa {_ + 1} falhou: {e}")
+            if _builder_logger:
+                _builder_logger.warning("[builder] OpenUI check tentativa {} falhou: {}", _ + 1, e)
         time.sleep(1)
     return False
 
@@ -613,10 +614,10 @@ def _prd_to_spec(prd) -> dict:
         "hero": hero,
         "ctas": ctas,
         "faqs": faqs,
-        "paleta": color_palette,
+        "paleta": design_tokens.get("palette", {}),
         "seo_keywords": getattr(prd, "seo_keywords", []) or [],
         "motion_directives": motion_directives,
-        "color_palette": color_palette,
+        "color_palette": design_tokens.get("palette", {}),
         "typography": getattr(prd, "typography", {}),
         "animations": animations,
         "design_tokens": design_tokens,
@@ -729,8 +730,8 @@ def _extract_body_only(html: str) -> str:
     fragment = match.group(1) if match else (html or "")
     fragment = re.sub(r"(?is)<!DOCTYPE[^>]*>\s*", "", fragment)
     fragment = re.sub(r"(?is)</?html[^>]*>", "", fragment)
-    # Remove only the <head>...</head> block itself (not subsequent body content)
-    fragment = re.sub(r"(?is)<head\b[^>]*>.*?</head>", "", fragment, flags=re.DOTALL)
+    # Remove <head>...</head> (or up to <body if closing tag is missing, e.g. partial fragments)
+    fragment = re.sub(r"(?is)<head\b[^>]*>.*?(?:</head\s*>|(?=<body\b))", "", fragment, flags=re.DOTALL)
     fragment = re.sub(r"(?is)</?body[^>]*>", "", fragment)
     return fragment.strip()
 
@@ -902,7 +903,7 @@ def _render_block(block_spec: dict, design_tokens: dict) -> tuple[str, str]:
                 GENERATE_ENDPOINT,
                 json={"designerPRD": block_spec},
                 headers={"Content-Type": "application/json"},
-                timeout=120,
+                timeout=60,
             )
             if resp.status_code == 200:
                 data = resp.json()
@@ -950,14 +951,17 @@ def _render_block(block_spec: dict, design_tokens: dict) -> tuple[str, str]:
                                 },
                             )
                     except Exception as exc:
-                        print(f"[builder] artifact openui bloco falhou: {exc}")
-                    print(f"[builder] Bloco [{label_str}] OK ({len(html)} chars)")
+                        if _builder_logger:
+                            _builder_logger.warning("[builder] artifact openui bloco falhou block={} err={}", label_str, exc)
+                    if _builder_logger:
+                        _builder_logger.info("[builder] Bloco [{}] OK bytes={} render_hint={}", label_str, len(html), render_hint)
                     return html, model
                 last_error = f"HTML invalido: {reason} ({len(html)} chars)"
-                print(
-                    f"[builder] Bloco [{label_str}] rejeitado "
-                    f"render_hint={render_hint} tentativa={attempt + 1}/{max_retries}: {last_error}"
-                )
+                if _builder_logger:
+                    _builder_logger.warning(
+                        "[builder] Bloco [{}] rejeitado render_hint={} tentativa={}/{} causa={}",
+                        label_str, render_hint, attempt + 1, max_retries, last_error,
+                    )
                 if attempt < max_retries - 1:
                     time.sleep(retry_delays[attempt])
                     continue
@@ -982,7 +986,8 @@ def _render_block(block_spec: dict, design_tokens: dict) -> tuple[str, str]:
             last_error = f"OpenUI error: {str(e)}"
             return "", ""
 
-    print(f"[builder] Bloco [{label_str}] falhou apos {max_retries} tentativas: {last_error}")
+    if _builder_logger:
+        _builder_logger.error("[builder] Bloco [{}] falhou apos {} tentativas causa={}", label_str, max_retries, last_error)
     return "", ""
 
 
@@ -994,7 +999,7 @@ def _render_shell_document(spec: dict) -> tuple[str, str, str]:
             GENERATE_ENDPOINT,
             json={"designerPRD": request_spec},
             headers={"Content-Type": "application/json"},
-            timeout=120,
+            timeout=60,
         )
         if resp.status_code != 200:
             return "", "", f"OpenUI HTTP {resp.status_code}: {resp.text[:200]}"
@@ -1021,7 +1026,8 @@ def _render_shell_document(spec: dict) -> tuple[str, str, str]:
                     },
                 )
         except Exception as exc:
-            print(f"[builder] artifact openui shell falhou: {exc}")
+            if _builder_logger:
+                _builder_logger.warning("[builder] artifact openui shell falhou err={}", exc)
         return html, data.get("model", ""), ""
     except Exception as exc:
         return "", "", f"shell error: {exc}"
@@ -1099,7 +1105,8 @@ def _render_full_site(spec: dict) -> tuple[str, str, str]:
     if _has_unbalanced_tags(final_html):
         return "", last_model or shell_model, "HTML final com tags <div> desbalanceadas"
     final_html = _inject_deterministic_assets(final_html, spec.get("design_tokens", {}))
-    print(f"[builder] Multi-call OpenUI OK ({len(final_html)} chars)")
+    if _builder_logger:
+        _builder_logger.info("[builder] Multi-call OpenUI OK bytes={}", len(final_html))
     return final_html, last_model or shell_model, ""
 
 
@@ -1134,7 +1141,8 @@ def render_site(prd, usar_llm: bool = True) -> BuildResult:
     try:
         _write_builder_spec_artifacts(spec)
     except Exception as exc:
-        print(f"[builder] artifact spec falhou: {exc}")
+        if _builder_logger:
+            _builder_logger.warning("[builder] artifact spec falhou err={}", exc)
 
     final_html, final_model, error = _render_full_site(spec)
     if not final_html:
@@ -1168,6 +1176,7 @@ def render_site(prd, usar_llm: bool = True) -> BuildResult:
             provider="openui",
         )
     except Exception as e:
-        print(f"[builder] tracking falhou single-shot: {e}")
+        if _builder_logger:
+            _builder_logger.warning("[builder] tracking falhou single-shot err={}", e)
 
     return BuildResult(html=final_html, model=final_model, success=True)
