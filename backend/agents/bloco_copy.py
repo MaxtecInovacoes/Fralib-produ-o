@@ -4,7 +4,6 @@ Retorno: Markdown parseado via markdown_prd_parser.
 """
 
 import re as _re
-import os
 from backend.agents.llm_direct import call_claude
 from backend.agents.markdown_prd_parser import parse_bloco2_markdown
 from prompts_arquiteto import SYSTEM_COPY_SENIOR
@@ -44,31 +43,38 @@ _SPECS_SECAO = {
 h1: titulo com cidade (8+ palavras, headline de VENDA, nao o nome do negocio)
 subtitulo: subtitulo persuasivo
 cta: texto do botao
-eyebrow: tag acima do h1""",
+eyebrow: tag acima do h1
+copy_constraints: h1 MUST include city name in 8+ words; NEVER ALL-CAPS; NEVER "Horário estendido"/"NÚMEROS QUE FALAM POR NÓS"/"PARE DE ESPERAR"; ONE specific proof point (rating or years in niche) max.""",
     "sobre": """## sobre
 h2: titulo
 body: texto curto e especifico
-cta: texto do botao""",
+cta: texto do botao
+copy_constraints: body must cite at least one confirmed fact (rating, niche-specific credential, neighborhood). NEVER "referência em estrutura" or generic "qualidade e compromisso". Tone matches archetype register.""",
     "servicos": """## servicos
 h2: titulo
 body: texto curto e especifico
 items: servicos reais confirmados, separados por ; (vazio se nao houver)
-cta: texto do botao""",
+cta: texto do botao
+copy_constraints: items come ONLY from Maps-confirmed services list. NEVER "Aula experimental gratuita" or generic bundles. Each item = one specific deliverable.""",
     "depoimentos": """## depoimentos
 omitir: {omitir_val}
 h2: titulo
-body: texto com reviews reais""",
+body: texto com reviews reais
+copy_constraints: h2 NEVER "NÚMEROS QUE FALAM POR NÓS" or "O que dizem nossos clientes". Use real review snippets only. NEVER fabricate.""",
     "faq": """## faq
 h2: titulo
-body: perguntas e respostas curtas""",
+body: perguntas e respostas curtas
+copy_constraints: questions from People Also Ask when available. Answers: 1-2 sentences max. NEVER use FAQ to restate service list.""",
     "localizacao": """## localizacao
 h2: titulo
 body: endereco real; se endereco estiver vazio, omitir:true
-cta: texto do botao""",
+cta: texto do botao
+copy_constraints: body contains ONLY the real address (street + neighborhood). NEVER invent streets. NEVER "estacionamento grátis" or "Horário estendido".""",
     "contato": """## contato
 h2: titulo
 body: telefone real
-cta: texto do botao""",
+cta: texto do botao
+copy_constraints: body = real phone only. CTA text NEVER "Faça um orçamento" or "Orçamento sem compromisso". Use action matching the primary CTA channel (WhatsApp/form/phone).""",
 }
 
 _GRUPOS_SECOES = [
@@ -103,9 +109,18 @@ CREATIVE DIRECTION: {instrucao_criativa[:500]}
 
 COPY RULES:
 - All customer-facing copy MUST be in Brazilian Portuguese (pt-BR).
-- NEVER use: "atendimento personalizado", "qualidade e compromisso", "resultados reais", "pronto para comecar", "os melhores profissionais"
-- NEVER use emoji.
+- NEVER use generic stock phrases: "atendimento personalizado", "qualidade e compromisso", "resultados reais", "pronto para comecar", "os melhores profissionais"
+- NEVER use ALL-CAPS section titles (ex: "NÚMEROS QUE FALAM POR NÓS", "PARE DE ESPERAR. COMECE HOJE").
+- NEVER use "Horário estendido", "atendimento 24h", "estacionamento grátis", "aula experimental gratuita", "Orçamento sem compromisso", "Faça um orçamento" as service claims.
+- NEVER claim "TEMOS +X ANOS DE EXPERIÊNCIA" or use "referência em" as a generic credential.
 - NEVER use "premium", "melhor", "top", "lider", "referencia", "moderna", "elite", "VIP" as public claims.
+- Archetype guard: match copy register to the visual archetype.
+  • industrial-bold → short declarative sentences, no emoji, no softening adverbs
+  • editorial-asymmetric → one literary metaphor per section, no corporate jargon
+  • apple-minimalist → minimal copy, one idea per line, no superlatives
+  • dark-futurist → tech-forward register, no "acolhedor" or organic language
+  • organic-warm → warm but concrete, no clinical/robotic register
+  • corporate-trust → formal register, cite ONE concrete credential per section, no urgency language
 - Vary CTAs: Hero=urgency, Servicos=curiosity, Depoimentos=desire, Contato=scarcity.
 - Geo-specific copy: if address exists, use street/neighborhood; if not, use only city.
 - SOBRE: do not paste a review inside the text. Use only confirmed facts.

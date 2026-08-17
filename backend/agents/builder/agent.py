@@ -578,11 +578,18 @@ def _prd_to_spec(prd) -> dict:
 
     # Build design_tokens from available PRD fields
     archetype_slug = getattr(prd, "design_system_slug", None) or "editorial-asymmetric"
+    archetype_system = _get_archetype_design_system(archetype_slug)
     design_tokens = {
         "archetype": archetype_slug,
         "palette": color_palette,
         "typography": getattr(prd, "typography", {}),
-        "radius": "12px",
+        "radius": archetype_system.get("border_radius", "8px"),
+        "heading_font": archetype_system.get("heading_font"),
+        "body_font": archetype_system.get("body_font"),
+        "heading_align": archetype_system.get("heading_align"),
+        "card_style": archetype_system.get("card_style"),
+        "spacing_tight": archetype_system.get("spacing_tight"),
+        "palette_bias": archetype_system.get("palette_bias", {}),
     }
 
     # Build layout_dna from layout_type
@@ -594,7 +601,9 @@ def _prd_to_spec(prd) -> dict:
 
     # Build design_system from archetype
     design_system = {
-        "archetype_briefing": _archetype_briefing(archetype_slug),
+        "archetype": archetype_slug,
+        **{k: v for k, v in archetype_system.items() if k != "palette_bias"},
+        "palette_bias": archetype_system.get("palette_bias", {}),
     }
 
     # Build hero from first section
@@ -786,6 +795,143 @@ def _archetype_briefing(archetype: str) -> str:
         "corporate-trust": "Corporate trust. Professional blue, structured grid, clear hierarchy. Enterprise credibility.",
     }
     return briefings.get(archetype, briefings["editorial-asymmetric"])
+
+
+VISUAL_DNA_BY_ARCHETYPE: dict[str, dict] = {
+    "industrial-bold": {
+        "typography": {
+            "heading": "Bebas Neue or Anton",
+            "body": "Inter",
+            "heading_scale": "condensed_impact_900",
+            "heading_trait": "uppercase condensado, italico em impacto",
+            "body_trait": "compacto, tenso, alto contraste",
+        },
+        "radius": "4px",
+        "border_style": "sharp edges, dark borders",
+        "color_overrides": {
+            "primary": "#111111",
+            "accent": "#e11d2a",
+            "background": "#0a0a0a",
+            "surface": "#1a1a1a",
+            "text": "#f5f5f5",
+            "border": "#2a2a2a",
+        },
+    },
+    "dark-futurist": {
+        "typography": {
+            "heading": "Space Grotesk or Outfit",
+            "body": "Inter",
+            "heading_scale": "geometric_display",
+            "heading_trait": "sans geometrica com contraste forte",
+            "body_trait": "preciso e escaneavel",
+        },
+        "radius": "16px",
+        "border_style": "subtle glass borders with blur",
+        "color_overrides": {
+            "primary": "#6366f1",
+            "accent": "#a855f7",
+            "background": "#0f0f1a",
+            "surface": "rgba(255,255,255,0.05)",
+            "text": "#e2e8f0",
+            "border": "rgba(255,255,255,0.08)",
+        },
+    },
+    "editorial-asymmetric": {
+        "typography": {
+            "heading": "Playfair Display or DM Serif Display",
+            "body": "Inter or Source Serif Pro",
+            "heading_scale": "editorial_large",
+            "heading_trait": "serif dramatico com peso contrastante",
+            "body_trait": "leitura calma e objetiva",
+        },
+        "radius": "8px",
+        "border_style": "thin editorial lines",
+        "color_overrides": {
+            "primary": "#1a1a1a",
+            "accent": "#c0392b",
+            "background": "#fafaf8",
+            "surface": "#ffffff",
+            "text": "#1a1a1a",
+            "border": "#e5e5e0",
+        },
+    },
+    "apple-minimalist": {
+        "typography": {
+            "heading": "SF Pro Display or Inter",
+            "body": "SF Pro Text or Inter",
+            "heading_scale": "clean_display",
+            "heading_trait": "peso leve, tracking apertado",
+            "body_trait": "limpo, espacado, silencioso",
+        },
+        "radius": "20px",
+        "border_style": "subtle 1px borders, soft shadows",
+        "color_overrides": {
+            "primary": "#000000",
+            "accent": "#0071e3",
+            "background": "#fbfbfd",
+            "surface": "#ffffff",
+            "text": "#1d1d1f",
+            "border": "#d2d2d7",
+        },
+    },
+    "organic-warm": {
+        "typography": {
+            "heading": "Fraunces or Lora",
+            "body": "Source Sans 3 or Lora",
+            "heading_scale": "soft_display",
+            "heading_trait": "display elegante sem agressividade",
+            "body_trait": "leve, amplo e acolhedor",
+        },
+        "radius": "24px",
+        "border_style": "rounded, soft, no sharp edges",
+        "color_overrides": {
+            "primary": "#5d7a5f",
+            "accent": "#c97b5d",
+            "background": "#faf7f2",
+            "surface": "#f3efe8",
+            "text": "#2d2a26",
+            "border": "#e3ddd4",
+        },
+    },
+    "corporate-trust": {
+        "typography": {
+            "heading": "Source Sans Pro or IBM Plex Sans",
+            "body": "Source Sans Pro or IBM Plex Sans",
+            "heading_scale": "structured",
+            "heading_trait": "grotesk elegante, pesos 600-700",
+            "body_trait": "leitura calma e objetiva",
+        },
+        "radius": "8px",
+        "border_style": "clean, structured, subtle",
+        "color_overrides": {
+            "primary": "#0f3d6e",
+            "accent": "#1a7bbd",
+            "background": "#ffffff",
+            "surface": "#f4f7fa",
+            "text": "#1f2937",
+            "border": "#dde3ea",
+        },
+    },
+}
+
+
+def _apply_archetype_dna(design_tokens: dict, archetype_slug: str) -> dict:
+    """Merge archetype-specific visual DNA into design_tokens."""
+    dna = VISUAL_DNA_BY_ARCHETYPE.get(archetype_slug)
+    if not dna:
+        return design_tokens
+    merged = dict(design_tokens)
+    if dna.get("typography"):
+        merged.setdefault("typography", {}).update(dna["typography"])
+    if dna.get("radius"):
+        merged["radius"] = dna["radius"]
+    if dna.get("border_style"):
+        merged["border_style"] = dna["border_style"]
+    if dna.get("color_overrides"):
+        palette = dict(merged.get("palette", {}))
+        palette.update(dna["color_overrides"])
+        merged["palette"] = palette
+    return merged
 
 
 def _extract_response_html(payload: dict) -> str:
