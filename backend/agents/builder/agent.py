@@ -142,10 +142,17 @@ def _strip_non_content_blocks(html: str) -> str:
 
 
 def _looks_like_valid_body_fragment(html: str) -> tuple[bool, str]:
-    """Reject style/script-heavy fragments before they poison the final page."""
+    """Reject style/script-heavy fragments before they poison the final page.
+
+    Permissive mode: complete HTML documents (<html + <body + <main + 200+ chars
+    of structured visible text) are allowed to contain legit scripts/styles
+    (analytics, GTM, AOS, etc.) — we still enforce balanced tags and structural
+    checks so genuinely broken fragments are still rejected.
+    """
     if not html or len(html.strip()) < 200:
         return False, "fragmento muito curto"
 
+    # Unbalanced tags always fail — real bug, not a legit document
     style_opens = len(re.findall(r"(?i)<style\b", html))
     style_closes = len(re.findall(r"(?i)</style>", html))
     if style_opens != style_closes:
@@ -175,8 +182,17 @@ def _looks_like_valid_body_fragment(html: str) -> tuple[bool, str]:
         return False, f"poucas secoes ({section_count})"
     if h1_count == 0:
         return False, "sem tag <h1>"
-    if "<script" in lower or "<style" in lower:
-        return False, "bloco ainda contem style/script apos limpeza"
+
+    # Complete documents may contain legit scripts/styles — skip blanket rejection
+    is_complete_doc = (
+        "<html" in lower
+        and "<body" in lower
+        and main_count > 0
+        and len(visible_text) > 200
+    )
+    if not is_complete_doc:
+        if "<script" in lower or "<style" in lower:
+            return False, "bloco ainda contem style/script apos limpeza"
 
     return True, ""
 

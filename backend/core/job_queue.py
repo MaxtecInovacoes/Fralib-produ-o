@@ -29,10 +29,10 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 
-# Backoff exponencial em segundos: tentativa 1 -> 30s, 2 -> 2min, 3 -> 8min
-_BACKOFF = [30, 120, 480]
-# Franz/SDR: mais tentativas com backoff mais longo (WhatsApp instável)
-_BACKOFF_BRYAN = [60, 120, 240, 480, 960]
+# Backoff exponencial em segundos: todas as tentativas usam 15s max
+_BACKOFF = [15, 15, 15]
+# Franz/SDR: mais tentativas com backoff curto (WhatsApp instável)
+_BACKOFF_BRYAN = [15, 15, 15, 15, 15]
 _PIPELINE_JOB_TYPES = ("pipeline_lead", "pipeline_multiplos", "pipeline_main")
 _MAX_PIPELINES_GLOBAL = int(os.environ.get("MAX_PIPELINES_GLOBAL", "1"))
 
@@ -184,6 +184,32 @@ def heartbeat(db: Session, job_id: int) -> None:
         text("UPDATE jobs SET worker_heartbeat = NOW() WHERE id = :id"), {"id": job_id}
     )
     db.commit()
+
+
+def reap_zombies_on_boot(db: Session, max_age_seconds: int = 60) -> int:
+    """Reset running jobs whose worker heartbeat is stale (or missing) to pending.
+
+    Called once at worker startup so jobs abandoned by dead workers re-enter
+    the queue immediately instead of waiting for the periodic reaper.
+    Returns the number of jobs reaped.
+    """
+    result = db.execute(
+        text("""
+        UPDATE jobs
+        SET status = 'pending',
+            worker_id = NULL,
+            worker_heartbeat = NULL,
+            next_retry_at = NOW()
+        WHERE status = 'running'
+          AND (worker_heartbeat IS NULL
+               OR worker_heartbeat < NOW() - (:age || ' seconds')::interval)
+        RETURNING id
+        """),
+        {"age": str(max_age_seconds)},
+    )
+    reaped = result.rowcount
+    db.commit()
+    return reaped
 
 
 def mark_success(db: Session, job_id: int) -> None:
