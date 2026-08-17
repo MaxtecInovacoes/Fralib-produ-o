@@ -4313,14 +4313,17 @@ function _mostrarPopupUpgrade(det) {
   const restantes = det.tokens_restantes !== undefined ? det.tokens_restantes : 0;
   const motivo = det.erro || 'Limite de ciclos atingido';
   const resetInfo = resetEm ? ` &nbsp;|&nbsp; Reinicia: <b style="color:#f5c518">${resetEm}</b>` : '';
+  const suporteMsg = 'Olá Suporte, atingi o limite de créditos: ' + motivo + '. Ciclos restantes: ' + restantes + (resetEm ? '. Reset em: ' + resetEm : '');
+  const waHref = 'https://wa.me/5541999538159?text=' + encodeURIComponent(suporteMsg);
   const html = `<div id="upgradeOverlay" style="position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;display:flex;align-items:center;justify-content:center;">
     <div style="background:#1a1a2e;border:1px solid #f5c518;border-radius:12px;padding:32px;max-width:420px;width:90%;text-align:center;">
       <div style="font-size:2rem;margin-bottom:12px;">&#9889;</div>
       <h2 style="color:#f5c518;margin-bottom:8px;">Limite atingido</h2>
       <p style="color:#ccc;margin-bottom:8px;">${motivo}</p>
       <p style="color:#888;font-size:.85rem;margin-bottom:24px;">Ciclos restantes: <b style="color:#f5c518">${restantes}</b>${resetInfo}</p>
-      <div style="display:flex;gap:12px;justify-content:center;">
+      <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
         <a href="/planos" style="background:#f5c518;color:#000;padding:10px 24px;border-radius:8px;font-weight:700;text-decoration:none;">FAZER UPGRADE</a>
+        <a href="${waHref}" target="_blank" rel="noopener noreferrer" style="background:#10b981;color:#fff;padding:10px 20px;border-radius:8px;font-weight:700;text-decoration:none;">&#x1F4AC; FALAR COM SUPORTE</a>
         <button onclick="document.getElementById('upgradeOverlay').remove()" style="background:transparent;border:1px solid #555;color:#ccc;padding:10px 24px;border-radius:8px;cursor:pointer;">FECHAR</button>
       </div>
     </div>
@@ -5125,7 +5128,7 @@ function atualizarStatusPipelineAdmin() {
   carregarKPIs();
 }
 
-function mostrarErrosPipelineAdmin(titulo, mensagem, acao, contextoExtra) {
+function mostrarErrosPipelineAdmin(titulo, mensagem, acao, contextoExtra, onRetry) {
   var old = document.getElementById('modal-erro-pipeline-admin');
   if (old) old.remove();
   titulo = String(titulo || 'Pipeline interrompido');
@@ -5170,6 +5173,11 @@ function mostrarErrosPipelineAdmin(titulo, mensagem, acao, contextoExtra) {
     + '  </div>'
     + (detalheTexto ? ('<details style="margin-bottom:18px;background:#0d0d15;border:1px solid #222235;border-radius:8px;padding:10px;"><summary style="cursor:pointer;font-size:12px;color:#a1a1aa;font-weight:600;">🔍 Detalhes Técnicos / Payload</summary><pre style="margin-top:8px;font-size:11px;color:#f43f5e;white-space:pre-wrap;word-break:break-all;max-height:120px;overflow-y:auto;background:#000;padding:8px;border-radius:6px;">' + escapeHtml(detalheTexto) + '</pre></details>') : '')
     + '  <div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;">'
+    + '    ' + (onRetry ? '<button id="btn-retry-pipeline-admin" style="background:#f59e0b;color:#000;border:none;padding:10px 16px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;">&#x1F504; Tentar Novamente</button>' : '')
+    + '    <a href="https://wa.me/5541999538159?text=' + encodeURIComponent('Olá Suporte, tive um erro no pipeline: ' + titulo + ' — ' + mensagem) + '" target="_blank" rel="noopener noreferrer" '
+    + '      style="background:#10b981;color:#fff;padding:10px 16px;border-radius:8px;font-size:12px;font-weight:600;text-decoration:none;">'
+    + '      &#x1F4AC; Falar com Suporte'
+    + '    </a>'
     + '    <button id="btn-copiar-diagnostico-admin" style="background:#3b82f6;color:white;border:none;padding:10px 16px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;">'
     + '      📋 Copiar Diagnóstico para o Claude'
     + '    </button>'
@@ -5179,6 +5187,16 @@ function mostrarErrosPipelineAdmin(titulo, mensagem, acao, contextoExtra) {
     + '</div>';
 
   document.body.appendChild(modal);
+
+  if (onRetry) {
+    var btnRetry = document.getElementById('btn-retry-pipeline-admin');
+    if (btnRetry) {
+      btnRetry.addEventListener('click', function() {
+        modal.remove();
+        onRetry();
+      });
+    }
+  }
 
   document.getElementById('btn-copiar-diagnostico-admin').onclick = function() {
     navigator.clipboard.writeText(promptClaude).then(function() {
@@ -7147,19 +7165,60 @@ console.log("[DEBUG] Event listeners registrados. Total:", document.querySelecto
       }
     };
 
+    let sseFalhasConsecutivas = 0;
+
+    eventSource.onerror = function(err) {
+      sseFalhasConsecutivas++;
+      console.warn('[SSE] Falha de conexão #' + sseFalhasConsecutivas);
+
+      if (sseFalhasConsecutivas >= 3) {
+        var erroMsg = 'A conexão em tempo real com a esteira oscilou. Tentando reconectar automaticamente...';
+        var zapLink = 'https://wa.me/5541999538159?text=' + encodeURIComponent('Olá Suporte, meu painel FraLib perdeu conexão com a esteira (SSE).');
+        // zera o contador e reconecta
+        sseFalhasConsecutivas = 0;
+        // usa o helper já existente do admin para mostrar o modal; injeta o link do WhatsApp dinamicamente
+        _mostrarErroSSEAdmin(erroMsg, zapLink);
+        eventSource.close();
+        if (!window.__fralibAuthExpired) {
+          setTimeout(function(){ conectarSSE().then(function(){ sseFalhasConsecutivas = 0; }).catch(function(e){ console.error('[SSE] Reconexão falhou:', e); }); }, 5000);
+        }
+      } else {
+        adicionarLog({ evento: 'AVISO', mensagem: 'Linha do tempo desconectada. Reconectando em 5s... (' + sseFalhasConsecutivas + '/3)', ts: new Date().toLocaleTimeString('pt-BR') });
+        eventSource.close();
+        if (!window.__fralibAuthExpired) {
+          setTimeout(function(){ conectarSSE().then(function(){ sseFalhasConsecutivas = 0; }).catch(function(e){ console.error('[SSE] Reconexão falhou:', e); }); }, 5000);
+        }
+      }
+    };
+
     eventSource.onopen = function() {
+      sseFalhasConsecutivas = 0;
+      console.log('[SSE] Conectado com sucesso.');
       var dot = document.getElementById('sse-dot');
       if (dot) dot.style.background = '#10b981';
       adicionarLog({ evento: 'INFO', mensagem: 'Linha do tempo conectada. Aguardando pipeline...', ts: new Date().toLocaleTimeString('pt-BR') });
     };
+  }
 
-    eventSource.onerror = function(err) {
-      console.error('[SSE] Erro na conexão:', err);
-      var dot = document.getElementById('sse-dot');
-      if (dot) dot.style.background = '#ef4444';
-      eventSource.close();
-      if (window.__fralibAuthExpired) return;
-      setTimeout(function(){ conectarSSE().catch(function(e){ console.error('[SSE] Reconexão falhou:', e); }); }, 5000);
+  function _mostrarErroSSEAdmin(erroMsg, zapLink) {
+    var old = document.getElementById('modal-sse-erro');
+    if (old) old.remove();
+    var modal = document.createElement('div');
+    modal.id = 'modal-sse-erro';
+    modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:99999;';
+    var waHref = (typeof zapLink === 'string' && zapLink.trim()) ? zapLink : ('https://wa.me/5541999538159?text=' + encodeURIComponent('Olá Suporte, a linha do tempo (SSE) caiu 3 vezes seguidas e não reconectou. Preciso de ajuda para verificar o pipeline.'));
+    var mensagem = (typeof erroMsg === 'string' && erroMsg.trim()) ? erroMsg : 'A conexão caiu 3 vezes seguidas. O worker continua rodando, mas você não está vendo os logs em tempo real.';
+        '<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">' +
+          '<button id="btn-reconectar-sse-admin" style="background:#f59e0b;color:#000;border:none;padding:10px 18px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;">🔄 Reconectar Agora</button>' +
+          '<a href="' + waHref + '" target="_blank" rel="noopener noreferrer" style="background:#10b981;color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;">💬 Falar com Suporte</a>' +
+          '<button onclick="document.getElementById(\'modal-sse-erro\').remove()" style="background:#27272a;color:#d4d4d8;border:1px solid #3f3f46;padding:10px 18px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">Fechar</button>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(modal);
+    document.getElementById('btn-reconectar-sse-admin').onclick = function() {
+      modal.remove();
+      sseFalhasConsecutivas = 0;
+      conectarSSE();
     };
   }
 
@@ -7169,12 +7228,18 @@ console.log("[DEBUG] Event listeners registrados. Total:", document.querySelecto
   const modal = document.createElement('div');
   modal.id = 'modal-rate-limit';
   modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:99999;';
+  var mensagem = (msg || 'O sistema esta temporariamente indisponivel. Seus leads estao salvos e serao processados automaticamente quando o limite resetar.');
+  var waHref = 'https://wa.me/5541999538159?text=' + encodeURIComponent('Olá Suporte, atingi o limite de uso: ' + mensagem);
   modal.innerHTML = `
-    <div style="background:#1a1a2e;border:1px solid #333;border-radius:16px;padding:32px;max-width:420px;width:90%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.5);">
+    <div style="background:#1a1a2e;border:1px solid #6366f1;border-radius:16px;padding:32px;max-width:420px;width:90%;text-align:center;box-shadow:0 20px 60px rgba(99,102,241,0.25);">
       <div style="font-size:48px;margin-bottom:16px;">⏳</div>
       <h2 style="margin:0 0 12px;font-size:20px;color:#f0f0f5;">Limite de Uso Atingido</h2>
-      <p style="color:#9ca3af;font-size:15px;line-height:1.5;margin:0 0 20px;">${msg || 'O sistema esta temporariamente indisponivel. Seus leads estao salvos e serao processados automaticamente quando o limite resetar.'}</p>
-      <button onclick="document.getElementById('modal-rate-limit').remove()" style="background:#6366f1;color:#fff;border:none;padding:10px 24px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;">Entendi</button>
+      <p style="color:#9ca3af;font-size:15px;line-height:1.5;margin:0 0 6px;">${mensagem}</p>
+      <p style="color:#6366f1;font-size:12px;margin:0 0 20px;">Os leads continuam salvos e serão processados automaticamente quando o limite resetar.</p>
+      <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+        <a href="${waHref}" target="_blank" rel="noopener noreferrer" style="background:#10b981;color:#fff;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;">&#x1F4AC; Falar com Suporte</a>
+        <button onclick="document.getElementById('modal-rate-limit').remove()" style="background:#6366f1;color:#fff;border:none;padding:10px 24px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;">Entendi</button>
+      </div>
     </div>
   `;
   document.body.appendChild(modal);

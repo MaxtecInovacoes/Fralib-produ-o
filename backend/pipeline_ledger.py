@@ -11,6 +11,7 @@ import os
 from dataclasses import dataclass, field
 from typing import Optional
 from enum import Enum
+from sqlalchemy import text
 
 
 class FaseStatus(Enum):
@@ -200,3 +201,36 @@ def carregar_ledger(run_id: str) -> Optional[Ledger]:
         with open(path, 'r', encoding='utf-8') as f:
             return Ledger.from_json(f.read())
     return None
+
+
+def sync_lead_inventory_status(lead_id, status_pipeline: str, site_url: str = None, erro_msg: str = None):
+    """Sincroniza o resultado da pipeline com a tabela lead_inventory para nunca travar a esteira."""
+    try:
+        from database import engine
+        if status_pipeline == "concluido":
+            with engine.connect() as conn:
+                conn.execute(text("""
+                    UPDATE lead_inventory
+                    SET status = 'site_done',
+                        site_url = :url,
+                        locked_by = NULL,
+                        locked_until = NULL,
+                        erro = NULL,
+                        atualizado_em = NOW()
+                    WHERE id = :id OR lead_id = :id
+                """), {"id": str(lead_id), "url": site_url})
+                conn.commit()
+        elif status_pipeline in ("erro_pipeline", "failed"):
+            with engine.connect() as conn:
+                conn.execute(text("""
+                    UPDATE lead_inventory
+                    SET status = 'error_retry',
+                        erro = :erro,
+                        locked_by = NULL,
+                        locked_until = NULL,
+                        atualizado_em = NOW()
+                    WHERE id = :id OR lead_id = :id
+                """), {"id": str(lead_id), "erro": erro_msg or "Falha no pipeline"})
+                conn.commit()
+    except Exception as exc:
+        print(f"[Ledger] Falha ao sincronizar lead_inventory: {exc}")

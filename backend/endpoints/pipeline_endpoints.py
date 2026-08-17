@@ -1410,6 +1410,12 @@ IMPORTANTE: Corrija EXATAMENTE os problemas acima. Não altere o que já estava 
                 processado_em=:ts, status='concluido', sdr_stage=:stage, atualizado_em=:ts
                 WHERE id=:id AND user_id=:uid
             """), {"url": state.site_url, "ts": datetime.now().isoformat(), "id": state.lead_id, "stage": _sdr_stage_final, "uid": state.tenant_id})
+            conn.execute(text("""
+                UPDATE lead_inventory
+                SET status='site_done', produzido_em=NOW(),
+                    locked_by=NULL, locked_until=NULL, erro=NULL, atualizado_em=NOW()
+                WHERE lead_id=:lead_id AND tenant_id=:uid
+            """), {"lead_id": state.lead_id, "uid": state.tenant_id})
             conn.commit()
         limpar_checkpoint(state.pipeline_id)
         _log("PIPELINE v2 CONCLUIDO - FraLibState OK", "success")
@@ -2515,6 +2521,12 @@ async def _executar_pipeline_a_partir_fase2(state, tenant_id, config):
                 "html": state.html_final[:50000], "id": state.lead_id,
                 "uid": state.tenant_id,
             })
+            conn.execute(text("""
+                UPDATE lead_inventory
+                SET status='site_done', produzido_em=NOW(),
+                    locked_by=NULL, locked_until=NULL, erro=NULL, atualizado_em=NOW()
+                WHERE lead_id=:lead_id AND tenant_id=:uid
+            """), {"lead_id": state.lead_id, "uid": state.tenant_id})
             conn.commit()
 
         # Franz
