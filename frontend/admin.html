@@ -520,6 +520,7 @@
           <span>progresso aproximado</span>
         </div>
         <div id="pipelineTopSteps" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(116px,1fr));gap:8px;margin-top:12px;"></div>
+        <div id="magic-logs-content" style="margin-top:12px;background:rgba(8,10,20,.82);border:1px solid var(--fl-border);border-radius:10px;padding:10px 12px;color:var(--fl-text-muted);font:12px/1.5 var(--fl-font-mono, 'Courier New', monospace);height:220px;overflow-y:auto;display:flex;flex-direction:column;gap:3px;"></div>
         <div id="pipelineTopLog" style="margin-top:12px;background:rgba(15,23,42,.58);border:1px solid var(--fl-border);border-radius:8px;padding:10px 12px;color:var(--fl-text-muted);font-size:12px;line-height:1.45;">
           Aguardando a esteira ser ligada.
         </div>
@@ -7129,11 +7130,9 @@ console.log("[DEBUG] Event listeners registrados. Total:", document.querySelecto
     if (eventSource) eventSource.close();
 
     if (window.__fralibAuthExpired) return;
-    var ticketResponse = await authFetch('/api/logs/stream-token', { method: 'POST' });
-    if (!ticketResponse.ok) throw new Error('Falha ao emitir ticket SSE');
-    var ticketData = await ticketResponse.json();
-    if (!ticketData.stream_token) throw new Error('Ticket SSE ausente');
-    eventSource = new EventSource('/api/logs/stream?ticket=' + encodeURIComponent(ticketData.stream_token));
+    var _sseToken = localStorage.getItem('fralib_token') || '';
+    if (!_sseToken) return;
+    eventSource = new EventSource('/api/logs/stream?token=' + encodeURIComponent(_sseToken));
 
     eventSource.onmessage = function(event) {
       try {
