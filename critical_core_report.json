@@ -1,0 +1,1359 @@
+{
+  "meta": {
+    "directive": "FRA-LIB_AUDIT_DIRECTIVE",
+    "version": "2026.08.16",
+    "halt_condition": "Report-only. No code mutated. Halt condition satisfied."
+  },
+  "discovered_entrypoints": [
+    "server.py",
+    "backend/agent_router.py",
+    "backend/pipeline_queue_manager.py",
+    "backend/pipeline_ledger.py",
+    "backend/dreaming_job.py",
+    "backend/whatsapp_listener.py",
+    "backend/agents/manager/agent.py",
+    "backend/services/lead_supply_engine.py",
+    "openui-service-wandb/backend/openui/server.py",
+    "backend/endpoints/__init__.py",
+    "backend/endpoints/abtest_endpoints.py",
+    "backend/endpoints/admin_pipeline_control_endpoints.py",
+    "backend/endpoints/agent_config_endpoints.py",
+    "backend/endpoints/agentes_endpoints.py",
+    "backend/endpoints/api_usage_endpoints.py",
+    "backend/endpoints/auth_endpoints.py",
+    "backend/endpoints/beta_endpoints.py",
+    "backend/endpoints/blog_endpoints.py",
+    "backend/endpoints/credits_endpoints.py",
+    "backend/endpoints/cron_endpoints.py",
+    "backend/endpoints/dashboard_endpoints.py",
+    "backend/endpoints/falhas_endpoints.py",
+    "backend/endpoints/franz_insights_endpoints.py",
+    "backend/endpoints/lead_supply_endpoints.py",
+    "backend/endpoints/leads_endpoints.py",
+    "backend/endpoints/llm_endpoints.py",
+    "backend/endpoints/obs_endpoints.py",
+    "backend/endpoints/pipeline_crud.py",
+    "backend/endpoints/pipeline_edit_endpoints.py",
+    "backend/endpoints/pipeline_endpoints.py",
+    "backend/endpoints/pipeline_trigger.py",
+    "backend/endpoints/provider_alerts_endpoints.py",
+    "backend/endpoints/provider_keys_endpoints.py",
+    "backend/endpoints/queue_endpoints.py",
+    "backend/endpoints/site_editor_endpoints.py",
+    "backend/endpoints/sse_endpoints.py",
+    "backend/endpoints/superadmin_endpoints.py",
+    "backend/endpoints/tracking_endpoints.py",
+    "backend/endpoints/users_endpoints.py",
+    "backend/endpoints/whatsapp_endpoints.py"
+  ],
+  "missing_entrypoints": [],
+  "total_scanned_files": 441,
+  "active_core_files_count": 45,
+  "orphaned_files_count": 396,
+  "active_files_by_layer": {
+    "LAYER_1_CORE_DATABASE": [
+      "backend/endpoints/auth_endpoints.py"
+    ],
+    "LAYER_2_PIPELINE_ENGINE": [
+      "backend/endpoints/admin_pipeline_control_endpoints.py",
+      "backend/endpoints/pipeline_crud.py",
+      "backend/endpoints/pipeline_edit_endpoints.py",
+      "backend/endpoints/pipeline_endpoints.py",
+      "backend/endpoints/pipeline_trigger.py",
+      "backend/pipeline_ledger.py",
+      "backend/pipeline_queue_manager.py"
+    ],
+    "LAYER_3_AI_AGENTS": [
+      "backend/agent_router.py",
+      "backend/agents/__init__.py",
+      "backend/agents/manager/agent.py",
+      "backend/endpoints/agent_config_endpoints.py",
+      "backend/endpoints/agentes_endpoints.py",
+      "backend/endpoints/franz_insights_endpoints.py",
+      "openui-service-wandb/backend/openui/server.py"
+    ],
+    "LAYER_4_LEAD_SUPPLY": [
+      "backend/endpoints/credits_endpoints.py",
+      "backend/endpoints/lead_supply_endpoints.py",
+      "backend/endpoints/provider_alerts_endpoints.py",
+      "backend/endpoints/provider_keys_endpoints.py",
+      "backend/services/lead_supply_engine.py"
+    ],
+    "LAYER_5_ACTIVE_ROUTES": [
+      "backend/endpoints/__init__.py",
+      "backend/endpoints/abtest_endpoints.py",
+      "backend/endpoints/api_usage_endpoints.py",
+      "backend/endpoints/beta_endpoints.py",
+      "backend/endpoints/blog_endpoints.py",
+      "backend/endpoints/cron_endpoints.py",
+      "backend/endpoints/dashboard_endpoints.py",
+      "backend/endpoints/falhas_endpoints.py",
+      "backend/endpoints/leads_endpoints.py",
+      "backend/endpoints/llm_endpoints.py",
+      "backend/endpoints/obs_endpoints.py",
+      "backend/endpoints/queue_endpoints.py",
+      "backend/endpoints/site_editor_endpoints.py",
+      "backend/endpoints/sse_endpoints.py",
+      "backend/endpoints/superadmin_endpoints.py",
+      "backend/endpoints/tracking_endpoints.py",
+      "backend/endpoints/users_endpoints.py",
+      "backend/endpoints/whatsapp_endpoints.py"
+    ],
+    "LAYER_6_SCHEMAS_CONTRACTS": [],
+    "LAYER_UNCLASSIFIED": [
+      "backend/__init__.py",
+      "backend/core/__init__.py",
+      "backend/dreaming_job.py",
+      "backend/services/__init__.py",
+      "backend/utils/__init__.py",
+      "backend/whatsapp_listener.py",
+      "server.py"
+    ]
+  },
+  "health_summary": {
+    "clean_files_count": 13,
+    "warning_files_count": 29,
+    "critical_files_count": 3
+  },
+  "top_priority_files_to_fix": [
+    {
+      "file_path": "backend/endpoints/credits_endpoints.py",
+      "layer": "LAYER_4_LEAD_SUPPLY",
+      "critical_issues_count": 1,
+      "warning_issues_count": 1,
+      "issue_types": [
+        "ASYNC_DB_SYNC_MISMATCH",
+        "IMPORT_DUPLICATED"
+      ]
+    },
+    {
+      "file_path": "backend/endpoints/whatsapp_endpoints.py",
+      "layer": "LAYER_5_ACTIVE_ROUTES",
+      "critical_issues_count": 1,
+      "warning_issues_count": 1,
+      "issue_types": [
+        "ASYNC_DB_SYNC_MISMATCH",
+        "IMPORT_DUPLICATED"
+      ]
+    },
+    {
+      "file_path": "openui-service-wandb/backend/openui/server.py",
+      "layer": "LAYER_3_AI_AGENTS",
+      "critical_issues_count": 1,
+      "warning_issues_count": 1,
+      "issue_types": [
+        "ASYNC_DB_SYNC_MISMATCH",
+        "IMPORT_DUPLICATED"
+      ]
+    },
+    {
+      "file_path": "backend/endpoints/pipeline_endpoints.py",
+      "layer": "LAYER_2_PIPELINE_ENGINE",
+      "critical_issues_count": 0,
+      "warning_issues_count": 3,
+      "issue_types": [
+        "HTML_FRAGILE_REGEX",
+        "IMPORT_DUPLICATED",
+        "JSON_BLIND_TRUNCATION"
+      ]
+    },
+    {
+      "file_path": "backend/dreaming_job.py",
+      "layer": "LAYER_UNCLASSIFIED",
+      "critical_issues_count": 0,
+      "warning_issues_count": 2,
+      "issue_types": [
+        "HTML_FRAGILE_REGEX",
+        "JSON_BLIND_TRUNCATION"
+      ]
+    },
+    {
+      "file_path": "backend/endpoints/site_editor_endpoints.py",
+      "layer": "LAYER_5_ACTIVE_ROUTES",
+      "critical_issues_count": 0,
+      "warning_issues_count": 2,
+      "issue_types": [
+        "HTML_FRAGILE_REGEX",
+        "IMPORT_DUPLICATED"
+      ]
+    },
+    {
+      "file_path": "backend/endpoints/sse_endpoints.py",
+      "layer": "LAYER_5_ACTIVE_ROUTES",
+      "critical_issues_count": 0,
+      "warning_issues_count": 2,
+      "issue_types": [
+        "IMPORT_DUPLICATED",
+        "JSON_BLIND_TRUNCATION"
+      ]
+    },
+    {
+      "file_path": "backend/endpoints/superadmin_endpoints.py",
+      "layer": "LAYER_5_ACTIVE_ROUTES",
+      "critical_issues_count": 0,
+      "warning_issues_count": 2,
+      "issue_types": [
+        "IMPORT_DUPLICATED",
+        "JSON_BLIND_TRUNCATION"
+      ]
+    },
+    {
+      "file_path": "backend/whatsapp_listener.py",
+      "layer": "LAYER_UNCLASSIFIED",
+      "critical_issues_count": 0,
+      "warning_issues_count": 2,
+      "issue_types": [
+        "HTML_FRAGILE_REGEX",
+        "IMPORT_DUPLICATED"
+      ]
+    },
+    {
+      "file_path": "backend/agents/manager/agent.py",
+      "layer": "LAYER_3_AI_AGENTS",
+      "critical_issues_count": 0,
+      "warning_issues_count": 1,
+      "issue_types": [
+        "IMPORT_DUPLICATED"
+      ]
+    },
+    {
+      "file_path": "backend/endpoints/abtest_endpoints.py",
+      "layer": "LAYER_5_ACTIVE_ROUTES",
+      "critical_issues_count": 0,
+      "warning_issues_count": 1,
+      "issue_types": [
+        "IMPORT_DUPLICATED"
+      ]
+    },
+    {
+      "file_path": "backend/endpoints/admin_pipeline_control_endpoints.py",
+      "layer": "LAYER_2_PIPELINE_ENGINE",
+      "critical_issues_count": 0,
+      "warning_issues_count": 1,
+      "issue_types": [
+        "IMPORT_DUPLICATED"
+      ]
+    },
+    {
+      "file_path": "backend/endpoints/agent_config_endpoints.py",
+      "layer": "LAYER_3_AI_AGENTS",
+      "critical_issues_count": 0,
+      "warning_issues_count": 1,
+      "issue_types": [
+        "IMPORT_DUPLICATED"
+      ]
+    },
+    {
+      "file_path": "backend/endpoints/agentes_endpoints.py",
+      "layer": "LAYER_3_AI_AGENTS",
+      "critical_issues_count": 0,
+      "warning_issues_count": 1,
+      "issue_types": [
+        "IMPORT_DUPLICATED"
+      ]
+    },
+    {
+      "file_path": "backend/endpoints/api_usage_endpoints.py",
+      "layer": "LAYER_5_ACTIVE_ROUTES",
+      "critical_issues_count": 0,
+      "warning_issues_count": 1,
+      "issue_types": [
+        "IMPORT_DUPLICATED"
+      ]
+    },
+    {
+      "file_path": "backend/endpoints/auth_endpoints.py",
+      "layer": "LAYER_1_CORE_DATABASE",
+      "critical_issues_count": 0,
+      "warning_issues_count": 1,
+      "issue_types": [
+        "IMPORT_DUPLICATED"
+      ]
+    },
+    {
+      "file_path": "backend/endpoints/beta_endpoints.py",
+      "layer": "LAYER_5_ACTIVE_ROUTES",
+      "critical_issues_count": 0,
+      "warning_issues_count": 1,
+      "issue_types": [
+        "IMPORT_DUPLICATED"
+      ]
+    },
+    {
+      "file_path": "backend/endpoints/blog_endpoints.py",
+      "layer": "LAYER_5_ACTIVE_ROUTES",
+      "critical_issues_count": 0,
+      "warning_issues_count": 1,
+      "issue_types": [
+        "HTML_FRAGILE_REGEX"
+      ]
+    },
+    {
+      "file_path": "backend/endpoints/dashboard_endpoints.py",
+      "layer": "LAYER_5_ACTIVE_ROUTES",
+      "critical_issues_count": 0,
+      "warning_issues_count": 1,
+      "issue_types": [
+        "IMPORT_DUPLICATED"
+      ]
+    },
+    {
+      "file_path": "backend/endpoints/falhas_endpoints.py",
+      "layer": "LAYER_5_ACTIVE_ROUTES",
+      "critical_issues_count": 0,
+      "warning_issues_count": 1,
+      "issue_types": [
+        "IMPORT_DUPLICATED"
+      ]
+    }
+  ],
+  "per_file_detail": {
+    "backend/__init__.py": {
+      "layer": "LAYER_UNCLASSIFIED",
+      "size_bytes": 0,
+      "has_fastapi_router": false,
+      "issues": [],
+      "issue_count": 0,
+      "incoming": [
+        "backend/agents/manager/agent.py",
+        "backend/endpoints/abtest_endpoints.py",
+        "backend/endpoints/admin_pipeline_control_endpoints.py",
+        "backend/endpoints/agentes_endpoints.py",
+        "backend/endpoints/beta_endpoints.py",
+        "backend/endpoints/dashboard_endpoints.py",
+        "backend/endpoints/falhas_endpoints.py",
+        "backend/endpoints/lead_supply_endpoints.py",
+        "backend/endpoints/leads_endpoints.py",
+        "backend/endpoints/pipeline_edit_endpoints.py",
+        "backend/endpoints/pipeline_endpoints.py",
+        "backend/endpoints/pipeline_trigger.py",
+        "backend/endpoints/provider_keys_endpoints.py",
+        "backend/endpoints/site_editor_endpoints.py",
+        "backend/endpoints/sse_endpoints.py",
+        "backend/endpoints/superadmin_endpoints.py",
+        "backend/endpoints/tracking_endpoints.py",
+        "server.py"
+      ]
+    },
+    "backend/agent_router.py": {
+      "layer": "LAYER_3_AI_AGENTS",
+      "size_bytes": 3915,
+      "has_fastapi_router": false,
+      "issues": [],
+      "issue_count": 0,
+      "incoming": []
+    },
+    "backend/agents/__init__.py": {
+      "layer": "LAYER_3_AI_AGENTS",
+      "size_bytes": 0,
+      "has_fastapi_router": false,
+      "issues": [],
+      "issue_count": 0,
+      "incoming": [
+        "backend/endpoints/agent_config_endpoints.py",
+        "backend/endpoints/leads_endpoints.py",
+        "backend/endpoints/pipeline_edit_endpoints.py",
+        "backend/endpoints/pipeline_endpoints.py",
+        "backend/endpoints/users_endpoints.py",
+        "backend/whatsapp_listener.py",
+        "server.py"
+      ]
+    },
+    "backend/agents/manager/agent.py": {
+      "layer": "LAYER_3_AI_AGENTS",
+      "size_bytes": 9355,
+      "has_fastapi_router": false,
+      "issues": [
+        {
+          "rule": "IMPORT_DUPLICATED",
+          "severity": "warning",
+          "detail": "duplicated top-level imports: ['backend']"
+        }
+      ],
+      "issue_count": 1,
+      "incoming": []
+    },
+    "backend/core/__init__.py": {
+      "layer": "LAYER_UNCLASSIFIED",
+      "size_bytes": 0,
+      "has_fastapi_router": false,
+      "issues": [],
+      "issue_count": 0,
+      "incoming": [
+        "backend/endpoints/agent_config_endpoints.py",
+        "backend/endpoints/auth_endpoints.py",
+        "backend/endpoints/pipeline_endpoints.py",
+        "backend/endpoints/provider_alerts_endpoints.py",
+        "backend/endpoints/provider_keys_endpoints.py",
+        "backend/endpoints/superadmin_endpoints.py"
+      ]
+    },
+    "backend/dreaming_job.py": {
+      "layer": "LAYER_UNCLASSIFIED",
+      "size_bytes": 9903,
+      "has_fastapi_router": false,
+      "issues": [
+        {
+          "rule": "JSON_BLIND_TRUNCATION",
+          "severity": "warning",
+          "detail": "json.dumps(...) slice truncation detected"
+        },
+        {
+          "rule": "HTML_FRAGILE_REGEX",
+          "severity": "warning",
+          "detail": "HTML parsing via regex detected"
+        }
+      ],
+      "issue_count": 2,
+      "incoming": []
+    },
+    "backend/endpoints/__init__.py": {
+      "layer": "LAYER_5_ACTIVE_ROUTES",
+      "size_bytes": 0,
+      "has_fastapi_router": false,
+      "issues": [],
+      "issue_count": 0,
+      "incoming": [
+        "backend/whatsapp_listener.py"
+      ]
+    },
+    "backend/endpoints/abtest_endpoints.py": {
+      "layer": "LAYER_5_ACTIVE_ROUTES",
+      "size_bytes": 5037,
+      "has_fastapi_router": true,
+      "issues": [
+        {
+          "rule": "IMPORT_DUPLICATED",
+          "severity": "warning",
+          "detail": "duplicated top-level imports: ['backend']"
+        }
+      ],
+      "issue_count": 1,
+      "incoming": []
+    },
+    "backend/endpoints/admin_pipeline_control_endpoints.py": {
+      "layer": "LAYER_2_PIPELINE_ENGINE",
+      "size_bytes": 24009,
+      "has_fastapi_router": true,
+      "issues": [
+        {
+          "rule": "IMPORT_DUPLICATED",
+          "severity": "warning",
+          "detail": "duplicated top-level imports: ['backend']"
+        }
+      ],
+      "issue_count": 1,
+      "incoming": []
+    },
+    "backend/endpoints/agent_config_endpoints.py": {
+      "layer": "LAYER_3_AI_AGENTS",
+      "size_bytes": 22991,
+      "has_fastapi_router": true,
+      "issues": [
+        {
+          "rule": "IMPORT_DUPLICATED",
+          "severity": "warning",
+          "detail": "duplicated top-level imports: ['agents', 'sqlalchemy']"
+        }
+      ],
+      "issue_count": 1,
+      "incoming": []
+    },
+    "backend/endpoints/agentes_endpoints.py": {
+      "layer": "LAYER_3_AI_AGENTS",
+      "size_bytes": 11354,
+      "has_fastapi_router": true,
+      "issues": [
+        {
+          "rule": "IMPORT_DUPLICATED",
+          "severity": "warning",
+          "detail": "duplicated top-level imports: ['backend']"
+        }
+      ],
+      "issue_count": 1,
+      "incoming": []
+    },
+    "backend/endpoints/api_usage_endpoints.py": {
+      "layer": "LAYER_5_ACTIVE_ROUTES",
+      "size_bytes": 6919,
+      "has_fastapi_router": true,
+      "issues": [
+        {
+          "rule": "IMPORT_DUPLICATED",
+          "severity": "warning",
+          "detail": "duplicated top-level imports: ['datetime', 'fastapi']"
+        }
+      ],
+      "issue_count": 1,
+      "incoming": []
+    },
+    "backend/endpoints/auth_endpoints.py": {
+      "layer": "LAYER_1_CORE_DATABASE",
+      "size_bytes": 16742,
+      "has_fastapi_router": true,
+      "issues": [
+        {
+          "rule": "IMPORT_DUPLICATED",
+          "severity": "warning",
+          "detail": "duplicated top-level imports: ['fastapi', 'services', 'sqlalchemy']"
+        }
+      ],
+      "issue_count": 1,
+      "incoming": []
+    },
+    "backend/endpoints/beta_endpoints.py": {
+      "layer": "LAYER_5_ACTIVE_ROUTES",
+      "size_bytes": 2811,
+      "has_fastapi_router": true,
+      "issues": [
+        {
+          "rule": "IMPORT_DUPLICATED",
+          "severity": "warning",
+          "detail": "duplicated top-level imports: ['backend', 'sqlalchemy']"
+        }
+      ],
+      "issue_count": 1,
+      "incoming": []
+    },
+    "backend/endpoints/blog_endpoints.py": {
+      "layer": "LAYER_5_ACTIVE_ROUTES",
+      "size_bytes": 18594,
+      "has_fastapi_router": true,
+      "issues": [
+        {
+          "rule": "HTML_FRAGILE_REGEX",
+          "severity": "warning",
+          "detail": "HTML parsing via regex detected"
+        }
+      ],
+      "issue_count": 1,
+      "incoming": []
+    },
+    "backend/endpoints/credits_endpoints.py": {
+      "layer": "LAYER_4_LEAD_SUPPLY",
+      "size_bytes": 16172,
+      "has_fastapi_router": true,
+      "issues": [
+        {
+          "rule": "ASYNC_DB_SYNC_MISMATCH",
+          "severity": "critical",
+          "detail": "async def 'criar_portal_session' accesses session/DB synchronously"
+        },
+        {
+          "rule": "IMPORT_DUPLICATED",
+          "severity": "warning",
+          "detail": "duplicated top-level imports: ['database', 'sqlalchemy']"
+        }
+      ],
+      "issue_count": 2,
+      "incoming": []
+    },
+    "backend/endpoints/cron_endpoints.py": {
+      "layer": "LAYER_5_ACTIVE_ROUTES",
+      "size_bytes": 3348,
+      "has_fastapi_router": true,
+      "issues": [],
+      "issue_count": 0,
+      "incoming": []
+    },
+    "backend/endpoints/dashboard_endpoints.py": {
+      "layer": "LAYER_5_ACTIVE_ROUTES",
+      "size_bytes": 13006,
+      "has_fastapi_router": true,
+      "issues": [
+        {
+          "rule": "IMPORT_DUPLICATED",
+          "severity": "warning",
+          "detail": "duplicated top-level imports: ['backend', 'sqlalchemy']"
+        }
+      ],
+      "issue_count": 1,
+      "incoming": []
+    },
+    "backend/endpoints/falhas_endpoints.py": {
+      "layer": "LAYER_5_ACTIVE_ROUTES",
+      "size_bytes": 5157,
+      "has_fastapi_router": true,
+      "issues": [
+        {
+          "rule": "IMPORT_DUPLICATED",
+          "severity": "warning",
+          "detail": "duplicated top-level imports: ['backend', 'sqlalchemy']"
+        }
+      ],
+      "issue_count": 1,
+      "incoming": []
+    },
+    "backend/endpoints/franz_insights_endpoints.py": {
+      "layer": "LAYER_3_AI_AGENTS",
+      "size_bytes": 7238,
+      "has_fastapi_router": true,
+      "issues": [
+        {
+          "rule": "IMPORT_DUPLICATED",
+          "severity": "warning",
+          "detail": "duplicated top-level imports: ['sqlalchemy']"
+        }
+      ],
+      "issue_count": 1,
+      "incoming": []
+    },
+    "backend/endpoints/lead_supply_endpoints.py": {
+      "layer": "LAYER_4_LEAD_SUPPLY",
+      "size_bytes": 10403,
+      "has_fastapi_router": true,
+      "issues": [
+        {
+          "rule": "IMPORT_DUPLICATED",
+          "severity": "warning",
+          "detail": "duplicated top-level imports: ['backend', 'sqlalchemy']"
+        }
+      ],
+      "issue_count": 1,
+      "incoming": []
+    },
+    "backend/endpoints/leads_endpoints.py": {
+      "layer": "LAYER_5_ACTIVE_ROUTES",
+      "size_bytes": 46505,
+      "has_fastapi_router": true,
+      "issues": [
+        {
+          "rule": "IMPORT_DUPLICATED",
+          "severity": "warning",
+          "detail": "duplicated top-level imports: ['agents', 'backend', 'datetime', 'fastapi', 'os', 'pydantic', 're', 'sqlalchemy', 'typing']"
+        }
+      ],
+      "issue_count": 1,
+      "incoming": []
+    },
+    "backend/endpoints/llm_endpoints.py": {
+      "layer": "LAYER_5_ACTIVE_ROUTES",
+      "size_bytes": 2746,
+      "has_fastapi_router": true,
+      "issues": [
+        {
+          "rule": "IMPORT_DUPLICATED",
+          "severity": "warning",
+          "detail": "duplicated top-level imports: ['sqlalchemy']"
+        }
+      ],
+      "issue_count": 1,
+      "incoming": []
+    },
+    "backend/endpoints/obs_endpoints.py": {
+      "layer": "LAYER_5_ACTIVE_ROUTES",
+      "size_bytes": 5391,
+      "has_fastapi_router": true,
+      "issues": [],
+      "issue_count": 0,
+      "incoming": []
+    },
+    "backend/endpoints/pipeline_crud.py": {
+      "layer": "LAYER_2_PIPELINE_ENGINE",
+      "size_bytes": 5433,
+      "has_fastapi_router": true,
+      "issues": [
+        {
+          "rule": "IMPORT_DUPLICATED",
+          "severity": "warning",
+          "detail": "duplicated top-level imports: ['database', 'sqlalchemy']"
+        }
+      ],
+      "issue_count": 1,
+      "incoming": []
+    },
+    "backend/endpoints/pipeline_edit_endpoints.py": {
+      "layer": "LAYER_2_PIPELINE_ENGINE",
+      "size_bytes": 3791,
+      "has_fastapi_router": true,
+      "issues": [
+        {
+          "rule": "IMPORT_DUPLICATED",
+          "severity": "warning",
+          "detail": "duplicated top-level imports: ['agents', 'backend', 'sqlalchemy']"
+        }
+      ],
+      "issue_count": 1,
+      "incoming": []
+    },
+    "backend/endpoints/pipeline_endpoints.py": {
+      "layer": "LAYER_2_PIPELINE_ENGINE",
+      "size_bytes": 150913,
+      "has_fastapi_router": true,
+      "issues": [
+        {
+          "rule": "JSON_BLIND_TRUNCATION",
+          "severity": "warning",
+          "detail": "json.dumps(...) slice truncation detected"
+        },
+        {
+          "rule": "HTML_FRAGILE_REGEX",
+          "severity": "warning",
+          "detail": "HTML parsing via regex detected"
+        },
+        {
+          "rule": "IMPORT_DUPLICATED",
+          "severity": "warning",
+          "detail": "duplicated top-level imports: ['agent_memory', 'agent_router', 'agents', 'asyncio', 'backend', 'concurrent', 'datetime', 'hashlib', 'job_queue', 'json', 'llm_direct', 'logging', 'os', 'random', 're', 'services', 'sqlalchemy', 'utils']"
+        }
+      ],
+      "issue_count": 3,
+      "incoming": []
+    },
+    "backend/endpoints/pipeline_trigger.py": {
+      "layer": "LAYER_2_PIPELINE_ENGINE",
+      "size_bytes": 5952,
+      "has_fastapi_router": true,
+      "issues": [
+        {
+          "rule": "IMPORT_DUPLICATED",
+          "severity": "warning",
+          "detail": "duplicated top-level imports: ['backend', 'sqlalchemy']"
+        }
+      ],
+      "issue_count": 1,
+      "incoming": []
+    },
+    "backend/endpoints/provider_alerts_endpoints.py": {
+      "layer": "LAYER_4_LEAD_SUPPLY",
+      "size_bytes": 6060,
+      "has_fastapi_router": true,
+      "issues": [
+        {
+          "rule": "IMPORT_DUPLICATED",
+          "severity": "warning",
+          "detail": "duplicated top-level imports: ['sqlalchemy']"
+        }
+      ],
+      "issue_count": 1,
+      "incoming": []
+    },
+    "backend/endpoints/provider_keys_endpoints.py": {
+      "layer": "LAYER_4_LEAD_SUPPLY",
+      "size_bytes": 8714,
+      "has_fastapi_router": true,
+      "issues": [
+        {
+          "rule": "IMPORT_DUPLICATED",
+          "severity": "warning",
+          "detail": "duplicated top-level imports: ['backend', 'sqlalchemy', 'utils']"
+        }
+      ],
+      "issue_count": 1,
+      "incoming": []
+    },
+    "backend/endpoints/queue_endpoints.py": {
+      "layer": "LAYER_5_ACTIVE_ROUTES",
+      "size_bytes": 5478,
+      "has_fastapi_router": true,
+      "issues": [],
+      "issue_count": 0,
+      "incoming": []
+    },
+    "backend/endpoints/site_editor_endpoints.py": {
+      "layer": "LAYER_5_ACTIVE_ROUTES",
+      "size_bytes": 12920,
+      "has_fastapi_router": true,
+      "issues": [
+        {
+          "rule": "HTML_FRAGILE_REGEX",
+          "severity": "warning",
+          "detail": "HTML parsing via regex detected"
+        },
+        {
+          "rule": "IMPORT_DUPLICATED",
+          "severity": "warning",
+          "detail": "duplicated top-level imports: ['backend', 'sqlalchemy']"
+        }
+      ],
+      "issue_count": 2,
+      "incoming": []
+    },
+    "backend/endpoints/sse_endpoints.py": {
+      "layer": "LAYER_5_ACTIVE_ROUTES",
+      "size_bytes": 9954,
+      "has_fastapi_router": true,
+      "issues": [
+        {
+          "rule": "JSON_BLIND_TRUNCATION",
+          "severity": "warning",
+          "detail": "json.dumps(...) slice truncation detected"
+        },
+        {
+          "rule": "IMPORT_DUPLICATED",
+          "severity": "warning",
+          "detail": "duplicated top-level imports: ['fastapi']"
+        }
+      ],
+      "issue_count": 2,
+      "incoming": []
+    },
+    "backend/endpoints/superadmin_endpoints.py": {
+      "layer": "LAYER_5_ACTIVE_ROUTES",
+      "size_bytes": 35608,
+      "has_fastapi_router": true,
+      "issues": [
+        {
+          "rule": "JSON_BLIND_TRUNCATION",
+          "severity": "warning",
+          "detail": "json.dumps(...) slice truncation detected"
+        },
+        {
+          "rule": "IMPORT_DUPLICATED",
+          "severity": "warning",
+          "detail": "duplicated top-level imports: ['backend', 'sqlalchemy']"
+        }
+      ],
+      "issue_count": 2,
+      "incoming": []
+    },
+    "backend/endpoints/tracking_endpoints.py": {
+      "layer": "LAYER_5_ACTIVE_ROUTES",
+      "size_bytes": 3240,
+      "has_fastapi_router": true,
+      "issues": [
+        {
+          "rule": "IMPORT_DUPLICATED",
+          "severity": "warning",
+          "detail": "duplicated top-level imports: ['backend', 'sqlalchemy']"
+        }
+      ],
+      "issue_count": 1,
+      "incoming": []
+    },
+    "backend/endpoints/users_endpoints.py": {
+      "layer": "LAYER_5_ACTIVE_ROUTES",
+      "size_bytes": 13219,
+      "has_fastapi_router": true,
+      "issues": [
+        {
+          "rule": "IMPORT_DUPLICATED",
+          "severity": "warning",
+          "detail": "duplicated top-level imports: ['httpx', 'os', 'sqlalchemy', 'utils']"
+        }
+      ],
+      "issue_count": 1,
+      "incoming": []
+    },
+    "backend/endpoints/whatsapp_endpoints.py": {
+      "layer": "LAYER_5_ACTIVE_ROUTES",
+      "size_bytes": 7766,
+      "has_fastapi_router": true,
+      "issues": [
+        {
+          "rule": "ASYNC_DB_SYNC_MISMATCH",
+          "severity": "critical",
+          "detail": "async def '_get_session' accesses session/DB synchronously"
+        },
+        {
+          "rule": "IMPORT_DUPLICATED",
+          "severity": "warning",
+          "detail": "duplicated top-level imports: ['sqlalchemy']"
+        }
+      ],
+      "issue_count": 2,
+      "incoming": []
+    },
+    "backend/pipeline_ledger.py": {
+      "layer": "LAYER_2_PIPELINE_ENGINE",
+      "size_bytes": 7645,
+      "has_fastapi_router": false,
+      "issues": [],
+      "issue_count": 0,
+      "incoming": []
+    },
+    "backend/pipeline_queue_manager.py": {
+      "layer": "LAYER_2_PIPELINE_ENGINE",
+      "size_bytes": 4448,
+      "has_fastapi_router": false,
+      "issues": [],
+      "issue_count": 0,
+      "incoming": []
+    },
+    "backend/services/__init__.py": {
+      "layer": "LAYER_UNCLASSIFIED",
+      "size_bytes": 2,
+      "has_fastapi_router": false,
+      "issues": [],
+      "issue_count": 0,
+      "incoming": [
+        "backend/endpoints/auth_endpoints.py",
+        "backend/endpoints/cron_endpoints.py",
+        "backend/endpoints/leads_endpoints.py",
+        "backend/endpoints/pipeline_endpoints.py",
+        "backend/endpoints/pipeline_trigger.py"
+      ]
+    },
+    "backend/services/lead_supply_engine.py": {
+      "layer": "LAYER_4_LEAD_SUPPLY",
+      "size_bytes": 2729,
+      "has_fastapi_router": false,
+      "issues": [],
+      "issue_count": 0,
+      "incoming": []
+    },
+    "backend/utils/__init__.py": {
+      "layer": "LAYER_UNCLASSIFIED",
+      "size_bytes": 0,
+      "has_fastapi_router": false,
+      "issues": [],
+      "issue_count": 0,
+      "incoming": [
+        "backend/endpoints/auth_endpoints.py",
+        "backend/endpoints/pipeline_endpoints.py",
+        "backend/endpoints/provider_keys_endpoints.py",
+        "backend/endpoints/users_endpoints.py"
+      ]
+    },
+    "backend/whatsapp_listener.py": {
+      "layer": "LAYER_UNCLASSIFIED",
+      "size_bytes": 42720,
+      "has_fastapi_router": false,
+      "issues": [
+        {
+          "rule": "HTML_FRAGILE_REGEX",
+          "severity": "warning",
+          "detail": "HTML parsing via regex detected"
+        },
+        {
+          "rule": "IMPORT_DUPLICATED",
+          "severity": "warning",
+          "detail": "duplicated top-level imports: ['agents', 'datetime', 'json', 're', 'sqlalchemy', 'time']"
+        }
+      ],
+      "issue_count": 2,
+      "incoming": []
+    },
+    "openui-service-wandb/backend/openui/server.py": {
+      "layer": "LAYER_3_AI_AGENTS",
+      "size_bytes": 21222,
+      "has_fastapi_router": true,
+      "issues": [
+        {
+          "rule": "ASYNC_DB_SYNC_MISMATCH",
+          "severity": "critical",
+          "detail": "async def 'chat_completions' accesses session/DB synchronously"
+        },
+        {
+          "rule": "IMPORT_DUPLICATED",
+          "severity": "warning",
+          "detail": "duplicated top-level imports: ['contextlib', 'fastapi', 'ollama', 'openai', 'util']"
+        }
+      ],
+      "issue_count": 2,
+      "incoming": []
+    },
+    "server.py": {
+      "layer": "LAYER_UNCLASSIFIED",
+      "size_bytes": 16261,
+      "has_fastapi_router": true,
+      "issues": [
+        {
+          "rule": "IMPORT_DUPLICATED",
+          "severity": "warning",
+          "detail": "duplicated top-level imports: ['alembic', 'backend', 'database', 'fastapi', 'os', 'slowapi', 'sys']"
+        }
+      ],
+      "issue_count": 1,
+      "incoming": []
+    }
+  },
+  "orphaned_files": [
+    ".git/hooks/check_v11_protection.py",
+    "alembic/env.py",
+    "alembic/versions/b278e17c0c0c_initial_schema.py",
+    "alembic/versions/baseline_real_prod.py",
+    "alembic/versions/fase4_multitenant_hardening.py",
+    "alembic/versions/provider_alerts.py",
+    "alembic/versions/provider_keys.py",
+    "audit_codebase.py",
+    "auto_fix_mechanical.py",
+    "backend/agent_memory.py",
+    "backend/agents/agent_rag.py",
+    "backend/agents/agente_nicho.py",
+    "backend/agents/agente_variacao.py",
+    "backend/agents/animation_injector.py",
+    "backend/agents/animation_profile.py",
+    "backend/agents/arquiteto_agent_loop.py",
+    "backend/agents/arquiteto_mestre.py",
+    "backend/agents/arquiteto_tools.py",
+    "backend/agents/artifact_store.py",
+    "backend/agents/benchmarker.py",
+    "backend/agents/bloco_copy.py",
+    "backend/agents/bloco_estrutura.py",
+    "backend/agents/brain.py",
+    "backend/agents/builder/agent.py",
+    "backend/agents/builder/quality_gate_v2/inject.py",
+    "backend/agents/builder/quality_gate_v2/seo_geo_enricher.py",
+    "backend/agents/builder_contract_utils.py",
+    "backend/agents/caio.py",
+    "backend/agents/cinematic_post_processor.py",
+    "backend/agents/color_enforcer.py",
+    "backend/agents/color_extractor.py",
+    "backend/agents/component_library.py",
+    "backend/agents/craft_rules.py",
+    "backend/agents/design_context.py",
+    "backend/agents/design_director.py",
+    "backend/agents/design_guidelines.py",
+    "backend/agents/design_prompts.py",
+    "backend/agents/design_system_injector.py",
+    "backend/agents/design_system_selector.py",
+    "backend/agents/design_systems_library.py",
+    "backend/agents/design_tokens.py",
+    "backend/agents/designer_prd.py",
+    "backend/agents/few_shot_examples.py",
+    "backend/agents/franz/__init__.py",
+    "backend/agents/franz/agent.py",
+    "backend/agents/franz/conversion_axes.py",
+    "backend/agents/franz/franz_agent_loop.py",
+    "backend/agents/franz/franz_tools.py",
+    "backend/agents/handoff_types.py",
+    "backend/agents/hero_styles.py",
+    "backend/agents/html_builder_repair.py",
+    "backend/agents/html_content_validator.py",
+    "backend/agents/html_contract_validator.py",
+    "backend/agents/html_media_validator.py",
+    "backend/agents/html_phase6_repair.py",
+    "backend/agents/html_publication_helpers.py",
+    "backend/agents/html_quality_gate.py",
+    "backend/agents/hunter/__init__.py",
+    "backend/agents/hunter/agent.py",
+    "backend/agents/jina_research.py",
+    "backend/agents/keyword_research.py",
+    "backend/agents/lgpd_personalized.py",
+    "backend/agents/liam_agent_loop.py",
+    "backend/agents/liz.py",
+    "backend/agents/liz_rubricas.py",
+    "backend/agents/llm_agent_config.py",
+    "backend/agents/llm_anthropic.py",
+    "backend/agents/llm_client.py",
+    "backend/agents/llm_config.py",
+    "backend/agents/llm_context.py",
+    "backend/agents/llm_direct.py",
+    "backend/agents/llm_openai.py",
+    "backend/agents/llm_providers.py",
+    "backend/agents/llm_router.py",
+    "backend/agents/llm_tracking.py",
+    "backend/agents/manager/states.py",
+    "backend/agents/manager/step_arquiteto.py",
+    "backend/agents/manager/step_builder.py",
+    "backend/agents/manager/step_caio.py",
+    "backend/agents/manager/step_deploy.py",
+    "backend/agents/manager/step_design_director.py",
+    "backend/agents/manager/step_franz.py",
+    "backend/agents/manager/step_hunter.py",
+    "backend/agents/manager/step_nicho.py",
+    "backend/agents/manager/step_quality_gate.py",
+    "backend/agents/manager/step_variacao.py",
+    "backend/agents/markdown_prd_parser.py",
+    "backend/agents/memory.py",
+    "backend/agents/niche_resolver.py",
+    "backend/agents/nicho_data.py",
+    "backend/agents/open_design_selector.py",
+    "backend/agents/pexels_video.py",
+    "backend/agents/pipeline_checkpoint.py",
+    "backend/agents/pipeline_identity.py",
+    "backend/agents/pipeline_learning.py",
+    "backend/agents/prompt_agent_builder.py",
+    "backend/agents/prompt_agent_context.py",
+    "backend/agents/prompt_agent_helpers.py",
+    "backend/agents/prompts_arquiteto.py",
+    "backend/agents/requirements_contract.py",
+    "backend/agents/sdr_langgraph/MIGRATION_GUIDE.py",
+    "backend/agents/sdr_langgraph/__init__.py",
+    "backend/agents/sdr_langgraph/agent.py",
+    "backend/agents/sdr_langgraph/bant_meddic.py",
+    "backend/agents/sdr_langgraph/compat.py",
+    "backend/agents/sdr_langgraph/handoff.py",
+    "backend/agents/sdr_langgraph/humanization.py",
+    "backend/agents/sdr_langgraph/intent_classifier.py",
+    "backend/agents/sdr_langgraph/learning.py",
+    "backend/agents/sdr_langgraph/multi_agent.py",
+    "backend/agents/sdr_langgraph/nodes/__init__.py",
+    "backend/agents/sdr_langgraph/orchestrator.py",
+    "backend/agents/sdr_langgraph/prompts.py",
+    "backend/agents/sdr_langgraph/state.py",
+    "backend/agents/sdr_langgraph/state_machine.py",
+    "backend/agents/sdr_langgraph/tools.py",
+    "backend/agents/sdr_langgraph/watchdog.py",
+    "backend/agents/section_editor.py",
+    "backend/agents/seo_context.py",
+    "backend/agents/site_build_plan.py",
+    "backend/agents/site_prompt_agent.py",
+    "backend/agents/site_skill_pack.py",
+    "backend/agents/skill_loader.py",
+    "backend/agents/sub_nicho.py",
+    "backend/agents/theo.py",
+    "backend/agents/theo_agent_loop.py",
+    "backend/agents/theo_tools.py",
+    "backend/agents/token_tracker.py",
+    "backend/agents/trend_watcher.py",
+    "backend/agents/unsplash_fetcher.py",
+    "backend/agents/validador.py",
+    "backend/agents/validation_enforcer.py",
+    "backend/agents/validation_layer.py",
+    "backend/agents/visual_archetypes.py",
+    "backend/agents/visual_contract.py",
+    "backend/agents/visual_contract_gate.py",
+    "backend/agents/visual_fingerprint.py",
+    "backend/api_monitor.py",
+    "backend/config.py",
+    "backend/core/access_control.py",
+    "backend/core/alerting.py",
+    "backend/core/archetypes.py",
+    "backend/core/auth.py",
+    "backend/core/auth_helpers.py",
+    "backend/core/color_library.py",
+    "backend/core/config.py",
+    "backend/core/database.py",
+    "backend/core/db_imports.py",
+    "backend/core/design_reference_packs.py",
+    "backend/core/design_system_router.py",
+    "backend/core/env_validator.py",
+    "backend/core/job_queue.py",
+    "backend/core/jwt_config.py",
+    "backend/core/knowledge_journal.py",
+    "backend/core/logging_setup.py",
+    "backend/core/observability_setup.py",
+    "backend/core/pipeline_error_log.py",
+    "backend/core/proxy_models.py",
+    "backend/core/rag.py",
+    "backend/core/rate_limiter.py",
+    "backend/core/retry_helper.py",
+    "backend/core/router_setup.py",
+    "backend/core/schema_init.py",
+    "backend/domain/__init__.py",
+    "backend/domain/llm_pricing.py",
+    "backend/domain/plans.py",
+    "backend/endpoints/credits/__init__.py",
+    "backend/endpoints/credits/checkout.py",
+    "backend/endpoints/credits/status.py",
+    "backend/endpoints/credits/webhook_cakto.py",
+    "backend/eval/__init__.py",
+    "backend/eval/runner.py",
+    "backend/eval/schemas.py",
+    "backend/integration_healthcheck.py",
+    "backend/observability.py",
+    "backend/prd_cache.py",
+    "backend/schemas/__init__.py",
+    "backend/schemas/pipeline.py",
+    "backend/schemas/pipeline_trigger.py",
+    "backend/schemas/provider_keys.py",
+    "backend/schemas/superadmin.py",
+    "backend/scripts/ensure_superadmin.py",
+    "backend/services/admin_user_service.py",
+    "backend/services/agent_bus.py",
+    "backend/services/auth_service.py",
+    "backend/services/auto_fix.py",
+    "backend/services/cache_service.py",
+    "backend/services/cakto_client.py",
+    "backend/services/circuit_breaker.py",
+    "backend/services/closer_queue.py",
+    "backend/services/credits_manager.py",
+    "backend/services/dreamer.py",
+    "backend/services/email_service.py",
+    "backend/services/error_diagnostics.py",
+    "backend/services/hermes_watchdog.py",
+    "backend/services/hunter_provider.py",
+    "backend/services/ia_manager.py",
+    "backend/services/key_healthcheck.py",
+    "backend/services/lead_providers.py",
+    "backend/services/lead_supply_events.py",
+    "backend/services/lead_supply_filters.py",
+    "backend/services/lead_supply_inventory.py",
+    "backend/services/lead_supply_providers/__init__.py",
+    "backend/services/lead_supply_providers/caio.py",
+    "backend/services/lead_supply_providers/hunter.py",
+    "backend/services/lead_supply_providers/manual.py",
+    "backend/services/lead_supply_providers/maps.py",
+    "backend/services/lead_supply_storage.py",
+    "backend/services/manual_provider.py",
+    "backend/services/maps_provider.py",
+    "backend/services/pipeline_cache_control.py",
+    "backend/services/pipeline_flow_config.py",
+    "backend/services/pipeline_media.py",
+    "backend/services/pipeline_phase_tracking.py",
+    "backend/services/pipeline_phases.py",
+    "backend/services/pipeline_renderer_support.py",
+    "backend/services/pipeline_sdr_delivery.py",
+    "backend/services/pipeline_state.py",
+    "backend/services/pipeline_validators.py",
+    "backend/services/provider_keys_service.py",
+    "backend/services/rag_retriever.py",
+    "backend/services/retargeting.py",
+    "backend/services/sdr_gateway.py",
+    "backend/services/sdr_settings.py",
+    "backend/services/service_manager.py",
+    "backend/services/site_health_check.py",
+    "backend/services/token_bucket.py",
+    "backend/services/vite_build_executor.py",
+    "backend/services/vite_config.py",
+    "backend/services/vite_config_helpers.py",
+    "backend/services/vite_facts.py",
+    "backend/services/vite_file_extractor.py",
+    "backend/services/vite_modules.py",
+    "backend/services/vite_prompts.py",
+    "backend/services/vite_renderer_models.py",
+    "backend/services/vite_templates.py",
+    "backend/services/vite_validator.py",
+    "backend/shared/password.py",
+    "backend/utils/agente1_hunter_v2.py",
+    "backend/utils/espionar_concorrencia.py",
+    "backend/utils/google_local_scraper.py",
+    "backend/utils/google_maps_gosom.py",
+    "backend/utils/google_scraper_core.py",
+    "backend/utils/google_scraper_helpers.py",
+    "backend/utils/google_scraper_parse.py",
+    "backend/utils/jina_intelligence.py",
+    "backend/utils/password_utils.py",
+    "backend/utils/safe_lead_qualificado.py",
+    "backend/utils/schema_builder.py",
+    "backend/utils/secrets_crypto.py",
+    "backend/utils/validation_layer.py",
+    "frontend/build.py",
+    "frontend/build_admin.py",
+    "lead-pipeline/outreach/config.py",
+    "lead-pipeline/outreach/config_reply.py",
+    "lead-pipeline/outreach/pitch_sender.py",
+    "lead-pipeline/outreach/reply_checker.py",
+    "lead-pipeline/scraper/apify_scraper.py",
+    "lead-pipeline/scraper/config.py",
+    "lead-pipeline/sheets/google_sheets.py",
+    "map_critical_core.py",
+    "openui-service-wandb/backend/.venv/Lib/site-packages/_virtualenv.py",
+    "openui-service-wandb/backend/.venv/Scripts/activate_this.py",
+    "openui-service-wandb/backend/openui/__init__.py",
+    "openui-service-wandb/backend/openui/__main__.py",
+    "openui-service-wandb/backend/openui/config.py",
+    "openui-service-wandb/backend/openui/db/models.py",
+    "openui-service-wandb/backend/openui/dummy.py",
+    "openui-service-wandb/backend/openui/eval/__init__.py",
+    "openui-service-wandb/backend/openui/eval/dataset.py",
+    "openui-service-wandb/backend/openui/eval/evaluate.py",
+    "openui-service-wandb/backend/openui/eval/evaluate_weave.py",
+    "openui-service-wandb/backend/openui/eval/model.py",
+    "openui-service-wandb/backend/openui/eval/prompt_to_img.py",
+    "openui-service-wandb/backend/openui/eval/promptsearch.py",
+    "openui-service-wandb/backend/openui/eval/scrape.py",
+    "openui-service-wandb/backend/openui/eval/screenshots.py",
+    "openui-service-wandb/backend/openui/eval/synthesize.py",
+    "openui-service-wandb/backend/openui/eval/to_fine_tune.py",
+    "openui-service-wandb/backend/openui/generate.py",
+    "openui-service-wandb/backend/openui/litellm.py",
+    "openui-service-wandb/backend/openui/logs.py",
+    "openui-service-wandb/backend/openui/models.py",
+    "openui-service-wandb/backend/openui/ollama.py",
+    "openui-service-wandb/backend/openui/openai.py",
+    "openui-service-wandb/backend/openui/session.py",
+    "openui-service-wandb/backend/openui/tui/app.py",
+    "openui-service-wandb/backend/openui/tui/code.py",
+    "openui-service-wandb/backend/openui/tui/markdown.py",
+    "openui-service-wandb/backend/openui/util/__init__.py",
+    "openui-service-wandb/backend/openui/util/email.py",
+    "openui-service-wandb/backend/openui/util/screenshots.py",
+    "openui-service-wandb/backend/openui/util/storage.py",
+    "openui-service-wandb/backend/tests/test_openui.py",
+    "prime-agent/packages/coding-agent/skills/agent-message/src/agent_message/__init__.py",
+    "prime-agent/packages/coding-agent/skills/agent-observe/src/agent_observe/__init__.py",
+    "prime-agent/packages/coding-agent/skills/attach-image/src/attach_image/__init__.py",
+    "prime-agent/packages/coding-agent/skills/attach-image/src/attach_image/attach_image.py",
+    "prime-agent/packages/coding-agent/skills/compact/src/compact/__init__.py",
+    "prime-agent/packages/coding-agent/skills/edit/src/edit/__init__.py",
+    "prime-agent/packages/coding-agent/skills/goal/src/goal/__init__.py",
+    "prime-agent/packages/coding-agent/skills/linear/src/linear/__init__.py",
+    "prime-agent/packages/coding-agent/skills/notion/src/notion/__init__.py",
+    "prime-agent/packages/coding-agent/skills/refine/src/refine/__init__.py",
+    "prime-agent/packages/coding-agent/skills/rlm-heartbeat/src/rlm_heartbeat/__init__.py",
+    "prime-agent/packages/coding-agent/skills/websearch/src/websearch/__init__.py",
+    "prime-agent/packages/coding-agent/skills/websearch/src/websearch/websearch.py",
+    "prime-agent/packages/coding-agent/test/fixtures/skills/python-skill/src/python_skill/__init__.py",
+    "prime-agent/prime-agent-runtime/src/rlm/__init__.py",
+    "prime-agent/prime-agent-runtime/src/rlm/harness.py",
+    "prime-agent/prime-agent-runtime/src/rlm/mcp_base.py",
+    "prime-agent/prime-agent-runtime/src/rlm/skill.py",
+    "prime-agent/prime-agent-runtime/test/test_agent_message_skill.py",
+    "prime-agent/prime-agent-runtime/test/test_harness.py",
+    "prime-agent/prime-agent-runtime/test/test_mcp_base.py",
+    "prime-agent/prime-agent-runtime/test/test_subagent_registry.py",
+    "prime-agent/scripts/render-logo.py",
+    "run_final_analysis.py",
+    "scripts/check_leads.py",
+    "scripts/check_pipeline_data.py",
+    "scripts/checks/check_crm.py",
+    "scripts/checks/check_crm2.py",
+    "scripts/checks/check_db_name.py",
+    "scripts/checks/check_jobs.py",
+    "scripts/checks/check_jobs2.py",
+    "scripts/checks/check_pipeline.py",
+    "scripts/checks/check_schema.py",
+    "scripts/checks/check_schema2.py",
+    "scripts/checks/check_schema3.py",
+    "scripts/checks/check_status.py",
+    "scripts/checks/check_status2.py",
+    "scripts/checks/check_users.py",
+    "scripts/checks/list_dbs.py",
+    "scripts/deploy/dashboard_analytics.py",
+    "scripts/deploy/lead_supply_endpoints.py",
+    "scripts/deploy/leads_missing_endpoints.py",
+    "scripts/deploy/patch_leads.py",
+    "scripts/deploy/run_production.py",
+    "scripts/deploy/run_production_batch.py",
+    "scripts/deploy/trigger_production.py",
+    "scripts/deploy_openui_python.py",
+    "scripts/fix_admin_password.py",
+    "scripts/fixes/fix_admin.py",
+    "scripts/fixes/fix_alerts.py",
+    "scripts/fixes/fix_bugs.py",
+    "scripts/fixes/fix_crm.py",
+    "scripts/fixes/fix_crm2.py",
+    "scripts/fixes/fix_lead_supply2.py",
+    "scripts/fixes/fix_lead_supply3.py",
+    "scripts/fixes/fix_lead_supply_sql.py",
+    "scripts/fixes/fix_status_full.py",
+    "scripts/fixes/fix_stuck_jobs.py",
+    "scripts/fixes/patch_worker.py",
+    "scripts/fixes/patch_worker_v2.py",
+    "scripts/fixes/patch_worker_v3.py",
+    "scripts/fixes/set_pass.py",
+    "scripts/fixes/sync2.py",
+    "scripts/fixes/sync_inventory.py",
+    "scripts/fixes/sync_scores.py",
+    "scripts/fixes/watchdog_jobs.py",
+    "scripts/fixes/worker_patched.py",
+    "scripts/init_local_db.py",
+    "scripts/list_tables.py",
+    "scripts/reset_evogym.py",
+    "scripts/restart3.py",
+    "scripts/trigger_test.py",
+    "tests/__init__.py",
+    "tests/conftest.py",
+    "tests/conftest_temp.py",
+    "tests/e2e/__init__.py",
+    "tests/e2e/test_e2e_login.py",
+    "tests/integration/__init__.py",
+    "tests/integration/test_api_auth.py",
+    "tests/integration/test_api_pipeline.py",
+    "tests/integration/test_idor_multitenant.py",
+    "tests/test_crm.py",
+    "tests/test_pipeline_real.py",
+    "tests/test_setup.py",
+    "tests/unit/__init__.py",
+    "tests/unit/test_auth_core.py",
+    "tests/unit/test_auth_endpoints.py",
+    "tests/unit/test_builder_prd_spec.py",
+    "tests/unit/test_database.py",
+    "tests/unit/test_jina_research.py",
+    "tests/unit/test_lead_supply_production_tick.py",
+    "tests/unit/test_llm_resilience.py",
+    "tests/unit/test_manager_intent_pipeline.py",
+    "tests/unit/test_openui_handoff_safe_post.py",
+    "tests/unit/test_password_utils.py",
+    "tests/unit/test_phd_sports_regressions.py",
+    "tests/unit/test_pipeline_runtime_contracts.py",
+    "tests/unit/test_utils.py",
+    "tests/unit/test_visual_fingerprint_quality_gates.py",
+    "tests/unit/test_worker_payload_context.py",
+    "tmp_reprocess_start_academia.py",
+    "worker.py"
+  ]
+}

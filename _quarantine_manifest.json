@@ -1,0 +1,8 @@
+{
+  "phase": "FASE_1_ORPHAN_PURGE",
+  "moved_count": 46,
+  "guardrail_protected_count": 349,
+  "bak_tmp_skipped": 0,
+  "not_found": 0,
+  "quarantine_dir": "C:\\fralib\\_quarantine_legacy"
+}

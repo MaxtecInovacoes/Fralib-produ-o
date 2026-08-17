@@ -1,0 +1,18 @@
+# Outreach Configuration
+# Copy this file to config.py and fill in your values
+
+# SMTP Server Settings
+SMTP_HOST = "smtp.hostinger.com"     # or smtp.gmail.com
+SMTP_PORT = 465                      # 465 for SSL, 587 for STARTTLS
+SMTP_USER = "hello@yourdomain.com"
+SMTP_PASSWORD = "YOUR_SMTP_PASSWORD"
+
+# Sender Details
+FROM_EMAIL = "hello@yourdomain.com"
+FROM_NAME = "Your Name"
+
+# BCC: Track all sent emails by CC'ing yourself
+BCC = "hello@yourdomain.com"
+
+# Rate limiting (seconds between sends)
+SEND_DELAY = 3
