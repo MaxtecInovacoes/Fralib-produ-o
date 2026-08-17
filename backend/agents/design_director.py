@@ -15,12 +15,10 @@ Fluxo:
 3. Se falhar, usa fallback determinístico
 """
 
-from __future__ import annotations
 
 import hashlib
 import json
 import logging
-import os
 import time
 from pathlib import Path
 from typing import Any
@@ -37,14 +35,14 @@ logger = logging.getLogger(__name__)
 CACHE_DIR = Path("/tmp/fralib_design_cache")
 CACHE_TTL_SECONDS = 86400  # 24h
 
-def _cache_key(nicho: str, cidade: str, segment: str) -> str:
-    """Generate cache key from nicho, cidade and segment."""
-    raw = f"{nicho}_{cidade}_{segment}"
+def _cache_key(nicho: str, cidade: str, segment: str, nome: str = "") -> str:
+    """Generate cache key from nicho, cidade, segment and business name."""
+    raw = f"{nicho}|{cidade}|{segment}|{nome.lower()}"
     return hashlib.md5(raw.encode()).hexdigest()
 
-def _cache_get(nicho: str, cidade: str, segment: str) -> dict[str, Any] | None:
+def _cache_get(nicho: str, cidade: str, segment: str, nome: str = "") -> dict[str, Any] | None:
     """Get cached design direction if valid (24h TTL)."""
-    key = _cache_key(nicho, cidade, segment)
+    key = _cache_key(nicho, cidade, segment, nome)
     path = CACHE_DIR / f"{key}.json"
     if path.exists():
         age = time.time() - path.stat().st_mtime
@@ -57,11 +55,11 @@ def _cache_get(nicho: str, cidade: str, segment: str) -> dict[str, Any] | None:
                 logger.warning(f"[DesignDirector] Cache read failed: {e}")
     return None
 
-def _cache_set(nicho: str, cidade: str, segment: str, data: dict[str, Any]) -> None:
+def _cache_set(nicho: str, cidade: str, segment: str, nome: str, data: dict[str, Any]) -> None:
     """Save design direction to cache."""
     try:
         CACHE_DIR.mkdir(parents=True, exist_ok=True)
-        key = _cache_key(nicho, cidade, segment)
+        key = _cache_key(nicho, cidade, segment, nome)
         path = CACHE_DIR / f"{key}.json"
         path.write_text(json.dumps(data, ensure_ascii=False))
         logger.info(f"[DesignDirector] Cache SET: nicho={nicho}, cidade={cidade}")
@@ -160,9 +158,9 @@ def gerar_direcao_criativa(
     Returns dict with paleta, motion, tom de voz, estrutura.
     """
     # ─── PASSO 0: Checar cache (24h TTL) ───
-    cached = _cache_get(nicho, cidade, segment)
+    cached = _cache_get(nicho, cidade, segment, nome_negocio)
     if cached:
-        logger.info(f"[DesignDirector] Cache hit para nicho={nicho}, cidade={cidade}")
+        logger.info(f"[DesignDirector] Cache hit para nicho={nicho}, cidade={cidade}, negocio={nome_negocio}")
         return cached
 
     # ─── PASSO 1: Tentar usar design_context como fonte de tokens OKLch ───
@@ -233,7 +231,6 @@ Retorne APENAS o JSON com a direção criativa."""
             max_tokens=2000,
         )
 
-        import json
         # Tentar parsear JSON
         if isinstance(result, str):
             # Limpar markdown se houver
@@ -269,7 +266,7 @@ Retorne APENAS o JSON com a direção criativa."""
             parsed["design_tokens"] = None
 
         # ─── PASSO 3: Salvar no cache ───
-        _cache_set(nicho, cidade, segment, parsed)
+        _cache_set(nicho, cidade, segment, nome_negocio, parsed)
 
         return parsed
 
@@ -277,8 +274,7 @@ Retorne APENAS o JSON com a direção criativa."""
         logger.error(f"[DesignDirector] Erro: {e}")
         # Fallback determinístico baseado no nicho
         fallback = _fallback_direction(nicho, design_tokens)
-        # Salvar fallback no cache também
-        _cache_set(nicho, cidade, segment, fallback)
+        # NÃO gravar fallback no cache — evita cache poisoning de 24h
         return fallback
 
 def _fallback_direction(nicho: str, design_tokens: dict[str, Any] | None = None) -> dict[str, Any]:
