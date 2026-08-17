@@ -22,6 +22,84 @@ except Exception:
     write_html_artifact = None
     write_json_artifact = None
 
+# ═══════════════════════════════════════════════════════════════════
+# ARCHETYPE DESIGN SYSTEMS — concrete tokens per visual archetype
+# Each entry drives typography, radius, spacing, card style and
+# palette bias so OpenUI renders a genuinely different layout per
+# business instead of relying on a vague text briefing.
+# ═══════════════════════════════════════════════════════════════════
+
+ARCHETYPE_DESIGN_SYSTEMS = {
+    "industrial-bold": {
+        "heading_font": "Bebas Neue",
+        "body_font": "Space Grotesk",
+        "border_radius": "0px",
+        "heading_align": "left",
+        "card_style": "sharp-border",
+        "spacing_tight": True,
+        "palette_bias": {"bg": "#0a0a0a", "surface": "#1a1a1a", "accent": "#ff3b00"},
+    },
+    "editorial-asymmetric": {
+        "heading_font": "Playfair Display",
+        "body_font": "Inter",
+        "border_radius": "8px",
+        "heading_align": "left",
+        "card_style": "shadow-elevated",
+        "spacing_tight": False,
+        "palette_bias": {"bg": "#fafafa", "surface": "#ffffff", "accent": "#1a1a1a"},
+    },
+    "apple-minimalist": {
+        "heading_font": "SF Pro Display",
+        "body_font": "SF Pro Text",
+        "border_radius": "16px",
+        "heading_align": "center",
+        "card_style": "glass-subtle",
+        "spacing_tight": False,
+        "palette_bias": {"bg": "#fbfbfd", "surface": "#ffffff", "accent": "#0071e3"},
+    },
+    "dark-futurist": {
+        "heading_font": "Orbitron",
+        "body_font": "Exo 2",
+        "border_radius": "12px",
+        "heading_align": "center",
+        "card_style": "glass-neon",
+        "spacing_tight": True,
+        "palette_bias": {"bg": "#0a0a14", "surface": "#12122a", "accent": "#00f0ff"},
+    },
+    "organic-warm": {
+        "heading_font": "DM Serif Display",
+        "body_font": "DM Sans",
+        "border_radius": "24px",
+        "heading_align": "left",
+        "card_style": "soft-shadow",
+        "spacing_tight": False,
+        "palette_bias": {"bg": "#fdf8f3", "surface": "#fff9f0", "accent": "#8b5e3c"},
+    },
+    "corporate-trust": {
+        "heading_font": "Source Serif 4",
+        "body_font": "Source Sans 3",
+        "border_radius": "4px",
+        "heading_align": "left",
+        "card_style": "bordered",
+        "spacing_tight": True,
+        "palette_bias": {"bg": "#ffffff", "surface": "#f5f7fa", "accent": "#1a56db"},
+    },
+}
+
+
+def _get_archetype_design_system(archetype: str) -> dict:
+    """Return concrete design-system tokens for an archetype.
+
+    Falls back to editorial-asymmetric when archetype is unknown.
+    The returned dict is flattened into design_tokens and design_system
+    so OpenUI receives specific CSS/typography instructions, not a vague
+    text briefing.
+    """
+    return ARCHETYPE_DESIGN_SYSTEMS.get(
+        archetype, ARCHETYPE_DESIGN_SYSTEMS["editorial-asymmetric"]
+    )
+
+
 OPENUI_URL = os.environ.get("OPENUI_URL") or os.environ.get("OPENUI_SERVICE_URL", "http://localhost:7878")
 GENERATE_ENDPOINT = f"{OPENUI_URL}/generate"
 OPENUI_CHECK_URL = f"{OPENUI_URL}/generate"

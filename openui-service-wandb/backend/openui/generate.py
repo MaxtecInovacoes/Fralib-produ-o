@@ -362,17 +362,30 @@ def _build_system_prompt(prd: dict) -> str:
     radius = design_tokens.get("radius", "12px")
 
     archetype_briefing = {
-        "industrial-bold": "BOLD industrial aesthetic. Massive typography, dark backgrounds, sharp edges. Brutalist luxury.",
-        "dark-futurist": "Futuristic dark mode. Neon accents, glass morphism, smooth gradients. Premium tech feel.",
-        "editorial-asymmetric": "Editorial asymmetric layout. Magazine-style grid, bold typography, generous whitespace. Premium content-first.",
-        "apple-minimalist": "Minimalist. Clean white space, subtle shadows, restrained palette. Apple-inspired simplicity.",
-        "organic-warm": "Warm organic. Earth tones, rounded shapes, natural textures. Approachable and trustworthy.",
-        "corporate-trust": "Corporate trust. Professional blue, structured grid, clear hierarchy. Enterprise credibility.",
+        "industrial-bold": "BOLD industrial aesthetic. Massive display typography, dark or concrete backgrounds, sharp corners. Brutalist luxury — think Nike or Gymshark campaign.",
+        "dark-futurist": "Futuristic dark mode. Neon accent color, glass-morphism panels, smooth gradients, soft glow effects. Premium tech feel — think Linear or Vercel.",
+        "editorial-asymmetric": "Editorial asymmetric layout. Magazine-style grid, bold serif typography, generous whitespace, off-kilter sections. Premium content-first — think The New York Times or The Verge.",
+        "apple-minimalist": "Minimalist Apple aesthetic. Clean white/cream space, very subtle shadows, restrained one-accent palette, generous padding, rounded-2xl cards. Precision over decoration.",
+        "organic-warm": "Warm organic aesthetic. Earth tones (terracotta, sage, cream), rounded-3xl shapes, paper/noise texture overlays, natural imagery. Approachable and trustworthy — think Kinfolk or Aesop.",
+        "corporate-trust": "Corporate trust aesthetic. Professional navy or slate, structured grid, clear hierarchy, ample whitespace, restrained accent. Enterprise credibility — think Stripe or Shopify.",
     }
     style_brief = archetype_briefing.get(archetype, archetype_briefing["editorial-asymmetric"])
 
+    # Archetype-driven visual contract — these tokens MUST visibly differentiate this site
+    archetype_visual_contract = {
+        "industrial-bold":       "FONT: sans-black display + mono body. RADIUS: 0px. ALIGN: left. BG: near-black. ACCENT: neon or primary on black.",
+        "dark-futurist":         "FONT: geometric sans (Inter/Space Grotesk). RADIUS: 12-16px. ALIGN: center. BG: #0a0a0a. ACCENT: neon gradient.",
+        "editorial-asymmetric":  "FONT: high-contrast serif (Playfair/GT Sectra) + sans body. RADIUS: 4px. ALIGN: asymmetric (off-grid). BG: off-white. ACCENT: deep blue or terracotta.",
+        "apple-minimalist":      "FONT: system-ui/Inter with tight tracking. RADIUS: 16-24px. ALIGN: center, generous whitespace. BG: #FAFAFA or #FFF. ACCENT: blue-600 or indigo.",
+        "organic-warm":          "FONT: warm serif (Lora/Newsreader) + rounded sans (Nunito). RADIUS: 9999px (full) on buttons, 24px on cards. ALIGN: left/center mix. BG: warm cream #FDFCF8. ACCENT: terracotta or sage.",
+        "corporate-trust":       "FONT: stable sans (Inter/Geist). RADIUS: 8px. ALIGN: structured grid, consistent gutters. BG: white or slate-50. ACCENT: navy-700 or indigo.",
+    }
+    visual_contract_text = archetype_visual_contract.get(archetype, archetype_visual_contract["editorial-asymmetric"])
+
     segments.append(f"\n## Design System\nStyle: {style_brief}")
     segments.append(f"Archetype: {archetype}\nBorder radius: {radius}")
+    segments.append(f"\n### ARCHETYPE VISUAL CONTRACT (MUST follow — this is what makes this site visually unique)\n{visual_contract_text}")
+    segments.append("Each archetype must produce a visibly different site. Do not default to generic card grids.")
 
     # Color palette
     if paleta:

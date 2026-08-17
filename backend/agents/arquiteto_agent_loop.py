@@ -550,7 +550,6 @@ def _parse_prd_response(
 
 def _extract_largest_json(text: str) -> str:
     """Extrai o maior bloco JSON válido do texto."""
-    text = text.replace(" ", " ").replace(" ", " ")
     text = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f]', ' ', text)
     candidates = []
     i = 0
@@ -590,46 +589,53 @@ def _extract_largest_json(text: str) -> str:
         i += 1
     if not candidates:
         return ""
+    for candidate in sorted(candidates, key=len, reverse=True):
+        try:
+            json.loads(candidate)
+            return candidate
+        except Exception:
+            continue
     return max(candidates, key=len)
 
 
 def _enrich_prd(prd: dict, dados_hunter: dict, cidade: str, segmento: str, dark_mode: bool) -> dict:
     """Garante campos obrigatórios no PRD usando dados do Hunter."""
-    prd.setdefault("business_name", dados_hunter.get("nome", ""))
-    prd.setdefault("segmento", segmento)
-    prd.setdefault("cidade", cidade)
-    prd.setdefault("address", dados_hunter.get("endereco", ""))
-    prd.setdefault("phone", dados_hunter.get("telefone", ""))
-    prd.setdefault("reviews_rating", float(dados_hunter.get("rating", 0)))
-    prd.setdefault("reviews_count", int(dados_hunter.get("total_avaliacoes", 0)))
-    if not prd.get("reviews_list"):
-        prd["reviews_list"] = dados_hunter.get("reviews") or dados_hunter.get("reviews_list") or []
-    prd["_raw_reviews"] = dados_hunter.get("reviews") or []
-    if not prd.get("photos"):
-        prd["photos"] = dados_hunter.get("fotos") or dados_hunter.get("photos") or []
-    prd.setdefault("logo_url", dados_hunter.get("logo_url"))
-    prd.setdefault("hours", dados_hunter.get("horarios") or {})
-    prd.setdefault("dark_mode", dark_mode)
-    prd.setdefault("google_maps_embed", "")
-    prd.setdefault("components_21dev", ["whatsapp-sticky-cta"])
-    prd.setdefault("anti_patterns", ["precos visiveis"])
-    prd.setdefault("schema_org_types", ["LocalBusiness"])
-    prd["sections"] = _ensure_full_section_contract(prd.get("sections") or [], dados_hunter)
+    new_prd = dict(prd)
+    new_prd.setdefault("business_name", dados_hunter.get("nome", ""))
+    new_prd.setdefault("segmento", segmento)
+    new_prd.setdefault("cidade", cidade)
+    new_prd.setdefault("address", dados_hunter.get("endereco", ""))
+    new_prd.setdefault("phone", dados_hunter.get("telefone", ""))
+    new_prd.setdefault("reviews_rating", float(dados_hunter.get("rating", 0)))
+    new_prd.setdefault("reviews_count", int(dados_hunter.get("total_avaliacoes", 0)))
+    if not new_prd.get("reviews_list"):
+        new_prd["reviews_list"] = dados_hunter.get("reviews") or dados_hunter.get("reviews_list") or []
+    new_prd["_raw_reviews"] = dados_hunter.get("reviews") or []
+    if not new_prd.get("photos"):
+        new_prd["photos"] = dados_hunter.get("fotos") or dados_hunter.get("photos") or []
+    new_prd.setdefault("logo_url", dados_hunter.get("logo_url"))
+    new_prd.setdefault("hours", dados_hunter.get("horarios") or {})
+    new_prd.setdefault("dark_mode", dark_mode)
+    new_prd.setdefault("google_maps_embed", "")
+    new_prd.setdefault("components_21dev", ["whatsapp-sticky-cta"])
+    new_prd.setdefault("anti_patterns", ["precos visiveis"])
+    new_prd.setdefault("schema_org_types", ["LocalBusiness"])
+    new_prd["sections"] = _ensure_full_section_contract(new_prd.get("sections") or [], dados_hunter)
 
     # Geo
     lat = dados_hunter.get("lat") or dados_hunter.get("latitude")
     lng = dados_hunter.get("lng") or dados_hunter.get("longitude") or dados_hunter.get("lon")
     if lat is not None and lng is not None:
         try:
-            prd.setdefault("geo", {"lat": float(lat), "lng": float(lng)})
+            new_prd.setdefault("geo", {"lat": float(lat), "lng": float(lng)})
         except (TypeError, ValueError):
             pass
 
     # Design tokens override (fonte de verdade)
-    if not prd.get("color_palette", {}).get("tokens_oklch"):
-        design = get_design_context(segmento, dados_hunter.get("nome", ""), prd.get("tier", "STANDARD"), dark_mode)
+    if not new_prd.get("color_palette", {}).get("tokens_oklch"):
+        design = get_design_context(segmento, dados_hunter.get("nome", ""), new_prd.get("tier", "STANDARD"), dark_mode)
         tokens = design["tokens"]
-        prd["color_palette"] = {
+        new_prd["color_palette"] = {
             "primary": tokens["--fg"],
             "secondary": tokens["--surface"],
             "accent": tokens["--accent"],
@@ -642,40 +648,40 @@ def _enrich_prd(prd: dict, dados_hunter: dict, cidade: str, segmento: str, dark_
             "hero_style": get_hero_style(design["dir_key"]),
             "reasoning": f"OKLch determinístico. Direção={design['dir_nome']}",
         }
-        prd["typography"] = {"heading": design["font_heading"], "body": design["font_body"]}
+        new_prd["typography"] = {"heading": design["font_heading"], "body": design["font_body"]}
 
     lead_id = str(dados_hunter.get("id") or dados_hunter.get("place_id") or dados_hunter.get("nome") or "")
     design_dna = build_design_dna(
         segmento=segmento,
         business_name=dados_hunter.get("nome", ""),
         lead_id=lead_id,
-        tier=prd.get("tier", "STANDARD"),
+        tier=new_prd.get("tier", "STANDARD"),
         base_design=design if "design" in locals() else {},
         dados_lead=dados_hunter,
     )
-    prd["visual_seed"] = design_dna["visual_seed"]
-    prd["visual_dna"] = design_dna
-    prd["design_reference_pack"] = design_dna.get("design_reference_pack") or {}
-    prd["typography"] = {
-        "heading": design_dna.get("font_heading") or (prd.get("typography") or {}).get("heading"),
-        "body": design_dna.get("font_body") or (prd.get("typography") or {}).get("body"),
+    new_prd["visual_seed"] = design_dna["visual_seed"]
+    new_prd["visual_dna"] = design_dna
+    new_prd["design_reference_pack"] = design_dna.get("design_reference_pack") or {}
+    new_prd["typography"] = {
+        "heading": design_dna.get("font_heading") or (new_prd.get("typography") or {}).get("heading"),
+        "body": design_dna.get("font_body") or (new_prd.get("typography") or {}).get("body"),
     }
-    for section in prd["sections"]:
+    for section in new_prd["sections"]:
         name = str(section.get("name", "")).lower()
         section["layout_type"] = choose_section_variant(
             name, design_dna["visual_seed"], design_dna["archetype"]["archetype"]
         )
-    prd["layout_blueprint"] = [
+    new_prd["layout_blueprint"] = [
         {"section": section["name"], "variant": section.get("layout_type", "")}
-        for section in prd["sections"]
+        for section in new_prd["sections"]
     ]
-    prd["requirements_contract"] = build_requirements_contract(prd)
-    prd["visual_contract"] = build_visual_contract(prd)
-    prd["site_build_plan"] = build_site_build_plan(prd)
+    new_prd["requirements_contract"] = build_requirements_contract(new_prd)
+    new_prd["visual_contract"] = build_visual_contract(new_prd)
+    new_prd["site_build_plan"] = build_site_build_plan(new_prd)
 
-    _validate_enriched_prd(prd)
+    _validate_enriched_prd(new_prd)
 
-    return prd
+    return new_prd
 
 
 def _ensure_full_section_contract(sections: list, dados_hunter: dict) -> list:
@@ -742,7 +748,8 @@ def gerar_arquiteto_mestre_prd_agent(
     Drop-in replacement para gerar_arquiteto_mestre_prd usando Managed Agent.
     Retorna DesignerPRD validado — mesma interface do original.
     """
-    dark_mode = _should_force_dark_mode(segmento, dark_mode, creative_direction or {})
+    # Dark mode: respeitar apenas o que o Design Director / archetype determinou
+    dark_mode = bool(creative_direction.get("dark_mode", False)) if creative_direction else False
 
     result = arquiteto_agent_loop(
         dados_hunter=dados_hunter,
@@ -803,11 +810,7 @@ def _apply_visual_contract_inputs(
 ) -> dict:
     """Attach upstream visual contracts and rebuild dependent execution plans."""
     prd = dict(prd or {})
-    prd["dark_mode"] = _should_force_dark_mode(
-        str(prd.get("segmento") or ""),
-        bool(prd.get("dark_mode", False)),
-        creative_direction,
-    )
+    prd["dark_mode"] = bool(prd.get("dark_mode", False))
     if niche_brief:
         prd["niche_brief"] = niche_brief
     if creative_direction:
@@ -862,21 +865,6 @@ def _apply_visual_contract_inputs(
     except Exception as exc:
         print(f"[ArquitetoAgent] site_build_plan rebuild falhou: {exc}")
     return prd
-
-
-def _should_force_dark_mode(segmento: str, current_dark_mode: bool, creative_direction: dict | None = None) -> bool:
-    creative_direction = creative_direction if isinstance(creative_direction, dict) else {}
-    segment = str(segmento or "").lower()
-    concept = str(creative_direction.get("visual_concept", "") or "").lower()
-    hard_concept = str((creative_direction.get("hard_constraints") or {}).get("visual_concept", "") or "").lower()
-    dark_segments = ("academia", "fitness", "gym", "barbearia", "barber", "balada", "bar")
-    dark_concepts = ("bold", "dark", "industrial", "brutalist", "gymshark", "nike")
-    return (
-        bool(current_dark_mode)
-        or any(token in segment for token in dark_segments)
-        or any(token in concept for token in dark_concepts)
-        or any(token in hard_concept for token in dark_concepts)
-    )
 
 
 def _reorder_sections_by_blueprint(sections: list, order: list[str]) -> list:

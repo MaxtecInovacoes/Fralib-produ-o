@@ -1,8 +1,6 @@
 """Step: Arquiteto — Fase 3: Geração de PRD (DesignerPRD) via Managed Agent."""
 import logging
-import os
 import time
-import json
 from backend.agents.manager.states import (
     PipelineState, STATE_DESIGNING, STATE_BUILDING, STATE_FAILED,
     _transition, _is_transient_llm_error, _log_step_error, _record_agent_handoff,
@@ -10,23 +8,6 @@ from backend.agents.manager.states import (
 from backend.core.knowledge_journal import record as journal_record
 
 logger = logging.getLogger("manager.pipeline")
-
-
-def _should_force_dark_mode(state: PipelineState, current_dark_mode: bool) -> bool:
-    segment = str(state.segmento or "").lower()
-    visual_concept = str((state.creative_direction or {}).get("visual_concept", "") or "").lower()
-    hard_concept = str(
-        ((state.creative_direction or {}).get("hard_constraints") or {}).get("visual_concept", "")
-        or ""
-    ).lower()
-    dark_segments = ("academia", "fitness", "gym", "barbearia", "barber", "balada", "bar")
-    dark_concepts = ("bold", "dark", "industrial", "brutalist", "gymshark", "nike")
-    return (
-        bool(current_dark_mode)
-        or any(token in segment for token in dark_segments)
-        or any(token in visual_concept for token in dark_concepts)
-        or any(token in hard_concept for token in dark_concepts)
-    )
 
 
 def step_arquiteto(state: PipelineState) -> PipelineState:
@@ -37,10 +18,7 @@ def step_arquiteto(state: PipelineState) -> PipelineState:
     caio = state.caio_output
     tier = caio.tier if caio else "STANDARD"
     score = caio.score if caio else 0
-    dark_mode = _should_force_dark_mode(
-        state,
-        getattr(caio, "dark_mode", False) if caio else False,
-    )
+    dark_mode = getattr(caio, "dark_mode", False) if caio else False
 
     max_attempts = 3
     for attempt in range(max_attempts):
@@ -184,8 +162,9 @@ def step_arquiteto(state: PipelineState) -> PipelineState:
                                attempt + 1, max_attempts, wait, e)
                 time.sleep(wait)
                 continue
+            logger.exception("[Arquiteto] falha não transitória (lead=%s)", state.lead_id)
             _log_step_error(state, "Arquiteto", e)
-            state.error = f"Arquiteto: {e}"
+            state.error = "Arquiteto: falha interna na geração do PRD"
             return _transition(state, STATE_FAILED)
 
     state.error = "Arquiteto: esgotadas todas as tentativas"

@@ -75,7 +75,8 @@ def step_variacao(state: PipelineState) -> PipelineState:
 
 
 def _normalize_blueprint(blueprint: dict, state: PipelineState) -> dict:
-    _enforce_dark_bold_variation(blueprint, state)
+    # Dark mode e template agora são decididos pelo Design Director / archetype,
+    # não mais forçados por nicho (removida trava _enforce_dark_bold_variation).
     order = blueprint.get("ordem_das_secoes") or []
     if not isinstance(order, list):
         order = []

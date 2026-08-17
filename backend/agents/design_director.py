@@ -163,14 +163,9 @@ def gerar_direcao_criativa(
         logger.info(f"[DesignDirector] Cache hit para nicho={nicho}, cidade={cidade}, negocio={nome_negocio}")
         return cached
 
-    # ─── PASSO 1: Tentar usar design_context como fonte de tokens OKLch ───
+    # PASSO 1: Usar design_context como fonte de tokens OKLch (sem trava de dark mode por nicho)
     design_tokens = None
     dark_mode = False
-
-    # Detectar dark mode baseado no nicho
-    _dark_niches = {"academia", "crossfit", "churrascaria", "barbearia", "auto_pecas", "pet_shop"}
-    if nicho.lower() in _dark_niches:
-        dark_mode = True
 
     try:
         design_tokens = get_design_context(
